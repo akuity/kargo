@@ -66,23 +66,17 @@ func Test_prHandler_handleOpened(t *testing.T) {
 			},
 		},
 		{
-			name:                  "no linked issue",
-			body:                  "This PR has no issue link.",
-			expectedLabelsAdded:   map[string]struct{}{"policy/no-linked-issue": {}},
+			name: "no linked issue",
+			body: "This PR has no issue link.",
+			expectedLabelsAdded: map[string]struct{}{
+				// Required-label enforcement runs before policy, so needs/*
+				// labels are applied even when the PR is about to be closed.
+				"needs/area":             {},
+				"needs/kind":             {},
+				"needs/priority":         {},
+				"policy/no-linked-issue": {},
+			},
 			expectedCommentsAdded: map[string]struct{}{"No linked issue.": {}},
-			expectClosed:          true,
-		},
-		{
-			name: "linked issue with blocking label",
-			body: "Closes #99",
-			existingIssue: &github.Issue{Labels: []*github.Label{
-				{Name: github.Ptr("area/cli")},
-				{Name: github.Ptr("kind/enhancement")},
-				{Name: github.Ptr("kind/proposal")},
-				{Name: github.Ptr("priority/high")},
-			}},
-			expectedLabelsAdded:   map[string]struct{}{"policy/blocked-issue": {}},
-			expectedCommentsAdded: map[string]struct{}{"Issue #99 blocked by `kind/proposal`": {}},
 			expectClosed:          true,
 		},
 		{
@@ -102,6 +96,28 @@ func Test_prHandler_handleOpened(t *testing.T) {
 				"kind/documentation": {}, // Inherited from issue
 				"needs/priority":     {}, // Added due to label governance
 			},
+		},
+		{
+			name: "linked issue with blocking label",
+			body: "Closes #99",
+			existingIssue: &github.Issue{Labels: []*github.Label{
+				{Name: github.Ptr("area/cli")},
+				{Name: github.Ptr("kind/enhancement")},
+				{Name: github.Ptr("kind/proposal")},
+				{Name: github.Ptr("priority/high")},
+			}},
+			expectedLabelsAdded: map[string]struct{}{
+				// Labels inherit before policy runs, and inheriting a
+				// blocking label onto the PR is intentional — it's an
+				// additional signal to the author.
+				"area/cli":             {},
+				"kind/enhancement":     {},
+				"kind/proposal":        {},
+				"priority/high":        {},
+				"policy/blocked-issue": {},
+			},
+			expectedCommentsAdded: map[string]struct{}{"Issue #99 blocked by `kind/proposal`": {}},
+			expectClosed:          true,
 		},
 	}
 	for _, testCase := range testCases {

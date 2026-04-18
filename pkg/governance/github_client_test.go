@@ -3,7 +3,12 @@ package governance
 import (
 	"context"
 	"encoding/base64"
+	"encoding/json"
 	"errors"
+	"io"
+	"net/http"
+	"net/http/httptest"
+	"net/url"
 	"testing"
 
 	"github.com/goccy/go-yaml"
@@ -22,7 +27,7 @@ func Test_githubClientFactory_NewIssuesClient(t *testing.T) {
 			factory: func() *githubClientFactory {
 				client := github.NewClient(nil)
 				return &githubClientFactory{
-					clients: map[int64]*github.Client{1: client},
+					clients: map[int64]*installationClient{1: {client: client}},
 				}
 			}(),
 			assert: func(t *testing.T, ic IssuesClient, err error) {
@@ -33,7 +38,7 @@ func Test_githubClientFactory_NewIssuesClient(t *testing.T) {
 		{
 			name: "wraps error with installation ID",
 			factory: &githubClientFactory{
-				newClientFn: func(_ int64) (*github.Client, error) {
+				newClientFn: func(_ int64) (*installationClient, error) {
 					return nil, errors.New("boom")
 				},
 			},
@@ -62,7 +67,7 @@ func Test_githubClientFactory_NewPullRequestsClient(t *testing.T) {
 			factory: func() *githubClientFactory {
 				client := github.NewClient(nil)
 				return &githubClientFactory{
-					clients: map[int64]*github.Client{1: client},
+					clients: map[int64]*installationClient{1: {client: client}},
 				}
 			}(),
 			assert: func(t *testing.T, prc PullRequestsClient, err error) {
@@ -73,7 +78,7 @@ func Test_githubClientFactory_NewPullRequestsClient(t *testing.T) {
 		{
 			name: "wraps error with installation ID",
 			factory: &githubClientFactory{
-				newClientFn: func(_ int64) (*github.Client, error) {
+				newClientFn: func(_ int64) (*installationClient, error) {
 					return nil, errors.New("boom")
 				},
 			},
@@ -91,6 +96,125 @@ func Test_githubClientFactory_NewPullRequestsClient(t *testing.T) {
 	}
 }
 
+func Test_pullRequestsClient_ConvertToDraft(t *testing.T) {
+	const (
+		owner    = "akuity"
+		repo     = "kargo"
+		number   = 42
+		nodeID   = "PR_kwDOabc"
+		apiToken = "test-token"
+	)
+
+	testCases := []struct {
+		name    string
+		handler http.HandlerFunc
+		assert  func(*testing.T, error)
+	}{
+		{
+			name: "happy path",
+			handler: func(w http.ResponseWriter, r *http.Request) {
+				require.Equal(t, "Bearer "+apiToken, r.Header.Get("Authorization"))
+				switch {
+				case r.Method == http.MethodGet &&
+					r.URL.Path == "/repos/"+owner+"/"+repo+"/pulls/42":
+					_, _ = w.Write([]byte(`{"node_id": "` + nodeID + `"}`))
+				case r.Method == http.MethodPost && r.URL.Path == "/graphql":
+					body, err := io.ReadAll(r.Body)
+					require.NoError(t, err)
+					var payload struct {
+						Variables map[string]string `json:"variables"`
+					}
+					require.NoError(t, json.Unmarshal(body, &payload))
+					require.Equal(t, nodeID, payload.Variables["id"])
+					_, _ = w.Write([]byte(
+						`{"data":{"convertPullRequestToDraft":` +
+							`{"pullRequest":{"isDraft":true}}}}`,
+					))
+				default:
+					t.Fatalf("unexpected request: %s %s", r.Method, r.URL.Path)
+				}
+			},
+			assert: func(t *testing.T, err error) {
+				require.NoError(t, err)
+			},
+		},
+		{
+			name: "REST Get fails",
+			handler: func(w http.ResponseWriter, _ *http.Request) {
+				w.WriteHeader(http.StatusInternalServerError)
+			},
+			assert: func(t *testing.T, err error) {
+				require.ErrorContains(t, err, "error fetching PR")
+			},
+		},
+		{
+			name: "GraphQL returns error payload",
+			handler: func(w http.ResponseWriter, r *http.Request) {
+				switch r.URL.Path {
+				case "/repos/" + owner + "/" + repo + "/pulls/42":
+					_, _ = w.Write([]byte(`{"node_id": "` + nodeID + `"}`))
+				case "/graphql":
+					_, _ = w.Write([]byte(
+						`{"errors":[{"message":"not authorized"}]}`,
+					))
+				}
+			},
+			assert: func(t *testing.T, err error) {
+				require.ErrorContains(t, err, "GraphQL errors")
+				require.ErrorContains(t, err, "not authorized")
+			},
+		},
+		{
+			name: "GraphQL returns non-200",
+			handler: func(w http.ResponseWriter, r *http.Request) {
+				switch r.URL.Path {
+				case "/repos/" + owner + "/" + repo + "/pulls/42":
+					_, _ = w.Write([]byte(`{"node_id": "` + nodeID + `"}`))
+				case "/graphql":
+					w.WriteHeader(http.StatusUnauthorized)
+					_, _ = w.Write([]byte(`unauthorized`))
+				}
+			},
+			assert: func(t *testing.T, err error) {
+				require.ErrorContains(t, err, "status 401")
+			},
+		},
+		{
+			name: "PR has no node ID",
+			handler: func(w http.ResponseWriter, r *http.Request) {
+				require.Equal(t,
+					"/repos/"+owner+"/"+repo+"/pulls/42", r.URL.Path,
+				)
+				_, _ = w.Write([]byte(`{}`))
+			},
+			assert: func(t *testing.T, err error) {
+				require.ErrorContains(t, err, "no node ID")
+			},
+		},
+	}
+	for _, testCase := range testCases {
+		t.Run(testCase.name, func(t *testing.T) {
+			srv := httptest.NewServer(testCase.handler)
+			defer srv.Close()
+
+			gh := github.NewClient(srv.Client()).WithAuthToken(apiToken)
+			baseURL, err := url.Parse(srv.URL + "/")
+			require.NoError(t, err)
+			gh.BaseURL = baseURL
+
+			p := &pullRequestsClient{
+				PullRequestsService: gh.PullRequests,
+				accessToken:         apiToken,
+				graphQLURL:          srv.URL + "/graphql",
+				httpClient:          srv.Client(),
+			}
+
+			err = p.ConvertToDraft(t.Context(), owner, repo, number)
+			testCase.assert(t, err)
+		})
+	}
+}
+
 func Test_githubClientFactory_NewRepositoriesClient(t *testing.T) {
 	testCases := []struct {
 		name    string
@@ -102,7 +226,7 @@ func Test_githubClientFactory_NewRepositoriesClient(t *testing.T) {
 			factory: func() *githubClientFactory {
 				client := github.NewClient(nil)
 				return &githubClientFactory{
-					clients: map[int64]*github.Client{1: client},
+					clients: map[int64]*installationClient{1: {client: client}},
 				}
 			}(),
 			assert: func(t *testing.T, rc RepositoriesClient, err error) {
@@ -113,7 +237,7 @@ func Test_githubClientFactory_NewRepositoriesClient(t *testing.T) {
 		{
 			name: "wraps error with installation ID",
 			factory: &githubClientFactory{
-				newClientFn: func(_ int64) (*github.Client, error) {
+				newClientFn: func(_ int64) (*installationClient, error) {
 					return nil, errors.New("boom")
 				},
 			},
@@ -136,20 +260,20 @@ func Test_githubClientFactory_getOrCreateClient(t *testing.T) {
 		name    string
 		factory *githubClientFactory
 		id      int64
-		assert  func(*testing.T, *githubClientFactory, *github.Client, error)
+		assert  func(*testing.T, *githubClientFactory, *installationClient, error)
 	}{
 		{
 			name: "creates and caches a new client",
 			factory: &githubClientFactory{
-				newClientFn: func(_ int64) (*github.Client, error) {
-					return github.NewClient(nil), nil
+				newClientFn: func(_ int64) (*installationClient, error) {
+					return &installationClient{client: github.NewClient(nil)}, nil
 				},
 			},
 			id: 1,
 			assert: func(
 				t *testing.T,
 				f *githubClientFactory,
-				client *github.Client,
+				client *installationClient,
 				err error,
 			) {
 				require.NoError(t, err)
@@ -161,10 +285,10 @@ func Test_githubClientFactory_getOrCreateClient(t *testing.T) {
 		{
 			name: "returns cached client on subsequent call",
 			factory: func() *githubClientFactory {
-				cached := github.NewClient(nil)
+				cached := &installationClient{client: github.NewClient(nil)}
 				return &githubClientFactory{
-					clients: map[int64]*github.Client{1: cached},
-					newClientFn: func(_ int64) (*github.Client, error) {
+					clients: map[int64]*installationClient{1: cached},
+					newClientFn: func(_ int64) (*installationClient, error) {
 						t.Fatal("newClientFn should not be called for cached client")
 						return nil, nil
 					},
@@ -174,7 +298,7 @@ func Test_githubClientFactory_getOrCreateClient(t *testing.T) {
 			assert: func(
 				t *testing.T,
 				f *githubClientFactory,
-				client *github.Client,
+				client *installationClient,
 				err error,
 			) {
 				require.NoError(t, err)
@@ -184,11 +308,11 @@ func Test_githubClientFactory_getOrCreateClient(t *testing.T) {
 		{
 			name: "caches separately per installation ID",
 			factory: func() *githubClientFactory {
-				clientA := github.NewClient(nil)
+				clientA := &installationClient{client: github.NewClient(nil)}
 				return &githubClientFactory{
-					clients: map[int64]*github.Client{1: clientA},
-					newClientFn: func(_ int64) (*github.Client, error) {
-						return github.NewClient(nil), nil
+					clients: map[int64]*installationClient{1: clientA},
+					newClientFn: func(_ int64) (*installationClient, error) {
+						return &installationClient{client: github.NewClient(nil)}, nil
 					},
 				}
 			}(),
@@ -196,7 +320,7 @@ func Test_githubClientFactory_getOrCreateClient(t *testing.T) {
 			assert: func(
 				t *testing.T,
 				f *githubClientFactory,
-				client *github.Client,
+				client *installationClient,
 				err error,
 			) {
 				require.NoError(t, err)
@@ -208,7 +332,7 @@ func Test_githubClientFactory_getOrCreateClient(t *testing.T) {
 		{
 			name: "propagates error from newClientFn",
 			factory: &githubClientFactory{
-				newClientFn: func(_ int64) (*github.Client, error) {
+				newClientFn: func(_ int64) (*installationClient, error) {
 					return nil, errors.New("token exchange failed")
 				},
 			},
@@ -216,7 +340,7 @@ func Test_githubClientFactory_getOrCreateClient(t *testing.T) {
 			assert: func(
 				t *testing.T,
 				f *githubClientFactory,
-				_ *github.Client,
+				_ *installationClient,
 				err error,
 			) {
 				require.ErrorContains(t, err, "token exchange failed")
@@ -393,6 +517,18 @@ type fakePullRequestsClient struct {
 		number int,
 		pr *github.PullRequest,
 	) (*github.PullRequest, *github.Response, error)
+	GetFn func(
+		ctx context.Context,
+		owner string,
+		repo string,
+		number int,
+	) (*github.PullRequest, *github.Response, error)
+	ConvertToDraftFn func(
+		ctx context.Context,
+		owner string,
+		repo string,
+		number int,
+	) error
 }
 
 // Edit implements PullRequestsClient.
@@ -407,6 +543,32 @@ func (f *fakePullRequestsClient) Edit(
 		return f.EditFn(ctx, owner, repo, number, pr)
 	}
 	return pr, nil, nil
+}
+
+// Get implements PullRequestsClient.
+func (f *fakePullRequestsClient) Get(
+	ctx context.Context,
+	owner string,
+	repo string,
+	number int,
+) (*github.PullRequest, *github.Response, error) {
+	if f.GetFn != nil {
+		return f.GetFn(ctx, owner, repo, number)
+	}
+	return &github.PullRequest{}, nil, nil
+}
+
+// ConvertToDraft implements PullRequestsClient.
+func (f *fakePullRequestsClient) ConvertToDraft(
+	ctx context.Context,
+	owner string,
+	repo string,
+	number int,
+) error {
+	if f.ConvertToDraftFn != nil {
+		return f.ConvertToDraftFn(ctx, owner, repo, number)
+	}
+	return nil
 }
 
 // fakeRepositoriesClient is a configurable fake RepositoriesClient.

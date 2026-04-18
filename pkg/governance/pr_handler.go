@@ -22,14 +22,23 @@ type prHandler struct {
 	prsClient    PullRequestsClient
 }
 
-// handleOpened is the handler for pull_request.opened events. It performs the
-// following actions:
-//   - Auto-assigns the PR to its author.
-//   - Checks PR policy: if the PR has no linked issue or if the linked issue
-//     has blocking labels, take configured actions (e.g. add labels, comment,
-//     close).
-//   - Inherits labels from the linked issue based on configured prefixes.
-//   - Flags missing required labels based on configured prefixes.
+// handleOpened is the handler for pull_request.opened events. It performs
+// the following, in order:
+//
+//  1. Auto-assigns the PR to its author.
+//  2. Inherits labels from the linked issue (if any) based on configured
+//     prefixes.
+//  3. Enforces required-label prefixes, flagging any that are still missing
+//     after inheritance.
+//  4. Applies PR policy — any configured actions for PRs with no linked
+//     issue or with a linked issue that carries blocking labels.
+//     Maintainers and bots are exempt from this step only.
+//
+// Labeling happens before policy so that maintainers have full context on
+// the PR's subject matter regardless of whether policy ends up drafting or
+// closing it. Inheriting a blocking label onto the PR is intentional: it's
+// an additional signal to the author that they've done something
+// prematurely.
 func (h *prHandler) handleOpened(
 	ctx context.Context,
 	event *github.PullRequestEvent,
@@ -47,8 +56,9 @@ func (h *prHandler) handleOpened(
 	logger := logging.LoggerFromContext(ctx).WithValues("pr", number)
 	ctx = logging.ContextWithLogger(ctx, logger)
 
-	// Auto-assign the PR to its author.
 	login := event.GetSender().GetLogin()
+
+	// 1. Auto-assign the PR to its author.
 	if _, _, err := h.issuesClient.AddAssignees(
 		ctx,
 		h.owner,
@@ -59,37 +69,24 @@ func (h *prHandler) handleOpened(
 		return fmt.Errorf("error assigning PR to author: %w", err)
 	}
 
-	// Policy check: exempt maintainers and bots.
-	author := pr.GetAuthorAssociation()
-	if h.isExemptFromPRPolicy(author, login) {
-		logger.Debug("author is exempt from policy check, skipping")
-	} else if h.cfg.PullRequests != nil {
-		closed, err := h.checkPRPolicy(ctx, number, pr)
-		if err != nil {
-			return fmt.Errorf("error checking PR policy: %w", err)
-		}
-		if closed {
-			return nil
-		}
-	}
-
-	// Label inheritance: copy labels from linked issue to PR.
 	issueNumber := h.parseLinkedIssue(pr.GetBody())
+
+	// 2. Inherit labels from the linked issue.
 	inheritedLabels, err := h.inheritLabels(ctx, number, issueNumber)
 	if err != nil {
 		return fmt.Errorf("error inheriting labels: %w", err)
 	}
 
-	// Label governance: flag missing required labels, accounting for
-	// both the PR's own labels and any we just inherited.
-	existingLabels := make(map[string]struct{})
-	for _, l := range pr.Labels {
-		existingLabels[l.GetName()] = struct{}{}
-	}
-	for _, l := range inheritedLabels {
-		existingLabels[l] = struct{}{}
-	}
+	// 3. Enforce required-label prefixes, accounting for labels the PR
+	// already has plus any we just inherited.
 	if h.cfg.PullRequests != nil {
+		existingLabels := make(map[string]struct{})
+		for _, l := range pr.Labels {
+			existingLabels[l.GetName()] = struct{}{}
+		}
+		for _, l := range inheritedLabels {
+			existingLabels[l] = struct{}{}
+		}
 		if err := enforceRequiredLabels(
 			ctx,
 			h.issuesClient,
@@ -103,26 +100,41 @@ func (h *prHandler) handleOpened(
 		}
 	}
 
+	// 4. Apply PR policy. Maintainers and bots are exempt.
+	author := pr.GetAuthorAssociation()
+	if h.isExemptFromPRPolicy(author, login) {
+		logger.Debug("author is exempt from policy, skipping")
+		return nil
+	}
+	if h.cfg.PullRequests == nil {
+		return nil
+	}
+	if err := h.applyPRPolicy(ctx, number, issueNumber); err != nil {
+		return fmt.Errorf("error applying PR policy: %w", err)
+	}
 	return nil
 }
 
-// checkPRPolicy checks whether a PR has a linked issue and whether
-// that issue has blocking labels. Returns true if the PR was closed.
-func (h *prHandler) checkPRPolicy(
+// applyPRPolicy runs the configured policy actions when either:
+//   - The PR has no linked issue and NoLinkedIssue is configured; or
+//   - The PR's linked issue carries one or more labels listed in
+//     BlockedIssue.BlockingLabels and BlockedIssue is configured.
+//
+// Otherwise it's a no-op. Callers should have already verified the PR's
+// author is not exempt from policy.
+func (h *prHandler) applyPRPolicy(
 	ctx context.Context,
 	number int,
-	pr *github.PullRequest,
-) (bool, error) {
-	if pr == nil {
-		return false, nil
-	}
-
+	issueNumber int,
+) error {
 	logger := logging.LoggerFromContext(ctx)
-	issueNumber := h.parseLinkedIssue(pr.GetBody())
 
-	if issueNumber == 0 && h.cfg.PullRequests.NoLinkedIssue != nil {
-		logger.Info("PR has no linked issue, closing")
-		if err := executeActions(
+	if issueNumber == 0 {
+		if h.cfg.PullRequests.NoLinkedIssue == nil {
+			return nil
+		}
+		logger.Info("PR has no linked issue, applying policy")
+		return executeActions(
 			ctx,
 			h.issuesClient,
 			h.prsClient,
@@ -132,26 +144,19 @@ func (h *prHandler) checkPRPolicy(
 			true,
 			h.cfg.PullRequests.NoLinkedIssue.Actions,
 			nil,
-		); err != nil {
-			return false, err
-		}
-		return true, nil
+		)
 	}
 
-	if issueNumber == 0 {
-		return false, nil
+	if h.cfg.PullRequests.BlockedIssue == nil {
+		return nil
 	}
 
 	logger = logger.WithValues("linkedIssue", issueNumber)
 	ctx = logging.ContextWithLogger(ctx, logger)
 
-	if h.cfg.PullRequests.BlockedIssue == nil {
-		return false, nil
-	}
-
 	issue, _, err := h.issuesClient.Get(ctx, h.owner, h.repo, issueNumber)
 	if err != nil {
-		return false, fmt.Errorf("error fetching linked issue: %w", err)
+		return fmt.Errorf("error fetching linked issue: %w", err)
 	}
 
 	issueLabels := make(map[string]bool)
@@ -166,30 +171,27 @@ func (h *prHandler) checkPRPolicy(
 		}
 	}
 
-	if len(blockers) > 0 {
-		logger.Info("linked issue has blocking labels, closing PR",
-			"blockers", blockers,
-		)
-		if err := executeActions(
-			ctx,
-			h.issuesClient,
-			h.prsClient,
-			h.owner,
-			h.repo,
-			number,
-			true,
-			h.cfg.PullRequests.BlockedIssue.Actions,
-			map[string]string{
-				"IssueNumber":    fmt.Sprintf("%d", issueNumber),
-				"BlockingLabels": h.formatBlockers(blockers),
-			},
-		); err != nil {
-			return false, err
-		}
-		return true, nil
+	if len(blockers) == 0 {
+		return nil
 	}
 
-	return false, nil
+	logger.Info("linked issue has blocking labels, applying policy",
+		"blockers", blockers,
+	)
+	return executeActions(
+		ctx,
+		h.issuesClient,
+		h.prsClient,
+		h.owner,
+		h.repo,
+		number,
+		true,
+		h.cfg.PullRequests.BlockedIssue.Actions,
+		map[string]string{
+			"IssueNumber":    fmt.Sprintf("%d", issueNumber),
+			"BlockingLabels": h.formatBlockers(blockers),
+		},
+	)
 }
 
 // inheritLabels copies labels with configured prefixes from the linked

@@ -80,8 +80,10 @@ type action struct {
 	Comment string `json:"comment,omitempty"`
 	// Close indicates whether to close the issue or pull request when the action
 	// is executed.
-
 	Close bool `json:"close,omitempty"`
+	// ConvertToDraft indicates whether to convert the pull request to a draft
+	// when the action is executed. Ignored for issues.
+	ConvertToDraft bool `json:"convertToDraft,omitempty"`
 }
 
 // commandDef defines a single slash command, including its description, whether

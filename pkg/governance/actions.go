@@ -76,6 +76,12 @@ func executeActions(
 			}
 		}
 
+		if a.ConvertToDraft && isPR {
+			if err := prsClient.ConvertToDraft(ctx, owner, repo, number); err != nil {
+				return fmt.Errorf("error converting PR to draft: %w", err)
+			}
+		}
+
 		if a.Close {
 			if isPR {
 				state := "closed"
