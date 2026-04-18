@@ -14,19 +14,24 @@ func Test_prHandler_handleOpened(t *testing.T) {
 		PullRequests: &pullRequestsConfig{
 			ExemptMaintainers: true,
 			ExemptBots:        true,
-			NoLinkedIssue: &noLinkedIssueConfig{
+			OnNoLinkedIssue: &onNoLinkedIssueConfig{
 				Actions: []action{
 					{AddLabels: []string{"policy/no-linked-issue"}},
 					{Comment: "No linked issue."},
 					{Close: true},
 				},
 			},
-			BlockedIssue: &blockedIssueConfig{
+			OnBlockedIssue: &onBlockedIssueConfig{
 				BlockingLabels: []string{"kind/proposal"},
 				Actions: []action{
 					{AddLabels: []string{"policy/blocked-issue"}},
 					{Comment: "Issue #{{.IssueNumber}} blocked by {{.BlockingLabels}}"},
 					{Close: true},
+				},
+			},
+			OnPass: &onPassConfig{
+				Actions: []action{
+					{Comment: "PR passes policy."},
 				},
 			},
 			InheritedLabelPrefixes: []string{"area", "kind", "priority"},
@@ -96,6 +101,9 @@ func Test_prHandler_handleOpened(t *testing.T) {
 				"kind/documentation": {}, // Inherited from issue
 				"needs/priority":     {}, // Added due to label governance
 			},
+			// OnPass fires because neither OnNoLinkedIssue nor OnBlockedIssue
+			// acted.
+			expectedCommentsAdded: map[string]struct{}{"PR passes policy.": {}},
 		},
 		{
 			name: "linked issue with blocking label",

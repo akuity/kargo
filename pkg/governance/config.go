@@ -36,11 +36,16 @@ type pullRequestsConfig struct {
 	ExemptMaintainers bool `json:"exemptMaintainers,omitempty"`
 	// ExemptBots indicates whether bots are exempt from PR policies.
 	ExemptBots bool `json:"exemptBots,omitempty"`
-	// NoLinkedIssue defines the actions to take for PRs without a linked issue.
-	NoLinkedIssue *noLinkedIssueConfig `json:"noLinkedIssue,omitempty"`
-	// BlockedIssue defines the actions to take for PRs whose linked issue is
+	// OnNoLinkedIssue defines the actions to take for PRs without a linked issue.
+	OnNoLinkedIssue *onNoLinkedIssueConfig `json:"onNoLinkedIssue,omitempty"`
+	// OnBlockedIssue defines the actions to take for PRs whose linked issue is
 	// blocked by the presence of certain labels.
-	BlockedIssue *blockedIssueConfig `json:"blockedIssue,omitempty"`
+	OnBlockedIssue *onBlockedIssueConfig `json:"onBlockedIssue,omitempty"`
+	// OnPass defines the actions to take when the PR passes policy — i.e.
+	// when neither OnNoLinkedIssue nor OnBlockedIssue actions fire. Useful for
+	// cleaning up state left by a prior failing evaluation (e.g. removing a
+	// policy/* label that was added when the PR was previously drafted).
+	OnPass *onPassConfig `json:"onPass,omitempty"`
 	// InheritedLabelPrefixes lists the label prefixes that a pull request
 	// inherits from its linked issue when opened.
 	InheritedLabelPrefixes []string `json:"inheritedLabelPrefixes,omitempty"`
@@ -53,19 +58,27 @@ type pullRequestsConfig struct {
 	SlashCommands map[string]commandDef `json:"slashCommands,omitempty"`
 }
 
-// noLinkedIssueConfig defines the actions to take for issues without linked
+// onNoLinkedIssueConfig defines the actions to take for issues without linked
 // issues.
-type noLinkedIssueConfig struct {
+type onNoLinkedIssueConfig struct {
 	// Actions defines the actions to take for issues without linked issues.
 	Actions []action `json:"actions,omitempty"`
 }
 
-// blockedIssueConfig defines the actions to take for issues that are blocked by
+// onBlockedIssueConfig defines the actions to take for issues that are blocked by
 // certain labels.
-type blockedIssueConfig struct {
+type onBlockedIssueConfig struct {
 	// BlockingLabels defines the labels that indicate an issue is blocked.
 	BlockingLabels []string `json:"blockingLabels,omitempty"`
 	// Actions defines the actions to take for issues that are blocked by certain labels.
+	Actions []action `json:"actions,omitempty"`
+}
+
+// onPassConfig defines the actions to take when a PR passes policy: it has
+// a linked, unblocked issue (or the operator hasn't configured the
+// corresponding check).
+type onPassConfig struct {
+	// Actions defines the actions to take when the PR passes policy.
 	Actions []action `json:"actions,omitempty"`
 }
 
@@ -85,7 +98,7 @@ type action struct {
 	// when the action is executed. Ignored for issues.
 	ConvertToDraft bool `json:"convertToDraft,omitempty"`
 	// ApplyPRPolicy indicates whether to evaluate and apply configured PR
-	// policy (NoLinkedIssue, BlockedIssue) against the pull request when the
+	// policy (OnNoLinkedIssue, OnBlockedIssue) against the pull request when the
 	// action is executed. Ignored for issues.
 	ApplyPRPolicy bool `json:"applyPRPolicy,omitempty"`
 }

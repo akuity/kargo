@@ -97,7 +97,7 @@ pullRequests:
   exemptBots: true
 
   # Defines how to handle PRs that aren't linked to an issue.
-  noLinkedIssue:
+  onNoLinkedIssue:
     actions:
     - addLabels:
       - policy/no-linked-issue
@@ -122,7 +122,7 @@ pullRequests:
   # Defines how to handle PRs that are linked to issues bearing labels that
   # indicate the PR is either premature or should be worked on only by a
   # maintainer.
-  blockedIssue:
+  onBlockedIssue:
     blockingLabels:
     - area/security # Security related issues are are off-limits to all but maintainers.
     - kind/proposal # If this label hasn't been removed, maintainers aren't yet bought into the idea.
@@ -151,6 +151,16 @@ pullRequests:
 
         See the [Contributor Guide](https://docs.kargo.io/contributor-guide) for full details.
     - convertToDraft: true
+
+  # Defines actions to take when a PR passes policy — neither onNoLinkedIssue
+  # nor onBlockedIssue fires. Runs on every opened/reopened/ready_for_review
+  # event, so this is where stale policy labels from a prior failing
+  # evaluation get cleaned up.
+  onPass:
+    actions:
+    - removeLabels:
+      - policy/no-linked-issue
+      - policy/blocked-issue
 
   # When a PR is opened, it will inherit labels with these prefixes from the
   # linked issue.

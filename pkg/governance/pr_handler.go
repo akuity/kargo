@@ -151,13 +151,16 @@ func (h *prHandler) handleOpened(
 	return errors.Join(errs...)
 }
 
-// applyPRPolicy runs the configured policy actions when either:
-//   - The PR has no linked issue and NoLinkedIssue is configured; or
+// applyPRPolicy evaluates PR policy and runs the actions configured for the
+// matching outcome:
+//   - The PR has no linked issue and OnNoLinkedIssue is configured; or
 //   - The PR's linked issue carries one or more labels listed in
-//     BlockedIssue.BlockingLabels and BlockedIssue is configured.
+//     OnBlockedIssue.BlockingLabels and OnBlockedIssue is configured; or
+//   - The PR passes (linked issue is not blocked, or the relevant check is
+//     not configured) and OnPass is configured.
 //
-// Otherwise it's a no-op. Callers should have already verified the PR's
-// author is not exempt from policy.
+// Callers should have already verified the PR's author is not exempt from
+// policy.
 func applyPRPolicy(
 	ctx context.Context,
 	cfg config,
@@ -170,56 +173,76 @@ func applyPRPolicy(
 ) error {
 	logger := logging.LoggerFromContext(ctx)
 
+	// Blocking outcome: PR has no linked issue.
 	if issueNumber == 0 {
-		if cfg.PullRequests.NoLinkedIssue == nil {
-			return nil
+		if cfg.PullRequests.OnNoLinkedIssue != nil {
+			logger.Info("PR has no linked issue, applying policy")
+			return executeActions(
+				ctx,
+				cfg,
+				issuesClient,
+				prsClient,
+				owner,
+				repo,
+				number,
+				true,
+				cfg.PullRequests.OnNoLinkedIssue.Actions,
+				nil,
+			)
 		}
-		logger.Info("PR has no linked issue, applying policy")
-		return executeActions(
-			ctx,
-			cfg,
-			issuesClient,
-			prsClient,
-			owner,
-			repo,
-			number,
-			true,
-			cfg.PullRequests.NoLinkedIssue.Actions,
-			nil,
-		)
+		// OnNoLinkedIssue not configured: treat as a pass. Fall through.
+	} else if cfg.PullRequests.OnBlockedIssue != nil {
+		// Has a linked issue and OnBlockedIssue is configured: check for
+		// blocking labels.
+		logger = logger.WithValues("linkedIssue", issueNumber)
+		ctx = logging.ContextWithLogger(ctx, logger)
+
+		issue, _, err := issuesClient.Get(ctx, owner, repo, issueNumber)
+		if err != nil {
+			return fmt.Errorf("error fetching linked issue: %w", err)
+		}
+
+		issueLabels := make(map[string]bool)
+		for _, l := range issue.Labels {
+			issueLabels[l.GetName()] = true
+		}
+
+		var blockers []string
+		for _, blocking := range cfg.PullRequests.OnBlockedIssue.BlockingLabels {
+			if issueLabels[blocking] {
+				blockers = append(blockers, blocking)
+			}
+		}
+
+		// Blocking outcome: linked issue has blocking labels.
+		if len(blockers) > 0 {
+			logger.Info("linked issue has blocking labels, applying policy",
+				"blockers", blockers,
+			)
+			return executeActions(
+				ctx,
+				cfg,
+				issuesClient,
+				prsClient,
+				owner,
+				repo,
+				number,
+				true,
+				cfg.PullRequests.OnBlockedIssue.Actions,
+				map[string]string{
+					"IssueNumber":    fmt.Sprintf("%d", issueNumber),
+					"BlockingLabels": formatBlockers(blockers),
+				},
+			)
+		}
+		// No blocking labels: fall through to OnPass.
 	}
 
-	if cfg.PullRequests.BlockedIssue == nil {
+	// Passing outcome: no blocking action fired. Run OnPass if configured.
+	if cfg.PullRequests.OnPass == nil {
 		return nil
 	}
-
-	logger = logger.WithValues("linkedIssue", issueNumber)
-	ctx = logging.ContextWithLogger(ctx, logger)
-
-	issue, _, err := issuesClient.Get(ctx, owner, repo, issueNumber)
-	if err != nil {
-		return fmt.Errorf("error fetching linked issue: %w", err)
-	}
-
-	issueLabels := make(map[string]bool)
-	for _, l := range issue.Labels {
-		issueLabels[l.GetName()] = true
-	}
-
-	var blockers []string
-	for _, blocking := range cfg.PullRequests.BlockedIssue.BlockingLabels {
-		if issueLabels[blocking] {
-			blockers = append(blockers, blocking)
-		}
-	}
-
-	if len(blockers) == 0 {
-		return nil
-	}
-
-	logger.Info("linked issue has blocking labels, applying policy",
-		"blockers", blockers,
-	)
+	logger.Info("PR passes policy, applying OnPass actions")
 	return executeActions(
 		ctx,
 		cfg,
@@ -229,11 +252,8 @@ func applyPRPolicy(
 		repo,
 		number,
 		true,
-		cfg.PullRequests.BlockedIssue.Actions,
-		map[string]string{
-			"IssueNumber":    fmt.Sprintf("%d", issueNumber),
-			"BlockingLabels": formatBlockers(blockers),
-		},
+		cfg.PullRequests.OnPass.Actions,
+		nil,
 	)
 }
 
