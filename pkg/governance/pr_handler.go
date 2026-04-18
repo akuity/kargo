@@ -2,6 +2,7 @@ package governance
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"regexp"
 	"strconv"
@@ -58,6 +59,12 @@ func (h *prHandler) handleOpened(
 
 	login := event.GetSender().GetLogin()
 
+	// Steps run independently: each one's failure is logged and collected,
+	// but does not prevent subsequent steps from running. The aggregated
+	// error is returned at the end so the webhook delivery shows red in
+	// GitHub's UI (GitHub does not auto-retry).
+	var errs []error
+
 	// 1. Auto-assign the PR to its author.
 	if _, _, err := h.issuesClient.AddAssignees(
 		ctx,
@@ -66,15 +73,19 @@ func (h *prHandler) handleOpened(
 		number,
 		[]string{login},
 	); err != nil {
-		return fmt.Errorf("error assigning PR to author: %w", err)
+		logger.Error(err, "error assigning PR to author")
+		errs = append(errs, fmt.Errorf("assign PR to author: %w", err))
 	}
 
 	issueNumber := parseLinkedIssue(pr.GetBody())
 
-	// 2. Inherit labels from the linked issue.
+	// 2. Inherit labels from the linked issue. If this fails, inheritedLabels
+	// is nil and the subsequent required-label check operates on only the
+	// labels the PR already has.
 	inheritedLabels, err := h.inheritLabels(ctx, number, issueNumber)
 	if err != nil {
-		return fmt.Errorf("error inheriting labels: %w", err)
+		logger.Error(err, "error inheriting labels")
+		errs = append(errs, fmt.Errorf("inherit labels: %w", err))
 	}
 
 	// 3. Enforce required-label prefixes, accounting for labels the PR
@@ -96,32 +107,35 @@ func (h *prHandler) handleOpened(
 			existingLabels,
 			h.cfg.PullRequests.RequiredLabelPrefixes,
 		); err != nil {
-			return fmt.Errorf("error enforcing required labels: %w", err)
+			logger.Error(err, "error enforcing required labels")
+			errs = append(errs, fmt.Errorf("enforce required labels: %w", err))
 		}
 	}
 
 	// 4. Apply PR policy. Maintainers and bots are exempt.
 	author := pr.GetAuthorAssociation()
-	if h.isExemptFromPRPolicy(author, login) {
+	switch {
+	case h.isExemptFromPRPolicy(author, login):
 		logger.Debug("author is exempt from policy, skipping")
-		return nil
+	case h.cfg.PullRequests == nil:
+		// No policy configured.
+	default:
+		if err := applyPRPolicy(
+			ctx,
+			h.cfg,
+			h.issuesClient,
+			h.prsClient,
+			h.owner,
+			h.repo,
+			number,
+			issueNumber,
+		); err != nil {
+			logger.Error(err, "error applying PR policy")
+			errs = append(errs, fmt.Errorf("apply PR policy: %w", err))
+		}
 	}
-	if h.cfg.PullRequests == nil {
-		return nil
-	}
-	if err := applyPRPolicy(
-		ctx,
-		h.cfg,
-		h.issuesClient,
-		h.prsClient,
-		h.owner,
-		h.repo,
-		number,
-		issueNumber,
-	); err != nil {
-		return fmt.Errorf("error applying PR policy: %w", err)
-	}
-	return nil
+
+	return errors.Join(errs...)
 }
 
 // applyPRPolicy runs the configured policy actions when either:

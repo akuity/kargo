@@ -2,6 +2,7 @@ package governance
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"sort"
 	"strings"
@@ -61,6 +62,10 @@ func (h *commentHandler) handleCreated(
 		}
 	}
 
+	// Each command runs independently: one failing command doesn't prevent
+	// the next from being tried. Errors are logged at the point of failure
+	// and aggregated for the final return value.
+	var errs []error
 	for _, pc := range parsedCmds {
 		cmdLogger := logger.WithValues("command", pc.name)
 		cmdCtx := logging.ContextWithLogger(ctx, cmdLogger)
@@ -73,7 +78,10 @@ func (h *commentHandler) handleCreated(
 				cmdCtx, h.owner, h.repo, number,
 				&github.IssueComment{Body: github.Ptr(helpBody)},
 			); err != nil {
-				return fmt.Errorf("error posting help comment: %w", err)
+				cmdLogger.Error(err, "error posting help comment")
+				errs = append(errs, fmt.Errorf(
+					"command %q: %w", pc.name, err,
+				))
 			}
 			continue
 		}
@@ -107,11 +115,12 @@ func (h *commentHandler) handleCreated(
 			cmd.Actions,
 			templateData,
 		); err != nil {
-			return err
+			cmdLogger.Error(err, "error executing slash command")
+			errs = append(errs, fmt.Errorf("command %q: %w", pc.name, err))
 		}
 	}
 
-	return nil
+	return errors.Join(errs...)
 }
 
 type parsedCommand struct {
