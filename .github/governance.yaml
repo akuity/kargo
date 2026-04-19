@@ -226,6 +226,11 @@ pullRequests:
           If you believe this was in error, please review the [Contributor Guide](https://docs.kargo.io/contributor-guide), ensure your changes meet project standards, and open a new pull request.
       - close: true
 
+    policy:
+      description: "Reapply policy; useful if labels were manually modified in a way that would affect the outcome of policy evaluation"
+      actions:
+      - applyPRPolicy: true
+
     research:
       description: "Add `needs research` label; blocks merge"
       actions:
