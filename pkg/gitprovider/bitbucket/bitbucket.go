@@ -2,16 +2,12 @@ package bitbucket
 
 import (
 	"context"
-	"encoding/json"
-	"errors"
 	"fmt"
+	"net/http"
 	"net/url"
-	"strconv"
 	"strings"
-	"time"
 
 	"github.com/hashicorp/go-cleanhttp"
-	"github.com/ktrysmt/go-bitbucket"
 
 	"github.com/akuity/kargo/pkg/gitprovider"
 	"github.com/akuity/kargo/pkg/urls"
@@ -25,16 +21,8 @@ const (
 	// self-hosted Bitbucket "Datacenter" instances.
 	supportedHost = "bitbucket.org"
 
-	// prStateOpen is the state of an open pull request.
-	prStateOpen = "OPEN"
-	// prStateMerged is the state of a merged pull request.
-	prStateMerged = "MERGED"
-	// prStateDeclined is the state of a declined pull request. This is also
-	// known as "closed" in other Git providers.
-	prStateDeclined = "DECLINED"
-	// prStateSuperseded is the state of a superseded pull request. This is also
-	// known as "closed" in other Git providers.
-	prStateSuperseded = "SUPERSEDED"
+	// apiBaseURL is the base URL for the Bitbucket Cloud REST API.
+	apiBaseURL = "https://api.bitbucket.org/2.0"
 )
 
 var registration = gitprovider.Registration{
@@ -57,27 +45,18 @@ func init() {
 	gitprovider.Register(ProviderName, registration)
 }
 
-// pullRequestClient defines the interface for pull request operations.
-type pullRequestClient interface {
-	Create(*bitbucket.PullRequestsOptions) (any, error)
-	Gets(*bitbucket.PullRequestsOptions) (any, error)
-	Get(*bitbucket.PullRequestsOptions) (any, error)
-	GetCommit(*bitbucket.CommitsOptions) (any, error)
-	Merge(*bitbucket.PullRequestsOptions) (any, error)
-}
-
 // provider is a Bitbucket-based implementation of gitprovider.Interface.
 type provider struct {
 	owner    string
 	repoSlug string
-	client   pullRequestClient
+	client   ClientWithResponsesInterface
 }
 
 // NewProvider returns a Bitbucket-based implementation of gitprovider.Interface.
 func NewProvider(
 	repoURL string,
 	opts *gitprovider.Options,
-) (p gitprovider.Interface, err error) {
+) (gitprovider.Interface, error) {
 	if opts == nil {
 		opts = &gitprovider.Options{}
 	}
@@ -93,32 +72,24 @@ func NewProvider(
 		return nil, fmt.Errorf("unsupported Bitbucket host %q", host)
 	}
 
-	// The go-bitbucket library may call log.Fatalf for certain error conditions,
-	// which causes a panic. We recover from this to return a proper error.
-	defer func() {
-		if r := recover(); r != nil {
-			p = nil
-			err = fmt.Errorf("failed to create Bitbucket client: %v", r)
-		}
-	}()
-
-	client := bitbucket.NewOAuthbearerToken(opts.Token)
-	client.HttpClient = cleanhttp.DefaultClient()
+	token := opts.Token
+	client, err := NewClientWithResponses(
+		apiBaseURL,
+		WithHTTPClient(cleanhttp.DefaultClient()),
+		WithRequestEditorFn(func(_ context.Context, req *http.Request) error {
+			req.Header.Set("Authorization", "Bearer "+token)
+			return nil
+		}),
+	)
+	if err != nil {
+		return nil, fmt.Errorf("error creating Bitbucket API client: %w", err)
+	}
 
 	return &provider{
 		owner:    owner,
 		repoSlug: repoSlug,
-		client: &clientWrapper{
-			Commits:      client.Repositories.Commits,
-			PullRequests: client.Repositories.PullRequests,
-		},
+		client:   client,
 	}, nil
-}
-
-// clientWrapper wraps a bitbucket.Client to implement the prClient interface
-type clientWrapper struct {
-	*bitbucket.Commits
-	*bitbucket.PullRequests
 }
 
 // CreatePullRequest implements gitprovider.Interface.
@@ -130,35 +101,47 @@ func (p *provider) CreatePullRequest(
 		opts = &gitprovider.CreatePullRequestOpts{}
 	}
 
-	createOpts := &bitbucket.PullRequestsOptions{
-		Owner:             p.owner,
-		RepoSlug:          p.repoSlug,
-		Title:             opts.Title,
-		Description:       opts.Description,
-		SourceBranch:      opts.Head,
-		DestinationBranch: opts.Base,
+	title := opts.Title
+	body := Pullrequest{Type: "pullrequest", Title: &title}
+	if opts.Description != "" {
+		body.Set("description", opts.Description)
 	}
-	createOpts.WithContext(ctx)
 
-	resp, err := p.client.Create(createOpts)
+	srcBranch := opts.Head
+	dstBranch := opts.Base
+	body.Source = &PullrequestEndpoint{
+		Branch: &struct {
+			DefaultMergeStrategy *string                                     `json:"default_merge_strategy,omitempty"`
+			MergeStrategies      *[]PullrequestEndpointBranchMergeStrategies `json:"merge_strategies,omitempty"`
+			Name                 *string                                     `json:"name,omitempty"`
+		}{Name: &srcBranch},
+	}
+	body.Destination = &PullrequestEndpoint{
+		Branch: &struct {
+			DefaultMergeStrategy *string                                     `json:"default_merge_strategy,omitempty"`
+			MergeStrategies      *[]PullrequestEndpointBranchMergeStrategies `json:"merge_strategies,omitempty"`
+			Name                 *string                                     `json:"name,omitempty"`
+		}{Name: &dstBranch},
+	}
+
+	resp, err := p.client.PostRepositoriesWorkspaceRepoSlugPullrequestsWithResponse(
+		ctx,
+		p.owner,
+		p.repoSlug,
+		body,
+	)
 	if err != nil {
+		return nil, fmt.Errorf("error creating pull request: %w", err)
+	}
+	if resp.JSON201 == nil {
+		return nil, fmt.Errorf(
+			"unexpected response %d creating pull request", resp.StatusCode(),
+		)
+	}
+	if err = p.resolveFullMergeCommitSHA(ctx, resp.JSON201); err != nil {
 		return nil, err
 	}
-
-	pr, err := toBitbucketPR(resp)
-	if err != nil {
-		return nil, err
-	}
-
-	if pr.MergeCommit.Hash != "" {
-		fullSHA, err := p.getFullCommitSHA(ctx, pr.MergeCommit.Hash)
-		if err != nil {
-			return nil, err
-		}
-		pr.MergeCommit.Hash = fullSHA
-	}
-
-	return toProviderPR(pr, resp), nil
+	return toProviderPR(resp.JSON201), nil
 }
 
 // GetPullRequest implements gitprovider.Interface.
@@ -166,32 +149,24 @@ func (p *provider) GetPullRequest(
 	ctx context.Context,
 	id int64,
 ) (*gitprovider.PullRequest, error) {
-	getOpts := &bitbucket.PullRequestsOptions{
-		Owner:    p.owner,
-		RepoSlug: p.repoSlug,
-		ID:       strconv.FormatInt(id, 10),
-	}
-	getOpts.WithContext(ctx)
-
-	resp, err := p.client.Get(getOpts)
+	resp, err := p.client.GetRepositoriesWorkspaceRepoSlugPullrequestsPullRequestIdWithResponse(
+		ctx,
+		p.owner,
+		p.repoSlug,
+		int(id),
+	)
 	if err != nil {
+		return nil, fmt.Errorf("error getting pull request %d: %w", id, err)
+	}
+	if resp.JSON200 == nil {
+		return nil, fmt.Errorf(
+			"unexpected response %d getting pull request %d", resp.StatusCode(), id,
+		)
+	}
+	if err = p.resolveFullMergeCommitSHA(ctx, resp.JSON200); err != nil {
 		return nil, err
 	}
-
-	pr, err := toBitbucketPR(resp)
-	if err != nil {
-		return nil, err
-	}
-
-	if pr.MergeCommit.Hash != "" {
-		fullSHA, err := p.getFullCommitSHA(ctx, pr.MergeCommit.Hash)
-		if err != nil {
-			return nil, err
-		}
-		pr.MergeCommit.Hash = fullSHA
-	}
-
-	return toProviderPR(pr, resp), nil
+	return toProviderPR(resp.JSON200), nil
 }
 
 // ListPullRequests implements gitprovider.Interface.
@@ -206,83 +181,97 @@ func (p *provider) ListPullRequests(
 		opts.State = gitprovider.PullRequestStateOpen
 	}
 
-	listOpts := &bitbucket.PullRequestsOptions{
-		Owner:    p.owner,
-		RepoSlug: p.repoSlug,
-	}
-	listOpts.WithContext(ctx)
-
+	var states []string
 	switch opts.State {
 	case gitprovider.PullRequestStateAny:
-		listOpts.States = []string{prStateOpen, prStateMerged, prStateDeclined, prStateSuperseded}
+		states = []string{
+			string(PullrequestStateOPEN),
+			string(PullrequestStateMERGED),
+			string(PullrequestStateDECLINED),
+			string(PullrequestStateSUPERSEDED),
+		}
 	case gitprovider.PullRequestStateClosed:
-		listOpts.States = []string{prStateMerged, prStateDeclined, prStateSuperseded}
+		states = []string{
+			string(PullrequestStateMERGED),
+			string(PullrequestStateDECLINED),
+			string(PullrequestStateSUPERSEDED),
+		}
 	case gitprovider.PullRequestStateOpen:
-		listOpts.States = []string{prStateOpen}
+		states = []string{string(PullrequestStateOPEN)}
 	default:
 		return nil, fmt.Errorf("unknown pull request state %q", opts.State)
 	}
 
-	resp, err := p.client.Gets(listOpts)
+	resp, err := p.client.GetRepositoriesWorkspaceRepoSlugPullrequestsWithResponse(
+		ctx,
+		p.owner,
+		p.repoSlug,
+		&GetRepositoriesWorkspaceRepoSlugPullrequestsParams{},
+		withStates(states),
+	)
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("error listing pull requests: %w", err)
 	}
-
-	list, ok := resp.(map[string]any)
-	if !ok {
-		return nil, fmt.Errorf("unexpected type for list response: %T", resp)
-	}
-
-	rawPRs, ok := list["values"]
-	if !ok {
-		return nil, fmt.Errorf("list response missing 'values' field")
-	}
-
-	prList, ok := rawPRs.([]any)
-	if !ok {
-		return nil, fmt.Errorf("unexpected type for list values: %T", rawPRs)
+	if resp.JSON200 == nil {
+		return nil, fmt.Errorf(
+			"unexpected response %d listing pull requests", resp.StatusCode(),
+		)
 	}
 
 	// NB: The Bitbucket API doesn't support filtering by source/destination
 	// branch or commit hash, so we have to filter client-side, which is
 	// highly inefficient.
-	var prs []gitprovider.PullRequest
-	for _, pr := range prList {
-		bbPR, err := toBitbucketPR(pr)
-		if err != nil {
-			continue
-		}
-
-		if opts.HeadBranch != "" && bbPR.Source.Branch.Name != opts.HeadBranch {
-			continue
-		}
-
-		if opts.BaseBranch != "" && bbPR.Destination.Branch.Name != opts.BaseBranch {
-			continue
-		}
-
-		if opts.HeadCommit != "" && bbPR.Source.Commit.Hash != opts.HeadCommit {
-			continue
-		}
-
-		if bbPR.MergeCommit.Hash != "" {
-			fullSHA, err := p.getFullCommitSHA(ctx, bbPR.MergeCommit.Hash)
-			if err != nil {
-				return nil, err
-			}
-			bbPR.MergeCommit.Hash = fullSHA
-		}
-
-		if converted := toProviderPR(bbPR, pr); converted != nil {
-			prs = append(prs, *converted)
-		}
+	var result []gitprovider.PullRequest
+	if resp.JSON200.Values == nil {
+		return result, nil
 	}
-	return prs, nil
+	values := *resp.JSON200.Values
+	for i := range values {
+		pr := &values[i]
+		if opts.HeadBranch != "" {
+			branchName := ""
+			if pr.Source != nil &&
+				pr.Source.Branch != nil &&
+				pr.Source.Branch.Name != nil {
+				branchName = *pr.Source.Branch.Name
+			}
+			if branchName != opts.HeadBranch {
+				continue
+			}
+		}
+		if opts.BaseBranch != "" {
+			branchName := ""
+			if pr.Destination != nil &&
+				pr.Destination.Branch != nil &&
+				pr.Destination.Branch.Name != nil {
+				branchName = *pr.Destination.Branch.Name
+			}
+			if branchName != opts.BaseBranch {
+				continue
+			}
+		}
+		if opts.HeadCommit != "" {
+			commitHash := ""
+			if pr.Source != nil &&
+				pr.Source.Commit != nil &&
+				pr.Source.Commit.Hash != nil {
+				commitHash = *pr.Source.Commit.Hash
+			}
+			if commitHash != opts.HeadCommit {
+				continue
+			}
+		}
+		if err = p.resolveFullMergeCommitSHA(ctx, pr); err != nil {
+			return nil, err
+		}
+		result = append(result, *toProviderPR(pr))
+	}
+	return result, nil
 }
 
 // MergePullRequest implements gitprovider.Interface.
 func (p *provider) MergePullRequest(
-	_ context.Context,
+	ctx context.Context,
 	id int64,
 	opts *gitprovider.MergePullRequestOpts,
 ) (*gitprovider.PullRequest, bool, error) {
@@ -290,38 +279,40 @@ func (p *provider) MergePullRequest(
 		opts = &gitprovider.MergePullRequestOpts{}
 	}
 
-	// Get the PR to check its state
-	prOpts := &bitbucket.PullRequestsOptions{
-		Owner:    p.owner,
-		RepoSlug: p.repoSlug,
-		ID:       strconv.FormatInt(id, 10),
-	}
+	prID := int(id)
 
-	prResp, err := p.client.Get(prOpts)
+	getResp, err := p.client.GetRepositoriesWorkspaceRepoSlugPullrequestsPullRequestIdWithResponse(
+		ctx,
+		p.owner,
+		p.repoSlug,
+		prID,
+	)
 	if err != nil {
 		return nil, false, fmt.Errorf("error getting pull request %d: %w", id, err)
 	}
-
-	bbPR, err := toBitbucketPR(prResp)
-	if err != nil {
-		return nil, false, fmt.Errorf("error parsing pull request response: %w", err)
-	}
-
-	// Check if PR is already merged
-	if bbPR.State == prStateMerged {
-		return toProviderPR(bbPR, prResp), true, nil
-	}
-
-	// Check if PR is closed (any non-open state except merged)
-	if bbPR.State != prStateOpen {
-		// If it's not open and not merged, then it's closed
+	if getResp.JSON200 == nil {
 		return nil, false, fmt.Errorf(
-			"pull request %d is closed but not merged (state: %s)", id, bbPR.State,
+			"unexpected response %d getting pull request %d", getResp.StatusCode(), id,
+		)
+	}
+	pr := getResp.JSON200
+
+	var state PullrequestState
+	if pr.State != nil {
+		state = *pr.State
+	}
+
+	if state == PullrequestStateMERGED {
+		return toProviderPR(pr), true, nil
+	}
+
+	if state != PullrequestStateOPEN {
+		return nil, false, fmt.Errorf(
+			"pull request %d is closed but not merged (state: %s)", id, state,
 		)
 	}
 
-	// Check if PR is draft - cannot merge draft PRs
-	if bbPR.Draft {
+	if pr.Draft != nil && *pr.Draft {
 		return nil, false, nil
 	}
 
@@ -335,180 +326,166 @@ func (p *provider) MergePullRequest(
 	// This limitation makes the "wait" option unreliable for Bitbucket
 	// repositories.
 
-	// TODO(krancour): go-bitbucket does not expose the merge method/strategy as
-	// an option. The merge will always use the repository's default merge
-	// strategy, so simply fail if any merge strategy was specified. This is
-	// strictly a limitation of the go-bitbucket library and not the Bitbucket API
-	// itself, so this can be revisited in the future if the library adds support
-	// for this or if we decide to implement this API call ourselves instead of
-	// using the library.
+	var mergeStrategy *PullrequestMergeParametersMergeStrategy
 	if opts.MergeMethod != "" {
-		return nil, false, errors.New( // nolint: staticcheck
-			"Kargo's Bitbucket client does not yet support specifying a merge method",
-		)
-	}
-	mergeOpts := &bitbucket.PullRequestsOptions{
-		Owner:    p.owner,
-		RepoSlug: p.repoSlug,
-		ID:       strconv.FormatInt(id, 10),
+		s := PullrequestMergeParametersMergeStrategy(opts.MergeMethod)
+		if !s.Valid() {
+			return nil, false, fmt.Errorf("unsupported merge strategy %q", opts.MergeMethod)
+		}
+		mergeStrategy = &s
 	}
 
-	// TODO(krancour): The Bitbucket merge endpoint can return 202 for async
-	// merges. The go-bitbucket library treats 202 as success (no error), but the
-	// response body would be a polling URL, not a PR object. This would cause
-	// toBitbucketPR to fail or produce incorrect results. If async merges are
-	// encountered in practice, we'll need to detect the 202 and poll for
-	// completion.
-	mergeResp, err := p.client.Merge(mergeOpts)
+	mergeBody := PullrequestMergeParameters{
+		Type:          "pullrequestMergeParameters",
+		MergeStrategy: mergeStrategy,
+	}
+
+	mergeResp, err := p.client.PostRepositoriesWorkspaceRepoSlugPullrequestsPullRequestIdMergeWithResponse(
+		ctx,
+		p.owner,
+		p.repoSlug,
+		prID,
+		&PostRepositoriesWorkspaceRepoSlugPullrequestsPullRequestIdMergeParams{},
+		mergeBody,
+	)
 	if err != nil {
 		return nil, false, fmt.Errorf("error merging pull request %d: %w", id, err)
 	}
 
-	// Parse the merged PR response
-	mergedBBPR, err := toBitbucketPR(mergeResp)
-	if err != nil {
-		return nil, false, fmt.Errorf("error parsing merged pull request response: %w", err)
+	if mergeResp.StatusCode() == http.StatusAccepted {
+		return nil, false, fmt.Errorf(
+			"pull request %d merge was accepted asynchronously and cannot be awaited", id,
+		)
+	}
+
+	if mergeResp.JSON200 == nil {
+		return nil, false, fmt.Errorf(
+			"unexpected response %d merging pull request %d", mergeResp.StatusCode(), id,
+		)
+	}
+
+	mergedPR := mergeResp.JSON200
+	var mergedState PullrequestState
+	if mergedPR.State != nil {
+		mergedState = *mergedPR.State
 	}
 
 	// Per the Bitbucket API docs, the merge endpoint returns 200 only on
-	// success (409 for conflicts, 555 for timeout — both surfaced as errors
-	// above). A 200 response with a non-merged state would be unexpected.
-	if mergedBBPR.State != prStateMerged {
-		return nil, false,
-			fmt.Errorf("unexpected state %q after merging pull request %d", mergedBBPR.State, id)
+	// success (409 for conflicts, 555 for timeout). A 200 response with a
+	// non-merged state would be unexpected.
+	if mergedState != PullrequestStateMERGED {
+		return nil, false, fmt.Errorf(
+			"unexpected state %q after merging pull request %d", mergedState, id,
+		)
 	}
 
-	return toProviderPR(mergedBBPR, mergeResp), true, nil
+	return toProviderPR(mergedPR), true, nil
 }
 
 // GetCommitURL implements gitprovider.Interface.
 func (p *provider) GetCommitURL(repoURL string, sha string) (string, error) {
 	normalizedURL := urls.NormalizeGit(repoURL)
-
 	parsedURL, err := url.Parse(normalizedURL)
 	if err != nil {
 		return "", fmt.Errorf("error processing repository URL: %s: %s", repoURL, err)
 	}
-
-	commitURL := fmt.Sprintf("https://%s%s/commits/%s", parsedURL.Host, parsedURL.Path, sha)
-
-	return commitURL, nil
+	return fmt.Sprintf("https://%s%s/commits/%s", parsedURL.Host, parsedURL.Path, sha), nil
 }
 
-func (p *provider) getFullCommitSHA(ctx context.Context, shortSHA string) (string, error) {
-	if shortSHA == "" {
-		return "", nil
+// resolveFullMergeCommitSHA replaces the (possibly short) merge commit hash on
+// pr with the full SHA. Bitbucket returns a short hash in the pull request
+// response, so a separate commit lookup is required.
+func (p *provider) resolveFullMergeCommitSHA(ctx context.Context, pr *Pullrequest) error {
+	if pr.MergeCommit == nil || pr.MergeCommit.Hash == nil || *pr.MergeCommit.Hash == "" {
+		return nil
 	}
-
-	commitOpts := &bitbucket.CommitsOptions{
-		Owner:    p.owner,
-		RepoSlug: p.repoSlug,
-		Revision: shortSHA,
-	}
-	commitOpts.WithContext(ctx)
-
-	resp, err := p.client.GetCommit(commitOpts)
+	resp, err := p.client.GetRepositoriesWorkspaceRepoSlugCommitCommitWithResponse(
+		ctx,
+		p.owner,
+		p.repoSlug,
+		*pr.MergeCommit.Hash,
+	)
 	if err != nil {
-		return "", err
+		return fmt.Errorf("error getting commit: %w", err)
 	}
-
-	commitResp, ok := resp.(map[string]any)
-	if !ok {
-		return "", fmt.Errorf("unexpected commit response type: %T", resp)
+	if resp.JSON200 == nil || resp.JSON200.Hash == nil {
+		return fmt.Errorf("unexpected response %d getting commit", resp.StatusCode())
 	}
-
-	hash, ok := commitResp["hash"].(string)
-	if !ok || hash == "" {
-		return "", fmt.Errorf("commit response missing 'hash' field")
-	}
-	return hash, nil
+	pr.MergeCommit.Hash = resp.JSON200.Hash
+	return nil
 }
 
-// bitbucketPR represents the structure of a Bitbucket pull request.
-// See: https://developer.atlassian.com/cloud/bitbucket/rest/api-group-pullrequests/#api-repositories-workspace-repo-slug-pullrequests-pull-request-id-get
-// nolint:lll
-type bitbucketPR struct {
-	ID    int64  `json:"id"`
-	State string `json:"state"`
-	Links struct {
-		HTML struct {
-			Href string `json:"href"`
-		} `json:"html"`
-	} `json:"links"`
-	Source struct {
-		Branch struct {
-			Name string `json:"name"`
-		} `json:"branch"`
-		Commit struct {
-			Hash string `json:"hash"`
-		} `json:"commit"`
-	} `json:"source"`
-	Destination struct {
-		Branch struct {
-			Name string `json:"name"`
-		} `json:"branch"`
-		Commit struct {
-			Hash string `json:"hash"`
-		} `json:"commit"`
-	} `json:"destination"`
-	MergeCommit struct {
-		Hash string `json:"hash"`
-	} `json:"merge_commit"`
-	Draft     bool   `json:"draft"`
-	CreatedOn string `json:"created_on"`
-}
-
-// toBitbucketPR converts a raw response to a bitbucketPR type.
-func toBitbucketPR(resp any) (*bitbucketPR, error) {
-	b, err := json.Marshal(resp)
-	if err != nil {
-		return nil, fmt.Errorf("marshal PR response: %w", err)
-	}
-	var pr bitbucketPR
-	if err = json.Unmarshal(b, &pr); err != nil {
-		return nil, fmt.Errorf("unmarshal PR response: %w", err)
-	}
-	return &pr, nil
-}
-
-// toProviderPR converts a bitbucketPR to a gitprovider.PullRequest.
-func toProviderPR(pr *bitbucketPR, raw any) *gitprovider.PullRequest {
+// toProviderPR converts a Pullrequest to a gitprovider.PullRequest.
+func toProviderPR(pr *Pullrequest) *gitprovider.PullRequest {
 	if pr == nil {
 		return nil
 	}
 
-	var createdAt *time.Time
-	if ts, err := time.Parse("2006-01-02T15:04:05Z", pr.CreatedOn); err == nil {
-		createdAt = &ts
+	var id int64
+	if pr.Id != nil {
+		id = int64(*pr.Id)
+	}
+
+	var state PullrequestState
+	if pr.State != nil {
+		state = *pr.State
+	}
+
+	var prURL string
+	if pr.Links != nil && pr.Links.Html != nil && pr.Links.Html.Href != nil {
+		prURL = *pr.Links.Html.Href
+	}
+
+	var headSHA string
+	if pr.Source != nil && pr.Source.Commit != nil && pr.Source.Commit.Hash != nil {
+		headSHA = *pr.Source.Commit.Hash
+	}
+
+	var mergeCommitSHA string
+	if pr.MergeCommit != nil && pr.MergeCommit.Hash != nil {
+		mergeCommitSHA = *pr.MergeCommit.Hash
 	}
 
 	return &gitprovider.PullRequest{
-		Number: pr.ID,
-		URL:    pr.Links.HTML.Href,
-		Open:   pr.State == prStateOpen,
-		Merged: pr.State == prStateMerged,
+		Number: id,
+		URL:    prURL,
+		Open:   state == PullrequestStateOPEN,
+		Merged: state == PullrequestStateMERGED,
 		// NB: As a sign of true craftsmanship, or lack thereof, the Bitbucket
 		// API returns a short commit SHA as merge commit hash. To get the full
 		// commit SHA, we need to fetch the commit details separately.
-		MergeCommitSHA: pr.MergeCommit.Hash,
-		HeadSHA:        pr.Source.Commit.Hash,
-		CreatedAt:      createdAt,
-		Object:         raw,
+		MergeCommitSHA: mergeCommitSHA,
+		HeadSHA:        headSHA,
+		CreatedAt:      pr.CreatedOn,
+		Object:         pr,
 	}
 }
 
-// parseRepoURL extracts host, owner and repo slug from a repository URL
+// withStates returns a RequestEditorFn that overrides the state query params.
+// The Bitbucket API supports multiple state filters via repeated ?state= params,
+// but the generated params struct only supports a single value.
+func withStates(states []string) RequestEditorFn {
+	return func(_ context.Context, req *http.Request) error {
+		q := req.URL.Query()
+		q.Del("state")
+		for _, s := range states {
+			q.Add("state", s)
+		}
+		req.URL.RawQuery = q.Encode()
+		return nil
+	}
+}
+
+// parseRepoURL extracts host, owner and repo slug from a repository URL.
 func parseRepoURL(repoURL string) (host, owner, slug string, err error) {
 	u, err := url.Parse(urls.NormalizeGit(repoURL))
 	if err != nil {
 		return "", "", "", fmt.Errorf("parse Bitbucket URL %q: %w", repoURL, err)
 	}
-
 	path := strings.TrimPrefix(u.Path, "/")
 	parts := strings.Split(path, "/")
 	if len(parts) != 2 {
 		return "", "", "", fmt.Errorf("invalid repository path in URL %q", u)
 	}
-
 	return u.Hostname(), parts[0], parts[1], nil
 }
