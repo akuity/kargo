@@ -73,12 +73,29 @@ func TestWorkloadIdentityFederationProvider_Supports(t *testing.T) {
 			},
 		},
 		{
-			name:     "rejects empty project ID",
-			provider: &WorkloadIdentityFederationProvider{},
+			name: "returns false when lazy init fails",
+			provider: &WorkloadIdentityFederationProvider{
+				initFn: func(context.Context) error {
+					return fmt.Errorf("metadata server unavailable")
+				},
+			},
 			credType: credentials.TypeImage,
 			repoURL:  fakeGARRepoURL,
 			assert: func(t *testing.T, result bool) {
-				assert.False(t, result, "should not support when project ID is empty")
+				assert.False(t, result, "should not support when initialization fails")
+			},
+		},
+		{
+			name: "initializes lazily on first eligible request",
+			provider: &WorkloadIdentityFederationProvider{
+				initFn: func(_ context.Context) error {
+					return nil
+				},
+			},
+			credType: credentials.TypeImage,
+			repoURL:  fakeGARRepoURL,
+			assert: func(t *testing.T, result bool) {
+				assert.True(t, result, "should support after successful lazy initialization")
 			},
 		},
 		// Helm chart test cases
@@ -116,12 +133,16 @@ func TestWorkloadIdentityFederationProvider_Supports(t *testing.T) {
 			},
 		},
 		{
-			name:     "rejects Helm credentials with empty project ID",
-			provider: &WorkloadIdentityFederationProvider{},
+			name: "returns false for Helm credentials when lazy init fails",
+			provider: &WorkloadIdentityFederationProvider{
+				initFn: func(context.Context) error {
+					return fmt.Errorf("metadata server unavailable")
+				},
+			},
 			credType: credentials.TypeHelm,
 			repoURL:  fakeGARRepoURL,
 			assert: func(t *testing.T, result bool) {
-				assert.False(t, result, "should not support when project ID is empty")
+				assert.False(t, result, "should not support when initialization fails")
 			},
 		},
 	}
@@ -165,6 +186,24 @@ func TestWorkloadIdentityFederationProvider_GetCredentials(t *testing.T) {
 			err error,
 		)
 	}{
+		{
+			name: "returns error when lazy init fails",
+			provider: &WorkloadIdentityFederationProvider{
+				tokenCache:       cache.New(10*time.Hour, time.Hour),
+				tokenSourceCache: cache.New(10*time.Hour, time.Hour),
+				initFn: func(context.Context) error {
+					return fmt.Errorf("metadata server unavailable")
+				},
+			},
+			project:  fakeProject,
+			credType: credentials.TypeImage,
+			repoURL:  fakeGCRRepoURL,
+			assert: func(t *testing.T, _, _ *cache.Cache, creds *credentials.Credentials, err error) {
+				assert.ErrorContains(t, err, "GCP Workload Identity Federation not initialized")
+				assert.ErrorContains(t, err, "metadata server unavailable")
+				assert.Nil(t, creds)
+			},
+		},
 		{
 			name: "token cache hit",
 			provider: &WorkloadIdentityFederationProvider{
