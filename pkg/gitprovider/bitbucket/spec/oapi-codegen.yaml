@@ -1,0 +1,10 @@
+package: bitbucket
+
+generate:
+  models: true
+  client: true
+
+output: bitbucket_client.gen.go
+
+output-options:
+  skip-prune: false
