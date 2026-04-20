@@ -216,7 +216,7 @@ build-cli-with-ui: build-ui build-cli
 ################################################################################
 
 .PHONY: codegen
-codegen: codegen-openapi codegen-proto codegen-controller codegen-schema-to-go codegen-ui codegen-docs
+codegen: codegen-openapi codegen-proto codegen-controller codegen-schema-to-go codegen-bitbucket-client codegen-ui codegen-docs
 
 .PHONY: codegen-openapi
 codegen-openapi: install-swag install-go-swagger install-jq
@@ -258,6 +258,10 @@ codegen-controller: install-controller-gen
 	$(CONTROLLER_GEN) \
 		object:headerFile=hack/boilerplate.go.txt \
 		paths=./...
+
+.PHONY: codegen-bitbucket-client
+codegen-bitbucket-client: install-oapi-codegen
+	cd pkg/gitprovider/bitbucket && $(OAPI_CODEGEN_LINK) --config spec/oapi-codegen.yaml spec/bitbucket.gen.json
 
 .PHONY: codegen-schema-to-go
 codegen-schema-to-go: install-goimports
