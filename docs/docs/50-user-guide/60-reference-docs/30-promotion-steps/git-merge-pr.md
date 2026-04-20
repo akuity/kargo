@@ -61,7 +61,7 @@ currently supported Git hosting providers.
 | Provider | Supported Methods | Default |
 | -------- | ----------------- | ------- |
 | Azure | <ul><li>`noFastForward`</li><li>`rebase`</li><li>`rebaseMerge`</li><li>`squash`</li></ul> | First allowed strategy per the target branch's merge type policy; merge commit if no policy is configured |
-| BitBucket | Client does not yet support specifying a merge strategy | The repository's configured default merge strategy |
+| BitBucket | <ul><li>`fast_forward`</li><li>`merge_commit`</li><li>`squash`</li></ul> | The repository's configured default merge strategy |
 | Gitea | <ul><li>`fast-forward-only`</li><li>`manually-merged`</li><li>`merge`</li><li>`rebase`</li><li>`rebase-merge`</li><li>`squash`</li></ul> | `merge` |
 | GitHub | <ul><li>`merge`</li><li>`rebase`</li><li>`squash`</li></ul> | `merge` |
 | GitLab | <ul><li>`merge`</li><li>`squash`</li></ul> | Defers to the merge request and project-level squash settings |
