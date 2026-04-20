@@ -30,6 +30,7 @@ QUILL_VERSION			?= v0.5.1
 PROTOC_GEN_DOC_VERSION	?= v1.5.1
 SWAG_VERSION			?= $(shell grep github.com/swaggo/swag $(TOOLS_MOD_FILE) | awk '{print $$2}')
 GO_SWAGGER_VERSION		?= $(shell grep github.com/go-swagger/go-swagger $(TOOLS_MOD_FILE) | awk '{print $$2}')
+OAPI_CODEGEN_VERSION	?= $(shell grep github.com/oapi-codegen/oapi-codegen $(TOOLS_MOD_FILE) | awk '{print $$2}')
 TILT_VERSION			?= v0.36.3
 CTLPTL_VERSION			?= v0.9.0
 KIND_VERSION			?= v0.31.0
@@ -52,6 +53,7 @@ QUILL		   	:= $(BIN_DIR)/quill-$(OS)-$(ARCH)-$(QUILL_VERSION)
 PROTOC_GEN_DOC  := $(BIN_DIR)/protoc-gen-doc-$(OS)-$(ARCH)-$(PROTOC_GEN_DOC_VERSION)
 SWAG            := $(BIN_DIR)/swag-$(OS)-$(ARCH)-$(SWAG_VERSION)
 GO_SWAGGER      := $(BIN_DIR)/go-swagger-$(OS)-$(ARCH)-$(GO_SWAGGER_VERSION)
+OAPI_CODEGEN    := $(BIN_DIR)/oapi-codegen-$(OS)-$(ARCH)-$(OAPI_CODEGEN_VERSION)
 TILT            := $(BIN_DIR)/tilt-$(OS)-$(ARCH)-$(TILT_VERSION)
 CTLPTL          := $(BIN_DIR)/ctlptl-$(OS)-$(ARCH)-$(CTLPTL_VERSION)
 KIND            := $(BIN_DIR)/kind-$(OS)-$(ARCH)-$(KIND_VERSION)
@@ -94,6 +96,9 @@ $(SWAG):
 $(GO_SWAGGER):
 	$(call go-install-tool,$@,github.com/go-swagger/go-swagger/cmd/swagger,$(GO_SWAGGER_VERSION))
 
+$(OAPI_CODEGEN):
+	$(call go-install-tool,$@,github.com/oapi-codegen/oapi-codegen/v2/cmd/oapi-codegen,$(OAPI_CODEGEN_VERSION))
+
 $(TILT):
 	$(call install-tilt,$@,$(TILT_VERSION))
 
@@ -125,6 +130,7 @@ QUILL_LINK			:= $(BIN_DIR)/quill
 PROTOC_GEN_DOC_LINK	:= $(BIN_DIR)/protoc-gen-doc
 SWAG_LINK			:= $(BIN_DIR)/swag
 GO_SWAGGER_LINK		:= $(BIN_DIR)/go-swagger
+OAPI_CODEGEN_LINK	:= $(BIN_DIR)/oapi-codegen
 TILT_LINK			:= $(BIN_DIR)/tilt
 CTLPTL_LINK			:= $(BIN_DIR)/ctlptl
 KIND_LINK			:= $(BIN_DIR)/kind
@@ -179,6 +185,10 @@ $(SWAG_LINK): $(SWAG)
 $(GO_SWAGGER_LINK): $(GO_SWAGGER)
 	$(call create-symlink,$(GO_SWAGGER),$(GO_SWAGGER_LINK))
 
+.PHONY: $(OAPI_CODEGEN_LINK)
+$(OAPI_CODEGEN_LINK): $(OAPI_CODEGEN)
+	$(call create-symlink,$(OAPI_CODEGEN),$(OAPI_CODEGEN_LINK))
+
 .PHONY: $(TILT_LINK)
 $(TILT_LINK): $(TILT)
 	$(call create-symlink,$(TILT),$(TILT_LINK))
@@ -203,7 +213,7 @@ $(JQ_LINK): $(JQ)
 # Alias targets                                                                #
 ################################################################################
 
-TOOLS := install-golangci-lint install-helm install-goimports install-go-to-protobuf install-protoc-gen-gogo install-controller-gen install-protoc install-buf install-quill install-protoc-gen-doc install-swag install-go-swagger install-tilt install-ctlptl install-kind install-k3d install-jq
+TOOLS := install-golangci-lint install-helm install-goimports install-go-to-protobuf install-protoc-gen-gogo install-controller-gen install-protoc install-buf install-quill install-protoc-gen-doc install-swag install-go-swagger install-oapi-codegen install-tilt install-ctlptl install-kind install-k3d install-jq
 
 .PHONY: install-tools
 install-tools: $(TOOLS)
@@ -243,6 +253,9 @@ install-swag: $(SWAG) $(SWAG_LINK)
 
 .PHONY: install-go-swagger
 install-go-swagger: $(GO_SWAGGER) $(GO_SWAGGER_LINK)
+
+.PHONY: install-oapi-codegen
+install-oapi-codegen: $(OAPI_CODEGEN) $(OAPI_CODEGEN_LINK)
 
 .PHONY: install-tilt
 install-tilt: $(TILT) $(TILT_LINK)
