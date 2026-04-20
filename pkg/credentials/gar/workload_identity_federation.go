@@ -5,6 +5,7 @@ import (
 	"errors"
 	"fmt"
 	"net/http"
+	"sync"
 	"time"
 
 	"cloud.google.com/go/compute/metadata"
@@ -21,60 +22,9 @@ import (
 const gcpResourceNameFormat = "projects/-/serviceAccounts/kargo-project-%s@%s.iam.gserviceaccount.com"
 
 func init() {
-	if provider := NewWorkloadIdentityFederationProvider(context.Background()); provider != nil {
-		credentials.DefaultProviderRegistry.MustRegister(
-			credentials.ProviderRegistration{
-				Predicate: provider.Supports,
-				Value:     provider,
-			},
-		)
-	}
-}
-
-type WorkloadIdentityFederationProvider struct {
-	tokenCache       *cache.Cache // For short-lived Project-specific tokens
-	tokenSourceCache *cache.Cache // For long-lived token sources
-
-	projectID string
-
-	getAccessTokenFn func(
-		ctx context.Context,
-		project string,
-	) (string, time.Time, error)
-
-	tokenSource oauth2.TokenSource
-}
-
-func NewWorkloadIdentityFederationProvider(
-	ctx context.Context,
-) credentials.Provider {
-	logger := logging.LoggerFromContext(ctx)
-
 	if !metadata.OnGCE() {
-		logger.Info("not running within GCE; assuming GCP Workload Identity Federation is not in use")
-		return nil
+		return
 	}
-	logger.Info("controller appears to be running within GCE")
-
-	projectID, err := metadata.ProjectIDWithContext(ctx)
-	if err != nil {
-		logger.Error(
-			err,
-			"error getting GCP project ID; GCP Workload Identity Federation disabled",
-		)
-		return nil
-	}
-	logger.Debug("got GCP project ID", "project", projectID)
-
-	tokenSource, err := google.DefaultTokenSource(ctx, iamcredentials.CloudPlatformScope)
-	if err != nil {
-		logger.Error(
-			err,
-			"error getting GCP default token source; GCP Workload Identity Federation disabled",
-		)
-		return nil
-	}
-
 	p := &WorkloadIdentityFederationProvider{
 		tokenCache: cache.New(
 			// Access tokens live for one hour. We'll hang on to them for 40
@@ -89,22 +39,83 @@ func NewWorkloadIdentityFederationProvider(
 			12*time.Hour, // Default ttl for each entry
 			time.Hour,    // Cleanup interval
 		),
-		projectID:   projectID,
-		tokenSource: tokenSource,
 	}
+	p.initFn = p.initialize
 	p.getAccessTokenFn = p.getAccessToken
-	return p
+	credentials.DefaultProviderRegistry.MustRegister(
+		credentials.ProviderRegistration{
+			Predicate: p.Supports,
+			Value:     p,
+		},
+	)
+}
+
+type WorkloadIdentityFederationProvider struct {
+	tokenCache       *cache.Cache // For short-lived Project-specific tokens
+	tokenSourceCache *cache.Cache // For long-lived token sources
+
+	mu          sync.Mutex
+	projectID   string
+	tokenSource oauth2.TokenSource
+
+	// initFn is called lazily on the first eligible request to populate
+	// projectID and tokenSource. Swappable for testing.
+	initFn func(ctx context.Context) error
+
+	getAccessTokenFn func(
+		ctx context.Context,
+		project string,
+	) (string, time.Time, error)
+}
+
+// initialize fetches the GCP project ID and default token source from the
+// instance metadata server. It is called at most once per provider instance,
+// on the first request that matches a GAR/GCR URL.
+func (p *WorkloadIdentityFederationProvider) initialize(ctx context.Context) error {
+	projectID, err := metadata.ProjectIDWithContext(ctx)
+	if err != nil {
+		return fmt.Errorf("error getting GCP project ID: %w", err)
+	}
+
+	tokenSource, err := google.DefaultTokenSource(ctx, iamcredentials.CloudPlatformScope)
+	if err != nil {
+		return fmt.Errorf("error getting GCP default token source: %w", err)
+	}
+
+	p.projectID = projectID
+	p.tokenSource = tokenSource
+	return nil
+}
+
+// ensureInitialized calls initFn if projectID has not yet been populated.
+// It is safe to call from multiple goroutines.
+func (p *WorkloadIdentityFederationProvider) ensureInitialized(ctx context.Context) error {
+	p.mu.Lock()
+	defer p.mu.Unlock()
+	if p.projectID != "" {
+		return nil
+	}
+	if p.initFn == nil {
+		return fmt.Errorf("provider not initialized")
+	}
+	return p.initFn(ctx)
 }
 
 func (p *WorkloadIdentityFederationProvider) Supports(
-	_ context.Context,
+	ctx context.Context,
 	req credentials.Request,
 ) (bool, error) {
-	if p.projectID == "" || req.Type != credentials.TypeImage && req.Type != credentials.TypeHelm {
+	if req.Type != credentials.TypeImage && req.Type != credentials.TypeHelm {
 		return false, nil
 	}
-	if !garURLRegex.MatchString(req.RepoURL) &&
-		!gcrURLRegex.MatchString(req.RepoURL) {
+	if !garURLRegex.MatchString(req.RepoURL) && !gcrURLRegex.MatchString(req.RepoURL) {
+		return false, nil
+	}
+	if err := p.ensureInitialized(ctx); err != nil {
+		logging.LoggerFromContext(ctx).Error(
+			err,
+			"GCP Workload Identity Federation not yet available; will retry on next request",
+		)
 		return false, nil
 	}
 	return true, nil
@@ -114,6 +125,10 @@ func (p *WorkloadIdentityFederationProvider) GetCredentials(
 	ctx context.Context,
 	req credentials.Request,
 ) (*credentials.Credentials, error) {
+	if err := p.ensureInitialized(ctx); err != nil {
+		return nil, fmt.Errorf("GCP Workload Identity Federation not initialized: %w", err)
+	}
+
 	cacheKey := tokenCacheKey(req.Project)
 
 	logger := logging.LoggerFromContext(ctx).WithValues(
