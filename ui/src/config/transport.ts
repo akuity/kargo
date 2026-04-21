@@ -2,6 +2,8 @@ import { Code, ConnectError, Interceptor } from '@connectrpc/connect';
 import { createConnectTransport } from '@connectrpc/connect-web';
 import { notification } from 'antd';
 
+import { parseJwtPayload } from '@ui/utils/jwt-payload';
+
 import { authTokenKey, redirectToQueryParam, refreshTokenKey } from './auth';
 import { paths } from './paths';
 
@@ -22,7 +24,9 @@ const authHandler: Interceptor = (next) => async (req) => {
   let isTokenExpired;
 
   try {
-    isTokenExpired = token && Date.now() >= JSON.parse(atob(token.split('.')[1])).exp * 1000;
+    const payload = token ? parseJwtPayload<{ exp?: number }>(token) : null;
+    isTokenExpired =
+      Boolean(token) && typeof payload?.exp === 'number' && Date.now() >= payload.exp * 1000;
   } catch (_) {
     logout();
 
