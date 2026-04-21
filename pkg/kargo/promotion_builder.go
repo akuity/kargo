@@ -5,6 +5,7 @@ import (
 	"errors"
 	"fmt"
 	"strings"
+	"time"
 
 	"github.com/oklog/ulid/v2"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -82,6 +83,7 @@ func (b *PromotionBuilder) Build(
 			Namespace:   stage.Namespace,
 			Annotations: annotations,
 		},
+		DiscoveryTimestamp: &metav1.Time{Time: time.Now()},
 		Spec: kargoapi.PromotionSpec{
 			Stage:   stage.Name,
 			Freight: freight,
