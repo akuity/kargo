@@ -6,17 +6,15 @@ sidebar_label: Bitbucket
 
 The Bitbucket webhook receiver responds to `repo:push`,
 `pullrequest:fulfilled`, and `pullrequest:rejected` events originating from
-Bitbucket Cloud repositories, and `repo:refs_changed`, `pr:merged`, and
-`pr:declined` events originating from Bitbucket Server and Data Center
-repositories.
+Bitbucket Cloud repositories, and `repo:refs_changed` events originating from
+Bitbucket Server and Data Center repositories.
 
 The receiver responds to `repo:push` and `repo:refs_changed` events by
 _refreshing_ all `Warehouse` resources subscribed to those repositories.
 
 The receiver responds to `pullrequest:fulfilled` and `pullrequest:rejected`
-(Bitbucket Cloud) and `pr:merged` and `pr:declined` (Bitbucket Server/Data
-Center) events by _refreshing_ all running `Promotion` resources that are
-waiting on the affected pull request via a
+events (Bitbucket Cloud) by _refreshing_ all running `Promotion` resources that
+are waiting on the affected pull request via a
 [`git-wait-for-pr`](../../30-promotion-steps/git-wait-for-pr.md) step. This
 enables near-instant detection of PR merges and closures instead of relying on
 the default polling interval.
