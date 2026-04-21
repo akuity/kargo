@@ -86,9 +86,9 @@ export const FreightTimelineFilters = (props: FreightTimelineFiltersProps) => {
           <Select
             mode='multiple'
             className='min-w-[200px] ml-auto'
+            styles={{ popup: { root: { width: '50%' } } }}
             size='small'
             value={props.preferredFilter?.sources}
-            dropdownStyle={{ width: '50%' }}
             onChange={(sources) =>
               props.onPreferredFilterChange({ ...props.preferredFilter, sources })
             }
