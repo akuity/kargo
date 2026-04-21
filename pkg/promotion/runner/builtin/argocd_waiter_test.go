@@ -215,7 +215,7 @@ func Test_argocdWaiter_run(t *testing.T) {
 			assertions: func(t *testing.T, res promotion.StepResult, err error) {
 				require.NoError(t, err)
 				assert.Equal(t, kargoapi.PromotionStepStatusRunning, res.Status)
-				statuses, ok := res.Output[healthStatusKey].(map[string]string)
+				statuses, ok := res.Output[healthStatusKey].(map[string]any)
 				require.True(t, ok)
 				assert.Equal(t, "Progressing", statuses["argocd/my-app"])
 			},
