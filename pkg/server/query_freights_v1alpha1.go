@@ -292,7 +292,15 @@ func sortFreightSlice(orderBy string, reverse bool, freight []*kargoapi.Freight)
 				return strings.Compare(lhsTag, rhsTag)
 			}
 		}
-		return lhs.CreationTimestamp.Compare(rhs.CreationTimestamp.Time)
+		lhsTime := lhs.DiscoveryTimestamp
+		if lhsTime == nil {
+			lhsTime = &lhs.CreationTimestamp
+		}
+		rhsTime := rhs.DiscoveryTimestamp
+		if rhsTime == nil {
+			rhsTime = &rhs.CreationTimestamp
+		}
+		return rhsTime.Compare(lhsTime.Time)
 	})
 	if reverse {
 		slices.Reverse(freight)

@@ -37,6 +37,10 @@ than Git repository commits, container images, and Helm charts. */
   charts?: Chart[];
   /** Commits describes specific Git repository commits. */
   commits?: GitCommit[];
+  /** DiscoveryTimestamp is the time at which the Freight was first discovered
+from its source. This is distinct from metadata.creationTimestamp, which is
+set by Kubernetes and cannot be controlled by users. */
+  discoveryTimestamp?: string;
   /** Images describes specific versions of specific container images. */
   images?: Image[];
   /** Kind is a string value representing the REST resource this object represents.

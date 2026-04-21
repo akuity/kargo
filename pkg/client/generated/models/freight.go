@@ -45,6 +45,11 @@ type Freight struct {
 	// Commits describes specific Git repository commits.
 	Commits []*GitCommit `json:"commits"`
 
+	// DiscoveryTimestamp is the time at which the Freight was first discovered
+	// from its source. This is distinct from metadata.creationTimestamp, which is
+	// set by Kubernetes and cannot be controlled by users.
+	DiscoveryTimestamp string `json:"discoveryTimestamp,omitempty"`
+
 	// Images describes specific versions of specific container images.
 	Images []*Image `json:"images"`
 
