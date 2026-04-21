@@ -4,7 +4,6 @@ import (
 	"context"
 	"errors"
 	"fmt"
-	"maps"
 	"slices"
 	"time"
 
@@ -128,8 +127,10 @@ func (w *argocdWaiter) run(
 	prevHealthStatuses := w.loadPreviousHealthStatuses(stepCtx)
 	// Seed with previous statuses so unchecked apps retain their last-known
 	// health if we bail early (e.g. on a TerminalError for another app).
-	newHealthStatuses := make(map[string]string, len(prevHealthStatuses))
-	maps.Copy(newHealthStatuses, prevHealthStatuses)
+	newHealthStatuses := make(map[string]any, len(prevHealthStatuses))
+	for k, v := range prevHealthStatuses {
+		newHealthStatuses[k] = v
+	}
 
 	allReady := true
 	for i := range stepCfg.Apps {
