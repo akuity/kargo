@@ -14,9 +14,10 @@ Currently, these actions are limited to "refreshing" `Warehouse` and
 `Promotion` resources. Refreshing a `Warehouse` triggers its artifact
 discovery process, making this useful for responding to "push" events from
 artifact repositories that lack dedicated webhook receiver implementations.
-Refreshing a `Promotion` wakes up a running `Promotion` that is waiting on a
-pull request, which is useful for integrating with external version control
-systems that lack a dedicated webhook receiver.
+Refreshing a `Promotion` enqueues a running `Promotion` for reconciliation,
+which is useful for waking up a `Promotion` that is waiting on an external
+signal — such as a pull request merge from a version control system that lacks
+a dedicated webhook receiver.
 
 :::
 
