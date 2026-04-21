@@ -188,6 +188,73 @@ func refreshWarehouses(
 	)
 }
 
+// refreshPromotionsByPrURL refreshes all running Promotions that are waiting on
+// the pull request identified by prURL. If the project is non-empty, only
+// Promotions in that namespace are considered.
+func refreshPromotionsByPrURL(
+	ctx context.Context,
+	w http.ResponseWriter,
+	c client.Client,
+	project string,
+	prURL string,
+) {
+	logger := logging.LoggerFromContext(ctx)
+
+	listOpts := make([]client.ListOption, 1, 2)
+	listOpts[0] = client.MatchingFields{
+		indexer.RunningPromotionsByPullRequestURLField: prURL,
+	}
+	if project != "" {
+		listOpts = append(listOpts, client.InNamespace(project))
+	}
+
+	promos := kargoapi.PromotionList{}
+	if err := c.List(ctx, &promos, listOpts...); err != nil {
+		logger.Error(err, "error listing matching Promotions")
+		xhttp.WriteErrorJSON(w, err)
+		return
+	}
+
+	logger.Debug("found Promotions to refresh", "count", len(promos.Items))
+
+	var failures int
+	for i := range promos.Items {
+		promo := &promos.Items[i]
+		promoLogger := logger.WithValues(
+			"namespace", promo.Namespace,
+			"name", promo.Name,
+		)
+		if err := api.RefreshObject(ctx, c, promo); err != nil {
+			failures++
+			promoLogger.Error(err, "failed to refresh Promotion")
+		} else {
+			promoLogger.Debug("marked Promotion for refresh")
+		}
+	}
+
+	total := len(promos.Items)
+	if failures > 0 {
+		xhttp.WriteResponseJSON(
+			w,
+			http.StatusInternalServerError,
+			map[string]string{
+				"error": fmt.Sprintf("failed to refresh %d of %d promotion(s)",
+					failures,
+					total,
+				),
+			},
+		)
+		return
+	}
+	xhttp.WriteResponseJSON(
+		w,
+		http.StatusOK,
+		map[string]string{
+			"msg": fmt.Sprintf("refreshed %d promotion(s)", total),
+		},
+	)
+}
+
 func shouldRefresh(
 	ctx context.Context,
 	wh kargoapi.Warehouse,

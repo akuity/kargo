@@ -80,6 +80,11 @@ type webhook struct {
 	) error
 
 	isRequestFromKargoControlplaneFn libWebhook.IsRequestFromKargoControlplaneFn
+
+	// externalWebhooksServerUsername is the exact username of the external
+	// webhooks server service account. When an admission request originates
+	// from this subject, the "promote" verb authorization check is bypassed.
+	externalWebhooksServerUsername string
 }
 
 func SetupWebhookWithManager(
@@ -118,6 +123,7 @@ func newWebhook(
 	w.admissionRequestFromContextFn = admission.RequestFromContext
 	w.createSubjectAccessReviewFn = w.client.Create
 	w.isRequestFromKargoControlplaneFn = libWebhook.IsRequestFromKargoControlplane(cfg.ControlplaneUserRegex)
+	w.externalWebhooksServerUsername = cfg.ExternalWebhooksServerUsername
 	return w
 }
 
@@ -342,6 +348,12 @@ func (w *webhook) authorize(
 				action,
 			),
 		)
+	}
+
+	// The external webhooks server is trusted to refresh running Promotions on
+	// behalf of webhook callers. Skip the "promote" verb check for this subject.
+	if req.UserInfo.Username == w.externalWebhooksServerUsername {
+		return nil
 	}
 
 	accessReview := &authzv1.SubjectAccessReview{

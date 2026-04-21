@@ -299,7 +299,7 @@ func (p *provider) GetCommitURL(repoURL string, sha string) (string, error) {
 func convertGiteaPR(giteaPR gitea.PullRequest) gitprovider.PullRequest {
 	pr := gitprovider.PullRequest{
 		Number:  giteaPR.Index,
-		URL:     giteaPR.URL,
+		URL:     giteaPR.HTMLURL,
 		Open:    giteaPR.State == gitea.StateOpen,
 		Merged:  giteaPR.HasMerged,
 		Object:  giteaPR,

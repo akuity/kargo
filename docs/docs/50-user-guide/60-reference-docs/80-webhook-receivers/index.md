@@ -2,7 +2,9 @@
 
 Below is an index of documentation for specific webhook receivers that can be
 used to trigger applicable `Warehouse` discovery processes as new artifacts are
-published to your repositories.
+published to your repositories, and to accelerate running `Promotion`s that are
+waiting on pull request events via a
+[`git-wait-for-pr`](../30-promotion-steps/git-wait-for-pr.md) step.
 
 :::info[Not what you were looking for?]
 

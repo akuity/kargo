@@ -4,15 +4,36 @@ sidebar_label: Bitbucket
 
 # Bitbucket Webhook Receiver
 
-The Bitbucket webhook receiver responds to `repo:push` events originating from
-Bitbucket repositories by _refreshing_ all `Warehouse` resources subscribed to
-those repositories.
+The Bitbucket webhook receiver responds to `repo:push`,
+`pullrequest:fulfilled`, and `pullrequest:rejected` events originating from
+Bitbucket Cloud repositories, and `repo:refs_changed` events originating from
+Bitbucket Server and Data Center repositories.
+
+The receiver responds to `repo:push` and `repo:refs_changed` events by
+_refreshing_ all `Warehouse` resources subscribed to those repositories.
+
+The receiver responds to `pullrequest:fulfilled` and `pullrequest:rejected`
+events (Bitbucket Cloud) by _refreshing_ all running `Promotion` resources that
+are waiting on the affected pull request via a
+[`git-wait-for-pr`](../../30-promotion-steps/git-wait-for-pr.md) step. This
+enables near-instant detection of PR merges and closures instead of relying on
+the default polling interval.
 
 :::info
 
 "Refreshing" a `Warehouse` resource means enqueuing it for immediate
 reconciliation by the Kargo controller, which will execute the discovery of new
 artifacts from all repositories to which that `Warehouse` subscribes.
+
+:::
+
+:::info
+
+"Refreshing" a `Promotion` resource means enqueuing it for immediate
+reconciliation. The
+[`git-wait-for-pr`](../../30-promotion-steps/git-wait-for-pr.md) step will then
+call the Git provider's API to detect whether the PR has been merged or closed,
+and proceed accordingly.
 
 :::
 
@@ -81,7 +102,7 @@ kubectl get projectconfigs kargo-demo \
 
 ## Registering with Bitbucket
 
-To configure a single Bitbucket repository to notify a receiver of `repo:push`
+To configure a single Bitbucket repository to notify a receiver of relevant
 events:
 
 1. Navigate to
@@ -120,6 +141,13 @@ events:
 
     1. Under <Hlt>Triggers</Hlt> → <Hlt>Repository</Hlt>, ensure <Hlt>Push</Hlt>
        is selected.
+
+        If you use PR-based promotion workflows (i.e. promotions that include a
+        [`git-wait-for-pr`](../../30-promotion-steps/git-wait-for-pr.md) step),
+        also select <Hlt>Merged</Hlt> and <Hlt>Declined</Hlt> under
+        <Hlt>Triggers</Hlt> → <Hlt>Pull Request</Hlt>. This enables Kargo to
+        detect PR merges and closures near-instantly instead of relying on the
+        default polling interval.
 
     1. Click <Hlt>Save</Hlt>.
 
