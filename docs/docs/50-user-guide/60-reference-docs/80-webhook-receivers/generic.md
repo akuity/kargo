@@ -210,6 +210,32 @@ spec:
                 name: "${{ normalizeGit(request.body.repository.name) }}"
 ```
 
+The following example depicts `targetSelectionCriteria` that selects a running
+`Promotion` by name sourced dynamically from the request body. This pattern is
+useful for resuming a `Promotion` from an external process: a promotion step
+(such as `http`) can trigger an external system and pass along its own name;
+the external system can then POST back to this receiver once complete, waking
+the `Promotion` for reconciliation without polling.
+
+```yaml
+apiVersion: kargo.akuity.io/v1alpha1
+kind: ProjectConfig
+metadata:
+  name: kargo-demo
+  namespace: kargo-demo
+spec:
+  webhookReceivers:
+    - name: my-receiver
+      generic:
+        secretRef:
+          name: wh-secret
+        actions:
+          - action: Refresh
+            targetSelectionCriteria:
+              - kind: Promotion
+                name: "${{ request.body.promotion }}"
+```
+
 ##### By Labels
 
 The following example depicts `targetSelectionCriteria` that selects
@@ -286,31 +312,12 @@ actions:
               value: "${{ normalizeGit(request.body.repository.url) }}"
 ```
 
-The following example depicts `targetSelectionCriteria` that dynamically
-selects running `Promotion` resources waiting on the pull request URL from the
-request body:
-
-```yaml
-actions:
-  - action: Refresh
-    whenExpression: "request.header('X-Event-Type') == 'pull_request'"
-    targetSelectionCriteria:
-      - kind: Promotion
-        indexSelector:
-          matchIndices:
-            - key: pullRequestURL
-              operator: Equals
-              value: "${{ request.body.pull_request.html_url }}"
-```
-
 :::note
 
-Two indices are available:
+One index is available for use with the generic receiver:
 
 - `subscribedURLs`: Selects `Warehouse` resources that contain subscriptions
   for a provided repository URL.
-- `pullRequestURL`: Selects running `Promotion` resources that are waiting on
-  a pull request with the given URL.
 
 :::
 
