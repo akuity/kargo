@@ -68,6 +68,17 @@ export const useWatchFreight = (project: string) => {
         }
 
         const currentFreight = queryCache.freight.get(project);
+
+        // Skip ADDED events for freight that already exists in the cache.
+        // Kubernetes watches replay all existing objects as ADDED on connect,
+        // which duplicates the initial GET and causes unnecessary re-renders.
+        if (e.type === 'ADDED') {
+          const existing = currentFreight?.groups?.['']?.freight || [];
+          if (existing.some((f) => f?.metadata?.name === freight?.metadata?.name)) {
+            continue;
+          }
+        }
+
         const updatedFreight =
           e.type === 'DELETED'
             ? deleteFreight(currentFreight, freight)
