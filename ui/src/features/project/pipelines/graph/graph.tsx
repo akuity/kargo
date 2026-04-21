@@ -8,7 +8,7 @@ import {
   ReactFlowInstance,
   useNodesState
 } from '@xyflow/react';
-import { useEffect, useMemo, useRef, useState } from 'react';
+import { useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react';
 
 import { WarehouseExpanded } from '@ui/extend/types';
 import { queryCache } from '@ui/features/utils/cache';
@@ -74,9 +74,12 @@ export const Graph = (props: GraphProps) => {
     filterContext?.preferredFilter?.hideSubscriptions
   );
 
-  const [nodes, setNodes, onNodesChange] = useNodesState(graph.nodes);
+  const [nodes, setNodes] = useNodesState(graph.nodes);
 
-  useEffect(() => {
+  // useLayoutEffect fires synchronously after DOM mutations but before the browser
+  // paints. This prevents the one-frame intermediate state where node content has
+  // changed (and grown) but positions haven't been recalculated yet.
+  useLayoutEffect(() => {
     setNodes(graph.nodes);
   }, [graph.nodes]);
 
@@ -100,7 +103,7 @@ export const Graph = (props: GraphProps) => {
       );
 
       if (!nodes.find((n) => n.id === index)) {
-        setRedraw(!redraw);
+        setRedraw((prev) => !prev);
       }
 
       queryCache.imageStageMatrix.update(stage);
@@ -124,7 +127,7 @@ export const Graph = (props: GraphProps) => {
       );
 
       if (!nodes.find((n) => n.id === index)) {
-        setRedraw(!redraw);
+        setRedraw((prev) => !prev);
       }
 
       queryCache.freight.refetch();
@@ -168,20 +171,19 @@ export const Graph = (props: GraphProps) => {
           nodes: nodesExcludingSubscriptionNodes
         }}
         proOptions={{ hideAttribution: true }}
-        minZoom={0}
-        onNodesChange={onNodesChange}
+        minZoom={nodes.length > 100 ? 0.6 : 0.1}
         onlyRenderVisibleElements
+        panOnDrag
         onInit={(inst) => (reactFlowInstance.current = inst)}
       >
-        {!Object.keys(dimensions).length && (
-          <div className='opacity-0 overflow-hidden h-0'>
-            <DummyNodeRenderrer
-              stages={props.stages}
-              warehouses={props.warehouses}
-              onDimensionChange={setDimensions}
-            />
-          </div>
-        )}
+        <div className='opacity-0 overflow-hidden h-0'>
+          <DummyNodeRenderrer
+            stages={props.stages}
+            warehouses={props.warehouses}
+            knownDimensions={dimensions}
+            onDimensionChange={(newDims) => setDimensions((prev) => ({ ...prev, ...newDims }))}
+          />
+        </div>
         {filterContext?.preferredFilter?.showMinimap && (
           <MiniMap
             style={{ background: 'white', border: '1px solid lightblue', borderRadius: '5px' }}

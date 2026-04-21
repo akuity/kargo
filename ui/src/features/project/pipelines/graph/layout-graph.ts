@@ -34,7 +34,7 @@ export const layoutGraph = (
 ) => {
   const graph = new graphlib.Graph<GraphMeta>({ multigraph: true });
 
-  graph.setGraph({ rankdir: 'LR' });
+  graph.setGraph({ rankdir: 'LR', ranksep: 100 });
   graph.setDefaultEdgeLabel(() => ({}));
 
   const warehouseByName: Record<string, WarehouseExpanded> = {};
@@ -48,6 +48,9 @@ export const layoutGraph = (
     stageByName[s?.metadata?.name || ''] = s;
   }
 
+  const maxStageHeight = 200;
+  const maxSubscriptionHeight = 100;
+
   for (const w of warehouse.warehouses) {
     if (warehouse.ignore?.(w)) {
       continue;
@@ -56,7 +59,8 @@ export const layoutGraph = (
     const warehouseNodeIndex = warehouseIndexer.index(w);
     graph.setNode(warehouseNodeIndex, {
       ...warehouseLabelling.label(w),
-      ...pickMaxSize(warehouseSizer.size(), dimensionState[warehouseNodeIndex] || {})
+      ...pickMaxSize(warehouseSizer.size(), dimensionState[warehouseNodeIndex] || {}),
+      height: maxStageHeight
     });
 
     if (hideSubscriptions?.[w?.metadata?.name || '']) {
@@ -68,7 +72,8 @@ export const layoutGraph = (
 
       graph.setNode(subscriptionNodeIndex, {
         ...repoSubscriptionLabelling.label(w, s),
-        ...pickMaxSize(repoSubscriptionSizer.size(), dimensionState[subscriptionNodeIndex] || {})
+        ...pickMaxSize(repoSubscriptionSizer.size(), dimensionState[subscriptionNodeIndex] || {}),
+        height: maxSubscriptionHeight
       });
 
       graph.setEdge(subscriptionNodeIndex, warehouseNodeIndex);
@@ -84,7 +89,8 @@ export const layoutGraph = (
 
     graph.setNode(stageNodeIndex, {
       ...stageLabelling.label(s),
-      ...pickMaxSize(stageSizer.size(), dimensionState[stageNodeIndex] || {})
+      ...pickMaxSize(stageSizer.size(), dimensionState[stageNodeIndex] || {}),
+      height: maxStageHeight
     });
 
     for (const requestedOrigin of s.spec?.requestedFreight || []) {
@@ -115,5 +121,5 @@ export const layoutGraph = (
     }
   }
 
-  return { graph, stageByName, warehouseByName };
+  return { graph, stageByName, maxStageHeight };
 };
