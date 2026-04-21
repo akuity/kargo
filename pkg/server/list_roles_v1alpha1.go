@@ -112,7 +112,7 @@ func (s *server) ListRoles(
 // @Param project path string true "Project name"
 // @Query as-resources boolean false "Return the roles as their underlying Kubernetes resources"
 // @Produce json
-// @Success 200 {object} object "RoleList custom resource (github.com/akuity/kargo/api/rbac/v1alpha1.RoleList)"
+// @Success 200 {object} object "RoleList custom resource (rbacapi.RoleList) or underlying resources"
 // @Router /v1beta1/projects/{project}/roles [get]
 func (s *server) listProjectRoles(c *gin.Context) {
 	ctx := c.Request.Context()
@@ -186,7 +186,7 @@ func (s *server) listProjectRoles(c *gin.Context) {
 // @Security BearerAuth
 // @Query as-resources boolean false "Return the roles as their underlying Kubernetes resources"
 // @Produce json
-// @Success 200 {object} object "RoleList custom resource (github.com/akuity/kargo/api/rbac/v1alpha1.RoleList)"
+// @Success 200 {object} object "RoleList custom resource (rbacapi.RoleList) or underlying resources"
 // @Router /v1beta1/system/roles [get]
 func (s *server) listSystemRoles(c *gin.Context) {
 	ctx := c.Request.Context()

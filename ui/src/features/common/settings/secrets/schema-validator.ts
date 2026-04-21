@@ -81,7 +81,8 @@ export const createFormSchema = (genericCreds: boolean, editing?: boolean) => {
       ),
       description: z.string().optional(),
       type: zodValidators.requiredString,
-      data: z.array(z.array(z.string()))
+      data: z.array(z.array(z.string())),
+      replicate: z.boolean().optional()
     });
   }
 

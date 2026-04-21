@@ -489,6 +489,54 @@ func TestRunningPromotionsByArgoCDApplications(t *testing.T) {
 			},
 		},
 		{
+			name: "Promotion has argocd-wait step with app name",
+			obj: &kargoapi.Promotion{
+				ObjectMeta: metav1.ObjectMeta{
+					Namespace: "fake-namespace",
+				},
+				Spec: kargoapi.PromotionSpec{
+					Stage: fakeStage.Name,
+					Steps: []kargoapi.PromotionStep{
+						{
+							Uses: "argocd-wait",
+							Config: &apiextensionsv1.JSON{
+								Raw: []byte(`{"apps":[{"namespace":"fake-namespace","name":"fake-app"}]}`),
+							},
+						},
+					},
+				},
+				Status: kargoapi.PromotionStatus{
+					Phase:       kargoapi.PromotionPhaseRunning,
+					CurrentStep: 0,
+				},
+			},
+			expected: []string{"fake-namespace:fake-app"},
+		},
+		{
+			name: "Promotion has argocd-wait step with selector (not indexed)",
+			obj: &kargoapi.Promotion{
+				ObjectMeta: metav1.ObjectMeta{
+					Namespace: "fake-namespace",
+				},
+				Spec: kargoapi.PromotionSpec{
+					Stage: fakeStage.Name,
+					Steps: []kargoapi.PromotionStep{
+						{
+							Uses: "argocd-wait",
+							Config: &apiextensionsv1.JSON{
+								Raw: []byte(`{"apps":[{"selector":{"matchLabels":{"env":"prod"}}}]}`),
+							},
+						},
+					},
+				},
+				Status: kargoapi.PromotionStatus{
+					Phase:       kargoapi.PromotionPhaseRunning,
+					CurrentStep: 0,
+				},
+			},
+			expected: nil,
+		},
+		{
 			name: "Promotion has directive steps without Applications",
 			obj: &kargoapi.Promotion{
 				ObjectMeta: metav1.ObjectMeta{

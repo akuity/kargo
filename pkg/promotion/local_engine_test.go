@@ -151,6 +151,7 @@ func TestSimpleEngine_Promote(t *testing.T) {
 					fake.NewClientBuilder().Build(),
 					nil,
 					nil,
+					nil,
 				),
 			}
 

@@ -1,4 +1,3 @@
-import { useMutation, useQuery } from '@connectrpc/connect-query';
 import { faPencil, faPlus, faTrash } from '@fortawesome/free-solid-svg-icons';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
 import { Button, Card, Table } from 'antd';
@@ -7,12 +6,11 @@ import { format } from 'date-fns';
 import { useConfirmModal } from '@ui/features/common/confirm-modal/use-confirm-modal';
 import { descriptionExpandable } from '@ui/features/common/description-expandable';
 import { useModal } from '@ui/features/common/modal/use-modal';
+import { RolloutsClusterAnalysisTemplate } from '@ui/gen/api/v2/models';
 import {
-  deleteClusterAnalysisTemplate,
-  listClusterAnalysisTemplates
-} from '@ui/gen/api/service/v1alpha1/service-KargoService_connectquery';
-import { ClusterAnalysisTemplate } from '@ui/gen/api/stubs/rollouts/v1alpha1/generated_pb';
-import { timestampDate } from '@ui/utils/connectrpc-utils';
+  useDeleteClusterAnalysisTemplate,
+  useListClusterAnalysisTemplates
+} from '@ui/gen/api/v2/verifications/verifications';
 
 import { CreateClusterAnalysisTemplateModal } from './create-cluster-analysis-template-modal';
 import { EditClusterAnalysisTemplateModal } from './edit-cluster-analysis-template-modal';
@@ -20,18 +18,17 @@ import { EditClusterAnalysisTemplateModal } from './edit-cluster-analysis-templa
 export const ClusterAnalysisTemplatesList = () => {
   const confirm = useConfirmModal();
 
-  const { data, isLoading, refetch } = useQuery(listClusterAnalysisTemplates);
+  const { data, isLoading, refetch } = useListClusterAnalysisTemplates();
 
   const { show: showEdit } = useModal();
 
   const { show: showCreate } = useModal((p) => <CreateClusterAnalysisTemplateModal {...p} />);
 
-  const { mutate: deleteTemplate, isPending: isDeleting } = useMutation(
-    deleteClusterAnalysisTemplate,
-    {
+  const { mutate: deleteTemplate, isPending: isDeleting } = useDeleteClusterAnalysisTemplate({
+    mutation: {
       onSuccess: () => refetch()
     }
-  );
+  });
 
   return (
     <Card
@@ -44,24 +41,29 @@ export const ClusterAnalysisTemplatesList = () => {
         </Button>
       }
     >
-      <Table<ClusterAnalysisTemplate>
-        dataSource={data?.clusterAnalysisTemplates}
+      <Table<RolloutsClusterAnalysisTemplate>
+        dataSource={data?.data?.items}
         pagination={{ hideOnSinglePage: true }}
         rowKey={(i) => i.metadata?.name || ''}
         loading={isLoading}
         expandable={descriptionExpandable()}
         className='w-full'
       >
-        <Table.Column<ClusterAnalysisTemplate>
+        <Table.Column<RolloutsClusterAnalysisTemplate>
           title='Creation Date'
           width={200}
           render={(_, template) => {
-            const date = timestampDate(template.metadata?.creationTimestamp);
-            return date ? format(date, 'MMM do yyyy HH:mm:ss') : '';
+            const ts = template.metadata?.creationTimestamp;
+            if (!ts) return '';
+            const date = new Date(ts);
+            return isNaN(date.getTime()) ? '' : format(date, 'MMM do yyyy HH:mm:ss');
           }}
         />
-        <Table.Column<ClusterAnalysisTemplate> title='Name' dataIndex={['metadata', 'name']} />
-        <Table.Column<ClusterAnalysisTemplate>
+        <Table.Column<RolloutsClusterAnalysisTemplate>
+          title='Name'
+          dataIndex={['metadata', 'name']}
+        />
+        <Table.Column<RolloutsClusterAnalysisTemplate>
           width={260}
           render={(_, template) => (
             <div className='flex gap-2 justify-end'>
@@ -100,7 +102,9 @@ export const ClusterAnalysisTemplatesList = () => {
                       </p>
                     ),
                     onOk: () => {
-                      deleteTemplate({ name: template?.metadata?.name || '' });
+                      deleteTemplate({
+                        clusterAnalysisTemplate: template?.metadata?.name || ''
+                      });
                     },
                     hide: () => {}
                   });

@@ -43,7 +43,7 @@ type WorkTree interface {
 	// with any other branch.
 	CreateOrphanedBranch(branch string) error
 	// CreateTag creates a new tag with the specified name.
-	CreateTag(name, msg string, opts *TagOptions) error
+	CreateTag(name, msg string) error
 	// CurrentBranch returns the current branch
 	CurrentBranch() (string, error)
 	// DeleteBranch deletes the specified branch
@@ -80,6 +80,20 @@ type WorkTree interface {
 	// CommitMessage returns the text of the most recent commit message associated
 	// with the specified commit ID.
 	CommitMessage(id string) (string, error)
+	// GetCommitSignatureInfo returns signature information for the specified
+	// commit, including whether it is signed by a trusted key and the
+	// identity of the signer. If opts provides a SigningKey, a temporary
+	// keyring is created with that key imported at ultimate trust and used
+	// for verification.
+	GetCommitSignatureInfo(commitID string) (*CommitSignatureInfo, error)
+	// IntegrateRemoteChanges integrates remote changes into the local branch
+	// before pushing. This fetches the target branch and applies the operator-
+	// configured integration policy (rebase, merge, or fail). It is a no-op
+	// if the remote branch does not exist or the policy is None.
+	IntegrateRemoteChanges(*IntegrationOptions) error
+	// Pull fetches and integrates changes from a remote branch
+	// into the current local branch.
+	Pull(*PullOptions) error
 	// Push pushes from the local repository to the remote repository.
 	Push(*PushOptions) error
 	// RefsHaveDiffs returns whether there is a diff between two commits/branches
@@ -318,51 +332,10 @@ func (w *workTree) CreateOrphanedBranch(branch string) error {
 	return w.Clean()
 }
 
-// TagOptions represents options for creating a new git tag.
-type TagOptions struct {
-	// Tagger is the tagger of the tag. If nil, the default tagger already
-	// configured in the git repository will be used.
-	Tagger *User
-}
-
-func (w *workTree) CreateTag(tag, msg string, opts *TagOptions) error {
-	if opts == nil {
-		opts = &TagOptions{}
-	}
-
-	var homeDir string
-	// This tagger is specific to this tag, so we will override repository-level
-	// user information by creating a temporary home directory, configuring the
-	// user information "globally" within it, and then ensuring the git tag
-	// command uses that home directory.
-	if opts.Tagger != nil {
-		var err error
-		if homeDir, err = os.MkdirTemp(w.homeDir, ""); err != nil {
-			return fmt.Errorf(
-				"error creating virtual home directory %q for tag command: %w",
-				homeDir, err,
-			)
-		}
-		defer func() {
-			if cleanErr := os.RemoveAll(homeDir); cleanErr != nil {
-				logging.LoggerFromContext(context.TODO()).
-					Error(cleanErr, "error removing virtual home directory", "path", homeDir)
-			}
-		}()
-		if err = w.setupUser(homeDir, opts.Tagger); err != nil {
-			return fmt.Errorf(
-				"error setting up author information for tag command: %w", err,
-			)
-		}
-	}
-
+func (w *workTree) CreateTag(tag, msg string) error {
 	cmd := w.buildGitCommand("tag", "-a", tag, "-m", msg)
-	if homeDir != "" {
-		// Override the home directory set by w.buildGitCommand().
-		w.setCmdHome(cmd, homeDir)
-	}
 	if _, err := libExec.Exec(cmd); err != nil {
-		return fmt.Errorf("error creating signed tag %q", err)
+		return fmt.Errorf("error creating annotated tag %q: %w", tag, err)
 	}
 	return nil
 }
@@ -687,6 +660,50 @@ func (w *workTree) ListTags() ([]TagMetadata, error) {
 	return tags, nil
 }
 
+// PullOptions represents options for pulling changes from a remote branch.
+type PullOptions struct {
+	// Branch is the remote branch to pull from. If not specified, the current
+	// branch will be pulled.
+	Branch string
+	// Force indicates whether the local branch should be reset to match
+	// the remote exactly, discarding any local state.
+	Force bool
+}
+
+func (w *workTree) Pull(opts *PullOptions) error {
+	if opts == nil {
+		opts = &PullOptions{}
+	}
+	branch := opts.Branch
+	if branch == "" {
+		var err error
+		if branch, err = w.CurrentBranch(); err != nil {
+			return err
+		}
+	}
+	if err := w.Fetch(&FetchOptions{Branch: branch}); err != nil {
+		return fmt.Errorf("error fetching branch %q: %w", branch, err)
+	}
+	if opts.Force {
+		cmd := w.buildGitCommand(
+			"reset", "--hard", fmt.Sprintf("origin/%s", branch),
+		)
+		if _, err := libExec.Exec(cmd); err != nil {
+			return fmt.Errorf(
+				"error resetting to origin/%s: %w", branch, err,
+			)
+		}
+		return nil
+	}
+	cmd := w.buildGitCommand("merge", fmt.Sprintf("origin/%s", branch))
+	if _, err := libExec.Exec(cmd); err != nil {
+		return fmt.Errorf(
+			"error merging origin/%s: %w", branch, err,
+		)
+	}
+	return nil
+}
+
 // PushOptions represents options for pushing changes to a remote git
 // repository.
 type PushOptions struct {
@@ -702,11 +719,6 @@ type PushOptions struct {
 	// pushing. If empty or set to PushIntegrationPolicyNone, no integration
 	// is performed.
 	IntegrationPolicy PushIntegrationPolicy
-	// Committer is the identity used as the committer for merge commits or
-	// replacement commits created when integrating remote changes before
-	// pushing. If nil, the default author already configured in the git
-	// repository will be used.
-	Committer *User
 	// Tag specifies a tag to push to the remote repository. If this field and
 	// TargetBranch are both non-empty, this field takes precedence and the tag
 	// will be pushed -- the branch will not.
@@ -744,20 +756,11 @@ func (w *workTree) Push(opts *PushOptions) error {
 	}
 
 	args = append(args, fmt.Sprintf("HEAD:%s", targetBranch))
-	if opts.IntegrationPolicy != PushIntegrationPolicyNone {
-		exists, err := w.RemoteBranchExists(targetBranch)
-		if err != nil {
-			return err
-		}
-		// We only want to pull and rebase/merge if the remote branch exists.
-		if exists {
-			if err = w.integrateBeforePush(
-				targetBranch,
-				opts.Committer, opts.IntegrationPolicy,
-			); err != nil {
-				return err
-			}
-		}
+	if err := w.IntegrateRemoteChanges(&IntegrationOptions{
+		TargetBranch:      targetBranch,
+		IntegrationPolicy: opts.IntegrationPolicy,
+	}); err != nil {
+		return err
 	}
 
 	if opts.Force {

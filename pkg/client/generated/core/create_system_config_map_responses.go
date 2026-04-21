@@ -10,6 +10,8 @@ import (
 
 	"github.com/go-openapi/runtime"
 	"github.com/go-openapi/strfmt"
+
+	"github.com/akuity/kargo/pkg/client/generated/models"
 )
 
 // CreateSystemConfigMapReader is a Reader for the CreateSystemConfigMap structure.
@@ -42,7 +44,7 @@ CreateSystemConfigMapCreated describes a response with status code 201, with def
 ConfigMap resource (k8s.io/api/core/v1.ConfigMap)
 */
 type CreateSystemConfigMapCreated struct {
-	Payload any
+	Payload *models.V1ConfigMap
 }
 
 // IsSuccess returns true when this create system config map created response has a 2xx status code
@@ -85,14 +87,16 @@ func (o *CreateSystemConfigMapCreated) String() string {
 	return fmt.Sprintf("[POST /v1beta1/system/configmaps][%d] createSystemConfigMapCreated %s", 201, payload)
 }
 
-func (o *CreateSystemConfigMapCreated) GetPayload() any {
+func (o *CreateSystemConfigMapCreated) GetPayload() *models.V1ConfigMap {
 	return o.Payload
 }
 
 func (o *CreateSystemConfigMapCreated) readResponse(response runtime.ClientResponse, consumer runtime.Consumer, formats strfmt.Registry) error {
 
+	o.Payload = new(models.V1ConfigMap)
+
 	// response payload
-	if err := consumer.Consume(response.Body(), &o.Payload); err != nil && !stderrors.Is(err, io.EOF) {
+	if err := consumer.Consume(response.Body(), o.Payload); err != nil && !stderrors.Is(err, io.EOF) {
 		return err
 	}
 

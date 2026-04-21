@@ -51,6 +51,10 @@ export default defineConfig({
       '/akuity.io.kargo.service.v1alpha1.KargoService': {
         target: API_URL,
         changeOrigin: true
+      },
+      '/v1beta1': {
+        target: API_URL,
+        changeOrigin: true
       }
     },
     port: 3333

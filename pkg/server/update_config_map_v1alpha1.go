@@ -30,6 +30,7 @@ func (s *server) UpdateConfigMap(
 		name:        req.Msg.Name,
 		data:        req.Msg.Data,
 		description: req.Msg.Description,
+		replicate:   req.Msg.Replicate,
 	})
 
 	if err := s.client.Update(ctx, configMap); err != nil {
@@ -66,6 +67,7 @@ func (s *server) validateUpdateConfigMapRequest(
 // updateConfigMapRequest is the request body for updating a ConfigMap.
 type updateConfigMapRequest struct {
 	Description string            `json:"description,omitempty"`
+	Replicate   bool              `json:"replicate,omitempty"`
 	Data        map[string]string `json:"data"`
 } // @name UpdateConfigMapRequest
 
@@ -80,7 +82,7 @@ type updateConfigMapRequest struct {
 // @Param project path string true "Project name"
 // @Param configmap path string true "ConfigMap name"
 // @Param body body updateConfigMapRequest true "ConfigMap"
-// @Success 200 {object} object "ConfigMap resource (k8s.io/api/core/v1.ConfigMap)"
+// @Success 200 {object} corev1.ConfigMap "ConfigMap resource (k8s.io/api/core/v1.ConfigMap)"
 // @Router /v1beta1/projects/{project}/configmaps/{configmap} [put]
 func (s *server) updateProjectConfigMap(c *gin.Context) {
 	ctx := c.Request.Context()
@@ -131,7 +133,7 @@ func (s *server) updateProjectConfigMap(c *gin.Context) {
 // @Produce json
 // @Param configmap path string true "ConfigMap name"
 // @Param body body updateConfigMapRequest true "ConfigMap"
-// @Success 200 {object} object "ConfigMap resource (k8s.io/api/core/v1.ConfigMap)"
+// @Success 200 {object} corev1.ConfigMap "ConfigMap resource (k8s.io/api/core/v1.ConfigMap)"
 // @Router /v1beta1/system/configmaps/{configmap} [put]
 func (s *server) updateSystemConfigMap(c *gin.Context) {
 	ctx := c.Request.Context()
@@ -183,7 +185,7 @@ func (s *server) updateSystemConfigMap(c *gin.Context) {
 // @Produce json
 // @Param configmap path string true "ConfigMap name"
 // @Param body body updateConfigMapRequest true "ConfigMap"
-// @Success 200 {object} object "ConfigMap resource (k8s.io/api/core/v1.ConfigMap)"
+// @Success 200 {object} corev1.ConfigMap "ConfigMap resource (k8s.io/api/core/v1.ConfigMap)"
 // @Router /v1beta1/shared/configmaps/{configmap} [put]
 func (s *server) updateSharedConfigMap(c *gin.Context) {
 	ctx := c.Request.Context()
@@ -226,14 +228,22 @@ func (s *server) updateSharedConfigMap(c *gin.Context) {
 }
 
 func applyConfigMapUpdateToK8sConfigMap(configMapObj *corev1.ConfigMap, req updateConfigMapRequest) {
-	// Set the description annotation if provided
+	if configMapObj.Annotations == nil {
+		configMapObj.Annotations = make(map[string]string)
+	}
+
+	// Set or clear the description annotation
 	if req.Description != "" {
-		if configMapObj.Annotations == nil {
-			configMapObj.Annotations = make(map[string]string, 1)
-		}
 		configMapObj.Annotations[kargoapi.AnnotationKeyDescription] = req.Description
 	} else {
 		delete(configMapObj.Annotations, kargoapi.AnnotationKeyDescription)
+	}
+
+	// Set or clear the replicate-to annotation
+	if req.Replicate {
+		configMapObj.Annotations[kargoapi.AnnotationKeyReplicateTo] = kargoapi.AnnotationValueReplicateToAll
+	} else {
+		delete(configMapObj.Annotations, kargoapi.AnnotationKeyReplicateTo)
 	}
 
 	// Replace the data with the new data

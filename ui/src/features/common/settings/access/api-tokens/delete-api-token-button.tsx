@@ -1,14 +1,16 @@
-import { createConnectQueryKey, useMutation } from '@connectrpc/connect-query';
 import { faTrash } from '@fortawesome/free-solid-svg-icons';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
+import { useQueryClient } from '@tanstack/react-query';
+import { useMutation } from '@tanstack/react-query';
 import { Button, Typography } from 'antd';
 
-import { queryClient } from '@ui/config/query-client';
 import { useConfirmModal } from '@ui/features/common/confirm-modal/use-confirm-modal';
 import {
-  deleteAPIToken,
-  listAPITokens
-} from '@ui/gen/api/service/v1alpha1/service-KargoService_connectquery';
+  deleteProjectAPIToken,
+  deleteSystemAPIToken,
+  getListProjectAPITokensQueryKey,
+  getListSystemAPITokensQueryKey
+} from '@ui/gen/api/v2/rbac/rbac';
 
 type Props = {
   systemLevel: boolean;
@@ -18,25 +20,22 @@ type Props = {
 
 export const DeleteAPITokenButton = ({ name, project, systemLevel }: Props) => {
   const confirm = useConfirmModal();
+  const queryClient = useQueryClient();
 
-  const { mutate, isPending: isLoadingDelete } = useMutation(deleteAPIToken);
+  const { mutate, isPending: isLoadingDelete } = useMutation({
+    mutationFn: () =>
+      systemLevel ? deleteSystemAPIToken(name) : deleteProjectAPIToken(project, name),
+    onSuccess: () =>
+      queryClient.invalidateQueries({
+        queryKey: systemLevel
+          ? getListSystemAPITokensQueryKey()
+          : getListProjectAPITokensQueryKey(project)
+      })
+  });
 
   const onDelete = () => {
     confirm({
-      onOk: () => {
-        mutate(
-          { name, project, systemLevel },
-          {
-            onSuccess: () =>
-              queryClient.refetchQueries({
-                queryKey: createConnectQueryKey({
-                  schema: listAPITokens,
-                  cardinality: 'finite'
-                })
-              })
-          }
-        );
-      },
+      onOk: () => mutate(),
       title: 'Delete API Token',
       content: (
         <>

@@ -3,6 +3,7 @@
         "jira",
         "jfrog-evidence",
         "git-merge-pr",
+        "github-push",
         "gha-dispatch-workflow",
         "gha-wait-for-workflow",
         "hcl-update",
@@ -16,7 +17,8 @@
         "snow-query-for-records",
         "snow-wait-for-condition",
         "toml-parse",
-        "toml-update"
+        "toml-update",
+        "Custom steps"
     ],
     "pro": [
         "jira",
@@ -32,6 +34,7 @@
         "snow-update",
         "snow-delete",
         "snow-query-for-records",
-        "snow-wait-for-condition"
+        "snow-wait-for-condition",
+        "Custom steps"
     ]
 }

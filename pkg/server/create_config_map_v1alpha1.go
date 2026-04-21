@@ -21,6 +21,7 @@ type configMap struct {
 	project     string
 	name        string
 	description string
+	replicate   bool
 	data        map[string]string
 }
 
@@ -38,6 +39,7 @@ func (s *server) CreateConfigMap(
 		name:        req.Msg.Name,
 		data:        req.Msg.Data,
 		description: req.Msg.Description,
+		replicate:   req.Msg.Replicate,
 	})
 
 	if err := s.client.Create(ctx, configMap); err != nil {
@@ -88,10 +90,15 @@ func (s *server) configMapToK8sConfigMap(cm configMap) *corev1.ConfigMap {
 		},
 		Data: cm.data,
 	}
+	annotations := make(map[string]string)
 	if cm.description != "" {
-		configMapObj.Annotations = map[string]string{
-			kargoapi.AnnotationKeyDescription: cm.description,
-		}
+		annotations[kargoapi.AnnotationKeyDescription] = cm.description
+	}
+	if cm.replicate {
+		annotations[kargoapi.AnnotationKeyReplicateTo] = kargoapi.AnnotationValueReplicateToAll
+	}
+	if len(annotations) > 0 {
+		configMapObj.Annotations = annotations
 	}
 	return configMapObj
 }
@@ -100,6 +107,7 @@ func (s *server) configMapToK8sConfigMap(cm configMap) *corev1.ConfigMap {
 type createConfigMapRequest struct {
 	Name        string            `json:"name"`
 	Description string            `json:"description,omitempty"`
+	Replicate   bool              `json:"replicate,omitempty"`
 	Data        map[string]string `json:"data"`
 } // @name CreateConfigMapRequest
 
@@ -113,7 +121,7 @@ type createConfigMapRequest struct {
 // @Produce json
 // @Param project path string true "Project name"
 // @Param body body createConfigMapRequest true "ConfigMap"
-// @Success 201 {object} object "ConfigMap resource (k8s.io/api/core/v1.ConfigMap)"
+// @Success 201 {object} corev1.ConfigMap "ConfigMap resource (k8s.io/api/core/v1.ConfigMap)"
 // @Router /v1beta1/projects/{project}/configmaps [post]
 func (s *server) createProjectConfigMap(c *gin.Context) {
 	ctx := c.Request.Context()
@@ -133,6 +141,7 @@ func (s *server) createProjectConfigMap(c *gin.Context) {
 		project:     project,
 		name:        req.Name,
 		description: req.Description,
+		replicate:   req.Replicate,
 		data:        req.Data,
 	})
 
@@ -153,7 +162,7 @@ func (s *server) createProjectConfigMap(c *gin.Context) {
 // @Accept json
 // @Produce json
 // @Param body body createConfigMapRequest true "ConfigMap"
-// @Success 201 {object} object "ConfigMap resource (k8s.io/api/core/v1.ConfigMap)"
+// @Success 201 {object} corev1.ConfigMap "ConfigMap resource (k8s.io/api/core/v1.ConfigMap)"
 // @Router /v1beta1/system/configmaps [post]
 func (s *server) createSystemConfigMap(c *gin.Context) {
 	ctx := c.Request.Context()
@@ -172,6 +181,7 @@ func (s *server) createSystemConfigMap(c *gin.Context) {
 		systemLevel: true,
 		name:        req.Name,
 		description: req.Description,
+		replicate:   req.Replicate,
 		data:        req.Data,
 	})
 
@@ -192,7 +202,7 @@ func (s *server) createSystemConfigMap(c *gin.Context) {
 // @Accept json
 // @Produce json
 // @Param body body createConfigMapRequest true "ConfigMap"
-// @Success 201 {object} object "ConfigMap resource (k8s.io/api/core/v1.ConfigMap)"
+// @Success 201 {object} corev1.ConfigMap "ConfigMap resource (k8s.io/api/core/v1.ConfigMap)"
 // @Router /v1beta1/shared/configmaps [post]
 func (s *server) createSharedConfigMap(c *gin.Context) {
 	ctx := c.Request.Context()
@@ -210,6 +220,7 @@ func (s *server) createSharedConfigMap(c *gin.Context) {
 	configMapObj := s.configMapToK8sConfigMap(configMap{
 		name:        req.Name,
 		description: req.Description,
+		replicate:   req.Replicate,
 		data:        req.Data,
 	})
 

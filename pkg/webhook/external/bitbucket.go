@@ -283,6 +283,7 @@ type bitbucketPushEventBody struct {
 	Push struct {
 		Changes []struct {
 			New struct {
+				Type string `json:"type"`
 				Name string `json:"name"`
 			} `json:"new"`
 		} `json:"changes"`
@@ -318,10 +319,21 @@ func (b bitbucketPushEventBody) getRepoURLs() []string {
 
 // getRefs extracts all references mentioned by the repo:push event.
 // See https://support.atlassian.com/bitbucket-cloud/docs/event-payloads/#Push
+//
+// Bitbucket Cloud sends bare names (e.g. "main") in change.new.name, unlike
+// GitHub/GitLab which send full refs. We qualify them here so that downstream
+// MatchesRef checks (which require refs/heads/ or refs/tags/ prefixes) work.
 func (b bitbucketPushEventBody) getRefs() []string {
 	var qualifiers []string
 	for _, change := range b.Push.Changes {
-		qualifiers = append(qualifiers, change.New.Name)
+		if change.New.Name == "" {
+			continue // branch/tag deletion — new is null
+		}
+		if change.New.Type == "tag" {
+			qualifiers = append(qualifiers, "refs/tags/"+change.New.Name)
+		} else {
+			qualifiers = append(qualifiers, "refs/heads/"+change.New.Name)
+		}
 	}
 	return qualifiers
 }

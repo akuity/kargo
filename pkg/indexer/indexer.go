@@ -173,7 +173,7 @@ func RunningPromotionsByArgoCDApplications(
 		}
 
 		// Build just enough context to extract the relevant config from the
-		// argocd-update promotion step.
+		// argocd-update and argocd-wait promotion steps.
 		promoCtx := promotion.NewContext(promo, stage)
 
 		// Extract the Argo CD Applications from the promotion steps.
@@ -188,7 +188,8 @@ func RunningPromotionsByArgoCDApplications(
 				// are about to be.
 				break
 			}
-			if step.Uses != "argocd-update" || step.Config == nil {
+			if (step.Uses != "argocd-update" && step.Uses != "argocd-wait") ||
+				step.Config == nil {
 				continue
 			}
 

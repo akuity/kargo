@@ -5,7 +5,7 @@ import Card from 'antd/es/card/Card';
 import classNames from 'classnames';
 import { useState } from 'react';
 
-import { WebhookReceiverDetails } from '@ui/gen/api/v1alpha1/generated_pb';
+import { WebhookReceiverDetails } from '@ui/gen/api/v2/models';
 
 type WebhooksProps = {
   webhookReceivers: WebhookReceiverDetails[];
@@ -58,7 +58,7 @@ const WebhookURLColumn = (props: { details: WebhookReceiverDetails }) => {
         size='small'
         icon={<FontAwesomeIcon icon={faClipboard} />}
         onClick={async () => {
-          await navigator.clipboard.writeText(props.details?.url);
+          await navigator.clipboard.writeText(props.details?.url || '');
           notification.success({ message: 'URL copied.', placement: 'bottomRight' });
         }}
         type='text'

@@ -219,8 +219,8 @@ build-cli-with-ui: build-ui build-cli
 codegen: codegen-openapi codegen-proto codegen-controller codegen-schema-to-go codegen-ui codegen-docs
 
 .PHONY: codegen-openapi
-codegen-openapi: install-swag install-go-swagger
-	rm -f swagger.yaml swagger.json
+codegen-openapi: install-swag install-go-swagger install-jq
+	rm -f swagger.json
 	find pkg/client/generated -mindepth 1 ! -name go.mod ! -name go.sum -exec rm -rf {} +
 	rm -rf /tmp/swagger-build
 	mkdir -p /tmp/swagger-build
@@ -229,10 +229,10 @@ codegen-openapi: install-swag install-go-swagger
 		--output /tmp/swagger-build \
 		--parseDependency \
 		--parseInternal \
-		--outputTypes yaml,json
-	mv /tmp/swagger-build/swagger.yaml .
+		--outputTypes json
 	mv /tmp/swagger-build/swagger.json .
 	rm -rf /tmp/swagger-build
+	hack/codegen/fix-swagger-spec.sh swagger.json
 	mkdir -p pkg/client/generated
 	$(GO_SWAGGER_LINK) generate client \
 		-f swagger.json \

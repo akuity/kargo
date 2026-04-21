@@ -8,6 +8,7 @@ import (
 
 	"connectrpc.com/connect"
 	"github.com/gin-gonic/gin"
+	corev1 "k8s.io/api/core/v1"
 	sigyaml "sigs.k8s.io/yaml"
 
 	svcv1alpha1 "github.com/akuity/kargo/api/service/v1alpha1"
@@ -77,7 +78,7 @@ func (s *server) GetAPIToken(
 // @Param project path string true "Project name"
 // @Param apitoken path string true "API token name"
 // @Produce json
-// @Success 200 {object} object "Secret resource (k8s.io/api/core/v1.Secret)"
+// @Success 200 {object} corev1.Secret "Secret resource (k8s.io/api/core/v1.Secret)"
 // @Router /v1beta1/projects/{project}/api-tokens/{apitoken} [get]
 func (s *server) getProjectAPIToken(c *gin.Context) {
 	ctx := c.Request.Context()
@@ -85,6 +86,7 @@ func (s *server) getProjectAPIToken(c *gin.Context) {
 	project := c.Param("project")
 	name := c.Param("apitoken")
 
+	var tokenSecret *corev1.Secret
 	tokenSecret, err := s.rolesDB.GetAPIToken(ctx, false, project, name)
 	if err != nil {
 		_ = c.Error(err)
@@ -102,7 +104,7 @@ func (s *server) getProjectAPIToken(c *gin.Context) {
 // @Security BearerAuth
 // @Param apitoken path string true "API token name"
 // @Produce json
-// @Success 200 {object} object "Secret resource (k8s.io/api/core/v1.Secret)"
+// @Success 200 {object} corev1.Secret "Secret resource (k8s.io/api/core/v1.Secret)"
 // @Router /v1beta1/system/api-tokens/{apitoken} [get]
 func (s *server) getSystemAPIToken(c *gin.Context) {
 	ctx := c.Request.Context()

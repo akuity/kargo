@@ -10,6 +10,8 @@ import (
 
 	"github.com/go-openapi/runtime"
 	"github.com/go-openapi/strfmt"
+
+	"github.com/akuity/kargo/pkg/client/generated/models"
 )
 
 // GetPromotionTaskReader is a Reader for the GetPromotionTask structure.
@@ -39,10 +41,10 @@ func NewGetPromotionTaskOK() *GetPromotionTaskOK {
 /*
 GetPromotionTaskOK describes a response with status code 200, with default header values.
 
-PromotionTask custom resource (github.com/akuity/kargo/api/v1alpha1.PromotionTask)
+PromotionTask custom resource
 */
 type GetPromotionTaskOK struct {
-	Payload any
+	Payload *models.PromotionTask
 }
 
 // IsSuccess returns true when this get promotion task o k response has a 2xx status code
@@ -85,14 +87,16 @@ func (o *GetPromotionTaskOK) String() string {
 	return fmt.Sprintf("[GET /v1beta1/projects/{project}/promotion-tasks/{promotion-task}][%d] getPromotionTaskOK %s", 200, payload)
 }
 
-func (o *GetPromotionTaskOK) GetPayload() any {
+func (o *GetPromotionTaskOK) GetPayload() *models.PromotionTask {
 	return o.Payload
 }
 
 func (o *GetPromotionTaskOK) readResponse(response runtime.ClientResponse, consumer runtime.Consumer, formats strfmt.Registry) error {
 
+	o.Payload = new(models.PromotionTask)
+
 	// response payload
-	if err := consumer.Consume(response.Body(), &o.Payload); err != nil && !stderrors.Is(err, io.EOF) {
+	if err := consumer.Consume(response.Body(), o.Payload); err != nil && !stderrors.Is(err, io.EOF) {
 		return err
 	}
 

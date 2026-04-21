@@ -12,7 +12,6 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 	"k8s.io/apimachinery/pkg/labels"
-	"k8s.io/apimachinery/pkg/selection"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
 	kargoapi "github.com/akuity/kargo/api/v1alpha1"
@@ -115,7 +114,7 @@ func newArgocdUpdater(caps promotion.StepRunnerCapabilities) promotion.StepRunne
 	r := &argocdUpdater{argocdClient: caps.ArgoCDClient}
 	r.schemaLoader = getConfigSchemaLoader(stepKindArgoCDUpdate)
 	r.getAuthorizedApplicationsFn = r.getAuthorizedApplications
-	r.buildLabelSelectorFn = r.buildLabelSelector
+	r.buildLabelSelectorFn = buildArgoCDAppLabelSelector
 	r.buildDesiredSourcesFn = r.buildDesiredSources
 	r.mustPerformUpdateFn = r.mustPerformUpdate
 	r.syncApplicationFn = r.syncApplication
@@ -918,49 +917,6 @@ func (a *argocdUpdater) authorizeArgoCDAppUpdate(
 		return permErr
 	}
 	return nil
-}
-
-// buildLabelSelector converts an ArgoCDAppSelector into a Kubernetes labels.Selector.
-func (a *argocdUpdater) buildLabelSelector(
-	selector *builtin.ArgoCDAppSelector,
-) (labels.Selector, error) {
-	if len(selector.MatchLabels) == 0 && len(selector.MatchExpressions) == 0 {
-		return nil, fmt.Errorf("selector must have at least one match criterion")
-	}
-
-	labelSelector := labels.NewSelector()
-
-	for key, value := range selector.MatchLabels {
-		req, err := labels.NewRequirement(key, selection.Equals, []string{value})
-		if err != nil {
-			return nil, fmt.Errorf("invalid matchLabel %s=%s: %w", key, value, err)
-		}
-		labelSelector = labelSelector.Add(*req)
-	}
-
-	for _, expr := range selector.MatchExpressions {
-		var op selection.Operator
-		switch expr.Operator {
-		case builtin.In:
-			op = selection.In
-		case builtin.NotIn:
-			op = selection.NotIn
-		case builtin.Exists:
-			op = selection.Exists
-		case builtin.DoesNotExist:
-			op = selection.DoesNotExist
-		default:
-			return nil, fmt.Errorf("invalid operator: %s", expr.Operator)
-		}
-
-		req, err := labels.NewRequirement(expr.Key, op, expr.Values)
-		if err != nil {
-			return nil, fmt.Errorf("invalid matchExpression: %w", err)
-		}
-		labelSelector = labelSelector.Add(*req)
-	}
-
-	return labelSelector, nil
 }
 
 // applyArgoCDSourceUpdate updates a single Argo CD ApplicationSource.

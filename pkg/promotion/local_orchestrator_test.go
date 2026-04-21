@@ -716,6 +716,7 @@ func TestLocalOrchestrator_ExecuteSteps(t *testing.T) {
 				fake.NewClientBuilder().Build(),
 				nil,
 				nil,
+				nil,
 			)
 
 			tt.promoCtx.WorkDir = t.TempDir()

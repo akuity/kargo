@@ -17,10 +17,17 @@ step](git-push.md).
 |------|------|----------|-------------|
 | `path` | `string` | Y | Path to a Git working tree containing changes to be committed. This path is relative to the temporary workspace that Kargo provisions for use by the promotion process. |
 | `message` | `string` | Y | The commit message. |
-| `author` | `[]object` | N | Optional authorship information for the commit. If provided, this takes precedence over both system-level defaults and any default authorship information configured in the [`git-clone`](./git-clone.md) step. |
-| `author.name` | `string` | Y | The committer's name. |
-| `author.email` | `string` | Y | The committer's email address. |
-| `author.signingKey` | `string` | N | The GPG signing key for the author. This field is optional. |
+| `author` | `object` | N | **Deprecated (v1.10.0, removal in v1.12.0).** Optional authorship information for the commit. Configure authorship in the [`git-clone`](./git-clone.md) step instead. |
+| `author.name` | `string` | Y | **Deprecated.** The committer's name. |
+| `author.email` | `string` | Y | **Deprecated.** The committer's email address. |
+| `author.signingKey` | `string` | N | **Deprecated.** The GPG signing key for the author. Configure signing keys in the [`git-clone`](./git-clone.md) step or via `ClusterConfig` instead. |
+
+:::warning
+
+The `author` field is deprecated as of v1.10.0 and will be removed in v1.12.0.
+If authorship differing from any system-level default is required, configure it in the [`git-clone`](./git-clone.md) step instead.
+
+:::
 
 ## Output
 
@@ -95,57 +102,3 @@ steps:
     message: |
       ${{ ctx.stage }}: ${{ outputs['update-image'].commitMessage }}
 ```
-
-### Commit with Custom Author
-
-The `author` field can be used to specify the committer's name and email address
-for the commit. This can be useful when the committer's identity should be
-different from Kargo's default identity.
-
-```yaml
-steps:
-# Update Kustomize manifests, etc...
-- uses: git-commit
-  config:
-    path: ./out
-    message: ${{ outputs['update-image'].commitMessage }}
-    author:
-      name: Kargo
-      email: kargo@example.com
-```
-
-### Create A Signed Commit
-
-In this example, the `git-commit` step creates a signed commit using the
-provided `author.signingKey` by sourcing it from an existing secret in the same 
-namespace using the [`secret()`](../40-expressions.md#secretname) expression 
-function.
-
-:::note
-
-Author signing information may have been configured at the system level by a 
-Kargo admin. If system-level configuration exists, the example shown below 
-would override it.
-
-:::
-
-
-```yaml
-steps:
-# Update Kustomize manifests, etc...
-- uses: git-commit
-  config:
-    path: ./out
-    message: ${{ outputs['update-image'].commitMessage }}
-    author:
-      name: Me
-      email: me@example.com
-      signingKey: ${{ secret('my-gpg-secret').privateKey }}
-```
-
-:::note
-
-If `author.signingKey` is provided, but `author.name` and `author.email` do not
-match the key's UID, the commit will fail.
-
-:::

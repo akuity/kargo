@@ -1,6 +1,7 @@
 package builtin
 
 import (
+	"context"
 	"fmt"
 	"net/http/httptest"
 	"os"
@@ -338,7 +339,8 @@ func Test_gitCloner_run(t *testing.T) {
 	// Now we can proceed to test gitCloner...
 
 	r := newGitCloner(promotion.StepRunnerCapabilities{
-		CredsDB: &credentials.FakeDB{},
+		CredsDB:         &credentials.FakeDB{},
+		GitUserResolver: &fakeGitUserResolver{},
 	})
 	runner, ok := r.(*gitCloner)
 	require.True(t, ok)
@@ -445,7 +447,8 @@ func Test_gitCloner_run_with_submodules(t *testing.T) {
 
 	// Run git-cloner with recurseSubmodules = true
 	r := newGitCloner(promotion.StepRunnerCapabilities{
-		CredsDB: &credentials.FakeDB{},
+		CredsDB:         &credentials.FakeDB{},
+		GitUserResolver: &fakeGitUserResolver{},
 	})
 	runner, ok := r.(*gitCloner)
 	require.True(t, ok)
@@ -512,4 +515,19 @@ func Test_filterForCheckouts(t *testing.T) {
 			require.Equal(t, tt.expected, result)
 		})
 	}
+}
+
+// fakeGitUserResolver is a mock implementation of the promotion.GitUserResolver
+// interface that is used to facilitate unit testing.
+type fakeGitUserResolver struct {
+	ResolveFn func(context.Context) (git.User, error)
+}
+
+func (f *fakeGitUserResolver) Resolve(
+	ctx context.Context,
+) (git.User, error) {
+	if f.ResolveFn != nil {
+		return f.ResolveFn(ctx)
+	}
+	return git.User{}, nil
 }

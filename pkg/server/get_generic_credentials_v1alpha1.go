@@ -17,7 +17,7 @@ import (
 // @Param project path string true "Project name"
 // @Param generic-credentials path string true "Credentials name"
 // @Produce json
-// @Success 200 {object} object "Secret resource (k8s.io/api/core/v1.Secret)"
+// @Success 200 {object} corev1.Secret "Secret resource (k8s.io/api/core/v1.Secret)"
 // @Router /v1beta1/projects/{project}/generic-credentials/{generic-credentials} [get]
 func (s *server) getProjectGenericCredentials(c *gin.Context) {
 	if !s.requireSecretManagement(c) {
@@ -55,7 +55,7 @@ func (s *server) getProjectGenericCredentials(c *gin.Context) {
 // @Security BearerAuth
 // @Param generic-credentials path string true "Credentials name"
 // @Produce json
-// @Success 200 {object} object "Secret resource (k8s.io/api/core/v1.Secret)"
+// @Success 200 {object} corev1.Secret "Secret resource (k8s.io/api/core/v1.Secret)"
 // @Router /v1beta1/system/generic-credentials/{generic-credentials} [get]
 func (s *server) getSystemGenericCredentials(c *gin.Context) {
 	if !s.requireSecretManagement(c) {
@@ -92,7 +92,7 @@ func (s *server) getSystemGenericCredentials(c *gin.Context) {
 // @Security BearerAuth
 // @Param generic-credentials path string true "Credentials name"
 // @Produce json
-// @Success 200 {object} object "Secret resource (k8s.io/api/core/v1.Secret)"
+// @Success 200 {object} corev1.Secret "Secret resource (k8s.io/api/core/v1.Secret)"
 // @Router /v1beta1/shared/generic-credentials/{generic-credentials} [get]
 func (s *server) getSharedGenericCredentials(c *gin.Context) {
 	if !s.requireSecretManagement(c) {

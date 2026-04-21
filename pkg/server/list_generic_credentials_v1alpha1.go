@@ -85,7 +85,7 @@ func (s *server) ListGenericCredentials(
 // @Security BearerAuth
 // @Param project path string true "Project name"
 // @Produce json
-// @Success 200 {object} object "SecretList resource (k8s.io/api/core/v1.SecretList)"
+// @Success 200 {object} corev1.SecretList "SecretList resource (k8s.io/api/core/v1.SecretList)"
 // @Router /v1beta1/projects/{project}/generic-credentials [get]
 func (s *server) listProjectGenericCredentials(c *gin.Context) {
 	ctx := c.Request.Context()
@@ -124,7 +124,7 @@ func (s *server) listProjectGenericCredentials(c *gin.Context) {
 // @Tags Credentials, Generic Credentials, System-Level
 // @Security BearerAuth
 // @Produce json
-// @Success 200 {object} object "SecretList resource (k8s.io/api/core/v1.SecretList)"
+// @Success 200 {object} corev1.SecretList "SecretList resource (k8s.io/api/core/v1.SecretList)"
 // @Router /v1beta1/system/generic-credentials [get]
 func (s *server) listSystemGenericCredentials(c *gin.Context) {
 	ctx := c.Request.Context()
@@ -161,7 +161,7 @@ func (s *server) listSystemGenericCredentials(c *gin.Context) {
 // @Tags Credentials, Generic Credentials, Shared
 // @Security BearerAuth
 // @Produce json
-// @Success 200 {object} object "SecretList resource (k8s.io/api/core/v1.SecretList)"
+// @Success 200 {object} corev1.SecretList "SecretList resource (k8s.io/api/core/v1.SecretList)"
 // @Router /v1beta1/shared/generic-credentials [get]
 func (s *server) listSharedGenericCredentials(c *gin.Context) {
 	ctx := c.Request.Context()
@@ -207,7 +207,7 @@ func sanitizeGenericCredentials(secret corev1.Secret) *corev1.Secret {
 	s.StringData = make(map[string]string, len(s.Data))
 	for k, v := range s.Annotations {
 		switch k {
-		case kargoapi.AnnotationKeyDescription:
+		case kargoapi.AnnotationKeyDescription, kargoapi.AnnotationKeyReplicateTo:
 			s.Annotations[k] = v
 		default:
 			s.Annotations[k] = redacted

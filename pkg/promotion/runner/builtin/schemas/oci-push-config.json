@@ -1,0 +1,32 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "OCIPushConfig",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["srcRef", "destRef"],
+  "properties": {
+    "srcRef": {
+      "type": "string",
+      "description": "SrcRef is the source OCI artifact reference with tag or digest (e.g. 'registry/repo:tag' or 'registry/repo@sha256:...'). Use 'oci://' prefix for Helm charts.",
+      "minLength": 1,
+      "pattern": "^(oci://)?[a-zA-Z0-9._-]+(:\\d+)?(/[a-zA-Z0-9._-]+)*[@:][a-zA-Z0-9._:-]+$"
+    },
+    "destRef": {
+      "type": "string",
+      "description": "DestRef is the destination reference including tag (e.g. 'registry/repo:tag' or 'oci://registry/repo:tag'). For retag-in-place, use the same repo as srcRef with the new tag.",
+      "minLength": 1,
+      "pattern": "^(oci://)?[a-zA-Z0-9._-]+(:\\d+)?(/[a-zA-Z0-9._-]+)*[:][a-zA-Z0-9._-]+$"
+    },
+    "annotations": {
+      "type": "object",
+      "description": "Annotations to set on the destination artifact. Keys may be prefixed with 'index:' or 'manifest:' to scope them to the index or image manifest respectively. Unprefixed keys default to the image manifest. For single images, 'index:'-prefixed keys are ignored.",
+      "additionalProperties": {
+        "type": "string"
+      }
+    },
+    "insecureSkipTLSVerify": {
+      "type": "boolean",
+      "description": "Whether to skip TLS verification when communicating with registries. Defaults to false."
+    }
+  }
+}

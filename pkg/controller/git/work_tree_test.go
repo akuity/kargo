@@ -70,6 +70,109 @@ func TestWorkTree(t *testing.T) {
 
 }
 
+func Test_workTree_Pull(t *testing.T) {
+	testServer, testRepoURL, testRepoCreds := setupRemoteRepo(
+		t, initialMainCommit, commitAhead,
+	)
+	defer testServer.Close()
+
+	t.Run("force pull resets to remote", func(t *testing.T) {
+		repo, err := Clone(
+			testRepoURL,
+			&ClientOptions{Credentials: &testRepoCreds},
+			nil,
+		)
+		require.NoError(t, err)
+		defer repo.Close()
+
+		// Make a local commit that diverges from "ahead".
+		err = os.WriteFile(
+			fmt.Sprintf("%s/local.txt", repo.Dir()),
+			[]byte("local"),
+			0o600,
+		)
+		require.NoError(t, err)
+		err = repo.AddAllAndCommit("local divergent commit", nil)
+		require.NoError(t, err)
+
+		localCommit, err := repo.LastCommitID()
+		require.NoError(t, err)
+
+		// Force pull from "ahead" should reset to the remote state.
+		err = repo.Pull(&PullOptions{Branch: "ahead", Force: true})
+		require.NoError(t, err)
+
+		newCommit, err := repo.LastCommitID()
+		require.NoError(t, err)
+		require.NotEqual(t, localCommit, newCommit)
+
+		// The remote-only file should be present.
+		_, err = os.Stat(
+			fmt.Sprintf("%s/remote.txt", repo.Dir()),
+		)
+		require.NoError(t, err)
+
+		// The local-only file should be gone (hard reset).
+		_, err = os.Stat(
+			fmt.Sprintf("%s/local.txt", repo.Dir()),
+		)
+		require.True(t, os.IsNotExist(err))
+	})
+
+	t.Run("non-force pull merges remote", func(t *testing.T) {
+		repo, err := Clone(
+			testRepoURL,
+			&ClientOptions{Credentials: &testRepoCreds},
+			nil,
+		)
+		require.NoError(t, err)
+		defer repo.Close()
+
+		// Make a local commit on a different file to avoid conflicts.
+		err = os.WriteFile(
+			fmt.Sprintf("%s/local.txt", repo.Dir()),
+			[]byte("local"),
+			0o600,
+		)
+		require.NoError(t, err)
+		err = repo.AddAllAndCommit("local non-conflicting commit", nil)
+		require.NoError(t, err)
+
+		// Non-force pull from "ahead" should merge.
+		err = repo.Pull(&PullOptions{Branch: "ahead"})
+		require.NoError(t, err)
+
+		// Both files should be present after merge.
+		_, err = os.Stat(
+			fmt.Sprintf("%s/remote.txt", repo.Dir()),
+		)
+		require.NoError(t, err)
+		_, err = os.Stat(
+			fmt.Sprintf("%s/local.txt", repo.Dir()),
+		)
+		require.NoError(t, err)
+
+		// Should have a merge commit.
+		msg, err := repo.CommitMessage("HEAD")
+		require.NoError(t, err)
+		require.Contains(t, msg, "Merge")
+	})
+
+	t.Run("nil opts defaults to current branch", func(t *testing.T) {
+		repo, err := Clone(
+			testRepoURL,
+			&ClientOptions{Credentials: &testRepoCreds},
+			nil,
+		)
+		require.NoError(t, err)
+		defer repo.Close()
+
+		// Pull with nil opts should not error (fetches current branch).
+		err = repo.Pull(nil)
+		require.NoError(t, err)
+	})
+}
+
 func Test_parseTagMetadataLine(t *testing.T) {
 	tests := []struct {
 		name    string

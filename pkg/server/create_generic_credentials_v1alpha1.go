@@ -21,6 +21,7 @@ type genericCredentials struct {
 	project     string
 	name        string
 	description string
+	replicate   bool
 	data        map[string]string
 }
 
@@ -44,6 +45,7 @@ func (s *server) CreateGenericCredentials(
 			name:        req.Msg.Name,
 			data:        req.Msg.Data,
 			description: req.Msg.Description,
+			replicate:   req.Msg.Replicate,
 		},
 	)
 	if err := s.client.Create(ctx, secret); err != nil {
@@ -84,6 +86,7 @@ func (s *server) validateGenericCredentialsRequest(
 type createGenericCredentialsRequest struct {
 	Name        string            `json:"name"`
 	Description string            `json:"description,omitempty"`
+	Replicate   bool              `json:"replicate,omitempty"`
 	Data        map[string]string `json:"data,omitempty"`
 } // @name CreateGenericCredentialsRequest
 
@@ -97,7 +100,7 @@ type createGenericCredentialsRequest struct {
 // @Produce json
 // @Param project path string true "Project name"
 // @Param body body createGenericCredentialsRequest true "Generic credentials"
-// @Success 201 {object} object "Secret resource (k8s.io/api/core/v1.Secret)"
+// @Success 201 {object} corev1.Secret "Secret resource (k8s.io/api/core/v1.Secret)"
 // @Router /v1beta1/projects/{project}/generic-credentials [post]
 func (s *server) createProjectGenericCredentials(c *gin.Context) {
 	if !s.requireSecretManagement(c) {
@@ -122,6 +125,7 @@ func (s *server) createProjectGenericCredentials(c *gin.Context) {
 			project:     project,
 			name:        req.Name,
 			description: req.Description,
+			replicate:   req.Replicate,
 			data:        req.Data,
 		},
 	)
@@ -142,7 +146,7 @@ func (s *server) createProjectGenericCredentials(c *gin.Context) {
 // @Accept json
 // @Produce json
 // @Param body body createGenericCredentialsRequest true "Generic credentials"
-// @Success 201 {object} object "Secret resource (k8s.io/api/core/v1.Secret)"
+// @Success 201 {object} corev1.Secret "Secret resource (k8s.io/api/core/v1.Secret)"
 // @Router /v1beta1/system/generic-credentials [post]
 func (s *server) createSystemGenericCredentials(c *gin.Context) {
 	if !s.requireSecretManagement(c) {
@@ -166,6 +170,7 @@ func (s *server) createSystemGenericCredentials(c *gin.Context) {
 			systemLevel: true,
 			name:        req.Name,
 			description: req.Description,
+			replicate:   req.Replicate,
 			data:        req.Data,
 		},
 	)
@@ -186,7 +191,7 @@ func (s *server) createSystemGenericCredentials(c *gin.Context) {
 // @Accept json
 // @Produce json
 // @Param body body createGenericCredentialsRequest true "Generic credentials"
-// @Success 201 {object} object "Secret resource (k8s.io/api/core/v1.Secret)"
+// @Success 201 {object} corev1.Secret "Secret resource (k8s.io/api/core/v1.Secret)"
 // @Router /v1beta1/shared/generic-credentials [post]
 func (s *server) createSharedGenericCredentials(c *gin.Context) {
 	if !s.requireSecretManagement(c) {
@@ -209,6 +214,7 @@ func (s *server) createSharedGenericCredentials(c *gin.Context) {
 		genericCredentials{
 			name:        req.Name,
 			description: req.Description,
+			replicate:   req.Replicate,
 			data:        req.Data,
 		},
 	)
@@ -261,10 +267,15 @@ func (s *server) genericCredentialsToK8sSecret(
 		Data: secretsData,
 	}
 
+	annotations := make(map[string]string)
 	if creds.description != "" {
-		secret.Annotations = map[string]string{
-			kargoapi.AnnotationKeyDescription: creds.description,
-		}
+		annotations[kargoapi.AnnotationKeyDescription] = creds.description
+	}
+	if creds.replicate {
+		annotations[kargoapi.AnnotationKeyReplicateTo] = kargoapi.AnnotationValueReplicateToAll
+	}
+	if len(annotations) > 0 {
+		secret.Annotations = annotations
 	}
 
 	return secret

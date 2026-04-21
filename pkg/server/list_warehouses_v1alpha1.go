@@ -62,7 +62,7 @@ func (s *server) ListWarehouses(
 // @Security BearerAuth
 // @Param project path string true "Project name"
 // @Produce json
-// @Success 200 {object} object "WarehouseList custom resource (github.com/akuity/kargo/api/v1alpha1.WarehouseList)"
+// @Success 200 {object} kargoapi.WarehouseList "WarehouseList custom resource"
 // @Router /v1beta1/projects/{project}/warehouses [get]
 func (s *server) listWarehouses(c *gin.Context) {
 	ctx := c.Request.Context()

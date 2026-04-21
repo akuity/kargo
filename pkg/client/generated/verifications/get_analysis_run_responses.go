@@ -10,6 +10,8 @@ import (
 
 	"github.com/go-openapi/runtime"
 	"github.com/go-openapi/strfmt"
+
+	"github.com/akuity/kargo/pkg/client/generated/models"
 )
 
 // GetAnalysisRunReader is a Reader for the GetAnalysisRun structure.
@@ -42,7 +44,7 @@ GetAnalysisRunOK describes a response with status code 200, with default header 
 AnalysisRun custom resource (github.com/argoproj/argo-rollouts/pkg/apis/rollouts/v1alpha1.AnalysisRun)
 */
 type GetAnalysisRunOK struct {
-	Payload any
+	Payload *models.RolloutsAnalysisRun
 }
 
 // IsSuccess returns true when this get analysis run o k response has a 2xx status code
@@ -85,14 +87,16 @@ func (o *GetAnalysisRunOK) String() string {
 	return fmt.Sprintf("[GET /v1beta1/projects/{project}/analysis-runs/{analysis-run}][%d] getAnalysisRunOK %s", 200, payload)
 }
 
-func (o *GetAnalysisRunOK) GetPayload() any {
+func (o *GetAnalysisRunOK) GetPayload() *models.RolloutsAnalysisRun {
 	return o.Payload
 }
 
 func (o *GetAnalysisRunOK) readResponse(response runtime.ClientResponse, consumer runtime.Consumer, formats strfmt.Registry) error {
 
+	o.Payload = new(models.RolloutsAnalysisRun)
+
 	// response payload
-	if err := consumer.Consume(response.Body(), &o.Payload); err != nil && !stderrors.Is(err, io.EOF) {
+	if err := consumer.Consume(response.Body(), o.Payload); err != nil && !stderrors.Is(err, io.EOF) {
 		return err
 	}
 

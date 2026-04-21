@@ -6,22 +6,26 @@
  "properties": {
   "author": {
    "type": "object",
-   "description": "Optional authorship information for the commit. If provided, this takes precedence over both system-level defaults and any optional, default authorship information configured in the `git-clone` step.",
+   "description": "Optional authorship information for the commit. If provided, this takes precedence over both system-level defaults and any optional, default authorship information configured in the `git-clone` step. Deprecated: This field is deprecated as of v1.10.0 and will be removed in v1.12.0. Configure authorship in the `git-clone` step instead.",
+   "deprecated": true,
    "additionalProperties": false,
    "properties": {
     "email": {
      "type": "string",
-     "description": "The email of the author.",
+     "description": "The email of the author. Deprecated: This field is deprecated as of v1.10.0 and will be removed in v1.12.0.",
+     "deprecated": true,
      "format": "email"
     },
     "name": {
      "type": "string",
-     "description": "The name of the author.",
+     "description": "The name of the author. Deprecated: This field is deprecated as of v1.10.0 and will be removed in v1.12.0.",
+     "deprecated": true,
      "minLength": 1
     },
     "signingKey": {
      "type": "string",
-     "description": "The GPG signing key for the author. If provided, 'email' and 'name' must match the key's UID."
+     "description": "The GPG signing key for the author. Deprecated: This field is deprecated as of v1.10.0 and will be removed in v1.12.0. Configure signing keys in the `git-clone` step or via ClusterConfig instead.",
+     "deprecated": true
     }
    }
   },
