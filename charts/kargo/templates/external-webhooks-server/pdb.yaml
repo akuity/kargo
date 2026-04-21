@@ -1,0 +1,31 @@
+{{- if and .Values.externalWebhooksServer.enabled .Values.externalWebhooksServer.podDisruptionBudget.enabled }}
+apiVersion: policy/v1
+kind: PodDisruptionBudget
+metadata:
+  name: kargo-external-webhooks-server
+  namespace: {{ .Release.Namespace }}
+  labels:
+    {{- include "kargo.labels" . | nindent 4 }}
+    {{- include "kargo.externalWebhooksServer.labels" . | nindent 4 }}
+  {{- with (mergeOverwrite (deepCopy .Values.global.labels) .Values.externalWebhooksServer.labels) }}
+    {{- range $key, $value := . }}
+    {{ $key }}: {{ $value | quote }}
+    {{- end }}
+  {{- end }}
+  {{- with (mergeOverwrite (deepCopy .Values.global.annotations) .Values.externalWebhooksServer.annotations) }}
+  annotations:
+    {{- range $key, $value := . }}
+    {{ $key }}: {{ $value | quote }}
+    {{- end }}
+  {{- end }}
+spec:
+  {{- if .Values.externalWebhooksServer.podDisruptionBudget.maxUnavailable }}
+  maxUnavailable: {{ .Values.externalWebhooksServer.podDisruptionBudget.maxUnavailable }}
+  {{- else }}
+  minAvailable: {{ .Values.externalWebhooksServer.podDisruptionBudget.minAvailable }}
+  {{- end }}
+  selector:
+    matchLabels:
+      {{- include "kargo.selectorLabels" . | nindent 6 }}
+      {{- include "kargo.externalWebhooksServer.labels" . | nindent 6 }}
+{{- end }}

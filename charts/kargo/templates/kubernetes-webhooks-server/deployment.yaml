@@ -54,6 +54,10 @@ spec:
       affinity:
         {{- toYaml . | nindent 8 }}
       {{- end }}
+      {{- with .Values.webhooksServer.topologySpreadConstraints }}
+      topologySpreadConstraints:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
       {{- with .Values.webhooksServer.priorityClassName | default .Values.global.priorityClassName }}
       priorityClassName: {{ . }}
       {{- end }}
