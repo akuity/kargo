@@ -212,14 +212,10 @@ func (o *promotionOptions) run(ctx context.Context) error {
 		if err != nil {
 			return fmt.Errorf("marshal promotion: %w", err)
 		}
-		// The response is {"promotion": {...}}
-		var result struct {
-			Promotion *kargoapi.Promotion `json:"promotion"`
-		}
-		if err = json.Unmarshal(promoJSON, &result); err != nil {
+		promo := &kargoapi.Promotion{}
+		if err = json.Unmarshal(promoJSON, promo); err != nil {
 			return fmt.Errorf("unmarshal promotion: %w", err)
 		}
-		promo := result.Promotion
 		if o.Wait {
 			if err = o.waitForPromotion(ctx, nil, promo); err != nil {
 				return fmt.Errorf("wait for promotion: %w", err)
