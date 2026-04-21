@@ -431,6 +431,14 @@ api:
   ## @param api.affinity Specifies pod affinity for api pods. Defaults to `global.affinity`.
   affinity: {}
   ## @param api.topologySpreadConstraints Topology spread constraints for api pods.
+  ## e.g.
+  ## topologySpreadConstraints:
+  ## - maxSkew: 1
+  ##   topologyKey: kubernetes.io/hostname
+  ##   whenUnsatisfiable: DoNotSchedule
+  ##   labelSelector:
+  ##     matchLabels:
+  ##       app.kubernetes.io/component: api
   topologySpreadConstraints: []
   ## @param api.priorityClassName [nullable] Name of the priority class for api pods. Defaults to `global.priorityClassName`.
   # priorityClassName:
@@ -791,6 +799,14 @@ externalWebhooksServer:
   ## @param externalWebhooksServer.affinity Specifies pod affinity for external webhook server pods. Defaults to `global.affinity`.
   affinity: {}
   ## @param externalWebhooksServer.topologySpreadConstraints Topology spread constraints for external webhook server pods.
+  ## e.g.
+  ## topologySpreadConstraints:
+  ## - maxSkew: 1
+  ##   topologyKey: kubernetes.io/hostname
+  ##   whenUnsatisfiable: DoNotSchedule
+  ##   labelSelector:
+  ##     matchLabels:
+  ##       app.kubernetes.io/component: external-webhooks-server
   topologySpreadConstraints: []
   ## @param externalWebhooksServer.priorityClassName [nullable] Name of the priority class for external webhook server pods. Defaults to `global.priorityClassName`.
   # priorityClassName:
@@ -983,6 +999,14 @@ webhooksServer:
   ## @param webhooksServer.affinity Specifies pod affinity for the webhooks server pods. Defaults to `global.affinity`.
   affinity: {}
   ## @param webhooksServer.topologySpreadConstraints Topology spread constraints for webhooks server pods.
+  ## e.g.
+  ## topologySpreadConstraints:
+  ## - maxSkew: 1
+  ##   topologyKey: kubernetes.io/hostname
+  ##   whenUnsatisfiable: DoNotSchedule
+  ##   labelSelector:
+  ##     matchLabels:
+  ##       app.kubernetes.io/component: webhooks-server
   topologySpreadConstraints: []
   ## @param webhooksServer.priorityClassName [nullable] Name of the priority class for the webhooks server pods. Defaults to `global.priorityClassName`.
   # priorityClassName:
