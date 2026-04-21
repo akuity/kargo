@@ -215,7 +215,7 @@ The following example depicts `targetSelectionCriteria` that selects a running
 useful for resuming a `Promotion` from an external process: a promotion step
 (such as `http`) can trigger an external system and pass along its own name;
 the external system can then POST back to this receiver once complete, waking
-the `Promotion` for reconciliation without polling.
+the `Promotion` for reconciliation.
 
 ```yaml
 apiVersion: kargo.akuity.io/v1alpha1
