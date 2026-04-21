@@ -21,7 +21,7 @@ type Config struct {
 	// ExternalWebhooksServerUsername is the exact username (typically a service
 	// account name) of the external webhooks server. When an admission request
 	// originates from this subject, the "promote" verb authorization check is
-	// bypassed, as the external webhooks server is permitted to create
+	// bypassed, as the external webhooks server is permitted to refresh running
 	// Promotions on behalf of webhook callers without holding that permission
 	// itself.
 	ExternalWebhooksServerUsername string `envconfig:"EXTERNAL_WEBHOOKS_SERVER_USERNAME"`

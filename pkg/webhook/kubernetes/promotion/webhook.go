@@ -350,8 +350,8 @@ func (w *webhook) authorize(
 		)
 	}
 
-	// The external webhooks server is trusted to create Promotions on behalf
-	// of webhook callers. Skip the "promote" verb check for this subject.
+	// The external webhooks server is trusted to refresh running Promotions on
+	// behalf of webhook callers. Skip the "promote" verb check for this subject.
 	if w.externalWebhooksServerUsername != "" &&
 		req.UserInfo.Username == w.externalWebhooksServerUsername {
 		return nil
