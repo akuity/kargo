@@ -1091,7 +1091,8 @@ func Test_webhook_Authorize(t *testing.T) {
 		assertions func(*testing.T, error)
 	}{
 		{
-			name: "error getting admission request bound to context",
+			name:                           "error getting admission request bound to context",
+			externalWebhooksServerUsername: "system:serviceaccount:kargo:kargo-external-webhooks-server",
 			admissionRequestFromContextFn: func(
 				context.Context,
 			) (admission.Request, error) {
@@ -1104,7 +1105,8 @@ func Test_webhook_Authorize(t *testing.T) {
 			},
 		},
 		{
-			name: "error creating subject access review",
+			name:                           "error creating subject access review",
+			externalWebhooksServerUsername: "system:serviceaccount:kargo:kargo-external-webhooks-server",
 			admissionRequestFromContextFn: func(
 				context.Context,
 			) (admission.Request, error) {
@@ -1122,7 +1124,8 @@ func Test_webhook_Authorize(t *testing.T) {
 			},
 		},
 		{
-			name: "subject is not authorized",
+			name:                           "subject is not authorized",
+			externalWebhooksServerUsername: "system:serviceaccount:kargo:kargo-external-webhooks-server",
 			admissionRequestFromContextFn: func(
 				context.Context,
 			) (admission.Request, error) {
@@ -1141,7 +1144,8 @@ func Test_webhook_Authorize(t *testing.T) {
 			},
 		},
 		{
-			name: "subject is authorized",
+			name:                           "subject is authorized",
+			externalWebhooksServerUsername: "system:serviceaccount:kargo:kargo-external-webhooks-server",
 			admissionRequestFromContextFn: func(
 				context.Context,
 			) (admission.Request, error) {
