@@ -3,6 +3,7 @@ package gar
 import (
 	"context"
 	"fmt"
+	"sync"
 	"testing"
 	"time"
 
@@ -160,6 +161,36 @@ func TestWorkloadIdentityFederationProvider_Supports(t *testing.T) {
 			testCase.assert(t, supports)
 		})
 	}
+}
+
+func TestWorkloadIdentityFederationProvider_EnsureInitialized_NoConcurrentRace(t *testing.T) {
+	// This test is only meaningful when run with -race. It verifies that
+	// concurrent callers of ensureInitialized do not produce a data race on
+	// projectID, which would occur if the lock were moved after the nil-check.
+	ready := make(chan struct{})
+	var p WorkloadIdentityFederationProvider
+	p.initFn = func(_ context.Context) error {
+		<-ready
+		p.projectID = "test-project"
+		return nil
+	}
+
+	var wg sync.WaitGroup
+	wg.Add(1)
+	go func() {
+		defer wg.Done()
+		_ = p.ensureInitialized(t.Context())
+	}()
+
+	wg.Add(1)
+	go func() {
+		defer wg.Done()
+		close(ready)
+		_ = p.ensureInitialized(t.Context())
+	}()
+
+	wg.Wait()
+	require.Equal(t, "test-project", p.projectID)
 }
 
 func TestWorkloadIdentityFederationProvider_Supports_RetryCap(t *testing.T) {
