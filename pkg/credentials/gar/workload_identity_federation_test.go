@@ -3,7 +3,6 @@ package gar
 import (
 	"context"
 	"fmt"
-	"sync"
 	"testing"
 	"time"
 
@@ -15,7 +14,92 @@ import (
 	"github.com/akuity/kargo/pkg/credentials"
 )
 
+func TestNewWorkloadIdentityFederationProvider(t *testing.T) {
+	t.Parallel()
+
+	testCases := []struct {
+		name          string
+		cancelContext bool
+		initFns       []func(context.Context) error
+		assert        func(*testing.T, *WorkloadIdentityFederationProvider)
+	}{
+		{
+			name: "succeeds on first attempt",
+			initFns: []func(context.Context) error{
+				func(context.Context) error { return nil },
+			},
+			assert: func(t *testing.T, p *WorkloadIdentityFederationProvider) {
+				require.NotNil(t, p)
+			},
+		},
+		{
+			name: "succeeds after transient failures",
+			initFns: []func(context.Context) error{
+				func(context.Context) error { return fmt.Errorf("transient") },
+				func(context.Context) error { return fmt.Errorf("transient") },
+				func(context.Context) error { return nil },
+			},
+			assert: func(t *testing.T, p *WorkloadIdentityFederationProvider) {
+				require.NotNil(t, p)
+			},
+		},
+		{
+			name: "returns nil after exhausting all attempts",
+			initFns: func() []func(context.Context) error {
+				fns := make([]func(context.Context) error, initMaxAttempts)
+				for i := range fns {
+					fns[i] = func(context.Context) error { return fmt.Errorf("persistent failure") }
+				}
+				return fns
+			}(),
+			assert: func(t *testing.T, p *WorkloadIdentityFederationProvider) {
+				require.Nil(t, p)
+			},
+		},
+		{
+			name:          "returns nil when context is cancelled",
+			cancelContext: true,
+			initFns: []func(context.Context) error{
+				func(context.Context) error { return fmt.Errorf("transient") },
+			},
+			assert: func(t *testing.T, p *WorkloadIdentityFederationProvider) {
+				require.Nil(t, p)
+			},
+		},
+	}
+
+	for _, testCase := range testCases {
+		t.Run(testCase.name, func(t *testing.T) {
+			t.Parallel()
+
+			calls := 0
+			initFn := func(ctx context.Context) error {
+				fn := testCase.initFns[min(calls, len(testCase.initFns)-1)]
+				calls++
+				return fn(ctx)
+			}
+
+			p := &WorkloadIdentityFederationProvider{
+				tokenCache:       cache.New(time.Minute, time.Minute),
+				tokenSourceCache: cache.New(time.Minute, time.Minute),
+			}
+
+			ctx := t.Context()
+			if testCase.cancelContext {
+				var cancel context.CancelFunc
+				ctx, cancel = context.WithCancel(ctx)
+				cancel()
+			}
+
+			result := initializeWithRetry(ctx, p, initFn, 0)
+			testCase.assert(t, result)
+		})
+	}
+}
+
 func TestWorkloadIdentityFederationProvider_Supports(t *testing.T) {
+	t.Parallel()
+
 	const (
 		fakeProjectID  = "test-project"
 		fakeGCRRepoURL = "gcr.io/my-project/my-repo"
@@ -30,126 +114,74 @@ func TestWorkloadIdentityFederationProvider_Supports(t *testing.T) {
 		assert   func(t *testing.T, result bool)
 	}{
 		{
-			name: "supports image credentials for GAR URL",
-			provider: &WorkloadIdentityFederationProvider{
-				projectID: fakeProjectID,
-			},
+			name:     "supports image credentials for GAR URL",
+			provider: &WorkloadIdentityFederationProvider{projectID: fakeProjectID},
 			credType: credentials.TypeImage,
 			repoURL:  fakeGARRepoURL,
 			assert: func(t *testing.T, result bool) {
-				assert.True(t, result, "should support GAR URL with image credentials")
+				assert.True(t, result)
 			},
 		},
 		{
-			name: "supports image credentials for GCR URL",
-			provider: &WorkloadIdentityFederationProvider{
-				projectID: fakeProjectID,
-			},
+			name:     "supports image credentials for GCR URL",
+			provider: &WorkloadIdentityFederationProvider{projectID: fakeProjectID},
 			credType: credentials.TypeImage,
 			repoURL:  fakeGCRRepoURL,
 			assert: func(t *testing.T, result bool) {
-				assert.True(t, result, "should support GCR URL with image credentials")
+				assert.True(t, result)
 			},
 		},
 		{
-			name: "rejects unsupported credentials",
-			provider: &WorkloadIdentityFederationProvider{
-				projectID: fakeProjectID,
+			name:     "supports Helm credentials for GAR URL",
+			provider: &WorkloadIdentityFederationProvider{projectID: fakeProjectID},
+			credType: credentials.TypeHelm,
+			repoURL:  fakeGARRepoURL,
+			assert: func(t *testing.T, result bool) {
+				assert.True(t, result)
 			},
+		},
+		{
+			name:     "supports Helm credentials for GCR URL",
+			provider: &WorkloadIdentityFederationProvider{projectID: fakeProjectID},
+			credType: credentials.TypeHelm,
+			repoURL:  fakeGCRRepoURL,
+			assert: func(t *testing.T, result bool) {
+				assert.True(t, result)
+			},
+		},
+		{
+			name:     "rejects unsupported credential type",
+			provider: &WorkloadIdentityFederationProvider{projectID: fakeProjectID},
 			credType: credentials.TypeGit,
 			repoURL:  fakeGARRepoURL,
 			assert: func(t *testing.T, result bool) {
-				assert.False(t, result, "should not support unsupported credentials")
+				assert.False(t, result)
 			},
 		},
 		{
-			name: "rejects non-GAR/GCR URL",
-			provider: &WorkloadIdentityFederationProvider{
-				projectID: fakeProjectID,
-			},
+			name:     "rejects non-GAR/GCR URL",
+			provider: &WorkloadIdentityFederationProvider{projectID: fakeProjectID},
 			credType: credentials.TypeImage,
 			repoURL:  "docker.io/library/alpine",
 			assert: func(t *testing.T, result bool) {
-				assert.False(t, result, "should not support non-GAR/GCR URL")
+				assert.False(t, result)
 			},
 		},
 		{
-			name: "returns false when lazy init fails",
-			provider: &WorkloadIdentityFederationProvider{
-				initFn: func(context.Context) error {
-					return fmt.Errorf("metadata server unavailable")
-				},
-			},
-			credType: credentials.TypeImage,
-			repoURL:  fakeGARRepoURL,
-			assert: func(t *testing.T, result bool) {
-				assert.False(t, result, "should not support when initialization fails")
-			},
-		},
-		{
-			name: "initializes lazily on first eligible request",
-			provider: &WorkloadIdentityFederationProvider{
-				initFn: func(_ context.Context) error {
-					return nil
-				},
-			},
-			credType: credentials.TypeImage,
-			repoURL:  fakeGARRepoURL,
-			assert: func(t *testing.T, result bool) {
-				assert.True(t, result, "should support after successful lazy initialization")
-			},
-		},
-		// Helm chart test cases
-		{
-			name: "supports Helm credentials for GAR chart URL",
-			provider: &WorkloadIdentityFederationProvider{
-				projectID: fakeProjectID,
-			},
-			credType: credentials.TypeHelm,
-			repoURL:  fakeGARRepoURL,
-			assert: func(t *testing.T, result bool) {
-				assert.True(t, result, "should support GAR chart URL with Helm credentials")
-			},
-		},
-		{
-			name: "supports Helm credentials for GCR chart URL",
-			provider: &WorkloadIdentityFederationProvider{
-				projectID: fakeProjectID,
-			},
-			credType: credentials.TypeHelm,
-			repoURL:  fakeGCRRepoURL,
-			assert: func(t *testing.T, result bool) {
-				assert.True(t, result, "should support GCR chart URL with Helm credentials")
-			},
-		},
-		{
-			name: "rejects Helm credentials for non-GAR/GCR URL",
-			provider: &WorkloadIdentityFederationProvider{
-				projectID: fakeProjectID,
-			},
+			name:     "rejects Helm credentials for non-GAR/GCR URL",
+			provider: &WorkloadIdentityFederationProvider{projectID: fakeProjectID},
 			credType: credentials.TypeHelm,
 			repoURL:  "docker.io/library/alpine",
 			assert: func(t *testing.T, result bool) {
-				assert.False(t, result, "should not support non-GAR/GCR URL with Helm credentials")
-			},
-		},
-		{
-			name: "returns false for Helm credentials when lazy init fails",
-			provider: &WorkloadIdentityFederationProvider{
-				initFn: func(context.Context) error {
-					return fmt.Errorf("metadata server unavailable")
-				},
-			},
-			credType: credentials.TypeHelm,
-			repoURL:  fakeGARRepoURL,
-			assert: func(t *testing.T, result bool) {
-				assert.False(t, result, "should not support when initialization fails")
+				assert.False(t, result)
 			},
 		},
 	}
 
 	for _, testCase := range testCases {
 		t.Run(testCase.name, func(t *testing.T) {
+			t.Parallel()
+
 			supports, err := testCase.provider.Supports(
 				t.Context(),
 				credentials.Request{
@@ -163,63 +195,9 @@ func TestWorkloadIdentityFederationProvider_Supports(t *testing.T) {
 	}
 }
 
-func TestWorkloadIdentityFederationProvider_EnsureInitialized_NoConcurrentRace(t *testing.T) {
-	// This test is only meaningful when run with -race. It verifies that
-	// concurrent callers of ensureInitialized do not produce a data race on
-	// projectID, which would occur if the lock were moved after the nil-check.
-	ready := make(chan struct{})
-	var p WorkloadIdentityFederationProvider
-	p.initFn = func(_ context.Context) error {
-		<-ready
-		p.projectID = "test-project"
-		return nil
-	}
-
-	var wg sync.WaitGroup
-	wg.Add(1)
-	go func() {
-		defer wg.Done()
-		_ = p.ensureInitialized(t.Context())
-	}()
-
-	wg.Add(1)
-	go func() {
-		defer wg.Done()
-		close(ready)
-		_ = p.ensureInitialized(t.Context())
-	}()
-
-	wg.Wait()
-	require.Equal(t, "test-project", p.projectID)
-}
-
-func TestWorkloadIdentityFederationProvider_Supports_RetryCap(t *testing.T) {
-	const fakeGARRepoURL = "us-central1-docker.pkg.dev/my-project/my-repo"
-
-	initCalls := 0
-	p := &WorkloadIdentityFederationProvider{
-		initFn: func(context.Context) error {
-			initCalls++
-			return fmt.Errorf("metadata server unavailable")
-		},
-	}
-
-	for i := range maxInitFailures + 1 {
-		supports, err := p.Supports(
-			t.Context(),
-			credentials.Request{
-				Type:    credentials.TypeImage,
-				RepoURL: fakeGARRepoURL,
-			},
-		)
-		require.NoError(t, err)
-		require.False(t, supports, "iteration %d", i)
-	}
-
-	require.Equal(t, maxInitFailures, initCalls, "initFn should not be called after cap is reached")
-}
-
 func TestWorkloadIdentityFederationProvider_GetCredentials(t *testing.T) {
+	t.Parallel()
+
 	const (
 		fakeProjectID  = "test-project"
 		fakeProject    = "kargo-project"
@@ -243,40 +221,6 @@ func TestWorkloadIdentityFederationProvider_GetCredentials(t *testing.T) {
 			err error,
 		)
 	}{
-		{
-			name: "returns error when initialization cap is exceeded",
-			provider: &WorkloadIdentityFederationProvider{
-				tokenCache:       cache.New(10*time.Hour, time.Hour),
-				tokenSourceCache: cache.New(10*time.Hour, time.Hour),
-				initFailures:     maxInitFailures,
-			},
-			project:  fakeProject,
-			credType: credentials.TypeImage,
-			repoURL:  fakeGCRRepoURL,
-			assert: func(t *testing.T, _, _ *cache.Cache, creds *credentials.Credentials, err error) {
-				assert.ErrorContains(t, err, "GCP Workload Identity Federation not initialized")
-				assert.ErrorContains(t, err, "initialization cap exceeded")
-				assert.Nil(t, creds)
-			},
-		},
-		{
-			name: "returns error when lazy init fails",
-			provider: &WorkloadIdentityFederationProvider{
-				tokenCache:       cache.New(10*time.Hour, time.Hour),
-				tokenSourceCache: cache.New(10*time.Hour, time.Hour),
-				initFn: func(context.Context) error {
-					return fmt.Errorf("metadata server unavailable")
-				},
-			},
-			project:  fakeProject,
-			credType: credentials.TypeImage,
-			repoURL:  fakeGCRRepoURL,
-			assert: func(t *testing.T, _, _ *cache.Cache, creds *credentials.Credentials, err error) {
-				assert.ErrorContains(t, err, "GCP Workload Identity Federation not initialized")
-				assert.ErrorContains(t, err, "metadata server unavailable")
-				assert.Nil(t, creds)
-			},
-		},
 		{
 			name: "token cache hit",
 			provider: &WorkloadIdentityFederationProvider{
@@ -338,8 +282,7 @@ func TestWorkloadIdentityFederationProvider_GetCredentials(t *testing.T) {
 				assert.Equal(t, accessTokenUsername, creds.Username)
 				assert.Equal(t, fakeToken, creds.Password)
 
-				// Verify the token was cached with a TTL based on the
-				// token's actual expiry
+				// Verify the token was cached with a TTL based on the token's actual expiry
 				items := tokenCache.Items()
 				item, found := items[tokenCacheKey(fakeProject)]
 				assert.True(t, found)
@@ -367,7 +310,7 @@ func TestWorkloadIdentityFederationProvider_GetCredentials(t *testing.T) {
 			},
 		},
 		{
-			name: "empty token from getAccessToken",
+			name: "empty token from getAccessToken falls back to default token source",
 			provider: &WorkloadIdentityFederationProvider{
 				projectID:        fakeProjectID,
 				tokenCache:       cache.New(10*time.Hour, time.Hour),
@@ -400,6 +343,8 @@ func TestWorkloadIdentityFederationProvider_GetCredentials(t *testing.T) {
 
 	for _, testCase := range testCases {
 		t.Run(testCase.name, func(t *testing.T) {
+			t.Parallel()
+
 			if testCase.setupTokenCache != nil {
 				testCase.setupTokenCache(testCase.provider.tokenCache)
 			}
@@ -426,7 +371,6 @@ func TestWorkloadIdentityFederationProvider_GetCredentials(t *testing.T) {
 }
 
 type fakeTokenSource struct {
-	// The token to be returned by the Token() method
 	token string
 }
 
@@ -435,7 +379,5 @@ func newFakeTokenSource(token string) oauth2.TokenSource {
 }
 
 func (f *fakeTokenSource) Token() (*oauth2.Token, error) {
-	return &oauth2.Token{
-		AccessToken: f.token,
-	}, nil
+	return &oauth2.Token{AccessToken: f.token}, nil
 }
