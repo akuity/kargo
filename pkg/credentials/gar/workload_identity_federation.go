@@ -222,8 +222,8 @@ func (p *WorkloadIdentityFederationProvider) GetCredentials(
 	}, nil
 }
 
-// getAccessToken returns a GCP access token retrieved using the provided base64
-// encoded service account key. The access token is valid for one hour.
+// getAccessToken returns a Project-specific GCP access token by impersonating
+// the kargo-project-<project> service account via the IAM Credentials API.
 func (p *WorkloadIdentityFederationProvider) getAccessToken(
 	ctx context.Context,
 	kargoProject string,
