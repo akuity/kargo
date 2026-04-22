@@ -162,6 +162,32 @@ func TestWorkloadIdentityFederationProvider_Supports(t *testing.T) {
 	}
 }
 
+func TestWorkloadIdentityFederationProvider_Supports_RetryCap(t *testing.T) {
+	const fakeGARRepoURL = "us-central1-docker.pkg.dev/my-project/my-repo"
+
+	initCalls := 0
+	p := &WorkloadIdentityFederationProvider{
+		initFn: func(context.Context) error {
+			initCalls++
+			return fmt.Errorf("metadata server unavailable")
+		},
+	}
+
+	for i := range maxInitFailures + 1 {
+		supports, err := p.Supports(
+			t.Context(),
+			credentials.Request{
+				Type:    credentials.TypeImage,
+				RepoURL: fakeGARRepoURL,
+			},
+		)
+		require.NoError(t, err)
+		require.False(t, supports, "iteration %d", i)
+	}
+
+	require.Equal(t, maxInitFailures, initCalls, "initFn should not be called after cap is reached")
+}
+
 func TestWorkloadIdentityFederationProvider_GetCredentials(t *testing.T) {
 	const (
 		fakeProjectID  = "test-project"
@@ -186,6 +212,22 @@ func TestWorkloadIdentityFederationProvider_GetCredentials(t *testing.T) {
 			err error,
 		)
 	}{
+		{
+			name: "returns error when initialization cap is exceeded",
+			provider: &WorkloadIdentityFederationProvider{
+				tokenCache:       cache.New(10*time.Hour, time.Hour),
+				tokenSourceCache: cache.New(10*time.Hour, time.Hour),
+				initFailures:     maxInitFailures,
+			},
+			project:  fakeProject,
+			credType: credentials.TypeImage,
+			repoURL:  fakeGCRRepoURL,
+			assert: func(t *testing.T, _, _ *cache.Cache, creds *credentials.Credentials, err error) {
+				assert.ErrorContains(t, err, "GCP Workload Identity Federation not initialized")
+				assert.ErrorContains(t, err, "initialization cap exceeded")
+				assert.Nil(t, creds)
+			},
+		},
 		{
 			name: "returns error when lazy init fails",
 			provider: &WorkloadIdentityFederationProvider{
