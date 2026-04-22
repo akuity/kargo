@@ -62,7 +62,7 @@ type WorkloadIdentityFederationProvider struct {
 	tokenCache       *cache.Cache // For short-lived Project-specific tokens
 	tokenSourceCache *cache.Cache // For long-lived token sources
 
-	mu          sync.Mutex
+	projectMu   sync.Mutex
 	projectID   string
 	tokenSource oauth2.TokenSource
 
@@ -98,8 +98,8 @@ func (p *WorkloadIdentityFederationProvider) initialize(ctx context.Context) err
 // ensureInitialized calls initFn if projectID has not yet been populated.
 // It is safe to call from multiple goroutines.
 func (p *WorkloadIdentityFederationProvider) ensureInitialized(ctx context.Context) error {
-	p.mu.Lock()
-	defer p.mu.Unlock()
+	p.projectMu.Lock()
+	defer p.projectMu.Unlock()
 	if p.projectID != "" {
 		return nil
 	}
