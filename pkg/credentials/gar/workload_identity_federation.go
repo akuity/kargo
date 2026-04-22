@@ -19,7 +19,12 @@ import (
 	"github.com/akuity/kargo/pkg/logging"
 )
 
-const gcpResourceNameFormat = "projects/-/serviceAccounts/kargo-project-%s@%s.iam.gserviceaccount.com"
+const (
+	gcpResourceNameFormat = "projects/-/serviceAccounts/kargo-project-%s@%s.iam.gserviceaccount.com"
+	maxInitFailures       = 3
+)
+
+var errInitCapExceeded = errors.New("initialization cap exceeded")
 
 func init() {
 	if !metadata.OnGCE() {
@@ -62,9 +67,10 @@ type WorkloadIdentityFederationProvider struct {
 	tokenCache       *cache.Cache // For short-lived Project-specific tokens
 	tokenSourceCache *cache.Cache // For long-lived token sources
 
-	projectMu   sync.Mutex
-	projectID   string
-	tokenSource oauth2.TokenSource
+	projectMu    sync.Mutex
+	projectID    string
+	tokenSource  oauth2.TokenSource
+	initFailures int // protected by projectMu
 
 	// initFn is called lazily on the first eligible request to populate
 	// projectID and tokenSource. Swappable for testing.
@@ -103,10 +109,17 @@ func (p *WorkloadIdentityFederationProvider) ensureInitialized(ctx context.Conte
 	if p.projectID != "" {
 		return nil
 	}
+	if p.initFailures >= maxInitFailures {
+		return errInitCapExceeded
+	}
 	if p.initFn == nil {
 		return fmt.Errorf("provider not initialized")
 	}
-	return p.initFn(ctx)
+	if err := p.initFn(ctx); err != nil {
+		p.initFailures++
+		return err
+	}
+	return nil
 }
 
 func (p *WorkloadIdentityFederationProvider) Supports(
@@ -120,10 +133,12 @@ func (p *WorkloadIdentityFederationProvider) Supports(
 		return false, nil
 	}
 	if err := p.ensureInitialized(ctx); err != nil {
-		logging.LoggerFromContext(ctx).Error(
-			err,
-			"GCP Workload Identity Federation not yet available; will retry on next request",
-		)
+		if !errors.Is(err, errInitCapExceeded) {
+			logging.LoggerFromContext(ctx).Error(
+				err,
+				"GCP Workload Identity Federation not yet available; will retry on next request",
+			)
+		}
 		return false, nil
 	}
 	return true, nil
