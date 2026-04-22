@@ -70,6 +70,13 @@ func (b *PromotionBuilder) Build(
 	if u, ok := user.InfoFromContext(ctx); ok {
 		annotations[kargoapi.AnnotationKeyCreateActor] = api.FormatEventUserActor(u)
 	}
+	// Propagate well-known annotations from the Stage to the Promotion so that
+	// step runners can access Stage-level context (e.g. GitHub Actions env vars).
+	for k, v := range stage.Annotations {
+		if strings.HasPrefix(k, "kargo.akuity.io/") {
+			annotations[k] = v
+		}
+	}
 
 	// Merge Stage variables with PromotionTemplate variables
 	vars := make([]kargoapi.ExpressionVariable, 0, len(stage.Spec.Vars)+len(stage.Spec.PromotionTemplate.Spec.Vars))

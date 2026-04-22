@@ -582,6 +582,7 @@ func (r *reconciler) promote(
 		workingPromo,
 		stage,
 		promotion.WithActor(api.CreateActorAnnotationValue(&promo)),
+		promotion.WithAnnotations(promo.Annotations),
 		promotion.WithUIBaseURL(r.cfg.APIServerBaseURL),
 		promotion.WithWorkDir(promotionWorkDir(workingPromo.UID)),
 	)

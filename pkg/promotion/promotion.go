@@ -67,6 +67,10 @@ type Context struct {
 	Vars []kargoapi.ExpressionVariable
 	// Actor is the name of the actor triggering the Promotion.
 	Actor string
+	// Annotations are the annotations from the Promotion object. Well-known
+	// annotation keys may be read by step runners to inject runtime context
+	// (e.g. GitHub Actions environment variables).
+	Annotations map[string]string
 
 	// currentStepMetadata is a pointer to the StepMetadata for the
 	// current step being executed. It is used to track the execution state of
@@ -124,6 +128,15 @@ func WithWorkDir(dir string) ContextOption {
 func WithActor(actor string) ContextOption {
 	return func(c *Context) {
 		c.Actor = actor
+	}
+}
+
+// WithAnnotations sets the Annotations of the Context from the Promotion
+// object's metadata. Step runners may read well-known keys to inject runtime
+// context (e.g. GitHub Actions environment variables).
+func WithAnnotations(annotations map[string]string) ContextOption {
+	return func(c *Context) {
+		c.Annotations = annotations
 	}
 }
 
@@ -385,6 +398,10 @@ type StepContext struct {
 	Promotion string
 	// PromotionActor is the name of the actor triggering the Promotion.
 	PromotionActor string
+	// PromotionAnnotations carries the annotations from the Promotion object.
+	// Step runners may read well-known annotation keys to inject additional
+	// runtime context (e.g. GitHub Actions environment variables).
+	PromotionAnnotations map[string]string
 	// FreightRequests is the list of Freight from various origins that is
 	// requested by the Stage targeted by the Promotion. This information is
 	// sometimes useful to Step that reference a particular artifact and, in the
