@@ -79,9 +79,10 @@ func TestNewWorkloadIdentityFederationProvider(t *testing.T) {
 				return fn(ctx)
 			}
 
+			expiry := time.Minute
 			p := &WorkloadIdentityFederationProvider{
-				tokenCache:       cache.New(time.Minute, time.Minute),
-				tokenSourceCache: cache.New(time.Minute, time.Minute),
+				tokenCache:       cache.New(expiry, initRetryInterval),
+				tokenSourceCache: cache.New(expiry, initRetryInterval),
 			}
 
 			ctx := t.Context()
