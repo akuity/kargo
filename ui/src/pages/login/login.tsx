@@ -2,7 +2,7 @@ import { useQuery } from '@connectrpc/connect-query';
 import { Divider, Typography } from 'antd';
 import { Navigate, generatePath, useSearchParams } from 'react-router-dom';
 
-import { redirectToQueryParam } from '@ui/config/auth';
+import { isSafeRedirectPath, redirectToQueryParam } from '@ui/config/auth';
 import { paths } from '@ui/config/paths';
 import { AdminLogin } from '@ui/features/auth/admin-login';
 import { useAuthContext } from '@ui/features/auth/context/use-auth-context';
@@ -20,13 +20,14 @@ export const Login = () => {
   const [params] = useSearchParams();
   const { isLoggedIn } = useAuthContext();
   const redirectTo = params.get(redirectToQueryParam);
+  const safeRedirectTo = isSafeRedirectPath(redirectTo) ? redirectTo : null;
 
   if (data?.skipAuth) {
     return <Navigate to={paths.home} replace />;
   }
 
   if (isLoggedIn) {
-    return <Navigate to={redirectTo ? generatePath(redirectTo) : paths.home} replace />;
+    return <Navigate to={safeRedirectTo ? generatePath(safeRedirectTo) : paths.home} replace />;
   }
 
   return (
