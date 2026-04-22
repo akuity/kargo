@@ -24,7 +24,10 @@ const (
 	maxInitFailures       = 3
 )
 
-var errInitCapExceeded = errors.New("initialization cap exceeded")
+var (
+	errInitCapExceeded        = errors.New("initialization cap exceeded")
+	errProviderNotInitialized = errors.New("provider not initialized")
+)
 
 func init() {
 	if !metadata.OnGCE() {
@@ -70,10 +73,8 @@ type WorkloadIdentityFederationProvider struct {
 	projectMu    sync.Mutex
 	projectID    string
 	tokenSource  oauth2.TokenSource
-	initFailures int // protected by projectMu
+	initFailures int
 
-	// initFn is called lazily on the first eligible request to populate
-	// projectID and tokenSource. Swappable for testing.
 	initFn func(ctx context.Context) error
 
 	getAccessTokenFn func(
@@ -113,7 +114,7 @@ func (p *WorkloadIdentityFederationProvider) ensureInitialized(ctx context.Conte
 		return errInitCapExceeded
 	}
 	if p.initFn == nil {
-		return fmt.Errorf("provider not initialized")
+		return errProviderNotInitialized
 	}
 	if err := p.initFn(ctx); err != nil {
 		p.initFailures++
