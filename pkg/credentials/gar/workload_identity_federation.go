@@ -133,6 +133,10 @@ func (p *WorkloadIdentityFederationProvider) GetCredentials(
 	ctx context.Context,
 	req credentials.Request,
 ) (*credentials.Credentials, error) {
+	// Supports() returns false when initialization fails, so this should never
+	// be reached in practice. Returning an error here (rather than nil) is
+	// intentional: it aborts the credential lookup entirely instead of silently
+	// falling through to the next provider.
 	if err := p.ensureInitialized(ctx); err != nil {
 		return nil, fmt.Errorf("GCP Workload Identity Federation not initialized: %w", err)
 	}
