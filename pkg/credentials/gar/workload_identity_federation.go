@@ -25,6 +25,19 @@ func init() {
 	if !metadata.OnGCE() {
 		return
 	}
+	p := NewWorkloadIdentityFederationProvider()
+	credentials.DefaultProviderRegistry.MustRegister(
+		credentials.ProviderRegistration{
+			Predicate: p.Supports,
+			Value:     p,
+		},
+	)
+}
+
+// NewWorkloadIdentityFederationProvider returns a fully initialized
+// WorkloadIdentityFederationProvider. The provider's projectID and tokenSource
+// are populated lazily on the first eligible request.
+func NewWorkloadIdentityFederationProvider() *WorkloadIdentityFederationProvider {
 	p := &WorkloadIdentityFederationProvider{
 		tokenCache: cache.New(
 			// Access tokens live for one hour. We'll hang on to them for 40
@@ -42,12 +55,7 @@ func init() {
 	}
 	p.initFn = p.initialize
 	p.getAccessTokenFn = p.getAccessToken
-	credentials.DefaultProviderRegistry.MustRegister(
-		credentials.ProviderRegistration{
-			Predicate: p.Supports,
-			Value:     p,
-		},
-	)
+	return p
 }
 
 type WorkloadIdentityFederationProvider struct {
