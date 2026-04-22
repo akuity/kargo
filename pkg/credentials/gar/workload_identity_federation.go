@@ -5,7 +5,6 @@ import (
 	"errors"
 	"fmt"
 	"net/http"
-	"sync"
 	"time"
 
 	"cloud.google.com/go/compute/metadata"
@@ -21,19 +20,20 @@ import (
 
 const (
 	gcpResourceNameFormat = "projects/-/serviceAccounts/kargo-project-%s@%s.iam.gserviceaccount.com"
-	maxInitFailures       = 3
-)
-
-var (
-	errInitCapExceeded        = errors.New("initialization cap exceeded")
-	errProviderNotInitialized = errors.New("provider not initialized")
+	initMaxAttempts       = 5
+	initRetryInterval     = time.Second
 )
 
 func init() {
 	if !metadata.OnGCE() {
 		return
 	}
-	p := NewWorkloadIdentityFederationProvider()
+	ctx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
+	defer cancel()
+	p := NewWorkloadIdentityFederationProvider(ctx)
+	if p == nil {
+		return
+	}
 	credentials.DefaultProviderRegistry.MustRegister(
 		credentials.ProviderRegistration{
 			Predicate: p.Supports,
@@ -43,9 +43,10 @@ func init() {
 }
 
 // NewWorkloadIdentityFederationProvider returns a fully initialized
-// WorkloadIdentityFederationProvider. The provider's projectID and tokenSource
-// are populated lazily on the first eligible request.
-func NewWorkloadIdentityFederationProvider() *WorkloadIdentityFederationProvider {
+// WorkloadIdentityFederationProvider, or nil if the GCP metadata server is
+// unreachable after initMaxAttempts attempts. Callers should not register a
+// nil provider.
+func NewWorkloadIdentityFederationProvider(ctx context.Context) *WorkloadIdentityFederationProvider {
 	p := &WorkloadIdentityFederationProvider{
 		tokenCache: cache.New(
 			// Access tokens live for one hour. We'll hang on to them for 40
@@ -61,21 +62,50 @@ func NewWorkloadIdentityFederationProvider() *WorkloadIdentityFederationProvider
 			time.Hour,    // Cleanup interval
 		),
 	}
-	p.initFn = p.initialize
 	p.getAccessTokenFn = p.getAccessToken
-	return p
+	return initializeWithRetry(ctx, p, p.initialize, initRetryInterval)
+}
+
+// initializeWithRetry calls initFn up to initMaxAttempts times, sleeping
+// retryInterval between attempts. It returns p on success and nil if all
+// attempts are exhausted or the context is cancelled.
+func initializeWithRetry(
+	ctx context.Context,
+	p *WorkloadIdentityFederationProvider,
+	initFn func(context.Context) error,
+	retryInterval time.Duration,
+) *WorkloadIdentityFederationProvider {
+	logger := logging.LoggerFromContext(ctx)
+	for i := range initMaxAttempts {
+		if err := initFn(ctx); err != nil {
+			if i < initMaxAttempts-1 {
+				logger.Debug(
+					"GCP Workload Identity Federation provider initialization failed; will retry",
+					"attempt", i+1,
+					"maxAttempts", initMaxAttempts,
+					"err", err,
+				)
+				select {
+				case <-time.After(retryInterval):
+				case <-ctx.Done():
+					return nil
+				}
+				continue
+			}
+			logger.Error(err, "GCP Workload Identity Federation provider could not be initialized")
+			return nil
+		}
+		return p
+	}
+	return nil
 }
 
 type WorkloadIdentityFederationProvider struct {
 	tokenCache       *cache.Cache // For short-lived Project-specific tokens
 	tokenSourceCache *cache.Cache // For long-lived token sources
 
-	projectMu    sync.Mutex
-	projectID    string
-	tokenSource  oauth2.TokenSource
-	initFailures int
-
-	initFn func(ctx context.Context) error
+	projectID   string
+	tokenSource oauth2.TokenSource
 
 	getAccessTokenFn func(
 		ctx context.Context,
@@ -84,8 +114,7 @@ type WorkloadIdentityFederationProvider struct {
 }
 
 // initialize fetches the GCP project ID and default token source from the
-// instance metadata server. It is called at most once per provider instance,
-// on the first request that matches a GAR/GCR URL.
+// instance metadata server.
 func (p *WorkloadIdentityFederationProvider) initialize(ctx context.Context) error {
 	projectID, err := metadata.ProjectIDWithContext(ctx)
 	if err != nil {
@@ -102,61 +131,20 @@ func (p *WorkloadIdentityFederationProvider) initialize(ctx context.Context) err
 	return nil
 }
 
-// ensureInitialized calls initFn if projectID has not yet been populated.
-// It is safe to call from multiple goroutines.
-func (p *WorkloadIdentityFederationProvider) ensureInitialized(ctx context.Context) error {
-	p.projectMu.Lock()
-	defer p.projectMu.Unlock()
-	if p.projectID != "" {
-		return nil
-	}
-	if p.initFailures >= maxInitFailures {
-		return errInitCapExceeded
-	}
-	if p.initFn == nil {
-		return errProviderNotInitialized
-	}
-	if err := p.initFn(ctx); err != nil {
-		p.initFailures++
-		return err
-	}
-	return nil
-}
-
 func (p *WorkloadIdentityFederationProvider) Supports(
-	ctx context.Context,
+	_ context.Context,
 	req credentials.Request,
 ) (bool, error) {
 	if req.Type != credentials.TypeImage && req.Type != credentials.TypeHelm {
 		return false, nil
 	}
-	if !garURLRegex.MatchString(req.RepoURL) && !gcrURLRegex.MatchString(req.RepoURL) {
-		return false, nil
-	}
-	if err := p.ensureInitialized(ctx); err != nil {
-		if !errors.Is(err, errInitCapExceeded) {
-			logging.LoggerFromContext(ctx).Error(
-				err,
-				"GCP Workload Identity Federation not yet available; will retry on next request",
-			)
-		}
-		return false, nil
-	}
-	return true, nil
+	return garURLRegex.MatchString(req.RepoURL) || gcrURLRegex.MatchString(req.RepoURL), nil
 }
 
 func (p *WorkloadIdentityFederationProvider) GetCredentials(
 	ctx context.Context,
 	req credentials.Request,
 ) (*credentials.Credentials, error) {
-	// Supports() returns false when initialization fails, so this should never
-	// be reached in practice. Returning an error here (rather than nil) is
-	// intentional: it aborts the credential lookup entirely instead of silently
-	// falling through to the next provider.
-	if err := p.ensureInitialized(ctx); err != nil {
-		return nil, fmt.Errorf("GCP Workload Identity Federation not initialized: %w", err)
-	}
-
 	cacheKey := tokenCacheKey(req.Project)
 
 	logger := logging.LoggerFromContext(ctx).WithValues(
