@@ -6,4 +6,4 @@
  * OpenAPI spec version: v1alpha1
  */
 
-export type DeleteResourceResultDeletedResourceManifest = { [key: string]: unknown };
+export type UpdateRoleBody = { [key: string]: unknown };
