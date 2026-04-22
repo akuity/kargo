@@ -48,17 +48,17 @@ importers:
         specifier: 4.7.0
         version: 4.7.0(monaco-editor@0.55.1)(react-dom@19.2.5(react@19.2.5))(react@19.2.5)
       '@rjsf/antd':
-        specifier: 6.4.2
-        version: 6.4.2(@ant-design/icons@6.1.0(react-dom@19.2.5(react@19.2.5))(react@19.2.5))(@rjsf/core@6.4.2(@rjsf/utils@6.4.2(react@19.2.5))(react@19.2.5))(@rjsf/utils@6.4.2(react@19.2.5))(antd@5.29.3(date-fns@4.1.0)(moment@2.30.1)(react-dom@19.2.5(react@19.2.5))(react@19.2.5))(date-fns@4.1.0)(dayjs@1.11.18)(moment@2.30.1)(react-dom@19.2.5(react@19.2.5))(react@19.2.5)
+        specifier: 6.5.1
+        version: 6.5.1(@ant-design/icons@6.1.1(react-dom@19.2.5(react@19.2.5))(react@19.2.5))(@rjsf/core@6.5.1(@rjsf/utils@6.5.1(react@19.2.5))(react@19.2.5))(@rjsf/utils@6.5.1(react@19.2.5))(antd@5.29.3(date-fns@4.1.0)(moment@2.30.1)(react-dom@19.2.5(react@19.2.5))(react@19.2.5))(date-fns@4.1.0)(dayjs@1.11.18)(moment@2.30.1)(react-dom@19.2.5(react@19.2.5))(react@19.2.5)
       '@rjsf/core':
-        specifier: 6.4.2
-        version: 6.4.2(@rjsf/utils@6.4.2(react@19.2.5))(react@19.2.5)
+        specifier: 6.5.1
+        version: 6.5.1(@rjsf/utils@6.5.1(react@19.2.5))(react@19.2.5)
       '@rjsf/utils':
-        specifier: 6.4.2
-        version: 6.4.2(react@19.2.5)
+        specifier: 6.5.1
+        version: 6.5.1(react@19.2.5)
       '@rjsf/validator-ajv8':
-        specifier: 6.4.2
-        version: 6.4.2(@rjsf/utils@6.4.2(react@19.2.5))
+        specifier: 6.5.1
+        version: 6.5.1(@rjsf/utils@6.5.1(react@19.2.5))
       '@tanstack/react-query':
         specifier: 5.99.1
         version: 5.99.1(react@19.2.5)
@@ -228,9 +228,6 @@ importers:
       vite-plugin-compression:
         specifier: 0.5.1
         version: 0.5.1(vite@8.0.8(@types/node@24.2.1)(esbuild@0.27.7)(jiti@1.21.7)(less@4.5.1)(yaml@2.8.3))
-      vite-tsconfig-paths:
-        specifier: 6.1.1
-        version: 6.1.1(typescript@5.9.3)(vite@8.0.8(@types/node@24.2.1)(esbuild@0.27.7)(jiti@1.21.7)(less@4.5.1)(yaml@2.8.3))
       vitest:
         specifier: 4.1.4
         version: 4.1.4(@types/node@24.2.1)(vite@8.0.8(@types/node@24.2.1)(esbuild@0.27.7)(jiti@1.21.7)(less@4.5.1)(yaml@2.8.3))
@@ -280,8 +277,8 @@ packages:
       react: '>=16.0.0'
       react-dom: '>=16.0.0'
 
-  '@ant-design/icons@6.1.0':
-    resolution: {integrity: sha512-KrWMu1fIg3w/1F2zfn+JlfNDU8dDqILfA5Tg85iqs1lf8ooyGlbkA+TkwfOKKgqpUmAiRY1PTFpuOU2DAIgSUg==}
+  '@ant-design/icons@6.1.1':
+    resolution: {integrity: sha512-AMT4N2y++TZETNHiM77fs4a0uPVCJGuL5MTonk13Pvv7UN7sID1cNEZOc1qNqx6zLKAOilTEFAdAoAFKa0U//Q==}
     engines: {node: '>=8'}
     peerDependencies:
       react: '>=16.0.0'
@@ -813,35 +810,35 @@ packages:
       react-redux:
         optional: true
 
-  '@rjsf/antd@6.4.2':
-    resolution: {integrity: sha512-FJ5D2ESIyrmNivIvP2OoQ9v+Rt+Tv7tgqinvGS3hhw0JHvP8SQRZ6gfbsIujuqx1SPbmNrgh1sfZ+F7dEDeuYg==}
+  '@rjsf/antd@6.5.1':
+    resolution: {integrity: sha512-ewXD1GGMSN8EtXYcKWQ+phBn0VNZFQDrT9cqjThtPb40DUAp33Fg+q/E1z6KgVkBM2e+0Sw7AFE+24G91QEK1Q==}
     engines: {node: '>=20'}
     peerDependencies:
       '@ant-design/icons': ^6.0.0
-      '@rjsf/core': ^6.4.x
-      '@rjsf/utils': ^6.4.x
-      antd: ^5.8.5
+      '@rjsf/core': ^6.5.x
+      '@rjsf/utils': ^6.5.x
+      antd: ^5 || >6.3.5
       dayjs: ^1.8.0
       react: '>=18'
 
-  '@rjsf/core@6.4.2':
-    resolution: {integrity: sha512-TsN2PNqsO92d6/Tt+Sq4XgXtpXgzNRShL/pYYrnAluwf3n87TvE1huJpHgH6c/wD7eRFOYT4e7I0GxqiVos/VQ==}
+  '@rjsf/core@6.5.1':
+    resolution: {integrity: sha512-H5GY9OU6wpLXGHaVzd8/1qGZ+zylCA86maD32tMdeOiUIJTmH6+VeheRx4Wr6OnprxbD/ybkEH48vIqS68wwxg==}
     engines: {node: '>=20'}
     peerDependencies:
-      '@rjsf/utils': ^6.4.x
+      '@rjsf/utils': ^6.5.x
       react: '>=18'
 
-  '@rjsf/utils@6.4.2':
-    resolution: {integrity: sha512-d8Td5Ui5VjxOV7uQq4QmoJQtjESvr78TPbgzJ/WN+/rihDK/4j/i1/s43egQFyRw1fEQzYIMNr2Dk8F0WviSZw==}
+  '@rjsf/utils@6.5.1':
+    resolution: {integrity: sha512-c+x2VJNEp0BsamxX+Ryy9sEmwJ/7V9WFsVWjhADwyEU53r7DaVd7a7hmtx0bz464kJ8oJYZ6XghrmXXH2y7l8g==}
     engines: {node: '>=20'}
     peerDependencies:
       react: '>=18'
 
-  '@rjsf/validator-ajv8@6.4.2':
-    resolution: {integrity: sha512-zbLuT5nlgjrw2GkDqp+BtCeNQS/okM8oa5ltc3wiuoEqjVqskl1+WvHidQ6Uu4qAU/VfHCh8MwZg9sIsj89YiQ==}
+  '@rjsf/validator-ajv8@6.5.1':
+    resolution: {integrity: sha512-0EfPRRe0ia3dvcqWt8vY1sUGB1vb4e+3GfivBXuJZmSBtw+zlHwyClAJnPW/4Qde2g21u0k344/2miP9DZJmCw==}
     engines: {node: '>=20'}
     peerDependencies:
-      '@rjsf/utils': ^6.4.x
+      '@rjsf/utils': ^6.5.x
 
   '@rolldown/binding-android-arm64@1.0.0-rc.15':
     resolution: {integrity: sha512-YYe6aWruPZDtHNpwu7+qAHEMbQ/yRl6atqb/AhznLTnD3UY99Q1jE7ihLSahNWkF4EqRPVC4SiR4O0UkLK02tA==}
@@ -3697,11 +3694,6 @@ packages:
     peerDependencies:
       monaco-editor: '>=0.33.0'
 
-  vite-tsconfig-paths@6.1.1:
-    resolution: {integrity: sha512-2cihq7zliibCCZ8P9cKJrQBkfgdvcFkOOc3Y02o3GWUDLgqjWsZudaoiuOwO/gzTzy17cS5F7ZPo4bsnS4DGkg==}
-    peerDependencies:
-      vite: '*'
-
   vite@8.0.8:
     resolution: {integrity: sha512-dbU7/iLVa8KZALJyLOBOQ88nOXtNG8vxKuOT4I2mD+Ya70KPceF4IAmDsmU0h1Qsn5bPrvsY9HJstCRh3hG6Uw==}
     engines: {node: ^20.19.0 || >=22.12.0}
@@ -3938,7 +3930,7 @@ snapshots:
       react: 19.2.5
       react-dom: 19.2.5(react@19.2.5)
 
-  '@ant-design/icons@6.1.0(react-dom@19.2.5(react@19.2.5))(react@19.2.5)':
+  '@ant-design/icons@6.1.1(react-dom@19.2.5(react@19.2.5))(react@19.2.5)':
     dependencies:
       '@ant-design/colors': 8.0.1
       '@ant-design/icons-svg': 4.4.2
@@ -4484,11 +4476,11 @@ snapshots:
       react: 19.2.5
       react-redux: 9.2.0(@types/react@19.2.14)(react@19.2.5)(redux@5.0.1)
 
-  '@rjsf/antd@6.4.2(@ant-design/icons@6.1.0(react-dom@19.2.5(react@19.2.5))(react@19.2.5))(@rjsf/core@6.4.2(@rjsf/utils@6.4.2(react@19.2.5))(react@19.2.5))(@rjsf/utils@6.4.2(react@19.2.5))(antd@5.29.3(date-fns@4.1.0)(moment@2.30.1)(react-dom@19.2.5(react@19.2.5))(react@19.2.5))(date-fns@4.1.0)(dayjs@1.11.18)(moment@2.30.1)(react-dom@19.2.5(react@19.2.5))(react@19.2.5)':
+  '@rjsf/antd@6.5.1(@ant-design/icons@6.1.1(react-dom@19.2.5(react@19.2.5))(react@19.2.5))(@rjsf/core@6.5.1(@rjsf/utils@6.5.1(react@19.2.5))(react@19.2.5))(@rjsf/utils@6.5.1(react@19.2.5))(antd@5.29.3(date-fns@4.1.0)(moment@2.30.1)(react-dom@19.2.5(react@19.2.5))(react@19.2.5))(date-fns@4.1.0)(dayjs@1.11.18)(moment@2.30.1)(react-dom@19.2.5(react@19.2.5))(react@19.2.5)':
     dependencies:
-      '@ant-design/icons': 6.1.0(react-dom@19.2.5(react@19.2.5))(react@19.2.5)
-      '@rjsf/core': 6.4.2(@rjsf/utils@6.4.2(react@19.2.5))(react@19.2.5)
-      '@rjsf/utils': 6.4.2(react@19.2.5)
+      '@ant-design/icons': 6.1.1(react-dom@19.2.5(react@19.2.5))(react@19.2.5)
+      '@rjsf/core': 6.5.1(@rjsf/utils@6.5.1(react@19.2.5))(react@19.2.5)
+      '@rjsf/utils': 6.5.1(react@19.2.5)
       antd: 5.29.3(date-fns@4.1.0)(moment@2.30.1)(react-dom@19.2.5(react@19.2.5))(react@19.2.5)
       classnames: 2.5.1
       dayjs: 1.11.18
@@ -4502,16 +4494,16 @@ snapshots:
       - moment
       - react-dom
 
-  '@rjsf/core@6.4.2(@rjsf/utils@6.4.2(react@19.2.5))(react@19.2.5)':
+  '@rjsf/core@6.5.1(@rjsf/utils@6.5.1(react@19.2.5))(react@19.2.5)':
     dependencies:
-      '@rjsf/utils': 6.4.2(react@19.2.5)
+      '@rjsf/utils': 6.5.1(react@19.2.5)
       lodash: 4.18.1
       lodash-es: 4.18.1
       markdown-to-jsx: 8.0.0(react@19.2.5)
       prop-types: 15.8.1
       react: 19.2.5
 
-  '@rjsf/utils@6.4.2(react@19.2.5)':
+  '@rjsf/utils@6.5.1(react@19.2.5)':
     dependencies:
       '@x0k/json-schema-merge': 1.0.3
       fast-uri: 3.1.0
@@ -4521,9 +4513,9 @@ snapshots:
       react: 19.2.5
       react-is: 18.3.1
 
-  '@rjsf/validator-ajv8@6.4.2(@rjsf/utils@6.4.2(react@19.2.5))':
+  '@rjsf/validator-ajv8@6.5.1(@rjsf/utils@6.5.1(react@19.2.5))':
     dependencies:
-      '@rjsf/utils': 6.4.2(react@19.2.5)
+      '@rjsf/utils': 6.5.1(react@19.2.5)
       ajv: 8.18.0
       ajv-formats: 2.1.1(ajv@8.18.0)
       lodash: 4.18.1
@@ -7769,16 +7761,6 @@ snapshots:
   vite-plugin-monaco-editor@1.1.0(monaco-editor@0.55.1):
     dependencies:
       monaco-editor: 0.55.1
-
-  vite-tsconfig-paths@6.1.1(typescript@5.9.3)(vite@8.0.8(@types/node@24.2.1)(esbuild@0.27.7)(jiti@1.21.7)(less@4.5.1)(yaml@2.8.3)):
-    dependencies:
-      debug: 4.4.3
-      globrex: 0.1.2
-      tsconfck: 3.1.6(typescript@5.9.3)
-      vite: 8.0.8(@types/node@24.2.1)(esbuild@0.27.7)(jiti@1.21.7)(less@4.5.1)(yaml@2.8.3)
-    transitivePeerDependencies:
-      - supports-color
-      - typescript
 
   vite@8.0.8(@types/node@24.2.1)(esbuild@0.27.7)(jiti@1.21.7)(less@4.5.1)(yaml@2.8.3):
     dependencies:
