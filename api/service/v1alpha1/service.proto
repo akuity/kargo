@@ -463,6 +463,9 @@ message ListStagesRequest {
 message ListStagesResponse {
   // stages is the list of Stage resources found in the project.
   repeated github.com.akuity.kargo.api.v1alpha1.Stage stages = 1;
+  // resource_version is the Kubernetes ListMeta.resourceVersion of the
+  // underlying list, suitable for use as a starting point for Watch calls.
+  string resource_version = 2 [json_name = "resourceVersion"];
 }
 
 // ListImagesRequest is the request for listing images and their usage across stages.
@@ -519,6 +522,9 @@ message WatchStagesRequest {
   // When specified, only events for Stages that subscribe to at least one of
   // the named Warehouses are streamed.
   repeated string freight_origins = 3 [json_name = "freightOrigins"];
+  // resource_version, when set, is passed to the underlying Kubernetes Watch
+  // call so that only events newer than this version are received.
+  string resource_version = 4 [json_name = "resourceVersion"];
 }
 
 // WatchStagesResponse contains stage change notifications.
@@ -815,6 +821,9 @@ message WatchFreightRequest {
   // When specified, only events for Freight that originated from at least one
   // of the named Warehouses are streamed.
   repeated string origins = 2;
+  // resource_version, when set, is passed to the underlying Kubernetes Watch
+  // call so that only events newer than this version are received.
+  string resource_version = 3 [json_name = "resourceVersion"];
 }
 
 // WatchFreightResponse contains freight change notifications.
@@ -883,6 +892,10 @@ message QueryFreightRequest {
 message QueryFreightResponse {
   // groups maps group names to their corresponding freight lists.
   map<string, FreightList> groups = 1;
+  // resource_version is the Kubernetes ListMeta.resourceVersion of the
+  // underlying list, populated only when no stage or origin filters are
+  // applied. Suitable for use as a starting point for Watch calls.
+  string resource_version = 2 [json_name = "resourceVersion"];
 }
 
 // FreightList contains a list of freight resources.
@@ -948,6 +961,9 @@ message ListWarehousesRequest {
 message ListWarehousesResponse {
   // warehouses is the list of Warehouse resources found in the project.
   repeated github.com.akuity.kargo.api.v1alpha1.Warehouse warehouses = 1;
+  // resource_version is the Kubernetes ListMeta.resourceVersion of the
+  // underlying list, suitable for use as a starting point for Watch calls.
+  string resource_version = 2 [json_name = "resourceVersion"];
 }
 
 // GetWarehouseRequest is the request for retrieving details of a specific warehouse.
@@ -976,6 +992,9 @@ message WatchWarehousesRequest {
   string project = 1;
   // name is the name of a specific warehouse to watch, if empty all warehouses in the project are watched.
   string name = 2;
+  // resource_version, when set, is passed to the underlying Kubernetes Watch
+  // call so that only events newer than this version are received.
+  string resource_version = 3 [json_name = "resourceVersion"];
 }
 
 // WatchWarehousesResponse contains warehouse change notifications.

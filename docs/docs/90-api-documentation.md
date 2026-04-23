@@ -1060,6 +1060,7 @@ Stability is not guaranteed.
 | Field | Type | Description |
 | ----- | ---- | ----------- |
 | stages | [github.com.akuity.kargo.api.v1alpha1.Stage](#github-com-akuity-kargo-api-v1alpha1-Stage) |  stages is the list of Stage resources found in the project. |
+| resource_version | [string](#string) |  resource_version is the Kubernetes ListMeta.resourceVersion of the underlying list, suitable for use as a starting point for Watch calls. |
 
 
 ### ListWarehousesRequest {#akuity-io-kargo-service-v1alpha1-ListWarehousesRequest}
@@ -1074,6 +1075,7 @@ Stability is not guaranteed.
 | Field | Type | Description |
 | ----- | ---- | ----------- |
 | warehouses | [github.com.akuity.kargo.api.v1alpha1.Warehouse](#github-com-akuity-kargo-api-v1alpha1-Warehouse) |  warehouses is the list of Warehouse resources found in the project. |
+| resource_version | [string](#string) |  resource_version is the Kubernetes ListMeta.resourceVersion of the underlying list, suitable for use as a starting point for Watch calls. |
 
 
 ### OIDCConfig {#akuity-io-kargo-service-v1alpha1-OIDCConfig}
@@ -1138,6 +1140,7 @@ Stability is not guaranteed.
 | Field | Type | Description |
 | ----- | ---- | ----------- |
 | groups | [QueryFreightResponse.GroupsEntry](#akuity-io-kargo-service-v1alpha1-QueryFreightResponse-GroupsEntry) |  groups maps group names to their corresponding freight lists. |
+| resource_version | [string](#string) |  resource_version is the Kubernetes ListMeta.resourceVersion of the underlying list, populated only when no stage or origin filters are applied. Suitable for use as a starting point for Watch calls. |
 
 
 ### QueryFreightResponse.GroupsEntry {#akuity-io-kargo-service-v1alpha1-QueryFreightResponse-GroupsEntry}
@@ -1361,6 +1364,7 @@ Stability is not guaranteed.
 | ----- | ---- | ----------- |
 | project | string |  project is the name of the project whose freight should be watched. |
 | origins | string |  origins is an optional list of Warehouse names to filter Freight by. When specified, only events for Freight that originated from at least one of the named Warehouses are streamed. |
+| resource_version | string |  resource_version, when set, is passed to the underlying Kubernetes Watch call so that only events newer than this version are received. |
 
 
 ### WatchFreightResponse {#akuity-io-kargo-service-v1alpha1-WatchFreightResponse}
@@ -1425,6 +1429,7 @@ Stability is not guaranteed.
 | project | string |  project is the name of the project whose stages should be watched. |
 | name | string |  name is the name of a specific stage to watch, if empty all stages in the project are watched. |
 | freight_origins | string |  freight_origins is an optional list of Warehouse names to filter Stages by. When specified, only events for Stages that subscribe to at least one of the named Warehouses are streamed. |
+| resource_version | string |  resource_version, when set, is passed to the underlying Kubernetes Watch call so that only events newer than this version are received. |
 
 
 ### WatchStagesResponse {#akuity-io-kargo-service-v1alpha1-WatchStagesResponse}
@@ -1441,6 +1446,7 @@ Stability is not guaranteed.
 | ----- | ---- | ----------- |
 | project | string |  project is the name of the project whose warehouses should be watched. |
 | name | string |  name is the name of a specific warehouse to watch, if empty all warehouses in the project are watched. |
+| resource_version | string |  resource_version, when set, is passed to the underlying Kubernetes Watch call so that only events newer than this version are received. |
 
 
 ### WatchWarehousesResponse {#akuity-io-kargo-service-v1alpha1-WatchWarehousesResponse}
@@ -2567,4 +2573,3 @@ RawFormat specifies the format for raw resource representation.
 | <a name="bool" /> bool |  | bool | boolean | boolean | bool | bool | boolean | TrueClass/FalseClass |
 | <a name="string" /> string | A string must always contain UTF-8 encoded or 7-bit ASCII text. | string | String | str/unicode | string | string | string | String (UTF-8) |
 | <a name="bytes" /> bytes | May contain any arbitrary sequence of bytes. | string | ByteString | str | []byte | ByteString | string | String (ASCII-8BIT) |
-

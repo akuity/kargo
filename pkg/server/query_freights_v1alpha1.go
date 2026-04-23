@@ -60,7 +60,10 @@ func (s *server) QueryFreight(
 	origins := req.Msg.GetOrigins()
 	reverse := req.Msg.GetReverse()
 
-	var freight []kargoapi.Freight
+	var (
+		freight         []kargoapi.Freight
+		resourceVersion string
+	)
 	switch {
 	case stageName != "":
 		stage, err := s.getStageFn(
@@ -95,6 +98,11 @@ func (s *server) QueryFreight(
 		if err != nil {
 			return nil, fmt.Errorf("get freight from warehouse: %w", err)
 		}
+		rvs := make([]string, len(freight))
+		for i := range freight {
+			rvs[i] = freight[i].ResourceVersion
+		}
+		resourceVersion = effectiveResourceVersion("", rvs)
 	default:
 		freightList := &kargoapi.FreightList{}
 		// Get ALL Freight in the project/namespace
@@ -106,6 +114,11 @@ func (s *server) QueryFreight(
 			return nil, fmt.Errorf("list freight: %w", err)
 		}
 		freight = freightList.Items
+		rvs := make([]string, len(freightList.Items))
+		for i := range freightList.Items {
+			rvs[i] = freightList.Items[i].ResourceVersion
+		}
+		resourceVersion = effectiveResourceVersion(freightList.ResourceVersion, rvs)
 	}
 
 	// Split the Freight into groups
@@ -124,7 +137,8 @@ func (s *server) QueryFreight(
 	sortFreightGroups(orderBy, reverse, freightGroups)
 
 	return connect.NewResponse(&svcv1alpha1.QueryFreightResponse{
-		Groups: freightGroups,
+		Groups:          freightGroups,
+		ResourceVersion: resourceVersion,
 	}), nil
 }
 
@@ -390,8 +404,11 @@ func (s *server) queryFreight(c *gin.Context) {
 		return
 	}
 
-	var freight []kargoapi.Freight
-	var err error
+	var (
+		freight         []kargoapi.Freight
+		resourceVersion string
+		err             error
+	)
 
 	switch {
 	case stageName != "":
@@ -430,6 +447,7 @@ func (s *server) queryFreight(c *gin.Context) {
 			return
 		}
 		freight = freightList.Items
+		resourceVersion = freightList.ResourceVersion
 	}
 
 	// Split the Freight into groups using the generic functions
@@ -456,7 +474,7 @@ func (s *server) queryFreight(c *gin.Context) {
 		result[k] = &freightList{Items: v}
 	}
 
-	c.JSON(http.StatusOK, gin.H{"groups": result})
+	c.JSON(http.StatusOK, gin.H{"groups": result, "resourceVersion": resourceVersion})
 }
 
 // getFreightFromWarehousesREST is a helper for the REST endpoint that gets freight from warehouses

@@ -2,6 +2,7 @@ package server
 
 import (
 	"context"
+	"encoding/json"
 	"errors"
 	"net/http"
 	"net/http/httptest"
@@ -14,6 +15,7 @@ import (
 	"k8s.io/apimachinery/pkg/types"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/client/fake"
+	"sigs.k8s.io/controller-runtime/pkg/client/interceptor"
 
 	svcv1alpha1 "github.com/akuity/kargo/api/service/v1alpha1"
 	kargoapi "github.com/akuity/kargo/api/v1alpha1"
@@ -282,6 +284,70 @@ func TestQueryFreight(t *testing.T) {
 				require.Len(t, res.Msg.GetGroups(), 2)
 				require.Len(t, res.Msg.GetGroups()["fake-repo-url"].Freight, 2)
 				require.Len(t, res.Msg.GetGroups()["another-fake-repo-url"].Freight, 2)
+			},
+		},
+
+		{
+			name: "resource_version is returned for unfiltered list",
+			req: &svcv1alpha1.QueryFreightRequest{
+				Project: "fake-project",
+			},
+			server: &server{
+				validateProjectExistsFn: func(context.Context, string) error {
+					return nil
+				},
+				listFreightFn: func(
+					_ context.Context,
+					objList client.ObjectList,
+					_ ...client.ListOption,
+				) error {
+					freight, ok := objList.(*kargoapi.FreightList)
+					require.True(t, ok)
+					freight.ResourceVersion = "12345"
+					return nil
+				},
+			},
+			assertions: func(
+				t *testing.T,
+				res *connect.Response[svcv1alpha1.QueryFreightResponse],
+				err error,
+			) {
+				require.NoError(t, err)
+				require.Equal(t, "12345", res.Msg.GetResourceVersion())
+			},
+		},
+
+		{
+			name: "resource_version is empty when filtered by stage",
+			req: &svcv1alpha1.QueryFreightRequest{
+				Project: "fake-project",
+				Stage:   "fake-stage",
+			},
+			server: &server{
+				validateProjectExistsFn: func(context.Context, string) error {
+					return nil
+				},
+				getStageFn: func(
+					context.Context,
+					client.Client,
+					types.NamespacedName,
+				) (*kargoapi.Stage, error) {
+					return &kargoapi.Stage{}, nil
+				},
+				getAvailableFreightForStageFn: func(
+					context.Context,
+					*kargoapi.Stage,
+				) ([]kargoapi.Freight, error) {
+					return nil, nil
+				},
+			},
+			assertions: func(
+				t *testing.T,
+				res *connect.Response[svcv1alpha1.QueryFreightResponse],
+				err error,
+			) {
+				require.NoError(t, err)
+				require.Empty(t, res.Msg.GetResourceVersion())
 			},
 		},
 
@@ -832,6 +898,33 @@ func Test_server_queryFreight(t *testing.T) {
 				clientBuilder: fake.NewClientBuilder().WithObjects(testProject, testFreight2),
 				assertions: func(t *testing.T, w *httptest.ResponseRecorder, _ client.Client) {
 					require.Equal(t, http.StatusOK, w.Code)
+				},
+			},
+			{
+				name: "resource_version is returned in response for unfiltered list",
+				clientBuilder: fake.NewClientBuilder().
+					WithObjects(testProject).
+					WithInterceptorFuncs(interceptor.Funcs{
+						List: func(
+							ctx context.Context,
+							cl client.WithWatch,
+							list client.ObjectList,
+							opts ...client.ListOption,
+						) error {
+							if err := cl.List(ctx, list, opts...); err != nil {
+								return err
+							}
+							if fl, ok := list.(*kargoapi.FreightList); ok {
+								fl.ResourceVersion = "99"
+							}
+							return nil
+						},
+					}),
+				assertions: func(t *testing.T, w *httptest.ResponseRecorder, _ client.Client) {
+					require.Equal(t, http.StatusOK, w.Code)
+					var body map[string]any
+					require.NoError(t, json.Unmarshal(w.Body.Bytes(), &body))
+					require.Equal(t, "99", body["resourceVersion"])
 				},
 			},
 		},
