@@ -13,6 +13,8 @@ import (
 	"golang.org/x/oauth2/google"
 	"google.golang.org/api/googleapi"
 	"google.golang.org/api/iamcredentials/v1"
+	"k8s.io/apimachinery/pkg/util/wait"
+	"k8s.io/client-go/util/retry"
 
 	"github.com/akuity/kargo/pkg/credentials"
 	"github.com/akuity/kargo/pkg/logging"
@@ -45,7 +47,41 @@ func init() {
 // unreachable after initMaxAttempts attempts. Callers should not register a
 // nil provider.
 func NewWorkloadIdentityFederationProvider(ctx context.Context) *WorkloadIdentityFederationProvider {
+	logger := logging.LoggerFromContext(ctx)
+
+	var projectID string
+	var tokenSource oauth2.TokenSource
+
+	if err := retry.OnError(
+		wait.Backoff{
+			Steps:    initMaxAttempts,
+			Duration: initRetryInterval,
+		},
+		func(_ error) bool {
+			return ctx.Err() == nil
+		},
+		func() error {
+			var err error
+			projectID, err = metadata.ProjectIDWithContext(ctx)
+			if err != nil {
+				return fmt.Errorf("error getting GCP project ID: %w", err)
+			}
+			tokenSource, err = google.DefaultTokenSource(ctx, iamcredentials.CloudPlatformScope)
+			if err != nil {
+				return fmt.Errorf("error getting GCP default token source: %w", err)
+			}
+			return nil
+		},
+	); err != nil {
+		logger.Info("GCP Workload Identity Federation provider could not be initialized", "err", err)
+		return nil
+	}
+
+	logger.Debug("initialized GCP Workload Identity Federation provider", "project", projectID)
+
 	p := &WorkloadIdentityFederationProvider{
+		projectID:   projectID,
+		tokenSource: tokenSource,
 		tokenCache: cache.New(
 			// Access tokens live for one hour. We'll hang on to them for 40
 			// minutes by default. When the actual token expiry is available, it
@@ -61,41 +97,7 @@ func NewWorkloadIdentityFederationProvider(ctx context.Context) *WorkloadIdentit
 		),
 	}
 	p.getAccessTokenFn = p.getAccessToken
-	return initializeWithRetry(ctx, p, p.initialize, initRetryInterval)
-}
-
-// initializeWithRetry calls initFn up to initMaxAttempts times, sleeping
-// retryInterval between attempts. It returns p on success and nil if all
-// attempts are exhausted or the context is cancelled.
-func initializeWithRetry(
-	ctx context.Context,
-	p *WorkloadIdentityFederationProvider,
-	initFn func(context.Context) error,
-	retryInterval time.Duration,
-) *WorkloadIdentityFederationProvider {
-	logger := logging.LoggerFromContext(ctx)
-	for i := range initMaxAttempts {
-		if err := initFn(ctx); err != nil {
-			if i < initMaxAttempts-1 {
-				logger.Debug(
-					"GCP Workload Identity Federation provider initialization failed; will retry",
-					"attempt", i+1,
-					"maxAttempts", initMaxAttempts,
-					"err", err,
-				)
-				select {
-				case <-time.After(retryInterval):
-				case <-ctx.Done():
-					return nil
-				}
-				continue
-			}
-			logger.Error(err, "GCP Workload Identity Federation provider could not be initialized")
-			return nil
-		}
-		return p
-	}
-	return nil
+	return p
 }
 
 type WorkloadIdentityFederationProvider struct {
@@ -109,24 +111,6 @@ type WorkloadIdentityFederationProvider struct {
 		ctx context.Context,
 		project string,
 	) (string, time.Time, error)
-}
-
-// initialize fetches the GCP project ID and default token source from the
-// instance metadata server.
-func (p *WorkloadIdentityFederationProvider) initialize(ctx context.Context) error {
-	projectID, err := metadata.ProjectIDWithContext(ctx)
-	if err != nil {
-		return fmt.Errorf("error getting GCP project ID: %w", err)
-	}
-
-	tokenSource, err := google.DefaultTokenSource(ctx, iamcredentials.CloudPlatformScope)
-	if err != nil {
-		return fmt.Errorf("error getting GCP default token source: %w", err)
-	}
-
-	p.projectID = projectID
-	p.tokenSource = tokenSource
-	return nil
 }
 
 func (p *WorkloadIdentityFederationProvider) Supports(
