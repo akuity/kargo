@@ -70,6 +70,12 @@ func TestWorkloadIdentityProvider_Supports(t *testing.T) {
 			expected: true,
 		},
 		{
+			name:     "git non-HTTP/S repo URLs not supported",
+			credType: credentials.TypeGit,
+			repoURL:  "ssh://repo",
+			expected: false,
+		},
+		{
 			name:     "helm HTTP/S repo URLs not supported",
 			credType: credentials.TypeHelm,
 			repoURL:  testHTTPSRepoURL,
@@ -188,6 +194,36 @@ func TestWorkloadIdentityProvider_GetCredentials(t *testing.T) {
 				cachedToken, found := c.Get(testRegistryName)
 				assert.True(t, found)
 				assert.Equal(t, testToken, cachedToken)
+			},
+		},
+		{
+			name: "cache miss, successful token fetch with expiry",
+			provider: &WorkloadIdentityProvider{
+				getAccessTokenFn: func(_ context.Context, _ credentials.Type, _ string) (string, time.Duration, error) {
+					return testToken, 5 * time.Minute, nil
+				},
+			},
+			credType: credentials.TypeGit,
+			repoURL:  testRepoURL,
+			assertions: func(
+				t *testing.T,
+				c *cache.Cache,
+				creds *credentials.Credentials,
+				err error,
+			) {
+				assert.NoError(t, err)
+				assert.NotNil(t, creds)
+				assert.Equal(t, azTokenUsername, creds.Username)
+				assert.Equal(t, testToken, creds.Password)
+
+				// Verify the token was cached with a TTL based on the token's actual
+				// expiry
+				items := c.Items()
+				item, found := items[adoScope]
+				assert.True(t, found)
+				expectedTTL := 5 * time.Minute
+				actualTTL := time.Until(time.Unix(0, item.Expiration))
+				assert.InDelta(t, expectedTTL.Seconds(), actualTTL.Seconds(), 5)
 			},
 		},
 		{
