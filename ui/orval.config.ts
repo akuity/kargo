@@ -12,7 +12,7 @@ export default defineConfig({
       client: 'react-query',
       httpClient: 'fetch',
       clean: true,
-      formatter: 'prettier',
+      prettier: true,
       override: {
         mutator: {
           path: './src/lib/api/custom-fetch.ts',
