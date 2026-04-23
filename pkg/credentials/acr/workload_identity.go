@@ -4,6 +4,7 @@ import (
 	"context"
 	"fmt"
 	"regexp"
+	"strings"
 	"time"
 
 	"github.com/Azure/azure-sdk-for-go/sdk/azcore"
@@ -17,15 +18,17 @@ import (
 )
 
 const (
-	// cacheTTLMinutes is how long we cache ACR tokens before refreshing them.
-	// Set to 2.5 hours to ensure we refresh before the 3-hour token expiry.
+	// cacheTTLMinutes is how long we cache tokens before refreshing them.
+	// Set to 2.5 hours to ensure we refresh before the 3-hour ACR token expiry.
 	cacheTTLMinutes = 150
 	// cleanupIntervalMinutes is how often the cache cleanup runs
 	cleanupIntervalMinutes = 30
-	// acrTokenUsername is the fixed username used for ACR token authentication
-	acrTokenUsername = "00000000-0000-0000-0000-000000000000"
 	// acrScope is the Azure AD scope required for ACR authentication
 	acrScope = "https://containerregistry.azure.net/.default"
+	// adoScope is the Azure AD scope for Azure DevOps
+	adoScope = "499b84ac-1321-427f-aa17-267ca6975798/.default"
+	// azTokenUsername is the fixed username used for token authentication
+	azTokenUsername = "00000000-0000-0000-0000-000000000000"
 )
 
 // acrURLRegex matches Azure Container Registry URLs.
@@ -44,14 +47,14 @@ func init() {
 }
 
 // WorkloadIdentityProvider implements credentials.Provider for Azure Container
-// Registry Workload Identity.
+// Registry and Azure DevOps via Azure Workload Identity.
 type WorkloadIdentityProvider struct {
-	// tokenCache is an in-memory cache of ACR registry access tokens keyed by
-	// registry name.
+	// tokenCache is an in-memory cache of access tokens keyed by ACR registry
+	// name or (static) ADO scope.
 	tokenCache *cache.Cache
 	credential azcore.TokenCredential
 
-	getAccessTokenFn func(ctx context.Context, registryName string) (string, error)
+	getAccessTokenFn func(ctx context.Context, credentialsType credentials.Type, registryName string) (string, time.Duration, error)
 }
 
 // NewWorkloadIdentityProvider returns a new WorkloadIdentityProvider if Azure
@@ -86,23 +89,36 @@ func (p *WorkloadIdentityProvider) Supports(
 	_ context.Context,
 	req credentials.Request,
 ) (bool, error) {
-	if req.Type != credentials.TypeImage && req.Type != credentials.TypeHelm {
+	switch req.Type {
+	case credentials.TypeImage, credentials.TypeHelm:
+		// Check if this is an ACR URL
+		return acrURLRegex.MatchString(req.RepoURL), nil
+	case credentials.TypeGit:
+		return strings.HasPrefix(req.RepoURL, "http://") || strings.HasPrefix(req.RepoURL, "https://"), nil
+	default:
 		return false, nil
 	}
-	// Check if this is an ACR URL
-	return acrURLRegex.MatchString(req.RepoURL), nil
 }
 
 func (p *WorkloadIdentityProvider) GetCredentials(
 	ctx context.Context,
 	req credentials.Request,
 ) (*credentials.Credentials, error) {
-	// Extract the registry name from the ACR URL
-	matches := acrURLRegex.FindStringSubmatch(req.RepoURL)
-	if len(matches) != 2 { // This doesn't look like an ACR URL
-		return nil, nil
+	var cacheKey string
+	switch req.Type {
+	case credentials.TypeImage, credentials.TypeHelm:
+		// Extract the registry name from the ACR URL
+		matches := acrURLRegex.FindStringSubmatch(req.RepoURL)
+		if len(matches) != 2 { // This doesn't look like an ACR URL
+			return nil, nil
+		}
+		cacheKey = matches[1]
+	case credentials.TypeGit:
+		// Use the Azure DevOps scope as the cache key
+		cacheKey = adoScope
+	default:
+		return nil, fmt.Errorf("invalid credentials type: %s", req.Type)
 	}
-	registryName := matches[1]
 
 	logger := logging.LoggerFromContext(ctx).WithValues(
 		"provider", "acrWorkloadIdentity",
@@ -110,19 +126,19 @@ func (p *WorkloadIdentityProvider) GetCredentials(
 	)
 
 	// Check the cache for the token
-	if entry, exists := p.tokenCache.Get(registryName); exists {
+	if entry, exists := p.tokenCache.Get(cacheKey); exists {
 		logger.Debug("access token cache hit")
 		return &credentials.Credentials{
-			Username: acrTokenUsername,
+			Username: azTokenUsername,
 			Password: entry.(string), // nolint: forcetypeassert
 		}, nil
 	}
 	logger.Debug("access token cache miss")
 
 	// Cache miss, get a new token
-	accessToken, err := p.getAccessTokenFn(ctx, registryName)
+	accessToken, ttl, err := p.getAccessTokenFn(ctx, req.Type, cacheKey)
 	if err != nil {
-		return nil, fmt.Errorf("error getting ACR access token: %w", err)
+		return nil, fmt.Errorf("error getting access token: %w", err)
 	}
 
 	// If we didn't get a token, we'll treat this as no credentials found
@@ -131,22 +147,42 @@ func (p *WorkloadIdentityProvider) GetCredentials(
 	}
 	logger.Debug("obtained new access token")
 
-	// Cache the token using the default TTL. The ACR refresh token exchange API
-	// does not expose token expiry, so a dynamic TTL is not possible here.
+	// Use the token TTL if available, otherwise fall back to the default.
+	// In general, Azure AD exposes token expiry, but the ACR refresh token
+	// exchange API does not.
+	if ttl == 0 {
+		ttl = cache.DefaultExpiration
+	}
 	logger.Debug(
 		"caching access token",
-		"ttl", cache.DefaultExpiration,
+		"ttl", ttl,
 	)
-	p.tokenCache.Set(registryName, accessToken, cache.DefaultExpiration)
+	p.tokenCache.Set(cacheKey, accessToken, ttl)
 
 	return &credentials.Credentials{
-		Username: acrTokenUsername,
+		Username: azTokenUsername,
 		Password: accessToken,
 	}, nil
 }
 
-// getAccessToken returns an ACR refresh token using Azure workload identity.
 func (p *WorkloadIdentityProvider) getAccessToken(
+	ctx context.Context,
+	credentialsType credentials.Type,
+	registryName string,
+) (string, time.Duration, error) {
+	switch credentialsType {
+	case credentials.TypeImage, credentials.TypeHelm:
+		token, err := p.getAcrAccessToken(ctx, registryName)
+		return token, 0, err
+	case credentials.TypeGit:
+		return p.getAdoAccessToken(ctx)
+	default:
+		return "", 0, fmt.Errorf("invalid credentials type: %s", credentialsType)
+	}
+}
+
+// getAcrAccessToken returns an ACR refresh token using Azure workload identity.
+func (p *WorkloadIdentityProvider) getAcrAccessToken(
 	ctx context.Context,
 	registryName string,
 ) (string, error) {
@@ -189,4 +225,24 @@ func (p *WorkloadIdentityProvider) getAccessToken(
 	}
 
 	return *refreshTokenResp.RefreshToken, nil
+}
+
+// getAdoAccessToken returns an ADO access token using Azure workload identity.
+func (p *WorkloadIdentityProvider) getAdoAccessToken(ctx context.Context) (string, time.Duration, error) {
+	// Get Azure AD access token with the standard ADO scope
+	token, err := p.credential.GetToken(ctx, policy.TokenRequestOptions{
+		Scopes: []string{adoScope},
+	})
+	if err != nil {
+		return "", 0, fmt.Errorf("failed to get Azure AD access token for ADO: %w", err)
+	}
+	// Return the time until the explicit refresh-on if provided, otherwise fall
+	// back to the expires-on minus 5 minutes (to be safe).
+	duration := time.Duration(0)
+	if !token.RefreshOn.IsZero() {
+		duration = time.Until(token.RefreshOn)
+	} else if !token.ExpiresOn.IsZero() {
+		duration = time.Until(token.ExpiresOn) - time.Minute*5
+	}
+	return token.Token, duration, nil
 }
