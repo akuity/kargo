@@ -27,9 +27,6 @@ const (
 )
 
 func init() {
-	if !metadata.OnGCE() {
-		return
-	}
 	ctx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
 	defer cancel()
 	if p := NewWorkloadIdentityFederationProvider(ctx); p != nil {
@@ -48,10 +45,13 @@ func init() {
 // nil provider.
 func NewWorkloadIdentityFederationProvider(ctx context.Context) *WorkloadIdentityFederationProvider {
 	logger := logging.LoggerFromContext(ctx)
+	if !metadata.OnGCE() {
+		logger.Info("not running on GCP; skipping initialization of GCP Workload Identity Federation provider")
+		return nil
+	}
 
 	var projectID string
 	var tokenSource oauth2.TokenSource
-
 	if err := retry.OnError(
 		wait.Backoff{
 			Steps:    initMaxAttempts,
