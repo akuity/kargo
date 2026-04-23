@@ -253,11 +253,19 @@ func newReconciler(kubeClient client.Client, cfg ReconcilerConfig) *reconciler {
 	r.ensureControllerPermissionsFn = r.ensureControllerPermissions
 	r.ensureDefaultUserRolesFn = r.ensureDefaultUserRoles
 	r.ensureExtendedPermissionsFn = r.ensureExtendedPermissions
-	r.createServiceAccountFn = r.client.Create
-	r.createRoleFn = r.client.Create
-	r.createRoleBindingFn = r.client.Create
-	r.createClusterRoleFn = r.client.Create
-	r.createClusterRoleBindingFn = r.client.Create
+	applySSA := func(ctx context.Context, obj client.Object, _ ...client.CreateOption) error {
+		gvks, _, err := r.client.Scheme().ObjectKinds(obj)
+		if err != nil {
+			return fmt.Errorf("could not determine GVK for object: %w", err)
+		}
+		obj.GetObjectKind().SetGroupVersionKind(gvks[0])
+		return r.client.Patch(ctx, obj, client.Apply, client.ForceOwnership, client.FieldOwner("kargo"))
+	}
+	r.createServiceAccountFn = applySSA
+	r.createRoleFn = applySSA
+	r.createRoleBindingFn = applySSA
+	r.createClusterRoleFn = applySSA
+	r.createClusterRoleBindingFn = applySSA
 	r.deleteClusterRoleFn = r.client.Delete
 	r.deleteClusterRoleBindingFn = r.client.Delete
 	return r
@@ -686,22 +694,12 @@ func (r *reconciler) ensureSystemPermissions(
 	for _, roleBinding := range roleBindings {
 		rbLogger := logger.WithValues("roleBinding", roleBinding.Name)
 		if err := r.createRoleBindingFn(ctx, &roleBinding); err != nil {
-			if !apierrors.IsAlreadyExists(err) {
-				return fmt.Errorf(
-					"error creating RoleBinding %q in Project namespace %q: %w",
-					roleBinding.Name, project.Name, err,
-				)
-			}
-			if err = r.client.Update(ctx, &roleBinding); err != nil {
-				return fmt.Errorf(
-					"error updating existing RoleBinding %q in Project namespace %q: %w",
-					roleBinding.Name, project.Name, err,
-				)
-			}
-			rbLogger.Debug("updated RoleBinding")
-			continue
+			return fmt.Errorf(
+				"error applying RoleBinding %q in Project namespace %q: %w",
+				roleBinding.Name, project.Name, err,
+			)
 		}
-		rbLogger.Debug("created RoleBinding in Project namespace")
+		rbLogger.Debug("applied RoleBinding in Project namespace")
 	}
 
 	return nil
@@ -766,23 +764,13 @@ func (r *reconciler) ensureControllerPermissions(
 			},
 		}
 
-		if err := r.client.Create(ctx, roleBinding); err != nil {
-			if !apierrors.IsAlreadyExists(err) {
-				return fmt.Errorf(
-					"error creating RoleBinding %q for ServiceAccount %q in Project namespace %q: %w",
-					roleBinding.Name, sa.Name, project.Name, err,
-				)
-			}
-			if err = r.client.Update(ctx, roleBinding); err != nil {
-				return fmt.Errorf(
-					"error updating existing RoleBinding %q in Project namespace %q: %w",
-					roleBinding.Name, project.Name, err,
-				)
-			}
-			saLogger.Debug("updated RoleBinding")
-			continue
+		if err := r.createRoleBindingFn(ctx, roleBinding); err != nil {
+			return fmt.Errorf(
+				"error applying RoleBinding %q for ServiceAccount %q in Project namespace %q: %w",
+				roleBinding.Name, sa.Name, project.Name, err,
+			)
 		}
-		saLogger.Debug("created RoleBinding")
+		saLogger.Debug("applied RoleBinding")
 	}
 
 	return nil
@@ -821,17 +809,14 @@ func (r *reconciler) ensureDefaultUserRoles(
 				},
 			},
 		); err != nil {
-			if apierrors.IsAlreadyExists(err) {
-				saLogger.Debug("ServiceAccount already exists in project namespace")
-				continue
-			}
 			return fmt.Errorf(
-				"error creating ServiceAccount %q in project namespace %q: %w",
+				"error applying ServiceAccount %q in project namespace %q: %w",
 				saName,
 				project.Name,
 				err,
 			)
 		}
+		saLogger.Debug("applied ServiceAccount in project namespace")
 	}
 
 	roles := []*rbacv1.Role{
@@ -976,16 +961,12 @@ func (r *reconciler) ensureDefaultUserRoles(
 			"namespace", project.Name,
 		)
 		if err := r.createRoleFn(ctx, role); err != nil {
-			if apierrors.IsAlreadyExists(err) {
-				roleLogger.Debug("Role already exists in project namespace")
-				continue
-			}
 			return fmt.Errorf(
-				"error creating Role %q in project namespace %q: %w",
+				"error applying Role %q in project namespace %q: %w",
 				role.Name, project.Name, err,
 			)
 		}
-		roleLogger.Debug("created Role in project namespace")
+		roleLogger.Debug("applied Role in project namespace")
 	}
 
 	for _, rbName := range allRoles {
@@ -1017,16 +998,12 @@ func (r *reconciler) ensureDefaultUserRoles(
 				},
 			},
 		); err != nil {
-			if apierrors.IsAlreadyExists(err) {
-				rbLogger.Debug("RoleBinding already exists in project namespace")
-				continue
-			}
 			return fmt.Errorf(
-				"error creating RoleBinding %q in project namespace %q: %w",
+				"error applying RoleBinding %q in project namespace %q: %w",
 				rbName, project.Name, err,
 			)
 		}
-		rbLogger.Debug("created RoleBinding in project namespace")
+		rbLogger.Debug("applied RoleBinding in project namespace")
 	}
 
 	// This ClusterRole allows those bound to it to update and delete one specific
@@ -1048,16 +1025,12 @@ func (r *reconciler) ensureDefaultUserRoles(
 			}},
 		},
 	); err != nil {
-		if !apierrors.IsAlreadyExists(err) {
-			return fmt.Errorf("error creating ClusterRole %q: %w", crName, err)
-		}
-		crLogger.Debug("ClusterRole already exists")
+		return fmt.Errorf("error applying ClusterRole %q: %w", crName, err)
 	}
-	crLogger.Debug("created ClusterRole")
+	crLogger.Debug("applied ClusterRole")
 
 	crbName := crName
 	crbLogger := logger.WithValues("name", crbName)
-	logger.WithValues()
 	if err := r.createClusterRoleBindingFn(
 		ctx,
 		&rbacv1.ClusterRoleBinding{
@@ -1074,12 +1047,9 @@ func (r *reconciler) ensureDefaultUserRoles(
 			}},
 		},
 	); err != nil {
-		if !apierrors.IsAlreadyExists(err) {
-			return fmt.Errorf("error creating ClusterRoleBinding %q: %w", crName, err)
-		}
-		crbLogger.Debug("ClusterRoleBinding already exists")
+		return fmt.Errorf("error applying ClusterRoleBinding %q: %w", crName, err)
 	}
-	crbLogger.Debug("created ClusterRoleBinding")
+	crbLogger.Debug("applied ClusterRoleBinding")
 
 	return nil
 }
@@ -1138,17 +1108,14 @@ func (r *reconciler) ensureExtendedPermissions(
 				},
 			},
 		); err != nil {
-			if apierrors.IsAlreadyExists(err) {
-				saLogger.Debug("ServiceAccount already exists in project namespace")
-				continue
-			}
 			return fmt.Errorf(
-				"error creating ServiceAccount %q in project namespace %q: %w",
+				"error applying ServiceAccount %q in project namespace %q: %w",
 				saName,
 				project.Name,
 				err,
 			)
 		}
+		saLogger.Debug("applied ServiceAccount in project namespace")
 	}
 
 	var clusterRoleBindings []*rbacv1.ClusterRoleBinding
@@ -1181,16 +1148,12 @@ func (r *reconciler) ensureExtendedPermissions(
 	for _, crb := range clusterRoleBindings {
 		crbLogger := logger.WithValues("name", crb.Name, "project", project.Name)
 		if err := r.createClusterRoleBindingFn(ctx, crb); err != nil {
-			if apierrors.IsAlreadyExists(err) {
-				crbLogger.Debug("ClusterRoleBinding already exists for Project")
-				continue
-			}
-
 			return fmt.Errorf(
-				"error creating ClusterRoleBinding %q for Project %q: %w",
+				"error applying ClusterRoleBinding %q for Project %q: %w",
 				crb.Name, project.Name, err,
 			)
 		}
+		crbLogger.Debug("applied ClusterRoleBinding for Project")
 	}
 
 	rbAnnotations := map[string]string{
@@ -1354,15 +1317,12 @@ func (r *reconciler) ensureExtendedPermissions(
 		)
 
 		if err := r.createRoleBindingFn(ctx, rb); err != nil {
-			if apierrors.IsAlreadyExists(err) {
-				rbLogger.Debug("RoleBinding already exists in project namespace")
-				continue
-			}
 			return fmt.Errorf(
-				"error creating RoleBinding %q in project namespace %q: %w",
+				"error applying RoleBinding %q in project namespace %q: %w",
 				rb.Name, project.Name, err,
 			)
 		}
+		rbLogger.Debug("applied RoleBinding in project namespace")
 	}
 
 	return nil
