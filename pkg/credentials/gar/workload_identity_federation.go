@@ -21,9 +21,8 @@ import (
 )
 
 const (
-	gcpResourceNameFormat = "projects/-/serviceAccounts/kargo-project-%s@%s.iam.gserviceaccount.com"
-	initMaxAttempts       = 5
-	initRetryInterval     = time.Second
+	initMaxAttempts   = 5
+	initRetryInterval = time.Second
 )
 
 func init() {
@@ -213,7 +212,10 @@ func (p *WorkloadIdentityFederationProvider) getAccessToken(
 	logger = logger.WithValues("gcpProjectID", p.projectID, "kargoProject", kargoProject)
 
 	resp, err := iamSvc.Projects.ServiceAccounts.GenerateAccessToken(
-		fmt.Sprintf(gcpResourceNameFormat, kargoProject, p.projectID),
+		fmt.Sprintf(
+			"projects/-/serviceAccounts/kargo-project-%s@%s.iam.gserviceaccount.com",
+			kargoProject, p.projectID,
+		),
 		&iamcredentials.GenerateAccessTokenRequest{
 			Scope: []string{
 				iamcredentials.CloudPlatformScope,
