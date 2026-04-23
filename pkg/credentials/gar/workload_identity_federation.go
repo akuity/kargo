@@ -30,16 +30,14 @@ func init() {
 	}
 	ctx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
 	defer cancel()
-	p := NewWorkloadIdentityFederationProvider(ctx)
-	if p == nil {
-		return
+	if p := NewWorkloadIdentityFederationProvider(ctx); p != nil {
+		credentials.DefaultProviderRegistry.MustRegister(
+			credentials.ProviderRegistration{
+				Predicate: p.Supports,
+				Value:     p,
+			},
+		)
 	}
-	credentials.DefaultProviderRegistry.MustRegister(
-		credentials.ProviderRegistration{
-			Predicate: p.Supports,
-			Value:     p,
-		},
-	)
 }
 
 // NewWorkloadIdentityFederationProvider returns a fully initialized
