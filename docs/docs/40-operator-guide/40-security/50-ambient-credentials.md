@@ -175,15 +175,16 @@ Tokens Kargo obtains for accessing any specific GAR repository on behalf of any
 specific Kargo Project are valid for 60 minutes and cached until shortly before
 they expire. A controller restart clears the cache.
 
-## Azure Container Registry (ACR)
+## Azure Container Registry (ACR) and Azure DevOps (ADO)
 
-Kargo can be configured to authenticate to ACR repositories using
+Kargo can be configured to authenticate to ACR and ADO repositories using
 [Azure Workload Identity](https://learn.microsoft.com/en-us/azure/aks/workload-identity-overview).
 
 If Kargo locates no `Secret` resources matching a repository URL and is deployed
 within an AKS cluster with workload identity enabled, it will attempt to use it
-to authenticate. Leveraging this eliminates the need to store ACR credentials in
-a `Secret` resource. Workload Identity can be enabled when creating a
+to authenticate. Leveraging this eliminates the need to store ACR and/or ADO
+credentials in a `Secret` resource. Workload Identity can be enabled when
+creating a
 [new cluster](https://learn.microsoft.com/en-us/azure/aks/workload-identity-deploy-cluster#create-an-aks-cluster)
 or can be added to an
 [existing cluster](https://learn.microsoft.com/en-us/azure/aks/workload-identity-deploy-cluster#update-an-existing-aks-cluster).
@@ -226,18 +227,28 @@ To access container images or Helm charts hosted in ACR, the managed identity
 [must be granted the `AcrPull` role](https://learn.microsoft.com/en-us/azure/container-registry/container-registry-authentication-managed-identity?tabs=azure-cli#grant-identity-access-to-the-container-registry)
 on the registry or on individual repositories within it.
 
+To access git repositories hosted in Azure DevOps, the managed identity (or
+service principal) must also be added to your Azure DevOps organization with
+`Contribute` permissions for authorized repositories. Refer to the
+[Azure DevOps documentation](https://learn.microsoft.com/en-us/azure/devops/integrate/get-started/authentication/service-principal-managed-identity?view=azure-devops)
+for more information on configuring access to Azure DevOps via Entra identities.
+
 :::danger
 
 Before continuing, be certain of the following:
 
-* You have created a **User-Assigned Managed Identity**.
-
-  ⚠️ This is different from an App Registration!
+In general:
 
 * You have created a **Federated Identity Credential** that associates the
   managed identity with the Kubernetes `ServiceAccount` used by the Kargo
   controller. (In a typical installation of Kargo, this is the
   `kargo-controller` `ServiceAccount` in the `kargo` namespace.)
+
+Additionally, for accessing artifacts hosted in ACR:
+
+* You have created a **User-Assigned Managed Identity**.
+
+  ⚠️ This is different from an App Registration!
 
 * The managed identity has been granted the **`AcrPull` role** on your ACR
   registry or specific repositories within it.
