@@ -1,4 +1,4 @@
-package acr
+package azure
 
 import (
 	"context"
@@ -121,7 +121,7 @@ func (p *WorkloadIdentityProvider) GetCredentials(
 	}
 
 	logger := logging.LoggerFromContext(ctx).WithValues(
-		"provider", "acrWorkloadIdentity",
+		"provider", "azureWorkloadIdentity",
 		"repoURL", req.RepoURL,
 	)
 

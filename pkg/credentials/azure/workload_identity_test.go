@@ -1,4 +1,4 @@
-package acr
+package azure
 
 import (
 	"context"
