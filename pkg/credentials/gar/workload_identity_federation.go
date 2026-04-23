@@ -57,7 +57,7 @@ func NewWorkloadIdentityFederationProvider(ctx context.Context) *WorkloadIdentit
 			Steps:    initMaxAttempts,
 			Duration: initRetryInterval,
 		},
-		func(_ error) bool {
+		func(error) bool {
 			return ctx.Err() == nil
 		},
 		func() error {
