@@ -79,6 +79,16 @@ export const refreshResource = KargoService.method.refreshResource;
 export const listStages = KargoService.method.listStages;
 
 /**
+ * ListStageSummaries retrieves a lightweight projection of Stages within a
+ * project, containing only the fields typically required to render list
+ * and graph views. Use GetStage to retrieve the full Stage resource when
+ * detail-level fields are needed.
+ *
+ * @generated from rpc akuity.io.kargo.service.v1alpha1.KargoService.ListStageSummaries
+ */
+export const listStageSummaries = KargoService.method.listStageSummaries;
+
+/**
  * ListImages returns available images and their usage across stages.
  *
  * @generated from rpc akuity.io.kargo.service.v1alpha1.KargoService.ListImages

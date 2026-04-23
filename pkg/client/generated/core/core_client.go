@@ -115,6 +115,8 @@ type ClientService interface {
 
 	ListSharedConfigMaps(params *ListSharedConfigMapsParams, authInfo runtime.ClientAuthInfoWriter, opts ...ClientOption) (*ListSharedConfigMapsOK, error)
 
+	ListStageSummaries(params *ListStageSummariesParams, authInfo runtime.ClientAuthInfoWriter, opts ...ClientOption) (*ListStageSummariesOK, error)
+
 	ListStages(params *ListStagesParams, authInfo runtime.ClientAuthInfoWriter, opts ...ClientOption) (*ListStagesOK, error)
 
 	ListSystemConfigMaps(params *ListSystemConfigMapsParams, authInfo runtime.ClientAuthInfoWriter, opts ...ClientOption) (*ListSystemConfigMapsOK, error)
@@ -1601,6 +1603,57 @@ func (a *Client) ListSharedConfigMaps(params *ListSharedConfigMapsParams, authIn
 	//
 	// safeguard: normally, in the absence of a default response, unknown success responses return an error above: so this is a codegen issue
 	msg := fmt.Sprintf("unexpected success response for ListSharedConfigMaps: API contract not enforced by server. Client expected to get an error, but got: %T", result)
+	panic(msg)
+}
+
+/*
+	ListStageSummaries lists stage summaries
+
+	List a lightweight projection of Stage resources from a
+
+project's namespace. Intended for UI list and graph views that
+need metadata and current state for many Stages at once but do
+not need full FreightHistory, PromotionTemplate steps, or
+Verification configuration. Use GetStage for detail fields.
+*/
+func (a *Client) ListStageSummaries(params *ListStageSummariesParams, authInfo runtime.ClientAuthInfoWriter, opts ...ClientOption) (*ListStageSummariesOK, error) {
+	// NOTE: parameters are not validated before sending
+	if params == nil {
+		params = NewListStageSummariesParams()
+	}
+	op := &runtime.ClientOperation{
+		ID:                 "ListStageSummaries",
+		Method:             "GET",
+		PathPattern:        "/v1beta1/projects/{project}/stage-summaries",
+		ProducesMediaTypes: []string{"application/json"},
+		ConsumesMediaTypes: []string{"application/json"},
+		Schemes:            []string{"http"},
+		Params:             params,
+		Reader:             &ListStageSummariesReader{formats: a.formats},
+		AuthInfo:           authInfo,
+		Context:            params.Context,
+		Client:             params.HTTPClient,
+	}
+	for _, opt := range opts {
+		opt(op)
+	}
+	result, err := a.transport.Submit(op)
+	if err != nil {
+		return nil, err
+	}
+
+	// only one success response has to be checked
+	success, ok := result.(*ListStageSummariesOK)
+	if ok {
+		return success, nil
+	}
+
+	// unexpected success response.
+
+	// no default response is defined.
+	//
+	// safeguard: normally, in the absence of a default response, unknown success responses return an error above: so this is a codegen issue
+	msg := fmt.Sprintf("unexpected success response for ListStageSummaries: API contract not enforced by server. Client expected to get an error, but got: %T", result)
 	panic(msg)
 }
 

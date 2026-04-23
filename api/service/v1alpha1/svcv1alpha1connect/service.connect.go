@@ -60,6 +60,9 @@ const (
 	KargoServiceRefreshResourceProcedure = "/akuity.io.kargo.service.v1alpha1.KargoService/RefreshResource"
 	// KargoServiceListStagesProcedure is the fully-qualified name of the KargoService's ListStages RPC.
 	KargoServiceListStagesProcedure = "/akuity.io.kargo.service.v1alpha1.KargoService/ListStages"
+	// KargoServiceListStageSummariesProcedure is the fully-qualified name of the KargoService's
+	// ListStageSummaries RPC.
+	KargoServiceListStageSummariesProcedure = "/akuity.io.kargo.service.v1alpha1.KargoService/ListStageSummaries"
 	// KargoServiceListImagesProcedure is the fully-qualified name of the KargoService's ListImages RPC.
 	KargoServiceListImagesProcedure = "/akuity.io.kargo.service.v1alpha1.KargoService/ListImages"
 	// KargoServiceGetStageProcedure is the fully-qualified name of the KargoService's GetStage RPC.
@@ -67,6 +70,9 @@ const (
 	// KargoServiceWatchStagesProcedure is the fully-qualified name of the KargoService's WatchStages
 	// RPC.
 	KargoServiceWatchStagesProcedure = "/akuity.io.kargo.service.v1alpha1.KargoService/WatchStages"
+	// KargoServiceWatchStageSummariesProcedure is the fully-qualified name of the KargoService's
+	// WatchStageSummaries RPC.
+	KargoServiceWatchStageSummariesProcedure = "/akuity.io.kargo.service.v1alpha1.KargoService/WatchStageSummaries"
 	// KargoServiceDeleteStageProcedure is the fully-qualified name of the KargoService's DeleteStage
 	// RPC.
 	KargoServiceDeleteStageProcedure = "/akuity.io.kargo.service.v1alpha1.KargoService/DeleteStage"
@@ -273,9 +279,11 @@ var (
 	kargoServiceDeleteResourceMethodDescriptor                = kargoServiceServiceDescriptor.Methods().ByName("DeleteResource")
 	kargoServiceRefreshResourceMethodDescriptor               = kargoServiceServiceDescriptor.Methods().ByName("RefreshResource")
 	kargoServiceListStagesMethodDescriptor                    = kargoServiceServiceDescriptor.Methods().ByName("ListStages")
+	kargoServiceListStageSummariesMethodDescriptor            = kargoServiceServiceDescriptor.Methods().ByName("ListStageSummaries")
 	kargoServiceListImagesMethodDescriptor                    = kargoServiceServiceDescriptor.Methods().ByName("ListImages")
 	kargoServiceGetStageMethodDescriptor                      = kargoServiceServiceDescriptor.Methods().ByName("GetStage")
 	kargoServiceWatchStagesMethodDescriptor                   = kargoServiceServiceDescriptor.Methods().ByName("WatchStages")
+	kargoServiceWatchStageSummariesMethodDescriptor           = kargoServiceServiceDescriptor.Methods().ByName("WatchStageSummaries")
 	kargoServiceDeleteStageMethodDescriptor                   = kargoServiceServiceDescriptor.Methods().ByName("DeleteStage")
 	kargoServiceGetClusterConfigMethodDescriptor              = kargoServiceServiceDescriptor.Methods().ByName("GetClusterConfig")
 	kargoServiceDeleteClusterConfigMethodDescriptor           = kargoServiceServiceDescriptor.Methods().ByName("DeleteClusterConfig")
@@ -369,12 +377,21 @@ type KargoServiceClient interface {
 	RefreshResource(context.Context, *connect.Request[v1alpha1.RefreshResourceRequest]) (*connect.Response[v1alpha1.RefreshResourceResponse], error)
 	// ListStages retrieves all stages within a project.
 	ListStages(context.Context, *connect.Request[v1alpha1.ListStagesRequest]) (*connect.Response[v1alpha1.ListStagesResponse], error)
+	// ListStageSummaries retrieves a lightweight projection of Stages within a
+	// project, containing only the fields typically required to render list
+	// and graph views. Use GetStage to retrieve the full Stage resource when
+	// detail-level fields are needed.
+	ListStageSummaries(context.Context, *connect.Request[v1alpha1.ListStageSummariesRequest]) (*connect.Response[v1alpha1.ListStageSummariesResponse], error)
 	// ListImages returns available images and their usage across stages.
 	ListImages(context.Context, *connect.Request[v1alpha1.ListImagesRequest]) (*connect.Response[v1alpha1.ListImagesResponse], error)
 	// GetStage retrieves details of a specific stage.
 	GetStage(context.Context, *connect.Request[v1alpha1.GetStageRequest]) (*connect.Response[v1alpha1.GetStageResponse], error)
 	// WatchStages provides a streaming interface to monitor stage changes.
 	WatchStages(context.Context, *connect.Request[v1alpha1.WatchStagesRequest]) (*connect.ServerStreamForClient[v1alpha1.WatchStagesResponse], error)
+	// WatchStageSummaries provides a streaming interface to monitor stage
+	// changes, returning the same lightweight projection as
+	// ListStageSummaries for each event.
+	WatchStageSummaries(context.Context, *connect.Request[v1alpha1.WatchStageSummariesRequest]) (*connect.ServerStreamForClient[v1alpha1.WatchStageSummariesResponse], error)
 	// DeleteStage removes a stage from the system.
 	DeleteStage(context.Context, *connect.Request[v1alpha1.DeleteStageRequest]) (*connect.Response[v1alpha1.DeleteStageResponse], error)
 	// GetClusterConfig retrieves cluster-level configuration settings.
@@ -596,6 +613,12 @@ func NewKargoServiceClient(httpClient connect.HTTPClient, baseURL string, opts .
 			connect.WithSchema(kargoServiceListStagesMethodDescriptor),
 			connect.WithClientOptions(opts...),
 		),
+		listStageSummaries: connect.NewClient[v1alpha1.ListStageSummariesRequest, v1alpha1.ListStageSummariesResponse](
+			httpClient,
+			baseURL+KargoServiceListStageSummariesProcedure,
+			connect.WithSchema(kargoServiceListStageSummariesMethodDescriptor),
+			connect.WithClientOptions(opts...),
+		),
 		listImages: connect.NewClient[v1alpha1.ListImagesRequest, v1alpha1.ListImagesResponse](
 			httpClient,
 			baseURL+KargoServiceListImagesProcedure,
@@ -612,6 +635,12 @@ func NewKargoServiceClient(httpClient connect.HTTPClient, baseURL string, opts .
 			httpClient,
 			baseURL+KargoServiceWatchStagesProcedure,
 			connect.WithSchema(kargoServiceWatchStagesMethodDescriptor),
+			connect.WithClientOptions(opts...),
+		),
+		watchStageSummaries: connect.NewClient[v1alpha1.WatchStageSummariesRequest, v1alpha1.WatchStageSummariesResponse](
+			httpClient,
+			baseURL+KargoServiceWatchStageSummariesProcedure,
+			connect.WithSchema(kargoServiceWatchStageSummariesMethodDescriptor),
 			connect.WithClientOptions(opts...),
 		),
 		deleteStage: connect.NewClient[v1alpha1.DeleteStageRequest, v1alpha1.DeleteStageResponse](
@@ -1031,9 +1060,11 @@ type kargoServiceClient struct {
 	deleteResource                *connect.Client[v1alpha1.DeleteResourceRequest, v1alpha1.DeleteResourceResponse]
 	refreshResource               *connect.Client[v1alpha1.RefreshResourceRequest, v1alpha1.RefreshResourceResponse]
 	listStages                    *connect.Client[v1alpha1.ListStagesRequest, v1alpha1.ListStagesResponse]
+	listStageSummaries            *connect.Client[v1alpha1.ListStageSummariesRequest, v1alpha1.ListStageSummariesResponse]
 	listImages                    *connect.Client[v1alpha1.ListImagesRequest, v1alpha1.ListImagesResponse]
 	getStage                      *connect.Client[v1alpha1.GetStageRequest, v1alpha1.GetStageResponse]
 	watchStages                   *connect.Client[v1alpha1.WatchStagesRequest, v1alpha1.WatchStagesResponse]
+	watchStageSummaries           *connect.Client[v1alpha1.WatchStageSummariesRequest, v1alpha1.WatchStageSummariesResponse]
 	deleteStage                   *connect.Client[v1alpha1.DeleteStageRequest, v1alpha1.DeleteStageResponse]
 	getClusterConfig              *connect.Client[v1alpha1.GetClusterConfigRequest, v1alpha1.GetClusterConfigResponse]
 	deleteClusterConfig           *connect.Client[v1alpha1.DeleteClusterConfigRequest, v1alpha1.DeleteClusterConfigResponse]
@@ -1154,6 +1185,11 @@ func (c *kargoServiceClient) ListStages(ctx context.Context, req *connect.Reques
 	return c.listStages.CallUnary(ctx, req)
 }
 
+// ListStageSummaries calls akuity.io.kargo.service.v1alpha1.KargoService.ListStageSummaries.
+func (c *kargoServiceClient) ListStageSummaries(ctx context.Context, req *connect.Request[v1alpha1.ListStageSummariesRequest]) (*connect.Response[v1alpha1.ListStageSummariesResponse], error) {
+	return c.listStageSummaries.CallUnary(ctx, req)
+}
+
 // ListImages calls akuity.io.kargo.service.v1alpha1.KargoService.ListImages.
 func (c *kargoServiceClient) ListImages(ctx context.Context, req *connect.Request[v1alpha1.ListImagesRequest]) (*connect.Response[v1alpha1.ListImagesResponse], error) {
 	return c.listImages.CallUnary(ctx, req)
@@ -1167,6 +1203,11 @@ func (c *kargoServiceClient) GetStage(ctx context.Context, req *connect.Request[
 // WatchStages calls akuity.io.kargo.service.v1alpha1.KargoService.WatchStages.
 func (c *kargoServiceClient) WatchStages(ctx context.Context, req *connect.Request[v1alpha1.WatchStagesRequest]) (*connect.ServerStreamForClient[v1alpha1.WatchStagesResponse], error) {
 	return c.watchStages.CallServerStream(ctx, req)
+}
+
+// WatchStageSummaries calls akuity.io.kargo.service.v1alpha1.KargoService.WatchStageSummaries.
+func (c *kargoServiceClient) WatchStageSummaries(ctx context.Context, req *connect.Request[v1alpha1.WatchStageSummariesRequest]) (*connect.ServerStreamForClient[v1alpha1.WatchStageSummariesResponse], error) {
+	return c.watchStageSummaries.CallServerStream(ctx, req)
 }
 
 // DeleteStage calls akuity.io.kargo.service.v1alpha1.KargoService.DeleteStage.
@@ -1539,12 +1580,21 @@ type KargoServiceHandler interface {
 	RefreshResource(context.Context, *connect.Request[v1alpha1.RefreshResourceRequest]) (*connect.Response[v1alpha1.RefreshResourceResponse], error)
 	// ListStages retrieves all stages within a project.
 	ListStages(context.Context, *connect.Request[v1alpha1.ListStagesRequest]) (*connect.Response[v1alpha1.ListStagesResponse], error)
+	// ListStageSummaries retrieves a lightweight projection of Stages within a
+	// project, containing only the fields typically required to render list
+	// and graph views. Use GetStage to retrieve the full Stage resource when
+	// detail-level fields are needed.
+	ListStageSummaries(context.Context, *connect.Request[v1alpha1.ListStageSummariesRequest]) (*connect.Response[v1alpha1.ListStageSummariesResponse], error)
 	// ListImages returns available images and their usage across stages.
 	ListImages(context.Context, *connect.Request[v1alpha1.ListImagesRequest]) (*connect.Response[v1alpha1.ListImagesResponse], error)
 	// GetStage retrieves details of a specific stage.
 	GetStage(context.Context, *connect.Request[v1alpha1.GetStageRequest]) (*connect.Response[v1alpha1.GetStageResponse], error)
 	// WatchStages provides a streaming interface to monitor stage changes.
 	WatchStages(context.Context, *connect.Request[v1alpha1.WatchStagesRequest], *connect.ServerStream[v1alpha1.WatchStagesResponse]) error
+	// WatchStageSummaries provides a streaming interface to monitor stage
+	// changes, returning the same lightweight projection as
+	// ListStageSummaries for each event.
+	WatchStageSummaries(context.Context, *connect.Request[v1alpha1.WatchStageSummariesRequest], *connect.ServerStream[v1alpha1.WatchStageSummariesResponse]) error
 	// DeleteStage removes a stage from the system.
 	DeleteStage(context.Context, *connect.Request[v1alpha1.DeleteStageRequest]) (*connect.Response[v1alpha1.DeleteStageResponse], error)
 	// GetClusterConfig retrieves cluster-level configuration settings.
@@ -1762,6 +1812,12 @@ func NewKargoServiceHandler(svc KargoServiceHandler, opts ...connect.HandlerOpti
 		connect.WithSchema(kargoServiceListStagesMethodDescriptor),
 		connect.WithHandlerOptions(opts...),
 	)
+	kargoServiceListStageSummariesHandler := connect.NewUnaryHandler(
+		KargoServiceListStageSummariesProcedure,
+		svc.ListStageSummaries,
+		connect.WithSchema(kargoServiceListStageSummariesMethodDescriptor),
+		connect.WithHandlerOptions(opts...),
+	)
 	kargoServiceListImagesHandler := connect.NewUnaryHandler(
 		KargoServiceListImagesProcedure,
 		svc.ListImages,
@@ -1778,6 +1834,12 @@ func NewKargoServiceHandler(svc KargoServiceHandler, opts ...connect.HandlerOpti
 		KargoServiceWatchStagesProcedure,
 		svc.WatchStages,
 		connect.WithSchema(kargoServiceWatchStagesMethodDescriptor),
+		connect.WithHandlerOptions(opts...),
+	)
+	kargoServiceWatchStageSummariesHandler := connect.NewServerStreamHandler(
+		KargoServiceWatchStageSummariesProcedure,
+		svc.WatchStageSummaries,
+		connect.WithSchema(kargoServiceWatchStageSummariesMethodDescriptor),
 		connect.WithHandlerOptions(opts...),
 	)
 	kargoServiceDeleteStageHandler := connect.NewUnaryHandler(
@@ -2204,12 +2266,16 @@ func NewKargoServiceHandler(svc KargoServiceHandler, opts ...connect.HandlerOpti
 			kargoServiceRefreshResourceHandler.ServeHTTP(w, r)
 		case KargoServiceListStagesProcedure:
 			kargoServiceListStagesHandler.ServeHTTP(w, r)
+		case KargoServiceListStageSummariesProcedure:
+			kargoServiceListStageSummariesHandler.ServeHTTP(w, r)
 		case KargoServiceListImagesProcedure:
 			kargoServiceListImagesHandler.ServeHTTP(w, r)
 		case KargoServiceGetStageProcedure:
 			kargoServiceGetStageHandler.ServeHTTP(w, r)
 		case KargoServiceWatchStagesProcedure:
 			kargoServiceWatchStagesHandler.ServeHTTP(w, r)
+		case KargoServiceWatchStageSummariesProcedure:
+			kargoServiceWatchStageSummariesHandler.ServeHTTP(w, r)
 		case KargoServiceDeleteStageProcedure:
 			kargoServiceDeleteStageHandler.ServeHTTP(w, r)
 		case KargoServiceGetClusterConfigProcedure:
@@ -2393,6 +2459,10 @@ func (UnimplementedKargoServiceHandler) ListStages(context.Context, *connect.Req
 	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("akuity.io.kargo.service.v1alpha1.KargoService.ListStages is not implemented"))
 }
 
+func (UnimplementedKargoServiceHandler) ListStageSummaries(context.Context, *connect.Request[v1alpha1.ListStageSummariesRequest]) (*connect.Response[v1alpha1.ListStageSummariesResponse], error) {
+	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("akuity.io.kargo.service.v1alpha1.KargoService.ListStageSummaries is not implemented"))
+}
+
 func (UnimplementedKargoServiceHandler) ListImages(context.Context, *connect.Request[v1alpha1.ListImagesRequest]) (*connect.Response[v1alpha1.ListImagesResponse], error) {
 	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("akuity.io.kargo.service.v1alpha1.KargoService.ListImages is not implemented"))
 }
@@ -2403,6 +2473,10 @@ func (UnimplementedKargoServiceHandler) GetStage(context.Context, *connect.Reque
 
 func (UnimplementedKargoServiceHandler) WatchStages(context.Context, *connect.Request[v1alpha1.WatchStagesRequest], *connect.ServerStream[v1alpha1.WatchStagesResponse]) error {
 	return connect.NewError(connect.CodeUnimplemented, errors.New("akuity.io.kargo.service.v1alpha1.KargoService.WatchStages is not implemented"))
+}
+
+func (UnimplementedKargoServiceHandler) WatchStageSummaries(context.Context, *connect.Request[v1alpha1.WatchStageSummariesRequest], *connect.ServerStream[v1alpha1.WatchStageSummariesResponse]) error {
+	return connect.NewError(connect.CodeUnimplemented, errors.New("akuity.io.kargo.service.v1alpha1.KargoService.WatchStageSummaries is not implemented"))
 }
 
 func (UnimplementedKargoServiceHandler) DeleteStage(context.Context, *connect.Request[v1alpha1.DeleteStageRequest]) (*connect.Response[v1alpha1.DeleteStageResponse], error) {

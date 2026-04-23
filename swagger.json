@@ -2314,6 +2314,52 @@
         }
       }
     },
+    "/v1beta1/projects/{project}/stage-summaries": {
+      "get": {
+        "security": [
+          {
+            "BearerAuth": []
+          }
+        ],
+        "description": "List a lightweight projection of Stage resources from a\nproject's namespace. Intended for UI list and graph views that\nneed metadata and current state for many Stages at once but do\nnot need full FreightHistory, PromotionTemplate steps, or\nVerification configuration. Use GetStage for detail fields.",
+        "produces": [
+          "application/json"
+        ],
+        "tags": [
+          "Core",
+          "Project-Level"
+        ],
+        "summary": "List Stage Summaries",
+        "operationId": "ListStageSummaries",
+        "parameters": [
+          {
+            "type": "string",
+            "description": "Project name",
+            "name": "project",
+            "in": "path",
+            "required": true
+          },
+          {
+            "type": "array",
+            "items": {
+              "type": "string"
+            },
+            "collectionFormat": "multi",
+            "description": "Warehouse name(s) to filter by",
+            "name": "freightOrigins",
+            "in": "query"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "schema": {
+              "$ref": "#/definitions/github_com_akuity_kargo_api_service_v1alpha1.ListStageSummariesResponse"
+            }
+          }
+        }
+      }
+    },
     "/v1beta1/projects/{project}/stages": {
       "get": {
         "security": [
@@ -5209,6 +5255,131 @@
           "items": {
             "$ref": "#/definitions/V1PolicyRule"
           }
+        }
+      }
+    },
+    "github_com_akuity_kargo_api_service_v1alpha1.ListStageSummariesResponse": {
+      "type": "object",
+      "properties": {
+        "resourceVersion": {
+          "description": "resourceVersion is the Kubernetes ResourceVersion of the underlying\nStageList. Clients may pass this value to WatchStageSummaries to begin\nwatching from the exact point this list was taken, receiving only\nsubsequent changes without redundant initial events.",
+          "type": "string"
+        },
+        "stageSummaries": {
+          "description": "stageSummaries is the list of StageSummary objects found in the project.",
+          "type": "array",
+          "items": {
+            "$ref": "#/definitions/github_com_akuity_kargo_api_service_v1alpha1.StageSummary"
+          }
+        }
+      }
+    },
+    "github_com_akuity_kargo_api_service_v1alpha1.StageSpecSummary": {
+      "type": "object",
+      "properties": {
+        "hasVerification": {
+          "description": "hasVerification indicates whether the Stage defines a Verification.\nUse GetStage to retrieve the full Verification configuration.",
+          "type": "boolean"
+        },
+        "promotionStepCount": {
+          "description": "promotionStepCount is the number of promotion steps defined in the\nStage's PromotionTemplate, or zero if no PromotionTemplate is defined.\nUse GetStage to retrieve the full step configuration.",
+          "type": "integer"
+        },
+        "requestedFreight": {
+          "description": "requestedFreight mirrors StageSpec.requestedFreight. This is needed in\nfull to render graph edges between Stages and their upstream sources.",
+          "type": "array",
+          "items": {
+            "$ref": "#/definitions/FreightRequest"
+          }
+        },
+        "shard": {
+          "description": "shard is the name of the shard that the Stage belongs to, mirroring\nStageSpec.shard.",
+          "type": "string"
+        }
+      }
+    },
+    "github_com_akuity_kargo_api_service_v1alpha1.StageStatusSummary": {
+      "type": "object",
+      "properties": {
+        "autoPromotionEnabled": {
+          "description": "autoPromotionEnabled mirrors StageStatus.autoPromotionEnabled.",
+          "type": "boolean"
+        },
+        "conditions": {
+          "description": "conditions mirrors StageStatus.conditions.",
+          "type": "array",
+          "items": {
+            "$ref": "#/definitions/V1Condition"
+          }
+        },
+        "currentFreight": {
+          "description": "currentFreight is the FreightCollection currently deployed to the Stage\n(i.e. index 0 of StageStatus.freightHistory), or null if no Freight has\nbeen deployed. Use GetStage to retrieve the full FreightHistory.",
+          "allOf": [
+            {
+              "$ref": "#/definitions/FreightCollection"
+            }
+          ]
+        },
+        "currentPromotion": {
+          "description": "currentPromotion mirrors StageStatus.currentPromotion.",
+          "allOf": [
+            {
+              "$ref": "#/definitions/PromotionReference"
+            }
+          ]
+        },
+        "health": {
+          "description": "health mirrors StageStatus.health.",
+          "allOf": [
+            {
+              "$ref": "#/definitions/Health"
+            }
+          ]
+        },
+        "lastHandledRefresh": {
+          "description": "lastHandledRefresh mirrors StageStatus.lastHandledRefresh.",
+          "type": "string"
+        },
+        "lastPromotion": {
+          "description": "lastPromotion mirrors StageStatus.lastPromotion.",
+          "allOf": [
+            {
+              "$ref": "#/definitions/PromotionReference"
+            }
+          ]
+        },
+        "observedGeneration": {
+          "description": "observedGeneration mirrors StageStatus.observedGeneration.",
+          "type": "integer"
+        }
+      }
+    },
+    "github_com_akuity_kargo_api_service_v1alpha1.StageSummary": {
+      "type": "object",
+      "properties": {
+        "metadata": {
+          "description": "metadata contains the Stage's identity and Kubernetes object metadata.",
+          "allOf": [
+            {
+              "$ref": "#/definitions/V1ObjectMeta"
+            }
+          ]
+        },
+        "spec": {
+          "description": "spec contains the subset of StageSpec fields needed by list/graph views.",
+          "allOf": [
+            {
+              "$ref": "#/definitions/github_com_akuity_kargo_api_service_v1alpha1.StageSpecSummary"
+            }
+          ]
+        },
+        "status": {
+          "description": "status contains the subset of StageStatus fields needed by list/graph views.",
+          "allOf": [
+            {
+              "$ref": "#/definitions/github_com_akuity_kargo_api_service_v1alpha1.StageStatusSummary"
+            }
+          ]
         }
       }
     },

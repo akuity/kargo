@@ -25,9 +25,11 @@ Stability is not guaranteed.
 | DeleteResource | [DeleteResourceRequest](#akuity-io-kargo-service-v1alpha1-DeleteResourceRequest) | [DeleteResourceResponse](#akuity-io-kargo-service-v1alpha1-DeleteResourceResponse) |
 | RefreshResource | [RefreshResourceRequest](#akuity-io-kargo-service-v1alpha1-RefreshResourceRequest) | [RefreshResourceResponse](#akuity-io-kargo-service-v1alpha1-RefreshResourceResponse) |
 | ListStages | [ListStagesRequest](#akuity-io-kargo-service-v1alpha1-ListStagesRequest) | [ListStagesResponse](#akuity-io-kargo-service-v1alpha1-ListStagesResponse) |
+| ListStageSummaries | [ListStageSummariesRequest](#akuity-io-kargo-service-v1alpha1-ListStageSummariesRequest) | [ListStageSummariesResponse](#akuity-io-kargo-service-v1alpha1-ListStageSummariesResponse) |
 | ListImages | [ListImagesRequest](#akuity-io-kargo-service-v1alpha1-ListImagesRequest) | [ListImagesResponse](#akuity-io-kargo-service-v1alpha1-ListImagesResponse) |
 | GetStage | [GetStageRequest](#akuity-io-kargo-service-v1alpha1-GetStageRequest) | [GetStageResponse](#akuity-io-kargo-service-v1alpha1-GetStageResponse) |
 | WatchStages | [WatchStagesRequest](#akuity-io-kargo-service-v1alpha1-WatchStagesRequest) | [WatchStagesResponse](#akuity-io-kargo-service-v1alpha1-WatchStagesResponse)(stream) |
+| WatchStageSummaries | [WatchStageSummariesRequest](#akuity-io-kargo-service-v1alpha1-WatchStageSummariesRequest) | [WatchStageSummariesResponse](#akuity-io-kargo-service-v1alpha1-WatchStageSummariesResponse)(stream) |
 | DeleteStage | [DeleteStageRequest](#akuity-io-kargo-service-v1alpha1-DeleteStageRequest) | [DeleteStageResponse](#akuity-io-kargo-service-v1alpha1-DeleteStageResponse) |
 | GetClusterConfig | [GetClusterConfigRequest](#akuity-io-kargo-service-v1alpha1-GetClusterConfigRequest) | [GetClusterConfigResponse](#akuity-io-kargo-service-v1alpha1-GetClusterConfigResponse) |
 | DeleteClusterConfig | [DeleteClusterConfigRequest](#akuity-io-kargo-service-v1alpha1-DeleteClusterConfigRequest) | [DeleteClusterConfigResponse](#akuity-io-kargo-service-v1alpha1-DeleteClusterConfigResponse) |
@@ -1177,6 +1179,24 @@ Stability is not guaranteed.
 | roles | [github.com.akuity.kargo.api.rbac.v1alpha1.Role](#github-com-akuity-kargo-api-rbac-v1alpha1-Role) |  Note: oneof and repeated do not work together roles is a list of Kargo Role virtual resources. |
 | resources | [github.com.akuity.kargo.api.rbac.v1alpha1.RoleResources](#github-com-akuity-kargo-api-rbac-v1alpha1-RoleResources) |  resources is a list of RoleResource objects encapsulating the Kargo Roles' underlying Kubernetes resources. |
 
+<a name="akuity-io-kargo-service-v1alpha1-ListStageSummariesRequest"></a>
+
+### ListStageSummariesRequest
+ ListStageSummariesRequest is the request for listing stage summaries within a project.
+| Field | Type | Description |
+| ----- | ---- | ----------- |
+| project | [string](#string) |  project is the name of the project whose stage summaries should be listed. |
+| freightOrigins | [string](#string) |  freightOrigins is an optional list of Warehouse names. When non-empty, only Stages that request Freight originating from at least one of the named Warehouses (directly or transitively via upstream Stages) will be returned. Mirrors ListStagesRequest.freightOrigins. |
+
+<a name="akuity-io-kargo-service-v1alpha1-ListStageSummariesResponse"></a>
+
+### ListStageSummariesResponse
+ ListStageSummariesResponse contains a list of stage summaries within a project.
+| Field | Type | Description |
+| ----- | ---- | ----------- |
+| stageSummaries | [StageSummary](#akuity-io-kargo-service-v1alpha1-StageSummary) |  stageSummaries is the list of StageSummary objects found in the project. |
+| resourceVersion | [string](#string) |  resourceVersion is the Kubernetes ResourceVersion of the underlying StageList. Clients may pass this value to WatchStageSummaries to begin watching from the exact point this list was taken, receiving only subsequent changes without redundant initial events. |
+
 <a name="akuity-io-kargo-service-v1alpha1-ListStagesRequest"></a>
 
 ### ListStagesRequest
@@ -1339,6 +1359,42 @@ Stability is not guaranteed.
 | Field | Type | Description |
 | ----- | ---- | ----------- |
 | role | [github.com.akuity.kargo.api.rbac.v1alpha1.Role](#github-com-akuity-kargo-api-rbac-v1alpha1-Role) |  role is the Kargo Role virtual resource that was the subject of the revocation. |
+
+<a name="akuity-io-kargo-service-v1alpha1-StageSpecSummary"></a>
+
+### StageSpecSummary
+ StageSpecSummary is the subset of StageSpec fields returned by ListStageSummaries. See StageSummary for the motivation.
+| Field | Type | Description |
+| ----- | ---- | ----------- |
+| shard | [string](#string) |  shard is the name of the shard that the Stage belongs to, mirroring StageSpec.shard. |
+| requestedFreight | [github.com.akuity.kargo.api.v1alpha1.FreightRequest](#github-com-akuity-kargo-api-v1alpha1-FreightRequest) |  requestedFreight mirrors StageSpec.requestedFreight. This is needed in full to render graph edges between Stages and their upstream sources. |
+| promotionStepCount | [int32](#int32) |  promotionStepCount is the number of promotion steps defined in the Stage's PromotionTemplate, or zero if no PromotionTemplate is defined. Use GetStage to retrieve the full step configuration. |
+| hasVerification | [bool](#bool) |  hasVerification indicates whether the Stage defines a Verification. Use GetStage to retrieve the full Verification configuration. |
+
+<a name="akuity-io-kargo-service-v1alpha1-StageStatusSummary"></a>
+
+### StageStatusSummary
+ StageStatusSummary is the subset of StageStatus fields returned by ListStageSummaries. See StageSummary for the motivation.
+| Field | Type | Description |
+| ----- | ---- | ----------- |
+| conditions | k8s.io.apimachinery.pkg.apis.meta.v1.Condition |  conditions mirrors StageStatus.conditions. |
+| lastHandledRefresh | [string](#string) |  lastHandledRefresh mirrors StageStatus.lastHandledRefresh. |
+| currentFreight | [github.com.akuity.kargo.api.v1alpha1.FreightCollection](#github-com-akuity-kargo-api-v1alpha1-FreightCollection) |  currentFreight is the FreightCollection currently deployed to the Stage (i.e. index 0 of StageStatus.freightHistory), or null if no Freight has been deployed. Use GetStage to retrieve the full FreightHistory. |
+| currentPromotion | [github.com.akuity.kargo.api.v1alpha1.PromotionReference](#github-com-akuity-kargo-api-v1alpha1-PromotionReference) |  currentPromotion mirrors StageStatus.currentPromotion. |
+| lastPromotion | [github.com.akuity.kargo.api.v1alpha1.PromotionReference](#github-com-akuity-kargo-api-v1alpha1-PromotionReference) |  lastPromotion mirrors StageStatus.lastPromotion. |
+| health | [github.com.akuity.kargo.api.v1alpha1.Health](#github-com-akuity-kargo-api-v1alpha1-Health) |  health mirrors StageStatus.health. |
+| observedGeneration | [int64](#int64) |  observedGeneration mirrors StageStatus.observedGeneration. |
+| autoPromotionEnabled | [bool](#bool) |  autoPromotionEnabled mirrors StageStatus.autoPromotionEnabled. |
+
+<a name="akuity-io-kargo-service-v1alpha1-StageSummary"></a>
+
+### StageSummary
+ StageSummary is a lightweight projection of a Stage resource intended for use by clients rendering list or graph views of many stages. It omits heavy fields that are only needed when a single stage is inspected in detail (e.g. full FreightHistory beyond the current FreightCollection, PromotionTemplate step configuration, and Verification configuration).
+| Field | Type | Description |
+| ----- | ---- | ----------- |
+| metadata | k8s.io.apimachinery.pkg.apis.meta.v1.ObjectMeta |  metadata contains the Stage's identity and Kubernetes object metadata. |
+| spec | [StageSpecSummary](#akuity-io-kargo-service-v1alpha1-StageSpecSummary) |  spec contains the subset of StageSpec fields needed by list/graph views. |
+| status | [StageStatusSummary](#akuity-io-kargo-service-v1alpha1-StageStatusSummary) |  status contains the subset of StageStatus fields needed by list/graph views. |
 
 <a name="akuity-io-kargo-service-v1alpha1-TagMap"></a>
 
@@ -1592,6 +1648,26 @@ Stability is not guaranteed.
 | Field | Type | Description |
 | ----- | ---- | ----------- |
 | promotion | [github.com.akuity.kargo.api.v1alpha1.Promotion](#github-com-akuity-kargo-api-v1alpha1-Promotion) |  promotion is the Promotion resource that changed. |
+| type | [string](#string) |  type indicates the type of change (ADDED, MODIFIED, DELETED). |
+
+<a name="akuity-io-kargo-service-v1alpha1-WatchStageSummariesRequest"></a>
+
+### WatchStageSummariesRequest
+ WatchStageSummariesRequest is the request for watching stage summaries via streaming.
+| Field | Type | Description |
+| ----- | ---- | ----------- |
+| project | [string](#string) |  project is the name of the project whose stage summaries should be watched. |
+| name | [string](#string) |  name is the name of a specific stage to watch, if empty all stages in the project are watched. |
+| freightOrigins | [string](#string) |  freightOrigins is an optional list of Warehouse names. When non-empty, only events for Stages that request Freight originating from at least one of the named Warehouses (directly or transitively via upstream Stages) will be streamed. Mirrors WatchStagesRequest.freightOrigins. |
+| resourceVersion | [string](#string) |  resourceVersion is an optional Kubernetes ResourceVersion. When set, the watch begins at the specified version, allowing clients to resume from a prior list or watch without missing or duplicating events. |
+
+<a name="akuity-io-kargo-service-v1alpha1-WatchStageSummariesResponse"></a>
+
+### WatchStageSummariesResponse
+ WatchStageSummariesResponse contains stage summary change notifications.
+| Field | Type | Description |
+| ----- | ---- | ----------- |
+| stageSummary | [StageSummary](#akuity-io-kargo-service-v1alpha1-StageSummary) |  stageSummary is the StageSummary for the Stage that changed. |
 | type | [string](#string) |  type indicates the type of change (ADDED, MODIFIED, DELETED). |
 
 <a name="akuity-io-kargo-service-v1alpha1-WatchStagesRequest"></a>
