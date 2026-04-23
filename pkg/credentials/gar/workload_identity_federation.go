@@ -27,7 +27,7 @@ const (
 )
 
 func init() {
-	ctx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
+	ctx, cancel := context.WithCancel(context.Background())
 	defer cancel()
 	if p := NewWorkloadIdentityFederationProvider(ctx); p != nil {
 		credentials.DefaultProviderRegistry.MustRegister(
