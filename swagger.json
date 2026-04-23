@@ -5261,11 +5261,11 @@
     "github_com_akuity_kargo_api_service_v1alpha1.ListStageSummariesResponse": {
       "type": "object",
       "properties": {
-        "resourceVersion": {
+        "resource_version": {
           "description": "resourceVersion is the Kubernetes ResourceVersion of the underlying\nStageList. Clients may pass this value to WatchStageSummaries to begin\nwatching from the exact point this list was taken, receiving only\nsubsequent changes without redundant initial events.",
           "type": "string"
         },
-        "stageSummaries": {
+        "stage_summaries": {
           "description": "stageSummaries is the list of StageSummary objects found in the project.",
           "type": "array",
           "items": {
@@ -5277,15 +5277,15 @@
     "github_com_akuity_kargo_api_service_v1alpha1.StageSpecSummary": {
       "type": "object",
       "properties": {
-        "hasVerification": {
+        "has_verification": {
           "description": "hasVerification indicates whether the Stage defines a Verification.\nUse GetStage to retrieve the full Verification configuration.",
           "type": "boolean"
         },
-        "promotionStepCount": {
+        "promotion_step_count": {
           "description": "promotionStepCount is the number of promotion steps defined in the\nStage's PromotionTemplate, or zero if no PromotionTemplate is defined.\nUse GetStage to retrieve the full step configuration.",
           "type": "integer"
         },
-        "requestedFreight": {
+        "requested_freight": {
           "description": "requestedFreight mirrors StageSpec.requestedFreight. This is needed in\nfull to render graph edges between Stages and their upstream sources.",
           "type": "array",
           "items": {
@@ -5301,7 +5301,7 @@
     "github_com_akuity_kargo_api_service_v1alpha1.StageStatusSummary": {
       "type": "object",
       "properties": {
-        "autoPromotionEnabled": {
+        "auto_promotion_enabled": {
           "description": "autoPromotionEnabled mirrors StageStatus.autoPromotionEnabled.",
           "type": "boolean"
         },
@@ -5312,7 +5312,7 @@
             "$ref": "#/definitions/V1Condition"
           }
         },
-        "currentFreight": {
+        "current_freight": {
           "description": "currentFreight is the FreightCollection currently deployed to the Stage\n(i.e. index 0 of StageStatus.freightHistory), or null if no Freight has\nbeen deployed. Use GetStage to retrieve the full FreightHistory.",
           "allOf": [
             {
@@ -5320,7 +5320,7 @@
             }
           ]
         },
-        "currentPromotion": {
+        "current_promotion": {
           "description": "currentPromotion mirrors StageStatus.currentPromotion.",
           "allOf": [
             {
@@ -5336,11 +5336,11 @@
             }
           ]
         },
-        "lastHandledRefresh": {
+        "last_handled_refresh": {
           "description": "lastHandledRefresh mirrors StageStatus.lastHandledRefresh.",
           "type": "string"
         },
-        "lastPromotion": {
+        "last_promotion": {
           "description": "lastPromotion mirrors StageStatus.lastPromotion.",
           "allOf": [
             {
@@ -5348,7 +5348,7 @@
             }
           ]
         },
-        "observedGeneration": {
+        "observed_generation": {
           "description": "observedGeneration mirrors StageStatus.observedGeneration.",
           "type": "integer"
         }

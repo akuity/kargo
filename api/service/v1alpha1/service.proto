@@ -574,14 +574,14 @@ message StageSpecSummary {
   string shard = 1;
   // requestedFreight mirrors StageSpec.requestedFreight. This is needed in
   // full to render graph edges between Stages and their upstream sources.
-  repeated github.com.akuity.kargo.api.v1alpha1.FreightRequest requestedFreight = 2;
+  repeated github.com.akuity.kargo.api.v1alpha1.FreightRequest requested_freight = 2;
   // promotionStepCount is the number of promotion steps defined in the
   // Stage's PromotionTemplate, or zero if no PromotionTemplate is defined.
   // Use GetStage to retrieve the full step configuration.
-  int32 promotionStepCount = 3;
+  int32 promotion_step_count = 3;
   // hasVerification indicates whether the Stage defines a Verification.
   // Use GetStage to retrieve the full Verification configuration.
-  bool hasVerification = 4;
+  bool has_verification = 4;
 }
 
 // StageStatusSummary is the subset of StageStatus fields returned by
@@ -590,21 +590,21 @@ message StageStatusSummary {
   // conditions mirrors StageStatus.conditions.
   repeated .k8s.io.apimachinery.pkg.apis.meta.v1.Condition conditions = 1;
   // lastHandledRefresh mirrors StageStatus.lastHandledRefresh.
-  string lastHandledRefresh = 2;
+  string last_handled_refresh = 2;
   // currentFreight is the FreightCollection currently deployed to the Stage
   // (i.e. index 0 of StageStatus.freightHistory), or null if no Freight has
   // been deployed. Use GetStage to retrieve the full FreightHistory.
-  optional github.com.akuity.kargo.api.v1alpha1.FreightCollection currentFreight = 3;
+  optional github.com.akuity.kargo.api.v1alpha1.FreightCollection current_freight = 3;
   // currentPromotion mirrors StageStatus.currentPromotion.
-  optional github.com.akuity.kargo.api.v1alpha1.PromotionReference currentPromotion = 4;
+  optional github.com.akuity.kargo.api.v1alpha1.PromotionReference current_promotion = 4;
   // lastPromotion mirrors StageStatus.lastPromotion.
-  optional github.com.akuity.kargo.api.v1alpha1.PromotionReference lastPromotion = 5;
+  optional github.com.akuity.kargo.api.v1alpha1.PromotionReference last_promotion = 5;
   // health mirrors StageStatus.health.
   optional github.com.akuity.kargo.api.v1alpha1.Health health = 6;
   // observedGeneration mirrors StageStatus.observedGeneration.
-  int64 observedGeneration = 7;
+  int64 observed_generation = 7;
   // autoPromotionEnabled mirrors StageStatus.autoPromotionEnabled.
-  bool autoPromotionEnabled = 8;
+  bool auto_promotion_enabled = 8;
 }
 
 // ListStageSummariesRequest is the request for listing stage summaries
@@ -616,18 +616,18 @@ message ListStageSummariesRequest {
   // only Stages that request Freight originating from at least one of the
   // named Warehouses (directly or transitively via upstream Stages) will be
   // returned. Mirrors ListStagesRequest.freightOrigins.
-  repeated string freightOrigins = 2;
+  repeated string freight_origins = 2;
 }
 
 // ListStageSummariesResponse contains a list of stage summaries within a project.
 message ListStageSummariesResponse {
   // stageSummaries is the list of StageSummary objects found in the project.
-  repeated StageSummary stageSummaries = 1;
+  repeated StageSummary stage_summaries = 1;
   // resourceVersion is the Kubernetes ResourceVersion of the underlying
   // StageList. Clients may pass this value to WatchStageSummaries to begin
   // watching from the exact point this list was taken, receiving only
   // subsequent changes without redundant initial events.
-  string resourceVersion = 2;
+  string resource_version = 2;
 }
 
 // WatchStageSummariesRequest is the request for watching stage summaries via streaming.
@@ -640,17 +640,17 @@ message WatchStageSummariesRequest {
   // only events for Stages that request Freight originating from at least
   // one of the named Warehouses (directly or transitively via upstream
   // Stages) will be streamed. Mirrors WatchStagesRequest.freightOrigins.
-  repeated string freightOrigins = 3;
+  repeated string freight_origins = 3;
   // resourceVersion is an optional Kubernetes ResourceVersion. When set,
   // the watch begins at the specified version, allowing clients to resume
   // from a prior list or watch without missing or duplicating events.
-  string resourceVersion = 4;
+  string resource_version = 4;
 }
 
 // WatchStageSummariesResponse contains stage summary change notifications.
 message WatchStageSummariesResponse {
   // stageSummary is the StageSummary for the Stage that changed.
-  optional StageSummary stageSummary = 1;
+  optional StageSummary stage_summary = 1;
   // type indicates the type of change (ADDED, MODIFIED, DELETED).
   string type = 2;
 }

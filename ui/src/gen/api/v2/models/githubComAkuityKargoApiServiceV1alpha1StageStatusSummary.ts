@@ -12,21 +12,21 @@ import type { Health } from './health';
 
 export interface GithubComAkuityKargoApiServiceV1alpha1StageStatusSummary {
   /** autoPromotionEnabled mirrors StageStatus.autoPromotionEnabled. */
-  autoPromotionEnabled?: boolean;
+  auto_promotion_enabled?: boolean;
   /** conditions mirrors StageStatus.conditions. */
   conditions?: V1Condition[];
   /** currentFreight is the FreightCollection currently deployed to the Stage
 (i.e. index 0 of StageStatus.freightHistory), or null if no Freight has
 been deployed. Use GetStage to retrieve the full FreightHistory. */
-  currentFreight?: FreightCollection;
+  current_freight?: FreightCollection;
   /** currentPromotion mirrors StageStatus.currentPromotion. */
-  currentPromotion?: PromotionReference;
+  current_promotion?: PromotionReference;
   /** health mirrors StageStatus.health. */
   health?: Health;
   /** lastHandledRefresh mirrors StageStatus.lastHandledRefresh. */
-  lastHandledRefresh?: string;
+  last_handled_refresh?: string;
   /** lastPromotion mirrors StageStatus.lastPromotion. */
-  lastPromotion?: PromotionReference;
+  last_promotion?: PromotionReference;
   /** observedGeneration mirrors StageStatus.observedGeneration. */
-  observedGeneration?: number;
+  observed_generation?: number;
 }

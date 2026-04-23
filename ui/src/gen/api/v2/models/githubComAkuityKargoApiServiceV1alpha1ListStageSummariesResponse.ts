@@ -12,7 +12,7 @@ export interface GithubComAkuityKargoApiServiceV1alpha1ListStageSummariesRespons
 StageList. Clients may pass this value to WatchStageSummaries to begin
 watching from the exact point this list was taken, receiving only
 subsequent changes without redundant initial events. */
-  resourceVersion?: string;
+  resource_version?: string;
   /** stageSummaries is the list of StageSummary objects found in the project. */
-  stageSummaries?: GithubComAkuityKargoApiServiceV1alpha1StageSummary[];
+  stage_summaries?: GithubComAkuityKargoApiServiceV1alpha1StageSummary[];
 }

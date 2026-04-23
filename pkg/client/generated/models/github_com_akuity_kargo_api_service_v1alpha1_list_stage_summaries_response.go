@@ -21,10 +21,10 @@ type GithubComAkuityKargoAPIServiceV1alpha1ListStageSummariesResponse struct {
 	// StageList. Clients may pass this value to WatchStageSummaries to begin
 	// watching from the exact point this list was taken, receiving only
 	// subsequent changes without redundant initial events.
-	ResourceVersion string `json:"resourceVersion,omitempty"`
+	ResourceVersion string `json:"resource_version,omitempty"`
 
 	// stageSummaries is the list of StageSummary objects found in the project.
-	StageSummaries []*GithubComAkuityKargoAPIServiceV1alpha1StageSummary `json:"stageSummaries"`
+	StageSummaries []*GithubComAkuityKargoAPIServiceV1alpha1StageSummary `json:"stage_summaries"`
 }
 
 // Validate validates this github com akuity kargo api service v1alpha1 list stage summaries response
@@ -55,11 +55,11 @@ func (m *GithubComAkuityKargoAPIServiceV1alpha1ListStageSummariesResponse) valid
 			if err := m.StageSummaries[i].Validate(formats); err != nil {
 				ve := new(errors.Validation)
 				if stderrors.As(err, &ve) {
-					return ve.ValidateName("stageSummaries" + "." + strconv.Itoa(i))
+					return ve.ValidateName("stage_summaries" + "." + strconv.Itoa(i))
 				}
 				ce := new(errors.CompositeError)
 				if stderrors.As(err, &ce) {
-					return ce.ValidateName("stageSummaries" + "." + strconv.Itoa(i))
+					return ce.ValidateName("stage_summaries" + "." + strconv.Itoa(i))
 				}
 
 				return err
@@ -98,11 +98,11 @@ func (m *GithubComAkuityKargoAPIServiceV1alpha1ListStageSummariesResponse) conte
 			if err := m.StageSummaries[i].ContextValidate(ctx, formats); err != nil {
 				ve := new(errors.Validation)
 				if stderrors.As(err, &ve) {
-					return ve.ValidateName("stageSummaries" + "." + strconv.Itoa(i))
+					return ve.ValidateName("stage_summaries" + "." + strconv.Itoa(i))
 				}
 				ce := new(errors.CompositeError)
 				if stderrors.As(err, &ce) {
-					return ce.ValidateName("stageSummaries" + "." + strconv.Itoa(i))
+					return ce.ValidateName("stage_summaries" + "." + strconv.Itoa(i))
 				}
 
 				return err

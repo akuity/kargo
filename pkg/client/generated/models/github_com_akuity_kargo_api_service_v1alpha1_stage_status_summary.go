@@ -18,7 +18,7 @@ import (
 type GithubComAkuityKargoAPIServiceV1alpha1StageStatusSummary struct {
 
 	// autoPromotionEnabled mirrors StageStatus.autoPromotionEnabled.
-	AutoPromotionEnabled bool `json:"autoPromotionEnabled,omitempty"`
+	AutoPromotionEnabled bool `json:"auto_promotion_enabled,omitempty"`
 
 	// conditions mirrors StageStatus.conditions.
 	Conditions []*V1Condition `json:"conditions"`
@@ -28,12 +28,12 @@ type GithubComAkuityKargoAPIServiceV1alpha1StageStatusSummary struct {
 	// been deployed. Use GetStage to retrieve the full FreightHistory.
 	CurrentFreight struct {
 		FreightCollection
-	} `json:"currentFreight,omitempty"`
+	} `json:"current_freight,omitempty"`
 
 	// currentPromotion mirrors StageStatus.currentPromotion.
 	CurrentPromotion struct {
 		PromotionReference
-	} `json:"currentPromotion,omitempty"`
+	} `json:"current_promotion,omitempty"`
 
 	// health mirrors StageStatus.health.
 	Health struct {
@@ -41,15 +41,15 @@ type GithubComAkuityKargoAPIServiceV1alpha1StageStatusSummary struct {
 	} `json:"health,omitempty"`
 
 	// lastHandledRefresh mirrors StageStatus.lastHandledRefresh.
-	LastHandledRefresh string `json:"lastHandledRefresh,omitempty"`
+	LastHandledRefresh string `json:"last_handled_refresh,omitempty"`
 
 	// lastPromotion mirrors StageStatus.lastPromotion.
 	LastPromotion struct {
 		PromotionReference
-	} `json:"lastPromotion,omitempty"`
+	} `json:"last_promotion,omitempty"`
 
 	// observedGeneration mirrors StageStatus.observedGeneration.
-	ObservedGeneration int64 `json:"observedGeneration,omitempty"`
+	ObservedGeneration int64 `json:"observed_generation,omitempty"`
 }
 
 // Validate validates this github com akuity kargo api service v1alpha1 stage status summary

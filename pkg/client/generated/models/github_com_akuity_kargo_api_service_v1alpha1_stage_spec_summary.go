@@ -19,16 +19,16 @@ type GithubComAkuityKargoAPIServiceV1alpha1StageSpecSummary struct {
 
 	// hasVerification indicates whether the Stage defines a Verification.
 	// Use GetStage to retrieve the full Verification configuration.
-	HasVerification bool `json:"hasVerification,omitempty"`
+	HasVerification bool `json:"has_verification,omitempty"`
 
 	// promotionStepCount is the number of promotion steps defined in the
 	// Stage's PromotionTemplate, or zero if no PromotionTemplate is defined.
 	// Use GetStage to retrieve the full step configuration.
-	PromotionStepCount int64 `json:"promotionStepCount,omitempty"`
+	PromotionStepCount int64 `json:"promotion_step_count,omitempty"`
 
 	// requestedFreight mirrors StageSpec.requestedFreight. This is needed in
 	// full to render graph edges between Stages and their upstream sources.
-	RequestedFreight []*FreightRequest `json:"requestedFreight"`
+	RequestedFreight []*FreightRequest `json:"requested_freight"`
 
 	// shard is the name of the shard that the Stage belongs to, mirroring
 	// StageSpec.shard.
@@ -63,11 +63,11 @@ func (m *GithubComAkuityKargoAPIServiceV1alpha1StageSpecSummary) validateRequest
 			if err := m.RequestedFreight[i].Validate(formats); err != nil {
 				ve := new(errors.Validation)
 				if stderrors.As(err, &ve) {
-					return ve.ValidateName("requestedFreight" + "." + strconv.Itoa(i))
+					return ve.ValidateName("requested_freight" + "." + strconv.Itoa(i))
 				}
 				ce := new(errors.CompositeError)
 				if stderrors.As(err, &ce) {
-					return ce.ValidateName("requestedFreight" + "." + strconv.Itoa(i))
+					return ce.ValidateName("requested_freight" + "." + strconv.Itoa(i))
 				}
 
 				return err
@@ -106,11 +106,11 @@ func (m *GithubComAkuityKargoAPIServiceV1alpha1StageSpecSummary) contextValidate
 			if err := m.RequestedFreight[i].ContextValidate(ctx, formats); err != nil {
 				ve := new(errors.Validation)
 				if stderrors.As(err, &ve) {
-					return ve.ValidateName("requestedFreight" + "." + strconv.Itoa(i))
+					return ve.ValidateName("requested_freight" + "." + strconv.Itoa(i))
 				}
 				ce := new(errors.CompositeError)
 				if stderrors.As(err, &ce) {
-					return ce.ValidateName("requestedFreight" + "." + strconv.Itoa(i))
+					return ce.ValidateName("requested_freight" + "." + strconv.Itoa(i))
 				}
 
 				return err

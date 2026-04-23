@@ -10,14 +10,14 @@ import type { FreightRequest } from './freightRequest';
 export interface GithubComAkuityKargoApiServiceV1alpha1StageSpecSummary {
   /** hasVerification indicates whether the Stage defines a Verification.
 Use GetStage to retrieve the full Verification configuration. */
-  hasVerification?: boolean;
+  has_verification?: boolean;
   /** promotionStepCount is the number of promotion steps defined in the
 Stage's PromotionTemplate, or zero if no PromotionTemplate is defined.
 Use GetStage to retrieve the full step configuration. */
-  promotionStepCount?: number;
+  promotion_step_count?: number;
   /** requestedFreight mirrors StageSpec.requestedFreight. This is needed in
 full to render graph edges between Stages and their upstream sources. */
-  requestedFreight?: FreightRequest[];
+  requested_freight?: FreightRequest[];
   /** shard is the name of the shard that the Stage belongs to, mirroring
 StageSpec.shard. */
   shard?: string;
