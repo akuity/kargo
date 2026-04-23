@@ -27,6 +27,9 @@ programmatically with Kargo.
 | `rbac.kargo.akuity.io/managed` | `ServiceAccount`, `Role`, `RoleBinding` | `"true"` | Permits the UI or CLI (via the API server) to programmatically manage trios of `ServiceAccount`, `Role`, and `RoleBinding` resources via Kargo's own ["roles" abstraction](../50-security/20-access-controls/index.md#managing-mappings-and-permissions). Omit this annotation if you wish to exclusively manage these resources [declaratively](../50-security/20-access-controls/index.md#managing-kargo-roles-declaratively). |
 | `kargo.akuity.io/replicate-to` | `Secret`, `ConfigMap` (in the shared resources namespace) | `"*"` | Enables automatic replication of the resource to all Project namespaces. For more details, see the [Replicating Shared Resources](../../40-operator-guide/40-security/40-managing-secrets.md#replicating-shared-resources-to-project-namespaces) section of the Operator Guide. |
 | `kargo.akuity.io/replicated-at` | `Secret`, `ConfigMap` (replicated copies) | UTC timestamp | Records when the resource was last replicated from the source. Managed by the system. |
+| `ee.kargo.akuity.io/promotion-sa` | `Stage` | String `ServiceAccount` name in promotion namespace | Overrides default serviceaccount for promotion pods ran by Promotion Controller (Kargo EE only) |
+| `ee.kargo.akuity.io/promotion-labels` | `Stage` | JSON string encoding valid K8s labels | Extends labels for promotion pods ran by Promotion Controller (Kargo EE only) |
+| `ee.kargo.akuity.io/promotion-annotations` | `Stage` | JSON string encoding valid K8s annotations | Extends annotations for promotion pods ran by Promotion Controller (Kargo EE only) |
 
 ## Labels
 
