@@ -30,18 +30,20 @@ func (s *server) ListStages(
 		return nil, err
 	}
 
-	var list kargoapi.StageList
-	if err := s.client.List(ctx, &list, client.InNamespace(project)); err != nil {
+	warehouses := req.Msg.GetFreightOrigins()
+
+	items, err := s.listStagesByWarehouses(ctx, project, warehouses)
+	if err != nil {
 		return nil, fmt.Errorf("list stages: %w", err)
 	}
 
-	slices.SortFunc(list.Items, func(a, b kargoapi.Stage) int {
+	slices.SortFunc(items, func(a, b kargoapi.Stage) int {
 		return strings.Compare(a.Name, b.Name)
 	})
 
-	stages := make([]*kargoapi.Stage, len(list.Items))
-	for idx := range list.Items {
-		stages[idx] = &list.Items[idx]
+	stages := make([]*kargoapi.Stage, len(items))
+	for idx := range items {
+		stages[idx] = &items[idx]
 	}
 	return connect.NewResponse(&svcv1alpha1.ListStagesResponse{
 		Stages: stages,
@@ -56,27 +58,29 @@ func (s *server) ListStages(
 // @Security BearerAuth
 // @Produce json
 // @Param project path string true "Project name"
+// @Param freightOrigins query []string false "Warehouse names to filter Stages by"
 // @Success 200 {object} kargoapi.StageList "StageList custom resource (github.com/akuity/kargo/api/v1alpha1.StageList)"
 // @Router /v1beta1/projects/{project}/stages [get]
 func (s *server) listStages(c *gin.Context) {
 	ctx := c.Request.Context()
 	project := c.Param("project")
+	warehouses := c.QueryArray("freightOrigins")
 
 	if watchMode := c.Query("watch") == trueStr; watchMode {
-		s.watchStages(c, project)
+		s.watchStages(c, project, warehouses)
 		return
 	}
 
-	list := &kargoapi.StageList{}
-	if err := s.client.List(ctx, list, client.InNamespace(project)); err != nil {
+	items, err := s.listStagesByWarehouses(ctx, project, warehouses)
+	if err != nil {
 		_ = c.Error(err)
 		return
 	}
 
-	c.JSON(http.StatusOK, list)
+	c.JSON(http.StatusOK, &kargoapi.StageList{Items: items})
 }
 
-func (s *server) watchStages(c *gin.Context, project string) {
+func (s *server) watchStages(c *gin.Context, project string, warehouses []string) {
 	ctx := c.Request.Context()
 	logger := logging.LoggerFromContext(ctx)
 
@@ -109,9 +113,57 @@ func (s *server) watchStages(c *gin.Context, project string) {
 				logger.Debug("watch channel closed")
 				return
 			}
-			if !convertAndSendWatchEvent(c, e, (*kargoapi.Stage)(nil)) {
+
+			stage, ok := convertWatchEventObject(c, e, (*kargoapi.Stage)(nil))
+			if !ok {
+				continue
+			}
+
+			if len(warehouses) > 0 && !stageMatchesAnyWarehouse(stage, warehouses) {
+				continue
+			}
+
+			if !sendSSEWatchEvent(c, e.Type, stage) {
 				return
 			}
 		}
 	}
+}
+
+// listStagesByWarehouses lists Stages in the given project, optionally
+// filtered to those that request Freight from at least one of the specified
+// warehouses (directly or through upstream stages). When warehouses is empty,
+// all Stages are returned.
+func (s *server) listStagesByWarehouses(
+	ctx context.Context,
+	project string,
+	warehouses []string,
+) ([]kargoapi.Stage, error) {
+	var list kargoapi.StageList
+	if err := s.client.List(ctx, &list, client.InNamespace(project)); err != nil {
+		return nil, err
+	}
+	if len(warehouses) == 0 {
+		return list.Items, nil
+	}
+	var stages []kargoapi.Stage
+	for _, stage := range list.Items {
+		if stageMatchesAnyWarehouse(&stage, warehouses) {
+			stages = append(stages, stage)
+		}
+	}
+	return stages, nil
+}
+
+// stageMatchesAnyWarehouse returns true if the Stage requests Freight that
+// originated from at least one of the specified warehouses, either directly
+// or through upstream stages.
+func stageMatchesAnyWarehouse(stage *kargoapi.Stage, warehouses []string) bool {
+	for _, req := range stage.Spec.RequestedFreight {
+		if req.Origin.Kind == kargoapi.FreightOriginKindWarehouse &&
+			slices.Contains(warehouses, req.Origin.Name) {
+			return true
+		}
+	}
+	return false
 }

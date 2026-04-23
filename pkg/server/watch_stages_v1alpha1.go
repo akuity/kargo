@@ -27,6 +27,7 @@ func (s *server) WatchStages(
 	}
 
 	name := req.Msg.GetName()
+	warehouses := req.Msg.GetFreightOrigins()
 
 	if name != "" {
 		if err := s.client.Get(ctx, libClient.ObjectKey{
@@ -59,6 +60,9 @@ func (s *server) WatchStages(
 			stage, ok := e.Object.(*kargoapi.Stage)
 			if !ok {
 				return fmt.Errorf("unexpected object type %T", e.Object)
+			}
+			if len(warehouses) > 0 && !stageMatchesAnyWarehouse(stage, warehouses) {
+				continue
 			}
 			if err := stream.Send(&svcv1alpha1.WatchStagesResponse{
 				Stage: stage,
