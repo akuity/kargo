@@ -212,9 +212,9 @@ func TestListStages(t *testing.T) {
 						if len(tc.objects) > 0 {
 							copies := make([]client.Object, len(tc.objects))
 							for i, obj := range tc.objects {
-								copy, ok := obj.DeepCopyObject().(client.Object)
+								objCopy, ok := obj.DeepCopyObject().(client.Object)
 								require.True(t, ok)
-								copies[i] = copy
+								copies[i] = objCopy
 							}
 							b = b.WithObjects(copies...)
 						}
