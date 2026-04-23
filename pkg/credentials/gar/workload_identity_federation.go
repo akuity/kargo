@@ -193,8 +193,11 @@ func (p *WorkloadIdentityFederationProvider) GetCredentials(
 	}, nil
 }
 
-// getAccessToken returns a Project-specific GCP access token by impersonating
-// the kargo-project-<project> service account via the IAM Credentials API.
+// getAccessToken attempts to get a GCP access token scoped to the given Kargo
+// project by impersonating the corresponding GCP service account in the
+// controller's GCP project via the IAM Credentials API. Returns an empty string
+// if no such service account exists, signaling the caller to fall back to the
+// controller's own identity.
 func (p *WorkloadIdentityFederationProvider) getAccessToken(
 	ctx context.Context,
 	kargoProject string,
