@@ -15,6 +15,7 @@ import (
 	"k8s.io/client-go/rest"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/client/fake"
+	"sigs.k8s.io/controller-runtime/pkg/client/interceptor"
 
 	svcv1alpha1 "github.com/akuity/kargo/api/service/v1alpha1"
 	kargoapi "github.com/akuity/kargo/api/v1alpha1"
@@ -238,6 +239,124 @@ func TestListStages(t *testing.T) {
 			tc.assert(t, res)
 		})
 	}
+}
+
+func TestListStages_resourceVersion(t *testing.T) {
+	t.Parallel()
+
+	testNamespace := mustNewObject[corev1.Namespace]("testdata/namespace.yaml")
+
+	ctx := t.Context()
+
+	c, err := kubernetes.NewClient(
+		ctx,
+		&rest.Config{},
+		kubernetes.ClientOptions{
+			SkipAuthorization: true,
+			NewInternalClient: func(
+				context.Context,
+				*rest.Config,
+				*runtime.Scheme,
+			) (client.WithWatch, error) {
+				return fake.NewClientBuilder().
+					WithScheme(mustNewScheme()).
+					WithObjects(testNamespace).
+					WithInterceptorFuncs(interceptor.Funcs{
+						List: func(
+							ctx context.Context,
+							cl client.WithWatch,
+							list client.ObjectList,
+							opts ...client.ListOption,
+						) error {
+							if err := cl.List(ctx, list, opts...); err != nil {
+								return err
+							}
+							if sl, ok := list.(*kargoapi.StageList); ok {
+								sl.ResourceVersion = "42"
+							}
+							return nil
+						},
+					}).
+					Build(), nil
+			},
+		},
+	)
+	require.NoError(t, err)
+
+	svr := &server{client: c}
+	svr.externalValidateProjectFn = validation.ValidateProject
+
+	res, err := svr.ListStages(ctx, connect.NewRequest(&svcv1alpha1.ListStagesRequest{
+		Project: "kargo-demo",
+	}))
+	require.NoError(t, err)
+	require.Equal(t, "42", res.Msg.GetResourceVersion())
+}
+
+func TestListStages_resourceVersionFallback(t *testing.T) {
+	t.Parallel()
+
+	testNamespace := mustNewObject[corev1.Namespace]("testdata/namespace.yaml")
+
+	ctx := t.Context()
+
+	c, err := kubernetes.NewClient(
+		ctx,
+		&rest.Config{},
+		kubernetes.ClientOptions{
+			SkipAuthorization: true,
+			NewInternalClient: func(
+				context.Context,
+				*rest.Config,
+				*runtime.Scheme,
+			) (client.WithWatch, error) {
+				return fake.NewClientBuilder().
+					WithScheme(mustNewScheme()).
+					WithObjects(testNamespace).
+					WithInterceptorFuncs(interceptor.Funcs{
+						List: func(
+							ctx context.Context,
+							cl client.WithWatch,
+							list client.ObjectList,
+							opts ...client.ListOption,
+						) error {
+							if err := cl.List(ctx, list, opts...); err != nil {
+								return err
+							}
+							if sl, ok := list.(*kargoapi.StageList); ok {
+								// Simulate what the controller-runtime cached client
+								// returns: "0" for list-level ResourceVersion.
+								sl.ResourceVersion = "0"
+								for i := range sl.Items {
+									sl.Items[i].ResourceVersion = "100"
+								}
+							}
+							return nil
+						},
+					}).
+					WithObjects(
+						&kargoapi.Stage{
+							ObjectMeta: metav1.ObjectMeta{
+								Name:      "test-stage",
+								Namespace: "kargo-demo",
+							},
+						},
+					).
+					Build(), nil
+			},
+		},
+	)
+	require.NoError(t, err)
+
+	svr := &server{client: c}
+	svr.externalValidateProjectFn = validation.ValidateProject
+
+	res, err := svr.ListStages(ctx, connect.NewRequest(&svcv1alpha1.ListStagesRequest{
+		Project: "kargo-demo",
+	}))
+	require.NoError(t, err)
+	// When list-level ResourceVersion is "0", fallback to max(item.ResourceVersion)
+	require.Equal(t, "100", res.Msg.GetResourceVersion())
 }
 
 func Test_server_listStages(t *testing.T) {

@@ -5,6 +5,7 @@ import (
 	"fmt"
 
 	"connectrpc.com/connect"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	libClient "sigs.k8s.io/controller-runtime/pkg/client"
 
 	svcv1alpha1 "github.com/akuity/kargo/api/service/v1alpha1"
@@ -41,6 +42,11 @@ func (s *server) WatchStages(
 	watchOpts := []libClient.ListOption{libClient.InNamespace(project)}
 	if name != "" {
 		watchOpts = append(watchOpts, libClient.MatchingFields{"metadata.name": name})
+	}
+	if rv := req.Msg.GetResourceVersion(); rv != "" {
+		watchOpts = append(watchOpts, &libClient.ListOptions{
+			Raw: &metav1.ListOptions{ResourceVersion: rv},
+		})
 	}
 	w, err := s.client.Watch(ctx, &kargoapi.StageList{}, watchOpts...)
 	if err != nil {

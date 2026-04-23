@@ -103,6 +103,9 @@ export class Watcher {
         });
         this.client.setQueryData(listStagesQueryKey, {
           stages: data,
+          resourceVersion:
+            (this.client.getQueryData(listStagesQueryKey) as ListStagesResponse)?.resourceVersion ??
+            '',
           $typeName: 'akuity.io.kargo.service.v1alpha1.ListStagesResponse'
         });
 
