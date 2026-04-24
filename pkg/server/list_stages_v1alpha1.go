@@ -14,6 +14,7 @@ import (
 
 	svcv1alpha1 "github.com/akuity/kargo/api/service/v1alpha1"
 	kargoapi "github.com/akuity/kargo/api/v1alpha1"
+	"github.com/akuity/kargo/pkg/api"
 	"github.com/akuity/kargo/pkg/logging"
 )
 
@@ -32,7 +33,12 @@ func (s *server) ListStages(
 
 	warehouses := req.Msg.GetFreightOrigins()
 
-	items, err := s.listStagesByWarehouses(ctx, project, warehouses)
+	items, err := api.ListStagesByWarehouses(
+		ctx,
+		s.client,
+		project,
+		&api.ListStagesOptions{Warehouses: warehouses},
+	)
 	if err != nil {
 		return nil, fmt.Errorf("list stages: %w", err)
 	}
@@ -71,7 +77,12 @@ func (s *server) listStages(c *gin.Context) {
 		return
 	}
 
-	items, err := s.listStagesByWarehouses(ctx, project, warehouses)
+	items, err := api.ListStagesByWarehouses(
+		ctx,
+		s.client,
+		project,
+		&api.ListStagesOptions{Warehouses: warehouses},
+	)
 	if err != nil {
 		_ = c.Error(err)
 		return
@@ -119,7 +130,7 @@ func (s *server) watchStages(c *gin.Context, project string, warehouses []string
 				continue
 			}
 
-			if len(warehouses) > 0 && !stageMatchesAnyWarehouse(stage, warehouses) {
+			if len(warehouses) > 0 && !api.StageMatchesAnyWarehouse(stage, warehouses) {
 				continue
 			}
 
@@ -128,42 +139,4 @@ func (s *server) watchStages(c *gin.Context, project string, warehouses []string
 			}
 		}
 	}
-}
-
-// listStagesByWarehouses lists Stages in the given project, optionally
-// filtered to those that request Freight from at least one of the specified
-// warehouses (directly or through upstream stages). When warehouses is empty,
-// all Stages are returned.
-func (s *server) listStagesByWarehouses(
-	ctx context.Context,
-	project string,
-	warehouses []string,
-) ([]kargoapi.Stage, error) {
-	var list kargoapi.StageList
-	if err := s.client.List(ctx, &list, client.InNamespace(project)); err != nil {
-		return nil, err
-	}
-	if len(warehouses) == 0 {
-		return list.Items, nil
-	}
-	var stages []kargoapi.Stage
-	for _, stage := range list.Items {
-		if stageMatchesAnyWarehouse(&stage, warehouses) {
-			stages = append(stages, stage)
-		}
-	}
-	return stages, nil
-}
-
-// stageMatchesAnyWarehouse returns true if the Stage requests Freight that
-// originated from at least one of the specified warehouses, either directly
-// or through upstream stages.
-func stageMatchesAnyWarehouse(stage *kargoapi.Stage, warehouses []string) bool {
-	for _, req := range stage.Spec.RequestedFreight {
-		if req.Origin.Kind == kargoapi.FreightOriginKindWarehouse &&
-			slices.Contains(warehouses, req.Origin.Name) {
-			return true
-		}
-	}
-	return false
 }
