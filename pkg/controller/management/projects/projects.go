@@ -970,6 +970,20 @@ func (r *reconciler) ensureDefaultUserRoles(
 			},
 		},
 	}
+	for i, role := range roles {
+		contribs, err := defaultRoleRulesContributorRegistry.GetAll(ctx, role.Name)
+		if err != nil {
+			return fmt.Errorf(
+				"error getting role rules contributors for role %q: %w",
+				role.Name, err,
+			)
+		}
+		for _, contrib := range contribs {
+			if extra := contrib.Value(role.Name); len(extra) > 0 {
+				roles[i].Rules = append(roles[i].Rules, extra...)
+			}
+		}
+	}
 	for _, role := range roles {
 		roleLogger := logger.WithValues(
 			"name", role.Name,

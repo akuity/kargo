@@ -21,6 +21,7 @@ import (
 
 	rbacapi "github.com/akuity/kargo/api/rbac/v1alpha1"
 	kargoapi "github.com/akuity/kargo/api/v1alpha1"
+	"github.com/akuity/kargo/pkg/component"
 	"github.com/akuity/kargo/pkg/conditions"
 	"github.com/akuity/kargo/pkg/kubernetes"
 )
@@ -1910,6 +1911,144 @@ func TestReconciler_ensureDefaultUserRoles(t *testing.T) {
 				t,
 				testCase.reconciler.ensureDefaultUserRoles(t.Context(), p),
 			)
+		})
+	}
+}
+
+func TestReconciler_ensureDefaultUserRoles_contributors(t *testing.T) {
+	// Save and restore the global registry around each sub-test.
+	origRegistry := defaultRoleRulesContributorRegistry
+
+	testCases := []struct {
+		name       string
+		setup      func()
+		assertions func(*testing.T, []*rbacv1.Role, error)
+	}{
+		{
+			name: "contributor predicate error propagates",
+			setup: func() {
+				defaultRoleRulesContributorRegistry =
+					component.MustNewPredicateBasedRegistry[
+						string,
+						roleRulesContributorPredicate,
+						roleRulesContributorFunc,
+						struct{},
+					](RoleRulesContributorRegistration{
+						Predicate: func(context.Context, string) (bool, error) {
+							return false, errors.New("something went wrong")
+						},
+						Value: func(string) []rbacv1.PolicyRule { return nil },
+					})
+			},
+			assertions: func(t *testing.T, _ []*rbacv1.Role, err error) {
+				require.ErrorContains(t, err, "error getting role rules contributors")
+				require.ErrorContains(t, err, "something went wrong")
+			},
+		},
+		{
+			name: "contributor rules are appended to matching roles",
+			setup: func() {
+				defaultRoleRulesContributorRegistry =
+					component.MustNewPredicateBasedRegistry[
+						string,
+						roleRulesContributorPredicate,
+						roleRulesContributorFunc,
+						struct{},
+					](RoleRulesContributorRegistration{
+						Predicate: func(_ context.Context, roleName string) (bool, error) {
+							return roleName == "kargo-admin", nil
+						},
+						Value: func(string) []rbacv1.PolicyRule {
+							return []rbacv1.PolicyRule{{
+								APIGroups: []string{"ee.kargo.akuity.io"},
+								Resources: []string{"messagechannels"},
+								Verbs:     []string{"*"},
+							}}
+						},
+					})
+			},
+			assertions: func(t *testing.T, createdRoles []*rbacv1.Role, err error) {
+				require.NoError(t, err)
+				var adminRole *rbacv1.Role
+				var viewerRole *rbacv1.Role
+				for _, r := range createdRoles {
+					switch r.Name {
+					case "kargo-admin":
+						adminRole = r
+					case "kargo-viewer":
+						viewerRole = r
+					}
+				}
+				require.NotNil(t, adminRole)
+				require.NotNil(t, viewerRole)
+
+				// Admin role should contain the EE rule as the last entry.
+				lastRule := adminRole.Rules[len(adminRole.Rules)-1]
+				require.Equal(t, []string{"ee.kargo.akuity.io"}, lastRule.APIGroups)
+				require.Equal(t, []string{"messagechannels"}, lastRule.Resources)
+				require.Equal(t, []string{"*"}, lastRule.Verbs)
+
+				// Viewer role should not contain the EE rule.
+				for _, rule := range viewerRole.Rules {
+					for _, apiGroup := range rule.APIGroups {
+						require.NotEqual(t, "ee.kargo.akuity.io", apiGroup)
+					}
+				}
+			},
+		},
+	}
+	for _, testCase := range testCases {
+		t.Run(testCase.name, func(t *testing.T) {
+			t.Cleanup(func() {
+				defaultRoleRulesContributorRegistry = origRegistry
+			})
+			testCase.setup()
+
+			var createdRoles []*rbacv1.Role
+			r := &reconciler{
+				createServiceAccountFn: func(
+					context.Context,
+					client.Object,
+					...client.CreateOption,
+				) error {
+					return apierrors.NewAlreadyExists(schema.GroupResource{}, "")
+				},
+				createRoleFn: func(
+					_ context.Context,
+					obj client.Object,
+					_ ...client.CreateOption,
+				) error {
+					role, ok := obj.(*rbacv1.Role)
+					require.True(t, ok)
+					createdRoles = append(createdRoles, role)
+					return nil
+				},
+				createRoleBindingFn: func(
+					context.Context,
+					client.Object,
+					...client.CreateOption,
+				) error {
+					return apierrors.NewAlreadyExists(schema.GroupResource{}, "")
+				},
+				createClusterRoleFn: func(
+					context.Context,
+					client.Object,
+					...client.CreateOption,
+				) error {
+					return apierrors.NewAlreadyExists(schema.GroupResource{}, "")
+				},
+				createClusterRoleBindingFn: func(
+					context.Context,
+					client.Object,
+					...client.CreateOption,
+				) error {
+					return apierrors.NewAlreadyExists(schema.GroupResource{}, "")
+				},
+			}
+			p := &kargoapi.Project{
+				ObjectMeta: metav1.ObjectMeta{Name: "test-project"},
+			}
+			testCase.assertions(t, createdRoles, r.ensureDefaultUserRoles(t.Context(), p))
 		})
 	}
 }
