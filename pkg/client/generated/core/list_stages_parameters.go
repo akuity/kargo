@@ -11,6 +11,7 @@ import (
 	"github.com/go-openapi/runtime"
 	cr "github.com/go-openapi/runtime/client"
 	"github.com/go-openapi/strfmt"
+	"github.com/go-openapi/swag"
 )
 
 // NewListStagesParams creates a new ListStagesParams object,
@@ -57,6 +58,12 @@ ListStagesParams contains all the parameters to send to the API endpoint
 	Typically these are written to a http.Request.
 */
 type ListStagesParams struct {
+
+	/* FreightOrigins.
+
+	   Warehouse names to filter Stages by
+	*/
+	FreightOrigins []string
 
 	/* Project.
 
@@ -117,6 +124,17 @@ func (o *ListStagesParams) SetHTTPClient(client *http.Client) {
 	o.HTTPClient = client
 }
 
+// WithFreightOrigins adds the freightOrigins to the list stages params
+func (o *ListStagesParams) WithFreightOrigins(freightOrigins []string) *ListStagesParams {
+	o.SetFreightOrigins(freightOrigins)
+	return o
+}
+
+// SetFreightOrigins adds the freightOrigins to the list stages params
+func (o *ListStagesParams) SetFreightOrigins(freightOrigins []string) {
+	o.FreightOrigins = freightOrigins
+}
+
 // WithProject adds the project to the list stages params
 func (o *ListStagesParams) WithProject(project string) *ListStagesParams {
 	o.SetProject(project)
@@ -136,6 +154,17 @@ func (o *ListStagesParams) WriteToRequest(r runtime.ClientRequest, reg strfmt.Re
 	}
 	var res []error
 
+	if o.FreightOrigins != nil {
+
+		// binding items for freightOrigins
+		joinedFreightOrigins := o.bindParamFreightOrigins(reg)
+
+		// query array param freightOrigins
+		if err := r.SetQueryParam("freightOrigins", joinedFreightOrigins...); err != nil {
+			return err
+		}
+	}
+
 	// path param project
 	if err := r.SetPathParam("project", o.Project); err != nil {
 		return err
@@ -145,4 +174,21 @@ func (o *ListStagesParams) WriteToRequest(r runtime.ClientRequest, reg strfmt.Re
 		return errors.CompositeValidationError(res...)
 	}
 	return nil
+}
+
+// bindParamListStages binds the parameter freightOrigins
+func (o *ListStagesParams) bindParamFreightOrigins(formats strfmt.Registry) []string {
+	freightOriginsIR := o.FreightOrigins
+
+	var freightOriginsIC []string
+	for _, freightOriginsIIR := range freightOriginsIR { // explode []string
+
+		freightOriginsIIV := freightOriginsIIR // string as string
+		freightOriginsIC = append(freightOriginsIC, freightOriginsIIV)
+	}
+
+	// items.CollectionFormat: "csv"
+	freightOriginsIS := swag.JoinByFormat(freightOriginsIC, "csv")
+
+	return freightOriginsIS
 }
