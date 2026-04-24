@@ -40,6 +40,52 @@ func GetStage(
 	return &stage, nil
 }
 
+// ListStagesOptions defines the options for listing Stages.
+type ListStagesOptions struct {
+	// Warehouses is an optional list of Warehouse names to filter the Stages by.
+	Warehouses []string
+}
+
+// ListStagesByWarehouses lists Stages in the given Project, optionally
+// filtered by the provided options.
+func ListStagesByWarehouses(
+	ctx context.Context,
+	c client.Client,
+	project string,
+	opts *ListStagesOptions,
+) ([]kargoapi.Stage, error) {
+	if opts == nil {
+		opts = &ListStagesOptions{}
+	}
+	var list kargoapi.StageList
+	if err := c.List(ctx, &list, client.InNamespace(project)); err != nil {
+		return nil, err
+	}
+	if len(opts.Warehouses) == 0 {
+		return list.Items, nil
+	}
+	var stages []kargoapi.Stage
+	for _, stage := range list.Items {
+		if StageMatchesAnyWarehouse(&stage, opts.Warehouses) {
+			stages = append(stages, stage)
+		}
+	}
+	return stages, nil
+}
+
+// StageMatchesAnyWarehouse returns true if the Stage requests Freight that
+// originated from at least one of the specified warehouses, either directly
+// or through upstream stages.
+func StageMatchesAnyWarehouse(stage *kargoapi.Stage, warehouses []string) bool {
+	for _, req := range stage.Spec.RequestedFreight {
+		if req.Origin.Kind == kargoapi.FreightOriginKindWarehouse &&
+			slices.Contains(warehouses, req.Origin.Name) {
+			return true
+		}
+	}
+	return false
+}
+
 // ListFreightAvailableToStage lists all Freight available to the Stage for any
 // reason. This includes:
 //
