@@ -218,7 +218,7 @@ build-cli-with-ui: build-ui build-cli
 ################################################################################
 
 .PHONY: codegen
-codegen: codegen-openapi codegen-proto codegen-controller codegen-schema-to-go codegen-bitbucket-client codegen-ui codegen-docs
+codegen: codegen-openapi codegen-proto codegen-controller codegen-schema-to-go codegen-ui codegen-docs
 
 .PHONY: codegen-openapi
 codegen-openapi: install-swag install-go-swagger install-jq
