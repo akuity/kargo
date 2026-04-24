@@ -10,6 +10,7 @@ import (
 
 	"connectrpc.com/connect"
 	"github.com/gin-gonic/gin"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
 	svcv1alpha1 "github.com/akuity/kargo/api/service/v1alpha1"
@@ -40,8 +41,10 @@ func (s *server) ListWarehouses(
 	})
 
 	warehouses := make([]*kargoapi.Warehouse, len(list.Items))
+	rvs := make([]string, len(list.Items))
 	for idx := range list.Items {
 		warehouses[idx] = &list.Items[idx]
+		rvs[idx] = list.Items[idx].ResourceVersion
 		// Necessary because serializing a Warehouse as part of a protobuf message
 		// does not apply custom marshaling. The call to this helper compensates for
 		// that.
@@ -50,7 +53,8 @@ func (s *server) ListWarehouses(
 		}
 	}
 	return connect.NewResponse(&svcv1alpha1.ListWarehousesResponse{
-		Warehouses: warehouses,
+		Warehouses:      warehouses,
+		ResourceVersion: effectiveResourceVersion(list.ResourceVersion, rvs),
 	}), nil
 }
 
@@ -69,7 +73,7 @@ func (s *server) listWarehouses(c *gin.Context) {
 	project := c.Param("project")
 
 	if watchMode := c.Query("watch") == trueStr; watchMode {
-		s.watchWarehouses(c, project)
+		s.watchWarehouses(c, project, c.Query("resourceVersion"))
 		return
 	}
 
@@ -82,11 +86,17 @@ func (s *server) listWarehouses(c *gin.Context) {
 	c.JSON(http.StatusOK, list)
 }
 
-func (s *server) watchWarehouses(c *gin.Context, project string) {
+func (s *server) watchWarehouses(c *gin.Context, project string, resourceVersion string) {
 	ctx := c.Request.Context()
 	logger := logging.LoggerFromContext(ctx)
 
-	w, err := s.client.Watch(ctx, &kargoapi.WarehouseList{}, client.InNamespace(project))
+	watchOpts := []client.ListOption{client.InNamespace(project)}
+	if resourceVersion != "" {
+		watchOpts = append(watchOpts, &client.ListOptions{
+			Raw: &metav1.ListOptions{ResourceVersion: resourceVersion},
+		})
+	}
+	w, err := s.client.Watch(ctx, &kargoapi.WarehouseList{}, watchOpts...)
 	if err != nil {
 		logger.Error(err, "failed to start watch")
 		_ = c.Error(fmt.Errorf("watch warehouses: %w", err))

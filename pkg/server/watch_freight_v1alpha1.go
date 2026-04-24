@@ -6,6 +6,7 @@ import (
 	"slices"
 
 	"connectrpc.com/connect"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
 	svcv1alpha1 "github.com/akuity/kargo/api/service/v1alpha1"
@@ -29,7 +30,13 @@ func (s *server) WatchFreight(
 
 	warehouses := req.Msg.GetOrigins()
 
-	w, err := s.client.Watch(ctx, &kargoapi.FreightList{}, client.InNamespace(project))
+	watchOpts := []client.ListOption{client.InNamespace(project)}
+	if rv := req.Msg.GetResourceVersion(); rv != "" {
+		watchOpts = append(watchOpts, &client.ListOptions{
+			Raw: &metav1.ListOptions{ResourceVersion: rv},
+		})
+	}
+	w, err := s.client.Watch(ctx, &kargoapi.FreightList{}, watchOpts...)
 	if err != nil {
 		return fmt.Errorf("watch freight: %w", err)
 	}

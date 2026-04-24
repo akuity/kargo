@@ -10,6 +10,7 @@ import (
 
 	"connectrpc.com/connect"
 	"github.com/gin-gonic/gin"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
 	svcv1alpha1 "github.com/akuity/kargo/api/service/v1alpha1"
@@ -32,21 +33,24 @@ func (s *server) ListStages(
 
 	warehouses := req.Msg.GetFreightOrigins()
 
-	items, err := s.listStagesByWarehouses(ctx, project, warehouses)
+	list, err := s.listStagesByWarehouses(ctx, project, warehouses)
 	if err != nil {
 		return nil, fmt.Errorf("list stages: %w", err)
 	}
 
-	slices.SortFunc(items, func(a, b kargoapi.Stage) int {
+	slices.SortFunc(list.Items, func(a, b kargoapi.Stage) int {
 		return strings.Compare(a.Name, b.Name)
 	})
 
-	stages := make([]*kargoapi.Stage, len(items))
-	for idx := range items {
-		stages[idx] = &items[idx]
+	stages := make([]*kargoapi.Stage, len(list.Items))
+	rvs := make([]string, len(list.Items))
+	for idx := range list.Items {
+		stages[idx] = &list.Items[idx]
+		rvs[idx] = list.Items[idx].ResourceVersion
 	}
 	return connect.NewResponse(&svcv1alpha1.ListStagesResponse{
-		Stages: stages,
+		Stages:          stages,
+		ResourceVersion: effectiveResourceVersion(list.ResourceVersion, rvs),
 	}), nil
 }
 
@@ -67,24 +71,30 @@ func (s *server) listStages(c *gin.Context) {
 	warehouses := c.QueryArray("freightOrigins")
 
 	if watchMode := c.Query("watch") == trueStr; watchMode {
-		s.watchStages(c, project, warehouses)
+		s.watchStages(c, project, warehouses, c.Query("resourceVersion"))
 		return
 	}
 
-	items, err := s.listStagesByWarehouses(ctx, project, warehouses)
+	list, err := s.listStagesByWarehouses(ctx, project, warehouses)
 	if err != nil {
 		_ = c.Error(err)
 		return
 	}
 
-	c.JSON(http.StatusOK, &kargoapi.StageList{Items: items})
+	c.JSON(http.StatusOK, list)
 }
 
-func (s *server) watchStages(c *gin.Context, project string, warehouses []string) {
+func (s *server) watchStages(c *gin.Context, project string, warehouses []string, resourceVersion string) {
 	ctx := c.Request.Context()
 	logger := logging.LoggerFromContext(ctx)
 
-	w, err := s.client.Watch(ctx, &kargoapi.StageList{}, client.InNamespace(project))
+	watchOpts := []client.ListOption{client.InNamespace(project)}
+	if resourceVersion != "" {
+		watchOpts = append(watchOpts, &client.ListOptions{
+			Raw: &metav1.ListOptions{ResourceVersion: resourceVersion},
+		})
+	}
+	w, err := s.client.Watch(ctx, &kargoapi.StageList{}, watchOpts...)
 	if err != nil {
 		logger.Error(err, "failed to start watch")
 		_ = c.Error(fmt.Errorf("watch stages: %w", err))
@@ -133,18 +143,19 @@ func (s *server) watchStages(c *gin.Context, project string, warehouses []string
 // listStagesByWarehouses lists Stages in the given project, optionally
 // filtered to those that request Freight from at least one of the specified
 // warehouses (directly or through upstream stages). When warehouses is empty,
-// all Stages are returned.
+// all Stages are returned. The returned StageList carries the ResourceVersion
+// from the underlying Kubernetes List call.
 func (s *server) listStagesByWarehouses(
 	ctx context.Context,
 	project string,
 	warehouses []string,
-) ([]kargoapi.Stage, error) {
+) (*kargoapi.StageList, error) {
 	var list kargoapi.StageList
 	if err := s.client.List(ctx, &list, client.InNamespace(project)); err != nil {
 		return nil, err
 	}
 	if len(warehouses) == 0 {
-		return list.Items, nil
+		return &list, nil
 	}
 	var stages []kargoapi.Stage
 	for _, stage := range list.Items {
@@ -152,7 +163,8 @@ func (s *server) listStagesByWarehouses(
 			stages = append(stages, stage)
 		}
 	}
-	return stages, nil
+	list.Items = stages
+	return &list, nil
 }
 
 // stageMatchesAnyWarehouse returns true if the Stage requests Freight that
