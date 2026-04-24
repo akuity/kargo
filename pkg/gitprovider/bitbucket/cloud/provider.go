@@ -14,12 +14,35 @@ import (
 )
 
 const (
+	// ProviderName is the name used to register the Bitbucket Cloud provider.
+	ProviderName = "bitbucket"
+
 	// Host is the hostname of the Bitbucket Cloud instance.
 	Host = "bitbucket.org"
 
 	// apiBaseURL is the base URL for the Bitbucket Cloud REST API.
 	apiBaseURL = "https://api.bitbucket.org/2.0"
 )
+
+var registration = gitprovider.Registration{
+	Predicate: func(repoURL string) bool {
+		u, err := url.Parse(repoURL)
+		if err != nil {
+			return false
+		}
+		return u.Hostname() == Host
+	},
+	NewProvider: func(
+		repoURL string,
+		opts *gitprovider.Options,
+	) (gitprovider.Interface, error) {
+		return NewProvider(repoURL, opts)
+	},
+}
+
+func init() {
+	gitprovider.Register(ProviderName, registration)
+}
 
 // provider is a Bitbucket Cloud implementation of gitprovider.Interface.
 type provider struct {

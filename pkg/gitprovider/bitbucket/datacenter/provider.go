@@ -3,9 +3,41 @@ package datacenter
 import (
 	"context"
 	"fmt"
+	"net/url"
+	"strings"
 
 	"github.com/akuity/kargo/pkg/gitprovider"
 )
+
+const (
+	// ProviderName is the name used to register the Bitbucket Data Center provider.
+	ProviderName = "bitbucket-datacenter"
+)
+
+var registration = gitprovider.Registration{
+	Predicate: func(repoURL string) bool {
+		u, err := url.Parse(repoURL)
+		if err != nil {
+			return false
+		}
+		// We assume that any hostname containing "bitbucket" that is not
+		// bitbucket.org is a self-hosted Data Center instance. Instances that
+		// don't include "bitbucket" in their hostname won't be auto-detected and
+		// will require explicit provider configuration via opts.Name.
+		host := u.Hostname()
+		return strings.Contains(host, "bitbucket") && host != "bitbucket.org"
+	},
+	NewProvider: func(
+		repoURL string,
+		opts *gitprovider.Options,
+	) (gitprovider.Interface, error) {
+		return NewProvider(repoURL, opts)
+	},
+}
+
+func init() {
+	gitprovider.Register(ProviderName, registration)
+}
 
 // provider is a Bitbucket Data Center implementation of gitprovider.Interface.
 type provider struct{}

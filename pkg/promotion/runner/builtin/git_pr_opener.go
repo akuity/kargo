@@ -17,7 +17,8 @@ import (
 	"github.com/akuity/kargo/pkg/x/promotion/runner/builtin"
 
 	_ "github.com/akuity/kargo/pkg/gitprovider/azure"     // Azure provider registration
-	_ "github.com/akuity/kargo/pkg/gitprovider/bitbucket" // Bitbucket provider registration
+	_ "github.com/akuity/kargo/pkg/gitprovider/bitbucket/cloud"      // Bitbucket Cloud provider registration
+	_ "github.com/akuity/kargo/pkg/gitprovider/bitbucket/datacenter" // Bitbucket Data Center provider registration
 	_ "github.com/akuity/kargo/pkg/gitprovider/gitea"     // Gitea provider registration
 	_ "github.com/akuity/kargo/pkg/gitprovider/github"    // GitHub provider registration
 	_ "github.com/akuity/kargo/pkg/gitprovider/gitlab"    // GitLab provider registration

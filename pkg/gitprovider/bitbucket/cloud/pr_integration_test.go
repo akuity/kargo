@@ -1,6 +1,6 @@
 //go:build integration && bitbucket
 
-package bitbucket
+package cloud
 
 import (
 	"testing"
