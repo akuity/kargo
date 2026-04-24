@@ -30,7 +30,11 @@ export const PipelineListView = (props: PipelineListViewProps) => {
   const actionContext = useActionContext();
   const freightTimelineControllerContext = useFreightTimelineControllerContext();
 
-  useEventsWatcher(props.project);
+  useEventsWatcher(
+    props.project,
+    undefined,
+    freightTimelineControllerContext?.preferredFilter?.warehouses || []
+  );
 
   const [filters, setFilters] = useState<Filter>({
     stage: ''

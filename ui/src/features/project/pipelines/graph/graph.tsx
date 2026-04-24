@@ -88,56 +88,60 @@ export const Graph = (props: GraphProps) => {
     setNodes(graph.nodes);
   }, [graph.nodes]);
 
-  useEventsWatcher(props.project, {
-    onStage(stage) {
-      const index = stageIndexer.index(stage);
-      setNodes((nodes) =>
-        nodes.map((node) => {
-          if (node.id === index && node.type === reactFlowNodeConstants.CUSTOM_NODE) {
-            return {
-              ...node,
-              data: {
-                ...node.data,
-                value: stage
-              }
-            };
-          }
+  useEventsWatcher(
+    props.project,
+    {
+      onStage(stage) {
+        const index = stageIndexer.index(stage);
+        setNodes((nodes) =>
+          nodes.map((node) => {
+            if (node.id === index && node.type === reactFlowNodeConstants.CUSTOM_NODE) {
+              return {
+                ...node,
+                data: {
+                  ...node.data,
+                  value: stage
+                }
+              };
+            }
 
-          return node;
-        })
-      );
+            return node;
+          })
+        );
 
-      if (!nodes.find((n) => n.id === index)) {
-        setRedraw((prev) => !prev);
+        if (!nodes.find((n) => n.id === index)) {
+          setRedraw((prev) => !prev);
+        }
+
+        queryCache.imageStageMatrix.update(stage);
+      },
+      onWarehouse(warehouse) {
+        const index = warehouseIndexer.index(warehouse);
+        setNodes((nodes) =>
+          nodes.map((node) => {
+            if (node.id === index && node.type === reactFlowNodeConstants.CUSTOM_NODE) {
+              return {
+                ...node,
+                data: {
+                  ...node.data,
+                  value: warehouse
+                }
+              };
+            }
+
+            return node;
+          })
+        );
+
+        if (!nodes.find((n) => n.id === index)) {
+          setRedraw((prev) => !prev);
+        }
+
+        queryCache.freight.refetch();
       }
-
-      queryCache.imageStageMatrix.update(stage);
     },
-    onWarehouse(warehouse) {
-      const index = warehouseIndexer.index(warehouse);
-      setNodes((nodes) =>
-        nodes.map((node) => {
-          if (node.id === index && node.type === reactFlowNodeConstants.CUSTOM_NODE) {
-            return {
-              ...node,
-              data: {
-                ...node.data,
-                value: warehouse
-              }
-            };
-          }
-
-          return node;
-        })
-      );
-
-      if (!nodes.find((n) => n.id === index)) {
-        setRedraw((prev) => !prev);
-      }
-
-      queryCache.freight.refetch();
-    }
-  });
+    filterContext?.preferredFilter?.warehouses || []
+  );
 
   const warehouseByName = useMemo(() => {
     const warehouseByName: Record<string, WarehouseExpanded> = {};

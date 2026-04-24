@@ -12,7 +12,8 @@ export const useEventsWatcher = (
   act?: {
     onStage: (stage: Stage) => void;
     onWarehouse: (warehouse: WarehouseExpanded) => void;
-  }
+  },
+  warehouses?: string[]
 ) => {
   const client = useQueryClient();
   const isWindowVisible = useDocumentEvent(
@@ -27,7 +28,7 @@ export const useEventsWatcher = (
 
     const watcher = new Watcher(project, client);
 
-    watcher.watchStages(act?.onStage);
+    watcher.watchStages(act?.onStage, warehouses);
     watcher.watchWarehouses({
       onWarehouseEvent: act?.onWarehouse,
       refreshHook: queryCache.freight.refetchQueryFreight
@@ -36,5 +37,5 @@ export const useEventsWatcher = (
     return () => {
       watcher.cancelWatch();
     };
-  }, [isWindowVisible, project]);
+  }, [isWindowVisible, project, (warehouses || []).join(',')]);
 };
