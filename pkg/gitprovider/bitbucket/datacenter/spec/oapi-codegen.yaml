@@ -1,10 +1,10 @@
-package: bitbucket
+package: datacenter
 
 generate:
   models: true
   client: true
 
-output: zz_bitbucket_cloud_client.gen.go
+output: zz_bitbucket_datacenter_client.gen.go
 
 output-options:
   skip-prune: false

@@ -263,7 +263,8 @@ codegen-controller: install-controller-gen
 
 .PHONY: codegen-bitbucket-client
 codegen-bitbucket-client: install-oapi-codegen
-	cd pkg/gitprovider/bitbucket && $(OAPI_CODEGEN_LINK) --config spec/oapi-codegen.yaml spec/bitbucket.gen.json
+	cd pkg/gitprovider/bitbucket/cloud && $(OAPI_CODEGEN_LINK) --config spec/oapi-codegen.yaml spec/bitbucket.gen.json
+	cd pkg/gitprovider/bitbucket/datacenter && $(OAPI_CODEGEN_LINK) --config spec/oapi-codegen.yaml spec/bitbucket-datacenter.gen.json
 
 .PHONY: codegen-schema-to-go
 codegen-schema-to-go: install-goimports
