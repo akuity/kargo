@@ -71,6 +71,12 @@ type ListStagesParams struct {
 	*/
 	Project string
 
+	/* Summary.
+
+	   Strip heavy fields from each Stage
+	*/
+	Summary *bool
+
 	timeout    time.Duration
 	Context    context.Context
 	HTTPClient *http.Client
@@ -146,6 +152,17 @@ func (o *ListStagesParams) SetProject(project string) {
 	o.Project = project
 }
 
+// WithSummary adds the summary to the list stages params
+func (o *ListStagesParams) WithSummary(summary *bool) *ListStagesParams {
+	o.SetSummary(summary)
+	return o
+}
+
+// SetSummary adds the summary to the list stages params
+func (o *ListStagesParams) SetSummary(summary *bool) {
+	o.Summary = summary
+}
+
 // WriteToRequest writes these params to a swagger request
 func (o *ListStagesParams) WriteToRequest(r runtime.ClientRequest, reg strfmt.Registry) error {
 
@@ -168,6 +185,23 @@ func (o *ListStagesParams) WriteToRequest(r runtime.ClientRequest, reg strfmt.Re
 	// path param project
 	if err := r.SetPathParam("project", o.Project); err != nil {
 		return err
+	}
+
+	if o.Summary != nil {
+
+		// query param summary
+		var qrSummary bool
+
+		if o.Summary != nil {
+			qrSummary = *o.Summary
+		}
+		qSummary := swag.FormatBool(qrSummary)
+		if qSummary != "" {
+
+			if err := r.SetQueryParam("summary", qSummary); err != nil {
+				return err
+			}
+		}
 	}
 
 	if len(res) > 0 {

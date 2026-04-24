@@ -72,21 +72,14 @@ export const deleteResource = KargoService.method.deleteResource;
 export const refreshResource = KargoService.method.refreshResource;
 
 /**
- * ListStages retrieves all stages within a project.
+ * ListStages retrieves all stages within a project. Pass summary=true to
+ * receive a lightweight projection intended for list and graph views
+ * (heavy fields are stripped from each returned Stage; see the summary
+ * field on ListStagesRequest for details).
  *
  * @generated from rpc akuity.io.kargo.service.v1alpha1.KargoService.ListStages
  */
 export const listStages = KargoService.method.listStages;
-
-/**
- * ListStageSummaries retrieves a lightweight projection of Stages within a
- * project, containing only the fields typically required to render list
- * and graph views. Use GetStage to retrieve the full Stage resource when
- * detail-level fields are needed.
- *
- * @generated from rpc akuity.io.kargo.service.v1alpha1.KargoService.ListStageSummaries
- */
-export const listStageSummaries = KargoService.method.listStageSummaries;
 
 /**
  * ListImages returns available images and their usage across stages.
@@ -105,7 +98,7 @@ export const getStage = KargoService.method.getStage;
 /**
  * GetStageHealthOutputs returns the raw health output blob for the
  * specified Stages in a project. Intended for clients that use
- * ListStageSummaries for the list and need to resolve per-argocd-app
+ * ListStages with summary=true and need to resolve per-argocd-app
  * health only for the Stages currently in viewport. Stages that do not
  * exist or have no health output recorded are omitted from the response.
  *

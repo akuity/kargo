@@ -22,7 +22,7 @@ const maxStageHealthOutputsBatch = 1000
 // GetStageHealthOutputs returns the raw health output blob for the specified
 // Stages in a project. Stages that do not exist or have no health output
 // recorded are omitted from the response map. Intended for clients that use
-// ListStageSummaries for the list and lazily resolve per-argocd-app health
+// ListStages with summary=true for the list and lazily resolve per-argocd-app health
 // for Stages currently in viewport.
 func (s *server) GetStageHealthOutputs(
 	ctx context.Context,
@@ -78,7 +78,7 @@ func (s *server) GetStageHealthOutputs(
 // @Description Return the raw health output blob for the specified Stages
 // @Description in a project. Stages that do not exist or have no recorded
 // @Description health output are omitted from the response. Intended for
-// @Description clients that use ListStageSummaries (which omits the output
+// @Description clients that use ListStages with summary=true (which omits the output
 // @Description blob) and need to lazily resolve health for Stages currently
 // @Description in viewport.
 // @Tags Core, Project-Level

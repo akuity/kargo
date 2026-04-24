@@ -193,7 +193,6 @@ func (s *server) setupRESTRouter(ctx context.Context) *gin.Engine {
 
 			// Stages
 			project.GET("/stages", s.listStages)
-			project.GET("/stage-summaries", s.listStageSummaries)
 			project.GET("/stage-health-outputs", s.getStageHealthOutputs)
 			project.GET("/stages/:stage", s.getStage)
 			project.POST("/stages/:stage/refresh", s.refreshStage)

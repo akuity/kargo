@@ -11,4 +11,8 @@ export type ListStagesParams = {
    * Warehouse names to filter Stages by
    */
   freightOrigins?: string[];
+  /**
+   * Strip heavy fields from each Stage
+   */
+  summary?: boolean;
 };
