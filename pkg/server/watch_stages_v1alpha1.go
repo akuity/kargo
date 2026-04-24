@@ -9,6 +9,7 @@ import (
 
 	svcv1alpha1 "github.com/akuity/kargo/api/service/v1alpha1"
 	kargoapi "github.com/akuity/kargo/api/v1alpha1"
+	"github.com/akuity/kargo/pkg/api"
 	"github.com/akuity/kargo/pkg/logging"
 )
 
@@ -61,7 +62,7 @@ func (s *server) WatchStages(
 			if !ok {
 				return fmt.Errorf("unexpected object type %T", e.Object)
 			}
-			if len(warehouses) > 0 && !stageMatchesAnyWarehouse(stage, warehouses) {
+			if len(warehouses) > 0 && !api.StageMatchesAnyWarehouse(stage, warehouses) {
 				continue
 			}
 			if err := stream.Send(&svcv1alpha1.WatchStagesResponse{

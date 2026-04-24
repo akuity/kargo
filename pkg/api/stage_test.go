@@ -69,6 +69,280 @@ func TestGetStage(t *testing.T) {
 	}
 }
 
+func TestListStagesByWarehouses(t *testing.T) {
+	const testProject = "fake-namespace"
+	const otherProject = "other-namespace"
+	const testWarehouse1 = "fake-warehouse1"
+	const testWarehouse2 = "fake-warehouse2"
+
+	scheme := k8sruntime.NewScheme()
+	require.NoError(t, kargoapi.SchemeBuilder.AddToScheme(scheme))
+
+	stageInProjectFromWarehouse1 := &kargoapi.Stage{
+		ObjectMeta: metav1.ObjectMeta{
+			Namespace: testProject,
+			Name:      "stage-1",
+		},
+		Spec: kargoapi.StageSpec{
+			RequestedFreight: []kargoapi.FreightRequest{{
+				Origin: kargoapi.FreightOrigin{
+					Kind: kargoapi.FreightOriginKindWarehouse,
+					Name: testWarehouse1,
+				},
+			}},
+		},
+	}
+	stageInProjectFromWarehouse2 := &kargoapi.Stage{
+		ObjectMeta: metav1.ObjectMeta{
+			Namespace: testProject,
+			Name:      "stage-2",
+		},
+		Spec: kargoapi.StageSpec{
+			RequestedFreight: []kargoapi.FreightRequest{{
+				Origin: kargoapi.FreightOrigin{
+					Kind: kargoapi.FreightOriginKindWarehouse,
+					Name: testWarehouse2,
+				},
+			}},
+		},
+	}
+	stageInOtherProject := &kargoapi.Stage{
+		ObjectMeta: metav1.ObjectMeta{
+			Namespace: otherProject,
+			Name:      "stage-3",
+		},
+		Spec: kargoapi.StageSpec{
+			RequestedFreight: []kargoapi.FreightRequest{{
+				Origin: kargoapi.FreightOrigin{
+					Kind: kargoapi.FreightOriginKindWarehouse,
+					Name: testWarehouse1,
+				},
+			}},
+		},
+	}
+
+	testCases := []struct {
+		name        string
+		opts        *ListStagesOptions
+		objects     []client.Object
+		interceptor interceptor.Funcs
+		assertions  func(*testing.T, []kargoapi.Stage, error)
+	}{
+		{
+			name: "error listing Stages",
+			interceptor: interceptor.Funcs{
+				List: func(
+					context.Context,
+					client.WithWatch,
+					client.ObjectList,
+					...client.ListOption,
+				) error {
+					return errors.New("something went wrong")
+				},
+			},
+			assertions: func(t *testing.T, stages []kargoapi.Stage, err error) {
+				require.ErrorContains(t, err, "something went wrong")
+				require.Nil(t, stages)
+			},
+		},
+		{
+			name: "nil opts returns all Stages in Project",
+			objects: []client.Object{
+				stageInProjectFromWarehouse1,
+				stageInProjectFromWarehouse2,
+				stageInOtherProject,
+			},
+			assertions: func(t *testing.T, stages []kargoapi.Stage, err error) {
+				require.NoError(t, err)
+				require.Len(t, stages, 2)
+			},
+		},
+		{
+			name: "empty Warehouses filter returns all Stages in Project",
+			opts: &ListStagesOptions{},
+			objects: []client.Object{
+				stageInProjectFromWarehouse1,
+				stageInProjectFromWarehouse2,
+				stageInOtherProject,
+			},
+			assertions: func(t *testing.T, stages []kargoapi.Stage, err error) {
+				require.NoError(t, err)
+				require.Len(t, stages, 2)
+			},
+		},
+		{
+			name: "Warehouses filter returns only matching Stages",
+			opts: &ListStagesOptions{
+				Warehouses: []string{testWarehouse1},
+			},
+			objects: []client.Object{
+				stageInProjectFromWarehouse1,
+				stageInProjectFromWarehouse2,
+				stageInOtherProject,
+			},
+			assertions: func(t *testing.T, stages []kargoapi.Stage, err error) {
+				require.NoError(t, err)
+				require.Len(t, stages, 1)
+				require.Equal(t, "stage-1", stages[0].Name)
+			},
+		},
+		{
+			name: "Warehouses filter with no matches returns empty",
+			opts: &ListStagesOptions{
+				Warehouses: []string{"unknown-warehouse"},
+			},
+			objects: []client.Object{
+				stageInProjectFromWarehouse1,
+				stageInProjectFromWarehouse2,
+			},
+			assertions: func(t *testing.T, stages []kargoapi.Stage, err error) {
+				require.NoError(t, err)
+				require.Empty(t, stages)
+			},
+		},
+	}
+
+	for _, testCase := range testCases {
+		t.Run(testCase.name, func(t *testing.T) {
+			c := fake.NewClientBuilder().WithScheme(scheme).
+				WithObjects(testCase.objects...).
+				WithInterceptorFuncs(testCase.interceptor).
+				Build()
+			stages, err := ListStagesByWarehouses(
+				t.Context(), c, testProject, testCase.opts,
+			)
+			testCase.assertions(t, stages, err)
+		})
+	}
+}
+
+func TestStageMatchesAnyWarehouse(t *testing.T) {
+	const testWarehouse1 = "fake-warehouse1"
+	const testWarehouse2 = "fake-warehouse2"
+
+	testCases := []struct {
+		name       string
+		stage      *kargoapi.Stage
+		warehouses []string
+		expected   bool
+	}{
+		{
+			name:       "no requested freight",
+			stage:      &kargoapi.Stage{},
+			warehouses: []string{testWarehouse1},
+			expected:   false,
+		},
+		{
+			name: "empty warehouses list",
+			stage: &kargoapi.Stage{
+				Spec: kargoapi.StageSpec{
+					RequestedFreight: []kargoapi.FreightRequest{{
+						Origin: kargoapi.FreightOrigin{
+							Kind: kargoapi.FreightOriginKindWarehouse,
+							Name: testWarehouse1,
+						},
+					}},
+				},
+			},
+			warehouses: nil,
+			expected:   false,
+		},
+		{
+			name: "no matching warehouse",
+			stage: &kargoapi.Stage{
+				Spec: kargoapi.StageSpec{
+					RequestedFreight: []kargoapi.FreightRequest{{
+						Origin: kargoapi.FreightOrigin{
+							Kind: kargoapi.FreightOriginKindWarehouse,
+							Name: testWarehouse1,
+						},
+					}},
+				},
+			},
+			warehouses: []string{testWarehouse2},
+			expected:   false,
+		},
+		{
+			name: "name matches but origin kind is not Warehouse",
+			stage: &kargoapi.Stage{
+				Spec: kargoapi.StageSpec{
+					RequestedFreight: []kargoapi.FreightRequest{{
+						Origin: kargoapi.FreightOrigin{
+							Kind: kargoapi.FreightOriginKind("OtherKind"),
+							Name: testWarehouse1,
+						},
+					}},
+				},
+			},
+			warehouses: []string{testWarehouse1},
+			expected:   false,
+		},
+		{
+			name: "single requested freight matches",
+			stage: &kargoapi.Stage{
+				Spec: kargoapi.StageSpec{
+					RequestedFreight: []kargoapi.FreightRequest{{
+						Origin: kargoapi.FreightOrigin{
+							Kind: kargoapi.FreightOriginKindWarehouse,
+							Name: testWarehouse1,
+						},
+					}},
+				},
+			},
+			warehouses: []string{testWarehouse1},
+			expected:   true,
+		},
+		{
+			name: "matches one of multiple warehouses",
+			stage: &kargoapi.Stage{
+				Spec: kargoapi.StageSpec{
+					RequestedFreight: []kargoapi.FreightRequest{{
+						Origin: kargoapi.FreightOrigin{
+							Kind: kargoapi.FreightOriginKindWarehouse,
+							Name: testWarehouse2,
+						},
+					}},
+				},
+			},
+			warehouses: []string{testWarehouse1, testWarehouse2},
+			expected:   true,
+		},
+		{
+			name: "matches one of multiple requested freight",
+			stage: &kargoapi.Stage{
+				Spec: kargoapi.StageSpec{
+					RequestedFreight: []kargoapi.FreightRequest{
+						{
+							Origin: kargoapi.FreightOrigin{
+								Kind: kargoapi.FreightOriginKindWarehouse,
+								Name: "unrelated-warehouse",
+							},
+						},
+						{
+							Origin: kargoapi.FreightOrigin{
+								Kind: kargoapi.FreightOriginKindWarehouse,
+								Name: testWarehouse1,
+							},
+						},
+					},
+				},
+			},
+			warehouses: []string{testWarehouse1},
+			expected:   true,
+		},
+	}
+
+	for _, testCase := range testCases {
+		t.Run(testCase.name, func(t *testing.T) {
+			require.Equal(
+				t,
+				testCase.expected,
+				StageMatchesAnyWarehouse(testCase.stage, testCase.warehouses),
+			)
+		})
+	}
+}
+
 func TestListFreightAvailableToStage(t *testing.T) {
 	const testProject = "fake-namespace"
 	const testWarehouse1 = "fake-warehouse1"
