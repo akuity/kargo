@@ -60,7 +60,7 @@ func (s *server) ListStages(
 	stages := make([]*kargoapi.Stage, len(items))
 	for idx := range items {
 		if summary {
-			stripStageForSummary(&items[idx])
+			api.StripStageForSummary(&items[idx])
 		}
 		stages[idx] = &items[idx]
 	}
@@ -68,34 +68,6 @@ func (s *server) ListStages(
 		Stages:          stages,
 		ResourceVersion: list.ResourceVersion,
 	}), nil
-}
-
-// stripStageForSummary mutates the Stage in place, clearing the heavy
-// payload fields that list and graph views do not need. The surviving
-// shape still preserves has-verification and promotion-step-count
-// information (via stage.Spec.Verification != nil and
-// len(stage.Spec.PromotionTemplate.Spec.Steps)), so callers do not have
-// to refetch via GetStage for those bits.
-//
-// Stripped fields:
-//   - status.freightHistory truncated to the current element (index 0)
-//   - spec.promotionTemplate.spec.steps[*].config cleared (kind/as/name kept)
-//   - status.health.output cleared (use GetStageHealthOutputs for lazy fetch)
-func stripStageForSummary(stage *kargoapi.Stage) {
-	if stage == nil {
-		return
-	}
-	if len(stage.Status.FreightHistory) > 1 {
-		stage.Status.FreightHistory = stage.Status.FreightHistory[:1]
-	}
-	if stage.Spec.PromotionTemplate != nil {
-		for i := range stage.Spec.PromotionTemplate.Spec.Steps {
-			stage.Spec.PromotionTemplate.Spec.Steps[i].Config = nil
-		}
-	}
-	if stage.Status.Health != nil {
-		stage.Status.Health.Output = nil
-	}
 }
 
 // @id ListStages
@@ -135,7 +107,7 @@ func (s *server) listStages(c *gin.Context) {
 
 	if summary {
 		for i := range items {
-			stripStageForSummary(&items[i])
+			api.StripStageForSummary(&items[i])
 		}
 	}
 
@@ -191,7 +163,7 @@ func (s *server) watchStages(
 			}
 
 			if summary {
-				stripStageForSummary(stage)
+				api.StripStageForSummary(stage)
 			}
 
 			if !sendSSEWatchEvent(c, e.Type, stage) {

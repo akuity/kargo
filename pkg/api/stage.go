@@ -316,3 +316,73 @@ func AbortStageFreightVerification(
 	}
 	return patchAnnotation(ctx, c, stage, kargoapi.AnnotationKeyAbort, ar.String())
 }
+
+// StripStageForSummary mutates the Stage in place, clearing the heavy
+// payload fields that list and graph views do not need. The surviving
+// shape still preserves has-verification and promotion-step-count
+// information (via stage.Spec.Verification != nil and
+// len(stage.Spec.PromotionTemplate.Spec.Steps)), so callers do not have
+// to refetch via GetStage for those bits.
+//
+// Stripped fields:
+//   - status.freightHistory truncated to the current element (index 0)
+//   - spec.promotionTemplate.spec.steps[*].config cleared (kind/as/name kept)
+//   - status.health.output cleared (use ListStageHealthOutputs for lazy fetch)
+func StripStageForSummary(stage *kargoapi.Stage) {
+	if stage == nil {
+		return
+	}
+	if len(stage.Status.FreightHistory) > 1 {
+		stage.Status.FreightHistory = stage.Status.FreightHistory[:1]
+	}
+	if stage.Spec.PromotionTemplate != nil {
+		for i := range stage.Spec.PromotionTemplate.Spec.Steps {
+			stage.Spec.PromotionTemplate.Spec.Steps[i].Config = nil
+		}
+	}
+	if stage.Status.Health != nil {
+		stage.Status.Health.Output = nil
+	}
+}
+
+// ListStageHealthOutputs returns the raw health output blob for each Stage
+// in the given project whose name appears in stageNames. Empty and duplicate
+// entries in stageNames are ignored. Stages that do not exist in the project
+// or have no recorded health output are omitted from the returned map.
+//
+// Intended for clients that list Stages with the summary projection (see
+// StripStageForSummary) and need to lazily resolve per-Stage health only for
+// the subset currently in viewport.
+func ListStageHealthOutputs(
+	ctx context.Context,
+	c client.Client,
+	project string,
+	stageNames []string,
+) (map[string][]byte, error) {
+	wanted := make(map[string]struct{}, len(stageNames))
+	for _, n := range stageNames {
+		if n == "" {
+			continue
+		}
+		wanted[n] = struct{}{}
+	}
+	if len(wanted) == 0 {
+		return map[string][]byte{}, nil
+	}
+	var list kargoapi.StageList
+	if err := c.List(ctx, &list, client.InNamespace(project)); err != nil {
+		return nil, fmt.Errorf("list stages: %w", err)
+	}
+	outputs := make(map[string][]byte, len(wanted))
+	for i := range list.Items {
+		st := &list.Items[i]
+		if _, want := wanted[st.Name]; !want {
+			continue
+		}
+		if st.Status.Health == nil || st.Status.Health.Output == nil {
+			continue
+		}
+		outputs[st.Name] = st.Status.Health.Output.Raw
+	}
+	return outputs, nil
+}

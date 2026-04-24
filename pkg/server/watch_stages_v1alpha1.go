@@ -73,7 +73,7 @@ func (s *server) WatchStages(
 				continue
 			}
 			if summary {
-				stripStageForSummary(stage)
+				api.StripStageForSummary(stage)
 			}
 			if err := stream.Send(&svcv1alpha1.WatchStagesResponse{
 				Stage: stage,
