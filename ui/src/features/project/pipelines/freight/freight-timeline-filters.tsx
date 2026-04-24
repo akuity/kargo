@@ -1,7 +1,7 @@
 import { faDocker, faGitAlt } from '@fortawesome/free-brands-svg-icons';
 import { faAnchor, faFilter, faTimes, IconDefinition } from '@fortawesome/free-solid-svg-icons';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
-import { Button, Checkbox, Select, SelectProps } from 'antd';
+import { Badge, Button, Checkbox, Select, SelectProps } from 'antd';
 import classNames from 'classnames';
 import { useMemo } from 'react';
 
@@ -24,6 +24,11 @@ type FreightTimelineFiltersProps = {
 };
 
 export const FreightTimelineFilters = (props: FreightTimelineFiltersProps) => {
+  const isFilterActive =
+    (props.preferredFilter?.sources?.length ?? 0) > 0 ||
+    props.preferredFilter?.timerange !== 'all-time' ||
+    props.preferredFilter?.hideUnusedFreights === true;
+
   const sourcesDropdownOptions: SelectProps['options'] = useMemo(() => {
     const freightSourcesCatalogue = catalogueFreights(props.freights);
 
@@ -63,9 +68,11 @@ export const FreightTimelineFilters = (props: FreightTimelineFiltersProps) => {
           </div>
         )}
 
-        <Button size='small' className='ml-auto' onClick={props.onCollapseToggle}>
-          <FontAwesomeIcon icon={props.collapsed ? faFilter : faTimes} />
-        </Button>
+        <Badge dot={props.collapsed && isFilterActive} offset={[-2, 2]} className='ml-auto'>
+          <Button size='small' onClick={props.onCollapseToggle}>
+            <FontAwesomeIcon icon={props.collapsed ? faFilter : faTimes} />
+          </Button>
+        </Badge>
       </span>
 
       <div

@@ -20,6 +20,7 @@ CONTAINER_RUNTIME ?= docker
 IMAGE_REPO 			?= kargo
 LOCAL_REG_PORT			?= 5001
 BASE_IMAGE 			?= localhost:$(LOCAL_REG_PORT)/$(IMAGE_REPO)-base
+APKO_IMAGE 			?= cgr.dev/chainguard/apko
 IMAGE_TAG 			?= dev
 IMAGE_PUSH 			?= false
 IMAGE_PLATFORMS 	?=
@@ -168,12 +169,13 @@ clean:
 .PHONY: build-base-image
 build-base-image:
 	mkdir -p build
+	chmod 0777 build
 	cp kargo-base.apko.yaml build
 	$(CONTAINER_RUNTIME) run \
 		--rm \
 		-v $(dir $(realpath $(firstword $(MAKEFILE_LIST))))build:/build \
 		-w /build \
-		cgr.dev/chainguard/apko \
+		$(APKO_IMAGE) \
 		build kargo-base.apko.yaml $(BASE_IMAGE) kargo-base.tar.gz
 	$(CONTAINER_RUNTIME) image load -i build/kargo-base.tar.gz
 

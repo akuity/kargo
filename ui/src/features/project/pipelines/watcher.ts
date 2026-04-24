@@ -30,6 +30,7 @@ async function ProcessEvents<T extends { type: string }, S extends { metadata?: 
   getter: (e: T) => S,
   callback: (item: S, data: S[]) => void
 ) {
+  let timer: ReturnType<typeof setTimeout> | undefined;
   for await (const e of stream) {
     let data = getData();
     const index = data.findIndex((item) => item.metadata?.name === getter(e).metadata?.name);
@@ -45,7 +46,8 @@ async function ProcessEvents<T extends { type: string }, S extends { metadata?: 
       }
     }
 
-    callback(getter(e), data);
+    clearTimeout(timer);
+    timer = setTimeout(() => callback(getter(e), data));
   }
 }
 

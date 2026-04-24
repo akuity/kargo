@@ -24,10 +24,8 @@ function VersionDropdown() {
 
   const fetchVersions = async () => {
     try {
-      console.log("Before fetching versions");
       const response = await fetch(githubApiUrl);
       const branches = await response.json();
-      console.log("Fetched branches are: ", branches);
 
       const releaseBranches = branches
         .map(branch => branch.name)
@@ -40,15 +38,10 @@ function VersionDropdown() {
           };
         });
 
-      console.log("These are release branches before sorting and updating 0 element: ", releaseBranches);
       releaseBranches.sort((a, b) => {
-        if (a.version > b.version) {
-          return -1;
-        }
-        if (a.version < b.version) {
-          return 1;
-        }
-        return 0;
+        const [aMajor, aMinor] = a.version.slice(1).split('.').map(Number);
+        const [bMajor, bMinor] = b.version.slice(1).split('.').map(Number);
+        return bMajor - aMajor || bMinor - aMinor;
       });
       // Overwrite the first element with the latest version
       releaseBranches[0] = {
@@ -69,7 +62,6 @@ function VersionDropdown() {
           url: `${url.protocol}//${url.hostname}${url.port ? `:${url.port}` : ''}`
         });
       }
-      console.log("These are release branches: ", releaseBranches);
       setVersions(releaseBranches);
       setLoading(false);
     } catch (error) {

@@ -24,7 +24,9 @@ export const useFreightTimelineControllerStore = (project: string) => {
       showMinimap: true
     };
 
-    if (searchParams.size === 0) {
+    const hasFilterParams = Object.keys(filters).some((name) => searchParams.has(name));
+
+    if (!hasFilterParams) {
       return { ...filters, ...getFreightTimelineFiltersLocalStorage(project) };
     }
 

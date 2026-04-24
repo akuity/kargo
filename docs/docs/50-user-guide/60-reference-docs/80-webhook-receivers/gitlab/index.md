@@ -4,11 +4,23 @@ sidebar_label: GitLab
 
 # GitLab Webhook Receiver
 
-The GitLab Webhook Receiver responds to `push` events originating from GitLab
-repositories by _refreshing_ `Warehouse` resources subscribed to those
-repositories. When a Warehouse has `includePaths` or `excludePaths` configured,
-the receiver extracts the list of changed files from the push event and only
-refreshes the Warehouse if the changed files match those path filters.
+The GitLab webhook receiver responds to `push`, `tag_push`, and
+`merge_request` events originating from GitLab repositories.
+
+The receiver responds to `push` and `tag_push` events by _refreshing_
+`Warehouse` resources subscribed to those repositories. When a Warehouse has
+`includePaths` or `excludePaths` configured, the receiver extracts the list of
+changed files from the push event and only refreshes the Warehouse if the
+changed files match those path filters.
+
+The receiver responds to `merge_request` events with a `close` or `merge`
+action by _refreshing_ all running `Promotion` resources that are waiting on
+the closed merge request via a
+[`git-wait-for-pr`](../../30-promotion-steps/git-wait-for-pr.md) step. This
+enables near-instant detection of MR merges and closures instead of relying on
+the default polling interval. Events with other actions (e.g. `open`,
+`update`) are acknowledged with an HTTP `200` status code but produce no side
+effects.
 
 :::note
 
@@ -24,6 +36,16 @@ unconditionally.
 "Refreshing" a `Warehouse` resource means enqueuing it for immediate
 reconciliation by the Kargo controller, which will execute the discovery of
 new artifacts from all repositories to which that `Warehouse` subscribes.
+
+:::
+
+:::info
+
+"Refreshing" a `Promotion` resource means enqueuing it for immediate
+reconciliation. The
+[`git-wait-for-pr`](../../30-promotion-steps/git-wait-for-pr.md) step will
+then call the Git provider's API to detect whether the MR has been merged or
+closed, and proceed accordingly.
 
 :::
 
@@ -148,6 +170,12 @@ kubectl get projectconfigs kargo-demo \
 
     1. In the <Hlt>Trigger</Hlt> section, ensure <Hlt>Push events</Hlt> is
        selected.
+
+        If you use PR-based promotion workflows (i.e. promotions that include a
+        [`git-wait-for-pr`](../../30-promotion-steps/git-wait-for-pr.md) step),
+        also select <Hlt>Merge request events</Hlt>. This enables Kargo to
+        detect MR merges and closures near-instantly instead of relying on the
+        default polling interval.
 
     1. Click <Hlt>Add webhook</Hlt>.
 

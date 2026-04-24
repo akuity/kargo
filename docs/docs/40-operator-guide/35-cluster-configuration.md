@@ -243,6 +243,12 @@ the list of changed files and evaluates each matching Warehouse's
 that match the changed files are refreshed. Warehouses without path filters
 configured are always refreshed.
 
+For providers that support pull request events (such as GitHub), the receiver
+also refreshes any running `Promotion` that is waiting on the affected pull
+request via a
+[`git-wait-for-pr`](../50-user-guide/60-reference-docs/30-promotion-steps/git-wait-for-pr.md)
+step.
+
 ## Cluster Message Channels
 
 <span class="tag professional"></span>

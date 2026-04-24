@@ -15,6 +15,8 @@ import (
 )
 
 func TestWorkloadIdentityFederationProvider_Supports(t *testing.T) {
+	t.Parallel()
+
 	const (
 		fakeProjectID  = "test-project"
 		fakeGCRRepoURL = "gcr.io/my-project/my-repo"
@@ -29,105 +31,74 @@ func TestWorkloadIdentityFederationProvider_Supports(t *testing.T) {
 		assert   func(t *testing.T, result bool)
 	}{
 		{
-			name: "supports image credentials for GAR URL",
-			provider: &WorkloadIdentityFederationProvider{
-				projectID: fakeProjectID,
-			},
+			name:     "supports image credentials for GAR URL",
+			provider: &WorkloadIdentityFederationProvider{projectID: fakeProjectID},
 			credType: credentials.TypeImage,
 			repoURL:  fakeGARRepoURL,
 			assert: func(t *testing.T, result bool) {
-				assert.True(t, result, "should support GAR URL with image credentials")
+				assert.True(t, result)
 			},
 		},
 		{
-			name: "supports image credentials for GCR URL",
-			provider: &WorkloadIdentityFederationProvider{
-				projectID: fakeProjectID,
-			},
+			name:     "supports image credentials for GCR URL",
+			provider: &WorkloadIdentityFederationProvider{projectID: fakeProjectID},
 			credType: credentials.TypeImage,
 			repoURL:  fakeGCRRepoURL,
 			assert: func(t *testing.T, result bool) {
-				assert.True(t, result, "should support GCR URL with image credentials")
+				assert.True(t, result)
 			},
 		},
 		{
-			name: "rejects unsupported credentials",
-			provider: &WorkloadIdentityFederationProvider{
-				projectID: fakeProjectID,
+			name:     "supports Helm credentials for GAR URL",
+			provider: &WorkloadIdentityFederationProvider{projectID: fakeProjectID},
+			credType: credentials.TypeHelm,
+			repoURL:  fakeGARRepoURL,
+			assert: func(t *testing.T, result bool) {
+				assert.True(t, result)
 			},
+		},
+		{
+			name:     "supports Helm credentials for GCR URL",
+			provider: &WorkloadIdentityFederationProvider{projectID: fakeProjectID},
+			credType: credentials.TypeHelm,
+			repoURL:  fakeGCRRepoURL,
+			assert: func(t *testing.T, result bool) {
+				assert.True(t, result)
+			},
+		},
+		{
+			name:     "rejects unsupported credential type",
+			provider: &WorkloadIdentityFederationProvider{projectID: fakeProjectID},
 			credType: credentials.TypeGit,
 			repoURL:  fakeGARRepoURL,
 			assert: func(t *testing.T, result bool) {
-				assert.False(t, result, "should not support unsupported credentials")
+				assert.False(t, result)
 			},
 		},
 		{
-			name: "rejects non-GAR/GCR URL",
-			provider: &WorkloadIdentityFederationProvider{
-				projectID: fakeProjectID,
-			},
+			name:     "rejects non-GAR/GCR URL",
+			provider: &WorkloadIdentityFederationProvider{projectID: fakeProjectID},
 			credType: credentials.TypeImage,
 			repoURL:  "docker.io/library/alpine",
 			assert: func(t *testing.T, result bool) {
-				assert.False(t, result, "should not support non-GAR/GCR URL")
+				assert.False(t, result)
 			},
 		},
 		{
-			name:     "rejects empty project ID",
-			provider: &WorkloadIdentityFederationProvider{},
-			credType: credentials.TypeImage,
-			repoURL:  fakeGARRepoURL,
-			assert: func(t *testing.T, result bool) {
-				assert.False(t, result, "should not support when project ID is empty")
-			},
-		},
-		// Helm chart test cases
-		{
-			name: "supports Helm credentials for GAR chart URL",
-			provider: &WorkloadIdentityFederationProvider{
-				projectID: fakeProjectID,
-			},
-			credType: credentials.TypeHelm,
-			repoURL:  fakeGARRepoURL,
-			assert: func(t *testing.T, result bool) {
-				assert.True(t, result, "should support GAR chart URL with Helm credentials")
-			},
-		},
-		{
-			name: "supports Helm credentials for GCR chart URL",
-			provider: &WorkloadIdentityFederationProvider{
-				projectID: fakeProjectID,
-			},
-			credType: credentials.TypeHelm,
-			repoURL:  fakeGCRRepoURL,
-			assert: func(t *testing.T, result bool) {
-				assert.True(t, result, "should support GCR chart URL with Helm credentials")
-			},
-		},
-		{
-			name: "rejects Helm credentials for non-GAR/GCR URL",
-			provider: &WorkloadIdentityFederationProvider{
-				projectID: fakeProjectID,
-			},
+			name:     "rejects Helm credentials for non-GAR/GCR URL",
+			provider: &WorkloadIdentityFederationProvider{projectID: fakeProjectID},
 			credType: credentials.TypeHelm,
 			repoURL:  "docker.io/library/alpine",
 			assert: func(t *testing.T, result bool) {
-				assert.False(t, result, "should not support non-GAR/GCR URL with Helm credentials")
-			},
-		},
-		{
-			name:     "rejects Helm credentials with empty project ID",
-			provider: &WorkloadIdentityFederationProvider{},
-			credType: credentials.TypeHelm,
-			repoURL:  fakeGARRepoURL,
-			assert: func(t *testing.T, result bool) {
-				assert.False(t, result, "should not support when project ID is empty")
+				assert.False(t, result)
 			},
 		},
 	}
 
 	for _, testCase := range testCases {
 		t.Run(testCase.name, func(t *testing.T) {
+			t.Parallel()
+
 			supports, err := testCase.provider.Supports(
 				t.Context(),
 				credentials.Request{
@@ -142,6 +113,8 @@ func TestWorkloadIdentityFederationProvider_Supports(t *testing.T) {
 }
 
 func TestWorkloadIdentityFederationProvider_GetCredentials(t *testing.T) {
+	t.Parallel()
+
 	const (
 		fakeProjectID  = "test-project"
 		fakeProject    = "kargo-project"
@@ -226,8 +199,7 @@ func TestWorkloadIdentityFederationProvider_GetCredentials(t *testing.T) {
 				assert.Equal(t, accessTokenUsername, creds.Username)
 				assert.Equal(t, fakeToken, creds.Password)
 
-				// Verify the token was cached with a TTL based on the
-				// token's actual expiry
+				// Verify the token was cached with a TTL based on the token's actual expiry
 				items := tokenCache.Items()
 				item, found := items[tokenCacheKey(fakeProject)]
 				assert.True(t, found)
@@ -255,7 +227,7 @@ func TestWorkloadIdentityFederationProvider_GetCredentials(t *testing.T) {
 			},
 		},
 		{
-			name: "empty token from getAccessToken",
+			name: "empty token from getAccessToken falls back to default token source",
 			provider: &WorkloadIdentityFederationProvider{
 				projectID:        fakeProjectID,
 				tokenCache:       cache.New(10*time.Hour, time.Hour),
@@ -288,6 +260,8 @@ func TestWorkloadIdentityFederationProvider_GetCredentials(t *testing.T) {
 
 	for _, testCase := range testCases {
 		t.Run(testCase.name, func(t *testing.T) {
+			t.Parallel()
+
 			if testCase.setupTokenCache != nil {
 				testCase.setupTokenCache(testCase.provider.tokenCache)
 			}
@@ -314,7 +288,6 @@ func TestWorkloadIdentityFederationProvider_GetCredentials(t *testing.T) {
 }
 
 type fakeTokenSource struct {
-	// The token to be returned by the Token() method
 	token string
 }
 
@@ -323,7 +296,5 @@ func newFakeTokenSource(token string) oauth2.TokenSource {
 }
 
 func (f *fakeTokenSource) Token() (*oauth2.Token, error) {
-	return &oauth2.Token{
-		AccessToken: f.token,
-	}, nil
+	return &oauth2.Token{AccessToken: f.token}, nil
 }

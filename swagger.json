@@ -2338,6 +2338,16 @@
             "name": "project",
             "in": "path",
             "required": true
+          },
+          {
+            "type": "array",
+            "items": {
+              "type": "string"
+            },
+            "collectionFormat": "csv",
+            "description": "Warehouse names to filter Stages by",
+            "name": "freightOrigins",
+            "in": "query"
           }
         ],
         "responses": {
