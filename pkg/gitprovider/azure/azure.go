@@ -391,9 +391,17 @@ func convertADOPullRequest(pr *adogit.GitPullRequest) (*gitprovider.PullRequest,
 		return nil, fmt.Errorf("no last merge source commit found for pull request %d", ptr.Deref(pr.PullRequestId, 0))
 	}
 	mergeCommit := ptr.Deref(pr.LastMergeCommit, adogit.GitCommitRef{})
+	var webURL string
+	if pr.Repository != nil {
+		webURL = ptr.Deref(pr.Repository.WebUrl, "")
+	}
 	return &gitprovider.PullRequest{
-		Number:         int64(ptr.Deref(pr.PullRequestId, 0)),
-		URL:            ptr.Deref(pr.Url, ""),
+		Number: int64(ptr.Deref(pr.PullRequestId, 0)),
+		URL: fmt.Sprintf(
+			"%s/pullrequest/%d",
+			webURL,
+			ptr.Deref(pr.PullRequestId, 0),
+		),
 		Open:           ptr.Deref(pr.Status, "notSet") == "active",
 		Merged:         ptr.Deref(pr.Status, "notSet") == "completed",
 		MergeCommitSHA: ptr.Deref(mergeCommit.CommitId, ""),

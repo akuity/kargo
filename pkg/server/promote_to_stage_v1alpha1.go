@@ -284,5 +284,5 @@ func (s *server) promoteToStage(c *gin.Context) {
 		s.recordPromotionCreatedEvent(ctx, promotion, freight)
 	}
 
-	c.JSON(http.StatusCreated, gin.H{"promotion": promotion})
+	c.JSON(http.StatusCreated, promotion)
 }

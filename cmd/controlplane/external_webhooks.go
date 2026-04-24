@@ -125,6 +125,16 @@ func (o *externalWebhooksServerOptions) run(ctx context.Context) error {
 		return fmt.Errorf("error registering project configs by webhook receiver path indexer: %w", err)
 	}
 
+	err = cluster.GetFieldIndexer().IndexField(
+		ctx,
+		&kargoapi.Promotion{},
+		indexer.RunningPromotionsByPullRequestURLField,
+		indexer.RunningPromotionsByPullRequestURL,
+	)
+	if err != nil {
+		return fmt.Errorf("error indexing running Promotions by pull request: %w", err)
+	}
+
 	go func() {
 		err = cluster.Start(ctx)
 	}()

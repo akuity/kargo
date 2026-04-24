@@ -9,6 +9,7 @@ import (
 
 	"github.com/stretchr/testify/require"
 	gl "gitlab.com/gitlab-org/api/client-go"
+	apiextensionsv1 "k8s.io/apiextensions-apiserver/pkg/apis/apiextensions/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"
@@ -17,6 +18,48 @@ import (
 	kargoapi "github.com/akuity/kargo/api/v1alpha1"
 	"github.com/akuity/kargo/pkg/indexer"
 )
+
+const gitlabMergeRequestEventMerged = `
+{
+	"object_attributes": {
+		"iid": 42,
+		"action": "merge",
+		"state": "merged",
+		"url": "https://gitlab.com/example/repo/-/merge_requests/42"
+	},
+	"project": {
+		"git_http_url": "https://gitlab.com/example/repo.git",
+		"git_ssh_url": "git@gitlab.com:example/repo.git"
+	}
+}`
+
+const gitlabMergeRequestEventClosed = `
+{
+	"object_attributes": {
+		"iid": 42,
+		"action": "close",
+		"state": "closed",
+		"url": "https://gitlab.com/example/repo/-/merge_requests/42"
+	},
+	"project": {
+		"git_http_url": "https://gitlab.com/example/repo.git",
+		"git_ssh_url": "git@gitlab.com:example/repo.git"
+	}
+}`
+
+const gitlabMergeRequestEventOpened = `
+{
+	"object_attributes": {
+		"iid": 42,
+		"action": "open",
+		"state": "opened",
+		"url": "https://gitlab.com/example/repo/-/merge_requests/42"
+	},
+	"project": {
+		"git_http_url": "https://gitlab.com/example/repo.git",
+		"git_ssh_url": "git@gitlab.com:example/repo.git"
+	}
+}`
 
 const gitlabPushEventRequestBody = `
 {
@@ -124,6 +167,139 @@ func TestGitLabHandler(t *testing.T) {
 			assertions: func(t *testing.T, rr *httptest.ResponseRecorder) {
 				require.Equal(t, http.StatusBadRequest, rr.Code)
 				require.JSONEq(t, `{"error":"invalid request body"}`, rr.Body.String())
+			},
+		},
+		{
+			name:       "non-close/merge action returns 200 OK",
+			secretData: testSecretData,
+			req: func() *http.Request {
+				bodyBuf := bytes.NewBuffer([]byte(gitlabMergeRequestEventOpened))
+				req := httptest.NewRequest(http.MethodPost, testURL, bodyBuf)
+				req.Header.Set(gitlabTokenHeader, testToken)
+				req.Header.Set(gitlabEventHeader, string(gl.EventTypeMergeRequest))
+				return req
+			},
+			assertions: func(t *testing.T, rr *httptest.ResponseRecorder) {
+				require.Equal(t, http.StatusOK, rr.Code)
+				require.JSONEq(t, "{}", rr.Body.String())
+			},
+		},
+		{
+			name:       "merged merge request refreshes matching Promotion",
+			secretData: testSecretData,
+			client: fake.NewClientBuilder().WithScheme(testScheme).WithObjects(
+				&kargoapi.Promotion{
+					ObjectMeta: metav1.ObjectMeta{
+						Namespace: testProjectName,
+						Name:      "promo-wait-for-pr",
+					},
+					Spec: kargoapi.PromotionSpec{
+						Stage: "test-stage",
+						Steps: []kargoapi.PromotionStep{{
+							Uses: "git-wait-for-pr",
+							As:   "wait-pr",
+						}},
+					},
+					Status: kargoapi.PromotionStatus{
+						Phase:       kargoapi.PromotionPhaseRunning,
+						CurrentStep: 0,
+						State: &apiextensionsv1.JSON{
+							Raw: []byte(`{
+								"wait-pr": {
+									"pr": {
+										"url": "https://gitlab.com/example/repo/-/merge_requests/42",
+										"open": true,
+										"merged": false
+									}
+								}
+							}`),
+						},
+					},
+				},
+			).WithIndex(
+				&kargoapi.Promotion{},
+				indexer.RunningPromotionsByPullRequestURLField,
+				indexer.RunningPromotionsByPullRequestURL,
+			).Build(),
+			req: func() *http.Request {
+				bodyBuf := bytes.NewBuffer([]byte(gitlabMergeRequestEventMerged))
+				req := httptest.NewRequest(http.MethodPost, testURL, bodyBuf)
+				req.Header.Set(gitlabTokenHeader, testToken)
+				req.Header.Set(gitlabEventHeader, string(gl.EventTypeMergeRequest))
+				return req
+			},
+			assertions: func(t *testing.T, rr *httptest.ResponseRecorder) {
+				require.Equal(t, http.StatusOK, rr.Code)
+				require.JSONEq(t, `{"msg":"refreshed 1 promotion(s)"}`, rr.Body.String())
+			},
+		},
+		{
+			name:       "closed merge request refreshes matching Promotion",
+			secretData: testSecretData,
+			client: fake.NewClientBuilder().WithScheme(testScheme).WithObjects(
+				&kargoapi.Promotion{
+					ObjectMeta: metav1.ObjectMeta{
+						Namespace: testProjectName,
+						Name:      "promo-wait-for-pr",
+					},
+					Spec: kargoapi.PromotionSpec{
+						Stage: "test-stage",
+						Steps: []kargoapi.PromotionStep{{
+							Uses: "git-wait-for-pr",
+							As:   "wait-pr",
+						}},
+					},
+					Status: kargoapi.PromotionStatus{
+						Phase:       kargoapi.PromotionPhaseRunning,
+						CurrentStep: 0,
+						State: &apiextensionsv1.JSON{
+							Raw: []byte(`{
+								"wait-pr": {
+									"pr": {
+										"url": "https://gitlab.com/example/repo/-/merge_requests/42",
+										"open": true,
+										"merged": false
+									}
+								}
+							}`),
+						},
+					},
+				},
+			).WithIndex(
+				&kargoapi.Promotion{},
+				indexer.RunningPromotionsByPullRequestURLField,
+				indexer.RunningPromotionsByPullRequestURL,
+			).Build(),
+			req: func() *http.Request {
+				bodyBuf := bytes.NewBuffer([]byte(gitlabMergeRequestEventClosed))
+				req := httptest.NewRequest(http.MethodPost, testURL, bodyBuf)
+				req.Header.Set(gitlabTokenHeader, testToken)
+				req.Header.Set(gitlabEventHeader, string(gl.EventTypeMergeRequest))
+				return req
+			},
+			assertions: func(t *testing.T, rr *httptest.ResponseRecorder) {
+				require.Equal(t, http.StatusOK, rr.Code)
+				require.JSONEq(t, `{"msg":"refreshed 1 promotion(s)"}`, rr.Body.String())
+			},
+		},
+		{
+			name:       "merge request event with no matching Promotions",
+			secretData: testSecretData,
+			client: fake.NewClientBuilder().WithScheme(testScheme).WithIndex(
+				&kargoapi.Promotion{},
+				indexer.RunningPromotionsByPullRequestURLField,
+				indexer.RunningPromotionsByPullRequestURL,
+			).Build(),
+			req: func() *http.Request {
+				bodyBuf := bytes.NewBuffer([]byte(gitlabMergeRequestEventMerged))
+				req := httptest.NewRequest(http.MethodPost, testURL, bodyBuf)
+				req.Header.Set(gitlabTokenHeader, testToken)
+				req.Header.Set(gitlabEventHeader, string(gl.EventTypeMergeRequest))
+				return req
+			},
+			assertions: func(t *testing.T, rr *httptest.ResponseRecorder) {
+				require.Equal(t, http.StatusOK, rr.Code)
+				require.JSONEq(t, `{"msg":"refreshed 0 promotion(s)"}`, rr.Body.String())
 			},
 		},
 		{

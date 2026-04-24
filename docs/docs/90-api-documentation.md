@@ -1184,6 +1184,7 @@ Stability is not guaranteed.
 | Field | Type | Description |
 | ----- | ---- | ----------- |
 | project | [string](#string) |  project is the name of the project whose stages should be listed. |
+| freight_origins | [string](#string) |  freight_origins is an optional list of Warehouse names to filter Stages by. When specified, only Stages that subscribe to at least one of the named Warehouses are returned. |
 
 <a name="akuity-io-kargo-service-v1alpha1-ListStagesResponse"></a>
 
@@ -1529,6 +1530,7 @@ Stability is not guaranteed.
 | Field | Type | Description |
 | ----- | ---- | ----------- |
 | project | [string](#string) |  project is the name of the project whose freight should be watched. |
+| origins | [string](#string) |  origins is an optional list of Warehouse names to filter Freight by. When specified, only events for Freight that originated from at least one of the named Warehouses are streamed. |
 
 <a name="akuity-io-kargo-service-v1alpha1-WatchFreightResponse"></a>
 
@@ -1600,6 +1602,7 @@ Stability is not guaranteed.
 | ----- | ---- | ----------- |
 | project | [string](#string) |  project is the name of the project whose stages should be watched. |
 | name | [string](#string) |  name is the name of a specific stage to watch, if empty all stages in the project are watched. |
+| freight_origins | [string](#string) |  freight_origins is an optional list of Warehouse names to filter Stages by. When specified, only events for Stages that subscribe to at least one of the named Warehouses are streamed. |
 
 <a name="akuity-io-kargo-service-v1alpha1-WatchStagesResponse"></a>
 

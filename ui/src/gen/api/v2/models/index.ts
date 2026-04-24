@@ -107,6 +107,7 @@ export * from './listImages200';
 export * from './listProjectAPITokensParams';
 export * from './listProjectRoles200';
 export * from './listPromotionsParams';
+export * from './listStagesParams';
 export * from './listSystemAPITokensParams';
 export * from './listSystemRoles200';
 export * from './oIDCConfig';

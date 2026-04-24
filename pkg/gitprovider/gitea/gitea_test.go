@@ -197,7 +197,7 @@ func TestCreatePullRequest(t *testing.T) {
 			Base: &gitea.PRBranchInfo{
 				Sha: "BaseSha",
 			},
-			URL:            "http://localhost:8080",
+			HTMLURL:        "http://localhost:8080",
 			MergedCommitID: ptr.To("2994fd93"),
 			HasMerged:      false,
 		},
@@ -214,7 +214,7 @@ func TestCreatePullRequest(t *testing.T) {
 				Base: &gitea.PRBranchInfo{
 					Sha: "BaseSha",
 				},
-				URL:            "http://localhost:8080",
+				HTMLURL:        "http://localhost:8080",
 				MergedCommitID: ptr.To("BaseSha"),
 				HasMerged:      false,
 				Created:        &time.Time{},
@@ -248,7 +248,7 @@ func TestCreatePullRequest(t *testing.T) {
 	require.Equal(t, mockClient.pr.Index, pr.Number,
 		"Expected PR number in returned object to match what was returned by gitea")
 	require.Equal(t, mockClient.pr.Base.Sha, pr.MergeCommitSHA)
-	require.Equal(t, mockClient.pr.URL, pr.URL)
+	require.Equal(t, mockClient.pr.HTMLURL, pr.URL)
 	require.True(t, pr.Open)
 }
 
@@ -264,7 +264,7 @@ func TestGetPullRequest(t *testing.T) {
 			Base: &gitea.PRBranchInfo{
 				Sha: "BaseSha",
 			},
-			URL:            "http://localhost:8080",
+			HTMLURL:        "http://localhost:8080",
 			MergedCommitID: ptr.To("2994fd93"),
 			HasMerged:      false,
 			Created:        &time.Time{},
@@ -283,7 +283,7 @@ func TestGetPullRequest(t *testing.T) {
 				Base: &gitea.PRBranchInfo{
 					Sha: "BaseSha",
 				},
-				URL:            "http://localhost:8080",
+				HTMLURL:        "http://localhost:8080",
 				MergedCommitID: ptr.To("BaseSha"),
 				HasMerged:      false,
 			},
@@ -309,7 +309,7 @@ func TestGetPullRequest(t *testing.T) {
 	require.Equal(t, mockClient.pr.Index, pr.Number,
 		"Expected PR number in returned object to match what was returned by gitea")
 	require.Equal(t, mockClient.pr.Base.Sha, pr.MergeCommitSHA)
-	require.Equal(t, mockClient.pr.URL, pr.URL)
+	require.Equal(t, mockClient.pr.HTMLURL, pr.URL)
 	require.True(t, pr.Open)
 }
 
@@ -331,7 +331,7 @@ func TestListPullRequests(t *testing.T) {
 			Base: &gitea.PRBranchInfo{
 				Sha: "BaseSha",
 			},
-			URL:            "http://localhost:8080",
+			HTMLURL:        "http://localhost:8080",
 			MergedCommitID: ptr.To("BaseSha"),
 			HasMerged:      false,
 		},
@@ -353,7 +353,7 @@ func TestListPullRequests(t *testing.T) {
 				Base: &gitea.PRBranchInfo{
 					Sha: "BaseSha",
 				},
-				URL:            "http://localhost:8080",
+				HTMLURL:        "http://localhost:8080",
 				MergedCommitID: ptr.To("BaseSha"),
 				HasMerged:      false,
 				Created:        &time.Time{},
@@ -377,7 +377,7 @@ func TestListPullRequests(t *testing.T) {
 
 	require.Equal(t, mockClient.pr.Index, prs[0].Number)
 	require.Equal(t, mockClient.pr.Base.Sha, prs[0].MergeCommitSHA)
-	require.Equal(t, mockClient.pr.URL, prs[0].URL)
+	require.Equal(t, mockClient.pr.HTMLURL, prs[0].URL)
 	require.True(t, prs[0].Open)
 }
 

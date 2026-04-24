@@ -171,7 +171,7 @@ export const Graph = (props: GraphProps) => {
           nodes: nodesExcludingSubscriptionNodes
         }}
         proOptions={{ hideAttribution: true }}
-        minZoom={0}
+        minZoom={nodes.length > 100 ? 0.6 : 0.1}
         onlyRenderVisibleElements
         panOnDrag
         onInit={(inst) => (reactFlowInstance.current = inst)}
