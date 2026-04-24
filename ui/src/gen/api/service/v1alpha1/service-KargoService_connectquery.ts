@@ -103,6 +103,17 @@ export const listImages = KargoService.method.listImages;
 export const getStage = KargoService.method.getStage;
 
 /**
+ * GetStageHealthOutputs returns the raw health output blob for the
+ * specified Stages in a project. Intended for clients that use
+ * ListStageSummaries for the list and need to resolve per-argocd-app
+ * health only for the Stages currently in viewport. Stages that do not
+ * exist or have no health output recorded are omitted from the response.
+ *
+ * @generated from rpc akuity.io.kargo.service.v1alpha1.KargoService.GetStageHealthOutputs
+ */
+export const getStageHealthOutputs = KargoService.method.getStageHealthOutputs;
+
+/**
  * DeleteStage removes a stage from the system.
  *
  * @generated from rpc akuity.io.kargo.service.v1alpha1.KargoService.DeleteStage

@@ -12,6 +12,12 @@ import (
 // stageToSummary converts a Stage to the lightweight StageSummary projection
 // returned by ListStageSummaries and WatchStageSummaries. See the StageSummary
 // proto definition for the rationale. Returns nil if stage is nil.
+//
+// The returned summary's Status.Health.Output is always nil even when the
+// source Stage has a populated output. That raw blob (the argocd-shaped
+// health output) is routinely ~2 KB per Stage and dominates the per-stage
+// cost of the summary. Clients that need it should call
+// GetStageHealthOutputs for the subset of Stages currently in viewport.
 func stageToSummary(stage *kargoapi.Stage) *svcv1alpha1.StageSummary {
 	if stage == nil {
 		return nil
@@ -31,7 +37,7 @@ func stageToSummary(stage *kargoapi.Stage) *svcv1alpha1.StageSummary {
 			LastHandledRefresh:   stage.Status.LastHandledRefresh,
 			CurrentPromotion:     stage.Status.CurrentPromotion.DeepCopy(),
 			LastPromotion:        stage.Status.LastPromotion.DeepCopy(),
-			Health:               stage.Status.Health.DeepCopy(),
+			Health:               healthWithoutOutput(stage.Status.Health),
 			ObservedGeneration:   stage.Status.ObservedGeneration,
 			AutoPromotionEnabled: stage.Status.AutoPromotionEnabled,
 		},
@@ -63,6 +69,18 @@ func cloneFreightRequests(src []kargoapi.FreightRequest) []*kargoapi.FreightRequ
 		dst[i] = src[i].DeepCopy()
 	}
 	return dst
+}
+
+// healthWithoutOutput returns a deep copy of the given Health with the
+// Output field cleared. Returns nil if src is nil. See stageToSummary for
+// the motivation.
+func healthWithoutOutput(src *kargoapi.Health) *kargoapi.Health {
+	if src == nil {
+		return nil
+	}
+	h := src.DeepCopy()
+	h.Output = nil
+	return h
 }
 
 // cloneConditions returns a deep copy of the given Conditions as a slice of

@@ -62,6 +62,12 @@ service KargoService {
   rpc ListImages(ListImagesRequest) returns (ListImagesResponse);
   // GetStage retrieves details of a specific stage.
   rpc GetStage(GetStageRequest) returns (GetStageResponse);
+  // GetStageHealthOutputs returns the raw health output blob for the
+  // specified Stages in a project. Intended for clients that use
+  // ListStageSummaries for the list and need to resolve per-argocd-app
+  // health only for the Stages currently in viewport. Stages that do not
+  // exist or have no health output recorded are omitted from the response.
+  rpc GetStageHealthOutputs(GetStageHealthOutputsRequest) returns (GetStageHealthOutputsResponse);
   // WatchStages provides a streaming interface to monitor stage changes.
   rpc WatchStages(WatchStagesRequest) returns (stream WatchStagesResponse);
   // WatchStageSummaries provides a streaming interface to monitor stage
@@ -517,6 +523,24 @@ message GetStageResponse {
     // raw contains the Stage resource in the requested raw format.
     bytes raw = 2;
   }
+}
+
+// GetStageHealthOutputsRequest is the request for fetching the raw health
+// output blob of one or more Stages within a project.
+message GetStageHealthOutputsRequest {
+  // project is the name of the project containing the Stages.
+  string project = 1;
+  // stage_names is the list of Stage names whose health outputs to return.
+  // Order is irrelevant; duplicates are deduplicated by the server.
+  repeated string stage_names = 2 [json_name = "stageNames"];
+}
+
+// GetStageHealthOutputsResponse contains per-Stage raw health output blobs.
+message GetStageHealthOutputsResponse {
+  // health_outputs maps Stage name to the raw bytes of its
+  // Stage.status.health.output.raw field. Stages that do not exist in the
+  // project or have no health output recorded are omitted from the map.
+  map<string, bytes> health_outputs = 1 [json_name = "healthOutputs"];
 }
 
 // WatchStagesRequest is the request for watching stage changes via streaming.

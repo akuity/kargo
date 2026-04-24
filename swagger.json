@@ -2314,6 +2314,53 @@
         }
       }
     },
+    "/v1beta1/projects/{project}/stage-health-outputs": {
+      "get": {
+        "security": [
+          {
+            "BearerAuth": []
+          }
+        ],
+        "description": "Return the raw health output blob for the specified Stages\nin a project. Stages that do not exist or have no recorded\nhealth output are omitted from the response. Intended for\nclients that use ListStageSummaries (which omits the output\nblob) and need to lazily resolve health for Stages currently\nin viewport.",
+        "produces": [
+          "application/json"
+        ],
+        "tags": [
+          "Core",
+          "Project-Level"
+        ],
+        "summary": "Get Stage Health Outputs",
+        "operationId": "GetStageHealthOutputs",
+        "parameters": [
+          {
+            "type": "string",
+            "description": "Project name",
+            "name": "project",
+            "in": "path",
+            "required": true
+          },
+          {
+            "type": "array",
+            "items": {
+              "type": "string"
+            },
+            "collectionFormat": "multi",
+            "description": "Stage names to fetch health outputs for",
+            "name": "stageNames",
+            "in": "query",
+            "required": true
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "schema": {
+              "$ref": "#/definitions/github_com_akuity_kargo_api_service_v1alpha1.GetStageHealthOutputsResponse"
+            }
+          }
+        }
+      }
+    },
     "/v1beta1/projects/{project}/stage-summaries": {
       "get": {
         "security": [
@@ -5254,6 +5301,22 @@
           "type": "array",
           "items": {
             "$ref": "#/definitions/V1PolicyRule"
+          }
+        }
+      }
+    },
+    "github_com_akuity_kargo_api_service_v1alpha1.GetStageHealthOutputsResponse": {
+      "type": "object",
+      "properties": {
+        "health_outputs": {
+          "description": "health_outputs maps Stage name to the raw bytes of its\nStage.status.health.output.raw field. Stages that do not exist in the\nproject or have no health output recorded are omitted from the map.",
+          "type": "object",
+          "additionalProperties": {
+            "type": "array",
+            "items": {
+              "type": "integer",
+              "format": "int32"
+            }
           }
         }
       }

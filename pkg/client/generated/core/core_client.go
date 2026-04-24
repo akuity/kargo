@@ -97,6 +97,8 @@ type ClientService interface {
 
 	GetStage(params *GetStageParams, authInfo runtime.ClientAuthInfoWriter, opts ...ClientOption) (*GetStageOK, error)
 
+	GetStageHealthOutputs(params *GetStageHealthOutputsParams, authInfo runtime.ClientAuthInfoWriter, opts ...ClientOption) (*GetStageHealthOutputsOK, error)
+
 	GetSystemConfigMap(params *GetSystemConfigMapParams, authInfo runtime.ClientAuthInfoWriter, opts ...ClientOption) (*GetSystemConfigMapOK, error)
 
 	GetWarehouse(params *GetWarehouseParams, authInfo runtime.ClientAuthInfoWriter, opts ...ClientOption) (*GetWarehouseOK, error)
@@ -1177,6 +1179,58 @@ func (a *Client) GetStage(params *GetStageParams, authInfo runtime.ClientAuthInf
 	//
 	// safeguard: normally, in the absence of a default response, unknown success responses return an error above: so this is a codegen issue
 	msg := fmt.Sprintf("unexpected success response for GetStage: API contract not enforced by server. Client expected to get an error, but got: %T", result)
+	panic(msg)
+}
+
+/*
+	GetStageHealthOutputs gets stage health outputs
+
+	Return the raw health output blob for the specified Stages
+
+in a project. Stages that do not exist or have no recorded
+health output are omitted from the response. Intended for
+clients that use ListStageSummaries (which omits the output
+blob) and need to lazily resolve health for Stages currently
+in viewport.
+*/
+func (a *Client) GetStageHealthOutputs(params *GetStageHealthOutputsParams, authInfo runtime.ClientAuthInfoWriter, opts ...ClientOption) (*GetStageHealthOutputsOK, error) {
+	// NOTE: parameters are not validated before sending
+	if params == nil {
+		params = NewGetStageHealthOutputsParams()
+	}
+	op := &runtime.ClientOperation{
+		ID:                 "GetStageHealthOutputs",
+		Method:             "GET",
+		PathPattern:        "/v1beta1/projects/{project}/stage-health-outputs",
+		ProducesMediaTypes: []string{"application/json"},
+		ConsumesMediaTypes: []string{"application/json"},
+		Schemes:            []string{"http"},
+		Params:             params,
+		Reader:             &GetStageHealthOutputsReader{formats: a.formats},
+		AuthInfo:           authInfo,
+		Context:            params.Context,
+		Client:             params.HTTPClient,
+	}
+	for _, opt := range opts {
+		opt(op)
+	}
+	result, err := a.transport.Submit(op)
+	if err != nil {
+		return nil, err
+	}
+
+	// only one success response has to be checked
+	success, ok := result.(*GetStageHealthOutputsOK)
+	if ok {
+		return success, nil
+	}
+
+	// unexpected success response.
+
+	// no default response is defined.
+	//
+	// safeguard: normally, in the absence of a default response, unknown success responses return an error above: so this is a codegen issue
+	msg := fmt.Sprintf("unexpected success response for GetStageHealthOutputs: API contract not enforced by server. Client expected to get an error, but got: %T", result)
 	panic(msg)
 }
 

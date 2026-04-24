@@ -28,6 +28,7 @@ Stability is not guaranteed.
 | ListStageSummaries | [ListStageSummariesRequest](#akuity-io-kargo-service-v1alpha1-ListStageSummariesRequest) | [ListStageSummariesResponse](#akuity-io-kargo-service-v1alpha1-ListStageSummariesResponse) |
 | ListImages | [ListImagesRequest](#akuity-io-kargo-service-v1alpha1-ListImagesRequest) | [ListImagesResponse](#akuity-io-kargo-service-v1alpha1-ListImagesResponse) |
 | GetStage | [GetStageRequest](#akuity-io-kargo-service-v1alpha1-GetStageRequest) | [GetStageResponse](#akuity-io-kargo-service-v1alpha1-GetStageResponse) |
+| GetStageHealthOutputs | [GetStageHealthOutputsRequest](#akuity-io-kargo-service-v1alpha1-GetStageHealthOutputsRequest) | [GetStageHealthOutputsResponse](#akuity-io-kargo-service-v1alpha1-GetStageHealthOutputsResponse) |
 | WatchStages | [WatchStagesRequest](#akuity-io-kargo-service-v1alpha1-WatchStagesRequest) | [WatchStagesResponse](#akuity-io-kargo-service-v1alpha1-WatchStagesResponse)(stream) |
 | WatchStageSummaries | [WatchStageSummariesRequest](#akuity-io-kargo-service-v1alpha1-WatchStageSummariesRequest) | [WatchStageSummariesResponse](#akuity-io-kargo-service-v1alpha1-WatchStageSummariesResponse)(stream) |
 | DeleteStage | [DeleteStageRequest](#akuity-io-kargo-service-v1alpha1-DeleteStageRequest) | [DeleteStageResponse](#akuity-io-kargo-service-v1alpha1-DeleteStageResponse) |
@@ -870,6 +871,32 @@ Stability is not guaranteed.
 | role | [github.com.akuity.kargo.api.rbac.v1alpha1.Role](#github-com-akuity-kargo-api-rbac-v1alpha1-Role) |  role is a structured Kargo Role virtual resource. |
 | resources | [github.com.akuity.kargo.api.rbac.v1alpha1.RoleResources](#github-com-akuity-kargo-api-rbac-v1alpha1-RoleResources) |  resources is a structured RoleResources object encapsulating the Kargo Role's underlying Kubernetes resources. |
 | raw | [bytes](#bytes) |  raw is a raw YAML or JSON representation of the requested resource(s). |
+
+<a name="akuity-io-kargo-service-v1alpha1-GetStageHealthOutputsRequest"></a>
+
+### GetStageHealthOutputsRequest
+ GetStageHealthOutputsRequest is the request for fetching the raw health output blob of one or more Stages within a project.
+| Field | Type | Description |
+| ----- | ---- | ----------- |
+| project | [string](#string) |  project is the name of the project containing the Stages. |
+| stage_names | [string](#string) |  stage_names is the list of Stage names whose health outputs to return. Order is irrelevant; duplicates are deduplicated by the server. |
+
+<a name="akuity-io-kargo-service-v1alpha1-GetStageHealthOutputsResponse"></a>
+
+### GetStageHealthOutputsResponse
+ GetStageHealthOutputsResponse contains per-Stage raw health output blobs.
+| Field | Type | Description |
+| ----- | ---- | ----------- |
+| health_outputs | [GetStageHealthOutputsResponse.HealthOutputsEntry](#akuity-io-kargo-service-v1alpha1-GetStageHealthOutputsResponse-HealthOutputsEntry) |  health_outputs maps Stage name to the raw bytes of its Stage.status.health.output.raw field. Stages that do not exist in the project or have no health output recorded are omitted from the map. |
+
+<a name="akuity-io-kargo-service-v1alpha1-GetStageHealthOutputsResponse-HealthOutputsEntry"></a>
+
+### GetStageHealthOutputsResponse.HealthOutputsEntry
+ 
+| Field | Type | Description |
+| ----- | ---- | ----------- |
+| key | [string](#string) |   |
+| value | [bytes](#bytes) |   |
 
 <a name="akuity-io-kargo-service-v1alpha1-GetStageRequest"></a>
 

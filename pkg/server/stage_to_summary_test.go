@@ -4,6 +4,7 @@ import (
 	"testing"
 
 	"github.com/stretchr/testify/require"
+	apiextensionsv1 "k8s.io/apiextensions-apiserver/pkg/apis/apiextensions/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 
 	kargoapi "github.com/akuity/kargo/api/v1alpha1"
@@ -116,6 +117,30 @@ func TestStageToSummary(t *testing.T) {
 		require.Equal(t, kargoapi.HealthStateHealthy, got.Status.Health.Status)
 		require.Equal(t, int64(7), got.Status.ObservedGeneration)
 		require.True(t, got.Status.AutoPromotionEnabled)
+	})
+
+	t.Run("health output is stripped while status is preserved", func(t *testing.T) {
+		t.Parallel()
+		s := &kargoapi.Stage{
+			ObjectMeta: metav1.ObjectMeta{Name: "s"},
+			Status: kargoapi.StageStatus{
+				Health: &kargoapi.Health{
+					Status: kargoapi.HealthStateHealthy,
+					Issues: []string{"transient blip"},
+					Output: &apiextensionsv1.JSON{
+						Raw: []byte(`[{"applicationStatuses":[{"Name":"app","health":{"status":"Healthy"}}]}]`),
+					},
+				},
+			},
+		}
+		got := stageToSummary(s)
+		require.NotNil(t, got.Status.Health)
+		require.Equal(t, kargoapi.HealthStateHealthy, got.Status.Health.Status)
+		require.Equal(t, []string{"transient blip"}, got.Status.Health.Issues)
+		require.Nil(t, got.Status.Health.Output,
+			"health.output must be nil in summary; fetch via GetStageHealthOutputs")
+		// Source Stage must be unchanged.
+		require.NotNil(t, s.Status.Health.Output)
 	})
 
 	t.Run("empty freight history omits current freight", func(t *testing.T) {

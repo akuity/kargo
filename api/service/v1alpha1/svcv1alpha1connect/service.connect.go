@@ -67,6 +67,9 @@ const (
 	KargoServiceListImagesProcedure = "/akuity.io.kargo.service.v1alpha1.KargoService/ListImages"
 	// KargoServiceGetStageProcedure is the fully-qualified name of the KargoService's GetStage RPC.
 	KargoServiceGetStageProcedure = "/akuity.io.kargo.service.v1alpha1.KargoService/GetStage"
+	// KargoServiceGetStageHealthOutputsProcedure is the fully-qualified name of the KargoService's
+	// GetStageHealthOutputs RPC.
+	KargoServiceGetStageHealthOutputsProcedure = "/akuity.io.kargo.service.v1alpha1.KargoService/GetStageHealthOutputs"
 	// KargoServiceWatchStagesProcedure is the fully-qualified name of the KargoService's WatchStages
 	// RPC.
 	KargoServiceWatchStagesProcedure = "/akuity.io.kargo.service.v1alpha1.KargoService/WatchStages"
@@ -282,6 +285,7 @@ var (
 	kargoServiceListStageSummariesMethodDescriptor            = kargoServiceServiceDescriptor.Methods().ByName("ListStageSummaries")
 	kargoServiceListImagesMethodDescriptor                    = kargoServiceServiceDescriptor.Methods().ByName("ListImages")
 	kargoServiceGetStageMethodDescriptor                      = kargoServiceServiceDescriptor.Methods().ByName("GetStage")
+	kargoServiceGetStageHealthOutputsMethodDescriptor         = kargoServiceServiceDescriptor.Methods().ByName("GetStageHealthOutputs")
 	kargoServiceWatchStagesMethodDescriptor                   = kargoServiceServiceDescriptor.Methods().ByName("WatchStages")
 	kargoServiceWatchStageSummariesMethodDescriptor           = kargoServiceServiceDescriptor.Methods().ByName("WatchStageSummaries")
 	kargoServiceDeleteStageMethodDescriptor                   = kargoServiceServiceDescriptor.Methods().ByName("DeleteStage")
@@ -386,6 +390,12 @@ type KargoServiceClient interface {
 	ListImages(context.Context, *connect.Request[v1alpha1.ListImagesRequest]) (*connect.Response[v1alpha1.ListImagesResponse], error)
 	// GetStage retrieves details of a specific stage.
 	GetStage(context.Context, *connect.Request[v1alpha1.GetStageRequest]) (*connect.Response[v1alpha1.GetStageResponse], error)
+	// GetStageHealthOutputs returns the raw health output blob for the
+	// specified Stages in a project. Intended for clients that use
+	// ListStageSummaries for the list and need to resolve per-argocd-app
+	// health only for the Stages currently in viewport. Stages that do not
+	// exist or have no health output recorded are omitted from the response.
+	GetStageHealthOutputs(context.Context, *connect.Request[v1alpha1.GetStageHealthOutputsRequest]) (*connect.Response[v1alpha1.GetStageHealthOutputsResponse], error)
 	// WatchStages provides a streaming interface to monitor stage changes.
 	WatchStages(context.Context, *connect.Request[v1alpha1.WatchStagesRequest]) (*connect.ServerStreamForClient[v1alpha1.WatchStagesResponse], error)
 	// WatchStageSummaries provides a streaming interface to monitor stage
@@ -629,6 +639,12 @@ func NewKargoServiceClient(httpClient connect.HTTPClient, baseURL string, opts .
 			httpClient,
 			baseURL+KargoServiceGetStageProcedure,
 			connect.WithSchema(kargoServiceGetStageMethodDescriptor),
+			connect.WithClientOptions(opts...),
+		),
+		getStageHealthOutputs: connect.NewClient[v1alpha1.GetStageHealthOutputsRequest, v1alpha1.GetStageHealthOutputsResponse](
+			httpClient,
+			baseURL+KargoServiceGetStageHealthOutputsProcedure,
+			connect.WithSchema(kargoServiceGetStageHealthOutputsMethodDescriptor),
 			connect.WithClientOptions(opts...),
 		),
 		watchStages: connect.NewClient[v1alpha1.WatchStagesRequest, v1alpha1.WatchStagesResponse](
@@ -1063,6 +1079,7 @@ type kargoServiceClient struct {
 	listStageSummaries            *connect.Client[v1alpha1.ListStageSummariesRequest, v1alpha1.ListStageSummariesResponse]
 	listImages                    *connect.Client[v1alpha1.ListImagesRequest, v1alpha1.ListImagesResponse]
 	getStage                      *connect.Client[v1alpha1.GetStageRequest, v1alpha1.GetStageResponse]
+	getStageHealthOutputs         *connect.Client[v1alpha1.GetStageHealthOutputsRequest, v1alpha1.GetStageHealthOutputsResponse]
 	watchStages                   *connect.Client[v1alpha1.WatchStagesRequest, v1alpha1.WatchStagesResponse]
 	watchStageSummaries           *connect.Client[v1alpha1.WatchStageSummariesRequest, v1alpha1.WatchStageSummariesResponse]
 	deleteStage                   *connect.Client[v1alpha1.DeleteStageRequest, v1alpha1.DeleteStageResponse]
@@ -1198,6 +1215,11 @@ func (c *kargoServiceClient) ListImages(ctx context.Context, req *connect.Reques
 // GetStage calls akuity.io.kargo.service.v1alpha1.KargoService.GetStage.
 func (c *kargoServiceClient) GetStage(ctx context.Context, req *connect.Request[v1alpha1.GetStageRequest]) (*connect.Response[v1alpha1.GetStageResponse], error) {
 	return c.getStage.CallUnary(ctx, req)
+}
+
+// GetStageHealthOutputs calls akuity.io.kargo.service.v1alpha1.KargoService.GetStageHealthOutputs.
+func (c *kargoServiceClient) GetStageHealthOutputs(ctx context.Context, req *connect.Request[v1alpha1.GetStageHealthOutputsRequest]) (*connect.Response[v1alpha1.GetStageHealthOutputsResponse], error) {
+	return c.getStageHealthOutputs.CallUnary(ctx, req)
 }
 
 // WatchStages calls akuity.io.kargo.service.v1alpha1.KargoService.WatchStages.
@@ -1589,6 +1611,12 @@ type KargoServiceHandler interface {
 	ListImages(context.Context, *connect.Request[v1alpha1.ListImagesRequest]) (*connect.Response[v1alpha1.ListImagesResponse], error)
 	// GetStage retrieves details of a specific stage.
 	GetStage(context.Context, *connect.Request[v1alpha1.GetStageRequest]) (*connect.Response[v1alpha1.GetStageResponse], error)
+	// GetStageHealthOutputs returns the raw health output blob for the
+	// specified Stages in a project. Intended for clients that use
+	// ListStageSummaries for the list and need to resolve per-argocd-app
+	// health only for the Stages currently in viewport. Stages that do not
+	// exist or have no health output recorded are omitted from the response.
+	GetStageHealthOutputs(context.Context, *connect.Request[v1alpha1.GetStageHealthOutputsRequest]) (*connect.Response[v1alpha1.GetStageHealthOutputsResponse], error)
 	// WatchStages provides a streaming interface to monitor stage changes.
 	WatchStages(context.Context, *connect.Request[v1alpha1.WatchStagesRequest], *connect.ServerStream[v1alpha1.WatchStagesResponse]) error
 	// WatchStageSummaries provides a streaming interface to monitor stage
@@ -1828,6 +1856,12 @@ func NewKargoServiceHandler(svc KargoServiceHandler, opts ...connect.HandlerOpti
 		KargoServiceGetStageProcedure,
 		svc.GetStage,
 		connect.WithSchema(kargoServiceGetStageMethodDescriptor),
+		connect.WithHandlerOptions(opts...),
+	)
+	kargoServiceGetStageHealthOutputsHandler := connect.NewUnaryHandler(
+		KargoServiceGetStageHealthOutputsProcedure,
+		svc.GetStageHealthOutputs,
+		connect.WithSchema(kargoServiceGetStageHealthOutputsMethodDescriptor),
 		connect.WithHandlerOptions(opts...),
 	)
 	kargoServiceWatchStagesHandler := connect.NewServerStreamHandler(
@@ -2272,6 +2306,8 @@ func NewKargoServiceHandler(svc KargoServiceHandler, opts ...connect.HandlerOpti
 			kargoServiceListImagesHandler.ServeHTTP(w, r)
 		case KargoServiceGetStageProcedure:
 			kargoServiceGetStageHandler.ServeHTTP(w, r)
+		case KargoServiceGetStageHealthOutputsProcedure:
+			kargoServiceGetStageHealthOutputsHandler.ServeHTTP(w, r)
 		case KargoServiceWatchStagesProcedure:
 			kargoServiceWatchStagesHandler.ServeHTTP(w, r)
 		case KargoServiceWatchStageSummariesProcedure:
@@ -2469,6 +2505,10 @@ func (UnimplementedKargoServiceHandler) ListImages(context.Context, *connect.Req
 
 func (UnimplementedKargoServiceHandler) GetStage(context.Context, *connect.Request[v1alpha1.GetStageRequest]) (*connect.Response[v1alpha1.GetStageResponse], error) {
 	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("akuity.io.kargo.service.v1alpha1.KargoService.GetStage is not implemented"))
+}
+
+func (UnimplementedKargoServiceHandler) GetStageHealthOutputs(context.Context, *connect.Request[v1alpha1.GetStageHealthOutputsRequest]) (*connect.Response[v1alpha1.GetStageHealthOutputsResponse], error) {
+	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("akuity.io.kargo.service.v1alpha1.KargoService.GetStageHealthOutputs is not implemented"))
 }
 
 func (UnimplementedKargoServiceHandler) WatchStages(context.Context, *connect.Request[v1alpha1.WatchStagesRequest], *connect.ServerStream[v1alpha1.WatchStagesResponse]) error {

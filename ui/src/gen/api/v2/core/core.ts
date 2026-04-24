@@ -27,6 +27,8 @@ import type {
   ClusterPromotionTaskList,
   CreateConfigMapRequestBody,
   Freight,
+  GetStageHealthOutputsParams,
+  GithubComAkuityKargoApiServiceV1alpha1GetStageHealthOutputsResponse,
   GithubComAkuityKargoApiServiceV1alpha1ListStageSummariesResponse,
   ListImages200,
   ListPromotionsParams,
@@ -2897,6 +2899,193 @@ export const useRefreshPromotion = <TError = unknown, TContext = unknown>(
 
   return useMutation(mutationOptions, queryClient);
 };
+/**
+ * Return the raw health output blob for the specified Stages
+in a project. Stages that do not exist or have no recorded
+health output are omitted from the response. Intended for
+clients that use ListStageSummaries (which omits the output
+blob) and need to lazily resolve health for Stages currently
+in viewport.
+ * @summary Get Stage Health Outputs
+ */
+export type getStageHealthOutputsResponse200 = {
+  data: GithubComAkuityKargoApiServiceV1alpha1GetStageHealthOutputsResponse;
+  status: 200;
+};
+
+export type getStageHealthOutputsResponseSuccess = getStageHealthOutputsResponse200 & {
+  headers: Headers;
+};
+export type getStageHealthOutputsResponse = getStageHealthOutputsResponseSuccess;
+
+export const getGetStageHealthOutputsUrl = (
+  project: string,
+  params: GetStageHealthOutputsParams
+) => {
+  const normalizedParams = new URLSearchParams();
+
+  Object.entries(params || {}).forEach(([key, value]) => {
+    const explodeParameters = ['stageNames'];
+
+    if (Array.isArray(value) && explodeParameters.includes(key)) {
+      value.forEach((v) => {
+        normalizedParams.append(key, v === null ? 'null' : v.toString());
+      });
+      return;
+    }
+
+    if (value !== undefined) {
+      normalizedParams.append(key, value === null ? 'null' : value.toString());
+    }
+  });
+
+  const stringifiedParams = normalizedParams.toString();
+
+  return stringifiedParams.length > 0
+    ? `/v1beta1/projects/${project}/stage-health-outputs?${stringifiedParams}`
+    : `/v1beta1/projects/${project}/stage-health-outputs`;
+};
+
+export const getStageHealthOutputs = async (
+  project: string,
+  params: GetStageHealthOutputsParams,
+  options?: RequestInit
+): Promise<getStageHealthOutputsResponse> => {
+  return customFetch<getStageHealthOutputsResponse>(getGetStageHealthOutputsUrl(project, params), {
+    ...options,
+    method: 'GET'
+  });
+};
+
+export const getGetStageHealthOutputsQueryKey = (
+  project?: string,
+  params?: GetStageHealthOutputsParams
+) => {
+  return [
+    `/v1beta1/projects/${project}/stage-health-outputs`,
+    ...(params ? [params] : [])
+  ] as const;
+};
+
+export const getGetStageHealthOutputsQueryOptions = <
+  TData = Awaited<ReturnType<typeof getStageHealthOutputs>>,
+  TError = unknown
+>(
+  project: string,
+  params: GetStageHealthOutputsParams,
+  options?: {
+    query?: Partial<
+      UseQueryOptions<Awaited<ReturnType<typeof getStageHealthOutputs>>, TError, TData>
+    >;
+    request?: SecondParameter<typeof customFetch>;
+  }
+) => {
+  const { query: queryOptions, request: requestOptions } = options ?? {};
+
+  const queryKey = queryOptions?.queryKey ?? getGetStageHealthOutputsQueryKey(project, params);
+
+  const queryFn: QueryFunction<Awaited<ReturnType<typeof getStageHealthOutputs>>> = () =>
+    getStageHealthOutputs(project, params, requestOptions);
+
+  return { queryKey, queryFn, enabled: !!project, ...queryOptions } as UseQueryOptions<
+    Awaited<ReturnType<typeof getStageHealthOutputs>>,
+    TError,
+    TData
+  > & { queryKey: DataTag<QueryKey, TData, TError> };
+};
+
+export type GetStageHealthOutputsQueryResult = NonNullable<
+  Awaited<ReturnType<typeof getStageHealthOutputs>>
+>;
+export type GetStageHealthOutputsQueryError = unknown;
+
+export function useGetStageHealthOutputs<
+  TData = Awaited<ReturnType<typeof getStageHealthOutputs>>,
+  TError = unknown
+>(
+  project: string,
+  params: GetStageHealthOutputsParams,
+  options: {
+    query: Partial<
+      UseQueryOptions<Awaited<ReturnType<typeof getStageHealthOutputs>>, TError, TData>
+    > &
+      Pick<
+        DefinedInitialDataOptions<
+          Awaited<ReturnType<typeof getStageHealthOutputs>>,
+          TError,
+          Awaited<ReturnType<typeof getStageHealthOutputs>>
+        >,
+        'initialData'
+      >;
+    request?: SecondParameter<typeof customFetch>;
+  },
+  queryClient?: QueryClient
+): DefinedUseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> };
+export function useGetStageHealthOutputs<
+  TData = Awaited<ReturnType<typeof getStageHealthOutputs>>,
+  TError = unknown
+>(
+  project: string,
+  params: GetStageHealthOutputsParams,
+  options?: {
+    query?: Partial<
+      UseQueryOptions<Awaited<ReturnType<typeof getStageHealthOutputs>>, TError, TData>
+    > &
+      Pick<
+        UndefinedInitialDataOptions<
+          Awaited<ReturnType<typeof getStageHealthOutputs>>,
+          TError,
+          Awaited<ReturnType<typeof getStageHealthOutputs>>
+        >,
+        'initialData'
+      >;
+    request?: SecondParameter<typeof customFetch>;
+  },
+  queryClient?: QueryClient
+): UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> };
+export function useGetStageHealthOutputs<
+  TData = Awaited<ReturnType<typeof getStageHealthOutputs>>,
+  TError = unknown
+>(
+  project: string,
+  params: GetStageHealthOutputsParams,
+  options?: {
+    query?: Partial<
+      UseQueryOptions<Awaited<ReturnType<typeof getStageHealthOutputs>>, TError, TData>
+    >;
+    request?: SecondParameter<typeof customFetch>;
+  },
+  queryClient?: QueryClient
+): UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> };
+/**
+ * @summary Get Stage Health Outputs
+ */
+
+export function useGetStageHealthOutputs<
+  TData = Awaited<ReturnType<typeof getStageHealthOutputs>>,
+  TError = unknown
+>(
+  project: string,
+  params: GetStageHealthOutputsParams,
+  options?: {
+    query?: Partial<
+      UseQueryOptions<Awaited<ReturnType<typeof getStageHealthOutputs>>, TError, TData>
+    >;
+    request?: SecondParameter<typeof customFetch>;
+  },
+  queryClient?: QueryClient
+): UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> } {
+  const queryOptions = getGetStageHealthOutputsQueryOptions(project, params, options);
+
+  const query = useQuery(queryOptions, queryClient) as UseQueryResult<TData, TError> & {
+    queryKey: DataTag<QueryKey, TData, TError>;
+  };
+
+  query.queryKey = queryOptions.queryKey;
+
+  return query;
+}
+
 /**
  * List a lightweight projection of Stage resources from a
 project's namespace. Intended for UI list and graph views that
