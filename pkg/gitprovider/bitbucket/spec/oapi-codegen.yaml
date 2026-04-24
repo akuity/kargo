@@ -4,7 +4,7 @@ generate:
   models: true
   client: true
 
-output: bitbucket_client.gen.go
+output: zz_bitbucket_client.gen.go
 
 output-options:
   skip-prune: false
