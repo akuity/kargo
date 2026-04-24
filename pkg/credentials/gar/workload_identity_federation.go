@@ -26,9 +26,7 @@ const (
 )
 
 func init() {
-	ctx, cancel := context.WithCancel(context.Background())
-	defer cancel()
-	if p := NewWorkloadIdentityFederationProvider(ctx); p != nil {
+	if p := NewWorkloadIdentityFederationProvider(context.Background()); p != nil {
 		credentials.DefaultProviderRegistry.MustRegister(
 			credentials.ProviderRegistration{
 				Predicate: p.Supports,
