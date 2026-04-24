@@ -70,8 +70,6 @@ export const Pipelines = (props: { creatingStage?: boolean; creatingWarehouse?: 
 
   const listImagesQuery = useQuery(listImages, { project: name });
 
-  const getFreightQuery = useQuery(queryFreight, { project: projectName });
-
   const listWarehousesQuery = useQuery(
     listWarehouses,
     {
@@ -91,7 +89,19 @@ export const Pipelines = (props: { creatingStage?: boolean; creatingWarehouse?: 
     }
   );
 
-  const listStagesQuery = useQuery(listStages, { project: projectName });
+  const [preferredFilter, setPreferredFilter] = useFreightTimelineControllerStore(
+    projectName || ''
+  );
+
+  const getFreightQuery = useQuery(queryFreight, {
+    project: projectName,
+    origins: preferredFilter.warehouses
+  });
+
+  const listStagesQuery = useQuery(listStages, {
+    project: projectName,
+    freightOrigins: preferredFilter.warehouses
+  });
 
   const loading =
     projectQuery.isLoading ||
@@ -121,10 +131,6 @@ export const Pipelines = (props: { creatingStage?: boolean; creatingWarehouse?: 
   const stageColorMap = useMemo(
     () => getColors(project?.metadata?.name || '', listStagesQuery.data?.stages || []),
     [project, listStagesQuery.data?.stages]
-  );
-
-  const [preferredFilter, setPreferredFilter] = useFreightTimelineControllerStore(
-    projectName || ''
   );
 
   const pipelineView = preferredFilter.view;
