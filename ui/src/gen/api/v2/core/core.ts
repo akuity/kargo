@@ -31,7 +31,7 @@ import type {
   GithubComAkuityKargoApiServiceV1alpha1GetStageHealthOutputsResponse,
   ListImages200,
   ListPromotionsParams,
-  ListStageSummariesParams,
+  ListStagesParams,
   PatchConfigMapRequestBody,
   PatchFreightAliasParams,
   Project,
@@ -3101,22 +3101,44 @@ export type listStagesResponseSuccess = listStagesResponse200 & {
 };
 export type listStagesResponse = listStagesResponseSuccess;
 
-export const getListStagesUrl = (project: string) => {
-  return `/v1beta1/projects/${project}/stages`;
+export const getListStagesUrl = (project: string, params?: ListStagesParams) => {
+  const normalizedParams = new URLSearchParams();
+
+  Object.entries(params || {}).forEach(([key, value]) => {
+    const explodeParameters = ['freightOrigins'];
+
+    if (Array.isArray(value) && explodeParameters.includes(key)) {
+      value.forEach((v) => {
+        normalizedParams.append(key, v === null ? 'null' : v.toString());
+      });
+      return;
+    }
+
+    if (value !== undefined) {
+      normalizedParams.append(key, value === null ? 'null' : value.toString());
+    }
+  });
+
+  const stringifiedParams = normalizedParams.toString();
+
+  return stringifiedParams.length > 0
+    ? `/v1beta1/projects/${project}/stages?${stringifiedParams}`
+    : `/v1beta1/projects/${project}/stages`;
 };
 
 export const listStages = async (
   project: string,
+  params?: ListStagesParams,
   options?: RequestInit
 ): Promise<listStagesResponse> => {
-  return customFetch<listStagesResponse>(getListStagesUrl(project), {
+  return customFetch<listStagesResponse>(getListStagesUrl(project, params), {
     ...options,
     method: 'GET'
   });
 };
 
-export const getListStagesQueryKey = (project?: string) => {
-  return [`/v1beta1/projects/${project}/stages`] as const;
+export const getListStagesQueryKey = (project?: string, params?: ListStagesParams) => {
+  return [`/v1beta1/projects/${project}/stages`, ...(params ? [params] : [])] as const;
 };
 
 export const getListStagesQueryOptions = <
@@ -3124,6 +3146,7 @@ export const getListStagesQueryOptions = <
   TError = unknown
 >(
   project: string,
+  params?: ListStagesParams,
   options?: {
     query?: Partial<UseQueryOptions<Awaited<ReturnType<typeof listStages>>, TError, TData>>;
     request?: SecondParameter<typeof customFetch>;
@@ -3131,10 +3154,10 @@ export const getListStagesQueryOptions = <
 ) => {
   const { query: queryOptions, request: requestOptions } = options ?? {};
 
-  const queryKey = queryOptions?.queryKey ?? getListStagesQueryKey(project);
+  const queryKey = queryOptions?.queryKey ?? getListStagesQueryKey(project, params);
 
   const queryFn: QueryFunction<Awaited<ReturnType<typeof listStages>>> = () =>
-    listStages(project, requestOptions);
+    listStages(project, params, requestOptions);
 
   return { queryKey, queryFn, enabled: !!project, ...queryOptions } as UseQueryOptions<
     Awaited<ReturnType<typeof listStages>>,
@@ -3148,6 +3171,7 @@ export type ListStagesQueryError = unknown;
 
 export function useListStages<TData = Awaited<ReturnType<typeof listStages>>, TError = unknown>(
   project: string,
+  params: undefined | ListStagesParams,
   options: {
     query: Partial<UseQueryOptions<Awaited<ReturnType<typeof listStages>>, TError, TData>> &
       Pick<
@@ -3164,6 +3188,7 @@ export function useListStages<TData = Awaited<ReturnType<typeof listStages>>, TE
 ): DefinedUseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> };
 export function useListStages<TData = Awaited<ReturnType<typeof listStages>>, TError = unknown>(
   project: string,
+  params?: ListStagesParams,
   options?: {
     query?: Partial<UseQueryOptions<Awaited<ReturnType<typeof listStages>>, TError, TData>> &
       Pick<
@@ -3180,6 +3205,7 @@ export function useListStages<TData = Awaited<ReturnType<typeof listStages>>, TE
 ): UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> };
 export function useListStages<TData = Awaited<ReturnType<typeof listStages>>, TError = unknown>(
   project: string,
+  params?: ListStagesParams,
   options?: {
     query?: Partial<UseQueryOptions<Awaited<ReturnType<typeof listStages>>, TError, TData>>;
     request?: SecondParameter<typeof customFetch>;
@@ -3192,13 +3218,14 @@ export function useListStages<TData = Awaited<ReturnType<typeof listStages>>, TE
 
 export function useListStages<TData = Awaited<ReturnType<typeof listStages>>, TError = unknown>(
   project: string,
+  params?: ListStagesParams,
   options?: {
     query?: Partial<UseQueryOptions<Awaited<ReturnType<typeof listStages>>, TError, TData>>;
     request?: SecondParameter<typeof customFetch>;
   },
   queryClient?: QueryClient
 ): UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> } {
-  const queryOptions = getListStagesQueryOptions(project, options);
+  const queryOptions = getListStagesQueryOptions(project, params, options);
 
   const query = useQuery(queryOptions, queryClient) as UseQueryResult<TData, TError> & {
     queryKey: DataTag<QueryKey, TData, TError>;
