@@ -196,15 +196,10 @@ func applyPRPolicy(
 				logger.Info("PR has no linked issue, applying policy")
 				return executeActions(
 					ctx,
-					cfg,
-					issuesClient,
-					prsClient,
-					owner,
-					repo,
-					number,
-					true,
+					newPRPolicyActionContext(
+						cfg, issuesClient, prsClient, owner, repo, number, nil,
+					),
 					cfg.PullRequests.OnNoLinkedIssue.Actions,
-					nil,
 				)
 			}
 			// OnNoLinkedIssue not configured: fall through to OnPass.
@@ -237,18 +232,14 @@ func applyPRPolicy(
 				)
 				return executeActions(
 					ctx,
-					cfg,
-					issuesClient,
-					prsClient,
-					owner,
-					repo,
-					number,
-					true,
+					newPRPolicyActionContext(
+						cfg, issuesClient, prsClient, owner, repo, number,
+						map[string]string{
+							"IssueNumber":    fmt.Sprintf("%d", issueNumber),
+							"BlockingLabels": formatBlockers(blockers),
+						},
+					),
 					cfg.PullRequests.OnBlockedIssue.Actions,
-					map[string]string{
-						"IssueNumber":    fmt.Sprintf("%d", issueNumber),
-						"BlockingLabels": formatBlockers(blockers),
-					},
 				)
 			}
 			// No blocking labels: fall through to OnPass.
@@ -262,16 +253,36 @@ func applyPRPolicy(
 	logger.Info("PR passes policy, applying OnPass actions", "exempt", exempt)
 	return executeActions(
 		ctx,
-		cfg,
-		issuesClient,
-		prsClient,
-		owner,
-		repo,
-		number,
-		true,
+		newPRPolicyActionContext(
+			cfg, issuesClient, prsClient, owner, repo, number, nil,
+		),
 		cfg.PullRequests.OnPass.Actions,
-		nil,
 	)
+}
+
+// newPRPolicyActionContext builds an actionContext for the PR policy
+// path. PR policy always operates on a PR (isPR=true) and uses the
+// supplied templateData (which differs per outcome — nil for
+// no-linked-issue and OnPass; populated for OnBlockedIssue).
+func newPRPolicyActionContext(
+	cfg config,
+	issuesClient IssuesClient,
+	prsClient PullRequestsClient,
+	owner string,
+	repo string,
+	number int,
+	templateData map[string]string,
+) *actionContext {
+	return &actionContext{
+		cfg:          cfg,
+		issuesClient: issuesClient,
+		prsClient:    prsClient,
+		owner:        owner,
+		repo:         repo,
+		number:       number,
+		isPR:         true,
+		templateData: templateData,
+	}
 }
 
 // inheritLabels copies labels with configured prefixes from the linked
@@ -353,8 +364,10 @@ func isExemptFromPRPolicy(
 	if ex.Bots && strings.HasSuffix(login, "[bot]") {
 		return true, nil
 	}
+	// MaxChangedLines is uint; pr additions/deletions are non-negative ints
+	// from go-github. The cast is safe (config-bound value).
 	if ex.MaxChangedLines > 0 &&
-		pr.GetAdditions()+pr.GetDeletions() <= ex.MaxChangedLines {
+		pr.GetAdditions()+pr.GetDeletions() <= int(ex.MaxChangedLines) { //nolint:gosec
 		return true, nil
 	}
 	if len(ex.PathPatterns) > 0 {

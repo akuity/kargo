@@ -105,15 +105,17 @@ func (h *commentHandler) handleCreated(
 		cmdLogger.Info("executing slash command")
 		if err := executeActions(
 			cmdCtx,
-			h.cfg,
-			h.issuesClient,
-			h.prsClient,
-			h.owner,
-			h.repo,
-			number,
-			isPR,
+			&actionContext{
+				cfg:          h.cfg,
+				issuesClient: h.issuesClient,
+				prsClient:    h.prsClient,
+				owner:        h.owner,
+				repo:         h.repo,
+				number:       number,
+				isPR:         isPR,
+				templateData: templateData,
+			},
 			cmd.Actions,
-			templateData,
 		); err != nil {
 			cmdLogger.Error(err, "error executing slash command")
 			errs = append(errs, fmt.Errorf("command %q: %w", pc.name, err))

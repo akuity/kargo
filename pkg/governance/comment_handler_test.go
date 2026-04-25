@@ -17,21 +17,23 @@ func Test_commentHandler_handleCreated(t *testing.T) {
 				"label-only": {
 					Description: "Adds a label",
 					Actions: []action{
-						{AddLabels: []string{"test-label"}},
-						{Comment: "Label added."},
+						mustAction("addLabels", []string{"test-label"}),
+						mustAction("comment", "Label added."),
 					},
 				},
 				"close-issue": {
 					Description: "Closes the issue",
 					Actions: []action{
-						{Comment: "Closing."},
-						{Close: true},
+						mustAction("comment", "Closing."),
+						mustAction("close", true),
 					},
 				},
 				"with-arg": {
 					Description: "Needs an arg",
 					RequiresArg: true,
-					Actions:     []action{{Comment: "Arg was #{{.Arg}}."}},
+					Actions: []action{
+						mustAction("comment", "Arg was #{{.Arg}}."),
+					},
 				},
 			},
 		},
@@ -40,21 +42,23 @@ func Test_commentHandler_handleCreated(t *testing.T) {
 				"label-pr": {
 					Description: "Adds a label to the PR",
 					Actions: []action{
-						{AddLabels: []string{"pr-label"}},
-						{Comment: "PR label added."},
+						mustAction("addLabels", []string{"pr-label"}),
+						mustAction("comment", "PR label added."),
 					},
 				},
 				"close-pr": {
 					Description: "Closes the PR",
 					Actions: []action{
-						{Comment: "Closing PR."},
-						{Close: true},
+						mustAction("comment", "Closing PR."),
+						mustAction("close", true),
 					},
 				},
 				"with-arg-pr": {
 					Description: "Needs an arg",
 					RequiresArg: true,
-					Actions:     []action{{Comment: "PR arg was #{{.Arg}}."}},
+					Actions: []action{
+						mustAction("comment", "PR arg was #{{.Arg}}."),
+					},
 				},
 			},
 		},

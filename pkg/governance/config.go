@@ -1,5 +1,11 @@
 package governance
 
+import (
+	"fmt"
+
+	"github.com/goccy/go-yaml"
+)
+
 // config represents top-level governance bot configuration.
 type config struct {
 	// MaintainerAssociations is a list of GitHub association types that are
@@ -68,7 +74,7 @@ type exemptionsConfig struct {
 	Bots bool `json:"bots,omitempty"`
 	// MaxChangedLines exempts PRs whose total additions + deletions are less
 	// than or equal to this value. A value <= 0 disables the check.
-	MaxChangedLines int `json:"maxChangedLines,omitempty"`
+	MaxChangedLines uint `json:"maxChangedLines,omitempty"`
 	// PathPatterns is a list of gitignore-style patterns. A PR is exempt
 	// when every file it changes matches at least one pattern. An empty
 	// list disables the check.
@@ -99,25 +105,45 @@ type onPassConfig struct {
 	Actions []action `json:"actions,omitempty"`
 }
 
-// action defines a single action to take, which may include adding or removing
-// labels, posting a comment, or closing the issue or pull request.
+// action is the parsed form of one entry in an action list. Its YAML shape
+// is a mapping with exactly one key — the action's kind name (e.g.
+// "addLabels", "comment") — and a value that's the kind-specific
+// configuration. The value's bytes are captured raw and decoded by the
+// runner registered for that kind.
+//
+// Examples:
+//
+//	addLabels: [needs/area, needs/kind]
+//	→ action{kind: "addLabels", config: []byte("[needs/area, needs/kind]\n")}
+//
+//	close: true
+//	→ action{kind: "close", config: []byte("true\n")}
 type action struct {
-	// AddLabels defines the labels to add when the action is executed.
-	AddLabels []string `json:"addLabels,omitempty"`
-	// RemoveLabels defines the labels to remove when the action is executed.
-	RemoveLabels []string `json:"removeLabels,omitempty"`
-	// Comment defines the comment to post when the action is executed.
-	Comment string `json:"comment,omitempty"`
-	// Close indicates whether to close the issue or pull request when the action
-	// is executed.
-	Close bool `json:"close,omitempty"`
-	// ConvertToDraft indicates whether to convert the pull request to a draft
-	// when the action is executed. Ignored for issues.
-	ConvertToDraft bool `json:"convertToDraft,omitempty"`
-	// ApplyPRPolicy indicates whether to evaluate and apply configured PR
-	// policy (OnNoLinkedIssue, OnBlockedIssue) against the pull request when the
-	// action is executed. Ignored for issues.
-	ApplyPRPolicy bool `json:"applyPRPolicy,omitempty"`
+	kind   string
+	config []byte
+}
+
+// UnmarshalYAML implements goccy/go-yaml's BytesUnmarshaler. The expected
+// form is a mapping with exactly one entry.
+func (a *action) UnmarshalYAML(data []byte) error {
+	var m map[string]any
+	if err := yaml.Unmarshal(data, &m); err != nil {
+		return fmt.Errorf("error parsing action: %w", err)
+	}
+	if len(m) != 1 {
+		return fmt.Errorf(
+			"action must have exactly one key, got %d", len(m),
+		)
+	}
+	for k, v := range m {
+		cfg, err := yaml.Marshal(v)
+		if err != nil {
+			return fmt.Errorf("error capturing %q config: %w", k, err)
+		}
+		a.kind = k
+		a.config = cfg
+	}
+	return nil
 }
 
 // commandDef defines a single slash command, including its description, whether

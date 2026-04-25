@@ -19,22 +19,22 @@ func Test_prHandler_handleOpened(t *testing.T) {
 			},
 			OnNoLinkedIssue: &onNoLinkedIssueConfig{
 				Actions: []action{
-					{AddLabels: []string{"policy/no-linked-issue"}},
-					{Comment: "No linked issue."},
-					{Close: true},
+					mustAction("addLabels", []string{"policy/no-linked-issue"}),
+					mustAction("comment", "No linked issue."),
+					mustAction("close", true),
 				},
 			},
 			OnBlockedIssue: &onBlockedIssueConfig{
 				BlockingLabels: []string{"kind/proposal"},
 				Actions: []action{
-					{AddLabels: []string{"policy/blocked-issue"}},
-					{Comment: "Issue #{{.IssueNumber}} blocked by {{.BlockingLabels}}"},
-					{Close: true},
+					mustAction("addLabels", []string{"policy/blocked-issue"}),
+					mustAction("comment", "Issue #{{.IssueNumber}} blocked by {{.BlockingLabels}}"),
+					mustAction("close", true),
 				},
 			},
 			OnPass: &onPassConfig{
 				Actions: []action{
-					{Comment: "PR passes policy."},
+					mustAction("comment", "PR passes policy."),
 				},
 			},
 			InheritedLabelPrefixes: []string{"area", "kind", "priority"},
