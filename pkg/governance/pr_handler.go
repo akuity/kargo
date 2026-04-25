@@ -8,10 +8,17 @@ import (
 	"strconv"
 	"strings"
 
+	"github.com/go-git/go-git/v5/plumbing/format/gitignore"
 	"github.com/google/go-github/v76/github"
 
 	"github.com/akuity/kargo/pkg/logging"
 )
+
+// pathExemptionPerPage is the per-page size requested when fetching changed
+// files for the path-based exemption check. PRs whose file count meets or
+// exceeds this threshold are treated as not path-exempt without bothering
+// to paginate — they're not drive-bys by definition.
+const pathExemptionPerPage = 100
 
 // prHandler handles pull request-related events for a specific repository
 // according to specific configuration.
@@ -125,11 +132,17 @@ func (h *prHandler) handleOpened(
 
 	}
 
-	// 4. Apply PR policy. Maintainers and bots are exempt.
-	author := pr.GetAuthorAssociation()
+	// 4. Apply PR policy unless the PR is exempt. On exemption-check error,
+	// log + accumulate but treat as not exempt (safer default — apply
+	// policy).
+	exempt, err := h.isExemptFromPRPolicy(ctx, pr, login)
+	if err != nil {
+		logger.Error(err, "error checking PR policy exemption")
+		errs = append(errs, fmt.Errorf("check PR policy exemption: %w", err))
+	}
 	switch {
-	case h.isExemptFromPRPolicy(author, login):
-		logger.Debug("author is exempt from policy, skipping")
+	case exempt:
+		logger.Debug("PR is exempt from policy, skipping")
 	case h.cfg.PullRequests == nil:
 		// No policy configured.
 	default:
@@ -309,19 +322,80 @@ func (h *prHandler) inheritLabels(
 	return toAdd, nil
 }
 
+// isExemptFromPRPolicy reports whether the PR matches any of the configured
+// exemption criteria (maintainer, bot, size, path). Criteria are OR'd.
+// Cheaper checks run first; the path check makes a network call (ListFiles)
+// and is only reached if the cheaper checks didn't already exempt the PR.
+//
+// On error from the path check, returns (false, err) — the caller is
+// expected to treat that as "not exempt" and apply policy.
 func (h *prHandler) isExemptFromPRPolicy(
-	authorAssoc string,
+	ctx context.Context,
+	pr *github.PullRequest,
 	login string,
-) bool {
-	if h.cfg.PullRequests != nil {
-		if h.cfg.PullRequests.ExemptMaintainers && isMaintainer(h.cfg, authorAssoc) {
-			return true
+) (bool, error) {
+	if h.cfg.PullRequests == nil || h.cfg.PullRequests.Exemptions == nil {
+		return false, nil
+	}
+	ex := h.cfg.PullRequests.Exemptions
+
+	if ex.Maintainers && isMaintainer(h.cfg, pr.GetAuthorAssociation()) {
+		return true, nil
+	}
+	if ex.Bots && strings.HasSuffix(login, "[bot]") {
+		return true, nil
+	}
+	if ex.MaxChangedLines > 0 &&
+		pr.GetAdditions()+pr.GetDeletions() <= ex.MaxChangedLines {
+		return true, nil
+	}
+	if len(ex.PathPatterns) > 0 {
+		exempt, err := h.allFilesMatchPathPatterns(
+			ctx, pr.GetNumber(), ex.PathPatterns,
+		)
+		if err != nil {
+			return false, err
 		}
-		if h.cfg.PullRequests.ExemptBots && strings.HasSuffix(login, "[bot]") {
-			return true
+		if exempt {
+			return true, nil
 		}
 	}
-	return false
+	return false, nil
+}
+
+// allFilesMatchPathPatterns returns true if every file changed by the PR
+// matches at least one of the supplied gitignore-style patterns. Returns
+// false (without error) when the PR's file count meets or exceeds the
+// per-page limit — at that scale the PR is not a drive-by and we don't
+// bother paginating.
+func (h *prHandler) allFilesMatchPathPatterns(
+	ctx context.Context,
+	prNumber int,
+	patterns []string,
+) (bool, error) {
+	files, _, err := h.prsClient.ListFiles(
+		ctx, h.owner, h.repo, prNumber,
+		&github.ListOptions{PerPage: pathExemptionPerPage},
+	)
+	if err != nil {
+		return false, fmt.Errorf("error listing PR files: %w", err)
+	}
+	if len(files) == 0 || len(files) >= pathExemptionPerPage {
+		return false, nil
+	}
+
+	parsed := make([]gitignore.Pattern, 0, len(patterns))
+	for _, p := range patterns {
+		parsed = append(parsed, gitignore.ParsePattern(p, nil))
+	}
+	matcher := gitignore.NewMatcher(parsed)
+
+	for _, f := range files {
+		if !matcher.Match(strings.Split(f.GetFilename(), "/"), false) {
+			return false, nil
+		}
+	}
+	return true, nil
 }
 
 func formatBlockers(blockers []string) string {

@@ -91,6 +91,13 @@ type PullRequestsClient interface {
 		repo string,
 		number int,
 	) (*github.PullRequest, *github.Response, error)
+	ListFiles(
+		ctx context.Context,
+		owner string,
+		repo string,
+		number int,
+		opts *github.ListOptions,
+	) ([]*github.CommitFile, *github.Response, error)
 	ConvertToDraft(
 		ctx context.Context,
 		owner string,

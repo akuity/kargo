@@ -92,9 +92,22 @@ issues:
 
 # Defines all pull request automation.
 pullRequests:
-  # Maintainers and bots are exempt from some policies.
-  exemptMaintainers: false
-  exemptBots: true
+  # Criteria under which a PR is exempt from policy enforcement. Any one
+  # matching criterion exempts the PR (OR semantics). Slash commands like
+  # /policy bypass exemptions and always re-evaluate.
+  exemptions:
+    # Maintainers (per maintainerAssociations above) are not exempt — we
+    # want policy to apply to everyone.
+    maintainers: false
+    # Bot-authored PRs (e.g. dependabot) skip policy.
+    bots: true
+    # Drive-by typo fixes are exempt — saves the friction of opening an
+    # issue for a few-line cleanup.
+    maxChangedLines: 5
+    # Doc-only and chore PRs are exempt. Patterns are gitignore-style.
+    pathPatterns:
+    - 'README.md'
+    - 'docs/**/*.md'
 
   # Defines how to handle PRs that aren't linked to an issue.
   onNoLinkedIssue:

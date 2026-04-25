@@ -558,6 +558,13 @@ type fakePullRequestsClient struct {
 		repo string,
 		number int,
 	) (*github.PullRequest, *github.Response, error)
+	ListFilesFn func(
+		ctx context.Context,
+		owner string,
+		repo string,
+		number int,
+		opts *github.ListOptions,
+	) ([]*github.CommitFile, *github.Response, error)
 	ConvertToDraftFn func(
 		ctx context.Context,
 		owner string,
@@ -591,6 +598,20 @@ func (f *fakePullRequestsClient) Get(
 		return f.GetFn(ctx, owner, repo, number)
 	}
 	return &github.PullRequest{}, nil, nil
+}
+
+// ListFiles implements PullRequestsClient.
+func (f *fakePullRequestsClient) ListFiles(
+	ctx context.Context,
+	owner string,
+	repo string,
+	number int,
+	opts *github.ListOptions,
+) ([]*github.CommitFile, *github.Response, error) {
+	if f.ListFilesFn != nil {
+		return f.ListFilesFn(ctx, owner, repo, number, opts)
+	}
+	return nil, nil, nil
 }
 
 // ConvertToDraft implements PullRequestsClient.

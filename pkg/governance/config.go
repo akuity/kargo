@@ -28,14 +28,14 @@ type issuesConfig struct {
 }
 
 // pullRequestsConfig defines the configuration applied to pull requests,
-// including exemptions for maintainers and bots and actions for PRs without a
-// linked issue or with a linked issue that is blocked.
+// including exemptions and actions for PRs without a linked issue or with a
+// linked issue that is blocked.
 type pullRequestsConfig struct {
-	// ExemptMaintainers indicates whether maintainers are exempt from PR
-	// policies.
-	ExemptMaintainers bool `json:"exemptMaintainers,omitempty"`
-	// ExemptBots indicates whether bots are exempt from PR policies.
-	ExemptBots bool `json:"exemptBots,omitempty"`
+	// Exemptions defines the criteria under which a PR is exempt from
+	// automated policy enforcement. The criteria are OR'd: a PR matching any
+	// configured exemption is exempt. Slash commands like /policy bypass
+	// exemptions and always apply the configured policy.
+	Exemptions *exemptionsConfig `json:"exemptions,omitempty"`
 	// OnNoLinkedIssue defines the actions to take for PRs without a linked issue.
 	OnNoLinkedIssue *onNoLinkedIssueConfig `json:"onNoLinkedIssue,omitempty"`
 	// OnBlockedIssue defines the actions to take for PRs whose linked issue is
@@ -56,6 +56,23 @@ type pullRequestsConfig struct {
 	// SlashCommands defines the slash commands available on pull requests,
 	// keyed by command name.
 	SlashCommands map[string]commandDef `json:"slashCommands,omitempty"`
+}
+
+// exemptionsConfig defines the criteria under which a PR is exempt from
+// automated policy enforcement. Each configured criterion is independently
+// evaluated; a PR matching any one of them is exempt.
+type exemptionsConfig struct {
+	// Maintainers indicates whether maintainers are exempt from PR policy.
+	Maintainers bool `json:"maintainers,omitempty"`
+	// Bots indicates whether bots are exempt from PR policy.
+	Bots bool `json:"bots,omitempty"`
+	// MaxChangedLines exempts PRs whose total additions + deletions are less
+	// than or equal to this value. A value <= 0 disables the check.
+	MaxChangedLines int `json:"maxChangedLines,omitempty"`
+	// PathPatterns is a list of gitignore-style patterns. A PR is exempt
+	// when every file it changes matches at least one pattern. An empty
+	// list disables the check.
+	PathPatterns []string `json:"pathPatterns,omitempty"`
 }
 
 // onNoLinkedIssueConfig defines the actions to take for issues without linked

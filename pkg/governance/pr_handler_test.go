@@ -2,6 +2,7 @@ package governance
 
 import (
 	"context"
+	"errors"
 	"testing"
 
 	"github.com/google/go-github/v76/github"
@@ -12,8 +13,10 @@ func Test_prHandler_handleOpened(t *testing.T) {
 	cfg := config{
 		MaintainerAssociations: []string{"OWNER", "MEMBER"},
 		PullRequests: &pullRequestsConfig{
-			ExemptMaintainers: true,
-			ExemptBots:        true,
+			Exemptions: &exemptionsConfig{
+				Maintainers: true,
+				Bots:        true,
+			},
 			OnNoLinkedIssue: &onNoLinkedIssueConfig{
 				Actions: []action{
 					{AddLabels: []string{"policy/no-linked-issue"}},
@@ -237,13 +240,41 @@ func Test_prHandler_isExemptFromPRPolicy(t *testing.T) {
 		cfg         config
 		association string
 		login       string
-		expected    bool
+		additions   int
+		deletions   int
+		// listFiles, when set, populates fakePullRequestsClient.ListFilesFn.
+		// nil means ListFiles returns no files (or isn't expected to be
+		// called).
+		listFiles []string
+		// listFilesErr, when set, makes the fake return this error.
+		listFilesErr error
+		expected     bool
+		expectErr    bool
 	}{
+		{
+			name:        "nil PullRequests not exempt",
+			cfg:         config{},
+			association: "MEMBER",
+			login:       "kent",
+			expected:    false,
+		},
+		{
+			name: "nil Exemptions not exempt",
+			cfg: config{
+				MaintainerAssociations: []string{"MEMBER"},
+				PullRequests:           &pullRequestsConfig{},
+			},
+			association: "MEMBER",
+			login:       "kent",
+			expected:    false,
+		},
 		{
 			name: "maintainer exempt when enabled",
 			cfg: config{
 				MaintainerAssociations: []string{"MEMBER"},
-				PullRequests:           &pullRequestsConfig{ExemptMaintainers: true},
+				PullRequests: &pullRequestsConfig{
+					Exemptions: &exemptionsConfig{Maintainers: true},
+				},
 			},
 			association: "MEMBER",
 			login:       "kent",
@@ -253,7 +284,9 @@ func Test_prHandler_isExemptFromPRPolicy(t *testing.T) {
 			name: "maintainer not exempt when disabled",
 			cfg: config{
 				MaintainerAssociations: []string{"MEMBER"},
-				PullRequests:           &pullRequestsConfig{ExemptMaintainers: false},
+				PullRequests: &pullRequestsConfig{
+					Exemptions: &exemptionsConfig{Maintainers: false},
+				},
 			},
 			association: "MEMBER",
 			login:       "kent",
@@ -262,7 +295,9 @@ func Test_prHandler_isExemptFromPRPolicy(t *testing.T) {
 		{
 			name: "bot exempt when enabled",
 			cfg: config{
-				PullRequests: &pullRequestsConfig{ExemptBots: true},
+				PullRequests: &pullRequestsConfig{
+					Exemptions: &exemptionsConfig{Bots: true},
+				},
 			},
 			association: "NONE",
 			login:       "dependabot[bot]",
@@ -271,26 +306,129 @@ func Test_prHandler_isExemptFromPRPolicy(t *testing.T) {
 		{
 			name: "bot not exempt when disabled",
 			cfg: config{
-				PullRequests: &pullRequestsConfig{ExemptBots: false},
+				PullRequests: &pullRequestsConfig{
+					Exemptions: &exemptionsConfig{Bots: false},
+				},
 			},
 			association: "NONE",
 			login:       "dependabot[bot]",
 			expected:    false,
 		},
 		{
-			name:        "nil PullRequests not exempt",
-			cfg:         config{},
-			association: "MEMBER",
-			login:       "kent",
+			name: "size exempt — total at limit",
+			cfg: config{
+				PullRequests: &pullRequestsConfig{
+					Exemptions: &exemptionsConfig{MaxChangedLines: 5},
+				},
+			},
+			association: "NONE",
+			login:       "random-user",
+			additions:   3,
+			deletions:   2,
+			expected:    true,
+		},
+		{
+			name: "size exempt — total below limit",
+			cfg: config{
+				PullRequests: &pullRequestsConfig{
+					Exemptions: &exemptionsConfig{MaxChangedLines: 5},
+				},
+			},
+			association: "NONE",
+			login:       "random-user",
+			additions:   1,
+			deletions:   0,
+			expected:    true,
+		},
+		{
+			name: "size NOT exempt — total over limit",
+			cfg: config{
+				PullRequests: &pullRequestsConfig{
+					Exemptions: &exemptionsConfig{MaxChangedLines: 5},
+				},
+			},
+			association: "NONE",
+			login:       "random-user",
+			additions:   4,
+			deletions:   2,
 			expected:    false,
+		},
+		{
+			name: "size NOT exempt when MaxChangedLines is 0",
+			cfg: config{
+				PullRequests: &pullRequestsConfig{
+					Exemptions: &exemptionsConfig{MaxChangedLines: 0},
+				},
+			},
+			association: "NONE",
+			login:       "random-user",
+			additions:   1,
+			deletions:   0,
+			expected:    false,
+		},
+		{
+			name: "path exempt — all files match",
+			cfg: config{
+				PullRequests: &pullRequestsConfig{
+					Exemptions: &exemptionsConfig{
+						PathPatterns: []string{"**/*.md", "docs/"},
+					},
+				},
+			},
+			association: "NONE",
+			login:       "random-user",
+			listFiles:   []string{"README.md", "docs/foo.md", "docs/sub/bar.md"},
+			expected:    true,
+		},
+		{
+			name: "path NOT exempt — one file doesn't match",
+			cfg: config{
+				PullRequests: &pullRequestsConfig{
+					Exemptions: &exemptionsConfig{
+						PathPatterns: []string{"**/*.md"},
+					},
+				},
+			},
+			association: "NONE",
+			login:       "random-user",
+			listFiles:   []string{"README.md", "main.go"},
+			expected:    false,
+		},
+		{
+			name: "path NOT exempt — empty patterns short-circuits",
+			cfg: config{
+				PullRequests: &pullRequestsConfig{
+					Exemptions: &exemptionsConfig{},
+				},
+			},
+			association: "NONE",
+			login:       "random-user",
+			expected:    false,
+		},
+		{
+			name: "path check propagates ListFiles error",
+			cfg: config{
+				PullRequests: &pullRequestsConfig{
+					Exemptions: &exemptionsConfig{
+						PathPatterns: []string{"**/*.md"},
+					},
+				},
+			},
+			association:  "NONE",
+			login:        "random-user",
+			listFilesErr: errors.New("network error"),
+			expected:     false,
+			expectErr:    true,
 		},
 		{
 			name: "regular user not exempt",
 			cfg: config{
 				MaintainerAssociations: []string{"MEMBER"},
 				PullRequests: &pullRequestsConfig{
-					ExemptMaintainers: true,
-					ExemptBots:        true,
+					Exemptions: &exemptionsConfig{
+						Maintainers: true,
+						Bots:        true,
+					},
 				},
 			},
 			association: "NONE",
@@ -300,8 +438,47 @@ func Test_prHandler_isExemptFromPRPolicy(t *testing.T) {
 	}
 	for _, testCase := range testCases {
 		t.Run(testCase.name, func(t *testing.T) {
-			h := prHandler{cfg: testCase.cfg}
-			result := h.isExemptFromPRPolicy(testCase.association, testCase.login)
+			prsClient := &fakePullRequestsClient{
+				ListFilesFn: func(
+					_ context.Context,
+					_, _ string,
+					_ int,
+					_ *github.ListOptions,
+				) ([]*github.CommitFile, *github.Response, error) {
+					if testCase.listFilesErr != nil {
+						return nil, nil, testCase.listFilesErr
+					}
+					files := make(
+						[]*github.CommitFile, 0, len(testCase.listFiles),
+					)
+					for _, name := range testCase.listFiles {
+						files = append(files, &github.CommitFile{
+							Filename: github.Ptr(name),
+						})
+					}
+					return files, nil, nil
+				},
+			}
+			h := prHandler{
+				cfg:       testCase.cfg,
+				owner:     "akuity",
+				repo:      "kargo",
+				prsClient: prsClient,
+			}
+			pr := &github.PullRequest{
+				Number:            github.Ptr(1),
+				AuthorAssociation: github.Ptr(testCase.association),
+				Additions:         github.Ptr(testCase.additions),
+				Deletions:         github.Ptr(testCase.deletions),
+			}
+			result, err := h.isExemptFromPRPolicy(
+				t.Context(), pr, testCase.login,
+			)
+			if testCase.expectErr {
+				require.Error(t, err)
+			} else {
+				require.NoError(t, err)
+			}
 			require.Equal(t, testCase.expected, result)
 		})
 	}
