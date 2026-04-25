@@ -184,7 +184,7 @@ func Test_prHandler_handleOpened(t *testing.T) {
 					_ int,
 					pr *github.PullRequest,
 				) (*github.PullRequest, *github.Response, error) {
-					if pr.GetState() == "closed" {
+					if pr.GetState() == prStateClosed {
 						closed = true
 					}
 					return pr, nil, nil

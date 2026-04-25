@@ -71,7 +71,7 @@ func Test_handler_ServeHTTP(t *testing.T) {
 		{
 			name:           "issues non-opened event with non-opened action",
 			eventType:      "issues",
-			body:           github.IssuesEvent{Action: github.Ptr("closed")},
+			body:           github.IssuesEvent{Action: github.Ptr(issueStateClosed)},
 			expectedStatus: http.StatusNoContent,
 		},
 		{
@@ -101,7 +101,7 @@ func Test_handler_ServeHTTP(t *testing.T) {
 		{
 			name:           "pull_request non-opened event with non-opened action",
 			eventType:      "pull_request",
-			body:           github.PullRequestEvent{Action: github.Ptr("closed")},
+			body:           github.PullRequestEvent{Action: github.Ptr(prStateClosed)},
 			expectedStatus: http.StatusNoContent,
 		},
 		{

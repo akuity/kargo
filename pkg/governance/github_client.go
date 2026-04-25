@@ -19,6 +19,9 @@ import (
 )
 
 const (
+	issueStateClosed = "closed"
+	prStateClosed    = "closed"
+
 	// defaultGraphQLURL is the public GitHub GraphQL endpoint.
 	defaultGraphQLURL = "https://api.github.com/graphql"
 
@@ -239,7 +242,7 @@ func (p *pullRequestsClient) ConvertToDraft(
 	if err != nil {
 		return fmt.Errorf("error fetching PR: %w", err)
 	}
-	if pr.GetState() == "closed" {
+	if pr.GetState() == prStateClosed {
 		logger.Debug("PR is closed, skipping ConvertToDraft")
 		return nil
 	}

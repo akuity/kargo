@@ -106,26 +106,24 @@ func executeActions(
 
 		if a.Close {
 			if isPR {
-				state := "closed"
 				if _, _, err := prsClient.Edit(
 					ctx,
 					owner,
 					repo,
 					number,
-					&github.PullRequest{State: &state},
+					&github.PullRequest{State: github.Ptr(prStateClosed)},
 				); err != nil {
 					return fmt.Errorf("error closing PR: %w", err)
 				}
 			} else {
 				stateReason := "not_planned"
-				state := "closed"
 				if _, _, err := issuesClient.Edit(
 					ctx,
 					owner,
 					repo,
 					number,
 					&github.IssueRequest{
-						State:       &state,
+						State:       github.Ptr(prStateClosed),
 						StateReason: &stateReason,
 					},
 				); err != nil {

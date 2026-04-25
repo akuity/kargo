@@ -278,7 +278,7 @@ func Test_commentHandler_handleCreated(t *testing.T) {
 					_ int,
 					req *github.IssueRequest,
 				) (*github.Issue, *github.Response, error) {
-					if req.GetState() == "closed" {
+					if req.GetState() == issueStateClosed {
 						closedAsIssue = true
 					}
 					return &github.Issue{}, nil, nil
@@ -292,7 +292,7 @@ func Test_commentHandler_handleCreated(t *testing.T) {
 					_ int,
 					pr *github.PullRequest,
 				) (*github.PullRequest, *github.Response, error) {
-					if pr.GetState() == "closed" {
+					if pr.GetState() == prStateClosed {
 						closedAsPR = true
 					}
 					return pr, nil, nil

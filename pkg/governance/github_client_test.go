@@ -128,7 +128,7 @@ func Test_pullRequestsClient_ConvertToDraft(t *testing.T) {
 					t.Fatalf("GraphQL should not be called for a closed PR")
 				}
 				_, _ = w.Write([]byte(
-					`{"node_id": "` + nodeID + `", "state": "closed"}`,
+					`{"node_id": "` + nodeID + `", "state": "` + prStateClosed + `"}`,
 				))
 			},
 			assert: func(t *testing.T, err error) {
