@@ -6,6 +6,7 @@ api:
   tls:
     enabled: false
   permissiveCORSPolicyEnabled: true
+  defaultShardName: tilt-shard
   probes:
     enabled: false
   adminAccount:
@@ -35,6 +36,8 @@ api:
         - kilgore@kilgore.trout
 controller:
   logLevel: DEBUG
+  shardName: tilt-shard
+  isDefault: true
   gitClient:
     name: "Kargo Test Key"
     email: "no-reply@kargo.io"

@@ -37,7 +37,14 @@ type ServerConfig struct {
 	SharedResourcesNamespace    string
 	SystemResourcesNamespace    string
 	KargoNamespace              string
-	RestConfig                  *rest.Config
+	// DefaultShardName is the name of the shard that Stages with no explicit
+	// spec.shard should be associated with for shard-liveness purposes. When
+	// empty, such Stages are not associated with any shard.
+	DefaultShardName string
+	// AgentStatusDeadline is the maximum age of a shard heartbeat before the
+	// shard is considered dead.
+	AgentStatusDeadline time.Duration
+	RestConfig          *rest.Config
 
 	// AdditionalHandlers is a map of path patterns to HTTP handlers that will
 	// be registered on the server's HTTP mux alongside its own handlers. This
@@ -100,6 +107,12 @@ func ServerConfigFromEnv() ServerConfig {
 		"kargo-shared-resources",
 	)
 	cfg.KargoNamespace = os.GetEnv("KARGO_NAMESPACE", "kargo")
+	cfg.DefaultShardName = os.GetEnv("DEFAULT_SHARD_NAME", "")
+	deadline, err := time.ParseDuration(os.GetEnv("AGENT_STATUS_DEADLINE", "10m"))
+	if err != nil {
+		panic(fmt.Sprintf("invalid AGENT_STATUS_DEADLINE: %s", err))
+	}
+	cfg.AgentStatusDeadline = deadline
 	return cfg
 }
 

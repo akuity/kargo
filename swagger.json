@@ -4607,6 +4607,32 @@
           }
         }
       }
+    },
+    "/v1beta1/system/shards": {
+      "get": {
+        "security": [
+          {
+            "BearerAuth": []
+          }
+        ],
+        "description": "List shards known to the system along with a liveness status\nderived from each shard's heartbeat ConfigMap. A shard is\n`alive` when its heartbeat is fresh, and `dead` when the\nheartbeat is stale or unparseable. Shards with no heartbeat\nConfigMap at all are not represented in the response. The\n`defaultShardName` field, when set, indicates which shard\nStages with no explicit `spec.shard` should be associated with\nfor liveness purposes.",
+        "produces": [
+          "application/json"
+        ],
+        "tags": [
+          "System"
+        ],
+        "summary": "List shard liveness",
+        "operationId": "ListShards",
+        "responses": {
+          "200": {
+            "description": "OK",
+            "schema": {
+              "$ref": "#/definitions/ListShardsResponse"
+            }
+          }
+        }
+      }
     }
   },
   "definitions": {
@@ -4843,6 +4869,20 @@
         }
       }
     },
+    "ListShardsResponse": {
+      "type": "object",
+      "properties": {
+        "defaultShardName": {
+          "type": "string"
+        },
+        "shards": {
+          "type": "array",
+          "items": {
+            "$ref": "#/definitions/ShardInfo"
+          }
+        }
+      }
+    },
     "OIDCConfig": {
       "type": "object",
       "properties": {
@@ -4993,6 +5033,31 @@
           "$ref": "#/definitions/UserClaims"
         }
       }
+    },
+    "ShardInfo": {
+      "type": "object",
+      "properties": {
+        "lastSeen": {
+          "type": "string"
+        },
+        "name": {
+          "type": "string"
+        },
+        "status": {
+          "$ref": "#/definitions/ShardStatus"
+        }
+      }
+    },
+    "ShardStatus": {
+      "type": "string",
+      "enum": [
+        "alive",
+        "dead"
+      ],
+      "x-enum-varnames": [
+        "shardStatusAlive",
+        "shardStatusDead"
+      ]
     },
     "TagMap": {
       "type": "object",

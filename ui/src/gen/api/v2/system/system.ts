@@ -25,6 +25,7 @@ import type {
   AdminLoginResponse,
   ClusterConfig,
   GetConfigResponse,
+  ListShardsResponse,
   PublicConfig,
   VersionInfo
 } from '.././models';
@@ -741,6 +742,125 @@ export function useGetVersionInfo<
   queryClient?: QueryClient
 ): UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> } {
   const queryOptions = getGetVersionInfoQueryOptions(options);
+
+  const query = useQuery(queryOptions, queryClient) as UseQueryResult<TData, TError> & {
+    queryKey: DataTag<QueryKey, TData, TError>;
+  };
+
+  query.queryKey = queryOptions.queryKey;
+
+  return query;
+}
+
+/**
+ * List shards known to the system along with a liveness status
+derived from each shard's heartbeat ConfigMap. A shard is
+`alive` when its heartbeat is fresh, and `dead` when the
+heartbeat is stale or unparseable. Shards with no heartbeat
+ConfigMap at all are not represented in the response. The
+`defaultShardName` field, when set, indicates which shard
+Stages with no explicit `spec.shard` should be associated with
+for liveness purposes.
+ * @summary List shard liveness
+ */
+export type listShardsResponse200 = {
+  data: ListShardsResponse;
+  status: 200;
+};
+
+export type listShardsResponseSuccess = listShardsResponse200 & {
+  headers: Headers;
+};
+export type listShardsResponse = listShardsResponseSuccess;
+
+export const getListShardsUrl = () => {
+  return `/v1beta1/system/shards`;
+};
+
+export const listShards = async (options?: RequestInit): Promise<listShardsResponse> => {
+  return customFetch<listShardsResponse>(getListShardsUrl(), {
+    ...options,
+    method: 'GET'
+  });
+};
+
+export const getListShardsQueryKey = () => {
+  return [`/v1beta1/system/shards`] as const;
+};
+
+export const getListShardsQueryOptions = <
+  TData = Awaited<ReturnType<typeof listShards>>,
+  TError = unknown
+>(options?: {
+  query?: Partial<UseQueryOptions<Awaited<ReturnType<typeof listShards>>, TError, TData>>;
+  request?: SecondParameter<typeof customFetch>;
+}) => {
+  const { query: queryOptions, request: requestOptions } = options ?? {};
+
+  const queryKey = queryOptions?.queryKey ?? getListShardsQueryKey();
+
+  const queryFn: QueryFunction<Awaited<ReturnType<typeof listShards>>> = () =>
+    listShards(requestOptions);
+
+  return { queryKey, queryFn, ...queryOptions } as UseQueryOptions<
+    Awaited<ReturnType<typeof listShards>>,
+    TError,
+    TData
+  > & { queryKey: DataTag<QueryKey, TData, TError> };
+};
+
+export type ListShardsQueryResult = NonNullable<Awaited<ReturnType<typeof listShards>>>;
+export type ListShardsQueryError = unknown;
+
+export function useListShards<TData = Awaited<ReturnType<typeof listShards>>, TError = unknown>(
+  options: {
+    query: Partial<UseQueryOptions<Awaited<ReturnType<typeof listShards>>, TError, TData>> &
+      Pick<
+        DefinedInitialDataOptions<
+          Awaited<ReturnType<typeof listShards>>,
+          TError,
+          Awaited<ReturnType<typeof listShards>>
+        >,
+        'initialData'
+      >;
+    request?: SecondParameter<typeof customFetch>;
+  },
+  queryClient?: QueryClient
+): DefinedUseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> };
+export function useListShards<TData = Awaited<ReturnType<typeof listShards>>, TError = unknown>(
+  options?: {
+    query?: Partial<UseQueryOptions<Awaited<ReturnType<typeof listShards>>, TError, TData>> &
+      Pick<
+        UndefinedInitialDataOptions<
+          Awaited<ReturnType<typeof listShards>>,
+          TError,
+          Awaited<ReturnType<typeof listShards>>
+        >,
+        'initialData'
+      >;
+    request?: SecondParameter<typeof customFetch>;
+  },
+  queryClient?: QueryClient
+): UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> };
+export function useListShards<TData = Awaited<ReturnType<typeof listShards>>, TError = unknown>(
+  options?: {
+    query?: Partial<UseQueryOptions<Awaited<ReturnType<typeof listShards>>, TError, TData>>;
+    request?: SecondParameter<typeof customFetch>;
+  },
+  queryClient?: QueryClient
+): UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> };
+/**
+ * @summary List shard liveness
+ */
+
+export function useListShards<TData = Awaited<ReturnType<typeof listShards>>, TError = unknown>(
+  options?: {
+    query?: Partial<UseQueryOptions<Awaited<ReturnType<typeof listShards>>, TError, TData>>;
+    request?: SecondParameter<typeof customFetch>;
+  },
+  queryClient?: QueryClient
+): UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> } {
+  const queryOptions = getListShardsQueryOptions(options);
 
   const query = useQuery(queryOptions, queryClient) as UseQueryResult<TData, TError> & {
     queryKey: DataTag<QueryKey, TData, TError>;

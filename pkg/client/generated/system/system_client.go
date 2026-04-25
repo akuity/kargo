@@ -65,6 +65,8 @@ type ClientService interface {
 
 	GetVersionInfo(params *GetVersionInfoParams, authInfo runtime.ClientAuthInfoWriter, opts ...ClientOption) (*GetVersionInfoOK, error)
 
+	ListShards(params *ListShardsParams, authInfo runtime.ClientAuthInfoWriter, opts ...ClientOption) (*ListShardsOK, error)
+
 	RefreshClusterConfig(params *RefreshClusterConfigParams, authInfo runtime.ClientAuthInfoWriter, opts ...ClientOption) (*RefreshClusterConfigOK, error)
 
 	SetTransport(transport runtime.ClientTransport)
@@ -347,6 +349,60 @@ func (a *Client) GetVersionInfo(params *GetVersionInfoParams, authInfo runtime.C
 	//
 	// safeguard: normally, in the absence of a default response, unknown success responses return an error above: so this is a codegen issue
 	msg := fmt.Sprintf("unexpected success response for GetVersionInfo: API contract not enforced by server. Client expected to get an error, but got: %T", result)
+	panic(msg)
+}
+
+/*
+	ListShards lists shard liveness
+
+	List shards known to the system along with a liveness status
+
+derived from each shard's heartbeat ConfigMap. A shard is
+`alive` when its heartbeat is fresh, and `dead` when the
+heartbeat is stale or unparseable. Shards with no heartbeat
+ConfigMap at all are not represented in the response. The
+`defaultShardName` field, when set, indicates which shard
+Stages with no explicit `spec.shard` should be associated with
+for liveness purposes.
+*/
+func (a *Client) ListShards(params *ListShardsParams, authInfo runtime.ClientAuthInfoWriter, opts ...ClientOption) (*ListShardsOK, error) {
+	// NOTE: parameters are not validated before sending
+	if params == nil {
+		params = NewListShardsParams()
+	}
+	op := &runtime.ClientOperation{
+		ID:                 "ListShards",
+		Method:             "GET",
+		PathPattern:        "/v1beta1/system/shards",
+		ProducesMediaTypes: []string{"application/json"},
+		ConsumesMediaTypes: []string{"application/json"},
+		Schemes:            []string{"http"},
+		Params:             params,
+		Reader:             &ListShardsReader{formats: a.formats},
+		AuthInfo:           authInfo,
+		Context:            params.Context,
+		Client:             params.HTTPClient,
+	}
+	for _, opt := range opts {
+		opt(op)
+	}
+	result, err := a.transport.Submit(op)
+	if err != nil {
+		return nil, err
+	}
+
+	// only one success response has to be checked
+	success, ok := result.(*ListShardsOK)
+	if ok {
+		return success, nil
+	}
+
+	// unexpected success response.
+
+	// no default response is defined.
+	//
+	// safeguard: normally, in the absence of a default response, unknown success responses return an error above: so this is a codegen issue
+	msg := fmt.Sprintf("unexpected success response for ListShards: API contract not enforced by server. Client expected to get an error, but got: %T", result)
 	panic(msg)
 }
 

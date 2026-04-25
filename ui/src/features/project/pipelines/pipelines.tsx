@@ -28,6 +28,8 @@ import {
 } from '@ui/gen/api/service/v1alpha1/service-KargoService_connectquery';
 import { FreightList } from '@ui/gen/api/service/v1alpha1/service_pb';
 import { Freight, Project, Stage } from '@ui/gen/api/v1alpha1/generated_pb';
+import { ShardInfo } from '@ui/gen/api/v2/models';
+import { useListShards } from '@ui/gen/api/v2/system/system';
 
 import { ActionContext } from './context/action-context';
 import { DictionaryContext } from './context/dictionary-context';
@@ -61,6 +63,20 @@ export const Pipelines = (props: { creatingStage?: boolean; creatingWarehouse?: 
   const getConfigQuery = useQuery(getConfig);
 
   const argocdShards = getConfigQuery?.data?.argocdShards;
+
+  const listShardsQuery = useListShards();
+
+  const shardsByName = useMemo(() => {
+    const map: Record<string, ShardInfo> = {};
+    for (const shard of listShardsQuery.data?.data?.shards || []) {
+      if (shard.name) {
+        map[shard.name] = shard;
+      }
+    }
+    return map;
+  }, [listShardsQuery.data]);
+
+  const defaultShardName = listShardsQuery.data?.data?.defaultShardName;
 
   const projectQuery = useQuery(getProject, { name });
 
@@ -204,6 +220,8 @@ export const Pipelines = (props: { creatingStage?: boolean; creatingWarehouse?: 
             subscribersByStage,
             stageByName,
             argocdShards,
+            shardsByName,
+            defaultShardName,
             hasAnalysisRunLogsUrlTemplate: getConfigQuery?.data?.hasAnalysisRunLogsUrlTemplate
           }}
         >

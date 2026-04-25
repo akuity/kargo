@@ -34,6 +34,7 @@ import { AnalysisRunLogsLink } from './analysis-run-logs-link';
 import style from './node-size-source-of-truth.module.less';
 import { useGetPromotionDropdownItems } from './promotion/use-get-promotion-dropdown-items';
 import { PullRequestLink } from './pull-request-link';
+import { ShardStatusIcon } from './shard-status-icon';
 import { StageFreight } from './stage-freight';
 import {
   getLastPromotionDate,
@@ -81,6 +82,9 @@ export const StageNode = (props: { stage: Stage }) => {
   });
 
   const dropdownItems = useGetPromotionDropdownItems(props.stage);
+
+  const shardName = props.stage.spec?.shard || dictionaryContext?.defaultShardName || '';
+  const shardInfo = shardName ? dictionaryContext?.shardsByName?.[shardName] : undefined;
 
   let descriptionItems: ReactNode;
 
@@ -139,12 +143,13 @@ export const StageNode = (props: { stage: Stage }) => {
           }
         }}
         title={
-          <>
+          <Flex align='center' gap={6} className='mr-auto'>
+            <ShardStatusIcon shard={shardInfo} shardName={shardName} />
             {autoPromotionMode && (
-              <FontAwesomeIcon title='Auto Promotion' icon={faBolt} className='text-[10px] mr-1' />
+              <FontAwesomeIcon title='Auto Promotion' icon={faBolt} className='text-[10px]' />
             )}
-            <span className='text-xs text-wrap mr-auto'>{props.stage.metadata?.name}</span>
-          </>
+            <span className='text-xs text-wrap'>{props.stage.metadata?.name}</span>
+          </Flex>
         }
         extra={
           <Space size={6}>
