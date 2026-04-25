@@ -106,6 +106,9 @@ func Test_commentHandler_handleCreated(t *testing.T) {
 			name:        "issue comment with valid command missing required arg",
 			body:        "/with-arg",
 			authorAssoc: "MEMBER",
+			expectedCommentsAdded: map[string]struct{}{
+				"The `/with-arg` command requires an argument. See `/help` for usage.": {},
+			},
 		},
 		{
 			name:                  "issue comment with valid command and required arg",
@@ -191,6 +194,10 @@ func Test_commentHandler_handleCreated(t *testing.T) {
 			body:        "/with-arg-pr",
 			authorAssoc: "MEMBER",
 			isPR:        true,
+			expectedCommentsAdded: map[string]struct{}{
+				"The `/with-arg-pr` command requires an argument. " +
+					"See `/help` for usage.": {},
+			},
 		},
 		{
 			name:                  "PR comment with valid command and required arg",

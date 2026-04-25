@@ -93,7 +93,17 @@ func (h *commentHandler) handleCreated(
 		}
 
 		if cmd.RequiresArg && pc.arg == "" {
-			cmdLogger.Debug("slash command requires an argument, ignoring")
+			hint := fmt.Sprintf(
+				"The `/%s` command requires an argument. See `/help` for usage.",
+				pc.name,
+			)
+			if _, _, err := h.issuesClient.CreateComment(
+				cmdCtx, h.owner, h.repo, number,
+				&github.IssueComment{Body: github.Ptr(hint)},
+			); err != nil {
+				cmdLogger.Error(err, "error posting missing-arg hint")
+				errs = append(errs, fmt.Errorf("command %q: %w", pc.name, err))
+			}
 			continue
 		}
 
