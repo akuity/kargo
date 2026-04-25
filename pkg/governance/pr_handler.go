@@ -132,35 +132,22 @@ func (h *prHandler) handleOpened(
 
 	}
 
-	// 4. Apply PR policy unless the PR is exempt. On exemption-check error,
-	// log + accumulate but treat as not exempt (safer default — apply
-	// policy).
-	exempt, err := isExemptFromPRPolicy(
-		ctx, h.cfg, h.prsClient, h.owner, h.repo, pr, login,
-	)
-	if err != nil {
-		logger.Error(err, "error checking PR policy exemption")
-		errs = append(errs, fmt.Errorf("check PR policy exemption: %w", err))
-	}
-	switch {
-	case exempt:
-		logger.Debug("PR is exempt from policy, skipping")
-	case h.cfg.PullRequests == nil:
-		// No policy configured.
-	default:
-		if err := applyPRPolicy(
-			ctx,
-			h.cfg,
-			h.issuesClient,
-			h.prsClient,
-			h.owner,
-			h.repo,
-			number,
-			issueNumber,
-		); err != nil {
-			logger.Error(err, "error applying PR policy")
-			errs = append(errs, fmt.Errorf("apply PR policy: %w", err))
-		}
+	// 4. Apply PR policy. The exemption check now lives inside
+	// applyPRPolicy and gates only the blocking outcomes; OnPass runs
+	// regardless so that policy-label cleanup keeps working on PRs that
+	// only became exempt after the fact.
+	if err := applyPRPolicy(
+		ctx,
+		h.cfg,
+		h.issuesClient,
+		h.prsClient,
+		h.owner,
+		h.repo,
+		pr,
+		login,
+	); err != nil {
+		logger.Error(err, "error applying PR policy")
+		errs = append(errs, fmt.Errorf("apply PR policy: %w", err))
 	}
 
 	return errors.Join(errs...)
@@ -168,14 +155,16 @@ func (h *prHandler) handleOpened(
 
 // applyPRPolicy evaluates PR policy and runs the actions configured for the
 // matching outcome:
-//   - The PR has no linked issue and OnNoLinkedIssue is configured; or
-//   - The PR's linked issue carries one or more labels listed in
-//     OnBlockedIssue.BlockingLabels and OnBlockedIssue is configured; or
-//   - The PR passes (linked issue is not blocked, or the relevant check is
-//     not configured) and OnPass is configured.
+//   - Blocking outcomes (OnNoLinkedIssue, OnBlockedIssue) fire only when
+//     the PR is NOT exempt from policy.
+//   - OnPass fires whenever neither blocking outcome fired — including for
+//     exempt PRs. This keeps cleanup-style OnPass actions (e.g. removing
+//     stale policy/* labels) working for PRs that became exempt after
+//     they'd already been drafted.
 //
-// Callers should have already verified the PR's author is not exempt from
-// policy.
+// PullRequests must be non-nil on the supplied config. The exemption check
+// makes a network call (ListFiles) when path patterns are configured;
+// errors there propagate to the caller.
 func applyPRPolicy(
 	ctx context.Context,
 	cfg config,
@@ -183,81 +172,94 @@ func applyPRPolicy(
 	prsClient PullRequestsClient,
 	owner string,
 	repo string,
-	number int,
-	issueNumber int,
+	pr *github.PullRequest,
+	login string,
 ) error {
+	if cfg.PullRequests == nil {
+		return nil
+	}
 	logger := logging.LoggerFromContext(ctx)
+	number := pr.GetNumber()
+	issueNumber := parseLinkedIssue(pr.GetBody())
 
-	// Blocking outcome: PR has no linked issue.
-	if issueNumber == 0 {
-		if cfg.PullRequests.OnNoLinkedIssue != nil {
-			logger.Info("PR has no linked issue, applying policy")
-			return executeActions(
-				ctx,
-				cfg,
-				issuesClient,
-				prsClient,
-				owner,
-				repo,
-				number,
-				true,
-				cfg.PullRequests.OnNoLinkedIssue.Actions,
-				nil,
-			)
-		}
-		// OnNoLinkedIssue not configured: treat as a pass. Fall through.
-	} else if cfg.PullRequests.OnBlockedIssue != nil {
-		// Has a linked issue and OnBlockedIssue is configured: check for
-		// blocking labels.
-		logger = logger.WithValues("linkedIssue", issueNumber)
-		ctx = logging.ContextWithLogger(ctx, logger)
-
-		issue, _, err := issuesClient.Get(ctx, owner, repo, issueNumber)
-		if err != nil {
-			return fmt.Errorf("error fetching linked issue: %w", err)
-		}
-
-		issueLabels := make(map[string]bool)
-		for _, l := range issue.Labels {
-			issueLabels[l.GetName()] = true
-		}
-
-		var blockers []string
-		for _, blocking := range cfg.PullRequests.OnBlockedIssue.BlockingLabels {
-			if issueLabels[blocking] {
-				blockers = append(blockers, blocking)
-			}
-		}
-
-		// Blocking outcome: linked issue has blocking labels.
-		if len(blockers) > 0 {
-			logger.Info("linked issue has blocking labels, applying policy",
-				"blockers", blockers,
-			)
-			return executeActions(
-				ctx,
-				cfg,
-				issuesClient,
-				prsClient,
-				owner,
-				repo,
-				number,
-				true,
-				cfg.PullRequests.OnBlockedIssue.Actions,
-				map[string]string{
-					"IssueNumber":    fmt.Sprintf("%d", issueNumber),
-					"BlockingLabels": formatBlockers(blockers),
-				},
-			)
-		}
-		// No blocking labels: fall through to OnPass.
+	exempt, err := isExemptFromPRPolicy(
+		ctx, cfg, prsClient, owner, repo, pr, login,
+	)
+	if err != nil {
+		return fmt.Errorf("error checking PR policy exemption: %w", err)
 	}
 
-	// Passing outcome: no blocking action fired. Run OnPass if configured.
+	// Blocking outcomes — gated by exemption.
+	if !exempt {
+		if issueNumber == 0 {
+			if cfg.PullRequests.OnNoLinkedIssue != nil {
+				logger.Info("PR has no linked issue, applying policy")
+				return executeActions(
+					ctx,
+					cfg,
+					issuesClient,
+					prsClient,
+					owner,
+					repo,
+					number,
+					true,
+					cfg.PullRequests.OnNoLinkedIssue.Actions,
+					nil,
+				)
+			}
+			// OnNoLinkedIssue not configured: fall through to OnPass.
+		} else if cfg.PullRequests.OnBlockedIssue != nil {
+			// Has a linked issue and OnBlockedIssue is configured: check
+			// for blocking labels.
+			logger = logger.WithValues("linkedIssue", issueNumber)
+			ctx = logging.ContextWithLogger(ctx, logger)
+
+			issue, _, err := issuesClient.Get(ctx, owner, repo, issueNumber)
+			if err != nil {
+				return fmt.Errorf("error fetching linked issue: %w", err)
+			}
+
+			issueLabels := make(map[string]bool)
+			for _, l := range issue.Labels {
+				issueLabels[l.GetName()] = true
+			}
+
+			var blockers []string
+			for _, blocking := range cfg.PullRequests.OnBlockedIssue.BlockingLabels {
+				if issueLabels[blocking] {
+					blockers = append(blockers, blocking)
+				}
+			}
+
+			if len(blockers) > 0 {
+				logger.Info("linked issue has blocking labels, applying policy",
+					"blockers", blockers,
+				)
+				return executeActions(
+					ctx,
+					cfg,
+					issuesClient,
+					prsClient,
+					owner,
+					repo,
+					number,
+					true,
+					cfg.PullRequests.OnBlockedIssue.Actions,
+					map[string]string{
+						"IssueNumber":    fmt.Sprintf("%d", issueNumber),
+						"BlockingLabels": formatBlockers(blockers),
+					},
+				)
+			}
+			// No blocking labels: fall through to OnPass.
+		}
+	}
+
+	// Passing outcome (or exempt): run OnPass if configured.
 	if cfg.PullRequests.OnPass == nil {
 		return nil
 	}
-	logger.Info("PR passes policy, applying OnPass actions")
+	logger.Info("PR passes policy, applying OnPass actions", "exempt", exempt)
 	return executeActions(
 		ctx,
 		cfg,

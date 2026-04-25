@@ -61,6 +61,8 @@ func Test_prHandler_handleOpened(t *testing.T) {
 				"needs/kind":     {},
 				"needs/priority": {},
 			},
+			// OnPass fires regardless of exemption (cleanup-style actions).
+			expectedCommentsAdded: map[string]struct{}{"PR passes policy.": {}},
 		},
 		{
 			name:        "bot is exempt from policy check",
@@ -72,6 +74,8 @@ func Test_prHandler_handleOpened(t *testing.T) {
 				"needs/kind":     {},
 				"needs/priority": {},
 			},
+			// OnPass fires regardless of exemption.
+			expectedCommentsAdded: map[string]struct{}{"PR passes policy.": {}},
 		},
 		{
 			name: "no linked issue",
