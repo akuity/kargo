@@ -3,7 +3,7 @@ maintainerAssociations:
 - MEMBER
 - OWNER
 
-# Defines ass issue automation.
+# Defines all issue automation.
 issues:
   # At least one label with each of these prefixes must exist on all new issues.
   # For any that don't, a label will be automatically added to indicate what
