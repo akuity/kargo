@@ -23,6 +23,22 @@ consider every submission.
 
 :::
 
+### Exceptions
+
+A few kinds of contribution are exempt from the issue-first requirement and can
+be opened as pull requests directly, without a corresponding issue:
+
+- **Drive-by fixes.** Pull requests of five or fewer lines (added + removed,
+  combined). This covers typo corrections, comment fixes, and small obvious bug
+  fixes.
+
+- **Documentation-only changes.** Pull requests whose changes are limited to
+  `README.md` and Markdown files anywhere under `docs/`.
+
+Exempt pull requests must still adhere to the
+[Quality Expectations](#quality-expectations) below — the issue requirement is
+the only thing waived.
+
 1. **Open an issue** using the
    [Bug Report](https://github.com/akuity/kargo/issues/new?template=bug_report.yml)
    or
@@ -43,8 +59,8 @@ consider every submission.
 ## Blocking Labels
 
 The following labels indicate an issue is **not ready for external
-contribution**. Pull requests linked to issues carrying any of these labels will
-be automatically closed.
+contribution**. Pull requests linked to issues carrying any of these labels are
+automatically converted to a draft until the issue is unblocked.
 
 | Label | Meaning |
 | ----- | ------- |
@@ -63,15 +79,16 @@ present.
 ## Automatic Enforcement
 
 Pull requests that do not observe the process described above are
-**automatically closed**. This includes:
+**automatically converted to a draft**. Maintainers do not routinely review
+drafts. The author is expected to address the underlying problem and then
+mark the PR ready for review. This applies to:
 
 - PRs with no linked issue.
 
 - PRs linked to issues that still carry blocking labels.
 
-- Unsolicited PRs (no corresponding issue exists).
-
-This enforcement applies to external contributors only. Maintainers are exempt.
+Pull requests covered by [Exceptions](#exceptions) are not subject to this
+enforcement.
 
 ## Quality Expectations
 
