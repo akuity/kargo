@@ -135,7 +135,9 @@ func (h *prHandler) handleOpened(
 	// 4. Apply PR policy unless the PR is exempt. On exemption-check error,
 	// log + accumulate but treat as not exempt (safer default — apply
 	// policy).
-	exempt, err := h.isExemptFromPRPolicy(ctx, pr, login)
+	exempt, err := isExemptFromPRPolicy(
+		ctx, h.cfg, h.prsClient, h.owner, h.repo, pr, login,
+	)
 	if err != nil {
 		logger.Error(err, "error checking PR policy exemption")
 		errs = append(errs, fmt.Errorf("check PR policy exemption: %w", err))
@@ -329,17 +331,21 @@ func (h *prHandler) inheritLabels(
 //
 // On error from the path check, returns (false, err) — the caller is
 // expected to treat that as "not exempt" and apply policy.
-func (h *prHandler) isExemptFromPRPolicy(
+func isExemptFromPRPolicy(
 	ctx context.Context,
+	cfg config,
+	prsClient PullRequestsClient,
+	owner string,
+	repo string,
 	pr *github.PullRequest,
 	login string,
 ) (bool, error) {
-	if h.cfg.PullRequests == nil || h.cfg.PullRequests.Exemptions == nil {
+	if cfg.PullRequests == nil || cfg.PullRequests.Exemptions == nil {
 		return false, nil
 	}
-	ex := h.cfg.PullRequests.Exemptions
+	ex := cfg.PullRequests.Exemptions
 
-	if ex.Maintainers && isMaintainer(h.cfg, pr.GetAuthorAssociation()) {
+	if ex.Maintainers && isMaintainer(cfg, pr.GetAuthorAssociation()) {
 		return true, nil
 	}
 	if ex.Bots && strings.HasSuffix(login, "[bot]") {
@@ -350,8 +356,8 @@ func (h *prHandler) isExemptFromPRPolicy(
 		return true, nil
 	}
 	if len(ex.PathPatterns) > 0 {
-		exempt, err := h.allFilesMatchPathPatterns(
-			ctx, pr.GetNumber(), ex.PathPatterns,
+		exempt, err := allFilesMatchPathPatterns(
+			ctx, prsClient, owner, repo, pr.GetNumber(), ex.PathPatterns,
 		)
 		if err != nil {
 			return false, err
@@ -368,13 +374,16 @@ func (h *prHandler) isExemptFromPRPolicy(
 // false (without error) when the PR's file count meets or exceeds the
 // per-page limit — at that scale the PR is not a drive-by and we don't
 // bother paginating.
-func (h *prHandler) allFilesMatchPathPatterns(
+func allFilesMatchPathPatterns(
 	ctx context.Context,
+	prsClient PullRequestsClient,
+	owner string,
+	repo string,
 	prNumber int,
 	patterns []string,
 ) (bool, error) {
-	files, _, err := h.prsClient.ListFiles(
-		ctx, h.owner, h.repo, prNumber,
+	files, _, err := prsClient.ListFiles(
+		ctx, owner, repo, prNumber,
 		&github.ListOptions{PerPage: pathExemptionPerPage},
 	)
 	if err != nil {

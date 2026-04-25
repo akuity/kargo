@@ -459,20 +459,15 @@ func Test_prHandler_isExemptFromPRPolicy(t *testing.T) {
 					return files, nil, nil
 				},
 			}
-			h := prHandler{
-				cfg:       testCase.cfg,
-				owner:     "akuity",
-				repo:      "kargo",
-				prsClient: prsClient,
-			}
 			pr := &github.PullRequest{
 				Number:            github.Ptr(1),
 				AuthorAssociation: github.Ptr(testCase.association),
 				Additions:         github.Ptr(testCase.additions),
 				Deletions:         github.Ptr(testCase.deletions),
 			}
-			result, err := h.isExemptFromPRPolicy(
-				t.Context(), pr, testCase.login,
+			result, err := isExemptFromPRPolicy(
+				t.Context(), testCase.cfg, prsClient,
+				"akuity", "kargo", pr, testCase.login,
 			)
 			if testCase.expectErr {
 				require.Error(t, err)

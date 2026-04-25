@@ -90,6 +90,15 @@ func executeActions(
 			if err != nil {
 				return fmt.Errorf("error fetching PR for policy check: %w", err)
 			}
+			exempt, err := isExemptFromPRPolicy(
+				ctx, cfg, prsClient, owner, repo, pr, pr.GetUser().GetLogin(),
+			)
+			if err != nil {
+				return fmt.Errorf("error checking PR policy exemption: %w", err)
+			}
+			if exempt {
+				continue
+			}
 			if err := applyPRPolicy(
 				ctx,
 				cfg,
