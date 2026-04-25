@@ -157,7 +157,7 @@ type installationClient struct {
 type githubClientFactory struct {
 	appTokenSource oauth2.TokenSource
 
-	clientsMu sync.Mutex
+	clientsMu sync.RWMutex
 	clients   map[int64]*installationClient
 
 	newClientFn func(installationID int64) (*installationClient, error)
@@ -337,12 +337,23 @@ func (f *githubClientFactory) NewRepositoriesClient(
 }
 
 // getOrCreateClient retrieves a cached installationClient for the given
-// installation ID or creates a new one if it doesn't exist.
+// installation ID or creates a new one if it doesn't exist. The cache is
+// read-mostly, so the lookup uses an RLock fast path; only cache misses
+// take the write lock.
 func (f *githubClientFactory) getOrCreateClient(
 	installationID int64,
 ) (*installationClient, error) {
+	f.clientsMu.RLock()
+	if client, ok := f.clients[installationID]; ok {
+		f.clientsMu.RUnlock()
+		return client, nil
+	}
+	f.clientsMu.RUnlock()
+
 	f.clientsMu.Lock()
 	defer f.clientsMu.Unlock()
+	// Re-check after acquiring the write lock — another goroutine may
+	// have created the entry between RUnlock() and Lock().
 	if client, ok := f.clients[installationID]; ok {
 		return client, nil
 	}
