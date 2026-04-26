@@ -23,7 +23,7 @@ jobs:
     - name: Checkout
       uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
     - name: Create backport PRs
-      uses: korthout/backport-action@3c06f323a58619da1e8522229ebc8d5de2633e46 # v4.3.0
+      uses: korthout/backport-action@ad30f01dbe543be4a24431001c38f3617af8c745 # v4.4.0
       # xref: https://github.com/korthout/backport-action#inputs
       with:
         # Use token to allow workflows to be triggered for the created PR
