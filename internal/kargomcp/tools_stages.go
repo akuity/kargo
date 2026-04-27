@@ -2,6 +2,8 @@ package kargomcp
 
 import (
 	"context"
+	"encoding/json"
+	"strings"
 
 	"github.com/modelcontextprotocol/go-sdk/mcp"
 
@@ -11,7 +13,7 @@ import (
 func (s *Server) registerStageTools() {
 	mcp.AddTool(s.mcpServer, &mcp.Tool{
 		Name:         "list_stages",
-		Description:  "List all stages in a Kargo project.",
+		Description:  "List stages in a Kargo project. Optionally filter by health status (Healthy, Unhealthy, Unknown).",
 		OutputSchema: mustOutputSchema[stageListResult](),
 		Annotations:  readOnly(),
 	}, s.handleListStages)
@@ -36,6 +38,7 @@ func (s *Server) registerStageTools() {
 
 type listStagesArgs struct {
 	Project string `json:"project" jsonschema:"The name of the Kargo project"`
+	Health  string `json:"health,omitempty" jsonschema:"Filter by health status: Healthy, Unhealthy, or Unknown"`
 }
 
 type stageListResult struct {
@@ -58,7 +61,46 @@ func (s *Server) handleListStages(
 	if err != nil {
 		return errResult(err)
 	}
-	return jsonAnyResult(res.Payload)
+	return jsonAnyResult(filterStagesByHealth(res.Payload, args.Health))
+}
+
+// filterStagesByHealth optionally filters the stage list payload by health status.
+// When health is empty the full list is returned unchanged.
+func filterStagesByHealth(payload any, health string) any {
+	if health == "" {
+		return payload
+	}
+	want := strings.ToLower(health)
+	data, err := json.Marshal(payload)
+	if err != nil {
+		return payload
+	}
+	var list struct {
+		Items []json.RawMessage `json:"items"`
+	}
+	if err := json.Unmarshal(data, &list); err != nil {
+		return payload
+	}
+	var filtered []json.RawMessage
+	for _, raw := range list.Items {
+		var s struct {
+			Status struct {
+				Health struct {
+					Status string `json:"status"`
+				} `json:"health"`
+			} `json:"status"`
+		}
+		if err := json.Unmarshal(raw, &s); err != nil {
+			continue
+		}
+		if strings.EqualFold(s.Status.Health.Status, want) {
+			filtered = append(filtered, raw)
+		}
+	}
+	if filtered == nil {
+		filtered = []json.RawMessage{}
+	}
+	return map[string]any{"items": filtered}
 }
 
 // --- get_stage ---

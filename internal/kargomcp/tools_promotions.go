@@ -2,6 +2,7 @@ package kargomcp
 
 import (
 	"context"
+	"encoding/json"
 	"fmt"
 
 	"github.com/modelcontextprotocol/go-sdk/mcp"
@@ -13,8 +14,8 @@ import (
 func (s *Server) registerPromotionTools() {
 	mcp.AddTool(s.mcpServer, &mcp.Tool{
 		Name: "list_promotions",
-		Description: "List promotions in a Kargo project. Optionally filter by stage " +
-			"to see only promotions targeting that stage.",
+		Description: "List promotions in a Kargo project, newest first. Optionally filter by stage. " +
+			"Defaults to the 20 most recent; set limit to see more.",
 		OutputSchema: mustOutputSchema[promotionListResult](),
 		Annotations:  readOnly(),
 	}, s.handleListPromotions)
@@ -55,6 +56,7 @@ func (s *Server) registerPromotionTools() {
 type listPromotionsArgs struct {
 	Project string  `json:"project" jsonschema:"The name of the Kargo project"`
 	Stage   *string `json:"stage,omitempty" jsonschema:"Filter to promotions targeting this stage"`
+	Limit   int     `json:"limit,omitempty" jsonschema:"Max number of promotions to return, newest first (default 20)"`
 }
 
 type promotionCondition struct {
@@ -95,7 +97,20 @@ func (s *Server) handleListPromotions(
 	if err != nil {
 		return errResult(err)
 	}
-	return jsonAnyResult(res.Payload)
+	return jsonAnyResult(limitPromotions(res.Payload, args.Limit))
+}
+
+// limitPromotions reverses the server's ascending-ULID order (newest first)
+// and truncates to limit items (default 20 when limit <= 0).
+func limitPromotions(payload any, limit int) map[string]any {
+	data, _ := json.Marshal(payload)
+	var list struct {
+		Items []json.RawMessage `json:"items"`
+	}
+	if err := json.Unmarshal(data, &list); err != nil {
+		return map[string]any{"items": []json.RawMessage{}}
+	}
+	return limitItems(map[string]any{"items": list.Items}, limit)
 }
 
 // --- get_promotion ---

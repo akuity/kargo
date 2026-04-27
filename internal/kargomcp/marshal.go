@@ -3,6 +3,7 @@ package kargomcp
 import (
 	"encoding/json"
 	"fmt"
+	"slices"
 
 	"github.com/google/jsonschema-go/jsonschema"
 	"github.com/modelcontextprotocol/go-sdk/mcp"
@@ -50,6 +51,22 @@ func readOnly() *mcp.ToolAnnotations {
 func destructive() *mcp.ToolAnnotations {
 	t := true
 	return &mcp.ToolAnnotations{DestructiveHint: &t}
+}
+
+// limitItems reverses a {"items":[...]} map to newest-first and truncates to
+// limit entries (default 20 when limit <= 0). Pass the result of flattenFreightGroups
+// or a similar helper that produces this shape.
+func limitItems(m map[string]any, limit int) map[string]any {
+	if limit <= 0 {
+		limit = 20
+	}
+	raw, _ := m["items"].([]json.RawMessage)
+	slices.Reverse(raw)
+	if len(raw) > limit {
+		raw = raw[:limit]
+	}
+	m["items"] = raw
+	return m
 }
 
 // okResult returns a simple success message as a tool result.

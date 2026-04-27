@@ -2,6 +2,7 @@ package kargomcp
 
 import (
 	"context"
+	"encoding/json"
 
 	"github.com/modelcontextprotocol/go-sdk/mcp"
 
@@ -36,9 +37,10 @@ func (s *Server) registerFreightTools() {
 // --- list_freight ---
 
 type listFreightArgs struct {
-	Project  string  `json:"project" jsonschema:"The name of the Kargo project"`
-	Stage    *string `json:"stage,omitempty" jsonschema:"Filter to freight currently in this stage"`
-	Origins  []string `json:"origins,omitempty" jsonschema:"Filter by origin warehouse names"`
+	Project string   `json:"project" jsonschema:"The name of the Kargo project"`
+	Stage   *string  `json:"stage,omitempty" jsonschema:"Filter to freight currently in this stage"`
+	Origins []string `json:"origins,omitempty" jsonschema:"Filter by origin warehouse names"`
+	Limit   int      `json:"limit,omitempty" jsonschema:"Max number of freight to return, newest first (default 20)"`
 }
 
 type freightCommit struct {
@@ -101,7 +103,32 @@ func (s *Server) handleListFreight(
 	if err != nil {
 		return errResult(err)
 	}
-	return jsonAnyResult(res.Payload)
+	return jsonAnyResult(limitItems(flattenFreightGroups(res.Payload), args.Limit))
+}
+
+// flattenFreightGroups collapses the QueryFreightsRest grouped response
+// ({"groups":{"":{"items":[...]}}}) into a simple {"items":[...]} list.
+func flattenFreightGroups(payload any) map[string]any {
+	data, err := json.Marshal(payload)
+	if err != nil {
+		return map[string]any{"items": []any{}}
+	}
+	var grouped struct {
+		Groups map[string]struct {
+			Items []json.RawMessage `json:"items"`
+		} `json:"groups"`
+	}
+	if err := json.Unmarshal(data, &grouped); err != nil {
+		return map[string]any{"items": []any{}}
+	}
+	var items []json.RawMessage
+	for _, g := range grouped.Groups {
+		items = append(items, g.Items...)
+	}
+	if items == nil {
+		items = []json.RawMessage{}
+	}
+	return map[string]any{"items": items}
 }
 
 // --- get_freight ---
