@@ -16,8 +16,7 @@ func (s *Server) registerPromotionTools() {
 	mcp.AddTool(s.mcpServer, &mcp.Tool{
 		Name: "list_promotions",
 		Description: "List promotions in a Kargo project, newest first. Returns a compact summary per promotion. " +
-			"Optionally filter by stage and/or phase (Running, Succeeded, Failed, Errored, Pending, Aborted). " +
-			"Defaults to the 20 most recent; set limit to see more.",
+			"Optionally filter by stage and/or phase (Running, Succeeded, Failed, Errored, Pending, Aborted).",
 		OutputSchema: mustOutputSchema[struct {
 			Items []promotionSummary `json:"items"`
 		}](),
@@ -63,7 +62,6 @@ type listPromotionsArgs struct {
 	Project string  `json:"project" jsonschema:"The name of the Kargo project"`
 	Stage   *string `json:"stage,omitempty" jsonschema:"Filter to promotions targeting this stage"`
 	Phase   string  `json:"phase,omitempty" jsonschema:"Filter by phase: Running, Succeeded, Failed, Errored, Pending, Aborted"`
-	Limit   int     `json:"limit,omitempty" jsonschema:"Max number of promotions to return, newest first (default 20)"`
 }
 
 // promotionJSON is the intake struct for summary projection.
@@ -150,7 +148,7 @@ func (s *Server) handleListPromotions(
 	if args.Phase != "" {
 		items = filterRawsByPhase(items, args.Phase)
 	}
-	summaries := projectItems(items, args.Limit, promotionToSummary)
+	summaries := projectItems(items, promotionToSummary)
 	return jsonAnyResult(map[string]any{"items": summaries})
 }
 

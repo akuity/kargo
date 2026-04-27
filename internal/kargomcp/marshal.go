@@ -53,17 +53,11 @@ func destructive() *mcp.ToolAnnotations {
 	return &mcp.ToolAnnotations{DestructiveHint: &t}
 }
 
-// projectItems unmarshals each raw JSON item into T, applies project to
-// produce a summary S, reverses the slice (newest-first), and truncates to
-// limit (default 20). Items that fail to unmarshal are skipped.
-func projectItems[T, S any](raws []json.RawMessage, limit int, project func(T) S) []S {
-	if limit <= 0 {
-		limit = 20
-	}
+// projectItems unmarshals each raw JSON item into T, reverses the slice
+// (newest-first), and applies project to produce a summary S.
+// Items that fail to unmarshal are skipped.
+func projectItems[T, S any](raws []json.RawMessage, project func(T) S) []S {
 	slices.Reverse(raws)
-	if len(raws) > limit {
-		raws = raws[:limit]
-	}
 	out := make([]S, 0, len(raws))
 	for _, raw := range raws {
 		var item T

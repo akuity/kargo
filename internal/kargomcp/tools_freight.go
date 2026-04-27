@@ -41,7 +41,6 @@ type listFreightArgs struct {
 	Project string   `json:"project" jsonschema:"The name of the Kargo project"`
 	Stage   *string  `json:"stage,omitempty" jsonschema:"Filter to freight currently in this stage"`
 	Origins []string `json:"origins,omitempty" jsonschema:"Filter by origin warehouse names"`
-	Limit   int      `json:"limit,omitempty" jsonschema:"Max number to return, newest first (default 20)"`
 }
 
 // freightJSON is the intake struct for summary projection.
@@ -148,7 +147,7 @@ func (s *Server) handleListFreight(
 		return errResult(err)
 	}
 	raws := flattenFreightGroups(res.Payload)
-	summaries := projectItems(raws, args.Limit, freightToSummary)
+	summaries := projectItems(raws, freightToSummary)
 	return jsonAnyResult(map[string]any{"items": summaries})
 }
 

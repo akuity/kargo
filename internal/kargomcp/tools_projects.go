@@ -102,8 +102,7 @@ func (s *Server) handleListProjects(
 	if err := json.Unmarshal(data, &list); err != nil {
 		return errResult(err)
 	}
-	// Projects are low-cardinality; use a high limit so nothing is dropped.
-	summaries := projectItems[projectJSON, projectSummary](list.Items, 1000, projectToSummary)
+	summaries := projectItems[projectJSON, projectSummary](list.Items, projectToSummary)
 	return jsonAnyResult(map[string]any{"items": summaries})
 }
 
