@@ -1,5 +1,3 @@
-import { faExternalLink } from '@fortawesome/free-solid-svg-icons';
-import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
 import { Flex } from 'antd';
 import { generatePath, Link } from 'react-router-dom';
 
@@ -7,26 +5,27 @@ import { paths } from '@ui/config/paths';
 import { StageConditionIcon } from '@ui/features/common/stage-status/stage-condition-icon';
 import { useStageControllerStatus } from '@ui/features/common/stage-status/use-stage-controller-status';
 import { getStagePhase } from '@ui/features/common/stage-status/utils';
+import { getCurrentFreight } from '@ui/features/common/utils';
 import { Stage } from '@ui/gen/api/v1alpha1/generated_pb';
 
-export const StageNodePhase = (props: { stage: Stage }) => {
-  const projectName = props.stage?.metadata?.namespace || '';
-  const { controllerName, isControllerDead } = useStageControllerStatus(props.stage);
-  const stagePhase = getStagePhase(props.stage, isControllerDead);
+export const PhaseCell = ({ stage }: { stage: Stage }) => {
+  const { controllerName, isControllerDead } = useStageControllerStatus(stage);
+  const stagePhase = getStagePhase(stage, isControllerDead);
 
-  const Phase = (
+  if (getCurrentFreight(stage).length === 0) {
+    return <>-</>;
+  }
+
+  const Comp = (
     <Flex align='center' gap={4}>
       {stagePhase}{' '}
       <StageConditionIcon
-        className='text-[10px]'
-        conditions={props.stage?.status?.conditions || []}
+        conditions={stage?.status?.conditions || []}
         noTooltip
+        className='text-[10px]'
         isControllerDead={isControllerDead}
         controllerName={controllerName}
       />
-      {stagePhase === 'Promoting' && (
-        <FontAwesomeIcon icon={faExternalLink} className='text-[8px]' />
-      )}
     </Flex>
   );
 
@@ -34,14 +33,14 @@ export const StageNodePhase = (props: { stage: Stage }) => {
     return (
       <Link
         to={generatePath(paths.promotion, {
-          name: projectName,
-          promotionId: props.stage?.status?.currentPromotion?.name || ''
+          name: stage?.metadata?.namespace,
+          promotionId: stage?.status?.currentPromotion?.name
         })}
       >
-        {Phase}
+        {Comp}
       </Link>
     );
   }
 
-  return Phase;
+  return Comp;
 };
