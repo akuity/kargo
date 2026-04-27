@@ -99,25 +99,35 @@ func sanitizeResource(payload any) any {
 	return dropNulls(m)
 }
 
-// dropNulls recursively removes nil values from maps and nil elements from
-// slices so the LLM doesn't see fields like "artifacts":null or "vars":null.
+// dropNulls recursively removes nil values and empty maps from the JSON tree
+// so the LLM doesn't see noise like "artifacts":null, "retry":{}, "task":{}.
 func dropNulls(v any) any {
 	switch val := v.(type) {
 	case map[string]any:
 		for k, child := range val {
 			if child == nil {
 				delete(val, k)
+				continue
+			}
+			cleaned := dropNulls(child)
+			if m, ok := cleaned.(map[string]any); ok && len(m) == 0 {
+				delete(val, k)
 			} else {
-				val[k] = dropNulls(child)
+				val[k] = cleaned
 			}
 		}
 		return val
 	case []any:
 		out := val[:0]
 		for _, elem := range val {
-			if elem != nil {
-				out = append(out, dropNulls(elem))
+			if elem == nil {
+				continue
 			}
+			cleaned := dropNulls(elem)
+			if m, ok := cleaned.(map[string]any); ok && len(m) == 0 {
+				continue
+			}
+			out = append(out, cleaned)
 		}
 		return out
 	default:
