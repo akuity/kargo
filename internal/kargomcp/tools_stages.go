@@ -14,7 +14,8 @@ func (s *Server) registerStageTools() {
 	mcp.AddTool(s.mcpServer, &mcp.Tool{
 		Name: "list_stages",
 		Description: "List stages in a Kargo project. Returns a compact summary per stage. " +
-			"Optionally filter by health status: Healthy, Unhealthy, or Unknown.",
+			"Optionally filter by warehouse (stages that request freight from those warehouses) " +
+			"and/or health status (Healthy, Unhealthy, Unknown).",
 		OutputSchema: mustOutputSchema[struct {
 			Items []stageSummary `json:"items"`
 		}](),
@@ -39,8 +40,9 @@ func (s *Server) registerStageTools() {
 // --- list_stages ---
 
 type listStagesArgs struct {
-	Project string `json:"project" jsonschema:"The name of the Kargo project"`
-	Health  string `json:"health,omitempty" jsonschema:"Filter by health status: Healthy, Unhealthy, or Unknown"`
+	Project    string   `json:"project" jsonschema:"The name of the Kargo project"`
+	Warehouses []string `json:"warehouses,omitempty" jsonschema:"Filter to stages that request freight from these warehouses"`
+	Health     string   `json:"health,omitempty" jsonschema:"Filter by health status: Healthy, Unhealthy, or Unknown"`
 }
 
 // stageJSON is the intake struct for summary projection.
@@ -110,10 +112,11 @@ func (s *Server) handleListStages(
 	if err != nil {
 		return errResult(err)
 	}
-	res, err := apiClient.Core.ListStages(
-		core.NewListStagesParams().WithProject(args.Project),
-		nil,
-	)
+	params := core.NewListStagesParams().WithProject(args.Project)
+	if len(args.Warehouses) > 0 {
+		params = params.WithFreightOrigins(args.Warehouses)
+	}
+	res, err := apiClient.Core.ListStages(params, nil)
 	if err != nil {
 		return errResult(err)
 	}
