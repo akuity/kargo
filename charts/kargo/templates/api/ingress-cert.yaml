@@ -10,6 +10,9 @@ metadata:
 spec:
   dnsNames:
   - {{ quote .Values.api.host }}
+  {{- range .Values.api.ingress.extraHosts }}
+  - {{ quote . }}
+  {{- end }}
   issuerRef:
     group: cert-manager.io
     kind: Issuer

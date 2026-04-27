@@ -1,4 +1,6 @@
 {{- if and .Values.api.enabled .Values.api.ingress.enabled }}
+{{- $apiPort := ternary 443 80 .Values.api.tls.enabled }}
+{{- $webhookPort := ternary 443 80 .Values.externalWebhooksServer.tls.enabled }}
 apiVersion: networking.k8s.io/v1
 kind: Ingress
 metadata:
@@ -27,11 +29,7 @@ spec:
           service:
             name: kargo-api
             port:
-              {{- if .Values.api.tls.enabled }}
-              number: 443
-              {{- else }}
-              number: 80
-              {{- end }}
+              number: {{ $apiPort }}
       {{- if and .Values.externalWebhooksServer.enabled (not .Values.externalWebhooksServer.ingress.enabled) }}
       - pathType: {{ .Values.api.ingress.pathType | default "ImplementationSpecific" }}
         path: /webhooks
@@ -39,16 +37,46 @@ spec:
           service:
             name: kargo-external-webhooks-server
             port:
-              {{- if .Values.externalWebhooksServer.tls.enabled }}
-              number: 443
-              {{- else }}
-              number: 80
-              {{- end }}
+              number: {{ $webhookPort }}
       {{- end }}
+  {{- range .Values.api.ingress.extraHosts }}
+  - host: {{ quote . }}
+    http:
+      paths:
+      - pathType: {{ $.Values.api.ingress.pathType | default "ImplementationSpecific" }}
+        path: /
+        backend:
+          service:
+            name: kargo-api
+            port:
+              number: {{ $apiPort }}
+      {{- if and $.Values.externalWebhooksServer.enabled (not $.Values.externalWebhooksServer.ingress.enabled) }}
+      - pathType: {{ $.Values.api.ingress.pathType | default "ImplementationSpecific" }}
+        path: /webhooks
+        backend:
+          service:
+            name: kargo-external-webhooks-server
+            port:
+              number: {{ $webhookPort }}
+      {{- end }}
+
+  {{- end }}
   {{- if .Values.api.ingress.tls.enabled }}
   tls:
   - hosts:
     - {{ quote .Values.api.host }}
+    {{- if .Values.api.ingress.tls.selfSignedCert }}
+    {{- range .Values.api.ingress.extraHosts }}
+    - {{ quote . }}
+    {{- end }}
+    {{- end }}
     secretName: {{ .Values.api.ingress.tls.secretName }}
+  {{- if and .Values.api.ingress.extraHosts .Values.api.ingress.tls.extraHostsSecretName (not .Values.api.ingress.tls.selfSignedCert) }}
+  - hosts:
+  {{- range .Values.api.ingress.extraHosts }}
+    - {{ quote . }}
+  {{- end }}
+    secretName: {{ .Values.api.ingress.tls.extraHostsSecretName }}
+  {{- end }}
   {{- end }}
 {{- end }}
