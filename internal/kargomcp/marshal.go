@@ -96,7 +96,33 @@ func sanitizeResource(payload any) any {
 			delete(meta, "annotations")
 		}
 	}
-	return m
+	return dropNulls(m)
+}
+
+// dropNulls recursively removes nil values from maps and nil elements from
+// slices so the LLM doesn't see fields like "artifacts":null or "vars":null.
+func dropNulls(v any) any {
+	switch val := v.(type) {
+	case map[string]any:
+		for k, child := range val {
+			if child == nil {
+				delete(val, k)
+			} else {
+				val[k] = dropNulls(child)
+			}
+		}
+		return val
+	case []any:
+		out := val[:0]
+		for _, elem := range val {
+			if elem != nil {
+				out = append(out, dropNulls(elem))
+			}
+		}
+		return out
+	default:
+		return v
+	}
 }
 
 // okResult returns a simple success message as a tool result.
