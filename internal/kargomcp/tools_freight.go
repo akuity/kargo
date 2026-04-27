@@ -70,6 +70,7 @@ type freightJSON struct {
 	} `json:"charts"`
 	Status struct {
 		CurrentlyIn map[string]json.RawMessage `json:"currentlyIn"`
+		VerifiedIn  map[string]json.RawMessage `json:"verifiedIn"`
 	} `json:"status"`
 }
 
@@ -90,14 +91,15 @@ type freightSummaryChart struct {
 }
 
 type freightSummary struct {
-	Name      string                `json:"name"`
-	Alias     string                `json:"alias,omitempty"`
-	CreatedAt string                `json:"createdAt,omitempty"`
-	Warehouse string                `json:"warehouse,omitempty"`
-	Stages    []string              `json:"stages,omitempty"`
-	Images    []freightSummaryImage  `json:"images,omitempty"`
-	Commits   []freightSummaryCommit `json:"commits,omitempty"`
-	Charts    []freightSummaryChart  `json:"charts,omitempty"`
+	Name       string                `json:"name"`
+	Alias      string                `json:"alias,omitempty"`
+	CreatedAt  string                `json:"createdAt,omitempty"`
+	Warehouse  string                `json:"warehouse,omitempty"`
+	Stages     []string              `json:"stages,omitempty"`
+	VerifiedIn []string              `json:"verifiedIn,omitempty"`
+	Images     []freightSummaryImage  `json:"images,omitempty"`
+	Commits    []freightSummaryCommit `json:"commits,omitempty"`
+	Charts     []freightSummaryChart  `json:"charts,omitempty"`
 }
 
 func freightToSummary(f freightJSON) freightSummary {
@@ -109,6 +111,9 @@ func freightToSummary(f freightJSON) freightSummary {
 	}
 	for stageName := range f.Status.CurrentlyIn {
 		s.Stages = append(s.Stages, stageName)
+	}
+	for stageName := range f.Status.VerifiedIn {
+		s.VerifiedIn = append(s.VerifiedIn, stageName)
 	}
 	for _, img := range f.Images {
 		s.Images = append(s.Images, freightSummaryImage{RepoURL: img.RepoURL, Tag: img.Tag})

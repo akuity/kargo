@@ -4,6 +4,7 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	"strings"
 
 	"github.com/modelcontextprotocol/go-sdk/mcp"
 
@@ -15,7 +16,8 @@ func (s *Server) registerPromotionTools() {
 	mcp.AddTool(s.mcpServer, &mcp.Tool{
 		Name: "list_promotions",
 		Description: "List promotions in a Kargo project, newest first. Returns a compact summary per promotion. " +
-			"Optionally filter by stage. Defaults to the 20 most recent; set limit to see more.",
+			"Optionally filter by stage and/or phase (Running, Succeeded, Failed, Errored, Pending, Aborted). " +
+			"Defaults to the 20 most recent; set limit to see more.",
 		OutputSchema: mustOutputSchema[struct {
 			Items []promotionSummary `json:"items"`
 		}](),
@@ -60,6 +62,7 @@ func (s *Server) registerPromotionTools() {
 type listPromotionsArgs struct {
 	Project string  `json:"project" jsonschema:"The name of the Kargo project"`
 	Stage   *string `json:"stage,omitempty" jsonschema:"Filter to promotions targeting this stage"`
+	Phase   string  `json:"phase,omitempty" jsonschema:"Filter by phase: Running, Succeeded, Failed, Errored, Pending, Aborted"`
 	Limit   int     `json:"limit,omitempty" jsonschema:"Max number of promotions to return, newest first (default 20)"`
 }
 
@@ -143,8 +146,28 @@ func (s *Server) handleListPromotions(
 	if err := json.Unmarshal(data, &list); err != nil {
 		return errResult(err)
 	}
-	summaries := projectItems(list.Items, args.Limit, promotionToSummary)
+	items := list.Items
+	if args.Phase != "" {
+		items = filterRawsByPhase(items, args.Phase)
+	}
+	summaries := projectItems(items, args.Limit, promotionToSummary)
 	return jsonAnyResult(map[string]any{"items": summaries})
+}
+
+// filterRawsByPhase keeps only promotion JSON items whose status.phase matches
+// (case-insensitive).
+func filterRawsByPhase(raws []json.RawMessage, phase string) []json.RawMessage {
+	var out []json.RawMessage
+	for _, raw := range raws {
+		var p promotionJSON
+		if err := json.Unmarshal(raw, &p); err != nil {
+			continue
+		}
+		if strings.EqualFold(p.Status.Phase, phase) {
+			out = append(out, raw)
+		}
+	}
+	return out
 }
 
 // --- get_promotion ---

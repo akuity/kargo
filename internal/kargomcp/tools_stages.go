@@ -55,8 +55,11 @@ type stageJSON struct {
 			Status string   `json:"status"`
 			Issues []string `json:"issues"`
 		} `json:"health"`
-		FreightSummary string `json:"freightSummary"`
-		LastPromotion  struct {
+		FreightSummary   string `json:"freightSummary"`
+		CurrentPromotion struct {
+			Name string `json:"name"`
+		} `json:"currentPromotion"`
+		LastPromotion struct {
 			Name       string `json:"name"`
 			FinishedAt string `json:"finishedAt"`
 			Status     struct {
@@ -64,18 +67,16 @@ type stageJSON struct {
 				Message string `json:"message"`
 			} `json:"status"`
 		} `json:"lastPromotion"`
-		CurrentPromotion struct {
-			Name string `json:"name"`
-		} `json:"currentPromotion"`
 	} `json:"status"`
 }
 
 type stageSummary struct {
-	Name           string              `json:"name"`
-	Health         string              `json:"health,omitempty"`
-	HealthIssues   []string            `json:"healthIssues,omitempty"`
-	CurrentFreight string              `json:"currentFreight,omitempty"`
-	LastPromotion  *lastPromotionBrief `json:"lastPromotion,omitempty"`
+	Name              string              `json:"name"`
+	Health            string              `json:"health,omitempty"`
+	HealthIssues      []string            `json:"healthIssues,omitempty"`
+	CurrentFreight    string              `json:"currentFreight,omitempty"`
+	CurrentPromotion  string              `json:"currentPromotion,omitempty"`
+	LastPromotion     *lastPromotionBrief `json:"lastPromotion,omitempty"`
 }
 
 type lastPromotionBrief struct {
@@ -87,10 +88,11 @@ type lastPromotionBrief struct {
 
 func stageToSummary(st stageJSON) stageSummary {
 	s := stageSummary{
-		Name:           st.Metadata.Name,
-		Health:         st.Status.Health.Status,
-		HealthIssues:   st.Status.Health.Issues,
-		CurrentFreight: st.Status.FreightSummary,
+		Name:             st.Metadata.Name,
+		Health:           st.Status.Health.Status,
+		HealthIssues:     st.Status.Health.Issues,
+		CurrentFreight:   st.Status.FreightSummary,
+		CurrentPromotion: st.Status.CurrentPromotion.Name,
 	}
 	if st.Status.LastPromotion.Name != "" {
 		s.LastPromotion = &lastPromotionBrief{
