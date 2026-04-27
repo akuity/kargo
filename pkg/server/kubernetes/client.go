@@ -8,6 +8,7 @@ import (
 	"strings"
 
 	authv1 "k8s.io/api/authorization/v1"
+	coordinationv1 "k8s.io/api/coordination/v1"
 	corev1 "k8s.io/api/core/v1"
 	rbacv1 "k8s.io/api/rbac/v1"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
@@ -20,6 +21,7 @@ import (
 	"k8s.io/client-go/rest"
 	"k8s.io/client-go/tools/clientcmd"
 	"sigs.k8s.io/cli-utils/pkg/flowcontrol"
+	"sigs.k8s.io/controller-runtime/pkg/cache"
 	libClient "sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/client/apiutil"
 	libCluster "sigs.k8s.io/controller-runtime/pkg/cluster"
@@ -194,6 +196,24 @@ func newDefaultInternalClient(
 				Cache: &libClient.CacheOptions{
 					DisableFor: []libClient.Object{
 						&corev1.Secret{},
+					},
+				},
+			}
+			// The API server has only namespaced (Role-based) RBAC for
+			// Leases, so the default cluster-wide watch the cache would
+			// otherwise set up fails to start. Scope the lease informer to
+			// the Kargo namespace, where the API server's RBAC actually
+			// permits list/watch.
+			kargoNamespace := os.Getenv("KARGO_NAMESPACE")
+			if kargoNamespace == "" {
+				kargoNamespace = "kargo"
+			}
+			clusterOptions.Cache = cache.Options{
+				ByObject: map[libClient.Object]cache.ByObject{
+					&coordinationv1.Lease{}: {
+						Namespaces: map[string]cache.Config{
+							kargoNamespace: {},
+						},
 					},
 				},
 			}

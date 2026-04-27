@@ -97,6 +97,9 @@ func (s *server) setupRESTRouter(ctx context.Context) *gin.Engine {
 			system.POST("/cluster-config/refresh", s.refreshClusterConfig)
 			system.DELETE("/cluster-config", s.deleteClusterConfig)
 
+			// Controller heartbeats
+			system.GET("/controller-heartbeats", s.getControllerHeartbeats)
+
 			// Roles
 			system.GET("/roles", s.listSystemRoles)
 			system.GET("/roles/:role", s.getSystemRole)

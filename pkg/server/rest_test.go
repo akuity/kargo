@@ -13,6 +13,7 @@ import (
 
 	"github.com/gin-gonic/gin"
 	"github.com/stretchr/testify/require"
+	coordinationv1 "k8s.io/api/coordination/v1"
 	corev1 "k8s.io/api/core/v1"
 	rbacv1 "k8s.io/api/rbac/v1"
 	"k8s.io/apimachinery/pkg/runtime"
@@ -61,6 +62,8 @@ func testRESTEndpoint(
 
 	// k8s APIs
 	err := corev1.AddToScheme(testScheme)
+	require.NoError(t, err)
+	err = coordinationv1.AddToScheme(testScheme)
 	require.NoError(t, err)
 	err = rbacv1.AddToScheme(testScheme)
 	require.NoError(t, err)
@@ -168,6 +171,8 @@ func testRESTWatchEndpoint(
 
 	// k8s APIs
 	err := corev1.AddToScheme(testScheme)
+	require.NoError(t, err)
+	err = coordinationv1.AddToScheme(testScheme)
 	require.NoError(t, err)
 	err = rbacv1.AddToScheme(testScheme)
 	require.NoError(t, err)
