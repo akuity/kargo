@@ -53,21 +53,28 @@ func destructive() *mcp.ToolAnnotations {
 	return &mcp.ToolAnnotations{DestructiveHint: &t}
 }
 
-// limitItems reverses a {"items":[...]} map to newest-first and truncates to
-// limit entries (default 20 when limit <= 0). Pass the result of flattenFreightGroups
-// or a similar helper that produces this shape.
-func limitItems(m map[string]any, limit int) map[string]any {
+// projectItems unmarshals each raw JSON item into T, applies project to
+// produce a summary S, reverses the slice (newest-first), and truncates to
+// limit (default 20). Items that fail to unmarshal are skipped.
+func projectItems[T, S any](raws []json.RawMessage, limit int, project func(T) S) []S {
 	if limit <= 0 {
 		limit = 20
 	}
-	raw, _ := m["items"].([]json.RawMessage)
-	slices.Reverse(raw)
-	if len(raw) > limit {
-		raw = raw[:limit]
+	slices.Reverse(raws)
+	if len(raws) > limit {
+		raws = raws[:limit]
 	}
-	m["items"] = raw
-	return m
+	out := make([]S, 0, len(raws))
+	for _, raw := range raws {
+		var item T
+		if err := json.Unmarshal(raw, &item); err != nil {
+			continue
+		}
+		out = append(out, project(item))
+	}
+	return out
 }
+
 
 // okResult returns a simple success message as a tool result.
 func okResult(msg string) (*mcp.CallToolResult, any, error) {

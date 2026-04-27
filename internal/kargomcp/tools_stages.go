@@ -12,15 +12,18 @@ import (
 
 func (s *Server) registerStageTools() {
 	mcp.AddTool(s.mcpServer, &mcp.Tool{
-		Name:         "list_stages",
-		Description:  "List stages in a Kargo project. Optionally filter by health status (Healthy, Unhealthy, Unknown).",
-		OutputSchema: mustOutputSchema[stageListResult](),
+		Name: "list_stages",
+		Description: "List stages in a Kargo project. Returns a compact summary per stage. " +
+			"Optionally filter by health status: Healthy, Unhealthy, or Unknown.",
+		OutputSchema: mustOutputSchema[struct {
+			Items []stageSummary `json:"items"`
+		}](),
 		Annotations:  readOnly(),
 	}, s.handleListStages)
 
 	mcp.AddTool(s.mcpServer, &mcp.Tool{
 		Name:         "get_stage",
-		Description:  "Get a single stage by name within a Kargo project.",
+		Description:  "Get full details for a single stage.",
 		OutputSchema: mustOutputSchema[stageResult](),
 		Annotations:  readOnly(),
 	}, s.handleGetStage)
@@ -29,8 +32,7 @@ func (s *Server) registerStageTools() {
 		Name: "refresh_stage",
 		Description: "Trigger an out-of-band refresh of a stage, causing it to " +
 			"re-evaluate its subscriptions and re-sync its current state.",
-		OutputSchema: mustOutputSchema[stageResult](),
-		Annotations:  destructive(),
+		Annotations: destructive(),
 	}, s.handleRefreshStage)
 }
 
@@ -41,8 +43,62 @@ type listStagesArgs struct {
 	Health  string `json:"health,omitempty" jsonschema:"Filter by health status: Healthy, Unhealthy, or Unknown"`
 }
 
-type stageListResult struct {
-	Items []*stageResult `json:"items,omitempty"`
+// stageJSON is the intake struct for summary projection.
+type stageJSON struct {
+	Metadata struct {
+		Name string `json:"name"`
+	} `json:"metadata"`
+	Status struct {
+		Health struct {
+			Status string   `json:"status"`
+			Issues []string `json:"issues"`
+		} `json:"health"`
+		FreightSummary string `json:"freightSummary"`
+		LastPromotion  struct {
+			Name       string `json:"name"`
+			FinishedAt string `json:"finishedAt"`
+			Status     struct {
+				Phase   string `json:"phase"`
+				Message string `json:"message"`
+			} `json:"status"`
+		} `json:"lastPromotion"`
+		CurrentPromotion struct {
+			Name string `json:"name"`
+		} `json:"currentPromotion"`
+	} `json:"status"`
+}
+
+type stageSummary struct {
+	Name           string              `json:"name"`
+	Health         string              `json:"health,omitempty"`
+	HealthIssues   []string            `json:"healthIssues,omitempty"`
+	CurrentFreight string              `json:"currentFreight,omitempty"`
+	LastPromotion  *lastPromotionBrief `json:"lastPromotion,omitempty"`
+}
+
+type lastPromotionBrief struct {
+	Name       string `json:"name,omitempty"`
+	Phase      string `json:"phase,omitempty"`
+	FinishedAt string `json:"finishedAt,omitempty"`
+	Message    string `json:"message,omitempty"`
+}
+
+func stageToSummary(st stageJSON) stageSummary {
+	s := stageSummary{
+		Name:           st.Metadata.Name,
+		Health:         st.Status.Health.Status,
+		HealthIssues:   st.Status.Health.Issues,
+		CurrentFreight: st.Status.FreightSummary,
+	}
+	if st.Status.LastPromotion.Name != "" {
+		s.LastPromotion = &lastPromotionBrief{
+			Name:       st.Status.LastPromotion.Name,
+			Phase:      st.Status.LastPromotion.Status.Phase,
+			FinishedAt: st.Status.LastPromotion.FinishedAt,
+			Message:    st.Status.LastPromotion.Status.Message,
+		}
+	}
+	return s
 }
 
 func (s *Server) handleListStages(
@@ -61,46 +117,39 @@ func (s *Server) handleListStages(
 	if err != nil {
 		return errResult(err)
 	}
-	return jsonAnyResult(filterStagesByHealth(res.Payload, args.Health))
-}
-
-// filterStagesByHealth optionally filters the stage list payload by health status.
-// When health is empty the full list is returned unchanged.
-func filterStagesByHealth(payload any, health string) any {
-	if health == "" {
-		return payload
-	}
-	want := strings.ToLower(health)
-	data, err := json.Marshal(payload)
-	if err != nil {
-		return payload
-	}
+	data, _ := json.Marshal(res.Payload)
 	var list struct {
 		Items []json.RawMessage `json:"items"`
 	}
 	if err := json.Unmarshal(data, &list); err != nil {
-		return payload
+		return errResult(err)
 	}
-	var filtered []json.RawMessage
-	for _, raw := range list.Items {
-		var s struct {
-			Status struct {
-				Health struct {
-					Status string `json:"status"`
-				} `json:"health"`
-			} `json:"status"`
+
+	// Filter by health before projecting.
+	want := strings.ToLower(args.Health)
+	filtered := list.Items
+	if want != "" {
+		filtered = filtered[:0]
+		for _, raw := range list.Items {
+			var st stageJSON
+			if err := json.Unmarshal(raw, &st); err != nil {
+				continue
+			}
+			if strings.EqualFold(st.Status.Health.Status, want) {
+				filtered = append(filtered, raw)
+			}
 		}
-		if err := json.Unmarshal(raw, &s); err != nil {
+	}
+
+	summaries := make([]stageSummary, 0, len(filtered))
+	for _, raw := range filtered {
+		var st stageJSON
+		if err := json.Unmarshal(raw, &st); err != nil {
 			continue
 		}
-		if strings.EqualFold(s.Status.Health.Status, want) {
-			filtered = append(filtered, raw)
-		}
+		summaries = append(summaries, stageToSummary(st))
 	}
-	if filtered == nil {
-		filtered = []json.RawMessage{}
-	}
-	return map[string]any{"items": filtered}
+	return jsonAnyResult(map[string]any{"items": summaries})
 }
 
 // --- get_stage ---
@@ -122,9 +171,9 @@ type stageHealth struct {
 }
 
 type stageLastPromotion struct {
-	Name      string `json:"name,omitempty"`
+	Name       string `json:"name,omitempty"`
 	FinishedAt string `json:"finishedAt,omitempty"`
-	Status    string `json:"status,omitempty"`
+	Status     string `json:"status,omitempty"`
 }
 
 type stageCondition struct {
@@ -135,13 +184,13 @@ type stageCondition struct {
 }
 
 type stageResult struct {
-	Name             string                   `json:"name,omitempty"`
-	Project          string                   `json:"namespace,omitempty"`
-	CurrentFreight   []*stageFreightReference `json:"currentFreight,omitempty"`
-	Health           *stageHealth             `json:"health,omitempty"`
-	LastPromotion    *stageLastPromotion      `json:"lastPromotion,omitempty"`
-	Conditions       []*stageCondition        `json:"conditions,omitempty"`
-	Phase            string                   `json:"phase,omitempty"`
+	Name           string                   `json:"name,omitempty"`
+	Project        string                   `json:"namespace,omitempty"`
+	CurrentFreight []*stageFreightReference `json:"currentFreight,omitempty"`
+	Health         *stageHealth             `json:"health,omitempty"`
+	LastPromotion  *stageLastPromotion      `json:"lastPromotion,omitempty"`
+	Conditions     []*stageCondition        `json:"conditions,omitempty"`
+	Phase          string                   `json:"phase,omitempty"`
 }
 
 func (s *Server) handleGetStage(

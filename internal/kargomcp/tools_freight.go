@@ -12,15 +12,17 @@ import (
 func (s *Server) registerFreightTools() {
 	mcp.AddTool(s.mcpServer, &mcp.Tool{
 		Name: "list_freight",
-		Description: "List freight in a Kargo project. Optionally filter by stage " +
-			"(freight currently in that stage) or by origin warehouse.",
-		OutputSchema: mustOutputSchema[freightListResult](),
+		Description: "List freight in a Kargo project, newest first. Returns a compact summary per piece. " +
+			"Optionally filter by stage (freight currently in that stage) or by origin warehouse.",
+		OutputSchema: mustOutputSchema[struct {
+			Items []freightSummary `json:"items"`
+		}](),
 		Annotations:  readOnly(),
 	}, s.handleListFreight)
 
 	mcp.AddTool(s.mcpServer, &mcp.Tool{
 		Name:         "get_freight",
-		Description:  "Get a single piece of freight by name or alias within a Kargo project.",
+		Description:  "Get full details for a single piece of freight by name or alias.",
 		OutputSchema: mustOutputSchema[freightResult](),
 		Annotations:  readOnly(),
 	}, s.handleGetFreight)
@@ -29,8 +31,7 @@ func (s *Server) registerFreightTools() {
 		Name: "approve_freight",
 		Description: "Manually approve a piece of freight for promotion to a specific stage, " +
 			"bypassing the normal verification process. Requires promote permission on the stage.",
-		OutputSchema: mustOutputSchema[freightResult](),
-		Annotations:  destructive(),
+		Annotations: destructive(),
 	}, s.handleApproveFreight)
 }
 
@@ -40,7 +41,136 @@ type listFreightArgs struct {
 	Project string   `json:"project" jsonschema:"The name of the Kargo project"`
 	Stage   *string  `json:"stage,omitempty" jsonschema:"Filter to freight currently in this stage"`
 	Origins []string `json:"origins,omitempty" jsonschema:"Filter by origin warehouse names"`
-	Limit   int      `json:"limit,omitempty" jsonschema:"Max number of freight to return, newest first (default 20)"`
+	Limit   int      `json:"limit,omitempty" jsonschema:"Max number to return, newest first (default 20)"`
+}
+
+// freightJSON is the intake struct for summary projection.
+type freightJSON struct {
+	Alias    string `json:"alias"`
+	Metadata struct {
+		Name              string `json:"name"`
+		CreationTimestamp string `json:"creationTimestamp"`
+	} `json:"metadata"`
+	Origin struct {
+		Name string `json:"name"`
+	} `json:"origin"`
+	Commits []struct {
+		RepoURL string `json:"repoURL"`
+		ID      string `json:"id"`
+		Tag     string `json:"tag"`
+		Message string `json:"message"`
+	} `json:"commits"`
+	Images []struct {
+		RepoURL string `json:"repoURL"`
+		Tag     string `json:"tag"`
+	} `json:"images"`
+	Charts []struct {
+		Name    string `json:"name"`
+		Version string `json:"version"`
+	} `json:"charts"`
+	Status struct {
+		CurrentlyIn map[string]json.RawMessage `json:"currentlyIn"`
+	} `json:"status"`
+}
+
+type freightSummaryImage struct {
+	RepoURL string `json:"repoURL,omitempty"`
+	Tag     string `json:"tag,omitempty"`
+}
+
+type freightSummaryCommit struct {
+	RepoURL string `json:"repoURL,omitempty"`
+	ID      string `json:"id,omitempty"`
+	Message string `json:"message,omitempty"`
+}
+
+type freightSummaryChart struct {
+	Name    string `json:"name,omitempty"`
+	Version string `json:"version,omitempty"`
+}
+
+type freightSummary struct {
+	Name      string                `json:"name"`
+	Alias     string                `json:"alias,omitempty"`
+	CreatedAt string                `json:"createdAt,omitempty"`
+	Warehouse string                `json:"warehouse,omitempty"`
+	Stages    []string              `json:"stages,omitempty"`
+	Images    []freightSummaryImage  `json:"images,omitempty"`
+	Commits   []freightSummaryCommit `json:"commits,omitempty"`
+	Charts    []freightSummaryChart  `json:"charts,omitempty"`
+}
+
+func freightToSummary(f freightJSON) freightSummary {
+	s := freightSummary{
+		Name:      f.Metadata.Name,
+		Alias:     f.Alias,
+		CreatedAt: f.Metadata.CreationTimestamp,
+		Warehouse: f.Origin.Name,
+	}
+	for stageName := range f.Status.CurrentlyIn {
+		s.Stages = append(s.Stages, stageName)
+	}
+	for _, img := range f.Images {
+		s.Images = append(s.Images, freightSummaryImage{RepoURL: img.RepoURL, Tag: img.Tag})
+	}
+	for _, c := range f.Commits {
+		s.Commits = append(s.Commits, freightSummaryCommit{RepoURL: c.RepoURL, ID: c.ID, Message: c.Message})
+	}
+	for _, ch := range f.Charts {
+		s.Charts = append(s.Charts, freightSummaryChart{Name: ch.Name, Version: ch.Version})
+	}
+	return s
+}
+
+func (s *Server) handleListFreight(
+	ctx context.Context,
+	_ *mcp.CallToolRequest,
+	args listFreightArgs,
+) (*mcp.CallToolResult, any, error) {
+	apiClient, err := s.apiClient(ctx)
+	if err != nil {
+		return errResult(err)
+	}
+	params := core.NewQueryFreightsRestParams().WithProject(args.Project)
+	if args.Stage != nil {
+		params = params.WithStage(args.Stage)
+	}
+	if len(args.Origins) > 0 {
+		params = params.WithOrigins(args.Origins)
+	}
+	res, err := apiClient.Core.QueryFreightsRest(params, nil)
+	if err != nil {
+		return errResult(err)
+	}
+	raws := flattenFreightGroups(res.Payload)
+	summaries := projectItems(raws, args.Limit, freightToSummary)
+	return jsonAnyResult(map[string]any{"items": summaries})
+}
+
+// flattenFreightGroups collapses the QueryFreightsRest grouped response
+// ({"groups":{"":{"items":[...]}}}) into a flat []json.RawMessage.
+func flattenFreightGroups(payload any) []json.RawMessage {
+	data, _ := json.Marshal(payload)
+	var grouped struct {
+		Groups map[string]struct {
+			Items []json.RawMessage `json:"items"`
+		} `json:"groups"`
+	}
+	if err := json.Unmarshal(data, &grouped); err != nil {
+		return nil
+	}
+	var items []json.RawMessage
+	for _, g := range grouped.Groups {
+		items = append(items, g.Items...)
+	}
+	return items
+}
+
+// --- get_freight ---
+
+type getFreightArgs struct {
+	Project            string `json:"project" jsonschema:"The name of the Kargo project"`
+	FreightNameOrAlias string `json:"freight" jsonschema:"The name or alias of the piece of freight"`
 }
 
 type freightCommit struct {
@@ -79,65 +209,6 @@ type freightResult struct {
 	Charts  []*freightChart  `json:"charts,omitempty"`
 }
 
-type freightListResult struct {
-	Items []*freightResult `json:"items,omitempty"`
-}
-
-func (s *Server) handleListFreight(
-	ctx context.Context,
-	_ *mcp.CallToolRequest,
-	args listFreightArgs,
-) (*mcp.CallToolResult, any, error) {
-	apiClient, err := s.apiClient(ctx)
-	if err != nil {
-		return errResult(err)
-	}
-	params := core.NewQueryFreightsRestParams().WithProject(args.Project)
-	if args.Stage != nil {
-		params = params.WithStage(args.Stage)
-	}
-	if len(args.Origins) > 0 {
-		params = params.WithOrigins(args.Origins)
-	}
-	res, err := apiClient.Core.QueryFreightsRest(params, nil)
-	if err != nil {
-		return errResult(err)
-	}
-	return jsonAnyResult(limitItems(flattenFreightGroups(res.Payload), args.Limit))
-}
-
-// flattenFreightGroups collapses the QueryFreightsRest grouped response
-// ({"groups":{"":{"items":[...]}}}) into a simple {"items":[...]} list.
-func flattenFreightGroups(payload any) map[string]any {
-	data, err := json.Marshal(payload)
-	if err != nil {
-		return map[string]any{"items": []any{}}
-	}
-	var grouped struct {
-		Groups map[string]struct {
-			Items []json.RawMessage `json:"items"`
-		} `json:"groups"`
-	}
-	if err := json.Unmarshal(data, &grouped); err != nil {
-		return map[string]any{"items": []any{}}
-	}
-	var items []json.RawMessage
-	for _, g := range grouped.Groups {
-		items = append(items, g.Items...)
-	}
-	if items == nil {
-		items = []json.RawMessage{}
-	}
-	return map[string]any{"items": items}
-}
-
-// --- get_freight ---
-
-type getFreightArgs struct {
-	Project         string `json:"project" jsonschema:"The name of the Kargo project"`
-	FreightNameOrAlias string `json:"freight" jsonschema:"The name or alias of the piece of freight"`
-}
-
 func (s *Server) handleGetFreight(
 	ctx context.Context,
 	_ *mcp.CallToolRequest,
@@ -162,9 +233,9 @@ func (s *Server) handleGetFreight(
 // --- approve_freight ---
 
 type approveFreightArgs struct {
-	Project         string `json:"project" jsonschema:"The name of the Kargo project"`
+	Project            string `json:"project" jsonschema:"The name of the Kargo project"`
 	FreightNameOrAlias string `json:"freight" jsonschema:"The name or alias of the piece of freight to approve"`
-	Stage           string `json:"stage" jsonschema:"The name of the stage to approve the freight for"`
+	Stage              string `json:"stage" jsonschema:"The name of the stage to approve the freight for"`
 }
 
 func (s *Server) handleApproveFreight(

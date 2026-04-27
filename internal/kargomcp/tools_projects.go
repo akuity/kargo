@@ -2,6 +2,7 @@ package kargomcp
 
 import (
 	"context"
+	"encoding/json"
 
 	"github.com/modelcontextprotocol/go-sdk/mcp"
 
@@ -11,14 +12,16 @@ import (
 func (s *Server) registerProjectTools() {
 	mcp.AddTool(s.mcpServer, &mcp.Tool{
 		Name:         "list_projects",
-		Description:  "List all Kargo projects the authenticated user has access to.",
-		OutputSchema: mustOutputSchema[projectListResult](),
+		Description:  "List all Kargo projects. Returns a compact summary per project.",
+		OutputSchema: mustOutputSchema[struct {
+			Items []projectSummary `json:"items"`
+		}](),
 		Annotations:  readOnly(),
 	}, s.handleListProjects)
 
 	mcp.AddTool(s.mcpServer, &mcp.Tool{
 		Name:         "get_project",
-		Description:  "Get a single Kargo project by name.",
+		Description:  "Get full details for a single Kargo project.",
 		OutputSchema: mustOutputSchema[projectResult](),
 		Annotations:  readOnly(),
 	}, s.handleGetProject)
@@ -28,8 +31,55 @@ func (s *Server) registerProjectTools() {
 
 type listProjectsArgs struct{}
 
-type projectListResult struct {
-	Items []*projectResult `json:"items,omitempty"`
+// projectJSON is the intake struct for decoding list items — only the fields we
+// want to surface in the summary.
+type projectJSON struct {
+	Metadata struct {
+		Name string `json:"name"`
+	} `json:"metadata"`
+	Status struct {
+		Conditions []struct {
+			Type    string `json:"type"`
+			Status  string `json:"status"`
+			Message string `json:"message"`
+		} `json:"conditions"`
+		Stats struct {
+			Stages struct {
+				Count  int            `json:"count"`
+				Health map[string]int `json:"health"`
+			} `json:"stages"`
+			Warehouses struct {
+				Count  int            `json:"count"`
+				Health map[string]int `json:"health"`
+			} `json:"warehouses"`
+		} `json:"stats"`
+	} `json:"status"`
+}
+
+type projectSummary struct {
+	Name              string `json:"name"`
+	Ready             string `json:"ready,omitempty"`
+	StageCount        int    `json:"stageCount,omitempty"`
+	HealthyStages     int    `json:"healthyStages,omitempty"`
+	WarehouseCount    int    `json:"warehouseCount,omitempty"`
+	HealthyWarehouses int    `json:"healthyWarehouses,omitempty"`
+}
+
+func projectToSummary(p projectJSON) projectSummary {
+	s := projectSummary{
+		Name:              p.Metadata.Name,
+		StageCount:        p.Status.Stats.Stages.Count,
+		HealthyStages:     p.Status.Stats.Stages.Health["healthy"],
+		WarehouseCount:    p.Status.Stats.Warehouses.Count,
+		HealthyWarehouses: p.Status.Stats.Warehouses.Health["healthy"],
+	}
+	for _, c := range p.Status.Conditions {
+		if c.Type == "Ready" {
+			s.Ready = c.Status
+			break
+		}
+	}
+	return s
 }
 
 func (s *Server) handleListProjects(
@@ -45,7 +95,16 @@ func (s *Server) handleListProjects(
 	if err != nil {
 		return errResult(err)
 	}
-	return jsonAnyResult(res.Payload)
+	data, _ := json.Marshal(res.Payload)
+	var list struct {
+		Items []json.RawMessage `json:"items"`
+	}
+	if err := json.Unmarshal(data, &list); err != nil {
+		return errResult(err)
+	}
+	// Projects are low-cardinality; use a high limit so nothing is dropped.
+	summaries := projectItems[projectJSON, projectSummary](list.Items, 1000, projectToSummary)
+	return jsonAnyResult(map[string]any{"items": summaries})
 }
 
 // --- get_project ---
@@ -67,13 +126,13 @@ type projectStats struct {
 }
 
 type stageStats struct {
-	Count  int64             `json:"count,omitempty"`
-	Health map[string]int64  `json:"health,omitempty"`
+	Count  int64            `json:"count,omitempty"`
+	Health map[string]int64 `json:"health,omitempty"`
 }
 
 type warehouseStats struct {
-	Count  int64             `json:"count,omitempty"`
-	Health map[string]int64  `json:"health,omitempty"`
+	Count  int64            `json:"count,omitempty"`
+	Health map[string]int64 `json:"health,omitempty"`
 }
 
 type projectResult struct {
@@ -100,3 +159,4 @@ func (s *Server) handleGetProject(
 	}
 	return jsonAnyResult(res.Payload)
 }
+

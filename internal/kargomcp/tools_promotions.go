@@ -14,9 +14,11 @@ import (
 func (s *Server) registerPromotionTools() {
 	mcp.AddTool(s.mcpServer, &mcp.Tool{
 		Name: "list_promotions",
-		Description: "List promotions in a Kargo project, newest first. Optionally filter by stage. " +
-			"Defaults to the 20 most recent; set limit to see more.",
-		OutputSchema: mustOutputSchema[promotionListResult](),
+		Description: "List promotions in a Kargo project, newest first. Returns a compact summary per promotion. " +
+			"Optionally filter by stage. Defaults to the 20 most recent; set limit to see more.",
+		OutputSchema: mustOutputSchema[struct {
+			Items []promotionSummary `json:"items"`
+		}](),
 		Annotations:  readOnly(),
 	}, s.handleListPromotions)
 
@@ -39,7 +41,9 @@ func (s *Server) registerPromotionTools() {
 		Name: "promote_downstream",
 		Description: "Promote a piece of freight to all stages immediately downstream of a given stage. " +
 			"Provide either freight (name) or freight_alias, not both.",
-		OutputSchema: mustOutputSchema[promotionListResult](),
+		OutputSchema: mustOutputSchema[struct {
+			Items []promotionSummary `json:"items"`
+		}](),
 		Annotations:  destructive(),
 	}, s.handlePromoteDownstream)
 
@@ -59,6 +63,33 @@ type listPromotionsArgs struct {
 	Limit   int     `json:"limit,omitempty" jsonschema:"Max number of promotions to return, newest first (default 20)"`
 }
 
+// promotionJSON is the intake struct for summary projection.
+type promotionJSON struct {
+	Metadata struct {
+		Name string `json:"name"`
+	} `json:"metadata"`
+	Spec struct {
+		Stage   string `json:"stage"`
+		Freight string `json:"freight"`
+	} `json:"spec"`
+	Status struct {
+		Phase      string `json:"phase"`
+		Message    string `json:"message"`
+		StartedAt  string `json:"startedAt"`
+		FinishedAt string `json:"finishedAt"`
+	} `json:"status"`
+}
+
+type promotionSummary struct {
+	Name       string `json:"name"`
+	Stage      string `json:"stage,omitempty"`
+	Freight    string `json:"freight,omitempty"`
+	Phase      string `json:"phase,omitempty"`
+	Message    string `json:"message,omitempty"`
+	StartedAt  string `json:"startedAt,omitempty"`
+	FinishedAt string `json:"finishedAt,omitempty"`
+}
+
 type promotionCondition struct {
 	Type    string `json:"type,omitempty"`
 	Status  string `json:"status,omitempty"`
@@ -76,8 +107,16 @@ type promotionResult struct {
 	Conditions []*promotionCondition `json:"conditions,omitempty"`
 }
 
-type promotionListResult struct {
-	Items []*promotionResult `json:"items,omitempty"`
+func promotionToSummary(p promotionJSON) promotionSummary {
+	return promotionSummary{
+		Name:       p.Metadata.Name,
+		Stage:      p.Spec.Stage,
+		Freight:    p.Spec.Freight,
+		Phase:      p.Status.Phase,
+		Message:    p.Status.Message,
+		StartedAt:  p.Status.StartedAt,
+		FinishedAt: p.Status.FinishedAt,
+	}
 }
 
 func (s *Server) handleListPromotions(
@@ -97,20 +136,15 @@ func (s *Server) handleListPromotions(
 	if err != nil {
 		return errResult(err)
 	}
-	return jsonAnyResult(limitPromotions(res.Payload, args.Limit))
-}
-
-// limitPromotions reverses the server's ascending-ULID order (newest first)
-// and truncates to limit items (default 20 when limit <= 0).
-func limitPromotions(payload any, limit int) map[string]any {
-	data, _ := json.Marshal(payload)
+	data, _ := json.Marshal(res.Payload)
 	var list struct {
 		Items []json.RawMessage `json:"items"`
 	}
 	if err := json.Unmarshal(data, &list); err != nil {
-		return map[string]any{"items": []json.RawMessage{}}
+		return errResult(err)
 	}
-	return limitItems(map[string]any{"items": list.Items}, limit)
+	summaries := projectItems(list.Items, args.Limit, promotionToSummary)
+	return jsonAnyResult(map[string]any{"items": summaries})
 }
 
 // --- get_promotion ---
