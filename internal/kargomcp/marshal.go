@@ -70,6 +70,35 @@ func projectItems[T, S any](raws []json.RawMessage, project func(T) S) []S {
 }
 
 
+// sanitizeResource strips noisy Kubernetes bookkeeping fields from a resource
+// before returning it to the LLM:
+//   - metadata.managedFields (GC bookkeeping, no semantic value)
+//   - metadata.resourceVersion (internal Kubernetes state)
+//   - metadata.generateName (template prefix, redundant with name)
+//   - metadata.annotations["kubectl.kubernetes.io/last-applied-configuration"]
+//     (full JSON-string duplicate of the spec)
+func sanitizeResource(payload any) any {
+	data, _ := json.Marshal(payload)
+	var m map[string]any
+	if err := json.Unmarshal(data, &m); err != nil {
+		return payload
+	}
+	meta, _ := m["metadata"].(map[string]any)
+	if meta == nil {
+		return m
+	}
+	delete(meta, "managedFields")
+	delete(meta, "resourceVersion")
+	delete(meta, "generateName")
+	if anns, ok := meta["annotations"].(map[string]any); ok {
+		delete(anns, "kubectl.kubernetes.io/last-applied-configuration")
+		if len(anns) == 0 {
+			delete(meta, "annotations")
+		}
+	}
+	return m
+}
+
 // okResult returns a simple success message as a tool result.
 func okResult(msg string) (*mcp.CallToolResult, any, error) {
 	return &mcp.CallToolResult{

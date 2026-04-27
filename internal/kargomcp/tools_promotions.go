@@ -191,7 +191,7 @@ func (s *Server) handleGetPromotion(
 	if err != nil {
 		return errResult(err)
 	}
-	return jsonAnyResult(res.Payload)
+	return jsonAnyResult(sanitizeResource(res.Payload))
 }
 
 // --- promote_to_stage ---
@@ -228,7 +228,7 @@ func (s *Server) handlePromoteToStage(
 	if err != nil {
 		return errResult(err)
 	}
-	return jsonAnyResult(res.Payload)
+	return jsonAnyResult(sanitizeResource(res.Payload))
 }
 
 // --- promote_downstream ---
@@ -265,7 +265,7 @@ func (s *Server) handlePromoteDownstream(
 	if err != nil {
 		return errResult(err)
 	}
-	return jsonAnyResult(res.Payload)
+	return jsonAnyResult(sanitizeResource(res.Payload))
 }
 
 // --- abort_promotion ---

@@ -142,7 +142,7 @@ func (s *Server) handleGetWarehouse(
 	if err != nil {
 		return errResult(err)
 	}
-	return jsonAnyResult(res.Payload)
+	return jsonAnyResult(sanitizeResource(res.Payload))
 }
 
 // --- refresh_warehouse ---

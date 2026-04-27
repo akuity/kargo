@@ -231,7 +231,7 @@ func (s *Server) handleGetFreight(
 	if err != nil {
 		return errResult(err)
 	}
-	return jsonAnyResult(res.Payload)
+	return jsonAnyResult(sanitizeResource(res.Payload))
 }
 
 // --- approve_freight ---
