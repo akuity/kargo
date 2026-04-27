@@ -1,20 +1,18 @@
-import { createConnectQueryKey, useMutation, useQuery } from '@connectrpc/connect-query';
 import { useQueryClient } from '@tanstack/react-query';
 import { Modal } from 'antd';
 import { useForm } from 'react-hook-form';
+import { stringify } from 'yaml';
 
 import YamlEditor from '@ui/features/common/code-editor/yaml-editor-lazy';
 import { FieldContainer } from '@ui/features/common/form/field-container';
 import { ModalComponentProps } from '@ui/features/common/modal/modal-context';
 import { getClusterAnalysisTemplateYAMLExample } from '@ui/features/utils/cluster-analysis-template-example';
 import {
-  getClusterPromotionTask,
-  listClusterPromotionTasks,
-  updateResource
-} from '@ui/gen/api/service/v1alpha1/service-KargoService_connectquery';
-import { RawFormat } from '@ui/gen/api/service/v1alpha1/service_pb';
-import { ClusterPromotionTask } from '@ui/gen/api/v1alpha1/generated_pb';
-import { decodeRawData } from '@ui/utils/decode-raw-data';
+  getListClusterPromotionTasksQueryKey,
+  useGetClusterPromotionTask
+} from '@ui/gen/api/v2/core/core';
+import { ClusterPromotionTask } from '@ui/gen/api/v2/models';
+import { useUpdateResource } from '@ui/gen/api/v2/resources/resources';
 
 type EditClusterPromotionTaskModalProps = ModalComponentProps & {
   clusterPromotionTask: ClusterPromotionTask;
@@ -23,36 +21,33 @@ type EditClusterPromotionTaskModalProps = ModalComponentProps & {
 export const EditClusterPromotionTaskModal = (props: EditClusterPromotionTaskModalProps) => {
   const queryClient = useQueryClient();
 
-  const getClusterPromotionTaskQuery = useQuery(getClusterPromotionTask, {
-    name: props.clusterPromotionTask?.metadata?.name,
-    format: RawFormat.YAML
+  const getClusterPromotionTaskQuery = useGetClusterPromotionTask(
+    props.clusterPromotionTask?.metadata?.name || ''
+  );
+
+  const updateResourceMutation = useUpdateResource({
+    mutation: {
+      onSuccess: () => {
+        queryClient.invalidateQueries({
+          queryKey: getListClusterPromotionTasksQueryKey()
+        });
+        props.hide();
+      }
+    }
   });
 
-  const updateResourceMutation = useMutation(updateResource, { onSuccess: () => props.hide() });
+  const taskYAML = getClusterPromotionTaskQuery.data?.data
+    ? stringify(getClusterPromotionTaskQuery.data.data)
+    : '';
 
   const editClusterPromotionTaskForm = useForm({
     values: {
-      value: decodeRawData(getClusterPromotionTaskQuery.data)
+      value: taskYAML
     }
   });
 
   const onSubmit = editClusterPromotionTaskForm.handleSubmit((data) => {
-    const textEncoder = new TextEncoder();
-
-    updateResourceMutation.mutate(
-      {
-        manifest: textEncoder.encode(data.value)
-      },
-      {
-        onSuccess: () =>
-          queryClient.invalidateQueries({
-            queryKey: createConnectQueryKey({
-              schema: listClusterPromotionTasks,
-              cardinality: 'infinite'
-            })
-          })
-      }
-    );
+    updateResourceMutation.mutate({ data: data.value });
   });
 
   return (

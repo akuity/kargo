@@ -105,7 +105,7 @@ func TestErrorInterceptor(t *testing.T) {
 
 			cli := svcv1alpha1connect.NewKargoServiceClient(srv.Client(), srv.URL, connect.WithGRPC())
 			_, err := cli.GetVersionInfo(
-				context.Background(),
+				t.Context(),
 				connect.NewRequest(&svcv1alpha1.GetVersionInfoRequest{}),
 			)
 			if tc.errExpected {

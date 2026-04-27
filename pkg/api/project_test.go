@@ -1,7 +1,6 @@
 package api
 
 import (
-	"context"
 	"testing"
 
 	"github.com/stretchr/testify/require"
@@ -50,7 +49,7 @@ func TestGetProject(t *testing.T) {
 	for _, testCase := range testCases {
 		t.Run(testCase.name, func(t *testing.T) {
 			project, err := GetProject(
-				context.Background(),
+				t.Context(),
 				testCase.client,
 				"fake-project",
 			)

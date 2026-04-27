@@ -3,7 +3,7 @@
   "version": "0.0.0",
   "private": true,
   "scripts": {
-    "copy-swagger": "cp ../swagger.yaml ../swagger.json static/",
+    "copy-swagger": "cp ../swagger.json static/",
     "docusaurus": "docusaurus",
     "prestart": "pnpm copy-swagger",
     "start": "pnpm build-gtag-plugin && docusaurus start --host 0.0.0.0",

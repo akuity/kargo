@@ -10,6 +10,7 @@ import (
 	"testing"
 
 	"github.com/stretchr/testify/require"
+	apiextensionsv1 "k8s.io/apiextensions-apiserver/pkg/apis/apiextensions/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"
@@ -515,6 +516,147 @@ func TestGenericHandler(t *testing.T) {
 			},
 		},
 		{
+			name: "promotion refresh - partial success",
+			kClient: fake.NewClientBuilder().WithScheme(testScheme).WithObjects(
+				// this promotion will be refreshed successfully
+				&kargoapi.Promotion{
+					ObjectMeta: metav1.ObjectMeta{
+						Namespace: "test-project",
+						Name:      "promo-wait-for-pr",
+					},
+					Spec: kargoapi.PromotionSpec{
+						Stage: "test-stage",
+						Steps: []kargoapi.PromotionStep{{
+							Uses: "git-wait-for-pr",
+							As:   "wait-pr",
+						}},
+					},
+					Status: kargoapi.PromotionStatus{
+						Phase:       kargoapi.PromotionPhaseRunning,
+						CurrentStep: 0,
+						State: &apiextensionsv1.JSON{
+							Raw: []byte(`{"wait-pr":{"pr":{"url":"https://github.com/example/repo/pull/42"}}}`),
+						},
+					},
+				},
+				// this promotion will also be found by the index but fail during refresh
+				&kargoapi.Promotion{
+					ObjectMeta: metav1.ObjectMeta{
+						Namespace: "test-project",
+						Name:      "failure-promo",
+					},
+					Spec: kargoapi.PromotionSpec{
+						Stage: "test-stage",
+						Steps: []kargoapi.PromotionStep{{
+							Uses: "git-wait-for-pr",
+							As:   "wait-pr",
+						}},
+					},
+					Status: kargoapi.PromotionStatus{
+						Phase:       kargoapi.PromotionPhaseRunning,
+						CurrentStep: 0,
+						State: &apiextensionsv1.JSON{
+							Raw: []byte(`{"wait-pr":{"pr":{"url":"https://github.com/example/repo/pull/42"}}}`),
+						},
+					},
+				},
+			).WithIndex(
+				&kargoapi.Promotion{},
+				indexer.RunningPromotionsByPullRequestURLField,
+				indexer.RunningPromotionsByPullRequestURL,
+			).WithInterceptorFuncs(
+				interceptor.Funcs{
+					Patch: func(
+						_ context.Context,
+						_ client.WithWatch,
+						obj client.Object,
+						_ client.Patch,
+						_ ...client.PatchOption,
+					) error {
+						if obj.GetName() == "failure-promo" {
+							return errors.New("something went wrong")
+						}
+						return nil
+					},
+				},
+			).Build(),
+			config: &kargoapi.GenericWebhookReceiverConfig{
+				Actions: []kargoapi.GenericWebhookAction{
+					{
+						ActionType:     kargoapi.GenericWebhookActionTypeRefresh,
+						WhenExpression: "request.header('X-Event-Type') == 'pull_request'",
+						TargetSelectionCriteria: []kargoapi.GenericWebhookTargetSelectionCriteria{
+							{
+								Kind: kargoapi.GenericWebhookTargetKindPromotion,
+								IndexSelector: kargoapi.IndexSelector{
+									MatchIndices: []kargoapi.IndexSelectorRequirement{
+										{
+											Key:      indexer.RunningPromotionsByPullRequestURLField,
+											Operator: kargoapi.IndexSelectorOperatorEqual,
+											Value:    `${{ request.body.pull_request.html_url }}`,
+										},
+									},
+								},
+							},
+						},
+					},
+				},
+			},
+			req: func() *http.Request {
+				b := []byte(`{"pull_request":{"html_url":"https://github.com/example/repo/pull/42"}}`)
+				req := httptest.NewRequest(
+					http.MethodPost,
+					testURL,
+					bytes.NewBuffer(b),
+				)
+				req.Header.Set("X-Event-Type", "pull_request")
+				return req
+			},
+			assertions: func(t *testing.T, w *httptest.ResponseRecorder) {
+				require.Equal(t, http.StatusInternalServerError, w.Code)
+				t.Logf("response body: %s", w.Body.String())
+				expected := `{
+					"results": [
+						{
+							"action": "Refresh",
+							"whenExpression": "request.header('X-Event-Type') == 'pull_request'",
+							"targetSelectionCriteria": [
+								{
+									"kind": "Promotion",
+									"labelSelector": {},
+									"indexSelector": {
+										"matchIndices": [
+											{
+												"key": "pullRequestURL",
+												"operator": "Equals",
+												"value": "${{ request.body.pull_request.html_url }}"
+											}
+										]
+									}
+								}
+							],
+							"matchedWhenExpression": true,
+							"selectedTargets": [
+								{
+									"namespace": "test-project",
+									"name": "failure-promo",
+									"success": false
+								},
+								{
+									"namespace": "test-project",
+									"name": "promo-wait-for-pr",
+									"success": true
+								}
+							],
+							"result": "PartialSuccess",
+							"summary": "Refreshed 1 of 2 selected resources"
+						}
+					]
+				}`
+				require.JSONEq(t, expected, w.Body.String())
+			},
+		},
+		{
 			name: "full success",
 			kClient: fake.NewClientBuilder().WithScheme(testScheme).WithObjects(
 				// this warehouse will be refreshed successfully
@@ -634,6 +776,105 @@ func TestGenericHandler(t *testing.T) {
 						]
 					}
 				`
+				require.JSONEq(t, expected, w.Body.String())
+			},
+		},
+		{
+			name: "promotion refresh - full success",
+			kClient: fake.NewClientBuilder().WithScheme(testScheme).WithObjects(
+				&kargoapi.Promotion{
+					ObjectMeta: metav1.ObjectMeta{
+						Namespace: "test-project",
+						Name:      "promo-wait-for-pr",
+					},
+					Spec: kargoapi.PromotionSpec{
+						Stage: "test-stage",
+						Steps: []kargoapi.PromotionStep{{
+							Uses: "git-wait-for-pr",
+							As:   "wait-pr",
+						}},
+					},
+					Status: kargoapi.PromotionStatus{
+						Phase:       kargoapi.PromotionPhaseRunning,
+						CurrentStep: 0,
+						State: &apiextensionsv1.JSON{
+							Raw: []byte(`{"wait-pr":{"pr":{"url":"https://github.com/example/repo/pull/42"}}}`),
+						},
+					},
+				},
+			).WithIndex(
+				&kargoapi.Promotion{},
+				indexer.RunningPromotionsByPullRequestURLField,
+				indexer.RunningPromotionsByPullRequestURL,
+			).Build(),
+			config: &kargoapi.GenericWebhookReceiverConfig{
+				Actions: []kargoapi.GenericWebhookAction{
+					{
+						ActionType:     kargoapi.GenericWebhookActionTypeRefresh,
+						WhenExpression: "request.header('X-Event-Type') == 'pull_request'",
+						TargetSelectionCriteria: []kargoapi.GenericWebhookTargetSelectionCriteria{
+							{
+								Kind: kargoapi.GenericWebhookTargetKindPromotion,
+								IndexSelector: kargoapi.IndexSelector{
+									MatchIndices: []kargoapi.IndexSelectorRequirement{
+										{
+											Key:      indexer.RunningPromotionsByPullRequestURLField,
+											Operator: kargoapi.IndexSelectorOperatorEqual,
+											Value:    `${{ request.body.pull_request.html_url }}`,
+										},
+									},
+								},
+							},
+						},
+					},
+				},
+			},
+			req: func() *http.Request {
+				b := []byte(`{"pull_request":{"html_url":"https://github.com/example/repo/pull/42"}}`)
+				req := httptest.NewRequest(
+					http.MethodPost,
+					testURL,
+					bytes.NewBuffer(b),
+				)
+				req.Header.Set("X-Event-Type", "pull_request")
+				return req
+			},
+			assertions: func(t *testing.T, w *httptest.ResponseRecorder) {
+				require.Equal(t, http.StatusOK, w.Code)
+				t.Logf("response body: %s", w.Body.String())
+				expected := `{
+					"results": [
+						{
+							"action": "Refresh",
+							"whenExpression": "request.header('X-Event-Type') == 'pull_request'",
+							"targetSelectionCriteria": [
+								{
+									"kind": "Promotion",
+									"labelSelector": {},
+									"indexSelector": {
+										"matchIndices": [
+											{
+												"key": "pullRequestURL",
+												"operator": "Equals",
+												"value": "${{ request.body.pull_request.html_url }}"
+											}
+										]
+									}
+								}
+							],
+							"matchedWhenExpression": true,
+							"selectedTargets": [
+								{
+									"namespace": "test-project",
+									"name": "promo-wait-for-pr",
+									"success": true
+								}
+							],
+							"result": "Success",
+							"summary": "Refreshed 1 of 1 selected resources"
+						}
+					]
+				}`
 				require.JSONEq(t, expected, w.Body.String())
 			},
 		},

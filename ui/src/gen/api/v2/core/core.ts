@@ -23,47 +23,34 @@ import type {
 
 import type {
   ApproveFreightParams,
+  ClusterPromotionTask,
+  ClusterPromotionTaskList,
   CreateConfigMapRequestBody,
-  CreateProjectConfigMap201,
-  CreateSharedConfigMap201,
-  CreateSystemConfigMap201,
-  GetClusterPromotionTask200,
-  GetFreight200,
-  GetProject200,
-  GetProjectConfig200,
-  GetProjectConfigMap200,
-  GetPromotion200,
-  GetPromotionTask200,
-  GetSharedConfigMap200,
-  GetStage200,
-  GetSystemConfigMap200,
-  GetWarehouse200,
-  ListClusterPromotionTasks200,
+  Freight,
   ListImages200,
-  ListProjectConfigMaps200,
-  ListProjects200,
-  ListPromotionTasks200,
-  ListPromotions200,
   ListPromotionsParams,
-  ListSharedConfigMaps200,
-  ListStages200,
-  ListSystemConfigMaps200,
-  ListWarehouses200,
+  ListStagesParams,
   PatchConfigMapRequestBody,
   PatchFreightAliasParams,
-  PatchProjectConfigMap200,
-  PatchSharedConfigMap200,
-  PatchSystemConfigMap200,
+  Project,
+  ProjectConfig,
+  ProjectList,
   PromoteDownstream201,
   PromoteDownstreamRequest,
-  PromoteToStage201,
   PromoteToStageRequest,
+  Promotion,
+  PromotionList,
+  PromotionTask,
+  PromotionTaskList,
   QueryFreightsRest200,
   QueryFreightsRestParams,
+  Stage,
+  StageList,
   UpdateConfigMapRequestBody,
-  UpdateProjectConfigMap200,
-  UpdateSharedConfigMap200,
-  UpdateSystemConfigMap200
+  V1ConfigMap,
+  V1ConfigMapList,
+  Warehouse,
+  WarehouseList
 } from '.././models';
 
 import { customFetch } from '../../../../lib/api/custom-fetch';
@@ -75,7 +62,7 @@ type SecondParameter<T extends (...args: never) => unknown> = Parameters<T>[1];
  * @summary List projects
  */
 export type listProjectsResponse200 = {
-  data: ListProjects200;
+  data: ProjectList;
   status: 200;
 };
 
@@ -187,7 +174,7 @@ export function useListProjects<TData = Awaited<ReturnType<typeof listProjects>>
  * @summary Retrieve a Project resource
  */
 export type getProjectResponse200 = {
-  data: GetProject200;
+  data: Project;
   status: 200;
 };
 
@@ -399,7 +386,7 @@ namespace.
  * @summary Retrieve ProjectConfig
  */
 export type getProjectConfigResponse200 = {
-  data: GetProjectConfig200;
+  data: ProjectConfig;
   status: 200;
 };
 
@@ -725,7 +712,7 @@ Kubernetes ConfigMapList resource.
  * @summary List project-level ConfigMaps
  */
 export type listProjectConfigMapsResponse200 = {
-  data: ListProjectConfigMaps200;
+  data: V1ConfigMapList;
   status: 200;
 };
 
@@ -872,7 +859,7 @@ Kubernetes ConfigMap resource.
  * @summary Create a project-level ConfigMap
  */
 export type createProjectConfigMapResponse201 = {
-  data: CreateProjectConfigMap201;
+  data: V1ConfigMap;
   status: 201;
 };
 
@@ -969,7 +956,7 @@ export const useCreateProjectConfigMap = <TError = unknown, TContext = unknown>(
  * @summary Retrieve a project-level ConfigMap
  */
 export type getProjectConfigMapResponse200 = {
-  data: GetProjectConfigMap200;
+  data: V1ConfigMap;
   status: 200;
 };
 
@@ -1125,7 +1112,7 @@ is replaced. Returns the updated Kubernetes ConfigMap resource.
  * @summary Replace a project-level ConfigMap
  */
 export type updateProjectConfigMapResponse200 = {
-  data: UpdateProjectConfigMap200;
+  data: V1ConfigMap;
   status: 200;
 };
 
@@ -1326,7 +1313,7 @@ Returns the updated Kubernetes ConfigMap resource.
  * @summary Patch a project-level ConfigMap
  */
 export type patchProjectConfigMapResponse200 = {
-  data: PatchProjectConfigMap200;
+  data: V1ConfigMap;
   status: 200;
 };
 
@@ -1594,7 +1581,7 @@ or alias.
  * @summary Retrieve a Freight resource
  */
 export type getFreightResponse200 = {
-  data: GetFreight200;
+  data: Freight;
   status: 200;
 };
 
@@ -2165,7 +2152,7 @@ a PromotionTaskList resource.
  * @summary List PromotionTasks
  */
 export type listPromotionTasksResponse200 = {
-  data: ListPromotionTasks200;
+  data: PromotionTaskList;
   status: 200;
 };
 
@@ -2303,7 +2290,7 @@ export function useListPromotionTasks<
  * @summary Retrieve a PromotionTask
  */
 export type getPromotionTaskResponse200 = {
-  data: GetPromotionTask200;
+  data: PromotionTask;
   status: 200;
 };
 
@@ -2447,7 +2434,7 @@ PromotionList resource.
  * @summary List Promotions
  */
 export type listPromotionsResponse200 = {
-  data: ListPromotions200;
+  data: PromotionList;
   status: 200;
 };
 
@@ -2599,7 +2586,7 @@ export function useListPromotions<
  * @summary Retrieve a Promotion
  */
 export type getPromotionResponse200 = {
-  data: GetPromotion200;
+  data: Promotion;
   status: 200;
 };
 
@@ -2915,7 +2902,7 @@ StageList resource.
  * @summary List Stages
  */
 export type listStagesResponse200 = {
-  data: ListStages200;
+  data: StageList;
   status: 200;
 };
 
@@ -2924,22 +2911,44 @@ export type listStagesResponseSuccess = listStagesResponse200 & {
 };
 export type listStagesResponse = listStagesResponseSuccess;
 
-export const getListStagesUrl = (project: string) => {
-  return `/v1beta1/projects/${project}/stages`;
+export const getListStagesUrl = (project: string, params?: ListStagesParams) => {
+  const normalizedParams = new URLSearchParams();
+
+  Object.entries(params || {}).forEach(([key, value]) => {
+    const explodeParameters = ['freightOrigins'];
+
+    if (Array.isArray(value) && explodeParameters.includes(key)) {
+      value.forEach((v) => {
+        normalizedParams.append(key, v === null ? 'null' : v.toString());
+      });
+      return;
+    }
+
+    if (value !== undefined) {
+      normalizedParams.append(key, value === null ? 'null' : value.toString());
+    }
+  });
+
+  const stringifiedParams = normalizedParams.toString();
+
+  return stringifiedParams.length > 0
+    ? `/v1beta1/projects/${project}/stages?${stringifiedParams}`
+    : `/v1beta1/projects/${project}/stages`;
 };
 
 export const listStages = async (
   project: string,
+  params?: ListStagesParams,
   options?: RequestInit
 ): Promise<listStagesResponse> => {
-  return customFetch<listStagesResponse>(getListStagesUrl(project), {
+  return customFetch<listStagesResponse>(getListStagesUrl(project, params), {
     ...options,
     method: 'GET'
   });
 };
 
-export const getListStagesQueryKey = (project?: string) => {
-  return [`/v1beta1/projects/${project}/stages`] as const;
+export const getListStagesQueryKey = (project?: string, params?: ListStagesParams) => {
+  return [`/v1beta1/projects/${project}/stages`, ...(params ? [params] : [])] as const;
 };
 
 export const getListStagesQueryOptions = <
@@ -2947,6 +2956,7 @@ export const getListStagesQueryOptions = <
   TError = unknown
 >(
   project: string,
+  params?: ListStagesParams,
   options?: {
     query?: Partial<UseQueryOptions<Awaited<ReturnType<typeof listStages>>, TError, TData>>;
     request?: SecondParameter<typeof customFetch>;
@@ -2954,10 +2964,10 @@ export const getListStagesQueryOptions = <
 ) => {
   const { query: queryOptions, request: requestOptions } = options ?? {};
 
-  const queryKey = queryOptions?.queryKey ?? getListStagesQueryKey(project);
+  const queryKey = queryOptions?.queryKey ?? getListStagesQueryKey(project, params);
 
   const queryFn: QueryFunction<Awaited<ReturnType<typeof listStages>>> = () =>
-    listStages(project, requestOptions);
+    listStages(project, params, requestOptions);
 
   return { queryKey, queryFn, enabled: !!project, ...queryOptions } as UseQueryOptions<
     Awaited<ReturnType<typeof listStages>>,
@@ -2971,6 +2981,7 @@ export type ListStagesQueryError = unknown;
 
 export function useListStages<TData = Awaited<ReturnType<typeof listStages>>, TError = unknown>(
   project: string,
+  params: undefined | ListStagesParams,
   options: {
     query: Partial<UseQueryOptions<Awaited<ReturnType<typeof listStages>>, TError, TData>> &
       Pick<
@@ -2987,6 +2998,7 @@ export function useListStages<TData = Awaited<ReturnType<typeof listStages>>, TE
 ): DefinedUseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> };
 export function useListStages<TData = Awaited<ReturnType<typeof listStages>>, TError = unknown>(
   project: string,
+  params?: ListStagesParams,
   options?: {
     query?: Partial<UseQueryOptions<Awaited<ReturnType<typeof listStages>>, TError, TData>> &
       Pick<
@@ -3003,6 +3015,7 @@ export function useListStages<TData = Awaited<ReturnType<typeof listStages>>, TE
 ): UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> };
 export function useListStages<TData = Awaited<ReturnType<typeof listStages>>, TError = unknown>(
   project: string,
+  params?: ListStagesParams,
   options?: {
     query?: Partial<UseQueryOptions<Awaited<ReturnType<typeof listStages>>, TError, TData>>;
     request?: SecondParameter<typeof customFetch>;
@@ -3015,13 +3028,14 @@ export function useListStages<TData = Awaited<ReturnType<typeof listStages>>, TE
 
 export function useListStages<TData = Awaited<ReturnType<typeof listStages>>, TError = unknown>(
   project: string,
+  params?: ListStagesParams,
   options?: {
     query?: Partial<UseQueryOptions<Awaited<ReturnType<typeof listStages>>, TError, TData>>;
     request?: SecondParameter<typeof customFetch>;
   },
   queryClient?: QueryClient
 ): UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> } {
-  const queryOptions = getListStagesQueryOptions(project, options);
+  const queryOptions = getListStagesQueryOptions(project, params, options);
 
   const query = useQuery(queryOptions, queryClient) as UseQueryResult<TData, TError> & {
     queryKey: DataTag<QueryKey, TData, TError>;
@@ -3037,7 +3051,7 @@ export function useListStages<TData = Awaited<ReturnType<typeof listStages>>, TE
  * @summary Retrieve a Stage
  */
 export type getStageResponse200 = {
-  data: GetStage200;
+  data: Stage;
   status: 200;
 };
 
@@ -3256,7 +3270,7 @@ the state represented by the specified Freight.
  * @summary Promote to Stage
  */
 export type promoteToStageResponse201 = {
-  data: PromoteToStage201;
+  data: Promotion;
   status: 201;
 };
 
@@ -3541,7 +3555,7 @@ WarehouseList resource.
  * @summary List Warehouses
  */
 export type listWarehousesResponse200 = {
-  data: ListWarehouses200;
+  data: WarehouseList;
   status: 200;
 };
 
@@ -3675,7 +3689,7 @@ export function useListWarehouses<
  * @summary Retrieve a Warehouse
  */
 export type getWarehouseResponse200 = {
-  data: GetWarehouse200;
+  data: Warehouse;
   status: 200;
 };
 
@@ -3993,7 +4007,7 @@ ClusterPromotionTaskList resource.
  * @summary List ClusterPromotionTasks
  */
 export type listClusterPromotionTasksResponse200 = {
-  data: ListClusterPromotionTasks200;
+  data: ClusterPromotionTaskList;
   status: 200;
 };
 
@@ -4131,7 +4145,7 @@ export function useListClusterPromotionTasks<
  * @summary Retrieve a ClusterPromotionTask
  */
 export type getClusterPromotionTaskResponse200 = {
-  data: GetClusterPromotionTask200;
+  data: ClusterPromotionTask;
   status: 200;
 };
 
@@ -4282,7 +4296,7 @@ Returns a Kubernetes ConfigMapList resource.
  * @summary List shared ConfigMaps
  */
 export type listSharedConfigMapsResponse200 = {
-  data: ListSharedConfigMaps200;
+  data: V1ConfigMapList;
   status: 200;
 };
 
@@ -4419,7 +4433,7 @@ the created Kubernetes ConfigMap resource.
  * @summary Create a shared ConfigMap
  */
 export type createSharedConfigMapResponse201 = {
-  data: CreateSharedConfigMap201;
+  data: V1ConfigMap;
   status: 201;
 };
 
@@ -4515,7 +4529,7 @@ export const useCreateSharedConfigMap = <TError = unknown, TContext = unknown>(
  * @summary Retrieve a shared ConfigMap
  */
 export type getSharedConfigMapResponse200 = {
-  data: GetSharedConfigMap200;
+  data: V1ConfigMap;
   status: 200;
 };
 
@@ -4654,7 +4668,7 @@ Returns the updated Kubernetes ConfigMap resource.
  * @summary Replace a shared ConfigMap
  */
 export type updateSharedConfigMapResponse200 = {
-  data: UpdateSharedConfigMap200;
+  data: V1ConfigMap;
   status: 200;
 };
 
@@ -4847,7 +4861,7 @@ Returns the updated Kubernetes ConfigMap resource.
  * @summary Patch a shared ConfigMap
  */
 export type patchSharedConfigMapResponse200 = {
-  data: PatchSharedConfigMap200;
+  data: V1ConfigMap;
   status: 200;
 };
 
@@ -4945,7 +4959,7 @@ ConfigMapList resource.
  * @summary List system-level ConfigMaps
  */
 export type listSystemConfigMapsResponse200 = {
-  data: ListSystemConfigMaps200;
+  data: V1ConfigMapList;
   status: 200;
 };
 
@@ -5082,7 +5096,7 @@ ConfigMap resource.
  * @summary Create a system-level ConfigMap
  */
 export type createSystemConfigMapResponse201 = {
-  data: CreateSystemConfigMap201;
+  data: V1ConfigMap;
   status: 201;
 };
 
@@ -5178,7 +5192,7 @@ export const useCreateSystemConfigMap = <TError = unknown, TContext = unknown>(
  * @summary Retrieve a system-level ConfigMap
  */
 export type getSystemConfigMapResponse200 = {
-  data: GetSystemConfigMap200;
+  data: V1ConfigMap;
   status: 200;
 };
 
@@ -5317,7 +5331,7 @@ Returns the updated Kubernetes ConfigMap resource.
  * @summary Replace a system-level ConfigMap
  */
 export type updateSystemConfigMapResponse200 = {
-  data: UpdateSystemConfigMap200;
+  data: V1ConfigMap;
   status: 200;
 };
 
@@ -5510,7 +5524,7 @@ Returns the updated Kubernetes ConfigMap resource.
  * @summary Patch a system-level ConfigMap
  */
 export type patchSystemConfigMapResponse200 = {
-  data: PatchSystemConfigMap200;
+  data: V1ConfigMap;
   status: 200;
 };
 

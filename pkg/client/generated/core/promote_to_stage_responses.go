@@ -10,6 +10,8 @@ import (
 
 	"github.com/go-openapi/runtime"
 	"github.com/go-openapi/strfmt"
+
+	"github.com/akuity/kargo/pkg/client/generated/models"
 )
 
 // PromoteToStageReader is a Reader for the PromoteToStage structure.
@@ -42,7 +44,7 @@ PromoteToStageCreated describes a response with status code 201, with default he
 Promotion resource (github.com/akuity/kargo/api/v1alpha1.Promotion)
 */
 type PromoteToStageCreated struct {
-	Payload any
+	Payload *models.Promotion
 }
 
 // IsSuccess returns true when this promote to stage created response has a 2xx status code
@@ -85,14 +87,16 @@ func (o *PromoteToStageCreated) String() string {
 	return fmt.Sprintf("[POST /v1beta1/projects/{project}/stages/{stage}/promotions][%d] promoteToStageCreated %s", 201, payload)
 }
 
-func (o *PromoteToStageCreated) GetPayload() any {
+func (o *PromoteToStageCreated) GetPayload() *models.Promotion {
 	return o.Payload
 }
 
 func (o *PromoteToStageCreated) readResponse(response runtime.ClientResponse, consumer runtime.Consumer, formats strfmt.Registry) error {
 
+	o.Payload = new(models.Promotion)
+
 	// response payload
-	if err := consumer.Consume(response.Body(), &o.Payload); err != nil && !stderrors.Is(err, io.EOF) {
+	if err := consumer.Consume(response.Body(), o.Payload); err != nil && !stderrors.Is(err, io.EOF) {
 		return err
 	}
 

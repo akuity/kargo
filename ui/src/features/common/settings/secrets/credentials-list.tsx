@@ -1,4 +1,3 @@
-import { useMutation, useQuery } from '@connectrpc/connect-query';
 import {
   faCode,
   faExternalLink,
@@ -8,14 +7,17 @@ import {
   faTrash
 } from '@fortawesome/free-solid-svg-icons';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
+import { useMutation } from '@tanstack/react-query';
 import { Button, Popover, Space, Table, Typography } from 'antd';
 import Card from 'antd/es/card/Card';
 
 import {
-  deleteRepoCredentials,
-  listRepoCredentials
-} from '@ui/gen/api/service/v1alpha1/service-KargoService_connectquery';
-import { Secret } from '@ui/gen/k8s.io/api/core/v1/generated_pb';
+  deleteProjectRepoCredentials,
+  deleteSharedRepoCredentials,
+  useListProjectRepoCredentials,
+  useListSharedRepoCredentials
+} from '@ui/gen/api/v2/credentials/credentials';
+import { V1Secret } from '@ui/gen/api/v2/models';
 
 import { useConfirmModal } from '../../confirm-modal/use-confirm-modal';
 import { descriptionExpandable } from '../../description-expandable';
@@ -33,7 +35,9 @@ type Props = {
 export const CredentialsList = ({ project = '' }: Props) => {
   const confirm = useConfirmModal();
 
-  const listCredentialsQuery = useQuery(listRepoCredentials, { project });
+  const sharedQuery = useListSharedRepoCredentials({ query: { enabled: !project } });
+  const projectQuery = useListProjectRepoCredentials(project, { query: { enabled: !!project } });
+  const listCredentialsQuery = project ? projectQuery : sharedQuery;
 
   const { show: showCreate } = useModal((p) => (
     <CreateCredentialsModal
@@ -43,13 +47,14 @@ export const CredentialsList = ({ project = '' }: Props) => {
       {...p}
     />
   ));
-  const deleteCredentialsMutation = useMutation(deleteRepoCredentials, {
-    onSuccess: () => {
-      listCredentialsQuery.refetch();
-    }
+
+  const deleteCredentialsMutation = useMutation({
+    mutationFn: (name: string) =>
+      project ? deleteProjectRepoCredentials(project, name) : deleteSharedRepoCredentials(name),
+    onSuccess: () => listCredentialsQuery.refetch()
   });
 
-  const specificCredentials: Secret[] = listCredentialsQuery.data?.credentials || [];
+  const specificCredentials: V1Secret[] = listCredentialsQuery.data?.data?.items || [];
 
   return (
     <Card
@@ -71,12 +76,12 @@ export const CredentialsList = ({ project = '' }: Props) => {
       }
       type='inner'
     >
-      <Table
+      <Table<V1Secret>
         className='my-2'
         scroll={{ x: 'max-content' }}
         key={specificCredentials.length}
         dataSource={specificCredentials}
-        rowKey={(record: Secret) => record?.metadata?.name || ''}
+        rowKey={(record) => record?.metadata?.name || ''}
         loading={listCredentialsQuery.isLoading}
         pagination={{ defaultPageSize: 5, hideOnSinglePage: true }}
         size='small'
@@ -84,105 +89,111 @@ export const CredentialsList = ({ project = '' }: Props) => {
           {
             title: 'Name',
             key: 'name',
-            render: (record) => {
+            render: (_, record) => {
               return <div>{record?.metadata?.name}</div>;
             }
           },
           {
             title: 'Type',
             key: 'type',
-            render: (record) => (
+            render: (_, record) => (
               <div className='flex items-center font-semibold text-sm'>
                 <FontAwesomeIcon
                   icon={iconForCredentialsType(
-                    record?.metadata?.labels[CredentialTypeLabelKey] as CredentialsType
+                    record?.metadata?.labels?.[CredentialTypeLabelKey] as CredentialsType
                   )}
                   className='mr-3 text-blue-500'
                 />
-                {record?.metadata?.labels[CredentialTypeLabelKey].toUpperCase()}
+                {record?.metadata?.labels?.[CredentialTypeLabelKey]?.toUpperCase()}
               </div>
             )
           },
           {
             title: 'Repo URL / Pattern',
             key: 'createdAt',
-            render: (record) => (
+            render: (_, record) => (
               <div className='flex items-center'>
                 <FontAwesomeIcon
                   icon={
-                    record.stringData[CredentialsDataKey.RepoUrlIsRegex] === 'true'
+                    record.stringData?.[CredentialsDataKey.RepoUrlIsRegex] === 'true'
                       ? faCode
                       : faExternalLink
                   }
                   className='mr-2'
                 />
-                {record?.stringData[CredentialsDataKey.RepoUrl]}
+                {record?.stringData?.[CredentialsDataKey.RepoUrl]}
               </div>
             )
           },
           {
             title: 'Username',
             key: 'username',
-            render: (record) => <div>{record?.stringData[CredentialsDataKey.Username]}</div>
+            render: (_, record) => <div>{record?.stringData?.[CredentialsDataKey.Username]}</div>
           },
           {
             key: 'actions',
             fixed: 'right',
-            render: (record) => (
-              <Space>
-                <Button
-                  icon={<FontAwesomeIcon icon={faPencil} size='sm' />}
-                  color='default'
-                  variant='filled'
-                  size='small'
-                  onClick={() => {
-                    showCreate((p) => (
-                      <CreateCredentialsModal
-                        type='repo'
-                        project={project}
-                        onSuccess={listCredentialsQuery.refetch}
-                        editing
-                        init={record}
-                        {...p}
-                      />
-                    ));
-                  }}
-                >
-                  Edit
-                </Button>
-                <Button
-                  icon={<FontAwesomeIcon icon={faTrash} size='sm' />}
-                  color='danger'
-                  variant='filled'
-                  size='small'
-                  onClick={() => {
-                    confirm({
-                      title: (
-                        <div className='flex items-center'>
-                          <FontAwesomeIcon icon={faTrash} className='mr-2' />
-                          Delete Credentials
-                        </div>
-                      ),
-                      content: (
-                        <p>
-                          Are you sure you want to delete credentials{' '}
-                          <b>{record?.metadata?.name}</b>?
-                        </p>
-                      ),
-                      onOk: () => {
-                        deleteCredentialsMutation.mutate({
-                          project,
-                          name: record?.metadata?.name || ''
-                        });
-                      },
-                      hide: () => {}
-                    });
-                  }}
-                >
-                  Delete
-                </Button>
-              </Space>
-            )
+            render: (_, record) => {
+              if (record?.metadata?.labels?.['kargo.akuity.io/replicated-from']) {
+                return (
+                  <Typography.Text type='secondary' italic>
+                    Replicated
+                  </Typography.Text>
+                );
+              }
+              return (
+                <Space>
+                  <Button
+                    icon={<FontAwesomeIcon icon={faPencil} size='sm' />}
+                    color='default'
+                    variant='filled'
+                    size='small'
+                    onClick={() => {
+                      showCreate((p) => (
+                        <CreateCredentialsModal
+                          type='repo'
+                          project={project}
+                          onSuccess={listCredentialsQuery.refetch}
+                          editing
+                          init={record}
+                          {...p}
+                        />
+                      ));
+                    }}
+                  >
+                    Edit
+                  </Button>
+                  <Button
+                    icon={<FontAwesomeIcon icon={faTrash} size='sm' />}
+                    color='danger'
+                    variant='filled'
+                    size='small'
+                    onClick={() => {
+                      confirm({
+                        title: (
+                          <div className='flex items-center'>
+                            <FontAwesomeIcon icon={faTrash} className='mr-2' />
+                            Delete Credentials
+                          </div>
+                        ),
+                        content: (
+                          <p>
+                            Are you sure you want to delete credentials{' '}
+                            <b>{record?.metadata?.name}</b>?
+                          </p>
+                        ),
+                        onOk: () => {
+                          deleteCredentialsMutation.mutate(record?.metadata?.name || '');
+                        },
+                        hide: () => {}
+                      });
+                    }}
+                  >
+                    Delete
+                  </Button>
+                </Space>
+              );
+            }
           }
         ]}
         expandable={descriptionExpandable()}

@@ -1,6 +1,9 @@
 package v1alpha1
 
-import metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+import (
+	corev1 "k8s.io/api/core/v1"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+)
 
 // +kubebuilder:object:root=true
 // +kubebuilder:resource:scope=Cluster,shortName={clusterconfig,clusterconfigs}
@@ -29,6 +32,31 @@ type ClusterConfigSpec struct {
 	// WebhookReceivers describes cluster-scoped webhook receivers used for
 	// processing events from various external platforms
 	WebhookReceivers []WebhookReceiverConfig `json:"webhookReceivers,omitempty" protobuf:"bytes,1,rep,name=webhookReceivers"`
+	// GitClient describes cluster-level configuration for Kargo's Git client,
+	// including committer identity and an optional signing key. If set, these
+	// values take precedence over any configuration provided at install time
+	// via the Helm chart.
+	// +optional
+	GitClient *GitClientConfig `json:"gitClient,omitempty" protobuf:"bytes,2,opt,name=gitClient"`
+}
+
+// GitClientConfig describes cluster-level configuration for Kargo's Git
+// client.
+type GitClientConfig struct {
+	// Name is the name used for Git commits made by Kargo.
+	// +kubebuilder:validation:Required
+	// +kubebuilder:validation:MinLength=1
+	Name string `json:"name" protobuf:"bytes,1,opt,name=name"`
+	// Email is the email address used for Git commits made by Kargo.
+	// +kubebuilder:validation:Required
+	// +kubebuilder:validation:MinLength=1
+	// +kubebuilder:validation:Format="email"
+	Email string `json:"email" protobuf:"bytes,2,opt,name=email"`
+	// SigningKeySecret references a Secret in the system namespace containing
+	// a GPG signing key for commit signing. The Secret must contain a data
+	// key named "signingKey" with the GPG private key material.
+	// +optional
+	SigningKeySecret *corev1.LocalObjectReference `json:"signingKeySecret,omitempty" protobuf:"bytes,3,opt,name=signingKeySecret"`
 }
 
 // ClusterConfigStatus describes the current status of a ClusterConfig.

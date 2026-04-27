@@ -86,7 +86,7 @@ func TestCleanProjectPromotions(t *testing.T) {
 			testCase.assertions(
 				t,
 				testCase.collector.cleanProjectPromotions(
-					context.Background(),
+					t.Context(),
 					"fake-project",
 				),
 			)
@@ -237,7 +237,7 @@ func TestCleanStagePromotions(t *testing.T) {
 			testCase.assertions(
 				t,
 				testCase.collector.cleanStagePromotions(
-					context.Background(),
+					t.Context(),
 					"fake-project",
 					"fake-stage",
 				),

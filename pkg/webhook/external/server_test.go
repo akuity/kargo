@@ -30,7 +30,7 @@ func TestServer_Healthz(t *testing.T) {
 	require.NoError(t, err)
 	defer l.Close()
 
-	ctx, cancel := context.WithCancel(context.Background())
+	ctx, cancel := context.WithCancel(t.Context())
 	defer cancel()
 
 	go func() {

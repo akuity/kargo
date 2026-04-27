@@ -34,6 +34,7 @@ const (
 	PromotionsByTerminalField        = "terminal"
 
 	RunningPromotionsByArgoCDApplicationsField = "applications"
+	RunningPromotionsByPullRequestURLField     = "pullRequestURL"
 
 	StagesByAnalysisRunField    = "analysisRun"
 	StagesByFreightField        = "freight"
@@ -172,7 +173,7 @@ func RunningPromotionsByArgoCDApplications(
 		}
 
 		// Build just enough context to extract the relevant config from the
-		// argocd-update promotion step.
+		// argocd-update and argocd-wait promotion steps.
 		promoCtx := promotion.NewContext(promo, stage)
 
 		// Extract the Argo CD Applications from the promotion steps.
@@ -187,7 +188,8 @@ func RunningPromotionsByArgoCDApplications(
 				// are about to be.
 				break
 			}
-			if step.Uses != "argocd-update" || step.Config == nil {
+			if (step.Uses != "argocd-update" && step.Uses != "argocd-wait") ||
+				step.Config == nil {
 				continue
 			}
 
@@ -297,6 +299,38 @@ func RunningPromotionsByArgoCDApplications(
 		}
 		return res
 	}
+}
+
+// RunningPromotionsByPullRequestURL is a client.IndexerFunc that indexes
+// running Promotions by the URL of the pull request they are waiting on via
+// git-wait-for-pr steps. The PR URL is read from each step's output in
+// promo.Status.State, where the step writes it on every reconciliation cycle.
+func RunningPromotionsByPullRequestURL(obj client.Object) []string {
+	promo, ok := obj.(*kargoapi.Promotion)
+	if !ok {
+		return nil
+	}
+	if promo.Status.Phase != kargoapi.PromotionPhaseRunning {
+		return nil
+	}
+	state := promo.Status.GetState()
+	var res []string
+	for i, step := range promo.Spec.Steps {
+		if int64(i) > promo.Status.CurrentStep {
+			break
+		}
+		if step.Uses != "git-wait-for-pr" || step.As == "" {
+			continue
+		}
+		stepOutput, _ := state[step.As].(map[string]any)
+		prMap, _ := stepOutput["pr"].(map[string]any)
+		prURL, _ := prMap["url"].(string)
+		if prURL == "" {
+			continue
+		}
+		res = append(res, prURL)
+	}
+	return res
 }
 
 // PromotionsByStageAndFreight is a client.IndexerFunc that indexes Promotions

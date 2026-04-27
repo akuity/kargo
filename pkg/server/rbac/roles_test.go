@@ -2257,7 +2257,7 @@ func Test_rolesDatabase_waitForTokenData(t *testing.T) {
 				internalClient: testCase.client,
 			}
 			secret, err := s.waitForTokenData(
-				context.Background(),
+				t.Context(),
 				testProject,
 				testTokenName,
 				2, // Only two attempts so that backoffs are minimal during tests

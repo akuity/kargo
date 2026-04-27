@@ -111,7 +111,7 @@ func (s *server) GetFreight(
 // @Produce json
 // @Param project path string true "Project name"
 // @Param freight-name-or-alias path string true "Freight name or alias"
-// @Success 200 {object} object "Freight custom resource (github.com/akuity/kargo/api/v1alpha1.Freight)"
+// @Success 200 {object} kargoapi.Freight "Freight custom resource (github.com/akuity/kargo/api/v1alpha1.Freight)"
 // @Router /v1beta1/projects/{project}/freight/{freight-name-or-alias} [get]
 func (s *server) getFreight(c *gin.Context) {
 	project := c.Param("project")

@@ -3,7 +3,6 @@
 package image
 
 import (
-	"context"
 	"testing"
 
 	"github.com/Masterminds/semver/v3"
@@ -21,7 +20,7 @@ func TestSelectImageGHCR(t *testing.T) {
 	const platform = "linux/amd64"
 
 	ctx := logging.ContextWithLogger(
-		context.Background(),
+		t.Context(),
 		logging.NewLoggerOrDie(logging.TraceLevel, logging.DefaultFormat),
 	)
 

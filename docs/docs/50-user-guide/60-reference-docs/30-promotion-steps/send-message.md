@@ -21,6 +21,15 @@ to imperatively send a notification as part of your promotion workflow. For an e
 that can send notifications based on specific events, consider using the [Notifications
 feature](../90-events/100-notifications/index.md).
 
+:::note
+
+This step supports `MessageChannel` and `ClusterMessageChannel` resources configured with Slack or
+SMTP. HTTP channels are only supported by
+[`EventRouter`s](../90-events/100-notifications/10-configuring-routers.md). To make HTTP requests
+as part of a promotion workflow, use the [`http`](./http.md) promotion step instead.
+
+:::
+
 This feature is evolving quickly and more configuration options and destinations will continue to be
 added in future releases.
 

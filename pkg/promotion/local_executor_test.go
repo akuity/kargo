@@ -32,6 +32,7 @@ func TestNewLocalStepExecutor(t *testing.T) {
 		kargoClient,
 		argoCDClient,
 		credsDB,
+		nil,
 	)
 
 	require.NotNil(t, executor)
@@ -189,8 +190,8 @@ func TestLocalStepExecutor_ExecuteStep(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			executor := NewLocalStepExecutor(tt.registry, nil, nil, nil)
-			result, err := executor.ExecuteStep(context.Background(), tt.request)
+			executor := NewLocalStepExecutor(tt.registry, nil, nil, nil, nil)
+			result, err := executor.ExecuteStep(t.Context(), tt.request)
 			tt.assertions(t, result, err)
 		})
 	}

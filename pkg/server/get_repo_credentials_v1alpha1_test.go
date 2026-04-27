@@ -282,7 +282,7 @@ func TestGetRepoCredentials(t *testing.T) {
 		t.Run(name, func(t *testing.T) {
 			t.Parallel()
 
-			ctx := context.Background()
+			ctx := t.Context()
 
 			client, err := kubernetes.NewClient(
 				ctx,

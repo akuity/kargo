@@ -1,7 +1,6 @@
 package kubernetes
 
 import (
-	"context"
 	"testing"
 	"time"
 
@@ -345,7 +344,7 @@ func TestEventSender_Send(t *testing.T) {
 			recorder := &mockEventRecorder{}
 			sender := NewEventSender(recorder)
 
-			err := sender.Send(context.Background(), tc.event)
+			err := sender.Send(t.Context(), tc.event)
 
 			if tc.expectError {
 				require.Error(t, err)

@@ -10,6 +10,8 @@ import (
 
 	"github.com/go-openapi/runtime"
 	"github.com/go-openapi/strfmt"
+
+	"github.com/akuity/kargo/pkg/client/generated/models"
 )
 
 // ListProjectEventsReader is a Reader for the ListProjectEvents structure.
@@ -42,7 +44,7 @@ ListProjectEventsOK describes a response with status code 200, with default head
 EventList resource (k8s.io/api/core/v1.EventList)
 */
 type ListProjectEventsOK struct {
-	Payload any
+	Payload *models.V1EventList
 }
 
 // IsSuccess returns true when this list project events o k response has a 2xx status code
@@ -85,14 +87,16 @@ func (o *ListProjectEventsOK) String() string {
 	return fmt.Sprintf("[GET /v1beta1/projects/{project}/events][%d] listProjectEventsOK %s", 200, payload)
 }
 
-func (o *ListProjectEventsOK) GetPayload() any {
+func (o *ListProjectEventsOK) GetPayload() *models.V1EventList {
 	return o.Payload
 }
 
 func (o *ListProjectEventsOK) readResponse(response runtime.ClientResponse, consumer runtime.Consumer, formats strfmt.Registry) error {
 
+	o.Payload = new(models.V1EventList)
+
 	// response payload
-	if err := consumer.Consume(response.Body(), &o.Payload); err != nil && !stderrors.Is(err, io.EOF) {
+	if err := consumer.Consume(response.Body(), o.Payload); err != nil && !stderrors.Is(err, io.EOF) {
 		return err
 	}
 

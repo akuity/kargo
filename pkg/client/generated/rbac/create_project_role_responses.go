@@ -10,6 +10,8 @@ import (
 
 	"github.com/go-openapi/runtime"
 	"github.com/go-openapi/strfmt"
+
+	"github.com/akuity/kargo/pkg/client/generated/models"
 )
 
 // CreateProjectRoleReader is a Reader for the CreateProjectRole structure.
@@ -42,7 +44,7 @@ CreateProjectRoleCreated describes a response with status code 201, with default
 Role resource (github.com/akuity/kargo/api/rbac/v1alpha1.Role)
 */
 type CreateProjectRoleCreated struct {
-	Payload any
+	Payload *models.RbacRole
 }
 
 // IsSuccess returns true when this create project role created response has a 2xx status code
@@ -85,14 +87,16 @@ func (o *CreateProjectRoleCreated) String() string {
 	return fmt.Sprintf("[POST /v1beta1/projects/{project}/roles][%d] createProjectRoleCreated %s", 201, payload)
 }
 
-func (o *CreateProjectRoleCreated) GetPayload() any {
+func (o *CreateProjectRoleCreated) GetPayload() *models.RbacRole {
 	return o.Payload
 }
 
 func (o *CreateProjectRoleCreated) readResponse(response runtime.ClientResponse, consumer runtime.Consumer, formats strfmt.Registry) error {
 
+	o.Payload = new(models.RbacRole)
+
 	// response payload
-	if err := consumer.Consume(response.Body(), &o.Payload); err != nil && !stderrors.Is(err, io.EOF) {
+	if err := consumer.Consume(response.Body(), o.Payload); err != nil && !stderrors.Is(err, io.EOF) {
 		return err
 	}
 

@@ -93,7 +93,7 @@ func (s *server) ListProjects(
 // @Tags Core, Cluster-Scoped Resource
 // @Security BearerAuth
 // @Produce json
-// @Success 200 {object} object "ProjectList custom resource (github.com/akuity/kargo/api/v1alpha1.ProjectList)"
+// @Success 200 {object} kargoapi.ProjectList "ProjectList custom resource"
 // @Router /v1beta1/projects [get]
 func (s *server) listProjects(c *gin.Context) {
 	ctx := c.Request.Context()

@@ -22,12 +22,12 @@ import type {
 } from '@tanstack/react-query';
 
 import type {
-  GetAnalysisRun200,
   GetAnalysisRunLogsParams,
-  GetAnalysisTemplate200,
-  GetClusterAnalysisTemplate200,
-  ListAnalysisTemplates200,
-  ListClusterAnalysisTemplates200
+  RolloutsAnalysisRun,
+  RolloutsAnalysisTemplate,
+  RolloutsAnalysisTemplateList,
+  RolloutsClusterAnalysisTemplate,
+  RolloutsClusterAnalysisTemplateList
 } from '.././models';
 
 import { customFetch } from '../../../../lib/api/custom-fetch';
@@ -39,7 +39,7 @@ type SecondParameter<T extends (...args: never) => unknown> = Parameters<T>[1];
  * @summary Retrieve an AnalysisRun
  */
 export type getAnalysisRunResponse200 = {
-  data: GetAnalysisRun200;
+  data: RolloutsAnalysisRun;
   status: 200;
 };
 
@@ -362,7 +362,7 @@ export function useGetAnalysisRunLogs<
  * @summary List AnalysisTemplates
  */
 export type listAnalysisTemplatesResponse200 = {
-  data: ListAnalysisTemplates200;
+  data: RolloutsAnalysisTemplateList;
   status: 200;
 };
 
@@ -509,7 +509,7 @@ namespace.
  * @summary Retrieve an AnalysisTemplate
  */
 export type getAnalysisTemplateResponse200 = {
-  data: GetAnalysisTemplate200;
+  data: RolloutsAnalysisTemplate;
   status: 200;
 };
 
@@ -953,7 +953,7 @@ ClusterAnalysisTemplateList resource.
  * @summary List ClusterAnalysisTemplates
  */
 export type listClusterAnalysisTemplatesResponse200 = {
-  data: ListClusterAnalysisTemplates200;
+  data: RolloutsClusterAnalysisTemplateList;
   status: 200;
 };
 
@@ -1092,7 +1092,7 @@ export function useListClusterAnalysisTemplates<
  * @summary Retrieve a ClusterAnalysisTemplate
  */
 export type getClusterAnalysisTemplateResponse200 = {
-  data: GetClusterAnalysisTemplate200;
+  data: RolloutsClusterAnalysisTemplate;
   status: 200;
 };
 

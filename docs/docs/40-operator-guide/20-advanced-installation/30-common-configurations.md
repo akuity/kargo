@@ -293,6 +293,61 @@ key.
 
 :::
 
+### Git Client Configuration
+
+As an alternative to configuring the Git client at install time via the Helm
+chart, the same settings -- committer identity and signing key -- can be
+configured at runtime through the `ClusterConfig` resource. This is especially
+useful for managed environments where the Helm values are not directly
+controlled by the Kargo operator.
+
+When configured, `ClusterConfig` settings take precedence over the
+Helm-provisioned defaults.
+
+**Step 1: Create a Secret**
+
+Create a system-level Secret (via the Settings page's **System Secrets** tab,
+the CLI, or `kubectl`) containing the GPG signing key:
+
+```yaml
+apiVersion: v1
+kind: Secret
+metadata:
+  name: my-gpg-key
+  namespace: <system-resources-namespace>
+type: Opaque
+data:
+  signingKey: <base64-encoded-ascii-armored-gpg-key>
+```
+
+**Step 2: Reference it from ClusterConfig**
+
+Edit the `ClusterConfig` resource (via the Settings page's **Cluster Config**
+tab or `kubectl`) to reference the Secret:
+
+```yaml
+apiVersion: kargo.akuity.io/v1alpha1
+kind: ClusterConfig
+metadata:
+  name: cluster
+spec:
+  gitClient:
+    name: Kargo
+    email: no-reply@kargo.io
+    signingKeySecret:
+      name: my-gpg-key
+```
+
+The next promotion that clones a Git repository will pick up the new
+configuration automatically -- no restart is required.
+
+:::note
+
+When using a signing key, the `gitClient.name` and `gitClient.email` values
+must match the name and email associated with the GPG key.
+
+:::
+
 ### Push Integration Policy
 
 When the [`git-push`](../../50-user-guide/60-reference-docs/30-promotion-steps/git-push.md)
@@ -338,6 +393,47 @@ controller:
 
 For more information about the security implications of this setting, see
 [Secure Configuration](../40-security/10-secure-configuration.md#push-integration-policy).
+
+:::
+
+### GitHub Push Settings
+
+The [`github-push`](../../50-user-guide/60-reference-docs/30-promotion-steps/github-push.md)
+promotion step has two system-level settings:
+
+#### Maximum Revisions
+
+The maximum number of commits that `github-push` will replay via the GitHub API
+in a single push. This is a safety guardrail against accidentally replaying
+large numbers of commits, which would consume API rate limit budget.
+
+The default is 10.
+
+```yaml
+controller:
+  githubPush:
+    maxRevisions: 20
+```
+
+#### Verify Untrusted Commits
+
+By default, `github-push` only withholds author/committer information (which
+results in a verified commit) for commits signed by a trusted key. When this
+option is enabled, author/committer information is withheld for __all__ commits,
+causing GitHub to sign every commit regardless of trust.
+
+```yaml
+controller:
+  githubPush:
+    verifyUntrustedCommits: true
+```
+
+:::warning
+
+This option manufactures trust where none exists. It tells GitHub to vouch for
+commits that Kargo cannot independently verify. Enable this only if your
+organization values the verified badge for policy compliance and accepts that
+verification no longer reflects genuine cryptographic trust.
 
 :::
 

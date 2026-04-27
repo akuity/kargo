@@ -1,20 +1,24 @@
-import { useMutation } from '@connectrpc/connect-query';
 import { faAsterisk, faCode, faExternalLink } from '@fortawesome/free-solid-svg-icons';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
 import { zodResolver } from '@hookform/resolvers/zod';
-import { Input, Modal, Segmented } from 'antd';
+import { useMutation } from '@tanstack/react-query';
+import { Checkbox, Input, Modal, Segmented, Typography } from 'antd';
 import { Controller, useForm } from 'react-hook-form';
 
 import { FieldContainer } from '@ui/features/common/form/field-container';
 import { ModalComponentProps } from '@ui/features/common/modal/modal-context';
 import { SegmentLabel } from '@ui/features/common/segment-label';
 import {
-  createRepoCredentials,
-  createGenericCredentials,
-  updateRepoCredentials,
-  updateGenericCredentials
-} from '@ui/gen/api/service/v1alpha1/service-KargoService_connectquery';
-import { Secret } from '@ui/gen/k8s.io/api/core/v1/generated_pb';
+  createProjectGenericCredentials,
+  createProjectRepoCredentials,
+  createSharedGenericCredentials,
+  createSharedRepoCredentials,
+  updateProjectGenericCredentials,
+  updateProjectRepoCredentials,
+  updateSharedGenericCredentials,
+  updateSharedRepoCredentials
+} from '@ui/gen/api/v2/credentials/credentials';
+import { V1Secret } from '@ui/gen/api/v2/models';
 
 import { createFormSchema } from './schema-validator';
 import { SecretEditor } from './secret-editor';
@@ -52,7 +56,7 @@ const repoUrlPatternPlaceholder = '(?:https?://)?(?:www.)?github.com/[w.-]+/[w.-
 type Props = ModalComponentProps & {
   project: string;
   onSuccess: () => void;
-  init?: Secret;
+  init?: V1Secret;
   editing?: boolean;
   type: 'repo' | 'generic';
 };
@@ -63,32 +67,72 @@ export const CreateCredentialsModal = ({ project, onSuccess, editing, init, ...p
     resolver: zodResolver(createFormSchema(props.type === 'generic', editing))
   });
 
-  const createCredentialsMutation = useMutation(createRepoCredentials, {
-    onSuccess: () => {
-      props.hide();
-      onSuccess();
-    }
+  const onMutationSuccess = () => {
+    props.hide();
+    onSuccess();
+  };
+
+  const createRepoMutation = useMutation({
+    mutationFn: (values: ReturnType<typeof constructDefaults>) => {
+      const body = {
+        name: values.name,
+        type: values.type,
+        repoUrl: values.repoUrl,
+        repoUrlIsRegex: values.repoUrlIsRegex,
+        username: values.username,
+        password: values.password,
+        description: values.description
+      };
+      return project
+        ? createProjectRepoCredentials(project, body)
+        : createSharedRepoCredentials(body);
+    },
+    onSuccess: onMutationSuccess
   });
 
-  const updateCredentialsMutation = useMutation(updateRepoCredentials, {
-    onSuccess: () => {
-      props.hide();
-      onSuccess();
-    }
+  const updateRepoMutation = useMutation({
+    mutationFn: (values: ReturnType<typeof constructDefaults>) => {
+      const name = init?.metadata?.name || '';
+      const body = {
+        type: values.type,
+        repoUrl: values.repoUrl,
+        repoUrlIsRegex: values.repoUrlIsRegex,
+        username: values.username,
+        password: values.password,
+        description: values.description
+      };
+      return project
+        ? updateProjectRepoCredentials(project, name, body)
+        : updateSharedRepoCredentials(name, body);
+    },
+    onSuccess: onMutationSuccess
   });
 
-  const createSecretsMutation = useMutation(createGenericCredentials, {
-    onSuccess: () => {
-      props.hide();
-      onSuccess();
-    }
+  const createGenericMutation = useMutation({
+    mutationFn: (payload: {
+      name: string;
+      data: Record<string, string>;
+      description?: string;
+      replicate?: boolean;
+    }) =>
+      project
+        ? createProjectGenericCredentials(project, payload)
+        : createSharedGenericCredentials(payload),
+    onSuccess: onMutationSuccess
   });
 
-  const updateSecretsMutation = useMutation(updateGenericCredentials, {
-    onSuccess: () => {
-      props.hide();
-      onSuccess();
-    }
+  const updateGenericMutation = useMutation({
+    mutationFn: (payload: {
+      data: Record<string, string>;
+      description?: string;
+      replicate?: boolean;
+    }) => {
+      const name = init?.metadata?.name || '';
+      return project
+        ? updateProjectGenericCredentials(project, name, payload)
+        : updateSharedGenericCredentials(name, payload);
+    },
+    onSuccess: onMutationSuccess
   });
 
   const repoUrlIsRegex = watch('repoUrlIsRegex');
@@ -107,34 +151,37 @@ export const CreateCredentialsModal = ({ project, onSuccess, editing, init, ...p
         }
       }
 
+      // @ts-expect-error zod infer problem
+      const replicate = values.replicate as boolean | undefined;
+
       if (editing) {
-        return updateSecretsMutation.mutate({
-          ...values,
-          project,
-          name: init?.metadata?.name || '',
-          data
-        });
+        return updateGenericMutation.mutate({ data, description: values.description, replicate });
       }
 
-      return createSecretsMutation.mutate({ ...values, project, data });
-    }
-
-    if (editing) {
-      return updateCredentialsMutation.mutate({
-        ...values,
-        project,
-        name: init?.metadata?.name || ''
+      return createGenericMutation.mutate({
+        name: values.name,
+        data,
+        description: values.description,
+        replicate
       });
     }
 
-    return createCredentialsMutation.mutate({ ...values, project });
+    if (editing) {
+      return updateRepoMutation.mutate(values as ReturnType<typeof constructDefaults>);
+    }
+
+    return createRepoMutation.mutate(values as ReturnType<typeof constructDefaults>);
   });
+
+  const isPending =
+    createRepoMutation.isPending ||
+    updateRepoMutation.isPending ||
+    createGenericMutation.isPending ||
+    updateGenericMutation.isPending;
 
   return (
     <Modal
-      okButtonProps={{
-        loading: createCredentialsMutation.isPending || updateCredentialsMutation.isPending
-      }}
+      okButtonProps={{ loading: isPending }}
       okText={editing ? 'Update' : 'Create'}
       onOk={onSubmit}
       title={
@@ -224,11 +271,32 @@ export const CreateCredentialsModal = ({ project, onSuccess, editing, init, ...p
           </div>
         )
       )}
+      {credentialType === 'generic' && !project && (
+        <Controller
+          // @ts-expect-error zod infer problem
+          name='replicate'
+          control={control}
+          render={({ field }) => (
+            <label className='flex items-start gap-2 cursor-pointer mb-4'>
+              <Checkbox
+                checked={!!field.value}
+                onChange={(e) => field.onChange(e.target.checked)}
+              />
+              <div>
+                <div>Replicate</div>
+                <Typography.Text type='secondary'>
+                  Replicate the resource to all projects to be used by AnalysisTemplates
+                </Typography.Text>
+              </div>
+            </label>
+          )}
+        />
+      )}
       {credentialType === 'generic' && (
         // @ts-expect-error expected type is there
         <FieldContainer control={control} name='data' label='Data'>
           {({ field }) => (
-            // @ts-expect-error expectedtype is there
+            // @ts-expect-error expected type is there
             <SecretEditor secret={field.value as [string, string][]} onChange={field.onChange} />
           )}
         </FieldContainer>

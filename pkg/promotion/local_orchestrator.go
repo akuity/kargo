@@ -30,10 +30,17 @@ func NewLocalOrchestrator(
 	registry StepRunnerRegistry,
 	kargoClient, argoCDClient client.Client,
 	credsDB credentials.Database,
+	gitUserResolver GitUserResolver,
 	cacheFunc ExprDataCacheFn,
 ) *LocalOrchestrator {
 	return &LocalOrchestrator{
-		executor:  NewLocalStepExecutor(registry, kargoClient, argoCDClient, credsDB),
+		executor: NewLocalStepExecutor(
+			registry,
+			kargoClient,
+			argoCDClient,
+			credsDB,
+			gitUserResolver,
+		),
 		registry:  registry,
 		client:    kargoClient,
 		cacheFunc: cacheFunc,

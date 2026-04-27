@@ -18,7 +18,7 @@ import type {
   UseQueryResult
 } from '@tanstack/react-query';
 
-import type { ListProjectEvents200 } from '.././models';
+import type { V1EventList } from '.././models';
 
 import { customFetch } from '../../../../lib/api/custom-fetch';
 
@@ -30,7 +30,7 @@ Kubernetes EventList resource.
  * @summary List project-level Kubernetes Events
  */
 export type listProjectEventsResponse200 = {
-  data: ListProjectEvents200;
+  data: V1EventList;
   status: 200;
 };
 

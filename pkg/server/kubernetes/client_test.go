@@ -29,7 +29,7 @@ func TestSetOptionsDefaults(t *testing.T) {
 func TestNewClient(t *testing.T) {
 	testInternalClient := fake.NewClientBuilder().Build()
 	c, err := NewClient(
-		context.Background(),
+		t.Context(),
 		&rest.Config{},
 		ClientOptions{
 			// Override this because the default behavior will fail without real REST
@@ -54,7 +54,7 @@ func TestNewClient(t *testing.T) {
 func TestAllClientOperations(t *testing.T) {
 	getOp := func(client *client) error {
 		return client.Get(
-			context.Background(),
+			t.Context(),
 			types.NamespacedName{
 				Namespace: "test-namespace",
 				Name:      "test-name",
@@ -65,7 +65,7 @@ func TestAllClientOperations(t *testing.T) {
 
 	listOp := func(client *client) error {
 		return client.List(
-			context.Background(),
+			t.Context(),
 			&corev1.PodList{},
 			libClient.InNamespace("test-namespace"),
 		)
@@ -73,7 +73,7 @@ func TestAllClientOperations(t *testing.T) {
 
 	createOp := func(client *client) error {
 		return client.Create(
-			context.Background(),
+			t.Context(),
 			&corev1.Pod{
 				ObjectMeta: metav1.ObjectMeta{
 					Namespace: "test-namespace",
@@ -85,7 +85,7 @@ func TestAllClientOperations(t *testing.T) {
 
 	deleteOp := func(client *client) error {
 		return client.Delete(
-			context.Background(),
+			t.Context(),
 			&corev1.Pod{
 				ObjectMeta: metav1.ObjectMeta{
 					Namespace: "test-namespace",
@@ -97,7 +97,7 @@ func TestAllClientOperations(t *testing.T) {
 
 	updateOp := func(client *client) error {
 		return client.Update(
-			context.Background(),
+			t.Context(),
 			&corev1.Pod{
 				ObjectMeta: metav1.ObjectMeta{
 					Namespace: "test-namespace",
@@ -109,7 +109,7 @@ func TestAllClientOperations(t *testing.T) {
 
 	patchOp := func(client *client) error {
 		return client.Patch(
-			context.Background(),
+			t.Context(),
 			&corev1.Pod{
 				ObjectMeta: metav1.ObjectMeta{
 					Namespace: "test-namespace",
@@ -122,7 +122,7 @@ func TestAllClientOperations(t *testing.T) {
 
 	deleteAllOp := func(client *client) error {
 		return client.DeleteAllOf(
-			context.Background(),
+			t.Context(),
 			&corev1.Pod{},
 			libClient.InNamespace("test-namespace"),
 		)
@@ -130,7 +130,7 @@ func TestAllClientOperations(t *testing.T) {
 
 	updateStatusOp := func(client *client) error {
 		return client.Status().Update(
-			context.Background(),
+			t.Context(),
 			&corev1.Pod{
 				ObjectMeta: metav1.ObjectMeta{
 					Namespace: "test-namespace",
@@ -142,7 +142,7 @@ func TestAllClientOperations(t *testing.T) {
 
 	patchStatusOp := func(client *client) error {
 		return client.Status().Patch(
-			context.Background(),
+			t.Context(),
 			&corev1.Pod{
 				ObjectMeta: metav1.ObjectMeta{
 					Namespace: "test-namespace",
@@ -155,7 +155,7 @@ func TestAllClientOperations(t *testing.T) {
 
 	watchOp := func(client *client) error {
 		_, err := client.Watch(
-			context.Background(),
+			t.Context(),
 			&corev1.PodList{},
 			libClient.InNamespace("test-namespace"),
 		)
@@ -351,7 +351,7 @@ func TestAllClientOperations(t *testing.T) {
 	for _, testCase := range testCases {
 		t.Run(testCase.name, func(t *testing.T) {
 			c, err := NewClient(
-				context.Background(),
+				t.Context(),
 				nil,
 				ClientOptions{
 					NewInternalClient: func(
@@ -431,7 +431,7 @@ func TestGetAuthorizedClient(t *testing.T) {
 	for _, testCase := range testCases {
 		t.Run(testCase.name, func(t *testing.T) {
 			if testCase.userInfo != nil {
-				ctx := user.ContextWithInfo(context.Background(), *testCase.userInfo)
+				ctx := user.ContextWithInfo(t.Context(), *testCase.userInfo)
 				client, err := getAuthorizedClient(nil)(
 					ctx,
 					testInternalClient,

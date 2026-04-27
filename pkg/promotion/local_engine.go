@@ -49,6 +49,7 @@ func NewLocalEngine(
 	kargoClient client.Client,
 	argocdClient client.Client,
 	credsDB credentials.Database,
+	gitUserResolver GitUserResolver,
 	cacheFunc ExprDataCacheFn,
 ) *LocalEngine {
 	return &LocalEngine{
@@ -57,6 +58,7 @@ func NewLocalEngine(
 			kargoClient,
 			argocdClient,
 			credsDB,
+			gitUserResolver,
 			cacheFunc,
 		),
 	}

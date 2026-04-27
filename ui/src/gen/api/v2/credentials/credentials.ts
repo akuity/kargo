@@ -23,36 +23,13 @@ import type {
 
 import type {
   CreateGenericCredentialsRequestBody,
-  CreateProjectGenericCredentials201,
-  CreateProjectRepoCredentials201,
   CreateRepoCredentialsRequestBody,
-  CreateSharedGenericCredentials201,
-  CreateSharedRepoCredentials201,
-  CreateSystemGenericCredentials201,
-  GetProjectGenericCredentials200,
-  GetProjectRepoCredentials200,
-  GetSharedGenericCredentials200,
-  GetSharedRepoCredentials200,
-  GetSystemGenericCredentials200,
-  ListProjectGenericCredentials200,
-  ListProjectRepoCredentials200,
-  ListSharedGenericCredentials200,
-  ListSharedRepoCredentials200,
-  ListSystemGenericCredentials200,
   PatchGenericCredentialsRequestBody,
-  PatchProjectGenericCredentials200,
-  PatchProjectRepoCredentials200,
   PatchRepoCredentialsRequestBody,
-  PatchSharedGenericCredentials200,
-  PatchSharedRepoCredentials200,
-  PatchSystemGenericCredentials200,
   UpdateGenericCredentialsRequestBody,
-  UpdateProjectGenericCredentials200,
-  UpdateProjectRepoCredentials200,
   UpdateRepoCredentialsRequestBody,
-  UpdateSharedGenericCredentials200,
-  UpdateSharedRepoCredentials200,
-  UpdateSystemGenericCredentials200
+  V1Secret,
+  V1SecretList
 } from '.././models';
 
 import { customFetch } from '../../../../lib/api/custom-fetch';
@@ -65,7 +42,7 @@ SecretList resource containing heavily redacted Secrets.
  * @summary List project-level generic credentials
  */
 export type listProjectGenericCredentialsResponse200 = {
-  data: ListProjectGenericCredentials200;
+  data: V1SecretList;
   status: 200;
 };
 
@@ -216,7 +193,7 @@ redacted Kubernetes Secret resource.
  * @summary Create project-level generic credentials
  */
 export type createProjectGenericCredentialsResponse201 = {
-  data: CreateProjectGenericCredentials201;
+  data: V1Secret;
   status: 201;
 };
 
@@ -319,7 +296,7 @@ heavily redacted Kubernetes Secret resource.
  * @summary Retrieve project-level generic credentials
  */
 export type getProjectGenericCredentialsResponse200 = {
-  data: GetProjectGenericCredentials200;
+  data: V1Secret;
   status: 200;
 };
 
@@ -487,7 +464,7 @@ replaced. Returns a heavily redacted Kubernetes Secret resource.
  * @summary Replace project-level generic credentials
  */
 export type updateProjectGenericCredentialsResponse200 = {
-  data: UpdateProjectGenericCredentials200;
+  data: V1Secret;
   status: 200;
 };
 
@@ -698,7 +675,7 @@ Returns a heavily redacted Kubernetes Secret resource.
  * @summary Patch project-level generic credentials
  */
 export type patchProjectGenericCredentialsResponse200 = {
-  data: PatchProjectGenericCredentials200;
+  data: V1Secret;
   status: 200;
 };
 
@@ -804,7 +781,7 @@ resource containing heavily redacted Secrets.
  * @summary List project-level repository credentials
  */
 export type listProjectRepoCredentialsResponse200 = {
-  data: ListProjectRepoCredentials200;
+  data: V1SecretList;
   status: 200;
 };
 
@@ -954,7 +931,7 @@ redacted Kubernetes Secret resource.
  * @summary Create project-level repository credentials
  */
 export type createProjectRepoCredentialsResponse201 = {
-  data: CreateProjectRepoCredentials201;
+  data: V1Secret;
   status: 201;
 };
 
@@ -1056,7 +1033,7 @@ heavily redacted Kubernetes Secret resource.
  * @summary Retrieve project-level repository credentials
  */
 export type getProjectRepoCredentialsResponse200 = {
-  data: GetProjectRepoCredentials200;
+  data: V1Secret;
   status: 200;
 };
 
@@ -1219,7 +1196,7 @@ Returns a heavily redacted Kubernetes Secret resource.
  * @summary Replace project-level repository credentials
  */
 export type updateProjectRepoCredentialsResponse200 = {
-  data: UpdateProjectRepoCredentials200;
+  data: V1Secret;
   status: 200;
 };
 
@@ -1421,7 +1398,7 @@ are updated. Returns a heavily redacted Kubernetes Secret resource.
  * @summary Patch project-level repository credentials
  */
 export type patchProjectRepoCredentialsResponse200 = {
-  data: PatchProjectRepoCredentials200;
+  data: V1Secret;
   status: 200;
 };
 
@@ -1523,7 +1500,7 @@ resource containing heavily redacted Secrets.
  * @summary List shared generic credentials
  */
 export type listSharedGenericCredentialsResponse200 = {
-  data: ListSharedGenericCredentials200;
+  data: V1SecretList;
   status: 200;
 };
 
@@ -1663,7 +1640,7 @@ projects. Returns a heavily redacted Kubernetes Secret resource.
  * @summary Create shared generic credentials
  */
 export type createSharedGenericCredentialsResponse201 = {
-  data: CreateSharedGenericCredentials201;
+  data: V1Secret;
   status: 201;
 };
 
@@ -1764,7 +1741,7 @@ heavily redacted Kubernetes Secret resource.
  * @summary Retrieve shared generic credentials
  */
 export type getSharedGenericCredentialsResponse200 = {
-  data: GetSharedGenericCredentials200;
+  data: V1Secret;
   status: 200;
 };
 
@@ -1915,7 +1892,7 @@ Returns a heavily redacted Kubernetes Secret resource.
  * @summary Replace shared generic credentials
  */
 export type updateSharedGenericCredentialsResponse200 = {
-  data: UpdateSharedGenericCredentials200;
+  data: V1Secret;
   status: 200;
 };
 
@@ -2116,7 +2093,7 @@ Returns a heavily redacted Kubernetes Secret resource.
  * @summary Patch shared generic credentials
  */
 export type patchSharedGenericCredentialsResponse200 = {
-  data: PatchSharedGenericCredentials200;
+  data: V1Secret;
   status: 200;
 };
 
@@ -2218,7 +2195,7 @@ resource containing heavily redacted Secrets.
  * @summary List shared repository credentials
  */
 export type listSharedRepoCredentialsResponse200 = {
-  data: ListSharedRepoCredentials200;
+  data: V1SecretList;
   status: 200;
 };
 
@@ -2357,7 +2334,7 @@ redacted Kubernetes Secret resource.
  * @summary Create shared repository credentials
  */
 export type createSharedRepoCredentialsResponse201 = {
-  data: CreateSharedRepoCredentials201;
+  data: V1Secret;
   status: 201;
 };
 
@@ -2454,7 +2431,7 @@ heavily redacted Kubernetes Secret resource.
  * @summary Retrieve shared repository credentials
  */
 export type getSharedRepoCredentialsResponse200 = {
-  data: GetSharedRepoCredentials200;
+  data: V1Secret;
   status: 200;
 };
 
@@ -2604,7 +2581,7 @@ Returns a heavily redacted Kubernetes Secret resource.
  * @summary Replace shared repository credentials
  */
 export type updateSharedRepoCredentialsResponse200 = {
-  data: UpdateSharedRepoCredentials200;
+  data: V1Secret;
   status: 200;
 };
 
@@ -2802,7 +2779,7 @@ are updated. Returns a heavily redacted Kubernetes Secret resource.
  * @summary Patch shared repository credentials
  */
 export type patchSharedRepoCredentialsResponse200 = {
-  data: PatchSharedRepoCredentials200;
+  data: V1Secret;
   status: 200;
 };
 
@@ -2903,7 +2880,7 @@ SecretList resource containing heavily redacted Secrets.
  * @summary List system-level generic credentials
  */
 export type listSystemGenericCredentialsResponse200 = {
-  data: ListSystemGenericCredentials200;
+  data: V1SecretList;
   status: 200;
 };
 
@@ -3043,7 +3020,7 @@ redacted Kubernetes Secret resource.
  * @summary Create system-level generic credentials
  */
 export type createSystemGenericCredentialsResponse201 = {
-  data: CreateSystemGenericCredentials201;
+  data: V1Secret;
   status: 201;
 };
 
@@ -3144,7 +3121,7 @@ heavily redacted Kubernetes Secret resource.
  * @summary Retrieve system-level generic credentials
  */
 export type getSystemGenericCredentialsResponse200 = {
-  data: GetSystemGenericCredentials200;
+  data: V1Secret;
   status: 200;
 };
 
@@ -3295,7 +3272,7 @@ replaced. Returns a heavily redacted Kubernetes Secret resource.
  * @summary Replace system-level generic credentials
  */
 export type updateSystemGenericCredentialsResponse200 = {
-  data: UpdateSystemGenericCredentials200;
+  data: V1Secret;
   status: 200;
 };
 
@@ -3496,7 +3473,7 @@ Returns a heavily redacted Kubernetes Secret resource.
  * @summary Patch system-level generic credentials
  */
 export type patchSystemGenericCredentialsResponse200 = {
-  data: PatchSystemGenericCredentials200;
+  data: V1Secret;
   status: 200;
 };
 

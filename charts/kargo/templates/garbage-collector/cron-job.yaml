@@ -47,7 +47,12 @@ spec:
             {{- end }}
           {{- end }}
         spec:
+          {{- if not .Values.rbac.useDefaultServiceAccount }}
           serviceAccountName: kargo-garbage-collector
+          {{- end }}
+          {{- if .Values.rbac.disableAutomountServiceAccountToken }}
+          automountServiceAccountToken: false
+          {{- end }}
           {{- with .Values.garbageCollector.affinity | default .Values.global.affinity }}
           affinity:
             {{- toYaml . | nindent 12 }}

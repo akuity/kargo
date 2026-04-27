@@ -84,6 +84,7 @@ func (s *server) UpdateGenericCredentials(
 
 	applyGenericCredentialsUpdateToK8sSecret(&secret, updateGenericCredentialsRequest{
 		Description: genericCredsUpdate.description,
+		Replicate:   req.Msg.Replicate,
 		Data:        genericCredsUpdate.data,
 	})
 
@@ -100,6 +101,7 @@ func (s *server) UpdateGenericCredentials(
 
 type updateGenericCredentialsRequest struct {
 	Description string            `json:"description,omitempty"`
+	Replicate   bool              `json:"replicate,omitempty"`
 	Data        map[string]string `json:"data"`
 } // @name UpdateGenericCredentialsRequest
 
@@ -114,7 +116,7 @@ type updateGenericCredentialsRequest struct {
 // @Param project path string true "Project name"
 // @Param generic-credentials path string true "Generic credentials name"
 // @Param body body updateGenericCredentialsRequest true "GenericCredentials"
-// @Success 200 {object} object "Secret resource (k8s.io/api/core/v1.Secret)"
+// @Success 200 {object} corev1.Secret "Secret resource (k8s.io/api/core/v1.Secret)"
 // @Router /v1beta1/projects/{project}/generic-credentials/{generic-credentials} [put]
 func (s *server) updateProjectGenericCredentials(c *gin.Context) {
 	if !s.requireSecretManagement(c) {
@@ -174,7 +176,7 @@ func (s *server) updateProjectGenericCredentials(c *gin.Context) {
 // @Produce json
 // @Param generic-credentials path string true "Generic credentials name"
 // @Param body body updateGenericCredentialsRequest true "GenericCredentials"
-// @Success 200 {object} object "Secret resource (k8s.io/api/core/v1.Secret)"
+// @Success 200 {object} corev1.Secret "Secret resource (k8s.io/api/core/v1.Secret)"
 // @Router /v1beta1/system/generic-credentials/{generic-credentials} [put]
 func (s *server) updateSystemGenericCredentials(c *gin.Context) {
 	if !s.requireSecretManagement(c) {
@@ -235,7 +237,7 @@ func (s *server) updateSystemGenericCredentials(c *gin.Context) {
 // @Produce json
 // @Param generic-credentials path string true "Generic credentials name"
 // @Param body body updateGenericCredentialsRequest true "GenericCredentials"
-// @Success 200 {object} object "Secret resource (k8s.io/api/core/v1.Secret)"
+// @Success 200 {object} corev1.Secret "Secret resource (k8s.io/api/core/v1.Secret)"
 // @Router /v1beta1/shared/generic-credentials/{generic-credentials} [put]
 func (s *server) updateSharedGenericCredentials(c *gin.Context) {
 	if !s.requireSecretManagement(c) {
@@ -284,14 +286,22 @@ func (s *server) updateSharedGenericCredentials(c *gin.Context) {
 }
 
 func applyGenericCredentialsUpdateToK8sSecret(secret *corev1.Secret, req updateGenericCredentialsRequest) {
-	// Set the description annotation if provided
+	if secret.Annotations == nil {
+		secret.Annotations = make(map[string]string)
+	}
+
+	// Set or clear the description annotation
 	if req.Description != "" {
-		if secret.Annotations == nil {
-			secret.Annotations = make(map[string]string, 1)
-		}
 		secret.Annotations[kargoapi.AnnotationKeyDescription] = req.Description
 	} else {
 		delete(secret.Annotations, kargoapi.AnnotationKeyDescription)
+	}
+
+	// Set or clear the replicate-to annotation
+	if req.Replicate {
+		secret.Annotations[kargoapi.AnnotationKeyReplicateTo] = kargoapi.AnnotationValueReplicateToAll
+	} else {
+		delete(secret.Annotations, kargoapi.AnnotationKeyReplicateTo)
 	}
 
 	// Delete any keys in the secret that are not in the update

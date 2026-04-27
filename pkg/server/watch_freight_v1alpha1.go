@@ -3,6 +3,7 @@ package server
 import (
 	"context"
 	"fmt"
+	"slices"
 
 	"connectrpc.com/connect"
 	"sigs.k8s.io/controller-runtime/pkg/client"
@@ -26,6 +27,8 @@ func (s *server) WatchFreight(
 		return err
 	}
 
+	warehouses := req.Msg.GetOrigins()
+
 	w, err := s.client.Watch(ctx, &kargoapi.FreightList{}, client.InNamespace(project))
 	if err != nil {
 		return fmt.Errorf("watch freight: %w", err)
@@ -45,6 +48,9 @@ func (s *server) WatchFreight(
 			freight, ok := e.Object.(*kargoapi.Freight)
 			if !ok {
 				return fmt.Errorf("unexpected object type %T", e.Object)
+			}
+			if len(warehouses) > 0 && !slices.Contains(warehouses, freight.Origin.Name) {
+				continue
 			}
 			if err := stream.Send(&svcv1alpha1.WatchFreightResponse{
 				Freight: freight,

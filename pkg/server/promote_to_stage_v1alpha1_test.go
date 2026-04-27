@@ -529,7 +529,7 @@ func TestPromoteToStage(t *testing.T) {
 			recorder := fakeevent.NewEventRecorder(1)
 			testCase.server.sender = k8sevent.NewEventSender(recorder)
 			res, err := testCase.server.PromoteToStage(
-				context.Background(),
+				t.Context(),
 				connect.NewRequest(testCase.req),
 			)
 			testCase.assertions(t, recorder, res, err)

@@ -225,7 +225,7 @@ func Test_gitPRWaiter_run(t *testing.T) {
 			)
 
 			res, err := runner.run(
-				context.Background(),
+				t.Context(),
 				&promotion.StepContext{},
 				builtin.GitWaitForPRConfig{
 					Provider: ptr.To(builtin.Provider(testGitProviderName)),

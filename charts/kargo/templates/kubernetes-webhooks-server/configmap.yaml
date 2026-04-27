@@ -19,5 +19,7 @@ data:
   {{- else }}
   CONTROLPLANE_USER_REGEX: {{ include "kargo.controlplane.defaultUserRegex" . }}
   {{- end }}
+  MANAGEMENT_CONTROLLER_USERNAME: system:serviceaccount:{{ .Release.Namespace }}:kargo-management-controller
+  EXTERNAL_WEBHOOKS_SERVER_USERNAME: system:serviceaccount:{{ .Release.Namespace }}:kargo-external-webhooks-server
   CACHE_BY_TAG_POLICY: {{ quote .Values.controller.images.cache.cacheByTagPolicy }}
 {{- end }}

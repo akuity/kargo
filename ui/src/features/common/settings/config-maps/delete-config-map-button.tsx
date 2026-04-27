@@ -1,42 +1,40 @@
-import { createConnectQueryKey, useMutation } from '@connectrpc/connect-query';
 import { faTrash } from '@fortawesome/free-solid-svg-icons';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
+import { useMutation } from '@tanstack/react-query';
 import { Button, Typography } from 'antd';
 
 import { queryClient } from '@ui/config/query-client';
 import { useConfirmModal } from '@ui/features/common/confirm-modal/use-confirm-modal';
 import {
-  deleteConfigMap,
-  listConfigMaps
-} from '@ui/gen/api/service/v1alpha1/service-KargoService_connectquery';
+  deleteProjectConfigMap,
+  deleteSharedConfigMap,
+  getListProjectConfigMapsQueryKey,
+  getListSharedConfigMapsQueryKey
+} from '@ui/gen/api/v2/core/core';
 
 type Props = {
-  systemLevel: boolean;
   project: string;
   name: string;
 };
 
-export const DeleteConfigMapButton = ({ name, project, systemLevel }: Props) => {
+export const DeleteConfigMapButton = ({ name, project }: Props) => {
   const confirm = useConfirmModal();
 
-  const { mutate, isPending } = useMutation(deleteConfigMap);
+  const mutationFn = project
+    ? () => deleteProjectConfigMap(project, name)
+    : () => deleteSharedConfigMap(name);
+  const queryKey = project
+    ? getListProjectConfigMapsQueryKey(project)
+    : getListSharedConfigMapsQueryKey();
+
+  const { mutate, isPending } = useMutation({
+    mutationFn,
+    onSuccess: () => queryClient.refetchQueries({ queryKey })
+  });
 
   const onDelete = () => {
     confirm({
-      onOk: () => {
-        mutate(
-          { name, project, systemLevel },
-          {
-            onSuccess: () =>
-              queryClient.refetchQueries({
-                queryKey: createConnectQueryKey({
-                  schema: listConfigMaps,
-                  cardinality: 'finite'
-                })
-              })
-          }
-        );
-      },
+      onOk: () => mutate(),
       title: 'Delete ConfigMap',
       content: (
         <>

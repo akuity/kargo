@@ -1,0 +1,65 @@
+// Override type aliases that go-swagger mishandles. Go-swagger wraps referenced
+// types in anonymous structs, which breaks JSON deserialization when the wire
+// format is a bare string or integer. Replacing them with primitives here
+// prevents that.
+
+replace k8s.io/apimachinery/pkg/apis/meta/v1.Duration string
+replace k8s.io/apiextensions-apiserver/pkg/apis/apiextensions/v1.JSON object
+replace k8s.io/apimachinery/pkg/apis/meta/v1.ConditionStatus string
+replace k8s.io/apimachinery/pkg/apis/meta/v1.LabelSelectorOperator string
+replace k8s.io/apimachinery/pkg/apis/meta/v1.ManagedFieldsOperationType string
+replace k8s.io/apimachinery/pkg/util/intstr.Type integer
+
+replace k8s.io/api/core/v1.AppArmorProfileType string
+replace k8s.io/api/core/v1.AzureDataDiskCachingMode string
+replace k8s.io/api/core/v1.AzureDataDiskKind string
+replace k8s.io/api/core/v1.CompletionMode string
+replace k8s.io/api/core/v1.ConditionStatus string
+replace k8s.io/api/core/v1.ContainerRestartPolicy string
+replace k8s.io/api/core/v1.ContainerRestartRuleAction string
+replace k8s.io/api/core/v1.ContainerRestartRuleOnExitCodesOperator string
+replace k8s.io/api/core/v1.DNSPolicy string
+replace k8s.io/api/core/v1.HostPathType string
+replace k8s.io/api/core/v1.MountPropagationMode string
+replace k8s.io/api/core/v1.NodeInclusionPolicy string
+replace k8s.io/api/core/v1.NodeSelectorOperator string
+replace k8s.io/api/core/v1.OSName string
+replace k8s.io/api/core/v1.PersistentVolumeAccessMode string
+replace k8s.io/api/core/v1.PersistentVolumeMode string
+replace k8s.io/api/core/v1.PodConditionType string
+replace k8s.io/api/core/v1.PodFSGroupChangePolicy string
+replace k8s.io/api/core/v1.PodFailurePolicyAction string
+replace k8s.io/api/core/v1.PodFailurePolicyOnExitCodesOperator string
+replace k8s.io/api/core/v1.PodReplacementPolicy string
+replace k8s.io/api/core/v1.PodSELinuxChangePolicy string
+replace k8s.io/api/core/v1.PreemptionPolicy string
+replace k8s.io/api/core/v1.ProcMountType string
+replace k8s.io/api/core/v1.Protocol string
+replace k8s.io/api/core/v1.PullPolicy string
+replace k8s.io/api/core/v1.RecursiveReadOnlyMode string
+replace k8s.io/api/core/v1.ResourceName string
+replace k8s.io/api/core/v1.ResourceResizeRestartPolicy string
+replace k8s.io/api/core/v1.RestartPolicy string
+replace k8s.io/api/core/v1.SeccompProfileType string
+replace k8s.io/api/core/v1.SecretType string
+replace k8s.io/api/core/v1.Signal string
+replace k8s.io/api/core/v1.StorageMedium string
+replace k8s.io/api/core/v1.SupplementalGroupsPolicy string
+replace k8s.io/api/core/v1.TaintEffect string
+replace k8s.io/api/core/v1.TerminationMessagePolicy string
+replace k8s.io/api/core/v1.TolerationOperator string
+replace k8s.io/api/core/v1.URIScheme string
+replace k8s.io/api/core/v1.UnsatisfiableConstraintAction string
+
+replace github.com/akuity/kargo/api/v1alpha1.AutoPromotionSelectionPolicy string
+replace github.com/akuity/kargo/api/v1alpha1.FreightAvailabilityStrategy string
+replace github.com/akuity/kargo/api/v1alpha1.FreightCreationPolicy string
+replace github.com/akuity/kargo/api/v1alpha1.FreightOriginKind string
+replace github.com/akuity/kargo/api/v1alpha1.GenericWebhookActionType string
+replace github.com/akuity/kargo/api/v1alpha1.GenericWebhookTargetKind string
+replace github.com/akuity/kargo/api/v1alpha1.HealthState string
+replace github.com/akuity/kargo/api/v1alpha1.IndexSelectorOperator string
+replace github.com/akuity/kargo/api/v1alpha1.PromotionPhase string
+replace github.com/akuity/kargo/api/v1alpha1.PromotionStepStatus string
+replace github.com/akuity/kargo/api/v1alpha1.VerificationPhase string
+replace github.com/akuity/kargo/api/stubs/rollouts/v1alpha1.AnalysisPhase string

@@ -30,6 +30,7 @@ async function ProcessEvents<T extends { type: string }, S extends { metadata?: 
   getter: (e: T) => S,
   callback: (item: S, data: S[]) => void
 ) {
+  let timer: ReturnType<typeof setTimeout> | undefined;
   for await (const e of stream) {
     let data = getData();
     const index = data.findIndex((item) => item.metadata?.name === getter(e).metadata?.name);
@@ -45,7 +46,8 @@ async function ProcessEvents<T extends { type: string }, S extends { metadata?: 
       }
     }
 
-    callback(getter(e), data);
+    clearTimeout(timer);
+    timer = setTimeout(() => callback(getter(e), data));
   }
 }
 
@@ -69,12 +71,18 @@ export class Watcher {
   async watchStages(
     // utilise the fact that something changed in this stage
     // avoid as much as re-construction of data as possible by using this parameter
-    onStageEvent?: (stage: Stage) => void
+    onStageEvent?: (stage: Stage) => void,
+    warehouses?: string[]
   ) {
     const stream = this.promiseClient.watchStages(
-      { project: this.project },
+      { project: this.project, freightOrigins: warehouses || [] },
       { signal: this.cancel.signal }
     );
+
+    const stagesInput = create(ListStagesRequestSchema, {
+      project: this.project,
+      freightOrigins: warehouses || []
+    });
 
     ProcessEvents(
       stream,
@@ -82,7 +90,7 @@ export class Watcher {
         const data = this.client.getQueryData(
           createConnectQueryKey({
             schema: listStages,
-            input: create(ListStagesRequestSchema, { project: this.project }),
+            input: stagesInput,
             cardinality: 'finite',
             transport: transportWithAuth
           })
@@ -95,7 +103,7 @@ export class Watcher {
         // update Stages list
         const listStagesQueryKey = createConnectQueryKey({
           schema: listStages,
-          input: create(ListStagesRequestSchema, { project: this.project }),
+          input: stagesInput,
           cardinality: 'finite',
           transport: transportWithAuth
         });

@@ -1,7 +1,6 @@
 package login
 
 import (
-	"context"
 	"crypto/sha256"
 	"encoding/base64"
 	"fmt"
@@ -20,7 +19,7 @@ func TestReceiveAuthCode(t *testing.T) {
 		testState = "fake-state"
 		testCode  = "fake-code"
 	)
-	ctx := context.Background()
+	ctx := t.Context()
 	codeCh := make(chan string)
 	errCh := make(chan error)
 	listener, err := net.Listen("tcp", "localhost:0")

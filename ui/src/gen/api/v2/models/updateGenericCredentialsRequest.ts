@@ -10,4 +10,5 @@ import type { UpdateGenericCredentialsRequestData } from './updateGenericCredent
 export interface UpdateGenericCredentialsRequest {
   data?: UpdateGenericCredentialsRequestData;
   description?: string;
+  replicate?: boolean;
 }

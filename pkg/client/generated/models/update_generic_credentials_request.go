@@ -19,6 +19,9 @@ type UpdateGenericCredentialsRequest struct {
 
 	// description
 	Description string `json:"description,omitempty"`
+
+	// replicate
+	Replicate bool `json:"replicate,omitempty"`
 }
 
 // Validate validates this update generic credentials request

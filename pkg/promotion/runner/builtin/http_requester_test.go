@@ -1,7 +1,6 @@
 package builtin
 
 import (
-	"context"
 	"io"
 	"net/http"
 	"net/http/httptest"
@@ -567,7 +566,7 @@ func Test_httpRequester_run(t *testing.T) {
 			srv := httptest.NewServer(testCase.handler)
 			t.Cleanup(srv.Close)
 			testCase.cfg.URL = srv.URL
-			res, err := h.run(context.Background(), nil, testCase.cfg)
+			res, err := h.run(t.Context(), nil, testCase.cfg)
 			testCase.assertions(t, res, err)
 		})
 	}
@@ -1060,7 +1059,7 @@ func Test_httpRequester_buildExprEnv(t *testing.T) {
 	h := &httpRequester{}
 	for _, testCase := range testCases {
 		t.Run(testCase.name, func(t *testing.T) {
-			env, err := h.buildExprEnv(context.Background(), testCase.resp, testCase.responseContentType)
+			env, err := h.buildExprEnv(t.Context(), testCase.resp, testCase.responseContentType)
 			testCase.assertions(t, env, err)
 		})
 	}

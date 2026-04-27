@@ -1,7 +1,6 @@
 package builtin
 
 import (
-	"context"
 	"os"
 	"path/filepath"
 	"strings"
@@ -264,7 +263,7 @@ kind: Kustomization
 			if tt.setupFiles != nil {
 				tt.setupFiles(t, tt.stepCtx.WorkDir)
 			}
-			result, err := runner.run(context.Background(), tt.stepCtx, tt.cfg)
+			result, err := runner.run(t.Context(), tt.stepCtx, tt.cfg)
 			tt.assertions(t, tt.stepCtx.WorkDir, result, err)
 		})
 	}
@@ -420,7 +419,7 @@ func Test_kustomizeImageSetter_buildTargetImagesAutomatically(t *testing.T) {
 				},
 			}
 
-			result, err := runner.buildTargetImagesAutomatically(context.Background(), stepCtx)
+			result, err := runner.buildTargetImagesAutomatically(t.Context(), stepCtx)
 			tt.assertions(t, result, err)
 		})
 	}

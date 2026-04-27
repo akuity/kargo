@@ -1,7 +1,6 @@
 package builtin
 
 import (
-	"context"
 	"net/http"
 	"net/http/httptest"
 	"os"
@@ -328,7 +327,7 @@ func Test_helmChartUpdater_run(t *testing.T) {
 				require.NoError(t, os.WriteFile(filepath.Join(chartPath, "Chart.yaml"), b, 0o600))
 			}
 
-			result, err := runner.run(context.Background(), stepCtx, tt.cfg)
+			result, err := runner.run(t.Context(), stepCtx, tt.cfg)
 			tt.assertions(t, stepCtx.WorkDir, result, err)
 
 			// Assert that the Helm cache directory was not used

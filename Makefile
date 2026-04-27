@@ -20,6 +20,7 @@ CONTAINER_RUNTIME ?= docker
 IMAGE_REPO 			?= kargo
 LOCAL_REG_PORT			?= 5001
 BASE_IMAGE 			?= localhost:$(LOCAL_REG_PORT)/$(IMAGE_REPO)-base
+APKO_IMAGE 			?= cgr.dev/chainguard/apko
 IMAGE_TAG 			?= dev
 IMAGE_PUSH 			?= false
 IMAGE_PLATFORMS 	?=
@@ -168,12 +169,13 @@ clean:
 .PHONY: build-base-image
 build-base-image:
 	mkdir -p build
+	chmod 0777 build
 	cp kargo-base.apko.yaml build
 	$(CONTAINER_RUNTIME) run \
 		--rm \
 		-v $(dir $(realpath $(firstword $(MAKEFILE_LIST))))build:/build \
 		-w /build \
-		cgr.dev/chainguard/apko \
+		$(APKO_IMAGE) \
 		build kargo-base.apko.yaml $(BASE_IMAGE) kargo-base.tar.gz
 	$(CONTAINER_RUNTIME) image load -i build/kargo-base.tar.gz
 
@@ -216,12 +218,12 @@ build-cli-with-ui: build-ui build-cli
 ################################################################################
 
 .PHONY: codegen
-codegen: codegen-openapi codegen-schema-to-go codegen-proto codegen-controller codegen-ui codegen-docs
+codegen: codegen-openapi codegen-proto codegen-controller codegen-schema-to-go codegen-ui codegen-docs
 
 .PHONY: codegen-openapi
-codegen-openapi: install-swag install-go-swagger
-	rm -f swagger.yaml swagger.json
-	rm -rf pkg/client/generated
+codegen-openapi: install-swag install-go-swagger install-jq
+	rm -f swagger.json
+	find pkg/client/generated -mindepth 1 ! -name go.mod ! -name go.sum -exec rm -rf {} +
 	rm -rf /tmp/swagger-build
 	mkdir -p /tmp/swagger-build
 	$(SWAG_LINK) init \
@@ -229,10 +231,10 @@ codegen-openapi: install-swag install-go-swagger
 		--output /tmp/swagger-build \
 		--parseDependency \
 		--parseInternal \
-		--outputTypes yaml,json
-	mv /tmp/swagger-build/swagger.yaml .
+		--outputTypes json
 	mv /tmp/swagger-build/swagger.json .
 	rm -rf /tmp/swagger-build
+	hack/codegen/fix-swagger-spec.sh swagger.json
 	mkdir -p pkg/client/generated
 	$(GO_SWAGGER_LINK) generate client \
 		-f swagger.json \
@@ -260,7 +262,7 @@ codegen-controller: install-controller-gen
 		paths=./...
 
 .PHONY: codegen-schema-to-go
-codegen-schema-to-go:
+codegen-schema-to-go: install-goimports
 	npm install -g quicktype@23.0.176
 	./hack/codegen/promotion-step-configs.sh
 	./hack/codegen/subscriptions.sh

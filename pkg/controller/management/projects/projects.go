@@ -13,7 +13,6 @@ import (
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/types"
-	"k8s.io/utils/ptr"
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/controller/controllerutil"
@@ -118,12 +117,6 @@ type reconciler struct {
 		context.Context,
 		client.Object,
 		...client.DeleteOption,
-	) error
-
-	patchOwnerReferencesFn func(
-		context.Context,
-		client.Client,
-		client.Object,
 	) error
 
 	ensureFinalizerFn func(
@@ -254,7 +247,6 @@ func newReconciler(kubeClient client.Client, cfg ReconcilerConfig) *reconciler {
 	r.getNamespaceFn = r.client.Get
 	r.createNamespaceFn = r.client.Create
 	r.deleteNamespaceFn = r.client.Delete
-	r.patchOwnerReferencesFn = api.PatchOwnerReferences
 	r.ensureFinalizerFn = api.EnsureFinalizer
 	r.removeFinalizerFn = api.RemoveFinalizer
 	r.ensureSystemPermissionsFn = r.ensureSystemPermissions
@@ -577,12 +569,14 @@ func (r *reconciler) syncProject(
 func (r *reconciler) ensureNamespace(ctx context.Context, project *kargoapi.Project) error {
 	logger := logging.LoggerFromContext(ctx).WithValues("project", project.Name)
 
-	ownerRef := metav1.NewControllerRef(
-		project,
-		kargoapi.GroupVersion.WithKind("Project"),
-	)
-	ownerRef.BlockOwnerDeletion = ptr.To(false)
-	ownerRef.Controller = nil
+	// Note: We intentionally do not set an owner reference from the Namespace to the Project.
+	// Two-way deletion semantics between a Project and its Namespace are instead implemented via
+	// finalizers: this controller adds a finalizer to the Namespace, and the Namespace reconciler
+	// uses it to delete the Project when the Namespace is deleted. Owner references are avoided
+	// because they break foreground cascade deletion of the Project (the Namespace would block on
+	// garbage collection) and can leave the Namespace pointing at a non-existent Project. See
+	// https://github.com/akuity/kargo/issues/4627. The Namespace reconciler strips any Project
+	// owner reference it finds.
 
 	ns := &corev1.Namespace{}
 	if err := r.getNamespaceFn(
@@ -609,47 +603,6 @@ func (r *reconciler) ensureNamespace(ctx context.Context, project *kargoapi.Proj
 		if updated {
 			logger.Debug("added finalizer to namespace")
 		}
-
-		for i, ownerRef := range ns.OwnerReferences {
-			if ownerRef.UID == project.UID {
-				logger.Debug("namespace exists and is already owned by this Project")
-				if ownerRef.Controller != nil {
-					logger.Debug("owner reference requires update")
-					ns.OwnerReferences[i].Controller = nil // Update in place
-					if err = r.patchOwnerReferencesFn(ctx, r.client, ns); err != nil {
-						return fmt.Errorf(
-							"error patching namespace %q owner references: %w",
-							project.Name, err,
-						)
-					}
-					logger.Debug("updated owner reference")
-				}
-				return nil
-			}
-		}
-
-		// If we get to here, the Project is not already an owner of the existing
-		// namespace.
-		logger.Debug(
-			"namespace exists, is not owned by this Project, but has the " +
-				"project label; Project will adopt it",
-		)
-
-		// Note: We allow multiple owners of a namespace due to the not entirely
-		// uncommon scenario where an organization has its own controller that
-		// creates and initializes namespaces to ensure compliance with
-		// internal policies. Such a controller might already own the namespace.
-		ns.OwnerReferences = append(ns.OwnerReferences, *ownerRef)
-		if err = r.patchOwnerReferencesFn(ctx, r.client, ns); err != nil {
-			return fmt.Errorf(
-				"error patching namespace %q with project %q as owner: %w",
-				project.Name,
-				project.Name,
-				err,
-			)
-		}
-		logger.Debug("patched namespace with Project as owner")
-
 		return nil
 	}
 
@@ -664,14 +617,8 @@ func (r *reconciler) ensureNamespace(ctx context.Context, project *kargoapi.Proj
 			Labels: map[string]string{
 				kargoapi.LabelKeyProject: kargoapi.LabelValueTrue,
 			},
-			OwnerReferences: []metav1.OwnerReference{*ownerRef},
 		},
 	}
-	// Project namespaces are owned by a Project. Deleting a Project automatically
-	// deletes the namespace. But we also want this to work in the other
-	// direction, where that behavior is not automatic. We add a finalizer to the
-	// namespace and use our own namespace reconciler to clear it after deleting
-	// the Project.
 	controllerutil.AddFinalizer(ns, kargoapi.FinalizerName)
 	if err := r.createNamespaceFn(ctx, ns); err != nil {
 		return fmt.Errorf("error creating namespace %q: %w", project.Name, err)
@@ -1022,6 +969,20 @@ func (r *reconciler) ensureDefaultUserRoles(
 				},
 			},
 		},
+	}
+	for i, role := range roles {
+		contribs, err := defaultRoleRulesContributorRegistry.GetAll(ctx, role.Name)
+		if err != nil {
+			return fmt.Errorf(
+				"error getting role rules contributors for role %q: %w",
+				role.Name, err,
+			)
+		}
+		for _, contrib := range contribs {
+			if extra := contrib.Value(role.Name); len(extra) > 0 {
+				roles[i].Rules = append(roles[i].Rules, extra...)
+			}
+		}
 	}
 	for _, role := range roles {
 		roleLogger := logger.WithValues(

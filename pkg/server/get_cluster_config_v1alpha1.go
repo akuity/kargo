@@ -64,7 +64,7 @@ func (s *server) GetClusterConfig(
 // @Tags System, Config, Cluster-Scoped Resource, Singleton
 // @Security BearerAuth
 // @Produce json
-// @Success 200 {object} object "ClusterConfig custom resource (github.com/akuity/kargo/api/v1alpha1.ClusterConfig)"
+// @Success 200 {object} kargoapi.ClusterConfig "ClusterConfig custom resource"
 // @Router /v1beta1/system/cluster-config [get]
 func (s *server) getClusterConfig(c *gin.Context) {
 	ctx := c.Request.Context()

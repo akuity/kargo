@@ -81,7 +81,7 @@ type userClaims struct {
 // @Produce json
 // @Param project path string true "Project name"
 // @Param body body grantRequest true "Grant request"
-// @Success 200 {object} object "Role resource (github.com/akuity/kargo/api/rbac/v1alpha1.Role)"
+// @Success 200 {object} rbacapi.Role "Role resource (github.com/akuity/kargo/api/rbac/v1alpha1.Role)"
 // @Router /v1beta1/projects/{project}/roles/grants [post]
 func (s *server) grant(c *gin.Context) {
 	ctx := c.Request.Context()

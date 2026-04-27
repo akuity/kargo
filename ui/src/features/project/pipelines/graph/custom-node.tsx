@@ -15,6 +15,7 @@ export const CustomNode = (props: {
     label: string;
     value: WarehouseExpanded | RepoSubscription | Stage;
     subscriptionParent?: Warehouse;
+    handleOffsetY?: number;
   };
   id?: string;
 }) => {
@@ -24,7 +25,11 @@ export const CustomNode = (props: {
 
   if (props.data.value.$typeName === 'github.com.akuity.kargo.api.v1alpha1.Warehouse') {
     return (
-      <CustomNode.Container id={props.id} warehouse={props.data.value}>
+      <CustomNode.Container
+        id={props.id}
+        warehouse={props.data.value}
+        handleOffsetY={props.data.handleOffsetY}
+      >
         <WarehouseNode warehouse={props.data.value} />
       </CustomNode.Container>
     );
@@ -36,6 +41,7 @@ export const CustomNode = (props: {
         id={props.id}
         // @ts-expect-error parent is there when value is RepoSubscription, check use-pipeline-graph.ts
         repoSubscription={{ data: props.data.value, parent: props.data.subscriptionParent }}
+        handleOffsetY={props.data.handleOffsetY}
       >
         <SubscriptionNode subscription={props.data.value} />
       </CustomNode.Container>
@@ -44,7 +50,11 @@ export const CustomNode = (props: {
 
   if (props.data.value.$typeName === 'github.com.akuity.kargo.api.v1alpha1.Stage') {
     return (
-      <CustomNode.Container id={props.id} stage={props.data.value}>
+      <CustomNode.Container
+        id={props.id}
+        stage={props.data.value}
+        handleOffsetY={props.data.handleOffsetY}
+      >
         <StageNode stage={props.data.value} />
       </CustomNode.Container>
     );
@@ -59,6 +69,10 @@ CustomNode.Container = (
     warehouse?: WarehouseExpanded;
     repoSubscription?: { data: RepoSubscription; parent: WarehouseExpanded };
     id?: string;
+    // Fixed pixel distance from the node's top edge to the dagre center point.
+    // Computed at layout time from the initially measured node height so handles
+    // stay anchored at the correct position even when node content changes size.
+    handleOffsetY?: number;
   }>
 ) => {
   let id = '';
@@ -74,6 +88,16 @@ CustomNode.Container = (
 
     const howManyStagesDoThisStageSubscribe = props.stage.spec?.requestedFreight?.length || 0;
 
+    const handleTop = (idx: number) => {
+      if (props.handleOffsetY !== undefined) {
+        const offset = -((howManyStagesDoThisStageSubscribe - 1) * EDGE_GAP) / 2 + idx * EDGE_GAP;
+        return `${props.handleOffsetY + offset}px`;
+      }
+      return `${50 - ((howManyStagesDoThisStageSubscribe - 1) * EDGE_GAP) / 2 + idx * EDGE_GAP}%`;
+    };
+
+    const centerHandleTop = props.handleOffsetY !== undefined ? `${props.handleOffsetY}px` : '50%';
+
     return (
       <>
         {props.stage?.spec?.requestedFreight?.map((freight, idx) => (
@@ -83,7 +107,7 @@ CustomNode.Container = (
             type='target'
             position={Position.Left}
             style={{
-              top: `${50 - howManyStagesDoThisStageSubscribe + idx * EDGE_GAP}%`,
+              top: handleTop(idx),
               backgroundColor: 'transparent'
             }}
           />
@@ -96,11 +120,16 @@ CustomNode.Container = (
             type='source'
             position={Position.Right}
             style={{
-              top: `${50 - howManyStagesDoThisStageSubscribe + idx * EDGE_GAP}%`,
+              top: handleTop(idx),
               backgroundColor: 'transparent'
             }}
           />
         ))}
+        <Handle
+          type='source'
+          position={Position.Right}
+          style={{ top: centerHandleTop, backgroundColor: 'transparent' }}
+        />
       </>
     );
   }
@@ -113,6 +142,8 @@ CustomNode.Container = (
     id = repoSubscriptionIndexer.index(props.repoSubscription.parent, props.repoSubscription.data);
   }
 
+  const singleHandleTop = props.handleOffsetY !== undefined ? `${props.handleOffsetY}px` : '50%';
+
   return (
     <>
       <Handle
@@ -120,6 +151,7 @@ CustomNode.Container = (
         type='target'
         position={Position.Left}
         style={{
+          top: singleHandleTop,
           backgroundColor: 'transparent',
           stroke: 'none',
           border: 'none'
@@ -131,6 +163,7 @@ CustomNode.Container = (
         type='source'
         position={Position.Right}
         style={{
+          top: singleHandleTop,
           backgroundColor: 'transparent',
           stroke: 'none',
           border: 'none'

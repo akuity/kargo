@@ -62,7 +62,7 @@ func NewEphemeralDependencyManager(
 
 	return &EphemeralDependencyManager{
 		credsDB:    credsDB,
-		authorizer: NewEphemeralAuthorizer(),
+		authorizer: NewEphemeralAuthorizer(false),
 		helmHome:   home,
 		project:    project,
 		workDir:    workDir,

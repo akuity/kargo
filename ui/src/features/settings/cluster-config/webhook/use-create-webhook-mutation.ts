@@ -1,16 +1,22 @@
-import { useMutation } from '@connectrpc/connect-query';
 import { useMutation as useReactQueryMutation } from '@tanstack/react-query';
 import { notification } from 'antd';
 import { parse, stringify } from 'yaml';
 
 import { queryCache } from '@ui/features/utils/cache';
 import {
-  createGenericCredentials,
-  createOrUpdateResource,
-  deleteGenericCredentials
-} from '@ui/gen/api/service/v1alpha1/service-KargoService_connectquery';
-import { ClusterConfig } from '@ui/gen/api/v1alpha1/generated_pb';
-import { PartialRecursive } from '@ui/utils/connectrpc-utils';
+  useCreateSystemGenericCredentials,
+  useDeleteSystemGenericCredentials
+} from '@ui/gen/api/v2/credentials/credentials';
+import { useCreateResource, useUpdateResource } from '@ui/gen/api/v2/resources/resources';
+
+type ClusterConfigPartial = {
+  apiVersion?: string;
+  kind?: string;
+  metadata?: { name?: string };
+  spec?: {
+    webhookReceivers?: Array<Record<string, unknown>>;
+  };
+};
 
 type createWebhookPayload = {
   clusterConfigYAML: string;
@@ -23,24 +29,25 @@ type createWebhookPayload = {
 };
 
 export const useCreateWebhookMutation = (opts?: { onSuccess?: () => void }) => {
-  const createOrUpdateMutation = useMutation(createOrUpdateResource);
-  const createSystemSecretMutation = useMutation(createGenericCredentials);
-  const deleteSystemSecretMutation = useMutation(deleteGenericCredentials);
+  const createResourceMutation = useCreateResource();
+  const updateResourceMutation = useUpdateResource();
+  const createSystemSecretMutation = useCreateSystemGenericCredentials();
+  const deleteSystemSecretMutation = useDeleteSystemGenericCredentials();
 
   return useReactQueryMutation({
     mutationFn: async (payload: createWebhookPayload) => {
       await createSystemSecretMutation.mutateAsync({
-        systemLevel: true,
-        name: payload.secret.name,
-        data: payload.secret.data
+        data: {
+          name: payload.secret.name,
+          data: payload.secret.data
+        }
       });
 
       try {
-        let clusterConfig = parse(payload.clusterConfigYAML) as PartialRecursive<ClusterConfig>;
+        let clusterConfig: ClusterConfigPartial = parse(payload.clusterConfigYAML);
 
         if (payload.clusterConfigYAML === '') {
           clusterConfig = {
-            // @ts-expect-error apiVersion required when creating resource
             apiVersion: 'kargo.akuity.io/v1alpha1',
             kind: 'ClusterConfig',
             metadata: {
@@ -71,15 +78,12 @@ export const useCreateWebhookMutation = (opts?: { onSuccess?: () => void }) => {
           }
         });
 
-        const textEncoder = new TextEncoder();
-
-        await createOrUpdateMutation.mutateAsync({
-          manifest: textEncoder.encode(stringify(clusterConfig))
-        });
+        const resourceMutation =
+          payload.clusterConfigYAML === '' ? createResourceMutation : updateResourceMutation;
+        await resourceMutation.mutateAsync({ data: stringify(clusterConfig) });
       } catch (e) {
         await deleteSystemSecretMutation.mutateAsync({
-          systemLevel: true,
-          name: payload.secret.name
+          genericCredentials: payload.secret.name
         });
 
         throw e;

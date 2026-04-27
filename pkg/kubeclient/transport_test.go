@@ -1,7 +1,6 @@
 package kubeclient
 
 import (
-	"context"
 	"net/http"
 	"net/http/httptest"
 	"testing"
@@ -39,7 +38,7 @@ func Test_credentialHook(t *testing.T) {
 			if ts.credential != "" {
 				req.Header.Set("Authorization", ts.credential)
 			}
-			res, err := hc.Do(req.WithContext(context.Background()))
+			res, err := hc.Do(req.WithContext(t.Context()))
 			defer func() {
 				_ = res.Body.Close()
 			}()

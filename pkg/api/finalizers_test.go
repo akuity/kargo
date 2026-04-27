@@ -1,7 +1,6 @@
 package api
 
 import (
-	"context"
 	"testing"
 
 	"github.com/stretchr/testify/require"
@@ -21,7 +20,7 @@ func TestEnsureFinalizer(t *testing.T) {
 	const testNamespace = "fake-namespace"
 	const testStageName = "fake-stage"
 
-	ctx := context.Background()
+	ctx := t.Context()
 
 	stage := &kargoapi.Stage{
 		ObjectMeta: metav1.ObjectMeta{
@@ -57,7 +56,7 @@ func TestRemoveFinalizer(t *testing.T) {
 	const testNamespace = "fake-namespace"
 	const testStageName = "fake-stage"
 
-	ctx := context.Background()
+	ctx := t.Context()
 
 	stage := &kargoapi.Stage{
 		ObjectMeta: metav1.ObjectMeta{
@@ -93,7 +92,7 @@ func TestPatchOwnerReferences(t *testing.T) {
 	const testNamespace = "fake-namespace"
 	const testProjectName = "fake-project"
 
-	ctx := context.Background()
+	ctx := t.Context()
 
 	initialNS := &corev1.Namespace{
 		ObjectMeta: metav1.ObjectMeta{
@@ -214,7 +213,7 @@ func Test_patchAnnotation(t *testing.T) {
 	for name, tc := range testCases {
 		t.Run(name, func(t *testing.T) {
 			t.Parallel()
-			err := patchAnnotation(context.Background(), tc.client, tc.obj, tc.key, tc.value)
+			err := patchAnnotation(t.Context(), tc.client, tc.obj, tc.key, tc.value)
 			if tc.errExpected {
 				require.Error(t, err)
 				return
@@ -292,7 +291,7 @@ func Test_deleteAnnotation(t *testing.T) {
 	for name, tc := range testCases {
 		t.Run(name, func(t *testing.T) {
 			t.Parallel()
-			err := deleteAnnotation(context.Background(), tc.client, tc.obj, tc.key)
+			err := deleteAnnotation(t.Context(), tc.client, tc.obj, tc.key)
 			if tc.errExpected {
 				require.Error(t, err)
 				return

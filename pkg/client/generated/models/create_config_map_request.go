@@ -22,6 +22,9 @@ type CreateConfigMapRequest struct {
 
 	// name
 	Name string `json:"name,omitempty"`
+
+	// replicate
+	Replicate bool `json:"replicate,omitempty"`
 }
 
 // Validate validates this create config map request

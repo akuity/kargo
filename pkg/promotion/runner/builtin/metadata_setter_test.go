@@ -1,7 +1,6 @@
 package builtin
 
 import (
-	"context"
 	"encoding/json"
 	"testing"
 
@@ -263,7 +262,7 @@ func Test_metadataSetter_run(t *testing.T) {
 
 				stage := &kargoapi.Stage{}
 				err = c.Get(
-					context.Background(),
+					t.Context(),
 					types.NamespacedName{
 						Name:      testObjName,
 						Namespace: testProject,
@@ -378,7 +377,7 @@ func Test_metadataSetter_run(t *testing.T) {
 
 				freight := &kargoapi.Freight{}
 				err = c.Get(
-					context.Background(),
+					t.Context(),
 					types.NamespacedName{
 						Name:      testObjName,
 						Namespace: testProject,
@@ -423,7 +422,7 @@ func Test_metadataSetter_run(t *testing.T) {
 		t.Run(tt.name, func(t *testing.T) {
 			setter := &metadataSetter{kargoClient: tt.client}
 			stepCtx := &promotion.StepContext{Project: testProject}
-			result, err := setter.run(context.Background(), stepCtx, tt.cfg)
+			result, err := setter.run(t.Context(), stepCtx, tt.cfg)
 			tt.assertions(t, result, tt.client, err)
 		})
 	}

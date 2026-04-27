@@ -27,7 +27,12 @@ spec:
       annotations:
         secret/checksum: {{ pick ( include (print $.Template.BasePath "/dex-server/secret.yaml") . | fromYaml ) "stringData" | toYaml | sha256sum }}
     spec:
+      {{- if not .Values.rbac.useDefaultServiceAccount }}
       serviceAccount: kargo-dex-server
+      {{- end }}
+      {{- if .Values.rbac.disableAutomountServiceAccountToken }}
+      automountServiceAccountToken: false
+      {{- end }}
       {{- with .Values.api.oidc.dex.affinity | default .Values.global.affinity }}
       affinity:
         {{- toYaml . | nindent 8 }}

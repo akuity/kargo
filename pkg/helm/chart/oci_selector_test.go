@@ -1,7 +1,6 @@
 package chart
 
 import (
-	"context"
 	"testing"
 
 	"github.com/stretchr/testify/require"
@@ -47,6 +46,19 @@ func TestNewOCISelector(t *testing.T) {
 				require.NotNil(t, o.repo)
 			},
 		},
+		{
+			name: "insecureSkipTLSVerify propagated to authorizer",
+			sub: kargoapi.ChartSubscription{
+				RepoURL:               "oci://charts.example.com/repo",
+				InsecureSkipTLSVerify: true,
+			},
+			assertions: func(t *testing.T, s Selector, err error) {
+				require.NoError(t, err)
+				o, ok := s.(*ociSelector)
+				require.True(t, ok)
+				require.True(t, o.insecureSkipTLSVerify)
+			},
+		},
 	}
 	for _, testCase := range testCases {
 		t.Run(testCase.name, func(t *testing.T) {
@@ -66,7 +78,7 @@ func Test_ociSelector_Select(t *testing.T) {
 		nil,
 	)
 	require.NoError(t, err)
-	versions, err := s.Select(context.Background())
+	versions, err := s.Select(t.Context())
 	require.NoError(t, err)
 	require.NotEmpty(t, versions)
 }

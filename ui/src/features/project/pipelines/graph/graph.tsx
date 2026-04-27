@@ -8,7 +8,7 @@ import {
   ReactFlowInstance,
   useNodesState
 } from '@xyflow/react';
-import { useEffect, useMemo, useRef, useState } from 'react';
+import { useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react';
 
 import { WarehouseExpanded } from '@ui/extend/types';
 import { queryCache } from '@ui/features/utils/cache';
@@ -74,62 +74,69 @@ export const Graph = (props: GraphProps) => {
     filterContext?.preferredFilter?.hideSubscriptions
   );
 
-  const [nodes, setNodes, onNodesChange] = useNodesState(graph.nodes);
+  const [nodes, setNodes] = useNodesState(graph.nodes);
 
-  useEffect(() => {
+  // useLayoutEffect fires synchronously after DOM mutations but before the browser
+  // paints. This prevents the one-frame intermediate state where node content has
+  // changed (and grown) but positions haven't been recalculated yet.
+  useLayoutEffect(() => {
     setNodes(graph.nodes);
   }, [graph.nodes]);
 
-  useEventsWatcher(props.project, {
-    onStage(stage) {
-      const index = stageIndexer.index(stage);
-      setNodes((nodes) =>
-        nodes.map((node) => {
-          if (node.id === index && node.type === reactFlowNodeConstants.CUSTOM_NODE) {
-            return {
-              ...node,
-              data: {
-                ...node.data,
-                value: stage
-              }
-            };
-          }
+  useEventsWatcher(
+    props.project,
+    {
+      onStage(stage) {
+        const index = stageIndexer.index(stage);
+        setNodes((nodes) =>
+          nodes.map((node) => {
+            if (node.id === index && node.type === reactFlowNodeConstants.CUSTOM_NODE) {
+              return {
+                ...node,
+                data: {
+                  ...node.data,
+                  value: stage
+                }
+              };
+            }
 
-          return node;
-        })
-      );
+            return node;
+          })
+        );
 
-      if (!nodes.find((n) => n.id === index)) {
-        setRedraw(!redraw);
+        if (!nodes.find((n) => n.id === index)) {
+          setRedraw((prev) => !prev);
+        }
+
+        queryCache.imageStageMatrix.update(stage);
+      },
+      onWarehouse(warehouse) {
+        const index = warehouseIndexer.index(warehouse);
+        setNodes((nodes) =>
+          nodes.map((node) => {
+            if (node.id === index && node.type === reactFlowNodeConstants.CUSTOM_NODE) {
+              return {
+                ...node,
+                data: {
+                  ...node.data,
+                  value: warehouse
+                }
+              };
+            }
+
+            return node;
+          })
+        );
+
+        if (!nodes.find((n) => n.id === index)) {
+          setRedraw((prev) => !prev);
+        }
+
+        queryCache.freight.refetch();
       }
-
-      queryCache.imageStageMatrix.update(stage);
     },
-    onWarehouse(warehouse) {
-      const index = warehouseIndexer.index(warehouse);
-      setNodes((nodes) =>
-        nodes.map((node) => {
-          if (node.id === index && node.type === reactFlowNodeConstants.CUSTOM_NODE) {
-            return {
-              ...node,
-              data: {
-                ...node.data,
-                value: warehouse
-              }
-            };
-          }
-
-          return node;
-        })
-      );
-
-      if (!nodes.find((n) => n.id === index)) {
-        setRedraw(!redraw);
-      }
-
-      queryCache.freight.refetch();
-    }
-  });
+    filterContext?.preferredFilter?.warehouses || []
+  );
 
   const warehouseByName = useMemo(() => {
     const warehouseByName: Record<string, WarehouseExpanded> = {};
@@ -168,20 +175,19 @@ export const Graph = (props: GraphProps) => {
           nodes: nodesExcludingSubscriptionNodes
         }}
         proOptions={{ hideAttribution: true }}
-        minZoom={0}
-        onNodesChange={onNodesChange}
+        minZoom={nodes.length > 100 ? 0.6 : 0.1}
         onlyRenderVisibleElements
+        panOnDrag
         onInit={(inst) => (reactFlowInstance.current = inst)}
       >
-        {!Object.keys(dimensions).length && (
-          <div className='opacity-0 overflow-hidden h-0'>
-            <DummyNodeRenderrer
-              stages={props.stages}
-              warehouses={props.warehouses}
-              onDimensionChange={setDimensions}
-            />
-          </div>
-        )}
+        <div className='opacity-0 overflow-hidden h-0'>
+          <DummyNodeRenderrer
+            stages={props.stages}
+            warehouses={props.warehouses}
+            knownDimensions={dimensions}
+            onDimensionChange={(newDims) => setDimensions((prev) => ({ ...prev, ...newDims }))}
+          />
+        </div>
         {filterContext?.preferredFilter?.showMinimap && (
           <MiniMap
             style={{ background: 'white', border: '1px solid lightblue', borderRadius: '5px' }}

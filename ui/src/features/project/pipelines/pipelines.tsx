@@ -70,8 +70,6 @@ export const Pipelines = (props: { creatingStage?: boolean; creatingWarehouse?: 
 
   const listImagesQuery = useQuery(listImages, { project: name });
 
-  const getFreightQuery = useQuery(queryFreight, { project: projectName });
-
   const listWarehousesQuery = useQuery(
     listWarehouses,
     {
@@ -91,13 +89,24 @@ export const Pipelines = (props: { creatingStage?: boolean; creatingWarehouse?: 
     }
   );
 
-  const listStagesQuery = useQuery(listStages, { project: projectName });
+  const [preferredFilter, setPreferredFilter] = useFreightTimelineControllerStore(
+    projectName || ''
+  );
+
+  const getFreightQuery = useQuery(queryFreight, {
+    project: projectName,
+    origins: preferredFilter.warehouses
+  });
+
+  const listStagesQuery = useQuery(listStages, {
+    project: projectName,
+    freightOrigins: preferredFilter.warehouses
+  });
 
   const loading =
     projectQuery.isLoading ||
     getFreightQuery.isLoading ||
     listWarehousesQuery.isLoading ||
-    listStagesQuery.isLoading ||
     getConfigQuery.isLoading;
 
   const promote = freight && stage ? { freight, stage } : undefined;
@@ -122,10 +131,6 @@ export const Pipelines = (props: { creatingStage?: boolean; creatingWarehouse?: 
   const stageColorMap = useMemo(
     () => getColors(project?.metadata?.name || '', listStagesQuery.data?.stages || []),
     [project, listStagesQuery.data?.stages]
-  );
-
-  const [preferredFilter, setPreferredFilter] = useFreightTimelineControllerStore(
-    projectName || ''
   );
 
   const pipelineView = preferredFilter.view;
@@ -301,14 +306,19 @@ export const Pipelines = (props: { creatingStage?: boolean; creatingWarehouse?: 
                       />
                     </div>
                   )}
-                  {pipelineView === 'graph' && (
+                  {listStagesQuery.isLoading && (
+                    <div className='mt-20'>
+                      <LoadingState />
+                    </div>
+                  )}
+                  {pipelineView === 'graph' && listStagesQuery.data?.stages && (
                     <Graph
                       project={project.metadata?.name || ''}
                       warehouses={listWarehousesQuery.data?.warehouses || []}
                       stages={listStagesQuery.data?.stages || []}
                     />
                   )}
-                  {pipelineView === 'list' && (
+                  {pipelineView === 'list' && listStagesQuery.data?.stages && (
                     <PipelineListView
                       stages={listStagesQuery.data?.stages || []}
                       warehouses={listWarehousesQuery.data?.warehouses || []}

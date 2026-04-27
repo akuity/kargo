@@ -45,9 +45,18 @@ spec:
         {{- end }}
       {{- end }}
     spec:
+      {{- if not .Values.rbac.useDefaultServiceAccount }}
       serviceAccount: kargo-api
+      {{- end }}
+      {{- if .Values.rbac.disableAutomountServiceAccountToken }}
+      automountServiceAccountToken: false
+      {{- end }}
       {{- with .Values.api.affinity | default .Values.global.affinity }}
       affinity:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      {{- with .Values.api.topologySpreadConstraints }}
+      topologySpreadConstraints:
         {{- toYaml . | nindent 8 }}
       {{- end }}
       {{- with .Values.api.priorityClassName | default .Values.global.priorityClassName }}
@@ -98,6 +107,20 @@ spec:
               containerPort: 8080
               protocol: TCP
 {{- if .Values.api.probes.enabled }}
+          startupProbe:
+            {{- if .Values.api.tls.enabled }}
+            exec:
+              command:
+                - /usr/local/bin/grpc_health_probe
+                - -addr=:8080
+                - -tls
+                - -tls-no-verify
+            {{- else }}
+            grpc:
+              port: 8080
+            {{- end }}
+            failureThreshold: 30
+            initialDelaySeconds: 10
           livenessProbe:
             {{- if .Values.api.tls.enabled }}
             exec:
@@ -110,7 +133,6 @@ spec:
             grpc:
               port: 8080
             {{- end }}
-            initialDelaySeconds: 10
           readinessProbe:
             {{- if .Values.api.tls.enabled }}
             exec:

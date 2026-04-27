@@ -58,6 +58,26 @@ func (r *listBasedRegistry[PA, P, V, MD]) MustRegister(
 	}
 }
 
+// GetAll implements PredicateBasedRegistry.
+func (r *listBasedRegistry[PA, P, V, MD]) GetAll(
+	ctx context.Context,
+	arg PA,
+) ([]PredicateBasedRegistration[PA, P, V, MD], error) {
+	r.mu.RLock()
+	defer r.mu.RUnlock()
+	var matches []PredicateBasedRegistration[PA, P, V, MD]
+	for _, reg := range r.registrations {
+		res, err := reg.Predicate(ctx, arg)
+		if err != nil {
+			return nil, err
+		}
+		if res {
+			matches = append(matches, reg)
+		}
+	}
+	return matches, nil
+}
+
 // Get implements PredicateBasedRegistry.
 func (r *listBasedRegistry[PA, P, V, MD]) Get(
 	ctx context.Context,

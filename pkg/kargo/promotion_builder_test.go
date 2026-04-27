@@ -173,7 +173,7 @@ func TestPromotionBuilder_Build(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			ctx := user.ContextWithInfo(context.Background(), tt.userInfo)
+			ctx := user.ContextWithInfo(t.Context(), tt.userInfo)
 
 			c := fake.NewClientBuilder().
 				WithScheme(s).
@@ -395,7 +395,7 @@ func TestPromotionBuilder_InflateSteps(t *testing.T) {
 
 			b := NewPromotionBuilder(c)
 			p := tt.promo.DeepCopy()
-			err := b.InflateSteps(context.Background(), p)
+			err := b.InflateSteps(t.Context(), p)
 			tt.assertions(t, p.Spec.Steps, err)
 		})
 	}
@@ -611,7 +611,7 @@ func TestPromotionBuilder_inflateTaskSteps(t *testing.T) {
 				Build()
 
 			b := NewPromotionBuilder(c)
-			steps, err := b.inflateTaskSteps(context.Background(), tt.project, tt.taskAlias, tt.promoVars, tt.taskStep)
+			steps, err := b.inflateTaskSteps(t.Context(), tt.project, tt.taskAlias, tt.promoVars, tt.taskStep)
 			tt.assertions(t, steps, err)
 		})
 	}
@@ -793,7 +793,7 @@ func TestPromotionBuilder_getTaskSpec(t *testing.T) {
 				Build()
 
 			b := NewPromotionBuilder(c)
-			result, err := b.getTaskSpec(context.Background(), tt.project, tt.ref)
+			result, err := b.getTaskSpec(t.Context(), tt.project, tt.ref)
 			tt.assertions(t, result, err)
 		})
 	}

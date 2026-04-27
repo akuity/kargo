@@ -1,4 +1,3 @@
-import { useMutation, useQuery } from '@connectrpc/connect-query';
 import { faPencil, faPlus, faTrash } from '@fortawesome/free-solid-svg-icons';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
 import { Button, Card, Flex, Table, Tag } from 'antd';
@@ -6,26 +5,29 @@ import { Button, Card, Flex, Table, Tag } from 'antd';
 import { useConfirmModal } from '@ui/features/common/confirm-modal/use-confirm-modal';
 import { useModal } from '@ui/features/common/modal/use-modal';
 import {
-  deleteGenericCredentials,
-  getConfig,
-  listGenericCredentials
-} from '@ui/gen/api/service/v1alpha1/service-KargoService_connectquery';
+  useDeleteSystemGenericCredentials,
+  useListSystemGenericCredentials
+} from '@ui/gen/api/v2/credentials/credentials';
+import { V1Secret } from '@ui/gen/api/v2/models';
+import { useGetConfig } from '@ui/gen/api/v2/system/system';
 
 import { CreateSystemSecretModal } from './create-system-secret-modal';
 
 export const ClusterSecret = () => {
-  const listSystemSecretsQuery = useQuery(listGenericCredentials, { systemLevel: true });
+  const listSystemSecretsQuery = useListSystemGenericCredentials();
   const confirm = useConfirmModal();
 
-  const getConfigQuery = useQuery(getConfig);
-  const config = getConfigQuery.data;
+  const getConfigQuery = useGetConfig();
+  const config = getConfigQuery.data?.data;
 
   const createSecretModal = useModal((p) => (
     <CreateSystemSecretModal {...p} onSuccess={listSystemSecretsQuery.refetch} />
   ));
 
-  const deleteSecretsMutation = useMutation(deleteGenericCredentials, {
-    onSuccess: () => listSystemSecretsQuery.refetch()
+  const deleteSecretsMutation = useDeleteSystemGenericCredentials({
+    mutation: {
+      onSuccess: () => listSystemSecretsQuery.refetch()
+    }
   });
 
   return (
@@ -45,10 +47,10 @@ export const ClusterSecret = () => {
         </Button>
       }
     >
-      <Table
+      <Table<V1Secret>
         className='my-2'
         scroll={{ x: 'max-content' }}
-        dataSource={listSystemSecretsQuery.data?.credentials || []}
+        dataSource={listSystemSecretsQuery.data?.data?.items || []}
         rowKey={(record) => record?.metadata?.name || ''}
         loading={listSystemSecretsQuery.isLoading}
         pagination={{ defaultPageSize: 10, hideOnSinglePage: true }}
@@ -57,13 +59,13 @@ export const ClusterSecret = () => {
           {
             title: 'Name',
             key: 'name',
-            render: (record) => record?.metadata?.name
+            render: (_, record) => record?.metadata?.name
           },
           {
             title: 'Keys',
             key: 'secrets',
             render: (_, record) => {
-              const secretKeys = Object.keys(record?.stringData) || [];
+              const secretKeys = Object.keys(record?.stringData || {});
 
               if (!secretKeys.length) {
                 return <Tag color='red'>It looks like this secret is empty.</Tag>;
@@ -111,8 +113,7 @@ export const ClusterSecret = () => {
                       ),
                       onOk: () =>
                         deleteSecretsMutation.mutate({
-                          systemLevel: true,
-                          name: record?.metadata?.name
+                          genericCredentials: record?.metadata?.name || ''
                         })
                     });
                   }}

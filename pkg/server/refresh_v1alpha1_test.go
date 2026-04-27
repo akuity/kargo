@@ -301,7 +301,7 @@ func TestRefreshResource(t *testing.T) {
 	}
 	for name, ts := range testSets {
 		t.Run(name, func(t *testing.T) {
-			ctx := context.Background()
+			ctx := t.Context()
 			client, err := kubernetes.NewClient(
 				ctx,
 				&rest.Config{},

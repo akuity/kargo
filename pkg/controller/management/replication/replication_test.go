@@ -905,14 +905,14 @@ func TestReconcile_SkipsReconcileWhenAdapterRetursFalse(t *testing.T) {
 		Data: map[string][]byte{"key": []byte("value")},
 		Type: corev1.SecretTypeOpaque,
 	}
-	require.NoError(t, fc.Create(context.Background(), nonCredentialSecret))
+	require.NoError(t, fc.Create(t.Context(), nonCredentialSecret))
 
 	// Add the finalizer so it won't try to re-reconcile
 	controllerutil.AddFinalizer(nonCredentialSecret, kargoapi.FinalizerName)
-	require.NoError(t, fc.Update(context.Background(), nonCredentialSecret))
+	require.NoError(t, fc.Update(t.Context(), nonCredentialSecret))
 
 	// Create a test project
-	require.NoError(t, fc.Create(context.Background(), project("test-project")))
+	require.NoError(t, fc.Create(t.Context(), project("test-project")))
 
 	r := reconcilerForTest(fc, secretFixture())
 
@@ -923,7 +923,7 @@ func TestReconcile_SkipsReconcileWhenAdapterRetursFalse(t *testing.T) {
 
 	// Verify the Secret was not replicated to the project namespace
 	replicatedList := &corev1.SecretList{}
-	require.NoError(t, fc.List(context.Background(), replicatedList, client.InNamespace("test-project")))
+	require.NoError(t, fc.List(t.Context(), replicatedList, client.InNamespace("test-project")))
 	require.Empty(t, replicatedList.Items)
 }
 
@@ -946,14 +946,14 @@ func TestReconcile_ReplicatesWhenAdapterReturnsTrue(t *testing.T) {
 		Data: map[string][]byte{"key": []byte("value")},
 		Type: corev1.SecretTypeOpaque,
 	}
-	require.NoError(t, fc.Create(context.Background(), credentialSecret))
+	require.NoError(t, fc.Create(t.Context(), credentialSecret))
 
 	// Add the finalizer
 	controllerutil.AddFinalizer(credentialSecret, kargoapi.FinalizerName)
-	require.NoError(t, fc.Update(context.Background(), credentialSecret))
+	require.NoError(t, fc.Update(t.Context(), credentialSecret))
 
 	// Create a test project
-	require.NoError(t, fc.Create(context.Background(), project("test-project")))
+	require.NoError(t, fc.Create(t.Context(), project("test-project")))
 
 	r := reconcilerForTest(fc, secretFixture())
 
@@ -964,7 +964,7 @@ func TestReconcile_ReplicatesWhenAdapterReturnsTrue(t *testing.T) {
 
 	// Verify the Secret was replicated to the project namespace
 	replicatedList := &corev1.SecretList{}
-	require.NoError(t, fc.List(context.Background(), replicatedList, client.InNamespace("test-project")))
+	require.NoError(t, fc.List(t.Context(), replicatedList, client.InNamespace("test-project")))
 	require.Len(t, replicatedList.Items, 1)
 	require.Equal(t, testResourceName, replicatedList.Items[0].GetName())
 }

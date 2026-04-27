@@ -46,7 +46,7 @@ func (s *server) ListClusterPromotionTasks(
 // @Tags Core, Shared, Cluster-Scoped Resource
 // @Security BearerAuth
 // @Produce json
-// @Success 200 {object} object "ClusterPromotionTaskList custom resource (github.com/akuity/kargo/api/v1alpha1.ClusterPromotionTaskList)"
+// @Success 200 {object} kargoapi.ClusterPromotionTaskList "ClusterPromotionTaskList custom resource (github.com/akuity/kargo/api/v1alpha1.ClusterPromotionTaskList)"
 // @Router /v1beta1/shared/cluster-promotion-tasks [get]
 func (s *server) listClusterPromotionTasks(c *gin.Context) {
 	ctx := c.Request.Context()

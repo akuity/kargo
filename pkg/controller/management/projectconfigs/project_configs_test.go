@@ -51,6 +51,26 @@ func TestReconciler_syncWebhookReceivers(t *testing.T) {
 			},
 		},
 		{
+			name:       "stale webhook receivers are cleared when spec is empty",
+			reconciler: &reconciler{},
+			projectCfg: &kargoapi.ProjectConfig{
+				Status: kargoapi.ProjectConfigStatus{
+					WebhookReceivers: []kargoapi.WebhookReceiverDetails{{
+						Name: "stale-receiver",
+						Path: "/webhook/github/abc123",
+					}},
+				},
+			},
+			assertions: func(t *testing.T, status kargoapi.ProjectConfigStatus, err error) {
+				require.NoError(t, err)
+				require.Empty(t, status.WebhookReceivers)
+				readyCondition := conditions.Get(&status, kargoapi.ConditionTypeReady)
+				require.NotNil(t, readyCondition)
+				require.Equal(t, metav1.ConditionTrue, readyCondition.Status)
+				require.Equal(t, "Synced", readyCondition.Reason)
+			},
+		},
+		{
 			name: "error building receiver",
 			reconciler: &reconciler{
 				client: fake.NewClientBuilder().WithScheme(testScheme).WithObjects(

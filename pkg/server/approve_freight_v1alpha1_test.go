@@ -384,7 +384,7 @@ func TestApproveFreight(t *testing.T) {
 			recorder := fakeevent.NewEventRecorder(1)
 			testCase.server.sender = k8sevent.NewEventSender(recorder)
 			resp, err := testCase.server.ApproveFreight(
-				context.Background(),
+				t.Context(),
 				connect.NewRequest(testCase.req),
 			)
 			testCase.assertions(t, recorder, resp, err)

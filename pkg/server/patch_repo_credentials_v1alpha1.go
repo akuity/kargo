@@ -35,7 +35,7 @@ type patchRepoCredentialsRequest struct {
 // @Param project path string true "Project name"
 // @Param repo-credentials path string true "Repo credentials name"
 // @Param body body patchRepoCredentialsRequest true "Credentials"
-// @Success 200 {object} object "Secret resource (k8s.io/api/core/v1.Secret)"
+// @Success 200 {object} corev1.Secret "Secret resource (k8s.io/api/core/v1.Secret)"
 // @Router /v1beta1/projects/{project}/repo-credentials/{repo-credentials} [patch]
 func (s *server) patchProjectRepoCredentials(c *gin.Context) {
 	if !s.requireSecretManagement(c) {
@@ -86,7 +86,7 @@ func (s *server) patchProjectRepoCredentials(c *gin.Context) {
 // @Produce json
 // @Param repo-credentials path string true "Repo credentials name"
 // @Param body body patchRepoCredentialsRequest true "Credentials"
-// @Success 200 {object} object "Secret resource (k8s.io/api/core/v1.Secret)"
+// @Success 200 {object} corev1.Secret "Secret resource (k8s.io/api/core/v1.Secret)"
 // @Router /v1beta1/shared/repo-credentials/{repo-credentials} [patch]
 func (s *server) patchSharedRepoCredentials(c *gin.Context) {
 	if !s.requireSecretManagement(c) {

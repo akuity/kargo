@@ -28,6 +28,7 @@ import (
 	"github.com/akuity/kargo/pkg/webhook/kubernetes/projectconfig"
 	"github.com/akuity/kargo/pkg/webhook/kubernetes/promotion"
 	"github.com/akuity/kargo/pkg/webhook/kubernetes/promotiontask"
+	"github.com/akuity/kargo/pkg/webhook/kubernetes/replicatedresource"
 	"github.com/akuity/kargo/pkg/webhook/kubernetes/stage"
 	"github.com/akuity/kargo/pkg/webhook/kubernetes/warehouse"
 	versionpkg "github.com/akuity/kargo/pkg/x/version"
@@ -149,10 +150,7 @@ func (o *kubernetesWebhooksServerOptions) run(ctx context.Context) error {
 	if err = freight.SetupWebhookWithManager(ctx, webhookCfg, mgr); err != nil {
 		return fmt.Errorf("setup Freight webhook: %w", err)
 	}
-	if err = project.SetupWebhookWithManager(
-		mgr,
-		project.WebhookConfigFromEnv(),
-	); err != nil {
+	if err = project.SetupWebhookWithManager(mgr, webhookCfg); err != nil {
 		return fmt.Errorf("setup Project webhook: %w", err)
 	}
 	if err = projectconfig.SetupWebhookWithManager(mgr); err != nil {
@@ -163,6 +161,9 @@ func (o *kubernetesWebhooksServerOptions) run(ctx context.Context) error {
 	}
 	if err = promotiontask.SetupWebhookWithManager(mgr); err != nil {
 		return fmt.Errorf("setup PromotionTask webhook: %w", err)
+	}
+	if err = replicatedresource.SetupWebhookWithManager(webhookCfg, mgr); err != nil {
+		return fmt.Errorf("setup replicated resource webhook: %w", err)
 	}
 	if err = stage.SetupWebhookWithManager(webhookCfg, mgr); err != nil {
 		return fmt.Errorf("setup Stage webhook: %w", err)

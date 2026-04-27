@@ -21,6 +21,7 @@ import (
 
 	rbacapi "github.com/akuity/kargo/api/rbac/v1alpha1"
 	kargoapi "github.com/akuity/kargo/api/v1alpha1"
+	"github.com/akuity/kargo/pkg/component"
 	"github.com/akuity/kargo/pkg/conditions"
 	"github.com/akuity/kargo/pkg/kubernetes"
 )
@@ -37,7 +38,6 @@ func TestNewReconciler(t *testing.T) {
 	require.NotNil(t, r.getNamespaceFn)
 	require.NotNil(t, r.createNamespaceFn)
 	require.NotNil(t, r.deleteNamespaceFn)
-	require.NotNil(t, r.patchOwnerReferencesFn)
 	require.NotNil(t, r.ensureFinalizerFn)
 	require.NotNil(t, r.removeFinalizerFn)
 	require.NotNil(t, r.ensureSystemPermissionsFn)
@@ -406,7 +406,7 @@ func TestReconciler_reconcile(t *testing.T) {
 				WithObjects(tt.project).
 				WithInterceptorFuncs(tt.interceptor).
 				Build()
-			status, err := tt.reconciler.reconcile(context.Background(), tt.project)
+			status, err := tt.reconciler.reconcile(t.Context(), tt.project)
 			tt.assertions(t, status, tt.reconciler.client, err)
 		})
 	}
@@ -719,17 +719,6 @@ func TestReconciler_cleanupProject(t *testing.T) {
 					ns, ok := obj.(*corev1.Namespace)
 					require.True(t, ok)
 					ns.Name = "test-project"
-					ns.OwnerReferences = []metav1.OwnerReference{
-						{UID: "project-uid"},
-						{UID: "other-uid"},
-					}
-					return nil
-				},
-				patchOwnerReferencesFn: func(
-					context.Context,
-					client.Client,
-					client.Object,
-				) error {
 					return nil
 				},
 				removeFinalizerFn: func(
@@ -1174,7 +1163,7 @@ func TestReconciler_syncProject(t *testing.T) {
 	for _, testCase := range testCases {
 		t.Run(testCase.name, func(t *testing.T) {
 			status, err := testCase.reconciler.syncProject(
-				context.Background(),
+				t.Context(),
 				testCase.project,
 			)
 			testCase.assertions(t, status, err)
@@ -1225,45 +1214,8 @@ func TestReconciler_ensureNamespace(t *testing.T) {
 			},
 		},
 		{
-			name: "namespace exists, is labeled as a project namespace, and is " +
-				"already owned by the project",
-			project: &kargoapi.Project{
-				ObjectMeta: metav1.ObjectMeta{
-					UID: types.UID("fake-uid"),
-				},
-			},
-			reconciler: &reconciler{
-				ensureFinalizerFn: func(
-					context.Context,
-					client.Client,
-					client.Object,
-				) (bool, error) {
-					return false, nil
-				},
-				getNamespaceFn: func(
-					_ context.Context,
-					_ types.NamespacedName,
-					obj client.Object,
-					_ ...client.GetOption,
-				) error {
-					ns, ok := obj.(*corev1.Namespace)
-					require.True(t, ok)
-					ns.Labels = map[string]string{
-						kargoapi.LabelKeyProject: kargoapi.LabelValueTrue,
-					}
-					ns.OwnerReferences = []metav1.OwnerReference{{
-						UID: "fake-uid",
-					}}
-					return nil
-				},
-			},
-			assertions: func(t *testing.T, err error) {
-				require.NoError(t, err)
-			},
-		},
-		{
-			name: "namespace exists, is labeled as a project namespace, and is " +
-				"NOT already owned by the project; error ensuring finalizer",
+			name: "namespace exists, is labeled as a project namespace; " +
+				"error ensuring finalizer",
 			project: &kargoapi.Project{},
 			reconciler: &reconciler{
 				getNamespaceFn: func(
@@ -1293,8 +1245,7 @@ func TestReconciler_ensureNamespace(t *testing.T) {
 			},
 		},
 		{
-			name: "namespace exists, is labeled as a project namespace, and is " +
-				"NOT already owned by the project; error patching it",
+			name:    "namespace exists, is labeled as a project namespace; success",
 			project: &kargoapi.Project{},
 			reconciler: &reconciler{
 				getNamespaceFn: func(
@@ -1311,56 +1262,13 @@ func TestReconciler_ensureNamespace(t *testing.T) {
 					return nil
 				},
 				ensureFinalizerFn: func(
-					context.Context,
-					client.Client,
-					client.Object,
-				) (bool, error) {
-					return false, nil
-				},
-				patchOwnerReferencesFn: func(
-					context.Context,
-					client.Client,
-					client.Object,
-				) error {
-					return errors.New("something went wrong")
-				},
-			},
-			assertions: func(t *testing.T, err error) {
-				require.ErrorContains(t, err, "error patching namespace")
-				require.ErrorContains(t, err, "something went wrong")
-			},
-		},
-		{
-			name: "namespace exists, is labeled as a project namespace, and is " +
-				"NOT already owned by the project; success",
-			project: &kargoapi.Project{},
-			reconciler: &reconciler{
-				getNamespaceFn: func(
 					_ context.Context,
-					_ types.NamespacedName,
+					_ client.Client,
 					obj client.Object,
-					_ ...client.GetOption,
-				) error {
-					ns, ok := obj.(*corev1.Namespace)
-					require.True(t, ok)
-					ns.Labels = map[string]string{
-						kargoapi.LabelKeyProject: kargoapi.LabelValueTrue,
-					}
-					return nil
-				},
-				ensureFinalizerFn: func(
-					context.Context,
-					client.Client,
-					client.Object,
 				) (bool, error) {
+					// Smoke/sanity test to ensure we are not adding an owner reference anymore
+					require.Len(t, obj.GetOwnerReferences(), 0)
 					return false, nil
-				},
-				patchOwnerReferencesFn: func(
-					context.Context,
-					client.Client,
-					client.Object,
-				) error {
-					return nil
 				},
 			},
 			assertions: func(t *testing.T, err error) {
@@ -1421,7 +1329,7 @@ func TestReconciler_ensureNamespace(t *testing.T) {
 		t.Run(testCase.name, func(t *testing.T) {
 			testCase.assertions(
 				t,
-				testCase.reconciler.ensureNamespace(context.Background(), testCase.project),
+				testCase.reconciler.ensureNamespace(t.Context(), testCase.project),
 			)
 		})
 	}
@@ -1521,7 +1429,7 @@ func TestReconciler_ensureSystemPermissions(t *testing.T) {
 			testCase.assertions(
 				t,
 				testCase.reconciler.ensureSystemPermissions(
-					context.Background(),
+					t.Context(),
 					&kargoapi.Project{},
 				),
 			)
@@ -1629,7 +1537,7 @@ func TestReconciler_ensureControllerPermissions(t *testing.T) {
 				require.NoError(t, err)
 				sa := &corev1.ServiceAccount{}
 				err = cl.Get(
-					context.Background(),
+					t.Context(),
 					types.NamespacedName{
 						Name:      "fake-controller",
 						Namespace: cfg.KargoNamespace,
@@ -1670,7 +1578,7 @@ func TestReconciler_ensureControllerPermissions(t *testing.T) {
 				require.NoError(t, err)
 				rb := &rbacv1.RoleBinding{}
 				err = cl.Get(
-					context.Background(),
+					t.Context(),
 					types.NamespacedName{
 						Name:      getRoleBindingName(testControllerSA.Name),
 						Namespace: testProject.Name,
@@ -1716,7 +1624,7 @@ func TestReconciler_ensureControllerPermissions(t *testing.T) {
 				require.NoError(t, err)
 				rb := &rbacv1.RoleBinding{}
 				err = cl.Get(
-					context.Background(),
+					t.Context(),
 					types.NamespacedName{
 						Name:      getRoleBindingName(testControllerSA.Name),
 						Namespace: testProject.Name,
@@ -1777,7 +1685,7 @@ func TestReconciler_ensureControllerPermissions(t *testing.T) {
 	for _, testCase := range testCases {
 		t.Run(testCase.name, func(t *testing.T) {
 			r := newReconciler(testCase.client, cfg)
-			err = r.ensureControllerPermissions(context.Background(), testProject)
+			err = r.ensureControllerPermissions(t.Context(), testProject)
 			testCase.assertions(t, testCase.client, err)
 		})
 	}
@@ -2001,8 +1909,146 @@ func TestReconciler_ensureDefaultUserRoles(t *testing.T) {
 			}
 			testCase.assertions(
 				t,
-				testCase.reconciler.ensureDefaultUserRoles(context.Background(), p),
+				testCase.reconciler.ensureDefaultUserRoles(t.Context(), p),
 			)
+		})
+	}
+}
+
+func TestReconciler_ensureDefaultUserRoles_contributors(t *testing.T) {
+	// Save and restore the global registry around each sub-test.
+	origRegistry := defaultRoleRulesContributorRegistry
+
+	testCases := []struct {
+		name       string
+		setup      func()
+		assertions func(*testing.T, []*rbacv1.Role, error)
+	}{
+		{
+			name: "contributor predicate error propagates",
+			setup: func() {
+				defaultRoleRulesContributorRegistry =
+					component.MustNewPredicateBasedRegistry[
+						string,
+						roleRulesContributorPredicate,
+						roleRulesContributorFunc,
+						struct{},
+					](RoleRulesContributorRegistration{
+						Predicate: func(context.Context, string) (bool, error) {
+							return false, errors.New("something went wrong")
+						},
+						Value: func(string) []rbacv1.PolicyRule { return nil },
+					})
+			},
+			assertions: func(t *testing.T, _ []*rbacv1.Role, err error) {
+				require.ErrorContains(t, err, "error getting role rules contributors")
+				require.ErrorContains(t, err, "something went wrong")
+			},
+		},
+		{
+			name: "contributor rules are appended to matching roles",
+			setup: func() {
+				defaultRoleRulesContributorRegistry =
+					component.MustNewPredicateBasedRegistry[
+						string,
+						roleRulesContributorPredicate,
+						roleRulesContributorFunc,
+						struct{},
+					](RoleRulesContributorRegistration{
+						Predicate: func(_ context.Context, roleName string) (bool, error) {
+							return roleName == "kargo-admin", nil
+						},
+						Value: func(string) []rbacv1.PolicyRule {
+							return []rbacv1.PolicyRule{{
+								APIGroups: []string{"ee.kargo.akuity.io"},
+								Resources: []string{"messagechannels"},
+								Verbs:     []string{"*"},
+							}}
+						},
+					})
+			},
+			assertions: func(t *testing.T, createdRoles []*rbacv1.Role, err error) {
+				require.NoError(t, err)
+				var adminRole *rbacv1.Role
+				var viewerRole *rbacv1.Role
+				for _, r := range createdRoles {
+					switch r.Name {
+					case "kargo-admin":
+						adminRole = r
+					case "kargo-viewer":
+						viewerRole = r
+					}
+				}
+				require.NotNil(t, adminRole)
+				require.NotNil(t, viewerRole)
+
+				// Admin role should contain the EE rule as the last entry.
+				lastRule := adminRole.Rules[len(adminRole.Rules)-1]
+				require.Equal(t, []string{"ee.kargo.akuity.io"}, lastRule.APIGroups)
+				require.Equal(t, []string{"messagechannels"}, lastRule.Resources)
+				require.Equal(t, []string{"*"}, lastRule.Verbs)
+
+				// Viewer role should not contain the EE rule.
+				for _, rule := range viewerRole.Rules {
+					for _, apiGroup := range rule.APIGroups {
+						require.NotEqual(t, "ee.kargo.akuity.io", apiGroup)
+					}
+				}
+			},
+		},
+	}
+	for _, testCase := range testCases {
+		t.Run(testCase.name, func(t *testing.T) {
+			t.Cleanup(func() {
+				defaultRoleRulesContributorRegistry = origRegistry
+			})
+			testCase.setup()
+
+			var createdRoles []*rbacv1.Role
+			r := &reconciler{
+				createServiceAccountFn: func(
+					context.Context,
+					client.Object,
+					...client.CreateOption,
+				) error {
+					return apierrors.NewAlreadyExists(schema.GroupResource{}, "")
+				},
+				createRoleFn: func(
+					_ context.Context,
+					obj client.Object,
+					_ ...client.CreateOption,
+				) error {
+					role, ok := obj.(*rbacv1.Role)
+					require.True(t, ok)
+					createdRoles = append(createdRoles, role)
+					return nil
+				},
+				createRoleBindingFn: func(
+					context.Context,
+					client.Object,
+					...client.CreateOption,
+				) error {
+					return apierrors.NewAlreadyExists(schema.GroupResource{}, "")
+				},
+				createClusterRoleFn: func(
+					context.Context,
+					client.Object,
+					...client.CreateOption,
+				) error {
+					return apierrors.NewAlreadyExists(schema.GroupResource{}, "")
+				},
+				createClusterRoleBindingFn: func(
+					context.Context,
+					client.Object,
+					...client.CreateOption,
+				) error {
+					return apierrors.NewAlreadyExists(schema.GroupResource{}, "")
+				},
+			}
+			p := &kargoapi.Project{
+				ObjectMeta: metav1.ObjectMeta{Name: "test-project"},
+			}
+			testCase.assertions(t, createdRoles, r.ensureDefaultUserRoles(t.Context(), p))
 		})
 	}
 }
@@ -2070,7 +2116,7 @@ func TestReconciler_ensureExtendedPermissions(t *testing.T) {
 				// Verify ServiceAccount still exists
 				sa := &corev1.ServiceAccount{}
 				err = cl.Get(
-					context.Background(),
+					t.Context(),
 					types.NamespacedName{
 						Name:      "test-control-plane",
 						Namespace: testProject.Name,
@@ -2095,7 +2141,7 @@ func TestReconciler_ensureExtendedPermissions(t *testing.T) {
 				// Verify ServiceAccount was created
 				sa := &corev1.ServiceAccount{}
 				err = cl.Get(
-					context.Background(),
+					t.Context(),
 					types.NamespacedName{
 						Name:      "test-control-plane",
 						Namespace: testProject.Name,
@@ -2108,7 +2154,7 @@ func TestReconciler_ensureExtendedPermissions(t *testing.T) {
 				// Verify RoleBinding was created
 				rb := &rbacv1.RoleBinding{}
 				err = cl.Get(
-					context.Background(),
+					t.Context(),
 					types.NamespacedName{
 						Name:      "test-control-plane",
 						Namespace: testProject.Name,
@@ -2135,7 +2181,7 @@ func TestReconciler_ensureExtendedPermissions(t *testing.T) {
 				// Verify ArgoCD ServiceAccount was created
 				sa := &corev1.ServiceAccount{}
 				err = cl.Get(
-					context.Background(),
+					t.Context(),
 					types.NamespacedName{
 						Name:      "kargo-argocd-service-account",
 						Namespace: testProject.Name,
@@ -2162,7 +2208,7 @@ func TestReconciler_ensureExtendedPermissions(t *testing.T) {
 				// Verify ClusterRoleBinding was created
 				crb := &rbacv1.ClusterRoleBinding{}
 				err = cl.Get(
-					context.Background(),
+					t.Context(),
 					types.NamespacedName{
 						Name: kubernetes.ShortenResourceName(fmt.Sprintf("kargo-argocd-%s", testProject.Name)),
 					},
@@ -2193,7 +2239,7 @@ func TestReconciler_ensureExtendedPermissions(t *testing.T) {
 				// Verify ArgoCD RoleBinding was created
 				rb := &rbacv1.RoleBinding{}
 				err = cl.Get(
-					context.Background(),
+					t.Context(),
 					types.NamespacedName{
 						Name:      kubernetes.ShortenResourceName(fmt.Sprintf("kargo-argocd-%s", testProject.Name)),
 						Namespace: "argocd",
@@ -2227,7 +2273,7 @@ func TestReconciler_ensureExtendedPermissions(t *testing.T) {
 				// Verify orchestrator ServiceAccount was created
 				sa := &corev1.ServiceAccount{}
 				err = cl.Get(
-					context.Background(),
+					t.Context(),
 					types.NamespacedName{
 						Name:      "test-orchestrator",
 						Namespace: testProject.Name,
@@ -2239,7 +2285,7 @@ func TestReconciler_ensureExtendedPermissions(t *testing.T) {
 				// Verify control plane ServiceAccount was created
 				sa = &corev1.ServiceAccount{}
 				err = cl.Get(
-					context.Background(),
+					t.Context(),
 					types.NamespacedName{
 						Name:      "test-control-plane",
 						Namespace: testProject.Name,
@@ -2259,7 +2305,7 @@ func TestReconciler_ensureExtendedPermissions(t *testing.T) {
 				for _, rbName := range roleBindings {
 					rb := &rbacv1.RoleBinding{}
 					err = cl.Get(
-						context.Background(),
+						t.Context(),
 						types.NamespacedName{
 							Name:      rbName,
 							Namespace: testProject.Name,
@@ -2286,7 +2332,7 @@ func TestReconciler_ensureExtendedPermissions(t *testing.T) {
 				// Verify orchestrator ServiceAccount was NOT created in project namespace
 				sa := &corev1.ServiceAccount{}
 				err = cl.Get(
-					context.Background(),
+					t.Context(),
 					types.NamespacedName{
 						Name:      "test-orchestrator",
 						Namespace: testProject.Name,
@@ -2313,7 +2359,7 @@ func TestReconciler_ensureExtendedPermissions(t *testing.T) {
 				// Verify manager RoleBinding was created
 				rb := &rbacv1.RoleBinding{}
 				err = cl.Get(
-					context.Background(),
+					t.Context(),
 					types.NamespacedName{
 						Name:      "kargo-manager",
 						Namespace: testProject.Name,
@@ -2342,7 +2388,7 @@ func TestReconciler_ensureExtendedPermissions(t *testing.T) {
 				// Verify manager RoleBinding was NOT created
 				rb := &rbacv1.RoleBinding{}
 				err = cl.Get(
-					context.Background(),
+					t.Context(),
 					types.NamespacedName{
 						Name:      "kargo-manager",
 						Namespace: testProject.Name,
@@ -2424,7 +2470,7 @@ func TestReconciler_ensureExtendedPermissions(t *testing.T) {
 				// Verify it still exists
 				crb := &rbacv1.ClusterRoleBinding{}
 				err = cl.Get(
-					context.Background(),
+					t.Context(),
 					types.NamespacedName{
 						Name: kubernetes.ShortenResourceName(fmt.Sprintf("kargo-argocd-role-%s", testProject.Name)),
 					},
@@ -2438,7 +2484,7 @@ func TestReconciler_ensureExtendedPermissions(t *testing.T) {
 	for _, testCase := range testCases {
 		t.Run(testCase.name, func(t *testing.T) {
 			r := newReconciler(testCase.client, testCase.cfg)
-			err := r.ensureExtendedPermissions(context.Background(), testProject)
+			err := r.ensureExtendedPermissions(t.Context(), testProject)
 			testCase.assertions(t, testCase.client, err)
 		})
 	}

@@ -1,7 +1,6 @@
 package api
 
 import (
-	"context"
 	"testing"
 	"time"
 
@@ -55,7 +54,7 @@ func TestGetPromotion(t *testing.T) {
 	for _, testCase := range testCases {
 		t.Run(testCase.name, func(t *testing.T) {
 			promo, err := GetPromotion(
-				context.Background(),
+				t.Context(),
 				testCase.client,
 				types.NamespacedName{
 					Namespace: "fake-namespace",
@@ -74,7 +73,7 @@ func TestAbortPromotion(t *testing.T) {
 	t.Run("not found", func(t *testing.T) {
 		c := fake.NewClientBuilder().WithScheme(scheme).Build()
 
-		err := AbortPromotion(context.TODO(), c, types.NamespacedName{
+		err := AbortPromotion(t.Context(), c, types.NamespacedName{
 			Namespace: "fake-namespace",
 			Name:      "fake-promotion",
 		}, kargoapi.AbortActionTerminate)
@@ -94,13 +93,13 @@ func TestAbortPromotion(t *testing.T) {
 			},
 		).Build()
 
-		err := AbortPromotion(context.TODO(), c, types.NamespacedName{
+		err := AbortPromotion(t.Context(), c, types.NamespacedName{
 			Namespace: "fake-namespace",
 			Name:      "fake-promotion",
 		}, kargoapi.AbortActionTerminate)
 		require.NoError(t, err)
 
-		promotion, err := GetPromotion(context.TODO(), c, types.NamespacedName{
+		promotion, err := GetPromotion(t.Context(), c, types.NamespacedName{
 			Namespace: "fake-namespace",
 			Name:      "fake-promotion",
 		})
@@ -119,13 +118,13 @@ func TestAbortPromotion(t *testing.T) {
 			},
 		).Build()
 
-		err := AbortPromotion(context.TODO(), c, types.NamespacedName{
+		err := AbortPromotion(t.Context(), c, types.NamespacedName{
 			Namespace: "fake-namespace",
 			Name:      "fake-promotion",
 		}, kargoapi.AbortActionTerminate)
 		require.NoError(t, err)
 
-		stage, err := GetPromotion(context.TODO(), c, types.NamespacedName{
+		stage, err := GetPromotion(t.Context(), c, types.NamespacedName{
 			Namespace: "fake-namespace",
 			Name:      "fake-promotion",
 		})

@@ -34,6 +34,7 @@ TILT_VERSION			?= v0.36.3
 CTLPTL_VERSION			?= v0.9.0
 KIND_VERSION			?= v0.31.0
 K3D_VERSION				?= v5.8.3
+JQ_VERSION				?= 1.8.1
 
 ################################################################################
 # Tool targets                                                                 #
@@ -55,6 +56,7 @@ TILT            := $(BIN_DIR)/tilt-$(OS)-$(ARCH)-$(TILT_VERSION)
 CTLPTL          := $(BIN_DIR)/ctlptl-$(OS)-$(ARCH)-$(CTLPTL_VERSION)
 KIND            := $(BIN_DIR)/kind-$(OS)-$(ARCH)-$(KIND_VERSION)
 K3D             := $(BIN_DIR)/k3d-$(OS)-$(ARCH)-$(K3D_VERSION)
+JQ              := $(BIN_DIR)/jq-$(OS)-$(ARCH)-$(JQ_VERSION)
 
 $(GOLANGCI_LINT):
 	$(call install-golangci-lint,$@,$(GOLANGCI_LINT_VERSION))
@@ -104,6 +106,9 @@ $(KIND):
 $(K3D):
 	$(call install-k3d,$@,$(K3D_VERSION))
 
+$(JQ):
+	$(call install-jq,$@,$(JQ_VERSION))
+
 ################################################################################
 # Symlink targets                                                              #
 ################################################################################
@@ -124,6 +129,7 @@ TILT_LINK			:= $(BIN_DIR)/tilt
 CTLPTL_LINK			:= $(BIN_DIR)/ctlptl
 KIND_LINK			:= $(BIN_DIR)/kind
 K3D_LINK			:= $(BIN_DIR)/k3d
+JQ_LINK				:= $(BIN_DIR)/jq
 
 .PHONY: $(GOLANGCI_LINT_LINK)
 $(GOLANGCI_LINT_LINK): $(GOLANGCI_LINT)
@@ -189,11 +195,15 @@ $(KIND_LINK): $(KIND)
 $(K3D_LINK): $(K3D)
 	$(call create-symlink,$(K3D),$(K3D_LINK))
 
+.PHONY: $(JQ_LINK)
+$(JQ_LINK): $(JQ)
+	$(call create-symlink,$(JQ),$(JQ_LINK))
+
 ################################################################################
 # Alias targets                                                                #
 ################################################################################
 
-TOOLS := install-golangci-lint install-helm install-goimports install-go-to-protobuf install-protoc-gen-gogo install-controller-gen install-protoc install-buf install-quill install-protoc-gen-doc install-swag install-go-swagger install-tilt install-ctlptl install-kind install-k3d
+TOOLS := install-golangci-lint install-helm install-goimports install-go-to-protobuf install-protoc-gen-gogo install-controller-gen install-protoc install-buf install-quill install-protoc-gen-doc install-swag install-go-swagger install-tilt install-ctlptl install-kind install-k3d install-jq
 
 .PHONY: install-tools
 install-tools: $(TOOLS)
@@ -245,6 +255,9 @@ install-kind: $(KIND) $(KIND_LINK)
 
 .PHONY: install-k3d
 install-k3d: $(K3D) $(K3D_LINK)
+
+.PHONY: install-jq
+install-jq: $(JQ) $(JQ_LINK)
 
 ################################################################################
 # Clean up targets                                                             #
@@ -424,6 +437,34 @@ define install-k3d
 	echo "Installing k3d $(2) to $(1)" ;\
 	mkdir -p $(dir $(1)) ;\
 	curl -fsSL -o $(1) https://github.com/k3d-io/k3d/releases/download/$(2)/k3d-$(OS)-$(K3D_ARCH) ;\
+	chmod 0755 $(1) ;\
+	}
+endef
+
+# JQ_OS and JQ_ARCH are used to determine the platform-specific binary to
+# download for jq.
+JQ_OS ?= $(OS)
+ifeq ($(JQ_OS),darwin)
+	JQ_OS := macos
+endif
+
+JQ_ARCH ?= $(ARCH)
+ifeq ($(JQ_ARCH),x86_64)
+	override JQ_ARCH = amd64
+else ifeq ($(JQ_ARCH),aarch64)
+	override JQ_ARCH = arm64
+endif
+
+# install-jq installs jq.
+#
+# $(1) binary path
+# $(2) version
+define install-jq
+	@[ -f $(1) ] || { \
+	set -e ;\
+	echo "Installing jq $(2) to $(1)" ;\
+	mkdir -p $(dir $(1)) ;\
+	curl -fsSL -o $(1) https://github.com/jqlang/jq/releases/download/jq-$(2)/jq-$(JQ_OS)-$(JQ_ARCH) ;\
 	chmod 0755 $(1) ;\
 	}
 endef

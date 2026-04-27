@@ -3,28 +3,6 @@
   "title": "GitTagConfig",
   "type": "object",
   "properties": {
-    "tagger": {
-      "type": "object",
-      "description": "Optional tagger information for the tag. If provided, this takes precedence over both system-level defaults and any optional, default authorship information configured in the `git-clone` step.",
-      "additionalProperties": false,
-      "properties": {
-        "email": {
-          "type": "string",
-          "description": "The email of the tagger.",
-          "format": "email"
-        },
-        "name": {
-          "type": "string",
-          "description": "The name of the tagger.",
-          "minLength": 1
-        },
-        "signingKey": {
-          "type": "string",
-          "description": "The GPG signing key for the tagger. If provided, 'email' and 'name' must match the key's UID." 
-        }
-      },
-      "required": ["name", "email"]
-    },
     "message": {
       "type": "string",
       "description": "The annotation message for the tag.",

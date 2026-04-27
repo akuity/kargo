@@ -24,7 +24,7 @@ import (
 )
 
 func TestListGenericCredentials(t *testing.T) {
-	ctx := context.Background()
+	ctx := t.Context()
 
 	testData := map[string][]byte{
 		"PROJECT_SECRET": []byte("Soylent Green is people!"),

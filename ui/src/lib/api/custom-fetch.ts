@@ -6,50 +6,91 @@
  * - Include authentication headers
  * - Handle common error scenarios
  *
- * The UI team should customize this based on how authentication
- * is handled in the current application.
+ * Orval generates hooks that expect a response envelope:
+ * { data: T, status: number, headers: Headers }
  */
 
-// TODO: Import your auth token getter from the appropriate location
-// import { getAuthToken } from '@/auth';
+import { authTokenKey, redirectToQueryParam, refreshTokenKey } from '@ui/config/auth';
+import { paths } from '@ui/config/paths';
 
-/**
- * Get the API base URL from environment or default to current origin.
- * Adjust this based on your deployment configuration.
- */
 const getBaseUrl = (): string => {
-  // In development, you might use a different API URL
   if (import.meta.env.VITE_API_URL) {
     return import.meta.env.VITE_API_URL;
   }
-  // In production, API is typically on the same origin
   return '';
+};
+
+const logout = () => {
+  localStorage.removeItem(authTokenKey);
+  localStorage.removeItem(refreshTokenKey);
+  window.location.replace(`${paths.login}?${redirectToQueryParam}=${window.location.pathname}`);
+};
+
+const renewToken = () => {
+  window.location.replace(
+    `${paths.tokenRenew}?${redirectToQueryParam}=${window.location.pathname}`
+  );
 };
 
 /**
  * Custom fetch function used by all generated API hooks.
  *
- * Orval calls this function with (url, options) signature.
+ * Returns a response envelope { data, status, headers } as expected
+ * by orval-generated hooks.
  *
- * @param url - The API endpoint path (e.g., "/v2/projects")
+ * @param url - The API endpoint path (e.g., "/v1beta1/projects")
  * @param options - The fetch options (method, body, headers, etc.)
- * @returns Promise resolving to the parsed response data
+ * @returns Promise resolving to the response envelope
  */
 export const customFetch = async <T>(url: string, options?: RequestInit): Promise<T> => {
   const baseUrl = getBaseUrl();
   const fullUrl = `${baseUrl}${url}`;
 
-  // TODO: Get the auth token from your auth state/context
-  // const token = getAuthToken();
-  const token: string | null = null; // Placeholder - implement auth token retrieval
-
-  const headers: HeadersInit = {
-    'Content-Type': 'application/json',
-    ...options?.headers
-  };
+  const token = localStorage.getItem(authTokenKey);
+  const refreshToken = localStorage.getItem(refreshTokenKey);
 
   if (token) {
-    (headers as Record<string, string>)['Authorization'] = `Bearer ${token}`;
+    let isTokenExpired: boolean;
+    try {
+      isTokenExpired = Date.now() >= JSON.parse(atob(token.split('.')[1])).exp * 1000;
+    } catch (_) {
+      logout();
+      throw new ApiError(401, 'Unauthorized', 'Invalid token');
+    }
+
+    if (isTokenExpired && refreshToken) {
+      renewToken();
+      throw new ApiError(401, 'Unauthorized', 'Token expired');
+    }
+
+    if (isTokenExpired && !refreshToken) {
+      logout();
+      throw new ApiError(401, 'Unauthorized', 'Token expired');
+    }
+  }
+
+  const headers: Record<string, string> = {
+    'Content-Type': 'application/json'
+  };
+
+  // Preserve any explicitly passed headers (may override Content-Type for text/plain bodies)
+  if (options?.headers) {
+    const incoming = options.headers;
+    if (incoming instanceof Headers) {
+      incoming.forEach((value, key) => {
+        headers[key] = value;
+      });
+    } else if (Array.isArray(incoming)) {
+      for (const [key, value] of incoming) {
+        headers[key] = value;
+      }
+    } else {
+      Object.assign(headers, incoming);
+    }
+  }
+
+  if (token) {
+    headers['Authorization'] = `Bearer ${token}`;
   }
 
   const response = await fetch(fullUrl, {
@@ -57,31 +98,37 @@ export const customFetch = async <T>(url: string, options?: RequestInit): Promis
     headers
   });
 
-  // Handle non-2xx responses
+  if (response.status === 401) {
+    logout();
+  }
+
   if (!response.ok) {
-    // Try to parse error body for more details
     let errorBody: unknown;
     try {
       errorBody = await response.json();
     } catch {
       errorBody = await response.text();
     }
-
     throw new ApiError(response.status, response.statusText, errorBody);
   }
 
-  // Handle 204 No Content
   if (response.status === 204) {
-    return undefined as T;
+    return { data: undefined, status: 204, headers: response.headers } as T;
   }
 
-  // Parse and return JSON response
-  return response.json();
+  const contentType = response.headers.get('content-type') ?? '';
+  let data: unknown;
+  if (contentType.includes('application/json')) {
+    data = await response.json();
+  } else {
+    data = await response.text();
+  }
+
+  return { data, status: response.status, headers: response.headers } as T;
 };
 
 /**
  * Custom error class for API errors.
- * Provides structured error information for error handling in the UI.
  */
 export class ApiError extends Error {
   constructor(
@@ -93,44 +140,26 @@ export class ApiError extends Error {
     this.name = 'ApiError';
   }
 
-  /**
-   * Check if this is a specific HTTP status code.
-   */
   is(status: number): boolean {
     return this.status === status;
   }
 
-  /**
-   * Check if this is a client error (4xx).
-   */
   isClientError(): boolean {
     return this.status >= 400 && this.status < 500;
   }
 
-  /**
-   * Check if this is a server error (5xx).
-   */
   isServerError(): boolean {
     return this.status >= 500;
   }
 
-  /**
-   * Check if this is an authentication error (401).
-   */
   isUnauthorized(): boolean {
     return this.status === 401;
   }
 
-  /**
-   * Check if this is a forbidden error (403).
-   */
   isForbidden(): boolean {
     return this.status === 403;
   }
 
-  /**
-   * Check if this is a not found error (404).
-   */
   isNotFound(): boolean {
     return this.status === 404;
   }

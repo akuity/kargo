@@ -19,6 +19,9 @@ type UpdateConfigMapRequest struct {
 
 	// description
 	Description string `json:"description,omitempty"`
+
+	// replicate
+	Replicate bool `json:"replicate,omitempty"`
 }
 
 // Validate validates this update config map request

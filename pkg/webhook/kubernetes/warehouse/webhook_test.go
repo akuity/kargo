@@ -87,7 +87,7 @@ func Test_webhook_Default(t *testing.T) {
 
 	t.Run("shard stays default when not specified at all", func(t *testing.T) {
 		warehouse := &kargoapi.Warehouse{}
-		err := w.Default(context.Background(), warehouse)
+		err := w.Default(t.Context(), warehouse)
 		require.NoError(t, err)
 		require.Empty(t, warehouse.Labels)
 		require.Empty(t, warehouse.Spec.Shard)
@@ -99,7 +99,7 @@ func Test_webhook_Default(t *testing.T) {
 				Shard: testShardName,
 			},
 		}
-		err := w.Default(context.Background(), warehouse)
+		err := w.Default(t.Context(), warehouse)
 		require.NoError(t, err)
 		require.Equal(t, testShardName, warehouse.Spec.Shard)
 		require.Equal(t, testShardName, warehouse.Labels[kargoapi.LabelKeyShard])
@@ -113,7 +113,7 @@ func Test_webhook_Default(t *testing.T) {
 				},
 			},
 		}
-		err := w.Default(context.Background(), warehouse)
+		err := w.Default(t.Context(), warehouse)
 		require.NoError(t, err)
 		require.Empty(t, warehouse.Spec.Shard)
 		_, ok := warehouse.Labels[kargoapi.LabelKeyShard]
@@ -133,7 +133,7 @@ func Test_webhook_Default(t *testing.T) {
 				},
 			},
 		}
-		err := w.Default(context.Background(), warehouse)
+		err := w.Default(t.Context(), warehouse)
 		require.NoError(t, err)
 		const testDiscoveryLimit int64 = 42
 		require.Equal(t, testDiscoveryLimit, warehouse.Spec.InternalSubscriptions[0].Git.DiscoveryLimit)
@@ -150,7 +150,7 @@ func Test_webhook_Default(t *testing.T) {
 				},
 			},
 		}
-		err := w.Default(context.Background(), warehouse)
+		err := w.Default(t.Context(), warehouse)
 		require.NoError(t, err)
 		require.Equal(
 			t,
@@ -251,7 +251,7 @@ func Test_webhook_ValidateCreate(t *testing.T) {
 		t.Run(testCase.name, func(t *testing.T) {
 			testCase.webhook.subscriberRegistry = subscription.DefaultSubscriberRegistry
 			_, err := testCase.webhook.ValidateCreate(
-				context.Background(),
+				t.Context(),
 				testCase.warehouse,
 			)
 			testCase.assertions(t, err)
@@ -333,7 +333,7 @@ func Test_webhook_ValidateUpdate(t *testing.T) {
 		t.Run(testCase.name, func(t *testing.T) {
 			testCase.webhook.subscriberRegistry = subscription.DefaultSubscriberRegistry
 			_, err := testCase.webhook.ValidateUpdate(
-				context.Background(),
+				t.Context(),
 				nil,
 				testCase.warehouse,
 			)
@@ -344,7 +344,7 @@ func Test_webhook_ValidateUpdate(t *testing.T) {
 
 func Test_webhook_ValidateDelete(t *testing.T) {
 	w := &webhook{}
-	_, err := w.ValidateDelete(context.Background(), nil)
+	_, err := w.ValidateDelete(t.Context(), nil)
 	require.NoError(t, err, nil)
 }
 

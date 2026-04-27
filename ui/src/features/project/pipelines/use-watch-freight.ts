@@ -6,7 +6,43 @@ import { useEffect } from 'react';
 import { transportWithAuth } from '@ui/config/transport';
 import { queryCache } from '@ui/features/utils/cache';
 import { queryFreight } from '@ui/gen/api/service/v1alpha1/service-KargoService_connectquery';
-import { KargoService } from '@ui/gen/api/service/v1alpha1/service_pb';
+import { KargoService, QueryFreightResponse } from '@ui/gen/api/service/v1alpha1/service_pb';
+import { Freight } from '@ui/gen/api/v1alpha1/generated_pb';
+
+const upsertFreight = (
+  current: QueryFreightResponse | undefined,
+  freight: Freight
+): QueryFreightResponse => {
+  const existing = current?.groups?.['']?.freight || [];
+  const found = existing.some((f) => f?.metadata?.name === freight?.metadata?.name);
+  const updated = found
+    ? existing.map((f) => (f?.metadata?.name === freight?.metadata?.name ? freight : f))
+    : [...existing, freight];
+  return {
+    ...current,
+    groups: {
+      ...current?.groups,
+      '': { ...current?.groups?.[''], freight: updated }
+    }
+  } as QueryFreightResponse;
+};
+
+const deleteFreight = (
+  current: QueryFreightResponse | undefined,
+  freight: Freight
+): QueryFreightResponse =>
+  ({
+    ...current,
+    groups: {
+      ...current?.groups,
+      '': {
+        ...current?.groups?.[''],
+        freight: (current?.groups?.['']?.freight || []).filter(
+          (f) => f?.metadata?.name !== freight?.metadata?.name
+        )
+      }
+    }
+  }) as QueryFreightResponse;
 
 export const useWatchFreight = (project: string) => {
   const client = useQueryClient();
@@ -31,62 +67,43 @@ export const useWatchFreight = (project: string) => {
           continue;
         }
 
-        let currentFreight = queryCache.freight.get(project);
+        const currentFreight = queryCache.freight.get(project);
 
-        if (e.type === 'DELETED') {
-          // Remove the deleted freight from the cache
-          if (currentFreight?.groups?.['']?.freight) {
-            currentFreight = {
-              ...currentFreight,
-              groups: {
-                ...currentFreight?.groups,
-                '': {
-                  ...currentFreight?.groups?.[''],
-                  freight: currentFreight?.groups?.['']?.freight?.filter(
-                    (f) => f?.metadata?.name !== freight?.metadata?.name
-                  )
-                }
-              }
-            };
-          }
-        } else {
-          // Handle ADDED and MODIFIED events
-          const exist = currentFreight?.groups?.['']?.freight?.find(
-            (f) => f?.metadata?.name === freight?.metadata?.name
-          );
-
-          if (!exist) {
-            currentFreight?.groups?.['']?.freight?.push(freight);
-          } else {
-            currentFreight = {
-              ...currentFreight,
-              groups: {
-                ...currentFreight?.groups,
-                '': {
-                  ...currentFreight?.groups?.[''],
-                  freight: currentFreight?.groups?.['']?.freight?.map((f) => {
-                    if (f?.metadata?.name === freight?.metadata?.name) {
-                      return freight;
-                    }
-
-                    return f;
-                  })
-                }
-              }
-            };
+        // Skip ADDED events for freight that already exists in the cache.
+        // Kubernetes watches replay all existing objects as ADDED on connect,
+        // which duplicates the initial GET and causes unnecessary re-renders.
+        if (e.type === 'ADDED') {
+          const existing = currentFreight?.groups?.['']?.freight || [];
+          if (existing.some((f) => f?.metadata?.name === freight?.metadata?.name)) {
+            continue;
           }
         }
 
-        const queryFreightKey = createConnectQueryKey({
-          cardinality: 'finite',
-          schema: queryFreight,
-          input: {
-            project
-          },
-          transport: transportWithAuth
-        });
-
-        client.setQueryData(queryFreightKey, currentFreight);
+        if (e.type === 'DELETED') {
+          // Remove from all queryFreight caches for this project, including
+          // warehouse-filtered variants, which use a different cache key.
+          client.setQueriesData<QueryFreightResponse>(
+            {
+              queryKey: createConnectQueryKey({
+                cardinality: 'finite',
+                schema: queryFreight,
+                input: { project },
+                transport: transportWithAuth
+              }),
+              exact: false
+            },
+            (current) => deleteFreight(current, freight)
+          );
+        } else {
+          const updatedFreight = upsertFreight(currentFreight, freight);
+          const queryFreightKey = createConnectQueryKey({
+            cardinality: 'finite',
+            schema: queryFreight,
+            input: { project },
+            transport: transportWithAuth
+          });
+          client.setQueryData(queryFreightKey, updatedFreight);
+        }
       }
     };
 

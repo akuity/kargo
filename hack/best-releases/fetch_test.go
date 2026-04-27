@@ -1,7 +1,6 @@
 package main
 
 import (
-	"context"
 	"encoding/json"
 	"fmt"
 	"net/http"
@@ -57,7 +56,7 @@ func TestFetchBestReleases(t *testing.T) {
 		defer srv.Close()
 
 		results, err := fetchBestReleases(
-			context.Background(), srv.URL,
+			t.Context(), srv.URL,
 		)
 		require.NoError(t, err)
 
@@ -77,7 +76,7 @@ func TestFetchBestReleases(t *testing.T) {
 		defer srv.Close()
 
 		results, err := fetchBestReleases(
-			context.Background(), srv.URL,
+			t.Context(), srv.URL,
 		)
 		require.Error(t, err)
 		assert.Nil(t, results)

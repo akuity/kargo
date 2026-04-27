@@ -88,7 +88,7 @@ func (s *server) GetAnalysisTemplate(
 // @Param project path string true "Project name"
 // @Param analysis-template path string true "AnalysisTemplate name"
 // @Produce json
-// @Success 200 {object} object "AnalysisTemplate custom resource (github.com/argoproj/argo-rollouts/pkg/apis/rollouts/v1alpha1.AnalysisTemplate)"
+// @Success 200 {object} rolloutsapi.AnalysisTemplate "AnalysisTemplate custom resource (github.com/argoproj/argo-rollouts/pkg/apis/rollouts/v1alpha1.AnalysisTemplate)"
 // @Router /v1beta1/projects/{project}/analysis-templates/{analysis-template} [get]
 func (s *server) getAnalysisTemplate(c *gin.Context) {
 	if !s.cfg.RolloutsIntegrationEnabled {

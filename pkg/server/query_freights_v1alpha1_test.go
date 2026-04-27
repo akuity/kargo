@@ -354,7 +354,7 @@ func TestQueryFreight(t *testing.T) {
 	for _, testCase := range testCases {
 		t.Run(testCase.name, func(t *testing.T) {
 			res, err := testCase.server.QueryFreight(
-				context.Background(),
+				t.Context(),
 				connect.NewRequest(testCase.req),
 			)
 			testCase.assertions(t, res, err)
@@ -418,7 +418,7 @@ func TestGetFreightFromWarehouse(t *testing.T) {
 	for _, testCase := range testCases {
 		t.Run(testCase.name, func(t *testing.T) {
 			freight, err := testCase.server.getFreightFromWarehouses(
-				context.Background(),
+				t.Context(),
 				"fake-project",
 				[]string{"fake-warehouse"},
 			)
@@ -484,7 +484,7 @@ func TestGetVerifiedFreight(t *testing.T) {
 	for _, testCase := range testCases {
 		t.Run(testCase.name, func(t *testing.T) {
 			freight, err := testCase.server.getVerifiedFreight(
-				context.Background(),
+				t.Context(),
 				"fake-project",
 				[]string{
 					"fake-stage",

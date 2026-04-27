@@ -10,6 +10,8 @@ import (
 
 	"github.com/go-openapi/runtime"
 	"github.com/go-openapi/strfmt"
+
+	"github.com/akuity/kargo/pkg/client/generated/models"
 )
 
 // GetProjectReader is a Reader for the GetProject structure.
@@ -42,7 +44,7 @@ GetProjectOK describes a response with status code 200, with default header valu
 Project custom resource (github.com/akuity/kargo/api/v1alpha1.Project)
 */
 type GetProjectOK struct {
-	Payload any
+	Payload *models.Project
 }
 
 // IsSuccess returns true when this get project o k response has a 2xx status code
@@ -85,14 +87,16 @@ func (o *GetProjectOK) String() string {
 	return fmt.Sprintf("[GET /v1beta1/projects/{project}][%d] getProjectOK %s", 200, payload)
 }
 
-func (o *GetProjectOK) GetPayload() any {
+func (o *GetProjectOK) GetPayload() *models.Project {
 	return o.Payload
 }
 
 func (o *GetProjectOK) readResponse(response runtime.ClientResponse, consumer runtime.Consumer, formats strfmt.Registry) error {
 
+	o.Payload = new(models.Project)
+
 	// response payload
-	if err := consumer.Consume(response.Body(), &o.Payload); err != nil && !stderrors.Is(err, io.EOF) {
+	if err := consumer.Consume(response.Body(), o.Payload); err != nil && !stderrors.Is(err, io.EOF) {
 		return err
 	}
 

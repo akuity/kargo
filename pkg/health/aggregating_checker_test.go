@@ -66,7 +66,7 @@ func TestAggregatingChecker_Check(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			ctx, cancel := context.WithCancel(context.Background())
+			ctx, cancel := context.WithCancel(t.Context())
 			defer cancel()
 
 			testRegistry := checkerRegistry{}
@@ -162,7 +162,7 @@ func TestAggregatingChecker_executeHealthChecks(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			ctx, cancel := context.WithCancel(context.Background())
+			ctx, cancel := context.WithCancel(t.Context())
 			defer cancel()
 
 			testRegistry := checkerRegistry{}
@@ -256,7 +256,7 @@ func TestAggregatingChecker_executeHealthCheck(t *testing.T) {
 			}
 
 			result := checker.executeHealthCheck(
-				context.Background(),
+				t.Context(),
 				"fake-project",
 				"fake-stage",
 				tt.criteria,

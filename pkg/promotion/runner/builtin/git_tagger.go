@@ -73,17 +73,7 @@ func (g *gitTagTagger) run(
 		return promotion.StepResult{Status: kargoapi.PromotionStepStatusErrored},
 			fmt.Errorf("error loading working tree from %s: %w", cfg.Path, err)
 	}
-	var tagOpts *git.TagOptions
-	if cfg.Tagger != nil {
-		tagOpts = &git.TagOptions{
-			Tagger: &git.User{
-				Name:       cfg.Tagger.Name,
-				Email:      cfg.Tagger.Email,
-				SigningKey: cfg.Tagger.SigningKey,
-			},
-		}
-	}
-	if err = workTree.CreateTag(cfg.Tag, cfg.Message, tagOpts); err != nil {
+	if err = workTree.CreateTag(cfg.Tag, cfg.Message); err != nil {
 		return promotion.StepResult{Status: kargoapi.PromotionStepStatusErrored},
 			fmt.Errorf("error creating tag %s: %w", cfg.Tag, err)
 	}

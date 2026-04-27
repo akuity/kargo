@@ -2,7 +2,7 @@ import { useDndContext } from '@dnd-kit/core';
 import { faCaretLeft, faCaretRight } from '@fortawesome/free-solid-svg-icons';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
 import classNames from 'classnames';
-import { useContext, useMemo, useRef, useState } from 'react';
+import { useCallback, useContext, useEffect, useMemo, useRef, useState } from 'react';
 import { generatePath, useNavigate } from 'react-router-dom';
 
 import { paths } from '@ui/config/paths';
@@ -129,7 +129,25 @@ export const FreightTimeline = (props: { freights: Freight[]; project: string })
     actionContext
   ]);
 
+  const PAGE_SIZE = 20;
+  const [visibleCount, setVisibleCount] = useState(PAGE_SIZE);
+
+  // Reset visible count and scroll position when filters change
+  useEffect(() => {
+    setVisibleCount(PAGE_SIZE);
+    freightListStyleRef.current?.style.setProperty('right', '0px');
+  }, [
+    freightTimelineControllerContext.preferredFilter.sources,
+    freightTimelineControllerContext.preferredFilter.timerange,
+    freightTimelineControllerContext.preferredFilter.warehouses,
+    freightTimelineControllerContext.preferredFilter.hideUnusedFreights
+  ]);
+
   const freightListStyleRef = useRef<HTMLDivElement>(null);
+
+  const loadMore = useCallback(() => {
+    setVisibleCount((prev) => Math.min(prev + PAGE_SIZE, filteredFreights.length));
+  }, [filteredFreights.length]);
 
   const scrollCarouselLeft = () => {
     const right = freightListStyleRef.current?.style.right || '0px';
@@ -149,6 +167,10 @@ export const FreightTimeline = (props: { freights: Freight[]; project: string })
     const nextRight = +right.slice(0, -2) + 160;
 
     if (nextRight >= (freightListStyleRef.current?.clientWidth || 0) / 2) {
+      // At the edge — load more items if available
+      if (visibleCount < filteredFreights.length) {
+        loadMore();
+      }
       return;
     }
 
@@ -203,7 +225,7 @@ export const FreightTimeline = (props: { freights: Freight[]; project: string })
             className='flex gap-1 relative right-0 transition-[right] duration-300 ease-out'
             ref={freightListStyleRef}
           >
-            {filteredFreights.map((freight) => {
+            {filteredFreights.slice(0, visibleCount).map((freight) => {
               const freightSoakTime = soakTime?.[freight?.metadata?.name || ''];
 
               const promotionEligible = Boolean(

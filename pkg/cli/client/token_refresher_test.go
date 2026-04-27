@@ -193,7 +193,7 @@ func TestRefreshToken(t *testing.T) {
 			}
 			cfg := testCase.setup()
 			newCfg, err :=
-				tf.refreshToken(context.Background(), testCase.setup(), false)
+				tf.refreshToken(t.Context(), testCase.setup(), false)
 			testCase.assertions(t, cfg, newCfg, err)
 		})
 	}

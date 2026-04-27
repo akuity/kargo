@@ -254,4 +254,56 @@ webhooks:
     resources: ["warehouses"]
     operations: ["CREATE", "UPDATE"]
   failurePolicy: Fail
+- name: replicated-resource-mutate.kargo.akuity.io
+  admissionReviewVersions: ["v1"]
+  sideEffects: None
+  clientConfig:
+    service:
+      namespace: {{ .Release.Namespace }}
+      name: kargo-webhooks-server
+      path: /validate-v1-replicated-resource
+    {{- if and (not .Values.webhooksServer.tls.selfSignedCert) .Values.webhooksServer.tls.caBundle }}
+    caBundle: {{ .Values.webhooksServer.tls.caBundle | b64enc }}
+    {{- end }}
+  rules:
+  - scope: Namespaced
+    apiGroups: [""]
+    apiVersions: ["v1"]
+    resources: ["secrets", "configmaps"]
+    operations: ["CREATE", "UPDATE"]
+  objectSelector:
+    matchExpressions:
+    - key: kargo.akuity.io/replicated-from
+      operator: Exists
+  namespaceSelector:
+    matchExpressions:
+    - key: kargo.akuity.io/project
+      operator: Exists
+  failurePolicy: Fail
+- name: replicated-resource-delete.kargo.akuity.io
+  admissionReviewVersions: ["v1"]
+  sideEffects: None
+  clientConfig:
+    service:
+      namespace: {{ .Release.Namespace }}
+      name: kargo-webhooks-server
+      path: /validate-v1-replicated-resource
+    {{- if and (not .Values.webhooksServer.tls.selfSignedCert) .Values.webhooksServer.tls.caBundle }}
+    caBundle: {{ .Values.webhooksServer.tls.caBundle | b64enc }}
+    {{- end }}
+  rules:
+  - scope: Namespaced
+    apiGroups: [""]
+    apiVersions: ["v1"]
+    resources: ["secrets", "configmaps"]
+    operations: ["DELETE"]
+  objectSelector:
+    matchExpressions:
+    - key: kargo.akuity.io/replicated-from
+      operator: Exists
+  namespaceSelector:
+    matchExpressions:
+    - key: kargo.akuity.io/project
+      operator: Exists
+  failurePolicy: Ignore
 {{- end }}

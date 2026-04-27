@@ -209,6 +209,7 @@ Stability is not guaranteed.
 | name | [string](#string) |  name is the name of the ConfigMap to create. |
 | description | [string](#string) |  description is a human-readable description of the ConfigMap. |
 | data | [CreateConfigMapRequest.DataEntry](#akuity-io-kargo-service-v1alpha1-CreateConfigMapRequest-DataEntry) |  data contains the key-value pairs that make up the ConfigMap. |
+| replicate | [bool](#bool) |  replicate, when true, replicates this ConfigMap to all Project namespaces by setting the kargo.akuity.io/replicate-to: "*" annotation. |
 
 <a name="akuity-io-kargo-service-v1alpha1-CreateConfigMapRequest-DataEntry"></a>
 
@@ -238,6 +239,7 @@ Stability is not guaranteed.
 | name | [string](#string) |  name is the name of the generic credentials to create. |
 | description | [string](#string) |  description is a human-readable description of the generic credentials. |
 | data | [CreateGenericCredentialsRequest.DataEntry](#akuity-io-kargo-service-v1alpha1-CreateGenericCredentialsRequest-DataEntry) |  data contains the key-value pairs that make up the generic credentials data. |
+| replicate | [bool](#bool) |  replicate, when true, replicates these credentials to all Project namespaces by setting the kargo.akuity.io/replicate-to: "*" annotation. |
 
 <a name="akuity-io-kargo-service-v1alpha1-CreateGenericCredentialsRequest-DataEntry"></a>
 
@@ -1182,6 +1184,7 @@ Stability is not guaranteed.
 | Field | Type | Description |
 | ----- | ---- | ----------- |
 | project | [string](#string) |  project is the name of the project whose stages should be listed. |
+| freight_origins | [string](#string) |  freight_origins is an optional list of Warehouse names to filter Stages by. When specified, only Stages that subscribe to at least one of the named Warehouses are returned. |
 
 <a name="akuity-io-kargo-service-v1alpha1-ListStagesResponse"></a>
 
@@ -1365,6 +1368,7 @@ Stability is not guaranteed.
 | name | [string](#string) |  name is the name of the ConfigMap to be updated. |
 | description | [string](#string) |  description is a human-readable description of the ConfigMap. |
 | data | [UpdateConfigMapRequest.DataEntry](#akuity-io-kargo-service-v1alpha1-UpdateConfigMapRequest-DataEntry) |  data contains the key-value pairs that make up the ConfigMap. |
+| replicate | [bool](#bool) |  replicate, when true, replicates this ConfigMap to all Project namespaces by setting the kargo.akuity.io/replicate-to: "*" annotation. |
 
 <a name="akuity-io-kargo-service-v1alpha1-UpdateConfigMapRequest-DataEntry"></a>
 
@@ -1409,6 +1413,7 @@ Stability is not guaranteed.
 | name | [string](#string) |  name is the name of the generic credentials to update. |
 | description | [string](#string) |  description is a human-readable description of the generic credentials. |
 | data | [UpdateGenericCredentialsRequest.DataEntry](#akuity-io-kargo-service-v1alpha1-UpdateGenericCredentialsRequest-DataEntry) |  data contains the key-value pairs that make up the generic credentials data. |
+| replicate | [bool](#bool) |  replicate, when true, replicates these credentials to all Project namespaces by setting the kargo.akuity.io/replicate-to: "*" annotation. |
 
 <a name="akuity-io-kargo-service-v1alpha1-UpdateGenericCredentialsRequest-DataEntry"></a>
 
@@ -1525,6 +1530,7 @@ Stability is not guaranteed.
 | Field | Type | Description |
 | ----- | ---- | ----------- |
 | project | [string](#string) |  project is the name of the project whose freight should be watched. |
+| origins | [string](#string) |  origins is an optional list of Warehouse names to filter Freight by. When specified, only events for Freight that originated from at least one of the named Warehouses are streamed. |
 
 <a name="akuity-io-kargo-service-v1alpha1-WatchFreightResponse"></a>
 
@@ -1596,6 +1602,7 @@ Stability is not guaranteed.
 | ----- | ---- | ----------- |
 | project | [string](#string) |  project is the name of the project whose stages should be watched. |
 | name | [string](#string) |  name is the name of a specific stage to watch, if empty all stages in the project are watched. |
+| freight_origins | [string](#string) |  freight_origins is an optional list of Warehouse names to filter Stages by. When specified, only events for Stages that subscribe to at least one of the named Warehouses are streamed. |
 
 <a name="akuity-io-kargo-service-v1alpha1-WatchStagesResponse"></a>
 
@@ -1864,6 +1871,7 @@ RawFormat specifies the format for raw resource representation.
 | Field | Type | Description |
 | ----- | ---- | ----------- |
 | discoveryLimit | [int64](#int64) |  DiscoveryLimit is an optional limit on the number of chart versions that can be discovered for this subscription. The limit is applied after filtering charts based on the semverConstraint field. The upper limit for this field is 100. |
+| insecureSkipTLSVerify | [bool](#bool) |  InsecureSkipTLSVerify specifies whether certificate verification errors should be ignored when connecting to the repository. This should be enabled only with great caution. |
 | name | [string](#string) |  Name specifies the name of a Helm chart to subscribe to within a classic chart repository specified by the repoURL field. This field is required when the repoURL field points to a classic chart repository and MUST otherwise be empty. |
 | repoURL | [string](#string) |  RepoURL specifies the URL of a Helm chart repository. It may be a classic chart repository (using HTTP/S) OR a repository within an OCI registry. Classic chart repositories can contain differently named charts. When this field points to such a repository, the name field MUST also be used to specify the name of the desired chart within that repository. In the case of a repository within an OCI registry, the URL implicitly points to a specific chart and the name field MUST NOT be used. This field is required. |
 | semverConstraint | [string](#string) |  SemverConstraint specifies constraints on what new chart versions are permissible. When left unspecified, there will be no constraints, which means the latest version of the chart will always be used. Care should be taken with leaving this field unspecified, as it can lead to the unanticipated rollout of breaking changes. |
@@ -1894,6 +1902,7 @@ RawFormat specifies the format for raw resource representation.
 | Field | Type | Description |
 | ----- | ---- | ----------- |
 | webhookReceivers | [WebhookReceiverConfig](#github-com-akuity-kargo-api-v1alpha1-WebhookReceiverConfig) |  WebhookReceivers describes cluster-scoped webhook receivers used for processing events from various external platforms |
+| gitClient | [GitClientConfig](#github-com-akuity-kargo-api-v1alpha1-GitClientConfig) |  GitClient describes cluster-level configuration for Kargo's Git client, including committer identity and an optional signing key. If set, these values take precedence over any configuration provided at install time via the Helm chart. +optional |
 
 <a name="github-com-akuity-kargo-api-v1alpha1-ClusterConfigStatus"></a>
 
@@ -2185,6 +2194,16 @@ RawFormat specifies the format for raw resource representation.
 | labelSelector | k8s.io.apimachinery.pkg.apis.meta.v1.LabelSelector |  LabelSelector is a label selector to identify the target resources. If used with IndexSelector and/or Name, the results are the combined (logical AND) of all the criteria.  +optional |
 | indexSelector | [IndexSelector](#github-com-akuity-kargo-api-v1alpha1-IndexSelector) |  IndexSelector is a selector used to identify cached target resources by cache key. If used with LabelSelector and/or Name, the results are the combined (logical AND) of all the criteria.  +optional |
 
+<a name="github-com-akuity-kargo-api-v1alpha1-GitClientConfig"></a>
+
+### GitClientConfig
+ GitClientConfig describes cluster-level configuration for Kargo's Git client.
+| Field | Type | Description |
+| ----- | ---- | ----------- |
+| name | [string](#string) |  Name is the name used for Git commits made by Kargo.   |
+| email | [string](#string) |  Email is the email address used for Git commits made by Kargo.    |
+| signingKeySecret | k8s.io.api.core.v1.LocalObjectReference |  SigningKeySecret references a Secret in the system namespace containing a GPG signing key for commit signing. The Secret must contain a data key named "signingKey" with the GPG private key material. +optional |
+
 <a name="github-com-akuity-kargo-api-v1alpha1-GitCommit"></a>
 
 ### GitCommit
@@ -2205,7 +2224,7 @@ RawFormat specifies the format for raw resource representation.
  GitDiscoveryResult represents the result of a Git discovery operation for a GitSubscription.
 | Field | Type | Description |
 | ----- | ---- | ----------- |
-| repoURL | [string](#string) |  RepoURL is the repository URL of the GitSubscription.     |
+| repoURL | [string](#string) |  RepoURL is the repository URL of the GitSubscription.  TODO(v1.13.0): Remove SSH/SCP-style URL support from this pattern.     |
 | commits | [DiscoveredCommit](#github-com-akuity-kargo-api-v1alpha1-DiscoveredCommit) |  Commits is a list of commits discovered by the Warehouse for the GitSubscription. An empty list indicates that the discovery operation was successful, but no commits matching the GitSubscription criteria were found.  +optional |
 
 <a name="github-com-akuity-kargo-api-v1alpha1-GitHubWebhookReceiverConfig"></a>
@@ -2241,8 +2260,9 @@ RawFormat specifies the format for raw resource representation.
 | ignoreTagsRegexes | [string](#string) |  IgnoreTagsRegexes is a list of regular expressions that can optionally be used to exclude tags from consideration. Only has effect when CommitSelectionStrategy is Lexical, NewestTag, or SemVer. |
 | includePaths | [string](#string) |  IncludePaths is a list of selectors that designate paths in the repository that should trigger the production of new Freight when changes are detected therein. |
 | insecureSkipTLSVerify | [bool](#bool) |  InsecureSkipTLSVerify specifies whether certificate verification errors should be ignored when connecting to the repository. This should be enabled only with great caution. |
-| repoURL | [string](#string) |  URL is the repository's URL. This is a required field. |
+| repoURL | [string](#string) |  URL is the repository's URL. This is a required field. Deprecated: Support for SSH URLs (ssh:// and SCP-style git@host:path) is deprecated as of v1.10.0 and will be removed in v1.13.0. Use HTTPS URLs instead. |
 | semverConstraint | [string](#string) |  SemverConstraint specifies constraints on what new tagged commits are considered in determining the newest commit of interest. Only has effect when CommitSelectionStrategy is SemVer. |
+| since | k8s.io.apimachinery.pkg.apis.meta.v1.Time |  An optional date (RFC 3339) that limits commit discovery to commits at or after this date. When specified, discovery stops upon reaching a commit older than this date. When left unspecified, there is no cutoff. |
 | strictSemvers | [bool](#bool) |  StrictSemvers specifies whether only "strict" semver tags should be considered. A "strict" semver tag contains ALL of major, minor, and patch version components. Only has effect when CommitSelectionStrategy is SemVer. |
 
 <a name="github-com-akuity-kargo-api-v1alpha1-GiteaWebhookReceiverConfig"></a>

@@ -1,7 +1,7 @@
 import { useQuery } from '@connectrpc/connect-query';
 import { faStar, faUser } from '@fortawesome/free-solid-svg-icons';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
-import { Button, Empty, Flex, Pagination, Space } from 'antd';
+import { Empty, Flex, Pagination, Space, Tag, Tooltip } from 'antd';
 import { useEffect, useState } from 'react';
 
 import { LoadingState } from '@ui/features/common';
@@ -25,7 +25,7 @@ export const ProjectsList = () => {
     'starred-projects-view',
     false
   );
-  const [myProjectsView, setMyProjectsView] = useLocalStorage('my-projects-view', true);
+  const [myProjectsView, setMyProjectsView] = useLocalStorage('my-projects-view', false);
 
   const [starred, toggleStar] = useStarProjects();
 
@@ -63,31 +63,37 @@ export const ProjectsList = () => {
         <Flex align='center' className='mb-20' gap={8}>
           <ProjectListFilter onChange={handleFilterChange} init={filter} />
           <Space className='ml-auto'>
-            <Button
-              variant='outlined'
-              color={myProjectsView ? 'primary' : 'default'}
-              icon={<FontAwesomeIcon icon={faUser} />}
-              onClick={() => {
-                setMyProjectsView(!myProjectsView);
+            <Tooltip title='Shows projects you have been explicitly granted access to. Broad system-level permissions (e.g. kargo-admin) do not qualify.'>
+              <Tag.CheckableTag
+                checked={myProjectsView}
+                onChange={(checked) => {
+                  setMyProjectsView(checked);
+                  setPage(1);
+                }}
+              >
+                <FontAwesomeIcon icon={faUser} className='mr-1' />
+                My Projects
+              </Tag.CheckableTag>
+            </Tooltip>
+            <Tag.CheckableTag
+              checked={starredProjectsView}
+              onChange={(checked) => {
+                setStarredProjectsView(checked);
                 setPage(1);
               }}
             >
-              My Projects
-            </Button>
-            <Button
-              variant='outlined'
-              color={starredProjectsView ? 'primary' : 'default'}
-              icon={<FontAwesomeIcon icon={faStar} />}
-              onClick={() => {
-                setStarredProjectsView(!starredProjectsView);
-                setPage(1);
-              }}
-            >
+              <FontAwesomeIcon icon={faStar} className='mr-1' />
               Starred Projects
-            </Button>
+            </Tag.CheckableTag>
           </Space>
         </Flex>
-        <Empty />
+        <Empty
+          description={
+            myProjectsView
+              ? 'No projects are directly assigned to your account. Disable this filter to see all projects.'
+              : undefined
+          }
+        />
       </>
     );
   }
@@ -97,28 +103,28 @@ export const ProjectsList = () => {
       <Flex align='center' className='mb-6' gap={8}>
         <ProjectListFilter onChange={handleFilterChange} init={filter} />
         <Space className='ml-auto'>
-          <Button
-            variant='outlined'
-            color={myProjectsView ? 'primary' : 'default'}
-            icon={<FontAwesomeIcon icon={faUser} />}
-            onClick={() => {
-              setMyProjectsView(!myProjectsView);
+          <Tooltip title='Shows projects you have been explicitly granted access to. Broad system-level permissions (e.g. kargo-admin) do not qualify.'>
+            <Tag.CheckableTag
+              checked={myProjectsView}
+              onChange={(checked) => {
+                setMyProjectsView(checked);
+                setPage(1);
+              }}
+            >
+              <FontAwesomeIcon icon={faUser} className='mr-1' />
+              My Projects
+            </Tag.CheckableTag>
+          </Tooltip>
+          <Tag.CheckableTag
+            checked={starredProjectsView}
+            onChange={(checked) => {
+              setStarredProjectsView(checked);
               setPage(1);
             }}
           >
-            My Projects
-          </Button>
-          <Button
-            variant='outlined'
-            color={starredProjectsView ? 'primary' : 'default'}
-            icon={<FontAwesomeIcon icon={faStar} />}
-            onClick={() => {
-              setStarredProjectsView(!starredProjectsView);
-              setPage(1);
-            }}
-          >
+            <FontAwesomeIcon icon={faStar} className='mr-1' />
             Starred Projects
-          </Button>
+          </Tag.CheckableTag>
         </Space>
       </Flex>
       <div className={styles.list}>

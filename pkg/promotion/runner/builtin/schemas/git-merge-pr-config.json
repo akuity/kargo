@@ -7,7 +7,7 @@
     "properties": {
       "repoURL": {
         "type": "string",
-        "description": "The URL of the remote Git repository containing the pull request.",
+        "description": "The URL of the remote Git repository containing the pull request. Deprecated: Support for SSH URLs (ssh:// and SCP-style git@host:path) is deprecated as of v1.10.0 and will be removed in v1.13.0. Use HTTPS URLs instead.",
         "minLength": 1,
         "format": "uri"
       },
@@ -28,6 +28,11 @@
       "wait": {
         "type": "boolean",
         "description": "If true, the step will return RUNNING instead of FAILED when the PR is not yet mergeable. The merge will be retried on the next reconciliation until it succeeds or times out. Default is false."
+      },
+      "mergeMethod": {
+        "type": "string",
+        "description": "The merge method to use when merging the pull request. Options are provider-specific.",
+        "minLength": 1
       }
     }
 }

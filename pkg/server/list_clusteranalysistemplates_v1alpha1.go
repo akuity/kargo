@@ -54,7 +54,7 @@ func (s *server) ListClusterAnalysisTemplates(
 // @Tags Verifications, Shared, Cluster-Scoped Resource
 // @Security BearerAuth
 // @Produce json
-// @Success 200 {object} object "ClusterAnalysisTemplateList custom resource (github.com/argoproj/argo-rollouts/pkg/apis/rollouts/v1alpha1.ClusterAnalysisTemplateList)"
+// @Success 200 {object} rollouts.ClusterAnalysisTemplateList "ClusterAnalysisTemplateList custom resource (github.com/argoproj/argo-rollouts/pkg/apis/rollouts/v1alpha1.ClusterAnalysisTemplateList)"
 // @Router /v1beta1/shared/cluster-analysis-templates [get]
 func (s *server) listClusterAnalysisTemplates(c *gin.Context) {
 	if !s.cfg.RolloutsIntegrationEnabled {

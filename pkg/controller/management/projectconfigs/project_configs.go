@@ -209,6 +209,7 @@ func (r *reconciler) syncWebhookReceivers(
 
 	if len(projectCfg.Spec.WebhookReceivers) == 0 {
 		logger.Debug("ProjectConfig does not define any webhook receiver configurations")
+		status.WebhookReceivers = nil
 		conditions.Delete(status, kargoapi.ConditionTypeReconciling)
 		conditions.Set(status, &metav1.Condition{
 			Type:               kargoapi.ConditionTypeReady,

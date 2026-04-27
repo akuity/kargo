@@ -11,4 +11,5 @@ export interface CreateGenericCredentialsRequest {
   data?: CreateGenericCredentialsRequestData;
   description?: string;
   name?: string;
+  replicate?: boolean;
 }

@@ -329,6 +329,20 @@ Git repository subscriptions can be defined using the following fields:
   subscription.
   :::
 
+- `since`: An optional date in RFC 3339 format (e.g. `2026-01-01T00:00:00Z`)
+  that bounds how far back commit discovery will look. When specified, only
+  commits at or after this date are considered. When left unspecified, there is
+  no date cutoff.
+
+  :::note
+
+  `since` only has effect when `commitSelectionStrategy` is
+  `NewestFromBranch` (or unspecified, since `NewestFromBranch` is the default).
+  It is particularly useful for large repositories with long histories where
+  `discoveryLimit` alone is not sufficient to prevent slow lookbacks.
+  
+  :::
+
 - `insecureSkipTLSVerify`: Set to `true` to disable validation of the
   repository's TLS certificate.
 
@@ -761,6 +775,14 @@ Helm chart repository subscriptions can be defined using the following fields:
 
   The default is `20`.
 
+- `insecureSkipTLSVerify`: Set to `true` to disable validation of the
+  repository's TLS certificate.
+
+  :::warning
+
+  This is a security risk and should only be used in development environments.
+  :::
+
   Example:
 
   ```yaml
@@ -1135,3 +1157,9 @@ the list of changed files and evaluates each matching Warehouse's
 [`includePaths` and `excludePaths`](#git-subscription-path-filtering) filters.
 Only Warehouses with path filters that match the changed files are refreshed.
 Warehouses without path filters configured are always refreshed.
+
+For providers that support pull request events (such as GitHub), the receiver
+also refreshes any running `Promotion` that is waiting on the affected pull
+request via a
+[`git-wait-for-pr`](../60-reference-docs/30-promotion-steps/git-wait-for-pr.md)
+step.

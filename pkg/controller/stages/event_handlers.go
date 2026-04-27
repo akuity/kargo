@@ -460,16 +460,103 @@ func appHealthOrSyncStatusChanged[T any](ctx context.Context, e event.TypedUpdat
 			"app", oldApp,
 		)
 	}
-	oldHealth, _, _ := unstructured.NestedString(oldUn, "status", "health", "status")
-	newHealth, _, _ := unstructured.NestedString(newUn, "status", "health", "status")
-	// TODO: switch from checking sync status to whether or not operation is complete
-	oldSync, _, _ := unstructured.NestedString(oldUn, "status", "sync", "status")
-	newSync, _, _ := unstructured.NestedString(newUn, "status", "sync", "status")
-	//_, oldOp := oldUn["operation"]
-	//_, newOp := newUn["operation"]
-	oldRev, _, _ := unstructured.NestedString(oldUn, "status", "sync", "revision")
-	newRev, _, _ := unstructured.NestedString(newUn, "status", "sync", "revision")
-	return newHealth != oldHealth || oldSync != newSync || oldRev != newRev
+	// The Kargo health checker for Argo CD Applications evaluates several
+	// fields from the Application status. We watch for changes to each of
+	// these so that Stages are re-enqueued promptly when the health
+	// checker's output might change.
+
+	// 1. Health status: The health checker maps this directly to Stage
+	//    health (Progressing, Healthy, Degraded, etc.). A change here
+	//    almost always means the health checker will produce a different
+	//    result.
+	oldHealth, _, _ := unstructured.NestedString(
+		oldUn, "status", "health", "status",
+	)
+	newHealth, _, _ := unstructured.NestedString(
+		newUn, "status", "health", "status",
+	)
+	if newHealth != oldHealth {
+		return true
+	}
+
+	// 2. Operation phase: The health checker returns Unknown whenever the
+	//    last operation has not succeeded (e.g. it is still Running or has
+	//    Failed). Watching for phase changes lets us detect both operation
+	//    start (health becomes Unknown) and completion (health can be
+	//    reassessed).
+	oldPhase, _, _ := unstructured.NestedString(
+		oldUn, "status", "operationState", "phase",
+	)
+	newPhase, _, _ := unstructured.NestedString(
+		newUn, "status", "operationState", "phase",
+	)
+	if oldPhase != newPhase {
+		return true
+	}
+
+	// 3. Sync revision(s): The health checker compares observed revisions
+	//    against the desired revisions from the last Promotion. If the
+	//    Application syncs to a new revision, the comparison result may
+	//    change. We check both the single-source revision field and the
+	//    multi-source revisions array.
+	oldRev, _, _ := unstructured.NestedString(
+		oldUn, "status", "sync", "revision",
+	)
+	newRev, _, _ := unstructured.NestedString(
+		newUn, "status", "sync", "revision",
+	)
+	if oldRev != newRev {
+		return true
+	}
+	oldRevs, _, _ := unstructured.NestedSlice(
+		oldUn, "status", "sync", "revisions",
+	)
+	newRevs, _, _ := unstructured.NestedSlice(
+		newUn, "status", "sync", "revisions",
+	)
+	if fmt.Sprint(oldRevs) != fmt.Sprint(newRevs) {
+		return true
+	}
+
+	// 4. reconciledAt vs finishedAt: Argo CD uses separate reconciliation
+	//    loops for syncing (operations) and assessing health. After an
+	//    operation completes, the health status may be stale -- still
+	//    reflecting pre-operation state. The health checker handles this
+	//    by not trusting health until reconciledAt (set by Argo CD's
+	//    health/status loop) is after finishedAt (set when the operation
+	//    completed).
+	//
+	//    The checks above (health, revision) catch cases where the fresh
+	//    post-operation values differ from the stale ones. But when the
+	//    fresh values are the SAME as the stale values (e.g. the app was
+	//    Healthy before the sync and is still Healthy after), those checks
+	//    see no diff and don't fire. Yet the health checker's output DOES
+	//    change: from Unknown (untrusted) to the now-trusted value.
+	//
+	//    To handle this, we check whether reconciledAt just crossed the
+	//    finishedAt threshold. We only trigger when the OLD reconciledAt
+	//    was stale (absent or before finishedAt) and has now advanced. Once
+	//    reconciledAt is at or past finishedAt, subsequent advances are
+	//    routine Argo CD refreshes and do not need to trigger
+	//    re-reconciliation.
+	oldReconciledAt, _, _ := unstructured.NestedString(
+		oldUn, "status", "reconciledAt",
+	)
+	newReconciledAt, _, _ := unstructured.NestedString(
+		newUn, "status", "reconciledAt",
+	)
+	if oldReconciledAt == newReconciledAt {
+		return false
+	}
+	finishedAt, _, _ := unstructured.NestedString(
+		newUn, "status", "operationState", "finishedAt",
+	)
+	if finishedAt == "" {
+		return false
+	}
+	// RFC3339 timestamps are lexicographically orderable, so string
+	// comparison preserves chronological order.
+	return oldReconciledAt == "" || oldReconciledAt < finishedAt
 }
 
 // stageEnqueuerForAnalysisRuns triggers reconciliation of Stages when their

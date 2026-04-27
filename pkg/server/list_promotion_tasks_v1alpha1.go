@@ -62,7 +62,7 @@ func (s *server) ListPromotionTasks(
 // @Security BearerAuth
 // @Param project path string true "Project name"
 // @Produce json
-// @Success 200 {object} object "PromotionTaskList custom resource (github.com/akuity/kargo/api/v1alpha1.PromotionTaskList)"
+// @Success 200 {object} kargoapi.PromotionTaskList "PromotionTaskList custom resource (github.com/akuity/kargo/api/v1alpha1.PromotionTaskList)"
 // @Router /v1beta1/projects/{project}/promotion-tasks [get]
 func (s *server) listPromotionTasks(c *gin.Context) {
 	ctx := c.Request.Context()

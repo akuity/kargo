@@ -298,7 +298,7 @@ func TestUpdateFreightAlias(t *testing.T) {
 	for _, testCase := range testCases {
 		t.Run(testCase.name, func(t *testing.T) {
 			_, err := testCase.server.UpdateFreightAlias(
-				context.Background(),
+				t.Context(),
 				connect.NewRequest(testCase.req),
 			)
 			testCase.assertions(t, err)

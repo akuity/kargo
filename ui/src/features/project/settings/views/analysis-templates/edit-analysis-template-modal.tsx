@@ -1,18 +1,16 @@
-import { createConnectQueryKey, useMutation, useQuery } from '@connectrpc/connect-query';
 import { useQueryClient } from '@tanstack/react-query';
 import { Modal } from 'antd';
 import { useForm } from 'react-hook-form';
+import { stringify } from 'yaml';
 
 import YamlEditor from '@ui/features/common/code-editor/yaml-editor-lazy';
 import { FieldContainer } from '@ui/features/common/form/field-container';
 import { ModalProps } from '@ui/features/common/modal/use-modal';
+import { useUpdateResource } from '@ui/gen/api/v2/resources/resources';
 import {
-  getAnalysisTemplate,
-  listAnalysisTemplates,
-  updateResource
-} from '@ui/gen/api/service/v1alpha1/service-KargoService_connectquery';
-import { RawFormat } from '@ui/gen/api/service/v1alpha1/service_pb';
-import { decodeRawData } from '@ui/utils/decode-raw-data';
+  getListAnalysisTemplatesQueryKey,
+  useGetAnalysisTemplate
+} from '@ui/gen/api/v2/verifications/verifications';
 
 import { getAnalysisTemplateYAMLExample } from './utils/analysis-template-example';
 
@@ -24,40 +22,26 @@ type Props = ModalProps & {
 export const EditAnalysisTemplateModal = ({ visible, hide, templateName, projectName }: Props) => {
   const queryClient = useQueryClient();
 
-  const { mutateAsync, isPending } = useMutation(updateResource, {
-    onSuccess: () => hide()
-  });
-
-  const { data: templateResponse, isLoading } = useQuery(getAnalysisTemplate, {
-    project: projectName,
-    name: templateName,
-    format: RawFormat.YAML
-  });
-
-  const { control, handleSubmit } = useForm({
-    values: {
-      value: decodeRawData(templateResponse)
+  const { mutate, isPending } = useUpdateResource({
+    mutation: {
+      onSuccess: () => {
+        queryClient.invalidateQueries({
+          queryKey: getListAnalysisTemplatesQueryKey(projectName)
+        });
+        hide();
+      }
     }
   });
 
-  const onSubmit = handleSubmit(async (data) => {
-    const textEncoder = new TextEncoder();
+  const { data: templateResponse, isLoading } = useGetAnalysisTemplate(projectName, templateName);
 
-    await mutateAsync(
-      {
-        manifest: textEncoder.encode(data.value)
-      },
-      {
-        onSuccess: () =>
-          queryClient.invalidateQueries({
-            queryKey: createConnectQueryKey({
-              schema: listAnalysisTemplates,
-              cardinality: 'finite'
-            })
-          })
-      }
-    );
+  const { control, handleSubmit } = useForm({
+    values: {
+      value: templateResponse?.data ? stringify(templateResponse.data) : ''
+    }
   });
+
+  const onSubmit = handleSubmit((data) => mutate({ data: data.value }));
 
   return (
     <Modal

@@ -16,6 +16,17 @@ import (
 
 const ProviderName = "gitea"
 
+// validMergeMethods is the set of merge methods supported by Gitea's API. Gitea
+// does not seem to validate this server-side, so we validate client-side.
+var validMergeMethods = map[string]struct{}{
+	"fast-forward-only": {},
+	"manually-merged":   {},
+	"merge":             {},
+	"rebase":            {},
+	"rebase-merge":      {},
+	"squash":            {},
+}
+
 var registration = gitprovider.Registration{
 	Predicate: func(repoURL string) bool {
 		u, err := url.Parse(repoURL)
@@ -40,41 +51,29 @@ func init() {
 
 type giteaClient interface {
 	CreatePullRequest(
-		ctx context.Context,
 		owner string,
 		repo string,
-		opts *gitea.CreatePullRequestOption,
+		opts gitea.CreatePullRequestOption,
 	) (*gitea.PullRequest, *gitea.Response, error)
 
-	ListPullRequests(
-		ctx context.Context,
+	ListRepoPullRequests(
 		owner string,
 		repo string,
-		opts *gitea.ListPullRequestsOptions,
+		opts gitea.ListPullRequestsOptions,
 	) ([]*gitea.PullRequest, *gitea.Response, error)
 
-	GetPullRequests(
-		ctx context.Context,
+	GetPullRequest(
 		owner string,
 		repo string,
-		number int,
+		number int64,
 	) (*gitea.PullRequest, *gitea.Response, error)
 
 	MergePullRequest(
-		ctx context.Context,
 		owner string,
 		repo string,
-		number int,
-		opts *gitea.MergePullRequestOption,
-	) (*gitea.Response, error)
-
-	AddLabelsToIssue(
-		ctx context.Context,
-		owner string,
-		repo string,
-		number int,
-		labels []string,
-	) ([]*gitea.Label, *gitea.Response, error)
+		number int64,
+		opts gitea.MergePullRequestOption,
+	) (bool, *gitea.Response, error)
 }
 
 // provider is a Gitea implementation of gitprovider.Interface.
@@ -122,74 +121,22 @@ func NewProvider(
 	return &provider{
 		owner:  owner,
 		repo:   repo,
-		client: &giteaClientWrapper{client},
+		client: client,
 	}, nil
-}
-
-type giteaClientWrapper struct {
-	client *gitea.Client
-}
-
-func (g giteaClientWrapper) CreatePullRequest(
-	_ context.Context,
-	owner string,
-	repo string,
-	opts *gitea.CreatePullRequestOption,
-) (*gitea.PullRequest, *gitea.Response, error) {
-	return g.client.CreatePullRequest(owner, repo, *opts)
-}
-
-func (g giteaClientWrapper) ListPullRequests(
-	_ context.Context,
-	owner string,
-	repo string,
-	opts *gitea.ListPullRequestsOptions,
-) ([]*gitea.PullRequest, *gitea.Response, error) {
-	return g.client.ListRepoPullRequests(owner, repo, *opts)
-}
-
-func (g giteaClientWrapper) GetPullRequests(
-	_ context.Context,
-	owner string,
-	repo string,
-	number int,
-) (*gitea.PullRequest, *gitea.Response, error) {
-	return g.client.GetPullRequest(owner, repo, int64(number))
-}
-
-func (g giteaClientWrapper) MergePullRequest(
-	_ context.Context,
-	owner string,
-	repo string,
-	number int,
-	opts *gitea.MergePullRequestOption,
-) (*gitea.Response, error) {
-	_, resp, err := g.client.MergePullRequest(owner, repo, int64(number), *opts)
-	return resp, err
-}
-
-func (g giteaClientWrapper) AddLabelsToIssue(
-	_ context.Context,
-	owner string,
-	repo string,
-	number int,
-	_ []string,
-) ([]*gitea.Label, *gitea.Response, error) {
-	return g.client.AddIssueLabels(owner, repo, int64(number), gitea.IssueLabelsOption{})
 }
 
 // CreatePullRequest implements gitprovider.Interface.
 func (p *provider) CreatePullRequest(
-	ctx context.Context,
+	_ context.Context,
 	opts *gitprovider.CreatePullRequestOpts,
 ) (*gitprovider.PullRequest, error) {
 	if opts == nil {
 		opts = &gitprovider.CreatePullRequestOpts{}
 	}
-	giteaPR, _, err := p.client.CreatePullRequest(ctx,
+	giteaPR, _, err := p.client.CreatePullRequest(
 		p.owner,
 		p.repo,
-		&gitea.CreatePullRequestOption{
+		gitea.CreatePullRequestOption{
 			Title: opts.Title,
 			Head:  opts.Head,
 			Base:  opts.Base,
@@ -202,26 +149,21 @@ func (p *provider) CreatePullRequest(
 	if giteaPR == nil {
 		return nil, fmt.Errorf("unexpected nil pull request")
 	}
+	// TODO(krancour): Add label support. The Gitea SDK's AddIssueLabels expects
+	// label IDs ([]int64), but Kargo's CreatePullRequestOpts.Labels are names
+	// ([]string). A previous implementation attempted this but silently discarded
+	// the labels entirely. To fix properly: list repo labels, match by name to
+	// get IDs, then call AddIssueLabels.
 	pr := convertGiteaPR(*giteaPR)
-	if len(opts.Labels) > 0 {
-		if _, _, err = p.client.AddLabelsToIssue(ctx,
-			p.owner,
-			p.repo,
-			int(pr.Number),
-			opts.Labels,
-		); err != nil {
-			return nil, err
-		}
-	}
 	return &pr, nil
 }
 
 // GetPullRequest implements gitprovider.Interface.
 func (p *provider) GetPullRequest(
-	ctx context.Context,
+	_ context.Context,
 	id int64,
 ) (*gitprovider.PullRequest, error) {
-	ghPR, _, err := p.client.GetPullRequests(ctx, p.owner, p.repo, int(id))
+	ghPR, _, err := p.client.GetPullRequest(p.owner, p.repo, id)
 	if err != nil {
 		return nil, err
 	}
@@ -234,7 +176,7 @@ func (p *provider) GetPullRequest(
 
 // ListPullRequests implements gitprovider.Interface.
 func (p *provider) ListPullRequests(
-	ctx context.Context,
+	_ context.Context,
 	opts *gitprovider.ListPullRequestOptions,
 ) ([]gitprovider.PullRequest, error) {
 	if opts == nil {
@@ -258,7 +200,7 @@ func (p *provider) ListPullRequests(
 	}
 	var prs []gitprovider.PullRequest
 	for {
-		giteaPRs, res, err := p.client.ListPullRequests(ctx, p.owner, p.repo, &listOpts)
+		giteaPRs, res, err := p.client.ListRepoPullRequests(p.owner, p.repo, listOpts)
 		if err != nil {
 			return nil, err
 		}
@@ -278,10 +220,15 @@ func (p *provider) ListPullRequests(
 
 // MergePullRequest implements gitprovider.Interface.
 func (p *provider) MergePullRequest(
-	ctx context.Context,
+	_ context.Context,
 	id int64,
+	opts *gitprovider.MergePullRequestOpts,
 ) (*gitprovider.PullRequest, bool, error) {
-	giteaPR, _, err := p.client.GetPullRequests(ctx, p.owner, p.repo, int(id))
+	if opts == nil {
+		opts = &gitprovider.MergePullRequestOpts{}
+	}
+
+	giteaPR, _, err := p.client.GetPullRequest(p.owner, p.repo, id)
 	if err != nil {
 		return nil, false, fmt.Errorf("error getting pull request %d: %w", id, err)
 	}
@@ -301,14 +248,29 @@ func (p *provider) MergePullRequest(
 		return nil, false, nil
 	}
 
-	// Merge the PR
-	if _, err = p.client.MergePullRequest(
-		ctx, p.owner, p.repo, int(id), &gitea.MergePullRequestOption{},
-	); err != nil {
-		return nil, false, fmt.Errorf("error merging pull request %d: %w", id, err)
+	mergeMethod := opts.MergeMethod
+	if mergeMethod == "" {
+		mergeMethod = "merge"
+	}
+	if _, ok := validMergeMethods[mergeMethod]; !ok {
+		return nil, false,
+			fmt.Errorf("unsupported merge method %q", mergeMethod)
 	}
 
-	updatedPR, _, err := p.client.GetPullRequests(ctx, p.owner, p.repo, int(id))
+	merged, _, err := p.client.MergePullRequest(
+		p.owner,
+		p.repo,
+		id,
+		gitea.MergePullRequestOption{Style: gitea.MergeStyle(mergeMethod)},
+	)
+	if err != nil {
+		return nil, false, fmt.Errorf("error merging pull request %d: %w", id, err)
+	}
+	if !merged {
+		return nil, false, fmt.Errorf("merge rejected for pull request %d", id)
+	}
+
+	updatedPR, _, err := p.client.GetPullRequest(p.owner, p.repo, id)
 	if err != nil {
 		return nil, false, fmt.Errorf("error fetching PR %d after merge: %w", id, err)
 	}
@@ -337,7 +299,7 @@ func (p *provider) GetCommitURL(repoURL string, sha string) (string, error) {
 func convertGiteaPR(giteaPR gitea.PullRequest) gitprovider.PullRequest {
 	pr := gitprovider.PullRequest{
 		Number:  giteaPR.Index,
-		URL:     giteaPR.URL,
+		URL:     giteaPR.HTMLURL,
 		Open:    giteaPR.State == gitea.StateOpen,
 		Merged:  giteaPR.HasMerged,
 		Object:  giteaPR,

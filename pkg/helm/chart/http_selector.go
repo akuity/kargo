@@ -2,12 +2,14 @@ package chart
 
 import (
 	"context"
+	"crypto/tls"
 	"fmt"
 	"io"
 	"net/http"
 	"strings"
 
 	"github.com/Masterminds/semver/v3"
+	"github.com/hashicorp/go-cleanhttp"
 	"gopkg.in/yaml.v3"
 
 	kargoapi "github.com/akuity/kargo/api/v1alpha1"
@@ -52,11 +54,15 @@ func (h *httpSelector) Select(context.Context) ([]string, error) {
 	if h.creds != nil {
 		req.SetBasicAuth(h.creds.Username, h.creds.Password)
 	}
-	// #nosec G704 -- Despite the user-specified URL, the possibility of SSRF here
-	// is mitigated by many factors, including the user's inability to specify an
-	// HTTP method or request headers, and the fact of the user having no access
-	// to the response.
-	res, err := http.DefaultClient.Do(req)
+	httpClient := http.DefaultClient
+	if h.insecureSkipTLSVerify {
+		httpTransport := cleanhttp.DefaultTransport()
+		httpTransport.TLSClientConfig = &tls.Config{
+			InsecureSkipVerify: true, // #nosec G402 -- explicitly allowed by insecureSkipTLSVerify
+		}
+		httpClient = &http.Client{Transport: httpTransport}
+	}
+	res, err := httpClient.Do(req) // #nosec G704 -- SSRF mitigated: no method/header control, no response access
 	if err != nil {
 		return nil,
 			fmt.Errorf("error querying repository index at %q: %w", h.indexURL, err)

@@ -49,6 +49,8 @@ type Credentials struct {
 	Password string
 	// SSHPrivateKey is a private key that can be used for access to some remote
 	// repository. This is primarily applicable for Git repositories.
+	//
+	// TODO(v1.13.0): Remove this field when SSH support is removed.
 	SSHPrivateKey string
 }
 

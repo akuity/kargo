@@ -13,7 +13,7 @@ type MockRepo struct {
 	CommitFn                  func(message string, opts *CommitOptions) error
 	CreateChildBranchFn       func(branch string) error
 	CreateOrphanedBranchFn    func(branch string) error
-	CreateTagFn               func(tag, msg string, opts *TagOptions) error
+	CreateTagFn               func(tag, msg string) error
 	CurrentBranchFn           func() (string, error)
 	DeleteBranchFn            func(branch string) error
 	DirFn                     func() string
@@ -25,8 +25,11 @@ type MockRepo struct {
 	IsRebasingFn              func() (bool, error)
 	LastCommitIDFn            func() (string, error)
 	ListTagsFn                func() ([]TagMetadata, error)
-	ListCommitsFn             func(limit, skip uint) ([]CommitMetadata, error)
+	ListCommitsFn             func(opts *ListCommitsOptions) ([]CommitMetadata, error)
 	CommitMessageFn           func(id string) (string, error)
+	GetCommitSignatureInfoFn  func(string) (*CommitSignatureInfo, error)
+	IntegrateRemoteChangesFn  func(*IntegrationOptions) error
+	PullFn                    func(*PullOptions) error
 	PushFn                    func(*PushOptions) error
 	RefsHaveDiffsFn           func(commit1 string, commit2 string) (bool, error)
 	RemoteBranchExistsFn      func(branch string) (bool, error)
@@ -77,8 +80,8 @@ func (m *MockRepo) CreateOrphanedBranch(branch string) error {
 	return m.CreateOrphanedBranchFn(branch)
 }
 
-func (m *MockRepo) CreateTag(tag, msg string, opts *TagOptions) error {
-	return m.CreateTagFn(tag, msg, opts)
+func (m *MockRepo) CreateTag(tag, msg string) error {
+	return m.CreateTagFn(tag, msg)
 }
 
 func (m *MockRepo) CurrentBranch() (string, error) {
@@ -127,12 +130,28 @@ func (m *MockRepo) ListTags() ([]TagMetadata, error) {
 	return m.ListTagsFn()
 }
 
-func (m *MockRepo) ListCommits(limit, skip uint) ([]CommitMetadata, error) {
-	return m.ListCommitsFn(limit, skip)
+func (m *MockRepo) ListCommits(opts *ListCommitsOptions) ([]CommitMetadata, error) {
+	return m.ListCommitsFn(opts)
 }
 
 func (m *MockRepo) CommitMessage(id string) (string, error) {
 	return m.CommitMessageFn(id)
+}
+
+func (m *MockRepo) GetCommitSignatureInfo(
+	commitID string,
+) (*CommitSignatureInfo, error) {
+	return m.GetCommitSignatureInfoFn(commitID)
+}
+
+func (m *MockRepo) IntegrateRemoteChanges(
+	opts *IntegrationOptions,
+) error {
+	return m.IntegrateRemoteChangesFn(opts)
+}
+
+func (m *MockRepo) Pull(opts *PullOptions) error {
+	return m.PullFn(opts)
 }
 
 func (m *MockRepo) Push(opts *PushOptions) error {

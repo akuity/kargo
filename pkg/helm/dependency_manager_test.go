@@ -110,7 +110,7 @@ func TestEphemeralDependencyManager_update(t *testing.T) {
 				b, err := os.ReadFile("testdata/charts/demo-0.1.0.tgz")
 				require.NoError(t, err)
 
-				client, err := NewRegistryClient(NewEphemeralAuthorizer().Client)
+				client, err := NewRegistryClient(NewEphemeralAuthorizer(false).Client)
 				require.NoError(t, err)
 				_, err = client.Push(b, hostForRepositoryURL(server.URL)+"/demo:0.1.0")
 				require.NoError(t, err)
@@ -236,7 +236,7 @@ generated: "2023-01-01T00:00:00Z"
 		t.Run(tt.name, func(t *testing.T) {
 			em := &EphemeralDependencyManager{
 				credsDB:    &credentials.FakeDB{},
-				authorizer: NewEphemeralAuthorizer(),
+				authorizer: NewEphemeralAuthorizer(false),
 				workDir:    absoluteTempDir(t),
 				helmHome:   absoluteTempDir(t),
 			}
@@ -292,7 +292,7 @@ generated: "2023-01-01T00:00:00Z"
 						Version:    dep.Version,
 					}
 				}
-				require.NoError(t, em.setupRepositories(context.Background(), dependencies))
+				require.NoError(t, em.setupRepositories(t.Context(), dependencies))
 			}
 
 			updates, err := em.update(chartDir)
@@ -728,7 +728,7 @@ func TestEphemeralDependencyManager_setupRepositories(t *testing.T) {
 
 				// Verify an entry exists for the OCI host
 				ociHost := hostForRepositoryURL(ociServer)
-				entry, err := em.authorizer.Get(context.Background(), ociHost)
+				entry, err := em.authorizer.Get(t.Context(), ociHost)
 				assert.NoError(t, err)
 				assert.NotNil(t, entry)
 			},
@@ -819,7 +819,7 @@ func TestEphemeralDependencyManager_setupRepositories(t *testing.T) {
 
 				// Verify an entry exists for the OCI host
 				ociHost := hostForRepositoryURL(ociServer)
-				entry, err := em.authorizer.Get(context.Background(), ociHost)
+				entry, err := em.authorizer.Get(t.Context(), ociHost)
 				assert.NoError(t, err)
 				assert.NotNil(t, entry)
 			},
@@ -832,7 +832,7 @@ func TestEphemeralDependencyManager_setupRepositories(t *testing.T) {
 
 			em := &EphemeralDependencyManager{
 				helmHome:   tempDir,
-				authorizer: NewEphemeralAuthorizer(),
+				authorizer: NewEphemeralAuthorizer(false),
 				credsDB:    tt.credsDB,
 			}
 
@@ -852,7 +852,7 @@ func TestEphemeralDependencyManager_setupRepositories(t *testing.T) {
 				}
 			}
 
-			err := em.setupRepositories(context.Background(), dependencies)
+			err := em.setupRepositories(t.Context(), dependencies)
 			tt.assertions(t, registryURL, em, err)
 		})
 	}

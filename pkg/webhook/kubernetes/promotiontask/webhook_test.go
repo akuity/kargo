@@ -1,7 +1,6 @@
 package promotiontask
 
 import (
-	"context"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
@@ -88,7 +87,7 @@ func Test_webhook_ValidateCreate(t *testing.T) {
 				client: c,
 			}
 
-			got, err := w.ValidateCreate(context.Background(), tt.task)
+			got, err := w.ValidateCreate(t.Context(), tt.task)
 			tt.assertions(t, got, err)
 		})
 	}

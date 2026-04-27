@@ -10,4 +10,5 @@ import type { UpdateConfigMapRequestData } from './updateConfigMapRequestData';
 export interface UpdateConfigMapRequest {
   data?: UpdateConfigMapRequestData;
   description?: string;
+  replicate?: boolean;
 }

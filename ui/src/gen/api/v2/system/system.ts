@@ -23,7 +23,7 @@ import type {
 
 import type {
   AdminLoginResponse,
-  GetClusterConfig200,
+  ClusterConfig,
   GetConfigResponse,
   PublicConfig,
   VersionInfo
@@ -99,7 +99,7 @@ export const useAdminLogin = <TError = unknown, TContext = unknown>(
  * @summary Retrieve the ClusterConfig
  */
 export type getClusterConfigResponse200 = {
-  data: GetClusterConfig200;
+  data: ClusterConfig;
   status: 200;
 };
 

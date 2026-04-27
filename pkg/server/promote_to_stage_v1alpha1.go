@@ -173,7 +173,7 @@ type promoteToStageRequest struct {
 // @Param project path string true "Project name"
 // @Param stage path string true "Stage name"
 // @Param body body promoteToStageRequest true "Promote request"
-// @Success 201 {object} object "Promotion resource (github.com/akuity/kargo/api/v1alpha1.Promotion)"
+// @Success 201 {object} kargoapi.Promotion "Promotion resource (github.com/akuity/kargo/api/v1alpha1.Promotion)"
 // @Router /v1beta1/projects/{project}/stages/{stage}/promotions [post]
 func (s *server) promoteToStage(c *gin.Context) {
 	ctx := c.Request.Context()
@@ -284,5 +284,5 @@ func (s *server) promoteToStage(c *gin.Context) {
 		s.recordPromotionCreatedEvent(ctx, promotion, freight)
 	}
 
-	c.JSON(http.StatusCreated, gin.H{"promotion": promotion})
+	c.JSON(http.StatusCreated, promotion)
 }

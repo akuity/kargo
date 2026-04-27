@@ -11,4 +11,5 @@ export interface CreateConfigMapRequest {
   data?: CreateConfigMapRequestData;
   description?: string;
   name?: string;
+  replicate?: boolean;
 }

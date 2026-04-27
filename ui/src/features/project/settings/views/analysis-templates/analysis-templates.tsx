@@ -1,4 +1,3 @@
-import { useMutation, useQuery } from '@connectrpc/connect-query';
 import { faPencil, faPlus, faTrash } from '@fortawesome/free-solid-svg-icons';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
 import { Button, Card, Space, Table } from 'antd';
@@ -8,12 +7,11 @@ import { useParams } from 'react-router-dom';
 import { useConfirmModal } from '@ui/features/common/confirm-modal/use-confirm-modal';
 import { descriptionExpandable } from '@ui/features/common/description-expandable';
 import { useModal } from '@ui/features/common/modal/use-modal';
+import { RolloutsAnalysisTemplate } from '@ui/gen/api/v2/models';
 import {
-  deleteAnalysisTemplate,
-  listAnalysisTemplates
-} from '@ui/gen/api/service/v1alpha1/service-KargoService_connectquery';
-import { AnalysisTemplate } from '@ui/gen/api/stubs/rollouts/v1alpha1/generated_pb';
-import { timestampDate } from '@ui/utils/connectrpc-utils';
+  useDeleteAnalysisTemplate,
+  useListAnalysisTemplates
+} from '@ui/gen/api/v2/verifications/verifications';
 
 import { CreateAnalysisTemplateModal } from './create-analysis-template-modal';
 import { EditAnalysisTemplateModal } from './edit-analysis-template-modal';
@@ -22,13 +20,13 @@ export const AnalysisTemplatesSettings = () => {
   const { name } = useParams();
   const confirm = useConfirmModal();
 
-  const { data, isLoading, refetch } = useQuery(listAnalysisTemplates, { project: name });
+  const { data, isLoading, refetch } = useListAnalysisTemplates(name || '');
   const { show: showEdit } = useModal();
   const { show: showCreate } = useModal((p) => (
     <CreateAnalysisTemplateModal {...p} namespace={name || ''} />
   ));
-  const { mutate: deleteTemplate, isPending: isDeleting } = useMutation(deleteAnalysisTemplate, {
-    onSuccess: () => refetch()
+  const { mutate: deleteTemplate, isPending: isDeleting } = useDeleteAnalysisTemplate({
+    mutation: { onSuccess: () => refetch() }
   });
 
   return (
@@ -42,24 +40,26 @@ export const AnalysisTemplatesSettings = () => {
         </Button>
       }
     >
-      <Table<AnalysisTemplate>
-        dataSource={data?.analysisTemplates}
+      <Table<RolloutsAnalysisTemplate>
+        dataSource={data?.data?.items}
         pagination={{ hideOnSinglePage: true }}
         rowKey={(i) => i.metadata?.name || ''}
         loading={isLoading}
         expandable={descriptionExpandable()}
         className='my-2'
       >
-        <Table.Column<AnalysisTemplate>
+        <Table.Column<RolloutsAnalysisTemplate>
           title='Creation Date'
           width={200}
           render={(_, template) => {
-            const date = timestampDate(template.metadata?.creationTimestamp);
-            return date ? format(date, 'MMM do yyyy HH:mm:ss') : '';
+            const ts = template.metadata?.creationTimestamp;
+            if (!ts) return '';
+            const date = new Date(ts);
+            return isNaN(date.getTime()) ? '' : format(date, 'MMM do yyyy HH:mm:ss');
           }}
         />
-        <Table.Column<AnalysisTemplate> title='Name' dataIndex={['metadata', 'name']} />
-        <Table.Column<AnalysisTemplate>
+        <Table.Column<RolloutsAnalysisTemplate> title='Name' dataIndex={['metadata', 'name']} />
+        <Table.Column<RolloutsAnalysisTemplate>
           width={150}
           render={(_, template) => (
             <Space>
@@ -101,7 +101,10 @@ export const AnalysisTemplatesSettings = () => {
                       </p>
                     ),
                     onOk: () => {
-                      deleteTemplate({ project: name || '', name: template?.metadata?.name || '' });
+                      deleteTemplate({
+                        project: name || '',
+                        analysisTemplate: template?.metadata?.name || ''
+                      });
                     },
                     hide: () => {}
                   });

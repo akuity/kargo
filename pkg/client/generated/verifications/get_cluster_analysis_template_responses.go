@@ -10,6 +10,8 @@ import (
 
 	"github.com/go-openapi/runtime"
 	"github.com/go-openapi/strfmt"
+
+	"github.com/akuity/kargo/pkg/client/generated/models"
 )
 
 // GetClusterAnalysisTemplateReader is a Reader for the GetClusterAnalysisTemplate structure.
@@ -42,7 +44,7 @@ GetClusterAnalysisTemplateOK describes a response with status code 200, with def
 ClusterAnalysisTemplate custom resource (github.com/argoproj/argo-rollouts/pkg/apis/rollouts/v1alpha1.ClusterAnalysisTemplate)
 */
 type GetClusterAnalysisTemplateOK struct {
-	Payload any
+	Payload *models.RolloutsClusterAnalysisTemplate
 }
 
 // IsSuccess returns true when this get cluster analysis template o k response has a 2xx status code
@@ -85,14 +87,16 @@ func (o *GetClusterAnalysisTemplateOK) String() string {
 	return fmt.Sprintf("[GET /v1beta1/shared/cluster-analysis-templates/{cluster-analysis-template}][%d] getClusterAnalysisTemplateOK %s", 200, payload)
 }
 
-func (o *GetClusterAnalysisTemplateOK) GetPayload() any {
+func (o *GetClusterAnalysisTemplateOK) GetPayload() *models.RolloutsClusterAnalysisTemplate {
 	return o.Payload
 }
 
 func (o *GetClusterAnalysisTemplateOK) readResponse(response runtime.ClientResponse, consumer runtime.Consumer, formats strfmt.Registry) error {
 
+	o.Payload = new(models.RolloutsClusterAnalysisTemplate)
+
 	// response payload
-	if err := consumer.Consume(response.Body(), &o.Payload); err != nil && !stderrors.Is(err, io.EOF) {
+	if err := consumer.Consume(response.Body(), o.Payload); err != nil && !stderrors.Is(err, io.EOF) {
 		return err
 	}
 

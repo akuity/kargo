@@ -74,7 +74,7 @@ func (s *server) GetProjectConfig(
 // @Security BearerAuth
 // @Param project path string true "Project name"
 // @Produce json
-// @Success 200 {object} object "ProjectConfig custom resource (github.com/akuity/kargo/api/v1alpha1.ProjectConfig)"
+// @Success 200 {object} kargoapi.ProjectConfig "ProjectConfig custom resource"
 // @Router /v1beta1/projects/{project}/config [get]
 func (s *server) getProjectConfig(c *gin.Context) {
 	ctx := c.Request.Context()

@@ -85,6 +85,7 @@ type ApplicationSourceKustomize struct {
 type ApplicationStatus struct {
 	Health         HealthStatus           `json:"health,omitempty"`
 	Sync           SyncStatus             `json:"sync,omitempty"`
+	ReconciledAt   *metav1.Time           `json:"reconciledAt,omitempty"`
 	Conditions     []ApplicationCondition `json:"conditions,omitempty"`
 	OperationState *OperationState        `json:"operationState,omitempty"`
 }

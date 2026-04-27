@@ -4,6 +4,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"io/fs"
 	"net/url"
 	"os"
 	"os/exec"
@@ -225,6 +226,7 @@ func (b *baseRepo) setupAuth(homeDir string) error {
 	if b.creds == nil {
 		return nil
 	}
+	// TODO(v1.13.0): Remove this block when SSH support is removed.
 	// If an SSH key was provided, use that.
 	if b.creds.SSHPrivateKey != "" {
 		sshPath := filepath.Join(homeDir, ".ssh")
@@ -306,7 +308,10 @@ func (b *baseRepo) saveOriginalURL() error {
 
 // loadHomeDir restores the repository's home directory from the repository's
 // configuration. This is useful for reliably determining this information when
-// an existing repository or working tree is loaded from the file system.
+// an existing repository or working tree is loaded from the file system. It
+// also reconciles any residual GnuPG state in that home directory that may
+// have been left behind by a process in a different container sharing the
+// same underlying filesystem.
 func (b *baseRepo) loadHomeDir() error {
 	res, err := libExec.Exec(b.buildGitCommand(
 		"config",
@@ -316,7 +321,86 @@ func (b *baseRepo) loadHomeDir() error {
 		return fmt.Errorf("error reading repo home dir from config: %w", err)
 	}
 	b.homeDir = strings.TrimSpace(string(res))
+	b.reconcileGPGState()
 	return nil
+}
+
+// reconcileGPGState removes any residual GnuPG state associated with this
+// repository's GNUPGHOME that may have been orphaned by a process in a
+// different container sharing the same underlying filesystem.
+//
+// Required because in a container-per-step promotion model each step runs
+// in its own container — separate PID namespaces, shared UTS namespace,
+// shared workspace volume. Several pieces of GnuPG's on-disk state are
+// process-bound and become hazardous when inherited by a new container:
+//
+//   - *.lock    — committed dotlock files. GnuPG's stale-lock heuristic
+//     compares (hostname, PID) against /proc; across sibling
+//     containers with a shared hostname but independent PID
+//     namespaces, the recorded PID can match an unrelated
+//     live process, causing indefinite waits that end in a
+//     "Connection timed out" signing failure.
+//   - .#lk*     — dotlock temp files created via O_CREAT|O_EXCL before
+//     being hard-linked to the committed .lock file. Their
+//     names embed an in-process memory address + hostname + PID;
+//     under weak ASLR and colliding container PIDs
+//     these names collide too, causing a "File exists"
+//     failure before gpg ever reaches the .lock file.
+//   - UNIX-domain sockets (gpg-agent, dirmngr, scdaemon, etc.). A stale
+//     socket left by a dead daemon in a prior container can
+//     race with a new daemon binding on the same path. After
+//     gpgconf --kill, any socket still present in GNUPGHOME
+//     is by definition stale, so we identify these by file
+//     mode rather than by name — new GnuPG daemons added
+//     upstream are covered automatically.
+//
+// The cleanup walks all of GNUPGHOME rather than enumerating specific
+// subdirectories so that GnuPG layout changes (e.g., the ongoing move
+// toward public-keys.d/pubring.db) are covered automatically.
+//
+// Safe to call when no GnuPG state exists (no-op) and in traditional
+// single-process deployments where no cross-container state sharing occurs
+// (also effectively a no-op).
+func (b *baseRepo) reconcileGPGState() {
+	if b.homeDir == "" {
+		return
+	}
+	gnupgDir := filepath.Join(b.homeDir, ".gnupg")
+	if _, err := os.Stat(gnupgDir); err != nil {
+		return
+	}
+	// Must run before removing sockets: gpgconf finds the agent via its
+	// sockets and tells it to shut down cleanly.
+	_, _ = libExec.Exec(b.buildCommand("gpgconf", "--kill", "gpg-agent"))
+
+	logger := logging.LoggerFromContext(context.TODO())
+	remove := func(path string) {
+		if err := os.Remove(path); err != nil && !os.IsNotExist(err) {
+			logger.Error(
+				err,
+				"error removing stale GnuPG state file",
+				"file", path,
+			)
+		}
+	}
+	_ = filepath.WalkDir(gnupgDir, func(path string, d fs.DirEntry, err error) error {
+		if err != nil || d.IsDir() {
+			return nil
+		}
+		name := d.Name()
+		switch {
+		case strings.HasSuffix(name, ".lock"),
+			strings.HasPrefix(name, ".#lk"):
+			remove(path)
+		default:
+			// Any remaining UNIX-domain socket in GNUPGHOME belongs to a
+			// dead daemon (we killed the live agent above).
+			if info, statErr := d.Info(); statErr == nil && info.Mode()&os.ModeSocket != 0 {
+				remove(path)
+			}
+		}
+		return nil
+	})
 }
 
 // loadURLs restores the repository's original and access URLs from the
@@ -353,6 +437,7 @@ func (b *baseRepo) buildCommand(command string, arg ...string) *exec.Cmd {
 
 func (b *baseRepo) buildGitCommand(arg ...string) *exec.Cmd {
 	cmd := b.buildCommand("git", arg...)
+	// TODO(v1.13.0): Remove this line when SSH support is removed.
 	cmd.Env = append(cmd.Env, fmt.Sprintf("GIT_SSH_COMMAND=ssh -F %s/.ssh/config", b.homeDir))
 	if b.creds != nil && b.creds.Password != "" {
 		cmd.Env = append(

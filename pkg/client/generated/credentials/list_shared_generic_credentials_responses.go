@@ -10,6 +10,8 @@ import (
 
 	"github.com/go-openapi/runtime"
 	"github.com/go-openapi/strfmt"
+
+	"github.com/akuity/kargo/pkg/client/generated/models"
 )
 
 // ListSharedGenericCredentialsReader is a Reader for the ListSharedGenericCredentials structure.
@@ -42,7 +44,7 @@ ListSharedGenericCredentialsOK describes a response with status code 200, with d
 SecretList resource (k8s.io/api/core/v1.SecretList)
 */
 type ListSharedGenericCredentialsOK struct {
-	Payload any
+	Payload *models.V1SecretList
 }
 
 // IsSuccess returns true when this list shared generic credentials o k response has a 2xx status code
@@ -85,14 +87,16 @@ func (o *ListSharedGenericCredentialsOK) String() string {
 	return fmt.Sprintf("[GET /v1beta1/shared/generic-credentials][%d] listSharedGenericCredentialsOK %s", 200, payload)
 }
 
-func (o *ListSharedGenericCredentialsOK) GetPayload() any {
+func (o *ListSharedGenericCredentialsOK) GetPayload() *models.V1SecretList {
 	return o.Payload
 }
 
 func (o *ListSharedGenericCredentialsOK) readResponse(response runtime.ClientResponse, consumer runtime.Consumer, formats strfmt.Registry) error {
 
+	o.Payload = new(models.V1SecretList)
+
 	// response payload
-	if err := consumer.Consume(response.Body(), &o.Payload); err != nil && !stderrors.Is(err, io.EOF) {
+	if err := consumer.Consume(response.Body(), o.Payload); err != nil && !stderrors.Is(err, io.EOF) {
 		return err
 	}
 

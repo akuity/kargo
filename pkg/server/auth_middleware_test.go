@@ -50,7 +50,7 @@ c1e3
 
 func TestNewAuthMiddleware(t *testing.T) {
 	a := &authMiddleware{}
-	middleware := newAuthMiddleware(context.Background(), config.ServerConfig{}, nil)
+	middleware := newAuthMiddleware(t.Context(), config.ServerConfig{}, nil)
 	require.NotNil(t, middleware)
 	// Call the middleware to get the initialized authMiddleware
 	// We can't directly inspect it, but we can verify it doesn't panic
@@ -151,7 +151,7 @@ func TestGetKeySet(t *testing.T) {
 		t.Run(testCase.name, func(t *testing.T) {
 			svr, cfg := testCase.setup()
 			t.Cleanup(svr.Close)
-			keyset, err := getKeySet(context.Background(), cfg)
+			keyset, err := getKeySet(t.Context(), cfg)
 			require.NoError(t, err)
 			require.NotNil(t, keyset)
 		})
@@ -412,7 +412,7 @@ func TestAuthenticate(t *testing.T) {
 				ts.authMiddleware = &authMiddleware{}
 			}
 			ctx, err := ts.authMiddleware.authenticate(
-				context.Background(),
+				t.Context(),
 				ts.path,
 				ts.token,
 			)
@@ -507,7 +507,7 @@ func TestVerifyIDPIssuedTokenFn(t *testing.T) {
 	for _, testCase := range testCases {
 		t.Run(testCase.name, func(t *testing.T) {
 			c, err := testCase.authMiddleware.verifyIDPIssuedToken(
-				context.Background(),
+				t.Context(),
 				// With the way these tests are constructed, this doesn't have to
 				// be valid.
 				"some-token",

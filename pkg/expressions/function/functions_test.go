@@ -1,7 +1,6 @@
 package function
 
 import (
-	"context"
 	"testing"
 	"time"
 
@@ -214,7 +213,7 @@ func Test_getCommitFromFreight(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			ctx := context.Background()
+			ctx := t.Context()
 
 			c := fake.NewClientBuilder().
 				WithScheme(scheme).
@@ -448,7 +447,7 @@ func Test_getImageFromFreight(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			ctx := context.Background()
+			ctx := t.Context()
 
 			c := fake.NewClientBuilder().
 				WithScheme(scheme).
@@ -775,7 +774,7 @@ func Test_getChartFromFreight(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			ctx := context.Background()
+			ctx := t.Context()
 
 			c := fake.NewClientBuilder().
 				WithScheme(scheme).
@@ -1031,7 +1030,7 @@ func Test_getArtifactFromFreight(t *testing.T) {
 	}
 	for _, testCase := range testCases {
 		t.Run(testCase.name, func(t *testing.T) {
-			ctx := context.Background()
+			ctx := t.Context()
 			c := fake.NewClientBuilder().
 				WithScheme(scheme).
 				WithObjects(testCase.objects...).
@@ -1255,7 +1254,7 @@ func Test_getConfigMap(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			ctx := context.Background()
+			ctx := t.Context()
 
 			c := fake.NewClientBuilder().
 				WithScheme(scheme).
@@ -1445,7 +1444,7 @@ func Test_getSecret(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			ctx := context.Background()
+			ctx := t.Context()
 
 			c := fake.NewClientBuilder().
 				WithScheme(scheme).
@@ -1513,7 +1512,7 @@ func Test_getConfigMap_getSecret_no_cache_key_collision(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			ctx := context.Background()
+			ctx := t.Context()
 
 			c := fake.NewClientBuilder().
 				WithScheme(scheme).
@@ -1765,7 +1764,7 @@ func Test_freightMetadata(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			ctx := context.Background()
+			ctx := t.Context()
 
 			c := fake.NewClientBuilder().
 				WithScheme(scheme).
@@ -1889,7 +1888,7 @@ func Test_stageMetadata(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			ctx := context.Background()
+			ctx := t.Context()
 
 			c := fake.NewClientBuilder().
 				WithScheme(scheme).

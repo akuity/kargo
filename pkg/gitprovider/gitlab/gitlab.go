@@ -9,6 +9,7 @@ import (
 
 	"github.com/hashicorp/go-cleanhttp"
 	gitlab "gitlab.com/gitlab-org/api/client-go"
+	"k8s.io/utils/ptr"
 
 	"github.com/akuity/kargo/pkg/gitprovider"
 	"github.com/akuity/kargo/pkg/urls"
@@ -209,7 +210,12 @@ func (p *provider) ListPullRequests(
 func (p *provider) MergePullRequest(
 	_ context.Context,
 	id int64,
+	opts *gitprovider.MergePullRequestOpts,
 ) (*gitprovider.PullRequest, bool, error) {
+	if opts == nil {
+		opts = &gitprovider.MergePullRequestOpts{}
+	}
+
 	glMR, _, err := p.client.GetMergeRequest(p.projectName, id, nil)
 	if err != nil {
 		return nil, false, fmt.Errorf("error getting merge request %d: %w", id, err)
@@ -230,9 +236,20 @@ func (p *provider) MergePullRequest(
 		return nil, false, nil
 	}
 
-	// Merge the MR
+	// GitLab's AcceptMergeRequest API only supports "merge" (default) and
+	// "squash" (via a boolean flag). Other strategies are not available through
+	// this endpoint.
+	var squash *bool
+	switch opts.MergeMethod {
+	case "", "merge":
+		// Accept API's default merge method (merge commit)
+	case "squash":
+		squash = ptr.To(true) // Opt-in to a squash merge
+	default:
+		return nil, false, fmt.Errorf("unsupported merge method %q", opts.MergeMethod)
+	}
 	updatedMR, _, err := p.client.AcceptMergeRequest(
-		p.projectName, id, &gitlab.AcceptMergeRequestOptions{},
+		p.projectName, id, &gitlab.AcceptMergeRequestOptions{Squash: squash},
 	)
 	if err != nil {
 		return nil, false, fmt.Errorf("error merging merge request %d: %w", id, err)

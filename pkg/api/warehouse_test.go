@@ -98,7 +98,7 @@ func TestGetWarehouse(t *testing.T) {
 	for _, testCase := range testCases {
 		t.Run(testCase.name, func(t *testing.T) {
 			warehouse, err := GetWarehouse(
-				context.Background(),
+				t.Context(),
 				testCase.client,
 				types.NamespacedName{
 					Namespace: "fake-namespace",
@@ -489,7 +489,7 @@ func TestListFreightFromWarehouse(t *testing.T) {
 				},
 			}
 			freight, err := ListFreightFromWarehouse(
-				context.Background(), c, warehouse, testCase.opts,
+				t.Context(), c, warehouse, testCase.opts,
 			)
 			testCase.assertions(t, freight, err)
 		})
