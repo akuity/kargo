@@ -47,6 +47,7 @@ func (s *Server) registerTools() {
 	s.registerWarehouseTools()
 	s.registerFreightTools()
 	s.registerPromotionTools()
+	s.registerPromotionTaskTools()
 }
 
 // apiClient constructs an authenticated Kargo REST API client, handling token
