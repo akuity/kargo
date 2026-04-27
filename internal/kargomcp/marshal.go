@@ -96,6 +96,10 @@ func sanitizeResource(payload any) any {
 			delete(meta, "annotations")
 		}
 	}
+	// Strip verbose status fields that have dedicated tools.
+	if status, ok := m["status"].(map[string]any); ok {
+		delete(status, "freightHistory")
+	}
 	return dropNulls(m)
 }
 

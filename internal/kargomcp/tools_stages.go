@@ -30,6 +30,18 @@ func (s *Server) registerStageTools() {
 	}, s.handleGetStage)
 
 	mcp.AddTool(s.mcpServer, &mcp.Tool{
+		Name: "get_stage_freight_history",
+		Description: "Get the freight history for a stage — the sequence of freight " +
+			"collections that have been promoted through it, with verification results. " +
+			"Use this when you need to audit what freight has passed through a stage " +
+			"or investigate verification failures.",
+		OutputSchema: mustOutputSchema[struct {
+			Items []freightHistoryEntry `json:"items"`
+		}](),
+		Annotations: readOnly(),
+	}, s.handleGetStageFreightHistory)
+
+	mcp.AddTool(s.mcpServer, &mcp.Tool{
 		Name: "refresh_stage",
 		Description: "Trigger an out-of-band refresh of a stage, causing it to " +
 			"re-evaluate its subscriptions and re-sync its current state.",
@@ -215,6 +227,75 @@ func (s *Server) handleGetStage(
 		return errResult(err)
 	}
 	return jsonAnyResult(sanitizeResource(res.Payload))
+}
+
+// --- get_stage_freight_history ---
+
+type getStageFreightHistoryArgs struct {
+	Project string `json:"project" jsonschema:"The name of the Kargo project"`
+	Stage   string `json:"stage" jsonschema:"The name of the stage"`
+}
+
+type freightHistoryVerification struct {
+	ID         string `json:"id,omitempty"`
+	Phase      string `json:"phase,omitempty"`
+	StartTime  string `json:"startTime,omitempty"`
+	FinishTime string `json:"finishTime,omitempty"`
+}
+
+type freightHistoryEntry struct {
+	ID                  string                       `json:"id,omitempty"`
+	FreightName         string                       `json:"freightName,omitempty"`
+	VerificationHistory []freightHistoryVerification `json:"verificationHistory,omitempty"`
+}
+
+func (s *Server) handleGetStageFreightHistory(
+	ctx context.Context,
+	_ *mcp.CallToolRequest,
+	args getStageFreightHistoryArgs,
+) (*mcp.CallToolResult, any, error) {
+	apiClient, err := s.apiClient(ctx)
+	if err != nil {
+		return errResult(err)
+	}
+	res, err := apiClient.Core.GetStage(
+		core.NewGetStageParams().WithProject(args.Project).WithStage(args.Stage),
+		nil,
+	)
+	if err != nil {
+		return errResult(err)
+	}
+	data, _ := json.Marshal(res.Payload)
+	var stage struct {
+		Status struct {
+			FreightHistory []struct {
+				ID    string `json:"id"`
+				Items map[string]struct {
+					Name string `json:"name"`
+				} `json:"items"`
+				VerificationHistory []freightHistoryVerification `json:"verificationHistory"`
+			} `json:"freightHistory"`
+		} `json:"status"`
+	}
+	if err := json.Unmarshal(data, &stage); err != nil {
+		return errResult(err)
+	}
+	entries := make([]freightHistoryEntry, 0, len(stage.Status.FreightHistory))
+	for _, h := range stage.Status.FreightHistory {
+		e := freightHistoryEntry{
+			ID:                  h.ID,
+			VerificationHistory: h.VerificationHistory,
+		}
+		// Extract freight name from the first item (there is typically one per origin).
+		for _, item := range h.Items {
+			if item.Name != "" {
+				e.FreightName = item.Name
+				break
+			}
+		}
+		entries = append(entries, e)
+	}
+	return jsonAnyResult(map[string]any{"items": entries})
 }
 
 // --- refresh_stage ---
