@@ -1,8 +1,10 @@
 package conditions
 
 import (
+	"strings"
 	"testing"
 	"time"
+	"unicode/utf8"
 
 	"github.com/stretchr/testify/require"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -781,11 +783,17 @@ func TestTruncateMessage(t *testing.T) {
 			},
 		},
 		{
-			name:  "multi-byte UTF-8 not split",
-			input: string(make([]byte, maxConditionMessageLength-1)) + "é", // 2-byte rune crosses boundary
+			name: "multi-byte UTF-8 not split",
+			// The suffix " ... (truncated)" is 16 bytes, so the cut index is
+			// maxConditionMessageLength-16 = 32752. Place é (UTF-8: 0xC3 0xA9)
+			// starting at index 32751 so its continuation byte (0xA9) lands
+			// exactly at the cut point, forcing the walk-back to trigger.
+			input: string(make([]byte, maxConditionMessageLength-len(" ... (truncated)")-1)) +
+				strings.Repeat("é", 20),
 			assert: func(t *testing.T, got string) {
 				require.LessOrEqual(t, len(got), maxConditionMessageLength)
 				require.Contains(t, got, "(truncated)")
+				require.True(t, utf8.ValidString(got))
 			},
 		},
 	}
