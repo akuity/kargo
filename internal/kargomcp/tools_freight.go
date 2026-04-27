@@ -13,7 +13,7 @@ func (s *Server) registerFreightTools() {
 	mcp.AddTool(s.mcpServer, &mcp.Tool{
 		Name: "list_freight",
 		Description: "List freight in a Kargo project, newest first. Returns a compact summary per piece. " +
-			"Optionally filter by stage (freight currently in that stage) or by origin warehouse.",
+			"Optionally filter by stage (freight eligible for promotion to that stage) or by origin warehouse.",
 		OutputSchema: mustOutputSchema[struct {
 			Items []freightSummary `json:"items"`
 		}](),
@@ -39,7 +39,7 @@ func (s *Server) registerFreightTools() {
 
 type listFreightArgs struct {
 	Project string   `json:"project" jsonschema:"The name of the Kargo project"`
-	Stage   *string  `json:"stage,omitempty" jsonschema:"Filter to freight currently in this stage"`
+	Stage   *string  `json:"stage,omitempty" jsonschema:"Filter to freight available (eligible) for promotion to this stage"`
 	Origins []string `json:"origins,omitempty" jsonschema:"Filter by origin warehouse names"`
 }
 
