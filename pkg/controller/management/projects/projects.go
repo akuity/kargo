@@ -414,7 +414,9 @@ func (r *reconciler) cleanupProject(ctx context.Context, project *kargoapi.Proje
 		crbs[kubernetes.ShortenResourceName(fmt.Sprintf("%s-%s", r.cfg.ArgoCDClusterRoleName, project.Name))] = false
 	}
 	if r.cfg.ManageExtendedPermissions && r.cfg.OrchestratorClusterAccessRoleName != "" {
-		crbs[kubernetes.ShortenResourceName(fmt.Sprintf("%s-%s", r.cfg.OrchestratorClusterAccessRoleName, project.Name))] = false
+		crbs[kubernetes.ShortenResourceName(
+			fmt.Sprintf("%s-%s", r.cfg.OrchestratorClusterAccessRoleName, project.Name),
+		)] = false
 	}
 	for crbName, hasCR := range crbs {
 		if err := r.deleteClusterRoleBindingFn(
