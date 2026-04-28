@@ -21,19 +21,33 @@ global:
   clusterSecretsNamespace: kargo-cluster-secrets
   ## @param global.createClusterSecretsNamespace **Deprecated, as it is directly related to `clusterSecretsNamespace`, which also is deprecated. See docs for `clusterSecretsNamespace` for more details.** Indicates whether the namespace specified by `clusterSecretsNamespace` should be created when installing the chart.
   createClusterSecretsNamespace: true
+  ## @param global.createClusterSecretsRBAC **Deprecated, as it is directly related to `clusterSecretsNamespace`, which also is deprecated. See docs for `clusterSecretsNamespace` for more details.** Indicates whether the Roles/RoleBindings in the namespace specified by `clusterSecretsNamespace` should be created when installing the chart.
+  createClusterSecretsRBAC: true
 
   systemResources:
     ## @param global.systemResources.namespace Designates a namespace to contain resources associated with cluster-scoped resources and for which no cluster-scoped analog exists. For example, ClusterConfig is a cluster-scoped resource. Cluster-scoped webhook receivers, defined as part of that resource, each must reference a Secret, however, no such thing as a cluster-scoped Secret exists within Kubernetes. To work around that, all Secrets referenced by a ClusterConfig resource must be located in a designated namespace. NOTE: The namespace designated for this purpose is NOT the place to put resources that you want to share across all Projects. This namespace is strictly for namespaced resources that must be referenced by other, cluster-scoped resources.
     namespace: kargo-system-resources
     ## @param global.systemResources.createNamespace Indicates whether the namespace specified by `global.systemResources.namespace` should be created when installing the chart.
     createNamespace: true
-  
+    ## @param global.systemResources.createRBAC Indicates whether the Roles/RoleBindings in the namespace specified by `global.systemResources.namespace` should be created when installing the chart.
+    createRBAC: true
+    ## @param global.systemResources.extraNamespaceAnnotations Additional annotations to be added to the namespace specified by `global.systemResources.namespace`.
+    extraNamespaceAnnotations: {}
+    ## @param global.systemResources.extraNamespaceLabels Additional labels to be added to the namespace specified by `global.systemResources.namespace`.
+    extraNamespaceLabels: {}
+
   sharedResources:
     ## @param global.sharedResources.namespace designates a namespace where shared resources can be located.
     namespace: kargo-shared-resources
     ## @param global.sharedResources.createNamespace Indicates whether the namespace specified by `global.sharedResources.namespace` should be created when installing the chart.
     createNamespace: true
-  
+    ## @param global.sharedResources.createRBAC Indicates whether the Roles/RoleBindings in the namespace specified by `global.sharedResources.namespace` should be created when installing the chart.
+    createRBAC: true
+    ## @param global.sharedResources.extraNamespaceAnnotations Additional annotations to be added to the namespace specified by `global.sharedResources.namespace`.
+    extraNamespaceAnnotations: {}
+    ## @param global.sharedResources.extraNamespaceLabels Additional labels to be added to the namespace specified by `global.sharedResources.namespace`.
+    extraNamespaceLabels: {}
+
   ## @param global.labels Labels to add to all resources.
   labels: {}
   ## @param global.annotations Annotations to add to all resources.

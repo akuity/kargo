@@ -1,3 +1,4 @@
+{{- if .Values.global.sharedResources.createRBAC }}
 apiVersion: rbac.authorization.k8s.io/v1
 kind: RoleBinding
 metadata:
@@ -42,4 +43,5 @@ subjects:
 - kind: ServiceAccount
   namespace:  {{ .Release.Namespace }}
   name: kargo-api
+{{- end }}
 {{- end }}
