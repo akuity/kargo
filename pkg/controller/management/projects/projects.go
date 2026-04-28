@@ -64,6 +64,19 @@ type ReconcilerConfig struct {
 	ArgoCDClusterRoleName    string `envconfig:"ARGOCD_CLUSTER_ROLE_NAME" default:""`
 	ArgoCDNamespace          string `envconfig:"ARGOCD_NAMESPACE" default:"argocd"`
 	ArgoCDWatchNamespaceOnly bool   `envconfig:"ARGOCD_WATCH_ARGOCD_NAMESPACE_ONLY" default:"false"`
+
+	// OrchestratorClusterAccessRoleName is the name of a ClusterRole granting
+	// the orchestrator access to cluster-scoped resources (e.g. ClusterConfig).
+	// When set, a per-project ClusterRoleBinding is created for the orchestrator
+	// ServiceAccount. Distinct from OrchestratorClusterRoleName to avoid
+	// granting namespace-scoped resources cluster-wide via ClusterRoleBinding.
+	OrchestratorClusterAccessRoleName string `envconfig:"ORCHESTRATOR_CLUSTER_ACCESS_ROLE_NAME" default:""`
+
+	// SharedResourcesNamespace is the namespace holding shared credentials
+	// Secrets. When set and an orchestrator ServiceAccount is configured, a
+	// RoleBinding is created in that namespace so the orchestrator can read
+	// those Secrets.
+	SharedResourcesNamespace string `envconfig:"SHARED_RESOURCES_NAMESPACE" default:""`
 }
 
 func ReconcilerConfigFromEnv() ReconcilerConfig {
@@ -180,6 +193,12 @@ type reconciler struct {
 		client.Object,
 		...client.DeleteOption,
 	) error
+
+	deleteRoleBindingFn func(
+		context.Context,
+		client.Object,
+		...client.DeleteOption,
+	) error
 }
 
 // SetupReconcilerWithManager initializes a reconciler for Project resources and
@@ -260,6 +279,7 @@ func newReconciler(kubeClient client.Client, cfg ReconcilerConfig) *reconciler {
 	r.createClusterRoleBindingFn = r.client.Create
 	r.deleteClusterRoleFn = r.client.Delete
 	r.deleteClusterRoleBindingFn = r.client.Delete
+	r.deleteRoleBindingFn = r.client.Delete
 	return r
 }
 
@@ -393,6 +413,9 @@ func (r *reconciler) cleanupProject(ctx context.Context, project *kargoapi.Proje
 	if r.cfg.ManageExtendedPermissions && r.cfg.ArgoCDClusterRoleName != "" {
 		crbs[kubernetes.ShortenResourceName(fmt.Sprintf("%s-%s", r.cfg.ArgoCDClusterRoleName, project.Name))] = false
 	}
+	if r.cfg.ManageExtendedPermissions && r.cfg.OrchestratorClusterAccessRoleName != "" {
+		crbs[kubernetes.ShortenResourceName(fmt.Sprintf("%s-%s", r.cfg.OrchestratorClusterAccessRoleName, project.Name))] = false
+	}
 	for crbName, hasCR := range crbs {
 		if err := r.deleteClusterRoleBindingFn(
 			ctx,
@@ -412,6 +435,29 @@ func (r *reconciler) cleanupProject(ctx context.Context, project *kargoapi.Proje
 			&rbacv1.ClusterRole{ObjectMeta: metav1.ObjectMeta{Name: crName}},
 		); err != nil && !apierrors.IsNotFound(err) {
 			return fmt.Errorf("error deleting ClusterRole %q: %w", crName, err)
+		}
+	}
+
+	// Delete the orchestrator's RoleBinding in the shared resources namespace.
+	// This binding lives outside the project namespace and won't be cleaned up
+	// when the namespace is deleted.
+	if r.cfg.ManageExtendedPermissions &&
+		r.cfg.OrchestratorServiceAccountName != "" &&
+		r.cfg.SharedResourcesNamespace != "" {
+		rbName := kubernetes.ShortenResourceName(
+			fmt.Sprintf("%s-%s", r.cfg.OrchestratorServiceAccountName, project.Name),
+		)
+		if err := r.deleteRoleBindingFn(
+			ctx,
+			&rbacv1.RoleBinding{ObjectMeta: metav1.ObjectMeta{
+				Name:      rbName,
+				Namespace: r.cfg.SharedResourcesNamespace,
+			}},
+		); err != nil && !apierrors.IsNotFound(err) {
+			return fmt.Errorf(
+				"error deleting RoleBinding %q in shared resources namespace %q: %w",
+				rbName, r.cfg.SharedResourcesNamespace, err,
+			)
 		}
 	}
 
@@ -1167,6 +1213,34 @@ func (r *reconciler) ensureExtendedPermissions(
 
 	var clusterRoleBindings []*rbacv1.ClusterRoleBinding
 
+	if r.cfg.OrchestratorServiceAccountName != "" && r.cfg.OrchestratorClusterAccessRoleName != "" {
+		// ClusterRoleBinding for the orchestrator ServiceAccount to read
+		// cluster-scoped resources (e.g. ClusterConfig) that cannot be granted
+		// through a namespace-scoped RoleBinding.
+		clusterRoleBindings = append(clusterRoleBindings, &rbacv1.ClusterRoleBinding{
+			ObjectMeta: metav1.ObjectMeta{
+				Name: kubernetes.ShortenResourceName(
+					fmt.Sprintf("%s-%s", r.cfg.OrchestratorClusterAccessRoleName, project.Name),
+				),
+				Annotations: map[string]string{
+					rbacapi.AnnotationKeyManaged: rbacapi.AnnotationValueTrue,
+				},
+			},
+			RoleRef: rbacv1.RoleRef{
+				APIGroup: rbacv1.GroupName,
+				Kind:     "ClusterRole",
+				Name:     r.cfg.OrchestratorClusterAccessRoleName,
+			},
+			Subjects: []rbacv1.Subject{
+				{
+					Kind:      "ServiceAccount",
+					Name:      r.cfg.OrchestratorServiceAccountName,
+					Namespace: project.Name,
+				},
+			},
+		})
+	}
+
 	if r.cfg.ArgoCDServiceAccountName != "" && !r.cfg.ArgoCDWatchNamespaceOnly {
 		// ClusterRoleBinding for the Argo CD ServiceAccount to access and
 		// operate on Argo CD Application resources in any namespace.
@@ -1333,6 +1407,33 @@ func (r *reconciler) ensureExtendedPermissions(
 				},
 			},
 		})
+
+		if r.cfg.SharedResourcesNamespace != "" {
+			// RoleBinding for the orchestrator ServiceAccount to access Secrets
+			// in the shared resources namespace. This is needed so the credentials
+			// server can look up shared credentials during Promotion step execution.
+			roleBindings = append(roleBindings, &rbacv1.RoleBinding{
+				ObjectMeta: metav1.ObjectMeta{
+					Name: kubernetes.ShortenResourceName(
+						fmt.Sprintf("%s-%s", r.cfg.OrchestratorServiceAccountName, project.Name),
+					),
+					Namespace:   r.cfg.SharedResourcesNamespace,
+					Annotations: rbAnnotations,
+				},
+				RoleRef: rbacv1.RoleRef{
+					APIGroup: rbacv1.GroupName,
+					Kind:     "ClusterRole",
+					Name:     projectSecretsReaderClusterRoleName,
+				},
+				Subjects: []rbacv1.Subject{
+					{
+						Kind:      "ServiceAccount",
+						Name:      r.cfg.OrchestratorServiceAccountName,
+						Namespace: project.Name,
+					},
+				},
+			})
+		}
 	}
 
 	if r.cfg.ArgoCDServiceAccountName != "" && r.cfg.ArgoCDNamespace != "" && r.cfg.ArgoCDWatchNamespaceOnly {
