@@ -57,6 +57,9 @@ kargo delete stage --project=my-project my-stage
 
 # Delete a warehouse
 kargo delete warehouse --project=my-project my-warehouse
+
+# Delete freight
+kargo delete freight --project=my-project abc1234
 `),
 		RunE: func(cmd *cobra.Command, _ []string) error {
 			if err := cmdOpts.validate(); err != nil {
@@ -76,6 +79,7 @@ kargo delete warehouse --project=my-project my-warehouse
 	// Register subcommands.
 	cmd.AddCommand(newClusterConfigCommand(cfg, streams))
 	cmd.AddCommand(newConfigMapCommand(cfg, streams))
+	cmd.AddCommand(newFreightCommand(cfg, streams))
 	cmd.AddCommand(newGenericCredentialsCommand(cfg, streams))
 	cmd.AddCommand(newRepoCredentialsCommand(cfg, streams))
 	cmd.AddCommand(newProjectCommand(cfg, streams))
