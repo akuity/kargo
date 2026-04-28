@@ -5,6 +5,7 @@ import (
 	"fmt"
 	stdruntime "runtime"
 	"sync"
+	"time"
 
 	"github.com/spf13/cobra"
 	coordinationv1 "k8s.io/api/coordination/v1"
@@ -490,6 +491,7 @@ func (o *controllerOptions) setupReconcilers(
 		kargoMgr.GetClient(),
 		os.GetEnv("KARGO_NAMESPACE", "kargo"),
 		o.ShardName,
+		time.Duration(os.GetEnvInt("HEARTBEAT_TTL_SECONDS", 120))*time.Second,
 	)
 	if err := kargoMgr.Add(renewer); err != nil {
 		return fmt.Errorf("error registering shard liveness heartbeat renewer: %w", err)

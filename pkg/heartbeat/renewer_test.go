@@ -23,27 +23,32 @@ func TestNewRenewer(t *testing.T) {
 	testCases := []struct {
 		name           string
 		controllerName string
+		leaseDuration  time.Duration
 		assertions     func(*testing.T, *renewer)
 	}{
 		{
 			name:           "named controller",
 			controllerName: "alpha",
+			leaseDuration:  30 * time.Second,
 			assertions: func(t *testing.T, r *renewer) {
 				require.Equal(t, "alpha", r.controllerName)
 				require.Equal(t, "kargo-controller-alpha", r.leaseName)
 				require.Equal(t, testNamespace, r.namespace)
-				require.Equal(t, defaultLeaseDuration, r.leaseDuration)
-				require.Equal(t, defaultRenewInterval, r.renewInterval)
+				require.Equal(t, 30*time.Second, r.leaseDuration)
+				require.Equal(t, 10*time.Second, r.renewInterval)
 				require.NotEmpty(t, r.holderIdentity)
 			},
 		},
 		{
 			name:           "unnamed controller",
 			controllerName: "",
+			leaseDuration:  30 * time.Second,
 			assertions: func(t *testing.T, r *renewer) {
 				require.Empty(t, r.controllerName)
 				require.Equal(t, "kargo-controller-unnamed", r.leaseName)
 				require.Equal(t, testNamespace, r.namespace)
+				require.Equal(t, 30*time.Second, r.leaseDuration)
+				require.Equal(t, 10*time.Second, r.renewInterval)
 			},
 		},
 	}
@@ -55,10 +60,24 @@ func TestNewRenewer(t *testing.T) {
 				fake.NewClientBuilder().Build(),
 				testNamespace,
 				testCase.controllerName,
+				testCase.leaseDuration,
 			).(*renewer)
 			testCase.assertions(t, r)
 		})
 	}
+
+	t.Run("non-positive lease duration panics", func(t *testing.T) {
+		for _, d := range []time.Duration{0, -1 * time.Second} {
+			require.Panics(t, func() {
+				NewRenewer(
+					fake.NewClientBuilder().Build(),
+					testNamespace,
+					"alpha",
+					d,
+				)
+			})
+		}
+	})
 }
 
 func TestRenewer_Start(t *testing.T) {
@@ -73,8 +92,8 @@ func TestRenewer_Start(t *testing.T) {
 		controllerName: "alpha",
 		leaseName:      "kargo-controller-alpha",
 		holderIdentity: "test-holder",
-		leaseDuration:  defaultLeaseDuration,
-		renewInterval:  10 * time.Millisecond,
+		leaseDuration:  30 * time.Second,
+		renewInterval:  10 * time.Millisecond, // Short interval to speed up the test
 	}
 
 	objKey := types.NamespacedName{Namespace: r.namespace, Name: r.leaseName}
@@ -114,6 +133,8 @@ func TestRenewer_renew(t *testing.T) {
 	const testLeaseName = "fake-lease"
 	const testHolder = "test-holder"
 
+	testLeaseDuration := 30 * time.Second
+
 	objKey := types.NamespacedName{Namespace: testNamespace, Name: testLeaseName}
 
 	old := time.Now().Add(-1 * time.Hour)
@@ -138,7 +159,7 @@ func TestRenewer_renew(t *testing.T) {
 				require.NotNil(t, lease.Spec.LeaseDurationSeconds)
 				require.Equal(
 					t,
-					int32(defaultLeaseDuration.Seconds()),
+					int32(testLeaseDuration.Seconds()),
 					*lease.Spec.LeaseDurationSeconds,
 				)
 				require.NotNil(t, lease.Spec.RenewTime)
@@ -204,7 +225,8 @@ func TestRenewer_renew(t *testing.T) {
 				namespace:      testNamespace,
 				leaseName:      testLeaseName,
 				holderIdentity: testHolder,
-				leaseDuration:  defaultLeaseDuration,
+				leaseDuration:  testLeaseDuration,
+				renewInterval:  testLeaseDuration / 3,
 			}
 			err := r.renew(t.Context())
 			require.NoError(t, err)

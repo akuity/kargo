@@ -25,15 +25,6 @@ const (
 
 	// leaseNamePrefix is prepended to the controller name to form the Lease name.
 	leaseNamePrefix = "kargo-controller-"
-
-	// defaultLeaseDuration is the validity window written into each lease.
-	// Readers consider a lease alive while now - renewTime < this value.
-	defaultLeaseDuration = 30 * time.Second
-
-	// defaultRenewInterval is how often the controller refreshes its lease.
-	// Set to roughly a third of the lease duration so a single missed
-	// renewal still leaves the lease valid.
-	defaultRenewInterval = 10 * time.Second
 )
 
 // renewer is an implementation of controller-runtime's manager.Runnable
@@ -56,7 +47,14 @@ func NewRenewer(
 	c client.Client,
 	namespace string,
 	controllerName string,
+	leaseDuration time.Duration,
 ) manager.Runnable {
+	if leaseDuration <= 0 {
+		panic(fmt.Sprintf(
+			"heartbeat: leaseDuration must be positive; got %v",
+			leaseDuration,
+		))
+	}
 	leaseName := controllerName
 	if leaseName != "" {
 		leaseName = leaseNamePrefix + controllerName
@@ -73,8 +71,10 @@ func NewRenewer(
 		controllerName: controllerName,
 		leaseName:      leaseName,
 		holderIdentity: holderIdentity,
-		leaseDuration:  defaultLeaseDuration,
-		renewInterval:  defaultRenewInterval,
+		leaseDuration:  leaseDuration,
+		// One third of the lease duration so a single missed renewal doesn't
+		// cause the controller to be considered dead.
+		renewInterval: leaseDuration / 3,
 	}
 }
 
