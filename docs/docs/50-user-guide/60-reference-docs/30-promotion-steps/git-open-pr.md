@@ -30,7 +30,16 @@ system to access the git repos.
 | `createTargetBranch` | `boolean` | N | **Deprecated**. Is a no-op if set. Will be removed in a future release.|
 | `title` | `string` | N | The title for the pull request. Kargo generates a title based on the commit messages if it is not explicitly specified. |
 | `description` | `string` | N | The description for the pull request. |
-| `labels` | `[]string` | N | Labels to add to the pull request. |
+| `labels` | `[]string` | N | Labels to add to the pull request. Not all Git providers support labels; see the note below. |
+
+:::note
+
+Label support varies by Git provider. GitHub and GitLab support labels on pull
+requests. Gitea does not currently support labels (tracked in
+[#6021](https://github.com/akuity/kargo/issues/6021)). Bitbucket does not
+support pull request labels at all.
+
+:::
 
 ## Output
 
