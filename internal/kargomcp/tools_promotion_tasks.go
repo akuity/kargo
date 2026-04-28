@@ -65,7 +65,7 @@ func promotionTaskToSummary(t promotionTaskJSON) promotionTaskSummary {
 // --- list_promotion_tasks ---
 
 type listPromotionTasksArgs struct {
-	Project string `json:"project" jsonschema:"The name of the Kargo project"`
+	Project string `json:"project,omitempty" jsonschema:"The Kargo project name. Omit to use the default set by 'kargo config set-project'"`
 }
 
 func (s *Server) handleListPromotionTasks(
@@ -73,12 +73,16 @@ func (s *Server) handleListPromotionTasks(
 	_ *mcp.CallToolRequest,
 	args listPromotionTasksArgs,
 ) (*mcp.CallToolResult, any, error) {
+	project, err := s.resolveProject(args.Project)
+	if err != nil {
+		return errResult(err)
+	}
 	apiClient, err := s.apiClient(ctx)
 	if err != nil {
 		return errResult(err)
 	}
 	res, err := apiClient.Core.ListPromotionTasks(
-		core.NewListPromotionTasksParams().WithProject(args.Project),
+		core.NewListPromotionTasksParams().WithProject(project),
 		nil,
 	)
 	if err != nil {

@@ -8,10 +8,17 @@ inspect freight and promotions, and trigger or approve promotions.
 ## Build
 
 ```bash
-make build-mcp
+make build-cli
 ```
 
-Produces `bin/kargo-mcp`.
+Produces `bin/kargo`, which includes `kargo mcp serve`.
+
+A standalone `bin/kargo-mcp` binary is also available for cases where the full
+CLI is not desired:
+
+```bash
+make build-mcp
+```
 
 ## Authentication
 
@@ -35,15 +42,15 @@ error message asking you to do so.
 
 ## Configure Claude Code
 
-The project already ships a `.mcp.json` that points at `bin/kargo-mcp`:
+The project already ships a `.mcp.json` that uses `kargo mcp serve`:
 
 ```json
 {
   "mcpServers": {
     "kargo": {
       "type": "stdio",
-      "command": "bin/kargo-mcp",
-      "args": []
+      "command": "bin/kargo",
+      "args": ["mcp", "serve"]
     }
   }
 }
@@ -58,8 +65,8 @@ For a different Kargo instance, pass environment variables:
   "mcpServers": {
     "kargo-prod": {
       "type": "stdio",
-      "command": "/path/to/kargo-mcp",
-      "args": [],
+      "command": "kargo",
+      "args": ["mcp", "serve"],
       "env": {
         "KARGO_API_ADDRESS": "https://kargo.prod.example.com",
         "KARGO_API_TOKEN": "${KARGO_PROD_TOKEN}"
@@ -140,3 +147,7 @@ instance.
 - Auth is handled entirely client-side: the server reads credentials
   from `~/.config/kargo/config` (written by `kargo login`) and handles
   OIDC token refresh transparently.
+- The `project` argument is optional on all project-scoped tools. When
+  omitted, the server falls back to the default project set by
+  `kargo config set-project <project>`. If neither is provided, the tool
+  returns an error prompting the user to supply one.

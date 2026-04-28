@@ -213,12 +213,6 @@ build-ui:
 .PHONY: build-cli-with-ui
 build-cli-with-ui: build-ui build-cli
 
-.PHONY: build-mcp
-build-mcp:
-	CGO_ENABLED=0 go build \
-		-ldflags "-w -X $(VERSION_PACKAGE).version=$(VERSION) -X $(VERSION_PACKAGE).buildDate=$$(date -u +'%Y-%m-%dT%H:%M:%SZ') -X $(VERSION_PACKAGE).gitCommit=$(GIT_COMMIT) -X $(VERSION_PACKAGE).gitTreeState=$(GIT_TREE_STATE)" \
-		-o bin/kargo-mcp \
-		./cmd/kargo-mcp
 
 ################################################################################
 # Code generation: To be run after modifications to API types                  #

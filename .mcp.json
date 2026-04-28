@@ -2,8 +2,8 @@
   "mcpServers": {
     "kargo": {
       "type": "stdio",
-      "command": "bin/kargo-mcp",
-      "args": []
+      "command": "bin/kargo",
+      "args": ["mcp", "serve"]
     }
   }
 }

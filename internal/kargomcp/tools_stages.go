@@ -19,7 +19,7 @@ func (s *Server) registerStageTools() {
 		OutputSchema: mustOutputSchema[struct {
 			Items []stageSummary `json:"items"`
 		}](),
-		Annotations:  readOnly(),
+		Annotations: readOnly(),
 	}, s.handleListStages)
 
 	mcp.AddTool(s.mcpServer, &mcp.Tool{
@@ -52,7 +52,7 @@ func (s *Server) registerStageTools() {
 // --- list_stages ---
 
 type listStagesArgs struct {
-	Project    string   `json:"project" jsonschema:"The name of the Kargo project"`
+	Project    string   `json:"project,omitempty" jsonschema:"The Kargo project name. Omit to use the default set by 'kargo config set-project'"`
 	Warehouses []string `json:"warehouses,omitempty" jsonschema:"Filter to stages that request freight from these warehouses"`
 	Health     string   `json:"health,omitempty" jsonschema:"Filter by health status: Healthy, Unhealthy, or Unknown"`
 }
@@ -83,12 +83,12 @@ type stageJSON struct {
 }
 
 type stageSummary struct {
-	Name              string              `json:"name"`
-	Health            string              `json:"health,omitempty"`
-	HealthIssues      []string            `json:"healthIssues,omitempty"`
-	CurrentFreight    string              `json:"currentFreight,omitempty"`
-	CurrentPromotion  string              `json:"currentPromotion,omitempty"`
-	LastPromotion     *lastPromotionBrief `json:"lastPromotion,omitempty"`
+	Name             string              `json:"name"`
+	Health           string              `json:"health,omitempty"`
+	HealthIssues     []string            `json:"healthIssues,omitempty"`
+	CurrentFreight   string              `json:"currentFreight,omitempty"`
+	CurrentPromotion string              `json:"currentPromotion,omitempty"`
+	LastPromotion    *lastPromotionBrief `json:"lastPromotion,omitempty"`
 }
 
 type lastPromotionBrief struct {
@@ -122,11 +122,15 @@ func (s *Server) handleListStages(
 	_ *mcp.CallToolRequest,
 	args listStagesArgs,
 ) (*mcp.CallToolResult, any, error) {
+	project, err := s.resolveProject(args.Project)
+	if err != nil {
+		return errResult(err)
+	}
 	apiClient, err := s.apiClient(ctx)
 	if err != nil {
 		return errResult(err)
 	}
-	params := core.NewListStagesParams().WithProject(args.Project)
+	params := core.NewListStagesParams().WithProject(project)
 	if len(args.Warehouses) > 0 {
 		params = params.WithFreightOrigins(args.Warehouses)
 	}
@@ -172,7 +176,7 @@ func (s *Server) handleListStages(
 // --- get_stage ---
 
 type getStageArgs struct {
-	Project string `json:"project" jsonschema:"The name of the Kargo project"`
+	Project string `json:"project,omitempty" jsonschema:"The Kargo project name. Omit to use the default set by 'kargo config set-project'"`
 	Stage   string `json:"stage" jsonschema:"The name of the stage"`
 }
 
@@ -215,12 +219,16 @@ func (s *Server) handleGetStage(
 	_ *mcp.CallToolRequest,
 	args getStageArgs,
 ) (*mcp.CallToolResult, any, error) {
+	project, err := s.resolveProject(args.Project)
+	if err != nil {
+		return errResult(err)
+	}
 	apiClient, err := s.apiClient(ctx)
 	if err != nil {
 		return errResult(err)
 	}
 	res, err := apiClient.Core.GetStage(
-		core.NewGetStageParams().WithProject(args.Project).WithStage(args.Stage),
+		core.NewGetStageParams().WithProject(project).WithStage(args.Stage),
 		nil,
 	)
 	if err != nil {
@@ -232,7 +240,7 @@ func (s *Server) handleGetStage(
 // --- get_stage_freight_history ---
 
 type getStageFreightHistoryArgs struct {
-	Project string `json:"project" jsonschema:"The name of the Kargo project"`
+	Project string `json:"project,omitempty" jsonschema:"The Kargo project name. Omit to use the default set by 'kargo config set-project'"`
 	Stage   string `json:"stage" jsonschema:"The name of the stage"`
 }
 
@@ -254,12 +262,16 @@ func (s *Server) handleGetStageFreightHistory(
 	_ *mcp.CallToolRequest,
 	args getStageFreightHistoryArgs,
 ) (*mcp.CallToolResult, any, error) {
+	project, err := s.resolveProject(args.Project)
+	if err != nil {
+		return errResult(err)
+	}
 	apiClient, err := s.apiClient(ctx)
 	if err != nil {
 		return errResult(err)
 	}
 	res, err := apiClient.Core.GetStage(
-		core.NewGetStageParams().WithProject(args.Project).WithStage(args.Stage),
+		core.NewGetStageParams().WithProject(project).WithStage(args.Stage),
 		nil,
 	)
 	if err != nil {
@@ -301,7 +313,7 @@ func (s *Server) handleGetStageFreightHistory(
 // --- refresh_stage ---
 
 type refreshStageArgs struct {
-	Project string `json:"project" jsonschema:"The name of the Kargo project"`
+	Project string `json:"project,omitempty" jsonschema:"The Kargo project name. Omit to use the default set by 'kargo config set-project'"`
 	Stage   string `json:"stage" jsonschema:"The name of the stage to refresh"`
 }
 
@@ -310,12 +322,16 @@ func (s *Server) handleRefreshStage(
 	_ *mcp.CallToolRequest,
 	args refreshStageArgs,
 ) (*mcp.CallToolResult, any, error) {
+	project, err := s.resolveProject(args.Project)
+	if err != nil {
+		return errResult(err)
+	}
 	apiClient, err := s.apiClient(ctx)
 	if err != nil {
 		return errResult(err)
 	}
 	_, err = apiClient.Core.RefreshStage(
-		core.NewRefreshStageParams().WithProject(args.Project).WithStage(args.Stage),
+		core.NewRefreshStageParams().WithProject(project).WithStage(args.Stage),
 		nil,
 	)
 	if err != nil {

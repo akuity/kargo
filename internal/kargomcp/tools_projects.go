@@ -109,7 +109,7 @@ func (s *Server) handleListProjects(
 // --- get_project ---
 
 type getProjectArgs struct {
-	Project string `json:"project" jsonschema:"The name of the Kargo project"`
+	Project string `json:"project,omitempty" jsonschema:"The Kargo project name. Omit to use the default set by 'kargo config set-project'"`
 }
 
 type projectCondition struct {
@@ -145,12 +145,16 @@ func (s *Server) handleGetProject(
 	_ *mcp.CallToolRequest,
 	args getProjectArgs,
 ) (*mcp.CallToolResult, any, error) {
+	project, err := s.resolveProject(args.Project)
+	if err != nil {
+		return errResult(err)
+	}
 	apiClient, err := s.apiClient(ctx)
 	if err != nil {
 		return errResult(err)
 	}
 	res, err := apiClient.Core.GetProject(
-		core.NewGetProjectParams().WithProject(args.Project),
+		core.NewGetProjectParams().WithProject(project),
 		nil,
 	)
 	if err != nil {

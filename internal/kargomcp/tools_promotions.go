@@ -20,7 +20,7 @@ func (s *Server) registerPromotionTools() {
 		OutputSchema: mustOutputSchema[struct {
 			Items []promotionSummary `json:"items"`
 		}](),
-		Annotations:  readOnly(),
+		Annotations: readOnly(),
 	}, s.handleListPromotions)
 
 	mcp.AddTool(s.mcpServer, &mcp.Tool{
@@ -45,7 +45,7 @@ func (s *Server) registerPromotionTools() {
 		OutputSchema: mustOutputSchema[struct {
 			Items []promotionSummary `json:"items"`
 		}](),
-		Annotations:  destructive(),
+		Annotations: destructive(),
 	}, s.handlePromoteDownstream)
 
 	mcp.AddTool(s.mcpServer, &mcp.Tool{
@@ -59,7 +59,7 @@ func (s *Server) registerPromotionTools() {
 // --- list_promotions ---
 
 type listPromotionsArgs struct {
-	Project string  `json:"project" jsonschema:"The name of the Kargo project"`
+	Project string  `json:"project,omitempty" jsonschema:"The Kargo project name. Omit to use the default set by 'kargo config set-project'"`
 	Stage   *string `json:"stage,omitempty" jsonschema:"Filter to promotions targeting this stage"`
 	Phase   string  `json:"phase,omitempty" jsonschema:"Filter by phase: Running, Succeeded, Failed, Errored, Pending, Aborted"`
 }
@@ -125,11 +125,15 @@ func (s *Server) handleListPromotions(
 	_ *mcp.CallToolRequest,
 	args listPromotionsArgs,
 ) (*mcp.CallToolResult, any, error) {
+	project, err := s.resolveProject(args.Project)
+	if err != nil {
+		return errResult(err)
+	}
 	apiClient, err := s.apiClient(ctx)
 	if err != nil {
 		return errResult(err)
 	}
-	params := core.NewListPromotionsParams().WithProject(args.Project)
+	params := core.NewListPromotionsParams().WithProject(project)
 	if args.Stage != nil {
 		params = params.WithStage(args.Stage)
 	}
@@ -171,7 +175,7 @@ func filterRawsByPhase(raws []json.RawMessage, phase string) []json.RawMessage {
 // --- get_promotion ---
 
 type getPromotionArgs struct {
-	Project   string `json:"project" jsonschema:"The name of the Kargo project"`
+	Project   string `json:"project,omitempty" jsonschema:"The Kargo project name. Omit to use the default set by 'kargo config set-project'"`
 	Promotion string `json:"promotion" jsonschema:"The name of the promotion"`
 }
 
@@ -180,12 +184,16 @@ func (s *Server) handleGetPromotion(
 	_ *mcp.CallToolRequest,
 	args getPromotionArgs,
 ) (*mcp.CallToolResult, any, error) {
+	project, err := s.resolveProject(args.Project)
+	if err != nil {
+		return errResult(err)
+	}
 	apiClient, err := s.apiClient(ctx)
 	if err != nil {
 		return errResult(err)
 	}
 	res, err := apiClient.Core.GetPromotion(
-		core.NewGetPromotionParams().WithProject(args.Project).WithPromotion(args.Promotion),
+		core.NewGetPromotionParams().WithProject(project).WithPromotion(args.Promotion),
 		nil,
 	)
 	if err != nil {
@@ -197,7 +205,7 @@ func (s *Server) handleGetPromotion(
 // --- promote_to_stage ---
 
 type promoteToStageArgs struct {
-	Project      string `json:"project" jsonschema:"The name of the Kargo project"`
+	Project      string `json:"project,omitempty" jsonschema:"The Kargo project name. Omit to use the default set by 'kargo config set-project'"`
 	Stage        string `json:"stage" jsonschema:"The name of the stage to promote the freight to"`
 	Freight      string `json:"freight,omitempty" jsonschema:"The name of the piece of freight to promote"`
 	FreightAlias string `json:"freight_alias,omitempty" jsonschema:"The alias of the piece of freight to promote"`
@@ -211,13 +219,17 @@ func (s *Server) handlePromoteToStage(
 	if args.Freight == "" && args.FreightAlias == "" {
 		return errResult(fmt.Errorf("either freight or freight_alias is required"))
 	}
+	project, err := s.resolveProject(args.Project)
+	if err != nil {
+		return errResult(err)
+	}
 	apiClient, err := s.apiClient(ctx)
 	if err != nil {
 		return errResult(err)
 	}
 	res, err := apiClient.Core.PromoteToStage(
 		core.NewPromoteToStageParams().
-			WithProject(args.Project).
+			WithProject(project).
 			WithStage(args.Stage).
 			WithBody(&models.PromoteToStageRequest{
 				Freight:      args.Freight,
@@ -234,7 +246,7 @@ func (s *Server) handlePromoteToStage(
 // --- promote_downstream ---
 
 type promoteDownstreamArgs struct {
-	Project      string `json:"project" jsonschema:"The name of the Kargo project"`
+	Project      string `json:"project,omitempty" jsonschema:"The Kargo project name. Omit to use the default set by 'kargo config set-project'"`
 	Stage        string `json:"stage" jsonschema:"The upstream stage whose immediately downstream stages will receive the freight"`
 	Freight      string `json:"freight,omitempty" jsonschema:"The name of the piece of freight to promote"`
 	FreightAlias string `json:"freight_alias,omitempty" jsonschema:"The alias of the piece of freight to promote"`
@@ -248,13 +260,17 @@ func (s *Server) handlePromoteDownstream(
 	if args.Freight == "" && args.FreightAlias == "" {
 		return errResult(fmt.Errorf("either freight or freight_alias is required"))
 	}
+	project, err := s.resolveProject(args.Project)
+	if err != nil {
+		return errResult(err)
+	}
 	apiClient, err := s.apiClient(ctx)
 	if err != nil {
 		return errResult(err)
 	}
 	res, err := apiClient.Core.PromoteDownstream(
 		core.NewPromoteDownstreamParams().
-			WithProject(args.Project).
+			WithProject(project).
 			WithStage(args.Stage).
 			WithBody(&models.PromoteDownstreamRequest{
 				Freight:      args.Freight,
@@ -271,7 +287,7 @@ func (s *Server) handlePromoteDownstream(
 // --- abort_promotion ---
 
 type abortPromotionArgs struct {
-	Project   string `json:"project" jsonschema:"The name of the Kargo project"`
+	Project   string `json:"project,omitempty" jsonschema:"The Kargo project name. Omit to use the default set by 'kargo config set-project'"`
 	Promotion string `json:"promotion" jsonschema:"The name of the promotion to abort"`
 }
 
@@ -280,12 +296,16 @@ func (s *Server) handleAbortPromotion(
 	_ *mcp.CallToolRequest,
 	args abortPromotionArgs,
 ) (*mcp.CallToolResult, any, error) {
+	project, err := s.resolveProject(args.Project)
+	if err != nil {
+		return errResult(err)
+	}
 	apiClient, err := s.apiClient(ctx)
 	if err != nil {
 		return errResult(err)
 	}
 	_, err = apiClient.Core.AbortPromotion(
-		core.NewAbortPromotionParams().WithProject(args.Project).WithPromotion(args.Promotion),
+		core.NewAbortPromotionParams().WithProject(project).WithPromotion(args.Promotion),
 		nil,
 	)
 	if err != nil {

@@ -17,7 +17,7 @@ func (s *Server) registerFreightTools() {
 		OutputSchema: mustOutputSchema[struct {
 			Items []freightSummary `json:"items"`
 		}](),
-		Annotations:  readOnly(),
+		Annotations: readOnly(),
 	}, s.handleListFreight)
 
 	mcp.AddTool(s.mcpServer, &mcp.Tool{
@@ -38,7 +38,7 @@ func (s *Server) registerFreightTools() {
 // --- list_freight ---
 
 type listFreightArgs struct {
-	Project string   `json:"project" jsonschema:"The name of the Kargo project"`
+	Project string   `json:"project,omitempty" jsonschema:"The Kargo project name. Omit to use the default set by 'kargo config set-project'"`
 	Stage   *string  `json:"stage,omitempty" jsonschema:"Filter to freight available (eligible) for promotion to this stage"`
 	Origins []string `json:"origins,omitempty" jsonschema:"Filter by origin warehouse names"`
 }
@@ -131,11 +131,15 @@ func (s *Server) handleListFreight(
 	_ *mcp.CallToolRequest,
 	args listFreightArgs,
 ) (*mcp.CallToolResult, any, error) {
+	project, err := s.resolveProject(args.Project)
+	if err != nil {
+		return errResult(err)
+	}
 	apiClient, err := s.apiClient(ctx)
 	if err != nil {
 		return errResult(err)
 	}
-	params := core.NewQueryFreightsRestParams().WithProject(args.Project)
+	params := core.NewQueryFreightsRestParams().WithProject(project)
 	if args.Stage != nil {
 		params = params.WithStage(args.Stage)
 	}
@@ -173,7 +177,7 @@ func flattenFreightGroups(payload any) []json.RawMessage {
 // --- get_freight ---
 
 type getFreightArgs struct {
-	Project            string `json:"project" jsonschema:"The name of the Kargo project"`
+	Project            string `json:"project,omitempty" jsonschema:"The Kargo project name. Omit to use the default set by 'kargo config set-project'"`
 	FreightNameOrAlias string `json:"freight" jsonschema:"The name or alias of the piece of freight"`
 }
 
@@ -204,10 +208,10 @@ type freightOrigin struct {
 }
 
 type freightResult struct {
-	Name    string          `json:"name,omitempty"`
-	Alias   string          `json:"alias,omitempty"`
-	Project string          `json:"namespace,omitempty"`
-	Origin  *freightOrigin  `json:"origin,omitempty"`
+	Name    string           `json:"name,omitempty"`
+	Alias   string           `json:"alias,omitempty"`
+	Project string           `json:"namespace,omitempty"`
+	Origin  *freightOrigin   `json:"origin,omitempty"`
 	Commits []*freightCommit `json:"commits,omitempty"`
 	Images  []*freightImage  `json:"images,omitempty"`
 	Charts  []*freightChart  `json:"charts,omitempty"`
@@ -218,13 +222,17 @@ func (s *Server) handleGetFreight(
 	_ *mcp.CallToolRequest,
 	args getFreightArgs,
 ) (*mcp.CallToolResult, any, error) {
+	project, err := s.resolveProject(args.Project)
+	if err != nil {
+		return errResult(err)
+	}
 	apiClient, err := s.apiClient(ctx)
 	if err != nil {
 		return errResult(err)
 	}
 	res, err := apiClient.Core.GetFreight(
 		core.NewGetFreightParams().
-			WithProject(args.Project).
+			WithProject(project).
 			WithFreightNameOrAlias(args.FreightNameOrAlias),
 		nil,
 	)
@@ -237,7 +245,7 @@ func (s *Server) handleGetFreight(
 // --- approve_freight ---
 
 type approveFreightArgs struct {
-	Project            string `json:"project" jsonschema:"The name of the Kargo project"`
+	Project            string `json:"project,omitempty" jsonschema:"The Kargo project name. Omit to use the default set by 'kargo config set-project'"`
 	FreightNameOrAlias string `json:"freight" jsonschema:"The name or alias of the piece of freight to approve"`
 	Stage              string `json:"stage" jsonschema:"The name of the stage to approve the freight for"`
 }
@@ -247,13 +255,17 @@ func (s *Server) handleApproveFreight(
 	_ *mcp.CallToolRequest,
 	args approveFreightArgs,
 ) (*mcp.CallToolResult, any, error) {
+	project, err := s.resolveProject(args.Project)
+	if err != nil {
+		return errResult(err)
+	}
 	apiClient, err := s.apiClient(ctx)
 	if err != nil {
 		return errResult(err)
 	}
 	_, err = apiClient.Core.ApproveFreight(
 		core.NewApproveFreightParams().
-			WithProject(args.Project).
+			WithProject(project).
 			WithFreightNameOrAlias(args.FreightNameOrAlias).
 			WithStage(args.Stage),
 		nil,

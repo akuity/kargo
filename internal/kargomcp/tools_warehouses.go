@@ -11,12 +11,12 @@ import (
 
 func (s *Server) registerWarehouseTools() {
 	mcp.AddTool(s.mcpServer, &mcp.Tool{
-		Name:         "list_warehouses",
-		Description:  "List warehouses in a Kargo project. Returns a compact summary per warehouse.",
+		Name:        "list_warehouses",
+		Description: "List warehouses in a Kargo project. Returns a compact summary per warehouse.",
 		OutputSchema: mustOutputSchema[struct {
 			Items []warehouseSummary `json:"items"`
 		}](),
-		Annotations:  readOnly(),
+		Annotations: readOnly(),
 	}, s.handleListWarehouses)
 
 	mcp.AddTool(s.mcpServer, &mcp.Tool{
@@ -37,7 +37,7 @@ func (s *Server) registerWarehouseTools() {
 // --- list_warehouses ---
 
 type listWarehousesArgs struct {
-	Project string `json:"project" jsonschema:"The name of the Kargo project"`
+	Project string `json:"project,omitempty" jsonschema:"The Kargo project name. Omit to use the default set by 'kargo config set-project'"`
 }
 
 type warehouseJSON struct {
@@ -77,12 +77,16 @@ func (s *Server) handleListWarehouses(
 	_ *mcp.CallToolRequest,
 	args listWarehousesArgs,
 ) (*mcp.CallToolResult, any, error) {
+	project, err := s.resolveProject(args.Project)
+	if err != nil {
+		return errResult(err)
+	}
 	apiClient, err := s.apiClient(ctx)
 	if err != nil {
 		return errResult(err)
 	}
 	res, err := apiClient.Core.ListWarehouses(
-		core.NewListWarehousesParams().WithProject(args.Project),
+		core.NewListWarehousesParams().WithProject(project),
 		nil,
 	)
 	if err != nil {
@@ -109,7 +113,7 @@ func (s *Server) handleListWarehouses(
 // --- get_warehouse ---
 
 type getWarehouseArgs struct {
-	Project   string `json:"project" jsonschema:"The name of the Kargo project"`
+	Project   string `json:"project,omitempty" jsonschema:"The Kargo project name. Omit to use the default set by 'kargo config set-project'"`
 	Warehouse string `json:"warehouse" jsonschema:"The name of the warehouse"`
 }
 
@@ -131,12 +135,16 @@ func (s *Server) handleGetWarehouse(
 	_ *mcp.CallToolRequest,
 	args getWarehouseArgs,
 ) (*mcp.CallToolResult, any, error) {
+	project, err := s.resolveProject(args.Project)
+	if err != nil {
+		return errResult(err)
+	}
 	apiClient, err := s.apiClient(ctx)
 	if err != nil {
 		return errResult(err)
 	}
 	res, err := apiClient.Core.GetWarehouse(
-		core.NewGetWarehouseParams().WithProject(args.Project).WithWarehouse(args.Warehouse),
+		core.NewGetWarehouseParams().WithProject(project).WithWarehouse(args.Warehouse),
 		nil,
 	)
 	if err != nil {
@@ -148,7 +156,7 @@ func (s *Server) handleGetWarehouse(
 // --- refresh_warehouse ---
 
 type refreshWarehouseArgs struct {
-	Project   string `json:"project" jsonschema:"The name of the Kargo project"`
+	Project   string `json:"project,omitempty" jsonschema:"The Kargo project name. Omit to use the default set by 'kargo config set-project'"`
 	Warehouse string `json:"warehouse" jsonschema:"The name of the warehouse to refresh"`
 }
 
@@ -157,12 +165,16 @@ func (s *Server) handleRefreshWarehouse(
 	_ *mcp.CallToolRequest,
 	args refreshWarehouseArgs,
 ) (*mcp.CallToolResult, any, error) {
+	project, err := s.resolveProject(args.Project)
+	if err != nil {
+		return errResult(err)
+	}
 	apiClient, err := s.apiClient(ctx)
 	if err != nil {
 		return errResult(err)
 	}
 	_, err = apiClient.Core.RefreshWarehouse(
-		core.NewRefreshWarehouseParams().WithProject(args.Project).WithWarehouse(args.Warehouse),
+		core.NewRefreshWarehouseParams().WithProject(project).WithWarehouse(args.Warehouse),
 		nil,
 	)
 	if err != nil {
