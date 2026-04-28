@@ -564,6 +564,129 @@ func TestReconciler_cleanupProject(t *testing.T) {
 			},
 		},
 		{
+			name: "deletes orchestrator cluster access ClusterRoleBinding",
+			project: &kargoapi.Project{
+				ObjectMeta: metav1.ObjectMeta{
+					Name: "test-project",
+				},
+			},
+			reconciler: &reconciler{
+				cfg: ReconcilerConfig{
+					ManageExtendedPermissions:         true,
+					OrchestratorClusterAccessRoleName: "test-cluster-access",
+				},
+				deleteClusterRoleBindingFn: func(
+					_ context.Context,
+					obj client.Object,
+					_ ...client.DeleteOption,
+				) error {
+					name := obj.GetName()
+					if name != kubernetes.ShortenResourceName("kargo-project-admin-test-project") &&
+						name != kubernetes.ShortenResourceName("test-cluster-access-test-project") {
+						return fmt.Errorf("unexpected ClusterRoleBinding name: %s", name)
+					}
+					return nil
+				},
+				deleteClusterRoleFn: func(
+					_ context.Context,
+					obj client.Object,
+					_ ...client.DeleteOption,
+				) error {
+					name := obj.GetName()
+					if name != kubernetes.ShortenResourceName("kargo-project-admin-test-project") {
+						return fmt.Errorf("unexpected ClusterRole name: %s", name)
+					}
+					return nil
+				},
+				deleteRoleBindingFn: func(
+					context.Context,
+					client.Object,
+					...client.DeleteOption,
+				) error {
+					return nil
+				},
+				getNamespaceFn: func(
+					context.Context,
+					types.NamespacedName,
+					client.Object,
+					...client.GetOption,
+				) error {
+					return apierrors.NewNotFound(schema.GroupResource{}, "test-project")
+				},
+				removeFinalizerFn: func(
+					context.Context,
+					client.Client,
+					client.Object,
+				) error {
+					return nil
+				},
+			},
+			assertions: func(t *testing.T, err error) {
+				require.NoError(t, err)
+			},
+		},
+		{
+			name: "deletes shared resources RoleBinding",
+			project: &kargoapi.Project{
+				ObjectMeta: metav1.ObjectMeta{
+					Name: "test-project",
+				},
+			},
+			reconciler: &reconciler{
+				cfg: ReconcilerConfig{
+					ManageExtendedPermissions:      true,
+					OrchestratorServiceAccountName: "test-orchestrator",
+					SharedResourcesNamespace:       "kargo-shared-resources",
+				},
+				deleteClusterRoleBindingFn: func(
+					context.Context,
+					client.Object,
+					...client.DeleteOption,
+				) error {
+					return nil
+				},
+				deleteClusterRoleFn: func(
+					context.Context,
+					client.Object,
+					...client.DeleteOption,
+				) error {
+					return nil
+				},
+				deleteRoleBindingFn: func(
+					_ context.Context,
+					obj client.Object,
+					_ ...client.DeleteOption,
+				) error {
+					expectedName := kubernetes.ShortenResourceName("test-orchestrator-test-project")
+					if obj.GetName() != expectedName || obj.GetNamespace() != "kargo-shared-resources" {
+						return fmt.Errorf(
+							"unexpected RoleBinding %s/%s",
+							obj.GetNamespace(), obj.GetName(),
+						)
+					}
+					return nil
+				},
+				getNamespaceFn: func(
+					context.Context,
+					types.NamespacedName,
+					client.Object,
+					...client.GetOption,
+				) error {
+					return apierrors.NewNotFound(schema.GroupResource{}, "test-project")
+				},
+				removeFinalizerFn: func(
+					context.Context,
+					client.Client,
+					client.Object,
+				) error {
+					return nil
+				},
+			},
+			assertions: func(t *testing.T, err error) {
+				require.NoError(t, err)
+			},
+		},
+		{
 			name: "error getting namespace",
 			project: &kargoapi.Project{
 				ObjectMeta: metav1.ObjectMeta{
@@ -2251,6 +2374,71 @@ func TestReconciler_ensureExtendedPermissions(t *testing.T) {
 				require.Equal(t, "Role", rb.RoleRef.Kind)
 				require.Len(t, rb.Subjects, 1)
 				require.Equal(t, "kargo-argocd-service-account", rb.Subjects[0].Name)
+			},
+		},
+		{
+			name: "orchestrator cluster access role set - creates ClusterRoleBinding",
+			cfg: ReconcilerConfig{
+				ManageOrchestrator:                true,
+				OrchestratorServiceAccountName:    "test-orchestrator",
+				OrchestratorClusterRoleName:       "test-orchestrator-role",
+				OrchestratorClusterAccessRoleName: "test-orchestrator-cluster-access",
+			},
+			client: fake.NewClientBuilder().
+				WithScheme(scheme).
+				Build(),
+			assertions: func(t *testing.T, cl client.Client, err error) {
+				require.NoError(t, err)
+
+				crb := &rbacv1.ClusterRoleBinding{}
+				err = cl.Get(
+					t.Context(),
+					types.NamespacedName{
+						Name: kubernetes.ShortenResourceName(
+							fmt.Sprintf("test-orchestrator-cluster-access-%s", testProject.Name),
+						),
+					},
+					crb,
+				)
+				require.NoError(t, err)
+				require.Equal(t, "test-orchestrator-cluster-access", crb.RoleRef.Name)
+				require.Equal(t, rbacapi.AnnotationValueTrue, crb.Annotations[rbacapi.AnnotationKeyManaged])
+				require.Len(t, crb.Subjects, 1)
+				require.Equal(t, "test-orchestrator", crb.Subjects[0].Name)
+				require.Equal(t, testProject.Name, crb.Subjects[0].Namespace)
+			},
+		},
+		{
+			name: "shared resources namespace set - creates RoleBinding for orchestrator",
+			cfg: ReconcilerConfig{
+				ManageOrchestrator:             true,
+				OrchestratorServiceAccountName: "test-orchestrator",
+				OrchestratorClusterRoleName:    "test-orchestrator-role",
+				SharedResourcesNamespace:       "kargo-shared-resources",
+			},
+			client: fake.NewClientBuilder().
+				WithScheme(scheme).
+				Build(),
+			assertions: func(t *testing.T, cl client.Client, err error) {
+				require.NoError(t, err)
+
+				rb := &rbacv1.RoleBinding{}
+				err = cl.Get(
+					t.Context(),
+					types.NamespacedName{
+						Name: kubernetes.ShortenResourceName(
+							fmt.Sprintf("test-orchestrator-%s", testProject.Name),
+						),
+						Namespace: "kargo-shared-resources",
+					},
+					rb,
+				)
+				require.NoError(t, err)
+				require.Equal(t, projectSecretsReaderClusterRoleName, rb.RoleRef.Name)
+				require.Equal(t, rbacapi.AnnotationValueTrue, rb.Annotations[rbacapi.AnnotationKeyManaged])
+				require.Len(t, rb.Subjects, 1)
+				require.Equal(t, "test-orchestrator", rb.Subjects[0].Name)
+				require.Equal(t, testProject.Name, rb.Subjects[0].Namespace)
 			},
 		},
 		{
