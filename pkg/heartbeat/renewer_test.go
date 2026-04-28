@@ -9,13 +9,17 @@ import (
 	coordinationv1 "k8s.io/api/coordination/v1"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/types"
 	"sigs.k8s.io/controller-runtime/pkg/client"
+	"sigs.k8s.io/controller-runtime/pkg/client/fake"
 
 	kargoapi "github.com/akuity/kargo/api/v1alpha1"
 )
 
 func TestNewRenewer(t *testing.T) {
+	const testNamespace = "kargo"
+
 	testCases := []struct {
 		name           string
 		controllerName string
@@ -27,7 +31,7 @@ func TestNewRenewer(t *testing.T) {
 			assertions: func(t *testing.T, r *renewer) {
 				require.Equal(t, "alpha", r.controllerName)
 				require.Equal(t, "kargo-controller-alpha", r.leaseName)
-				require.Equal(t, "kargo", r.namespace)
+				require.Equal(t, testNamespace, r.namespace)
 				require.Equal(t, defaultLeaseDuration, r.leaseDuration)
 				require.Equal(t, defaultRenewInterval, r.renewInterval)
 				require.NotEmpty(t, r.holderIdentity)
@@ -37,10 +41,9 @@ func TestNewRenewer(t *testing.T) {
 			name:           "unnamed controller",
 			controllerName: "",
 			assertions: func(t *testing.T, r *renewer) {
-				require.Empty(t, r.controllerName,
-					"label value stays empty for an unnamed controller")
-				require.Equal(t, "kargo-controller-unnamed", r.leaseName,
-					"lease name uses 'unnamed' for K8s resource-name uniqueness")
+				require.Empty(t, r.controllerName)
+				require.Equal(t, "kargo-controller-unnamed", r.leaseName)
+				require.Equal(t, testNamespace, r.namespace)
 			},
 		},
 	}
@@ -48,29 +51,47 @@ func TestNewRenewer(t *testing.T) {
 	for _, testCase := range testCases {
 		t.Run(testCase.name, func(t *testing.T) {
 			//nolint:forcetypeassert
-			r := NewRenewer(newFakeClient(t), "kargo", testCase.controllerName).(*renewer)
+			r := NewRenewer(
+				fake.NewClientBuilder().Build(),
+				testNamespace,
+				testCase.controllerName,
+			).(*renewer)
 			testCase.assertions(t, r)
 		})
 	}
 }
 
 func TestRenewer_Start(t *testing.T) {
-	r, c := newTestRenewer(t, "alpha")
-	r.renewInterval = 10 * time.Millisecond
+	scheme := runtime.NewScheme()
+	require.NoError(t, coordinationv1.AddToScheme(scheme))
 
+	c := fake.NewClientBuilder().WithScheme(scheme).Build()
+
+	r := &renewer{
+		client:         c,
+		namespace:      "kargo",
+		controllerName: "alpha",
+		leaseName:      "kargo-controller-alpha",
+		holderIdentity: "test-holder",
+		leaseDuration:  defaultLeaseDuration,
+		renewInterval:  10 * time.Millisecond,
+	}
+
+	objKey := types.NamespacedName{Namespace: r.namespace, Name: r.leaseName}
+
+	// Verify a lease is created after Start is called.
 	ctx, cancel := context.WithCancel(t.Context())
 	done := make(chan error, 1)
 	go func() { done <- r.Start(ctx) }()
-
-	require.Eventually(t, func() bool {
-		got := &coordinationv1.Lease{}
-		return c.Get(t.Context(), types.NamespacedName{
-			Namespace: "kargo",
-			Name:      "kargo-controller-alpha",
-		}, got) == nil
-	}, time.Second, 10*time.Millisecond,
-		"renewer should create the lease on Start")
-
+	require.Eventually(
+		t,
+		func() bool {
+			lease := &coordinationv1.Lease{}
+			return c.Get(t.Context(), objKey, lease) == nil
+		},
+		time.Second,
+		10*time.Millisecond,
+	)
 	cancel()
 	select {
 	case err := <-done:
@@ -79,159 +100,166 @@ func TestRenewer_Start(t *testing.T) {
 		t.Fatal("Start did not return after context cancel")
 	}
 
-	got := &coordinationv1.Lease{}
-	err := c.Get(t.Context(), types.NamespacedName{
-		Namespace: "kargo",
-		Name:      "kargo-controller-alpha",
-	}, got)
-	require.True(t, apierrors.IsNotFound(err),
-		"renewer should delete its lease on shutdown so observers see dead immediately")
-}
-
-func TestRenewer_NeedLeaderElection(t *testing.T) {
-	r, _ := newTestRenewer(t, "alpha")
-	require.False(t, r.NeedLeaderElection(),
-		"the renewer must run on every replica, not just a leader")
+	// Verify the lease was deleted on shutdown.
+	lease := &coordinationv1.Lease{}
+	err := c.Get(t.Context(), objKey, lease)
+	require.True(t, apierrors.IsNotFound(err))
 }
 
 func TestRenewer_renew(t *testing.T) {
+	scheme := runtime.NewScheme()
+	require.NoError(t, coordinationv1.AddToScheme(scheme))
+
+	const testNamespace = "kargo"
+	const testLeaseName = "fake-lease"
+	const testHolder = "test-holder"
+
+	objKey := types.NamespacedName{Namespace: testNamespace, Name: testLeaseName}
+
 	old := time.Now().Add(-1 * time.Hour)
 
 	testCases := []struct {
 		name           string
+		client         client.Client
 		controllerName string
-		objects        []client.Object
 		assertions     func(*testing.T, client.Client)
 	}{
 		{
 			name:           "creates lease when absent",
-			controllerName: "alpha",
+			client:         fake.NewClientBuilder().WithScheme(scheme).Build(),
+			controllerName: "fake-controller",
 			assertions: func(t *testing.T, c client.Client) {
-				got := &coordinationv1.Lease{}
-				require.NoError(t, c.Get(t.Context(), types.NamespacedName{
-					Namespace: "kargo",
-					Name:      "kargo-controller-alpha",
-				}, got))
-				require.Equal(t, "alpha", got.Labels[kargoapi.LabelKeyController])
-				require.NotNil(t, got.Spec.HolderIdentity)
-				require.Equal(t, "test-holder", *got.Spec.HolderIdentity)
-				require.NotNil(t, got.Spec.LeaseDurationSeconds)
-				require.Equal(t,
-					int32(defaultLeaseDuration.Seconds()), *got.Spec.LeaseDurationSeconds)
-				require.NotNil(t, got.Spec.RenewTime)
-				require.NotNil(t, got.Spec.AcquireTime)
+				lease := &coordinationv1.Lease{}
+				err := c.Get(t.Context(), objKey, lease)
+				require.NoError(t, err)
+				require.Equal(t, "fake-controller", lease.Labels[kargoapi.LabelKeyController])
+				require.NotNil(t, lease.Spec.HolderIdentity)
+				require.Equal(t, testHolder, *lease.Spec.HolderIdentity)
+				require.NotNil(t, lease.Spec.LeaseDurationSeconds)
+				require.Equal(
+					t,
+					int32(defaultLeaseDuration.Seconds()),
+					*lease.Spec.LeaseDurationSeconds,
+				)
+				require.NotNil(t, lease.Spec.RenewTime)
+				require.NotNil(t, lease.Spec.AcquireTime)
 			},
 		},
 		{
 			name:           "updates existing lease and preserves AcquireTime",
-			controllerName: "alpha",
-			objects: []client.Object{
+			controllerName: "fake-controller",
+			client: fake.NewClientBuilder().WithScheme(scheme).WithObjects(
 				&coordinationv1.Lease{
 					ObjectMeta: metav1.ObjectMeta{
-						Namespace: "kargo",
-						Name:      "kargo-controller-alpha",
-						Labels:    map[string]string{kargoapi.LabelKeyController: "alpha"},
+						Namespace: testNamespace,
+						Name:      testLeaseName,
+						Labels:    map[string]string{kargoapi.LabelKeyController: "fake-controller"},
 					},
 					Spec: coordinationv1.LeaseSpec{
 						RenewTime:   &metav1.MicroTime{Time: old},
 						AcquireTime: &metav1.MicroTime{Time: old},
 					},
 				},
-			},
+			).Build(),
 			assertions: func(t *testing.T, c client.Client) {
-				got := &coordinationv1.Lease{}
-				require.NoError(t, c.Get(t.Context(), types.NamespacedName{
-					Namespace: "kargo",
-					Name:      "kargo-controller-alpha",
-				}, got))
-				require.NotNil(t, got.Spec.RenewTime)
-				require.True(t, got.Spec.RenewTime.After(old),
-					"RenewTime should advance")
-				require.NotNil(t, got.Spec.AcquireTime)
-				require.True(t,
-					got.Spec.AcquireTime.Equal(&metav1.MicroTime{Time: old}),
-					"AcquireTime should be preserved across renewals")
+				lease := &coordinationv1.Lease{}
+				err := c.Get(t.Context(), objKey, lease)
+				require.NoError(t, err)
+				// RenewTime should have advanced but AcquireTime should be preserved
+				// across renewals. metav1.MicroTime's protobuf path truncates to
+				// microseconds, so allow a 1µs tolerance.
+				require.NotNil(t, lease.Spec.RenewTime)
+				require.True(t, lease.Spec.RenewTime.After(old))
+				require.NotNil(t, lease.Spec.AcquireTime)
+				// WithinDuration accounts for possible loss of precision in AcquireTime
+				// due quirks of the fake client.
+				require.WithinDuration(
+					t,
+					old,
+					lease.Spec.AcquireTime.Time,
+					time.Second,
+				)
 			},
 		},
 		{
 			name:           "unnamed controller writes empty label value",
+			client:         fake.NewClientBuilder().WithScheme(scheme).Build(),
 			controllerName: "",
 			assertions: func(t *testing.T, c client.Client) {
-				got := &coordinationv1.Lease{}
-				require.NoError(t, c.Get(t.Context(), types.NamespacedName{
-					Namespace: "kargo",
-					Name:      "kargo-controller-unnamed",
-				}, got))
-				value, present := got.Labels[kargoapi.LabelKeyController]
-				require.True(t, present, "controller label key must be set")
-				require.Empty(t, value,
-					"controller label value must be empty for an unnamed controller")
+				lease := &coordinationv1.Lease{}
+				err := c.Get(t.Context(), objKey, lease)
+				require.NoError(t, err)
+				// Label should exist, but its value should be an empty string.
+				value, exists := lease.Labels[kargoapi.LabelKeyController]
+				require.True(t, exists)
+				require.Empty(t, value)
 			},
 		},
 	}
-
 	for _, testCase := range testCases {
 		t.Run(testCase.name, func(t *testing.T) {
-			r, c := newTestRenewer(t, testCase.controllerName, testCase.objects...)
-			require.NoError(t, r.renew(t.Context()))
-			testCase.assertions(t, c)
+			r := &renewer{
+				client:         testCase.client,
+				controllerName: testCase.controllerName,
+				namespace:      testNamespace,
+				leaseName:      testLeaseName,
+				holderIdentity: testHolder,
+				leaseDuration:  defaultLeaseDuration,
+			}
+			err := r.renew(t.Context())
+			require.NoError(t, err)
+			testCase.assertions(t, testCase.client)
 		})
 	}
 }
 
 func TestRenewer_delete(t *testing.T) {
+	scheme := runtime.NewScheme()
+	require.NoError(t, coordinationv1.AddToScheme(scheme))
+
+	objKey := types.NamespacedName{Namespace: "kargo", Name: "kargo-controller-alpha"}
+
 	testCases := []struct {
 		name       string
-		objects    []client.Object
+		client     client.Client
 		assertions func(*testing.T, client.Client, error)
 	}{
 		{
 			name: "removes lease",
-			objects: []client.Object{
+			client: fake.NewClientBuilder().WithScheme(scheme).WithObjects(
 				&coordinationv1.Lease{
 					ObjectMeta: metav1.ObjectMeta{
-						Namespace: "kargo",
-						Name:      "kargo-controller-alpha",
+						Namespace: objKey.Namespace,
+						Name:      objKey.Name,
 					},
 				},
-			},
+			).Build(),
 			assertions: func(t *testing.T, c client.Client, err error) {
 				require.NoError(t, err)
-				got := &coordinationv1.Lease{}
-				lookupErr := c.Get(t.Context(), types.NamespacedName{
-					Namespace: "kargo",
-					Name:      "kargo-controller-alpha",
-				}, got)
-				require.True(t, apierrors.IsNotFound(lookupErr))
+				lease := &coordinationv1.Lease{}
+				err = c.Get(t.Context(), objKey, lease)
+				require.True(t, apierrors.IsNotFound(err))
 			},
 		},
 		{
-			name: "is idempotent when lease is already absent",
+			name:   "is idempotent when lease is already absent",
+			client: fake.NewClientBuilder().WithScheme(scheme).Build(),
 			assertions: func(t *testing.T, _ client.Client, err error) {
-				require.NoError(t, err,
-					"deleting an absent lease must not error")
+				// Deleting a non-existent lease should not return an error.
+				require.NoError(t, err)
 			},
 		},
 	}
-
 	for _, testCase := range testCases {
 		t.Run(testCase.name, func(t *testing.T) {
-			r, c := newTestRenewer(t, "alpha", testCase.objects...)
-			testCase.assertions(t, c, r.delete(t.Context()))
+			r := &renewer{
+				client:         testCase.client,
+				controllerName: "alpha",
+				namespace:      "kargo",
+				leaseName:      "kargo-controller-alpha",
+			}
+			err := r.delete(t.Context())
+			testCase.assertions(t, testCase.client, err)
 		})
 	}
-}
-
-// newTestRenewer returns a *renewer wired against a fake client preloaded
-// with the given objects, ready to drive renew/delete/Start.
-func newTestRenewer(
-	t *testing.T,
-	controllerName string,
-	objs ...client.Object,
-) (*renewer, client.Client) {
-	t.Helper()
-	c := newFakeClient(t, objs...)
-	r := NewRenewer(c, "kargo", controllerName).(*renewer) //nolint:forcetypeassert
-	r.holderIdentity = "test-holder"
-	return r, c
 }

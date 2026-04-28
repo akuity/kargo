@@ -130,10 +130,14 @@ func (r *renewer) renew(ctx context.Context) error {
 	durationSeconds := int32(r.leaseDuration.Seconds()) //nolint:gosec
 
 	cur := &coordinationv1.Lease{}
-	err := r.client.Get(ctx, types.NamespacedName{
-		Name:      r.leaseName,
-		Namespace: r.namespace,
-	}, cur)
+	err := r.client.Get(
+		ctx,
+		types.NamespacedName{
+			Name:      r.leaseName,
+			Namespace: r.namespace,
+		},
+		cur,
+	)
 	if apierrors.IsNotFound(err) {
 		return r.client.Create(
 			ctx,
@@ -172,12 +176,12 @@ func (r *renewer) renew(ctx context.Context) error {
 }
 
 func (r *renewer) delete(ctx context.Context) error {
-	if err := r.client.Delete(ctx, &coordinationv1.Lease{
-		ObjectMeta: metav1.ObjectMeta{
-			Name:      r.leaseName,
-			Namespace: r.namespace,
+	if err := r.client.Delete(
+		ctx,
+		&coordinationv1.Lease{
+			ObjectMeta: metav1.ObjectMeta{Name: r.leaseName, Namespace: r.namespace},
 		},
-	}); !apierrors.IsNotFound(err) {
+	); !apierrors.IsNotFound(err) {
 		return err
 	}
 	return nil
