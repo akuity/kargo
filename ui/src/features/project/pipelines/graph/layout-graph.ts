@@ -6,8 +6,7 @@ import { RepoSubscription, Stage, Warehouse } from '@ui/gen/api/v1alpha1/generat
 
 import { repoSubscriptionIndexer, stageIndexer, warehouseIndexer } from './node-indexer';
 import { repoSubscriptionLabelling, stageLabelling, warehouseLabelling } from './node-labeling';
-import { pickMaxSize, repoSubscriptionSizer, stageSizer, warehouseSizer } from './node-sizer';
-import { DimensionState } from './use-node-dimension-state';
+import { repoSubscriptionSizer, stageSizer, warehouseSizer } from './node-sizer';
 
 export type GraphMeta = {
   warehouse?: WarehouseExpanded;
@@ -28,7 +27,6 @@ export const layoutGraph = (
     warehouses: WarehouseExpanded[];
     ignore?: (w: WarehouseExpanded) => boolean;
   },
-  dimensionState: DimensionState,
   warehouseColorMap?: ColorMap,
   hideSubscriptions?: Record<string, boolean>
 ) => {
@@ -59,7 +57,7 @@ export const layoutGraph = (
     const warehouseNodeIndex = warehouseIndexer.index(w);
     graph.setNode(warehouseNodeIndex, {
       ...warehouseLabelling.label(w),
-      ...pickMaxSize(warehouseSizer.size(), dimensionState[warehouseNodeIndex] || {}),
+      ...warehouseSizer.size(),
       height: maxStageHeight
     });
 
@@ -72,7 +70,7 @@ export const layoutGraph = (
 
       graph.setNode(subscriptionNodeIndex, {
         ...repoSubscriptionLabelling.label(w, s),
-        ...pickMaxSize(repoSubscriptionSizer.size(), dimensionState[subscriptionNodeIndex] || {}),
+        ...repoSubscriptionSizer.size(),
         height: maxSubscriptionHeight
       });
 
@@ -89,7 +87,7 @@ export const layoutGraph = (
 
     graph.setNode(stageNodeIndex, {
       ...stageLabelling.label(s),
-      ...pickMaxSize(stageSizer.size(), dimensionState[stageNodeIndex] || {}),
+      ...stageSizer.size(),
       height: maxStageHeight
     });
 
