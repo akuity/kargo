@@ -28,7 +28,14 @@ export default defineConfig({
     preprocessorOptions: {
       less: {
         javascriptEnabled: true,
-        modifyVars: { ...mapToken, ...token }
+        modifyVars: Object.fromEntries(
+          Object.entries({ ...mapToken, ...token }).map(([k, v]) => [
+            k,
+            k.startsWith('color') || k.includes('Color')
+              ? `var(--ant-${k.replace(/([A-Z])/g, '-$1').toLowerCase()})`
+              : v
+          ])
+        )
       }
     }
   },

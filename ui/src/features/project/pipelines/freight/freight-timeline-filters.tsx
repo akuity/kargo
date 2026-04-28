@@ -3,7 +3,7 @@ import { faAnchor, faFilter, faTimes, IconDefinition } from '@fortawesome/free-s
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
 import { Badge, Button, Checkbox, Select, SelectProps } from 'antd';
 import classNames from 'classnames';
-import { useMemo } from 'react';
+import { CSSProperties, useMemo } from 'react';
 
 import { FreightTimelineControllerContextType } from '@ui/features/project/pipelines/context/freight-timeline-controller-context';
 import { Freight } from '@ui/gen/api/v1alpha1/generated_pb';
@@ -16,6 +16,7 @@ type FreightTimelineFiltersProps = {
   collapsed: boolean;
   onCollapseToggle(): void;
   className?: string;
+  style?: CSSProperties;
   preferredFilter: FreightTimelineControllerContextType['preferredFilter'];
   onPreferredFilterChange(next: FreightTimelineControllerContextType['preferredFilter']): void;
   // all freights to cataloging
@@ -60,7 +61,7 @@ export const FreightTimelineFilters = (props: FreightTimelineFiltersProps) => {
   }, [props.freights]);
 
   return (
-    <div className={classNames(props.className)}>
+    <div className={classNames(props.className)} style={props.style}>
       <span className='text-xs flex items-center gap-2'>
         {!props.collapsed && (
           <div className='font-semibold flex items-center gap-2'>

@@ -6,6 +6,8 @@ import { configureMonacoYaml } from 'monaco-yaml';
 import React, { FC, useEffect, useRef } from 'react';
 import yaml from 'yaml';
 
+import { useThemeContext } from '@ui/features/theme/use-theme-context';
+
 import styles from './yaml-editor.module.less';
 
 loader.config({ monaco });
@@ -40,6 +42,8 @@ const YamlEditor: FC<YamlEditorProps> = (props) => {
     label,
     resourceType
   } = props;
+
+  const { resolvedTheme } = useThemeContext();
 
   const handleOnChange = (newValue: string | undefined) => {
     onChange?.(newValue);
@@ -100,10 +104,11 @@ const YamlEditor: FC<YamlEditorProps> = (props) => {
         <div>{label}</div>
       </Flex>
       <div
-        style={{ border: '1px solid #d9d9d9', height, overflow: 'hidden' }}
+        style={{ border: '1px solid var(--ant-color-border)', height, overflow: 'hidden' }}
         className={className}
       >
         <Editor
+          theme={resolvedTheme === 'dark' ? 'vs-dark' : 'light'}
           options={{
             readOnly: disabled,
             lineDecorationsWidth: 5,

@@ -47,7 +47,8 @@ export const ProjectListFilter = ({
         placeholder='Search...'
         options={filteredProjects?.map((p) => ({ value: p.metadata?.name }))}
         onChange={setFilter}
-        className='w-full mr-2 bg-white'
+        className='w-full mr-2'
+        style={{ background: 'var(--app-bg-elevated)' }}
         value={filter}
         onKeyDown={handleKeyDown}
         onSelect={handleSelect}

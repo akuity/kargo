@@ -8,14 +8,14 @@
   display: flex;
   flex-direction: column;
   flex: 0 0 110px;
-  background-color: #111;
+  background-color: var(--app-sidebar-bg);
   color: @colorWhite;
 }
 
 .contentWrapper {
   position: relative;
   flex: 1;
-  background-color: @colorBgLayout;
+  background-color: var(--app-bg-layout);
   overflow: hidden;
 }
 
@@ -49,10 +49,19 @@
 }
 
 .logout {
-  color: #a0b3c2;
+  color: var(--app-sidebar-text);
   margin: ~'@{sizeSM}px 0';
 
   &:hover {
-    color: #cddae4 !important;
+    color: var(--app-sidebar-text-active) !important;
+  }
+}
+
+.themeButton {
+  color: var(--app-sidebar-text);
+  margin: 0 auto;
+
+  &:hover {
+    color: var(--app-sidebar-text-active) !important;
   }
 }

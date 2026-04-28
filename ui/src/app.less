@@ -62,6 +62,41 @@ body, html {
     font-family: 'Poppins', sans-serif;
 }
 
+:root {
+    --app-bg-layout: #f7f8fa;
+    --app-bg-elevated: #ffffff;
+    --app-bg-subtle: #f4f6f9;
+    --app-bg-overlay: rgba(0, 0, 0, 0.4);
+    --app-sidebar-bg: #111111;
+    --app-sidebar-text: #a0b3c2;
+    --app-sidebar-text-active: #cddae4;
+    --app-border-subtle: rgba(0, 0, 0, 0.05);
+    --app-border-strong: #d9d9d9;
+    --app-text: #454545;
+    --app-text-secondary: #6b7280;
+    --app-minimap-border: #9cccf1;
+}
+
+[data-theme='dark'] {
+    --app-bg-layout: #0f141a;
+    --app-bg-elevated: #161d24;
+    --app-bg-subtle: #1b242d;
+    --app-bg-overlay: rgba(0, 0, 0, 0.55);
+    --app-sidebar-bg: #0b1016;
+    --app-sidebar-text: #8da0b3;
+    --app-sidebar-text-active: #d7e3ef;
+    --app-border-subtle: rgba(255, 255, 255, 0.08);
+    --app-border-strong: #2a333d;
+    --app-text: #d7dee7;
+    --app-text-secondary: #9cadbd;
+    --app-minimap-border: #36536b;
+}
+
+body {
+    background: var(--app-bg-layout);
+    color: var(--app-text);
+}
+
 .ant-btn {
     box-shadow: none !important;
 }

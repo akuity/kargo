@@ -11,8 +11,14 @@ export const StackedNodeBody = (props: { id?: string; count?: number; onClick?: 
     id={props.id}
     className={classNames(styles['stacked-node-size'], 'relative nodrag cursor-default')}
   >
-    <div className='absolute w-full h-full -top-1 -right-1 bg-white shadow-md rounded-md z-10' />
-    <div className='absolute w-full h-full -top-2 -right-2 bg-white shadow-md rounded-md' />
+    <div
+      className='absolute w-full h-full -top-1 -right-1 shadow-md rounded-md z-10'
+      style={{ background: 'var(--app-bg-elevated)' }}
+    />
+    <div
+      className='absolute w-full h-full -top-2 -right-2 shadow-md rounded-md'
+      style={{ background: 'var(--app-bg-elevated)' }}
+    />
     <Card className={classNames(styles['stacked-node-size'], 'relative z-20')}>
       <Button size='small' onClick={props.onClick}>
         <Typography.Text type='secondary'>

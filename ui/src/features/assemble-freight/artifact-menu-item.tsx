@@ -12,10 +12,13 @@ export interface ArtifactMenuItemProps {
 export const ArtifactMenuItem = ({ onClick, selected, children }: ArtifactMenuItemProps) => (
   <div
     onClick={onClick}
-    className={classNames(
-      'p-2 bg-white mb-1 cursor-pointer rounded-md border border-solid border-gray-100 break-words',
-      { 'border-sky-500': selected }
-    )}
+    className={classNames('p-2 mb-1 cursor-pointer rounded-md border border-solid break-words', {
+      'border-sky-500': selected
+    })}
+    style={{
+      background: 'var(--app-bg-elevated)',
+      borderColor: selected ? undefined : 'var(--app-border-subtle)'
+    }}
   >
     {children}
   </div>

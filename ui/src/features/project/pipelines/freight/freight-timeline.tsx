@@ -191,23 +191,28 @@ export const FreightTimeline = (props: { freights: Freight[]; project: string })
           <BaseHeader>
             <PromotionModeHeader
               loading={getPromotionEligibleFreightQuery.isFetching}
-              className='bg-white space-x-2'
+              className='space-x-2'
+              style={{ background: 'var(--app-bg-elevated)' }}
             />
           </BaseHeader>
         </div>
       )}
       <div
-        className={classNames('freightTimeline', 'bg-white py-2 flex gap-0 relative z-20')}
-        style={{ borderBottom: '2px solid rgba(0,0,0,.05)' }}
+        className={classNames('freightTimeline', 'py-2 flex gap-0 relative z-20')}
+        style={{
+          background: 'var(--app-bg-elevated)',
+          borderBottom: '2px solid var(--app-border-subtle)'
+        }}
       >
         <FreightTimelineFilters
-          className='bg-white px-3 z-10'
+          className='px-3 z-10'
           collapsed={filtersCollapsed}
           filteredFreights={filteredFreights}
           freights={props.freights}
           onCollapseToggle={() => setFilterCollapsed(!filtersCollapsed)}
           onPreferredFilterChange={freightTimelineControllerContext.setPreferredFilter}
           preferredFilter={freightTimelineControllerContext.preferredFilter}
+          style={{ background: 'var(--app-bg-elevated)' }}
         />
         <div
           className={classNames('w-full flex relative px-5', {
@@ -278,7 +283,8 @@ export const FreightTimeline = (props: { freights: Freight[]; project: string })
           </div>
 
           <div
-            className='absolute left-0 h-full bg-gray-100 px-1 flex items-center cursor-pointer rounded-sm hover:bg-gray-200'
+            className='absolute left-0 h-full px-1 flex items-center cursor-pointer rounded-sm'
+            style={{ background: 'var(--app-bg-subtle)' }}
             onClick={() => {
               scrollCarouselLeft();
             }}
@@ -287,7 +293,8 @@ export const FreightTimeline = (props: { freights: Freight[]; project: string })
           </div>
 
           <div
-            className='absolute right-0 h-full bg-gray-100 px-1 flex items-center cursor-pointer rounded-sm hover:bg-gray-200'
+            className='absolute right-0 h-full px-1 flex items-center cursor-pointer rounded-sm'
+            style={{ background: 'var(--app-bg-subtle)' }}
             onClick={() => {
               scrollCarouselRight();
             }}

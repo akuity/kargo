@@ -11,6 +11,7 @@ import {
 import { useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react';
 
 import { WarehouseExpanded } from '@ui/extend/types';
+import { useThemeContext } from '@ui/features/theme/use-theme-context';
 import { queryCache } from '@ui/features/utils/cache';
 import { Stage } from '@ui/gen/api/v1alpha1/generated_pb';
 
@@ -164,9 +165,13 @@ export const Graph = (props: GraphProps) => {
     });
   }, [filterContext?.preferredFilter?.hideSubscriptions]);
 
+  const { resolvedTheme } = useThemeContext();
+
   return (
     <GraphContext.Provider value={{ warehouseByName, stackedNodesParents, onStack, onUnstack }}>
       <ReactFlow
+        colorMode={resolvedTheme}
+        style={{ background: 'transparent' }}
         nodes={nodes}
         edges={graph.edges}
         nodeTypes={nodeTypes}
@@ -190,7 +195,11 @@ export const Graph = (props: GraphProps) => {
         </div>
         {filterContext?.preferredFilter?.showMinimap && (
           <MiniMap
-            style={{ background: 'white', border: '1px solid lightblue', borderRadius: '5px' }}
+            style={{
+              background: 'var(--app-bg-elevated)',
+              border: '1px solid var(--app-minimap-border)',
+              borderRadius: '5px'
+            }}
             pannable
           />
         )}
