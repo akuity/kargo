@@ -73,6 +73,10 @@ func (s *server) WatchStages(
 				continue
 			}
 			if summary {
+				// StripStageForSummary mutates in place; copy first so
+				// shaping the response does not depend on the watch
+				// object's ownership semantics.
+				stage = stage.DeepCopy()
 				api.StripStageForSummary(stage)
 			}
 			if err := stream.Send(&svcv1alpha1.WatchStagesResponse{
