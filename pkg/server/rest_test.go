@@ -106,6 +106,7 @@ func testRESTEndpoint(
 						context.Context,
 						*rest.Config,
 						*runtime.Scheme,
+						string,
 					) (client.WithWatch, error) {
 						return internalClient, nil
 					},
@@ -218,6 +219,7 @@ func testRESTWatchEndpoint(
 						context.Context,
 						*rest.Config,
 						*runtime.Scheme,
+						string,
 					) (client.WithWatch, error) {
 						return internalClient, nil
 					},

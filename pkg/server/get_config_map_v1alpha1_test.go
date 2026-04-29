@@ -172,6 +172,7 @@ func TestGetConfigMap(t *testing.T) {
 						_ context.Context,
 						_ *rest.Config,
 						s *runtime.Scheme,
+						_ string,
 					) (client.WithWatch, error) {
 						c := fake.NewClientBuilder().WithScheme(s).WithInterceptorFuncs(testCase.interceptor)
 						if len(testCase.objects) > 0 {

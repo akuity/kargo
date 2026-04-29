@@ -51,6 +51,9 @@ type ClientOptions struct {
 	// GlobalServiceAccountNamespaces is a list of namespaces in which we should
 	// always look for ServiceAccounts when attempting to authorize a user.
 	GlobalServiceAccountNamespaces []string
+	// KargoNamespace is the namespace where Kargo itself is installed. Defaults
+	// to "kargo" when unspecified.
+	KargoNamespace string
 	// NewInternalClient may be used to take control of how the client's own
 	// internal/underlying controller-runtime client is created. This is mainly
 	// useful for tests wherein one may, for instance, wish to inject a custom
@@ -59,9 +62,10 @@ type ClientOptions struct {
 	// which case, the NewClient function to which this struct is passed will
 	// supply its own default implementation.
 	NewInternalClient func(
-		context.Context,
-		*rest.Config,
-		*runtime.Scheme,
+		ctx context.Context,
+		restCfg *rest.Config,
+		scheme *runtime.Scheme,
+		kargoNamespace string,
 	) (libClient.WithWatch, error)
 	// Scheme may be used to take control of the scheme used by the client's own
 	// internal/underlying controller-runtime client. Ordinarily, the value of
@@ -91,6 +95,9 @@ func setOptionsDefaults(opts ClientOptions) (ClientOptions, error) {
 	}
 	if opts.NewInternalClient == nil {
 		opts.NewInternalClient = newDefaultInternalClient
+	}
+	if opts.KargoNamespace == "" {
+		opts.KargoNamespace = "kargo"
 	}
 	return opts, nil
 }
@@ -155,7 +162,12 @@ func NewClient(
 	if opts, err = setOptionsDefaults(opts); err != nil {
 		return nil, fmt.Errorf("error setting client options defaults: %w", err)
 	}
-	internalClient, err := opts.NewInternalClient(ctx, restCfg, opts.Scheme)
+	internalClient, err := opts.NewInternalClient(
+		ctx,
+		restCfg,
+		opts.Scheme,
+		opts.KargoNamespace,
+	)
 	if err != nil {
 		return nil, fmt.Errorf("error building internal client: %w", err)
 	}
@@ -187,6 +199,7 @@ func newDefaultInternalClient(
 	ctx context.Context,
 	restCfg *rest.Config,
 	scheme *runtime.Scheme,
+	kargoNamespace string,
 ) (libClient.WithWatch, error) {
 	cluster, err := libCluster.New(
 		restCfg,
@@ -204,10 +217,6 @@ func newDefaultInternalClient(
 			// otherwise set up fails to start. Scope the lease informer to
 			// the Kargo namespace, where the API server's RBAC actually
 			// permits list/watch.
-			kargoNamespace := os.Getenv("KARGO_NAMESPACE")
-			if kargoNamespace == "" {
-				kargoNamespace = "kargo"
-			}
 			clusterOptions.Cache = cache.Options{
 				ByObject: map[libClient.Object]cache.ByObject{
 					&coordinationv1.Lease{}: {
