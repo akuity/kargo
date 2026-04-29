@@ -1,3 +1,4 @@
+import { useQuery } from '@connectrpc/connect-query';
 import { faExternalLink } from '@fortawesome/free-solid-svg-icons';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
 import { Dropdown, ButtonProps, Button } from 'antd';
@@ -9,6 +10,7 @@ import { ARGOCD_CONTEXT_KEY, SHARD_LABEL_KEY } from '@ui/config/labels';
 import { paths } from '@ui/config/paths';
 import { useExtensionsContext } from '@ui/extensions/extensions-context';
 import { HealthStatusIcon } from '@ui/features/common/health-status/health-status-icon';
+import { getStageHealthOutputs } from '@ui/gen/api/service/v1alpha1/service-KargoService_connectquery';
 import { Stage } from '@ui/gen/api/v1alpha1/generated_pb';
 import { decodeRawData } from '@ui/utils/decode-raw-data';
 
@@ -47,6 +49,29 @@ export const ArgoCDLink = ({
       return [];
     }
   }, [stage]);
+
+  // The pipeline list/graph fetches Stages with the summary projection,
+  // which strips status.health.output. Multi-app health icons in the
+  // dropdown still need that blob, so lazy-fetch it via
+  // GetStageHealthOutputs only when the dropdown is meaningful (more than
+  // one app) and the embedded blob is missing. Single-app links don't
+  // render a status icon, so we skip the fetch in that case.
+  const stageName = stage.metadata?.name;
+  const needsLazyHealth =
+    argoCDApps.length > 1 && !!projectName && !!stageName && !stage.status?.health?.output?.raw;
+
+  const healthOutputsQuery = useQuery(
+    getStageHealthOutputs,
+    {
+      project: projectName ?? '',
+      stageNames: stageName ? [stageName] : []
+    },
+    { enabled: needsLazyHealth }
+  );
+
+  const lazyHealthOutputRaw = stageName
+    ? healthOutputsQuery.data?.healthOutputs?.[stageName]
+    : undefined;
 
   const openArgoCD = React.useCallback(
     (link: ArgoCDContext) => {
@@ -88,9 +113,13 @@ export const ArgoCDLink = ({
       menu={{
         style: { maxHeight: '278px', overflowY: 'auto' },
         items: argoCDApps.map((app, idx) => {
-          const status =
-            stage.status?.health?.output?.raw &&
-            getStatusFromHealthOutput(stage.status?.health?.output?.raw, app.name);
+          const rawJSON = stage.status?.health?.output?.raw
+            ? decodeRawData({
+                result: { case: 'raw', value: stage.status.health.output.raw }
+              })
+            : lazyHealthOutputRaw;
+
+          const status = rawJSON ? getStatusFromHealthOutput(rawJSON, app.name) : undefined;
 
           return {
             key: idx,
@@ -127,16 +156,9 @@ const argoCDContextSchema = z.array(
 
 type ArgoCDContext = z.infer<typeof argoCDContextSchema>[number];
 
-const getStatusFromHealthOutput = (healthOutputRaw: Uint8Array, app: string) => {
+const getStatusFromHealthOutput = (healthOutputJSON: string, app: string) => {
   try {
-    const parsed = JSON.parse(
-      decodeRawData({
-        result: {
-          case: 'raw',
-          value: healthOutputRaw
-        }
-      })
-    );
+    const parsed = JSON.parse(healthOutputJSON);
 
     const appStatus =
       // eslint-disable-next-line @typescript-eslint/ban-ts-comment

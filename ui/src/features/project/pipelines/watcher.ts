@@ -72,16 +72,27 @@ export class Watcher {
     // utilise the fact that something changed in this stage
     // avoid as much as re-construction of data as possible by using this parameter
     onStageEvent?: (stage: Stage) => void,
-    warehouses?: string[]
+    warehouses?: string[],
+    opts?: { summary?: boolean; resourceVersion?: string }
   ) {
+    const summary = opts?.summary ?? false;
     const stream = this.promiseClient.watchStages(
-      { project: this.project, freightOrigins: warehouses || [] },
+      {
+        project: this.project,
+        freightOrigins: warehouses || [],
+        summary,
+        resourceVersion: opts?.resourceVersion ?? ''
+      },
       { signal: this.cancel.signal }
     );
 
+    // The cache key for ListStages must match exactly what useQuery used to
+    // populate the cache, including the summary flag. Otherwise the watcher
+    // reads from / writes to a different bucket and the UI never updates.
     const stagesInput = create(ListStagesRequestSchema, {
       project: this.project,
-      freightOrigins: warehouses || []
+      freightOrigins: warehouses || [],
+      summary
     });
 
     ProcessEvents(
@@ -113,23 +124,30 @@ export class Watcher {
           $typeName: 'akuity.io.kargo.service.v1alpha1.ListStagesResponse'
         });
 
-        // update Stage details
-        const getStageQueryKey = createConnectQueryKey({
-          schema: getStage,
-          input: create(GetStageRequestSchema, {
-            project: this.project,
-            name: stage.metadata?.name
-          }),
-          cardinality: 'finite',
-          transport: transportWithAuth
-        });
-        this.client.setQueryData(getStageQueryKey, {
-          result: {
-            value: stage,
-            case: 'stage'
-          },
-          $typeName: 'akuity.io.kargo.service.v1alpha1.GetStageResponse'
-        });
+        // Stage detail cache writes are only safe when the watch event
+        // carries the full Stage. When summary mode strips
+        // freightHistory, step bodies, and health output, writing the
+        // event body into the GetStage cache would poison detail views
+        // (callers expect a full Stage and would see stripped data
+        // until something invalidates the cache).
+        if (!summary) {
+          const getStageQueryKey = createConnectQueryKey({
+            schema: getStage,
+            input: create(GetStageRequestSchema, {
+              project: this.project,
+              name: stage.metadata?.name
+            }),
+            cardinality: 'finite',
+            transport: transportWithAuth
+          });
+          this.client.setQueryData(getStageQueryKey, {
+            result: {
+              value: stage,
+              case: 'stage'
+            },
+            $typeName: 'akuity.io.kargo.service.v1alpha1.GetStageResponse'
+          });
+        }
 
         onStageEvent?.(stage);
       }

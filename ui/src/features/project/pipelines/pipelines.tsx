@@ -103,9 +103,14 @@ export const Pipelines = (props: { creatingStage?: boolean; creatingWarehouse?: 
     origins: preferredFilter.warehouses
   });
 
+  // Use the lightweight summary projection. Heavy fields
+  // (status.freightHistory, status.health.output, step bodies) are stripped
+  // server-side and lazily fetched on demand. The watcher must use the
+  // matching summary flag so cache reads/writes hit the same bucket.
   const listStagesQuery = useQuery(listStages, {
     project: projectName,
-    freightOrigins: preferredFilter.warehouses
+    freightOrigins: preferredFilter.warehouses,
+    summary: true
   });
 
   const loading =
