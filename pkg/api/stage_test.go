@@ -126,7 +126,7 @@ func TestListStagesByWarehouses(t *testing.T) {
 		opts        *ListStagesOptions
 		objects     []client.Object
 		interceptor interceptor.Funcs
-		assertions  func(*testing.T, []kargoapi.Stage, error)
+		assertions  func(*testing.T, *kargoapi.StageList, error)
 	}{
 		{
 			name: "error listing Stages",
@@ -140,9 +140,9 @@ func TestListStagesByWarehouses(t *testing.T) {
 					return errors.New("something went wrong")
 				},
 			},
-			assertions: func(t *testing.T, stages []kargoapi.Stage, err error) {
+			assertions: func(t *testing.T, list *kargoapi.StageList, err error) {
 				require.ErrorContains(t, err, "something went wrong")
-				require.Nil(t, stages)
+				require.Nil(t, list)
 			},
 		},
 		{
@@ -152,9 +152,10 @@ func TestListStagesByWarehouses(t *testing.T) {
 				stageInProjectFromWarehouse2,
 				stageInOtherProject,
 			},
-			assertions: func(t *testing.T, stages []kargoapi.Stage, err error) {
+			assertions: func(t *testing.T, list *kargoapi.StageList, err error) {
 				require.NoError(t, err)
-				require.Len(t, stages, 2)
+				require.NotNil(t, list)
+				require.Len(t, list.Items, 2)
 			},
 		},
 		{
@@ -165,9 +166,10 @@ func TestListStagesByWarehouses(t *testing.T) {
 				stageInProjectFromWarehouse2,
 				stageInOtherProject,
 			},
-			assertions: func(t *testing.T, stages []kargoapi.Stage, err error) {
+			assertions: func(t *testing.T, list *kargoapi.StageList, err error) {
 				require.NoError(t, err)
-				require.Len(t, stages, 2)
+				require.NotNil(t, list)
+				require.Len(t, list.Items, 2)
 			},
 		},
 		{
@@ -180,10 +182,11 @@ func TestListStagesByWarehouses(t *testing.T) {
 				stageInProjectFromWarehouse2,
 				stageInOtherProject,
 			},
-			assertions: func(t *testing.T, stages []kargoapi.Stage, err error) {
+			assertions: func(t *testing.T, list *kargoapi.StageList, err error) {
 				require.NoError(t, err)
-				require.Len(t, stages, 1)
-				require.Equal(t, "stage-1", stages[0].Name)
+				require.NotNil(t, list)
+				require.Len(t, list.Items, 1)
+				require.Equal(t, "stage-1", list.Items[0].Name)
 			},
 		},
 		{
@@ -195,9 +198,40 @@ func TestListStagesByWarehouses(t *testing.T) {
 				stageInProjectFromWarehouse1,
 				stageInProjectFromWarehouse2,
 			},
-			assertions: func(t *testing.T, stages []kargoapi.Stage, err error) {
+			assertions: func(t *testing.T, list *kargoapi.StageList, err error) {
 				require.NoError(t, err)
-				require.Empty(t, stages)
+				require.NotNil(t, list)
+				require.Empty(t, list.Items)
+			},
+		},
+		{
+			name: "ListMeta.ResourceVersion from underlying List is preserved",
+			objects: []client.Object{
+				stageInProjectFromWarehouse1,
+				stageInProjectFromWarehouse2,
+			},
+			interceptor: interceptor.Funcs{
+				List: func(
+					ctx context.Context,
+					c client.WithWatch,
+					list client.ObjectList,
+					opts ...client.ListOption,
+				) error {
+					if err := c.List(ctx, list, opts...); err != nil {
+						return err
+					}
+					stageList, ok := list.(*kargoapi.StageList)
+					if !ok {
+						return nil
+					}
+					stageList.ResourceVersion = "fake-rv-42"
+					return nil
+				},
+			},
+			assertions: func(t *testing.T, list *kargoapi.StageList, err error) {
+				require.NoError(t, err)
+				require.NotNil(t, list)
+				require.Equal(t, "fake-rv-42", list.ResourceVersion)
 			},
 		},
 	}
@@ -208,10 +242,10 @@ func TestListStagesByWarehouses(t *testing.T) {
 				WithObjects(testCase.objects...).
 				WithInterceptorFuncs(testCase.interceptor).
 				Build()
-			stages, err := ListStagesByWarehouses(
+			list, err := ListStagesByWarehouses(
 				t.Context(), c, testProject, testCase.opts,
 			)
-			testCase.assertions(t, stages, err)
+			testCase.assertions(t, list, err)
 		})
 	}
 }
@@ -962,26 +996,49 @@ func TestStripStageForSummary(t *testing.T) {
 			},
 		},
 		{
-			name: "PromotionTemplate step configs are cleared but skeletons kept",
+			name: "PromotionTemplate step bodies are cleared but skeletons kept",
 			stage: &kargoapi.Stage{
 				Spec: kargoapi.StageSpec{
 					PromotionTemplate: &kargoapi.PromotionTemplate{
 						Spec: kargoapi.PromotionTemplateSpec{
 							Steps: []kargoapi.PromotionStep{
-								{Uses: "copy", As: "step-0", Config: rawConfig},
-								{Uses: "helm-update-image", As: "step-1", Config: rawConfig},
+								{
+									Uses:            "copy",
+									As:              "step-0",
+									Config:          rawConfig,
+									If:              "expr-0",
+									Vars:            []kargoapi.ExpressionVariable{{Name: "v", Value: "1"}},
+									ContinueOnError: true,
+								},
+								{
+									Uses:   "helm-update-image",
+									As:     "step-1",
+									Config: rawConfig,
+									If:     "expr-1",
+									Vars:   []kargoapi.ExpressionVariable{{Name: "v", Value: "2"}},
+									Retry:  &kargoapi.PromotionStepRetry{},
+								},
 							},
 						},
 					},
 				},
 			},
 			assert: func(t *testing.T, s *kargoapi.Stage) {
-				require.Len(t, s.Spec.PromotionTemplate.Spec.Steps, 2)
-				require.Equal(t, "copy", s.Spec.PromotionTemplate.Spec.Steps[0].Uses)
-				require.Equal(t, "step-0", s.Spec.PromotionTemplate.Spec.Steps[0].As)
-				require.Nil(t, s.Spec.PromotionTemplate.Spec.Steps[0].Config)
-				require.Equal(t, "helm-update-image", s.Spec.PromotionTemplate.Spec.Steps[1].Uses)
-				require.Nil(t, s.Spec.PromotionTemplate.Spec.Steps[1].Config)
+				steps := s.Spec.PromotionTemplate.Spec.Steps
+				require.Len(t, steps, 2)
+				// Skeleton fields preserved on every step.
+				require.Equal(t, "copy", steps[0].Uses)
+				require.Equal(t, "step-0", steps[0].As)
+				require.True(t, steps[0].ContinueOnError)
+				require.Equal(t, "helm-update-image", steps[1].Uses)
+				require.Equal(t, "step-1", steps[1].As)
+				require.NotNil(t, steps[1].Retry)
+				// Heavy fields stripped on every step.
+				for i := range steps {
+					require.Nilf(t, steps[i].Config, "step %d config", i)
+					require.Emptyf(t, steps[i].If, "step %d if", i)
+					require.Nilf(t, steps[i].Vars, "step %d vars", i)
+				}
 			},
 		},
 		{

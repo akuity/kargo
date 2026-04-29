@@ -2401,6 +2401,18 @@
             "description": "Strip heavy fields from each Stage",
             "name": "summary",
             "in": "query"
+          },
+          {
+            "type": "boolean",
+            "description": "Stream Stage changes as Server-Sent Events instead of returning a list",
+            "name": "watch",
+            "in": "query"
+          },
+          {
+            "type": "string",
+            "description": "When watch=true, resume after this ResourceVersion",
+            "name": "resourceVersion",
+            "in": "query"
           }
         ],
         "responses": {

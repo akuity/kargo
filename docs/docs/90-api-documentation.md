@@ -1212,7 +1212,7 @@ Stability is not guaranteed.
 | ----- | ---- | ----------- |
 | project | [string](#string) |  project is the name of the project whose stages should be listed. |
 | freight_origins | [string](#string) |  freight_origins is an optional list of Warehouse names to filter Stages by. When specified, only Stages that subscribe to at least one of the named Warehouses are returned. |
-| summary | [bool](#bool) |  summary, when true, strips heavy fields from each Stage in the response. Intended for list and graph views that render many Stages but do not need full FreightHistory, PromotionTemplate step configuration, or the raw health output blob. Stripped Stages still carry: metadata, shard, requestedFreight, promotionTemplate step skeletons (kind/as/name but not config), verification, conditions, currentFreight (history[0]), currentPromotion, lastPromotion, health metadata (without output.raw), observedGeneration, autoPromotionEnabled. Use summary=false (default) to retrieve the full Stage, or GetStage for a single Stage in detail. |
+| summary | [bool](#bool) |  summary, when true, strips heavy fields from each Stage in the response. Intended for list and graph views that render many Stages but do not need full FreightHistory, PromotionTemplate step bodies, or the raw health output blob. Stripped Stages still carry: metadata, shard, requestedFreight, promotionTemplate step skeletons (uses, task, as, continueOnError, retry; config, if, vars cleared), verification, conditions, currentFreight (history[0]), currentPromotion, lastPromotion, health metadata (without output.raw), observedGeneration, autoPromotionEnabled. Use summary=false (default) to retrieve the full Stage, or GetStage for a single Stage in detail. |
 
 <a name="akuity-io-kargo-service-v1alpha1-ListStagesResponse"></a>
 
@@ -1220,7 +1220,7 @@ Stability is not guaranteed.
  ListStagesResponse contains a list of stages within a project.
 | Field | Type | Description |
 | ----- | ---- | ----------- |
-| stages | [github.com.akuity.kargo.api.v1alpha1.Stage](#github-com-akuity-kargo-api-v1alpha1-Stage) |  stages is the list of Stage resources found in the project. When the corresponding request set summary=true, each Stage has heavy fields stripped: status.freightHistory is truncated to index 0, spec.promotionTemplate.spec.steps[*].config is cleared, and status.health.output is nil. |
+| stages | [github.com.akuity.kargo.api.v1alpha1.Stage](#github-com-akuity-kargo-api-v1alpha1-Stage) |  stages is the list of Stage resources found in the project. When the corresponding request set summary=true, each Stage has heavy fields stripped: status.freightHistory is truncated to index 0, spec.promotionTemplate.spec.steps[*] has config, if, and vars cleared, and status.health.output is nil. |
 | resource_version | [string](#string) |  resource_version is the Kubernetes ResourceVersion of the underlying StageList. Clients may pass this value to WatchStages to begin watching from the exact point this list was taken, receiving only subsequent changes without redundant initial events. |
 
 <a name="akuity-io-kargo-service-v1alpha1-ListWarehousesRequest"></a>

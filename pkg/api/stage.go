@@ -50,13 +50,15 @@ type ListStagesOptions struct {
 }
 
 // ListStagesByWarehouses lists Stages in the given Project, optionally
-// filtered by the provided options.
+// filtered by the provided options. The returned StageList preserves
+// ListMeta (notably ResourceVersion) from the underlying List call so
+// callers can perform a gapless list-then-watch.
 func ListStagesByWarehouses(
 	ctx context.Context,
 	c client.Client,
 	project string,
 	opts *ListStagesOptions,
-) ([]kargoapi.Stage, error) {
+) (*kargoapi.StageList, error) {
 	if opts == nil {
 		opts = &ListStagesOptions{}
 	}
@@ -65,15 +67,16 @@ func ListStagesByWarehouses(
 		return nil, err
 	}
 	if len(opts.Warehouses) == 0 {
-		return list.Items, nil
+		return &list, nil
 	}
-	var stages []kargoapi.Stage
+	filtered := list
+	filtered.Items = filtered.Items[:0:0]
 	for _, stage := range list.Items {
 		if StageMatchesAnyWarehouse(&stage, opts.Warehouses) {
-			stages = append(stages, stage)
+			filtered.Items = append(filtered.Items, stage)
 		}
 	}
-	return stages, nil
+	return &filtered, nil
 }
 
 // StageMatchesAnyWarehouse returns true if the Stage requests Freight that
@@ -329,8 +332,10 @@ func AbortStageFreightVerification(
 //
 // Stripped fields:
 //   - status.freightHistory truncated to the current element (index 0)
-//   - spec.promotionTemplate.spec.steps[*].config cleared (kind/as/name kept)
 //   - status.health.output cleared (use ListStageHealthOutputs for lazy fetch)
+//   - spec.promotionTemplate.spec.steps[*]: config, if, and vars cleared.
+//     Step uses, task, as, continueOnError, and retry are kept so callers
+//     can still identify and count steps without falling back to GetStage.
 func StripStageForSummary(stage *kargoapi.Stage) {
 	if stage == nil {
 		return
@@ -339,8 +344,11 @@ func StripStageForSummary(stage *kargoapi.Stage) {
 		stage.Status.FreightHistory = stage.Status.FreightHistory[:1]
 	}
 	if stage.Spec.PromotionTemplate != nil {
-		for i := range stage.Spec.PromotionTemplate.Spec.Steps {
-			stage.Spec.PromotionTemplate.Spec.Steps[i].Config = nil
+		steps := stage.Spec.PromotionTemplate.Spec.Steps
+		for i := range steps {
+			steps[i].Config = nil
+			steps[i].If = ""
+			steps[i].Vars = nil
 		}
 	}
 	if stage.Status.Health != nil {

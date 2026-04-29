@@ -10,6 +10,7 @@ import (
 
 	"connectrpc.com/connect"
 	"github.com/gin-gonic/gin"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
 	svcv1alpha1 "github.com/akuity/kargo/api/service/v1alpha1"
@@ -33,24 +34,16 @@ func (s *server) ListStages(
 
 	warehouses := req.Msg.GetFreightOrigins()
 
-	// The ConnectRPC response carries resource_version for list-then-watch,
-	// so the list call is done inline here rather than via
-	// api.ListStagesByWarehouses (which does not surface the list's
-	// ResourceVersion). Filtering is delegated to api.StageMatchesAnyWarehouse
-	// so the matching logic stays in one place.
-	var list kargoapi.StageList
-	if err := s.client.List(ctx, &list, client.InNamespace(project)); err != nil {
+	list, err := api.ListStagesByWarehouses(
+		ctx,
+		s.client,
+		project,
+		&api.ListStagesOptions{Warehouses: warehouses},
+	)
+	if err != nil {
 		return nil, fmt.Errorf("list stages: %w", err)
 	}
 	items := list.Items
-	if len(warehouses) > 0 {
-		items = items[:0:0]
-		for _, stage := range list.Items {
-			if api.StageMatchesAnyWarehouse(&stage, warehouses) {
-				items = append(items, stage)
-			}
-		}
-	}
 
 	slices.SortFunc(items, func(a, b kargoapi.Stage) int {
 		return strings.Compare(a.Name, b.Name)
@@ -81,6 +74,8 @@ func (s *server) ListStages(
 // @Param project path string true "Project name"
 // @Param freightOrigins query []string false "Warehouse names to filter Stages by"
 // @Param summary query bool false "Strip heavy fields from each Stage"
+// @Param watch query bool false "Stream Stage changes as Server-Sent Events instead of returning a list"
+// @Param resourceVersion query string false "When watch=true, resume after this ResourceVersion"
 // @Success 200 {object} kargoapi.StageList "StageList custom resource (github.com/akuity/kargo/api/v1alpha1.StageList)"
 // @Router /v1beta1/projects/{project}/stages [get]
 func (s *server) listStages(c *gin.Context) {
@@ -90,11 +85,11 @@ func (s *server) listStages(c *gin.Context) {
 	summary := c.Query("summary") == trueStr
 
 	if watchMode := c.Query("watch") == trueStr; watchMode {
-		s.watchStages(c, project, warehouses, summary)
+		s.watchStages(c, project, warehouses, summary, c.Query("resourceVersion"))
 		return
 	}
 
-	items, err := api.ListStagesByWarehouses(
+	list, err := api.ListStagesByWarehouses(
 		ctx,
 		s.client,
 		project,
@@ -106,12 +101,12 @@ func (s *server) listStages(c *gin.Context) {
 	}
 
 	if summary {
-		for i := range items {
-			api.StripStageForSummary(&items[i])
+		for i := range list.Items {
+			api.StripStageForSummary(&list.Items[i])
 		}
 	}
 
-	c.JSON(http.StatusOK, &kargoapi.StageList{Items: items})
+	c.JSON(http.StatusOK, list)
 }
 
 func (s *server) watchStages(
@@ -119,11 +114,19 @@ func (s *server) watchStages(
 	project string,
 	warehouses []string,
 	summary bool,
+	resourceVersion string,
 ) {
 	ctx := c.Request.Context()
 	logger := logging.LoggerFromContext(ctx)
 
-	w, err := s.client.Watch(ctx, &kargoapi.StageList{}, client.InNamespace(project))
+	listOpts := []client.ListOption{client.InNamespace(project)}
+	if resourceVersion != "" {
+		listOpts = append(
+			listOpts,
+			&client.ListOptions{Raw: &metav1.ListOptions{ResourceVersion: resourceVersion}},
+		)
+	}
+	w, err := s.client.Watch(ctx, &kargoapi.StageList{}, listOpts...)
 	if err != nil {
 		logger.Error(err, "failed to start watch")
 		_ = c.Error(fmt.Errorf("watch stages: %w", err))

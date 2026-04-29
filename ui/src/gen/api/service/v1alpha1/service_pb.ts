@@ -709,11 +709,12 @@ export type ListStagesRequest = Message<"akuity.io.kargo.service.v1alpha1.ListSt
   /**
    * summary, when true, strips heavy fields from each Stage in the response.
    * Intended for list and graph views that render many Stages but do not
-   * need full FreightHistory, PromotionTemplate step configuration, or the
-   * raw health output blob. Stripped Stages still carry: metadata, shard,
-   * requestedFreight, promotionTemplate step skeletons (kind/as/name but
-   * not config), verification, conditions, currentFreight (history[0]),
-   * currentPromotion, lastPromotion, health metadata (without output.raw),
+   * need full FreightHistory, PromotionTemplate step bodies, or the raw
+   * health output blob. Stripped Stages still carry: metadata, shard,
+   * requestedFreight, promotionTemplate step skeletons (uses, task, as,
+   * continueOnError, retry; config, if, vars cleared), verification,
+   * conditions, currentFreight (history[0]), currentPromotion,
+   * lastPromotion, health metadata (without output.raw),
    * observedGeneration, autoPromotionEnabled. Use summary=false (default)
    * to retrieve the full Stage, or GetStage for a single Stage in detail.
    *
@@ -739,8 +740,8 @@ export type ListStagesResponse = Message<"akuity.io.kargo.service.v1alpha1.ListS
    * stages is the list of Stage resources found in the project. When the
    * corresponding request set summary=true, each Stage has heavy fields
    * stripped: status.freightHistory is truncated to index 0,
-   * spec.promotionTemplate.spec.steps[*].config is cleared, and
-   * status.health.output is nil.
+   * spec.promotionTemplate.spec.steps[*] has config, if, and vars cleared,
+   * and status.health.output is nil.
    *
    * @generated from field: repeated github.com.akuity.kargo.api.v1alpha1.Stage stages = 1;
    */
