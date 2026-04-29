@@ -563,6 +563,7 @@ func TestServer_getStageFromAnalysisRun(t *testing.T) {
 						context.Context,
 						*rest.Config,
 						*runtime.Scheme,
+						string,
 					) (client.WithWatch, error) {
 						return testCase.client, nil
 					},

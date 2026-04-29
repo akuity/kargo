@@ -28,13 +28,35 @@ export const StageConditionIcon = memo(
   ({
     conditions,
     className,
-    noTooltip
+    noTooltip,
+    isControllerDead,
+    controllerName
   }: {
     conditions: Condition[];
     className?: string;
     noTooltip?: boolean;
+    isControllerDead?: boolean;
+    controllerName?: string;
   }) => {
     const { iconState, isPromoting } = useMemo(() => {
+      // A dead (or absent) controller overrides everything: the
+      // conditions on the Stage were written by the very controller that
+      // has gone silent, so they cannot be trusted. Surface this as
+      // Failed with a tooltip explaining why.
+      if (isControllerDead) {
+        return {
+          iconState: {
+            icon: faTimesCircle,
+            tooltipTitle: 'Failed',
+            tooltipMessage: controllerName
+              ? `Controller '${controllerName}' is dead or nonexistent`
+              : 'The default controller is dead or nonexistent',
+            iconClass: 'text-red-400'
+          },
+          isPromoting: false
+        };
+      }
+
       const hasCondition = (
         type: StageConditionType,
         status: StageConditionStatus
@@ -115,7 +137,7 @@ export const StageConditionIcon = memo(
       }
 
       return { iconState, isPromoting };
-    }, [conditions]); // Only recalculate when conditions changes
+    }, [conditions, isControllerDead, controllerName]);
 
     const tooltipContent = useMemo(
       () => (

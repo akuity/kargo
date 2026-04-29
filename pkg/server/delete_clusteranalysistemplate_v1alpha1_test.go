@@ -79,6 +79,7 @@ func TestDeleteClusterAnalysisTemplate(t *testing.T) {
 						_ context.Context,
 						_ *rest.Config,
 						scheme *runtime.Scheme,
+						_ string,
 					) (client.WithWatch, error) {
 						return fake.NewClientBuilder().
 							WithScheme(scheme).
