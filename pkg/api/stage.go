@@ -7,8 +7,11 @@ import (
 	"fmt"
 	"slices"
 	"strings"
+	"sync"
 	"time"
 
+	"golang.org/x/sync/errgroup"
+	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/types"
 	"sigs.k8s.io/controller-runtime/pkg/client"
@@ -345,6 +348,11 @@ func StripStageForSummary(stage *kargoapi.Stage) {
 	}
 }
 
+// listStageHealthOutputsConcurrency caps the number of concurrent Gets
+// issued by ListStageHealthOutputs. Sized to keep the apiserver/SAR fan-out
+// bounded for typical viewport-sized batches without serializing them.
+const listStageHealthOutputsConcurrency = 16
+
 // ListStageHealthOutputs returns the raw health output blob for each Stage
 // in the given project whose name appears in stageNames. Empty and duplicate
 // entries in stageNames are ignored. Stages that do not exist in the project
@@ -352,37 +360,64 @@ func StripStageForSummary(stage *kargoapi.Stage) {
 //
 // Intended for clients that list Stages with the summary projection (see
 // StripStageForSummary) and need to lazily resolve per-Stage health only for
-// the subset currently in viewport.
+// the subset currently in viewport. The implementation reads each requested
+// Stage individually so server-side work scales with the request, not the
+// project size.
 func ListStageHealthOutputs(
 	ctx context.Context,
 	c client.Client,
 	project string,
 	stageNames []string,
 ) (map[string]string, error) {
-	wanted := make(map[string]struct{}, len(stageNames))
+	seen := make(map[string]struct{}, len(stageNames))
+	wanted := make([]string, 0, len(stageNames))
 	for _, n := range stageNames {
 		if n == "" {
 			continue
 		}
-		wanted[n] = struct{}{}
+		if _, ok := seen[n]; ok {
+			continue
+		}
+		seen[n] = struct{}{}
+		wanted = append(wanted, n)
 	}
 	if len(wanted) == 0 {
 		return map[string]string{}, nil
 	}
-	var list kargoapi.StageList
-	if err := c.List(ctx, &list, client.InNamespace(project)); err != nil {
-		return nil, fmt.Errorf("list stages: %w", err)
+
+	g, ctx := errgroup.WithContext(ctx)
+	g.SetLimit(listStageHealthOutputsConcurrency)
+
+	var (
+		mu      sync.Mutex
+		outputs = make(map[string]string, len(wanted))
+	)
+	for _, name := range wanted {
+		g.Go(func() error {
+			var stage kargoapi.Stage
+			err := c.Get(
+				ctx,
+				client.ObjectKey{Namespace: project, Name: name},
+				&stage,
+			)
+			if err != nil {
+				if apierrors.IsNotFound(err) {
+					return nil
+				}
+				return fmt.Errorf("get stage %q: %w", name, err)
+			}
+			if stage.Status.Health == nil || stage.Status.Health.Output == nil {
+				return nil
+			}
+			raw := string(stage.Status.Health.Output.Raw)
+			mu.Lock()
+			outputs[name] = raw
+			mu.Unlock()
+			return nil
+		})
 	}
-	outputs := make(map[string]string, len(wanted))
-	for i := range list.Items {
-		st := &list.Items[i]
-		if _, want := wanted[st.Name]; !want {
-			continue
-		}
-		if st.Status.Health == nil || st.Status.Health.Output == nil {
-			continue
-		}
-		outputs[st.Name] = string(st.Status.Health.Output.Raw)
+	if err := g.Wait(); err != nil {
+		return nil, err
 	}
 	return outputs, nil
 }

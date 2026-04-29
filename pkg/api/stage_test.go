@@ -1069,8 +1069,40 @@ func TestListStageHealthOutputs(t *testing.T) {
 			},
 		},
 		{
-			name:       "only empty strings returns empty map without listing",
+			name:       "only empty strings returns empty map without fetching",
 			stageNames: []string{"", "", ""},
+			interceptor: interceptor.Funcs{
+				Get: func(
+					context.Context,
+					client.WithWatch,
+					client.ObjectKey,
+					client.Object,
+					...client.GetOption,
+				) error {
+					t.Fatal("Get should not be called when there are no real names")
+					return nil
+				},
+				List: func(
+					context.Context,
+					client.WithWatch,
+					client.ObjectList,
+					...client.ListOption,
+				) error {
+					t.Fatal("List must not be called -- this helper reads per-name only")
+					return nil
+				},
+			},
+			assert: func(t *testing.T, out map[string]string, err error) {
+				require.NoError(t, err)
+				require.Empty(t, out)
+			},
+		},
+		{
+			name:       "List is never called even when names are present",
+			stageNames: []string{"stage-1"},
+			objects: []client.Object{
+				withHealth(testProject, "stage-1", `{"s":1}`),
+			},
 			interceptor: interceptor.Funcs{
 				List: func(
 					context.Context,
@@ -1078,13 +1110,13 @@ func TestListStageHealthOutputs(t *testing.T) {
 					client.ObjectList,
 					...client.ListOption,
 				) error {
-					t.Fatal("List should not be called when there are no real names")
+					t.Fatal("List must not be called -- this helper reads per-name only")
 					return nil
 				},
 			},
 			assert: func(t *testing.T, out map[string]string, err error) {
 				require.NoError(t, err)
-				require.Empty(t, out)
+				require.Len(t, out, 1)
 			},
 		},
 		{
@@ -1150,14 +1182,15 @@ func TestListStageHealthOutputs(t *testing.T) {
 			},
 		},
 		{
-			name:       "List error propagates",
+			name:       "Get error propagates",
 			stageNames: []string{"stage-1"},
 			interceptor: interceptor.Funcs{
-				List: func(
+				Get: func(
 					context.Context,
 					client.WithWatch,
-					client.ObjectList,
-					...client.ListOption,
+					client.ObjectKey,
+					client.Object,
+					...client.GetOption,
 				) error {
 					return errors.New("boom")
 				},
