@@ -8,7 +8,7 @@
 import type { GithubComAkuityKargoApiServiceV1alpha1GetStageHealthOutputsResponseHealthOutputs } from './githubComAkuityKargoApiServiceV1alpha1GetStageHealthOutputsResponseHealthOutputs';
 
 export interface GithubComAkuityKargoApiServiceV1alpha1GetStageHealthOutputsResponse {
-  /** health_outputs maps Stage name to the raw bytes of its
+  /** health_outputs maps Stage name to the raw JSON of its
 Stage.status.health.output.raw field. Stages that do not exist in the
 project or have no health output recorded are omitted from the map. */
   health_outputs?: GithubComAkuityKargoApiServiceV1alpha1GetStageHealthOutputsResponseHealthOutputs;

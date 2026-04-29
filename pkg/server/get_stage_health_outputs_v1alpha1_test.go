@@ -6,6 +6,8 @@ import (
 	"fmt"
 	"net/http"
 	"net/http/httptest"
+	"strconv"
+	"strings"
 	"testing"
 
 	"connectrpc.com/connect"
@@ -93,8 +95,8 @@ func TestGetStageHealthOutputs(t *testing.T) {
 				require.NoError(t, err)
 				got := res.Msg.GetHealthOutputs()
 				require.Len(t, got, 2)
-				require.Equal(t, []byte(`{"app":"a"}`), got["a"])
-				require.Equal(t, []byte(`{"app":"b"}`), got["b"])
+				require.Equal(t, `{"app":"a"}`, got["a"])
+				require.Equal(t, `{"app":"b"}`, got["b"])
 			},
 		},
 		"unknown stage names are silently omitted": {
@@ -139,7 +141,7 @@ func TestGetStageHealthOutputs(t *testing.T) {
 				require.NoError(t, err)
 				got := res.Msg.GetHealthOutputs()
 				require.Len(t, got, 1)
-				require.Equal(t, []byte(`{"app":"a"}`), got["a"])
+				require.Equal(t, `{"app":"a"}`, got["a"])
 			},
 		},
 		"batch size cap exceeded": {
@@ -204,6 +206,14 @@ func manyNames(n int) []string {
 	return out
 }
 
+func manyStageNamesQuery(n int) string {
+	parts := make([]string, n)
+	for i := range n {
+		parts[i] = "stageNames=stage-" + strconv.Itoa(i)
+	}
+	return strings.Join(parts, "&")
+}
+
 func Test_server_getStageHealthOutputs(t *testing.T) {
 	testProject := &kargoapi.Project{ObjectMeta: metav1.ObjectMeta{Name: "fake-project"}}
 
@@ -253,9 +263,30 @@ func Test_server_getStageHealthOutputs(t *testing.T) {
 					require.NoError(t, json.Unmarshal(w.Body.Bytes(), resp))
 					got := resp.GetHealthOutputs()
 					require.Len(t, got, 1)
-					require.Equal(t, []byte(`{"app":"a"}`), got["a"])
+					require.Equal(t, `{"app":"a"}`, got["a"])
 					require.NotContains(t, got, "b")
 					require.NotContains(t, got, "c")
+
+					// Lock in the wire shape: each value must be a JSON
+					// string, not a base64-encoded blob or array of ints.
+					var raw struct {
+						HealthOutputs map[string]json.RawMessage `json:"health_outputs"`
+					}
+					require.NoError(t, json.Unmarshal(w.Body.Bytes(), &raw))
+					require.JSONEq(
+						t,
+						`"{\"app\":\"a\"}"`,
+						string(raw.HealthOutputs["a"]),
+					)
+				},
+			},
+			{
+				name: "batch size cap exceeded returns 400",
+				url: "/v1beta1/projects/" + testProject.Name +
+					"/stage-health-outputs?" + manyStageNamesQuery(maxStageHealthOutputsBatch+1),
+				clientBuilder: fake.NewClientBuilder().WithObjects(testProject),
+				assertions: func(t *testing.T, w *httptest.ResponseRecorder, _ client.Client) {
+					require.Equal(t, http.StatusBadRequest, w.Code)
 				},
 			},
 		},

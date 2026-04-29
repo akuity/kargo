@@ -10,6 +10,7 @@ import (
 
 	svcv1alpha1 "github.com/akuity/kargo/api/service/v1alpha1"
 	"github.com/akuity/kargo/pkg/api"
+	libhttp "github.com/akuity/kargo/pkg/http"
 )
 
 // maxStageHealthOutputsBatch is a soft limit on the number of Stage names a
@@ -78,9 +79,12 @@ func (s *server) getStageHealthOutputs(c *gin.Context) {
 
 	stageNames := c.QueryArray("stageNames")
 	if len(stageNames) > maxStageHealthOutputsBatch {
-		_ = c.Error(fmt.Errorf(
-			"stageNames exceeds maximum batch size of %d (got %d)",
-			maxStageHealthOutputsBatch, len(stageNames),
+		_ = c.Error(libhttp.Error(
+			fmt.Errorf(
+				"stageNames exceeds maximum batch size of %d (got %d)",
+				maxStageHealthOutputsBatch, len(stageNames),
+			),
+			http.StatusBadRequest,
 		))
 		return
 	}

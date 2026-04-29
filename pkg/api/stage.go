@@ -358,7 +358,7 @@ func ListStageHealthOutputs(
 	c client.Client,
 	project string,
 	stageNames []string,
-) (map[string][]byte, error) {
+) (map[string]string, error) {
 	wanted := make(map[string]struct{}, len(stageNames))
 	for _, n := range stageNames {
 		if n == "" {
@@ -367,13 +367,13 @@ func ListStageHealthOutputs(
 		wanted[n] = struct{}{}
 	}
 	if len(wanted) == 0 {
-		return map[string][]byte{}, nil
+		return map[string]string{}, nil
 	}
 	var list kargoapi.StageList
 	if err := c.List(ctx, &list, client.InNamespace(project)); err != nil {
 		return nil, fmt.Errorf("list stages: %w", err)
 	}
-	outputs := make(map[string][]byte, len(wanted))
+	outputs := make(map[string]string, len(wanted))
 	for i := range list.Items {
 		st := &list.Items[i]
 		if _, want := wanted[st.Name]; !want {
@@ -382,7 +382,7 @@ func ListStageHealthOutputs(
 		if st.Status.Health == nil || st.Status.Health.Output == nil {
 			continue
 		}
-		outputs[st.Name] = st.Status.Health.Output.Raw
+		outputs[st.Name] = string(st.Status.Health.Output.Raw)
 	}
 	return outputs, nil
 }

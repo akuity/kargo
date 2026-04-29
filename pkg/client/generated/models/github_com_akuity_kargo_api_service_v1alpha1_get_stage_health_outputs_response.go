@@ -14,10 +14,10 @@ import (
 // swagger:model github_com_akuity_kargo_api_service_v1alpha1.GetStageHealthOutputsResponse
 type GithubComAkuityKargoAPIServiceV1alpha1GetStageHealthOutputsResponse struct {
 
-	// health_outputs maps Stage name to the raw bytes of its
+	// health_outputs maps Stage name to the raw JSON of its
 	// Stage.status.health.output.raw field. Stages that do not exist in the
 	// project or have no health output recorded are omitted from the map.
-	HealthOutputs map[string][]int32 `json:"health_outputs,omitempty"`
+	HealthOutputs map[string]string `json:"health_outputs,omitempty"`
 }
 
 // Validate validates this github com akuity kargo api service v1alpha1 get stage health outputs response

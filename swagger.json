@@ -5269,14 +5269,10 @@
       "type": "object",
       "properties": {
         "health_outputs": {
-          "description": "health_outputs maps Stage name to the raw bytes of its\nStage.status.health.output.raw field. Stages that do not exist in the\nproject or have no health output recorded are omitted from the map.",
+          "description": "health_outputs maps Stage name to the raw JSON of its\nStage.status.health.output.raw field. Stages that do not exist in the\nproject or have no health output recorded are omitted from the map.",
           "type": "object",
           "additionalProperties": {
-            "type": "array",
-            "items": {
-              "type": "integer",
-              "format": "int32"
-            }
+            "type": "string"
           }
         }
       }

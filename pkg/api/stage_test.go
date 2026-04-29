@@ -1056,13 +1056,13 @@ func TestListStageHealthOutputs(t *testing.T) {
 		stageNames  []string
 		objects     []client.Object
 		interceptor interceptor.Funcs
-		assert      func(*testing.T, map[string][]byte, error)
+		assert      func(*testing.T, map[string]string, error)
 	}{
 		{
 			name:       "nil stageNames returns empty map",
 			stageNames: nil,
 			objects:    []client.Object{withHealth(testProject, "stage-1", `{"s":1}`)},
-			assert: func(t *testing.T, out map[string][]byte, err error) {
+			assert: func(t *testing.T, out map[string]string, err error) {
 				require.NoError(t, err)
 				require.Empty(t, out)
 				require.NotNil(t, out)
@@ -1082,7 +1082,7 @@ func TestListStageHealthOutputs(t *testing.T) {
 					return nil
 				},
 			},
-			assert: func(t *testing.T, out map[string][]byte, err error) {
+			assert: func(t *testing.T, out map[string]string, err error) {
 				require.NoError(t, err)
 				require.Empty(t, out)
 			},
@@ -1094,10 +1094,10 @@ func TestListStageHealthOutputs(t *testing.T) {
 				withHealth(testProject, "stage-1", `{"s":1}`),
 				withHealth(testProject, "stage-2", `{"s":2}`),
 			},
-			assert: func(t *testing.T, out map[string][]byte, err error) {
+			assert: func(t *testing.T, out map[string]string, err error) {
 				require.NoError(t, err)
 				require.Len(t, out, 1)
-				require.JSONEq(t, `{"s":1}`, string(out["stage-1"]))
+				require.JSONEq(t, `{"s":1}`, out["stage-1"])
 			},
 		},
 		{
@@ -1106,10 +1106,10 @@ func TestListStageHealthOutputs(t *testing.T) {
 			objects: []client.Object{
 				withHealth(testProject, "stage-1", `{"s":1}`),
 			},
-			assert: func(t *testing.T, out map[string][]byte, err error) {
+			assert: func(t *testing.T, out map[string]string, err error) {
 				require.NoError(t, err)
 				require.Len(t, out, 1)
-				require.JSONEq(t, `{"s":1}`, string(out["stage-1"]))
+				require.JSONEq(t, `{"s":1}`, out["stage-1"])
 			},
 		},
 		{
@@ -1119,7 +1119,7 @@ func TestListStageHealthOutputs(t *testing.T) {
 				withHealth(testProject, "stage-1", `{"s":1}`),
 				withoutHealth(testProject, "stage-no-health"),
 			},
-			assert: func(t *testing.T, out map[string][]byte, err error) {
+			assert: func(t *testing.T, out map[string]string, err error) {
 				require.NoError(t, err)
 				require.Len(t, out, 1)
 				require.Contains(t, out, "stage-1")
@@ -1130,7 +1130,7 @@ func TestListStageHealthOutputs(t *testing.T) {
 			name:       "unknown name is silently omitted",
 			stageNames: []string{"stage-1", "does-not-exist"},
 			objects:    []client.Object{withHealth(testProject, "stage-1", `{"s":1}`)},
-			assert: func(t *testing.T, out map[string][]byte, err error) {
+			assert: func(t *testing.T, out map[string]string, err error) {
 				require.NoError(t, err)
 				require.Len(t, out, 1)
 				require.Contains(t, out, "stage-1")
@@ -1143,10 +1143,10 @@ func TestListStageHealthOutputs(t *testing.T) {
 				withHealth(testProject, "stage-1", `{"s":"ours"}`),
 				withHealth(otherProject, "stage-1", `{"s":"theirs"}`),
 			},
-			assert: func(t *testing.T, out map[string][]byte, err error) {
+			assert: func(t *testing.T, out map[string]string, err error) {
 				require.NoError(t, err)
 				require.Len(t, out, 1)
-				require.JSONEq(t, `{"s":"ours"}`, string(out["stage-1"]))
+				require.JSONEq(t, `{"s":"ours"}`, out["stage-1"])
 			},
 		},
 		{
@@ -1162,7 +1162,7 @@ func TestListStageHealthOutputs(t *testing.T) {
 					return errors.New("boom")
 				},
 			},
-			assert: func(t *testing.T, out map[string][]byte, err error) {
+			assert: func(t *testing.T, out map[string]string, err error) {
 				require.ErrorContains(t, err, "boom")
 				require.Nil(t, out)
 			},
