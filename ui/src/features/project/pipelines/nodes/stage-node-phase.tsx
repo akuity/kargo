@@ -5,12 +5,14 @@ import { generatePath, Link } from 'react-router-dom';
 
 import { paths } from '@ui/config/paths';
 import { StageConditionIcon } from '@ui/features/common/stage-status/stage-condition-icon';
+import { useStageControllerStatus } from '@ui/features/common/stage-status/use-stage-controller-status';
 import { getStagePhase } from '@ui/features/common/stage-status/utils';
 import { Stage } from '@ui/gen/api/v1alpha1/generated_pb';
 
 export const StageNodePhase = (props: { stage: Stage }) => {
   const projectName = props.stage?.metadata?.namespace || '';
-  const stagePhase = getStagePhase(props.stage);
+  const { controllerName, isControllerDead } = useStageControllerStatus(props.stage);
+  const stagePhase = getStagePhase(props.stage, isControllerDead);
 
   const Phase = (
     <Flex align='center' gap={4}>
@@ -19,6 +21,8 @@ export const StageNodePhase = (props: { stage: Stage }) => {
         className='text-[10px]'
         conditions={props.stage?.status?.conditions || []}
         noTooltip
+        isControllerDead={isControllerDead}
+        controllerName={controllerName}
       />
       {stagePhase === 'Promoting' && (
         <FontAwesomeIcon icon={faExternalLink} className='text-[8px]' />

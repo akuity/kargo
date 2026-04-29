@@ -26,7 +26,14 @@ export const hasCondition = (
   };
 };
 
-export const getStagePhase = (stage: Stage) => {
+export const getStagePhase = (stage: Stage, isControllerDead?: boolean) => {
+  // A dead (or absent) controller means any condition the Stage carries
+  // was written before the controller stopped reporting and is now stale.
+  // Surface this as Failed regardless of what those stale conditions say.
+  if (isControllerDead) {
+    return 'Failed';
+  }
+
   const conditions = stage?.status?.conditions || [];
 
   const promoting = hasCondition(
