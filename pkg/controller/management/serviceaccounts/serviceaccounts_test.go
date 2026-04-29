@@ -362,22 +362,23 @@ func TestEnsureControllerPermissions(t *testing.T) {
 			},
 		},
 		{
-			name: "error creating RoleBinding",
+			name: "error applying RoleBinding",
 			client: fake.NewClientBuilder().
 				WithScheme(scheme).
 				WithObjects(testProject).
 				WithInterceptorFuncs(interceptor.Funcs{
-					Create: func(
+					Patch: func(
 						context.Context,
 						client.WithWatch,
 						client.Object,
-						...client.CreateOption,
+						client.Patch,
+						...client.PatchOption,
 					) error {
 						return fmt.Errorf("something went wrong")
 					},
 				}).Build(),
 			assertions: func(t *testing.T, _ client.Client, err error) {
-				require.ErrorContains(t, err, "error creating RoleBinding")
+				require.ErrorContains(t, err, "error applying RoleBinding")
 				require.ErrorContains(t, err, "something went wrong")
 			},
 		},
@@ -464,34 +465,6 @@ func TestEnsureControllerPermissions(t *testing.T) {
 					},
 					rb.Subjects[0],
 				)
-			},
-		},
-		{
-			name: "error updating existing RoleBinding",
-			client: fake.NewClientBuilder().
-				WithScheme(scheme).
-				WithObjects(
-					testProject,
-					&rbacv1.RoleBinding{
-						ObjectMeta: metav1.ObjectMeta{
-							Namespace: testProject.Name,
-							Name:      getRoleBindingName(testControllerSARef.Name),
-						},
-					},
-				).
-				WithInterceptorFuncs(interceptor.Funcs{
-					Update: func(
-						context.Context,
-						client.WithWatch,
-						client.Object,
-						...client.UpdateOption,
-					) error {
-						return fmt.Errorf("something went wrong")
-					},
-				}).Build(),
-			assertions: func(t *testing.T, _ client.Client, err error) {
-				require.ErrorContains(t, err, "error updating existing RoleBinding")
-				require.ErrorContains(t, err, "something went wrong")
 			},
 		},
 	}

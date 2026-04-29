@@ -185,23 +185,21 @@ func (r *reconciler) ensureControllerPermissions(ctx context.Context, sa types.N
 				},
 			},
 		}
-		if err := r.client.Create(ctx, roleBinding); err != nil {
-			if !apierrors.IsAlreadyExists(err) {
-				return fmt.Errorf(
-					"error creating RoleBinding %q for ServiceAccount %q in Project namespace %q: %w",
-					roleBinding.Name, sa.Name, project.Name, err,
-				)
-			}
-			if err = r.client.Update(ctx, roleBinding); err != nil {
-				return fmt.Errorf(
-					"error updating existing RoleBinding %q in Project namespace %q: %w",
-					roleBinding.Name, project.Name, err,
-				)
-			}
-			projectLogger.Debug("updated existing RoleBinding")
-		} else {
-			projectLogger.Debug("created RoleBinding")
+		gvks, _, err := r.client.Scheme().ObjectKinds(roleBinding)
+		if err != nil {
+			return fmt.Errorf("could not determine GVK for RoleBinding: %w", err)
 		}
+		roleBinding.GetObjectKind().SetGroupVersionKind(gvks[0])
+		if err := r.client.Patch(
+			ctx, roleBinding, client.Apply,
+			client.ForceOwnership, client.FieldOwner("kargo"),
+		); err != nil {
+			return fmt.Errorf(
+				"error applying RoleBinding %q for ServiceAccount %q in Project namespace %q: %w",
+				roleBinding.Name, sa.Name, project.Name, err,
+			)
+		}
+		projectLogger.Debug("applied RoleBinding")
 	}
 	logger.Debug("necessary RoleBindings exist in all Project namespaces")
 	return nil
