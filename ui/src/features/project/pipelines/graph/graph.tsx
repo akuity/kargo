@@ -19,10 +19,8 @@ import { GraphContext } from '../context/graph-context';
 import { StackedNodes } from '../nodes/stacked-nodes';
 
 import { CustomNode } from './custom-node';
-import { DummyNodeRenderrer } from './dummy-node-renderrer';
 import { repoSubscriptionIndexer, stageIndexer, warehouseIndexer } from './node-indexer';
 import { useEventsWatcher } from './use-events-watcher';
-import { useNodeDimensionState } from './use-node-dimension-state';
 import { reactFlowNodeConstants, useReactFlowPipelineGraph } from './use-pipeline-graph';
 
 type GraphProps = {
@@ -60,14 +58,21 @@ export const Graph = (props: GraphProps) => {
 
   const [redraw, setRedraw] = useState(false);
 
-  const [dimensions, setDimensions] = useNodeDimensionState();
+  // Cheap placeholders on first paint; swap to real components on the next tick.
+  // ReactFlow mounts every node at least once for measurement, so this avoids
+  // paying the cost of rendering full node bodies for items that may end up
+  // off-screen and culled by onlyRenderVisibleElements.
+  const [ready, setReady] = useState(false);
+  useEffect(() => {
+    const timer = setTimeout(() => setReady(true), 10);
+    return () => clearTimeout(timer);
+  }, []);
 
   const graph = useReactFlowPipelineGraph(
     props.stages,
     props.warehouses,
     filterContext?.preferredFilter.warehouses || [],
     redraw,
-    dimensions,
     {
       afterNodes: stackedNodesParents
     },
@@ -164,8 +169,25 @@ export const Graph = (props: GraphProps) => {
     });
   }, [filterContext?.preferredFilter?.hideSubscriptions]);
 
+  const loggedRef = useRef(false);
+  const mountTimeRef = useRef(performance.now());
+  useEffect(() => {
+    if (loggedRef.current || graph.nodes.length === 0) {
+      return;
+    }
+    loggedRef.current = true;
+    requestAnimationFrame(() => {
+      // eslint-disable-next-line no-console
+      console.log(
+        `[Graph] painted in ${((performance.now() - mountTimeRef.current) / 1000).toFixed(3)}s`
+      );
+    });
+  }, [graph.nodes]);
+
   return (
-    <GraphContext.Provider value={{ warehouseByName, stackedNodesParents, onStack, onUnstack }}>
+    <GraphContext.Provider
+      value={{ warehouseByName, stackedNodesParents, onStack, onUnstack, ready }}
+    >
       <ReactFlow
         nodes={nodes}
         edges={graph.edges}
@@ -175,19 +197,11 @@ export const Graph = (props: GraphProps) => {
           nodes: nodesExcludingSubscriptionNodes
         }}
         proOptions={{ hideAttribution: true }}
-        minZoom={nodes.length > 100 ? 0.6 : 0.1}
+        minZoom={nodes.length > 100 ? 0.4 : 0.1}
         onlyRenderVisibleElements
         panOnDrag
         onInit={(inst) => (reactFlowInstance.current = inst)}
       >
-        <div className='opacity-0 overflow-hidden h-0'>
-          <DummyNodeRenderrer
-            stages={props.stages}
-            warehouses={props.warehouses}
-            knownDimensions={dimensions}
-            onDimensionChange={(newDims) => setDimensions((prev) => ({ ...prev, ...newDims }))}
-          />
-        </div>
         {filterContext?.preferredFilter?.showMinimap && (
           <MiniMap
             style={{ background: 'white', border: '1px solid lightblue', borderRadius: '5px' }}
