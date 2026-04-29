@@ -161,12 +161,12 @@ func TestLeaseToHeartbeat(t *testing.T) {
 
 	testCases := []struct {
 		name       string
-		lease      *coordinationv1.Lease
+		lease      coordinationv1.Lease
 		assertions func(*testing.T, Heartbeat)
 	}{
 		{
 			name: "renewTime missing → dead with no Timestamp",
-			lease: &coordinationv1.Lease{
+			lease: coordinationv1.Lease{
 				ObjectMeta: metav1.ObjectMeta{
 					Labels: map[string]string{kargoapi.LabelKeyController: testControllerName},
 				},
@@ -180,7 +180,7 @@ func TestLeaseToHeartbeat(t *testing.T) {
 		},
 		{
 			name: "leaseDurationSeconds missing → dead with Timestamp",
-			lease: &coordinationv1.Lease{
+			lease: coordinationv1.Lease{
 				ObjectMeta: metav1.ObjectMeta{
 					Labels: map[string]string{kargoapi.LabelKeyController: testControllerName},
 				},
@@ -195,7 +195,7 @@ func TestLeaseToHeartbeat(t *testing.T) {
 		},
 		{
 			name: "fresh renewTime → alive",
-			lease: &coordinationv1.Lease{
+			lease: coordinationv1.Lease{
 				ObjectMeta: metav1.ObjectMeta{
 					Labels: map[string]string{kargoapi.LabelKeyController: testControllerName},
 				},
@@ -211,7 +211,7 @@ func TestLeaseToHeartbeat(t *testing.T) {
 		},
 		{
 			name: "renewTime exactly at expiry → dead",
-			lease: &coordinationv1.Lease{
+			lease: coordinationv1.Lease{
 				ObjectMeta: metav1.ObjectMeta{
 					Labels: map[string]string{kargoapi.LabelKeyController: testControllerName},
 				},
@@ -226,7 +226,7 @@ func TestLeaseToHeartbeat(t *testing.T) {
 		},
 		{
 			name: "stale renewTime → dead",
-			lease: &coordinationv1.Lease{
+			lease: coordinationv1.Lease{
 				ObjectMeta: metav1.ObjectMeta{
 					Labels: map[string]string{kargoapi.LabelKeyController: testControllerName},
 				},
@@ -241,7 +241,7 @@ func TestLeaseToHeartbeat(t *testing.T) {
 		},
 		{
 			name: "empty controller name is preserved on the heartbeat",
-			lease: &coordinationv1.Lease{
+			lease: coordinationv1.Lease{
 				ObjectMeta: metav1.ObjectMeta{
 					Labels: map[string]string{kargoapi.LabelKeyController: ""},
 				},

@@ -30,7 +30,8 @@ func WithRenewedAt(t time.Time) Option {
 // readers should treat as dead regardless of renewTime.
 func WithDuration(d time.Duration) Option {
 	return func(l *coordinationv1.Lease) {
-		l.Spec.LeaseDurationSeconds = ptr.To(int32(d.Seconds())) //nolint:gosec
+		// #nosec G115 -- test-only helper; durations are caller-controlled
+		l.Spec.LeaseDurationSeconds = ptr.To(int32(d.Seconds()))
 	}
 }
 

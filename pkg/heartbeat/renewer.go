@@ -81,13 +81,12 @@ func NewRenewer(
 // Start implements controller-runtime's manager.Runnable interface. It produces
 // a heartbeat at a scheduled interval by creating or updating a Lease resource.
 func (r *renewer) Start(ctx context.Context) error {
-	logger := logging.LoggerFromContext(ctx)
-	logger.Info(
-		"Starting controller heartbeat",
+	logger := logging.LoggerFromContext(ctx).WithValues(
 		"lease.name", r.leaseName,
 		"lease.duration", r.leaseDuration,
 		"interval", r.renewInterval,
 	)
+	logger.Info("Starting controller heartbeat")
 
 	if err := r.renew(ctx); err != nil {
 		logger.Error(err, "initial heartbeat (lease) failed; will retry")
@@ -127,7 +126,10 @@ func (r *renewer) NeedLeaderElection() bool { return false }
 
 func (r *renewer) renew(ctx context.Context) error {
 	now := metav1.MicroTime{Time: time.Now()}
-	durationSeconds := int32(r.leaseDuration.Seconds()) //nolint:gosec
+	// #nosec G115 -- leaseDuration is validated > 0 in NewRenewer and represents
+	// a lease validity window; any sane operator-supplied value fits in int32
+	// (which the Kubernetes API requires here -- LeaseDurationSeconds is *int32).
+	durationSeconds := int32(r.leaseDuration.Seconds())
 
 	cur := &coordinationv1.Lease{}
 	err := r.client.Get(

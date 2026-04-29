@@ -63,14 +63,14 @@ func GetAll(
 	out := make(map[string]Heartbeat, len(list.Items))
 	for _, lease := range list.Items {
 		controllerName := lease.Labels[kargoapi.LabelKeyController]
-		out[controllerName] = leaseToHeartbeat(&lease, now)
+		out[controllerName] = leaseToHeartbeat(lease, now)
 	}
 	return out, nil
 }
 
 // leaseToHeartbeat synthesizes a Heartbeat from a Lease and the current time.
 func leaseToHeartbeat(
-	lease *coordinationv1.Lease,
+	lease coordinationv1.Lease,
 	now time.Time,
 ) Heartbeat {
 	heartbeat := Heartbeat{
