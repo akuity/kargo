@@ -44,6 +44,10 @@ const (
 	LabelKeyProject = "kargo.akuity.io/project"
 	// LabelKeyShard is used to identify the shard of a resource.
 	LabelKeyShard = "kargo.akuity.io/shard"
+	// LabelKeyController is used to identify the controller associated with a
+	// resource. This is only used for heartbeat leases at the moment, but it
+	// could be used more broadly in the future.
+	LabelKeyController = "kargo.akuity.io/controller"
 
 	// LabelValueTrue is used to identify a label that has a value of "true".
 	LabelValueTrue = "true"

@@ -28,6 +28,7 @@ import {
 } from '@ui/gen/api/service/v1alpha1/service-KargoService_connectquery';
 import { FreightList } from '@ui/gen/api/service/v1alpha1/service_pb';
 import { Freight, Project, Stage } from '@ui/gen/api/v1alpha1/generated_pb';
+import { useGetControllerHeartbeats } from '@ui/gen/api/v2/system/system';
 
 import { ActionContext } from './context/action-context';
 import { DictionaryContext } from './context/dictionary-context';
@@ -61,6 +62,10 @@ export const Pipelines = (props: { creatingStage?: boolean; creatingWarehouse?: 
   const getConfigQuery = useQuery(getConfig);
 
   const argocdShards = getConfigQuery?.data?.argocdShards;
+
+  const heartbeatsQuery = useGetControllerHeartbeats();
+  const heartbeatsByController = heartbeatsQuery.data?.data?.heartbeats;
+  const defaultControllerName = heartbeatsQuery.data?.data?.defaultController;
 
   const projectQuery = useQuery(getProject, { name });
 
@@ -198,6 +203,8 @@ export const Pipelines = (props: { creatingStage?: boolean; creatingWarehouse?: 
             subscribersByStage,
             stageByName,
             argocdShards,
+            heartbeatsByController,
+            defaultControllerName,
             hasAnalysisRunLogsUrlTemplate: getConfigQuery?.data?.hasAnalysisRunLogsUrlTemplate
           }}
         >
