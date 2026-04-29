@@ -54,8 +54,7 @@ export const customFetch = async <T>(url: string, options?: RequestInit): Promis
     let isTokenExpired: boolean;
     try {
       const payload = parseJwtPayload<{ exp?: number }>(token);
-      isTokenExpired =
-        typeof payload.exp === 'number' && Date.now() >= payload.exp * 1000;
+      isTokenExpired = typeof payload.exp === 'number' && Date.now() >= payload.exp * 1000;
     } catch (_) {
       logout();
       throw new ApiError(401, 'Unauthorized', 'Invalid token');

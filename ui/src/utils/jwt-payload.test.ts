@@ -36,17 +36,14 @@ test('parseJwtPayload decodes UTF-8 claims (diacritics)', () => {
  * other lengths/compositions decode fine.
  */
 describe('parseJwtPayload familyName regression cases', () => {
-  test.each([
-    'abcdef',
-    'abcdeï',
-    'abcdeoï',
-    'abcdoï',
-    'abcdoñ'
-  ] as const)('round-trips familyName %s', (familyName) => {
-    const payload = { sub: 'u1', familyName, exp: 2_000_000_000 };
-    const token = makeJwt(payload);
-    expect(parseJwtPayload<typeof payload>(token)).toEqual(payload);
-  });
+  test.each(['abcdef', 'abcdeï', 'abcdeoï', 'abcdoï', 'abcdoñ'] as const)(
+    'round-trips familyName %s',
+    (familyName) => {
+      const payload = { sub: 'u1', familyName, exp: 2_000_000_000 };
+      const token = makeJwt(payload);
+      expect(parseJwtPayload<typeof payload>(token)).toEqual(payload);
+    }
+  );
 });
 
 test('parseJwtPayload handles Base64URL alphabet (+ → -) and restored padding', () => {
