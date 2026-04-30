@@ -149,7 +149,7 @@ export const useReactFlowPipelineGraph = (
           },
           style: {
             strokeWidth: 4,
-            stroke: dagreEdge.edgeColor || '',
+            stroke: dagreEdge.edgeColor || '#9ca3af',
             strokeOpacity: 0.3,
             transition: 'd 0.3s ease, stroke-opacity 0.2s ease, filter 0.2s ease'
           }

@@ -152,7 +152,7 @@ CustomNode.Container = (
               top: handleTop(idx),
               backgroundColor: 'transparent',
               border: 'none',
-              left: 2
+              left: 1
             }}
           />
         ))}

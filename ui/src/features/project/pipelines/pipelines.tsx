@@ -123,15 +123,13 @@ export const Pipelines = (props: { creatingStage?: boolean; creatingWarehouse?: 
   const stageDetails =
     stageName && listStagesQuery.data?.stages?.find((s: Stage) => s?.metadata?.name === stageName);
 
-  const warehouseColorMap = useMemo(
-    () =>
-      getColors(
-        project?.metadata?.name || '',
-        listWarehousesQuery.data?.warehouses || [],
-        'warehouses'
-      ),
-    [project, listWarehousesQuery.data?.warehouses]
-  );
+  const warehouseColorMap = useMemo(() => {
+    const warehouses = listWarehousesQuery.data?.warehouses || [];
+    if (warehouses.length < 2) {
+      return {};
+    }
+    return getColors(project?.metadata?.name || '', warehouses, 'warehouses');
+  }, [project, listWarehousesQuery.data?.warehouses]);
 
   const stageColorMap = useMemo(
     () => getColors(project?.metadata?.name || '', listStagesQuery.data?.stages || []),
