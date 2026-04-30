@@ -2620,6 +2620,7 @@ RawFormat specifies the format for raw resource representation.
  RepoSubscription describes a subscription to ONE OF a Git repository, a container image repository, a Helm chart repository, or something else.
 | Field | Type | Description |
 | ----- | ---- | ----------- |
+| name | [string](#string) |  Name is an optional, human-readable identifier for this subscription. When a Warehouse has multiple subscriptions of the same type (e.g., two image repositories), assigning a name to each makes them distinguishable in logs, the Kargo UI freight timeline, and other contexts where subscriptions would otherwise be ambiguous.    |
 | git | [GitSubscription](#github-com-akuity-kargo-api-v1alpha1-GitSubscription) |  Git describes a subscriptions to a Git repository. |
 | image | [ImageSubscription](#github-com-akuity-kargo-api-v1alpha1-ImageSubscription) |  Image describes a subscription to container image repository. |
 | chart | [ChartSubscription](#github-com-akuity-kargo-api-v1alpha1-ChartSubscription) |  Chart describes a subscription to a Helm chart repository. |
