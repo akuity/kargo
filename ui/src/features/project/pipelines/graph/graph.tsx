@@ -155,8 +155,15 @@ export const Graph = (props: GraphProps) => {
 
   const [hoveredWarehouseName, setHoveredWarehouseName] = useState<string | null>(null);
 
+  const distinctEdgeWarehouses = useMemo(
+    () =>
+      new Set(graph.edges.map((e) => e.data?.warehouseName as string | undefined).filter(Boolean))
+        .size,
+    [graph.edges]
+  );
+
   const edges = useMemo(() => {
-    if (!hoveredWarehouseName) {
+    if (!hoveredWarehouseName || distinctEdgeWarehouses < 2) {
       return graph.edges;
     }
     return graph.edges.map((edge) => {
@@ -169,11 +176,11 @@ export const Graph = (props: GraphProps) => {
         style: {
           ...edge.style,
           strokeOpacity: 0.8,
-          filter: `drop-shadow(0 0 4px ${color}60)`
+          filter: `drop-shadow(0 0 7px ${color}50)`
         }
       };
     });
-  }, [graph.edges, hoveredWarehouseName]);
+  }, [graph.edges, hoveredWarehouseName, distinctEdgeWarehouses]);
 
   const nodesExcludingSubscriptionNodes = useMemo(() => {
     const subscriptionNodes = nodes.filter((n) => repoSubscriptionIndexer.is(n.id));
