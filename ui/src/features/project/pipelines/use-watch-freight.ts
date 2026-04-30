@@ -79,21 +79,31 @@ export const useWatchFreight = (project: string) => {
           }
         }
 
-        const updatedFreight =
-          e.type === 'DELETED'
-            ? deleteFreight(currentFreight, freight)
-            : upsertFreight(currentFreight, freight);
-
-        const queryFreightKey = createConnectQueryKey({
-          cardinality: 'finite',
-          schema: queryFreight,
-          input: {
-            project
-          },
-          transport: transportWithAuth
-        });
-
-        client.setQueryData(queryFreightKey, updatedFreight);
+        if (e.type === 'DELETED') {
+          // Remove from all queryFreight caches for this project, including
+          // warehouse-filtered variants, which use a different cache key.
+          client.setQueriesData<QueryFreightResponse>(
+            {
+              queryKey: createConnectQueryKey({
+                cardinality: 'finite',
+                schema: queryFreight,
+                input: { project },
+                transport: transportWithAuth
+              }),
+              exact: false
+            },
+            (current) => deleteFreight(current, freight)
+          );
+        } else {
+          const updatedFreight = upsertFreight(currentFreight, freight);
+          const queryFreightKey = createConnectQueryKey({
+            cardinality: 'finite',
+            schema: queryFreight,
+            input: { project },
+            transport: transportWithAuth
+          });
+          client.setQueryData(queryFreightKey, updatedFreight);
+        }
       }
     };
 
