@@ -1509,14 +1509,41 @@ func TestReconciler_ensureNamespace(t *testing.T) {
 }
 
 func TestReconciler_ensureSystemPermissions(t *testing.T) {
+	scheme := runtime.NewScheme()
+	require.NoError(t, rbacv1.AddToScheme(scheme))
+
 	testCases := []struct {
 		name       string
 		reconciler *reconciler
 		assertions func(*testing.T, error)
 	}{
 		{
-			name: "error creating role binding",
+			name: "error getting RoleBinding",
 			reconciler: &reconciler{
+				cfg: ReconcilerConfig{KargoNamespace: "kargo"},
+				client: fake.NewClientBuilder().WithScheme(scheme).
+					WithInterceptorFuncs(interceptor.Funcs{
+						Get: func(
+							context.Context,
+							client.WithWatch,
+							client.ObjectKey,
+							client.Object,
+							...client.GetOption,
+						) error {
+							return errors.New("something went wrong")
+						},
+					}).Build(),
+			},
+			assertions: func(t *testing.T, err error) {
+				require.ErrorContains(t, err, "error getting RoleBinding")
+				require.ErrorContains(t, err, "something went wrong")
+			},
+		},
+		{
+			name: "error creating RoleBinding",
+			reconciler: &reconciler{
+				cfg:    ReconcilerConfig{KargoNamespace: "kargo"},
+				client: fake.NewClientBuilder().WithScheme(scheme).Build(),
 				createRoleBindingFn: func(
 					context.Context,
 					client.Object,
@@ -1531,9 +1558,72 @@ func TestReconciler_ensureSystemPermissions(t *testing.T) {
 			},
 		},
 		{
-			name: "error updating existing role binding",
+			name: "success creating RoleBinding",
 			reconciler: &reconciler{
-				client: fake.NewClientBuilder().WithInterceptorFuncs(interceptor.Funcs{
+				cfg:    ReconcilerConfig{KargoNamespace: "kargo"},
+				client: fake.NewClientBuilder().WithScheme(scheme).Build(),
+				createRoleBindingFn: func(
+					context.Context,
+					client.Object,
+					...client.CreateOption,
+				) error {
+					return nil
+				},
+			},
+			assertions: func(t *testing.T, err error) {
+				require.NoError(t, err)
+			},
+		},
+		{
+			name: "no update when RoleBinding already matches",
+			reconciler: &reconciler{
+				cfg: ReconcilerConfig{KargoNamespace: "kargo"},
+				client: fake.NewClientBuilder().WithScheme(scheme).WithObjects(
+					&rbacv1.RoleBinding{
+						ObjectMeta: metav1.ObjectMeta{
+							Name:      "kargo-project-admin",
+							Namespace: "",
+						},
+						Subjects: []rbacv1.Subject{
+							{Kind: "ServiceAccount", Name: "kargo-api", Namespace: "kargo"},
+							{Kind: "ServiceAccount", Name: "kargo-admin", Namespace: "kargo"},
+						},
+					},
+					&rbacv1.RoleBinding{
+						ObjectMeta: metav1.ObjectMeta{
+							Name:      "kargo-project-secrets-reader",
+							Namespace: "",
+						},
+						Subjects: []rbacv1.Subject{{
+							Kind:      "ServiceAccount",
+							Name:      "kargo-external-webhooks-server",
+							Namespace: "kargo",
+						}},
+					},
+				).WithInterceptorFuncs(interceptor.Funcs{
+					Update: func(
+						context.Context,
+						client.WithWatch,
+						client.Object,
+						...client.UpdateOption,
+					) error {
+						return errors.New("Update should not be called when subjects already match")
+					},
+				}).Build(),
+			},
+			assertions: func(t *testing.T, err error) {
+				require.NoError(t, err)
+			},
+		},
+		{
+			name: "error updating RoleBinding",
+			reconciler: &reconciler{
+				cfg: ReconcilerConfig{KargoNamespace: "kargo"},
+				client: fake.NewClientBuilder().WithScheme(scheme).WithObjects(
+					&rbacv1.RoleBinding{
+						ObjectMeta: metav1.ObjectMeta{Name: "kargo-project-admin"},
+					},
+				).WithInterceptorFuncs(interceptor.Funcs{
 					Update: func(
 						context.Context,
 						client.WithWatch,
@@ -1543,54 +1633,24 @@ func TestReconciler_ensureSystemPermissions(t *testing.T) {
 						return errors.New("something went wrong")
 					},
 				}).Build(),
-				createRoleBindingFn: func(
-					context.Context,
-					client.Object,
-					...client.CreateOption,
-				) error {
-					return apierrors.NewAlreadyExists(schema.GroupResource{}, "")
-				},
 			},
 			assertions: func(t *testing.T, err error) {
-				require.ErrorContains(t, err, "error updating existing RoleBinding")
+				require.ErrorContains(t, err, "error updating RoleBinding")
 				require.ErrorContains(t, err, "something went wrong")
 			},
 		},
 		{
-			name: "success updating existing role binding",
+			name: "success updating RoleBinding",
 			reconciler: &reconciler{
-				client: fake.NewClientBuilder().WithInterceptorFuncs(interceptor.Funcs{
-					Update: func(
-						context.Context,
-						client.WithWatch,
-						client.Object,
-						...client.UpdateOption,
-					) error {
-						return nil
+				cfg: ReconcilerConfig{KargoNamespace: "kargo"},
+				client: fake.NewClientBuilder().WithScheme(scheme).WithObjects(
+					&rbacv1.RoleBinding{
+						ObjectMeta: metav1.ObjectMeta{Name: "kargo-project-admin"},
 					},
-				}).Build(),
-				createRoleBindingFn: func(
-					context.Context,
-					client.Object,
-					...client.CreateOption,
-				) error {
-					return apierrors.NewAlreadyExists(schema.GroupResource{}, "")
-				},
-			},
-			assertions: func(t *testing.T, err error) {
-				require.NoError(t, err)
-			},
-		},
-		{
-			name: "success creating role binding",
-			reconciler: &reconciler{
-				createRoleBindingFn: func(
-					context.Context,
-					client.Object,
-					...client.CreateOption,
-				) error {
-					return nil
-				},
+					&rbacv1.RoleBinding{
+						ObjectMeta: metav1.ObjectMeta{Name: "kargo-project-secrets-reader"},
+					},
+				).Build(),
 			},
 			assertions: func(t *testing.T, err error) {
 				require.NoError(t, err)
@@ -1722,6 +1782,27 @@ func TestReconciler_ensureControllerPermissions(t *testing.T) {
 			},
 		},
 		{
+			name: "error getting RoleBinding",
+			client: fake.NewClientBuilder().
+				WithScheme(scheme).
+				WithObjects(testControllerSA).
+				WithInterceptorFuncs(interceptor.Funcs{
+					Get: func(
+						context.Context,
+						client.WithWatch,
+						client.ObjectKey,
+						client.Object,
+						...client.GetOption,
+					) error {
+						return fmt.Errorf("something went wrong")
+					},
+				}).Build(),
+			assertions: func(t *testing.T, _ client.Client, err error) {
+				require.ErrorContains(t, err, "error getting RoleBinding")
+				require.ErrorContains(t, err, "something went wrong")
+			},
+		},
+		{
 			name: "error creating RoleBinding",
 			client: fake.NewClientBuilder().
 				WithScheme(scheme).
@@ -1791,6 +1872,11 @@ func TestReconciler_ensureControllerPermissions(t *testing.T) {
 							Namespace: testProject.Name,
 							Name:      getRoleBindingName(testControllerSA.Name),
 						},
+						RoleRef: rbacv1.RoleRef{
+							APIGroup: rbacv1.GroupName,
+							Kind:     "ClusterRole",
+							Name:     controllerReadSecretsClusterRoleName,
+						},
 					},
 				).Build(),
 			assertions: func(t *testing.T, cl client.Client, err error) {
@@ -1850,7 +1936,7 @@ func TestReconciler_ensureControllerPermissions(t *testing.T) {
 					},
 				}).Build(),
 			assertions: func(t *testing.T, _ client.Client, err error) {
-				require.ErrorContains(t, err, "error updating existing RoleBinding")
+				require.ErrorContains(t, err, "error updating RoleBinding")
 				require.ErrorContains(t, err, "something went wrong")
 			},
 		},
