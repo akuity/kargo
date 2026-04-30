@@ -124,21 +124,22 @@ export const useReactFlowPipelineGraph = (
           source: edge.v,
           target: edge.w,
           animated: false,
-          type:
-            (graph.successors(edge.v)?.length || 0) > 1 ||
-            (graph.predecessors(edge.w)?.length || 0) > 1
-              ? 'step'
-              : '',
+          type: 'default',
           sourceHandle: belongsToWarehouse,
           targetHandle: belongsToWarehouse,
+          data: { warehouseName: belongsToWarehouse },
           markerEnd: {
             type: MarkerType.ArrowClosed,
-            color: dagreEdge.edgeColor || ''
+            color: '#777',
+            strokeWidth: 1,
+            width: 8,
+            height: 8
           },
           style: {
-            strokeWidth: 2,
+            strokeWidth: 4,
             stroke: dagreEdge.edgeColor || '',
-            transition: 'd 0.3s ease'
+            strokeOpacity: 0.3,
+            transition: 'd 0.3s ease, stroke-opacity 0.2s ease, filter 0.2s ease'
           }
         });
       }

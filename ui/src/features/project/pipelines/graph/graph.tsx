@@ -153,6 +153,28 @@ export const Graph = (props: GraphProps) => {
     return warehouseByName;
   }, [props.warehouses]);
 
+  const [hoveredWarehouseName, setHoveredWarehouseName] = useState<string | null>(null);
+
+  const edges = useMemo(() => {
+    if (!hoveredWarehouseName) {
+      return graph.edges;
+    }
+    return graph.edges.map((edge) => {
+      if (edge.data?.warehouseName !== hoveredWarehouseName) {
+        return edge;
+      }
+      const color = (edge.style?.stroke as string) || '#000';
+      return {
+        ...edge,
+        style: {
+          ...edge.style,
+          strokeOpacity: 0.8,
+          filter: `drop-shadow(0 0 4px ${color}60)`
+        }
+      };
+    });
+  }, [graph.edges, hoveredWarehouseName]);
+
   const nodesExcludingSubscriptionNodes = useMemo(() => {
     const subscriptionNodes = nodes.filter((n) => repoSubscriptionIndexer.is(n.id));
 
@@ -186,11 +208,19 @@ export const Graph = (props: GraphProps) => {
 
   return (
     <GraphContext.Provider
-      value={{ warehouseByName, stackedNodesParents, onStack, onUnstack, ready }}
+      value={{
+        warehouseByName,
+        stackedNodesParents,
+        onStack,
+        onUnstack,
+        ready,
+        hoveredWarehouseName,
+        setHoveredWarehouseName
+      }}
     >
       <ReactFlow
         nodes={nodes}
-        edges={graph.edges}
+        edges={edges}
         nodeTypes={nodeTypes}
         fitView
         fitViewOptions={{

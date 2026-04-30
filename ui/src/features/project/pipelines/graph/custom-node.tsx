@@ -82,6 +82,8 @@ CustomNode.Container = (
     id?: string;
   }>
 ) => {
+  const graphContext = useGraphContext();
+
   let id = '';
   let height = 0;
 
@@ -96,11 +98,24 @@ CustomNode.Container = (
     height = repoSubscriptionSizer.size().height;
   }
 
+  const warehouseHoverProps = props.warehouse
+    ? {
+        onMouseEnter: () =>
+          graphContext?.setHoveredWarehouseName(props.warehouse?.metadata?.name || ''),
+        onMouseLeave: () => graphContext?.setHoveredWarehouseName(null)
+      }
+    : {};
+
   // Fixed-height slot with content vertically centered. The slot height matches
   // the predefined size used by dagre for layout, so handles -- positioned at
   // 50% of this slot -- line up with the dagre-computed edge endpoints.
   const Children = (
-    <div id={props.id} className='nodrag cursor-default flex items-center' style={{ height }}>
+    <div
+      id={props.id}
+      className='nodrag cursor-default flex items-center'
+      style={{ height }}
+      {...warehouseHoverProps}
+    >
       {props.children}
     </div>
   );
@@ -121,7 +136,9 @@ CustomNode.Container = (
             position={Position.Left}
             style={{
               top: handleTop(idx),
-              backgroundColor: 'transparent'
+              backgroundColor: 'transparent',
+              border: 'none',
+              left: 2
             }}
           />
         ))}
@@ -134,14 +151,16 @@ CustomNode.Container = (
             position={Position.Right}
             style={{
               top: handleTop(idx),
-              backgroundColor: 'transparent'
+              backgroundColor: 'transparent',
+              border: 'none',
+              right: 4
             }}
           />
         ))}
         <Handle
           type='source'
           position={Position.Right}
-          style={{ top: '50%', backgroundColor: 'transparent' }}
+          style={{ top: '50%', backgroundColor: 'transparent', border: 'none', right: 4 }}
         />
       </>
     );
@@ -157,7 +176,8 @@ CustomNode.Container = (
           top: '50%',
           backgroundColor: 'transparent',
           stroke: 'none',
-          border: 'none'
+          border: 'none',
+          left: 2
         }}
       />
       {Children}
@@ -169,11 +189,12 @@ CustomNode.Container = (
           top: '50%',
           backgroundColor: 'transparent',
           stroke: 'none',
-          border: 'none'
+          border: 'none',
+          right: 4
         }}
       />
     </>
   );
 };
 
-const EDGE_GAP = 10;
+const EDGE_GAP = 16;
