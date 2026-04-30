@@ -169,7 +169,7 @@ func (p *provider) resolveLabelIDs(labelNames []string) ([]int64, error) {
 		return nil, nil
 	}
 
-	repoLabels := make([]*gitea.Label, 0, len(labelNames))
+	labelIDsByName := make(map[string]int64, len(labelNames))
 	for page := 1; ; {
 		pageLabels, resp, err := p.client.ListRepoLabels(
 			p.owner,
@@ -181,19 +181,16 @@ func (p *provider) resolveLabelIDs(labelNames []string) ([]int64, error) {
 		if err != nil {
 			return nil, fmt.Errorf("error listing repository labels: %w", err)
 		}
-		repoLabels = append(repoLabels, pageLabels...)
+		for _, repoLabel := range pageLabels {
+			if repoLabel == nil {
+				continue
+			}
+			labelIDsByName[repoLabel.Name] = repoLabel.ID
+		}
 		if resp == nil || resp.NextPage == 0 {
 			break
 		}
 		page = resp.NextPage
-	}
-
-	labelIDsByName := make(map[string]int64, len(repoLabels))
-	for _, repoLabel := range repoLabels {
-		if repoLabel == nil {
-			continue
-		}
-		labelIDsByName[repoLabel.Name] = repoLabel.ID
 	}
 
 	labelIDs := make([]int64, 0, len(labelNames))
