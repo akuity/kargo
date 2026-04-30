@@ -15,6 +15,7 @@ export const warehouseExpand = (warehouse: Warehouse): WarehouseExpanded => ({
       if (parsed.git) {
         return {
           $typeName: 'github.com.akuity.kargo.api.v1alpha1.RepoSubscription',
+          name: parsed.name ?? '',
           git: {
             ...parsed.git,
             $typeName: 'github.com.akuity.kargo.api.v1alpha1.GitSubscription'
@@ -25,6 +26,7 @@ export const warehouseExpand = (warehouse: Warehouse): WarehouseExpanded => ({
       if (parsed.image) {
         return {
           $typeName: 'github.com.akuity.kargo.api.v1alpha1.RepoSubscription',
+          name: parsed.name ?? '',
           image: {
             ...parsed.image,
             $typeName: 'github.com.akuity.kargo.api.v1alpha1.ImageSubscription'
@@ -35,6 +37,7 @@ export const warehouseExpand = (warehouse: Warehouse): WarehouseExpanded => ({
       if (parsed.chart) {
         return {
           $typeName: 'github.com.akuity.kargo.api.v1alpha1.RepoSubscription',
+          name: parsed.name ?? '',
           chart: {
             ...parsed.chart,
             $typeName: 'github.com.akuity.kargo.api.v1alpha1.ChartSubscription'
@@ -46,6 +49,7 @@ export const warehouseExpand = (warehouse: Warehouse): WarehouseExpanded => ({
 
       return {
         $typeName: 'github.com.akuity.kargo.api.v1alpha1.RepoSubscription',
+        name: parsed.name ?? '',
         subscription: parsed[otherSubscriptionKey]
       };
     })
