@@ -69,6 +69,17 @@ export const useReactFlowPipelineGraph = (
       const reactFlowNodes: Node[] = [];
       const reactFlowEdges: Edge[] = [];
 
+      // y-coordinate of each warehouse after layout. Stage nodes use this to
+      // sort their per-warehouse handles top-to-bottom so edges enter in the
+      // same vertical order as the source warehouses, avoiding crossings.
+      const warehouseY: Record<string, number> = {};
+      for (const node of graph.nodes()) {
+        const dagreNode = graph.node(node);
+        if (dagreNode?.warehouse) {
+          warehouseY[dagreNode.warehouse?.metadata?.name || ''] = dagreNode.y;
+        }
+      }
+
       for (const node of graph.nodes()) {
         const dagreNode = graph.node(node);
 
@@ -109,7 +120,8 @@ export const useReactFlowPipelineGraph = (
           data: {
             label: node,
             value: dagreNode?.warehouse || dagreNode?.subscription || dagreNode?.stage,
-            subscriptionParent: dagreNode?.subscriptionParent
+            subscriptionParent: dagreNode?.subscriptionParent,
+            warehouseY
           }
         });
       }
@@ -131,9 +143,9 @@ export const useReactFlowPipelineGraph = (
           markerEnd: {
             type: MarkerType.ArrowClosed,
             color: '#777',
-            strokeWidth: 1,
             width: 8,
-            height: 8
+            height: 8,
+            strokeWidth: 2
           },
           style: {
             strokeWidth: 4,
