@@ -1,0 +1,41 @@
+package http
+
+import (
+	"encoding/json"
+	"fmt"
+	"net/http"
+	"time"
+)
+
+var noCacheHeaders = map[string]string{
+	"Expires":         time.Unix(0, 0).Format(time.RFC1123),
+	"Cache-Control":   "no-cache, private, max-age=0",
+	"Pragma":          "no-cache",
+	"X-Accel-Expires": "0",
+}
+
+func SetNoCacheHeaders(w http.ResponseWriter) {
+	if w == nil {
+		return
+	}
+	for k, v := range noCacheHeaders {
+		w.Header().Set(k, v)
+	}
+}
+
+func SetCacheHeaders(w http.ResponseWriter, maxAge time.Duration, timeUntilExpiry time.Duration) {
+	if w == nil {
+		return
+	}
+	w.Header().Set("Cache-Control", fmt.Sprintf("public, max-age=%d", int(maxAge.Seconds())))
+	w.Header().Set("Expires", time.Now().UTC().Add(timeUntilExpiry).Format(http.TimeFormat))
+}
+
+func WriteResponseJSON(w http.ResponseWriter, code int, body any) {
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(code)
+	if body == nil {
+		body = struct{}{}
+	}
+	_ = json.NewEncoder(w).Encode(body)
+}

@@ -1,0 +1,133 @@
+{{- if and .Values.api.enabled .Values.api.oidc.enabled .Values.api.oidc.dex.enabled }}
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: kargo-dex-server
+  namespace: {{ .Release.Namespace }}
+  labels:
+    {{- include "kargo.labels" . | nindent 4 }}
+    {{- include "kargo.dexServer.labels" . | nindent 4 }}
+  {{- with (mergeOverwrite (deepCopy .Values.global.annotations) .Values.api.oidc.dex.annotations) }}
+  annotations:
+    {{- range $key, $value := . }}
+    {{ $key }}: {{ $value | quote }}
+    {{- end }}
+  {{- end }}
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      {{- include "kargo.selectorLabels" . | nindent 6 }}
+      {{- include "kargo.dexServer.labels" . | nindent 6 }}
+  template:
+    metadata:
+      labels:
+        {{- include "kargo.labels" . | nindent 8 }}
+        {{- include "kargo.dexServer.labels" . | nindent 8 }}
+      annotations:
+        secret/checksum: {{ pick ( include (print $.Template.BasePath "/dex-server/secret.yaml") . | fromYaml ) "stringData" | toYaml | sha256sum }}
+    spec:
+      {{- if not .Values.rbac.useDefaultServiceAccount }}
+      serviceAccount: kargo-dex-server
+      {{- end }}
+      {{- if .Values.rbac.disableAutomountServiceAccountToken }}
+      automountServiceAccountToken: false
+      {{- end }}
+      {{- with .Values.api.oidc.dex.affinity | default .Values.global.affinity }}
+      affinity:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      {{- with .Values.api.oidc.dex.priorityClassName | default .Values.global.priorityClassName }}
+      priorityClassName: {{ . }}
+      {{- end }}
+      {{- with .Values.api.oidc.dex.image.pullSecrets }}
+      imagePullSecrets:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      containers:
+      - name: dex-server
+        image: {{ .Values.api.oidc.dex.image.repository }}:{{ .Values.api.oidc.dex.image.tag }}
+        imagePullPolicy: {{ .Values.api.oidc.dex.image.pullPolicy }}
+        command: ["dex", "serve"]
+        args: ["/etc/dex/config.yaml"]
+        env:
+        - name: GOMEMLIMIT
+          valueFrom:
+            resourceFieldRef:
+              containerName: dex-server
+              divisor: "1"
+              resource: limits.memory
+        - name: GOMAXPROCS
+          valueFrom:
+            resourceFieldRef:
+              containerName: dex-server
+              divisor: "1"
+              resource: {{ include "kargo.selectCpuResourceField" (dict "resources" .Values.api.oidc.dex.resources) }}
+        {{- with (concat .Values.global.env .Values.api.oidc.dex.env) }}
+        {{- toYaml . | nindent 8 }}
+        {{- end }}
+        {{- with (concat .Values.global.envFrom .Values.api.oidc.dex.envFrom) }}
+        envFrom:
+        {{- toYaml . | nindent 8 }}
+        {{- end }}
+        volumeMounts:
+        - mountPath: /etc/dex
+          name: config
+          readOnly: true
+        {{- if .Values.api.oidc.dex.volumeMounts }}
+          {{- toYaml .Values.api.oidc.dex.volumeMounts | nindent 8 }}
+        {{- end }}
+        {{- with .Values.api.oidc.dex.securityContext | default .Values.global.securityContext }}
+        securityContext:
+          {{- toYaml . | nindent 10 }}
+        {{- end }}
+        resources:
+          {{- toYaml .Values.api.oidc.dex.resources | nindent 10 }}
+        {{- if .Values.api.oidc.dex.probes.enabled }}
+        livenessProbe:
+          httpGet:
+            path: /healthz/live
+            port: 5558
+          initialDelaySeconds: 10
+          periodSeconds: 10
+          timeoutSeconds: 1
+          successThreshold: 1
+          failureThreshold: 300
+        readinessProbe:
+          httpGet:
+            path: /healthz/ready
+            port: 5558
+          initialDelaySeconds: 10
+          periodSeconds: 10
+          timeoutSeconds: 1
+          successThreshold: 1
+          failureThreshold: 300
+          {{- end }}
+      volumes:
+      - name: config
+        projected:
+          sources:
+          - secret:
+              name: {{ .Values.api.oidc.dex.tls.secretName }}
+              items:
+              - key: tls.crt
+                path: tls.crt
+              - key: tls.key
+                path: tls.key
+          - secret:
+              name: kargo-dex-server
+              items:
+              - key: config.yaml
+                path: config.yaml
+      {{- if .Values.api.oidc.dex.volumes }}
+        {{- toYaml .Values.api.oidc.dex.volumes | nindent 6 }}
+      {{- end }}
+      {{- with .Values.api.oidc.dex.nodeSelector | default .Values.global.nodeSelector }}
+      nodeSelector:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      {{- with .Values.api.oidc.dex.tolerations | default .Values.global.tolerations }}
+      tolerations:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+{{- end }}

@@ -1,0 +1,60 @@
+global:
+  clusterSecretsNamespace: kargo-cluster-secrets
+api:
+  logLevel: DEBUG
+  host: localhost:30081
+  tls:
+    enabled: false
+  permissiveCORSPolicyEnabled: true
+  probes:
+    enabled: false
+  adminAccount:
+    # The password is 'admin'
+    passwordHash: "$2a$10$Zrhhie4vLz5ygtVSaif6o.qN36jgs6vjtMBdM6yrU1FOeiAAMMxOm"
+    tokenSigningKey: iwishtowashmyirishwristwatch
+  rollouts:
+    logs:
+      enabled: true
+      # This is Pride and Prejudice. It's an adequate volume of text to validate
+      # that log streaming via SSE truly works as intended.
+      urlTemplate: https://www.gutenberg.org/files/1342/1342-0.txt
+  oidc:
+    enabled: true
+    dex:
+      enabled: true
+      connectors:
+      - id: mock
+        name: Example
+        type: mockCallback
+      probes:
+        enabled: false
+    admins:
+      claims:
+        email:
+        # This email claim is hard-coded in the Dex mockCallback connector
+        - kilgore@kilgore.trout
+controller:
+  logLevel: DEBUG
+  gitClient:
+    name: "Kargo Test Key"
+    email: "no-reply@kargo.io"
+    signingKeySecret:
+      name: kargo-test-gpg-signing-key
+  images:
+    cache:
+      cacheByTagPolicy: Force
+crds:
+  install: true
+externalWebhooksServer:
+  logLevel: DEBUG
+  host: localhost:30083
+  tls:
+    enabled: false
+  probes:
+    enabled: false
+garbageCollector:
+  logLevel: DEBUG
+managementController:
+  logLevel: DEBUG
+webhooksServer:
+  logLevel: DEBUG

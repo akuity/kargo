@@ -1,0 +1,53 @@
+{{- if and .Values.controller.enabled .Values.rbac.installClusterRoleBindings }}
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRoleBinding
+metadata:
+  name: kargo-controller
+  labels:
+    {{- include "kargo.labels" . | nindent 4 }}
+    {{- include "kargo.controller.labels" . | nindent 4 }}
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: ClusterRole
+  name: kargo-controller
+subjects:
+- kind: ServiceAccount
+  namespace: {{ .Release.Namespace }}
+  name: kargo-controller
+{{- if and .Values.controller.argocd.integrationEnabled (not .Values.controller.argocd.watchArgocdNamespaceOnly) }}
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRoleBinding
+metadata:
+  name: kargo-controller-argocd
+  labels:
+    {{- include "kargo.labels" . | nindent 4 }}
+    {{- include "kargo.controller.labels" . | nindent 4 }}
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: ClusterRole
+  name: kargo-controller-argocd
+subjects:
+- kind: ServiceAccount
+  namespace: {{ .Release.Namespace }}
+  name: kargo-controller
+{{- end }}
+{{- if .Values.controller.rollouts.integrationEnabled }}
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRoleBinding
+metadata:
+  name: kargo-controller-rollouts
+  labels:
+    {{- include "kargo.labels" . | nindent 4 }}
+    {{- include "kargo.controller.labels" . | nindent 4 }}
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: ClusterRole
+  name: kargo-controller-rollouts
+subjects:
+- kind: ServiceAccount
+  namespace: {{ .Release.Namespace }}
+  name: kargo-controller
+{{- end }}
+{{- end }}

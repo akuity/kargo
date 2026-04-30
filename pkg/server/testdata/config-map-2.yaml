@@ -1,0 +1,7 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: cm-2
+  namespace: kargo-demo
+data:
+  bar: baz

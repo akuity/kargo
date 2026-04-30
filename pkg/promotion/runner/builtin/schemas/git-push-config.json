@@ -1,0 +1,76 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "GitPushConfig",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["path"],
+  "properties": {
+    "generateTargetBranch": {
+      "type": "boolean",
+      "description": "Indicates whether to push to a new remote branch. A value of 'true' is mutually exclusive with 'targetBranch' and 'tag'. If none of these are provided, the target branch will be the currently checked out branch."
+    },
+    "maxAttempts": {
+      "type": "integer",
+      "description": "This step implements its own internal retry logic for cases where a push is determined to have failed due to the remote branch having commits that that are not present locally. Each attempt, including the first, rebases prior to pushing. This field configures the maximum number of attempts to push to the remote repository. If not specified, the default is 10.",
+      "minimum": 1,
+      "maximum": 2147483647
+    },
+    "path": {
+      "type": "string",
+      "description": "The path to a working directory of a local repository.",
+      "minLength": 1
+    },
+    "targetBranch": {
+      "type": "string",
+      "description": "The target branch to push to. Mutually exclusive with 'generateTargetBranch=true' and 'tag'. If none of these are provided, the target branch will be the currently checked out branch."
+    },
+    "provider": {
+      "type": "string",
+      "description": "The name of the Git provider to use. Currently 'azure', 'bitbucket', 'gitea', 'github', and 'gitlab' are supported. Kargo will try to infer the provider if it is not explicitly specified.",
+      "enum": ["azure", "bitbucket", "gitea", "github", "gitlab"]
+    },
+    "force": {
+      "type": "boolean",
+      "description": "Whether to force push to the target branch, overwriting any existing history. This is useful for scenarios where you want to completely replace the branch content (e.g., pushing rendered manifests that don't depend on previous state). Use with caution as this will overwrite any commits that exist on the remote branch but not in your local branch. Mutually exclusive with 'tag'.",
+      "default": false
+    },
+    "tag": {
+      "type": "string",
+      "description": "A tag to push to the remote repository. Mutually exclusive with 'generateTargetBranch=true' and 'targetBranch'. If none of these are provided, the target branch will be the currently checked out branch. 'tag' is also mutually exclusive with 'force=true'."
+    }
+  },
+  "oneOf": [
+    {
+      "properties": {
+        "generateTargetBranch": { "const": true },
+        "targetBranch": { "enum": ["", null] },
+        "tag": { "enum": ["", null] }
+      },
+      "required": ["generateTargetBranch"]
+    },
+    {
+      "properties": {
+        "generateTargetBranch": { "enum": [false, null] },
+        "targetBranch": { "minLength": 1 },
+        "tag": { "enum": ["", null] }
+      },
+      "required": ["targetBranch"]
+    },
+    {
+      "properties": {
+        "generateTargetBranch": { "enum": [false, null] },
+        "targetBranch": { "enum": ["", null] },
+        "tag": { "minLength": 1 },
+        "force": { "enum": [false, null] }
+      },
+      "required": ["tag"]
+    },
+    {
+      "properties": {
+        "generateTargetBranch": { "enum": [false, null] },
+        "targetBranch": { "enum": ["", null] },
+        "tag": { "enum": ["", null] }
+      }
+    }
+  ]
+}

@@ -1,0 +1,81 @@
+{
+ "$schema": "https://json-schema.org/draft/2020-12/schema",
+ "title": "ImageSubscription",
+ "description": "ImageSubscription defines a subscription to a container image repository.",
+ "type": "object",
+ "properties": {
+  "repoURL": {
+   "type": "string",
+   "minLength": 1,
+   "pattern": "^(\\w+([\\.-]\\w+)*(:[\\d]+)?/)?(\\w+([\\.-]\\w+)*)(/\\w+([\\.-]\\w+)*)*$",
+   "description": "RepoURL specifies the URL of the image repository to subscribe to. The value in this field MUST NOT include an image tag. This field is required."
+  },
+  "imageSelectionStrategy": {
+   "type": "string",
+   "enum": [
+    "Digest",
+    "Lexical",
+    "NewestBuild",
+    "SemVer"
+   ],
+   "default": "SemVer",
+   "description": "ImageSelectionStrategy specifies the rules for how to identify the newest version of the image specified by the RepoURL field. This field is optional. When left unspecified, the field is implicitly treated as if its value were \"SemVer\". Accepted values: \"Digest\", \"Lexical\", \"NewestBuild\", \"SemVer\"."
+  },
+  "strictSemvers": {
+   "type": "boolean",
+   "default": true,
+   "description": "StrictSemvers specifies whether only \"strict\" semver tags should be considered. A \"strict\" semver tag is one containing ALL of major, minor, and patch version components. This is enabled by default, but only has any effect when the ImageSelectionStrategy is SemVer. This should be disabled cautiously, as it is not uncommon to tag container images with short Git commit hashes, which could be mistaken for a semver string containing the major version number only."
+  },
+  "constraint": {
+   "type": "string",
+   "description": "Constraint specifies ImageSelectionStrategy-specific constraints on what new image revisions are permissible. Acceptable values for this field vary contextually by ImageSelectionStrategy. The field is optional for some strategies. Others either require it or ignore it. For strategies that treat this field as optional, specifying no value means \"no constraints.\""
+  },
+  "allowTags": {
+   "type": "string",
+   "description": "AllowTags is a regular expression that can optionally be used to limit the image tags that are considered in determining the newest version of an image. This field is optional. Deprecated: Use allowTagsRegexes instead. Beginning in v1.11.0, artifact discovery will FAIL if this field is non-empty. This field will be removed in v1.13.0."
+  },
+  "allowTagsRegexes": {
+   "type": "array",
+   "items": {
+    "type": "string"
+   },
+   "description": "AllowTagsRegexes is a list of regular expressions that can optionally be used to limit the image tags that are considered in determining the newest revision of an image. This field is optional."
+  },
+  "ignoreTags": {
+   "type": "array",
+   "items": {
+    "type": "string"
+   },
+   "description": "IgnoreTags is a list of tags that must be ignored when determining the newest version of an image. No regular expressions or glob patterns are supported yet. This field is optional. Deprecated: Use ignoreTagsRegexes instead. Beginning in v1.11.0, artifact discovery will FAIL if this field is non-empty. This field will be removed in v1.13.0."
+  },
+  "ignoreTagsRegexes": {
+   "type": "array",
+   "items": {
+    "type": "string"
+   },
+   "description": "IgnoreTagsRegexes is a list of regular expressions that can optionally be used to exclude tags from consideration when determining the newest revision of an image. This field is optional."
+  },
+  "platform": {
+   "type": "string",
+   "pattern": "^\\w+/\\w+$",
+   "description": "Platform is a string of the form <os>/<arch> that limits the tags that can be considered when searching for new versions of an image. This field is optional. When left unspecified, it is implicitly equivalent to the OS/architecture of the Kargo controller. Care should be taken to set this value correctly in cases where the image will run on a Kubernetes node with a different OS/architecture than the Kargo controller."
+  },
+  "insecureSkipTLSVerify": {
+   "type": "boolean",
+   "description": "InsecureSkipTLSVerify specifies whether certificate verification errors should be ignored when connecting to the repository. This should be enabled only with great caution."
+  },
+  "discoveryLimit": {
+   "type": "integer",
+   "minimum": 1,
+   "maximum": 100,
+   "default": 20,
+   "description": "DiscoveryLimit is an optional limit on the number of image references that can be discovered for this subscription. The limit is applied after filtering images based on the AllowTagsRegexes and IgnoreTagsRegexes fields. When left unspecified, the field is implicitly treated as if its value were \"20\". The upper limit for this field is 100."
+  },
+  "cacheByTag": {
+   "type": "boolean",
+   "default": false,
+   "description": "CacheByTag specifies whether to cache image metadata by tag. This can improve performance but may lead to stale data if mutable tags are used."
+  }
+ },
+ "additionalProperties": false
+}

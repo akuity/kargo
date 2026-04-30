@@ -1,0 +1,54 @@
+{{- if and .Values.api.enabled .Values.api.ingress.enabled }}
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: kargo-api
+  namespace: {{ .Release.Namespace }}
+  labels:
+    {{- include "kargo.labels" . | nindent 4 }}
+    {{- include "kargo.api.labels" . | nindent 4 }}
+  {{- with (mergeOverwrite (deepCopy .Values.global.annotations) .Values.api.ingress.annotations) }}
+  annotations:
+    {{- range $key, $value := . }}
+    {{ $key }}: {{ $value | quote }}
+    {{- end }}
+  {{- end }}
+spec:
+  {{- if .Values.api.ingress.ingressClassName }}
+  ingressClassName: {{ .Values.api.ingress.ingressClassName }}
+  {{- end }}
+  rules:
+  - host: {{ quote .Values.api.host }}
+    http:
+      paths:
+      - pathType: {{ .Values.api.ingress.pathType | default "ImplementationSpecific" }}
+        path: /
+        backend:
+          service:
+            name: kargo-api
+            port:
+              {{- if .Values.api.tls.enabled }}
+              number: 443
+              {{- else }}
+              number: 80
+              {{- end }}
+      {{- if and .Values.externalWebhooksServer.enabled (not .Values.externalWebhooksServer.ingress.enabled) }}
+      - pathType: {{ .Values.api.ingress.pathType | default "ImplementationSpecific" }}
+        path: /webhooks
+        backend:
+          service:
+            name: kargo-external-webhooks-server
+            port:
+              {{- if .Values.externalWebhooksServer.tls.enabled }}
+              number: 443
+              {{- else }}
+              number: 80
+              {{- end }}
+      {{- end }}
+  {{- if .Values.api.ingress.tls.enabled }}
+  tls:
+  - hosts:
+    - {{ quote .Values.api.host }}
+    secretName: {{ .Values.api.ingress.tls.secretName }}
+  {{- end }}
+{{- end }}

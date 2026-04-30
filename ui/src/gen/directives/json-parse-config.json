@@ -1,0 +1,51 @@
+{
+ "$schema": "https://json-schema.org/draft/2020-12/schema",
+ "title": "JSONParseConfig",
+ "definitions": {
+  "jsonParse": {
+   "type": "object",
+   "additionalProperties": false,
+   "properties": {
+    "name": {
+     "type": "string",
+     "minLength": 1,
+     "description": "The name of the output variable to store the result."
+    },
+    "fromExpression": {
+     "type": "string",
+     "minLength": 1,
+     "description": "The expression used to extract data from the JSON file."
+    }
+   }
+  }
+ },
+ "type": "object",
+ "additionalProperties": false,
+ "properties": {
+  "path": {
+   "type": "string",
+   "description": "The path to the JSON file to be parsed.",
+   "minLength": 1
+  },
+  "outputs": {
+   "type": "array",
+   "description": "An array of outputs to extract from the JSON file.",
+   "items": {
+    "type": "object",
+    "additionalProperties": false,
+    "properties": {
+     "name": {
+      "type": "string",
+      "minLength": 1,
+      "description": "The name of the output variable to store the result."
+     },
+     "fromExpression": {
+      "type": "string",
+      "minLength": 1,
+      "description": "The expression used to extract data from the JSON file."
+     }
+    }
+   }
+  }
+ }
+}

@@ -1,0 +1,40 @@
+{
+    "beta": [
+        "jira",
+        "jfrog-evidence",
+        "git-merge-pr",
+        "github-push",
+        "gha-dispatch-workflow",
+        "gha-wait-for-workflow",
+        "hcl-update",
+        "send-message",
+        "tf-apply",
+        "tf-output",
+        "tf-plan",
+        "snow-create",
+        "snow-update",
+        "snow-delete",
+        "snow-query-for-records",
+        "snow-wait-for-condition",
+        "toml-parse",
+        "toml-update",
+        "Custom steps"
+    ],
+    "pro": [
+        "jira",
+        "jfrog-evidence",
+        "gha-dispatch-workflow",
+        "gha-wait-for-workflow",
+        "hcl-update",
+        "send-message",
+        "tf-apply",
+        "tf-output",
+        "tf-plan",
+        "snow-create",
+        "snow-update",
+        "snow-delete",
+        "snow-query-for-records",
+        "snow-wait-for-condition",
+        "Custom steps"
+    ]
+}

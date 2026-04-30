@@ -1,0 +1,36 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: kargo-ui
+  namespace: kargo
+  labels:
+    app.kubernetes.io/component: ui
+    app.kubernetes.io/instance: kargo
+    app.kubernetes.io/name: kargo
+spec:
+  replicas: 1
+  strategy:
+    type: RollingUpdate
+  selector:
+    matchLabels:
+      app.kubernetes.io/component: ui
+      app.kubernetes.io/instance: kargo
+      app.kubernetes.io/name: kargo
+  template:
+    metadata:
+      labels:
+        app.kubernetes.io/component: ui
+        app.kubernetes.io/instance: kargo
+        app.kubernetes.io/name: kargo
+    spec:
+      containers:
+      - name: ui
+        image: kargo-ui:placeholder
+        imagePullPolicy: Always
+        env:
+        - name: API_URL
+          value: http://kargo-api
+        ports:
+        - name: http
+          containerPort: 3333
+          protocol: TCP

@@ -1,0 +1,65 @@
+{{- if .Values.controller.enabled }}
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: kargo-controller
+  namespace: {{ .Release.Namespace }}
+  labels:
+    {{- include "kargo.labels" . | nindent 4 }}
+    {{- include "kargo.controller.labels" . | nindent 4 }}
+data:
+  {{- if .Values.api.enabled }}
+  API_SERVER_BASE_URL: {{ include "kargo.api.baseURL" . }}
+  {{- end }}
+  LOG_LEVEL: {{ quote .Values.controller.logLevel }}
+  LOG_FORMAT: {{ quote .Values.controller.logFormat }}
+  KARGO_NAMESPACE: {{ .Release.Namespace }}
+  SYSTEM_RESOURCES_NAMESPACE: {{ quote .Values.global.systemResources.namespace }}
+  {{- if or (not .Values.controller.shardName) .Values.controller.isDefault }}
+  IS_DEFAULT_CONTROLLER: "true"
+  {{- end }}
+  {{- if .Values.controller.shardName }}
+  SHARD_NAME: {{ .Values.controller.shardName }}
+  {{- end }}
+  {{- if .Values.kubeconfigSecrets.kargo }}
+  KUBECONFIG: /etc/kargo/kubeconfigs/kubeconfig.yaml
+  {{- end }}
+  SHARED_RESOURCES_NAMESPACE: {{ quote .Values.global.sharedResources.namespace }}
+  ALLOW_CREDENTIALS_OVER_HTTP: {{ quote .Values.controller.allowCredentialsOverHTTP }}
+  GITCLIENT_NAME: {{ quote .Values.controller.gitClient.name }}
+  GITCLIENT_EMAIL: {{ quote .Values.controller.gitClient.email }}
+  GIT_PUSH_INTEGRATION_POLICY: {{ quote .Values.controller.gitClient.pushIntegrationPolicy }}
+  GITCLIENT_SIGNING_KEY_TYPE: {{ .Values.controller.gitClient.signingKeySecret.type | default "gpg" | quote }}
+  {{- if .Values.controller.gitClient.signingKeySecret.name }}
+  GITCLIENT_SIGNING_KEY_PATH: /etc/kargo/git/signingKey
+  {{- end }}
+  GITHUB_PUSH_MAX_REVISIONS: {{ quote .Values.controller.githubPush.maxRevisions }}
+  GITHUB_PUSH_VERIFY_UNTRUSTED_COMMITS: {{ quote .Values.controller.githubPush.verifyUntrustedCommits }}
+  CACHE_BY_TAG_POLICY: {{ quote .Values.controller.images.cache.cacheByTagPolicy }}
+  MAX_IMAGE_CACHE_ENTRIES: {{ quote .Values.controller.images.cache.maxEntries }}
+  IMAGE_REGISTRY_RATE_LIMIT: {{ quote .Values.controller.images.registries.rateLimit }}
+  {{- with .Values.controller.images.push }}
+  {{- if not (kindIs "invalid" .maxArtifactSize) }}
+  MAX_OCI_PUSH_ARTIFACT_SIZE: {{ int64 .maxArtifactSize | quote }}
+  {{- end }}
+  {{- end }}
+  ARGOCD_INTEGRATION_ENABLED: {{ quote .Values.controller.argocd.integrationEnabled }}
+  {{- if .Values.controller.argocd.integrationEnabled }}
+  {{- if .Values.kubeconfigSecrets.argocd }}
+  ARGOCD_KUBECONFIG: /etc/kargo/kubeconfigs/argocd-kubeconfig.yaml
+  {{- end }}
+  ARGOCD_NAMESPACE: {{ .Values.controller.argocd.namespace | default "argocd" }}
+  ARGOCD_WATCH_ARGOCD_NAMESPACE_ONLY: {{ quote .Values.controller.argocd.watchArgocdNamespaceOnly }}
+  {{- end }}
+  ROLLOUTS_INTEGRATION_ENABLED: {{ quote .Values.controller.rollouts.integrationEnabled }}
+  {{- if .Values.controller.rollouts.integrationEnabled }}
+  ROLLOUTS_CONTROLLER_INSTANCE_ID: {{ quote .Values.controller.rollouts.controllerInstanceID }}
+  {{- end }}
+  MAX_CONCURRENT_CONTROL_FLOW_RECONCILES: {{ .Values.controller.reconcilers.controlFlowStages.maxConcurrentReconciles | default .Values.controller.reconcilers.maxConcurrentReconciles | quote }}
+  MAX_CONCURRENT_PROMOTION_RECONCILES: {{ .Values.controller.reconcilers.promotions.maxConcurrentReconciles | default .Values.controller.reconcilers.maxConcurrentReconciles | quote }}
+  MAX_CONCURRENT_STAGE_RECONCILES: {{ .Values.controller.reconcilers.stages.maxConcurrentReconciles | default .Values.controller.reconcilers.maxConcurrentReconciles | quote }}
+  MAX_CONCURRENT_WAREHOUSE_RECONCILES: {{ .Values.controller.reconcilers.warehouses.maxConcurrentReconciles | default .Values.controller.reconcilers.maxConcurrentReconciles | quote }}
+  {{- if .Values.controller.reconcilers.warehouses.minReconciliationInterval }}
+  MIN_WAREHOUSE_RECONCILIATION_INTERVAL: {{ .Values.controller.reconcilers.warehouses.minReconciliationInterval | quote }}
+  {{- end }}
+{{- end }}

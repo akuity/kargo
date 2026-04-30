@@ -1,0 +1,19 @@
+apiVersion: kargo.akuity.io/v1alpha1
+kind: PromotionTask
+metadata:
+  name: open-pr-and-wait
+  namespace: kargo-demo
+spec:
+  vars:
+  - name: repoURL
+  - name: sourceBranch
+  - name: targetBranch
+    value: main
+  steps:
+  - uses: git-open-pr
+    as: open-pr
+    config:
+      repoURL: ${{ vars.repoURL }}
+      createTargetBranch: true
+      sourceBranch: ${{ vars.sourceBranch }}
+      targetBranch: ${{ vars.targetBranch }}

@@ -1,0 +1,73 @@
+.truckContainer {
+  position: relative;
+  display: inline-block;
+  @apply text-xl;
+}
+
+.truckIcon {
+  position: relative;
+  z-index: 1;
+  animation: bounce 0.6s ease-in-out infinite;
+  @apply text-blue-500;
+}
+
+@keyframes bounce {
+  0%,
+  100% {
+    transform: translateY(0);
+  }
+  50% {
+    transform: translateY(-1px);
+  }
+}
+
+.exhaustParticle {
+  position: absolute;
+  bottom: 10px;
+  left: -5px;
+  width: 2px;
+  height: 2px;
+  background-color: rgba(150, 150, 150, 0.7);
+  border-radius: 50%;
+  opacity: 0;
+  animation: puff 1.5s ease-out infinite;
+}
+
+@keyframes puff {
+  0% {
+    opacity: 1;
+    transform: translate(0, 0) scale(1);
+    width: 4px;
+  }
+  50% {
+    opacity: 1;
+    transform: translate(calc(var(--directionX)), calc(-15px + var(--directionY)))
+      scale(calc(1.2 + var(--scale)));
+    width: calc(4px + 2px * var(--scale));
+  }
+  100% {
+    opacity: 0;
+    transform: translate(calc(var(--directionX)), calc(-30px + var(--directionY)))
+      scale(calc(1.2 + var(--scale)));
+    width: calc(4px + 2px * var(--scale));
+  }
+}
+
+.exhaustParticle:nth-child(1) {
+  --directionX: -5px;
+  --directionY: 0px;
+  --scale: 0.5;
+  animation-delay: 0s;
+}
+.exhaustParticle:nth-child(2) {
+  --directionX: -10px;
+  --directionY: 5px;
+  --scale: 0.4;
+  animation-delay: 0.2s;
+}
+.exhaustParticle:nth-child(3) {
+  --directionX: -8px;
+  --directionY: 10px;
+  --scale: 0.6;
+  animation-delay: 0.4s;
+}

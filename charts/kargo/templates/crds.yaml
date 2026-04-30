@@ -1,0 +1,11 @@
+{{- if .Values.crds.install -}}
+{{- range $path, $bytes := .Files.Glob "resources/crds/*.yaml" }}
+{{- $manifest := $.Files.Get $path | fromYaml }}
+{{- if $.Values.crds.keep }}
+{{- $newAnnotations := dict "helm.sh/resource-policy" "keep" | merge $manifest.metadata.annotations }}
+{{- $_ := set $manifest.metadata "annotations" $newAnnotations }}
+{{- end }}
+{{- $manifest | toYaml  }}
+{{- print "\n---\n" }}
+{{- end }}
+{{- end }}

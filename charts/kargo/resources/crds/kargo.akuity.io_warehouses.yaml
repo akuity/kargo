@@ -1,0 +1,433 @@
+---
+apiVersion: apiextensions.k8s.io/v1
+kind: CustomResourceDefinition
+metadata:
+  annotations:
+    controller-gen.kubebuilder.io/version: v0.19.0
+  name: warehouses.kargo.akuity.io
+spec:
+  group: kargo.akuity.io
+  names:
+    kind: Warehouse
+    listKind: WarehouseList
+    plural: warehouses
+    singular: warehouse
+  scope: Namespaced
+  versions:
+  - additionalPrinterColumns:
+    - jsonPath: .spec.shard
+      name: Shard
+      type: string
+    - jsonPath: .metadata.creationTimestamp
+      name: Age
+      type: date
+    name: v1alpha1
+    schema:
+      openAPIV3Schema:
+        description: Warehouse is a source of Freight.
+        properties:
+          apiVersion:
+            description: |-
+              APIVersion defines the versioned schema of this representation of an object.
+              Servers should convert recognized schemas to the latest internal value, and
+              may reject unrecognized values.
+              More info: https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#resources
+            type: string
+          kind:
+            description: |-
+              Kind is a string value representing the REST resource this object represents.
+              Servers may infer this from the endpoint the client submits requests to.
+              Cannot be updated.
+              In CamelCase.
+              More info: https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#types-kinds
+            type: string
+          metadata:
+            type: object
+          spec:
+            description: Spec describes sources of artifacts.
+            properties:
+              freightCreationCriteria:
+                description: |-
+                  FreightCreationCriteria defines criteria that must be satisfied for Freight
+                  to be created automatically from new artifacts following discovery. This
+                  field has no effect when the FreightCreationPolicy is `Manual`.
+                properties:
+                  expression:
+                    description: |-
+                      Expression is an expr-lang expression that must evaluate to true for
+                      Freight to be created automatically from new artifacts following discovery.
+                    type: string
+                type: object
+              freightCreationPolicy:
+                default: Automatic
+                description: |-
+                  FreightCreationPolicy describes how Freight is created by this Warehouse.
+                  This field is optional. When left unspecified, the field is implicitly
+                  treated as if its value were "Automatic".
+
+                  Accepted values:
+
+                  - "Automatic": New Freight is created automatically when any new artifact
+                    is discovered.
+                  - "Manual": New Freight is never created automatically.
+                enum:
+                - Automatic
+                - Manual
+                type: string
+              interval:
+                default: 5m0s
+                description: |-
+                  Interval is the reconciliation interval for this Warehouse. On each
+                  reconciliation, the Warehouse will discover new artifacts and optionally
+                  produce new Freight. This field is optional. When left unspecified, the
+                  field is implicitly treated as if its value were "5m0s".
+                pattern: ^([0-9]+(\.[0-9]+)?(s|m|h))+$
+                type: string
+              shard:
+                description: |-
+                  Shard is the name of the shard that this Warehouse belongs to. This is an
+                  optional field. If not specified, the Warehouse will belong to the default
+                  shard. A defaulting webhook will sync this field with the value of the
+                  kargo.akuity.io/shard label. When the shard label is not present or differs
+                  from the value of this field, the defaulting webhook will set the label to
+                  the value of this field. If the shard label is present and this field is
+                  empty, the defaulting webhook will set the value of this field to the value
+                  of the shard label.
+                type: string
+              subscriptions:
+                description: |-
+                  Subscriptions describes sources of artifacts to be included in Freight
+                  produced by this Warehouse.
+                items:
+                  x-kubernetes-preserve-unknown-fields: true
+                minItems: 1
+                type: array
+            required:
+            - interval
+            - subscriptions
+            type: object
+          status:
+            description: Status describes the Warehouse's most recently observed state.
+            properties:
+              conditions:
+                description: |-
+                  Conditions contains the last observations of the Warehouse's current
+                  state.
+                items:
+                  description: Condition contains details for one aspect of the current
+                    state of this API Resource.
+                  properties:
+                    lastTransitionTime:
+                      description: |-
+                        lastTransitionTime is the last time the condition transitioned from one status to another.
+                        This should be when the underlying condition changed.  If that is not known, then using the time when the API field changed is acceptable.
+                      format: date-time
+                      type: string
+                    message:
+                      description: |-
+                        message is a human readable message indicating details about the transition.
+                        This may be an empty string.
+                      maxLength: 32768
+                      type: string
+                    observedGeneration:
+                      description: |-
+                        observedGeneration represents the .metadata.generation that the condition was set based upon.
+                        For instance, if .metadata.generation is currently 12, but the .status.conditions[x].observedGeneration is 9, the condition is out of date
+                        with respect to the current state of the instance.
+                      format: int64
+                      minimum: 0
+                      type: integer
+                    reason:
+                      description: |-
+                        reason contains a programmatic identifier indicating the reason for the condition's last transition.
+                        Producers of specific condition types may define expected values and meanings for this field,
+                        and whether the values are considered a guaranteed API.
+                        The value should be a CamelCase string.
+                        This field may not be empty.
+                      maxLength: 1024
+                      minLength: 1
+                      pattern: ^[A-Za-z]([A-Za-z0-9_,:]*[A-Za-z0-9_])?$
+                      type: string
+                    status:
+                      description: status of the condition, one of True, False, Unknown.
+                      enum:
+                      - "True"
+                      - "False"
+                      - Unknown
+                      type: string
+                    type:
+                      description: type of condition in CamelCase or in foo.example.com/CamelCase.
+                      maxLength: 316
+                      pattern: ^([a-z0-9]([-a-z0-9]*[a-z0-9])?(\.[a-z0-9]([-a-z0-9]*[a-z0-9])?)*/)?(([A-Za-z0-9][-A-Za-z0-9_.]*)?[A-Za-z0-9])$
+                      type: string
+                  required:
+                  - lastTransitionTime
+                  - message
+                  - reason
+                  - status
+                  - type
+                  type: object
+                type: array
+                x-kubernetes-list-map-keys:
+                - type
+                x-kubernetes-list-type: map
+              discoveredArtifacts:
+                description: DiscoveredArtifacts holds the artifacts discovered by
+                  the Warehouse.
+                properties:
+                  charts:
+                    description: |-
+                      Charts holds the charts discovered by the Warehouse for the chart
+                      subscriptions.
+                    items:
+                      description: |-
+                        ChartDiscoveryResult represents the result of a chart discovery operation for
+                        a ChartSubscription.
+                      properties:
+                        name:
+                          description: Name is the name of the Helm chart, as specified
+                            in the ChartSubscription.
+                          type: string
+                        repoURL:
+                          description: |-
+                            RepoURL is the repository URL of the Helm chart, as specified in the
+                            ChartSubscription.
+                          minLength: 1
+                          type: string
+                        semverConstraint:
+                          description: |-
+                            SemverConstraint is the constraint for which versions were discovered.
+                            This field is optional, and only populated if the ChartSubscription
+                            specifies a SemverConstraint.
+                          type: string
+                        versions:
+                          description: |-
+                            Versions is a list of versions discovered by the Warehouse for the
+                            ChartSubscription. An empty list indicates that the discovery operation was
+                            successful, but no versions matching the ChartSubscription criteria were
+                            found.
+                          items:
+                            type: string
+                          type: array
+                      required:
+                      - repoURL
+                      type: object
+                    type: array
+                  discoveredAt:
+                    description: DiscoveredAt is the time at which the Warehouse discovered
+                      the artifacts.
+                    format: date-time
+                    type: string
+                  git:
+                    description: |-
+                      Git holds the commits discovered by the Warehouse for the Git
+                      subscriptions.
+                    items:
+                      description: |-
+                        GitDiscoveryResult represents the result of a Git discovery operation for a
+                        GitSubscription.
+                      properties:
+                        commits:
+                          description: |-
+                            Commits is a list of commits discovered by the Warehouse for the
+                            GitSubscription. An empty list indicates that the discovery operation was
+                            successful, but no commits matching the GitSubscription criteria were found.
+                          items:
+                            description: |-
+                              DiscoveredCommit represents a commit discovered by a Warehouse for a
+                              GitSubscription.
+                            properties:
+                              author:
+                                description: Author is the author of the commit.
+                                type: string
+                              branch:
+                                description: |-
+                                  Branch is the branch in which the commit was found. This field is
+                                  optional, and populated based on the CommitSelectionStrategy of the
+                                  GitSubscription.
+                                type: string
+                              committer:
+                                description: Committer is the person who committed
+                                  the commit.
+                                type: string
+                              creatorDate:
+                                description: |-
+                                  CreatorDate is the commit creation date as specified by the commit, or
+                                  the tagger date if the commit belongs to an annotated tag.
+                                format: date-time
+                                type: string
+                              id:
+                                description: ID is the identifier of the commit. This
+                                  typically is a SHA-1 hash.
+                                minLength: 1
+                                type: string
+                              subject:
+                                description: |-
+                                  Subject is the subject of the commit (i.e. the first line of the commit
+                                  message).
+                                type: string
+                              tag:
+                                description: |-
+                                  Tag is the tag that resolved to this commit. This field is optional, and
+                                  populated based on the CommitSelectionStrategy of the GitSubscription.
+                                type: string
+                            type: object
+                          type: array
+                        repoURL:
+                          description: |
+                            RepoURL is the repository URL of the GitSubscription.
+                          minLength: 1
+                          pattern: (?:^(ssh|https?)://(?:([\w-]+)(:(.+))?@)?([\w-]+(?:\.[\w-]+)*)(?::(\d{1,5}))?(/.*)$)|(?:^([\w-]+)@([\w+]+(?:\.[\w-]+)*):(/?.*))
+                          type: string
+                      required:
+                      - repoURL
+                      type: object
+                    type: array
+                  images:
+                    description: |-
+                      Images holds the image references discovered by the Warehouse for the
+                      image subscriptions.
+                    items:
+                      description: |-
+                        ImageDiscoveryResult represents the result of an image discovery operation
+                        for an ImageSubscription.
+                      properties:
+                        platform:
+                          description: |-
+                            Platform is the target platform constraint of the ImageSubscription
+                            for which references were discovered. This field is optional, and
+                            only populated if the ImageSubscription specifies a Platform.
+                          type: string
+                        references:
+                          description: |-
+                            References is a list of image references discovered by the Warehouse for
+                            the ImageSubscription. An empty list indicates that the discovery
+                            operation was successful, but no images matching the ImageSubscription
+                            criteria were found.
+                          items:
+                            description: |-
+                              DiscoveredImageReference represents an image reference discovered by a
+                              Warehouse for an ImageSubscription.
+                            properties:
+                              annotations:
+                                additionalProperties:
+                                  type: string
+                                description: |-
+                                  Annotations is a map of key-value pairs that provide additional
+                                  information about the image.
+                                type: object
+                              createdAt:
+                                description: |-
+                                  CreatedAt is the time the image was created. This field is optional, and
+                                  not populated for every ImageSelectionStrategy.
+                                format: date-time
+                                type: string
+                              digest:
+                                description: Digest is the digest of the image.
+                                minLength: 1
+                                pattern: ^[a-z0-9]+:[a-f0-9]+$
+                                type: string
+                              tag:
+                                description: Tag is the tag of the image.
+                                maxLength: 128
+                                minLength: 1
+                                pattern: ^[\w.\-\_]+$
+                                type: string
+                            required:
+                            - digest
+                            - tag
+                            type: object
+                          type: array
+                        repoURL:
+                          description: |-
+                            RepoURL is the repository URL of the image, as specified in the
+                            ImageSubscription.
+                          minLength: 1
+                          type: string
+                      required:
+                      - repoURL
+                      type: object
+                    type: array
+                  results:
+                    description: Results holds the artifact references discovered
+                      by the Warehouse.
+                    items:
+                      description: |-
+                        DiscoveryResult represents the result of an artifact discovery operation for
+                        some subscription.
+                      properties:
+                        artifactReferences:
+                          description: |-
+                            ArtifactReferences is a list of references to specific versions of an
+                            artifact.
+                          items:
+                            description: ArtifactReference is a reference to a specific
+                              version of an artifact.
+                            properties:
+                              artifactType:
+                                description: |-
+                                  ArtifactType specifies the type of artifact this is. Often, but not always,
+                                  it will be the media type (MIME type) of the artifact referenced by this
+                                  ArtifactReference.
+                                minLength: 1
+                                type: string
+                              metadata:
+                                description: |-
+                                  Metadata is a JSON object containing a mostly opaque collection of artifact
+                                  attributes. (It must be an object. It may not be a list or a scalar value.)
+                                  "Mostly" because Kargo may understand how to interpret some documented,
+                                  well-known, top-level keys. Those aside, this metadata is only understood
+                                  by a corresponding Subscriber implementation that created it.
+                                x-kubernetes-preserve-unknown-fields: true
+                              subscriptionName:
+                                description: |-
+                                  SubscriptionName is the name of the Subscription that discovered this
+                                  artifact.
+                                minLength: 1
+                                type: string
+                              version:
+                                description: Version identifies a specific revision
+                                  of this artifact.
+                                minLength: 1
+                                type: string
+                            required:
+                            - subscriptionName
+                            - version
+                            type: object
+                          type: array
+                        name:
+                          description: |-
+                            SubscriptionName is the name of the Subscription that discovered these
+                            results.
+                          minLength: 1
+                          type: string
+                      required:
+                      - name
+                      type: object
+                    type: array
+                type: object
+              lastFreightID:
+                description: |-
+                  LastFreightID is a reference to the system-assigned identifier (name) of
+                  the most recent Freight produced by the Warehouse.
+                type: string
+              lastHandledRefresh:
+                description: |-
+                  LastHandledRefresh holds the value of the most recent AnnotationKeyRefresh
+                  annotation that was handled by the controller. This field can be used to
+                  determine whether the request to refresh the resource has been handled.
+                type: string
+              observedGeneration:
+                description: |-
+                  ObservedGeneration represents the .metadata.generation that this Warehouse
+                  was reconciled against.
+                format: int64
+                type: integer
+            type: object
+        required:
+        - spec
+        type: object
+    served: true
+    storage: true
+    subresources:
+      status: {}

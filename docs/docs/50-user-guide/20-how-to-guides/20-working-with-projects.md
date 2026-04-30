@@ -1,0 +1,513 @@
+---
+description: Learn how to work effectively with Projects
+sidebar_label: Working with Projects
+---
+
+# Working with Projects
+
+Each Kargo project is represented by a cluster-scoped Kubernetes resource of
+type `Project`. Reconciliation of such a resource effects all boilerplate
+project initialization, including the creation of a specially-labeled
+`Namespace` with the same name as the `Project`. All resources belonging to a
+given `Project` should be grouped together in that `Namespace`.
+
+A minimal `Project` resource looks like the following:
+
+```yaml
+apiVersion: kargo.akuity.io/v1alpha1
+kind: Project
+metadata:
+  name: example
+```
+
+:::note
+
+Deletion of a `Project` resource results in the deletion of the corresponding
+`Namespace`. For convenience, the inverse is also true -- deletion of a
+project's `Namespace` results in the deletion of the corresponding `Project`
+resource.
+
+:::
+
+:::info
+
+There are compelling advantages to using `Project` resources instead of
+permitting users to create `Namespace` resources directly:
+
+* The required label indicating a `Namespace` is a Kargo project cannot be
+forgotten or misapplied.
+
+* Users can be granted permission to indirectly create `Namespace` resources for
+Kargo projects _only_ without being granted more general permissions to create
+_any_ new `Namespace` directly.
+
+* Boilerplate configuration is automatically created at the time of `Project`
+creation. This includes things such as project-level RBAC resources and
+`ServiceAccount` resources.
+
+:::
+
+## Project Configuration
+
+A `ProjectConfig` resource defines project-level configuration for an associated
+`Project`. At present, this only includes
+[promotion policies](#promotion-policies)
+that describe which `Stage`s are eligible for automatic promotion of newly
+available `Freight`.
+
+The `ProjectConfig` resource must have the same name as its associated `Project`
+and be created in the `Namespace` of the `Project`. This separation of
+configuration from the `Project` resource enables more granular RBAC control.
+Users can be granted permission to modify project configurations via
+`ProjectConfig` resources without necessarily having broader access to `Project`
+resources themselves.
+
+### Promotion Policies
+
+A `ProjectConfig` resource can contain multiple promotion policies. Each policy
+is defined by a `stageSelector` and an `autoPromotionEnabled` flag. The
+`stageSelector` specifies which `Stage`s the policy applies to, and the
+`autoPromotionEnabled` flag indicates whether automatic promotion is enabled for
+those `Stage`s.
+
+:::info[Not what you were looking for?]
+
+This section focuses only on _enabling or disabling_ auto-promotion for specific
+`Stage`s through Project-level configuration. For `Stage`-level controls over
+_which_ `Freight` are eligible for auto-promotion when enabled, refer to the
+[Auto-Promotion](./40-working-with-stages.md#auto-promotion) section of our
+Working with Stages guide.
+
+:::
+
+#### Basic Promotion Policy
+
+In the example below, the `test` and `uat` `Stage`s are eligible for automatic
+promotion of newly available `Freight`, but any other `Stage`s in the `Project`
+are not:
+
+```yaml
+---
+apiVersion: kargo.akuity.io/v1alpha1
+kind: Project
+metadata:
+   name: example
+---
+apiVersion: kargo.akuity.io/v1alpha1
+kind: ProjectConfig
+metadata:
+  name: example
+  namespace: example
+spec:
+  promotionPolicies:
+  - stageSelector:
+      name: test
+    autoPromotionEnabled: true
+  - stageSelector:
+      name: uat
+    autoPromotionEnabled: true
+```
+
+#### Advanced Promotion Policies with Selectors
+
+Kargo supports more flexible ways to specify which `Stage`s a promotion policy
+applies to, using either pattern matching or label selectors.
+
+:::warning
+
+Pattern and label matching introduce security considerations. Users with
+appropriate permissions could potentially create resources with names or labels
+deliberately crafted to match patterns, bypassing intended promotion controls.
+Using [exact names](#basic-promotion-policy) provides the most secure option.
+
+:::
+
+##### Using Stage Selectors with Patterns
+
+You can use the `stageSelector` field with pattern matching to apply a promotion
+policy to multiple `Stage`s that match a specific pattern:
+
+```yaml
+---
+apiVersion: kargo.akuity.io/v1alpha1
+kind: Project
+metadata:
+  name: example
+---
+apiVersion: kargo.akuity.io/v1alpha1
+kind: ProjectConfig
+metadata:
+  name: example
+  namespace: example
+spec:
+  promotionPolicies:
+  - stageSelector:
+      # Apply to a specific stage by exact name
+      name: prod-east
+    autoPromotionEnabled: false
+  - stageSelector:
+      # Apply to all stages matching a regex pattern
+      name: "regex:test-.*"
+    autoPromotionEnabled: true
+  - stageSelector:
+      # Apply to all stages matching a glob pattern
+      name: "glob:dev-*"
+    autoPromotionEnabled: true
+```
+
+The pattern matching supports:
+
+- Exact name matching (when no prefix is used)
+- Regex patterns with prefix `regex:` or `regexp:`
+- Glob patterns with prefix `glob:`
+
+##### Using Stage Selectors with Labels
+
+You can also use
+[Kubernetes-style label selectors](https://kubernetes.io/docs/concepts/overview/working-with-objects/labels/#resources-that-support-set-based-requirements)
+to apply a promotion policy to `Stage`s with specific labels:
+
+```yaml
+---
+apiVersion: kargo.akuity.io/v1alpha1
+kind: Project
+metadata:
+  name: example
+---
+apiVersion: kargo.akuity.io/v1alpha1
+kind: ProjectConfig
+metadata:
+  name: example
+  namespace: example
+spec:
+  promotionPolicies:
+  - stageSelector:
+      matchLabels:
+        environment: development
+    autoPromotionEnabled: true
+  - stageSelector:
+      matchExpressions:
+      - key: environment
+        operator: In
+        values: ["development", "staging"]
+    autoPromotionEnabled: true
+```
+
+#### Using Stage Selectors with Patterns and Labels
+
+The [name](#using-stage-selectors-with-patterns) and
+[label](#using-stage-selectors-with-labels) selectors can be combined, in which
+case a `Stage` must match both the name and label selectors to be eligible for
+automatic promotion:
+
+```yaml
+---
+apiVersion: kargo.akuity.io/v1alpha1
+kind: Project
+metadata:
+  name: example
+---
+apiVersion: kargo.akuity.io/v1alpha1
+kind: ProjectConfig
+metadata:
+  name: example
+  namespace: example
+spec:
+  promotionPolicies:
+  - stageSelector:
+      name: glob:prod-*
+      matchLabels:
+        example.org/allow-auto-promotion: "true"
+```
+
+In the example above, the promotion policy applies to all `Stage`s with the
+`example.org/allow-auto-promotion: "true"` label and names matching the
+`glob:prod-*` pattern.
+
+### Message Channels
+
+<span class="tag professional"></span>
+<span class="tag beta"></span>
+
+Projects can define message channels to facilitate notifications and message sending as part of
+their workflows. Message channels can be configured for various platforms, such as Slack, SMTP, or
+HTTP webhooks.
+Channels are defined using the `MessageChannel` custom resource. This can be done either by applying
+YAML manifests or in the Kargo UI (also via YAML, though this will be made more user-friendly in
+future releases).
+
+Any message channel specification must include only a single channel type (e.g., Slack, SMTP, or
+HTTP, not multiple) and an optional `secretRef` to a Kubernetes `Secret` containing any necessary
+credentials.
+
+#### Examples
+
+##### Slack
+
+This is an example `MessageChannel` configuration for Slack showing all options with annotations:
+
+```yaml
+apiVersion: ee.kargo.akuity.io/v1alpha1
+kind: MessageChannel
+metadata:
+  name: test-env-slack
+  # Must match the namespace of the Project
+  namespace: kargo-demo
+spec:
+  # A reference to a Secret containing the Slack token. This is required for Slack. The Secret must
+  # contain the following key:
+  # - `apiKey`: The Slack token with permissions to post messages to the desired channel
+  secretRef:
+    # The `namespace` field is ignored for `MessageChannel` as it is only allowed to reference
+    # Secrets in the same namespace
+    name: slack-token
+  # Configuration specific to Slack
+  slack:
+    # The channel ID to send messages to. This field is required
+    channelID: C1234567890
+```
+
+##### SMTP
+
+This is an example `MessageChannel` configuration for SMTP showing all options with annotations:
+
+```yaml
+apiVersion: ee.kargo.akuity.io/v1alpha1
+kind: MessageChannel
+metadata:
+  name: engineering-team-smtp
+  # Must match the namespace of the Project
+  namespace: kargo-demo
+spec:
+  # A reference to a Secret containing the SMTP credentials. This is required for SMTP. The Secret
+  # must contain the following keys:
+  # - `username`: The SMTP username
+  # - `password`: The SMTP password
+  secretRef:
+    # The `namespace` field is ignored for `MessageChannel` as it is only allowed to reference
+    # Secrets in the same namespace
+    name: smtp-credentials
+  smtp:
+    # The email address to use in the "From" field. This field is required
+    from: no-reply@example.com
+    # The default recipient email addresses. This field is optional and can be overridden. The first
+    # address in the list will be the primary recipient, and any additional addresses will be CC'd.
+    to: [you@example.com]
+    # The SMTP server host. This field is required
+    host: smtp.gmail.com
+    # The SMTP server port. This field is required
+    port: 587
+    # Whether to use TLS when connecting to the SMTP server. This field is optional and defaults to
+    # true
+    useTLS: true
+    # Whether to skip TLS certificate verification. This field is optional and defaults to false.
+    # In most cases this should only be set to true for testing with self-signed certificates.
+    insecureSkipVerify: false
+```
+
+##### HTTP
+
+:::note
+
+HTTP channels are only supported by
+[`EventRouter`s](../60-reference-docs/90-events/100-notifications/10-configuring-routers.md). They
+cannot be used with the [`send-message`](../60-reference-docs/30-promotion-steps/send-message.md)
+promotion step. To make HTTP requests as part of a promotion workflow, use the
+[`http`](../60-reference-docs/30-promotion-steps/http.md) promotion step instead.
+
+:::
+
+This is an example `MessageChannel` configuration for HTTP showing all options with annotations:
+
+```yaml
+apiVersion: ee.kargo.akuity.io/v1alpha1
+kind: MessageChannel
+metadata:
+  name: webhook-endpoint
+  # Must match the namespace of the Project
+  namespace: kargo-demo
+spec:
+  # A reference to a Secret containing authentication credentials. This is optional for HTTP.
+  # The Secret may contain one of the following keys:
+  # - `bearerToken`: A plain token that will be sent as a Bearer authorization header
+  # - `authorization`: A custom value that will be sent verbatim as the Authorization header
+  secretRef:
+    # The `namespace` field is ignored for `MessageChannel` as it is only allowed to reference
+    # Secrets in the same namespace
+    name: webhook-secret
+  # Configuration specific to HTTP
+  http:
+    # The endpoint to send the HTTP request to. This field is required
+    url: https://hooks.example.com/notify
+    # The HTTP method to use. Defaults to POST. Allowed values: GET, POST, PUT, PATCH, DELETE
+    method: POST
+    # Additional HTTP headers to include in the request. This field is optional
+    headers:
+    - name: Content-Type
+      value: application/json
+    # Additional query parameters to include in the request URL. This field is optional
+    queryParams:
+    - name: source
+      value: kargo
+    # Maximum time to wait for the request to complete. Must be a valid Go duration string.
+    # Defaults to "10s"
+    timeout: 30s
+    # Whether to skip TLS certificate verification. Should only be used for development or testing
+    insecureSkipTLSVerify: false
+    # An expr-lang expression to evaluate whether the request succeeded. Has access to
+    # response.status, response.body, and response.headers. If omitted, any 2XX status code is
+    # treated as success. Can be overridden per-message in the EventRouter output
+    successExpression: "response.status >= 200 && response.status < 300"
+    # An expr-lang expression to evaluate whether the request failed. Has access to
+    # response.status, response.body, and response.headers. If omitted, any non-2XX status code is
+    # treated as failure. Can be overridden per-message in the EventRouter output
+    failureExpression: "response.status >= 400"
+```
+
+The `response.body` field will attempt to parse the response body as JSON or YAML if the
+`Content-Type` response header indicates a JSON or YAML response. If parsing fails or the content
+type is not JSON/YAML, `response.body` will be treated as a string containing the raw response body.
+
+:::info
+
+When using success or failure expressions, please note that the 429 response status code (Too Many
+Requests) is reserved. Any response with this status code will never evaluate either expression as
+it is used to automatically backoff and retry requests that exceed rate limits.
+
+:::
+
+## Namespace Adoption
+
+At times, `Namespace`s may require specific configuration to
+comply with regulatory or organizational requirements. To
+account for this, Kargo supports the adoption of pre-existing
+`Namespace`s that are labeled with `kargo.akuity.io/project: "true"`.
+This enables pre-configuring such `Namespace`s according to your
+own requirements.
+
+:::info
+
+Requiring a `Namespace` to have the `kargo.akuity.io/project: "true"` label to
+be eligible for adoption by a new `Project` is intended to prevent accidental or
+willful hijacking of an existing `Namespace`.
+
+:::
+
+The following example demonstrates adoption of a `Namespace` that's been
+pre-configured with a label unrelated to Kargo:
+
+```yaml
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: example
+labels:
+  kargo.akuity.io/project: "true"
+  example.com/org: platform-eng
+---
+apiVersion: kargo.akuity.io/v1alpha1
+kind: Project
+metadata:
+  name: example
+spec:
+  # ...
+```
+
+## Preventing Namespace Deletion
+
+By default, when a Project is deleted, Kargo will attempt to delete the
+corresponding Namespace. However, there are scenarios where you may want to
+retain the namespace after the associated Project is removed whether it was
+created by Kargo or adopted from an existing setup.
+
+To achieve this, you can apply the following annotation to the `Namespace` or
+the corresponding `Project` resource with
+`kargo.akuity.io/keep-namespace: "true"`.
+
+## Interacting with Projects
+
+Kargo provides tools to manage `Project`s using either its UI or
+CLI. This section explains how to handle `Project`s effectively through both interfaces.
+
+### Creating a Project
+
+<Tabs groupId="create-project">
+<TabItem value="ui" label="Using the UI" default>
+
+1. Navigate to the Kargo UI and select <Hlt>New Project</Hlt> in the top right corner.
+
+   A <Hlt>Form</Hlt> tab will appear where you can enter the name of your `Project`:
+
+   ![create-project](img/create-project.png)
+
+   Alternatively, you can define the `Project` and other related configurations using the <Hlt>YAML</Hlt> tab:
+
+   ![create-project](img/create-project-2.png)
+
+1. After completing the <Hlt>Form</Hlt> or defining the `Project` in the <Hlt>YAML</Hlt> tab, click <Hlt>Create</Hlt>. 
+
+   The new `Project` will appear a card on the UI's home page:
+
+   ![create-project](img/create-project-3.png)
+
+</TabItem>
+<TabItem value="cli" label="Using the CLI">
+
+1. To create a `Project` using the CLI, run:
+
+   ```bash
+   kargo create project <project>
+   ```
+
+   Alternatively, define the `Project` in a YAML file, for example:
+
+   ```yaml
+   apiVersion: kargo.akuity.io/v1alpha1
+   kind: Project
+   metadata:
+     name: <project>
+   ```
+
+   Save the file and run:
+
+   ```shell
+   kargo create -f <filename>
+   ```
+
+1. To verify creation of the `Project`, run:
+
+   ```shell
+   kargo get project <project>
+   ```
+
+</TabItem>
+</Tabs>
+
+### Deleting a Project
+
+<Tabs groupId="delete-project">
+<TabItem value="ui" label="Using the UI" default>
+
+1. Select the `Project` you want to remove.
+
+1. Go to the <Hlt>Settings</Hlt> in the top right corner of the `Project` view.
+
+   ![delete-project](img/delete-project.png)
+
+1. In the <Hlt>General</Hlt> tab, scroll down to the <Hlt>Delete Project</Hlt> section.
+
+1. To confirm deletion, enter the `Project`'s name and click <Hlt>Delete</Hlt> to permanently remove it:
+
+   ![delete-project](img/delete-project-2.png)
+
+</TabItem>
+<TabItem value="cli" label="Using the CLI">
+
+To delete a `Project` using the CLI, run:
+
+```shell
+kargo delete project <project>
+```
+
+</TabItem>
+</Tabs>

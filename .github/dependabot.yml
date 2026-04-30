@@ -1,0 +1,112 @@
+# Documentation:
+# * https://docs.github.com/en/code-security/supply-chain-security/keeping-your-dependencies-updated-automatically/enabling-and-disabling-dependabot-version-updates
+# * https://docs.github.com/en/code-security/supply-chain-security/keeping-your-dependencies-updated-automatically/configuration-options-for-dependency-updates
+version: 2
+updates:
+  - package-ecosystem: "github-actions"
+    directory: "/"
+    schedule:
+      interval: "weekly"
+      day: "sunday"
+    commit-message:
+      prefix: "chore(deps):"
+
+  - package-ecosystem: "docker"
+    directory: "/"
+    schedule:
+      interval: "weekly"
+      day: "sunday"
+    commit-message:
+      prefix: "chore(deps):"
+
+  - package-ecosystem: "npm"
+    directory: "/ui"
+    versioning-strategy: increase
+    schedule:
+      interval: "monthly"
+    commit-message:
+      prefix: "chore(deps):"
+    groups:
+      js-patch:
+        update-types:
+        - "patch"
+      js-minor:
+        update-types:
+        - "minor"
+      js-major:
+        update-types:
+        - "major"
+
+  - package-ecosystem: "gomod"
+    directory: "/"
+    schedule:
+      interval: "weekly"
+      day: "sunday"
+    commit-message:
+      prefix: "chore(deps):"
+    groups:
+      go-patch:
+        update-types:
+        - "patch"
+      go-minor:
+        update-types:
+        - "minor"
+      go-major:
+        update-types:
+        - "major"
+
+  - package-ecosystem: "gomod"
+    directory: "/api"
+    schedule:
+      interval: "weekly"
+      day: "sunday"
+    commit-message:
+      prefix: "chore(deps/api):"
+    groups:
+      go-patch:
+        update-types:
+        - "patch"
+      go-minor:
+        update-types:
+        - "minor"
+      go-major:
+        update-types:
+        - "major"
+
+  - package-ecosystem: "gomod"
+    directory: "/hack/tools"
+    schedule:
+      interval: "weekly"
+      day: "sunday"
+    commit-message:
+      prefix: "chore(deps/tools):"
+    allow:
+      - dependency-type: "direct"
+    groups:
+      go-patch:
+        update-types:
+          - "patch"
+      go-minor:
+        update-types:
+          - "minor"
+      go-major:
+        update-types:
+          - "major"
+
+  - package-ecosystem: "gomod"
+    directory: "/pkg"
+    schedule:
+      interval: "weekly"
+      day: "sunday"
+    commit-message:
+      prefix: "chore(deps/pkg):"
+    groups:
+      go-patch:
+        update-types:
+        - "patch"
+      go-minor:
+        update-types:
+        - "minor"
+      go-major:
+        update-types:
+        - "major"

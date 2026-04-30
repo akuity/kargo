@@ -1,0 +1,481 @@
+# This Makefile contains targets for installing various development tools.
+# The tools are installed in a local bin directory, making it easy to manage
+# project-specific tool versions without affecting the system-wide installation.
+
+################################################################################
+# Directory and file path variables                                            #
+################################################################################
+
+HACK_DIR        ?= $(shell dirname $(abspath $(lastword $(MAKEFILE_LIST))))
+TOOLS_MOD_FILE	:= $(HACK_DIR)/tools/go.mod
+BIN_DIR			?= $(HACK_DIR)/bin
+INCLUDE_DIR		?= $(HACK_DIR)/include
+
+# Detect OS and architecture
+OS		:= $(shell uname -s | tr A-Z a-z)
+ARCH	:= $(shell uname -m)
+
+################################################################################
+# Tool versions                                                                #
+################################################################################
+
+GOLANGCI_LINT_VERSION	?= $(shell grep github.com/golangci/golangci-lint $(TOOLS_MOD_FILE) | awk '{print $$2}')
+HELM_VERSION            ?= $(shell grep helm.sh/helm/v3 $(TOOLS_MOD_FILE) | awk '{print $$2}')
+GOIMPORTS_VERSION       ?= $(shell grep golang.org/x/tools $(TOOLS_MOD_FILE) | awk '{print $$2}')
+CODE_GENERATOR_VERSION	?= $(shell grep k8s.io/code-generator $(TOOLS_MOD_FILE) | awk '{print $$2}')
+CONTROLLER_GEN_VERSION	?= $(shell grep k8s.io/controller-tools $(TOOLS_MOD_FILE) | awk '{print $$2}')
+PROTOC_VERSION			?= v25.3
+BUF_VERSION				?= $(shell grep github.com/bufbuild/buf $(TOOLS_MOD_FILE) | awk '{print $$2}')
+QUILL_VERSION			?= v0.5.1
+PROTOC_GEN_DOC_VERSION	?= v1.5.1
+SWAG_VERSION			?= $(shell grep github.com/swaggo/swag $(TOOLS_MOD_FILE) | awk '{print $$2}')
+GO_SWAGGER_VERSION		?= $(shell grep github.com/go-swagger/go-swagger $(TOOLS_MOD_FILE) | awk '{print $$2}')
+TILT_VERSION			?= v0.36.3
+CTLPTL_VERSION			?= v0.9.0
+KIND_VERSION			?= v0.31.0
+K3D_VERSION				?= v5.8.3
+JQ_VERSION				?= 1.8.1
+
+################################################################################
+# Tool targets                                                                 #
+################################################################################
+
+GOLANGCI_LINT	:= $(BIN_DIR)/golangci-lint-$(OS)-$(ARCH)-$(GOLANGCI_LINT_VERSION)
+HELM            := $(BIN_DIR)/helm-$(OS)-$(ARCH)-$(HELM_VERSION)
+GOIMPORTS       := $(BIN_DIR)/goimports-$(OS)-$(ARCH)-$(GOIMPORTS_VERSION)
+GO_TO_PROTOBUF  := $(BIN_DIR)/go-to-protobuf-$(OS)-$(ARCH)-$(CODE_GENERATOR_VERSION)
+PROTOC_GEN_GO   := $(BIN_DIR)/protoc-gen-gogo-$(OS)-$(ARCH)-$(CODE_GENERATOR_VERSION)
+CONTROLLER_GEN  := $(BIN_DIR)/controller-gen-$(OS)-$(ARCH)-$(CONTROLLER_GEN_VERSION)
+PROTOC          := $(BIN_DIR)/protoc-$(OS)-$(ARCH)-$(PROTOC_VERSION)
+BUF             := $(BIN_DIR)/buf-$(OS)-$(ARCH)-$(BUF_VERSION)
+QUILL		   	:= $(BIN_DIR)/quill-$(OS)-$(ARCH)-$(QUILL_VERSION)
+PROTOC_GEN_DOC  := $(BIN_DIR)/protoc-gen-doc-$(OS)-$(ARCH)-$(PROTOC_GEN_DOC_VERSION)
+SWAG            := $(BIN_DIR)/swag-$(OS)-$(ARCH)-$(SWAG_VERSION)
+GO_SWAGGER      := $(BIN_DIR)/go-swagger-$(OS)-$(ARCH)-$(GO_SWAGGER_VERSION)
+TILT            := $(BIN_DIR)/tilt-$(OS)-$(ARCH)-$(TILT_VERSION)
+CTLPTL          := $(BIN_DIR)/ctlptl-$(OS)-$(ARCH)-$(CTLPTL_VERSION)
+KIND            := $(BIN_DIR)/kind-$(OS)-$(ARCH)-$(KIND_VERSION)
+K3D             := $(BIN_DIR)/k3d-$(OS)-$(ARCH)-$(K3D_VERSION)
+JQ              := $(BIN_DIR)/jq-$(OS)-$(ARCH)-$(JQ_VERSION)
+
+$(GOLANGCI_LINT):
+	$(call install-golangci-lint,$@,$(GOLANGCI_LINT_VERSION))
+
+$(HELM):
+	$(call install-helm,$@,$(HELM_VERSION))
+
+$(GOIMPORTS):
+	$(call go-install-tool,$@,golang.org/x/tools/cmd/goimports,$(GOIMPORTS_VERSION))
+
+$(GO_TO_PROTOBUF):
+	$(call go-install-tool,$@,k8s.io/code-generator/cmd/go-to-protobuf,$(CODE_GENERATOR_VERSION))
+
+$(PROTOC_GEN_GO):
+	$(call go-install-tool,$@,k8s.io/code-generator/cmd/go-to-protobuf/protoc-gen-gogo,$(CODE_GENERATOR_VERSION))
+
+$(CONTROLLER_GEN):
+	$(call go-install-tool,$@,sigs.k8s.io/controller-tools/cmd/controller-gen,$(CONTROLLER_GEN_VERSION))
+
+$(PROTOC):
+	$(call install-protoc,$@,$(PROTOC_VERSION),$(HACK_DIR)/include)
+
+$(BUF):
+	$(call go-install-tool,$@,github.com/bufbuild/buf/cmd/buf,$(BUF_VERSION))
+
+$(QUILL):
+	$(call install-quill,$@,$(QUILL_VERSION))
+
+$(PROTOC_GEN_DOC):
+	$(call go-install-tool,$@,github.com/pseudomuto/protoc-gen-doc/cmd/protoc-gen-doc,$(PROTOC_GEN_DOC_VERSION))
+
+$(SWAG):
+	$(call go-install-tool,$@,github.com/swaggo/swag/cmd/swag,$(SWAG_VERSION))
+
+$(GO_SWAGGER):
+	$(call go-install-tool,$@,github.com/go-swagger/go-swagger/cmd/swagger,$(GO_SWAGGER_VERSION))
+
+$(TILT):
+	$(call install-tilt,$@,$(TILT_VERSION))
+
+$(CTLPTL):
+	$(call go-install-tool,$@,github.com/tilt-dev/ctlptl/cmd/ctlptl,$(CTLPTL_VERSION))
+
+$(KIND):
+	$(call go-install-tool,$@,sigs.k8s.io/kind,$(KIND_VERSION))
+
+$(K3D):
+	$(call install-k3d,$@,$(K3D_VERSION))
+
+$(JQ):
+	$(call install-jq,$@,$(JQ_VERSION))
+
+################################################################################
+# Symlink targets                                                              #
+################################################################################
+
+GOLANGCI_LINT_LINK 	:= $(BIN_DIR)/golangci-lint
+HELM_LINK 			:= $(BIN_DIR)/helm
+GOIMPORTS_LINK 		:= $(BIN_DIR)/goimports
+GO_TO_PROTOBUF_LINK	:= $(BIN_DIR)/go-to-protobuf
+PROTOC_GEN_GO_LINK	:= $(BIN_DIR)/protoc-gen-gogo
+CONTROLLER_GEN_LINK	:= $(BIN_DIR)/controller-gen
+PROTOC_LINK			:= $(BIN_DIR)/protoc
+BUF_LINK			:= $(BIN_DIR)/buf
+QUILL_LINK			:= $(BIN_DIR)/quill
+PROTOC_GEN_DOC_LINK	:= $(BIN_DIR)/protoc-gen-doc
+SWAG_LINK			:= $(BIN_DIR)/swag
+GO_SWAGGER_LINK		:= $(BIN_DIR)/go-swagger
+TILT_LINK			:= $(BIN_DIR)/tilt
+CTLPTL_LINK			:= $(BIN_DIR)/ctlptl
+KIND_LINK			:= $(BIN_DIR)/kind
+K3D_LINK			:= $(BIN_DIR)/k3d
+JQ_LINK				:= $(BIN_DIR)/jq
+
+.PHONY: $(GOLANGCI_LINT_LINK)
+$(GOLANGCI_LINT_LINK): $(GOLANGCI_LINT)
+	$(call create-symlink,$(GOLANGCI_LINT),$(GOLANGCI_LINT_LINK))
+
+.PHONY: $(HELM_LINK)
+$(HELM_LINK): $(HELM)
+	$(call create-symlink,$(HELM),$(HELM_LINK))
+
+.PHONY: $(GOIMPORTS_LINK)
+$(GOIMPORTS_LINK): $(GOIMPORTS)
+	$(call create-symlink,$(GOIMPORTS),$(GOIMPORTS_LINK))
+
+.PHONY: $(GO_TO_PROTOBUF_LINK)
+$(GO_TO_PROTOBUF_LINK): $(GO_TO_PROTOBUF)
+	$(call create-symlink,$(GO_TO_PROTOBUF),$(GO_TO_PROTOBUF_LINK))
+
+.PHONY: $(PROTOC_GEN_GO_LINK)
+$(PROTOC_GEN_GO_LINK): $(PROTOC_GEN_GO)
+	$(call create-symlink,$(PROTOC_GEN_GO),$(PROTOC_GEN_GO_LINK))
+
+.PHONY: $(CONTROLLER_GEN_LINK)
+$(CONTROLLER_GEN_LINK): $(CONTROLLER_GEN)
+	$(call create-symlink,$(CONTROLLER_GEN),$(CONTROLLER_GEN_LINK))
+
+.PHONY: $(PROTOC_LINK)
+$(PROTOC_LINK): $(PROTOC)
+	$(call create-symlink,$(PROTOC),$(PROTOC_LINK))
+
+.PHONY: $(BUF_LINK)
+$(BUF_LINK): $(BUF)
+	$(call create-symlink,$(BUF),$(BUF_LINK))
+
+.PHONY: $(QUILL_LINK)
+$(QUILL_LINK): $(QUILL)
+	$(call create-symlink,$(QUILL),$(QUILL_LINK))
+
+.PHONY: $(PROTOC_GEN_DOC_LINK)
+$(PROTOC_GEN_DOC_LINK): $(PROTOC_GEN_DOC)
+	$(call create-symlink,$(PROTOC_GEN_DOC),$(PROTOC_GEN_DOC_LINK))
+
+.PHONY: $(SWAG_LINK)
+$(SWAG_LINK): $(SWAG)
+	$(call create-symlink,$(SWAG),$(SWAG_LINK))
+
+.PHONY: $(GO_SWAGGER_LINK)
+$(GO_SWAGGER_LINK): $(GO_SWAGGER)
+	$(call create-symlink,$(GO_SWAGGER),$(GO_SWAGGER_LINK))
+
+.PHONY: $(TILT_LINK)
+$(TILT_LINK): $(TILT)
+	$(call create-symlink,$(TILT),$(TILT_LINK))
+
+.PHONY: $(CTLPTL_LINK)
+$(CTLPTL_LINK): $(CTLPTL)
+	$(call create-symlink,$(CTLPTL),$(CTLPTL_LINK))
+
+.PHONY: $(KIND_LINK)
+$(KIND_LINK): $(KIND)
+	$(call create-symlink,$(KIND),$(KIND_LINK))
+
+.PHONY: $(K3D_LINK)
+$(K3D_LINK): $(K3D)
+	$(call create-symlink,$(K3D),$(K3D_LINK))
+
+.PHONY: $(JQ_LINK)
+$(JQ_LINK): $(JQ)
+	$(call create-symlink,$(JQ),$(JQ_LINK))
+
+################################################################################
+# Alias targets                                                                #
+################################################################################
+
+TOOLS := install-golangci-lint install-helm install-goimports install-go-to-protobuf install-protoc-gen-gogo install-controller-gen install-protoc install-buf install-quill install-protoc-gen-doc install-swag install-go-swagger install-tilt install-ctlptl install-kind install-k3d install-jq
+
+.PHONY: install-tools
+install-tools: $(TOOLS)
+
+.PHONY: install-golangci-lint
+install-golangci-lint: $(GOLANGCI_LINT) $(GOLANGCI_LINT_LINK)
+
+.PHONY: install-helm
+install-helm: $(HELM) $(HELM_LINK)
+
+.PHONY: install-goimports
+install-goimports: $(GOIMPORTS) $(GOIMPORTS_LINK)
+
+.PHONY: install-go-to-protobuf
+install-go-to-protobuf: $(GO_TO_PROTOBUF) $(GO_TO_PROTOBUF_LINK)
+
+.PHONY: install-protoc-gen-gogo
+install-protoc-gen-gogo: $(PROTOC_GEN_GO) $(PROTOC_GEN_GO_LINK)
+
+.PHONY: install-controller-gen
+install-controller-gen: $(CONTROLLER_GEN) $(CONTROLLER_GEN_LINK)
+
+.PHONY: install-protoc
+install-protoc: $(PROTOC) $(PROTOC_LINK)
+
+.PHONY: install-buf
+install-buf: $(BUF) $(BUF_LINK)
+
+.PHONY: install-quill
+install-quill: $(QUILL) $(QUILL_LINK)
+
+.PHONY: install-protoc-gen-doc
+install-protoc-gen-doc: $(PROTOC_GEN_DOC) $(PROTOC_GEN_DOC_LINK)
+
+.PHONY: install-swag
+install-swag: $(SWAG) $(SWAG_LINK)
+
+.PHONY: install-go-swagger
+install-go-swagger: $(GO_SWAGGER) $(GO_SWAGGER_LINK)
+
+.PHONY: install-tilt
+install-tilt: $(TILT) $(TILT_LINK)
+
+.PHONY: install-ctlptl
+install-ctlptl: $(CTLPTL) $(CTLPTL_LINK)
+
+.PHONY: install-kind
+install-kind: $(KIND) $(KIND_LINK)
+
+.PHONY: install-k3d
+install-k3d: $(K3D) $(K3D_LINK)
+
+.PHONY: install-jq
+install-jq: $(JQ) $(JQ_LINK)
+
+################################################################################
+# Clean up targets                                                             #
+################################################################################
+
+# Clean up all installed tools and symlinks
+.PHONY: clean-tools
+clean-tools:
+	rm -rf $(BIN_DIR)/*
+	rm -rf $(INCLUDE_DIR)/*
+
+# Update all tools
+.PHONY: update-tools
+update-tools: clean-tools install-tools
+
+################################################################################
+# Helper functions                                                             #
+################################################################################
+
+# go-install-tool installs a Go tool.
+#
+# $(1) binary path
+# $(2) repo URL
+# $(3) version
+define go-install-tool
+	@[ -f $(1) ] || { \
+	set -e ;\
+	TMP_DIR=$$(mktemp -d) ;\
+	cd $$TMP_DIR ;\
+	echo "Installing $(2)@$(3) to $(1)" ;\
+	go mod init tmp ;\
+	GOBIN=$$TMP_DIR go install $(2)@$(3) ;\
+	mkdir -p $(dir $(1)) ;\
+	mv $$TMP_DIR/$$(basename $(2)) $(1) ;\
+	rm -rf $$TMP_DIR ;\
+	}
+endef
+
+# install-golangci-lint installs golangci-lint.
+#
+# $(1) binary path
+# $(2) version
+define install-golangci-lint
+	@[ -f $(1) ] || { \
+	set -e ;\
+	TMP_DIR=$$(mktemp -d) ;\
+	cd $$TMP_DIR ;\
+	echo "Installing golangci-lint $(2) to $(1)" ;\
+	curl -fsSL -o install.sh https://raw.githubusercontent.com/golangci/golangci-lint/master/install.sh ;\
+	chmod 0700 install.sh ;\
+	./install.sh -b $$TMP_DIR $(2) ;\
+	mkdir -p $(dir $(1)) ;\
+	mv $$TMP_DIR/golangci-lint $(1) ;\
+	rm -rf $$TMP_DIR ;\
+	}
+endef
+
+# install-helm installs Helm.
+#
+# $(1) binary path
+# $(2) version
+define install-helm
+	@[ -f $(1) ] || { \
+	set -e ;\
+	TMP_DIR=$$(mktemp -d) ;\
+	cd $$TMP_DIR ;\
+	echo "Installing helm $(2) to $(1)" ;\
+	curl -fsSL -o get_helm.sh https://raw.githubusercontent.com/helm/helm/main/scripts/get-helm-3 ;\
+	chmod 0700 get_helm.sh ;\
+	PATH="$$TMP_DIR:$$PATH" HELM_INSTALL_DIR=$$TMP_DIR USE_SUDO="false" DESIRED_VERSION="$(2)" ./get_helm.sh ;\
+	mkdir -p $(dir $(1)) ;\
+	mv $$TMP_DIR/helm $(1) ;\
+	rm -rf $$TMP_DIR ;\
+	}
+endef
+
+# install-quill installs Quill.
+#
+# $(1) binary path
+# $(2) version
+define install-quill
+	@[ -f $(1) ] || { \
+	set -e ;\
+	TMP_DIR=$$(mktemp -d) ;\
+	cd $$TMP_DIR ;\
+	echo "Installing quill $(2) to $(1)" ;\
+	curl -fsSL -o install.sh https://get.anchore.io/quill ;\
+	chmod 0700 install.sh ;\
+	./install.sh -b $$TMP_DIR $(2) ;\
+	mkdir -p $(dir $(1)) ;\
+	mv $$TMP_DIR/quill $(1) ;\
+	rm -rf $$TMP_DIR ;\
+	}
+endef
+
+# PROTOC_OS and PROTOC_ARCH are used to determine the platform-specific zip file
+# to download for protoc.
+PROTOC_OS ?= $(shell uname -s | tr '[:upper:]' '[:lower:]')
+ifeq ($(PROTOC_OS),darwin)
+	PROTOC_OS := osx
+endif
+
+PROTOC_ARCH ?= $(shell uname -m)
+ifeq ($(PROTOC_ARCH),amd64)
+	override PROTOC_ARCH = x86_64
+else ifeq ($(PROTOC_ARCH),aarch64)
+	override PROTOC_ARCH = aarch_64
+else ifeq ($(PROTOC_ARCH),arm64)
+	override PROTOC_ARCH = aarch_64
+endif
+
+# install-protoc installs protoc.
+#
+# $(1) binary path
+# $(2) version
+# $(3) include path
+define install-protoc
+	@[ -f $(1) ] || { \
+	set -e ;\
+	TMP_DIR=$$(mktemp -d) ;\
+	cd $$TMP_DIR ;\
+	curl -fsSL -o protoc.zip https://github.com/protocolbuffers/protobuf/releases/download/$(2)/protoc-$(patsubst v%,%,$(2))-$(PROTOC_OS)-$(PROTOC_ARCH).zip ;\
+	unzip -q protoc.zip ;\
+	rm -rf $(3) ;\
+	mkdir -p $(dir $(1)) $(3) ;\
+	mv $$TMP_DIR/bin/protoc $(1) ;\
+	mv -f $$TMP_DIR/include/* $(3) ;\
+	rm -rf $$TMP_DIR ;\
+	}
+endef
+
+# TILT_OS and TILT_ARCH are used to determine the platform-specific tarball to
+# download for tilt.
+TILT_OS ?= $(OS)
+ifeq ($(TILT_OS),darwin)
+	TILT_OS := mac
+endif
+
+TILT_ARCH ?= $(ARCH)
+ifeq ($(TILT_ARCH),aarch64)
+	override TILT_ARCH = arm64
+endif
+
+# install-tilt installs Tilt.
+#
+# $(1) binary path
+# $(2) version
+define install-tilt
+	@[ -f $(1) ] || { \
+	set -e ;\
+	TMP_DIR=$$(mktemp -d) ;\
+	cd $$TMP_DIR ;\
+	echo "Installing tilt $(2) to $(1)" ;\
+	curl -fsSL -o tilt.tar.gz https://github.com/tilt-dev/tilt/releases/download/$(2)/tilt.$(patsubst v%,%,$(2)).$(TILT_OS).$(TILT_ARCH).tar.gz ;\
+	tar xzf tilt.tar.gz ;\
+	mkdir -p $(dir $(1)) ;\
+	mv $$TMP_DIR/tilt $(1) ;\
+	rm -rf $$TMP_DIR ;\
+	}
+endef
+
+# K3D_ARCH is used to determine the platform-specific binary to download for k3d.
+K3D_ARCH ?= $(ARCH)
+ifeq ($(K3D_ARCH),x86_64)
+	override K3D_ARCH = amd64
+else ifeq ($(K3D_ARCH),aarch64)
+	override K3D_ARCH = arm64
+endif
+
+# install-k3d installs k3d.
+#
+# $(1) binary path
+# $(2) version
+define install-k3d
+	@[ -f $(1) ] || { \
+	set -e ;\
+	echo "Installing k3d $(2) to $(1)" ;\
+	mkdir -p $(dir $(1)) ;\
+	curl -fsSL -o $(1) https://github.com/k3d-io/k3d/releases/download/$(2)/k3d-$(OS)-$(K3D_ARCH) ;\
+	chmod 0755 $(1) ;\
+	}
+endef
+
+# JQ_OS and JQ_ARCH are used to determine the platform-specific binary to
+# download for jq.
+JQ_OS ?= $(OS)
+ifeq ($(JQ_OS),darwin)
+	JQ_OS := macos
+endif
+
+JQ_ARCH ?= $(ARCH)
+ifeq ($(JQ_ARCH),x86_64)
+	override JQ_ARCH = amd64
+else ifeq ($(JQ_ARCH),aarch64)
+	override JQ_ARCH = arm64
+endif
+
+# install-jq installs jq.
+#
+# $(1) binary path
+# $(2) version
+define install-jq
+	@[ -f $(1) ] || { \
+	set -e ;\
+	echo "Installing jq $(2) to $(1)" ;\
+	mkdir -p $(dir $(1)) ;\
+	curl -fsSL -o $(1) https://github.com/jqlang/jq/releases/download/jq-$(2)/jq-$(JQ_OS)-$(JQ_ARCH) ;\
+	chmod 0755 $(1) ;\
+	}
+endef
+
+# create-symlink creates a relative symlink to the platform-specific binary.
+#
+# $(1) platform-specific binary path
+# $(2) symlink path
+define create-symlink
+	@if [ ! -e $(2) ] || [ "$$(readlink $(2))" != "$$(basename $(1))" ]; then \
+		echo "Creating symlink: $(2) -> $$(basename $(1))"; \
+		ln -sf $$(basename $(1)) $(2); \
+	fi
+endef

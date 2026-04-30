@@ -1,0 +1,18 @@
+{{- if and .Values.api.enabled .Values.api.ingress.enabled .Values.api.ingress.tls.enabled .Values.api.ingress.tls.selfSignedCert }}
+apiVersion: cert-manager.io/v1
+kind: Certificate
+metadata:
+  name: kargo-api-ingress
+  namespace: {{ .Release.Namespace }}
+  labels:
+    {{- include "kargo.labels" . | nindent 4 }}
+    {{- include "kargo.api.labels" . | nindent 4 }}
+spec:
+  dnsNames:
+  - {{ quote .Values.api.host }}
+  issuerRef:
+    group: cert-manager.io
+    kind: Issuer
+    name: kargo-selfsigned-cert-issuer
+  secretName: {{ .Values.api.ingress.tls.secretName }}
+{{- end }}

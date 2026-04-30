@@ -1,0 +1,53 @@
+name: Backport
+
+on:
+  pull_request_target:
+    types: [closed, labeled]
+
+permissions:
+  contents: read
+
+jobs:
+  pull-request:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+      pull-requests: write
+    if: github.repository_owner == 'akuity' && github.event.pull_request.merged && (github.event_name != 'labeled' || startsWith('backport/', github.event.label.name))
+    steps:
+    - name: Harden the runner (Audit all outbound calls)
+      uses: step-security/harden-runner@8d3c67de8e2fe68ef647c8db1e6a09f647780f40 # v2.19.0
+      with:
+        egress-policy: audit
+
+    - name: Checkout
+      uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
+    - name: Create backport PRs
+      uses: korthout/backport-action@ad30f01dbe543be4a24431001c38f3617af8c745 # v4.4.0
+      # xref: https://github.com/korthout/backport-action#inputs
+      with:
+        # Use token to allow workflows to be triggered for the created PR
+        github_token: ${{ secrets.AKUITYBOT_PAT }}
+        # Match labels with pattern `backport/<target-branch>`
+        label_pattern: '^backport\/([^ ]+)$'
+        # A title which matches the linter constraints for semantic PR titles,
+        # while still being descriptive about the target branch
+        pull_title: 'chore(backport ${target_branch}): ${pull_title}'
+        # Simpler PR description than default
+        pull_description: |-
+          Automated backport to `${target_branch}`, triggered by a label in #${pull_number}.
+        # Copy any labels (excluding those starting with "backport/") to the backport PR
+        copy_labels_pattern: '^(?!backport\/).*'
+        # Copy associated people to the backport PR
+        copy_assignees: true
+        copy_requested_reviewers: true
+        # Copy any milestone to the backport PR
+        copy_milestone: true
+        # Skip any merge commits in the source PR
+        merge_commits: 'skip'
+        # Automatically detect "squash and merge" instead of copying all
+        # commits from the source PR to the backport PR
+        experimental: >
+          {
+            "detect_merge_method": true
+          }

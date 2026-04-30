@@ -1,0 +1,47 @@
+{
+ "$schema": "https://json-schema.org/draft/2020-12/schema",
+ "title": "JSONUpdateConfig",
+ "definitions": {
+  "jsonUpdate": {
+   "type": "object",
+   "additionalProperties": false,
+   "properties": {
+    "key": {
+     "type": "string",
+     "description": "The key whose value needs to be updated. For nested values, use a JSON dot notation path.",
+     "minLength": 1
+    },
+    "value": {
+     "description": "The new value for the specified key."
+    }
+   }
+  }
+ },
+ "type": "object",
+ "additionalProperties": false,
+ "properties": {
+  "path": {
+   "type": "string",
+   "description": "The path to a JSON file.",
+   "minLength": 1
+  },
+  "updates": {
+   "type": "array",
+   "description": "A list of updates to apply to the JSON file.",
+   "items": {
+    "type": "object",
+    "additionalProperties": false,
+    "properties": {
+     "key": {
+      "type": "string",
+      "description": "The key whose value needs to be updated. For nested values, use a JSON dot notation path.",
+      "minLength": 1
+     },
+     "value": {
+      "description": "The new value for the specified key."
+     }
+    }
+   }
+  }
+ }
+}

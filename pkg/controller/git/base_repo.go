@@ -1,0 +1,549 @@
+package git
+
+import (
+	"context"
+	"errors"
+	"fmt"
+	"io/fs"
+	"net/url"
+	"os"
+	"os/exec"
+	"path/filepath"
+	"strings"
+
+	libExec "github.com/akuity/kargo/pkg/exec"
+	"github.com/akuity/kargo/pkg/logging"
+)
+
+const (
+	defaultUsername = "Kargo"
+	defaultEmail    = "no-reply@kargo.io"
+
+	repoDirConfigKey         = "kargo.repoDir"
+	repoHomeDirConfigKey     = "kargo.repoHomeDir"
+	repoOriginalURLConfigKey = "kargo.repoOriginalURL"
+)
+
+// baseRepo implements the common underpinnings of a Git repository with a
+// single working tree, a bare repository, or working tree associated with a
+// bare repository.
+type baseRepo struct {
+	creds   *RepoCredentials
+	dir     string
+	homeDir string
+	// Store the URL two ways:
+	// 1. Exactly as it was originally provided
+	// 2. Modified in ways required for internal use by this type's methods
+	originalURL string
+	accessURL   string
+}
+
+// ClientOptions represents options for a repository-specific Git client.
+type ClientOptions struct {
+	// User represents the actor that performs operations against the git
+	// repository. This has no effect on authentication, see Credentials for
+	// specifying authentication configuration.
+	User *User
+	// Credentials represents the authentication information.
+	Credentials *RepoCredentials
+	// InsecureSkipTLSVerify indicates whether to ignore certificate verification
+	// errors when interacting with the remote repository.
+	InsecureSkipTLSVerify bool
+}
+
+func (b *baseRepo) setupDirs(baseDir string) error {
+	var err error
+	if b.homeDir, err = os.MkdirTemp(baseDir, "repo-"); err != nil {
+		return fmt.Errorf(
+			"error creating home directory for repo %q: %w",
+			b.originalURL, err,
+		)
+	}
+	if b.homeDir, err = filepath.EvalSymlinks(b.homeDir); err != nil {
+		return fmt.Errorf("error resolving symlinks in path %s: %w", b.homeDir, err)
+	}
+	b.dir = filepath.Join(b.homeDir, "repo")
+	cmd := b.buildGitCommand("config", "--global", "init.defaultBranch", "main")
+	// Override the cmd.Dir that's set by b.buildGitCommand(). It's normally the
+	// repository's path, but if this method was called as part of the cloning
+	// process, that path may not exist yet.
+	cmd.Dir = b.homeDir
+	if _, err := libExec.Exec(cmd); err != nil {
+		return fmt.Errorf("error configuring init.defaultBranch: %w", err)
+	}
+	return nil
+}
+
+// setupClient sets up "global" git configuration with author and authentication
+// details in the specified virtual home directory.
+func (b *baseRepo) setupClient(opts *ClientOptions) error {
+	if opts == nil {
+		opts = &ClientOptions{}
+	}
+
+	if err := b.setupUser(b.homeDir, opts.User); err != nil {
+		return fmt.Errorf("error configuring the author: %w", err)
+	}
+
+	if err := b.setupAuth(b.homeDir); err != nil {
+		return fmt.Errorf("error configuring the credentials: %w", err)
+	}
+
+	if opts.InsecureSkipTLSVerify {
+		cmd := b.buildGitCommand("config", "--global", "http.sslVerify", "false")
+		// Override the cmd.Dir that's set by b.buildGitCommand(). It's normally the
+		// repository's path, but if this method was called as part of the cloning
+		// process, that path may not exist yet.
+		cmd.Dir = b.homeDir
+		if _, err := libExec.Exec(cmd); err != nil {
+			return fmt.Errorf("error configuring http.sslVerify: %w", err)
+		}
+	}
+
+	return nil
+}
+
+// User represents the user contributing to a git repository.
+type User struct {
+	// Name is the user's full name.
+	Name string
+	// Email is the user's email address.
+	Email string
+	// SigningKeyType indicates the type of signing key.
+	SigningKeyType SigningKeyType
+	// SigningKey is an optional string containing the raw signing key content.
+	// If provided, it takes precedence over SigningKeyPath.
+	SigningKey string
+	// SigningKeyPath is an optional path referencing a signing key for
+	// signing git objects. Ignored if SigningKey is provided.
+	SigningKeyPath string
+}
+
+// setupUser configures the git CLI with a default user.
+// Optionally, the user can have an associated signing key. When using GPG
+// signing, the name and email must match the GPG key identity. The directory
+// specified by homeDir is used as a virtual home directory for all commands
+// executed by this method.
+func (b *baseRepo) setupUser(homeDir string, user *User) error {
+	if user == nil {
+		user = &User{}
+	}
+
+	if user.Name == "" {
+		user.Name = defaultUsername
+	}
+
+	cmd := b.buildGitCommand("config", "--global", "user.name", user.Name)
+	// Override cmd.Dir set by buildGitCommand(). The repo path may not exist
+	// yet if called during clone. homeDir is safe since we're only writing
+	// "global" git config for a synthetic user.
+	cmd.Dir = homeDir
+	// Override HOME set by buildGitCommand(). The caller may provide a different
+	// homeDir to set up ephemeral config for a per-command user identity.
+	b.setCmdHome(cmd, homeDir)
+	if _, err := libExec.Exec(cmd); err != nil {
+		return fmt.Errorf("error configuring git user name: %w", err)
+	}
+
+	if user.Email == "" {
+		user.Email = defaultEmail
+	}
+
+	cmd = b.buildGitCommand("config", "--global", "user.email", user.Email)
+	// See justification for both of these overrides above.
+	cmd.Dir = homeDir
+	b.setCmdHome(cmd, homeDir)
+	if _, err := libExec.Exec(cmd); err != nil {
+		return fmt.Errorf("error configuring git user email: %w", err)
+	}
+
+	// For now, since only GPG signing is supported, we will assume GPG if the
+	// signing key type is not specified.
+	if user.SigningKeyType == SigningKeyTypeGPG || user.SigningKeyType == "" {
+
+		if user.SigningKey != "" {
+			user.SigningKeyPath = filepath.Join(homeDir, "signing-key.asc")
+			if err := os.WriteFile(
+				user.SigningKeyPath,
+				[]byte(user.SigningKey),
+				0600,
+			); err != nil {
+				return fmt.Errorf("error writing signing key to %q: %w", user.SigningKeyPath, err)
+			}
+			defer func() {
+				if err := os.Remove(user.SigningKeyPath); err != nil {
+					logging.LoggerFromContext(context.TODO()).Error(
+						err,
+						"error removing file",
+						"file", user.SigningKeyPath,
+					)
+				}
+			}()
+		}
+
+		if user.SigningKeyPath != "" {
+			cmd = b.buildGitCommand("config", "--global", "commit.gpgSign", "true")
+			// See justification for both of these overrides above.
+			cmd.Dir = homeDir
+			b.setCmdHome(cmd, homeDir)
+			if _, err := libExec.Exec(cmd); err != nil {
+				return fmt.Errorf("error configuring commit gpg signing: %w", err)
+			}
+
+			// Enable signing for tags as well.
+			cmd = b.buildGitCommand("config", "--global", "tag.gpgSign", "true")
+			cmd.Dir = homeDir
+			b.setCmdHome(cmd, homeDir)
+			if _, err := libExec.Exec(cmd); err != nil {
+				return fmt.Errorf("error configuring tag gpg signing: %w", err)
+			}
+
+			cmd = b.buildCommand("gpg", "--import", user.SigningKeyPath)
+			// See justification for both of these overrides above.
+			cmd.Dir = homeDir
+			b.setCmdHome(cmd, homeDir)
+			if _, err := libExec.Exec(cmd); err != nil {
+				return fmt.Errorf("error importing gpg key %q: %w", user.SigningKeyPath, err)
+			}
+
+			// Set ultimate trust on the imported key so that commits signed
+			// by this key are considered trusted during signature
+			// verification (e.g. when deciding whether a rebase is safe).
+			if err := b.setUltimateTrust(homeDir, user.SigningKeyPath); err != nil {
+				return fmt.Errorf("error setting trust on gpg key: %w", err)
+			}
+		}
+
+	}
+
+	return nil
+}
+
+// setupAuth configures the git CLI with authentication information. The
+// directory specified by homeDir is used as a virtual home directory for
+// storing ssh keys if applicable.
+func (b *baseRepo) setupAuth(homeDir string) error {
+	if b.creds == nil {
+		return nil
+	}
+	// TODO(v1.13.0): Remove this block when SSH support is removed.
+	// If an SSH key was provided, use that.
+	if b.creds.SSHPrivateKey != "" {
+		sshPath := filepath.Join(homeDir, ".ssh")
+		if err := os.MkdirAll(sshPath, 0700); err != nil {
+			return fmt.Errorf("error creating SSH directory %q: %w", sshPath, err)
+		}
+		sshConfigPath := filepath.Join(sshPath, "config")
+		rsaKeyPath := filepath.Join(sshPath, "id_rsa")
+		// nolint: lll
+		sshConfig := fmt.Sprintf("Host *\n  StrictHostKeyChecking no\n  UserKnownHostsFile=/dev/null\n  IdentityFile %q\n", rsaKeyPath)
+		if err := os.WriteFile(sshConfigPath, []byte(sshConfig), 0600); err != nil {
+			return fmt.Errorf("error writing SSH config to %q: %w", sshConfigPath, err)
+		}
+
+		if err := os.WriteFile(
+			rsaKeyPath,
+			[]byte(b.creds.SSHPrivateKey),
+			0600,
+		); err != nil {
+			return fmt.Errorf("error writing SSH key to %q: %w", rsaKeyPath, err)
+		}
+		return nil // We're done
+	}
+
+	// If no password is specified, we're done'.
+	if b.creds.Password == "" {
+		return nil
+	}
+
+	// Add username@ to the URL that will be used internally...
+	lowerURL := strings.ToLower(b.accessURL)
+	if strings.HasPrefix(lowerURL, "http://") || strings.HasPrefix(lowerURL, "https://") {
+		u, err := url.Parse(b.accessURL)
+		if err != nil {
+			return fmt.Errorf("error parsing URL %q: %w", b.accessURL, err)
+		}
+		u.User = url.User(b.creds.Username)
+		b.accessURL = u.String()
+	}
+
+	return nil
+}
+
+// saveDirs saves information about the repository's directories to the
+// repository's configuration. This is useful for reliably determining this
+// information later if an existing repository or working tree is loaded from
+// the file system.
+func (b *baseRepo) saveDirs() error {
+	if _, err := libExec.Exec(b.buildGitCommand(
+		"config",
+		repoDirConfigKey,
+		b.dir,
+	)); err != nil {
+		return fmt.Errorf("error saving repo dir as config: %w", err)
+	}
+	if _, err := libExec.Exec(b.buildGitCommand(
+		"config",
+		repoHomeDirConfigKey,
+		b.homeDir,
+	)); err != nil {
+		return fmt.Errorf("error saving repo home dir as config: %w", err)
+	}
+	return nil
+}
+
+// saveOriginalURL saves the original URL of the repository to the repository's
+// configuration. This is useful for reliably determining this information when
+// an existing repository or working tree is loaded from the file system.
+func (b *baseRepo) saveOriginalURL() error {
+	if _, err := libExec.Exec(b.buildGitCommand(
+		"config",
+		repoOriginalURLConfigKey,
+		b.originalURL,
+	)); err != nil {
+		return fmt.Errorf("error saving original URL as config: %w", err)
+	}
+	return nil
+}
+
+// loadHomeDir restores the repository's home directory from the repository's
+// configuration. This is useful for reliably determining this information when
+// an existing repository or working tree is loaded from the file system. It
+// also reconciles any residual GnuPG state in that home directory that may
+// have been left behind by a process in a different container sharing the
+// same underlying filesystem.
+func (b *baseRepo) loadHomeDir() error {
+	res, err := libExec.Exec(b.buildGitCommand(
+		"config",
+		repoHomeDirConfigKey,
+	))
+	if err != nil {
+		return fmt.Errorf("error reading repo home dir from config: %w", err)
+	}
+	b.homeDir = strings.TrimSpace(string(res))
+	b.reconcileGPGState()
+	return nil
+}
+
+// reconcileGPGState removes any residual GnuPG state associated with this
+// repository's GNUPGHOME that may have been orphaned by a process in a
+// different container sharing the same underlying filesystem.
+//
+// Required because in a container-per-step promotion model each step runs
+// in its own container — separate PID namespaces, shared UTS namespace,
+// shared workspace volume. Several pieces of GnuPG's on-disk state are
+// process-bound and become hazardous when inherited by a new container:
+//
+//   - *.lock    — committed dotlock files. GnuPG's stale-lock heuristic
+//     compares (hostname, PID) against /proc; across sibling
+//     containers with a shared hostname but independent PID
+//     namespaces, the recorded PID can match an unrelated
+//     live process, causing indefinite waits that end in a
+//     "Connection timed out" signing failure.
+//   - .#lk*     — dotlock temp files created via O_CREAT|O_EXCL before
+//     being hard-linked to the committed .lock file. Their
+//     names embed an in-process memory address + hostname + PID;
+//     under weak ASLR and colliding container PIDs
+//     these names collide too, causing a "File exists"
+//     failure before gpg ever reaches the .lock file.
+//   - UNIX-domain sockets (gpg-agent, dirmngr, scdaemon, etc.). A stale
+//     socket left by a dead daemon in a prior container can
+//     race with a new daemon binding on the same path. After
+//     gpgconf --kill, any socket still present in GNUPGHOME
+//     is by definition stale, so we identify these by file
+//     mode rather than by name — new GnuPG daemons added
+//     upstream are covered automatically.
+//
+// The cleanup walks all of GNUPGHOME rather than enumerating specific
+// subdirectories so that GnuPG layout changes (e.g., the ongoing move
+// toward public-keys.d/pubring.db) are covered automatically.
+//
+// Safe to call when no GnuPG state exists (no-op) and in traditional
+// single-process deployments where no cross-container state sharing occurs
+// (also effectively a no-op).
+func (b *baseRepo) reconcileGPGState() {
+	if b.homeDir == "" {
+		return
+	}
+	gnupgDir := filepath.Join(b.homeDir, ".gnupg")
+	if _, err := os.Stat(gnupgDir); err != nil {
+		return
+	}
+	// Must run before removing sockets: gpgconf finds the agent via its
+	// sockets and tells it to shut down cleanly.
+	_, _ = libExec.Exec(b.buildCommand("gpgconf", "--kill", "gpg-agent"))
+
+	logger := logging.LoggerFromContext(context.TODO())
+	remove := func(path string) {
+		if err := os.Remove(path); err != nil && !os.IsNotExist(err) {
+			logger.Error(
+				err,
+				"error removing stale GnuPG state file",
+				"file", path,
+			)
+		}
+	}
+	_ = filepath.WalkDir(gnupgDir, func(path string, d fs.DirEntry, err error) error {
+		if err != nil || d.IsDir() {
+			return nil
+		}
+		name := d.Name()
+		switch {
+		case strings.HasSuffix(name, ".lock"),
+			strings.HasPrefix(name, ".#lk"):
+			remove(path)
+		default:
+			// Any remaining UNIX-domain socket in GNUPGHOME belongs to a
+			// dead daemon (we killed the live agent above).
+			if info, statErr := d.Info(); statErr == nil && info.Mode()&os.ModeSocket != 0 {
+				remove(path)
+			}
+		}
+		return nil
+	})
+}
+
+// loadURLs restores the repository's original and access URLs from the
+// repository's configuration. This is useful for reliably determining this
+// information when an existing repository or working tree is loaded from the
+// file system.
+func (b *baseRepo) loadURLs() error {
+	res, err := libExec.Exec(b.buildGitCommand("config", repoOriginalURLConfigKey))
+	if err != nil {
+		return fmt.Errorf(`error getting original URL of remote "origin": %w`, err)
+	}
+	b.originalURL = strings.TrimSpace(string(res))
+	if res, err = libExec.Exec(b.buildGitCommand(
+		"config",
+		"remote.origin.url",
+	)); err != nil {
+		return fmt.Errorf(`error getting URL of remote "origin": %w`, err)
+	}
+	b.accessURL = strings.TrimSpace(string(res))
+	return nil
+}
+
+func (b *baseRepo) buildCommand(command string, arg ...string) *exec.Cmd {
+	cmd := exec.Command(command, arg...)
+	homeEnvVar := fmt.Sprintf("HOME=%s", b.homeDir)
+	if cmd.Env == nil {
+		cmd.Env = []string{homeEnvVar}
+	} else {
+		cmd.Env = append(cmd.Env, homeEnvVar)
+	}
+	cmd.Dir = b.dir
+	return cmd
+}
+
+func (b *baseRepo) buildGitCommand(arg ...string) *exec.Cmd {
+	cmd := b.buildCommand("git", arg...)
+	// TODO(v1.13.0): Remove this line when SSH support is removed.
+	cmd.Env = append(cmd.Env, fmt.Sprintf("GIT_SSH_COMMAND=ssh -F %s/.ssh/config", b.homeDir))
+	if b.creds != nil && b.creds.Password != "" {
+		cmd.Env = append(
+			cmd.Env,
+			"GIT_ASKPASS=/usr/local/bin/credential-helper",
+			fmt.Sprintf("GIT_PASSWORD=%s", b.creds.Password),
+		)
+	}
+	if httpProxy := os.Getenv("http_proxy"); httpProxy != "" {
+		cmd.Env = append(cmd.Env, fmt.Sprintf("http_proxy=%s", httpProxy))
+	}
+	if httpsProxy := os.Getenv("https_proxy"); httpsProxy != "" {
+		cmd.Env = append(cmd.Env, fmt.Sprintf("https_proxy=%s", httpsProxy))
+	}
+	if noProxy := os.Getenv("no_proxy"); noProxy != "" {
+		cmd.Env = append(cmd.Env, fmt.Sprintf("no_proxy=%s", noProxy))
+	}
+	return cmd
+}
+
+func (b *baseRepo) Dir() string {
+	return b.dir
+}
+
+func (b *baseRepo) HomeDir() string {
+	return b.homeDir
+}
+
+func (b *baseRepo) RemoteBranchExists(branch string) (bool, error) {
+	_, err := libExec.Exec(b.buildGitCommand(
+		"ls-remote",
+		"--heads",
+		"--exit-code", // Return 2 if not found
+		b.accessURL,
+		"refs/heads/"+branch,
+	))
+	var exitErr *libExec.ExitError
+	if errors.As(err, &exitErr) && exitErr.ExitCode == 2 {
+		// Branch does not exist
+		return false, nil
+	}
+	if err != nil {
+		return false, fmt.Errorf(
+			"error checking for existence of branch %q in remote repo %q: %w",
+			branch,
+			b.originalURL,
+			err,
+		)
+	}
+	return true, nil
+}
+
+func (b *baseRepo) URL() string {
+	return b.originalURL
+}
+
+// setUltimateTrust sets ultimate trust (level 6) on a GPG key so that
+// signatures made by this key are considered fully trusted during verification.
+func (b *baseRepo) setUltimateTrust(homeDir, keyPath string) error {
+	// Get the fingerprint of the key.
+	cmd := b.buildCommand(
+		"gpg",
+		"--with-colons",
+		"--fingerprint",
+		"--import-options", "show-only",
+		"--import",
+		keyPath,
+	)
+	cmd.Dir = homeDir
+	b.setCmdHome(cmd, homeDir)
+	res, err := libExec.Exec(cmd)
+	if err != nil {
+		return fmt.Errorf("error getting fingerprint of gpg key: %w", err)
+	}
+	// Sample response:
+	//
+	// sec:u:2048:1:C984DEC578866F8A:1773322865:::u:::escarESCA::::::23::0:
+	// fpr:::::::::27CDB28C1429C96E91CBAE09C984DEC578866F8A:
+	// grp:::::::::2E518991B28783A8A4D06373B4FCBA74D53F397D:
+	// uid:u::::1773322865::F2E723F89EE13F7007A48DDACDB395768100ABC3::Test User <test@example.com>::::::::::0:
+	var fingerprint string
+	for _, line := range strings.Split(string(res), "\n") {
+		fields := strings.Split(line, ":")
+		if len(fields) >= 10 && fields[0] == "fpr" {
+			fingerprint = fields[9]
+			break
+		}
+	}
+	if fingerprint == "" {
+		return fmt.Errorf("could not determine fingerprint of gpg key %q", keyPath)
+	}
+	// Import owner trust: level 6 = ultimate trust.
+	cmd = b.buildCommand("gpg", "--import-ownertrust")
+	cmd.Dir = homeDir
+	b.setCmdHome(cmd, homeDir)
+	cmd.Stdin = strings.NewReader(fmt.Sprintf("%s:6:\n", fingerprint))
+	if _, err = libExec.Exec(cmd); err != nil {
+		return fmt.Errorf("error setting ultimate trust on gpg key: %w", err)
+	}
+	return nil
+}
+
+func (b *baseRepo) setCmdHome(cmd *exec.Cmd, homeDir string) {
+	if cmd.Env == nil {
+		cmd.Env = []string{fmt.Sprintf("HOME=%s", homeDir)}
+	} else {
+		cmd.Env = append(cmd.Env, fmt.Sprintf("HOME=%s", homeDir))
+	}
+}

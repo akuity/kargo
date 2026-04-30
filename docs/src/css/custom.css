@@ -1,0 +1,105 @@
+/**
+ * Any CSS included here will be global. The classic template
+ * bundles Infima by default. Infima is a CSS framework designed to
+ * work well for content-centric websites.
+ */
+
+/* You can override the default Infima variables here. */
+:root {
+  --generic-bg: #fff;
+  --generic-color: #000;
+
+  --ifm-color-primary: #e87878;
+  --ifm-color-primary-dark: #e35a5a;
+  --ifm-color-primary-darker: #e04b4b;
+  --ifm-color-primary-darkest: #d32424;
+  --ifm-color-primary-light: #ed9696;
+  --ifm-color-primary-lighter: #f0a5a5;
+  --ifm-color-primary-lightest: #f7d2d2;
+  --ifm-code-font-size: 95%;
+  --docusaurus-highlighted-code-line-bg: rgba(0, 0, 0, 0.1);
+
+  /* Search */
+  --aa-primary-color-rgb: 120, 120, 120 !important;
+  --aa-muted-color-rgb: 120, 120, 120 !important;
+
+  --btn-primary-bg: var(--ifm-color-primary-dark);
+  --btn-primary-shadow: var(--ifm-color-primary-lightest);
+  --btn-primary-hover-bg: var(--ifm-color-primary-darker);
+  --btn-primary-hover-shadow: var(--ifm-color-primary-lighter);
+  --btn-primary-active-bg: var(--ifm-color-primary-darkest);
+  --btn-primary-active-shadow: var(--ifm-color-primary-lightest);
+}
+
+/* For readability concerns, you should choose a lighter palette in dark mode. */
+[data-theme='dark'] {
+  --generic-bg: #252526;
+  --generic-color: #fff;
+
+  --ifm-color-primary: #e87878;
+  --ifm-color-primary-dark: #e35a5a;
+  --ifm-color-primary-darker: #e04b4b;
+  --ifm-color-primary-darkest: #d32424;
+  --ifm-color-primary-light: #ed9696;
+  --ifm-color-primary-lighter: #f0a5a5;
+  --ifm-color-primary-lightest: #f7d2d2;
+  --docusaurus-highlighted-code-line-bg: rgba(0, 0, 0, 0.3);
+
+  /* Search */
+  --aa-primary-color-rgb: 232, 232, 232 !important;
+  --aa-muted-color-rgb: 190, 190, 190 !important;
+  --aa-background-color-rgb: 32, 32, 32 !important;
+  --aa-selected-color-rgb: 70, 70, 70 !important;
+  --aa-input-border-color-rgb: 126, 126, 126 !important;
+  --aa-input-background-color-rgb: 32, 32, 32 !important;
+
+
+  --btn-primary-bg: #252526;
+  --btn-primary-shadow: transparent;
+  --btn-primary-hover-bg: #252526;
+  --btn-primary-hover-shadow: transparent;
+  --btn-primary-active-bg: #252526;
+  --btn-primary-active-shadow: transparent;
+}
+
+main.landing-page {
+  a.highlight {
+    text-decoration: underline;
+  }
+
+  a:hover {
+    text-decoration: none !important;
+  }
+}
+
+.tag::after {
+  display: inline-block;
+  padding: 0.1em 0.5em;
+  border-radius: 0.3em;
+  vertical-align: middle;
+  font-weight: normal;
+  font-size: small;
+}
+
+.professional::after {
+  content: "Pro";
+  margin-bottom: 0.5em;
+  background: #1976d2;
+  color: #fff;
+}
+
+.beta::after {
+  content: "Beta";
+  margin-bottom: 0.5em;
+  background: #FBCFA8;
+  color: #000;
+}
+
+.tag-small::after {
+  display: inline-block;
+  padding: 0.05em 0.25em;
+  border-radius: 0.3em;
+  vertical-align: middle;
+  font-weight: normal;
+  font-size: x-small;
+}

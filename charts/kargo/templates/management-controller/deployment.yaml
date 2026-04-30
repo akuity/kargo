@@ -1,0 +1,124 @@
+{{- if .Values.managementController.enabled }}
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: kargo-management-controller
+  namespace: {{ .Release.Namespace }}
+  labels:
+    {{- include "kargo.labels" . | nindent 4 }}
+    {{- include "kargo.managementController.labels" . | nindent 4 }}
+  {{- with (mergeOverwrite (deepCopy .Values.global.labels) .Values.managementController.labels) }}
+    {{- range $key, $value := . }}
+    {{ $key }}: {{ $value | quote }}
+    {{- end }}
+  {{- end }}
+  {{- with (mergeOverwrite (deepCopy .Values.global.annotations) .Values.managementController.annotations) }}
+  annotations:
+    {{- range $key, $value := . }}
+    {{ $key }}: {{ $value | quote }}
+    {{- end }}
+  {{- end }}
+spec:
+  replicas: 1
+  strategy:
+    type: Recreate
+  selector:
+    matchLabels:
+      {{- include "kargo.selectorLabels" . | nindent 6 }}
+      {{- include "kargo.managementController.labels" . | nindent 6 }}
+  template:
+    metadata:
+      labels:
+        {{- include "kargo.labels" . | nindent 8 }}
+        {{- include "kargo.managementController.labels" . | nindent 8 }}
+      {{- with (mergeOverwrite (deepCopy .Values.global.podLabels) .Values.managementController.podLabels) }}
+        {{- range $key, $value := . }}
+        {{ $key }}: {{ $value | quote }}
+        {{- end }}
+      {{- end }}
+      annotations:
+        configmap/checksum: {{ pick ( include (print $.Template.BasePath "/management-controller/configmap.yaml") . | fromYaml ) "data" | toYaml | sha256sum }}
+      {{- with (mergeOverwrite (deepCopy .Values.global.podAnnotations) .Values.managementController.podAnnotations) }}
+        {{- range $key, $value := . }}
+        {{ $key }}: {{ $value | quote }}
+        {{- end }}
+      {{- end }}
+    spec:
+      {{- if not .Values.rbac.useDefaultServiceAccount }}
+      serviceAccount: kargo-management-controller
+      {{- end }}
+      {{- if .Values.rbac.disableAutomountServiceAccountToken }}
+      automountServiceAccountToken: false
+      {{- end }}
+      {{- with .Values.managementController.affinity | default .Values.global.affinity }}
+      affinity:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      {{- with .Values.managementController.priorityClassName | default .Values.global.priorityClassName }}
+      priorityClassName: {{ . }}
+      {{- end }}
+      {{- with .Values.image.pullSecrets }}
+      imagePullSecrets:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      containers:
+      - name: management-controller
+        image: {{ include "kargo.image" . }}
+        imagePullPolicy: {{ .Values.image.pullPolicy }}
+        command: ["/sbin/tini", "--", "/usr/local/bin/kargo"]
+        args: ["management-controller"]
+        env:
+        - name: GOMEMLIMIT
+          valueFrom:
+            resourceFieldRef:
+              containerName: management-controller
+              divisor: "1"
+              resource: limits.memory
+        - name: GOMAXPROCS
+          valueFrom:
+            resourceFieldRef:
+              containerName: management-controller
+              divisor: "1"
+              resource: {{ include "kargo.selectCpuResourceField" (dict "resources" .Values.managementController.resources) }}
+        {{- with (concat .Values.global.env .Values.managementController.env) }}
+        {{- toYaml . | nindent 8 }}
+        {{- end }}
+        envFrom:
+        - configMapRef:
+            name: kargo-management-controller
+        {{- with (concat .Values.global.envFrom .Values.managementController.envFrom) }}
+          {{- toYaml . | nindent 8 }}
+        {{- end }}
+        {{- if .Values.kubeconfigSecrets.kargo }}
+        volumeMounts:
+        - mountPath: /etc/kargo/kubeconfigs
+          name: kubeconfigs
+          readOnly: true
+        {{- end }}
+        {{- with .Values.managementController.securityContext | default .Values.global.securityContext }}
+        securityContext:
+          {{- toYaml . | nindent 10 }}
+        {{- end }}
+        resources:
+          {{- toYaml .Values.managementController.resources | nindent 10 }}
+      {{- if .Values.kubeconfigSecrets.kargo }}
+      volumes:
+      - name: kubeconfigs
+        projected:
+          sources:
+          - secret:
+              name: {{ .Values.kubeconfigSecrets.kargo }}
+              items:
+              - key: kubeconfig.yaml
+                path: kubeconfig.yaml
+                mode: 0644
+      {{- end }}
+      {{- with .Values.managementController.nodeSelector | default .Values.global.nodeSelector }}
+      nodeSelector:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      {{- with .Values.managementController.tolerations | default .Values.global.tolerations }}
+      tolerations:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+{{- end }}

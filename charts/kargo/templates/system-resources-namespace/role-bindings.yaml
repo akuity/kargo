@@ -1,0 +1,37 @@
+apiVersion: rbac.authorization.k8s.io/v1
+kind: RoleBinding
+metadata:
+  name: kargo-system-resources-reader
+  namespace: {{ .Values.global.systemResources.namespace }}
+  labels:
+    {{- include "kargo.labels" . | nindent 4 }}
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: Role
+  name: kargo-system-resources-reader
+subjects:
+- kind: ServiceAccount
+  namespace: {{ .Release.Namespace }}
+  name: kargo-controller
+- kind: ServiceAccount
+  namespace: {{ .Release.Namespace }}
+  name: kargo-external-webhooks-server
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: RoleBinding
+metadata:
+  name: kargo-system-resources-admin
+  namespace: {{ .Values.global.systemResources.namespace }}
+  labels:
+    {{- include "kargo.labels" . | nindent 4 }}
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: Role
+  name: kargo-system-resources-admin
+subjects:
+- kind: ServiceAccount
+  namespace: {{ .Release.Namespace }}
+  name: kargo-api
+- kind: ServiceAccount
+  namespace: {{ .Release.Namespace }}
+  name: kargo-admin

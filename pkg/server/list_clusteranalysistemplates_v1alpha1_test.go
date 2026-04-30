@@ -1,0 +1,180 @@
+package server
+
+import (
+	"context"
+	"encoding/json"
+	"net/http"
+	"net/http/httptest"
+	"testing"
+
+	"connectrpc.com/connect"
+	"github.com/stretchr/testify/require"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/apimachinery/pkg/runtime"
+	"k8s.io/client-go/rest"
+	"sigs.k8s.io/controller-runtime/pkg/client"
+	"sigs.k8s.io/controller-runtime/pkg/client/fake"
+
+	svcv1alpha1 "github.com/akuity/kargo/api/service/v1alpha1"
+	rollouts "github.com/akuity/kargo/api/stubs/rollouts/v1alpha1"
+	"github.com/akuity/kargo/pkg/server/config"
+	"github.com/akuity/kargo/pkg/server/kubernetes"
+	"github.com/akuity/kargo/pkg/server/validation"
+)
+
+func TestListClusterAnalysisTemplates(t *testing.T) {
+	testCases := map[string]struct {
+		req              *svcv1alpha1.ListClusterAnalysisTemplatesRequest
+		objects          []client.Object
+		rolloutsDisabled bool
+		assertions       func(*testing.T, *connect.Response[svcv1alpha1.ListClusterAnalysisTemplatesResponse], error)
+	}{
+		"existing": {
+			req: &svcv1alpha1.ListClusterAnalysisTemplatesRequest{},
+			objects: []client.Object{
+				mustNewObject[rollouts.ClusterAnalysisTemplate]("testdata/clusteranalysistemplate.yaml"),
+			},
+			assertions: func(t *testing.T, r *connect.Response[svcv1alpha1.ListClusterAnalysisTemplatesResponse], err error) {
+				require.NoError(t, err)
+				require.NotNil(t, r)
+				require.Len(t, r.Msg.GetClusterAnalysisTemplates(), 1)
+			},
+		},
+		"Argo Rollouts integration is not enabled": {
+			req:              &svcv1alpha1.ListClusterAnalysisTemplatesRequest{},
+			rolloutsDisabled: true,
+			assertions: func(t *testing.T, r *connect.Response[svcv1alpha1.ListClusterAnalysisTemplatesResponse], err error) {
+				require.Error(t, err)
+				require.Equal(t, connect.CodeUnimplemented, connect.CodeOf(err))
+				require.Nil(t, r)
+			},
+		},
+		"orders by name": {
+			req: &svcv1alpha1.ListClusterAnalysisTemplatesRequest{},
+			objects: []client.Object{
+				func() client.Object {
+					obj := mustNewObject[rollouts.ClusterAnalysisTemplate]("testdata/clusteranalysistemplate.yaml")
+					obj.SetName("z-clusteranalysistemplate")
+					return obj
+				}(),
+				func() client.Object {
+					obj := mustNewObject[rollouts.ClusterAnalysisTemplate]("testdata/clusteranalysistemplate.yaml")
+					obj.SetName("a-clusteranalysistemplate")
+					return obj
+				}(),
+				func() client.Object {
+					obj := mustNewObject[rollouts.ClusterAnalysisTemplate]("testdata/clusteranalysistemplate.yaml")
+					obj.SetName("m-clusteranalysistemplate")
+					return obj
+				}(),
+				func() client.Object {
+					obj := mustNewObject[rollouts.ClusterAnalysisTemplate]("testdata/clusteranalysistemplate.yaml")
+					obj.SetName("0-clusteranalysistemplate")
+					return obj
+				}(),
+			},
+			assertions: func(t *testing.T, r *connect.Response[svcv1alpha1.ListClusterAnalysisTemplatesResponse], err error) {
+				require.NoError(t, err)
+				require.NotNil(t, r)
+				require.Len(t, r.Msg.GetClusterAnalysisTemplates(), 4)
+
+				// Check that the analysis templates are ordered by name.
+				require.Equal(t, "0-clusteranalysistemplate", r.Msg.GetClusterAnalysisTemplates()[0].GetName())
+				require.Equal(t, "a-clusteranalysistemplate", r.Msg.GetClusterAnalysisTemplates()[1].GetName())
+				require.Equal(t, "m-clusteranalysistemplate", r.Msg.GetClusterAnalysisTemplates()[2].GetName())
+				require.Equal(t, "z-clusteranalysistemplate", r.Msg.GetClusterAnalysisTemplates()[3].GetName())
+			},
+		},
+	}
+	for name, testCase := range testCases {
+		t.Run(name, func(t *testing.T) {
+			t.Parallel()
+
+			ctx := t.Context()
+
+			cfg := config.ServerConfigFromEnv()
+			if testCase.rolloutsDisabled {
+				cfg.RolloutsIntegrationEnabled = false
+			}
+
+			client, err := kubernetes.NewClient(
+				ctx,
+				&rest.Config{},
+				kubernetes.ClientOptions{
+					SkipAuthorization: true,
+					NewInternalClient: func(
+						_ context.Context,
+						_ *rest.Config,
+						scheme *runtime.Scheme,
+						_ string,
+					) (client.WithWatch, error) {
+						c := fake.NewClientBuilder().WithScheme(scheme)
+						if len(testCase.objects) > 0 {
+							c.WithObjects(testCase.objects...)
+						}
+						return c.Build(), nil
+					},
+				},
+			)
+			require.NoError(t, err)
+
+			svr := &server{
+				client:                    client,
+				cfg:                       cfg,
+				externalValidateProjectFn: validation.ValidateProject,
+			}
+			res, err := (svr).ListClusterAnalysisTemplates(ctx, connect.NewRequest(testCase.req))
+			testCase.assertions(t, res, err)
+		})
+	}
+}
+
+func Test_server_listClusterAnalysisTemplates(t *testing.T) {
+	testRESTEndpoint(
+		t, &config.ServerConfig{RolloutsIntegrationEnabled: true},
+		http.MethodGet, "/v1beta1/shared/cluster-analysis-templates",
+		[]restTestCase{
+			{
+				name:         "Rollouts integration disabled",
+				serverConfig: &config.ServerConfig{RolloutsIntegrationEnabled: false},
+				assertions: func(t *testing.T, w *httptest.ResponseRecorder, _ client.Client) {
+					require.Equal(t, http.StatusNotImplemented, w.Code)
+				},
+			},
+			{
+				name: "no ClusterAnalysisTemplates exist",
+				assertions: func(t *testing.T, w *httptest.ResponseRecorder, _ client.Client) {
+					require.Equal(t, http.StatusOK, w.Code)
+					templates := &rollouts.ClusterAnalysisTemplateList{}
+					err := json.Unmarshal(w.Body.Bytes(), templates)
+					require.NoError(t, err)
+					require.Empty(t, templates.Items)
+				},
+			},
+			{
+				name: "lists ClusterAnalysisTemplates",
+				clientBuilder: fake.NewClientBuilder().WithObjects(
+					&rollouts.ClusterAnalysisTemplate{
+						ObjectMeta: metav1.ObjectMeta{
+							Name: "template-1",
+						},
+					},
+					&rollouts.ClusterAnalysisTemplate{
+						ObjectMeta: metav1.ObjectMeta{
+							Name: "template-2",
+						},
+					},
+				),
+				assertions: func(t *testing.T, w *httptest.ResponseRecorder, _ client.Client) {
+					require.Equal(t, http.StatusOK, w.Code)
+
+					// Examine the ClusterAnalysisTemplates in the response
+					templates := &rollouts.ClusterAnalysisTemplateList{}
+					err := json.Unmarshal(w.Body.Bytes(), templates)
+					require.NoError(t, err)
+					require.Len(t, templates.Items, 2)
+				},
+			},
+		},
+	)
+}

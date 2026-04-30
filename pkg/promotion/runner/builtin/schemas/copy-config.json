@@ -1,0 +1,24 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "CopyConfig",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["inPath", "outPath"],
+  "properties": {
+    "inPath": {
+      "type": "string",
+      "description": "InPath is the path to the file or directory to copy.",
+      "minLength": 1
+    },
+    "outPath": {
+      "type": "string",
+      "description": "OutPath is the path to the destination file or directory.",
+      "minLength": 1
+    },
+    "ignore": {
+      "type": "string",
+      "description": "Ignore is a (multiline) string of glob patterns to ignore when copying files. It accepts the same syntax as .gitignore files.",
+      "minLength": 1
+    }
+  }
+}

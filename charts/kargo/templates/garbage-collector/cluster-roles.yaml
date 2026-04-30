@@ -1,0 +1,46 @@
+{{- if and .Values.garbageCollector.enabled .Values.rbac.installClusterRoles }}
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRole
+metadata:
+  name: kargo-garbage-collector
+  labels:
+    {{- include "kargo.labels" . | nindent 4 }}
+    {{- include "kargo.garbageCollector.labels" . | nindent 4 }}
+rules:
+- apiGroups:
+  - ""
+  resources:
+  - namespaces
+  verbs:
+  - get
+  - list
+  - watch
+# The garbage collector cannot actually carry our promotions because it lacks
+# permission to create Promotion resources, but having the custom promote verb
+# on Stages allows it to delete Promotion resources associated with any Stage.
+- apiGroups:
+  - kargo.akuity.io
+  resources:
+  - stages
+  verbs:
+  - promote
+- apiGroups:
+  - kargo.akuity.io
+  resources:
+  - stages
+  - warehouses
+  verbs:
+  - get
+  - list
+  - watch
+- apiGroups:
+  - kargo.akuity.io
+  resources:
+  - freights
+  - promotions
+  verbs:
+  - delete
+  - get
+  - list
+  - watch
+{{- end }}

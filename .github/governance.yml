@@ -1,0 +1,53 @@
+# Documentation: https://github.com/BirthdayResearch/oss-governance-bot
+version: v1
+
+issue:
+  labels:
+    - prefix: kind
+      list:
+        - bug
+        - chore
+        - discussion
+        - enhancement
+        - proposal
+        - question
+        - refactor
+      multiple: true
+      needs: true
+
+    - prefix: priority
+      list:
+        - urgent
+        - high
+        - normal
+        - low
+      multiple: false
+      needs: true
+
+    - prefix: area
+      list:
+        # generic areas
+        - planning
+        - devx
+        - documentation
+        - perf
+        - regression
+        - security
+        - tech-debt
+        - test
+        - ux
+        - ci-process
+        - release-process
+        # kargo component areas
+        - api-server
+        - charts
+        - cli
+        - controller
+        - crds
+        - external-webhooks
+        - garbage-collector
+        - kubernetes-webhooks
+        - management-controller
+        - ui
+      multiple: true
+      needs: true

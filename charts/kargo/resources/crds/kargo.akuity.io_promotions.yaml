@@ -1,0 +1,771 @@
+---
+apiVersion: apiextensions.k8s.io/v1
+kind: CustomResourceDefinition
+metadata:
+  annotations:
+    controller-gen.kubebuilder.io/version: v0.19.0
+  name: promotions.kargo.akuity.io
+spec:
+  group: kargo.akuity.io
+  names:
+    kind: Promotion
+    listKind: PromotionList
+    plural: promotions
+    shortNames:
+    - promo
+    - promos
+    singular: promotion
+  scope: Namespaced
+  versions:
+  - additionalPrinterColumns:
+    - jsonPath: .metadata.labels.kargo\.akuity\.io/shard
+      name: Shard
+      type: string
+    - jsonPath: .spec.stage
+      name: Stage
+      type: string
+    - jsonPath: .spec.freight
+      name: Freight
+      type: string
+    - jsonPath: .status.phase
+      name: Phase
+      type: string
+    - jsonPath: .metadata.creationTimestamp
+      name: Age
+      type: date
+    name: v1alpha1
+    schema:
+      openAPIV3Schema:
+        description: |-
+          Promotion represents a request to transition a particular Stage into a
+          particular Freight.
+        properties:
+          apiVersion:
+            description: |-
+              APIVersion defines the versioned schema of this representation of an object.
+              Servers should convert recognized schemas to the latest internal value, and
+              may reject unrecognized values.
+              More info: https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#resources
+            type: string
+          kind:
+            description: |-
+              Kind is a string value representing the REST resource this object represents.
+              Servers may infer this from the endpoint the client submits requests to.
+              Cannot be updated.
+              In CamelCase.
+              More info: https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#types-kinds
+            type: string
+          metadata:
+            type: object
+          spec:
+            description: |-
+              Spec describes the desired transition of a specific Stage into a specific
+              Freight.
+            properties:
+              freight:
+                description: |-
+                  Freight specifies the piece of Freight to be promoted into the Stage
+                  referenced by the Stage field.
+                maxLength: 253
+                minLength: 1
+                pattern: ^[a-z0-9]([-a-z0-9]*[a-z0-9])?(\.[a-z0-9]([-a-z0-9]*[a-z0-9])?)*$
+                type: string
+              stage:
+                description: |-
+                  Stage specifies the name of the Stage to which this Promotion
+                  applies. The Stage referenced by this field MUST be in the same
+                  namespace as the Promotion.
+                maxLength: 253
+                minLength: 1
+                pattern: ^[a-z0-9]([-a-z0-9]*[a-z0-9])?(\.[a-z0-9]([-a-z0-9]*[a-z0-9])?)*$
+                type: string
+              steps:
+                description: |-
+                  Steps specifies the directives to be executed as part of this Promotion.
+                  The order in which the directives are executed is the order in which they
+                  are listed in this field.
+                items:
+                  description: PromotionStep describes a directive to be executed
+                    as part of a Promotion.
+                  properties:
+                    as:
+                      description: As is the alias this step can be referred to as.
+                      type: string
+                    config:
+                      description: |-
+                        Config is opaque configuration for the PromotionStep that is understood
+                        only by each PromotionStep's implementation. It is legal to utilize
+                        expressions in defining values at any level of this block.
+                        See https://docs.kargo.io/user-guide/reference-docs/expressions for details.
+                      x-kubernetes-preserve-unknown-fields: true
+                    continueOnError:
+                      description: |-
+                        ContinueOnError is a boolean value that, if set to true, will cause the
+                        Promotion to continue executing the next step even if this step fails. It
+                        also will not permit this failure to impact the overall status of the
+                        Promotion.
+                      type: boolean
+                    if:
+                      description: |-
+                        If is an optional expression that, if present, must evaluate to a boolean
+                        value. If the expression evaluates to false, the step will be skipped.
+                        If the expression does not evaluate to a boolean value, the step will be
+                        considered to have failed.
+                      type: string
+                    retry:
+                      description: Retry is the retry policy for this step.
+                      properties:
+                        errorThreshold:
+                          description: |-
+                            ErrorThreshold is the number of consecutive times the step must fail (for
+                            any reason) before retries are abandoned and the entire Promotion is marked
+                            as failed.
+
+                            If this field is set to 0, the effective default will be a step-specific
+                            one. If no step-specific default exists (i.e. is also 0), the effective
+                            default will be the system-wide default of 1.
+
+                            A value of 1 will cause the Promotion to be marked as failed after just
+                            a single failure; i.e. no retries will be attempted.
+
+                            There is no option to specify an infinite number of retries using a value
+                            such as -1.
+
+                            In a future release, Kargo is likely to become capable of distinguishing
+                            between recoverable and non-recoverable step failures. At that time, it is
+                            planned that unrecoverable failures will not be subject to this threshold
+                            and will immediately cause the Promotion to be marked as failed without
+                            further condition.
+                          format: int32
+                          type: integer
+                        timeout:
+                          description: |-
+                            Timeout is the soft maximum interval in which a step that returns a Running
+                            status (which typically indicates it's waiting for something to happen)
+                            may be retried.
+
+                            The maximum is a soft one because the check for whether the interval has
+                            elapsed occurs AFTER the step has run. This effectively means a step may
+                            run ONCE beyond the close of the interval.
+
+                            If this field is set to nil, the effective default will be a step-specific
+                            one. If no step-specific default exists (i.e. is also nil), the effective
+                            default will be the system-wide default of 0.
+
+                            A value of 0 will cause the step to be retried indefinitely unless the
+                            ErrorThreshold is reached.
+                          type: string
+                      type: object
+                    task:
+                      description: |-
+                        Task is a reference to a PromotionTask that should be inflated into a
+                        Promotion when it is built from a PromotionTemplate.
+                      properties:
+                        kind:
+                          description: |-
+                            Kind is the type of the PromotionTask. Can be either PromotionTask or
+                            ClusterPromotionTask, default is PromotionTask.
+                          enum:
+                          - PromotionTask
+                          - ClusterPromotionTask
+                          type: string
+                        name:
+                          description: Name is the name of the (Cluster)PromotionTask.
+                          maxLength: 253
+                          minLength: 1
+                          pattern: ^[a-z0-9]([-a-z0-9]*[a-z0-9])?(\.[a-z0-9]([-a-z0-9]*[a-z0-9])?)*$
+                          type: string
+                      required:
+                      - name
+                      type: object
+                    uses:
+                      description: Uses identifies a runner that can execute this
+                        step.
+                      minLength: 1
+                      type: string
+                    vars:
+                      description: |-
+                        Vars is a list of variables that can be referenced by expressions in
+                        the step's Config. The values override the values specified in the
+                        PromotionSpec.
+                      items:
+                        description: |-
+                          ExpressionVariable describes a single variable that may be referenced by
+                          expressions in the context of a ClusterPromotionTask, PromotionTask,
+                          Promotion, AnalysisRun arguments, or other objects that support expressions.
+
+                          It is used to pass information to the expression evaluation engine, and to
+                          allow for dynamic evaluation of expressions based on the variable values.
+                        properties:
+                          name:
+                            description: Name is the name of the variable.
+                            minLength: 1
+                            pattern: ^[a-zA-Z_]\w*$
+                            type: string
+                          value:
+                            description: |-
+                              Value is the value of the variable. It is allowed to utilize expressions
+                              in the value.
+                              See https://docs.kargo.io/user-guide/reference-docs/expressions for details.
+                            type: string
+                        required:
+                        - name
+                        type: object
+                      type: array
+                  type: object
+                  x-kubernetes-validations:
+                  - message: Promotion step must have uses set and must not reference
+                      a task
+                    rule: has(self.uses) && !has(self.task)
+                minItems: 1
+                type: array
+              vars:
+                description: |-
+                  Vars is a list of variables that can be referenced by expressions in
+                  promotion steps.
+                items:
+                  description: |-
+                    ExpressionVariable describes a single variable that may be referenced by
+                    expressions in the context of a ClusterPromotionTask, PromotionTask,
+                    Promotion, AnalysisRun arguments, or other objects that support expressions.
+
+                    It is used to pass information to the expression evaluation engine, and to
+                    allow for dynamic evaluation of expressions based on the variable values.
+                  properties:
+                    name:
+                      description: Name is the name of the variable.
+                      minLength: 1
+                      pattern: ^[a-zA-Z_]\w*$
+                      type: string
+                    value:
+                      description: |-
+                        Value is the value of the variable. It is allowed to utilize expressions
+                        in the value.
+                        See https://docs.kargo.io/user-guide/reference-docs/expressions for details.
+                      type: string
+                  required:
+                  - name
+                  type: object
+                type: array
+            required:
+            - freight
+            - stage
+            - steps
+            type: object
+          status:
+            description: |-
+              Status describes the current state of the transition represented by this
+              Promotion.
+            properties:
+              currentStep:
+                description: |-
+                  CurrentStep is the index of the current promotion step being executed. This
+                  permits steps that have already run successfully to be skipped on
+                  subsequent reconciliations attempts.
+                format: int64
+                type: integer
+              finishedAt:
+                description: FinishedAt is the time when the promotion was completed.
+                format: date-time
+                type: string
+              freight:
+                description: Freight is the detail of the piece of freight that was
+                  referenced by this promotion.
+                properties:
+                  artifacts:
+                    description: |-
+                      Artifacts describes specific versions of artifacts other
+                      than Git repository commits, container images, and Helm charts.
+                    items:
+                      description: ArtifactReference is a reference to a specific
+                        version of an artifact.
+                      properties:
+                        artifactType:
+                          description: |-
+                            ArtifactType specifies the type of artifact this is. Often, but not always,
+                            it will be the media type (MIME type) of the artifact referenced by this
+                            ArtifactReference.
+                          minLength: 1
+                          type: string
+                        metadata:
+                          description: |-
+                            Metadata is a JSON object containing a mostly opaque collection of artifact
+                            attributes. (It must be an object. It may not be a list or a scalar value.)
+                            "Mostly" because Kargo may understand how to interpret some documented,
+                            well-known, top-level keys. Those aside, this metadata is only understood
+                            by a corresponding Subscriber implementation that created it.
+                          x-kubernetes-preserve-unknown-fields: true
+                        subscriptionName:
+                          description: |-
+                            SubscriptionName is the name of the Subscription that discovered this
+                            artifact.
+                          minLength: 1
+                          type: string
+                        version:
+                          description: Version identifies a specific revision of this
+                            artifact.
+                          minLength: 1
+                          type: string
+                      required:
+                      - subscriptionName
+                      - version
+                      type: object
+                    type: array
+                  charts:
+                    description: Charts describes specific versions of specific Helm
+                      charts.
+                    items:
+                      description: Chart describes a specific version of a Helm chart.
+                      properties:
+                        name:
+                          description: Name specifies the name of the chart.
+                          type: string
+                        repoURL:
+                          description: |-
+                            RepoURL specifies the URL of a Helm chart repository. Classic chart
+                            repositories (using HTTP/S) can contain differently named charts. When this
+                            field points to such a repository, the Name field will specify the name of
+                            the chart within the repository. In the case of a repository within an OCI
+                            registry, the URL implicitly points to a specific chart and the Name field
+                            will be empty.
+                          type: string
+                        version:
+                          description: Version specifies a particular version of the
+                            chart.
+                          type: string
+                      type: object
+                    type: array
+                  commits:
+                    description: Commits describes specific Git repository commits.
+                    items:
+                      description: GitCommit describes a specific commit from a specific
+                        Git repository.
+                      properties:
+                        author:
+                          description: Author is the author of the commit.
+                          type: string
+                        branch:
+                          description: Branch denotes the branch of the repository
+                            where this commit was found.
+                          type: string
+                        committer:
+                          description: Committer is the person who committed the commit.
+                          type: string
+                        id:
+                          description: |-
+                            ID is the ID of a specific commit in the Git repository specified by
+                            RepoURL.
+                          type: string
+                        message:
+                          description: |-
+                            Message is the message associated with the commit. At present, this only
+                            contains the first line (subject) of the commit message.
+                          type: string
+                        repoURL:
+                          description: RepoURL is the URL of a Git repository.
+                          type: string
+                        tag:
+                          description: |-
+                            Tag denotes a tag in the repository that matched selection criteria and
+                            resolved to this commit.
+                          type: string
+                      type: object
+                    type: array
+                  images:
+                    description: Images describes specific versions of specific container
+                      images.
+                    items:
+                      description: Image describes a specific version of a container
+                        image.
+                      properties:
+                        annotations:
+                          additionalProperties:
+                            type: string
+                          description: Annotations is a map of arbitrary metadata
+                            for the image.
+                          type: object
+                        digest:
+                          description: |-
+                            Digest identifies a specific version of the image in the repository
+                            specified by RepoURL. This is a more precise identifier than Tag.
+                          type: string
+                        repoURL:
+                          description: RepoURL describes the repository in which the
+                            image can be found.
+                          type: string
+                        tag:
+                          description: |-
+                            Tag identifies a specific version of the image in the repository specified
+                            by RepoURL.
+                          type: string
+                      type: object
+                    type: array
+                  name:
+                    description: |-
+                      Name is a system-assigned identifier derived deterministically from
+                      the contents of the Freight. I.e., two pieces of Freight can be compared
+                      for equality by comparing their Names.
+                    type: string
+                  origin:
+                    description: Origin describes a kind of Freight in terms of its
+                      origin.
+                    properties:
+                      kind:
+                        description: |-
+                          Kind is the kind of resource from which Freight may have originated. At
+                          present, this can only be "Warehouse".
+                        enum:
+                        - Warehouse
+                        type: string
+                      name:
+                        description: |-
+                          Name is the name of the resource of the kind indicated by the Kind field
+                          from which Freight may originate.
+                        type: string
+                    required:
+                    - kind
+                    - name
+                    type: object
+                type: object
+              freightCollection:
+                description: |-
+                  FreightCollection contains the details of the piece of Freight referenced
+                  by this Promotion as well as any additional Freight that is carried over
+                  from the target Stage's current state.
+                properties:
+                  id:
+                    description: |-
+                      ID is a unique and deterministically calculated identifier for the
+                      FreightCollection. It is updated on each use of the UpdateOrPush method.
+                    type: string
+                  items:
+                    additionalProperties:
+                      description: |-
+                        FreightReference is a simplified representation of a piece of Freight -- not
+                        a root resource type.
+                      properties:
+                        artifacts:
+                          description: |-
+                            Artifacts describes specific versions of artifacts other
+                            than Git repository commits, container images, and Helm charts.
+                          items:
+                            description: ArtifactReference is a reference to a specific
+                              version of an artifact.
+                            properties:
+                              artifactType:
+                                description: |-
+                                  ArtifactType specifies the type of artifact this is. Often, but not always,
+                                  it will be the media type (MIME type) of the artifact referenced by this
+                                  ArtifactReference.
+                                minLength: 1
+                                type: string
+                              metadata:
+                                description: |-
+                                  Metadata is a JSON object containing a mostly opaque collection of artifact
+                                  attributes. (It must be an object. It may not be a list or a scalar value.)
+                                  "Mostly" because Kargo may understand how to interpret some documented,
+                                  well-known, top-level keys. Those aside, this metadata is only understood
+                                  by a corresponding Subscriber implementation that created it.
+                                x-kubernetes-preserve-unknown-fields: true
+                              subscriptionName:
+                                description: |-
+                                  SubscriptionName is the name of the Subscription that discovered this
+                                  artifact.
+                                minLength: 1
+                                type: string
+                              version:
+                                description: Version identifies a specific revision
+                                  of this artifact.
+                                minLength: 1
+                                type: string
+                            required:
+                            - subscriptionName
+                            - version
+                            type: object
+                          type: array
+                        charts:
+                          description: Charts describes specific versions of specific
+                            Helm charts.
+                          items:
+                            description: Chart describes a specific version of a Helm
+                              chart.
+                            properties:
+                              name:
+                                description: Name specifies the name of the chart.
+                                type: string
+                              repoURL:
+                                description: |-
+                                  RepoURL specifies the URL of a Helm chart repository. Classic chart
+                                  repositories (using HTTP/S) can contain differently named charts. When this
+                                  field points to such a repository, the Name field will specify the name of
+                                  the chart within the repository. In the case of a repository within an OCI
+                                  registry, the URL implicitly points to a specific chart and the Name field
+                                  will be empty.
+                                type: string
+                              version:
+                                description: Version specifies a particular version
+                                  of the chart.
+                                type: string
+                            type: object
+                          type: array
+                        commits:
+                          description: Commits describes specific Git repository commits.
+                          items:
+                            description: GitCommit describes a specific commit from
+                              a specific Git repository.
+                            properties:
+                              author:
+                                description: Author is the author of the commit.
+                                type: string
+                              branch:
+                                description: Branch denotes the branch of the repository
+                                  where this commit was found.
+                                type: string
+                              committer:
+                                description: Committer is the person who committed
+                                  the commit.
+                                type: string
+                              id:
+                                description: |-
+                                  ID is the ID of a specific commit in the Git repository specified by
+                                  RepoURL.
+                                type: string
+                              message:
+                                description: |-
+                                  Message is the message associated with the commit. At present, this only
+                                  contains the first line (subject) of the commit message.
+                                type: string
+                              repoURL:
+                                description: RepoURL is the URL of a Git repository.
+                                type: string
+                              tag:
+                                description: |-
+                                  Tag denotes a tag in the repository that matched selection criteria and
+                                  resolved to this commit.
+                                type: string
+                            type: object
+                          type: array
+                        images:
+                          description: Images describes specific versions of specific
+                            container images.
+                          items:
+                            description: Image describes a specific version of a container
+                              image.
+                            properties:
+                              annotations:
+                                additionalProperties:
+                                  type: string
+                                description: Annotations is a map of arbitrary metadata
+                                  for the image.
+                                type: object
+                              digest:
+                                description: |-
+                                  Digest identifies a specific version of the image in the repository
+                                  specified by RepoURL. This is a more precise identifier than Tag.
+                                type: string
+                              repoURL:
+                                description: RepoURL describes the repository in which
+                                  the image can be found.
+                                type: string
+                              tag:
+                                description: |-
+                                  Tag identifies a specific version of the image in the repository specified
+                                  by RepoURL.
+                                type: string
+                            type: object
+                          type: array
+                        name:
+                          description: |-
+                            Name is a system-assigned identifier derived deterministically from
+                            the contents of the Freight. I.e., two pieces of Freight can be compared
+                            for equality by comparing their Names.
+                          type: string
+                        origin:
+                          description: Origin describes a kind of Freight in terms
+                            of its origin.
+                          properties:
+                            kind:
+                              description: |-
+                                Kind is the kind of resource from which Freight may have originated. At
+                                present, this can only be "Warehouse".
+                              enum:
+                              - Warehouse
+                              type: string
+                            name:
+                              description: |-
+                                Name is the name of the resource of the kind indicated by the Kind field
+                                from which Freight may originate.
+                              type: string
+                          required:
+                          - kind
+                          - name
+                          type: object
+                      type: object
+                    description: |-
+                      Freight is a map of FreightReference objects, indexed by their Warehouse
+                      origin.
+                    type: object
+                  verificationHistory:
+                    description: |-
+                      VerificationHistory is a stack of recent VerificationInfo. By default,
+                      the last ten VerificationInfo are stored.
+                    items:
+                      description: |-
+                        VerificationInfo contains the details of an instance of a Verification
+                        process.
+                      properties:
+                        actor:
+                          description: |-
+                            Actor is the name of the entity that initiated or aborted the
+                            Verification process.
+                          type: string
+                        analysisRun:
+                          description: |-
+                            AnalysisRun is a reference to the Argo Rollouts AnalysisRun that implements
+                            the Verification process.
+                          properties:
+                            name:
+                              description: Name is the name of the AnalysisRun.
+                              type: string
+                            namespace:
+                              description: Namespace is the namespace of the AnalysisRun.
+                              type: string
+                            phase:
+                              description: Phase is the last observed phase of the
+                                AnalysisRun referenced by Name.
+                              type: string
+                          required:
+                          - name
+                          - namespace
+                          - phase
+                          type: object
+                        finishTime:
+                          description: FinishTime is the time at which the Verification
+                            process finished.
+                          format: date-time
+                          type: string
+                        id:
+                          description: ID is the identifier of the Verification process.
+                          type: string
+                        message:
+                          description: |-
+                            Message may contain additional information about why the verification
+                            process is in its current phase.
+                          type: string
+                        phase:
+                          description: |-
+                            Phase describes the current phase of the Verification process. Generally,
+                            this will be a reflection of the underlying AnalysisRun's phase, however,
+                            there are exceptions to this, such as in the case where an AnalysisRun
+                            cannot be launched successfully.
+                          type: string
+                        startTime:
+                          description: StartTime is the time at which the Verification
+                            process was started.
+                          format: date-time
+                          type: string
+                      type: object
+                    type: array
+                required:
+                - id
+                type: object
+              healthChecks:
+                description: |-
+                  HealthChecks contains the health check directives to be executed after
+                  the Promotion has completed.
+                items:
+                  description: |-
+                    HealthCheckStep describes a health check directive which can be executed by
+                    a Stage to verify the health of a Promotion result.
+                  properties:
+                    config:
+                      description: Config is the configuration for the directive.
+                      x-kubernetes-preserve-unknown-fields: true
+                    uses:
+                      description: Uses identifies a runner that can execute this
+                        step.
+                      minLength: 1
+                      type: string
+                  required:
+                  - uses
+                  type: object
+                type: array
+              lastHandledRefresh:
+                description: |-
+                  LastHandledRefresh holds the value of the most recent AnnotationKeyRefresh
+                  annotation that was handled by the controller. This field can be used to
+                  determine whether the request to refresh the resource has been handled.
+                type: string
+              message:
+                description: |-
+                  Message is a display message about the promotion, including any errors
+                  preventing the Promotion controller from executing this Promotion.
+                  i.e. If the Phase field has a value of Failed, this field can be expected
+                  to explain why.
+                type: string
+              phase:
+                description: Phase describes where the Promotion currently is in its
+                  lifecycle.
+                type: string
+              startedAt:
+                description: StartedAt is the time when the promotion started.
+                format: date-time
+                type: string
+              state:
+                description: |-
+                  State stores the state of the promotion process between reconciliation
+                  attempts.
+                x-kubernetes-preserve-unknown-fields: true
+              stepExecutionMetadata:
+                description: |-
+                  StepExecutionMetadata tracks metadata pertaining to the execution
+                  of individual promotion steps.
+                items:
+                  description: |-
+                    StepExecutionMetadata tracks metadata pertaining to the execution of
+                    a promotion step.
+                  properties:
+                    alias:
+                      description: Alias is the alias of the step.
+                      type: string
+                    continueOnError:
+                      description: |-
+                        ContinueOnError is a boolean value that, if set to true, will cause the
+                        Promotion to continue executing the next step even if this step fails. It
+                        also will not permit this failure to impact the overall status of the
+                        Promotion.
+                      type: boolean
+                    errorCount:
+                      description: ErrorCount tracks consecutive failed attempts to
+                        execute the step.
+                      format: int32
+                      type: integer
+                    finishedAt:
+                      description: |-
+                        FinishedAt is the time at which the final attempt to execute the step
+                        completed.
+                      format: date-time
+                      type: string
+                    message:
+                      description: Message is a display message about the step, including
+                        any errors.
+                      type: string
+                    startedAt:
+                      description: |-
+                        StartedAt is the time at which the first attempt to execute the step
+                        began.
+                      format: date-time
+                      type: string
+                    status:
+                      description: Status is the high-level outcome of the step.
+                      type: string
+                  type: object
+                type: array
+            type: object
+        required:
+        - spec
+        type: object
+    served: true
+    storage: true
+    subresources:
+      status: {}

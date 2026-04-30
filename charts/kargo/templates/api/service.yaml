@@ -1,0 +1,32 @@
+{{- if .Values.api.enabled }}
+apiVersion: v1
+kind: Service
+metadata:
+  name: kargo-api
+  namespace: {{ .Release.Namespace }}
+  labels:
+    {{- include "kargo.labels" . | nindent 4 }}
+    {{- include "kargo.api.labels" . | nindent 4 }}
+  {{- with (mergeOverwrite (deepCopy .Values.global.annotations) .Values.api.service.annotations) }}
+  annotations:
+    {{- range $key, $value := . }}
+    {{ $key }}: {{ $value | quote }}
+    {{- end }}
+  {{- end }}
+spec:
+  type: {{ .Values.api.service.type }}
+  ports:
+  - protocol: TCP
+    {{- if .Values.api.tls.enabled }}
+    port: 443
+    {{- else }}
+    port: 80
+    {{- end }}
+    {{- if and (or (eq .Values.api.service.type "NodePort") (eq .Values.api.service.type "LoadBalancer")) .Values.api.service.nodePort}}
+    nodePort: {{ .Values.api.service.nodePort }}
+    {{- end }}
+    targetPort: 8080
+  selector:
+    {{- include "kargo.selectorLabels" . | nindent 4 }}
+    {{- include "kargo.api.labels" . | nindent 4 }}
+{{- end }}

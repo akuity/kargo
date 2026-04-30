@@ -1,0 +1,43 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "YAMLParseConfig",
+
+  "definitions": {
+    "yamlParse": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["name", "fromExpression"],
+      "properties": {
+        "name": {
+          "type": "string",
+          "minLength": 1,
+          "description": "The name of the output variable to store the result."
+        },
+        "fromExpression": {
+          "type": "string",
+          "minLength": 1,
+          "description": "The expression used to extract data from the YAML file."
+        }
+      }
+    }
+  },
+
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["path", "outputs"],
+  "properties": {
+    "path": {
+      "type": "string",
+      "description": "The path to the YAML file to be parsed.",
+      "minLength": 1
+    },
+    "outputs": {
+      "type": "array",
+      "description": "An array of outputs to extract from the YAML file.",
+      "minItems": 1,
+      "items": {
+        "$ref": "#/definitions/yamlParse"
+      }
+    }
+  }
+}

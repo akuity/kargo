@@ -1,0 +1,27 @@
+{
+  "name": "plugin-gtag-with-cookie-consent",
+  "description": "Global Site Tag (gtag.js) with cookie consent plugin for Docusaurus.",
+  "main": "lib/index.js",
+  "types": "lib/index.d.ts",
+  "scripts": {
+    "build": "tsc --build",
+    "watch": "tsc --build --watch"
+  },
+  "packageManager": "pnpm@9.0.3",
+  "dependencies": {
+    "@docusaurus/core": "^3.8.1",
+    "@docusaurus/types": "^3.8.1",
+    "@docusaurus/utils-validation": "3.8.1",
+    "tslib": "^2.6.2"
+  },
+  "devDependencies": {
+    "typescript": "~5.2.2"
+  },
+  "peerDependencies": {
+    "react": "^18.2.0",
+    "react-dom": "^18.2.0"
+  },
+  "engines": {
+    "node": ">=18.0"
+  }
+}

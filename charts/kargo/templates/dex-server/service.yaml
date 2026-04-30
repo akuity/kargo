@@ -1,0 +1,24 @@
+{{- if and .Values.api.enabled .Values.api.oidc.enabled .Values.api.oidc.dex.enabled }}
+apiVersion: v1
+kind: Service
+metadata:
+  name: kargo-dex-server
+  namespace: {{ .Release.Namespace }}
+  labels:
+    {{- include "kargo.labels" . | nindent 4 }}
+    {{- include "kargo.dexServer.labels" . | nindent 4 }}
+spec:
+  type: ClusterIP
+  selector:
+    {{- include "kargo.selectorLabels" . | nindent 4 }}
+    {{- include "kargo.dexServer.labels" . | nindent 4 }}
+  ports:
+    - name: https
+      port: 443
+      protocol: TCP
+      targetPort: 5556
+    - name: telemetry
+      port: 5558
+      protocol: TCP
+      targetPort: 5558
+{{- end }}

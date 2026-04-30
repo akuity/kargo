@@ -1,0 +1,110 @@
+{{- if .Values.garbageCollector.enabled }}
+apiVersion: batch/v1
+kind: CronJob
+metadata:
+  name: kargo-garbage-collector
+  namespace: {{ .Release.Namespace }}
+  labels:
+    {{- include "kargo.labels" . | nindent 4 }}
+    {{- include "kargo.garbageCollector.labels" . | nindent 4 }}
+  {{- with (mergeOverwrite (deepCopy .Values.global.labels) .Values.garbageCollector.labels) }}
+    {{- range $key, $value := . }}
+    {{ $key }}: {{ $value | quote }}
+    {{- end }}
+  {{- end }}
+  {{- with (mergeOverwrite (deepCopy .Values.global.annotations) .Values.garbageCollector.annotations) }}
+  annotations:
+    {{- range $key, $value := . }}
+    {{ $key }}: {{ $value | quote }}
+    {{- end }}
+  {{- end }}
+spec:
+  schedule: {{ quote .Values.garbageCollector.schedule }}
+  concurrencyPolicy: Forbid
+  jobTemplate:
+    metadata:
+      labels:
+        {{- include "kargo.labels" . | nindent 8 }}
+        {{- include "kargo.garbageCollector.labels" . | nindent 8 }}
+      annotations:
+        configmap/checksum: {{ pick ( include (print $.Template.BasePath "/garbage-collector/configmap.yaml") . | fromYaml ) "data" | toYaml | sha256sum }}
+    spec:
+      template:
+        metadata:
+          labels:
+            {{- include "kargo.labels" . | nindent 12 }}
+            {{- include "kargo.garbageCollector.labels" . | nindent 12 }}
+          {{- with (mergeOverwrite (deepCopy .Values.global.podLabels) .Values.garbageCollector.podLabels) }}
+            {{- range $key, $value := . }}
+            {{ $key }}: {{ $value | quote }}
+            {{- end }}
+          {{- end }}
+          annotations:
+            configmap/checksum: {{ pick ( include (print $.Template.BasePath "/garbage-collector/configmap.yaml") . | fromYaml ) "data" | toYaml | sha256sum }}
+          {{- with (mergeOverwrite (deepCopy .Values.global.podAnnotations) .Values.garbageCollector.podAnnotations) }}
+            {{- range $key, $value := . }}
+            {{ $key }}: {{ $value | quote }}
+            {{- end }}
+          {{- end }}
+        spec:
+          {{- if not .Values.rbac.useDefaultServiceAccount }}
+          serviceAccountName: kargo-garbage-collector
+          {{- end }}
+          {{- if .Values.rbac.disableAutomountServiceAccountToken }}
+          automountServiceAccountToken: false
+          {{- end }}
+          {{- with .Values.garbageCollector.affinity | default .Values.global.affinity }}
+          affinity:
+            {{- toYaml . | nindent 12 }}
+          {{- end }}
+          {{- with .Values.garbageCollector.priorityClassName | default .Values.global.priorityClassName }}
+          priorityClassName: {{ . }}
+          {{- end }}
+          {{- with .Values.image.pullSecrets }}
+          imagePullSecrets:
+            {{- toYaml . | nindent 12 }}
+          {{- end }}
+          containers:
+          - name: garbage-collector
+            image: {{ include "kargo.image" . }}
+            imagePullPolicy: {{ .Values.image.pullPolicy }}
+            command: ["/sbin/tini", "--", "/usr/local/bin/kargo"]
+            args: ["garbage-collector"]
+            env:
+            - name: GOMEMLIMIT
+              valueFrom:
+                resourceFieldRef:
+                  containerName: garbage-collector
+                  divisor: "1"
+                  resource: limits.memory
+            - name: GOMAXPROCS
+              valueFrom:
+                resourceFieldRef:
+                  containerName: garbage-collector
+                  divisor: "1"
+                  resource: {{ include "kargo.selectCpuResourceField" (dict "resources" .Values.garbageCollector.resources) }}
+            {{- with (concat .Values.global.env .Values.garbageCollector.env) }}
+            {{- toYaml . | nindent 12 }}
+            {{- end }}
+            envFrom:
+            - configMapRef:
+                name: kargo-garbage-collector
+            {{- with (concat .Values.global.envFrom .Values.garbageCollector.envFrom) }}
+              {{- toYaml . | nindent 12 }}
+            {{- end }}
+            {{- with .Values.garbageCollector.securityContext | default .Values.global.securityContext }}
+            securityContext:
+              {{- toYaml . | nindent 14 }}
+            {{- end }}
+            resources:
+              {{- toYaml .Values.garbageCollector.resources | nindent 14 }}
+          restartPolicy: Never
+          {{- with .Values.garbageCollector.nodeSelector | default .Values.global.nodeSelector }}
+          nodeSelector:
+            {{- toYaml . | nindent 12 }}
+          {{- end }}
+          {{- with .Values.garbageCollector.tolerations | default .Values.global.tolerations }}
+          tolerations:
+            {{- toYaml . | nindent 12 }}
+          {{- end }}
+{{- end }}

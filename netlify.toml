@@ -1,0 +1,16 @@
+[build]
+  base = "docs/"
+  command = "pnpm build"
+  publish = "build/"
+  
+[build.environment]
+  NODE_VERSION = "22.11.0"
+  
+[context.deploy-preview]
+  ignore = "git diff --quiet main -- docs"
+
+[[redirects]]
+  from = "https://kargo.akuity.io/*"
+  to = "https://kargo.io"
+  status = 301
+  force = true

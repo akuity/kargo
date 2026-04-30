@@ -1,0 +1,74 @@
+{{- if and .Values.managementController.enabled .Values.rbac.installClusterRoles }}
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRole
+metadata:
+  name: kargo-management-controller
+  labels:
+    {{- include "kargo.labels" . | nindent 4 }}
+    {{- include "kargo.managementController.labels" . | nindent 4 }}
+rules:
+- apiGroups:
+  - ""
+  resources:
+  - namespaces
+  verbs:
+  - create
+  - delete
+  - get
+  - list
+  - patch
+  - watch
+- apiGroups:
+  - ""
+  resources:
+  - configmaps
+  - secrets
+  - serviceaccounts
+  verbs:
+  - "*"
+- apiGroups:
+  - rbac.authorization.k8s.io
+  resources:
+  - clusterroles
+  - clusterrolebindings
+  - rolebindings
+  - roles
+  verbs:
+  - "*"
+- apiGroups:
+  - kargo.akuity.io
+  resources:
+  - projects
+  verbs:
+  - delete
+  - get
+  - list
+  - patch
+  - update
+  - watch
+- apiGroups:
+  - kargo.akuity.io
+  resources:
+  - clusterconfigs/status
+  - projects/status
+  - projectconfigs/status
+  verbs:
+  - patch
+- apiGroups:
+  - kargo.akuity.io
+  resources:
+  - projectconfigs
+  verbs:
+  - create
+- apiGroups:
+  - kargo.akuity.io
+  resources:
+  - clusterconfigs
+  - stages
+  - warehouses
+  - projectconfigs
+  verbs:
+  - get
+  - list
+  - watch
+{{- end }}  

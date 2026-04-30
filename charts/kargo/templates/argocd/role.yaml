@@ -1,0 +1,20 @@
+{{- if and .Values.controller.argocd.integrationEnabled .Values.controller.argocd.watchArgocdNamespaceOnly }}
+apiVersion: rbac.authorization.k8s.io/v1
+kind: Role
+metadata:
+  name: kargo-controller
+  namespace: {{ .Values.controller.argocd.namespace | default "argocd" }}
+  labels:
+    {{- include "kargo.labels" . | nindent 4 }}
+    {{- include "kargo.controller.labels" . | nindent 4 }}
+rules:
+- apiGroups:
+  - argoproj.io
+  resources:
+  - applications
+  verbs:
+  - get
+  - list
+  - patch
+  - watch
+{{- end }}

@@ -1,0 +1,69 @@
+{{- if .Values.api.enabled }}
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: kargo-api
+  namespace: {{ .Release.Namespace }}
+  labels:
+    {{- include "kargo.labels" . | nindent 4 }}
+    {{- include "kargo.api.labels" . | nindent 4 }}
+data:
+  KARGO_NAMESPACE: {{ .Release.Namespace }}
+  LOG_LEVEL: {{ quote .Values.api.logLevel }}
+  LOG_FORMAT: {{ quote .Values.api.logFormat }}
+  {{- if .Values.kubeconfigSecrets.kargo }}
+  KUBECONFIG: /etc/kargo/kubeconfig.yaml
+  {{- end }}
+  {{- if .Values.api.tls.enabled }}
+  TLS_ENABLED: "true"
+  TLS_CERT_PATH: /etc/kargo/tls.crt
+  TLS_KEY_PATH: /etc/kargo/tls.key
+  {{- end }}
+  {{- if .Values.api.secretManagementEnabled }}
+  SECRET_MANAGEMENT_ENABLED: "true"
+  {{- end }}
+  SYSTEM_RESOURCES_NAMESPACE: {{ quote .Values.global.systemResources.namespace }}
+  SHARED_RESOURCES_NAMESPACE: {{ quote .Values.global.sharedResources.namespace }}
+  PERMISSIVE_CORS_POLICY_ENABLED: {{ quote .Values.api.permissiveCORSPolicyEnabled }}
+  {{- if .Values.api.defaultControllerName }}
+  DEFAULT_CONTROLLER_NAME: {{ .Values.api.defaultControllerName | quote }}
+  {{- end }}
+  {{- if .Values.api.adminAccount.enabled }}
+  ADMIN_ACCOUNT_ENABLED: "true"
+  ADMIN_ACCOUNT_TOKEN_ISSUER: {{ include "kargo.api.baseURL" . }}
+  ADMIN_ACCOUNT_TOKEN_AUDIENCE: {{ quote .Values.api.host }}
+  ADMIN_ACCOUNT_TOKEN_TTL: {{ quote .Values.api.adminAccount.tokenTTL }}
+  {{- end }}
+  {{- if .Values.api.oidc.enabled }}
+  OIDC_ENABLED: "true"
+  OIDC_ADDITIONAL_SCOPES: {{ join "," .Values.api.oidc.additionalScopes }}
+  {{- if .Values.api.oidc.globalServiceAccounts.namespaces }}
+  GLOBAL_SERVICE_ACCOUNT_NAMESPACES: {{ .Release.Namespace }},{{ join "," .Values.api.oidc.globalServiceAccounts.namespaces }}
+  {{- else }}
+  GLOBAL_SERVICE_ACCOUNT_NAMESPACES: {{ .Release.Namespace }}
+  {{- end }}
+  {{- if .Values.api.oidc.dex.enabled }}
+  OIDC_ISSUER_URL: {{ include "kargo.api.baseURL" . }}/dex
+  OIDC_CLIENT_ID: {{ quote .Values.api.host }}
+  OIDC_CLI_CLIENT_ID: {{ .Values.api.host }}-cli
+  DEX_ENABLED: "true"
+  DEX_SERVER_ADDRESS: https://kargo-dex-server.{{ .Release.Namespace }}.svc
+  DEX_CA_CERT_PATH: /etc/kargo/idp-ca.crt
+  {{- else }}
+  OIDC_ISSUER_URL: {{ quote .Values.api.oidc.issuerURL }}
+  OIDC_CLIENT_ID: {{ quote .Values.api.oidc.clientID }}
+  {{- if .Values.api.oidc.cliClientID }}
+  OIDC_CLI_CLIENT_ID: {{ quote .Values.api.oidc.cliClientID }}
+  {{- end }}
+  {{- end }}
+  OIDC_USERNAME_CLAIM: {{ quote .Values.api.oidc.usernameClaim | default "email" }}
+  {{- end }}
+  {{- if .Values.api.argocd.urls }}
+  ARGOCD_NAMESPACE: {{ .Values.controller.argocd.namespace | default "argocd" }}
+  ARGOCD_URLS: {{ range $key, $val := .Values.api.argocd.urls }}{{ $key }}={{ $val }},{{- end }}
+  {{- end }}
+  ROLLOUTS_INTEGRATION_ENABLED: {{ quote .Values.api.rollouts.integrationEnabled }}
+  {{- if and .Values.api.rollouts.integrationEnabled .Values.api.rollouts.logs.enabled }}
+  ANALYSIS_RUN_LOG_URL_TEMPLATE: {{ quote .Values.api.rollouts.logs.urlTemplate }}
+  {{- end }}
+{{- end }}

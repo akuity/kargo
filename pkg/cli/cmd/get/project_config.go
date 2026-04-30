@@ -1,0 +1,144 @@
+package get
+
+import (
+	"context"
+	"encoding/json"
+	"fmt"
+	"time"
+
+	"github.com/spf13/cobra"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/apimachinery/pkg/util/duration"
+	"k8s.io/cli-runtime/pkg/genericclioptions"
+	"k8s.io/cli-runtime/pkg/genericiooptions"
+
+	kargoapi "github.com/akuity/kargo/api/v1alpha1"
+	"github.com/akuity/kargo/pkg/cli/client"
+	"github.com/akuity/kargo/pkg/cli/config"
+	"github.com/akuity/kargo/pkg/cli/io"
+	"github.com/akuity/kargo/pkg/cli/kubernetes"
+	"github.com/akuity/kargo/pkg/cli/option"
+	"github.com/akuity/kargo/pkg/cli/templates"
+	"github.com/akuity/kargo/pkg/client/generated/core"
+)
+
+type getProjectConfigOptions struct {
+	genericiooptions.IOStreams
+	*genericclioptions.PrintFlags
+
+	*getOptions
+
+	Config        config.CLIConfig
+	ClientOptions client.Options
+
+	Project string
+}
+
+func newGetProjectConfigCommand(
+	cfg config.CLIConfig,
+	streams genericiooptions.IOStreams,
+	getOptions *getOptions,
+) *cobra.Command {
+	cmdOpts := &getProjectConfigOptions{
+		Config:     cfg,
+		IOStreams:  streams,
+		getOptions: getOptions,
+		PrintFlags: genericclioptions.NewPrintFlags("").WithTypeSetter(kubernetes.GetScheme()),
+	}
+
+	cmd := &cobra.Command{
+		Use:     "projectconfig [--project=project] [--no-headers]",
+		Aliases: []string{"projectconfigs"},
+		Short:   "Display project configuration",
+		Args:    cobra.NoArgs,
+		Example: templates.Example(`
+# Get project configuration for my-project
+kargo get projectconfig --project=my-project
+
+# Get project configuration for the default project
+kargo config set-project my-project
+kargo get projectconfig
+`),
+		RunE: func(cmd *cobra.Command, _ []string) error {
+			return cmdOpts.run(cmd.Context())
+		},
+	}
+
+	// Register the option flags on the command.
+	cmdOpts.addFlags(cmd)
+
+	// Set the input/output streams for the command.
+	io.SetIOStreams(cmd, cmdOpts.IOStreams)
+
+	return cmd
+}
+
+// addFlags adds the flags for the get project config options to the provided
+// command.
+func (o *getProjectConfigOptions) addFlags(cmd *cobra.Command) {
+	o.ClientOptions.AddFlags(cmd.PersistentFlags())
+	o.AddFlags(cmd)
+
+	option.Project(
+		cmd.Flags(), &o.Project, o.Config.Project,
+		"The project for which to get the configuration. If not set, the default project will be used.",
+	)
+}
+
+// run gets the project config from the server and prints it to the console.
+func (o *getProjectConfigOptions) run(ctx context.Context) error {
+	apiClient, err := client.GetClientFromConfig(ctx, o.Config, o.ClientOptions)
+	if err != nil {
+		return fmt.Errorf("get client from config: %w", err)
+	}
+
+	res, err := apiClient.Core.GetProjectConfig(
+		core.NewGetProjectConfigParams().WithProject(o.Project),
+		nil,
+	)
+	if err != nil {
+		return fmt.Errorf("get project configuration: %w", err)
+	}
+	if res.Payload != nil {
+		var configJSON []byte
+		if configJSON, err = json.Marshal(res.Payload); err != nil {
+			return err
+		}
+		var cfg *kargoapi.ProjectConfig
+		if err = json.Unmarshal(configJSON, &cfg); err != nil {
+			return err
+		}
+		if err = PrintObjects(
+			[]*kargoapi.ProjectConfig{cfg},
+			o.PrintFlags,
+			o.IOStreams,
+			o.NoHeaders,
+		); err != nil {
+			return fmt.Errorf("print project configuration: %w", err)
+		}
+	}
+
+	return nil
+}
+
+func newProjectConfigTable(list *metav1.List) *metav1.Table {
+	rows := make([]metav1.TableRow, len(list.Items))
+	for i, item := range list.Items {
+		cfg := item.Object.(*kargoapi.ProjectConfig) // nolint: forcetypeassert
+
+		rows[i] = metav1.TableRow{
+			Cells: []any{
+				cfg.Name,
+				duration.HumanDuration(time.Since(cfg.CreationTimestamp.Time)),
+			},
+			Object: list.Items[i],
+		}
+	}
+	return &metav1.Table{
+		ColumnDefinitions: []metav1.TableColumnDefinition{
+			{Name: "Name", Type: "string"},
+			{Name: "Age", Type: "string"},
+		},
+		Rows: rows,
+	}
+}

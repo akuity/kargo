@@ -1,0 +1,246 @@
+{{- if .Values.api.enabled }}
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: kargo-api
+  namespace: {{ .Release.Namespace }}
+  labels:
+    {{- include "kargo.labels" . | nindent 4 }}
+    {{- include "kargo.api.labels" . | nindent 4 }}
+  {{- with (mergeOverwrite (deepCopy .Values.global.labels) .Values.api.labels) }}
+    {{- range $key, $value := . }}
+    {{ $key }}: {{ $value | quote }}
+    {{- end }}
+  {{- end }}
+  {{- with (mergeOverwrite (deepCopy .Values.global.annotations) .Values.api.annotations) }}
+  annotations:
+    {{- range $key, $value := . }}
+    {{ $key }}: {{ $value | quote }}
+    {{- end }}
+  {{- end }}
+spec:
+  replicas: {{ .Values.api.replicas | default 1 }}
+  strategy:
+    type: RollingUpdate
+  selector:
+    matchLabels:
+      {{- include "kargo.selectorLabels" . | nindent 6 }}
+      {{- include "kargo.api.labels" . | nindent 6 }}
+  template:
+    metadata:
+      labels:
+        {{- include "kargo.labels" . | nindent 8 }}
+        {{- include "kargo.api.labels" . | nindent 8 }}
+      {{- with (mergeOverwrite (deepCopy .Values.global.podLabels) .Values.api.podLabels) }}
+        {{- range $key, $value := . }}
+        {{ $key }}: {{ $value | quote }}
+        {{- end }}
+      {{- end }}
+      annotations:
+        configmap/checksum: {{ pick ( include (print $.Template.BasePath "/api/configmap.yaml") . | fromYaml ) "data" | toYaml | sha256sum }}
+        secret/checksum: {{ pick ( include (print $.Template.BasePath "/api/secret.yaml") . | fromYaml ) "stringData" | toYaml | sha256sum }}
+      {{- with (mergeOverwrite (deepCopy .Values.global.podAnnotations) .Values.api.podAnnotations) }}
+        {{- range $key, $value := . }}
+        {{ $key }}: {{ $value | quote }}
+        {{- end }}
+      {{- end }}
+    spec:
+      {{- if not .Values.rbac.useDefaultServiceAccount }}
+      serviceAccount: kargo-api
+      {{- end }}
+      {{- if .Values.rbac.disableAutomountServiceAccountToken }}
+      automountServiceAccountToken: false
+      {{- end }}
+      {{- with .Values.api.affinity | default .Values.global.affinity }}
+      affinity:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      {{- with .Values.api.topologySpreadConstraints }}
+      topologySpreadConstraints:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      {{- with .Values.api.priorityClassName | default .Values.global.priorityClassName }}
+      priorityClassName: {{ . }}
+      {{- end }}
+      {{- with .Values.image.pullSecrets }}
+      imagePullSecrets:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      containers:
+        - name: api
+          image: {{ include "kargo.image" . }}
+          imagePullPolicy: {{ .Values.image.pullPolicy }}
+          command: ["/usr/local/bin/kargo", "api"]
+          env:
+          - name: GOMEMLIMIT
+            valueFrom:
+              resourceFieldRef:
+                containerName: api
+                divisor: "1"
+                resource: limits.memory
+          - name: GOMAXPROCS
+            valueFrom:
+              resourceFieldRef:
+                containerName: api
+                divisor: "1"
+                resource: {{ include "kargo.selectCpuResourceField" (dict "resources" .Values.api.resources) }}
+          {{- with (concat .Values.global.env .Values.api.env) }}
+          {{- toYaml . | nindent 10 }}
+          {{- end }}
+          {{- if and .Values.api.rollouts.integrationEnabled .Values.api.rollouts.logs.enabled .Values.api.rollouts.logs.tokenSecret.name .Values.api.rollouts.logs.tokenSecret.key }}
+          - name: ANALYSIS_RUN_LOG_TOKEN
+            valueFrom:
+              secretKeyRef:
+                name: {{ .Values.api.rollouts.logs.tokenSecret.name }}
+                key: {{ .Values.api.rollouts.logs.tokenSecret.key }}
+          {{- end }}
+          envFrom:
+          - configMapRef:
+              name: kargo-api
+          - secretRef:
+              name: {{ .Values.api.secret.name | default "kargo-api" }}
+          {{- with (concat .Values.global.envFrom .Values.api.envFrom) }}
+            {{- toYaml . | nindent 10 }}
+          {{- end }}
+          ports:
+            - name: h2c
+              containerPort: 8080
+              protocol: TCP
+{{- if .Values.api.probes.enabled }}
+          startupProbe:
+            {{- if .Values.api.tls.enabled }}
+            exec:
+              command:
+                - /usr/local/bin/grpc_health_probe
+                - -addr=:8080
+                - -tls
+                - -tls-no-verify
+            {{- else }}
+            grpc:
+              port: 8080
+            {{- end }}
+            failureThreshold: 30
+            initialDelaySeconds: 10
+          livenessProbe:
+            {{- if .Values.api.tls.enabled }}
+            exec:
+              command:
+                - /usr/local/bin/grpc_health_probe
+                - -addr=:8080
+                - -tls
+                - -tls-no-verify
+            {{- else }}
+            grpc:
+              port: 8080
+            {{- end }}
+          readinessProbe:
+            {{- if .Values.api.tls.enabled }}
+            exec:
+              command:
+                - /usr/local/bin/grpc_health_probe
+                - -addr=:8080
+                - -tls
+                - -tls-no-verify
+            {{- else }}
+            grpc:
+              port: 8080
+            {{- end }}
+            initialDelaySeconds: 5
+{{- end }}
+{{- if or .Values.kubeconfigSecrets.kargo (and .Values.api.oidc.enabled .Values.api.oidc.dex.enabled) .Values.api.tls.enabled .Values.api.cabundle.configMapName .Values.api.cabundle.secretName }}
+          volumeMounts:
+          {{- if or .Values.kubeconfigSecrets.kargo (and .Values.api.oidc.enabled .Values.api.oidc.dex.enabled) .Values.api.tls.enabled }}
+            - mountPath: /etc/kargo
+              name: config
+              readOnly: true
+          {{- end }}
+          {{- if or .Values.api.cabundle.configMapName .Values.api.cabundle.secretName }}
+            - mountPath: /etc/ssl/certs
+              name: certs
+          {{- end }}
+{{- end }}
+{{- with .Values.api.securityContext | default .Values.global.securityContext }}
+          securityContext:
+            {{- toYaml . | nindent 12 }}
+{{- end }}
+          resources:
+            {{- toYaml .Values.api.resources | nindent 12 }}
+      {{- if or .Values.api.cabundle.configMapName .Values.api.cabundle.secretName }}
+      initContainers:
+      - name: parse-cabundle
+        image: {{ include "kargo.image" . }}
+        imagePullPolicy: {{ .Values.image.pullPolicy }}
+        securityContext:
+          runAsUser: 0
+        command:
+        - "/bin/sh"
+        - "-c"
+        args:
+        - |
+          for file in /tmp/source/*; do
+            base_filename=$(basename "$file" .crt)
+            awk 'BEGIN {c=0;} /BEGIN CERT/{c++} { print > "/usr/local/share/ca-certificates/" base_filename "." c ".crt"}' base_filename="$base_filename" < $file
+          done
+          /usr/sbin/update-ca-certificates
+          find /etc/ssl/certs -type l -exec cp --remove-destination {} /etc/ssl/certs/ \;
+          cp -r /etc/ssl/certs/* /tmp/target/
+        volumeMounts:
+        - name: cabundle
+          mountPath: /tmp/source
+        - name: certs
+          mountPath: /tmp/target
+      {{- end }}
+{{- if or .Values.kubeconfigSecrets.kargo (and .Values.api.oidc.enabled .Values.api.oidc.dex.enabled) .Values.api.tls.enabled .Values.api.cabundle.configMapName .Values.api.cabundle.secretName }}
+      volumes:
+{{- if or .Values.kubeconfigSecrets.kargo (and .Values.api.oidc.enabled .Values.api.oidc.dex.enabled) .Values.api.tls.enabled }}
+        - name: config
+          projected:
+            sources:
+{{- if .Values.kubeconfigSecrets.kargo }}
+              - secret:
+                  name: {{ .Values.kubeconfigSecrets.kargo }}
+                  items:
+                    - key: kubeconfig.yaml
+                      path: kubeconfig.yaml
+                      mode: 0644
+{{- end }}
+{{- if .Values.api.tls.enabled }}
+              - secret:
+                  name: {{ .Values.api.tls.secretName }}
+                  items:
+                    - key: tls.crt
+                      path: tls.crt
+                    - key: tls.key
+                      path: tls.key
+{{- end }}
+{{- if and .Values.api.oidc.enabled .Values.api.oidc.dex.enabled }}
+              - secret:
+                  name: {{ .Values.api.oidc.dex.tls.secretName }}
+                  items:
+                    - key: ca.crt
+                      path: idp-ca.crt
+{{- end }}
+{{- end }}
+        {{- if or .Values.api.cabundle.configMapName .Values.api.cabundle.secretName }}
+        {{- if .Values.api.cabundle.secretName }}
+        - name: cabundle
+          secret:
+            secretName: {{ .Values.api.cabundle.secretName }}
+        {{- else }}
+        - name: cabundle
+          configMap:
+            name: {{ .Values.api.cabundle.configMapName }}
+        {{- end }}
+        - name: certs
+          emptyDir: {}
+        {{- end }}
+{{- end }}
+      {{- with .Values.api.nodeSelector | default .Values.global.nodeSelector }}
+      nodeSelector:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      {{- with .Values.api.tolerations | default .Values.global.tolerations }}
+      tolerations:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+{{- end }}

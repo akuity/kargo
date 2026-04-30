@@ -1,0 +1,235 @@
+{{- if and .Values.api.enabled .Values.rbac.installClusterRoles }}
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRole
+metadata:
+  name: kargo-admin
+  labels:
+    {{- include "kargo.labels" . | nindent 4 }}
+rules:
+- apiGroups:
+  - ""
+  resources:
+  - events
+  - namespaces
+  # secrets permissions are granted dynamically at the project-level
+  - serviceaccounts # writes on serviceaccounts are granted dynamically at the project-level
+  verbs:
+  - get
+  - list
+  - watch
+- apiGroups:
+  - rbac.authorization.k8s.io
+  resources:
+  - rolebindings # writes on rolebindings are granted dynamically at the project-level
+  - roles # writes on roles are granted dynamically at the project-level
+  verbs:
+  - get
+  - list
+  - watch
+- apiGroups:
+  - kargo.akuity.io
+  resources:
+  - clusterconfigs
+  - clusterpromotiontasks
+  - freights
+  - projects
+  - projectconfigs
+  - promotiontasks
+  - stages
+  - warehouses
+  verbs:
+  - "*" # full access to all mutable Kargo resource types
+- apiGroups:
+  - kargo.akuity.io
+  resources:
+  - stages
+  verbs:
+  - promote # promotion permission for all stages
+- apiGroups:
+  - kargo.akuity.io
+  resources:
+  - promotions
+  verbs: # nearly full access to all promotions, but they are immutable
+  - create
+  - delete
+  - get
+  - list
+  - patch
+  - watch
+- apiGroups:
+  - kargo.akuity.io
+  resources:
+  - freights/status
+  verbs:
+  - patch # for manual approvals
+{{- if .Values.api.rollouts.integrationEnabled }}
+- apiGroups:
+  - argoproj.io
+  resources:
+  - analysisruns
+  verbs: # view and delete analysisruns
+  - delete
+  - get
+  - list
+  - watch
+- apiGroups:
+  - argoproj.io
+  resources:
+  - analysistemplates
+  verbs:
+  - "*" # full access to analysistemplates
+- apiGroups:
+  - argoproj.io
+  resources:
+  - clusteranalysistemplates
+  verbs:
+  - "*" # full access to clusteranalysistemplates
+{{- end }}
+{{- if .Values.api.clusterRoles.admin.additionalRules }}
+{{ toYaml .Values.api.clusterRoles.admin.additionalRules }}
+{{- end }}
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRole
+metadata:
+  name: kargo-project-creator
+  labels:
+    {{- include "kargo.labels" . | nindent 4 }}
+rules:
+- apiGroups:
+  - ""
+  resources:
+  - namespaces
+  verbs:
+  - get
+  - list
+  - watch
+- apiGroups:
+  - kargo.akuity.io
+  resources:
+  - clusterconfigs
+  - clusterpromotiontasks
+  verbs:
+  - get
+  - list
+  - watch
+- apiGroups:
+  - kargo.akuity.io
+  resources:
+  - projects
+  verbs:
+  - create
+  - get
+  - list
+  - watch
+{{- if .Values.api.rollouts.integrationEnabled }}
+- apiGroups:
+  - argoproj.io
+  resources:
+  - clusteranalysistemplates
+  verbs:
+  - get
+  - list
+  - watch
+{{- end }}
+{{- if .Values.api.clusterRoles.projectCreator.additionalRules }}
+{{ toYaml .Values.api.clusterRoles.projectCreator.additionalRules }}
+{{- end }}
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRole
+metadata:
+  name: kargo-user
+  labels:
+    {{- include "kargo.labels" . | nindent 4 }}
+rules:
+- apiGroups:
+  - ""
+  resources:
+  - namespaces
+  verbs:
+  - get
+  - list
+  - watch
+- apiGroups:
+  - kargo.akuity.io
+  resources:
+  - clusterconfigs
+  - clusterpromotiontasks
+  - projects
+  verbs:
+  - get
+  - list
+  - watch
+{{- if .Values.api.rollouts.integrationEnabled }}
+- apiGroups:
+  - argoproj.io
+  resources:
+  - clusteranalysistemplates
+  verbs:
+  - get
+  - list
+  - watch
+{{- end }}
+{{- if .Values.api.clusterRoles.user.additionalRules }}
+{{ toYaml .Values.api.clusterRoles.user.additionalRules }}
+{{- end }}
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRole
+metadata:
+  name: kargo-viewer
+  labels:
+    {{- include "kargo.labels" . | nindent 4 }}
+rules:
+- apiGroups:
+  - ""
+  resources:
+  - events
+  - namespaces
+  - serviceaccounts
+  verbs:
+  - get
+  - list
+  - watch
+- apiGroups:
+  - rbac.authorization.k8s.io
+  resources:
+  - rolebindings
+  - roles
+  verbs:
+  - get
+  - list
+  - watch
+- apiGroups:
+  - kargo.akuity.io
+  resources:
+  - clusterconfigs
+  - clusterpromotiontasks
+  - freights
+  - projects
+  - projectconfigs
+  - promotions
+  - promotiontasks
+  - stages
+  - warehouses
+  verbs:
+  - get
+  - list
+  - watch
+{{- if .Values.api.rollouts.integrationEnabled }}
+- apiGroups:
+  - argoproj.io
+  resources:
+  - analysisruns
+  - analysistemplates
+  - clusteranalysistemplates
+  verbs:
+  - get
+  - list
+  - watch
+{{- end }}
+{{- if .Values.api.clusterRoles.viewer.additionalRules }}
+{{ toYaml .Values.api.clusterRoles.viewer.additionalRules }}
+{{- end }}
+{{- end }}

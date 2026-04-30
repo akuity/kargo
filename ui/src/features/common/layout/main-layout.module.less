@@ -1,0 +1,58 @@
+.wrapper {
+  min-height: 100vh;
+  max-height: 100vh;
+  display: flex;
+}
+
+.sidebar {
+  display: flex;
+  flex-direction: column;
+  flex: 0 0 110px;
+  background-color: #111;
+  color: @colorWhite;
+}
+
+.contentWrapper {
+  position: relative;
+  flex: 1;
+  background-color: @colorBgLayout;
+  overflow: hidden;
+}
+
+.content {
+  position: relative;
+  height: 100%;
+  width: 100%;
+  overflow: auto;
+}
+
+.version {
+  margin: 0 auto;
+  margin-bottom: 1.5rem;
+  font-size: 0.875rem;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  width: 80px;
+  text-align: center;
+  @apply text-gray-500;
+  @apply font-mono;
+}
+
+.icon {
+  margin: 0 auto;
+  margin-bottom: 0.75em;
+}
+
+.nav {
+  flex: 1;
+}
+
+.logout {
+  color: #a0b3c2;
+  margin: ~'@{sizeSM}px 0';
+
+  &:hover {
+    color: #cddae4 !important;
+  }
+}

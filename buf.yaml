@@ -1,0 +1,20 @@
+version: v2
+modules:
+- path: .
+  lint:
+    use:
+    - STANDARD
+    except:
+    - FIELD_NOT_REQUIRED
+    - PACKAGE_DIRECTORY_MATCH
+    - PACKAGE_NO_IMPORT_CYCLE
+    disallow_comment_ignores: true
+  breaking:
+    use:
+    - FILE
+    except:
+    - EXTENSION_NO_DELETE
+    - FIELD_SAME_DEFAULT
+- path: vendor
+deps:
+- buf.build/googleapis/googleapis

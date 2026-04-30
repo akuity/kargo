@@ -1,0 +1,17 @@
+{{- if and .Values.managementController.enabled .Values.rbac.installClusterRoleBindings }}
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRoleBinding
+metadata:
+  name: kargo-management-controller
+  labels:
+    {{- include "kargo.labels" . | nindent 4 }}
+    {{- include "kargo.managementController.labels" . | nindent 4 }}
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: ClusterRole
+  name: kargo-management-controller
+subjects:
+- kind: ServiceAccount
+  namespace: {{ .Release.Namespace }}
+  name: kargo-management-controller
+{{- end }}

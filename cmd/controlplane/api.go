@@ -1,0 +1,166 @@
+package main
+
+import (
+	"context"
+	"fmt"
+	"net"
+	"runtime"
+
+	"github.com/spf13/cobra"
+
+	k8sevent "github.com/akuity/kargo/pkg/event/kubernetes"
+	"github.com/akuity/kargo/pkg/kubernetes/event"
+	"github.com/akuity/kargo/pkg/logging"
+	"github.com/akuity/kargo/pkg/os"
+	"github.com/akuity/kargo/pkg/server"
+	"github.com/akuity/kargo/pkg/server/config"
+	"github.com/akuity/kargo/pkg/server/kubernetes"
+	"github.com/akuity/kargo/pkg/server/rbac"
+	"github.com/akuity/kargo/pkg/types"
+	versionpkg "github.com/akuity/kargo/pkg/x/version"
+)
+
+type apiOptions struct {
+	KubeConfig string
+	QPS        float32
+	Burst      int
+
+	BindAddress string
+	Port        string
+
+	Logger *logging.Logger
+}
+
+func newAPICommand() *cobra.Command {
+	_, format := getLogVars()
+	cmdOpts := &apiOptions{
+		// During startup, we enforce use of an info-level logger to ensure that
+		// no important startup messages are missed.
+		Logger: logging.NewLoggerOrDie(logging.InfoLevel, format),
+	}
+
+	cmd := &cobra.Command{
+		Use:               "api",
+		DisableAutoGenTag: true,
+		SilenceErrors:     true,
+		SilenceUsage:      true,
+		RunE: func(cmd *cobra.Command, _ []string) error {
+			version := versionpkg.GetVersion()
+			cmdOpts.Logger.Info(
+				"Starting Kargo API Server",
+				"version", version.Version,
+				"commit", version.GitCommit,
+				"GOMAXPROCS", runtime.GOMAXPROCS(0),
+				"GOMEMLIMIT", os.GetEnv("GOMEMLIMIT", ""),
+			)
+			cmdOpts.complete()
+
+			return cmdOpts.run(cmd.Context())
+		},
+	}
+
+	return cmd
+}
+
+func (o *apiOptions) complete() {
+	o.KubeConfig = os.GetEnv("KUBECONFIG", "")
+	o.QPS = types.MustParseFloat32(os.GetEnv("KUBE_API_QPS", "50.0"))
+	o.Burst = types.MustParseInt(os.GetEnv("KUBE_API_BURST", "300"))
+
+	o.BindAddress = os.GetEnv("BIND_ADDRESS", "0.0.0.0")
+	o.Port = os.GetEnv("PORT", "8080")
+
+	logLevel, logFormat := getLogVars()
+
+	o.Logger = logging.NewLoggerOrDie(logLevel, logFormat)
+}
+
+func (o *apiOptions) run(ctx context.Context) error {
+	serverCfg := config.ServerConfigFromEnv()
+
+	restCfg, err := kubernetes.GetRestConfig(ctx, o.KubeConfig)
+	if err != nil {
+		return fmt.Errorf("error getting Kubernetes client REST config: %w", err)
+	}
+	kubernetes.ConfigureQPSBurst(ctx, restCfg, o.QPS, o.Burst)
+	serverCfg.RestConfig = restCfg
+
+	kubeClientOptions := kubernetes.ClientOptions{
+		KargoNamespace: serverCfg.KargoNamespace,
+	}
+	if serverCfg.OIDCConfig != nil {
+		kubeClientOptions.GlobalServiceAccountNamespaces = serverCfg.OIDCConfig.GlobalServiceAccountNamespaces
+	}
+	kubeClient, err := kubernetes.NewClient(ctx, restCfg, kubeClientOptions)
+	if err != nil {
+		return fmt.Errorf("error creating Kubernetes client for Kargo API server: %w", err)
+	}
+
+	if serverCfg.RolloutsIntegrationEnabled {
+		var exists bool
+		if exists, err = argoRolloutsExists(ctx, restCfg); !exists || err != nil {
+			// If we are unable to determine if Argo Rollouts is installed, we
+			// will return an error and fail to start the server. Note this
+			// will only happen if we get an inconclusive response from the API
+			// server (e.g. due to network issues), and not if Argo Rollouts is
+			// not installed.
+			if err != nil {
+				return fmt.Errorf("unable to determine if Argo Rollouts is installed: %w", err)
+			}
+
+			o.Logger.Info(
+				"Argo Rollouts integration was enabled, but no Argo Rollouts " +
+					"CRDs were found. Proceeding without Argo Rollouts integration.",
+			)
+			serverCfg.RolloutsIntegrationEnabled = false
+		} else {
+			o.Logger.Debug("Argo Rollouts integration is enabled")
+		}
+	} else {
+		o.Logger.Debug("Argo Rollouts integration is disabled")
+	}
+
+	if serverCfg.AdminConfig != nil {
+		o.Logger.Info("admin account is enabled")
+	}
+	if serverCfg.OIDCConfig != nil {
+		o.Logger.Info(
+			"SSO via OpenID Connect is enabled",
+			"issuerURL", serverCfg.OIDCConfig.IssuerURL,
+			"clientID", serverCfg.OIDCConfig.ClientID,
+			"cliClientID", serverCfg.OIDCConfig.CLIClientID,
+		)
+	}
+
+	recorder, shutdown := event.NewRecorderWithShutdown(
+		ctx,
+		kubeClient.InternalClient().Scheme(),
+		kubeClient.InternalClient(),
+		"api",
+	)
+	sender := k8sevent.NewEventSenderWithShutdown(
+		recorder, shutdown,
+	)
+	defer sender.Shutdown()
+
+	srv := server.NewServer(
+		serverCfg,
+		kubeClient,
+		rbac.NewKubernetesRolesDatabase(
+			kubeClient,
+			kubeClient.InternalClient(),
+			rbac.RolesDatabaseConfigFromEnv(),
+		),
+		sender,
+	)
+	l, err := net.Listen("tcp", fmt.Sprintf("%s:%s", o.BindAddress, o.Port))
+	if err != nil {
+		return fmt.Errorf("error creating listener: %w", err)
+	}
+	defer l.Close()
+
+	if err = srv.Serve(ctx, l); err != nil {
+		return fmt.Errorf("error serving API: %w", err)
+	}
+	return nil
+}
