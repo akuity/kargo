@@ -1953,6 +1953,7 @@ func TestReconciler_ensureControllerPermissions(t *testing.T) {
 func TestReconciler_ensureDefaultUserRoles(t *testing.T) {
 	scheme := runtime.NewScheme()
 	require.NoError(t, corev1.AddToScheme(scheme))
+	require.NoError(t, rbacv1.AddToScheme(scheme))
 
 	matchingAnnotations := map[string]string{
 		rbacapi.AnnotationKeyManaged:    rbacapi.AnnotationValueTrue,
@@ -2125,6 +2126,39 @@ func TestReconciler_ensureDefaultUserRoles(t *testing.T) {
 			},
 		},
 		{
+			name: "error getting Role",
+			reconciler: &reconciler{
+				client: fake.NewClientBuilder().WithScheme(scheme).WithObjects(
+					&corev1.ServiceAccount{ObjectMeta: metav1.ObjectMeta{
+						Name: "kargo-admin", Annotations: matchingAnnotations,
+					}},
+					&corev1.ServiceAccount{ObjectMeta: metav1.ObjectMeta{
+						Name: "kargo-viewer", Annotations: matchingAnnotations,
+					}},
+					&corev1.ServiceAccount{ObjectMeta: metav1.ObjectMeta{
+						Name: "kargo-promoter", Annotations: matchingAnnotations,
+					}},
+				).WithInterceptorFuncs(interceptor.Funcs{
+					Get: func(
+						ctx context.Context,
+						wc client.WithWatch,
+						key client.ObjectKey,
+						obj client.Object,
+						opts ...client.GetOption,
+					) error {
+						if _, ok := obj.(*rbacv1.Role); ok {
+							return errors.New("something went wrong")
+						}
+						return wc.Get(ctx, key, obj, opts...)
+					},
+				}).Build(),
+			},
+			assertions: func(t *testing.T, err error) {
+				require.ErrorContains(t, err, "error getting Role")
+				require.ErrorContains(t, err, "something went wrong")
+			},
+		},
+		{
 			name: "error creating Role",
 			reconciler: &reconciler{
 				client: fake.NewClientBuilder().WithScheme(scheme).Build(),
@@ -2145,6 +2179,37 @@ func TestReconciler_ensureDefaultUserRoles(t *testing.T) {
 			},
 			assertions: func(t *testing.T, err error) {
 				require.ErrorContains(t, err, "error creating Role")
+				require.ErrorContains(t, err, "something went wrong")
+			},
+		},
+		{
+			name: "error updating Role",
+			reconciler: &reconciler{
+				client: fake.NewClientBuilder().WithScheme(scheme).WithObjects(
+					&corev1.ServiceAccount{ObjectMeta: metav1.ObjectMeta{
+						Name: "kargo-admin", Annotations: matchingAnnotations,
+					}},
+					&corev1.ServiceAccount{ObjectMeta: metav1.ObjectMeta{
+						Name: "kargo-viewer", Annotations: matchingAnnotations,
+					}},
+					&corev1.ServiceAccount{ObjectMeta: metav1.ObjectMeta{
+						Name: "kargo-promoter", Annotations: matchingAnnotations,
+					}},
+					// kargo-admin Role with no rules — differs from desired.
+					&rbacv1.Role{ObjectMeta: metav1.ObjectMeta{Name: "kargo-admin"}},
+				).WithInterceptorFuncs(interceptor.Funcs{
+					Update: func(
+						context.Context,
+						client.WithWatch,
+						client.Object,
+						...client.UpdateOption,
+					) error {
+						return errors.New("something went wrong")
+					},
+				}).Build(),
+			},
+			assertions: func(t *testing.T, err error) {
+				require.ErrorContains(t, err, "error updating Role")
 				require.ErrorContains(t, err, "something went wrong")
 			},
 		},
@@ -2415,6 +2480,7 @@ func TestReconciler_ensureDefaultUserRoles_contributors(t *testing.T) {
 	}
 	contributorsScheme := runtime.NewScheme()
 	require.NoError(t, corev1.AddToScheme(contributorsScheme))
+	require.NoError(t, rbacv1.AddToScheme(contributorsScheme))
 
 	for _, testCase := range testCases {
 		t.Run(testCase.name, func(t *testing.T) {

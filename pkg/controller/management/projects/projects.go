@@ -1030,17 +1030,38 @@ func (r *reconciler) ensureDefaultUserRoles(
 			"name", role.Name,
 			"namespace", project.Name,
 		)
-		if err := r.createRoleFn(ctx, role); err != nil {
-			if apierrors.IsAlreadyExists(err) {
-				roleLogger.Debug("Role already exists in project namespace")
-				continue
+		existing := &rbacv1.Role{}
+		if err := r.client.Get(
+			ctx,
+			client.ObjectKeyFromObject(role),
+			existing,
+		); err != nil {
+			if !apierrors.IsNotFound(err) {
+				return fmt.Errorf(
+					"error getting Role %q in project namespace %q: %w",
+					role.Name, project.Name, err,
+				)
 			}
+			if err = r.createRoleFn(ctx, role); err != nil {
+				return fmt.Errorf(
+					"error creating Role %q in project namespace %q: %w",
+					role.Name, project.Name, err,
+				)
+			}
+			roleLogger.Debug("created Role in project namespace")
+			continue
+		}
+		if reflect.DeepEqual(existing.Rules, role.Rules) {
+			continue
+		}
+		existing.Rules = role.Rules
+		if err := r.client.Update(ctx, existing); err != nil {
 			return fmt.Errorf(
-				"error creating Role %q in project namespace %q: %w",
+				"error updating Role %q in project namespace %q: %w",
 				role.Name, project.Name, err,
 			)
 		}
-		roleLogger.Debug("created Role in project namespace")
+		roleLogger.Debug("updated Role in project namespace")
 	}
 
 	for _, rbName := range allRoles {
