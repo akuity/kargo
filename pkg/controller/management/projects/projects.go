@@ -1129,24 +1129,31 @@ func (r *reconciler) ensureDefaultUserRoles(
 		fmt.Sprintf("kargo-project-admin-%s", project.Name),
 	)
 	crLogger := logger.WithValues("name", crName)
-	if err := r.createClusterRoleFn(
-		ctx,
-		&rbacv1.ClusterRole{
-			ObjectMeta: metav1.ObjectMeta{Name: crName},
-			Rules: []rbacv1.PolicyRule{{
-				APIGroups:     []string{kargoapi.GroupVersion.Group},
-				Resources:     []string{"projects"},
-				ResourceNames: []string{project.Name},
-				Verbs:         []string{"delete", "update"},
-			}},
-		},
-	); err != nil {
-		if !apierrors.IsAlreadyExists(err) {
+	desiredCR := &rbacv1.ClusterRole{
+		ObjectMeta: metav1.ObjectMeta{Name: crName},
+		Rules: []rbacv1.PolicyRule{{
+			APIGroups:     []string{kargoapi.GroupVersion.Group},
+			Resources:     []string{"projects"},
+			ResourceNames: []string{project.Name},
+			Verbs:         []string{"delete", "update"},
+		}},
+	}
+	existingCR := &rbacv1.ClusterRole{}
+	if err := r.client.Get(ctx, client.ObjectKeyFromObject(desiredCR), existingCR); err != nil {
+		if !apierrors.IsNotFound(err) {
+			return fmt.Errorf("error getting ClusterRole %q: %w", crName, err)
+		}
+		if err = r.createClusterRoleFn(ctx, desiredCR); err != nil {
 			return fmt.Errorf("error creating ClusterRole %q: %w", crName, err)
 		}
-		crLogger.Debug("ClusterRole already exists")
+		crLogger.Debug("created ClusterRole")
+	} else if !reflect.DeepEqual(existingCR.Rules, desiredCR.Rules) {
+		existingCR.Rules = desiredCR.Rules
+		if err := r.client.Update(ctx, existingCR); err != nil {
+			return fmt.Errorf("error updating ClusterRole %q: %w", crName, err)
+		}
+		crLogger.Debug("updated ClusterRole")
 	}
-	crLogger.Debug("created ClusterRole")
 
 	crbName := crName
 	crbLogger := logger.WithValues("name", crbName)
