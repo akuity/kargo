@@ -3,6 +3,7 @@ package serviceaccounts
 import (
 	"context"
 	"fmt"
+	"reflect"
 
 	"github.com/kelseyhightower/envconfig"
 	corev1 "k8s.io/api/core/v1"
@@ -167,7 +168,7 @@ func (r *reconciler) ensureControllerPermissions(ctx context.Context, sa types.N
 	// RoleBinding.
 	for _, project := range projectList.Items {
 		projectLogger := logger.WithValues("project.namespace", project.Name)
-		roleBinding := &rbacv1.RoleBinding{
+		desired := &rbacv1.RoleBinding{
 			ObjectMeta: metav1.ObjectMeta{
 				Name:      roleBindingName,
 				Namespace: project.Name,
@@ -177,31 +178,44 @@ func (r *reconciler) ensureControllerPermissions(ctx context.Context, sa types.N
 				Kind:     "ClusterRole",
 				Name:     controllerReadSecretsClusterRoleName,
 			},
-			Subjects: []rbacv1.Subject{
-				{
-					Kind:      "ServiceAccount",
-					Name:      sa.Name,
-					Namespace: r.cfg.KargoNamespace,
-				},
-			},
+			Subjects: []rbacv1.Subject{{
+				Kind:      "ServiceAccount",
+				Name:      sa.Name,
+				Namespace: r.cfg.KargoNamespace,
+			}},
 		}
-		if err := r.client.Create(ctx, roleBinding); err != nil {
-			if !apierrors.IsAlreadyExists(err) {
+		existing := &rbacv1.RoleBinding{}
+		if err := r.client.Get(
+			ctx,
+			client.ObjectKeyFromObject(desired),
+			existing,
+		); err != nil {
+			if !apierrors.IsNotFound(err) {
+				return fmt.Errorf(
+					"error getting RoleBinding %q in Project namespace %q: %w",
+					desired.Name, project.Name, err,
+				)
+			}
+			if err = r.client.Create(ctx, desired); err != nil {
 				return fmt.Errorf(
 					"error creating RoleBinding %q for ServiceAccount %q in Project namespace %q: %w",
-					roleBinding.Name, sa.Name, project.Name, err,
+					desired.Name, sa.Name, project.Name, err,
 				)
 			}
-			if err = r.client.Update(ctx, roleBinding); err != nil {
-				return fmt.Errorf(
-					"error updating existing RoleBinding %q in Project namespace %q: %w",
-					roleBinding.Name, project.Name, err,
-				)
-			}
-			projectLogger.Debug("updated existing RoleBinding")
-		} else {
 			projectLogger.Debug("created RoleBinding")
+			continue
 		}
+		if reflect.DeepEqual(existing.Subjects, desired.Subjects) {
+			continue
+		}
+		existing.Subjects = desired.Subjects
+		if err := r.client.Update(ctx, existing); err != nil {
+			return fmt.Errorf(
+				"error updating RoleBinding %q in Project namespace %q: %w",
+				desired.Name, project.Name, err,
+			)
+		}
+		projectLogger.Debug("updated RoleBinding")
 	}
 	logger.Debug("necessary RoleBindings exist in all Project namespaces")
 	return nil
