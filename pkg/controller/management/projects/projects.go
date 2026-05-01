@@ -1069,40 +1069,57 @@ func (r *reconciler) ensureDefaultUserRoles(
 			"name", rbName,
 			"namespace", project.Name,
 		)
-		if err := r.createRoleBindingFn(
-			ctx,
-			&rbacv1.RoleBinding{
-				ObjectMeta: metav1.ObjectMeta{
-					Name:      rbName,
-					Namespace: project.Name,
-					Annotations: map[string]string{
-						rbacapi.AnnotationKeyManaged: rbacapi.AnnotationValueTrue,
-					},
-				},
-				RoleRef: rbacv1.RoleRef{
-					APIGroup: rbacv1.GroupName,
-					Kind:     "Role",
-					Name:     rbName,
-				},
-				Subjects: []rbacv1.Subject{
-					{
-						Kind:      "ServiceAccount",
-						Name:      rbName,
-						Namespace: project.Name,
-					},
+		desired := &rbacv1.RoleBinding{
+			ObjectMeta: metav1.ObjectMeta{
+				Name:      rbName,
+				Namespace: project.Name,
+				Annotations: map[string]string{
+					rbacapi.AnnotationKeyManaged: rbacapi.AnnotationValueTrue,
 				},
 			},
+			RoleRef: rbacv1.RoleRef{
+				APIGroup: rbacv1.GroupName,
+				Kind:     "Role",
+				Name:     rbName,
+			},
+			Subjects: []rbacv1.Subject{{
+				Kind:      "ServiceAccount",
+				Name:      rbName,
+				Namespace: project.Name,
+			}},
+		}
+		existing := &rbacv1.RoleBinding{}
+		if err := r.client.Get(
+			ctx,
+			client.ObjectKeyFromObject(desired),
+			existing,
 		); err != nil {
-			if apierrors.IsAlreadyExists(err) {
-				rbLogger.Debug("RoleBinding already exists in project namespace")
-				continue
+			if !apierrors.IsNotFound(err) {
+				return fmt.Errorf(
+					"error getting RoleBinding %q in project namespace %q: %w",
+					rbName, project.Name, err,
+				)
 			}
+			if err = r.createRoleBindingFn(ctx, desired); err != nil {
+				return fmt.Errorf(
+					"error creating RoleBinding %q in project namespace %q: %w",
+					rbName, project.Name, err,
+				)
+			}
+			rbLogger.Debug("created RoleBinding in project namespace")
+			continue
+		}
+		if reflect.DeepEqual(existing.Subjects, desired.Subjects) {
+			continue
+		}
+		existing.Subjects = desired.Subjects
+		if err := r.client.Update(ctx, existing); err != nil {
 			return fmt.Errorf(
-				"error creating RoleBinding %q in project namespace %q: %w",
+				"error updating RoleBinding %q in project namespace %q: %w",
 				rbName, project.Name, err,
 			)
 		}
-		rbLogger.Debug("created RoleBinding in project namespace")
+		rbLogger.Debug("updated RoleBinding in project namespace")
 	}
 
 	// This ClusterRole allows those bound to it to update and delete one specific
