@@ -1,4 +1,4 @@
-import { faMap } from '@fortawesome/free-solid-svg-icons';
+import { faShareNodes, faMap } from '@fortawesome/free-solid-svg-icons';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
 import {
   ControlButton,
@@ -162,13 +162,20 @@ export const Graph = (props: GraphProps) => {
     [graph.edges]
   );
 
+  const edgeType = filterContext?.preferredFilter?.stepEdges ? 'step' : 'default';
+
+  const typedEdges = useMemo(
+    () => graph.edges.map((e) => (e.type === edgeType ? e : { ...e, type: edgeType })),
+    [graph.edges, edgeType]
+  );
+
   const edges = useMemo(() => {
     if (!hoveredWarehouseName || distinctEdgeWarehouses < 2) {
-      return graph.edges;
+      return typedEdges;
     }
-    const dimmed: typeof graph.edges = [];
-    const highlighted: typeof graph.edges = [];
-    for (const edge of graph.edges) {
+    const dimmed: typeof typedEdges = [];
+    const highlighted: typeof typedEdges = [];
+    for (const edge of typedEdges) {
       if (edge.data?.warehouseName !== hoveredWarehouseName) {
         dimmed.push(edge);
         continue;
@@ -186,7 +193,7 @@ export const Graph = (props: GraphProps) => {
     // Highlighted edges paint last so they sit on top of overlapping dimmed
     // edges from other warehouses.
     return [...dimmed, ...highlighted];
-  }, [graph.edges, hoveredWarehouseName, distinctEdgeWarehouses]);
+  }, [typedEdges, hoveredWarehouseName, distinctEdgeWarehouses]);
 
   const nodesExcludingSubscriptionNodes = useMemo(() => {
     const subscriptionNodes = nodes.filter((n) => repoSubscriptionIndexer.is(n.id));
@@ -268,6 +275,19 @@ export const Graph = (props: GraphProps) => {
             }
           >
             <FontAwesomeIcon icon={faMap} />
+          </ControlButton>
+          <ControlButton
+            title={
+              filterContext?.preferredFilter?.stepEdges ? 'Use Curved Edges' : 'Use Step Edges'
+            }
+            onClick={() =>
+              filterContext?.setPreferredFilter({
+                ...filterContext?.preferredFilter,
+                stepEdges: !filterContext?.preferredFilter?.stepEdges
+              })
+            }
+          >
+            <FontAwesomeIcon icon={faShareNodes} />
           </ControlButton>
         </Controls>
       </ReactFlow>
