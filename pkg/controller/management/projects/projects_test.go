@@ -1955,11 +1955,6 @@ func TestReconciler_ensureDefaultUserRoles(t *testing.T) {
 	require.NoError(t, corev1.AddToScheme(scheme))
 	require.NoError(t, rbacv1.AddToScheme(scheme))
 
-	matchingAnnotations := map[string]string{
-		rbacapi.AnnotationKeyManaged:    rbacapi.AnnotationValueTrue,
-		rbacapi.AnnotationKeyOIDCClaims: `{"email":["tony@stark.io"]}`,
-	}
-
 	testCases := []struct {
 		name       string
 		reconciler *reconciler
@@ -2004,140 +1999,12 @@ func TestReconciler_ensureDefaultUserRoles(t *testing.T) {
 			},
 		},
 		{
-			name: "no update when ServiceAccount annotations already match",
-			reconciler: &reconciler{
-				client: fake.NewClientBuilder().WithScheme(scheme).WithObjects(
-					&corev1.ServiceAccount{ObjectMeta: metav1.ObjectMeta{
-						Name: "kargo-admin", Annotations: matchingAnnotations,
-					}},
-					&corev1.ServiceAccount{ObjectMeta: metav1.ObjectMeta{
-						Name: "kargo-viewer", Annotations: matchingAnnotations,
-					}},
-					&corev1.ServiceAccount{ObjectMeta: metav1.ObjectMeta{
-						Name: "kargo-promoter", Annotations: matchingAnnotations,
-					}},
-				).WithInterceptorFuncs(interceptor.Funcs{
-					Update: func(
-						context.Context,
-						client.WithWatch,
-						client.Object,
-						...client.UpdateOption,
-					) error {
-						return errors.New("Update should not be called when annotations already match")
-					},
-				}).Build(),
-				createRoleFn: func(
-					context.Context,
-					client.Object,
-					...client.CreateOption,
-				) error {
-					return nil
-				},
-				createRoleBindingFn: func(
-					context.Context,
-					client.Object,
-					...client.CreateOption,
-				) error {
-					return nil
-				},
-				createClusterRoleFn: func(
-					context.Context,
-					client.Object,
-					...client.CreateOption,
-				) error {
-					return nil
-				},
-				createClusterRoleBindingFn: func(
-					context.Context,
-					client.Object,
-					...client.CreateOption,
-				) error {
-					return nil
-				},
-			},
-			assertions: func(t *testing.T, err error) {
-				require.NoError(t, err)
-			},
-		},
-		{
-			name: "error updating ServiceAccount",
-			reconciler: &reconciler{
-				client: fake.NewClientBuilder().WithScheme(scheme).WithObjects(
-					// kargo-admin has no annotations, so it differs from desired.
-					&corev1.ServiceAccount{ObjectMeta: metav1.ObjectMeta{
-						Name: "kargo-admin",
-					}},
-				).WithInterceptorFuncs(interceptor.Funcs{
-					Update: func(
-						context.Context,
-						client.WithWatch,
-						client.Object,
-						...client.UpdateOption,
-					) error {
-						return errors.New("something went wrong")
-					},
-				}).Build(),
-			},
-			assertions: func(t *testing.T, err error) {
-				require.ErrorContains(t, err, "error updating ServiceAccount")
-				require.ErrorContains(t, err, "something went wrong")
-			},
-		},
-		{
-			name: "success updating ServiceAccount",
-			reconciler: &reconciler{
-				client: fake.NewClientBuilder().WithScheme(scheme).WithObjects(
-					// All three SAs exist but have no annotations — differ from desired.
-					&corev1.ServiceAccount{ObjectMeta: metav1.ObjectMeta{Name: "kargo-admin"}},
-					&corev1.ServiceAccount{ObjectMeta: metav1.ObjectMeta{Name: "kargo-viewer"}},
-					&corev1.ServiceAccount{ObjectMeta: metav1.ObjectMeta{Name: "kargo-promoter"}},
-				).Build(),
-				createRoleFn: func(
-					context.Context,
-					client.Object,
-					...client.CreateOption,
-				) error {
-					return nil
-				},
-				createRoleBindingFn: func(
-					context.Context,
-					client.Object,
-					...client.CreateOption,
-				) error {
-					return nil
-				},
-				createClusterRoleFn: func(
-					context.Context,
-					client.Object,
-					...client.CreateOption,
-				) error {
-					return nil
-				},
-				createClusterRoleBindingFn: func(
-					context.Context,
-					client.Object,
-					...client.CreateOption,
-				) error {
-					return nil
-				},
-			},
-			assertions: func(t *testing.T, err error) {
-				require.NoError(t, err)
-			},
-		},
-		{
 			name: "error getting Role",
 			reconciler: &reconciler{
 				client: fake.NewClientBuilder().WithScheme(scheme).WithObjects(
-					&corev1.ServiceAccount{ObjectMeta: metav1.ObjectMeta{
-						Name: "kargo-admin", Annotations: matchingAnnotations,
-					}},
-					&corev1.ServiceAccount{ObjectMeta: metav1.ObjectMeta{
-						Name: "kargo-viewer", Annotations: matchingAnnotations,
-					}},
-					&corev1.ServiceAccount{ObjectMeta: metav1.ObjectMeta{
-						Name: "kargo-promoter", Annotations: matchingAnnotations,
-					}},
+					&corev1.ServiceAccount{ObjectMeta: metav1.ObjectMeta{Name: "kargo-admin"}},
+					&corev1.ServiceAccount{ObjectMeta: metav1.ObjectMeta{Name: "kargo-viewer"}},
+					&corev1.ServiceAccount{ObjectMeta: metav1.ObjectMeta{Name: "kargo-promoter"}},
 				).WithInterceptorFuncs(interceptor.Funcs{
 					Get: func(
 						ctx context.Context,
@@ -2186,15 +2053,9 @@ func TestReconciler_ensureDefaultUserRoles(t *testing.T) {
 			name: "error updating Role",
 			reconciler: &reconciler{
 				client: fake.NewClientBuilder().WithScheme(scheme).WithObjects(
-					&corev1.ServiceAccount{ObjectMeta: metav1.ObjectMeta{
-						Name: "kargo-admin", Annotations: matchingAnnotations,
-					}},
-					&corev1.ServiceAccount{ObjectMeta: metav1.ObjectMeta{
-						Name: "kargo-viewer", Annotations: matchingAnnotations,
-					}},
-					&corev1.ServiceAccount{ObjectMeta: metav1.ObjectMeta{
-						Name: "kargo-promoter", Annotations: matchingAnnotations,
-					}},
+					&corev1.ServiceAccount{ObjectMeta: metav1.ObjectMeta{Name: "kargo-admin"}},
+					&corev1.ServiceAccount{ObjectMeta: metav1.ObjectMeta{Name: "kargo-viewer"}},
+					&corev1.ServiceAccount{ObjectMeta: metav1.ObjectMeta{Name: "kargo-promoter"}},
 					// kargo-admin Role with no rules — differs from desired.
 					&rbacv1.Role{ObjectMeta: metav1.ObjectMeta{Name: "kargo-admin"}},
 				).WithInterceptorFuncs(interceptor.Funcs{

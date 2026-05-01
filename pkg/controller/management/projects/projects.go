@@ -829,11 +829,10 @@ func (r *reconciler) ensureDefaultUserRoles(
 				Annotations: saAnnotations,
 			},
 		}
-		existing := &corev1.ServiceAccount{}
 		if err := r.client.Get(
 			ctx,
-			client.ObjectKeyFromObject(desired),
-			existing,
+			types.NamespacedName{Name: saName, Namespace: project.Name},
+			&corev1.ServiceAccount{},
 		); err != nil {
 			if !apierrors.IsNotFound(err) {
 				return fmt.Errorf(
@@ -848,31 +847,7 @@ func (r *reconciler) ensureDefaultUserRoles(
 				)
 			}
 			saLogger.Debug("created ServiceAccount in project namespace")
-			continue
 		}
-		needsUpdate := false
-		for k, v := range saAnnotations {
-			if existing.Annotations[k] != v {
-				needsUpdate = true
-				break
-			}
-		}
-		if !needsUpdate {
-			continue
-		}
-		if existing.Annotations == nil {
-			existing.Annotations = make(map[string]string, len(saAnnotations))
-		}
-		for k, v := range saAnnotations {
-			existing.Annotations[k] = v
-		}
-		if err := r.client.Update(ctx, existing); err != nil {
-			return fmt.Errorf(
-				"error updating ServiceAccount %q in project namespace %q: %w",
-				saName, project.Name, err,
-			)
-		}
-		saLogger.Debug("updated ServiceAccount in project namespace")
 	}
 
 	roles := []*rbacv1.Role{
