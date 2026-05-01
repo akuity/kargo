@@ -2447,6 +2447,58 @@ func TestReconciler_ensureDefaultUserRoles(t *testing.T) {
 			},
 		},
 		{
+			name: "error getting ClusterRoleBinding",
+			reconciler: &reconciler{
+				client: fake.NewClientBuilder().WithScheme(scheme).
+					WithInterceptorFuncs(interceptor.Funcs{
+						Get: func(
+							ctx context.Context,
+							wc client.WithWatch,
+							key client.ObjectKey,
+							obj client.Object,
+							opts ...client.GetOption,
+						) error {
+							if _, ok := obj.(*rbacv1.ClusterRoleBinding); ok {
+								return errors.New("something went wrong")
+							}
+							return wc.Get(ctx, key, obj, opts...)
+						},
+					}).Build(),
+				createServiceAccountFn: func(
+					context.Context,
+					client.Object,
+					...client.CreateOption,
+				) error {
+					return nil
+				},
+				createRoleFn: func(
+					context.Context,
+					client.Object,
+					...client.CreateOption,
+				) error {
+					return nil
+				},
+				createRoleBindingFn: func(
+					context.Context,
+					client.Object,
+					...client.CreateOption,
+				) error {
+					return nil
+				},
+				createClusterRoleFn: func(
+					context.Context,
+					client.Object,
+					...client.CreateOption,
+				) error {
+					return nil
+				},
+			},
+			assertions: func(t *testing.T, err error) {
+				require.ErrorContains(t, err, "error getting ClusterRoleBinding")
+				require.ErrorContains(t, err, "something went wrong")
+			},
+		},
+		{
 			name: "error creating ClusterRoleBinding",
 			reconciler: &reconciler{
 				client: fake.NewClientBuilder().WithScheme(scheme).Build(),
@@ -2488,6 +2540,58 @@ func TestReconciler_ensureDefaultUserRoles(t *testing.T) {
 			},
 			assertions: func(t *testing.T, err error) {
 				require.ErrorContains(t, err, "error creating ClusterRoleBinding")
+				require.ErrorContains(t, err, "something went wrong")
+			},
+		},
+		{
+			name: "error updating ClusterRoleBinding",
+			reconciler: &reconciler{
+				client: fake.NewClientBuilder().WithScheme(scheme).WithObjects(
+					// ClusterRoleBinding with no subjects — differs from desired.
+					&rbacv1.ClusterRoleBinding{ObjectMeta: metav1.ObjectMeta{
+						Name: "kargo-project-admin-",
+					}},
+				).WithInterceptorFuncs(interceptor.Funcs{
+					Update: func(
+						context.Context,
+						client.WithWatch,
+						client.Object,
+						...client.UpdateOption,
+					) error {
+						return errors.New("something went wrong")
+					},
+				}).Build(),
+				createServiceAccountFn: func(
+					context.Context,
+					client.Object,
+					...client.CreateOption,
+				) error {
+					return nil
+				},
+				createRoleFn: func(
+					context.Context,
+					client.Object,
+					...client.CreateOption,
+				) error {
+					return nil
+				},
+				createRoleBindingFn: func(
+					context.Context,
+					client.Object,
+					...client.CreateOption,
+				) error {
+					return nil
+				},
+				createClusterRoleFn: func(
+					context.Context,
+					client.Object,
+					...client.CreateOption,
+				) error {
+					return nil
+				},
+			},
+			assertions: func(t *testing.T, err error) {
+				require.ErrorContains(t, err, "error updating ClusterRoleBinding")
 				require.ErrorContains(t, err, "something went wrong")
 			},
 		},

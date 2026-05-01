@@ -1157,29 +1157,35 @@ func (r *reconciler) ensureDefaultUserRoles(
 
 	crbName := crName
 	crbLogger := logger.WithValues("name", crbName)
-	logger.WithValues()
-	if err := r.createClusterRoleBindingFn(
-		ctx,
-		&rbacv1.ClusterRoleBinding{
-			ObjectMeta: metav1.ObjectMeta{Name: crbName},
-			RoleRef: rbacv1.RoleRef{
-				APIGroup: rbacv1.GroupName,
-				Kind:     "ClusterRole",
-				Name:     crName,
-			},
-			Subjects: []rbacv1.Subject{{
-				Kind:      "ServiceAccount",
-				Name:      adminRoleName,
-				Namespace: project.Name,
-			}},
+	desiredCRB := &rbacv1.ClusterRoleBinding{
+		ObjectMeta: metav1.ObjectMeta{Name: crbName},
+		RoleRef: rbacv1.RoleRef{
+			APIGroup: rbacv1.GroupName,
+			Kind:     "ClusterRole",
+			Name:     crName,
 		},
-	); err != nil {
-		if !apierrors.IsAlreadyExists(err) {
-			return fmt.Errorf("error creating ClusterRoleBinding %q: %w", crName, err)
-		}
-		crbLogger.Debug("ClusterRoleBinding already exists")
+		Subjects: []rbacv1.Subject{{
+			Kind:      "ServiceAccount",
+			Name:      adminRoleName,
+			Namespace: project.Name,
+		}},
 	}
-	crbLogger.Debug("created ClusterRoleBinding")
+	existingCRB := &rbacv1.ClusterRoleBinding{}
+	if err := r.client.Get(ctx, client.ObjectKeyFromObject(desiredCRB), existingCRB); err != nil {
+		if !apierrors.IsNotFound(err) {
+			return fmt.Errorf("error getting ClusterRoleBinding %q: %w", crbName, err)
+		}
+		if err = r.createClusterRoleBindingFn(ctx, desiredCRB); err != nil {
+			return fmt.Errorf("error creating ClusterRoleBinding %q: %w", crbName, err)
+		}
+		crbLogger.Debug("created ClusterRoleBinding")
+	} else if !reflect.DeepEqual(existingCRB.Subjects, desiredCRB.Subjects) {
+		existingCRB.Subjects = desiredCRB.Subjects
+		if err := r.client.Update(ctx, existingCRB); err != nil {
+			return fmt.Errorf("error updating ClusterRoleBinding %q: %w", crbName, err)
+		}
+		crbLogger.Debug("updated ClusterRoleBinding")
+	}
 
 	return nil
 }
