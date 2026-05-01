@@ -166,20 +166,26 @@ export const Graph = (props: GraphProps) => {
     if (!hoveredWarehouseName || distinctEdgeWarehouses < 2) {
       return graph.edges;
     }
-    return graph.edges.map((edge) => {
+    const dimmed: typeof graph.edges = [];
+    const highlighted: typeof graph.edges = [];
+    for (const edge of graph.edges) {
       if (edge.data?.warehouseName !== hoveredWarehouseName) {
-        return edge;
+        dimmed.push(edge);
+        continue;
       }
       const color = (edge.style?.stroke as string) || '#000';
-      return {
+      highlighted.push({
         ...edge,
         style: {
           ...edge.style,
           strokeOpacity: 0.8,
           filter: `drop-shadow(0 0 7px ${color}50)`
         }
-      };
-    });
+      });
+    }
+    // Highlighted edges paint last so they sit on top of overlapping dimmed
+    // edges from other warehouses.
+    return [...dimmed, ...highlighted];
   }, [graph.edges, hoveredWarehouseName, distinctEdgeWarehouses]);
 
   const nodesExcludingSubscriptionNodes = useMemo(() => {
