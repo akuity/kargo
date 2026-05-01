@@ -822,27 +822,57 @@ func (r *reconciler) ensureDefaultUserRoles(
 			"name", saName,
 			"namespace", project.Name,
 		)
-		if err := r.createServiceAccountFn(
-			ctx,
-			&corev1.ServiceAccount{
-				ObjectMeta: metav1.ObjectMeta{
-					Name:        saName,
-					Namespace:   project.Name,
-					Annotations: saAnnotations,
-				},
+		desired := &corev1.ServiceAccount{
+			ObjectMeta: metav1.ObjectMeta{
+				Name:        saName,
+				Namespace:   project.Name,
+				Annotations: saAnnotations,
 			},
+		}
+		existing := &corev1.ServiceAccount{}
+		if err := r.client.Get(
+			ctx,
+			client.ObjectKeyFromObject(desired),
+			existing,
 		); err != nil {
-			if apierrors.IsAlreadyExists(err) {
-				saLogger.Debug("ServiceAccount already exists in project namespace")
-				continue
+			if !apierrors.IsNotFound(err) {
+				return fmt.Errorf(
+					"error getting ServiceAccount %q in project namespace %q: %w",
+					saName, project.Name, err,
+				)
 			}
+			if err = r.createServiceAccountFn(ctx, desired); err != nil {
+				return fmt.Errorf(
+					"error creating ServiceAccount %q in project namespace %q: %w",
+					saName, project.Name, err,
+				)
+			}
+			saLogger.Debug("created ServiceAccount in project namespace")
+			continue
+		}
+		needsUpdate := false
+		for k, v := range saAnnotations {
+			if existing.Annotations[k] != v {
+				needsUpdate = true
+				break
+			}
+		}
+		if !needsUpdate {
+			continue
+		}
+		if existing.Annotations == nil {
+			existing.Annotations = make(map[string]string, len(saAnnotations))
+		}
+		for k, v := range saAnnotations {
+			existing.Annotations[k] = v
+		}
+		if err := r.client.Update(ctx, existing); err != nil {
 			return fmt.Errorf(
-				"error creating ServiceAccount %q in project namespace %q: %w",
-				saName,
-				project.Name,
-				err,
+				"error updating ServiceAccount %q in project namespace %q: %w",
+				saName, project.Name, err,
 			)
 		}
+		saLogger.Debug("updated ServiceAccount in project namespace")
 	}
 
 	roles := []*rbacv1.Role{
