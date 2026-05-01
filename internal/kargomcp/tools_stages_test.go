@@ -1,10 +1,38 @@
 package kargomcp
 
 import (
+	"encoding/json"
 	"testing"
 
 	"github.com/stretchr/testify/require"
 )
+
+// TestGetStageStripsFreightHistory verifies that get_stage removes
+// status.freightHistory (served by get_stage_freight_history instead).
+func TestGetStageStripsFreightHistory(t *testing.T) {
+	t.Parallel()
+	payload := map[string]any{
+		"metadata": map[string]any{"name": "dev"},
+		"status": map[string]any{
+			"phase": "Steady",
+			"freightHistory": []any{
+				map[string]any{"id": "abc"},
+			},
+		},
+	}
+	data, _ := json.Marshal(payload)
+	var v any
+	_ = json.Unmarshal(data, &v)
+
+	sanitized := sanitizeResource(v).(map[string]any)
+	if status, ok := sanitized["status"].(map[string]any); ok {
+		delete(status, "freightHistory")
+	}
+
+	status := sanitized["status"].(map[string]any)
+	require.Equal(t, "Steady", status["phase"])
+	require.NotContains(t, status, "freightHistory")
+}
 
 func TestStageToSummary(t *testing.T) {
 	t.Parallel()

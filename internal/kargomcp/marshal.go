@@ -73,7 +73,6 @@ func projectItems[T, S any](raws []json.RawMessage, project func(T) S) []S {
 // sanitizeResource strips noisy Kubernetes bookkeeping fields from a resource
 // before returning it to the LLM:
 //   - metadata.managedFields (GC bookkeeping, no semantic value)
-//   - metadata.resourceVersion (internal Kubernetes state)
 //   - metadata.generateName (template prefix, redundant with name)
 //   - metadata.annotations["kubectl.kubernetes.io/last-applied-configuration"]
 //     (full JSON-string duplicate of the spec)
@@ -88,17 +87,12 @@ func sanitizeResource(payload any) any {
 		return m
 	}
 	delete(meta, "managedFields")
-	delete(meta, "resourceVersion")
 	delete(meta, "generateName")
 	if anns, ok := meta["annotations"].(map[string]any); ok {
 		delete(anns, "kubectl.kubernetes.io/last-applied-configuration")
 		if len(anns) == 0 {
 			delete(meta, "annotations")
 		}
-	}
-	// Strip verbose status fields that have dedicated tools.
-	if status, ok := m["status"].(map[string]any); ok {
-		delete(status, "freightHistory")
 	}
 	return dropNulls(m)
 }

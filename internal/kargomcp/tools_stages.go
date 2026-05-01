@@ -234,7 +234,11 @@ func (s *Server) handleGetStage(
 	if err != nil {
 		return errResult(err)
 	}
-	return jsonAnyResult(sanitizeResource(res.Payload))
+	sanitized := sanitizeResource(res.Payload).(map[string]any)
+	if status, ok := sanitized["status"].(map[string]any); ok {
+		delete(status, "freightHistory")
+	}
+	return jsonAnyResult(sanitized)
 }
 
 // --- get_stage_freight_history ---

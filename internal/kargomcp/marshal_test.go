@@ -51,6 +51,88 @@ func TestProjectItems(t *testing.T) {
 	}
 }
 
+func TestSanitizeResource(t *testing.T) {
+	t.Parallel()
+	testCases := []struct {
+		name   string
+		input  any
+		assert func(*testing.T, any)
+	}{
+		{
+			name: "removes managedFields and generateName",
+			input: map[string]any{
+				"metadata": map[string]any{
+					"name":            "foo",
+					"generateName":    "foo-",
+					"managedFields":   []any{map[string]any{"manager": "kubectl"}},
+				},
+			},
+			assert: func(t *testing.T, got any) {
+				m := got.(map[string]any)
+				meta := m["metadata"].(map[string]any)
+				require.Equal(t, "foo", meta["name"])
+				require.NotContains(t, meta, "generateName")
+				require.NotContains(t, meta, "managedFields")
+			},
+		},
+		{
+			name: "removes last-applied annotation, drops empty annotations map",
+			input: map[string]any{
+				"metadata": map[string]any{
+					"annotations": map[string]any{
+						"kubectl.kubernetes.io/last-applied-configuration": `{"spec":{}}`,
+					},
+				},
+			},
+			assert: func(t *testing.T, got any) {
+				meta := got.(map[string]any)["metadata"].(map[string]any)
+				require.NotContains(t, meta, "annotations")
+			},
+		},
+		{
+			name: "keeps other annotations",
+			input: map[string]any{
+				"metadata": map[string]any{
+					"annotations": map[string]any{
+						"kubectl.kubernetes.io/last-applied-configuration": `{"spec":{}}`,
+						"example.com/keep": "yes",
+					},
+				},
+			},
+			assert: func(t *testing.T, got any) {
+				anns := got.(map[string]any)["metadata"].(map[string]any)["annotations"].(map[string]any)
+				require.Equal(t, "yes", anns["example.com/keep"])
+				require.NotContains(t, anns, "kubectl.kubernetes.io/last-applied-configuration")
+			},
+		},
+		{
+			name: "drops null values",
+			input: map[string]any{
+				"metadata": map[string]any{"name": "x"},
+				"spec":     map[string]any{"field": nil, "other": "val"},
+			},
+			assert: func(t *testing.T, got any) {
+				spec := got.(map[string]any)["spec"].(map[string]any)
+				require.NotContains(t, spec, "field")
+				require.Equal(t, "val", spec["other"])
+			},
+		},
+		{
+			name:  "no metadata passes through",
+			input: map[string]any{"kind": "Foo"},
+			assert: func(t *testing.T, got any) {
+				require.Equal(t, "Foo", got.(map[string]any)["kind"])
+			},
+		},
+	}
+	for _, tc := range testCases {
+		t.Run(tc.name, func(t *testing.T) {
+			t.Parallel()
+			tc.assert(t, sanitizeResource(tc.input))
+		})
+	}
+}
+
 func TestFlattenFreightGroups(t *testing.T) {
 	t.Parallel()
 	testCases := []struct {
