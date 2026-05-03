@@ -11,9 +11,9 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
 	kargoapi "github.com/akuity/kargo/api/v1alpha1"
+	"github.com/akuity/kargo/pkg/api"
 	"github.com/akuity/kargo/pkg/expressions"
 	exprfn "github.com/akuity/kargo/pkg/expressions/function"
-	"github.com/akuity/kargo/pkg/kargo"
 )
 
 // StepEvaluator handles the evaluation and processing of Promotion steps,
@@ -345,7 +345,7 @@ func getTaskOutputs(alias string, state State) State {
 // The namespace part is the part before the first "::" separator. Typically,
 // this is used for steps inflated from a task.
 func getAliasNamespace(alias string) string {
-	parts := strings.Split(alias, kargo.PromotionAliasSeparator)
+	parts := strings.Split(alias, api.PromotionAliasSeparator)
 	if len(parts) != 2 {
 		return ""
 	}

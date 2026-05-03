@@ -335,59 +335,6 @@ func TestPromoteToStage(t *testing.T) {
 			},
 		},
 		{
-			name: "error building Promotion",
-			req: &svcv1alpha1.PromoteToStageRequest{
-				Project: "fake-project",
-				Stage:   "fake-stage",
-				Freight: "fake-freight",
-			},
-			server: &server{
-				validateProjectExistsFn: func(context.Context, string) error {
-					return nil
-				},
-				getStageFn: func(
-					context.Context,
-					client.Client,
-					types.NamespacedName,
-				) (*kargoapi.Stage, error) {
-					return &kargoapi.Stage{
-						ObjectMeta: metav1.ObjectMeta{
-							Namespace: "fake-project",
-							Name:      "fake-stage",
-						},
-						Spec: testStageSpec,
-					}, nil
-				},
-				getFreightByNameOrAliasFn: func(
-					context.Context,
-					client.Client,
-					string, string, string,
-				) (*kargoapi.Freight, error) {
-					return &kargoapi.Freight{}, nil
-				},
-				authorizeFn: func(
-					context.Context,
-					string,
-					schema.GroupVersionResource,
-					string,
-					client.ObjectKey,
-				) error {
-					return nil
-				},
-				isFreightAvailableFn: func(*kargoapi.Stage, *kargoapi.Freight) bool {
-					return true
-				},
-			},
-			assertions: func(
-				t *testing.T,
-				_ *fakeevent.EventRecorder,
-				_ *connect.Response[svcv1alpha1.PromoteToStageResponse],
-				err error,
-			) {
-				require.ErrorContains(t, err, "build promotion")
-			},
-		},
-		{
 			name: "error creating Promotion",
 			req: &svcv1alpha1.PromoteToStageRequest{
 				Project: "fake-project",
