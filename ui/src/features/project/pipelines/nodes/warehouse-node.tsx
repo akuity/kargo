@@ -93,7 +93,7 @@ export const WarehouseNode = (props: { warehouse: WarehouseExpanded }) => {
       <Button
         size='small'
         icon={<FontAwesomeIcon icon={isSubscriptionHidden ? faPlus : faMinus} />}
-        className='absolute -left-2 top-[50%] translate-y-[-50%] text-[10px]'
+        className='absolute -left-3 top-[50%] translate-y-[-50%] text-[10px]'
         onClick={(e) => {
           e.stopPropagation();
 

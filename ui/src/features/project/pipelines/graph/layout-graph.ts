@@ -32,7 +32,7 @@ export const layoutGraph = (
 ) => {
   const graph = new graphlib.Graph<GraphMeta>({ multigraph: true });
 
-  graph.setGraph({ rankdir: 'LR', ranksep: 100 });
+  graph.setGraph({ rankdir: 'LR', ranksep: 150, nodesep: 60 });
   graph.setDefaultEdgeLabel(() => ({}));
 
   const warehouseByName: Record<string, WarehouseExpanded> = {};

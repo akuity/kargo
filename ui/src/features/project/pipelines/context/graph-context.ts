@@ -15,6 +15,11 @@ export type GraphContextType = {
   // with onlyRenderVisibleElements -- so this skips heavy node bodies on init
   // and lets the real components mount only when actually visible.
   ready: boolean;
+
+  // name of the warehouse node currently being hovered, used to highlight
+  // edges belonging to that warehouse
+  hoveredWarehouseName: string | null;
+  setHoveredWarehouseName(name: string | null): void;
 };
 
 export const GraphContext = createContext<GraphContextType | null>(null);
