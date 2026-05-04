@@ -41,6 +41,15 @@ func New(cfg config.CLIConfig) *Server {
 	return s
 }
 
+// NewWithExistingServer registers all OSS Kargo tools onto an externally-owned
+// mcp.Server. Intended for EE callers that want to subsume the OSS tool set
+// into their own server rather than running a separate process.
+func NewWithExistingServer(mcpServer *mcp.Server, cfg config.CLIConfig) *Server {
+	s := &Server{mcpServer: mcpServer, cfg: cfg}
+	s.registerTools()
+	return s
+}
+
 // Run starts the MCP server on the stdio transport.
 func (s *Server) Run(ctx context.Context) error {
 	return s.mcpServer.Run(ctx, &mcp.StdioTransport{})
