@@ -166,7 +166,10 @@ func TestGetStageHealthOutputs(t *testing.T) {
 				kubernetes.ClientOptions{
 					SkipAuthorization: true,
 					NewInternalClient: func(
-						context.Context, *rest.Config, *runtime.Scheme,
+						context.Context,
+						*rest.Config,
+						*runtime.Scheme,
+						string,
 					) (client.WithWatch, error) {
 						return fake.NewClientBuilder().
 							WithScheme(mustNewScheme()).
