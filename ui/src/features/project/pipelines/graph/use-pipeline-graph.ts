@@ -69,6 +69,17 @@ export const useReactFlowPipelineGraph = (
       const reactFlowNodes: Node[] = [];
       const reactFlowEdges: Edge[] = [];
 
+      // y-coordinate of each warehouse after layout. Stage nodes use this to
+      // sort their per-warehouse handles top-to-bottom so edges enter in the
+      // same vertical order as the source warehouses, avoiding crossings.
+      const warehouseY: Record<string, number> = {};
+      for (const node of graph.nodes()) {
+        const dagreNode = graph.node(node);
+        if (dagreNode?.warehouse) {
+          warehouseY[dagreNode.warehouse?.metadata?.name || ''] = dagreNode.y;
+        }
+      }
+
       for (const node of graph.nodes()) {
         const dagreNode = graph.node(node);
 
@@ -109,7 +120,8 @@ export const useReactFlowPipelineGraph = (
           data: {
             label: node,
             value: dagreNode?.warehouse || dagreNode?.subscription || dagreNode?.stage,
-            subscriptionParent: dagreNode?.subscriptionParent
+            subscriptionParent: dagreNode?.subscriptionParent,
+            warehouseY
           }
         });
       }
@@ -124,21 +136,22 @@ export const useReactFlowPipelineGraph = (
           source: edge.v,
           target: edge.w,
           animated: false,
-          type:
-            (graph.successors(edge.v)?.length || 0) > 1 ||
-            (graph.predecessors(edge.w)?.length || 0) > 1
-              ? 'step'
-              : '',
+          type: 'default',
           sourceHandle: belongsToWarehouse,
           targetHandle: belongsToWarehouse,
+          data: { warehouseName: belongsToWarehouse },
           markerEnd: {
             type: MarkerType.ArrowClosed,
-            color: dagreEdge.edgeColor || ''
+            color: '#777',
+            width: 8,
+            height: 8,
+            strokeWidth: 2
           },
           style: {
-            strokeWidth: 2,
-            stroke: dagreEdge.edgeColor || '',
-            transition: 'd 0.3s ease'
+            strokeWidth: 4,
+            stroke: dagreEdge.edgeColor || '#9ca3af',
+            strokeOpacity: 0.3,
+            transition: 'd 0.3s ease, stroke-opacity 0.2s ease, filter 0.2s ease'
           }
         });
       }

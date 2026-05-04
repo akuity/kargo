@@ -22,6 +22,7 @@ export const CustomNode = (props: {
     label: string;
     value: WarehouseExpanded | RepoSubscription | Stage;
     subscriptionParent?: Warehouse;
+    warehouseY?: Record<string, number>;
   };
   id?: string;
 }) => {
@@ -61,7 +62,11 @@ export const CustomNode = (props: {
 
   if (props.data.value.$typeName === 'github.com.akuity.kargo.api.v1alpha1.Stage') {
     return (
-      <CustomNode.Container id={props.id} stage={props.data.value}>
+      <CustomNode.Container
+        id={props.id}
+        stage={props.data.value}
+        warehouseY={props.data.warehouseY}
+      >
         {ready ? (
           <StageNode stage={props.data.value} />
         ) : (
@@ -79,9 +84,12 @@ CustomNode.Container = (
     stage?: Stage;
     warehouse?: WarehouseExpanded;
     repoSubscription?: { data: RepoSubscription; parent: WarehouseExpanded };
+    warehouseY?: Record<string, number>;
     id?: string;
   }>
 ) => {
+  const graphContext = useGraphContext();
+
   let id = '';
   let height = 0;
 
@@ -96,24 +104,45 @@ CustomNode.Container = (
     height = repoSubscriptionSizer.size().height;
   }
 
+  const warehouseHoverProps = props.warehouse
+    ? {
+        onMouseEnter: () =>
+          graphContext?.setHoveredWarehouseName(props.warehouse?.metadata?.name || ''),
+        onMouseLeave: () => graphContext?.setHoveredWarehouseName(null)
+      }
+    : {};
+
   // Fixed-height slot with content vertically centered. The slot height matches
   // the predefined size used by dagre for layout, so handles -- positioned at
   // 50% of this slot -- line up with the dagre-computed edge endpoints.
   const Children = (
-    <div id={props.id} className='nodrag cursor-default flex items-center' style={{ height }}>
+    <div
+      id={props.id}
+      className='nodrag cursor-default flex items-center'
+      style={{ height }}
+      {...warehouseHoverProps}
+    >
       {props.children}
     </div>
   );
 
   if (props.stage) {
-    const howManyStagesDoThisStageSubscribe = props.stage.spec?.requestedFreight?.length || 0;
+    // Sort the per-warehouse handles by the y-coordinate of their source
+    // warehouse in the dagre layout. This makes the handles' top-to-bottom
+    // order match the warehouses' top-to-bottom order, so edges enter the
+    // stage without crossing each other.
+    const sortedRequestedFreight = [...(props.stage.spec?.requestedFreight || [])].sort((a, b) => {
+      const yA = props.warehouseY?.[a?.origin?.name || ''] ?? 0;
+      const yB = props.warehouseY?.[b?.origin?.name || ''] ?? 0;
+      return yA - yB;
+    });
 
     const handleTop = (idx: number) =>
-      `calc(50% + ${-((howManyStagesDoThisStageSubscribe - 1) * EDGE_GAP) / 2 + idx * EDGE_GAP}px)`;
+      `calc(50% + ${-((sortedRequestedFreight.length - 1) * EDGE_GAP) / 2 + idx * EDGE_GAP}px)`;
 
     return (
       <>
-        {props.stage?.spec?.requestedFreight?.map((freight, idx) => (
+        {sortedRequestedFreight.map((freight, idx) => (
           <Handle
             key={idx}
             id={freight?.origin?.name}
@@ -121,12 +150,14 @@ CustomNode.Container = (
             position={Position.Left}
             style={{
               top: handleTop(idx),
-              backgroundColor: 'transparent'
+              backgroundColor: 'transparent',
+              border: 'none',
+              left: 1
             }}
           />
         ))}
         {Children}
-        {props.stage?.spec?.requestedFreight?.map((freight, idx) => (
+        {sortedRequestedFreight.map((freight, idx) => (
           <Handle
             key={idx}
             id={freight?.origin?.name}
@@ -134,14 +165,16 @@ CustomNode.Container = (
             position={Position.Right}
             style={{
               top: handleTop(idx),
-              backgroundColor: 'transparent'
+              backgroundColor: 'transparent',
+              border: 'none',
+              right: 4
             }}
           />
         ))}
         <Handle
           type='source'
           position={Position.Right}
-          style={{ top: '50%', backgroundColor: 'transparent' }}
+          style={{ top: '50%', backgroundColor: 'transparent', border: 'none', right: 4 }}
         />
       </>
     );
@@ -157,7 +190,8 @@ CustomNode.Container = (
           top: '50%',
           backgroundColor: 'transparent',
           stroke: 'none',
-          border: 'none'
+          border: 'none',
+          left: 2
         }}
       />
       {Children}
@@ -169,11 +203,12 @@ CustomNode.Container = (
           top: '50%',
           backgroundColor: 'transparent',
           stroke: 'none',
-          border: 'none'
+          border: 'none',
+          right: 4
         }}
       />
     </>
   );
 };
 
-const EDGE_GAP = 10;
+const EDGE_GAP = 16;
