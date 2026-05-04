@@ -62,14 +62,16 @@ func TestSanitizeResource(t *testing.T) {
 			name: "removes managedFields and generateName",
 			input: map[string]any{
 				"metadata": map[string]any{
-					"name":            "foo",
-					"generateName":    "foo-",
-					"managedFields":   []any{map[string]any{"manager": "kubectl"}},
+					"name":          "foo",
+					"generateName":  "foo-",
+					"managedFields": []any{map[string]any{"manager": "kubectl"}},
 				},
 			},
 			assert: func(t *testing.T, got any) {
-				m := got.(map[string]any)
-				meta := m["metadata"].(map[string]any)
+				m, ok := got.(map[string]any)
+				require.True(t, ok)
+				meta, ok := m["metadata"].(map[string]any)
+				require.True(t, ok)
 				require.Equal(t, "foo", meta["name"])
 				require.NotContains(t, meta, "generateName")
 				require.NotContains(t, meta, "managedFields")
@@ -85,7 +87,10 @@ func TestSanitizeResource(t *testing.T) {
 				},
 			},
 			assert: func(t *testing.T, got any) {
-				meta := got.(map[string]any)["metadata"].(map[string]any)
+				m, ok := got.(map[string]any)
+				require.True(t, ok)
+				meta, ok := m["metadata"].(map[string]any)
+				require.True(t, ok)
 				require.NotContains(t, meta, "annotations")
 			},
 		},
@@ -100,7 +105,12 @@ func TestSanitizeResource(t *testing.T) {
 				},
 			},
 			assert: func(t *testing.T, got any) {
-				anns := got.(map[string]any)["metadata"].(map[string]any)["annotations"].(map[string]any)
+				m, ok := got.(map[string]any)
+				require.True(t, ok)
+				meta, ok := m["metadata"].(map[string]any)
+				require.True(t, ok)
+				anns, ok := meta["annotations"].(map[string]any)
+				require.True(t, ok)
 				require.Equal(t, "yes", anns["example.com/keep"])
 				require.NotContains(t, anns, "kubectl.kubernetes.io/last-applied-configuration")
 			},
@@ -112,7 +122,10 @@ func TestSanitizeResource(t *testing.T) {
 				"spec":     map[string]any{"field": nil, "other": "val"},
 			},
 			assert: func(t *testing.T, got any) {
-				spec := got.(map[string]any)["spec"].(map[string]any)
+				m, ok := got.(map[string]any)
+				require.True(t, ok)
+				spec, ok := m["spec"].(map[string]any)
+				require.True(t, ok)
 				require.NotContains(t, spec, "field")
 				require.Equal(t, "val", spec["other"])
 			},
@@ -121,7 +134,9 @@ func TestSanitizeResource(t *testing.T) {
 			name:  "no metadata passes through",
 			input: map[string]any{"kind": "Foo"},
 			assert: func(t *testing.T, got any) {
-				require.Equal(t, "Foo", got.(map[string]any)["kind"])
+				m, ok := got.(map[string]any)
+				require.True(t, ok)
+				require.Equal(t, "Foo", m["kind"])
 			},
 		},
 	}

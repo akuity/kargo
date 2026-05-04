@@ -38,8 +38,8 @@ func (s *Server) registerFreightTools() {
 // --- list_freight ---
 
 type listFreightArgs struct {
-	Project string   `json:"project,omitempty" jsonschema:"The Kargo project name. Omit to use the default set by 'kargo config set-project'"`
-	Stage   *string  `json:"stage,omitempty" jsonschema:"Filter to freight available (eligible) for promotion to this stage"`
+	Project string   `json:"project,omitempty" jsonschema:"The Kargo project name. Omit to use the default set by 'kargo config set-project'"` //nolint:lll
+	Stage   *string  `json:"stage,omitempty" jsonschema:"Filter to freight available (eligible) for promotion to this stage"`                  //nolint:lll
 	Origins []string `json:"origins,omitempty" jsonschema:"Filter by origin warehouse names"`
 }
 
@@ -90,12 +90,12 @@ type freightSummaryChart struct {
 }
 
 type freightSummary struct {
-	Name       string                `json:"name"`
-	Alias      string                `json:"alias,omitempty"`
-	CreatedAt  string                `json:"createdAt,omitempty"`
-	Warehouse  string                `json:"warehouse,omitempty"`
-	Stages     []string              `json:"stages,omitempty"`
-	VerifiedIn []string              `json:"verifiedIn,omitempty"`
+	Name       string                 `json:"name"`
+	Alias      string                 `json:"alias,omitempty"`
+	CreatedAt  string                 `json:"createdAt,omitempty"`
+	Warehouse  string                 `json:"warehouse,omitempty"`
+	Stages     []string               `json:"stages,omitempty"`
+	VerifiedIn []string               `json:"verifiedIn,omitempty"`
 	Images     []freightSummaryImage  `json:"images,omitempty"`
 	Commits    []freightSummaryCommit `json:"commits,omitempty"`
 	Charts     []freightSummaryChart  `json:"charts,omitempty"`
@@ -177,7 +177,7 @@ func flattenFreightGroups(payload any) []json.RawMessage {
 // --- get_freight ---
 
 type getFreightArgs struct {
-	Project            string `json:"project,omitempty" jsonschema:"The Kargo project name. Omit to use the default set by 'kargo config set-project'"`
+	Project            string `json:"project,omitempty" jsonschema:"The Kargo project name. Omit to use the default set by 'kargo config set-project'"` //nolint:lll
 	FreightNameOrAlias string `json:"freight" jsonschema:"The name or alias of the piece of freight"`
 }
 
@@ -245,7 +245,7 @@ func (s *Server) handleGetFreight(
 // --- approve_freight ---
 
 type approveFreightArgs struct {
-	Project            string `json:"project,omitempty" jsonschema:"The Kargo project name. Omit to use the default set by 'kargo config set-project'"`
+	Project            string `json:"project,omitempty" jsonschema:"The Kargo project name. Omit to use the default set by 'kargo config set-project'"` //nolint:lll
 	FreightNameOrAlias string `json:"freight" jsonschema:"The name or alias of the piece of freight to approve"`
 	Stage              string `json:"stage" jsonschema:"The name of the stage to approve the freight for"`
 }

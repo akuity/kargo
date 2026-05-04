@@ -65,7 +65,7 @@ func promotionTaskToSummary(t promotionTaskJSON) promotionTaskSummary {
 // --- list_promotion_tasks ---
 
 type listPromotionTasksArgs struct {
-	Project string `json:"project,omitempty" jsonschema:"The Kargo project name. Omit to use the default set by 'kargo config set-project'"`
+	Project string `json:"project,omitempty" jsonschema:"The Kargo project name. Omit to use the default set by 'kargo config set-project'"` //nolint:lll
 }
 
 func (s *Server) handleListPromotionTasks(

@@ -24,12 +24,14 @@ func TestGetStageStripsFreightHistory(t *testing.T) {
 	var v any
 	_ = json.Unmarshal(data, &v)
 
-	sanitized := sanitizeResource(v).(map[string]any)
+	sanitized, isSanitizedMap := sanitizeResource(v).(map[string]any)
+	require.True(t, isSanitizedMap)
 	if status, ok := sanitized["status"].(map[string]any); ok {
 		delete(status, "freightHistory")
 	}
 
-	status := sanitized["status"].(map[string]any)
+	status, isStatusMap := sanitized["status"].(map[string]any)
+	require.True(t, isStatusMap)
 	require.Equal(t, "Steady", status["phase"])
 	require.NotContains(t, status, "freightHistory")
 }

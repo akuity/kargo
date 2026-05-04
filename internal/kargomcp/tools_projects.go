@@ -11,12 +11,12 @@ import (
 
 func (s *Server) registerProjectTools() {
 	mcp.AddTool(s.mcpServer, &mcp.Tool{
-		Name:         "list_projects",
-		Description:  "List all Kargo projects. Returns a compact summary per project.",
+		Name:        "list_projects",
+		Description: "List all Kargo projects. Returns a compact summary per project.",
 		OutputSchema: mustOutputSchema[struct {
 			Items []projectSummary `json:"items"`
 		}](),
-		Annotations:  readOnly(),
+		Annotations: readOnly(),
 	}, s.handleListProjects)
 
 	mcp.AddTool(s.mcpServer, &mcp.Tool{
@@ -109,7 +109,7 @@ func (s *Server) handleListProjects(
 // --- get_project ---
 
 type getProjectArgs struct {
-	Project string `json:"project,omitempty" jsonschema:"The Kargo project name. Omit to use the default set by 'kargo config set-project'"`
+	Project string `json:"project,omitempty" jsonschema:"The Kargo project name. Omit to use the default set by 'kargo config set-project'"` //nolint:lll
 }
 
 type projectCondition struct {
@@ -135,9 +135,9 @@ type warehouseStats struct {
 }
 
 type projectResult struct {
-	Name       string             `json:"name,omitempty"`
+	Name       string              `json:"name,omitempty"`
 	Conditions []*projectCondition `json:"conditions,omitempty"`
-	Stats      *projectStats      `json:"stats,omitempty"`
+	Stats      *projectStats       `json:"stats,omitempty"`
 }
 
 func (s *Server) handleGetProject(
@@ -162,4 +162,3 @@ func (s *Server) handleGetProject(
 	}
 	return jsonAnyResult(sanitizeResource(res.Payload))
 }
-

@@ -52,8 +52,8 @@ func (s *Server) registerStageTools() {
 // --- list_stages ---
 
 type listStagesArgs struct {
-	Project    string   `json:"project,omitempty" jsonschema:"The Kargo project name. Omit to use the default set by 'kargo config set-project'"`
-	Warehouses []string `json:"warehouses,omitempty" jsonschema:"Filter to stages that request freight from these warehouses"`
+	Project    string   `json:"project,omitempty" jsonschema:"The Kargo project name. Omit to use the default set by 'kargo config set-project'"` //nolint:lll
+	Warehouses []string `json:"warehouses,omitempty" jsonschema:"Filter to stages that request freight from these warehouses"`                    //nolint:lll
 	Health     string   `json:"health,omitempty" jsonschema:"Filter by health status: Healthy, Unhealthy, or Unknown"`
 }
 
@@ -176,7 +176,7 @@ func (s *Server) handleListStages(
 // --- get_stage ---
 
 type getStageArgs struct {
-	Project string `json:"project,omitempty" jsonschema:"The Kargo project name. Omit to use the default set by 'kargo config set-project'"`
+	Project string `json:"project,omitempty" jsonschema:"The Kargo project name. Omit to use the default set by 'kargo config set-project'"` //nolint:lll
 	Stage   string `json:"stage" jsonschema:"The name of the stage"`
 }
 
@@ -234,7 +234,10 @@ func (s *Server) handleGetStage(
 	if err != nil {
 		return errResult(err)
 	}
-	sanitized := sanitizeResource(res.Payload).(map[string]any)
+	sanitized, ok := sanitizeResource(res.Payload).(map[string]any)
+	if !ok {
+		return jsonAnyResult(sanitizeResource(res.Payload))
+	}
 	if status, ok := sanitized["status"].(map[string]any); ok {
 		delete(status, "freightHistory")
 	}
@@ -244,7 +247,7 @@ func (s *Server) handleGetStage(
 // --- get_stage_freight_history ---
 
 type getStageFreightHistoryArgs struct {
-	Project string `json:"project,omitempty" jsonschema:"The Kargo project name. Omit to use the default set by 'kargo config set-project'"`
+	Project string `json:"project,omitempty" jsonschema:"The Kargo project name. Omit to use the default set by 'kargo config set-project'"` //nolint:lll
 	Stage   string `json:"stage" jsonschema:"The name of the stage"`
 }
 
@@ -317,7 +320,7 @@ func (s *Server) handleGetStageFreightHistory(
 // --- refresh_stage ---
 
 type refreshStageArgs struct {
-	Project string `json:"project,omitempty" jsonschema:"The Kargo project name. Omit to use the default set by 'kargo config set-project'"`
+	Project string `json:"project,omitempty" jsonschema:"The Kargo project name. Omit to use the default set by 'kargo config set-project'"` //nolint:lll
 	Stage   string `json:"stage" jsonschema:"The name of the stage to refresh"`
 }
 

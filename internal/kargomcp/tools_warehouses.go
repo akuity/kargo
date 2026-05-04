@@ -37,7 +37,7 @@ func (s *Server) registerWarehouseTools() {
 // --- list_warehouses ---
 
 type listWarehousesArgs struct {
-	Project string `json:"project,omitempty" jsonschema:"The Kargo project name. Omit to use the default set by 'kargo config set-project'"`
+	Project string `json:"project,omitempty" jsonschema:"The Kargo project name. Omit to use the default set by 'kargo config set-project'"` //nolint:lll
 }
 
 type warehouseJSON struct {
@@ -113,7 +113,7 @@ func (s *Server) handleListWarehouses(
 // --- get_warehouse ---
 
 type getWarehouseArgs struct {
-	Project   string `json:"project,omitempty" jsonschema:"The Kargo project name. Omit to use the default set by 'kargo config set-project'"`
+	Project   string `json:"project,omitempty" jsonschema:"The Kargo project name. Omit to use the default set by 'kargo config set-project'"` //nolint:lll
 	Warehouse string `json:"warehouse" jsonschema:"The name of the warehouse"`
 }
 
@@ -125,8 +125,8 @@ type warehouseCondition struct {
 }
 
 type warehouseResult struct {
-	Name       string               `json:"name,omitempty"`
-	Project    string               `json:"namespace,omitempty"`
+	Name       string                `json:"name,omitempty"`
+	Project    string                `json:"namespace,omitempty"`
 	Conditions []*warehouseCondition `json:"conditions,omitempty"`
 }
 
@@ -156,7 +156,7 @@ func (s *Server) handleGetWarehouse(
 // --- refresh_warehouse ---
 
 type refreshWarehouseArgs struct {
-	Project   string `json:"project,omitempty" jsonschema:"The Kargo project name. Omit to use the default set by 'kargo config set-project'"`
+	Project   string `json:"project,omitempty" jsonschema:"The Kargo project name. Omit to use the default set by 'kargo config set-project'"` //nolint:lll
 	Warehouse string `json:"warehouse" jsonschema:"The name of the warehouse to refresh"`
 }
 

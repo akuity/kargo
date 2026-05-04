@@ -59,9 +59,9 @@ func (s *Server) registerPromotionTools() {
 // --- list_promotions ---
 
 type listPromotionsArgs struct {
-	Project string  `json:"project,omitempty" jsonschema:"The Kargo project name. Omit to use the default set by 'kargo config set-project'"`
+	Project string  `json:"project,omitempty" jsonschema:"The Kargo project name. Omit to use the default set by 'kargo config set-project'"` //nolint:lll
 	Stage   *string `json:"stage,omitempty" jsonschema:"Filter to promotions targeting this stage"`
-	Phase   string  `json:"phase,omitempty" jsonschema:"Filter by phase: Running, Succeeded, Failed, Errored, Pending, Aborted"`
+	Phase   string  `json:"phase,omitempty" jsonschema:"Filter by phase: Running, Succeeded, Failed, Errored, Pending, Aborted"` //nolint:lll
 }
 
 // promotionJSON is the intake struct for summary projection.
@@ -99,12 +99,12 @@ type promotionCondition struct {
 }
 
 type promotionResult struct {
-	Name       string               `json:"name,omitempty"`
-	Project    string               `json:"namespace,omitempty"`
-	Stage      string               `json:"stage,omitempty"`
-	Freight    string               `json:"freight,omitempty"`
-	Phase      string               `json:"phase,omitempty"`
-	Message    string               `json:"message,omitempty"`
+	Name       string                `json:"name,omitempty"`
+	Project    string                `json:"namespace,omitempty"`
+	Stage      string                `json:"stage,omitempty"`
+	Freight    string                `json:"freight,omitempty"`
+	Phase      string                `json:"phase,omitempty"`
+	Message    string                `json:"message,omitempty"`
 	Conditions []*promotionCondition `json:"conditions,omitempty"`
 }
 
@@ -175,7 +175,7 @@ func filterRawsByPhase(raws []json.RawMessage, phase string) []json.RawMessage {
 // --- get_promotion ---
 
 type getPromotionArgs struct {
-	Project   string `json:"project,omitempty" jsonschema:"The Kargo project name. Omit to use the default set by 'kargo config set-project'"`
+	Project   string `json:"project,omitempty" jsonschema:"The Kargo project name. Omit to use the default set by 'kargo config set-project'"` //nolint:lll
 	Promotion string `json:"promotion" jsonschema:"The name of the promotion"`
 }
 
@@ -205,7 +205,7 @@ func (s *Server) handleGetPromotion(
 // --- promote_to_stage ---
 
 type promoteToStageArgs struct {
-	Project      string `json:"project,omitempty" jsonschema:"The Kargo project name. Omit to use the default set by 'kargo config set-project'"`
+	Project      string `json:"project,omitempty" jsonschema:"The Kargo project name. Omit to use the default set by 'kargo config set-project'"` //nolint:lll
 	Stage        string `json:"stage" jsonschema:"The name of the stage to promote the freight to"`
 	Freight      string `json:"freight,omitempty" jsonschema:"The name of the piece of freight to promote"`
 	FreightAlias string `json:"freight_alias,omitempty" jsonschema:"The alias of the piece of freight to promote"`
@@ -246,8 +246,8 @@ func (s *Server) handlePromoteToStage(
 // --- promote_downstream ---
 
 type promoteDownstreamArgs struct {
-	Project      string `json:"project,omitempty" jsonschema:"The Kargo project name. Omit to use the default set by 'kargo config set-project'"`
-	Stage        string `json:"stage" jsonschema:"The upstream stage whose immediately downstream stages will receive the freight"`
+	Project      string `json:"project,omitempty" jsonschema:"The Kargo project name. Omit to use the default set by 'kargo config set-project'"` //nolint:lll
+	Stage        string `json:"stage" jsonschema:"The upstream stage whose immediately downstream stages will receive the freight"`               //nolint:lll
 	Freight      string `json:"freight,omitempty" jsonschema:"The name of the piece of freight to promote"`
 	FreightAlias string `json:"freight_alias,omitempty" jsonschema:"The alias of the piece of freight to promote"`
 }
@@ -287,7 +287,7 @@ func (s *Server) handlePromoteDownstream(
 // --- abort_promotion ---
 
 type abortPromotionArgs struct {
-	Project   string `json:"project,omitempty" jsonschema:"The Kargo project name. Omit to use the default set by 'kargo config set-project'"`
+	Project   string `json:"project,omitempty" jsonschema:"The Kargo project name. Omit to use the default set by 'kargo config set-project'"` //nolint:lll
 	Promotion string `json:"promotion" jsonschema:"The name of the promotion to abort"`
 }
 

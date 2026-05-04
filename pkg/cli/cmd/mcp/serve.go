@@ -7,9 +7,9 @@ import (
 	"github.com/spf13/cobra"
 
 	"github.com/akuity/kargo/internal/kargomcp"
+	clicfg "github.com/akuity/kargo/pkg/cli/config"
 	"github.com/akuity/kargo/pkg/cli/option"
 	"github.com/akuity/kargo/pkg/cli/templates"
-	clicfg "github.com/akuity/kargo/pkg/cli/config"
 )
 
 func newServeCommand(cfg clicfg.CLIConfig) *cobra.Command {

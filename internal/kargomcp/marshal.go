@@ -69,7 +69,6 @@ func projectItems[T, S any](raws []json.RawMessage, project func(T) S) []S {
 	return out
 }
 
-
 // sanitizeResource strips noisy Kubernetes bookkeeping fields from a resource
 // before returning it to the LLM:
 //   - metadata.managedFields (GC bookkeeping, no semantic value)
