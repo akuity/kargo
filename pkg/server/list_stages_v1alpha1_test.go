@@ -207,6 +207,7 @@ func TestListStages(t *testing.T) {
 						context.Context,
 						*rest.Config,
 						*runtime.Scheme,
+						string,
 					) (client.WithWatch, error) {
 						b := fake.NewClientBuilder().WithScheme(mustNewScheme())
 						if len(tc.objects) > 0 {

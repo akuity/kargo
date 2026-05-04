@@ -208,6 +208,7 @@ func TestGetProjectConfig(t *testing.T) {
 						_ context.Context,
 						_ *rest.Config,
 						scheme *runtime.Scheme,
+						_ string,
 					) (client.WithWatch, error) {
 						c := fake.NewClientBuilder().WithScheme(scheme).WithInterceptorFuncs(testCase.interceptor)
 						if len(testCase.objects) > 0 {

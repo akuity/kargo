@@ -21,7 +21,8 @@ export const useFreightTimelineControllerStore = (project: string) => {
       hideSubscriptions: {},
       images: false,
       view: 'graph',
-      showMinimap: true
+      showMinimap: true,
+      stepEdges: false
     };
 
     const hasFilterParams = Object.keys(filters).some((name) => searchParams.has(name));
@@ -43,6 +44,11 @@ export const useFreightTimelineControllerStore = (project: string) => {
     const showMinimap = searchParams.get('showMinimap');
     if (showMinimap && showMinimap !== '') {
       filters.showMinimap = showMinimap === 'true';
+    }
+
+    const stepEdges = searchParams.get('stepEdges');
+    if (stepEdges && stepEdges !== '') {
+      filters.stepEdges = stepEdges === 'true';
     }
 
     const sourcesParam = searchParams.getAll('sources');
@@ -109,6 +115,8 @@ export const useFreightTimelineControllerStore = (project: string) => {
         currentSearchParams.set('view', `${nextPartial.view}`);
 
         currentSearchParams.set('showMinimap', `${nextPartial.showMinimap}`);
+
+        currentSearchParams.set('stepEdges', `${nextPartial.stepEdges}`);
 
         currentSearchParams.set('showColors', `${nextPartial.showColors}`);
 

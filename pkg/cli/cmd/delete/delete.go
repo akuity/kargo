@@ -76,6 +76,7 @@ kargo delete warehouse --project=my-project my-warehouse
 	// Register subcommands.
 	cmd.AddCommand(newClusterConfigCommand(cfg, streams))
 	cmd.AddCommand(newConfigMapCommand(cfg, streams))
+	cmd.AddCommand(newFreightCommand(cfg, streams))
 	cmd.AddCommand(newGenericCredentialsCommand(cfg, streams))
 	cmd.AddCommand(newRepoCredentialsCommand(cfg, streams))
 	cmd.AddCommand(newProjectCommand(cfg, streams))

@@ -25,6 +25,7 @@ import type {
   AdminLoginResponse,
   ClusterConfig,
   GetConfigResponse,
+  GetControllerHeartbeatsResponse,
   PublicConfig,
   VersionInfo
 } from '.././models';
@@ -388,6 +389,147 @@ export const useRefreshClusterConfig = <TError = unknown, TContext = unknown>(
 
   return useMutation(mutationOptions, queryClient);
 };
+/**
+ * Get the most recent heartbeat from every controller that has
+reported in. Any controller not represented in the response has
+never reported a heartbeat and can therefore be assumed by the
+caller to be dead or nonexistent.
+ * @summary Get controller heartbeats
+ */
+export type getControllerHeartbeatsResponse200 = {
+  data: GetControllerHeartbeatsResponse;
+  status: 200;
+};
+
+export type getControllerHeartbeatsResponseSuccess = getControllerHeartbeatsResponse200 & {
+  headers: Headers;
+};
+export type getControllerHeartbeatsResponse = getControllerHeartbeatsResponseSuccess;
+
+export const getGetControllerHeartbeatsUrl = () => {
+  return `/v1beta1/system/controller-heartbeats`;
+};
+
+export const getControllerHeartbeats = async (
+  options?: RequestInit
+): Promise<getControllerHeartbeatsResponse> => {
+  return customFetch<getControllerHeartbeatsResponse>(getGetControllerHeartbeatsUrl(), {
+    ...options,
+    method: 'GET'
+  });
+};
+
+export const getGetControllerHeartbeatsQueryKey = () => {
+  return [`/v1beta1/system/controller-heartbeats`] as const;
+};
+
+export const getGetControllerHeartbeatsQueryOptions = <
+  TData = Awaited<ReturnType<typeof getControllerHeartbeats>>,
+  TError = unknown
+>(options?: {
+  query?: Partial<
+    UseQueryOptions<Awaited<ReturnType<typeof getControllerHeartbeats>>, TError, TData>
+  >;
+  request?: SecondParameter<typeof customFetch>;
+}) => {
+  const { query: queryOptions, request: requestOptions } = options ?? {};
+
+  const queryKey = queryOptions?.queryKey ?? getGetControllerHeartbeatsQueryKey();
+
+  const queryFn: QueryFunction<Awaited<ReturnType<typeof getControllerHeartbeats>>> = () =>
+    getControllerHeartbeats(requestOptions);
+
+  return { queryKey, queryFn, ...queryOptions } as UseQueryOptions<
+    Awaited<ReturnType<typeof getControllerHeartbeats>>,
+    TError,
+    TData
+  > & { queryKey: DataTag<QueryKey, TData, TError> };
+};
+
+export type GetControllerHeartbeatsQueryResult = NonNullable<
+  Awaited<ReturnType<typeof getControllerHeartbeats>>
+>;
+export type GetControllerHeartbeatsQueryError = unknown;
+
+export function useGetControllerHeartbeats<
+  TData = Awaited<ReturnType<typeof getControllerHeartbeats>>,
+  TError = unknown
+>(
+  options: {
+    query: Partial<
+      UseQueryOptions<Awaited<ReturnType<typeof getControllerHeartbeats>>, TError, TData>
+    > &
+      Pick<
+        DefinedInitialDataOptions<
+          Awaited<ReturnType<typeof getControllerHeartbeats>>,
+          TError,
+          Awaited<ReturnType<typeof getControllerHeartbeats>>
+        >,
+        'initialData'
+      >;
+    request?: SecondParameter<typeof customFetch>;
+  },
+  queryClient?: QueryClient
+): DefinedUseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> };
+export function useGetControllerHeartbeats<
+  TData = Awaited<ReturnType<typeof getControllerHeartbeats>>,
+  TError = unknown
+>(
+  options?: {
+    query?: Partial<
+      UseQueryOptions<Awaited<ReturnType<typeof getControllerHeartbeats>>, TError, TData>
+    > &
+      Pick<
+        UndefinedInitialDataOptions<
+          Awaited<ReturnType<typeof getControllerHeartbeats>>,
+          TError,
+          Awaited<ReturnType<typeof getControllerHeartbeats>>
+        >,
+        'initialData'
+      >;
+    request?: SecondParameter<typeof customFetch>;
+  },
+  queryClient?: QueryClient
+): UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> };
+export function useGetControllerHeartbeats<
+  TData = Awaited<ReturnType<typeof getControllerHeartbeats>>,
+  TError = unknown
+>(
+  options?: {
+    query?: Partial<
+      UseQueryOptions<Awaited<ReturnType<typeof getControllerHeartbeats>>, TError, TData>
+    >;
+    request?: SecondParameter<typeof customFetch>;
+  },
+  queryClient?: QueryClient
+): UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> };
+/**
+ * @summary Get controller heartbeats
+ */
+
+export function useGetControllerHeartbeats<
+  TData = Awaited<ReturnType<typeof getControllerHeartbeats>>,
+  TError = unknown
+>(
+  options?: {
+    query?: Partial<
+      UseQueryOptions<Awaited<ReturnType<typeof getControllerHeartbeats>>, TError, TData>
+    >;
+    request?: SecondParameter<typeof customFetch>;
+  },
+  queryClient?: QueryClient
+): UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> } {
+  const queryOptions = getGetControllerHeartbeatsQueryOptions(options);
+
+  const query = useQuery(queryOptions, queryClient) as UseQueryResult<TData, TError> & {
+    queryKey: DataTag<QueryKey, TData, TError>;
+  };
+
+  query.queryKey = queryOptions.queryKey;
+
+  return query;
+}
+
 /**
  * Retrieve information a client may need to know about how the
 Kargo API server is configured in order to proceed with
