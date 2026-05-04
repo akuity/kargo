@@ -8,6 +8,8 @@ import yaml from 'yaml';
 
 import styles from './yaml-editor.module.less';
 
+import './patch-yaml-editor';
+
 loader.config({ monaco });
 
 export interface YamlEditorProps {
