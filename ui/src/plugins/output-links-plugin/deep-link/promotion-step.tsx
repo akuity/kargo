@@ -4,7 +4,7 @@ import { Flex, Tooltip } from 'antd';
 import { DeepLinkPluginsInstallation } from '@ui/plugins/atoms/plugin-interfaces';
 
 import { getOutputLinks } from '../output-links';
-import { resolveIcon } from '../resolve-icon';
+import { iconExists, resolveIcon } from '../resolve-icon';
 
 const plugin: DeepLinkPluginsInstallation['PromotionStep'] = {
   shouldRender({ output }) {
@@ -20,6 +20,7 @@ const plugin: DeepLinkPluginsInstallation['PromotionStep'] = {
           <Tooltip key={idx} title={link.tooltip || link.label}>
             <a href={link.url} target='_blank' rel='noreferrer'>
               <FontAwesomeIcon icon={resolveIcon(link.icon)} />
+              {!iconExists(link.icon) && link.label && <span className='ml-1'>{link.label}</span>}
             </a>
           </Tooltip>
         ))}

@@ -2,6 +2,11 @@ import { IconDefinition } from '@fortawesome/fontawesome-svg-core';
 import * as brandIcons from '@fortawesome/free-brands-svg-icons';
 import * as solidIcons from '@fortawesome/free-solid-svg-icons';
 
+export function iconExists(name?: string): boolean {
+  if (!name) return false;
+  return name in solidIcons || name in brandIcons;
+}
+
 export function resolveIcon(name?: string): IconDefinition {
   if (!name) return solidIcons.faLink;
   return (

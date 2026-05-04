@@ -6,7 +6,7 @@ import { getPromotionState, getPromotionStepAlias } from '@ui/plugins/atoms/plug
 import { DeepLinkPluginsInstallation } from '@ui/plugins/atoms/plugin-interfaces';
 
 import { getOutputLinks, StepOutputLink } from '../output-links';
-import { resolveIcon } from '../resolve-icon';
+import { iconExists, resolveIcon } from '../resolve-icon';
 
 function collectLinks(
   props: Parameters<NonNullable<DeepLinkPluginsInstallation['Promotion']>['render']>[0]
@@ -55,6 +55,7 @@ const plugin: DeepLinkPluginsInstallation['Promotion'] = {
         <Tooltip title={link.tooltip || link.label}>
           <a href={link.url} target='_blank' rel='noreferrer'>
             <FontAwesomeIcon icon={resolveIcon(link.icon)} />
+            {!iconExists(link.icon) && link.label && <span className='ml-1'>{link.label}</span>}
           </a>
         </Tooltip>
       );
