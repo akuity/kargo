@@ -64,7 +64,6 @@ export const PipelineListView = (props: PipelineListViewProps) => {
       <Card className={classNames(props.className, 'm-2')} size='small'>
         <AppliedFilters className='px-2 pb-4' />
         <Table
-          pagination={{ hideOnSinglePage: true }}
           dataSource={filteredStages}
           rowKey={(stage) => `${stage?.metadata?.name}-${stage?.status?.observedGeneration}`}
           size='small'

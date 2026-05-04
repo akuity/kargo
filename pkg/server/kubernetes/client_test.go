@@ -38,6 +38,7 @@ func TestNewClient(t *testing.T) {
 				context.Context,
 				*rest.Config,
 				*runtime.Scheme,
+				string,
 			) (libClient.WithWatch, error) {
 				return testInternalClient, nil
 			},
@@ -358,6 +359,7 @@ func TestAllClientOperations(t *testing.T) {
 						context.Context,
 						*rest.Config,
 						*runtime.Scheme,
+						string,
 					) (libClient.WithWatch, error) {
 						return fake.NewClientBuilder().Build(), nil
 					},

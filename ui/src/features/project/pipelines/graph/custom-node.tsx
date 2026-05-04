@@ -1,36 +1,45 @@
 import { Handle, Position } from '@xyflow/react';
+import { Skeleton } from 'antd';
 import { PropsWithChildren } from 'react';
 
 import { WarehouseExpanded } from '@ui/extend/types';
 import { RepoSubscription, Stage, Warehouse } from '@ui/gen/api/v1alpha1/generated_pb';
 
+import { useGraphContext } from '../context/graph-context';
 import { StageNode } from '../nodes/stage-node';
 import { SubscriptionNode } from '../nodes/subscription-node';
 import { WarehouseNode } from '../nodes/warehouse-node';
 
 import { repoSubscriptionIndexer, stageIndexer } from './node-indexer';
+import { repoSubscriptionSizer, stageSizer, warehouseSizer } from './node-sizer';
+
+const NodePlaceholder = ({ width, height }: { width: number; height: number }) => (
+  <Skeleton.Node active style={{ width, height }} />
+);
 
 export const CustomNode = (props: {
   data: {
     label: string;
     value: WarehouseExpanded | RepoSubscription | Stage;
     subscriptionParent?: Warehouse;
-    handleOffsetY?: number;
+    warehouseY?: Record<string, number>;
   };
   id?: string;
 }) => {
+  const ready = useGraphContext()?.ready ?? true;
+
   if (!props.data.value) {
     return null;
   }
 
   if (props.data.value.$typeName === 'github.com.akuity.kargo.api.v1alpha1.Warehouse') {
     return (
-      <CustomNode.Container
-        id={props.id}
-        warehouse={props.data.value}
-        handleOffsetY={props.data.handleOffsetY}
-      >
-        <WarehouseNode warehouse={props.data.value} />
+      <CustomNode.Container id={props.id} warehouse={props.data.value}>
+        {ready ? (
+          <WarehouseNode warehouse={props.data.value} />
+        ) : (
+          <NodePlaceholder {...warehouseSizer.size()} />
+        )}
       </CustomNode.Container>
     );
   }
@@ -41,9 +50,12 @@ export const CustomNode = (props: {
         id={props.id}
         // @ts-expect-error parent is there when value is RepoSubscription, check use-pipeline-graph.ts
         repoSubscription={{ data: props.data.value, parent: props.data.subscriptionParent }}
-        handleOffsetY={props.data.handleOffsetY}
       >
-        <SubscriptionNode subscription={props.data.value} />
+        {ready ? (
+          <SubscriptionNode subscription={props.data.value} />
+        ) : (
+          <NodePlaceholder {...repoSubscriptionSizer.size()} />
+        )}
       </CustomNode.Container>
     );
   }
@@ -53,9 +65,13 @@ export const CustomNode = (props: {
       <CustomNode.Container
         id={props.id}
         stage={props.data.value}
-        handleOffsetY={props.data.handleOffsetY}
+        warehouseY={props.data.warehouseY}
       >
-        <StageNode stage={props.data.value} />
+        {ready ? (
+          <StageNode stage={props.data.value} />
+        ) : (
+          <NodePlaceholder {...stageSizer.size()} />
+        )}
       </CustomNode.Container>
     );
   }
@@ -68,39 +84,65 @@ CustomNode.Container = (
     stage?: Stage;
     warehouse?: WarehouseExpanded;
     repoSubscription?: { data: RepoSubscription; parent: WarehouseExpanded };
+    warehouseY?: Record<string, number>;
     id?: string;
-    // Fixed pixel distance from the node's top edge to the dagre center point.
-    // Computed at layout time from the initially measured node height so handles
-    // stay anchored at the correct position even when node content changes size.
-    handleOffsetY?: number;
   }>
 ) => {
-  let id = '';
+  const graphContext = useGraphContext();
 
+  let id = '';
+  let height = 0;
+
+  if (props.stage) {
+    id = stageIndexer.index(props.stage);
+    height = stageSizer.size().height;
+  } else if (props.warehouse) {
+    id = props.warehouse?.metadata?.name || '';
+    height = warehouseSizer.size().height;
+  } else if (props.repoSubscription) {
+    id = repoSubscriptionIndexer.index(props.repoSubscription.parent, props.repoSubscription.data);
+    height = repoSubscriptionSizer.size().height;
+  }
+
+  const warehouseHoverProps = props.warehouse
+    ? {
+        onMouseEnter: () =>
+          graphContext?.setHoveredWarehouseName(props.warehouse?.metadata?.name || ''),
+        onMouseLeave: () => graphContext?.setHoveredWarehouseName(null)
+      }
+    : {};
+
+  // Fixed-height slot with content vertically centered. The slot height matches
+  // the predefined size used by dagre for layout, so handles -- positioned at
+  // 50% of this slot -- line up with the dagre-computed edge endpoints.
   const Children = (
-    <div id={props.id} className='w-fit nodrag cursor-default'>
+    <div
+      id={props.id}
+      className='nodrag cursor-default flex items-center'
+      style={{ height }}
+      {...warehouseHoverProps}
+    >
       {props.children}
     </div>
   );
 
   if (props.stage) {
-    id = stageIndexer.index(props.stage);
+    // Sort the per-warehouse handles by the y-coordinate of their source
+    // warehouse in the dagre layout. This makes the handles' top-to-bottom
+    // order match the warehouses' top-to-bottom order, so edges enter the
+    // stage without crossing each other.
+    const sortedRequestedFreight = [...(props.stage.spec?.requestedFreight || [])].sort((a, b) => {
+      const yA = props.warehouseY?.[a?.origin?.name || ''] ?? 0;
+      const yB = props.warehouseY?.[b?.origin?.name || ''] ?? 0;
+      return yA - yB;
+    });
 
-    const howManyStagesDoThisStageSubscribe = props.stage.spec?.requestedFreight?.length || 0;
-
-    const handleTop = (idx: number) => {
-      if (props.handleOffsetY !== undefined) {
-        const offset = -((howManyStagesDoThisStageSubscribe - 1) * EDGE_GAP) / 2 + idx * EDGE_GAP;
-        return `${props.handleOffsetY + offset}px`;
-      }
-      return `${50 - ((howManyStagesDoThisStageSubscribe - 1) * EDGE_GAP) / 2 + idx * EDGE_GAP}%`;
-    };
-
-    const centerHandleTop = props.handleOffsetY !== undefined ? `${props.handleOffsetY}px` : '50%';
+    const handleTop = (idx: number) =>
+      `calc(50% + ${-((sortedRequestedFreight.length - 1) * EDGE_GAP) / 2 + idx * EDGE_GAP}px)`;
 
     return (
       <>
-        {props.stage?.spec?.requestedFreight?.map((freight, idx) => (
+        {sortedRequestedFreight.map((freight, idx) => (
           <Handle
             key={idx}
             id={freight?.origin?.name}
@@ -108,12 +150,14 @@ CustomNode.Container = (
             position={Position.Left}
             style={{
               top: handleTop(idx),
-              backgroundColor: 'transparent'
+              backgroundColor: 'transparent',
+              border: 'none',
+              left: 1
             }}
           />
         ))}
         {Children}
-        {props.stage?.spec?.requestedFreight?.map((freight, idx) => (
+        {sortedRequestedFreight.map((freight, idx) => (
           <Handle
             key={idx}
             id={freight?.origin?.name}
@@ -121,28 +165,20 @@ CustomNode.Container = (
             position={Position.Right}
             style={{
               top: handleTop(idx),
-              backgroundColor: 'transparent'
+              backgroundColor: 'transparent',
+              border: 'none',
+              right: 4
             }}
           />
         ))}
         <Handle
           type='source'
           position={Position.Right}
-          style={{ top: centerHandleTop, backgroundColor: 'transparent' }}
+          style={{ top: '50%', backgroundColor: 'transparent', border: 'none', right: 4 }}
         />
       </>
     );
   }
-
-  if (props.warehouse) {
-    id = props.warehouse?.metadata?.name || '';
-  }
-
-  if (props.repoSubscription) {
-    id = repoSubscriptionIndexer.index(props.repoSubscription.parent, props.repoSubscription.data);
-  }
-
-  const singleHandleTop = props.handleOffsetY !== undefined ? `${props.handleOffsetY}px` : '50%';
 
   return (
     <>
@@ -151,10 +187,11 @@ CustomNode.Container = (
         type='target'
         position={Position.Left}
         style={{
-          top: singleHandleTop,
+          top: '50%',
           backgroundColor: 'transparent',
           stroke: 'none',
-          border: 'none'
+          border: 'none',
+          left: 2
         }}
       />
       {Children}
@@ -163,14 +200,15 @@ CustomNode.Container = (
         type='source'
         position={Position.Right}
         style={{
-          top: singleHandleTop,
+          top: '50%',
           backgroundColor: 'transparent',
           stroke: 'none',
-          border: 'none'
+          border: 'none',
+          right: 4
         }}
       />
     </>
   );
 };
 
-const EDGE_GAP = 10;
+const EDGE_GAP = 16;

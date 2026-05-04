@@ -37,7 +37,13 @@ type ServerConfig struct {
 	SharedResourcesNamespace    string
 	SystemResourcesNamespace    string
 	KargoNamespace              string
-	RestConfig                  *rest.Config
+	// DefaultControllerName is the name of the controller that Stages with no
+	// explicit spec.shard are reconciled by. The API server needs to know this
+	// only to include it in a get controller heartbeats response so callers will
+	// know which controller's liveness to associate with such Stages. The default
+	// controller is often unnamed, so an empty string is a valid value.
+	DefaultControllerName string
+	RestConfig            *rest.Config
 
 	// AdditionalHandlers is a map of path patterns to HTTP handlers that will
 	// be registered on the server's HTTP mux alongside its own handlers. This
@@ -100,6 +106,7 @@ func ServerConfigFromEnv() ServerConfig {
 		"kargo-shared-resources",
 	)
 	cfg.KargoNamespace = os.GetEnv("KARGO_NAMESPACE", "kargo")
+	cfg.DefaultControllerName = os.GetEnv("DEFAULT_CONTROLLER_NAME", "")
 	return cfg
 }
 

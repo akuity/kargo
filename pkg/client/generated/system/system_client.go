@@ -61,6 +61,8 @@ type ClientService interface {
 
 	GetConfig(params *GetConfigParams, authInfo runtime.ClientAuthInfoWriter, opts ...ClientOption) (*GetConfigOK, error)
 
+	GetControllerHeartbeats(params *GetControllerHeartbeatsParams, authInfo runtime.ClientAuthInfoWriter, opts ...ClientOption) (*GetControllerHeartbeatsOK, error)
+
 	GetPublicConfig(params *GetPublicConfigParams, opts ...ClientOption) (*GetPublicConfigOK, error)
 
 	GetVersionInfo(params *GetVersionInfoParams, authInfo runtime.ClientAuthInfoWriter, opts ...ClientOption) (*GetVersionInfoOK, error)
@@ -253,6 +255,56 @@ func (a *Client) GetConfig(params *GetConfigParams, authInfo runtime.ClientAuthI
 	//
 	// safeguard: normally, in the absence of a default response, unknown success responses return an error above: so this is a codegen issue
 	msg := fmt.Sprintf("unexpected success response for GetConfig: API contract not enforced by server. Client expected to get an error, but got: %T", result)
+	panic(msg)
+}
+
+/*
+	GetControllerHeartbeats gets controller heartbeats
+
+	Get the most recent heartbeat from every controller that has
+
+reported in. Any controller not represented in the response has
+never reported a heartbeat and can therefore be assumed by the
+caller to be dead or nonexistent.
+*/
+func (a *Client) GetControllerHeartbeats(params *GetControllerHeartbeatsParams, authInfo runtime.ClientAuthInfoWriter, opts ...ClientOption) (*GetControllerHeartbeatsOK, error) {
+	// NOTE: parameters are not validated before sending
+	if params == nil {
+		params = NewGetControllerHeartbeatsParams()
+	}
+	op := &runtime.ClientOperation{
+		ID:                 "GetControllerHeartbeats",
+		Method:             "GET",
+		PathPattern:        "/v1beta1/system/controller-heartbeats",
+		ProducesMediaTypes: []string{"application/json"},
+		ConsumesMediaTypes: []string{"application/json"},
+		Schemes:            []string{"http"},
+		Params:             params,
+		Reader:             &GetControllerHeartbeatsReader{formats: a.formats},
+		AuthInfo:           authInfo,
+		Context:            params.Context,
+		Client:             params.HTTPClient,
+	}
+	for _, opt := range opts {
+		opt(op)
+	}
+	result, err := a.transport.Submit(op)
+	if err != nil {
+		return nil, err
+	}
+
+	// only one success response has to be checked
+	success, ok := result.(*GetControllerHeartbeatsOK)
+	if ok {
+		return success, nil
+	}
+
+	// unexpected success response.
+
+	// no default response is defined.
+	//
+	// safeguard: normally, in the absence of a default response, unknown success responses return an error above: so this is a codegen issue
+	msg := fmt.Sprintf("unexpected success response for GetControllerHeartbeats: API contract not enforced by server. Client expected to get an error, but got: %T", result)
 	panic(msg)
 }
 
