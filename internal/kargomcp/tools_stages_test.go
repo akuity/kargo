@@ -1,7 +1,9 @@
 package kargomcp
 
 import (
+	"context"
 	"encoding/json"
+	"net/http"
 	"testing"
 
 	"github.com/stretchr/testify/require"
@@ -101,4 +103,51 @@ func TestStageToSummary(t *testing.T) {
 			tc.assert(t, stageToSummary(tc.input))
 		})
 	}
+}
+
+func TestHandleListStages(t *testing.T) {
+	t.Parallel()
+	s := newTestServer(t, map[string]http.HandlerFunc{
+		"/v1beta1/projects/test-project/stages": jsonOK(
+			`{"items":[{"metadata":{"name":"dev"},"status":{"health":{"status":"Healthy"}}}]}`,
+		),
+	})
+	result, _, err := s.handleListStages(context.Background(), nil, listStagesArgs{})
+	require.NoError(t, err)
+	require.False(t, result.IsError)
+	require.Contains(t, structuredContent(t, result), "dev")
+}
+
+func TestHandleGetStage(t *testing.T) {
+	t.Parallel()
+	s := newTestServer(t, map[string]http.HandlerFunc{
+		"/v1beta1/projects/test-project/stages/dev": jsonOK(
+			`{"metadata":{"name":"dev"},"status":{"health":{"status":"Healthy"}}}`,
+		),
+	})
+	result, _, err := s.handleGetStage(context.Background(), nil, getStageArgs{Stage: "dev"})
+	require.NoError(t, err)
+	require.False(t, result.IsError)
+	require.Contains(t, structuredContent(t, result), "dev")
+}
+
+func TestHandleGetStageFreightHistory(t *testing.T) {
+	t.Parallel()
+	s := newTestServer(t, map[string]http.HandlerFunc{
+		"/v1beta1/projects/test-project/stages/dev": jsonOK(`{"metadata":{"name":"dev"},"status":{"freightHistory":[{"id":"hist-1","items":{"wh":{"name":"abc123"}}}]}}`), //nolint:lll
+	})
+	result, _, err := s.handleGetStageFreightHistory(context.Background(), nil, getStageFreightHistoryArgs{Stage: "dev"})
+	require.NoError(t, err)
+	require.False(t, result.IsError)
+	require.Contains(t, structuredContent(t, result), "hist-1")
+}
+
+func TestHandleRefreshStage(t *testing.T) {
+	t.Parallel()
+	s := newTestServer(t, map[string]http.HandlerFunc{
+		"/v1beta1/projects/test-project/stages/dev/refresh": jsonOK(`{}`),
+	})
+	result, _, err := s.handleRefreshStage(context.Background(), nil, refreshStageArgs{Stage: "dev"})
+	require.NoError(t, err)
+	require.False(t, result.IsError)
 }

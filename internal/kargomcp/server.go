@@ -13,8 +13,9 @@ import (
 
 // Server wraps an MCP server backed by the Kargo REST API client.
 type Server struct {
-	mcpServer *mcp.Server
-	cfg       config.CLIConfig
+	mcpServer         *mcp.Server
+	cfg               config.CLIConfig
+	apiClientOverride *generatedclient.KargoAPI // non-nil in tests only
 }
 
 // New creates a new Kargo MCP server with all tools registered.
@@ -72,6 +73,9 @@ func (s *Server) resolveProject(explicit string) (string, error) {
 // apiClient constructs an authenticated Kargo REST API client, handling token
 // refresh transparently. Returns a user-friendly error if auth is missing or expired.
 func (s *Server) apiClient(ctx context.Context) (*generatedclient.KargoAPI, error) {
+	if s.apiClientOverride != nil {
+		return s.apiClientOverride, nil
+	}
 	c, err := client.GetClientFromConfig(ctx, s.cfg, client.Options{})
 	if err != nil {
 		return nil, fmt.Errorf("%w\nRun `kargo login` to authenticate", err)

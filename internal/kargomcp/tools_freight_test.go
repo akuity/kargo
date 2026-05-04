@@ -1,7 +1,9 @@
 package kargomcp
 
 import (
+	"context"
 	"encoding/json"
+	"net/http"
 	"testing"
 
 	"github.com/stretchr/testify/require"
@@ -80,4 +82,41 @@ func TestFreightToSummary(t *testing.T) {
 			tc.assert(t, freightToSummary(tc.input))
 		})
 	}
+}
+
+func TestHandleListFreight(t *testing.T) {
+	t.Parallel()
+	s := newTestServer(t, map[string]http.HandlerFunc{
+		"/v1beta1/projects/test-project/freight": jsonOK(
+			`{"groups":{"":{"items":[{"metadata":{"name":"abc"},"alias":"funky-moose","origin":{"name":"my-wh"}}]}}}`,
+		),
+	})
+	result, _, err := s.handleListFreight(context.Background(), nil, listFreightArgs{})
+	require.NoError(t, err)
+	require.False(t, result.IsError)
+	require.Contains(t, structuredContent(t, result), "funky-moose")
+}
+
+func TestHandleGetFreight(t *testing.T) {
+	t.Parallel()
+	s := newTestServer(t, map[string]http.HandlerFunc{
+		"/v1beta1/projects/test-project/freight/abc": jsonOK(`{"metadata":{"name":"abc"},"alias":"funky-moose"}`),
+	})
+	result, _, err := s.handleGetFreight(context.Background(), nil, getFreightArgs{FreightNameOrAlias: "abc"})
+	require.NoError(t, err)
+	require.False(t, result.IsError)
+	require.Contains(t, structuredContent(t, result), "funky-moose")
+}
+
+func TestHandleApproveFreight(t *testing.T) {
+	t.Parallel()
+	s := newTestServer(t, map[string]http.HandlerFunc{
+		"/v1beta1/projects/test-project/freight/abc/approve": jsonOK(`{}`),
+	})
+	result, _, err := s.handleApproveFreight(
+		context.Background(), nil,
+		approveFreightArgs{FreightNameOrAlias: "abc", Stage: "dev"},
+	)
+	require.NoError(t, err)
+	require.False(t, result.IsError)
 }
