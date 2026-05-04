@@ -31,4 +31,4 @@ Select one:
 ### Sign-Off
 
 - [ ] All commits are signed off (`git commit -s`) **(required)**
-- [ ] All commits are cryptographically signed (`git commit -S`) **(preferred)**
+- [ ] All commits are cryptographically signed (`git commit -S`) **(encouraged)**

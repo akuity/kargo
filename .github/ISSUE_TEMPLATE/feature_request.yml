@@ -7,21 +7,13 @@ body:
     value: |
       **Please read before submitting.**
 
-      Feature requests are reviewed by maintainers on a best-effort basis.
-      Submitting a request does not guarantee it will be implemented.
+      Feature requests are reviewed by maintainers on a best-effort basis. Submitting a request does not guarantee it will be implemented.
 
-      **Do NOT begin work on a feature until all blocking labels have been removed
-      from the issue by a maintainer.** Pull requests linked to issues that still
-      carry blocking labels (`kind/proposal`, `needs discussion`, `needs research`,
-      `maintainer only`, `area/security`, `size/large`, `size/x-large`,
-      `size/xx-large`) will be automatically closed.
+      **Do NOT begin work on a feature until all blocking labels have been removed from the issue by a maintainer.** These include `kind/proposal`, `needs discussion`, `needs research`, `maintainer only`, `area/security`, `size/large`, `size/x-large`, and `size/xx-large`.
 
-      See the [Contributor Guide](https://docs.kargo.io/contributor-guide) for
-      full details on the contribution process.
+      See the [Contributor Guide](https://docs.kargo.io/contributor-guide) for full details on the contribution process.
 
-      If you are requesting a Helm chart option that may be very niche and not
-      useful to the community at large, please consider using Kustomize to apply
-      "last mile" tweaks to the output of `helm template` instead.
+      If you are requesting a Helm chart option that may be very niche and not useful to the community at large, please consider using Kustomize to apply "last mile" tweaks to the output of `helm template` instead.
 - type: checkboxes
   id: preconditions
   attributes:

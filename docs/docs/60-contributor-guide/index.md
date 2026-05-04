@@ -23,22 +23,6 @@ consider every submission.
 
 :::
 
-### Exceptions
-
-A few kinds of contribution are exempt from the issue-first requirement and can
-be opened as pull requests directly, without a corresponding issue:
-
-- **Drive-by fixes.** Pull requests of five or fewer lines (added + removed,
-  combined). This covers typo corrections, comment fixes, and small obvious bug
-  fixes.
-
-- **Documentation-only changes.** Pull requests whose changes are limited to
-  `README.md` and Markdown files anywhere under `docs/`.
-
-Exempt pull requests must still adhere to the
-[Quality Expectations](#quality-expectations) below — the issue requirement is
-the only thing waived.
-
 1. **Open an issue** using the
    [Bug Report](https://github.com/akuity/kargo/issues/new?template=bug_report.yml)
    or
@@ -76,19 +60,21 @@ automatically converted to a draft until the issue is unblocked.
 An issue is ready for external contribution when **none** of these labels are
 present.
 
-## Automatic Enforcement
+### Exceptions
 
-Pull requests that do not observe the process described above are
-**automatically converted to a draft**. Maintainers do not routinely review
-drafts. The author is expected to address the underlying problem and then
-mark the PR ready for review. This applies to:
+A few kinds of contribution are exempt from the issue-first requirement and can
+be opened as pull requests directly, without a corresponding issue:
 
-- PRs with no linked issue.
+- **Drive-by fixes.** Pull requests of five or fewer lines (added + removed,
+  combined). This covers typo corrections, comment fixes, and small, obvious bug
+  fixes.
 
-- PRs linked to issues that still carry blocking labels.
+- **Documentation-only changes.** Pull requests whose changes are limited to
+  `README.md` and Markdown files anywhere under `docs/`.
 
-Pull requests covered by [Exceptions](#exceptions) are not subject to this
-enforcement.
+Exempt pull requests must still adhere to the
+[Quality Expectations](#quality-expectations) below — the issue requirement is
+the only thing waived.
 
 ## Quality Expectations
 
