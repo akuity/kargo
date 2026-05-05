@@ -57,10 +57,10 @@ type warehouseJSON struct {
 }
 
 type warehouseSummary struct {
-	Name                    string `json:"name"`
-	Ready                   string `json:"ready,omitempty"`
-	Healthy                 string `json:"healthy,omitempty"`
-	LastFreightDiscoveredAt string `json:"lastFreightDiscoveredAt,omitempty"`
+	Name                      string `json:"name"`
+	Ready                     string `json:"ready,omitempty"`
+	Healthy                   string `json:"healthy,omitempty"`
+	LastArtifactsDiscoveredAt string `json:"lastArtifactsDiscoveredAt,omitempty"`
 }
 
 func warehouseToSummary(w warehouseJSON) warehouseSummary {
@@ -74,7 +74,7 @@ func warehouseToSummary(w warehouseJSON) warehouseSummary {
 		}
 	}
 	if w.Status.DiscoveredArtifacts != nil {
-		s.LastFreightDiscoveredAt = w.Status.DiscoveredArtifacts.DiscoveredAt
+		s.LastArtifactsDiscoveredAt = w.Status.DiscoveredArtifacts.DiscoveredAt
 	}
 	return s
 }
