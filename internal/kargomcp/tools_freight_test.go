@@ -43,17 +43,19 @@ func TestFreightToSummary(t *testing.T) {
 			},
 		},
 		{
-			name: "freight currently in a stage and verified",
+			name: "freight currently in a stage, verified, and approved",
 			input: func() freightJSON {
 				var f freightJSON
 				f.Metadata.Name = "def456"
 				f.Status.CurrentlyIn = map[string]json.RawMessage{"prod": nil}
 				f.Status.VerifiedIn = map[string]json.RawMessage{"staging": nil}
+				f.Status.ApprovedFor = map[string]json.RawMessage{"hotfix": nil}
 				return f
 			}(),
 			assert: func(t *testing.T, s freightSummary) {
 				require.Equal(t, []string{"prod"}, s.Stages)
 				require.Equal(t, []string{"staging"}, s.VerifiedIn)
+				require.Equal(t, []string{"hotfix"}, s.ApprovedFor)
 			},
 		},
 		{

@@ -67,8 +67,9 @@ type stageJSON struct {
 			Status string   `json:"status"`
 			Issues []string `json:"issues"`
 		} `json:"health"`
-		FreightSummary   string `json:"freightSummary"`
-		CurrentPromotion struct {
+		FreightSummary       string `json:"freightSummary"`
+		AutoPromotionEnabled bool   `json:"autoPromotionEnabled"`
+		CurrentPromotion     struct {
 			Name string `json:"name"`
 		} `json:"currentPromotion"`
 		LastPromotion struct {
@@ -83,12 +84,13 @@ type stageJSON struct {
 }
 
 type stageSummary struct {
-	Name             string              `json:"name"`
-	Health           string              `json:"health,omitempty"`
-	HealthIssues     []string            `json:"healthIssues,omitempty"`
-	CurrentFreight   string              `json:"currentFreight,omitempty"`
-	CurrentPromotion string              `json:"currentPromotion,omitempty"`
-	LastPromotion    *lastPromotionBrief `json:"lastPromotion,omitempty"`
+	Name                 string              `json:"name"`
+	Health               string              `json:"health,omitempty"`
+	HealthIssues         []string            `json:"healthIssues,omitempty"`
+	CurrentFreight       string              `json:"currentFreight,omitempty"`
+	AutoPromotionEnabled bool                `json:"autoPromotionEnabled,omitempty"`
+	CurrentPromotion     string              `json:"currentPromotion,omitempty"`
+	LastPromotion        *lastPromotionBrief `json:"lastPromotion,omitempty"`
 }
 
 type lastPromotionBrief struct {
@@ -100,11 +102,12 @@ type lastPromotionBrief struct {
 
 func stageToSummary(st stageJSON) stageSummary {
 	s := stageSummary{
-		Name:             st.Metadata.Name,
-		Health:           st.Status.Health.Status,
-		HealthIssues:     st.Status.Health.Issues,
-		CurrentFreight:   st.Status.FreightSummary,
-		CurrentPromotion: st.Status.CurrentPromotion.Name,
+		Name:                 st.Metadata.Name,
+		Health:               st.Status.Health.Status,
+		HealthIssues:         st.Status.Health.Issues,
+		CurrentFreight:       st.Status.FreightSummary,
+		AutoPromotionEnabled: st.Status.AutoPromotionEnabled,
+		CurrentPromotion:     st.Status.CurrentPromotion.Name,
 	}
 	if st.Status.LastPromotion.Name != "" {
 		s.LastPromotion = &lastPromotionBrief{
