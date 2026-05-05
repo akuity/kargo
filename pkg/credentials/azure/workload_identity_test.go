@@ -1,4 +1,4 @@
-package acr
+package azure
 
 import (
 	"context"
@@ -64,15 +64,21 @@ func TestWorkloadIdentityProvider_Supports(t *testing.T) {
 			expected: true,
 		},
 		{
-			name:     "helm HTTP/S repo URLs not supported",
-			credType: credentials.TypeHelm,
+			name:     "git credential type supported",
+			credType: credentials.TypeGit,
 			repoURL:  testHTTPSRepoURL,
+			expected: true,
+		},
+		{
+			name:     "git non-HTTP/S repo URLs not supported",
+			credType: credentials.TypeGit,
+			repoURL:  "ssh://repo",
 			expected: false,
 		},
 		{
-			name:     "git credential type not supported",
-			credType: credentials.TypeGit,
-			repoURL:  testOCIRepoURL,
+			name:     "helm HTTP/S repo URLs not supported",
+			credType: credentials.TypeHelm,
+			repoURL:  testHTTPSRepoURL,
 			expected: false,
 		},
 		{
@@ -117,8 +123,8 @@ func TestWorkloadIdentityProvider_GetCredentials(t *testing.T) {
 		{
 			name:     "not supported",
 			provider: &WorkloadIdentityProvider{},
-			credType: credentials.TypeGit,
-			repoURL:  "git://repo",
+			credType: credentials.TypeHelm,
+			repoURL:  "https://repo",
 			assertions: func(
 				t *testing.T,
 				_ *cache.Cache,
@@ -160,15 +166,15 @@ func TestWorkloadIdentityProvider_GetCredentials(t *testing.T) {
 			) {
 				assert.NoError(t, err)
 				assert.NotNil(t, creds)
-				assert.Equal(t, acrTokenUsername, creds.Username)
+				assert.Equal(t, azTokenUsername, creds.Username)
 				assert.Equal(t, testToken, creds.Password)
 			},
 		},
 		{
 			name: "cache miss, successful token fetch",
 			provider: &WorkloadIdentityProvider{
-				getAccessTokenFn: func(_ context.Context, _ string) (string, error) {
-					return testToken, nil
+				getAccessTokenFn: func(_ context.Context, _ credentials.Type, _ string) (string, time.Duration, error) {
+					return testToken, 0, nil
 				},
 			},
 			credType: credentials.TypeImage,
@@ -181,7 +187,7 @@ func TestWorkloadIdentityProvider_GetCredentials(t *testing.T) {
 			) {
 				assert.NoError(t, err)
 				assert.NotNil(t, creds)
-				assert.Equal(t, acrTokenUsername, creds.Username)
+				assert.Equal(t, azTokenUsername, creds.Username)
 				assert.Equal(t, testToken, creds.Password)
 
 				// Verify the token was cached
@@ -191,10 +197,40 @@ func TestWorkloadIdentityProvider_GetCredentials(t *testing.T) {
 			},
 		},
 		{
+			name: "cache miss, successful token fetch with expiry",
+			provider: &WorkloadIdentityProvider{
+				getAccessTokenFn: func(_ context.Context, _ credentials.Type, _ string) (string, time.Duration, error) {
+					return testToken, 5 * time.Minute, nil
+				},
+			},
+			credType: credentials.TypeGit,
+			repoURL:  testRepoURL,
+			assertions: func(
+				t *testing.T,
+				c *cache.Cache,
+				creds *credentials.Credentials,
+				err error,
+			) {
+				assert.NoError(t, err)
+				assert.NotNil(t, creds)
+				assert.Equal(t, azTokenUsername, creds.Username)
+				assert.Equal(t, testToken, creds.Password)
+
+				// Verify the token was cached with a TTL based on the token's actual
+				// expiry
+				items := c.Items()
+				item, found := items[adoScope]
+				assert.True(t, found)
+				expectedTTL := 5 * time.Minute
+				actualTTL := time.Until(time.Unix(0, item.Expiration))
+				assert.InDelta(t, expectedTTL.Seconds(), actualTTL.Seconds(), 5)
+			},
+		},
+		{
 			name: "error in getAccessToken",
 			provider: &WorkloadIdentityProvider{
-				getAccessTokenFn: func(_ context.Context, _ string) (string, error) {
-					return "", errors.New("access token error")
+				getAccessTokenFn: func(_ context.Context, _ credentials.Type, _ string) (string, time.Duration, error) {
+					return "", 0, errors.New("access token error")
 				},
 			},
 			credType: credentials.TypeImage,
@@ -205,15 +241,15 @@ func TestWorkloadIdentityProvider_GetCredentials(t *testing.T) {
 				creds *credentials.Credentials,
 				err error,
 			) {
-				assert.ErrorContains(t, err, "error getting ACR access token")
+				assert.ErrorContains(t, err, "error getting access token")
 				assert.Nil(t, creds)
 			},
 		},
 		{
 			name: "empty token from getAccessToken",
 			provider: &WorkloadIdentityProvider{
-				getAccessTokenFn: func(_ context.Context, _ string) (string, error) {
-					return "", nil
+				getAccessTokenFn: func(_ context.Context, _ credentials.Type, _ string) (string, time.Duration, error) {
+					return "", 0, nil
 				},
 			},
 			credType: credentials.TypeImage,

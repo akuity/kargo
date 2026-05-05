@@ -41,7 +41,7 @@ import (
 	"github.com/akuity/kargo/pkg/types"
 	versionpkg "github.com/akuity/kargo/pkg/x/version"
 
-	_ "github.com/akuity/kargo/pkg/credentials/acr"
+	_ "github.com/akuity/kargo/pkg/credentials/azure"
 	_ "github.com/akuity/kargo/pkg/credentials/basic"
 	_ "github.com/akuity/kargo/pkg/credentials/ecr"
 	_ "github.com/akuity/kargo/pkg/credentials/gar"
