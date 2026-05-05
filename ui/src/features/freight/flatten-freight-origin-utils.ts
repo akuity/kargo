@@ -1,4 +1,4 @@
-import { Freight, ArtifactReference } from '@ui/gen/api/v1alpha1/generated_pb';
+import { ArtifactReference, Freight } from '@ui/gen/api/v1alpha1/generated_pb';
 
 export type TableSource =
   | {
@@ -26,7 +26,7 @@ export type TableSource =
       type: 'other';
     } & ArtifactReference);
 
-export const flattenFreightOrigin = (freight: Freight): TableSource[] => {
+export const flattenFreightOrigin = (freight: Freight | undefined | null): TableSource[] => {
   const images: TableSource[] =
     freight?.images?.map((image) => ({
       type: 'image',
@@ -35,27 +35,30 @@ export const flattenFreightOrigin = (freight: Freight): TableSource[] => {
       annotations: image?.annotations
     })) || [];
 
-  const git: TableSource[] = freight?.commits?.map((commit) => ({
-    type: 'git',
-    repoURL: commit?.repoURL,
-    author: commit?.author,
-    branch: commit?.branch,
-    committer: commit?.committer,
-    id: commit?.id,
-    message: commit?.message,
-    tag: commit?.tag
-  }));
+  const git: TableSource[] =
+    freight?.commits?.map((commit) => ({
+      type: 'git',
+      repoURL: commit?.repoURL,
+      author: commit?.author,
+      branch: commit?.branch,
+      committer: commit?.committer,
+      id: commit?.id,
+      message: commit?.message,
+      tag: commit?.tag
+    })) || [];
 
-  const helm: TableSource[] = freight?.charts?.map((chart) => ({
-    type: 'helm',
-    repoURL: chart?.repoURL,
-    version: chart?.version
-  }));
+  const helm: TableSource[] =
+    freight?.charts?.map((chart) => ({
+      type: 'helm',
+      repoURL: chart?.repoURL,
+      version: chart?.version
+    })) || [];
 
-  const other: TableSource[] = freight?.artifacts?.map((otherArtifact) => ({
-    type: 'other',
-    ...otherArtifact
-  }));
+  const other: TableSource[] =
+    freight?.artifacts?.map((otherArtifact) => ({
+      type: 'other',
+      ...otherArtifact
+    })) || [];
 
   return [...images, ...git, ...helm, ...other];
 };
