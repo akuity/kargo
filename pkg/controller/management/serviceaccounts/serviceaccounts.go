@@ -99,6 +99,16 @@ func (r *reconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Resu
 		corev1.ServiceAccountNameKey, req.Namespace,
 	)
 	ctx = logging.ContextWithLogger(ctx, logger)
+
+	if req.Namespace != r.cfg.KargoNamespace {
+		logger.Debug(
+			"ignoring ServiceAccount from unexpected namespace",
+			"expectedNamespace", r.cfg.KargoNamespace,
+			"actualNamespace", req.Namespace,
+		)
+		return ctrl.Result{}, nil
+	}
+
 	logger.Debug("reconciling ServiceAccount")
 
 	sa := &corev1.ServiceAccount{}
