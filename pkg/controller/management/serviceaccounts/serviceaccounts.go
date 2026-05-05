@@ -57,12 +57,19 @@ func SetupReconcilerWithManager(
 	err := ctrl.NewControllerManagedBy(kargoMgr).
 		For(&corev1.ServiceAccount{}).
 		WithEventFilter(
-			predicate.Funcs{
-				DeleteFunc: func(event.DeleteEvent) bool {
-					// We're only interested in soft deletes
-					return false
+			predicate.And(
+				predicate.Funcs{
+					DeleteFunc: func(event.DeleteEvent) bool {
+						// We're only interested in soft deletes
+						return false
+					},
 				},
-			},
+				// Only reconcile ServiceAccounts in Kargo's own namespace.
+				// The projects reconciler handles SAs in project namespaces.
+				predicate.NewPredicateFuncs(func(obj client.Object) bool {
+					return obj.GetNamespace() == cfg.KargoNamespace
+				}),
+			),
 		).
 		WithOptions(controller.CommonOptions(cfg.MaxConcurrentReconciles)).
 		Complete(newReconciler(kargoMgr.GetClient(), cfg))
