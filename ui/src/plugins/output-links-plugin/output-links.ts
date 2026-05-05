@@ -1,7 +1,9 @@
 import { z } from 'zod';
 
 const stepOutputLinkSchema = z.object({
-  url: z.string().min(1),
+  url: z
+    .url()
+    .refine((v) => /^https?:\/\//i.test(v), { message: 'only http/https URLs are allowed' }),
   icon: z.string().optional(),
   tooltip: z.string().optional(),
   label: z.string().optional()

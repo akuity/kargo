@@ -1,17 +1,69 @@
 import { IconDefinition } from '@fortawesome/fontawesome-svg-core';
-import * as brandIcons from '@fortawesome/free-brands-svg-icons';
-import * as solidIcons from '@fortawesome/free-solid-svg-icons';
+import {
+  faBitbucket,
+  faDocker,
+  faGitAlt,
+  faGithub,
+  faGitlab,
+  faJira,
+  faAtlassian,
+  faSlack,
+  faRedhat,
+  faGit,
+  faJenkins,
+  faDigitalOcean,
+  faGithubAlt
+} from '@fortawesome/free-brands-svg-icons';
+import {
+  faArrowUpRightFromSquare,
+  faBox,
+  faChartLine,
+  faCheckCircle,
+  faCircleNodes,
+  faCode,
+  faDatabase,
+  faExternalLink,
+  faFileCode,
+  faGlobe,
+  faLink,
+  faServer,
+  faTag
+} from '@fortawesome/free-solid-svg-icons';
+
+const ICONS: Record<string, IconDefinition> = {
+  // brand
+  faBitbucket,
+  faDocker,
+  faGitAlt,
+  faGithub,
+  faGitlab,
+  faJira,
+  faSlack,
+  faAtlassian,
+  faRedhat,
+  faGit,
+  faJenkins,
+  faDigitalOcean,
+  faGithubAlt,
+  // solid
+  faArrowUpRightFromSquare,
+  faBox,
+  faChartLine,
+  faCheckCircle,
+  faCircleNodes,
+  faCode,
+  faDatabase,
+  faFileCode,
+  faGlobe,
+  faLink,
+  faServer,
+  faTag
+};
 
 export function iconExists(name?: string): boolean {
-  if (!name) return false;
-  return name in solidIcons || name in brandIcons;
+  return !!name && name in ICONS;
 }
 
 export function resolveIcon(name?: string): IconDefinition {
-  if (!name) return solidIcons.faLink;
-  return (
-    (solidIcons[name as keyof typeof solidIcons] as IconDefinition) ??
-    (brandIcons[name as keyof typeof brandIcons] as IconDefinition) ??
-    solidIcons.faLink
-  );
+  return (name && ICONS[name]) || faExternalLink;
 }
