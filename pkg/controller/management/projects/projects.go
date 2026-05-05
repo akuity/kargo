@@ -822,26 +822,31 @@ func (r *reconciler) ensureDefaultUserRoles(
 			"name", saName,
 			"namespace", project.Name,
 		)
-		if err := r.createServiceAccountFn(
-			ctx,
-			&corev1.ServiceAccount{
-				ObjectMeta: metav1.ObjectMeta{
-					Name:        saName,
-					Namespace:   project.Name,
-					Annotations: saAnnotations,
-				},
+		desired := &corev1.ServiceAccount{
+			ObjectMeta: metav1.ObjectMeta{
+				Name:        saName,
+				Namespace:   project.Name,
+				Annotations: saAnnotations,
 			},
+		}
+		if err := r.client.Get(
+			ctx,
+			types.NamespacedName{Name: saName, Namespace: project.Name},
+			&corev1.ServiceAccount{},
 		); err != nil {
-			if apierrors.IsAlreadyExists(err) {
-				saLogger.Debug("ServiceAccount already exists in project namespace")
-				continue
+			if !apierrors.IsNotFound(err) {
+				return fmt.Errorf(
+					"error getting ServiceAccount %q in project namespace %q: %w",
+					saName, project.Name, err,
+				)
 			}
-			return fmt.Errorf(
-				"error creating ServiceAccount %q in project namespace %q: %w",
-				saName,
-				project.Name,
-				err,
-			)
+			if err = r.createServiceAccountFn(ctx, desired); err != nil {
+				return fmt.Errorf(
+					"error creating ServiceAccount %q in project namespace %q: %w",
+					saName, project.Name, err,
+				)
+			}
+			saLogger.Debug("created ServiceAccount in project namespace")
 		}
 	}
 
@@ -1000,17 +1005,38 @@ func (r *reconciler) ensureDefaultUserRoles(
 			"name", role.Name,
 			"namespace", project.Name,
 		)
-		if err := r.createRoleFn(ctx, role); err != nil {
-			if apierrors.IsAlreadyExists(err) {
-				roleLogger.Debug("Role already exists in project namespace")
-				continue
+		existing := &rbacv1.Role{}
+		if err := r.client.Get(
+			ctx,
+			client.ObjectKeyFromObject(role),
+			existing,
+		); err != nil {
+			if !apierrors.IsNotFound(err) {
+				return fmt.Errorf(
+					"error getting Role %q in project namespace %q: %w",
+					role.Name, project.Name, err,
+				)
 			}
+			if err = r.createRoleFn(ctx, role); err != nil {
+				return fmt.Errorf(
+					"error creating Role %q in project namespace %q: %w",
+					role.Name, project.Name, err,
+				)
+			}
+			roleLogger.Debug("created Role in project namespace")
+			continue
+		}
+		if reflect.DeepEqual(existing.Rules, role.Rules) {
+			continue
+		}
+		existing.Rules = role.Rules
+		if err := r.client.Update(ctx, existing); err != nil {
 			return fmt.Errorf(
-				"error creating Role %q in project namespace %q: %w",
+				"error updating Role %q in project namespace %q: %w",
 				role.Name, project.Name, err,
 			)
 		}
-		roleLogger.Debug("created Role in project namespace")
+		roleLogger.Debug("updated Role in project namespace")
 	}
 
 	for _, rbName := range allRoles {
@@ -1018,40 +1044,57 @@ func (r *reconciler) ensureDefaultUserRoles(
 			"name", rbName,
 			"namespace", project.Name,
 		)
-		if err := r.createRoleBindingFn(
-			ctx,
-			&rbacv1.RoleBinding{
-				ObjectMeta: metav1.ObjectMeta{
-					Name:      rbName,
-					Namespace: project.Name,
-					Annotations: map[string]string{
-						rbacapi.AnnotationKeyManaged: rbacapi.AnnotationValueTrue,
-					},
-				},
-				RoleRef: rbacv1.RoleRef{
-					APIGroup: rbacv1.GroupName,
-					Kind:     "Role",
-					Name:     rbName,
-				},
-				Subjects: []rbacv1.Subject{
-					{
-						Kind:      "ServiceAccount",
-						Name:      rbName,
-						Namespace: project.Name,
-					},
+		desired := &rbacv1.RoleBinding{
+			ObjectMeta: metav1.ObjectMeta{
+				Name:      rbName,
+				Namespace: project.Name,
+				Annotations: map[string]string{
+					rbacapi.AnnotationKeyManaged: rbacapi.AnnotationValueTrue,
 				},
 			},
+			RoleRef: rbacv1.RoleRef{
+				APIGroup: rbacv1.GroupName,
+				Kind:     "Role",
+				Name:     rbName,
+			},
+			Subjects: []rbacv1.Subject{{
+				Kind:      "ServiceAccount",
+				Name:      rbName,
+				Namespace: project.Name,
+			}},
+		}
+		existing := &rbacv1.RoleBinding{}
+		if err := r.client.Get(
+			ctx,
+			client.ObjectKeyFromObject(desired),
+			existing,
 		); err != nil {
-			if apierrors.IsAlreadyExists(err) {
-				rbLogger.Debug("RoleBinding already exists in project namespace")
-				continue
+			if !apierrors.IsNotFound(err) {
+				return fmt.Errorf(
+					"error getting RoleBinding %q in project namespace %q: %w",
+					rbName, project.Name, err,
+				)
 			}
+			if err = r.createRoleBindingFn(ctx, desired); err != nil {
+				return fmt.Errorf(
+					"error creating RoleBinding %q in project namespace %q: %w",
+					rbName, project.Name, err,
+				)
+			}
+			rbLogger.Debug("created RoleBinding in project namespace")
+			continue
+		}
+		if reflect.DeepEqual(existing.Subjects, desired.Subjects) {
+			continue
+		}
+		existing.Subjects = desired.Subjects
+		if err := r.client.Update(ctx, existing); err != nil {
 			return fmt.Errorf(
-				"error creating RoleBinding %q in project namespace %q: %w",
+				"error updating RoleBinding %q in project namespace %q: %w",
 				rbName, project.Name, err,
 			)
 		}
-		rbLogger.Debug("created RoleBinding in project namespace")
+		rbLogger.Debug("updated RoleBinding in project namespace")
 	}
 
 	// This ClusterRole allows those bound to it to update and delete one specific
@@ -1061,50 +1104,63 @@ func (r *reconciler) ensureDefaultUserRoles(
 		fmt.Sprintf("kargo-project-admin-%s", project.Name),
 	)
 	crLogger := logger.WithValues("name", crName)
-	if err := r.createClusterRoleFn(
-		ctx,
-		&rbacv1.ClusterRole{
-			ObjectMeta: metav1.ObjectMeta{Name: crName},
-			Rules: []rbacv1.PolicyRule{{
-				APIGroups:     []string{kargoapi.GroupVersion.Group},
-				Resources:     []string{"projects"},
-				ResourceNames: []string{project.Name},
-				Verbs:         []string{"delete", "update"},
-			}},
-		},
-	); err != nil {
-		if !apierrors.IsAlreadyExists(err) {
+	desiredCR := &rbacv1.ClusterRole{
+		ObjectMeta: metav1.ObjectMeta{Name: crName},
+		Rules: []rbacv1.PolicyRule{{
+			APIGroups:     []string{kargoapi.GroupVersion.Group},
+			Resources:     []string{"projects"},
+			ResourceNames: []string{project.Name},
+			Verbs:         []string{"delete", "update"},
+		}},
+	}
+	existingCR := &rbacv1.ClusterRole{}
+	if err := r.client.Get(ctx, client.ObjectKeyFromObject(desiredCR), existingCR); err != nil {
+		if !apierrors.IsNotFound(err) {
+			return fmt.Errorf("error getting ClusterRole %q: %w", crName, err)
+		}
+		if err = r.createClusterRoleFn(ctx, desiredCR); err != nil {
 			return fmt.Errorf("error creating ClusterRole %q: %w", crName, err)
 		}
-		crLogger.Debug("ClusterRole already exists")
+		crLogger.Debug("created ClusterRole")
+	} else if !reflect.DeepEqual(existingCR.Rules, desiredCR.Rules) {
+		existingCR.Rules = desiredCR.Rules
+		if err := r.client.Update(ctx, existingCR); err != nil {
+			return fmt.Errorf("error updating ClusterRole %q: %w", crName, err)
+		}
+		crLogger.Debug("updated ClusterRole")
 	}
-	crLogger.Debug("created ClusterRole")
 
 	crbName := crName
 	crbLogger := logger.WithValues("name", crbName)
-	logger.WithValues()
-	if err := r.createClusterRoleBindingFn(
-		ctx,
-		&rbacv1.ClusterRoleBinding{
-			ObjectMeta: metav1.ObjectMeta{Name: crbName},
-			RoleRef: rbacv1.RoleRef{
-				APIGroup: rbacv1.GroupName,
-				Kind:     "ClusterRole",
-				Name:     crName,
-			},
-			Subjects: []rbacv1.Subject{{
-				Kind:      "ServiceAccount",
-				Name:      adminRoleName,
-				Namespace: project.Name,
-			}},
+	desiredCRB := &rbacv1.ClusterRoleBinding{
+		ObjectMeta: metav1.ObjectMeta{Name: crbName},
+		RoleRef: rbacv1.RoleRef{
+			APIGroup: rbacv1.GroupName,
+			Kind:     "ClusterRole",
+			Name:     crName,
 		},
-	); err != nil {
-		if !apierrors.IsAlreadyExists(err) {
-			return fmt.Errorf("error creating ClusterRoleBinding %q: %w", crName, err)
-		}
-		crbLogger.Debug("ClusterRoleBinding already exists")
+		Subjects: []rbacv1.Subject{{
+			Kind:      "ServiceAccount",
+			Name:      adminRoleName,
+			Namespace: project.Name,
+		}},
 	}
-	crbLogger.Debug("created ClusterRoleBinding")
+	existingCRB := &rbacv1.ClusterRoleBinding{}
+	if err := r.client.Get(ctx, client.ObjectKeyFromObject(desiredCRB), existingCRB); err != nil {
+		if !apierrors.IsNotFound(err) {
+			return fmt.Errorf("error getting ClusterRoleBinding %q: %w", crbName, err)
+		}
+		if err = r.createClusterRoleBindingFn(ctx, desiredCRB); err != nil {
+			return fmt.Errorf("error creating ClusterRoleBinding %q: %w", crbName, err)
+		}
+		crbLogger.Debug("created ClusterRoleBinding")
+	} else if !reflect.DeepEqual(existingCRB.Subjects, desiredCRB.Subjects) {
+		existingCRB.Subjects = desiredCRB.Subjects
+		if err := r.client.Update(ctx, existingCRB); err != nil {
+			return fmt.Errorf("error updating ClusterRoleBinding %q: %w", crbName, err)
+		}
+		crbLogger.Debug("updated ClusterRoleBinding")
+	}
 
 	return nil
 }

@@ -362,6 +362,27 @@ func TestEnsureControllerPermissions(t *testing.T) {
 			},
 		},
 		{
+			name: "error getting RoleBinding",
+			client: fake.NewClientBuilder().
+				WithScheme(scheme).
+				WithObjects(testProject).
+				WithInterceptorFuncs(interceptor.Funcs{
+					Get: func(
+						context.Context,
+						client.WithWatch,
+						client.ObjectKey,
+						client.Object,
+						...client.GetOption,
+					) error {
+						return fmt.Errorf("something went wrong")
+					},
+				}).Build(),
+			assertions: func(t *testing.T, _ client.Client, err error) {
+				require.ErrorContains(t, err, "error getting RoleBinding")
+				require.ErrorContains(t, err, "something went wrong")
+			},
+		},
+		{
 			name: "error creating RoleBinding",
 			client: fake.NewClientBuilder().
 				WithScheme(scheme).
@@ -448,15 +469,6 @@ func TestEnsureControllerPermissions(t *testing.T) {
 				require.Len(t, rb.Subjects, 1)
 				require.Equal(
 					t,
-					rbacv1.RoleRef{
-						APIGroup: rbacv1.GroupName,
-						Kind:     "ClusterRole",
-						Name:     controllerReadSecretsClusterRoleName,
-					},
-					rb.RoleRef,
-				)
-				require.Equal(
-					t,
 					rbacv1.Subject{
 						Kind:      "ServiceAccount",
 						Name:      testControllerSARef.Name,
@@ -467,7 +479,39 @@ func TestEnsureControllerPermissions(t *testing.T) {
 			},
 		},
 		{
-			name: "error updating existing RoleBinding",
+			name: "no update when RoleBinding subjects already match",
+			client: fake.NewClientBuilder().
+				WithScheme(scheme).
+				WithObjects(
+					testProject,
+					&rbacv1.RoleBinding{
+						ObjectMeta: metav1.ObjectMeta{
+							Namespace: testProject.Name,
+							Name:      getRoleBindingName(testControllerSARef.Name),
+						},
+						Subjects: []rbacv1.Subject{{
+							Kind:      "ServiceAccount",
+							Name:      testControllerSARef.Name,
+							Namespace: cfg.KargoNamespace,
+						}},
+					},
+				).
+				WithInterceptorFuncs(interceptor.Funcs{
+					Update: func(
+						context.Context,
+						client.WithWatch,
+						client.Object,
+						...client.UpdateOption,
+					) error {
+						return fmt.Errorf("Update should not be called when subjects already match")
+					},
+				}).Build(),
+			assertions: func(t *testing.T, _ client.Client, err error) {
+				require.NoError(t, err)
+			},
+		},
+		{
+			name: "error updating RoleBinding",
 			client: fake.NewClientBuilder().
 				WithScheme(scheme).
 				WithObjects(
@@ -490,7 +534,7 @@ func TestEnsureControllerPermissions(t *testing.T) {
 					},
 				}).Build(),
 			assertions: func(t *testing.T, _ client.Client, err error) {
-				require.ErrorContains(t, err, "error updating existing RoleBinding")
+				require.ErrorContains(t, err, "error updating RoleBinding")
 				require.ErrorContains(t, err, "something went wrong")
 			},
 		},

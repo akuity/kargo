@@ -35,7 +35,6 @@ type managementControllerOptions struct {
 	QPS        float32
 	Burst      int
 
-	KargoNamespace               string
 	ManageControllerRoleBindings bool
 
 	MetricsBindAddress string
@@ -71,7 +70,6 @@ func (o *managementControllerOptions) complete() {
 	o.QPS = types.MustParseFloat32(os.GetEnv("KUBE_API_QPS", "50.0"))
 	o.Burst = types.MustParseInt(os.GetEnv("KUBE_API_BURST", "300"))
 
-	o.KargoNamespace = os.GetEnv("KARGO_NAMESPACE", "kargo")
 	o.ManageControllerRoleBindings = types.MustParseBool(os.GetEnv("MANAGE_CONTROLLER_ROLE_BINDINGS", "true"))
 
 	o.MetricsBindAddress = os.GetEnv("METRICS_BIND_ADDRESS", "0")
@@ -241,11 +239,6 @@ func (o *managementControllerOptions) setupManager(
 			PprofBindAddress: o.PprofBindAddress,
 			Cache: cache.Options{
 				ByObject: map[client.Object]cache.ByObject{
-					&corev1.ServiceAccount{}: {
-						Namespaces: map[string]cache.Config{
-							o.KargoNamespace: {},
-						},
-					},
 					&corev1.Secret{}: {
 						Namespaces: namespaceCacheConfigs,
 					},
