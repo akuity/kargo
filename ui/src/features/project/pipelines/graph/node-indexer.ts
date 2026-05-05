@@ -1,8 +1,8 @@
 import { WarehouseExpanded } from '@ui/extend/types';
-import { RepoSubscription, Stage } from '@ui/gen/api/v1alpha1/generated_pb';
+import { RepoSubscription, Stage, Warehouse } from '@ui/gen/api/v1alpha1/generated_pb';
 
 export const warehouseIndexer = {
-  index: (warehouse: WarehouseExpanded) => {
+  index: (warehouse: Pick<Warehouse, 'metadata'>) => {
     const warehouseUID = warehouse?.metadata?.uid;
     const warehouseName = warehouse?.metadata?.name;
 
