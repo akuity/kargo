@@ -135,6 +135,31 @@ func TestWatchStages(t *testing.T) {
 				require.NotContains(t, names, "stage-wh2")
 			},
 		},
+		{
+			name: "summary=true strips heavy fields from streamed Stages",
+			req: &svcv1alpha1.WatchStagesRequest{
+				Project: projectName,
+				Summary: true,
+			},
+			stageEvents:   []*kargoapi.Stage{stageWithHeavyFieldsIn(projectName)},
+			expectedCount: 1,
+			assert: func(t *testing.T, responses []*svcv1alpha1.WatchStagesResponse) {
+				require.Len(t, responses, 1)
+				assertStageStripped(t, responses[0].GetStage())
+			},
+		},
+		{
+			name: "summary=false retains heavy fields in streamed Stages",
+			req: &svcv1alpha1.WatchStagesRequest{
+				Project: projectName,
+			},
+			stageEvents:   []*kargoapi.Stage{stageWithHeavyFieldsIn(projectName)},
+			expectedCount: 1,
+			assert: func(t *testing.T, responses []*svcv1alpha1.WatchStagesResponse) {
+				require.Len(t, responses, 1)
+				assertStageNotStripped(t, responses[0].GetStage())
+			},
+		},
 	}
 	for _, tc := range testCases {
 		t.Run(tc.name, func(t *testing.T) {

@@ -33,7 +33,8 @@ export const PipelineListView = (props: PipelineListViewProps) => {
   useEventsWatcher(
     props.project,
     undefined,
-    freightTimelineControllerContext?.preferredFilter?.warehouses || []
+    freightTimelineControllerContext?.preferredFilter?.warehouses || [],
+    { summary: true }
   );
 
   const [filters, setFilters] = useState<Filter>({

@@ -11,4 +11,16 @@ export type ListStagesParams = {
    * Warehouse names to filter Stages by
    */
   freightOrigins?: string[];
+  /**
+   * Strip heavy fields from each Stage
+   */
+  summary?: boolean;
+  /**
+   * Stream Stage changes as Server-Sent Events instead of returning a list
+   */
+  watch?: boolean;
+  /**
+   * When watch=true, resume after this ResourceVersion
+   */
+  resourceVersion?: string;
 };

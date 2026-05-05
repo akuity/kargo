@@ -7,8 +7,11 @@ import (
 	"fmt"
 	"slices"
 	"strings"
+	"sync"
 	"time"
 
+	"golang.org/x/sync/errgroup"
+	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/types"
 	"sigs.k8s.io/controller-runtime/pkg/client"
@@ -47,13 +50,15 @@ type ListStagesOptions struct {
 }
 
 // ListStagesByWarehouses lists Stages in the given Project, optionally
-// filtered by the provided options.
+// filtered by the provided options. The returned StageList preserves
+// ListMeta (notably ResourceVersion) from the underlying List call so
+// callers can perform a gapless list-then-watch.
 func ListStagesByWarehouses(
 	ctx context.Context,
 	c client.Client,
 	project string,
 	opts *ListStagesOptions,
-) ([]kargoapi.Stage, error) {
+) (*kargoapi.StageList, error) {
 	if opts == nil {
 		opts = &ListStagesOptions{}
 	}
@@ -62,15 +67,16 @@ func ListStagesByWarehouses(
 		return nil, err
 	}
 	if len(opts.Warehouses) == 0 {
-		return list.Items, nil
+		return &list, nil
 	}
-	var stages []kargoapi.Stage
+	filtered := list
+	filtered.Items = filtered.Items[:0:0]
 	for _, stage := range list.Items {
 		if StageMatchesAnyWarehouse(&stage, opts.Warehouses) {
-			stages = append(stages, stage)
+			filtered.Items = append(filtered.Items, stage)
 		}
 	}
-	return stages, nil
+	return &filtered, nil
 }
 
 // StageMatchesAnyWarehouse returns true if the Stage requests Freight that
@@ -315,4 +321,111 @@ func AbortStageFreightVerification(
 		ar.Actor = FormatEventUserActor(u)
 	}
 	return patchAnnotation(ctx, c, stage, kargoapi.AnnotationKeyAbort, ar.String())
+}
+
+// StripStageForSummary mutates the Stage in place, clearing the heavy
+// payload fields that list and graph views do not need. The surviving
+// shape still preserves has-verification and promotion-step-count
+// information (via stage.Spec.Verification != nil and
+// len(stage.Spec.PromotionTemplate.Spec.Steps)), so callers do not have
+// to refetch via GetStage for those bits.
+//
+// Stripped fields:
+//   - status.freightHistory truncated to the current element (index 0)
+//   - status.health.output cleared (use ListStageHealthOutputs for lazy fetch)
+//   - spec.promotionTemplate.spec.steps[*]: config, if, and vars cleared.
+//     Step uses, task, as, continueOnError, and retry are kept so callers
+//     can still identify and count steps without falling back to GetStage.
+func StripStageForSummary(stage *kargoapi.Stage) {
+	if stage == nil {
+		return
+	}
+	if len(stage.Status.FreightHistory) > 1 {
+		stage.Status.FreightHistory = stage.Status.FreightHistory[:1]
+	}
+	if stage.Spec.PromotionTemplate != nil {
+		steps := stage.Spec.PromotionTemplate.Spec.Steps
+		for i := range steps {
+			steps[i].Config = nil
+			steps[i].If = ""
+			steps[i].Vars = nil
+		}
+	}
+	if stage.Status.Health != nil {
+		stage.Status.Health.Output = nil
+	}
+}
+
+// listStageHealthOutputsConcurrency caps the number of concurrent Gets
+// issued by ListStageHealthOutputs. Sized to keep the apiserver/SAR fan-out
+// bounded for typical viewport-sized batches without serializing them.
+const listStageHealthOutputsConcurrency = 16
+
+// ListStageHealthOutputs returns the raw health output blob for each Stage
+// in the given project whose name appears in stageNames. Empty and duplicate
+// entries in stageNames are ignored. Stages that do not exist in the project
+// or have no recorded health output are omitted from the returned map.
+//
+// Intended for clients that list Stages with the summary projection (see
+// StripStageForSummary) and need to lazily resolve per-Stage health only for
+// the subset currently in viewport. The implementation reads each requested
+// Stage individually so server-side work scales with the request, not the
+// project size.
+func ListStageHealthOutputs(
+	ctx context.Context,
+	c client.Client,
+	project string,
+	stageNames []string,
+) (map[string]string, error) {
+	seen := make(map[string]struct{}, len(stageNames))
+	wanted := make([]string, 0, len(stageNames))
+	for _, n := range stageNames {
+		if n == "" {
+			continue
+		}
+		if _, ok := seen[n]; ok {
+			continue
+		}
+		seen[n] = struct{}{}
+		wanted = append(wanted, n)
+	}
+	if len(wanted) == 0 {
+		return map[string]string{}, nil
+	}
+
+	g, ctx := errgroup.WithContext(ctx)
+	g.SetLimit(listStageHealthOutputsConcurrency)
+
+	var (
+		mu      sync.Mutex
+		outputs = make(map[string]string, len(wanted))
+	)
+	for _, name := range wanted {
+		g.Go(func() error {
+			var stage kargoapi.Stage
+			err := c.Get(
+				ctx,
+				client.ObjectKey{Namespace: project, Name: name},
+				&stage,
+			)
+			if err != nil {
+				if apierrors.IsNotFound(err) {
+					return nil
+				}
+				return fmt.Errorf("get stage %q: %w", name, err)
+			}
+			if stage.Status.Health == nil || stage.Status.Health.Output == nil {
+				return nil
+			}
+			raw := string(stage.Status.Health.Output.Raw)
+			mu.Lock()
+			outputs[name] = raw
+			mu.Unlock()
+			return nil
+		})
+	}
+	if err := g.Wait(); err != nil {
+		return nil, err
+	}
+	return outputs, nil
 }

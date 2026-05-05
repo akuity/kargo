@@ -3,6 +3,7 @@ package server
 import (
 	"context"
 	"encoding/json"
+	"fmt"
 	"net/http"
 	"net/http/httptest"
 	"testing"
@@ -10,11 +11,14 @@ import (
 	"connectrpc.com/connect"
 	"github.com/stretchr/testify/require"
 	corev1 "k8s.io/api/core/v1"
+	apiextensionsv1 "k8s.io/apiextensions-apiserver/pkg/apis/apiextensions/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
+	"k8s.io/apimachinery/pkg/watch"
 	"k8s.io/client-go/rest"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/client/fake"
+	"sigs.k8s.io/controller-runtime/pkg/client/interceptor"
 
 	svcv1alpha1 "github.com/akuity/kargo/api/service/v1alpha1"
 	kargoapi "github.com/akuity/kargo/api/v1alpha1"
@@ -101,6 +105,7 @@ func TestListStages(t *testing.T) {
 		name         string
 		req          *svcv1alpha1.ListStagesRequest
 		objects      []client.Object
+		interceptor  interceptor.Funcs
 		errExpected  bool
 		expectedCode connect.Code
 		assert       func(*testing.T, *connect.Response[svcv1alpha1.ListStagesResponse])
@@ -191,6 +196,64 @@ func TestListStages(t *testing.T) {
 				require.Empty(t, res.Msg.GetStages())
 			},
 		},
+		{
+			name: "summary=true strips heavy fields from each Stage",
+			req: &svcv1alpha1.ListStagesRequest{
+				Project: "kargo-demo",
+				Summary: true,
+			},
+			objects: []client.Object{
+				testNamespace,
+				stageWithHeavyFields(),
+			},
+			assert: func(t *testing.T, res *connect.Response[svcv1alpha1.ListStagesResponse]) {
+				require.Len(t, res.Msg.GetStages(), 1)
+				assertStageStripped(t, res.Msg.GetStages()[0])
+			},
+		},
+		{
+			name: "summary=false retains all fields",
+			req: &svcv1alpha1.ListStagesRequest{
+				Project: "kargo-demo",
+			},
+			objects: []client.Object{
+				testNamespace,
+				stageWithHeavyFields(),
+			},
+			assert: func(t *testing.T, res *connect.Response[svcv1alpha1.ListStagesResponse]) {
+				require.Len(t, res.Msg.GetStages(), 1)
+				assertStageNotStripped(t, res.Msg.GetStages()[0])
+			},
+		},
+		{
+			name: "ResourceVersion is propagated from underlying StageList",
+			req: &svcv1alpha1.ListStagesRequest{
+				Project: "kargo-demo",
+			},
+			objects: []client.Object{
+				testNamespace,
+				stageDirectWH1,
+			},
+			interceptor: interceptor.Funcs{
+				List: func(
+					ctx context.Context,
+					c client.WithWatch,
+					list client.ObjectList,
+					opts ...client.ListOption,
+				) error {
+					if err := c.List(ctx, list, opts...); err != nil {
+						return err
+					}
+					if sl, ok := list.(*kargoapi.StageList); ok {
+						sl.ResourceVersion = "fake-rv-77"
+					}
+					return nil
+				},
+			},
+			assert: func(t *testing.T, res *connect.Response[svcv1alpha1.ListStagesResponse]) {
+				require.Equal(t, "fake-rv-77", res.Msg.GetResourceVersion())
+			},
+		},
 	}
 	for _, tc := range testCases {
 		t.Run(tc.name, func(t *testing.T) {
@@ -219,6 +282,7 @@ func TestListStages(t *testing.T) {
 							}
 							b = b.WithObjects(copies...)
 						}
+						b = b.WithInterceptorFuncs(tc.interceptor)
 						return b.Build(), nil
 					},
 				},
@@ -369,6 +433,66 @@ func Test_server_listStages(t *testing.T) {
 					require.Len(t, stages.Items, 2)
 				},
 			},
+			{
+				name: "summary=true strips heavy fields",
+				url:  "/v1beta1/projects/" + testProject.Name + "/stages?summary=true",
+				clientBuilder: fake.NewClientBuilder().WithObjects(
+					testProject,
+					stageWithHeavyFieldsIn(testProject.Name),
+				),
+				assertions: func(t *testing.T, w *httptest.ResponseRecorder, _ client.Client) {
+					require.Equal(t, http.StatusOK, w.Code)
+
+					stages := &kargoapi.StageList{}
+					require.NoError(t, json.Unmarshal(w.Body.Bytes(), stages))
+					require.Len(t, stages.Items, 1)
+					assertStageStripped(t, &stages.Items[0])
+				},
+			},
+			{
+				name: "summary=false retains heavy fields",
+				url:  "/v1beta1/projects/" + testProject.Name + "/stages",
+				clientBuilder: fake.NewClientBuilder().WithObjects(
+					testProject,
+					stageWithHeavyFieldsIn(testProject.Name),
+				),
+				assertions: func(t *testing.T, w *httptest.ResponseRecorder, _ client.Client) {
+					require.Equal(t, http.StatusOK, w.Code)
+
+					stages := &kargoapi.StageList{}
+					require.NoError(t, json.Unmarshal(w.Body.Bytes(), stages))
+					require.Len(t, stages.Items, 1)
+					assertStageNotStripped(t, &stages.Items[0])
+				},
+			},
+			{
+				name: "ListMeta.ResourceVersion is propagated to REST response body",
+				clientBuilder: fake.NewClientBuilder().
+					WithObjects(testProject, stageDirectWH1).
+					WithInterceptorFuncs(interceptor.Funcs{
+						List: func(
+							ctx context.Context,
+							c client.WithWatch,
+							list client.ObjectList,
+							opts ...client.ListOption,
+						) error {
+							if err := c.List(ctx, list, opts...); err != nil {
+								return err
+							}
+							if sl, ok := list.(*kargoapi.StageList); ok {
+								sl.ResourceVersion = "fake-rv-rest"
+							}
+							return nil
+						},
+					}),
+				assertions: func(t *testing.T, w *httptest.ResponseRecorder, _ client.Client) {
+					require.Equal(t, http.StatusOK, w.Code)
+
+					stages := &kargoapi.StageList{}
+					require.NoError(t, json.Unmarshal(w.Body.Bytes(), stages))
+					require.Equal(t, "fake-rv-rest", stages.ResourceVersion)
+				},
+			},
 		},
 	)
 }
@@ -514,6 +638,143 @@ func Test_server_listStages_watch(t *testing.T) {
 					require.Equal(t, "text/event-stream", w.Header().Get("Content-Type"))
 				},
 			},
+			{
+				name: "summary=true strips heavy fields from streamed Stages",
+				url:  "/v1beta1/projects/" + projectName + "/stages?watch=true&summary=true",
+				clientBuilder: fake.NewClientBuilder().WithObjects(
+					&kargoapi.Project{ObjectMeta: metav1.ObjectMeta{Name: projectName}},
+				),
+				operations: func(ctx context.Context, c client.Client) {
+					_ = c.Create(ctx, stageWithHeavyFieldsIn(projectName))
+				},
+				assertions: func(t *testing.T, w *httptest.ResponseRecorder, _ client.Client) {
+					require.Equal(t, http.StatusOK, w.Code)
+					body := w.Body.String()
+					// Heavy field markers must not appear; skeleton markers should.
+					require.Contains(t, body, "stage-heavy")
+					require.NotContains(t, body, `"output":{"app":"x"}`)
+					require.NotContains(t, body, `"config":{"k":"v"}`)
+					require.NotContains(t, body, `"if":"true"`)
+				},
+			},
+			{
+				name: "summary=false retains heavy fields in streamed Stages",
+				url:  "/v1beta1/projects/" + projectName + "/stages?watch=true",
+				clientBuilder: fake.NewClientBuilder().WithObjects(
+					&kargoapi.Project{ObjectMeta: metav1.ObjectMeta{Name: projectName}},
+				),
+				operations: func(ctx context.Context, c client.Client) {
+					_ = c.Create(ctx, stageWithHeavyFieldsIn(projectName))
+				},
+				assertions: func(t *testing.T, w *httptest.ResponseRecorder, _ client.Client) {
+					require.Equal(t, http.StatusOK, w.Code)
+					body := w.Body.String()
+					require.Contains(t, body, "stage-heavy")
+					require.Contains(t, body, `"output":{"app":"x"}`)
+					require.Contains(t, body, `"config":{"k":"v"}`)
+				},
+			},
+			{
+				name: "resourceVersion query param is forwarded to underlying watch",
+				url:  "/v1beta1/projects/" + projectName + "/stages?watch=true&resourceVersion=fake-rv-123",
+				clientBuilder: fake.NewClientBuilder().
+					WithObjects(&kargoapi.Project{ObjectMeta: metav1.ObjectMeta{Name: projectName}}).
+					WithInterceptorFuncs(interceptor.Funcs{
+						Watch: func(
+							ctx context.Context,
+							c client.WithWatch,
+							obj client.ObjectList,
+							opts ...client.ListOption,
+						) (watch.Interface, error) {
+							seen := ""
+							for _, o := range opts {
+								if rawOpts, ok := o.(*client.ListOptions); ok && rawOpts.Raw != nil {
+									seen = rawOpts.Raw.ResourceVersion
+								}
+							}
+							if seen != "fake-rv-123" {
+								return nil, fmt.Errorf(
+									"expected resourceVersion=fake-rv-123, got %q",
+									seen,
+								)
+							}
+							return c.Watch(ctx, obj, opts...)
+						},
+					}),
+				assertions: func(t *testing.T, w *httptest.ResponseRecorder, _ client.Client) {
+					require.Equal(t, http.StatusOK, w.Code)
+					require.Equal(t, "text/event-stream", w.Header().Get("Content-Type"))
+				},
+			},
 		},
 	)
+}
+
+func stageWithHeavyFields() *kargoapi.Stage {
+	return stageWithHeavyFieldsIn("kargo-demo")
+}
+
+func stageWithHeavyFieldsIn(namespace string) *kargoapi.Stage {
+	const name = "stage-heavy"
+	rawConfig := &apiextensionsv1.JSON{Raw: []byte(`{"k":"v"}`)}
+	rawOutput := &apiextensionsv1.JSON{Raw: []byte(`{"app":"x"}`)}
+	return &kargoapi.Stage{
+		ObjectMeta: metav1.ObjectMeta{
+			Name:      name,
+			Namespace: namespace,
+		},
+		Spec: kargoapi.StageSpec{
+			RequestedFreight: []kargoapi.FreightRequest{{
+				Origin: kargoapi.FreightOrigin{
+					Kind: kargoapi.FreightOriginKindWarehouse,
+					Name: "warehouse-1",
+				},
+				Sources: kargoapi.FreightSources{Direct: true},
+			}},
+			PromotionTemplate: &kargoapi.PromotionTemplate{
+				Spec: kargoapi.PromotionTemplateSpec{
+					Steps: []kargoapi.PromotionStep{{
+						Uses:   "copy",
+						As:     "step-0",
+						Config: rawConfig,
+						If:     "true",
+						Vars:   []kargoapi.ExpressionVariable{{Name: "v", Value: "1"}},
+					}},
+				},
+			},
+		},
+		Status: kargoapi.StageStatus{
+			FreightHistory: kargoapi.FreightHistory{
+				{Freight: map[string]kargoapi.FreightReference{"w": {Name: "f0"}}},
+				{Freight: map[string]kargoapi.FreightReference{"w": {Name: "f1"}}},
+			},
+			Health: &kargoapi.Health{
+				Status: kargoapi.HealthStateHealthy,
+				Output: rawOutput,
+			},
+		},
+	}
+}
+
+func assertStageStripped(t *testing.T, s *kargoapi.Stage) {
+	t.Helper()
+	require.LessOrEqual(t, len(s.Status.FreightHistory), 1)
+	require.NotNil(t, s.Status.Health)
+	require.Nil(t, s.Status.Health.Output)
+	require.NotNil(t, s.Spec.PromotionTemplate)
+	for i, step := range s.Spec.PromotionTemplate.Spec.Steps {
+		require.Nilf(t, step.Config, "step %d config", i)
+		require.Emptyf(t, step.If, "step %d if", i)
+		require.Nilf(t, step.Vars, "step %d vars", i)
+	}
+}
+
+func assertStageNotStripped(t *testing.T, s *kargoapi.Stage) {
+	t.Helper()
+	require.NotNil(t, s.Status.Health)
+	require.NotNil(t, s.Status.Health.Output)
+	require.Greater(t, len(s.Status.FreightHistory), 1)
+	require.NotNil(t, s.Spec.PromotionTemplate)
+	require.NotEmpty(t, s.Spec.PromotionTemplate.Spec.Steps)
+	require.NotNil(t, s.Spec.PromotionTemplate.Spec.Steps[0].Config)
 }

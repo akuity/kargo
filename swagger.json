@@ -2314,6 +2314,53 @@
         }
       }
     },
+    "/v1beta1/projects/{project}/stage-health-outputs": {
+      "get": {
+        "security": [
+          {
+            "BearerAuth": []
+          }
+        ],
+        "description": "Return the raw health output blob for the specified Stages\nin a project. Stages that do not exist or have no recorded\nhealth output are omitted from the response. Intended for\nclients that use ListStages with summary=true (which omits the output\nblob) and need to lazily resolve health for Stages currently\nin viewport.",
+        "produces": [
+          "application/json"
+        ],
+        "tags": [
+          "Core",
+          "Project-Level"
+        ],
+        "summary": "Get Stage Health Outputs",
+        "operationId": "GetStageHealthOutputs",
+        "parameters": [
+          {
+            "type": "string",
+            "description": "Project name",
+            "name": "project",
+            "in": "path",
+            "required": true
+          },
+          {
+            "type": "array",
+            "items": {
+              "type": "string"
+            },
+            "collectionFormat": "multi",
+            "description": "Stage names to fetch health outputs for",
+            "name": "stageNames",
+            "in": "query",
+            "required": true
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "schema": {
+              "$ref": "#/definitions/github_com_akuity_kargo_api_service_v1alpha1.GetStageHealthOutputsResponse"
+            }
+          }
+        }
+      }
+    },
     "/v1beta1/projects/{project}/stages": {
       "get": {
         "security": [
@@ -2321,7 +2368,7 @@
             "BearerAuth": []
           }
         ],
-        "description": "List Stage resources from a project's namespace. Returns a\nStageList resource.",
+        "description": "List Stage resources from a project's namespace. Returns a\nStageList resource. Pass summary=true to receive a lightweight\nprojection for list and graph views.",
         "produces": [
           "application/json"
         ],
@@ -2347,6 +2394,24 @@
             "collectionFormat": "csv",
             "description": "Warehouse names to filter Stages by",
             "name": "freightOrigins",
+            "in": "query"
+          },
+          {
+            "type": "boolean",
+            "description": "Strip heavy fields from each Stage",
+            "name": "summary",
+            "in": "query"
+          },
+          {
+            "type": "boolean",
+            "description": "Stream Stage changes as Server-Sent Events instead of returning a list",
+            "name": "watch",
+            "in": "query"
+          },
+          {
+            "type": "string",
+            "description": "When watch=true, resume after this ResourceVersion",
+            "name": "resourceVersion",
             "in": "query"
           }
         ],
@@ -5208,6 +5273,18 @@
           "type": "array",
           "items": {
             "$ref": "#/definitions/V1PolicyRule"
+          }
+        }
+      }
+    },
+    "github_com_akuity_kargo_api_service_v1alpha1.GetStageHealthOutputsResponse": {
+      "type": "object",
+      "properties": {
+        "health_outputs": {
+          "description": "health_outputs maps Stage name to the raw JSON of its\nStage.status.health.output.raw field. Stages that do not exist in the\nproject or have no health output recorded are omitted from the map.",
+          "type": "object",
+          "additionalProperties": {
+            "type": "string"
           }
         }
       }

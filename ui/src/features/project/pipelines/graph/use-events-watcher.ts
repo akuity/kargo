@@ -12,13 +12,16 @@ export const useEventsWatcher = (
     onStage: (stage: Stage) => void;
     onWarehouse: (warehouse: Warehouse) => void;
   },
-  warehouses?: string[]
+  warehouses?: string[],
+  opts?: { summary?: boolean }
 ) => {
   const client = useQueryClient();
   const isWindowVisible = useDocumentEvent(
     'visibilitychange',
     () => document.visibilityState === 'visible'
   );
+
+  const summary = opts?.summary ?? false;
 
   useEffect(() => {
     if (!isWindowVisible || !project) {
@@ -27,7 +30,7 @@ export const useEventsWatcher = (
 
     const watcher = new Watcher(project, client);
 
-    watcher.watchStages(act?.onStage, warehouses);
+    watcher.watchStages(act?.onStage, warehouses, { summary });
     watcher.watchWarehouses({
       onWarehouseEvent: act?.onWarehouse,
       refreshHook: queryCache.freight.refetchQueryFreight
@@ -36,5 +39,5 @@ export const useEventsWatcher = (
     return () => {
       watcher.cancelWatch();
     };
-  }, [isWindowVisible, project, (warehouses || []).join(',')]);
+  }, [isWindowVisible, project, (warehouses || []).join(','), summary]);
 };

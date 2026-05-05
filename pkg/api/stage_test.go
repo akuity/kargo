@@ -126,7 +126,7 @@ func TestListStagesByWarehouses(t *testing.T) {
 		opts        *ListStagesOptions
 		objects     []client.Object
 		interceptor interceptor.Funcs
-		assertions  func(*testing.T, []kargoapi.Stage, error)
+		assertions  func(*testing.T, *kargoapi.StageList, error)
 	}{
 		{
 			name: "error listing Stages",
@@ -140,9 +140,9 @@ func TestListStagesByWarehouses(t *testing.T) {
 					return errors.New("something went wrong")
 				},
 			},
-			assertions: func(t *testing.T, stages []kargoapi.Stage, err error) {
+			assertions: func(t *testing.T, list *kargoapi.StageList, err error) {
 				require.ErrorContains(t, err, "something went wrong")
-				require.Nil(t, stages)
+				require.Nil(t, list)
 			},
 		},
 		{
@@ -152,9 +152,10 @@ func TestListStagesByWarehouses(t *testing.T) {
 				stageInProjectFromWarehouse2,
 				stageInOtherProject,
 			},
-			assertions: func(t *testing.T, stages []kargoapi.Stage, err error) {
+			assertions: func(t *testing.T, list *kargoapi.StageList, err error) {
 				require.NoError(t, err)
-				require.Len(t, stages, 2)
+				require.NotNil(t, list)
+				require.Len(t, list.Items, 2)
 			},
 		},
 		{
@@ -165,9 +166,10 @@ func TestListStagesByWarehouses(t *testing.T) {
 				stageInProjectFromWarehouse2,
 				stageInOtherProject,
 			},
-			assertions: func(t *testing.T, stages []kargoapi.Stage, err error) {
+			assertions: func(t *testing.T, list *kargoapi.StageList, err error) {
 				require.NoError(t, err)
-				require.Len(t, stages, 2)
+				require.NotNil(t, list)
+				require.Len(t, list.Items, 2)
 			},
 		},
 		{
@@ -180,10 +182,11 @@ func TestListStagesByWarehouses(t *testing.T) {
 				stageInProjectFromWarehouse2,
 				stageInOtherProject,
 			},
-			assertions: func(t *testing.T, stages []kargoapi.Stage, err error) {
+			assertions: func(t *testing.T, list *kargoapi.StageList, err error) {
 				require.NoError(t, err)
-				require.Len(t, stages, 1)
-				require.Equal(t, "stage-1", stages[0].Name)
+				require.NotNil(t, list)
+				require.Len(t, list.Items, 1)
+				require.Equal(t, "stage-1", list.Items[0].Name)
 			},
 		},
 		{
@@ -195,9 +198,40 @@ func TestListStagesByWarehouses(t *testing.T) {
 				stageInProjectFromWarehouse1,
 				stageInProjectFromWarehouse2,
 			},
-			assertions: func(t *testing.T, stages []kargoapi.Stage, err error) {
+			assertions: func(t *testing.T, list *kargoapi.StageList, err error) {
 				require.NoError(t, err)
-				require.Empty(t, stages)
+				require.NotNil(t, list)
+				require.Empty(t, list.Items)
+			},
+		},
+		{
+			name: "ListMeta.ResourceVersion from underlying List is preserved",
+			objects: []client.Object{
+				stageInProjectFromWarehouse1,
+				stageInProjectFromWarehouse2,
+			},
+			interceptor: interceptor.Funcs{
+				List: func(
+					ctx context.Context,
+					c client.WithWatch,
+					list client.ObjectList,
+					opts ...client.ListOption,
+				) error {
+					if err := c.List(ctx, list, opts...); err != nil {
+						return err
+					}
+					stageList, ok := list.(*kargoapi.StageList)
+					if !ok {
+						return nil
+					}
+					stageList.ResourceVersion = "fake-rv-42"
+					return nil
+				},
+			},
+			assertions: func(t *testing.T, list *kargoapi.StageList, err error) {
+				require.NoError(t, err)
+				require.NotNil(t, list)
+				require.Equal(t, "fake-rv-42", list.ResourceVersion)
 			},
 		},
 	}
@@ -208,10 +242,10 @@ func TestListStagesByWarehouses(t *testing.T) {
 				WithObjects(testCase.objects...).
 				WithInterceptorFuncs(testCase.interceptor).
 				Build()
-			stages, err := ListStagesByWarehouses(
+			list, err := ListStagesByWarehouses(
 				t.Context(), c, testProject, testCase.opts,
 			)
-			testCase.assertions(t, stages, err)
+			testCase.assertions(t, list, err)
 		})
 	}
 }
@@ -906,4 +940,335 @@ func TestAnnotateStageWithArgoCDContext(t *testing.T) {
 
 		require.NotContains(t, stage.Annotations, kargoapi.AnnotationKeyArgoCDContext)
 	})
+}
+
+func TestStripStageForSummary(t *testing.T) {
+	rawConfig := &apiextensionsv1.JSON{Raw: []byte(`{"to":"out"}`)}
+	rawOutput := &apiextensionsv1.JSON{Raw: []byte(`{"status":"Healthy"}`)}
+
+	testCases := []struct {
+		name   string
+		stage  *kargoapi.Stage
+		assert func(*testing.T, *kargoapi.Stage)
+	}{
+		{
+			name:   "nil Stage is a no-op",
+			stage:  nil,
+			assert: func(*testing.T, *kargoapi.Stage) {},
+		},
+		{
+			name:  "empty Stage is left untouched",
+			stage: &kargoapi.Stage{},
+			assert: func(t *testing.T, s *kargoapi.Stage) {
+				require.Empty(t, s.Status.FreightHistory)
+				require.Nil(t, s.Spec.PromotionTemplate)
+				require.Nil(t, s.Status.Health)
+			},
+		},
+		{
+			name: "FreightHistory with one entry is preserved",
+			stage: &kargoapi.Stage{
+				Status: kargoapi.StageStatus{
+					FreightHistory: kargoapi.FreightHistory{
+						{Freight: map[string]kargoapi.FreightReference{"w": {Name: "f0"}}},
+					},
+				},
+			},
+			assert: func(t *testing.T, s *kargoapi.Stage) {
+				require.Len(t, s.Status.FreightHistory, 1)
+				require.Equal(t, "f0", s.Status.FreightHistory[0].Freight["w"].Name)
+			},
+		},
+		{
+			name: "FreightHistory is truncated to the current entry",
+			stage: &kargoapi.Stage{
+				Status: kargoapi.StageStatus{
+					FreightHistory: kargoapi.FreightHistory{
+						{Freight: map[string]kargoapi.FreightReference{"w": {Name: "f0"}}},
+						{Freight: map[string]kargoapi.FreightReference{"w": {Name: "f1"}}},
+						{Freight: map[string]kargoapi.FreightReference{"w": {Name: "f2"}}},
+					},
+				},
+			},
+			assert: func(t *testing.T, s *kargoapi.Stage) {
+				require.Len(t, s.Status.FreightHistory, 1)
+				require.Equal(t, "f0", s.Status.FreightHistory[0].Freight["w"].Name)
+			},
+		},
+		{
+			name: "PromotionTemplate step bodies are cleared but skeletons kept",
+			stage: &kargoapi.Stage{
+				Spec: kargoapi.StageSpec{
+					PromotionTemplate: &kargoapi.PromotionTemplate{
+						Spec: kargoapi.PromotionTemplateSpec{
+							Steps: []kargoapi.PromotionStep{
+								{
+									Uses:            "copy",
+									As:              "step-0",
+									Config:          rawConfig,
+									If:              "expr-0",
+									Vars:            []kargoapi.ExpressionVariable{{Name: "v", Value: "1"}},
+									ContinueOnError: true,
+								},
+								{
+									Uses:   "helm-update-image",
+									As:     "step-1",
+									Config: rawConfig,
+									If:     "expr-1",
+									Vars:   []kargoapi.ExpressionVariable{{Name: "v", Value: "2"}},
+									Retry:  &kargoapi.PromotionStepRetry{},
+								},
+							},
+						},
+					},
+				},
+			},
+			assert: func(t *testing.T, s *kargoapi.Stage) {
+				steps := s.Spec.PromotionTemplate.Spec.Steps
+				require.Len(t, steps, 2)
+				// Skeleton fields preserved on every step.
+				require.Equal(t, "copy", steps[0].Uses)
+				require.Equal(t, "step-0", steps[0].As)
+				require.True(t, steps[0].ContinueOnError)
+				require.Equal(t, "helm-update-image", steps[1].Uses)
+				require.Equal(t, "step-1", steps[1].As)
+				require.NotNil(t, steps[1].Retry)
+				// Heavy fields stripped on every step.
+				for i := range steps {
+					require.Nilf(t, steps[i].Config, "step %d config", i)
+					require.Emptyf(t, steps[i].If, "step %d if", i)
+					require.Nilf(t, steps[i].Vars, "step %d vars", i)
+				}
+			},
+		},
+		{
+			name: "nil PromotionTemplate is left untouched",
+			stage: &kargoapi.Stage{
+				Spec: kargoapi.StageSpec{PromotionTemplate: nil},
+			},
+			assert: func(t *testing.T, s *kargoapi.Stage) {
+				require.Nil(t, s.Spec.PromotionTemplate)
+			},
+		},
+		{
+			name: "Health.Output is cleared, other Health fields preserved",
+			stage: &kargoapi.Stage{
+				Status: kargoapi.StageStatus{
+					Health: &kargoapi.Health{
+						Status: kargoapi.HealthStateHealthy,
+						Output: rawOutput,
+					},
+				},
+			},
+			assert: func(t *testing.T, s *kargoapi.Stage) {
+				require.NotNil(t, s.Status.Health)
+				require.Equal(t, kargoapi.HealthStateHealthy, s.Status.Health.Status)
+				require.Nil(t, s.Status.Health.Output)
+			},
+		},
+		{
+			name: "nil Health is left untouched",
+			stage: &kargoapi.Stage{
+				Status: kargoapi.StageStatus{Health: nil},
+			},
+			assert: func(t *testing.T, s *kargoapi.Stage) {
+				require.Nil(t, s.Status.Health)
+			},
+		},
+	}
+
+	for _, testCase := range testCases {
+		t.Run(testCase.name, func(t *testing.T) {
+			StripStageForSummary(testCase.stage)
+			testCase.assert(t, testCase.stage)
+		})
+	}
+}
+
+func TestListStageHealthOutputs(t *testing.T) {
+	const testProject = "fake-namespace"
+	const otherProject = "other-namespace"
+
+	scheme := k8sruntime.NewScheme()
+	require.NoError(t, kargoapi.SchemeBuilder.AddToScheme(scheme))
+
+	withHealth := func(namespace, name, rawJSON string) *kargoapi.Stage {
+		return &kargoapi.Stage{
+			ObjectMeta: metav1.ObjectMeta{Namespace: namespace, Name: name},
+			Status: kargoapi.StageStatus{
+				Health: &kargoapi.Health{
+					Output: &apiextensionsv1.JSON{Raw: []byte(rawJSON)},
+				},
+			},
+		}
+	}
+	withoutHealth := func(namespace, name string) *kargoapi.Stage {
+		return &kargoapi.Stage{
+			ObjectMeta: metav1.ObjectMeta{Namespace: namespace, Name: name},
+		}
+	}
+
+	testCases := []struct {
+		name        string
+		stageNames  []string
+		objects     []client.Object
+		interceptor interceptor.Funcs
+		assert      func(*testing.T, map[string]string, error)
+	}{
+		{
+			name:       "nil stageNames returns empty map",
+			stageNames: nil,
+			objects:    []client.Object{withHealth(testProject, "stage-1", `{"s":1}`)},
+			assert: func(t *testing.T, out map[string]string, err error) {
+				require.NoError(t, err)
+				require.Empty(t, out)
+				require.NotNil(t, out)
+			},
+		},
+		{
+			name:       "only empty strings returns empty map without fetching",
+			stageNames: []string{"", "", ""},
+			interceptor: interceptor.Funcs{
+				Get: func(
+					context.Context,
+					client.WithWatch,
+					client.ObjectKey,
+					client.Object,
+					...client.GetOption,
+				) error {
+					t.Fatal("Get should not be called when there are no real names")
+					return nil
+				},
+				List: func(
+					context.Context,
+					client.WithWatch,
+					client.ObjectList,
+					...client.ListOption,
+				) error {
+					t.Fatal("List must not be called -- this helper reads per-name only")
+					return nil
+				},
+			},
+			assert: func(t *testing.T, out map[string]string, err error) {
+				require.NoError(t, err)
+				require.Empty(t, out)
+			},
+		},
+		{
+			name:       "List is never called even when names are present",
+			stageNames: []string{"stage-1"},
+			objects: []client.Object{
+				withHealth(testProject, "stage-1", `{"s":1}`),
+			},
+			interceptor: interceptor.Funcs{
+				List: func(
+					context.Context,
+					client.WithWatch,
+					client.ObjectList,
+					...client.ListOption,
+				) error {
+					t.Fatal("List must not be called -- this helper reads per-name only")
+					return nil
+				},
+			},
+			assert: func(t *testing.T, out map[string]string, err error) {
+				require.NoError(t, err)
+				require.Len(t, out, 1)
+			},
+		},
+		{
+			name:       "matching Stage returns its health output",
+			stageNames: []string{"stage-1"},
+			objects: []client.Object{
+				withHealth(testProject, "stage-1", `{"s":1}`),
+				withHealth(testProject, "stage-2", `{"s":2}`),
+			},
+			assert: func(t *testing.T, out map[string]string, err error) {
+				require.NoError(t, err)
+				require.Len(t, out, 1)
+				require.JSONEq(t, `{"s":1}`, out["stage-1"])
+			},
+		},
+		{
+			name:       "duplicate entries are deduplicated",
+			stageNames: []string{"stage-1", "stage-1", ""},
+			objects: []client.Object{
+				withHealth(testProject, "stage-1", `{"s":1}`),
+			},
+			assert: func(t *testing.T, out map[string]string, err error) {
+				require.NoError(t, err)
+				require.Len(t, out, 1)
+				require.JSONEq(t, `{"s":1}`, out["stage-1"])
+			},
+		},
+		{
+			name:       "Stage without health output is omitted",
+			stageNames: []string{"stage-1", "stage-no-health"},
+			objects: []client.Object{
+				withHealth(testProject, "stage-1", `{"s":1}`),
+				withoutHealth(testProject, "stage-no-health"),
+			},
+			assert: func(t *testing.T, out map[string]string, err error) {
+				require.NoError(t, err)
+				require.Len(t, out, 1)
+				require.Contains(t, out, "stage-1")
+				require.NotContains(t, out, "stage-no-health")
+			},
+		},
+		{
+			name:       "unknown name is silently omitted",
+			stageNames: []string{"stage-1", "does-not-exist"},
+			objects:    []client.Object{withHealth(testProject, "stage-1", `{"s":1}`)},
+			assert: func(t *testing.T, out map[string]string, err error) {
+				require.NoError(t, err)
+				require.Len(t, out, 1)
+				require.Contains(t, out, "stage-1")
+			},
+		},
+		{
+			name:       "Stages in other namespaces are not returned",
+			stageNames: []string{"stage-1"},
+			objects: []client.Object{
+				withHealth(testProject, "stage-1", `{"s":"ours"}`),
+				withHealth(otherProject, "stage-1", `{"s":"theirs"}`),
+			},
+			assert: func(t *testing.T, out map[string]string, err error) {
+				require.NoError(t, err)
+				require.Len(t, out, 1)
+				require.JSONEq(t, `{"s":"ours"}`, out["stage-1"])
+			},
+		},
+		{
+			name:       "Get error propagates",
+			stageNames: []string{"stage-1"},
+			interceptor: interceptor.Funcs{
+				Get: func(
+					context.Context,
+					client.WithWatch,
+					client.ObjectKey,
+					client.Object,
+					...client.GetOption,
+				) error {
+					return errors.New("boom")
+				},
+			},
+			assert: func(t *testing.T, out map[string]string, err error) {
+				require.ErrorContains(t, err, "boom")
+				require.Nil(t, out)
+			},
+		},
+	}
+
+	for _, testCase := range testCases {
+		t.Run(testCase.name, func(t *testing.T) {
+			c := fake.NewClientBuilder().WithScheme(scheme).
+				WithObjects(testCase.objects...).
+				WithInterceptorFuncs(testCase.interceptor).
+				Build()
+			out, err := ListStageHealthOutputs(
+				t.Context(), c, testProject, testCase.stageNames,
+			)
+			testCase.assert(t, out, err)
+		})
+	}
 }
