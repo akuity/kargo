@@ -1,0 +1,264 @@
+# Users with these relationships to the events are counted as maintainers.
+maintainerAssociations:
+- MEMBER
+- OWNER
+
+# Defines all issue automation.
+issues:
+  # At least one label with each of these prefixes must exist on all new issues.
+  # For any that don't, a label will be automatically added to indicate what
+  # remains to be added.
+  requiredLabelPrefixes:
+  - area
+  - kind
+  - priority
+
+  # Slash commands available to maintainers on issues.
+  slashCommands:
+    discuss:
+      description: "Add `needs discussion` label; blocks work"
+      actions:
+      - addLabels: [needs discussion]
+      - comment: |
+          ## Discussion Needed
+
+          A maintainer has indicated that this issue requires further discussion before any implementation work should begin.
+
+          Please do not open a pull request for this issue until the discussion has concluded and all blocking labels have been removed.
+
+    duplicate:
+      description: "Close as duplicate"
+      requiresArg: true
+      actions:
+      - addLabels: [duplicate]
+      - comment: |
+          ## Duplicate
+
+          This has been closed as a duplicate of #{{.Arg}}.
+
+          Please follow the linked issue for updates.
+      - close: true
+
+    enterprise:
+      description: "Close as already planned for Kargo Enterprise"
+      actions:
+      - comment: |
+          ## Already Planned for Kargo Enterprise
+
+          Thank you for your suggestion. This is something already planned for (or already available in) [Kargo Enterprise](https://akuity.io). As such, it will not be implemented in the open source project.
+
+          For more information about enterprise features and support, please contact [Akuity](https://akuity.io) directly.
+      - close: true
+
+    maintainer:
+      description: "Add `maintainer only` label; blocks external contribution"
+      actions:
+      - addLabels: [maintainer only]
+      - comment: |
+          ## Maintainer Only
+
+          A maintainer has indicated that this issue will only be worked on by the maintainer team due to its size, complexity, or sensitivity.
+
+          External pull requests for this issue will be closed.
+
+    research:
+      description: "Add `needs research` label; blocks work"
+      actions:
+      - addLabels: [needs research]
+      - comment: |
+          ## Research Needed
+
+          A maintainer has indicated that this issue needs further investigation or research before any implementation work should begin.
+
+          Please do not open a pull request for this issue until the research has concluded and all blocking labels have been removed.
+
+    unblock:
+      description: "Remove process-blocking labels; unblocks work"
+      actions:
+      - removeLabels: [kind/proposal, needs discussion, needs research]
+      - comment: |
+          ## Unblocked for Contribution
+
+          A maintainer has unblocked this issue for external contribution. Process-blocking labels have been removed.
+
+          If you would like to work on this, please comment to indicate your intent.
+
+          Wait for a maintainer to acknowledge your comment and formally assign the issue to you before starting work. This ensures multiple contributors do not duplicate effort on the same issue.
+
+          When you open a pull request, reference this issue using `Closes #<number>`.
+
+          Before starting, confirm the issue has no remaining blocking labels. See the [Contributor Guide](https://docs.kargo.io/contributor-guide) for details.
+
+
+# Defines all pull request automation.
+pullRequests:
+  # Criteria under which a PR is exempt from policy enforcement. Any one
+  # matching criterion exempts the PR (OR semantics). Slash commands like
+  # /policy bypass exemptions and always re-evaluate.
+  exemptions:
+    # Policy doesn't apply to PRs authored by maintainers.
+    maintainers: true
+    # Bot-authored PRs (e.g. dependabot) skip policy.
+    bots: true
+    # Drive-by typo fixes are exempt — saves the friction of opening an
+    # issue for a few-line cleanup.
+    maxChangedLines: 5
+    # Doc-only and chore PRs are exempt. Patterns are gitignore-style.
+    pathPatterns:
+    - 'README.md'
+    - 'docs/**/*.md'
+
+  # Defines how to handle PRs that aren't linked to an issue.
+  onNoLinkedIssue:
+    actions:
+    - addLabels:
+      - policy/no-linked-issue
+    - comment: |
+        ## Automated Policy Notice
+
+        This pull request has been converted to a draft because it does not reference an unblocked issue. Maintainers do not routinely review drafts.
+
+        All contributions to Kargo require a linked, unblocked issue. This ensures that proposed changes have been reviewed by maintainers before effort is invested.
+
+        **To move forward:**
+
+        1. Open a [Bug Report](https://github.com/akuity/kargo/issues/new?template=bug_report.yml) or [Feature Request](https://github.com/akuity/kargo/issues/new?template=feature_request.yml)
+        2. Wait for a maintainer to review the issue and remove any blocking labels
+        3. Update this PR's description, linking to the issue using `Closes #<number>`
+        4. Ensure the implementation in this PR is consistent with discussion points in the linked issue
+        5. Mark the PR ready for review
+
+        See the [Contributor Guide](https://docs.kargo.io/contributor-guide) for full details.
+    - convertToDraft: true
+
+  # Defines how to handle PRs that are linked to issues bearing labels that
+  # indicate the PR is either premature or should be worked on only by a
+  # maintainer.
+  onBlockedIssue:
+    blockingLabels:
+    - area/security # Security related issues are are off-limits to all but maintainers.
+    - kind/proposal # If this label hasn't been removed, maintainers aren't yet bought into the idea.
+    - maintainer only # Generic indicator that the issue is off-limits to all but maintainers.
+    - needs discussion # If this label hasn't been removed, maintainers feel the issue requires more discussion before moving forward.
+    - needs research # If this label hasn't been removed, maintainers feel the issue requires more research before moving forward.
+    # Changes estimated to be very large are off-limits to all but maintainers.
+    - size/large
+    - size/x-large
+    - size/xx-large
+    actions:
+    - addLabels:
+      - policy/blocked-issue # Makes it easier to find PRs that were auto-closed due to policy violations.
+    - comment: |
+        ## Automated Policy Notice
+
+        This pull request has been converted to a draft because the linked issue (#{{.IssueNumber}}) has not been unblocked for external contribution. Maintainers do not routinely review drafts.
+
+        The issue currently has the following blocking label(s): {{.BlockingLabels}}
+
+        **To move forward:**
+
+        1. Wait for a maintainer to review the issue and remove any blocking labels
+        2. Ensure the implementation in this PR is consistent with discussion points in the linked issue
+        3. Mark the PR ready for review
+
+        See the [Contributor Guide](https://docs.kargo.io/contributor-guide) for full details.
+    - convertToDraft: true
+
+  # Defines actions to take when a PR passes policy — neither onNoLinkedIssue
+  # nor onBlockedIssue fires. Runs on every opened/reopened/ready_for_review
+  # event, so this is where stale policy labels from a prior failing
+  # evaluation get cleaned up.
+  onPass:
+    actions:
+    - removeLabels:
+      - policy/no-linked-issue
+      - policy/blocked-issue
+
+  # When a PR is opened, it will inherit labels with these prefixes from the
+  # linked issue.
+  inheritedLabelPrefixes:
+  - kind
+  - area
+
+  # At least one label with each of these prefixes must exist on all new PRs.
+  # For any that don't, a label will be automatically added to indicate what
+  # remains to be added.
+  requiredLabelPrefixes:
+  - area
+  - kind
+  - priority
+
+  # Slash commands available to maintainers on pull requests.
+  slashCommands:
+    discuss:
+      description: "Add `needs discussion` label; blocks merge"
+      actions:
+      - addLabels: [needs discussion]
+      - comment: |
+          ## Discussion Needed
+
+          A maintainer has indicated that further discussion is needed before this pull request can be merged.
+
+          Please do not merge this PR until the discussion has concluded and all blocking labels have been removed.
+
+    duplicate:
+      description: "Close as duplicate"
+      requiresArg: true
+      actions:
+      - addLabels: [duplicate]
+      - comment: |
+          ## Duplicate
+
+          This has been closed as a duplicate of #{{.Arg}}.
+
+          Please follow the linked issue for updates.
+      - close: true
+
+    enterprise:
+      description: "Close as already planned for Kargo Enterprise"
+      actions:
+      - comment: |
+          ## Already Planned for Kargo Enterprise
+
+          Thank you for your suggestion. This is something already planned for (or already available in) [Kargo Enterprise](https://akuity.io). As such, it will not be implemented in the open source project.
+
+          For more information about enterprise features and support, please contact [Akuity](https://akuity.io) directly.
+      - close: true
+
+    quality:
+      description: "Close; does not meet quality standards"
+      actions:
+      - comment: |
+          ## 💩 Quality Standards Notice
+
+          This pull request has been closed because it does not meet the project's quality standards for review.
+
+          All pull requests must be authored and reviewed by a human. AI-assisted coding is acceptable, but every line must be understood and verified by the submitter. Submissions that appear to be generated without meaningful human review will be closed.
+
+          If you believe this was in error, please review the [Contributor Guide](https://docs.kargo.io/contributor-guide), ensure your changes meet project standards, and open a new pull request.
+      - close: true
+
+    policy:
+      description: "Reapply policy; useful if labels were manually modified in a way that would affect the outcome of policy evaluation"
+      actions:
+      - applyPRPolicy: true
+
+    research:
+      description: "Add `needs research` label; blocks merge"
+      actions:
+      - addLabels: [needs research]
+      - comment: |
+          ## Research Needed
+
+          A maintainer has indicated that further investigation or research is needed before this pull request can be merged.
+
+          Please do not merge this PR until the research has concluded and all blocking labels have been removed.
+
+    unblock:
+      description: "Remove blocking labels; unblocks merge"
+      actions:
+      - removeLabels: [needs discussion, needs research]
+      - comment: |
+          ## Unblocked for Merge
+
+          A maintainer has removed blocking labels from this pull request. Review may now proceed.
