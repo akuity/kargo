@@ -50,13 +50,17 @@ type warehouseJSON struct {
 			Status  string `json:"status"`
 			Message string `json:"message"`
 		} `json:"conditions"`
+		DiscoveredArtifacts *struct {
+			DiscoveredAt string `json:"discoveredAt"`
+		} `json:"discoveredArtifacts"`
 	} `json:"status"`
 }
 
 type warehouseSummary struct {
-	Name    string `json:"name"`
-	Ready   string `json:"ready,omitempty"`
-	Healthy string `json:"healthy,omitempty"`
+	Name                    string `json:"name"`
+	Ready                   string `json:"ready,omitempty"`
+	Healthy                 string `json:"healthy,omitempty"`
+	LastFreightDiscoveredAt string `json:"lastFreightDiscoveredAt,omitempty"`
 }
 
 func warehouseToSummary(w warehouseJSON) warehouseSummary {
@@ -68,6 +72,9 @@ func warehouseToSummary(w warehouseJSON) warehouseSummary {
 		case "Healthy":
 			s.Healthy = c.Status
 		}
+	}
+	if w.Status.DiscoveredArtifacts != nil {
+		s.LastFreightDiscoveredAt = w.Status.DiscoveredArtifacts.DiscoveredAt
 	}
 	return s
 }

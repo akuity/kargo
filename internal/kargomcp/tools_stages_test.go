@@ -58,8 +58,21 @@ func TestStageToSummary(t *testing.T) {
 				require.Equal(t, "dev", s.Name)
 				require.Equal(t, "Healthy", s.Health)
 				require.Equal(t, "abc123", s.CurrentFreight)
+				require.False(t, s.AutoPromotionEnabled)
 				require.Nil(t, s.LastPromotion)
 				require.Empty(t, s.CurrentPromotion)
+			},
+		},
+		{
+			name: "stage with auto-promotion enabled",
+			input: func() stageJSON {
+				var s stageJSON
+				s.Metadata.Name = "dev"
+				s.Status.AutoPromotionEnabled = true
+				return s
+			}(),
+			assert: func(t *testing.T, s stageSummary) {
+				require.True(t, s.AutoPromotionEnabled)
 			},
 		},
 		{
