@@ -2136,3 +2136,137 @@ func Test_semverParse(t *testing.T) {
 		})
 	}
 }
+
+func Test_freightImages(t *testing.T) {
+	const testProject = "fake-project"
+	const testFreightName = "fake-freight"
+
+	scheme := runtime.NewScheme()
+	assert.NoError(t, kargoapi.AddToScheme(scheme))
+
+	// Sample images for testing
+	testImages := []kargoapi.Image{
+		{
+			RepoURL: "640918798954.dkr.ecr.eu-west-1.amazonaws.com/arrival/arrival-agent",
+			Tag:     "0.246.1",
+			Digest:  "sha256:788e12d8db491c896a292e114132e8998ce895ac8f7bff0beed1f7e641ccbd64",
+		},
+		{
+			RepoURL: "640918798954.dkr.ecr.eu-west-1.amazonaws.com/arrival/abbott",
+			Tag:     "v_0.59.15.2811716",
+			Digest:  "sha256:c7635177cb0b1c506ee77df5d2485893d1143c446f137966f5317cb121ccfcc2",
+		},
+	}
+
+	// Create a freight object with images
+	testFreight := &kargoapi.Freight{
+		ObjectMeta: metav1.ObjectMeta{
+			Name:      testFreightName,
+			Namespace: testProject,
+		},
+		Images: testImages,
+	}
+
+	tests := []struct {
+		name       string
+		objects    []client.Object
+		args       []any
+		assertions func(t *testing.T, result any, err error)
+	}{
+		{
+			name: "no arguments",
+			args: []any{},
+			assertions: func(t *testing.T, result any, err error) {
+				assert.ErrorContains(t, err, "expected 1 argument")
+				assert.Nil(t, result)
+			},
+		},
+		{
+			name: "too many arguments",
+			args: []any{testFreightName, "extra"},
+			assertions: func(t *testing.T, result any, err error) {
+				assert.ErrorContains(t, err, "expected 1 argument")
+				assert.Nil(t, result)
+			},
+		},
+		{
+			name: "invalid argument type",
+			args: []any{123},
+			assertions: func(t *testing.T, result any, err error) {
+				assert.ErrorContains(t, err, "first argument must be string")
+				assert.Nil(t, result)
+			},
+		},
+		{
+			name: "empty freight name",
+			args: []any{""},
+			assertions: func(t *testing.T, result any, err error) {
+				assert.ErrorContains(t, err, "freight name must not be empty")
+				assert.Nil(t, result)
+			},
+		},
+		{
+			name:    "freight not found",
+			objects: []client.Object{}, // No freight objects
+			args:    []any{testFreightName},
+			assertions: func(t *testing.T, result any, err error) {
+				assert.NoError(t, err)
+				assert.Nil(t, result)
+			},
+		},
+		{
+			name: "freight exists but no images",
+			objects: []client.Object{
+				&kargoapi.Freight{
+					ObjectMeta: metav1.ObjectMeta{
+						Name:      testFreightName,
+						Namespace: testProject,
+					},
+					// No images set
+				},
+			},
+			args: []any{testFreightName},
+			assertions: func(t *testing.T, result any, err error) {
+				assert.NoError(t, err)
+				// Result should be an empty slice, not nil
+				imageSlice, ok := result.([]kargoapi.Image)
+				assert.True(t, ok)
+				assert.Empty(t, imageSlice)
+			},
+		},
+		{
+			name:    "successful images retrieval",
+			objects: []client.Object{testFreight},
+			args:    []any{testFreightName},
+			assertions: func(t *testing.T, result any, err error) {
+				assert.NoError(t, err)
+				imageSlice, ok := result.([]kargoapi.Image)
+				assert.True(t, ok)
+				assert.Equal(t, testImages, imageSlice)
+				assert.Len(t, imageSlice, 2)
+				// Verify first image
+				assert.Equal(t, "640918798954.dkr.ecr.eu-west-1.amazonaws.com/arrival/arrival-agent", imageSlice[0].RepoURL)
+				assert.Equal(t, "0.246.1", imageSlice[0].Tag)
+				// Verify second image
+				assert.Equal(t, "640918798954.dkr.ecr.eu-west-1.amazonaws.com/arrival/abbott", imageSlice[1].RepoURL)
+				assert.Equal(t, "v_0.59.15.2811716", imageSlice[1].Tag)
+			},
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			ctx := t.Context()
+
+			c := fake.NewClientBuilder().
+				WithScheme(scheme).
+				WithObjects(tt.objects...).
+				Build()
+
+			fn := freightImages(ctx, c, testProject)
+
+			result, err := fn(tt.args...)
+			tt.assertions(t, result, err)
+		})
+	}
+}

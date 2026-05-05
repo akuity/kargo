@@ -29,10 +29,10 @@ type exprFn func(params ...any) (any, error)
 // FreightOperations returns a slice of expr.Option containing functions for
 // Freight operations.
 //
-// It provides `warehouse()`, `commitFrom()`, `imageFrom()`, and `chartFrom()`
-// functions that can be used within expressions. The functions operate within
-// the context of a given project with the provided freight requests and
-// references.
+// It provides `warehouse()`, `commitFrom()`, `imageFrom()`, `chartFrom()`,
+// `freightMetadata()`, and `freightImages()` functions that can be used within
+// expressions. The functions operate within the context of a given project with
+// the provided freight requests and references.
 func FreightOperations(
 	ctx context.Context,
 	c client.Client,
@@ -47,6 +47,7 @@ func FreightOperations(
 		ChartFromFreight(ctx, c, project, freightRequests, freightRefs),
 		ArtifactFromFreight(ctx, c, project, freightRequests, freightRefs),
 		FreightMetadata(ctx, c, project),
+		FreightImages(ctx, c, project),
 	}
 }
 
@@ -428,6 +429,74 @@ func stageMetadata(
 			decoded[k] = val
 		}
 		return decoded, nil
+	}
+}
+
+// FreightImages returns an expr.Option that provides a `freightImages()` function
+// for use in expressions.
+//
+// Usage:
+//   - `freightImages(freightName)` returns the list of images for the Freight.
+func FreightImages(
+	ctx context.Context,
+	c client.Client,
+	project string,
+) expr.Option {
+	return expr.Function(
+		"freightImages",
+		freightImages(ctx, c, project),
+		new(func(freightName string) []kargoapi.Image),
+	)
+}
+
+func freightImages(
+	ctx context.Context,
+	c client.Client,
+	project string,
+) exprFn {
+	return func(a ...any) (any, error) {
+		if len(a) != 1 {
+			return nil, fmt.Errorf("expected 1 argument, got %d", len(a))
+		}
+
+		freightName, ok := a[0].(string)
+		if !ok {
+			return nil, fmt.Errorf("first argument must be string, got %T", a[0])
+		}
+		if freightName == "" {
+			return nil, fmt.Errorf("freight name must not be empty")
+		}
+
+		// Retrieve the Freight object as unstructured because it bypasses the
+		// client's cache. This is essential for cases where Freight images are
+		// being accessed very shortly after having been updated.
+		u := &unstructured.Unstructured{}
+		u.SetGroupVersionKind(schema.GroupVersionKind{
+			Group:   kargoapi.GroupVersion.Group,
+			Version: kargoapi.GroupVersion.Version,
+			Kind:    "Freight",
+		})
+		if err := c.Get(
+			ctx,
+			client.ObjectKey{Namespace: project, Name: freightName},
+			u,
+		); err != nil {
+			if apierrors.IsNotFound(err) {
+				return nil, nil
+			}
+			return nil, fmt.Errorf("failed to get freight %s: %w", freightName, err)
+		}
+		freight := &kargoapi.Freight{}
+		if err := runtime.DefaultUnstructuredConverter.FromUnstructured(
+			u.Object,
+			freight,
+		); err != nil {
+			return nil, fmt.Errorf(
+				"error converting unstructured object to Freight: %w", err,
+			)
+		}
+
+		return freight.Images, nil
 	}
 }
 

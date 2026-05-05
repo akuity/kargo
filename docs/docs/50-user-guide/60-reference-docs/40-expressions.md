@@ -477,6 +477,45 @@ features.
 
 :::
 
+### `freightImages(freightName)`
+
+The `freightImages()` function retrieves the list of all container images stored
+in a `Freight` resource. It has one required argument:
+
+- `freightName` (Required): The name of the `Freight` resource
+
+Returns a list of `Image` objects. Each `Image` object has the following fields:
+
+| Field | Description |
+|-------|-------------|
+| `RepoURL` | The URL of the container image repository the image originates from. |
+| `Tag` | The tag of the image. |
+| `Digest` | The digest of the image. |
+| `Annotations` | A map of [annotations](https://specs.opencontainers.org/image-spec/annotations/) discovered for the image. |
+
+Example:
+
+```yaml
+config:
+  # Get the first image's tag
+  firstImageTag: ${{ freightImages(ctx.targetFreight.name)[0].Tag }}
+
+  # Iterate over all images
+  allImages: ${{ freightImages(ctx.targetFreight.name) }}
+
+  # Filter and access specific image by repository URL
+  nginxDigest: ${{ freightImages(ctx.targetFreight.name) | filter(.RepoURL == "nginx") | first.Digest }}
+```
+
+:::info
+
+You can handle empty lists or missing images gracefully using Expr's
+[collection functions](https://expr-lang.org/docs/language-definition#array-functions)
+and [nil coalescing](https://expr-lang.org/docs/language-definition#nil-coalescing)
+features.
+
+:::
+
 ### `stageMetadata(stageName)`
 
 The `stageMetadata()` function retrieves metadata stored in a `Stage` resource. It
