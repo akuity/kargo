@@ -241,11 +241,6 @@ func (o *managementControllerOptions) setupManager(
 			PprofBindAddress: o.PprofBindAddress,
 			Cache: cache.Options{
 				ByObject: map[client.Object]cache.ByObject{
-					&corev1.ServiceAccount{}: {
-						Namespaces: map[string]cache.Config{
-							o.KargoNamespace: {},
-						},
-					},
 					&corev1.Secret{}: {
 						Namespaces: namespaceCacheConfigs,
 					},
