@@ -1,0 +1,10 @@
+package: cloud
+
+generate:
+  models: true
+  client: true
+
+output: zz_bitbucket_cloud_client.gen.go
+
+output-options:
+  skip-prune: false

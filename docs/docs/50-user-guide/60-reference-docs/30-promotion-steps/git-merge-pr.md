@@ -41,7 +41,7 @@ system to access the git repos.
 | Name                    | Type      | Required | Description                                                                                                                                                                                                    |
 | ----------------------- | --------- | -------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
 | `repoURL`               | `string`  | Y        | The URL of a remote Git repository. **Deprecated:** Support for SSH URLs (`ssh://` and SCP-style `git@host:path`) is deprecated as of v1.10.0 and will be removed in v1.13.0. Use HTTPS URLs instead.          |
-| `provider`              | `string`  | N        | The name of the Git provider to use. Currently `azure`, `bitbucket`, `gitea`, `github`, and `gitlab` are supported. Kargo will try to infer the provider if it is not explicitly specified.                    |
+| `provider`              | `string`  | N        | The name of the Git provider to use. Currently `azure`, `bitbucket`, `bitbucket-datacenter`, `gitea`, `github`, and `gitlab` are supported. Kargo will try to infer the provider if it is not explicitly specified.                    |
 | `insecureSkipTLSVerify` | `boolean` | N        | Indicates whether to bypass TLS certificate verification when interfacing with the Git provider. Setting this to `true` is highly discouraged in production.                                                   |
 | `prNumber`              | `integer` | Y        | The pull request number to merge.                                                                                                                                                                              |
 | `mergeMethod`           | `string`  | N        | The merge method to use when merging the pull request. The supported methods are provider-specific; refer to the [Merge Method](#merge-method) section. |
@@ -49,7 +49,7 @@ system to access the git repos.
 
 :::warning
 
-The `wait` option is unreliable for repositories hosted by Bitbucket due to API limitations.
+The `wait` option is unreliable for repositories hosted by Bitbucket Cloud due to API limitations.
 
 :::
 
@@ -61,7 +61,8 @@ currently supported Git hosting providers.
 | Provider | Supported Methods | Default |
 | -------- | ----------------- | ------- |
 | Azure | <ul><li>`noFastForward`</li><li>`rebase`</li><li>`rebaseMerge`</li><li>`squash`</li></ul> | First allowed strategy per the target branch's merge type policy; merge commit if no policy is configured |
-| BitBucket | Client does not yet support specifying a merge strategy | The repository's configured default merge strategy |
+| Bitbucket Cloud | <ul><li>`fast_forward`</li><li>`merge_commit`</li><li>`squash`</li></ul> | The repository's configured default merge strategy |
+| Bitbucket Data Center | <ul><li>`ff`</li><li>`ff-only`</li><li>`no-ff`</li><li>`rebase-ff-only`</li><li>`rebase-no-ff`</li><li>`squash`</li><li>`squash-ff-only`</li></ul> | The repository's configured default merge strategy |
 | Gitea | <ul><li>`fast-forward-only`</li><li>`manually-merged`</li><li>`merge`</li><li>`rebase`</li><li>`rebase-merge`</li><li>`squash`</li></ul> | `merge` |
 | GitHub | <ul><li>`merge`</li><li>`rebase`</li><li>`squash`</li></ul> | `merge` |
 | GitLab | <ul><li>`merge`</li><li>`squash`</li></ul> | Defers to the merge request and project-level squash settings |
