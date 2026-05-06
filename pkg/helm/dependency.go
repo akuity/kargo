@@ -15,6 +15,7 @@ type ChartDependency struct {
 	Repository string `json:"repository,omitempty"`
 	Name       string `json:"name,omitempty"`
 	Version    string `json:"version,omitempty"`
+	Alias      string `json:"alias,omitempty"`
 }
 
 // chartMetadata is a minimal representation of a Helm chart's metadata
