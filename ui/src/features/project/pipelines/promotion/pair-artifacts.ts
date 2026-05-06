@@ -14,10 +14,14 @@ export type PairedRow = {
 };
 
 const pairKey = (s: TableSource): string => {
-  if (s.type === 'other') {
-    return `other:${s.subscriptionName || ''}`;
+  switch (s.type) {
+    case 'other':
+      return `other:${s.subscriptionName || ''}`;
+    case 'helm':
+      return `helm:${s.repoURL || ''}/${s.name || ''}`;
+    default:
+      return `${s.type}:${s.repoURL || ''}`;
   }
-  return `${s.type}:${s.repoURL || ''}`;
 };
 
 const versionOf = (s: TableSource): string => {

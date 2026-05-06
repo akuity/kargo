@@ -7,7 +7,7 @@ import { pairArtifacts } from './pair-artifacts';
 const f = (input: {
   images?: { repoURL: string; tag: string }[];
   commits?: { repoURL: string; id: string; branch?: string; message?: string }[];
-  charts?: { repoURL: string; version: string }[];
+  charts?: { repoURL: string; name?: string; version: string }[];
 }) =>
   ({
     images: input.images || [],
@@ -33,7 +33,7 @@ describe('pairArtifacts', () => {
     expect(rows.map((r) => [r.key, r.status])).toEqual([
       ['image:ghcr.io/acme/guestbook', 'CHANGED'],
       ['git:github.com/acme/kargo-advanced.git', 'CHANGED'],
-      ['helm:charts.example.com/guestbook', 'UNCHANGED']
+      ['helm:charts.example.com/guestbook/', 'UNCHANGED']
     ]);
   });
 
@@ -71,7 +71,28 @@ describe('pairArtifacts', () => {
     expect(rows.map((r) => [r.key, r.status])).toEqual([
       ['image:ghcr.io/keep', 'UNCHANGED'],
       ['git:github.com/new.git', 'NEW'],
-      ['helm:charts.example.com/old', 'REMOVED']
+      ['helm:charts.example.com/old/', 'REMOVED']
+    ]);
+  });
+
+  test('classic helm repo: charts with same repoURL but different names pair independently', () => {
+    const current = f({
+      charts: [
+        { repoURL: 'charts.example.com', name: 'guestbook', version: '1.0.0' },
+        { repoURL: 'charts.example.com', name: 'frontend', version: '2.0.0' }
+      ]
+    });
+    const incoming = f({
+      charts: [
+        { repoURL: 'charts.example.com', name: 'guestbook', version: '1.1.0' },
+        { repoURL: 'charts.example.com', name: 'frontend', version: '2.0.0' }
+      ]
+    });
+
+    const rows = pairArtifacts(current, incoming);
+    expect(rows.map((r) => [r.key, r.status])).toEqual([
+      ['helm:charts.example.com/guestbook', 'CHANGED'],
+      ['helm:charts.example.com/frontend', 'UNCHANGED']
     ]);
   });
 

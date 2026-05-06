@@ -20,6 +20,7 @@ export type TableSource =
   | {
       type: 'helm';
       repoURL: string;
+      name: string;
       version: string;
     }
   | ({
@@ -53,6 +54,7 @@ export const flattenFreightOrigin = (
     freight?.charts?.map((chart) => ({
       type: 'helm',
       repoURL: chart?.repoURL,
+      name: chart?.name,
       version: chart?.version
     })) || [];
 
