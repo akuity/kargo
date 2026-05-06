@@ -2,11 +2,12 @@ package kargomcp
 
 import (
 	"context"
-	"encoding/json"
 	"net/http"
 	"testing"
 
 	"github.com/stretchr/testify/require"
+
+	"github.com/akuity/kargo/pkg/client/generated/models"
 )
 
 // TestGetStageStripsFreightHistory verifies that get_stage removes
@@ -22,17 +23,11 @@ func TestGetStageStripsFreightHistory(t *testing.T) {
 			},
 		},
 	}
-	data, _ := json.Marshal(payload)
-	var v any
-	_ = json.Unmarshal(data, &v)
-
-	sanitized, isSanitizedMap := sanitizeResource(v).(map[string]any)
-	require.True(t, isSanitizedMap)
-	if status, ok := sanitized["status"].(map[string]any); ok {
+	u := sanitizeResource(toUnstructured(payload))
+	if status, ok := u.Object["status"].(map[string]any); ok {
 		delete(status, "freightHistory")
 	}
-
-	status, isStatusMap := sanitized["status"].(map[string]any)
+	status, isStatusMap := u.Object["status"].(map[string]any)
 	require.True(t, isStatusMap)
 	require.Equal(t, "Steady", status["phase"])
 	require.NotContains(t, status, "freightHistory")
@@ -42,17 +37,17 @@ func TestStageToSummary(t *testing.T) {
 	t.Parallel()
 	testCases := []struct {
 		name   string
-		input  stageJSON
+		input  *models.Stage
 		assert func(*testing.T, stageSummary)
 	}{
 		{
 			name: "minimal stage",
-			input: func() stageJSON {
-				var s stageJSON
-				s.Metadata.Name = "dev"
-				s.Status.Health.Status = "Healthy"
-				s.Status.FreightSummary = "abc123"
-				return s
+			input: func() *models.Stage {
+				st := &models.Stage{}
+				st.Metadata = &models.V1ObjectMeta{Name: "dev"}
+				st.Status.Health.Status = "Healthy"
+				st.Status.FreightSummary = "abc123"
+				return st
 			}(),
 			assert: func(t *testing.T, s stageSummary) {
 				require.Equal(t, "dev", s.Name)
@@ -65,11 +60,11 @@ func TestStageToSummary(t *testing.T) {
 		},
 		{
 			name: "stage with auto-promotion enabled",
-			input: func() stageJSON {
-				var s stageJSON
-				s.Metadata.Name = "dev"
-				s.Status.AutoPromotionEnabled = true
-				return s
+			input: func() *models.Stage {
+				st := &models.Stage{}
+				st.Metadata = &models.V1ObjectMeta{Name: "dev"}
+				st.Status.AutoPromotionEnabled = true
+				return st
 			}(),
 			assert: func(t *testing.T, s stageSummary) {
 				require.True(t, s.AutoPromotionEnabled)
@@ -77,16 +72,16 @@ func TestStageToSummary(t *testing.T) {
 		},
 		{
 			name: "stage with last promotion",
-			input: func() stageJSON {
-				var s stageJSON
-				s.Metadata.Name = "prod"
-				s.Status.Health.Status = "Unknown"
-				s.Status.Health.Issues = []string{"reason"}
-				s.Status.LastPromotion.Name = "promo-xyz"
-				s.Status.LastPromotion.FinishedAt = "2026-01-01T00:00:00Z"
-				s.Status.LastPromotion.Status.Phase = "Errored"
-				s.Status.LastPromotion.Status.Message = "merge conflict"
-				return s
+			input: func() *models.Stage {
+				st := &models.Stage{}
+				st.Metadata = &models.V1ObjectMeta{Name: "prod"}
+				st.Status.Health.Status = "Unknown"
+				st.Status.Health.Issues = []string{"reason"}
+				st.Status.LastPromotion.Name = "promo-xyz"
+				st.Status.LastPromotion.FinishedAt = "2026-01-01T00:00:00Z"
+				st.Status.LastPromotion.Status.Phase = "Errored"
+				st.Status.LastPromotion.Status.Message = "merge conflict"
+				return st
 			}(),
 			assert: func(t *testing.T, s stageSummary) {
 				require.Equal(t, "prod", s.Name)
@@ -99,11 +94,11 @@ func TestStageToSummary(t *testing.T) {
 		},
 		{
 			name: "stage with active promotion",
-			input: func() stageJSON {
-				var s stageJSON
-				s.Metadata.Name = "staging"
-				s.Status.CurrentPromotion.Name = "promo-active"
-				return s
+			input: func() *models.Stage {
+				st := &models.Stage{}
+				st.Metadata = &models.V1ObjectMeta{Name: "staging"}
+				st.Status.CurrentPromotion.Name = "promo-active"
+				return st
 			}(),
 			assert: func(t *testing.T, s stageSummary) {
 				require.Equal(t, "promo-active", s.CurrentPromotion)

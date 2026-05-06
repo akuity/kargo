@@ -42,7 +42,8 @@ func TestToolRegistration(t *testing.T) {
 		"list_warehouses", "get_warehouse", "refresh_warehouse",
 		"list_freight", "get_freight", "approve_freight",
 		"list_promotions", "get_promotion", "abort_promotion",
-		"list_promotion_tasks", "list_cluster_promotion_tasks",
+		"list_promotion_tasks", "get_promotion_task",
+		"list_cluster_promotion_tasks", "get_cluster_promotion_task",
 	}, names)
 }
 

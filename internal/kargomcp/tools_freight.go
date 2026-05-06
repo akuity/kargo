@@ -3,16 +3,19 @@ package kargomcp
 import (
 	"context"
 	"encoding/json"
+	"maps"
+	"slices"
 
 	"github.com/modelcontextprotocol/go-sdk/mcp"
 
 	"github.com/akuity/kargo/pkg/client/generated/core"
+	"github.com/akuity/kargo/pkg/client/generated/models"
 )
 
 func (s *Server) registerFreightTools() {
 	mcp.AddTool(s.mcpServer, &mcp.Tool{
 		Name: "list_freight",
-		Description: "List freight in a Kargo project, newest first. Returns a compact summary per piece. " +
+		Description: "List freight in a Kargo project. Returns a compact summary per piece. " +
 			"Optionally filter by stage (freight eligible for promotion to that stage) or by origin warehouse.",
 		OutputSchema: mustOutputSchema[struct {
 			Items []freightSummary `json:"items"`
@@ -41,37 +44,6 @@ type listFreightArgs struct {
 	Project string   `json:"project,omitempty" jsonschema:"The Kargo project name. Omit to use the default set by 'kargo config set-project'"` //nolint:lll
 	Stage   *string  `json:"stage,omitempty" jsonschema:"Filter to freight available (eligible) for promotion to this stage"`                  //nolint:lll
 	Origins []string `json:"origins,omitempty" jsonschema:"Filter by origin warehouse names"`
-}
-
-// freightJSON is the intake struct for summary projection.
-type freightJSON struct {
-	Alias    string `json:"alias"`
-	Metadata struct {
-		Name              string `json:"name"`
-		CreationTimestamp string `json:"creationTimestamp"`
-	} `json:"metadata"`
-	Origin struct {
-		Name string `json:"name"`
-	} `json:"origin"`
-	Commits []struct {
-		RepoURL string `json:"repoURL"`
-		ID      string `json:"id"`
-		Tag     string `json:"tag"`
-		Message string `json:"message"`
-	} `json:"commits"`
-	Images []struct {
-		RepoURL string `json:"repoURL"`
-		Tag     string `json:"tag"`
-	} `json:"images"`
-	Charts []struct {
-		Name    string `json:"name"`
-		Version string `json:"version"`
-	} `json:"charts"`
-	Status struct {
-		CurrentlyIn map[string]json.RawMessage `json:"currentlyIn"`
-		VerifiedIn  map[string]json.RawMessage `json:"verifiedIn"`
-		ApprovedFor map[string]json.RawMessage `json:"approvedFor"`
-	} `json:"status"`
 }
 
 type freightSummaryImage struct {
@@ -103,30 +75,32 @@ type freightSummary struct {
 	Charts      []freightSummaryChart  `json:"charts,omitempty"`
 }
 
-func freightToSummary(f freightJSON) freightSummary {
-	s := freightSummary{
-		Name:      f.Metadata.Name,
-		Alias:     f.Alias,
-		CreatedAt: f.Metadata.CreationTimestamp,
-		Warehouse: f.Origin.Name,
+func freightToSummary(f *models.Freight) freightSummary {
+	s := freightSummary{Alias: f.Alias}
+	if f.Metadata != nil {
+		s.Name = f.Metadata.Name
+		s.CreatedAt = f.Metadata.CreationTimestamp
 	}
-	for stageName := range f.Status.CurrentlyIn {
-		s.Stages = append(s.Stages, stageName)
+	if f.Origin.Name != nil {
+		s.Warehouse = *f.Origin.Name
 	}
-	for stageName := range f.Status.VerifiedIn {
-		s.VerifiedIn = append(s.VerifiedIn, stageName)
-	}
-	for stageName := range f.Status.ApprovedFor {
-		s.ApprovedFor = append(s.ApprovedFor, stageName)
-	}
+	s.Stages = slices.Collect(maps.Keys(f.Status.CurrentlyIn))
+	s.VerifiedIn = slices.Collect(maps.Keys(f.Status.VerifiedIn))
+	s.ApprovedFor = slices.Collect(maps.Keys(f.Status.ApprovedFor))
 	for _, img := range f.Images {
-		s.Images = append(s.Images, freightSummaryImage{RepoURL: img.RepoURL, Tag: img.Tag})
+		if img != nil {
+			s.Images = append(s.Images, freightSummaryImage{RepoURL: img.RepoURL, Tag: img.Tag})
+		}
 	}
 	for _, c := range f.Commits {
-		s.Commits = append(s.Commits, freightSummaryCommit{RepoURL: c.RepoURL, ID: c.ID, Message: c.Message})
+		if c != nil {
+			s.Commits = append(s.Commits, freightSummaryCommit{RepoURL: c.RepoURL, ID: c.ID, Message: c.Message})
+		}
 	}
 	for _, ch := range f.Charts {
-		s.Charts = append(s.Charts, freightSummaryChart{Name: ch.Name, Version: ch.Version})
+		if ch != nil {
+			s.Charts = append(s.Charts, freightSummaryChart{Name: ch.Name, Version: ch.Version})
+		}
 	}
 	return s
 }
@@ -156,7 +130,14 @@ func (s *Server) handleListFreight(
 		return errResult(err)
 	}
 	raws := flattenFreightGroups(res.Payload)
-	summaries := projectItems(raws, freightToSummary)
+	summaries := make([]freightSummary, 0, len(raws))
+	for _, raw := range raws {
+		var f models.Freight
+		if err := json.Unmarshal(raw, &f); err != nil {
+			continue
+		}
+		summaries = append(summaries, freightToSummary(&f))
+	}
 	return jsonAnyResult(map[string]any{"items": summaries})
 }
 
@@ -244,7 +225,7 @@ func (s *Server) handleGetFreight(
 	if err != nil {
 		return errResult(err)
 	}
-	return jsonAnyResult(sanitizeResource(res.Payload))
+	return jsonAnyResult(sanitizeResource(toUnstructured(res.Payload)).Object)
 }
 
 // --- approve_freight ---

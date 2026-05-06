@@ -7,27 +7,29 @@ import (
 	"testing"
 
 	"github.com/stretchr/testify/require"
+
+	"github.com/akuity/kargo/pkg/client/generated/models"
 )
 
 func TestFreightToSummary(t *testing.T) {
 	t.Parallel()
+	namePtr := func(s string) *string { return &s }
 	testCases := []struct {
 		name   string
-		input  freightJSON
+		input  *models.Freight
 		assert func(*testing.T, freightSummary)
 	}{
 		{
 			name: "basic freight with image",
-			input: func() freightJSON {
-				var f freightJSON
+			input: func() *models.Freight {
+				f := &models.Freight{}
 				f.Alias = "worn-panther"
-				f.Metadata.Name = "abc123"
-				f.Metadata.CreationTimestamp = "2026-01-01T00:00:00Z"
-				f.Origin.Name = "my-warehouse"
-				f.Images = []struct {
-					RepoURL string `json:"repoURL"`
-					Tag     string `json:"tag"`
-				}{{RepoURL: "nginx", Tag: "1.29.6"}}
+				f.Metadata = &models.V1ObjectMeta{
+					Name:              "abc123",
+					CreationTimestamp: "2026-01-01T00:00:00Z",
+				}
+				f.Origin.Name = namePtr("my-warehouse")
+				f.Images = []*models.Image{{RepoURL: "nginx", Tag: "1.29.6"}}
 				return f
 			}(),
 			assert: func(t *testing.T, s freightSummary) {
@@ -44,12 +46,12 @@ func TestFreightToSummary(t *testing.T) {
 		},
 		{
 			name: "freight currently in a stage, verified, and approved",
-			input: func() freightJSON {
-				var f freightJSON
-				f.Metadata.Name = "def456"
-				f.Status.CurrentlyIn = map[string]json.RawMessage{"prod": nil}
-				f.Status.VerifiedIn = map[string]json.RawMessage{"staging": nil}
-				f.Status.ApprovedFor = map[string]json.RawMessage{"hotfix": nil}
+			input: func() *models.Freight {
+				f := &models.Freight{}
+				f.Metadata = &models.V1ObjectMeta{Name: "def456"}
+				f.Status.CurrentlyIn = map[string]models.CurrentStage{"prod": {}}
+				f.Status.VerifiedIn = map[string]models.VerifiedStage{"staging": {}}
+				f.Status.ApprovedFor = map[string]models.ApprovedStage{"hotfix": {}}
 				return f
 			}(),
 			assert: func(t *testing.T, s freightSummary) {
@@ -60,15 +62,14 @@ func TestFreightToSummary(t *testing.T) {
 		},
 		{
 			name: "freight with commit",
-			input: func() freightJSON {
-				var f freightJSON
-				f.Metadata.Name = "ghi789"
-				f.Commits = []struct {
-					RepoURL string `json:"repoURL"`
-					ID      string `json:"id"`
-					Tag     string `json:"tag"`
-					Message string `json:"message"`
-				}{{RepoURL: "https://github.com/org/repo", ID: "abc1234", Message: "fix: something"}}
+			input: func() *models.Freight {
+				f := &models.Freight{}
+				f.Metadata = &models.V1ObjectMeta{Name: "ghi789"}
+				f.Commits = []*models.GitCommit{{
+					RepoURL: "https://github.com/org/repo",
+					ID:      "abc1234",
+					Message: "fix: something",
+				}}
 				return f
 			}(),
 			assert: func(t *testing.T, s freightSummary) {
@@ -82,6 +83,63 @@ func TestFreightToSummary(t *testing.T) {
 		t.Run(tc.name, func(t *testing.T) {
 			t.Parallel()
 			tc.assert(t, freightToSummary(tc.input))
+		})
+	}
+}
+
+func TestFlattenFreightGroups(t *testing.T) {
+	t.Parallel()
+	testCases := []struct {
+		name   string
+		input  any
+		assert func(*testing.T, []json.RawMessage)
+	}{
+		{
+			name:   "nil payload",
+			input:  nil,
+			assert: func(t *testing.T, got []json.RawMessage) { require.Empty(t, got) },
+		},
+		{
+			name: "single default group",
+			input: map[string]any{
+				"groups": map[string]any{
+					"": map[string]any{
+						"items": []any{
+							map[string]any{"name": "a"},
+							map[string]any{"name": "b"},
+						},
+					},
+				},
+			},
+			assert: func(t *testing.T, got []json.RawMessage) {
+				require.Len(t, got, 2)
+			},
+		},
+		{
+			name: "multiple groups are merged",
+			input: map[string]any{
+				"groups": map[string]any{
+					"g1": map[string]any{"items": []any{map[string]any{"name": "a"}}},
+					"g2": map[string]any{"items": []any{map[string]any{"name": "b"}}},
+				},
+			},
+			assert: func(t *testing.T, got []json.RawMessage) {
+				require.Len(t, got, 2)
+			},
+		},
+		{
+			name: "empty groups yields empty slice",
+			input: map[string]any{
+				"groups": map[string]any{},
+			},
+			assert: func(t *testing.T, got []json.RawMessage) { require.Empty(t, got) },
+		},
+	}
+	for _, tc := range testCases {
+		t.Run(tc.name, func(t *testing.T) {
+			t.Parallel()
+			got := flattenFreightGroups(tc.input)
+			tc.assert(t, got)
 		})
 	}
 }

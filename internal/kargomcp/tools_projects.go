@@ -2,11 +2,11 @@ package kargomcp
 
 import (
 	"context"
-	"encoding/json"
 
 	"github.com/modelcontextprotocol/go-sdk/mcp"
 
 	"github.com/akuity/kargo/pkg/client/generated/core"
+	"github.com/akuity/kargo/pkg/client/generated/models"
 )
 
 func (s *Server) registerProjectTools() {
@@ -31,31 +31,6 @@ func (s *Server) registerProjectTools() {
 
 type listProjectsArgs struct{}
 
-// projectJSON is the intake struct for decoding list items — only the fields we
-// want to surface in the summary.
-type projectJSON struct {
-	Metadata struct {
-		Name string `json:"name"`
-	} `json:"metadata"`
-	Status struct {
-		Conditions []struct {
-			Type    string `json:"type"`
-			Status  string `json:"status"`
-			Message string `json:"message"`
-		} `json:"conditions"`
-		Stats struct {
-			Stages struct {
-				Count  int            `json:"count"`
-				Health map[string]int `json:"health"`
-			} `json:"stages"`
-			Warehouses struct {
-				Count  int            `json:"count"`
-				Health map[string]int `json:"health"`
-			} `json:"warehouses"`
-		} `json:"stats"`
-	} `json:"status"`
-}
-
 type projectSummary struct {
 	Name              string `json:"name"`
 	Ready             string `json:"ready,omitempty"`
@@ -65,17 +40,21 @@ type projectSummary struct {
 	HealthyWarehouses int    `json:"healthyWarehouses,omitempty"`
 }
 
-func projectToSummary(p projectJSON) projectSummary {
+func projectToSummary(p *models.Project) projectSummary {
 	s := projectSummary{
-		Name:              p.Metadata.Name,
-		StageCount:        p.Status.Stats.Stages.Count,
-		HealthyStages:     p.Status.Stats.Stages.Health["healthy"],
-		WarehouseCount:    p.Status.Stats.Warehouses.Count,
-		HealthyWarehouses: p.Status.Stats.Warehouses.Health["healthy"],
+		StageCount:        int(p.Status.Stats.Stages.Count),
+		HealthyStages:     int(p.Status.Stats.Stages.Health.Healthy),
+		WarehouseCount:    int(p.Status.Stats.Warehouses.Count),
+		HealthyWarehouses: int(p.Status.Stats.Warehouses.Health.Healthy),
+	}
+	if p.Metadata != nil {
+		s.Name = p.Metadata.Name
 	}
 	for _, c := range p.Status.Conditions {
-		if c.Type == "Ready" {
-			s.Ready = c.Status
+		if c != nil && c.Type != nil && *c.Type == "Ready" {
+			if c.Status != nil {
+				s.Ready = *c.Status
+			}
 			break
 		}
 	}
@@ -95,14 +74,12 @@ func (s *Server) handleListProjects(
 	if err != nil {
 		return errResult(err)
 	}
-	data, _ := json.Marshal(res.Payload)
-	var list struct {
-		Items []json.RawMessage `json:"items"`
+	summaries := make([]projectSummary, 0, len(res.Payload.Items))
+	for _, p := range res.Payload.Items {
+		if p != nil {
+			summaries = append(summaries, projectToSummary(p))
+		}
 	}
-	if err := json.Unmarshal(data, &list); err != nil {
-		return errResult(err)
-	}
-	summaries := projectItems[projectJSON, projectSummary](list.Items, projectToSummary)
 	return jsonAnyResult(map[string]any{"items": summaries})
 }
 
@@ -160,5 +137,5 @@ func (s *Server) handleGetProject(
 	if err != nil {
 		return errResult(err)
 	}
-	return jsonAnyResult(sanitizeResource(res.Payload))
+	return jsonAnyResult(sanitizeResource(toUnstructured(res.Payload)).Object)
 }

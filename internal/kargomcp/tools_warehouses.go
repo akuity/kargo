@@ -2,11 +2,11 @@ package kargomcp
 
 import (
 	"context"
-	"encoding/json"
 
 	"github.com/modelcontextprotocol/go-sdk/mcp"
 
 	"github.com/akuity/kargo/pkg/client/generated/core"
+	"github.com/akuity/kargo/pkg/client/generated/models"
 )
 
 func (s *Server) registerWarehouseTools() {
@@ -40,22 +40,6 @@ type listWarehousesArgs struct {
 	Project string `json:"project,omitempty" jsonschema:"The Kargo project name. Omit to use the default set by 'kargo config set-project'"` //nolint:lll
 }
 
-type warehouseJSON struct {
-	Metadata struct {
-		Name string `json:"name"`
-	} `json:"metadata"`
-	Status struct {
-		Conditions []struct {
-			Type    string `json:"type"`
-			Status  string `json:"status"`
-			Message string `json:"message"`
-		} `json:"conditions"`
-		DiscoveredArtifacts *struct {
-			DiscoveredAt string `json:"discoveredAt"`
-		} `json:"discoveredArtifacts"`
-	} `json:"status"`
-}
-
 type warehouseSummary struct {
 	Name                      string `json:"name"`
 	Ready                     string `json:"ready,omitempty"`
@@ -63,19 +47,23 @@ type warehouseSummary struct {
 	LastArtifactsDiscoveredAt string `json:"lastArtifactsDiscoveredAt,omitempty"`
 }
 
-func warehouseToSummary(w warehouseJSON) warehouseSummary {
-	s := warehouseSummary{Name: w.Metadata.Name}
+func warehouseToSummary(w *models.Warehouse) warehouseSummary {
+	s := warehouseSummary{}
+	if w.Metadata != nil {
+		s.Name = w.Metadata.Name
+	}
 	for _, c := range w.Status.Conditions {
-		switch c.Type {
+		if c == nil || c.Type == nil || c.Status == nil {
+			continue
+		}
+		switch *c.Type {
 		case "Ready":
-			s.Ready = c.Status
+			s.Ready = *c.Status
 		case "Healthy":
-			s.Healthy = c.Status
+			s.Healthy = *c.Status
 		}
 	}
-	if w.Status.DiscoveredArtifacts != nil {
-		s.LastArtifactsDiscoveredAt = w.Status.DiscoveredArtifacts.DiscoveredAt
-	}
+	s.LastArtifactsDiscoveredAt = w.Status.DiscoveredArtifacts.DiscoveredAt
 	return s
 }
 
@@ -99,20 +87,11 @@ func (s *Server) handleListWarehouses(
 	if err != nil {
 		return errResult(err)
 	}
-	data, _ := json.Marshal(res.Payload)
-	var list struct {
-		Items []json.RawMessage `json:"items"`
-	}
-	if err := json.Unmarshal(data, &list); err != nil {
-		return errResult(err)
-	}
-	summaries := make([]warehouseSummary, 0, len(list.Items))
-	for _, raw := range list.Items {
-		var w warehouseJSON
-		if err := json.Unmarshal(raw, &w); err != nil {
-			continue
+	summaries := make([]warehouseSummary, 0, len(res.Payload.Items))
+	for _, w := range res.Payload.Items {
+		if w != nil {
+			summaries = append(summaries, warehouseToSummary(w))
 		}
-		summaries = append(summaries, warehouseToSummary(w))
 	}
 	return jsonAnyResult(map[string]any{"items": summaries})
 }
@@ -124,17 +103,9 @@ type getWarehouseArgs struct {
 	Warehouse string `json:"warehouse" jsonschema:"The name of the warehouse"`
 }
 
-type warehouseCondition struct {
-	Type    string `json:"type,omitempty"`
-	Status  string `json:"status,omitempty"`
-	Reason  string `json:"reason,omitempty"`
-	Message string `json:"message,omitempty"`
-}
-
 type warehouseResult struct {
-	Name       string                `json:"name,omitempty"`
-	Project    string                `json:"namespace,omitempty"`
-	Conditions []*warehouseCondition `json:"conditions,omitempty"`
+	Name    string `json:"name,omitempty"`
+	Project string `json:"namespace,omitempty"`
 }
 
 func (s *Server) handleGetWarehouse(
@@ -157,7 +128,7 @@ func (s *Server) handleGetWarehouse(
 	if err != nil {
 		return errResult(err)
 	}
-	return jsonAnyResult(sanitizeResource(res.Payload))
+	return jsonAnyResult(sanitizeResource(toUnstructured(res.Payload)).Object)
 }
 
 // --- refresh_warehouse ---

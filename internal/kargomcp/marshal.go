@@ -7,6 +7,7 @@ import (
 
 	"github.com/google/jsonschema-go/jsonschema"
 	"github.com/modelcontextprotocol/go-sdk/mcp"
+	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 )
 
 // noOutput is returned as the Out value by tool handlers with no typed
@@ -53,47 +54,38 @@ func destructive() *mcp.ToolAnnotations {
 	return &mcp.ToolAnnotations{DestructiveHint: &t}
 }
 
-// projectItems unmarshals each raw JSON item into T, reverses the slice
-// (newest-first), and applies project to produce a summary S.
-// Items that fail to unmarshal are skipped.
-func projectItems[T, S any](raws []json.RawMessage, project func(T) S) []S {
-	slices.Reverse(raws)
-	out := make([]S, 0, len(raws))
-	for _, raw := range raws {
-		var item T
-		if err := json.Unmarshal(raw, &item); err != nil {
-			continue
-		}
-		out = append(out, project(item))
-	}
-	return out
+// toUnstructured converts any swagger-generated payload to *unstructured.Unstructured
+// via a JSON round trip. On unmarshal failure the returned object is empty.
+func toUnstructured(payload any) *unstructured.Unstructured {
+	data, _ := json.Marshal(payload)
+	u := &unstructured.Unstructured{}
+	_ = json.Unmarshal(data, &u.Object)
+	return u
 }
 
-// sanitizeResource strips noisy Kubernetes bookkeeping fields from a resource
-// before returning it to the LLM:
+// sanitizeResource strips noisy Kubernetes bookkeeping fields from an
+// Unstructured object in-place before returning it to the LLM:
 //   - metadata.managedFields (GC bookkeeping, no semantic value)
 //   - metadata.generateName (template prefix, redundant with name)
 //   - metadata.annotations["kubectl.kubernetes.io/last-applied-configuration"]
 //     (full JSON-string duplicate of the spec)
-func sanitizeResource(payload any) any {
-	data, _ := json.Marshal(payload)
-	var m map[string]any
-	if err := json.Unmarshal(data, &m); err != nil {
-		return payload
+//
+// Also recursively drops null-valued fields via dropNulls.
+func sanitizeResource(u *unstructured.Unstructured) *unstructured.Unstructured {
+	u.SetManagedFields(nil)
+	if meta, ok := u.Object["metadata"].(map[string]any); ok {
+		delete(meta, "generateName")
 	}
-	meta, _ := m["metadata"].(map[string]any)
-	if meta == nil {
-		return m
+	anns := u.GetAnnotations()
+	delete(anns, "kubectl.kubernetes.io/last-applied-configuration")
+	if len(anns) == 0 {
+		anns = nil
 	}
-	delete(meta, "managedFields")
-	delete(meta, "generateName")
-	if anns, ok := meta["annotations"].(map[string]any); ok {
-		delete(anns, "kubectl.kubernetes.io/last-applied-configuration")
-		if len(anns) == 0 {
-			delete(meta, "annotations")
-		}
+	u.SetAnnotations(anns)
+	if m, ok := dropNulls(u.Object).(map[string]any); ok {
+		u.Object = m
 	}
-	return dropNulls(m)
+	return u
 }
 
 // dropNulls recursively removes nil values from maps and nil elements from
@@ -112,13 +104,12 @@ func dropNulls(v any) any {
 		}
 		return val
 	case []any:
-		out := val[:0]
-		for _, elem := range val {
+		for i, elem := range val {
 			if elem != nil {
-				out = append(out, dropNulls(elem))
+				val[i] = dropNulls(elem)
 			}
 		}
-		return out
+		return slices.DeleteFunc(val, func(e any) bool { return e == nil })
 	default:
 		return v
 	}

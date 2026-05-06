@@ -2,7 +2,6 @@ package kargomcp
 
 import (
 	"context"
-	"encoding/json"
 	"fmt"
 	"strings"
 
@@ -15,7 +14,7 @@ import (
 func (s *Server) registerPromotionTools() {
 	mcp.AddTool(s.mcpServer, &mcp.Tool{
 		Name: "list_promotions",
-		Description: "List promotions in a Kargo project, newest first. Returns a compact summary per promotion. " +
+		Description: "List promotions in a Kargo project. Returns a compact summary per promotion. " +
 			"Optionally filter by stage and/or phase (Running, Succeeded, Failed, Errored, Pending, Aborted).",
 		OutputSchema: mustOutputSchema[struct {
 			Items []promotionSummary `json:"items"`
@@ -64,23 +63,6 @@ type listPromotionsArgs struct {
 	Phase   string  `json:"phase,omitempty" jsonschema:"Filter by phase: Running, Succeeded, Failed, Errored, Pending, Aborted"` //nolint:lll
 }
 
-// promotionJSON is the intake struct for summary projection.
-type promotionJSON struct {
-	Metadata struct {
-		Name string `json:"name"`
-	} `json:"metadata"`
-	Spec struct {
-		Stage   string `json:"stage"`
-		Freight string `json:"freight"`
-	} `json:"spec"`
-	Status struct {
-		Phase      string `json:"phase"`
-		Message    string `json:"message"`
-		StartedAt  string `json:"startedAt"`
-		FinishedAt string `json:"finishedAt"`
-	} `json:"status"`
-}
-
 type promotionSummary struct {
 	Name       string `json:"name"`
 	Stage      string `json:"stage,omitempty"`
@@ -108,16 +90,23 @@ type promotionResult struct {
 	Conditions []*promotionCondition `json:"conditions,omitempty"`
 }
 
-func promotionToSummary(p promotionJSON) promotionSummary {
-	return promotionSummary{
-		Name:       p.Metadata.Name,
-		Stage:      p.Spec.Stage,
-		Freight:    p.Spec.Freight,
+func promotionToSummary(p *models.Promotion) promotionSummary {
+	s := promotionSummary{
 		Phase:      p.Status.Phase,
 		Message:    p.Status.Message,
 		StartedAt:  p.Status.StartedAt,
 		FinishedAt: p.Status.FinishedAt,
 	}
+	if p.Metadata != nil {
+		s.Name = p.Metadata.Name
+	}
+	if p.Spec.Stage != nil {
+		s.Stage = *p.Spec.Stage
+	}
+	if p.Spec.Freight != nil {
+		s.Freight = *p.Spec.Freight
+	}
+	return s
 }
 
 func (s *Server) handleListPromotions(
@@ -141,35 +130,18 @@ func (s *Server) handleListPromotions(
 	if err != nil {
 		return errResult(err)
 	}
-	data, _ := json.Marshal(res.Payload)
-	var list struct {
-		Items []json.RawMessage `json:"items"`
-	}
-	if err := json.Unmarshal(data, &list); err != nil {
-		return errResult(err)
-	}
-	items := list.Items
-	if args.Phase != "" {
-		items = filterRawsByPhase(items, args.Phase)
-	}
-	summaries := projectItems(items, promotionToSummary)
-	return jsonAnyResult(map[string]any{"items": summaries})
-}
-
-// filterRawsByPhase keeps only promotion JSON items whose status.phase matches
-// (case-insensitive).
-func filterRawsByPhase(raws []json.RawMessage, phase string) []json.RawMessage {
-	var out []json.RawMessage
-	for _, raw := range raws {
-		var p promotionJSON
-		if err := json.Unmarshal(raw, &p); err != nil {
+	want := strings.ToLower(args.Phase)
+	summaries := make([]promotionSummary, 0, len(res.Payload.Items))
+	for _, p := range res.Payload.Items {
+		if p == nil {
 			continue
 		}
-		if strings.EqualFold(p.Status.Phase, phase) {
-			out = append(out, raw)
+		if want != "" && !strings.EqualFold(p.Status.Phase, want) {
+			continue
 		}
+		summaries = append(summaries, promotionToSummary(p))
 	}
-	return out
+	return jsonAnyResult(map[string]any{"items": summaries})
 }
 
 // --- get_promotion ---
@@ -199,7 +171,7 @@ func (s *Server) handleGetPromotion(
 	if err != nil {
 		return errResult(err)
 	}
-	return jsonAnyResult(sanitizeResource(res.Payload))
+	return jsonAnyResult(sanitizeResource(toUnstructured(res.Payload)).Object)
 }
 
 // --- promote_to_stage ---
@@ -240,7 +212,7 @@ func (s *Server) handlePromoteToStage(
 	if err != nil {
 		return errResult(err)
 	}
-	return jsonAnyResult(sanitizeResource(res.Payload))
+	return jsonAnyResult(sanitizeResource(toUnstructured(res.Payload)).Object)
 }
 
 // --- promote_downstream ---
@@ -281,7 +253,7 @@ func (s *Server) handlePromoteDownstream(
 	if err != nil {
 		return errResult(err)
 	}
-	return jsonAnyResult(sanitizeResource(res.Payload))
+	return jsonAnyResult(sanitizeResource(toUnstructured(res.Payload)).Object)
 }
 
 // --- abort_promotion ---

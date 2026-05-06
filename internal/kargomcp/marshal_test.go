@@ -1,62 +1,18 @@
 package kargomcp
 
 import (
-	"encoding/json"
 	"testing"
 
 	"github.com/stretchr/testify/require"
+	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 )
-
-func TestProjectItems(t *testing.T) {
-	t.Parallel()
-	type in struct {
-		V int `json:"v"`
-	}
-	raw := func(v int) json.RawMessage {
-		b, _ := json.Marshal(in{V: v})
-		return b
-	}
-
-	testCases := []struct {
-		name   string
-		raws   []json.RawMessage
-		assert func(*testing.T, []int)
-	}{
-		{
-			name:   "nil input",
-			raws:   nil,
-			assert: func(t *testing.T, got []int) { require.Empty(t, got) },
-		},
-		{
-			name: "reverses order (newest-first)",
-			raws: []json.RawMessage{raw(1), raw(2), raw(3)},
-			assert: func(t *testing.T, got []int) {
-				require.Equal(t, []int{3, 2, 1}, got)
-			},
-		},
-		{
-			name: "skips invalid JSON",
-			raws: []json.RawMessage{raw(1), []byte("bad"), raw(3)},
-			assert: func(t *testing.T, got []int) {
-				require.Equal(t, []int{3, 1}, got)
-			},
-		},
-	}
-	for _, tc := range testCases {
-		t.Run(tc.name, func(t *testing.T) {
-			t.Parallel()
-			got := projectItems(tc.raws, func(i in) int { return i.V })
-			tc.assert(t, got)
-		})
-	}
-}
 
 func TestSanitizeResource(t *testing.T) {
 	t.Parallel()
 	testCases := []struct {
 		name   string
 		input  any
-		assert func(*testing.T, any)
+		assert func(*testing.T, *unstructured.Unstructured)
 	}{
 		{
 			name: "removes managedFields and generateName",
@@ -67,10 +23,8 @@ func TestSanitizeResource(t *testing.T) {
 					"managedFields": []any{map[string]any{"manager": "kubectl"}},
 				},
 			},
-			assert: func(t *testing.T, got any) {
-				m, ok := got.(map[string]any)
-				require.True(t, ok)
-				meta, ok := m["metadata"].(map[string]any)
+			assert: func(t *testing.T, got *unstructured.Unstructured) {
+				meta, ok := got.Object["metadata"].(map[string]any)
 				require.True(t, ok)
 				require.Equal(t, "foo", meta["name"])
 				require.NotContains(t, meta, "generateName")
@@ -86,10 +40,8 @@ func TestSanitizeResource(t *testing.T) {
 					},
 				},
 			},
-			assert: func(t *testing.T, got any) {
-				m, ok := got.(map[string]any)
-				require.True(t, ok)
-				meta, ok := m["metadata"].(map[string]any)
+			assert: func(t *testing.T, got *unstructured.Unstructured) {
+				meta, ok := got.Object["metadata"].(map[string]any)
 				require.True(t, ok)
 				require.NotContains(t, meta, "annotations")
 			},
@@ -104,10 +56,8 @@ func TestSanitizeResource(t *testing.T) {
 					},
 				},
 			},
-			assert: func(t *testing.T, got any) {
-				m, ok := got.(map[string]any)
-				require.True(t, ok)
-				meta, ok := m["metadata"].(map[string]any)
+			assert: func(t *testing.T, got *unstructured.Unstructured) {
+				meta, ok := got.Object["metadata"].(map[string]any)
 				require.True(t, ok)
 				anns, ok := meta["annotations"].(map[string]any)
 				require.True(t, ok)
@@ -121,10 +71,8 @@ func TestSanitizeResource(t *testing.T) {
 				"metadata": map[string]any{"name": "x"},
 				"spec":     map[string]any{"field": nil, "other": "val"},
 			},
-			assert: func(t *testing.T, got any) {
-				m, ok := got.(map[string]any)
-				require.True(t, ok)
-				spec, ok := m["spec"].(map[string]any)
+			assert: func(t *testing.T, got *unstructured.Unstructured) {
+				spec, ok := got.Object["spec"].(map[string]any)
 				require.True(t, ok)
 				require.NotContains(t, spec, "field")
 				require.Equal(t, "val", spec["other"])
@@ -133,74 +81,15 @@ func TestSanitizeResource(t *testing.T) {
 		{
 			name:  "no metadata passes through",
 			input: map[string]any{"kind": "Foo"},
-			assert: func(t *testing.T, got any) {
-				m, ok := got.(map[string]any)
-				require.True(t, ok)
-				require.Equal(t, "Foo", m["kind"])
+			assert: func(t *testing.T, got *unstructured.Unstructured) {
+				require.Equal(t, "Foo", got.Object["kind"])
 			},
 		},
 	}
 	for _, tc := range testCases {
 		t.Run(tc.name, func(t *testing.T) {
 			t.Parallel()
-			tc.assert(t, sanitizeResource(tc.input))
-		})
-	}
-}
-
-func TestFlattenFreightGroups(t *testing.T) {
-	t.Parallel()
-	testCases := []struct {
-		name   string
-		input  any
-		assert func(*testing.T, []json.RawMessage)
-	}{
-		{
-			name:   "nil payload",
-			input:  nil,
-			assert: func(t *testing.T, got []json.RawMessage) { require.Empty(t, got) },
-		},
-		{
-			name: "single default group",
-			input: map[string]any{
-				"groups": map[string]any{
-					"": map[string]any{
-						"items": []any{
-							map[string]any{"name": "a"},
-							map[string]any{"name": "b"},
-						},
-					},
-				},
-			},
-			assert: func(t *testing.T, got []json.RawMessage) {
-				require.Len(t, got, 2)
-			},
-		},
-		{
-			name: "multiple groups are merged",
-			input: map[string]any{
-				"groups": map[string]any{
-					"g1": map[string]any{"items": []any{map[string]any{"name": "a"}}},
-					"g2": map[string]any{"items": []any{map[string]any{"name": "b"}}},
-				},
-			},
-			assert: func(t *testing.T, got []json.RawMessage) {
-				require.Len(t, got, 2)
-			},
-		},
-		{
-			name: "empty groups yields empty slice",
-			input: map[string]any{
-				"groups": map[string]any{},
-			},
-			assert: func(t *testing.T, got []json.RawMessage) { require.Empty(t, got) },
-		},
-	}
-	for _, tc := range testCases {
-		t.Run(tc.name, func(t *testing.T) {
-			t.Parallel()
-			got := flattenFreightGroups(tc.input)
-			tc.assert(t, got)
+			tc.assert(t, sanitizeResource(toUnstructured(tc.input)))
 		})
 	}
 }

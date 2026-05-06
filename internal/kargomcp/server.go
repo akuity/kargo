@@ -79,13 +79,18 @@ func (s *Server) resolveProject(explicit string) (string, error) {
 	)
 }
 
-// apiClient constructs an authenticated Kargo REST API client, handling token
-// refresh transparently. Returns a user-friendly error if auth is missing or expired.
+// apiClient constructs an authenticated Kargo REST API client. It re-reads the
+// config from disk on every call so that tokens written by `kargo login` or
+// refreshed since startup are picked up without requiring a server restart.
 func (s *Server) apiClient(ctx context.Context) (*generatedclient.KargoAPI, error) {
 	if s.apiClientOverride != nil {
 		return s.apiClientOverride, nil
 	}
-	c, err := client.GetClientFromConfig(ctx, s.cfg, client.Options{})
+	cfg := s.cfg
+	if fresh, err := config.LoadCLIConfig(); err == nil {
+		cfg = fresh
+	}
+	c, err := client.GetClientFromConfig(ctx, cfg, client.Options{})
 	if err != nil {
 		return nil, fmt.Errorf("%w\nRun `kargo login` to authenticate", err)
 	}

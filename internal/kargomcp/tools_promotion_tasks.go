@@ -2,11 +2,11 @@ package kargomcp
 
 import (
 	"context"
-	"encoding/json"
 
 	"github.com/modelcontextprotocol/go-sdk/mcp"
 
 	"github.com/akuity/kargo/pkg/client/generated/core"
+	"github.com/akuity/kargo/pkg/client/generated/models"
 )
 
 func (s *Server) registerPromotionTaskTools() {
@@ -22,6 +22,12 @@ func (s *Server) registerPromotionTaskTools() {
 	}, s.handleListPromotionTasks)
 
 	mcp.AddTool(s.mcpServer, &mcp.Tool{
+		Name:        "get_promotion_task",
+		Description: "Get full details for a single PromotionTask in a Kargo project.",
+		Annotations: readOnly(),
+	}, s.handleGetPromotionTask)
+
+	mcp.AddTool(s.mcpServer, &mcp.Tool{
 		Name: "list_cluster_promotion_tasks",
 		Description: "List cluster-scoped reusable PromotionTask templates " +
 			"available across all projects.",
@@ -30,19 +36,12 @@ func (s *Server) registerPromotionTaskTools() {
 		}](),
 		Annotations: readOnly(),
 	}, s.handleListClusterPromotionTasks)
-}
 
-// promotionTaskJSON is the intake struct for summary projection.
-type promotionTaskJSON struct {
-	Metadata struct {
-		Name string `json:"name"`
-	} `json:"metadata"`
-	Spec struct {
-		Steps []struct {
-			Uses string `json:"uses"`
-			As   string `json:"as,omitempty"`
-		} `json:"steps"`
-	} `json:"spec"`
+	mcp.AddTool(s.mcpServer, &mcp.Tool{
+		Name:        "get_cluster_promotion_task",
+		Description: "Get full details for a single cluster-scoped PromotionTask.",
+		Annotations: readOnly(),
+	}, s.handleGetClusterPromotionTask)
 }
 
 type promotionTaskSummary struct {
@@ -50,9 +49,33 @@ type promotionTaskSummary struct {
 	Steps []string `json:"steps,omitempty"`
 }
 
-func promotionTaskToSummary(t promotionTaskJSON) promotionTaskSummary {
-	s := promotionTaskSummary{Name: t.Metadata.Name}
+func promotionTaskToSummary(t *models.PromotionTask) promotionTaskSummary {
+	s := promotionTaskSummary{}
+	if t.Metadata != nil {
+		s.Name = t.Metadata.Name
+	}
 	for _, step := range t.Spec.Steps {
+		if step == nil {
+			continue
+		}
+		label := step.Uses
+		if step.As != "" {
+			label = step.As + " (" + step.Uses + ")"
+		}
+		s.Steps = append(s.Steps, label)
+	}
+	return s
+}
+
+func clusterPromotionTaskToSummary(t *models.ClusterPromotionTask) promotionTaskSummary {
+	s := promotionTaskSummary{}
+	if t.Metadata != nil {
+		s.Name = t.Metadata.Name
+	}
+	for _, step := range t.Spec.Steps {
+		if step == nil {
+			continue
+		}
 		label := step.Uses
 		if step.As != "" {
 			label = step.As + " (" + step.Uses + ")"
@@ -88,15 +111,43 @@ func (s *Server) handleListPromotionTasks(
 	if err != nil {
 		return errResult(err)
 	}
-	data, _ := json.Marshal(res.Payload)
-	var list struct {
-		Items []json.RawMessage `json:"items"`
+	summaries := make([]promotionTaskSummary, 0, len(res.Payload.Items))
+	for _, t := range res.Payload.Items {
+		if t != nil {
+			summaries = append(summaries, promotionTaskToSummary(t))
+		}
 	}
-	if err := json.Unmarshal(data, &list); err != nil {
+	return jsonAnyResult(map[string]any{"items": summaries})
+}
+
+// --- get_promotion_task ---
+
+type getPromotionTaskArgs struct {
+	Project       string `json:"project,omitempty" jsonschema:"The Kargo project name. Omit to use the default set by 'kargo config set-project'"` //nolint:lll
+	PromotionTask string `json:"promotion_task" jsonschema:"The name of the PromotionTask"`
+}
+
+func (s *Server) handleGetPromotionTask(
+	ctx context.Context,
+	_ *mcp.CallToolRequest,
+	args getPromotionTaskArgs,
+) (*mcp.CallToolResult, any, error) {
+	project, err := s.resolveProject(args.Project)
+	if err != nil {
 		return errResult(err)
 	}
-	summaries := projectItems(list.Items, promotionTaskToSummary)
-	return jsonAnyResult(map[string]any{"items": summaries})
+	apiClient, err := s.apiClient(ctx)
+	if err != nil {
+		return errResult(err)
+	}
+	res, err := apiClient.Core.GetPromotionTask(
+		core.NewGetPromotionTaskParams().WithProject(project).WithPromotionTask(args.PromotionTask),
+		nil,
+	)
+	if err != nil {
+		return errResult(err)
+	}
+	return jsonAnyResult(sanitizeResource(toUnstructured(res.Payload)).Object)
 }
 
 // --- list_cluster_promotion_tasks ---
@@ -119,13 +170,36 @@ func (s *Server) handleListClusterPromotionTasks(
 	if err != nil {
 		return errResult(err)
 	}
-	data, _ := json.Marshal(res.Payload)
-	var list struct {
-		Items []json.RawMessage `json:"items"`
+	summaries := make([]promotionTaskSummary, 0, len(res.Payload.Items))
+	for _, t := range res.Payload.Items {
+		if t != nil {
+			summaries = append(summaries, clusterPromotionTaskToSummary(t))
+		}
 	}
-	if err := json.Unmarshal(data, &list); err != nil {
+	return jsonAnyResult(map[string]any{"items": summaries})
+}
+
+// --- get_cluster_promotion_task ---
+
+type getClusterPromotionTaskArgs struct {
+	PromotionTask string `json:"promotion_task" jsonschema:"The name of the ClusterPromotionTask"`
+}
+
+func (s *Server) handleGetClusterPromotionTask(
+	ctx context.Context,
+	_ *mcp.CallToolRequest,
+	args getClusterPromotionTaskArgs,
+) (*mcp.CallToolResult, any, error) {
+	apiClient, err := s.apiClient(ctx)
+	if err != nil {
 		return errResult(err)
 	}
-	summaries := projectItems(list.Items, promotionTaskToSummary)
-	return jsonAnyResult(map[string]any{"items": summaries})
+	res, err := apiClient.Core.GetClusterPromotionTask(
+		core.NewGetClusterPromotionTaskParams().WithClusterPromotionTask(args.PromotionTask),
+		nil,
+	)
+	if err != nil {
+		return errResult(err)
+	}
+	return jsonAnyResult(sanitizeResource(toUnstructured(res.Payload)).Object)
 }

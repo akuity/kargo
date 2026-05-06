@@ -2,87 +2,22 @@ package kargomcp
 
 import (
 	"context"
-	"encoding/json"
 	"net/http"
 	"testing"
 
 	"github.com/stretchr/testify/require"
+
+	"github.com/akuity/kargo/pkg/client/generated/models"
 )
-
-func TestFilterRawsByPhase(t *testing.T) {
-	t.Parallel()
-	raw := func(phase string) json.RawMessage {
-		b, _ := json.Marshal(promotionJSON{
-			Status: struct {
-				Phase      string `json:"phase"`
-				Message    string `json:"message"`
-				StartedAt  string `json:"startedAt"`
-				FinishedAt string `json:"finishedAt"`
-			}{Phase: phase},
-		})
-		return b
-	}
-
-	testCases := []struct {
-		name   string
-		input  []json.RawMessage
-		phase  string
-		assert func(*testing.T, []json.RawMessage)
-	}{
-		{
-			name:   "empty input",
-			input:  nil,
-			phase:  "Running",
-			assert: func(t *testing.T, got []json.RawMessage) { require.Empty(t, got) },
-		},
-		{
-			name:  "exact phase match",
-			input: []json.RawMessage{raw("Running"), raw("Succeeded"), raw("Running")},
-			phase: "Running",
-			assert: func(t *testing.T, got []json.RawMessage) {
-				require.Len(t, got, 2)
-			},
-		},
-		{
-			name:  "case-insensitive match",
-			input: []json.RawMessage{raw("Errored"), raw("Succeeded")},
-			phase: "errored",
-			assert: func(t *testing.T, got []json.RawMessage) {
-				require.Len(t, got, 1)
-			},
-		},
-		{
-			name:  "no matches returns nil",
-			input: []json.RawMessage{raw("Succeeded")},
-			phase: "Running",
-			assert: func(t *testing.T, got []json.RawMessage) {
-				require.Empty(t, got)
-			},
-		},
-		{
-			name:  "invalid JSON skipped",
-			input: []json.RawMessage{raw("Errored"), []byte("bad"), raw("Errored")},
-			phase: "Errored",
-			assert: func(t *testing.T, got []json.RawMessage) {
-				require.Len(t, got, 2)
-			},
-		},
-	}
-	for _, tc := range testCases {
-		t.Run(tc.name, func(t *testing.T) {
-			t.Parallel()
-			got := filterRawsByPhase(tc.input, tc.phase)
-			tc.assert(t, got)
-		})
-	}
-}
 
 func TestPromotionToSummary(t *testing.T) {
 	t.Parallel()
-	p := promotionJSON{}
-	p.Metadata.Name = "promo-1"
-	p.Spec.Stage = "prod"
-	p.Spec.Freight = "abc123"
+	stage := "prod"
+	freight := "abc123"
+	p := &models.Promotion{}
+	p.Metadata = &models.V1ObjectMeta{Name: "promo-1"}
+	p.Spec.Stage = &stage
+	p.Spec.Freight = &freight
 	p.Status.Phase = "Succeeded"
 	p.Status.Message = "done"
 	p.Status.StartedAt = "2026-01-01T00:00:00Z"

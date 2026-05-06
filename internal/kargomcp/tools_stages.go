@@ -2,12 +2,12 @@ package kargomcp
 
 import (
 	"context"
-	"encoding/json"
 	"strings"
 
 	"github.com/modelcontextprotocol/go-sdk/mcp"
 
 	"github.com/akuity/kargo/pkg/client/generated/core"
+	"github.com/akuity/kargo/pkg/client/generated/models"
 )
 
 func (s *Server) registerStageTools() {
@@ -23,8 +23,9 @@ func (s *Server) registerStageTools() {
 	}, s.handleListStages)
 
 	mcp.AddTool(s.mcpServer, &mcp.Tool{
-		Name:         "get_stage",
-		Description:  "Get full details for a single stage.",
+		Name: "get_stage",
+		Description: "Get full details for a single stage. " +
+			"Note: status.freightHistory is omitted — use get_stage_freight_history for that data.",
 		OutputSchema: mustOutputSchema[stageResult](),
 		Annotations:  readOnly(),
 	}, s.handleGetStage)
@@ -35,9 +36,6 @@ func (s *Server) registerStageTools() {
 			"collections that have been promoted through it, with verification results. " +
 			"Use this when you need to audit what freight has passed through a stage " +
 			"or investigate verification failures.",
-		OutputSchema: mustOutputSchema[struct {
-			Items []freightHistoryEntry `json:"items"`
-		}](),
 		Annotations: readOnly(),
 	}, s.handleGetStageFreightHistory)
 
@@ -57,32 +55,6 @@ type listStagesArgs struct {
 	Health     string   `json:"health,omitempty" jsonschema:"Filter by health status: Healthy, Unhealthy, or Unknown"`
 }
 
-// stageJSON is the intake struct for summary projection.
-type stageJSON struct {
-	Metadata struct {
-		Name string `json:"name"`
-	} `json:"metadata"`
-	Status struct {
-		Health struct {
-			Status string   `json:"status"`
-			Issues []string `json:"issues"`
-		} `json:"health"`
-		FreightSummary       string `json:"freightSummary"`
-		AutoPromotionEnabled bool   `json:"autoPromotionEnabled"`
-		CurrentPromotion     struct {
-			Name string `json:"name"`
-		} `json:"currentPromotion"`
-		LastPromotion struct {
-			Name       string `json:"name"`
-			FinishedAt string `json:"finishedAt"`
-			Status     struct {
-				Phase   string `json:"phase"`
-				Message string `json:"message"`
-			} `json:"status"`
-		} `json:"lastPromotion"`
-	} `json:"status"`
-}
-
 type stageSummary struct {
 	Name                 string              `json:"name"`
 	Health               string              `json:"health,omitempty"`
@@ -100,14 +72,16 @@ type lastPromotionBrief struct {
 	Message    string `json:"message,omitempty"`
 }
 
-func stageToSummary(st stageJSON) stageSummary {
+func stageToSummary(st *models.Stage) stageSummary {
 	s := stageSummary{
-		Name:                 st.Metadata.Name,
 		Health:               st.Status.Health.Status,
 		HealthIssues:         st.Status.Health.Issues,
 		CurrentFreight:       st.Status.FreightSummary,
 		AutoPromotionEnabled: st.Status.AutoPromotionEnabled,
 		CurrentPromotion:     st.Status.CurrentPromotion.Name,
+	}
+	if st.Metadata != nil {
+		s.Name = st.Metadata.Name
 	}
 	if st.Status.LastPromotion.Name != "" {
 		s.LastPromotion = &lastPromotionBrief{
@@ -141,34 +115,13 @@ func (s *Server) handleListStages(
 	if err != nil {
 		return errResult(err)
 	}
-	data, _ := json.Marshal(res.Payload)
-	var list struct {
-		Items []json.RawMessage `json:"items"`
-	}
-	if err := json.Unmarshal(data, &list); err != nil {
-		return errResult(err)
-	}
-
-	// Filter by health before projecting.
 	want := strings.ToLower(args.Health)
-	filtered := list.Items
-	if want != "" {
-		filtered = filtered[:0]
-		for _, raw := range list.Items {
-			var st stageJSON
-			if err := json.Unmarshal(raw, &st); err != nil {
-				continue
-			}
-			if strings.EqualFold(st.Status.Health.Status, want) {
-				filtered = append(filtered, raw)
-			}
+	summaries := make([]stageSummary, 0, len(res.Payload.Items))
+	for _, st := range res.Payload.Items {
+		if st == nil {
+			continue
 		}
-	}
-
-	summaries := make([]stageSummary, 0, len(filtered))
-	for _, raw := range filtered {
-		var st stageJSON
-		if err := json.Unmarshal(raw, &st); err != nil {
+		if want != "" && !strings.EqualFold(st.Status.Health.Status, want) {
 			continue
 		}
 		summaries = append(summaries, stageToSummary(st))
@@ -237,14 +190,12 @@ func (s *Server) handleGetStage(
 	if err != nil {
 		return errResult(err)
 	}
-	sanitized, ok := sanitizeResource(res.Payload).(map[string]any)
-	if !ok {
-		return jsonAnyResult(sanitizeResource(res.Payload))
-	}
-	if status, ok := sanitized["status"].(map[string]any); ok {
+	u := toUnstructured(res.Payload)
+	sanitizeResource(u)
+	if status, ok := u.Object["status"].(map[string]any); ok {
 		delete(status, "freightHistory")
 	}
-	return jsonAnyResult(sanitized)
+	return jsonAnyResult(u.Object)
 }
 
 // --- get_stage_freight_history ---
@@ -252,19 +203,6 @@ func (s *Server) handleGetStage(
 type getStageFreightHistoryArgs struct {
 	Project string `json:"project,omitempty" jsonschema:"The Kargo project name. Omit to use the default set by 'kargo config set-project'"` //nolint:lll
 	Stage   string `json:"stage" jsonschema:"The name of the stage"`
-}
-
-type freightHistoryVerification struct {
-	ID         string `json:"id,omitempty"`
-	Phase      string `json:"phase,omitempty"`
-	StartTime  string `json:"startTime,omitempty"`
-	FinishTime string `json:"finishTime,omitempty"`
-}
-
-type freightHistoryEntry struct {
-	ID                  string                       `json:"id,omitempty"`
-	FreightName         string                       `json:"freightName,omitempty"`
-	VerificationHistory []freightHistoryVerification `json:"verificationHistory,omitempty"`
 }
 
 func (s *Server) handleGetStageFreightHistory(
@@ -287,37 +225,13 @@ func (s *Server) handleGetStageFreightHistory(
 	if err != nil {
 		return errResult(err)
 	}
-	data, _ := json.Marshal(res.Payload)
-	var stage struct {
-		Status struct {
-			FreightHistory []struct {
-				ID    string `json:"id"`
-				Items map[string]struct {
-					Name string `json:"name"`
-				} `json:"items"`
-				VerificationHistory []freightHistoryVerification `json:"verificationHistory"`
-			} `json:"freightHistory"`
-		} `json:"status"`
+	u := toUnstructured(res.Payload)
+	status, _ := u.Object["status"].(map[string]any)
+	history := status["freightHistory"]
+	if history == nil {
+		history = []any{}
 	}
-	if err := json.Unmarshal(data, &stage); err != nil {
-		return errResult(err)
-	}
-	entries := make([]freightHistoryEntry, 0, len(stage.Status.FreightHistory))
-	for _, h := range stage.Status.FreightHistory {
-		e := freightHistoryEntry{
-			ID:                  h.ID,
-			VerificationHistory: h.VerificationHistory,
-		}
-		// Extract freight name from the first item (there is typically one per origin).
-		for _, item := range h.Items {
-			if item.Name != "" {
-				e.FreightName = item.Name
-				break
-			}
-		}
-		entries = append(entries, e)
-	}
-	return jsonAnyResult(map[string]any{"items": entries})
+	return jsonAnyResult(map[string]any{"items": history})
 }
 
 // --- refresh_stage ---
