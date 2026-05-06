@@ -90,6 +90,7 @@ export const SubscriptionWizard = (props: {
                       props.onChange([
                         ...props.subscriptions,
                         {
+                          name: '',
                           [selectedNewSubscription]: data.formData
                         }
                       ])
