@@ -6149,6 +6149,15 @@
         }
       }
     },
+    "AutoRollbackConfig": {
+      "type": "object",
+      "properties": {
+        "onFailedPromotions": {
+          "description": "OnFailedPromotions indicates whether a rollback should be triggered\nwhen a promotion to the Stage fails.",
+          "type": "boolean"
+        }
+      }
+    },
     "AzureWebhookReceiverConfig": {
       "type": "object",
       "properties": {
@@ -7312,6 +7321,14 @@
         "autoPromotionEnabled": {
           "description": "AutoPromotionEnabled indicates whether new Freight can automatically be\npromoted into the Stage referenced by the Stage field. Note: There are may\nbe other conditions also required for an auto-promotion to occur. This\nfield defaults to false, but is commonly set to true for Stages that\nsubscribe to Warehouses instead of other, upstream Stages. This allows\nusers to define Stages that are automatically updated as soon as new\nartifacts are detected.",
           "type": "boolean"
+        },
+        "autoRollback": {
+          "description": "AutoRollback describes the conditions under which this Stage should\nautomatically roll back to the last known-good (verified) Freight. When\nnil, auto-rollback is disabled.\n\nKargo Enterprise only: This field is ignored in Kargo OSS.",
+          "allOf": [
+            {
+              "$ref": "#/definitions/AutoRollbackConfig"
+            }
+          ]
         },
         "stage": {
           "description": "Stage is the name of the Stage to which this policy applies.\n\nDeprecated: Use StageSelector instead.\n\n+kubebuilder:validation:Pattern=^[a-z0-9]([-a-z0-9]*[a-z0-9])?(\\.[a-z0-9]([-a-z0-9]*[a-z0-9])?)*$",

@@ -20,6 +20,7 @@ export * from './artifactReference';
 export * from './artifactReferenceMetadata';
 export * from './artifactoryWebhookReceiverConfig';
 export * from './autoPromotionOptions';
+export * from './autoRollbackConfig';
 export * from './azureWebhookReceiverConfig';
 export * from './bitbucketWebhookReceiverConfig';
 export * from './chart';

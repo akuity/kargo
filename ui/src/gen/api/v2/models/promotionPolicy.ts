@@ -5,6 +5,7 @@
  * REST API for Kargo
  * OpenAPI spec version: v1alpha1
  */
+import type { AutoRollbackConfig } from './autoRollbackConfig';
 import type { PromotionPolicySelector } from './promotionPolicySelector';
 
 export interface PromotionPolicy {
@@ -16,6 +17,12 @@ subscribe to Warehouses instead of other, upstream Stages. This allows
 users to define Stages that are automatically updated as soon as new
 artifacts are detected. */
   autoPromotionEnabled?: boolean;
+  /** AutoRollback describes the conditions under which this Stage should
+automatically roll back to the last known-good (verified) Freight. When
+nil, auto-rollback is disabled.
+
+Kargo Enterprise only: This field is ignored in Kargo OSS. */
+  autoRollback?: AutoRollbackConfig;
   /** Stage is the name of the Stage to which this policy applies.
 
 Deprecated: Use StageSelector instead.

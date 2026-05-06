@@ -199,6 +199,16 @@ message AutoPromotionOptions {
   optional string selectionPolicy = 1;
 }
 
+// AutoRollbackConfig describes the conditions under which a Stage should
+// automatically roll back to the last known-good (verified) Freight.
+// Rollback on failed verifications is always enabled when this config is
+// present. Additional triggers may be enabled via the fields below.
+message AutoRollbackConfig {
+  // OnFailedPromotions indicates whether a rollback should be triggered
+  // when a promotion to the Stage fails.
+  optional bool onFailedPromotions = 1;
+}
+
 // AzureWebhookReceiverConfig describes a webhook receiver that is compatible
 // with Azure Container Registry (ACR) and Azure DevOps payloads.
 message AzureWebhookReceiverConfig {
@@ -1368,6 +1378,13 @@ message PromotionPolicy {
   // users to define Stages that are automatically updated as soon as new
   // artifacts are detected.
   optional bool autoPromotionEnabled = 2;
+
+  // AutoRollback describes the conditions under which this Stage should
+  // automatically roll back to the last known-good (verified) Freight. When
+  // nil, auto-rollback is disabled.
+  //
+  // Kargo Enterprise only: This field is ignored in Kargo OSS.
+  optional AutoRollbackConfig autoRollback = 4;
 }
 
 // PromotionPolicySelector is a selector that matches the resource to which

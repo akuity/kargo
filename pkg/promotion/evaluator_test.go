@@ -48,7 +48,8 @@ func TestStepEvaluator_BuildExprEnv(t *testing.T) {
 					},
 					"meta": map[string]any{
 						"promotion": map[string]any{
-							"actor": "test-actor",
+							"actor":    "test-actor",
+							"rollback": false,
 						},
 					},
 				},
@@ -88,7 +89,8 @@ func TestStepEvaluator_BuildExprEnv(t *testing.T) {
 					},
 					"meta": map[string]any{
 						"promotion": map[string]any{
-							"actor": "test-actor",
+							"actor":    "test-actor",
+							"rollback": false,
 						},
 					},
 				},
@@ -150,7 +152,8 @@ func TestStepEvaluator_BuildExprEnv(t *testing.T) {
 					},
 					"meta": map[string]any{
 						"promotion": map[string]any{
-							"actor": "test-actor",
+							"actor":    "test-actor",
+							"rollback": false,
 						},
 					},
 				},
@@ -201,7 +204,8 @@ func TestStepEvaluator_BuildExprEnv(t *testing.T) {
 					},
 					"meta": map[string]any{
 						"promotion": map[string]any{
-							"actor": "test-actor",
+							"actor":    "test-actor",
+							"rollback": false,
 						},
 					},
 				},
@@ -251,7 +255,8 @@ func TestStepEvaluator_BuildExprEnv(t *testing.T) {
 					},
 					"meta": map[string]any{
 						"promotion": map[string]any{
-							"actor": "test-actor",
+							"actor":    "test-actor",
+							"rollback": false,
 						},
 					},
 				},
@@ -299,7 +304,8 @@ func TestStepEvaluator_BuildExprEnv(t *testing.T) {
 					},
 					"meta": map[string]any{
 						"promotion": map[string]any{
-							"actor": "test-actor",
+							"actor":    "test-actor",
+							"rollback": false,
 						},
 					},
 				},
@@ -359,7 +365,8 @@ func TestStepEvaluator_BuildExprEnv(t *testing.T) {
 					},
 					"meta": map[string]any{
 						"promotion": map[string]any{
-							"actor": "test-actor",
+							"actor":    "test-actor",
+							"rollback": false,
 						},
 					},
 				},
@@ -402,7 +409,8 @@ func TestStepEvaluator_BuildExprEnv(t *testing.T) {
 					},
 					"meta": map[string]any{
 						"promotion": map[string]any{
-							"actor": "",
+							"actor":    "",
+							"rollback": false,
 						},
 					},
 				},
