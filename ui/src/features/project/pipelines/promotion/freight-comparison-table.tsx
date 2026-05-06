@@ -1,17 +1,11 @@
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
-import { Table, Tag, theme, Typography } from 'antd';
+import { Col, Flex, Row, Space, Table, Tag, theme, Typography } from 'antd';
 import { useMemo } from 'react';
 
-import { TableSource } from '@ui/features/freight/flatten-freight-origin-utils';
+import { ArtifactMetadata } from '@ui/features/freight/artifact-metadata';
 import { Freight } from '@ui/gen/api/v1alpha1/generated_pb';
 
-import {
-  relativeFromFreight,
-  repoLabel,
-  typeIcon,
-  typeLabel,
-  versionLabel
-} from './freight-comparison-utils';
+import { repoLabel, typeIcon, typeLabel, versionLabel } from './freight-comparison-utils';
 import { PairedRow, pairArtifacts, PairStatus } from './pair-artifacts';
 
 const statusTag = (status: PairStatus) => {
@@ -25,27 +19,6 @@ const statusTag = (status: PairStatus) => {
     case 'UNCHANGED':
       return <Tag>UNCHANGED</Tag>;
   }
-};
-
-const ArtifactExtras = ({
-  source,
-  relativeAge,
-  color
-}: {
-  source: TableSource;
-  relativeAge: string;
-  color?: string;
-}) => {
-  if (source.type !== 'git') {
-    return null;
-  }
-  const author = [source.author, relativeAge].filter(Boolean).join(' · ');
-  return (
-    <div className='mt-1 text-xs leading-snug' style={{ color }}>
-      {source.message && <div>{source.message}</div>}
-      {author && <div>{author}</div>}
-    </div>
-  );
 };
 
 type FreightComparisonTableProps = {
@@ -69,8 +42,6 @@ export const FreightComparisonTable = ({
   );
 
   const hasCurrent = !!currentFreight;
-  const currentAge = useMemo(() => relativeFromFreight(currentFreight), [currentFreight]);
-  const incomingAge = useMemo(() => relativeFromFreight(incomingFreight), [incomingFreight]);
 
   return (
     <Table<PairedRow>
@@ -78,53 +49,87 @@ export const FreightComparisonTable = ({
       dataSource={rows}
       rowKey='key'
       pagination={false}
-      onRow={(row) => ({
-        style:
-          row.status === 'CHANGED' || row.status === 'NEW'
-            ? { backgroundColor: changedRowBg }
-            : undefined
-      })}
+      tableLayout='fixed'
+      rowHoverable={false}
+      onRow={(row) => {
+        const expandable =
+          (row.incoming || row.current)?.type === 'image' ||
+          (row.incoming || row.current)?.type === 'git';
+        const bg = row.status === 'CHANGED' || row.status === 'NEW' ? changedRowBg : undefined;
+        return {
+          style: {
+            backgroundColor: bg,
+            cursor: expandable ? 'pointer' : undefined
+          }
+        };
+      }}
+      expandable={{
+        expandRowByClick: true,
+        rowExpandable: (row) => {
+          const t = (row.incoming || row.current)?.type;
+          return t === 'image' || t === 'git';
+        },
+        expandedRowRender: (row) => (
+          <Row gutter={24}>
+            <Col span={12}>
+              <Typography.Text type='secondary' strong className='text-xs uppercase mb-2 block'>
+                Current
+              </Typography.Text>
+              {row.current ? (
+                <ArtifactMetadata {...row.current} />
+              ) : (
+                <Typography.Text type='secondary'>—</Typography.Text>
+              )}
+            </Col>
+            <Col span={12}>
+              <Typography.Text type='secondary' strong className='text-xs uppercase mb-2 block'>
+                Promoting
+              </Typography.Text>
+              {row.incoming ? (
+                <ArtifactMetadata {...row.incoming} />
+              ) : (
+                <Typography.Text type='secondary'>—</Typography.Text>
+              )}
+            </Col>
+          </Row>
+        )
+      }}
     >
       <Table.Column<PairedRow>
-        title='Type'
-        width={64}
-        render={(_, row) => {
-          const source = row.incoming || row.current;
-          if (!source) {
-            return null;
-          }
-          return (
-            <FontAwesomeIcon
-              icon={typeIcon(source)}
-              style={{ opacity: row.status === 'UNCHANGED' ? 0.55 : 1 }}
-            />
-          );
-        }}
-      />
-      <Table.Column<PairedRow>
         title='Repo / Name'
+        width='60%'
         render={(_, row) => {
           const source = row.incoming || row.current;
           if (!source) {
             return null;
           }
           return (
-            <div>
-              <div className='font-mono'>{repoLabel(source)}</div>
-              <Typography.Text type='secondary' className='text-xs'>
-                {typeLabel(source)}
-              </Typography.Text>
-            </div>
+            <Flex align='start' gap={12}>
+              <FontAwesomeIcon
+                icon={typeIcon(source)}
+                style={{
+                  opacity: row.status === 'UNCHANGED' ? 0.55 : 1,
+                  marginTop: 4
+                }}
+              />
+              <div>
+                <div className='font-mono'>{repoLabel(source)}</div>
+                <Typography.Text type='secondary' className='text-xs'>
+                  {typeLabel(source)}
+                </Typography.Text>
+              </div>
+            </Flex>
           );
         }}
       />
       <Table.Column<PairedRow>
         title='Current'
+        width='15%'
         render={(_, row) => {
           if (!hasCurrent) {
             return (
               <Typography.Text italic type='secondary'>
-                — No current freight —
+                — No freight —
               </Typography.Text>
             );
           }
@@ -132,45 +137,41 @@ export const FreightComparisonTable = ({
             return <Typography.Text type='secondary'>—</Typography.Text>;
           }
           const muted = row.status === 'UNCHANGED';
-          const color = muted ? mutedColor : undefined;
           return (
-            <div style={{ color }}>
-              <span className='font-mono'>{versionLabel(row.current)}</span>
-              <ArtifactExtras source={row.current} relativeAge={currentAge} color={color} />
-            </div>
+            <span className='font-mono' style={{ color: muted ? mutedColor : undefined }}>
+              {versionLabel(row.current)}
+            </span>
           );
         }}
       />
       <Table.Column<PairedRow>
         title='Promoting'
+        width='15%'
         render={(_, row) => {
           if (!row.incoming) {
             return <Typography.Text type='secondary'>—</Typography.Text>;
           }
           if (row.status === 'UNCHANGED') {
             return (
-              <div style={{ color: mutedColor }}>
-                <span className='mr-1'>=</span>
+              <Space size={4} style={{ color: mutedColor }}>
+                <span>=</span>
                 <span className='font-mono'>{versionLabel(row.incoming)}</span>
-              </div>
+              </Space>
             );
           }
           return (
-            <div>
-              <span style={{ color: mutedColor }} className='mr-1'>
-                →
-              </span>
+            <Space size={4}>
+              <span style={{ color: mutedColor }}>→</span>
               <Tag color='gold' className='font-mono'>
                 {versionLabel(row.incoming)}
               </Tag>
-              <ArtifactExtras source={row.incoming} relativeAge={incomingAge} />
-            </div>
+            </Space>
           );
         }}
       />
       <Table.Column<PairedRow>
         title='Status'
-        width={120}
+        width='10%'
         render={(_, row) => statusTag(row.status)}
       />
     </Table>

@@ -1,11 +1,8 @@
 import { IconProp } from '@fortawesome/fontawesome-svg-core';
 import { faDocker, faGitAlt } from '@fortawesome/free-brands-svg-icons';
 import { faAnchor, faArrowDownShortWide } from '@fortawesome/free-solid-svg-icons';
-import { formatDistance } from 'date-fns';
 
 import { TableSource } from '@ui/features/freight/flatten-freight-origin-utils';
-import { Freight } from '@ui/gen/api/v1alpha1/generated_pb';
-import { timestampDate } from '@ui/utils/connectrpc-utils';
 
 export const typeIcon = (source: TableSource): IconProp => {
   switch (source.type) {
@@ -51,12 +48,4 @@ export const versionLabel = (source: TableSource): string => {
     default:
       return source.version || '';
   }
-};
-
-export const relativeFromFreight = (freight: Freight | undefined): string => {
-  const created = timestampDate(freight?.metadata?.creationTimestamp);
-  if (!created) {
-    return '';
-  }
-  return formatDistance(created, new Date(), { addSuffix: true }).replace('about ', '');
 };
