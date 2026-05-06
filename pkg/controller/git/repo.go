@@ -45,16 +45,12 @@ type CloneOptions struct {
 	// Depth is the number of commits to fetch from the remote repository. If
 	// zero, all commits will be fetched. This option is ignored if Bare is true.
 	Depth uint
-	// Filter allows for partially cloning the repository by specifying a
-	// filter. When a filter is specified, the server will only send a
-	// subset of reachable objects according to a given object filter.
-	//
-	// For more information, see:
-	// - https://git-scm.com/docs/git-clone#Documentation/git-clone.txt-code--filtercodeemltfilter-specgtem
-	// - https://git-scm.com/docs/git-rev-list#Documentation/git-rev-list.txt---filterltfilter-specgt
-	// - https://github.blog/2020-12-21-get-up-to-speed-with-partial-clone-and-shallow-clone/
-	// - https://docs.gitlab.com/ee/topics/git/partial_clone.html
-	Filter string
+	// Blobless enables blobless cloning (--filter=blob:none). When set, the
+	// initial clone downloads all commits and trees but defers blob downloads
+	// until checkout. Combine with sparse checkout to minimise disk usage on
+	// large repositories. The server must support partial clones; if it does
+	// not, the clone will fail.
+	Blobless bool
 	// SingleBranch indicates whether the clone should be a single-branch clone.
 	// This option is ignored if Bare is true.
 	SingleBranch bool
@@ -119,12 +115,9 @@ func (r *repo) clone(opts *CloneOptions) error {
 	if opts.Depth > 0 {
 		args = append(args, "--depth", fmt.Sprint(opts.Depth))
 	}
-	// NOTE(hidde): Temporarily disabled until we figure out why this can result
-	// in "could not fetch <commit> from promisor remote" errors.
-	//
-	// if opts.Filter != "" {
-	//  	args = append(args, "--filter", opts.Filter)
-	// }
+	if opts.Blobless {
+		args = append(args, "--filter", "blob:none")
+	}
 	args = append(args, r.accessURL, r.dir)
 	cmd := r.buildGitCommand(args...)
 	cmd.Dir = r.homeDir // Override the cmd.Dir that's set by r.buildGitCommand()
@@ -133,7 +126,6 @@ func (r *repo) clone(opts *CloneOptions) error {
 	}
 	return nil
 }
-
 type LoadRepoOptions struct {
 	Credentials *RepoCredentials
 }

@@ -54,6 +54,21 @@ type gitCloner struct {
 	schemaLoader    gojsonschema.JSONLoader
 }
 
+// gitUserFromEnv populates a git.User struct from environment variables.
+func gitUserFromEnv() git.User {
+	cfg := struct {
+		Name           string `envconfig:"GITCLIENT_NAME"`
+		Email          string `envconfig:"GITCLIENT_EMAIL"`
+		SigningKeyType string `envconfig:"GITCLIENT_SIGNING_KEY_TYPE"`
+		SigningKeyPath string `envconfig:"GITCLIENT_SIGNING_KEY_PATH"`
+	}{}
+	envconfig.MustProcess("", &cfg)
+	return git.User{
+		Name:           cfg.Name,
+		Email:          cfg.Email,
+		SigningKeyType: git.SigningKeyType(cfg.SigningKeyType),
+		SigningKeyPath: cfg.SigningKeyPath,
+	}
 // filterForCheckouts returns the clone filter to use based on checkout
 // configurations. Returns git.FilterBlobless if all checkouts specify sparse
 // patterns, returns empty string otherwise to avoid on-demand blob fetches for
@@ -161,7 +176,7 @@ func (g *gitCloner) run(
 		},
 		&git.BareCloneOptions{
 			BaseDir: stepCtx.WorkDir,
-			Filter:  filterForCheckouts(cfg.Checkout),
+			Blobless: cfg.Blobless,
 		},
 	)
 	if err != nil {
