@@ -136,6 +136,7 @@ func TestWatchFreight(t *testing.T) {
 						context.Context,
 						*rest.Config,
 						*runtime.Scheme,
+						string,
 					) (client.WithWatch, error) {
 						return fakeClient, nil
 					},

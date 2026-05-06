@@ -1,0 +1,46 @@
+name: Feature Request
+description: Propose an enhancement for consideration by the maintainers
+labels: ["kind/proposal", "kind/enhancement"]
+body:
+- type: markdown
+  attributes:
+    value: |
+      **Please read before submitting.**
+
+      Feature requests are reviewed by maintainers on a best-effort basis. Submitting a request does not guarantee it will be implemented.
+
+      **Do NOT begin work on a feature until all blocking labels have been removed from the issue by a maintainer.** These include `kind/proposal`, `needs discussion`, `needs research`, `maintainer only`, `area/security`, `size/large`, `size/x-large`, and `size/xx-large`.
+
+      See the [Contributor Guide](https://docs.kargo.io/contributor-guide) for full details on the contribution process.
+
+      If you are requesting a Helm chart option that may be very niche and not useful to the community at large, please consider using Kustomize to apply "last mile" tweaks to the output of `helm template` instead.
+- type: checkboxes
+  id: preconditions
+  attributes:
+    label: Pre-submission checklist
+    options:
+    - label: I have searched existing issues and confirmed this is not a duplicate.
+      required: true
+    - label: I understand that submitting a feature request does not guarantee it will be implemented.
+      required: true
+- type: textarea
+  id: proposal
+  attributes:
+    label: Proposed Feature
+    description: What new feature would you like to see?
+  validations:
+    required: true
+- type: textarea
+  id: motivation
+  attributes:
+    label: Motivation and Use Case
+    description: Why do you need this? Please give concrete examples of when someone would use this.
+  validations:
+    required: true
+- type: textarea
+  id: alternatives
+  attributes:
+    label: Alternatives Considered
+    description: Have you considered any alternative solutions or workarounds?
+  validations:
+    required: false

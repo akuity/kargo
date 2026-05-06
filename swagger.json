@@ -4193,6 +4193,32 @@
         }
       }
     },
+    "/v1beta1/system/controller-heartbeats": {
+      "get": {
+        "security": [
+          {
+            "BearerAuth": []
+          }
+        ],
+        "description": "Get the most recent heartbeat from every controller that has\nreported in. Any controller not represented in the response has\nnever reported a heartbeat and can therefore be assumed by the\ncaller to be dead or nonexistent.",
+        "produces": [
+          "application/json"
+        ],
+        "tags": [
+          "System"
+        ],
+        "summary": "Get controller heartbeats",
+        "operationId": "GetControllerHeartbeats",
+        "responses": {
+          "200": {
+            "description": "OK",
+            "schema": {
+              "$ref": "#/definitions/GetControllerHeartbeatsResponse"
+            }
+          }
+        }
+      }
+    },
     "/v1beta1/system/generic-credentials": {
       "get": {
         "security": [
@@ -4817,6 +4843,22 @@
         }
       }
     },
+    "GetControllerHeartbeatsResponse": {
+      "type": "object",
+      "properties": {
+        "defaultController": {
+          "description": "DefaultController is the name of the default controller. The default\ncontroller is often unnamed, so an empty string is a valid value. This is\nincluded in the response to give clients a canonical identity to associate\nwith Stages that have no explicit `spec.controller`.",
+          "type": "string"
+        },
+        "heartbeats": {
+          "description": "Heartbeats is the most recent heartbeat from every controller that has\nreported in indexed by controller name.",
+          "type": "object",
+          "additionalProperties": {
+            "$ref": "#/definitions/Heartbeat"
+          }
+        }
+      }
+    },
     "GrantRequest": {
       "type": "object",
       "properties": {
@@ -4830,6 +4872,38 @@
           "$ref": "#/definitions/UserClaims"
         }
       }
+    },
+    "Heartbeat": {
+      "type": "object",
+      "properties": {
+        "controller": {
+          "description": "Controller is the name of the controller as reported in the Lease's\nkargoapi.LabelKeyController label. This may be empty if the controller that\nproduced the heartbeat was unnamed.",
+          "type": "string"
+        },
+        "status": {
+          "description": "Status is point-in-time liveness synthesized from a heartbeat record.",
+          "allOf": [
+            {
+              "$ref": "#/definitions/HeartbeatStatus"
+            }
+          ]
+        },
+        "timestamp": {
+          "description": "Timestamp is the timestamp of the heartbeat. nil when the underlying record\ncarried no parseable timestamp.",
+          "type": "string"
+        }
+      }
+    },
+    "HeartbeatStatus": {
+      "type": "string",
+      "enum": [
+        "Alive",
+        "Dead"
+      ],
+      "x-enum-varnames": [
+        "StatusAlive",
+        "StatusDead"
+      ]
     },
     "ImageStageMap": {
       "type": "object",

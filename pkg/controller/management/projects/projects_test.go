@@ -21,6 +21,7 @@ import (
 
 	rbacapi "github.com/akuity/kargo/api/rbac/v1alpha1"
 	kargoapi "github.com/akuity/kargo/api/v1alpha1"
+	"github.com/akuity/kargo/pkg/component"
 	"github.com/akuity/kargo/pkg/conditions"
 	"github.com/akuity/kargo/pkg/kubernetes"
 )
@@ -42,7 +43,6 @@ func TestNewReconciler(t *testing.T) {
 	require.NotNil(t, r.ensureSystemPermissionsFn)
 	require.NotNil(t, r.ensureControllerPermissionsFn)
 	require.NotNil(t, r.ensureDefaultUserRolesFn)
-	require.NotNil(t, r.ensureExtendedPermissionsFn)
 	require.NotNil(t, r.createServiceAccountFn)
 	require.NotNil(t, r.createRoleFn)
 	require.NotNil(t, r.createRoleBindingFn)
@@ -510,7 +510,7 @@ func TestReconciler_cleanupProject(t *testing.T) {
 			},
 		},
 		{
-			name: "deletes promotion ArgoCD cluster role binding",
+			name: "deletes project admin cluster role and binding",
 			project: &kargoapi.Project{
 				ObjectMeta: metav1.ObjectMeta{
 					Name: "test-project",
@@ -522,10 +522,8 @@ func TestReconciler_cleanupProject(t *testing.T) {
 					obj client.Object,
 					_ ...client.DeleteOption,
 				) error {
-					// Verify both ClusterRoleBindings are deleted
 					name := obj.GetName()
-					if name != kubernetes.ShortenResourceName("kargo-project-admin-test-project") &&
-						name != kubernetes.ShortenResourceName("kargo-argocd-test-project") {
+					if name != kubernetes.ShortenResourceName("kargo-project-admin-test-project") {
 						return fmt.Errorf("unexpected ClusterRoleBinding name: %s", name)
 					}
 					return nil
@@ -535,7 +533,6 @@ func TestReconciler_cleanupProject(t *testing.T) {
 					obj client.Object,
 					_ ...client.DeleteOption,
 				) error {
-					// Only the admin ClusterRole should be deleted
 					name := obj.GetName()
 					if name != kubernetes.ShortenResourceName("kargo-project-admin-test-project") {
 						return fmt.Errorf("unexpected ClusterRole name: %s", name)
@@ -956,6 +953,111 @@ func TestReconciler_cleanupProject(t *testing.T) {
 	}
 }
 
+func TestReconciler_cleanupProject_cleanupContributors(t *testing.T) {
+	testCases := []struct {
+		name        string
+		contributor ProjectCleanupContributorRegistration
+		assertions  func(*testing.T, error)
+	}{
+		{
+			name: "error from cleanup contributor",
+			contributor: ProjectCleanupContributorRegistration{
+				Predicate: func(context.Context, *kargoapi.Project) (bool, error) {
+					return true, nil
+				},
+				Value: func(context.Context, *kargoapi.Project) error {
+					return errors.New("something went wrong")
+				},
+			},
+			assertions: func(t *testing.T, err error) {
+				require.ErrorContains(t, err, "something went wrong")
+			},
+		},
+		{
+			name: "contributor runs before OSS deletions",
+			contributor: ProjectCleanupContributorRegistration{
+				Predicate: func(context.Context, *kargoapi.Project) (bool, error) {
+					return true, nil
+				},
+				Value: func(context.Context, *kargoapi.Project) error {
+					return errors.New("contributor ran")
+				},
+			},
+			assertions: func(t *testing.T, err error) {
+				// If the contributor runs first and errors, the OSS deletions are
+				// never reached — confirming EE-before-OSS ordering.
+				require.ErrorContains(t, err, "contributor ran")
+			},
+		},
+		{
+			name: "success with cleanup contributor",
+			contributor: ProjectCleanupContributorRegistration{
+				Predicate: func(context.Context, *kargoapi.Project) (bool, error) {
+					return true, nil
+				},
+				Value: func(context.Context, *kargoapi.Project) error {
+					return nil
+				},
+			},
+			assertions: func(t *testing.T, err error) {
+				require.NoError(t, err)
+			},
+		},
+	}
+	for _, testCase := range testCases {
+		t.Run(testCase.name, func(t *testing.T) {
+			orig := defaultProjectCleanupContributorRegistry
+			t.Cleanup(func() { defaultProjectCleanupContributorRegistry = orig })
+			defaultProjectCleanupContributorRegistry = component.MustNewPredicateBasedRegistry[
+				*kargoapi.Project,
+				projectCleanupContributorPredicate,
+				projectCleanupContributorFunc,
+				struct{},
+			]()
+			defaultProjectCleanupContributorRegistry.MustRegister(testCase.contributor)
+
+			r := &reconciler{
+				deleteClusterRoleBindingFn: func(
+					context.Context,
+					client.Object,
+					...client.DeleteOption,
+				) error {
+					return nil
+				},
+				deleteClusterRoleFn: func(
+					context.Context,
+					client.Object,
+					...client.DeleteOption,
+				) error {
+					return nil
+				},
+				getNamespaceFn: func(
+					context.Context,
+					types.NamespacedName,
+					client.Object,
+					...client.GetOption,
+				) error {
+					return apierrors.NewNotFound(schema.GroupResource{}, "test-project")
+				},
+				removeFinalizerFn: func(
+					context.Context,
+					client.Client,
+					client.Object,
+				) error {
+					return nil
+				},
+			}
+			err := r.cleanupProject(
+				t.Context(),
+				&kargoapi.Project{
+					ObjectMeta: metav1.ObjectMeta{Name: "test-project"},
+				},
+			)
+			testCase.assertions(t, err)
+		})
+	}
+}
+
 func TestReconciler_syncProject(t *testing.T) {
 	testCases := []struct {
 		name       string
@@ -1170,6 +1272,78 @@ func TestReconciler_syncProject(t *testing.T) {
 	}
 }
 
+func TestReconciler_syncProject_setupContributors(t *testing.T) {
+	testCases := []struct {
+		name        string
+		contributor ProjectSetupContributorRegistration
+		assertions  func(*testing.T, kargoapi.ProjectStatus, error)
+	}{
+		{
+			name: "error from setup contributor",
+			contributor: ProjectSetupContributorRegistration{
+				Predicate: func(context.Context, *kargoapi.Project) (bool, error) {
+					return true, nil
+				},
+				Value: func(context.Context, *kargoapi.Project) error {
+					return errors.New("something went wrong")
+				},
+			},
+			assertions: func(t *testing.T, status kargoapi.ProjectStatus, err error) {
+				require.ErrorContains(t, err, "something went wrong")
+				readyCondition := conditions.Get(&status, kargoapi.ConditionTypeReady)
+				require.NotNil(t, readyCondition)
+				require.Equal(t, metav1.ConditionFalse, readyCondition.Status)
+				require.Equal(t, "EnsuringExtendedPermissionsFailed", readyCondition.Reason)
+			},
+		},
+		{
+			name: "success with setup contributor",
+			contributor: ProjectSetupContributorRegistration{
+				Predicate: func(context.Context, *kargoapi.Project) (bool, error) {
+					return true, nil
+				},
+				Value: func(context.Context, *kargoapi.Project) error {
+					return nil
+				},
+			},
+			assertions: func(t *testing.T, status kargoapi.ProjectStatus, err error) {
+				require.NoError(t, err)
+				readyCondition := conditions.Get(&status, kargoapi.ConditionTypeReady)
+				require.NotNil(t, readyCondition)
+				require.Equal(t, metav1.ConditionTrue, readyCondition.Status)
+				require.Equal(t, "Synced", readyCondition.Reason)
+			},
+		},
+	}
+	for _, testCase := range testCases {
+		t.Run(testCase.name, func(t *testing.T) {
+			orig := defaultProjectSetupContributorRegistry
+			t.Cleanup(func() { defaultProjectSetupContributorRegistry = orig })
+			defaultProjectSetupContributorRegistry = component.MustNewPredicateBasedRegistry[
+				*kargoapi.Project,
+				projectSetupContributorPredicate,
+				projectSetupContributorFunc,
+				struct{},
+			]()
+			defaultProjectSetupContributorRegistry.MustRegister(testCase.contributor)
+
+			r := &reconciler{
+				ensureNamespaceFn: func(context.Context, *kargoapi.Project) error {
+					return nil
+				},
+				ensureSystemPermissionsFn: func(context.Context, *kargoapi.Project) error {
+					return nil
+				},
+				ensureDefaultUserRolesFn: func(context.Context, *kargoapi.Project) error {
+					return nil
+				},
+			}
+			status, err := r.syncProject(t.Context(), &kargoapi.Project{})
+			testCase.assertions(t, status, err)
+		})
+	}
+}
+
 func TestReconciler_ensureNamespace(t *testing.T) {
 	testCases := []struct {
 		name       string
@@ -1335,14 +1509,41 @@ func TestReconciler_ensureNamespace(t *testing.T) {
 }
 
 func TestReconciler_ensureSystemPermissions(t *testing.T) {
+	scheme := runtime.NewScheme()
+	require.NoError(t, rbacv1.AddToScheme(scheme))
+
 	testCases := []struct {
 		name       string
 		reconciler *reconciler
 		assertions func(*testing.T, error)
 	}{
 		{
-			name: "error creating role binding",
+			name: "error getting RoleBinding",
 			reconciler: &reconciler{
+				cfg: ReconcilerConfig{KargoNamespace: "kargo"},
+				client: fake.NewClientBuilder().WithScheme(scheme).
+					WithInterceptorFuncs(interceptor.Funcs{
+						Get: func(
+							context.Context,
+							client.WithWatch,
+							client.ObjectKey,
+							client.Object,
+							...client.GetOption,
+						) error {
+							return errors.New("something went wrong")
+						},
+					}).Build(),
+			},
+			assertions: func(t *testing.T, err error) {
+				require.ErrorContains(t, err, "error getting RoleBinding")
+				require.ErrorContains(t, err, "something went wrong")
+			},
+		},
+		{
+			name: "error creating RoleBinding",
+			reconciler: &reconciler{
+				cfg:    ReconcilerConfig{KargoNamespace: "kargo"},
+				client: fake.NewClientBuilder().WithScheme(scheme).Build(),
 				createRoleBindingFn: func(
 					context.Context,
 					client.Object,
@@ -1357,9 +1558,72 @@ func TestReconciler_ensureSystemPermissions(t *testing.T) {
 			},
 		},
 		{
-			name: "error updating existing role binding",
+			name: "success creating RoleBinding",
 			reconciler: &reconciler{
-				client: fake.NewClientBuilder().WithInterceptorFuncs(interceptor.Funcs{
+				cfg:    ReconcilerConfig{KargoNamespace: "kargo"},
+				client: fake.NewClientBuilder().WithScheme(scheme).Build(),
+				createRoleBindingFn: func(
+					context.Context,
+					client.Object,
+					...client.CreateOption,
+				) error {
+					return nil
+				},
+			},
+			assertions: func(t *testing.T, err error) {
+				require.NoError(t, err)
+			},
+		},
+		{
+			name: "no update when RoleBinding already matches",
+			reconciler: &reconciler{
+				cfg: ReconcilerConfig{KargoNamespace: "kargo"},
+				client: fake.NewClientBuilder().WithScheme(scheme).WithObjects(
+					&rbacv1.RoleBinding{
+						ObjectMeta: metav1.ObjectMeta{
+							Name:      "kargo-project-admin",
+							Namespace: "",
+						},
+						Subjects: []rbacv1.Subject{
+							{Kind: "ServiceAccount", Name: "kargo-api", Namespace: "kargo"},
+							{Kind: "ServiceAccount", Name: "kargo-admin", Namespace: "kargo"},
+						},
+					},
+					&rbacv1.RoleBinding{
+						ObjectMeta: metav1.ObjectMeta{
+							Name:      "kargo-project-secrets-reader",
+							Namespace: "",
+						},
+						Subjects: []rbacv1.Subject{{
+							Kind:      "ServiceAccount",
+							Name:      "kargo-external-webhooks-server",
+							Namespace: "kargo",
+						}},
+					},
+				).WithInterceptorFuncs(interceptor.Funcs{
+					Update: func(
+						context.Context,
+						client.WithWatch,
+						client.Object,
+						...client.UpdateOption,
+					) error {
+						return errors.New("Update should not be called when subjects already match")
+					},
+				}).Build(),
+			},
+			assertions: func(t *testing.T, err error) {
+				require.NoError(t, err)
+			},
+		},
+		{
+			name: "error updating RoleBinding",
+			reconciler: &reconciler{
+				cfg: ReconcilerConfig{KargoNamespace: "kargo"},
+				client: fake.NewClientBuilder().WithScheme(scheme).WithObjects(
+					&rbacv1.RoleBinding{
+						ObjectMeta: metav1.ObjectMeta{Name: "kargo-project-admin"},
+					},
+				).WithInterceptorFuncs(interceptor.Funcs{
 					Update: func(
 						context.Context,
 						client.WithWatch,
@@ -1369,54 +1633,24 @@ func TestReconciler_ensureSystemPermissions(t *testing.T) {
 						return errors.New("something went wrong")
 					},
 				}).Build(),
-				createRoleBindingFn: func(
-					context.Context,
-					client.Object,
-					...client.CreateOption,
-				) error {
-					return apierrors.NewAlreadyExists(schema.GroupResource{}, "")
-				},
 			},
 			assertions: func(t *testing.T, err error) {
-				require.ErrorContains(t, err, "error updating existing RoleBinding")
+				require.ErrorContains(t, err, "error updating RoleBinding")
 				require.ErrorContains(t, err, "something went wrong")
 			},
 		},
 		{
-			name: "success updating existing role binding",
+			name: "success updating RoleBinding",
 			reconciler: &reconciler{
-				client: fake.NewClientBuilder().WithInterceptorFuncs(interceptor.Funcs{
-					Update: func(
-						context.Context,
-						client.WithWatch,
-						client.Object,
-						...client.UpdateOption,
-					) error {
-						return nil
+				cfg: ReconcilerConfig{KargoNamespace: "kargo"},
+				client: fake.NewClientBuilder().WithScheme(scheme).WithObjects(
+					&rbacv1.RoleBinding{
+						ObjectMeta: metav1.ObjectMeta{Name: "kargo-project-admin"},
 					},
-				}).Build(),
-				createRoleBindingFn: func(
-					context.Context,
-					client.Object,
-					...client.CreateOption,
-				) error {
-					return apierrors.NewAlreadyExists(schema.GroupResource{}, "")
-				},
-			},
-			assertions: func(t *testing.T, err error) {
-				require.NoError(t, err)
-			},
-		},
-		{
-			name: "success creating role binding",
-			reconciler: &reconciler{
-				createRoleBindingFn: func(
-					context.Context,
-					client.Object,
-					...client.CreateOption,
-				) error {
-					return nil
-				},
+					&rbacv1.RoleBinding{
+						ObjectMeta: metav1.ObjectMeta{Name: "kargo-project-secrets-reader"},
+					},
+				).Build(),
 			},
 			assertions: func(t *testing.T, err error) {
 				require.NoError(t, err)
@@ -1548,6 +1782,27 @@ func TestReconciler_ensureControllerPermissions(t *testing.T) {
 			},
 		},
 		{
+			name: "error getting RoleBinding",
+			client: fake.NewClientBuilder().
+				WithScheme(scheme).
+				WithObjects(testControllerSA).
+				WithInterceptorFuncs(interceptor.Funcs{
+					Get: func(
+						context.Context,
+						client.WithWatch,
+						client.ObjectKey,
+						client.Object,
+						...client.GetOption,
+					) error {
+						return fmt.Errorf("something went wrong")
+					},
+				}).Build(),
+			assertions: func(t *testing.T, _ client.Client, err error) {
+				require.ErrorContains(t, err, "error getting RoleBinding")
+				require.ErrorContains(t, err, "something went wrong")
+			},
+		},
+		{
 			name: "error creating RoleBinding",
 			client: fake.NewClientBuilder().
 				WithScheme(scheme).
@@ -1617,6 +1872,11 @@ func TestReconciler_ensureControllerPermissions(t *testing.T) {
 							Namespace: testProject.Name,
 							Name:      getRoleBindingName(testControllerSA.Name),
 						},
+						RoleRef: rbacv1.RoleRef{
+							APIGroup: rbacv1.GroupName,
+							Kind:     "ClusterRole",
+							Name:     controllerReadSecretsClusterRoleName,
+						},
 					},
 				).Build(),
 			assertions: func(t *testing.T, cl client.Client, err error) {
@@ -1676,7 +1936,7 @@ func TestReconciler_ensureControllerPermissions(t *testing.T) {
 					},
 				}).Build(),
 			assertions: func(t *testing.T, _ client.Client, err error) {
-				require.ErrorContains(t, err, "error updating existing RoleBinding")
+				require.ErrorContains(t, err, "error updating RoleBinding")
 				require.ErrorContains(t, err, "something went wrong")
 			},
 		},
@@ -1914,443 +2174,143 @@ func TestReconciler_ensureDefaultUserRoles(t *testing.T) {
 	}
 }
 
-func TestReconciler_ensureExtendedPermissions(t *testing.T) {
-	testProject := &kargoapi.Project{
-		ObjectMeta: metav1.ObjectMeta{
-			Name: "fake-project",
-		},
-	}
-
-	scheme := runtime.NewScheme()
-	err := corev1.AddToScheme(scheme)
-	require.NoError(t, err)
-	err = rbacv1.AddToScheme(scheme)
-	require.NoError(t, err)
+func TestReconciler_ensureDefaultUserRoles_contributors(t *testing.T) {
+	// Save and restore the global registry around each sub-test.
+	origRegistry := defaultRoleRulesContributorRegistry
 
 	testCases := []struct {
 		name       string
-		cfg        ReconcilerConfig
-		client     client.Client
-		assertions func(*testing.T, client.Client, error)
+		setup      func()
+		assertions func(*testing.T, []*rbacv1.Role, error)
 	}{
 		{
-			name: "error creating ServiceAccount",
-			cfg: ReconcilerConfig{
-				ControlPlaneServiceAccountName: "test-control-plane",
+			name: "contributor predicate error propagates",
+			setup: func() {
+				defaultRoleRulesContributorRegistry =
+					component.MustNewPredicateBasedRegistry[
+						string,
+						roleRulesContributorPredicate,
+						roleRulesContributorFunc,
+						struct{},
+					](RoleRulesContributorRegistration{
+						Predicate: func(context.Context, string) (bool, error) {
+							return false, errors.New("something went wrong")
+						},
+						Value: func(string) []rbacv1.PolicyRule { return nil },
+					})
 			},
-			client: fake.NewClientBuilder().WithScheme(scheme).
-				WithInterceptorFuncs(interceptor.Funcs{
-					Create: func(
-						context.Context,
-						client.WithWatch,
-						client.Object,
-						...client.CreateOption,
-					) error {
-						return fmt.Errorf("something went wrong")
-					},
-				}).Build(),
-			assertions: func(t *testing.T, _ client.Client, err error) {
-				require.ErrorContains(t, err, "error creating ServiceAccount")
+			assertions: func(t *testing.T, _ []*rbacv1.Role, err error) {
+				require.ErrorContains(t, err, "error getting role rules contributors")
 				require.ErrorContains(t, err, "something went wrong")
 			},
 		},
 		{
-			name: "ServiceAccounts already exist",
-			cfg: ReconcilerConfig{
-				ControlPlaneServiceAccountName: "test-control-plane",
-			},
-			client: fake.NewClientBuilder().
-				WithScheme(scheme).
-				WithObjects(
-					&corev1.ServiceAccount{
-						ObjectMeta: metav1.ObjectMeta{
-							Name:      "test-control-plane",
-							Namespace: testProject.Name,
-							Annotations: map[string]string{
-								rbacapi.AnnotationKeyManaged: rbacapi.AnnotationValueTrue,
-							},
+			name: "contributor rules are appended to matching roles",
+			setup: func() {
+				defaultRoleRulesContributorRegistry =
+					component.MustNewPredicateBasedRegistry[
+						string,
+						roleRulesContributorPredicate,
+						roleRulesContributorFunc,
+						struct{},
+					](RoleRulesContributorRegistration{
+						Predicate: func(_ context.Context, roleName string) (bool, error) {
+							return roleName == "kargo-admin", nil
 						},
-					},
-				).Build(),
-			assertions: func(t *testing.T, cl client.Client, err error) {
-				require.NoError(t, err)
-				// Verify ServiceAccount still exists
-				sa := &corev1.ServiceAccount{}
-				err = cl.Get(
-					t.Context(),
-					types.NamespacedName{
-						Name:      "test-control-plane",
-						Namespace: testProject.Name,
-					},
-					sa,
-				)
-				require.NoError(t, err)
+						Value: func(string) []rbacv1.PolicyRule {
+							return []rbacv1.PolicyRule{{
+								APIGroups: []string{"ee.kargo.akuity.io"},
+								Resources: []string{"messagechannels"},
+								Verbs:     []string{"*"},
+							}}
+						},
+					})
 			},
-		},
-		{
-			name: "creates control plane ServiceAccount and RoleBinding",
-			cfg: ReconcilerConfig{
-				ControlPlaneServiceAccountName: "test-control-plane",
-				ControlPlaneClusterRoleName:    "test-control-plane-role",
-			},
-			client: fake.NewClientBuilder().
-				WithScheme(scheme).
-				Build(),
-			assertions: func(t *testing.T, cl client.Client, err error) {
+			assertions: func(t *testing.T, createdRoles []*rbacv1.Role, err error) {
 				require.NoError(t, err)
-
-				// Verify ServiceAccount was created
-				sa := &corev1.ServiceAccount{}
-				err = cl.Get(
-					t.Context(),
-					types.NamespacedName{
-						Name:      "test-control-plane",
-						Namespace: testProject.Name,
-					},
-					sa,
-				)
-				require.NoError(t, err)
-				require.Equal(t, rbacapi.AnnotationValueTrue, sa.Annotations[rbacapi.AnnotationKeyManaged])
-
-				// Verify RoleBinding was created
-				rb := &rbacv1.RoleBinding{}
-				err = cl.Get(
-					t.Context(),
-					types.NamespacedName{
-						Name:      "test-control-plane",
-						Namespace: testProject.Name,
-					},
-					rb,
-				)
-				require.NoError(t, err)
-				require.Equal(t, "test-control-plane-role", rb.RoleRef.Name)
-				require.Equal(t, "ClusterRole", rb.RoleRef.Kind)
-				require.Equal(t, rbacapi.AnnotationValueTrue, rb.Annotations[rbacapi.AnnotationKeyManaged])
-			},
-		},
-		{
-			name: "ArgoCD configured - creates ArgoCD ServiceAccount",
-			cfg: ReconcilerConfig{
-				ArgoCDServiceAccountName: "kargo-argocd-service-account",
-			},
-			client: fake.NewClientBuilder().
-				WithScheme(scheme).
-				Build(),
-			assertions: func(t *testing.T, cl client.Client, err error) {
-				require.NoError(t, err)
-
-				// Verify ArgoCD ServiceAccount was created
-				sa := &corev1.ServiceAccount{}
-				err = cl.Get(
-					t.Context(),
-					types.NamespacedName{
-						Name:      "kargo-argocd-service-account",
-						Namespace: testProject.Name,
-					},
-					sa,
-				)
-				require.NoError(t, err)
-				require.Equal(t, rbacapi.AnnotationValueTrue, sa.Annotations[rbacapi.AnnotationKeyManaged])
-			},
-		},
-		{
-			name: "ArgoCD configured and not watching namespace only - creates ClusterRoleBinding",
-			cfg: ReconcilerConfig{
-				ArgoCDServiceAccountName: "kargo-argocd-service-account",
-				ArgoCDClusterRoleName:    "kargo-argocd",
-				ArgoCDWatchNamespaceOnly: false,
-			},
-			client: fake.NewClientBuilder().
-				WithScheme(scheme).
-				Build(),
-			assertions: func(t *testing.T, cl client.Client, err error) {
-				require.NoError(t, err)
-
-				// Verify ClusterRoleBinding was created
-				crb := &rbacv1.ClusterRoleBinding{}
-				err = cl.Get(
-					t.Context(),
-					types.NamespacedName{
-						Name: kubernetes.ShortenResourceName(fmt.Sprintf("kargo-argocd-%s", testProject.Name)),
-					},
-					crb,
-				)
-				require.NoError(t, err)
-				require.Equal(t, "kargo-argocd", crb.RoleRef.Name)
-				require.Equal(t, rbacapi.AnnotationValueTrue, crb.Annotations[rbacapi.AnnotationKeyManaged])
-				require.Len(t, crb.Subjects, 1)
-				require.Equal(t, "kargo-argocd-service-account", crb.Subjects[0].Name)
-				require.Equal(t, testProject.Name, crb.Subjects[0].Namespace)
-			},
-		},
-		{
-			name: "ArgoCD configured and watching namespace only - creates RoleBinding",
-			cfg: ReconcilerConfig{
-				ArgoCDServiceAccountName: "kargo-argocd-service-account",
-				ArgoCDRoleName:           "kargo-argocd",
-				ArgoCDNamespace:          "argocd",
-				ArgoCDWatchNamespaceOnly: true,
-			},
-			client: fake.NewClientBuilder().
-				WithScheme(scheme).
-				Build(),
-			assertions: func(t *testing.T, cl client.Client, err error) {
-				require.NoError(t, err)
-
-				// Verify ArgoCD RoleBinding was created
-				rb := &rbacv1.RoleBinding{}
-				err = cl.Get(
-					t.Context(),
-					types.NamespacedName{
-						Name:      kubernetes.ShortenResourceName(fmt.Sprintf("kargo-argocd-%s", testProject.Name)),
-						Namespace: "argocd",
-					},
-					rb,
-				)
-				require.NoError(t, err)
-				require.Equal(t, "kargo-argocd", rb.RoleRef.Name)
-				require.Equal(t, "Role", rb.RoleRef.Kind)
-				require.Len(t, rb.Subjects, 1)
-				require.Equal(t, "kargo-argocd-service-account", rb.Subjects[0].Name)
-			},
-		},
-		{
-			name: "manage orchestrator enabled without dedicated namespace",
-			cfg: ReconcilerConfig{
-				ManageOrchestrator:             true,
-				OrchestratorServiceAccountName: "test-orchestrator",
-				OrchestratorClusterRoleName:    "test-orchestrator-role",
-				TokenManagerClusterRoleName:    "test-token-manager",
-				ControlPlaneServiceAccountName: "test-control-plane",
-				ControlPlaneClusterRoleName:    "test-control-plane-role",
-				ManagedResourceNamespace:       "", // Empty means use project namespace
-			},
-			client: fake.NewClientBuilder().
-				WithScheme(scheme).
-				Build(),
-			assertions: func(t *testing.T, cl client.Client, err error) {
-				require.NoError(t, err)
-
-				// Verify orchestrator ServiceAccount was created
-				sa := &corev1.ServiceAccount{}
-				err = cl.Get(
-					t.Context(),
-					types.NamespacedName{
-						Name:      "test-orchestrator",
-						Namespace: testProject.Name,
-					},
-					sa,
-				)
-				require.NoError(t, err)
-
-				// Verify control plane ServiceAccount was created
-				sa = &corev1.ServiceAccount{}
-				err = cl.Get(
-					t.Context(),
-					types.NamespacedName{
-						Name:      "test-control-plane",
-						Namespace: testProject.Name,
-					},
-					sa,
-				)
-				require.NoError(t, err)
-
-				// Verify orchestrator RoleBindings were created
-				roleBindings := []string{
-					"test-orchestrator",
-					"test-token-manager",
-					"test-control-plane",
-					kubernetes.ShortenResourceName(fmt.Sprintf("%s-secrets-reader", "test-orchestrator")),
+				var adminRole *rbacv1.Role
+				var viewerRole *rbacv1.Role
+				for _, r := range createdRoles {
+					switch r.Name {
+					case "kargo-admin":
+						adminRole = r
+					case "kargo-viewer":
+						viewerRole = r
+					}
 				}
+				require.NotNil(t, adminRole)
+				require.NotNil(t, viewerRole)
 
-				for _, rbName := range roleBindings {
-					rb := &rbacv1.RoleBinding{}
-					err = cl.Get(
-						t.Context(),
-						types.NamespacedName{
-							Name:      rbName,
-							Namespace: testProject.Name,
-						},
-						rb,
-					)
-					require.NoError(t, err, "RoleBinding %s should exist", rbName)
+				// Admin role should contain the EE rule as the last entry.
+				lastRule := adminRole.Rules[len(adminRole.Rules)-1]
+				require.Equal(t, []string{"ee.kargo.akuity.io"}, lastRule.APIGroups)
+				require.Equal(t, []string{"messagechannels"}, lastRule.Resources)
+				require.Equal(t, []string{"*"}, lastRule.Verbs)
+
+				// Viewer role should not contain the EE rule.
+				for _, rule := range viewerRole.Rules {
+					for _, apiGroup := range rule.APIGroups {
+						require.NotEqual(t, "ee.kargo.akuity.io", apiGroup)
+					}
 				}
-			},
-		},
-		{
-			name: "manage orchestrator enabled with dedicated namespace",
-			cfg: ReconcilerConfig{
-				ManageOrchestrator:             true,
-				OrchestratorServiceAccountName: "test-orchestrator",
-				ManagedResourceNamespace:       "kargo-resources",
-			},
-			client: fake.NewClientBuilder().
-				WithScheme(scheme).
-				Build(),
-			assertions: func(t *testing.T, cl client.Client, err error) {
-				require.NoError(t, err)
-
-				// Verify orchestrator ServiceAccount was NOT created in project namespace
-				sa := &corev1.ServiceAccount{}
-				err = cl.Get(
-					t.Context(),
-					types.NamespacedName{
-						Name:      "test-orchestrator",
-						Namespace: testProject.Name,
-					},
-					sa,
-				)
-				require.True(t, apierrors.IsNotFound(err))
-			},
-		},
-		{
-			name: "manage resource manager role without dedicated namespace",
-			cfg: ReconcilerConfig{
-				ManagerServiceAccountName: "manager-sa",
-				ManagerClusterRoleName:    "kargo-manager",
-				ManagedResourceNamespace:  "", // Empty means use project namespace
-				KargoNamespace:            "kargo-system",
-			},
-			client: fake.NewClientBuilder().
-				WithScheme(scheme).
-				Build(),
-			assertions: func(t *testing.T, cl client.Client, err error) {
-				require.NoError(t, err)
-
-				// Verify manager RoleBinding was created
-				rb := &rbacv1.RoleBinding{}
-				err = cl.Get(
-					t.Context(),
-					types.NamespacedName{
-						Name:      "kargo-manager",
-						Namespace: testProject.Name,
-					},
-					rb,
-				)
-				require.NoError(t, err)
-				require.Equal(t, "kargo-manager", rb.RoleRef.Name)
-				require.Len(t, rb.Subjects, 1)
-				require.Equal(t, "manager-sa", rb.Subjects[0].Name)
-				require.Equal(t, "kargo-system", rb.Subjects[0].Namespace)
-			},
-		},
-		{
-			name: "do not manage resource manager role with dedicated namespace",
-			cfg: ReconcilerConfig{
-				ManagerServiceAccountName: "manager-sa",
-				ManagedResourceNamespace:  "kargo-resources",
-			},
-			client: fake.NewClientBuilder().
-				WithScheme(scheme).
-				Build(),
-			assertions: func(t *testing.T, cl client.Client, err error) {
-				require.NoError(t, err)
-
-				// Verify manager RoleBinding was NOT created
-				rb := &rbacv1.RoleBinding{}
-				err = cl.Get(
-					t.Context(),
-					types.NamespacedName{
-						Name:      "kargo-manager",
-						Namespace: testProject.Name,
-					},
-					rb,
-				)
-				require.True(t, apierrors.IsNotFound(err))
-			},
-		},
-		{
-			name: "error creating RoleBinding",
-			cfg: ReconcilerConfig{
-				ControlPlaneServiceAccountName: "test-control-plane",
-				ControlPlaneClusterRoleName:    "test-control-plane-role",
-			},
-			client: fake.NewClientBuilder().
-				WithScheme(scheme).
-				WithInterceptorFuncs(interceptor.Funcs{
-					Create: func(
-						_ context.Context,
-						_ client.WithWatch,
-						obj client.Object,
-						_ ...client.CreateOption,
-					) error {
-						if _, ok := obj.(*rbacv1.RoleBinding); ok {
-							return fmt.Errorf("something went wrong")
-						}
-						return nil
-					},
-				}).Build(),
-			assertions: func(t *testing.T, _ client.Client, err error) {
-				require.ErrorContains(t, err, "error creating RoleBinding")
-				require.ErrorContains(t, err, "something went wrong")
-			},
-		},
-		{
-			name: "error creating ClusterRoleBinding",
-			cfg: ReconcilerConfig{
-				ArgoCDServiceAccountName: "kargo-argocd-service-account",
-				ArgoCDClusterRoleName:    "kargo-argocd-role",
-			},
-			client: fake.NewClientBuilder().
-				WithScheme(scheme).
-				WithInterceptorFuncs(interceptor.Funcs{
-					Create: func(
-						_ context.Context,
-						_ client.WithWatch,
-						obj client.Object,
-						_ ...client.CreateOption,
-					) error {
-						if _, ok := obj.(*rbacv1.ClusterRoleBinding); ok {
-							return fmt.Errorf("something went wrong")
-						}
-						return nil
-					},
-				}).Build(),
-			assertions: func(t *testing.T, _ client.Client, err error) {
-				require.ErrorContains(t, err, "error creating ClusterRoleBinding")
-				require.ErrorContains(t, err, "something went wrong")
-			},
-		},
-		{
-			name: "ClusterRoleBinding already exists",
-			cfg: ReconcilerConfig{
-				ArgoCDServiceAccountName: "kargo-argocd-service-account",
-				ArgoCDClusterRoleName:    "kargo-argocd-role",
-			},
-			client: fake.NewClientBuilder().
-				WithScheme(scheme).
-				WithObjects(
-					&rbacv1.ClusterRoleBinding{
-						ObjectMeta: metav1.ObjectMeta{
-							Name: kubernetes.ShortenResourceName(fmt.Sprintf("kargo-argocd-role-%s", testProject.Name)),
-						},
-					},
-				).Build(),
-			assertions: func(t *testing.T, cl client.Client, err error) {
-				require.NoError(t, err)
-				// Verify it still exists
-				crb := &rbacv1.ClusterRoleBinding{}
-				err = cl.Get(
-					t.Context(),
-					types.NamespacedName{
-						Name: kubernetes.ShortenResourceName(fmt.Sprintf("kargo-argocd-role-%s", testProject.Name)),
-					},
-					crb,
-				)
-				require.NoError(t, err)
 			},
 		},
 	}
-
 	for _, testCase := range testCases {
 		t.Run(testCase.name, func(t *testing.T) {
-			r := newReconciler(testCase.client, testCase.cfg)
-			err := r.ensureExtendedPermissions(t.Context(), testProject)
-			testCase.assertions(t, testCase.client, err)
+			t.Cleanup(func() {
+				defaultRoleRulesContributorRegistry = origRegistry
+			})
+			testCase.setup()
+
+			var createdRoles []*rbacv1.Role
+			r := &reconciler{
+				createServiceAccountFn: func(
+					context.Context,
+					client.Object,
+					...client.CreateOption,
+				) error {
+					return apierrors.NewAlreadyExists(schema.GroupResource{}, "")
+				},
+				createRoleFn: func(
+					_ context.Context,
+					obj client.Object,
+					_ ...client.CreateOption,
+				) error {
+					role, ok := obj.(*rbacv1.Role)
+					require.True(t, ok)
+					createdRoles = append(createdRoles, role)
+					return nil
+				},
+				createRoleBindingFn: func(
+					context.Context,
+					client.Object,
+					...client.CreateOption,
+				) error {
+					return apierrors.NewAlreadyExists(schema.GroupResource{}, "")
+				},
+				createClusterRoleFn: func(
+					context.Context,
+					client.Object,
+					...client.CreateOption,
+				) error {
+					return apierrors.NewAlreadyExists(schema.GroupResource{}, "")
+				},
+				createClusterRoleBindingFn: func(
+					context.Context,
+					client.Object,
+					...client.CreateOption,
+				) error {
+					return apierrors.NewAlreadyExists(schema.GroupResource{}, "")
+				},
+			}
+			p := &kargoapi.Project{
+				ObjectMeta: metav1.ObjectMeta{Name: "test-project"},
+			}
+			testCase.assertions(t, createdRoles, r.ensureDefaultUserRoles(t.Context(), p))
 		})
 	}
 }
-
 func Test_shouldKeepNamespace(t *testing.T) {
 	testCases := []struct {
 		name      string

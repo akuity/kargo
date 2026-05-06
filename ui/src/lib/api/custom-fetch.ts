@@ -12,6 +12,7 @@
 
 import { authTokenKey, redirectToQueryParam, refreshTokenKey } from '@ui/config/auth';
 import { paths } from '@ui/config/paths';
+import { parseJwtPayload } from '@ui/utils/jwt-payload';
 
 const getBaseUrl = (): string => {
   if (import.meta.env.VITE_API_URL) {
@@ -52,7 +53,8 @@ export const customFetch = async <T>(url: string, options?: RequestInit): Promis
   if (token) {
     let isTokenExpired: boolean;
     try {
-      isTokenExpired = Date.now() >= JSON.parse(atob(token.split('.')[1])).exp * 1000;
+      const payload = parseJwtPayload<{ exp?: number }>(token);
+      isTokenExpired = typeof payload.exp === 'number' && Date.now() >= payload.exp * 1000;
     } catch (_) {
       logout();
       throw new ApiError(401, 'Unauthorized', 'Invalid token');
