@@ -3,11 +3,13 @@ import { faTruckArrowRight } from '@fortawesome/free-solid-svg-icons';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
 import { Button, Drawer, Flex } from 'antd';
 import classNames from 'classnames';
+import { useMemo } from 'react';
 import { generatePath, useNavigate } from 'react-router-dom';
 
 import { paths } from '@ui/config/paths';
 import { useExtensionsContext } from '@ui/extensions/extensions-context';
 import { ModalComponentProps } from '@ui/features/common/modal/modal-context';
+import { getCurrentFreight } from '@ui/features/common/utils';
 import { IAction, useActionContext } from '@ui/features/project/pipelines/context/action-context';
 import {
   promoteDownstream,
@@ -39,6 +41,8 @@ export const Promote = (props: PromoteProps) => {
   const freightAlias = props.freight?.alias;
   const stageName = props.stage?.metadata?.name;
   const projectName = props.stage?.metadata?.namespace;
+
+  const currentFreightOnStage = useMemo(() => getCurrentFreight(props.stage)[0], [props.stage]);
 
   const promoteActionMutation = useMutation(promoteToStage, {
     onSuccess: (response) => {
@@ -114,6 +118,7 @@ export const Promote = (props: PromoteProps) => {
       <div className='-mt-4'>
         <FreightDetails
           freight={props.freight}
+          comparison={{ currentFreight: currentFreightOnStage }}
           additionalTabs={promoteTabs.map((data, index) => ({
             children: <data.component freight={props.freight} stage={props.stage} />,
             key: String(data.label + index),
