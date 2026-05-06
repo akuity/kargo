@@ -30,6 +30,10 @@ type Freight struct {
 	// present, the defaulting webhook will choose an available alias and assign
 	// it to both the field and label.
 	Alias string `json:"alias,omitempty" protobuf:"bytes,7,opt,name=alias"`
+	// DiscoveryTimestamp is the time at which the Freight was first discovered
+	// from its source. This is distinct from metadata.creationTimestamp, which is
+	// set by Kubernetes and cannot be controlled by users.
+	DiscoveryTimestamp *metav1.Time `json:"discoveryTimestamp,omitempty" protobuf:"bytes,11,opt,name=discoveryTimestamp"`
 	// Origin describes a kind of Freight in terms of its origin.
 	//
 	// +kubebuilder:validation:Required

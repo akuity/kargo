@@ -142,6 +142,10 @@ func (s PromotionStepStatus) Compare(other PromotionStepStatus) int {
 type Promotion struct {
 	metav1.TypeMeta   `json:",inline"`
 	metav1.ObjectMeta `json:"metadata,omitempty" protobuf:"bytes,1,opt,name=metadata"`
+	// DiscoveryTimestamp is the time at which the Promotion was created.
+	// This is distinct from metadata.creationTimestamp, which is
+	// set by Kubernetes and cannot be controlled by users.
+	DiscoveryTimestamp *metav1.Time `json:"discoveryTimestamp,omitempty" protobuf:"bytes,4,opt,name=discoveryTimestamp"`
 	// Spec describes the desired transition of a specific Stage into a specific
 	// Freight.
 	//

@@ -572,6 +572,7 @@ func (r *reconciler) buildFreightFromLatestArtifacts(
 		ObjectMeta: metav1.ObjectMeta{
 			Namespace: namespace,
 		},
+		DiscoveryTimestamp: &metav1.Time{Time: time.Now()},
 	}
 
 	for _, result := range artifacts.Git {
