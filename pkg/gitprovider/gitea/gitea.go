@@ -62,6 +62,12 @@ type giteaClient interface {
 		opts gitea.ListPullRequestsOptions,
 	) ([]*gitea.PullRequest, *gitea.Response, error)
 
+	ListRepoLabels(
+		owner string,
+		repo string,
+		opts gitea.ListLabelsOptions,
+	) ([]*gitea.Label, *gitea.Response, error)
+
 	GetPullRequest(
 		owner string,
 		repo string,
@@ -133,14 +139,19 @@ func (p *provider) CreatePullRequest(
 	if opts == nil {
 		opts = &gitprovider.CreatePullRequestOpts{}
 	}
+	labelIDs, err := p.resolveLabelIDs(opts.Labels)
+	if err != nil {
+		return nil, err
+	}
 	giteaPR, _, err := p.client.CreatePullRequest(
 		p.owner,
 		p.repo,
 		gitea.CreatePullRequestOption{
-			Title: opts.Title,
-			Head:  opts.Head,
-			Base:  opts.Base,
-			Body:  opts.Description,
+			Title:  opts.Title,
+			Head:   opts.Head,
+			Base:   opts.Base,
+			Body:   opts.Description,
+			Labels: labelIDs,
 		},
 	)
 	if err != nil {
@@ -149,13 +160,64 @@ func (p *provider) CreatePullRequest(
 	if giteaPR == nil {
 		return nil, fmt.Errorf("unexpected nil pull request")
 	}
-	// TODO(krancour): Add label support. The Gitea SDK's AddIssueLabels expects
-	// label IDs ([]int64), but Kargo's CreatePullRequestOpts.Labels are names
-	// ([]string). A previous implementation attempted this but silently discarded
-	// the labels entirely. To fix properly: list repo labels, match by name to
-	// get IDs, then call AddIssueLabels.
 	pr := convertGiteaPR(*giteaPR)
 	return &pr, nil
+}
+
+func (p *provider) resolveLabelIDs(labelNames []string) ([]int64, error) {
+	if len(labelNames) == 0 {
+		return nil, nil
+	}
+
+	labelIDsByName := make(map[string]int64, len(labelNames))
+	for page := 1; ; {
+		pageLabels, resp, err := p.client.ListRepoLabels(
+			p.owner,
+			p.repo,
+			gitea.ListLabelsOptions{
+				ListOptions: gitea.ListOptions{Page: page},
+			},
+		)
+		if err != nil {
+			return nil, fmt.Errorf("error listing repository labels: %w", err)
+		}
+		for _, repoLabel := range pageLabels {
+			if repoLabel == nil {
+				continue
+			}
+			labelIDsByName[repoLabel.Name] = repoLabel.ID
+		}
+		if resp == nil || resp.NextPage == 0 {
+			break
+		}
+		page = resp.NextPage
+	}
+
+	labelIDs := make([]int64, 0, len(labelNames))
+	seen := make(map[int64]struct{}, len(labelNames))
+	missing := make([]string, 0)
+	for _, labelName := range labelNames {
+		labelID, ok := labelIDsByName[labelName]
+		if !ok {
+			missing = append(missing, labelName)
+			continue
+		}
+		if _, ok := seen[labelID]; ok {
+			continue
+		}
+		seen[labelID] = struct{}{}
+		labelIDs = append(labelIDs, labelID)
+	}
+	if len(missing) > 0 {
+		return nil, fmt.Errorf(
+			"labels not found in repository %s/%s: %s",
+			p.owner,
+			p.repo,
+			strings.Join(missing, ", "),
+		)
+	}
+
+	return labelIDs, nil
 }
 
 // GetPullRequest implements gitprovider.Interface.
