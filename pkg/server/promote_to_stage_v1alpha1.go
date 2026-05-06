@@ -17,7 +17,6 @@ import (
 	"github.com/akuity/kargo/pkg/api"
 	"github.com/akuity/kargo/pkg/event"
 	libhttp "github.com/akuity/kargo/pkg/http"
-	"github.com/akuity/kargo/pkg/kargo"
 	"github.com/akuity/kargo/pkg/logging"
 	"github.com/akuity/kargo/pkg/server/user"
 )
@@ -118,9 +117,11 @@ func (s *server) PromoteToStage(
 		)
 	}
 
-	promotion, err := kargo.NewPromotionBuilder(s.client).Build(ctx, *stage, freight.Name)
-	if err != nil {
-		return nil, fmt.Errorf("build promotion: %w", err)
+	promotion := api.NewMinimalPromotion(stage, freight.Name)
+	if u, ok := user.InfoFromContext(ctx); ok {
+		promotion.Annotations = map[string]string{
+			kargoapi.AnnotationKeyCreateActor: api.FormatEventUserActor(u),
+		}
 	}
 	if err := s.createPromotionFn(ctx, promotion); err != nil {
 		return nil, fmt.Errorf("create promotion: %w", err)
@@ -268,11 +269,13 @@ func (s *server) promoteToStage(c *gin.Context) {
 		return
 	}
 
-	// Build and create the Promotion
-	promotion, err := kargo.NewPromotionBuilder(s.client).Build(ctx, *stage, freight.Name)
-	if err != nil {
-		_ = c.Error(fmt.Errorf("build promotion: %w", err))
-		return
+	// Create the Promotion. The defaulting webhook fills in the rest from
+	// the Stage's PromotionTemplate.
+	promotion := api.NewMinimalPromotion(stage, freight.Name)
+	if u, ok := user.InfoFromContext(ctx); ok {
+		promotion.Annotations = map[string]string{
+			kargoapi.AnnotationKeyCreateActor: api.FormatEventUserActor(u),
+		}
 	}
 
 	if err := s.client.Create(ctx, promotion); err != nil {

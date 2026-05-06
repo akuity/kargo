@@ -1869,15 +1869,10 @@ func (r *RegularStageReconciler) autoPromoteFreight(
 			}
 		}
 
-		// Auto promote the latest available Freight and record an event.
-		promotion, err := kargo.NewPromotionBuilder(r.client).
-			Build(ctx, *stage, latestFreight.Name)
-		if err != nil {
-			return newStatus, fmt.Errorf(
-				"error building Promotion for Freight %q in namespace %q: %w",
-				latestFreight.Name, stage.Namespace, err,
-			)
-		}
+		// Auto promote the latest available Freight and record an event. Create a
+		// minimal Promotion. The defaulting webhook fills in the rest from the
+		// Stage's PromotionTemplate.
+		promotion := api.NewMinimalPromotion(stage, latestFreight.Name)
 		if err = r.client.Create(ctx, promotion); err != nil {
 			return newStatus, fmt.Errorf(
 				"error creating Promotion for Freight %q in namespace %q: %w",
