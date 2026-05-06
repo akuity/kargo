@@ -1,0 +1,9 @@
+{
+  "mcpServers": {
+    "kargo": {
+      "type": "stdio",
+      "command": "bin/kargo",
+      "args": ["mcp", "serve"]
+    }
+  }
+}

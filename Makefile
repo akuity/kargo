@@ -232,6 +232,7 @@ build-ui:
 .PHONY: build-cli-with-ui
 build-cli-with-ui: build-ui build-cli
 
+
 ################################################################################
 # Code generation: To be run after modifications to API types                  #
 ################################################################################
