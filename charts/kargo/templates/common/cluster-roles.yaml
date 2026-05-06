@@ -9,6 +9,7 @@ metadata:
   name: kargo-project-admin
   labels:
     {{- include "kargo.labels" . | nindent 4 }}
+  {{- include "kargo.annotations" (dict "root" .) | nindent 2 }}
 rules:
 - apiGroups:
     - ""
@@ -48,6 +49,7 @@ metadata:
   name: kargo-project-secrets-reader
   labels:
     {{- include "kargo.labels" . | nindent 4 }}
+  {{- include "kargo.annotations" (dict "root" .) | nindent 2 }}
 rules:
 - apiGroups:
   - ""

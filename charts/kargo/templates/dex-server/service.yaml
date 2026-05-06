@@ -7,6 +7,7 @@ metadata:
   labels:
     {{- include "kargo.labels" . | nindent 4 }}
     {{- include "kargo.dexServer.labels" . | nindent 4 }}
+  {{- include "kargo.annotations" (dict "root" . "annotations" .Values.api.oidc.dex.annotations) | nindent 2 }}
 spec:
   type: ClusterIP
   selector:

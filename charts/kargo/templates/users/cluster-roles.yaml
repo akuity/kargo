@@ -5,6 +5,7 @@ metadata:
   name: kargo-admin
   labels:
     {{- include "kargo.labels" . | nindent 4 }}
+  {{- include "kargo.annotations" (dict "root" .) | nindent 2 }}
 rules:
 - apiGroups:
   - ""
@@ -95,6 +96,7 @@ metadata:
   name: kargo-project-creator
   labels:
     {{- include "kargo.labels" . | nindent 4 }}
+  {{- include "kargo.annotations" (dict "root" .) | nindent 2 }}
 rules:
 - apiGroups:
   - ""
@@ -142,6 +144,7 @@ metadata:
   name: kargo-user
   labels:
     {{- include "kargo.labels" . | nindent 4 }}
+  {{- include "kargo.annotations" (dict "root" .) | nindent 2 }}
 rules:
 - apiGroups:
   - ""
@@ -181,6 +184,7 @@ metadata:
   name: kargo-viewer
   labels:
     {{- include "kargo.labels" . | nindent 4 }}
+  {{- include "kargo.annotations" (dict "root" .) | nindent 2 }}
 rules:
 - apiGroups:
   - ""

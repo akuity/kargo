@@ -7,12 +7,7 @@ metadata:
   labels:
     {{- include "kargo.labels" . | nindent 4 }}
     {{- include "kargo.api.labels" . | nindent 4 }}
-  {{- with (mergeOverwrite (deepCopy .Values.global.annotations) .Values.api.service.annotations) }}
-  annotations:
-    {{- range $key, $value := . }}
-    {{ $key }}: {{ $value | quote }}
-    {{- end }}
-  {{- end }}
+  {{- include "kargo.annotations" (dict "root" . "annotations" .Values.api.service.annotations) | nindent 2 }}
 spec:
   type: {{ .Values.api.service.type }}
   ports:

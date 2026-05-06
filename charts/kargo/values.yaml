@@ -347,8 +347,10 @@ api:
       affinity: {}
       ## @param api.oidc.dex.priorityClassName [nullable] Name of the priority class for the Dex server pods. Defaults to `global.priorityClassName`.
       # priorityClassName:
-      ## @param api.oidc.dex.annotations Annotations to add to the Dex server pods. Merges with `global.annotations`, allowing you to override or add to the global annotations.
+      ## @param api.oidc.dex.annotations Annotations to add to the Dex server deployment. Merges with `global.annotations`, allowing you to override or add to the global annotations.
       annotations: {}
+      ## @param api.oidc.dex.podAnnotations Annotations to add to the Dex server pods. Merges with `global.podAnnotations`, allowing you to override or add to the global annotations.
+      podAnnotations: {}
       ## @param api.oidc.dex.securityContext Security context for Dex server pods. Defaults to `global.securityContext`.
       securityContext: {}
 
