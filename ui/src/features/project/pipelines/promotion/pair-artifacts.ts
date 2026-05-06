@@ -2,7 +2,7 @@ import {
   flattenFreightOrigin,
   TableSource
 } from '@ui/features/freight/flatten-freight-origin-utils';
-import { Freight } from '@ui/gen/api/v1alpha1/generated_pb';
+import { Freight, FreightReference } from '@ui/gen/api/v1alpha1/generated_pb';
 
 export type PairStatus = 'CHANGED' | 'UNCHANGED' | 'NEW' | 'REMOVED';
 
@@ -34,8 +34,8 @@ const versionOf = (s: TableSource): string => {
 };
 
 export const pairArtifacts = (
-  current: Freight | undefined | null,
-  incoming: Freight | undefined | null
+  current: Freight | FreightReference | undefined | null,
+  incoming: Freight | FreightReference | undefined | null
 ): PairedRow[] => {
   const currentItems = flattenFreightOrigin(current);
   const incomingItems = flattenFreightOrigin(incoming);

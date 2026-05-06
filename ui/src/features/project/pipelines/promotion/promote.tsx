@@ -11,7 +11,6 @@ import { useExtensionsContext } from '@ui/extensions/extensions-context';
 import { ModalComponentProps } from '@ui/features/common/modal/modal-context';
 import { getCurrentFreight } from '@ui/features/common/utils';
 import { IAction, useActionContext } from '@ui/features/project/pipelines/context/action-context';
-import { useGetFreightMap } from '@ui/features/stage/tabs/freight-history/use-get-freight-map';
 import {
   promoteDownstream,
   promoteToStage
@@ -43,18 +42,7 @@ export const Promote = (props: PromoteProps) => {
   const stageName = props.stage?.metadata?.name;
   const projectName = props.stage?.metadata?.namespace;
 
-  const freightMap = useGetFreightMap(projectName || '');
-
-  const currentFreightOnStage = useMemo<Freight | undefined>(() => {
-    const refs = getCurrentFreight(props.stage);
-    for (const ref of refs) {
-      const resolved = ref?.name ? freightMap[ref.name] : undefined;
-      if (resolved) {
-        return resolved;
-      }
-    }
-    return undefined;
-  }, [props.stage, freightMap]);
+  const currentFreightOnStage = useMemo(() => getCurrentFreight(props.stage)[0], [props.stage]);
 
   const promoteActionMutation = useMutation(promoteToStage, {
     onSuccess: (response) => {

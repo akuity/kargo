@@ -1,4 +1,4 @@
-import { ArtifactReference, Freight } from '@ui/gen/api/v1alpha1/generated_pb';
+import { ArtifactReference, Freight, FreightReference } from '@ui/gen/api/v1alpha1/generated_pb';
 
 export type TableSource =
   | {
@@ -26,7 +26,9 @@ export type TableSource =
       type: 'other';
     } & ArtifactReference);
 
-export const flattenFreightOrigin = (freight: Freight | undefined | null): TableSource[] => {
+export const flattenFreightOrigin = (
+  freight: Freight | FreightReference | undefined | null
+): TableSource[] => {
   const images: TableSource[] =
     freight?.images?.map((image) => ({
       type: 'image',
