@@ -27,13 +27,13 @@ global:
     namespace: kargo-system-resources
     ## @param global.systemResources.createNamespace Indicates whether the namespace specified by `global.systemResources.namespace` should be created when installing the chart.
     createNamespace: true
-  
+
   sharedResources:
     ## @param global.sharedResources.namespace designates a namespace where shared resources can be located.
     namespace: kargo-shared-resources
     ## @param global.sharedResources.createNamespace Indicates whether the namespace specified by `global.sharedResources.namespace` should be created when installing the chart.
     createNamespace: true
-  
+
   ## @param global.labels Labels to add to all resources.
   labels: {}
   ## @param global.annotations Annotations to add to all resources.
@@ -260,6 +260,11 @@ api:
         ## @param api.oidc.dex.image.pullSecrets List of imagePullSecrets.
         pullSecrets: []
         # - name: regcred
+
+      ## @param api.oidc.dex.logLevel The log level for the Dex server. Valid options are: debug, info, warn, error.
+      logLevel: info
+      ## @param api.oidc.dex.logFormat The format of logs from the Dex server. Valid options are text and json.
+      logFormat: text
 
       ## @param api.oidc.dex.skipApprovalScreen Whether to skip Dex's own approval screen. Since upstream identity providers will already request user consent, this second approval screen from Dex can be both superfluous and confusing.
       skipApprovalScreen: true
