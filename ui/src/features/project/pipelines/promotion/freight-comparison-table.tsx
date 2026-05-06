@@ -3,7 +3,7 @@ import { Col, Flex, Row, Space, Table, Tag, theme, Typography } from 'antd';
 import { useMemo } from 'react';
 
 import { ArtifactMetadata } from '@ui/features/freight/artifact-metadata';
-import { Freight } from '@ui/gen/api/v1alpha1/generated_pb';
+import { Freight, FreightReference } from '@ui/gen/api/v1alpha1/generated_pb';
 
 import { repoLabel, typeIcon, typeLabel, versionLabel } from './freight-comparison-utils';
 import { PairedRow, pairArtifacts, PairStatus } from './pair-artifacts';
@@ -22,7 +22,7 @@ const statusTag = (status: PairStatus) => {
 };
 
 type FreightComparisonTableProps = {
-  currentFreight?: Freight;
+  currentFreight?: Freight | FreightReference;
   incomingFreight: Freight;
   className?: string;
 };

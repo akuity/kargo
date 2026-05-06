@@ -10,7 +10,7 @@ import { FreightMetadata } from '@ui/features/freight/freight-metadata';
 import { FreightStatusList } from '@ui/features/freight/freight-status-list';
 import { FreightTable } from '@ui/features/project/pipelines/freight/freight-table';
 import { useGetFreightCreation } from '@ui/features/project/pipelines/freight/use-get-freight-creation';
-import { Freight, FreightSchema } from '@ui/gen/api/v1alpha1/generated_pb';
+import { Freight, FreightReference, FreightSchema } from '@ui/gen/api/v1alpha1/generated_pb';
 
 import { FreightComparisonTable } from './freight-comparison-table';
 
@@ -18,7 +18,7 @@ type FreightDetailsProps = {
   freight: Freight;
   additionalTabs?: TabsProps['items'];
   comparison?: {
-    currentFreight?: Freight;
+    currentFreight?: Freight | FreightReference;
   };
 };
 
