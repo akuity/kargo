@@ -261,10 +261,10 @@ api:
         pullSecrets: []
         # - name: regcred
 
-      ## @param api.oidc.dex.logLevel The log level for the Dex server. Valid options are: debug, info, warn, error.
-      logLevel: info
-      ## @param api.oidc.dex.logFormat The format of logs from the Dex server. Valid options are text and json.
-      logFormat: text
+      ## @param api.oidc.dex.logLevel The log level for the Dex server. Since Dex server is a third-party software, its log level options differ from the other Kargo components. The valid options are: DEBUG, INFO, WARN, ERROR.
+      logLevel: INFO
+      ## @param api.oidc.dex.logFormat The format of logs from the Dex server. Since Dex server is a third-party software, its log format options differ from the other Kargo components. The valid options are TEXT and JSON.
+      logFormat: TEXT
 
       ## @param api.oidc.dex.skipApprovalScreen Whether to skip Dex's own approval screen. Since upstream identity providers will already request user consent, this second approval screen from Dex can be both superfluous and confusing.
       skipApprovalScreen: true
