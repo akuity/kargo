@@ -97,7 +97,7 @@ export const FreightComparisonTable = ({
     >
       <Table.Column<PairedRow>
         title='Repo / Name'
-        width='60%'
+        width='57%'
         render={(_, row) => {
           const source = row.incoming || row.current;
           if (!source) {
@@ -138,7 +138,7 @@ export const FreightComparisonTable = ({
           }
           const muted = row.status === 'UNCHANGED';
           return (
-            <span className='font-mono' style={{ color: muted ? mutedColor : undefined }}>
+            <span className='font-mono break-all' style={{ color: muted ? mutedColor : undefined }}>
               {versionLabel(row.current)}
             </span>
           );
@@ -146,23 +146,25 @@ export const FreightComparisonTable = ({
       />
       <Table.Column<PairedRow>
         title='Promoting'
-        width='15%'
+        width='18%'
         render={(_, row) => {
           if (!row.incoming) {
             return <Typography.Text type='secondary'>—</Typography.Text>;
           }
           if (row.status === 'UNCHANGED') {
             return (
-              <Space size={4} style={{ color: mutedColor }}>
-                <span>=</span>
-                <span className='font-mono'>{versionLabel(row.incoming)}</span>
-              </Space>
+              <span
+                className='font-mono break-all inline-block w-4/5'
+                style={{ color: mutedColor }}
+              >
+                {versionLabel(row.incoming)}
+              </span>
             );
           }
           return (
-            <Space size={4}>
+            <Space size={4} align='center'>
               <span style={{ color: mutedColor }}>→</span>
-              <Tag color='gold' className='font-mono'>
+              <Tag color='gold' className='font-mono whitespace-normal break-all'>
                 {versionLabel(row.incoming)}
               </Tag>
             </Space>
