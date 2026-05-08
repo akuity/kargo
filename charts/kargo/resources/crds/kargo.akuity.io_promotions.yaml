@@ -329,6 +329,11 @@ spec:
                             registry, the URL implicitly points to a specific chart and the Name field
                             will be empty.
                           type: string
+                        subscriptionName:
+                          description: |-
+                            SubscriptionName is the optional human-readable name of the subscription
+                            that discovered this chart.
+                          type: string
                         version:
                           description: Version specifies a particular version of the
                             chart.
@@ -364,6 +369,11 @@ spec:
                         repoURL:
                           description: RepoURL is the URL of a Git repository.
                           type: string
+                        subscriptionName:
+                          description: |-
+                            SubscriptionName is the optional human-readable name of the subscription
+                            that discovered this commit.
+                          type: string
                         tag:
                           description: |-
                             Tag denotes a tag in the repository that matched selection criteria and
@@ -392,6 +402,11 @@ spec:
                         repoURL:
                           description: RepoURL describes the repository in which the
                             image can be found.
+                          type: string
+                        subscriptionName:
+                          description: |-
+                            SubscriptionName is the optional human-readable name of the subscription
+                            that discovered this image.
                           type: string
                         tag:
                           description: |-
@@ -502,6 +517,11 @@ spec:
                                   registry, the URL implicitly points to a specific chart and the Name field
                                   will be empty.
                                 type: string
+                              subscriptionName:
+                                description: |-
+                                  SubscriptionName is the optional human-readable name of the subscription
+                                  that discovered this chart.
+                                type: string
                               version:
                                 description: Version specifies a particular version
                                   of the chart.
@@ -538,6 +558,11 @@ spec:
                               repoURL:
                                 description: RepoURL is the URL of a Git repository.
                                 type: string
+                              subscriptionName:
+                                description: |-
+                                  SubscriptionName is the optional human-readable name of the subscription
+                                  that discovered this commit.
+                                type: string
                               tag:
                                 description: |-
                                   Tag denotes a tag in the repository that matched selection criteria and
@@ -566,6 +591,11 @@ spec:
                               repoURL:
                                 description: RepoURL describes the repository in which
                                   the image can be found.
+                                type: string
+                              subscriptionName:
+                                description: |-
+                                  SubscriptionName is the optional human-readable name of the subscription
+                                  that discovered this image.
                                 type: string
                               tag:
                                 description: |-

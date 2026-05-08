@@ -22,4 +22,9 @@ TODO(v1.13.0): Remove SSH/SCP-style URL support from this pattern.
 +kubebuilder:validation:Pattern=`(?:^(ssh|https?)://(?:([\w-]+)(:(.+))?@)?([\w-]+(?:\.[\w-]+)*)(?::(\d{1,5}))?(/.*)$)|(?:^([\w-]+)@([\w+]+(?:\.[\w-]+)*):(/?.*))`
 +akuity:test-kubebuilder-pattern=GitRepoURLPattern */
   repoURL?: string;
+  /** SubscriptionName is the optional human-readable name of the subscription
+that produced this discovery result.
+
++optional */
+  subscriptionName?: string;
 }

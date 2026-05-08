@@ -25,6 +25,12 @@ type Chart struct {
 	// will be empty.
 	RepoURL string `json:"repoURL,omitempty"`
 
+	// SubscriptionName is the optional human-readable name of the subscription
+	// that discovered this chart.
+	//
+	// +optional
+	SubscriptionName string `json:"subscriptionName,omitempty"`
+
 	// Version specifies a particular version of the chart.
 	Version string `json:"version,omitempty"`
 }

@@ -6192,6 +6192,10 @@
           "description": "RepoURL specifies the URL of a Helm chart repository. Classic chart\nrepositories (using HTTP/S) can contain differently named charts. When this\nfield points to such a repository, the Name field will specify the name of\nthe chart within the repository. In the case of a repository within an OCI\nregistry, the URL implicitly points to a specific chart and the Name field\nwill be empty.",
           "type": "string"
         },
+        "subscriptionName": {
+          "description": "SubscriptionName is the optional human-readable name of the subscription\nthat discovered this chart.\n\n+optional",
+          "type": "string"
+        },
         "version": {
           "description": "Version specifies a particular version of the chart.",
           "type": "string"
@@ -6211,6 +6215,10 @@
         },
         "semverConstraint": {
           "description": "SemverConstraint is the constraint for which versions were discovered.\nThis field is optional, and only populated if the ChartSubscription\nspecifies a SemverConstraint.",
+          "type": "string"
+        },
+        "subscriptionName": {
+          "description": "SubscriptionName is the optional human-readable name of the subscription\nthat produced this discovery result.\n\n+optional",
           "type": "string"
         },
         "versions": {
@@ -6879,6 +6887,10 @@
           "description": "RepoURL is the URL of a Git repository.",
           "type": "string"
         },
+        "subscriptionName": {
+          "description": "SubscriptionName is the optional human-readable name of the subscription\nthat discovered this commit.\n\n+optional",
+          "type": "string"
+        },
         "tag": {
           "description": "Tag denotes a tag in the repository that matched selection criteria and\nresolved to this commit.",
           "type": "string"
@@ -6897,6 +6909,10 @@
         },
         "repoURL": {
           "description": "RepoURL is the repository URL of the GitSubscription.\n\nTODO(v1.13.0): Remove SSH/SCP-style URL support from this pattern.\n\n+kubebuilder:validation:MinLength=1\n+kubebuilder:validation:Pattern=`(?:^(ssh|https?)://(?:([\\w-]+)(:(.+))?@)?([\\w-]+(?:\\.[\\w-]+)*)(?::(\\d{1,5}))?(/.*)$)|(?:^([\\w-]+)@([\\w+]+(?:\\.[\\w-]+)*):(/?.*))`\n+akuity:test-kubebuilder-pattern=GitRepoURLPattern",
+          "type": "string"
+        },
+        "subscriptionName": {
+          "description": "SubscriptionName is the optional human-readable name of the subscription\nthat produced this discovery result.\n\n+optional",
           "type": "string"
         }
       }
@@ -7029,6 +7045,10 @@
           "description": "RepoURL describes the repository in which the image can be found.",
           "type": "string"
         },
+        "subscriptionName": {
+          "description": "SubscriptionName is the optional human-readable name of the subscription\nthat discovered this image.\n\n+optional",
+          "type": "string"
+        },
         "tag": {
           "description": "Tag identifies a specific version of the image in the repository specified\nby RepoURL.",
           "type": "string"
@@ -7051,6 +7071,10 @@
         },
         "repoURL": {
           "description": "RepoURL is the repository URL of the image, as specified in the\nImageSubscription.\n\n+kubebuilder:validation:MinLength=1",
+          "type": "string"
+        },
+        "subscriptionName": {
+          "description": "SubscriptionName is the optional human-readable name of the subscription\nthat produced this discovery result.\n\n+optional",
           "type": "string"
         }
       }

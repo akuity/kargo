@@ -1852,6 +1852,7 @@ RawFormat specifies the format for raw resource representation.
 | repoURL | [string](#string) |  RepoURL specifies the URL of a Helm chart repository. Classic chart repositories (using HTTP/S) can contain differently named charts. When this field points to such a repository, the Name field will specify the name of the chart within the repository. In the case of a repository within an OCI registry, the URL implicitly points to a specific chart and the Name field will be empty. |
 | name | [string](#string) |  Name specifies the name of the chart. |
 | version | [string](#string) |  Version specifies a particular version of the chart. |
+| subscriptionName | [string](#string) |  SubscriptionName is the optional human-readable name of the subscription that discovered this chart.  +optional |
 
 <a name="github-com-akuity-kargo-api-v1alpha1-ChartDiscoveryResult"></a>
 
@@ -1863,6 +1864,7 @@ RawFormat specifies the format for raw resource representation.
 | name | [string](#string) |  Name is the name of the Helm chart, as specified in the ChartSubscription. |
 | semverConstraint | [string](#string) |  SemverConstraint is the constraint for which versions were discovered. This field is optional, and only populated if the ChartSubscription specifies a SemverConstraint. |
 | versions | [string](#string) |  Versions is a list of versions discovered by the Warehouse for the ChartSubscription. An empty list indicates that the discovery operation was successful, but no versions matching the ChartSubscription criteria were found.  +optional |
+| subscriptionName | [string](#string) |  SubscriptionName is the optional human-readable name of the subscription that produced this discovery result.  +optional |
 
 <a name="github-com-akuity-kargo-api-v1alpha1-ChartSubscription"></a>
 
@@ -2217,6 +2219,7 @@ RawFormat specifies the format for raw resource representation.
 | message | [string](#string) |  Message is the message associated with the commit. At present, this only contains the first line (subject) of the commit message. |
 | author | [string](#string) |  Author is the author of the commit. |
 | committer | [string](#string) |  Committer is the person who committed the commit. |
+| subscriptionName | [string](#string) |  SubscriptionName is the optional human-readable name of the subscription that discovered this commit.  +optional |
 
 <a name="github-com-akuity-kargo-api-v1alpha1-GitDiscoveryResult"></a>
 
@@ -2226,6 +2229,7 @@ RawFormat specifies the format for raw resource representation.
 | ----- | ---- | ----------- |
 | repoURL | [string](#string) |  RepoURL is the repository URL of the GitSubscription.  TODO(v1.13.0): Remove SSH/SCP-style URL support from this pattern.     |
 | commits | [DiscoveredCommit](#github-com-akuity-kargo-api-v1alpha1-DiscoveredCommit) |  Commits is a list of commits discovered by the Warehouse for the GitSubscription. An empty list indicates that the discovery operation was successful, but no commits matching the GitSubscription criteria were found.  +optional |
+| subscriptionName | [string](#string) |  SubscriptionName is the optional human-readable name of the subscription that produced this discovery result.  +optional |
 
 <a name="github-com-akuity-kargo-api-v1alpha1-GitHubWebhookReceiverConfig"></a>
 
@@ -2319,6 +2323,7 @@ RawFormat specifies the format for raw resource representation.
 | tag | [string](#string) |  Tag identifies a specific version of the image in the repository specified by RepoURL. |
 | digest | [string](#string) |  Digest identifies a specific version of the image in the repository specified by RepoURL. This is a more precise identifier than Tag. |
 | annotations | [Image.AnnotationsEntry](#github-com-akuity-kargo-api-v1alpha1-Image-AnnotationsEntry) |  Annotations is a map of arbitrary metadata for the image. |
+| subscriptionName | [string](#string) |  SubscriptionName is the optional human-readable name of the subscription that discovered this image.  +optional |
 
 <a name="github-com-akuity-kargo-api-v1alpha1-Image-AnnotationsEntry"></a>
 
@@ -2338,6 +2343,7 @@ RawFormat specifies the format for raw resource representation.
 | repoURL | [string](#string) |  RepoURL is the repository URL of the image, as specified in the ImageSubscription.   |
 | platform | [string](#string) |  Platform is the target platform constraint of the ImageSubscription for which references were discovered. This field is optional, and only populated if the ImageSubscription specifies a Platform. |
 | references | [DiscoveredImageReference](#github-com-akuity-kargo-api-v1alpha1-DiscoveredImageReference) |  References is a list of image references discovered by the Warehouse for the ImageSubscription. An empty list indicates that the discovery operation was successful, but no images matching the ImageSubscription criteria were found.  +optional |
+| subscriptionName | [string](#string) |  SubscriptionName is the optional human-readable name of the subscription that produced this discovery result.  +optional |
 
 <a name="github-com-akuity-kargo-api-v1alpha1-ImageSubscription"></a>
 

@@ -15,6 +15,11 @@ specified by RepoURL. This is a more precise identifier than Tag. */
   digest?: string;
   /** RepoURL describes the repository in which the image can be found. */
   repoURL?: string;
+  /** SubscriptionName is the optional human-readable name of the subscription
+that discovered this image.
+
++optional */
+  subscriptionName?: string;
   /** Tag identifies a specific version of the image in the repository specified
 by RepoURL. */
   tag?: string;

@@ -24,6 +24,12 @@ type Image struct {
 	// RepoURL describes the repository in which the image can be found.
 	RepoURL string `json:"repoURL,omitempty"`
 
+	// SubscriptionName is the optional human-readable name of the subscription
+	// that discovered this image.
+	//
+	// +optional
+	SubscriptionName string `json:"subscriptionName,omitempty"`
+
 	// Tag identifies a specific version of the image in the repository specified
 	// by RepoURL.
 	Tag string `json:"tag,omitempty"`

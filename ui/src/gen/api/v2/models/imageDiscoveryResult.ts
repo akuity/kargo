@@ -24,4 +24,9 @@ ImageSubscription.
 
 +kubebuilder:validation:MinLength=1 */
   repoURL?: string;
+  /** SubscriptionName is the optional human-readable name of the subscription
+that produced this discovery result.
+
++optional */
+  subscriptionName?: string;
 }

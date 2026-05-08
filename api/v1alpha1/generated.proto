@@ -260,6 +260,12 @@ message Chart {
 
   // Version specifies a particular version of the chart.
   optional string version = 3;
+
+  // SubscriptionName is the optional human-readable name of the subscription
+  // that discovered this chart.
+  //
+  // +optional
+  optional string subscriptionName = 4;
 }
 
 // ChartDiscoveryResult represents the result of a chart discovery operation for
@@ -286,6 +292,12 @@ message ChartDiscoveryResult {
   //
   // +optional
   repeated string versions = 4;
+
+  // SubscriptionName is the optional human-readable name of the subscription
+  // that produced this discovery result.
+  //
+  // +optional
+  optional string subscriptionName = 5;
 }
 
 // ChartSubscription defines a subscription to a Helm chart repository.
@@ -876,6 +888,12 @@ message GitCommit {
 
   // Committer is the person who committed the commit.
   optional string committer = 8;
+
+  // SubscriptionName is the optional human-readable name of the subscription
+  // that discovered this commit.
+  //
+  // +optional
+  optional string subscriptionName = 9;
 }
 
 // GitDiscoveryResult represents the result of a Git discovery operation for a
@@ -896,6 +914,12 @@ message GitDiscoveryResult {
   //
   // +optional
   repeated DiscoveredCommit commits = 2;
+
+  // SubscriptionName is the optional human-readable name of the subscription
+  // that produced this discovery result.
+  //
+  // +optional
+  optional string subscriptionName = 3;
 }
 
 // GitHubWebhookReceiverConfig describes a webhook receiver that is compatible
@@ -1098,6 +1122,12 @@ message Image {
 
   // Annotations is a map of arbitrary metadata for the image.
   map<string, string> annotations = 5;
+
+  // SubscriptionName is the optional human-readable name of the subscription
+  // that discovered this image.
+  //
+  // +optional
+  optional string subscriptionName = 6;
 }
 
 // ImageDiscoveryResult represents the result of an image discovery operation
@@ -1121,6 +1151,12 @@ message ImageDiscoveryResult {
   //
   // +optional
   repeated DiscoveredImageReference references = 3;
+
+  // SubscriptionName is the optional human-readable name of the subscription
+  // that produced this discovery result.
+  //
+  // +optional
+  optional string subscriptionName = 4;
 }
 
 // ImageSubscription defines a subscription to a container image repository.
