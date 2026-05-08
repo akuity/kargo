@@ -10,6 +10,8 @@ import {
   ImageDiscoveryResult
 } from '@ui/gen/api/v1alpha1/generated_pb';
 
+import { getSubscriptionKey, getSubscriptionKeyFreight } from './unique-subscription-key';
+
 // WHY: A Warehouse's discoveredArtifacts is a rolling window of recently seen
 // artifact versions — it does not retain a full history. When a user wants to
 // clone an existing piece of Freight (i.e. assemble a new Freight starting from
@@ -42,20 +44,24 @@ export const useWarehouseWithClonedFreight = (
       return warehouse;
     }
 
-    const da = warehouse.status?.discoveredArtifacts;
-    const images: ImageDiscoveryResult[] = [...(da?.images || [])];
-    const charts: ChartDiscoveryResult[] = [...(da?.charts || [])];
-    const git: GitDiscoveryResult[] = [...(da?.git || [])];
+    const discoveredArtifacts = warehouse.status?.discoveredArtifacts;
+    const images: ImageDiscoveryResult[] = [...(discoveredArtifacts?.images || [])];
+    const charts: ChartDiscoveryResult[] = [...(discoveredArtifacts?.charts || [])];
+    const git: GitDiscoveryResult[] = [...(discoveredArtifacts?.git || [])];
 
     for (const image of cloneFreightData.images || []) {
-      const sub = images.find((s) => s.repoURL === image.repoURL);
-      if (!sub) {
+      const subscription = images.find(
+        (s) => getSubscriptionKey(s) === getSubscriptionKeyFreight(image)
+      );
+      if (!subscription) {
         images.push({
           repoURL: image.repoURL,
-          references: [{ tag: image.tag, digest: image.digest, annotations: image.annotations }]
+          references: []
         } as unknown as ImageDiscoveryResult);
-      } else if (!sub.references.find((r) => r.tag === image.tag)) {
-        sub.references.unshift({
+      }
+
+      if (!subscription?.references.find((r) => r.tag === image.tag)) {
+        subscription?.references.unshift({
           tag: image.tag,
           digest: image.digest,
           annotations: image.annotations
@@ -64,37 +70,36 @@ export const useWarehouseWithClonedFreight = (
     }
 
     for (const chart of cloneFreightData.charts || []) {
-      const sub = charts.find((s) => s.repoURL === chart.repoURL && s.name === chart.name);
-      if (!sub) {
+      const subscription = charts.find(
+        (s) => getSubscriptionKey(s) === getSubscriptionKeyFreight(chart)
+      );
+      if (!subscription) {
         charts.push({
           $typeName: 'github.com.akuity.kargo.api.v1alpha1.ChartDiscoveryResult',
           repoURL: chart.repoURL,
           name: chart.name,
-          versions: [chart.version]
+          versions: []
         } as unknown as ChartDiscoveryResult);
-      } else if (!sub.versions.find((v) => v === chart.version)) {
-        sub.versions.unshift(chart.version);
+      }
+
+      if (!subscription?.versions.find((v) => v === chart.version)) {
+        subscription?.versions.unshift(chart.version);
       }
     }
 
     for (const commit of cloneFreightData.commits || []) {
-      const sub = git.find((s) => s.repoURL === commit.repoURL);
-      if (!sub) {
+      const subscription = git.find(
+        (s) => getSubscriptionKey(s) === getSubscriptionKeyFreight(commit)
+      );
+      if (!subscription) {
         git.push({
           repoURL: commit.repoURL,
-          commits: [
-            {
-              id: commit.id,
-              branch: commit.branch,
-              tag: commit.tag,
-              author: commit.author,
-              committer: commit.committer,
-              subject: commit.message
-            }
-          ]
+          commits: []
         } as unknown as GitDiscoveryResult);
-      } else if (!sub.commits.find((c) => c.id === commit.id && c.tag === commit.tag)) {
-        sub.commits.unshift({
+      }
+
+      if (!subscription?.commits.find((c) => c.id === commit.id && c.tag === commit.tag)) {
+        subscription?.commits.unshift({
           id: commit.id,
           branch: commit.branch,
           tag: commit.tag,
@@ -109,7 +114,7 @@ export const useWarehouseWithClonedFreight = (
       ...warehouse,
       status: {
         ...warehouse.status,
-        discoveredArtifacts: { ...da, images, charts, git }
+        discoveredArtifacts: { ...discoveredArtifacts, images, charts, git }
       }
     } as WarehouseExpanded;
   }, [warehouse, cloneFreightData]);
