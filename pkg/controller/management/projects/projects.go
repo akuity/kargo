@@ -4,6 +4,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"reflect"
 	"strings"
 	"time"
 
@@ -683,25 +684,41 @@ func (r *reconciler) ensureSystemPermissions(
 			}},
 		},
 	}
-	for _, roleBinding := range roleBindings {
-		rbLogger := logger.WithValues("roleBinding", roleBinding.Name)
-		if err := r.createRoleBindingFn(ctx, &roleBinding); err != nil {
-			if !apierrors.IsAlreadyExists(err) {
+	for i := range roleBindings {
+		desired := &roleBindings[i]
+		rbLogger := logger.WithValues("roleBinding", desired.Name)
+		existing := &rbacv1.RoleBinding{}
+		if err := r.client.Get(
+			ctx,
+			client.ObjectKeyFromObject(desired),
+			existing,
+		); err != nil {
+			if !apierrors.IsNotFound(err) {
+				return fmt.Errorf(
+					"error getting RoleBinding %q in Project namespace %q: %w",
+					desired.Name, project.Name, err,
+				)
+			}
+			if err = r.createRoleBindingFn(ctx, desired); err != nil {
 				return fmt.Errorf(
 					"error creating RoleBinding %q in Project namespace %q: %w",
-					roleBinding.Name, project.Name, err,
+					desired.Name, project.Name, err,
 				)
 			}
-			if err = r.client.Update(ctx, &roleBinding); err != nil {
-				return fmt.Errorf(
-					"error updating existing RoleBinding %q in Project namespace %q: %w",
-					roleBinding.Name, project.Name, err,
-				)
-			}
-			rbLogger.Debug("updated RoleBinding")
+			rbLogger.Debug("created RoleBinding in Project namespace")
 			continue
 		}
-		rbLogger.Debug("created RoleBinding in Project namespace")
+		if reflect.DeepEqual(existing.Subjects, desired.Subjects) {
+			continue
+		}
+		existing.Subjects = desired.Subjects
+		if err := r.client.Update(ctx, existing); err != nil {
+			return fmt.Errorf(
+				"error updating RoleBinding %q in Project namespace %q: %w",
+				desired.Name, project.Name, err,
+			)
+		}
+		rbLogger.Debug("updated RoleBinding")
 	}
 
 	return nil
@@ -766,23 +783,38 @@ func (r *reconciler) ensureControllerPermissions(
 			},
 		}
 
-		if err := r.client.Create(ctx, roleBinding); err != nil {
-			if !apierrors.IsAlreadyExists(err) {
+		existing := &rbacv1.RoleBinding{}
+		if err := r.client.Get(
+			ctx,
+			client.ObjectKeyFromObject(roleBinding),
+			existing,
+		); err != nil {
+			if !apierrors.IsNotFound(err) {
+				return fmt.Errorf(
+					"error getting RoleBinding %q in Project namespace %q: %w",
+					roleBinding.Name, project.Name, err,
+				)
+			}
+			if err = r.client.Create(ctx, roleBinding); err != nil {
 				return fmt.Errorf(
 					"error creating RoleBinding %q for ServiceAccount %q in Project namespace %q: %w",
 					roleBinding.Name, sa.Name, project.Name, err,
 				)
 			}
-			if err = r.client.Update(ctx, roleBinding); err != nil {
-				return fmt.Errorf(
-					"error updating existing RoleBinding %q in Project namespace %q: %w",
-					roleBinding.Name, project.Name, err,
-				)
-			}
-			saLogger.Debug("updated RoleBinding")
+			saLogger.Debug("created RoleBinding")
 			continue
 		}
-		saLogger.Debug("created RoleBinding")
+		if reflect.DeepEqual(existing.Subjects, roleBinding.Subjects) {
+			continue
+		}
+		existing.Subjects = roleBinding.Subjects
+		if err := r.client.Update(ctx, existing); err != nil {
+			return fmt.Errorf(
+				"error updating RoleBinding %q in Project namespace %q: %w",
+				roleBinding.Name, project.Name, err,
+			)
+		}
+		saLogger.Debug("updated RoleBinding")
 	}
 
 	return nil
