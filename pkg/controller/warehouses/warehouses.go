@@ -543,10 +543,13 @@ func (r *reconciler) discoverArtifacts(
 		}
 		switch typedRes := res.(type) {
 		case kargoapi.ChartDiscoveryResult:
+			typedRes.SubscriptionName = sub.Name
 			discovered.Charts = append(discovered.Charts, typedRes)
 		case kargoapi.GitDiscoveryResult:
+			typedRes.SubscriptionName = sub.Name
 			discovered.Git = append(discovered.Git, typedRes)
 		case kargoapi.ImageDiscoveryResult:
+			typedRes.SubscriptionName = sub.Name
 			discovered.Images = append(discovered.Images, typedRes)
 		case kargoapi.DiscoveryResult:
 			discovered.Results = append(discovered.Results, typedRes)
@@ -580,13 +583,14 @@ func (r *reconciler) buildFreightFromLatestArtifacts(
 		}
 		latestCommit := result.Commits[0]
 		freight.Commits = append(freight.Commits, kargoapi.GitCommit{
-			RepoURL:   result.RepoURL,
-			ID:        latestCommit.ID,
-			Branch:    latestCommit.Branch,
-			Tag:       latestCommit.Tag,
-			Message:   latestCommit.Subject,
-			Author:    latestCommit.Author,
-			Committer: latestCommit.Committer,
+			RepoURL:          result.RepoURL,
+			ID:               latestCommit.ID,
+			Branch:           latestCommit.Branch,
+			Tag:              latestCommit.Tag,
+			Message:          latestCommit.Subject,
+			Author:           latestCommit.Author,
+			Committer:        latestCommit.Committer,
+			SubscriptionName: result.SubscriptionName,
 		})
 	}
 
@@ -596,10 +600,11 @@ func (r *reconciler) buildFreightFromLatestArtifacts(
 		}
 		latestImage := result.References[0]
 		freight.Images = append(freight.Images, kargoapi.Image{
-			RepoURL:     result.RepoURL,
-			Tag:         latestImage.Tag,
-			Digest:      latestImage.Digest,
-			Annotations: latestImage.Annotations,
+			RepoURL:          result.RepoURL,
+			Tag:              latestImage.Tag,
+			Digest:           latestImage.Digest,
+			Annotations:      latestImage.Annotations,
+			SubscriptionName: result.SubscriptionName,
 		})
 	}
 
@@ -613,9 +618,10 @@ func (r *reconciler) buildFreightFromLatestArtifacts(
 		}
 		latestChart := result.Versions[0]
 		freight.Charts = append(freight.Charts, kargoapi.Chart{
-			RepoURL: result.RepoURL,
-			Name:    result.Name,
-			Version: latestChart,
+			RepoURL:          result.RepoURL,
+			Name:             result.Name,
+			Version:          latestChart,
+			SubscriptionName: result.SubscriptionName,
 		})
 	}
 

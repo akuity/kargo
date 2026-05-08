@@ -304,6 +304,7 @@ func (s uniqueSubSet) addSub(
 			}
 			return field.Invalid(f.Child("chart"), sub.Chart.RepoURL, errMsg)
 		}
+		s[k] = f
 	case sub.Git != nil:
 		k := subscriptionKey{
 			kind: "git",
@@ -316,6 +317,7 @@ func (s uniqueSubSet) addSub(
 				fmt.Sprintf("subscription for Git repository already exists at %q", s[k]),
 			)
 		}
+		s[k] = f
 	case sub.Image != nil:
 		k := subscriptionKey{
 			kind: "image",
@@ -328,6 +330,7 @@ func (s uniqueSubSet) addSub(
 				fmt.Sprintf("subscription for image repository already exists at %q", s[k]),
 			)
 		}
+		s[k] = f
 	case sub.Subscription != nil:
 		k := subscriptionKey{
 			kind: "sub",
@@ -340,6 +343,21 @@ func (s uniqueSubSet) addSub(
 				fmt.Sprintf("subscription with name %q already exists at %q", sub.Subscription.Name, s[k]),
 			)
 		}
+		s[k] = f
+	}
+	// Validate uniqueness of the optional human-readable Name across all
+	// subscription types. Two subscriptions in the same Warehouse may not share
+	// a non-empty Name.
+	if sub.Name != "" {
+		nk := subscriptionKey{kind: "name", id: strings.ToLower(sub.Name)}
+		if _, exists := s[nk]; exists {
+			return field.Invalid(
+				f.Child("name"),
+				sub.Name,
+				fmt.Sprintf("subscription name %q already used at %q", sub.Name, s[nk]),
+			)
+		}
+		s[nk] = f
 	}
 	return nil
 }

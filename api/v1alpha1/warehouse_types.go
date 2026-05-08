@@ -417,6 +417,11 @@ type GitDiscoveryResult struct {
 	//
 	// +optional
 	Commits []DiscoveredCommit `json:"commits" protobuf:"bytes,2,rep,name=commits"`
+	// SubscriptionName is the optional human-readable name of the subscription
+	// that produced this discovery result.
+	//
+	// +optional
+	SubscriptionName string `json:"subscriptionName,omitempty" protobuf:"bytes,3,opt,name=subscriptionName"`
 }
 
 // DiscoveredCommit represents a commit discovered by a Warehouse for a
@@ -464,6 +469,11 @@ type ImageDiscoveryResult struct {
 	//
 	// +optional
 	References []DiscoveredImageReference `json:"references" protobuf:"bytes,3,rep,name=references"`
+	// SubscriptionName is the optional human-readable name of the subscription
+	// that produced this discovery result.
+	//
+	// +optional
+	SubscriptionName string `json:"subscriptionName,omitempty" protobuf:"bytes,4,opt,name=subscriptionName"`
 }
 
 // DiscoveredImageReference represents an image reference discovered by a
@@ -511,6 +521,11 @@ type ChartDiscoveryResult struct {
 	//
 	// +optional
 	Versions []string `json:"versions" protobuf:"bytes,4,rep,name=versions"`
+	// SubscriptionName is the optional human-readable name of the subscription
+	// that produced this discovery result.
+	//
+	// +optional
+	SubscriptionName string `json:"subscriptionName,omitempty" protobuf:"bytes,5,opt,name=subscriptionName"`
 }
 
 // DiscoveryResult represents the result of an artifact discovery operation for
