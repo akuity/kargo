@@ -1777,14 +1777,40 @@ func TestReconciler_ensureControllerPermissions(t *testing.T) {
 }
 
 func TestReconciler_ensureDefaultUserRoles(t *testing.T) {
+	scheme := runtime.NewScheme()
+	require.NoError(t, corev1.AddToScheme(scheme))
+	require.NoError(t, rbacv1.AddToScheme(scheme))
+
 	testCases := []struct {
 		name       string
 		reconciler *reconciler
 		assertions func(*testing.T, error)
 	}{
 		{
+			name: "error getting ServiceAccount",
+			reconciler: &reconciler{
+				client: fake.NewClientBuilder().WithScheme(scheme).
+					WithInterceptorFuncs(interceptor.Funcs{
+						Get: func(
+							context.Context,
+							client.WithWatch,
+							client.ObjectKey,
+							client.Object,
+							...client.GetOption,
+						) error {
+							return errors.New("something went wrong")
+						},
+					}).Build(),
+			},
+			assertions: func(t *testing.T, err error) {
+				require.ErrorContains(t, err, "error getting ServiceAccount")
+				require.ErrorContains(t, err, "something went wrong")
+			},
+		},
+		{
 			name: "error creating ServiceAccount",
 			reconciler: &reconciler{
+				client: fake.NewClientBuilder().WithScheme(scheme).Build(),
 				createServiceAccountFn: func(
 					context.Context,
 					client.Object,
@@ -1799,14 +1825,42 @@ func TestReconciler_ensureDefaultUserRoles(t *testing.T) {
 			},
 		},
 		{
+			name: "error getting Role",
+			reconciler: &reconciler{
+				client: fake.NewClientBuilder().WithScheme(scheme).WithObjects(
+					&corev1.ServiceAccount{ObjectMeta: metav1.ObjectMeta{Name: "kargo-admin"}},
+					&corev1.ServiceAccount{ObjectMeta: metav1.ObjectMeta{Name: "kargo-viewer"}},
+					&corev1.ServiceAccount{ObjectMeta: metav1.ObjectMeta{Name: "kargo-promoter"}},
+				).WithInterceptorFuncs(interceptor.Funcs{
+					Get: func(
+						ctx context.Context,
+						wc client.WithWatch,
+						key client.ObjectKey,
+						obj client.Object,
+						opts ...client.GetOption,
+					) error {
+						if _, ok := obj.(*rbacv1.Role); ok {
+							return errors.New("something went wrong")
+						}
+						return wc.Get(ctx, key, obj, opts...)
+					},
+				}).Build(),
+			},
+			assertions: func(t *testing.T, err error) {
+				require.ErrorContains(t, err, "error getting Role")
+				require.ErrorContains(t, err, "something went wrong")
+			},
+		},
+		{
 			name: "error creating Role",
 			reconciler: &reconciler{
+				client: fake.NewClientBuilder().WithScheme(scheme).Build(),
 				createServiceAccountFn: func(
 					context.Context,
 					client.Object,
 					...client.CreateOption,
 				) error {
-					return apierrors.NewAlreadyExists(schema.GroupResource{}, "")
+					return nil
 				},
 				createRoleFn: func(
 					context.Context,
@@ -1822,21 +1876,85 @@ func TestReconciler_ensureDefaultUserRoles(t *testing.T) {
 			},
 		},
 		{
-			name: "error creating RoleBinding",
+			name: "error updating Role",
 			reconciler: &reconciler{
+				client: fake.NewClientBuilder().WithScheme(scheme).WithObjects(
+					&corev1.ServiceAccount{ObjectMeta: metav1.ObjectMeta{Name: "kargo-admin"}},
+					&corev1.ServiceAccount{ObjectMeta: metav1.ObjectMeta{Name: "kargo-viewer"}},
+					&corev1.ServiceAccount{ObjectMeta: metav1.ObjectMeta{Name: "kargo-promoter"}},
+					// kargo-admin Role with no rules — differs from desired.
+					&rbacv1.Role{ObjectMeta: metav1.ObjectMeta{Name: "kargo-admin"}},
+				).WithInterceptorFuncs(interceptor.Funcs{
+					Update: func(
+						context.Context,
+						client.WithWatch,
+						client.Object,
+						...client.UpdateOption,
+					) error {
+						return errors.New("something went wrong")
+					},
+				}).Build(),
+			},
+			assertions: func(t *testing.T, err error) {
+				require.ErrorContains(t, err, "error updating Role")
+				require.ErrorContains(t, err, "something went wrong")
+			},
+		},
+		{
+			name: "error getting RoleBinding",
+			reconciler: &reconciler{
+				client: fake.NewClientBuilder().WithScheme(scheme).
+					WithInterceptorFuncs(interceptor.Funcs{
+						Get: func(
+							ctx context.Context,
+							wc client.WithWatch,
+							key client.ObjectKey,
+							obj client.Object,
+							opts ...client.GetOption,
+						) error {
+							if _, ok := obj.(*rbacv1.RoleBinding); ok {
+								return errors.New("something went wrong")
+							}
+							return wc.Get(ctx, key, obj, opts...)
+						},
+					}).Build(),
 				createServiceAccountFn: func(
 					context.Context,
 					client.Object,
 					...client.CreateOption,
 				) error {
-					return apierrors.NewAlreadyExists(schema.GroupResource{}, "")
+					return nil
 				},
 				createRoleFn: func(
 					context.Context,
 					client.Object,
 					...client.CreateOption,
 				) error {
-					return apierrors.NewAlreadyExists(schema.GroupResource{}, "")
+					return nil
+				},
+			},
+			assertions: func(t *testing.T, err error) {
+				require.ErrorContains(t, err, "error getting RoleBinding")
+				require.ErrorContains(t, err, "something went wrong")
+			},
+		},
+		{
+			name: "error creating RoleBinding",
+			reconciler: &reconciler{
+				client: fake.NewClientBuilder().WithScheme(scheme).Build(),
+				createServiceAccountFn: func(
+					context.Context,
+					client.Object,
+					...client.CreateOption,
+				) error {
+					return nil
+				},
+				createRoleFn: func(
+					context.Context,
+					client.Object,
+					...client.CreateOption,
+				) error {
+					return nil
 				},
 				createRoleBindingFn: func(
 					context.Context,
@@ -1852,8 +1970,90 @@ func TestReconciler_ensureDefaultUserRoles(t *testing.T) {
 			},
 		},
 		{
+			name: "error updating RoleBinding",
+			reconciler: &reconciler{
+				client: fake.NewClientBuilder().WithScheme(scheme).WithObjects(
+					// kargo-admin RoleBinding with no subjects — differs from desired.
+					&rbacv1.RoleBinding{ObjectMeta: metav1.ObjectMeta{Name: "kargo-admin"}},
+				).WithInterceptorFuncs(interceptor.Funcs{
+					Update: func(
+						context.Context,
+						client.WithWatch,
+						client.Object,
+						...client.UpdateOption,
+					) error {
+						return errors.New("something went wrong")
+					},
+				}).Build(),
+				createServiceAccountFn: func(
+					context.Context,
+					client.Object,
+					...client.CreateOption,
+				) error {
+					return nil
+				},
+				createRoleFn: func(
+					context.Context,
+					client.Object,
+					...client.CreateOption,
+				) error {
+					return nil
+				},
+			},
+			assertions: func(t *testing.T, err error) {
+				require.ErrorContains(t, err, "error updating RoleBinding")
+				require.ErrorContains(t, err, "something went wrong")
+			},
+		},
+		{
+			name: "error getting ClusterRole",
+			reconciler: &reconciler{
+				client: fake.NewClientBuilder().WithScheme(scheme).
+					WithInterceptorFuncs(interceptor.Funcs{
+						Get: func(
+							ctx context.Context,
+							wc client.WithWatch,
+							key client.ObjectKey,
+							obj client.Object,
+							opts ...client.GetOption,
+						) error {
+							if _, ok := obj.(*rbacv1.ClusterRole); ok {
+								return errors.New("something went wrong")
+							}
+							return wc.Get(ctx, key, obj, opts...)
+						},
+					}).Build(),
+				createServiceAccountFn: func(
+					context.Context,
+					client.Object,
+					...client.CreateOption,
+				) error {
+					return nil
+				},
+				createRoleFn: func(
+					context.Context,
+					client.Object,
+					...client.CreateOption,
+				) error {
+					return nil
+				},
+				createRoleBindingFn: func(
+					context.Context,
+					client.Object,
+					...client.CreateOption,
+				) error {
+					return nil
+				},
+			},
+			assertions: func(t *testing.T, err error) {
+				require.ErrorContains(t, err, "error getting ClusterRole")
+				require.ErrorContains(t, err, "something went wrong")
+			},
+		},
+		{
 			name: "error creating ClusterRole",
 			reconciler: &reconciler{
+				client: fake.NewClientBuilder().WithScheme(scheme).Build(),
 				createServiceAccountFn: func(
 					context.Context,
 					client.Object,
@@ -1889,8 +2089,106 @@ func TestReconciler_ensureDefaultUserRoles(t *testing.T) {
 			},
 		},
 		{
+			name: "error updating ClusterRole",
+			reconciler: &reconciler{
+				client: fake.NewClientBuilder().WithScheme(scheme).WithObjects(
+					// ClusterRole with no rules — differs from desired.
+					&rbacv1.ClusterRole{ObjectMeta: metav1.ObjectMeta{
+						Name: "kargo-project-admin-",
+					}},
+				).WithInterceptorFuncs(interceptor.Funcs{
+					Update: func(
+						context.Context,
+						client.WithWatch,
+						client.Object,
+						...client.UpdateOption,
+					) error {
+						return errors.New("something went wrong")
+					},
+				}).Build(),
+				createServiceAccountFn: func(
+					context.Context,
+					client.Object,
+					...client.CreateOption,
+				) error {
+					return nil
+				},
+				createRoleFn: func(
+					context.Context,
+					client.Object,
+					...client.CreateOption,
+				) error {
+					return nil
+				},
+				createRoleBindingFn: func(
+					context.Context,
+					client.Object,
+					...client.CreateOption,
+				) error {
+					return nil
+				},
+			},
+			assertions: func(t *testing.T, err error) {
+				require.ErrorContains(t, err, "error updating ClusterRole")
+				require.ErrorContains(t, err, "something went wrong")
+			},
+		},
+		{
+			name: "error getting ClusterRoleBinding",
+			reconciler: &reconciler{
+				client: fake.NewClientBuilder().WithScheme(scheme).
+					WithInterceptorFuncs(interceptor.Funcs{
+						Get: func(
+							ctx context.Context,
+							wc client.WithWatch,
+							key client.ObjectKey,
+							obj client.Object,
+							opts ...client.GetOption,
+						) error {
+							if _, ok := obj.(*rbacv1.ClusterRoleBinding); ok {
+								return errors.New("something went wrong")
+							}
+							return wc.Get(ctx, key, obj, opts...)
+						},
+					}).Build(),
+				createServiceAccountFn: func(
+					context.Context,
+					client.Object,
+					...client.CreateOption,
+				) error {
+					return nil
+				},
+				createRoleFn: func(
+					context.Context,
+					client.Object,
+					...client.CreateOption,
+				) error {
+					return nil
+				},
+				createRoleBindingFn: func(
+					context.Context,
+					client.Object,
+					...client.CreateOption,
+				) error {
+					return nil
+				},
+				createClusterRoleFn: func(
+					context.Context,
+					client.Object,
+					...client.CreateOption,
+				) error {
+					return nil
+				},
+			},
+			assertions: func(t *testing.T, err error) {
+				require.ErrorContains(t, err, "error getting ClusterRoleBinding")
+				require.ErrorContains(t, err, "something went wrong")
+			},
+		},
+		{
 			name: "error creating ClusterRoleBinding",
 			reconciler: &reconciler{
+				client: fake.NewClientBuilder().WithScheme(scheme).Build(),
 				createServiceAccountFn: func(
 					context.Context,
 					client.Object,
@@ -1933,8 +2231,44 @@ func TestReconciler_ensureDefaultUserRoles(t *testing.T) {
 			},
 		},
 		{
-			name: "success",
+			name: "error updating ClusterRoleBinding",
 			reconciler: &reconciler{
+				client: fake.NewClientBuilder().WithScheme(scheme).WithObjects(
+					// ClusterRoleBinding with no subjects — differs from desired.
+					&rbacv1.ClusterRoleBinding{ObjectMeta: metav1.ObjectMeta{
+						Name: "kargo-project-admin-",
+					}},
+				).WithInterceptorFuncs(interceptor.Funcs{
+					Update: func(
+						context.Context,
+						client.WithWatch,
+						client.Object,
+						...client.UpdateOption,
+					) error {
+						return errors.New("something went wrong")
+					},
+				}).Build(),
+				createServiceAccountFn: func(
+					context.Context,
+					client.Object,
+					...client.CreateOption,
+				) error {
+					return nil
+				},
+				createRoleFn: func(
+					context.Context,
+					client.Object,
+					...client.CreateOption,
+				) error {
+					return nil
+				},
+				createRoleBindingFn: func(
+					context.Context,
+					client.Object,
+					...client.CreateOption,
+				) error {
+					return nil
+				},
 				createClusterRoleFn: func(
 					context.Context,
 					client.Object,
@@ -1942,13 +2276,16 @@ func TestReconciler_ensureDefaultUserRoles(t *testing.T) {
 				) error {
 					return nil
 				},
-				createClusterRoleBindingFn: func(
-					context.Context,
-					client.Object,
-					...client.CreateOption,
-				) error {
-					return nil
-				},
+			},
+			assertions: func(t *testing.T, err error) {
+				require.ErrorContains(t, err, "error updating ClusterRoleBinding")
+				require.ErrorContains(t, err, "something went wrong")
+			},
+		},
+		{
+			name: "success creating ServiceAccount",
+			reconciler: &reconciler{
+				client: fake.NewClientBuilder().WithScheme(scheme).Build(),
 				createServiceAccountFn: func(
 					_ context.Context,
 					obj client.Object,
@@ -1971,6 +2308,20 @@ func TestReconciler_ensureDefaultUserRoles(t *testing.T) {
 					return nil
 				},
 				createRoleBindingFn: func(
+					context.Context,
+					client.Object,
+					...client.CreateOption,
+				) error {
+					return nil
+				},
+				createClusterRoleFn: func(
+					context.Context,
+					client.Object,
+					...client.CreateOption,
+				) error {
+					return nil
+				},
+				createClusterRoleBindingFn: func(
 					context.Context,
 					client.Object,
 					...client.CreateOption,
