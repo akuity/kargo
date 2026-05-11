@@ -44,7 +44,7 @@ export const useWarehouseWithClonedFreight = (
       return warehouse;
     }
 
-    const discoveredArtifacts = warehouse.status?.discoveredArtifacts;
+    const discoveredArtifacts = structuredClone(warehouse.status?.discoveredArtifacts);
     const images: ImageDiscoveryResult[] = [...(discoveredArtifacts?.images || [])];
     const charts: ChartDiscoveryResult[] = [...(discoveredArtifacts?.charts || [])];
     const git: GitDiscoveryResult[] = [...(discoveredArtifacts?.git || [])];
