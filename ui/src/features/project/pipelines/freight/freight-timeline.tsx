@@ -1,8 +1,16 @@
 import { useDndContext } from '@dnd-kit/core';
-import { faCaretLeft, faCaretRight } from '@fortawesome/free-solid-svg-icons';
+import { faChevronLeft, faChevronRight } from '@fortawesome/free-solid-svg-icons';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
 import classNames from 'classnames';
-import { useCallback, useContext, useEffect, useMemo, useRef, useState } from 'react';
+import {
+  CSSProperties,
+  useCallback,
+  useContext,
+  useEffect,
+  useMemo,
+  useRef,
+  useState
+} from 'react';
 import { generatePath, useNavigate } from 'react-router-dom';
 
 import { paths } from '@ui/config/paths';
@@ -17,13 +25,17 @@ import { timestampDate } from '@ui/utils/connectrpc-utils';
 import { timerangeToDate } from './filter-timerange-utils';
 import { FreightCard } from './freight-card';
 import { FreightExpandTile } from './freight-expand-tile';
-import { FreightTimelineFilters } from './freight-timeline-filters';
 import { PromotionModeHeader } from './promotion-mode-header';
 import { filterFreightBySource, filterFreightByTimerange } from './source-catalogue-utils';
 import { usePromotionEligibleFreight } from './use-promotion-eligible-freight';
 import { useSoakTime } from './use-soak-time';
 
 import './freight-timeline.less';
+
+const PAGE_SIZE = 20;
+const ARROW_BUTTON_WIDTH = 28;
+const MIN_CARD_WIDTH = 140;
+const CARD_GAP = 4;
 
 export const FreightTimeline = (props: { freights: Freight[]; project: string }) => {
   const navigate = useNavigate();
@@ -45,8 +57,6 @@ export const FreightTimeline = (props: { freights: Freight[]; project: string })
   if (!freightTimelineControllerContext) {
     throw new Error('missing context freightTimelineControllerContext');
   }
-
-  const [filtersCollapsed, setFilterCollapsed] = useState(true);
 
   const [viewingFreight, setViewingFreight] = useState<Freight | null>(null);
 
@@ -129,13 +139,39 @@ export const FreightTimeline = (props: { freights: Freight[]; project: string })
     actionContext
   ]);
 
-  const PAGE_SIZE = 20;
   const [visibleCount, setVisibleCount] = useState(PAGE_SIZE);
+
+  const viewportRef = useRef<HTMLDivElement>(null);
+  const stripRef = useRef<HTMLDivElement>(null);
+  const [offset, setOffset] = useState(0);
+  const [cardWidth, setCardWidth] = useState(MIN_CARD_WIDTH);
+
+  useEffect(() => {
+    const viewport = viewportRef.current;
+    if (!viewport) return;
+
+    const compute = () => {
+      // Use sub-pixel viewport width and keep exact card width — flooring
+      // discards fractional pixels, and the accumulated loss across N cards
+      // makes the next card peek through on certain resolutions.
+      const W = viewport.getBoundingClientRect().width;
+      if (W <= 0) return;
+      const n = Math.max(1, Math.floor((W + CARD_GAP) / (MIN_CARD_WIDTH + CARD_GAP)));
+      const exactW = (W - (n - 1) * CARD_GAP) / n;
+      setCardWidth(exactW);
+      setOffset(0);
+    };
+
+    compute();
+    const ro = new ResizeObserver(compute);
+    ro.observe(viewport);
+    return () => ro.disconnect();
+  }, []);
 
   // Reset visible count and scroll position when filters change
   useEffect(() => {
     setVisibleCount(PAGE_SIZE);
-    freightListStyleRef.current?.style.setProperty('right', '0px');
+    setOffset(0);
   }, [
     freightTimelineControllerContext.preferredFilter.sources,
     freightTimelineControllerContext.preferredFilter.timerange,
@@ -143,40 +179,60 @@ export const FreightTimeline = (props: { freights: Freight[]; project: string })
     freightTimelineControllerContext.preferredFilter.hideUnusedFreights
   ]);
 
-  const freightListStyleRef = useRef<HTMLDivElement>(null);
-
   const loadMore = useCallback(() => {
     setVisibleCount((prev) => Math.min(prev + PAGE_SIZE, filteredFreights.length));
   }, [filteredFreights.length]);
 
-  const scrollCarouselLeft = () => {
-    const right = freightListStyleRef.current?.style.right || '0px';
+  const slideLeft = useCallback(() => {
+    const viewport = viewportRef.current;
+    if (!viewport) return;
+    // With exact card widths, a page is W + gap (the trailing gap after the
+    // last card on the page); using just W would drift by `gap` per slide.
+    const stride = viewport.getBoundingClientRect().width + CARD_GAP;
+    setOffset((prev) => Math.max(0, prev - stride));
+  }, []);
 
-    let nextRight = +right.slice(0, -2) - 160;
+  const slideRight = useCallback(() => {
+    const viewport = viewportRef.current;
+    const strip = stripRef.current;
+    if (!viewport || !strip) return;
 
-    if (nextRight < 0) {
-      nextRight = 0;
-    }
+    const W = viewport.getBoundingClientRect().width;
+    const stride = W + CARD_GAP;
+    const maxOffset = Math.max(0, strip.scrollWidth - W);
+    const hasMore = visibleCount < filteredFreights.length;
 
-    freightListStyleRef.current?.style.setProperty('right', `${nextRight}px`);
-  };
-
-  const scrollCarouselRight = () => {
-    const right = freightListStyleRef.current?.style.right || '0px';
-
-    const nextRight = +right.slice(0, -2) + 160;
-
-    if (
-      nextRight >= (freightListStyleRef.current?.clientWidth || 0) / 2 &&
-      visibleCount < filteredFreights.length
-    ) {
-      loadMore();
-    }
-
-    freightListStyleRef.current?.style.setProperty('right', `${nextRight}px`);
-  };
+    setOffset((prev) => {
+      const next = prev + stride;
+      if (next > maxOffset) {
+        if (hasMore) {
+          // Load more so the next page renders; keep the full-stride slide
+          loadMore();
+          return next;
+        }
+        return maxOffset;
+      }
+      return next;
+    });
+  }, [filteredFreights.length, loadMore, visibleCount]);
 
   const dndContext = useDndContext();
+  const isDragging = !!dndContext.active;
+
+  const [canSlideRight, setCanSlideRight] = useState(false);
+
+  useEffect(() => {
+    const viewport = viewportRef.current;
+    const strip = stripRef.current;
+    if (!viewport || !strip) {
+      setCanSlideRight(false);
+      return;
+    }
+    const maxOffset = Math.max(0, strip.scrollWidth - viewport.clientWidth);
+    setCanSlideRight(offset < maxOffset - 1 || visibleCount < filteredFreights.length);
+  }, [offset, visibleCount, filteredFreights.length]);
+
+  const canSlideLeft = offset > 0;
 
   return (
     <>
@@ -196,33 +252,44 @@ export const FreightTimeline = (props: { freights: Freight[]; project: string })
         </div>
       )}
       <div
-        className={classNames('freightTimeline', 'bg-white py-2 flex gap-0 relative z-20')}
+        className={classNames('freightTimeline', 'bg-white py-2 flex relative z-20')}
         style={{ borderBottom: '2px solid rgba(0,0,0,.05)' }}
       >
-        <FreightTimelineFilters
-          className='bg-white px-3 z-10'
-          collapsed={filtersCollapsed}
-          filteredFreights={filteredFreights}
-          freights={props.freights}
-          onCollapseToggle={() => setFilterCollapsed(!filtersCollapsed)}
-          onPreferredFilterChange={freightTimelineControllerContext.setPreferredFilter}
-          preferredFilter={freightTimelineControllerContext.preferredFilter}
-        />
         <div
-          className={classNames('w-full flex relative px-5', {
-            'overflow-hidden': !dndContext.active
+          className='flex items-stretch shrink-0 cursor-pointer select-none text-gray-500 hover:text-gray-700 mx-1'
+          style={{ width: ARROW_BUTTON_WIDTH, opacity: canSlideLeft ? 1 : 0.4 }}
+          onClick={() => {
+            if (canSlideLeft) slideLeft();
+          }}
+        >
+          <div className='m-auto'>
+            <FontAwesomeIcon icon={faChevronLeft} />
+          </div>
+        </div>
+
+        <div
+          ref={viewportRef}
+          className={classNames('flex-1 relative', {
+            'overflow-hidden': !isDragging
           })}
           onWheel={(e) => {
             if (e.deltaY > 0) {
-              scrollCarouselRight();
+              slideRight();
             } else if (e.deltaY < 0) {
-              scrollCarouselLeft();
+              slideLeft();
             }
           }}
         >
           <div
-            className='flex gap-1 relative right-0 transition-[right] duration-300 ease-out'
-            ref={freightListStyleRef}
+            ref={stripRef}
+            className='flex gap-1 transition-transform duration-300 ease-out'
+            style={
+              {
+                transform: `translateX(-${offset}px)`,
+                width: 'max-content',
+                '--freight-card-width': `${cardWidth}px`
+              } as CSSProperties
+            }
           >
             {filteredFreights.slice(0, visibleCount).map((freight) => {
               const freightSoakTime = soakTime?.[freight?.metadata?.name || ''];
@@ -275,23 +342,17 @@ export const FreightTimeline = (props: { freights: Freight[]; project: string })
               );
             })}
           </div>
+        </div>
 
-          <div
-            className='absolute left-0 h-full bg-gray-100 px-1 flex items-center cursor-pointer rounded-sm hover:bg-gray-200'
-            onClick={() => {
-              scrollCarouselLeft();
-            }}
-          >
-            <FontAwesomeIcon icon={faCaretLeft} />
-          </div>
-
-          <div
-            className='absolute right-0 h-full bg-gray-100 px-1 flex items-center cursor-pointer rounded-sm hover:bg-gray-200'
-            onClick={() => {
-              scrollCarouselRight();
-            }}
-          >
-            <FontAwesomeIcon icon={faCaretRight} />
+        <div
+          className='flex items-stretch shrink-0 cursor-pointer select-none text-gray-500 hover:text-gray-700 mx-1'
+          style={{ width: ARROW_BUTTON_WIDTH, opacity: canSlideRight ? 1 : 0.4 }}
+          onClick={() => {
+            if (canSlideRight) slideRight();
+          }}
+        >
+          <div className='m-auto'>
+            <FontAwesomeIcon icon={faChevronRight} />
           </div>
         </div>
       </div>

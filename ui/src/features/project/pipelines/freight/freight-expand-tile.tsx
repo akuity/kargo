@@ -13,7 +13,8 @@ export const FreightExpandTile = ({ count }: Props) => {
 
   return (
     <div
-      className='flex flex-col justify-center h-full px-2 bg-gray-100 rounded-md text-center cursor-pointer border border-solid border-gray-100 hover:border-gray-200'
+      className='flex flex-col justify-center px-2 bg-gray-100 rounded-md text-center cursor-pointer border border-solid border-gray-100 hover:border-gray-200 shrink-0'
+      style={{ width: 56 }}
       onClick={() =>
         freightTimelineControllerContext?.setPreferredFilter({
           ...freightTimelineControllerContext?.preferredFilter,
