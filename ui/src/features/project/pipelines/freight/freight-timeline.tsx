@@ -144,6 +144,8 @@ export const FreightTimeline = (props: { freights: Freight[]; project: string })
   ]);
 
   const freightListStyleRef = useRef<HTMLDivElement>(null);
+  const freightListContainerRef = useRef<HTMLDivElement>(null);
+  const carouselButtonRef = useRef<HTMLDivElement>(null);
 
   const loadMore = useCallback(() => {
     setVisibleCount((prev) => Math.min(prev + PAGE_SIZE, filteredFreights.length));
@@ -162,15 +164,21 @@ export const FreightTimeline = (props: { freights: Freight[]; project: string })
   };
 
   const scrollCarouselRight = () => {
-    const right = freightListStyleRef.current?.style.right || '0px';
+    const rightStr = freightListStyleRef.current?.style.right || '0px';
 
-    const nextRight = +right.slice(0, -2) + 160;
+    const right = +rightStr.slice(0, -2);
 
-    if (nextRight >= (freightListStyleRef.current?.clientWidth || 0) / 2) {
-      // At the edge — load more items if available
-      if (visibleCount < filteredFreights.length) {
-        loadMore();
-      }
+    const actualScrollEndFromRight =
+      (freightListStyleRef.current?.getBoundingClientRect().width ?? 0) -
+      (freightListContainerRef.current?.getBoundingClientRect().width ?? 0);
+
+    const nextRight = right + 160;
+
+    const isFreightScrollEnd = right > actualScrollEndFromRight;
+
+    if (isFreightScrollEnd && visibleCount < filteredFreights.length) {
+      loadMore();
+    } else if (isFreightScrollEnd) {
       return;
     }
 
@@ -210,9 +218,7 @@ export const FreightTimeline = (props: { freights: Freight[]; project: string })
           preferredFilter={freightTimelineControllerContext.preferredFilter}
         />
         <div
-          className={classNames('w-full flex relative px-5', {
-            'overflow-hidden': !dndContext.active
-          })}
+          className='flex flex-1 min-w-0'
           onWheel={(e) => {
             if (e.deltaY > 0) {
               scrollCarouselRight();
@@ -220,74 +226,84 @@ export const FreightTimeline = (props: { freights: Freight[]; project: string })
               scrollCarouselLeft();
             }
           }}
+          ref={freightListContainerRef}
         >
           <div
-            className='flex gap-1 relative right-0 transition-[right] duration-300 ease-out'
-            ref={freightListStyleRef}
-          >
-            {filteredFreights.slice(0, visibleCount).map((freight) => {
-              const freightSoakTime = soakTime?.[freight?.metadata?.name || ''];
-
-              const promotionEligible = Boolean(
-                promotionEligibleFreight?.find((f) => f?.metadata?.name === freight?.metadata?.name)
-              );
-
-              if (freight.count && freight.count > 0) {
-                return (
-                  <FreightExpandTile
-                    key={`expand-tile-${freight?.metadata?.uid}-${freight?.count}`}
-                    count={freight.count}
-                  />
-                );
-              }
-
-              return (
-                <FreightCard
-                  key={`${freight?.metadata?.uid}-${freight?.count}`}
-                  className='h-full'
-                  stagesInFreight={
-                    dictionaryContext?.freightInStages?.[freight?.metadata?.name || ''] || []
-                  }
-                  freight={freight}
-                  preferredFilter={freightTimelineControllerContext.preferredFilter}
-                  setViewingFreight={setViewingFreight}
-                  viewingFreight={viewingFreight}
-                  inUse={
-                    (dictionaryContext?.freightInStages[freight?.metadata?.name || '']?.length ||
-                      0) > 0
-                  }
-                  stageColorMap={colorContext.stageColorMap}
-                  promote={isPromotionMode}
-                  isPromotionEligibleLoading={getPromotionEligibleFreightQuery.isFetching}
-                  promotionEligible={promotionEligible}
-                  onReviewAndPromote={() => {
-                    const stage = actionContext?.action?.stage?.metadata?.name || '';
-
-                    navigate(
-                      generatePath(paths.promote, {
-                        name: props.project,
-                        freight: freight?.metadata?.name,
-                        stage: stage
-                      })
-                    );
-                  }}
-                  soakTime={freightSoakTime}
-                />
-              );
-            })}
-          </div>
-
-          <div
-            className='absolute left-0 h-full bg-gray-100 px-1 flex items-center cursor-pointer rounded-sm hover:bg-gray-200'
+            className='bg-gray-100 px-1 flex items-center cursor-pointer rounded-sm hover:bg-gray-200 flex-shrink-0'
             onClick={() => {
               scrollCarouselLeft();
             }}
+            ref={carouselButtonRef}
           >
             <FontAwesomeIcon icon={faCaretLeft} />
           </div>
 
           <div
-            className='absolute right-0 h-full bg-gray-100 px-1 flex items-center cursor-pointer rounded-sm hover:bg-gray-200'
+            className={classNames('flex-1 relative min-w-0', {
+              'overflow-hidden': !dndContext.active
+            })}
+          >
+            <div
+              className='w-fit flex gap-1 relative right-0 transition-[right] duration-300 ease-out'
+              ref={freightListStyleRef}
+            >
+              {filteredFreights.slice(0, visibleCount).map((freight) => {
+                const freightSoakTime = soakTime?.[freight?.metadata?.name || ''];
+
+                const promotionEligible = Boolean(
+                  promotionEligibleFreight?.find(
+                    (f) => f?.metadata?.name === freight?.metadata?.name
+                  )
+                );
+
+                if (freight.count && freight.count > 0) {
+                  return (
+                    <FreightExpandTile
+                      key={`expand-tile-${freight?.metadata?.uid}-${freight?.count}`}
+                      count={freight.count}
+                    />
+                  );
+                }
+
+                return (
+                  <FreightCard
+                    key={`${freight?.metadata?.uid}-${freight?.count}`}
+                    className='h-full'
+                    stagesInFreight={
+                      dictionaryContext?.freightInStages?.[freight?.metadata?.name || ''] || []
+                    }
+                    freight={freight}
+                    preferredFilter={freightTimelineControllerContext.preferredFilter}
+                    setViewingFreight={setViewingFreight}
+                    viewingFreight={viewingFreight}
+                    inUse={
+                      (dictionaryContext?.freightInStages[freight?.metadata?.name || '']?.length ||
+                        0) > 0
+                    }
+                    stageColorMap={colorContext.stageColorMap}
+                    promote={isPromotionMode}
+                    isPromotionEligibleLoading={getPromotionEligibleFreightQuery.isFetching}
+                    promotionEligible={promotionEligible}
+                    onReviewAndPromote={() => {
+                      const stage = actionContext?.action?.stage?.metadata?.name || '';
+
+                      navigate(
+                        generatePath(paths.promote, {
+                          name: props.project,
+                          freight: freight?.metadata?.name,
+                          stage: stage
+                        })
+                      );
+                    }}
+                    soakTime={freightSoakTime}
+                  />
+                );
+              })}
+            </div>
+          </div>
+
+          <div
+            className='bg-gray-100 px-1 flex items-center cursor-pointer rounded-sm hover:bg-gray-200 flex-shrink-0'
             onClick={() => {
               scrollCarouselRight();
             }}
