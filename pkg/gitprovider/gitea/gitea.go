@@ -194,18 +194,18 @@ func (p *provider) resolveLabelIDs(labelNames []string) ([]int64, error) {
 	}
 
 	labelIDs := make([]int64, 0, len(labelNames))
-	seen := make(map[int64]struct{}, len(labelNames))
+	seen := make(map[string]struct{}, len(labelNames))
 	missing := make([]string, 0)
 	for _, labelName := range labelNames {
+		if _, ok := seen[labelName]; ok {
+			continue
+		}
+		seen[labelName] = struct{}{}
 		labelID, ok := labelIDsByName[labelName]
 		if !ok {
 			missing = append(missing, labelName)
 			continue
 		}
-		if _, ok := seen[labelID]; ok {
-			continue
-		}
-		seen[labelID] = struct{}{}
 		labelIDs = append(labelIDs, labelID)
 	}
 	if len(missing) > 0 {

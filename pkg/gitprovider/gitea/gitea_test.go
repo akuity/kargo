@@ -341,6 +341,36 @@ func TestCreatePullRequest(t *testing.T) {
 				m.AssertNotCalled(t, "AddIssueLabels", mock.Anything, mock.Anything, mock.Anything, mock.Anything)
 			},
 		},
+		{
+			name: "duplicate missing labels are reported only once",
+			opts: gitprovider.CreatePullRequestOpts{
+				Head:        "feature-branch",
+				Base:        "main",
+				Title:       "title",
+				Description: "desc",
+				Labels:      []string{"ghost-label", "ghost-label"},
+			},
+			setupMock: func(m *mockGiteaClient) {
+				m.On(
+					"ListRepoLabels",
+					testRepoOwner,
+					testRepoName,
+					gitea.ListLabelsOptions{
+						ListOptions: gitea.ListOptions{Page: 1},
+					},
+				).Return(
+					[]*gitea.Label{},
+					&gitea.Response{},
+					nil,
+				)
+			},
+			assert: func(t *testing.T, m *mockGiteaClient, pr *gitprovider.PullRequest, err error) {
+				require.Nil(t, pr)
+				require.ErrorContains(t, err, "ghost-label")
+				require.NotContains(t, err.Error(), "ghost-label, ghost-label")
+				m.AssertNotCalled(t, "CreatePullRequest", mock.Anything, mock.Anything, mock.Anything)
+			},
+		},
 	}
 	for _, testCase := range testCases {
 		t.Run(testCase.name, func(t *testing.T) {
