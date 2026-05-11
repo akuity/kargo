@@ -353,7 +353,7 @@ func TestCreatePullRequestWithLabels(t *testing.T) {
 	require.Equal(t, []int64{101, 202}, mockClient.newPr.Labels)
 	require.Equal(t, mockClient.pr.Index, pr.Number)
 	require.Equal(t, mockClient.pr.Base.Sha, pr.MergeCommitSHA)
-	require.Equal(t, mockClient.pr.URL, pr.URL)
+	require.Equal(t, mockClient.pr.HTMLURL, pr.URL)
 	require.True(t, pr.Open)
 	mockClient.AssertNotCalled(
 		t,
