@@ -76,6 +76,7 @@ export const useWarehouseWithClonedFreight = (
       );
       if (!subscription) {
         subscription = {
+          $typeName: 'github.com.akuity.kargo.api.v1alpha1.ChartDiscoveryResult',
           repoURL: chart.repoURL,
           name: chart.name,
           versions: []
