@@ -218,10 +218,10 @@ func TestCreatePullRequest(t *testing.T) {
 				m.On("CreatePullRequest", testRepoOwner, testRepoName, mock.Anything).
 					Return(
 						&gitea.PullRequest{
-							Index: int64(42),
-							State: gitea.StateOpen,
-							Head:  &gitea.PRBranchInfo{Sha: "HeadSha"},
-							Base:  &gitea.PRBranchInfo{Sha: "BaseSha"},
+							Index:          int64(42),
+							State:          gitea.StateOpen,
+							Head:           &gitea.PRBranchInfo{Sha: "HeadSha"},
+							Base:           &gitea.PRBranchInfo{Sha: "BaseSha"},
 							HTMLURL:        "http://localhost:8080",
 							MergedCommitID: ptr.To("BaseSha"),
 							HasMerged:      false,
@@ -273,10 +273,10 @@ func TestCreatePullRequest(t *testing.T) {
 				m.On("CreatePullRequest", testRepoOwner, testRepoName, mock.Anything).
 					Return(
 						&gitea.PullRequest{
-							Index: int64(42),
-							State: gitea.StateOpen,
-							Head:  &gitea.PRBranchInfo{Sha: "HeadSha"},
-							Base:  &gitea.PRBranchInfo{Sha: "BaseSha"},
+							Index:          int64(42),
+							State:          gitea.StateOpen,
+							Head:           &gitea.PRBranchInfo{Sha: "HeadSha"},
+							Base:           &gitea.PRBranchInfo{Sha: "BaseSha"},
 							HTMLURL:        "http://localhost:8080",
 							MergedCommitID: ptr.To("BaseSha"),
 							HasMerged:      false,
