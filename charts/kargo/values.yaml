@@ -534,6 +534,8 @@ controller:
     promotions:
       ## @param controller.reconcilers.promotions.maxConcurrentReconciles optionally overrides the maximum number of Promotion resources the controller can reconcile concurrently.
       maxConcurrentReconciles:
+      ## @param controller.reconcilers.promotions.defaultRequeueInterval interval at which the controller requeues a Promotion that is still Running and waiting on an external condition (as opposed to retrying on a transient error, which uses controller-runtime backoff). Accepts a Go duration string (e.g., "5m", "30s", "1h").
+      defaultRequeueInterval: "5m"
     stages:
       ## @param controller.reconcilers.stages.maxConcurrentReconciles optionally overrides the maximum number of (non-control flow) Stage resources the controller can reconcile concurrently.
       maxConcurrentReconciles:

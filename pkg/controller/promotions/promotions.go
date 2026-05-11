@@ -37,11 +37,12 @@ import (
 
 // ReconcilerConfig represents configuration for the promotion reconciler.
 type ReconcilerConfig struct {
-	Enable                  bool   `envconfig:"ENABLE_PROMOTION_RECONCILER" default:"true"`
-	IsDefaultController     bool   `envconfig:"IS_DEFAULT_CONTROLLER"`
-	ShardName               string `envconfig:"SHARD_NAME"`
-	APIServerBaseURL        string `envconfig:"API_SERVER_BASE_URL"`
-	MaxConcurrentReconciles int    `envconfig:"MAX_CONCURRENT_PROMOTION_RECONCILES" default:"4"`
+	Enable                  bool          `envconfig:"ENABLE_PROMOTION_RECONCILER" default:"true"`
+	IsDefaultController     bool          `envconfig:"IS_DEFAULT_CONTROLLER"`
+	ShardName               string        `envconfig:"SHARD_NAME"`
+	APIServerBaseURL        string        `envconfig:"API_SERVER_BASE_URL"`
+	MaxConcurrentReconciles int           `envconfig:"MAX_CONCURRENT_PROMOTION_RECONCILES" default:"4"`
+	DefaultRequeueInterval  time.Duration `envconfig:"PROMOTION_REQUEUE_INTERVAL" default:"5m"`
 }
 
 func (c ReconcilerConfig) Name() string {
@@ -203,7 +204,8 @@ func SetupReconcilerWithManager(
 
 	logging.LoggerFromContext(ctx).Info(
 		"Initialized Promotion reconciler",
-		"maxConcurrentReconciles", cfg.MaxConcurrentReconciles,
+		"maxConcurrentReconciles", reconciler.cfg.MaxConcurrentReconciles,
+		"defaultRequeueInterval", reconciler.cfg.DefaultRequeueInterval,
 	)
 
 	return nil
@@ -216,6 +218,9 @@ func newReconciler(
 	promoEngine promotion.Engine,
 	cfg ReconcilerConfig,
 ) *reconciler {
+	if cfg.DefaultRequeueInterval <= 0 {
+		cfg.DefaultRequeueInterval = defaultRequeueInterval
+	}
 	r := &reconciler{
 		kargoClient: kargoClient,
 		apiReader:   apiReader,
@@ -521,7 +526,12 @@ func (r *reconciler) Reconcile(
 		}
 		// Waiting for external condition: use calculated interval.
 		return ctrl.Result{
-			RequeueAfter: calculateRequeueInterval(ctx, promo, suggestedRequeueInterval),
+			RequeueAfter: calculateRequeueInterval(
+				ctx,
+				promo,
+				suggestedRequeueInterval,
+				r.cfg.DefaultRequeueInterval,
+			),
 		}, nil
 	}
 	return ctrl.Result{}, nil
@@ -818,12 +828,13 @@ func (r *reconciler) cleanupWorkDir(ctx context.Context, promoUID types.UID) {
 	}
 }
 
-var defaultRequeueInterval = 5 * time.Minute
+const defaultRequeueInterval = 5 * time.Minute
 
 func calculateRequeueInterval(
 	ctx context.Context,
 	p *kargoapi.Promotion,
 	suggestedRequeueInterval *time.Duration,
+	defaultRequeueInterval time.Duration,
 ) time.Duration {
 	requeueInterval := defaultRequeueInterval
 	if suggestedRequeueInterval != nil {

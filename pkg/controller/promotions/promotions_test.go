@@ -29,6 +29,12 @@ var (
 	before = metav1.Time{Time: now.Add(time.Second * -1)}
 )
 
+func TestReconcilerConfigFromEnv_DefaultRequeueInterval(t *testing.T) {
+	t.Setenv("PROMOTION_REQUEUE_INTERVAL", "30s")
+	cfg := ReconcilerConfigFromEnv()
+	require.Equal(t, 30*time.Second, cfg.DefaultRequeueInterval)
+}
+
 func TestNewPromotionReconciler(t *testing.T) {
 	kubeClient := fake.NewClientBuilder().Build()
 	r := newReconciler(
@@ -1028,6 +1034,7 @@ func Test_calculateRequeueInterval(t *testing.T) {
 					t.Context(),
 					testCase.promo,
 					testCase.suggestedRequeueInterval,
+					defaultRequeueInterval,
 				),
 			)
 		})
