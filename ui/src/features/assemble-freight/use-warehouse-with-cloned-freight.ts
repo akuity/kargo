@@ -50,14 +50,15 @@ export const useWarehouseWithClonedFreight = (
     const git: GitDiscoveryResult[] = [...(discoveredArtifacts?.git || [])];
 
     for (const image of cloneFreightData.images || []) {
-      const subscription = images.find(
+      let subscription = images.find(
         (s) => getSubscriptionKey(s) === getSubscriptionKeyFreight(image)
       );
       if (!subscription) {
-        images.push({
+        subscription = {
           repoURL: image.repoURL,
           references: []
-        } as unknown as ImageDiscoveryResult);
+        } as unknown as ImageDiscoveryResult;
+        images.push(subscription);
       }
 
       if (!subscription?.references.find((r) => r.tag === image.tag)) {
@@ -70,16 +71,17 @@ export const useWarehouseWithClonedFreight = (
     }
 
     for (const chart of cloneFreightData.charts || []) {
-      const subscription = charts.find(
+      let subscription = charts.find(
         (s) => getSubscriptionKey(s) === getSubscriptionKeyFreight(chart)
       );
       if (!subscription) {
-        charts.push({
+        subscription = {
           $typeName: 'github.com.akuity.kargo.api.v1alpha1.ChartDiscoveryResult',
           repoURL: chart.repoURL,
           name: chart.name,
           versions: []
-        } as unknown as ChartDiscoveryResult);
+        } as unknown as ChartDiscoveryResult;
+        charts.push(subscription);
       }
 
       if (!subscription?.versions.find((v) => v === chart.version)) {
@@ -88,14 +90,15 @@ export const useWarehouseWithClonedFreight = (
     }
 
     for (const commit of cloneFreightData.commits || []) {
-      const subscription = git.find(
+      let subscription = git.find(
         (s) => getSubscriptionKey(s) === getSubscriptionKeyFreight(commit)
       );
       if (!subscription) {
-        git.push({
+        subscription = {
           repoURL: commit.repoURL,
           commits: []
-        } as unknown as GitDiscoveryResult);
+        } as unknown as GitDiscoveryResult;
+        git.push(subscription);
       }
 
       if (!subscription?.commits.find((c) => c.id === commit.id && c.tag === commit.tag)) {
