@@ -17,7 +17,7 @@ jobs:
   test-unit:
     runs-on: ubuntu-latest
     container:
-      image: &golangImage golang:1.26.2-trixie
+      image: &golangImage golang:1.26.3-trixie
     steps:
     # Install Git from "trixie" repository to get a more recent version than
     # the one available in "stable". This can be removed once the version in
