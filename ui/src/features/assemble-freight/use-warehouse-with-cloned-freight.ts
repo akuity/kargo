@@ -45,9 +45,9 @@ export const useWarehouseWithClonedFreight = (
     }
 
     const discoveredArtifacts = structuredClone(warehouse.status?.discoveredArtifacts);
-    const images: ImageDiscoveryResult[] = [...(discoveredArtifacts?.images || [])];
-    const charts: ChartDiscoveryResult[] = [...(discoveredArtifacts?.charts || [])];
-    const git: GitDiscoveryResult[] = [...(discoveredArtifacts?.git || [])];
+    const images: ImageDiscoveryResult[] = discoveredArtifacts?.images || [];
+    const charts: ChartDiscoveryResult[] = discoveredArtifacts?.charts || [];
+    const git: GitDiscoveryResult[] = discoveredArtifacts?.git || [];
 
     for (const image of cloneFreightData.images || []) {
       let subscription = images.find(
@@ -76,7 +76,6 @@ export const useWarehouseWithClonedFreight = (
       );
       if (!subscription) {
         subscription = {
-          $typeName: 'github.com.akuity.kargo.api.v1alpha1.ChartDiscoveryResult',
           repoURL: chart.repoURL,
           name: chart.name,
           versions: []
@@ -117,7 +116,7 @@ export const useWarehouseWithClonedFreight = (
       ...warehouse,
       status: {
         ...warehouse.status,
-        discoveredArtifacts: { ...discoveredArtifacts, images, charts, git }
+        discoveredArtifacts
       }
     } as WarehouseExpanded;
   }, [warehouse, cloneFreightData]);
