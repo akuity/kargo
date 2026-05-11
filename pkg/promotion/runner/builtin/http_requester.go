@@ -8,6 +8,7 @@ import (
 	"fmt"
 	"mime"
 	"net/http"
+	"net/url"
 	"strings"
 	"time"
 
@@ -263,6 +264,21 @@ func (h *httpRequester) getClient(cfg builtin.HTTPConfig) (*http.Client, error) 
 			// Input is validated, so this really should not happen
 			return nil, fmt.Errorf("error parsing timeout: %w", err)
 		}
+	}
+	if cfg.Proxy != "" {
+		proxyURL, err := url.Parse(cfg.Proxy)
+		if err != nil {
+			return nil, fmt.Errorf("error parsing proxy URL: %w", err)
+		}
+		if proxyURL.Host == "" {
+			// Convenience: catch an easy-to-make configuration error.
+			// As an example, for the input "proxy.example.com:80" (a valid value for `http_proxy`)
+			// url.Parse will return a URL as follows:
+			//   &url.URL{Scheme:"proxy.example.com", Host:"", Opaque:"80"}
+			// This is not a useful input to http.ProxyURL.
+			return nil, fmt.Errorf("invalid proxy URL: no hostname was parsed (be sure to specify the URL scheme)")
+		}
+		httpTransport.Proxy = http.ProxyURL(proxyURL)
 	}
 	return &http.Client{
 		Transport: httpTransport,
