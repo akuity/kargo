@@ -7,6 +7,7 @@ metadata:
   labels:
     {{- include "kargo.labels" . | nindent 4 }}
     {{- include "kargo.garbageCollector.labels" . | nindent 4 }}
+  {{- include "kargo.annotations" (dict "root" . "annotations" .Values.garbageCollector.annotations) | nindent 2 }}
 data:
   LOG_LEVEL: {{ quote .Values.garbageCollector.logLevel }}
   LOG_FORMAT: {{ quote .Values.garbageCollector.logFormat }}

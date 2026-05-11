@@ -27,13 +27,13 @@ global:
     namespace: kargo-system-resources
     ## @param global.systemResources.createNamespace Indicates whether the namespace specified by `global.systemResources.namespace` should be created when installing the chart.
     createNamespace: true
-  
+
   sharedResources:
     ## @param global.sharedResources.namespace designates a namespace where shared resources can be located.
     namespace: kargo-shared-resources
     ## @param global.sharedResources.createNamespace Indicates whether the namespace specified by `global.sharedResources.namespace` should be created when installing the chart.
     createNamespace: true
-  
+
   ## @param global.labels Labels to add to all resources.
   labels: {}
   ## @param global.annotations Annotations to add to all resources.
@@ -69,6 +69,8 @@ global:
   tolerations: []
   ## @param global.affinity Default affinity for all Kargo pods.
   affinity: {}
+  ## @param global.priorityClassName [nullable] Default priority class for all Kargo pods.
+  # priorityClassName:
   ## @param global.securityContext Default security context for all Kargo pods.
   securityContext: {}
 
@@ -259,6 +261,11 @@ api:
         pullSecrets: []
         # - name: regcred
 
+      ## @param api.oidc.dex.logLevel The log level for the Dex server. Since Dex server is a third-party software, its log level options differ from the other Kargo components. The valid options are: DEBUG, INFO, WARN, ERROR.
+      logLevel: INFO
+      ## @param api.oidc.dex.logFormat The format of logs from the Dex server. Since Dex server is a third-party software, its log format options differ from the other Kargo components. The valid options are TEXT and JSON.
+      logFormat: TEXT
+
       ## @param api.oidc.dex.skipApprovalScreen Whether to skip Dex's own approval screen. Since upstream identity providers will already request user consent, this second approval screen from Dex can be both superfluous and confusing.
       skipApprovalScreen: true
 
@@ -343,8 +350,12 @@ api:
       tolerations: []
       ## @param api.oidc.dex.affinity Specifies pod affinity for the Dex server pods. Defaults to `global.affinity`.
       affinity: {}
-      ## @param api.oidc.dex.annotations Annotations to add to the Dex server pods. Merges with `global.annotations`, allowing you to override or add to the global annotations.
+      ## @param api.oidc.dex.priorityClassName [nullable] Name of the priority class for the Dex server pods. Defaults to `global.priorityClassName`.
+      # priorityClassName:
+      ## @param api.oidc.dex.annotations Annotations to add to the Dex server deployment. Merges with `global.annotations`, allowing you to override or add to the global annotations.
       annotations: {}
+      ## @param api.oidc.dex.podAnnotations Annotations to add to the Dex server pods. Merges with `global.podAnnotations`, allowing you to override or add to the global annotations.
+      podAnnotations: {}
       ## @param api.oidc.dex.securityContext Security context for Dex server pods. Defaults to `global.securityContext`.
       securityContext: {}
 
@@ -426,8 +437,28 @@ api:
   tolerations: []
   ## @param api.affinity Specifies pod affinity for api pods. Defaults to `global.affinity`.
   affinity: {}
+  ## @param api.topologySpreadConstraints Topology spread constraints for api pods.
+  ## e.g.
+  ## topologySpreadConstraints:
+  ## - maxSkew: 1
+  ##   topologyKey: kubernetes.io/hostname
+  ##   whenUnsatisfiable: DoNotSchedule
+  ##   labelSelector:
+  ##     matchLabels:
+  ##       app.kubernetes.io/component: api
+  topologySpreadConstraints: []
+  ## @param api.priorityClassName [nullable] Name of the priority class for api pods. Defaults to `global.priorityClassName`.
+  # priorityClassName:
   ## @param api.securityContext Security context for api pods. Defaults to `global.securityContext`.
   securityContext: {}
+
+  podDisruptionBudget:
+    ## @param api.podDisruptionBudget.enabled Whether to create a PodDisruptionBudget for the API server.
+    enabled: false
+    ## @param api.podDisruptionBudget.minAvailable Minimum number/percentage of pods that must remain available during disruption. Cannot be used with maxUnavailable.
+    minAvailable: 1
+    ## @param api.podDisruptionBudget.maxUnavailable Maximum number/percentage of pods that can be unavailable during disruption. Cannot be used with minAvailable.
+    maxUnavailable: ""
 
   cabundle:
     ## @param api.cabundle.configMapName Specifies the name of an optional ConfigMap containing CA certs that is managed "out of band." Values in the ConfigMap named here should each contain a single PEM-encoded CA cert. If secretName is also defined, it will take precedence over this field.
@@ -524,12 +555,20 @@ controller:
     name: "Kargo"
     ## @param controller.gitClient.email Specifies the email of the Kargo controller (used when authoring Git commits).
     email: "no-reply@kargo.io"
+    ## @param controller.gitClient.pushIntegrationPolicy Controls how remote changes are integrated before pushing. Options: AlwaysRebase (unconditionally rebase), RebaseOrMerge (rebase when safe, merge otherwise), RebaseOrFail (rebase when safe, fail otherwise), AlwaysMerge (unconditionally merge). The default will change from AlwaysRebase to RebaseOrMerge in v1.12.0.
+    pushIntegrationPolicy: "AlwaysRebase"
 
     signingKeySecret:
       ## @param controller.gitClient.signingKeySecret.name Specifies the name of an existing `Secret` which contains the Git user's signing key. The value should be accessible under `.data.signingKey` in the same namespace as Kargo. When the signing key is a GPG key, the GPG key's name and email address identity must match the values defined for `controller.gitClient.name` and `controller.gitClient.email`.
       name: ""
       ## @param controller.gitClient.signingKeySecret.type Specifies the type of the signing key. The currently supported and default option is `gpg`.
       type: ""
+
+  githubPush:
+    ## @param controller.githubPush.maxRevisions The maximum number of commits that the github-push step will replay via the GitHub API in a single push. This is a safety guardrail against accidentally replaying large numbers of commits.
+    maxRevisions: 10
+    ## @param controller.githubPush.verifyUntrustedCommits When true, the github-push step will omit author/committer information for ALL commits replayed via the GitHub API, not just those signed by a trusted key. This causes GitHub to sign all commits with its own key, resulting in verified commits regardless of trust. Use with caution -- this manufactures trust where none exists.
+    verifyUntrustedCommits: false
 
   images:
     registries:
@@ -540,6 +579,9 @@ controller:
       cacheByTagPolicy: Allow
       ## @param controller.images.cache.maxEntries specifies the maximum number of entries in the internal image metadata cache.
       maxEntries: 100000
+    push:
+      ## @param controller.images.push.maxArtifactSize The maximum size (in bytes) for cross-repository OCI artifact pushes. Defaults to 1 GiB (1073741824). Set to 0 to block all cross-repo pushes, or -1 to disable the limit.
+      maxArtifactSize: 1073741824
 
   ## All settings relating to the Argo CD control plane this controller might
   ## integrate with.
@@ -620,6 +662,8 @@ controller:
   tolerations: []
   ## @param controller.affinity Specifies pod affinity for controller pods. Defaults to `global.affinity`.
   affinity: {}
+  ## @param controller.priorityClassName [nullable] Name of the priority class for controller pods. Defaults to `global.priorityClassName`.
+  # priorityClassName:
   ## @param controller.securityContext Security context for controller pods. Defaults to `global.securityContext`.
   securityContext: {}
 
@@ -696,6 +740,8 @@ garbageCollector:
   tolerations: []
   ## @param garbageCollector.affinity Specifies pod affinity for the garbage collector pods. Defaults to `global.affinity`.
   affinity: {}
+  ## @param garbageCollector.priorityClassName [nullable] Name of the priority class for the garbage collector pods. Defaults to `global.priorityClassName`.
+  # priorityClassName:
   ## @param garbageCollector.securityContext Security context for garbage collector pods. Defaults to `global.securityContext`.
   securityContext: {}
 
@@ -759,8 +805,28 @@ externalWebhooksServer:
   tolerations: []
   ## @param externalWebhooksServer.affinity Specifies pod affinity for external webhook server pods. Defaults to `global.affinity`.
   affinity: {}
+  ## @param externalWebhooksServer.topologySpreadConstraints Topology spread constraints for external webhook server pods.
+  ## e.g.
+  ## topologySpreadConstraints:
+  ## - maxSkew: 1
+  ##   topologyKey: kubernetes.io/hostname
+  ##   whenUnsatisfiable: DoNotSchedule
+  ##   labelSelector:
+  ##     matchLabels:
+  ##       app.kubernetes.io/component: external-webhooks-server
+  topologySpreadConstraints: []
+  ## @param externalWebhooksServer.priorityClassName [nullable] Name of the priority class for external webhook server pods. Defaults to `global.priorityClassName`.
+  # priorityClassName:
   ## @param externalWebhooksServer.securityContext Security context for external webhook server pods. Defaults to `global.securityContext`.
   securityContext: {}
+
+  podDisruptionBudget:
+    ## @param externalWebhooksServer.podDisruptionBudget.enabled Whether to create a PodDisruptionBudget for the external webhook server.
+    enabled: false
+    ## @param externalWebhooksServer.podDisruptionBudget.minAvailable Minimum number/percentage of pods that must remain available during disruption. Cannot be used with maxUnavailable.
+    minAvailable: 1
+    ## @param externalWebhooksServer.podDisruptionBudget.maxUnavailable Maximum number/percentage of pods that can be unavailable during disruption. Cannot be used with minAvailable.
+    maxUnavailable: ""
 
   probes:
     ## @param externalWebhooksServer.probes.enabled Whether liveness and readiness probes should be included in the external webhook server deployment. It is sometimes advantageous to disable these during local development.
@@ -874,6 +940,8 @@ managementController:
   tolerations: []
   ## @param managementController.affinity Specifies pod affinity for management controller pods. Defaults to `global.affinity`.
   affinity: {}
+  ## @param managementController.priorityClassName [nullable] Name of the priority class for management controller pods. Defaults to `global.priorityClassName`.
+  # priorityClassName:
   ## @param managementController.securityContext Security context for management controller pods. Defaults to `global.securityContext`.
   securityContext: {}
 
@@ -937,8 +1005,28 @@ webhooksServer:
   tolerations: []
   ## @param webhooksServer.affinity Specifies pod affinity for the webhooks server pods. Defaults to `global.affinity`.
   affinity: {}
+  ## @param webhooksServer.topologySpreadConstraints Topology spread constraints for webhooks server pods.
+  ## e.g.
+  ## topologySpreadConstraints:
+  ## - maxSkew: 1
+  ##   topologyKey: kubernetes.io/hostname
+  ##   whenUnsatisfiable: DoNotSchedule
+  ##   labelSelector:
+  ##     matchLabels:
+  ##       app.kubernetes.io/component: webhooks-server
+  topologySpreadConstraints: []
+  ## @param webhooksServer.priorityClassName [nullable] Name of the priority class for the webhooks server pods. Defaults to `global.priorityClassName`.
+  # priorityClassName:
   ## @param webhooksServer.securityContext Security context for webhooks server pods. Defaults to `global.securityContext`.
   securityContext: {}
+
+  podDisruptionBudget:
+    ## @param webhooksServer.podDisruptionBudget.enabled Whether to create a PodDisruptionBudget for the webhooks server.
+    enabled: false
+    ## @param webhooksServer.podDisruptionBudget.minAvailable Minimum number/percentage of pods that must remain available during disruption. Cannot be used with maxUnavailable.
+    minAvailable: 1
+    ## @param webhooksServer.podDisruptionBudget.maxUnavailable Maximum number/percentage of pods that can be unavailable during disruption. Cannot be used with minAvailable.
+    maxUnavailable: ""
 
   tls:
     ## @param webhooksServer.tls.selfSignedCert Whether to generate a self-signed certificate for the (internal) webhooks server. If `true`, `cert-manager` CRDs **must** be present in the cluster. The chart will create and use its own namespaced `Issuer`. If `false`, a cert `Secret` with the name specified by `webhooksServer.tls.secretName` **must** be provided in the same namespace as Kargo. If that cert is not already trusted by the Kubernetes API server, you must specify a value for `webhooksServer.tls.caBundle`. This is why it is strongly recommended to leave this setting as `true`. There is no provision for running the webhooks server without TLS because the Kubernetes API server will not communicate with non-TLS endpoints.

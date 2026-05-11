@@ -31,8 +31,14 @@ All Jira operations require proper authentication credentials stored in a Kubern
 
 | Name                     | Type     | Required | Description                                                                      |
 | ------------------------ | -------- | -------- | -------------------------------------------------------------------------------- |
-| `credentials.secretName` | `string` | Y        | Name of the  `Secret`  containing the Jira credentials in the project namespace. |
+| `credentials.secretName` | `string` | N        | Name of the  `Secret`  containing the Jira credentials in the project namespace. |
+| `credentials.sharedSecretName` | `string` | N  | Name of the `Secret` containing the Jira credentials in the `shared-resources-namespace`. |
 
+:::info
+
+Either `credentials.secretName` or `credentials.sharedSecretName` must be set, but not both.
+
+:::
 
 The referenced `Secret` should contain the following keys:
 
@@ -176,7 +182,7 @@ steps:
     credentials:
       secretName: jira-credentials
     deleteIssue:
-      issueKey: "${{ freightMetadata(ctx.targetFreight.name, 'jira-issue-key') }}"
+      issueKey: "${{ freightMetadata(ctx.targetFreight.name)['jira-issue-key'] }}"
       deleteSubtasks: true
 ```
 
@@ -271,7 +277,7 @@ steps:
     credentials:
       secretName: jira-credentials
     commentOnIssue:
-      issueKey: "${{ freightMetadata(ctx.targetFreight.name, 'jira-issue-key') }}"
+      issueKey: "${{ freightMetadata(ctx.targetFreight.name)['jira-issue-key'] }}"
       body: "Promotion started. Environment: ${{ ctx.stage }}. Image: ${{ imageFrom(vars.imageRepo).RepoURL }}:${{ imageFrom(vars.imageRepo).Tag }}. Promotion: ${{ ctx.promotion }}. Status: Promoting to ${{ ctx.stage }} environment..."
 # Later use the comment ID if needed
 - uses: jira
@@ -279,7 +285,7 @@ steps:
     credentials:
       secretName: jira-credentials
     deleteComment:
-      issueKey: "${{ freightMetadata(ctx.targetFreight.name, 'jira-issue-key') }}"
+      issueKey: "${{ freightMetadata(ctx.targetFreight.name)['jira-issue-key'] }}"
       commentID: "${{ quote(outputs['add-progress-comment'].commentID) }}"
 ```
 
@@ -309,7 +315,7 @@ steps:
     credentials:
       secretName: jira-credentials
     deleteComment:
-      issueKey: "${{ freightMetadata(ctx.targetFreight.name, 'jira-issue-key') }}"
+      issueKey: "${{ freightMetadata(ctx.targetFreight.name)['jira-issue-key'] }}"
       commentID: "${{ outputs['previous-comment-step'].commentID }}"
 ```
 
@@ -321,10 +327,11 @@ Waits for a Jira issue to reach a specific status before proceeding.
 
 #### Configuration
 
-| Name                           | Type     | Required | Description                                                    |
-| ------------------------------ | -------- | -------- | -------------------------------------------------------------- |
-| `waitForStatus.issueKey`       | `string` | Y        | The Jira Issue Key (e.g., EXT-123).                            |
-| `waitForStatus.expectedStatus` | `string` | Y        | The expected status to wait for (e.g., 'IN PROGRESS', 'DONE'). |
+| Name                           | Type      | Required | Description                                                    |
+| ------------------------------ | --------- | -------- | -------------------------------------------------------------- |
+| `waitForStatus.issueKey`       | `string`  | Y        | The Jira Issue Key (e.g., EXT-123).                            |
+| `waitForStatus.expectedStatus` | `string`  | Y        | The expected status to wait for (e.g., 'IN PROGRESS', 'DONE'). |
+| `waitForStatus.pollInterval`   | `string`  | N        | Poll interval for checking issue status, specified as a [Go duration string](https://pkg.go.dev/time#ParseDuration) (e.g., `30s`, `5m`). Overrides the default controller reconciliation interval of 5 minutes when set. Available in Kargo >= v1.10. |
 
 #### Output
 
@@ -341,7 +348,7 @@ steps:
     credentials:
       secretName: jira-credentials
     waitForStatus:
-      issueKey: "${{ freightMetadata(ctx.targetFreight.name, 'change-request-key') }}"
+      issueKey: "${{ freightMetadata(ctx.targetFreight.name)['change-request-key'] }}"
       expectedStatus: "Approved"
 # promotion steps continue after approval...
 - uses: helm-template
@@ -529,7 +536,7 @@ spec:
           credentials:
             secretName: jira
           waitForStatus:
-            issueKey: ${{ freightMetadata(ctx.targetFreight.name, 'jira-issue-key') }}
+            issueKey: ${{ freightMetadata(ctx.targetFreight.name)['jira-issue-key'] }}
             expectedStatus: UAT
 
       # Update the Argo CD Application directly. Not ideal for practical purposes.
@@ -553,7 +560,7 @@ spec:
           credentials:
             secretName: jira
           commentOnIssue:
-            issueKey: ${{ freightMetadata(ctx.targetFreight.name, 'jira-issue-key') }}
+            issueKey: ${{ freightMetadata(ctx.targetFreight.name)['jira-issue-key'] }}
             body: "Release ${{ imageFrom(vars.imageRepo).Tag }} has been promoted to ${{ ctx.stage }} environment. Promotion: ${{ ctx.promotion }}. Status: Promoteed and ready for uat validation."
 
       # Update environment labels
@@ -563,7 +570,7 @@ spec:
           credentials:
             secretName: jira
           updateIssue:
-            issueKey: ${{ freightMetadata(ctx.targetFreight.name, 'jira-issue-key') }}
+            issueKey: ${{ freightMetadata(ctx.targetFreight.name)['jira-issue-key'] }}
             removeLabels:
             - "env-test"
             addLabels:
@@ -578,7 +585,7 @@ spec:
           credentials:
             secretName: jira
           deleteComment:
-            issueKey: ${{ freightMetadata(ctx.targetFreight.name, 'jira-issue-key') }}
+            issueKey: ${{ freightMetadata(ctx.targetFreight.name)['jira-issue-key'] }}
             commentID: ${{ quote(outputs['comment-on-issue'].commentID) }}
 
 ---

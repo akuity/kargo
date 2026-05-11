@@ -138,7 +138,7 @@ func Test_webhook_Default(t *testing.T) {
 		},
 	}
 	for _, testCase := range testCases {
-		ctx := context.Background()
+		ctx := t.Context()
 		if testCase.op != "" {
 			ctx = admission.NewContextWithRequest(
 				ctx,
@@ -481,7 +481,7 @@ func Test_webhook_ValidateCreate(t *testing.T) {
 	for _, testCase := range testCases {
 		tc := testCase // Avoid implicit memory aliasing
 		t.Run(testCase.name, func(t *testing.T) {
-			_, err := tc.webhook.ValidateCreate(context.Background(), &tc.freight)
+			_, err := tc.webhook.ValidateCreate(t.Context(), &tc.freight)
 			tc.assertions(t, err)
 		})
 	}
@@ -797,7 +797,7 @@ func Test_webhook_ValidateUpdate(t *testing.T) {
 			if testCase.userInfo != nil {
 				req.UserInfo = *testCase.userInfo
 			}
-			ctx := admission.NewContextWithRequest(context.Background(), req)
+			ctx := admission.NewContextWithRequest(t.Context(), req)
 
 			_, err := testCase.webhook.ValidateUpdate(
 				ctx,
@@ -870,7 +870,7 @@ func Test_webhook_ValidateDelete(t *testing.T) {
 	for name, tc := range testCases {
 		t.Run(name, func(t *testing.T) {
 			t.Parallel()
-			_, err := tc.webhook.ValidateDelete(context.Background(), tc.input)
+			_, err := tc.webhook.ValidateDelete(t.Context(), tc.input)
 			if tc.shouldErr {
 				require.Error(t, err)
 				require.True(t, apierrors.IsForbidden(err))

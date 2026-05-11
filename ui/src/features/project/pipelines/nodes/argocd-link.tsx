@@ -5,14 +5,14 @@ import React from 'react';
 import { generatePath, useNavigate, useParams } from 'react-router-dom';
 import z from 'zod';
 
+import { ARGOCD_CONTEXT_KEY, SHARD_LABEL_KEY } from '@ui/config/labels';
 import { paths } from '@ui/config/paths';
 import { useExtensionsContext } from '@ui/extensions/extensions-context';
+import { HealthStatusIcon } from '@ui/features/common/health-status/health-status-icon';
 import { Stage } from '@ui/gen/api/v1alpha1/generated_pb';
+import { decodeRawData } from '@ui/utils/decode-raw-data';
 
 import { useDictionaryContext } from '../context/dictionary-context';
-
-const ARGOCD_CONTEXT_KEY = 'kargo.akuity.io/argocd-context';
-const SHARD_LABEL_KEY = 'kargo.akuity.io/shard';
 
 type ArgoCDLinkProps = React.PropsWithChildren<{
   stage: Stage;
@@ -55,7 +55,8 @@ export const ArgoCDLink = ({
           generatePath(paths.projectArgoCDExtension, {
             name: projectName,
             namespace: link.namespace,
-            appName: link.name
+            appName: link.name,
+            stageName: stage.metadata?.name
           })
         );
       } else {
@@ -85,7 +86,12 @@ export const ArgoCDLink = ({
     <Dropdown
       trigger={['click']}
       menu={{
+        style: { maxHeight: '278px', overflowY: 'auto' },
         items: argoCDApps.map((app, idx) => {
+          const status =
+            stage.status?.health?.output?.raw &&
+            getStatusFromHealthOutput(stage.status?.health?.output?.raw, app.name);
+
           return {
             key: idx,
             label: (
@@ -96,6 +102,7 @@ export const ArgoCDLink = ({
                   openArgoCD(app);
                 }}
               >
+                {status && <HealthStatusIcon health={status} className='mr-2' />}
                 {`${app.name} - ${app.namespace}`}
                 {!isExtensionArgoCD && (
                   <FontAwesomeIcon icon={faExternalLink} className='text-xs ml-2' />
@@ -119,3 +126,24 @@ const argoCDContextSchema = z.array(
 );
 
 type ArgoCDContext = z.infer<typeof argoCDContextSchema>[number];
+
+const getStatusFromHealthOutput = (healthOutputRaw: Uint8Array, app: string) => {
+  try {
+    const parsed = JSON.parse(
+      decodeRawData({
+        result: {
+          case: 'raw',
+          value: healthOutputRaw
+        }
+      })
+    );
+
+    const appStatus =
+      // eslint-disable-next-line @typescript-eslint/ban-ts-comment
+      // @ts-ignore
+      parsed.flatMap((item) => item.applicationStatuses).find((status) => status.Name === app);
+    return appStatus?.health;
+  } catch {
+    return undefined;
+  }
+};

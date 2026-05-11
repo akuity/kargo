@@ -636,7 +636,7 @@ func TestSyncWarehouse(t *testing.T) {
 
 	for _, testCase := range testCases {
 		t.Run(testCase.name, func(t *testing.T) {
-			status, err := testCase.reconciler.syncWarehouse(context.TODO(), testCase.warehouse)
+			status, err := testCase.reconciler.syncWarehouse(t.Context(), testCase.warehouse)
 			testCase.assertions(t, status, err)
 		})
 	}
@@ -837,7 +837,7 @@ func TestDiscoverArtifacts(t *testing.T) {
 	for _, testCase := range testCases {
 		t.Run(testCase.name, func(t *testing.T) {
 			discoveredArtifacts, err := testCase.reconciler.discoverArtifacts(
-				context.TODO(),
+				t.Context(),
 				"fake-project",
 				[]kargoapi.RepoSubscription{{}},
 			)

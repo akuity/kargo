@@ -2,24 +2,24 @@ package create
 
 import (
 	"context"
+	"encoding/json"
 	"errors"
 	"fmt"
 	"strings"
 
-	"connectrpc.com/connect"
 	"github.com/spf13/cobra"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/cli-runtime/pkg/genericclioptions"
 	"k8s.io/cli-runtime/pkg/genericiooptions"
 
 	rbacapi "github.com/akuity/kargo/api/rbac/v1alpha1"
-	kargosvcapi "github.com/akuity/kargo/api/service/v1alpha1"
 	"github.com/akuity/kargo/pkg/cli/client"
 	"github.com/akuity/kargo/pkg/cli/config"
 	"github.com/akuity/kargo/pkg/cli/io"
 	"github.com/akuity/kargo/pkg/cli/kubernetes"
 	"github.com/akuity/kargo/pkg/cli/option"
 	"github.com/akuity/kargo/pkg/cli/templates"
+	"github.com/akuity/kargo/pkg/client/generated/rbac"
 )
 
 type createRoleOptions struct {
@@ -124,7 +124,7 @@ func (o *createRoleOptions) validate() error {
 
 // run creates a role using the provided options.
 func (o *createRoleOptions) run(ctx context.Context) error {
-	kargoSvcCli, err := client.GetClientFromConfig(ctx, o.Config, o.ClientOptions)
+	apiClient, err := client.GetClientFromConfig(ctx, o.Config, o.ClientOptions)
 	if err != nil {
 		return fmt.Errorf("get client from config: %w", err)
 	}
@@ -139,22 +139,42 @@ func (o *createRoleOptions) run(ctx context.Context) error {
 		})
 	}
 
-	resp, err := kargoSvcCli.CreateRole(
-		ctx,
-		connect.NewRequest(
-			&kargosvcapi.CreateRoleRequest{
-				Role: &rbacapi.Role{
-					ObjectMeta: metav1.ObjectMeta{
-						Namespace: o.Project,
-						Name:      o.Name,
-					},
-					Claims: claims,
-				},
-			},
-		),
+	// Create Role struct
+	role := &rbacapi.Role{
+		ObjectMeta: metav1.ObjectMeta{
+			Name: o.Name,
+		},
+		Claims: claims,
+	}
+
+	// Convert role to map[string]any for the request
+	roleJSON, err := json.Marshal(role)
+	if err != nil {
+		return fmt.Errorf("marshal role: %w", err)
+	}
+	var roleMap map[string]any
+	if err = json.Unmarshal(roleJSON, &roleMap); err != nil {
+		return fmt.Errorf("unmarshal role to map: %w", err)
+	}
+
+	res, err := apiClient.Rbac.CreateProjectRole(
+		rbac.NewCreateProjectRoleParams().
+			WithProject(o.Project).
+			WithBody(roleMap),
+		nil,
 	)
 	if err != nil {
 		return fmt.Errorf("create role: %w", err)
+	}
+
+	resJSON, err := json.Marshal(res.GetPayload())
+	if err != nil {
+		return fmt.Errorf("marshal response: %w", err)
+	}
+
+	createdRole := &rbacapi.Role{}
+	if err = json.Unmarshal(resJSON, createdRole); err != nil {
+		return fmt.Errorf("unmarshal role: %w", err)
 	}
 
 	printer, err := o.ToPrinter()
@@ -162,5 +182,5 @@ func (o *createRoleOptions) run(ctx context.Context) error {
 		return fmt.Errorf("new printer: %w", err)
 	}
 
-	return printer.PrintObj(resp.Msg.Role, o.Out)
+	return printer.PrintObj(createdRole, o.Out)
 }

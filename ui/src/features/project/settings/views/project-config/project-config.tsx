@@ -1,4 +1,3 @@
-import { useMutation, useQuery } from '@connectrpc/connect-query';
 import { faPlus } from '@fortawesome/free-solid-svg-icons';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
 import { zodResolver } from '@hookform/resolvers/zod';
@@ -7,25 +6,19 @@ import type { JSONSchema4 } from 'json-schema';
 import { useMemo } from 'react';
 import { useForm } from 'react-hook-form';
 import { useParams } from 'react-router-dom';
-import yaml, { parse } from 'yaml';
+import yaml, { parse, stringify } from 'yaml';
 import { z } from 'zod';
 
 import { YamlEditor } from '@ui/features/common/code-editor/yaml-editor';
 import { FieldContainer } from '@ui/features/common/form/field-container';
 import { useModal } from '@ui/features/common/modal/use-modal';
 import { projectConfigYAMLExample } from '@ui/features/project/list/utils/project-yaml-example';
-import {
-  createOrUpdateResource,
-  getProjectConfig
-} from '@ui/gen/api/service/v1alpha1/service-KargoService_connectquery';
-import { RawFormat } from '@ui/gen/api/service/v1alpha1/service_pb';
-import { ProjectConfig as ProjectConfigT } from '@ui/gen/api/v1alpha1/generated_pb';
+import { useGetProjectConfig } from '@ui/gen/api/v2/core/core';
+import { useUpdateResource } from '@ui/gen/api/v2/resources/resources';
 import projectConfigSchema from '@ui/gen/schema/projectconfigs.kargo.akuity.io_v1alpha1.json';
-import { decodeRawData } from '@ui/utils/decode-raw-data';
 import { zodValidators } from '@ui/utils/validators';
 
 import { Refresh } from './refresh';
-import { projectConfigTransport } from './transport';
 import { CreateWebhookModal } from './webhook/create-webhook-modal';
 import { Webhooks } from './webhooks';
 
@@ -36,19 +29,31 @@ const formSchema = z.object({
 export const ProjectConfig = () => {
   const { name } = useParams();
 
-  const projectConfigQuery = useQuery(
-    getProjectConfig,
-    { project: name, format: RawFormat.YAML },
-    {
-      transport: projectConfigTransport
-    }
-  );
+  const projectConfigQuery = useGetProjectConfig(name || '', {
+    query: { meta: { silent404: true } }
+  });
 
-  const projectConfigYAML = decodeRawData(projectConfigQuery.data);
+  const projectConfigYAML = useMemo(() => {
+    if (!projectConfigQuery.data?.data) {
+      return '';
+    }
+    try {
+      return stringify(projectConfigQuery.data.data);
+    } catch (e) {
+      notification.error({
+        message: (e as Error)?.message || 'Failed to stringify ProjectConfig',
+        placement: 'bottomRight'
+      });
+      return '';
+    }
+  }, [projectConfigQuery.data?.data]);
 
   const projectConfig = useMemo(() => {
+    if (!projectConfigYAML) {
+      return undefined;
+    }
     try {
-      return parse(projectConfigYAML) as ProjectConfigT;
+      return parse(projectConfigYAML);
     } catch (e) {
       notification.error({
         message: (e as Error)?.message || 'Failed to parse ProjectConfig YAML',
@@ -68,19 +73,18 @@ export const ProjectConfig = () => {
     resolver: zodResolver(formSchema)
   });
 
-  const createOrUpdateMutation = useMutation(createOrUpdateResource, {
-    onSuccess: () => {
-      message.success({ content: `ProjectConfig has been ${creation ? 'created' : 'updated'}` });
-      projectConfigQuery.refetch();
+  const createOrUpdateMutation = useUpdateResource({
+    mutation: {
+      onSuccess: () => {
+        message.success({ content: `ProjectConfig has been ${creation ? 'created' : 'updated'}` });
+        projectConfigQuery.refetch();
+      }
     }
   });
 
-  const onSubmitConfig = projectConfigForm.handleSubmit(async (data) => {
-    const textEncoder = new TextEncoder();
-    await createOrUpdateMutation.mutateAsync({
-      manifest: textEncoder.encode(data.value)
-    });
-  });
+  const onSubmitConfig = projectConfigForm.handleSubmit((data) =>
+    createOrUpdateMutation.mutate({ data: data.value })
+  );
 
   const createWebhookModal = useModal((props) => (
     <CreateWebhookModal projectConfigYAML={projectConfigYAML} project={name || ''} {...props} />

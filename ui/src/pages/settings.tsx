@@ -13,6 +13,7 @@ import React from 'react';
 import { NavLink, Routes, Route, Navigate, useLocation } from 'react-router-dom';
 
 import { useExtensionsContext } from '@ui/extensions/extensions-context';
+import { useDocumentTitle } from '@ui/features/common/document-title/use-document-title';
 import { BaseHeader } from '@ui/features/common/layout/base-header';
 import { AccessSettings } from '@ui/features/settings/access/accecss';
 import { ClusterAnalysisTemplatesList } from '@ui/features/settings/analysis-templates/analysis-templates';
@@ -76,6 +77,7 @@ const settingsViews = {
 const defaultView = settingsViews.clusterConfig;
 
 export const Settings = () => {
+  useDocumentTitle(['Settings']);
   const location = useLocation();
   const { settingsExtensions } = useExtensionsContext();
 

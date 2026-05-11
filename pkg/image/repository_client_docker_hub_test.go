@@ -3,7 +3,6 @@
 package image
 
 import (
-	"context"
 	"os"
 	"testing"
 
@@ -22,7 +21,7 @@ func TestGetTags(t *testing.T) {
 	client, err := newRepositoryClient("debian", false, getDockerHubCreds(), true)
 	require.NoError(t, err)
 	require.NotNil(t, client)
-	tags, err := client.getTags(context.Background())
+	tags, err := client.getTags(t.Context())
 	require.NoError(t, err)
 	require.NotEmpty(t, tags)
 }

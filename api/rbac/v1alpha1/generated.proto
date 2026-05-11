@@ -47,6 +47,8 @@ message RoleResources {
 
   repeated .k8s.io.api.rbac.v1.Role roles = 3;
 
+  repeated .k8s.io.api.rbac.v1.ClusterRole clusterRoles = 5;
+
   repeated .k8s.io.api.rbac.v1.RoleBinding roleBindings = 4;
 }
 

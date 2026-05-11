@@ -1,7 +1,6 @@
 package cache
 
 import (
-	"context"
 	"testing"
 
 	lru "github.com/hashicorp/golang-lru/v2"
@@ -89,7 +88,7 @@ func TestInMemoryCache_Get(t *testing.T) {
 				testCase.setup(internalCache)
 			}
 			cache := &inMemoryCache[testStruct]{cache: internalCache}
-			value, found, err := cache.Get(context.Background(), testKey)
+			value, found, err := cache.Get(t.Context(), testKey)
 			require.NoError(t, err)
 			testCase.assertions(t, value, found, err)
 		})

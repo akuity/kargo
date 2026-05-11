@@ -7,6 +7,8 @@ import (
 	"strings"
 )
 
+// TODO(v1.13.0): Remove scpSyntaxRegex when SSH/SCP-style URL support is
+// removed.
 var scpSyntaxRegex = regexp.MustCompile(`^((?:[\w-]+@)?[\w-]+(?:\.[\w-]+)*)(?::(.*))?$`)
 
 // NormalizeGit normalizes Git URLs of the following forms:
@@ -20,7 +22,7 @@ var scpSyntaxRegex = regexp.MustCompile(`^((?:[\w-]+@)?[\w-]+(?:\.[\w-]+)*)(?::(
 // normalized will be returned as-is.
 func NormalizeGit(repo string) string {
 	origRepo := repo
-	repo = strings.ToLower(repo)
+	repo = SanitizeURL(strings.ToLower(repo))
 
 	// HTTP/S URLs
 	if strings.HasPrefix(repo, "http://") || strings.HasPrefix(repo, "https://") {
@@ -38,6 +40,7 @@ func NormalizeGit(repo string) string {
 		return repoURL.String()
 	}
 
+	// TODO(v1.13.0): Remove this block when SSH URL support is removed.
 	// URLS of the form ssh://[user@]host.xz[:port][/path/to/repo[.git][/]]
 	if strings.HasPrefix(repo, "ssh://") {
 		// repo = strings.TrimPrefix(repo, "ssh://")
@@ -53,7 +56,7 @@ func NormalizeGit(repo string) string {
 		repoURL.Path = strings.TrimSuffix(repoURL.Path, ".git")
 		return repoURL.String()
 	}
-
+	// TODO(v1.13.0): Remove this block when SCP-style URL support is removed.
 	// URLS of the form [user@]host.xz[:path/to/repo[.git][/]]
 	matches := scpSyntaxRegex.FindStringSubmatch(repo)
 	if len(matches) != 2 && len(matches) != 3 {

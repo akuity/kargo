@@ -5,4 +5,5 @@ metadata:
   name: {{ .Values.global.sharedResources.namespace }}
   labels:
     {{- include "kargo.labels" . | nindent 4 }}
+  {{- include "kargo.annotations" (dict "root" .) | nindent 2 }}
 {{- end }}

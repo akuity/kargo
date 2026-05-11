@@ -5,6 +5,7 @@ import { generatePath, useNavigate, useParams, useSearchParams } from 'react-rou
 import { paths } from '@ui/config/paths';
 import { LoadingState } from '@ui/features/common';
 import { AnalysisRunLogs } from '@ui/features/common/analysis-run-logs/analysis-run-logs';
+import { useDocumentTitle } from '@ui/features/common/document-title/use-document-title';
 import { getAnalysisRun } from '@ui/gen/api/service/v1alpha1/service-KargoService_connectquery';
 import { AnalysisRun } from '@ui/gen/api/stubs/rollouts/v1alpha1/generated_pb';
 
@@ -12,6 +13,7 @@ export const AnalysisRunLogsPage = () => {
   const { name, stageName, analysisRunId } = useParams();
   const navigate = useNavigate();
   const [searchParams] = useSearchParams();
+  useDocumentTitle([analysisRunId && `Logs: ${analysisRunId}`, stageName, name]);
 
   const getAnalysisRunQuery = useQuery(getAnalysisRun, {
     namespace: name,

@@ -2,14 +2,14 @@
 
 set -x
 
-argo_cd_chart_version=8.1.4
-argo_rollouts_chart_version=2.40.1
-cert_manager_chart_version=1.18.2
+argo_cd_chart_version=9.4.3
+argo_rollouts_chart_version=2.40.6
+cert_manager_chart_version=1.19.3
 
 k3d cluster create kargo-quickstart \
   --no-lb \
   --k3s-arg '--disable=traefik@server:0' \
-  -p '31443-31445:31443-31445@servers:0:direct' \
+  -p '31080-31082:31080-31082@servers:0:direct' \
   -p '32080-32082:32080-32082@servers:0:direct' \
   --wait
 
@@ -30,10 +30,12 @@ helm install argocd argo-cd \
   --set dex.enabled=false \
   --set notifications.enabled=false \
   --set server.service.type=NodePort \
-  --set server.service.nodePortHttp=31443 \
+  --set server.service.nodePortHttp=31080 \
+  --set 'server.extraArgs={--insecure}' \
   --set server.extensions.enabled=true \
-  --set 'server.extensions.contents[0].name=argo-rollouts' \
-  --set 'server.extensions.contents[0].url=https://github.com/argoproj-labs/rollout-extension/releases/download/v0.3.3/extension.tar' \
+  --set 'server.extensions.extensionList[0].name=argo-rollouts' \
+  --set 'server.extensions.extensionList[0].env[0].name=EXTENSION_URL' \
+  --set 'server.extensions.extensionList[0].env[0].value=https://github.com/argoproj-labs/rollout-extension/releases/download/v0.3.7/extension.tar' \
   --wait
 
 helm install argo-rollouts argo-rollouts \
@@ -49,9 +51,11 @@ helm install kargo \
   --namespace kargo \
   --create-namespace \
   --set api.service.type=NodePort \
-  --set api.service.nodePort=31444 \
+  --set api.service.nodePort=31081 \
+  --set api.tls.enabled=false \
   --set api.adminAccount.passwordHash='$2a$10$Zrhhie4vLz5ygtVSaif6o.qN36jgs6vjtMBdM6yrU1FOeiAAMMxOm' \
   --set api.adminAccount.tokenSigningKey=iwishtowashmyirishwristwatch \
   --set externalWebhooksServer.service.type=NodePort \
-  --set externalWebhooksServer.service.nodePort=31445 \
+  --set externalWebhooksServer.service.nodePort=31082 \
+  --set externalWebhooksServer.tls.enabled=false \
   --wait

@@ -1,7 +1,6 @@
 package api
 
 import (
-	"context"
 	"testing"
 
 	"github.com/stretchr/testify/require"
@@ -52,7 +51,7 @@ func TestGetProjectConfig(t *testing.T) {
 	for _, testCase := range testCases {
 		t.Run(testCase.name, func(t *testing.T) {
 			projectCfg, err := GetProjectConfig(
-				context.Background(),
+				t.Context(),
 				testCase.client,
 				testProjectName,
 			)

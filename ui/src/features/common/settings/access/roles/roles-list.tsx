@@ -1,4 +1,3 @@
-import { useMutation, useQuery } from '@connectrpc/connect-query';
 import {
   faInfoCircle,
   faPencil,
@@ -14,11 +13,12 @@ import { useState } from 'react';
 import { ConfirmModal } from '@ui/features/common/confirm-modal/confirm-modal';
 import { descriptionExpandable } from '@ui/features/common/description-expandable';
 import { useModal } from '@ui/features/common/modal/use-modal';
-import { Role } from '@ui/gen/api/rbac/v1alpha1/generated_pb';
+import { RbacRole } from '@ui/gen/api/v2/models';
 import {
-  deleteRole,
-  listRoles
-} from '@ui/gen/api/service/v1alpha1/service-KargoService_connectquery';
+  useDeleteProjectRole,
+  useListProjectRoles,
+  useListSystemRoles
+} from '@ui/gen/api/v2/rbac/rbac';
 
 import { CreateRole } from './create-role';
 import { RulesModal } from './rules-modal';
@@ -27,8 +27,8 @@ const renderColumn = (key: string) => {
   return {
     title: key.charAt(0).toUpperCase() + key.slice(1),
     key,
-    render: (record: Role) => {
-      const claimValues = record.claims.find((claim) => claim.name === key)?.values;
+    render: (record: RbacRole) => {
+      const claimValues = (record.claims || []).find((claim) => claim.name === key)?.values;
       return (
         <div>
           {((claimValues as string[]) || []).length > 0 ? (
@@ -48,17 +48,27 @@ type Props = {
 };
 
 export const RolesList = ({ project = '', systemLevel = false }: Props) => {
-  const { data, refetch, isLoading } = useQuery(listRoles, { project, systemLevel });
+  const systemRolesQuery = useListSystemRoles({ query: { enabled: systemLevel } });
+  const projectRolesQuery = useListProjectRoles(project, {
+    query: { enabled: !systemLevel && !!project }
+  });
+  const activeQuery = systemLevel ? systemRolesQuery : projectRolesQuery;
+
+  const { data, refetch, isLoading } = activeQuery;
+  // backend returns json object instead of array of RbacRole for some reason, so we need to cast it
+  const roles = (data?.data as unknown as RbacRole[]) || [];
 
   const [showCreateRole, setShowCreateRole] = useState(false);
-  const [editingRole, setEditingRole] = useState<Role | undefined>();
+  const [editingRole, setEditingRole] = useState<RbacRole | undefined>();
 
   const { show, hide } = useModal();
 
-  const { mutate: deleteRoleAction } = useMutation(deleteRole, {
-    onSuccess: () => {
-      hide();
-      setTimeout(() => refetch(), 500);
+  const { mutate: deleteRoleAction } = useDeleteProjectRole({
+    mutation: {
+      onSuccess: () => {
+        hide();
+        setTimeout(() => refetch(), 500);
+      }
     }
   });
 
@@ -95,8 +105,8 @@ export const RolesList = ({ project = '', systemLevel = false }: Props) => {
       )}
       <Table
         className='my-2 overflow-x-auto'
-        key={data?.roles?.length}
-        dataSource={(data?.roles || []).sort((a, b) => {
+        key={roles.length}
+        dataSource={roles.sort((a, b) => {
           if (a.metadata?.name && b.metadata?.name) {
             return a.metadata?.name.localeCompare(b.metadata?.name);
           } else {
@@ -104,12 +114,12 @@ export const RolesList = ({ project = '', systemLevel = false }: Props) => {
           }
         })}
         loading={isLoading}
-        rowKey={(record: Role) => record?.metadata?.name || ''}
+        rowKey={(record: RbacRole) => record?.metadata?.name || ''}
         columns={[
           {
             title: 'Name',
             key: 'name',
-            render: (record: Role) => <>{record.metadata?.name}</>
+            render: (record: RbacRole) => <>{record.metadata?.name}</>
           },
           renderColumn('email'),
           renderColumn('sub'),
@@ -117,18 +127,19 @@ export const RolesList = ({ project = '', systemLevel = false }: Props) => {
           {
             title: 'Rules',
             key: 'rules',
-            render: (record: Role) => {
+            render: (record: RbacRole) => {
+              const rulesCount = record?.rules?.length || 0;
               return (
                 <FontAwesomeIcon
-                  icon={record?.rules?.length > 0 ? faInfoCircle : faQuestionCircle}
+                  icon={rulesCount > 0 ? faInfoCircle : faQuestionCircle}
                   className={classNames({
-                    'cursor-pointer text-blue-500': record?.rules?.length > 0,
-                    'text-gray-200': record?.rules?.length === 0
+                    'cursor-pointer text-blue-500': rulesCount > 0,
+                    'text-gray-200': rulesCount === 0
                   })}
                   onClick={() => {
-                    if (record?.rules?.length === 0) return;
+                    if (rulesCount === 0) return;
                     show((p) => (
-                      <RulesModal rules={record.rules} name={record?.metadata?.name} {...p} />
+                      <RulesModal rules={record.rules || []} name={record?.metadata?.name} {...p} />
                     ));
                   }}
                 />
@@ -137,10 +148,10 @@ export const RolesList = ({ project = '', systemLevel = false }: Props) => {
           },
           {
             key: 'actions',
-            render: (record: Role) => {
+            render: (record: RbacRole) => {
               return (
                 <div className='flex items-center justify-end'>
-                  {record?.kargoManaged && (
+                  {!systemLevel && (
                     <Space>
                       <Button
                         icon={<FontAwesomeIcon icon={faPencil} size='sm' />}
@@ -168,8 +179,8 @@ export const RolesList = ({ project = '', systemLevel = false }: Props) => {
                               okText='Yes, Delete'
                               onOk={() => {
                                 deleteRoleAction({
-                                  name: record.metadata?.name || '',
-                                  project
+                                  project,
+                                  role: record.metadata?.name || ''
                                 });
                                 refetch();
                               }}

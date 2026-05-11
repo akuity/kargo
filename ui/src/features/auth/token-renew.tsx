@@ -11,7 +11,7 @@ import {
 import React from 'react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
 
-import { redirectToQueryParam, refreshTokenKey } from '@ui/config/auth';
+import { isSafeRedirectPath, redirectToQueryParam, refreshTokenKey } from '@ui/config/auth';
 import { paths } from '@ui/config/paths';
 import { getPublicConfig } from '@ui/gen/api/service/v1alpha1/service-KargoService_connectquery';
 
@@ -72,6 +72,7 @@ export const TokenRenew = () => {
 
     (async () => {
       const redirectQuery = searchParams.get(redirectToQueryParam);
+      const safeRedirectQuery = isSafeRedirectPath(redirectQuery) ? redirectQuery : null;
       try {
         const response = await refreshTokenGrantRequest(as, client, oidcClientAuth, refreshToken, {
           [allowInsecureRequests]: shouldAllowHttpRequest(),
@@ -93,7 +94,7 @@ export const TokenRenew = () => {
         }
 
         onLogin(result.id_token, result.refresh_token);
-        navigate(redirectQuery || paths.home);
+        navigate(safeRedirectQuery || paths.home);
       } catch (err) {
         logout();
         navigate(

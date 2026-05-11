@@ -48,10 +48,18 @@ type EphemeralAuthorizer struct {
 // NewEphemeralAuthorizer creates a new EphemeralAuthorizer with an in-memory
 // credentials store. This authorizer does not persist credentials to disk and
 // is suitable for temporary operations where you do not want to store
-// credentials permanently.
-func NewEphemeralAuthorizer() *EphemeralAuthorizer {
-	httpClient := cleanhttp.DefaultClient()
-	httpClient.Transport = retry.NewTransport(newTransport(httpClient.Transport))
+// credentials permanently. When insecure is true, TLS certificate verification
+// errors are ignored. This should be enabled only with great caution.
+func NewEphemeralAuthorizer(insecure bool) *EphemeralAuthorizer {
+	transport := cleanhttp.DefaultTransport()
+	if insecure {
+		transport.TLSClientConfig = &tls.Config{
+			InsecureSkipVerify: true, // #nosec G402 -- explicitly allowed by insecureSkipTLSVerify
+		}
+	}
+	httpClient := &http.Client{
+		Transport: retry.NewTransport(newTransport(transport)),
+	}
 
 	store := credentials.NewMemoryStore()
 

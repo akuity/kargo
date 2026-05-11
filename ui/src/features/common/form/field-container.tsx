@@ -10,8 +10,10 @@ import {
   UseControllerReturn
 } from 'react-hook-form';
 
-interface Props<T extends FieldValues, TName extends FieldPath<T> = FieldPath<T>>
-  extends UseControllerProps<T, TName> {
+interface Props<
+  T extends FieldValues,
+  TName extends FieldPath<T> = FieldPath<T>
+> extends UseControllerProps<T, TName> {
   children: (props: UseControllerReturn<T, TName>) => React.ReactNode;
   label?: string;
   formItemOptions?: Omit<FormItemProps, 'label'>;

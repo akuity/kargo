@@ -13,13 +13,13 @@ import (
 func TestMockEngine_Promote(t *testing.T) {
 	t.Run("without function injection", func(t *testing.T) {
 		engine := &MockEngine{}
-		res, err := engine.Promote(context.Background(), Context{}, nil)
+		res, err := engine.Promote(t.Context(), Context{}, nil)
 		assert.NoError(t, err)
 		assert.Equal(t, kargoapi.PromotionPhaseSucceeded, res.Status)
 	})
 
 	t.Run("with function injection", func(t *testing.T) {
-		ctx := context.Background()
+		ctx := t.Context()
 		promoCtx := Context{
 			Stage: "foo",
 		}

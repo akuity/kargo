@@ -46,14 +46,16 @@ export const FreightArtifact = (props: FreightArtifactProps) => {
   if (artifactType === 'github.com.akuity.kargo.api.v1alpha1.GitCommit') {
     const url = getGitCommitURL(props.artifact.repoURL, props.artifact.id);
 
-    // prioritize semver
-    const id = props.artifact.tag || props.artifact.id;
+    // prioritize semver; use shortVersion for tags, 7-char slice for raw commit hashes
+    const displayId = props.artifact.tag
+      ? shortVersion(props.artifact.tag)
+      : props.artifact.id.slice(0, 7);
 
     const TagComponent = (
       <Tag title={props.artifact.repoURL} bordered={false} color='geekblue' key={props.artifact.id}>
         <ArtifactIcon artifactType={artifactType} className='mr-1' />
 
-        {id.slice(0, 7)}
+        {displayId}
 
         {Expand}
       </Tag>

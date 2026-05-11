@@ -2,17 +2,15 @@ package github
 
 import (
 	"context"
-	"crypto/tls"
 	"fmt"
 	"net/url"
 	"strings"
 
 	"github.com/google/go-github/v76/github"
-	"github.com/hashicorp/go-cleanhttp"
 	"k8s.io/utils/ptr"
 
+	ghutil "github.com/akuity/kargo/pkg/github"
 	"github.com/akuity/kargo/pkg/gitprovider"
-	"github.com/akuity/kargo/pkg/urls"
 )
 
 const ProviderName = "github"
@@ -104,32 +102,17 @@ func NewProvider(
 		opts = &gitprovider.Options{}
 	}
 
-	scheme, host, owner, repo, err := parseRepoURL(repoURL)
+	_, _, owner, repo, err := ghutil.ParseRepoURL(repoURL)
 	if err != nil {
 		return nil, err
 	}
 
-	httpClient := cleanhttp.DefaultClient()
-	if opts.InsecureSkipTLSVerify {
-		transport := cleanhttp.DefaultTransport()
-		transport.TLSClientConfig = &tls.Config{
-			InsecureSkipVerify: true, // nolint: gosec
-		}
-		httpClient.Transport = transport
-	}
-
-	client := github.NewClient(httpClient)
-
-	if host != "github.com" {
-		baseURL := fmt.Sprintf("%s://%s", scheme, host)
-		// This function call will automatically add correct paths to the base URL
-		client, err = client.WithEnterpriseURLs(baseURL, baseURL)
-		if err != nil {
-			return nil, err
-		}
-	}
-	if opts.Token != "" {
-		client = client.WithAuthToken(opts.Token)
+	client, err := ghutil.NewClient(repoURL, &ghutil.ClientOptions{
+		Token:                 opts.Token,
+		InsecureSkipTLSVerify: opts.InsecureSkipTLSVerify,
+	})
+	if err != nil {
+		return nil, err
 	}
 
 	return &provider{
@@ -299,7 +282,12 @@ func (p *provider) ListPullRequests(
 func (p *provider) MergePullRequest(
 	ctx context.Context,
 	id int64,
+	opts *gitprovider.MergePullRequestOpts,
 ) (*gitprovider.PullRequest, bool, error) {
+	if opts == nil {
+		opts = &gitprovider.MergePullRequestOpts{}
+	}
+
 	ghPR, _, err := p.client.GetPullRequests(ctx, p.owner, p.repo, int(id))
 	if err != nil {
 		return nil, false, fmt.Errorf("error getting pull request %d: %w", id, err)
@@ -326,14 +314,18 @@ func (p *provider) MergePullRequest(
 		p.owner,
 		p.repo,
 		int(id),
-		"", // Use default commit message
-		&github.PullRequestOptions{},
+		"", // Use default commit message.
+		&github.PullRequestOptions{MergeMethod: opts.MergeMethod},
 	)
 	if err != nil {
 		return nil, false, fmt.Errorf("error merging pull request %d: %w", id, err)
 	}
 	if mergeResult == nil {
 		return nil, false, fmt.Errorf("unexpected nil merge result")
+	}
+	if !ptr.Deref(mergeResult.Merged, false) {
+		return nil, false,
+			fmt.Errorf("merge rejected for pull request %d", id)
 	}
 
 	updatedPR, _, err := p.client.GetPullRequests(ctx, p.owner, p.repo, int(id))
@@ -354,16 +346,11 @@ func (p *provider) GetCommitURL(
 	repoURL string,
 	sha string,
 ) (string, error) {
-	normalizedURL := urls.NormalizeGit(repoURL)
-
-	parsedURL, err := url.Parse(normalizedURL)
+	_, host, owner, repo, err := ghutil.ParseRepoURL(repoURL)
 	if err != nil {
 		return "", fmt.Errorf("error processing repository URL: %s: %s", repoURL, err)
 	}
-
-	commitURL := fmt.Sprintf("https://%s%s/commit/%s", parsedURL.Host, parsedURL.Path, sha)
-
-	return commitURL, nil
+	return fmt.Sprintf("https://%s/%s/%s/commit/%s", host, owner, repo, sha), nil
 }
 
 func convertGithubPR(ghPR github.PullRequest) gitprovider.PullRequest {
@@ -380,28 +367,4 @@ func convertGithubPR(ghPR github.PullRequest) gitprovider.PullRequest {
 		pr.CreatedAt = &ghPR.CreatedAt.Time
 	}
 	return pr
-}
-
-func parseRepoURL(repoURL string) (string, string, string, string, error) {
-	u, err := url.Parse(urls.NormalizeGit(repoURL))
-	if err != nil {
-		return "", "", "", "", fmt.Errorf(
-			"error parsing github repository URL %q: %w", u, err,
-		)
-	}
-
-	scheme := u.Scheme
-	if scheme != "https" && scheme != "http" {
-		scheme = "https"
-	}
-
-	path := strings.TrimPrefix(u.Path, "/")
-	parts := strings.Split(path, "/")
-	if len(parts) != 2 {
-		return "", "", "", "", fmt.Errorf(
-			"could not extract repository owner and name from URL %q", u,
-		)
-	}
-
-	return scheme, u.Host, parts[0], parts[1], nil
 }

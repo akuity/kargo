@@ -14,17 +14,19 @@ import (
 // functionality for all Selector implementations. It is not intended to be used
 // directly.
 type baseSelector struct {
-	repoURL        string
-	constraint     *semver.Constraints
-	discoveryLimit int
+	repoURL               string
+	constraint            *semver.Constraints
+	discoveryLimit        int
+	insecureSkipTLSVerify bool
 }
 
 func newBaseSelector(
 	sub kargoapi.ChartSubscription,
 ) (*baseSelector, error) {
 	s := &baseSelector{
-		repoURL:        sub.RepoURL,
-		discoveryLimit: int(sub.DiscoveryLimit),
+		repoURL:               sub.RepoURL,
+		discoveryLimit:        int(sub.DiscoveryLimit),
+		insecureSkipTLSVerify: sub.InsecureSkipTLSVerify,
 	}
 	if sub.SemverConstraint != "" {
 		var err error

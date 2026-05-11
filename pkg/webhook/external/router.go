@@ -103,6 +103,7 @@ func (s *server) route(w http.ResponseWriter, r *http.Request) {
 	receiver, err := NewReceiver(
 		ctx,
 		s.client,
+		s.apiReader,
 		s.cfg.BaseURL,
 		project,
 		secretsNamespace,

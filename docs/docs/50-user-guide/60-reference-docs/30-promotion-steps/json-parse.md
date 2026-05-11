@@ -47,7 +47,7 @@ its configuration.
 
 In this example, a values file is parsed to find the container image tag.
 After cloning the repository and clearing the output directory, the `json-parse`
-step parses `values.json` to extract the image tag from the `Freight` being
+step parses `config.json` to extract the image tag from the `Freight` being
 promoted. Using dot notation (`image.tag`), it extracts the nested value from
 the JSON file.
 
@@ -71,7 +71,7 @@ steps:
 - uses: json-parse
   as: values
   config:
-    path: './src/charts/my-chart/values.json'
+    path: './src/config.json'
     outputs:
     - name: imageTag
       fromExpression: image.tag
@@ -83,10 +83,7 @@ Given the sample input JSON:
 ```json
 {
   "image": {
-    "tag": "latest"
-  },
-  "rbac": {
-    "installClusterRoles": true
+    "tag": "v1.2.3"
   }
 }
 ```
@@ -96,6 +93,6 @@ The step would produce the following
 
 | Name | Type | Value |
 |------|------|-------|
-| `imageTag` | `string` | `latest` |
+| `imageTag` | `string` | `v1.2.3` |
 
 [expr-lang]: https://expr-lang.org

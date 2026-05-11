@@ -1,7 +1,6 @@
 package api
 
 import (
-	"context"
 	"testing"
 
 	"github.com/stretchr/testify/require"
@@ -45,7 +44,7 @@ func TestGetClusterConfig(t *testing.T) {
 	}
 	for _, testCase := range testCases {
 		t.Run(testCase.name, func(t *testing.T) {
-			clusterCfg, err := GetClusterConfig(context.Background(), testCase.client)
+			clusterCfg, err := GetClusterConfig(t.Context(), testCase.client)
 			testCase.assertions(t, clusterCfg, err)
 		})
 	}

@@ -12,12 +12,7 @@ metadata:
     {{ $key }}: {{ $value | quote }}
     {{- end }}
   {{- end }}
-  {{- with (mergeOverwrite (deepCopy .Values.global.annotations) .Values.webhooksServer.annotations) }}
-  annotations:
-    {{- range $key, $value := . }}
-    {{ $key }}: {{ $value | quote }}
-    {{- end }}
-  {{- end }}
+  {{- include "kargo.annotations" (dict "root" . "annotations" .Values.webhooksServer.annotations) | nindent 2 }}
 spec:
   replicas: {{ .Values.webhooksServer.replicas | default 1 }}
   strategy:
@@ -44,10 +39,22 @@ spec:
         {{- end }}
       {{- end }}
     spec:
+      {{- if not .Values.rbac.useDefaultServiceAccount }}
       serviceAccount: kargo-webhooks-server
+      {{- end }}
+      {{- if .Values.rbac.disableAutomountServiceAccountToken }}
+      automountServiceAccountToken: false
+      {{- end }}
       {{- with .Values.webhooksServer.affinity | default .Values.global.affinity }}
       affinity:
         {{- toYaml . | nindent 8 }}
+      {{- end }}
+      {{- with .Values.webhooksServer.topologySpreadConstraints }}
+      topologySpreadConstraints:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      {{- with .Values.webhooksServer.priorityClassName | default .Values.global.priorityClassName }}
+      priorityClassName: {{ . }}
       {{- end }}
       {{- with .Values.image.pullSecrets }}
       imagePullSecrets:

@@ -12,10 +12,12 @@ import moment from 'moment';
 import { useEffect, useMemo, useState } from 'react';
 import { generatePath, useNavigate, useParams } from 'react-router-dom';
 
+import { SHARD_LABEL_KEY } from '@ui/config/labels';
 import { paths } from '@ui/config/paths';
 import { useExtensionsContext } from '@ui/extensions/extensions-context';
 import { Description } from '@ui/features/common/description';
 import { HealthStatusIcon } from '@ui/features/common/health-status/health-status-icon';
+import { useStageControllerStatus } from '@ui/features/common/stage-status/use-stage-controller-status';
 import {
   getConfig,
   getStage
@@ -92,12 +94,14 @@ export const StageDetails = ({ stage }: { stage: Stage }) => {
   const getConfigQuery = useQuery(getConfig);
   const config = getConfigQuery.data;
 
-  const shardKey = stage?.metadata?.labels['kargo.akuity.io/shard'] || '';
+  const shardKey = stage?.metadata?.labels[SHARD_LABEL_KEY] || '';
   const argocdShard = config?.argocdShards?.[shardKey];
 
   const { stageTabs } = useExtensionsContext();
 
   const stageConditions = useMemo(() => stage.status?.conditions || [], [stage.status?.conditions]);
+
+  const { controllerName, isControllerDead } = useStageControllerStatus(stage);
 
   return (
     <Drawer
@@ -112,7 +116,11 @@ export const StageDetails = ({ stage }: { stage: Stage }) => {
                 {stage.metadata?.name}
               </Typography.Title>
               <Flex gap={4}>
-                <StageConditionIcon conditions={stageConditions} />
+                <StageConditionIcon
+                  conditions={stageConditions}
+                  isControllerDead={isControllerDead}
+                  controllerName={controllerName}
+                />
 
                 {!!stage.status?.health && <HealthStatusIcon health={stage.status?.health} />}
               </Flex>

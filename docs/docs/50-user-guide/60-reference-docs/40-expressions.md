@@ -82,7 +82,7 @@ as delimiters when an expression must contain the literal character sequence
 
 ```yaml
 config:
-  jsonData: %{{ {"labels": {"app": "nginx"}} }}
+  jsonData: ${% {"labels": {"app": "nginx"}} %}
 ```
 :::
 
@@ -474,17 +474,6 @@ You can handle `nil` values gracefully in Expr using its
 [nil coalescing](https://expr-lang.org/docs/language-definition#nil-coalescing) and
 [optional chaining](https://expr-lang.org/docs/language-definition#optional-chaining)
 features.
-
-:::
-
-:::note
-
-An optional second argument (`freightMetadata(freightName, 'key-name')`) is supported
-but deprecated as of `v1.8` and will be removed in `v1.10`. While the two-argument
-form returns a single value for the specified key, the single-argument form returns
-the complete metadata map. To migrate, use either dot notation
-(`freightMetadata(freightName).keyName`) or map access syntax
-(`freightMetadata(freightName)['key-name']`) to access specific values.
 
 :::
 

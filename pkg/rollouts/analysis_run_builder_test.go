@@ -1,7 +1,6 @@
 package rollouts
 
 import (
-	"context"
 	"strings"
 	"testing"
 
@@ -290,7 +289,7 @@ func TestAnalysisRunBuilder_Build(t *testing.T) {
 				Build()
 
 			builder := NewAnalysisRunBuilder(c, tt.cfg)
-			ar, err := builder.Build(context.Background(), tt.namespace, tt.verification, tt.options...)
+			ar, err := builder.Build(t.Context(), tt.namespace, tt.verification, tt.options...)
 			tt.assertions(t, ar, err)
 		})
 	}
@@ -894,7 +893,7 @@ func TestAnalysisRunBuilder_buildOwnerReferences(t *testing.T) {
 				Build()
 
 			builder := &AnalysisRunBuilder{client: c}
-			refs, err := builder.buildOwnerReferences(context.Background(), tt.owners)
+			refs, err := builder.buildOwnerReferences(t.Context(), tt.owners)
 			tt.assertions(t, refs, err)
 		})
 	}
@@ -1018,7 +1017,7 @@ func TestAnalysisRunBuilder_getAnalysisTemplates(t *testing.T) {
 
 			builder := &AnalysisRunBuilder{client: c}
 			analysisTemplates, clusterAnalysisTemplates, err := builder.getAnalysisTemplates(
-				context.Background(),
+				t.Context(),
 				tt.namespace,
 				tt.references,
 			)

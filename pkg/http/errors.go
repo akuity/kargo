@@ -2,25 +2,35 @@ package http
 
 import (
 	"encoding/json"
+	"errors"
 	"net/http"
 )
 
-type httpError struct {
+type HTTPError struct { // nolint: revive
 	code int
 	err  error
 }
 
-func (e *httpError) Error() string {
+func (e *HTTPError) Error() string {
 	return e.err.Error()
+}
+
+func (e *HTTPError) Code() int {
+	return e.code
 }
 
 // Error returns an error that can be used to write an
 // HTTP response with an error message and a specific status code.
 func Error(err error, code int) error {
-	return &httpError{
+	return &HTTPError{
 		code: code,
 		err:  err,
 	}
+}
+
+// ErrorStr is like Error but takes a string message instead of an error.
+func ErrorStr(err string, code int) error {
+	return Error(errors.New(err), code)
 }
 
 // WriteErrorJSON writes an error response in JSON format to the provided
@@ -29,7 +39,7 @@ func Error(err error, code int) error {
 // http.StatusInternalServerError, obfuscating the error message in that case.
 func WriteErrorJSON(w http.ResponseWriter, err error) {
 	code := http.StatusInternalServerError
-	if httpErr, ok := err.(*httpError); ok {
+	if httpErr, ok := err.(*HTTPError); ok {
 		code = httpErr.code
 		err = httpErr.err
 	}

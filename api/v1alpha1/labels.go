@@ -49,10 +49,24 @@ const (
 	// discovered dynamically and used to configure ArgoCD shard URLs without
 	// requiring Helm chart redeployment.
 	LabelKeyArgoCDShard = "kargo.akuity.io/argocd-shard"
+	// LabelKeyController is used to identify the controller associated with a
+	// resource. This is only used for heartbeat leases at the moment, but it
+	// could be used more broadly in the future.
+	LabelKeyController = "kargo.akuity.io/controller"
 
 	// LabelValueTrue is used to identify a label that has a value of "true".
 	LabelValueTrue = "true"
 
 	// FinalizerName is the name of the finalizer used by Kargo.
 	FinalizerName = "kargo.akuity.io/finalizer"
+
+	// LabelKeyReplicatedFrom is a label key set on replicated resources to
+	// identify the name of the source resource in the shared resources namespace.
+	LabelKeyReplicatedFrom = "kargo.akuity.io/replicated-from"
+
+	// LabelKeyReplicatedSHA is a label key set on replicated resources to record
+	// the 16-character truncated SHA-256 hash of the source resource's data at
+	// the time it was last replicated. This is used to optimize whether updates
+	// to replicated resources are needed.
+	LabelKeyReplicatedSHA = "kargo.akuity.io/replicated-sha"
 )

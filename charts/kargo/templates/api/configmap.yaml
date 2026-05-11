@@ -7,6 +7,7 @@ metadata:
   labels:
     {{- include "kargo.labels" . | nindent 4 }}
     {{- include "kargo.api.labels" . | nindent 4 }}
+  {{- include "kargo.annotations" (dict "root" . "annotations" .Values.api.annotations) | nindent 2 }}
 data:
   KARGO_NAMESPACE: {{ .Release.Namespace }}
   LOG_LEVEL: {{ quote .Values.api.logLevel }}
@@ -23,7 +24,11 @@ data:
   SECRET_MANAGEMENT_ENABLED: "true"
   {{- end }}
   SYSTEM_RESOURCES_NAMESPACE: {{ quote .Values.global.systemResources.namespace }}
+  SHARED_RESOURCES_NAMESPACE: {{ quote .Values.global.sharedResources.namespace }}
   PERMISSIVE_CORS_POLICY_ENABLED: {{ quote .Values.api.permissiveCORSPolicyEnabled }}
+  {{- if .Values.api.defaultControllerName }}
+  DEFAULT_CONTROLLER_NAME: {{ .Values.api.defaultControllerName | quote }}
+  {{- end }}
   {{- if .Values.api.adminAccount.enabled }}
   ADMIN_ACCOUNT_ENABLED: "true"
   ADMIN_ACCOUNT_TOKEN_ISSUER: {{ include "kargo.api.baseURL" . }}

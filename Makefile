@@ -3,9 +3,9 @@ include $(CURDIR)/hack/tools.mk
 SHELL	      ?= /bin/bash
 EXTENDED_PATH ?= $(CURDIR)/hack/bin:$(PATH)
 
-ARGO_CD_CHART_VERSION		:= 8.1.4
-ARGO_ROLLOUTS_CHART_VERSION := 2.40.1
-CERT_MANAGER_CHART_VERSION 	:= 1.18.2
+ARGO_CD_CHART_VERSION		:= 9.4.3
+ARGO_ROLLOUTS_CHART_VERSION := 2.40.6
+CERT_MANAGER_CHART_VERSION 	:= 1.19.3
 
 BUF_LINT_ERROR_FORMAT	?= text
 GO_LINT_EXTRA_FLAGS 	?= --output.text.print-issued-lines --output.text.colors
@@ -20,6 +20,7 @@ CONTAINER_RUNTIME ?= docker
 IMAGE_REPO 			?= kargo
 LOCAL_REG_PORT			?= 5001
 BASE_IMAGE 			?= localhost:$(LOCAL_REG_PORT)/$(IMAGE_REPO)-base
+APKO_IMAGE 			?= cgr.dev/chainguard/apko
 IMAGE_TAG 			?= dev
 IMAGE_PUSH 			?= false
 IMAGE_PLATFORMS 	?=
@@ -140,6 +141,7 @@ test-unit: install-helm
 				-race \
 				-coverprofile=coverage.txt \
 				-covermode=atomic \
+				-count=1 \
 				./... $(GO_TEST_ARGS); \
 			cd - > /dev/null; \
 		done; \
@@ -167,12 +169,13 @@ clean:
 .PHONY: build-base-image
 build-base-image:
 	mkdir -p build
+	chmod 0777 build
 	cp kargo-base.apko.yaml build
 	$(CONTAINER_RUNTIME) run \
 		--rm \
 		-v $(dir $(realpath $(firstword $(MAKEFILE_LIST))))build:/build \
 		-w /build \
-		cgr.dev/chainguard/apko \
+		$(APKO_IMAGE) \
 		build kargo-base.apko.yaml $(BASE_IMAGE) kargo-base.tar.gz
 	$(CONTAINER_RUNTIME) image load -i build/kargo-base.tar.gz
 
@@ -182,6 +185,25 @@ build-cli:
 		-ldflags "-w -X $(VERSION_PACKAGE).version=$(VERSION) -X $(VERSION_PACKAGE).buildDate=$$(date -u +'%Y-%m-%dT%H:%M:%SZ') -X $(VERSION_PACKAGE).gitCommit=$(GIT_COMMIT) -X $(VERSION_PACKAGE).gitTreeState=$(GIT_TREE_STATE)" \
 		-o bin/kargo-$(GOOS)-$(GOARCH)$(shell [ ${GOOS} = windows ] && echo .exe) \
 		./cmd/cli
+
+.PHONY: build-governance-bot
+build-governance-bot:
+	CGO_ENABLED=0 go build \
+		-ldflags "-w -s" \
+		-o bin/governance-bot \
+		./cmd/governance-bot
+
+.PHONY: build-governance-bot-lambda
+build-governance-bot-lambda:
+	GOOS=linux GOARCH=arm64 CGO_ENABLED=0 go build \
+		-ldflags "-w -s" \
+		-o bin/governance-bot-lambda/bootstrap \
+		./cmd/governance-bot
+
+.PHONY: package-governance-bot-lambda
+package-governance-bot-lambda: build-governance-bot-lambda
+	cd bin/governance-bot-lambda && zip -j governance-bot.zip bootstrap
+	@echo "Package ready: bin/governance-bot-lambda/governance-bot.zip"
 
 .PHONY: sign-and-notarize-cli
 sign-and-notarize-cli: install-quill
@@ -215,7 +237,32 @@ build-cli-with-ui: build-ui build-cli
 ################################################################################
 
 .PHONY: codegen
-codegen: codegen-schema-to-go codegen-proto codegen-controller codegen-ui codegen-docs
+codegen: codegen-openapi codegen-proto codegen-controller codegen-schema-to-go codegen-ui codegen-docs
+
+.PHONY: codegen-openapi
+codegen-openapi: install-swag install-go-swagger install-jq
+	rm -f swagger.json
+	find pkg/client/generated -mindepth 1 ! -name go.mod ! -name go.sum -exec rm -rf {} +
+	rm -rf /tmp/swagger-build
+	mkdir -p /tmp/swagger-build
+	$(SWAG_LINK) init \
+		--generalInfo pkg/server/rest_router.go \
+		--output /tmp/swagger-build \
+		--parseDependency \
+		--parseInternal \
+		--outputTypes json
+	mv /tmp/swagger-build/swagger.json .
+	rm -rf /tmp/swagger-build
+	hack/codegen/fix-swagger-spec.sh swagger.json
+	mkdir -p pkg/client/generated
+	$(GO_SWAGGER_LINK) generate client \
+		-f swagger.json \
+		-t pkg \
+		--client-package client/generated \
+		--model-package client/generated/models \
+		--skip-validation
+	pnpm --dir=ui install --dev
+	pnpm --dir=ui run generate:api
 
 .PHONY: codegen-proto
 codegen-proto: install-protoc install-go-to-protobuf install-protoc-gen-gogo install-goimports install-buf install-protoc-gen-doc
@@ -234,7 +281,7 @@ codegen-controller: install-controller-gen
 		paths=./...
 
 .PHONY: codegen-schema-to-go
-codegen-schema-to-go:
+codegen-schema-to-go: install-goimports
 	npm install -g quicktype@23.0.176
 	./hack/codegen/promotion-step-configs.sh
 	./hack/codegen/subscriptions.sh
@@ -247,6 +294,7 @@ codegen-ui:
 .PHONY: codegen-docs
 codegen-docs:
 	npm install -g @bitnami/readme-generator-for-helm
+	pnpm install --dir docs
 	bash hack/helm-docs/helm-docs.sh
 
 ################################################################################
@@ -353,23 +401,34 @@ hack-build-cli: hack-build-dev-tools
 	@# Local values of GOOS and GOARCH get passed into the container.
 	$(DOCKER_CMD) sh -c 'GOOS=$(GOOS) GOARCH=$(GOARCH) make build-cli'
 
+.PHONY: hack-build-governance-bot
+hack-build-governance-bot: hack-build-dev-tools
+	@# Local values of GOOS and GOARCH get passed into the container.
+	$(DOCKER_CMD) sh -c 'GOOS=$(GOOS) GOARCH=$(GOARCH) make build-governance-bot'
+
 .PHONY: hack-kind-up
-hack-kind-up:
-	ctlptl apply -f hack/kind/cluster.yaml
-	make hack-install-prereqs
+hack-kind-up: install-ctlptl install-kind
+	PATH=$(EXTENDED_PATH) $(CTLPTL) apply -f hack/kind/cluster.yaml
 
 .PHONY: hack-k3d-up
-hack-k3d-up:
-	ctlptl apply -f hack/k3d/cluster.yaml
-	make hack-install-prereqs
+hack-k3d-up: install-ctlptl install-k3d
+	PATH=$(EXTENDED_PATH) $(CTLPTL) apply -f hack/k3d/cluster.yaml
+
+.PHONY: hack-tilt-up
+hack-tilt-up: install-tilt install-helm
+	PATH=$(EXTENDED_PATH) $(TILT) up
+
+.PHONY: hack-tilt-down
+hack-tilt-down: install-tilt
+	PATH=$(EXTENDED_PATH) $(TILT) down
 
 .PHONY: hack-kind-down
-hack-kind-down:
-	ctlptl delete -f hack/kind/cluster.yaml
+hack-kind-down: install-ctlptl install-kind
+	PATH=$(EXTENDED_PATH) $(CTLPTL) delete -f hack/kind/cluster.yaml
 
 .PHONY: hack-k3d-down
-hack-k3d-down:
-	ctlptl delete -f hack/k3d/cluster.yaml
+hack-k3d-down: install-ctlptl install-k3d
+	PATH=$(EXTENDED_PATH) $(CTLPTL) delete -f hack/k3d/cluster.yaml
 
 .PHONY: hack-install-prereqs
 hack-install-prereqs: hack-install-cert-manager hack-install-argocd hack-install-argo-rollouts
@@ -398,8 +457,9 @@ hack-install-argocd: install-helm
 		--set server.service.type=NodePort \
 		--set server.service.nodePortHttp=30080 \
 		--set server.extensions.enabled=true \
-		--set server.extensions.contents[0].name=argo-rollouts \
-		--set server.extensions.contents[0].url=https://github.com/argoproj-labs/rollout-extension/releases/download/v0.3.3/extension.tar \
+		--set server.extensions.extensionList[0].name=argo-rollouts \
+		--set server.extensions.extensionList[0].env[0].name=EXTENSION_URL \
+		--set server.extensions.extensionList[0].env[0].value=https://github.com/argoproj-labs/rollout-extension/releases/download/v0.3.7/extension.tar \
 		--wait
 
 .PHONY: hack-install-argo-rollouts

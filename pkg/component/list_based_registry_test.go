@@ -182,6 +182,94 @@ func TestListBasedRegistry_Get(t *testing.T) {
 	}
 }
 
+func TestListBasedRegistry_GetAll(t *testing.T) {
+	testCases := []struct {
+		name       string
+		registry   *predicateRegistry
+		assertions func(*testing.T, []predicateRegistration, error)
+	}{
+		{
+			name: "error evaluating predicate",
+			registry: &predicateRegistry{
+				registrations: []predicateRegistration{{
+					Predicate: func(context.Context, string) (bool, error) {
+						return false, errors.New("something went wrong")
+					},
+				}},
+			},
+			assertions: func(t *testing.T, regs []predicateRegistration, err error) {
+				require.ErrorContains(t, err, "something went wrong")
+				require.Nil(t, regs)
+			},
+		},
+		{
+			name:     "no matches",
+			registry: &predicateRegistry{},
+			assertions: func(t *testing.T, regs []predicateRegistration, err error) {
+				require.NoError(t, err)
+				require.Empty(t, regs)
+			},
+		},
+		{
+			name: "one match",
+			registry: &predicateRegistry{
+				registrations: []predicateRegistration{
+					{
+						Predicate: func(context.Context, string) (bool, error) {
+							return true, nil
+						},
+						Value:    "match",
+						Metadata: "meta1",
+					},
+					{
+						Predicate: func(context.Context, string) (bool, error) {
+							return false, nil
+						},
+						Value:    "no-match",
+						Metadata: "meta2",
+					},
+				},
+			},
+			assertions: func(t *testing.T, regs []predicateRegistration, err error) {
+				require.NoError(t, err)
+				require.Len(t, regs, 1)
+				require.Equal(t, "match", regs[0].Value)
+			},
+		},
+		{
+			name: "multiple matches",
+			registry: &predicateRegistry{
+				registrations: []predicateRegistration{
+					{
+						Predicate: func(context.Context, string) (bool, error) {
+							return true, nil
+						},
+						Value: "first",
+					},
+					{
+						Predicate: func(context.Context, string) (bool, error) {
+							return true, nil
+						},
+						Value: "second",
+					},
+				},
+			},
+			assertions: func(t *testing.T, regs []predicateRegistration, err error) {
+				require.NoError(t, err)
+				require.Len(t, regs, 2)
+				require.Equal(t, "first", regs[0].Value)
+				require.Equal(t, "second", regs[1].Value)
+			},
+		},
+	}
+	for _, testCase := range testCases {
+		t.Run(testCase.name, func(t *testing.T) {
+			regs, err := testCase.registry.GetAll(t.Context(), "test")
+			testCase.assertions(t, regs, err)
+		})
+	}
+}
+
 func TestListBasedRegistry_WithFunctionValues(t *testing.T) {
 	// Test with function types to ensure the registry works with factory
 	// functions
@@ -213,11 +301,11 @@ func TestListBasedRegistry_WithFunctionValues(t *testing.T) {
 	}
 
 	// Test matching predicate
-	reg, err := registry.Get(context.Background(), "match")
+	reg, err := registry.Get(t.Context(), "match")
 	require.NoError(t, err)
 
 	// Verify the factory function works
-	result, err := reg.Value(context.Background(), "test")
+	result, err := reg.Value(t.Context(), "test")
 	require.NoError(t, err)
 	require.Equal(t, "output-test", result)
 }

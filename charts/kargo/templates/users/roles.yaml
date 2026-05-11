@@ -2,8 +2,10 @@ apiVersion: rbac.authorization.k8s.io/v1
 kind: Role
 metadata:
   name: kargo-admin
+  namespace: {{ .Release.Namespace }}
   labels:
     {{- include "kargo.labels" . | nindent 4 }}
+  {{- include "kargo.annotations" (dict "root" .) | nindent 2 }}
 rules:
 - apiGroups:
   - ""

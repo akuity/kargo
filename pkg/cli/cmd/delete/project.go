@@ -6,13 +6,11 @@ import (
 	"fmt"
 	"slices"
 
-	"connectrpc.com/connect"
 	"github.com/spf13/cobra"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/cli-runtime/pkg/genericclioptions"
 	"k8s.io/cli-runtime/pkg/genericiooptions"
 
-	v1alpha1 "github.com/akuity/kargo/api/service/v1alpha1"
 	kargoapi "github.com/akuity/kargo/api/v1alpha1"
 	"github.com/akuity/kargo/pkg/cli/client"
 	"github.com/akuity/kargo/pkg/cli/config"
@@ -20,6 +18,7 @@ import (
 	"github.com/akuity/kargo/pkg/cli/kubernetes"
 	"github.com/akuity/kargo/pkg/cli/option"
 	"github.com/akuity/kargo/pkg/cli/templates"
+	"github.com/akuity/kargo/pkg/client/generated/core"
 )
 
 type deleteProjectOptions struct {
@@ -93,7 +92,7 @@ func (o *deleteProjectOptions) validate() error {
 
 // run removes the project(s) based on the options.
 func (o *deleteProjectOptions) run(ctx context.Context) error {
-	kargoSvcCli, err := client.GetClientFromConfig(ctx, o.Config, o.ClientOptions)
+	apiClient, err := client.GetClientFromConfig(ctx, o.Config, o.ClientOptions)
 	if err != nil {
 		return fmt.Errorf("get client from config: %w", err)
 	}
@@ -105,9 +104,11 @@ func (o *deleteProjectOptions) run(ctx context.Context) error {
 
 	var errs []error
 	for _, name := range o.Names {
-		if _, err := kargoSvcCli.DeleteProject(ctx, connect.NewRequest(&v1alpha1.DeleteProjectRequest{
-			Name: name,
-		})); err != nil {
+		if _, err := apiClient.Core.DeleteProject(
+			core.NewDeleteProjectParams().
+				WithProject(name),
+			nil,
+		); err != nil {
 			errs = append(errs, err)
 			continue
 		}

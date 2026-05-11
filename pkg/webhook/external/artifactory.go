@@ -221,7 +221,7 @@ func (a *artifactoryWebhookReceiver) getHandler(requestBody []byte) http.Handler
 		}
 		logger = logger.WithValues("repoURL", repoURL)
 		ctx = logging.ContextWithLogger(ctx, logger)
-		refreshWarehouses(ctx, w, a.client, a.project, []string{repoURL}, payload.Data.Tag)
+		refreshWarehouses(ctx, w, a.client, a.project, []string{repoURL}, nil, payload.Data.Tag)
 	})
 }
 

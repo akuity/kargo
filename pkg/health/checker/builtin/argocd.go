@@ -6,7 +6,6 @@ import (
 	"fmt"
 	"slices"
 	"strings"
-	"time"
 
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	"sigs.k8s.io/controller-runtime/pkg/client"
@@ -18,8 +17,6 @@ import (
 )
 
 const applicationStatusesKey = "applicationStatuses"
-
-var appHealthCooldownDuration = 10 * time.Second
 
 // ArgoCDHealthInput is the input for a health check associated with the the
 // argocd-update step.
@@ -202,57 +199,46 @@ func (a *argocdChecker) getApplicationHealth(
 	// Reflect the health and sync status of the Argo CD Application.
 	appStatus.ApplicationStatus = app.Status
 
-	if appStatus.OperationState != nil && appStatus.OperationState.Phase != argocd.OperationSucceeded {
-		// This App is in a transitional state. By Kargo Standards, the Stage cannot
-		// be Healthy.
+	// Argo CD has separate reconciliation loops for operations (like syncing) and
+	// assessing App health. This means that immediately following a completed
+	// operation, App health may reflect state from PRIOR to the operation. If
+	// that status indicates the App is Healthy, but would have indicated
+	// otherwise had it not been stale, it creates the possibility of an
+	// overly-optimistic assessment of Stage health.
+	//
+	// Describing Argo CD behavior in greater detail: When an operation completes
+	// on an App, Argo CD enqueues that App for reconciliation, which will
+	// reassess health and update the App's status.reconciledAt field.
+	//
+	// For our purposes, if reconciledAt is at or after operation completion, we
+	// can infer that health was assessed after the operation completed and can
+	// be trusted. Equal timestamps are acceptable because Argo CD always
+	// enqueues reconciliation after setting finishedAt, so a same-second
+	// reconciledAt means the health loop ran after the operation completed.
+	// If reconciledAt is before finishedAt, the health assessment may be
+	// stale and we need to consider the health status to be unknown.
+	if app.Status.OperationState != nil &&
+		app.Status.OperationState.FinishedAt != nil &&
+		(app.Status.ReconciledAt == nil || app.Status.ReconciledAt.Before(app.Status.OperationState.FinishedAt)) {
+		// Request a hard refresh to ensure Argo CD persists its status
+		// (including reconciledAt) even if nothing else changed. Without
+		// this, Argo CD may skip the status write after reconciliation
+		// if health/sync are identical to before the operation, leaving
+		// reconciledAt stale indefinitely until the next periodic refresh.
+		libargocd.RequestAppRefresh(ctx, a.argocdClient, app)
+		// nolint:staticcheck
 		return kargoapi.HealthStateUnknown,
 			appStatus,
 			fmt.Errorf(
-				"last operation of Argo CD Application %q in namespace %q has "+
-					"status %q; Application health status not trusted",
+				"Argo CD Application %q in namespace %q was not reconciled "+
+					"after its most recent operation completed; "+
+					"Application health status not trusted",
 				appKey.Name,
 				appKey.Namespace,
-				appStatus.OperationState.Phase,
 			)
 	}
 
-	// Argo CD has separate reconciliation loops for operations (like syncing) and
-	// assessing App health. This means that in the moments immediately following
-	// a completed operation, App health may reflect state from PRIOR to the
-	// operation. If that status indicates the App is in a Healthy state, but
-	// would have indicated otherwise had it not been stale, it creates the
-	// possibility of an overly-optimistic assessment of Stage health. If that
-	// occurs following a Promotion, it can prompt a verification process to kick
-	// of prematurely.
-	//
-	// To work around this, we will not immediately trust App health if the most
-	// recently completed operation completed fewer than ten seconds ago. In such
-	// a case, we will deem Stage health Unknown and return an error. This will
-	// cause the Stage to be queued for re-reconciliation with a progressive
-	// backoff. This will continue until the App's health status is considered
-	// reliable.
-	//
-	// TODO(krancour): This workaround can be revisited if/when
-	// https://github.com/argoproj/argo-cd/pull/21120 is merged, as (for newer
-	// versions of Argo CD, at least) it will allow us to accurately determine
-	// whether an App's health was last assessed before or after its most recent
-	// operation completed.
-	if app.Status.OperationState != nil && app.Status.OperationState.FinishedAt != nil {
-		if time.Since(app.Status.OperationState.FinishedAt.Time) < appHealthCooldownDuration {
-			return kargoapi.HealthStateUnknown,
-				appStatus,
-				fmt.Errorf(
-					"last operation of Argo CD Application %q in namespace %q completed "+
-						"less than %s ago; Application health status not trusted",
-					appKey.Name,
-					appKey.Namespace,
-					appHealthCooldownDuration,
-				)
-		}
-	}
-
-	// If we get to here, we assume the Argo CD Application's health state is
-	// reliable.
+	// If we get to here, we can trust the Argo CD Application's status.
 
 	// Check for any error conditions. If these are found, the application is
 	// considered unhealthy as they may indicate a problem which can result in
@@ -272,17 +258,15 @@ func (a *argocdChecker) getApplicationHealth(
 		return kargoapi.HealthStateUnhealthy, appStatus, errors.Join(issues...)
 	}
 
-	stageHealth, err := a.stageHealthForAppHealth(app)
-	if err != nil || stageHealth != kargoapi.HealthStateHealthy {
-		// If there was an error or the App is not Healthy, we're done.
+	// Check sync status before health status. After an operation completes, the
+	// sync revision is updated immediately by the operation, while health may
+	// still reflect pre-operation state. By checking sync first, a wrong
+	// revision is caught before we even consider health.
+	if stageHealth, err := a.stageHealthForAppSync(app, desiredRevisions); err != nil {
 		return stageHealth, appStatus, err
 	}
 
-	// If we get to here, the App is Healthy and, so far, the Stage appears to be
-	// as well. If desiredRevisions are known, however, this needs to be factored
-	// into Stage health. Assess how App sources being synced to the correct or
-	// incorrect revisions affects overall Stage health:
-	stageHealth, err = a.stageHealthForAppSync(app, desiredRevisions)
+	stageHealth, err := a.stageHealthForAppHealth(app)
 	return stageHealth, appStatus, err
 }
 

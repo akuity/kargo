@@ -156,6 +156,8 @@ message DatadogMetric {
   optional string formula = 4;
 
   optional string apiVersion = 5;
+
+  optional string aggregator = 6;
 }
 
 message DryRun {

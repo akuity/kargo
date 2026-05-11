@@ -4,7 +4,10 @@ import (
 	"crypto/sha256"
 	"fmt"
 	"regexp"
+	"time"
 )
+
+const tokenCacheExpiryMargin = 5 * time.Minute
 
 // ecrURLRegex is a regex that matches ECR URLs.
 var ecrURLRegex = regexp.MustCompile(`^[0-9]{12}\.dkr\.ecr\.(.+)\.amazonaws\.com/`)

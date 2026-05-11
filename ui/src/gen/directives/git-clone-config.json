@@ -14,12 +14,12 @@
   },
   "repoURL": {
    "type": "string",
-   "description": "The URL of a remote Git repository to clone. Required.",
+   "description": "The URL of a remote Git repository to clone. Required. Deprecated: Support for SSH URLs (ssh:// and SCP-style git@host:path) is deprecated as of v1.10.0 and will be removed in v1.13.0. Use HTTPS URLs instead.",
    "minLength": 1
   },
   "author": {
    "type": "object",
-   "description": "Default authorship information for any commits made to the cloned repository. If provided, this overrides any system-level defaults. Note: Configuration of the `git-commit` step can override this information.",
+   "description": "Default authorship information for any commits made to the cloned repository. If provided, this overrides any system-level defaults. Note: Configuration of the `git-commit` and `git-tag` steps can override this information.",
    "additionalProperties": false,
    "properties": {
     "email": {

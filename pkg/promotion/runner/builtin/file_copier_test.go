@@ -1,7 +1,6 @@
 package builtin
 
 import (
-	"context"
 	"os"
 	"path/filepath"
 	"strings"
@@ -359,7 +358,7 @@ func Test_fileCopier_run(t *testing.T) {
 		t.Run(tt.name, func(t *testing.T) {
 			workDir := tt.setupFiles(t)
 			result, err := runner.run(
-				context.Background(),
+				t.Context(),
 				&promotion.StepContext{WorkDir: workDir},
 				tt.cfg,
 			)

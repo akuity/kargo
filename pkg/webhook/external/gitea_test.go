@@ -8,6 +8,7 @@ import (
 	"testing"
 
 	"github.com/stretchr/testify/require"
+	apiextensionsv1 "k8s.io/apiextensions-apiserver/pkg/apis/apiextensions/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"
@@ -17,12 +18,78 @@ import (
 	"github.com/akuity/kargo/pkg/indexer"
 )
 
+const giteaWebhookRequestBodyPullRequestClosedMerged = `
+{
+	"action": "closed",
+	"number": 42,
+	"pull_request": {
+		"merged": true,
+		"html_url": "https://gitea.com/example/repo/pulls/42"
+	},
+	"repository": {
+		"clone_url": "https://gitea.com/example/repo.git"
+	}
+}`
+
+const giteaWebhookRequestBodyPullRequestClosedNotMerged = `
+{
+	"action": "closed",
+	"number": 42,
+	"pull_request": {
+		"merged": false,
+		"html_url": "https://gitea.com/example/repo/pulls/42"
+	},
+	"repository": {
+		"clone_url": "https://gitea.com/example/repo.git"
+	}
+}`
+
+const giteaWebhookRequestBodyPullRequestOpened = `
+{
+	"action": "opened",
+	"number": 42,
+	"repository": {
+		"clone_url": "https://gitea.com/example/repo.git"
+	}
+}`
+
 const giteaWebhookRequestBodyPush = `
 {
 	"ref": "refs/heads/main",
 	"repository": {
 		"clone_url": "https://gitea.com/example/repo.git"
 	}
+}`
+
+const giteaWebhookRequestBodyPushWithCommits = `
+{
+	"ref": "refs/heads/main",
+	"repository": {
+		"clone_url": "https://gitea.com/example/repo.git"
+	},
+	"commits": [
+		{
+			"added": ["apps/foo/values.yaml"],
+			"modified": ["apps/foo/deployment.yaml"],
+			"removed": []
+		}
+	]
+}`
+
+const giteaWebhookRequestBodyPushTruncated = `
+{
+	"ref": "refs/heads/main",
+	"repository": {
+		"clone_url": "https://gitea.com/example/repo.git"
+	},
+	"commits": [
+		{
+			"added": ["apps/bar/values.yaml"],
+			"modified": [],
+			"removed": []
+		}
+	],
+	"total_commits": 25
 }`
 
 func TestGiteaHandler(t *testing.T) {
@@ -179,6 +246,272 @@ func TestGiteaHandler(t *testing.T) {
 			).Build(),
 			req: func() *http.Request {
 				b := []byte(giteaWebhookRequestBodyPush)
+				req := httptest.NewRequest(
+					http.MethodPost,
+					testURL,
+					bytes.NewBuffer(b),
+				)
+				req.Header.Set(giteaSignatureHeader, sign(b))
+				req.Header.Set(giteaEventTypeHeader, giteaEventTypePush)
+				return req
+			},
+			assertions: func(t *testing.T, rr *httptest.ResponseRecorder) {
+				require.Equal(t, http.StatusOK, rr.Code)
+				require.JSONEq(t, `{"msg":"refreshed 1 warehouse(s)"}`, rr.Body.String())
+			},
+		},
+		{
+			name:       "path mismatch — warehouse not refreshed",
+			secretData: testSecretData,
+			client: fake.NewClientBuilder().WithScheme(testScheme).WithObjects(
+				&kargoapi.Warehouse{
+					ObjectMeta: metav1.ObjectMeta{
+						Namespace: testProjectName,
+						Name:      "fake-warehouse",
+					},
+					Spec: kargoapi.WarehouseSpec{
+						InternalSubscriptions: []kargoapi.RepoSubscription{{
+							Git: &kargoapi.GitSubscription{
+								RepoURL:      "https://gitea.com/example/repo",
+								IncludePaths: []string{"glob:apps/bar/**"},
+							},
+						}},
+					},
+				},
+			).WithIndex(
+				&kargoapi.Warehouse{},
+				indexer.WarehousesBySubscribedURLsField,
+				indexer.WarehousesBySubscribedURLs,
+			).Build(),
+			req: func() *http.Request {
+				b := []byte(giteaWebhookRequestBodyPushWithCommits)
+				req := httptest.NewRequest(
+					http.MethodPost,
+					testURL,
+					bytes.NewBuffer(b),
+				)
+				req.Header.Set(giteaSignatureHeader, sign(b))
+				req.Header.Set(giteaEventTypeHeader, giteaEventTypePush)
+				return req
+			},
+			assertions: func(t *testing.T, rr *httptest.ResponseRecorder) {
+				require.Equal(t, http.StatusOK, rr.Code)
+				require.JSONEq(t, `{"msg":"refreshed 0 warehouse(s)"}`, rr.Body.String())
+			},
+		},
+		{
+			name:       "path match — warehouse refreshed",
+			secretData: testSecretData,
+			client: fake.NewClientBuilder().WithScheme(testScheme).WithObjects(
+				&kargoapi.Warehouse{
+					ObjectMeta: metav1.ObjectMeta{
+						Namespace: testProjectName,
+						Name:      "fake-warehouse",
+					},
+					Spec: kargoapi.WarehouseSpec{
+						InternalSubscriptions: []kargoapi.RepoSubscription{{
+							Git: &kargoapi.GitSubscription{
+								RepoURL:      "https://gitea.com/example/repo",
+								IncludePaths: []string{"glob:apps/foo/**"},
+							},
+						}},
+					},
+				},
+			).WithIndex(
+				&kargoapi.Warehouse{},
+				indexer.WarehousesBySubscribedURLsField,
+				indexer.WarehousesBySubscribedURLs,
+			).Build(),
+			req: func() *http.Request {
+				b := []byte(giteaWebhookRequestBodyPushWithCommits)
+				req := httptest.NewRequest(
+					http.MethodPost,
+					testURL,
+					bytes.NewBuffer(b),
+				)
+				req.Header.Set(giteaSignatureHeader, sign(b))
+				req.Header.Set(giteaEventTypeHeader, giteaEventTypePush)
+				return req
+			},
+			assertions: func(t *testing.T, rr *httptest.ResponseRecorder) {
+				require.Equal(t, http.StatusOK, rr.Code)
+				require.JSONEq(t, `{"msg":"refreshed 1 warehouse(s)"}`, rr.Body.String())
+			},
+		},
+		{
+			name:       "non-closed pull_request action returns 200 OK",
+			secretData: testSecretData,
+			req: func() *http.Request {
+				b := []byte(giteaWebhookRequestBodyPullRequestOpened)
+				req := httptest.NewRequest(
+					http.MethodPost,
+					testURL,
+					bytes.NewBuffer(b),
+				)
+				req.Header.Set(giteaSignatureHeader, sign(b))
+				req.Header.Set(giteaEventTypeHeader, giteaEventTypePullRequest)
+				return req
+			},
+			assertions: func(t *testing.T, rr *httptest.ResponseRecorder) {
+				require.Equal(t, http.StatusOK, rr.Code)
+				require.JSONEq(t, "{}", rr.Body.String())
+			},
+		},
+		{
+			name:       "closed+merged pull_request refreshes matching Promotion",
+			secretData: testSecretData,
+			client: fake.NewClientBuilder().WithScheme(testScheme).WithObjects(
+				&kargoapi.Promotion{
+					ObjectMeta: metav1.ObjectMeta{
+						Namespace: testProjectName,
+						Name:      "promo-wait-for-pr",
+					},
+					Spec: kargoapi.PromotionSpec{
+						Stage: "test-stage",
+						Steps: []kargoapi.PromotionStep{{
+							Uses: "git-wait-for-pr",
+							As:   "wait-pr",
+						}},
+					},
+					Status: kargoapi.PromotionStatus{
+						Phase:       kargoapi.PromotionPhaseRunning,
+						CurrentStep: 0,
+						State: &apiextensionsv1.JSON{
+							Raw: []byte(`{
+								"wait-pr": {
+									"pr": {
+										"url": "https://gitea.com/example/repo/pulls/42",
+										"open": true,
+										"merged": false
+									}
+								}
+							}`),
+						},
+					},
+				},
+			).WithIndex(
+				&kargoapi.Promotion{},
+				indexer.RunningPromotionsByPullRequestURLField,
+				indexer.RunningPromotionsByPullRequestURL,
+			).Build(),
+			req: func() *http.Request {
+				b := []byte(giteaWebhookRequestBodyPullRequestClosedMerged)
+				req := httptest.NewRequest(
+					http.MethodPost,
+					testURL,
+					bytes.NewBuffer(b),
+				)
+				req.Header.Set(giteaSignatureHeader, sign(b))
+				req.Header.Set(giteaEventTypeHeader, giteaEventTypePullRequest)
+				return req
+			},
+			assertions: func(t *testing.T, rr *httptest.ResponseRecorder) {
+				require.Equal(t, http.StatusOK, rr.Code)
+				require.JSONEq(t, `{"msg":"refreshed 1 promotion(s)"}`, rr.Body.String())
+			},
+		},
+		{
+			name:       "closed+not-merged pull_request refreshes matching Promotion",
+			secretData: testSecretData,
+			client: fake.NewClientBuilder().WithScheme(testScheme).WithObjects(
+				&kargoapi.Promotion{
+					ObjectMeta: metav1.ObjectMeta{
+						Namespace: testProjectName,
+						Name:      "promo-wait-for-pr",
+					},
+					Spec: kargoapi.PromotionSpec{
+						Stage: "test-stage",
+						Steps: []kargoapi.PromotionStep{{
+							Uses: "git-wait-for-pr",
+							As:   "wait-pr",
+						}},
+					},
+					Status: kargoapi.PromotionStatus{
+						Phase:       kargoapi.PromotionPhaseRunning,
+						CurrentStep: 0,
+						State: &apiextensionsv1.JSON{
+							Raw: []byte(`{
+								"wait-pr": {
+									"pr": {
+										"url": "https://gitea.com/example/repo/pulls/42",
+										"open": true,
+										"merged": false
+									}
+								}
+							}`),
+						},
+					},
+				},
+			).WithIndex(
+				&kargoapi.Promotion{},
+				indexer.RunningPromotionsByPullRequestURLField,
+				indexer.RunningPromotionsByPullRequestURL,
+			).Build(),
+			req: func() *http.Request {
+				b := []byte(giteaWebhookRequestBodyPullRequestClosedNotMerged)
+				req := httptest.NewRequest(
+					http.MethodPost,
+					testURL,
+					bytes.NewBuffer(b),
+				)
+				req.Header.Set(giteaSignatureHeader, sign(b))
+				req.Header.Set(giteaEventTypeHeader, giteaEventTypePullRequest)
+				return req
+			},
+			assertions: func(t *testing.T, rr *httptest.ResponseRecorder) {
+				require.Equal(t, http.StatusOK, rr.Code)
+				require.JSONEq(t, `{"msg":"refreshed 1 promotion(s)"}`, rr.Body.String())
+			},
+		},
+		{
+			name:       "closed pull_request with no matching Promotions",
+			secretData: testSecretData,
+			client: fake.NewClientBuilder().WithScheme(testScheme).WithIndex(
+				&kargoapi.Promotion{},
+				indexer.RunningPromotionsByPullRequestURLField,
+				indexer.RunningPromotionsByPullRequestURL,
+			).Build(),
+			req: func() *http.Request {
+				b := []byte(giteaWebhookRequestBodyPullRequestClosedMerged)
+				req := httptest.NewRequest(
+					http.MethodPost,
+					testURL,
+					bytes.NewBuffer(b),
+				)
+				req.Header.Set(giteaSignatureHeader, sign(b))
+				req.Header.Set(giteaEventTypeHeader, giteaEventTypePullRequest)
+				return req
+			},
+			assertions: func(t *testing.T, rr *httptest.ResponseRecorder) {
+				require.Equal(t, http.StatusOK, rr.Code)
+				require.JSONEq(t, `{"msg":"refreshed 0 promotion(s)"}`, rr.Body.String())
+			},
+		},
+		{
+			name:       "truncated commits — path filtering skipped, warehouse refreshed",
+			secretData: testSecretData,
+			client: fake.NewClientBuilder().WithScheme(testScheme).WithObjects(
+				&kargoapi.Warehouse{
+					ObjectMeta: metav1.ObjectMeta{
+						Namespace: testProjectName,
+						Name:      "fake-warehouse",
+					},
+					Spec: kargoapi.WarehouseSpec{
+						InternalSubscriptions: []kargoapi.RepoSubscription{{
+							Git: &kargoapi.GitSubscription{
+								RepoURL:      "https://gitea.com/example/repo",
+								IncludePaths: []string{"glob:apps/foo/**"},
+							},
+						}},
+					},
+				},
+			).WithIndex(
+				&kargoapi.Warehouse{},
+				indexer.WarehousesBySubscribedURLsField,
+				indexer.WarehousesBySubscribedURLs,
+			).Build(),
+			req: func() *http.Request {
+				b := []byte(giteaWebhookRequestBodyPushTruncated)
 				req := httptest.NewRequest(
 					http.MethodPost,
 					testURL,

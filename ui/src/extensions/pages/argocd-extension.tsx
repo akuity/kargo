@@ -8,13 +8,17 @@ import { useProjectBreadcrumbs } from '@ui/features/project/project-utils';
 import { useExtensionsContext } from '../extensions-context';
 import { useIsAnyExtensionLoaded } from '../utils';
 
+import { useArgoCDURL } from './use-argocd-url';
+
 export const ArgoCDExtension = () => {
-  const { appName } = useParams();
+  const { appName, stageName, namespace, name } = useParams();
   const projectBreadcrumbs = useProjectBreadcrumbs();
   const { argoCDExtension } = useExtensionsContext();
   const isAnyExenstionLoaded = useIsAnyExtensionLoaded();
 
-  if (!isAnyExenstionLoaded) {
+  const { argocdURL, isPending } = useArgoCDURL({ project: name, stageName });
+
+  if (!isAnyExenstionLoaded || !appName || !stageName || !namespace) {
     return <Navigate to='/' replace />;
   }
 
@@ -26,7 +30,16 @@ export const ArgoCDExtension = () => {
           items={[...projectBreadcrumbs, { title: 'ArgoCD' }, { title: appName }]}
         />
       </BaseHeader>
-      {argoCDExtension ? <argoCDExtension.component /> : <LoadingState />}
+      {isPending || !argoCDExtension ? (
+        <LoadingState />
+      ) : (
+        <argoCDExtension.component
+          stageName={stageName}
+          namespace={namespace}
+          appName={appName}
+          argocdURL={argocdURL}
+        />
+      )}
     </>
   );
 };

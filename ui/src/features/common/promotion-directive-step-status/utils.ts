@@ -33,3 +33,7 @@ export const getPromotionDirectiveStepStatus = (
 
   return PromotionDirectiveStepStatus.WONT_RUN;
 };
+
+export const isFailedStep = (stepIndex: number, promotionStatus?: PromotionStatus) =>
+  getPromotionDirectiveStepStatus(stepIndex, promotionStatus) ===
+  PromotionDirectiveStepStatus.FAILED;

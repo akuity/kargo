@@ -85,8 +85,11 @@ func (o *apiOptions) run(ctx context.Context) error {
 		return fmt.Errorf("error getting Kubernetes client REST config: %w", err)
 	}
 	kubernetes.ConfigureQPSBurst(ctx, restCfg, o.QPS, o.Burst)
+	serverCfg.RestConfig = restCfg
 
-	kubeClientOptions := kubernetes.ClientOptions{}
+	kubeClientOptions := kubernetes.ClientOptions{
+		KargoNamespace: serverCfg.KargoNamespace,
+	}
 	if serverCfg.OIDCConfig != nil {
 		kubeClientOptions.GlobalServiceAccountNamespaces = serverCfg.OIDCConfig.GlobalServiceAccountNamespaces
 	}
@@ -145,12 +148,23 @@ func (o *apiOptions) run(ctx context.Context) error {
 			o.Logger.Error(watchErr, "ArgoCD shard watcher stopped with error")
 		}
 	}()
+	recorder, shutdown := event.NewRecorderWithShutdown(
+		ctx,
+		kubeClient.InternalClient().Scheme(),
+		kubeClient.InternalClient(),
+		"api",
+	)
+	sender := k8sevent.NewEventSenderWithShutdown(
+		recorder, shutdown,
+	)
+	defer sender.Shutdown()
 
 	srv := server.NewServer(
 		serverCfg,
 		kubeClient,
 		rbac.NewKubernetesRolesDatabase(
 			kubeClient,
+			kubeClient.InternalClient(),
 			rbac.RolesDatabaseConfigFromEnv(),
 		),
 		k8sevent.NewEventSender(
@@ -162,6 +176,7 @@ func (o *apiOptions) run(ctx context.Context) error {
 			),
 		),
 		argoCDURLStore,
+		sender,
 	)
 	l, err := net.Listen("tcp", fmt.Sprintf("%s:%s", o.BindAddress, o.Port))
 	if err != nil {

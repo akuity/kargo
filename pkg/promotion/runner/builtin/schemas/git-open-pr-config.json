@@ -7,7 +7,7 @@
   "properties": {
     "createTargetBranch": {
       "type": "boolean",
-      "description": "Indicates whether a new, empty orphan branch should be created and pushed to the remote if the target branch does not already exist there. Default is false."
+      "description": "Deprecated. Is a no-op if set. Will be removed in a future release."
     },
     "insecureSkipTLSVerify" : {
       "type": "boolean",
@@ -20,7 +20,7 @@
     },
     "repoURL": {
       "type": "string",
-      "description": "The URL of a remote Git repository to clone.",
+      "description": "The URL of a remote Git repository to clone. Deprecated: Support for SSH URLs (ssh:// and SCP-style git@host:path) is deprecated as of v1.10.0 and will be removed in v1.13.0. Use HTTPS URLs instead.",
       "minLength": 1,
       "format": "uri"
     },

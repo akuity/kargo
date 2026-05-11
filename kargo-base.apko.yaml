@@ -10,7 +10,7 @@ contents:
   - gpg~2
   - gpg-agent~2
   - helm~3 # Required for Kustomize Helm plugin
-  - openssh-client~9
+  - openssh-client~10
   - tini
 
 accounts:

@@ -1,19 +1,14 @@
-import { createConnectQueryKey, useMutation, useQuery } from '@connectrpc/connect-query';
 import { useQueryClient } from '@tanstack/react-query';
 import { Modal } from 'antd';
 import { useForm } from 'react-hook-form';
+import { stringify } from 'yaml';
 
 import YamlEditor from '@ui/features/common/code-editor/yaml-editor-lazy';
 import { FieldContainer } from '@ui/features/common/form/field-container';
 import { ModalComponentProps } from '@ui/features/common/modal/modal-context';
-import {
-  getPromotionTask,
-  listPromotionTasks,
-  updateResource
-} from '@ui/gen/api/service/v1alpha1/service-KargoService_connectquery';
-import { RawFormat } from '@ui/gen/api/service/v1alpha1/service_pb';
-import { PromotionTask } from '@ui/gen/api/v1alpha1/generated_pb';
-import { decodeRawData } from '@ui/utils/decode-raw-data';
+import { getListPromotionTasksQueryKey, useGetPromotionTask } from '@ui/gen/api/v2/core/core';
+import { PromotionTask } from '@ui/gen/api/v2/models';
+import { useUpdateResource } from '@ui/gen/api/v2/resources/resources';
 
 import { getPromotionTaskYAMLExample } from './promotion-task-example';
 
@@ -23,38 +18,30 @@ type EditPromotionTaskModalProps = ModalComponentProps & {
 
 export const EditPromotionTaskModal = (props: EditPromotionTaskModalProps) => {
   const queryClient = useQueryClient();
+  const project = props.promotionTask?.metadata?.namespace || '';
+  const taskName = props.promotionTask?.metadata?.name || '';
 
-  const getPromotionTaskQuery = useQuery(getPromotionTask, {
-    project: props.promotionTask?.metadata?.namespace,
-    name: props.promotionTask?.metadata?.name,
-    format: RawFormat.YAML
+  const getPromotionTaskQuery = useGetPromotionTask(project, taskName);
+
+  const updateResourceMutation = useUpdateResource({
+    mutation: {
+      onSuccess: () => {
+        queryClient.invalidateQueries({
+          queryKey: getListPromotionTasksQueryKey(project)
+        });
+        props.hide();
+      }
+    }
   });
-
-  const updateResourceMutation = useMutation(updateResource, { onSuccess: () => props.hide() });
 
   const editPromotionTaskForm = useForm({
     values: {
-      value: decodeRawData(getPromotionTaskQuery.data)
+      value: getPromotionTaskQuery.data?.data ? stringify(getPromotionTaskQuery.data.data) : ''
     }
   });
 
   const onSubmit = editPromotionTaskForm.handleSubmit((data) => {
-    const textEncoder = new TextEncoder();
-
-    updateResourceMutation.mutate(
-      {
-        manifest: textEncoder.encode(data.value)
-      },
-      {
-        onSuccess: () =>
-          queryClient.invalidateQueries({
-            queryKey: createConnectQueryKey({
-              schema: listPromotionTasks,
-              cardinality: 'infinite'
-            })
-          })
-      }
-    );
+    updateResourceMutation.mutate({ data: data.value });
   });
 
   return (
@@ -74,9 +61,7 @@ export const EditPromotionTaskModal = (props: EditPromotionTaskModalProps) => {
             onChange={(e) => field.onChange(e || '')}
             isLoading={getPromotionTaskQuery.isFetching}
             height='500px'
-            placeholder={getPromotionTaskYAMLExample(
-              props.promotionTask?.metadata?.name || 'custom-promotion-task'
-            )}
+            placeholder={getPromotionTaskYAMLExample(taskName || 'custom-promotion-task')}
             label='Spec'
           />
         )}

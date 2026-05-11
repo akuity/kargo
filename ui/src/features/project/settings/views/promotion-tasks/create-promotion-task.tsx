@@ -1,4 +1,3 @@
-import { createConnectQueryKey, useMutation } from '@connectrpc/connect-query';
 import { useQueryClient } from '@tanstack/react-query';
 import Modal from 'antd/es/modal/Modal';
 import Link from 'antd/es/typography/Link';
@@ -7,10 +6,8 @@ import { useForm } from 'react-hook-form';
 import YamlEditor from '@ui/features/common/code-editor/yaml-editor-lazy';
 import { FieldContainer } from '@ui/features/common/form/field-container';
 import { ModalComponentProps } from '@ui/features/common/modal/modal-context';
-import {
-  createResource,
-  listPromotionTasks
-} from '@ui/gen/api/service/v1alpha1/service-KargoService_connectquery';
+import { getListPromotionTasksQueryKey } from '@ui/gen/api/v2/core/core';
+import { useCreateResource } from '@ui/gen/api/v2/resources/resources';
 
 import { getPromotionTaskYAMLExample } from './promotion-task-example';
 
@@ -21,7 +18,16 @@ type CreatePromotionTaskModalProps = ModalComponentProps & {
 export const CreatePromotionTaskModal = (props: CreatePromotionTaskModalProps) => {
   const queryClient = useQueryClient();
 
-  const createResourceMutation = useMutation(createResource);
+  const createResourceMutation = useCreateResource({
+    mutation: {
+      onSuccess: () => {
+        queryClient.invalidateQueries({
+          queryKey: getListPromotionTasksQueryKey(props.namespace)
+        });
+        props.hide();
+      }
+    }
+  });
 
   const promotionTaskForm = useForm({
     defaultValues: {
@@ -30,24 +36,7 @@ export const CreatePromotionTaskModal = (props: CreatePromotionTaskModalProps) =
   });
 
   const onSubmit = promotionTaskForm.handleSubmit((data) => {
-    const textEncoder = new TextEncoder();
-
-    createResourceMutation.mutate(
-      {
-        manifest: textEncoder.encode(data.value)
-      },
-      {
-        onSuccess: () => {
-          queryClient.invalidateQueries({
-            queryKey: createConnectQueryKey({
-              schema: listPromotionTasks,
-              cardinality: 'finite'
-            })
-          });
-          props.hide();
-        }
-      }
-    );
+    createResourceMutation.mutate({ data: data.value });
   });
 
   return (

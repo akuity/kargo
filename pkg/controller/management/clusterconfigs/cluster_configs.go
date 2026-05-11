@@ -200,6 +200,7 @@ func (r *reconciler) syncWebhookReceivers(
 
 	if len(clusterCfg.Spec.WebhookReceivers) == 0 {
 		logger.Debug("ClusterConfig does not define any webhook receiver configurations")
+		status.WebhookReceivers = nil
 		conditions.Delete(status, kargoapi.ConditionTypeReconciling)
 		conditions.Set(status, &metav1.Condition{
 			Type:               kargoapi.ConditionTypeReady,
@@ -253,6 +254,7 @@ func (r *reconciler) syncWebhookReceivers(
 		receiver, err := external.NewReceiver(
 			ctx,
 			r.client,
+			r.client, // cluster scoped secrets can be cached so we can use the regular client as the api reader
 			r.cfg.ExternalWebhookServerBaseURL,
 			"",                             // No Project name for cluster-level receivers
 			r.cfg.SystemResourcesNamespace, // Secret namespace is one designated for cluster-level Secrets

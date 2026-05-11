@@ -53,6 +53,7 @@ export type SettingsExtension = {
   label: string;
   icon: IconProp;
   path: string;
+  group?: string;
 };
 
 export type ProjectSettingsExtension = {
@@ -63,9 +64,16 @@ export type ProjectSettingsExtension = {
   path: string;
 };
 
+export type ArgoCDExtensionComponentProps = {
+  stageName: string;
+  namespace: string;
+  appName: string;
+  argocdURL: string;
+};
+
 export type ArgoCDExtension = {
   type: 'argocdExtension';
-  component: () => React.ReactNode;
+  component: (props: ArgoCDExtensionComponentProps) => React.ReactNode;
 };
 
 export type Extension =

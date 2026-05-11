@@ -2,11 +2,13 @@ package builtin
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"sync"
 	"time"
 
 	securejoin "github.com/cyphar/filepath-securejoin"
+	"github.com/kelseyhightower/envconfig"
 	"github.com/xeipuuv/gojsonschema"
 	"k8s.io/apimachinery/pkg/util/wait"
 	"k8s.io/client-go/util/retry"
@@ -33,6 +35,9 @@ const (
 )
 
 func init() {
+	cfg := gitPusherConfigFromEnv()
+	var once sync.Once
+	var pusher promotion.StepRunner
 	promotion.DefaultStepRunnerRegistry.MustRegister(
 		promotion.StepRunnerRegistration{
 			Name: stepKindGitPush,
@@ -41,25 +46,50 @@ func init() {
 					promotion.StepCapabilityAccessCredentials,
 				},
 			},
-			Value: newGitPusher,
+			// This factory function closes over a single instance of gitPushPusher
+			// so that that its mutexes are shared across all executions of this step
+			// runner, which is necessary to ensure proper locking behavior.
+			Value: func(caps promotion.StepRunnerCapabilities) promotion.StepRunner {
+				once.Do(func() {
+					pusher = newGitPusher(caps, cfg)
+				})
+				return pusher
+			},
 		},
 	)
 }
 
+// gitPusherConfig holds controller-level configuration for the git-push step,
+// populated from environment variables.
+type gitPusherConfig struct {
+	PushIntegrationPolicy git.PushIntegrationPolicy `envconfig:"GIT_PUSH_INTEGRATION_POLICY" default:"AlwaysRebase"`
+}
+
+func gitPusherConfigFromEnv() gitPusherConfig {
+	cfg := gitPusherConfig{}
+	envconfig.MustProcess("", &cfg)
+	return cfg
+}
+
 // gitPushPusher is an implementation of the promotion.StepRunner interface that
-// pushes commits from a local Git repository to a remote Git repository.
+// pushes commits and tags from a local Git repository to a remote Git repository.
 type gitPushPusher struct {
 	schemaLoader gojsonschema.JSONLoader
 	credsDB      credentials.Database
+	cfg          gitPusherConfig
 	branchMus    map[string]*sync.Mutex
 	masterMu     sync.Mutex
 }
 
 // newGitPusher returns an implementation of the promotion.StepRunner interface
 // that pushes commits from a local Git repository to a remote Git repository.
-func newGitPusher(caps promotion.StepRunnerCapabilities) promotion.StepRunner {
+func newGitPusher(
+	caps promotion.StepRunnerCapabilities,
+	cfg gitPusherConfig,
+) promotion.StepRunner {
 	return &gitPushPusher{
 		credsDB:      caps.CredsDB,
+		cfg:          cfg,
 		branchMus:    map[string]*sync.Mutex{},
 		schemaLoader: getConfigSchemaLoader(stepKindGitPush),
 	}
@@ -129,13 +159,9 @@ func (g *gitPushPusher) run(
 			fmt.Errorf("error loading working tree from %s: %w", cfg.Path, err)
 	}
 	pushOpts := &git.PushOptions{
-		// Start with whatever was specified in the config, which may be empty.
-		TargetBranch: cfg.TargetBranch,
-		// Attempt to rebase on top of the state of the remote branch to help
-		// avoid conflicts.
-		PullRebase: true,
-		// Allow force push if explicitly requested in config
-		Force: cfg.Force,
+		TargetBranch:      cfg.TargetBranch,
+		IntegrationPolicy: g.cfg.PushIntegrationPolicy,
+		Force:             cfg.Force,
 	}
 	// If we're supposed to generate a target branch name, do so.
 	if cfg.GenerateTargetBranch {
@@ -154,10 +180,17 @@ func (g *gitPushPusher) run(
 		// branch is specific to this Promotion only holds, it is also safe to do this.
 		pushOpts.Force = true
 	}
-
-	// Disable pull/rebase when force pushing to allow overwriting remote history
+	if cfg.Tag != "" {
+		pushOpts.Tag = cfg.Tag
+		// If we're pushing a tag, we should not attempt to integrate remote
+		// changes first as tags are immutable and any existing tag with the
+		// same name on the remote would cause the integration to fail.
+		pushOpts.IntegrationPolicy = git.PushIntegrationPolicyNone
+	}
+	// Disable remote change integration when force pushing to allow
+	// overwriting remote history.
 	if pushOpts.Force {
-		pushOpts.PullRebase = false
+		pushOpts.IntegrationPolicy = git.PushIntegrationPolicyNone
 	}
 	if pushOpts.TargetBranch == "" {
 		// If targetBranch is still empty, we want to set it to the current branch
@@ -194,16 +227,23 @@ func (g *gitPushPusher) run(
 		backoff,
 		git.IsNonFastForward,
 		func() error {
-			// This will obtain a lock on the repo + branch before performing a
-			// pull/rebase + push. This means retries should only ever be necessary
+			// This will obtain a lock on the repo + branch before integrating remote
+			// changes into the local branch and pushing the branch to the remote
+			// using the GitHub API. This means retries should only ever be necessary
 			// when there are multiple sharded controllers concurrently executing
 			// Promotions that push to the same branch.
 			return g.push(workTree, pushOpts)
 		},
 	); err != nil {
 		if git.IsMergeConflict(err) {
-			// Special case: A merge conflict requires manual resolution and no amount
-			// of retries will fix that.
+			// A merge conflict requires manual resolution and no amount of retries
+			// will fix that.
+			return promotion.StepResult{Status: kargoapi.PromotionStepStatusFailed},
+				&promotion.TerminalError{Err: err}
+		}
+		if errors.Is(err, git.ErrRebaseUnsafe) {
+			// The integration policy prohibits merge fallback and rebase is unsafe.
+			// No amount of retries will fix this.
 			return promotion.StepResult{Status: kargoapi.PromotionStepStatusFailed},
 				&promotion.TerminalError{Err: err}
 		}
@@ -224,27 +264,31 @@ func (g *gitPushPusher) run(
 	if cfg.Provider != nil {
 		gpOpts.Name = string(*cfg.Provider)
 	}
+
+	output := map[string]any{stateKeyCommit: commitID}
+	if pushOpts.TargetBranch != "" {
+		output[stateKeyBranch] = pushOpts.TargetBranch
+	}
+
 	gitProvider, err := gitprovider.New(workTree.URL(), &gpOpts)
 	var commitURL string
 	if err == nil {
 		if commitURL, err = gitProvider.GetCommitURL(workTree.URL(), commitID); err != nil {
 			logger.Error(err, "unable to get commit URL from Git provider")
+		} else {
+			output[stateKeyCommitURL] = commitURL
 		}
 	}
-
 	return promotion.StepResult{
 		Status: kargoapi.PromotionStepStatusSucceeded,
-		Output: map[string]any{
-			stateKeyBranch:    pushOpts.TargetBranch,
-			stateKeyCommit:    commitID,
-			stateKeyCommitURL: commitURL,
-		},
+		Output: output,
 	}, nil
 }
 
-// push obtains a repo + branch lock before pushing to the remote. This helps
-// reduce the likelihood of conflicts when multiple Promotions that push to
-// the same branch are running concurrently.
+// push obtains a repo + branch lock before integrating remote changes into the
+// local branch and pushing the branch to the remote using the GitHub API. This
+// helps reduce the likelihood of conflicts when multiple Promotions that push
+// to the same branch are running concurrently.
 func (g *gitPushPusher) push(workTree git.WorkTree, pushOpts *git.PushOptions) error {
 	branchKey := g.getBranchKey(workTree.URL(), pushOpts.TargetBranch)
 	if _, exists := g.branchMus[branchKey]; !exists {

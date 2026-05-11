@@ -10,6 +10,7 @@ import (
 
 	gh "github.com/google/go-github/v76/github"
 	"github.com/stretchr/testify/require"
+	apiextensionsv1 "k8s.io/apiextensions-apiserver/pkg/apis/apiextensions/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"
@@ -37,6 +38,24 @@ func TestGithubHandler(t *testing.T) {
 		Ref: gh.Ptr("refs/heads/main"),
 		Repo: &gh.PushEventRepository{
 			SSHURL: gh.Ptr("git@github.com:user/repo.git"),
+		},
+	}
+	validPushEventPathMismatch := &gh.PushEvent{
+		Ref: gh.Ptr("refs/heads/main"),
+		Repo: &gh.PushEventRepository{
+			CloneURL: gh.Ptr("https://github.com/example/repo"),
+		},
+		HeadCommit: &gh.HeadCommit{
+			Modified: []string{"apps/bar/values.yaml"},
+		},
+	}
+	validPushEventPathMatch := &gh.PushEvent{
+		Ref: gh.Ptr("refs/heads/main"),
+		Repo: &gh.PushEventRepository{
+			CloneURL: gh.Ptr("https://github.com/example/repo"),
+		},
+		HeadCommit: &gh.HeadCommit{
+			Modified: []string{"apps/foo/values.yaml"},
 		},
 	}
 	validPackageEventImage := &gh.PackageEvent{
@@ -123,6 +142,39 @@ func TestGithubHandler(t *testing.T) {
 					},
 				},
 			},
+		},
+	}
+
+	validPullRequestEventClosedMerged := &gh.PullRequestEvent{
+		Action: gh.Ptr("closed"),
+		Number: gh.Ptr(42),
+		PullRequest: &gh.PullRequest{
+			Merged:  gh.Ptr(true),
+			HTMLURL: gh.Ptr("https://github.com/example/repo/pull/42"),
+		},
+		Repo: &gh.Repository{
+			CloneURL: gh.Ptr("https://github.com/example/repo"),
+			SSHURL:   gh.Ptr("git@github.com:example/repo.git"),
+		},
+	}
+
+	validPullRequestEventClosedNotMerged := &gh.PullRequestEvent{
+		Action: gh.Ptr("closed"),
+		Number: gh.Ptr(42),
+		PullRequest: &gh.PullRequest{
+			Merged:  gh.Ptr(false),
+			HTMLURL: gh.Ptr("https://github.com/example/repo/pull/42"),
+		},
+		Repo: &gh.Repository{
+			CloneURL: gh.Ptr("https://github.com/example/repo"),
+			SSHURL:   gh.Ptr("git@github.com:example/repo.git"),
+		},
+	}
+
+	testStage := &kargoapi.Stage{
+		ObjectMeta: metav1.ObjectMeta{
+			Namespace: testProjectName,
+			Name:      "test-stage",
 		},
 	}
 
@@ -508,6 +560,90 @@ func TestGithubHandler(t *testing.T) {
 			},
 		},
 		{
+			name:       "warehouse not refreshed (push event, git, path mismatch)",
+			secretData: testSecretData,
+			client: fake.NewClientBuilder().WithScheme(testScheme).WithObjects(
+				&kargoapi.Warehouse{
+					ObjectMeta: metav1.ObjectMeta{
+						Namespace: testProjectName,
+						Name:      "fake-warehouse",
+					},
+					Spec: kargoapi.WarehouseSpec{
+						InternalSubscriptions: []kargoapi.RepoSubscription{{
+							Git: &kargoapi.GitSubscription{
+								RepoURL:                 "https://github.com/example/repo",
+								CommitSelectionStrategy: kargoapi.CommitSelectionStrategyNewestFromBranch,
+								Branch:                  "main",
+								IncludePaths:            []string{"apps/foo"},
+							},
+						}},
+					},
+				},
+			).WithIndex(
+				&kargoapi.Warehouse{},
+				indexer.WarehousesBySubscribedURLsField,
+				indexer.WarehousesBySubscribedURLs,
+			).Build(),
+			req: func() *http.Request {
+				bodyBytes, err := json.Marshal(validPushEventPathMismatch)
+				require.NoError(t, err)
+				req := httptest.NewRequest(
+					http.MethodPost,
+					testURL,
+					bytes.NewBuffer(bodyBytes),
+				)
+				req.Header.Set(gh.EventTypeHeader, githubEventTypePush)
+				req.Header.Set(gh.SHA256SignatureHeader, sign(bodyBytes))
+				return req
+			},
+			assertions: func(t *testing.T, rr *httptest.ResponseRecorder) {
+				require.Equal(t, http.StatusOK, rr.Code)
+				require.JSONEq(t, `{"msg":"refreshed 0 warehouse(s)"}`, rr.Body.String())
+			},
+		},
+		{
+			name:       "warehouse refreshed (push event, git, path match)",
+			secretData: testSecretData,
+			client: fake.NewClientBuilder().WithScheme(testScheme).WithObjects(
+				&kargoapi.Warehouse{
+					ObjectMeta: metav1.ObjectMeta{
+						Namespace: testProjectName,
+						Name:      "fake-warehouse",
+					},
+					Spec: kargoapi.WarehouseSpec{
+						InternalSubscriptions: []kargoapi.RepoSubscription{{
+							Git: &kargoapi.GitSubscription{
+								RepoURL:                 "https://github.com/example/repo",
+								CommitSelectionStrategy: kargoapi.CommitSelectionStrategyNewestFromBranch,
+								Branch:                  "main",
+								IncludePaths:            []string{"apps/foo"},
+							},
+						}},
+					},
+				},
+			).WithIndex(
+				&kargoapi.Warehouse{},
+				indexer.WarehousesBySubscribedURLsField,
+				indexer.WarehousesBySubscribedURLs,
+			).Build(),
+			req: func() *http.Request {
+				bodyBytes, err := json.Marshal(validPushEventPathMatch)
+				require.NoError(t, err)
+				req := httptest.NewRequest(
+					http.MethodPost,
+					testURL,
+					bytes.NewBuffer(bodyBytes),
+				)
+				req.Header.Set(gh.EventTypeHeader, githubEventTypePush)
+				req.Header.Set(gh.SHA256SignatureHeader, sign(bodyBytes))
+				return req
+			},
+			assertions: func(t *testing.T, rr *httptest.ResponseRecorder) {
+				require.Equal(t, http.StatusOK, rr.Code)
+				require.JSONEq(t, `{"msg":"refreshed 1 warehouse(s)"}`, rr.Body.String())
+			},
+		},
+		{
 			name:       "warehouse refreshed (push event, git, https)",
 			secretData: testSecretData,
 			client: fake.NewClientBuilder().WithScheme(testScheme).WithObjects(
@@ -821,6 +957,167 @@ func TestGithubHandler(t *testing.T) {
 			assertions: func(t *testing.T, rr *httptest.ResponseRecorder) {
 				require.Equal(t, http.StatusOK, rr.Code)
 				require.JSONEq(t, `{"msg":"refreshed 1 warehouse(s)"}`, rr.Body.String())
+			},
+		},
+		{
+			name:       "non-closed pull_request action returns 200 OK",
+			secretData: testSecretData,
+			req: func() *http.Request {
+				bodyBytes, err := json.Marshal(
+					&gh.PullRequestEvent{
+						Action: gh.Ptr("opened"),
+						Number: gh.Ptr(42),
+						Repo: &gh.Repository{
+							CloneURL: gh.Ptr("https://github.com/example/repo"),
+						},
+					},
+				)
+				require.NoError(t, err)
+				req := httptest.NewRequest(
+					http.MethodPost,
+					testURL,
+					bytes.NewBuffer(bodyBytes),
+				)
+				req.Header.Set(gh.EventTypeHeader, githubEventTypePullRequest)
+				req.Header.Set(gh.SHA256SignatureHeader, sign(bodyBytes))
+				return req
+			},
+			assertions: func(t *testing.T, rr *httptest.ResponseRecorder) {
+				require.Equal(t, http.StatusOK, rr.Code)
+				require.JSONEq(t, "{}", rr.Body.String())
+			},
+		},
+		{
+			name:       "closed+merged pull_request refreshes matching Promotion",
+			secretData: testSecretData,
+			client: fake.NewClientBuilder().WithScheme(testScheme).WithObjects(
+				&kargoapi.Promotion{
+					ObjectMeta: metav1.ObjectMeta{
+						Namespace: testProjectName,
+						Name:      "promo-wait-for-pr",
+					},
+					Spec: kargoapi.PromotionSpec{
+						Stage: testStage.Name,
+						Steps: []kargoapi.PromotionStep{{
+							Uses: "git-wait-for-pr",
+							As:   "wait-pr",
+						}},
+					},
+					Status: kargoapi.PromotionStatus{
+						Phase:       kargoapi.PromotionPhaseRunning,
+						CurrentStep: 0,
+						State: &apiextensionsv1.JSON{
+							Raw: []byte(`{
+								"wait-pr": {
+									"pr": {
+										"url": "https://github.com/example/repo/pull/42",
+										"open": true,
+										"merged": false
+									}
+								}
+							}`),
+						},
+					},
+				},
+			).WithIndex(
+				&kargoapi.Promotion{},
+				indexer.RunningPromotionsByPullRequestURLField,
+				indexer.RunningPromotionsByPullRequestURL,
+			).Build(),
+			req: func() *http.Request {
+				bodyBytes, err := json.Marshal(validPullRequestEventClosedMerged)
+				require.NoError(t, err)
+				req := httptest.NewRequest(
+					http.MethodPost,
+					testURL,
+					bytes.NewBuffer(bodyBytes),
+				)
+				req.Header.Set(gh.EventTypeHeader, githubEventTypePullRequest)
+				req.Header.Set(gh.SHA256SignatureHeader, sign(bodyBytes))
+				return req
+			},
+			assertions: func(t *testing.T, rr *httptest.ResponseRecorder) {
+				require.Equal(t, http.StatusOK, rr.Code)
+				require.JSONEq(t, `{"msg":"refreshed 1 promotion(s)"}`, rr.Body.String())
+			},
+		},
+		{
+			name:       "closed+not-merged pull_request refreshes matching Promotion",
+			secretData: testSecretData,
+			client: fake.NewClientBuilder().WithScheme(testScheme).WithObjects(
+				&kargoapi.Promotion{
+					ObjectMeta: metav1.ObjectMeta{
+						Namespace: testProjectName,
+						Name:      "promo-wait-for-pr",
+					},
+					Spec: kargoapi.PromotionSpec{
+						Stage: testStage.Name,
+						Steps: []kargoapi.PromotionStep{{
+							Uses: "git-wait-for-pr",
+							As:   "wait-pr",
+						}},
+					},
+					Status: kargoapi.PromotionStatus{
+						Phase:       kargoapi.PromotionPhaseRunning,
+						CurrentStep: 0,
+						State: &apiextensionsv1.JSON{
+							Raw: []byte(`{
+								"wait-pr": {
+									"pr": {
+										"url": "https://github.com/example/repo/pull/42",
+										"open": true,
+										"merged": false
+									}
+								}
+							}`),
+						},
+					},
+				},
+			).WithIndex(
+				&kargoapi.Promotion{},
+				indexer.RunningPromotionsByPullRequestURLField,
+				indexer.RunningPromotionsByPullRequestURL,
+			).Build(),
+			req: func() *http.Request {
+				bodyBytes, err := json.Marshal(validPullRequestEventClosedNotMerged)
+				require.NoError(t, err)
+				req := httptest.NewRequest(
+					http.MethodPost,
+					testURL,
+					bytes.NewBuffer(bodyBytes),
+				)
+				req.Header.Set(gh.EventTypeHeader, githubEventTypePullRequest)
+				req.Header.Set(gh.SHA256SignatureHeader, sign(bodyBytes))
+				return req
+			},
+			assertions: func(t *testing.T, rr *httptest.ResponseRecorder) {
+				require.Equal(t, http.StatusOK, rr.Code)
+				require.JSONEq(t, `{"msg":"refreshed 1 promotion(s)"}`, rr.Body.String())
+			},
+		},
+		{
+			name:       "closed pull_request with no matching Promotions",
+			secretData: testSecretData,
+			client: fake.NewClientBuilder().WithScheme(testScheme).WithIndex(
+				&kargoapi.Promotion{},
+				indexer.RunningPromotionsByPullRequestURLField,
+				indexer.RunningPromotionsByPullRequestURL,
+			).Build(),
+			req: func() *http.Request {
+				bodyBytes, err := json.Marshal(validPullRequestEventClosedMerged)
+				require.NoError(t, err)
+				req := httptest.NewRequest(
+					http.MethodPost,
+					testURL,
+					bytes.NewBuffer(bodyBytes),
+				)
+				req.Header.Set(gh.EventTypeHeader, githubEventTypePullRequest)
+				req.Header.Set(gh.SHA256SignatureHeader, sign(bodyBytes))
+				return req
+			},
+			assertions: func(t *testing.T, rr *httptest.ResponseRecorder) {
+				require.Equal(t, http.StatusOK, rr.Code)
+				require.JSONEq(t, `{"msg":"refreshed 0 promotion(s)"}`, rr.Body.String())
 			},
 		},
 	}

@@ -5,7 +5,7 @@ import (
 	"go/ast"
 	"go/parser"
 	"go/token"
-	"io/fs"
+	"os"
 	"regexp"
 	"strings"
 	"testing"
@@ -123,10 +123,8 @@ var patternRE = regexp.MustCompile("// ?\\+kubebuilder:validation:Pattern=`(.*)`
 func findExpression(marker string) (*regexp.Regexp, error) {
 	fset := token.NewFileSet()
 
-	// Find all types file in the current directory
-	pkgs, err := parser.ParseDir(fset, "./", func(fi fs.FileInfo) bool {
-		return strings.HasSuffix(fi.Name(), "_types.go")
-	}, parser.ParseComments)
+	// Find all types files in the current directory
+	entries, err := os.ReadDir("./")
 	if err != nil {
 		return nil, err
 	}
@@ -136,34 +134,39 @@ func findExpression(marker string) (*regexp.Regexp, error) {
 
 	firstLocation := ""
 
-	for _, pkg := range pkgs {
-		for _, f := range pkg.Files {
-			cmap := ast.NewCommentMap(fset, f, f.Comments)
-			for _, list := range cmap.Comments() {
-				foundDirective := false
-				commentLocation := ""
-				foundExpression := ""
+	for _, entry := range entries {
+		if entry.IsDir() || !strings.HasSuffix(entry.Name(), "_types.go") {
+			continue
+		}
+		f, err := parser.ParseFile(fset, entry.Name(), nil, parser.ParseComments)
+		if err != nil {
+			return nil, err
+		}
+		cmap := ast.NewCommentMap(fset, f, f.Comments)
+		for _, list := range cmap.Comments() {
+			foundDirective := false
+			commentLocation := ""
+			foundExpression := ""
 
-				for _, comment := range list.List {
-					if markerRE.MatchString(comment.Text) {
-						foundDirective = true
-						commentLocation = fset.Position(comment.Pos()).String()
-					}
-					if patterns := patternRE.FindStringSubmatch(comment.Text); len(patterns) > 1 {
-						foundExpression = patterns[1]
-					}
+			for _, comment := range list.List {
+				if markerRE.MatchString(comment.Text) {
+					foundDirective = true
+					commentLocation = fset.Position(comment.Pos()).String()
 				}
+				if patterns := patternRE.FindStringSubmatch(comment.Text); len(patterns) > 1 {
+					foundExpression = patterns[1]
+				}
+			}
 
-				if foundDirective {
-					if previouslyFoundExpression == "" {
-						previouslyFoundExpression = foundExpression
-						firstLocation = commentLocation
-					} else if foundExpression == "" {
-						return nil, fmt.Errorf("marker at %s had no regular expression", commentLocation)
-					} else if previouslyFoundExpression != foundExpression {
-						return nil, fmt.Errorf("regexps marked %s are not in sync: %s and %s, %q and %q",
-							marker, firstLocation, commentLocation, previouslyFoundExpression, foundExpression)
-					}
+			if foundDirective {
+				if previouslyFoundExpression == "" {
+					previouslyFoundExpression = foundExpression
+					firstLocation = commentLocation
+				} else if foundExpression == "" {
+					return nil, fmt.Errorf("marker at %s had no regular expression", commentLocation)
+				} else if previouslyFoundExpression != foundExpression {
+					return nil, fmt.Errorf("regexps marked %s are not in sync: %s and %s, %q and %q",
+						marker, firstLocation, commentLocation, previouslyFoundExpression, foundExpression)
 				}
 			}
 		}

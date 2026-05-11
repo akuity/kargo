@@ -6,6 +6,7 @@ metadata:
   labels:
     {{- include "kargo.labels" . | nindent 4 }}
     {{- include "kargo.controller.labels" . | nindent 4 }}
+  {{- include "kargo.annotations" (dict "root" . "annotations" .Values.controller.annotations) | nindent 2 }}
 rules:
 - apiGroups:
   - ""
@@ -35,6 +36,7 @@ rules:
 - apiGroups:
   - kargo.akuity.io
   resources:
+  - clusterconfigs
   - projects
   - projectconfigs
   verbs:
@@ -44,13 +46,23 @@ rules:
 - apiGroups:
   - kargo.akuity.io
   resources:
-  - freights
   - promotions
   verbs:
   - create
   - get
   - list
   - watch
+- apiGroups:
+  - kargo.akuity.io
+  resources:
+  - freights
+  verbs:
+  - create
+  - get
+  - list
+  - watch
+  - patch
+  - update
 - apiGroups:
   - kargo.akuity.io
   resources:
@@ -90,6 +102,7 @@ metadata:
   labels:
     {{- include "kargo.labels" . | nindent 4 }}
     {{- include "kargo.controller.labels" . | nindent 4 }}
+  {{- include "kargo.annotations" (dict "root" . "annotations" .Values.controller.annotations) | nindent 2 }}
 rules:
 - apiGroups:
   - ""
@@ -109,6 +122,7 @@ metadata:
   labels:
     {{- include "kargo.labels" . | nindent 4 }}
     {{- include "kargo.controller.labels" . | nindent 4 }}
+  {{- include "kargo.annotations" (dict "root" . "annotations" .Values.controller.annotations) | nindent 2 }}
 rules:
 - apiGroups:
   - argoproj.io
@@ -129,6 +143,7 @@ metadata:
   labels:
     {{- include "kargo.labels" . | nindent 4 }}
     {{- include "kargo.controller.labels" . | nindent 4 }}
+  {{- include "kargo.annotations" (dict "root" . "annotations" .Values.controller.annotations) | nindent 2 }}
 rules:
 - apiGroups:
   - argoproj.io

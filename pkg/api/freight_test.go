@@ -109,7 +109,7 @@ func TestGetFreight(t *testing.T) {
 	for _, testCase := range testCases {
 		t.Run(testCase.name, func(t *testing.T) {
 			freight, err := GetFreight(
-				context.Background(),
+				t.Context(),
 				testCase.client,
 				types.NamespacedName{
 					Namespace: "fake-namespace",
@@ -163,7 +163,7 @@ func TestGetFreightByAlias(t *testing.T) {
 	for _, testCase := range testCases {
 		t.Run(testCase.name, func(t *testing.T) {
 			freight, err := GetFreightByAlias(
-				context.Background(),
+				t.Context(),
 				testCase.client,
 				"fake-namespace",
 				"fake-alias",
@@ -250,7 +250,7 @@ func TestListFreightByCurrentStage(t *testing.T) {
 			Build()
 
 		t.Run(testCase.name, func(t *testing.T) {
-			freight, err := ListFreightByCurrentStage(context.Background(), c, testStage)
+			freight, err := ListFreightByCurrentStage(t.Context(), c, testStage)
 			testCase.assertions(t, freight, err)
 		})
 	}

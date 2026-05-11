@@ -7,10 +7,12 @@ metadata:
   labels:
     {{- include "kargo.labels" . | nindent 4 }}
     {{- include "kargo.api.labels" . | nindent 4 }}
+  {{- include "kargo.annotations" (dict "root" . "annotations" .Values.api.annotations) | nindent 2 }}
 spec:
   dnsNames:
   - {{ quote .Values.api.host }}
   issuerRef:
+    group: cert-manager.io
     kind: Issuer
     name: kargo-selfsigned-cert-issuer
   secretName: {{ .Values.api.ingress.tls.secretName }}

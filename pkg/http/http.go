@@ -2,6 +2,7 @@ package http
 
 import (
 	"encoding/json"
+	"fmt"
 	"net/http"
 	"time"
 )
@@ -26,8 +27,8 @@ func SetCacheHeaders(w http.ResponseWriter, maxAge time.Duration, timeUntilExpir
 	if w == nil {
 		return
 	}
-	w.Header().Set("Cache-Control", "public, max-age="+maxAge.String())
-	w.Header().Set("Expires", time.Now().Add(timeUntilExpiry).Format(time.RFC1123))
+	w.Header().Set("Cache-Control", fmt.Sprintf("public, max-age=%d", int(maxAge.Seconds())))
+	w.Header().Set("Expires", time.Now().UTC().Add(timeUntilExpiry).Format(http.TimeFormat))
 }
 
 func WriteResponseJSON(w http.ResponseWriter, code int, body any) {

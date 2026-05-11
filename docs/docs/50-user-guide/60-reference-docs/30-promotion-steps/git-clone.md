@@ -20,11 +20,16 @@ multiple working trees.
 
 :::
 
+## Credentials
+
+Git steps are utilizing the [repository credentials](../../50-security/30-managing-secrets.md#repository-credentials)
+system to access the git repos.
+
 ## Configuration
 
 | Name | Type | Required | Description |
 |------|------|----------|-------------|
-| `repoURL` | `string` | Y | The URL of a remote Git repository to clone. |
+| `repoURL` | `string` | Y | The URL of a remote Git repository to clone. **Deprecated:** Support for SSH URLs (`ssh://` and SCP-style `git@host:path`) is deprecated as of v1.10.0 and will be removed in v1.13.0. Use HTTPS URLs instead. |
 | `insecureSkipTLSVerify` | `boolean` | N | Whether to bypass TLS certificate verification when cloning (and for all subsequent operations involving this clone). Setting this to `true` is highly discouraged in production. |
 | `author` | `[]object` | N | Default authorship information for any commits made to the cloned repository. If provided, this overrides any system-level defaults. Note: Configuration of the [`git-commit`](./git-commit.md) step can override this information. |
 | `author.name` | `string` | Y | The committer's name. |
@@ -37,7 +42,7 @@ multiple working trees.
 | `checkout[].commit` | `string` | N | A specific commit to check out. Mutually exclusive with `branch` and `tag`. If none of these is specified, the default branch will be checked out. |
 | `checkout[].path` | `string` | Y | The path for a working tree that will be created from the checked out revision. This path is relative to the temporary workspace that Kargo provisions for use by the promotion process. |
 | `checkout[].tag` | `string` | N | A tag to check out. Mutually exclusive with `branch` and `commit`. If none of these is specified, the default branch will be checked out. |
-| `checkout[].sparse` | `[]string` | N | Directory paths for sparse checkout. Only the specified directories (and their contents) will be checked out. Paths must be relative to the repository root (e.g., `src/app`, `configs/prod`). Glob patterns are not supported. When all checkouts use sparse patterns, a [blobless clone][] is performed automatically to reduce clone time and disk usage. |
+| `checkout[].sparse` | `[]string` | N | Directory paths for sparse checkout. Only the specified directories (and their contents) will be checked out. Paths must be relative to the repository root (e.g., `src/app`, `configs/prod`). Glob patterns are not supported. |
 
 ## Output
 

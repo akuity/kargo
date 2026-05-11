@@ -1,4 +1,3 @@
-import { useMutation } from '@connectrpc/connect-query';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { Input, Modal } from 'antd';
 import { useForm } from 'react-hook-form';
@@ -9,10 +8,10 @@ import { ModalComponentProps } from '@ui/features/common/modal/modal-context';
 import { SecretEditor } from '@ui/features/common/settings/secrets/secret-editor';
 import { dnsRegex } from '@ui/features/common/utils';
 import {
-  createGenericCredentials,
-  updateGenericCredentials
-} from '@ui/gen/api/service/v1alpha1/service-KargoService_connectquery';
-import { Secret } from '@ui/gen/k8s.io/api/core/v1/generated_pb';
+  useCreateSystemGenericCredentials,
+  useUpdateSystemGenericCredentials
+} from '@ui/gen/api/v2/credentials/credentials';
+import { V1Secret } from '@ui/gen/api/v2/models';
 import { zodValidators } from '@ui/utils/validators';
 
 const createFormSchema = z.object({
@@ -21,7 +20,7 @@ const createFormSchema = z.object({
 });
 
 type CreateSystemSecretModalProps = ModalComponentProps & {
-  init?: Secret;
+  init?: V1Secret;
   onSuccess?(): void;
 };
 
@@ -36,17 +35,21 @@ export const CreateSystemSecretModal = (props: CreateSystemSecretModalProps) => 
 
   const editing = !!props.init;
 
-  const createSystemSecretsMutation = useMutation(createGenericCredentials, {
-    onSuccess: () => {
-      props.hide();
-      props.onSuccess?.();
+  const createSystemSecretsMutation = useCreateSystemGenericCredentials({
+    mutation: {
+      onSuccess: () => {
+        props.hide();
+        props.onSuccess?.();
+      }
     }
   });
 
-  const updateSystemSecretMutation = useMutation(updateGenericCredentials, {
-    onSuccess: () => {
-      props.hide();
-      props.onSuccess?.();
+  const updateSystemSecretMutation = useUpdateSystemGenericCredentials({
+    mutation: {
+      onSuccess: () => {
+        props.hide();
+        props.onSuccess?.();
+      }
     }
   });
 
@@ -61,16 +64,13 @@ export const CreateSystemSecretModal = (props: CreateSystemSecretModalProps) => 
 
     if (editing) {
       return updateSystemSecretMutation.mutate({
-        systemLevel: true,
-        ...values,
-        data
+        genericCredentials: values.name,
+        data: { data }
       });
     }
 
     return createSystemSecretsMutation.mutate({
-      systemLevel: true,
-      ...values,
-      data
+      data: { name: values.name, data }
     });
   });
 
@@ -89,6 +89,7 @@ export const CreateSystemSecretModal = (props: CreateSystemSecretModalProps) => 
             value={field.value as string}
             placeholder='secret-1'
             onChange={(e) => field.onChange(e.target.value)}
+            disabled={editing}
           />
         )}
       </FieldContainer>

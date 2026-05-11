@@ -1,7 +1,7 @@
 import { useQuery } from '@connectrpc/connect-query';
-import { faStar } from '@fortawesome/free-solid-svg-icons';
+import { faStar, faUser } from '@fortawesome/free-solid-svg-icons';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
-import { Button, Empty, Flex, Pagination } from 'antd';
+import { Empty, Flex, Pagination, Space, Tag, Tooltip } from 'antd';
 import { useEffect, useState } from 'react';
 
 import { LoadingState } from '@ui/features/common';
@@ -25,6 +25,7 @@ export const ProjectsList = () => {
     'starred-projects-view',
     false
   );
+  const [myProjectsView, setMyProjectsView] = useLocalStorage('my-projects-view', false);
 
   const [starred, toggleStar] = useStarProjects();
 
@@ -32,7 +33,8 @@ export const ProjectsList = () => {
     pageSize: pageSize,
     page: page - 1,
     filter,
-    uid: starredProjectsView ? starred : []
+    uid: starredProjectsView ? starred : [],
+    mine: myProjectsView || undefined
   });
 
   useEffect(() => {
@@ -58,33 +60,73 @@ export const ProjectsList = () => {
   if (isEmpty) {
     return (
       <>
-        <div className='flex items-center mb-20'>
+        <Flex align='center' className='mb-20' gap={8}>
           <ProjectListFilter onChange={handleFilterChange} init={filter} />
-          <Button
-            className='ml-auto'
-            icon={<FontAwesomeIcon icon={faStar} />}
-            onClick={() => setStarredProjectsView(!starredProjectsView)}
-          >
-            Show {starredProjectsView ? 'all' : 'only starred'} projects
-          </Button>
-        </div>
-        <Empty />
+          <Space className='ml-auto'>
+            <Tooltip title='Shows projects you have been explicitly granted access to. Broad system-level permissions (e.g. kargo-admin) do not qualify.'>
+              <Tag.CheckableTag
+                checked={myProjectsView}
+                onChange={(checked) => {
+                  setMyProjectsView(checked);
+                  setPage(1);
+                }}
+              >
+                <FontAwesomeIcon icon={faUser} className='mr-1' />
+                My Projects
+              </Tag.CheckableTag>
+            </Tooltip>
+            <Tag.CheckableTag
+              checked={starredProjectsView}
+              onChange={(checked) => {
+                setStarredProjectsView(checked);
+                setPage(1);
+              }}
+            >
+              <FontAwesomeIcon icon={faStar} className='mr-1' />
+              Starred Projects
+            </Tag.CheckableTag>
+          </Space>
+        </Flex>
+        <Empty
+          description={
+            myProjectsView
+              ? 'No projects are directly assigned to your account. Disable this filter to see all projects.'
+              : undefined
+          }
+        />
       </>
     );
   }
 
   return (
     <>
-      <div className='mb-6 flex items-center'>
+      <Flex align='center' className='mb-6' gap={8}>
         <ProjectListFilter onChange={handleFilterChange} init={filter} />
-        <Button
-          className='ml-auto'
-          icon={<FontAwesomeIcon icon={faStar} />}
-          onClick={() => setStarredProjectsView(!starredProjectsView)}
-        >
-          Show {starredProjectsView ? 'all' : 'only starred'} projects
-        </Button>
-      </div>
+        <Space className='ml-auto'>
+          <Tooltip title='Shows projects you have been explicitly granted access to. Broad system-level permissions (e.g. kargo-admin) do not qualify.'>
+            <Tag.CheckableTag
+              checked={myProjectsView}
+              onChange={(checked) => {
+                setMyProjectsView(checked);
+                setPage(1);
+              }}
+            >
+              <FontAwesomeIcon icon={faUser} className='mr-1' />
+              My Projects
+            </Tag.CheckableTag>
+          </Tooltip>
+          <Tag.CheckableTag
+            checked={starredProjectsView}
+            onChange={(checked) => {
+              setStarredProjectsView(checked);
+              setPage(1);
+            }}
+          >
+            <FontAwesomeIcon icon={faStar} className='mr-1' />
+            Starred Projects
+          </Tag.CheckableTag>
+        </Space>
+      </Flex>
       <div className={styles.list}>
         {data.projects.map((proj) => (
           <ProjectItem

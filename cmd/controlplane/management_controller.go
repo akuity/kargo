@@ -20,6 +20,7 @@ import (
 	"github.com/akuity/kargo/pkg/controller/management/namespaces"
 	"github.com/akuity/kargo/pkg/controller/management/projectconfigs"
 	"github.com/akuity/kargo/pkg/controller/management/projects"
+	"github.com/akuity/kargo/pkg/controller/management/replication"
 	"github.com/akuity/kargo/pkg/controller/management/secrets"
 	"github.com/akuity/kargo/pkg/controller/management/serviceaccounts"
 	"github.com/akuity/kargo/pkg/logging"
@@ -34,7 +35,6 @@ type managementControllerOptions struct {
 	QPS        float32
 	Burst      int
 
-	KargoNamespace               string
 	ManageControllerRoleBindings bool
 
 	MetricsBindAddress string
@@ -70,7 +70,6 @@ func (o *managementControllerOptions) complete() {
 	o.QPS = types.MustParseFloat32(os.GetEnv("KUBE_API_QPS", "50.0"))
 	o.Burst = types.MustParseInt(os.GetEnv("KUBE_API_BURST", "300"))
 
-	o.KargoNamespace = os.GetEnv("KARGO_NAMESPACE", "kargo")
 	o.ManageControllerRoleBindings = types.MustParseBool(os.GetEnv("MANAGE_CONTROLLER_ROLE_BINDINGS", "true"))
 
 	o.MetricsBindAddress = os.GetEnv("METRICS_BIND_ADDRESS", "0")
@@ -169,6 +168,17 @@ func (o *managementControllerOptions) run(ctx context.Context) error {
 		}
 	}
 
+	replicationCfg := replication.ReconcilerConfig{
+		SharedResourcesNamespace: os.GetEnv("SHARED_RESOURCES_NAMESPACE", "kargo-shared-resources"),
+		MaxConcurrentReconciles:  4,
+	}
+	if err := replication.SetupSecretReconcilerWithManager(ctx, kargoMgr, replicationCfg); err != nil {
+		return fmt.Errorf("error setting up shared Secret replication reconciler: %w", err)
+	}
+	if err := replication.SetupConfigMapReconcilerWithManager(ctx, kargoMgr, replicationCfg); err != nil {
+		return fmt.Errorf("error setting up shared ConfigMap replication reconciler: %w", err)
+	}
+
 	if err := kargoMgr.Start(ctx); err != nil {
 		return fmt.Errorf("error starting kargo manager: %w", err)
 	}
@@ -215,6 +225,10 @@ func (o *managementControllerOptions) setupManager(
 		namespaceCacheConfigs[sharedResourcesCfg.SourceNamespace] = cache.Config{}
 		namespaceCacheConfigs[sharedResourcesCfg.DestinationNamespace] = cache.Config{}
 	}
+	// Always cache the shared resources namespace so the shared secret
+	// replication reconciler can watch source secrets even when the legacy
+	// migration controller is disabled (GLOBAL_CREDENTIALS_NAMESPACE unset).
+	namespaceCacheConfigs[os.GetEnv("SHARED_RESOURCES_NAMESPACE", "kargo-shared-resources")] = cache.Config{}
 	return ctrl.NewManager(
 		restCfg,
 		ctrl.Options{
@@ -225,12 +239,10 @@ func (o *managementControllerOptions) setupManager(
 			PprofBindAddress: o.PprofBindAddress,
 			Cache: cache.Options{
 				ByObject: map[client.Object]cache.ByObject{
-					&corev1.ServiceAccount{}: {
-						Namespaces: map[string]cache.Config{
-							o.KargoNamespace: {},
-						},
-					},
 					&corev1.Secret{}: {
+						Namespaces: namespaceCacheConfigs,
+					},
+					&corev1.ConfigMap{}: {
 						Namespaces: namespaceCacheConfigs,
 					},
 				},

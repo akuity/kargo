@@ -57,6 +57,28 @@ func newBaseSelector(
 	return s, nil
 }
 
+// MatchesPaths implements Selector.
+func (b *baseSelector) MatchesPaths(paths []string) bool {
+	for _, path := range paths {
+		// If include is nil, all paths are implicitly included
+		// Otherwise, check if the path matches the include pattern
+		if b.includePaths != nil && !b.includePaths.Matches(path) {
+			// Path not included, skip to next path
+			continue
+		}
+		// Path is included (either implicitly or explicitly)
+		// Now check if it should be excluded
+		if b.excludePaths != nil && b.excludePaths.Matches(path) {
+			// Path is explicitly excluded, skip to next path
+			continue
+		}
+		// If we reach here, the path is included and not excluded
+		return true
+	}
+	// None of the paths match our criteria
+	return false
+}
+
 // getLoggerContext returns key/value pairs that can be used by any selector to
 // enrich loggers with valuable context.
 func (b *baseSelector) getLoggerContext() []any {

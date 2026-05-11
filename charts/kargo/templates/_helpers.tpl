@@ -105,6 +105,38 @@ Determine the most appropriate CPU resource field for GOMAXPROCS.
 {{- end -}}
 
 {{/*
+kargo.annotations renders a complete metadata annotations block by merging
+.Values.global.annotations with a per-component annotations map.
+
+Call it by passing a dict with two keys:
+  - "root": the top-level chart context (.)
+  - "annotations": the component-specific annotations map (e.g. .Values.controller.annotations)
+
+Example:
+  {{- include "kargo.annotations" (dict "root" . "annotations" .Values.controller.annotations) | nindent 2 }}
+
+When the merged result is empty the helper emits nothing, so it is always safe to
+include unconditionally — no surrounding `with` is required.
+
+Use this helper only when the annotations block consists solely of the merged
+global + component values. When additional static annotations are required (e.g.
+cert-manager CA injection, configmap checksums), write the annotations block
+inline and call mergeOverwrite directly.
+
+For resources that have no component-specific annotations, omit the "annotations"
+key or pass an empty dict:
+  {{- include "kargo.annotations" (dict "root" .) | nindent 2 }}
+*/}}
+{{- define "kargo.annotations" -}}
+{{- with (mergeOverwrite (deepCopy .root.Values.global.annotations) (.annotations | default dict)) -}}
+annotations:
+  {{- range $key, $value := . }}
+  {{ $key }}: {{ $value | quote }}
+  {{- end }}
+{{- end }}
+{{- end -}}
+
+{{/*
 Common labels
 */}}
 {{- define "kargo.labels" -}}

@@ -19,6 +19,7 @@ export type FreightTimelineControllerContextType = {
     images: boolean;
     view: 'graph' | 'list';
     showMinimap: boolean;
+    stepEdges: boolean;
   };
   setPreferredFilter: (filter: FreightTimelineControllerContextType['preferredFilter']) => void;
 };

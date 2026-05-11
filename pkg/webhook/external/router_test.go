@@ -220,6 +220,9 @@ func TestServer_route(t *testing.T) {
 	for _, testCase := range testCases {
 		t.Run(testCase.name, func(t *testing.T) {
 			rr := httptest.NewRecorder()
+			// succinct way of setting the apiReader to the same fake client
+			// since the fake client doesn't use the cache at all.
+			testCase.server.apiReader = testCase.server.client
 			testCase.server.route(
 				rr,
 				httptest.NewRequest(http.MethodPost, testURL, nil),

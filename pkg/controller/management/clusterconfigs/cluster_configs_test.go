@@ -1,7 +1,6 @@
 package clusterconfigs
 
 import (
-	"context"
 	"testing"
 
 	"github.com/stretchr/testify/require"
@@ -42,6 +41,26 @@ func TestReconciler_syncWebhookReceivers(t *testing.T) {
 				require.NoError(t, err)
 				require.Empty(t, status.WebhookReceivers)
 				require.Len(t, status.Conditions, 1)
+				readyCondition := conditions.Get(&status, kargoapi.ConditionTypeReady)
+				require.NotNil(t, readyCondition)
+				require.Equal(t, metav1.ConditionTrue, readyCondition.Status)
+				require.Equal(t, "Synced", readyCondition.Reason)
+			},
+		},
+		{
+			name:       "stale webhook receivers are cleared when spec is empty",
+			reconciler: &reconciler{},
+			clusterCfg: &kargoapi.ClusterConfig{
+				Status: kargoapi.ClusterConfigStatus{
+					WebhookReceivers: []kargoapi.WebhookReceiverDetails{{
+						Name: "stale-receiver",
+						Path: "/webhook/github/abc123",
+					}},
+				},
+			},
+			assertions: func(t *testing.T, status kargoapi.ClusterConfigStatus, err error) {
+				require.NoError(t, err)
+				require.Empty(t, status.WebhookReceivers)
 				readyCondition := conditions.Get(&status, kargoapi.ConditionTypeReady)
 				require.NotNil(t, readyCondition)
 				require.Equal(t, metav1.ConditionTrue, readyCondition.Status)
@@ -163,7 +182,7 @@ func TestReconciler_syncWebhookReceivers(t *testing.T) {
 	for _, testCase := range testCases {
 		t.Run(testCase.name, func(t *testing.T) {
 			status, err := testCase.reconciler.syncWebhookReceivers(
-				context.Background(),
+				t.Context(),
 				testCase.clusterCfg,
 			)
 			testCase.assertions(t, status, err)

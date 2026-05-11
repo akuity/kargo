@@ -37,7 +37,7 @@ func TestRefreshResource(t *testing.T) {
 	}
 
 	testSets := map[string]struct {
-		kClient    client.Client
+		kClient    client.WithWatch
 		req        *svcv1alpha1.RefreshResourceRequest
 		assertions func(*connect.Response[svcv1alpha1.RefreshResourceResponse], error)
 	}{
@@ -301,7 +301,7 @@ func TestRefreshResource(t *testing.T) {
 	}
 	for name, ts := range testSets {
 		t.Run(name, func(t *testing.T) {
-			ctx := context.Background()
+			ctx := t.Context()
 			client, err := kubernetes.NewClient(
 				ctx,
 				&rest.Config{},
@@ -311,7 +311,8 @@ func TestRefreshResource(t *testing.T) {
 						_ context.Context,
 						_ *rest.Config,
 						_ *runtime.Scheme,
-					) (client.Client, error) {
+						_ string,
+					) (client.WithWatch, error) {
 						return ts.kClient, nil
 					},
 				},

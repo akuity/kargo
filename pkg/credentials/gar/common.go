@@ -4,9 +4,13 @@ import (
 	"crypto/sha256"
 	"fmt"
 	"regexp"
+	"time"
 )
 
-const accessTokenUsername = "oauth2accesstoken"
+const (
+	accessTokenUsername    = "oauth2accesstoken"
+	tokenCacheExpiryMargin = 5 * time.Minute
+)
 
 var (
 	gcrURLRegex = regexp.MustCompile(`^(?:.+\.)?gcr\.io/`) // Legacy

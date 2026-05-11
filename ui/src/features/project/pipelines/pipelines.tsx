@@ -28,6 +28,7 @@ import {
 } from '@ui/gen/api/service/v1alpha1/service-KargoService_connectquery';
 import { FreightList } from '@ui/gen/api/service/v1alpha1/service_pb';
 import { Freight, Project, Stage } from '@ui/gen/api/v1alpha1/generated_pb';
+import { useGetControllerHeartbeats } from '@ui/gen/api/v2/system/system';
 
 import { ActionContext } from './context/action-context';
 import { DictionaryContext } from './context/dictionary-context';
@@ -62,6 +63,10 @@ export const Pipelines = (props: { creatingStage?: boolean; creatingWarehouse?: 
 
   const argocdShards = getConfigQuery?.data?.argocdShards;
 
+  const heartbeatsQuery = useGetControllerHeartbeats();
+  const heartbeatsByController = heartbeatsQuery.data?.data?.heartbeats;
+  const defaultControllerName = heartbeatsQuery.data?.data?.defaultController;
+
   const projectQuery = useQuery(getProject, { name });
 
   const project = projectQuery.data?.result?.value as Project;
@@ -69,8 +74,6 @@ export const Pipelines = (props: { creatingStage?: boolean; creatingWarehouse?: 
   const projectName = name;
 
   const listImagesQuery = useQuery(listImages, { project: name });
-
-  const getFreightQuery = useQuery(queryFreight, { project: projectName });
 
   const listWarehousesQuery = useQuery(
     listWarehouses,
@@ -91,13 +94,24 @@ export const Pipelines = (props: { creatingStage?: boolean; creatingWarehouse?: 
     }
   );
 
-  const listStagesQuery = useQuery(listStages, { project: projectName });
+  const [preferredFilter, setPreferredFilter] = useFreightTimelineControllerStore(
+    projectName || ''
+  );
+
+  const getFreightQuery = useQuery(queryFreight, {
+    project: projectName,
+    origins: preferredFilter.warehouses
+  });
+
+  const listStagesQuery = useQuery(listStages, {
+    project: projectName,
+    freightOrigins: preferredFilter.warehouses
+  });
 
   const loading =
     projectQuery.isLoading ||
     getFreightQuery.isLoading ||
     listWarehousesQuery.isLoading ||
-    listStagesQuery.isLoading ||
     getConfigQuery.isLoading;
 
   const promote = freight && stage ? { freight, stage } : undefined;
@@ -109,23 +123,17 @@ export const Pipelines = (props: { creatingStage?: boolean; creatingWarehouse?: 
   const stageDetails =
     stageName && listStagesQuery.data?.stages?.find((s: Stage) => s?.metadata?.name === stageName);
 
-  const warehouseColorMap = useMemo(
-    () =>
-      getColors(
-        project?.metadata?.name || '',
-        listWarehousesQuery.data?.warehouses || [],
-        'warehouses'
-      ),
-    [project, listWarehousesQuery.data?.warehouses]
-  );
+  const warehouseColorMap = useMemo(() => {
+    const warehouses = listWarehousesQuery.data?.warehouses || [];
+    if (warehouses.length < 2) {
+      return {};
+    }
+    return getColors(project?.metadata?.name || '', warehouses, 'warehouses');
+  }, [project, listWarehousesQuery.data?.warehouses]);
 
   const stageColorMap = useMemo(
     () => getColors(project?.metadata?.name || '', listStagesQuery.data?.stages || []),
     [project, listStagesQuery.data?.stages]
-  );
-
-  const [preferredFilter, setPreferredFilter] = useFreightTimelineControllerStore(
-    projectName || ''
   );
 
   const pipelineView = preferredFilter.view;
@@ -199,6 +207,8 @@ export const Pipelines = (props: { creatingStage?: boolean; creatingWarehouse?: 
             subscribersByStage,
             stageByName,
             argocdShards,
+            heartbeatsByController,
+            defaultControllerName,
             hasAnalysisRunLogsUrlTemplate: getConfigQuery?.data?.hasAnalysisRunLogsUrlTemplate
           }}
         >
@@ -301,14 +311,19 @@ export const Pipelines = (props: { creatingStage?: boolean; creatingWarehouse?: 
                       />
                     </div>
                   )}
-                  {pipelineView === 'graph' && (
+                  {listStagesQuery.isLoading && (
+                    <div className='mt-20'>
+                      <LoadingState />
+                    </div>
+                  )}
+                  {pipelineView === 'graph' && listStagesQuery.data?.stages && (
                     <Graph
                       project={project.metadata?.name || ''}
                       warehouses={listWarehousesQuery.data?.warehouses || []}
                       stages={listStagesQuery.data?.stages || []}
                     />
                   )}
-                  {pipelineView === 'list' && (
+                  {pipelineView === 'list' && listStagesQuery.data?.stages && (
                     <PipelineListView
                       stages={listStagesQuery.data?.stages || []}
                       warehouses={listWarehousesQuery.data?.warehouses || []}

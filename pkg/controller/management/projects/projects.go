@@ -4,6 +4,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"reflect"
 	"strings"
 	"time"
 
@@ -13,7 +14,6 @@ import (
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/types"
-	"k8s.io/utils/ptr"
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/controller/controllerutil"
@@ -45,26 +45,6 @@ type ReconcilerConfig struct {
 	ManageControllerRoleBindings bool   `envconfig:"MANAGE_CONTROLLER_ROLE_BINDINGS" default:"true"`
 	KargoNamespace               string `envconfig:"KARGO_NAMESPACE" default:"kargo"`
 	MaxConcurrentReconciles      int    `envconfig:"MAX_CONCURRENT_PROJECT_RECONCILES" default:"4"`
-
-	ManageExtendedPermissions bool `envconfig:"MANAGE_EXTENDED_PERMISSIONS" default:"false"`
-
-	ManageOrchestrator             bool   `envconfig:"MANAGE_ORCHESTRATOR" default:"false"`
-	OrchestratorServiceAccountName string `envconfig:"ORCHESTRATOR_SERVICE_ACCOUNT_NAME" default:""`
-	OrchestratorClusterRoleName    string `envconfig:"ORCHESTRATOR_CLUSTER_ROLE_NAME" default:""`
-	TokenManagerClusterRoleName    string `envconfig:"TOKEN_MANAGER_CLUSTER_ROLE_NAME" default:""`
-
-	ControlPlaneServiceAccountName string `envconfig:"CONTROL_PLANE_SERVICE_ACCOUNT_NAME" default:""`
-	ControlPlaneClusterRoleName    string `envconfig:"CONTROL_PLANE_CLUSTER_ROLE_NAME" default:""`
-
-	ManagerServiceAccountName string `envconfig:"MANAGER_SERVICE_ACCOUNT_NAME" default:""`
-	ManagerClusterRoleName    string `envconfig:"MANAGER_CLUSTER_ROLE_NAME" default:""`
-	ManagedResourceNamespace  string `envconfig:"MANAGED_RESOURCE_NAMESPACE" default:""`
-
-	ArgoCDServiceAccountName string `envconfig:"ARGOCD_SERVICE_ACCOUNT_NAME" default:""`
-	ArgoCDRoleName           string `envconfig:"ARGOCD_ROLE_NAME" default:""`
-	ArgoCDClusterRoleName    string `envconfig:"ARGOCD_CLUSTER_ROLE_NAME" default:""`
-	ArgoCDNamespace          string `envconfig:"ARGOCD_NAMESPACE" default:"argocd"`
-	ArgoCDWatchNamespaceOnly bool   `envconfig:"ARGOCD_WATCH_ARGOCD_NAMESPACE_ONLY" default:"false"`
 }
 
 func ReconcilerConfigFromEnv() ReconcilerConfig {
@@ -114,10 +94,10 @@ type reconciler struct {
 		...client.CreateOption,
 	) error
 
-	patchOwnerReferencesFn func(
+	deleteNamespaceFn func(
 		context.Context,
-		client.Client,
 		client.Object,
+		...client.DeleteOption,
 	) error
 
 	ensureFinalizerFn func(
@@ -137,8 +117,6 @@ type reconciler struct {
 	ensureControllerPermissionsFn func(context.Context, *kargoapi.Project) error
 
 	ensureDefaultUserRolesFn func(context.Context, *kargoapi.Project) error
-
-	ensureExtendedPermissionsFn func(context.Context, *kargoapi.Project) error
 
 	createServiceAccountFn func(
 		context.Context,
@@ -247,13 +225,12 @@ func newReconciler(kubeClient client.Client, cfg ReconcilerConfig) *reconciler {
 	r.patchProjectStatusFn = r.patchProjectStatus
 	r.getNamespaceFn = r.client.Get
 	r.createNamespaceFn = r.client.Create
-	r.patchOwnerReferencesFn = api.PatchOwnerReferences
+	r.deleteNamespaceFn = r.client.Delete
 	r.ensureFinalizerFn = api.EnsureFinalizer
 	r.removeFinalizerFn = api.RemoveFinalizer
 	r.ensureSystemPermissionsFn = r.ensureSystemPermissions
 	r.ensureControllerPermissionsFn = r.ensureControllerPermissions
 	r.ensureDefaultUserRolesFn = r.ensureDefaultUserRoles
-	r.ensureExtendedPermissionsFn = r.ensureExtendedPermissions
 	r.createServiceAccountFn = r.client.Create
 	r.createRoleFn = r.client.Create
 	r.createRoleBindingFn = r.client.Create
@@ -387,33 +364,31 @@ func (r *reconciler) reconcile(
 func (r *reconciler) cleanupProject(ctx context.Context, project *kargoapi.Project) error {
 	logger := logging.LoggerFromContext(ctx)
 
-	// Delete cluster-scoped resources that are specific to the Project
-	crbs := map[string]bool{
-		kubernetes.ShortenResourceName(fmt.Sprintf("kargo-project-admin-%s", project.Name)): true,
+	// Run EE cleanup contributors before removing OSS base resources, so that
+	// any EE resources that reference OSS resources are removed first.
+	cleanupContribs, contribsErr := defaultProjectCleanupContributorRegistry.GetAll(ctx, project)
+	if contribsErr != nil {
+		return fmt.Errorf("error getting project cleanup contributors: %w", contribsErr)
 	}
-	if r.cfg.ManageExtendedPermissions && r.cfg.ArgoCDClusterRoleName != "" {
-		crbs[kubernetes.ShortenResourceName(fmt.Sprintf("%s-%s", r.cfg.ArgoCDClusterRoleName, project.Name))] = false
+	for _, contrib := range cleanupContribs {
+		if contribErr := contrib.Value(ctx, project); contribErr != nil {
+			return contribErr
+		}
 	}
-	for crbName, hasCR := range crbs {
-		if err := r.deleteClusterRoleBindingFn(
-			ctx,
-			&rbacv1.ClusterRoleBinding{ObjectMeta: metav1.ObjectMeta{Name: crbName}},
-		); err != nil && !apierrors.IsNotFound(err) {
-			return fmt.Errorf("error deleting ClusterRoleBinding %q: %w", crbName, err)
-		}
 
-		if !hasCR {
-			// No ClusterRole to delete for this ClusterRoleBinding.
-			continue
-		}
-
-		crName := crbName
-		if err := r.deleteClusterRoleFn(
-			ctx,
-			&rbacv1.ClusterRole{ObjectMeta: metav1.ObjectMeta{Name: crName}},
-		); err != nil && !apierrors.IsNotFound(err) {
-			return fmt.Errorf("error deleting ClusterRole %q: %w", crName, err)
-		}
+	// Delete the project-admin ClusterRoleBinding and ClusterRole.
+	crbName := kubernetes.ShortenResourceName(fmt.Sprintf("kargo-project-admin-%s", project.Name))
+	if err := r.deleteClusterRoleBindingFn(
+		ctx,
+		&rbacv1.ClusterRoleBinding{ObjectMeta: metav1.ObjectMeta{Name: crbName}},
+	); err != nil && !apierrors.IsNotFound(err) {
+		return fmt.Errorf("error deleting ClusterRoleBinding %q: %w", crbName, err)
+	}
+	if err := r.deleteClusterRoleFn(
+		ctx,
+		&rbacv1.ClusterRole{ObjectMeta: metav1.ObjectMeta{Name: crbName}},
+	); err != nil && !apierrors.IsNotFound(err) {
+		return fmt.Errorf("error deleting ClusterRole %q: %w", crbName, err)
 	}
 
 	// Get namespace for the Project
@@ -432,30 +407,16 @@ func (r *reconciler) cleanupProject(ctx context.Context, project *kargoapi.Proje
 		return fmt.Errorf("error getting namespace %q: %w", project.Name, err)
 	}
 
-	if shouldKeepNamespace(project, ns) {
-		logger.Debug("keeping namespace due to keep-namespace annotation")
-
-		// Remove only this Project's OwnerReference from the Namespace
-		var newOwnerRefs []metav1.OwnerReference
-		for _, ref := range ns.OwnerReferences {
-			if ref.UID != project.UID {
-				newOwnerRefs = append(newOwnerRefs, ref)
-			}
-		}
-
-		// Only update owner references if we actually found and removed one
-		if len(newOwnerRefs) < len(ns.OwnerReferences) {
-			ns.OwnerReferences = newOwnerRefs
-			if err = r.patchOwnerReferencesFn(ctx, r.client, ns); err != nil {
-				return fmt.Errorf("failed to patch namespace %q owner references: %w", ns.Name, err)
-			}
-			logger.Debug("removed project owner reference from namespace")
-		}
-	}
-
 	// Remove finalizer from namespace
 	if err = r.removeFinalizerFn(ctx, r.client, ns); err != nil {
 		return fmt.Errorf("failed to remove finalizer from namespace %q: %w", ns.Name, err)
+	}
+
+	if !shouldKeepNamespace(project, ns) {
+		logger.Debug("keep-namespace annotation absent; deleting namespace")
+		if err = r.deleteNamespaceFn(ctx, ns); err != nil && !apierrors.IsNotFound(err) {
+			return fmt.Errorf("error deleting namespace %q: %w", ns.Name, err)
+		}
 	}
 
 	// Remove finalizer from Project
@@ -557,8 +518,12 @@ func (r *reconciler) syncProject(
 		return *status, fmt.Errorf("error ensuring default project roles: %w", err)
 	}
 
-	if r.cfg.ManageExtendedPermissions {
-		if err := r.ensureExtendedPermissionsFn(ctx, project); err != nil {
+	setupContribs, err := defaultProjectSetupContributorRegistry.GetAll(ctx, project)
+	if err != nil {
+		return *status, fmt.Errorf("error getting project setup contributors: %w", err)
+	}
+	for _, contrib := range setupContribs {
+		if err := contrib.Value(ctx, project); err != nil {
 			conditions.Set(status, &metav1.Condition{
 				Type:               kargoapi.ConditionTypeReady,
 				Status:             metav1.ConditionFalse,
@@ -584,12 +549,14 @@ func (r *reconciler) syncProject(
 func (r *reconciler) ensureNamespace(ctx context.Context, project *kargoapi.Project) error {
 	logger := logging.LoggerFromContext(ctx).WithValues("project", project.Name)
 
-	ownerRef := metav1.NewControllerRef(
-		project,
-		kargoapi.GroupVersion.WithKind("Project"),
-	)
-	ownerRef.BlockOwnerDeletion = ptr.To(false)
-	ownerRef.Controller = nil
+	// Note: We intentionally do not set an owner reference from the Namespace to the Project.
+	// Two-way deletion semantics between a Project and its Namespace are instead implemented via
+	// finalizers: this controller adds a finalizer to the Namespace, and the Namespace reconciler
+	// uses it to delete the Project when the Namespace is deleted. Owner references are avoided
+	// because they break foreground cascade deletion of the Project (the Namespace would block on
+	// garbage collection) and can leave the Namespace pointing at a non-existent Project. See
+	// https://github.com/akuity/kargo/issues/4627. The Namespace reconciler strips any Project
+	// owner reference it finds.
 
 	ns := &corev1.Namespace{}
 	if err := r.getNamespaceFn(
@@ -616,47 +583,6 @@ func (r *reconciler) ensureNamespace(ctx context.Context, project *kargoapi.Proj
 		if updated {
 			logger.Debug("added finalizer to namespace")
 		}
-
-		for i, ownerRef := range ns.OwnerReferences {
-			if ownerRef.UID == project.UID {
-				logger.Debug("namespace exists and is already owned by this Project")
-				if ownerRef.Controller != nil {
-					logger.Debug("owner reference requires update")
-					ns.OwnerReferences[i].Controller = nil // Update in place
-					if err = r.patchOwnerReferencesFn(ctx, r.client, ns); err != nil {
-						return fmt.Errorf(
-							"error patching namespace %q owner references: %w",
-							project.Name, err,
-						)
-					}
-					logger.Debug("updated owner reference")
-				}
-				return nil
-			}
-		}
-
-		// If we get to here, the Project is not already an owner of the existing
-		// namespace.
-		logger.Debug(
-			"namespace exists, is not owned by this Project, but has the " +
-				"project label; Project will adopt it",
-		)
-
-		// Note: We allow multiple owners of a namespace due to the not entirely
-		// uncommon scenario where an organization has its own controller that
-		// creates and initializes namespaces to ensure compliance with
-		// internal policies. Such a controller might already own the namespace.
-		ns.OwnerReferences = append(ns.OwnerReferences, *ownerRef)
-		if err = r.patchOwnerReferencesFn(ctx, r.client, ns); err != nil {
-			return fmt.Errorf(
-				"error patching namespace %q with project %q as owner: %w",
-				project.Name,
-				project.Name,
-				err,
-			)
-		}
-		logger.Debug("patched namespace with Project as owner")
-
 		return nil
 	}
 
@@ -671,14 +597,8 @@ func (r *reconciler) ensureNamespace(ctx context.Context, project *kargoapi.Proj
 			Labels: map[string]string{
 				kargoapi.LabelKeyProject: kargoapi.LabelValueTrue,
 			},
-			OwnerReferences: []metav1.OwnerReference{*ownerRef},
 		},
 	}
-	// Project namespaces are owned by a Project. Deleting a Project automatically
-	// deletes the namespace. But we also want this to work in the other
-	// direction, where that behavior is not automatic. We add a finalizer to the
-	// namespace and use our own namespace reconciler to clear it after deleting
-	// the Project.
 	controllerutil.AddFinalizer(ns, kargoapi.FinalizerName)
 	if err := r.createNamespaceFn(ctx, ns); err != nil {
 		return fmt.Errorf("error creating namespace %q: %w", project.Name, err)
@@ -743,25 +663,41 @@ func (r *reconciler) ensureSystemPermissions(
 			}},
 		},
 	}
-	for _, roleBinding := range roleBindings {
-		rbLogger := logger.WithValues("roleBinding", roleBinding.Name)
-		if err := r.createRoleBindingFn(ctx, &roleBinding); err != nil {
-			if !apierrors.IsAlreadyExists(err) {
+	for i := range roleBindings {
+		desired := &roleBindings[i]
+		rbLogger := logger.WithValues("roleBinding", desired.Name)
+		existing := &rbacv1.RoleBinding{}
+		if err := r.client.Get(
+			ctx,
+			client.ObjectKeyFromObject(desired),
+			existing,
+		); err != nil {
+			if !apierrors.IsNotFound(err) {
+				return fmt.Errorf(
+					"error getting RoleBinding %q in Project namespace %q: %w",
+					desired.Name, project.Name, err,
+				)
+			}
+			if err = r.createRoleBindingFn(ctx, desired); err != nil {
 				return fmt.Errorf(
 					"error creating RoleBinding %q in Project namespace %q: %w",
-					roleBinding.Name, project.Name, err,
+					desired.Name, project.Name, err,
 				)
 			}
-			if err = r.client.Update(ctx, &roleBinding); err != nil {
-				return fmt.Errorf(
-					"error updating existing RoleBinding %q in Project namespace %q: %w",
-					roleBinding.Name, project.Name, err,
-				)
-			}
-			rbLogger.Debug("updated RoleBinding")
+			rbLogger.Debug("created RoleBinding in Project namespace")
 			continue
 		}
-		rbLogger.Debug("created RoleBinding in Project namespace")
+		if reflect.DeepEqual(existing.Subjects, desired.Subjects) {
+			continue
+		}
+		existing.Subjects = desired.Subjects
+		if err := r.client.Update(ctx, existing); err != nil {
+			return fmt.Errorf(
+				"error updating RoleBinding %q in Project namespace %q: %w",
+				desired.Name, project.Name, err,
+			)
+		}
+		rbLogger.Debug("updated RoleBinding")
 	}
 
 	return nil
@@ -826,23 +762,38 @@ func (r *reconciler) ensureControllerPermissions(
 			},
 		}
 
-		if err := r.client.Create(ctx, roleBinding); err != nil {
-			if !apierrors.IsAlreadyExists(err) {
+		existing := &rbacv1.RoleBinding{}
+		if err := r.client.Get(
+			ctx,
+			client.ObjectKeyFromObject(roleBinding),
+			existing,
+		); err != nil {
+			if !apierrors.IsNotFound(err) {
+				return fmt.Errorf(
+					"error getting RoleBinding %q in Project namespace %q: %w",
+					roleBinding.Name, project.Name, err,
+				)
+			}
+			if err = r.client.Create(ctx, roleBinding); err != nil {
 				return fmt.Errorf(
 					"error creating RoleBinding %q for ServiceAccount %q in Project namespace %q: %w",
 					roleBinding.Name, sa.Name, project.Name, err,
 				)
 			}
-			if err = r.client.Update(ctx, roleBinding); err != nil {
-				return fmt.Errorf(
-					"error updating existing RoleBinding %q in Project namespace %q: %w",
-					roleBinding.Name, project.Name, err,
-				)
-			}
-			saLogger.Debug("updated RoleBinding")
+			saLogger.Debug("created RoleBinding")
 			continue
 		}
-		saLogger.Debug("created RoleBinding")
+		if reflect.DeepEqual(existing.Subjects, roleBinding.Subjects) {
+			continue
+		}
+		existing.Subjects = roleBinding.Subjects
+		if err := r.client.Update(ctx, existing); err != nil {
+			return fmt.Errorf(
+				"error updating RoleBinding %q in Project namespace %q: %w",
+				roleBinding.Name, project.Name, err,
+			)
+		}
+		saLogger.Debug("updated RoleBinding")
 	}
 
 	return nil
@@ -871,26 +822,31 @@ func (r *reconciler) ensureDefaultUserRoles(
 			"name", saName,
 			"namespace", project.Name,
 		)
-		if err := r.createServiceAccountFn(
-			ctx,
-			&corev1.ServiceAccount{
-				ObjectMeta: metav1.ObjectMeta{
-					Name:        saName,
-					Namespace:   project.Name,
-					Annotations: saAnnotations,
-				},
+		desired := &corev1.ServiceAccount{
+			ObjectMeta: metav1.ObjectMeta{
+				Name:        saName,
+				Namespace:   project.Name,
+				Annotations: saAnnotations,
 			},
+		}
+		if err := r.client.Get(
+			ctx,
+			types.NamespacedName{Name: saName, Namespace: project.Name},
+			&corev1.ServiceAccount{},
 		); err != nil {
-			if apierrors.IsAlreadyExists(err) {
-				saLogger.Debug("ServiceAccount already exists in project namespace")
-				continue
+			if !apierrors.IsNotFound(err) {
+				return fmt.Errorf(
+					"error getting ServiceAccount %q in project namespace %q: %w",
+					saName, project.Name, err,
+				)
 			}
-			return fmt.Errorf(
-				"error creating ServiceAccount %q in project namespace %q: %w",
-				saName,
-				project.Name,
-				err,
-			)
+			if err = r.createServiceAccountFn(ctx, desired); err != nil {
+				return fmt.Errorf(
+					"error creating ServiceAccount %q in project namespace %q: %w",
+					saName, project.Name, err,
+				)
+			}
+			saLogger.Debug("created ServiceAccount in project namespace")
 		}
 	}
 
@@ -1030,22 +986,57 @@ func (r *reconciler) ensureDefaultUserRoles(
 			},
 		},
 	}
+	for i, role := range roles {
+		contribs, err := defaultRoleRulesContributorRegistry.GetAll(ctx, role.Name)
+		if err != nil {
+			return fmt.Errorf(
+				"error getting role rules contributors for role %q: %w",
+				role.Name, err,
+			)
+		}
+		for _, contrib := range contribs {
+			if extra := contrib.Value(role.Name); len(extra) > 0 {
+				roles[i].Rules = append(roles[i].Rules, extra...)
+			}
+		}
+	}
 	for _, role := range roles {
 		roleLogger := logger.WithValues(
 			"name", role.Name,
 			"namespace", project.Name,
 		)
-		if err := r.createRoleFn(ctx, role); err != nil {
-			if apierrors.IsAlreadyExists(err) {
-				roleLogger.Debug("Role already exists in project namespace")
-				continue
+		existing := &rbacv1.Role{}
+		if err := r.client.Get(
+			ctx,
+			client.ObjectKeyFromObject(role),
+			existing,
+		); err != nil {
+			if !apierrors.IsNotFound(err) {
+				return fmt.Errorf(
+					"error getting Role %q in project namespace %q: %w",
+					role.Name, project.Name, err,
+				)
 			}
+			if err = r.createRoleFn(ctx, role); err != nil {
+				return fmt.Errorf(
+					"error creating Role %q in project namespace %q: %w",
+					role.Name, project.Name, err,
+				)
+			}
+			roleLogger.Debug("created Role in project namespace")
+			continue
+		}
+		if reflect.DeepEqual(existing.Rules, role.Rules) {
+			continue
+		}
+		existing.Rules = role.Rules
+		if err := r.client.Update(ctx, existing); err != nil {
 			return fmt.Errorf(
-				"error creating Role %q in project namespace %q: %w",
+				"error updating Role %q in project namespace %q: %w",
 				role.Name, project.Name, err,
 			)
 		}
-		roleLogger.Debug("created Role in project namespace")
+		roleLogger.Debug("updated Role in project namespace")
 	}
 
 	for _, rbName := range allRoles {
@@ -1053,40 +1044,57 @@ func (r *reconciler) ensureDefaultUserRoles(
 			"name", rbName,
 			"namespace", project.Name,
 		)
-		if err := r.createRoleBindingFn(
-			ctx,
-			&rbacv1.RoleBinding{
-				ObjectMeta: metav1.ObjectMeta{
-					Name:      rbName,
-					Namespace: project.Name,
-					Annotations: map[string]string{
-						rbacapi.AnnotationKeyManaged: rbacapi.AnnotationValueTrue,
-					},
-				},
-				RoleRef: rbacv1.RoleRef{
-					APIGroup: rbacv1.GroupName,
-					Kind:     "Role",
-					Name:     rbName,
-				},
-				Subjects: []rbacv1.Subject{
-					{
-						Kind:      "ServiceAccount",
-						Name:      rbName,
-						Namespace: project.Name,
-					},
+		desired := &rbacv1.RoleBinding{
+			ObjectMeta: metav1.ObjectMeta{
+				Name:      rbName,
+				Namespace: project.Name,
+				Annotations: map[string]string{
+					rbacapi.AnnotationKeyManaged: rbacapi.AnnotationValueTrue,
 				},
 			},
+			RoleRef: rbacv1.RoleRef{
+				APIGroup: rbacv1.GroupName,
+				Kind:     "Role",
+				Name:     rbName,
+			},
+			Subjects: []rbacv1.Subject{{
+				Kind:      "ServiceAccount",
+				Name:      rbName,
+				Namespace: project.Name,
+			}},
+		}
+		existing := &rbacv1.RoleBinding{}
+		if err := r.client.Get(
+			ctx,
+			client.ObjectKeyFromObject(desired),
+			existing,
 		); err != nil {
-			if apierrors.IsAlreadyExists(err) {
-				rbLogger.Debug("RoleBinding already exists in project namespace")
-				continue
+			if !apierrors.IsNotFound(err) {
+				return fmt.Errorf(
+					"error getting RoleBinding %q in project namespace %q: %w",
+					rbName, project.Name, err,
+				)
 			}
+			if err = r.createRoleBindingFn(ctx, desired); err != nil {
+				return fmt.Errorf(
+					"error creating RoleBinding %q in project namespace %q: %w",
+					rbName, project.Name, err,
+				)
+			}
+			rbLogger.Debug("created RoleBinding in project namespace")
+			continue
+		}
+		if reflect.DeepEqual(existing.Subjects, desired.Subjects) {
+			continue
+		}
+		existing.Subjects = desired.Subjects
+		if err := r.client.Update(ctx, existing); err != nil {
 			return fmt.Errorf(
-				"error creating RoleBinding %q in project namespace %q: %w",
+				"error updating RoleBinding %q in project namespace %q: %w",
 				rbName, project.Name, err,
 			)
 		}
-		rbLogger.Debug("created RoleBinding in project namespace")
+		rbLogger.Debug("updated RoleBinding in project namespace")
 	}
 
 	// This ClusterRole allows those bound to it to update and delete one specific
@@ -1096,333 +1104,62 @@ func (r *reconciler) ensureDefaultUserRoles(
 		fmt.Sprintf("kargo-project-admin-%s", project.Name),
 	)
 	crLogger := logger.WithValues("name", crName)
-	if err := r.createClusterRoleFn(
-		ctx,
-		&rbacv1.ClusterRole{
-			ObjectMeta: metav1.ObjectMeta{Name: crName},
-			Rules: []rbacv1.PolicyRule{{
-				APIGroups:     []string{kargoapi.GroupVersion.Group},
-				Resources:     []string{"projects"},
-				ResourceNames: []string{project.Name},
-				Verbs:         []string{"delete", "update"},
-			}},
-		},
-	); err != nil {
-		if !apierrors.IsAlreadyExists(err) {
+	desiredCR := &rbacv1.ClusterRole{
+		ObjectMeta: metav1.ObjectMeta{Name: crName},
+		Rules: []rbacv1.PolicyRule{{
+			APIGroups:     []string{kargoapi.GroupVersion.Group},
+			Resources:     []string{"projects"},
+			ResourceNames: []string{project.Name},
+			Verbs:         []string{"delete", "update"},
+		}},
+	}
+	existingCR := &rbacv1.ClusterRole{}
+	if err := r.client.Get(ctx, client.ObjectKeyFromObject(desiredCR), existingCR); err != nil {
+		if !apierrors.IsNotFound(err) {
+			return fmt.Errorf("error getting ClusterRole %q: %w", crName, err)
+		}
+		if err = r.createClusterRoleFn(ctx, desiredCR); err != nil {
 			return fmt.Errorf("error creating ClusterRole %q: %w", crName, err)
 		}
-		crLogger.Debug("ClusterRole already exists")
+		crLogger.Debug("created ClusterRole")
+	} else if !reflect.DeepEqual(existingCR.Rules, desiredCR.Rules) {
+		existingCR.Rules = desiredCR.Rules
+		if err := r.client.Update(ctx, existingCR); err != nil {
+			return fmt.Errorf("error updating ClusterRole %q: %w", crName, err)
+		}
+		crLogger.Debug("updated ClusterRole")
 	}
-	crLogger.Debug("created ClusterRole")
 
 	crbName := crName
 	crbLogger := logger.WithValues("name", crbName)
-	logger.WithValues()
-	if err := r.createClusterRoleBindingFn(
-		ctx,
-		&rbacv1.ClusterRoleBinding{
-			ObjectMeta: metav1.ObjectMeta{Name: crbName},
-			RoleRef: rbacv1.RoleRef{
-				APIGroup: rbacv1.GroupName,
-				Kind:     "ClusterRole",
-				Name:     crName,
-			},
-			Subjects: []rbacv1.Subject{{
-				Kind:      "ServiceAccount",
-				Name:      adminRoleName,
-				Namespace: project.Name,
-			}},
+	desiredCRB := &rbacv1.ClusterRoleBinding{
+		ObjectMeta: metav1.ObjectMeta{Name: crbName},
+		RoleRef: rbacv1.RoleRef{
+			APIGroup: rbacv1.GroupName,
+			Kind:     "ClusterRole",
+			Name:     crName,
 		},
-	); err != nil {
-		if !apierrors.IsAlreadyExists(err) {
-			return fmt.Errorf("error creating ClusterRoleBinding %q: %w", crName, err)
+		Subjects: []rbacv1.Subject{{
+			Kind:      "ServiceAccount",
+			Name:      adminRoleName,
+			Namespace: project.Name,
+		}},
+	}
+	existingCRB := &rbacv1.ClusterRoleBinding{}
+	if err := r.client.Get(ctx, client.ObjectKeyFromObject(desiredCRB), existingCRB); err != nil {
+		if !apierrors.IsNotFound(err) {
+			return fmt.Errorf("error getting ClusterRoleBinding %q: %w", crbName, err)
 		}
-		crbLogger.Debug("ClusterRoleBinding already exists")
-	}
-	crbLogger.Debug("created ClusterRoleBinding")
-
-	return nil
-}
-
-func (r *reconciler) ensureExtendedPermissions(
-	ctx context.Context,
-	project *kargoapi.Project,
-) error {
-	logger := logging.LoggerFromContext(ctx).WithValues("project", project.Name)
-
-	var serviceAccounts []string
-
-	// If a control plane ServiceAccount is configured, then add it to the list
-	// of ServiceAccounts to create and bind extended permissions to.
-	if r.cfg.ControlPlaneServiceAccountName != "" {
-		serviceAccounts = append(serviceAccounts, r.cfg.ControlPlaneServiceAccountName)
-	}
-
-	// If a dedicated namespace for managed resources is configured, then we do
-	// not have to create the orchestrator ServiceAccount in every Project
-	// namespace.
-	if r.cfg.ManageOrchestrator && r.cfg.ManagedResourceNamespace == "" && r.cfg.OrchestratorServiceAccountName != "" {
-		serviceAccounts = append([]string{
-			r.cfg.OrchestratorServiceAccountName,
-		}, serviceAccounts...)
-	}
-
-	// If an Argo CD ServiceAccount is configured, then add it to the list of
-	// ServiceAccounts to create and bind extended permissions to.
-	//
-	// Note: We only do this if Argo CD is not restricted to watch its own
-	// namespace only. If it is, then the Argo CD ServiceAccount does not need
-	// to exist in every Project namespace, and we do not need to create a
-	// ClusterRoleBinding for it.
-	if r.cfg.ArgoCDServiceAccountName != "" {
-		serviceAccounts = append(serviceAccounts, r.cfg.ArgoCDServiceAccountName)
-	}
-
-	saAnnotations := map[string]string{
-		rbacapi.AnnotationKeyManaged: rbacapi.AnnotationValueTrue,
-	}
-
-	for _, saName := range serviceAccounts {
-		saLogger := logger.WithValues(
-			"name", saName,
-			"namespace", project.Name,
-		)
-
-		if err := r.createServiceAccountFn(
-			ctx,
-			&corev1.ServiceAccount{
-				ObjectMeta: metav1.ObjectMeta{
-					Name:        saName,
-					Namespace:   project.Name,
-					Annotations: saAnnotations,
-				},
-			},
-		); err != nil {
-			if apierrors.IsAlreadyExists(err) {
-				saLogger.Debug("ServiceAccount already exists in project namespace")
-				continue
-			}
-			return fmt.Errorf(
-				"error creating ServiceAccount %q in project namespace %q: %w",
-				saName,
-				project.Name,
-				err,
-			)
+		if err = r.createClusterRoleBindingFn(ctx, desiredCRB); err != nil {
+			return fmt.Errorf("error creating ClusterRoleBinding %q: %w", crbName, err)
 		}
-	}
-
-	var clusterRoleBindings []*rbacv1.ClusterRoleBinding
-
-	if r.cfg.ArgoCDServiceAccountName != "" && !r.cfg.ArgoCDWatchNamespaceOnly {
-		// ClusterRoleBinding for the Argo CD ServiceAccount to access and
-		// operate on Argo CD Application resources in any namespace.
-		clusterRoleBindings = append(clusterRoleBindings, &rbacv1.ClusterRoleBinding{
-			ObjectMeta: metav1.ObjectMeta{
-				Name: kubernetes.ShortenResourceName(fmt.Sprintf("%s-%s", r.cfg.ArgoCDClusterRoleName, project.Name)),
-				Annotations: map[string]string{
-					rbacapi.AnnotationKeyManaged: rbacapi.AnnotationValueTrue,
-				},
-			},
-			RoleRef: rbacv1.RoleRef{
-				APIGroup: rbacv1.GroupName,
-				Kind:     "ClusterRole",
-				Name:     r.cfg.ArgoCDClusterRoleName,
-			},
-			Subjects: []rbacv1.Subject{
-				{
-					Kind:      "ServiceAccount",
-					Name:      r.cfg.ArgoCDServiceAccountName,
-					Namespace: project.Name,
-				},
-			},
-		})
-	}
-
-	for _, crb := range clusterRoleBindings {
-		crbLogger := logger.WithValues("name", crb.Name, "project", project.Name)
-		if err := r.createClusterRoleBindingFn(ctx, crb); err != nil {
-			if apierrors.IsAlreadyExists(err) {
-				crbLogger.Debug("ClusterRoleBinding already exists for Project")
-				continue
-			}
-
-			return fmt.Errorf(
-				"error creating ClusterRoleBinding %q for Project %q: %w",
-				crb.Name, project.Name, err,
-			)
+		crbLogger.Debug("created ClusterRoleBinding")
+	} else if !reflect.DeepEqual(existingCRB.Subjects, desiredCRB.Subjects) {
+		existingCRB.Subjects = desiredCRB.Subjects
+		if err := r.client.Update(ctx, existingCRB); err != nil {
+			return fmt.Errorf("error updating ClusterRoleBinding %q: %w", crbName, err)
 		}
-	}
-
-	rbAnnotations := map[string]string{
-		rbacapi.AnnotationKeyManaged: rbacapi.AnnotationValueTrue,
-	}
-
-	var roleBindings []*rbacv1.RoleBinding
-
-	if r.cfg.ControlPlaneServiceAccountName != "" && r.cfg.ControlPlaneClusterRoleName != "" {
-		roleBindings = append(roleBindings, &rbacv1.RoleBinding{
-			// RoleBinding for the control plane ServiceAccount to access and
-			// operate on a minimal set of Kargo resources in the Project
-			// namespace.
-			ObjectMeta: metav1.ObjectMeta{
-				Name:        r.cfg.ControlPlaneServiceAccountName,
-				Namespace:   project.Name,
-				Annotations: rbAnnotations,
-			},
-			RoleRef: rbacv1.RoleRef{
-				APIGroup: rbacv1.GroupName,
-				Kind:     "ClusterRole",
-				Name:     r.cfg.ControlPlaneClusterRoleName,
-			},
-			Subjects: []rbacv1.Subject{
-				{
-					Kind:      "ServiceAccount",
-					Name:      r.cfg.ControlPlaneClusterRoleName,
-					Namespace: project.Name,
-				},
-			},
-		})
-	}
-
-	if r.cfg.ManagerServiceAccountName != "" && r.cfg.ManagedResourceNamespace == "" {
-		// RoleBinding for the manager ServiceAccount to manage resources in
-		// the Project namespace, if no dedicated managed resources namespace
-		// is configured.
-		roleBindings = append(roleBindings, &rbacv1.RoleBinding{
-			ObjectMeta: metav1.ObjectMeta{
-				Name:        r.cfg.ManagerClusterRoleName,
-				Namespace:   project.Name,
-				Annotations: rbAnnotations,
-			},
-			RoleRef: rbacv1.RoleRef{
-				APIGroup: rbacv1.GroupName,
-				Kind:     "ClusterRole",
-				Name:     r.cfg.ManagerClusterRoleName,
-			},
-			Subjects: []rbacv1.Subject{
-				{
-					Kind:      "ServiceAccount",
-					Name:      r.cfg.ManagerServiceAccountName,
-					Namespace: r.cfg.KargoNamespace,
-				},
-			},
-		})
-	}
-
-	if r.cfg.OrchestratorServiceAccountName != "" {
-		// RoleBinding for the orchestrator ServiceAccount to access and operate
-		// on resources in the Project namespace.
-		roleBindings = append(roleBindings, &rbacv1.RoleBinding{
-			ObjectMeta: metav1.ObjectMeta{
-				Name:        r.cfg.OrchestratorServiceAccountName,
-				Namespace:   project.Name,
-				Annotations: rbAnnotations,
-			},
-			RoleRef: rbacv1.RoleRef{
-				APIGroup: rbacv1.GroupName,
-				Kind:     "ClusterRole",
-				Name:     r.cfg.OrchestratorClusterRoleName,
-			},
-			Subjects: []rbacv1.Subject{
-				{
-					Kind:      "ServiceAccount",
-					Name:      r.cfg.OrchestratorServiceAccountName,
-					Namespace: project.Name,
-				},
-			},
-		})
-
-		if r.cfg.TokenManagerClusterRoleName != "" {
-			// RoleBinding for the orchestrator ServiceAccount to create and
-			// manage ServiceAccount tokens in the Project namespace.
-			roleBindings = append(roleBindings, &rbacv1.RoleBinding{
-				ObjectMeta: metav1.ObjectMeta{
-					Name:        r.cfg.TokenManagerClusterRoleName,
-					Namespace:   project.Name,
-					Annotations: rbAnnotations,
-				},
-				RoleRef: rbacv1.RoleRef{
-					APIGroup: rbacv1.GroupName,
-					Kind:     "ClusterRole",
-					Name:     r.cfg.TokenManagerClusterRoleName,
-				},
-				Subjects: []rbacv1.Subject{
-					{
-						Kind:      "ServiceAccount",
-						Name:      r.cfg.OrchestratorClusterRoleName,
-						Namespace: project.Name,
-					},
-				},
-			})
-		}
-
-		// RoleBinding for the orchestrator ServiceAccount to access Secrets
-		// in the Project namespace.
-		roleBindings = append(roleBindings, &rbacv1.RoleBinding{
-			ObjectMeta: metav1.ObjectMeta{
-				Name: kubernetes.ShortenResourceName(
-					fmt.Sprintf("%s-secrets-reader", r.cfg.OrchestratorServiceAccountName),
-				),
-				Namespace:   project.Name,
-				Annotations: rbAnnotations,
-			},
-			RoleRef: rbacv1.RoleRef{
-				APIGroup: rbacv1.GroupName,
-				Kind:     "ClusterRole",
-				Name:     projectSecretsReaderClusterRoleName,
-			},
-			Subjects: []rbacv1.Subject{
-				{
-					Kind:      "ServiceAccount",
-					Name:      r.cfg.OrchestratorServiceAccountName,
-					Namespace: project.Name,
-				},
-			},
-		})
-	}
-
-	if r.cfg.ArgoCDServiceAccountName != "" && r.cfg.ArgoCDNamespace != "" && r.cfg.ArgoCDWatchNamespaceOnly {
-		// RoleBinding for the Argo CD ServiceAccount to access and operate
-		// on Applications in the Argo CD namespace.
-		roleBindings = append(roleBindings, &rbacv1.RoleBinding{
-			ObjectMeta: metav1.ObjectMeta{
-				Name: kubernetes.ShortenResourceName(
-					fmt.Sprintf("%s-%s", r.cfg.ArgoCDRoleName, project.Name),
-				),
-				Namespace:   r.cfg.ArgoCDNamespace,
-				Annotations: rbAnnotations,
-			},
-			RoleRef: rbacv1.RoleRef{
-				APIGroup: rbacv1.GroupName,
-				Kind:     "Role",
-				Name:     r.cfg.ArgoCDRoleName,
-			},
-			Subjects: []rbacv1.Subject{
-				{
-					Kind:      "ServiceAccount",
-					Name:      r.cfg.ArgoCDServiceAccountName,
-					Namespace: project.Name,
-				},
-			},
-		})
-	}
-
-	for _, rb := range roleBindings {
-		rbLogger := logger.WithValues(
-			"name", rb.Name,
-			"namespace", project.Name,
-		)
-
-		if err := r.createRoleBindingFn(ctx, rb); err != nil {
-			if apierrors.IsAlreadyExists(err) {
-				rbLogger.Debug("RoleBinding already exists in project namespace")
-				continue
-			}
-			return fmt.Errorf(
-				"error creating RoleBinding %q in project namespace %q: %w",
-				rb.Name, project.Name, err,
-			)
-		}
+		crbLogger.Debug("updated ClusterRoleBinding")
 	}
 
 	return nil

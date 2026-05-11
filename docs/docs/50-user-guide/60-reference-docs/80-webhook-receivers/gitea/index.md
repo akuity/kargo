@@ -4,15 +4,48 @@ sidebar_label: Gitea
 
 # The Gitea Webhook Receiver
 
-The Gitea webhook receiver responds to `push` events originating from Gitea
-repositories by _refreshing_ all `Warehouse` resources subscribed to those
-repositories.
+The Gitea webhook receiver responds to `push` and `pull_request` events
+originating from Gitea repositories.
+
+The receiver responds to `push` events by _refreshing_ `Warehouse` resources
+subscribed to those repositories. When a Warehouse has `includePaths` or
+`excludePaths` configured, the receiver extracts the list of changed files from
+the push event and only refreshes the Warehouse if the changed files match those
+path filters.
+
+The receiver responds to `pull_request` events with a `closed` action by
+_refreshing_ all running `Promotion` resources that are waiting on the closed
+pull request via a [`git-wait-for-pr`](../../30-promotion-steps/git-wait-for-pr.md)
+step. This enables near-instant detection of PR merges and closures instead of
+relying on the default polling interval. Events with other actions (e.g.
+`opened`, `synchronized`) are acknowledged with an HTTP `200` status code but
+produce no side effects.
+
+:::note
+
+Gitea limits the `commits` array in push webhook payloads to a configurable
+number of commits (default: **5**, controlled by `UI.FEED_MAX_COMMIT_NUM` in
+Gitea's `app.ini`). If a push contains more commits than this limit, Kargo
+detects the truncation and skips path filtering for that event, refreshing all
+matching Warehouses unconditionally.
+
+:::
 
 :::info
 
 "Refreshing" a `Warehouse` resource means enqueuing it for immediate
 reconciliation by the Kargo controller, which will execute the discovery of
 new artifacts from all repositories to which that `Warehouse` subscribes.
+
+:::
+
+:::info
+
+"Refreshing" a `Promotion` resource means enqueuing it for immediate
+reconciliation. The
+[`git-wait-for-pr`](../../30-promotion-steps/git-wait-for-pr.md) step will then
+call the Git provider's API to detect whether the PR has been merged or closed,
+and proceed accordingly.
 
 :::
 
@@ -61,7 +94,7 @@ metadata:
 spec:
   webhookReceivers: 
   - name: gitea-wh-receiver
-    gitlab:
+    gitea:
       secretRef:
         name: gitea-wh-secret
 ```
@@ -130,6 +163,12 @@ kubectl get projectconfigs kargo-demo \
 
     1. In the <Hlt>Trigger On</Hlt> section, ensure <Hlt>Push Events</Hlt> is
        checked.
+
+        If you use PR-based promotion workflows (i.e. promotions that include a
+        [`git-wait-for-pr`](../../30-promotion-steps/git-wait-for-pr.md) step),
+        also check <Hlt>Pull Request Events</Hlt>. This enables Kargo to detect
+        PR merges and closures near-instantly instead of relying on the default
+        polling interval.
 
     1. Click <Hlt>Add Webhook</Hlt>.
 

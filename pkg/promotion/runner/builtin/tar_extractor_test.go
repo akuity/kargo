@@ -3,7 +3,6 @@ package builtin
 import (
 	"archive/tar"
 	"compress/gzip"
-	"context"
 	"fmt"
 	"os"
 	"path/filepath"
@@ -420,7 +419,7 @@ func Test_tarExtractor_run(t *testing.T) {
 		t.Run(tt.name, func(t *testing.T) {
 			workDir := tt.setupFiles(t)
 			result, err := runner.run(
-				context.Background(),
+				t.Context(),
 				&promotion.StepContext{WorkDir: workDir},
 				tt.cfg,
 			)
@@ -1011,7 +1010,7 @@ func Test_tarExtractor_extractToDir(t *testing.T) {
 			extractDir := filepath.Join(workDir, "temp_extract")
 
 			result, err := runner.extractToDir(
-				context.Background(),
+				t.Context(),
 				tt.cfg,
 				tarPath,
 				extractDir,

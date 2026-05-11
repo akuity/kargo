@@ -2,7 +2,10 @@ package secrets
 
 import (
 	"context"
+	"crypto/sha256"
+	"encoding/hex"
 	"fmt"
+	"sort"
 	"time"
 
 	corev1 "k8s.io/api/core/v1"
@@ -18,6 +21,11 @@ import (
 	kargoapi "github.com/akuity/kargo/api/v1alpha1"
 	"github.com/akuity/kargo/pkg/api"
 	"github.com/akuity/kargo/pkg/logging"
+)
+
+const (
+	originNamespaceAnnotation = "kargo.akuity.io/origin-namespace"
+	syncedDataHashAnnotation  = "kargo.akuity.io/synced-data-hash"
 )
 
 type ReconcilerConfig struct {
@@ -152,9 +160,10 @@ func (r *reconciler) Reconcile(
 	destSecret.UID = ""
 	destSecret.DeletionTimestamp = nil
 	if destSecret.Annotations == nil {
-		destSecret.Annotations = make(map[string]string, 1)
+		destSecret.Annotations = make(map[string]string, 2)
 	}
-	destSecret.Annotations["kargo.akuity.io/origin-namespace"] = r.cfg.SourceNamespace
+	destSecret.Annotations[originNamespaceAnnotation] = r.cfg.SourceNamespace
+	destSecret.Annotations[syncedDataHashAnnotation] = computeDataHash(srcSecret.Data)
 
 	// Try to create the destination secret
 	if err := r.client.Create(ctx, destSecret); err != nil {
@@ -164,8 +173,43 @@ func (r *reconciler) Reconcile(
 				req.Name, r.cfg.DestinationNamespace, err,
 			)
 		}
-		// Secret already exists, patch it instead.
-		if err = r.client.Patch(ctx, destSecret, client.Merge); err != nil {
+		// Secret already exists - check if we should update it
+		existing := &corev1.Secret{}
+		if err = r.client.Get(ctx, types.NamespacedName{
+			Namespace: r.cfg.DestinationNamespace,
+			Name:      req.Name,
+		}, existing); err != nil {
+			return ctrl.Result{}, fmt.Errorf(
+				"error getting destination Secret %q in namespace %q: %w",
+				req.Name, r.cfg.DestinationNamespace, err,
+			)
+		}
+
+		// Only update if we previously synced this secret (has our hash annotation)
+		// and it hasn't been modified externally since
+		lastSyncedHash, hasAnnotation := existing.Annotations[syncedDataHashAnnotation]
+		if !hasAnnotation {
+			logger.Debug("destination Secret missing sync annotation; skipping update")
+			return ctrl.Result{}, nil
+		}
+		if lastSyncedHash != computeDataHash(existing.Data) {
+			logger.Info("destination Secret was modified externally; skipping update")
+			return ctrl.Result{}, nil
+		}
+
+		// Safe to update - modify existing in place and use Update for optimistic
+		// concurrency control. If the destination was modified between our Get and
+		// this Update, the API server will reject with a conflict error and we'll
+		// re-evaluate on the next reconciliation.
+		existing.Labels = srcSecret.Labels
+		existing.Data = srcSecret.Data
+		existing.Type = srcSecret.Type
+		if existing.Annotations == nil {
+			existing.Annotations = make(map[string]string, 2)
+		}
+		existing.Annotations[originNamespaceAnnotation] = r.cfg.SourceNamespace
+		existing.Annotations[syncedDataHashAnnotation] = computeDataHash(srcSecret.Data)
+		if err = r.client.Update(ctx, existing); err != nil {
 			return ctrl.Result{}, fmt.Errorf(
 				"error updating destination Secret %q in namespace %q: %w",
 				req.Name, r.cfg.DestinationNamespace, err,
@@ -192,7 +236,19 @@ func (r *reconciler) handleDelete(ctx context.Context, srcSecret *corev1.Secret)
 
 	logger := logging.LoggerFromContext(ctx)
 
-	destSecret := new(corev1.Secret)
+	// Check if the source namespace itself is being deleted. If so, this is a
+	// bulk cleanup operation and we should preserve all destination secrets.
+	srcNamespace := &corev1.Namespace{}
+	if err := r.client.Get(
+		ctx,
+		types.NamespacedName{Name: r.cfg.SourceNamespace},
+		srcNamespace,
+	); err == nil && !srcNamespace.DeletionTimestamp.IsZero() {
+		logger.Info("source namespace being deleted; preserving destination Secret")
+		return r.removeFinalizer(ctx, srcSecret)
+	}
+
+	destSecret := &corev1.Secret{}
 	err := r.client.Get(
 		ctx,
 		types.NamespacedName{
@@ -208,20 +264,54 @@ func (r *reconciler) handleDelete(ctx context.Context, srcSecret *corev1.Secret)
 		)
 	}
 
-	if err = r.client.Delete(ctx, destSecret); client.IgnoreNotFound(err) != nil {
-		return fmt.Errorf(
-			"error deleting destination Secret %q in namespace %q: %w",
-			srcSecret.Name, r.cfg.DestinationNamespace, err,
-		)
-	}
-	logger.Debug("deleted corresponding destination Secret")
+	// If destination exists, only delete if we manage it and it hasn't been
+	// modified externally
+	if err == nil {
+		lastSyncedHash, hasAnnotation := destSecret.Annotations[syncedDataHashAnnotation]
+		if !hasAnnotation {
+			logger.Debug("destination Secret missing sync annotation; skipping delete")
+			return r.removeFinalizer(ctx, srcSecret)
+		}
+		if lastSyncedHash != computeDataHash(destSecret.Data) {
+			logger.Info("destination Secret was modified externally; skipping delete")
+			return r.removeFinalizer(ctx, srcSecret)
+		}
 
-	if err = api.RemoveFinalizer(ctx, r.client, srcSecret); err != nil {
+		// Safe to delete
+		if err = r.client.Delete(ctx, destSecret); err != nil {
+			return fmt.Errorf(
+				"error deleting destination Secret %q in namespace %q: %w",
+				srcSecret.Name, r.cfg.DestinationNamespace, err,
+			)
+		}
+		logger.Debug("deleted corresponding destination Secret")
+	}
+
+	return r.removeFinalizer(ctx, srcSecret)
+}
+
+// computeDataHash returns a deterministic hash of the secret data.
+func computeDataHash(data map[string][]byte) string {
+	h := sha256.New()
+	keys := make([]string, 0, len(data))
+	for k := range data {
+		keys = append(keys, k)
+	}
+	sort.Strings(keys)
+	for _, k := range keys {
+		h.Write([]byte(k))
+		h.Write(data[k])
+	}
+	return hex.EncodeToString(h.Sum(nil))[:16]
+}
+
+func (r *reconciler) removeFinalizer(ctx context.Context, secret *corev1.Secret) error {
+	if err := api.RemoveFinalizer(ctx, r.client, secret); err != nil {
 		return fmt.Errorf(
 			"error removing finalizer from source Secret %q in namespace %q: %w",
-			srcSecret.Name, r.cfg.SourceNamespace, err,
+			secret.Name, secret.Namespace, err,
 		)
 	}
-	logger.Debug("removed finalizer from source Secret")
+	logging.LoggerFromContext(ctx).Debug("removed finalizer from source Secret")
 	return nil
 }

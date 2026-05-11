@@ -5,6 +5,7 @@ metadata:
   namespace: {{ .Values.global.clusterSecretsNamespace }}
   labels:
     {{- include "kargo.labels" . | nindent 4 }}
+  {{- include "kargo.annotations" (dict "root" .) | nindent 2 }}
 rules:
 - apiGroups:
   - ""
@@ -22,6 +23,7 @@ metadata:
   namespace: {{ .Values.global.clusterSecretsNamespace }}
   labels:
     {{- include "kargo.labels" . | nindent 4 }}
+  {{- include "kargo.annotations" (dict "root" .) | nindent 2 }}
 rules:
 - apiGroups:
   - ""

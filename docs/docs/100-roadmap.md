@@ -29,28 +29,53 @@ every submission.
 
 ## In Progress
 
+### v1.10.0
+
+**Expected:** Mid-April, 2026
+
+🧬 Evolution; not revolution — apart from the usual slate of bug fixes and
+performance + stability improvements, v1.10.0 is set to deliver a broad
+collection of small, but meaningful quality-of-life improvements.
+
+A modest selection of anticipated highlights:
+
+* UI "My Projects" filter
+* Path filtering for push events from Git repositories ➡️ fewer Warehouses
+  executing unnecessary artifact discovery cycles
+* Broad range of new and improved promotion steps
+* Enhanced trust model for commits made by Kargo
+* New Helm chart options to support common operational concerns
+
+v1.10.0 will also include a partial UI transition from the deprecated gRPC API
+to new RESTful API.
+
+## Upcoming
+
+### v1.11.0
+
+**Expected:** Mid-June, 2026
+
+## Completed
+
 ### v1.9.0
 
-__Expected:__ November, 2025
+Focused on stability, performance, and usability.
 
-This release is focused on:
+Introduced:
 
-* Facilitating external automation and other integrations via Kargo-managed
-  service accounts.
-* Improving Warehouse performance through more aggressive caching.
-* Relieving confusion over "global" vs "cluster-scoped" credentials and other
-  Secrets through careful, minimally breaking refactoring.
-* Extending webhook compatibility to unspecified repository hosts via a generic
-  webhook receiver.
+* A new, RESTful API
+* User-generated API tokens
+* Opt-in Warehouse caching
+* Configurable rate limits
+* Refined everything related to Secret/credentials management
+* A large slate of small
+
+See [release notes](./80-release-notes/90-v1.9.0.md) for full details.
 
 ### v1.8.0
 
-__Expected:__ October, 2025
-
-This release is focused on UI enhancements and general "quality-of-life"
-improvements, but also boasts a grab bag of small features.
-
-## Completed
+This small release focused on UI enhancements and general "quality-of-life"
+improvements, as well as a grab bag of small features.
 
 ### v1.7.0
 

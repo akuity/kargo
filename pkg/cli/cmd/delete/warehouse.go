@@ -6,19 +6,18 @@ import (
 	"fmt"
 	"slices"
 
-	"connectrpc.com/connect"
 	"github.com/spf13/cobra"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/cli-runtime/pkg/genericclioptions"
 	"k8s.io/cli-runtime/pkg/genericiooptions"
 
-	v1alpha1 "github.com/akuity/kargo/api/service/v1alpha1"
 	kargoapi "github.com/akuity/kargo/api/v1alpha1"
 	"github.com/akuity/kargo/pkg/cli/client"
 	"github.com/akuity/kargo/pkg/cli/config"
 	"github.com/akuity/kargo/pkg/cli/option"
 	"github.com/akuity/kargo/pkg/cli/templates"
+	"github.com/akuity/kargo/pkg/client/generated/core"
 )
 
 type deleteWarehouseOptions struct {
@@ -104,7 +103,7 @@ func (o *deleteWarehouseOptions) validate() error {
 
 // run removes the warehouse(s) based on the options.
 func (o *deleteWarehouseOptions) run(ctx context.Context) error {
-	kargoSvcCli, err := client.GetClientFromConfig(ctx, o.Config, o.ClientOptions)
+	apiClient, err := client.GetClientFromConfig(ctx, o.Config, o.ClientOptions)
 	if err != nil {
 		return fmt.Errorf("get client from config: %w", err)
 	}
@@ -116,14 +115,11 @@ func (o *deleteWarehouseOptions) run(ctx context.Context) error {
 
 	var errs []error
 	for _, name := range o.Names {
-		if _, err := kargoSvcCli.DeleteWarehouse(
-			ctx,
-			connect.NewRequest(
-				&v1alpha1.DeleteWarehouseRequest{
-					Project: o.Project,
-					Name:    name,
-				},
-			),
+		if _, err := apiClient.Core.DeleteWarehouse(
+			core.NewDeleteWarehouseParams().
+				WithProject(o.Project).
+				WithWarehouse(name),
+			nil,
 		); err != nil {
 			errs = append(errs, err)
 			continue

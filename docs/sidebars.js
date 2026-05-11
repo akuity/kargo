@@ -13,6 +13,24 @@ const sidebars = {
       label: 'CRD Reference',
       href: 'https://doc.crds.dev/github.com/akuity/kargo',
     },
+    {
+      type: 'category',
+      label: 'API Reference',
+      collapsible: true,
+      collapsed: true,
+      items: [
+        {
+          type: 'link',
+          label: 'REST API',
+          href: '/api-docs',
+        },
+        {
+          type: 'doc',
+          id: 'api-documentation',
+          label: 'gRPC API (Deprecated)',
+        },
+      ],
+    },
   ],
 };
 

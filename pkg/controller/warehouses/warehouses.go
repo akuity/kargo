@@ -746,10 +746,10 @@ func validateDiscoveredArtifacts(
 			var sb strings.Builder
 			_, _ = sb.WriteString("No versions discovered for chart ")
 			if artifact.Name != "" {
-				_, _ = sb.WriteString(fmt.Sprintf("%q", artifact.Name))
+				_, _ = fmt.Fprintf(&sb, "%q", artifact.Name)
 			}
 			_, _ = sb.WriteString(" from repository ")
-			_, _ = sb.WriteString(fmt.Sprintf("%q", artifact.RepoURL))
+			_, _ = fmt.Fprintf(&sb, "%q", artifact.RepoURL)
 
 			conditions.Set(
 				newStatus,

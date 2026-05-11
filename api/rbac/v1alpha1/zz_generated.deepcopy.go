@@ -101,6 +101,13 @@ func (in *RoleResources) DeepCopyInto(out *RoleResources) {
 			(*in)[i].DeepCopyInto(&(*out)[i])
 		}
 	}
+	if in.ClusterRoles != nil {
+		in, out := &in.ClusterRoles, &out.ClusterRoles
+		*out = make([]v1.ClusterRole, len(*in))
+		for i := range *in {
+			(*in)[i].DeepCopyInto(&(*out)[i])
+		}
+	}
 	if in.RoleBindings != nil {
 		in, out := &in.RoleBindings, &out.RoleBindings
 		*out = make([]v1.RoleBinding, len(*in))

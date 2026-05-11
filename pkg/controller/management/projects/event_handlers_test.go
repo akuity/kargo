@@ -1,7 +1,6 @@
 package projects
 
 import (
-	"context"
 	"testing"
 
 	"github.com/stretchr/testify/require"
@@ -86,7 +85,7 @@ func Test_projectWarehouseHealthEnqueuer_Update(t *testing.T) {
 			queue := &controllertest.Queue{TypedInterface: workqueue.NewTyped[reconcile.Request]()}
 
 			enqueuer.Update(
-				context.Background(),
+				t.Context(),
 				event.TypedUpdateEvent[*kargoapi.Warehouse]{
 					ObjectOld: tt.oldWarehouse,
 					ObjectNew: tt.newWarehouse,
@@ -176,7 +175,7 @@ func Test_projectStageHealthEnqueuer_Update(t *testing.T) {
 			queue := &controllertest.Queue{TypedInterface: workqueue.NewTyped[reconcile.Request]()}
 
 			enqueuer.Update(
-				context.Background(),
+				t.Context(),
 				event.TypedUpdateEvent[*kargoapi.Stage]{
 					ObjectOld: tt.oldStage,
 					ObjectNew: tt.newStage,

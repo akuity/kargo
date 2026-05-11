@@ -14,6 +14,10 @@ type Selector interface {
 	// would consider a commit referenced by the specified ref to be eligible for
 	// selection.
 	MatchesRef(string) bool
+	// MatchesPaths returns a boolean value indicating whether or not the Selector
+	// would consider a commit with the specified changed paths to be eligible for
+	// selection.
+	MatchesPaths([]string) bool
 	// Select selects images from a container image repository.
 	Select(context.Context) ([]kargoapi.DiscoveredCommit, error)
 }

@@ -1,0 +1,72 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "ArgoCDWaitConfig",
+
+  "definitions": {
+
+    "argoCDAppWait": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "name": {
+          "type": "string",
+          "description": "Specifies the exact name of an Argo CD Application resource to wait for. Mutually exclusive with 'selector'.",
+          "minLength": 1
+        },
+        "namespace": {
+          "type": "string",
+          "description": "Specifies the namespace of the Argo CD Application. If left unspecified, the namespace will be the controller's configured default.",
+          "minLength": 1
+        },
+        "selector": {
+          "$ref": "argocd-common.json#/definitions/argoCDAppSelector",
+          "description": "Specifies a label selector to match Argo CD Application resources to wait for. Mutually exclusive with 'name'."
+        },
+        "waitFor": {
+          "type": "array",
+          "description": "Specifies the conditions to wait for. Valid values are 'health', 'sync', 'operation', 'suspended', and 'degraded'. Health-related conditions (health, suspended, degraded) are OR'd. All other conditions are AND'd. Defaults to ['health', 'sync', 'operation'] when omitted.",
+          "items": {
+            "type": "string",
+            "enum": ["health", "sync", "operation", "suspended", "degraded"]
+          },
+          "minItems": 1,
+          "uniqueItems": true
+        }
+      },
+      "oneOf": [
+        {
+          "required": ["name"],
+          "properties": {
+            "name": {
+              "minLength": 1
+            },
+            "selector": {
+              "enum": [null]
+            }
+          }
+        },
+        {
+          "required": ["selector"],
+          "properties": {
+            "name": {
+              "enum": ["", null]
+            }
+          }
+        }
+      ]
+    }
+  },
+
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["apps"],
+  "properties": {
+    "apps": {
+      "type": "array",
+      "minItems": 1,
+      "items": {
+        "$ref": "#/definitions/argoCDAppWait"
+      }
+    }
+  }
+}

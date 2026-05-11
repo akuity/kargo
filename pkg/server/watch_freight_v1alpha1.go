@@ -3,11 +3,10 @@ package server
 import (
 	"context"
 	"fmt"
+	"slices"
 
 	"connectrpc.com/connect"
-	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
-	"k8s.io/apimachinery/pkg/runtime"
+	"sigs.k8s.io/controller-runtime/pkg/client"
 
 	svcv1alpha1 "github.com/akuity/kargo/api/service/v1alpha1"
 	kargoapi "github.com/akuity/kargo/api/v1alpha1"
@@ -28,8 +27,9 @@ func (s *server) WatchFreight(
 		return err
 	}
 
-	opts := metav1.ListOptions{} // No field selectors for now, watching all Freight
-	w, err := s.client.Watch(ctx, &kargoapi.Freight{}, project, opts)
+	warehouses := req.Msg.GetOrigins()
+
+	w, err := s.client.Watch(ctx, &kargoapi.FreightList{}, client.InNamespace(project))
 	if err != nil {
 		return fmt.Errorf("watch freight: %w", err)
 	}
@@ -45,13 +45,12 @@ func (s *server) WatchFreight(
 			if !ok {
 				return nil
 			}
-			u, ok := e.Object.(*unstructured.Unstructured)
+			freight, ok := e.Object.(*kargoapi.Freight)
 			if !ok {
 				return fmt.Errorf("unexpected object type %T", e.Object)
 			}
-			var freight *kargoapi.Freight
-			if err := runtime.DefaultUnstructuredConverter.FromUnstructured(u.Object, &freight); err != nil {
-				return fmt.Errorf("from unstructured: %w", err)
+			if len(warehouses) > 0 && !slices.Contains(warehouses, freight.Origin.Name) {
+				continue
 			}
 			if err := stream.Send(&svcv1alpha1.WatchFreightResponse{
 				Freight: freight,

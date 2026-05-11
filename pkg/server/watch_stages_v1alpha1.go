@@ -5,14 +5,11 @@ import (
 	"fmt"
 
 	"connectrpc.com/connect"
-	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
-	"k8s.io/apimachinery/pkg/fields"
-	"k8s.io/apimachinery/pkg/runtime"
 	libClient "sigs.k8s.io/controller-runtime/pkg/client"
 
 	svcv1alpha1 "github.com/akuity/kargo/api/service/v1alpha1"
 	kargoapi "github.com/akuity/kargo/api/v1alpha1"
+	"github.com/akuity/kargo/pkg/api"
 	"github.com/akuity/kargo/pkg/logging"
 )
 
@@ -31,6 +28,7 @@ func (s *server) WatchStages(
 	}
 
 	name := req.Msg.GetName()
+	warehouses := req.Msg.GetFreightOrigins()
 
 	if name != "" {
 		if err := s.client.Get(ctx, libClient.ObjectKey{
@@ -41,11 +39,11 @@ func (s *server) WatchStages(
 		}
 	}
 
-	opts := metav1.ListOptions{}
+	watchOpts := []libClient.ListOption{libClient.InNamespace(project)}
 	if name != "" {
-		opts.FieldSelector = fields.OneTermEqualSelector(metav1.ObjectNameField, name).String()
+		watchOpts = append(watchOpts, libClient.MatchingFields{"metadata.name": name})
 	}
-	w, err := s.client.Watch(ctx, &kargoapi.Stage{}, project, opts)
+	w, err := s.client.Watch(ctx, &kargoapi.StageList{}, watchOpts...)
 	if err != nil {
 		return fmt.Errorf("watch stage: %w", err)
 	}
@@ -60,13 +58,12 @@ func (s *server) WatchStages(
 			if !ok {
 				return nil
 			}
-			u, ok := e.Object.(*unstructured.Unstructured)
+			stage, ok := e.Object.(*kargoapi.Stage)
 			if !ok {
 				return fmt.Errorf("unexpected object type %T", e.Object)
 			}
-			var stage *kargoapi.Stage
-			if err := runtime.DefaultUnstructuredConverter.FromUnstructured(u.Object, &stage); err != nil {
-				return fmt.Errorf("from unstructured: %w", err)
+			if len(warehouses) > 0 && !api.StageMatchesAnyWarehouse(stage, warehouses) {
+				continue
 			}
 			if err := stream.Send(&svcv1alpha1.WatchStagesResponse{
 				Stage: stage,

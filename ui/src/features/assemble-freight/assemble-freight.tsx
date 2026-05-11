@@ -78,6 +78,11 @@ const constructFreight = (
       } as Chart);
     } else if ('commits' in artifact) {
       const commitRef = info as DiscoveredCommit;
+
+      if (!commitRef) {
+        continue;
+      }
+
       freight.commits.push({
         repoURL: artifact.repoURL,
         id: commitRef.id,

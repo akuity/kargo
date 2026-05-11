@@ -49,6 +49,35 @@ func NewRecorder(
 	)
 }
 
+// NewRecorderWithShutdown is like NewRecorder but returns a shutdown function
+// that drains the internal event broadcaster queue. The caller can use the
+// returned function during graceful termination to ensure queued events are
+// delivered before the process exits.
+func NewRecorderWithShutdown(
+	ctx context.Context,
+	scheme *runtime.Scheme,
+	client libClient.Client,
+	name string,
+) (record.EventRecorder, func()) {
+	logger := logging.LoggerFromContext(ctx)
+	// NOTE(thomastaylor312): We use a non-cancelable context for the internal recorder to ensure that
+	// the recorder can continue to process events until the shutdown function is called, even if the
+	// original context is canceled (e.g. due to controller shutdown). Otherwise the context we end up
+	// using for our sink would be canceled before events were sent. Based on my investigation of the
+	// underlying k8s libraries, this should be fine because those libraries already don't use context
+	// for the underlying event creation, and there are other retry and timeouts in place by default
+	// on the underlying clients
+	internalRecorder := newRecorder(context.WithoutCancel(ctx), client, logger)
+	b := record.NewBroadcaster()
+	b.StartEventWatcher(internalRecorder.handleEvent)
+	return b.NewRecorder(
+		scheme,
+		corev1.EventSource{
+			Component: name,
+		},
+	), b.Shutdown
+}
+
 func newRecorder(
 	ctx context.Context,
 	client libClient.Client,
@@ -90,8 +119,7 @@ func (r *recorder) newRetryDecider(event *corev1.Event) func(error) bool {
 	return func(err error) bool {
 		logger := r.logger.WithValues("event", event)
 
-		var statusErr *apierrors.StatusError
-		if errors.As(err, &statusErr) {
+		if _, ok := errors.AsType[*apierrors.StatusError](err); ok {
 			if apierrors.IsAlreadyExists(err) ||
 				apierrors.HasStatusCause(err, corev1.NamespaceTerminatingCause) {
 				logger.Info(

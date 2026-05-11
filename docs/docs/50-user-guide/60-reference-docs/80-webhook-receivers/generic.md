@@ -10,12 +10,14 @@ user-defined set of resources when it does.
 
 :::note
 
-Currently, these actions are limited to "refreshing" `Warehouse` resources,
-which triggers their artifact discovery processes, so a typical use of this
-component is responding to "push" events from artifact repositories that
-lack dedicated webhook receiver implementations. Since this component
-effectively enables imperatively refreshing a `Warehouse` from any external
-process, other uses are possible and practical.
+Currently, these actions are limited to "refreshing" `Warehouse` and
+`Promotion` resources. Refreshing a `Warehouse` triggers its artifact
+discovery process, making this useful for responding to "push" events from
+artifact repositories that lack dedicated webhook receiver implementations.
+Refreshing a `Promotion` enqueues a running `Promotion` for reconciliation,
+which is useful for waking up a `Promotion` that is waiting on an external
+signal — such as a pull request merge from a version control system that lacks
+a dedicated webhook receiver.
 
 :::
 
@@ -76,13 +78,13 @@ spec:
 
 Actions are defined by:
 
-1. [`actionType`](#actiontype)
+1. [`action`](#action)
 1. [`whenExpression`](#whenexpression)
 1. [`targetSelectionCriteria`](#defining-targetselectioncriteria)
 
-#### actionType
+#### action
 
-The `actionType` field specifies the action that should be performed.
+The `action` field specifies the action that should be performed.
 
 ```yaml
 apiVersion: kargo.akuity.io/v1alpha1
@@ -96,13 +98,15 @@ spec:
       generic:
         secretRef:
           name: wh-secret
-      actions:
-        - actionType: Refresh
+        actions:
+          - action: Refresh
 ```
 
 :::note
 
-The only currently supported `actionType` is `Refresh`.
+The only currently supported `action` is `Refresh`. It is supported for
+both `Warehouse` and `Promotion` resource kinds.
+
 :::
 
 
@@ -126,9 +130,9 @@ spec:
       generic:
         secretRef:
           name: wh-secret
-      actions:
-        - actionType: Refresh
-          whenExpression: "request.header("X-Event-Type") == 'push'"
+        actions:
+          - action: Refresh
+            whenExpression: "request.header("X-Event-Type") == 'push'"
 ```
 
 :::note
@@ -174,12 +178,12 @@ spec:
       generic:
         secretRef:
           name: wh-secret
-      actions:
-        - actionType: Refresh
-          whenExpression: "request.header('X-Event-Type') == 'push'"
-          targetSelectionCriteria:
-            - kind: Warehouse
-              name: my-warehouse
+        actions:
+          - action: Refresh
+            whenExpression: "request.header('X-Event-Type') == 'push'"
+            targetSelectionCriteria:
+              - kind: Warehouse
+                name: my-warehouse
 ```
 
 The following example depicts `targetSelectionCriteria` that selects
@@ -198,12 +202,38 @@ spec:
       generic:
         secretRef:
           name: wh-secret
-      actions:
-        - actionType: Refresh
-          whenExpression: "request.header('X-Event-Type') == 'push'"
-          targetSelectionCriteria:
-            - kind: Warehouse
-              name: "${{ normalizeGit(request.body.repository.name) }}"
+        actions:
+          - action: Refresh
+            whenExpression: "request.header('X-Event-Type') == 'push'"
+            targetSelectionCriteria:
+              - kind: Warehouse
+                name: "${{ normalizeGit(request.body.repository.name) }}"
+```
+
+The following example depicts `targetSelectionCriteria` that selects a running
+`Promotion` by name sourced dynamically from the request body. This pattern is
+useful for resuming a `Promotion` from an external process: a promotion step
+(such as `http`) can trigger an external system and pass along its own name;
+the external system can then POST back to this receiver once complete, waking
+the `Promotion` for reconciliation.
+
+```yaml
+apiVersion: kargo.akuity.io/v1alpha1
+kind: ProjectConfig
+metadata:
+  name: kargo-demo
+  namespace: kargo-demo
+spec:
+  webhookReceivers:
+    - name: my-receiver
+      generic:
+        secretRef:
+          name: wh-secret
+        actions:
+          - action: Refresh
+            targetSelectionCriteria:
+              - kind: Promotion
+                name: "${{ request.body.promotion }}"
 ```
 
 ##### By Labels
@@ -223,14 +253,14 @@ spec:
       generic:
         secretRef:
           name: wh-secret
-      actions:
-        - actionType: Refresh
-          whenExpression: "request.header('X-Event-Type') == 'push'"
-          targetSelectionCriteria:
-            - kind: Warehouse
-              labelSelector:
-                matchLabels:
-                  environment: prod
+        actions:
+          - action: Refresh
+            whenExpression: "request.header('X-Event-Type') == 'push'"
+            targetSelectionCriteria:
+              - kind: Warehouse
+                labelSelector:
+                  matchLabels:
+                    environment: prod
 ```
 
 The following example depicts `targetSelectionCriteria` that selects
@@ -249,29 +279,29 @@ spec:
       generic:
         secretRef:
           name: wh-secret
-      actions:
-        - actionType: Refresh
-          whenExpression: "request.header('X-Event-Type') == 'push'"
-          targetSelectionCriteria:
-            - kind: Warehouse
-              labelSelector:
-                matchExpressions:
-                  - key: service
-                    operator: In
-                    values: ["ui", "api"]
+        actions:
+          - action: Refresh
+            whenExpression: "request.header('X-Event-Type') == 'push'"
+            targetSelectionCriteria:
+              - kind: Warehouse
+                labelSelector:
+                  matchExpressions:
+                    - key: service
+                      operator: In
+                      values: ["ui", "api"]
 ```
 
 ##### By Values in an Index
 
 Use `indexSelector` to retrieve resources by a cached index.
 
-The following example depicts `targetSelectionCriteria` that dynamically selects
-`Warehouse` resources that contain subscriptions to the normalized git
-URL from the request body.
+The following example depicts `targetSelectionCriteria` that dynamically
+selects `Warehouse` resources subscribed to the normalized Git URL from the
+request body:
 
 ```yaml
 actions:
-  - actionType: Refresh
+  - action: Refresh
     whenExpression: "request.header('X-Event-Type') == 'push'"
     targetSelectionCriteria:
       - kind: Warehouse
@@ -284,8 +314,10 @@ actions:
 
 :::note
 
-`subscribedURLs` is the only available index. It refers to `Warehouse`
-resources that contain subscriptions for a provided repository URL.
+One index is available for use with the generic receiver:
+
+- `subscribedURLs`: Selects `Warehouse` resources that contain subscriptions
+  for a provided repository URL.
 
 :::
 

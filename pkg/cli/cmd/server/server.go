@@ -21,7 +21,8 @@ import (
 )
 
 type serverOptions struct {
-	address string
+	address        string
+	kargoNamespace string
 }
 
 func NewCommand() *cobra.Command {
@@ -54,8 +55,18 @@ kargo server --address=127.0.0.1:3000
 
 // addFlags adds the flags for the server options to the provided command.
 func (o *serverOptions) addFlags(cmd *cobra.Command) {
-	cmd.Flags().StringVar(&o.address, "address", "127.0.0.1:0",
-		"Address to bind the server to. Defaults to binding to a random port on localhost.")
+	option.Address(
+		cmd.Flags(),
+		&o.address,
+		"127.0.0.1:0",
+		"Address to bind the server to. Defaults to binding to a random port on localhost.",
+	)
+	option.KargoNamespace(
+		cmd.Flags(),
+		&o.kargoNamespace,
+		"kargo",
+		"Namespace where Kargo is installed.",
+	)
 }
 
 // validate performs validation of the options. If the options are invalid, an
@@ -79,6 +90,7 @@ func (o *serverOptions) run(ctx context.Context) error {
 		restCfg,
 		kubernetes.ClientOptions{
 			SkipAuthorization: true,
+			KargoNamespace:    o.kargoNamespace,
 		},
 	)
 	if err != nil {
@@ -97,10 +109,12 @@ func (o *serverOptions) run(ctx context.Context) error {
 
 	srv := server.NewServer(
 		apiconfig.ServerConfig{
-			LocalMode: true,
+			RestConfig:     restCfg,
+			LocalMode:      true,
+			KargoNamespace: o.kargoNamespace,
 		},
 		client,
-		rbac.NewKubernetesRolesDatabase(client, rbac.RolesDatabaseConfigFromEnv()),
+		rbac.NewKubernetesRolesDatabase(client, client, rbac.RolesDatabaseConfigFromEnv()),
 		k8sevent.NewEventSender(&fakeevent.EventRecorder{}),
 		argoCDURLStore,
 	)

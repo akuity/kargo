@@ -9,30 +9,18 @@ import { stackSizer } from './node-sizer';
 export const stackNodes = (
   afterNodes: string[],
   graph: graphlib.Graph,
-  stageByName: Record<string, Stage>
-) => {
-  const sources = graph.sources();
+  stageByName: Record<string, Stage>,
+  maxStageHeight: number
+): graphlib.Graph => {
+  if (afterNodes.length === 0) {
+    return graph;
+  }
 
-  const stackNodes: Array<{
-    count: number;
-    parentNode: string;
-    actualNode: string;
-  }> = [];
-
-  const ignoreList = new Set<string>();
   const processedParents = new Set<string>();
   const visited = new Set<string>();
 
-  if (afterNodes.length === 0) {
-    return {
-      stackNodes,
-      ignoreList,
-      graph
-    };
-  }
-
   // @ts-expect-error it is string array
-  const traverseQueue: string[] = [...sources];
+  const traverseQueue: string[] = [...graph.sources()];
 
   while (traverseQueue.length > 0) {
     const currentNode = traverseQueue.shift();
@@ -40,40 +28,26 @@ export const stackNodes = (
     if (currentNode && !visited.has(currentNode)) {
       visited.add(currentNode);
 
-      const currentNodeSuccessors = graph.successors(currentNode) || [];
-
-      for (const _successor of currentNodeSuccessors) {
-        const successor = _successor;
-
+      for (const successor of (graph.successors(currentNode) || []) as string[]) {
         if (afterNodes.includes(successor)) {
           if (processedParents.has(successor)) {
             continue;
           }
           processedParents.add(successor);
 
-          const stackedNode: { count: number; parentNode: string; actualNode: string } = {
-            count: 0,
-            parentNode: successor,
-            actualNode: graph.successors(successor)?.[0] as string
-          };
+          const actualNode = graph.successors(successor)?.[0] as string;
 
-          if (!stackedNode.actualNode) {
+          if (!actualNode) {
             continue;
           }
 
           const successors = getAllSuccessors(successor, graph);
 
-          stackedNode.count = successors.size;
-
           for (const s of successors) {
-            if (stackedIndexer.is(s)) {
-              continue;
+            if (!stackedIndexer.is(s)) {
+              graph.removeNode(s);
             }
-            graph.removeNode(s);
-            ignoreList.add(s);
           }
-
-          stackNodes.push(stackedNode);
 
           const index = stackedIndexer.index(successor);
 
@@ -81,9 +55,10 @@ export const stackNodes = (
             ...stackedLabelling.label(
               stageByName[stageIndexer.getStageName(successor)],
               successor,
-              stackedNode.count
+              successors.size
             ),
-            ...stackSizer.size()
+            ...stackSizer.size(),
+            height: maxStageHeight
           });
 
           graph.setEdge(successor, index);
@@ -98,11 +73,7 @@ export const stackNodes = (
     }
   }
 
-  return {
-    stackNodes,
-    ignoreList,
-    graph
-  };
+  return graph;
 };
 
 const getAllSuccessors = (afterNode: string, graph: graphlib.Graph) => {

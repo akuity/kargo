@@ -89,7 +89,7 @@ func TestSimpleEngine_Promote(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			ctx, cancel := context.WithCancel(context.Background())
+			ctx, cancel := context.WithCancel(t.Context())
 			defer cancel()
 
 			testRegistry := MustNewStepRunnerRegistry(
@@ -149,6 +149,7 @@ func TestSimpleEngine_Promote(t *testing.T) {
 					testRegistry,
 					fake.NewClientBuilder().Build(),
 					fake.NewClientBuilder().Build(),
+					nil,
 					nil,
 					nil,
 				),

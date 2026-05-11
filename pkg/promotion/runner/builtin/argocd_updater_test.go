@@ -10,7 +10,6 @@ import (
 	"github.com/stretchr/testify/require"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	"k8s.io/apimachinery/pkg/labels"
 	"k8s.io/apimachinery/pkg/runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/client/fake"
@@ -616,7 +615,7 @@ func Test_argoCDUpdater_run(t *testing.T) {
 			},
 			assertions: func(t *testing.T, res promotion.StepResult, err error) {
 				assert.Equal(t, kargoapi.PromotionStepStatusRunning, res.Status)
-				assert.NotNil(t, res.RetryAfter)
+				assert.Nil(t, res.RetryAfter)
 				require.NoError(t, err)
 			},
 		},
@@ -652,7 +651,7 @@ func Test_argoCDUpdater_run(t *testing.T) {
 			},
 			assertions: func(t *testing.T, res promotion.StepResult, err error) {
 				assert.Equal(t, kargoapi.PromotionStepStatusRunning, res.Status)
-				assert.NotNil(t, res.RetryAfter)
+				assert.Nil(t, res.RetryAfter)
 				require.NoError(t, err)
 			},
 		},
@@ -688,7 +687,7 @@ func Test_argoCDUpdater_run(t *testing.T) {
 			},
 			assertions: func(t *testing.T, res promotion.StepResult, err error) {
 				assert.Equal(t, kargoapi.PromotionStepStatusRunning, res.Status)
-				assert.NotNil(t, res.RetryAfter)
+				assert.Nil(t, res.RetryAfter)
 				require.NoError(t, err)
 			},
 		},
@@ -1080,7 +1079,7 @@ func Test_argoCDUpdater_run(t *testing.T) {
 			},
 			assertions: func(t *testing.T, res promotion.StepResult, err error) {
 				assert.Equal(t, kargoapi.PromotionStepStatusRunning, res.Status)
-				assert.NotNil(t, res.RetryAfter)
+				assert.Nil(t, res.RetryAfter)
 				require.NoError(t, err)
 				// Verify health checks include all 3 apps
 				require.NotNil(t, res.HealthCheck)
@@ -1271,7 +1270,7 @@ func Test_argoCDUpdater_run(t *testing.T) {
 	for _, testCase := range testCases {
 		t.Run(testCase.name, func(t *testing.T) {
 			res, err := testCase.runner.run(
-				context.Background(),
+				t.Context(),
 				&promotion.StepContext{},
 				testCase.stepCfg,
 			)
@@ -1796,7 +1795,7 @@ func Test_argoCDUpdater_syncApplication(t *testing.T) {
 				},
 			}
 			err := testCase.runner.syncApplication(
-				context.Background(),
+				t.Context(),
 				stepCtx,
 				testCase.app,
 				testCase.desiredSources,
@@ -1892,7 +1891,7 @@ func Test_argoCDUpdater_logAppEvent(t *testing.T) {
 			eventMessage: "fake-message",
 			assertions: func(t *testing.T, c client.Client, app *argocd.Application) {
 				events := &corev1.EventList{}
-				require.NoError(t, c.List(context.Background(), events))
+				require.NoError(t, c.List(t.Context(), events))
 				assert.Len(t, events.Items, 1)
 
 				event := events.Items[0]
@@ -1929,7 +1928,7 @@ func Test_argoCDUpdater_logAppEvent(t *testing.T) {
 			eventMessage: "fake-message",
 			assertions: func(t *testing.T, c client.Client, _ *argocd.Application) {
 				events := &corev1.EventList{}
-				require.NoError(t, c.List(context.Background(), events))
+				require.NoError(t, c.List(t.Context(), events))
 				assert.Len(t, events.Items, 1)
 
 				event := events.Items[0]
@@ -1945,7 +1944,7 @@ func Test_argoCDUpdater_logAppEvent(t *testing.T) {
 				argocdClient: c,
 			}
 			runner.logAppEvent(
-				context.Background(),
+				t.Context(),
 				testCase.app,
 				testCase.user,
 				testCase.eventReason,
@@ -1958,7 +1957,7 @@ func Test_argoCDUpdater_logAppEvent(t *testing.T) {
 
 func Test_argoCDUpdater_authorizeArgoCDAppUpdate(t *testing.T) {
 	const (
-		permErr           = "does not permit mutation"
+		permErr           = "does not permit mutation by"
 		parseErr          = "unable to parse"
 		deprecatedGlobErr = "deprecated glob expression"
 	)
@@ -2404,143 +2403,6 @@ func Test_argoCDUpdater_recursiveMerge(t *testing.T) {
 	}
 }
 
-func Test_argoCDUpdater_buildLabelSelector(t *testing.T) {
-	testCases := []struct {
-		name       string
-		selector   *builtin.ArgoCDAppSelector
-		assertions func(*testing.T, labels.Selector, error)
-	}{
-		{
-			name: "selector with matchLabels only",
-			selector: &builtin.ArgoCDAppSelector{
-				MatchLabels: map[string]string{
-					"env":  "prod",
-					"team": "platform",
-				},
-			},
-			assertions: func(t *testing.T, sel labels.Selector, err error) {
-				require.NoError(t, err)
-				require.NotNil(t, sel)
-				assert.True(t, sel.Matches(labels.Set{"env": "prod", "team": "platform"}))
-				assert.False(t, sel.Matches(labels.Set{"env": "dev", "team": "platform"}))
-			},
-		},
-		{
-			name: "selector with matchExpressions only",
-			selector: &builtin.ArgoCDAppSelector{
-				MatchExpressions: []builtin.MatchExpression{
-					{
-						Key:      "env",
-						Operator: builtin.In,
-						Values:   []string{"prod", "staging"},
-					},
-				},
-			},
-			assertions: func(t *testing.T, sel labels.Selector, err error) {
-				require.NoError(t, err)
-				require.NotNil(t, sel)
-				assert.True(t, sel.Matches(labels.Set{"env": "prod"}))
-				assert.True(t, sel.Matches(labels.Set{"env": "staging"}))
-				assert.False(t, sel.Matches(labels.Set{"env": "dev"}))
-			},
-		},
-		{
-			name: "selector with both matchLabels and matchExpressions",
-			selector: &builtin.ArgoCDAppSelector{
-				MatchLabels: map[string]string{
-					"team": "platform",
-				},
-				MatchExpressions: []builtin.MatchExpression{
-					{
-						Key:      "env",
-						Operator: builtin.In,
-						Values:   []string{"prod", "staging"},
-					},
-				},
-			},
-			assertions: func(t *testing.T, sel labels.Selector, err error) {
-				require.NoError(t, err)
-				require.NotNil(t, sel)
-				assert.True(t, sel.Matches(labels.Set{"env": "prod", "team": "platform"}))
-				assert.False(t, sel.Matches(labels.Set{"env": "prod", "team": "other"}))
-				assert.False(t, sel.Matches(labels.Set{"env": "dev", "team": "platform"}))
-			},
-		},
-		{
-			name: "selector with NotIn operator",
-			selector: &builtin.ArgoCDAppSelector{
-				MatchExpressions: []builtin.MatchExpression{
-					{
-						Key:      "env",
-						Operator: builtin.NotIn,
-						Values:   []string{"dev", "test"},
-					},
-				},
-			},
-			assertions: func(t *testing.T, sel labels.Selector, err error) {
-				require.NoError(t, err)
-				require.NotNil(t, sel)
-				assert.True(t, sel.Matches(labels.Set{"env": "prod"}))
-				assert.False(t, sel.Matches(labels.Set{"env": "dev"}))
-			},
-		},
-		{
-			name: "selector with Exists operator",
-			selector: &builtin.ArgoCDAppSelector{
-				MatchExpressions: []builtin.MatchExpression{
-					{
-						Key:      "environment",
-						Operator: builtin.Exists,
-					},
-				},
-			},
-			assertions: func(t *testing.T, sel labels.Selector, err error) {
-				require.NoError(t, err)
-				require.NotNil(t, sel)
-				assert.True(t, sel.Matches(labels.Set{"environment": "prod"}))
-				assert.False(t, sel.Matches(labels.Set{"env": "prod"}))
-			},
-		},
-		{
-			name: "selector with DoesNotExist operator",
-			selector: &builtin.ArgoCDAppSelector{
-				MatchExpressions: []builtin.MatchExpression{
-					{
-						Key:      "deprecated",
-						Operator: builtin.DoesNotExist,
-					},
-				},
-			},
-			assertions: func(t *testing.T, sel labels.Selector, err error) {
-				require.NoError(t, err)
-				require.NotNil(t, sel)
-				assert.True(t, sel.Matches(labels.Set{"env": "prod"}))
-				assert.False(t, sel.Matches(labels.Set{"deprecated": "true"}))
-			},
-		},
-		{
-			name: "empty selector returns error",
-			selector: &builtin.ArgoCDAppSelector{
-				MatchLabels:      map[string]string{},
-				MatchExpressions: []builtin.MatchExpression{},
-			},
-			assertions: func(t *testing.T, sel labels.Selector, err error) {
-				require.ErrorContains(t, err, "selector must have at least one match criterion")
-				require.Nil(t, sel)
-			},
-		},
-	}
-
-	runner := &argocdUpdater{}
-
-	for _, testCase := range testCases {
-		t.Run(testCase.name, func(t *testing.T) {
-			sel, err := runner.buildLabelSelector(testCase.selector)
-			testCase.assertions(t, sel, err)
-		})
-	}
-}
-
 func Test_argoCDUpdater_getAuthorizedApplications(t *testing.T) {
 	scheme := runtime.NewScheme()
 	require.NoError(t, argocd.AddToScheme(scheme))
@@ -2809,10 +2671,10 @@ func Test_argoCDUpdater_getAuthorizedApplications(t *testing.T) {
 			runner := &argocdUpdater{
 				argocdClient: c.Build(),
 			}
-			runner.buildLabelSelectorFn = runner.buildLabelSelector
+			runner.buildLabelSelectorFn = buildArgoCDAppLabelSelector
 
 			apps, err := runner.getAuthorizedApplications(
-				context.Background(),
+				t.Context(),
 				&promotion.StepContext{
 					Project: "fake-project",
 					Stage:   "fake-stage",
@@ -3060,7 +2922,7 @@ func Test_argoCDUpdater_processApplication(t *testing.T) {
 	for _, testCase := range testCases {
 		t.Run(testCase.name, func(t *testing.T) {
 			phase, err := testCase.runner.processApplication(
-				context.Background(),
+				t.Context(),
 				&promotion.StepContext{},
 				testCase.update,
 				testCase.app,

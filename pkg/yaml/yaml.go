@@ -9,6 +9,8 @@ import (
 	"strings"
 
 	"go.yaml.in/yaml/v3"
+
+	"github.com/akuity/kargo/pkg/sjson"
 )
 
 // The maximum size of the input buffer for processing YAML files. Given that the max size of a
@@ -28,7 +30,7 @@ type Update struct {
 }
 
 // SetValuesInFile overwrites the specified file with the changes specified by
-// the the list of Updates. Keys are of the form <key 0>.<key 1>...<key n>.
+// the list of Updates. Keys are of the form <key 0>.<key 1>...<key n>.
 // Integers may be used as keys in cases where a specific node needs to be
 // selected from a sequence. An error is returned for any attempted update to a
 // key that does not exist or does not address a scalar node. Importantly, all
@@ -79,7 +81,10 @@ func SetValuesInBytes(inBytes []byte, updates []Update) ([]byte, error) {
 	}
 	changesByLine := map[int]change{}
 	for _, update := range updates {
-		keyPath := strings.Split(update.Key, ".")
+		keyPath, err := sjson.SplitKey(update.Key)
+		if err != nil {
+			return nil, fmt.Errorf("error splitting key %s: %w", update.Key, err)
+		}
 		line, col, err := findScalarNode(doc, keyPath)
 		if err != nil {
 			return nil, fmt.Errorf("error finding key %s: %w", update.Key, err)

@@ -96,20 +96,20 @@ SSH-style URLs of the form `git@github.com:example/repo.git`), the key
 `sshPrivateKey` in the `Secret`'s `data` block may have as its value a
 PEM-encoded SSH private key.
 
-:::warning[Not Recommended]
+:::warning[Deprecated]
 
-While an SSH private key is an adequate credential for basic Git operations that
-are formally part of the Git specification (i.e. `clone`, `checkout`, etc.), the
-proprietary APIs offered by the major git hosting platforms (e.g. GitHub or
+Support for SSH URLs and SSH private keys is **deprecated as of v1.10.0** and
+**scheduled for removal in v1.13.0**.
+
+The proprietary APIs offered by the major Git hosting platforms (e.g. GitHub or
 GitLab) to enable actions such as opening or closing pull requests are
 invariably HTTP-based and therefore cannot use an SSH private key for
-authentication.
+authentication. This forces users who rely on SSH to maintain a second set of
+credentials (e.g. a personal access token) for API operations.
 
-If your Project will create or merge pull request, which is common, rather than
-using an SSH private key for basic Git operations and a second credential, such
-as a personal access token, for API calls, the Kargo team recommends using a
-single credential that works for both -- and an SSH private key is not such a
-credential.
+Using HTTPS URLs with a single token-based credential that works for both
+standard Git operations and provider API calls is simpler and more secure. Users
+should migrate to HTTPS URLs before v1.13.0.
 
 :::
 
@@ -537,7 +537,7 @@ Elastic Container Registries do not _directly_ support long-lived credentials,
 however, an AWS access key ID and secret access key
 [can be used to obtain an authorization token](https://docs.aws.amazon.com/AmazonECR/latest/userguide/registry_auth.html#registry-auth-token)
 that is valid for 12 hours. Kargo can seamlessly obtain such a token and will
-cache it for a period of 10 hours.
+cache it until shortly before it expires.
 
 To use this option, your `Secret` should take the following form:
 
@@ -600,7 +600,7 @@ in a `Secret` resource.
 Both of these options rely upon extensive external configuration that likely
 requires the assistance of Kargo's operator and an AWS account administrator,
 and as such, further details are covered in the
-[Managing Secrets](../../40-operator-guide/40-security/40-managing-secrets.md)
+[Ambient Credentials](../../40-operator-guide/40-security/50-ambient-credentials.md)
 section of the Operator Guide.
 
 :::
@@ -632,7 +632,8 @@ Google documentation recommends
 that is valid for 60 minutes. Compared to the discouraged method of using the
 service account key to authenticate to the registry directly, this process does
 _not_ transmit the service account key over the wire. Kargo can seamlessly carry
-out this process and will cache the access token for a period of 40 minutes.
+out this process and will cache the access token until shortly before it
+expires.
 
 To use this option, your `Secret` should take the following form:
 

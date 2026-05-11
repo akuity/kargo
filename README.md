@@ -29,7 +29,7 @@ To report a bug or request a feature, please open an
 [issue](https://github.com/akuity/kargo/issues). For general questions, please
 start a [discussion](https://github.com/akuity/kargo/discussions) instead.
 
-Please also feel free to join fellow users in discusions in our
+Please also feel free to join fellow users in discussions in our
 [Discord Community](https://akuity.community)!
 
 If you are interested in enterprise-scale Kargo hosted, managed, and

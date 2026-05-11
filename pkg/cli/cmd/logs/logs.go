@@ -2,14 +2,13 @@ package logs
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"strings"
 
-	"connectrpc.com/connect"
 	"github.com/spf13/cobra"
 	"k8s.io/cli-runtime/pkg/genericiooptions"
 
-	v1alpha1 "github.com/akuity/kargo/api/service/v1alpha1"
 	"github.com/akuity/kargo/pkg/cli/client"
 	"github.com/akuity/kargo/pkg/cli/config"
 	"github.com/akuity/kargo/pkg/cli/io"
@@ -89,47 +88,45 @@ func (o *logsOptions) complete(args []string) {
 
 // run retrieves logs for the specified AnalysisRun.
 func (o *logsOptions) run(ctx context.Context) error {
-	kargoSvcCli, err := client.GetClientFromConfig(ctx, o.Config, o.ClientOptions)
+	if o.Project == "" {
+		return errors.New("project is required")
+	}
+
+	watchClient, err := client.GetWatchClientFromConfig(ctx, o.Config, o.ClientOptions)
 	if err != nil {
 		return fmt.Errorf("get client from config: %w", err)
 	}
 
-	stream, err := kargoSvcCli.GetAnalysisRunLogs(
+	logCh, errCh := watchClient.StreamAnalysisRunLogs(
 		ctx,
-		connect.NewRequest(
-			&v1alpha1.GetAnalysisRunLogsRequest{
-				Namespace:     o.Project,
-				Name:          o.Name,
-				MetricName:    o.Metric,
-				ContainerName: o.Container,
-			},
-		),
+		o.Project,
+		o.Name,
+		o.Metric,
+		o.Container,
 	)
-	if err != nil {
-		return fmt.Errorf("get logs from server: %w", err)
-	}
 
-	if err = o.displayLogs(ctx, stream); err != nil {
-		return fmt.Errorf("display logs: %w", err)
-	}
-
-	return nil
+	return o.displayLogs(ctx, logCh, errCh)
 }
 
 func (o *logsOptions) displayLogs(
 	ctx context.Context,
-	stream *connect.ServerStreamForClient[v1alpha1.GetAnalysisRunLogsResponse],
+	logCh <-chan string,
+	errCh <-chan error,
 ) error {
-	for stream.Receive() {
+	for {
 		select {
 		case <-ctx.Done():
 			return ctx.Err()
-		default:
+		case err, ok := <-errCh:
+			if ok && err != nil {
+				return fmt.Errorf("receive logs: %w", err)
+			}
+		case chunk, ok := <-logCh:
+			if !ok {
+				// Channel closed, stream complete
+				return nil
+			}
+			_, _ = fmt.Fprint(o.Out, chunk)
 		}
-		_, _ = fmt.Fprint(o.Out, stream.Msg().Chunk)
 	}
-	if err := stream.Err(); err != nil {
-		return fmt.Errorf("receive logs: %w", err)
-	}
-	return nil
 }

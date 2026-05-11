@@ -182,8 +182,6 @@ func (g *gitPROpener) run(
 	// we're free to create a new one.
 
 	// Get the title from the commit message of the head of the source branch
-	// BEFORE we move on to ensuring the existence of the target branch because
-	// that may involve creating a new branch and committing to it.
 	commitMsg, err := repo.CommitMessage(sourceBranch)
 	if err != nil {
 		return promotion.StepResult{Status: kargoapi.PromotionStepStatusErrored}, fmt.Errorf(
@@ -192,20 +190,47 @@ func (g *gitPROpener) run(
 		)
 	}
 
-	if err = g.ensureRemoteTargetBranch(
-		repo,
-		cfg.TargetBranch,
-		cfg.CreateTargetBranch,
-	); err != nil {
+	exists, err := repo.RemoteBranchExists(cfg.TargetBranch)
+	if err != nil {
 		return promotion.StepResult{Status: kargoapi.PromotionStepStatusErrored}, fmt.Errorf(
-			"error ensuring existence of remote branch %s: %w",
-			cfg.TargetBranch, err,
+			"error checking if remote branch %q of repo %s exists: %w",
+			cfg.TargetBranch, repo.URL(), err,
 		)
+	}
+	if !exists {
+		return promotion.StepResult{Status: kargoapi.PromotionStepStatusErrored}, fmt.Errorf(
+			"target branch %q does not exist", cfg.TargetBranch,
+		)
+	}
+
+	// Ensure we have the latest commits from the remote before checking for diffs.
+	err = repo.Fetch(
+		&git.FetchOptions{
+			Branch: cfg.TargetBranch,
+			Depth:  1,
+		},
+	)
+	if err != nil {
+		return promotion.StepResult{Status: kargoapi.PromotionStepStatusErrored}, err
+	}
+
+	remoteSrc := fmt.Sprintf("origin/%s", sourceBranch)
+	remoteTarget := fmt.Sprintf("origin/%s", cfg.TargetBranch)
+	hasChanges, err := repo.RefsHaveDiffs(remoteSrc, remoteTarget)
+	if err != nil {
+		return promotion.StepResult{Status: kargoapi.PromotionStepStatusErrored}, fmt.Errorf(
+			"failed to check for changes between remote branches %s and %s: %w",
+			remoteSrc, remoteTarget, err,
+		)
+	}
+	// We skip here otherwise we get:
+	// "no commits between <src>..<target>" error when attempting to create a PR.
+	if !hasChanges {
+		return promotion.StepResult{Status: kargoapi.PromotionStepStatusSkipped}, nil
 	}
 
 	title := cfg.Title
 	description := commitMsg
-
 	if cfg.Description != "" {
 		description = cfg.Description
 	}
@@ -300,52 +325,6 @@ func (g *gitPROpener) getPRID(
 			stepCtx.Alias,
 		)
 	}
-}
-
-// ensureRemoteTargetBranch ensures the existence of a remote branch. If the
-// branch does not exist, an empty orphaned branch is created and pushed to the
-// remote.
-func (g *gitPROpener) ensureRemoteTargetBranch(
-	repo git.Repo,
-	branch string, create bool,
-) error {
-	exists, err := repo.RemoteBranchExists(branch)
-	if err != nil {
-		return fmt.Errorf(
-			"error checking if remote branch %q of repo %s exists: %w",
-			branch, repo.URL(), err,
-		)
-	}
-	if exists {
-		return nil
-	}
-	if !create {
-		return fmt.Errorf(
-			"remote branch %q does not exist in repo %s", branch, repo.URL(),
-		)
-	}
-	if err = repo.CreateOrphanedBranch(branch); err != nil {
-		return fmt.Errorf(
-			"error creating orphaned branch %q in repo %s: %w",
-			branch, repo.URL(), err,
-		)
-	}
-	if err = repo.Commit(
-		"Initial commit",
-		&git.CommitOptions{AllowEmpty: true},
-	); err != nil {
-		return fmt.Errorf(
-			"error making initial commit to new branch %q of repo %s: %w",
-			branch, repo.URL(), err,
-		)
-	}
-	if err = repo.Push(&git.PushOptions{TargetBranch: branch}); err != nil {
-		return fmt.Errorf(
-			"error pushing initial commit to new branch %q to repo %s: %w",
-			branch, repo.URL(), err,
-		)
-	}
-	return nil
 }
 
 // getExistingPR searches for an existing pull request from the head of the

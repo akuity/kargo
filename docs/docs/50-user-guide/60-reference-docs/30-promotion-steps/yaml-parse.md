@@ -82,9 +82,7 @@ Given the sample input YAML:
 
 ```yaml
 image:
-  tag: latest
-rbac:
-  installClusterRoles: true
+  tag: "v1.2.3"
 ```
 
 The step would produce the following
@@ -92,6 +90,6 @@ The step would produce the following
 
 | Name | Type | Value |
 |------|------|-------|
-| `imageTag` | `string` | `latest` |
+| `imageTag` | `string` | `v1.2.3` |
 
 [expr-lang]: https://expr-lang.org

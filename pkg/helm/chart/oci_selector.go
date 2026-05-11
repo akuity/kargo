@@ -35,7 +35,7 @@ func newOCISelector(
 			fmt.Errorf("error parsing repository URL %q: %w", sub.RepoURL, err)
 	}
 
-	authorizer := helm.NewEphemeralAuthorizer()
+	authorizer := helm.NewEphemeralAuthorizer(sub.InsecureSkipTLSVerify)
 	if creds != nil {
 		if err = authorizer.Login(context.Background(), ref.Host(), creds.Username, creds.Password); err != nil {
 			return nil, fmt.Errorf(

@@ -53,9 +53,15 @@ type CLIConfig struct {
 	// This token will be sent in the Authorization header of all requests to the
 	// Kargo API server. The Kargo API server will ascertain which of the three
 	// cases above applies and will act accordingly.
+	//
+	// #nosec G117 -- This struct represents configuration stored client-side that
+	// is not transmitted anywhere directly.
 	BearerToken string `json:"bearerToken,omitempty"`
 	// RefreshToken, if set, is used to refresh the Token, which must, in such a
 	// case, have been issued by an OIDC identity provider.
+	//
+	// #nosec G117 -- This struct represents configuration stored client-side that
+	// is not transmitted anywhere directly.
 	RefreshToken string `json:"refreshToken,omitempty"`
 	// InsecureSkipTLSVerify indicates whether the user indicated during login
 	// that certificate warnings should be ignored. When true, this option will be
@@ -65,6 +71,16 @@ type CLIConfig struct {
 	InsecureSkipTLSVerify bool `json:"insecureSkipTLSVerify,omitempty"`
 	// Project is the default Project for the command.
 	Project string `json:"project,omitempty"`
+}
+
+// NewEnvVarCLIConfig returns a new CLI configuration populated from environment
+// variables.
+func NewEnvVarCLIConfig() CLIConfig {
+	return CLIConfig{
+		APIAddress:            os.Getenv("KARGO_API_ADDRESS"),
+		BearerToken:           os.Getenv("KARGO_API_TOKEN"),
+		InsecureSkipTLSVerify: os.Getenv("KARGO_INSECURE_SKIP_TLS_VERIFY") == "true",
+	}
 }
 
 // NewDefaultCLIConfig returns a new default CLI configuration.
@@ -83,7 +99,7 @@ func loadCLIConfig(configPath string) (CLIConfig, error) {
 	_, err := os.Stat(configPath)
 	if err != nil {
 		if os.IsNotExist(err) {
-			return cfg, fmt.Errorf("please use `kargo login` to continue: %w", NewConfigNotFoundErr(configPath))
+			return cfg, NewConfigNotFoundErr(configPath)
 		}
 		return cfg, fmt.Errorf("os.Stat: %w", err)
 	}

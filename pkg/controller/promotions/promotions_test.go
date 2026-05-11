@@ -3,6 +3,7 @@ package promotions
 import (
 	"context"
 	"errors"
+	"fmt"
 	"testing"
 	"time"
 
@@ -10,6 +11,7 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	k8sruntime "k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/types"
+	toolscache "k8s.io/client-go/tools/cache"
 	"k8s.io/utils/ptr"
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"
@@ -31,6 +33,7 @@ func TestNewPromotionReconciler(t *testing.T) {
 	kubeClient := fake.NewClientBuilder().Build()
 	r := newReconciler(
 		kubeClient,
+		kubeClient,
 		k8sevent.NewEventSender(&fakeevent.EventRecorder{}),
 		&promotion.MockEngine{},
 		ReconcilerConfig{},
@@ -40,6 +43,7 @@ func TestNewPromotionReconciler(t *testing.T) {
 	require.NotNil(t, r.promoEngine)
 	require.NotNil(t, r.getStageFn)
 	require.NotNil(t, r.promoteFn)
+	require.NotNil(t, r.cleanupWorkDirFn)
 }
 
 func newFakeReconciler(
@@ -53,6 +57,7 @@ func newFakeReconciler(
 		WithObjects(objects...).WithStatusSubresource(objects...).Build()
 	return newReconciler(
 		kargoClient,
+		kargoClient,
 		k8sevent.NewEventSender(recorder),
 		&promotion.MockEngine{},
 		ReconcilerConfig{},
@@ -61,8 +66,12 @@ func newFakeReconciler(
 
 func TestReconcile(t *testing.T) {
 	testCases := []struct {
-		name      string
-		promos    []client.Object
+		name   string
+		promos []client.Object
+		// apiReader, if set, overrides the reconciler's direct API reader. Use
+		// this to simulate cache/API divergence or to assert the reader is not
+		// called (e.g. wrap with an interceptor that calls t.Error on Get).
+		apiReader client.Reader
 		promoteFn func(
 			context.Context,
 			kargoapi.Promotion,
@@ -101,6 +110,7 @@ func TestReconcile(t *testing.T) {
 		{
 			name:                  "promo doesn't exist",
 			promoToReconcile:      &types.NamespacedName{Namespace: "fake-namespace", Name: "fake-promo"},
+			apiReader:             assertNotCalledReader(t),
 			expectPromoteFnCalled: false,
 		},
 		{
@@ -112,6 +122,7 @@ func TestReconcile(t *testing.T) {
 			promos: []client.Object{
 				newPromo("fake-namespace", "fake-promo", "fake-stage", kargoapi.PromotionPhaseErrored, now),
 			},
+			apiReader: assertNotCalledReader(t),
 		},
 		{
 			name:                  "Promotion doesn't belong to shard",
@@ -132,6 +143,7 @@ func TestReconcile(t *testing.T) {
 					},
 				},
 			},
+			apiReader: assertNotCalledReader(t),
 		},
 		{
 			name:                  "promo already running",
@@ -279,6 +291,71 @@ func TestReconcile(t *testing.T) {
 			},
 		},
 		{
+			// issue-5282: the cache holds a stale Running promotion with no step
+			// metadata (as it was just before any steps ran), while the API has
+			// the authoritative state reflecting steps already completed. The
+			// reconciler must use the API data so it resumes from the correct
+			// step rather than re-executing from step 0.
+			name:                  "stale cache: cache has no step metadata, API has current state",
+			expectPromoteFnCalled: true,
+			expectedPhase:         kargoapi.PromotionPhaseSucceeded,
+			expectedEventRecorded: true,
+			expectedEventType:     kargoapi.EventTypePromotionSucceeded,
+			promos: []client.Object{
+				&kargoapi.Stage{
+					ObjectMeta: metav1.ObjectMeta{
+						Name:      "fake-stage",
+						Namespace: "fake-namespace",
+					},
+					Status: kargoapi.StageStatus{
+						CurrentPromotion: &kargoapi.PromotionReference{
+							Name: "fake-promo",
+						},
+					},
+				},
+				// Stale cached copy: Running but no step metadata.
+				newPromo("fake-namespace", "fake-promo", "fake-stage", kargoapi.PromotionPhaseRunning, now),
+			},
+			apiReader: fakeReaderWithObjects(t, func() *kargoapi.Promotion {
+				// Fresh API copy: Running with step metadata showing progress.
+				p := newPromo("fake-namespace", "fake-promo", "fake-stage", kargoapi.PromotionPhaseRunning, now)
+				p.Status.CurrentStep = 1
+				p.Status.StepExecutionMetadata = kargoapi.StepExecutionMetadataList{{
+					Alias:  "step-0",
+					Status: kargoapi.PromotionStepStatusSucceeded,
+				}}
+				return p
+			}()),
+			promoToReconcile: &types.NamespacedName{Namespace: "fake-namespace", Name: "fake-promo"},
+			promoteFn: func(
+				_ context.Context,
+				p kargoapi.Promotion,
+				_ *kargoapi.Freight,
+			) (*kargoapi.PromotionStatus, *time.Duration, error) {
+				// Assert the reconciler is using the API's authoritative state,
+				// not the stale cached copy.
+				if len(p.Status.StepExecutionMetadata) == 0 {
+					return nil, nil, fmt.Errorf(
+						"expected step execution metadata from API reader, got none (stale cache used)",
+					)
+				}
+				return &kargoapi.PromotionStatus{Phase: kargoapi.PromotionPhaseSucceeded}, nil, nil
+			},
+		},
+		{
+			// The cache shows the Promotion as active, but the direct API read
+			// (apiReader) returns a terminal state — the Promotion completed
+			// between the two reads. The reconciler must not proceed.
+			name:                  "promo terminal in API but active in cache",
+			expectPromoteFnCalled: false,
+			promos: []client.Object{
+				newPromo("fake-namespace", "fake-promo", "fake-stage", kargoapi.PromotionPhaseRunning, now),
+			},
+			apiReader: fakeReaderWithObjects(t,
+				newPromo("fake-namespace", "fake-promo", "fake-stage", kargoapi.PromotionPhaseSucceeded, now),
+			),
+		},
+		{
 			name: "terminates promotion on request",
 			promos: []client.Object{
 				func() *kargoapi.Promotion {
@@ -301,9 +378,12 @@ func TestReconcile(t *testing.T) {
 	}
 	for _, tc := range testCases {
 		t.Run(tc.name, func(t *testing.T) {
-			ctx := context.TODO()
+			ctx := t.Context()
 			recorder := fakeevent.NewEventRecorder(1)
 			r := newFakeReconciler(t, recorder, tc.promos...)
+			if tc.apiReader != nil {
+				r.apiReader = tc.apiReader
+			}
 
 			promoteWasCalled := false
 			r.promoteFn = func(
@@ -522,13 +602,201 @@ func Test_reconciler_terminatePromotion(t *testing.T) {
 			r := &reconciler{
 				kargoClient: c,
 				sender:      k8sevent.NewEventSender(recorder),
+				cleanupWorkDirFn: func(context.Context, types.UID) {
+					// no-op for tests
+				},
 			}
 
 			req := tt.req
-			err := r.terminatePromotion(context.Background(), &req, tt.promo, tt.freight)
+			err := r.terminatePromotion(t.Context(), &req, tt.promo, tt.freight)
 			tt.assertions(t, recorder, tt.promo, err)
 		})
 	}
+}
+
+func Test_reconciler_handleDeletion(t *testing.T) {
+	testCases := []struct {
+		name       string
+		objects    []client.Object
+		reconcile  types.NamespacedName
+		assertions func(
+			*testing.T, *reconciler, *fakeevent.EventRecorder,
+			bool, ctrl.Result, error,
+		)
+	}{
+		{
+			name:      "deleted promotion not found is a no-op",
+			reconcile: types.NamespacedName{Namespace: "fake-ns", Name: "deleted-promo"},
+			objects:   []client.Object{},
+			assertions: func(
+				t *testing.T, _ *reconciler, recorder *fakeevent.EventRecorder,
+				cleanupCalled bool, result ctrl.Result, err error,
+			) {
+				require.NoError(t, err)
+				require.Equal(t, ctrl.Result{}, result)
+				require.False(t, cleanupCalled)
+				require.Len(t, recorder.Events, 0)
+			},
+		},
+		{
+			name:      "terminal promotion returns early without cleanup",
+			reconcile: types.NamespacedName{Namespace: "fake-ns", Name: "fake-promo"},
+			objects: []client.Object{
+				newPromo("fake-ns", "fake-promo", "fake-stage", kargoapi.PromotionPhaseSucceeded, now),
+			},
+			assertions: func(
+				t *testing.T, _ *reconciler, _ *fakeevent.EventRecorder,
+				cleanupCalled bool, result ctrl.Result, err error,
+			) {
+				require.NoError(t, err)
+				require.Equal(t, ctrl.Result{}, result)
+				require.False(t, cleanupCalled)
+			},
+		},
+		{
+			name:      "promotion with DeletionTimestamp cleans up workdir and returns",
+			reconcile: types.NamespacedName{Namespace: "fake-ns", Name: "fake-promo"},
+			objects: []client.Object{
+				func() *kargoapi.Promotion {
+					p := newPromo("fake-ns", "fake-promo", "fake-stage", kargoapi.PromotionPhaseRunning, now)
+					// A finalizer from another controller keeps the object alive.
+					p.Finalizers = []string{"some-other-controller/finalizer"}
+					deletionTime := metav1.Now()
+					p.DeletionTimestamp = &deletionTime
+					return p
+				}(),
+			},
+			assertions: func(
+				t *testing.T, _ *reconciler, recorder *fakeevent.EventRecorder,
+				cleanupCalled bool, result ctrl.Result, err error,
+			) {
+				require.NoError(t, err)
+				require.Equal(t, ctrl.Result{}, result)
+				require.True(t, cleanupCalled)
+				require.Len(t, recorder.Events, 0)
+			},
+		},
+		{
+			name:      "deleted promotion with wrong shard is ignored",
+			reconcile: types.NamespacedName{Namespace: "fake-ns", Name: "fake-promo"},
+			objects: []client.Object{
+				func() *kargoapi.Promotion {
+					p := newPromo("fake-ns", "fake-promo", "fake-stage", kargoapi.PromotionPhaseRunning, now)
+					p.Labels = map[string]string{
+						kargoapi.LabelKeyShard: "wrong-shard",
+					}
+					p.Finalizers = []string{"some-other-controller/finalizer"}
+					deletionTime := metav1.Now()
+					p.DeletionTimestamp = &deletionTime
+					return p
+				}(),
+			},
+			assertions: func(
+				t *testing.T, _ *reconciler, recorder *fakeevent.EventRecorder,
+				cleanupCalled bool, result ctrl.Result, err error,
+			) {
+				require.NoError(t, err)
+				require.Equal(t, ctrl.Result{}, result)
+				require.False(t, cleanupCalled)
+				require.Len(t, recorder.Events, 0)
+			},
+		},
+	}
+	for _, tc := range testCases {
+		t.Run(tc.name, func(t *testing.T) {
+			ctx := t.Context()
+			recorder := fakeevent.NewEventRecorder(1)
+			r := newFakeReconciler(t, recorder, tc.objects...)
+
+			cleanupCalled := false
+			r.cleanupWorkDirFn = func(context.Context, types.UID) {
+				cleanupCalled = true
+			}
+
+			result, err := r.Reconcile(ctx, ctrl.Request{NamespacedName: tc.reconcile})
+			tc.assertions(t, r, recorder, cleanupCalled, result, err)
+		})
+	}
+}
+
+func Test_reconciler_terminatePromotion_cleansUpWorkDir(t *testing.T) {
+	scheme := k8sruntime.NewScheme()
+	require.NoError(t, kargoapi.SchemeBuilder.AddToScheme(scheme))
+
+	promo := newPromo("fake-ns", "fake-promo", "fake-stage", kargoapi.PromotionPhaseRunning, now)
+
+	c := fake.NewClientBuilder().
+		WithScheme(scheme).
+		WithObjects(promo).
+		WithStatusSubresource(&kargoapi.Promotion{}).
+		Build()
+	recorder := fakeevent.NewEventRecorder(1)
+
+	cleanupCalled := false
+	r := &reconciler{
+		kargoClient: c,
+		sender:      k8sevent.NewEventSender(recorder),
+		cleanupWorkDirFn: func(context.Context, types.UID) {
+			cleanupCalled = true
+		},
+	}
+
+	req := kargoapi.AbortPromotionRequest{Action: kargoapi.AbortActionTerminate}
+	err := r.terminatePromotion(t.Context(), &req, promo, nil)
+	require.NoError(t, err)
+
+	require.True(t, cleanupCalled)
+
+	var updated kargoapi.Promotion
+	require.NoError(t, c.Get(t.Context(), types.NamespacedName{
+		Namespace: "fake-ns",
+		Name:      "fake-promo",
+	}, &updated))
+	require.Equal(t, kargoapi.PromotionPhaseAborted, updated.Status.Phase)
+}
+
+func Test_extractDeletedObject(t *testing.T) {
+	t.Run("direct object", func(t *testing.T) {
+		obj := &kargoapi.Promotion{
+			ObjectMeta: metav1.ObjectMeta{
+				UID:  "test-uid-123",
+				Name: "test-promo",
+			},
+		}
+		result, err := extractDeletedObject(obj)
+		require.NoError(t, err)
+		require.Equal(t, types.UID("test-uid-123"), result.GetUID())
+	})
+
+	t.Run("tombstone", func(t *testing.T) {
+		obj := &kargoapi.Promotion{
+			ObjectMeta: metav1.ObjectMeta{
+				UID:  "test-uid-456",
+				Name: "tombstoned-promo",
+			},
+		}
+		tombstone := toolscache.DeletedFinalStateUnknown{
+			Key: "fake-ns/tombstoned-promo",
+			Obj: obj,
+		}
+		result, err := extractDeletedObject(tombstone)
+		require.NoError(t, err)
+		require.Equal(t, types.UID("test-uid-456"), result.GetUID())
+	})
+
+	t.Run("unexpected type", func(t *testing.T) {
+		_, err := extractDeletedObject("not-an-object")
+		require.ErrorContains(t, err, "unexpected object type")
+	})
+
+	t.Run("tombstone with unexpected inner type", func(t *testing.T) {
+		tombstone := toolscache.DeletedFinalStateUnknown{
+			Key: "fake-key",
+			Obj: "not-an-object",
+		}
+		_, err := extractDeletedObject(tombstone)
+		require.ErrorContains(t, err, "tombstone contained unexpected type")
+	})
 }
 
 func Test_calculateRequeueInterval(t *testing.T) {
@@ -918,4 +1186,37 @@ func Test_buildTargetFreightCollection(t *testing.T) {
 			require.Len(t, result.Freight, tc.expectedNumFreight)
 		})
 	}
+}
+
+// assertNotCalledReader returns a client.Reader that fails the test if Get is
+// called. Use it to verify that a code path exits before reaching the direct
+// API read.
+func assertNotCalledReader(t *testing.T) client.Reader {
+	t.Helper()
+	return interceptor.NewClient(
+		fake.NewClientBuilder().Build(),
+		interceptor.Funcs{
+			Get: func(
+				_ context.Context,
+				_ client.WithWatch,
+				_ client.ObjectKey,
+				_ client.Object,
+				_ ...client.GetOption,
+			) error {
+				t.Error("apiReader.Get was called but should not have been")
+				return nil
+			},
+		},
+	)
+}
+
+// fakeReaderWithObjects returns a client.Reader backed by a fake client
+// pre-populated with the given objects. Use it to simulate a direct API read
+// returning data that differs from the informer cache.
+func fakeReaderWithObjects(t *testing.T, objs ...client.Object) client.Reader {
+	t.Helper()
+	scheme := k8sruntime.NewScheme()
+	require.NoError(t, kargoapi.SchemeBuilder.AddToScheme(scheme))
+	return fake.NewClientBuilder().WithScheme(scheme).
+		WithObjects(objs...).WithStatusSubresource(objs...).Build()
 }

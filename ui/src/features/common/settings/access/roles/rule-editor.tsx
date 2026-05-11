@@ -7,7 +7,7 @@ import { z } from 'zod';
 
 import { FieldContainer } from '@ui/features/common/form/field-container';
 import { MultiStringEditor } from '@ui/features/common/form/multi-string-editor';
-import { PolicyRule } from '@ui/gen/k8s.io/api/rbac/v1/generated_pb';
+import { V1PolicyRule } from '@ui/gen/api/v2/models';
 
 const availableResources = [
   // core
@@ -41,7 +41,7 @@ export const RuleEditor = ({
   onSuccess,
   style
 }: {
-  onSuccess: (rule: PolicyRule) => void;
+  onSuccess: (rule: V1PolicyRule) => void;
   style?: React.CSSProperties;
 }) => {
   const { control, handleSubmit, reset, watch } = useForm({
@@ -53,12 +53,12 @@ export const RuleEditor = ({
       verbs: values.verbs,
       resources: values.resources,
       resourceNames: values.resourceNames
-    } as PolicyRule);
+    } as V1PolicyRule);
     reset({
       verbs: [] as string[],
       resources: [] as string[],
       resourceNames: [] as string[]
-    } as PolicyRule);
+    } as V1PolicyRule);
   });
 
   const resources = watch('resources');

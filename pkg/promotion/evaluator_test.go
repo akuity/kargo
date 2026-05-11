@@ -1,7 +1,6 @@
 package promotion
 
 import (
-	"context"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
@@ -791,7 +790,7 @@ func TestStepEvaluator_Vars(t *testing.T) {
 		t.Run(tt.name, func(t *testing.T) {
 			evaluator := NewStepEvaluator(testClient, nil)
 			vars, err := evaluator.Vars(
-				context.Background(),
+				t.Context(),
 				tt.promoCtx,
 				tt.step,
 			)
@@ -955,7 +954,7 @@ func TestStepEvaluator_ShouldSkip(t *testing.T) {
 				nil,
 			)
 			got, err := evaluator.ShouldSkip(
-				context.Background(),
+				t.Context(),
 				tt.promoCtx,
 				tt.step,
 			)
@@ -1421,7 +1420,7 @@ func TestStepEvaluator_Config(t *testing.T) {
 		t.Run(tt.name, func(t *testing.T) {
 			evaluator := NewStepEvaluator(testClient, nil)
 			stepCfg, err := evaluator.Config(
-				context.Background(),
+				t.Context(),
 				tt.promoCtx,
 				tt.step,
 			)
@@ -1554,7 +1553,7 @@ func TestStepEvaluator_BuildStepContext(t *testing.T) {
 		t.Run(tt.name, func(t *testing.T) {
 			evaluator := NewStepEvaluator(testClient, nil)
 			stepCtx, err := evaluator.BuildStepContext(
-				context.Background(),
+				t.Context(),
 				tt.promoCtx,
 				tt.step,
 			)

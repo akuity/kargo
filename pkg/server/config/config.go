@@ -2,10 +2,13 @@ package config
 
 import (
 	"fmt"
+	"io/fs"
+	"net/http"
 	"strings"
 	"time"
 
 	"github.com/kelseyhightower/envconfig"
+	"k8s.io/client-go/rest"
 
 	"github.com/akuity/kargo/pkg/os"
 	"github.com/akuity/kargo/pkg/server/dex"
@@ -33,6 +36,25 @@ type ServerConfig struct {
 	AnalysisRunLogHTTPHeaders   map[string]string
 	SharedResourcesNamespace    string
 	SystemResourcesNamespace    string
+	KargoNamespace              string
+	// DefaultControllerName is the name of the controller that Stages with no
+	// explicit spec.shard are reconciled by. The API server needs to know this
+	// only to include it in a get controller heartbeats response so callers will
+	// know which controller's liveness to associate with such Stages. The default
+	// controller is often unnamed, so an empty string is a valid value.
+	DefaultControllerName string
+	RestConfig            *rest.Config
+
+	// AdditionalHandlers is a map of path patterns to HTTP handlers that will
+	// be registered on the server's HTTP mux alongside its own handlers. This
+	// permits downstream consumers to extend the server with additional
+	// endpoints.
+	AdditionalHandlers map[string]http.Handler
+
+	// DashboardFS, when set, overrides the embedded UI filesystem used by the
+	// dashboard handler. The filesystem should contain the built UI assets at
+	// its root (i.e., index.html should be at the top level).
+	DashboardFS fs.FS
 }
 
 func ServerConfigFromEnv() ServerConfig {
@@ -75,16 +97,16 @@ func ServerConfigFromEnv() ServerConfig {
 			}
 		}
 	}
-	if cfg.SecretManagementEnabled {
-		cfg.SystemResourcesNamespace = os.GetEnv(
-			"SYSTEM_RESOURCES_NAMESPACE",
-			"kargo-system-resources",
-		)
-		cfg.SharedResourcesNamespace = os.GetEnv(
-			"SHARED_RESOURCES_NAMESPACE",
-			"kargo-shared-resources",
-		)
-	}
+	cfg.SystemResourcesNamespace = os.GetEnv(
+		"SYSTEM_RESOURCES_NAMESPACE",
+		"kargo-system-resources",
+	)
+	cfg.SharedResourcesNamespace = os.GetEnv(
+		"SHARED_RESOURCES_NAMESPACE",
+		"kargo-shared-resources",
+	)
+	cfg.KargoNamespace = os.GetEnv("KARGO_NAMESPACE", "kargo")
+	cfg.DefaultControllerName = os.GetEnv("DEFAULT_CONTROLLER_NAME", "")
 	return cfg
 }
 

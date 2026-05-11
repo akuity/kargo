@@ -53,8 +53,11 @@ const config = {
                 return item;
               });
             }
-
-            return addBadges(sidebarItems);
+            // sidebars.js already lists the deprecated gRPC API documentation 
+            // page, so we need to filter it out here to avoid listing it twice.
+            return addBadges(sidebarItems.filter(
+              (item) => /** @type {any} */ (item).id !== 'api-documentation')
+            );
           },
         },
         blog: false,
@@ -74,9 +77,25 @@ const config = {
         anonymizeIP: true,
       },
     ],
-    'docusaurus-plugin-sass'
+    'docusaurus-plugin-sass',
+    [
+      '@scalar/docusaurus',
+      {
+        label: 'API Reference',
+        route: '/api-docs',
+        showNavLink: false, // Don't include in the top navbar
+        configuration: {
+          url: '/swagger.json',
+          servers: [{
+            url: '{baseUrl}',
+            variables: {
+              baseUrl: {default: 'https://kargo.example.com'}
+            }
+          }]
+        },
+      }
+    ],
   ],
-
   themeConfig:
     /** @type {import('@docusaurus/preset-classic').ThemeConfig} */
     ({

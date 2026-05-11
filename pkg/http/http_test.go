@@ -4,6 +4,7 @@ import (
 	"net/http"
 	"net/http/httptest"
 	"testing"
+	"time"
 
 	"github.com/stretchr/testify/require"
 )
@@ -35,4 +36,13 @@ func TestWriteResponseJSON(t *testing.T) {
 			require.Equal(t, test.bodyObj, w.Body.String())
 		})
 	}
+}
+
+func TestSetCacheHeaders(t *testing.T) {
+	w := httptest.NewRecorder()
+	SetCacheHeaders(w, 30*24*time.Hour, 7*24*time.Hour)
+	headers := w.Result().Header
+	require.Equal(t, "public, max-age=2592000", headers.Get("Cache-Control"))
+	expires := headers.Get("Expires")
+	require.Equal(t, expires[len(expires)-4:], " GMT", "Expires header must end with ' GMT', got '%s'.", expires)
 }

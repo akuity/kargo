@@ -191,7 +191,7 @@ export const StageNode = (props: { stage: Stage }) => {
           'postiion-relative'
         )}
         size='small'
-        variant='borderless'
+        // variant='borderless'
       >
         <DropOverlay isOver={isOver} stage={props.stage} />
         {controlFlow && (

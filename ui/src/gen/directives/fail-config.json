@@ -1,0 +1,13 @@
+{
+ "$schema": "https://json-schema.org/draft/2020-12/schema",
+ "title": "FailConfig",
+ "type": "object",
+ "additionalProperties": false,
+ "properties": {
+  "message": {
+   "type": "string",
+   "description": "Optional failure message.",
+   "minLength": 1
+  }
+ }
+}

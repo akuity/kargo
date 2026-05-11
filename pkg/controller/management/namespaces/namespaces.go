@@ -55,6 +55,12 @@ type reconciler struct {
 		client.Client,
 		client.Object,
 	) error
+
+	patchOwnerReferencesFn func(
+		context.Context,
+		client.Client,
+		client.Object,
+	) error
 }
 
 // SetupReconcilerWithManager initializes a reconciler for Namespace resources
@@ -96,6 +102,7 @@ func newReconciler(kubeClient client.Client) *reconciler {
 	r.getNamespaceFn = r.client.Get
 	r.deleteProjectFn = r.client.Delete
 	r.removeFinalizerFn = api.RemoveFinalizer
+	r.patchOwnerReferencesFn = api.PatchOwnerReferences
 	return r
 }
 
@@ -117,6 +124,42 @@ func (r *reconciler) Reconcile(
 		// Ignore if not found. This can happen if the Namespace was deleted after
 		// the current reconciliation request was issued.
 		return ctrl.Result{}, client.IgnoreNotFound(err)
+	}
+
+	// Ensure existing namespaces don't have a project owner reference.
+	// This ensures cascading foreground deletion works as expected,
+	// and that we don't end up with namespaces that can't be deleted
+	// because they have a non-existent project owner reference.
+	// For more information see: https://github.com/akuity/kargo/issues/4627#issuecomment-3821967156
+	//
+	// The Project reconciler no longer sets this owner reference, so for newly
+	// reconciled namespaces this is a no-op. It is retained to clean up
+	// namespaces that were created by older Kargo versions.
+	project := &kargoapi.Project{
+		ObjectMeta: metav1.ObjectMeta{Name: ns.Name},
+		TypeMeta: metav1.TypeMeta{
+			APIVersion: kargoapi.GroupVersion.String(),
+			Kind:       "Project",
+		},
+	}
+	hasProjectOwnerRef, err := controllerutil.HasOwnerReference(ns.OwnerReferences, project, r.client.Scheme())
+	if err != nil {
+		return ctrl.Result{}, fmt.Errorf("failed to check for project owner reference on namespace %q: %w", ns.Name, err)
+	}
+	if hasProjectOwnerRef {
+		logger.Debug("Namespace has project owner reference; removing")
+		err := controllerutil.RemoveOwnerReference(
+			project,
+			ns,
+			r.client.Scheme(),
+		)
+		if err != nil {
+			return ctrl.Result{}, fmt.Errorf("failed to remove project owner reference from namespace %q: %w", ns.Name, err)
+		}
+		if err := r.patchOwnerReferencesFn(ctx, r.client, ns); err != nil {
+			return ctrl.Result{}, fmt.Errorf("failed to patch owner references for namespace %q: %w", ns.Name, err)
+		}
+		return ctrl.Result{}, nil
 	}
 
 	// We're only interested in deletes

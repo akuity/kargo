@@ -1,4 +1,4 @@
-import { faMap } from '@fortawesome/free-solid-svg-icons';
+import { faShareNodes, faMap } from '@fortawesome/free-solid-svg-icons';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
 import {
   ControlButton,
@@ -8,7 +8,7 @@ import {
   ReactFlowInstance,
   useNodesState
 } from '@xyflow/react';
-import { useEffect, useMemo, useRef, useState } from 'react';
+import { useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react';
 
 import { WarehouseExpanded } from '@ui/extend/types';
 import { queryCache } from '@ui/features/utils/cache';
@@ -19,10 +19,8 @@ import { GraphContext } from '../context/graph-context';
 import { StackedNodes } from '../nodes/stacked-nodes';
 
 import { CustomNode } from './custom-node';
-import { DummyNodeRenderrer } from './dummy-node-renderrer';
 import { repoSubscriptionIndexer, stageIndexer, warehouseIndexer } from './node-indexer';
 import { useEventsWatcher } from './use-events-watcher';
-import { useNodeDimensionState } from './use-node-dimension-state';
 import { reactFlowNodeConstants, useReactFlowPipelineGraph } from './use-pipeline-graph';
 
 type GraphProps = {
@@ -60,76 +58,90 @@ export const Graph = (props: GraphProps) => {
 
   const [redraw, setRedraw] = useState(false);
 
-  const [dimensions, setDimensions] = useNodeDimensionState();
+  // Cheap placeholders on first paint; swap to real components on the next tick.
+  // ReactFlow mounts every node at least once for measurement, so this avoids
+  // paying the cost of rendering full node bodies for items that may end up
+  // off-screen and culled by onlyRenderVisibleElements.
+  const [ready, setReady] = useState(false);
+  useEffect(() => {
+    const timer = setTimeout(() => setReady(true), 10);
+    return () => clearTimeout(timer);
+  }, []);
 
   const graph = useReactFlowPipelineGraph(
     props.stages,
     props.warehouses,
     filterContext?.preferredFilter.warehouses || [],
     redraw,
-    dimensions,
     {
       afterNodes: stackedNodesParents
     },
     filterContext?.preferredFilter?.hideSubscriptions
   );
 
-  const [nodes, setNodes, onNodesChange] = useNodesState(graph.nodes);
+  const [nodes, setNodes] = useNodesState(graph.nodes);
 
-  useEffect(() => {
+  // useLayoutEffect fires synchronously after DOM mutations but before the browser
+  // paints. This prevents the one-frame intermediate state where node content has
+  // changed (and grown) but positions haven't been recalculated yet.
+  useLayoutEffect(() => {
     setNodes(graph.nodes);
   }, [graph.nodes]);
 
-  useEventsWatcher(props.project, {
-    onStage(stage) {
-      const index = stageIndexer.index(stage);
-      setNodes((nodes) =>
-        nodes.map((node) => {
-          if (node.id === index && node.type === reactFlowNodeConstants.CUSTOM_NODE) {
-            return {
-              ...node,
-              data: {
-                ...node.data,
-                value: stage
-              }
-            };
-          }
+  useEventsWatcher(
+    props.project,
+    {
+      onStage(stage) {
+        const index = stageIndexer.index(stage);
+        setNodes((nodes) =>
+          nodes.map((node) => {
+            if (node.id === index && node.type === reactFlowNodeConstants.CUSTOM_NODE) {
+              return {
+                ...node,
+                data: {
+                  ...node.data,
+                  value: stage
+                }
+              };
+            }
 
-          return node;
-        })
-      );
+            return node;
+          })
+        );
 
-      if (!nodes.find((n) => n.id === index)) {
-        setRedraw(!redraw);
+        if (!nodes.find((n) => n.id === index)) {
+          setRedraw((prev) => !prev);
+        }
+
+        queryCache.imageStageMatrix.update(stage);
+      },
+      onWarehouse(warehouse) {
+        const index = warehouseIndexer.index(warehouse);
+        setNodes((nodes) =>
+          nodes.map((node) => {
+            if (node.id === index && node.type === reactFlowNodeConstants.CUSTOM_NODE) {
+              return {
+                ...node,
+                data: {
+                  ...node.data,
+                  value: warehouse
+                }
+              };
+            }
+
+            return node;
+          })
+        );
+
+        if (!nodes.find((n) => n.id === index)) {
+          setRedraw((prev) => !prev);
+        }
+
+        queryCache.freight.refetch();
       }
-
-      queryCache.imageStageMatrix.update(stage);
     },
-    onWarehouse(warehouse) {
-      const index = warehouseIndexer.index(warehouse);
-      setNodes((nodes) =>
-        nodes.map((node) => {
-          if (node.id === index && node.type === reactFlowNodeConstants.CUSTOM_NODE) {
-            return {
-              ...node,
-              data: {
-                ...node.data,
-                value: warehouse
-              }
-            };
-          }
-
-          return node;
-        })
-      );
-
-      if (!nodes.find((n) => n.id === index)) {
-        setRedraw(!redraw);
-      }
-
-      queryCache.freight.refetch();
-    }
-  });
+    filterContext?.preferredFilter?.warehouses || []
+  );
 
   const warehouseByName = useMemo(() => {
     const warehouseByName: Record<string, WarehouseExpanded> = {};
@@ -140,6 +152,48 @@ export const Graph = (props: GraphProps) => {
 
     return warehouseByName;
   }, [props.warehouses]);
+
+  const [hoveredWarehouseName, setHoveredWarehouseName] = useState<string | null>(null);
+
+  const distinctEdgeWarehouses = useMemo(
+    () =>
+      new Set(graph.edges.map((e) => e.data?.warehouseName as string | undefined).filter(Boolean))
+        .size,
+    [graph.edges]
+  );
+
+  const edgeType = filterContext?.preferredFilter?.stepEdges ? 'step' : 'default';
+
+  const typedEdges = useMemo(
+    () => graph.edges.map((e) => (e.type === edgeType ? e : { ...e, type: edgeType })),
+    [graph.edges, edgeType]
+  );
+
+  const edges = useMemo(() => {
+    if (!hoveredWarehouseName || distinctEdgeWarehouses < 2) {
+      return typedEdges;
+    }
+    const dimmed: typeof typedEdges = [];
+    const highlighted: typeof typedEdges = [];
+    for (const edge of typedEdges) {
+      if (edge.data?.warehouseName !== hoveredWarehouseName) {
+        dimmed.push(edge);
+        continue;
+      }
+      const color = (edge.style?.stroke as string) || '#000';
+      highlighted.push({
+        ...edge,
+        style: {
+          ...edge.style,
+          strokeOpacity: 0.8,
+          filter: `drop-shadow(0 0 7px ${color}50)`
+        }
+      });
+    }
+    // Highlighted edges paint last so they sit on top of overlapping dimmed
+    // edges from other warehouses.
+    return [...dimmed, ...highlighted];
+  }, [typedEdges, hoveredWarehouseName, distinctEdgeWarehouses]);
 
   const nodesExcludingSubscriptionNodes = useMemo(() => {
     const subscriptionNodes = nodes.filter((n) => repoSubscriptionIndexer.is(n.id));
@@ -157,31 +211,48 @@ export const Graph = (props: GraphProps) => {
     });
   }, [filterContext?.preferredFilter?.hideSubscriptions]);
 
+  const loggedRef = useRef(false);
+  const mountTimeRef = useRef(performance.now());
+  useEffect(() => {
+    if (loggedRef.current || graph.nodes.length === 0) {
+      return;
+    }
+    loggedRef.current = true;
+    requestAnimationFrame(() => {
+      // eslint-disable-next-line no-console
+      console.log(
+        `[Graph] painted in ${((performance.now() - mountTimeRef.current) / 1000).toFixed(3)}s`
+      );
+    });
+  }, [graph.nodes]);
+
   return (
-    <GraphContext.Provider value={{ warehouseByName, stackedNodesParents, onStack, onUnstack }}>
+    <GraphContext.Provider
+      value={{
+        warehouseByName,
+        stackedNodesParents,
+        onStack,
+        onUnstack,
+        ready,
+        hoveredWarehouseName,
+        setHoveredWarehouseName
+      }}
+    >
       <ReactFlow
         nodes={nodes}
-        edges={graph.edges}
+        edges={edges}
         nodeTypes={nodeTypes}
         fitView
         fitViewOptions={{
           nodes: nodesExcludingSubscriptionNodes
         }}
         proOptions={{ hideAttribution: true }}
-        minZoom={0}
-        onNodesChange={onNodesChange}
+        minZoom={nodes.length > 100 ? 0.4 : 0.1}
+        maxZoom={1.4}
         onlyRenderVisibleElements
+        panOnDrag
         onInit={(inst) => (reactFlowInstance.current = inst)}
       >
-        {!Object.keys(dimensions).length && (
-          <div className='opacity-0 overflow-hidden h-0'>
-            <DummyNodeRenderrer
-              stages={props.stages}
-              warehouses={props.warehouses}
-              onDimensionChange={setDimensions}
-            />
-          </div>
-        )}
         {filterContext?.preferredFilter?.showMinimap && (
           <MiniMap
             style={{ background: 'white', border: '1px solid lightblue', borderRadius: '5px' }}
@@ -204,6 +275,19 @@ export const Graph = (props: GraphProps) => {
             }
           >
             <FontAwesomeIcon icon={faMap} />
+          </ControlButton>
+          <ControlButton
+            title={
+              filterContext?.preferredFilter?.stepEdges ? 'Use Curved Edges' : 'Use Step Edges'
+            }
+            onClick={() =>
+              filterContext?.setPreferredFilter({
+                ...filterContext?.preferredFilter,
+                stepEdges: !filterContext?.preferredFilter?.stepEdges
+              })
+            }
+          >
+            <FontAwesomeIcon icon={faShareNodes} />
           </ControlButton>
         </Controls>
       </ReactFlow>

@@ -1,7 +1,6 @@
 package event
 
 import (
-	"context"
 	"errors"
 	"net/http"
 	"testing"
@@ -17,7 +16,7 @@ import (
 )
 
 func Test_newRecorder(t *testing.T) {
-	ctx := context.TODO()
+	ctx := t.Context()
 	client := fake.NewClientBuilder().Build()
 	logger := logging.LoggerFromContext(ctx)
 	r := newRecorder(ctx, client, logger)
@@ -74,7 +73,7 @@ func Test_retryDecider(t *testing.T) {
 
 func Test_newSink(t *testing.T) {
 	s := newSink(
-		context.TODO(),
+		t.Context(),
 		fake.NewClientBuilder().Build(),
 	)
 	require.NotNil(t, s.client)

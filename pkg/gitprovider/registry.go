@@ -33,8 +33,10 @@ func New(repoURL string, opts *Options) (Interface, error) {
 		return nil, fmt.Errorf("no registered providers with name %q", opts.Name)
 	}
 	for _, reg := range registeredProviders {
-		if reg.Predicate(repoURL) {
-			return reg.NewProvider(repoURL, opts)
+		if reg.Predicate != nil && reg.NewProvider != nil {
+			if reg.Predicate(repoURL) {
+				return reg.NewProvider(repoURL, opts)
+			}
 		}
 	}
 	return nil, fmt.Errorf("no registered providers for %s", repoURL)

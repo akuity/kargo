@@ -16,13 +16,38 @@ import (
 )
 
 type EventSender struct {
-	recorder record.EventRecorder
+	recorder   record.EventRecorder
+	shutdownFn func()
 }
 
-// NewEventSender creates a new EventSender that uses the provided EventRecorder
+// NewEventSender creates a new EventSender that uses the provided
+// EventRecorder. The returned sender's Shutdown method is a no-op; use
+// NewEventSenderWithShutdown when graceful drain is required.
 func NewEventSender(recorder record.EventRecorder) *EventSender {
 	return &EventSender{
 		recorder: recorder,
+	}
+}
+
+// NewEventSenderWithShutdown creates a new EventSender whose Shutdown method
+// calls the provided function to drain the underlying event broadcaster. Use
+// this variant for any processes that must flush events before exiting.
+func NewEventSenderWithShutdown(
+	recorder record.EventRecorder,
+	shutdown func(),
+) *EventSender {
+	return &EventSender{
+		recorder:   recorder,
+		shutdownFn: shutdown,
+	}
+}
+
+// Shutdown drains buffered events. It blocks until all queued events
+// have been processed or the underlying transport gives up. It is a
+// no-op when the sender was created with NewEventSender.
+func (s *EventSender) Shutdown() {
+	if s.shutdownFn != nil {
+		s.shutdownFn()
 	}
 }
 

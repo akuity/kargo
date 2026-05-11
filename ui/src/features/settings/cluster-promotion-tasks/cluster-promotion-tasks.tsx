@@ -1,18 +1,14 @@
-import { useMutation, useQuery } from '@connectrpc/connect-query';
 import { faPencil, faPlus, faTrash } from '@fortawesome/free-solid-svg-icons';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
 import { Button, Card, Flex, Table } from 'antd';
 import { format } from 'date-fns';
+import { stringify } from 'yaml';
 
 import { useConfirmModal } from '@ui/features/common/confirm-modal/use-confirm-modal';
 import { useModal } from '@ui/features/common/modal/use-modal';
-import { clusterPromotionTaskManifestsGen } from '@ui/features/utils/manifest-generator';
-import {
-  deleteResource,
-  listClusterPromotionTasks
-} from '@ui/gen/api/service/v1alpha1/service-KargoService_connectquery';
-import { ClusterPromotionTask } from '@ui/gen/api/v1alpha1/generated_pb';
-import { timestampDate } from '@ui/utils/connectrpc-utils';
+import { useListClusterPromotionTasks } from '@ui/gen/api/v2/core/core';
+import { ClusterPromotionTask } from '@ui/gen/api/v2/models';
+import { useDeleteResource } from '@ui/gen/api/v2/resources/resources';
 
 import { CreateClusterPromotionTaskModal } from './create-cluster-promotion-task';
 import { EditClusterPromotionTaskModal } from './edit-cluster-promotion-task-modal';
@@ -20,9 +16,13 @@ import { EditClusterPromotionTaskModal } from './edit-cluster-promotion-task-mod
 export const ClusterPromotionTasks = () => {
   const confirm = useConfirmModal();
 
-  const listClusterPromotionTasksQuery = useQuery(listClusterPromotionTasks);
+  const listClusterPromotionTasksQuery = useListClusterPromotionTasks();
 
-  const deleteClusterPromotionTaskMutation = useMutation(deleteResource);
+  const deleteClusterPromotionTaskMutation = useDeleteResource({
+    mutation: {
+      onSuccess: () => listClusterPromotionTasksQuery.refetch()
+    }
+  });
 
   const clusterPromotionTasksModal = useModal();
 
@@ -44,13 +44,9 @@ export const ClusterPromotionTasks = () => {
         </p>
       ),
       onOk: () => {
-        const manifest = new TextEncoder().encode(
-          clusterPromotionTaskManifestsGen.v1alpha1(clusterPromotionTask)
-        );
-        deleteClusterPromotionTaskMutation.mutate(
-          { manifest },
-          { onSuccess: () => listClusterPromotionTasksQuery.refetch() }
-        );
+        deleteClusterPromotionTaskMutation.mutate({
+          data: stringify(clusterPromotionTask)
+        });
       },
       hide: () => {}
     });
@@ -75,7 +71,7 @@ export const ClusterPromotionTasks = () => {
       }
     >
       <Table<ClusterPromotionTask>
-        dataSource={listClusterPromotionTasksQuery.data?.clusterPromotionTasks}
+        dataSource={listClusterPromotionTasksQuery.data?.data?.items}
         loading={listClusterPromotionTasksQuery.isFetching}
         locale={{
           emptyText: (
@@ -97,9 +93,10 @@ export const ClusterPromotionTasks = () => {
             title: 'Creation Date',
             width: 200,
             render: (_, template) => {
-              const date = timestampDate(template.metadata?.creationTimestamp);
-
-              return date ? format(date, 'MMM do yyyy HH:mm:ss') : '';
+              const ts = template.metadata?.creationTimestamp;
+              if (!ts) return '';
+              const date = new Date(ts);
+              return isNaN(date.getTime()) ? '' : format(date, 'MMM do yyyy HH:mm:ss');
             }
           },
           {

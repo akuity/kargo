@@ -2,12 +2,12 @@ package get
 
 import (
 	"context"
+	"encoding/json"
 	"errors"
 	"fmt"
 	"slices"
 	"time"
 
-	"connectrpc.com/connect"
 	"github.com/spf13/cobra"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -16,13 +16,13 @@ import (
 	"k8s.io/cli-runtime/pkg/genericiooptions"
 
 	rbacapi "github.com/akuity/kargo/api/rbac/v1alpha1"
-	v1alpha1 "github.com/akuity/kargo/api/service/v1alpha1"
 	"github.com/akuity/kargo/pkg/cli/client"
 	"github.com/akuity/kargo/pkg/cli/config"
 	"github.com/akuity/kargo/pkg/cli/io"
 	"github.com/akuity/kargo/pkg/cli/kubernetes"
 	"github.com/akuity/kargo/pkg/cli/option"
 	"github.com/akuity/kargo/pkg/cli/templates"
+	"github.com/akuity/kargo/pkg/client/generated/rbac"
 )
 
 type getTokensOptions struct {
@@ -142,46 +142,91 @@ func (o *getTokensOptions) validate() error {
 
 // run gets the tokens from the server and prints them to the console.
 func (o *getTokensOptions) run(ctx context.Context) error {
-	kargoSvcCli, err := client.GetClientFromConfig(ctx, o.Config, o.ClientOptions)
+	apiClient, err := client.GetClientFromConfig(ctx, o.Config, o.ClientOptions)
 	if err != nil {
 		return fmt.Errorf("get client from config: %w", err)
 	}
 
 	if len(o.Names) == 0 {
-		var resp *connect.Response[v1alpha1.ListAPITokensResponse]
-		if resp, err = kargoSvcCli.ListAPITokens(
-			ctx,
-			connect.NewRequest(
-				&v1alpha1.ListAPITokensRequest{
-					SystemLevel: o.SystemLevel,
-					Project:     o.Project,
-					RoleName:    o.RoleName,
-				},
-			),
-		); err != nil {
-			return fmt.Errorf("list API tokens: %w", err)
+		var payload any
+		if o.SystemLevel {
+			params := rbac.NewListSystemAPITokensParams()
+			if o.RoleName != "" {
+				params = params.WithRole(&o.RoleName)
+			}
+			var res *rbac.ListSystemAPITokensOK
+			if res, err = apiClient.Rbac.ListSystemAPITokens(params, nil); err != nil {
+				return fmt.Errorf("list API tokens: %w", err)
+			}
+			payload = res.GetPayload()
+		} else {
+			params := rbac.NewListProjectAPITokensParams().WithProject(o.Project)
+			if o.RoleName != "" {
+				params = params.WithRole(&o.RoleName)
+			}
+			var res *rbac.ListProjectAPITokensOK
+			if res, err = apiClient.Rbac.ListProjectAPITokens(params, nil); err != nil {
+				return fmt.Errorf("list API tokens: %w", err)
+			}
+			payload = res.GetPayload()
 		}
-		return PrintObjects(resp.Msg.GetTokenSecrets(), o.PrintFlags, o.IOStreams, o.NoHeaders)
+
+		var listJSON []byte
+		if listJSON, err = json.Marshal(payload); err != nil {
+			return fmt.Errorf("marshal response: %w", err)
+		}
+		var secretList corev1.SecretList
+		if err = json.Unmarshal(listJSON, &secretList); err != nil {
+			return fmt.Errorf("unmarshal secret list: %w", err)
+		}
+
+		secrets := make([]*corev1.Secret, len(secretList.Items))
+		for i := range secretList.Items {
+			secrets[i] = &secretList.Items[i]
+		}
+		return PrintObjects(secrets, o.PrintFlags, o.IOStreams, o.NoHeaders)
 	}
 
 	res := make([]*corev1.Secret, 0, len(o.Names))
 	errs := make([]error, 0, len(o.Names))
 	for _, name := range o.Names {
-		var resp *connect.Response[v1alpha1.GetAPITokenResponse]
-		if resp, err = kargoSvcCli.GetAPIToken(
-			ctx,
-			connect.NewRequest(
-				&v1alpha1.GetAPITokenRequest{
-					SystemLevel: o.SystemLevel,
-					Project:     o.Project,
-					Name:        name,
-				},
-			),
-		); err != nil {
-			errs = append(errs, err)
+		var payload any
+		if o.SystemLevel {
+			var res *rbac.GetSystemAPITokenOK
+			if res, err = apiClient.Rbac.GetSystemAPIToken(
+				rbac.NewGetSystemAPITokenParams().WithApitoken(name),
+				nil,
+			); err != nil {
+				errs = append(errs, err)
+				continue
+			}
+			payload = res.GetPayload()
+		} else {
+			var res *rbac.GetProjectAPITokenOK
+			if res, err = apiClient.Rbac.GetProjectAPIToken(
+				rbac.NewGetProjectAPITokenParams().
+					WithProject(o.Project).
+					WithApitoken(name),
+				nil,
+			); err != nil {
+				errs = append(errs, err)
+				continue
+			}
+			payload = res.GetPayload()
+		}
+
+		var secretJSON []byte
+		secretJSON, err = json.Marshal(payload)
+		if err != nil {
+			errs = append(errs, fmt.Errorf("marshal response: %w", err))
 			continue
 		}
-		res = append(res, resp.Msg.GetTokenSecret())
+		var secret *corev1.Secret
+		if err = json.Unmarshal(secretJSON, &secret); err != nil {
+			errs = append(errs, fmt.Errorf("unmarshal secret: %w", err))
+			continue
+		}
+		res = append(res, secret)
 	}
 
 	if err = PrintObjects(res, o.PrintFlags, o.IOStreams, o.NoHeaders); err != nil {

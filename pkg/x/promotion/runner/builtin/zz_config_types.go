@@ -2,6 +2,8 @@
 
 package builtin
 
+type ArgoCDCommonDefs interface{}
+
 type CommonDefs interface{}
 
 type ComposeOutput map[string]interface{}
@@ -25,6 +27,9 @@ type ArgoCDAppUpdate struct {
 }
 
 // Specifies a label selector to match Argo CD Application resources to be updated. Mutually
+// exclusive with 'name'.
+//
+// Specifies a label selector to match Argo CD Application resources to wait for. Mutually
 // exclusive with 'name'.
 //
 // Selector to match Argo CD Application resources by labels. Must contain at least one
@@ -111,6 +116,27 @@ type ArgoCDKustomizeImageUpdate struct {
 	Tag string `json:"tag,omitempty"`
 }
 
+type ArgoCDWaitConfig struct {
+	Apps []ArgoCDAppWait `json:"apps"`
+}
+
+type ArgoCDAppWait struct {
+	// Specifies the exact name of an Argo CD Application resource to wait for. Mutually
+	// exclusive with 'selector'.
+	Name string `json:"name,omitempty"`
+	// Specifies the namespace of the Argo CD Application. If left unspecified, the namespace
+	// will be the controller's configured default.
+	Namespace string `json:"namespace,omitempty"`
+	// Specifies a label selector to match Argo CD Application resources to wait for. Mutually
+	// exclusive with 'name'.
+	Selector *ArgoCDAppSelector `json:"selector,omitempty"`
+	// Specifies the conditions to wait for. Valid values are 'health', 'sync', 'operation',
+	// 'suspended', and 'degraded'. Health-related conditions (health, suspended, degraded) are
+	// OR'd. All other conditions are AND'd. Defaults to ['health', 'sync', 'operation'] when
+	// omitted.
+	WaitFor []WaitFor `json:"waitFor,omitempty"`
+}
+
 type CopyConfig struct {
 	// Ignore is a (multiline) string of glob patterns to ignore when copying files. It accepts
 	// the same syntax as .gitignore files.
@@ -128,6 +154,11 @@ type DeleteConfig struct {
 	Strict bool `json:"strict,omitempty"`
 }
 
+type FailConfig struct {
+	// Optional failure message.
+	Message string `json:"message,omitempty"`
+}
+
 type GitClearConfig struct {
 	// Path to a working directory of a local repository from which to remove all files,
 	// excluding the .git/ directory.
@@ -137,7 +168,7 @@ type GitClearConfig struct {
 type GitCloneConfig struct {
 	// Default authorship information for any commits made to the cloned repository. If
 	// provided, this overrides any system-level defaults. Note: Configuration of the
-	// `git-commit` step can override this information.
+	// `git-commit` and `git-tag` steps can override this information.
 	Author *GitCloneConfigAuthor `json:"author,omitempty"`
 	// The commits, branches, or tags to check out from the repository and the paths where they
 	// should be checked out. At least one must be specified.
@@ -147,13 +178,15 @@ type GitCloneConfig struct {
 	// Indicates whether to recursively clone submodules. Default is false. Note that any
 	// provided credentials must also be valid for the submodules.
 	RecurseSubmodules bool `json:"recurseSubmodules,omitempty"`
-	// The URL of a remote Git repository to clone. Required.
+	// The URL of a remote Git repository to clone. Required. Deprecated: Support for SSH URLs
+	// (ssh:// and SCP-style git@host:path) is deprecated as of v1.10.0 and will be removed in
+	// v1.13.0. Use HTTPS URLs instead.
 	RepoURL string `json:"repoURL"`
 }
 
 // Default authorship information for any commits made to the cloned repository. If
 // provided, this overrides any system-level defaults. Note: Configuration of the
-// `git-commit` step can override this information.
+// `git-commit` and `git-tag` steps can override this information.
 type GitCloneConfigAuthor struct {
 	// The email of the author.
 	Email string `json:"email"`
@@ -190,7 +223,8 @@ type Checkout struct {
 type GitCommitConfig struct {
 	// Optional authorship information for the commit. If provided, this takes precedence over
 	// both system-level defaults and any optional, default authorship information configured in
-	// the `git-clone` step.
+	// the `git-clone` step. Deprecated: This field is deprecated as of v1.10.0 and will be
+	// removed in v1.12.0. Configure authorship in the `git-clone` step instead.
 	Author *GitCommitConfigAuthor `json:"author,omitempty"`
 	// The commit message.
 	Message string `json:"message"`
@@ -200,26 +234,35 @@ type GitCommitConfig struct {
 
 // Optional authorship information for the commit. If provided, this takes precedence over
 // both system-level defaults and any optional, default authorship information configured in
-// the `git-clone` step.
+// the `git-clone` step. Deprecated: This field is deprecated as of v1.10.0 and will be
+// removed in v1.12.0. Configure authorship in the `git-clone` step instead.
 type GitCommitConfigAuthor struct {
-	// The email of the author.
+	// The email of the author. Deprecated: This field is deprecated as of v1.10.0 and will be
+	// removed in v1.12.0.
 	Email string `json:"email"`
-	// The name of the author.
+	// The name of the author. Deprecated: This field is deprecated as of v1.10.0 and will be
+	// removed in v1.12.0.
 	Name string `json:"name"`
-	// The GPG signing key for the author.
+	// The GPG signing key for the author. Deprecated: This field is deprecated as of v1.10.0
+	// and will be removed in v1.12.0. Configure signing keys in the `git-clone` step or via
+	// ClusterConfig instead.
 	SigningKey string `json:"signingKey,omitempty"`
 }
 
 type GitMergePRConfig struct {
 	// Skip TLS verification when interacting with the Git provider. Default is false.
 	InsecureSkipTLSVerify bool `json:"insecureSkipTLSVerify,omitempty"`
+	// The merge method to use when merging the pull request. Options are provider-specific.
+	MergeMethod string `json:"mergeMethod,omitempty"`
 	// The number of the pull request to merge.
 	PRNumber int64 `json:"prNumber"`
 	// The name of the Git provider to use. Currently 'azure', 'bitbucket', 'gitea', 'github',
 	// and 'gitlab' are supported. Kargo will try to infer the provider if it is not explicitly
 	// specified.
 	Provider *Provider `json:"provider,omitempty"`
-	// The URL of the remote Git repository containing the pull request.
+	// The URL of the remote Git repository containing the pull request. Deprecated: Support for
+	// SSH URLs (ssh:// and SCP-style git@host:path) is deprecated as of v1.10.0 and will be
+	// removed in v1.13.0. Use HTTPS URLs instead.
 	RepoURL string `json:"repoURL"`
 	// If true, the step will return RUNNING instead of FAILED when the PR is not yet mergeable.
 	// The merge will be retried on the next reconciliation until it succeeds or times out.
@@ -228,8 +271,7 @@ type GitMergePRConfig struct {
 }
 
 type GitOpenPRConfig struct {
-	// Indicates whether a new, empty orphan branch should be created and pushed to the remote
-	// if the target branch does not already exist there. Default is false.
+	// Deprecated. Is a no-op if set. Will be removed in a future release.
 	CreateTargetBranch bool `json:"createTargetBranch,omitempty"`
 	// The description of the pull request. Kargo generates a description based on the commit
 	// messages if it is not explicitly specified.
@@ -242,7 +284,9 @@ type GitOpenPRConfig struct {
 	// and 'gitlab' are supported. Kargo will try to infer the provider if it is not explicitly
 	// specified.
 	Provider *Provider `json:"provider,omitempty"`
-	// The URL of a remote Git repository to clone.
+	// The URL of a remote Git repository to clone. Deprecated: Support for SSH URLs (ssh:// and
+	// SCP-style git@host:path) is deprecated as of v1.10.0 and will be removed in v1.13.0. Use
+	// HTTPS URLs instead.
 	RepoURL string `json:"repoURL"`
 	// The branch containing the changes to be merged. This branch must already exist and be up
 	// to date on the remote.
@@ -260,16 +304,17 @@ type GitPushConfig struct {
 	// useful for scenarios where you want to completely replace the branch content (e.g.,
 	// pushing rendered manifests that don't depend on previous state). Use with caution as this
 	// will overwrite any commits that exist on the remote branch but not in your local branch.
+	// Mutually exclusive with 'tag'.
 	Force bool `json:"force,omitempty"`
 	// Indicates whether to push to a new remote branch. A value of 'true' is mutually exclusive
-	// with 'targetBranch'. If neither of these is provided, the target branch will be the
-	// currently checked out branch.
+	// with 'targetBranch' and 'tag'. If none of these are provided, the target branch will be
+	// the currently checked out branch.
 	GenerateTargetBranch bool `json:"generateTargetBranch,omitempty"`
 	// This step implements its own internal retry logic for cases where a push is determined to
 	// have failed due to the remote branch having commits that that are not present locally.
 	// Each attempt, including the first, rebases prior to pushing. This field configures the
 	// maximum number of attempts to push to the remote repository. If not specified, the
-	// default is 50.
+	// default is 10.
 	MaxAttempts *int64 `json:"maxAttempts,omitempty"`
 	// The path to a working directory of a local repository.
 	Path string `json:"path"`
@@ -277,9 +322,24 @@ type GitPushConfig struct {
 	// and 'gitlab' are supported. Kargo will try to infer the provider if it is not explicitly
 	// specified.
 	Provider *Provider `json:"provider,omitempty"`
-	// The target branch to push to. Mutually exclusive with 'generateTargetBranch=true'. If
-	// neither of these is provided, the target branch will be the currently checked out branch.
+	// A tag to push to the remote repository. Mutually exclusive with
+	// 'generateTargetBranch=true' and 'targetBranch'. If none of these are provided, the target
+	// branch will be the currently checked out branch. 'tag' is also mutually exclusive with
+	// 'force=true'.
+	Tag string `json:"tag,omitempty"`
+	// The target branch to push to. Mutually exclusive with 'generateTargetBranch=true' and
+	// 'tag'. If none of these are provided, the target branch will be the currently checked out
+	// branch.
 	TargetBranch string `json:"targetBranch,omitempty"`
+}
+
+type GitTagConfig struct {
+	// The annotation message for the tag.
+	Message string `json:"message"`
+	// The path to a working directory of a local repository.
+	Path string `json:"path"`
+	// The tag to create in the repository.
+	Tag string `json:"tag"`
 }
 
 type GitWaitForPRConfig struct {
@@ -291,8 +351,30 @@ type GitWaitForPRConfig struct {
 	// and 'gitlab' are supported. Kargo will try to infer the provider if it is not explicitly
 	// specified.
 	Provider *Provider `json:"provider,omitempty"`
-	// The URL of a remote Git repository to clone.
+	// The URL of a remote Git repository to clone. Deprecated: Support for SSH URLs (ssh:// and
+	// SCP-style git@host:path) is deprecated as of v1.10.0 and will be removed in v1.13.0. Use
+	// HTTPS URLs instead.
 	RepoURL string `json:"repoURL"`
+}
+
+type GitHubPushConfig struct {
+	// Whether to force push to the target branch, overwriting any existing history.
+	Force bool `json:"force,omitempty"`
+	// Indicates whether to push to a new remote branch. A value of 'true' is mutually exclusive
+	// with 'targetBranch'. If neither is provided, the target branch will be the currently
+	// checked out branch.
+	GenerateTargetBranch bool `json:"generateTargetBranch,omitempty"`
+	// Whether to skip TLS verification when communicating with the GitHub API. Intended for
+	// GitHub Enterprise instances with self-signed certificates.
+	InsecureSkipTLSVerify bool `json:"insecureSkipTLSVerify,omitempty"`
+	// The maximum number of attempts to push. Each attempt integrates remote changes (if
+	// applicable) and retries the API-based push. If not specified, the default is 10.
+	MaxAttempts *int64 `json:"maxAttempts,omitempty"`
+	// The path to a working directory of a local repository.
+	Path string `json:"path"`
+	// The target branch to push to. Mutually exclusive with 'generateTargetBranch=true'. If
+	// neither is provided, the target branch will be the currently checked out branch.
+	TargetBranch string `json:"targetBranch,omitempty"`
 }
 
 type HelmTemplateConfig struct {
@@ -548,6 +630,29 @@ type OCIDownloadConfig struct {
 	OutPath string `json:"outPath"`
 }
 
+type OCIPushConfig struct {
+	// Annotations to set on the destination artifact. Keys may be prefixed with 'index:' or
+	// 'manifest:' to scope them to the index or image manifest respectively. Unprefixed keys
+	// default to the image manifest. For single images, 'index:'-prefixed keys are ignored.
+	Annotations map[string]string `json:"annotations,omitempty"`
+	// DestRef is the destination reference including tag (e.g. 'registry/repo:tag' or
+	// 'oci://registry/repo:tag'). For retag-in-place, use the same repo as srcRef with the new
+	// tag.
+	DestRef string `json:"destRef"`
+	// Whether to skip TLS verification when communicating with registries. Defaults to false.
+	InsecureSkipTLSVerify bool `json:"insecureSkipTLSVerify,omitempty"`
+	// SrcRef is the source OCI artifact reference with tag or digest (e.g. 'registry/repo:tag'
+	// or 'registry/repo@sha256:...'). Use 'oci://' prefix for Helm charts.
+	SrcRef string `json:"srcRef"`
+}
+
+type SetFreightAliasConfig struct {
+	// The new alias to assign to the Freight. Aliases must be unique within the project.
+	Alias string `json:"alias"`
+	// The name of the Freight resource to update.
+	Name string `json:"name"`
+}
+
 type SetMetadataConfig struct {
 	// List of metadata updates to apply to various resources
 	Updates []Update `json:"updates"`
@@ -560,6 +665,34 @@ type Update struct {
 	Name string `json:"name"`
 	// Key/value pairs to set as metadata on the resource
 	Values map[string]interface{} `json:"values"`
+}
+
+type TOMLParseConfig struct {
+	// An array of outputs to extract from the TOML file.
+	Outputs []TomlParse `json:"outputs"`
+	// The path to the TOML file to be parsed.
+	Path string `json:"path"`
+}
+
+type TomlParse struct {
+	// The expression used to extract data from the TOML file.
+	FromExpression string `json:"fromExpression"`
+	// The name of the output variable to store the result.
+	Name string `json:"name"`
+}
+
+type TOMLUpdateConfig struct {
+	// The path to a TOML file.
+	Path string `json:"path"`
+	// A list of updates to apply to the TOML file.
+	Updates []TomlUpdate `json:"updates"`
+}
+
+type TomlUpdate struct {
+	// The key whose value needs to be updated. For nested values, use a TOML dot notation path.
+	Key string `json:"key"`
+	// The new value for the specified key.
+	Value interface{} `json:"value"`
 }
 
 type UntarConfig struct {
@@ -622,6 +755,16 @@ const (
 	Exists       Operator = "Exists"
 	In           Operator = "In"
 	NotIn        Operator = "NotIn"
+)
+
+type WaitFor string
+
+const (
+	Degraded  WaitFor = "degraded"
+	Health    WaitFor = "health"
+	Operation WaitFor = "operation"
+	Suspended WaitFor = "suspended"
+	Sync      WaitFor = "sync"
 )
 
 // The name of the Git provider to use. Currently 'azure', 'bitbucket', 'gitea', 'github',

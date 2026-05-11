@@ -62,8 +62,15 @@ All ServiceNow operations require proper authentication credentials stored in a 
 
 | Name                     | Type     | Required | Description                                                                                     |
 | ------------------------ | -------- | -------- | ----------------------------------------------------------------------------------------------- |
-| `credentials.secretName` | `string` | Y        | Name of the `Secret` containing the ServiceNow credentials in the project namespace.            |
+| `credentials.secretName` | `string` | N        | Name of the `Secret` containing the ServiceNow credentials in the project namespace.            |
+| `credentials.sharedSecretName` | `string` | N  | Name of the `Secret` containing the ServiceNow credentials in the `shared-resources-namespace`. |
 | `credentials.type`       | `string` | Y        | Type of ServiceNow credentials to use for authentication (either `api-token` or `basic`).       |
+
+:::info
+
+Either `credentials.secretName` or `credentials.sharedSecretName` must be set, but not both.
+
+:::
 
 For `credentials.type: api-token` the referenced `Secret` should contain the following keys:
 
@@ -80,11 +87,12 @@ For `credentials.type: basic` the referenced `Secret` should contain the followi
 
 ## Configuration
 
-| Name        | Type     | Required | Description                                                                                                                     |
-| ----------- | -------- | -------- | ------------------------------------------------------------------------------------------------------------------------------- |
-| `tableName` | `string` | Y        | Table name of the record type you want to wait on (e.g., `incident`, `problem`, `change_request`).                              |
-| `ticketId`  | `string` | Y        | Ticket ID (`sys_id`) of the record you want to monitor.                                                                         |
-| `condition` | `string` | Y        | Condition to wait on before proceeding.                                                                                         |
+| Name           | Type      | Required | Description                                                                                                                     |
+| -------------- | --------- | -------- | ------------------------------------------------------------------------------------------------------------------------------- |
+| `tableName`    | `string`  | Y        | Table name of the record type you want to wait on (e.g., `incident`, `problem`, `change_request`).                              |
+| `ticketId`     | `string`  | Y        | Ticket ID (`sys_id`) of the record you want to monitor.                                                                         |
+| `condition`    | `string`  | Y        | Condition to wait on before proceeding.                                                                                         |
+| `pollInterval` | `string`  | N        | Poll interval for checking record condition, specified as a [Go duration string](https://pkg.go.dev/time#ParseDuration) (e.g., `30s`, `5m`). Overrides the default controller reconciliation interval of 5 minutes when set. Available in Kargo >= v1.10. |
 
 ## Output
 

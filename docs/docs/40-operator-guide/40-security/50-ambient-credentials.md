@@ -76,8 +76,8 @@ recommended.
 :::
 
 Tokens Kargo obtains for accessing any specific ECR repository on behalf of any
-specific Kargo Project are valid for 12 hours and cached for 10. A controller
-restart clears the cache.
+specific Kargo Project are valid for 12 hours and cached until shortly before
+they expire. A controller restart clears the cache.
 
 ## Google Artifact Registry (GAR)
 
@@ -102,6 +102,16 @@ or can be added to an
 Clusters managed by
 [GKE Autopilot](https://cloud.google.com/kubernetes-engine/docs/concepts/autopilot-overview)
 have WIF enabled automatically.
+
+:::
+
+:::note
+
+On GKE Autopilot and some standard GKE clusters, the instance metadata
+server may not be immediately reachable when the Kargo controller pod
+first starts. If WIF initialization fails for this reason, Kargo will
+automatically retry on the next credential request — no pod restart is
+required.
 
 :::
 
@@ -172,8 +182,8 @@ recommended.
 :::
 
 Tokens Kargo obtains for accessing any specific GAR repository on behalf of any
-specific Kargo Project are valid for 60 minutes and cached for 40. A controller
-restart clears the cache.
+specific Kargo Project are valid for 60 minutes and cached until shortly before
+they expire. A controller restart clears the cache.
 
 ## Azure Container Registry (ACR)
 

@@ -339,7 +339,8 @@ func Test_gitCloner_run(t *testing.T) {
 	// Now we can proceed to test gitCloner...
 
 	r := newGitCloner(promotion.StepRunnerCapabilities{
-		CredsDB: &credentials.FakeDB{},
+		CredsDB:         &credentials.FakeDB{},
+		GitUserResolver: &fakeGitUserResolver{},
 	})
 	runner, ok := r.(*gitCloner)
 	require.True(t, ok)
@@ -349,7 +350,7 @@ func Test_gitCloner_run(t *testing.T) {
 	}
 
 	res, err := runner.run(
-		context.Background(),
+		t.Context(),
 		stepCtx,
 		builtin.GitCloneConfig{
 			RepoURL: fmt.Sprintf("%s/test.git", server.URL),
@@ -369,8 +370,8 @@ func Test_gitCloner_run(t *testing.T) {
 	require.NoError(t, err)
 	require.Equal(t, kargoapi.PromotionStepStatusSucceeded, res.Status)
 	require.DirExists(t, filepath.Join(stepCtx.WorkDir, "src"))
-	// The checked out master branch should have the content we know is in the
-	// test remote's master branch.
+	// The checked out main branch should have the content we know is in the
+	// test remote's main branch.
 	require.FileExists(t, filepath.Join(stepCtx.WorkDir, "src", "test.txt"))
 	require.DirExists(t, filepath.Join(stepCtx.WorkDir, "out"))
 	// The stage/dev branch is a new orphan branch with a single empty commit.
@@ -430,7 +431,7 @@ func Test_gitCloner_run_with_submodules(t *testing.T) {
 	})
 
 	// Use git submodule add to create proper submodule metadata
-	cmd := exec.Command("git", "submodule", "add", "-b", "master", subRepoURL, "sub")
+	cmd := exec.Command("git", "submodule", "add", "-b", "main", subRepoURL, "sub")
 	cmd.Dir = mainRepo.Dir()
 	out, err := cmd.CombinedOutput()
 	require.NoErrorf(t, err, "git submodule add failed: %s", string(out))
@@ -446,7 +447,8 @@ func Test_gitCloner_run_with_submodules(t *testing.T) {
 
 	// Run git-cloner with recurseSubmodules = true
 	r := newGitCloner(promotion.StepRunnerCapabilities{
-		CredsDB: &credentials.FakeDB{},
+		CredsDB:         &credentials.FakeDB{},
+		GitUserResolver: &fakeGitUserResolver{},
 	})
 	runner, ok := r.(*gitCloner)
 	require.True(t, ok)
@@ -513,4 +515,19 @@ func Test_filterForCheckouts(t *testing.T) {
 			require.Equal(t, tt.expected, result)
 		})
 	}
+}
+
+// fakeGitUserResolver is a mock implementation of the promotion.GitUserResolver
+// interface that is used to facilitate unit testing.
+type fakeGitUserResolver struct {
+	ResolveFn func(context.Context) (git.User, error)
+}
+
+func (f *fakeGitUserResolver) Resolve(
+	ctx context.Context,
+) (git.User, error) {
+	if f.ResolveFn != nil {
+		return f.ResolveFn(ctx)
+	}
+	return git.User{}, nil
 }

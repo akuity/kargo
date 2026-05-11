@@ -1,4 +1,21 @@
-{{- if .Values.global.sharedResources.createNamespace }}
+apiVersion: rbac.authorization.k8s.io/v1
+kind: Role
+metadata:
+  name: kargo-shared-resources-reader
+  namespace: {{ .Values.global.sharedResources.namespace }}
+  labels:
+    {{- include "kargo.labels" . | nindent 4 }}
+  {{- include "kargo.annotations" (dict "root" .) | nindent 2 }}
+rules:
+- apiGroups:
+  - ""
+  resources:
+  - configmaps
+  verbs:
+  - get
+  - list
+  - watch
+---
 apiVersion: rbac.authorization.k8s.io/v1
 kind: Role
 metadata:
@@ -6,11 +23,12 @@ metadata:
   namespace: {{ .Values.global.sharedResources.namespace }}
   labels:
     {{- include "kargo.labels" . | nindent 4 }}
+  {{- include "kargo.annotations" (dict "root" .) | nindent 2 }}
 rules:
 - apiGroups:
   - ""
   resources:
   - secrets
+  - configmaps
   verbs:
   - "*"
-{{- end }}

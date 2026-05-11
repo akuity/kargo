@@ -1,7 +1,6 @@
 package external
 
 import (
-	"context"
 	"strings"
 	"testing"
 
@@ -107,7 +106,10 @@ func TestNewReceiver(t *testing.T) {
 	for _, testCase := range testCases {
 		t.Run(testCase.name, func(t *testing.T) {
 			receiver, err := NewReceiver(
-				context.Background(),
+				t.Context(),
+				// we pass the same client for both the client and api-reader since the
+				// fake client doesn't use the cache at all.
+				testCase.client,
 				testCase.client,
 				testBaseURL,
 				testProject,

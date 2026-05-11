@@ -18,22 +18,22 @@ var (
 // build.
 type Version struct {
 	// Version is a human-friendly version string.
-	Version string
+	Version string `json:"version"`
 	// BuildDate is the date/time on which the application was built.
-	BuildDate time.Time
+	BuildDate time.Time `json:"buildDate"`
 	// GitCommit is the ID (sha) of the last commit to the application's source
 	// code that is included in this build.
-	GitCommit string
+	GitCommit string `json:"gitCommit"`
 	// GitTreeDirty is true if the application's source code contained
 	// uncommitted changes at the time it was built; otherwise it is false.
-	GitTreeDirty bool
+	GitTreeDirty bool `json:"gitTreeDirty"`
 	// GoVersion is the version of Go that was used to build the application.
-	GoVersion string
+	GoVersion string `json:"goVersion"`
 	// Compiler indicates what Go compiler was used for the build.
-	Compiler string
+	Compiler string `json:"compiler"`
 	// Platform indicates the OS and CPU architecture for which the application
 	// was built.
-	Platform string
+	Platform string `json:"platform"`
 }
 
 var ver Version

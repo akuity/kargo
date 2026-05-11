@@ -822,7 +822,7 @@ func Test_webhook_Default(t *testing.T) {
 			}
 
 			ctx := admission.NewContextWithRequest(
-				context.Background(),
+				t.Context(),
 				tc.req,
 			)
 			tc.assertions(
@@ -909,7 +909,7 @@ func Test_webhook_ValidateCreate(t *testing.T) {
 	for _, testCase := range testCases {
 		t.Run(testCase.name, func(t *testing.T) {
 			_, err := testCase.webhook.ValidateCreate(
-				context.Background(),
+				t.Context(),
 				&kargoapi.Stage{},
 			)
 			testCase.assertions(t, err)
@@ -955,7 +955,7 @@ func Test_webhook_ValidateUpdate(t *testing.T) {
 	for _, testCase := range testCases {
 		t.Run(testCase.name, func(t *testing.T) {
 			_, err := testCase.webhook.ValidateUpdate(
-				context.Background(),
+				t.Context(),
 				nil,
 				&kargoapi.Stage{},
 			)
@@ -966,7 +966,7 @@ func Test_webhook_ValidateUpdate(t *testing.T) {
 
 func Test_webhook_ValidateDelete(t *testing.T) {
 	w := &webhook{}
-	_, err := w.ValidateDelete(context.Background(), nil)
+	_, err := w.ValidateDelete(t.Context(), nil)
 	require.NoError(t, err)
 }
 

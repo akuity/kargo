@@ -129,14 +129,14 @@ func (j *jsonUpdater) generateCommitMessage(path string, updates []builtin.JSONU
 	}
 
 	var commitMsg strings.Builder
-	_, _ = commitMsg.WriteString(fmt.Sprintf("Updated %s\n", path))
+	_, _ = fmt.Fprintf(&commitMsg, "Updated %s\n", path)
 
 	for _, update := range updates {
 		switch v := update.Value.(type) {
 		case string:
-			_, _ = commitMsg.WriteString(fmt.Sprintf("\n- %s: %q", update.Key, v))
+			_, _ = fmt.Fprintf(&commitMsg, "\n- %s: %q", update.Key, v)
 		default:
-			_, _ = commitMsg.WriteString(fmt.Sprintf("\n- %s: %v", update.Key, v))
+			_, _ = fmt.Fprintf(&commitMsg, "\n- %s: %v", update.Key, v)
 		}
 	}
 

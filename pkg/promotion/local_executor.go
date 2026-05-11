@@ -15,9 +15,10 @@ import (
 type LocalStepExecutor struct {
 	registry StepRunnerRegistry
 
-	kargoClient  client.Client
-	argoCDClient client.Client
-	credsDB      credentials.Database
+	kargoClient     client.Client
+	argoCDClient    client.Client
+	credsDB         credentials.Database
+	gitUserResolver GitUserResolver
 }
 
 // NewLocalStepExecutor creates a new LocalStepExecutor with the provided
@@ -27,12 +28,14 @@ func NewLocalStepExecutor(
 	registry StepRunnerRegistry,
 	kargoClient, argoCDClient client.Client,
 	credsDB credentials.Database,
+	gitUserResolver GitUserResolver,
 ) *LocalStepExecutor {
 	return &LocalStepExecutor{
-		registry:     registry,
-		kargoClient:  kargoClient,
-		argoCDClient: argoCDClient,
-		credsDB:      credsDB,
+		registry:        registry,
+		kargoClient:     kargoClient,
+		argoCDClient:    argoCDClient,
+		credsDB:         credsDB,
+		gitUserResolver: gitUserResolver,
 	}
 }
 
@@ -59,6 +62,8 @@ func (e *LocalStepExecutor) ExecuteStep(
 			capabilities.ArgoCDClient = e.argoCDClient
 		case StepCapabilityAccessCredentials:
 			capabilities.CredsDB = e.credsDB
+		case StepCapabilityAccessGitUser:
+			capabilities.GitUserResolver = e.gitUserResolver
 		}
 	}
 
@@ -81,7 +86,14 @@ func (e *LocalStepExecutor) ExecuteStep(
 	}()
 
 	if err != nil {
-		err = fmt.Errorf("error running step %q: %w", req.Step.Alias, err)
+		if result.Status == kargoapi.PromotionStepStatusErrored {
+			// e.g. error running step "clone": error cloning repo: auth failed
+			err = fmt.Errorf("error running step %q: %w", req.Step.Alias, err)
+		} else {
+			// e.g. step "failer": failed: deployment blocked by policy
+			// e.g. step "push": invalid git-push config: path is required
+			err = fmt.Errorf("step %q: %w", req.Step.Alias, err)
+		}
 	}
 
 	return result, err

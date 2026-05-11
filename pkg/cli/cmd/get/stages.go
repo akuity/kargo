@@ -2,19 +2,18 @@ package get
 
 import (
 	"context"
+	"encoding/json"
 	"errors"
 	"fmt"
 	"slices"
 	"time"
 
-	"connectrpc.com/connect"
 	"github.com/spf13/cobra"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/util/duration"
 	"k8s.io/cli-runtime/pkg/genericclioptions"
 	"k8s.io/cli-runtime/pkg/genericiooptions"
 
-	v1alpha1 "github.com/akuity/kargo/api/service/v1alpha1"
 	kargoapi "github.com/akuity/kargo/api/v1alpha1"
 	"github.com/akuity/kargo/pkg/cli/client"
 	"github.com/akuity/kargo/pkg/cli/config"
@@ -22,6 +21,7 @@ import (
 	"github.com/akuity/kargo/pkg/cli/kubernetes"
 	"github.com/akuity/kargo/pkg/cli/option"
 	"github.com/akuity/kargo/pkg/cli/templates"
+	"github.com/akuity/kargo/pkg/client/generated/core"
 	"github.com/akuity/kargo/pkg/conditions"
 )
 
@@ -119,46 +119,57 @@ func (o *getStagesOptions) validate() error {
 
 // run gets the stages from the server and prints them to the console.
 func (o *getStagesOptions) run(ctx context.Context) error {
-	kargoSvcCli, err := client.GetClientFromConfig(ctx, o.Config, o.ClientOptions)
+	apiClient, err := client.GetClientFromConfig(ctx, o.Config, o.ClientOptions)
 	if err != nil {
-		return fmt.Errorf("get client from config: %w", err)
+		return err
 	}
 
 	if len(o.Names) == 0 {
-		var resp *connect.Response[v1alpha1.ListStagesResponse]
-		if resp, err = kargoSvcCli.ListStages(
-			ctx,
-			connect.NewRequest(
-				&v1alpha1.ListStagesRequest{
-					Project: o.Project,
-				},
-			),
+		var res *core.ListStagesOK
+		if res, err = apiClient.Core.ListStages(
+			core.NewListStagesParams().WithProject(o.Project),
+			nil,
 		); err != nil {
-			return fmt.Errorf("list stages: %w", err)
+			return err
 		}
-		return PrintObjects(resp.Msg.GetStages(), o.PrintFlags, o.IOStreams, o.NoHeaders)
+		var stageJSON []byte
+		if stageJSON, err = json.Marshal(res.Payload); err != nil {
+			return err
+		}
+		stageList := struct {
+			Items []*kargoapi.Stage `json:"items"`
+		}{}
+		if err = json.Unmarshal(stageJSON, &stageList); err != nil {
+			return err
+		}
+		return PrintObjects(stageList.Items, o.PrintFlags, o.IOStreams, o.NoHeaders)
 	}
 
-	res := make([]*kargoapi.Stage, 0, len(o.Names))
+	stages := make([]*kargoapi.Stage, 0, len(o.Names))
 	errs := make([]error, 0, len(o.Names))
 	for _, name := range o.Names {
-		var resp *connect.Response[v1alpha1.GetStageResponse]
-		if resp, err = kargoSvcCli.GetStage(
-			ctx,
-			connect.NewRequest(
-				&v1alpha1.GetStageRequest{
-					Project: o.Project,
-					Name:    name,
-				},
-			),
+		var res *core.GetStageOK
+		if res, err = apiClient.Core.GetStage(
+			core.NewGetStageParams().WithProject(o.Project).WithStage(name),
+			nil,
 		); err != nil {
 			errs = append(errs, err)
 			continue
 		}
-		res = append(res, resp.Msg.GetStage())
+		var stageJSON []byte
+		if stageJSON, err = json.Marshal(res.Payload); err != nil {
+			errs = append(errs, err)
+			continue
+		}
+		var stage *kargoapi.Stage
+		if err = json.Unmarshal(stageJSON, &stage); err != nil {
+			errs = append(errs, err)
+			continue
+		}
+		stages = append(stages, stage)
 	}
 
-	if err = PrintObjects(res, o.PrintFlags, o.IOStreams, o.NoHeaders); err != nil {
+	if err = PrintObjects(stages, o.PrintFlags, o.IOStreams, o.NoHeaders); err != nil {
 		return fmt.Errorf("print stages: %w", err)
 	}
 	return errors.Join(errs...)

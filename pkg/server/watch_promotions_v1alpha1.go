@@ -5,9 +5,6 @@ import (
 	"fmt"
 
 	"connectrpc.com/connect"
-	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
-	"k8s.io/apimachinery/pkg/runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
 	svcv1alpha1 "github.com/akuity/kargo/api/service/v1alpha1"
@@ -40,7 +37,7 @@ func (s *server) WatchPromotions(
 		}
 	}
 
-	w, err := s.client.Watch(ctx, &kargoapi.Promotion{}, project, metav1.ListOptions{})
+	w, err := s.client.Watch(ctx, &kargoapi.PromotionList{}, client.InNamespace(project))
 	if err != nil {
 		return fmt.Errorf("watch promotion: %w", err)
 	}
@@ -55,13 +52,9 @@ func (s *server) WatchPromotions(
 			if !ok {
 				return nil
 			}
-			u, ok := e.Object.(*unstructured.Unstructured)
+			promotion, ok := e.Object.(*kargoapi.Promotion)
 			if !ok {
 				return fmt.Errorf("unexpected object type %T", e.Object)
-			}
-			var promotion *kargoapi.Promotion
-			if err = runtime.DefaultUnstructuredConverter.FromUnstructured(u.Object, &promotion); err != nil {
-				return fmt.Errorf("from unstructured: %w", err)
 			}
 			// FIXME: Current (dynamic) client doesn't support filtering with indexed field by indexer,
 			// so manually filter stage here.

@@ -21,14 +21,15 @@ import (
 func TestNewServer(t *testing.T) {
 	testServerConfig := config.ServerConfig{}
 	testClient, err := kubernetes.NewClient(
-		context.Background(),
+		t.Context(),
 		&rest.Config{},
 		kubernetes.ClientOptions{
 			NewInternalClient: func(
 				context.Context,
 				*rest.Config,
 				*runtime.Scheme,
-			) (client.Client, error) {
+				string,
+			) (client.WithWatch, error) {
 				return fake.NewClientBuilder().Build(), nil
 			},
 		},
@@ -41,6 +42,7 @@ func TestNewServer(t *testing.T) {
 		testServerConfig,
 		testClient,
 		rbac.NewKubernetesRolesDatabase(
+			testClient,
 			testClient,
 			rbac.RolesDatabaseConfigFromEnv(),
 		),
