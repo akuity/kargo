@@ -102,7 +102,7 @@ export const Promote = (props: PromoteProps) => {
         </Flex>
       }
       size='large'
-      width={'1224px'}
+      width={'1400px'}
       footer={
         <Button
           size='large'

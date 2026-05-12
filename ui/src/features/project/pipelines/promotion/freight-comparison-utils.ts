@@ -40,7 +40,7 @@ export const repoLabel = (source: TableSource): string => {
 export const versionLabel = (source: TableSource): string => {
   switch (source.type) {
     case 'git':
-      return (source.id || '').slice(0, 8);
+      return `${(source.id || '').slice(0, 8)} ${source.tag ? `(${source.tag})` : ''}`;
     case 'image':
       return source.tag || '';
     case 'helm':
