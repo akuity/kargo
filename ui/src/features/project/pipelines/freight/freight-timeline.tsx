@@ -269,7 +269,7 @@ export const FreightTimeline = (props: { freights: Freight[]; project: string })
 
         <div
           ref={viewportRef}
-          className={classNames('flex-1 relative', {
+          className={classNames('flex-1 min-w-0 relative', {
             'overflow-hidden': !isDragging
           })}
           onWheel={(e) => {
