@@ -125,7 +125,10 @@ export const useFreightCarousel = (
     }
     const maxOffset = Math.max(0, strip.scrollWidth - viewport.clientWidth);
     setCanSlideRight(offset < maxOffset - 1 || visibleCount < itemCount);
-  }, [offset, visibleCount, itemCount]);
+    // cardWidth tracks viewport size changes from the ResizeObserver. Without
+    // it, a resize that leaves offset at 0 would not re-run this effect, so
+    // canSlideRight could stay stale when the strip starts/stops overflowing.
+  }, [offset, visibleCount, itemCount, cardWidth]);
 
   return {
     viewportRef,
