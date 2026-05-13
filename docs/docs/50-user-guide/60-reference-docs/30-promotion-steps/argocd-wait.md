@@ -90,27 +90,34 @@ to confirm that the `Application` has reached a healthy and synced state before
 the `Promotion` is marked as succeeded.
 
 ```yaml
-steps:
-# Clone, render manifests, commit, push, etc...
-- uses: git-commit
-  as: commit
-  config:
-    path: ./out
-    message: ${{ outputs['update-image'].commitMessage }}
-- uses: git-push
-  config:
-    path: ./out
-- uses: argocd-update
-  config:
-    apps:
-    - name: my-app
-      sources:
-      - repoURL: https://github.com/example/repo.git
-        desiredRevision: ${{ outputs.commit.commit }}
-- uses: argocd-wait
-  config:
-    apps:
-    - name: my-app
+apiVersion: kargo.akuity.io/v1alpha1
+kind: Stage
+# ...
+spec:
+  # ...
+  promotionTemplate:
+    spec:
+      steps:
+      # Clone, render manifests, commit, push, etc...
+      - uses: git-commit
+        as: commit
+        config:
+          path: ./out
+          message: ${{ outputs['update-image'].commitMessage }}
+      - uses: git-push
+        config:
+          path: ./out
+      - uses: argocd-update
+        config:
+          apps:
+          - name: my-app
+            sources:
+            - repoURL: https://github.com/example/repo.git
+              desiredRevision: ${{ outputs.commit.commit }}
+      - uses: argocd-wait
+        config:
+          apps:
+          - name: my-app
 ```
 
 ### Waiting Only for Operation Completion
