@@ -25,9 +25,9 @@ func init() {
 // ResolvedLink is a DeepLink whose URL template has been evaluated against a
 // specific resource.
 type ResolvedLink struct {
-	Title       string
-	URL         string
-	Description string
+	Title       string `json:"title"`
+	URL         string `json:"url"`
+	Description string `json:"description,omitempty"`
 }
 
 // EvaluateLinks evaluates each DeepLink against ctx, applying any If

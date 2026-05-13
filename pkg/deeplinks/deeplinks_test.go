@@ -25,9 +25,9 @@ func TestEvaluateLinks(t *testing.T) {
 	}
 
 	testCases := []struct {
-		name          string
-		links         []kargoapi.DeepLink
-		assert        func(*testing.T, []ResolvedLink, []string)
+		name   string
+		links  []kargoapi.DeepLink
+		assert func(*testing.T, []ResolvedLink, []string)
 	}{
 		{
 			name: "simple URL with no condition",
