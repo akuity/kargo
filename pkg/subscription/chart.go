@@ -190,6 +190,7 @@ func (c *chartSubscriber) DiscoverArtifacts(
 		Name:             chartSub.Name,
 		SemverConstraint: chartSub.SemverConstraint,
 		Versions:         trimSlice(versions, int(chartSub.DiscoveryLimit)),
+		SubscriptionName: sub.Name,
 	}, nil
 }
 

@@ -618,8 +618,6 @@ type Image struct {
 	// SubscriptionName is the name of the subscription that discovered this
 	// image. This field is only populated if the subscription was assigned
 	// a name.
-	//
-	// +optional
 	SubscriptionName string `json:"subscriptionName,omitempty" protobuf:"bytes,6,opt,name=subscriptionName"`
 }
 
@@ -655,8 +653,6 @@ type Chart struct {
 	// SubscriptionName is the name of the subscription that discovered this
 	// chart. This field is only populated if the subscription was assigned
 	// a name.
-	//
-	// +optional
 	SubscriptionName string `json:"subscriptionName,omitempty" protobuf:"bytes,4,opt,name=subscriptionName"`
 }
 

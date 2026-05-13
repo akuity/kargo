@@ -543,13 +543,10 @@ func (r *reconciler) discoverArtifacts(
 		}
 		switch typedRes := res.(type) {
 		case kargoapi.ChartDiscoveryResult:
-			typedRes.SubscriptionName = sub.Name
 			discovered.Charts = append(discovered.Charts, typedRes)
 		case kargoapi.GitDiscoveryResult:
-			typedRes.SubscriptionName = sub.Name
 			discovered.Git = append(discovered.Git, typedRes)
 		case kargoapi.ImageDiscoveryResult:
-			typedRes.SubscriptionName = sub.Name
 			discovered.Images = append(discovered.Images, typedRes)
 		case kargoapi.DiscoveryResult:
 			discovered.Results = append(discovered.Results, typedRes)

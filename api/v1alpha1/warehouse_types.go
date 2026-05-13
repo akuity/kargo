@@ -291,11 +291,14 @@ type FreightCreationCriteria struct {
 // RepoSubscription describes a subscription to ONE OF a Git repository, a
 // container image repository, a Helm chart repository, or something else.
 type RepoSubscription struct {
-	// Name is an optional, human-readable identifier for this subscription. When
-	// a Warehouse has multiple subscriptions of the same type (e.g., two image
-	// repositories), assigning a name to each makes them distinguishable in logs,
-	// the Kargo UI freight timeline, and other contexts where subscriptions would
-	// otherwise be ambiguous.
+	// Name is an optional, human-readable identifier for this subscription.
+	// Subscription names are primarily intended as a stepping stone toward
+	// allowing a single Warehouse to subscribe to the same repository more than
+	// once, which in turn would allow a single Freight resource to reference
+	// multiple distinct revisions of an artifact from one repository. As an
+	// incidental benefit, a name may also be surfaced in the Kargo UI and other
+	// tooling as a more human-readable label where a repository URL would
+	// otherwise appear.
 	//
 	// +kubebuilder:validation:Optional
 	// +kubebuilder:validation:MaxLength=253
