@@ -270,14 +270,6 @@ func (h *httpRequester) getClient(cfg builtin.HTTPConfig) (*http.Client, error) 
 		if err != nil {
 			return nil, fmt.Errorf("error parsing proxy URL: %w", err)
 		}
-		if proxyURL.Host == "" {
-			// Convenience: catch an easy-to-make configuration error.
-			// As an example, for the input "proxy.example.com:80" (a valid value for `http_proxy`)
-			// url.Parse will return a URL as follows:
-			//   &url.URL{Scheme:"proxy.example.com", Host:"", Opaque:"80"}
-			// This is not a useful input to http.ProxyURL.
-			return nil, fmt.Errorf("invalid proxy URL: no hostname was parsed (be sure to specify the URL scheme)")
-		}
 		httpTransport.Proxy = http.ProxyURL(proxyURL)
 	}
 	return &http.Client{

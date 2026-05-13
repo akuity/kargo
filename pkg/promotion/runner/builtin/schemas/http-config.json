@@ -97,6 +97,7 @@
     },
     "proxy": {
       "type": "string",
+      "pattern": "^https?://.*$",
       "description": "The URL of the proxy server to send the HTTP request through. If not specified, defers to the HTTP transport's default proxy behavior (http.ProxyFromEnvironment)."
     },
     "timeout": {

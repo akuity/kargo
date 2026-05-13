@@ -1,12 +1,10 @@
 package builtin
 
 import (
-	"fmt"
 	"io"
+	"maps"
 	"net/http"
 	"net/http/httptest"
-	"net/http/httputil"
-	"net/url"
 	"strings"
 	"testing"
 
@@ -183,6 +181,15 @@ func Test_httpRequester_convert(t *testing.T) {
 			},
 		},
 		{
+			name: "proxy url has no scheme",
+			config: promotion.Config{
+				"proxy": "proxy.example.com:3000",
+			},
+			expectedProblems: []string{
+				"proxy: Does not match pattern",
+			},
+		},
+		{
 			name: "valid kitchen sink",
 			config: promotion.Config{
 				"method": "GET",
@@ -199,6 +206,7 @@ func Test_httpRequester_convert(t *testing.T) {
 				"timeout":               "30s",
 				"successExpression":     "response.status == 200",
 				"failureExpression":     "response.status == 404",
+				"proxy":                 "https://proxy.example.com:3000",
 				"outputs": []promotion.Config{
 					{
 						"name":           "fact1",
@@ -1364,65 +1372,52 @@ func Test_httpRequester_determineResponseParseMode(t *testing.T) {
 }
 
 func Test_httpRequester_proxy(t *testing.T) {
-	const testProxyHeader = "X-HttpRequester-Test-Proxy"
-	const testProxyHeaderValue = "true"
-	const testBackendHeader = "X-HttpRequester-Test-Proxy-Backend"
-	const testBackendHeaderValue = "true"
-
+	// Target server
 	backend := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		require.Equal(t, testProxyHeaderValue, r.Header.Get(testProxyHeader), "backend did not receive expected header from proxy")
-		w.Header().Set(testBackendHeader, testBackendHeaderValue)
-		w.WriteHeader(http.StatusNoContent)
+		// Check that the request passed through the proxy
+		require.Equal(t, "true", r.Header.Get("X-Test-HttpRequester-Proxy-Injected"))
+
+		w.Header().Set("Content-Type", "application/json")
+		w.WriteHeader(http.StatusOK)
+		_, err := w.Write([]byte(`{"reachedBackend": true}`))
+		require.NoError(t, err)
 	}))
 	defer backend.Close()
-	backendURL, err := url.Parse(backend.URL)
-	require.NoError(t, err, "error parsing httptest server url")
 
-	proxy := &httputil.ReverseProxy{
-		Rewrite: func(r *httputil.ProxyRequest) {
-			r.Out.Header.Set(testProxyHeader, testProxyHeaderValue)
-			r.SetURL(backendURL)
-		},
+	// Forward proxy
+	proxy := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		outReq, err := http.NewRequestWithContext(r.Context(), r.Method, r.URL.String(), r.Body)
+		require.NoError(t, err)
+
+		// Add an extra header, to prove that the request passed through this proxy
+		maps.Copy(outReq.Header, r.Header)
+		outReq.Header.Set("X-Test-HttpRequester-Proxy-Injected", "true")
+
+		// Forward the request to the target URL
+		resp, err := http.DefaultClient.Do(outReq)
+		require.NoError(t, err)
+		defer resp.Body.Close()
+
+		// Relay response to the client
+		maps.Copy(w.Header(), resp.Header)
+		w.WriteHeader(resp.StatusCode)
+		_, err = io.Copy(w, resp.Body)
+		require.NoError(t, err)
+	}))
+	defer proxy.Close()
+
+	cfg := builtin.HTTPConfig{
+		URL:               backend.URL,
+		Proxy:             proxy.URL,
+		SuccessExpression: "response.status == 200",
+		Outputs: []builtin.HTTPOutput{{
+			Name:           "reachedBackend",
+			FromExpression: "response.body.reachedBackend",
+		}},
 	}
-	frontend := httptest.NewServer(proxy)
-	defer frontend.Close()
-
-	testCases := []struct {
-		name       string
-		cfg        builtin.HTTPConfig
-		assertions func(t *testing.T, result promotion.StepResult, err error)
-	}{
-		{
-			name: "valid proxy",
-			cfg: builtin.HTTPConfig{
-				URL:               backend.URL,
-				Proxy:             frontend.URL,
-				SuccessExpression: fmt.Sprintf(`response.header("%s") == "%s"`, testBackendHeader, testBackendHeaderValue),
-			},
-			assertions: func(t *testing.T, result promotion.StepResult, err error) {
-				require.NoError(t, err)
-				require.Equal(t, kargoapi.PromotionStepStatusSucceeded, result.Status)
-			},
-		},
-		{
-			name: "invalid proxy (no scheme specified)",
-			cfg: builtin.HTTPConfig{
-				URL:               backend.URL,
-				Proxy:             "test.example.com:80",
-				SuccessExpression: fmt.Sprintf(`response.header("%s") == "%s"`, testBackendHeader, testBackendHeaderValue),
-			},
-			assertions: func(t *testing.T, result promotion.StepResult, err error) {
-				require.ErrorContains(t, err, "invalid proxy URL")
-				require.Equal(t, kargoapi.PromotionStepStatusErrored, result.Status)
-			},
-		},
-	}
-
 	h := &httpRequester{}
-	for _, testCase := range testCases {
-		t.Run(testCase.name, func(t *testing.T) {
-			res, err := h.run(t.Context(), nil, testCase.cfg)
-			testCase.assertions(t, res, err)
-		})
-	}
+	result, err := h.run(t.Context(), nil, cfg)
+	require.NoError(t, err)
+	require.Equal(t, kargoapi.PromotionStepStatusSucceeded, result.Status)
+	require.Equal(t, true, result.Output["reachedBackend"])
 }
