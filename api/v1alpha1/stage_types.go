@@ -615,8 +615,9 @@ type Image struct {
 	Digest string `json:"digest,omitempty" protobuf:"bytes,4,opt,name=digest"`
 	// Annotations is a map of arbitrary metadata for the image.
 	Annotations map[string]string `json:"annotations,omitempty" protobuf:"bytes,5,rep,name=annotations" protobuf_key:"bytes,1,opt,name=key" protobuf_val:"bytes,2,opt,name=value"`
-	// SubscriptionName is the optional human-readable name of the subscription
-	// that discovered this image.
+	// SubscriptionName is the name of the subscription that discovered this
+	// image. This field is only populated if the subscription was assigned
+	// a name.
 	//
 	// +optional
 	SubscriptionName string `json:"subscriptionName,omitempty" protobuf:"bytes,6,opt,name=subscriptionName"`
@@ -651,8 +652,9 @@ type Chart struct {
 	Name string `json:"name,omitempty" protobuf:"bytes,2,opt,name=name"`
 	// Version specifies a particular version of the chart.
 	Version string `json:"version,omitempty" protobuf:"bytes,3,opt,name=version"`
-	// SubscriptionName is the optional human-readable name of the subscription
-	// that discovered this chart.
+	// SubscriptionName is the name of the subscription that discovered this
+	// chart. This field is only populated if the subscription was assigned
+	// a name.
 	//
 	// +optional
 	SubscriptionName string `json:"subscriptionName,omitempty" protobuf:"bytes,4,opt,name=subscriptionName"`
