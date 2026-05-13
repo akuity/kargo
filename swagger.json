@@ -1122,6 +1122,49 @@
         }
       }
     },
+    "/v1beta1/projects/{project}/freight/{freight-name-or-alias}/links": {
+      "get": {
+        "security": [
+          {
+            "BearerAuth": []
+          }
+        ],
+        "description": "Retrieve evaluated deep links for a Freight resource, combining\ncluster-level links from ClusterConfig and project-level links\nfrom ProjectConfig.",
+        "produces": [
+          "application/json"
+        ],
+        "tags": [
+          "Core",
+          "Project-Level"
+        ],
+        "summary": "Retrieve deep links for a Freight resource",
+        "operationId": "GetFreightLinks",
+        "parameters": [
+          {
+            "type": "string",
+            "description": "Project name",
+            "name": "project",
+            "in": "path",
+            "required": true
+          },
+          {
+            "type": "string",
+            "description": "Freight name or alias",
+            "name": "freight-name-or-alias",
+            "in": "path",
+            "required": true
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "schema": {
+              "$ref": "#/definitions/pkg_server.getFreightLinksResponse"
+            }
+          }
+        }
+      }
+    },
     "/v1beta1/projects/{project}/generic-credentials": {
       "get": {
         "security": [
@@ -2434,6 +2477,49 @@
         "responses": {
           "204": {
             "description": "Deleted successfully"
+          }
+        }
+      }
+    },
+    "/v1beta1/projects/{project}/stages/{stage}/links": {
+      "get": {
+        "security": [
+          {
+            "BearerAuth": []
+          }
+        ],
+        "description": "Retrieve evaluated deep links for a Stage resource, combining\ncluster-level links from ClusterConfig and project-level links\nfrom ProjectConfig.",
+        "produces": [
+          "application/json"
+        ],
+        "tags": [
+          "Core",
+          "Project-Level"
+        ],
+        "summary": "Retrieve deep links for a Stage resource",
+        "operationId": "GetStageLinks",
+        "parameters": [
+          {
+            "type": "string",
+            "description": "Project name",
+            "name": "project",
+            "in": "path",
+            "required": true
+          },
+          {
+            "type": "string",
+            "description": "Stage name",
+            "name": "stage",
+            "in": "path",
+            "required": true
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "schema": {
+              "$ref": "#/definitions/pkg_server.getStageLinksResponse"
+            }
           }
         }
       }
@@ -8250,6 +8336,20 @@
         }
       }
     },
+    "github_com_akuity_kargo_pkg_deeplinks.ResolvedLink": {
+      "type": "object",
+      "properties": {
+        "description": {
+          "type": "string"
+        },
+        "title": {
+          "type": "string"
+        },
+        "url": {
+          "type": "string"
+        }
+      }
+    },
     "IntOrString": {
       "type": "object",
       "properties": {
@@ -8416,6 +8516,40 @@
         "request": {
           "description": "Request is the name chosen for a request in the referenced claim.\nIf empty, everything from the claim is made available, otherwise\nonly the result of this request.\n\n+optional",
           "type": "string"
+        }
+      }
+    },
+    "pkg_server.getFreightLinksResponse": {
+      "type": "object",
+      "properties": {
+        "errors": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        },
+        "links": {
+          "type": "array",
+          "items": {
+            "$ref": "#/definitions/github_com_akuity_kargo_pkg_deeplinks.ResolvedLink"
+          }
+        }
+      }
+    },
+    "pkg_server.getStageLinksResponse": {
+      "type": "object",
+      "properties": {
+        "errors": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        },
+        "links": {
+          "type": "array",
+          "items": {
+            "$ref": "#/definitions/github_com_akuity_kargo_pkg_deeplinks.ResolvedLink"
+          }
         }
       }
     },
