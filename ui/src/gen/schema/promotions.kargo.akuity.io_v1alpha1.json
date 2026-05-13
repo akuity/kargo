@@ -228,7 +228,7 @@
                     "type": "string"
                   },
                   "subscriptionName": {
-                    "description": "SubscriptionName is the optional human-readable name of the subscription\nthat discovered this chart.",
+                    "description": "SubscriptionName is the name of the subscription that discovered this\nchart. This field is only populated if the subscription was assigned\na name.",
                     "type": "string"
                   },
                   "version": {
@@ -270,7 +270,7 @@
                     "type": "string"
                   },
                   "subscriptionName": {
-                    "description": "SubscriptionName is the optional human-readable name of the subscription\nthat discovered this commit.",
+                    "description": "SubscriptionName is the name of the subscription that discovered this\ncommit. This field is only populated if the subscription was assigned\na name.",
                     "type": "string"
                   },
                   "tag": {
@@ -303,7 +303,7 @@
                     "type": "string"
                   },
                   "subscriptionName": {
-                    "description": "SubscriptionName is the optional human-readable name of the subscription\nthat discovered this image.",
+                    "description": "SubscriptionName is the name of the subscription that discovered this\nimage. This field is only populated if the subscription was assigned\na name.",
                     "type": "string"
                   },
                   "tag": {
@@ -401,7 +401,7 @@
                           "type": "string"
                         },
                         "subscriptionName": {
-                          "description": "SubscriptionName is the optional human-readable name of the subscription\nthat discovered this chart.",
+                          "description": "SubscriptionName is the name of the subscription that discovered this\nchart. This field is only populated if the subscription was assigned\na name.",
                           "type": "string"
                         },
                         "version": {
@@ -443,7 +443,7 @@
                           "type": "string"
                         },
                         "subscriptionName": {
-                          "description": "SubscriptionName is the optional human-readable name of the subscription\nthat discovered this commit.",
+                          "description": "SubscriptionName is the name of the subscription that discovered this\ncommit. This field is only populated if the subscription was assigned\na name.",
                           "type": "string"
                         },
                         "tag": {
@@ -476,7 +476,7 @@
                           "type": "string"
                         },
                         "subscriptionName": {
-                          "description": "SubscriptionName is the optional human-readable name of the subscription\nthat discovered this image.",
+                          "description": "SubscriptionName is the name of the subscription that discovered this\nimage. This field is only populated if the subscription was assigned\na name.",
                           "type": "string"
                         },
                         "tag": {

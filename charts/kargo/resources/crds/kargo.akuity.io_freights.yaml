@@ -108,8 +108,9 @@ spec:
                   type: string
                 subscriptionName:
                   description: |-
-                    SubscriptionName is the optional human-readable name of the subscription
-                    that discovered this chart.
+                    SubscriptionName is the name of the subscription that discovered this
+                    chart. This field is only populated if the subscription was assigned
+                    a name.
                   type: string
                 version:
                   description: Version specifies a particular version of the chart.
@@ -147,8 +148,9 @@ spec:
                   type: string
                 subscriptionName:
                   description: |-
-                    SubscriptionName is the optional human-readable name of the subscription
-                    that discovered this commit.
+                    SubscriptionName is the name of the subscription that discovered this
+                    commit. This field is only populated if the subscription was assigned
+                    a name.
                   type: string
                 tag:
                   description: |-
@@ -180,8 +182,9 @@ spec:
                   type: string
                 subscriptionName:
                   description: |-
-                    SubscriptionName is the optional human-readable name of the subscription
-                    that discovered this image.
+                    SubscriptionName is the name of the subscription that discovered this
+                    image. This field is only populated if the subscription was assigned
+                    a name.
                   type: string
                 tag:
                   description: |-

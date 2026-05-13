@@ -1852,7 +1852,7 @@ RawFormat specifies the format for raw resource representation.
 | repoURL | [string](#string) |  RepoURL specifies the URL of a Helm chart repository. Classic chart repositories (using HTTP/S) can contain differently named charts. When this field points to such a repository, the Name field will specify the name of the chart within the repository. In the case of a repository within an OCI registry, the URL implicitly points to a specific chart and the Name field will be empty. |
 | name | [string](#string) |  Name specifies the name of the chart. |
 | version | [string](#string) |  Version specifies a particular version of the chart. |
-| subscriptionName | [string](#string) |  SubscriptionName is the optional human-readable name of the subscription that discovered this chart.  +optional |
+| subscriptionName | [string](#string) |  SubscriptionName is the name of the subscription that discovered this chart. This field is only populated if the subscription was assigned a name. |
 
 <a name="github-com-akuity-kargo-api-v1alpha1-ChartDiscoveryResult"></a>
 
@@ -2219,7 +2219,7 @@ RawFormat specifies the format for raw resource representation.
 | message | [string](#string) |  Message is the message associated with the commit. At present, this only contains the first line (subject) of the commit message. |
 | author | [string](#string) |  Author is the author of the commit. |
 | committer | [string](#string) |  Committer is the person who committed the commit. |
-| subscriptionName | [string](#string) |  SubscriptionName is the optional human-readable name of the subscription that discovered this commit.  +optional |
+| subscriptionName | [string](#string) |  SubscriptionName is the name of the subscription that discovered this commit. This field is only populated if the subscription was assigned a name. |
 
 <a name="github-com-akuity-kargo-api-v1alpha1-GitDiscoveryResult"></a>
 
@@ -2323,7 +2323,7 @@ RawFormat specifies the format for raw resource representation.
 | tag | [string](#string) |  Tag identifies a specific version of the image in the repository specified by RepoURL. |
 | digest | [string](#string) |  Digest identifies a specific version of the image in the repository specified by RepoURL. This is a more precise identifier than Tag. |
 | annotations | [Image.AnnotationsEntry](#github-com-akuity-kargo-api-v1alpha1-Image-AnnotationsEntry) |  Annotations is a map of arbitrary metadata for the image. |
-| subscriptionName | [string](#string) |  SubscriptionName is the optional human-readable name of the subscription that discovered this image.  +optional |
+| subscriptionName | [string](#string) |  SubscriptionName is the name of the subscription that discovered this image. This field is only populated if the subscription was assigned a name. |
 
 <a name="github-com-akuity-kargo-api-v1alpha1-Image-AnnotationsEntry"></a>
 
@@ -2626,7 +2626,7 @@ RawFormat specifies the format for raw resource representation.
  RepoSubscription describes a subscription to ONE OF a Git repository, a container image repository, a Helm chart repository, or something else.
 | Field | Type | Description |
 | ----- | ---- | ----------- |
-| name | [string](#string) |  Name is an optional, human-readable identifier for this subscription. When a Warehouse has multiple subscriptions of the same type (e.g., two image repositories), assigning a name to each makes them distinguishable in logs, the Kargo UI freight timeline, and other contexts where subscriptions would otherwise be ambiguous.    |
+| name | [string](#string) |  Name is an optional, human-readable identifier for this subscription. Subscription names are primarily intended as a stepping stone toward allowing a single Warehouse to subscribe to the same repository more than once, which in turn would allow a single Freight resource to reference multiple distinct revisions of an artifact from one repository. As an incidental benefit, a name may also be surfaced in the Kargo UI and other tooling as a more human-readable label where a repository URL would otherwise appear.    |
 | git | [GitSubscription](#github-com-akuity-kargo-api-v1alpha1-GitSubscription) |  Git describes a subscriptions to a Git repository. |
 | image | [ImageSubscription](#github-com-akuity-kargo-api-v1alpha1-ImageSubscription) |  Image describes a subscription to container image repository. |
 | chart | [ChartSubscription](#github-com-akuity-kargo-api-v1alpha1-ChartSubscription) |  Chart describes a subscription to a Helm chart repository. |

@@ -21,10 +21,9 @@ contains the first line (subject) of the commit message. */
   message?: string;
   /** RepoURL is the URL of a Git repository. */
   repoURL?: string;
-  /** SubscriptionName is the optional human-readable name of the subscription
-that discovered this commit.
-
-+optional */
+  /** SubscriptionName is the name of the subscription that discovered this
+commit. This field is only populated if the subscription was assigned
+a name. */
   subscriptionName?: string;
   /** Tag denotes a tag in the repository that matched selection criteria and
 resolved to this commit. */

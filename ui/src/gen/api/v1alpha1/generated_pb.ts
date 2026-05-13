@@ -536,10 +536,9 @@ export type Chart = Message<"github.com.akuity.kargo.api.v1alpha1.Chart"> & {
   version: string;
 
   /**
-   * SubscriptionName is the optional human-readable name of the subscription
-   * that discovered this chart.
-   *
-   * +optional
+   * SubscriptionName is the name of the subscription that discovered this
+   * chart. This field is only populated if the subscription was assigned
+   * a name.
    *
    * @generated from field: optional string subscriptionName = 4;
    */
@@ -1876,10 +1875,9 @@ export type GitCommit = Message<"github.com.akuity.kargo.api.v1alpha1.GitCommit"
   committer: string;
 
   /**
-   * SubscriptionName is the optional human-readable name of the subscription
-   * that discovered this commit.
-   *
-   * +optional
+   * SubscriptionName is the name of the subscription that discovered this
+   * commit. This field is only populated if the subscription was assigned
+   * a name.
    *
    * @generated from field: optional string subscriptionName = 9;
    */
@@ -2356,10 +2354,9 @@ export type Image = Message<"github.com.akuity.kargo.api.v1alpha1.Image"> & {
   annotations: { [key: string]: string };
 
   /**
-   * SubscriptionName is the optional human-readable name of the subscription
-   * that discovered this image.
-   *
-   * +optional
+   * SubscriptionName is the name of the subscription that discovered this
+   * image. This field is only populated if the subscription was assigned
+   * a name.
    *
    * @generated from field: optional string subscriptionName = 6;
    */
@@ -3631,11 +3628,14 @@ export const QuayWebhookReceiverConfigSchema: GenMessage<QuayWebhookReceiverConf
  */
 export type RepoSubscription = Message<"github.com.akuity.kargo.api.v1alpha1.RepoSubscription"> & {
   /**
-   * Name is an optional, human-readable identifier for this subscription. When
-   * a Warehouse has multiple subscriptions of the same type (e.g., two image
-   * repositories), assigning a name to each makes them distinguishable in logs,
-   * the Kargo UI freight timeline, and other contexts where subscriptions would
-   * otherwise be ambiguous.
+   * Name is an optional, human-readable identifier for this subscription.
+   * Subscription names are primarily intended as a stepping stone toward
+   * allowing a single Warehouse to subscribe to the same repository more than
+   * once, which in turn would allow a single Freight resource to reference
+   * multiple distinct revisions of an artifact from one repository. As an
+   * incidental benefit, a name may also be surfaced in the Kargo UI and other
+   * tooling as a more human-readable label where a repository URL would
+   * otherwise appear.
    *
    * +kubebuilder:validation:Optional
    * +kubebuilder:validation:MaxLength=253

@@ -273,6 +273,9 @@ type subscriptionKey struct {
 
 type uniqueSubSet map[subscriptionKey]*field.Path
 
+// TODO(krancour): This method will require substantial refactoring when we
+// eventually move toward permitting Warehouses to have multiple subscriptions
+// to the same repository, as long as they are qualified with different names.
 func (s uniqueSubSet) addSub(
 	f *field.Path,
 	sub kargoapi.RepoSubscription,
