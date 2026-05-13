@@ -301,7 +301,8 @@ type RepoSubscription struct {
 	// otherwise appear.
 	//
 	// +kubebuilder:validation:Optional
-	// +kubebuilder:validation:MaxLength=253
+	// +kubebuilder:validation:MaxLength=63
+	// +kubebuilder:validation:Pattern=`^[a-zA-Z0-9]([a-zA-Z0-9._-]*[a-zA-Z0-9])?$`
 	Name string `json:"name,omitempty" protobuf:"bytes,5,opt,name=name"`
 	// Git describes a subscriptions to a Git repository.
 	Git *GitSubscription `json:"git,omitempty" protobuf:"bytes,1,opt,name=git"`

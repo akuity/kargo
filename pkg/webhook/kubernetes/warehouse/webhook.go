@@ -166,8 +166,22 @@ func (w *webhook) validateSubs(
 	}
 	var errs field.ErrorList
 	seen := make(uniqueSubSet, len(subs))
+	seenNames := make(map[string]*field.Path, len(subs))
 	for i, sub := range subs {
 		errs = append(errs, w.validateSub(ctx, f.Index(i), sub, seen)...)
+		if sub.Name != "" {
+			nk := strings.TrimSpace(strings.ToLower(sub.Name))
+			subNamePath := f.Index(i).Child("name")
+			if prev, exists := seenNames[nk]; exists {
+				errs = append(errs, field.Invalid(
+					subNamePath,
+					sub.Name,
+					fmt.Sprintf("subscription name %q already used at %q", sub.Name, prev),
+				))
+			} else {
+				seenNames[nk] = subNamePath
+			}
+		}
 	}
 	return errs
 }
@@ -351,16 +365,5 @@ func (s uniqueSubSet) addSub(
 	// Validate uniqueness of the optional human-readable Name across all
 	// subscription types. Two subscriptions in the same Warehouse may not share
 	// a non-empty Name.
-	if sub.Name != "" {
-		nk := subscriptionKey{kind: "name", id: strings.ToLower(sub.Name)}
-		if _, exists := s[nk]; exists {
-			return field.Invalid(
-				f.Child("name"),
-				sub.Name,
-				fmt.Sprintf("subscription name %q already used at %q", sub.Name, s[nk]),
-			)
-		}
-		s[nk] = f
-	}
 	return nil
 }

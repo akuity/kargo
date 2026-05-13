@@ -255,3 +255,84 @@ func TestListFreightByCurrentStage(t *testing.T) {
 		})
 	}
 }
+
+
+
+// TestSubscriptionNameAffectsFreightID verifies that a non-empty SubscriptionName
+// on a GitCommit, Image, or Chart causes a distinct Freight ID to be generated,
+// while an empty SubscriptionName preserves backward-compatible byte-identical IDs.
+func TestSubscriptionNameAffectsFreightID(t *testing.T) {
+	t.Run("git commit SubscriptionName produces distinct ID", func(t *testing.T) {
+		base := kargoapi.Freight{
+			Commits: []kargoapi.GitCommit{{
+				RepoURL: "https://github.com/example/repo",
+				ID:      "abc123def456abc123def456abc123def456abc123",
+			}},
+		}
+		named := kargoapi.Freight{
+			Commits: []kargoapi.GitCommit{{
+				RepoURL:          "https://github.com/example/repo",
+				ID:               "abc123def456abc123def456abc123def456abc123",
+				SubscriptionName: "my-sub",
+			}},
+		}
+		namedSame := kargoapi.Freight{
+			Commits: []kargoapi.GitCommit{{
+				RepoURL:          "https://github.com/example/repo",
+				ID:               "abc123def456abc123def456abc123def456abc123",
+				SubscriptionName: "my-sub",
+			}},
+		}
+		idBase     := GenerateFreightID(&base)
+		idNamed    := GenerateFreightID(&named)
+		idNamedSame := GenerateFreightID(&namedSame)
+		require.NotEqual(t, idBase, idNamed,
+			"non-empty SubscriptionName must produce a distinct Freight ID")
+		require.Equal(t, idNamed, idNamedSame,
+			"same SubscriptionName must produce the same Freight ID")
+	})
+
+	t.Run("image SubscriptionName produces distinct ID", func(t *testing.T) {
+		base := kargoapi.Freight{
+			Images: []kargoapi.Image{{
+				RepoURL: "example.com/myimage",
+				Tag:     "v1.2.3",
+				Digest:  "sha256:deadbeef",
+			}},
+		}
+		named := kargoapi.Freight{
+			Images: []kargoapi.Image{{
+				RepoURL:          "example.com/myimage",
+				Tag:              "v1.2.3",
+				Digest:           "sha256:deadbeef",
+				SubscriptionName: "img-sub",
+			}},
+		}
+		idBase  := GenerateFreightID(&base)
+		idNamed := GenerateFreightID(&named)
+		require.NotEqual(t, idBase, idNamed,
+			"non-empty image SubscriptionName must produce a distinct Freight ID")
+	})
+
+	t.Run("chart SubscriptionName produces distinct ID", func(t *testing.T) {
+		base := kargoapi.Freight{
+			Charts: []kargoapi.Chart{{
+				RepoURL: "https://charts.example.com",
+				Name:    "mychart",
+				Version: "1.0.0",
+			}},
+		}
+		named := kargoapi.Freight{
+			Charts: []kargoapi.Chart{{
+				RepoURL:          "https://charts.example.com",
+				Name:             "mychart",
+				Version:          "1.0.0",
+				SubscriptionName: "chart-sub",
+			}},
+		}
+		idBase  := GenerateFreightID(&base)
+		idNamed := GenerateFreightID(&named)
+		require.NotEqual(t, idBase, idNamed,
+			"non-empty chart SubscriptionName must produce a distinct Freight ID")
+	})
+}

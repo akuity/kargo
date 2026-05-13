@@ -245,7 +245,33 @@ func Test_webhook_ValidateCreate(t *testing.T) {
 			assertions: func(t *testing.T, err error) {
 				require.NoError(t, err)
 			},
+			{
+			name: "subscription names must be unique",
+			warehouse: &kargoapi.Warehouse{
+				Spec: kargoapi.WarehouseSpec{
+					Subscriptions: []kargoapi.RepoSubscription{
+						{
+							Name: "alpha",
+							Image: &kargoapi.ImageSubscription{
+								RepoURL: "fake-url-1",
+							},
+						},
+						{
+							Name: "alpha",
+							Image: &kargoapi.ImageSubscription{
+								RepoURL: "fake-url-2",
+							},
+						},
+					},
+				},
+			},
+			assertions: func(t *testing.T, err error) {
+				require.Error(t, err)
+				require.Contains(t, err.Error(), "spec.subscriptions[1].name")
+				require.NotContains(t, err.Error(), ".image.name")
+			},
 		},
+	},
 	}
 	for _, testCase := range testCases {
 		t.Run(testCase.name, func(t *testing.T) {
@@ -327,7 +353,33 @@ func Test_webhook_ValidateUpdate(t *testing.T) {
 			assertions: func(t *testing.T, err error) {
 				require.NoError(t, err)
 			},
+			{
+			name: "subscription names must be unique",
+			warehouse: &kargoapi.Warehouse{
+				Spec: kargoapi.WarehouseSpec{
+					Subscriptions: []kargoapi.RepoSubscription{
+						{
+							Name: "alpha",
+							Image: &kargoapi.ImageSubscription{
+								RepoURL: "fake-url-1",
+							},
+						},
+						{
+							Name: "alpha",
+							Image: &kargoapi.ImageSubscription{
+								RepoURL: "fake-url-2",
+							},
+						},
+					},
+				},
+			},
+			assertions: func(t *testing.T, err error) {
+				require.Error(t, err)
+				require.Contains(t, err.Error(), "spec.subscriptions[1].name")
+				require.NotContains(t, err.Error(), ".image.name")
+			},
 		},
+	},
 	}
 	for _, testCase := range testCases {
 		t.Run(testCase.name, func(t *testing.T) {
