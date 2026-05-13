@@ -49,6 +49,7 @@ export * from './createResourceResponse';
 export * from './createResourceResult';
 export * from './createResourceResultCreatedResourceManifest';
 export * from './currentStage';
+export * from './deepLink';
 export * from './deleteResourceResponse';
 export * from './deleteResourceResult';
 export * from './deleteResourceResultDeletedResourceManifest';

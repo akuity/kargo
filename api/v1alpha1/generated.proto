@@ -351,6 +351,20 @@ message ClusterConfigSpec {
   // via the Helm chart.
   // +optional
   optional GitClientConfig gitClient = 2;
+
+  // FreightLinks defines deep links shown when viewing any Freight resource
+  // across all projects in the cluster. Project-level FreightLinks defined
+  // in ProjectConfig are shown in addition to these.
+  //
+  // +optional
+  repeated DeepLink freightLinks = 3;
+
+  // StageLinks defines deep links shown when viewing any Stage resource
+  // across all projects in the cluster. Project-level StageLinks defined in
+  // ProjectConfig are shown in addition to these.
+  //
+  // +optional
+  repeated DeepLink stageLinks = 4;
 }
 
 // ClusterConfigStatus describes the current status of a ClusterConfig.
@@ -401,6 +415,34 @@ message CurrentStage {
   // Freight. This can be used to calculate how long the Freight has been in use
   // by the Stage.
   optional .k8s.io.apimachinery.pkg.apis.meta.v1.Time since = 1;
+}
+
+// DeepLink defines a configurable external link that is rendered in the UI
+// when viewing a Freight or Stage resource. The URL is an expression evaluated
+// against the resource. The optional If field is an expression condition;
+// when set, the link is only shown when the expression evaluates to true.
+message DeepLink {
+  // Title is the display label for the link.
+  //
+  // +kubebuilder:validation:MinLength=1
+  optional string title = 1;
+
+  // URL is an expression that resolves to the link's href.
+  //
+  // +kubebuilder:validation:MinLength=1
+  optional string url = 2;
+
+  // Description is an optional human-readable summary shown alongside the
+  // link.
+  //
+  // +optional
+  optional string description = 3;
+
+  // If is an optional expression condition. When set, the link is only shown
+  // when the expression evaluates to true.
+  //
+  // +optional
+  optional string if = 4;
 }
 
 // DiscoveredArtifacts holds the artifacts discovered by the Warehouse for its
@@ -1260,6 +1302,20 @@ message ProjectConfigSpec {
   // WebhookReceivers describes Project-specific webhook receivers used for
   // processing events from various external platforms
   repeated WebhookReceiverConfig webhookReceivers = 2;
+
+  // FreightLinks defines deep links shown when viewing Freight resources
+  // within this project. These are shown in addition to any cluster-level
+  // FreightLinks defined in ClusterConfig.
+  //
+  // +optional
+  repeated DeepLink freightLinks = 3;
+
+  // StageLinks defines deep links shown when viewing Stage resources within
+  // this project. These are shown in addition to any cluster-level
+  // StageLinks defined in ClusterConfig.
+  //
+  // +optional
+  repeated DeepLink stageLinks = 4;
 }
 
 // ProjectConfigStatus describes the current status of a ProjectConfig.

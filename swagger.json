@@ -6257,6 +6257,13 @@
     "ClusterConfigSpec": {
       "type": "object",
       "properties": {
+        "freightLinks": {
+          "description": "FreightLinks defines deep links shown when viewing any Freight resource\nacross all projects in the cluster. Project-level FreightLinks defined\nin ProjectConfig are shown in addition to these.\n\n+optional",
+          "type": "array",
+          "items": {
+            "$ref": "#/definitions/DeepLink"
+          }
+        },
         "gitClient": {
           "description": "GitClient describes cluster-level configuration for Kargo's Git client,\nincluding committer identity and an optional signing key. If set, these\nvalues take precedence over any configuration provided at install time\nvia the Helm chart.\n+optional",
           "allOf": [
@@ -6264,6 +6271,13 @@
               "$ref": "#/definitions/GitClientConfig"
             }
           ]
+        },
+        "stageLinks": {
+          "description": "StageLinks defines deep links shown when viewing any Stage resource\nacross all projects in the cluster. Project-level StageLinks defined in\nProjectConfig are shown in addition to these.\n\n+optional",
+          "type": "array",
+          "items": {
+            "$ref": "#/definitions/DeepLink"
+          }
         },
         "webhookReceivers": {
           "description": "WebhookReceivers describes cluster-scoped webhook receivers used for\nprocessing events from various external platforms",
@@ -6355,6 +6369,27 @@
       "properties": {
         "since": {
           "description": "Since is the time at which the Stage most recently started using the\nFreight. This can be used to calculate how long the Freight has been in use\nby the Stage.",
+          "type": "string"
+        }
+      }
+    },
+    "DeepLink": {
+      "type": "object",
+      "properties": {
+        "description": {
+          "description": "Description is an optional human-readable summary shown alongside the\nlink.\n\n+optional",
+          "type": "string"
+        },
+        "if": {
+          "description": "If is an optional expression condition. When set, the link is only shown\nwhen the expression evaluates to true.\n\n+optional",
+          "type": "string"
+        },
+        "title": {
+          "description": "Title is the display label for the link.\n\n+kubebuilder:validation:MinLength=1",
+          "type": "string"
+        },
+        "url": {
+          "description": "URL is an expression that resolves to the link's href.\n\n+kubebuilder:validation:MinLength=1",
           "type": "string"
         }
       }
@@ -7143,11 +7178,25 @@
     "ProjectConfigSpec": {
       "type": "object",
       "properties": {
+        "freightLinks": {
+          "description": "FreightLinks defines deep links shown when viewing Freight resources\nwithin this project. These are shown in addition to any cluster-level\nFreightLinks defined in ClusterConfig.\n\n+optional",
+          "type": "array",
+          "items": {
+            "$ref": "#/definitions/DeepLink"
+          }
+        },
         "promotionPolicies": {
           "description": "PromotionPolicies defines policies governing the promotion of Freight to\nspecific Stages within the Project.",
           "type": "array",
           "items": {
             "$ref": "#/definitions/PromotionPolicy"
+          }
+        },
+        "stageLinks": {
+          "description": "StageLinks defines deep links shown when viewing Stage resources within\nthis project. These are shown in addition to any cluster-level\nStageLinks defined in ClusterConfig.\n\n+optional",
+          "type": "array",
+          "items": {
+            "$ref": "#/definitions/DeepLink"
           }
         },
         "webhookReceivers": {

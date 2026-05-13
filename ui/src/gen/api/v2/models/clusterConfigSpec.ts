@@ -5,16 +5,29 @@
  * REST API for Kargo
  * OpenAPI spec version: v1alpha1
  */
+import type { DeepLink } from './deepLink';
 import type { GitClientConfig } from './gitClientConfig';
 import type { WebhookReceiverConfig } from './webhookReceiverConfig';
 
 export interface ClusterConfigSpec {
+  /** FreightLinks defines deep links shown when viewing any Freight resource
+across all projects in the cluster. Project-level FreightLinks defined
+in ProjectConfig are shown in addition to these.
+
++optional */
+  freightLinks?: DeepLink[];
   /** GitClient describes cluster-level configuration for Kargo's Git client,
 including committer identity and an optional signing key. If set, these
 values take precedence over any configuration provided at install time
 via the Helm chart.
 +optional */
   gitClient?: GitClientConfig;
+  /** StageLinks defines deep links shown when viewing any Stage resource
+across all projects in the cluster. Project-level StageLinks defined in
+ProjectConfig are shown in addition to these.
+
++optional */
+  stageLinks?: DeepLink[];
   /** WebhookReceivers describes cluster-scoped webhook receivers used for
 processing events from various external platforms */
   webhookReceivers?: WebhookReceiverConfig[];

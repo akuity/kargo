@@ -17,6 +17,13 @@ import (
 // swagger:model ClusterConfigSpec
 type ClusterConfigSpec struct {
 
+	// FreightLinks defines deep links shown when viewing any Freight resource
+	// across all projects in the cluster. Project-level FreightLinks defined
+	// in ProjectConfig are shown in addition to these.
+	//
+	// +optional
+	FreightLinks []*DeepLink `json:"freightLinks"`
+
 	// GitClient describes cluster-level configuration for Kargo's Git client,
 	// including committer identity and an optional signing key. If set, these
 	// values take precedence over any configuration provided at install time
@@ -25,6 +32,13 @@ type ClusterConfigSpec struct {
 	GitClient struct {
 		GitClientConfig
 	} `json:"gitClient,omitempty"`
+
+	// StageLinks defines deep links shown when viewing any Stage resource
+	// across all projects in the cluster. Project-level StageLinks defined in
+	// ProjectConfig are shown in addition to these.
+	//
+	// +optional
+	StageLinks []*DeepLink `json:"stageLinks"`
 
 	// WebhookReceivers describes cluster-scoped webhook receivers used for
 	// processing events from various external platforms
@@ -35,7 +49,15 @@ type ClusterConfigSpec struct {
 func (m *ClusterConfigSpec) Validate(formats strfmt.Registry) error {
 	var res []error
 
+	if err := m.validateFreightLinks(formats); err != nil {
+		res = append(res, err)
+	}
+
 	if err := m.validateGitClient(formats); err != nil {
+		res = append(res, err)
+	}
+
+	if err := m.validateStageLinks(formats); err != nil {
 		res = append(res, err)
 	}
 
@@ -49,9 +71,69 @@ func (m *ClusterConfigSpec) Validate(formats strfmt.Registry) error {
 	return nil
 }
 
+func (m *ClusterConfigSpec) validateFreightLinks(formats strfmt.Registry) error {
+	if swag.IsZero(m.FreightLinks) { // not required
+		return nil
+	}
+
+	for i := 0; i < len(m.FreightLinks); i++ {
+		if swag.IsZero(m.FreightLinks[i]) { // not required
+			continue
+		}
+
+		if m.FreightLinks[i] != nil {
+			if err := m.FreightLinks[i].Validate(formats); err != nil {
+				ve := new(errors.Validation)
+				if stderrors.As(err, &ve) {
+					return ve.ValidateName("freightLinks" + "." + strconv.Itoa(i))
+				}
+				ce := new(errors.CompositeError)
+				if stderrors.As(err, &ce) {
+					return ce.ValidateName("freightLinks" + "." + strconv.Itoa(i))
+				}
+
+				return err
+			}
+		}
+
+	}
+
+	return nil
+}
+
 func (m *ClusterConfigSpec) validateGitClient(formats strfmt.Registry) error {
 	if swag.IsZero(m.GitClient) { // not required
 		return nil
+	}
+
+	return nil
+}
+
+func (m *ClusterConfigSpec) validateStageLinks(formats strfmt.Registry) error {
+	if swag.IsZero(m.StageLinks) { // not required
+		return nil
+	}
+
+	for i := 0; i < len(m.StageLinks); i++ {
+		if swag.IsZero(m.StageLinks[i]) { // not required
+			continue
+		}
+
+		if m.StageLinks[i] != nil {
+			if err := m.StageLinks[i].Validate(formats); err != nil {
+				ve := new(errors.Validation)
+				if stderrors.As(err, &ve) {
+					return ve.ValidateName("stageLinks" + "." + strconv.Itoa(i))
+				}
+				ce := new(errors.CompositeError)
+				if stderrors.As(err, &ce) {
+					return ce.ValidateName("stageLinks" + "." + strconv.Itoa(i))
+				}
+
+				return err
+			}
+		}
+
 	}
 
 	return nil
@@ -91,7 +173,15 @@ func (m *ClusterConfigSpec) validateWebhookReceivers(formats strfmt.Registry) er
 func (m *ClusterConfigSpec) ContextValidate(ctx context.Context, formats strfmt.Registry) error {
 	var res []error
 
+	if err := m.contextValidateFreightLinks(ctx, formats); err != nil {
+		res = append(res, err)
+	}
+
 	if err := m.contextValidateGitClient(ctx, formats); err != nil {
+		res = append(res, err)
+	}
+
+	if err := m.contextValidateStageLinks(ctx, formats); err != nil {
 		res = append(res, err)
 	}
 
@@ -105,7 +195,65 @@ func (m *ClusterConfigSpec) ContextValidate(ctx context.Context, formats strfmt.
 	return nil
 }
 
+func (m *ClusterConfigSpec) contextValidateFreightLinks(ctx context.Context, formats strfmt.Registry) error {
+
+	for i := 0; i < len(m.FreightLinks); i++ {
+
+		if m.FreightLinks[i] != nil {
+
+			if swag.IsZero(m.FreightLinks[i]) { // not required
+				return nil
+			}
+
+			if err := m.FreightLinks[i].ContextValidate(ctx, formats); err != nil {
+				ve := new(errors.Validation)
+				if stderrors.As(err, &ve) {
+					return ve.ValidateName("freightLinks" + "." + strconv.Itoa(i))
+				}
+				ce := new(errors.CompositeError)
+				if stderrors.As(err, &ce) {
+					return ce.ValidateName("freightLinks" + "." + strconv.Itoa(i))
+				}
+
+				return err
+			}
+		}
+
+	}
+
+	return nil
+}
+
 func (m *ClusterConfigSpec) contextValidateGitClient(ctx context.Context, formats strfmt.Registry) error {
+
+	return nil
+}
+
+func (m *ClusterConfigSpec) contextValidateStageLinks(ctx context.Context, formats strfmt.Registry) error {
+
+	for i := 0; i < len(m.StageLinks); i++ {
+
+		if m.StageLinks[i] != nil {
+
+			if swag.IsZero(m.StageLinks[i]) { // not required
+				return nil
+			}
+
+			if err := m.StageLinks[i].ContextValidate(ctx, formats); err != nil {
+				ve := new(errors.Validation)
+				if stderrors.As(err, &ve) {
+					return ve.ValidateName("stageLinks" + "." + strconv.Itoa(i))
+				}
+				ce := new(errors.CompositeError)
+				if stderrors.As(err, &ce) {
+					return ce.ValidateName("stageLinks" + "." + strconv.Itoa(i))
+				}
+
+				return err
+			}
+		}
+
+	}
 
 	return nil
 }

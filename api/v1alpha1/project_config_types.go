@@ -35,6 +35,18 @@ type ProjectConfigSpec struct {
 	// WebhookReceivers describes Project-specific webhook receivers used for
 	// processing events from various external platforms
 	WebhookReceivers []WebhookReceiverConfig `json:"webhookReceivers,omitempty" protobuf:"bytes,2,rep,name=webhookReceivers"`
+	// FreightLinks defines deep links shown when viewing Freight resources
+	// within this project. These are shown in addition to any cluster-level
+	// FreightLinks defined in ClusterConfig.
+	//
+	// +optional
+	FreightLinks []DeepLink `json:"freightLinks,omitempty" protobuf:"bytes,3,rep,name=freightLinks"`
+	// StageLinks defines deep links shown when viewing Stage resources within
+	// this project. These are shown in addition to any cluster-level
+	// StageLinks defined in ClusterConfig.
+	//
+	// +optional
+	StageLinks []DeepLink `json:"stageLinks,omitempty" protobuf:"bytes,4,rep,name=stageLinks"`
 }
 
 // ProjectConfigStatus describes the current status of a ProjectConfig.
@@ -71,8 +83,8 @@ func (p *ProjectConfigStatus) SetConditions(conditions []metav1.Condition) {
 }
 
 // DeepLink defines a configurable external link that is rendered in the UI
-// when viewing a Freight or Stage resource. The URL is an expression evaluated 
-// against the resource. The optional If field is an expression condition; 
+// when viewing a Freight or Stage resource. The URL is an expression evaluated
+// against the resource. The optional If field is an expression condition;
 // when set, the link is only shown when the expression evaluates to true.
 type DeepLink struct {
 	// Title is the display label for the link.
