@@ -1737,7 +1737,8 @@ message RepoSubscription {
   // otherwise appear.
   //
   // +kubebuilder:validation:Optional
-  // +kubebuilder:validation:MaxLength=253
+  // +kubebuilder:validation:MaxLength=63
+  // +kubebuilder:validation:Pattern=`^[a-zA-Z0-9]([a-zA-Z0-9._-]*[a-zA-Z0-9])?$`
   optional string name = 5;
 
   // Git describes a subscriptions to a Git repository.

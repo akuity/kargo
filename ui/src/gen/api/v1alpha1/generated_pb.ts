@@ -3638,7 +3638,8 @@ export type RepoSubscription = Message<"github.com.akuity.kargo.api.v1alpha1.Rep
    * otherwise appear.
    *
    * +kubebuilder:validation:Optional
-   * +kubebuilder:validation:MaxLength=253
+   * +kubebuilder:validation:MaxLength=63
+   * +kubebuilder:validation:Pattern=`^[a-zA-Z0-9]([a-zA-Z0-9._-]*[a-zA-Z0-9])?$`
    *
    * @generated from field: optional string name = 5;
    */

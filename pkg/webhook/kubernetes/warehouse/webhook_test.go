@@ -245,11 +245,25 @@ func Test_webhook_ValidateCreate(t *testing.T) {
 			assertions: func(t *testing.T, err error) {
 				require.NoError(t, err)
 			},
-			{
+		},
+		{
 			name: "subscription names must be unique",
+			webhook: &webhook{
+				client: fake.NewClientBuilder().WithScheme(testScheme).WithObjects(
+					&corev1.Namespace{
+						ObjectMeta: metav1.ObjectMeta{
+							Name: testProject,
+							Labels: map[string]string{
+								kargoapi.LabelKeyProject: kargoapi.LabelValueTrue,
+							},
+						},
+					},
+				).Build(),
+			},
 			warehouse: &kargoapi.Warehouse{
+				ObjectMeta: metav1.ObjectMeta{Namespace: testProject},
 				Spec: kargoapi.WarehouseSpec{
-					Subscriptions: []kargoapi.RepoSubscription{
+					InternalSubscriptions: []kargoapi.RepoSubscription{
 						{
 							Name: "alpha",
 							Image: &kargoapi.ImageSubscription{
@@ -271,7 +285,6 @@ func Test_webhook_ValidateCreate(t *testing.T) {
 				require.NotContains(t, err.Error(), ".image.name")
 			},
 		},
-	},
 	}
 	for _, testCase := range testCases {
 		t.Run(testCase.name, func(t *testing.T) {
@@ -353,11 +366,25 @@ func Test_webhook_ValidateUpdate(t *testing.T) {
 			assertions: func(t *testing.T, err error) {
 				require.NoError(t, err)
 			},
-			{
+		},
+		{
 			name: "subscription names must be unique",
+			webhook: &webhook{
+				client: fake.NewClientBuilder().WithScheme(testScheme).WithObjects(
+					&corev1.Namespace{
+						ObjectMeta: metav1.ObjectMeta{
+							Name: testProject,
+							Labels: map[string]string{
+								kargoapi.LabelKeyProject: kargoapi.LabelValueTrue,
+							},
+						},
+					},
+				).Build(),
+			},
 			warehouse: &kargoapi.Warehouse{
+				ObjectMeta: metav1.ObjectMeta{Namespace: testProject},
 				Spec: kargoapi.WarehouseSpec{
-					Subscriptions: []kargoapi.RepoSubscription{
+					InternalSubscriptions: []kargoapi.RepoSubscription{
 						{
 							Name: "alpha",
 							Image: &kargoapi.ImageSubscription{
@@ -379,7 +406,6 @@ func Test_webhook_ValidateUpdate(t *testing.T) {
 				require.NotContains(t, err.Error(), ".image.name")
 			},
 		},
-	},
 	}
 	for _, testCase := range testCases {
 		t.Run(testCase.name, func(t *testing.T) {
