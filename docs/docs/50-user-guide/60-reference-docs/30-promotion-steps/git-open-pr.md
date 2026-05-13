@@ -70,20 +70,27 @@ The `git-open-pr` step will fail if the `targetBranch` doesn't exist.
 :::
 
 ```yaml
-steps:
-# Clone, prepare the contents of ./out, commit, etc...
-- uses: git-push
-  as: push
-  config:
-    path: ./out
-    generateTargetBranch: true
-- uses: git-open-pr
-  as: open-pr
-  config:
-    repoURL: https://github.com/example/repo.git
-    sourceBranch: ${{ outputs.push.branch }}
-    targetBranch: stage/${{ ctx.stage }}
-# Wait for the PR to be merged or closed...
+apiVersion: kargo.akuity.io/v1alpha1
+kind: Stage
+# ...
+spec:
+  # ...
+  promotionTemplate:
+    spec:
+      steps:
+      # Clone, prepare the contents of ./out, commit, etc...
+      - uses: git-push
+        as: push
+        config:
+          path: ./out
+          generateTargetBranch: true
+      - uses: git-open-pr
+        as: open-pr
+        config:
+          repoURL: https://github.com/example/repo.git
+          sourceBranch: ${{ outputs.push.branch }}
+          targetBranch: stage/${{ ctx.stage }}
+      # Wait for the PR to be merged or closed...
 ```
 
 ### Custom Title and Labels
@@ -99,28 +106,34 @@ proposed or need to integrate with existing PR review workflows that rely on
 specific labels for automation or filtering.
 
 ```yaml
-
-steps:
-# Clone, prepare the contents of ./out, commit, etc...
-- uses: git-push
-  as: push
-  config:
-    path: ./out
-    generateTargetBranch: true
-- uses: git-open-pr
-  as: open-pr
-  config:
-    repoURL: https://github.com/example/repo.git
-    sourceBranch: ${{ outputs.push.branch }}
-    targetBranch: stage/${{ ctx.stage }}
-    title: Deploy to ${{ ctx.stage }}
-    labels: ["infra", "needs-review"]
-- if: ${{ status('open-pr') != 'Skipped' }}
-  uses: git-wait-for-pr
-  as: wait-for-pr
-  config:
-    repoURL: https://github.com/example/repo.git
-    prNumber: ${{ outputs['open-pr'].pr.id }}
+apiVersion: kargo.akuity.io/v1alpha1
+kind: Stage
+# ...
+spec:
+  # ...
+  promotionTemplate:
+    spec:
+      steps:
+      # Clone, prepare the contents of ./out, commit, etc...
+      - uses: git-push
+        as: push
+        config:
+          path: ./out
+          generateTargetBranch: true
+      - uses: git-open-pr
+        as: open-pr
+        config:
+          repoURL: https://github.com/example/repo.git
+          sourceBranch: ${{ outputs.push.branch }}
+          targetBranch: stage/${{ ctx.stage }}
+          title: Deploy to ${{ ctx.stage }}
+          labels: ["infra", "needs-review"]
+      - if: ${{ status('open-pr') != 'Skipped' }}
+        uses: git-wait-for-pr
+        as: wait-for-pr
+        config:
+          repoURL: https://github.com/example/repo.git
+          prNumber: ${{ outputs['open-pr'].pr.id }}
 ```
 
 ### Skipped
@@ -133,21 +146,29 @@ The following example conditionally runs the
 by subsequent steps to determine if a preceding step was skipped.
 
 ```yaml
-- uses: git-push
-  as: push
-  config:
-    path: ./out
-    generateTargetBranch: true
-- uses: git-open-pr
-  as: open-pr
-  config:
-    repoURL: https://github.com/example/repo.git
-    sourceBranch: ${{ outputs.push.branch }}
-    targetBranch: stage/${{ ctx.stage }}
-- if: ${{ status('open-pr') != 'Skipped' }}
-  uses: git-wait-for-pr
-  as: wait-for-pr
-  config:
-    repoURL: https://github.com/example/repo.git
-    prNumber: ${{ outputs['open-pr'].pr.id }}
+apiVersion: kargo.akuity.io/v1alpha1
+kind: Stage
+# ...
+spec:
+  # ...
+  promotionTemplate:
+    spec:
+      steps:
+      - uses: git-push
+        as: push
+        config:
+          path: ./out
+          generateTargetBranch: true
+      - uses: git-open-pr
+        as: open-pr
+        config:
+          repoURL: https://github.com/example/repo.git
+          sourceBranch: ${{ outputs.push.branch }}
+          targetBranch: stage/${{ ctx.stage }}
+      - if: ${{ status('open-pr') != 'Skipped' }}
+        uses: git-wait-for-pr
+        as: wait-for-pr
+        config:
+          repoURL: https://github.com/example/repo.git
+          prNumber: ${{ outputs['open-pr'].pr.id }}
 ```
