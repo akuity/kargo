@@ -195,7 +195,7 @@ export const FreightCard = (props: FreightCardProps) => {
         }
       >
         <div
-          className={classNames('relative px-2', {
+          className={classNames('relative px-2 flex-1 flex flex-col', {
             'pl-4': props.inUse
           })}
         >
@@ -286,7 +286,7 @@ export const FreightCard = (props: FreightCardProps) => {
             <div className='text-[10px] text-nowrap mb-2'>{freightAlias}</div>
           )}
 
-          <div className='flex flex-col gap-1 justify-center items-center min-w-0 max-w-full [&_.ant-tag]:max-w-full [&_.ant-tag]:truncate'>
+          <div className='flex flex-col gap-1 justify-center items-center min-w-0 max-w-full [&_.ant-tag]:block [&_.ant-tag]:max-w-full [&_.ant-tag]:truncate'>
             {props.freight?.commits?.slice(0, 2).map((commit) => (
               <FreightArtifact key={commit?.repoURL} artifact={commit} />
             ))}
@@ -317,7 +317,7 @@ export const FreightCard = (props: FreightCardProps) => {
             )}
           </div>
 
-          <div className='flex flex-col mx-auto w-full gap-0.5 items-center justify-center text-nowrap my-1'>
+          <div className='flex flex-col mx-auto w-full gap-0.5 items-center justify-center text-nowrap py-1 mt-auto'>
             {(noOfGitCommits ? 1 : 0) + (noOfHelmReleases ? 1 : 0) + (noOfContainerImages ? 1 : 0) >
               2 && (
               <>
