@@ -256,8 +256,6 @@ func TestListFreightByCurrentStage(t *testing.T) {
 	}
 }
 
-
-
 // TestSubscriptionNameAffectsFreightID verifies that a non-empty SubscriptionName
 // on a GitCommit, Image, or Chart causes a distinct Freight ID to be generated,
 // while an empty SubscriptionName preserves backward-compatible byte-identical IDs.
@@ -283,8 +281,8 @@ func TestSubscriptionNameAffectsFreightID(t *testing.T) {
 				SubscriptionName: "my-sub",
 			}},
 		}
-		idBase     := GenerateFreightID(&base)
-		idNamed    := GenerateFreightID(&named)
+		idBase := GenerateFreightID(&base)
+		idNamed := GenerateFreightID(&named)
 		idNamedSame := GenerateFreightID(&namedSame)
 		require.NotEqual(t, idBase, idNamed,
 			"non-empty SubscriptionName must produce a distinct Freight ID")
@@ -308,7 +306,7 @@ func TestSubscriptionNameAffectsFreightID(t *testing.T) {
 				SubscriptionName: "img-sub",
 			}},
 		}
-		idBase  := GenerateFreightID(&base)
+		idBase := GenerateFreightID(&base)
 		idNamed := GenerateFreightID(&named)
 		require.NotEqual(t, idBase, idNamed,
 			"non-empty image SubscriptionName must produce a distinct Freight ID")
@@ -330,7 +328,7 @@ func TestSubscriptionNameAffectsFreightID(t *testing.T) {
 				SubscriptionName: "chart-sub",
 			}},
 		}
-		idBase  := GenerateFreightID(&base)
+		idBase := GenerateFreightID(&base)
 		idNamed := GenerateFreightID(&named)
 		require.NotEqual(t, idBase, idNamed,
 			"non-empty chart SubscriptionName must produce a distinct Freight ID")
