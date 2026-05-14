@@ -28,13 +28,14 @@ import type {
   CreateConfigMapRequestBody,
   Freight,
   ListImages200,
+  ListProjectsParams,
+  ListProjectsResponse,
   ListPromotionsParams,
   ListStagesParams,
   PatchConfigMapRequestBody,
   PatchFreightAliasParams,
   Project,
   ProjectConfig,
-  ProjectList,
   PromoteDownstream201,
   PromoteDownstreamRequest,
   PromoteToStageRequest,
@@ -58,11 +59,14 @@ import { customFetch } from '../../../../lib/api/custom-fetch';
 type SecondParameter<T extends (...args: never) => unknown> = Parameters<T>[1];
 
 /**
- * List all Projects resources. Returns a ProjectList resource.
+ * List all Projects resources. Supports server-side filtering by
+name substring, by UID, and by namespaces mapped to the
+authenticated user's ServiceAccounts, plus offset-based
+pagination.
  * @summary List projects
  */
 export type listProjectsResponse200 = {
-  data: ProjectList;
+  data: ListProjectsResponse;
   status: 200;
 };
 
@@ -71,34 +75,61 @@ export type listProjectsResponseSuccess = listProjectsResponse200 & {
 };
 export type listProjectsResponse = listProjectsResponseSuccess;
 
-export const getListProjectsUrl = () => {
-  return `/v1beta1/projects`;
+export const getListProjectsUrl = (params?: ListProjectsParams) => {
+  const normalizedParams = new URLSearchParams();
+
+  Object.entries(params || {}).forEach(([key, value]) => {
+    const explodeParameters = ['uid'];
+
+    if (Array.isArray(value) && explodeParameters.includes(key)) {
+      value.forEach((v) => {
+        normalizedParams.append(key, v === null ? 'null' : v.toString());
+      });
+      return;
+    }
+
+    if (value !== undefined) {
+      normalizedParams.append(key, value === null ? 'null' : value.toString());
+    }
+  });
+
+  const stringifiedParams = normalizedParams.toString();
+
+  return stringifiedParams.length > 0
+    ? `/v1beta1/projects?${stringifiedParams}`
+    : `/v1beta1/projects`;
 };
 
-export const listProjects = async (options?: RequestInit): Promise<listProjectsResponse> => {
-  return customFetch<listProjectsResponse>(getListProjectsUrl(), {
+export const listProjects = async (
+  params?: ListProjectsParams,
+  options?: RequestInit
+): Promise<listProjectsResponse> => {
+  return customFetch<listProjectsResponse>(getListProjectsUrl(params), {
     ...options,
     method: 'GET'
   });
 };
 
-export const getListProjectsQueryKey = () => {
-  return [`/v1beta1/projects`] as const;
+export const getListProjectsQueryKey = (params?: ListProjectsParams) => {
+  return [`/v1beta1/projects`, ...(params ? [params] : [])] as const;
 };
 
 export const getListProjectsQueryOptions = <
   TData = Awaited<ReturnType<typeof listProjects>>,
   TError = unknown
->(options?: {
-  query?: Partial<UseQueryOptions<Awaited<ReturnType<typeof listProjects>>, TError, TData>>;
-  request?: SecondParameter<typeof customFetch>;
-}) => {
+>(
+  params?: ListProjectsParams,
+  options?: {
+    query?: Partial<UseQueryOptions<Awaited<ReturnType<typeof listProjects>>, TError, TData>>;
+    request?: SecondParameter<typeof customFetch>;
+  }
+) => {
   const { query: queryOptions, request: requestOptions } = options ?? {};
 
-  const queryKey = queryOptions?.queryKey ?? getListProjectsQueryKey();
+  const queryKey = queryOptions?.queryKey ?? getListProjectsQueryKey(params);
 
   const queryFn: QueryFunction<Awaited<ReturnType<typeof listProjects>>> = () =>
-    listProjects(requestOptions);
+    listProjects(params, requestOptions);
 
   return { queryKey, queryFn, ...queryOptions } as UseQueryOptions<
     Awaited<ReturnType<typeof listProjects>>,
@@ -111,6 +142,7 @@ export type ListProjectsQueryResult = NonNullable<Awaited<ReturnType<typeof list
 export type ListProjectsQueryError = unknown;
 
 export function useListProjects<TData = Awaited<ReturnType<typeof listProjects>>, TError = unknown>(
+  params: undefined | ListProjectsParams,
   options: {
     query: Partial<UseQueryOptions<Awaited<ReturnType<typeof listProjects>>, TError, TData>> &
       Pick<
@@ -126,6 +158,7 @@ export function useListProjects<TData = Awaited<ReturnType<typeof listProjects>>
   queryClient?: QueryClient
 ): DefinedUseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> };
 export function useListProjects<TData = Awaited<ReturnType<typeof listProjects>>, TError = unknown>(
+  params?: ListProjectsParams,
   options?: {
     query?: Partial<UseQueryOptions<Awaited<ReturnType<typeof listProjects>>, TError, TData>> &
       Pick<
@@ -141,6 +174,7 @@ export function useListProjects<TData = Awaited<ReturnType<typeof listProjects>>
   queryClient?: QueryClient
 ): UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> };
 export function useListProjects<TData = Awaited<ReturnType<typeof listProjects>>, TError = unknown>(
+  params?: ListProjectsParams,
   options?: {
     query?: Partial<UseQueryOptions<Awaited<ReturnType<typeof listProjects>>, TError, TData>>;
     request?: SecondParameter<typeof customFetch>;
@@ -152,13 +186,14 @@ export function useListProjects<TData = Awaited<ReturnType<typeof listProjects>>
  */
 
 export function useListProjects<TData = Awaited<ReturnType<typeof listProjects>>, TError = unknown>(
+  params?: ListProjectsParams,
   options?: {
     query?: Partial<UseQueryOptions<Awaited<ReturnType<typeof listProjects>>, TError, TData>>;
     request?: SecondParameter<typeof customFetch>;
   },
   queryClient?: QueryClient
 ): UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> } {
-  const queryOptions = getListProjectsQueryOptions(options);
+  const queryOptions = getListProjectsQueryOptions(params, options);
 
   const query = useQuery(queryOptions, queryClient) as UseQueryResult<TData, TError> & {
     queryKey: DataTag<QueryKey, TData, TError>;
