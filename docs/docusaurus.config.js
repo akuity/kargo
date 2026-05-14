@@ -1,20 +1,58 @@
 // @ts-check
 // Note: type annotations allow type checking and IDEs autocompletion
 
-const path = require('path');
+const path = require('node:path');
 const {themes} = require('prism-react-renderer');
 const tags = require('./tags');
 const lightCodeTheme = themes.github;
 const darkCodeTheme = themes.dracula;
 
 /** @type {import('@docusaurus/types').Config} */
+const siteDescription = 'Kargo is a Kubernetes-native continuous promotion platform that orchestrates the movement of artifacts through environments in GitOps workflows.';
+
+const softwareApplicationJsonLd = {
+  '@context': 'https://schema.org',
+  '@type': 'SoftwareApplication',
+  name: 'Kargo',
+  description: siteDescription,
+  applicationCategory: 'DeveloperApplication',
+  operatingSystem: 'Kubernetes',
+  codeRepository: 'https://github.com/akuity/kargo',
+  license: 'https://www.apache.org/licenses/LICENSE-2.0',
+  url: 'https://kargo.io',
+  publisher: {
+    '@type': 'Organization',
+    name: 'Akuity',
+    url: 'https://akuity.io',
+  },
+  offers: {
+    '@type': 'Offer',
+    price: '0',
+    priceCurrency: 'USD',
+  },
+};
+
 const config = {
   title: 'Kargo Docs',
+  tagline: siteDescription,
   url: 'https://docs.kargo.io',
   baseUrl: '/',
+  trailingSlash: false,
   onBrokenLinks: 'throw',
-  onBrokenMarkdownLinks: 'warn',
+  onBrokenAnchors: 'throw',
   favicon: 'img/kargo.png',
+  markdown: {
+    hooks: {
+      onBrokenMarkdownLinks: 'throw',
+    },
+  },
+  headTags: [
+    {
+      tagName: 'script',
+      attributes: {type: 'application/ld+json'},
+      innerHTML: JSON.stringify(softwareApplicationJsonLd),
+    },
+  ],
 
   // Even if you don't use internalization, you can use this field to set useful
   // metadata like html lang. For example, if your site is Chinese, you may want
@@ -95,6 +133,23 @@ const config = {
         },
       }
     ],
+    [
+      'docusaurus-plugin-llms',
+      {
+        // The curated llms.txt in static/ is the canonical index; only the
+        // full-content bundle is auto-generated.
+        generateLLMsTxt: false,
+        generateLLMsFullTxt: true,
+        docsDir: 'docs',
+        title: 'Kargo Documentation',
+        description: 'Kargo is a Kubernetes-native continuous promotion platform for GitOps workflows.',
+        excludeImports: true,
+        removeDuplicateHeadings: true,
+        ignoreFiles: [
+          'api-documentation*',
+        ],
+      },
+    ],
   ],
   themeConfig:
     /** @type {import('@docusaurus/preset-classic').ThemeConfig} */
@@ -150,7 +205,13 @@ const config = {
       colorMode: {
         defaultMode: 'light',
       },
-      metadata: [{name: 'akuity, argoproj, argo cd, argo workflows, argo events, argo rollouts, kubernetes, gitops, devops', content: 'akuity, documentation, developer documentation'}],
+      metadata: [
+        {
+          name: 'keywords',
+          content: 'kargo, akuity, argoproj, argo cd, argo workflows, argo events, argo rollouts, kubernetes, gitops, devops, continuous promotion',
+        },
+        {name: 'description', content: siteDescription},
+      ],
       algolia: {
         appId: '3SQ7LK6WD9',
         apiKey: '5627b8c2efd5b28a5b70c6660cb2b0f3',

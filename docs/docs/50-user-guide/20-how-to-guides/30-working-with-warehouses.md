@@ -61,17 +61,17 @@ fields:
 - `imageSelectionStrategy`: One of four pre-defined strategies for selecting the
   desired image. (See next section.)
 
-<a name="allow-tags-regexes-constraint"></a>
+<a id="allow-tags-regexes-constraint"></a>
 
 - `allowTagsRegexes`: An optional list of regular expressions that limit
   eligibility for selection to tags that match any of the patterns.
 
-<a name="ignore-tags-regexes-constraint"></a>
+<a id="ignore-tags-regexes-constraint"></a>
 
 - `ignoreTagsRegexes`: An optional list of regular expressions that limit
   eligibility for selection to tags that don't match any of the patterns.
 
-<a name="platform-constraint"></a>
+<a id="platform-constraint"></a>
 
 - `platform`: An optional identifier that constrains image selection to those
   images supporting the specified operating system and system architecture.
@@ -112,6 +112,8 @@ fields:
   with short Git commit hashes, which have the potential to contain numeric
   characters only and could be mistaken for a semver string containing the
   major version number only.
+
+<a id="cacheByTag"></a>
 
 - `cacheByTag`: Set to `true` to enable more aggressive caching of image
   metadata using tags as keys. This can significantly reduce the number of API
@@ -227,7 +229,7 @@ strategies are:
         constraint: latest
   ```
 
-<a name="newest-build"></a>
+<a id="newest-build"></a>
 
 - `NewestBuild`: This strategy selects the image with the most recent build
   time.
@@ -850,12 +852,12 @@ is under heavy load or `Warehouse`s are poorly configured.
 
 Discovery of container images, in particular, can be time-consuming.
 
-Both the [`NewestBuild` selection strategy](#newest-build) and any
-[`platform` constraints](#platform-constraint) are heavily dependent on the
+Both the [`NewestBuild` selection strategy](#image-selection-strategies) and any
+[`platform` constraints](#container-image-subscriptions) are heavily dependent on the
 retrieval of image metadata for every image in the repository not eliminated
 from consideration up-front by other, more efficient constraints such as
-[`allowTagsRegexes`](#allow-tags-regexes-constraint) or
-[`ignoreTagsRegexes`](#ignore-tags-regexes-constraint). Registry architecture,
+[`allowTagsRegexes`](#container-image-subscriptions) or
+[`ignoreTagsRegexes`](#container-image-subscriptions). Registry architecture,
 unfortunately, requires such metadata be retrieved image-by-image with a
 separate API call for each. Even with aggressive caching, and especially when
 the number of image revisions to consider is large, this process can take quite
@@ -896,7 +898,7 @@ minimum, _but not more frequently._
 If you're an operator wishing to reduce the frequency with which _all_
 `Warehouse`s execute their discovery processes (increase the minimum polling
 interval), refer to the
-[Common Configurations](../../40-operator-guide/20-advanced-installation/30-common-configurations.md#tuning-warehouse-reconciliation-intervals)
+[Common Configurations](../../40-operator-guide/20-advanced-installation/30-common-configurations.md#tuning-reconciliation-intervals)
 section of the of the Operator's Guide for more information.
 
 :::
@@ -910,13 +912,13 @@ Kargo to the presence of new artifacts via webhooks._
 ### Caching Image Metadata by Tag
 
 When using image selection strategies that require fetching image metadata
-(such as [`NewestBuild`](#newest-build) or when using
-[`platform`](#platform-constraint) constraints), a significant bottleneck can be
+(such as [`NewestBuild`](#image-selection-strategies) or when using
+[`platform`](#container-image-subscriptions) constraints), a significant bottleneck can be
 the number of API calls required to the container image registry.
 
 If your image tags are **guaranteed to be immutable** (i.e., a tag always
 references the exact same image and is never updated to point to a different
-image), you can enable the [`cacheByTag`](#cacheByTag) option on individual
+image), you can enable the [`cacheByTag`](#container-image-subscriptions) option on individual
 image subscriptions:
 
 ```yaml
