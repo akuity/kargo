@@ -1406,18 +1406,43 @@ func Test_httpRequester_proxy(t *testing.T) {
 	}))
 	defer proxy.Close()
 
-	cfg := builtin.HTTPConfig{
-		URL:               backend.URL,
-		Proxy:             proxy.URL,
-		SuccessExpression: "response.status == 200",
-		Outputs: []builtin.HTTPOutput{{
-			Name:           "reachedBackend",
-			FromExpression: "response.body.reachedBackend",
-		}},
+	testCases := []struct {
+		name       string
+		cfg        builtin.HTTPConfig
+		assertions func(t *testing.T, res promotion.StepResult, err error)
+	}{
+		{
+			name: "proxy URL with invalid format returns error",
+			cfg: builtin.HTTPConfig{
+				URL:   backend.URL,
+				Proxy: "http://[invalid-url",
+			},
+			assertions: func(t *testing.T, _ promotion.StepResult, err error) {
+				require.ErrorContains(t, err, "error parsing proxy URL")
+			},
+		},
+		{
+			name: "proxy is used when configured",
+			cfg: builtin.HTTPConfig{
+				URL:               backend.URL,
+				Proxy:             proxy.URL,
+				SuccessExpression: "response.status == 200",
+				Outputs: []builtin.HTTPOutput{{
+					Name:           "reachedBackend",
+					FromExpression: "response.body.reachedBackend",
+				}},
+			},
+			assertions: func(t *testing.T, res promotion.StepResult, err error) {
+				require.NoError(t, err)
+				require.Equal(t, kargoapi.PromotionStepStatusSucceeded, res.Status)
+				require.Equal(t, true, res.Output["reachedBackend"])
+			},
+		},
 	}
-	h := &httpRequester{}
-	result, err := h.run(t.Context(), nil, cfg)
-	require.NoError(t, err)
-	require.Equal(t, kargoapi.PromotionStepStatusSucceeded, result.Status)
-	require.Equal(t, true, result.Output["reachedBackend"])
+
+	for _, tc := range testCases {
+		h := &httpRequester{}
+		result, err := h.run(t.Context(), nil, tc.cfg)
+		tc.assertions(t, result, err)
+	}
 }
