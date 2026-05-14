@@ -49,3 +49,8 @@ info on how to start hacking on Kargo quickly and easily.
 
 Participation in the Kargo project is governed by the
 [Contributor Covenant Code of Conduct](https://docs.kargo.io/contributor-guide/code-of-conduct/).
+
+
+## fix unstated assumption inherent in many examples
+
+Added per issue [#6275](https://github.com/akuity/kargo/issues/6275).
