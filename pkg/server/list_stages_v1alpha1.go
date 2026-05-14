@@ -10,6 +10,7 @@ import (
 
 	"connectrpc.com/connect"
 	"github.com/gin-gonic/gin"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
 	svcv1alpha1 "github.com/akuity/kargo/api/service/v1alpha1"
@@ -33,7 +34,7 @@ func (s *server) ListStages(
 
 	warehouses := req.Msg.GetFreightOrigins()
 
-	items, err := api.ListStagesByWarehouses(
+	list, err := api.ListStagesByWarehouses(
 		ctx,
 		s.client,
 		project,
@@ -42,42 +43,53 @@ func (s *server) ListStages(
 	if err != nil {
 		return nil, fmt.Errorf("list stages: %w", err)
 	}
+	items := list.Items
 
 	slices.SortFunc(items, func(a, b kargoapi.Stage) int {
 		return strings.Compare(a.Name, b.Name)
 	})
 
+	summary := req.Msg.GetSummary()
 	stages := make([]*kargoapi.Stage, len(items))
 	for idx := range items {
+		if summary {
+			api.StripStageForSummary(&items[idx])
+		}
 		stages[idx] = &items[idx]
 	}
 	return connect.NewResponse(&svcv1alpha1.ListStagesResponse{
-		Stages: stages,
+		Stages:          stages,
+		ResourceVersion: list.ResourceVersion,
 	}), nil
 }
 
 // @id ListStages
 // @Summary List Stages
 // @Description List Stage resources from a project's namespace. Returns a
-// @Description StageList resource.
+// @Description StageList resource. Pass summary=true to receive a lightweight
+// @Description projection for list and graph views.
 // @Tags Core, Project-Level
 // @Security BearerAuth
 // @Produce json
 // @Param project path string true "Project name"
 // @Param freightOrigins query []string false "Warehouse names to filter Stages by"
+// @Param summary query bool false "Strip heavy fields from each Stage"
+// @Param watch query bool false "Stream Stage changes as Server-Sent Events instead of returning a list"
+// @Param resourceVersion query string false "When watch=true, resume after this ResourceVersion"
 // @Success 200 {object} kargoapi.StageList "StageList custom resource (github.com/akuity/kargo/api/v1alpha1.StageList)"
 // @Router /v1beta1/projects/{project}/stages [get]
 func (s *server) listStages(c *gin.Context) {
 	ctx := c.Request.Context()
 	project := c.Param("project")
 	warehouses := c.QueryArray("freightOrigins")
+	summary := c.Query("summary") == trueStr
 
 	if watchMode := c.Query("watch") == trueStr; watchMode {
-		s.watchStages(c, project, warehouses)
+		s.watchStages(c, project, warehouses, summary, c.Query("resourceVersion"))
 		return
 	}
 
-	items, err := api.ListStagesByWarehouses(
+	list, err := api.ListStagesByWarehouses(
 		ctx,
 		s.client,
 		project,
@@ -88,14 +100,33 @@ func (s *server) listStages(c *gin.Context) {
 		return
 	}
 
-	c.JSON(http.StatusOK, &kargoapi.StageList{Items: items})
+	if summary {
+		for i := range list.Items {
+			api.StripStageForSummary(&list.Items[i])
+		}
+	}
+
+	c.JSON(http.StatusOK, list)
 }
 
-func (s *server) watchStages(c *gin.Context, project string, warehouses []string) {
+func (s *server) watchStages(
+	c *gin.Context,
+	project string,
+	warehouses []string,
+	summary bool,
+	resourceVersion string,
+) {
 	ctx := c.Request.Context()
 	logger := logging.LoggerFromContext(ctx)
 
-	w, err := s.client.Watch(ctx, &kargoapi.StageList{}, client.InNamespace(project))
+	listOpts := []client.ListOption{client.InNamespace(project)}
+	if resourceVersion != "" {
+		listOpts = append(
+			listOpts,
+			&client.ListOptions{Raw: &metav1.ListOptions{ResourceVersion: resourceVersion}},
+		)
+	}
+	w, err := s.client.Watch(ctx, &kargoapi.StageList{}, listOpts...)
 	if err != nil {
 		logger.Error(err, "failed to start watch")
 		_ = c.Error(fmt.Errorf("watch stages: %w", err))
@@ -132,6 +163,14 @@ func (s *server) watchStages(c *gin.Context, project string, warehouses []string
 
 			if len(warehouses) > 0 && !api.StageMatchesAnyWarehouse(stage, warehouses) {
 				continue
+			}
+
+			if summary {
+				// StripStageForSummary mutates in place; copy first so
+				// shaping the response does not depend on the watch
+				// object's ownership semantics.
+				stage = stage.DeepCopy()
+				api.StripStageForSummary(stage)
 			}
 
 			if !sendSSEWatchEvent(c, e.Type, stage) {

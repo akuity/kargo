@@ -140,7 +140,8 @@ export const Graph = (props: GraphProps) => {
         queryCache.freight.refetch();
       }
     },
-    filterContext?.preferredFilter?.warehouses || []
+    filterContext?.preferredFilter?.warehouses || [],
+    { summary: true }
   );
 
   const warehouseByName = useMemo(() => {

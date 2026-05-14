@@ -50,13 +50,23 @@ service KargoService {
   rpc RefreshResource(RefreshResourceRequest) returns (RefreshResourceResponse);
   /* Stage APIs */
 
-  // ListStages retrieves all stages within a project.
+  // ListStages retrieves all stages within a project. Pass summary=true to
+  // receive a lightweight projection intended for list and graph views
+  // (heavy fields are stripped from each returned Stage; see the summary
+  // field on ListStagesRequest for details).
   rpc ListStages(ListStagesRequest) returns (ListStagesResponse);
   // ListImages returns available images and their usage across stages.
   rpc ListImages(ListImagesRequest) returns (ListImagesResponse);
   // GetStage retrieves details of a specific stage.
   rpc GetStage(GetStageRequest) returns (GetStageResponse);
+  // GetStageHealthOutputs returns the raw health output blob for the
+  // specified Stages in a project. Intended for clients that use
+  // ListStages with summary=true and need to resolve per-argocd-app
+  // health only for the Stages currently in viewport. Stages that do not
+  // exist or have no health output recorded are omitted from the response.
+  rpc GetStageHealthOutputs(GetStageHealthOutputsRequest) returns (GetStageHealthOutputsResponse);
   // WatchStages provides a streaming interface to monitor stage changes.
+  // Pass summary=true to apply the same projection as ListStages.
   rpc WatchStages(WatchStagesRequest) returns (stream WatchStagesResponse);
   // DeleteStage removes a stage from the system.
   rpc DeleteStage(DeleteStageRequest) returns (DeleteStageResponse);
@@ -457,12 +467,32 @@ message ListStagesRequest {
   // When specified, only Stages that subscribe to at least one of the named
   // Warehouses are returned.
   repeated string freight_origins = 2 [json_name = "freightOrigins"];
+  // summary, when true, strips heavy fields from each Stage in the response.
+  // Intended for list and graph views that render many Stages but do not
+  // need full FreightHistory, PromotionTemplate step bodies, or the raw
+  // health output blob. Stripped Stages still carry: metadata, shard,
+  // requestedFreight, promotionTemplate step skeletons (uses, task, as,
+  // continueOnError, retry; config, if, vars cleared), verification,
+  // conditions, currentFreight (history[0]), currentPromotion,
+  // lastPromotion, health metadata (without output.raw),
+  // observedGeneration, autoPromotionEnabled. Use summary=false (default)
+  // to retrieve the full Stage, or GetStage for a single Stage in detail.
+  bool summary = 3;
 }
 
 // ListStagesResponse contains a list of stages within a project.
 message ListStagesResponse {
-  // stages is the list of Stage resources found in the project.
+  // stages is the list of Stage resources found in the project. When the
+  // corresponding request set summary=true, each Stage has heavy fields
+  // stripped: status.freightHistory is truncated to index 0,
+  // spec.promotionTemplate.spec.steps[*] has config, if, and vars cleared,
+  // and status.health.output is nil.
   repeated github.com.akuity.kargo.api.v1alpha1.Stage stages = 1;
+  // resource_version is the Kubernetes ResourceVersion of the underlying
+  // StageList. Clients may pass this value to WatchStages to begin watching
+  // from the exact point this list was taken, receiving only subsequent
+  // changes without redundant initial events.
+  string resource_version = 2;
 }
 
 // ListImagesRequest is the request for listing images and their usage across stages.
@@ -509,6 +539,24 @@ message GetStageResponse {
   }
 }
 
+// GetStageHealthOutputsRequest is the request for fetching the raw health
+// output blob of one or more Stages within a project.
+message GetStageHealthOutputsRequest {
+  // project is the name of the project containing the Stages.
+  string project = 1;
+  // stage_names is the list of Stage names whose health outputs to return.
+  // Order is irrelevant; duplicates are deduplicated by the server.
+  repeated string stage_names = 2 [json_name = "stageNames"];
+}
+
+// GetStageHealthOutputsResponse contains per-Stage raw health output blobs.
+message GetStageHealthOutputsResponse {
+  // health_outputs maps Stage name to the raw JSON of its
+  // Stage.status.health.output.raw field. Stages that do not exist in the
+  // project or have no health output recorded are omitted from the map.
+  map<string, string> health_outputs = 1 [json_name = "healthOutputs"];
+}
+
 // WatchStagesRequest is the request for watching stage changes via streaming.
 message WatchStagesRequest {
   // project is the name of the project whose stages should be watched.
@@ -519,6 +567,15 @@ message WatchStagesRequest {
   // When specified, only events for Stages that subscribe to at least one of
   // the named Warehouses are streamed.
   repeated string freight_origins = 3 [json_name = "freightOrigins"];
+  // summary, when true, applies the same projection as
+  // ListStagesRequest.summary to each streamed Stage. See the summary
+  // field on ListStagesRequest for the list of fields stripped.
+  bool summary = 4;
+  // resource_version is an optional Kubernetes ResourceVersion. When set,
+  // the watch begins at the specified version, allowing clients to resume
+  // from a prior list (see ListStagesResponse.resource_version) or watch
+  // without missing or duplicating events.
+  string resource_version = 5;
 }
 
 // WatchStagesResponse contains stage change notifications.
@@ -541,6 +598,7 @@ message DeleteStageRequest {
 message DeleteStageResponse {
   /* explicitly empty */
 }
+
 /* ClusterConfig Messages */
 
 message GetClusterConfigRequest {

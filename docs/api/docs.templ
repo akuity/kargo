@@ -29,7 +29,7 @@ Stability is not guaranteed.
 <a name="{{.FullName | anchor}}"></a>
 
 ### {{.LongName}}
-{{range (.Description | splitList "\n" )  }} {{if not (contains "kubebuilder" .)}}{{.}}{{end}}{{end}}
+{{range (.Description | splitList "\n" )  }}{{if and (ne . "") (not (contains "kubebuilder" .))}} {{.}}{{end}}{{end}}
 
 {{- if .HasFields}}
 | Field | Type | Description |

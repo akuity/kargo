@@ -27,6 +27,7 @@ Stability is not guaranteed.
 | ListStages | [ListStagesRequest](#akuity-io-kargo-service-v1alpha1-ListStagesRequest) | [ListStagesResponse](#akuity-io-kargo-service-v1alpha1-ListStagesResponse) |
 | ListImages | [ListImagesRequest](#akuity-io-kargo-service-v1alpha1-ListImagesRequest) | [ListImagesResponse](#akuity-io-kargo-service-v1alpha1-ListImagesResponse) |
 | GetStage | [GetStageRequest](#akuity-io-kargo-service-v1alpha1-GetStageRequest) | [GetStageResponse](#akuity-io-kargo-service-v1alpha1-GetStageResponse) |
+| GetStageHealthOutputs | [GetStageHealthOutputsRequest](#akuity-io-kargo-service-v1alpha1-GetStageHealthOutputsRequest) | [GetStageHealthOutputsResponse](#akuity-io-kargo-service-v1alpha1-GetStageHealthOutputsResponse) |
 | WatchStages | [WatchStagesRequest](#akuity-io-kargo-service-v1alpha1-WatchStagesRequest) | [WatchStagesResponse](#akuity-io-kargo-service-v1alpha1-WatchStagesResponse)(stream) |
 | DeleteStage | [DeleteStageRequest](#akuity-io-kargo-service-v1alpha1-DeleteStageRequest) | [DeleteStageResponse](#akuity-io-kargo-service-v1alpha1-DeleteStageResponse) |
 | GetClusterConfig | [GetClusterConfigRequest](#akuity-io-kargo-service-v1alpha1-GetClusterConfigRequest) | [GetClusterConfigResponse](#akuity-io-kargo-service-v1alpha1-GetClusterConfigResponse) |
@@ -108,7 +109,7 @@ Stability is not guaranteed.
 <a name="akuity-io-kargo-service-v1alpha1-AbortPromotionResponse"></a>
 
 ### AbortPromotionResponse
- AbortPromotionResponse is the response after aborting a promotion.  explicitly empty
+ AbortPromotionResponse is the response after aborting a promotion. explicitly empty
 <a name="akuity-io-kargo-service-v1alpha1-AbortVerificationRequest"></a>
 
 ### AbortVerificationRequest
@@ -121,7 +122,7 @@ Stability is not guaranteed.
 <a name="akuity-io-kargo-service-v1alpha1-AbortVerificationResponse"></a>
 
 ### AbortVerificationResponse
- AbortVerificationResponse is the response after aborting verification.  explicitly empty
+ AbortVerificationResponse is the response after aborting verification. explicitly empty
 <a name="akuity-io-kargo-service-v1alpha1-AdminLoginRequest"></a>
 
 ### AdminLoginRequest
@@ -152,7 +153,7 @@ Stability is not guaranteed.
 <a name="akuity-io-kargo-service-v1alpha1-ApproveFreightResponse"></a>
 
 ### ApproveFreightResponse
- ApproveFreightResponse is the response after approving freight.  explicitly empty
+ ApproveFreightResponse is the response after approving freight. explicitly empty
 <a name="akuity-io-kargo-service-v1alpha1-ArgoCDShard"></a>
 
 ### ArgoCDShard
@@ -214,7 +215,7 @@ Stability is not guaranteed.
 <a name="akuity-io-kargo-service-v1alpha1-CreateConfigMapRequest-DataEntry"></a>
 
 ### CreateConfigMapRequest.DataEntry
- 
+
 | Field | Type | Description |
 | ----- | ---- | ----------- |
 | key | [string](#string) |   |
@@ -244,7 +245,7 @@ Stability is not guaranteed.
 <a name="akuity-io-kargo-service-v1alpha1-CreateGenericCredentialsRequest-DataEntry"></a>
 
 ### CreateGenericCredentialsRequest.DataEntry
- 
+
 | Field | Type | Description |
 | ----- | ---- | ----------- |
 | key | [string](#string) |   |
@@ -361,7 +362,7 @@ Stability is not guaranteed.
 <a name="akuity-io-kargo-service-v1alpha1-DeleteAPITokenResponse"></a>
 
 ### DeleteAPITokenResponse
- DeleteAPITokenResponse is the response returned after deleting a bearer token associated with a Kargo Role virtual resource.  explicitly empty
+ DeleteAPITokenResponse is the response returned after deleting a bearer token associated with a Kargo Role virtual resource. explicitly empty
 <a name="akuity-io-kargo-service-v1alpha1-DeleteAnalysisTemplateRequest"></a>
 
 ### DeleteAnalysisTemplateRequest
@@ -374,7 +375,7 @@ Stability is not guaranteed.
 <a name="akuity-io-kargo-service-v1alpha1-DeleteAnalysisTemplateResponse"></a>
 
 ### DeleteAnalysisTemplateResponse
- DeleteAnalysisTemplateResponse is the response returned after deleting an analysis template.  explicitly empty
+ DeleteAnalysisTemplateResponse is the response returned after deleting an analysis template. explicitly empty
 <a name="akuity-io-kargo-service-v1alpha1-DeleteClusterAnalysisTemplateRequest"></a>
 
 ### DeleteClusterAnalysisTemplateRequest
@@ -386,7 +387,7 @@ Stability is not guaranteed.
 <a name="akuity-io-kargo-service-v1alpha1-DeleteClusterAnalysisTemplateResponse"></a>
 
 ### DeleteClusterAnalysisTemplateResponse
- DeleteClusterAnalysisTemplateResponse is the response returned after deleting a cluster analysis template.  explicitly empty
+ DeleteClusterAnalysisTemplateResponse is the response returned after deleting a cluster analysis template. explicitly empty
 <a name="akuity-io-kargo-service-v1alpha1-DeleteClusterConfigRequest"></a>
 
 ### DeleteClusterConfigRequest
@@ -408,7 +409,7 @@ Stability is not guaranteed.
 <a name="akuity-io-kargo-service-v1alpha1-DeleteConfigMapResponse"></a>
 
 ### DeleteConfigMapResponse
- DeleteConfigMapResponse is the response returned after deleting a ConfigMap.  explicitly empty
+ DeleteConfigMapResponse is the response returned after deleting a ConfigMap. explicitly empty
 <a name="akuity-io-kargo-service-v1alpha1-DeleteFreightRequest"></a>
 
 ### DeleteFreightRequest
@@ -422,7 +423,7 @@ Stability is not guaranteed.
 <a name="akuity-io-kargo-service-v1alpha1-DeleteFreightResponse"></a>
 
 ### DeleteFreightResponse
- DeleteFreightResponse is the response after deleting freight.  explicitly empty
+ DeleteFreightResponse is the response after deleting freight. explicitly empty
 <a name="akuity-io-kargo-service-v1alpha1-DeleteGenericCredentialsRequest"></a>
 
 ### DeleteGenericCredentialsRequest
@@ -436,7 +437,7 @@ Stability is not guaranteed.
 <a name="akuity-io-kargo-service-v1alpha1-DeleteGenericCredentialsResponse"></a>
 
 ### DeleteGenericCredentialsResponse
- DeleteGenericCredentialsResponse is the response returned after deleting generic credentials.  explicitly empty
+ DeleteGenericCredentialsResponse is the response returned after deleting generic credentials. explicitly empty
 <a name="akuity-io-kargo-service-v1alpha1-DeleteProjectConfigRequest"></a>
 
 ### DeleteProjectConfigRequest
@@ -448,7 +449,7 @@ Stability is not guaranteed.
 <a name="akuity-io-kargo-service-v1alpha1-DeleteProjectConfigResponse"></a>
 
 ### DeleteProjectConfigResponse
- DeleteProjectConfigResponse is the response after deleting project configuration.  explicitly empty
+ DeleteProjectConfigResponse is the response after deleting project configuration. explicitly empty
 <a name="akuity-io-kargo-service-v1alpha1-DeleteProjectRequest"></a>
 
 ### DeleteProjectRequest
@@ -460,7 +461,7 @@ Stability is not guaranteed.
 <a name="akuity-io-kargo-service-v1alpha1-DeleteProjectResponse"></a>
 
 ### DeleteProjectResponse
- DeleteProjectResponse is the response after deleting a project.  explicitly empty
+ DeleteProjectResponse is the response after deleting a project. explicitly empty
 <a name="akuity-io-kargo-service-v1alpha1-DeleteRepoCredentialsRequest"></a>
 
 ### DeleteRepoCredentialsRequest
@@ -473,7 +474,7 @@ Stability is not guaranteed.
 <a name="akuity-io-kargo-service-v1alpha1-DeleteRepoCredentialsResponse"></a>
 
 ### DeleteRepoCredentialsResponse
- DeleteRepoCredentialsResponse is the response returned after deleting repository credentials.  explicitly empty
+ DeleteRepoCredentialsResponse is the response returned after deleting repository credentials. explicitly empty
 <a name="akuity-io-kargo-service-v1alpha1-DeleteResourceRequest"></a>
 
 ### DeleteResourceRequest
@@ -511,7 +512,7 @@ Stability is not guaranteed.
 <a name="akuity-io-kargo-service-v1alpha1-DeleteRoleResponse"></a>
 
 ### DeleteRoleResponse
- DeleteRoleResponse is the response returned after deleting a Kargo Role virtual resource.  explicitly empty
+ DeleteRoleResponse is the response returned after deleting a Kargo Role virtual resource. explicitly empty
 <a name="akuity-io-kargo-service-v1alpha1-DeleteStageRequest"></a>
 
 ### DeleteStageRequest
@@ -524,7 +525,7 @@ Stability is not guaranteed.
 <a name="akuity-io-kargo-service-v1alpha1-DeleteStageResponse"></a>
 
 ### DeleteStageResponse
- DeleteStageResponse is the response after deleting a stage.  explicitly empty
+ DeleteStageResponse is the response after deleting a stage. explicitly empty
 <a name="akuity-io-kargo-service-v1alpha1-DeleteWarehouseRequest"></a>
 
 ### DeleteWarehouseRequest
@@ -537,7 +538,7 @@ Stability is not guaranteed.
 <a name="akuity-io-kargo-service-v1alpha1-DeleteWarehouseResponse"></a>
 
 ### DeleteWarehouseResponse
- DeleteWarehouseResponse is the response after deleting a warehouse.  explicitly empty
+ DeleteWarehouseResponse is the response after deleting a warehouse. explicitly empty
 <a name="akuity-io-kargo-service-v1alpha1-FreightList"></a>
 
 ### FreightList
@@ -644,7 +645,7 @@ Stability is not guaranteed.
 <a name="akuity-io-kargo-service-v1alpha1-GetClusterConfigRequest"></a>
 
 ### GetClusterConfigRequest
- 
+
 | Field | Type | Description |
 | ----- | ---- | ----------- |
 | format | [RawFormat](#akuity-io-kargo-service-v1alpha1-RawFormat) |   |
@@ -652,7 +653,7 @@ Stability is not guaranteed.
 <a name="akuity-io-kargo-service-v1alpha1-GetClusterConfigResponse"></a>
 
 ### GetClusterConfigResponse
- 
+
 | Field | Type | Description |
 | ----- | ---- | ----------- |
 | cluster_config | [github.com.akuity.kargo.api.v1alpha1.ClusterConfig](#github-com-akuity-kargo-api-v1alpha1-ClusterConfig) |   |
@@ -714,7 +715,7 @@ Stability is not guaranteed.
 <a name="akuity-io-kargo-service-v1alpha1-GetConfigResponse-ArgocdShardsEntry"></a>
 
 ### GetConfigResponse.ArgocdShardsEntry
- 
+
 | Field | Type | Description |
 | ----- | ---- | ----------- |
 | key | [string](#string) |   |
@@ -869,6 +870,32 @@ Stability is not guaranteed.
 | resources | [github.com.akuity.kargo.api.rbac.v1alpha1.RoleResources](#github-com-akuity-kargo-api-rbac-v1alpha1-RoleResources) |  resources is a structured RoleResources object encapsulating the Kargo Role's underlying Kubernetes resources. |
 | raw | [bytes](#bytes) |  raw is a raw YAML or JSON representation of the requested resource(s). |
 
+<a name="akuity-io-kargo-service-v1alpha1-GetStageHealthOutputsRequest"></a>
+
+### GetStageHealthOutputsRequest
+ GetStageHealthOutputsRequest is the request for fetching the raw health output blob of one or more Stages within a project.
+| Field | Type | Description |
+| ----- | ---- | ----------- |
+| project | [string](#string) |  project is the name of the project containing the Stages. |
+| stage_names | [string](#string) |  stage_names is the list of Stage names whose health outputs to return. Order is irrelevant; duplicates are deduplicated by the server. |
+
+<a name="akuity-io-kargo-service-v1alpha1-GetStageHealthOutputsResponse"></a>
+
+### GetStageHealthOutputsResponse
+ GetStageHealthOutputsResponse contains per-Stage raw health output blobs.
+| Field | Type | Description |
+| ----- | ---- | ----------- |
+| health_outputs | [GetStageHealthOutputsResponse.HealthOutputsEntry](#akuity-io-kargo-service-v1alpha1-GetStageHealthOutputsResponse-HealthOutputsEntry) |  health_outputs maps Stage name to the raw JSON of its Stage.status.health.output.raw field. Stages that do not exist in the project or have no health output recorded are omitted from the map. |
+
+<a name="akuity-io-kargo-service-v1alpha1-GetStageHealthOutputsResponse-HealthOutputsEntry"></a>
+
+### GetStageHealthOutputsResponse.HealthOutputsEntry
+
+| Field | Type | Description |
+| ----- | ---- | ----------- |
+| key | [string](#string) |   |
+| value | [string](#string) |   |
+
 <a name="akuity-io-kargo-service-v1alpha1-GetStageRequest"></a>
 
 ### GetStageRequest
@@ -949,7 +976,7 @@ Stability is not guaranteed.
 <a name="akuity-io-kargo-service-v1alpha1-ImageStageMap-StagesEntry"></a>
 
 ### ImageStageMap.StagesEntry
- 
+
 | Field | Type | Description |
 | ----- | ---- | ----------- |
 | key | [string](#string) |   |
@@ -1066,7 +1093,7 @@ Stability is not guaranteed.
 <a name="akuity-io-kargo-service-v1alpha1-ListImagesResponse-ImagesEntry"></a>
 
 ### ListImagesResponse.ImagesEntry
- 
+
 | Field | Type | Description |
 | ----- | ---- | ----------- |
 | key | [string](#string) |   |
@@ -1185,6 +1212,7 @@ Stability is not guaranteed.
 | ----- | ---- | ----------- |
 | project | [string](#string) |  project is the name of the project whose stages should be listed. |
 | freight_origins | [string](#string) |  freight_origins is an optional list of Warehouse names to filter Stages by. When specified, only Stages that subscribe to at least one of the named Warehouses are returned. |
+| summary | [bool](#bool) |  summary, when true, strips heavy fields from each Stage in the response. Intended for list and graph views that render many Stages but do not need full FreightHistory, PromotionTemplate step bodies, or the raw health output blob. Stripped Stages still carry: metadata, shard, requestedFreight, promotionTemplate step skeletons (uses, task, as, continueOnError, retry; config, if, vars cleared), verification, conditions, currentFreight (history[0]), currentPromotion, lastPromotion, health metadata (without output.raw), observedGeneration, autoPromotionEnabled. Use summary=false (default) to retrieve the full Stage, or GetStage for a single Stage in detail. |
 
 <a name="akuity-io-kargo-service-v1alpha1-ListStagesResponse"></a>
 
@@ -1192,7 +1220,8 @@ Stability is not guaranteed.
  ListStagesResponse contains a list of stages within a project.
 | Field | Type | Description |
 | ----- | ---- | ----------- |
-| stages | [github.com.akuity.kargo.api.v1alpha1.Stage](#github-com-akuity-kargo-api-v1alpha1-Stage) |  stages is the list of Stage resources found in the project. |
+| stages | [github.com.akuity.kargo.api.v1alpha1.Stage](#github-com-akuity-kargo-api-v1alpha1-Stage) |  stages is the list of Stage resources found in the project. When the corresponding request set summary=true, each Stage has heavy fields stripped: status.freightHistory is truncated to index 0, spec.promotionTemplate.spec.steps[*] has config, if, and vars cleared, and status.health.output is nil. |
+| resource_version | [string](#string) |  resource_version is the Kubernetes ResourceVersion of the underlying StageList. Clients may pass this value to WatchStages to begin watching from the exact point this list was taken, receiving only subsequent changes without redundant initial events. |
 
 <a name="akuity-io-kargo-service-v1alpha1-ListWarehousesRequest"></a>
 
@@ -1284,7 +1313,7 @@ Stability is not guaranteed.
 <a name="akuity-io-kargo-service-v1alpha1-QueryFreightResponse-GroupsEntry"></a>
 
 ### QueryFreightResponse.GroupsEntry
- 
+
 | Field | Type | Description |
 | ----- | ---- | ----------- |
 | key | [string](#string) |   |
@@ -1293,7 +1322,7 @@ Stability is not guaranteed.
 <a name="akuity-io-kargo-service-v1alpha1-RefreshResourceRequest"></a>
 
 ### RefreshResourceRequest
- 
+
 | Field | Type | Description |
 | ----- | ---- | ----------- |
 | project | [string](#string) |  project is the name of the project containing the object to refresh. leave blank if refreshing a cluster-config. |
@@ -1303,7 +1332,7 @@ Stability is not guaranteed.
 <a name="akuity-io-kargo-service-v1alpha1-RefreshResourceResponse"></a>
 
 ### RefreshResourceResponse
- 
+
 | Field | Type | Description |
 | ----- | ---- | ----------- |
 | resource | [google.protobuf.Any](#google-protobuf-Any) |   |
@@ -1320,7 +1349,7 @@ Stability is not guaranteed.
 <a name="akuity-io-kargo-service-v1alpha1-ReverifyResponse"></a>
 
 ### ReverifyResponse
- ReverifyResponse is the response after triggering reverification.  explicitly empty
+ ReverifyResponse is the response after triggering reverification. explicitly empty
 <a name="akuity-io-kargo-service-v1alpha1-RevokeRequest"></a>
 
 ### RevokeRequest
@@ -1351,7 +1380,7 @@ Stability is not guaranteed.
 <a name="akuity-io-kargo-service-v1alpha1-TagMap-TagsEntry"></a>
 
 ### TagMap.TagsEntry
- 
+
 | Field | Type | Description |
 | ----- | ---- | ----------- |
 | key | [string](#string) |   |
@@ -1373,7 +1402,7 @@ Stability is not guaranteed.
 <a name="akuity-io-kargo-service-v1alpha1-UpdateConfigMapRequest-DataEntry"></a>
 
 ### UpdateConfigMapRequest.DataEntry
- 
+
 | Field | Type | Description |
 | ----- | ---- | ----------- |
 | key | [string](#string) |   |
@@ -1401,7 +1430,7 @@ Stability is not guaranteed.
 <a name="akuity-io-kargo-service-v1alpha1-UpdateFreightAliasResponse"></a>
 
 ### UpdateFreightAliasResponse
- UpdateFreightAliasResponse is the response after updating a freight's alias.  explicitly empty
+ UpdateFreightAliasResponse is the response after updating a freight's alias. explicitly empty
 <a name="akuity-io-kargo-service-v1alpha1-UpdateGenericCredentialsRequest"></a>
 
 ### UpdateGenericCredentialsRequest
@@ -1418,7 +1447,7 @@ Stability is not guaranteed.
 <a name="akuity-io-kargo-service-v1alpha1-UpdateGenericCredentialsRequest-DataEntry"></a>
 
 ### UpdateGenericCredentialsRequest.DataEntry
- 
+
 | Field | Type | Description |
 | ----- | ---- | ----------- |
 | key | [string](#string) |   |
@@ -1517,7 +1546,7 @@ Stability is not guaranteed.
 <a name="akuity-io-kargo-service-v1alpha1-WatchClusterConfigResponse"></a>
 
 ### WatchClusterConfigResponse
- 
+
 | Field | Type | Description |
 | ----- | ---- | ----------- |
 | cluster_config | [github.com.akuity.kargo.api.v1alpha1.ClusterConfig](#github-com-akuity-kargo-api-v1alpha1-ClusterConfig) |   |
@@ -1603,6 +1632,8 @@ Stability is not guaranteed.
 | project | [string](#string) |  project is the name of the project whose stages should be watched. |
 | name | [string](#string) |  name is the name of a specific stage to watch, if empty all stages in the project are watched. |
 | freight_origins | [string](#string) |  freight_origins is an optional list of Warehouse names to filter Stages by. When specified, only events for Stages that subscribe to at least one of the named Warehouses are streamed. |
+| summary | [bool](#bool) |  summary, when true, applies the same projection as ListStagesRequest.summary to each streamed Stage. See the summary field on ListStagesRequest for the list of fields stripped. |
+| resource_version | [string](#string) |  resource_version is an optional Kubernetes ResourceVersion. When set, the watch begins at the specified version, allowing clients to resume from a prior list (see ListStagesResponse.resource_version) or watch without missing or duplicating events. |
 
 <a name="akuity-io-kargo-service-v1alpha1-WatchStagesResponse"></a>
 
@@ -1652,7 +1683,7 @@ RawFormat specifies the format for raw resource representation.
 <a name="github-com-akuity-kargo-api-rbac-v1alpha1-Claim"></a>
 
 ### Claim
- 
+
 | Field | Type | Description |
 | ----- | ---- | ----------- |
 | name | [string](#string) |   |
@@ -1661,7 +1692,7 @@ RawFormat specifies the format for raw resource representation.
 <a name="github-com-akuity-kargo-api-rbac-v1alpha1-ResourceDetails"></a>
 
 ### ResourceDetails
- 
+
 | Field | Type | Description |
 | ----- | ---- | ----------- |
 | resourceType | [string](#string) |   |
@@ -1671,7 +1702,7 @@ RawFormat specifies the format for raw resource representation.
 <a name="github-com-akuity-kargo-api-rbac-v1alpha1-Role"></a>
 
 ### Role
- 
+
 | Field | Type | Description |
 | ----- | ---- | ----------- |
 | metadata | k8s.io.apimachinery.pkg.apis.meta.v1.ObjectMeta |   |
@@ -1682,7 +1713,7 @@ RawFormat specifies the format for raw resource representation.
 <a name="github-com-akuity-kargo-api-rbac-v1alpha1-RoleResources"></a>
 
 ### RoleResources
- 
+
 | Field | Type | Description |
 | ----- | ---- | ----------- |
 | metadata | k8s.io.apimachinery.pkg.apis.meta.v1.ObjectMeta |   |
@@ -1694,7 +1725,7 @@ RawFormat specifies the format for raw resource representation.
 <a name="github-com-akuity-kargo-api-rbac-v1alpha1-ServiceAccountReference"></a>
 
 ### ServiceAccountReference
- 
+
 | Field | Type | Description |
 | ----- | ---- | ----------- |
 | name | [string](#string) |   |
@@ -1727,7 +1758,7 @@ RawFormat specifies the format for raw resource representation.
 <a name="github-com-akuity-kargo-api-v1alpha1-AnalysisRunMetadata-AnnotationsEntry"></a>
 
 ### AnalysisRunMetadata.AnnotationsEntry
- 
+
 | Field | Type | Description |
 | ----- | ---- | ----------- |
 | key | [string](#string) |   |
@@ -1736,7 +1767,7 @@ RawFormat specifies the format for raw resource representation.
 <a name="github-com-akuity-kargo-api-v1alpha1-AnalysisRunMetadata-LabelsEntry"></a>
 
 ### AnalysisRunMetadata.LabelsEntry
- 
+
 | Field | Type | Description |
 | ----- | ---- | ----------- |
 | key | [string](#string) |   |
@@ -1918,7 +1949,7 @@ RawFormat specifies the format for raw resource representation.
 <a name="github-com-akuity-kargo-api-v1alpha1-ClusterPromotionTask"></a>
 
 ### ClusterPromotionTask
- 
+
 | Field | Type | Description |
 | ----- | ---- | ----------- |
 | metadata | k8s.io.apimachinery.pkg.apis.meta.v1.ObjectMeta |   |
@@ -1981,7 +2012,7 @@ RawFormat specifies the format for raw resource representation.
 <a name="github-com-akuity-kargo-api-v1alpha1-DiscoveredImageReference-AnnotationsEntry"></a>
 
 ### DiscoveredImageReference.AnnotationsEntry
- 
+
 | Field | Type | Description |
 | ----- | ---- | ----------- |
 | key | [string](#string) |   |
@@ -2007,7 +2038,7 @@ RawFormat specifies the format for raw resource representation.
 <a name="github-com-akuity-kargo-api-v1alpha1-ExpressionVariable"></a>
 
 ### ExpressionVariable
- ExpressionVariable describes a single variable that may be referenced by expressions in the context of a ClusterPromotionTask, PromotionTask, Promotion, AnalysisRun arguments, or other objects that support expressions.  It is used to pass information to the expression evaluation engine, and to allow for dynamic evaluation of expressions based on the variable values.
+ ExpressionVariable describes a single variable that may be referenced by expressions in the context of a ClusterPromotionTask, PromotionTask, Promotion, AnalysisRun arguments, or other objects that support expressions. It is used to pass information to the expression evaluation engine, and to allow for dynamic evaluation of expressions based on the variable values.
 | Field | Type | Description |
 | ----- | ---- | ----------- |
 | name | [string](#string) |  Name is the name of the variable.    |
@@ -2041,7 +2072,7 @@ RawFormat specifies the format for raw resource representation.
 <a name="github-com-akuity-kargo-api-v1alpha1-FreightCollection-ItemsEntry"></a>
 
 ### FreightCollection.ItemsEntry
- 
+
 | Field | Type | Description |
 | ----- | ---- | ----------- |
 | key | [string](#string) |   |
@@ -2067,7 +2098,7 @@ RawFormat specifies the format for raw resource representation.
 <a name="github-com-akuity-kargo-api-v1alpha1-FreightOrigin"></a>
 
 ### FreightOrigin
- FreightOrigin describes a kind of Freight in terms of where it may have originated.  +protobuf.options.(gogoproto.goproto_stringer)=false
+ FreightOrigin describes a kind of Freight in terms of where it may have originated. +protobuf.options.(gogoproto.goproto_stringer)=false
 | Field | Type | Description |
 | ----- | ---- | ----------- |
 | kind | [string](#string) |  Kind is the kind of resource from which Freight may have originated. At present, this can only be "Warehouse".   |
@@ -2098,7 +2129,7 @@ RawFormat specifies the format for raw resource representation.
 <a name="github-com-akuity-kargo-api-v1alpha1-FreightSources"></a>
 
 ### FreightSources
- 
+
 | Field | Type | Description |
 | ----- | ---- | ----------- |
 | direct | [bool](#bool) |  Direct indicates the requested Freight may be obtained directly from the Warehouse from which it originated. If this field's value is false, then the value of the Stages field must be non-empty. i.e. Between the two fields, at least one source must be specified. |
@@ -2121,7 +2152,7 @@ RawFormat specifies the format for raw resource representation.
 <a name="github-com-akuity-kargo-api-v1alpha1-FreightStatus-ApprovedForEntry"></a>
 
 ### FreightStatus.ApprovedForEntry
- 
+
 | Field | Type | Description |
 | ----- | ---- | ----------- |
 | key | [string](#string) |   |
@@ -2130,7 +2161,7 @@ RawFormat specifies the format for raw resource representation.
 <a name="github-com-akuity-kargo-api-v1alpha1-FreightStatus-CurrentlyInEntry"></a>
 
 ### FreightStatus.CurrentlyInEntry
- 
+
 | Field | Type | Description |
 | ----- | ---- | ----------- |
 | key | [string](#string) |   |
@@ -2139,7 +2170,7 @@ RawFormat specifies the format for raw resource representation.
 <a name="github-com-akuity-kargo-api-v1alpha1-FreightStatus-MetadataEntry"></a>
 
 ### FreightStatus.MetadataEntry
- 
+
 | Field | Type | Description |
 | ----- | ---- | ----------- |
 | key | [string](#string) |   |
@@ -2148,7 +2179,7 @@ RawFormat specifies the format for raw resource representation.
 <a name="github-com-akuity-kargo-api-v1alpha1-FreightStatus-VerifiedInEntry"></a>
 
 ### FreightStatus.VerifiedInEntry
- 
+
 | Field | Type | Description |
 | ----- | ---- | ----------- |
 | key | [string](#string) |   |
@@ -2168,7 +2199,7 @@ RawFormat specifies the format for raw resource representation.
 <a name="github-com-akuity-kargo-api-v1alpha1-GenericWebhookAction-ParametersEntry"></a>
 
 ### GenericWebhookAction.ParametersEntry
- 
+
 | Field | Type | Description |
 | ----- | ---- | ----------- |
 | key | [string](#string) |   |
@@ -2323,7 +2354,7 @@ RawFormat specifies the format for raw resource representation.
 <a name="github-com-akuity-kargo-api-v1alpha1-Image-AnnotationsEntry"></a>
 
 ### Image.AnnotationsEntry
- 
+
 | Field | Type | Description |
 | ----- | ---- | ----------- |
 | key | [string](#string) |   |
@@ -2473,7 +2504,7 @@ RawFormat specifies the format for raw resource representation.
 <a name="github-com-akuity-kargo-api-v1alpha1-PromotionPolicy"></a>
 
 ### PromotionPolicy
- PromotionPolicy defines policies governing the promotion of Freight to a specific Stage.  
+ PromotionPolicy defines policies governing the promotion of Freight to a specific Stage.
 | Field | Type | Description |
 | ----- | ---- | ----------- |
 | stage | [string](#string) |  Stage is the name of the Stage to which this policy applies.  Deprecated: Use StageSelector instead.   |
@@ -2556,7 +2587,7 @@ RawFormat specifies the format for raw resource representation.
 <a name="github-com-akuity-kargo-api-v1alpha1-PromotionTask"></a>
 
 ### PromotionTask
- 
+
 | Field | Type | Description |
 | ----- | ---- | ----------- |
 | metadata | k8s.io.apimachinery.pkg.apis.meta.v1.ObjectMeta |   |
@@ -2583,7 +2614,7 @@ RawFormat specifies the format for raw resource representation.
 <a name="github-com-akuity-kargo-api-v1alpha1-PromotionTaskSpec"></a>
 
 ### PromotionTaskSpec
- 
+
 | Field | Type | Description |
 | ----- | ---- | ----------- |
 | vars | [ExpressionVariable](#github-com-akuity-kargo-api-v1alpha1-ExpressionVariable) |  Vars specifies the variables available to the PromotionTask. The values of these variables are the default values that can be overridden by the step referencing the task. |
@@ -2685,7 +2716,7 @@ RawFormat specifies the format for raw resource representation.
 <a name="github-com-akuity-kargo-api-v1alpha1-StageStatus-MetadataEntry"></a>
 
 ### StageStatus.MetadataEntry
- 
+
 | Field | Type | Description |
 | ----- | ---- | ----------- |
 | key | [string](#string) |   |
