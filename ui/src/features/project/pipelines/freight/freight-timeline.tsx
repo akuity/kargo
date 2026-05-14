@@ -166,12 +166,11 @@ export const FreightTimeline = (props: { freights: Freight[]; project: string })
 
     const nextRight = +right.slice(0, -2) + 160;
 
-    if (nextRight >= (freightListStyleRef.current?.clientWidth || 0) / 2) {
-      // At the edge — load more items if available
-      if (visibleCount < filteredFreights.length) {
-        loadMore();
-      }
-      return;
+    if (
+      nextRight >= (freightListStyleRef.current?.clientWidth || 0) / 2 &&
+      visibleCount < filteredFreights.length
+    ) {
+      loadMore();
     }
 
     freightListStyleRef.current?.style.setProperty('right', `${nextRight}px`);

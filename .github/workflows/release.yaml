@@ -64,7 +64,7 @@ jobs:
       with:
         driver-opts: network=host
     - name: Install Cosign
-      uses: sigstore/cosign-installer@cad07c2e89fa2edd6e2d7bab4c1aa38e53f76003 # v4.1.1
+      uses: sigstore/cosign-installer@6f9f17788090df1f26f669e9d70d6ae9567deba6 # v4.1.2
       with:
         cosign-release: 'v2.2.1' # optional
     - name: Login to GHCR
@@ -231,7 +231,7 @@ jobs:
       contents: write
     runs-on: ubuntu-latest
     container:
-      image: &golangImage golang:1.26.2-trixie
+      image: &golangImage golang:1.26.3-trixie
     strategy:
       matrix:
         os: [linux, darwin, windows]
@@ -349,7 +349,7 @@ jobs:
       run: |
         apt update && apt install awscli -y
     - name: Configure AWS credentials
-      uses: aws-actions/configure-aws-credentials@ec61189d14ec14c8efccab744f656cffd0e33f37 # v6.1.0
+      uses: aws-actions/configure-aws-credentials@d979d5b3a71173a29b74b5b88418bfda9437d885 # v6.1.1
       with:
         role-to-assume: ${{ secrets.AWS_ROLE }}
         aws-region: us-west-2

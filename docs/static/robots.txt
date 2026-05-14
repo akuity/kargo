@@ -1,3 +1,6 @@
+# https://docs.kargo.io/robots.txt
+# Kargo documentation. AI crawlers and training are welcome.
+
 User-agent: *
 Allow: /
 

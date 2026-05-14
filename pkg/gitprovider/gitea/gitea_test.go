@@ -85,6 +85,7 @@ type mockGiteaClient struct {
 	owner              string
 	repo               string
 	issueLabelsOptions gitea.IssueLabelsOption
+	repoLabelsOpts     gitea.ListLabelsOptions
 	listOpts           gitea.ListPullRequestsOptions
 }
 
@@ -125,6 +126,26 @@ func (m *mockGiteaClient) GetPullRequest(
 		return pr, nil, args.Error(2)
 	}
 	return pr, resp, args.Error(2)
+}
+
+func (m *mockGiteaClient) ListRepoLabels(
+	owner string,
+	repo string,
+	opts gitea.ListLabelsOptions,
+) ([]*gitea.Label, *gitea.Response, error) {
+	args := m.Called(owner, repo, opts)
+	m.owner = owner
+	m.repo = repo
+	m.repoLabelsOpts = opts
+	labels, ok := args.Get(0).([]*gitea.Label)
+	if !ok {
+		return nil, nil, args.Error(2)
+	}
+	resp, ok := args.Get(1).(*gitea.Response)
+	if !ok {
+		return labels, nil, args.Error(2)
+	}
+	return labels, resp, args.Error(2)
 }
 
 func (m *mockGiteaClient) AddIssueLabels(
@@ -179,77 +200,244 @@ func (m *mockGiteaClient) CreatePullRequest(
 }
 
 func TestCreatePullRequest(t *testing.T) {
-	opts := gitprovider.CreatePullRequestOpts{
-		Head:        "feature-branch",
-		Base:        "main",
-		Title:       "title",
-		Description: "desc",
-	}
-
-	// set up mock
-	mockClient := &mockGiteaClient{
-		pr: &gitea.PullRequest{
-			Index: int64(42),
-			State: gitea.StateOpen,
-			Head: &gitea.PRBranchInfo{
-				Sha: "HeadSha",
+	testCases := []struct {
+		name      string
+		opts      gitprovider.CreatePullRequestOpts
+		setupMock func(*mockGiteaClient)
+		assert    func(*testing.T, *mockGiteaClient, *gitprovider.PullRequest, error)
+	}{
+		{
+			name: "no labels",
+			opts: gitprovider.CreatePullRequestOpts{
+				Head:        "feature-branch",
+				Base:        "main",
+				Title:       "title",
+				Description: "desc",
 			},
-			Base: &gitea.PRBranchInfo{
-				Sha: "BaseSha",
+			setupMock: func(m *mockGiteaClient) {
+				m.On("CreatePullRequest", testRepoOwner, testRepoName, mock.Anything).
+					Return(
+						&gitea.PullRequest{
+							Index:          int64(42),
+							State:          gitea.StateOpen,
+							Head:           &gitea.PRBranchInfo{Sha: "HeadSha"},
+							Base:           &gitea.PRBranchInfo{Sha: "BaseSha"},
+							HTMLURL:        "http://localhost:8080",
+							MergedCommitID: ptr.To("BaseSha"),
+							HasMerged:      false,
+							Created:        &time.Time{},
+						},
+						&gitea.Response{},
+						nil,
+					)
 			},
-			HTMLURL:        "http://localhost:8080",
-			MergedCommitID: ptr.To("2994fd93"),
-			HasMerged:      false,
+			assert: func(t *testing.T, m *mockGiteaClient, pr *gitprovider.PullRequest, err error) {
+				require.NoError(t, err)
+				require.Equal(t, testRepoOwner, m.owner)
+				require.Equal(t, testRepoName, m.repo)
+				require.Equal(t, "feature-branch", m.newPr.Head)
+				require.Equal(t, "main", m.newPr.Base)
+				require.Equal(t, "title", m.newPr.Title)
+				require.Equal(t, "desc", m.newPr.Body)
+				require.Equal(t, int64(42), pr.Number)
+				require.Equal(t, "BaseSha", pr.MergeCommitSHA)
+				require.Equal(t, "http://localhost:8080", pr.URL)
+				require.True(t, pr.Open)
+			},
+		},
+		{
+			name: "with labels",
+			opts: gitprovider.CreatePullRequestOpts{
+				Head:        "feature-branch",
+				Base:        "main",
+				Title:       "title",
+				Description: "desc",
+				Labels:      []string{"label1", "label2"},
+			},
+			setupMock: func(m *mockGiteaClient) {
+				m.On(
+					"ListRepoLabels",
+					testRepoOwner,
+					testRepoName,
+					gitea.ListLabelsOptions{
+						ListOptions: gitea.ListOptions{Page: 1},
+					},
+				).Return(
+					[]*gitea.Label{
+						{ID: 101, Name: "label1"},
+						{ID: 202, Name: "label2"},
+					},
+					&gitea.Response{},
+					nil,
+				)
+				m.On("CreatePullRequest", testRepoOwner, testRepoName, mock.Anything).
+					Return(
+						&gitea.PullRequest{
+							Index:          int64(42),
+							State:          gitea.StateOpen,
+							Head:           &gitea.PRBranchInfo{Sha: "HeadSha"},
+							Base:           &gitea.PRBranchInfo{Sha: "BaseSha"},
+							HTMLURL:        "http://localhost:8080",
+							MergedCommitID: ptr.To("BaseSha"),
+							HasMerged:      false,
+							Created:        &time.Time{},
+						},
+						&gitea.Response{},
+						nil,
+					)
+			},
+			assert: func(t *testing.T, m *mockGiteaClient, pr *gitprovider.PullRequest, err error) {
+				require.NoError(t, err)
+				require.Equal(t, testRepoOwner, m.owner)
+				require.Equal(t, testRepoName, m.repo)
+				require.Equal(t, "feature-branch", m.newPr.Head)
+				require.Equal(t, "main", m.newPr.Base)
+				require.Equal(t, "title", m.newPr.Title)
+				require.Equal(t, "desc", m.newPr.Body)
+				require.Equal(t, []int64{101, 202}, m.newPr.Labels)
+				require.Equal(t, int64(42), pr.Number)
+				require.Equal(t, "BaseSha", pr.MergeCommitSHA)
+				require.Equal(t, "http://localhost:8080", pr.URL)
+				require.True(t, pr.Open)
+				m.AssertNotCalled(
+					t,
+					"AddIssueLabels",
+					mock.Anything,
+					mock.Anything,
+					mock.Anything,
+					mock.Anything,
+				)
+			},
+		},
+		{
+			name: "missing labels",
+			opts: gitprovider.CreatePullRequestOpts{
+				Head:        "feature-branch",
+				Base:        "main",
+				Title:       "title",
+				Description: "desc",
+				Labels:      []string{"label1", "missing"},
+			},
+			setupMock: func(m *mockGiteaClient) {
+				m.On(
+					"ListRepoLabels",
+					testRepoOwner,
+					testRepoName,
+					gitea.ListLabelsOptions{
+						ListOptions: gitea.ListOptions{Page: 1},
+					},
+				).Return(
+					[]*gitea.Label{
+						{ID: 101, Name: "label1"},
+					},
+					&gitea.Response{},
+					nil,
+				)
+			},
+			assert: func(t *testing.T, m *mockGiteaClient, pr *gitprovider.PullRequest, err error) {
+				require.Nil(t, pr)
+				require.ErrorContains(t, err, "labels not found")
+				m.AssertNotCalled(t, "CreatePullRequest", mock.Anything, mock.Anything, mock.Anything)
+				m.AssertNotCalled(t, "AddIssueLabels", mock.Anything, mock.Anything, mock.Anything, mock.Anything)
+			},
+		},
+		{
+			name: "duplicate missing labels are reported only once",
+			opts: gitprovider.CreatePullRequestOpts{
+				Head:        "feature-branch",
+				Base:        "main",
+				Title:       "title",
+				Description: "desc",
+				Labels:      []string{"ghost-label", "ghost-label"},
+			},
+			setupMock: func(m *mockGiteaClient) {
+				m.On(
+					"ListRepoLabels",
+					testRepoOwner,
+					testRepoName,
+					gitea.ListLabelsOptions{
+						ListOptions: gitea.ListOptions{Page: 1},
+					},
+				).Return(
+					[]*gitea.Label{},
+					&gitea.Response{},
+					nil,
+				)
+			},
+			assert: func(t *testing.T, m *mockGiteaClient, pr *gitprovider.PullRequest, err error) {
+				require.Nil(t, pr)
+				require.ErrorContains(t, err, "ghost-label")
+				require.NotContains(t, err.Error(), "ghost-label, ghost-label")
+				m.AssertNotCalled(t, "CreatePullRequest", mock.Anything, mock.Anything, mock.Anything)
+			},
 		},
 	}
+	for _, testCase := range testCases {
+		t.Run(testCase.name, func(t *testing.T) {
+			t.Parallel()
+			mockClient := &mockGiteaClient{}
+			testCase.setupMock(mockClient)
+			g := provider{
+				owner:  testRepoOwner,
+				repo:   testRepoName,
+				client: mockClient,
+			}
+			pr, err := g.CreatePullRequest(t.Context(), &testCase.opts)
+			mockClient.AssertExpectations(t)
+			testCase.assert(t, mockClient, pr, err)
+		})
+	}
+}
+
+func TestResolveLabelIDsPagesThroughAllRepositoryLabels(t *testing.T) {
+	mockClient := &mockGiteaClient{}
 	mockClient.
-		On("CreatePullRequest", testRepoOwner, testRepoName, mock.Anything).
+		On(
+			"ListRepoLabels",
+			testRepoOwner,
+			testRepoName,
+			gitea.ListLabelsOptions{
+				ListOptions: gitea.ListOptions{Page: 1},
+			},
+		).
 		Return(
-			&gitea.PullRequest{
-				Index: int64(42),
-				State: gitea.StateOpen,
-				Head: &gitea.PRBranchInfo{
-					Sha: "HeadSha",
-				},
-				Base: &gitea.PRBranchInfo{
-					Sha: "BaseSha",
-				},
-				HTMLURL:        "http://localhost:8080",
-				MergedCommitID: ptr.To("BaseSha"),
-				HasMerged:      false,
-				Created:        &time.Time{},
+			[]*gitea.Label{
+				{ID: 101, Name: "label1"},
+			},
+			&gitea.Response{NextPage: 2},
+			nil,
+		).
+		Once()
+	mockClient.
+		On(
+			"ListRepoLabels",
+			testRepoOwner,
+			testRepoName,
+			gitea.ListLabelsOptions{
+				ListOptions: gitea.ListOptions{Page: 2},
+			},
+		).
+		Return(
+			[]*gitea.Label{
+				{ID: 202, Name: "label2"},
 			},
 			&gitea.Response{},
 			nil,
-		)
+		).
+		Once()
 
-	// call the code we are testing
 	g := provider{
 		owner:  testRepoOwner,
 		repo:   testRepoName,
 		client: mockClient,
 	}
-	pr, err := g.CreatePullRequest(t.Context(), &opts)
 
-	// assert that the expectations were met
+	labelIDs, err := g.resolveLabelIDs([]string{"label1", "label2"})
+
 	mockClient.AssertExpectations(t)
 
-	// other assertions
 	require.NoError(t, err)
-	require.Equal(t, testRepoOwner, mockClient.owner)
-	require.Equal(t, testRepoName, mockClient.repo)
-	require.Equal(t, opts.Head, mockClient.newPr.Head)
-	require.Equal(t, opts.Base, mockClient.newPr.Base)
-	require.Equal(t, opts.Title, mockClient.newPr.Title,
-		"Expected title in new PR request to match title from options")
-	require.Equal(t, opts.Description, mockClient.newPr.Body,
-		"Expected body in new PR request to match description from options")
-
-	require.Equal(t, mockClient.pr.Index, pr.Number,
-		"Expected PR number in returned object to match what was returned by gitea")
-	require.Equal(t, mockClient.pr.Base.Sha, pr.MergeCommitSHA)
-	require.Equal(t, mockClient.pr.HTMLURL, pr.URL)
-	require.True(t, pr.Open)
+	require.Equal(t, []int64{101, 202}, labelIDs)
 }
 
 func TestGetPullRequest(t *testing.T) {

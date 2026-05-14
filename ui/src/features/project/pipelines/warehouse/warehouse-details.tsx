@@ -15,6 +15,7 @@ import { generatePath, useNavigate, useParams, useSearchParams } from 'react-rou
 import { paths } from '@ui/config/paths';
 import { WarehouseExpanded } from '@ui/extend/types';
 import { AssembleFreight } from '@ui/features/assemble-freight/assemble-freight';
+import { useWarehouseWithClonedFreight } from '@ui/features/assemble-freight/use-warehouse-with-cloned-freight';
 import YamlEditor from '@ui/features/common/code-editor/yaml-editor-lazy';
 import {
   getFreight,
@@ -67,6 +68,10 @@ export const WarehouseDetails = ({
       enabled: !!cloneFreight && tab === 'create-freight'
     }
   );
+
+  const cloneFreightData = freightQuery.data?.result.value as Freight | undefined;
+
+  const warehouseWithClonedFreight = useWarehouseWithClonedFreight(warehouse, cloneFreightData);
 
   return (
     <Drawer
@@ -127,8 +132,8 @@ export const WarehouseDetails = ({
                 <Skeleton />
               ) : (
                 <AssembleFreight
-                  warehouse={warehouse}
-                  cloneFreight={freightQuery.data?.result.value as Freight}
+                  warehouse={warehouseWithClonedFreight}
+                  cloneFreight={cloneFreightData}
                   onSuccess={() => {
                     onClose();
                     refetchFreight();

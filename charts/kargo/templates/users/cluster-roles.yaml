@@ -39,7 +39,14 @@ rules:
   - stages
   - warehouses
   verbs:
-  - "*" # full access to all mutable Kargo resource types
+  - create
+  - delete
+  - deletecollection
+  - get
+  - list
+  - patch
+  - update
+  - watch
 - apiGroups:
   - kargo.akuity.io
   resources:
