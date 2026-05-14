@@ -26,7 +26,7 @@ artifact repositories, or if developers have
 you may have elected to reduce the frequency with which all `Warehouse`s execute
 their artifact discovery processes (i.e. You may have elected to _increase_ the
 minimum polling interval. See
-[Common Configurations](./20-advanced-installation/30-common-configurations.md#tuning-warehouse-reconciliation-intervals).
+[Common Configurations](./20-advanced-installation/30-common-configurations.md#tuning-reconciliation-intervals).
 )
 
 If you have done this, it may have relieved degraded performance and helped to

@@ -88,7 +88,7 @@ All pull requests must:
 
 - Follow existing code conventions and patterns.
 
-- Include DCO sign-off on all commits (see [Signing Commits](signing-commits)).
+- Include DCO sign-off on all commits (see [Signing Commits](./30-signing-commits.md)).
 
 - Include documentation updates where user-facing behavior has changed.
 

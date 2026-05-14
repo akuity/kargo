@@ -238,7 +238,7 @@ based on the context of the `Freight` being verified.
 
 For example, the following defines an argument `commit` with a value set to the
 commit hash that is being verified using the
-[`commitFrom` expression function](../60-reference-docs/40-expressions.md#commitfromrepourl-freightorigin):
+[`commitFrom` expression function](../60-reference-docs/40-expressions.md#commitfrom):
 
 ```yaml
 apiVersion: kargo.akuity.io/v1alpha1
