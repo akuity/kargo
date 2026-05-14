@@ -37,6 +37,15 @@ If authorship differing from any system-level default is required, configure it 
 
 ## Examples
 
+:::note
+
+Examples that reference previous step outputs assume the steps are defined
+directly in a `Stage`'s `spec.promotionTemplate`, where those outputs are
+referenced with `outputs`. In a `PromotionTask` or `ClusterPromotionTask`,
+use `task.outputs` instead.
+
+:::
+
 ### Common Usage
 
 In this example, the working tree is prepared by previous steps and then committed

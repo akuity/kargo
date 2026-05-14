@@ -41,6 +41,15 @@ transfer occurs in that case.
 
 ## Examples
 
+:::note
+
+Examples that reference previous step outputs assume the steps are defined
+directly in a `Stage`'s `spec.promotionTemplate`, where those outputs are
+referenced with `outputs`. In a `PromotionTask` or `ClusterPromotionTask`,
+use `task.outputs` instead.
+
+:::
+
 ### Retagging an Image with a Release Version
 
 In this example, a dedicated "release" Stage sits downstream from a testing

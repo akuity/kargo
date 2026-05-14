@@ -119,6 +119,15 @@ Valid values for `expectedConclusion`:
 
 ## Example
 
+:::note
+
+Examples that reference previous step outputs assume the steps are defined
+directly in a `Stage`'s `spec.promotionTemplate`, where those outputs are
+referenced with `outputs`. In a `PromotionTask` or `ClusterPromotionTask`,
+use `task.outputs` instead.
+
+:::
+
 ### v1.9 and Above
 
 This example waits for a previously dispatched workflow to complete successfully using the new configuration format.
