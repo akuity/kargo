@@ -626,6 +626,10 @@ func (in *Freight) DeepCopyInto(out *Freight) {
 	*out = *in
 	out.TypeMeta = in.TypeMeta
 	in.ObjectMeta.DeepCopyInto(&out.ObjectMeta)
+	if in.DiscoveryTimestamp != nil {
+		in, out := &in.DiscoveryTimestamp, &out.DiscoveryTimestamp
+		*out = (*in).DeepCopy()
+	}
 	out.Origin = in.Origin
 	if in.Commits != nil {
 		in, out := &in.Commits, &out.Commits

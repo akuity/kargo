@@ -147,6 +147,13 @@ spec:
                   type: string
               type: object
             type: array
+          discoveryTimestamp:
+            description: |-
+              DiscoveryTimestamp is the time at which the Freight was first discovered
+              from its source. This is distinct from metadata.creationTimestamp, which is
+              set by Kubernetes and cannot be controlled by users.
+            format: date-time
+            type: string
           images:
             description: Images describes specific versions of specific container
               images.

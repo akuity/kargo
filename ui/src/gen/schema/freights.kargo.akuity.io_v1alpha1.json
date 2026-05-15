@@ -103,6 +103,11 @@
       },
       "type": "array"
     },
+    "discoveryTimestamp": {
+      "description": "DiscoveryTimestamp is the time at which the Freight was first discovered\nfrom its source. This is distinct from metadata.creationTimestamp, which is\nset by Kubernetes and cannot be controlled by users.",
+      "format": "date-time",
+      "type": "string"
+    },
     "images": {
       "description": "Images describes specific versions of specific container images.",
       "items": {

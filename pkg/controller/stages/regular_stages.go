@@ -1721,10 +1721,18 @@ func (r *RegularStageReconciler) autoPromoteFreight(
 			)
 		}
 
-		// Find the latest Freight by sorting the available Freight by creation time
+		// Find the latest Freight by sorting the available Freight by discovery time
 		// in descending order.
 		slices.SortFunc(freight, func(lhs, rhs kargoapi.Freight) int {
-			return rhs.CreationTimestamp.Compare(lhs.CreationTimestamp.Time)
+			lhsTime := lhs.DiscoveryTimestamp
+			if lhsTime == nil {
+				lhsTime = &lhs.CreationTimestamp
+			}
+			rhsTime := rhs.DiscoveryTimestamp
+			if rhsTime == nil {
+				rhsTime = &rhs.CreationTimestamp
+			}
+			return rhsTime.Compare(lhsTime.Time)
 		})
 		latestFreight := freight[0]
 
@@ -1812,9 +1820,18 @@ func (r *RegularStageReconciler) autoPromoteFreight(
 				)
 			}
 			if len(promotions.Items) > 0 {
-				// Sort the terminal Promotions by creation time in descending order
+
+				// Sort the terminal Promotions by started time in descending order
 				slices.SortFunc(promotions.Items, func(lhs, rhs kargoapi.Promotion) int {
-					return rhs.CreationTimestamp.Compare(lhs.CreationTimestamp.Time)
+					lhsTime := lhs.Status.StartedAt
+					if lhsTime == nil {
+						lhsTime = &lhs.CreationTimestamp
+					}
+					rhsTime := rhs.Status.StartedAt
+					if rhsTime == nil {
+						rhsTime = &rhs.CreationTimestamp
+					}
+					return rhsTime.Compare(lhsTime.Time)
 				})
 				newestPromotion := promotions.Items[0]
 				if newestPromotion.Status.Phase != kargoapi.PromotionPhaseSucceeded {
