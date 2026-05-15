@@ -62,7 +62,7 @@ The following deprecated features are scheduled for **removal** in v1.12.0:
   `git-clone` instead.
 * The default `git-push` integration policy changes from `AlwaysRebase` to
   `RebaseOrMerge`. Set the policy explicitly if you rely on unconditional
-  rebase behavior
+  rebase behavior.
 
 ## Completed
 
