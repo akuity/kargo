@@ -85,7 +85,9 @@ func (o *apiOptions) run(ctx context.Context) error {
 	kubernetes.ConfigureQPSBurst(ctx, restCfg, o.QPS, o.Burst)
 	serverCfg.RestConfig = restCfg
 
-	kubeClientOptions := kubernetes.ClientOptions{}
+	kubeClientOptions := kubernetes.ClientOptions{
+		KargoNamespace: serverCfg.KargoNamespace,
+	}
 	if serverCfg.OIDCConfig != nil {
 		kubeClientOptions.GlobalServiceAccountNamespaces = serverCfg.OIDCConfig.GlobalServiceAccountNamespaces
 	}

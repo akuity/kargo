@@ -7,6 +7,7 @@ metadata:
   labels:
     {{- include "kargo.labels" . | nindent 4 }}
     {{- include "kargo.kubernetesWebhooksServer.labels" . | nindent 4 }}
+  {{- include "kargo.annotations" (dict "root" . "annotations" .Values.webhooksServer.annotations) | nindent 2 }}
 data:
   KARGO_NAMESPACE: {{ .Release.Namespace }}
   LOG_LEVEL: {{ quote .Values.webhooksServer.logLevel }}
@@ -20,5 +21,6 @@ data:
   CONTROLPLANE_USER_REGEX: {{ include "kargo.controlplane.defaultUserRegex" . }}
   {{- end }}
   MANAGEMENT_CONTROLLER_USERNAME: system:serviceaccount:{{ .Release.Namespace }}:kargo-management-controller
+  EXTERNAL_WEBHOOKS_SERVER_USERNAME: system:serviceaccount:{{ .Release.Namespace }}:kargo-external-webhooks-server
   CACHE_BY_TAG_POLICY: {{ quote .Values.controller.images.cache.cacheByTagPolicy }}
 {{- end }}

@@ -68,21 +68,42 @@ export const useWatchFreight = (project: string) => {
         }
 
         const currentFreight = queryCache.freight.get(project);
-        const updatedFreight =
-          e.type === 'DELETED'
-            ? deleteFreight(currentFreight, freight)
-            : upsertFreight(currentFreight, freight);
 
-        const queryFreightKey = createConnectQueryKey({
-          cardinality: 'finite',
-          schema: queryFreight,
-          input: {
-            project
-          },
-          transport: transportWithAuth
-        });
+        // Skip ADDED events for freight that already exists in the cache.
+        // Kubernetes watches replay all existing objects as ADDED on connect,
+        // which duplicates the initial GET and causes unnecessary re-renders.
+        if (e.type === 'ADDED') {
+          const existing = currentFreight?.groups?.['']?.freight || [];
+          if (existing.some((f) => f?.metadata?.name === freight?.metadata?.name)) {
+            continue;
+          }
+        }
 
-        client.setQueryData(queryFreightKey, updatedFreight);
+        if (e.type === 'DELETED') {
+          // Remove from all queryFreight caches for this project, including
+          // warehouse-filtered variants, which use a different cache key.
+          client.setQueriesData<QueryFreightResponse>(
+            {
+              queryKey: createConnectQueryKey({
+                cardinality: 'finite',
+                schema: queryFreight,
+                input: { project },
+                transport: transportWithAuth
+              }),
+              exact: false
+            },
+            (current) => deleteFreight(current, freight)
+          );
+        } else {
+          const updatedFreight = upsertFreight(currentFreight, freight);
+          const queryFreightKey = createConnectQueryKey({
+            cardinality: 'finite',
+            schema: queryFreight,
+            input: { project },
+            transport: transportWithAuth
+          });
+          client.setQueryData(queryFreightKey, updatedFreight);
+        }
       }
     };
 

@@ -20,6 +20,7 @@ CONTAINER_RUNTIME ?= docker
 IMAGE_REPO 			?= kargo
 LOCAL_REG_PORT			?= 5001
 BASE_IMAGE 			?= localhost:$(LOCAL_REG_PORT)/$(IMAGE_REPO)-base
+APKO_IMAGE 			?= cgr.dev/chainguard/apko
 IMAGE_TAG 			?= dev
 IMAGE_PUSH 			?= false
 IMAGE_PLATFORMS 	?=
@@ -168,12 +169,13 @@ clean:
 .PHONY: build-base-image
 build-base-image:
 	mkdir -p build
+	chmod 0777 build
 	cp kargo-base.apko.yaml build
 	$(CONTAINER_RUNTIME) run \
 		--rm \
 		-v $(dir $(realpath $(firstword $(MAKEFILE_LIST))))build:/build \
 		-w /build \
-		cgr.dev/chainguard/apko \
+		$(APKO_IMAGE) \
 		build kargo-base.apko.yaml $(BASE_IMAGE) kargo-base.tar.gz
 	$(CONTAINER_RUNTIME) image load -i build/kargo-base.tar.gz
 
@@ -183,6 +185,25 @@ build-cli:
 		-ldflags "-w -X $(VERSION_PACKAGE).version=$(VERSION) -X $(VERSION_PACKAGE).buildDate=$$(date -u +'%Y-%m-%dT%H:%M:%SZ') -X $(VERSION_PACKAGE).gitCommit=$(GIT_COMMIT) -X $(VERSION_PACKAGE).gitTreeState=$(GIT_TREE_STATE)" \
 		-o bin/kargo-$(GOOS)-$(GOARCH)$(shell [ ${GOOS} = windows ] && echo .exe) \
 		./cmd/cli
+
+.PHONY: build-governance-bot
+build-governance-bot:
+	CGO_ENABLED=0 go build \
+		-ldflags "-w -s" \
+		-o bin/governance-bot \
+		./cmd/governance-bot
+
+.PHONY: build-governance-bot-lambda
+build-governance-bot-lambda:
+	GOOS=linux GOARCH=arm64 CGO_ENABLED=0 go build \
+		-ldflags "-w -s" \
+		-o bin/governance-bot-lambda/bootstrap \
+		./cmd/governance-bot
+
+.PHONY: package-governance-bot-lambda
+package-governance-bot-lambda: build-governance-bot-lambda
+	cd bin/governance-bot-lambda && zip -j governance-bot.zip bootstrap
+	@echo "Package ready: bin/governance-bot-lambda/governance-bot.zip"
 
 .PHONY: sign-and-notarize-cli
 sign-and-notarize-cli: install-quill
@@ -379,6 +400,11 @@ hack-build: build-base-image
 hack-build-cli: hack-build-dev-tools
 	@# Local values of GOOS and GOARCH get passed into the container.
 	$(DOCKER_CMD) sh -c 'GOOS=$(GOOS) GOARCH=$(GOARCH) make build-cli'
+
+.PHONY: hack-build-governance-bot
+hack-build-governance-bot: hack-build-dev-tools
+	@# Local values of GOOS and GOARCH get passed into the container.
+	$(DOCKER_CMD) sh -c 'GOOS=$(GOOS) GOARCH=$(GOARCH) make build-governance-bot'
 
 .PHONY: hack-kind-up
 hack-kind-up: install-ctlptl install-kind

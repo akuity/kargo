@@ -7,12 +7,7 @@ metadata:
   labels:
     {{- include "kargo.labels" . | nindent 4 }}
     {{- include "kargo.api.labels" . | nindent 4 }}
-  {{- with (mergeOverwrite (deepCopy .Values.global.annotations) .Values.api.ingress.annotations) }}
-  annotations:
-    {{- range $key, $value := . }}
-    {{ $key }}: {{ $value | quote }}
-    {{- end }}
-  {{- end }}
+  {{- include "kargo.annotations" (dict "root" . "annotations" .Values.api.ingress.annotations) | nindent 2 }}
 spec:
   {{- if .Values.api.ingress.ingressClassName }}
   ingressClassName: {{ .Values.api.ingress.ingressClassName }}

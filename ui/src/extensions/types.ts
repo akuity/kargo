@@ -53,6 +53,7 @@ export type SettingsExtension = {
   label: string;
   icon: IconProp;
   path: string;
+  group?: string;
 };
 
 export type ProjectSettingsExtension = {

@@ -26,7 +26,7 @@ artifact repositories, or if developers have
 you may have elected to reduce the frequency with which all `Warehouse`s execute
 their artifact discovery processes (i.e. You may have elected to _increase_ the
 minimum polling interval. See
-[Common Configurations](./20-advanced-installation/30-common-configurations.md#tuning-warehouse-reconciliation-intervals).
+[Common Configurations](./20-advanced-installation/30-common-configurations.md#tuning-reconciliation-intervals).
 )
 
 If you have done this, it may have relieved degraded performance and helped to
@@ -242,6 +242,12 @@ the list of changed files and evaluates each matching Warehouse's
 `includePaths` and `excludePaths` filters. Only Warehouses with path filters
 that match the changed files are refreshed. Warehouses without path filters
 configured are always refreshed.
+
+For providers that support pull request events (such as GitHub), the receiver
+also refreshes any running `Promotion` that is waiting on the affected pull
+request via a
+[`git-wait-for-pr`](../50-user-guide/60-reference-docs/30-promotion-steps/git-wait-for-pr.md)
+step.
 
 ## Cluster Message Channels
 

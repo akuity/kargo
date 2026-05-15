@@ -7,12 +7,7 @@ metadata:
   labels:
     {{- include "kargo.labels" . | nindent 4 }}
     {{- include "kargo.externalWebhooksServer.labels" . | nindent 4 }}
-  {{- with (mergeOverwrite (deepCopy .Values.global.annotations) .Values.externalWebhooksServer.ingress.annotations) }}
-  annotations:
-    {{- range $key, $value := . }}
-    {{ $key }}: {{ $value | quote }}
-    {{- end }}
-  {{- end }}
+  {{- include "kargo.annotations" (dict "root" . "annotations" .Values.externalWebhooksServer.ingress.annotations) | nindent 2 }}
 spec:
   {{- if .Values.externalWebhooksServer.ingress.ingressClassName }}
   ingressClassName: {{ .Values.externalWebhooksServer.ingress.ingressClassName }}

@@ -107,7 +107,10 @@ func TestMergePullRequest(t *testing.T) {
 					return &adogit.GitPullRequest{
 						PullRequestId: ptr.To(123),
 						Status:        ptr.To(adogit.PullRequestStatusValues.Completed),
-						Url:           ptr.To("https://dev.azure.com/org/project/_git/repo/pullrequest/123"),
+						Repository: &adogit.GitRepository{
+							WebUrl: ptr.To("https://dev.azure.com/org/project/_git/repo"),
+						},
+						Url: ptr.To("https://dev.azure.com/org/project/_git/repo/pullrequest/123"),
 						LastMergeSourceCommit: &adogit.GitCommitRef{
 							CommitId: ptr.To("head_sha"),
 						},

@@ -445,6 +445,7 @@ type GenericWebhookTargetKind string
 
 const (
 	GenericWebhookTargetKindWarehouse GenericWebhookTargetKind = "Warehouse"
+	GenericWebhookTargetKindPromotion GenericWebhookTargetKind = "Promotion"
 )
 
 // IndexSelector defines selection criteria that match resources on the basis of

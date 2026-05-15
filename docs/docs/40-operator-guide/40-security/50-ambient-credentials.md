@@ -105,6 +105,16 @@ have WIF enabled automatically.
 
 :::
 
+:::note
+
+On GKE Autopilot and some standard GKE clusters, the instance metadata
+server may not be immediately reachable when the Kargo controller pod
+first starts. If WIF initialization fails for this reason, Kargo will
+automatically retry on the next credential request — no pod restart is
+required.
+
+:::
+
 With WIF enabled,
 [GCP Identity and Access Management](https://cloud.google.com/iam/docs/overview)
 (IAM) automatically understands a

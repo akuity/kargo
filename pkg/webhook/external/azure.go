@@ -26,6 +26,9 @@ const (
 
 	acrUserAgentPrefix         = "AzureContainerRegistry"
 	azureDevOpsUserAgentPrefix = "VSServices"
+
+	azureDevOpsPRMergedEvent  = "git.pullrequest.merged"
+	azureDevOpsPRUpdatedEvent = "git.pullrequest.updated"
 )
 
 func init() {
@@ -171,7 +174,33 @@ func (a *azureWebhookReceiver) handleAzureDevOpsEvent(
 		return
 	}
 
-	if event.EventType != azureDevOpsPushEvent {
+	logger := logging.LoggerFromContext(ctx)
+
+	switch event.EventType {
+	case azureDevOpsPushEvent:
+		repoURLs := []string{urls.NormalizeGit(event.Resource.Repository.RemoteURL)}
+		refs := event.getRefs()
+		logger = logger.WithValues(
+			"repoURLs", repoURLs,
+			"refs", refs,
+		)
+		ctx = logging.ContextWithLogger(ctx, logger)
+		refreshWarehouses(ctx, w, a.client, a.project, repoURLs, nil, refs...)
+	case azureDevOpsPRMergedEvent:
+		prURL := event.Resource.Links.Web.Href
+		logger = logger.WithValues("prURL", prURL)
+		ctx = logging.ContextWithLogger(ctx, logger)
+		refreshPromotionsByPrURL(ctx, w, a.client, a.project, prURL)
+	case azureDevOpsPRUpdatedEvent:
+		if event.Resource.Status != "abandoned" {
+			xhttp.WriteResponseJSON(w, http.StatusOK, nil)
+			return
+		}
+		prURL := event.Resource.Links.Web.Href
+		logger = logger.WithValues("prURL", prURL)
+		ctx = logging.ContextWithLogger(ctx, logger)
+		refreshPromotionsByPrURL(ctx, w, a.client, a.project, prURL)
+	default:
 		xhttp.WriteErrorJSON(
 			w,
 			xhttp.Error(
@@ -179,18 +208,7 @@ func (a *azureWebhookReceiver) handleAzureDevOpsEvent(
 				http.StatusBadRequest,
 			),
 		)
-		return
 	}
-
-	repoURLs := []string{urls.NormalizeGit(event.Resource.Repository.RemoteURL)}
-	logger := logging.LoggerFromContext(ctx)
-	refs := event.getRefs()
-	logger = logger.WithValues(
-		"repoURLs", repoURLs,
-		"refs", refs,
-	)
-	ctx = logging.ContextWithLogger(ctx, logger)
-	refreshWarehouses(ctx, w, a.client, a.project, repoURLs, nil, refs...)
 }
 
 // acrEvent represents the payload for Azure Container Registry webhooks.
@@ -216,12 +234,19 @@ type acrEvent struct {
 // For information on payload schemas for Azure DevOps, see:
 //
 //	Azure DevOps
-//		https://learn.microsoft.com/en-us/azure/devops/service-hooks/services/webhooks?view=azure-devops#resource-details-to-send
+//		https://learn.microsoft.com/en-us/azure/devops/service-hooks/events?view=azure-devops
 //
 // nolint:lll
 type azureDevOpsEvent struct {
 	EventType string `json:"eventType,omitempty"`
 	Resource  struct {
+		PullRequestID int    `json:"pullRequestId,omitempty"`
+		Status        string `json:"status,omitempty"`
+		Links         struct {
+			Web struct {
+				Href string `json:"href,omitempty"`
+			} `json:"web,omitempty"`
+		} `json:"_links,omitempty"`
 		RefUpdates []struct {
 			Name string `json:"name,omitempty"`
 		} `json:"refUpdates,omitempty"`

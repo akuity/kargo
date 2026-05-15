@@ -8,6 +8,11 @@ metadata:
     {{- include "kargo.controller.labels" . | nindent 4 }}
   annotations:
     cert-manager.io/inject-ca-from: {{ .Release.Namespace }}/kargo-webhooks-server
+  {{- with (mergeOverwrite (deepCopy .Values.global.annotations) .Values.webhooksServer.annotations) }}
+    {{- range $key, $value := . }}
+    {{ $key }}: {{ $value | quote }}
+    {{- end }}
+  {{- end }}
 webhooks:
 - name: freight.kargo.akuity.io
   admissionReviewVersions: ["v1"]
@@ -91,6 +96,11 @@ metadata:
     {{- include "kargo.controller.labels" . | nindent 4 }}
   annotations:
     cert-manager.io/inject-ca-from: {{ .Release.Namespace }}/kargo-webhooks-server
+  {{- with (mergeOverwrite (deepCopy .Values.global.annotations) .Values.webhooksServer.annotations) }}
+    {{- range $key, $value := . }}
+    {{ $key }}: {{ $value | quote }}
+    {{- end }}
+  {{- end }}
 webhooks:
 - name: clusterconfig.kargo.akuity.io
   admissionReviewVersions: ["v1"]

@@ -42,6 +42,13 @@ type PredicateBasedRegistry[PA any, P Predicate[PA], V, MD any] interface {
 		PredicateBasedRegistration[PA, P, V, MD],
 		error,
 	)
+	// GetAll searches for all matching registrations by evaluating each
+	// registration's predicate against the provided input. Returns all matching
+	// registrations, or an empty slice if none match.
+	GetAll(context.Context, PA) (
+		[]PredicateBasedRegistration[PA, P, V, MD],
+		error,
+	)
 }
 
 // NewPredicateBasedRegistry returns a default implementation of the

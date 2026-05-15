@@ -93,7 +93,7 @@ func (g *gitlabWebhookReceiver) getHandler(requestBody []byte) http.HandlerFunc 
 
 		eventType := gl.HookEventType(r)
 		switch eventType {
-		case gl.EventTypePush, gl.EventTypeTagPush:
+		case gl.EventTypeMergeRequest, gl.EventTypePush, gl.EventTypeTagPush:
 		default:
 			xhttp.WriteErrorJSON(
 				w,
@@ -118,47 +118,85 @@ func (g *gitlabWebhookReceiver) getHandler(requestBody []byte) http.HandlerFunc 
 		}
 
 		switch e := event.(type) {
+		case *gl.MergeEvent:
+			g.handleMergeRequestEvent(ctx, w, e)
 		case *gl.PushEvent:
-			var repoURLs []string
-			if e.Repository != nil {
-				repoURLs = []string{
-					urls.NormalizeGit(e.Repository.GitHTTPURL),
-					urls.NormalizeGit(e.Repository.GitSSHURL),
-				}
-			}
-			var changedFiles []string
-			if e.TotalCommitsCount > int64(len(e.Commits)) {
-				logger.Info(
-					"push event commits were truncated by GitLab; "+
-						"skipping path filtering for this event",
-					"totalCommits", e.TotalCommitsCount,
-					"receivedCommits", len(e.Commits),
-				)
-			} else {
-				changedFiles = collectPaths(e.Commits, func(c *gl.PushEventCommit) []string {
-					return slices.Concat(c.Added, c.Modified, c.Removed)
-				})
-			}
-			logger = logger.WithValues(
-				"repoURLs", repoURLs,
-				"ref", e.Ref,
-			)
-			ctx = logging.ContextWithLogger(ctx, logger)
-			refreshWarehouses(ctx, w, g.client, g.project, repoURLs, changedFiles, e.Ref)
+			g.handlePushEvent(ctx, w, e)
 		case *gl.TagEvent:
-			var repoURLs []string
-			if e.Repository != nil {
-				repoURLs = []string{
-					urls.NormalizeGit(e.Repository.GitHTTPURL),
-					urls.NormalizeGit(e.Repository.GitSSHURL),
-				}
-			}
-			logger = logger.WithValues(
-				"repoURLs", repoURLs,
-				"tag", e.Ref,
-			)
-			ctx = logging.ContextWithLogger(ctx, logger)
-			refreshWarehouses(ctx, w, g.client, g.project, repoURLs, nil, e.Ref)
+			g.handleTagPushEvent(ctx, w, e)
 		}
 	})
+}
+
+func (g *gitlabWebhookReceiver) handleMergeRequestEvent(
+	ctx context.Context,
+	w http.ResponseWriter,
+	e *gl.MergeEvent,
+) {
+	action := e.ObjectAttributes.Action
+	if action != "close" && action != "merge" {
+		xhttp.WriteResponseJSON(w, http.StatusOK, nil)
+		return
+	}
+	prURL := e.ObjectAttributes.URL
+	logger := logging.LoggerFromContext(ctx)
+	logger = logger.WithValues("prURL", prURL)
+	ctx = logging.ContextWithLogger(ctx, logger)
+	refreshPromotionsByPrURL(ctx, w, g.client, g.project, prURL)
+}
+
+func (g *gitlabWebhookReceiver) handlePushEvent(
+	ctx context.Context,
+	w http.ResponseWriter,
+	e *gl.PushEvent,
+) {
+	logger := logging.LoggerFromContext(ctx)
+
+	var repoURLs []string
+	if e.Repository != nil {
+		repoURLs = []string{
+			urls.NormalizeGit(e.Repository.GitHTTPURL),
+			urls.NormalizeGit(e.Repository.GitSSHURL),
+		}
+	}
+	var changedFiles []string
+	if e.TotalCommitsCount > int64(len(e.Commits)) {
+		logger.Info(
+			"push event commits were truncated by GitLab; "+
+				"skipping path filtering for this event",
+			"totalCommits", e.TotalCommitsCount,
+			"receivedCommits", len(e.Commits),
+		)
+	} else {
+		changedFiles = collectPaths(e.Commits, func(c *gl.PushEventCommit) []string {
+			return slices.Concat(c.Added, c.Modified, c.Removed)
+		})
+	}
+	logger = logger.WithValues(
+		"repoURLs", repoURLs,
+		"ref", e.Ref,
+	)
+	ctx = logging.ContextWithLogger(ctx, logger)
+	refreshWarehouses(ctx, w, g.client, g.project, repoURLs, changedFiles, e.Ref)
+}
+
+func (g *gitlabWebhookReceiver) handleTagPushEvent(
+	ctx context.Context,
+	w http.ResponseWriter,
+	e *gl.TagEvent,
+) {
+	var repoURLs []string
+	if e.Repository != nil {
+		repoURLs = []string{
+			urls.NormalizeGit(e.Repository.GitHTTPURL),
+			urls.NormalizeGit(e.Repository.GitSSHURL),
+		}
+	}
+	logger := logging.LoggerFromContext(ctx)
+	logger = logger.WithValues(
+		"repoURLs", repoURLs,
+		"tag", e.Ref,
+	)
+	ctx = logging.ContextWithLogger(ctx, logger)
+	refreshWarehouses(ctx, w, g.client, g.project, repoURLs, nil, e.Ref)
 }

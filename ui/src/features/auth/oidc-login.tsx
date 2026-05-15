@@ -16,6 +16,7 @@ import {
 import React from 'react';
 import { useLocation } from 'react-router-dom';
 
+import { isSafeRedirectPath } from '@ui/config/auth';
 import { OIDCConfig } from '@ui/gen/api/service/v1alpha1/service_pb';
 
 import { useAuthContext } from './context/use-auth-context';
@@ -151,7 +152,7 @@ export const OIDCLogin = ({ oidcConfig }: Props) => {
         if (platformRedirect) {
           const redirectTo = new URLSearchParams(platformRedirect).get('redirectTo');
 
-          if (redirectTo) {
+          if (isSafeRedirectPath(redirectTo)) {
             window.location.replace(window.location.origin + redirectTo);
           }
         }
