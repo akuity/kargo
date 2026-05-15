@@ -44,7 +44,7 @@ GetStageLinksOK describes a response with status code 200, with default header v
 OK
 */
 type GetStageLinksOK struct {
-	Payload *models.PkgServerGetStageLinksResponse
+	Payload *models.GetStageLinksResponse
 }
 
 // IsSuccess returns true when this get stage links o k response has a 2xx status code
@@ -87,13 +87,13 @@ func (o *GetStageLinksOK) String() string {
 	return fmt.Sprintf("[GET /v1beta1/projects/{project}/stages/{stage}/links][%d] getStageLinksOK %s", 200, payload)
 }
 
-func (o *GetStageLinksOK) GetPayload() *models.PkgServerGetStageLinksResponse {
+func (o *GetStageLinksOK) GetPayload() *models.GetStageLinksResponse {
 	return o.Payload
 }
 
 func (o *GetStageLinksOK) readResponse(response runtime.ClientResponse, consumer runtime.Consumer, formats strfmt.Registry) error {
 
-	o.Payload = new(models.PkgServerGetStageLinksResponse)
+	o.Payload = new(models.GetStageLinksResponse)
 
 	// response payload
 	if err := consumer.Consume(response.Body(), o.Payload); err != nil && !stderrors.Is(err, io.EOF) {

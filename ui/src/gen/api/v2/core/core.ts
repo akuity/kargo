@@ -27,13 +27,13 @@ import type {
   ClusterPromotionTaskList,
   CreateConfigMapRequestBody,
   Freight,
+  GetFreightLinksResponse,
+  GetStageLinksResponse,
   ListImages200,
   ListPromotionsParams,
   ListStagesParams,
   PatchConfigMapRequestBody,
   PatchFreightAliasParams,
-  PkgServerGetFreightLinksResponse,
-  PkgServerGetStageLinksResponse,
   Project,
   ProjectConfig,
   ProjectList,
@@ -2032,7 +2032,7 @@ from ProjectConfig.
  * @summary Retrieve deep links for a Freight resource
  */
 export type getFreightLinksResponse200 = {
-  data: PkgServerGetFreightLinksResponse;
+  data: GetFreightLinksResponse;
   status: 200;
 };
 
@@ -3419,7 +3419,7 @@ from ProjectConfig.
  * @summary Retrieve deep links for a Stage resource
  */
 export type getStageLinksResponse200 = {
-  data: PkgServerGetStageLinksResponse;
+  data: GetStageLinksResponse;
   status: 200;
 };
 

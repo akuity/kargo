@@ -17,7 +17,7 @@ import (
 type getStageLinksResponse struct {
 	Links  []deeplinks.ResolvedLink `json:"links"`
 	Errors []string                 `json:"errors,omitempty"`
-}
+} // @name GetStageLinksResponse
 
 // @id GetStageLinks
 // @Summary Retrieve deep links for a Stage resource

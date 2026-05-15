@@ -28,7 +28,7 @@ type ResolvedLink struct {
 	Title       string `json:"title"`
 	URL         string `json:"url"`
 	Description string `json:"description,omitempty"`
-}
+} // @name ResolvedLink
 
 // EvaluateLinks evaluates each DeepLink against ctx, applying any If
 // conditions and resolving URL templates. Links whose conditions evaluate to

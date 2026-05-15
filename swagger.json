@@ -1159,7 +1159,7 @@
           "200": {
             "description": "OK",
             "schema": {
-              "$ref": "#/definitions/pkg_server.getFreightLinksResponse"
+              "$ref": "#/definitions/GetFreightLinksResponse"
             }
           }
         }
@@ -2518,7 +2518,7 @@
           "200": {
             "description": "OK",
             "schema": {
-              "$ref": "#/definitions/pkg_server.getStageLinksResponse"
+              "$ref": "#/definitions/GetStageLinksResponse"
             }
           }
         }
@@ -4945,6 +4945,40 @@
         }
       }
     },
+    "GetFreightLinksResponse": {
+      "type": "object",
+      "properties": {
+        "errors": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        },
+        "links": {
+          "type": "array",
+          "items": {
+            "$ref": "#/definitions/ResolvedLink"
+          }
+        }
+      }
+    },
+    "GetStageLinksResponse": {
+      "type": "object",
+      "properties": {
+        "errors": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        },
+        "links": {
+          "type": "array",
+          "items": {
+            "$ref": "#/definitions/ResolvedLink"
+          }
+        }
+      }
+    },
     "GrantRequest": {
       "type": "object",
       "properties": {
@@ -5120,6 +5154,20 @@
         },
         "skipAuth": {
           "type": "boolean"
+        }
+      }
+    },
+    "ResolvedLink": {
+      "type": "object",
+      "properties": {
+        "description": {
+          "type": "string"
+        },
+        "title": {
+          "type": "string"
+        },
+        "url": {
+          "type": "string"
         }
       }
     },
@@ -8336,20 +8384,6 @@
         }
       }
     },
-    "github_com_akuity_kargo_pkg_deeplinks.ResolvedLink": {
-      "type": "object",
-      "properties": {
-        "description": {
-          "type": "string"
-        },
-        "title": {
-          "type": "string"
-        },
-        "url": {
-          "type": "string"
-        }
-      }
-    },
     "IntOrString": {
       "type": "object",
       "properties": {
@@ -8516,40 +8550,6 @@
         "request": {
           "description": "Request is the name chosen for a request in the referenced claim.\nIf empty, everything from the claim is made available, otherwise\nonly the result of this request.\n\n+optional",
           "type": "string"
-        }
-      }
-    },
-    "pkg_server.getFreightLinksResponse": {
-      "type": "object",
-      "properties": {
-        "errors": {
-          "type": "array",
-          "items": {
-            "type": "string"
-          }
-        },
-        "links": {
-          "type": "array",
-          "items": {
-            "$ref": "#/definitions/github_com_akuity_kargo_pkg_deeplinks.ResolvedLink"
-          }
-        }
-      }
-    },
-    "pkg_server.getStageLinksResponse": {
-      "type": "object",
-      "properties": {
-        "errors": {
-          "type": "array",
-          "items": {
-            "type": "string"
-          }
-        },
-        "links": {
-          "type": "array",
-          "items": {
-            "$ref": "#/definitions/github_com_akuity_kargo_pkg_deeplinks.ResolvedLink"
-          }
         }
       }
     },

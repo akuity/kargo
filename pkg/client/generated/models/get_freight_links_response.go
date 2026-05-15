@@ -12,20 +12,20 @@ import (
 	"github.com/go-openapi/swag"
 )
 
-// PkgServerGetStageLinksResponse pkg server get stage links response
+// GetFreightLinksResponse get freight links response
 //
-// swagger:model pkg_server.getStageLinksResponse
-type PkgServerGetStageLinksResponse struct {
+// swagger:model GetFreightLinksResponse
+type GetFreightLinksResponse struct {
 
 	// errors
 	Errors []string `json:"errors"`
 
 	// links
-	Links []*GithubComAkuityKargoPkgDeeplinksResolvedLink `json:"links"`
+	Links []*ResolvedLink `json:"links"`
 }
 
-// Validate validates this pkg server get stage links response
-func (m *PkgServerGetStageLinksResponse) Validate(formats strfmt.Registry) error {
+// Validate validates this get freight links response
+func (m *GetFreightLinksResponse) Validate(formats strfmt.Registry) error {
 	var res []error
 
 	if err := m.validateLinks(formats); err != nil {
@@ -38,7 +38,7 @@ func (m *PkgServerGetStageLinksResponse) Validate(formats strfmt.Registry) error
 	return nil
 }
 
-func (m *PkgServerGetStageLinksResponse) validateLinks(formats strfmt.Registry) error {
+func (m *GetFreightLinksResponse) validateLinks(formats strfmt.Registry) error {
 	if swag.IsZero(m.Links) { // not required
 		return nil
 	}
@@ -68,8 +68,8 @@ func (m *PkgServerGetStageLinksResponse) validateLinks(formats strfmt.Registry) 
 	return nil
 }
 
-// ContextValidate validate this pkg server get stage links response based on the context it is used
-func (m *PkgServerGetStageLinksResponse) ContextValidate(ctx context.Context, formats strfmt.Registry) error {
+// ContextValidate validate this get freight links response based on the context it is used
+func (m *GetFreightLinksResponse) ContextValidate(ctx context.Context, formats strfmt.Registry) error {
 	var res []error
 
 	if err := m.contextValidateLinks(ctx, formats); err != nil {
@@ -82,7 +82,7 @@ func (m *PkgServerGetStageLinksResponse) ContextValidate(ctx context.Context, fo
 	return nil
 }
 
-func (m *PkgServerGetStageLinksResponse) contextValidateLinks(ctx context.Context, formats strfmt.Registry) error {
+func (m *GetFreightLinksResponse) contextValidateLinks(ctx context.Context, formats strfmt.Registry) error {
 
 	for i := 0; i < len(m.Links); i++ {
 
@@ -112,7 +112,7 @@ func (m *PkgServerGetStageLinksResponse) contextValidateLinks(ctx context.Contex
 }
 
 // MarshalBinary interface implementation
-func (m *PkgServerGetStageLinksResponse) MarshalBinary() ([]byte, error) {
+func (m *GetFreightLinksResponse) MarshalBinary() ([]byte, error) {
 	if m == nil {
 		return nil, nil
 	}
@@ -120,8 +120,8 @@ func (m *PkgServerGetStageLinksResponse) MarshalBinary() ([]byte, error) {
 }
 
 // UnmarshalBinary interface implementation
-func (m *PkgServerGetStageLinksResponse) UnmarshalBinary(b []byte) error {
-	var res PkgServerGetStageLinksResponse
+func (m *GetFreightLinksResponse) UnmarshalBinary(b []byte) error {
+	var res GetFreightLinksResponse
 	if err := swag.ReadJSON(b, &res); err != nil {
 		return err
 	}

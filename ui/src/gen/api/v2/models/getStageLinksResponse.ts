@@ -5,9 +5,9 @@
  * REST API for Kargo
  * OpenAPI spec version: v1alpha1
  */
+import type { ResolvedLink } from './resolvedLink';
 
-export interface GithubComAkuityKargoPkgDeeplinksResolvedLink {
-  description?: string;
-  title?: string;
-  url?: string;
+export interface GetStageLinksResponse {
+  errors?: string[];
+  links?: ResolvedLink[];
 }

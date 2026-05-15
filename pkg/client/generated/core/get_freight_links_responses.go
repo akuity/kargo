@@ -44,7 +44,7 @@ GetFreightLinksOK describes a response with status code 200, with default header
 OK
 */
 type GetFreightLinksOK struct {
-	Payload *models.PkgServerGetFreightLinksResponse
+	Payload *models.GetFreightLinksResponse
 }
 
 // IsSuccess returns true when this get freight links o k response has a 2xx status code
@@ -87,13 +87,13 @@ func (o *GetFreightLinksOK) String() string {
 	return fmt.Sprintf("[GET /v1beta1/projects/{project}/freight/{freight-name-or-alias}/links][%d] getFreightLinksOK %s", 200, payload)
 }
 
-func (o *GetFreightLinksOK) GetPayload() *models.PkgServerGetFreightLinksResponse {
+func (o *GetFreightLinksOK) GetPayload() *models.GetFreightLinksResponse {
 	return o.Payload
 }
 
 func (o *GetFreightLinksOK) readResponse(response runtime.ClientResponse, consumer runtime.Consumer, formats strfmt.Registry) error {
 
-	o.Payload = new(models.PkgServerGetFreightLinksResponse)
+	o.Payload = new(models.GetFreightLinksResponse)
 
 	// response payload
 	if err := consumer.Consume(response.Body(), o.Payload); err != nil && !stderrors.Is(err, io.EOF) {

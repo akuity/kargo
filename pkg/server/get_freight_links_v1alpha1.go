@@ -15,7 +15,7 @@ import (
 type getFreightLinksResponse struct {
 	Links  []deeplinks.ResolvedLink `json:"links"`
 	Errors []string                 `json:"errors,omitempty"`
-}
+} // @name GetFreightLinksResponse
 
 // @id GetFreightLinks
 // @Summary Retrieve deep links for a Freight resource
