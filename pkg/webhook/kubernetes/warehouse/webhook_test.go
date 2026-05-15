@@ -285,6 +285,82 @@ func Test_webhook_ValidateCreate(t *testing.T) {
 				require.NotContains(t, err.Error(), ".image.name")
 			},
 		},
+		{
+			name: "subscription name uniqueness is case-insensitive",
+			webhook: &webhook{
+				client: fake.NewClientBuilder().WithScheme(testScheme).WithObjects(
+					&corev1.Namespace{
+						ObjectMeta: metav1.ObjectMeta{
+							Name: testProject,
+							Labels: map[string]string{
+								kargoapi.LabelKeyProject: kargoapi.LabelValueTrue,
+							},
+						},
+					},
+				).Build(),
+			},
+			warehouse: &kargoapi.Warehouse{
+				ObjectMeta: metav1.ObjectMeta{Namespace: testProject},
+				Spec: kargoapi.WarehouseSpec{
+					InternalSubscriptions: []kargoapi.RepoSubscription{
+						{
+							Name: "Alpha",
+							Image: &kargoapi.ImageSubscription{
+								RepoURL: "fake-url-1",
+							},
+						},
+						{
+							Name: "ALPHA",
+							Image: &kargoapi.ImageSubscription{
+								RepoURL: "fake-url-2",
+							},
+						},
+					},
+				},
+			},
+			assertions: func(t *testing.T, err error) {
+				require.Error(t, err)
+				require.Contains(t, err.Error(), "spec.subscriptions[1].name")
+			},
+		},
+		{
+			name: "subscription name uniqueness ignores leading/trailing whitespace",
+			webhook: &webhook{
+				client: fake.NewClientBuilder().WithScheme(testScheme).WithObjects(
+					&corev1.Namespace{
+						ObjectMeta: metav1.ObjectMeta{
+							Name: testProject,
+							Labels: map[string]string{
+								kargoapi.LabelKeyProject: kargoapi.LabelValueTrue,
+							},
+						},
+					},
+				).Build(),
+			},
+			warehouse: &kargoapi.Warehouse{
+				ObjectMeta: metav1.ObjectMeta{Namespace: testProject},
+				Spec: kargoapi.WarehouseSpec{
+					InternalSubscriptions: []kargoapi.RepoSubscription{
+						{
+							Name: "foo",
+							Image: &kargoapi.ImageSubscription{
+								RepoURL: "fake-url-1",
+							},
+						},
+						{
+							Name: "foo ",
+							Image: &kargoapi.ImageSubscription{
+								RepoURL: "fake-url-2",
+							},
+						},
+					},
+				},
+			},
+			assertions: func(t *testing.T, err error) {
+				require.Error(t, err)
+				require.Contains(t, err.Error(), "spec.subscriptions[1].name")
+			},
+		},
 	}
 	for _, testCase := range testCases {
 		t.Run(testCase.name, func(t *testing.T) {

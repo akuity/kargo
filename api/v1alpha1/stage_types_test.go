@@ -883,6 +883,34 @@ func TestImageDeepEquals(t *testing.T) {
 			},
 			expectedResult: true,
 		},
+		{
+			name: "subscription names differ",
+			a: &Image{
+				RepoURL:          "fake-url",
+				Tag:              "fake-tag",
+				SubscriptionName: "sub-a",
+			},
+			b: &Image{
+				RepoURL:          "fake-url",
+				Tag:              "fake-tag",
+				SubscriptionName: "sub-b",
+			},
+			expectedResult: false,
+		},
+		{
+			name: "perfect match with subscription name",
+			a: &Image{
+				RepoURL:          "fake-url",
+				Tag:              "fake-tag",
+				SubscriptionName: "img-sub",
+			},
+			b: &Image{
+				RepoURL:          "fake-url",
+				Tag:              "fake-tag",
+				SubscriptionName: "img-sub",
+			},
+			expectedResult: true,
+		},
 	}
 
 	for _, testCase := range testCases {
@@ -961,6 +989,38 @@ func TestChartDeepEquals(t *testing.T) {
 				RepoURL: "fake-url",
 				Name:    "fake-name",
 				Version: "v1.0.0",
+			},
+			expectedResult: true,
+		},
+		{
+			name: "subscription names differ",
+			a: &Chart{
+				RepoURL:          "fake-url",
+				Name:             "fake-name",
+				Version:          "v1.0.0",
+				SubscriptionName: "sub-a",
+			},
+			b: &Chart{
+				RepoURL:          "fake-url",
+				Name:             "fake-name",
+				Version:          "v1.0.0",
+				SubscriptionName: "sub-b",
+			},
+			expectedResult: false,
+		},
+		{
+			name: "perfect match with subscription name",
+			a: &Chart{
+				RepoURL:          "fake-url",
+				Name:             "fake-name",
+				Version:          "v1.0.0",
+				SubscriptionName: "chart-sub",
+			},
+			b: &Chart{
+				RepoURL:          "fake-url",
+				Name:             "fake-name",
+				Version:          "v1.0.0",
+				SubscriptionName: "chart-sub",
 			},
 			expectedResult: true,
 		},
