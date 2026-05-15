@@ -41,7 +41,10 @@ func (s *server) getFreightLinks(c *gin.Context) {
 
 	var linkDefs []kargoapi.DeepLink
 	clusterCfg := &kargoapi.ClusterConfig{}
-	if err := s.client.InternalClient().Get(ctx, client.ObjectKey{Name: api.ClusterConfigName}, clusterCfg); err != nil {
+	if err := s.client.InternalClient().Get(ctx,
+		client.ObjectKey{Name: api.ClusterConfigName},
+		clusterCfg,
+	); err != nil {
 		if !apierrors.IsNotFound(err) {
 			_ = c.Error(err)
 			return
