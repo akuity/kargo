@@ -29,33 +29,50 @@ every submission.
 
 ## In Progress
 
-### v1.10.0
-
-**Expected:** Mid-April, 2026
-
-🧬 Evolution; not revolution — apart from the usual slate of bug fixes and
-performance + stability improvements, v1.10.0 is set to deliver a broad
-collection of small, but meaningful quality-of-life improvements.
-
-A modest selection of anticipated highlights:
-
-* UI "My Projects" filter
-* Path filtering for push events from Git repositories ➡️ fewer Warehouses
-  executing unnecessary artifact discovery cycles
-* Broad range of new and improved promotion steps
-* Enhanced trust model for commits made by Kargo
-* New Helm chart options to support common operational concerns
-
-v1.10.0 will also include a partial UI transition from the deprecated gRPC API
-to new RESTful API.
-
-## Upcoming
-
 ### v1.11.0
 
 **Expected:** Mid-June, 2026
 
+* **Webhook-driven promotion refreshes**: `git-wait-for-pr` steps will wake
+  immediately when a pull request is merged and a webhook receiver has been 
+  configured for the gitprovider platform. This reduces detection latency from
+  ~5 minutes (polling) to near-instant. Polling remains as a fallback.
+* **Freight diff in promote drawer**: side-by-side comparison of current and
+  incoming Freight when initiating a promotion.
+* **Named subscriptions**: an optional `name` field on `RepoSubscription` for
+  cleaner referencing in promotion steps and the UI.
+* **HA improvements**: `PodDisruptionBudget` and `topologySpreadConstraints`
+  support in the Helm chart.
+* **Continued UI migration** from the deprecated ConnectRPC API to the REST
+  API.
+* Gitea pull request label support, GAR Workload Identity Federation retry,
+  Bitbucket Cloud webhook fixes, and more.
+* **Deep links**: configurable links on Freight, Stages, and promotion views
+  so teams can jump directly to relevant dashboards or CI runs from within Kargo.
+
+## Upcoming
+
+### v1.12.0
+
+The following deprecated features are scheduled for **removal** in v1.12.0:
+
+* The deprecated ConnectRPC (gRPC) API in favor of the new REST API.
+* The `createTargetBranch` option in the `git-open-pr` promotion step.
+* The `author` configuration block on the `git-commit` promotion step. Use
+  `git-clone` instead.
+* The default `git-push` integration policy changes from `AlwaysRebase` to
+  `RebaseOrMerge`. Set the policy explicitly if you rely on unconditional
+  rebase behavior
+
 ## Completed
+
+### v1.10.0
+
+Evolution, not revolution — a broad collection of quality-of-life improvements,
+new and improved promotion steps, and UI enhancements. Also introduced
+controller heartbeats with liveness surfaced in the UI.
+
+See [release notes](./80-release-notes/89-v1.10.0.md) for full details.
 
 ### v1.9.0
 
