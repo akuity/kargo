@@ -52,13 +52,8 @@ func (s *server) getStageLinks(c *gin.Context) {
 	}
 
 	var linkDefs []kargoapi.DeepLink
-
-	// We need to use the internal client here as regular/non-admin users may
-	// not have GET permissions on cluster-configs.
-	internalClient := s.client.InternalClient()
-
 	clusterCfg := &kargoapi.ClusterConfig{}
-	if err := internalClient.Get(ctx, client.ObjectKey{Name: api.ClusterConfigName}, clusterCfg); err != nil {
+	if err := s.client.InternalClient().Get(ctx, client.ObjectKey{Name: api.ClusterConfigName}, clusterCfg); err != nil {
 		if !apierrors.IsNotFound(err) {
 			_ = c.Error(err)
 			return
@@ -68,7 +63,7 @@ func (s *server) getStageLinks(c *gin.Context) {
 	}
 
 	projectCfg := &kargoapi.ProjectConfig{}
-	if err := internalClient.Get(
+	if err := s.client.InternalClient().Get(
 		ctx, client.ObjectKey{Name: project, Namespace: project}, projectCfg,
 	); err != nil {
 		if !apierrors.IsNotFound(err) {
