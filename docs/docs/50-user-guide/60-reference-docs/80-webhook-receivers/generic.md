@@ -80,7 +80,7 @@ Actions are defined by:
 
 1. [`action`](#action)
 1. [`whenExpression`](#whenexpression)
-1. [`targetSelectionCriteria`](#defining-targetselectioncriteria)
+1. [`targetSelectionCriteria`](#targetselectioncriteria)
 
 #### action
 

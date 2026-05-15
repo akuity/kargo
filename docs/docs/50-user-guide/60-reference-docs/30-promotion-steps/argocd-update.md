@@ -147,7 +147,7 @@ refresh groups of `Application`s with heterogeneous configurations.
 | `apps[].sources[].helm` | `object` | N | Describes updates to an Argo CD `ApplicationSource`'s Helm parameters. |
 | `apps[].sources[].helm.images` | `[]object` | Y | Describes how to update  an Argo CD `ApplicationSource`'s Helm parameters to reference specific versions of container images. |
 | `apps[].sources[].helm.images[].key` | `string` | Y | The key to update within the target `ApplicationSource`'s `helm.parameters` map. See Helm documentation on the [format and limitations](https://helm.sh/docs/intro/using_helm/#the-format-and-limitations-of---set) of the notation used in this field. |
-| `apps[].sources[].helm.images[].value` | `string` | Y | Specifies the new value for the key. Typically, a value from [`chartFrom()`](../40-expressions.md#chartfromrepourl-chartname-freightorigin) is used here. |
+| `apps[].sources[].helm.images[].value` | `string` | Y | Specifies the new value for the key. Typically, a value from [`chartFrom()`](../40-expressions.md#chartfrom) is used here. |
 
 ## Health Checks
 

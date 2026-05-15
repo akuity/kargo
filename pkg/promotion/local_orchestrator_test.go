@@ -29,13 +29,14 @@ func TestLocalOrchestrator_ExecuteSteps(t *testing.T) {
 			assertions: func(t *testing.T, result Result, err error) {
 				require.NoError(t, err)
 				assert.Equal(t, kargoapi.PromotionPhaseErrored, result.Status)
-				assert.Contains(t, result.Message, "error getting runner for step kind")
+				assert.Contains(t, result.Message, "step kind \"unknown-step\" is not registered")
+				assert.Contains(t, result.Message, "promotion controller")
 				assert.Equal(t, int64(0), result.CurrentStep)
 
 				require.Len(t, result.StepExecutionMetadata, 1)
 
 				assert.Equal(t, kargoapi.PromotionStepStatusErrored, result.StepExecutionMetadata[0].Status)
-				assert.Contains(t, result.StepExecutionMetadata[0].Message, "error getting runner for step kind")
+				assert.Contains(t, result.StepExecutionMetadata[0].Message, "step kind \"unknown-step\" is not registered")
 				assert.Nil(t, result.StepExecutionMetadata[0].StartedAt)
 				assert.Nil(t, result.StepExecutionMetadata[0].FinishedAt)
 			},

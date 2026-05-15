@@ -26,25 +26,23 @@ Stability is not guaranteed.
 
 {{- .Description}}
 {{- range .Messages}}
-<a name="{{.FullName | anchor}}"></a>
 
-### {{.LongName}}
+### {{.LongName}} {#{{.FullName | anchor}}}
 {{range (.Description | splitList "\n" )  }} {{if not (contains "kubebuilder" .)}}{{.}}{{end}}{{end}}
 
 {{- if .HasFields}}
 | Field | Type | Description |
 | ----- | ---- | ----------- |
 {{range .Fields -}}
-  | {{.Name}} | {{ if not (contains "k8s.io" .FullType )}}[{{.LongType}}](#{{.FullType | anchor}}){{ else }}{{.FullType}}{{ end }} | {{range (.Description | splitList "\n" )  }} {{if not (contains "kubebuilder" .)}}{{. | replace "<" "&lt;" | replace ">" "&gt;" }}{{end}}{{end}} |
+  | {{.Name}} | {{ if or (contains "k8s.io" .FullType) (contains "google.protobuf" .FullType) (contains "akuity.kargo.api.stubs.rollouts" .FullType) (not (contains "." .FullType)) }}{{.FullType}}{{ else }}[{{.LongType}}](#{{.FullType | anchor}}){{ end }} | {{range (.Description | splitList "\n" )  }} {{if not (contains "kubebuilder" .)}}{{. | replace "<" "&lt;" | replace ">" "&gt;" }}{{end}}{{end}} |
 {{end}}
 {{- end}}
 {{- end}}
 <!-- end messages -->
 
 {{- range .Enums}}
-<a name="{{.FullName | anchor}}"></a>
 
-### {{.LongName}}
+### {{.LongName}} {#{{.FullName | anchor}}}
 {{.Description}}
 
 | Name | Number | Description |
