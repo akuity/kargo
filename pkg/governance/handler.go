@@ -122,6 +122,11 @@ func (h *handler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 		w.WriteHeader(http.StatusInternalServerError)
 		return
 	}
+	if cfg == nil {
+		logger.Debug("no config found, skipping event")
+		w.WriteHeader(http.StatusNoContent)
+		return
+	}
 
 	issuesClient, err := h.clientFactory.NewIssuesClient(installationID)
 	if err != nil {
@@ -143,7 +148,7 @@ func (h *handler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 			return
 		}
 		commentHandler := &commentHandler{
-			cfg:          cfg,
+			cfg:          *cfg,
 			owner:        owner,
 			repo:         repo,
 			issuesClient: issuesClient,
@@ -169,7 +174,7 @@ func (h *handler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 			return
 		}
 		prHandler := &prHandler{
-			cfg:          cfg,
+			cfg:          *cfg,
 			owner:        owner,
 			repo:         repo,
 			issuesClient: issuesClient,
@@ -204,32 +209,34 @@ func (h *handler) repoInfo(
 		e.GetInstallation().GetID()
 }
 
-// loadConfig loads the governance config for the given repository. It returns
-// an error if the config cannot be loaded or parsed. Note that the config is
-// not cached, so it will be fetched and parsed on every event.
+// loadConfig loads and returns the governance config for the given repository.
+// It returns nil and no error if no such config exists. It returns nil and an
+// error if the config cannot be loaded or parsed for any other reason. Note
+// that the config is not cached, so it will be fetched and parsed on every
+// event.
 func (h *handler) loadConfig(
 	ctx context.Context,
 	reposClient RepositoriesClient,
 	owner string,
 	repo string,
-) (config, error) {
-	content, _, _, err := reposClient.GetContents(
+) (*config, error) {
+	content, _, resp, err := reposClient.GetContents(
 		ctx, owner, repo, configPath,
 		&github.RepositoryContentGetOptions{Ref: "HEAD"},
 	)
 	if err != nil {
-		return config{}, fmt.Errorf("error fetching governance config: %w", err)
-	}
-	if content == nil {
-		return config{}, fmt.Errorf("governance config not found at %s", configPath)
+		if resp != nil && resp.StatusCode == http.StatusNotFound {
+			return nil, nil
+		}
+		return nil, fmt.Errorf("error fetching governance config: %w", err)
 	}
 	raw, err := content.GetContent()
 	if err != nil {
-		return config{}, fmt.Errorf("error decoding governance config: %w", err)
+		return nil, fmt.Errorf("error decoding governance config: %w", err)
 	}
 	cfg := config{}
 	if err := yaml.Unmarshal([]byte(raw), &cfg); err != nil {
-		return config{}, fmt.Errorf("error parsing governance config: %w", err)
+		return nil, fmt.Errorf("error parsing governance config: %w", err)
 	}
-	return cfg, nil
+	return &cfg, nil
 }
