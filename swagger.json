@@ -2481,6 +2481,107 @@
         }
       }
     },
+    "/v1beta1/projects/{project}/stages/{stage}/auto-promotion/candidates": {
+      "get": {
+        "security": [
+          {
+            "BearerAuth": []
+          }
+        ],
+        "description": "List the newest currently auto-promotable Freight for each\norigin requested by the Stage.",
+        "produces": [
+          "application/json"
+        ],
+        "tags": [
+          "Core",
+          "Project-Level"
+        ],
+        "summary": "Get Stage auto-promotion candidates",
+        "operationId": "GetStageAutoPromotionCandidates",
+        "parameters": [
+          {
+            "type": "string",
+            "description": "Project name",
+            "name": "project",
+            "in": "path",
+            "required": true
+          },
+          {
+            "type": "string",
+            "description": "Stage name",
+            "name": "stage",
+            "in": "path",
+            "required": true
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "schema": {
+              "$ref": "#/definitions/AutoPromotionCandidatesResponse"
+            }
+          }
+        }
+      }
+    },
+    "/v1beta1/projects/{project}/stages/{stage}/auto-promotion/resume": {
+      "post": {
+        "security": [
+          {
+            "BearerAuth": []
+          }
+        ],
+        "description": "Clear active auto-promotion holds for a Stage.",
+        "consumes": [
+          "application/json"
+        ],
+        "produces": [
+          "application/json"
+        ],
+        "tags": [
+          "Core",
+          "Project-Level"
+        ],
+        "summary": "Resume Stage auto-promotion",
+        "operationId": "ResumeStageAutoPromotion",
+        "parameters": [
+          {
+            "type": "string",
+            "description": "Project name",
+            "name": "project",
+            "in": "path",
+            "required": true
+          },
+          {
+            "type": "string",
+            "description": "Stage name",
+            "name": "stage",
+            "in": "path",
+            "required": true
+          },
+          {
+            "description": "Resume request",
+            "name": "body",
+            "in": "body",
+            "required": true,
+            "schema": {
+              "$ref": "#/definitions/ResumeStageAutoPromotionRequest"
+            }
+          }
+        ],
+        "responses": {
+          "204": {
+            "description": "No Content"
+          },
+          "404": {
+            "description": "Not Found"
+          },
+          "409": {
+            "description": "Conflict"
+          }
+        }
+      }
+    },
     "/v1beta1/projects/{project}/stages/{stage}/links": {
       "get": {
         "security": [
@@ -4741,6 +4842,28 @@
         }
       }
     },
+    "AutoPromotionCandidate": {
+      "type": "object",
+      "properties": {
+        "freight": {
+          "$ref": "#/definitions/FreightReference"
+        },
+        "origin": {
+          "$ref": "#/definitions/FreightOrigin"
+        }
+      }
+    },
+    "AutoPromotionCandidatesResponse": {
+      "type": "object",
+      "properties": {
+        "candidates": {
+          "type": "array",
+          "items": {
+            "$ref": "#/definitions/AutoPromotionCandidate"
+          }
+        }
+      }
+    },
     "Claim": {
       "type": "object",
       "properties": {
@@ -5135,10 +5258,16 @@
     "PromoteToStageRequest": {
       "type": "object",
       "properties": {
+        "expectedAutoCandidate": {
+          "type": "string"
+        },
         "freight": {
           "type": "string"
         },
         "freightAlias": {
+          "type": "string"
+        },
+        "reason": {
           "type": "string"
         }
       }
@@ -5187,6 +5316,22 @@
           }
         }
       }
+    },
+    "ResumeStageAutoPromotionRequest": {
+      "type": "object",
+      "properties": {
+        "origin": {
+          "description": "Origin identifies the held Freight origin to resume.\n+kubebuilder:validation:Required",
+          "allOf": [
+            {
+              "$ref": "#/definitions/FreightOrigin"
+            }
+          ]
+        }
+      },
+      "required": [
+        "origin"
+      ]
     },
     "RevokeRequest": {
       "type": "object",
@@ -6272,6 +6417,47 @@
       },
       "required": [
         "secretRef"
+      ]
+    },
+    "AutoPromotionHold": {
+      "type": "object",
+      "properties": {
+        "actor": {
+          "description": "Actor is an identifier for the user who caused the hold to be created.",
+          "type": "string"
+        },
+        "createdAt": {
+          "description": "CreatedAt is the time at which the hold was created.",
+          "type": "string"
+        },
+        "freight": {
+          "description": "Freight is a reference to the Freight that was selected by the operator\nwhen the hold was created.\n+kubebuilder:validation:Required",
+          "allOf": [
+            {
+              "$ref": "#/definitions/FreightReference"
+            }
+          ]
+        },
+        "promotionName": {
+          "description": "PromotionName is the name of the rollback Promotion associated\nwith this hold, when applicable.",
+          "type": "string"
+        },
+        "promotionUID": {
+          "description": "PromotionUID is the UID of the rollback Promotion. Used to\nprevent an older failed rollback from clearing a newer hold.",
+          "type": "string"
+        },
+        "reason": {
+          "description": "Reason is a free-form human-readable explanation of why the hold was\ncreated.",
+          "type": "string"
+        },
+        "state": {
+          "description": "State is the current lifecycle state of the hold.\n+kubebuilder:validation:Required",
+          "type": "string"
+        }
+      },
+      "required": [
+        "freight",
+        "state"
       ]
     },
     "AutoPromotionOptions": {
@@ -7569,6 +7755,10 @@
           "description": "Freight specifies the piece of Freight to be promoted into the Stage\nreferenced by the Stage field.\n\n+kubebuilder:validation:Required\n+kubebuilder:validation:MinLength=1\n+kubebuilder:validation:MaxLength=253\n+kubebuilder:validation:Pattern=`^[a-z0-9]([-a-z0-9]*[a-z0-9])?(\\.[a-z0-9]([-a-z0-9]*[a-z0-9])?)*$`\n+akuity:test-kubebuilder-pattern=KubernetesName",
           "type": "string"
         },
+        "source": {
+          "description": "Source describes the system path that created this Promotion. The value is\nimmutable and is used by controllers to distinguish normal auto-promotion\nfrom user-directed promotion requests.",
+          "type": "string"
+        },
         "stage": {
           "description": "Stage specifies the name of the Stage to which this Promotion\napplies. The Stage referenced by this field MUST be in the same\nnamespace as the Promotion.\n\n+kubebuilder:validation:Required\n+kubebuilder:validation:MinLength=1\n+kubebuilder:validation:MaxLength=253\n+kubebuilder:validation:Pattern=`^[a-z0-9]([-a-z0-9]*[a-z0-9])?(\\.[a-z0-9]([-a-z0-9]*[a-z0-9])?)*$`\n+akuity:test-kubebuilder-pattern=KubernetesName",
           "type": "string"
@@ -7967,6 +8157,13 @@
         "autoPromotionEnabled": {
           "description": "AutoPromotionEnabled indicates whether automatic promotion is enabled\nfor the Stage based on the ProjectConfig.",
           "type": "boolean"
+        },
+        "autoPromotionHolds": {
+          "description": "AutoPromotionHolds pause auto-promotion for specific FreightOrigins on\nthis Stage after a user-directed promotion intentionally selects an older\npiece of Freight. Each map entry pins a single origin keyed by the\ncanonical string representation of the FreightOrigin.",
+          "type": "object",
+          "additionalProperties": {
+            "$ref": "#/definitions/AutoPromotionHold"
+          }
         },
         "conditions": {
           "description": "Conditions contains the last observations of the Stage's current\nstate.\n+patchMergeKey=type\n+patchStrategy=merge\n+listType=map\n+listMapKey=type",

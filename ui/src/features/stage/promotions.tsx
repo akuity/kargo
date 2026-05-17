@@ -1,5 +1,5 @@
 import { createClient } from '@connectrpc/connect';
-import { createConnectQueryKey, useMutation, useQuery } from '@connectrpc/connect-query';
+import { createConnectQueryKey, useQuery } from '@connectrpc/connect-query';
 import { faUndo } from '@fortawesome/free-solid-svg-icons';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
 import { useQueryClient } from '@tanstack/react-query';
@@ -19,13 +19,13 @@ import {
 } from '@ui/features/common/promotion-status/utils';
 import {
   getFreight,
-  listPromotions,
-  promoteToStage
+  listPromotions
 } from '@ui/gen/api/service/v1alpha1/service-KargoService_connectquery';
 import { ListPromotionsResponse } from '@ui/gen/api/service/v1alpha1/service_pb';
 import { KargoService } from '@ui/gen/api/service/v1alpha1/service_pb';
 import { ArgoCDShard } from '@ui/gen/api/service/v1alpha1/service_pb';
 import { Freight, Promotion } from '@ui/gen/api/v1alpha1/generated_pb';
+import { usePromoteToStage } from '@ui/gen/api/v2/core/core';
 import uiPlugins from '@ui/plugins';
 import { UiPluginHoles } from '@ui/plugins/atoms/ui-plugin-hole/ui-plugin-holes';
 import { timestampDate } from '@ui/utils/connectrpc-utils';
@@ -54,7 +54,7 @@ export const Promotions = ({ argocdShard }: { argocdShard?: ArgoCDShard }) => {
     }
   );
 
-  const promotionMutation = useMutation(promoteToStage);
+  const promotionMutation = usePromoteToStage();
 
   const onRetryPromotion = (promotion: Promotion) => {
     const stage = stageName;
@@ -62,9 +62,9 @@ export const Promotions = ({ argocdShard }: { argocdShard?: ArgoCDShard }) => {
     const freight = promotion?.spec?.freight;
 
     promotionMutation.mutate({
-      stage,
-      project,
-      freight
+      stage: stage || '',
+      project: project || '',
+      data: { freight }
     });
   };
 

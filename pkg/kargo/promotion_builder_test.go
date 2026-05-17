@@ -109,6 +109,7 @@ func TestPromotionBuilder_Build(t *testing.T) {
 				assert.Equal(t, "test-project", promotion.Namespace)
 				assert.Equal(t, "test-stage", promotion.Spec.Stage)
 				assert.Equal(t, "abc123", promotion.Spec.Freight)
+				assert.Equal(t, kargoapi.PromotionSourceNonAuto, promotion.Spec.Source)
 
 				// Check vars
 				assert.Equal(t, []kargoapi.ExpressionVariable{

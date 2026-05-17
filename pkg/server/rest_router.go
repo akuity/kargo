@@ -198,6 +198,8 @@ func (s *server) setupRESTRouter(ctx context.Context) *gin.Engine {
 			project.POST("/stages/:stage/refresh", s.refreshStage)
 			project.DELETE("/stages/:stage", s.deleteStage)
 			// Stage Promotions
+			project.GET("/stages/:stage/auto-promotion/candidates", s.getStageAutoPromotionCandidates)
+			project.POST("/stages/:stage/auto-promotion/resume", s.resumeStageAutoPromotion)
 			project.POST("/stages/:stage/promotions", s.promoteToStage)
 			project.POST("/stages/:stage/promotions/downstream", s.promoteDownstream)
 			// Stage Verification

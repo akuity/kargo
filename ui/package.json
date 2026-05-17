@@ -27,7 +27,6 @@
     "@openapi-contrib/openapi-schema-to-json-schema": "5.1.0",
     "@orval/core": "7.21.0",
     "@tanstack/react-query-devtools": "5.99.0",
-    "@types/git-url-parse": "16.0.2",
     "@types/json-schema": "7.0.15",
     "@types/node": "24.2.1",
     "@types/react": "19.2.14",

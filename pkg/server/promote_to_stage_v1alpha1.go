@@ -5,10 +5,13 @@ import (
 	"errors"
 	"fmt"
 	"net/http"
+	"strings"
+	"time"
 
 	"connectrpc.com/connect"
 	"github.com/gin-gonic/gin"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/types"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
@@ -118,14 +121,30 @@ func (s *server) PromoteToStage(
 		)
 	}
 
-	promotion, err := kargo.NewPromotionBuilder(s.client).Build(ctx, *stage, freight.Name)
+	promotion, createdHold, err := s.createStagePromotion(
+		ctx,
+		stage,
+		freight,
+		stagePromotionOptions{},
+	)
 	if err != nil {
-		return nil, fmt.Errorf("build promotion: %w", err)
-	}
-	if err := s.createPromotionFn(ctx, promotion); err != nil {
-		return nil, fmt.Errorf("create promotion: %w", err)
+		return nil, err
 	}
 	s.recordPromotionCreatedEvent(ctx, promotion, freight)
+	if createdHold {
+		if _, err = api.RefreshStage(
+			ctx,
+			s.client.InternalClient(),
+			client.ObjectKey{Namespace: project, Name: stageName},
+		); err != nil {
+			logging.LoggerFromContext(ctx).Error(
+				err,
+				"error refreshing Stage after creating rollback Promotion",
+				"stage", stageName,
+				"promotion", promotion.Name,
+			)
+		}
+	}
 	return connect.NewResponse(&svcv1alpha1.PromoteToStageResponse{
 		Promotion: promotion,
 	}), nil
@@ -143,6 +162,10 @@ func (s *server) recordPromotionCreatedEvent(
 	p *kargoapi.Promotion,
 	f *kargoapi.Freight,
 ) {
+	if s.sender == nil {
+		return
+	}
+
 	var actor string
 	msg := fmt.Sprintf("Promotion created for Stage %q", p.Spec.Stage)
 	if u, ok := user.InfoFromContext(ctx); ok {
@@ -158,8 +181,10 @@ func (s *server) recordPromotionCreatedEvent(
 
 // promoteToStageRequest represents the request body for the PromoteToStage REST endpoint.
 type promoteToStageRequest struct {
-	Freight      string `json:"freight,omitempty"`
-	FreightAlias string `json:"freightAlias,omitempty"`
+	Freight               string `json:"freight,omitempty"`
+	FreightAlias          string `json:"freightAlias,omitempty"`
+	ExpectedAutoCandidate string `json:"expectedAutoCandidate,omitempty"`
+	Reason                string `json:"reason,omitempty"`
 } // @name PromoteToStageRequest
 
 // @id PromoteToStage
@@ -179,6 +204,7 @@ func (s *server) promoteToStage(c *gin.Context) {
 	ctx := c.Request.Context()
 	project := c.Param("project")
 	stageName := c.Param("stage")
+	key := client.ObjectKey{Namespace: project, Name: stageName}
 
 	var req promoteToStageRequest
 	if !bindJSONOrError(c, &req) {
@@ -193,18 +219,18 @@ func (s *server) promoteToStage(c *gin.Context) {
 		))
 		return
 	}
+	req.Reason = strings.TrimSpace(req.Reason)
+	if len(req.Reason) > 1024 {
+		_ = c.Error(libhttp.ErrorStr(
+			"reason cannot be longer than 1024 characters",
+			http.StatusBadRequest,
+		))
+		return
+	}
 
 	// Get the Stage
-	stage := &kargoapi.Stage{}
-	if err := s.client.Get(ctx, client.ObjectKey{Namespace: project, Name: stageName}, stage); err != nil {
-		if apierrors.IsNotFound(err) {
-			_ = c.Error(libhttp.ErrorStr(
-				fmt.Sprintf("Stage %q not found in project %q", stageName, project),
-				http.StatusNotFound,
-			))
-			return
-		}
-		_ = c.Error(err)
+	stage, ok := s.getRESTStage(ctx, project, stageName, c)
+	if !ok {
 		return
 	}
 
@@ -268,21 +294,172 @@ func (s *server) promoteToStage(c *gin.Context) {
 		return
 	}
 
-	// Build and create the Promotion
-	promotion, err := kargo.NewPromotionBuilder(s.client).Build(ctx, *stage, freight.Name)
+	promotion, createdHold, err := s.createStagePromotion(
+		ctx,
+		stage,
+		freight,
+		stagePromotionOptions{
+			ExpectedAutoCandidate: req.ExpectedAutoCandidate,
+			Reason:                req.Reason,
+		},
+	)
 	if err != nil {
-		_ = c.Error(fmt.Errorf("build promotion: %w", err))
-		return
-	}
-
-	if err := s.client.Create(ctx, promotion); err != nil {
-		_ = c.Error(fmt.Errorf("create promotion: %w", err))
+		_ = c.Error(err)
 		return
 	}
 
 	if s.sender != nil {
 		s.recordPromotionCreatedEvent(ctx, promotion, freight)
 	}
+	if createdHold {
+		// The caller was authorized for the custom "promote" verb above.
+		// The internal client performs the mechanical refresh annotation
+		// write because users are not generally allowed to patch Stages.
+		if _, err = api.RefreshStage(ctx, s.client.InternalClient(), key); err != nil {
+			logging.LoggerFromContext(ctx).Error(
+				err,
+				"error refreshing Stage after creating rollback Promotion",
+				"stage", stageName,
+				"promotion", promotion.Name,
+			)
+		}
+	}
 
 	c.JSON(http.StatusCreated, promotion)
+}
+
+type stagePromotionOptions struct {
+	ExpectedAutoCandidate string
+	Reason                string
+}
+
+func (s *server) createStagePromotion(
+	ctx context.Context,
+	stage *kargoapi.Stage,
+	freight *kargoapi.Freight,
+	opts stagePromotionOptions,
+) (*kargoapi.Promotion, bool, error) {
+	promotion, err := kargo.NewPromotionBuilder(s.client).Build(ctx, *stage, freight.Name)
+	if err != nil {
+		return nil, false, fmt.Errorf("build promotion: %w", err)
+	}
+
+	key := client.ObjectKey{Namespace: stage.Namespace, Name: stage.Name}
+	candidate, err := s.getAutoPromotionCandidate(ctx, stage, freight.Origin)
+	if err != nil {
+		return nil, false, fmt.Errorf("get auto-promotion candidate: %w", err)
+	}
+	if opts.ExpectedAutoCandidate != "" &&
+		(candidate == nil || candidate.Name != opts.ExpectedAutoCandidate) {
+		currentCandidate := ""
+		if candidate != nil {
+			currentCandidate = candidate.Name
+		}
+		return nil, false, libhttp.ErrorStr(
+			fmt.Sprintf(
+				"auto-promotion candidate changed from %q to %q; reload and try again",
+				opts.ExpectedAutoCandidate,
+				currentCandidate,
+			),
+			http.StatusConflict,
+		)
+	}
+
+	createdHold := false
+	if candidate != nil && candidate.Name != freight.Name {
+		var existingHold *kargoapi.AutoPromotionHold
+		now := metav1.Now()
+		hold := kargoapi.AutoPromotionHold{
+			Freight: kargoapi.FreightReference{
+				Name:   freight.Name,
+				Origin: freight.Origin,
+			},
+			State:         kargoapi.AutoPromotionHoldStatePending,
+			PromotionName: promotion.Name,
+			Actor:         autoPromotionHoldActor(ctx),
+			Reason:        opts.Reason,
+			CreatedAt:     &now,
+		}
+		if createdHold, err = s.patchStageAutoPromotionHolds(ctx, key, func(status *kargoapi.StageStatus) bool {
+			if hold, ok := status.GetAutoPromotionHold(freight.Origin); ok {
+				existing := hold
+				existingHold = &existing
+				return false
+			}
+			return upsertAutoPromotionHold(status, freight.Origin, hold)
+		}); err != nil {
+			return nil, false, fmt.Errorf("create auto-promotion hold: %w", err)
+		}
+		if existingHold != nil {
+			return nil, false, libhttp.ErrorStr(
+				fmt.Sprintf(
+					"auto-promotion is already %s for origin %q; wait for the current rollback to settle or resume auto-promotion before creating another rollback",
+					strings.ToLower(string(existingHold.State)),
+					freight.Origin.String(),
+				),
+				http.StatusConflict,
+			)
+		}
+	} else if candidate != nil && candidate.Name == freight.Name {
+		hold, held := stage.Status.GetAutoPromotionHold(freight.Origin)
+		if held &&
+			hold.State == kargoapi.AutoPromotionHoldStateActive {
+			annotateClearAutoPromotionHold(promotion, freight.Origin, hold)
+		}
+	}
+
+	createPromotionFn := s.createPromotionFn
+	if createPromotionFn == nil {
+		createPromotionFn = s.client.Create
+	}
+	if createErr := createPromotionFn(ctx, promotion); createErr != nil {
+		if createdHold {
+			if _, cleanupErr := s.patchStageAutoPromotionHolds(ctx, key, func(status *kargoapi.StageStatus) bool {
+				return removeAutoPromotionHolds(status, func(_ string, hold kargoapi.AutoPromotionHold) bool {
+					return hold.State == kargoapi.AutoPromotionHoldStatePending &&
+						hold.PromotionName == promotion.Name
+				})
+			}); cleanupErr != nil {
+				logging.LoggerFromContext(ctx).Error(
+					cleanupErr,
+					"error removing pending auto-promotion hold after Promotion creation failed",
+					"stage", stage.Name,
+					"promotion", promotion.Name,
+				)
+				return nil, false, apierrors.NewInternalError(fmt.Errorf(
+					"create promotion and clean up pending auto-promotion hold: %w",
+					errors.Join(createErr, cleanupErr),
+				))
+			}
+		}
+		return nil, false, createPromotionRESTError(createErr)
+	}
+	return promotion, createdHold, nil
+}
+
+func annotateClearAutoPromotionHold(
+	promotion *kargoapi.Promotion,
+	origin kargoapi.FreightOrigin,
+	hold kargoapi.AutoPromotionHold,
+) {
+	if promotion.Annotations == nil {
+		promotion.Annotations = make(map[string]string, 4)
+	}
+	promotion.Annotations[kargoapi.AnnotationKeyClearAutoPromotionHold] = origin.String()
+	promotion.Annotations[kargoapi.AnnotationKeyClearAutoPromotionHoldPromotion] = hold.PromotionName
+	promotion.Annotations[kargoapi.AnnotationKeyClearAutoPromotionHoldPromotionUID] = hold.PromotionUID
+	if hold.CreatedAt != nil {
+		promotion.Annotations[kargoapi.AnnotationKeyClearAutoPromotionHoldCreatedAt] =
+			hold.CreatedAt.Time.Format(time.RFC3339Nano)
+	}
+}
+
+func createPromotionRESTError(err error) error {
+	var statusErr *apierrors.StatusError
+	if errors.As(err, &statusErr) {
+		status := statusErr.ErrStatus
+		status.Message = fmt.Sprintf("create promotion: %s", status.Message)
+		return &apierrors.StatusError{ErrStatus: status}
+	}
+	return apierrors.NewInternalError(fmt.Errorf("create promotion: %w", err))
 }

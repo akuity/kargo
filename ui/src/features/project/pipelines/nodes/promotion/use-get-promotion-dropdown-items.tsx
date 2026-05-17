@@ -1,4 +1,4 @@
-import { useMutation } from '@connectrpc/connect-query';
+import { useMutation as useConnectMutation } from '@connectrpc/connect-query';
 import { faBoltLightning, faCircleNotch } from '@fortawesome/free-solid-svg-icons';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
 import { Typography } from 'antd';
@@ -10,12 +10,11 @@ import { IAction, useActionContext } from '@ui/features/project/pipelines/contex
 import { useDictionaryContext } from '@ui/features/project/pipelines/context/dictionary-context';
 import { isStageControlFlow } from '@ui/features/project/pipelines/nodes/stage-meta-utils';
 import { useGetUpstreamFreight } from '@ui/features/project/pipelines/nodes/use-get-upstream-freight';
+import { getAutoPromotionCandidateName } from '@ui/features/project/pipelines/promotion/auto-promotion';
 import { useManualApprovalModal } from '@ui/features/project/pipelines/promotion/use-manual-approval-modal';
-import {
-  promoteToStage,
-  queryFreight
-} from '@ui/gen/api/service/v1alpha1/service-KargoService_connectquery';
+import { queryFreight } from '@ui/gen/api/service/v1alpha1/service-KargoService_connectquery';
 import { Stage } from '@ui/gen/api/v1alpha1/generated_pb';
+import { useGetStageAutoPromotionCandidates, usePromoteToStage } from '@ui/gen/api/v2/core/core';
 
 export const useGetPromotionDropdownItems = (stage: Stage) => {
   const projectName = stage?.metadata?.namespace || '';
@@ -32,7 +31,12 @@ export const useGetPromotionDropdownItems = (stage: Stage) => {
 
   const upstreamFreights = useGetUpstreamFreight(stage);
 
-  const queryFreightMutation = useMutation(queryFreight);
+  const queryFreightMutation = useConnectMutation(queryFreight);
+  const autoPromotionCandidatesQuery = useGetStageAutoPromotionCandidates(projectName, stageName, {
+    query: {
+      enabled: Boolean(projectName && stageName && stage?.status?.autoPromotionEnabled)
+    }
+  });
 
   const showManualApproveModal = useManualApprovalModal();
 
@@ -82,26 +86,49 @@ export const useGetPromotionDropdownItems = (stage: Stage) => {
     });
   };
 
-  const promoteMutation = useMutation(promoteToStage, {
-    onSuccess: (response) => {
-      navigate(
-        generatePath(paths.promotion, {
-          name: projectName,
-          promotionId: response.promotion?.metadata?.name
-        })
-      );
+  const promoteMutation = usePromoteToStage({
+    mutation: {
+      onSuccess: (response) => {
+        navigate(
+          generatePath(paths.promotion, {
+            name: projectName,
+            promotionId: response.data?.metadata?.name
+          })
+        );
+      }
     }
   });
 
   const handleInstantPromoteFromUpstream = (freight?: string) => {
     ensureEligibilityBeforeAction({
       freight,
-      onSuccess: (eligibleFreight) =>
+      onSuccess: (eligibleFreight) => {
+        const upstreamFreight = upstreamFreights?.find((item) => item?.name === eligibleFreight);
+        const candidateName = getAutoPromotionCandidateName(
+          autoPromotionCandidatesQuery.data?.data?.candidates,
+          upstreamFreight
+        );
+
+        if (candidateName && candidateName !== eligibleFreight) {
+          navigate(
+            generatePath(paths.promote, {
+              name: projectName,
+              freight: eligibleFreight,
+              stage: stageName
+            })
+          );
+          return;
+        }
+
         promoteMutation.mutate({
           stage: stageName,
           project: projectName,
-          freight: eligibleFreight
-        })
+          data: {
+            freight: eligibleFreight,
+            expectedAutoCandidate: candidateName || undefined
+          }
+        });
+      }
     });
   };
 

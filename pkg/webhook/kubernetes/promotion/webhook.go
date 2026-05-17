@@ -149,6 +149,10 @@ func (w *webhook) Default(ctx context.Context, obj runtime.Object) error {
 
 	switch req.Operation {
 	case admissionv1.Create:
+		if promo.Spec.Source == "" {
+			promo.Spec.Source = kargoapi.PromotionSourceNonAuto
+		}
+
 		// Set actor as an admission request's user info when the promotion is created
 		// to allow controllers to track who created it.
 		if !w.isRequestFromKargoControlplaneFn(req) {
@@ -251,6 +255,19 @@ func (w *webhook) ValidateCreate(
 	if err != nil {
 		return nil, apierrors.NewInternalError(
 			fmt.Errorf("get admission request from context: %w", err),
+		)
+	}
+	if promo.Spec.Source == kargoapi.PromotionSourceAuto &&
+		!w.isRequestFromKargoControlplaneFn(req) {
+		return nil, apierrors.NewInvalid(
+			promotionGroupKind,
+			promo.Name,
+			field.ErrorList{
+				field.Forbidden(
+					field.NewPath("spec", "source"),
+					"only the Kargo control plane may create auto-sourced Promotions",
+				),
+			},
 		)
 	}
 

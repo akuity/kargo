@@ -6,6 +6,27 @@ const (
 	// the resource.
 	AnnotationKeyCreateActor = "kargo.akuity.io/create-actor"
 
+	// AnnotationKeyClearAutoPromotionHold is an annotation key set on a
+	// user-directed Promotion when it should clear an existing auto-promotion
+	// hold after it succeeds. The value identifies the FreightOrigin the hold
+	// applies to.
+	AnnotationKeyClearAutoPromotionHold = "kargo.akuity.io/clear-auto-promotion-hold"
+
+	// AnnotationKeyClearAutoPromotionHoldPromotion is an annotation key set
+	// alongside AnnotationKeyClearAutoPromotionHold. The value identifies the
+	// rollback Promotion recorded on the hold that should be cleared.
+	AnnotationKeyClearAutoPromotionHoldPromotion = "kargo.akuity.io/clear-auto-promotion-hold-promotion"
+
+	// AnnotationKeyClearAutoPromotionHoldPromotionUID is an annotation key set
+	// alongside AnnotationKeyClearAutoPromotionHold. The value identifies the
+	// rollback Promotion UID recorded on the hold that should be cleared.
+	AnnotationKeyClearAutoPromotionHoldPromotionUID = "kargo.akuity.io/clear-auto-promotion-hold-promotion-uid"
+
+	// AnnotationKeyClearAutoPromotionHoldCreatedAt is an annotation key set
+	// alongside AnnotationKeyClearAutoPromotionHold. The value identifies the
+	// hold creation time that should be cleared.
+	AnnotationKeyClearAutoPromotionHoldCreatedAt = "kargo.akuity.io/clear-auto-promotion-hold-created-at"
+
 	// AnnotationKeyRefresh is an annotation key that can be set on a resource
 	// to trigger a refresh of the resource by the controller. The value of the
 	// annotation is interpreted as a token, and any change to the value of the

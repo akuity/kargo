@@ -14,11 +14,17 @@ import (
 // swagger:model PromoteToStageRequest
 type PromoteToStageRequest struct {
 
+	// expected auto candidate
+	ExpectedAutoCandidate string `json:"expectedAutoCandidate,omitempty"`
+
 	// freight
 	Freight string `json:"freight,omitempty"`
 
 	// freight alias
 	FreightAlias string `json:"freightAlias,omitempty"`
+
+	// reason
+	Reason string `json:"reason,omitempty"`
 }
 
 // Validate validates this promote to stage request

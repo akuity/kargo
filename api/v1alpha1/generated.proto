@@ -181,6 +181,39 @@ message ArtifactoryWebhookReceiverConfig {
   optional string virtualRepoName = 2;
 }
 
+// AutoPromotionHold pins a single FreightOrigin on a Stage, pausing
+// auto-promotion for that origin after a user-directed promotion intentionally
+// selects an older piece of Freight. Other origins continue to auto-promote
+// normally. The origin is identified by the enclosing map key.
+message AutoPromotionHold {
+  // Freight is a reference to the Freight that was selected by the operator
+  // when the hold was created.
+  // +kubebuilder:validation:Required
+  optional FreightReference freight = 1;
+
+  // State is the current lifecycle state of the hold.
+  // +kubebuilder:validation:Required
+  optional string state = 2;
+
+  // PromotionName is the name of the rollback Promotion associated
+  // with this hold, when applicable.
+  optional string promotionName = 3;
+
+  // PromotionUID is the UID of the rollback Promotion. Used to
+  // prevent an older failed rollback from clearing a newer hold.
+  optional string promotionUID = 4;
+
+  // Actor is an identifier for the user who caused the hold to be created.
+  optional string actor = 5;
+
+  // Reason is a free-form human-readable explanation of why the hold was
+  // created.
+  optional string reason = 6;
+
+  // CreatedAt is the time at which the hold was created.
+  optional .k8s.io.apimachinery.pkg.apis.meta.v1.Time createdAt = 7;
+}
+
 // AutoPromotionOptions specifies options pertaining to auto-promotion.
 message AutoPromotionOptions {
   // SelectionPolicy specifies the rules for identifying new Freight that is
@@ -1503,6 +1536,11 @@ message PromotionSpec {
   // +akuity:test-kubebuilder-pattern=KubernetesName
   optional string freight = 2;
 
+  // Source describes the system path that created this Promotion. The value is
+  // immutable and is used by controllers to distinguish normal auto-promotion
+  // from user-directed promotion requests.
+  optional string source = 5;
+
   // Vars is a list of variables that can be referenced by expressions in
   // promotion steps.
   repeated ExpressionVariable vars = 4;
@@ -1887,6 +1925,12 @@ message StageStatus {
   // This is useful for storing additional information about the Stage
   // that can be shared across promotions, verifications, or other processes.
   map<string, .k8s.io.apiextensions_apiserver.pkg.apis.apiextensions.v1.JSON> metadata = 15;
+
+  // AutoPromotionHolds pause auto-promotion for specific FreightOrigins on
+  // this Stage after a user-directed promotion intentionally selects an older
+  // piece of Freight. Each map entry pins a single origin keyed by the
+  // canonical string representation of the FreightOrigin.
+  map<string, AutoPromotionHold> autoPromotionHolds = 16;
 }
 
 // StepExecutionMetadata tracks metadata pertaining to the execution of

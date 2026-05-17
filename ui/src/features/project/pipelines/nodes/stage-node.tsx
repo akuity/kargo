@@ -5,6 +5,7 @@ import {
   faBolt,
   faExternalLink,
   faMinus,
+  faPause,
   faTruckArrowRight
 } from '@fortawesome/free-solid-svg-icons';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
@@ -59,6 +60,9 @@ export const StageNode = (props: { stage: Stage }) => {
   const headerStyle = useStageHeaderStyle(props.stage);
 
   const autoPromotionMode = dictionaryContext?.stageAutoPromotionMap?.[stageName];
+  const hasAutoPromotionHold = Boolean(
+    Object.keys(props.stage?.status?.autoPromotionHolds || {}).length
+  );
 
   const stageHealth = getStageHealth(props.stage);
 
@@ -142,6 +146,13 @@ export const StageNode = (props: { stage: Stage }) => {
           <>
             {autoPromotionMode && (
               <FontAwesomeIcon title='Auto Promotion' icon={faBolt} className='text-[10px] mr-1' />
+            )}
+            {hasAutoPromotionHold && (
+              <FontAwesomeIcon
+                title='Auto-promotion hold'
+                icon={faPause}
+                className='text-[10px] mr-1'
+              />
             )}
             <span className='text-xs text-wrap mr-auto'>{props.stage.metadata?.name}</span>
           </>

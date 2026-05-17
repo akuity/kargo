@@ -70,6 +70,15 @@ spec:
                 minLength: 1
                 pattern: ^[a-z0-9]([-a-z0-9]*[a-z0-9])?(\.[a-z0-9]([-a-z0-9]*[a-z0-9])?)*$
                 type: string
+              source:
+                description: |-
+                  Source describes the system path that created this Promotion. The value is
+                  immutable and is used by controllers to distinguish normal auto-promotion
+                  from user-directed promotion requests.
+                enum:
+                - nonAuto
+                - auto
+                type: string
               stage:
                 description: |-
                   Stage specifies the name of the Stage to which this Promotion

@@ -262,7 +262,23 @@ func (f *FreightOrigin) String() string {
 	if f == nil {
 		return ""
 	}
+	// This format is persisted in annotations and status keys. Do not change it
+	// without a migration for existing resources.
 	return fmt.Sprintf("%s/%s", f.Kind, f.Name)
+}
+
+func ParseFreightOriginKey(key string) (FreightOrigin, error) {
+	kind, name, ok := strings.Cut(key, "/")
+	if !ok || kind == "" || name == "" {
+		return FreightOrigin{}, fmt.Errorf("invalid Freight origin key %q", key)
+	}
+	origin := FreightOrigin{Kind: FreightOriginKind(kind), Name: name}
+	switch origin.Kind {
+	case FreightOriginKindWarehouse:
+		return origin, nil
+	default:
+		return FreightOrigin{}, fmt.Errorf("invalid Freight origin kind %q", kind)
+	}
 }
 
 func (f *FreightOrigin) Equals(other *FreightOrigin) bool {
@@ -426,6 +442,65 @@ type StageStatus struct {
 	// This is useful for storing additional information about the Stage
 	// that can be shared across promotions, verifications, or other processes.
 	Metadata map[string]apiextensionsv1.JSON `json:"metadata,omitempty" protobuf:"bytes,15,rep,name=metadata" protobuf_key:"bytes,1,opt,name=key" protobuf_val:"bytes,2,opt,name=value"`
+	// AutoPromotionHolds pause auto-promotion for specific FreightOrigins on
+	// this Stage after a user-directed promotion intentionally selects an older
+	// piece of Freight. Each map entry pins a single origin keyed by the
+	// canonical string representation of the FreightOrigin.
+	AutoPromotionHolds map[string]AutoPromotionHold `json:"autoPromotionHolds,omitempty" protobuf:"bytes,16,rep,name=autoPromotionHolds" protobuf_key:"bytes,1,opt,name=key" protobuf_val:"bytes,2,opt,name=value"`
+}
+
+// AutoPromotionHoldState represents the lifecycle state of an
+// AutoPromotionHold.
+// +kubebuilder:validation:Enum=Pending;Active
+type AutoPromotionHoldState string
+
+const (
+	// AutoPromotionHoldStatePending indicates that the hold is waiting for
+	// its linked rollback Promotion to succeed.
+	AutoPromotionHoldStatePending AutoPromotionHoldState = "Pending"
+	// AutoPromotionHoldStateActive indicates that the hold is preserving a
+	// successful rollback.
+	AutoPromotionHoldStateActive AutoPromotionHoldState = "Active"
+)
+
+// AutoPromotionHold pins a single FreightOrigin on a Stage, pausing
+// auto-promotion for that origin after a user-directed promotion intentionally
+// selects an older piece of Freight. Other origins continue to auto-promote
+// normally. The origin is identified by the enclosing map key.
+type AutoPromotionHold struct {
+	// Freight is a reference to the Freight that was selected by the operator
+	// when the hold was created.
+	// +kubebuilder:validation:Required
+	Freight FreightReference `json:"freight" protobuf:"bytes,1,opt,name=freight"`
+	// State is the current lifecycle state of the hold.
+	// +kubebuilder:validation:Required
+	State AutoPromotionHoldState `json:"state" protobuf:"bytes,2,opt,name=state" swaggertype:"string"`
+	// PromotionName is the name of the rollback Promotion associated
+	// with this hold, when applicable.
+	PromotionName string `json:"promotionName,omitempty" protobuf:"bytes,3,opt,name=promotionName"`
+	// PromotionUID is the UID of the rollback Promotion. Used to
+	// prevent an older failed rollback from clearing a newer hold.
+	PromotionUID string `json:"promotionUID,omitempty" protobuf:"bytes,4,opt,name=promotionUID"`
+	// Actor is an identifier for the user who caused the hold to be created.
+	Actor string `json:"actor,omitempty" protobuf:"bytes,5,opt,name=actor"`
+	// Reason is a free-form human-readable explanation of why the hold was
+	// created.
+	Reason string `json:"reason,omitempty" protobuf:"bytes,6,opt,name=reason"`
+	// CreatedAt is the time at which the hold was created.
+	CreatedAt *metav1.Time `json:"createdAt,omitempty" protobuf:"bytes,7,opt,name=createdAt"`
+}
+
+// GetAutoPromotionHold returns the AutoPromotionHold for the given origin, if
+// one exists. The second return value indicates whether a hold was found.
+func (s *StageStatus) GetAutoPromotionHold(origin FreightOrigin) (AutoPromotionHold, bool) {
+	if s == nil {
+		return AutoPromotionHold{}, false
+	}
+	hold, ok := s.AutoPromotionHolds[origin.String()]
+	if !ok {
+		return AutoPromotionHold{}, false
+	}
+	return hold, true
 }
 
 // GetConditions implements the conditions.Getter interface.

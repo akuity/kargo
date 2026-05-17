@@ -233,6 +233,47 @@ func TestReconcile(t *testing.T) {
 			},
 		},
 		{
+			name:                  "auto-promotion blocked by hold aborts before running",
+			expectPromoteFnCalled: false,
+			promoToReconcile:      &types.NamespacedName{Namespace: "fake-namespace", Name: "fake-promo"},
+			expectedPhase:         kargoapi.PromotionPhaseAborted,
+			promos: []client.Object{
+				&kargoapi.Stage{
+					ObjectMeta: metav1.ObjectMeta{
+						Name:      "fake-stage",
+						Namespace: "fake-namespace",
+					},
+					Status: kargoapi.StageStatus{
+						CurrentPromotion: &kargoapi.PromotionReference{
+							Name: "fake-promo",
+						},
+						AutoPromotionHolds: map[string]kargoapi.AutoPromotionHold{
+							"Warehouse/fake-warehouse": {
+								Freight: kargoapi.FreightReference{Name: "older-freight"},
+								State:   kargoapi.AutoPromotionHoldStateActive,
+							},
+						},
+					},
+				},
+				&kargoapi.Freight{
+					ObjectMeta: metav1.ObjectMeta{
+						Name:      "fake-freight",
+						Namespace: "fake-namespace",
+					},
+					Origin: kargoapi.FreightOrigin{
+						Kind: kargoapi.FreightOriginKindWarehouse,
+						Name: "fake-warehouse",
+					},
+				},
+				func() *kargoapi.Promotion {
+					promo := newPromo("fake-namespace", "fake-promo", "fake-stage", kargoapi.PromotionPhasePending, now)
+					promo.Spec.Freight = "fake-freight"
+					promo.Spec.Source = kargoapi.PromotionSourceAuto
+					return promo
+				}(),
+			},
+		},
+		{
 			name:                  "promoteFn panics",
 			expectPromoteFnCalled: true,
 			expectedPhase:         kargoapi.PromotionPhaseErrored,

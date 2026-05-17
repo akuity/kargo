@@ -29,6 +29,11 @@ type PromotionSpec struct {
 	// Required: true
 	Freight *string `json:"freight"`
 
+	// Source describes the system path that created this Promotion. The value is
+	// immutable and is used by controllers to distinguish normal auto-promotion
+	// from user-directed promotion requests.
+	Source string `json:"source,omitempty"`
+
 	// Stage specifies the name of the Stage to which this Promotion
 	// applies. The Stage referenced by this field MUST be in the same
 	// namespace as the Promotion.

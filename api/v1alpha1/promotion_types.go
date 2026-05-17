@@ -10,6 +10,20 @@ import (
 )
 
 const (
+	// PromotionSourceNonAuto denotes a Promotion created outside the Stage
+	// controller's normal auto-promotion loop. It does not necessarily mean a
+	// human created the Promotion.
+	PromotionSourceNonAuto PromotionSource = "nonAuto"
+	// PromotionSourceAuto denotes a Promotion created by Kargo's Stage
+	// controller while processing normal auto-promotion.
+	PromotionSourceAuto PromotionSource = "auto"
+)
+
+// PromotionSource identifies the actor path that created a Promotion.
+// +kubebuilder:validation:Enum=nonAuto;auto
+type PromotionSource string
+
+const (
 	// PromotionPhasePending denotes a Promotion that has not been executed yet.
 	// i.e. It is currently waiting in a queue. Queues are stage-specific and
 	// prioritized by Promotion creation time.
@@ -178,6 +192,10 @@ type PromotionSpec struct {
 	// +kubebuilder:validation:Pattern=`^[a-z0-9]([-a-z0-9]*[a-z0-9])?(\.[a-z0-9]([-a-z0-9]*[a-z0-9])?)*$`
 	// +akuity:test-kubebuilder-pattern=KubernetesName
 	Freight string `json:"freight" protobuf:"bytes,2,opt,name=freight"`
+	// Source describes the system path that created this Promotion. The value is
+	// immutable and is used by controllers to distinguish normal auto-promotion
+	// from user-directed promotion requests.
+	Source PromotionSource `json:"source,omitempty" protobuf:"bytes,5,opt,name=source" swaggertype:"string"`
 	// Vars is a list of variables that can be referenced by expressions in
 	// promotion steps.
 	Vars []ExpressionVariable `json:"vars,omitempty" protobuf:"bytes,4,rep,name=vars"`

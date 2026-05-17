@@ -357,6 +357,22 @@ func (r *reconciler) Reconcile(
 		return ctrl.Result{}, nil
 	}
 
+	if promo.Spec.Source == kargoapi.PromotionSourceAuto &&
+		promo.Status.Phase != kargoapi.PromotionPhaseRunning {
+		if _, held := stage.Status.GetAutoPromotionHold(freight.Origin); held {
+			now := metav1.Now()
+			if err = kubeclient.PatchStatus(ctx, r.kargoClient, promo, func(status *kargoapi.PromotionStatus) {
+				status.Phase = kargoapi.PromotionPhaseAborted
+				status.Message = "auto-promotion superseded by an auto-promotion hold"
+				status.FinishedAt = &now
+			}); err != nil {
+				return ctrl.Result{}, err
+			}
+			logger.Info("aborted auto-promotion blocked by auto-promotion hold")
+			return ctrl.Result{}, nil
+		}
+	}
+
 	// Update promo status as Running to give visibility in UI. Also, a promo which
 	// has already entered Running status will be allowed to continue to reconcile.
 	if promo.Status.Phase != kargoapi.PromotionPhaseRunning {
