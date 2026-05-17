@@ -24,6 +24,8 @@ import { Stage } from '@ui/gen/api/v1alpha1/generated_pb';
 import { currentFreightHasVerification } from '../common/utils';
 import { ArgoCDLink } from '../project/pipelines/nodes/argocd-link';
 
+import { StageDeepLinks } from './stage-deep-links';
+
 export const StageActions = ({
   stage,
   verificationRunning
@@ -88,6 +90,7 @@ export const StageActions = ({
             ArgoCD
           </Space>
         </ArgoCDLink>
+        <StageDeepLinks projectName={projectName} stageName={stageName} />
         {currentFreightHasVerification(stage) && (
           <>
             {verificationEnabled && (
