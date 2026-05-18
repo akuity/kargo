@@ -85,11 +85,31 @@ func (f *fileWriter) run(
 			}
 	}
 
+	permissions, err := parseFileWritePermissions(cfg.Permissions)
+	if err != nil {
+		return promotion.StepResult{Status: kargoapi.PromotionStepStatusFailed},
+			&promotion.TerminalError{Err: err}
+	}
+
 	absPath, err := securejoin.SecureJoin(stepCtx.WorkDir, cfg.Path)
 	if err != nil {
 		return promotion.StepResult{Status: kargoapi.PromotionStepStatusFailed},
 			&promotion.TerminalError{
 				Err: fmt.Errorf("could not secure join path %q: %w", cfg.Path, err),
+			}
+	}
+
+	relPath, err := filepath.Rel(stepCtx.WorkDir, absPath)
+	if err != nil {
+		return promotion.StepResult{Status: kargoapi.PromotionStepStatusFailed},
+			&promotion.TerminalError{
+				Err: fmt.Errorf("could not get relative path for %q: %w", absPath, err),
+			}
+	}
+	if relPath != cleanPath {
+		return promotion.StepResult{Status: kargoapi.PromotionStepStatusFailed},
+			&promotion.TerminalError{
+				Err: fmt.Errorf("path %q resolves to a different path %q (symlinks are forbidden)", cfg.Path, relPath),
 			}
 	}
 
@@ -103,22 +123,14 @@ func (f *fileWriter) run(
 			fmt.Errorf("error creating parent directories for %q: %w", cfg.Path, err)
 	}
 
-	permissions, err := parseFileWritePermissions(cfg.Permissions)
-	if err != nil {
-		return promotion.StepResult{Status: kargoapi.PromotionStepStatusFailed},
-			&promotion.TerminalError{Err: err}
-	}
-
 	if err = os.WriteFile(absPath, []byte(cfg.Contents), permissions); err != nil {
 		return promotion.StepResult{Status: kargoapi.PromotionStepStatusErrored},
 			fmt.Errorf("error writing file %q: %w", cfg.Path, err)
 	}
 
-	if cfg.Permissions != "" {
-		if err = os.Chmod(absPath, permissions); err != nil {
-			return promotion.StepResult{Status: kargoapi.PromotionStepStatusErrored},
-				fmt.Errorf("error setting permissions on file %q: %w", cfg.Path, err)
-		}
+	if err = os.Chmod(absPath, permissions); err != nil {
+		return promotion.StepResult{Status: kargoapi.PromotionStepStatusErrored},
+			fmt.Errorf("error setting permissions on file %q: %w", cfg.Path, err)
 	}
 
 	return promotion.StepResult{Status: kargoapi.PromotionStepStatusSucceeded}, nil

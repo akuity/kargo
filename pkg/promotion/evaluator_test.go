@@ -1147,6 +1147,66 @@ func TestStepEvaluator_Config(t *testing.T) {
 			},
 		},
 		{
+			name:     "test asYAML boolean",
+			promoCtx: Context{},
+			step: Step{
+				Config: []byte(`{
+					"contents": "${{ asYAML(true) }}"
+				}`),
+			},
+			expectedCfg: Config{
+				"contents": "true\n",
+			},
+		},
+		{
+			name:     "test asYAML number",
+			promoCtx: Context{},
+			step: Step{
+				Config: []byte(`{
+					"contents": "${{ asYAML(42) }}"
+				}`),
+			},
+			expectedCfg: Config{
+				"contents": "42\n",
+			},
+		},
+		{
+			name:     "test asJSON nil",
+			promoCtx: Context{},
+			step: Step{
+				Config: []byte(`{
+					"contents": "${{ asJSON(nil) }}"
+				}`),
+			},
+			expectedCfg: Config{
+				"contents": "null\n",
+			},
+		},
+		{
+			name:     "test asJSON boolean",
+			promoCtx: Context{},
+			step: Step{
+				Config: []byte(`{
+					"contents": "${{ asJSON(true) }}"
+				}`),
+			},
+			expectedCfg: Config{
+				"contents": "true\n",
+			},
+		},
+		{
+			name:     "test asJSON string",
+			promoCtx: Context{},
+			step: Step{
+				Config: []byte(`{
+					"contents": "${{ asJSON('foo') }}"
+				}`),
+			},
+			expectedCfg: Config{
+				"contents": "\"foo\"\n",
+			},
+		},
+		{
 			name: "test warehouse function",
 			// Test that the warehouse() function can be used to reference freight
 			// origins
