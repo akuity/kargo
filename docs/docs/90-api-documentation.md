@@ -1628,6 +1628,13 @@ RawFormat specifies the format for raw resource representation.
 | selectionPolicy | string |  SelectionPolicy specifies the rules for identifying new Freight that is eligible for auto-promotion to this Stage. This field is optional. When left unspecified, the field is implicitly treated as if its value were "NewestFreight".  Accepted Values:  - "NewestFreight": The newest Freight that is available to the Stage is   eligible for auto-promotion.  - "MatchUpstream": Only the Freight currently used immediately upstream   from this Stage is eligible for auto-promotion. This policy may only   be applied when the Stage has exactly one upstream Stage. |
 
 
+### AutoRollbackConfig {#github-com-akuity-kargo-api-v1alpha1-AutoRollbackConfig}
+ AutoRollbackConfig describes the conditions under which a Stage should automatically roll back to the last known-good (verified) Freight. Rollback on failed verifications is always enabled when this config is present. Additional triggers may be enabled via the fields below.
+| Field | Type | Description |
+| ----- | ---- | ----------- |
+| onFailedPromotions | bool |  OnFailedPromotions indicates whether a rollback should be triggered when a promotion to the Stage fails. Failed promotions (as opposed to failed verifications) does not necessarily indicate a problem the Freight, since promotions might fail due to transient issues with the Stage itself (network, credential expirations, etc...). This defaults to false. |
+
+
 ### AzureWebhookReceiverConfig {#github-com-akuity-kargo-api-v1alpha1-AzureWebhookReceiverConfig}
  AzureWebhookReceiverConfig describes a webhook receiver that is compatible with Azure Container Registry (ACR) and Azure DevOps payloads.
 | Field | Type | Description |
@@ -2228,6 +2235,7 @@ RawFormat specifies the format for raw resource representation.
 | stage | string |  Stage is the name of the Stage to which this policy applies.  Deprecated: Use StageSelector instead.   |
 | stageSelector | [PromotionPolicySelector](#github-com-akuity-kargo-api-v1alpha1-PromotionPolicySelector) |  StageSelector is a selector that matches the Stage resource to which this policy applies. |
 | autoPromotionEnabled | bool |  AutoPromotionEnabled indicates whether new Freight can automatically be promoted into the Stage referenced by the Stage field. Note: There are may be other conditions also required for an auto-promotion to occur. This field defaults to false, but is commonly set to true for Stages that subscribe to Warehouses instead of other, upstream Stages. This allows users to define Stages that are automatically updated as soon as new artifacts are detected. |
+| autoRollback | [AutoRollbackConfig](#github-com-akuity-kargo-api-v1alpha1-AutoRollbackConfig) |  AutoRollback describes the conditions under which this Stage should automatically roll back to the last known-good (verified) Freight. When nil, auto-rollback is disabled.  Kargo Enterprise only: This field is ignored in Kargo OSS. |
 
 
 ### PromotionPolicySelector {#github-com-akuity-kargo-api-v1alpha1-PromotionPolicySelector}

@@ -107,6 +107,20 @@ type DeepLink struct {
 	If string `json:"if,omitempty" protobuf:"bytes,4,opt,name=if"`
 }
 
+// AutoRollbackConfig describes the conditions under which a Stage should
+// automatically roll back to the last known-good (verified) Freight.
+// Rollback on failed verifications is always enabled when this config is
+// present. Additional triggers may be enabled via the fields below.
+type AutoRollbackConfig struct {
+	// OnFailedPromotions indicates whether a rollback should be triggered
+	// when a promotion to the Stage fails. Failed promotions (as opposed
+	// to failed verifications) does not necessarily indicate a problem the
+	// Freight, since promotions might fail due to transient issues with the
+	// Stage itself (network, credential expirations, etc...). This defaults
+	// to false.
+	OnFailedPromotions bool `json:"onFailedPromotions,omitempty" protobuf:"varint,1,opt,name=onFailedPromotions"`
+}
+
 // PromotionPolicy defines policies governing the promotion of Freight to a
 // specific Stage.
 //
@@ -129,6 +143,12 @@ type PromotionPolicy struct {
 	// users to define Stages that are automatically updated as soon as new
 	// artifacts are detected.
 	AutoPromotionEnabled bool `json:"autoPromotionEnabled,omitempty" protobuf:"varint,2,opt,name=autoPromotionEnabled"`
+	// AutoRollback describes the conditions under which this Stage should
+	// automatically roll back to the last known-good (verified) Freight. When
+	// nil, auto-rollback is disabled.
+	//
+	// Kargo Enterprise only: This field is ignored in Kargo OSS.
+	AutoRollback *AutoRollbackConfig `json:"autoRollback,omitempty" protobuf:"bytes,4,opt,name=autoRollback"`
 }
 
 // WebhookReceiverConfig describes the configuration for a single webhook
