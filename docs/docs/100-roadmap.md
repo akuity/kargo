@@ -33,22 +33,10 @@ every submission.
 
 **Expected:** Mid-June, 2026
 
-* **Webhook-driven promotion refreshes**: `git-wait-for-pr` steps will wake
-  immediately when a pull request is merged and a webhook receiver has been 
-  configured for the gitprovider platform. This reduces detection latency from
-  ~5 minutes (polling) to near-instant. Polling remains as a fallback.
-* **Freight diff in promote drawer**: side-by-side comparison of current and
-  incoming Freight when initiating a promotion.
-* **Named subscriptions**: an optional `name` field on `RepoSubscription` for
-  cleaner referencing in promotion steps and the UI.
-* **HA improvements**: `PodDisruptionBudget` and `topologySpreadConstraints`
-  support in the Helm chart.
-* **Continued UI migration** from the deprecated ConnectRPC API to the REST
-  API.
-* Gitea pull request label support, GAR Workload Identity Federation retry,
-  Bitbucket Cloud webhook fixes, and more.
-* **Deep links**: configurable links on Freight, Stages, and promotion views
-  so teams can jump directly to relevant dashboards or CI runs from within Kargo.
+v1.11.0 advances Kargo's event-driven model continues improving operator
+and end-user experience. The release also advances the ongoing UI migration 
+from the deprecated ConnectRPC API to the REST API. Freight and Stage details
+aim to become richer with configurable links to external platforms.
 
 ## Upcoming
 
