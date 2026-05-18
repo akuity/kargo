@@ -1133,6 +1133,20 @@ func TestStepEvaluator_Config(t *testing.T) {
 			},
 		},
 		{
+			name:     "test asYAML keeps nil contents as a string",
+			promoCtx: Context{},
+			step: Step{
+				Config: []byte(`{
+					"path": "out.yaml",
+					"contents": "${{ asYAML(nil) }}"
+				}`),
+			},
+			expectedCfg: Config{
+				"path":     "out.yaml",
+				"contents": "null\n",
+			},
+		},
+		{
 			name: "test warehouse function",
 			// Test that the warehouse() function can be used to reference freight
 			// origins

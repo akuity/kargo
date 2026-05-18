@@ -44,6 +44,7 @@ var supportedDelimiters = []supportedDelimiterSet{
 // result in a string.
 // This behavior should be intuitive to anyone familiar with YAML.
 func EvaluateJSONTemplate(jsonBytes []byte, env map[string]any, exprOpts ...expr.Option) ([]byte, error) {
+	// TODO: Consider reserving "unsafeQuote" in this list after confirming it's safe to do so
 	for _, fn := range []string{"quote", "asYAML", "asJSON"} {
 		if _, ok := env[fn]; ok {
 			return nil, fmt.Errorf(

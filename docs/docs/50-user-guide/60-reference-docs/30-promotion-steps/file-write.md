@@ -19,6 +19,7 @@ does not preserve comments or formatting from an existing file.
 |------|------|----------|-------------|
 | `path` | `string` | Y | Path to the file to write. This path is relative to the temporary workspace that Kargo provisions for use by the promotion process. |
 | `contents` | `string` | Y | Contents to write to the file. This may be an empty string. |
+| `permissions` | `string` | N | Octal file permissions to apply to the written file, for example `"0644"`. Defaults to `"0600"`. Executable, special, and world-writable modes are rejected. |
 | `overwrite` | `bool` | N | Whether an existing file may be replaced. Defaults to `false`. |
 
 ## Examples

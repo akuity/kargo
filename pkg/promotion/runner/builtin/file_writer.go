@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"os"
 	"path/filepath"
+	"strconv"
 	"strings"
 
 	securejoin "github.com/cyphar/filepath-securejoin"
@@ -16,6 +17,8 @@ import (
 )
 
 const stepKindFileWrite = "file-write"
+
+const defaultFileWritePermissions os.FileMode = 0o600
 
 func init() {
 	promotion.DefaultStepRunnerRegistry.MustRegister(
@@ -75,6 +78,13 @@ func (f *fileWriter) run(
 			}
 	}
 
+	if cleanPath == ".git" || strings.HasPrefix(cleanPath, ".git"+string(filepath.Separator)) {
+		return promotion.StepResult{Status: kargoapi.PromotionStepStatusFailed},
+			&promotion.TerminalError{
+				Err: fmt.Errorf("writing to the .git directory is forbidden: %q", cfg.Path),
+			}
+	}
+
 	absPath, err := securejoin.SecureJoin(stepCtx.WorkDir, cfg.Path)
 	if err != nil {
 		return promotion.StepResult{Status: kargoapi.PromotionStepStatusFailed},
@@ -93,10 +103,56 @@ func (f *fileWriter) run(
 			fmt.Errorf("error creating parent directories for %q: %w", cfg.Path, err)
 	}
 
-	if err = os.WriteFile(absPath, []byte(cfg.Contents), 0o600); err != nil {
+	permissions, err := parseFileWritePermissions(cfg.Permissions)
+	if err != nil {
+		return promotion.StepResult{Status: kargoapi.PromotionStepStatusFailed},
+			&promotion.TerminalError{Err: err}
+	}
+
+	if err = os.WriteFile(absPath, []byte(cfg.Contents), permissions); err != nil {
 		return promotion.StepResult{Status: kargoapi.PromotionStepStatusErrored},
 			fmt.Errorf("error writing file %q: %w", cfg.Path, err)
 	}
 
+	if cfg.Permissions != "" {
+		if err = os.Chmod(absPath, permissions); err != nil {
+			return promotion.StepResult{Status: kargoapi.PromotionStepStatusErrored},
+				fmt.Errorf("error setting permissions on file %q: %w", cfg.Path, err)
+		}
+	}
+
 	return promotion.StepResult{Status: kargoapi.PromotionStepStatusSucceeded}, nil
+}
+
+func parseFileWritePermissions(permissions string) (os.FileMode, error) {
+	if permissions == "" {
+		return defaultFileWritePermissions, nil
+	}
+
+	parsed, err := strconv.ParseUint(permissions, 8, 32)
+	if err != nil {
+		return 0, fmt.Errorf("invalid permissions %q: must be an octal file mode", permissions)
+	}
+
+	mode := os.FileMode(parsed)
+	// Only ordinary permission bits are allowed through. os.FileMode.Perm()
+	// strips away special bits such as setuid, setgid, and sticky; if stripping
+	// would change the requested mode, reject it instead of applying a surprising
+	// permission set.
+	if mode != mode.Perm() {
+		return 0, fmt.Errorf("permissions %q must not include special mode bits", permissions)
+	}
+	// Do not allow file-write to create executable files. Promotion steps can
+	// still write scripts as text, but another explicit step should be required
+	// before they become executable.
+	if mode&0o111 != 0 {
+		return 0, fmt.Errorf("permissions %q must not include executable bits", permissions)
+	}
+	// World-writable files are unnecessarily broad for generated promotion
+	// artifacts, so keep the writable surface limited to owner and group.
+	if mode&0o002 != 0 {
+		return 0, fmt.Errorf("permissions %q must not be world-writable", permissions)
+	}
+
+	return mode, nil
 }

@@ -14,6 +14,11 @@
       "type": "string",
       "description": "Contents is the file content to write."
     },
+    "permissions": {
+      "type": "string",
+      "description": "Permissions is an optional octal file mode to apply to the written file. Defaults to 0600.",
+      "pattern": "^0[0-7]{3}$"
+    },
     "overwrite": {
       "type": "boolean",
       "description": "Overwrite allows an existing file to be replaced.",

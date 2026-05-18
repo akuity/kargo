@@ -51,6 +51,18 @@ func Test_fileWriter_convert(t *testing.T) {
 			},
 		},
 		{
+			name: "contents must be a string",
+			config: promotion.Config{
+				"path": "test.txt",
+				"contents": map[string]any{
+					"key": "value",
+				},
+			},
+			expectedProblems: []string{
+				"invalid file-write config: contents: Invalid type. Expected: string",
+			},
+		},
+		{
 			name: "unknown field",
 			config: promotion.Config{
 				"path":     "test.txt",
@@ -64,9 +76,32 @@ func Test_fileWriter_convert(t *testing.T) {
 		{
 			name: "valid configuration",
 			config: promotion.Config{
-				"path":      "test.txt",
-				"contents":  "test content",
-				"overwrite": true,
+				"path":        "test.txt",
+				"contents":    "test content",
+				"overwrite":   true,
+				"permissions": "0644",
+			},
+		},
+		{
+			name: "permissions must be a string",
+			config: promotion.Config{
+				"path":        "test.txt",
+				"contents":    "test content",
+				"permissions": 0o644,
+			},
+			expectedProblems: []string{
+				"invalid file-write config: permissions: Invalid type. Expected: string",
+			},
+		},
+		{
+			name: "permissions must be octal",
+			config: promotion.Config{
+				"path":        "test.txt",
+				"contents":    "test content",
+				"permissions": "invalid",
+			},
+			expectedProblems: []string{
+				"invalid file-write config: permissions: Does not match pattern",
 			},
 		},
 	}
@@ -102,6 +137,21 @@ func Test_fileWriter_run(t *testing.T) {
 			},
 		},
 		{
+			name: "writes contents exactly as provided",
+			cfg: builtin.FileWriteConfig{
+				Path:     "out/config.yaml",
+				Contents: "key: value",
+			},
+			assertions: func(t *testing.T, workDir string, result promotion.StepResult, err error) {
+				require.NoError(t, err)
+				assert.Equal(t, promotion.StepResult{Status: kargoapi.PromotionStepStatusSucceeded}, result)
+
+				content, readErr := os.ReadFile(filepath.Join(workDir, "out/config.yaml"))
+				require.NoError(t, readErr)
+				assert.Equal(t, "key: value", string(content))
+			},
+		},
+		{
 			name: "writes empty file",
 			cfg: builtin.FileWriteConfig{
 				Path:     "empty.txt",
@@ -114,6 +164,78 @@ func Test_fileWriter_run(t *testing.T) {
 				content, readErr := os.ReadFile(filepath.Join(workDir, "empty.txt"))
 				require.NoError(t, readErr)
 				assert.Empty(t, content)
+			},
+		},
+		{
+			name: "writes file with custom permissions",
+			cfg: builtin.FileWriteConfig{
+				Path:        "public.txt",
+				Contents:    "test content",
+				Permissions: "0644",
+			},
+			assertions: func(t *testing.T, workDir string, result promotion.StepResult, err error) {
+				require.NoError(t, err)
+				assert.Equal(t, promotion.StepResult{Status: kargoapi.PromotionStepStatusSucceeded}, result)
+
+				info, statErr := os.Stat(filepath.Join(workDir, "public.txt"))
+				require.NoError(t, statErr)
+				assert.Equal(t, os.FileMode(0o644), info.Mode().Perm())
+			},
+		},
+		{
+			name: "changes permissions when overwriting existing file",
+			files: map[string]string{
+				"public.txt": "existing content",
+			},
+			cfg: builtin.FileWriteConfig{
+				Path:        "public.txt",
+				Contents:    "new content",
+				Overwrite:   true,
+				Permissions: "0644",
+			},
+			assertions: func(t *testing.T, workDir string, result promotion.StepResult, err error) {
+				require.NoError(t, err)
+				assert.Equal(t, promotion.StepResult{Status: kargoapi.PromotionStepStatusSucceeded}, result)
+
+				info, statErr := os.Stat(filepath.Join(workDir, "public.txt"))
+				require.NoError(t, statErr)
+				assert.Equal(t, os.FileMode(0o644), info.Mode().Perm())
+			},
+		},
+		{
+			name: "rejects executable permissions",
+			cfg: builtin.FileWriteConfig{
+				Path:        "script.sh",
+				Contents:    "echo test",
+				Permissions: "0755",
+			},
+			assertions: func(t *testing.T, _ string, result promotion.StepResult, err error) {
+				require.ErrorContains(t, err, "must not include executable bits")
+				assert.Equal(t, promotion.StepResult{Status: kargoapi.PromotionStepStatusFailed}, result)
+			},
+		},
+		{
+			name: "rejects special mode bits",
+			cfg: builtin.FileWriteConfig{
+				Path:        "public.txt",
+				Contents:    "test content",
+				Permissions: "1777",
+			},
+			assertions: func(t *testing.T, _ string, result promotion.StepResult, err error) {
+				require.ErrorContains(t, err, "must not include special mode bits")
+				assert.Equal(t, promotion.StepResult{Status: kargoapi.PromotionStepStatusFailed}, result)
+			},
+		},
+		{
+			name: "rejects world-writable permissions",
+			cfg: builtin.FileWriteConfig{
+				Path:        "public.txt",
+				Contents:    "test content",
+				Permissions: "0666",
+			},
+			assertions: func(t *testing.T, _ string, result promotion.StepResult, err error) {
+				require.ErrorContains(t, err, "must not be world-writable")
+				assert.Equal(t, promotion.StepResult{Status: kargoapi.PromotionStepStatusFailed}, result)
 			},
 		},
 		{
@@ -161,6 +283,17 @@ func Test_fileWriter_run(t *testing.T) {
 			},
 			assertions: func(t *testing.T, _ string, result promotion.StepResult, err error) {
 				require.Error(t, err)
+				assert.Equal(t, promotion.StepResult{Status: kargoapi.PromotionStepStatusFailed}, result)
+			},
+		},
+		{
+			name: "fails when path targets .git directory",
+			cfg: builtin.FileWriteConfig{
+				Path:     ".git/config",
+				Contents: "malicious content",
+			},
+			assertions: func(t *testing.T, _ string, result promotion.StepResult, err error) {
+				require.ErrorContains(t, err, "writing to the .git directory is forbidden")
 				assert.Equal(t, promotion.StepResult{Status: kargoapi.PromotionStepStatusFailed}, result)
 			},
 		},
