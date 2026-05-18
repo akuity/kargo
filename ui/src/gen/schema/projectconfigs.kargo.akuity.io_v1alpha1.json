@@ -16,6 +16,38 @@
     "spec": {
       "description": "Spec describes the configuration of a Project.",
       "properties": {
+        "freightLinks": {
+          "description": "FreightLinks defines deep links shown when viewing Freight resources\nwithin this project. These are shown in addition to any cluster-level\nFreightLinks defined in ClusterConfig.",
+          "items": {
+            "description": "DeepLink defines a configurable external link that is rendered in the UI\nwhen viewing a Freight or Stage resource. The URL is an expression evaluated\nagainst the resource. The optional If field is an expression condition;\nwhen set, the link is only shown when the expression evaluates to true.",
+            "properties": {
+              "description": {
+                "description": "Description is an optional human-readable summary shown alongside the\nlink.",
+                "type": "string"
+              },
+              "if": {
+                "description": "If is an optional expression condition. When set, the link is only shown\nwhen the expression evaluates to true.",
+                "type": "string"
+              },
+              "title": {
+                "description": "Title is the display label for the link.",
+                "minLength": 1,
+                "type": "string"
+              },
+              "url": {
+                "description": "URL is an expression that resolves to the link's href.",
+                "minLength": 1,
+                "type": "string"
+              }
+            },
+            "required": [
+              "title",
+              "url"
+            ],
+            "type": "object"
+          },
+          "type": "array"
+        },
         "promotionPolicies": {
           "description": "PromotionPolicies defines policies governing the promotion of Freight to\nspecific Stages within the Project.",
           "items": {
@@ -87,6 +119,38 @@
                 "rule": "has(self.stage) ? !has(self.stageSelector) : has(self.stageSelector)"
               }
             ]
+          },
+          "type": "array"
+        },
+        "stageLinks": {
+          "description": "StageLinks defines deep links shown when viewing Stage resources within\nthis project. These are shown in addition to any cluster-level\nStageLinks defined in ClusterConfig.",
+          "items": {
+            "description": "DeepLink defines a configurable external link that is rendered in the UI\nwhen viewing a Freight or Stage resource. The URL is an expression evaluated\nagainst the resource. The optional If field is an expression condition;\nwhen set, the link is only shown when the expression evaluates to true.",
+            "properties": {
+              "description": {
+                "description": "Description is an optional human-readable summary shown alongside the\nlink.",
+                "type": "string"
+              },
+              "if": {
+                "description": "If is an optional expression condition. When set, the link is only shown\nwhen the expression evaluates to true.",
+                "type": "string"
+              },
+              "title": {
+                "description": "Title is the display label for the link.",
+                "minLength": 1,
+                "type": "string"
+              },
+              "url": {
+                "description": "URL is an expression that resolves to the link's href.",
+                "minLength": 1,
+                "type": "string"
+              }
+            },
+            "required": [
+              "title",
+              "url"
+            ],
+            "type": "object"
           },
           "type": "array"
         },

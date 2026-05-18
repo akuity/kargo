@@ -1695,6 +1695,8 @@ RawFormat specifies the format for raw resource representation.
 | ----- | ---- | ----------- |
 | webhookReceivers | [WebhookReceiverConfig](#github-com-akuity-kargo-api-v1alpha1-WebhookReceiverConfig) |  WebhookReceivers describes cluster-scoped webhook receivers used for processing events from various external platforms |
 | gitClient | [GitClientConfig](#github-com-akuity-kargo-api-v1alpha1-GitClientConfig) |  GitClient describes cluster-level configuration for Kargo's Git client, including committer identity and an optional signing key. If set, these values take precedence over any configuration provided at install time via the Helm chart. +optional |
+| freightLinks | [DeepLink](#github-com-akuity-kargo-api-v1alpha1-DeepLink) |  FreightLinks defines deep links shown when viewing any Freight resource across all projects in the cluster. Project-level FreightLinks defined in ProjectConfig are shown in addition to these.  +optional |
+| stageLinks | [DeepLink](#github-com-akuity-kargo-api-v1alpha1-DeepLink) |  StageLinks defines deep links shown when viewing any Stage resource across all projects in the cluster. Project-level StageLinks defined in ProjectConfig are shown in addition to these.  +optional |
 
 
 ### ClusterConfigStatus {#github-com-akuity-kargo-api-v1alpha1-ClusterConfigStatus}
@@ -1728,6 +1730,16 @@ RawFormat specifies the format for raw resource representation.
 | Field | Type | Description |
 | ----- | ---- | ----------- |
 | since | k8s.io.apimachinery.pkg.apis.meta.v1.Time |  Since is the time at which the Stage most recently started using the Freight. This can be used to calculate how long the Freight has been in use by the Stage. |
+
+
+### DeepLink {#github-com-akuity-kargo-api-v1alpha1-DeepLink}
+ DeepLink defines a configurable external link that is rendered in the UI when viewing a Freight or Stage resource. The URL is an expression evaluated against the resource. The optional If field is an expression condition; when set, the link is only shown when the expression evaluates to true.
+| Field | Type | Description |
+| ----- | ---- | ----------- |
+| title | string |  Title is the display label for the link.   |
+| url | string |  URL is an expression that resolves to the link's href.   |
+| description | string |  Description is an optional human-readable summary shown alongside the link.  +optional |
+| if | string |  If is an optional expression condition. When set, the link is only shown when the expression evaluates to true.  +optional |
 
 
 ### DiscoveredArtifacts {#github-com-akuity-kargo-api-v1alpha1-DiscoveredArtifacts}
@@ -2154,6 +2166,8 @@ RawFormat specifies the format for raw resource representation.
 | ----- | ---- | ----------- |
 | promotionPolicies | [PromotionPolicy](#github-com-akuity-kargo-api-v1alpha1-PromotionPolicy) |  PromotionPolicies defines policies governing the promotion of Freight to specific Stages within the Project. |
 | webhookReceivers | [WebhookReceiverConfig](#github-com-akuity-kargo-api-v1alpha1-WebhookReceiverConfig) |  WebhookReceivers describes Project-specific webhook receivers used for processing events from various external platforms |
+| freightLinks | [DeepLink](#github-com-akuity-kargo-api-v1alpha1-DeepLink) |  FreightLinks defines deep links shown when viewing Freight resources within this project. These are shown in addition to any cluster-level FreightLinks defined in ClusterConfig.  +optional |
+| stageLinks | [DeepLink](#github-com-akuity-kargo-api-v1alpha1-DeepLink) |  StageLinks defines deep links shown when viewing Stage resources within this project. These are shown in addition to any cluster-level StageLinks defined in ClusterConfig.  +optional |
 
 
 ### ProjectConfigStatus {#github-com-akuity-kargo-api-v1alpha1-ProjectConfigStatus}

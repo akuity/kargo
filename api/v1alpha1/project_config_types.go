@@ -35,6 +35,18 @@ type ProjectConfigSpec struct {
 	// WebhookReceivers describes Project-specific webhook receivers used for
 	// processing events from various external platforms
 	WebhookReceivers []WebhookReceiverConfig `json:"webhookReceivers,omitempty" protobuf:"bytes,2,rep,name=webhookReceivers"`
+	// FreightLinks defines deep links shown when viewing Freight resources
+	// within this project. These are shown in addition to any cluster-level
+	// FreightLinks defined in ClusterConfig.
+	//
+	// +optional
+	FreightLinks []DeepLink `json:"freightLinks,omitempty" protobuf:"bytes,3,rep,name=freightLinks"`
+	// StageLinks defines deep links shown when viewing Stage resources within
+	// this project. These are shown in addition to any cluster-level
+	// StageLinks defined in ClusterConfig.
+	//
+	// +optional
+	StageLinks []DeepLink `json:"stageLinks,omitempty" protobuf:"bytes,4,rep,name=stageLinks"`
 }
 
 // ProjectConfigStatus describes the current status of a ProjectConfig.
@@ -68,6 +80,31 @@ func (p *ProjectConfigStatus) GetConditions() []metav1.Condition {
 // SetConditions implements the conditions.Setter interface.
 func (p *ProjectConfigStatus) SetConditions(conditions []metav1.Condition) {
 	p.Conditions = conditions
+}
+
+// DeepLink defines a configurable external link that is rendered in the UI
+// when viewing a Freight or Stage resource. The URL is an expression evaluated
+// against the resource. The optional If field is an expression condition;
+// when set, the link is only shown when the expression evaluates to true.
+type DeepLink struct {
+	// Title is the display label for the link.
+	//
+	// +kubebuilder:validation:MinLength=1
+	Title string `json:"title" protobuf:"bytes,1,opt,name=title"`
+	// URL is an expression that resolves to the link's href.
+	//
+	// +kubebuilder:validation:MinLength=1
+	URL string `json:"url" protobuf:"bytes,2,opt,name=url"`
+	// Description is an optional human-readable summary shown alongside the
+	// link.
+	//
+	// +optional
+	Description string `json:"description,omitempty" protobuf:"bytes,3,opt,name=description"`
+	// If is an optional expression condition. When set, the link is only shown
+	// when the expression evaluates to true.
+	//
+	// +optional
+	If string `json:"if,omitempty" protobuf:"bytes,4,opt,name=if"`
 }
 
 // PromotionPolicy defines policies governing the promotion of Freight to a

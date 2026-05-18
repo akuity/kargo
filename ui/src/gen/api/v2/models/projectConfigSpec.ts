@@ -5,13 +5,26 @@
  * REST API for Kargo
  * OpenAPI spec version: v1alpha1
  */
+import type { DeepLink } from './deepLink';
 import type { PromotionPolicy } from './promotionPolicy';
 import type { WebhookReceiverConfig } from './webhookReceiverConfig';
 
 export interface ProjectConfigSpec {
+  /** FreightLinks defines deep links shown when viewing Freight resources
+within this project. These are shown in addition to any cluster-level
+FreightLinks defined in ClusterConfig.
+
++optional */
+  freightLinks?: DeepLink[];
   /** PromotionPolicies defines policies governing the promotion of Freight to
 specific Stages within the Project. */
   promotionPolicies?: PromotionPolicy[];
+  /** StageLinks defines deep links shown when viewing Stage resources within
+this project. These are shown in addition to any cluster-level
+StageLinks defined in ClusterConfig.
+
++optional */
+  stageLinks?: DeepLink[];
   /** WebhookReceivers describes Project-specific webhook receivers used for
 processing events from various external platforms */
   webhookReceivers?: WebhookReceiverConfig[];

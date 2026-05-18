@@ -1,14 +1,16 @@
 import { toJson } from '@bufbuild/protobuf';
 import { faFile, faInfoCircle, faPencil } from '@fortawesome/free-solid-svg-icons';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
-import { Button, Drawer, Tabs, Typography } from 'antd';
+import { Button, Drawer, Space, Tabs, Typography } from 'antd';
 import classNames from 'classnames';
 import { useEffect, useState } from 'react';
 import { generatePath, useNavigate, useParams } from 'react-router-dom';
 
 import { paths } from '@ui/config/paths';
 import { Freight, FreightSchema } from '@ui/gen/api/v1alpha1/generated_pb';
+import { useGetFreightLinks } from '@ui/gen/api/v2/core/core';
 
+import { DeepLinks } from '../common/deep-links';
 import { Description } from '../common/description';
 import { ManifestPreview } from '../common/manifest-preview';
 import { useModal } from '../common/modal/use-modal';
@@ -45,6 +47,13 @@ export const FreightDetails = ({
   const onClose = () => navigate(generatePath(paths.project, { name: projectName }));
   const { show } = useModal();
 
+  const freightNameOrAlias = alias || freight?.metadata?.name;
+  const { data: freightLinksData } = useGetFreightLinks(
+    projectName || '',
+    freightNameOrAlias || '',
+    { query: { enabled: !!projectName && !!freightNameOrAlias } }
+  );
+
   return (
     <Drawer
       open={!!freight}
@@ -52,27 +61,31 @@ export const FreightDetails = ({
       width='80%'
       title={alias || freight?.metadata?.name}
       extra={
-        alias &&
         freight && (
-          <Button
-            icon={<FontAwesomeIcon icon={faPencil} />}
-            onClick={() =>
-              show((p) => (
-                <UpdateFreightAliasModal
-                  {...p}
-                  freight={freight || undefined}
-                  project={freight?.metadata?.namespace || ''}
-                  onSubmit={(newAlias) => {
-                    setAlias(newAlias);
-                    refetchFreight();
-                    p.hide();
-                  }}
-                />
-              ))
-            }
-          >
-            Edit Alias
-          </Button>
+          <Space size={16}>
+            <DeepLinks links={freightLinksData?.data?.links ?? []} />
+            {alias && (
+              <Button
+                icon={<FontAwesomeIcon icon={faPencil} />}
+                onClick={() =>
+                  show((p) => (
+                    <UpdateFreightAliasModal
+                      {...p}
+                      freight={freight || undefined}
+                      project={freight?.metadata?.namespace || ''}
+                      onSubmit={(newAlias) => {
+                        setAlias(newAlias);
+                        refetchFreight();
+                        p.hide();
+                      }}
+                    />
+                  ))
+                }
+              >
+                Edit Alias
+              </Button>
+            )}
+          </Space>
         )
       }
     >
