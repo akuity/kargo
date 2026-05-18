@@ -64,24 +64,28 @@ func (f *fileWriter) run(
 	cfg builtin.FileWriteConfig,
 ) (promotion.StepResult, error) {
 	if filepath.IsAbs(cfg.Path) {
-		return promotion.StepResult{Status: kargoapi.PromotionStepStatusErrored},
-			fmt.Errorf("path %q must be relative", cfg.Path)
+		return promotion.StepResult{Status: kargoapi.PromotionStepStatusFailed},
+			&promotion.TerminalError{Err: fmt.Errorf("path %q must be relative", cfg.Path)}
 	}
 	cleanPath := filepath.Clean(cfg.Path)
 	if cleanPath == ".." || strings.HasPrefix(cleanPath, ".."+string(filepath.Separator)) {
-		return promotion.StepResult{Status: kargoapi.PromotionStepStatusErrored},
-			fmt.Errorf("path %q attempts to traverse outside the working directory", cfg.Path)
+		return promotion.StepResult{Status: kargoapi.PromotionStepStatusFailed},
+			&promotion.TerminalError{
+				Err: fmt.Errorf("path %q attempts to traverse outside the working directory", cfg.Path),
+			}
 	}
 
 	absPath, err := securejoin.SecureJoin(stepCtx.WorkDir, cfg.Path)
 	if err != nil {
-		return promotion.StepResult{Status: kargoapi.PromotionStepStatusErrored},
-			fmt.Errorf("could not secure join path %q: %w", cfg.Path, err)
+		return promotion.StepResult{Status: kargoapi.PromotionStepStatusFailed},
+			&promotion.TerminalError{
+				Err: fmt.Errorf("could not secure join path %q: %w", cfg.Path, err),
+			}
 	}
 
 	if _, err = os.Stat(absPath); err == nil && !cfg.Overwrite {
-		return promotion.StepResult{Status: kargoapi.PromotionStepStatusErrored},
-			fmt.Errorf("file %q already exists", cfg.Path)
+		return promotion.StepResult{Status: kargoapi.PromotionStepStatusFailed},
+			&promotion.TerminalError{Err: fmt.Errorf("file %q already exists", cfg.Path)}
 	}
 
 	if err = os.MkdirAll(filepath.Dir(absPath), 0o700); err != nil {

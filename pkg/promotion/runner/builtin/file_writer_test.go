@@ -127,7 +127,7 @@ func Test_fileWriter_run(t *testing.T) {
 			},
 			assertions: func(t *testing.T, workDir string, result promotion.StepResult, err error) {
 				require.ErrorContains(t, err, "already exists")
-				assert.Equal(t, promotion.StepResult{Status: kargoapi.PromotionStepStatusErrored}, result)
+				assert.Equal(t, promotion.StepResult{Status: kargoapi.PromotionStepStatusFailed}, result)
 
 				content, readErr := os.ReadFile(filepath.Join(workDir, "config.yaml"))
 				require.NoError(t, readErr)
@@ -161,7 +161,7 @@ func Test_fileWriter_run(t *testing.T) {
 			},
 			assertions: func(t *testing.T, _ string, result promotion.StepResult, err error) {
 				require.Error(t, err)
-				assert.Equal(t, promotion.StepResult{Status: kargoapi.PromotionStepStatusErrored}, result)
+				assert.Equal(t, promotion.StepResult{Status: kargoapi.PromotionStepStatusFailed}, result)
 			},
 		},
 		{

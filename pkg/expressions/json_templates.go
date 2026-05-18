@@ -327,7 +327,7 @@ func asYAMLFunc(a ...any) (any, error) {
 	if err != nil {
 		return nil, fmt.Errorf("error applying asYAML() function: %w", err)
 	}
-	return string(yamlBytes), nil
+	return fmt.Sprintf("\"%s\"", yamlBytes), nil
 }
 
 func asJSONFunc(a ...any) (any, error) {
