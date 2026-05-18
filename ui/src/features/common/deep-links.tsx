@@ -2,21 +2,9 @@ import { faChevronDown, faExternalLink, faLink } from '@fortawesome/free-solid-s
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
 import { Button, Dropdown, Flex, Space, Tooltip, Typography } from 'antd';
 
-import { useGetStageLinks } from '@ui/gen/api/v2/core/core';
+import { ResolvedLink } from '@ui/gen/api/v2/models/resolvedLink';
 
-export const StageDeepLinks = ({
-  projectName,
-  stageName
-}: {
-  projectName?: string;
-  stageName?: string;
-}) => {
-  const { data } = useGetStageLinks(projectName || '', stageName || '', {
-    query: { enabled: !!projectName && !!stageName }
-  });
-
-  const links = data?.data?.links ?? [];
-
+export const DeepLinks = ({ links }: { links: ResolvedLink[] }) => {
   if (links.length === 0) {
     return null;
   }
