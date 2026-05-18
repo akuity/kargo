@@ -591,6 +591,9 @@ message ListPromotionsRequest {
 message ListPromotionsResponse {
   // promotions is the list of Promotion resources found in the project.
   repeated github.com.akuity.kargo.api.v1alpha1.Promotion promotions = 1;
+  // resource_version is the Kubernetes ListMeta.resourceVersion of the
+  // underlying list, suitable for use as a starting point for Watch calls.
+  string resource_version = 2 [json_name = "resourceVersion"];
 }
 
 // WatchPromotionsRequest is the request for watching promotion changes via streaming.
@@ -599,6 +602,9 @@ message WatchPromotionsRequest {
   string project = 1;
   // stage is an optional stage name to filter promotions by.
   optional string stage = 2;
+  // resource_version, when set, is passed to the underlying Kubernetes Watch
+  // call so that only events newer than this version are received.
+  string resource_version = 3 [json_name = "resourceVersion"];
 }
 
 // WatchPromotionsResponse contains promotion change notifications.

@@ -37,7 +37,11 @@ func (s *server) WatchPromotions(
 		}
 	}
 
-	w, err := s.client.Watch(ctx, &kargoapi.PromotionList{}, client.InNamespace(project))
+	w, err := s.client.Watch(
+		ctx,
+		&kargoapi.PromotionList{},
+		buildWatchListOptions(project, req.Msg.GetResourceVersion())...,
+	)
 	if err != nil {
 		return fmt.Errorf("watch promotion: %w", err)
 	}

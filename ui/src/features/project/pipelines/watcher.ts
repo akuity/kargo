@@ -4,6 +4,7 @@ import { createConnectQueryKey } from '@connectrpc/connect-query';
 import { QueryClient } from '@tanstack/react-query';
 
 import { transportWithAuth } from '@ui/config/transport';
+import { isSameOrOlderResourceVersion } from '@ui/features/utils/resource-version';
 import {
   getStage,
   getWarehouse,
@@ -30,22 +31,29 @@ async function ProcessEvents<T extends { type: string }, S extends { metadata?: 
 ) {
   let timer: ReturnType<typeof setTimeout> | undefined;
   for await (const e of stream) {
+    const eventObject = getter(e);
     let data = getData();
-    const index = data.findIndex((item) => item.metadata?.name === getter(e).metadata?.name);
+    const index = data.findIndex((item) => item.metadata?.name === eventObject.metadata?.name);
     if (e.type === 'DELETED') {
       if (index !== -1) {
         data = [...data.slice(0, index), ...data.slice(index + 1)];
       }
+    } else if (
+      e.type === 'ADDED' &&
+      index !== -1 &&
+      isSameOrOlderResourceVersion(data[index], eventObject)
+    ) {
+      continue;
     } else {
       if (index === -1) {
-        data = [...data, getter(e)];
+        data = [...data, eventObject];
       } else {
-        data = [...data.slice(0, index), getter(e), ...data.slice(index + 1)];
+        data = [...data.slice(0, index), eventObject, ...data.slice(index + 1)];
       }
     }
 
     clearTimeout(timer);
-    timer = setTimeout(() => callback(getter(e), data));
+    timer = setTimeout(() => callback(eventObject, data));
   }
 }
 
@@ -72,39 +80,39 @@ export class Watcher {
     onStageEvent?: (stage: Stage) => void,
     warehouses?: string[]
   ) {
-    const stream = this.promiseClient.watchStages(
-      { project: this.project, freightOrigins: warehouses || [] },
-      { signal: this.cancel.signal }
-    );
-
     const stagesInput = create(ListStagesRequestSchema, {
       project: this.project,
       freightOrigins: warehouses || []
     });
+    const listStagesQueryKey = createConnectQueryKey({
+      schema: listStages,
+      input: stagesInput,
+      cardinality: 'finite',
+      transport: transportWithAuth
+    });
+    const stagesResponse = this.client.getQueryData(listStagesQueryKey) as
+      | ListStagesResponse
+      | undefined;
+
+    const stream = this.promiseClient.watchStages(
+      {
+        project: this.project,
+        freightOrigins: warehouses || [],
+        resourceVersion: stagesResponse?.resourceVersion || ''
+      },
+      { signal: this.cancel.signal }
+    );
 
     ProcessEvents(
       stream,
       () => {
-        const data = this.client.getQueryData(
-          createConnectQueryKey({
-            schema: listStages,
-            input: stagesInput,
-            cardinality: 'finite',
-            transport: transportWithAuth
-          })
-        );
+        const data = this.client.getQueryData(listStagesQueryKey);
 
         return (data as ListStagesResponse)?.stages || [];
       },
       (e) => e.stage as Stage,
       (stage, data) => {
         // update Stages list
-        const listStagesQueryKey = createConnectQueryKey({
-          schema: listStages,
-          input: stagesInput,
-          cardinality: 'finite',
-          transport: transportWithAuth
-        });
         this.client.setQueryData(listStagesQueryKey, {
           stages: data,
           resourceVersion:
@@ -140,8 +148,22 @@ export class Watcher {
     refreshHook?: () => void;
     onWarehouseEvent?: (warehouse: Warehouse) => void;
   }) {
+    const warehousesInput = create(ListWarehousesRequestSchema, { project: this.project });
+    const listWarehousesQueryKey = createConnectQueryKey({
+      schema: listWarehouses,
+      input: warehousesInput,
+      cardinality: 'finite',
+      transport: transportWithAuth
+    });
+    const warehousesResponse = this.client.getQueryData(listWarehousesQueryKey) as
+      | ListWarehousesResponse
+      | undefined;
+
     const stream = this.promiseClient.watchWarehouses(
-      { project: this.project },
+      {
+        project: this.project,
+        resourceVersion: warehousesResponse?.resourceVersion || ''
+      },
       { signal: this.cancel.signal }
     );
     const refresh = {} as { [key: string]: boolean };
@@ -149,14 +171,7 @@ export class Watcher {
     ProcessEvents(
       stream,
       () => {
-        const data = this.client.getQueryData(
-          createConnectQueryKey({
-            schema: listWarehouses,
-            input: create(ListWarehousesRequestSchema, { project: this.project }),
-            cardinality: 'finite',
-            transport: transportWithAuth
-          })
-        );
+        const data = this.client.getQueryData(listWarehousesQueryKey);
 
         return (data as ListWarehousesResponse)?.warehouses || [];
       },
@@ -174,16 +189,11 @@ export class Watcher {
         }
 
         // update Warehouse list
-        const listWarehousesQueryKey = createConnectQueryKey({
-          schema: listWarehouses,
-          input: create(ListWarehousesRequestSchema, {
-            project: this.project
-          }),
-          cardinality: 'finite',
-          transport: transportWithAuth
-        });
         this.client.setQueryData(listWarehousesQueryKey, {
           warehouses: data,
+          resourceVersion:
+            (this.client.getQueryData(listWarehousesQueryKey) as ListWarehousesResponse)
+              ?.resourceVersion ?? '',
           $typeName: 'akuity.io.kargo.service.v1alpha1.ListWarehousesResponse'
         });
 

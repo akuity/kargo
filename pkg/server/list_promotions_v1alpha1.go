@@ -53,7 +53,8 @@ func (s *server) ListPromotions(
 	}
 
 	return connect.NewResponse(&svcv1alpha1.ListPromotionsResponse{
-		Promotions: promotions,
+		Promotions:      promotions,
+		ResourceVersion: effectiveResourceVersionFromObjects(list.ResourceVersion, promotions),
 	}), nil
 }
 
@@ -74,7 +75,7 @@ func (s *server) listPromotions(c *gin.Context) {
 	stage := c.Query("stage")
 
 	if watchMode := c.Query("watch") == trueStr; watchMode {
-		s.watchPromotions(c, project, stage)
+		s.watchPromotions(c, project, stage, c.Query("resourceVersion"))
 		return
 	}
 
@@ -90,6 +91,12 @@ func (s *server) listPromotions(c *gin.Context) {
 		return
 	}
 
+	rvs := make([]string, len(list.Items))
+	for idx := range list.Items {
+		rvs[idx] = list.Items[idx].ResourceVersion
+	}
+	list.ResourceVersion = effectiveResourceVersion(list.ResourceVersion, rvs)
+
 	// Sort ascending by name
 	slices.SortFunc(list.Items, func(lhs, rhs kargoapi.Promotion) int {
 		return strings.Compare(lhs.Name, rhs.Name)
@@ -98,13 +105,17 @@ func (s *server) listPromotions(c *gin.Context) {
 	c.JSON(http.StatusOK, list)
 }
 
-func (s *server) watchPromotions(c *gin.Context, project, stage string) {
+func (s *server) watchPromotions(c *gin.Context, project, stage, resourceVersion string) {
 	ctx := c.Request.Context()
 	logger := logging.LoggerFromContext(ctx)
 
 	// Note: We can't filter by stage using field selector in the watch API.
 	// The indexer is for List operations only. We filter events client-side.
-	w, err := s.client.Watch(ctx, &kargoapi.PromotionList{}, client.InNamespace(project))
+	w, err := s.client.Watch(
+		ctx,
+		&kargoapi.PromotionList{},
+		buildWatchListOptions(project, resourceVersion)...,
+	)
 	if err != nil {
 		logger.Error(err, "failed to start watch")
 		_ = c.Error(fmt.Errorf("watch promotions: %w", err))

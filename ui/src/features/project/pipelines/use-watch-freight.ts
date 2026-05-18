@@ -5,6 +5,7 @@ import { useEffect } from 'react';
 
 import { transportWithAuth } from '@ui/config/transport';
 import { queryCache } from '@ui/features/utils/cache';
+import { isSameOrOlderResourceVersion } from '@ui/features/utils/resource-version';
 import { queryFreight } from '@ui/gen/api/service/v1alpha1/service-KargoService_connectquery';
 import { KargoService, QueryFreightResponse } from '@ui/gen/api/service/v1alpha1/service_pb';
 import { Freight } from '@ui/gen/api/v1alpha1/generated_pb';
@@ -55,7 +56,8 @@ export const useWatchFreight = (project: string) => {
 
       const stream = promiseClient.watchFreight(
         {
-          project
+          project,
+          resourceVersion: queryCache.freight.get(project)?.resourceVersion || ''
         },
         { signal: cancel.signal }
       );
@@ -74,7 +76,8 @@ export const useWatchFreight = (project: string) => {
         // which duplicates the initial GET and causes unnecessary re-renders.
         if (e.type === 'ADDED') {
           const existing = currentFreight?.groups?.['']?.freight || [];
-          if (existing.some((f) => f?.metadata?.name === freight?.metadata?.name)) {
+          const current = existing.find((f) => f?.metadata?.name === freight?.metadata?.name);
+          if (isSameOrOlderResourceVersion(current, freight)) {
             continue;
           }
         }

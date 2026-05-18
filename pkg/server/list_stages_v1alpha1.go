@@ -10,7 +10,6 @@ import (
 
 	"connectrpc.com/connect"
 	"github.com/gin-gonic/gin"
-	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
 	svcv1alpha1 "github.com/akuity/kargo/api/service/v1alpha1"
@@ -44,14 +43,12 @@ func (s *server) ListStages(
 	})
 
 	stages := make([]*kargoapi.Stage, len(list.Items))
-	rvs := make([]string, len(list.Items))
 	for idx := range list.Items {
 		stages[idx] = &list.Items[idx]
-		rvs[idx] = list.Items[idx].ResourceVersion
 	}
 	return connect.NewResponse(&svcv1alpha1.ListStagesResponse{
 		Stages:          stages,
-		ResourceVersion: effectiveResourceVersion(list.ResourceVersion, rvs),
+		ResourceVersion: effectiveResourceVersionFromObjects(list.ResourceVersion, stages),
 	}), nil
 }
 
@@ -89,13 +86,11 @@ func (s *server) watchStages(c *gin.Context, project string, warehouses []string
 	ctx := c.Request.Context()
 	logger := logging.LoggerFromContext(ctx)
 
-	watchOpts := []client.ListOption{client.InNamespace(project)}
-	if resourceVersion != "" {
-		watchOpts = append(watchOpts, &client.ListOptions{
-			Raw: &metav1.ListOptions{ResourceVersion: resourceVersion},
-		})
-	}
-	w, err := s.client.Watch(ctx, &kargoapi.StageList{}, watchOpts...)
+	w, err := s.client.Watch(
+		ctx,
+		&kargoapi.StageList{},
+		buildWatchListOptions(project, resourceVersion)...,
+	)
 	if err != nil {
 		logger.Error(err, "failed to start watch")
 		_ = c.Error(fmt.Errorf("watch stages: %w", err))
