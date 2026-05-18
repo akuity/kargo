@@ -1,4 +1,5 @@
-{{- if .Values.managementController.enabled }}
+{{- if and .Values.workloads.install .Values.managementController.enabled }}
+{{- $kc := .Values.managementController.kubeconfigSecrets.kargo | default .Values.kubeconfigSecrets.kargo }}
 apiVersion: apps/v1
 kind: Deployment
 metadata:
@@ -79,7 +80,7 @@ spec:
         {{- with (concat .Values.global.envFrom .Values.managementController.envFrom) }}
           {{- toYaml . | nindent 8 }}
         {{- end }}
-        {{- if .Values.kubeconfigSecrets.kargo }}
+        {{- if $kc }}
         volumeMounts:
         - mountPath: /etc/kargo/kubeconfigs
           name: kubeconfigs
@@ -91,13 +92,13 @@ spec:
         {{- end }}
         resources:
           {{- toYaml .Values.managementController.resources | nindent 10 }}
-      {{- if .Values.kubeconfigSecrets.kargo }}
+      {{- if $kc }}
       volumes:
       - name: kubeconfigs
         projected:
           sources:
           - secret:
-              name: {{ .Values.kubeconfigSecrets.kargo }}
+              name: {{ $kc }}
               items:
               - key: kubeconfig.yaml
                 path: kubeconfig.yaml

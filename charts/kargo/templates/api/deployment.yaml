@@ -1,4 +1,5 @@
-{{- if .Values.api.enabled }}
+{{- if and .Values.workloads.install .Values.api.enabled }}
+{{- $kc := .Values.api.kubeconfigSecrets.kargo | default .Values.kubeconfigSecrets.kargo }}
 apiVersion: apps/v1
 kind: Deployment
 metadata:
@@ -137,9 +138,9 @@ spec:
             {{- end }}
             initialDelaySeconds: 5
 {{- end }}
-{{- if or .Values.kubeconfigSecrets.kargo (and .Values.api.oidc.enabled .Values.api.oidc.dex.enabled) .Values.api.tls.enabled .Values.api.cabundle.configMapName .Values.api.cabundle.secretName }}
+{{- if or $kc (and .Values.api.oidc.enabled .Values.api.oidc.dex.enabled) .Values.api.tls.enabled .Values.api.cabundle.configMapName .Values.api.cabundle.secretName }}
           volumeMounts:
-          {{- if or .Values.kubeconfigSecrets.kargo (and .Values.api.oidc.enabled .Values.api.oidc.dex.enabled) .Values.api.tls.enabled }}
+          {{- if or $kc (and .Values.api.oidc.enabled .Values.api.oidc.dex.enabled) .Values.api.tls.enabled }}
             - mountPath: /etc/kargo
               name: config
               readOnly: true
@@ -180,15 +181,15 @@ spec:
         - name: certs
           mountPath: /tmp/target
       {{- end }}
-{{- if or .Values.kubeconfigSecrets.kargo (and .Values.api.oidc.enabled .Values.api.oidc.dex.enabled) .Values.api.tls.enabled .Values.api.cabundle.configMapName .Values.api.cabundle.secretName }}
+{{- if or $kc (and .Values.api.oidc.enabled .Values.api.oidc.dex.enabled) .Values.api.tls.enabled .Values.api.cabundle.configMapName .Values.api.cabundle.secretName }}
       volumes:
-{{- if or .Values.kubeconfigSecrets.kargo (and .Values.api.oidc.enabled .Values.api.oidc.dex.enabled) .Values.api.tls.enabled }}
+{{- if or $kc (and .Values.api.oidc.enabled .Values.api.oidc.dex.enabled) .Values.api.tls.enabled }}
         - name: config
           projected:
             sources:
-{{- if .Values.kubeconfigSecrets.kargo }}
+{{- if $kc }}
               - secret:
-                  name: {{ .Values.kubeconfigSecrets.kargo }}
+                  name: {{ $kc }}
                   items:
                     - key: kubeconfig.yaml
                       path: kubeconfig.yaml

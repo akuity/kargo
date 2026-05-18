@@ -1,4 +1,4 @@
-{{- if and .Values.webhooksServer.enabled .Values.webhooksServer.podDisruptionBudget.enabled }}
+{{- if and .Values.workloads.install .Values.webhooksServer.enabled .Values.webhooksServer.podDisruptionBudget.enabled }}
 apiVersion: policy/v1
 kind: PodDisruptionBudget
 metadata:

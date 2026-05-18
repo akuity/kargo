@@ -74,6 +74,16 @@ global:
   ## @param global.securityContext Default security context for all Kargo pods.
   securityContext: {}
 
+## @section Workloads
+workloads:
+  ## @param workloads.install Whether to install workload-bearing resources (Deployments, CronJobs, etc.) and their supporting resources.
+  install: true
+
+## @section Data Plane
+dataPlane:
+  ## @param dataPlane.install Coarse switch that, when `false`, suppresses every data-plane resource — even where finer-grained flags (`crds.install`, `rbac.installClusterRoles`, `rbac.installClusterRoleBindings`, `webhooks.register`, `global.createClusterSecretsNamespace`, `global.sharedResources.createNamespace`, `global.systemResources.createNamespace`) would otherwise install them.
+  install: true
+
 ## @section CRDs
 crds:
   ## @param crds.install Indicates if Custom Resource Definitions should be installed and upgraded as part of the release. If set to `false`, the CRDs will only be installed if they do not already exist.
@@ -101,16 +111,12 @@ webhooks:
 ##
 ## 2. A remote cluster hosting Argo CD resources
 ##
-## 3. A remote cluster that is running Argo Rollouts and is a suitable location
-##    to execute user-defined verification processes in the form of Argo
-##    Rollouts AnalysisRuns
-##
 ## This flexibility is useful for various advanced use cases -- especially
 ## topologies where Kargo data may be sharded, with Kargo controllers distributed
-## across many clusters. Any two, or even all three, of these configurations may
-## be the same. In the average case, these should all be left unspecified. All
-## that are unspecified will default to configuration for the cluster in which
-## the Kargo controller is running.
+## across many clusters. Either or both of these configurations may be the same.
+## In the average case, these should all be left unspecified. All that are
+## unspecified will default to configuration for the cluster in which the Kargo
+## controller is running.
 ## @descriptionEnd
 ## @skip kubeconfigSecrets
 kubeconfigSecrets: {}
@@ -123,6 +129,11 @@ kubeconfigSecrets: {}
 api:
   ## @param api.enabled Whether the API server is enabled.
   enabled: true
+
+  ## @skip api.kubeconfigSecrets
+  kubeconfigSecrets: {}
+    ## @param api.kubeconfigSecrets.kargo [nullable] Per-component override for `kubeconfigSecrets.kargo`. Lets the API server mount its own kubeconfig secret rather than the shared one. Falls back to the chart-level value when unset.
+    # kargo: ""
 
   ## @param api.replicas The number of API server pods.
   replicas: 1
@@ -512,6 +523,13 @@ controller:
   ## @param controller.enabled Whether the controller is enabled.
   enabled: true
 
+  ## @skip controller.kubeconfigSecrets
+  kubeconfigSecrets: {}
+    ## @param controller.kubeconfigSecrets.kargo [nullable] Per-component override for `kubeconfigSecrets.kargo`. Lets the controller mount its own kubeconfig secret rather than the shared one. Falls back to the chart-level value when unset.
+    # kargo: ""
+    ## @param controller.kubeconfigSecrets.argocd [nullable] Per-component override for `kubeconfigSecrets.argocd`. Falls back to the chart-level value when unset.
+    # argocd: ""
+
   ## @param controller.logLevel The log level for the controller. Valid options are ERROR, INFO, DEBUG, and TRACE (case insensitive). Note that INFO level messages are written during startup regardless of the selected level.
   logLevel: INFO
   ## @param controller.logFormat The format of logs from the controller. Valid options are CONSOLE or JSON (case insensitive).
@@ -678,6 +696,11 @@ garbageCollector:
   ## @param garbageCollector.enabled Whether the garbage collector is enabled.
   enabled: true
 
+  ## @skip garbageCollector.kubeconfigSecrets
+  kubeconfigSecrets: {}
+    ## @param garbageCollector.kubeconfigSecrets.kargo [nullable] Per-component override for `kubeconfigSecrets.kargo`. Lets the garbage collector mount its own kubeconfig secret rather than the shared one. Falls back to the chart-level value when unset.
+    # kargo: ""
+
   ## @param garbageCollector.logLevel The log level for the garbage collector. Valid options are ERROR, INFO, DEBUG, and TRACE (case insensitive). Note that INFO level messages are written during startup regardless of the selected level.
   logLevel: INFO
   ## @param garbageCollector.logFormat The format of logs from the garbage collector. Valid options are CONSOLE or JSON (case insensitive).
@@ -749,6 +772,11 @@ garbageCollector:
 externalWebhooksServer:
   ## @param externalWebhooksServer.enabled Whether the external webhooks server is enabled.
   enabled: true
+
+  ## @skip externalWebhooksServer.kubeconfigSecrets
+  kubeconfigSecrets: {}
+    ## @param externalWebhooksServer.kubeconfigSecrets.kargo [nullable] Per-component override for `kubeconfigSecrets.kargo`. Lets the external webhooks server mount its own kubeconfig secret rather than the shared one. Falls back to the chart-level value when unset.
+    # kargo: ""
 
   ## @param externalWebhooksServer.replicas The number of external webhooks server pods.
   replicas: 1
@@ -874,6 +902,11 @@ managementController:
   ## @param managementController.enabled Whether the management controller is enabled.
   enabled: true
 
+  ## @skip managementController.kubeconfigSecrets
+  kubeconfigSecrets: {}
+    ## @param managementController.kubeconfigSecrets.kargo [nullable] Per-component override for `kubeconfigSecrets.kargo`. Lets the management controller mount its own kubeconfig secret rather than the shared one. Falls back to the chart-level value when unset.
+    # kargo: ""
+
   ## @param managementController.logLevel The log level for the management controller. Valid options are ERROR, INFO, DEBUG, and TRACE (case insensitive). Note that INFO level messages are written during startup regardless of the selected level.
   logLevel: INFO
   ## @param managementController.logFormat The format of logs from the management controller. Valid options are CONSOLE or JSON (case insensitive).
@@ -949,6 +982,11 @@ managementController:
 webhooksServer:
   ## @param webhooksServer.enabled Whether the webhooks server is enabled.
   enabled: true
+
+  ## @skip webhooksServer.kubeconfigSecrets
+  kubeconfigSecrets: {}
+    ## @param webhooksServer.kubeconfigSecrets.kargo [nullable] Per-component override for `kubeconfigSecrets.kargo`. Lets the webhooks server mount its own kubeconfig secret rather than the shared one. Falls back to the chart-level value when unset.
+    # kargo: ""
 
   ## @param webhooksServer.replicas The number of webhooks server pods.
   replicas: 1

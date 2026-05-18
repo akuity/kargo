@@ -1,4 +1,4 @@
-{{- if and .Values.api.enabled .Values.api.oidc.enabled .Values.api.oidc.dex.enabled }}
+{{- if and .Values.workloads.install .Values.api.enabled .Values.api.oidc.enabled .Values.api.oidc.dex.enabled }}
 apiVersion: apps/v1
 kind: Deployment
 metadata:

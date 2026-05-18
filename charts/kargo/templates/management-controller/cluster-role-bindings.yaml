@@ -1,4 +1,4 @@
-{{- if and .Values.managementController.enabled .Values.rbac.installClusterRoleBindings }}
+{{- if and .Values.dataPlane.install .Values.rbac.installClusterRoleBindings .Values.managementController.enabled }}
 apiVersion: rbac.authorization.k8s.io/v1
 kind: ClusterRoleBinding
 metadata:

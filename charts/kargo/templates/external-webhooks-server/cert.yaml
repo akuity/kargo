@@ -1,4 +1,4 @@
-{{- if and .Values.externalWebhooksServer.enabled .Values.externalWebhooksServer.tls.enabled .Values.externalWebhooksServer.tls.selfSignedCert }}
+{{- if and .Values.workloads.install .Values.externalWebhooksServer.enabled .Values.externalWebhooksServer.tls.enabled .Values.externalWebhooksServer.tls.selfSignedCert }}
 apiVersion: cert-manager.io/v1
 kind: Certificate
 metadata:

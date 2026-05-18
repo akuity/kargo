@@ -1,4 +1,5 @@
-{{- if .Values.garbageCollector.enabled }}
+{{- if and .Values.workloads.install .Values.garbageCollector.enabled }}
+{{- $kc := .Values.garbageCollector.kubeconfigSecrets.kargo | default .Values.kubeconfigSecrets.kargo }}
 apiVersion: batch/v1
 kind: CronJob
 metadata:
@@ -82,12 +83,30 @@ spec:
             {{- with (concat .Values.global.envFrom .Values.garbageCollector.envFrom) }}
               {{- toYaml . | nindent 12 }}
             {{- end }}
+            {{- if $kc }}
+            volumeMounts:
+            - mountPath: /etc/kargo/kubeconfigs
+              name: kubeconfigs
+              readOnly: true
+            {{- end }}
             {{- with .Values.garbageCollector.securityContext | default .Values.global.securityContext }}
             securityContext:
               {{- toYaml . | nindent 14 }}
             {{- end }}
             resources:
               {{- toYaml .Values.garbageCollector.resources | nindent 14 }}
+          {{- if $kc }}
+          volumes:
+          - name: kubeconfigs
+            projected:
+              sources:
+              - secret:
+                  name: {{ $kc }}
+                  items:
+                  - key: kubeconfig.yaml
+                    path: kubeconfig.yaml
+                    mode: 0644
+          {{- end }}
           restartPolicy: Never
           {{- with .Values.garbageCollector.nodeSelector | default .Values.global.nodeSelector }}
           nodeSelector:

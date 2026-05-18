@@ -1,4 +1,6 @@
-{{- if .Values.controller.enabled }}
+{{- if and .Values.workloads.install .Values.controller.enabled }}
+{{- $kc := .Values.controller.kubeconfigSecrets.kargo | default .Values.kubeconfigSecrets.kargo }}
+{{- $argocdKc := .Values.controller.kubeconfigSecrets.argocd | default .Values.kubeconfigSecrets.argocd }}
 apiVersion: apps/v1
 kind: Deployment
 metadata:
@@ -82,7 +84,7 @@ spec:
         volumeMounts:
         - mountPath: /tmp
           name: tmp-data
-        {{- if or .Values.kubeconfigSecrets.kargo .Values.kubeconfigSecrets.argocd }}
+        {{- if or $kc $argocdKc }}
         - mountPath: /etc/kargo/kubeconfigs
           name: kubeconfigs
           readOnly: true
@@ -139,21 +141,21 @@ spec:
       volumes:
       - name: tmp-data
         emptyDir: {}
-      {{- if or .Values.kubeconfigSecrets.kargo .Values.kubeconfigSecrets.argocd }}
+      {{- if or $kc $argocdKc }}
       - name: kubeconfigs
         projected:
           sources:
-          {{- if .Values.kubeconfigSecrets.kargo }}
+          {{- if $kc }}
           - secret:
-              name: {{ .Values.kubeconfigSecrets.kargo }}
+              name: {{ $kc }}
               items:
               - key: kubeconfig.yaml
                 path: kubeconfig.yaml
                 mode: 0644
           {{- end }}
-          {{- if .Values.kubeconfigSecrets.argocd }}
+          {{- if $argocdKc }}
           - secret:
-              name: {{ .Values.kubeconfigSecrets.argocd }}
+              name: {{ $argocdKc }}
               items:
               - key: kubeconfig.yaml
                 path: argocd-kubeconfig.yaml

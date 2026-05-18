@@ -1,4 +1,4 @@
-{{- if and .Values.api.enabled .Values.api.podDisruptionBudget.enabled }}
+{{- if and .Values.workloads.install .Values.api.enabled .Values.api.podDisruptionBudget.enabled }}
 apiVersion: policy/v1
 kind: PodDisruptionBudget
 metadata:

@@ -1,4 +1,4 @@
-{{- if .Values.webhooks.register }}
+{{- if and .Values.dataPlane.install .Values.webhooks.register }}
 apiVersion: admissionregistration.k8s.io/v1
 kind: MutatingWebhookConfiguration
 metadata:

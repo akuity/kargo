@@ -1,4 +1,5 @@
-{{- if .Values.webhooksServer.enabled }}
+{{- if and .Values.workloads.install .Values.webhooksServer.enabled }}
+{{- $kc := .Values.webhooksServer.kubeconfigSecrets.kargo | default .Values.kubeconfigSecrets.kargo }}
 apiVersion: apps/v1
 kind: Deployment
 metadata:
@@ -91,7 +92,7 @@ spec:
         - mountPath: /tmp/k8s-webhook-server/serving-certs
           name: cert
           readOnly: true
-        {{- if .Values.kubeconfigSecrets.kargo }}
+        {{- if $kc }}
         - mountPath: /etc/kargo/kubeconfigs
           name: kubeconfigs
           readOnly: true
@@ -107,11 +108,11 @@ spec:
         secret:
           defaultMode: 0644
           secretName: {{ .Values.webhooksServer.tls.secretName }}
-      {{- if .Values.kubeconfigSecrets.kargo }}
+      {{- if $kc }}
       - name: kubeconfigs
         secret:
           defaultMode: 0644
-          secretName: {{ .Values.kubeconfigSecrets.kargo }}
+          secretName: {{ $kc }}
       {{- end }}
       {{- with .Values.webhooksServer.nodeSelector | default .Values.global.nodeSelector }}
       nodeSelector:

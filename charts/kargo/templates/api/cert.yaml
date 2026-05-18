@@ -1,4 +1,4 @@
-{{- if and .Values.api.enabled .Values.api.tls.enabled .Values.api.tls.selfSignedCert }}
+{{- if and .Values.workloads.install .Values.api.enabled .Values.api.tls.enabled .Values.api.tls.selfSignedCert }}
 apiVersion: cert-manager.io/v1
 kind: Certificate
 metadata:
