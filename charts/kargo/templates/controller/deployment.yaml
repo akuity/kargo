@@ -95,8 +95,7 @@ spec:
           readOnly: true
         {{- end }}
         {{- if or .Values.controller.cabundle.configMapName .Values.controller.cabundle.secretName }}
-        - mountPath: /etc/ssl/certs
-          name: certs
+        {{- include "kargo.cabundle.volumeMount" .Values.controller.cabundle | nindent 8 }}
         {{- end }}
         {{- with .Values.controller.volumeMounts }}
           {{- toYaml . | nindent 8 }}
@@ -111,34 +110,13 @@ spec:
       {{- toYaml . | nindent 6 }}
       {{- end }}
 
-      {{- if or .Values.controller.cabundle.configMapName .Values.controller.cabundle.secretName .Values.controller.initContainers  }}
+      {{- if or .Values.controller.cabundle.configMapName .Values.controller.cabundle.secretName .Values.controller.initContainers }}
       initContainers:
       {{- with .Values.controller.initContainers }}
-        {{- toYaml . | nindent 8 }}
+      {{- toYaml . | nindent 6 }}
       {{- end }}
       {{- if or .Values.controller.cabundle.configMapName .Values.controller.cabundle.secretName }}
-        - name: parse-cabundle
-          image: {{ include "kargo.image" . }}
-          imagePullPolicy: {{ .Values.image.pullPolicy }}
-          securityContext:
-            runAsUser: 0
-          command:
-          - "/bin/sh"
-          - "-c"
-          args:
-          - |
-            for file in /tmp/source/*; do
-              base_filename=$(basename "$file" .crt)
-              awk 'BEGIN {c=0;} /BEGIN CERT/{c++} { print > "/usr/local/share/ca-certificates/" base_filename "." c ".crt"}' base_filename="$base_filename" < $file
-            done
-            /usr/sbin/update-ca-certificates
-            find /etc/ssl/certs -type l -exec cp --remove-destination {} /etc/ssl/certs/ \;
-            cp -r /etc/ssl/certs/* /tmp/target/
-          volumeMounts:
-          - name: cabundle
-            mountPath: /tmp/source
-          - name: certs
-            mountPath: /tmp/target
+      {{- include "kargo.cabundle.initContainer" (dict "cabundle" .Values.controller.cabundle "context" .) | nindent 6 }}
       {{- end }}
       {{- end }}
       volumes:
@@ -166,17 +144,7 @@ spec:
           {{- end }}
       {{- end }}
       {{- if or .Values.controller.cabundle.configMapName .Values.controller.cabundle.secretName }}
-      {{- if .Values.controller.cabundle.secretName }}
-      - name: cabundle
-        secret:
-          secretName: {{ .Values.controller.cabundle.secretName }}
-      {{- else }}
-      - name: cabundle
-        configMap:
-          name: {{ .Values.controller.cabundle.configMapName }}
-      {{- end }}
-      - name: certs
-        emptyDir: {}
+      {{- include "kargo.cabundle.volumes" .Values.controller.cabundle | nindent 6 }}
       {{- end }}
       {{- if .Values.controller.gitClient.signingKeySecret.name }}
       - name: git
