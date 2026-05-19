@@ -83,11 +83,16 @@ spec:
             {{- with (concat .Values.global.envFrom .Values.garbageCollector.envFrom) }}
               {{- toYaml . | nindent 12 }}
             {{- end }}
-            {{- if $kc }}
+            {{- if or $kc .Values.garbageCollector.volumeMounts }}
             volumeMounts:
+            {{- if $kc }}
             - mountPath: /etc/kargo/kubeconfigs
               name: kubeconfigs
               readOnly: true
+            {{- end }}
+            {{- with .Values.garbageCollector.volumeMounts }}
+            {{- toYaml . | nindent 12 }}
+            {{- end }}
             {{- end }}
             {{- with .Values.garbageCollector.securityContext | default .Values.global.securityContext }}
             securityContext:
@@ -95,8 +100,16 @@ spec:
             {{- end }}
             resources:
               {{- toYaml .Values.garbageCollector.resources | nindent 14 }}
-          {{- if $kc }}
+          {{- with .Values.garbageCollector.containers }}
+          {{- toYaml . | nindent 10 }}
+          {{- end }}
+          {{- with .Values.garbageCollector.initContainers }}
+          initContainers:
+          {{- toYaml . | nindent 10 }}
+          {{- end }}
+          {{- if or $kc .Values.garbageCollector.volumes }}
           volumes:
+          {{- if $kc }}
           - name: kubeconfigs
             projected:
               sources:
@@ -106,6 +119,10 @@ spec:
                   - key: kubeconfig.yaml
                     path: kubeconfig.yaml
                     mode: 0644
+          {{- end }}
+          {{- with .Values.garbageCollector.volumes }}
+          {{- toYaml . | nindent 10 }}
+          {{- end }}
           {{- end }}
           restartPolicy: Never
           {{- with .Values.garbageCollector.nodeSelector | default .Values.global.nodeSelector }}

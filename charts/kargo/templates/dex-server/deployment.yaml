@@ -98,6 +98,13 @@ spec:
           successThreshold: 1
           failureThreshold: 300
           {{- end }}
+      {{- with .Values.api.oidc.dex.containers }}
+      {{- toYaml . | nindent 6 }}
+      {{- end }}
+      {{- with .Values.api.oidc.dex.initContainers }}
+      initContainers:
+      {{- toYaml . | nindent 6 }}
+      {{- end }}
       volumes:
       - name: config
         projected:
@@ -115,7 +122,7 @@ spec:
               - key: config.yaml
                 path: config.yaml
       {{- if .Values.api.oidc.dex.volumes }}
-        {{- toYaml .Values.api.oidc.dex.volumes | nindent 6 }}
+      {{- toYaml .Values.api.oidc.dex.volumes | nindent 6 }}
       {{- end }}
       {{- with .Values.api.oidc.dex.nodeSelector | default .Values.global.nodeSelector }}
       nodeSelector:

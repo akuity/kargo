@@ -97,12 +97,22 @@ spec:
           name: kubeconfigs
           readOnly: true
         {{- end }}
+        {{- with .Values.webhooksServer.volumeMounts }}
+        {{- toYaml . | nindent 8 }}
+        {{- end }}
         {{- with .Values.webhooksServer.securityContext | default .Values.global.securityContext }}
         securityContext:
           {{- toYaml . | nindent 10 }}
         {{- end }}
         resources:
           {{- toYaml .Values.webhooksServer.resources | nindent 10 }}
+      {{- with .Values.webhooksServer.containers }}
+      {{- toYaml . | nindent 6 }}
+      {{- end }}
+      {{- with .Values.webhooksServer.initContainers }}
+      initContainers:
+      {{- toYaml . | nindent 6 }}
+      {{- end }}
       volumes:
       - name: cert
         secret:
@@ -113,6 +123,9 @@ spec:
         secret:
           defaultMode: 0644
           secretName: {{ $kc }}
+      {{- end }}
+      {{- with .Values.webhooksServer.volumes }}
+      {{- toYaml . | nindent 6 }}
       {{- end }}
       {{- with .Values.webhooksServer.nodeSelector | default .Values.global.nodeSelector }}
       nodeSelector:

@@ -106,11 +106,16 @@ spec:
             path: /healthz
           initialDelaySeconds: 5
         {{- end }}
-        {{- if or $kc .Values.externalWebhooksServer.tls.enabled }}
+        {{- if or $kc .Values.externalWebhooksServer.tls.enabled .Values.externalWebhooksServer.volumeMounts }}
         volumeMounts:
+        {{- if or $kc .Values.externalWebhooksServer.tls.enabled }}
         - mountPath: /etc/kargo
           name: config
           readOnly: true
+        {{- end }}
+        {{- with .Values.externalWebhooksServer.volumeMounts }}
+        {{- toYaml . | nindent 8 }}
+        {{- end }}
         {{- end }}
         {{- with .Values.externalWebhooksServer.securityContext | default .Values.global.securityContext }}
         securityContext:
@@ -118,8 +123,16 @@ spec:
         {{- end }}
         resources:
           {{- toYaml .Values.externalWebhooksServer.resources | nindent 10 }}
-      {{- if or $kc .Values.externalWebhooksServer.tls.enabled }}
+      {{- with .Values.externalWebhooksServer.containers }}
+      {{- toYaml . | nindent 6 }}
+      {{- end }}
+      {{- with .Values.externalWebhooksServer.initContainers }}
+      initContainers:
+      {{- toYaml . | nindent 6 }}
+      {{- end }}
+      {{- if or $kc .Values.externalWebhooksServer.tls.enabled .Values.externalWebhooksServer.volumes }}
       volumes:
+      {{- if or $kc .Values.externalWebhooksServer.tls.enabled }}
       - name: config
         projected:
           sources:
@@ -140,6 +153,10 @@ spec:
                 - key: tls.key
                   path: tls.key
             {{- end }}
+      {{- end }}
+      {{- with .Values.externalWebhooksServer.volumes }}
+      {{- toYaml . | nindent 6 }}
+      {{- end }}
       {{- end }}
       {{- with .Values.externalWebhooksServer.nodeSelector | default .Values.global.nodeSelector }}
       nodeSelector:

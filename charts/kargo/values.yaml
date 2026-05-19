@@ -334,6 +334,10 @@ api:
       #  - secretRef:
       #      name: secret-name
 
+      ## @param api.oidc.dex.containers Additional sidecar containers to add to Dex pods. Rendered as literal YAML.
+      containers: []
+      ## @param api.oidc.dex.initContainers Additional init containers to add to Dex pods. Rendered as literal YAML.
+      initContainers: []
       ## @param api.oidc.dex.volumes Add additional volumes to Dex pods. This is convenient for cases where api.oidc.dex.connectors needs to reference mounted data from a Secret that is managed "out of band" with a secret management solution such as Sealed Secrets.
       volumes: []
       # - name: google-json
@@ -432,6 +436,15 @@ api:
   #      name: config-map-name
   #  - secretRef:
   #      name: secret-name
+
+  ## @param api.containers Additional sidecar containers to add to API server pods. Rendered as literal YAML.
+  containers: []
+  ## @param api.initContainers Additional init containers to add to API server pods. Rendered as literal YAML.
+  initContainers: []
+  ## @param api.volumes Additional pod-level volumes for API server pods. Rendered as literal YAML.
+  volumes: []
+  ## @param api.volumeMounts Additional volume mounts for the API server container. Rendered as literal YAML.
+  volumeMounts: []
 
   ## @param api.resources Resources limits and requests for the api containers.
   resources: {}
@@ -660,6 +673,8 @@ controller:
   #  - secretRef:
   #      name: secret-name
 
+  ## @param controller.containers Additional sidecar containers to add to controller pods. Rendered as literal YAML.
+  containers: []
   ## @param controller.volumes Volumes for the controller pods.
   volumes: []
   ## @param controller.volumeMounts Volume mounts for the controller pods.
@@ -748,6 +763,15 @@ garbageCollector:
   #  - secretRef:
   #      name: secret-name
 
+  ## @param garbageCollector.containers Additional sidecar containers to add to garbage collector pods. Rendered as literal YAML.
+  containers: []
+  ## @param garbageCollector.initContainers Additional init containers to add to garbage collector pods. Rendered as literal YAML.
+  initContainers: []
+  ## @param garbageCollector.volumes Additional pod-level volumes for garbage collector pods. Rendered as literal YAML.
+  volumes: []
+  ## @param garbageCollector.volumeMounts Additional volume mounts for the garbage collector container. Rendered as literal YAML.
+  volumeMounts: []
+
   ## @param garbageCollector.resources Resources limits and requests for the garbage collector containers.
   resources: {}
     # limits:
@@ -817,6 +841,15 @@ externalWebhooksServer:
   #      name: config-map-name
   #  - secretRef:
   #      name: secret-name
+
+  ## @param externalWebhooksServer.containers Additional sidecar containers to add to external webhook server pods. Rendered as literal YAML.
+  containers: []
+  ## @param externalWebhooksServer.initContainers Additional init containers to add to external webhook server pods. Rendered as literal YAML.
+  initContainers: []
+  ## @param externalWebhooksServer.volumes Additional pod-level volumes for external webhook server pods. Rendered as literal YAML.
+  volumes: []
+  ## @param externalWebhooksServer.volumeMounts Additional volume mounts for the external webhook server container. Rendered as literal YAML.
+  volumeMounts: []
 
   ## @param externalWebhooksServer.resources Resources limits and requests for the external webhook server containers.
   resources: {}
@@ -958,6 +991,15 @@ managementController:
   #  - secretRef:
   #      name: secret-name
 
+  ## @param managementController.containers Additional sidecar containers to add to management controller pods. Rendered as literal YAML.
+  containers: []
+  ## @param managementController.initContainers Additional init containers to add to management controller pods. Rendered as literal YAML.
+  initContainers: []
+  ## @param managementController.volumes Additional pod-level volumes for management controller pods. Rendered as literal YAML.
+  volumes: []
+  ## @param managementController.volumeMounts Additional volume mounts for the management controller container. Rendered as literal YAML.
+  volumeMounts: []
+
   ## @param managementController.resources Resources limits and requests for the management controller containers.
   resources: {}
     # limits:
@@ -1027,6 +1069,15 @@ webhooksServer:
   #      name: config-map-name
   #  - secretRef:
   #      name: secret-name
+
+  ## @param webhooksServer.containers Additional sidecar containers to add to webhooks server pods. Rendered as literal YAML.
+  containers: []
+  ## @param webhooksServer.initContainers Additional init containers to add to webhooks server pods. Rendered as literal YAML.
+  initContainers: []
+  ## @param webhooksServer.volumes Additional pod-level volumes for webhooks server pods. Rendered as literal YAML.
+  volumes: []
+  ## @param webhooksServer.volumeMounts Additional volume mounts for the webhooks server container. Rendered as literal YAML.
+  volumeMounts: []
 
   ## @param webhooksServer.resources Resources limits and requests for the webhooks server containers.
   resources: {}
