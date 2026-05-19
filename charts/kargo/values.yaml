@@ -138,6 +138,16 @@ api:
   ## @param api.replicas The number of API server pods.
   replicas: 1
 
+  ## @param api.revisionHistoryLimit Number of old ReplicaSets the API server Deployment retains for rollback.
+  revisionHistoryLimit: 10
+
+  ## @skip api.rollingUpdate
+  rollingUpdate: {}
+    ## @param api.rollingUpdate.maxSurge [nullable] Maximum number of Pods that can be created above `replicas` during a rolling update of the API server Deployment. May be an absolute number or a percentage. Unset for the Kubernetes default (25%).
+    # maxSurge: 25%
+    ## @param api.rollingUpdate.maxUnavailable [nullable] Maximum number of Pods that can be unavailable during a rolling update of the API server Deployment. May be an absolute number or a percentage. Unset for the Kubernetes default (25%).
+    # maxUnavailable: 25%
+
   ## @param api.host The domain name where Kargo's API server will be accessible. When applicable, this is used for generation of an Ingress resource, certificates, and the OpenID Connect issuer and callback URLs. Note: The value in this field MAY include a port number and MUST NOT specify the protocol (http vs https), which is automatically inferred from other configuration options.
   host: localhost
 
@@ -260,6 +270,16 @@ api:
     dex:
       ## @param api.oidc.dex.enabled Whether to enable Dex as the identity provider. When set to true, the Kargo installation will include a Dex server and the Kargo API server will be configured to make the /dex endpoint a reverse proxy for the Dex server.
       enabled: false
+
+      ## @param api.oidc.dex.revisionHistoryLimit Number of old ReplicaSets the Dex server Deployment retains for rollback.
+      revisionHistoryLimit: 10
+
+      ## @skip api.oidc.dex.rollingUpdate
+      rollingUpdate: {}
+        ## @param api.oidc.dex.rollingUpdate.maxSurge [nullable] Maximum number of Pods that can be created above `replicas` during a rolling update of the Dex server Deployment. May be an absolute number or a percentage. Unset for the Kubernetes default (25%).
+        # maxSurge: 25%
+        ## @param api.oidc.dex.rollingUpdate.maxUnavailable [nullable] Maximum number of Pods that can be unavailable during a rolling update of the Dex server Deployment. May be an absolute number or a percentage. Unset for the Kubernetes default (25%).
+        # maxUnavailable: 25%
 
       image:
         ## @param api.oidc.dex.image.repository Image repository of Dex
@@ -536,6 +556,9 @@ controller:
   ## @param controller.enabled Whether the controller is enabled.
   enabled: true
 
+  ## @param controller.revisionHistoryLimit Number of old ReplicaSets the controller Deployment retains for rollback. The controller uses a `Recreate` rollout strategy (singleton), so `rollingUpdate.*` knobs do not apply.
+  revisionHistoryLimit: 10
+
   ## @skip controller.kubeconfigSecrets
   kubeconfigSecrets: {}
     ## @param controller.kubeconfigSecrets.kargo [nullable] Per-component override for `kubeconfigSecrets.kargo`. Lets the controller mount its own kubeconfig secret rather than the shared one. Falls back to the chart-level value when unset.
@@ -805,6 +828,16 @@ externalWebhooksServer:
   ## @param externalWebhooksServer.replicas The number of external webhooks server pods.
   replicas: 1
 
+  ## @param externalWebhooksServer.revisionHistoryLimit Number of old ReplicaSets the external webhooks server Deployment retains for rollback.
+  revisionHistoryLimit: 10
+
+  ## @skip externalWebhooksServer.rollingUpdate
+  rollingUpdate: {}
+    ## @param externalWebhooksServer.rollingUpdate.maxSurge [nullable] Maximum number of Pods that can be created above `replicas` during a rolling update of the external webhooks server Deployment. May be an absolute number or a percentage. Unset for the Kubernetes default (25%).
+    # maxSurge: 25%
+    ## @param externalWebhooksServer.rollingUpdate.maxUnavailable [nullable] Maximum number of Pods that can be unavailable during a rolling update of the external webhooks server Deployment. May be an absolute number or a percentage. Unset for the Kubernetes default (25%).
+    # maxUnavailable: 25%
+
   ## @param externalWebhooksServer.host The domain name where Kargo's external webhooks server will be accessible. When applicable, this is used for generation of an Ingress resource and certificates. Note: The value in this field MAY include a port number and MUST NOT specify the protocol (http vs https), which is automatically inferred from other configuration options.
   host: localhost
 
@@ -935,6 +968,9 @@ managementController:
   ## @param managementController.enabled Whether the management controller is enabled.
   enabled: true
 
+  ## @param managementController.revisionHistoryLimit Number of old ReplicaSets the management controller Deployment retains for rollback. The management controller uses a `Recreate` rollout strategy (singleton), so `rollingUpdate.*` knobs do not apply.
+  revisionHistoryLimit: 10
+
   ## @skip managementController.kubeconfigSecrets
   kubeconfigSecrets: {}
     ## @param managementController.kubeconfigSecrets.kargo [nullable] Per-component override for `kubeconfigSecrets.kargo`. Lets the management controller mount its own kubeconfig secret rather than the shared one. Falls back to the chart-level value when unset.
@@ -1032,6 +1068,16 @@ webhooksServer:
 
   ## @param webhooksServer.replicas The number of webhooks server pods.
   replicas: 1
+
+  ## @param webhooksServer.revisionHistoryLimit Number of old ReplicaSets the webhooks server Deployment retains for rollback.
+  revisionHistoryLimit: 10
+
+  ## @skip webhooksServer.rollingUpdate
+  rollingUpdate: {}
+    ## @param webhooksServer.rollingUpdate.maxSurge [nullable] Maximum number of Pods that can be created above `replicas` during a rolling update of the webhooks server Deployment. May be an absolute number or a percentage. Unset for the Kubernetes default (25%).
+    # maxSurge: 25%
+    ## @param webhooksServer.rollingUpdate.maxUnavailable [nullable] Maximum number of Pods that can be unavailable during a rolling update of the webhooks server Deployment. May be an absolute number or a percentage. Unset for the Kubernetes default (25%).
+    # maxUnavailable: 25%
 
   ## @param webhooksServer.logLevel The log level for the webhooks server. Valid options are ERROR, INFO, DEBUG, and TRACE (case insensitive). Note that INFO level messages are written during startup regardless of the selected level.
   logLevel: INFO

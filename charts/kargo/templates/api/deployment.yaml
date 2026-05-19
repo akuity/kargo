@@ -16,8 +16,13 @@ metadata:
   {{- include "kargo.annotations" (dict "root" . "annotations" .Values.api.annotations) | nindent 2 }}
 spec:
   replicas: {{ .Values.api.replicas | default 1 }}
+  revisionHistoryLimit: {{ .Values.api.revisionHistoryLimit }}
   strategy:
     type: RollingUpdate
+    {{- with .Values.api.rollingUpdate }}
+    rollingUpdate:
+      {{- toYaml . | nindent 6 }}
+    {{- end }}
   selector:
     matchLabels:
       {{- include "kargo.selectorLabels" . | nindent 6 }}

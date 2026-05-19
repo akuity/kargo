@@ -10,6 +10,13 @@ metadata:
   {{- include "kargo.annotations" (dict "root" . "annotations" .Values.api.oidc.dex.annotations) | nindent 2 }}
 spec:
   replicas: 1
+  revisionHistoryLimit: {{ .Values.api.oidc.dex.revisionHistoryLimit }}
+  {{- with .Values.api.oidc.dex.rollingUpdate }}
+  strategy:
+    type: RollingUpdate
+    rollingUpdate:
+      {{- toYaml . | nindent 6 }}
+  {{- end }}
   selector:
     matchLabels:
       {{- include "kargo.selectorLabels" . | nindent 6 }}

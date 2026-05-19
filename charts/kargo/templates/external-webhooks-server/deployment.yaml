@@ -16,8 +16,13 @@ metadata:
   {{- include "kargo.annotations" (dict "root" . "annotations" .Values.externalWebhooksServer.annotations) | nindent 2 }}
 spec:
   replicas: {{ .Values.externalWebhooksServer.replicas | default 1 }}
+  revisionHistoryLimit: {{ .Values.externalWebhooksServer.revisionHistoryLimit }}
   strategy:
     type: RollingUpdate
+    {{- with .Values.externalWebhooksServer.rollingUpdate }}
+    rollingUpdate:
+      {{- toYaml . | nindent 6 }}
+    {{- end }}
   selector:
     matchLabels:
       {{- include "kargo.selectorLabels" . | nindent 6 }}

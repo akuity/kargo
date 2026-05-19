@@ -16,6 +16,7 @@ metadata:
   {{- include "kargo.annotations" (dict "root" . "annotations" .Values.managementController.annotations) | nindent 2 }}
 spec:
   replicas: 1
+  revisionHistoryLimit: {{ .Values.managementController.revisionHistoryLimit }}
   strategy:
     type: Recreate
   selector:
