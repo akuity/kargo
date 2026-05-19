@@ -228,6 +228,15 @@ unpacks the customer-supplied CA cert source (mounted at /tmp/source) into a
 writable trust bundle mounted at /tmp/target. Pair with kargo.cabundle.volumes
 which exposes the `cabundle` and `certs` volumes the init container expects.
 
+The init container uses the kargo image (which has `update-ca-certificates`).
+
+Args (dict):
+  cabundle — the per-component cabundle config (configMapName / secretName)
+  context  — the chart context whose .Values.image and .Chart back the kargo
+             image lookup. Templates inside this chart pass `.` (their chart
+             root). Templates in a parent chart that depends on this one as a
+             subchart pass `.Subcharts.kargo` to point at this chart's context.
+
 Empty when the passed cabundle dict has neither configMapName nor secretName.
 
 Usage:
