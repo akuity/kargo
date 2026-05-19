@@ -10,6 +10,9 @@ specified source and target branches. This step is often used after a
 [`git-push` step](git-push.md) and is commonly followed by a
 [`git-wait-for-pr` step](git-wait-for-pr.md).
 
+At present, this feature only supports GitHub, Gitea, Azure DevOps, GitLab and
+BitBucket pull/merge requests.
+
 ## Credentials
 
 Git steps are utilizing the [repository credentials](../../50-security/30-managing-secrets.md#repository-credentials)
