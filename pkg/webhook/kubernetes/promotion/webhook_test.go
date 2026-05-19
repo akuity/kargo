@@ -107,7 +107,7 @@ func Test_webhook_Default(t *testing.T) {
 			},
 		},
 		{
-			name: "stage without promotion steps",
+			name: "Stage with no PromotionTemplate is rejected",
 			webhook: &webhook{
 				admissionRequestFromContextFn: admission.RequestFromContext,
 				getStageFn: func(
@@ -115,7 +115,13 @@ func Test_webhook_Default(t *testing.T) {
 					client.Client,
 					types.NamespacedName,
 				) (*kargoapi.Stage, error) {
-					return &kargoapi.Stage{}, nil
+					return &kargoapi.Stage{
+						ObjectMeta: metav1.ObjectMeta{
+							Name:      "fake-stage",
+							Namespace: "fake-project",
+						},
+						// No PromotionTemplate.
+					}, nil
 				},
 				isRequestFromKargoControlplaneFn: func(admission.Request) bool {
 					return false
@@ -126,7 +132,12 @@ func Test_webhook_Default(t *testing.T) {
 					Operation: admissionv1.Create,
 				},
 			},
-			promotion: &kargoapi.Promotion{},
+			promotion: &kargoapi.Promotion{
+				Spec: kargoapi.PromotionSpec{
+					Stage:   "fake-stage",
+					Freight: "abc1234567",
+				},
+			},
 			assertions: func(t *testing.T, _ *kargoapi.Promotion, err error) {
 				require.ErrorContains(t, err, "defines no promotion steps")
 			},
@@ -141,8 +152,25 @@ func Test_webhook_Default(t *testing.T) {
 					types.NamespacedName,
 				) (*kargoapi.Stage, error) {
 					return &kargoapi.Stage{
+						ObjectMeta: metav1.ObjectMeta{
+							Name:      "fake-stage",
+							Namespace: "fake-project",
+						},
 						Spec: kargoapi.StageSpec{
 							Shard: "fake-shard",
+							Vars: []kargoapi.ExpressionVariable{
+								{Name: "stage-var", Value: "stage-val"},
+							},
+							PromotionTemplate: &kargoapi.PromotionTemplate{
+								Spec: kargoapi.PromotionTemplateSpec{
+									Vars: []kargoapi.ExpressionVariable{
+										{Name: "tmpl-var", Value: "tmpl-val"},
+									},
+									Steps: []kargoapi.PromotionStep{
+										{As: "from-template", Uses: "tmpl-step"},
+									},
+								},
+							},
 						},
 					}, nil
 				},
@@ -155,16 +183,42 @@ func Test_webhook_Default(t *testing.T) {
 					Operation: admissionv1.Create,
 				},
 			},
+			// Caller-supplied name, steps, and vars are intentionally set to
+			// values that don't appear in the Stage's spec, so that the
+			// assertions below verify they were unconditionally discarded.
 			promotion: &kargoapi.Promotion{
+				ObjectMeta: metav1.ObjectMeta{
+					Name: "user-supplied-name",
+				},
 				Spec: kargoapi.PromotionSpec{
-					Stage: "fake-stage",
+					Stage:   "fake-stage",
+					Freight: "abc1234567",
 					Steps: []kargoapi.PromotionStep{
-						{},
+						{As: "from-user", Uses: "user-step"},
+					},
+					Vars: []kargoapi.ExpressionVariable{
+						{Name: "user-var", Value: "user-val"},
 					},
 				},
 			},
 			assertions: func(t *testing.T, promo *kargoapi.Promotion, err error) {
 				require.NoError(t, err)
+				// Steps come from the template; the caller's were discarded.
+				require.Len(t, promo.Spec.Steps, 1)
+				require.Equal(t, "from-template", promo.Spec.Steps[0].As)
+				require.Equal(t, "tmpl-step", promo.Spec.Steps[0].Uses)
+				// Vars come from the Stage and template only; the caller's
+				// were discarded.
+				require.Equal(t, []kargoapi.ExpressionVariable{
+					{Name: "stage-var", Value: "stage-val"},
+					{Name: "tmpl-var", Value: "tmpl-val"},
+				}, promo.Spec.Vars)
+				// Caller-supplied name was overwritten with one Kargo
+				// generated.
+				require.NotEqual(t, "user-supplied-name", promo.Name)
+				require.Contains(t, promo.Name, "fake-stage")
+				require.Contains(t, promo.Name, "abc1234")
+				// Shard label and owner reference are set.
 				require.Equal(t, "fake-shard", promo.Labels[kargoapi.LabelKeyShard])
 				require.NotEmpty(t, promo.OwnerReferences)
 			},
@@ -642,6 +696,7 @@ func Test_webhook_ValidateCreate(t *testing.T) {
 		name       string
 		webhook    *webhook
 		userInfo   *authnv1.UserInfo
+		promotion  *kargoapi.Promotion
 		assertions func(*testing.T, *fakeevent.EventRecorder, error)
 	}{
 		{
@@ -654,6 +709,9 @@ func Test_webhook_ValidateCreate(t *testing.T) {
 				) error {
 					return errors.New("something went wrong")
 				},
+			},
+			promotion: &kargoapi.Promotion{
+				Spec: kargoapi.PromotionSpec{Freight: "fake-freight"},
 			},
 			assertions: func(t *testing.T, _ *fakeevent.EventRecorder, err error) {
 				var statusErr *apierrors.StatusError
@@ -679,6 +737,9 @@ func Test_webhook_ValidateCreate(t *testing.T) {
 				authorizeFn: func(context.Context, *kargoapi.Promotion, string) error {
 					return errors.New("something went wrong")
 				},
+			},
+			promotion: &kargoapi.Promotion{
+				Spec: kargoapi.PromotionSpec{Freight: "fake-freight"},
 			},
 			assertions: func(t *testing.T, _ *fakeevent.EventRecorder, err error) {
 				var statusErr *apierrors.StatusError
@@ -712,6 +773,9 @@ func Test_webhook_ValidateCreate(t *testing.T) {
 				) (*kargoapi.Stage, error) {
 					return nil, errors.New("something went wrong")
 				},
+			},
+			promotion: &kargoapi.Promotion{
+				Spec: kargoapi.PromotionSpec{Freight: "fake-freight"},
 			},
 			assertions: func(t *testing.T, _ *fakeevent.EventRecorder, err error) {
 				var statusErr *apierrors.StatusError
@@ -753,6 +817,9 @@ func Test_webhook_ValidateCreate(t *testing.T) {
 					return nil, errors.New("something went wrong")
 				},
 			},
+			promotion: &kargoapi.Promotion{
+				Spec: kargoapi.PromotionSpec{Freight: "fake-freight"},
+			},
 			assertions: func(t *testing.T, _ *fakeevent.EventRecorder, err error) {
 				var statusErr *apierrors.StatusError
 				require.True(t, errors.As(err, &statusErr))
@@ -792,6 +859,9 @@ func Test_webhook_ValidateCreate(t *testing.T) {
 				) (*kargoapi.Freight, error) {
 					return &kargoapi.Freight{}, nil
 				},
+			},
+			promotion: &kargoapi.Promotion{
+				Spec: kargoapi.PromotionSpec{Freight: "fake-freight"},
 			},
 			assertions: func(t *testing.T, _ *fakeevent.EventRecorder, err error) {
 				var statusErr *apierrors.StatusError
@@ -854,6 +924,12 @@ func Test_webhook_ValidateCreate(t *testing.T) {
 			userInfo: &authnv1.UserInfo{
 				Username: "fake-user",
 			},
+			promotion: &kargoapi.Promotion{
+				Spec: kargoapi.PromotionSpec{
+					Freight: "fake-freight",
+					Steps:   []kargoapi.PromotionStep{{Uses: "fake-step"}},
+				},
+			},
 			assertions: func(t *testing.T, r *fakeevent.EventRecorder, err error) {
 				require.NoError(t, err)
 				require.Len(t, r.Events, 1)
@@ -911,6 +987,12 @@ func Test_webhook_ValidateCreate(t *testing.T) {
 			userInfo: &authnv1.UserInfo{
 				Username: serviceaccount.ServiceAccountUsernamePrefix + "kargo:kargo-api",
 			},
+			promotion: &kargoapi.Promotion{
+				Spec: kargoapi.PromotionSpec{
+					Freight: "fake-freight",
+					Steps:   []kargoapi.PromotionStep{{Uses: "fake-step"}},
+				},
+			},
 			assertions: func(t *testing.T, r *fakeevent.EventRecorder, err error) {
 				require.NoError(t, err)
 				require.Empty(t, r.Events)
@@ -928,14 +1010,7 @@ func Test_webhook_ValidateCreate(t *testing.T) {
 			}
 			ctx := admission.NewContextWithRequest(t.Context(), req)
 
-			_, err := testCase.webhook.ValidateCreate(
-				ctx,
-				&kargoapi.Promotion{
-					Spec: kargoapi.PromotionSpec{
-						Freight: "fake-freight",
-					},
-				},
-			)
+			_, err := testCase.webhook.ValidateCreate(ctx, testCase.promotion)
 			testCase.assertions(t, recorder, err)
 		})
 	}
