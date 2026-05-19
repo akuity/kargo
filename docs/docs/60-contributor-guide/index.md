@@ -76,6 +76,20 @@ Exempt pull requests must still adhere to the
 [Quality Expectations](#quality-expectations) below — the issue requirement is
 the only thing waived.
 
+## Automatic Enforcement
+
+Pull requests that do not observe the process described above are
+**automatically converted to a draft**. Maintainers do not routinely review
+drafts. The author is expected to address the underlying problems and then
+mark the PR ready for review. This applies to:
+
+- PRs with no linked issue.
+
+- PRs linked to issues that still carry blocking labels.
+
+Pull requests covered by [Exceptions](#exceptions) are not subject to this
+enforcement.
+
 ## Quality Expectations
 
 All pull requests must:

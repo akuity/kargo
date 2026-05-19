@@ -27,6 +27,8 @@ import type {
   ClusterPromotionTaskList,
   CreateConfigMapRequestBody,
   Freight,
+  GetFreightLinksResponse,
+  GetStageLinksResponse,
   ListImages200,
   ListPromotionsParams,
   ListStagesParams,
@@ -2024,6 +2026,152 @@ export const useApproveFreight = <TError = unknown, TContext = unknown>(
   return useMutation(mutationOptions, queryClient);
 };
 /**
+ * Retrieve evaluated deep links for a Freight resource, combining
+cluster-level links from ClusterConfig and project-level links
+from ProjectConfig.
+ * @summary Retrieve deep links for a Freight resource
+ */
+export type getFreightLinksResponse200 = {
+  data: GetFreightLinksResponse;
+  status: 200;
+};
+
+export type getFreightLinksResponseSuccess = getFreightLinksResponse200 & {
+  headers: Headers;
+};
+export type getFreightLinksResponse = getFreightLinksResponseSuccess;
+
+export const getGetFreightLinksUrl = (project: string, freightNameOrAlias: string) => {
+  return `/v1beta1/projects/${project}/freight/${freightNameOrAlias}/links`;
+};
+
+export const getFreightLinks = async (
+  project: string,
+  freightNameOrAlias: string,
+  options?: RequestInit
+): Promise<getFreightLinksResponse> => {
+  return customFetch<getFreightLinksResponse>(getGetFreightLinksUrl(project, freightNameOrAlias), {
+    ...options,
+    method: 'GET'
+  });
+};
+
+export const getGetFreightLinksQueryKey = (project?: string, freightNameOrAlias?: string) => {
+  return [`/v1beta1/projects/${project}/freight/${freightNameOrAlias}/links`] as const;
+};
+
+export const getGetFreightLinksQueryOptions = <
+  TData = Awaited<ReturnType<typeof getFreightLinks>>,
+  TError = unknown
+>(
+  project: string,
+  freightNameOrAlias: string,
+  options?: {
+    query?: Partial<UseQueryOptions<Awaited<ReturnType<typeof getFreightLinks>>, TError, TData>>;
+    request?: SecondParameter<typeof customFetch>;
+  }
+) => {
+  const { query: queryOptions, request: requestOptions } = options ?? {};
+
+  const queryKey =
+    queryOptions?.queryKey ?? getGetFreightLinksQueryKey(project, freightNameOrAlias);
+
+  const queryFn: QueryFunction<Awaited<ReturnType<typeof getFreightLinks>>> = () =>
+    getFreightLinks(project, freightNameOrAlias, requestOptions);
+
+  return {
+    queryKey,
+    queryFn,
+    enabled: !!(project && freightNameOrAlias),
+    ...queryOptions
+  } as UseQueryOptions<Awaited<ReturnType<typeof getFreightLinks>>, TError, TData> & {
+    queryKey: DataTag<QueryKey, TData, TError>;
+  };
+};
+
+export type GetFreightLinksQueryResult = NonNullable<Awaited<ReturnType<typeof getFreightLinks>>>;
+export type GetFreightLinksQueryError = unknown;
+
+export function useGetFreightLinks<
+  TData = Awaited<ReturnType<typeof getFreightLinks>>,
+  TError = unknown
+>(
+  project: string,
+  freightNameOrAlias: string,
+  options: {
+    query: Partial<UseQueryOptions<Awaited<ReturnType<typeof getFreightLinks>>, TError, TData>> &
+      Pick<
+        DefinedInitialDataOptions<
+          Awaited<ReturnType<typeof getFreightLinks>>,
+          TError,
+          Awaited<ReturnType<typeof getFreightLinks>>
+        >,
+        'initialData'
+      >;
+    request?: SecondParameter<typeof customFetch>;
+  },
+  queryClient?: QueryClient
+): DefinedUseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> };
+export function useGetFreightLinks<
+  TData = Awaited<ReturnType<typeof getFreightLinks>>,
+  TError = unknown
+>(
+  project: string,
+  freightNameOrAlias: string,
+  options?: {
+    query?: Partial<UseQueryOptions<Awaited<ReturnType<typeof getFreightLinks>>, TError, TData>> &
+      Pick<
+        UndefinedInitialDataOptions<
+          Awaited<ReturnType<typeof getFreightLinks>>,
+          TError,
+          Awaited<ReturnType<typeof getFreightLinks>>
+        >,
+        'initialData'
+      >;
+    request?: SecondParameter<typeof customFetch>;
+  },
+  queryClient?: QueryClient
+): UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> };
+export function useGetFreightLinks<
+  TData = Awaited<ReturnType<typeof getFreightLinks>>,
+  TError = unknown
+>(
+  project: string,
+  freightNameOrAlias: string,
+  options?: {
+    query?: Partial<UseQueryOptions<Awaited<ReturnType<typeof getFreightLinks>>, TError, TData>>;
+    request?: SecondParameter<typeof customFetch>;
+  },
+  queryClient?: QueryClient
+): UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> };
+/**
+ * @summary Retrieve deep links for a Freight resource
+ */
+
+export function useGetFreightLinks<
+  TData = Awaited<ReturnType<typeof getFreightLinks>>,
+  TError = unknown
+>(
+  project: string,
+  freightNameOrAlias: string,
+  options?: {
+    query?: Partial<UseQueryOptions<Awaited<ReturnType<typeof getFreightLinks>>, TError, TData>>;
+    request?: SecondParameter<typeof customFetch>;
+  },
+  queryClient?: QueryClient
+): UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> } {
+  const queryOptions = getGetFreightLinksQueryOptions(project, freightNameOrAlias, options);
+
+  const query = useQuery(queryOptions, queryClient) as UseQueryResult<TData, TError> & {
+    queryKey: DataTag<QueryKey, TData, TError>;
+  };
+
+  query.queryKey = queryOptions.queryKey;
+
+  return query;
+}
+
+/**
  * List container images referenced by Freight resources in a
 project's namespace.
  * @summary List container images
@@ -3264,6 +3412,148 @@ export const useDeleteStage = <TError = unknown, TContext = unknown>(
 
   return useMutation(mutationOptions, queryClient);
 };
+/**
+ * Retrieve evaluated deep links for a Stage resource, combining
+cluster-level links from ClusterConfig and project-level links
+from ProjectConfig.
+ * @summary Retrieve deep links for a Stage resource
+ */
+export type getStageLinksResponse200 = {
+  data: GetStageLinksResponse;
+  status: 200;
+};
+
+export type getStageLinksResponseSuccess = getStageLinksResponse200 & {
+  headers: Headers;
+};
+export type getStageLinksResponse = getStageLinksResponseSuccess;
+
+export const getGetStageLinksUrl = (project: string, stage: string) => {
+  return `/v1beta1/projects/${project}/stages/${stage}/links`;
+};
+
+export const getStageLinks = async (
+  project: string,
+  stage: string,
+  options?: RequestInit
+): Promise<getStageLinksResponse> => {
+  return customFetch<getStageLinksResponse>(getGetStageLinksUrl(project, stage), {
+    ...options,
+    method: 'GET'
+  });
+};
+
+export const getGetStageLinksQueryKey = (project?: string, stage?: string) => {
+  return [`/v1beta1/projects/${project}/stages/${stage}/links`] as const;
+};
+
+export const getGetStageLinksQueryOptions = <
+  TData = Awaited<ReturnType<typeof getStageLinks>>,
+  TError = unknown
+>(
+  project: string,
+  stage: string,
+  options?: {
+    query?: Partial<UseQueryOptions<Awaited<ReturnType<typeof getStageLinks>>, TError, TData>>;
+    request?: SecondParameter<typeof customFetch>;
+  }
+) => {
+  const { query: queryOptions, request: requestOptions } = options ?? {};
+
+  const queryKey = queryOptions?.queryKey ?? getGetStageLinksQueryKey(project, stage);
+
+  const queryFn: QueryFunction<Awaited<ReturnType<typeof getStageLinks>>> = () =>
+    getStageLinks(project, stage, requestOptions);
+
+  return { queryKey, queryFn, enabled: !!(project && stage), ...queryOptions } as UseQueryOptions<
+    Awaited<ReturnType<typeof getStageLinks>>,
+    TError,
+    TData
+  > & { queryKey: DataTag<QueryKey, TData, TError> };
+};
+
+export type GetStageLinksQueryResult = NonNullable<Awaited<ReturnType<typeof getStageLinks>>>;
+export type GetStageLinksQueryError = unknown;
+
+export function useGetStageLinks<
+  TData = Awaited<ReturnType<typeof getStageLinks>>,
+  TError = unknown
+>(
+  project: string,
+  stage: string,
+  options: {
+    query: Partial<UseQueryOptions<Awaited<ReturnType<typeof getStageLinks>>, TError, TData>> &
+      Pick<
+        DefinedInitialDataOptions<
+          Awaited<ReturnType<typeof getStageLinks>>,
+          TError,
+          Awaited<ReturnType<typeof getStageLinks>>
+        >,
+        'initialData'
+      >;
+    request?: SecondParameter<typeof customFetch>;
+  },
+  queryClient?: QueryClient
+): DefinedUseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> };
+export function useGetStageLinks<
+  TData = Awaited<ReturnType<typeof getStageLinks>>,
+  TError = unknown
+>(
+  project: string,
+  stage: string,
+  options?: {
+    query?: Partial<UseQueryOptions<Awaited<ReturnType<typeof getStageLinks>>, TError, TData>> &
+      Pick<
+        UndefinedInitialDataOptions<
+          Awaited<ReturnType<typeof getStageLinks>>,
+          TError,
+          Awaited<ReturnType<typeof getStageLinks>>
+        >,
+        'initialData'
+      >;
+    request?: SecondParameter<typeof customFetch>;
+  },
+  queryClient?: QueryClient
+): UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> };
+export function useGetStageLinks<
+  TData = Awaited<ReturnType<typeof getStageLinks>>,
+  TError = unknown
+>(
+  project: string,
+  stage: string,
+  options?: {
+    query?: Partial<UseQueryOptions<Awaited<ReturnType<typeof getStageLinks>>, TError, TData>>;
+    request?: SecondParameter<typeof customFetch>;
+  },
+  queryClient?: QueryClient
+): UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> };
+/**
+ * @summary Retrieve deep links for a Stage resource
+ */
+
+export function useGetStageLinks<
+  TData = Awaited<ReturnType<typeof getStageLinks>>,
+  TError = unknown
+>(
+  project: string,
+  stage: string,
+  options?: {
+    query?: Partial<UseQueryOptions<Awaited<ReturnType<typeof getStageLinks>>, TError, TData>>;
+    request?: SecondParameter<typeof customFetch>;
+  },
+  queryClient?: QueryClient
+): UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> } {
+  const queryOptions = getGetStageLinksQueryOptions(project, stage, options);
+
+  const query = useQuery(queryOptions, queryClient) as UseQueryResult<TData, TError> & {
+    queryKey: DataTag<QueryKey, TData, TError>;
+  };
+
+  query.queryKey = queryOptions.queryKey;
+
+  return query;
+}
+
 /**
  * Create a Promotion resource to transition a specified Stage into
 the state represented by the specified Freight.

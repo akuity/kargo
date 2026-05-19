@@ -1,4 +1,3 @@
-import { useQuery } from '@connectrpc/connect-query';
 import { Divider, Typography } from 'antd';
 import { Navigate, generatePath, useSearchParams } from 'react-router-dom';
 
@@ -10,13 +9,14 @@ import { OIDCLogin } from '@ui/features/auth/oidc-login';
 import { LoadingState } from '@ui/features/common';
 import { useDocumentTitle } from '@ui/features/common/document-title/use-document-title';
 import { KargoLogo } from '@ui/features/common/logo/logo';
-import { getPublicConfig } from '@ui/gen/api/service/v1alpha1/service-KargoService_connectquery';
+import { useGetPublicConfig } from '@ui/gen/api/v2/system/system';
 
 import * as styles from './login.module.less';
 
 export const Login = () => {
   useDocumentTitle(['Login']);
-  const { data, isLoading } = useQuery(getPublicConfig);
+  const { data: response, isLoading } = useGetPublicConfig();
+  const data = response?.data;
   const [params] = useSearchParams();
   const { isLoggedIn } = useAuthContext();
   const redirectTo = params.get(redirectToQueryParam);

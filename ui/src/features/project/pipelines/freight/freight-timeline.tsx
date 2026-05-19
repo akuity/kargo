@@ -1,8 +1,8 @@
 import { useDndContext } from '@dnd-kit/core';
-import { faCaretLeft, faCaretRight } from '@fortawesome/free-solid-svg-icons';
+import { faChevronLeft, faChevronRight } from '@fortawesome/free-solid-svg-icons';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
 import classNames from 'classnames';
-import { useCallback, useContext, useEffect, useMemo, useRef, useState } from 'react';
+import { CSSProperties, useContext, useState } from 'react';
 import { generatePath, useNavigate } from 'react-router-dom';
 
 import { paths } from '@ui/config/paths';
@@ -12,18 +12,18 @@ import { IAction, useActionContext } from '@ui/features/project/pipelines/contex
 import { useDictionaryContext } from '@ui/features/project/pipelines/context/dictionary-context';
 import { useFreightTimelineControllerContext } from '@ui/features/project/pipelines/context/freight-timeline-controller-context';
 import { Freight } from '@ui/gen/api/v1alpha1/generated_pb';
-import { timestampDate } from '@ui/utils/connectrpc-utils';
 
-import { timerangeToDate } from './filter-timerange-utils';
 import { FreightCard } from './freight-card';
 import { FreightExpandTile } from './freight-expand-tile';
-import { FreightTimelineFilters } from './freight-timeline-filters';
 import { PromotionModeHeader } from './promotion-mode-header';
-import { filterFreightBySource, filterFreightByTimerange } from './source-catalogue-utils';
+import { useFilteredFreights } from './use-filtered-freights';
+import { useFreightCarousel } from './use-freight-carousel';
 import { usePromotionEligibleFreight } from './use-promotion-eligible-freight';
 import { useSoakTime } from './use-soak-time';
 
 import './freight-timeline.less';
+
+const ARROW_BUTTON_WIDTH = 28;
 
 export const FreightTimeline = (props: { freights: Freight[]; project: string }) => {
   const navigate = useNavigate();
@@ -32,6 +32,12 @@ export const FreightTimeline = (props: { freights: Freight[]; project: string })
   const freightTimelineControllerContext = useFreightTimelineControllerContext();
   const dictionaryContext = useDictionaryContext();
   const actionContext = useActionContext();
+
+  if (!freightTimelineControllerContext) {
+    throw new Error('missing context freightTimelineControllerContext');
+  }
+
+  const { preferredFilter } = freightTimelineControllerContext;
 
   const isPromotionMode =
     actionContext?.action?.type === IAction.PROMOTE ||
@@ -42,141 +48,24 @@ export const FreightTimeline = (props: { freights: Freight[]; project: string })
 
   const soakTime = useSoakTime(props.freights);
 
-  if (!freightTimelineControllerContext) {
-    throw new Error('missing context freightTimelineControllerContext');
-  }
-
-  const [filtersCollapsed, setFilterCollapsed] = useState(true);
-
   const [viewingFreight, setViewingFreight] = useState<Freight | null>(null);
 
-  const filteredFreights: (Freight & {
-    count?: number;
-  })[] = useMemo(() => {
-    let filtered = [...(props.freights || [])].sort((a, b) => {
-      const t1 = timestampDate(a?.metadata?.creationTimestamp);
+  const filteredFreights = useFilteredFreights(props.freights, preferredFilter);
 
-      const t2 = timestampDate(b?.metadata?.creationTimestamp);
-
-      return (t2?.getTime() || 0) - (t1?.getTime() || 0);
-    });
-
-    filtered = filtered
-      .map(filterFreightBySource(freightTimelineControllerContext.preferredFilter?.sources))
-      .filter(Boolean) as Freight[];
-
-    if (freightTimelineControllerContext.preferredFilter.timerange !== 'all-time') {
-      filtered = filtered.filter(
-        filterFreightByTimerange(
-          timerangeToDate(freightTimelineControllerContext.preferredFilter.timerange)
-        )
-      );
-    }
-
-    if (freightTimelineControllerContext.preferredFilter.warehouses?.length > 0) {
-      filtered = filtered.filter((f) =>
-        freightTimelineControllerContext.preferredFilter.warehouses.includes(f.origin?.name || '')
-      );
-    }
-
-    if (freightTimelineControllerContext.preferredFilter.hideUnusedFreights) {
-      const newFiltered: (Freight & {
-        count?: number;
-      })[] = [];
-
-      let count = 0;
-
-      for (const f of filtered) {
-        const inUse =
-          (dictionaryContext?.freightInStages[f?.metadata?.name || '']?.length || 0) > 0;
-
-        if (inUse) {
-          if (count > 0) {
-            newFiltered.push({
-              ...f,
-              count
-            });
-            count = 0;
-          }
-
-          newFiltered.push(f);
-        } else {
-          count++;
-        }
-      }
-
-      filtered = [...newFiltered];
-    }
-
-    if (isPromotionMode) {
-      filtered = filtered.filter((f) =>
-        actionContext?.action?.stage?.spec?.requestedFreight?.find(
-          (fr) => fr.origin?.name === f?.origin?.name
-        )
-      );
-    }
-
-    return filtered;
-  }, [
-    props.freights,
-    props.freights.length,
-    freightTimelineControllerContext.preferredFilter.sources,
-    freightTimelineControllerContext.preferredFilter.timerange,
-    freightTimelineControllerContext.preferredFilter.warehouses,
-    freightTimelineControllerContext.preferredFilter.hideUnusedFreights,
-    dictionaryContext?.freightInStages,
-    isPromotionMode,
-    actionContext
-  ]);
-
-  const PAGE_SIZE = 20;
-  const [visibleCount, setVisibleCount] = useState(PAGE_SIZE);
-
-  // Reset visible count and scroll position when filters change
-  useEffect(() => {
-    setVisibleCount(PAGE_SIZE);
-    freightListStyleRef.current?.style.setProperty('right', '0px');
-  }, [
-    freightTimelineControllerContext.preferredFilter.sources,
-    freightTimelineControllerContext.preferredFilter.timerange,
-    freightTimelineControllerContext.preferredFilter.warehouses,
-    freightTimelineControllerContext.preferredFilter.hideUnusedFreights
-  ]);
-
-  const freightListStyleRef = useRef<HTMLDivElement>(null);
-
-  const loadMore = useCallback(() => {
-    setVisibleCount((prev) => Math.min(prev + PAGE_SIZE, filteredFreights.length));
-  }, [filteredFreights.length]);
-
-  const scrollCarouselLeft = () => {
-    const right = freightListStyleRef.current?.style.right || '0px';
-
-    let nextRight = +right.slice(0, -2) - 160;
-
-    if (nextRight < 0) {
-      nextRight = 0;
-    }
-
-    freightListStyleRef.current?.style.setProperty('right', `${nextRight}px`);
-  };
-
-  const scrollCarouselRight = () => {
-    const right = freightListStyleRef.current?.style.right || '0px';
-
-    const nextRight = +right.slice(0, -2) + 160;
-
-    if (
-      nextRight >= (freightListStyleRef.current?.clientWidth || 0) / 2 &&
-      visibleCount < filteredFreights.length
-    ) {
-      loadMore();
-    }
-
-    freightListStyleRef.current?.style.setProperty('right', `${nextRight}px`);
-  };
+  const {
+    viewportRef,
+    stripRef,
+    cardWidth,
+    offset,
+    visibleCount,
+    slideLeft,
+    slideRight,
+    canSlideLeft,
+    canSlideRight
+  } = useFreightCarousel(filteredFreights.length, preferredFilter);
 
   const dndContext = useDndContext();
+  const isDragging = !!dndContext.active;
 
   return (
     <>
@@ -196,33 +85,37 @@ export const FreightTimeline = (props: { freights: Freight[]; project: string })
         </div>
       )}
       <div
-        className={classNames('freightTimeline', 'bg-white py-2 flex gap-0 relative z-20')}
+        className={classNames('freightTimeline', 'bg-white py-2 flex relative z-20')}
         style={{ borderBottom: '2px solid rgba(0,0,0,.05)' }}
       >
-        <FreightTimelineFilters
-          className='bg-white px-3 z-10'
-          collapsed={filtersCollapsed}
-          filteredFreights={filteredFreights}
-          freights={props.freights}
-          onCollapseToggle={() => setFilterCollapsed(!filtersCollapsed)}
-          onPreferredFilterChange={freightTimelineControllerContext.setPreferredFilter}
-          preferredFilter={freightTimelineControllerContext.preferredFilter}
-        />
         <div
-          className={classNames('w-full flex relative px-5', {
-            'overflow-hidden': !dndContext.active
-          })}
-          onWheel={(e) => {
-            if (e.deltaY > 0) {
-              scrollCarouselRight();
-            } else if (e.deltaY < 0) {
-              scrollCarouselLeft();
-            }
+          className='flex items-stretch shrink-0 cursor-pointer select-none text-gray-500 hover:text-gray-700 mx-1'
+          style={{ width: ARROW_BUTTON_WIDTH, opacity: canSlideLeft ? 1 : 0.4 }}
+          onClick={() => {
+            if (canSlideLeft) slideLeft();
           }}
         >
+          <div className='m-auto'>
+            <FontAwesomeIcon icon={faChevronLeft} />
+          </div>
+        </div>
+
+        <div
+          ref={viewportRef}
+          className={classNames('flex-1 min-w-0 relative', {
+            'overflow-hidden': !isDragging
+          })}
+        >
           <div
-            className='flex gap-1 relative right-0 transition-[right] duration-300 ease-out'
-            ref={freightListStyleRef}
+            ref={stripRef}
+            className='flex gap-1 transition-transform duration-300 ease-out'
+            style={
+              {
+                transform: `translateX(-${offset}px)`,
+                width: 'max-content',
+                '--freight-card-width': `${cardWidth}px`
+              } as CSSProperties
+            }
           >
             {filteredFreights.slice(0, visibleCount).map((freight) => {
               const freightSoakTime = soakTime?.[freight?.metadata?.name || ''];
@@ -248,7 +141,7 @@ export const FreightTimeline = (props: { freights: Freight[]; project: string })
                     dictionaryContext?.freightInStages?.[freight?.metadata?.name || ''] || []
                   }
                   freight={freight}
-                  preferredFilter={freightTimelineControllerContext.preferredFilter}
+                  preferredFilter={preferredFilter}
                   setViewingFreight={setViewingFreight}
                   viewingFreight={viewingFreight}
                   inUse={
@@ -275,23 +168,17 @@ export const FreightTimeline = (props: { freights: Freight[]; project: string })
               );
             })}
           </div>
+        </div>
 
-          <div
-            className='absolute left-0 h-full bg-gray-100 px-1 flex items-center cursor-pointer rounded-sm hover:bg-gray-200'
-            onClick={() => {
-              scrollCarouselLeft();
-            }}
-          >
-            <FontAwesomeIcon icon={faCaretLeft} />
-          </div>
-
-          <div
-            className='absolute right-0 h-full bg-gray-100 px-1 flex items-center cursor-pointer rounded-sm hover:bg-gray-200'
-            onClick={() => {
-              scrollCarouselRight();
-            }}
-          >
-            <FontAwesomeIcon icon={faCaretRight} />
+        <div
+          className='flex items-stretch shrink-0 cursor-pointer select-none text-gray-500 hover:text-gray-700 mx-1'
+          style={{ width: ARROW_BUTTON_WIDTH, opacity: canSlideRight ? 1 : 0.4 }}
+          onClick={() => {
+            if (canSlideRight) slideRight();
+          }}
+        >
+          <div className='m-auto'>
+            <FontAwesomeIcon icon={faChevronRight} />
           </div>
         </div>
       </div>

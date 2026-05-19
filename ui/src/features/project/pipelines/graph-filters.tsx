@@ -4,14 +4,16 @@ import { Button, Card, Segmented, Select, Typography } from 'antd';
 import { useMemo } from 'react';
 
 import { WarehouseExpanded } from '@ui/extend/types';
-import { Stage } from '@ui/gen/api/v1alpha1/generated_pb';
+import { Freight, Stage } from '@ui/gen/api/v1alpha1/generated_pb';
 
 import { useFreightTimelineControllerContext } from './context/freight-timeline-controller-context';
+import { FreightTimelineFilterButton } from './freight/freight-timeline-filter-button';
 import { groupNodes } from './group-nodes';
 
 type GraphFiltersProps = {
   warehouses: WarehouseExpanded[];
   stages: Stage[];
+  freights: Freight[];
   pipelineView: 'graph' | 'list';
   setPipelineView: (view: 'graph' | 'list') => void;
   className?: string;
@@ -33,7 +35,7 @@ export const GraphFilters = (props: GraphFiltersProps) => {
       <Select
         size='small'
         mode='multiple'
-        className='ml-1 min-w-[300px]'
+        className='ml-1 min-w-[240px]'
         maxTagCount={2}
         placeholder='All'
         value={filterContext?.preferredFilter?.warehouses || []}
@@ -48,6 +50,8 @@ export const GraphFilters = (props: GraphFiltersProps) => {
           })
         }
       />
+
+      <FreightTimelineFilterButton className='ml-3' freights={props.freights} />
 
       {props.pipelineView === 'graph' && (
         <Button

@@ -2,6 +2,7 @@ package governance
 
 import (
 	"bytes"
+	"context"
 	"crypto/hmac"
 	"crypto/sha256"
 	"encoding/hex"
@@ -22,6 +23,7 @@ func Test_handler_ServeHTTP(t *testing.T) {
 		eventType      string
 		body           any
 		signature      *string
+		reposClient    RepositoriesClient
 		expectedStatus int
 	}{
 		{
@@ -105,22 +107,66 @@ func Test_handler_ServeHTTP(t *testing.T) {
 			expectedStatus: http.StatusNoContent,
 		},
 		{
+			name:      "no governance config in repo",
+			eventType: "pull_request",
+			body: github.PullRequestEvent{
+				Action: github.Ptr("opened"),
+				PullRequest: &github.PullRequest{
+					Number:            github.Ptr(1),
+					AuthorAssociation: github.Ptr("NONE"),
+				},
+				Repo: &github.Repository{
+					Name:  github.Ptr("repo"),
+					Owner: &github.User{Login: github.Ptr("test")},
+				},
+				Sender:       &github.User{Login: github.Ptr("someone")},
+				Installation: &github.Installation{ID: github.Ptr(int64(1))},
+			},
+			reposClient: &fakeRepositoriesClient{
+				GetContentsFn: func(
+					context.Context,
+					string,
+					string,
+					string,
+					*github.RepositoryContentGetOptions,
+				) (
+					*github.RepositoryContent,
+					[]*github.RepositoryContent,
+					*github.Response,
+					error,
+				) {
+					resp := &github.Response{
+						Response: &http.Response{StatusCode: http.StatusNotFound},
+					}
+					return nil, nil, resp, &github.ErrorResponse{
+						Response: resp.Response,
+						Message:  "Not Found",
+					}
+				},
+			},
+			expectedStatus: http.StatusNoContent,
+		},
+		{
 			name:           "unhandled event type",
 			eventType:      "check_run",
 			body:           github.CheckRunEvent{},
 			expectedStatus: http.StatusNoContent,
 		},
 	}
-	h := &handler{
-		webhookSecret: []byte(testWebhookSecret),
-		clientFactory: &fakeClientFactory{
-			issuesClient: &fakeIssuesClient{},
-			prsClient:    &fakePullRequestsClient{},
-			reposClient:  &fakeRepositoriesClient{},
-		},
-	}
 	for _, testCase := range testCases {
 		t.Run(testCase.name, func(t *testing.T) {
+			reposClient := testCase.reposClient
+			if reposClient == nil {
+				reposClient = &fakeRepositoriesClient{}
+			}
+			h := &handler{
+				webhookSecret: []byte(testWebhookSecret),
+				clientFactory: &fakeClientFactory{
+					issuesClient: &fakeIssuesClient{},
+					prsClient:    &fakePullRequestsClient{},
+					reposClient:  reposClient,
+				},
+			}
 			rr := httptest.NewRecorder()
 			body := []byte(`{}`)
 			if testCase.body != "" {

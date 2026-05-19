@@ -229,6 +229,7 @@ export const Pipelines = (props: { creatingStage?: boolean; creatingWarehouse?: 
                     <GraphFilters
                       warehouses={listWarehousesQuery.data?.warehouses || []}
                       stages={listStagesQuery.data?.stages || []}
+                      freights={freights}
                       pipelineView={pipelineView}
                       setPipelineView={setPipelineView}
                       className='z-10'

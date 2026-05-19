@@ -17,9 +17,23 @@ import (
 // swagger:model ProjectConfigSpec
 type ProjectConfigSpec struct {
 
+	// FreightLinks defines deep links shown when viewing Freight resources
+	// within this project. These are shown in addition to any cluster-level
+	// FreightLinks defined in ClusterConfig.
+	//
+	// +optional
+	FreightLinks []*DeepLink `json:"freightLinks"`
+
 	// PromotionPolicies defines policies governing the promotion of Freight to
 	// specific Stages within the Project.
 	PromotionPolicies []*PromotionPolicy `json:"promotionPolicies"`
+
+	// StageLinks defines deep links shown when viewing Stage resources within
+	// this project. These are shown in addition to any cluster-level
+	// StageLinks defined in ClusterConfig.
+	//
+	// +optional
+	StageLinks []*DeepLink `json:"stageLinks"`
 
 	// WebhookReceivers describes Project-specific webhook receivers used for
 	// processing events from various external platforms
@@ -30,7 +44,15 @@ type ProjectConfigSpec struct {
 func (m *ProjectConfigSpec) Validate(formats strfmt.Registry) error {
 	var res []error
 
+	if err := m.validateFreightLinks(formats); err != nil {
+		res = append(res, err)
+	}
+
 	if err := m.validatePromotionPolicies(formats); err != nil {
+		res = append(res, err)
+	}
+
+	if err := m.validateStageLinks(formats); err != nil {
 		res = append(res, err)
 	}
 
@@ -41,6 +63,36 @@ func (m *ProjectConfigSpec) Validate(formats strfmt.Registry) error {
 	if len(res) > 0 {
 		return errors.CompositeValidationError(res...)
 	}
+	return nil
+}
+
+func (m *ProjectConfigSpec) validateFreightLinks(formats strfmt.Registry) error {
+	if swag.IsZero(m.FreightLinks) { // not required
+		return nil
+	}
+
+	for i := 0; i < len(m.FreightLinks); i++ {
+		if swag.IsZero(m.FreightLinks[i]) { // not required
+			continue
+		}
+
+		if m.FreightLinks[i] != nil {
+			if err := m.FreightLinks[i].Validate(formats); err != nil {
+				ve := new(errors.Validation)
+				if stderrors.As(err, &ve) {
+					return ve.ValidateName("freightLinks" + "." + strconv.Itoa(i))
+				}
+				ce := new(errors.CompositeError)
+				if stderrors.As(err, &ce) {
+					return ce.ValidateName("freightLinks" + "." + strconv.Itoa(i))
+				}
+
+				return err
+			}
+		}
+
+	}
+
 	return nil
 }
 
@@ -63,6 +115,36 @@ func (m *ProjectConfigSpec) validatePromotionPolicies(formats strfmt.Registry) e
 				ce := new(errors.CompositeError)
 				if stderrors.As(err, &ce) {
 					return ce.ValidateName("promotionPolicies" + "." + strconv.Itoa(i))
+				}
+
+				return err
+			}
+		}
+
+	}
+
+	return nil
+}
+
+func (m *ProjectConfigSpec) validateStageLinks(formats strfmt.Registry) error {
+	if swag.IsZero(m.StageLinks) { // not required
+		return nil
+	}
+
+	for i := 0; i < len(m.StageLinks); i++ {
+		if swag.IsZero(m.StageLinks[i]) { // not required
+			continue
+		}
+
+		if m.StageLinks[i] != nil {
+			if err := m.StageLinks[i].Validate(formats); err != nil {
+				ve := new(errors.Validation)
+				if stderrors.As(err, &ve) {
+					return ve.ValidateName("stageLinks" + "." + strconv.Itoa(i))
+				}
+				ce := new(errors.CompositeError)
+				if stderrors.As(err, &ce) {
+					return ce.ValidateName("stageLinks" + "." + strconv.Itoa(i))
 				}
 
 				return err
@@ -108,7 +190,15 @@ func (m *ProjectConfigSpec) validateWebhookReceivers(formats strfmt.Registry) er
 func (m *ProjectConfigSpec) ContextValidate(ctx context.Context, formats strfmt.Registry) error {
 	var res []error
 
+	if err := m.contextValidateFreightLinks(ctx, formats); err != nil {
+		res = append(res, err)
+	}
+
 	if err := m.contextValidatePromotionPolicies(ctx, formats); err != nil {
+		res = append(res, err)
+	}
+
+	if err := m.contextValidateStageLinks(ctx, formats); err != nil {
 		res = append(res, err)
 	}
 
@@ -119,6 +209,35 @@ func (m *ProjectConfigSpec) ContextValidate(ctx context.Context, formats strfmt.
 	if len(res) > 0 {
 		return errors.CompositeValidationError(res...)
 	}
+	return nil
+}
+
+func (m *ProjectConfigSpec) contextValidateFreightLinks(ctx context.Context, formats strfmt.Registry) error {
+
+	for i := 0; i < len(m.FreightLinks); i++ {
+
+		if m.FreightLinks[i] != nil {
+
+			if swag.IsZero(m.FreightLinks[i]) { // not required
+				return nil
+			}
+
+			if err := m.FreightLinks[i].ContextValidate(ctx, formats); err != nil {
+				ve := new(errors.Validation)
+				if stderrors.As(err, &ve) {
+					return ve.ValidateName("freightLinks" + "." + strconv.Itoa(i))
+				}
+				ce := new(errors.CompositeError)
+				if stderrors.As(err, &ce) {
+					return ce.ValidateName("freightLinks" + "." + strconv.Itoa(i))
+				}
+
+				return err
+			}
+		}
+
+	}
+
 	return nil
 }
 
@@ -140,6 +259,35 @@ func (m *ProjectConfigSpec) contextValidatePromotionPolicies(ctx context.Context
 				ce := new(errors.CompositeError)
 				if stderrors.As(err, &ce) {
 					return ce.ValidateName("promotionPolicies" + "." + strconv.Itoa(i))
+				}
+
+				return err
+			}
+		}
+
+	}
+
+	return nil
+}
+
+func (m *ProjectConfigSpec) contextValidateStageLinks(ctx context.Context, formats strfmt.Registry) error {
+
+	for i := 0; i < len(m.StageLinks); i++ {
+
+		if m.StageLinks[i] != nil {
+
+			if swag.IsZero(m.StageLinks[i]) { // not required
+				return nil
+			}
+
+			if err := m.StageLinks[i].ContextValidate(ctx, formats); err != nil {
+				ve := new(errors.Validation)
+				if stderrors.As(err, &ve) {
+					return ve.ValidateName("stageLinks" + "." + strconv.Itoa(i))
+				}
+				ce := new(errors.CompositeError)
+				if stderrors.As(err, &ce) {
+					return ce.ValidateName("stageLinks" + "." + strconv.Itoa(i))
 				}
 
 				return err
