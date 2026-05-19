@@ -20,6 +20,10 @@ export type GraphContextType = {
   // edges belonging to that warehouse
   hoveredWarehouseName: string | null;
   setHoveredWarehouseName(name: string | null): void;
+
+  // node ids of stages matched by the current stage-search query; empty when
+  // no search is active
+  matchedStageIndices: Set<string>;
 };
 
 export const GraphContext = createContext<GraphContextType | null>(null);

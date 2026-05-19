@@ -211,6 +211,42 @@ export const Graph = (props: GraphProps) => {
     });
   }, [filterContext?.preferredFilter?.hideSubscriptions]);
 
+  const stageSearch = filterContext?.stageSearch || '';
+  const matchedStageIndices = useMemo(() => {
+    const matched = new Set<string>();
+    const trimmed = stageSearch.trim().toLowerCase();
+    if (!trimmed) {
+      return matched;
+    }
+    for (const stage of props.stages) {
+      const name = stage.metadata?.name?.toLowerCase() || '';
+      if (name.includes(trimmed)) {
+        matched.add(stageIndexer.index(stage));
+      }
+    }
+    return matched;
+  }, [stageSearch, props.stages]);
+
+  // Debounce centering the graph on matches so the view does not jitter while
+  // the user is still typing.
+  useEffect(() => {
+    if (matchedStageIndices.size === 0) {
+      return;
+    }
+    const timer = setTimeout(() => {
+      const nodesToFit = nodes.filter((n) => matchedStageIndices.has(n.id));
+      if (nodesToFit.length > 0) {
+        reactFlowInstance.current?.fitView({
+          nodes: nodesToFit,
+          duration: 400,
+          padding: 0.3,
+          maxZoom: 1
+        });
+      }
+    }, 250);
+    return () => clearTimeout(timer);
+  }, [matchedStageIndices, nodes]);
+
   const loggedRef = useRef(false);
   const mountTimeRef = useRef(performance.now());
   useEffect(() => {
@@ -235,7 +271,8 @@ export const Graph = (props: GraphProps) => {
         onUnstack,
         ready,
         hoveredWarehouseName,
-        setHoveredWarehouseName
+        setHoveredWarehouseName,
+        matchedStageIndices
       }}
     >
       <ReactFlow
