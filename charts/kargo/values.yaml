@@ -141,11 +141,9 @@ api:
   ## @param api.revisionHistoryLimit Number of old ReplicaSets the API server Deployment retains for rollback.
   revisionHistoryLimit: 10
 
-  ## @skip api.rollingUpdate
+  ## @param api.rollingUpdate Values merged into the chart-built `strategy.rollingUpdate` for the API server Deployment. Typically used to tune `maxSurge` and `maxUnavailable` (each an absolute number or a percentage). Default empty map — Kubernetes defaults (25% / 25%) apply.
   rollingUpdate: {}
-    ## @param api.rollingUpdate.maxSurge [nullable] Maximum number of Pods that can be created above `replicas` during a rolling update of the API server Deployment. May be an absolute number or a percentage. Unset for the Kubernetes default (25%).
     # maxSurge: 25%
-    ## @param api.rollingUpdate.maxUnavailable [nullable] Maximum number of Pods that can be unavailable during a rolling update of the API server Deployment. May be an absolute number or a percentage. Unset for the Kubernetes default (25%).
     # maxUnavailable: 25%
 
   ## @param api.host The domain name where Kargo's API server will be accessible. When applicable, this is used for generation of an Ingress resource, certificates, and the OpenID Connect issuer and callback URLs. Note: The value in this field MAY include a port number and MUST NOT specify the protocol (http vs https), which is automatically inferred from other configuration options.
@@ -274,11 +272,9 @@ api:
       ## @param api.oidc.dex.revisionHistoryLimit Number of old ReplicaSets the Dex server Deployment retains for rollback.
       revisionHistoryLimit: 10
 
-      ## @skip api.oidc.dex.rollingUpdate
+      ## @param api.oidc.dex.rollingUpdate Values merged into the chart-built `strategy.rollingUpdate` for the Dex server Deployment. Typically used to tune `maxSurge` and `maxUnavailable` (each an absolute number or a percentage). Default empty map — Kubernetes defaults (25% / 25%) apply.
       rollingUpdate: {}
-        ## @param api.oidc.dex.rollingUpdate.maxSurge [nullable] Maximum number of Pods that can be created above `replicas` during a rolling update of the Dex server Deployment. May be an absolute number or a percentage. Unset for the Kubernetes default (25%).
         # maxSurge: 25%
-        ## @param api.oidc.dex.rollingUpdate.maxUnavailable [nullable] Maximum number of Pods that can be unavailable during a rolling update of the Dex server Deployment. May be an absolute number or a percentage. Unset for the Kubernetes default (25%).
         # maxUnavailable: 25%
 
       image:
@@ -395,8 +391,29 @@ api:
       securityContext: {}
 
       probes:
-        ## @param api.oidc.dex.probes.enabled Whether liveness and readiness probes should be included in the Dex server deployment. It is sometimes advantageous to disable these during local development.
+        ## @param api.oidc.dex.probes.enabled Whether startup, liveness, and readiness probes should be included in the Dex server deployment. It is sometimes advantageous to disable these during local development.
         enabled: true
+        ## @param api.oidc.dex.probes.startupProbe Values merged into the chart-built `startupProbe` for the Dex server. Typically used to tune timing fields like `initialDelaySeconds`, `periodSeconds`, `timeoutSeconds`, `successThreshold`, and `failureThreshold`.
+        startupProbe:
+          initialDelaySeconds: 10
+          # periodSeconds: 10
+          # timeoutSeconds: 1
+          # successThreshold: 1
+          failureThreshold: 30
+        ## @param api.oidc.dex.probes.livenessProbe Values merged into the chart-built `livenessProbe` for the Dex server. Default is an empty map, so the chart's `livenessProbe` renders with Kubernetes-default timings.
+        livenessProbe: {}
+          # initialDelaySeconds: 0
+          # periodSeconds: 10
+          # timeoutSeconds: 1
+          # successThreshold: 1
+          # failureThreshold: 3
+        ## @param api.oidc.dex.probes.readinessProbe Values merged into the chart-built `readinessProbe` for the Dex server.
+        readinessProbe:
+          initialDelaySeconds: 5
+          # periodSeconds: 10
+          # timeoutSeconds: 1
+          # successThreshold: 1
+          # failureThreshold: 3
 
       tls:
         ## @param api.oidc.dex.tls.selfSignedCert Whether to generate a self-signed certificate for use with Dex. If `true`, `cert-manager` CRDs **must** be present in the cluster. The chart will create and use its own namespaced `Issuer`. If `false`, a cert `Secret` with the name specified by `api.oidc.dex.tls.secretName` **must** be provided in the same namespace as Kargo. There is no provision for running Dex without TLS.
@@ -511,8 +528,29 @@ api:
     secretName: ""
 
   probes:
-    ## @param api.probes.enabled Whether liveness and readiness probes should be included in the API server deployment. It is sometimes advantageous to disable these during local development.
+    ## @param api.probes.enabled Whether startup, liveness, and readiness probes should be included in the API server deployment. It is sometimes advantageous to disable these during local development.
     enabled: true
+    ## @param api.probes.startupProbe Values merged into the chart-built `startupProbe` for the API server. Typically used to tune timing fields like `initialDelaySeconds`, `periodSeconds`, `timeoutSeconds`, `successThreshold`, and `failureThreshold`.
+    startupProbe:
+      initialDelaySeconds: 10
+      # periodSeconds: 10
+      # timeoutSeconds: 1
+      # successThreshold: 1
+      failureThreshold: 30
+    ## @param api.probes.livenessProbe Values merged into the chart-built `livenessProbe` for the API server. Default is an empty map, so the chart's `livenessProbe` renders with Kubernetes-default timings.
+    livenessProbe: {}
+      # initialDelaySeconds: 0
+      # periodSeconds: 10
+      # timeoutSeconds: 1
+      # successThreshold: 1
+      # failureThreshold: 3
+    ## @param api.probes.readinessProbe Values merged into the chart-built `readinessProbe` for the API server.
+    readinessProbe:
+      initialDelaySeconds: 5
+      # periodSeconds: 10
+      # timeoutSeconds: 1
+      # successThreshold: 1
+      # failureThreshold: 3
 
   tls:
     ## @param api.tls.enabled Whether to enable TLS directly on the API server. This is helpful if you do not intend to use an ingress controller or if you require TLS end-to-end. All other settings in this section EXCEPT `terminatedUpstream` will be ignored when this is set to `false`.
@@ -831,11 +869,9 @@ externalWebhooksServer:
   ## @param externalWebhooksServer.revisionHistoryLimit Number of old ReplicaSets the external webhooks server Deployment retains for rollback.
   revisionHistoryLimit: 10
 
-  ## @skip externalWebhooksServer.rollingUpdate
+  ## @param externalWebhooksServer.rollingUpdate Values merged into the chart-built `strategy.rollingUpdate` for the external webhook server Deployment. Typically used to tune `maxSurge` and `maxUnavailable` (each an absolute number or a percentage). Default empty map — Kubernetes defaults (25% / 25%) apply.
   rollingUpdate: {}
-    ## @param externalWebhooksServer.rollingUpdate.maxSurge [nullable] Maximum number of Pods that can be created above `replicas` during a rolling update of the external webhooks server Deployment. May be an absolute number or a percentage. Unset for the Kubernetes default (25%).
     # maxSurge: 25%
-    ## @param externalWebhooksServer.rollingUpdate.maxUnavailable [nullable] Maximum number of Pods that can be unavailable during a rolling update of the external webhooks server Deployment. May be an absolute number or a percentage. Unset for the Kubernetes default (25%).
     # maxUnavailable: 25%
 
   ## @param externalWebhooksServer.host The domain name where Kargo's external webhooks server will be accessible. When applicable, this is used for generation of an Ingress resource and certificates. Note: The value in this field MAY include a port number and MUST NOT specify the protocol (http vs https), which is automatically inferred from other configuration options.
@@ -923,8 +959,29 @@ externalWebhooksServer:
     maxUnavailable: ""
 
   probes:
-    ## @param externalWebhooksServer.probes.enabled Whether liveness and readiness probes should be included in the external webhook server deployment. It is sometimes advantageous to disable these during local development.
+    ## @param externalWebhooksServer.probes.enabled Whether startup, liveness, and readiness probes should be included in the external webhook server deployment. It is sometimes advantageous to disable these during local development.
     enabled: true
+    ## @param externalWebhooksServer.probes.startupProbe Values merged into the chart-built `startupProbe` for the external webhook server. Typically used to tune timing fields like `initialDelaySeconds`, `periodSeconds`, `timeoutSeconds`, `successThreshold`, and `failureThreshold`.
+    startupProbe:
+      initialDelaySeconds: 10
+      # periodSeconds: 10
+      # timeoutSeconds: 1
+      # successThreshold: 1
+      failureThreshold: 30
+    ## @param externalWebhooksServer.probes.livenessProbe Values merged into the chart-built `livenessProbe` for the external webhook server. Default is an empty map, so the chart's `livenessProbe` renders with Kubernetes-default timings.
+    livenessProbe: {}
+      # initialDelaySeconds: 0
+      # periodSeconds: 10
+      # timeoutSeconds: 1
+      # successThreshold: 1
+      # failureThreshold: 3
+    ## @param externalWebhooksServer.probes.readinessProbe Values merged into the chart-built `readinessProbe` for the external webhook server.
+    readinessProbe:
+      initialDelaySeconds: 5
+      # periodSeconds: 10
+      # timeoutSeconds: 1
+      # successThreshold: 1
+      # failureThreshold: 3
 
   tls:
     ## @param externalWebhooksServer.tls.enabled Whether to enable TLS directly on the external webhook server. This is helpful if you do not intend to use an ingress controller or if you require TLS end-to-end. All other settings in this section EXCEPT `terminatedUpstream` will be ignored when this is set to `false`.
@@ -1072,11 +1129,9 @@ webhooksServer:
   ## @param webhooksServer.revisionHistoryLimit Number of old ReplicaSets the webhooks server Deployment retains for rollback.
   revisionHistoryLimit: 10
 
-  ## @skip webhooksServer.rollingUpdate
+  ## @param webhooksServer.rollingUpdate Values merged into the chart-built `strategy.rollingUpdate` for the webhooks server Deployment. Typically used to tune `maxSurge` and `maxUnavailable` (each an absolute number or a percentage). Default empty map — Kubernetes defaults (25% / 25%) apply.
   rollingUpdate: {}
-    ## @param webhooksServer.rollingUpdate.maxSurge [nullable] Maximum number of Pods that can be created above `replicas` during a rolling update of the webhooks server Deployment. May be an absolute number or a percentage. Unset for the Kubernetes default (25%).
     # maxSurge: 25%
-    ## @param webhooksServer.rollingUpdate.maxUnavailable [nullable] Maximum number of Pods that can be unavailable during a rolling update of the webhooks server Deployment. May be an absolute number or a percentage. Unset for the Kubernetes default (25%).
     # maxUnavailable: 25%
 
   ## @param webhooksServer.logLevel The log level for the webhooks server. Valid options are ERROR, INFO, DEBUG, and TRACE (case insensitive). Note that INFO level messages are written during startup regardless of the selected level.

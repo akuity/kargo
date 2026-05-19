@@ -94,6 +94,16 @@ spec:
           name: {{ if .Values.externalWebhooksServer.tls.enabled }}"https"{{ else }}"http"{{ end }}
           protocol: TCP
         {{- if .Values.externalWebhooksServer.probes.enabled }}
+        startupProbe:
+          httpGet:
+            {{- if .Values.externalWebhooksServer.tls.enabled }}
+            scheme: HTTPS
+            {{- end }}
+            port: 8080
+            path: /healthz
+          {{- with .Values.externalWebhooksServer.probes.startupProbe }}
+          {{- toYaml . | nindent 10 }}
+          {{- end }}
         livenessProbe:
           httpGet:
             {{- if .Values.externalWebhooksServer.tls.enabled }}
@@ -101,7 +111,9 @@ spec:
             {{- end }}
             port: 8080
             path: /healthz
-          initialDelaySeconds: 10
+          {{- with .Values.externalWebhooksServer.probes.livenessProbe }}
+          {{- toYaml . | nindent 10 }}
+          {{- end }}
         readinessProbe:
           httpGet:
             {{- if .Values.externalWebhooksServer.tls.enabled }}
@@ -109,7 +121,9 @@ spec:
             {{- end }}
             port: 8080
             path: /healthz
-          initialDelaySeconds: 5
+          {{- with .Values.externalWebhooksServer.probes.readinessProbe }}
+          {{- toYaml . | nindent 10 }}
+          {{- end }}
         {{- end }}
         {{- if or $kc .Values.externalWebhooksServer.tls.enabled .Values.externalWebhooksServer.volumeMounts }}
         volumeMounts:
