@@ -113,11 +113,11 @@ spec:
 
       {{- if or .Values.controller.cabundle.configMapName .Values.controller.cabundle.secretName .Values.controller.initContainers }}
       initContainers:
-      {{- with .Values.controller.initContainers }}
-      {{- toYaml . | nindent 6 }}
-      {{- end }}
       {{- if or .Values.controller.cabundle.configMapName .Values.controller.cabundle.secretName }}
       {{- include "kargo.cabundle.initContainer" (dict "cabundle" .Values.controller.cabundle "context" .) | nindent 6 }}
+      {{- end }}
+      {{- with .Values.controller.initContainers }}
+      {{- toYaml . | nindent 6 }}
       {{- end }}
       {{- end }}
       volumes:

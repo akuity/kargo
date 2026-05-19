@@ -174,11 +174,11 @@ spec:
       {{- end }}
       {{- if or .Values.api.cabundle.configMapName .Values.api.cabundle.secretName .Values.api.initContainers }}
       initContainers:
-      {{- with .Values.api.initContainers }}
-      {{- toYaml . | nindent 6 }}
-      {{- end }}
       {{- if or .Values.api.cabundle.configMapName .Values.api.cabundle.secretName }}
       {{- include "kargo.cabundle.initContainer" (dict "cabundle" .Values.api.cabundle "context" .) | nindent 6 }}
+      {{- end }}
+      {{- with .Values.api.initContainers }}
+      {{- toYaml . | nindent 6 }}
       {{- end }}
       {{- end }}
       {{- if or $kc (and .Values.api.oidc.enabled .Values.api.oidc.dex.enabled) .Values.api.tls.enabled .Values.api.cabundle.configMapName .Values.api.cabundle.secretName .Values.api.volumes }}
