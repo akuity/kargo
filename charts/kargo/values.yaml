@@ -393,21 +393,21 @@ api:
       probes:
         ## @param api.oidc.dex.probes.enabled Whether startup, liveness, and readiness probes should be included in the Dex server deployment. It is sometimes advantageous to disable these during local development.
         enabled: true
-        ## @param api.oidc.dex.probes.startupProbe Values merged into the chart-built `startupProbe` for the Dex server. Typically used to tune timing fields like `initialDelaySeconds`, `periodSeconds`, `timeoutSeconds`, `successThreshold`, and `failureThreshold`.
+        ## @param api.oidc.dex.probes.startupProbe [object] Values merged into the chart-built `startupProbe` for the Dex server. Typically used to tune timing fields like `initialDelaySeconds`, `periodSeconds`, `timeoutSeconds`, `successThreshold`, and `failureThreshold`.
         startupProbe:
           initialDelaySeconds: 10
           # periodSeconds: 10
           # timeoutSeconds: 1
           # successThreshold: 1
           failureThreshold: 30
-        ## @param api.oidc.dex.probes.livenessProbe Values merged into the chart-built `livenessProbe` for the Dex server. Default is an empty map, so the chart's `livenessProbe` renders with Kubernetes-default timings.
+        ## @param api.oidc.dex.probes.livenessProbe [object] Values merged into the chart-built `livenessProbe` for the Dex server. Default is an empty map, so the chart's `livenessProbe` renders with Kubernetes-default timings.
         livenessProbe: {}
           # initialDelaySeconds: 0
           # periodSeconds: 10
           # timeoutSeconds: 1
           # successThreshold: 1
           # failureThreshold: 3
-        ## @param api.oidc.dex.probes.readinessProbe Values merged into the chart-built `readinessProbe` for the Dex server.
+        ## @param api.oidc.dex.probes.readinessProbe [object] Values merged into the chart-built `readinessProbe` for the Dex server.
         readinessProbe:
           initialDelaySeconds: 5
           # periodSeconds: 10
@@ -530,21 +530,21 @@ api:
   probes:
     ## @param api.probes.enabled Whether startup, liveness, and readiness probes should be included in the API server deployment. It is sometimes advantageous to disable these during local development.
     enabled: true
-    ## @param api.probes.startupProbe Values merged into the chart-built `startupProbe` for the API server. Typically used to tune timing fields like `initialDelaySeconds`, `periodSeconds`, `timeoutSeconds`, `successThreshold`, and `failureThreshold`.
+    ## @param api.probes.startupProbe [object] Values merged into the chart-built `startupProbe` for the API server. Typically used to tune timing fields like `initialDelaySeconds`, `periodSeconds`, `timeoutSeconds`, `successThreshold`, and `failureThreshold`.
     startupProbe:
       initialDelaySeconds: 10
       # periodSeconds: 10
       # timeoutSeconds: 1
       # successThreshold: 1
       failureThreshold: 30
-    ## @param api.probes.livenessProbe Values merged into the chart-built `livenessProbe` for the API server. Default is an empty map, so the chart's `livenessProbe` renders with Kubernetes-default timings.
+    ## @param api.probes.livenessProbe [object] Values merged into the chart-built `livenessProbe` for the API server. Default is an empty map, so the chart's `livenessProbe` renders with Kubernetes-default timings.
     livenessProbe: {}
       # initialDelaySeconds: 0
       # periodSeconds: 10
       # timeoutSeconds: 1
       # successThreshold: 1
       # failureThreshold: 3
-    ## @param api.probes.readinessProbe Values merged into the chart-built `readinessProbe` for the API server.
+    ## @param api.probes.readinessProbe [object] Values merged into the chart-built `readinessProbe` for the API server.
     readinessProbe:
       initialDelaySeconds: 5
       # periodSeconds: 10
@@ -961,21 +961,21 @@ externalWebhooksServer:
   probes:
     ## @param externalWebhooksServer.probes.enabled Whether startup, liveness, and readiness probes should be included in the external webhook server deployment. It is sometimes advantageous to disable these during local development.
     enabled: true
-    ## @param externalWebhooksServer.probes.startupProbe Values merged into the chart-built `startupProbe` for the external webhook server. Typically used to tune timing fields like `initialDelaySeconds`, `periodSeconds`, `timeoutSeconds`, `successThreshold`, and `failureThreshold`.
+    ## @param externalWebhooksServer.probes.startupProbe [object] Values merged into the chart-built `startupProbe` for the external webhook server. Typically used to tune timing fields like `initialDelaySeconds`, `periodSeconds`, `timeoutSeconds`, `successThreshold`, and `failureThreshold`.
     startupProbe:
       initialDelaySeconds: 10
       # periodSeconds: 10
       # timeoutSeconds: 1
       # successThreshold: 1
       failureThreshold: 30
-    ## @param externalWebhooksServer.probes.livenessProbe Values merged into the chart-built `livenessProbe` for the external webhook server. Default is an empty map, so the chart's `livenessProbe` renders with Kubernetes-default timings.
+    ## @param externalWebhooksServer.probes.livenessProbe [object] Values merged into the chart-built `livenessProbe` for the external webhook server. Default is an empty map, so the chart's `livenessProbe` renders with Kubernetes-default timings.
     livenessProbe: {}
       # initialDelaySeconds: 0
       # periodSeconds: 10
       # timeoutSeconds: 1
       # successThreshold: 1
       # failureThreshold: 3
-    ## @param externalWebhooksServer.probes.readinessProbe Values merged into the chart-built `readinessProbe` for the external webhook server.
+    ## @param externalWebhooksServer.probes.readinessProbe [object] Values merged into the chart-built `readinessProbe` for the external webhook server.
     readinessProbe:
       initialDelaySeconds: 5
       # periodSeconds: 10
