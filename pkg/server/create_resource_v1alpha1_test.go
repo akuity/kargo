@@ -209,7 +209,7 @@ func Test_server_createResources(t *testing.T) {
 type errSender struct{ err error }
 
 func (s *errSender) Send(_ context.Context, _ event.Meta) error { return s.err }
-func (s *errSender) Shutdown()                                   {}
+func (s *errSender) Shutdown()                                  {}
 
 func Test_server_createResources_freightEvent(t *testing.T) {
 	testFreight := &kargoapi.Freight{
