@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"context"
 	"encoding/json"
+	"errors"
 	"net/http"
 	"net/http/httptest"
 	"testing"
@@ -15,6 +16,7 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/client/fake"
 
 	kargoapi "github.com/akuity/kargo/api/v1alpha1"
+	"github.com/akuity/kargo/pkg/event"
 	k8sevent "github.com/akuity/kargo/pkg/event/kubernetes"
 	fakeevent "github.com/akuity/kargo/pkg/kubernetes/event/fake"
 	"github.com/akuity/kargo/pkg/server/user"
@@ -204,6 +206,11 @@ func Test_server_createResources(t *testing.T) {
 	)
 }
 
+type errSender struct{ err error }
+
+func (s *errSender) Send(_ context.Context, _ event.Meta) error { return s.err }
+func (s *errSender) Shutdown()                                   {}
+
 func Test_server_createResources_freightEvent(t *testing.T) {
 	testFreight := &kargoapi.Freight{
 		TypeMeta: metav1.TypeMeta{
@@ -266,6 +273,16 @@ func Test_server_createResources_freightEvent(t *testing.T) {
 					require.Equal(t, corev1.EventTypeNormal, evt.EventType)
 					require.Equal(t, string(kargoapi.EventTypeFreightCreated), evt.Reason)
 					require.Equal(t, "Freight created", evt.Message)
+				},
+			},
+			{
+				name: "Freight with sender error still succeeds",
+				serverSetup: func(_ *testing.T, s *server) {
+					s.sender = &errSender{err: errors.New("send failed")}
+				},
+				body: mustJSONBody(testFreight),
+				assertions: func(t *testing.T, w *httptest.ResponseRecorder, _ client.Client) {
+					require.Equal(t, http.StatusCreated, w.Code)
 				},
 			},
 			{

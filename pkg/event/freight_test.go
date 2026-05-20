@@ -511,6 +511,17 @@ func TestFreightEventUnmarshalAnnotations(t *testing.T) {
 			expectError:  true,
 			errorMessage: "failed to parse freight create time",
 		},
+		"freight created - invalid freight annotations": {
+			annotations: map[string]string{
+				kargoapi.AnnotationKeyEventFreightName:       "test-freight",
+				kargoapi.AnnotationKeyEventFreightCreateTime: "invalid-time",
+			},
+			unmarshalFunc: func(annotations map[string]string) (Meta, error) {
+				return UnmarshalFreightCreatedAnnotations("event-id", annotations)
+			},
+			expectError:  true,
+			errorMessage: "failed to unmarshal freight annotations",
+		},
 	}
 
 	for name, tc := range testCases {

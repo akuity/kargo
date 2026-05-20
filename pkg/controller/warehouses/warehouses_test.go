@@ -64,6 +64,31 @@ func TestNewReconciler(t *testing.T) {
 	require.NotNil(t, e.patchStatusFn)
 }
 
+func TestReconcilerConfigName(t *testing.T) {
+	testCases := []struct {
+		name     string
+		cfg      ReconcilerConfig
+		expected string
+	}{
+		{
+			name:     "no shard name",
+			cfg:      ReconcilerConfig{},
+			expected: "warehouse-controller",
+		},
+		{
+			name:     "with shard name",
+			cfg:      ReconcilerConfig{ShardName: "my-shard"},
+			expected: "warehouse-controller-my-shard",
+		},
+	}
+	for _, tc := range testCases {
+		t.Run(tc.name, func(t *testing.T) {
+			t.Parallel()
+			require.Equal(t, tc.expected, tc.cfg.Name())
+		})
+	}
+}
+
 func TestSyncWarehouse(t *testing.T) {
 	fakeRecorder := fakeevent.NewEventRecorder(1)
 
@@ -548,6 +573,58 @@ func TestSyncWarehouse(t *testing.T) {
 						return errors.New("failed to send event")
 					},
 				},
+				discoverArtifactsFn: func(
+					context.Context, string,
+					[]kargoapi.RepoSubscription,
+				) (*kargoapi.DiscoveredArtifacts, error) {
+					return &kargoapi.DiscoveredArtifacts{
+						Git: []kargoapi.GitDiscoveryResult{
+							{
+								RepoURL: "fake-repo",
+								Commits: []kargoapi.DiscoveredCommit{{ID: "fake-commit"}},
+							},
+						},
+					}, nil
+				},
+				buildFreightFromLatestArtifactsFn: func(
+					string,
+					*kargoapi.DiscoveredArtifacts,
+				) (*kargoapi.Freight, error) {
+					return &kargoapi.Freight{
+						ObjectMeta: metav1.ObjectMeta{
+							Name:      "fake-freight",
+							Namespace: "fake-namespace",
+						},
+					}, nil
+				},
+				createFreightFn: func(
+					context.Context,
+					client.Object,
+					...client.CreateOption,
+				) error {
+					return nil
+				},
+				patchStatusFn: func(context.Context, *kargoapi.Warehouse, func(*kargoapi.WarehouseStatus)) error {
+					return nil
+				},
+			},
+			warehouse: &kargoapi.Warehouse{
+				ObjectMeta: metav1.ObjectMeta{Generation: 1},
+				Spec: kargoapi.WarehouseSpec{
+					FreightCreationPolicy: kargoapi.FreightCreationPolicyAutomatic,
+				},
+			},
+			assertions: func(t *testing.T, status kargoapi.WarehouseStatus, err error) {
+				require.NoError(t, err)
+				require.NotEmpty(t, status.LastFreightID)
+			},
+		},
+
+		{
+			name: "successful freight creation with nil event sender",
+			reconciler: &reconciler{
+				cfg:         ReconcilerConfig{},
+				eventSender: nil,
 				discoverArtifactsFn: func(
 					context.Context, string,
 					[]kargoapi.RepoSubscription,
