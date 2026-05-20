@@ -1,0 +1,1840 @@
+{
+  "openapi": "3.0.0",
+  "info": {
+    "title": "Bitbucket API",
+    "description": "Code against the Bitbucket API to automate simple tasks, embed Bitbucket data into your own site, build mobile or desktop apps, or even add custom UI add-ons into Bitbucket itself using the Connect framework.",
+    "version": "2.0",
+    "termsOfService": "https://www.atlassian.com/legal/customer-agreement",
+    "contact": {
+      "name": "Bitbucket Support",
+      "url": "https://support.atlassian.com/bitbucket-cloud/",
+      "email": "support@bitbucket.org"
+    }
+  },
+  "servers": [
+    {
+      "url": "https://api.bitbucket.org/2.0"
+    }
+  ],
+  "paths": {
+    "/repositories/{workspace}/{repo_slug}/pullrequests": {
+      "get": {
+        "tags": [
+          "Pullrequests"
+        ],
+        "description": "Returns all pull requests on the specified repository.\n\nBy default only open pull requests are returned. This can be controlled\nusing the `state` query parameter. To retrieve pull requests that are\nin one of multiple states, repeat the `state` parameter for each\nindividual state.\n\nThis endpoint also supports filtering and sorting of the results. See\n[filtering and sorting](/cloud/bitbucket/rest/intro/#filtering) for more details.",
+        "summary": "List pull requests",
+        "responses": {
+          "200": {
+            "description": "All pull requests on the specified repository.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/paginated_pullrequests"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "If the repository is private and the request was not authenticated."
+          },
+          "404": {
+            "description": "If the specified repository does not exist.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/error"
+                }
+              }
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "state",
+            "in": "query",
+            "description": "Only return pull requests that are in this state. This parameter can be repeated.",
+            "schema": {
+              "type": "string",
+              "enum": [
+                "OPEN",
+                "MERGED",
+                "DECLINED",
+                "SUPERSEDED"
+              ]
+            }
+          }
+        ],
+        "security": [
+          {
+            "oauth2": [
+              "pullrequest"
+            ]
+          },
+          {
+            "basic": []
+          },
+          {
+            "api_key": []
+          }
+        ],
+        "x-atlassian-oauth2-scopes": [
+          {
+            "state": "Current",
+            "scheme": "oauth2",
+            "scopes": [
+              "read:pullrequest:bitbucket"
+            ]
+          }
+        ],
+        "x-atlassian-auth-types": [
+          "forge-oauth2",
+          "api-token"
+        ]
+      },
+      "post": {
+        "tags": [
+          "Pullrequests"
+        ],
+        "description": "Creates a new pull request where the destination repository is\nthis repository and the author is the authenticated user.\n\nThe minimum required fields to create a pull request are `title` and\n`source`, specified by a branch name.\n\n```\ncurl https://api.bitbucket.org/2.0/repositories/my-workspace/my-repository/pullrequests \\\n    -u my-username:my-password \\\n    --request POST \\\n    --header 'Content-Type: application/json' \\\n    --data '{\n        \"title\": \"My Title\",\n        \"source\": {\n            \"branch\": {\n                \"name\": \"staging\"\n            }\n        }\n    }'\n```\n\nIf the pull request's `destination` is not specified, it will default\nto the `repository.mainbranch`. To open a pull request to a\ndifferent branch, say from a feature branch to a staging branch,\nspecify a `destination` (same format as the `source`):\n\n```\n{\n    \"title\": \"My Title\",\n    \"source\": {\n        \"branch\": {\n            \"name\": \"my-feature-branch\"\n        }\n    },\n    \"destination\": {\n        \"branch\": {\n            \"name\": \"staging\"\n        }\n    }\n}\n```\n\nReviewers can be specified by adding an array of user objects as the\n`reviewers` property.\n\n```\n{\n    \"title\": \"My Title\",\n    \"source\": {\n        \"branch\": {\n            \"name\": \"my-feature-branch\"\n        }\n    },\n    \"reviewers\": [\n        {\n            \"uuid\": \"{504c3b62-8120-4f0c-a7bc-87800b9d6f70}\"\n        }\n    ]\n}\n```\n\nOther fields:\n\n* `description` - a string\n* `close_source_branch` - boolean that specifies if the source branch should be closed upon merging\n* `draft` - boolean that specifies whether the pull request is a draft",
+        "summary": "Create a pull request",
+        "responses": {
+          "201": {
+            "description": "The newly created pull request.",
+            "headers": {
+              "Location": {
+                "description": "The URL of new newly created pull request.",
+                "schema": {
+                  "type": "string"
+                }
+              }
+            },
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/pullrequest"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "If the input document was invalid, or if the caller lacks the privilege to create repositories under the targeted account.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/error"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "If the request was not authenticated.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/error"
+                }
+              }
+            }
+          }
+        },
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/pullrequest"
+              }
+            }
+          },
+          "description": "The new pull request.\n\nThe request URL you POST to becomes the destination repository URL. For this reason, you must specify an explicit source repository in the request object if you want to pull from a different repository (fork).\n\nSince not all elements are required or even mutable, you only need to include the elements you want to initialize, such as the source branch and the title."
+        },
+        "security": [
+          {
+            "oauth2": [
+              "pullrequest:write"
+            ]
+          },
+          {
+            "basic": []
+          },
+          {
+            "api_key": []
+          }
+        ],
+        "x-atlassian-oauth2-scopes": [
+          {
+            "state": "Current",
+            "scheme": "oauth2",
+            "scopes": [
+              "read:pullrequest:bitbucket",
+              "write:pullrequest:bitbucket"
+            ]
+          }
+        ],
+        "x-atlassian-auth-types": [
+          "forge-oauth2",
+          "api-token"
+        ]
+      },
+      "parameters": [
+        {
+          "name": "repo_slug",
+          "in": "path",
+          "description": "This can either be the repository slug or the UUID of the repository,\nsurrounded by curly-braces, for example: `{repository UUID}`.\n",
+          "required": true,
+          "schema": {
+            "type": "string"
+          }
+        },
+        {
+          "name": "workspace",
+          "in": "path",
+          "description": "This can either be the workspace ID (slug) or the workspace UUID\nsurrounded by curly-braces, for example: `{workspace UUID}`.\n",
+          "required": true,
+          "schema": {
+            "type": "string"
+          }
+        }
+      ]
+    },
+    "/repositories/{workspace}/{repo_slug}/pullrequests/{pull_request_id}": {
+      "get": {
+        "tags": [
+          "Pullrequests"
+        ],
+        "description": "Returns the specified pull request.",
+        "summary": "Get a pull request",
+        "responses": {
+          "200": {
+            "description": "The pull request object",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/pullrequest"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "If the repository is private and the request was not authenticated."
+          },
+          "404": {
+            "description": "If the repository or pull request does not exist",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/error"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "oauth2": [
+              "pullrequest"
+            ]
+          },
+          {
+            "basic": []
+          },
+          {
+            "api_key": []
+          }
+        ],
+        "x-atlassian-oauth2-scopes": [
+          {
+            "state": "Current",
+            "scheme": "oauth2",
+            "scopes": [
+              "read:pullrequest:bitbucket"
+            ]
+          }
+        ],
+        "x-atlassian-auth-types": [
+          "forge-oauth2",
+          "api-token"
+        ]
+      },
+      "parameters": [
+        {
+          "name": "pull_request_id",
+          "in": "path",
+          "description": "The id of the pull request.",
+          "required": true,
+          "schema": {
+            "type": "integer"
+          }
+        },
+        {
+          "name": "repo_slug",
+          "in": "path",
+          "description": "This can either be the repository slug or the UUID of the repository,\nsurrounded by curly-braces, for example: `{repository UUID}`.\n",
+          "required": true,
+          "schema": {
+            "type": "string"
+          }
+        },
+        {
+          "name": "workspace",
+          "in": "path",
+          "description": "This can either be the workspace ID (slug) or the workspace UUID\nsurrounded by curly-braces, for example: `{workspace UUID}`.\n",
+          "required": true,
+          "schema": {
+            "type": "string"
+          }
+        }
+      ]
+    },
+    "/repositories/{workspace}/{repo_slug}/pullrequests/{pull_request_id}/merge": {
+      "post": {
+        "tags": [
+          "Pullrequests"
+        ],
+        "description": "Merges the pull request.",
+        "summary": "Merge a pull request",
+        "responses": {
+          "200": {
+            "description": "The pull request object.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/pullrequest"
+                }
+              }
+            }
+          },
+          "202": {
+            "description": "In the Location header, the URL to poll for the pull request merge status"
+          },
+          "409": {
+            "description": "Unable to merge because one of the refs involved changed while attempting to merge"
+          },
+          "555": {
+            "description": "If the merge took too long and timed out.\nIn this case the caller should retry the request later",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/error"
+                }
+              }
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "async",
+            "in": "query",
+            "description": "Default value is false.\n\n\nWhen set to true, runs merge asynchronously and\nimmediately returns a 202 with polling link to\nthe task-status API in the Location header.\n\n\nWhen set to false, runs merge and waits for it to\ncomplete, returning 200 when it succeeds. If the\nduration of the merge exceeds a timeout threshold,\nthe API returns a 202 with polling link to the\ntask-status API in the Location header.",
+            "required": false,
+            "schema": {
+              "type": "boolean"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/pullrequest_merge_parameters"
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "oauth2": [
+              "pullrequest:write"
+            ]
+          },
+          {
+            "basic": []
+          },
+          {
+            "api_key": []
+          }
+        ],
+        "x-atlassian-oauth2-scopes": [
+          {
+            "state": "Current",
+            "scheme": "oauth2",
+            "scopes": [
+              "read:pullrequest:bitbucket",
+              "write:pullrequest:bitbucket"
+            ]
+          }
+        ],
+        "x-atlassian-auth-types": [
+          "forge-oauth2",
+          "api-token"
+        ]
+      },
+      "parameters": [
+        {
+          "name": "pull_request_id",
+          "in": "path",
+          "description": "The id of the pull request.",
+          "required": true,
+          "schema": {
+            "type": "integer"
+          }
+        },
+        {
+          "name": "repo_slug",
+          "in": "path",
+          "description": "This can either be the repository slug or the UUID of the repository,\nsurrounded by curly-braces, for example: `{repository UUID}`.\n",
+          "required": true,
+          "schema": {
+            "type": "string"
+          }
+        },
+        {
+          "name": "workspace",
+          "in": "path",
+          "description": "This can either be the workspace ID (slug) or the workspace UUID\nsurrounded by curly-braces, for example: `{workspace UUID}`.\n",
+          "required": true,
+          "schema": {
+            "type": "string"
+          }
+        }
+      ]
+    },
+    "/repositories/{workspace}/{repo_slug}/commit/{commit}": {
+      "get": {
+        "tags": [
+          "Commits"
+        ],
+        "description": "Returns the specified commit.",
+        "summary": "Get a commit",
+        "responses": {
+          "200": {
+            "description": "The commit object",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/commit"
+                },
+                "examples": {
+                  "response": {
+                    "value": {
+                      "rendered": {
+                        "message": {
+                          "raw": "Add a GEORDI_OUTPUT_DIR setting",
+                          "markup": "markdown",
+                          "html": "<p>Add a GEORDI_OUTPUT_DIR setting</p>",
+                          "type": "rendered"
+                        }
+                      },
+                      "hash": "f7591a13eda445d9a9167f98eb870319f4b6c2d8",
+                      "repository": {
+                        "name": "geordi",
+                        "type": "repository",
+                        "full_name": "bitbucket/geordi",
+                        "links": {
+                          "self": {
+                            "href": "https://api.bitbucket.org/2.0/repositories/bitbucket/geordi"
+                          },
+                          "html": {
+                            "href": "https://bitbucket.org/bitbucket/geordi"
+                          },
+                          "avatar": {
+                            "href": "https://bytebucket.org/ravatar/%7B85d08b4e-571d-44e9-a507-fa476535aa98%7D?ts=1730260"
+                          }
+                        },
+                        "uuid": "{85d08b4e-571d-44e9-a507-fa476535aa98}"
+                      },
+                      "links": {
+                        "self": {
+                          "href": "https://api.bitbucket.org/2.0/repositories/bitbucket/geordi/commit/f7591a13eda445d9a9167f98eb870319f4b6c2d8"
+                        },
+                        "comments": {
+                          "href": "https://api.bitbucket.org/2.0/repositories/bitbucket/geordi/commit/f7591a13eda445d9a9167f98eb870319f4b6c2d8/comments"
+                        },
+                        "patch": {
+                          "href": "https://api.bitbucket.org/2.0/repositories/bitbucket/geordi/patch/f7591a13eda445d9a9167f98eb870319f4b6c2d8"
+                        },
+                        "html": {
+                          "href": "https://bitbucket.org/bitbucket/geordi/commits/f7591a13eda445d9a9167f98eb870319f4b6c2d8"
+                        },
+                        "diff": {
+                          "href": "https://api.bitbucket.org/2.0/repositories/bitbucket/geordi/diff/f7591a13eda445d9a9167f98eb870319f4b6c2d8"
+                        },
+                        "approve": {
+                          "href": "https://api.bitbucket.org/2.0/repositories/bitbucket/geordi/commit/f7591a13eda445d9a9167f98eb870319f4b6c2d8/approve"
+                        },
+                        "statuses": {
+                          "href": "https://api.bitbucket.org/2.0/repositories/bitbucket/geordi/commit/f7591a13eda445d9a9167f98eb870319f4b6c2d8/statuses"
+                        }
+                      },
+                      "author": {
+                        "raw": "Brodie Rao <a@b.c>",
+                        "type": "author",
+                        "user": {
+                          "display_name": "Brodie Rao",
+                          "uuid": "{9484702e-c663-4afd-aefb-c93a8cd31c28}",
+                          "links": {
+                            "self": {
+                              "href": "https://api.bitbucket.org/2.0/users/%7B9484702e-c663-4afd-aefb-c93a8cd31c28%7D"
+                            },
+                            "html": {
+                              "href": "https://bitbucket.org/%7B9484702e-c663-4afd-aefb-c93a8cd31c28%7D/"
+                            },
+                            "avatar": {
+                              "href": "https://avatar-management--avatars.us-west-2.prod.public.atl-paas.net/557058:3aae1e05-702a-41e5-81c8-f36f29afb6ca/613070db-28b0-421f-8dba-ae8a87e2a5c7/128"
+                            }
+                          },
+                          "type": "user",
+                          "nickname": "brodie",
+                          "account_id": "557058:3aae1e05-702a-41e5-81c8-f36f29afb6ca"
+                        }
+                      },
+                      "summary": {
+                        "raw": "Add a GEORDI_OUTPUT_DIR setting",
+                        "markup": "markdown",
+                        "html": "<p>Add a GEORDI_OUTPUT_DIR setting</p>",
+                        "type": "rendered"
+                      },
+                      "participants": [],
+                      "parents": [
+                        {
+                          "type": "commit",
+                          "hash": "f06941fec4ef6bcb0c2456927a0cf258fa4f899b",
+                          "links": {
+                            "self": {
+                              "href": "https://api.bitbucket.org/2.0/repositories/bitbucket/geordi/commit/f06941fec4ef6bcb0c2456927a0cf258fa4f899b"
+                            },
+                            "html": {
+                              "href": "https://bitbucket.org/bitbucket/geordi/commits/f06941fec4ef6bcb0c2456927a0cf258fa4f899b"
+                            }
+                          }
+                        }
+                      ],
+                      "date": "2012-07-16T19:37:54+00:00",
+                      "message": "Add a GEORDI_OUTPUT_DIR setting",
+                      "type": "commit"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "If the specified commit or repository does not exist.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/error"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "oauth2": [
+              "repository"
+            ]
+          },
+          {
+            "basic": []
+          },
+          {
+            "api_key": []
+          }
+        ],
+        "x-atlassian-oauth2-scopes": [
+          {
+            "state": "Current",
+            "scheme": "oauth2",
+            "scopes": [
+              "read:repository:bitbucket"
+            ]
+          }
+        ],
+        "x-atlassian-auth-types": [
+          "forge-oauth2",
+          "api-token"
+        ]
+      },
+      "parameters": [
+        {
+          "name": "commit",
+          "in": "path",
+          "description": "The commit's SHA1.",
+          "required": true,
+          "schema": {
+            "type": "string"
+          }
+        },
+        {
+          "name": "repo_slug",
+          "in": "path",
+          "description": "This can either be the repository slug or the UUID of the repository,\nsurrounded by curly-braces, for example: `{repository UUID}`.\n",
+          "required": true,
+          "schema": {
+            "type": "string"
+          }
+        },
+        {
+          "name": "workspace",
+          "in": "path",
+          "description": "This can either be the workspace ID (slug) or the workspace UUID\nsurrounded by curly-braces, for example: `{workspace UUID}`.\n",
+          "required": true,
+          "schema": {
+            "type": "string"
+          }
+        }
+      ]
+    }
+  },
+  "components": {
+    "schemas": {
+      "base_commit": {
+        "allOf": [
+          {
+            "$ref": "#/components/schemas/object"
+          },
+          {
+            "type": "object",
+            "title": "Base Commit",
+            "description": "The common base type for both repository and snippet commits.",
+            "properties": {
+              "hash": {
+                "type": "string",
+                "pattern": "[0-9a-f]{7,}?"
+              },
+              "date": {
+                "type": "string",
+                "format": "date-time"
+              },
+              "author": {
+                "$ref": "#/components/schemas/author"
+              },
+              "committer": {
+                "$ref": "#/components/schemas/committer"
+              },
+              "message": {
+                "type": "string"
+              },
+              "summary": {
+                "type": "object",
+                "properties": {
+                  "raw": {
+                    "type": "string",
+                    "description": "The text as it was typed by a user."
+                  },
+                  "markup": {
+                    "type": "string",
+                    "description": "The type of markup language the raw content is to be interpreted in.",
+                    "enum": [
+                      "markdown",
+                      "creole",
+                      "plaintext"
+                    ]
+                  },
+                  "html": {
+                    "type": "string",
+                    "description": "The user's content rendered as HTML."
+                  }
+                },
+                "additionalProperties": false
+              },
+              "parents": {
+                "type": "array",
+                "items": {
+                  "$ref": "#/components/schemas/base_commit"
+                },
+                "minItems": 0
+              }
+            },
+            "additionalProperties": true
+          }
+        ]
+      },
+      "team_links": {
+        "allOf": [
+          {
+            "$ref": "#/components/schemas/account_links"
+          },
+          {
+            "type": "object",
+            "title": "Team Links",
+            "description": "Links related to a Team.",
+            "properties": {
+              "self": {
+                "$ref": "#/components/schemas/link"
+              },
+              "html": {
+                "$ref": "#/components/schemas/link"
+              },
+              "members": {
+                "$ref": "#/components/schemas/link"
+              },
+              "projects": {
+                "$ref": "#/components/schemas/link"
+              },
+              "repositories": {
+                "$ref": "#/components/schemas/link"
+              }
+            },
+            "additionalProperties": true
+          }
+        ]
+      },
+      "committer": {
+        "allOf": [
+          {
+            "$ref": "#/components/schemas/object"
+          },
+          {
+            "type": "object",
+            "title": "Committer",
+            "description": "The committer of a change in a repository",
+            "properties": {
+              "raw": {
+                "type": "string",
+                "description": "The raw committer value from the repository. This may be the only value available if the committer does not match a user in Bitbucket."
+              },
+              "user": {
+                "$ref": "#/components/schemas/account"
+              }
+            },
+            "additionalProperties": true
+          }
+        ]
+      },
+      "ref": {
+        "type": "object",
+        "title": "Ref",
+        "description": "A ref object, representing a branch or tag in a repository.",
+        "properties": {
+          "type": {
+            "type": "string"
+          },
+          "links": {
+            "type": "object",
+            "properties": {
+              "self": {
+                "type": "object",
+                "title": "Link",
+                "description": "A link to a resource related to this object.",
+                "properties": {
+                  "href": {
+                    "type": "string",
+                    "format": "uri"
+                  },
+                  "name": {
+                    "type": "string"
+                  }
+                },
+                "additionalProperties": false
+              },
+              "commits": {
+                "type": "object",
+                "title": "Link",
+                "description": "A link to a resource related to this object.",
+                "properties": {
+                  "href": {
+                    "type": "string",
+                    "format": "uri"
+                  },
+                  "name": {
+                    "type": "string"
+                  }
+                },
+                "additionalProperties": false
+              },
+              "html": {
+                "type": "object",
+                "title": "Link",
+                "description": "A link to a resource related to this object.",
+                "properties": {
+                  "href": {
+                    "type": "string",
+                    "format": "uri"
+                  },
+                  "name": {
+                    "type": "string"
+                  }
+                },
+                "additionalProperties": false
+              }
+            },
+            "additionalProperties": false
+          },
+          "name": {
+            "type": "string",
+            "description": "The name of the ref."
+          },
+          "target": {
+            "$ref": "#/components/schemas/commit"
+          }
+        },
+        "required": [
+          "type"
+        ],
+        "additionalProperties": true
+      },
+      "account": {
+        "allOf": [
+          {
+            "$ref": "#/components/schemas/object"
+          },
+          {
+            "type": "object",
+            "title": "Account",
+            "description": "An account object.",
+            "properties": {
+              "links": {
+                "$ref": "#/components/schemas/account_links"
+              },
+              "created_on": {
+                "type": "string",
+                "format": "date-time"
+              },
+              "display_name": {
+                "type": "string"
+              },
+              "uuid": {
+                "type": "string"
+              }
+            },
+            "additionalProperties": true
+          }
+        ]
+      },
+      "pullrequest": {
+        "allOf": [
+          {
+            "$ref": "#/components/schemas/object"
+          },
+          {
+            "type": "object",
+            "title": "Pull Request",
+            "description": "A pull request object.",
+            "properties": {
+              "links": {
+                "type": "object",
+                "properties": {
+                  "self": {
+                    "type": "object",
+                    "title": "Link",
+                    "description": "A link to a resource related to this object.",
+                    "properties": {
+                      "href": {
+                        "type": "string",
+                        "format": "uri"
+                      },
+                      "name": {
+                        "type": "string"
+                      }
+                    },
+                    "additionalProperties": false
+                  },
+                  "html": {
+                    "type": "object",
+                    "title": "Link",
+                    "description": "A link to a resource related to this object.",
+                    "properties": {
+                      "href": {
+                        "type": "string",
+                        "format": "uri"
+                      },
+                      "name": {
+                        "type": "string"
+                      }
+                    },
+                    "additionalProperties": false
+                  },
+                  "commits": {
+                    "type": "object",
+                    "title": "Link",
+                    "description": "A link to a resource related to this object.",
+                    "properties": {
+                      "href": {
+                        "type": "string",
+                        "format": "uri"
+                      },
+                      "name": {
+                        "type": "string"
+                      }
+                    },
+                    "additionalProperties": false
+                  },
+                  "approve": {
+                    "type": "object",
+                    "title": "Link",
+                    "description": "A link to a resource related to this object.",
+                    "properties": {
+                      "href": {
+                        "type": "string",
+                        "format": "uri"
+                      },
+                      "name": {
+                        "type": "string"
+                      }
+                    },
+                    "additionalProperties": false
+                  },
+                  "diff": {
+                    "type": "object",
+                    "title": "Link",
+                    "description": "A link to a resource related to this object.",
+                    "properties": {
+                      "href": {
+                        "type": "string",
+                        "format": "uri"
+                      },
+                      "name": {
+                        "type": "string"
+                      }
+                    },
+                    "additionalProperties": false
+                  },
+                  "diffstat": {
+                    "type": "object",
+                    "title": "Link",
+                    "description": "A link to a resource related to this object.",
+                    "properties": {
+                      "href": {
+                        "type": "string",
+                        "format": "uri"
+                      },
+                      "name": {
+                        "type": "string"
+                      }
+                    },
+                    "additionalProperties": false
+                  },
+                  "comments": {
+                    "type": "object",
+                    "title": "Link",
+                    "description": "A link to a resource related to this object.",
+                    "properties": {
+                      "href": {
+                        "type": "string",
+                        "format": "uri"
+                      },
+                      "name": {
+                        "type": "string"
+                      }
+                    },
+                    "additionalProperties": false
+                  },
+                  "activity": {
+                    "type": "object",
+                    "title": "Link",
+                    "description": "A link to a resource related to this object.",
+                    "properties": {
+                      "href": {
+                        "type": "string",
+                        "format": "uri"
+                      },
+                      "name": {
+                        "type": "string"
+                      }
+                    },
+                    "additionalProperties": false
+                  },
+                  "merge": {
+                    "type": "object",
+                    "title": "Link",
+                    "description": "A link to a resource related to this object.",
+                    "properties": {
+                      "href": {
+                        "type": "string",
+                        "format": "uri"
+                      },
+                      "name": {
+                        "type": "string"
+                      }
+                    },
+                    "additionalProperties": false
+                  },
+                  "decline": {
+                    "type": "object",
+                    "title": "Link",
+                    "description": "A link to a resource related to this object.",
+                    "properties": {
+                      "href": {
+                        "type": "string",
+                        "format": "uri"
+                      },
+                      "name": {
+                        "type": "string"
+                      }
+                    },
+                    "additionalProperties": false
+                  }
+                },
+                "additionalProperties": false
+              },
+              "id": {
+                "type": "integer",
+                "description": "The pull request's unique ID. Note that pull request IDs are only unique within their associated repository."
+              },
+              "title": {
+                "type": "string",
+                "description": "Title of the pull request."
+              },
+              "rendered": {
+                "type": "object",
+                "title": "Rendered Pull Request Markup",
+                "description": "User provided pull request text, interpreted in a markup language and rendered in HTML",
+                "properties": {
+                  "title": {
+                    "type": "object",
+                    "properties": {
+                      "raw": {
+                        "type": "string",
+                        "description": "The text as it was typed by a user."
+                      },
+                      "markup": {
+                        "type": "string",
+                        "description": "The type of markup language the raw content is to be interpreted in.",
+                        "enum": [
+                          "markdown",
+                          "creole",
+                          "plaintext"
+                        ]
+                      },
+                      "html": {
+                        "type": "string",
+                        "description": "The user's content rendered as HTML."
+                      }
+                    },
+                    "additionalProperties": false
+                  },
+                  "description": {
+                    "type": "object",
+                    "properties": {
+                      "raw": {
+                        "type": "string",
+                        "description": "The text as it was typed by a user."
+                      },
+                      "markup": {
+                        "type": "string",
+                        "description": "The type of markup language the raw content is to be interpreted in.",
+                        "enum": [
+                          "markdown",
+                          "creole",
+                          "plaintext"
+                        ]
+                      },
+                      "html": {
+                        "type": "string",
+                        "description": "The user's content rendered as HTML."
+                      }
+                    },
+                    "additionalProperties": false
+                  },
+                  "reason": {
+                    "type": "object",
+                    "properties": {
+                      "raw": {
+                        "type": "string",
+                        "description": "The text as it was typed by a user."
+                      },
+                      "markup": {
+                        "type": "string",
+                        "description": "The type of markup language the raw content is to be interpreted in.",
+                        "enum": [
+                          "markdown",
+                          "creole",
+                          "plaintext"
+                        ]
+                      },
+                      "html": {
+                        "type": "string",
+                        "description": "The user's content rendered as HTML."
+                      }
+                    },
+                    "additionalProperties": false
+                  }
+                },
+                "additionalProperties": false
+              },
+              "summary": {
+                "type": "object",
+                "properties": {
+                  "raw": {
+                    "type": "string",
+                    "description": "The text as it was typed by a user."
+                  },
+                  "markup": {
+                    "type": "string",
+                    "description": "The type of markup language the raw content is to be interpreted in.",
+                    "enum": [
+                      "markdown",
+                      "creole",
+                      "plaintext"
+                    ]
+                  },
+                  "html": {
+                    "type": "string",
+                    "description": "The user's content rendered as HTML."
+                  }
+                },
+                "additionalProperties": false
+              },
+              "state": {
+                "type": "string",
+                "description": "The pull request's current status.",
+                "enum": [
+                  "OPEN",
+                  "DRAFT",
+                  "QUEUED",
+                  "MERGED",
+                  "DECLINED",
+                  "SUPERSEDED"
+                ]
+              },
+              "author": {
+                "$ref": "#/components/schemas/account"
+              },
+              "source": {
+                "$ref": "#/components/schemas/pullrequest_endpoint"
+              },
+              "destination": {
+                "$ref": "#/components/schemas/pullrequest_endpoint"
+              },
+              "merge_commit": {
+                "type": "object",
+                "title": "Pull Request Commit",
+                "properties": {
+                  "hash": {
+                    "type": "string",
+                    "pattern": "[0-9a-f]{7,}?"
+                  }
+                },
+                "additionalProperties": false
+              },
+              "comment_count": {
+                "type": "integer",
+                "description": "The number of comments for a specific pull request.",
+                "minimum": 0
+              },
+              "task_count": {
+                "type": "integer",
+                "description": "The number of open tasks for a specific pull request.",
+                "minimum": 0
+              },
+              "close_source_branch": {
+                "type": "boolean",
+                "description": "A boolean flag indicating if merging the pull request closes the source branch."
+              },
+              "closed_by": {
+                "$ref": "#/components/schemas/account"
+              },
+              "reason": {
+                "type": "string",
+                "description": "Explains why a pull request was declined. This field is only applicable to pull requests in rejected state."
+              },
+              "created_on": {
+                "type": "string",
+                "description": "The ISO8601 timestamp the request was created.",
+                "format": "date-time"
+              },
+              "updated_on": {
+                "type": "string",
+                "description": "The ISO8601 timestamp the request was last updated.",
+                "format": "date-time"
+              },
+              "reviewers": {
+                "type": "array",
+                "description": "The list of users that were added as reviewers on this pull request when it was created. For performance reasons, the API only includes this list on a pull request's `self` URL.",
+                "items": {
+                  "$ref": "#/components/schemas/account"
+                }
+              },
+              "participants": {
+                "type": "array",
+                "description": "        The list of users that are collaborating on this pull request.\n        Collaborators are user that:\n\n        * are added to the pull request as a reviewer (part of the reviewers\n          list)\n        * are not explicit reviewers, but have commented on the pull request\n        * are not explicit reviewers, but have approved the pull request\n\n        Each user is wrapped in an object that indicates the user's role and\n        whether they have approved the pull request. For performance reasons,\n        the API only returns this list when an API requests a pull request by\n        id.\n        ",
+                "items": {
+                  "$ref": "#/components/schemas/participant"
+                }
+              },
+              "draft": {
+                "type": "boolean",
+                "description": "A boolean flag indicating whether the pull request is a draft."
+              },
+              "queued": {
+                "type": "boolean",
+                "description": "A boolean flag indicating whether the pull request is queued"
+              }
+            },
+            "additionalProperties": true
+          }
+        ]
+      },
+      "author": {
+        "allOf": [
+          {
+            "$ref": "#/components/schemas/object"
+          },
+          {
+            "type": "object",
+            "title": "Author",
+            "description": "The author of a change in a repository",
+            "properties": {
+              "raw": {
+                "type": "string",
+                "description": "The raw author value from the repository. This may be the only value available if the author does not match a user in Bitbucket."
+              },
+              "user": {
+                "$ref": "#/components/schemas/account"
+              }
+            },
+            "additionalProperties": true
+          }
+        ]
+      },
+      "branch": {
+        "allOf": [
+          {
+            "$ref": "#/components/schemas/ref"
+          },
+          {
+            "type": "object",
+            "title": "Branch",
+            "description": "A branch object, representing a branch in a repository.",
+            "properties": {
+              "merge_strategies": {
+                "type": "array",
+                "description": "Available merge strategies for pull requests targeting this branch.",
+                "items": {
+                  "type": "string",
+                  "enum": [
+                    "merge_commit",
+                    "squash",
+                    "fast_forward",
+                    "squash_fast_forward",
+                    "rebase_fast_forward",
+                    "rebase_merge"
+                  ]
+                }
+              },
+              "default_merge_strategy": {
+                "type": "string",
+                "description": "The default merge strategy for pull requests targeting this branch."
+              }
+            },
+            "additionalProperties": true
+          }
+        ]
+      },
+      "repository": {
+        "allOf": [
+          {
+            "$ref": "#/components/schemas/object"
+          },
+          {
+            "type": "object",
+            "title": "Repository",
+            "description": "A Bitbucket repository.",
+            "properties": {
+              "links": {
+                "type": "object",
+                "properties": {
+                  "self": {
+                    "type": "object",
+                    "title": "Link",
+                    "description": "A link to a resource related to this object.",
+                    "properties": {
+                      "href": {
+                        "type": "string",
+                        "format": "uri"
+                      },
+                      "name": {
+                        "type": "string"
+                      }
+                    },
+                    "additionalProperties": false
+                  },
+                  "html": {
+                    "type": "object",
+                    "title": "Link",
+                    "description": "A link to a resource related to this object.",
+                    "properties": {
+                      "href": {
+                        "type": "string",
+                        "format": "uri"
+                      },
+                      "name": {
+                        "type": "string"
+                      }
+                    },
+                    "additionalProperties": false
+                  },
+                  "avatar": {
+                    "type": "object",
+                    "title": "Link",
+                    "description": "A link to a resource related to this object.",
+                    "properties": {
+                      "href": {
+                        "type": "string",
+                        "format": "uri"
+                      },
+                      "name": {
+                        "type": "string"
+                      }
+                    },
+                    "additionalProperties": false
+                  },
+                  "pullrequests": {
+                    "type": "object",
+                    "title": "Link",
+                    "description": "A link to a resource related to this object.",
+                    "properties": {
+                      "href": {
+                        "type": "string",
+                        "format": "uri"
+                      },
+                      "name": {
+                        "type": "string"
+                      }
+                    },
+                    "additionalProperties": false
+                  },
+                  "commits": {
+                    "type": "object",
+                    "title": "Link",
+                    "description": "A link to a resource related to this object.",
+                    "properties": {
+                      "href": {
+                        "type": "string",
+                        "format": "uri"
+                      },
+                      "name": {
+                        "type": "string"
+                      }
+                    },
+                    "additionalProperties": false
+                  },
+                  "forks": {
+                    "type": "object",
+                    "title": "Link",
+                    "description": "A link to a resource related to this object.",
+                    "properties": {
+                      "href": {
+                        "type": "string",
+                        "format": "uri"
+                      },
+                      "name": {
+                        "type": "string"
+                      }
+                    },
+                    "additionalProperties": false
+                  },
+                  "watchers": {
+                    "type": "object",
+                    "title": "Link",
+                    "description": "A link to a resource related to this object.",
+                    "properties": {
+                      "href": {
+                        "type": "string",
+                        "format": "uri"
+                      },
+                      "name": {
+                        "type": "string"
+                      }
+                    },
+                    "additionalProperties": false
+                  },
+                  "downloads": {
+                    "type": "object",
+                    "title": "Link",
+                    "description": "A link to a resource related to this object.",
+                    "properties": {
+                      "href": {
+                        "type": "string",
+                        "format": "uri"
+                      },
+                      "name": {
+                        "type": "string"
+                      }
+                    },
+                    "additionalProperties": false
+                  },
+                  "clone": {
+                    "type": "array",
+                    "items": {
+                      "type": "object",
+                      "title": "Link",
+                      "description": "A link to a resource related to this object.",
+                      "properties": {
+                        "href": {
+                          "type": "string",
+                          "format": "uri"
+                        },
+                        "name": {
+                          "type": "string"
+                        }
+                      },
+                      "additionalProperties": false
+                    }
+                  },
+                  "hooks": {
+                    "type": "object",
+                    "title": "Link",
+                    "description": "A link to a resource related to this object.",
+                    "properties": {
+                      "href": {
+                        "type": "string",
+                        "format": "uri"
+                      },
+                      "name": {
+                        "type": "string"
+                      }
+                    },
+                    "additionalProperties": false
+                  }
+                },
+                "additionalProperties": false
+              },
+              "uuid": {
+                "type": "string",
+                "description": "The repository's immutable id. This can be used as a substitute for the slug segment in URLs. Doing this guarantees your URLs will survive renaming of the repository by its owner, or even transfer of the repository to a different user."
+              },
+              "full_name": {
+                "type": "string",
+                "description": "The concatenation of the repository owner's username and the slugified name, e.g. \"evzijst/interruptingcow\". This is the same string used in Bitbucket URLs."
+              },
+              "is_private": {
+                "type": "boolean"
+              },
+              "parent": {
+                "$ref": "#/components/schemas/repository"
+              },
+              "scm": {
+                "type": "string",
+                "enum": [
+                  "git"
+                ]
+              },
+              "owner": {
+                "$ref": "#/components/schemas/account"
+              },
+              "name": {
+                "type": "string"
+              },
+              "description": {
+                "type": "string"
+              },
+              "created_on": {
+                "type": "string",
+                "format": "date-time"
+              },
+              "updated_on": {
+                "type": "string",
+                "format": "date-time"
+              },
+              "size": {
+                "type": "integer"
+              },
+              "language": {
+                "type": "string"
+              },
+              "has_issues": {
+                "type": "boolean",
+                "description": "\nThe issue tracker for this repository is enabled. Issue Tracker\nfeatures are not supported for repositories in workspaces\nadministered through admin.atlassian.com.\n"
+              },
+              "has_wiki": {
+                "type": "boolean",
+                "description": "\nThe wiki for this repository is enabled. Wiki\nfeatures are not supported for repositories in workspaces\nadministered through admin.atlassian.com.\n"
+              },
+              "fork_policy": {
+                "type": "string",
+                "description": "\nControls the rules for forking this repository.\n\n* **allow_forks**: unrestricted forking\n* **no_public_forks**: restrict forking to private forks (forks cannot\n  be made public later)\n* **no_forks**: deny all forking\n",
+                "enum": [
+                  "allow_forks",
+                  "no_public_forks",
+                  "no_forks"
+                ]
+              },
+              "project": {
+                "$ref": "#/components/schemas/project"
+              },
+              "mainbranch": {
+                "$ref": "#/components/schemas/branch"
+              }
+            },
+            "additionalProperties": true
+          }
+        ]
+      },
+      "paginated_pullrequests": {
+        "type": "object",
+        "title": "Paginated Pull Requests",
+        "description": "A paginated list of pullrequests.",
+        "properties": {
+          "size": {
+            "type": "integer",
+            "description": "Total number of objects in the response. This is an optional element that is not provided in all responses, as it can be expensive to compute.",
+            "minimum": 0
+          },
+          "page": {
+            "type": "integer",
+            "description": "Page number of the current results. This is an optional element that is not provided in all responses.",
+            "minimum": 1
+          },
+          "pagelen": {
+            "type": "integer",
+            "description": "Current number of objects on the existing page. The default value is 10 with 100 being the maximum allowed value. Individual APIs may enforce different values.",
+            "minimum": 1
+          },
+          "next": {
+            "type": "string",
+            "description": "Link to the next page if it exists. The last page of a collection does not have this value. Use this link to navigate the result set and refrain from constructing your own URLs.",
+            "format": "uri"
+          },
+          "previous": {
+            "type": "string",
+            "description": "Link to previous page if it exists. A collections first page does not have this value. This is an optional element that is not provided in all responses. Some result sets strictly support forward navigation and never provide previous links. Clients must anticipate that backwards navigation is not always available. Use this link to navigate the result set and refrain from constructing your own URLs.",
+            "format": "uri"
+          },
+          "values": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/pullrequest"
+            },
+            "minItems": 0,
+            "uniqueItems": true
+          }
+        },
+        "additionalProperties": false
+      },
+      "pullrequest_endpoint": {
+        "type": "object",
+        "title": "Pull Request Endpoint",
+        "properties": {
+          "repository": {
+            "$ref": "#/components/schemas/repository"
+          },
+          "branch": {
+            "type": "object",
+            "title": "Pull Request Branch",
+            "properties": {
+              "name": {
+                "type": "string"
+              },
+              "merge_strategies": {
+                "type": "array",
+                "description": "Available merge strategies, when this endpoint is the destination of the pull request.",
+                "items": {
+                  "type": "string",
+                  "enum": [
+                    "merge_commit",
+                    "squash",
+                    "fast_forward",
+                    "squash_fast_forward",
+                    "rebase_fast_forward",
+                    "rebase_merge"
+                  ]
+                }
+              },
+              "default_merge_strategy": {
+                "type": "string",
+                "description": "The default merge strategy, when this endpoint is the destination of the pull request."
+              }
+            },
+            "additionalProperties": false
+          },
+          "commit": {
+            "type": "object",
+            "title": "Pull Request Commit",
+            "properties": {
+              "hash": {
+                "type": "string",
+                "pattern": "[0-9a-f]{7,}?"
+              }
+            },
+            "additionalProperties": false
+          }
+        },
+        "additionalProperties": false
+      },
+      "team": {
+        "allOf": [
+          {
+            "$ref": "#/components/schemas/account"
+          },
+          {
+            "type": "object",
+            "title": "Team",
+            "description": "A team object.",
+            "properties": {
+              "links": {
+                "$ref": "#/components/schemas/team_links"
+              }
+            },
+            "additionalProperties": true
+          }
+        ]
+      },
+      "project": {
+        "allOf": [
+          {
+            "$ref": "#/components/schemas/object"
+          },
+          {
+            "type": "object",
+            "title": "Project",
+            "description": "A Bitbucket project.\n            Projects are used by teams to organize repositories.",
+            "properties": {
+              "links": {
+                "type": "object",
+                "properties": {
+                  "html": {
+                    "type": "object",
+                    "title": "Link",
+                    "description": "A link to a resource related to this object.",
+                    "properties": {
+                      "href": {
+                        "type": "string",
+                        "format": "uri"
+                      },
+                      "name": {
+                        "type": "string"
+                      }
+                    },
+                    "additionalProperties": false
+                  },
+                  "avatar": {
+                    "type": "object",
+                    "title": "Link",
+                    "description": "A link to a resource related to this object.",
+                    "properties": {
+                      "href": {
+                        "type": "string",
+                        "format": "uri"
+                      },
+                      "name": {
+                        "type": "string"
+                      }
+                    },
+                    "additionalProperties": false
+                  }
+                },
+                "additionalProperties": false
+              },
+              "uuid": {
+                "type": "string",
+                "description": "The project's immutable id."
+              },
+              "key": {
+                "type": "string",
+                "description": "The project's key."
+              },
+              "owner": {
+                "$ref": "#/components/schemas/team"
+              },
+              "name": {
+                "type": "string",
+                "description": "The name of the project."
+              },
+              "description": {
+                "type": "string"
+              },
+              "is_private": {
+                "type": "boolean",
+                "description": "\nIndicates whether the project is publicly accessible, or whether it is\nprivate to the team and consequently only visible to team members.\nNote that private projects cannot contain public repositories."
+              },
+              "created_on": {
+                "type": "string",
+                "format": "date-time"
+              },
+              "updated_on": {
+                "type": "string",
+                "format": "date-time"
+              },
+              "has_publicly_visible_repos": {
+                "type": "boolean",
+                "description": "\nIndicates whether the project contains publicly visible repositories.\nNote that private projects cannot contain public repositories."
+              }
+            },
+            "additionalProperties": true
+          }
+        ]
+      },
+      "commit": {
+        "allOf": [
+          {
+            "$ref": "#/components/schemas/base_commit"
+          },
+          {
+            "type": "object",
+            "title": "Commit",
+            "description": "A repository commit object.",
+            "properties": {
+              "repository": {
+                "$ref": "#/components/schemas/repository"
+              },
+              "participants": {
+                "type": "array",
+                "items": {
+                  "$ref": "#/components/schemas/participant"
+                },
+                "minItems": 0
+              }
+            },
+            "additionalProperties": true
+          }
+        ]
+      },
+      "error": {
+        "type": "object",
+        "title": "Error",
+        "description": "Base type for most resource objects. It defines the common `type` element that identifies an object's type. It also identifies the element as Swagger's `discriminator`.",
+        "properties": {
+          "type": {
+            "type": "string"
+          },
+          "error": {
+            "type": "object",
+            "properties": {
+              "message": {
+                "type": "string"
+              },
+              "detail": {
+                "type": "string"
+              },
+              "data": {
+                "type": "object",
+                "description": "Optional structured data that is endpoint-specific.",
+                "properties": {},
+                "additionalProperties": true
+              }
+            },
+            "required": [
+              "message"
+            ],
+            "additionalProperties": false
+          }
+        },
+        "required": [
+          "type"
+        ],
+        "additionalProperties": true
+      },
+      "participant": {
+        "allOf": [
+          {
+            "$ref": "#/components/schemas/object"
+          },
+          {
+            "type": "object",
+            "title": "Participant",
+            "description": "Object describing a user's role on resources like commits or pull requests.",
+            "properties": {
+              "user": {
+                "$ref": "#/components/schemas/account"
+              },
+              "role": {
+                "type": "string",
+                "enum": [
+                  "PARTICIPANT",
+                  "REVIEWER"
+                ]
+              },
+              "approved": {
+                "type": "boolean"
+              },
+              "state": {
+                "type": "string",
+                "enum": [
+                  "approved",
+                  "changes_requested",
+                  null
+                ]
+              },
+              "participated_on": {
+                "type": "string",
+                "description": "The ISO8601 timestamp of the participant's action. For approvers, this is the time of their approval. For commenters and pull request reviewers who are not approvers, this is the time they last commented, or null if they have not commented.",
+                "format": "date-time"
+              }
+            },
+            "additionalProperties": true
+          }
+        ]
+      },
+      "account_links": {
+        "type": "object",
+        "title": "Account Links",
+        "description": "Links related to an Account.",
+        "properties": {
+          "avatar": {
+            "$ref": "#/components/schemas/link"
+          }
+        },
+        "additionalProperties": true
+      },
+      "link": {
+        "type": "object",
+        "title": "Link",
+        "description": "A link to a resource related to this object.",
+        "properties": {
+          "href": {
+            "type": "string",
+            "format": "uri"
+          },
+          "name": {
+            "type": "string"
+          }
+        },
+        "additionalProperties": false
+      },
+      "object": {
+        "type": "object",
+        "description": "Base type for most resource objects. It defines the common `type` element that identifies an object's type. It also identifies the element as Swagger's `discriminator`.",
+        "properties": {
+          "type": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "type"
+        ],
+        "additionalProperties": true,
+        "discriminator": {
+          "propertyName": "type"
+        }
+      },
+      "pullrequest_merge_parameters": {
+        "type": "object",
+        "title": "Pull Request Merge Parameters",
+        "description": "The metadata that describes a pull request merge.",
+        "properties": {
+          "type": {
+            "type": "string"
+          },
+          "message": {
+            "type": "string",
+            "description": "The commit message that will be used on the resulting commit. Note that the size of the message is limited to 128 KiB."
+          },
+          "close_source_branch": {
+            "type": "boolean",
+            "description": "Whether the source branch should be deleted. If this is not provided, we fallback to the value used when the pull request was created, which defaults to False"
+          },
+          "merge_strategy": {
+            "type": "string",
+            "description": "The merge strategy that will be used to merge the pull request.",
+            "enum": [
+              "merge_commit",
+              "squash",
+              "fast_forward",
+              "squash_fast_forward",
+              "rebase_fast_forward",
+              "rebase_merge"
+            ],
+            "default": "merge_commit"
+          }
+        },
+        "required": [
+          "type"
+        ],
+        "additionalProperties": true
+      }
+    }
+  }
+}
