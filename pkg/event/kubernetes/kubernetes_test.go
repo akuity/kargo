@@ -94,6 +94,27 @@ func TestFromKubernetesEvent(t *testing.T) {
 			},
 			expectedType: kargoapi.EventTypeFreightVerificationSucceeded,
 		},
+		"freight created event": {
+			k8sEvent: corev1.Event{
+				ObjectMeta: metav1.ObjectMeta{
+					UID: "test-uid",
+					Annotations: map[string]string{
+						kargoapi.AnnotationKeyEventProject:           "test-project",
+						kargoapi.AnnotationKeyEventFreightName:       "test-freight",
+						kargoapi.AnnotationKeyEventFreightCreateTime: "2024-01-01T00:00:00Z",
+					},
+				},
+				Reason:  string(kargoapi.EventTypeFreightCreated),
+				Message: "Freight created",
+				InvolvedObject: corev1.ObjectReference{
+					Kind:      "Freight",
+					Name:      "test-freight",
+					Namespace: "test-project",
+				},
+				LastTimestamp: metav1.Time{Time: time.Date(2024, 1, 1, 12, 0, 0, 0, time.UTC)},
+			},
+			expectedType: kargoapi.EventTypeFreightCreated,
+		},
 		"freight approved event": {
 			k8sEvent: corev1.Event{
 				ObjectMeta: metav1.ObjectMeta{
@@ -215,6 +236,7 @@ func TestFromKubernetesEvent_AllEventTypes(t *testing.T) {
 		kargoapi.EventTypeFreightVerificationAborted,
 		kargoapi.EventTypeFreightVerificationInconclusive,
 		kargoapi.EventTypeFreightVerificationUnknown,
+		kargoapi.EventTypeFreightCreated,
 		kargoapi.EventTypeFreightApproved,
 	}
 
@@ -319,6 +341,20 @@ func TestEventSender_Send(t *testing.T) {
 				Freight: event.Freight{
 					Name:       "test-freight",
 					StageName:  "test-stage",
+					CreateTime: time.Date(2024, 1, 1, 0, 0, 0, 0, time.UTC),
+				},
+			},
+			expectedCalls: 1,
+		},
+		"freight created event": {
+			event: &event.FreightCreated{
+				Common: event.Common{
+					Project: "test-project",
+					Message: "Freight created",
+					Actor:   stringPtr("test-actor"),
+				},
+				Freight: event.Freight{
+					Name:       "test-freight",
 					CreateTime: time.Date(2024, 1, 1, 0, 0, 0, 0, time.UTC),
 				},
 			},
