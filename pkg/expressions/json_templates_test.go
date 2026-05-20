@@ -241,6 +241,39 @@ func TestEvaluateJSONTemplate(t *testing.T) {
 			},
 		},
 		{
+			name:         "asYAML function formats map as string",
+			jsonTemplate: `{ "AString": "${{ asYAML({ 'foo': 'bar', 'count': 2 }) }}" }`,
+			assertions: func(t *testing.T, jsonOutput []byte, err error) {
+				require.NoError(t, err)
+				parsed := testStruct{}
+				require.NoError(t, json.Unmarshal(jsonOutput, &parsed))
+				require.Contains(t, parsed.AString, "foo: bar\n")
+				require.Contains(t, parsed.AString, "count: 2\n")
+			},
+		},
+		{
+			name:         "asYAML function formats array as string",
+			jsonTemplate: `{ "AString": "${{ asYAML([ 'one', 'two' ]) }}" }`,
+			assertions: func(t *testing.T, jsonOutput []byte, err error) {
+				require.NoError(t, err)
+				parsed := testStruct{}
+				require.NoError(t, json.Unmarshal(jsonOutput, &parsed))
+				require.Equal(t, "- one\n- two\n", parsed.AString)
+			},
+		},
+		{
+			name:         "asJSON function formats object as pretty JSON string",
+			jsonTemplate: `{ "AString": "${{ asJSON({ 'foo': 'bar', 'count': 2 }) }}" }`,
+			assertions: func(t *testing.T, jsonOutput []byte, err error) {
+				require.NoError(t, err)
+				parsed := testStruct{}
+				require.NoError(t, json.Unmarshal(jsonOutput, &parsed))
+				require.JSONEq(t, `{"foo":"bar","count":2}`, parsed.AString)
+				require.Contains(t, parsed.AString, "\n")
+				require.True(t, parsed.AString[len(parsed.AString)-1:] == "\n")
+			},
+		},
+		{
 			name: "a variety of tricky cases dealing with YAML and quotes",
 			yamlTemplate: `
 value1: {"foo": "bar"} # This is a JSON object
@@ -347,5 +380,13 @@ value13: | # This is a string
 	t.Run("quote function is forbidden", func(t *testing.T) {
 		_, err := EvaluateJSONTemplate([]byte(`{}`), map[string]any{"quote": nil})
 		require.ErrorContains(t, err, `"quote" is a forbidden key`)
+	})
+	t.Run("asYAML function is forbidden", func(t *testing.T) {
+		_, err := EvaluateJSONTemplate([]byte(`{}`), map[string]any{"asYAML": nil})
+		require.ErrorContains(t, err, `"asYAML" is a forbidden key`)
+	})
+	t.Run("asJSON function is forbidden", func(t *testing.T) {
+		_, err := EvaluateJSONTemplate([]byte(`{}`), map[string]any{"asJSON": nil})
+		require.ErrorContains(t, err, `"asJSON" is a forbidden key`)
 	})
 }

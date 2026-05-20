@@ -1,0 +1,27 @@
+{
+ "$schema": "https://json-schema.org/draft/2020-12/schema",
+ "title": "FileWriteConfig",
+ "type": "object",
+ "additionalProperties": false,
+ "properties": {
+  "path": {
+   "type": "string",
+   "description": "Path is the destination file path to write.",
+   "minLength": 1
+  },
+  "contents": {
+   "type": "string",
+   "description": "Contents is the file content to write."
+  },
+  "permissions": {
+   "type": "string",
+   "description": "Permissions is an optional octal file mode to apply to the written file. Defaults to 0600.",
+   "pattern": "^0[0-7]{3}$"
+  },
+  "overwrite": {
+   "type": "boolean",
+   "description": "Overwrite allows an existing file to be replaced.",
+   "default": false
+  }
+ }
+}

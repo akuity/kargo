@@ -5,6 +5,7 @@ import argocdUpdateConfig from '@ui/gen/directives/argocd-update-config.json';
 import copyConfig from '@ui/gen/directives/copy-config.json';
 import deleteConfig from '@ui/gen/directives/delete-config.json';
 import failConfig from '@ui/gen/directives/fail-config.json';
+import fileWriteConfig from '@ui/gen/directives/file-write-config.json';
 import gitOverwriteConfig from '@ui/gen/directives/git-clear-config.json';
 import gitCloneConfig from '@ui/gen/directives/git-clone-config.json';
 import gitCommitConfig from '@ui/gen/directives/git-commit-config.json';
@@ -44,6 +45,10 @@ export const useDiscoverPromotionDirectivesRegistries = (): PromotionDirectivesR
         identifier: 'delete',
         unstable_icons: [],
         config: deleteConfig as JSONSchema7
+      },
+      {
+        identifier: 'file-write',
+        config: fileWriteConfig as JSONSchema7
       },
       {
         identifier: 'git-clone',

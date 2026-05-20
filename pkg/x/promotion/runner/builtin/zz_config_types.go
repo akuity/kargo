@@ -159,6 +159,18 @@ type FailConfig struct {
 	Message string `json:"message,omitempty"`
 }
 
+type FileWriteConfig struct {
+	// Contents is the file content to write.
+	Contents string `json:"contents"`
+	// Overwrite allows an existing file to be replaced.
+	Overwrite bool `json:"overwrite,omitempty"`
+	// Path is the destination file path to write.
+	Path string `json:"path"`
+	// Permissions is an optional octal file mode to apply to the written file. Defaults to
+	// 0600.
+	Permissions string `json:"permissions,omitempty"`
+}
+
 type GitClearConfig struct {
 	// Path to a working directory of a local repository from which to remove all files,
 	// excluding the .git/ directory.
