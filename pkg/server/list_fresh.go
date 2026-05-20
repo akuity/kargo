@@ -17,7 +17,7 @@ func (s *server) listFresh(
 ) error {
 	if s.cfg.RestConfig == nil {
 		if s.client == nil {
-			return fmt.Errorf("Kubernetes client is not configured")
+			return fmt.Errorf("kubernetes client is not configured")
 		}
 		return s.client.List(ctx, list, opts...)
 	}

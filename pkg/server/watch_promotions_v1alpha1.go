@@ -56,8 +56,8 @@ func (s *server) WatchPromotions(
 			if !ok {
 				return nil
 			}
-			if err := errorFromWatchEvent(e); err != nil {
-				return err
+			if watchErr := errorFromWatchEvent(e); watchErr != nil {
+				return watchErr
 			}
 			promotion, ok := e.Object.(*kargoapi.Promotion)
 			if !ok {
