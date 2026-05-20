@@ -7,6 +7,7 @@ import (
 	"net/http"
 	"net/http/httptest"
 	"testing"
+	"time"
 
 	"connectrpc.com/connect"
 	"github.com/oklog/ulid/v2"
@@ -14,9 +15,11 @@ import (
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
+	"k8s.io/apimachinery/pkg/watch"
 	"k8s.io/client-go/rest"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/client/fake"
+	"sigs.k8s.io/controller-runtime/pkg/client/interceptor"
 
 	svcv1alpha1 "github.com/akuity/kargo/api/service/v1alpha1"
 	kargoapi "github.com/akuity/kargo/api/v1alpha1"
@@ -33,9 +36,10 @@ func TestListPromotions(t *testing.T) {
 	newPromotionName := fmt.Sprintf("some-stage.%s.new", ulid.Make())
 
 	testCases := map[string]struct {
-		req        *svcv1alpha1.ListPromotionsRequest
-		objects    []client.Object
-		assertions func(*testing.T, *connect.Response[svcv1alpha1.ListPromotionsResponse], error)
+		req              *svcv1alpha1.ListPromotionsRequest
+		objects          []client.Object
+		interceptorFuncs interceptor.Funcs
+		assertions       func(*testing.T, *connect.Response[svcv1alpha1.ListPromotionsResponse], error)
 	}{
 		"empty project": {
 			req: &svcv1alpha1.ListPromotionsRequest{
@@ -64,6 +68,77 @@ func TestListPromotions(t *testing.T) {
 				require.NoError(t, err)
 				require.NotNil(t, r)
 				require.Len(t, r.Msg.GetPromotions(), 1)
+			},
+		},
+		"uses list-level resourceVersion": {
+			req: &svcv1alpha1.ListPromotionsRequest{
+				Project: "kargo-demo",
+			},
+			objects: []client.Object{
+				mustNewObject[corev1.Namespace]("testdata/namespace.yaml"),
+			},
+			interceptorFuncs: interceptor.Funcs{
+				List: func(
+					ctx context.Context,
+					cl client.WithWatch,
+					list client.ObjectList,
+					opts ...client.ListOption,
+				) error {
+					if err := cl.List(ctx, list, opts...); err != nil {
+						return err
+					}
+					if pl, ok := list.(*kargoapi.PromotionList); ok {
+						pl.ResourceVersion = "42"
+					}
+					return nil
+				},
+			},
+			assertions: func(t *testing.T, r *connect.Response[svcv1alpha1.ListPromotionsResponse], err error) {
+				require.NoError(t, err)
+				require.Equal(t, "42", r.Msg.GetResourceVersion())
+			},
+		},
+		"falls back to max item resourceVersion": {
+			req: &svcv1alpha1.ListPromotionsRequest{
+				Project: "kargo-demo",
+			},
+			objects: []client.Object{
+				mustNewObject[corev1.Namespace]("testdata/namespace.yaml"),
+				&kargoapi.Promotion{
+					ObjectMeta: metav1.ObjectMeta{
+						Name:      "promotion-1",
+						Namespace: "kargo-demo",
+					},
+				},
+				&kargoapi.Promotion{
+					ObjectMeta: metav1.ObjectMeta{
+						Name:      "promotion-2",
+						Namespace: "kargo-demo",
+					},
+				},
+			},
+			interceptorFuncs: interceptor.Funcs{
+				List: func(
+					ctx context.Context,
+					cl client.WithWatch,
+					list client.ObjectList,
+					opts ...client.ListOption,
+				) error {
+					if err := cl.List(ctx, list, opts...); err != nil {
+						return err
+					}
+					if pl, ok := list.(*kargoapi.PromotionList); ok {
+						pl.ResourceVersion = "0"
+						for i := range pl.Items {
+							pl.Items[i].ResourceVersion = "100"
+						}
+					}
+					return nil
+				},
+			},
+			assertions: func(t *testing.T, r *connect.Response[svcv1alpha1.ListPromotionsResponse], err error) {
+				require.NoError(t, err)
+				require.Equal(t, "100", r.Msg.GetResourceVersion())
 			},
 		},
 		"non-existing project": {
@@ -153,6 +228,9 @@ func TestListPromotions(t *testing.T) {
 						if len(testCase.objects) > 0 {
 							c.WithObjects(testCase.objects...)
 						}
+						if testCase.interceptorFuncs.List != nil {
+							c.WithInterceptorFuncs(testCase.interceptorFuncs)
+						}
 						return c.Build(), nil
 					},
 				},
@@ -221,12 +299,91 @@ func Test_server_listPromotions(t *testing.T) {
 					require.Len(t, promos.Items, 2)
 				},
 			},
+			{
+				name: "sets effective resourceVersion",
+				clientBuilder: fake.NewClientBuilder().
+					WithObjects(
+						testProject,
+						&kargoapi.Promotion{
+							ObjectMeta: metav1.ObjectMeta{
+								Namespace: testProject.Name,
+								Name:      "promotion-1",
+							},
+						},
+					).
+					WithInterceptorFuncs(interceptor.Funcs{
+						List: func(
+							ctx context.Context,
+							cl client.WithWatch,
+							list client.ObjectList,
+							opts ...client.ListOption,
+						) error {
+							if err := cl.List(ctx, list, opts...); err != nil {
+								return err
+							}
+							if pl, ok := list.(*kargoapi.PromotionList); ok {
+								pl.ResourceVersion = "0"
+								for i := range pl.Items {
+									pl.Items[i].ResourceVersion = "100"
+								}
+							}
+							return nil
+						},
+					}),
+				assertions: func(t *testing.T, w *httptest.ResponseRecorder, _ client.Client) {
+					require.Equal(t, http.StatusOK, w.Code)
+					promos := &kargoapi.PromotionList{}
+					err := json.Unmarshal(w.Body.Bytes(), promos)
+					require.NoError(t, err)
+					require.Equal(t, "100", promos.ResourceVersion)
+				},
+			},
 		},
 	)
 }
 
 func Test_server_listPromotions_watch(t *testing.T) {
 	const projectName = "fake-project"
+
+	resourceVersionTestCase := func() restWatchTestCase {
+		resourceVersionCh := make(chan string, 1)
+		return restWatchTestCase{
+			name: "passes resourceVersion to watch",
+			url:  "/v1beta1/projects/" + projectName + "/promotions?watch=true&resourceVersion=123",
+			clientBuilder: fake.NewClientBuilder().
+				WithObjects(&kargoapi.Project{
+					ObjectMeta: metav1.ObjectMeta{Name: projectName},
+				}).
+				WithInterceptorFuncs(interceptor.Funcs{
+					Watch: func(
+						ctx context.Context,
+						cl client.WithWatch,
+						obj client.ObjectList,
+						opts ...client.ListOption,
+					) (watch.Interface, error) {
+						var listOpts client.ListOptions
+						for _, opt := range opts {
+							opt.ApplyToList(&listOpts)
+						}
+						if listOpts.Raw == nil {
+							resourceVersionCh <- ""
+						} else {
+							resourceVersionCh <- listOpts.Raw.ResourceVersion
+						}
+						return cl.Watch(ctx, obj, opts...)
+					},
+				}),
+			assertions: func(t *testing.T, w *httptest.ResponseRecorder, _ client.Client) {
+				require.Equal(t, http.StatusOK, w.Code)
+				select {
+				case rv := <-resourceVersionCh:
+					require.Equal(t, "123", rv)
+				case <-time.After(time.Second):
+					require.Fail(t, "watch was not called")
+				}
+			},
+		}
+	}()
 
 	testRESTWatchEndpoint(
 		t, &config.ServerConfig{},
@@ -282,6 +439,7 @@ func Test_server_listPromotions_watch(t *testing.T) {
 					require.Contains(t, body, "data:")
 				},
 			},
+			resourceVersionTestCase,
 			{
 				name: "watches empty promotion list",
 				clientBuilder: fake.NewClientBuilder().WithObjects(

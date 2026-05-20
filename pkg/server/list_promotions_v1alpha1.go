@@ -15,7 +15,6 @@ import (
 	svcv1alpha1 "github.com/akuity/kargo/api/service/v1alpha1"
 	kargoapi "github.com/akuity/kargo/api/v1alpha1"
 	"github.com/akuity/kargo/pkg/api"
-	"github.com/akuity/kargo/pkg/indexer"
 	"github.com/akuity/kargo/pkg/logging"
 )
 
@@ -35,14 +34,11 @@ func (s *server) ListPromotions(
 	stage := req.Msg.GetStage()
 
 	var list kargoapi.PromotionList
-	opts := []client.ListOption{
-		client.InNamespace(project),
+	if err := s.listFresh(ctx, "promotions", &list, client.InNamespace(project)); err != nil {
+		return nil, fmt.Errorf("list promotions: %w", err)
 	}
 	if stage != "" {
-		opts = append(opts, client.MatchingFields{indexer.PromotionsByStageField: stage})
-	}
-	if err := s.client.List(ctx, &list, opts...); err != nil {
-		return nil, fmt.Errorf("list promotions: %w", err)
+		list.Items = filterPromotionsByStage(list.Items, stage)
 	}
 
 	slices.SortFunc(list.Items, api.ComparePromotionByPhaseAndCreationTime)
@@ -53,7 +49,8 @@ func (s *server) ListPromotions(
 	}
 
 	return connect.NewResponse(&svcv1alpha1.ListPromotionsResponse{
-		Promotions: promotions,
+		Promotions:      promotions,
+		ResourceVersion: effectiveResourceVersionFromObjects(list.ResourceVersion, promotions),
 	}), nil
 }
 
@@ -74,21 +71,24 @@ func (s *server) listPromotions(c *gin.Context) {
 	stage := c.Query("stage")
 
 	if watchMode := c.Query("watch") == trueStr; watchMode {
-		s.watchPromotions(c, project, stage)
+		s.watchPromotions(c, project, stage, c.Query("resourceVersion"))
 		return
 	}
 
 	list := &kargoapi.PromotionList{}
-	opts := []client.ListOption{
-		client.InNamespace(project),
-	}
-	if stage != "" {
-		opts = append(opts, client.MatchingFields{indexer.PromotionsByStageField: stage})
-	}
-	if err := s.client.List(ctx, list, opts...); err != nil {
+	if err := s.listFresh(ctx, "promotions", list, client.InNamespace(project)); err != nil {
 		_ = c.Error(err)
 		return
 	}
+	if stage != "" {
+		list.Items = filterPromotionsByStage(list.Items, stage)
+	}
+
+	rvs := make([]string, len(list.Items))
+	for idx := range list.Items {
+		rvs[idx] = list.Items[idx].ResourceVersion
+	}
+	list.ResourceVersion = effectiveResourceVersion(list.ResourceVersion, rvs)
 
 	// Sort ascending by name
 	slices.SortFunc(list.Items, func(lhs, rhs kargoapi.Promotion) int {
@@ -98,13 +98,27 @@ func (s *server) listPromotions(c *gin.Context) {
 	c.JSON(http.StatusOK, list)
 }
 
-func (s *server) watchPromotions(c *gin.Context, project, stage string) {
+func filterPromotionsByStage(promotions []kargoapi.Promotion, stage string) []kargoapi.Promotion {
+	filtered := make([]kargoapi.Promotion, 0, len(promotions))
+	for _, promotion := range promotions {
+		if promotion.Spec.Stage == stage {
+			filtered = append(filtered, promotion)
+		}
+	}
+	return filtered
+}
+
+func (s *server) watchPromotions(c *gin.Context, project, stage, resourceVersion string) {
 	ctx := c.Request.Context()
 	logger := logging.LoggerFromContext(ctx)
 
 	// Note: We can't filter by stage using field selector in the watch API.
 	// The indexer is for List operations only. We filter events client-side.
-	w, err := s.client.Watch(ctx, &kargoapi.PromotionList{}, client.InNamespace(project))
+	w, err := s.client.Watch(
+		ctx,
+		&kargoapi.PromotionList{},
+		buildWatchListOptions(project, resourceVersion)...,
+	)
 	if err != nil {
 		logger.Error(err, "failed to start watch")
 		_ = c.Error(fmt.Errorf("watch promotions: %w", err))

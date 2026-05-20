@@ -31,7 +31,7 @@ func (s *server) ListWarehouses(
 	}
 
 	var list kargoapi.WarehouseList
-	if err := s.client.List(ctx, &list, client.InNamespace(project)); err != nil {
+	if err := s.listFresh(ctx, "warehouses", &list, client.InNamespace(project)); err != nil {
 		return nil, fmt.Errorf("list warehouses: %w", err)
 	}
 
@@ -50,7 +50,8 @@ func (s *server) ListWarehouses(
 		}
 	}
 	return connect.NewResponse(&svcv1alpha1.ListWarehousesResponse{
-		Warehouses: warehouses,
+		Warehouses:      warehouses,
+		ResourceVersion: effectiveResourceVersionFromObjects(list.ResourceVersion, warehouses),
 	}), nil
 }
 
@@ -69,12 +70,12 @@ func (s *server) listWarehouses(c *gin.Context) {
 	project := c.Param("project")
 
 	if watchMode := c.Query("watch") == trueStr; watchMode {
-		s.watchWarehouses(c, project)
+		s.watchWarehouses(c, project, c.Query("resourceVersion"))
 		return
 	}
 
 	list := &kargoapi.WarehouseList{}
-	if err := s.client.List(ctx, list, client.InNamespace(project)); err != nil {
+	if err := s.listFresh(ctx, "warehouses", list, client.InNamespace(project)); err != nil {
 		_ = c.Error(err)
 		return
 	}
@@ -82,11 +83,15 @@ func (s *server) listWarehouses(c *gin.Context) {
 	c.JSON(http.StatusOK, list)
 }
 
-func (s *server) watchWarehouses(c *gin.Context, project string) {
+func (s *server) watchWarehouses(c *gin.Context, project string, resourceVersion string) {
 	ctx := c.Request.Context()
 	logger := logging.LoggerFromContext(ctx)
 
-	w, err := s.client.Watch(ctx, &kargoapi.WarehouseList{}, client.InNamespace(project))
+	w, err := s.client.Watch(
+		ctx,
+		&kargoapi.WarehouseList{},
+		buildWatchListOptions(project, resourceVersion)...,
+	)
 	if err != nil {
 		logger.Error(err, "failed to start watch")
 		_ = c.Error(fmt.Errorf("watch warehouses: %w", err))

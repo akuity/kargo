@@ -6,7 +6,6 @@ import (
 	"slices"
 
 	"connectrpc.com/connect"
-	"sigs.k8s.io/controller-runtime/pkg/client"
 
 	svcv1alpha1 "github.com/akuity/kargo/api/service/v1alpha1"
 	kargoapi "github.com/akuity/kargo/api/v1alpha1"
@@ -29,7 +28,11 @@ func (s *server) WatchFreight(
 
 	warehouses := req.Msg.GetOrigins()
 
-	w, err := s.client.Watch(ctx, &kargoapi.FreightList{}, client.InNamespace(project))
+	w, err := s.client.Watch(
+		ctx,
+		&kargoapi.FreightList{},
+		buildWatchListOptions(project, req.Msg.GetResourceVersion())...,
+	)
 	if err != nil {
 		return fmt.Errorf("watch freight: %w", err)
 	}
@@ -44,6 +47,9 @@ func (s *server) WatchFreight(
 		case e, ok := <-w.ResultChan():
 			if !ok {
 				return nil
+			}
+			if err := errorFromWatchEvent(e); err != nil {
+				return err
 			}
 			freight, ok := e.Object.(*kargoapi.Freight)
 			if !ok {

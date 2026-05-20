@@ -26,13 +26,11 @@ export default {
       })
     });
   },
-  get: (project: string) => {
+  get: (project: string, origins?: string[]) => {
     const data = queryClient.getQueryData(
       createConnectQueryKey({
         schema: queryFreight,
-        input: {
-          project
-        },
+        input: origins === undefined ? { project } : { project, origins },
         cardinality: 'finite',
         transport: transportWithAuth
       })

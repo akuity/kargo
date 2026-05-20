@@ -60,7 +60,10 @@ func (s *server) QueryFreight(
 	origins := req.Msg.GetOrigins()
 	reverse := req.Msg.GetReverse()
 
-	var freight []kargoapi.Freight
+	var (
+		freight         []kargoapi.Freight
+		resourceVersion string
+	)
 	switch {
 	case stageName != "":
 		stage, err := s.getStageFn(
@@ -90,15 +93,20 @@ func (s *server) QueryFreight(
 			return nil, fmt.Errorf("get available freight for stage: %w", err)
 		}
 	case len(origins) > 0:
-		var err error
-		freight, err = s.getFreightFromWarehousesFn(ctx, project, origins)
-		if err != nil {
-			return nil, fmt.Errorf("get freight from warehouse: %w", err)
+		freightList := &kargoapi.FreightList{}
+		if err := s.listFreightForQuery(
+			ctx,
+			freightList,
+			client.InNamespace(project),
+		); err != nil {
+			return nil, fmt.Errorf("list freight: %w", err)
 		}
+		freight = filterFreightByOrigins(freightList.Items, origins)
+		resourceVersion = resourceVersionForFreightList(freightList)
 	default:
 		freightList := &kargoapi.FreightList{}
 		// Get ALL Freight in the project/namespace
-		if err := s.listFreightFn(
+		if err := s.listFreightForQuery(
 			ctx,
 			freightList,
 			client.InNamespace(project),
@@ -106,6 +114,7 @@ func (s *server) QueryFreight(
 			return nil, fmt.Errorf("list freight: %w", err)
 		}
 		freight = freightList.Items
+		resourceVersion = resourceVersionForFreightList(freightList)
 	}
 
 	// Split the Freight into groups
@@ -124,8 +133,41 @@ func (s *server) QueryFreight(
 	sortFreightGroups(orderBy, reverse, freightGroups)
 
 	return connect.NewResponse(&svcv1alpha1.QueryFreightResponse{
-		Groups: freightGroups,
+		Groups:          freightGroups,
+		ResourceVersion: resourceVersion,
 	}), nil
+}
+
+func (s *server) listFreightForQuery(
+	ctx context.Context,
+	list client.ObjectList,
+	opts ...client.ListOption,
+) error {
+	if s.cfg.RestConfig == nil {
+		return s.listFreightFn(ctx, list, opts...)
+	}
+	return s.listFresh(ctx, "freights", list, opts...)
+}
+
+func filterFreightByOrigins(
+	freight []kargoapi.Freight,
+	origins []string,
+) []kargoapi.Freight {
+	filtered := make([]kargoapi.Freight, 0, len(freight))
+	for _, f := range freight {
+		if slices.Contains(origins, f.Origin.Name) {
+			filtered = append(filtered, f)
+		}
+	}
+	return filtered
+}
+
+func resourceVersionForFreightList(list *kargoapi.FreightList) string {
+	rvs := make([]string, len(list.Items))
+	for i := range list.Items {
+		rvs[i] = list.Items[i].ResourceVersion
+	}
+	return effectiveResourceVersion(list.ResourceVersion, rvs)
 }
 
 func (s *server) getAvailableFreightForStage(
@@ -390,8 +432,11 @@ func (s *server) queryFreight(c *gin.Context) {
 		return
 	}
 
-	var freight []kargoapi.Freight
-	var err error
+	var (
+		freight         []kargoapi.Freight
+		resourceVersion string
+		err             error
+	)
 
 	switch {
 	case stageName != "":
@@ -430,6 +475,7 @@ func (s *server) queryFreight(c *gin.Context) {
 			return
 		}
 		freight = freightList.Items
+		resourceVersion = freightList.ResourceVersion
 	}
 
 	// Split the Freight into groups using the generic functions
@@ -456,7 +502,7 @@ func (s *server) queryFreight(c *gin.Context) {
 		result[k] = &freightList{Items: v}
 	}
 
-	c.JSON(http.StatusOK, gin.H{"groups": result})
+	c.JSON(http.StatusOK, gin.H{"groups": result, "resourceVersion": resourceVersion})
 }
 
 // getFreightFromWarehousesREST is a helper for the REST endpoint that gets freight from warehouses

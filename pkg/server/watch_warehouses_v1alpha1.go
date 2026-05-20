@@ -37,11 +37,15 @@ func (s *server) WatchWarehouses(
 		}
 	}
 
-	watchOpts := []libClient.ListOption{libClient.InNamespace(project)}
+	var opts []libClient.ListOption
 	if name != "" {
-		watchOpts = append(watchOpts, libClient.MatchingFields{"metadata.name": name})
+		opts = append(opts, libClient.MatchingFields{"metadata.name": name})
 	}
-	w, err := s.client.Watch(ctx, &kargoapi.WarehouseList{}, watchOpts...)
+	w, err := s.client.Watch(
+		ctx,
+		&kargoapi.WarehouseList{},
+		buildWatchListOptions(project, req.Msg.GetResourceVersion(), opts...)...,
+	)
 	if err != nil {
 		return fmt.Errorf("watch warehouse: %w", err)
 	}
@@ -55,6 +59,9 @@ func (s *server) WatchWarehouses(
 		case e, ok := <-w.ResultChan():
 			if !ok {
 				return nil
+			}
+			if err := errorFromWatchEvent(e); err != nil {
+				return err
 			}
 			warehouse, ok := e.Object.(*kargoapi.Warehouse)
 			if !ok {

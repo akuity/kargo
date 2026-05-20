@@ -39,11 +39,15 @@ func (s *server) WatchStages(
 		}
 	}
 
-	watchOpts := []libClient.ListOption{libClient.InNamespace(project)}
+	var opts []libClient.ListOption
 	if name != "" {
-		watchOpts = append(watchOpts, libClient.MatchingFields{"metadata.name": name})
+		opts = append(opts, libClient.MatchingFields{"metadata.name": name})
 	}
-	w, err := s.client.Watch(ctx, &kargoapi.StageList{}, watchOpts...)
+	w, err := s.client.Watch(
+		ctx,
+		&kargoapi.StageList{},
+		buildWatchListOptions(project, req.Msg.GetResourceVersion(), opts...)...,
+	)
 	if err != nil {
 		return fmt.Errorf("watch stage: %w", err)
 	}
@@ -57,6 +61,9 @@ func (s *server) WatchStages(
 		case e, ok := <-w.ResultChan():
 			if !ok {
 				return nil
+			}
+			if err := errorFromWatchEvent(e); err != nil {
+				return err
 			}
 			stage, ok := e.Object.(*kargoapi.Stage)
 			if !ok {
