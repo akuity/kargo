@@ -131,6 +131,11 @@ func TestFreightApproved(t *testing.T) {
 	require.Equal(t, kargoapi.EventTypeFreightApproved, evt.Type())
 }
 
+func TestFreightCreated(t *testing.T) {
+	evt := &FreightCreated{}
+	require.Equal(t, kargoapi.EventTypeFreightCreated, evt.Type())
+}
+
 func TestNewFreightCommon(t *testing.T) {
 	testCases := map[string]struct {
 		message         string
@@ -279,6 +284,24 @@ func TestNewFreightApproved(t *testing.T) {
 	require.Equal(t, "Freight approved", event.GetMessage())
 }
 
+func TestNewFreightCreated(t *testing.T) {
+	freight := &kargoapi.Freight{
+		ObjectMeta: metav1.ObjectMeta{
+			Name:              "test-freight",
+			Namespace:         "test-project",
+			CreationTimestamp: metav1.Time{Time: time.Date(2024, 1, 1, 0, 0, 0, 0, time.UTC)},
+		},
+	}
+
+	evt := NewFreightCreated("Freight created", "test-actor", freight)
+
+	require.Equal(t, kargoapi.EventTypeFreightCreated, evt.Type())
+	require.Equal(t, "test-project", evt.GetProject())
+	require.Equal(t, "test-freight", evt.GetName())
+	require.Equal(t, "Freight", evt.Kind())
+	require.Equal(t, "Freight created", evt.GetMessage())
+}
+
 func TestFreightEventMarshalAnnotations(t *testing.T) {
 	freight := &kargoapi.Freight{
 		ObjectMeta: metav1.ObjectMeta{
@@ -318,6 +341,17 @@ func TestFreightEventMarshalAnnotations(t *testing.T) {
 				kargoapi.AnnotationKeyEventFreightName:       "test-freight",
 				kargoapi.AnnotationKeyEventFreightCreateTime: "2024-01-01T00:00:00Z",
 				kargoapi.AnnotationKeyEventStageName:         "test-stage",
+				kargoapi.AnnotationKeyEventFreightAlias:      "v1.0.0",
+			},
+		},
+		"freight created": {
+			event: NewFreightCreated("Freight created", "test-actor", freight),
+			expected: map[string]string{
+				kargoapi.AnnotationKeyEventProject:           "test-project",
+				kargoapi.AnnotationKeyEventActor:             "test-actor",
+				kargoapi.AnnotationKeyEventFreightName:       "test-freight",
+				kargoapi.AnnotationKeyEventFreightCreateTime: "2024-01-01T00:00:00Z",
+				kargoapi.AnnotationKeyEventStageName:         "",
 				kargoapi.AnnotationKeyEventFreightAlias:      "v1.0.0",
 			},
 		},
@@ -446,6 +480,26 @@ func TestFreightEventUnmarshalAnnotations(t *testing.T) {
 				},
 			},
 		},
+		"freight created": {
+			annotations: map[string]string{
+				kargoapi.AnnotationKeyEventProject:           "test-project",
+				kargoapi.AnnotationKeyEventFreightName:       "test-freight",
+				kargoapi.AnnotationKeyEventFreightCreateTime: "2024-01-01T00:00:00Z",
+			},
+			unmarshalFunc: func(annotations map[string]string) (Meta, error) {
+				return UnmarshalFreightCreatedAnnotations("event-id", annotations)
+			},
+			expectedType: &FreightCreated{
+				Common: Common{
+					Project: "test-project",
+					ID:      "event-id",
+				},
+				Freight: Freight{
+					Name:       "test-freight",
+					CreateTime: time.Date(2024, 1, 1, 0, 0, 0, 0, time.UTC),
+				},
+			},
+		},
 		"invalid freight annotations": {
 			annotations: map[string]string{
 				kargoapi.AnnotationKeyEventFreightName:       "test-freight",
@@ -456,6 +510,17 @@ func TestFreightEventUnmarshalAnnotations(t *testing.T) {
 			},
 			expectError:  true,
 			errorMessage: "failed to parse freight create time",
+		},
+		"freight created - invalid freight annotations": {
+			annotations: map[string]string{
+				kargoapi.AnnotationKeyEventFreightName:       "test-freight",
+				kargoapi.AnnotationKeyEventFreightCreateTime: "invalid-time",
+			},
+			unmarshalFunc: func(annotations map[string]string) (Meta, error) {
+				return UnmarshalFreightCreatedAnnotations("event-id", annotations)
+			},
+			expectError:  true,
+			errorMessage: "failed to unmarshal freight annotations",
 		},
 	}
 

@@ -22,9 +22,12 @@ import (
 	"github.com/akuity/kargo/pkg/conditions"
 	"github.com/akuity/kargo/pkg/controller"
 	"github.com/akuity/kargo/pkg/credentials"
+	kargoEvent "github.com/akuity/kargo/pkg/event"
+	k8sevent "github.com/akuity/kargo/pkg/event/kubernetes"
 	"github.com/akuity/kargo/pkg/expressions/function"
 	"github.com/akuity/kargo/pkg/kargo"
 	"github.com/akuity/kargo/pkg/kubeclient"
+	libEvent "github.com/akuity/kargo/pkg/kubernetes/event"
 	"github.com/akuity/kargo/pkg/logging"
 	intpredicate "github.com/akuity/kargo/pkg/predicate"
 	"github.com/akuity/kargo/pkg/subscription"
@@ -43,6 +46,15 @@ func ReconcilerConfigFromEnv() ReconcilerConfig {
 	return cfg
 }
 
+// Name returns the name of the Warehouse controller.
+func (c ReconcilerConfig) Name() string {
+	const name = "warehouse-controller"
+	if c.ShardName != "" {
+		return name + "-" + c.ShardName
+	}
+	return name
+}
+
 // reconciler reconciles Warehouse resources.
 type reconciler struct {
 	client             client.Client
@@ -50,6 +62,7 @@ type reconciler struct {
 	subscriberRegistry subscription.SubscriberRegistry
 	cfg                ReconcilerConfig
 	shardPredicate     controller.ResponsibleFor[kargoapi.Warehouse]
+	eventSender        kargoEvent.Sender
 
 	// The following behaviors are overridable for testing purposes:
 
@@ -94,6 +107,9 @@ func SetupReconcilerWithManager(
 			credentialsDB,
 			subscriberRegistry,
 			cfg,
+			k8sevent.NewEventSender(
+				libEvent.NewRecorder(ctx, mgr.GetScheme(), mgr.GetClient(), cfg.Name()),
+			),
 		)); err != nil {
 		return fmt.Errorf("error building Warehouse reconciler: %w", err)
 	}
@@ -111,12 +127,14 @@ func newReconciler(
 	credentialsDB credentials.Database,
 	subscriberRegistry subscription.SubscriberRegistry,
 	cfg ReconcilerConfig,
+	eventSender kargoEvent.Sender,
 ) *reconciler {
 	r := &reconciler{
 		client:             kubeClient,
 		credentialsDB:      credentialsDB,
 		subscriberRegistry: subscriberRegistry,
 		cfg:                cfg,
+		eventSender:        eventSender,
 		shardPredicate: controller.ResponsibleFor[kargoapi.Warehouse]{
 			IsDefaultController: cfg.IsDefaultController,
 			ShardName:           cfg.ShardName,
@@ -480,6 +498,17 @@ func (r *reconciler) syncWarehouse(
 						ObservedGeneration: warehouse.GetGeneration(),
 					},
 				)
+				if r.eventSender != nil {
+					evt := kargoEvent.NewFreightCreated(
+						"Freight created from discovered artifacts",
+						api.FormatEventControllerActor(r.cfg.Name()),
+						freight,
+					)
+					if err := r.eventSender.Send(ctx, evt); err != nil {
+						logger.Error(err, "failed to send FreightCreated event",
+							"freight", freight.Name)
+					}
+				}
 			}
 
 			status.LastFreightID = freight.Name

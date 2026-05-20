@@ -27,6 +27,7 @@ const (
 	EventTypePromotionFailed                 EventType = "PromotionFailed"
 	EventTypePromotionErrored                EventType = "PromotionErrored"
 	EventTypePromotionAborted                EventType = "PromotionAborted"
+	EventTypeFreightCreated                  EventType = "FreightCreated"
 	EventTypeFreightApproved                 EventType = "FreightApproved"
 	EventTypeFreightVerificationSucceeded    EventType = "FreightVerificationSucceeded"
 	EventTypeFreightVerificationFailed       EventType = "FreightVerificationFailed"

@@ -14,6 +14,7 @@ var KnownEventTypes = []kargoapi.EventType{
 	kargoapi.EventTypePromotionFailed,
 	kargoapi.EventTypePromotionErrored,
 	kargoapi.EventTypePromotionAborted,
+	kargoapi.EventTypeFreightCreated,
 	kargoapi.EventTypeFreightApproved,
 	kargoapi.EventTypeFreightVerificationSucceeded,
 	kargoapi.EventTypeFreightVerificationFailed,
