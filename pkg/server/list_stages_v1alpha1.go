@@ -147,7 +147,7 @@ func (s *server) listStagesByWarehouses(
 	warehouses []string,
 ) (*kargoapi.StageList, error) {
 	var list kargoapi.StageList
-	if err := s.client.List(ctx, &list, client.InNamespace(project)); err != nil {
+	if err := s.listFresh(ctx, "stages", &list, client.InNamespace(project)); err != nil {
 		return nil, err
 	}
 	if len(warehouses) == 0 {

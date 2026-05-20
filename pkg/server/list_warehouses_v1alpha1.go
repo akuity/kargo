@@ -31,7 +31,7 @@ func (s *server) ListWarehouses(
 	}
 
 	var list kargoapi.WarehouseList
-	if err := s.client.List(ctx, &list, client.InNamespace(project)); err != nil {
+	if err := s.listFresh(ctx, "warehouses", &list, client.InNamespace(project)); err != nil {
 		return nil, fmt.Errorf("list warehouses: %w", err)
 	}
 
@@ -75,7 +75,7 @@ func (s *server) listWarehouses(c *gin.Context) {
 	}
 
 	list := &kargoapi.WarehouseList{}
-	if err := s.client.List(ctx, list, client.InNamespace(project)); err != nil {
+	if err := s.listFresh(ctx, "warehouses", list, client.InNamespace(project)); err != nil {
 		_ = c.Error(err)
 		return
 	}

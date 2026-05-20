@@ -15,7 +15,6 @@ import (
 	svcv1alpha1 "github.com/akuity/kargo/api/service/v1alpha1"
 	kargoapi "github.com/akuity/kargo/api/v1alpha1"
 	"github.com/akuity/kargo/pkg/api"
-	"github.com/akuity/kargo/pkg/indexer"
 	"github.com/akuity/kargo/pkg/logging"
 )
 
@@ -35,14 +34,11 @@ func (s *server) ListPromotions(
 	stage := req.Msg.GetStage()
 
 	var list kargoapi.PromotionList
-	opts := []client.ListOption{
-		client.InNamespace(project),
+	if err := s.listFresh(ctx, "promotions", &list, client.InNamespace(project)); err != nil {
+		return nil, fmt.Errorf("list promotions: %w", err)
 	}
 	if stage != "" {
-		opts = append(opts, client.MatchingFields{indexer.PromotionsByStageField: stage})
-	}
-	if err := s.client.List(ctx, &list, opts...); err != nil {
-		return nil, fmt.Errorf("list promotions: %w", err)
+		list.Items = filterPromotionsByStage(list.Items, stage)
 	}
 
 	slices.SortFunc(list.Items, api.ComparePromotionByPhaseAndCreationTime)
@@ -80,15 +76,12 @@ func (s *server) listPromotions(c *gin.Context) {
 	}
 
 	list := &kargoapi.PromotionList{}
-	opts := []client.ListOption{
-		client.InNamespace(project),
-	}
-	if stage != "" {
-		opts = append(opts, client.MatchingFields{indexer.PromotionsByStageField: stage})
-	}
-	if err := s.client.List(ctx, list, opts...); err != nil {
+	if err := s.listFresh(ctx, "promotions", list, client.InNamespace(project)); err != nil {
 		_ = c.Error(err)
 		return
+	}
+	if stage != "" {
+		list.Items = filterPromotionsByStage(list.Items, stage)
 	}
 
 	rvs := make([]string, len(list.Items))
@@ -103,6 +96,16 @@ func (s *server) listPromotions(c *gin.Context) {
 	})
 
 	c.JSON(http.StatusOK, list)
+}
+
+func filterPromotionsByStage(promotions []kargoapi.Promotion, stage string) []kargoapi.Promotion {
+	filtered := make([]kargoapi.Promotion, 0, len(promotions))
+	for _, promotion := range promotions {
+		if promotion.Spec.Stage == stage {
+			filtered = append(filtered, promotion)
+		}
+	}
+	return filtered
 }
 
 func (s *server) watchPromotions(c *gin.Context, project, stage, resourceVersion string) {

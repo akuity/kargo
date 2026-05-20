@@ -56,6 +56,9 @@ func (s *server) WatchPromotions(
 			if !ok {
 				return nil
 			}
+			if err := errorFromWatchEvent(e); err != nil {
+				return err
+			}
 			promotion, ok := e.Object.(*kargoapi.Promotion)
 			if !ok {
 				return fmt.Errorf("unexpected object type %T", e.Object)

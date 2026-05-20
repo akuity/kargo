@@ -93,20 +93,20 @@ func (s *server) QueryFreight(
 			return nil, fmt.Errorf("get available freight for stage: %w", err)
 		}
 	case len(origins) > 0:
-		var err error
-		freight, err = s.getFreightFromWarehousesFn(ctx, project, origins)
-		if err != nil {
-			return nil, fmt.Errorf("get freight from warehouse: %w", err)
+		freightList := &kargoapi.FreightList{}
+		if err := s.listFreightForQuery(
+			ctx,
+			freightList,
+			client.InNamespace(project),
+		); err != nil {
+			return nil, fmt.Errorf("list freight: %w", err)
 		}
-		rvs := make([]string, len(freight))
-		for i := range freight {
-			rvs[i] = freight[i].ResourceVersion
-		}
-		resourceVersion = effectiveResourceVersion("", rvs)
+		freight = filterFreightByOrigins(freightList.Items, origins)
+		resourceVersion = resourceVersionForFreightList(freightList)
 	default:
 		freightList := &kargoapi.FreightList{}
 		// Get ALL Freight in the project/namespace
-		if err := s.listFreightFn(
+		if err := s.listFreightForQuery(
 			ctx,
 			freightList,
 			client.InNamespace(project),
@@ -114,11 +114,7 @@ func (s *server) QueryFreight(
 			return nil, fmt.Errorf("list freight: %w", err)
 		}
 		freight = freightList.Items
-		rvs := make([]string, len(freightList.Items))
-		for i := range freightList.Items {
-			rvs[i] = freightList.Items[i].ResourceVersion
-		}
-		resourceVersion = effectiveResourceVersion(freightList.ResourceVersion, rvs)
+		resourceVersion = resourceVersionForFreightList(freightList)
 	}
 
 	// Split the Freight into groups
@@ -140,6 +136,38 @@ func (s *server) QueryFreight(
 		Groups:          freightGroups,
 		ResourceVersion: resourceVersion,
 	}), nil
+}
+
+func (s *server) listFreightForQuery(
+	ctx context.Context,
+	list client.ObjectList,
+	opts ...client.ListOption,
+) error {
+	if s.cfg.RestConfig == nil {
+		return s.listFreightFn(ctx, list, opts...)
+	}
+	return s.listFresh(ctx, "freights", list, opts...)
+}
+
+func filterFreightByOrigins(
+	freight []kargoapi.Freight,
+	origins []string,
+) []kargoapi.Freight {
+	filtered := make([]kargoapi.Freight, 0, len(freight))
+	for _, f := range freight {
+		if slices.Contains(origins, f.Origin.Name) {
+			filtered = append(filtered, f)
+		}
+	}
+	return filtered
+}
+
+func resourceVersionForFreightList(list *kargoapi.FreightList) string {
+	rvs := make([]string, len(list.Items))
+	for i := range list.Items {
+		rvs[i] = list.Items[i].ResourceVersion
+	}
+	return effectiveResourceVersion(list.ResourceVersion, rvs)
 }
 
 func (s *server) getAvailableFreightForStage(

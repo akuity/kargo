@@ -17,7 +17,10 @@ import {
   isPromotionPhaseTerminal,
   isPromotionRetryable
 } from '@ui/features/common/promotion-status/utils';
-import { isSameOrOlderResourceVersion } from '@ui/features/utils/resource-version';
+import {
+  isExpiredResourceVersionError,
+  isSameOrOlderResourceVersion
+} from '@ui/features/utils/resource-version';
 import {
   getFreight,
   listPromotions,
@@ -89,63 +92,86 @@ export const Promotions = ({ argocdShard }: { argocdShard?: ArgoCDShard }) => {
         },
         transport: transportWithAuth
       });
-      const currentPromotionsResponse = client.getQueryData(listPromotionsQueryKey) as
-        | ListPromotionsResponse
-        | undefined;
-      const stream = promiseClient.watchPromotions(
-        {
-          project: projectName,
-          stage: stageName,
-          resourceVersion: currentPromotionsResponse?.resourceVersion || ''
-        },
-        { signal: cancel.signal }
-      );
 
-      let promotions =
-        currentPromotionsResponse?.promotions ||
-        (promotionsResponse as ListPromotionsResponse).promotions ||
-        [];
-
-      for await (const e of stream) {
-        const promotion = e.promotion;
-        if (!promotion) {
-          continue;
-        }
-
-        const index = promotions?.findIndex(
-          (item) => item.metadata?.name === promotion.metadata?.name
+      while (!cancel.signal.aborted) {
+        const currentPromotionsResponse = client.getQueryData(listPromotionsQueryKey) as
+          | ListPromotionsResponse
+          | undefined;
+        const stream = promiseClient.watchPromotions(
+          {
+            project: projectName,
+            stage: stageName,
+            resourceVersion: currentPromotionsResponse?.resourceVersion || ''
+          },
+          { signal: cancel.signal }
         );
-        if (e.type === 'DELETED') {
-          if (index !== -1) {
-            promotions = [...promotions.slice(0, index), ...promotions.slice(index + 1)];
-          }
-        } else if (
-          e.type === 'ADDED' &&
-          index !== -1 &&
-          isSameOrOlderResourceVersion(promotions[index], promotion)
-        ) {
-          continue;
-        } else {
-          if (index === -1) {
-            promotions = [...promotions, promotion];
-          } else {
-            promotions = [...promotions.slice(0, index), promotion, ...promotions.slice(index + 1)];
-          }
-        }
 
-        // Update Promotions list
-        client.setQueryData(listPromotionsQueryKey, {
-          promotions,
-          resourceVersion:
-            (client.getQueryData(listPromotionsQueryKey) as ListPromotionsResponse)
-              ?.resourceVersion ??
-            currentPromotionsResponse?.resourceVersion ??
-            '',
-          $typeName: 'akuity.io.kargo.service.v1alpha1.ListPromotionsResponse'
-        });
+        let promotions =
+          currentPromotionsResponse?.promotions ||
+          (promotionsResponse as ListPromotionsResponse).promotions ||
+          [];
+
+        try {
+          for await (const e of stream) {
+            const promotion = e.promotion;
+            if (!promotion) {
+              continue;
+            }
+
+            const index = promotions?.findIndex(
+              (item) => item.metadata?.name === promotion.metadata?.name
+            );
+            if (e.type === 'DELETED') {
+              if (index !== -1) {
+                promotions = [...promotions.slice(0, index), ...promotions.slice(index + 1)];
+              }
+            } else if (
+              e.type === 'ADDED' &&
+              index !== -1 &&
+              isSameOrOlderResourceVersion(promotions[index], promotion)
+            ) {
+              continue;
+            } else {
+              if (index === -1) {
+                promotions = [...promotions, promotion];
+              } else {
+                promotions = [
+                  ...promotions.slice(0, index),
+                  promotion,
+                  ...promotions.slice(index + 1)
+                ];
+              }
+            }
+
+            // Update Promotions list
+            client.setQueryData(listPromotionsQueryKey, {
+              promotions,
+              resourceVersion:
+                promotion.metadata?.resourceVersion ||
+                (client.getQueryData(listPromotionsQueryKey) as ListPromotionsResponse)
+                  ?.resourceVersion ||
+                currentPromotionsResponse?.resourceVersion ||
+                '',
+              $typeName: 'akuity.io.kargo.service.v1alpha1.ListPromotionsResponse'
+            });
+          }
+          return;
+        } catch (err) {
+          if (cancel.signal.aborted) {
+            return;
+          }
+          if (isExpiredResourceVersionError(err)) {
+            await client.refetchQueries({
+              queryKey: listPromotionsQueryKey,
+              exact: true
+            });
+            continue;
+          }
+          throw err;
+        }
       }
     };
-    watchPromotions();
+    watchPromotions().catch(() => undefined);
 
     return () => cancel.abort();
   }, [isLoading]);

@@ -3,8 +3,11 @@ package server
 import (
 	"encoding/json"
 	"fmt"
+	"net/http"
 
+	"connectrpc.com/connect"
 	"github.com/gin-gonic/gin"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/watch"
@@ -57,6 +60,35 @@ func convertWatchEventObject[T any](c *gin.Context, e watch.Event, _ T) (T, bool
 		obj = typed
 	}
 	return obj, true
+}
+
+func errorFromWatchEvent(e watch.Event) error {
+	if e.Type != watch.Error {
+		return nil
+	}
+
+	status, ok := e.Object.(*metav1.Status)
+	if !ok {
+		return connect.NewError(
+			connect.CodeUnknown,
+			fmt.Errorf("watch error: unexpected object type %T", e.Object),
+		)
+	}
+
+	message := status.Message
+	if message == "" {
+		message = string(status.Reason)
+	}
+	if status.Code == http.StatusGone || status.Reason == metav1.StatusReasonExpired {
+		return connect.NewError(
+			connect.CodeOutOfRange,
+			fmt.Errorf("watch resource version expired: %s", message),
+		)
+	}
+	return connect.NewError(
+		connect.CodeUnknown,
+		fmt.Errorf("watch error: %s", message),
+	)
 }
 
 // convertAndSendWatchEvent converts a watch event's object to the target type

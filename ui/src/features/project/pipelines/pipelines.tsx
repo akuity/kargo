@@ -168,7 +168,12 @@ export const Pipelines = (props: { creatingStage?: boolean; creatingWarehouse?: 
 
   usePersistPreferredFilter(projectName || '', preferredFilter);
 
-  useWatchFreight(projectName || '');
+  useWatchFreight(
+    projectName || '',
+    preferredFilter.warehouses,
+    getFreightQuery.data?.resourceVersion || '',
+    !getFreightQuery.isLoading
+  );
 
   if (loading) {
     return <LoadingState />;

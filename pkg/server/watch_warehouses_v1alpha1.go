@@ -60,6 +60,9 @@ func (s *server) WatchWarehouses(
 			if !ok {
 				return nil
 			}
+			if err := errorFromWatchEvent(e); err != nil {
+				return err
+			}
 			warehouse, ok := e.Object.(*kargoapi.Warehouse)
 			if !ok {
 				return fmt.Errorf("unexpected object type %T", e.Object)

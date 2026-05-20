@@ -48,6 +48,9 @@ func (s *server) WatchFreight(
 			if !ok {
 				return nil
 			}
+			if err := errorFromWatchEvent(e); err != nil {
+				return err
+			}
 			freight, ok := e.Object.(*kargoapi.Freight)
 			if !ok {
 				return fmt.Errorf("unexpected object type %T", e.Object)

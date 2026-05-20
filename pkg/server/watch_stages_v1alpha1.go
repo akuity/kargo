@@ -62,6 +62,9 @@ func (s *server) WatchStages(
 			if !ok {
 				return nil
 			}
+			if err := errorFromWatchEvent(e); err != nil {
+				return err
+			}
 			stage, ok := e.Object.(*kargoapi.Stage)
 			if !ok {
 				return fmt.Errorf("unexpected object type %T", e.Object)

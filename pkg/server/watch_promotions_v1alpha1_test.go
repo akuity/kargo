@@ -115,3 +115,78 @@ func TestWatchPromotions_resourceVersion(t *testing.T) {
 		require.Fail(t, "watch was not called")
 	}
 }
+
+func TestWatchPromotions_expiredResourceVersion(t *testing.T) {
+	t.Parallel()
+
+	const projectName = "fake-project"
+
+	fakeClient := fake.NewClientBuilder().
+		WithScheme(mustNewScheme()).
+		WithInterceptorFuncs(interceptor.Funcs{
+			Watch: func(
+				_ context.Context,
+				_ client.WithWatch,
+				_ client.ObjectList,
+				_ ...client.ListOption,
+			) (watch.Interface, error) {
+				w := watch.NewFake()
+				go func() {
+					time.Sleep(10 * time.Millisecond)
+					w.Error(&metav1.Status{
+						Status:  metav1.StatusFailure,
+						Message: "too old resource version: 123 (456)",
+						Reason:  metav1.StatusReasonExpired,
+						Code:    http.StatusGone,
+					})
+				}()
+				return w, nil
+			},
+		}).
+		Build()
+
+	k8sClient, err := kubernetes.NewClient(
+		t.Context(),
+		&rest.Config{},
+		kubernetes.ClientOptions{
+			SkipAuthorization: true,
+			NewInternalClient: func(
+				context.Context,
+				*rest.Config,
+				*runtime.Scheme,
+				string,
+			) (client.WithWatch, error) {
+				return fakeClient, nil
+			},
+		},
+	)
+	require.NoError(t, err)
+
+	svr := &server{client: k8sClient}
+	svr.externalValidateProjectFn = func(_ context.Context, _ client.Client, project string) error {
+		if project != projectName {
+			return validation.ErrProjectNotFound
+		}
+		return nil
+	}
+
+	mux := http.NewServeMux()
+	mux.Handle(svcv1alpha1connect.NewKargoServiceHandler(svr))
+	httpSrv := httptest.NewServer(mux)
+	t.Cleanup(httpSrv.Close)
+
+	cli := svcv1alpha1connect.NewKargoServiceClient(httpSrv.Client(), httpSrv.URL)
+
+	ctx, cancel := context.WithTimeout(t.Context(), 2*time.Second)
+	defer cancel()
+
+	stream, err := cli.WatchPromotions(ctx, connect.NewRequest(&svcv1alpha1.WatchPromotionsRequest{
+		Project:         projectName,
+		ResourceVersion: "123",
+	}))
+	require.NoError(t, err)
+	require.False(t, stream.Receive())
+	require.Error(t, stream.Err())
+	require.Equal(t, connect.CodeOutOfRange, connect.CodeOf(stream.Err()))
+	require.ErrorContains(t, stream.Err(), "watch resource version expired")
+}
