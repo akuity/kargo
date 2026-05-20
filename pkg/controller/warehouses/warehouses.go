@@ -102,13 +102,15 @@ func SetupReconcilerWithManager(
 			),
 		).
 		WithOptions(controller.CommonOptions(cfg.MaxConcurrentReconciles)).
-		Complete(func() *reconciler {
-			r := newReconciler(mgr.GetClient(), credentialsDB, subscriberRegistry, cfg)
-			r.eventSender = k8sevent.NewEventSender(
+		Complete(newReconciler(
+			mgr.GetClient(),
+			credentialsDB,
+			subscriberRegistry,
+			cfg,
+			k8sevent.NewEventSender(
 				libEvent.NewRecorder(ctx, mgr.GetScheme(), mgr.GetClient(), cfg.Name()),
-			)
-			return r
-		}()); err != nil {
+			),
+		)); err != nil {
 		return fmt.Errorf("error building Warehouse reconciler: %w", err)
 	}
 
@@ -125,12 +127,14 @@ func newReconciler(
 	credentialsDB credentials.Database,
 	subscriberRegistry subscription.SubscriberRegistry,
 	cfg ReconcilerConfig,
+	eventSender kargoEvent.Sender,
 ) *reconciler {
 	r := &reconciler{
 		client:             kubeClient,
 		credentialsDB:      credentialsDB,
 		subscriberRegistry: subscriberRegistry,
 		cfg:                cfg,
+		eventSender:        eventSender,
 		shardPredicate: controller.ResponsibleFor[kargoapi.Warehouse]{
 			IsDefaultController: cfg.IsDefaultController,
 			ShardName:           cfg.ShardName,

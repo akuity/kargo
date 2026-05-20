@@ -50,6 +50,7 @@ func TestNewReconciler(t *testing.T) {
 		&credentials.FakeDB{},
 		subscription.MustNewSubscriberRegistry(),
 		ReconcilerConfig{MinReconciliationInterval: minReconciliationInterval},
+		nil,
 	)
 	require.NotNil(t, e.client)
 	require.NotNil(t, e.credentialsDB)
