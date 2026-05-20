@@ -232,7 +232,8 @@ func (g *gitSubscriber) DiscoverArtifacts(
 	}
 
 	return kargoapi.GitDiscoveryResult{
-		RepoURL: gitSub.RepoURL,
-		Commits: commits,
+		RepoURL:          gitSub.RepoURL,
+		Commits:          commits,
+		SubscriptionName: sub.Name,
 	}, nil
 }

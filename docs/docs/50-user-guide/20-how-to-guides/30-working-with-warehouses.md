@@ -51,6 +51,37 @@ spec:
 The remainder of this section focuses on the configuration of the individual
 subscription types.
 
+### Naming Subscriptions
+
+Each entry in `spec.subscriptions` may optionally include a `name` field. When
+provided, this human-readable identifier makes it easier to distinguish between
+subscriptions of the same type in logs, events, and the Kargo UI — particularly
+when a `Warehouse` subscribes to multiple repositories of the same kind.
+
+```yaml
+spec:
+  subscriptions:
+  - name: frontend-images
+    image:
+      repoURL: public.ecr.aws/nginx/nginx
+      constraint: ^1.26.0
+  - name: backend-images
+    image:
+      repoURL: public.ecr.aws/myorg/backend
+```
+
+Subscription names, when provided, must be unique within a `Warehouse` (the
+check is case-insensitive and ignores leading/trailing whitespace). Names are
+limited to 63 characters and must match the pattern
+`^[a-zA-Z0-9]([a-zA-Z0-9._-]*[a-zA-Z0-9])?$`.
+
+:::note
+
+The `name` field on a `RepoSubscription` is optional. Existing subscriptions
+without a name continue to work exactly as before.
+
+:::
+
 ### Container Image Subscriptions
 
 Container image repository subscriptions can be defined using the following

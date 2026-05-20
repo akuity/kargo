@@ -301,8 +301,9 @@ func (i *imageSubscriber) DiscoverArtifacts(
 	}
 
 	return kargoapi.ImageDiscoveryResult{
-		RepoURL:    imgSub.RepoURL,
-		Platform:   imgSub.Platform,
-		References: images,
+		RepoURL:          imgSub.RepoURL,
+		Platform:         imgSub.Platform,
+		References:       images,
+		SubscriptionName: sub.Name,
 	}, nil
 }

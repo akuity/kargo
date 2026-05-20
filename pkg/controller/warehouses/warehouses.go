@@ -580,13 +580,14 @@ func (r *reconciler) buildFreightFromLatestArtifacts(
 		}
 		latestCommit := result.Commits[0]
 		freight.Commits = append(freight.Commits, kargoapi.GitCommit{
-			RepoURL:   result.RepoURL,
-			ID:        latestCommit.ID,
-			Branch:    latestCommit.Branch,
-			Tag:       latestCommit.Tag,
-			Message:   latestCommit.Subject,
-			Author:    latestCommit.Author,
-			Committer: latestCommit.Committer,
+			RepoURL:          result.RepoURL,
+			ID:               latestCommit.ID,
+			Branch:           latestCommit.Branch,
+			Tag:              latestCommit.Tag,
+			Message:          latestCommit.Subject,
+			Author:           latestCommit.Author,
+			Committer:        latestCommit.Committer,
+			SubscriptionName: result.SubscriptionName,
 		})
 	}
 
@@ -596,10 +597,11 @@ func (r *reconciler) buildFreightFromLatestArtifacts(
 		}
 		latestImage := result.References[0]
 		freight.Images = append(freight.Images, kargoapi.Image{
-			RepoURL:     result.RepoURL,
-			Tag:         latestImage.Tag,
-			Digest:      latestImage.Digest,
-			Annotations: latestImage.Annotations,
+			RepoURL:          result.RepoURL,
+			Tag:              latestImage.Tag,
+			Digest:           latestImage.Digest,
+			Annotations:      latestImage.Annotations,
+			SubscriptionName: result.SubscriptionName,
 		})
 	}
 
@@ -613,9 +615,10 @@ func (r *reconciler) buildFreightFromLatestArtifacts(
 		}
 		latestChart := result.Versions[0]
 		freight.Charts = append(freight.Charts, kargoapi.Chart{
-			RepoURL: result.RepoURL,
-			Name:    result.Name,
-			Version: latestChart,
+			RepoURL:          result.RepoURL,
+			Name:             result.Name,
+			Version:          latestChart,
+			SubscriptionName: result.SubscriptionName,
 		})
 	}
 

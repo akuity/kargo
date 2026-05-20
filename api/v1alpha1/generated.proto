@@ -274,6 +274,11 @@ message Chart {
 
   // Version specifies a particular version of the chart.
   optional string version = 3;
+
+  // SubscriptionName is the name of the subscription that discovered this
+  // chart. This field is only populated if the subscription was assigned
+  // a name.
+  optional string subscriptionName = 4;
 }
 
 // ChartDiscoveryResult represents the result of a chart discovery operation for
@@ -300,6 +305,12 @@ message ChartDiscoveryResult {
   //
   // +optional
   repeated string versions = 4;
+
+  // SubscriptionName is the optional human-readable name of the subscription
+  // that produced this discovery result.
+  //
+  // +optional
+  optional string subscriptionName = 5;
 }
 
 // ChartSubscription defines a subscription to a Helm chart repository.
@@ -932,6 +943,11 @@ message GitCommit {
 
   // Committer is the person who committed the commit.
   optional string committer = 8;
+
+  // SubscriptionName is the name of the subscription that discovered this
+  // commit. This field is only populated if the subscription was assigned
+  // a name.
+  optional string subscriptionName = 9;
 }
 
 // GitDiscoveryResult represents the result of a Git discovery operation for a
@@ -952,6 +968,12 @@ message GitDiscoveryResult {
   //
   // +optional
   repeated DiscoveredCommit commits = 2;
+
+  // SubscriptionName is the optional human-readable name of the subscription
+  // that produced this discovery result.
+  //
+  // +optional
+  optional string subscriptionName = 3;
 }
 
 // GitHubWebhookReceiverConfig describes a webhook receiver that is compatible
@@ -1154,6 +1176,11 @@ message Image {
 
   // Annotations is a map of arbitrary metadata for the image.
   map<string, string> annotations = 5;
+
+  // SubscriptionName is the name of the subscription that discovered this
+  // image. This field is only populated if the subscription was assigned
+  // a name.
+  optional string subscriptionName = 6;
 }
 
 // ImageDiscoveryResult represents the result of an image discovery operation
@@ -1177,6 +1204,12 @@ message ImageDiscoveryResult {
   //
   // +optional
   repeated DiscoveredImageReference references = 3;
+
+  // SubscriptionName is the optional human-readable name of the subscription
+  // that produced this discovery result.
+  //
+  // +optional
+  optional string subscriptionName = 4;
 }
 
 // ImageSubscription defines a subscription to a container image repository.
@@ -1771,6 +1804,20 @@ message QuayWebhookReceiverConfig {
 // RepoSubscription describes a subscription to ONE OF a Git repository, a
 // container image repository, a Helm chart repository, or something else.
 message RepoSubscription {
+  // Name is an optional, human-readable identifier for this subscription.
+  // Subscription names are primarily intended as a stepping stone toward
+  // allowing a single Warehouse to subscribe to the same repository more than
+  // once, which in turn would allow a single Freight resource to reference
+  // multiple distinct revisions of an artifact from one repository. As an
+  // incidental benefit, a name may also be surfaced in the Kargo UI and other
+  // tooling as a more human-readable label where a repository URL would
+  // otherwise appear.
+  //
+  // +kubebuilder:validation:Optional
+  // +kubebuilder:validation:MaxLength=63
+  // +kubebuilder:validation:Pattern=`^[a-zA-Z0-9]([a-zA-Z0-9._-]*[a-zA-Z0-9])?$`
+  optional string name = 5;
+
   // Git describes a subscriptions to a Git repository.
   optional GitSubscription git = 1;
 

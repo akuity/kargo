@@ -615,6 +615,10 @@ type Image struct {
 	Digest string `json:"digest,omitempty" protobuf:"bytes,4,opt,name=digest"`
 	// Annotations is a map of arbitrary metadata for the image.
 	Annotations map[string]string `json:"annotations,omitempty" protobuf:"bytes,5,rep,name=annotations" protobuf_key:"bytes,1,opt,name=key" protobuf_val:"bytes,2,opt,name=value"`
+	// SubscriptionName is the name of the subscription that discovered this
+	// image. This field is only populated if the subscription was assigned
+	// a name.
+	SubscriptionName string `json:"subscriptionName,omitempty" protobuf:"bytes,6,opt,name=subscriptionName"`
 }
 
 // DeepEquals returns a bool indicating whether the receiver deep-equals the
@@ -629,7 +633,8 @@ func (i *Image) DeepEquals(other *Image) bool {
 	return i.RepoURL == other.RepoURL &&
 		i.Tag == other.Tag &&
 		i.Digest == other.Digest &&
-		maps.Equal(i.Annotations, other.Annotations)
+		maps.Equal(i.Annotations, other.Annotations) &&
+		i.SubscriptionName == other.SubscriptionName
 }
 
 // Chart describes a specific version of a Helm chart.
@@ -645,6 +650,10 @@ type Chart struct {
 	Name string `json:"name,omitempty" protobuf:"bytes,2,opt,name=name"`
 	// Version specifies a particular version of the chart.
 	Version string `json:"version,omitempty" protobuf:"bytes,3,opt,name=version"`
+	// SubscriptionName is the name of the subscription that discovered this
+	// chart. This field is only populated if the subscription was assigned
+	// a name.
+	SubscriptionName string `json:"subscriptionName,omitempty" protobuf:"bytes,4,opt,name=subscriptionName"`
 }
 
 // DeepEquals returns a bool indicating whether the receiver deep-equals the
@@ -658,7 +667,8 @@ func (c *Chart) DeepEquals(other *Chart) bool {
 	}
 	return c.RepoURL == other.RepoURL &&
 		c.Name == other.Name &&
-		c.Version == other.Version
+		c.Version == other.Version &&
+		c.SubscriptionName == other.SubscriptionName
 }
 
 // Health describes the health of a Stage.

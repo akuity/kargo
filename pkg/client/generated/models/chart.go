@@ -25,6 +25,11 @@ type Chart struct {
 	// will be empty.
 	RepoURL string `json:"repoURL,omitempty"`
 
+	// SubscriptionName is the name of the subscription that discovered this
+	// chart. This field is only populated if the subscription was assigned
+	// a name.
+	SubscriptionName string `json:"subscriptionName,omitempty"`
+
 	// Version specifies a particular version of the chart.
 	Version string `json:"version,omitempty"`
 }

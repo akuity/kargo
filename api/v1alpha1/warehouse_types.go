@@ -291,6 +291,19 @@ type FreightCreationCriteria struct {
 // RepoSubscription describes a subscription to ONE OF a Git repository, a
 // container image repository, a Helm chart repository, or something else.
 type RepoSubscription struct {
+	// Name is an optional, human-readable identifier for this subscription.
+	// Subscription names are primarily intended as a stepping stone toward
+	// allowing a single Warehouse to subscribe to the same repository more than
+	// once, which in turn would allow a single Freight resource to reference
+	// multiple distinct revisions of an artifact from one repository. As an
+	// incidental benefit, a name may also be surfaced in the Kargo UI and other
+	// tooling as a more human-readable label where a repository URL would
+	// otherwise appear.
+	//
+	// +kubebuilder:validation:Optional
+	// +kubebuilder:validation:MaxLength=63
+	// +kubebuilder:validation:Pattern=`^[a-zA-Z0-9]([a-zA-Z0-9._-]*[a-zA-Z0-9])?$`
+	Name string `json:"name,omitempty" protobuf:"bytes,5,opt,name=name"`
 	// Git describes a subscriptions to a Git repository.
 	Git *GitSubscription `json:"git,omitempty" protobuf:"bytes,1,opt,name=git"`
 	// Image describes a subscription to container image repository.
@@ -408,6 +421,11 @@ type GitDiscoveryResult struct {
 	//
 	// +optional
 	Commits []DiscoveredCommit `json:"commits" protobuf:"bytes,2,rep,name=commits"`
+	// SubscriptionName is the optional human-readable name of the subscription
+	// that produced this discovery result.
+	//
+	// +optional
+	SubscriptionName string `json:"subscriptionName,omitempty" protobuf:"bytes,3,opt,name=subscriptionName"`
 }
 
 // DiscoveredCommit represents a commit discovered by a Warehouse for a
@@ -455,6 +473,11 @@ type ImageDiscoveryResult struct {
 	//
 	// +optional
 	References []DiscoveredImageReference `json:"references" protobuf:"bytes,3,rep,name=references"`
+	// SubscriptionName is the optional human-readable name of the subscription
+	// that produced this discovery result.
+	//
+	// +optional
+	SubscriptionName string `json:"subscriptionName,omitempty" protobuf:"bytes,4,opt,name=subscriptionName"`
 }
 
 // DiscoveredImageReference represents an image reference discovered by a
@@ -502,6 +525,11 @@ type ChartDiscoveryResult struct {
 	//
 	// +optional
 	Versions []string `json:"versions" protobuf:"bytes,4,rep,name=versions"`
+	// SubscriptionName is the optional human-readable name of the subscription
+	// that produced this discovery result.
+	//
+	// +optional
+	SubscriptionName string `json:"subscriptionName,omitempty" protobuf:"bytes,5,opt,name=subscriptionName"`
 }
 
 // DiscoveryResult represents the result of an artifact discovery operation for
