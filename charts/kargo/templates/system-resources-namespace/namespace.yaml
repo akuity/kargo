@@ -1,4 +1,4 @@
-{{- if .Values.global.systemResources.createNamespace }}
+{{- if and .Values.dataPlane.install .Values.global.systemResources.createNamespace }}
 apiVersion: v1
 kind: Namespace
 metadata:

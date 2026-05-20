@@ -1,4 +1,4 @@
-{{- if and .Values.externalWebhooksServer.enabled .Values.externalWebhooksServer.ingress.enabled }}
+{{- if and .Values.workloads.install .Values.externalWebhooksServer.enabled .Values.externalWebhooksServer.ingress.enabled }}
 apiVersion: networking.k8s.io/v1
 kind: Ingress
 metadata:

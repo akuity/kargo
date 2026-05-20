@@ -1,4 +1,5 @@
-{{- if .Values.webhooksServer.enabled }}
+{{- if and .Values.workloads.install .Values.webhooksServer.enabled }}
+{{- $kc := .Values.webhooksServer.kubeconfigSecrets.kargo | default .Values.kubeconfigSecrets.kargo }}
 apiVersion: v1
 kind: ConfigMap
 metadata:
@@ -12,7 +13,7 @@ data:
   KARGO_NAMESPACE: {{ .Release.Namespace }}
   LOG_LEVEL: {{ quote .Values.webhooksServer.logLevel }}
   LOG_FORMAT: {{ quote .Values.webhooksServer.logFormat }}
-  {{- if .Values.kubeconfigSecrets.kargo }}
+  {{- if $kc }}
   KUBECONFIG: /etc/kargo/kubeconfigs/kubeconfig.yaml
   {{- end }}
   {{- if .Values.webhooksServer.controlplaneUserRegex }}
