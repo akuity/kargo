@@ -13,8 +13,10 @@ spec:
   ports:
   - protocol: TCP
     {{- if .Values.api.tls.enabled }}
+    appProtocol: https
     port: 443
     {{- else }}
+    appProtocol: http
     port: 80
     {{- end }}
     {{- if and (or (eq .Values.api.service.type "NodePort") (eq .Values.api.service.type "LoadBalancer")) .Values.api.service.nodePort}}
