@@ -496,7 +496,7 @@ func (r *reconciler) syncWarehouse(
 				)
 				if r.eventSender != nil {
 					evt := kargoEvent.NewFreightCreated(
-						"Freight created from discovered artifacts",
+						"",
 						api.FormatEventControllerActor(r.cfg.Name()),
 						freight,
 					)
