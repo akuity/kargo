@@ -5,7 +5,7 @@ import { Link, generatePath } from 'react-router-dom';
 
 import { paths } from '@ui/config/paths';
 import { DESCRIPTION_ANNOTATION_KEY } from '@ui/features/common/utils';
-import { Project } from '@ui/gen/api/v1alpha1/generated_pb';
+import type { Project } from '@ui/gen/api/v2/models';
 
 import * as styles from './project-item.module.less';
 
