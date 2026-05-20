@@ -186,7 +186,8 @@ export const StageNode = (props: { stage: Stage }) => {
           'stage-node',
           style['stage-node-size'],
           {
-            'opacity-40': hideStage
+            'opacity-40': hideStage,
+            'stage-node--search-match': graphContext?.matchedStageIndices?.has(stageNodeIndex)
           },
           'postiion-relative'
         )}
