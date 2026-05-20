@@ -5937,3 +5937,4 @@ export const KargoService: GenService<{
   },
 }> = /*@__PURE__*/
   serviceDesc(file_api_service_v1alpha1_service, 0);
+
