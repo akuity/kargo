@@ -91,8 +91,7 @@ export const StageFreight = (props: { stage: Stage }) => {
         projectName &&
         stageName &&
         selectedAutoPromotionHold &&
-        selectedAutoPromotionHold.state !== autoPromotionHoldStatePending &&
-        props.stage?.status?.autoPromotionEnabled
+        selectedAutoPromotionHold.state !== autoPromotionHoldStatePending
       )
     }
   });

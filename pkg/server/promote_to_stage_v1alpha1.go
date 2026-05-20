@@ -128,7 +128,7 @@ func (s *server) PromoteToStage(
 		stagePromotionOptions{},
 	)
 	if err != nil {
-		return nil, err
+		return nil, stagePromotionConnectError(err)
 	}
 	s.recordPromotionCreatedEvent(ctx, promotion, freight)
 	if createdHold {
@@ -199,6 +199,7 @@ type promoteToStageRequest struct {
 // @Param stage path string true "Stage name"
 // @Param body body promoteToStageRequest true "Promote request"
 // @Success 201 {object} kargoapi.Promotion "Promotion resource (github.com/akuity/kargo/api/v1alpha1.Promotion)"
+// @Failure 409
 // @Router /v1beta1/projects/{project}/stages/{stage}/promotions [post]
 func (s *server) promoteToStage(c *gin.Context) {
 	ctx := c.Request.Context()
@@ -304,7 +305,7 @@ func (s *server) promoteToStage(c *gin.Context) {
 		},
 	)
 	if err != nil {
-		_ = c.Error(err)
+		_ = c.Error(stagePromotionRESTError(err))
 		return
 	}
 
@@ -333,6 +334,18 @@ type stagePromotionOptions struct {
 	Reason                string
 }
 
+type stagePromotionConflictError struct {
+	message string
+}
+
+func (s *stagePromotionConflictError) Error() string {
+	return s.message
+}
+
+func newStagePromotionConflictError(format string, args ...any) error {
+	return &stagePromotionConflictError{message: fmt.Sprintf(format, args...)}
+}
+
 func (s *server) createStagePromotion(
 	ctx context.Context,
 	stage *kargoapi.Stage,
@@ -355,13 +368,10 @@ func (s *server) createStagePromotion(
 		if candidate != nil {
 			currentCandidate = candidate.Name
 		}
-		return nil, false, libhttp.ErrorStr(
-			fmt.Sprintf(
-				"auto-promotion candidate changed from %q to %q; reload and try again",
-				opts.ExpectedAutoCandidate,
-				currentCandidate,
-			),
-			http.StatusConflict,
+		return nil, false, newStagePromotionConflictError(
+			"auto-promotion candidate changed from %q to %q; reload and try again",
+			opts.ExpectedAutoCandidate,
+			currentCandidate,
 		)
 	}
 
@@ -381,8 +391,8 @@ func (s *server) createStagePromotion(
 			CreatedAt:     &now,
 		}
 		if createdHold, err = s.patchStageAutoPromotionHolds(ctx, key, func(status *kargoapi.StageStatus) bool {
-			if hold, ok := status.GetAutoPromotionHold(freight.Origin); ok {
-				existing := hold
+			if statusHold, ok := status.GetAutoPromotionHold(freight.Origin); ok {
+				existing := statusHold
 				existingHold = &existing
 				return false
 			}
@@ -391,20 +401,31 @@ func (s *server) createStagePromotion(
 			return nil, false, fmt.Errorf("create auto-promotion hold: %w", err)
 		}
 		if existingHold != nil {
-			return nil, false, libhttp.ErrorStr(
-				fmt.Sprintf(
-					"auto-promotion is already %s for origin %q; wait for the current rollback to settle or resume auto-promotion before creating another rollback",
-					strings.ToLower(string(existingHold.State)),
-					freight.Origin.String(),
-				),
-				http.StatusConflict,
+			return nil, false, newStagePromotionConflictError(
+				"auto-promotion is already %s for origin %q; wait for the "+
+					"current rollback to settle or resume auto-promotion before "+
+					"creating another rollback",
+				strings.ToLower(string(existingHold.State)),
+				freight.Origin.String(),
 			)
 		}
 	} else if candidate != nil && candidate.Name == freight.Name {
 		hold, held := stage.Status.GetAutoPromotionHold(freight.Origin)
-		if held &&
-			hold.State == kargoapi.AutoPromotionHoldStateActive {
-			annotateClearAutoPromotionHold(promotion, freight.Origin, hold)
+		if held && hold.State == kargoapi.AutoPromotionHoldStateActive {
+			liveStage := &kargoapi.Stage{}
+			if err = s.client.InternalClient().Get(ctx, key, liveStage); err != nil {
+				return nil, false, fmt.Errorf("get live Stage before clearing auto-promotion hold: %w", err)
+			}
+			liveHold, liveHeld := liveStage.Status.GetAutoPromotionHold(freight.Origin)
+			if !liveHeld ||
+				liveHold.State != kargoapi.AutoPromotionHoldStateActive ||
+				!api.AutoPromotionHoldIdentityMatches(liveHold, hold) {
+				return nil, false, newStagePromotionConflictError(
+					"auto-promotion hold for origin %q changed; reload and try again",
+					freight.Origin.String(),
+				)
+			}
+			annotateClearAutoPromotionHold(promotion, freight.Origin, liveHold)
 		}
 	}
 
@@ -432,9 +453,25 @@ func (s *server) createStagePromotion(
 				))
 			}
 		}
-		return nil, false, createPromotionRESTError(createErr)
+		return nil, false, createPromotionError(createErr)
 	}
 	return promotion, createdHold, nil
+}
+
+func stagePromotionRESTError(err error) error {
+	var conflictErr *stagePromotionConflictError
+	if errors.As(err, &conflictErr) {
+		return libhttp.ErrorStr(conflictErr.Error(), http.StatusConflict)
+	}
+	return err
+}
+
+func stagePromotionConnectError(err error) error {
+	var conflictErr *stagePromotionConflictError
+	if errors.As(err, &conflictErr) {
+		return connect.NewError(connect.CodeFailedPrecondition, conflictErr)
+	}
+	return err
 }
 
 func annotateClearAutoPromotionHold(
@@ -450,11 +487,11 @@ func annotateClearAutoPromotionHold(
 	promotion.Annotations[kargoapi.AnnotationKeyClearAutoPromotionHoldPromotionUID] = hold.PromotionUID
 	if hold.CreatedAt != nil {
 		promotion.Annotations[kargoapi.AnnotationKeyClearAutoPromotionHoldCreatedAt] =
-			hold.CreatedAt.Time.Format(time.RFC3339Nano)
+			hold.CreatedAt.Format(time.RFC3339Nano)
 	}
 }
 
-func createPromotionRESTError(err error) error {
+func createPromotionError(err error) error {
 	var statusErr *apierrors.StatusError
 	if errors.As(err, &statusErr) {
 		status := statusErr.ErrStatus

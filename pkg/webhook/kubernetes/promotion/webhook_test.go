@@ -165,6 +165,7 @@ func Test_webhook_Default(t *testing.T) {
 			},
 			assertions: func(t *testing.T, promo *kargoapi.Promotion, err error) {
 				require.NoError(t, err)
+				require.Equal(t, kargoapi.PromotionSourceNonAuto, promo.Spec.Source)
 				require.Equal(t, "fake-shard", promo.Labels[kargoapi.LabelKeyShard])
 				require.NotEmpty(t, promo.OwnerReferences)
 			},
@@ -642,6 +643,7 @@ func Test_webhook_ValidateCreate(t *testing.T) {
 		name       string
 		webhook    *webhook
 		userInfo   *authnv1.UserInfo
+		promotion  *kargoapi.Promotion
 		assertions func(*testing.T, *fakeevent.EventRecorder, error)
 	}{
 		{
@@ -689,6 +691,95 @@ func Test_webhook_ValidateCreate(t *testing.T) {
 					statusErr.ErrStatus.Reason,
 				)
 				require.Contains(t, statusErr.ErrStatus.Message, "something went wrong")
+			},
+		},
+		{
+			name: "auto-sourced Promotion from non-controlplane request is rejected",
+			promotion: &kargoapi.Promotion{
+				Spec: kargoapi.PromotionSpec{
+					Freight: "fake-freight",
+					Source:  kargoapi.PromotionSourceAuto,
+				},
+			},
+			webhook: &webhook{
+				validateProjectFn: func(
+					context.Context,
+					client.Client,
+					client.Object,
+				) error {
+					return nil
+				},
+				authorizeFn: func(context.Context, *kargoapi.Promotion, string) error {
+					return nil
+				},
+				admissionRequestFromContextFn: admission.RequestFromContext,
+				isRequestFromKargoControlplaneFn: func(admission.Request) bool {
+					return false
+				},
+			},
+			assertions: func(t *testing.T, _ *fakeevent.EventRecorder, err error) {
+				var statusErr *apierrors.StatusError
+				require.True(t, errors.As(err, &statusErr))
+				require.Equal(t, metav1.StatusReasonInvalid, statusErr.ErrStatus.Reason)
+				require.Contains(t, statusErr.ErrStatus.Message, "only the Kargo control plane")
+			},
+		},
+		{
+			name: "auto-sourced Promotion from controlplane request is accepted",
+			promotion: &kargoapi.Promotion{
+				Spec: kargoapi.PromotionSpec{
+					Freight: "fake-freight",
+					Source:  kargoapi.PromotionSourceAuto,
+				},
+			},
+			webhook: &webhook{
+				validateProjectFn: func(
+					context.Context,
+					client.Client,
+					client.Object,
+				) error {
+					return nil
+				},
+				authorizeFn: func(context.Context, *kargoapi.Promotion, string) error {
+					return nil
+				},
+				admissionRequestFromContextFn: admission.RequestFromContext,
+				isRequestFromKargoControlplaneFn: func(admission.Request) bool {
+					return true
+				},
+				getStageFn: func(
+					context.Context,
+					client.Client,
+					types.NamespacedName,
+				) (*kargoapi.Stage, error) {
+					return &kargoapi.Stage{
+						Spec: kargoapi.StageSpec{
+							RequestedFreight: []kargoapi.FreightRequest{{
+								Origin: kargoapi.FreightOrigin{
+									Kind: kargoapi.FreightOriginKindWarehouse,
+									Name: testWarehouse,
+								},
+								Sources: kargoapi.FreightSources{Direct: true},
+							}},
+						},
+					}, nil
+				},
+				getFreightFn: func(
+					context.Context,
+					client.Client,
+					types.NamespacedName,
+				) (*kargoapi.Freight, error) {
+					return &kargoapi.Freight{
+						Origin: kargoapi.FreightOrigin{
+							Kind: kargoapi.FreightOriginKindWarehouse,
+							Name: testWarehouse,
+						},
+					}, nil
+				},
+			},
+			assertions: func(t *testing.T, r *fakeevent.EventRecorder, err error) {
+				require.NoError(t, err)
+				require.Empty(t, r.Events)
 			},
 		},
 		{
@@ -928,14 +1019,16 @@ func Test_webhook_ValidateCreate(t *testing.T) {
 			}
 			ctx := admission.NewContextWithRequest(t.Context(), req)
 
-			_, err := testCase.webhook.ValidateCreate(
-				ctx,
-				&kargoapi.Promotion{
+			promo := testCase.promotion
+			if promo == nil {
+				promo = &kargoapi.Promotion{
 					Spec: kargoapi.PromotionSpec{
 						Freight: "fake-freight",
 					},
-				},
-			)
+				}
+			}
+
+			_, err := testCase.webhook.ValidateCreate(ctx, promo)
 			testCase.assertions(t, recorder, err)
 		})
 	}

@@ -51,7 +51,7 @@ export const Promote = (props: PromoteProps) => {
   const currentFreightOnStage = useMemo(() => getCurrentFreight(props.stage)[0], [props.stage]);
 
   const shouldCheckAutoPromotionCandidate = Boolean(
-    projectName && stageName && !isDownstreamPromotion && props.stage?.status?.autoPromotionEnabled
+    projectName && stageName && !isDownstreamPromotion
   );
   const autoPromotionCandidatesQuery = useGetStageAutoPromotionCandidates(
     projectName || '',

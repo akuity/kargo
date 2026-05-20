@@ -3845,10 +3845,19 @@ export type promoteToStageResponse201 = {
   status: 201;
 };
 
+export type promoteToStageResponse409 = {
+  data: void;
+  status: 409;
+};
+
 export type promoteToStageResponseSuccess = promoteToStageResponse201 & {
   headers: Headers;
 };
-export type promoteToStageResponse = promoteToStageResponseSuccess;
+export type promoteToStageResponseError = promoteToStageResponse409 & {
+  headers: Headers;
+};
+
+export type promoteToStageResponse = promoteToStageResponseSuccess | promoteToStageResponseError;
 
 export const getPromoteToStageUrl = (project: string, stage: string) => {
   return `/v1beta1/projects/${project}/stages/${stage}/promotions`;
@@ -3868,7 +3877,7 @@ export const promoteToStage = async (
   });
 };
 
-export const getPromoteToStageMutationOptions = <TError = unknown, TContext = unknown>(options?: {
+export const getPromoteToStageMutationOptions = <TError = void, TContext = unknown>(options?: {
   mutation?: UseMutationOptions<
     Awaited<ReturnType<typeof promoteToStage>>,
     TError,
@@ -3903,12 +3912,12 @@ export const getPromoteToStageMutationOptions = <TError = unknown, TContext = un
 
 export type PromoteToStageMutationResult = NonNullable<Awaited<ReturnType<typeof promoteToStage>>>;
 export type PromoteToStageMutationBody = PromoteToStageRequest;
-export type PromoteToStageMutationError = unknown;
+export type PromoteToStageMutationError = void;
 
 /**
  * @summary Promote to Stage
  */
-export const usePromoteToStage = <TError = unknown, TContext = unknown>(
+export const usePromoteToStage = <TError = void, TContext = unknown>(
   options?: {
     mutation?: UseMutationOptions<
       Awaited<ReturnType<typeof promoteToStage>>,

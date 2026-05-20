@@ -18,6 +18,7 @@ import (
 	"github.com/rs/cors"
 	"golang.org/x/net/http2"
 	"golang.org/x/net/http2/h2c"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime/schema"
 	"k8s.io/apimachinery/pkg/types"
 	"sigs.k8s.io/controller-runtime/pkg/client"
@@ -104,6 +105,11 @@ type server struct {
 		context.Context,
 		*kargoapi.Stage,
 	) ([]kargoapi.Freight, error)
+	isAutoPromotionEnabledFn func(
+		context.Context,
+		client.Client,
+		metav1.ObjectMeta,
+	) (bool, error)
 	getFreightFromWarehousesFn func(
 		ctx context.Context,
 		project string,
@@ -184,6 +190,7 @@ func NewServer(
 	s.findDownstreamStagesFn = s.findDownstreamStages
 	s.listFreightFn = kubeClient.List
 	s.getAvailableFreightForStageFn = s.getAvailableFreightForStage
+	s.isAutoPromotionEnabledFn = api.IsAutoPromotionEnabled
 	s.getFreightFromWarehousesFn = s.getFreightFromWarehouses
 	s.getVerifiedFreightFn = s.getVerifiedFreight
 	s.patchFreightAliasFn = s.patchFreightAlias

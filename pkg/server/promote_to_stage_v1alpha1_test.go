@@ -618,8 +618,8 @@ func TestPromoteToStageCreatesAutoPromotionHold(t *testing.T) {
 			key types.NamespacedName,
 		) (*kargoapi.Stage, error) {
 			stage := &kargoapi.Stage{}
-			if err := c.Get(ctx, key, stage); err != nil {
-				return nil, err
+			if getErr := c.Get(ctx, key, stage); getErr != nil {
+				return nil, getErr
 			}
 			return stage, nil
 		},
@@ -645,6 +645,9 @@ func TestPromoteToStageCreatesAutoPromotionHold(t *testing.T) {
 			return nil
 		},
 		createPromotionFn: kubeClient.Create,
+		isAutoPromotionEnabledFn: func(context.Context, client.Client, metav1.ObjectMeta) (bool, error) {
+			return true, nil
+		},
 		getAvailableFreightForStageFn: func(
 			context.Context,
 			*kargoapi.Stage,
@@ -681,6 +684,18 @@ func Test_server_promoteToStage(t *testing.T) {
 	now := time.Now()
 	testProject := &kargoapi.Project{
 		ObjectMeta: metav1.ObjectMeta{Name: "fake-project"},
+	}
+	testProjectConfig := &kargoapi.ProjectConfig{
+		ObjectMeta: metav1.ObjectMeta{
+			Name:      testProject.Name,
+			Namespace: testProject.Name,
+		},
+		Spec: kargoapi.ProjectConfigSpec{
+			PromotionPolicies: []kargoapi.PromotionPolicy{{
+				StageSelector:        &kargoapi.PromotionPolicySelector{Name: "fake-stage"},
+				AutoPromotionEnabled: true,
+			}},
+		},
 	}
 	testWarehouse := &kargoapi.Warehouse{
 		ObjectMeta: metav1.ObjectMeta{
@@ -925,7 +940,7 @@ func Test_server_promoteToStage(t *testing.T) {
 			{
 				name: "older freight creates pending auto-promotion hold",
 				clientBuilder: fake.NewClientBuilder().
-					WithObjects(testProject, testStage, testFreight, testNewerFreight).
+					WithObjects(testProject, testProjectConfig, testStage, testFreight, testNewerFreight).
 					WithStatusSubresource(testStage),
 				serverSetup: func(_ *testing.T, s *server) {
 					s.authorizeFn = func(
@@ -971,6 +986,7 @@ func Test_server_promoteToStage(t *testing.T) {
 				name: "older freight is rejected while active hold exists for origin",
 				clientBuilder: fake.NewClientBuilder().WithObjects(
 					testProject,
+					testProjectConfig,
 					func() *kargoapi.Stage {
 						stage := testStage.DeepCopy()
 						stage.Status.AutoPromotionHolds = map[string]kargoapi.AutoPromotionHold{
@@ -1031,6 +1047,7 @@ func Test_server_promoteToStage(t *testing.T) {
 				name: "older freight is rejected while pending hold exists for origin",
 				clientBuilder: fake.NewClientBuilder().WithObjects(
 					testProject,
+					testProjectConfig,
 					func() *kargoapi.Stage {
 						stage := testStage.DeepCopy()
 						stage.Status.AutoPromotionHolds = map[string]kargoapi.AutoPromotionHold{
@@ -1089,7 +1106,7 @@ func Test_server_promoteToStage(t *testing.T) {
 			{
 				name: "stage refresh failure after rollback promotion creation still returns created",
 				clientBuilder: fake.NewClientBuilder().
-					WithObjects(testProject, testStage, testFreight, testNewerFreight).
+					WithObjects(testProject, testProjectConfig, testStage, testFreight, testNewerFreight).
 					WithStatusSubresource(testStage).
 					WithInterceptorFuncs(interceptor.Funcs{
 						Patch: func(
@@ -1148,7 +1165,7 @@ func Test_server_promoteToStage(t *testing.T) {
 				clientBuilder: func() *fake.ClientBuilder {
 					statusPatchCount := 0
 					return fake.NewClientBuilder().
-						WithObjects(testProject, testStage, testFreight, testNewerFreight).
+						WithObjects(testProject, testProjectConfig, testStage, testFreight, testNewerFreight).
 						WithStatusSubresource(testStage).
 						WithInterceptorFuncs(interceptor.Funcs{
 							Create: func(
@@ -1205,7 +1222,7 @@ func Test_server_promoteToStage(t *testing.T) {
 			{
 				name: "stale expected auto-promotion candidate is rejected",
 				clientBuilder: fake.NewClientBuilder().
-					WithObjects(testProject, testStage, testFreight, testNewerFreight),
+					WithObjects(testProject, testProjectConfig, testStage, testFreight, testNewerFreight),
 				serverSetup: func(_ *testing.T, s *server) {
 					s.authorizeFn = func(
 						context.Context,
@@ -1285,6 +1302,7 @@ func Test_server_promoteToStage(t *testing.T) {
 				name: "newest freight promotion marks active hold for clearing on success",
 				clientBuilder: fake.NewClientBuilder().WithObjects(
 					testProject,
+					testProjectConfig,
 					func() *kargoapi.Stage {
 						stage := testStage.DeepCopy()
 						stage.Status.AutoPromotionHolds = map[string]kargoapi.AutoPromotionHold{
@@ -1345,6 +1363,80 @@ func Test_server_promoteToStage(t *testing.T) {
 						t,
 						promos.Items[0].Annotations[kargoapi.AnnotationKeyClearAutoPromotionHoldCreatedAt],
 					)
+				},
+			},
+			{
+				name: "newest freight promotion rejects stale active hold",
+				clientBuilder: func() *fake.ClientBuilder {
+					stageGetCount := 0
+					return fake.NewClientBuilder().WithObjects(
+						testProject,
+						testProjectConfig,
+						func() *kargoapi.Stage {
+							stage := testStage.DeepCopy()
+							stage.Status.AutoPromotionHolds = map[string]kargoapi.AutoPromotionHold{
+								testFreight.Origin.String(): {
+									Freight: kargoapi.FreightReference{
+										Name:   testFreight.Name,
+										Origin: testFreight.Origin,
+									},
+									State:         kargoapi.AutoPromotionHoldStateActive,
+									PromotionName: "rollback-promotion",
+									PromotionUID:  "rollback-uid",
+									CreatedAt:     &metav1.Time{Time: now.Add(-30 * time.Minute)},
+								},
+							}
+							return stage
+						}(),
+						testFreight,
+						testNewerFreight,
+					).WithInterceptorFuncs(interceptor.Funcs{
+						Get: func(
+							ctx context.Context,
+							c client.WithWatch,
+							key client.ObjectKey,
+							obj client.Object,
+							opts ...client.GetOption,
+						) error {
+							if stage, ok := obj.(*kargoapi.Stage); ok && key.Name == testStage.Name {
+								stageGetCount++
+								if err := c.Get(ctx, key, obj, opts...); err != nil {
+									return err
+								}
+								if stageGetCount > 1 {
+									hold := stage.Status.AutoPromotionHolds[testFreight.Origin.String()]
+									hold.PromotionUID = "newer-rollback-uid"
+									stage.Status.AutoPromotionHolds[testFreight.Origin.String()] = hold
+								}
+								return nil
+							}
+							return c.Get(ctx, key, obj, opts...)
+						},
+					})
+				}(),
+				serverSetup: func(_ *testing.T, s *server) {
+					s.authorizeFn = func(
+						context.Context,
+						string,
+						schema.GroupVersionResource,
+						string,
+						client.ObjectKey,
+					) error {
+						return nil
+					}
+				},
+				body: mustJSONBody(promoteToStageRequest{
+					Freight:               testNewerFreight.Name,
+					ExpectedAutoCandidate: testNewerFreight.Name,
+				}),
+				assertions: func(t *testing.T, w *httptest.ResponseRecorder, c client.Client) {
+					require.Equal(t, http.StatusConflict, w.Code)
+					require.Contains(t, w.Body.String(), "auto-promotion hold")
+
+					promos := &kargoapi.PromotionList{}
+					err := c.List(t.Context(), promos, client.InNamespace(testProject.Name))
+					require.NoError(t, err)
+					require.Empty(t, promos.Items)
 				},
 			},
 		},

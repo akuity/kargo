@@ -28,6 +28,12 @@ func (o *PromoteToStageReader) ReadResponse(response runtime.ClientResponse, con
 			return nil, err
 		}
 		return result, nil
+	case 409:
+		result := NewPromoteToStageConflict()
+		if err := result.readResponse(response, consumer, o.formats); err != nil {
+			return nil, err
+		}
+		return nil, result
 	default:
 		return nil, runtime.NewAPIError("[POST /v1beta1/projects/{project}/stages/{stage}/promotions] PromoteToStage", response, response.Code())
 	}
@@ -99,6 +105,62 @@ func (o *PromoteToStageCreated) readResponse(response runtime.ClientResponse, co
 	if err := consumer.Consume(response.Body(), o.Payload); err != nil && !stderrors.Is(err, io.EOF) {
 		return err
 	}
+
+	return nil
+}
+
+// NewPromoteToStageConflict creates a PromoteToStageConflict with default headers values
+func NewPromoteToStageConflict() *PromoteToStageConflict {
+	return &PromoteToStageConflict{}
+}
+
+/*
+PromoteToStageConflict describes a response with status code 409, with default header values.
+
+Conflict
+*/
+type PromoteToStageConflict struct {
+}
+
+// IsSuccess returns true when this promote to stage conflict response has a 2xx status code
+func (o *PromoteToStageConflict) IsSuccess() bool {
+	return false
+}
+
+// IsRedirect returns true when this promote to stage conflict response has a 3xx status code
+func (o *PromoteToStageConflict) IsRedirect() bool {
+	return false
+}
+
+// IsClientError returns true when this promote to stage conflict response has a 4xx status code
+func (o *PromoteToStageConflict) IsClientError() bool {
+	return true
+}
+
+// IsServerError returns true when this promote to stage conflict response has a 5xx status code
+func (o *PromoteToStageConflict) IsServerError() bool {
+	return false
+}
+
+// IsCode returns true when this promote to stage conflict response a status code equal to that given
+func (o *PromoteToStageConflict) IsCode(code int) bool {
+	return code == 409
+}
+
+// Code gets the status code for the promote to stage conflict response
+func (o *PromoteToStageConflict) Code() int {
+	return 409
+}
+
+func (o *PromoteToStageConflict) Error() string {
+	return fmt.Sprintf("[POST /v1beta1/projects/{project}/stages/{stage}/promotions][%d] promoteToStageConflict", 409)
+}
+
+func (o *PromoteToStageConflict) String() string {
+	return fmt.Sprintf("[POST /v1beta1/projects/{project}/stages/{stage}/promotions][%d] promoteToStageConflict", 409)
+}
+
+func (o *PromoteToStageConflict) readResponse(response runtime.ClientResponse, consumer runtime.Consumer, formats strfmt.Registry) error {
 
 	return nil
 }

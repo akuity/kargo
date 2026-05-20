@@ -20,14 +20,27 @@ import (
 
 func Test_server_getStageAutoPromotionCandidates(t *testing.T) {
 	now := time.Now()
+	const stageName = "fake-stage"
 	project := &kargoapi.Project{ObjectMeta: metav1.ObjectMeta{Name: "fake-project"}}
+	projectConfig := &kargoapi.ProjectConfig{
+		ObjectMeta: metav1.ObjectMeta{
+			Name:      project.Name,
+			Namespace: project.Name,
+		},
+		Spec: kargoapi.ProjectConfigSpec{
+			PromotionPolicies: []kargoapi.PromotionPolicy{{
+				StageSelector:        &kargoapi.PromotionPolicySelector{Name: stageName},
+				AutoPromotionEnabled: true,
+			}},
+		},
+	}
 	origin := kargoapi.FreightOrigin{
 		Kind: kargoapi.FreightOriginKindWarehouse,
 		Name: "fake-warehouse",
 	}
 	stage := &kargoapi.Stage{
 		ObjectMeta: metav1.ObjectMeta{
-			Name:      "fake-stage",
+			Name:      stageName,
 			Namespace: project.Name,
 		},
 		Spec: kargoapi.StageSpec{
@@ -66,7 +79,7 @@ func Test_server_getStageAutoPromotionCandidates(t *testing.T) {
 		"/v1beta1/projects/"+project.Name+"/stages/"+stage.Name+"/auto-promotion/candidates",
 		[]restTestCase{{
 			name:          "returns newest available candidate per origin",
-			clientBuilder: fake.NewClientBuilder().WithObjects(project, stage, oldFreight, newFreight),
+			clientBuilder: fake.NewClientBuilder().WithObjects(project, projectConfig, stage, oldFreight, newFreight),
 			assertions: func(t *testing.T, w *httptest.ResponseRecorder, _ client.Client) {
 				require.Equal(t, http.StatusOK, w.Code)
 				var resp autoPromotionCandidatesResponse
@@ -79,9 +92,13 @@ func Test_server_getStageAutoPromotionCandidates(t *testing.T) {
 			name: "returns no candidates when auto-promotion is disabled",
 			clientBuilder: fake.NewClientBuilder().WithObjects(
 				project,
+				func() *kargoapi.ProjectConfig {
+					cfg := projectConfig.DeepCopy()
+					cfg.Spec.PromotionPolicies[0].AutoPromotionEnabled = false
+					return cfg
+				}(),
 				func() *kargoapi.Stage {
 					disabledStage := stage.DeepCopy()
-					disabledStage.Status.AutoPromotionEnabled = false
 					return disabledStage
 				}(),
 				oldFreight,

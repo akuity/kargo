@@ -38,6 +38,7 @@ type promotionOptions struct {
 	DownstreamFrom string
 	Abort          bool
 	Wait           bool
+	Reason         string
 }
 
 func NewCommand(cfg config.CLIConfig, streams genericiooptions.IOStreams) *cobra.Command {
@@ -133,6 +134,12 @@ func (o *promotionOptions) addFlags(cmd *cobra.Command) {
 		"Abort a non-terminal promotion. If set, --%s must be set.", option.NameFlag,
 	))
 	option.Wait(cmd.Flags(), &o.Wait, false, "Wait for the promotion(s) to complete.")
+	cmd.Flags().StringVar(
+		&o.Reason,
+		"reason",
+		"",
+		"Optional explanation for promoting older freight and pausing auto-promotion.",
+	)
 
 	cmd.MarkFlagsOneRequired(option.FreightFlag, option.FreightAliasFlag, option.NameFlag)
 	cmd.MarkFlagsMutuallyExclusive(option.FreightFlag, option.FreightAliasFlag, option.NameFlag)
@@ -203,6 +210,7 @@ func (o *promotionOptions) run(ctx context.Context) error {
 				WithBody(&models.PromoteToStageRequest{
 					Freight:      o.FreightName,
 					FreightAlias: o.FreightAlias,
+					Reason:       o.Reason,
 				}),
 			nil,
 		); err != nil {

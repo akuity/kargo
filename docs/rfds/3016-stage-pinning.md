@@ -306,6 +306,13 @@ The controller should:
 - use one shared auto-candidate resolver with the API server. The Stage
   controller and the promote endpoint must compare against the same candidate
   for an origin.
+- keep candidate resolution limited to the policy decision: live
+  `ProjectConfig` enablement, `Freight` availability, and the origin's
+  selection policy. The temporary duplicate-`Promotion` guard described below
+  is a write-side coexistence guard, not part of "what would automation choose
+  right now." Mixing it into candidate resolution would hide the latest
+  candidate from rollback/hold logic and could let a future newer `Freight`
+  move the `Stage` forward unexpectedly.
 - thread accumulated `newStatus` forward between sub-reconcilers (or use an
   in-memory signal) so a hold written by `syncPromotions` is visible to
   `autoPromoteFreight` in the same reconcile pass. The current sub-reconciler
@@ -472,10 +479,10 @@ observes `Promotion`s for the `Stage`:
   - Found, `Promotion.UID != ""` → patch hold with the UID.
   - Not found, hold age < grace period (default 10m) → leave Pending;
     a retry from the API will likely complete the chain.
-  - Not found, hold age >= grace period → clear the hold; emit a
-    warning-level `HoldAbandoned` event. This is the one recovery path that can
-    resume automation after an attempted rollback never produced a `Promotion`;
-    the event should be visible enough for operators to investigate.
+  - Not found, hold age >= grace period → clear the hold; emit a visible
+    `HoldAbandoned` event. This is the one recovery path that can resume
+    automation after an attempted rollback never produced a `Promotion`; the
+    event should be visible enough for operators to investigate.
 - **Pending hold with `PromotionUID` set.** Standard lifecycle.
   - `Promotion.Status.Phase == Succeeded` → transition hold to Active.
   - `Promotion.Status.Phase` terminal but not Succeeded → clear the
@@ -560,8 +567,10 @@ GET /v1beta1/projects/:project/stages/:stage/auto-promotion/candidates
 
 Returns the `Freight` automation would currently promote for each
 requested origin on this `Stage`, computed with the same resolver the
-controller uses. Authorizes against `get` on `stages` (the same permission
-needed to read the `Stage` itself).
+controller uses. The resolver checks live `ProjectConfig` policy rather than
+trusting the `Stage.status.autoPromotionEnabled` observation, so a stale
+status field does not create or suppress holds. Authorizes against `get` on
+`stages` (the same permission needed to read the `Stage` itself).
 
 Response:
 
@@ -570,7 +579,10 @@ Response:
   "candidates": [
     {
       "origin":  {"kind": "Warehouse", "name": "nginx"},
-      "freight": {"name": "<freight-name>", "alias": "..."}
+      "freight": {
+        "name": "<freight-name>",
+        "origin": {"kind": "Warehouse", "name": "nginx"}
+      }
     }
   ]
 }
@@ -595,15 +607,15 @@ creating or resuming a `Promotion`. This endpoint is informational only.
 ### CLI follow-up shape
 
 ```
-kargo rollback <stage> --freight <name|alias> [--reason "..."]
-kargo resume-auto-promotion <stage> --origin <kind>/<name>
+kargo promote --stage <stage> --freight <name> [--reason "..."]
+kargo promote --stage <stage> --freight-alias <alias> [--reason "..."]
+kargo resume-auto-promotion --stage <stage> --origin <kind>/<name>
 ```
 
-`kargo rollback` would be a thin wrapper over `POST /promotions`: the
-server-side rule handles pausing automatically when the target is not the
-current auto candidate. `resume-auto-promotion` would target the resume
-endpoint. The first implementation can ship the REST surface and UI while
-leaving this CLI wrapper as follow-up work.
+The existing `promote` command can carry an optional reason; the server-side
+rule handles pausing automatically when the target is not the current auto
+candidate. `resume-auto-promotion` targets the resume endpoint directly and
+requires the held origin so multi-origin stages resume only the intended lane.
 
 ### Authorization
 
@@ -845,6 +857,17 @@ bump on resume, the sub-reconciler `newStatus` propagation, and the
 Full reproduction steps, manifests, and the empirical narrative are in
 [`hack/spike-3016/README.md`](../../hack/spike-3016/README.md).
 
+A later local Tilt/kind run on the production branch validated the same user
+path through REST, CLI, and the dashboard: stale candidate preconditions return
+`409`, `kargo promote --reason` records an Active origin hold, the dashboard
+shows the per-origin `Auto-paused` state and candidate-aware resume
+confirmation, and `resume-auto-promotion` clears the hold. One coexistence
+gotcha showed up clearly: while the older duplicate-`Promotion` guard remains,
+clearing a hold may not immediately create another auto-`Promotion` for a
+`Freight` that already has a `Promotion` to the same `Stage`. That is consistent
+with the phased rollout; the stable contract for this RFD is that the hold is
+cleared deliberately and automation is no longer blocked by the hold.
+
 ## Test scenarios
 
 The implementation should explicitly cover:
@@ -935,7 +958,7 @@ The implementation should explicitly cover:
 - **Events and metrics.** Recommended to emit:
   - `Event`s on the `Stage` for hold creation, update, and clear, including
     the `Actor` and `Reason` so the audit trail is complete without joining
-    other resources. `HoldAbandoned` should be warning-level because abandoned
+    other resources. `HoldAbandoned` should be conspicuous because abandoned
     pending-hold cleanup can resume automation after an attempted rollback never
     produced a `Promotion`.
   - Metrics:

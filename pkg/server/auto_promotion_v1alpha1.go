@@ -157,7 +157,7 @@ func (s *server) resumeStageAutoPromotion(c *gin.Context) {
 		return removeAutoPromotionHolds(status, func(origin string, hold kargoapi.AutoPromotionHold) bool {
 			return origin == req.Origin.String() &&
 				hold.State == kargoapi.AutoPromotionHoldStateActive &&
-				autoPromotionHoldIdentityMatches(hold, expectedHold)
+				api.AutoPromotionHoldIdentityMatches(hold, expectedHold)
 		})
 	})
 	if err != nil {
@@ -225,7 +225,18 @@ func (s *server) getAutoPromotionCandidates(
 	ctx context.Context,
 	stage *kargoapi.Stage,
 ) (map[string]*kargoapi.Freight, error) {
-	if !stage.Status.AutoPromotionEnabled {
+	if s.isAutoPromotionEnabledFn == nil && s.client == nil {
+		return map[string]*kargoapi.Freight{}, nil
+	}
+	isAutoPromotionEnabledFn := s.isAutoPromotionEnabledFn
+	if isAutoPromotionEnabledFn == nil {
+		isAutoPromotionEnabledFn = api.IsAutoPromotionEnabled
+	}
+	enabled, err := isAutoPromotionEnabledFn(ctx, s.client, stage.ObjectMeta)
+	if err != nil {
+		return nil, fmt.Errorf("check auto-promotion enablement: %w", err)
+	}
+	if !enabled {
 		return map[string]*kargoapi.Freight{}, nil
 	}
 
@@ -238,20 +249,13 @@ func (s *server) getAutoPromotionCandidates(
 		return nil, fmt.Errorf("get available Freight for Stage: %w", err)
 	}
 
+	selected, err := api.SelectAutoPromotionCandidates(stage, availableFreight)
+	if err != nil {
+		return nil, fmt.Errorf("select auto-promotion candidates: %w", err)
+	}
 	candidates := make(map[string]*kargoapi.Freight)
-	for i := range availableFreight {
-		freight := &availableFreight[i]
-		origin := freight.Origin.String()
-		candidate := candidates[origin]
-		cmp := 1
-		if candidate != nil {
-			cmp = freight.CreationTimestamp.Compare(candidate.CreationTimestamp.Time)
-		}
-		if candidate == nil ||
-			cmp > 0 ||
-			(cmp == 0 && freight.Name > candidate.Name) {
-			candidates[origin] = freight.DeepCopy()
-		}
+	for origin, freight := range selected {
+		candidates[origin] = freight.DeepCopy()
 	}
 	return candidates, nil
 }
@@ -333,17 +337,6 @@ func removeAutoPromotionHolds(
 		status.AutoPromotionHolds = nil
 	}
 	return changed
-}
-
-func autoPromotionHoldIdentityMatches(
-	hold kargoapi.AutoPromotionHold,
-	expected kargoapi.AutoPromotionHold,
-) bool {
-	return hold.Freight.Name == expected.Freight.Name &&
-		hold.Freight.Origin.Equals(&expected.Freight.Origin) &&
-		hold.PromotionName == expected.PromotionName &&
-		hold.PromotionUID == expected.PromotionUID &&
-		hold.CreatedAt.Equal(expected.CreatedAt)
 }
 
 func autoPromotionHoldActor(ctx context.Context) string {

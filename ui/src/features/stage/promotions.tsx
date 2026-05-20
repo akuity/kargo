@@ -7,7 +7,7 @@ import { Flex, Spin, Table, Tooltip } from 'antd';
 import { ColumnsType } from 'antd/es/table';
 import { format } from 'date-fns';
 import React, { useEffect, useState } from 'react';
-import { Link, generatePath, useParams } from 'react-router-dom';
+import { Link, generatePath, useNavigate, useParams } from 'react-router-dom';
 
 import { paths } from '@ui/config/paths';
 import { transportWithAuth } from '@ui/config/transport';
@@ -25,7 +25,6 @@ import { ListPromotionsResponse } from '@ui/gen/api/service/v1alpha1/service_pb'
 import { KargoService } from '@ui/gen/api/service/v1alpha1/service_pb';
 import { ArgoCDShard } from '@ui/gen/api/service/v1alpha1/service_pb';
 import { Freight, Promotion } from '@ui/gen/api/v1alpha1/generated_pb';
-import { usePromoteToStage } from '@ui/gen/api/v2/core/core';
 import uiPlugins from '@ui/plugins';
 import { UiPluginHoles } from '@ui/plugins/atoms/ui-plugin-hole/ui-plugin-holes';
 import { timestampDate } from '@ui/utils/connectrpc-utils';
@@ -36,6 +35,7 @@ import { hasAbortRequest, promotionCompareFn } from './utils/promotion';
 
 export const Promotions = ({ argocdShard }: { argocdShard?: ArgoCDShard }) => {
   const client = useQueryClient();
+  const navigate = useNavigate();
 
   const { name: projectName, stageName } = useParams();
   const { data: promotionsResponse, isLoading } = useQuery(
@@ -54,18 +54,18 @@ export const Promotions = ({ argocdShard }: { argocdShard?: ArgoCDShard }) => {
     }
   );
 
-  const promotionMutation = usePromoteToStage();
-
   const onRetryPromotion = (promotion: Promotion) => {
     const stage = stageName;
     const project = promotion?.metadata?.namespace;
     const freight = promotion?.spec?.freight;
 
-    promotionMutation.mutate({
-      stage: stage || '',
-      project: project || '',
-      data: { freight }
-    });
+    navigate(
+      generatePath(paths.promote, {
+        name: project || '',
+        freight: freight || '',
+        stage: stage || ''
+      })
+    );
   };
 
   // modal kept in the same component for live view
@@ -160,7 +160,7 @@ export const Promotions = ({ argocdShard }: { argocdShard?: ArgoCDShard }) => {
                 <FontAwesomeIcon
                   className='text-xs cursor-pointer'
                   icon={faUndo}
-                  onClick={() => !promotionMutation.isPending && onRetryPromotion(promotion)}
+                  onClick={() => onRetryPromotion(promotion)}
                 />
               </Tooltip>
             )}

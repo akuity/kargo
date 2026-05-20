@@ -34,7 +34,7 @@ export const useGetPromotionDropdownItems = (stage: Stage) => {
   const queryFreightMutation = useConnectMutation(queryFreight);
   const autoPromotionCandidatesQuery = useGetStageAutoPromotionCandidates(projectName, stageName, {
     query: {
-      enabled: Boolean(projectName && stageName && stage?.status?.autoPromotionEnabled)
+      enabled: Boolean(projectName && stageName && !controlFlow)
     }
   });
 
@@ -104,6 +104,20 @@ export const useGetPromotionDropdownItems = (stage: Stage) => {
       freight,
       onSuccess: (eligibleFreight) => {
         const upstreamFreight = upstreamFreights?.find((item) => item?.name === eligibleFreight);
+        if (
+          autoPromotionCandidatesQuery.isLoading ||
+          autoPromotionCandidatesQuery.isFetching ||
+          !autoPromotionCandidatesQuery.data
+        ) {
+          navigate(
+            generatePath(paths.promote, {
+              name: projectName,
+              freight: eligibleFreight,
+              stage: stageName
+            })
+          );
+          return;
+        }
         const candidateName = getAutoPromotionCandidateName(
           autoPromotionCandidatesQuery.data?.data?.candidates,
           upstreamFreight

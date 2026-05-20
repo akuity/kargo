@@ -79,6 +79,7 @@ func TestReconcile(t *testing.T) {
 		) (*kargoapi.PromotionStatus, *time.Duration, error)
 		terminateFn             func(context.Context, *kargoapi.Promotion) error
 		promoToReconcile        *types.NamespacedName // if nil, uses the first of the promos
+		configure               func(*testing.T, *reconciler)
 		expectPromoteFnCalled   bool
 		expectTerminateFnCalled bool
 		expectedPhase           kargoapi.PromotionPhase
@@ -274,6 +275,133 @@ func TestReconcile(t *testing.T) {
 			},
 		},
 		{
+			name:                  "auto-promotion sees live Stage hold before running",
+			expectPromoteFnCalled: false,
+			promoToReconcile:      &types.NamespacedName{Namespace: "fake-namespace", Name: "fake-promo"},
+			expectedPhase:         kargoapi.PromotionPhaseAborted,
+			promos: []client.Object{
+				&kargoapi.Stage{
+					ObjectMeta: metav1.ObjectMeta{
+						Name:      "fake-stage",
+						Namespace: "fake-namespace",
+					},
+					Status: kargoapi.StageStatus{
+						CurrentPromotion: &kargoapi.PromotionReference{
+							Name: "fake-promo",
+						},
+					},
+				},
+				&kargoapi.Freight{
+					ObjectMeta: metav1.ObjectMeta{
+						Name:      "fake-freight",
+						Namespace: "fake-namespace",
+					},
+					Origin: kargoapi.FreightOrigin{
+						Kind: kargoapi.FreightOriginKindWarehouse,
+						Name: "fake-warehouse",
+					},
+				},
+				func() *kargoapi.Promotion {
+					promo := newPromo("fake-namespace", "fake-promo", "fake-stage", kargoapi.PromotionPhasePending, now)
+					promo.Spec.Freight = "fake-freight"
+					promo.Spec.Source = kargoapi.PromotionSourceAuto
+					return promo
+				}(),
+			},
+			apiReader: fakeReaderWithObjects(t,
+				func() *kargoapi.Stage {
+					stage := &kargoapi.Stage{
+						ObjectMeta: metav1.ObjectMeta{
+							Name:      "fake-stage",
+							Namespace: "fake-namespace",
+						},
+						Status: kargoapi.StageStatus{
+							CurrentPromotion: &kargoapi.PromotionReference{
+								Name: "fake-promo",
+							},
+							AutoPromotionHolds: map[string]kargoapi.AutoPromotionHold{
+								"Warehouse/fake-warehouse": {
+									Freight: kargoapi.FreightReference{Name: "older-freight"},
+									State:   kargoapi.AutoPromotionHoldStateActive,
+								},
+							},
+						},
+					}
+					return stage
+				}(),
+				func() *kargoapi.Promotion {
+					promo := newPromo("fake-namespace", "fake-promo", "fake-stage", kargoapi.PromotionPhasePending, now)
+					promo.Spec.Freight = "fake-freight"
+					promo.Spec.Source = kargoapi.PromotionSourceAuto
+					return promo
+				}(),
+			),
+		},
+		{
+			name:                  "auto-promotion sees live Stage hold after running transition",
+			expectPromoteFnCalled: false,
+			promoToReconcile:      &types.NamespacedName{Namespace: "fake-namespace", Name: "fake-promo"},
+			expectedPhase:         kargoapi.PromotionPhaseAborted,
+			promos: []client.Object{
+				&kargoapi.Stage{
+					ObjectMeta: metav1.ObjectMeta{
+						Name:      "fake-stage",
+						Namespace: "fake-namespace",
+					},
+					Status: kargoapi.StageStatus{
+						CurrentPromotion: &kargoapi.PromotionReference{
+							Name: "fake-promo",
+						},
+					},
+				},
+				&kargoapi.Freight{
+					ObjectMeta: metav1.ObjectMeta{
+						Name:      "fake-freight",
+						Namespace: "fake-namespace",
+					},
+					Origin: kargoapi.FreightOrigin{
+						Kind: kargoapi.FreightOriginKindWarehouse,
+						Name: "fake-warehouse",
+					},
+				},
+				func() *kargoapi.Promotion {
+					promo := newPromo("fake-namespace", "fake-promo", "fake-stage", kargoapi.PromotionPhasePending, now)
+					promo.Spec.Freight = "fake-freight"
+					promo.Spec.Source = kargoapi.PromotionSourceAuto
+					return promo
+				}(),
+			},
+			configure: func(t *testing.T, r *reconciler) {
+				r.apiReader = stageSequenceReader(t,
+					r.kargoClient,
+					&kargoapi.Stage{
+						ObjectMeta: metav1.ObjectMeta{
+							Name:      "fake-stage",
+							Namespace: "fake-namespace",
+						},
+						Status: kargoapi.StageStatus{
+							CurrentPromotion: &kargoapi.PromotionReference{Name: "fake-promo"},
+						},
+					},
+					&kargoapi.Stage{
+						ObjectMeta: metav1.ObjectMeta{
+							Name:      "fake-stage",
+							Namespace: "fake-namespace",
+						},
+						Status: kargoapi.StageStatus{
+							CurrentPromotion: &kargoapi.PromotionReference{Name: "fake-promo"},
+							AutoPromotionHolds: map[string]kargoapi.AutoPromotionHold{
+								"Warehouse/fake-warehouse": {
+									Freight: kargoapi.FreightReference{Name: "older-freight"},
+									State:   kargoapi.AutoPromotionHoldStateActive,
+								},
+							},
+						},
+					},
+				)
+			},
+		},
+		{
 			name:                  "promoteFn panics",
 			expectPromoteFnCalled: true,
 			expectedPhase:         kargoapi.PromotionPhaseErrored,
@@ -424,6 +552,9 @@ func TestReconcile(t *testing.T) {
 			r := newFakeReconciler(t, recorder, tc.promos...)
 			if tc.apiReader != nil {
 				r.apiReader = tc.apiReader
+			}
+			if tc.configure != nil {
+				tc.configure(t, r)
 			}
 
 			promoteWasCalled := false
@@ -1260,4 +1391,44 @@ func fakeReaderWithObjects(t *testing.T, objs ...client.Object) client.Reader {
 	require.NoError(t, kargoapi.SchemeBuilder.AddToScheme(scheme))
 	return fake.NewClientBuilder().WithScheme(scheme).
 		WithObjects(objs...).WithStatusSubresource(objs...).Build()
+}
+
+func stageSequenceReader(
+	t *testing.T,
+	base client.Reader,
+	stages ...*kargoapi.Stage,
+) client.Reader {
+	t.Helper()
+	return &sequencedStageReader{base: base, stages: stages}
+}
+
+type sequencedStageReader struct {
+	base      client.Reader
+	stageGets int
+	stages    []*kargoapi.Stage
+}
+
+func (s *sequencedStageReader) Get(
+	ctx context.Context,
+	key client.ObjectKey,
+	obj client.Object,
+	opts ...client.GetOption,
+) error {
+	if stage, ok := obj.(*kargoapi.Stage); ok {
+		if s.stageGets >= len(s.stages) {
+			s.stageGets = len(s.stages) - 1
+		}
+		s.stages[s.stageGets].DeepCopyInto(stage)
+		s.stageGets++
+		return nil
+	}
+	return s.base.Get(ctx, key, obj, opts...)
+}
+
+func (s *sequencedStageReader) List(
+	ctx context.Context,
+	list client.ObjectList,
+	opts ...client.ListOption,
+) error {
+	return s.base.List(ctx, list, opts...)
 }
