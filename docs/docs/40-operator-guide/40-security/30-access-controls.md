@@ -99,7 +99,7 @@ metadata:
     rbac.kargo.akuity.io/claims: |
       {
         "sub": ["alice", "bob" ],
-        "email": "carl@example.com",
+        "email": ["carl@example.com"],
         "groups": ["devops", "kargo-admin"]
       }
 ```
