@@ -44,10 +44,13 @@ func Test_prHandler_handleOpened(t *testing.T) {
 
 	testCases := []struct {
 		name                  string
+		action                string
 		body                  string
+		author                string
 		authorAssoc           string
 		sender                string
 		existingIssue         *github.Issue
+		isMembers             map[string]bool
 		expectedLabelsAdded   map[string]struct{}
 		expectedCommentsAdded map[string]struct{}
 		expectClosed          bool
@@ -62,6 +65,37 @@ func Test_prHandler_handleOpened(t *testing.T) {
 				"needs/priority": {},
 			},
 			// OnPass fires regardless of exemption (cleanup-style actions).
+			expectedCommentsAdded: map[string]struct{}{"PR passes policy.": {}},
+		},
+		{
+			name:        "concealed-member author exempt via IsMember fallback",
+			body:        "No issue reference here.", // Would ordinarily close the PR
+			author:      "frankenstein",
+			authorAssoc: "CONTRIBUTOR", // GitHub conceals private membership
+			sender:      "frankenstein",
+			isMembers:   map[string]bool{"frankenstein": true},
+			expectedLabelsAdded: map[string]struct{}{
+				"needs/area":     {},
+				"needs/kind":     {},
+				"needs/priority": {},
+			},
+			expectedCommentsAdded: map[string]struct{}{"PR passes policy.": {}},
+		},
+		{
+			// applyPolicyOnly path: a maintainer marking a non-maintainer's
+			// stuck PR ready for review acts as an implicit endorsement that
+			// exempts the PR. Labels are not re-asserted on this path
+			// (it's policy-only).
+			name:        "maintainer sender exempts a non-maintainer author's PR on ready_for_review",
+			action:      "ready_for_review",
+			body:        "No issue reference here.",
+			author:      "external",
+			authorAssoc: "NONE",
+			sender:      "kent",
+			isMembers: map[string]bool{
+				"external": false,
+				"kent":     true,
+			},
 			expectedCommentsAdded: map[string]struct{}{"PR passes policy.": {}},
 		},
 		{
@@ -195,15 +229,24 @@ func Test_prHandler_handleOpened(t *testing.T) {
 			if authorAssoc == "" {
 				authorAssoc = "NONE"
 			}
+			author := testCase.author
+			if author == "" {
+				author = "some-user"
+			}
 			sender := testCase.sender
 			if sender == "" {
-				sender = "some-user"
+				sender = author
+			}
+			action := testCase.action
+			if action == "" {
+				action = "opened"
 			}
 			event := &github.PullRequestEvent{
-				Action: github.Ptr("opened"),
+				Action: github.Ptr(action),
 				PullRequest: &github.PullRequest{
 					Number:            github.Ptr(1),
 					Body:              github.Ptr(testCase.body),
+					User:              &github.User{Login: github.Ptr(author)},
 					AuthorAssociation: github.Ptr(authorAssoc),
 				},
 				Repo: &github.Repository{
@@ -214,14 +257,33 @@ func Test_prHandler_handleOpened(t *testing.T) {
 				Installation: &github.Installation{ID: github.Ptr(int64(1))},
 			}
 
+			orgsClient := &fakeOrganizationsClient{
+				IsMemberFn: func(
+					_ context.Context,
+					_ string,
+					user string,
+				) (bool, *github.Response, error) {
+					member, ok := testCase.isMembers[user]
+					if !ok {
+						return false, nil, nil
+					}
+					return member, nil, nil
+				},
+			}
+
 			h := &prHandler{
 				cfg:          cfg,
 				owner:        "akuity",
 				repo:         "kargo",
 				issuesClient: issuesClient,
 				prsClient:    prsClient,
+				orgsClient:   orgsClient,
 			}
-			err := h.handleOpened(t.Context(), event, nil)
+			var opts *handlePROpenedOpts
+			if action == "reopened" || action == "ready_for_review" {
+				opts = &handlePROpenedOpts{applyPolicyOnly: true}
+			}
+			err := h.handleOpened(t.Context(), event, opts)
 			require.NoError(t, err)
 
 			if testCase.expectedLabelsAdded == nil {
@@ -238,12 +300,13 @@ func Test_prHandler_handleOpened(t *testing.T) {
 	}
 }
 
-func Test_prHandler_isExemptFromPRPolicy(t *testing.T) {
+func Test_isExemptFromPRPolicy(t *testing.T) {
 	testCases := []struct {
 		name        string
 		cfg         config
+		authorLogin string
 		association string
-		login       string
+		senderLogin string
 		additions   int
 		deletions   int
 		// listFiles, when set, populates fakePullRequestsClient.ListFilesFn.
@@ -252,14 +315,20 @@ func Test_prHandler_isExemptFromPRPolicy(t *testing.T) {
 		listFiles []string
 		// listFilesErr, when set, makes the fake return this error.
 		listFilesErr error
-		expected     bool
-		expectErr    bool
+		// isMembers maps username → membership state returned by the fake
+		// OrganizationsClient. nil means IsMember should not be called.
+		isMembers map[string]bool
+		// isMemberErr, when set, makes the fake return this error.
+		isMemberErr error
+		expected    bool
+		expectErr   bool
 	}{
 		{
 			name:        "nil PullRequests not exempt",
 			cfg:         config{},
+			authorLogin: "kent",
 			association: "MEMBER",
-			login:       "kent",
+			senderLogin: "kent",
 			expected:    false,
 		},
 		{
@@ -268,20 +337,22 @@ func Test_prHandler_isExemptFromPRPolicy(t *testing.T) {
 				MaintainerAssociations: []string{"MEMBER"},
 				PullRequests:           &pullRequestsConfig{},
 			},
+			authorLogin: "kent",
 			association: "MEMBER",
-			login:       "kent",
+			senderLogin: "kent",
 			expected:    false,
 		},
 		{
-			name: "maintainer exempt when enabled",
+			name: "maintainer author exempt via fast path",
 			cfg: config{
 				MaintainerAssociations: []string{"MEMBER"},
 				PullRequests: &pullRequestsConfig{
 					Exemptions: &exemptionsConfig{Maintainers: true},
 				},
 			},
+			authorLogin: "kent",
 			association: "MEMBER",
-			login:       "kent",
+			senderLogin: "kent",
 			expected:    true,
 		},
 		{
@@ -292,9 +363,103 @@ func Test_prHandler_isExemptFromPRPolicy(t *testing.T) {
 					Exemptions: &exemptionsConfig{Maintainers: false},
 				},
 			},
+			authorLogin: "kent",
 			association: "MEMBER",
-			login:       "kent",
+			senderLogin: "kent",
 			expected:    false,
+		},
+		{
+			name: "concealed-member author exempt via IsMember fallback",
+			cfg: config{
+				MaintainerAssociations: []string{"MEMBER"},
+				PullRequests: &pullRequestsConfig{
+					Exemptions: &exemptionsConfig{Maintainers: true},
+				},
+			},
+			authorLogin: "frankenstein",
+			// Concealed members appear as CONTRIBUTOR in webhook payloads
+			// even when the App holds Organization Members: Read.
+			association: "CONTRIBUTOR",
+			senderLogin: "frankenstein",
+			isMembers:   map[string]bool{"frankenstein": true},
+			expected:    true,
+		},
+		{
+			name: "concealed non-member author not exempt",
+			cfg: config{
+				MaintainerAssociations: []string{"MEMBER"},
+				PullRequests: &pullRequestsConfig{
+					Exemptions: &exemptionsConfig{Maintainers: true},
+				},
+			},
+			authorLogin: "external",
+			association: "CONTRIBUTOR",
+			senderLogin: "external",
+			isMembers:   map[string]bool{"external": false},
+			expected:    false,
+		},
+		{
+			name: "IsMember error on author propagates",
+			cfg: config{
+				MaintainerAssociations: []string{"MEMBER"},
+				PullRequests: &pullRequestsConfig{
+					Exemptions: &exemptionsConfig{Maintainers: true},
+				},
+			},
+			authorLogin: "frankenstein",
+			association: "CONTRIBUTOR",
+			senderLogin: "frankenstein",
+			isMemberErr: errors.New("network error"),
+			expected:    false,
+			expectErr:   true,
+		},
+		{
+			name: "sender-as-maintainer escape hatch: non-maintainer author, maintainer sender",
+			cfg: config{
+				MaintainerAssociations: []string{"MEMBER"},
+				PullRequests: &pullRequestsConfig{
+					Exemptions: &exemptionsConfig{Maintainers: true},
+				},
+			},
+			authorLogin: "external",
+			association: "CONTRIBUTOR",
+			senderLogin: "kent",
+			isMembers: map[string]bool{
+				"external": false,
+				"kent":     true,
+			},
+			expected: true,
+		},
+		{
+			name: "sender check skipped when sender == author",
+			cfg: config{
+				MaintainerAssociations: []string{"MEMBER"},
+				PullRequests: &pullRequestsConfig{
+					Exemptions: &exemptionsConfig{Maintainers: true},
+				},
+			},
+			authorLogin: "external",
+			association: "CONTRIBUTOR",
+			senderLogin: "external",
+			isMembers:   map[string]bool{"external": false},
+			expected:    false,
+		},
+		{
+			name: "non-maintainer author + non-maintainer sender not exempt",
+			cfg: config{
+				MaintainerAssociations: []string{"MEMBER"},
+				PullRequests: &pullRequestsConfig{
+					Exemptions: &exemptionsConfig{Maintainers: true},
+				},
+			},
+			authorLogin: "external",
+			association: "CONTRIBUTOR",
+			senderLogin: "another-external",
+			isMembers: map[string]bool{
+				"external":         false,
+				"another-external": false,
+			},
+			expected: false,
 		},
 		{
 			name: "bot exempt when enabled",
@@ -303,8 +468,9 @@ func Test_prHandler_isExemptFromPRPolicy(t *testing.T) {
 					Exemptions: &exemptionsConfig{Bots: true},
 				},
 			},
+			authorLogin: "dependabot[bot]",
 			association: "NONE",
-			login:       "dependabot[bot]",
+			senderLogin: "dependabot[bot]",
 			expected:    true,
 		},
 		{
@@ -314,8 +480,9 @@ func Test_prHandler_isExemptFromPRPolicy(t *testing.T) {
 					Exemptions: &exemptionsConfig{Bots: false},
 				},
 			},
+			authorLogin: "dependabot[bot]",
 			association: "NONE",
-			login:       "dependabot[bot]",
+			senderLogin: "dependabot[bot]",
 			expected:    false,
 		},
 		{
@@ -325,8 +492,9 @@ func Test_prHandler_isExemptFromPRPolicy(t *testing.T) {
 					Exemptions: &exemptionsConfig{MaxChangedLines: 5},
 				},
 			},
+			authorLogin: "random-user",
 			association: "NONE",
-			login:       "random-user",
+			senderLogin: "random-user",
 			additions:   3,
 			deletions:   2,
 			expected:    true,
@@ -338,8 +506,9 @@ func Test_prHandler_isExemptFromPRPolicy(t *testing.T) {
 					Exemptions: &exemptionsConfig{MaxChangedLines: 5},
 				},
 			},
+			authorLogin: "random-user",
 			association: "NONE",
-			login:       "random-user",
+			senderLogin: "random-user",
 			additions:   1,
 			deletions:   0,
 			expected:    true,
@@ -351,8 +520,9 @@ func Test_prHandler_isExemptFromPRPolicy(t *testing.T) {
 					Exemptions: &exemptionsConfig{MaxChangedLines: 5},
 				},
 			},
+			authorLogin: "random-user",
 			association: "NONE",
-			login:       "random-user",
+			senderLogin: "random-user",
 			additions:   4,
 			deletions:   2,
 			expected:    false,
@@ -364,8 +534,9 @@ func Test_prHandler_isExemptFromPRPolicy(t *testing.T) {
 					Exemptions: &exemptionsConfig{MaxChangedLines: 0},
 				},
 			},
+			authorLogin: "random-user",
 			association: "NONE",
-			login:       "random-user",
+			senderLogin: "random-user",
 			additions:   1,
 			deletions:   0,
 			expected:    false,
@@ -379,8 +550,9 @@ func Test_prHandler_isExemptFromPRPolicy(t *testing.T) {
 					},
 				},
 			},
+			authorLogin: "random-user",
 			association: "NONE",
-			login:       "random-user",
+			senderLogin: "random-user",
 			listFiles:   []string{"README.md", "docs/foo.md", "docs/sub/bar.md"},
 			expected:    true,
 		},
@@ -393,8 +565,9 @@ func Test_prHandler_isExemptFromPRPolicy(t *testing.T) {
 					},
 				},
 			},
+			authorLogin: "random-user",
 			association: "NONE",
-			login:       "random-user",
+			senderLogin: "random-user",
 			listFiles:   []string{"README.md", "main.go"},
 			expected:    false,
 		},
@@ -405,8 +578,9 @@ func Test_prHandler_isExemptFromPRPolicy(t *testing.T) {
 					Exemptions: &exemptionsConfig{},
 				},
 			},
+			authorLogin: "random-user",
 			association: "NONE",
-			login:       "random-user",
+			senderLogin: "random-user",
 			expected:    false,
 		},
 		{
@@ -418,8 +592,9 @@ func Test_prHandler_isExemptFromPRPolicy(t *testing.T) {
 					},
 				},
 			},
+			authorLogin:  "random-user",
 			association:  "NONE",
-			login:        "random-user",
+			senderLogin:  "random-user",
 			listFilesErr: errors.New("network error"),
 			expected:     false,
 			expectErr:    true,
@@ -435,8 +610,10 @@ func Test_prHandler_isExemptFromPRPolicy(t *testing.T) {
 					},
 				},
 			},
+			authorLogin: "random-user",
 			association: "NONE",
-			login:       "random-user",
+			senderLogin: "random-user",
+			isMembers:   map[string]bool{"random-user": false},
 			expected:    false,
 		},
 	}
@@ -463,15 +640,32 @@ func Test_prHandler_isExemptFromPRPolicy(t *testing.T) {
 					return files, nil, nil
 				},
 			}
+			orgsClient := &fakeOrganizationsClient{
+				IsMemberFn: func(
+					_ context.Context,
+					_ string,
+					user string,
+				) (bool, *github.Response, error) {
+					if testCase.isMemberErr != nil {
+						return false, nil, testCase.isMemberErr
+					}
+					member, ok := testCase.isMembers[user]
+					if !ok {
+						t.Fatalf("unexpected IsMember call for %q", user)
+					}
+					return member, nil, nil
+				},
+			}
 			pr := &github.PullRequest{
 				Number:            github.Ptr(1),
+				User:              &github.User{Login: github.Ptr(testCase.authorLogin)},
 				AuthorAssociation: github.Ptr(testCase.association),
 				Additions:         github.Ptr(testCase.additions),
 				Deletions:         github.Ptr(testCase.deletions),
 			}
 			result, err := isExemptFromPRPolicy(
-				t.Context(), testCase.cfg, prsClient,
-				"akuity", "kargo", pr, testCase.login,
+				t.Context(), testCase.cfg, prsClient, orgsClient,
+				"akuity", "kargo", pr, testCase.senderLogin,
 			)
 			if testCase.expectErr {
 				require.Error(t, err)

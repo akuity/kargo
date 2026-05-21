@@ -1,29 +1,185 @@
 package governance
 
 import (
+	"context"
+	"errors"
 	"testing"
 
+	"github.com/google/go-github/v76/github"
 	"github.com/stretchr/testify/require"
 )
 
 func Test_isMaintainer(t *testing.T) {
-	cfg := config{
-		MaintainerAssociations: []string{"MEMBER", "OWNER"},
-	}
 	testCases := []struct {
 		name        string
-		association string
-		expected    bool
+		cfg         config
+		authorAssoc string
+		login       string
+		orgsClient  OrganizationsClient
+		assert      func(*testing.T, bool, error)
 	}{
-		{name: "MEMBER is maintainer", association: "MEMBER", expected: true},
-		{name: "OWNER is maintainer", association: "OWNER", expected: true},
-		{name: "case insensitive", association: "member", expected: true},
-		{name: "NONE is not maintainer", association: "NONE", expected: false},
-		{name: "CONTRIBUTOR is not maintainer", association: "CONTRIBUTOR", expected: false},
+		{
+			name: "fast path: MEMBER matches",
+			cfg: config{
+				MaintainerAssociations: []string{"MEMBER", "OWNER"},
+			},
+			authorAssoc: "MEMBER",
+			login:       "alice",
+			assert: func(t *testing.T, ok bool, err error) {
+				require.NoError(t, err)
+				require.True(t, ok)
+			},
+		},
+		{
+			name: "fast path: OWNER matches",
+			cfg: config{
+				MaintainerAssociations: []string{"MEMBER", "OWNER"},
+			},
+			authorAssoc: "OWNER",
+			login:       "alice",
+			assert: func(t *testing.T, ok bool, err error) {
+				require.NoError(t, err)
+				require.True(t, ok)
+			},
+		},
+		{
+			name: "fast path: case insensitive",
+			cfg: config{
+				MaintainerAssociations: []string{"MEMBER", "OWNER"},
+			},
+			authorAssoc: "member",
+			login:       "alice",
+			assert: func(t *testing.T, ok bool, err error) {
+				require.NoError(t, err)
+				require.True(t, ok)
+			},
+		},
+		{
+			name: "fast path miss + no orgsClient: no fallback",
+			cfg: config{
+				MaintainerAssociations: []string{"MEMBER", "OWNER"},
+			},
+			authorAssoc: "CONTRIBUTOR",
+			login:       "alice",
+			orgsClient:  nil,
+			assert: func(t *testing.T, ok bool, err error) {
+				require.NoError(t, err)
+				require.False(t, ok)
+			},
+		},
+		{
+			name: "fast path miss + empty login: no fallback",
+			cfg: config{
+				MaintainerAssociations: []string{"MEMBER", "OWNER"},
+			},
+			authorAssoc: "CONTRIBUTOR",
+			login:       "",
+			orgsClient: &fakeOrganizationsClient{
+				IsMemberFn: func(context.Context, string, string) (bool, *github.Response, error) {
+					t.Fatal("IsMember should not be called without a login")
+					return false, nil, nil
+				},
+			},
+			assert: func(t *testing.T, ok bool, err error) {
+				require.NoError(t, err)
+				require.False(t, ok)
+			},
+		},
+		{
+			name: "fast path miss + MEMBER not configured: no fallback",
+			cfg: config{
+				MaintainerAssociations: []string{"OWNER"},
+			},
+			authorAssoc: "CONTRIBUTOR",
+			login:       "alice",
+			orgsClient: &fakeOrganizationsClient{
+				IsMemberFn: func(context.Context, string, string) (bool, *github.Response, error) {
+					t.Fatal("IsMember should not be called when MEMBER is not configured")
+					return false, nil, nil
+				},
+			},
+			assert: func(t *testing.T, ok bool, err error) {
+				require.NoError(t, err)
+				require.False(t, ok)
+			},
+		},
+		{
+			name: "slow path: concealed member resolves as maintainer",
+			cfg: config{
+				MaintainerAssociations: []string{"MEMBER", "OWNER"},
+			},
+			authorAssoc: "CONTRIBUTOR",
+			login:       "alice",
+			orgsClient: &fakeOrganizationsClient{
+				IsMemberFn: func(_ context.Context, org, user string) (bool, *github.Response, error) {
+					require.Equal(t, "akuity", org)
+					require.Equal(t, "alice", user)
+					return true, nil, nil
+				},
+			},
+			assert: func(t *testing.T, ok bool, err error) {
+				require.NoError(t, err)
+				require.True(t, ok)
+			},
+		},
+		{
+			name: "slow path: non-member is not a maintainer",
+			cfg: config{
+				MaintainerAssociations: []string{"MEMBER", "OWNER"},
+			},
+			authorAssoc: "CONTRIBUTOR",
+			login:       "bob",
+			orgsClient: &fakeOrganizationsClient{
+				IsMemberFn: func(context.Context, string, string) (bool, *github.Response, error) {
+					return false, nil, nil
+				},
+			},
+			assert: func(t *testing.T, ok bool, err error) {
+				require.NoError(t, err)
+				require.False(t, ok)
+			},
+		},
+		{
+			name: "slow path: IsMember error propagates",
+			cfg: config{
+				MaintainerAssociations: []string{"MEMBER", "OWNER"},
+			},
+			authorAssoc: "CONTRIBUTOR",
+			login:       "alice",
+			orgsClient: &fakeOrganizationsClient{
+				IsMemberFn: func(context.Context, string, string) (bool, *github.Response, error) {
+					return false, nil, errors.New("boom")
+				},
+			},
+			assert: func(t *testing.T, ok bool, err error) {
+				require.ErrorContains(t, err, "boom")
+				require.False(t, ok)
+			},
+		},
+		{
+			name: "no association configured: nobody is a maintainer",
+			cfg: config{
+				MaintainerAssociations: nil,
+			},
+			authorAssoc: "MEMBER",
+			login:       "alice",
+			assert: func(t *testing.T, ok bool, err error) {
+				require.NoError(t, err)
+				require.False(t, ok)
+			},
+		},
 	}
 	for _, testCase := range testCases {
 		t.Run(testCase.name, func(t *testing.T) {
-			require.Equal(t, testCase.expected, isMaintainer(cfg, testCase.association))
+			ok, err := isMaintainer(
+				context.Background(),
+				testCase.cfg,
+				"akuity",
+				testCase.authorAssoc,
+				testCase.login,
+				testCase.orgsClient,
+			)
+			testCase.assert(t, ok, err)
 		})
 	}
 }

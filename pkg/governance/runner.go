@@ -14,6 +14,7 @@ type actionContext struct {
 	cfg          config
 	issuesClient IssuesClient
 	prsClient    PullRequestsClient
+	orgsClient   OrganizationsClient
 	owner        string
 	repo         string
 	number       int

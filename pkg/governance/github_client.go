@@ -127,6 +127,17 @@ type RepositoriesClient interface {
 	)
 }
 
+// OrganizationsClient is the subset of github.OrganizationsService methods
+// needed by the governance bot. *github.OrganizationsService satisfies this
+// interface.
+type OrganizationsClient interface {
+	IsMember(
+		ctx context.Context,
+		org string,
+		user string,
+	) (bool, *github.Response, error)
+}
+
 // GitHubClientFactory creates authenticated GitHub service clients for
 // a given installation.
 type GitHubClientFactory interface {
@@ -139,6 +150,9 @@ type GitHubClientFactory interface {
 	// NewRepositoriesClient creates a new RepositoriesClient authenticated as the
 	// GitHub App installation with the specified installation ID.
 	NewRepositoriesClient(installationID int64) (RepositoriesClient, error)
+	// NewOrganizationsClient creates a new OrganizationsClient authenticated as
+	// the GitHub App installation with the specified installation ID.
+	NewOrganizationsClient(installationID int64) (OrganizationsClient, error)
 }
 
 // installationClient bundles a per-installation *github.Client with its
@@ -334,6 +348,20 @@ func (f *githubClientFactory) NewRepositoriesClient(
 		)
 	}
 	return client.client.Repositories, nil
+}
+
+// NewOrganizationsClient implements GitHubClientFactory.
+func (f *githubClientFactory) NewOrganizationsClient(
+	installationID int64,
+) (OrganizationsClient, error) {
+	client, err := f.getOrCreateClient(installationID)
+	if err != nil {
+		return nil, fmt.Errorf(
+			"error creating GitHub organizations service client for installation %d: %w",
+			installationID, err,
+		)
+	}
+	return client.client.Organizations, nil
 }
 
 // getOrCreateClient retrieves a cached installationClient for the given

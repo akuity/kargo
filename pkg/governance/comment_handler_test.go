@@ -67,7 +67,9 @@ func Test_commentHandler_handleCreated(t *testing.T) {
 	testCases := []struct {
 		name                  string
 		body                  string
+		authorLogin           string
 		authorAssoc           string
+		isMembers             map[string]bool
 		isPR                  bool
 		expectedLabelsAdded   map[string]struct{}
 		expectedCommentsAdded map[string]struct{}
@@ -84,6 +86,20 @@ func Test_commentHandler_handleCreated(t *testing.T) {
 			name:        "non-maintainer issue comment",
 			body:        "/label-only",
 			authorAssoc: "NONE",
+			isMembers:   map[string]bool{"maintainer": false},
+		},
+		{
+			// Concealed (private) org member: GitHub reports
+			// author_association as CONTRIBUTOR in webhook payloads even
+			// when the App has Organization Members: Read. The
+			// org-membership fallback restores their maintainer status.
+			name:                  "concealed maintainer's slash command is honored",
+			body:                  "/label-only",
+			authorLogin:           "frankenstein",
+			authorAssoc:           "CONTRIBUTOR",
+			isMembers:             map[string]bool{"frankenstein": true},
+			expectedLabelsAdded:   map[string]struct{}{"test-label": {}},
+			expectedCommentsAdded: map[string]struct{}{"Label added.": {}},
 		},
 		{
 			name:        "issue comment with unknown command",
@@ -317,19 +333,38 @@ func Test_commentHandler_handleCreated(t *testing.T) {
 				}
 			}
 
+			authorLogin := testCase.authorLogin
+			if authorLogin == "" {
+				authorLogin = "maintainer"
+			}
 			event := &github.IssueCommentEvent{
 				Action: github.Ptr("created"),
 				Issue:  issue,
 				Comment: &github.IssueComment{
 					Body:              github.Ptr(testCase.body),
+					User:              &github.User{Login: github.Ptr(authorLogin)},
 					AuthorAssociation: github.Ptr(testCase.authorAssoc),
 				},
 				Repo: &github.Repository{
 					Name:  github.Ptr("kargo"),
 					Owner: &github.User{Login: github.Ptr("akuity")},
 				},
-				Sender:       &github.User{Login: github.Ptr("maintainer")},
+				Sender:       &github.User{Login: github.Ptr(authorLogin)},
 				Installation: &github.Installation{ID: github.Ptr(int64(1))},
+			}
+
+			orgsClient := &fakeOrganizationsClient{
+				IsMemberFn: func(
+					_ context.Context,
+					_ string,
+					user string,
+				) (bool, *github.Response, error) {
+					member, ok := testCase.isMembers[user]
+					if !ok {
+						return false, nil, nil
+					}
+					return member, nil, nil
+				},
 			}
 
 			h := &commentHandler{
@@ -338,6 +373,7 @@ func Test_commentHandler_handleCreated(t *testing.T) {
 				repo:         "kargo",
 				issuesClient: issuesClient,
 				prsClient:    prsClient,
+				orgsClient:   orgsClient,
 			}
 			err := h.handleCreated(t.Context(), event)
 			require.NoError(t, err)

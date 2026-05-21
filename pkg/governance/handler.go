@@ -135,6 +135,13 @@ func (h *handler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	orgsClient, err := h.clientFactory.NewOrganizationsClient(installationID)
+	if err != nil {
+		logger.Error(err, "error creating organizations client")
+		w.WriteHeader(http.StatusInternalServerError)
+		return
+	}
+
 	logger = logger.WithValues("owner", owner, "repo", repo)
 	ctx = logging.ContextWithLogger(ctx, logger)
 
@@ -153,6 +160,7 @@ func (h *handler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 			repo:         repo,
 			issuesClient: issuesClient,
 			prsClient:    prsClient,
+			orgsClient:   orgsClient,
 		}
 		err = commentHandler.handleCreated(ctx, e)
 	case *github.IssuesEvent:
@@ -179,6 +187,7 @@ func (h *handler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 			repo:         repo,
 			issuesClient: issuesClient,
 			prsClient:    prsClient,
+			orgsClient:   orgsClient,
 		}
 		opts := &handlePROpenedOpts{}
 		if e.GetAction() == "reopened" || e.GetAction() == "ready_for_review" {

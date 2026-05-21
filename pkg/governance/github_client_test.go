@@ -250,6 +250,46 @@ func Test_pullRequestsClient_ConvertToDraft(t *testing.T) {
 	}
 }
 
+func Test_githubClientFactory_NewOrganizationsClient(t *testing.T) {
+	testCases := []struct {
+		name    string
+		factory *githubClientFactory
+		assert  func(*testing.T, OrganizationsClient, error)
+	}{
+		{
+			name: "returns OrganizationsService from cached client",
+			factory: func() *githubClientFactory {
+				client := github.NewClient(nil)
+				return &githubClientFactory{
+					clients: map[int64]*installationClient{1: {client: client}},
+				}
+			}(),
+			assert: func(t *testing.T, oc OrganizationsClient, err error) {
+				require.NoError(t, err)
+				require.NotNil(t, oc)
+			},
+		},
+		{
+			name: "wraps error with installation ID",
+			factory: &githubClientFactory{
+				newClientFn: func(_ int64) (*installationClient, error) {
+					return nil, errors.New("boom")
+				},
+			},
+			assert: func(t *testing.T, _ OrganizationsClient, err error) {
+				require.ErrorContains(t, err, "installation 1")
+				require.ErrorContains(t, err, "boom")
+			},
+		},
+	}
+	for _, testCase := range testCases {
+		t.Run(testCase.name, func(t *testing.T) {
+			oc, err := testCase.factory.NewOrganizationsClient(1)
+			testCase.assert(t, oc, err)
+		})
+	}
+}
+
 func Test_githubClientFactory_NewRepositoriesClient(t *testing.T) {
 	testCases := []struct {
 		name    string
@@ -397,6 +437,7 @@ type fakeClientFactory struct {
 	issuesClient IssuesClient
 	prsClient    PullRequestsClient
 	reposClient  RepositoriesClient
+	orgsClient   OrganizationsClient
 }
 
 // NewIssuesClient implements GitHubClientFactory.
@@ -412,6 +453,11 @@ func (f *fakeClientFactory) NewPullRequestsClient(int64) (PullRequestsClient, er
 // NewRepositoriesClient implements GitHubClientFactory.
 func (f *fakeClientFactory) NewRepositoriesClient(int64) (RepositoriesClient, error) {
 	return f.reposClient, nil
+}
+
+// NewOrganizationsClient implements GitHubClientFactory.
+func (f *fakeClientFactory) NewOrganizationsClient(int64) (OrganizationsClient, error) {
+	return f.orgsClient, nil
 }
 
 // fakeIssuesClient is a configurable fake IssuesClient. Each method
@@ -661,4 +707,25 @@ func (f *fakeRepositoriesClient) GetContents(
 		Content:  github.Ptr(encoded),
 		Encoding: github.Ptr("base64"),
 	}, nil, nil, nil
+}
+
+// fakeOrganizationsClient is a configurable fake OrganizationsClient.
+type fakeOrganizationsClient struct {
+	IsMemberFn func(
+		ctx context.Context,
+		org string,
+		user string,
+	) (bool, *github.Response, error)
+}
+
+// IsMember implements OrganizationsClient.
+func (f *fakeOrganizationsClient) IsMember(
+	ctx context.Context,
+	org string,
+	user string,
+) (bool, *github.Response, error) {
+	if f.IsMemberFn != nil {
+		return f.IsMemberFn(ctx, org, user)
+	}
+	return false, nil, nil
 }

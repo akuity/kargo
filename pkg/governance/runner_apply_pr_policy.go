@@ -44,6 +44,7 @@ func (applyPRPolicyRunner) run(
 		ac.cfg,
 		ac.issuesClient,
 		ac.prsClient,
+		ac.orgsClient,
 		ac.owner,
 		ac.repo,
 		pr,

@@ -28,6 +28,7 @@ type prHandler struct {
 	repo         string
 	issuesClient IssuesClient
 	prsClient    PullRequestsClient
+	orgsClient   OrganizationsClient
 }
 
 type handlePROpenedOpts struct {
@@ -141,6 +142,7 @@ func (h *prHandler) handleOpened(
 		h.cfg,
 		h.issuesClient,
 		h.prsClient,
+		h.orgsClient,
 		h.owner,
 		h.repo,
 		pr,
@@ -163,13 +165,21 @@ func (h *prHandler) handleOpened(
 //     they'd already been drafted.
 //
 // PullRequests must be non-nil on the supplied config. The exemption check
-// makes a network call (ListFiles) when path patterns are configured;
-// errors there propagate to the caller.
+// makes network calls (ListFiles for path patterns, IsMember for concealed-
+// member detection) when those checks are reached; errors there propagate
+// to the caller.
+//
+// login is the event sender's login — for opened events that's the PR
+// author, for reopened / ready_for_review events that may be a different
+// user. A maintainer sender is treated as exempt even when the PR author
+// isn't, giving maintainers a way to clear stuck PRs by re-triggering
+// policy evaluation.
 func applyPRPolicy(
 	ctx context.Context,
 	cfg config,
 	issuesClient IssuesClient,
 	prsClient PullRequestsClient,
+	orgsClient OrganizationsClient,
 	owner string,
 	repo string,
 	pr *github.PullRequest,
@@ -183,7 +193,7 @@ func applyPRPolicy(
 	issueNumber := parseLinkedIssue(pr.GetBody())
 
 	exempt, err := isExemptFromPRPolicy(
-		ctx, cfg, prsClient, owner, repo, pr, login,
+		ctx, cfg, prsClient, orgsClient, owner, repo, pr, login,
 	)
 	if err != nil {
 		return fmt.Errorf("error checking PR policy exemption: %w", err)
@@ -339,29 +349,64 @@ func (h *prHandler) inheritLabels(
 
 // isExemptFromPRPolicy reports whether the PR matches any of the configured
 // exemption criteria (maintainer, bot, size, path). Criteria are OR'd.
-// Cheaper checks run first; the path check makes a network call (ListFiles)
-// and is only reached if the cheaper checks didn't already exempt the PR.
+// Cheaper checks run first; the path and concealed-member checks make
+// network calls and are only reached when the cheaper checks didn't
+// already exempt the PR.
 //
-// On error from the path check, returns (false, err) — the caller is
-// expected to treat that as "not exempt" and apply policy.
+// For the maintainer criterion, both the PR author and the event sender are
+// considered. If either is a maintainer, the PR is exempt. The sender
+// distinction matters on reopened / ready_for_review events: a maintainer
+// can re-trigger policy on someone else's stuck PR by marking it ready, and
+// that signal is treated as an implicit endorsement.
+//
+// On error from any of the network checks, returns (false, err) — the
+// caller is expected to treat that as "not exempt" and apply policy.
 func isExemptFromPRPolicy(
 	ctx context.Context,
 	cfg config,
 	prsClient PullRequestsClient,
+	orgsClient OrganizationsClient,
 	owner string,
 	repo string,
 	pr *github.PullRequest,
-	login string,
+	senderLogin string,
 ) (bool, error) {
 	if cfg.PullRequests == nil || cfg.PullRequests.Exemptions == nil {
 		return false, nil
 	}
 	ex := cfg.PullRequests.Exemptions
 
-	if ex.Maintainers && isMaintainer(cfg, pr.GetAuthorAssociation()) {
-		return true, nil
+	if ex.Maintainers {
+		// Author check: payload association (cheap), with org-membership
+		// fallback to catch concealed members.
+		authorLogin := pr.GetUser().GetLogin()
+		authorExempt, err := isMaintainer(
+			ctx, cfg, owner,
+			pr.GetAuthorAssociation(), authorLogin, orgsClient,
+		)
+		if err != nil {
+			return false, err
+		}
+		if authorExempt {
+			return true, nil
+		}
+		// Sender check: only meaningful when the sender differs from the
+		// author (i.e. reopened / ready_for_review by someone else). No
+		// payload association is available for the sender, so this relies
+		// on the org-membership fallback.
+		if senderLogin != "" && senderLogin != authorLogin {
+			senderExempt, err := isMaintainer(
+				ctx, cfg, owner, "", senderLogin, orgsClient,
+			)
+			if err != nil {
+				return false, err
+			}
+			if senderExempt {
+				return true, nil
+			}
+		}
 	}
-	if ex.Bots && strings.HasSuffix(login, "[bot]") {
+	if ex.Bots && strings.HasSuffix(senderLogin, "[bot]") {
 		return true, nil
 	}
 	// MaxChangedLines is uint; pr additions/deletions are non-negative ints

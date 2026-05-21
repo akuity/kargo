@@ -20,6 +20,7 @@ type commentHandler struct {
 	repo         string
 	issuesClient IssuesClient
 	prsClient    PullRequestsClient
+	orgsClient   OrganizationsClient
 }
 
 // handleCreated is the handler for the "issue_comment.created" event.
@@ -43,8 +44,15 @@ func (h *commentHandler) handleCreated(
 	}
 
 	// Slash commands are maintainer-only.
-	author := event.GetComment().GetAuthorAssociation()
-	if !isMaintainer(h.cfg, author) {
+	authorAssoc := event.GetComment().GetAuthorAssociation()
+	authorLogin := event.GetComment().GetUser().GetLogin()
+	authorIsMaintainer, err := isMaintainer(
+		ctx, h.cfg, h.owner, authorAssoc, authorLogin, h.orgsClient,
+	)
+	if err != nil {
+		return fmt.Errorf("error checking maintainer status: %w", err)
+	}
+	if !authorIsMaintainer {
 		logger.Debug("comment author is not a maintainer, ignoring")
 		return nil
 	}
@@ -119,6 +127,7 @@ func (h *commentHandler) handleCreated(
 				cfg:          h.cfg,
 				issuesClient: h.issuesClient,
 				prsClient:    h.prsClient,
+				orgsClient:   h.orgsClient,
 				owner:        h.owner,
 				repo:         h.repo,
 				number:       number,

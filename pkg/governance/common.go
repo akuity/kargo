@@ -8,13 +8,48 @@ import (
 	"github.com/akuity/kargo/pkg/logging"
 )
 
-func isMaintainer(cfg config, authorAssoc string) bool {
+// isMaintainer reports whether the given login is considered a maintainer
+// per the configured MaintainerAssociations.
+//
+// Fast path: the supplied authorAssoc (from a webhook payload) is matched
+// against the configured associations.
+//
+// Slow path: if MEMBER is configured but the fast path didn't match, fall
+// back to querying org membership directly. This catches concealed (private)
+// org members — GitHub reports their author_association as CONTRIBUTOR in
+// webhook payloads regardless of the App's permissions, but the
+// orgs/{org}/members/{user} endpoint honors the App's Organization Members
+// permission and returns the true membership state.
+//
+// The fallback is skipped when orgsClient is nil, login is empty, or MEMBER
+// is not in the configured associations.
+func isMaintainer(
+	ctx context.Context,
+	cfg config,
+	org string,
+	authorAssoc string,
+	login string,
+	orgsClient OrganizationsClient,
+) (bool, error) {
+	wantMember := false
 	for _, assoc := range cfg.MaintainerAssociations {
 		if strings.EqualFold(authorAssoc, assoc) {
-			return true
+			return true, nil
+		}
+		if strings.EqualFold(assoc, "MEMBER") {
+			wantMember = true
 		}
 	}
-	return false
+	if !wantMember || login == "" || orgsClient == nil {
+		return false, nil
+	}
+	isMember, _, err := orgsClient.IsMember(ctx, org, login)
+	if err != nil {
+		return false, fmt.Errorf(
+			"error checking org membership of %q: %w", login, err,
+		)
+	}
+	return isMember, nil
 }
 
 func enforceRequiredLabels(
