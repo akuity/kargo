@@ -23,6 +23,14 @@
           "pattern": "^[a-z0-9]([-a-z0-9]*[a-z0-9])?(\\.[a-z0-9]([-a-z0-9]*[a-z0-9])?)*$",
           "type": "string"
         },
+        "source": {
+          "description": "Source describes the system path that created this Promotion. The value is\nimmutable and is used by controllers to distinguish normal auto-promotion\nfrom user-directed promotion requests.",
+          "enum": [
+            "nonAuto",
+            "auto"
+          ],
+          "type": "string"
+        },
         "stage": {
           "description": "Stage specifies the name of the Stage to which this Promotion\napplies. The Stage referenced by this field MUST be in the same\nnamespace as the Promotion.",
           "maxLength": 253,

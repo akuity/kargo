@@ -13,6 +13,7 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/types"
 	toolscache "k8s.io/client-go/tools/cache"
+	"k8s.io/client-go/util/retry"
 	"k8s.io/utils/ptr"
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"
@@ -318,10 +319,17 @@ func (r *reconciler) Reconcile(
 	// If the Promotion does not have a Phase, it must be new and (initially)
 	// pending. Mark it as such.
 	if promo.Status.Phase == "" {
-		if err = kubeclient.PatchStatus(ctx, r.kargoClient, promo, func(status *kargoapi.PromotionStatus) {
+		if promo, err = r.patchPromotionStatus(ctx, req.NamespacedName, func(status *kargoapi.PromotionStatus) bool {
+			if status.Phase != "" {
+				return false
+			}
 			status.Phase = kargoapi.PromotionPhasePending
+			return true
 		}); err != nil {
 			return ctrl.Result{}, err
+		}
+		if promo == nil || promo.Status.Phase.IsTerminal() {
+			return ctrl.Result{}, nil
 		}
 	}
 
@@ -357,14 +365,83 @@ func (r *reconciler) Reconcile(
 		return ctrl.Result{}, nil
 	}
 
+	if freight == nil && promo.Spec.Source == kargoapi.PromotionSourceAuto {
+		if freight, err = r.getLiveFreight(
+			ctx,
+			types.NamespacedName{Namespace: promo.Namespace, Name: promo.Spec.Freight},
+		); err != nil {
+			return ctrl.Result{}, err
+		}
+	}
+
+	if freight != nil &&
+		promo.Spec.Source == kargoapi.PromotionSourceAuto &&
+		promo.Status.Phase != kargoapi.PromotionPhaseRunning {
+		liveStage, awaiting, held, checkErr := r.checkLiveStageForAutoPromotion(ctx, promo, freight)
+		if checkErr != nil {
+			return ctrl.Result{}, checkErr
+		}
+		if !awaiting {
+			logger.Debug("Stage is not awaiting Promotion", "stage", promo.Spec.Stage, "promotion", promo.Name)
+			return ctrl.Result{}, nil
+		}
+		stage = liveStage
+		if held {
+			var aborted bool
+			if aborted, err = r.abortAutoPromotion(ctx, req.NamespacedName, freight.Origin); err != nil {
+				return ctrl.Result{}, err
+			}
+			if !aborted {
+				return ctrl.Result{RequeueAfter: 100 * time.Millisecond}, nil
+			}
+			logger.Info("aborted auto-promotion blocked by auto-promotion hold")
+			return ctrl.Result{}, nil
+		}
+	}
+
 	// Update promo status as Running to give visibility in UI. Also, a promo which
 	// has already entered Running status will be allowed to continue to reconcile.
 	if promo.Status.Phase != kargoapi.PromotionPhaseRunning {
-		if err = kubeclient.PatchStatus(ctx, r.kargoClient, promo, func(status *kargoapi.PromotionStatus) {
+		if promo, err = r.patchPromotionStatus(ctx, req.NamespacedName, func(status *kargoapi.PromotionStatus) bool {
+			if status.Phase == kargoapi.PromotionPhaseRunning {
+				return false
+			}
+			if status.Phase != "" && status.Phase != kargoapi.PromotionPhasePending {
+				return false
+			}
 			status.Phase = kargoapi.PromotionPhaseRunning
 			status.StartedAt = &metav1.Time{Time: time.Now()}
+			return true
 		}); err != nil {
 			return ctrl.Result{}, err
+		}
+		if promo == nil || promo.Status.Phase.IsTerminal() {
+			return ctrl.Result{}, nil
+		}
+		if promo.Status.Phase != kargoapi.PromotionPhaseRunning {
+			return ctrl.Result{}, nil
+		}
+		if freight != nil && promo.Spec.Source == kargoapi.PromotionSourceAuto {
+			liveStage, awaiting, held, checkErr := r.checkLiveStageForAutoPromotion(ctx, promo, freight)
+			if checkErr != nil {
+				return ctrl.Result{}, checkErr
+			}
+			if !awaiting {
+				logger.Debug("Stage is not awaiting Promotion", "stage", promo.Spec.Stage, "promotion", promo.Name)
+				return ctrl.Result{}, nil
+			}
+			stage = liveStage
+			if held {
+				var aborted bool
+				if aborted, err = r.abortAutoPromotion(ctx, req.NamespacedName, freight.Origin); err != nil {
+					return ctrl.Result{}, err
+				}
+				if !aborted {
+					return ctrl.Result{RequeueAfter: 100 * time.Millisecond}, nil
+				}
+				logger.Info("aborted auto-promotion blocked by auto-promotion hold")
+				return ctrl.Result{}, nil
+			}
 		}
 		logger.Info("began promotion")
 	} else {
@@ -458,7 +535,7 @@ func (r *reconciler) Reconcile(
 			},
 		)
 		if getStageErr != nil {
-			return ctrl.Result{}, fmt.Errorf("get stage: %w", err)
+			return ctrl.Result{}, fmt.Errorf("get stage: %w", getStageErr)
 		}
 		if stage == nil {
 			return ctrl.Result{}, fmt.Errorf(
@@ -525,6 +602,162 @@ func (r *reconciler) Reconcile(
 		}, nil
 	}
 	return ctrl.Result{}, nil
+}
+
+// checkLiveStageForAutoPromotion confirms from a live Stage read that this
+// auto-promotion is still the Stage's current Promotion and is not blocked by
+// an auto-promotion hold.
+func (r *reconciler) checkLiveStageForAutoPromotion(
+	ctx context.Context,
+	promo *kargoapi.Promotion,
+	freight *kargoapi.Freight,
+) (*kargoapi.Stage, bool, bool, error) {
+	reader := r.apiReader
+	if reader == nil {
+		reader = r.kargoClient
+	}
+	liveStage := &kargoapi.Stage{}
+	if err := reader.Get(
+		ctx,
+		types.NamespacedName{Namespace: promo.Namespace, Name: promo.Spec.Stage},
+		liveStage,
+	); err != nil {
+		return nil, false, false, client.IgnoreNotFound(err)
+	}
+	if liveStage.Status.CurrentPromotion == nil ||
+		liveStage.Status.CurrentPromotion.Name != promo.Name {
+		return liveStage, false, false, nil
+	}
+	_, held := liveStage.Status.GetAutoPromotionHold(freight.Origin)
+	return liveStage, true, held, nil
+}
+
+// getLiveFreight reads Freight directly from the API server for
+// auto-promotion safety checks that cannot rely on an eventually-consistent
+// informer cache.
+func (r *reconciler) getLiveFreight(
+	ctx context.Context,
+	key types.NamespacedName,
+) (*kargoapi.Freight, error) {
+	reader := r.apiReader
+	if reader == nil {
+		reader = r.kargoClient
+	}
+	freight := &kargoapi.Freight{}
+	if err := reader.Get(ctx, key, freight); err != nil {
+		if apierrors.IsNotFound(err) {
+			return nil, nil
+		}
+		return nil, fmt.Errorf(
+			"error getting live Freight %q in namespace %q: %w",
+			key.Name,
+			key.Namespace,
+			err,
+		)
+	}
+	return freight, nil
+}
+
+// patchPromotionStatus updates Promotion status with optimistic locking and
+// returns the latest Promotion observed during the retry loop.
+func (r *reconciler) patchPromotionStatus(
+	ctx context.Context,
+	key client.ObjectKey,
+	patch func(*kargoapi.PromotionStatus) bool,
+) (*kargoapi.Promotion, error) {
+	var live *kargoapi.Promotion
+	err := retry.RetryOnConflict(retry.DefaultRetry, func() error {
+		reader := r.apiReader
+		if reader == nil {
+			reader = r.kargoClient
+		}
+		live = &kargoapi.Promotion{}
+		if err := reader.Get(ctx, key, live); err != nil {
+			live = nil
+			return client.IgnoreNotFound(err)
+		}
+		original := live.DeepCopy()
+		if !patch(&live.Status) {
+			return nil
+		}
+		return r.kargoClient.Status().Patch(
+			ctx,
+			live,
+			client.MergeFromWithOptions(original, client.MergeFromWithOptimisticLock{}),
+		)
+	})
+	return live, err
+}
+
+// abortAutoPromotion marks a non-terminal auto-promotion as aborted after a
+// Stage hold supersedes it.
+func (r *reconciler) abortAutoPromotion(
+	ctx context.Context,
+	key client.ObjectKey,
+	origin kargoapi.FreightOrigin,
+) (bool, error) {
+	var aborted bool
+	err := retry.RetryOnConflict(retry.DefaultRetry, func() error {
+		aborted = false
+		reader := r.apiReader
+		if reader == nil {
+			reader = r.kargoClient
+		}
+		live := &kargoapi.Promotion{}
+		if err := reader.Get(ctx, key, live); err != nil {
+			return client.IgnoreNotFound(err)
+		}
+		if live.Status.Phase.IsTerminal() {
+			return nil
+		}
+		awaiting, held, err := r.liveStageStillBlocksAutoPromotion(ctx, live, origin)
+		if err != nil {
+			return err
+		}
+		if !awaiting || !held {
+			return nil
+		}
+
+		original := live.DeepCopy()
+		now := metav1.Now()
+		live.Status.Phase = kargoapi.PromotionPhaseAborted
+		live.Status.Message = api.AutoPromotionBlockedByHoldMessage
+		live.Status.FinishedAt = &now
+		aborted = true
+		return r.kargoClient.Status().Patch(
+			ctx,
+			live,
+			client.MergeFromWithOptions(original, client.MergeFromWithOptimisticLock{}),
+		)
+	})
+	return aborted, err
+}
+
+// liveStageStillBlocksAutoPromotion confirms from a live Stage read that an
+// auto-promotion is still current and blocked by a hold for the same origin.
+func (r *reconciler) liveStageStillBlocksAutoPromotion(
+	ctx context.Context,
+	promo *kargoapi.Promotion,
+	origin kargoapi.FreightOrigin,
+) (bool, bool, error) {
+	reader := r.apiReader
+	if reader == nil {
+		reader = r.kargoClient
+	}
+	liveStage := &kargoapi.Stage{}
+	if err := reader.Get(
+		ctx,
+		types.NamespacedName{Namespace: promo.Namespace, Name: promo.Spec.Stage},
+		liveStage,
+	); err != nil {
+		return false, false, client.IgnoreNotFound(err)
+	}
+	if liveStage.Status.CurrentPromotion == nil ||
+		liveStage.Status.CurrentPromotion.Name != promo.Name {
+		return false, false, nil
+	}
+	_, held := liveStage.Status.GetAutoPromotionHold(origin)
+	return true, held, nil
 }
 
 func (r *reconciler) promote(

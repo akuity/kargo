@@ -10,6 +10,7 @@ import (
 	"github.com/go-openapi/errors"
 	"github.com/go-openapi/strfmt"
 	"github.com/go-openapi/swag"
+	"github.com/go-openapi/validate"
 )
 
 // StageStatus stage status
@@ -20,6 +21,12 @@ type StageStatus struct {
 	// AutoPromotionEnabled indicates whether automatic promotion is enabled
 	// for the Stage based on the ProjectConfig.
 	AutoPromotionEnabled bool `json:"autoPromotionEnabled,omitempty"`
+
+	// AutoPromotionHolds pause auto-promotion for specific FreightOrigins on
+	// this Stage after a user-directed promotion intentionally selects an older
+	// piece of Freight. Each map entry pins a single origin keyed by the
+	// canonical string representation of the FreightOrigin.
+	AutoPromotionHolds map[string]AutoPromotionHold `json:"autoPromotionHolds,omitempty"`
 
 	// Conditions contains the last observations of the Stage's current
 	// state.
@@ -82,6 +89,10 @@ type StageStatus struct {
 func (m *StageStatus) Validate(formats strfmt.Registry) error {
 	var res []error
 
+	if err := m.validateAutoPromotionHolds(formats); err != nil {
+		res = append(res, err)
+	}
+
 	if err := m.validateConditions(formats); err != nil {
 		res = append(res, err)
 	}
@@ -105,6 +116,36 @@ func (m *StageStatus) Validate(formats strfmt.Registry) error {
 	if len(res) > 0 {
 		return errors.CompositeValidationError(res...)
 	}
+	return nil
+}
+
+func (m *StageStatus) validateAutoPromotionHolds(formats strfmt.Registry) error {
+	if swag.IsZero(m.AutoPromotionHolds) { // not required
+		return nil
+	}
+
+	for k := range m.AutoPromotionHolds {
+
+		if err := validate.Required("autoPromotionHolds"+"."+k, "body", m.AutoPromotionHolds[k]); err != nil {
+			return err
+		}
+		if val, ok := m.AutoPromotionHolds[k]; ok {
+			if err := val.Validate(formats); err != nil {
+				ve := new(errors.Validation)
+				if stderrors.As(err, &ve) {
+					return ve.ValidateName("autoPromotionHolds" + "." + k)
+				}
+				ce := new(errors.CompositeError)
+				if stderrors.As(err, &ce) {
+					return ce.ValidateName("autoPromotionHolds" + "." + k)
+				}
+
+				return err
+			}
+		}
+
+	}
+
 	return nil
 }
 
@@ -196,6 +237,10 @@ func (m *StageStatus) validateLastPromotion(formats strfmt.Registry) error {
 func (m *StageStatus) ContextValidate(ctx context.Context, formats strfmt.Registry) error {
 	var res []error
 
+	if err := m.contextValidateAutoPromotionHolds(ctx, formats); err != nil {
+		res = append(res, err)
+	}
+
 	if err := m.contextValidateConditions(ctx, formats); err != nil {
 		res = append(res, err)
 	}
@@ -219,6 +264,21 @@ func (m *StageStatus) ContextValidate(ctx context.Context, formats strfmt.Regist
 	if len(res) > 0 {
 		return errors.CompositeValidationError(res...)
 	}
+	return nil
+}
+
+func (m *StageStatus) contextValidateAutoPromotionHolds(ctx context.Context, formats strfmt.Registry) error {
+
+	for k := range m.AutoPromotionHolds {
+
+		if val, ok := m.AutoPromotionHolds[k]; ok {
+			if err := val.ContextValidate(ctx, formats); err != nil {
+				return err
+			}
+		}
+
+	}
+
 	return nil
 }
 

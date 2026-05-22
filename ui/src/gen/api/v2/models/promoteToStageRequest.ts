@@ -7,6 +7,8 @@
  */
 
 export interface PromoteToStageRequest {
+  expectedAutoCandidate?: string;
   freight?: string;
   freightAlias?: string;
+  reason?: string;
 }

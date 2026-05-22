@@ -85,6 +85,7 @@ func (b *PromotionBuilder) Build(
 		Spec: kargoapi.PromotionSpec{
 			Stage:   stage.Name,
 			Freight: freight,
+			Source:  kargoapi.PromotionSourceNonAuto,
 			Vars:    vars,
 			Steps:   stage.Spec.PromotionTemplate.Spec.Steps,
 		},

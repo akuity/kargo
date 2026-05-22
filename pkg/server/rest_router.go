@@ -198,6 +198,8 @@ func (s *server) setupRESTRouter(ctx context.Context) *gin.Engine {
 			project.POST("/stages/:stage/refresh", s.refreshStage)
 			project.DELETE("/stages/:stage", s.deleteStage)
 			// Stage Promotions
+			project.GET("/stages/:stage/auto-promotion/candidates", s.getStageAutoPromotionCandidates)
+			project.POST("/stages/:stage/auto-promotion/resume", s.resumeStageAutoPromotion)
 			project.POST("/stages/:stage/promotions", s.promoteToStage)
 			project.POST("/stages/:stage/promotions/downstream", s.promoteDownstream)
 			// Stage Verification
@@ -323,6 +325,7 @@ func (s *server) handleError(c *gin.Context) {
 					http.StatusInternalServerError,
 					gin.H{"error": "internal server error"},
 				)
+				return
 			}
 			c.JSON(httpErr.Code(), gin.H{"error": httpErr.Error()})
 			return
@@ -332,9 +335,11 @@ func (s *server) handleError(c *gin.Context) {
 			c.JSON(int(statusErr.Status().Code), gin.H{"error": err.Error()})
 			return
 		}
-		_ = c.Error(libhttp.Error(
-			errors.New("internal server error"),
+		logging.LoggerFromContext(c.Request.Context()).
+			Error(err, "internal server error")
+		c.JSON(
 			http.StatusInternalServerError,
-		))
+			gin.H{"error": "internal server error"},
+		)
 	}
 }

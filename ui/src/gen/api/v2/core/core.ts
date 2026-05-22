@@ -23,9 +23,11 @@ import type {
 
 import type {
   ApproveFreightParams,
+  AutoPromotionCandidatesResponse,
   ClusterPromotionTask,
   ClusterPromotionTaskList,
   CreateConfigMapRequestBody,
+  ErrorResponse,
   Freight,
   GetFreightLinksResponse,
   GetStageLinksResponse,
@@ -46,6 +48,7 @@ import type {
   PromotionTaskList,
   QueryFreightsRest200,
   QueryFreightsRestParams,
+  ResumeStageAutoPromotionRequest,
   Stage,
   StageList,
   UpdateConfigMapRequestBody,
@@ -3413,6 +3416,351 @@ export const useDeleteStage = <TError = unknown, TContext = unknown>(
   return useMutation(mutationOptions, queryClient);
 };
 /**
+ * List the newest currently auto-promotable Freight for each
+origin requested by the Stage.
+ * @summary Get Stage auto-promotion candidates
+ */
+export type getStageAutoPromotionCandidatesResponse200 = {
+  data: AutoPromotionCandidatesResponse;
+  status: 200;
+};
+
+export type getStageAutoPromotionCandidatesResponse403 = {
+  data: ErrorResponse;
+  status: 403;
+};
+
+export type getStageAutoPromotionCandidatesResponse404 = {
+  data: ErrorResponse;
+  status: 404;
+};
+
+export type getStageAutoPromotionCandidatesResponse500 = {
+  data: ErrorResponse;
+  status: 500;
+};
+
+export type getStageAutoPromotionCandidatesResponse503 = {
+  data: ErrorResponse;
+  status: 503;
+};
+
+export type getStageAutoPromotionCandidatesResponse504 = {
+  data: ErrorResponse;
+  status: 504;
+};
+
+export type getStageAutoPromotionCandidatesResponseSuccess =
+  getStageAutoPromotionCandidatesResponse200 & {
+    headers: Headers;
+  };
+export type getStageAutoPromotionCandidatesResponseError = (
+  | getStageAutoPromotionCandidatesResponse403
+  | getStageAutoPromotionCandidatesResponse404
+  | getStageAutoPromotionCandidatesResponse500
+  | getStageAutoPromotionCandidatesResponse503
+  | getStageAutoPromotionCandidatesResponse504
+) & {
+  headers: Headers;
+};
+
+export type getStageAutoPromotionCandidatesResponse =
+  | getStageAutoPromotionCandidatesResponseSuccess
+  | getStageAutoPromotionCandidatesResponseError;
+
+export const getGetStageAutoPromotionCandidatesUrl = (project: string, stage: string) => {
+  return `/v1beta1/projects/${project}/stages/${stage}/auto-promotion/candidates`;
+};
+
+export const getStageAutoPromotionCandidates = async (
+  project: string,
+  stage: string,
+  options?: RequestInit
+): Promise<getStageAutoPromotionCandidatesResponse> => {
+  return customFetch<getStageAutoPromotionCandidatesResponse>(
+    getGetStageAutoPromotionCandidatesUrl(project, stage),
+    {
+      ...options,
+      method: 'GET'
+    }
+  );
+};
+
+export const getGetStageAutoPromotionCandidatesQueryKey = (project?: string, stage?: string) => {
+  return [`/v1beta1/projects/${project}/stages/${stage}/auto-promotion/candidates`] as const;
+};
+
+export const getGetStageAutoPromotionCandidatesQueryOptions = <
+  TData = Awaited<ReturnType<typeof getStageAutoPromotionCandidates>>,
+  TError = ErrorResponse
+>(
+  project: string,
+  stage: string,
+  options?: {
+    query?: Partial<
+      UseQueryOptions<Awaited<ReturnType<typeof getStageAutoPromotionCandidates>>, TError, TData>
+    >;
+    request?: SecondParameter<typeof customFetch>;
+  }
+) => {
+  const { query: queryOptions, request: requestOptions } = options ?? {};
+
+  const queryKey =
+    queryOptions?.queryKey ?? getGetStageAutoPromotionCandidatesQueryKey(project, stage);
+
+  const queryFn: QueryFunction<Awaited<ReturnType<typeof getStageAutoPromotionCandidates>>> = () =>
+    getStageAutoPromotionCandidates(project, stage, requestOptions);
+
+  return { queryKey, queryFn, enabled: !!(project && stage), ...queryOptions } as UseQueryOptions<
+    Awaited<ReturnType<typeof getStageAutoPromotionCandidates>>,
+    TError,
+    TData
+  > & { queryKey: DataTag<QueryKey, TData, TError> };
+};
+
+export type GetStageAutoPromotionCandidatesQueryResult = NonNullable<
+  Awaited<ReturnType<typeof getStageAutoPromotionCandidates>>
+>;
+export type GetStageAutoPromotionCandidatesQueryError = ErrorResponse;
+
+export function useGetStageAutoPromotionCandidates<
+  TData = Awaited<ReturnType<typeof getStageAutoPromotionCandidates>>,
+  TError = ErrorResponse
+>(
+  project: string,
+  stage: string,
+  options: {
+    query: Partial<
+      UseQueryOptions<Awaited<ReturnType<typeof getStageAutoPromotionCandidates>>, TError, TData>
+    > &
+      Pick<
+        DefinedInitialDataOptions<
+          Awaited<ReturnType<typeof getStageAutoPromotionCandidates>>,
+          TError,
+          Awaited<ReturnType<typeof getStageAutoPromotionCandidates>>
+        >,
+        'initialData'
+      >;
+    request?: SecondParameter<typeof customFetch>;
+  },
+  queryClient?: QueryClient
+): DefinedUseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> };
+export function useGetStageAutoPromotionCandidates<
+  TData = Awaited<ReturnType<typeof getStageAutoPromotionCandidates>>,
+  TError = ErrorResponse
+>(
+  project: string,
+  stage: string,
+  options?: {
+    query?: Partial<
+      UseQueryOptions<Awaited<ReturnType<typeof getStageAutoPromotionCandidates>>, TError, TData>
+    > &
+      Pick<
+        UndefinedInitialDataOptions<
+          Awaited<ReturnType<typeof getStageAutoPromotionCandidates>>,
+          TError,
+          Awaited<ReturnType<typeof getStageAutoPromotionCandidates>>
+        >,
+        'initialData'
+      >;
+    request?: SecondParameter<typeof customFetch>;
+  },
+  queryClient?: QueryClient
+): UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> };
+export function useGetStageAutoPromotionCandidates<
+  TData = Awaited<ReturnType<typeof getStageAutoPromotionCandidates>>,
+  TError = ErrorResponse
+>(
+  project: string,
+  stage: string,
+  options?: {
+    query?: Partial<
+      UseQueryOptions<Awaited<ReturnType<typeof getStageAutoPromotionCandidates>>, TError, TData>
+    >;
+    request?: SecondParameter<typeof customFetch>;
+  },
+  queryClient?: QueryClient
+): UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> };
+/**
+ * @summary Get Stage auto-promotion candidates
+ */
+
+export function useGetStageAutoPromotionCandidates<
+  TData = Awaited<ReturnType<typeof getStageAutoPromotionCandidates>>,
+  TError = ErrorResponse
+>(
+  project: string,
+  stage: string,
+  options?: {
+    query?: Partial<
+      UseQueryOptions<Awaited<ReturnType<typeof getStageAutoPromotionCandidates>>, TError, TData>
+    >;
+    request?: SecondParameter<typeof customFetch>;
+  },
+  queryClient?: QueryClient
+): UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> } {
+  const queryOptions = getGetStageAutoPromotionCandidatesQueryOptions(project, stage, options);
+
+  const query = useQuery(queryOptions, queryClient) as UseQueryResult<TData, TError> & {
+    queryKey: DataTag<QueryKey, TData, TError>;
+  };
+
+  query.queryKey = queryOptions.queryKey;
+
+  return query;
+}
+
+/**
+ * Clear active auto-promotion holds for a Stage.
+ * @summary Resume Stage auto-promotion
+ */
+export type resumeStageAutoPromotionResponse204 = {
+  data: void;
+  status: 204;
+};
+
+export type resumeStageAutoPromotionResponse400 = {
+  data: ErrorResponse;
+  status: 400;
+};
+
+export type resumeStageAutoPromotionResponse403 = {
+  data: ErrorResponse;
+  status: 403;
+};
+
+export type resumeStageAutoPromotionResponse404 = {
+  data: ErrorResponse;
+  status: 404;
+};
+
+export type resumeStageAutoPromotionResponse409 = {
+  data: ErrorResponse;
+  status: 409;
+};
+
+export type resumeStageAutoPromotionResponse500 = {
+  data: ErrorResponse;
+  status: 500;
+};
+
+export type resumeStageAutoPromotionResponse503 = {
+  data: ErrorResponse;
+  status: 503;
+};
+
+export type resumeStageAutoPromotionResponse504 = {
+  data: ErrorResponse;
+  status: 504;
+};
+
+export type resumeStageAutoPromotionResponseSuccess = resumeStageAutoPromotionResponse204 & {
+  headers: Headers;
+};
+export type resumeStageAutoPromotionResponseError = (
+  | resumeStageAutoPromotionResponse400
+  | resumeStageAutoPromotionResponse403
+  | resumeStageAutoPromotionResponse404
+  | resumeStageAutoPromotionResponse409
+  | resumeStageAutoPromotionResponse500
+  | resumeStageAutoPromotionResponse503
+  | resumeStageAutoPromotionResponse504
+) & {
+  headers: Headers;
+};
+
+export type resumeStageAutoPromotionResponse =
+  | resumeStageAutoPromotionResponseSuccess
+  | resumeStageAutoPromotionResponseError;
+
+export const getResumeStageAutoPromotionUrl = (project: string, stage: string) => {
+  return `/v1beta1/projects/${project}/stages/${stage}/auto-promotion/resume`;
+};
+
+export const resumeStageAutoPromotion = async (
+  project: string,
+  stage: string,
+  resumeStageAutoPromotionRequest: ResumeStageAutoPromotionRequest,
+  options?: RequestInit
+): Promise<resumeStageAutoPromotionResponse> => {
+  return customFetch<resumeStageAutoPromotionResponse>(
+    getResumeStageAutoPromotionUrl(project, stage),
+    {
+      ...options,
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', ...options?.headers },
+      body: JSON.stringify(resumeStageAutoPromotionRequest)
+    }
+  );
+};
+
+export const getResumeStageAutoPromotionMutationOptions = <
+  TError = ErrorResponse,
+  TContext = unknown
+>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof resumeStageAutoPromotion>>,
+    TError,
+    { project: string; stage: string; data: ResumeStageAutoPromotionRequest },
+    TContext
+  >;
+  request?: SecondParameter<typeof customFetch>;
+}): UseMutationOptions<
+  Awaited<ReturnType<typeof resumeStageAutoPromotion>>,
+  TError,
+  { project: string; stage: string; data: ResumeStageAutoPromotionRequest },
+  TContext
+> => {
+  const mutationKey = ['resumeStageAutoPromotion'];
+  const { mutation: mutationOptions, request: requestOptions } = options
+    ? options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey
+      ? options
+      : { ...options, mutation: { ...options.mutation, mutationKey } }
+    : { mutation: { mutationKey }, request: undefined };
+
+  const mutationFn: MutationFunction<
+    Awaited<ReturnType<typeof resumeStageAutoPromotion>>,
+    { project: string; stage: string; data: ResumeStageAutoPromotionRequest }
+  > = (props) => {
+    const { project, stage, data } = props ?? {};
+
+    return resumeStageAutoPromotion(project, stage, data, requestOptions);
+  };
+
+  return { mutationFn, ...mutationOptions };
+};
+
+export type ResumeStageAutoPromotionMutationResult = NonNullable<
+  Awaited<ReturnType<typeof resumeStageAutoPromotion>>
+>;
+export type ResumeStageAutoPromotionMutationBody = ResumeStageAutoPromotionRequest;
+export type ResumeStageAutoPromotionMutationError = ErrorResponse;
+
+/**
+ * @summary Resume Stage auto-promotion
+ */
+export const useResumeStageAutoPromotion = <TError = ErrorResponse, TContext = unknown>(
+  options?: {
+    mutation?: UseMutationOptions<
+      Awaited<ReturnType<typeof resumeStageAutoPromotion>>,
+      TError,
+      { project: string; stage: string; data: ResumeStageAutoPromotionRequest },
+      TContext
+    >;
+    request?: SecondParameter<typeof customFetch>;
+  },
+  queryClient?: QueryClient
+): UseMutationResult<
+  Awaited<ReturnType<typeof resumeStageAutoPromotion>>,
+  TError,
+  { project: string; stage: string; data: ResumeStageAutoPromotionRequest },
+  TContext
+> => {
+  const mutationOptions = getResumeStageAutoPromotionMutationOptions(options);
+
+  return useMutation(mutationOptions, queryClient);
+};
+/**
  * Retrieve evaluated deep links for a Stage resource, combining
 cluster-level links from ClusterConfig and project-level links
 from ProjectConfig.
@@ -3564,10 +3912,57 @@ export type promoteToStageResponse201 = {
   status: 201;
 };
 
+export type promoteToStageResponse400 = {
+  data: ErrorResponse;
+  status: 400;
+};
+
+export type promoteToStageResponse403 = {
+  data: ErrorResponse;
+  status: 403;
+};
+
+export type promoteToStageResponse404 = {
+  data: ErrorResponse;
+  status: 404;
+};
+
+export type promoteToStageResponse409 = {
+  data: ErrorResponse;
+  status: 409;
+};
+
+export type promoteToStageResponse500 = {
+  data: ErrorResponse;
+  status: 500;
+};
+
+export type promoteToStageResponse503 = {
+  data: ErrorResponse;
+  status: 503;
+};
+
+export type promoteToStageResponse504 = {
+  data: ErrorResponse;
+  status: 504;
+};
+
 export type promoteToStageResponseSuccess = promoteToStageResponse201 & {
   headers: Headers;
 };
-export type promoteToStageResponse = promoteToStageResponseSuccess;
+export type promoteToStageResponseError = (
+  | promoteToStageResponse400
+  | promoteToStageResponse403
+  | promoteToStageResponse404
+  | promoteToStageResponse409
+  | promoteToStageResponse500
+  | promoteToStageResponse503
+  | promoteToStageResponse504
+) & {
+  headers: Headers;
+};
+
+export type promoteToStageResponse = promoteToStageResponseSuccess | promoteToStageResponseError;
 
 export const getPromoteToStageUrl = (project: string, stage: string) => {
   return `/v1beta1/projects/${project}/stages/${stage}/promotions`;
@@ -3587,7 +3982,10 @@ export const promoteToStage = async (
   });
 };
 
-export const getPromoteToStageMutationOptions = <TError = unknown, TContext = unknown>(options?: {
+export const getPromoteToStageMutationOptions = <
+  TError = ErrorResponse,
+  TContext = unknown
+>(options?: {
   mutation?: UseMutationOptions<
     Awaited<ReturnType<typeof promoteToStage>>,
     TError,
@@ -3622,12 +4020,12 @@ export const getPromoteToStageMutationOptions = <TError = unknown, TContext = un
 
 export type PromoteToStageMutationResult = NonNullable<Awaited<ReturnType<typeof promoteToStage>>>;
 export type PromoteToStageMutationBody = PromoteToStageRequest;
-export type PromoteToStageMutationError = unknown;
+export type PromoteToStageMutationError = ErrorResponse;
 
 /**
  * @summary Promote to Stage
  */
-export const usePromoteToStage = <TError = unknown, TContext = unknown>(
+export const usePromoteToStage = <TError = ErrorResponse, TContext = unknown>(
   options?: {
     mutation?: UseMutationOptions<
       Awaited<ReturnType<typeof promoteToStage>>,

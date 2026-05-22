@@ -1,5 +1,5 @@
 import { createClient } from '@connectrpc/connect';
-import { createConnectQueryKey, useMutation, useQuery } from '@connectrpc/connect-query';
+import { createConnectQueryKey, useQuery } from '@connectrpc/connect-query';
 import { faUndo } from '@fortawesome/free-solid-svg-icons';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
 import { useQueryClient } from '@tanstack/react-query';
@@ -7,7 +7,7 @@ import { Flex, Spin, Table, Tooltip } from 'antd';
 import { ColumnsType } from 'antd/es/table';
 import { format } from 'date-fns';
 import React, { useEffect, useState } from 'react';
-import { Link, generatePath, useParams } from 'react-router-dom';
+import { Link, generatePath, useNavigate, useParams } from 'react-router-dom';
 
 import { paths } from '@ui/config/paths';
 import { transportWithAuth } from '@ui/config/transport';
@@ -19,8 +19,7 @@ import {
 } from '@ui/features/common/promotion-status/utils';
 import {
   getFreight,
-  listPromotions,
-  promoteToStage
+  listPromotions
 } from '@ui/gen/api/service/v1alpha1/service-KargoService_connectquery';
 import { ListPromotionsResponse } from '@ui/gen/api/service/v1alpha1/service_pb';
 import { KargoService } from '@ui/gen/api/service/v1alpha1/service_pb';
@@ -36,6 +35,7 @@ import { hasAbortRequest, promotionCompareFn } from './utils/promotion';
 
 export const Promotions = ({ argocdShard }: { argocdShard?: ArgoCDShard }) => {
   const client = useQueryClient();
+  const navigate = useNavigate();
 
   const { name: projectName, stageName } = useParams();
   const { data: promotionsResponse, isLoading } = useQuery(
@@ -54,18 +54,18 @@ export const Promotions = ({ argocdShard }: { argocdShard?: ArgoCDShard }) => {
     }
   );
 
-  const promotionMutation = useMutation(promoteToStage);
-
   const onRetryPromotion = (promotion: Promotion) => {
     const stage = stageName;
     const project = promotion?.metadata?.namespace;
     const freight = promotion?.spec?.freight;
 
-    promotionMutation.mutate({
-      stage,
-      project,
-      freight
-    });
+    navigate(
+      generatePath(paths.promote, {
+        name: project || '',
+        freight: freight || '',
+        stage: stage || ''
+      })
+    );
   };
 
   // modal kept in the same component for live view
@@ -160,7 +160,7 @@ export const Promotions = ({ argocdShard }: { argocdShard?: ArgoCDShard }) => {
                 <FontAwesomeIcon
                   className='text-xs cursor-pointer'
                   icon={faUndo}
-                  onClick={() => !promotionMutation.isPending && onRetryPromotion(promotion)}
+                  onClick={() => onRetryPromotion(promotion)}
                 />
               </Tooltip>
             )}

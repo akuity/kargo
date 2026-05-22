@@ -144,9 +144,6 @@ importers:
       '@tanstack/react-query-devtools':
         specifier: 5.99.0
         version: 5.99.0(@tanstack/react-query@5.99.1(react@19.2.5))(react@19.2.5)
-      '@types/git-url-parse':
-        specifier: 16.0.2
-        version: 16.0.2
       '@types/json-schema':
         specifier: 7.0.15
         version: 7.0.15
@@ -1300,10 +1297,6 @@ packages:
 
   '@types/estree@1.0.8':
     resolution: {integrity: sha512-dWHzHa2WqEXI/O1E9OjrocMTKJl2mSrEolh1Iomrv6U+JuNwaHXsXx9bLu5gG7BUWFIN0skIQJQ/L1rIex4X6w==}
-
-  '@types/git-url-parse@16.0.2':
-    resolution: {integrity: sha512-STa+QaJtPbqwtioDIncRyft1xXrsTIYW0KkS6RS6l++NiDaQxqgsIkNp2Jf9nJ1KnCGPOvWaR1iO+B7LkM8+ew==}
-    deprecated: This is a stub types definition. git-url-parse provides its own type definitions, so you do not need this installed.
 
   '@types/hast@3.0.4':
     resolution: {integrity: sha512-WPs+bbQw5aCj+x6laNGWLH3wviHtoCv/P3+otBhbOhJgG8qtpdAMlTCxLtsTWA7LH1Oh/bFCHsBn0TPS5m30EQ==}
@@ -5382,10 +5375,6 @@ snapshots:
       '@types/node': 24.2.1
 
   '@types/estree@1.0.8': {}
-
-  '@types/git-url-parse@16.0.2':
-    dependencies:
-      git-url-parse: 16.1.0
 
   '@types/hast@3.0.4':
     dependencies:

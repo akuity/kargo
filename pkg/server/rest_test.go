@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"context"
 	"encoding/json"
+	"errors"
 	"io"
 	"net/http"
 	"net/http/httptest"
@@ -142,6 +143,25 @@ func testRESTEndpoint(
 			testCase.assertions(t, w, internalClient)
 		})
 	}
+}
+
+func TestServerHandleErrorPlainError(t *testing.T) {
+	gin.DefaultWriter = io.Discard
+	gin.DefaultErrorWriter = io.Discard
+
+	s := &server{}
+	router := gin.New()
+	router.Use(s.handleError)
+	router.GET("/error", func(c *gin.Context) {
+		_ = c.Error(errors.New("something went wrong"))
+	})
+
+	w := httptest.NewRecorder()
+	req := httptest.NewRequest(http.MethodGet, "/error", nil)
+	router.ServeHTTP(w, req)
+
+	require.Equal(t, http.StatusInternalServerError, w.Code)
+	require.JSONEq(t, `{"error":"internal server error"}`, w.Body.String())
 }
 
 // restWatchTestCase represents a test case for a REST watch endpoint that uses

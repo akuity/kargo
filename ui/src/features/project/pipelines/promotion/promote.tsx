@@ -1,9 +1,9 @@
-import { useMutation } from '@connectrpc/connect-query';
+import { useMutation as useConnectMutation } from '@connectrpc/connect-query';
 import { faTruckArrowRight } from '@fortawesome/free-solid-svg-icons';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
-import { Button, Drawer, Flex } from 'antd';
+import { Alert, Button, Drawer, Flex, Input } from 'antd';
 import classNames from 'classnames';
-import { useMemo } from 'react';
+import { useMemo, useState } from 'react';
 import { generatePath, useNavigate } from 'react-router-dom';
 
 import { paths } from '@ui/config/paths';
@@ -11,15 +11,19 @@ import { useExtensionsContext } from '@ui/extensions/extensions-context';
 import { ModalComponentProps } from '@ui/features/common/modal/modal-context';
 import { getCurrentFreight } from '@ui/features/common/utils';
 import { IAction, useActionContext } from '@ui/features/project/pipelines/context/action-context';
-import {
-  promoteDownstream,
-  promoteToStage
-} from '@ui/gen/api/service/v1alpha1/service-KargoService_connectquery';
+import { promoteDownstream } from '@ui/gen/api/service/v1alpha1/service-KargoService_connectquery';
 import { Freight, Stage } from '@ui/gen/api/v1alpha1/generated_pb';
+import { useGetStageAutoPromotionCandidates, usePromoteToStage } from '@ui/gen/api/v2/core/core';
 
 import { useDictionaryContext } from '../context/dictionary-context';
 import { isStageControlFlow } from '../nodes/stage-meta-utils';
 
+import {
+  autoPromotionHoldStateActive,
+  getAutoPromotionCandidateName,
+  getAutoPromotionHold,
+  originLabel
+} from './auto-promotion';
 import { FreightDetails } from './freight-details';
 import styles from './promote.module.less';
 
@@ -32,6 +36,7 @@ export const Promote = (props: PromoteProps) => {
   const actionContext = useActionContext();
   const navigate = useNavigate();
   const { promoteTabs } = useExtensionsContext();
+  const [reason, setReason] = useState('');
 
   const dictionaryContext = useDictionaryContext();
 
@@ -39,26 +44,59 @@ export const Promote = (props: PromoteProps) => {
     actionContext?.action?.type === IAction.PROMOTE_DOWNSTREAM || isStageControlFlow(props.stage);
 
   const freightAlias = props.freight?.alias;
-  const stageName = props.stage?.metadata?.name;
-  const projectName = props.stage?.metadata?.namespace;
+  const stageName = props.stage?.metadata?.name || '';
+  const projectName = props.stage?.metadata?.namespace || '';
+  const freightName = props.freight?.metadata?.name || '';
 
   const currentFreightOnStage = useMemo(() => getCurrentFreight(props.stage)[0], [props.stage]);
 
-  const promoteActionMutation = useMutation(promoteToStage, {
-    onSuccess: (response) => {
-      // navigate
-      navigate(
-        generatePath(paths.promotion, {
-          name: projectName,
-          promotionId: response.promotion?.metadata?.name
-        })
-      );
+  const shouldCheckAutoPromotionCandidate = Boolean(
+    projectName && stageName && !isDownstreamPromotion
+  );
+  const autoPromotionCandidatesQuery = useGetStageAutoPromotionCandidates(
+    projectName || '',
+    stageName || '',
+    {
+      query: {
+        enabled: shouldCheckAutoPromotionCandidate
+      }
+    }
+  );
 
-      actionContext?.cancel();
+  const isCheckingAutoPromotionCandidate =
+    shouldCheckAutoPromotionCandidate && autoPromotionCandidatesQuery.isLoading;
+  const autoPromotionCandidates =
+    autoPromotionCandidatesQuery.data?.status === 200
+      ? autoPromotionCandidatesQuery.data.data.candidates
+      : undefined;
+  const candidateName = getAutoPromotionCandidateName(autoPromotionCandidates, props.freight);
+  const selectedOriginLabel = originLabel(props.freight?.origin);
+  const isPromotingOlderThanCandidate = Boolean(candidateName && candidateName !== freightName);
+  const activeHold = getAutoPromotionHold(props.stage, props.freight?.origin);
+  const willResumeOnSuccess = Boolean(
+    activeHold?.state === autoPromotionHoldStateActive && candidateName === freightName
+  );
+
+  const promoteActionMutation = usePromoteToStage({
+    mutation: {
+      onSuccess: (response) => {
+        if (response.status !== 201) {
+          return;
+        }
+        // navigate
+        navigate(
+          generatePath(paths.promotion, {
+            name: projectName,
+            promotionId: response.data?.metadata?.name
+          })
+        );
+
+        actionContext?.cancel();
+      }
     }
   });
 
-  const promoteDownstreamActionMutation = useMutation(promoteDownstream, {
+  const promoteDownstreamActionMutation = useConnectMutation(promoteDownstream, {
     onSuccess: () => {
       // navigate
       navigate(
@@ -72,18 +110,26 @@ export const Promote = (props: PromoteProps) => {
   });
 
   const onPromote = () => {
-    const payload = {
+    const downstreamPayload = {
       stage: stageName,
       project: projectName,
-      freight: props.freight?.metadata?.name
+      freight: freightName
     };
 
     if (isDownstreamPromotion) {
-      promoteDownstreamActionMutation.mutate(payload);
+      promoteDownstreamActionMutation.mutate(downstreamPayload);
       return;
     }
 
-    promoteActionMutation.mutate(payload);
+    promoteActionMutation.mutate({
+      stage: stageName,
+      project: projectName,
+      data: {
+        freight: freightName,
+        expectedAutoCandidate: candidateName || undefined,
+        reason: isPromotingOlderThanCandidate ? reason.trim() || undefined : undefined
+      }
+    });
   };
 
   let promotingTo = stageName || '';
@@ -109,13 +155,64 @@ export const Promote = (props: PromoteProps) => {
           className={classNames(styles['promote-btn'], 'ml-auto mt-5')}
           icon={<FontAwesomeIcon icon={faTruckArrowRight} />}
           onClick={onPromote}
-          loading={promoteActionMutation.isPending || promoteDownstreamActionMutation.isPending}
+          loading={
+            isCheckingAutoPromotionCandidate ||
+            promoteActionMutation.isPending ||
+            promoteDownstreamActionMutation.isPending
+          }
+          disabled={isCheckingAutoPromotionCandidate}
         >
-          Promote{isDownstreamPromotion && ' to downstream'}
+          {isCheckingAutoPromotionCandidate
+            ? 'Checking auto-promotion'
+            : isDownstreamPromotion
+              ? 'Promote to downstream'
+              : isPromotingOlderThanCandidate
+                ? 'Roll back and pause auto-promotion'
+                : 'Promote'}
         </Button>
       }
     >
       <div className='-mt-4'>
+        {isCheckingAutoPromotionCandidate && (
+          <Alert
+            className='mb-4'
+            showIcon
+            type='info'
+            message='Checking the current auto-promotion candidate.'
+            description='Promotion is disabled until Kargo can show whether this will pause auto-promotion.'
+          />
+        )}
+
+        {isPromotingOlderThanCandidate && (
+          <div className='mb-4'>
+            <Alert
+              showIcon
+              type='warning'
+              message={`This is older than the current auto-promotion candidate ${candidateName}.`}
+              description={`Auto-promotion for ${selectedOriginLabel} will pause if this Promotion succeeds.`}
+            />
+            <Input.TextArea
+              className='mt-3'
+              placeholder='Reason (optional)'
+              value={reason}
+              onChange={(event) => setReason(event.target.value)}
+              maxLength={1024}
+              showCount
+              autoSize={{ minRows: 2, maxRows: 4 }}
+            />
+          </div>
+        )}
+
+        {willResumeOnSuccess && (
+          <Alert
+            className='mb-4'
+            showIcon
+            type='info'
+            message={`This is the current auto-promotion candidate for ${selectedOriginLabel}.`}
+            description='Auto-promotion will resume for this origin if the Promotion succeeds.'
+          />
+        )}
+
         <FreightDetails
           freight={props.freight}
           comparison={{ currentFreight: currentFreightOnStage }}

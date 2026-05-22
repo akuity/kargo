@@ -358,6 +358,202 @@
           "description": "AutoPromotionEnabled indicates whether automatic promotion is enabled\nfor the Stage based on the ProjectConfig.",
           "type": "boolean"
         },
+        "autoPromotionHolds": {
+          "additionalProperties": {
+            "description": "AutoPromotionHold pins a single FreightOrigin on a Stage, pausing\nauto-promotion for that origin after a user-directed promotion intentionally\nselects an older piece of Freight. Other origins continue to auto-promote\nnormally. The origin is identified by the enclosing map key.",
+            "properties": {
+              "actor": {
+                "description": "Actor is an identifier for the user who caused the hold to be created.",
+                "type": "string"
+              },
+              "createdAt": {
+                "description": "CreatedAt is the time at which the hold was created.",
+                "format": "date-time",
+                "type": "string"
+              },
+              "freight": {
+                "description": "Freight is a reference to the Freight that was selected by the operator\nwhen the hold was created.",
+                "properties": {
+                  "artifacts": {
+                    "description": "Artifacts describes specific versions of artifacts other\nthan Git repository commits, container images, and Helm charts.",
+                    "items": {
+                      "description": "ArtifactReference is a reference to a specific version of an artifact.",
+                      "properties": {
+                        "artifactType": {
+                          "description": "ArtifactType specifies the type of artifact this is. Often, but not always,\nit will be the media type (MIME type) of the artifact referenced by this\nArtifactReference.",
+                          "minLength": 1,
+                          "type": "string"
+                        },
+                        "metadata": {
+                          "description": "Metadata is a JSON object containing a mostly opaque collection of artifact\nattributes. (It must be an object. It may not be a list or a scalar value.)\n\"Mostly\" because Kargo may understand how to interpret some documented,\nwell-known, top-level keys. Those aside, this metadata is only understood\nby a corresponding Subscriber implementation that created it.",
+                          "x-kubernetes-preserve-unknown-fields": true
+                        },
+                        "subscriptionName": {
+                          "description": "SubscriptionName is the name of the Subscription that discovered this\nartifact.",
+                          "minLength": 1,
+                          "type": "string"
+                        },
+                        "version": {
+                          "description": "Version identifies a specific revision of this artifact.",
+                          "minLength": 1,
+                          "type": "string"
+                        }
+                      },
+                      "required": [
+                        "subscriptionName",
+                        "version"
+                      ],
+                      "type": "object"
+                    },
+                    "type": "array"
+                  },
+                  "charts": {
+                    "description": "Charts describes specific versions of specific Helm charts.",
+                    "items": {
+                      "description": "Chart describes a specific version of a Helm chart.",
+                      "properties": {
+                        "name": {
+                          "description": "Name specifies the name of the chart.",
+                          "type": "string"
+                        },
+                        "repoURL": {
+                          "description": "RepoURL specifies the URL of a Helm chart repository. Classic chart\nrepositories (using HTTP/S) can contain differently named charts. When this\nfield points to such a repository, the Name field will specify the name of\nthe chart within the repository. In the case of a repository within an OCI\nregistry, the URL implicitly points to a specific chart and the Name field\nwill be empty.",
+                          "type": "string"
+                        },
+                        "version": {
+                          "description": "Version specifies a particular version of the chart.",
+                          "type": "string"
+                        }
+                      },
+                      "type": "object"
+                    },
+                    "type": "array"
+                  },
+                  "commits": {
+                    "description": "Commits describes specific Git repository commits.",
+                    "items": {
+                      "description": "GitCommit describes a specific commit from a specific Git repository.",
+                      "properties": {
+                        "author": {
+                          "description": "Author is the author of the commit.",
+                          "type": "string"
+                        },
+                        "branch": {
+                          "description": "Branch denotes the branch of the repository where this commit was found.",
+                          "type": "string"
+                        },
+                        "committer": {
+                          "description": "Committer is the person who committed the commit.",
+                          "type": "string"
+                        },
+                        "id": {
+                          "description": "ID is the ID of a specific commit in the Git repository specified by\nRepoURL.",
+                          "type": "string"
+                        },
+                        "message": {
+                          "description": "Message is the message associated with the commit. At present, this only\ncontains the first line (subject) of the commit message.",
+                          "type": "string"
+                        },
+                        "repoURL": {
+                          "description": "RepoURL is the URL of a Git repository.",
+                          "type": "string"
+                        },
+                        "tag": {
+                          "description": "Tag denotes a tag in the repository that matched selection criteria and\nresolved to this commit.",
+                          "type": "string"
+                        }
+                      },
+                      "type": "object"
+                    },
+                    "type": "array"
+                  },
+                  "images": {
+                    "description": "Images describes specific versions of specific container images.",
+                    "items": {
+                      "description": "Image describes a specific version of a container image.",
+                      "properties": {
+                        "annotations": {
+                          "additionalProperties": {
+                            "type": "string"
+                          },
+                          "description": "Annotations is a map of arbitrary metadata for the image.",
+                          "type": "object"
+                        },
+                        "digest": {
+                          "description": "Digest identifies a specific version of the image in the repository\nspecified by RepoURL. This is a more precise identifier than Tag.",
+                          "type": "string"
+                        },
+                        "repoURL": {
+                          "description": "RepoURL describes the repository in which the image can be found.",
+                          "type": "string"
+                        },
+                        "tag": {
+                          "description": "Tag identifies a specific version of the image in the repository specified\nby RepoURL.",
+                          "type": "string"
+                        }
+                      },
+                      "type": "object"
+                    },
+                    "type": "array"
+                  },
+                  "name": {
+                    "description": "Name is a system-assigned identifier derived deterministically from\nthe contents of the Freight. I.e., two pieces of Freight can be compared\nfor equality by comparing their Names.",
+                    "type": "string"
+                  },
+                  "origin": {
+                    "description": "Origin describes a kind of Freight in terms of its origin.",
+                    "properties": {
+                      "kind": {
+                        "description": "Kind is the kind of resource from which Freight may have originated. At\npresent, this can only be \"Warehouse\".",
+                        "enum": [
+                          "Warehouse"
+                        ],
+                        "type": "string"
+                      },
+                      "name": {
+                        "description": "Name is the name of the resource of the kind indicated by the Kind field\nfrom which Freight may originate.",
+                        "type": "string"
+                      }
+                    },
+                    "required": [
+                      "kind",
+                      "name"
+                    ],
+                    "type": "object"
+                  }
+                },
+                "type": "object"
+              },
+              "promotionName": {
+                "description": "PromotionName is the name of the rollback Promotion associated\nwith this hold, when applicable.",
+                "type": "string"
+              },
+              "promotionUID": {
+                "description": "PromotionUID is the UID of the rollback Promotion. Used to\nprevent an older failed rollback from clearing a newer hold.",
+                "type": "string"
+              },
+              "reason": {
+                "description": "Reason is a free-form human-readable explanation of why the hold was\ncreated.",
+                "type": "string"
+              },
+              "state": {
+                "description": "State is the current lifecycle state of the hold.",
+                "enum": [
+                  "Pending",
+                  "Active"
+                ],
+                "type": "string"
+              }
+            },
+            "required": [
+              "freight",
+              "state"
+            ],
+            "type": "object"
+          },
+          "description": "AutoPromotionHolds pause auto-promotion for specific FreightOrigins on\nthis Stage after a user-directed promotion intentionally selects an older\npiece of Freight. Each map entry pins a single origin keyed by the\ncanonical string representation of the FreightOrigin.",
+          "type": "object"
+        },
         "conditions": {
           "description": "Conditions contains the last observations of the Stage's current\nstate.",
           "items": {

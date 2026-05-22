@@ -99,6 +99,8 @@ type ClientService interface {
 
 	GetStage(params *GetStageParams, authInfo runtime.ClientAuthInfoWriter, opts ...ClientOption) (*GetStageOK, error)
 
+	GetStageAutoPromotionCandidates(params *GetStageAutoPromotionCandidatesParams, authInfo runtime.ClientAuthInfoWriter, opts ...ClientOption) (*GetStageAutoPromotionCandidatesOK, error)
+
 	GetStageLinks(params *GetStageLinksParams, authInfo runtime.ClientAuthInfoWriter, opts ...ClientOption) (*GetStageLinksOK, error)
 
 	GetSystemConfigMap(params *GetSystemConfigMapParams, authInfo runtime.ClientAuthInfoWriter, opts ...ClientOption) (*GetSystemConfigMapOK, error)
@@ -146,6 +148,8 @@ type ClientService interface {
 	RefreshStage(params *RefreshStageParams, authInfo runtime.ClientAuthInfoWriter, opts ...ClientOption) (*RefreshStageOK, error)
 
 	RefreshWarehouse(params *RefreshWarehouseParams, authInfo runtime.ClientAuthInfoWriter, opts ...ClientOption) (*RefreshWarehouseOK, error)
+
+	ResumeStageAutoPromotion(params *ResumeStageAutoPromotionParams, authInfo runtime.ClientAuthInfoWriter, opts ...ClientOption) (*ResumeStageAutoPromotionNoContent, error)
 
 	UpdateProjectConfigMap(params *UpdateProjectConfigMapParams, authInfo runtime.ClientAuthInfoWriter, opts ...ClientOption) (*UpdateProjectConfigMapOK, error)
 
@@ -1228,6 +1232,54 @@ func (a *Client) GetStage(params *GetStageParams, authInfo runtime.ClientAuthInf
 	//
 	// safeguard: normally, in the absence of a default response, unknown success responses return an error above: so this is a codegen issue
 	msg := fmt.Sprintf("unexpected success response for GetStage: API contract not enforced by server. Client expected to get an error, but got: %T", result)
+	panic(msg)
+}
+
+/*
+	GetStageAutoPromotionCandidates gets stage auto promotion candidates
+
+	List the newest currently auto-promotable Freight for each
+
+origin requested by the Stage.
+*/
+func (a *Client) GetStageAutoPromotionCandidates(params *GetStageAutoPromotionCandidatesParams, authInfo runtime.ClientAuthInfoWriter, opts ...ClientOption) (*GetStageAutoPromotionCandidatesOK, error) {
+	// NOTE: parameters are not validated before sending
+	if params == nil {
+		params = NewGetStageAutoPromotionCandidatesParams()
+	}
+	op := &runtime.ClientOperation{
+		ID:                 "GetStageAutoPromotionCandidates",
+		Method:             "GET",
+		PathPattern:        "/v1beta1/projects/{project}/stages/{stage}/auto-promotion/candidates",
+		ProducesMediaTypes: []string{"application/json"},
+		ConsumesMediaTypes: []string{"application/json"},
+		Schemes:            []string{"http"},
+		Params:             params,
+		Reader:             &GetStageAutoPromotionCandidatesReader{formats: a.formats},
+		AuthInfo:           authInfo,
+		Context:            params.Context,
+		Client:             params.HTTPClient,
+	}
+	for _, opt := range opts {
+		opt(op)
+	}
+	result, err := a.transport.Submit(op)
+	if err != nil {
+		return nil, err
+	}
+
+	// only one success response has to be checked
+	success, ok := result.(*GetStageAutoPromotionCandidatesOK)
+	if ok {
+		return success, nil
+	}
+
+	// unexpected success response.
+
+	// no default response is defined.
+	//
+	// safeguard: normally, in the absence of a default response, unknown success responses return an error above: so this is a codegen issue
+	msg := fmt.Sprintf("unexpected success response for GetStageAutoPromotionCandidates: API contract not enforced by server. Client expected to get an error, but got: %T", result)
 	panic(msg)
 }
 
@@ -2378,6 +2430,52 @@ func (a *Client) RefreshWarehouse(params *RefreshWarehouseParams, authInfo runti
 	//
 	// safeguard: normally, in the absence of a default response, unknown success responses return an error above: so this is a codegen issue
 	msg := fmt.Sprintf("unexpected success response for RefreshWarehouse: API contract not enforced by server. Client expected to get an error, but got: %T", result)
+	panic(msg)
+}
+
+/*
+ResumeStageAutoPromotion resumes stage auto promotion
+
+Clear active auto-promotion holds for a Stage.
+*/
+func (a *Client) ResumeStageAutoPromotion(params *ResumeStageAutoPromotionParams, authInfo runtime.ClientAuthInfoWriter, opts ...ClientOption) (*ResumeStageAutoPromotionNoContent, error) {
+	// NOTE: parameters are not validated before sending
+	if params == nil {
+		params = NewResumeStageAutoPromotionParams()
+	}
+	op := &runtime.ClientOperation{
+		ID:                 "ResumeStageAutoPromotion",
+		Method:             "POST",
+		PathPattern:        "/v1beta1/projects/{project}/stages/{stage}/auto-promotion/resume",
+		ProducesMediaTypes: []string{"application/json"},
+		ConsumesMediaTypes: []string{"application/json"},
+		Schemes:            []string{"http"},
+		Params:             params,
+		Reader:             &ResumeStageAutoPromotionReader{formats: a.formats},
+		AuthInfo:           authInfo,
+		Context:            params.Context,
+		Client:             params.HTTPClient,
+	}
+	for _, opt := range opts {
+		opt(op)
+	}
+	result, err := a.transport.Submit(op)
+	if err != nil {
+		return nil, err
+	}
+
+	// only one success response has to be checked
+	success, ok := result.(*ResumeStageAutoPromotionNoContent)
+	if ok {
+		return success, nil
+	}
+
+	// unexpected success response.
+
+	// no default response is defined.
+	//
+	// safeguard: normally, in the absence of a default response, unknown success responses return an error above: so this is a codegen issue
+	msg := fmt.Sprintf("unexpected success response for ResumeStageAutoPromotion: API contract not enforced by server. Client expected to get an error, but got: %T", result)
 	panic(msg)
 }
 

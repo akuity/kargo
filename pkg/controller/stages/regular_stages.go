@@ -42,9 +42,14 @@ import (
 	"github.com/akuity/kargo/pkg/kubernetes"
 	libEvent "github.com/akuity/kargo/pkg/kubernetes/event"
 	"github.com/akuity/kargo/pkg/logging"
-	"github.com/akuity/kargo/pkg/pattern"
 	intpredicate "github.com/akuity/kargo/pkg/predicate"
 	"github.com/akuity/kargo/pkg/rollouts"
+)
+
+const (
+	pendingAutoPromotionHoldCreationGracePeriod = 10 * time.Minute
+
+	autoPromotionHoldAbandonedEventType kargoapi.EventType = "HoldAbandoned"
 )
 
 // ReconcilerConfig represents configuration for the stage reconciler.
@@ -77,6 +82,7 @@ func ReconcilerConfigFromEnv() ReconcilerConfig {
 type RegularStageReconciler struct {
 	cfg            ReconcilerConfig
 	client         client.Client
+	apiReader      client.Reader
 	eventSender    kargoEvent.Sender
 	healthChecker  health.AggregatingChecker
 	shardPredicate controller.ResponsibleFor[kargoapi.Stage]
@@ -116,6 +122,7 @@ func (r *RegularStageReconciler) SetupWithManager(
 ) error {
 	// Configure client and event recorder using manager.
 	r.client = kargoMgr.GetClient()
+	r.apiReader = kargoMgr.GetAPIReader()
 	r.eventSender = k8sevent.NewEventSender(
 		libEvent.NewRecorder(ctx, kargoMgr.GetScheme(), kargoMgr.GetClient(), r.cfg.Name()),
 	)
@@ -373,9 +380,7 @@ func (r *RegularStageReconciler) Reconcile(ctx context.Context, req ctrl.Request
 	}
 
 	// Patch the status of the Stage.
-	if err := kubeclient.PatchStatus(ctx, r.client, stage, func(status *kargoapi.StageStatus) {
-		*status = newStatus
-	}); err != nil {
+	if err := patchRegularStageStatus(ctx, r.client, stage, newStatus); err != nil {
 		// Prioritize the reconcile error if it exists.
 		if reconcileErr != nil {
 			logger.Error(err, "failed to update Stage status after reconciliation error")
@@ -512,10 +517,10 @@ func (r *RegularStageReconciler) reconcile(
 
 		// Patch the status of the Stage after each sub-reconciler to show
 		// progress.
-		if err = kubeclient.PatchStatus(ctx, r.client, stage, func(status *kargoapi.StageStatus) {
-			*status = newStatus
-		}); err != nil {
+		if err = patchRegularStageStatus(ctx, r.client, stage, newStatus); err != nil {
 			logger.Error(err, fmt.Sprintf("failed to update Stage status after %s", subR.name))
+		} else {
+			stage.Status = newStatus
 		}
 	}
 
@@ -527,6 +532,23 @@ func (r *RegularStageReconciler) reconcile(
 	}
 
 	return newStatus, requestRequeue, nil
+}
+
+// patchRegularStageStatus patches broad Stage status progress while keeping
+// auto-promotion holds out of the merge patch. Holds are updated by dedicated
+// optimistic-lock helpers because API handlers and controllers can both write
+// them.
+func patchRegularStageStatus(
+	ctx context.Context,
+	c client.Client,
+	stage *kargoapi.Stage,
+	newStatus kargoapi.StageStatus,
+) error {
+	return kubeclient.PatchStatus(ctx, c, stage, func(status *kargoapi.StageStatus) {
+		holds := status.AutoPromotionHolds
+		*status = newStatus
+		status.AutoPromotionHolds = holds
+	})
 }
 
 // syncPromotions synchronizes the Promotions for a Stage. It determines the
@@ -565,6 +587,10 @@ func (r *RegularStageReconciler) syncPromotions(
 		return newStatus, false, err
 	}
 
+	if err := r.syncAutoPromotionHolds(ctx, stage, promotions, &newStatus); err != nil {
+		return newStatus, false, err
+	}
+
 	// If there are no Promotions, then we are not promoting any Freight.
 	if len(promotions.Items) == 0 {
 		logger.Debug("no Promotions found for Stage")
@@ -575,6 +601,10 @@ func (r *RegularStageReconciler) syncPromotions(
 		newStatus.CurrentPromotion = nil
 
 		return newStatus, false, nil
+	}
+
+	if err := r.abortAutoPromotionsBlockedByHolds(ctx, stage, promotions); err != nil {
+		return newStatus, false, err
 	}
 
 	// Sort the Promotions by phase and creation time to determine the current
@@ -750,6 +780,560 @@ func (r *RegularStageReconciler) syncPromotions(
 	// not promoting.
 	conditions.Delete(&newStatus, kargoapi.ConditionTypePromoting)
 	return newStatus, hasNonTerminalPromotions, nil
+}
+
+// syncAutoPromotionHolds reconciles recorded auto-promotion holds against the
+// Promotions that can activate or clear them. It keeps status changes guarded
+// by live reads so stale cached Stage snapshots cannot remove a newer hold.
+func (r *RegularStageReconciler) syncAutoPromotionHolds(
+	ctx context.Context,
+	stage *kargoapi.Stage,
+	promotions *kargoapi.PromotionList,
+	status *kargoapi.StageStatus,
+) error {
+	if len(status.AutoPromotionHolds) == 0 {
+		return nil
+	}
+
+	requestedOrigins := make(map[string]struct{}, len(stage.Spec.RequestedFreight))
+	for _, req := range stage.Spec.RequestedFreight {
+		requestedOrigins[req.Origin.String()] = struct{}{}
+	}
+
+	promotionsByName := make(map[string]*kargoapi.Promotion, len(promotions.Items))
+	clearHoldPromotionsByOrigin := map[string][]*kargoapi.Promotion{}
+	for i := range promotions.Items {
+		promo := &promotions.Items[i]
+		promotionsByName[promo.Name] = promo
+		if promo.Status.Phase != kargoapi.PromotionPhaseSucceeded {
+			continue
+		}
+		origin := promo.Annotations[kargoapi.AnnotationKeyClearAutoPromotionHold]
+		if origin == "" {
+			continue
+		}
+		clearHoldPromotionsByOrigin[origin] = append(clearHoldPromotionsByOrigin[origin], promo)
+	}
+
+	latestHolds := status.AutoPromotionHolds
+	for origin := range status.AutoPromotionHolds {
+		hold, ok := latestHolds[origin]
+		if !ok {
+			continue
+		}
+		if _, err := kargoapi.ParseFreightOriginKey(origin); err != nil {
+			if latestHolds, _, err = r.removeAutoPromotionHoldIfCurrent(
+				ctx,
+				client.ObjectKeyFromObject(stage),
+				origin,
+				hold,
+			); err != nil {
+				return err
+			}
+			continue
+		}
+		if _, requested := requestedOrigins[origin]; !requested {
+			var err error
+			if latestHolds, _, err = r.removeAutoPromotionHoldIfCurrent(
+				ctx,
+				client.ObjectKeyFromObject(stage),
+				origin,
+				hold,
+			); err != nil {
+				return err
+			}
+			continue
+		}
+
+		cleared := false
+		for _, clearPromo := range clearHoldPromotionsByOrigin[origin] {
+			if autoPromotionHoldMatchesClearAnnotation(hold, clearPromo) {
+				var err error
+				if latestHolds, _, err = r.removeAutoPromotionHoldIfCurrent(
+					ctx,
+					client.ObjectKeyFromObject(stage),
+					origin,
+					hold,
+				); err != nil {
+					return err
+				}
+				cleared = true
+				break
+			}
+		}
+		if cleared {
+			continue
+		}
+
+		if hold.State != kargoapi.AutoPromotionHoldStatePending {
+			continue
+		}
+
+		promo := promotionsByName[hold.PromotionName]
+		if promo == nil {
+			livePromo, err := r.getLivePromotion(
+				ctx,
+				client.ObjectKey{Namespace: stage.Namespace, Name: hold.PromotionName},
+			)
+			if err != nil {
+				return err
+			}
+			promo = livePromo
+		}
+		if promo == nil {
+			if hold.CreatedAt == nil {
+				holds, err := r.setPendingAutoPromotionHoldCreatedAtIfCurrent(
+					ctx,
+					client.ObjectKeyFromObject(stage),
+					origin,
+					hold,
+				)
+				if err != nil {
+					return err
+				}
+				latestHolds = holds
+				continue
+			}
+			if hold.PromotionUID != "" ||
+				time.Since(hold.CreatedAt.Time) > pendingAutoPromotionHoldCreationGracePeriod {
+				holds, removed, err := r.removeAutoPromotionHoldIfCurrent(
+					ctx,
+					client.ObjectKeyFromObject(stage),
+					origin,
+					hold,
+				)
+				if err != nil {
+					return err
+				}
+				latestHolds = holds
+				if removed {
+					r.sendAutoPromotionHoldAbandonedEvent(ctx, stage, origin, hold)
+				}
+				continue
+			}
+			continue
+		}
+
+		holds, err := r.syncPendingAutoPromotionHold(
+			ctx,
+			client.ObjectKeyFromObject(stage),
+			origin,
+			hold,
+			promo,
+		)
+		if err != nil {
+			return err
+		}
+		latestHolds = holds
+	}
+
+	stage.Status.AutoPromotionHolds = latestHolds
+	status.AutoPromotionHolds = latestHolds
+	return nil
+}
+
+// syncPendingAutoPromotionHold moves a pending hold through its linked rollback
+// Promotion lifecycle. A UID-less snapshot can learn the Promotion UID, but any
+// other identity change means a newer writer owns the hold.
+func (r *RegularStageReconciler) syncPendingAutoPromotionHold(
+	ctx context.Context,
+	stageKey client.ObjectKey,
+	origin string,
+	hold kargoapi.AutoPromotionHold,
+	promo *kargoapi.Promotion,
+) (map[string]kargoapi.AutoPromotionHold, error) {
+	holds, _, err := r.patchStageAutoPromotionHolds(ctx, stageKey, func(status *kargoapi.StageStatus) bool {
+		liveHold, ok := status.AutoPromotionHolds[origin]
+		if !ok || !pendingAutoPromotionHoldMatchesSnapshot(liveHold, hold) {
+			return false
+		}
+		if liveHold.PromotionUID != "" && liveHold.PromotionUID != string(promo.UID) {
+			return false
+		}
+		if promo.Status.Phase.IsTerminal() && promo.Status.Phase != kargoapi.PromotionPhaseSucceeded {
+			delete(status.AutoPromotionHolds, origin)
+			if len(status.AutoPromotionHolds) == 0 {
+				status.AutoPromotionHolds = nil
+			}
+			return true
+		}
+
+		updatedHold := liveHold
+		if updatedHold.PromotionUID == "" {
+			updatedHold.PromotionUID = string(promo.UID)
+		}
+		if promo.Status.Phase == kargoapi.PromotionPhaseSucceeded {
+			updatedHold.State = kargoapi.AutoPromotionHoldStateActive
+		}
+		if api.AutoPromotionHoldIdentityMatches(updatedHold, liveHold) &&
+			updatedHold.State == liveHold.State {
+			return false
+		}
+		if status.AutoPromotionHolds == nil {
+			status.AutoPromotionHolds = map[string]kargoapi.AutoPromotionHold{}
+		}
+		status.AutoPromotionHolds[origin] = updatedHold
+		return true
+	})
+	return holds, err
+}
+
+// setPendingAutoPromotionHoldCreatedAtIfCurrent timestamps malformed pending
+// holds instead of abandoning them immediately, preserving the same grace
+// period used for normally-created holds.
+func (r *RegularStageReconciler) setPendingAutoPromotionHoldCreatedAtIfCurrent(
+	ctx context.Context,
+	stageKey client.ObjectKey,
+	origin string,
+	expected kargoapi.AutoPromotionHold,
+) (map[string]kargoapi.AutoPromotionHold, error) {
+	now := metav1.Now()
+	holds, _, err := r.patchStageAutoPromotionHolds(ctx, stageKey, func(status *kargoapi.StageStatus) bool {
+		hold, ok := status.AutoPromotionHolds[origin]
+		if !ok ||
+			hold.State != kargoapi.AutoPromotionHoldStatePending ||
+			hold.CreatedAt != nil ||
+			!pendingAutoPromotionHoldMatchesSnapshot(hold, expected) {
+			return false
+		}
+		hold.CreatedAt = &now
+		status.AutoPromotionHolds[origin] = hold
+		return true
+	})
+	return holds, err
+}
+
+// pendingAutoPromotionHoldMatchesSnapshot allows a pending hold to learn the
+// UID of its linked Promotion while rejecting other identity or metadata drift.
+func pendingAutoPromotionHoldMatchesSnapshot(
+	hold kargoapi.AutoPromotionHold,
+	snapshot kargoapi.AutoPromotionHold,
+) bool {
+	if hold.Freight.Name != snapshot.Freight.Name ||
+		!hold.Freight.Origin.Equals(&snapshot.Freight.Origin) ||
+		hold.PromotionName != snapshot.PromotionName ||
+		hold.State != snapshot.State ||
+		hold.Actor != snapshot.Actor ||
+		hold.Reason != snapshot.Reason ||
+		!autoPromotionHoldCreatedAtEqual(hold.CreatedAt, snapshot.CreatedAt) {
+		return false
+	}
+	return snapshot.PromotionUID == "" || hold.PromotionUID == snapshot.PromotionUID
+}
+
+// autoPromotionHoldMatchesExpected requires an exact hold match before a
+// caller removes a hold from live Stage status.
+func autoPromotionHoldMatchesExpected(
+	hold kargoapi.AutoPromotionHold,
+	expected kargoapi.AutoPromotionHold,
+) bool {
+	return hold.State == expected.State &&
+		hold.Actor == expected.Actor &&
+		hold.Reason == expected.Reason &&
+		api.AutoPromotionHoldIdentityMatches(hold, expected)
+}
+
+// autoPromotionHoldCreatedAtEqual compares optional Kubernetes timestamps by
+// instant instead of pointer identity.
+func autoPromotionHoldCreatedAtEqual(lhs, rhs *metav1.Time) bool {
+	switch {
+	case lhs == nil && rhs == nil:
+		return true
+	case lhs == nil || rhs == nil:
+		return false
+	default:
+		return lhs.Time.Equal(rhs.Time)
+	}
+}
+
+// removeAutoPromotionHoldIfCurrent removes a hold only when the live hold still
+// exactly matches the caller's snapshot.
+func (r *RegularStageReconciler) removeAutoPromotionHoldIfCurrent(
+	ctx context.Context,
+	stageKey client.ObjectKey,
+	origin string,
+	expected kargoapi.AutoPromotionHold,
+) (map[string]kargoapi.AutoPromotionHold, bool, error) {
+	return r.patchStageAutoPromotionHolds(ctx, stageKey, func(status *kargoapi.StageStatus) bool {
+		hold, ok := status.AutoPromotionHolds[origin]
+		if !ok || !autoPromotionHoldMatchesExpected(hold, expected) {
+			return false
+		}
+		delete(status.AutoPromotionHolds, origin)
+		if len(status.AutoPromotionHolds) == 0 {
+			status.AutoPromotionHolds = nil
+		}
+		return true
+	})
+}
+
+// patchStageAutoPromotionHolds mutates Stage status with optimistic locking
+// and returns the latest hold map observed during the retry loop.
+func (r *RegularStageReconciler) patchStageAutoPromotionHolds(
+	ctx context.Context,
+	key client.ObjectKey,
+	patch func(status *kargoapi.StageStatus) bool,
+) (map[string]kargoapi.AutoPromotionHold, bool, error) {
+	var (
+		changed bool
+		holds   map[string]kargoapi.AutoPromotionHold
+	)
+	err := retry.RetryOnConflict(retry.DefaultRetry, func() error {
+		changed = false
+		liveStage, err := r.getLiveStage(ctx, key)
+		if err != nil {
+			if apierrors.IsNotFound(err) {
+				return nil
+			}
+			return err
+		}
+
+		original := liveStage.DeepCopy()
+		if !patch(&liveStage.Status) {
+			holds = liveStage.Status.AutoPromotionHolds
+			return nil
+		}
+		if len(liveStage.Status.AutoPromotionHolds) == 0 {
+			liveStage.Status.AutoPromotionHolds = nil
+		}
+		if err = r.client.Status().Patch(
+			ctx,
+			liveStage,
+			client.MergeFromWithOptions(original, client.MergeFromWithOptimisticLock{}),
+		); err != nil {
+			return err
+		}
+		changed = true
+		holds = liveStage.Status.AutoPromotionHolds
+		return nil
+	})
+	return holds, changed, err
+}
+
+func (r *RegularStageReconciler) getLiveStage(
+	ctx context.Context,
+	key client.ObjectKey,
+) (*kargoapi.Stage, error) {
+	reader := r.apiReader
+	if reader == nil {
+		reader = r.client
+	}
+	stage := &kargoapi.Stage{}
+	if err := reader.Get(ctx, key, stage); err != nil {
+		return nil, err
+	}
+	return stage, nil
+}
+
+func (r *RegularStageReconciler) getLivePromotion(
+	ctx context.Context,
+	key client.ObjectKey,
+) (*kargoapi.Promotion, error) {
+	reader := r.apiReader
+	if reader == nil {
+		reader = r.client
+	}
+	promo := &kargoapi.Promotion{}
+	if err := reader.Get(ctx, key, promo); err != nil {
+		if apierrors.IsNotFound(err) {
+			return nil, nil
+		}
+		return nil, err
+	}
+	return promo, nil
+}
+
+func (r *RegularStageReconciler) sendAutoPromotionHoldAbandonedEvent(
+	ctx context.Context,
+	stage *kargoapi.Stage,
+	origin string,
+	hold kargoapi.AutoPromotionHold,
+) {
+	if r.eventSender == nil {
+		return
+	}
+	evt := &kargoEvent.Custom{
+		ObjectKind: "Stage",
+		Name:       stage.Name,
+		Project:    stage.Namespace,
+		EventType:  autoPromotionHoldAbandonedEventType,
+		Message: fmt.Sprintf(
+			"Abandoned pending auto-promotion hold for origin %q because Promotion %q was not found",
+			origin,
+			hold.PromotionName,
+		),
+		Data: map[string]any{
+			"origin":    origin,
+			"promotion": hold.PromotionName,
+			"freight":   hold.Freight.Name,
+		},
+	}
+	if err := r.eventSender.Send(ctx, evt); err != nil {
+		logging.LoggerFromContext(ctx).Error(err, "failed to send auto-promotion hold abandoned event")
+	}
+}
+
+// autoPromotionHoldMatchesClearAnnotation verifies that a successful non-auto
+// Promotion is clearing the same active hold the API server observed when it
+// created the Promotion. This prevents older Promotions from clearing newer
+// rollback intent.
+func autoPromotionHoldMatchesClearAnnotation(
+	hold kargoapi.AutoPromotionHold,
+	promo *kargoapi.Promotion,
+) bool {
+	if hold.State != kargoapi.AutoPromotionHoldStateActive {
+		return false
+	}
+	createdAtValue := promo.Annotations[kargoapi.AnnotationKeyClearAutoPromotionHoldCreatedAt]
+	if hold.CreatedAt == nil {
+		if createdAtValue != "" {
+			return false
+		}
+	} else {
+		if createdAtValue == "" {
+			return false
+		}
+		createdAt, err := time.Parse(time.RFC3339Nano, createdAtValue)
+		if err != nil || !hold.CreatedAt.Time.Equal(createdAt) {
+			return false
+		}
+	}
+	promotionName := promo.Annotations[kargoapi.AnnotationKeyClearAutoPromotionHoldPromotion]
+	if hold.PromotionName == "" || promotionName == "" {
+		return false
+	}
+	return hold.PromotionName == promotionName &&
+		hold.PromotionUID == promo.Annotations[kargoapi.AnnotationKeyClearAutoPromotionHoldPromotionUID] &&
+		(hold.CreatedAt == nil || !promo.CreationTimestamp.Time.Before(hold.CreatedAt.Time))
+}
+
+// abortAutoPromotionsBlockedByHolds aborts pending auto Promotions that lost
+// the race to a newer auto-promotion hold. Running Promotions are left alone.
+func (r *RegularStageReconciler) abortAutoPromotionsBlockedByHolds(
+	ctx context.Context,
+	stage *kargoapi.Stage,
+	promotions *kargoapi.PromotionList,
+) error {
+	var liveStage *kargoapi.Stage
+	for i := range promotions.Items {
+		promo := &promotions.Items[i]
+		if promo.Spec.Source != kargoapi.PromotionSourceAuto ||
+			(promo.Status.Phase != "" &&
+				promo.Status.Phase != kargoapi.PromotionPhasePending) {
+			continue
+		}
+
+		freight := &kargoapi.Freight{}
+		if err := r.client.Get(
+			ctx,
+			client.ObjectKey{Namespace: promo.Namespace, Name: promo.Spec.Freight},
+			freight,
+		); err != nil {
+			if apierrors.IsNotFound(err) {
+				continue
+			}
+			return fmt.Errorf("error getting Freight %q for Promotion %q: %w", promo.Spec.Freight, promo.Name, err)
+		}
+		if liveStage == nil {
+			var err error
+			liveStage, err = r.getLiveStage(ctx, client.ObjectKeyFromObject(stage))
+			if err != nil {
+				if apierrors.IsNotFound(err) {
+					return nil
+				}
+				return err
+			}
+		}
+		hold, held := liveStage.Status.GetAutoPromotionHold(freight.Origin)
+		// A hold pinning the same Freight is not in conflict with this
+		// Promotion. Only newer auto-promotions for that origin are blocked.
+		if !held || hold.Freight.Name == freight.Name {
+			continue
+		}
+
+		livePromo, aborted, err := r.abortAutoPromotionIfPending(
+			ctx,
+			client.ObjectKey{Namespace: promo.Namespace, Name: promo.Name},
+			client.ObjectKeyFromObject(stage),
+			freight.Origin,
+		)
+		if err != nil {
+			return fmt.Errorf("error aborting Promotion %q blocked by auto-promotion hold: %w", promo.Name, err)
+		}
+		if aborted {
+			promo.Status = livePromo.Status
+		}
+	}
+	return nil
+}
+
+// abortAutoPromotionIfPending aborts only auto-created Promotions that are
+// still pending and still blocked by a live Stage hold. That avoids aborting a
+// Promotion that has already started running, or one whose hold was cleared
+// while the cache was behind.
+func (r *RegularStageReconciler) abortAutoPromotionIfPending(
+	ctx context.Context,
+	key client.ObjectKey,
+	stageKey client.ObjectKey,
+	origin kargoapi.FreightOrigin,
+) (*kargoapi.Promotion, bool, error) {
+	var (
+		aborted bool
+		live    *kargoapi.Promotion
+	)
+	err := retry.RetryOnConflict(retry.DefaultRetry, func() error {
+		aborted = false
+		var err error
+		live, err = r.getLivePromotion(ctx, key)
+		if err != nil {
+			return err
+		}
+		if live == nil {
+			return nil
+		}
+		if live.Spec.Source != kargoapi.PromotionSourceAuto ||
+			(live.Status.Phase != "" &&
+				live.Status.Phase != kargoapi.PromotionPhasePending) {
+			return nil
+		}
+		blocked, err := r.liveStageHasAutoPromotionHold(ctx, stageKey, origin)
+		if err != nil {
+			return err
+		}
+		if !blocked {
+			return nil
+		}
+
+		original := live.DeepCopy()
+		now := metav1.Now()
+		live.Status.Phase = kargoapi.PromotionPhaseAborted
+		live.Status.Message = api.AutoPromotionBlockedByHoldMessage
+		live.Status.FinishedAt = &now
+		aborted = true
+		return r.client.Status().Patch(
+			ctx,
+			live,
+			client.MergeFromWithOptions(original, client.MergeFromWithOptimisticLock{}),
+		)
+	})
+	return live, aborted, err
+}
+
+// liveStageHasAutoPromotionHold checks the API-server view of a Stage hold.
+func (r *RegularStageReconciler) liveStageHasAutoPromotionHold(
+	ctx context.Context,
+	key client.ObjectKey,
+	origin kargoapi.FreightOrigin,
+) (bool, error) {
+	liveStage, err := r.getLiveStage(ctx, key)
+	if err != nil {
+		if apierrors.IsNotFound(err) {
+			return false, nil
+		}
+		return false, err
+	}
+	_, held := liveStage.Status.GetAutoPromotionHold(origin)
+	return held, nil
 }
 
 // assessHealth assesses the health of a Stage based on the health checks from
@@ -1691,8 +2275,14 @@ func (r *RegularStageReconciler) autoPromoteFreight(
 	}
 	newStatus.AutoPromotionEnabled = true
 
-	// Retrieve promotable Freight for the Stage.
-	promotableFreight, err := r.getPromotableFreight(ctx, stage)
+	availableFreight, err := api.ListFreightAvailableToStage(ctx, r.client, stage)
+	if err != nil {
+		return newStatus, fmt.Errorf(
+			"error listing available Freight for Stage %q: %w",
+			stage.Name, err,
+		)
+	}
+	candidates, err := api.SelectAutoPromotionCandidates(stage, availableFreight)
 	if err != nil {
 		return newStatus, err
 	}
@@ -1700,171 +2290,128 @@ func (r *RegularStageReconciler) autoPromoteFreight(
 	// If the Stage has no current Freight, then we can promote any available
 	currentFreight := newStatus.FreightHistory.Current()
 
+	liveStage, err := r.getLiveStage(ctx, client.ObjectKeyFromObject(stage))
+	if err != nil {
+		if apierrors.IsNotFound(err) {
+			return newStatus, nil
+		}
+		return newStatus, fmt.Errorf("error getting live Stage %q: %w", stage.Name, err)
+	}
+
 	// Check if there is any new Freight which can be auto-promoted.
 	for _, req := range stage.Spec.RequestedFreight {
 		origin := req.Origin.String()
-		freight, exists := promotableFreight[origin]
-		if !exists || len(freight) == 0 {
-			logger.Debug("no Freight from origin available for auto-promotion", "origin", origin)
+		if _, held := newStatus.AutoPromotionHolds[origin]; held {
+			logger.Debug("auto-promotion is blocked by an auto-promotion hold", "origin", origin)
+			continue
+		}
+		if _, held := liveStage.Status.AutoPromotionHolds[origin]; held {
+			logger.Debug(
+				"auto-promotion is blocked by a live auto-promotion hold",
+				"origin", origin,
+			)
 			continue
 		}
 
-		// Quick sanity check...
-		if req.Sources.AutoPromotionOptions != nil &&
-			req.Sources.AutoPromotionOptions.SelectionPolicy == kargoapi.AutoPromotionSelectionPolicyMatchUpstream &&
-			len(freight) > 1 {
-			return newStatus, fmt.Errorf(
-				"unexpectedly found %d available Freight running immediately "+
-					"upstream from Stage %q in namespace %q; this should not be "+
-					"possible",
-				len(freight), stage.Name, stage.Namespace,
-			)
+		latestFreight, exists := candidates[origin]
+		if !exists {
+			logger.Debug("no Freight from origin available for auto-promotion", "origin", origin)
+			continue
 		}
-
-		// Find the latest Freight by sorting the available Freight by creation time
-		// in descending order.
-		slices.SortFunc(freight, func(lhs, rhs kargoapi.Freight) int {
-			return rhs.CreationTimestamp.Compare(lhs.CreationTimestamp.Time)
-		})
-		latestFreight := freight[0]
 
 		freightLogger := logger.WithValues("origin", origin, "freight", latestFreight.Name)
 
 		// Only proceed if the latest available Freight is different from the
 		// current Freight in the Stage.
-		if currentFreight != nil && len(currentFreight.Freight) > 0 {
-			if freightRef, ok := currentFreight.Freight[origin]; ok && freightRef.Name == latestFreight.Name {
-				freightLogger.Debug("Stage already has latest available Freight for origin")
-				continue
-			}
+		if freightCollectionHasFreight(currentFreight, origin, latestFreight.Name) ||
+			freightCollectionHasFreight(
+				liveStage.Status.FreightHistory.Current(),
+				origin,
+				latestFreight.Name,
+			) {
+			freightLogger.Debug("Stage already has latest available Freight for origin")
+			continue
+		}
+		if liveStage.Status.CurrentPromotion != nil &&
+			liveStage.Status.CurrentPromotion.Freight != nil &&
+			liveStage.Status.CurrentPromotion.Freight.Name == latestFreight.Name &&
+			liveStage.Status.CurrentPromotion.Freight.Origin.String() == origin {
+			freightLogger.Debug("Stage is already awaiting latest available Freight for origin")
+			continue
 		}
 
-		// How we proceed depends on the auto-promotion Freight selection policy...
-		if req.Sources.AutoPromotionOptions != nil &&
-			req.Sources.AutoPromotionOptions.SelectionPolicy == kargoapi.AutoPromotionSelectionPolicyMatchUpstream {
-			// With the MatchUpstream policy, we want to allow for the possibility of
-			// a Stage needing to RETURN to a state it's previously been in. The only
-			// conditions under which we WON'T proceed with auto-promotion are if
-			// there's already a Promotion like the one we'd create that is not
-			// terminal (e.g. Pending or Running) OR the last terminal Promotion like
-			// the one we'd create wasn't successful. Not creating a new Promotion
-			// under these conditions avoids the formation of an infinite loop of new
-			// Promotions.
-			//
-			// If a non-terminal Promotion already exists for this Stage and Freight,
-			// then we should not create a new one.
-			promotions := &kargoapi.PromotionList{}
-			if err = r.client.List(
-				ctx,
-				promotions,
-				client.InNamespace(stage.Namespace),
-				client.MatchingFieldsSelector{
-					Selector: fields.AndSelectors(
-						fields.OneTermEqualSelector(
-							indexer.PromotionsByStageAndFreightField,
-							indexer.StageAndFreightKey(stage.Name, latestFreight.Name),
-						),
-						fields.OneTermEqualSelector(
-							indexer.PromotionsByTerminalField,
-							"false",
-						),
-					),
-				},
-				client.Limit(1),
-			); err != nil {
-				return newStatus, fmt.Errorf(
-					"error listing existing non-terminal Promotions for Freight %q "+
-						"in namespace %q: %w",
-					latestFreight.Name, stage.Namespace, err,
-				)
-			}
-			if len(promotions.Items) > 0 {
-				freightLogger.Debug("at least one non-terminal Promotion already " +
-					"exists for Stage and Freight")
-				continue
-			}
-			// If the most recent terminal Promotion for this Stage and Freight wasn't
-			// successful, then we should not create a new one -- otherwise we're
-			// likely to end up in an infinite loop of failed auto-promotions.
-			promotions = &kargoapi.PromotionList{}
-			if err = r.client.List(
-				ctx,
-				promotions,
-				client.InNamespace(stage.Namespace),
-				client.MatchingFieldsSelector{
-					Selector: fields.AndSelectors(
-						fields.OneTermEqualSelector(
-							indexer.PromotionsByStageAndFreightField,
-							indexer.StageAndFreightKey(stage.Name, latestFreight.Name),
-						),
-						fields.OneTermEqualSelector(
-							indexer.PromotionsByTerminalField,
-							"true",
-						),
-					),
-				},
-				client.Limit(1),
-			); err != nil {
-				return newStatus, fmt.Errorf(
-					"error listing existing terminal Promotions for Freight %q in "+
-						"namespace %q: %w",
-					latestFreight.Name, stage.Namespace, err,
-				)
-			}
-			if len(promotions.Items) > 0 {
-				// Sort the terminal Promotions by creation time in descending order
-				slices.SortFunc(promotions.Items, func(lhs, rhs kargoapi.Promotion) int {
-					return rhs.CreationTimestamp.Compare(lhs.CreationTimestamp.Time)
-				})
-				newestPromotion := promotions.Items[0]
-				if newestPromotion.Status.Phase != kargoapi.PromotionPhaseSucceeded {
-					freightLogger.Debug(
-						"most recent terminal Promotion for Stage and Freight was not "+
-							"successful; skipping auto-promotion to avoid an infinite loop",
-						"lastPromotion", newestPromotion.Name,
-						"lastPromotionPhase", newestPromotion.Status.Phase,
-					)
-					continue
-				}
-			}
-		} else {
-			// If we get to here, auto-promotion is based on promoting the newest
-			// Freight. We want to avoid the scenario where we RE-auto-promote the
-			// newest Freight AFTER a user has manually re-promoted the Stage to some
-			// older state. The check we'll perform is more basic than in the case of
-			// the MatchUpstream policy. If ANY Promotion already exists referencing
-			// the same Stage and Freight as the one we'd create, it means this Stage
-			// has seen this Freight before and it shouldn't be RE-auto-promoted to
-			// it. (Freight that's actually NEW and never before promoted to this
-			// Stage will still make it through.)
-			//
-			// TODO(krancour): After #3016 is addressed, we can probably rely on
-			// "pinning" older Freight to a Stage to prevent a user's will from being
-			// preempted by auto-promotion of the newest Freight, and then the less
-			// stringent check used above for the MatchUpstream selection policy
-			// will probably suffice for this case as well.
-			//
-			// See: https://github.com/akuity/kargo/issues/3016
-			promotions := &kargoapi.PromotionList{}
-			if err = r.client.List(
-				ctx,
-				promotions,
-				client.InNamespace(stage.Namespace),
-				client.MatchingFieldsSelector{
-					Selector: fields.OneTermEqualSelector(
+		// Do not create duplicate work for a non-terminal Promotion. Also do
+		// not immediately retry the latest failed terminal Promotion. Explicit
+		// holds now carry user rollback intent, so a previously successful
+		// Promotion is allowed to run again after the hold is resumed.
+		promotions := &kargoapi.PromotionList{}
+		if err = r.client.List(
+			ctx,
+			promotions,
+			client.InNamespace(stage.Namespace),
+			client.MatchingFieldsSelector{
+				Selector: fields.AndSelectors(
+					fields.OneTermEqualSelector(
 						indexer.PromotionsByStageAndFreightField,
 						indexer.StageAndFreightKey(stage.Name, latestFreight.Name),
 					),
-				},
-				client.Limit(1),
-			); err != nil {
-				return newStatus, fmt.Errorf(
-					"error listing existing Promotions for Freight %q in namespace %q: %w",
-					latestFreight.Name, stage.Namespace, err,
+					fields.OneTermEqualSelector(
+						indexer.PromotionsByTerminalField,
+						"false",
+					),
+				),
+			},
+		); err != nil {
+			return newStatus, fmt.Errorf(
+				"error listing existing non-terminal Promotions for Freight %q "+
+					"in namespace %q: %w",
+				latestFreight.Name, stage.Namespace, err,
+			)
+		}
+		if len(promotions.Items) > 0 {
+			freightLogger.Debug("at least one non-terminal Promotion already " +
+				"exists for Stage and Freight")
+			continue
+		}
+		promotions = &kargoapi.PromotionList{}
+		if err = r.client.List(
+			ctx,
+			promotions,
+			client.InNamespace(stage.Namespace),
+			client.MatchingFieldsSelector{
+				Selector: fields.AndSelectors(
+					fields.OneTermEqualSelector(
+						indexer.PromotionsByStageAndFreightField,
+						indexer.StageAndFreightKey(stage.Name, latestFreight.Name),
+					),
+					fields.OneTermEqualSelector(
+						indexer.PromotionsByTerminalField,
+						"true",
+					),
+				),
+			},
+		); err != nil {
+			return newStatus, fmt.Errorf(
+				"error listing existing terminal Promotions for Freight %q in "+
+					"namespace %q: %w",
+				latestFreight.Name, stage.Namespace, err,
+			)
+		}
+		if len(promotions.Items) > 0 {
+			slices.SortFunc(promotions.Items, func(lhs, rhs kargoapi.Promotion) int {
+				if result := rhs.CreationTimestamp.Compare(lhs.CreationTimestamp.Time); result != 0 {
+					return result
+				}
+				return strings.Compare(rhs.Name, lhs.Name)
+			})
+			newestPromotion := promotions.Items[0]
+			if !autoPromotionTerminalAllowsRetry(newestPromotion.Status) {
+				freightLogger.Debug(
+					"most recent terminal Promotion for Stage and Freight was not "+
+						"successful; skipping auto-promotion to avoid an infinite loop",
+					"lastPromotion", newestPromotion.Name,
+					"lastPromotionPhase", newestPromotion.Status.Phase,
 				)
-			}
-			if len(promotions.Items) > 0 {
-				freightLogger.Debug("Promotion already exists for Freight")
 				continue
 			}
 		}
@@ -1878,6 +2425,7 @@ func (r *RegularStageReconciler) autoPromoteFreight(
 				latestFreight.Name, stage.Namespace, err,
 			)
 		}
+		promotion.Spec.Source = kargoapi.PromotionSourceAuto
 		if err = r.client.Create(ctx, promotion); err != nil {
 			return newStatus, fmt.Errorf(
 				"error creating Promotion for Freight %q in namespace %q: %w",
@@ -1904,98 +2452,40 @@ func (r *RegularStageReconciler) autoPromoteFreight(
 	return newStatus, nil
 }
 
+// freightCollectionHasFreight checks a single origin in a FreightCollection.
+func freightCollectionHasFreight(
+	collection *kargoapi.FreightCollection,
+	origin string,
+	name string,
+) bool {
+	if collection == nil || len(collection.Freight) == 0 {
+		return false
+	}
+	freightRef, ok := collection.Freight[origin]
+	return ok && freightRef.Name == name
+}
+
+// autoPromotionTerminalAllowsRetry reports whether a terminal Promotion should
+// allow auto-promotion to create a replacement for the same Freight. A Promotion
+// aborted only because a hold appeared is not treated like a failed promotion.
+func autoPromotionTerminalAllowsRetry(status kargoapi.PromotionStatus) bool {
+	return status.Phase == kargoapi.PromotionPhaseSucceeded ||
+		(status.Phase == kargoapi.PromotionPhaseAborted &&
+			status.Message == api.AutoPromotionBlockedByHoldMessage)
+}
+
 // autoPromotionAllowed checks if auto-promotion is allowed for the given Stage.
 func (r *RegularStageReconciler) autoPromotionAllowed(
 	ctx context.Context,
 	stage metav1.ObjectMeta,
 ) (bool, error) {
 	logger := logging.LoggerFromContext(ctx)
-
-	projectCfg := &kargoapi.ProjectConfig{}
-	if err := r.client.Get(ctx, types.NamespacedName{
-		Name:      stage.Namespace,
-		Namespace: stage.Namespace,
-	}, projectCfg); err != nil {
-		if apierrors.IsNotFound(err) {
-			logger.Debug("found no ProjectConfig associated with Project; auto-promotion is disabled")
-			return false, nil
-		}
-		return false, fmt.Errorf("error getting ProjectConfig for Project %q: %w", stage.Namespace, err)
-	}
-
-	if len(projectCfg.Spec.PromotionPolicies) == 0 {
-		logger.Debug("found no PromotionPolicy associated with Stage")
-		return false, nil
-	}
-
-	for _, policy := range projectCfg.Spec.PromotionPolicies {
-		if policy.StageSelector == nil {
-			// Maintain backward compatibility with older versions of the
-			// PromotionPolicy where the selector was not available.
-			policy.StageSelector = &kargoapi.PromotionPolicySelector{
-				Name: policy.Stage, // nolint:staticcheck
-			}
-		}
-
-		// Match the Stage name with the exact PromotionPolicy name
-		if nameSelector := policy.StageSelector.Name; nameSelector != "" {
-			m, err := pattern.ParseNamePattern(nameSelector)
-			if err != nil {
-				return false, fmt.Errorf("error parsing PromotionPolicy name pattern %q: %w", nameSelector, err)
-			}
-			if !m.Matches(stage.Name) {
-				continue
-			}
-		}
-
-		// Match the Stage labels with the PromotionPolicy label selector.
-		if labelSelector := policy.StageSelector.LabelSelector; labelSelector != nil {
-			s, err := metav1.LabelSelectorAsSelector(labelSelector)
-			if err != nil {
-				return false, fmt.Errorf("error parsing PromotionPolicy label selector %q: %w", labelSelector, err)
-			}
-			if !s.Matches(labels.Set(stage.Labels)) {
-				continue
-			}
-		}
-
-		// If we reach this point, we have found a matching PromotionPolicy.
-		logger.Debug(
-			"found PromotionPolicy associated with Stage",
-			"autoPromotionEnabled", policy.AutoPromotionEnabled,
-		)
-		return policy.AutoPromotionEnabled, nil
-	}
-
-	logger.Debug("found no PromotionPolicy associated with Stage")
-	return false, nil
-}
-
-// getPromotableFreight retrieves a map of []Freight promotable to the specified
-// Stage, indexed by origin.
-func (r *RegularStageReconciler) getPromotableFreight(
-	ctx context.Context,
-	stage *kargoapi.Stage,
-) (map[string][]kargoapi.Freight, error) {
-	availableFreight, err := api.ListFreightAvailableToStage(ctx, r.client, stage)
+	allowed, err := api.IsAutoPromotionEnabled(ctx, r.client, stage)
 	if err != nil {
-		return nil, fmt.Errorf(
-			"error listing available Freight for Stage %q: %w",
-			stage.Name, err,
-		)
+		return false, err
 	}
-
-	promotableFreight := make(map[string][]kargoapi.Freight)
-	for _, freight := range availableFreight {
-		originID := freight.Origin.String()
-		if _, ok := promotableFreight[originID]; !ok {
-			promotableFreight[originID] = []kargoapi.Freight{freight}
-		} else {
-			promotableFreight[originID] = append(promotableFreight[originID], freight)
-		}
-	}
-
-	return promotableFreight, nil
+	logger.Debug("checked auto-promotion policy for Stage", "autoPromotionEnabled", allowed)
+	return allowed, nil
 }
 
 // handleDelete handles the deletion of the given Stage. It clears the

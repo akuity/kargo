@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"strings"
 
 	"github.com/spf13/cobra"
 	"golang.org/x/sync/errgroup"
@@ -30,14 +31,16 @@ type promotionOptions struct {
 	Config        config.CLIConfig
 	ClientOptions client.Options
 
-	Project        string
-	FreightName    string
-	FreightAlias   string
-	Promotion      string
-	Stage          string
-	DownstreamFrom string
-	Abort          bool
-	Wait           bool
+	Project               string
+	FreightName           string
+	FreightAlias          string
+	Promotion             string
+	Stage                 string
+	DownstreamFrom        string
+	Abort                 bool
+	Wait                  bool
+	Reason                string
+	ExpectedAutoCandidate string
 }
 
 func NewCommand(cfg config.CLIConfig, streams genericiooptions.IOStreams) *cobra.Command {
@@ -133,6 +136,18 @@ func (o *promotionOptions) addFlags(cmd *cobra.Command) {
 		"Abort a non-terminal promotion. If set, --%s must be set.", option.NameFlag,
 	))
 	option.Wait(cmd.Flags(), &o.Wait, false, "Wait for the promotion(s) to complete.")
+	cmd.Flags().StringVar(
+		&o.Reason,
+		"reason",
+		"",
+		"Optional explanation for promoting older freight and pausing auto-promotion.",
+	)
+	cmd.Flags().StringVar(
+		&o.ExpectedAutoCandidate,
+		"expected-auto-candidate",
+		"",
+		"Expected current auto-promotion candidate for stale-click protection.",
+	)
 
 	cmd.MarkFlagsOneRequired(option.FreightFlag, option.FreightAliasFlag, option.NameFlag)
 	cmd.MarkFlagsMutuallyExclusive(option.FreightFlag, option.FreightAliasFlag, option.NameFlag)
@@ -147,10 +162,26 @@ func (o *promotionOptions) addFlags(cmd *cobra.Command) {
 // error is returned.
 func (o *promotionOptions) validate() error {
 	var errs []error
+	o.Reason = strings.TrimSpace(o.Reason)
 	// While the flags are marked as required, a user could still provide an empty
 	// string. This is a check to ensure that the flags are not empty.
 	if o.Project == "" {
 		errs = append(errs, fmt.Errorf("%s is required", option.ProjectFlag))
+	}
+	if o.Reason != "" && o.Stage == "" {
+		errs = append(
+			errs,
+			fmt.Errorf("reason can only be used when promoting directly to a stage with %s", option.StageFlag),
+		)
+	}
+	if o.ExpectedAutoCandidate != "" && o.Stage == "" {
+		errs = append(
+			errs,
+			fmt.Errorf(
+				"expected-auto-candidate can only be used when promoting directly to a stage with %s",
+				option.StageFlag,
+			),
+		)
 	}
 	if o.Abort {
 		if o.Promotion == "" {
@@ -201,12 +232,14 @@ func (o *promotionOptions) run(ctx context.Context) error {
 				WithProject(o.Project).
 				WithStage(o.Stage).
 				WithBody(&models.PromoteToStageRequest{
-					Freight:      o.FreightName,
-					FreightAlias: o.FreightAlias,
+					ExpectedAutoCandidate: o.ExpectedAutoCandidate,
+					Freight:               o.FreightName,
+					FreightAlias:          o.FreightAlias,
+					Reason:                o.Reason,
 				}),
 			nil,
 		); err != nil {
-			return err
+			return client.FormatAPIError("promote to stage", err)
 		}
 		promoJSON, err := json.Marshal(res.Payload)
 		if err != nil {
@@ -235,7 +268,7 @@ func (o *promotionOptions) run(ctx context.Context) error {
 			nil,
 		)
 		if err != nil {
-			return err
+			return client.FormatAPIError("promote downstream", err)
 		}
 		promotionsJSON, err := json.Marshal(res.Payload)
 		if err != nil {

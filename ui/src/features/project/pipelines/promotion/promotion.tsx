@@ -22,7 +22,6 @@ import { canAbortPromotion, hasAbortRequest } from '@ui/features/stage/utils/pro
 import {
   abortPromotion,
   getPromotion,
-  promoteToStage,
   refreshResource
 } from '@ui/gen/api/service/v1alpha1/service-KargoService_connectquery';
 import { RawFormat } from '@ui/gen/api/service/v1alpha1/service_pb';
@@ -53,17 +52,6 @@ const Content = (props: { promotion: TPromotion; yaml: string }) => {
       })
   });
 
-  const promoteMutation = useMutation(promoteToStage, {
-    onSuccess(data) {
-      navigate(
-        generatePath(paths.promotion, {
-          name: props.promotion?.metadata?.namespace,
-          promotionId: data.promotion?.metadata?.name
-        })
-      );
-    }
-  });
-
   const refreshResouceTypeStage = 'Stage';
   const refreshResourceMutation = useMutation(refreshResource);
 
@@ -75,11 +63,13 @@ const Content = (props: { promotion: TPromotion; yaml: string }) => {
     const project = props.promotion?.metadata?.namespace;
     const freight = promotion?.spec?.freight;
 
-    promoteMutation.mutate({
-      stage,
-      project,
-      freight
-    });
+    navigate(
+      generatePath(paths.promote, {
+        name: project || '',
+        freight: freight || '',
+        stage: stage || ''
+      })
+    );
   };
 
   const promotionStatusPhase = getPromotionStatusPhase(promotion);
@@ -107,12 +97,7 @@ const Content = (props: { promotion: TPromotion; yaml: string }) => {
         <span>{promotion?.status?.phase}</span>
 
         {canRetry && (
-          <Button
-            loading={promoteMutation.isPending}
-            size='small'
-            icon={<FontAwesomeIcon icon={faUndo} />}
-            onClick={onRetryPromotion}
-          >
+          <Button size='small' icon={<FontAwesomeIcon icon={faUndo} />} onClick={onRetryPromotion}>
             Retry
           </Button>
         )}

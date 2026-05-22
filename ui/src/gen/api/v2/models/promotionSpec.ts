@@ -18,6 +18,10 @@ referenced by the Stage field.
 +kubebuilder:validation:Pattern=`^[a-z0-9]([-a-z0-9]*[a-z0-9])?(\.[a-z0-9]([-a-z0-9]*[a-z0-9])?)*$`
 +akuity:test-kubebuilder-pattern=KubernetesName */
   freight: string;
+  /** Source describes the system path that created this Promotion. The value is
+immutable and is used by controllers to distinguish normal auto-promotion
+from user-directed promotion requests. */
+  source?: string;
   /** Stage specifies the name of the Stage to which this Promotion
 applies. The Stage referenced by this field MUST be in the same
 namespace as the Promotion.

@@ -28,6 +28,48 @@ func (o *PromoteToStageReader) ReadResponse(response runtime.ClientResponse, con
 			return nil, err
 		}
 		return result, nil
+	case 400:
+		result := NewPromoteToStageBadRequest()
+		if err := result.readResponse(response, consumer, o.formats); err != nil {
+			return nil, err
+		}
+		return nil, result
+	case 403:
+		result := NewPromoteToStageForbidden()
+		if err := result.readResponse(response, consumer, o.formats); err != nil {
+			return nil, err
+		}
+		return nil, result
+	case 404:
+		result := NewPromoteToStageNotFound()
+		if err := result.readResponse(response, consumer, o.formats); err != nil {
+			return nil, err
+		}
+		return nil, result
+	case 409:
+		result := NewPromoteToStageConflict()
+		if err := result.readResponse(response, consumer, o.formats); err != nil {
+			return nil, err
+		}
+		return nil, result
+	case 500:
+		result := NewPromoteToStageInternalServerError()
+		if err := result.readResponse(response, consumer, o.formats); err != nil {
+			return nil, err
+		}
+		return nil, result
+	case 503:
+		result := NewPromoteToStageServiceUnavailable()
+		if err := result.readResponse(response, consumer, o.formats); err != nil {
+			return nil, err
+		}
+		return nil, result
+	case 504:
+		result := NewPromoteToStageGatewayTimeout()
+		if err := result.readResponse(response, consumer, o.formats); err != nil {
+			return nil, err
+		}
+		return nil, result
 	default:
 		return nil, runtime.NewAPIError("[POST /v1beta1/projects/{project}/stages/{stage}/promotions] PromoteToStage", response, response.Code())
 	}
@@ -94,6 +136,496 @@ func (o *PromoteToStageCreated) GetPayload() *models.Promotion {
 func (o *PromoteToStageCreated) readResponse(response runtime.ClientResponse, consumer runtime.Consumer, formats strfmt.Registry) error {
 
 	o.Payload = new(models.Promotion)
+
+	// response payload
+	if err := consumer.Consume(response.Body(), o.Payload); err != nil && !stderrors.Is(err, io.EOF) {
+		return err
+	}
+
+	return nil
+}
+
+// NewPromoteToStageBadRequest creates a PromoteToStageBadRequest with default headers values
+func NewPromoteToStageBadRequest() *PromoteToStageBadRequest {
+	return &PromoteToStageBadRequest{}
+}
+
+/*
+PromoteToStageBadRequest describes a response with status code 400, with default header values.
+
+Bad Request
+*/
+type PromoteToStageBadRequest struct {
+	Payload *models.ErrorResponse
+}
+
+// IsSuccess returns true when this promote to stage bad request response has a 2xx status code
+func (o *PromoteToStageBadRequest) IsSuccess() bool {
+	return false
+}
+
+// IsRedirect returns true when this promote to stage bad request response has a 3xx status code
+func (o *PromoteToStageBadRequest) IsRedirect() bool {
+	return false
+}
+
+// IsClientError returns true when this promote to stage bad request response has a 4xx status code
+func (o *PromoteToStageBadRequest) IsClientError() bool {
+	return true
+}
+
+// IsServerError returns true when this promote to stage bad request response has a 5xx status code
+func (o *PromoteToStageBadRequest) IsServerError() bool {
+	return false
+}
+
+// IsCode returns true when this promote to stage bad request response a status code equal to that given
+func (o *PromoteToStageBadRequest) IsCode(code int) bool {
+	return code == 400
+}
+
+// Code gets the status code for the promote to stage bad request response
+func (o *PromoteToStageBadRequest) Code() int {
+	return 400
+}
+
+func (o *PromoteToStageBadRequest) Error() string {
+	payload, _ := json.Marshal(o.Payload)
+	return fmt.Sprintf("[POST /v1beta1/projects/{project}/stages/{stage}/promotions][%d] promoteToStageBadRequest %s", 400, payload)
+}
+
+func (o *PromoteToStageBadRequest) String() string {
+	payload, _ := json.Marshal(o.Payload)
+	return fmt.Sprintf("[POST /v1beta1/projects/{project}/stages/{stage}/promotions][%d] promoteToStageBadRequest %s", 400, payload)
+}
+
+func (o *PromoteToStageBadRequest) GetPayload() *models.ErrorResponse {
+	return o.Payload
+}
+
+func (o *PromoteToStageBadRequest) readResponse(response runtime.ClientResponse, consumer runtime.Consumer, formats strfmt.Registry) error {
+
+	o.Payload = new(models.ErrorResponse)
+
+	// response payload
+	if err := consumer.Consume(response.Body(), o.Payload); err != nil && !stderrors.Is(err, io.EOF) {
+		return err
+	}
+
+	return nil
+}
+
+// NewPromoteToStageForbidden creates a PromoteToStageForbidden with default headers values
+func NewPromoteToStageForbidden() *PromoteToStageForbidden {
+	return &PromoteToStageForbidden{}
+}
+
+/*
+PromoteToStageForbidden describes a response with status code 403, with default header values.
+
+Forbidden
+*/
+type PromoteToStageForbidden struct {
+	Payload *models.ErrorResponse
+}
+
+// IsSuccess returns true when this promote to stage forbidden response has a 2xx status code
+func (o *PromoteToStageForbidden) IsSuccess() bool {
+	return false
+}
+
+// IsRedirect returns true when this promote to stage forbidden response has a 3xx status code
+func (o *PromoteToStageForbidden) IsRedirect() bool {
+	return false
+}
+
+// IsClientError returns true when this promote to stage forbidden response has a 4xx status code
+func (o *PromoteToStageForbidden) IsClientError() bool {
+	return true
+}
+
+// IsServerError returns true when this promote to stage forbidden response has a 5xx status code
+func (o *PromoteToStageForbidden) IsServerError() bool {
+	return false
+}
+
+// IsCode returns true when this promote to stage forbidden response a status code equal to that given
+func (o *PromoteToStageForbidden) IsCode(code int) bool {
+	return code == 403
+}
+
+// Code gets the status code for the promote to stage forbidden response
+func (o *PromoteToStageForbidden) Code() int {
+	return 403
+}
+
+func (o *PromoteToStageForbidden) Error() string {
+	payload, _ := json.Marshal(o.Payload)
+	return fmt.Sprintf("[POST /v1beta1/projects/{project}/stages/{stage}/promotions][%d] promoteToStageForbidden %s", 403, payload)
+}
+
+func (o *PromoteToStageForbidden) String() string {
+	payload, _ := json.Marshal(o.Payload)
+	return fmt.Sprintf("[POST /v1beta1/projects/{project}/stages/{stage}/promotions][%d] promoteToStageForbidden %s", 403, payload)
+}
+
+func (o *PromoteToStageForbidden) GetPayload() *models.ErrorResponse {
+	return o.Payload
+}
+
+func (o *PromoteToStageForbidden) readResponse(response runtime.ClientResponse, consumer runtime.Consumer, formats strfmt.Registry) error {
+
+	o.Payload = new(models.ErrorResponse)
+
+	// response payload
+	if err := consumer.Consume(response.Body(), o.Payload); err != nil && !stderrors.Is(err, io.EOF) {
+		return err
+	}
+
+	return nil
+}
+
+// NewPromoteToStageNotFound creates a PromoteToStageNotFound with default headers values
+func NewPromoteToStageNotFound() *PromoteToStageNotFound {
+	return &PromoteToStageNotFound{}
+}
+
+/*
+PromoteToStageNotFound describes a response with status code 404, with default header values.
+
+Not Found
+*/
+type PromoteToStageNotFound struct {
+	Payload *models.ErrorResponse
+}
+
+// IsSuccess returns true when this promote to stage not found response has a 2xx status code
+func (o *PromoteToStageNotFound) IsSuccess() bool {
+	return false
+}
+
+// IsRedirect returns true when this promote to stage not found response has a 3xx status code
+func (o *PromoteToStageNotFound) IsRedirect() bool {
+	return false
+}
+
+// IsClientError returns true when this promote to stage not found response has a 4xx status code
+func (o *PromoteToStageNotFound) IsClientError() bool {
+	return true
+}
+
+// IsServerError returns true when this promote to stage not found response has a 5xx status code
+func (o *PromoteToStageNotFound) IsServerError() bool {
+	return false
+}
+
+// IsCode returns true when this promote to stage not found response a status code equal to that given
+func (o *PromoteToStageNotFound) IsCode(code int) bool {
+	return code == 404
+}
+
+// Code gets the status code for the promote to stage not found response
+func (o *PromoteToStageNotFound) Code() int {
+	return 404
+}
+
+func (o *PromoteToStageNotFound) Error() string {
+	payload, _ := json.Marshal(o.Payload)
+	return fmt.Sprintf("[POST /v1beta1/projects/{project}/stages/{stage}/promotions][%d] promoteToStageNotFound %s", 404, payload)
+}
+
+func (o *PromoteToStageNotFound) String() string {
+	payload, _ := json.Marshal(o.Payload)
+	return fmt.Sprintf("[POST /v1beta1/projects/{project}/stages/{stage}/promotions][%d] promoteToStageNotFound %s", 404, payload)
+}
+
+func (o *PromoteToStageNotFound) GetPayload() *models.ErrorResponse {
+	return o.Payload
+}
+
+func (o *PromoteToStageNotFound) readResponse(response runtime.ClientResponse, consumer runtime.Consumer, formats strfmt.Registry) error {
+
+	o.Payload = new(models.ErrorResponse)
+
+	// response payload
+	if err := consumer.Consume(response.Body(), o.Payload); err != nil && !stderrors.Is(err, io.EOF) {
+		return err
+	}
+
+	return nil
+}
+
+// NewPromoteToStageConflict creates a PromoteToStageConflict with default headers values
+func NewPromoteToStageConflict() *PromoteToStageConflict {
+	return &PromoteToStageConflict{}
+}
+
+/*
+PromoteToStageConflict describes a response with status code 409, with default header values.
+
+Conflict
+*/
+type PromoteToStageConflict struct {
+	Payload *models.ErrorResponse
+}
+
+// IsSuccess returns true when this promote to stage conflict response has a 2xx status code
+func (o *PromoteToStageConflict) IsSuccess() bool {
+	return false
+}
+
+// IsRedirect returns true when this promote to stage conflict response has a 3xx status code
+func (o *PromoteToStageConflict) IsRedirect() bool {
+	return false
+}
+
+// IsClientError returns true when this promote to stage conflict response has a 4xx status code
+func (o *PromoteToStageConflict) IsClientError() bool {
+	return true
+}
+
+// IsServerError returns true when this promote to stage conflict response has a 5xx status code
+func (o *PromoteToStageConflict) IsServerError() bool {
+	return false
+}
+
+// IsCode returns true when this promote to stage conflict response a status code equal to that given
+func (o *PromoteToStageConflict) IsCode(code int) bool {
+	return code == 409
+}
+
+// Code gets the status code for the promote to stage conflict response
+func (o *PromoteToStageConflict) Code() int {
+	return 409
+}
+
+func (o *PromoteToStageConflict) Error() string {
+	payload, _ := json.Marshal(o.Payload)
+	return fmt.Sprintf("[POST /v1beta1/projects/{project}/stages/{stage}/promotions][%d] promoteToStageConflict %s", 409, payload)
+}
+
+func (o *PromoteToStageConflict) String() string {
+	payload, _ := json.Marshal(o.Payload)
+	return fmt.Sprintf("[POST /v1beta1/projects/{project}/stages/{stage}/promotions][%d] promoteToStageConflict %s", 409, payload)
+}
+
+func (o *PromoteToStageConflict) GetPayload() *models.ErrorResponse {
+	return o.Payload
+}
+
+func (o *PromoteToStageConflict) readResponse(response runtime.ClientResponse, consumer runtime.Consumer, formats strfmt.Registry) error {
+
+	o.Payload = new(models.ErrorResponse)
+
+	// response payload
+	if err := consumer.Consume(response.Body(), o.Payload); err != nil && !stderrors.Is(err, io.EOF) {
+		return err
+	}
+
+	return nil
+}
+
+// NewPromoteToStageInternalServerError creates a PromoteToStageInternalServerError with default headers values
+func NewPromoteToStageInternalServerError() *PromoteToStageInternalServerError {
+	return &PromoteToStageInternalServerError{}
+}
+
+/*
+PromoteToStageInternalServerError describes a response with status code 500, with default header values.
+
+Internal Server Error
+*/
+type PromoteToStageInternalServerError struct {
+	Payload *models.ErrorResponse
+}
+
+// IsSuccess returns true when this promote to stage internal server error response has a 2xx status code
+func (o *PromoteToStageInternalServerError) IsSuccess() bool {
+	return false
+}
+
+// IsRedirect returns true when this promote to stage internal server error response has a 3xx status code
+func (o *PromoteToStageInternalServerError) IsRedirect() bool {
+	return false
+}
+
+// IsClientError returns true when this promote to stage internal server error response has a 4xx status code
+func (o *PromoteToStageInternalServerError) IsClientError() bool {
+	return false
+}
+
+// IsServerError returns true when this promote to stage internal server error response has a 5xx status code
+func (o *PromoteToStageInternalServerError) IsServerError() bool {
+	return true
+}
+
+// IsCode returns true when this promote to stage internal server error response a status code equal to that given
+func (o *PromoteToStageInternalServerError) IsCode(code int) bool {
+	return code == 500
+}
+
+// Code gets the status code for the promote to stage internal server error response
+func (o *PromoteToStageInternalServerError) Code() int {
+	return 500
+}
+
+func (o *PromoteToStageInternalServerError) Error() string {
+	payload, _ := json.Marshal(o.Payload)
+	return fmt.Sprintf("[POST /v1beta1/projects/{project}/stages/{stage}/promotions][%d] promoteToStageInternalServerError %s", 500, payload)
+}
+
+func (o *PromoteToStageInternalServerError) String() string {
+	payload, _ := json.Marshal(o.Payload)
+	return fmt.Sprintf("[POST /v1beta1/projects/{project}/stages/{stage}/promotions][%d] promoteToStageInternalServerError %s", 500, payload)
+}
+
+func (o *PromoteToStageInternalServerError) GetPayload() *models.ErrorResponse {
+	return o.Payload
+}
+
+func (o *PromoteToStageInternalServerError) readResponse(response runtime.ClientResponse, consumer runtime.Consumer, formats strfmt.Registry) error {
+
+	o.Payload = new(models.ErrorResponse)
+
+	// response payload
+	if err := consumer.Consume(response.Body(), o.Payload); err != nil && !stderrors.Is(err, io.EOF) {
+		return err
+	}
+
+	return nil
+}
+
+// NewPromoteToStageServiceUnavailable creates a PromoteToStageServiceUnavailable with default headers values
+func NewPromoteToStageServiceUnavailable() *PromoteToStageServiceUnavailable {
+	return &PromoteToStageServiceUnavailable{}
+}
+
+/*
+PromoteToStageServiceUnavailable describes a response with status code 503, with default header values.
+
+Service Unavailable
+*/
+type PromoteToStageServiceUnavailable struct {
+	Payload *models.ErrorResponse
+}
+
+// IsSuccess returns true when this promote to stage service unavailable response has a 2xx status code
+func (o *PromoteToStageServiceUnavailable) IsSuccess() bool {
+	return false
+}
+
+// IsRedirect returns true when this promote to stage service unavailable response has a 3xx status code
+func (o *PromoteToStageServiceUnavailable) IsRedirect() bool {
+	return false
+}
+
+// IsClientError returns true when this promote to stage service unavailable response has a 4xx status code
+func (o *PromoteToStageServiceUnavailable) IsClientError() bool {
+	return false
+}
+
+// IsServerError returns true when this promote to stage service unavailable response has a 5xx status code
+func (o *PromoteToStageServiceUnavailable) IsServerError() bool {
+	return true
+}
+
+// IsCode returns true when this promote to stage service unavailable response a status code equal to that given
+func (o *PromoteToStageServiceUnavailable) IsCode(code int) bool {
+	return code == 503
+}
+
+// Code gets the status code for the promote to stage service unavailable response
+func (o *PromoteToStageServiceUnavailable) Code() int {
+	return 503
+}
+
+func (o *PromoteToStageServiceUnavailable) Error() string {
+	payload, _ := json.Marshal(o.Payload)
+	return fmt.Sprintf("[POST /v1beta1/projects/{project}/stages/{stage}/promotions][%d] promoteToStageServiceUnavailable %s", 503, payload)
+}
+
+func (o *PromoteToStageServiceUnavailable) String() string {
+	payload, _ := json.Marshal(o.Payload)
+	return fmt.Sprintf("[POST /v1beta1/projects/{project}/stages/{stage}/promotions][%d] promoteToStageServiceUnavailable %s", 503, payload)
+}
+
+func (o *PromoteToStageServiceUnavailable) GetPayload() *models.ErrorResponse {
+	return o.Payload
+}
+
+func (o *PromoteToStageServiceUnavailable) readResponse(response runtime.ClientResponse, consumer runtime.Consumer, formats strfmt.Registry) error {
+
+	o.Payload = new(models.ErrorResponse)
+
+	// response payload
+	if err := consumer.Consume(response.Body(), o.Payload); err != nil && !stderrors.Is(err, io.EOF) {
+		return err
+	}
+
+	return nil
+}
+
+// NewPromoteToStageGatewayTimeout creates a PromoteToStageGatewayTimeout with default headers values
+func NewPromoteToStageGatewayTimeout() *PromoteToStageGatewayTimeout {
+	return &PromoteToStageGatewayTimeout{}
+}
+
+/*
+PromoteToStageGatewayTimeout describes a response with status code 504, with default header values.
+
+Gateway Timeout
+*/
+type PromoteToStageGatewayTimeout struct {
+	Payload *models.ErrorResponse
+}
+
+// IsSuccess returns true when this promote to stage gateway timeout response has a 2xx status code
+func (o *PromoteToStageGatewayTimeout) IsSuccess() bool {
+	return false
+}
+
+// IsRedirect returns true when this promote to stage gateway timeout response has a 3xx status code
+func (o *PromoteToStageGatewayTimeout) IsRedirect() bool {
+	return false
+}
+
+// IsClientError returns true when this promote to stage gateway timeout response has a 4xx status code
+func (o *PromoteToStageGatewayTimeout) IsClientError() bool {
+	return false
+}
+
+// IsServerError returns true when this promote to stage gateway timeout response has a 5xx status code
+func (o *PromoteToStageGatewayTimeout) IsServerError() bool {
+	return true
+}
+
+// IsCode returns true when this promote to stage gateway timeout response a status code equal to that given
+func (o *PromoteToStageGatewayTimeout) IsCode(code int) bool {
+	return code == 504
+}
+
+// Code gets the status code for the promote to stage gateway timeout response
+func (o *PromoteToStageGatewayTimeout) Code() int {
+	return 504
+}
+
+func (o *PromoteToStageGatewayTimeout) Error() string {
+	payload, _ := json.Marshal(o.Payload)
+	return fmt.Sprintf("[POST /v1beta1/projects/{project}/stages/{stage}/promotions][%d] promoteToStageGatewayTimeout %s", 504, payload)
+}
+
+func (o *PromoteToStageGatewayTimeout) String() string {
+	payload, _ := json.Marshal(o.Payload)
+	return fmt.Sprintf("[POST /v1beta1/projects/{project}/stages/{stage}/promotions][%d] promoteToStageGatewayTimeout %s", 504, payload)
+}
+
+func (o *PromoteToStageGatewayTimeout) GetPayload() *models.ErrorResponse {
+	return o.Payload
+}
+
+func (o *PromoteToStageGatewayTimeout) readResponse(response runtime.ClientResponse, consumer runtime.Consumer, formats strfmt.Registry) error {
+
+	o.Payload = new(models.ErrorResponse)
 
 	// response payload
 	if err := consumer.Consume(response.Body(), o.Payload); err != nil && !stderrors.Is(err, io.EOF) {
