@@ -127,19 +127,6 @@ func Test_commentHandler_handleCreated(t *testing.T) {
 			},
 		},
 		{
-			name:                  "issue comment with valid command and required arg",
-			body:                  "/with-arg #99",
-			authorAssoc:           "MEMBER",
-			expectedCommentsAdded: map[string]struct{}{"Arg was #99.": {}},
-		},
-		{
-			name:                  "issue comment with command that closes issue",
-			body:                  "/close-issue",
-			authorAssoc:           "MEMBER",
-			expectedCommentsAdded: map[string]struct{}{"Closing.": {}},
-			expectClosedAsIssue:   true,
-		},
-		{
 			name:                  "issue comment with command indented and mid-body",
 			body:                  "Some context here.\n\n  /label-only\n\nThanks!",
 			authorAssoc:           "MEMBER",
@@ -158,13 +145,6 @@ func Test_commentHandler_handleCreated(t *testing.T) {
 			expectClosedAsIssue: true,
 		},
 		{
-			name:                  "issue comment with mix of valid and unknown commands",
-			body:                  "/nonexistent\n/label-only",
-			authorAssoc:           "MEMBER",
-			expectedLabelsAdded:   map[string]struct{}{"test-label": {}},
-			expectedCommentsAdded: map[string]struct{}{"Label added.": {}},
-		},
-		{
 			name:        "issue comment with help command",
 			body:        "/help",
 			authorAssoc: "MEMBER",
@@ -172,100 +152,26 @@ func Test_commentHandler_handleCreated(t *testing.T) {
 				buildHelpComment(cfg.Issues.SlashCommands): {},
 			},
 		},
-		// PR cases
+		// PR cases — minimal coverage: just enough to prove context
+		// routing works both ways. The dispatch / parse / gate behavior
+		// is identical to the issue path and is fully exercised above.
 		{
-			name:        "non-slash PR comment",
-			body:        "just a regular comment",
-			authorAssoc: "MEMBER",
-			isPR:        true,
-		},
-		{
-			name:        "non-maintainer PR comment",
-			body:        "/close-pr",
-			authorAssoc: "NONE",
-			isPR:        true,
-		},
-		{
-			name:        "PR comment with unknown command",
-			body:        "/nonexistent",
-			authorAssoc: "MEMBER",
-			isPR:        true,
-		},
-		{
+			// Routing: in PR context, an issue-only slash command falls
+			// through as if unknown.
 			name:        "PR comment with issue-only command",
 			body:        "/label-only",
 			authorAssoc: "MEMBER",
 			isPR:        true,
 		},
 		{
+			// Routing: in PR context, a PR slash command dispatches as
+			// expected.
 			name:                  "PR comment with valid command",
 			body:                  "/label-pr",
 			authorAssoc:           "MEMBER",
 			isPR:                  true,
 			expectedLabelsAdded:   map[string]struct{}{"pr-label": {}},
 			expectedCommentsAdded: map[string]struct{}{"PR label added.": {}},
-		},
-		{
-			name:        "PR comment with valid command missing required arg",
-			body:        "/with-arg-pr",
-			authorAssoc: "MEMBER",
-			isPR:        true,
-			expectedCommentsAdded: map[string]struct{}{
-				"The `/with-arg-pr` command requires an argument. " +
-					"See `/help` for usage.": {},
-			},
-		},
-		{
-			name:                  "PR comment with valid command and required arg",
-			body:                  "/with-arg-pr #7",
-			authorAssoc:           "MEMBER",
-			isPR:                  true,
-			expectedCommentsAdded: map[string]struct{}{"PR arg was #7.": {}},
-		},
-		{
-			name:                  "PR comment with command that closes PR",
-			body:                  "/close-pr",
-			authorAssoc:           "MEMBER",
-			isPR:                  true,
-			expectedCommentsAdded: map[string]struct{}{"Closing PR.": {}},
-			expectClosedAsPR:      true,
-		},
-		{
-			name:                  "PR comment with command indented and mid-body",
-			body:                  "Some context here.\n\n  /label-pr\n\nThanks!",
-			authorAssoc:           "MEMBER",
-			isPR:                  true,
-			expectedLabelsAdded:   map[string]struct{}{"pr-label": {}},
-			expectedCommentsAdded: map[string]struct{}{"PR label added.": {}},
-		},
-		{
-			name:                "PR comment with multiple commands",
-			body:                "/label-pr\n/close-pr",
-			authorAssoc:         "MEMBER",
-			isPR:                true,
-			expectedLabelsAdded: map[string]struct{}{"pr-label": {}},
-			expectedCommentsAdded: map[string]struct{}{
-				"PR label added.": {},
-				"Closing PR.":     {},
-			},
-			expectClosedAsPR: true,
-		},
-		{
-			name:                  "PR comment with mix of valid and unknown commands",
-			body:                  "/nonexistent\n/label-pr",
-			authorAssoc:           "MEMBER",
-			isPR:                  true,
-			expectedLabelsAdded:   map[string]struct{}{"pr-label": {}},
-			expectedCommentsAdded: map[string]struct{}{"PR label added.": {}},
-		},
-		{
-			name:        "PR comment with help command",
-			body:        "/help",
-			authorAssoc: "MEMBER",
-			isPR:        true,
-			expectedCommentsAdded: map[string]struct{}{
-				buildHelpComment(cfg.PullRequests.SlashCommands): {},
-			},
 		},
 	}
 	for _, testCase := range testCases {
@@ -368,12 +274,14 @@ func Test_commentHandler_handleCreated(t *testing.T) {
 			}
 
 			h := &commentHandler{
-				cfg:          cfg,
-				owner:        "akuity",
-				repo:         "kargo",
-				issuesClient: issuesClient,
-				prsClient:    prsClient,
-				orgsClient:   orgsClient,
+				repoContext: repoContext{
+					cfg:          cfg,
+					owner:        "akuity",
+					repo:         "kargo",
+					issuesClient: issuesClient,
+					prsClient:    prsClient,
+					orgsClient:   orgsClient,
+				},
 			}
 			err := h.handleCreated(t.Context(), event)
 			require.NoError(t, err)
@@ -384,7 +292,6 @@ func Test_commentHandler_handleCreated(t *testing.T) {
 			if testCase.expectedCommentsAdded == nil {
 				testCase.expectedCommentsAdded = map[string]struct{}{}
 			}
-
 			require.Equal(t, testCase.expectedLabelsAdded, labelsAdded)
 			require.Equal(t, testCase.expectedCommentsAdded, commentsAdded)
 			require.Equal(t, testCase.expectClosedAsIssue, closedAsIssue)

@@ -145,50 +145,39 @@ func (h *handler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	logger = logger.WithValues("owner", owner, "repo", repo)
 	ctx = logging.ContextWithLogger(ctx, logger)
 
+	// Per-request repo context shared by the PR and comment handlers. The
+	// pull-requests client is lazily attached in code branches that need it.
+	rc := repoContext{
+		cfg:          *cfg,
+		owner:        owner,
+		repo:         repo,
+		issuesClient: issuesClient,
+		orgsClient:   orgsClient,
+	}
+
 	switch e := event.(type) {
 	case *github.IssueCommentEvent:
-		var prsClient PullRequestsClient
-		prsClient, err = h.clientFactory.NewPullRequestsClient(installationID)
+		rc.prsClient, err = h.clientFactory.NewPullRequestsClient(installationID)
 		if err != nil {
 			logger.Error(err, "error creating pull requests client")
 			w.WriteHeader(http.StatusInternalServerError)
 			return
 		}
-		commentHandler := &commentHandler{
-			cfg:          *cfg,
-			owner:        owner,
-			repo:         repo,
-			issuesClient: issuesClient,
-			prsClient:    prsClient,
-			orgsClient:   orgsClient,
-		}
+		commentHandler := &commentHandler{repoContext: rc}
 		err = commentHandler.handleCreated(ctx, e)
 	case *github.IssuesEvent:
 		if cfg.Issues != nil {
-			issueHandler := &issueHandler{
-				cfg:          *cfg.Issues,
-				owner:        owner,
-				repo:         repo,
-				issuesClient: issuesClient,
-			}
+			issueHandler := &issueHandler{repoContext: rc}
 			err = issueHandler.handleOpened(ctx, e)
 		}
 	case *github.PullRequestEvent:
-		var prsClient PullRequestsClient
-		prsClient, err = h.clientFactory.NewPullRequestsClient(installationID)
+		rc.prsClient, err = h.clientFactory.NewPullRequestsClient(installationID)
 		if err != nil {
 			logger.Error(err, "error creating pull requests client")
 			w.WriteHeader(http.StatusInternalServerError)
 			return
 		}
-		prHandler := &prHandler{
-			cfg:          *cfg,
-			owner:        owner,
-			repo:         repo,
-			issuesClient: issuesClient,
-			prsClient:    prsClient,
-			orgsClient:   orgsClient,
-		}
+		prHandler := &prHandler{repoContext: rc}
 		opts := &handlePROpenedOpts{}
 		if e.GetAction() == prActionReopened || e.GetAction() == prActionReadyForReview {
 			opts.applyPolicyOnly = true

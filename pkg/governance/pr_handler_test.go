@@ -10,25 +10,21 @@ import (
 )
 
 func Test_prHandler_handleOpened(t *testing.T) {
+	// Cases here focus on what the handler does that isn't already proven
+	// by direct unit tests on repoContext: orchestrating the four steps
+	// (assign → inherit → enforce → apply policy), and honoring the
+	// applyPolicyOnly bypass on reopen / ready_for_review. Branch-level
+	// coverage of policy outcomes lives in Test_repoContext_applyPRPolicy
+	// and Test_repoContext_isPRExempt; coverage of inheritance and
+	// required-label enforcement lives in their respective unit tests.
 	cfg := config{
 		MaintainerAssociations: []string{"OWNER", "MEMBER"},
 		PullRequests: &pullRequestsConfig{
-			Exemptions: &exemptionsConfig{
-				Maintainers: true,
-				Bots:        true,
-			},
+			Exemptions: &exemptionsConfig{Maintainers: true},
 			OnNoLinkedIssue: &onNoLinkedIssueConfig{
 				Actions: []action{
 					mustAction("addLabels", []string{"policy/no-linked-issue"}),
 					mustAction("comment", "No linked issue."),
-					mustAction("close", true),
-				},
-			},
-			OnBlockedIssue: &onBlockedIssueConfig{
-				BlockingLabels: []string{"kind/proposal"},
-				Actions: []action{
-					mustAction("addLabels", []string{"policy/blocked-issue"}),
-					mustAction("comment", "Issue #{{.IssueNumber}} blocked by {{.BlockingLabels}}"),
 					mustAction("close", true),
 				},
 			},
@@ -43,178 +39,194 @@ func Test_prHandler_handleOpened(t *testing.T) {
 	}
 
 	testCases := []struct {
-		name                  string
-		action                string
-		body                  string
-		author                string
-		authorAssoc           string
-		sender                string
-		existingIssue         *github.Issue
-		isMembers             map[string]bool
-		expectedLabelsAdded   map[string]struct{}
-		expectedCommentsAdded map[string]struct{}
-		expectClosed          bool
+		name            string
+		action          string
+		body            string
+		author          string
+		sender          string
+		linkedIssue     *github.Issue
+		isMembers       map[string]bool
+		addAssigneesErr error
+		assert          func(
+			t *testing.T,
+			assignees []string,
+			labels map[string]struct{},
+			comments map[string]struct{},
+			closed bool,
+			err error,
+		)
 	}{
 		{
-			name:        "maintainer is exempt from policy check",
-			body:        "No issue reference here.", // Would ordinarily close the PR
-			authorAssoc: "MEMBER",
-			expectedLabelsAdded: map[string]struct{}{
-				"needs/area":     {},
-				"needs/kind":     {},
-				"needs/priority": {},
+			// Happy path on `opened`: all four steps must run end-to-end.
+			// The PR is assigned to its author, inheritable labels from
+			// the linked issue land on the PR, required-label enforcement
+			// fills the remaining gap (needs/priority), and OnPass fires.
+			name:   "opened, linked issue with no blockers: all steps run end-to-end",
+			body:   "Closes #99",
+			author: "external",
+			linkedIssue: &github.Issue{Labels: []*github.Label{
+				{Name: github.Ptr("area/cli")},
+				{Name: github.Ptr("kind/chore")},
+			}},
+			assert: func(
+				t *testing.T,
+				assignees []string,
+				labels, comments map[string]struct{},
+				closed bool,
+				err error,
+			) {
+				require.NoError(t, err)
+				require.Equal(t, []string{"external"}, assignees)
+				require.Equal(t, map[string]struct{}{
+					"area/cli":       {}, // inherited
+					"kind/chore":     {}, // inherited
+					"needs/priority": {}, // enforced (priority/* missing)
+				}, labels)
+				require.Equal(t, map[string]struct{}{"PR passes policy.": {}}, comments)
+				require.False(t, closed)
 			},
-			// OnPass fires regardless of exemption (cleanup-style actions).
-			expectedCommentsAdded: map[string]struct{}{"PR passes policy.": {}},
 		},
 		{
-			name:        "concealed-member author exempt via IsMember fallback",
-			body:        "No issue reference here.", // Would ordinarily close the PR
-			author:      "frankenstein",
-			authorAssoc: "CONTRIBUTOR", // GitHub conceals private membership
-			sender:      "frankenstein",
-			isMembers:   map[string]bool{"frankenstein": true},
-			expectedLabelsAdded: map[string]struct{}{
-				"needs/area":     {},
-				"needs/kind":     {},
-				"needs/priority": {},
+			// Step 3 (required-label enforcement) must run before step 4
+			// (policy), even when step 4 is about to close the PR. Both
+			// the needs/* labels and the policy/no-linked-issue label end
+			// up on the PR.
+			name:   "opened, no linked issue: enforce runs before policy closes",
+			body:   "No issue link here.",
+			author: "external",
+			assert: func(
+				t *testing.T,
+				assignees []string,
+				labels, comments map[string]struct{},
+				closed bool,
+				err error,
+			) {
+				require.NoError(t, err)
+				require.Equal(t, []string{"external"}, assignees)
+				require.Equal(t, map[string]struct{}{
+					"needs/area":             {},
+					"needs/kind":             {},
+					"needs/priority":         {},
+					"policy/no-linked-issue": {},
+				}, labels)
+				require.Equal(t, map[string]struct{}{"No linked issue.": {}}, comments)
+				require.True(t, closed)
 			},
-			expectedCommentsAdded: map[string]struct{}{"PR passes policy.": {}},
 		},
 		{
-			// applyPolicyOnly path: a maintainer marking a non-maintainer's
-			// stuck PR ready for review acts as an implicit endorsement that
-			// exempts the PR. Labels are not re-asserted on this path
-			// (it's policy-only).
-			name:        "maintainer sender exempts a non-maintainer author's PR on ready_for_review",
-			action:      prActionReadyForReview,
-			body:        "No issue reference here.",
-			author:      "external",
-			authorAssoc: "NONE",
-			sender:      "kent",
+			// Error accumulation: when one step fails, subsequent steps
+			// must still run. Here step 1 (assign) is forced to fail; the
+			// returned error must wrap that failure, AND the
+			// inherit/enforce/policy steps must still have produced their
+			// expected side effects.
+			name:            "step failure does not halt subsequent steps",
+			body:            "Closes #99",
+			author:          "external",
+			addAssigneesErr: errors.New("assignees boom"),
+			linkedIssue: &github.Issue{Labels: []*github.Label{
+				{Name: github.Ptr("kind/chore")},
+			}},
+			assert: func(
+				t *testing.T,
+				assignees []string,
+				labels, comments map[string]struct{},
+				closed bool,
+				err error,
+			) {
+				require.ErrorContains(t, err, "assign PR to author")
+				require.ErrorContains(t, err, "assignees boom")
+				// Step 1 was called even though it failed.
+				require.Equal(t, []string{"external"}, assignees)
+				// Step 2 (inherit) ran after step 1's failure.
+				require.Contains(t, labels, "kind/chore")
+				// Step 3 (enforce) ran — needs/area and needs/priority
+				// added for the still-missing required prefixes.
+				require.Contains(t, labels, "needs/area")
+				require.Contains(t, labels, "needs/priority")
+				// Step 4 (apply policy) ran — OnPass fired.
+				require.Equal(t, map[string]struct{}{"PR passes policy.": {}}, comments)
+				require.False(t, closed)
+			},
+		},
+		{
+			// applyPolicyOnly path: steps 1-3 (assign, inherit, enforce)
+			// must be skipped. Only step 4 runs. A maintainer sender on a
+			// non-maintainer author's PR is treated as exempt; OnPass
+			// fires without policy violations or label churn.
+			name:   "ready_for_review with maintainer sender: only policy runs",
+			action: prActionReadyForReview,
+			body:   "No issue link here.",
+			author: "external",
+			sender: "kent",
 			isMembers: map[string]bool{
 				"external": false,
 				"kent":     true,
 			},
-			expectedCommentsAdded: map[string]struct{}{"PR passes policy.": {}},
-		},
-		{
-			name:        "bot is exempt from policy check",
-			body:        "No issue reference.", // Would ordinarily close the PR
-			authorAssoc: "NONE",
-			sender:      "dependabot[bot]",
-			expectedLabelsAdded: map[string]struct{}{
-				"needs/area":     {},
-				"needs/kind":     {},
-				"needs/priority": {},
+			assert: func(
+				t *testing.T,
+				assignees []string,
+				labels, comments map[string]struct{},
+				closed bool,
+				err error,
+			) {
+				require.NoError(t, err)
+				require.Empty(t, assignees)
+				require.Empty(t, labels)
+				require.Equal(t, map[string]struct{}{"PR passes policy.": {}}, comments)
+				require.False(t, closed)
 			},
-			// OnPass fires regardless of exemption.
-			expectedCommentsAdded: map[string]struct{}{"PR passes policy.": {}},
-		},
-		{
-			name: "no linked issue",
-			body: "This PR has no issue link.",
-			expectedLabelsAdded: map[string]struct{}{
-				// Required-label enforcement runs before policy, so needs/*
-				// labels are applied even when the PR is about to be closed.
-				"needs/area":             {},
-				"needs/kind":             {},
-				"needs/priority":         {},
-				"policy/no-linked-issue": {},
-			},
-			expectedCommentsAdded: map[string]struct{}{"No linked issue.": {}},
-			expectClosed:          true,
-		},
-		{
-			name: "linked issue without blocking labels",
-			body: "Closes #99",
-			existingIssue: &github.Issue{Labels: []*github.Label{
-				{Name: github.Ptr("area/cli")}, // Inheritable
-				// Explicitly testing inheritance of multiple labels from the same group
-				{Name: github.Ptr("kind/chore")},         // Inheritable
-				{Name: github.Ptr("kind/documentation")}, // Inheritable
-				{Name: github.Ptr("random")},             // Not inheritable
-
-			}},
-			expectedLabelsAdded: map[string]struct{}{
-				"area/cli":           {}, // Inherited from issue
-				"kind/chore":         {}, // Inherited from issue
-				"kind/documentation": {}, // Inherited from issue
-				"needs/priority":     {}, // Added due to label governance
-			},
-			// OnPass fires because neither OnNoLinkedIssue nor OnBlockedIssue
-			// acted.
-			expectedCommentsAdded: map[string]struct{}{"PR passes policy.": {}},
-		},
-		{
-			name: "linked issue with blocking label",
-			body: "Closes #99",
-			existingIssue: &github.Issue{Labels: []*github.Label{
-				{Name: github.Ptr("area/cli")},
-				{Name: github.Ptr("kind/enhancement")},
-				{Name: github.Ptr("kind/proposal")},
-				{Name: github.Ptr("priority/high")},
-			}},
-			expectedLabelsAdded: map[string]struct{}{
-				// Labels inherit before policy runs, and inheriting a
-				// blocking label onto the PR is intentional — it's an
-				// additional signal to the author.
-				"area/cli":             {},
-				"kind/enhancement":     {},
-				"kind/proposal":        {},
-				"priority/high":        {},
-				"policy/blocked-issue": {},
-			},
-			expectedCommentsAdded: map[string]struct{}{"Issue #99 blocked by `kind/proposal`": {}},
-			expectClosed:          true,
 		},
 	}
 	for _, testCase := range testCases {
 		t.Run(testCase.name, func(t *testing.T) {
-			labelsAdded := map[string]struct{}{}
-			commentsAdded := map[string]struct{}{}
+			var assignees []string
+			labels := map[string]struct{}{}
+			comments := map[string]struct{}{}
 			closed := false
 
 			issuesClient := &fakeIssuesClient{
-				GetFn: func(
-					context.Context,
-					string,
-					string,
-					int,
+				AddAssigneesFn: func(
+					_ context.Context,
+					_, _ string,
+					_ int,
+					a []string,
 				) (*github.Issue, *github.Response, error) {
-					if testCase.existingIssue != nil {
-						return testCase.existingIssue, nil, nil
+					assignees = append(assignees, a...)
+					return nil, nil, testCase.addAssigneesErr
+				},
+				GetFn: func(
+					context.Context, string, string, int,
+				) (*github.Issue, *github.Response, error) {
+					if testCase.linkedIssue != nil {
+						return testCase.linkedIssue, nil, nil
 					}
 					return &github.Issue{}, nil, nil
 				},
 				AddLabelsToIssueFn: func(
 					_ context.Context,
-					_ string,
-					_ string,
+					_, _ string,
 					_ int,
-					labels []string,
+					added []string,
 				) ([]*github.Label, *github.Response, error) {
-					for _, l := range labels {
-						labelsAdded[l] = struct{}{}
+					for _, l := range added {
+						labels[l] = struct{}{}
 					}
 					return nil, nil, nil
 				},
 				CreateCommentFn: func(
 					_ context.Context,
-					_ string,
-					_ string,
+					_, _ string,
 					_ int,
 					comment *github.IssueComment,
 				) (*github.IssueComment, *github.Response, error) {
-					commentsAdded[comment.GetBody()] = struct{}{}
+					comments[comment.GetBody()] = struct{}{}
 					return comment, nil, nil
 				},
 			}
 			prsClient := &fakePullRequestsClient{
 				EditFn: func(
 					_ context.Context,
-					_ string,
-					_ string,
+					_, _ string,
 					_ int,
 					pr *github.PullRequest,
 				) (*github.PullRequest, *github.Response, error) {
@@ -224,30 +236,31 @@ func Test_prHandler_handleOpened(t *testing.T) {
 					return pr, nil, nil
 				},
 			}
+			orgsClient := &fakeOrganizationsClient{
+				IsMemberFn: func(
+					_ context.Context,
+					_ string,
+					user string,
+				) (bool, *github.Response, error) {
+					return testCase.isMembers[user], nil, nil
+				},
+			}
 
-			authorAssoc := testCase.authorAssoc
-			if authorAssoc == "" {
-				authorAssoc = "NONE"
-			}
-			author := testCase.author
-			if author == "" {
-				author = "some-user"
-			}
 			sender := testCase.sender
 			if sender == "" {
-				sender = author
+				sender = testCase.author
 			}
 			action := testCase.action
 			if action == "" {
-				action = "opened"
+				action = prActionOpened
 			}
 			event := &github.PullRequestEvent{
 				Action: github.Ptr(action),
 				PullRequest: &github.PullRequest{
 					Number:            github.Ptr(1),
 					Body:              github.Ptr(testCase.body),
-					User:              &github.User{Login: github.Ptr(author)},
-					AuthorAssociation: github.Ptr(authorAssoc),
+					User:              &github.User{Login: github.Ptr(testCase.author)},
+					AuthorAssociation: github.Ptr("NONE"),
 				},
 				Repo: &github.Repository{
 					Name:  github.Ptr("kargo"),
@@ -257,422 +270,187 @@ func Test_prHandler_handleOpened(t *testing.T) {
 				Installation: &github.Installation{ID: github.Ptr(int64(1))},
 			}
 
-			orgsClient := &fakeOrganizationsClient{
-				IsMemberFn: func(
-					_ context.Context,
-					_ string,
-					user string,
-				) (bool, *github.Response, error) {
-					member, ok := testCase.isMembers[user]
-					if !ok {
-						return false, nil, nil
-					}
-					return member, nil, nil
-				},
-			}
-
 			h := &prHandler{
-				cfg:          cfg,
-				owner:        "akuity",
-				repo:         "kargo",
-				issuesClient: issuesClient,
-				prsClient:    prsClient,
-				orgsClient:   orgsClient,
+				repoContext: repoContext{
+					cfg:          cfg,
+					owner:        "akuity",
+					repo:         "kargo",
+					issuesClient: issuesClient,
+					prsClient:    prsClient,
+					orgsClient:   orgsClient,
+				},
 			}
 			var opts *handlePROpenedOpts
 			if action == prActionReopened || action == prActionReadyForReview {
 				opts = &handlePROpenedOpts{applyPolicyOnly: true}
 			}
 			err := h.handleOpened(t.Context(), event, opts)
-			require.NoError(t, err)
-
-			if testCase.expectedLabelsAdded == nil {
-				testCase.expectedLabelsAdded = map[string]struct{}{}
-			}
-			if testCase.expectedCommentsAdded == nil {
-				testCase.expectedCommentsAdded = map[string]struct{}{}
-			}
-
-			require.Equal(t, testCase.expectedLabelsAdded, labelsAdded)
-			require.Equal(t, testCase.expectedCommentsAdded, commentsAdded)
-			require.Equal(t, testCase.expectClosed, closed)
+			testCase.assert(t, assignees, labels, comments, closed, err)
 		})
 	}
 }
 
-func Test_isExemptFromPRPolicy(t *testing.T) {
+func Test_prHandler_inheritLabels(t *testing.T) {
 	testCases := []struct {
-		name        string
-		cfg         config
-		authorLogin string
-		association string
-		senderLogin string
-		additions   int
-		deletions   int
-		// listFiles, when set, populates fakePullRequestsClient.ListFilesFn.
-		// nil means ListFiles returns no files (or isn't expected to be
-		// called).
-		listFiles []string
-		// listFilesErr, when set, makes the fake return this error.
-		listFilesErr error
-		// isMembers maps username → membership state returned by the fake
-		// OrganizationsClient. nil means IsMember should not be called.
-		isMembers map[string]bool
-		// isMemberErr, when set, makes the fake return this error.
-		isMemberErr error
-		expected    bool
-		expectErr   bool
+		name           string
+		cfg            config
+		issueNumber    int
+		linkedIssue    *github.Issue
+		linkedIssueErr error
+		addLabelsErr   error
+		assert         func(t *testing.T, inherited, addedLabels []string, err error)
 	}{
 		{
-			name:        "nil PullRequests not exempt",
+			// issueNumber == 0 means parseLinkedIssue didn't find a
+			// reference — short-circuit before any API call.
+			name:        "no linked issue: no-op",
+			cfg:         config{PullRequests: &pullRequestsConfig{InheritedLabelPrefixes: []string{"kind"}}},
+			issueNumber: 0,
+			assert: func(t *testing.T, inherited, addedLabels []string, err error) {
+				require.NoError(t, err)
+				require.Empty(t, inherited)
+				require.Empty(t, addedLabels)
+			},
+		},
+		{
+			name:        "PullRequests config nil: no-op",
 			cfg:         config{},
-			authorLogin: "kent",
-			association: "MEMBER",
-			senderLogin: "kent",
-			expected:    false,
+			issueNumber: 99,
+			assert: func(t *testing.T, inherited, addedLabels []string, err error) {
+				require.NoError(t, err)
+				require.Empty(t, inherited)
+				require.Empty(t, addedLabels)
+			},
 		},
 		{
-			name: "nil Exemptions not exempt",
-			cfg: config{
-				MaintainerAssociations: []string{"MEMBER"},
-				PullRequests:           &pullRequestsConfig{},
+			name:        "no InheritedLabelPrefixes configured: no-op",
+			cfg:         config{PullRequests: &pullRequestsConfig{}},
+			issueNumber: 99,
+			assert: func(t *testing.T, inherited, addedLabels []string, err error) {
+				require.NoError(t, err)
+				require.Empty(t, inherited)
+				require.Empty(t, addedLabels)
 			},
-			authorLogin: "kent",
-			association: "MEMBER",
-			senderLogin: "kent",
-			expected:    false,
 		},
 		{
-			name: "maintainer author exempt via fast path",
-			cfg: config{
-				MaintainerAssociations: []string{"MEMBER"},
-				PullRequests: &pullRequestsConfig{
-					Exemptions: &exemptionsConfig{Maintainers: true},
-				},
+			name: "issuesClient.Get error propagates",
+			cfg: config{PullRequests: &pullRequestsConfig{
+				InheritedLabelPrefixes: []string{"kind"},
+			}},
+			issueNumber:    99,
+			linkedIssueErr: errors.New("network error"),
+			assert: func(t *testing.T, inherited, addedLabels []string, err error) {
+				require.ErrorContains(t, err, "error fetching linked issue")
+				require.Empty(t, inherited)
+				require.Empty(t, addedLabels)
 			},
-			authorLogin: "kent",
-			association: "MEMBER",
-			senderLogin: "kent",
-			expected:    true,
 		},
 		{
-			name: "maintainer not exempt when disabled",
-			cfg: config{
-				MaintainerAssociations: []string{"MEMBER"},
-				PullRequests: &pullRequestsConfig{
-					Exemptions: &exemptionsConfig{Maintainers: false},
-				},
+			name: "some issue labels match prefixes: inherited and added",
+			cfg: config{PullRequests: &pullRequestsConfig{
+				InheritedLabelPrefixes: []string{"area", "kind"},
+			}},
+			issueNumber: 99,
+			linkedIssue: &github.Issue{Labels: []*github.Label{
+				{Name: github.Ptr("area/cli")},
+				{Name: github.Ptr("kind/bug")},
+				{Name: github.Ptr("priority/high")}, // not in prefixes
+				{Name: github.Ptr("random")},        // no slash
+			}},
+			assert: func(t *testing.T, inherited, addedLabels []string, err error) {
+				require.NoError(t, err)
+				require.Equal(t, []string{"area/cli", "kind/bug"}, inherited)
+				require.Equal(t, []string{"area/cli", "kind/bug"}, addedLabels)
 			},
-			authorLogin: "kent",
-			association: "MEMBER",
-			senderLogin: "kent",
-			expected:    false,
 		},
 		{
-			name: "concealed-member author exempt via IsMember fallback",
-			cfg: config{
-				MaintainerAssociations: []string{"MEMBER"},
-				PullRequests: &pullRequestsConfig{
-					Exemptions: &exemptionsConfig{Maintainers: true},
-				},
+			name: "no issue labels match prefixes: AddLabelsToIssue is NOT called",
+			cfg: config{PullRequests: &pullRequestsConfig{
+				InheritedLabelPrefixes: []string{"area"},
+			}},
+			issueNumber: 99,
+			linkedIssue: &github.Issue{Labels: []*github.Label{
+				{Name: github.Ptr("kind/bug")},
+				{Name: github.Ptr("priority/high")},
+			}},
+			assert: func(t *testing.T, inherited, addedLabels []string, err error) {
+				require.NoError(t, err)
+				require.Empty(t, inherited)
+				require.Empty(t, addedLabels)
 			},
-			authorLogin: "frankenstein",
-			// Concealed members appear as CONTRIBUTOR in webhook payloads
-			// even when the App holds Organization Members: Read.
-			association: "CONTRIBUTOR",
-			senderLogin: "frankenstein",
-			isMembers:   map[string]bool{"frankenstein": true},
-			expected:    true,
 		},
 		{
-			name: "concealed non-member author not exempt",
-			cfg: config{
-				MaintainerAssociations: []string{"MEMBER"},
-				PullRequests: &pullRequestsConfig{
-					Exemptions: &exemptionsConfig{Maintainers: true},
-				},
+			// Multiple labels under the same prefix all carry over —
+			// inheritance isn't one-per-prefix, it's all-matching-labels.
+			name: "multiple labels with same prefix: all inherited",
+			cfg: config{PullRequests: &pullRequestsConfig{
+				InheritedLabelPrefixes: []string{"kind"},
+			}},
+			issueNumber: 99,
+			linkedIssue: &github.Issue{Labels: []*github.Label{
+				{Name: github.Ptr("kind/bug")},
+				{Name: github.Ptr("kind/documentation")},
+			}},
+			assert: func(t *testing.T, inherited, addedLabels []string, err error) {
+				require.NoError(t, err)
+				require.Equal(t, []string{"kind/bug", "kind/documentation"}, inherited)
+				require.Equal(t, []string{"kind/bug", "kind/documentation"}, addedLabels)
 			},
-			authorLogin: "external",
-			association: "CONTRIBUTOR",
-			senderLogin: "external",
-			isMembers:   map[string]bool{"external": false},
-			expected:    false,
 		},
 		{
-			name: "IsMember error on author propagates",
-			cfg: config{
-				MaintainerAssociations: []string{"MEMBER"},
-				PullRequests: &pullRequestsConfig{
-					Exemptions: &exemptionsConfig{Maintainers: true},
-				},
+			name: "AddLabelsToIssue error propagates",
+			cfg: config{PullRequests: &pullRequestsConfig{
+				InheritedLabelPrefixes: []string{"kind"},
+			}},
+			issueNumber: 99,
+			linkedIssue: &github.Issue{Labels: []*github.Label{
+				{Name: github.Ptr("kind/bug")},
+			}},
+			addLabelsErr: errors.New("network error"),
+			assert: func(t *testing.T, inherited, addedLabels []string, err error) {
+				require.ErrorContains(t, err, "error adding inherited labels")
+				require.Empty(t, inherited)
+				require.Equal(t, []string{"kind/bug"}, addedLabels)
 			},
-			authorLogin: "frankenstein",
-			association: "CONTRIBUTOR",
-			senderLogin: "frankenstein",
-			isMemberErr: errors.New("network error"),
-			expected:    false,
-			expectErr:   true,
-		},
-		{
-			name: "sender-as-maintainer escape hatch: non-maintainer author, maintainer sender",
-			cfg: config{
-				MaintainerAssociations: []string{"MEMBER"},
-				PullRequests: &pullRequestsConfig{
-					Exemptions: &exemptionsConfig{Maintainers: true},
-				},
-			},
-			authorLogin: "external",
-			association: "CONTRIBUTOR",
-			senderLogin: "kent",
-			isMembers: map[string]bool{
-				"external": false,
-				"kent":     true,
-			},
-			expected: true,
-		},
-		{
-			name: "sender check skipped when sender == author",
-			cfg: config{
-				MaintainerAssociations: []string{"MEMBER"},
-				PullRequests: &pullRequestsConfig{
-					Exemptions: &exemptionsConfig{Maintainers: true},
-				},
-			},
-			authorLogin: "external",
-			association: "CONTRIBUTOR",
-			senderLogin: "external",
-			isMembers:   map[string]bool{"external": false},
-			expected:    false,
-		},
-		{
-			name: "non-maintainer author + non-maintainer sender not exempt",
-			cfg: config{
-				MaintainerAssociations: []string{"MEMBER"},
-				PullRequests: &pullRequestsConfig{
-					Exemptions: &exemptionsConfig{Maintainers: true},
-				},
-			},
-			authorLogin: "external",
-			association: "CONTRIBUTOR",
-			senderLogin: "another-external",
-			isMembers: map[string]bool{
-				"external":         false,
-				"another-external": false,
-			},
-			expected: false,
-		},
-		{
-			name: "bot exempt when enabled",
-			cfg: config{
-				PullRequests: &pullRequestsConfig{
-					Exemptions: &exemptionsConfig{Bots: true},
-				},
-			},
-			authorLogin: "dependabot[bot]",
-			association: "NONE",
-			senderLogin: "dependabot[bot]",
-			expected:    true,
-		},
-		{
-			name: "bot not exempt when disabled",
-			cfg: config{
-				PullRequests: &pullRequestsConfig{
-					Exemptions: &exemptionsConfig{Bots: false},
-				},
-			},
-			authorLogin: "dependabot[bot]",
-			association: "NONE",
-			senderLogin: "dependabot[bot]",
-			expected:    false,
-		},
-		{
-			name: "size exempt — total at limit",
-			cfg: config{
-				PullRequests: &pullRequestsConfig{
-					Exemptions: &exemptionsConfig{MaxChangedLines: 5},
-				},
-			},
-			authorLogin: "random-user",
-			association: "NONE",
-			senderLogin: "random-user",
-			additions:   3,
-			deletions:   2,
-			expected:    true,
-		},
-		{
-			name: "size exempt — total below limit",
-			cfg: config{
-				PullRequests: &pullRequestsConfig{
-					Exemptions: &exemptionsConfig{MaxChangedLines: 5},
-				},
-			},
-			authorLogin: "random-user",
-			association: "NONE",
-			senderLogin: "random-user",
-			additions:   1,
-			deletions:   0,
-			expected:    true,
-		},
-		{
-			name: "size NOT exempt — total over limit",
-			cfg: config{
-				PullRequests: &pullRequestsConfig{
-					Exemptions: &exemptionsConfig{MaxChangedLines: 5},
-				},
-			},
-			authorLogin: "random-user",
-			association: "NONE",
-			senderLogin: "random-user",
-			additions:   4,
-			deletions:   2,
-			expected:    false,
-		},
-		{
-			name: "size NOT exempt when MaxChangedLines is 0",
-			cfg: config{
-				PullRequests: &pullRequestsConfig{
-					Exemptions: &exemptionsConfig{MaxChangedLines: 0},
-				},
-			},
-			authorLogin: "random-user",
-			association: "NONE",
-			senderLogin: "random-user",
-			additions:   1,
-			deletions:   0,
-			expected:    false,
-		},
-		{
-			name: "path exempt — all files match",
-			cfg: config{
-				PullRequests: &pullRequestsConfig{
-					Exemptions: &exemptionsConfig{
-						PathPatterns: []string{"**/*.md", "docs/"},
-					},
-				},
-			},
-			authorLogin: "random-user",
-			association: "NONE",
-			senderLogin: "random-user",
-			listFiles:   []string{"README.md", "docs/foo.md", "docs/sub/bar.md"},
-			expected:    true,
-		},
-		{
-			name: "path NOT exempt — one file doesn't match",
-			cfg: config{
-				PullRequests: &pullRequestsConfig{
-					Exemptions: &exemptionsConfig{
-						PathPatterns: []string{"**/*.md"},
-					},
-				},
-			},
-			authorLogin: "random-user",
-			association: "NONE",
-			senderLogin: "random-user",
-			listFiles:   []string{"README.md", "main.go"},
-			expected:    false,
-		},
-		{
-			name: "path NOT exempt — empty patterns short-circuits",
-			cfg: config{
-				PullRequests: &pullRequestsConfig{
-					Exemptions: &exemptionsConfig{},
-				},
-			},
-			authorLogin: "random-user",
-			association: "NONE",
-			senderLogin: "random-user",
-			expected:    false,
-		},
-		{
-			name: "path check propagates ListFiles error",
-			cfg: config{
-				PullRequests: &pullRequestsConfig{
-					Exemptions: &exemptionsConfig{
-						PathPatterns: []string{"**/*.md"},
-					},
-				},
-			},
-			authorLogin:  "random-user",
-			association:  "NONE",
-			senderLogin:  "random-user",
-			listFilesErr: errors.New("network error"),
-			expected:     false,
-			expectErr:    true,
-		},
-		{
-			name: "regular user not exempt",
-			cfg: config{
-				MaintainerAssociations: []string{"MEMBER"},
-				PullRequests: &pullRequestsConfig{
-					Exemptions: &exemptionsConfig{
-						Maintainers: true,
-						Bots:        true,
-					},
-				},
-			},
-			authorLogin: "random-user",
-			association: "NONE",
-			senderLogin: "random-user",
-			isMembers:   map[string]bool{"random-user": false},
-			expected:    false,
 		},
 	}
 	for _, testCase := range testCases {
 		t.Run(testCase.name, func(t *testing.T) {
-			prsClient := &fakePullRequestsClient{
-				ListFilesFn: func(
+			var added []string
+			issuesClient := &fakeIssuesClient{
+				GetFn: func(
+					context.Context, string, string, int,
+				) (*github.Issue, *github.Response, error) {
+					if testCase.linkedIssueErr != nil {
+						return nil, nil, testCase.linkedIssueErr
+					}
+					if testCase.linkedIssue != nil {
+						return testCase.linkedIssue, nil, nil
+					}
+					return &github.Issue{}, nil, nil
+				},
+				AddLabelsToIssueFn: func(
 					_ context.Context,
 					_, _ string,
 					_ int,
-					_ *github.ListOptions,
-				) ([]*github.CommitFile, *github.Response, error) {
-					if testCase.listFilesErr != nil {
-						return nil, nil, testCase.listFilesErr
-					}
-					files := make(
-						[]*github.CommitFile, 0, len(testCase.listFiles),
-					)
-					for _, name := range testCase.listFiles {
-						files = append(files, &github.CommitFile{
-							Filename: github.Ptr(name),
-						})
-					}
-					return files, nil, nil
+					labels []string,
+				) ([]*github.Label, *github.Response, error) {
+					added = append(added, labels...)
+					return nil, nil, testCase.addLabelsErr
 				},
 			}
-			orgsClient := &fakeOrganizationsClient{
-				IsMemberFn: func(
-					_ context.Context,
-					_ string,
-					user string,
-				) (bool, *github.Response, error) {
-					if testCase.isMemberErr != nil {
-						return false, nil, testCase.isMemberErr
-					}
-					member, ok := testCase.isMembers[user]
-					if !ok {
-						t.Fatalf("unexpected IsMember call for %q", user)
-					}
-					return member, nil, nil
+			h := &prHandler{
+				repoContext: repoContext{
+					cfg:          testCase.cfg,
+					owner:        "akuity",
+					repo:         "kargo",
+					issuesClient: issuesClient,
 				},
 			}
-			pr := &github.PullRequest{
-				Number:            github.Ptr(1),
-				User:              &github.User{Login: github.Ptr(testCase.authorLogin)},
-				AuthorAssociation: github.Ptr(testCase.association),
-				Additions:         github.Ptr(testCase.additions),
-				Deletions:         github.Ptr(testCase.deletions),
-			}
-			result, err := isExemptFromPRPolicy(
-				t.Context(), testCase.cfg, prsClient, orgsClient,
-				"akuity", "kargo", pr, testCase.senderLogin,
+			inherited, err := h.inheritLabels(
+				t.Context(), 1, testCase.issueNumber,
 			)
-			if testCase.expectErr {
-				require.Error(t, err)
-			} else {
-				require.NoError(t, err)
-			}
-			require.Equal(t, testCase.expected, result)
+			testCase.assert(t, inherited, added, err)
 		})
 	}
 }

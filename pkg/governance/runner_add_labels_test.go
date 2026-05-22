@@ -11,33 +11,43 @@ import (
 
 func Test_addLabelsRunner_run(t *testing.T) {
 	testCases := []struct {
-		name              string
-		config            []byte
-		addLabelsErr      error
-		expectedAdded     []string
-		expectErrContains string
+		name         string
+		config       []byte
+		addLabelsErr error
+		assert       func(t *testing.T, sentLabels []string, err error)
 	}{
 		{
-			name:              "decode error — config is not a list of strings",
-			config:            []byte(`true`),
-			expectErrContains: "decoding addLabels config",
+			name:   "decode error — config is not a list of strings",
+			config: []byte(`true`),
+			assert: func(t *testing.T, sentLabels []string, err error) {
+				require.ErrorContains(t, err, "decoding addLabels config")
+				require.Nil(t, sentLabels)
+			},
 		},
 		{
-			name:          "empty list — no API call",
-			config:        []byte(`[]`),
-			expectedAdded: nil,
+			name:   "empty list — no API call",
+			config: []byte(`[]`),
+			assert: func(t *testing.T, sentLabels []string, err error) {
+				require.NoError(t, err)
+				require.Nil(t, sentLabels)
+			},
 		},
 		{
-			name:          "happy path — labels passed through",
-			config:        []byte("- foo\n- bar\n"),
-			expectedAdded: []string{"foo", "bar"},
+			name:   "happy path — labels passed through",
+			config: []byte("- foo\n- bar\n"),
+			assert: func(t *testing.T, sentLabels []string, err error) {
+				require.NoError(t, err)
+				require.Equal(t, []string{"foo", "bar"}, sentLabels)
+			},
 		},
 		{
-			name:              "API error propagates with wrapping",
-			config:            []byte("- foo\n"),
-			addLabelsErr:      errors.New("upstream boom"),
-			expectedAdded:     []string{"foo"},
-			expectErrContains: "error adding labels: upstream boom",
+			name:         "API error propagates with wrapping",
+			config:       []byte("- foo\n"),
+			addLabelsErr: errors.New("upstream boom"),
+			assert: func(t *testing.T, sentLabels []string, err error) {
+				require.ErrorContains(t, err, "error adding labels: upstream boom")
+				require.Equal(t, []string{"foo"}, sentLabels)
+			},
 		},
 	}
 	for _, testCase := range testCases {
@@ -57,19 +67,16 @@ func Test_addLabelsRunner_run(t *testing.T) {
 			err := addLabelsRunner{}.run(
 				t.Context(),
 				&actionContext{
-					issuesClient: fake,
-					owner:        "akuity",
-					repo:         "kargo",
-					number:       1,
+					repoContext: repoContext{
+						issuesClient: fake,
+						owner:        "akuity",
+						repo:         "kargo",
+					},
+					number: 1,
 				},
 				testCase.config,
 			)
-			if testCase.expectErrContains != "" {
-				require.ErrorContains(t, err, testCase.expectErrContains)
-			} else {
-				require.NoError(t, err)
-			}
-			require.Equal(t, testCase.expectedAdded, sentLabels)
+			testCase.assert(t, sentLabels, err)
 		})
 	}
 }

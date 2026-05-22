@@ -11,41 +11,59 @@ import (
 
 func Test_applyPRPolicyRunner_run(t *testing.T) {
 	testCases := []struct {
-		name              string
-		config            []byte
-		isPR              bool
-		cfg               config
-		prGetErr          error
-		prBody            string
-		expectGetCalls    int
-		expectLabelsAdded map[string]struct{}
-		expectErrContains string
+		name     string
+		config   []byte
+		isPR     bool
+		cfg      config
+		prGetErr error
+		prBody   string
+		assert   func(
+			t *testing.T,
+			getCalls int,
+			labelsAdded map[string]struct{},
+			err error,
+		)
 	}{
 		{
-			name:              "decode error — config is not a bool",
-			config:            []byte(`"yes"`),
-			isPR:              true,
-			expectErrContains: "decoding applyPRPolicy config",
+			name:   "decode error — config is not a bool",
+			config: []byte(`"yes"`),
+			isPR:   true,
+			assert: func(t *testing.T, getCalls int, labelsAdded map[string]struct{}, err error) {
+				require.ErrorContains(t, err, "decoding applyPRPolicy config")
+				require.Zero(t, getCalls)
+				require.Empty(t, labelsAdded)
+			},
 		},
 		{
-			name:           "false on PR — no-op",
-			config:         []byte(`false`),
-			isPR:           true,
-			expectGetCalls: 0,
+			name:   "false on PR — no-op",
+			config: []byte(`false`),
+			isPR:   true,
+			assert: func(t *testing.T, getCalls int, labelsAdded map[string]struct{}, err error) {
+				require.NoError(t, err)
+				require.Zero(t, getCalls)
+				require.Empty(t, labelsAdded)
+			},
 		},
 		{
-			name:           "true on issue — silent no-op (PR-only action)",
-			config:         []byte(`true`),
-			isPR:           false,
-			expectGetCalls: 0,
+			name:   "true on issue — silent no-op (PR-only action)",
+			config: []byte(`true`),
+			isPR:   false,
+			assert: func(t *testing.T, getCalls int, labelsAdded map[string]struct{}, err error) {
+				require.NoError(t, err)
+				require.Zero(t, getCalls)
+				require.Empty(t, labelsAdded)
+			},
 		},
 		{
-			name:              "PR fetch error propagates",
-			config:            []byte(`true`),
-			isPR:              true,
-			prGetErr:          errors.New("network"),
-			expectGetCalls:    1,
-			expectErrContains: "error fetching PR for policy check",
+			name:     "PR fetch error propagates",
+			config:   []byte(`true`),
+			isPR:     true,
+			prGetErr: errors.New("network"),
+			assert: func(t *testing.T, getCalls int, labelsAdded map[string]struct{}, err error) {
+				require.ErrorContains(t, err, "error fetching PR for policy check")
+				require.Equal(t, 1, getCalls)
+				require.Empty(t, labelsAdded)
+			},
 		},
 		{
 			name:   "happy path — delegates to applyPRPolicy and OnPass fires",
@@ -61,9 +79,10 @@ func Test_applyPRPolicyRunner_run(t *testing.T) {
 					},
 				},
 			},
-			expectGetCalls: 1,
-			expectLabelsAdded: map[string]struct{}{
-				"policy/passed": {},
+			assert: func(t *testing.T, getCalls int, labelsAdded map[string]struct{}, err error) {
+				require.NoError(t, err)
+				require.Equal(t, 1, getCalls)
+				require.Equal(t, map[string]struct{}{"policy/passed": {}}, labelsAdded)
 			},
 		},
 	}
@@ -104,26 +123,19 @@ func Test_applyPRPolicyRunner_run(t *testing.T) {
 			err := applyPRPolicyRunner{}.run(
 				t.Context(),
 				&actionContext{
-					cfg:          testCase.cfg,
-					issuesClient: issuesFake,
-					prsClient:    prsFake,
-					owner:        "akuity",
-					repo:         "kargo",
-					number:       1,
-					isPR:         testCase.isPR,
+					repoContext: repoContext{
+						cfg:          testCase.cfg,
+						issuesClient: issuesFake,
+						prsClient:    prsFake,
+						owner:        "akuity",
+						repo:         "kargo",
+					},
+					number: 1,
+					isPR:   testCase.isPR,
 				},
 				testCase.config,
 			)
-			if testCase.expectErrContains != "" {
-				require.ErrorContains(t, err, testCase.expectErrContains)
-			} else {
-				require.NoError(t, err)
-			}
-			require.Equal(t, testCase.expectGetCalls, getCalls)
-			if testCase.expectLabelsAdded == nil {
-				testCase.expectLabelsAdded = map[string]struct{}{}
-			}
-			require.Equal(t, testCase.expectLabelsAdded, labelsAdded)
+			testCase.assert(t, getCalls, labelsAdded, err)
 		})
 	}
 }
