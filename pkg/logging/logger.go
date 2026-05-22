@@ -71,14 +71,16 @@ func init() {
 		panic(err)
 	}
 
+	fs := flag.NewFlagSet("kargo_logger", flag.ExitOnError)
+
 	// Configure klog to use the same writer
-	klog.InitFlags(nil)
+	klog.InitFlags(fs)
 	klog.SetOutput(writer)
 	klogLevel := "0"
 	if k := os.Getenv("KLOG_LEVEL"); k != "" {
 		klogLevel = k
 	}
-	if err = flag.Set("v", klogLevel); err != nil {
+	if err = fs.Set("v", klogLevel); err != nil {
 		panic(err)
 	}
 
