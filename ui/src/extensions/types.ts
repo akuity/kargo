@@ -22,6 +22,18 @@ export type StageTab = {
   icon?: React.ReactNode;
 };
 
+export type FreightTabComponentProps = {
+  projectName: string;
+  freightId: string;
+};
+
+export type FreightTab = {
+  type: 'freightTab';
+  component: (props: FreightTabComponentProps) => React.ReactNode;
+  label: string;
+  icon?: React.ReactNode;
+};
+
 export type LayoutExtension = {
   type: 'layoutExtension';
   component: () => React.ReactNode;
@@ -78,6 +90,7 @@ export type ArgoCDExtension = {
 
 export type Extension =
   | StageTab
+  | FreightTab
   | LayoutExtension
   | ProjectSubpage
   | AppSubpage
