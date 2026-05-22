@@ -19,8 +19,13 @@ import (
 )
 
 const (
-	issueStateClosed = "closed"
-	prStateClosed    = "closed"
+	issueActionOpened = "opened"
+	issueStateClosed  = "closed"
+
+	prActionOpened         = "opened"
+	prActionReopened       = "reopened"
+	prActionReadyForReview = "ready_for_review"
+	prStateClosed          = "closed"
 
 	// defaultGraphQLURL is the public GitHub GraphQL endpoint.
 	defaultGraphQLURL = "https://api.github.com/graphql"

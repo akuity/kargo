@@ -84,7 +84,7 @@ func (h *handler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 		}
 		owner, repo, installationID = h.repoInfo(e)
 	case *github.IssuesEvent:
-		if e.GetAction() != "opened" {
+		if e.GetAction() != issueActionOpened {
 			logger.Debug("ignoring non-opened issues event", "action", e.GetAction())
 			w.WriteHeader(http.StatusNoContent)
 			return
@@ -92,9 +92,9 @@ func (h *handler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 		owner, repo, installationID = h.repoInfo(e)
 	case *github.PullRequestEvent:
 		action := e.GetAction()
-		if action != "opened" &&
-			action != "reopened" &&
-			action != "ready_for_review" {
+		if action != prActionOpened &&
+			action != prActionReopened &&
+			action != prActionReadyForReview {
 			logger.Debug("ignoring pull request event", "action", action)
 			w.WriteHeader(http.StatusNoContent)
 			return
@@ -190,7 +190,7 @@ func (h *handler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 			orgsClient:   orgsClient,
 		}
 		opts := &handlePROpenedOpts{}
-		if e.GetAction() == "reopened" || e.GetAction() == "ready_for_review" {
+		if e.GetAction() == prActionReopened || e.GetAction() == prActionReadyForReview {
 			opts.applyPolicyOnly = true
 		}
 		err = prHandler.handleOpened(ctx, e, opts)

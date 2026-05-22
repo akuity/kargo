@@ -87,7 +87,7 @@ func Test_prHandler_handleOpened(t *testing.T) {
 			// exempts the PR. Labels are not re-asserted on this path
 			// (it's policy-only).
 			name:        "maintainer sender exempts a non-maintainer author's PR on ready_for_review",
-			action:      "ready_for_review",
+			action:      prActionReadyForReview,
 			body:        "No issue reference here.",
 			author:      "external",
 			authorAssoc: "NONE",
@@ -280,7 +280,7 @@ func Test_prHandler_handleOpened(t *testing.T) {
 				orgsClient:   orgsClient,
 			}
 			var opts *handlePROpenedOpts
-			if action == "reopened" || action == "ready_for_review" {
+			if action == prActionReopened || action == prActionReadyForReview {
 				opts = &handlePROpenedOpts{applyPolicyOnly: true}
 			}
 			err := h.handleOpened(t.Context(), event, opts)
