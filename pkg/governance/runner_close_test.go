@@ -11,60 +11,83 @@ import (
 
 func Test_closeRunner_run(t *testing.T) {
 	testCases := []struct {
-		name                  string
-		config                []byte
-		isPR                  bool
-		issuesEditErr         error
-		prsEditErr            error
-		expectIssuesEditCalls int
-		expectPRsEditCalls    int
-		expectIssueState      string
-		expectPRState         string
-		expectStateReason     string
-		expectErrContains     string
+		name          string
+		config        []byte
+		isPR          bool
+		issuesEditErr error
+		prsEditErr    error
+		assert        func(
+			t *testing.T,
+			issueEditCalls, prEditCalls int,
+			issueState, prState, stateReason string,
+			err error,
+		)
 	}{
 		{
-			name:              "decode error — config is not a bool",
-			config:            []byte(`"close"`),
-			expectErrContains: "decoding close config",
+			name:   "decode error — config is not a bool",
+			config: []byte(`"close"`),
+			assert: func(t *testing.T, issueEditCalls, prEditCalls int, _, _, _ string, err error) {
+				require.ErrorContains(t, err, "decoding close config")
+				require.Zero(t, issueEditCalls)
+				require.Zero(t, prEditCalls)
+			},
 		},
 		{
 			name:   "false — no-op",
 			config: []byte(`false`),
+			assert: func(t *testing.T, issueEditCalls, prEditCalls int, _, _, _ string, err error) {
+				require.NoError(t, err)
+				require.Zero(t, issueEditCalls)
+				require.Zero(t, prEditCalls)
+			},
 		},
 		{
-			name:                  "true on issue — issuesClient.Edit called with state_reason",
-			config:                []byte(`true`),
-			isPR:                  false,
-			expectIssuesEditCalls: 1,
-			expectIssueState:      issueStateClosed,
-			expectStateReason:     stateReasonNotPlanned,
+			name:   "true on issue — issuesClient.Edit called with state_reason",
+			config: []byte(`true`),
+			isPR:   false,
+			assert: func(t *testing.T, issueEditCalls, prEditCalls int, issueState, _, stateReason string, err error) {
+				require.NoError(t, err)
+				require.Equal(t, 1, issueEditCalls)
+				require.Zero(t, prEditCalls)
+				require.Equal(t, issueStateClosed, issueState)
+				require.Equal(t, stateReasonNotPlanned, stateReason)
+			},
 		},
 		{
-			name:               "true on PR — prsClient.Edit called",
-			config:             []byte(`true`),
-			isPR:               true,
-			expectPRsEditCalls: 1,
-			expectPRState:      prStateClosed,
+			name:   "true on PR — prsClient.Edit called",
+			config: []byte(`true`),
+			isPR:   true,
+			assert: func(t *testing.T, issueEditCalls, prEditCalls int, _, prState, _ string, err error) {
+				require.NoError(t, err)
+				require.Zero(t, issueEditCalls)
+				require.Equal(t, 1, prEditCalls)
+				require.Equal(t, prStateClosed, prState)
+			},
 		},
 		{
-			name:               "PR edit error propagates",
-			config:             []byte(`true`),
-			isPR:               true,
-			prsEditErr:         errors.New("boom"),
-			expectPRsEditCalls: 1,
-			expectPRState:      prStateClosed,
-			expectErrContains:  "error closing PR",
+			name:       "PR edit error propagates",
+			config:     []byte(`true`),
+			isPR:       true,
+			prsEditErr: errors.New("boom"),
+			assert: func(t *testing.T, issueEditCalls, prEditCalls int, _, prState, _ string, err error) {
+				require.ErrorContains(t, err, "error closing PR")
+				require.Zero(t, issueEditCalls)
+				require.Equal(t, 1, prEditCalls)
+				require.Equal(t, prStateClosed, prState)
+			},
 		},
 		{
-			name:                  "issue edit error propagates",
-			config:                []byte(`true`),
-			isPR:                  false,
-			issuesEditErr:         errors.New("boom"),
-			expectIssuesEditCalls: 1,
-			expectIssueState:      issueStateClosed,
-			expectStateReason:     stateReasonNotPlanned,
-			expectErrContains:     "error closing issue",
+			name:          "issue edit error propagates",
+			config:        []byte(`true`),
+			isPR:          false,
+			issuesEditErr: errors.New("boom"),
+			assert: func(t *testing.T, issueEditCalls, prEditCalls int, issueState, _, stateReason string, err error) {
+				require.ErrorContains(t, err, "error closing issue")
+				require.Equal(t, 1, issueEditCalls)
+				require.Zero(t, prEditCalls)
+				require.Equal(t, issueStateClosed, issueState)
+				require.Equal(t, stateReasonNotPlanned, stateReason)
+			},
 		},
 	}
 	for _, testCase := range testCases {
@@ -104,25 +127,21 @@ func Test_closeRunner_run(t *testing.T) {
 			err := closeRunner{}.run(
 				t.Context(),
 				&actionContext{
-					issuesClient: issuesFake,
-					prsClient:    prsFake,
-					owner:        "akuity",
-					repo:         "kargo",
-					number:       1,
-					isPR:         testCase.isPR,
+					repoContext: repoContext{
+						issuesClient: issuesFake,
+						prsClient:    prsFake,
+						owner:        "akuity",
+						repo:         "kargo",
+					},
+					number: 1,
+					isPR:   testCase.isPR,
 				},
 				testCase.config,
 			)
-			if testCase.expectErrContains != "" {
-				require.ErrorContains(t, err, testCase.expectErrContains)
-			} else {
-				require.NoError(t, err)
-			}
-			require.Equal(t, testCase.expectIssuesEditCalls, issueEditCalls)
-			require.Equal(t, testCase.expectPRsEditCalls, prEditCalls)
-			require.Equal(t, testCase.expectIssueState, issueState)
-			require.Equal(t, testCase.expectPRState, prState)
-			require.Equal(t, testCase.expectStateReason, stateReason)
+			testCase.assert(
+				t, issueEditCalls, prEditCalls,
+				issueState, prState, stateReason, err,
+			)
 		})
 	}
 }

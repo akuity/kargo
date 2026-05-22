@@ -9,58 +9,49 @@ import (
 )
 
 func Test_issueHandler_handleOpened(t *testing.T) {
+	// The handler's only job is to extract the issue's existing labels
+	// from the event and call enforceRequiredLabels with the configured
+	// prefixes. Branch-level coverage of enforceRequiredLabels itself
+	// (all-present, partial, all-missing, errors) lives in
+	// Test_repoContext_enforceRequiredLabels.
 	testCases := []struct {
-		name                string
-		cfg                 issuesConfig
-		initialLabels       []string
-		expectedLabelsAdded map[string]struct{}
+		name              string
+		cfg               issuesConfig
+		initialLabels     []string
+		expectLabelsAdded map[string]struct{}
 	}{
 		{
-			name: "all required labels present",
-			cfg: issuesConfig{
-				RequiredLabelPrefixes: []string{"kind", "priority"},
-			},
-			initialLabels:       []string{"kind/bug", "priority/high"},
-			expectedLabelsAdded: map[string]struct{}{},
-		},
-		{
-			name: "missing kind label",
-			cfg: issuesConfig{
-				RequiredLabelPrefixes: []string{"kind", "priority"},
-			},
-			initialLabels:       []string{"priority/high"},
-			expectedLabelsAdded: map[string]struct{}{"needs/kind": {}},
-		},
-		{
-			name: "missing all required labels",
+			// Happy path: handler reads existing labels from the issue,
+			// computes which required prefixes are missing, and asks
+			// enforceRequiredLabels to add the corresponding needs/* labels.
+			name: "extracts existing labels and enforces missing prefixes",
 			cfg: issuesConfig{
 				RequiredLabelPrefixes: []string{"kind", "priority", "area"},
 			},
-			initialLabels: []string{},
-			expectedLabelsAdded: map[string]struct{}{
-				"needs/kind":     {},
+			initialLabels: []string{"kind/bug"},
+			expectLabelsAdded: map[string]struct{}{
 				"needs/priority": {},
 				"needs/area":     {},
 			},
 		},
 		{
-			name:                "no label governance configured",
-			cfg:                 issuesConfig{},
-			initialLabels:       []string{},
-			expectedLabelsAdded: map[string]struct{}{},
+			// No-op short-circuit at the handler level: when the config
+			// has no required prefixes, the handler returns early without
+			// invoking enforceRequiredLabels at all.
+			name:              "no required prefixes configured: no-op",
+			cfg:               issuesConfig{},
+			initialLabels:     []string{},
+			expectLabelsAdded: map[string]struct{}{},
 		},
 	}
 	for _, testCase := range testCases {
 		t.Run(testCase.name, func(t *testing.T) {
-			// Our fake client will close over this map and update it with any labels
-			// that get added.
 			labelsAdded := map[string]struct{}{}
 
 			issuesClient := &fakeIssuesClient{
 				AddLabelsToIssueFn: func(
 					_ context.Context,
-					_ string,
-					_ string,
+					_, _ string,
 					_ int,
 					labels []string,
 				) ([]*github.Label, *github.Response, error) {
@@ -89,14 +80,16 @@ func Test_issueHandler_handleOpened(t *testing.T) {
 			}
 
 			h := &issueHandler{
-				cfg:          testCase.cfg,
-				owner:        "akuity",
-				repo:         "kargo",
-				issuesClient: issuesClient,
+				repoContext: repoContext{
+					cfg:          config{Issues: &testCase.cfg},
+					owner:        "akuity",
+					repo:         "kargo",
+					issuesClient: issuesClient,
+				},
 			}
 			err := h.handleOpened(t.Context(), event)
 			require.NoError(t, err)
-			require.Equal(t, testCase.expectedLabelsAdded, labelsAdded)
+			require.Equal(t, testCase.expectLabelsAdded, labelsAdded)
 		})
 	}
 }

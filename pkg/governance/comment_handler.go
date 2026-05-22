@@ -13,13 +13,11 @@ import (
 )
 
 // commentHandler handles comment-related events for a specific repository
-// according to specific configuration.
+// according to specific configuration. It embeds repoContext so the shared
+// per-repository dependencies and their methods are accessible directly on
+// the handler.
 type commentHandler struct {
-	cfg          config
-	owner        string
-	repo         string
-	issuesClient IssuesClient
-	prsClient    PullRequestsClient
+	repoContext
 }
 
 // handleCreated is the handler for the "issue_comment.created" event.
@@ -43,8 +41,13 @@ func (h *commentHandler) handleCreated(
 	}
 
 	// Slash commands are maintainer-only.
-	author := event.GetComment().GetAuthorAssociation()
-	if !isMaintainer(h.cfg, author) {
+	authorAssoc := event.GetComment().GetAuthorAssociation()
+	authorLogin := event.GetComment().GetUser().GetLogin()
+	authorIsMaintainer, err := h.isMaintainer(ctx, authorAssoc, authorLogin)
+	if err != nil {
+		return fmt.Errorf("error checking maintainer status: %w", err)
+	}
+	if !authorIsMaintainer {
 		logger.Debug("comment author is not a maintainer, ignoring")
 		return nil
 	}
@@ -116,11 +119,7 @@ func (h *commentHandler) handleCreated(
 		if err := executeActions(
 			cmdCtx,
 			&actionContext{
-				cfg:          h.cfg,
-				issuesClient: h.issuesClient,
-				prsClient:    h.prsClient,
-				owner:        h.owner,
-				repo:         h.repo,
+				repoContext:  h.repoContext,
 				number:       number,
 				isPR:         isPR,
 				templateData: templateData,
