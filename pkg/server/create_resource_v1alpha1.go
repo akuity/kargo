@@ -12,12 +12,18 @@ import (
 	"github.com/gin-gonic/gin"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
+	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/runtime/schema"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	sigyaml "sigs.k8s.io/yaml"
 
 	svcv1alpha1 "github.com/akuity/kargo/api/service/v1alpha1"
+	kargoapi "github.com/akuity/kargo/api/v1alpha1"
+	"github.com/akuity/kargo/pkg/api"
+	"github.com/akuity/kargo/pkg/event"
 	libhttp "github.com/akuity/kargo/pkg/http"
+	"github.com/akuity/kargo/pkg/logging"
+	"github.com/akuity/kargo/pkg/server/user"
 )
 
 // createResourceResponse is the response for creating resources
@@ -214,6 +220,26 @@ func (s *server) createResource(
 		return createResourceResult{
 			Error: fmt.Errorf("create resource: %w", err).Error(),
 		}, err
+	}
+
+	if obj.GroupVersionKind() == freightGVK && s.sender != nil {
+		var freight kargoapi.Freight
+		if convertErr := runtime.DefaultUnstructuredConverter.FromUnstructured(
+			obj.Object,
+			&freight,
+		); convertErr == nil {
+			var actor string
+			eventMsg := "Freight created"
+			if u, ok := user.InfoFromContext(ctx); ok {
+				actor = api.FormatEventUserActor(u)
+				eventMsg += fmt.Sprintf(" by %q", actor)
+			}
+			evt := event.NewFreightCreated(eventMsg, actor, &freight)
+			if sendErr := s.sender.Send(ctx, evt); sendErr != nil {
+				logging.LoggerFromContext(ctx).Error(
+					sendErr, "error sending FreightCreated event")
+			}
+		}
 	}
 
 	// Convert the created object to a map for the response
