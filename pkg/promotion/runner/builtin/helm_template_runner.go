@@ -397,6 +397,13 @@ func (h *helmTemplateRunner) writeResourcesFlat(outPath, manifest string) error 
 			fileName = fmt.Sprintf("resource-%d.yaml", i)
 		}
 
+		// Filenames are derived from rendered resource metadata, which is
+		// untrusted input. Reject anything that isn't a plain filename so a
+		// malicious or malformed manifest cannot write outside outPath.
+		if err = validateGeneratedResourceFilename(fileName); err != nil {
+			return err
+		}
+
 		// Write the resource to the output directory.
 		//
 		// #nosec G703 -- Contextually, if this was constructed from a
