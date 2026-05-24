@@ -396,6 +396,37 @@ metadata:
 			},
 		},
 		{
+			name: "output directory rejects resource metadata that would escape it",
+			setupFiles: func(t *testing.T, dir string) {
+				require.NoError(t, os.WriteFile(filepath.Join(dir, "kustomization.yaml"), []byte(`
+apiVersion: kustomize.config.k8s.io/v1beta1
+kind: Kustomization
+resources:
+- deployment.yaml
+`), 0o600))
+				require.NoError(t, os.WriteFile(filepath.Join(dir, "deployment.yaml"), []byte(`---
+apiVersion: v1
+kind: ../owned/marker
+metadata:
+  name: written
+`), 0o600))
+				require.NoError(t, os.MkdirAll(filepath.Join(dir, "owned"), 0o700))
+			},
+			config: builtin.KustomizeBuildConfig{
+				Path:    ".",
+				OutPath: "output/",
+			},
+			assertions: func(t *testing.T, dir string, result promotion.StepResult, err error) {
+				require.ErrorContains(t, err, "unsafe generated resource filename")
+				assert.Equal(
+					t,
+					promotion.StepResult{Status: kargoapi.PromotionStepStatusErrored},
+					result,
+				)
+				assert.NoFileExists(t, filepath.Join(dir, "owned", "marker-written.yaml"))
+			},
+		},
+		{
 			name:       "kustomization file not found",
 			setupFiles: func(*testing.T, string) {},
 			config: builtin.KustomizeBuildConfig{
