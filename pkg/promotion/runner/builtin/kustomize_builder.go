@@ -213,6 +213,12 @@ func (k *kustomizeBuilder) writeIndividualFiles(dirPath string, m resmap.ResMap,
 }
 
 func (k *kustomizeBuilder) writeResource(path, fName string, res *resource.Resource) error {
+	// Filenames are derived from rendered resource metadata, which is untrusted
+	// input. Reject anything that isn't a plain filename so a malicious or
+	// malformed resource cannot write outside path.
+	if err := validateGeneratedResourceFilename(fName); err != nil {
+		return err
+	}
 	m, err := res.Map()
 	if err != nil {
 		return err
