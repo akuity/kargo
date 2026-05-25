@@ -1281,6 +1281,34 @@ spec:
 			},
 		},
 		{
+			name: "flat layout rejects manifest metadata that would escape output dir",
+			cfg: builtin.HelmTemplateConfig{
+				OutPath:   "output",
+				OutLayout: ptr.To(builtin.Flat),
+			},
+			rls: &release.Release{
+				Manifest: `---
+apiVersion: v1
+kind: ../outside/marker
+metadata:
+  name: written
+data:
+  key: value`,
+			},
+			setup: func(t *testing.T) (workDir string) {
+				workDir = t.TempDir()
+				require.NoError(t, os.MkdirAll(filepath.Join(workDir, "outside"), 0o700))
+				return workDir
+			},
+			assertions: func(t *testing.T, workDir string, err error) {
+				require.ErrorContains(t, err, "unsafe generated resource filename")
+				assert.NoFileExists(
+					t,
+					filepath.Join(workDir, "outside", "marker-written.yaml"),
+				)
+			},
+		},
+		{
 			name: "skip test hooks",
 			cfg: builtin.HelmTemplateConfig{
 				OutPath:   "output",
