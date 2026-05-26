@@ -1,52 +1,38 @@
-import { RepoSubscription, Subscription, Warehouse } from '@ui/gen/api/v1alpha1/generated_pb';
-import { decodeRawData } from '@ui/utils/decode-raw-data';
+import { Warehouse } from '@ui/gen/api/v2/models';
 
-import { WarehouseExpanded } from './types';
+import { RepoSubscription, WarehouseExpanded } from './types';
 
 export const warehouseExpand = (warehouse: Warehouse): WarehouseExpanded => ({
   ...warehouse,
   spec: {
     ...warehouse?.spec,
-    subscriptions: warehouse?.spec?.subscriptions?.map((s) => {
-      const parsed = JSON.parse(
-        decodeRawData({ result: { case: 'raw', value: s?.raw } })
-      ) as RepoSubscription & { [key: string]: Subscription };
-
-      if (parsed.git) {
+    subscriptions: warehouse?.spec?.subscriptions?.map((s: RepoSubscription) => {
+      if (s.git) {
         return {
-          $typeName: 'github.com.akuity.kargo.api.v1alpha1.RepoSubscription',
           git: {
-            ...parsed.git,
-            $typeName: 'github.com.akuity.kargo.api.v1alpha1.GitSubscription'
+            ...s.git
           }
         };
       }
 
-      if (parsed.image) {
+      if (s.image) {
         return {
-          $typeName: 'github.com.akuity.kargo.api.v1alpha1.RepoSubscription',
           image: {
-            ...parsed.image,
-            $typeName: 'github.com.akuity.kargo.api.v1alpha1.ImageSubscription'
+            ...s.image
           }
         };
       }
 
-      if (parsed.chart) {
+      if (s.chart) {
         return {
-          $typeName: 'github.com.akuity.kargo.api.v1alpha1.RepoSubscription',
           chart: {
-            ...parsed.chart,
-            $typeName: 'github.com.akuity.kargo.api.v1alpha1.ChartSubscription'
+            ...s.chart
           }
         };
       }
-
-      const otherSubscriptionKey = Object.keys(parsed)[0];
 
       return {
-        $typeName: 'github.com.akuity.kargo.api.v1alpha1.RepoSubscription',
-        subscription: parsed[otherSubscriptionKey]
+        subscription: s.subscription
       };
     })
   }

@@ -2,7 +2,7 @@ import { faDocker, faGitAlt } from '@fortawesome/free-brands-svg-icons';
 import { faAnchor } from '@fortawesome/free-solid-svg-icons';
 import classNames from 'classnames';
 
-import { Freight } from '@ui/gen/api/v1alpha1/generated_pb';
+import { Freight } from '@ui/gen/api/v2/models';
 import { urlForImage } from '@ui/utils/url';
 
 import { CommitInfo } from '../common/commit-info';
@@ -60,8 +60,8 @@ export const FreightContents = (props: {
           icon={faDocker}
           href={urlForImage(i.repoURL || '')}
           fullContentVisibility={props.fullContentVisibility}
-          artifactSource={getImageSource(i?.annotations)}
-          artifactBuildDate={getImageBuiltDate(i?.annotations)}
+          artifactSource={getImageSource(i?.annotations || {})}
+          artifactBuildDate={getImageBuiltDate(i?.annotations || {})}
         >
           {`${props.horizontal ? i.repoURL + ':' : ''}${i.tag}`}
         </FreightContentItem>
@@ -82,7 +82,7 @@ export const FreightContents = (props: {
       ))}
       {(freight?.artifacts || []).map((g) => (
         <FreightContentItem
-          key={g.subscriptionName + g.artifactType}
+          key={g.subscriptionName || '' + g.artifactType}
           highlighted={highlighted}
           linkClass={linkClass}
           fullContentVisibility={props.fullContentVisibility}
