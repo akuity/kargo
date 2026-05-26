@@ -2,8 +2,7 @@ import { faQuestionCircle } from '@fortawesome/free-solid-svg-icons';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
 import { Descriptions, Popover } from 'antd';
 
-import { Freight } from '@ui/gen/api/v1alpha1/generated_pb';
-import { decodeRawData } from '@ui/utils/decode-raw-data';
+import { Freight } from '@ui/gen/api/v2/models';
 
 type FreightMetadataProps = {
   freight: Freight;
@@ -43,11 +42,12 @@ export const FreightMetadata = (props: FreightMetadataProps) => {
         </>
       }
       items={Object.entries(props.freight.status?.metadata || {}).map(([key, value]) => {
-        const decodedValue = decodeRawData({ result: { case: 'raw', value: value.raw } });
+        // TODO(Marvin9): verify
+        console.log({ value });
         return {
           key,
           label: key,
-          children: decodedValue
+          children: ''
         };
       })}
       bordered

@@ -24,7 +24,7 @@ import { useModal } from '@ui/features/common/modal/use-modal';
 import { useActionContext } from '@ui/features/project/pipelines/context/action-context';
 import { FreightTimelineControllerContextType } from '@ui/features/project/pipelines/context/freight-timeline-controller-context';
 import { ColorMap } from '@ui/features/stage/utils';
-import { Freight, Stage } from '@ui/gen/api/v1alpha1/generated_pb';
+import { Freight, Stage } from '@ui/gen/api/v2/models';
 import { timestampDate } from '@ui/utils/connectrpc-utils';
 
 import { useManualApprovalModal } from '../promotion/use-manual-approval-modal';
