@@ -42,6 +42,11 @@ type GitSubscription struct {
 	// the tags that are considered. Only has effect when CommitSelectionStrategy is Lexical,
 	// NewestTag, or SemVer.
 	AllowTagsRegexes []string `json:"allowTagsRegexes,omitempty"`
+	// Blobless enables blobless cloning (--filter=blob:none) for this subscription. When true,
+	// git clones will defer blob downloads until checkout, significantly reducing clone time
+	// and disk usage for large repositories. The server must support partial clones; if it does
+	// not, the clone will fail.
+	Blobless *bool `json:"blobless,omitempty"`
 	// Branch references a particular branch of the repository. Only has effect when
 	// CommitSelectionStrategy is NewestFromBranch or unspecified. When left unspecified, the
 	// subscription is implicitly to the repository's default branch. Must be a valid branch
@@ -73,11 +78,7 @@ type GitSubscription struct {
 	// InsecureSkipTLSVerify specifies whether certificate verification errors should be ignored
 	// when connecting to the repository. This should be enabled only with great caution.
 	InsecureSkipTLSVerify bool `json:"insecureSkipTLSVerify,omitempty"`
-	// Blobless enables blobless cloning (--filter=blob:none) for this subscription.
-	// When true, git clones will defer blob downloads until checkout, significantly
-	// reducing clone time and disk usage for large repositories. The server must
-	// support partial clones; if it does not, the clone will fail.
-	Blobless *bool `json:"blobless,omitempty"`
+
 	// URL is the repository's URL. This is a required field. Deprecated: Support for SSH URLs
 	// (ssh:// and SCP-style git@host:path) is deprecated as of v1.10.0 and will be removed in
 	// v1.13.0. Use HTTPS URLs instead.

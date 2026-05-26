@@ -1084,6 +1084,11 @@ func (in *GitSubscription) DeepCopyInto(out *GitSubscription) {
 		*out = make([]string, len(*in))
 		copy(*out, *in)
 	}
+	if in.Blobless != nil {
+		in, out := &in.Blobless, &out.Blobless
+		*out = new(bool)
+		**out = **in
+	}
 	if in.ExcludePaths != nil {
 		in, out := &in.ExcludePaths, &out.ExcludePaths
 		*out = make([]string, len(*in))

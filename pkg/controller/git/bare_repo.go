@@ -7,6 +7,7 @@ import (
 	"os"
 	"path/filepath"
 	"slices"
+	"strings"
 
 	libExec "github.com/akuity/kargo/pkg/exec"
 )
