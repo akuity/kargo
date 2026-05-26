@@ -49,7 +49,11 @@ system to access the git repos.
 
 :::warning
 
-The `wait` option is unreliable for repositories hosted by Bitbucket due to API limitations.
+The `wait` option is unreliable for repositories hosted by Bitbucket. The
+Bitbucket Cloud API does not provide a way to check merge eligibility before
+attempting a merge, so Kargo cannot determine in advance whether a PR is blocked
+by conflicts, failing checks, or other conditions. As a result, Kargo will
+attempt the merge regardless, which may fail unexpectedly.
 
 :::
 
