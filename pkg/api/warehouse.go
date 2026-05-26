@@ -225,10 +225,15 @@ func ListFreightFromWarehouse(
 			}
 		}
 
-		// Track set of Stages that have passed the verification soak time
-		// for the Freight.
+		// Track the set of configured upstream Stages in which the Freight
+		// has been verified AND has passed the required soak time. Only
+		// upstream Stages named in opts.VerifiedIn are considered -- soak
+		// time accrued in unrelated Stages must not satisfy this gate.
 		verifiedStages := sets.New[string]()
-		for stage := range f.Status.VerifiedIn {
+		for _, stage := range opts.VerifiedIn {
+			if _, verified := f.Status.VerifiedIn[stage]; !verified {
+				continue
+			}
 			if f.HasSoakedIn(stage, opts.RequiredSoakTime) {
 				verifiedStages.Insert(stage)
 			}

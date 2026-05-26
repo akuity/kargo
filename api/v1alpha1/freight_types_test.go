@@ -316,6 +316,21 @@ func TestFreight_GetLongestSoak(t *testing.T) {
 				require.LessOrEqual(t, longestSoak, 2*time.Hour+time.Second)
 			},
 		},
+		{
+			// A control-flow Stage verifies Freight without ever holding it, so
+			// neither a current residency nor a completed soak is recorded. Soak
+			// must be measured from the time the Freight was verified.
+			name: "Freight verified in a control-flow Stage; soak measured from verification",
+			status: FreightStatus{
+				VerifiedIn: map[string]VerifiedStage{
+					testStage: {VerifiedAt: &metav1.Time{Time: time.Now().Add(-2 * time.Hour)}},
+				},
+			},
+			assertions: func(t *testing.T, _ FreightStatus, longestSoak time.Duration) {
+				require.GreaterOrEqual(t, longestSoak, 2*time.Hour)
+				require.LessOrEqual(t, longestSoak, 2*time.Hour+time.Second)
+			},
+		},
 	}
 	for _, testCase := range testCases {
 		t.Run(testCase.name, func(t *testing.T) {
