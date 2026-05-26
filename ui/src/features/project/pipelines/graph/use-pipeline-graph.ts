@@ -4,7 +4,7 @@ import { useContext, useEffect, useRef, useState } from 'react';
 
 import { ColorContext } from '@ui/context/colors';
 import { WarehouseExpanded } from '@ui/extend/types';
-import { Stage } from '@ui/gen/api/v1alpha1/generated_pb';
+import { Stage } from '@ui/gen/api/v2/models';
 
 import { edgeIndexer } from './edge-indexer';
 import { layoutGraph } from './layout-graph';

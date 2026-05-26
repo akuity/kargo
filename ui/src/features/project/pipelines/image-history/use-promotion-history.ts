@@ -1,6 +1,6 @@
 import { useMemo } from 'react';
 
-import { Stage } from '@ui/gen/api/v1alpha1/generated_pb';
+import { Stage } from '@ui/gen/api/v2/models';
 
 export const usePromotionHistory = (stages: Stage[]) => {
   return useMemo(() => {
@@ -11,8 +11,8 @@ export const usePromotionHistory = (stages: Stage[]) => {
       if (!stageName) return history;
 
       stage.status?.freightHistory?.forEach((freightGroup, freightIndex) => {
-        for (const freightRef of Object.values(freightGroup.items)) {
-          for (const image of freightRef.images) {
+        for (const freightRef of Object.values(freightGroup.items || {})) {
+          for (const image of freightRef?.images || []) {
             const repoURL = image.repoURL || '';
             const tag = image.tag || '';
 

@@ -1,7 +1,7 @@
 import { useEffect } from 'react';
 
 import { queryCache } from '@ui/features/utils/cache';
-import { Freight, Stage } from '@ui/gen/api/v1alpha1/generated_pb';
+import { Freight, Stage } from '@ui/gen/api/v2/models';
 
 export const useSyncFreight = (payload: {
   freights?: Record<string, Freight>;

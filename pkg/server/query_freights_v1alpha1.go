@@ -23,6 +23,14 @@ import (
 	"github.com/akuity/kargo/pkg/indexer"
 )
 
+type freightGroupList struct {
+	Items []*kargoapi.Freight `json:"items"`
+}
+
+type queryFreightsResponse struct {
+	Groups map[string]freightGroupList `json:"groups"`
+}
+
 const (
 	GroupByImageRepository = "image_repo"
 	GroupByGitRepository   = "git_repo"
@@ -369,7 +377,7 @@ func getRepoAndTag(s *kargoapi.Freight) (string, string, *semver.Version) {
 // @Param groupBy query string false "Group by (image_repo, git_repo, chart_repo)"
 // @Param orderBy query string false "Order by (first_seen, tag)"
 // @Param reverse query bool false "Reverse order"
-// @Success 200 {object} object "Map of freight groups"
+// @Success 200 {object} queryFreightsResponse
 // @Router /v1beta1/projects/{project}/freight [get]
 func (s *server) queryFreight(c *gin.Context) {
 	ctx := c.Request.Context()
@@ -447,16 +455,12 @@ func (s *server) queryFreight(c *gin.Context) {
 
 	sortFreightGroupsGeneric(orderBy, reverse, freightGroups)
 
-	// Return in a REST-friendly format with "items" field (matching Kubernetes conventions)
-	type freightList struct {
-		Items []*kargoapi.Freight `json:"items"`
-	}
-	result := make(map[string]*freightList, len(freightGroups))
+	result := make(map[string]freightGroupList, len(freightGroups))
 	for k, v := range freightGroups {
-		result[k] = &freightList{Items: v}
+		result[k] = freightGroupList{Items: v}
 	}
 
-	c.JSON(http.StatusOK, gin.H{"groups": result})
+	c.JSON(http.StatusOK, queryFreightsResponse{Groups: result})
 }
 
 // getFreightFromWarehousesREST is a helper for the REST endpoint that gets freight from warehouses

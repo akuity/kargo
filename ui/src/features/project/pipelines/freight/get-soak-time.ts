@@ -1,7 +1,6 @@
 import { add, intervalToDuration, isBefore } from 'date-fns';
 
-import { Freight, Stage } from '@ui/gen/api/v1alpha1/generated_pb';
-import { Duration } from '@ui/gen/k8s.io/apimachinery/pkg/apis/meta/v1/generated_pb';
+import { Freight, Stage } from '@ui/gen/api/v2/models';
 import { timestampDate } from '@ui/utils/connectrpc-utils';
 
 // freight is in stage since X
@@ -16,8 +15,8 @@ export const getSoakTime = (payload: {
   // in normal promotion stage-A -> stage-B, soak time for stage-B is decide upon how much time stage-A contains that freight
   // stage-B -> stage-C, stage-D, stage-E, soak time for stage-C, stage-D, stage-E is decide upon how much time stage-B contains that freight
   freightInStage: Stage;
-  // time duration - 1h, 1h2m, 10m
-  requiredSoakTime: Duration;
+  // time duration string e.g. 1h, 1h2m, 10m, 30s
+  requiredSoakTime: string;
 }) => {
   if (!payload.requiredSoakTime) {
     return '';
@@ -46,12 +45,27 @@ export const getSoakTime = (payload: {
   return null;
 };
 
-const durationToHMS = (duration: Duration) => {
-  const totalSeconds = Number(duration.duration / 1_000_000_000n); // Convert to seconds
-
-  const hours = Math.floor(totalSeconds / 3600);
-  const minutes = Math.floor((totalSeconds % 3600) / 60);
-  const seconds = totalSeconds % 60;
-
-  return { hours, minutes, seconds };
+const durationToHMS = (duration: string) => {
+  let totalSeconds = 0;
+  const re = /([0-9]+(?:\.[0-9]+)?)(h|m|s)/g;
+  let match;
+  while ((match = re.exec(duration)) !== null) {
+    const value = parseFloat(match[1]);
+    switch (match[2]) {
+      case 'h':
+        totalSeconds += value * 3600;
+        break;
+      case 'm':
+        totalSeconds += value * 60;
+        break;
+      case 's':
+        totalSeconds += value;
+        break;
+    }
+  }
+  return {
+    hours: Math.floor(totalSeconds / 3600),
+    minutes: Math.floor((totalSeconds % 3600) / 60),
+    seconds: Math.floor(totalSeconds % 60)
+  };
 };

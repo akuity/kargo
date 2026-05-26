@@ -23,7 +23,7 @@ import {
   getStage
 } from '@ui/gen/api/service/v1alpha1/service-KargoService_connectquery';
 import { RawFormat } from '@ui/gen/api/service/v1alpha1/service_pb';
-import { Stage } from '@ui/gen/api/v1alpha1/generated_pb';
+import { Stage } from '@ui/gen/api/v2/models';
 import { timestampDate } from '@ui/utils/connectrpc-utils';
 import { decodeRawData } from '@ui/utils/decode-raw-data';
 
@@ -59,7 +59,7 @@ export const StageDetails = ({ stage }: { stage: Stage }) => {
     setIsVerificationRunning(false);
     return (stage.status?.freightHistory || [])
       .flatMap((freight) =>
-        freight.verificationHistory.map((verification) => {
+        freight.verificationHistory?.map((verification) => {
           if (verification.phase === 'Running' || verification.phase === 'Pending') {
             setIsVerificationRunning(true);
           }
@@ -69,7 +69,9 @@ export const StageDetails = ({ stage }: { stage: Stage }) => {
           };
         })
       )
-      .sort((a, b) => moment(timestampDate(b.startTime)).diff(moment(timestampDate(a.startTime))));
+      .sort((a, b) =>
+        moment(timestampDate(b?.startTime)).diff(moment(timestampDate(a?.startTime)))
+      );
   }, [stage]);
 
   const rawStageYamlQuery = useQuery(getStage, {
@@ -94,7 +96,7 @@ export const StageDetails = ({ stage }: { stage: Stage }) => {
   const getConfigQuery = useQuery(getConfig);
   const config = getConfigQuery.data;
 
-  const shardKey = stage?.metadata?.labels[SHARD_LABEL_KEY] || '';
+  const shardKey = stage?.metadata?.labels?.[SHARD_LABEL_KEY] || '';
   const argocdShard = config?.argocdShards?.[shardKey];
 
   const { stageTabs } = useExtensionsContext();

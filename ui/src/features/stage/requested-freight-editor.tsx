@@ -6,12 +6,8 @@ import classNames from 'classnames';
 import { useMemo } from 'react';
 import { useForm } from 'react-hook-form';
 
-import {
-  FreightOrigin,
-  FreightRequest,
-  FreightSources,
-  Stage
-} from '@ui/gen/api/v1alpha1/generated_pb';
+import { FreightOrigin, FreightRequest, FreightSources } from '@ui/gen/api/v1alpha1/generated_pb';
+import { Stage } from '@ui/gen/api/v2/models';
 
 import { FieldContainer } from '../common/form/field-container';
 import { findStagesForWarehouse } from '../project/pipelines/image-history/get-stages';

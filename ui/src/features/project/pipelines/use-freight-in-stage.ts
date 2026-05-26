@@ -1,7 +1,7 @@
 import { useMemo } from 'react';
 
 import { getCurrentFreight } from '@ui/features/common/utils';
-import { Stage } from '@ui/gen/api/v1alpha1/generated_pb';
+import { Stage } from '@ui/gen/api/v2/models';
 
 export const useFreightInStage = (stages: Stage[]): Record<string, Stage[]> =>
   useMemo(() => {

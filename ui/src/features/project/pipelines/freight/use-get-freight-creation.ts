@@ -1,7 +1,7 @@
 import { formatDistance } from 'date-fns';
 import { useMemo } from 'react';
 
-import { Freight } from '@ui/gen/api/v1alpha1/generated_pb';
+import { Freight } from '@ui/gen/api/v2/models';
 import { timestampDate } from '@ui/utils/connectrpc-utils';
 
 export const useGetFreightCreation = (freight?: Freight) =>

@@ -38,6 +38,7 @@ import type {
 } from '.././models';
 
 import { customFetch } from '../../../../lib/api/custom-fetch';
+import type { ErrorType } from '../../../../lib/api/custom-fetch';
 
 type SecondParameter<T extends (...args: never) => unknown> = Parameters<T>[1];
 
@@ -95,7 +96,7 @@ export const getListProjectAPITokensQueryKey = (
 
 export const getListProjectAPITokensQueryOptions = <
   TData = Awaited<ReturnType<typeof listProjectAPITokens>>,
-  TError = unknown
+  TError = ErrorType<unknown>
 >(
   project: string,
   params?: ListProjectAPITokensParams,
@@ -123,11 +124,11 @@ export const getListProjectAPITokensQueryOptions = <
 export type ListProjectAPITokensQueryResult = NonNullable<
   Awaited<ReturnType<typeof listProjectAPITokens>>
 >;
-export type ListProjectAPITokensQueryError = unknown;
+export type ListProjectAPITokensQueryError = ErrorType<unknown>;
 
 export function useListProjectAPITokens<
   TData = Awaited<ReturnType<typeof listProjectAPITokens>>,
-  TError = unknown
+  TError = ErrorType<unknown>
 >(
   project: string,
   params: undefined | ListProjectAPITokensParams,
@@ -149,7 +150,7 @@ export function useListProjectAPITokens<
 ): DefinedUseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> };
 export function useListProjectAPITokens<
   TData = Awaited<ReturnType<typeof listProjectAPITokens>>,
-  TError = unknown
+  TError = ErrorType<unknown>
 >(
   project: string,
   params?: ListProjectAPITokensParams,
@@ -171,7 +172,7 @@ export function useListProjectAPITokens<
 ): UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> };
 export function useListProjectAPITokens<
   TData = Awaited<ReturnType<typeof listProjectAPITokens>>,
-  TError = unknown
+  TError = ErrorType<unknown>
 >(
   project: string,
   params?: ListProjectAPITokensParams,
@@ -189,7 +190,7 @@ export function useListProjectAPITokens<
 
 export function useListProjectAPITokens<
   TData = Awaited<ReturnType<typeof listProjectAPITokens>>,
-  TError = unknown
+  TError = ErrorType<unknown>
 >(
   project: string,
   params?: ListProjectAPITokensParams,
@@ -248,7 +249,7 @@ export const getGetProjectAPITokenQueryKey = (project?: string, apitoken?: strin
 
 export const getGetProjectAPITokenQueryOptions = <
   TData = Awaited<ReturnType<typeof getProjectAPIToken>>,
-  TError = unknown
+  TError = ErrorType<unknown>
 >(
   project: string,
   apitoken: string,
@@ -277,11 +278,11 @@ export const getGetProjectAPITokenQueryOptions = <
 export type GetProjectAPITokenQueryResult = NonNullable<
   Awaited<ReturnType<typeof getProjectAPIToken>>
 >;
-export type GetProjectAPITokenQueryError = unknown;
+export type GetProjectAPITokenQueryError = ErrorType<unknown>;
 
 export function useGetProjectAPIToken<
   TData = Awaited<ReturnType<typeof getProjectAPIToken>>,
-  TError = unknown
+  TError = ErrorType<unknown>
 >(
   project: string,
   apitoken: string,
@@ -301,7 +302,7 @@ export function useGetProjectAPIToken<
 ): DefinedUseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> };
 export function useGetProjectAPIToken<
   TData = Awaited<ReturnType<typeof getProjectAPIToken>>,
-  TError = unknown
+  TError = ErrorType<unknown>
 >(
   project: string,
   apitoken: string,
@@ -323,7 +324,7 @@ export function useGetProjectAPIToken<
 ): UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> };
 export function useGetProjectAPIToken<
   TData = Awaited<ReturnType<typeof getProjectAPIToken>>,
-  TError = unknown
+  TError = ErrorType<unknown>
 >(
   project: string,
   apitoken: string,
@@ -339,7 +340,7 @@ export function useGetProjectAPIToken<
 
 export function useGetProjectAPIToken<
   TData = Awaited<ReturnType<typeof getProjectAPIToken>>,
-  TError = unknown
+  TError = ErrorType<unknown>
 >(
   project: string,
   apitoken: string,
@@ -393,7 +394,7 @@ export const deleteProjectAPIToken = async (
 };
 
 export const getDeleteProjectAPITokenMutationOptions = <
-  TError = unknown,
+  TError = ErrorType<unknown>,
   TContext = unknown
 >(options?: {
   mutation?: UseMutationOptions<
@@ -432,12 +433,12 @@ export type DeleteProjectAPITokenMutationResult = NonNullable<
   Awaited<ReturnType<typeof deleteProjectAPIToken>>
 >;
 
-export type DeleteProjectAPITokenMutationError = unknown;
+export type DeleteProjectAPITokenMutationError = ErrorType<unknown>;
 
 /**
  * @summary Delete a project-level API token
  */
-export const useDeleteProjectAPIToken = <TError = unknown, TContext = unknown>(
+export const useDeleteProjectAPIToken = <TError = ErrorType<unknown>, TContext = unknown>(
   options?: {
     mutation?: UseMutationOptions<
       Awaited<ReturnType<typeof deleteProjectAPIToken>>,
@@ -493,7 +494,7 @@ export const getListProjectRolesQueryKey = (project?: string) => {
 
 export const getListProjectRolesQueryOptions = <
   TData = Awaited<ReturnType<typeof listProjectRoles>>,
-  TError = unknown
+  TError = ErrorType<unknown>
 >(
   project: string,
   options?: {
@@ -516,11 +517,11 @@ export const getListProjectRolesQueryOptions = <
 };
 
 export type ListProjectRolesQueryResult = NonNullable<Awaited<ReturnType<typeof listProjectRoles>>>;
-export type ListProjectRolesQueryError = unknown;
+export type ListProjectRolesQueryError = ErrorType<unknown>;
 
 export function useListProjectRoles<
   TData = Awaited<ReturnType<typeof listProjectRoles>>,
-  TError = unknown
+  TError = ErrorType<unknown>
 >(
   project: string,
   options: {
@@ -539,7 +540,7 @@ export function useListProjectRoles<
 ): DefinedUseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> };
 export function useListProjectRoles<
   TData = Awaited<ReturnType<typeof listProjectRoles>>,
-  TError = unknown
+  TError = ErrorType<unknown>
 >(
   project: string,
   options?: {
@@ -558,7 +559,7 @@ export function useListProjectRoles<
 ): UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> };
 export function useListProjectRoles<
   TData = Awaited<ReturnType<typeof listProjectRoles>>,
-  TError = unknown
+  TError = ErrorType<unknown>
 >(
   project: string,
   options?: {
@@ -573,7 +574,7 @@ export function useListProjectRoles<
 
 export function useListProjectRoles<
   TData = Awaited<ReturnType<typeof listProjectRoles>>,
-  TError = unknown
+  TError = ErrorType<unknown>
 >(
   project: string,
   options?: {
@@ -627,7 +628,7 @@ export const createProjectRole = async (
 };
 
 export const getCreateProjectRoleMutationOptions = <
-  TError = unknown,
+  TError = ErrorType<unknown>,
   TContext = unknown
 >(options?: {
   mutation?: UseMutationOptions<
@@ -666,12 +667,12 @@ export type CreateProjectRoleMutationResult = NonNullable<
   Awaited<ReturnType<typeof createProjectRole>>
 >;
 export type CreateProjectRoleMutationBody = CreateProjectRoleBodyBody;
-export type CreateProjectRoleMutationError = unknown;
+export type CreateProjectRoleMutationError = ErrorType<unknown>;
 
 /**
  * @summary Create a project-level Kargo Role virtual resource
  */
-export const useCreateProjectRole = <TError = unknown, TContext = unknown>(
+export const useCreateProjectRole = <TError = ErrorType<unknown>, TContext = unknown>(
   options?: {
     mutation?: UseMutationOptions<
       Awaited<ReturnType<typeof createProjectRole>>,
@@ -724,7 +725,7 @@ export const grant = async (
   });
 };
 
-export const getGrantMutationOptions = <TError = unknown, TContext = unknown>(options?: {
+export const getGrantMutationOptions = <TError = ErrorType<unknown>, TContext = unknown>(options?: {
   mutation?: UseMutationOptions<
     Awaited<ReturnType<typeof grant>>,
     TError,
@@ -759,12 +760,12 @@ export const getGrantMutationOptions = <TError = unknown, TContext = unknown>(op
 
 export type GrantMutationResult = NonNullable<Awaited<ReturnType<typeof grant>>>;
 export type GrantMutationBody = GrantRequest;
-export type GrantMutationError = unknown;
+export type GrantMutationError = ErrorType<unknown>;
 
 /**
  * @summary Grant permissions
  */
-export const useGrant = <TError = unknown, TContext = unknown>(
+export const useGrant = <TError = ErrorType<unknown>, TContext = unknown>(
   options?: {
     mutation?: UseMutationOptions<
       Awaited<ReturnType<typeof grant>>,
@@ -817,7 +818,10 @@ export const revoke = async (
   });
 };
 
-export const getRevokeMutationOptions = <TError = unknown, TContext = unknown>(options?: {
+export const getRevokeMutationOptions = <
+  TError = ErrorType<unknown>,
+  TContext = unknown
+>(options?: {
   mutation?: UseMutationOptions<
     Awaited<ReturnType<typeof revoke>>,
     TError,
@@ -852,12 +856,12 @@ export const getRevokeMutationOptions = <TError = unknown, TContext = unknown>(o
 
 export type RevokeMutationResult = NonNullable<Awaited<ReturnType<typeof revoke>>>;
 export type RevokeMutationBody = RevokeRequest;
-export type RevokeMutationError = unknown;
+export type RevokeMutationError = ErrorType<unknown>;
 
 /**
  * @summary Revoke permissions
  */
-export const useRevoke = <TError = unknown, TContext = unknown>(
+export const useRevoke = <TError = ErrorType<unknown>, TContext = unknown>(
   options?: {
     mutation?: UseMutationOptions<
       Awaited<ReturnType<typeof revoke>>,
@@ -915,7 +919,7 @@ export const getGetProjectRoleQueryKey = (project?: string, role?: string) => {
 
 export const getGetProjectRoleQueryOptions = <
   TData = Awaited<ReturnType<typeof getProjectRole>>,
-  TError = unknown
+  TError = ErrorType<unknown>
 >(
   project: string,
   role: string,
@@ -939,11 +943,11 @@ export const getGetProjectRoleQueryOptions = <
 };
 
 export type GetProjectRoleQueryResult = NonNullable<Awaited<ReturnType<typeof getProjectRole>>>;
-export type GetProjectRoleQueryError = unknown;
+export type GetProjectRoleQueryError = ErrorType<unknown>;
 
 export function useGetProjectRole<
   TData = Awaited<ReturnType<typeof getProjectRole>>,
-  TError = unknown
+  TError = ErrorType<unknown>
 >(
   project: string,
   role: string,
@@ -963,7 +967,7 @@ export function useGetProjectRole<
 ): DefinedUseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> };
 export function useGetProjectRole<
   TData = Awaited<ReturnType<typeof getProjectRole>>,
-  TError = unknown
+  TError = ErrorType<unknown>
 >(
   project: string,
   role: string,
@@ -983,7 +987,7 @@ export function useGetProjectRole<
 ): UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> };
 export function useGetProjectRole<
   TData = Awaited<ReturnType<typeof getProjectRole>>,
-  TError = unknown
+  TError = ErrorType<unknown>
 >(
   project: string,
   role: string,
@@ -999,7 +1003,7 @@ export function useGetProjectRole<
 
 export function useGetProjectRole<
   TData = Awaited<ReturnType<typeof getProjectRole>>,
-  TError = unknown
+  TError = ErrorType<unknown>
 >(
   project: string,
   role: string,
@@ -1054,7 +1058,10 @@ export const updateRole = async (
   });
 };
 
-export const getUpdateRoleMutationOptions = <TError = unknown, TContext = unknown>(options?: {
+export const getUpdateRoleMutationOptions = <
+  TError = ErrorType<unknown>,
+  TContext = unknown
+>(options?: {
   mutation?: UseMutationOptions<
     Awaited<ReturnType<typeof updateRole>>,
     TError,
@@ -1089,12 +1096,12 @@ export const getUpdateRoleMutationOptions = <TError = unknown, TContext = unknow
 
 export type UpdateRoleMutationResult = NonNullable<Awaited<ReturnType<typeof updateRole>>>;
 export type UpdateRoleMutationBody = CreateProjectRoleBodyBody;
-export type UpdateRoleMutationError = unknown;
+export type UpdateRoleMutationError = ErrorType<unknown>;
 
 /**
  * @summary Update a project-level Kargo Role virtual resource
  */
-export const useUpdateRole = <TError = unknown, TContext = unknown>(
+export const useUpdateRole = <TError = ErrorType<unknown>, TContext = unknown>(
   options?: {
     mutation?: UseMutationOptions<
       Awaited<ReturnType<typeof updateRole>>,
@@ -1147,7 +1154,7 @@ export const deleteProjectRole = async (
 };
 
 export const getDeleteProjectRoleMutationOptions = <
-  TError = unknown,
+  TError = ErrorType<unknown>,
   TContext = unknown
 >(options?: {
   mutation?: UseMutationOptions<
@@ -1186,12 +1193,12 @@ export type DeleteProjectRoleMutationResult = NonNullable<
   Awaited<ReturnType<typeof deleteProjectRole>>
 >;
 
-export type DeleteProjectRoleMutationError = unknown;
+export type DeleteProjectRoleMutationError = ErrorType<unknown>;
 
 /**
  * @summary Delete a project-level Kargo Role virtual resource
  */
-export const useDeleteProjectRole = <TError = unknown, TContext = unknown>(
+export const useDeleteProjectRole = <TError = ErrorType<unknown>, TContext = unknown>(
   options?: {
     mutation?: UseMutationOptions<
       Awaited<ReturnType<typeof deleteProjectRole>>,
@@ -1249,7 +1256,7 @@ export const createProjectAPIToken = async (
 };
 
 export const getCreateProjectAPITokenMutationOptions = <
-  TError = unknown,
+  TError = ErrorType<unknown>,
   TContext = unknown
 >(options?: {
   mutation?: UseMutationOptions<
@@ -1288,12 +1295,12 @@ export type CreateProjectAPITokenMutationResult = NonNullable<
   Awaited<ReturnType<typeof createProjectAPIToken>>
 >;
 export type CreateProjectAPITokenMutationBody = CreateAPITokenRequestBody;
-export type CreateProjectAPITokenMutationError = unknown;
+export type CreateProjectAPITokenMutationError = ErrorType<unknown>;
 
 /**
  * @summary Create a project-level API token
  */
-export const useCreateProjectAPIToken = <TError = unknown, TContext = unknown>(
+export const useCreateProjectAPIToken = <TError = ErrorType<unknown>, TContext = unknown>(
   options?: {
     mutation?: UseMutationOptions<
       Awaited<ReturnType<typeof createProjectAPIToken>>,
@@ -1361,7 +1368,7 @@ export const getListSystemAPITokensQueryKey = (params?: ListSystemAPITokensParam
 
 export const getListSystemAPITokensQueryOptions = <
   TData = Awaited<ReturnType<typeof listSystemAPITokens>>,
-  TError = unknown
+  TError = ErrorType<unknown>
 >(
   params?: ListSystemAPITokensParams,
   options?: {
@@ -1388,11 +1395,11 @@ export const getListSystemAPITokensQueryOptions = <
 export type ListSystemAPITokensQueryResult = NonNullable<
   Awaited<ReturnType<typeof listSystemAPITokens>>
 >;
-export type ListSystemAPITokensQueryError = unknown;
+export type ListSystemAPITokensQueryError = ErrorType<unknown>;
 
 export function useListSystemAPITokens<
   TData = Awaited<ReturnType<typeof listSystemAPITokens>>,
-  TError = unknown
+  TError = ErrorType<unknown>
 >(
   params: undefined | ListSystemAPITokensParams,
   options: {
@@ -1413,7 +1420,7 @@ export function useListSystemAPITokens<
 ): DefinedUseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> };
 export function useListSystemAPITokens<
   TData = Awaited<ReturnType<typeof listSystemAPITokens>>,
-  TError = unknown
+  TError = ErrorType<unknown>
 >(
   params?: ListSystemAPITokensParams,
   options?: {
@@ -1434,7 +1441,7 @@ export function useListSystemAPITokens<
 ): UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> };
 export function useListSystemAPITokens<
   TData = Awaited<ReturnType<typeof listSystemAPITokens>>,
-  TError = unknown
+  TError = ErrorType<unknown>
 >(
   params?: ListSystemAPITokensParams,
   options?: {
@@ -1451,7 +1458,7 @@ export function useListSystemAPITokens<
 
 export function useListSystemAPITokens<
   TData = Awaited<ReturnType<typeof listSystemAPITokens>>,
-  TError = unknown
+  TError = ErrorType<unknown>
 >(
   params?: ListSystemAPITokensParams,
   options?: {
@@ -1508,7 +1515,7 @@ export const getGetSystemAPITokenQueryKey = (apitoken?: string) => {
 
 export const getGetSystemAPITokenQueryOptions = <
   TData = Awaited<ReturnType<typeof getSystemAPIToken>>,
-  TError = unknown
+  TError = ErrorType<unknown>
 >(
   apitoken: string,
   options?: {
@@ -1533,11 +1540,11 @@ export const getGetSystemAPITokenQueryOptions = <
 export type GetSystemAPITokenQueryResult = NonNullable<
   Awaited<ReturnType<typeof getSystemAPIToken>>
 >;
-export type GetSystemAPITokenQueryError = unknown;
+export type GetSystemAPITokenQueryError = ErrorType<unknown>;
 
 export function useGetSystemAPIToken<
   TData = Awaited<ReturnType<typeof getSystemAPIToken>>,
-  TError = unknown
+  TError = ErrorType<unknown>
 >(
   apitoken: string,
   options: {
@@ -1556,7 +1563,7 @@ export function useGetSystemAPIToken<
 ): DefinedUseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> };
 export function useGetSystemAPIToken<
   TData = Awaited<ReturnType<typeof getSystemAPIToken>>,
-  TError = unknown
+  TError = ErrorType<unknown>
 >(
   apitoken: string,
   options?: {
@@ -1575,7 +1582,7 @@ export function useGetSystemAPIToken<
 ): UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> };
 export function useGetSystemAPIToken<
   TData = Awaited<ReturnType<typeof getSystemAPIToken>>,
-  TError = unknown
+  TError = ErrorType<unknown>
 >(
   apitoken: string,
   options?: {
@@ -1590,7 +1597,7 @@ export function useGetSystemAPIToken<
 
 export function useGetSystemAPIToken<
   TData = Awaited<ReturnType<typeof getSystemAPIToken>>,
-  TError = unknown
+  TError = ErrorType<unknown>
 >(
   apitoken: string,
   options?: {
@@ -1639,7 +1646,7 @@ export const deleteSystemAPIToken = async (
 };
 
 export const getDeleteSystemAPITokenMutationOptions = <
-  TError = unknown,
+  TError = ErrorType<unknown>,
   TContext = unknown
 >(options?: {
   mutation?: UseMutationOptions<
@@ -1678,12 +1685,12 @@ export type DeleteSystemAPITokenMutationResult = NonNullable<
   Awaited<ReturnType<typeof deleteSystemAPIToken>>
 >;
 
-export type DeleteSystemAPITokenMutationError = unknown;
+export type DeleteSystemAPITokenMutationError = ErrorType<unknown>;
 
 /**
  * @summary Delete a system-level API token
  */
-export const useDeleteSystemAPIToken = <TError = unknown, TContext = unknown>(
+export const useDeleteSystemAPIToken = <TError = ErrorType<unknown>, TContext = unknown>(
   options?: {
     mutation?: UseMutationOptions<
       Awaited<ReturnType<typeof deleteSystemAPIToken>>,
@@ -1736,7 +1743,7 @@ export const getListSystemRolesQueryKey = () => {
 
 export const getListSystemRolesQueryOptions = <
   TData = Awaited<ReturnType<typeof listSystemRoles>>,
-  TError = unknown
+  TError = ErrorType<unknown>
 >(options?: {
   query?: Partial<UseQueryOptions<Awaited<ReturnType<typeof listSystemRoles>>, TError, TData>>;
   request?: SecondParameter<typeof customFetch>;
@@ -1756,11 +1763,11 @@ export const getListSystemRolesQueryOptions = <
 };
 
 export type ListSystemRolesQueryResult = NonNullable<Awaited<ReturnType<typeof listSystemRoles>>>;
-export type ListSystemRolesQueryError = unknown;
+export type ListSystemRolesQueryError = ErrorType<unknown>;
 
 export function useListSystemRoles<
   TData = Awaited<ReturnType<typeof listSystemRoles>>,
-  TError = unknown
+  TError = ErrorType<unknown>
 >(
   options: {
     query: Partial<UseQueryOptions<Awaited<ReturnType<typeof listSystemRoles>>, TError, TData>> &
@@ -1778,7 +1785,7 @@ export function useListSystemRoles<
 ): DefinedUseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> };
 export function useListSystemRoles<
   TData = Awaited<ReturnType<typeof listSystemRoles>>,
-  TError = unknown
+  TError = ErrorType<unknown>
 >(
   options?: {
     query?: Partial<UseQueryOptions<Awaited<ReturnType<typeof listSystemRoles>>, TError, TData>> &
@@ -1796,7 +1803,7 @@ export function useListSystemRoles<
 ): UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> };
 export function useListSystemRoles<
   TData = Awaited<ReturnType<typeof listSystemRoles>>,
-  TError = unknown
+  TError = ErrorType<unknown>
 >(
   options?: {
     query?: Partial<UseQueryOptions<Awaited<ReturnType<typeof listSystemRoles>>, TError, TData>>;
@@ -1810,7 +1817,7 @@ export function useListSystemRoles<
 
 export function useListSystemRoles<
   TData = Awaited<ReturnType<typeof listSystemRoles>>,
-  TError = unknown
+  TError = ErrorType<unknown>
 >(
   options?: {
     query?: Partial<UseQueryOptions<Awaited<ReturnType<typeof listSystemRoles>>, TError, TData>>;
@@ -1865,7 +1872,7 @@ export const getGetSystemRoleQueryKey = (role?: string) => {
 
 export const getGetSystemRoleQueryOptions = <
   TData = Awaited<ReturnType<typeof getSystemRole>>,
-  TError = unknown
+  TError = ErrorType<unknown>
 >(
   role: string,
   options?: {
@@ -1888,11 +1895,11 @@ export const getGetSystemRoleQueryOptions = <
 };
 
 export type GetSystemRoleQueryResult = NonNullable<Awaited<ReturnType<typeof getSystemRole>>>;
-export type GetSystemRoleQueryError = unknown;
+export type GetSystemRoleQueryError = ErrorType<unknown>;
 
 export function useGetSystemRole<
   TData = Awaited<ReturnType<typeof getSystemRole>>,
-  TError = unknown
+  TError = ErrorType<unknown>
 >(
   role: string,
   options: {
@@ -1911,7 +1918,7 @@ export function useGetSystemRole<
 ): DefinedUseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> };
 export function useGetSystemRole<
   TData = Awaited<ReturnType<typeof getSystemRole>>,
-  TError = unknown
+  TError = ErrorType<unknown>
 >(
   role: string,
   options?: {
@@ -1930,7 +1937,7 @@ export function useGetSystemRole<
 ): UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> };
 export function useGetSystemRole<
   TData = Awaited<ReturnType<typeof getSystemRole>>,
-  TError = unknown
+  TError = ErrorType<unknown>
 >(
   role: string,
   options?: {
@@ -1945,7 +1952,7 @@ export function useGetSystemRole<
 
 export function useGetSystemRole<
   TData = Awaited<ReturnType<typeof getSystemRole>>,
-  TError = unknown
+  TError = ErrorType<unknown>
 >(
   role: string,
   options?: {
@@ -2001,7 +2008,7 @@ export const createSystemAPIToken = async (
 };
 
 export const getCreateSystemAPITokenMutationOptions = <
-  TError = unknown,
+  TError = ErrorType<unknown>,
   TContext = unknown
 >(options?: {
   mutation?: UseMutationOptions<
@@ -2040,12 +2047,12 @@ export type CreateSystemAPITokenMutationResult = NonNullable<
   Awaited<ReturnType<typeof createSystemAPIToken>>
 >;
 export type CreateSystemAPITokenMutationBody = CreateAPITokenRequestBody;
-export type CreateSystemAPITokenMutationError = unknown;
+export type CreateSystemAPITokenMutationError = ErrorType<unknown>;
 
 /**
  * @summary Create a system-level API token
  */
-export const useCreateSystemAPIToken = <TError = unknown, TContext = unknown>(
+export const useCreateSystemAPIToken = <TError = ErrorType<unknown>, TContext = unknown>(
   options?: {
     mutation?: UseMutationOptions<
       Awaited<ReturnType<typeof createSystemAPIToken>>,

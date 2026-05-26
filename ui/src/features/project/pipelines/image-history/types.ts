@@ -1,4 +1,4 @@
-import { ImageStageMap } from '@ui/gen/api/service/v1alpha1/service_pb';
+import { ImageStageMap } from '@ui/gen/api/v2/models';
 
 export type ProcessedTagMap = {
   tags: Record<string, ImageStageMap>;

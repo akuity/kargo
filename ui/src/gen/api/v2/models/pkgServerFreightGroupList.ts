@@ -5,5 +5,8 @@
  * REST API for Kargo
  * OpenAPI spec version: v1alpha1
  */
+import type { Freight } from './freight';
 
-export type QueryFreightsRest200 = { [key: string]: unknown };
+export interface PkgServerFreightGroupList {
+  items?: Freight[];
+}

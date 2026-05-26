@@ -31,6 +31,7 @@ import type {
 } from '.././models';
 
 import { customFetch } from '../../../../lib/api/custom-fetch';
+import type { ErrorType } from '../../../../lib/api/custom-fetch';
 
 type SecondParameter<T extends (...args: never) => unknown> = Parameters<T>[1];
 
@@ -59,7 +60,10 @@ export const adminLogin = async (options?: RequestInit): Promise<adminLoginRespo
   });
 };
 
-export const getAdminLoginMutationOptions = <TError = unknown, TContext = unknown>(options?: {
+export const getAdminLoginMutationOptions = <
+  TError = ErrorType<unknown>,
+  TContext = unknown
+>(options?: {
   mutation?: UseMutationOptions<Awaited<ReturnType<typeof adminLogin>>, TError, void, TContext>;
   request?: SecondParameter<typeof customFetch>;
 }): UseMutationOptions<Awaited<ReturnType<typeof adminLogin>>, TError, void, TContext> => {
@@ -79,12 +83,12 @@ export const getAdminLoginMutationOptions = <TError = unknown, TContext = unknow
 
 export type AdminLoginMutationResult = NonNullable<Awaited<ReturnType<typeof adminLogin>>>;
 
-export type AdminLoginMutationError = unknown;
+export type AdminLoginMutationError = ErrorType<unknown>;
 
 /**
  * @summary Admin login
  */
-export const useAdminLogin = <TError = unknown, TContext = unknown>(
+export const useAdminLogin = <TError = ErrorType<unknown>, TContext = unknown>(
   options?: {
     mutation?: UseMutationOptions<Awaited<ReturnType<typeof adminLogin>>, TError, void, TContext>;
     request?: SecondParameter<typeof customFetch>;
@@ -128,7 +132,7 @@ export const getGetClusterConfigQueryKey = () => {
 
 export const getGetClusterConfigQueryOptions = <
   TData = Awaited<ReturnType<typeof getClusterConfig>>,
-  TError = unknown
+  TError = ErrorType<unknown>
 >(options?: {
   query?: Partial<UseQueryOptions<Awaited<ReturnType<typeof getClusterConfig>>, TError, TData>>;
   request?: SecondParameter<typeof customFetch>;
@@ -148,11 +152,11 @@ export const getGetClusterConfigQueryOptions = <
 };
 
 export type GetClusterConfigQueryResult = NonNullable<Awaited<ReturnType<typeof getClusterConfig>>>;
-export type GetClusterConfigQueryError = unknown;
+export type GetClusterConfigQueryError = ErrorType<unknown>;
 
 export function useGetClusterConfig<
   TData = Awaited<ReturnType<typeof getClusterConfig>>,
-  TError = unknown
+  TError = ErrorType<unknown>
 >(
   options: {
     query: Partial<UseQueryOptions<Awaited<ReturnType<typeof getClusterConfig>>, TError, TData>> &
@@ -170,7 +174,7 @@ export function useGetClusterConfig<
 ): DefinedUseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> };
 export function useGetClusterConfig<
   TData = Awaited<ReturnType<typeof getClusterConfig>>,
-  TError = unknown
+  TError = ErrorType<unknown>
 >(
   options?: {
     query?: Partial<UseQueryOptions<Awaited<ReturnType<typeof getClusterConfig>>, TError, TData>> &
@@ -188,7 +192,7 @@ export function useGetClusterConfig<
 ): UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> };
 export function useGetClusterConfig<
   TData = Awaited<ReturnType<typeof getClusterConfig>>,
-  TError = unknown
+  TError = ErrorType<unknown>
 >(
   options?: {
     query?: Partial<UseQueryOptions<Awaited<ReturnType<typeof getClusterConfig>>, TError, TData>>;
@@ -202,7 +206,7 @@ export function useGetClusterConfig<
 
 export function useGetClusterConfig<
   TData = Awaited<ReturnType<typeof getClusterConfig>>,
-  TError = unknown
+  TError = ErrorType<unknown>
 >(
   options?: {
     query?: Partial<UseQueryOptions<Awaited<ReturnType<typeof getClusterConfig>>, TError, TData>>;
@@ -249,7 +253,7 @@ export const deleteClusterConfig = async (
 };
 
 export const getDeleteClusterConfigMutationOptions = <
-  TError = unknown,
+  TError = ErrorType<unknown>,
   TContext = unknown
 >(options?: {
   mutation?: UseMutationOptions<
@@ -281,12 +285,12 @@ export type DeleteClusterConfigMutationResult = NonNullable<
   Awaited<ReturnType<typeof deleteClusterConfig>>
 >;
 
-export type DeleteClusterConfigMutationError = unknown;
+export type DeleteClusterConfigMutationError = ErrorType<unknown>;
 
 /**
  * @summary Delete the ClusterConfig
  */
-export const useDeleteClusterConfig = <TError = unknown, TContext = unknown>(
+export const useDeleteClusterConfig = <TError = ErrorType<unknown>, TContext = unknown>(
   options?: {
     mutation?: UseMutationOptions<
       Awaited<ReturnType<typeof deleteClusterConfig>>,
@@ -331,7 +335,7 @@ export const refreshClusterConfig = async (
 };
 
 export const getRefreshClusterConfigMutationOptions = <
-  TError = unknown,
+  TError = ErrorType<unknown>,
   TContext = unknown
 >(options?: {
   mutation?: UseMutationOptions<
@@ -368,12 +372,12 @@ export type RefreshClusterConfigMutationResult = NonNullable<
   Awaited<ReturnType<typeof refreshClusterConfig>>
 >;
 
-export type RefreshClusterConfigMutationError = unknown;
+export type RefreshClusterConfigMutationError = ErrorType<unknown>;
 
 /**
  * @summary Refresh the ClusterConfig
  */
-export const useRefreshClusterConfig = <TError = unknown, TContext = unknown>(
+export const useRefreshClusterConfig = <TError = ErrorType<unknown>, TContext = unknown>(
   options?: {
     mutation?: UseMutationOptions<
       Awaited<ReturnType<typeof refreshClusterConfig>>,
@@ -425,7 +429,7 @@ export const getGetControllerHeartbeatsQueryKey = () => {
 
 export const getGetControllerHeartbeatsQueryOptions = <
   TData = Awaited<ReturnType<typeof getControllerHeartbeats>>,
-  TError = unknown
+  TError = ErrorType<unknown>
 >(options?: {
   query?: Partial<
     UseQueryOptions<Awaited<ReturnType<typeof getControllerHeartbeats>>, TError, TData>
@@ -449,11 +453,11 @@ export const getGetControllerHeartbeatsQueryOptions = <
 export type GetControllerHeartbeatsQueryResult = NonNullable<
   Awaited<ReturnType<typeof getControllerHeartbeats>>
 >;
-export type GetControllerHeartbeatsQueryError = unknown;
+export type GetControllerHeartbeatsQueryError = ErrorType<unknown>;
 
 export function useGetControllerHeartbeats<
   TData = Awaited<ReturnType<typeof getControllerHeartbeats>>,
-  TError = unknown
+  TError = ErrorType<unknown>
 >(
   options: {
     query: Partial<
@@ -473,7 +477,7 @@ export function useGetControllerHeartbeats<
 ): DefinedUseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> };
 export function useGetControllerHeartbeats<
   TData = Awaited<ReturnType<typeof getControllerHeartbeats>>,
-  TError = unknown
+  TError = ErrorType<unknown>
 >(
   options?: {
     query?: Partial<
@@ -493,7 +497,7 @@ export function useGetControllerHeartbeats<
 ): UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> };
 export function useGetControllerHeartbeats<
   TData = Awaited<ReturnType<typeof getControllerHeartbeats>>,
-  TError = unknown
+  TError = ErrorType<unknown>
 >(
   options?: {
     query?: Partial<
@@ -509,7 +513,7 @@ export function useGetControllerHeartbeats<
 
 export function useGetControllerHeartbeats<
   TData = Awaited<ReturnType<typeof getControllerHeartbeats>>,
-  TError = unknown
+  TError = ErrorType<unknown>
 >(
   options?: {
     query?: Partial<
@@ -563,7 +567,7 @@ export const getGetPublicConfigQueryKey = () => {
 
 export const getGetPublicConfigQueryOptions = <
   TData = Awaited<ReturnType<typeof getPublicConfig>>,
-  TError = unknown
+  TError = ErrorType<unknown>
 >(options?: {
   query?: Partial<UseQueryOptions<Awaited<ReturnType<typeof getPublicConfig>>, TError, TData>>;
   request?: SecondParameter<typeof customFetch>;
@@ -583,11 +587,11 @@ export const getGetPublicConfigQueryOptions = <
 };
 
 export type GetPublicConfigQueryResult = NonNullable<Awaited<ReturnType<typeof getPublicConfig>>>;
-export type GetPublicConfigQueryError = unknown;
+export type GetPublicConfigQueryError = ErrorType<unknown>;
 
 export function useGetPublicConfig<
   TData = Awaited<ReturnType<typeof getPublicConfig>>,
-  TError = unknown
+  TError = ErrorType<unknown>
 >(
   options: {
     query: Partial<UseQueryOptions<Awaited<ReturnType<typeof getPublicConfig>>, TError, TData>> &
@@ -605,7 +609,7 @@ export function useGetPublicConfig<
 ): DefinedUseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> };
 export function useGetPublicConfig<
   TData = Awaited<ReturnType<typeof getPublicConfig>>,
-  TError = unknown
+  TError = ErrorType<unknown>
 >(
   options?: {
     query?: Partial<UseQueryOptions<Awaited<ReturnType<typeof getPublicConfig>>, TError, TData>> &
@@ -623,7 +627,7 @@ export function useGetPublicConfig<
 ): UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> };
 export function useGetPublicConfig<
   TData = Awaited<ReturnType<typeof getPublicConfig>>,
-  TError = unknown
+  TError = ErrorType<unknown>
 >(
   options?: {
     query?: Partial<UseQueryOptions<Awaited<ReturnType<typeof getPublicConfig>>, TError, TData>>;
@@ -637,7 +641,7 @@ export function useGetPublicConfig<
 
 export function useGetPublicConfig<
   TData = Awaited<ReturnType<typeof getPublicConfig>>,
-  TError = unknown
+  TError = ErrorType<unknown>
 >(
   options?: {
     query?: Partial<UseQueryOptions<Awaited<ReturnType<typeof getPublicConfig>>, TError, TData>>;
@@ -688,7 +692,7 @@ export const getGetConfigQueryKey = () => {
 
 export const getGetConfigQueryOptions = <
   TData = Awaited<ReturnType<typeof getConfig>>,
-  TError = unknown
+  TError = ErrorType<unknown>
 >(options?: {
   query?: Partial<UseQueryOptions<Awaited<ReturnType<typeof getConfig>>, TError, TData>>;
   request?: SecondParameter<typeof customFetch>;
@@ -708,9 +712,12 @@ export const getGetConfigQueryOptions = <
 };
 
 export type GetConfigQueryResult = NonNullable<Awaited<ReturnType<typeof getConfig>>>;
-export type GetConfigQueryError = unknown;
+export type GetConfigQueryError = ErrorType<unknown>;
 
-export function useGetConfig<TData = Awaited<ReturnType<typeof getConfig>>, TError = unknown>(
+export function useGetConfig<
+  TData = Awaited<ReturnType<typeof getConfig>>,
+  TError = ErrorType<unknown>
+>(
   options: {
     query: Partial<UseQueryOptions<Awaited<ReturnType<typeof getConfig>>, TError, TData>> &
       Pick<
@@ -725,7 +732,10 @@ export function useGetConfig<TData = Awaited<ReturnType<typeof getConfig>>, TErr
   },
   queryClient?: QueryClient
 ): DefinedUseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> };
-export function useGetConfig<TData = Awaited<ReturnType<typeof getConfig>>, TError = unknown>(
+export function useGetConfig<
+  TData = Awaited<ReturnType<typeof getConfig>>,
+  TError = ErrorType<unknown>
+>(
   options?: {
     query?: Partial<UseQueryOptions<Awaited<ReturnType<typeof getConfig>>, TError, TData>> &
       Pick<
@@ -740,7 +750,10 @@ export function useGetConfig<TData = Awaited<ReturnType<typeof getConfig>>, TErr
   },
   queryClient?: QueryClient
 ): UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> };
-export function useGetConfig<TData = Awaited<ReturnType<typeof getConfig>>, TError = unknown>(
+export function useGetConfig<
+  TData = Awaited<ReturnType<typeof getConfig>>,
+  TError = ErrorType<unknown>
+>(
   options?: {
     query?: Partial<UseQueryOptions<Awaited<ReturnType<typeof getConfig>>, TError, TData>>;
     request?: SecondParameter<typeof customFetch>;
@@ -751,7 +764,10 @@ export function useGetConfig<TData = Awaited<ReturnType<typeof getConfig>>, TErr
  * @summary Retrieve server configuration
  */
 
-export function useGetConfig<TData = Awaited<ReturnType<typeof getConfig>>, TError = unknown>(
+export function useGetConfig<
+  TData = Awaited<ReturnType<typeof getConfig>>,
+  TError = ErrorType<unknown>
+>(
   options?: {
     query?: Partial<UseQueryOptions<Awaited<ReturnType<typeof getConfig>>, TError, TData>>;
     request?: SecondParameter<typeof customFetch>;
@@ -800,7 +816,7 @@ export const getGetVersionInfoQueryKey = () => {
 
 export const getGetVersionInfoQueryOptions = <
   TData = Awaited<ReturnType<typeof getVersionInfo>>,
-  TError = unknown
+  TError = ErrorType<unknown>
 >(options?: {
   query?: Partial<UseQueryOptions<Awaited<ReturnType<typeof getVersionInfo>>, TError, TData>>;
   request?: SecondParameter<typeof customFetch>;
@@ -820,11 +836,11 @@ export const getGetVersionInfoQueryOptions = <
 };
 
 export type GetVersionInfoQueryResult = NonNullable<Awaited<ReturnType<typeof getVersionInfo>>>;
-export type GetVersionInfoQueryError = unknown;
+export type GetVersionInfoQueryError = ErrorType<unknown>;
 
 export function useGetVersionInfo<
   TData = Awaited<ReturnType<typeof getVersionInfo>>,
-  TError = unknown
+  TError = ErrorType<unknown>
 >(
   options: {
     query: Partial<UseQueryOptions<Awaited<ReturnType<typeof getVersionInfo>>, TError, TData>> &
@@ -842,7 +858,7 @@ export function useGetVersionInfo<
 ): DefinedUseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> };
 export function useGetVersionInfo<
   TData = Awaited<ReturnType<typeof getVersionInfo>>,
-  TError = unknown
+  TError = ErrorType<unknown>
 >(
   options?: {
     query?: Partial<UseQueryOptions<Awaited<ReturnType<typeof getVersionInfo>>, TError, TData>> &
@@ -860,7 +876,7 @@ export function useGetVersionInfo<
 ): UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> };
 export function useGetVersionInfo<
   TData = Awaited<ReturnType<typeof getVersionInfo>>,
-  TError = unknown
+  TError = ErrorType<unknown>
 >(
   options?: {
     query?: Partial<UseQueryOptions<Awaited<ReturnType<typeof getVersionInfo>>, TError, TData>>;
@@ -874,7 +890,7 @@ export function useGetVersionInfo<
 
 export function useGetVersionInfo<
   TData = Awaited<ReturnType<typeof getVersionInfo>>,
-  TError = unknown
+  TError = ErrorType<unknown>
 >(
   options?: {
     query?: Partial<UseQueryOptions<Awaited<ReturnType<typeof getVersionInfo>>, TError, TData>>;

@@ -2,7 +2,7 @@ import { graphlib } from '@dagrejs/dagre';
 
 import { WarehouseExpanded } from '@ui/extend/types';
 import { ColorMap } from '@ui/features/stage/utils';
-import { RepoSubscription, Stage, Warehouse } from '@ui/gen/api/v1alpha1/generated_pb';
+import { Stage, Warehouse } from '@ui/gen/api/v2/models';
 
 import { repoSubscriptionIndexer, stageIndexer, warehouseIndexer } from './node-indexer';
 import { repoSubscriptionLabelling, stageLabelling, warehouseLabelling } from './node-labeling';

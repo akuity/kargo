@@ -31,6 +31,7 @@ import type {
 } from '.././models';
 
 import { customFetch } from '../../../../lib/api/custom-fetch';
+import type { ErrorType } from '../../../../lib/api/custom-fetch';
 
 type SecondParameter<T extends (...args: never) => unknown> = Parameters<T>[1];
 
@@ -69,7 +70,7 @@ export const getGetAnalysisRunQueryKey = (project?: string, analysisRun?: string
 
 export const getGetAnalysisRunQueryOptions = <
   TData = Awaited<ReturnType<typeof getAnalysisRun>>,
-  TError = unknown
+  TError = ErrorType<unknown>
 >(
   project: string,
   analysisRun: string,
@@ -96,11 +97,11 @@ export const getGetAnalysisRunQueryOptions = <
 };
 
 export type GetAnalysisRunQueryResult = NonNullable<Awaited<ReturnType<typeof getAnalysisRun>>>;
-export type GetAnalysisRunQueryError = unknown;
+export type GetAnalysisRunQueryError = ErrorType<unknown>;
 
 export function useGetAnalysisRun<
   TData = Awaited<ReturnType<typeof getAnalysisRun>>,
-  TError = unknown
+  TError = ErrorType<unknown>
 >(
   project: string,
   analysisRun: string,
@@ -120,7 +121,7 @@ export function useGetAnalysisRun<
 ): DefinedUseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> };
 export function useGetAnalysisRun<
   TData = Awaited<ReturnType<typeof getAnalysisRun>>,
-  TError = unknown
+  TError = ErrorType<unknown>
 >(
   project: string,
   analysisRun: string,
@@ -140,7 +141,7 @@ export function useGetAnalysisRun<
 ): UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> };
 export function useGetAnalysisRun<
   TData = Awaited<ReturnType<typeof getAnalysisRun>>,
-  TError = unknown
+  TError = ErrorType<unknown>
 >(
   project: string,
   analysisRun: string,
@@ -156,7 +157,7 @@ export function useGetAnalysisRun<
 
 export function useGetAnalysisRun<
   TData = Awaited<ReturnType<typeof getAnalysisRun>>,
-  TError = unknown
+  TError = ErrorType<unknown>
 >(
   project: string,
   analysisRun: string,
@@ -239,7 +240,7 @@ export const getGetAnalysisRunLogsQueryKey = (
 
 export const getGetAnalysisRunLogsQueryOptions = <
   TData = Awaited<ReturnType<typeof getAnalysisRunLogs>>,
-  TError = unknown
+  TError = ErrorType<unknown>
 >(
   project: string,
   analysisRun: string,
@@ -270,11 +271,11 @@ export const getGetAnalysisRunLogsQueryOptions = <
 export type GetAnalysisRunLogsQueryResult = NonNullable<
   Awaited<ReturnType<typeof getAnalysisRunLogs>>
 >;
-export type GetAnalysisRunLogsQueryError = unknown;
+export type GetAnalysisRunLogsQueryError = ErrorType<unknown>;
 
 export function useGetAnalysisRunLogs<
   TData = Awaited<ReturnType<typeof getAnalysisRunLogs>>,
-  TError = unknown
+  TError = ErrorType<unknown>
 >(
   project: string,
   analysisRun: string,
@@ -295,7 +296,7 @@ export function useGetAnalysisRunLogs<
 ): DefinedUseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> };
 export function useGetAnalysisRunLogs<
   TData = Awaited<ReturnType<typeof getAnalysisRunLogs>>,
-  TError = unknown
+  TError = ErrorType<unknown>
 >(
   project: string,
   analysisRun: string,
@@ -318,7 +319,7 @@ export function useGetAnalysisRunLogs<
 ): UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> };
 export function useGetAnalysisRunLogs<
   TData = Awaited<ReturnType<typeof getAnalysisRunLogs>>,
-  TError = unknown
+  TError = ErrorType<unknown>
 >(
   project: string,
   analysisRun: string,
@@ -335,7 +336,7 @@ export function useGetAnalysisRunLogs<
 
 export function useGetAnalysisRunLogs<
   TData = Awaited<ReturnType<typeof getAnalysisRunLogs>>,
-  TError = unknown
+  TError = ErrorType<unknown>
 >(
   project: string,
   analysisRun: string,
@@ -391,7 +392,7 @@ export const getListAnalysisTemplatesQueryKey = (project?: string) => {
 
 export const getListAnalysisTemplatesQueryOptions = <
   TData = Awaited<ReturnType<typeof listAnalysisTemplates>>,
-  TError = unknown
+  TError = ErrorType<unknown>
 >(
   project: string,
   options?: {
@@ -418,11 +419,11 @@ export const getListAnalysisTemplatesQueryOptions = <
 export type ListAnalysisTemplatesQueryResult = NonNullable<
   Awaited<ReturnType<typeof listAnalysisTemplates>>
 >;
-export type ListAnalysisTemplatesQueryError = unknown;
+export type ListAnalysisTemplatesQueryError = ErrorType<unknown>;
 
 export function useListAnalysisTemplates<
   TData = Awaited<ReturnType<typeof listAnalysisTemplates>>,
-  TError = unknown
+  TError = ErrorType<unknown>
 >(
   project: string,
   options: {
@@ -443,7 +444,7 @@ export function useListAnalysisTemplates<
 ): DefinedUseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> };
 export function useListAnalysisTemplates<
   TData = Awaited<ReturnType<typeof listAnalysisTemplates>>,
-  TError = unknown
+  TError = ErrorType<unknown>
 >(
   project: string,
   options?: {
@@ -464,7 +465,7 @@ export function useListAnalysisTemplates<
 ): UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> };
 export function useListAnalysisTemplates<
   TData = Awaited<ReturnType<typeof listAnalysisTemplates>>,
-  TError = unknown
+  TError = ErrorType<unknown>
 >(
   project: string,
   options?: {
@@ -481,7 +482,7 @@ export function useListAnalysisTemplates<
 
 export function useListAnalysisTemplates<
   TData = Awaited<ReturnType<typeof listAnalysisTemplates>>,
-  TError = unknown
+  TError = ErrorType<unknown>
 >(
   project: string,
   options?: {
@@ -542,7 +543,7 @@ export const getGetAnalysisTemplateQueryKey = (project?: string, analysisTemplat
 
 export const getGetAnalysisTemplateQueryOptions = <
   TData = Awaited<ReturnType<typeof getAnalysisTemplate>>,
-  TError = unknown
+  TError = ErrorType<unknown>
 >(
   project: string,
   analysisTemplate: string,
@@ -574,11 +575,11 @@ export const getGetAnalysisTemplateQueryOptions = <
 export type GetAnalysisTemplateQueryResult = NonNullable<
   Awaited<ReturnType<typeof getAnalysisTemplate>>
 >;
-export type GetAnalysisTemplateQueryError = unknown;
+export type GetAnalysisTemplateQueryError = ErrorType<unknown>;
 
 export function useGetAnalysisTemplate<
   TData = Awaited<ReturnType<typeof getAnalysisTemplate>>,
-  TError = unknown
+  TError = ErrorType<unknown>
 >(
   project: string,
   analysisTemplate: string,
@@ -600,7 +601,7 @@ export function useGetAnalysisTemplate<
 ): DefinedUseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> };
 export function useGetAnalysisTemplate<
   TData = Awaited<ReturnType<typeof getAnalysisTemplate>>,
-  TError = unknown
+  TError = ErrorType<unknown>
 >(
   project: string,
   analysisTemplate: string,
@@ -622,7 +623,7 @@ export function useGetAnalysisTemplate<
 ): UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> };
 export function useGetAnalysisTemplate<
   TData = Awaited<ReturnType<typeof getAnalysisTemplate>>,
-  TError = unknown
+  TError = ErrorType<unknown>
 >(
   project: string,
   analysisTemplate: string,
@@ -640,7 +641,7 @@ export function useGetAnalysisTemplate<
 
 export function useGetAnalysisTemplate<
   TData = Awaited<ReturnType<typeof getAnalysisTemplate>>,
-  TError = unknown
+  TError = ErrorType<unknown>
 >(
   project: string,
   analysisTemplate: string,
@@ -696,7 +697,7 @@ export const deleteAnalysisTemplate = async (
 };
 
 export const getDeleteAnalysisTemplateMutationOptions = <
-  TError = unknown,
+  TError = ErrorType<unknown>,
   TContext = unknown
 >(options?: {
   mutation?: UseMutationOptions<
@@ -735,12 +736,12 @@ export type DeleteAnalysisTemplateMutationResult = NonNullable<
   Awaited<ReturnType<typeof deleteAnalysisTemplate>>
 >;
 
-export type DeleteAnalysisTemplateMutationError = unknown;
+export type DeleteAnalysisTemplateMutationError = ErrorType<unknown>;
 
 /**
  * @summary Delete an AnalysisTemplate
  */
-export const useDeleteAnalysisTemplate = <TError = unknown, TContext = unknown>(
+export const useDeleteAnalysisTemplate = <TError = ErrorType<unknown>, TContext = unknown>(
   options?: {
     mutation?: UseMutationOptions<
       Awaited<ReturnType<typeof deleteAnalysisTemplate>>,
@@ -791,7 +792,10 @@ export const reverify = async (
   });
 };
 
-export const getReverifyMutationOptions = <TError = unknown, TContext = unknown>(options?: {
+export const getReverifyMutationOptions = <
+  TError = ErrorType<unknown>,
+  TContext = unknown
+>(options?: {
   mutation?: UseMutationOptions<
     Awaited<ReturnType<typeof reverify>>,
     TError,
@@ -826,12 +830,12 @@ export const getReverifyMutationOptions = <TError = unknown, TContext = unknown>
 
 export type ReverifyMutationResult = NonNullable<Awaited<ReturnType<typeof reverify>>>;
 
-export type ReverifyMutationError = unknown;
+export type ReverifyMutationError = ErrorType<unknown>;
 
 /**
  * @summary Reverify Freight
  */
-export const useReverify = <TError = unknown, TContext = unknown>(
+export const useReverify = <TError = ErrorType<unknown>, TContext = unknown>(
   options?: {
     mutation?: UseMutationOptions<
       Awaited<ReturnType<typeof reverify>>,
@@ -882,7 +886,7 @@ export const abortVerification = async (
 };
 
 export const getAbortVerificationMutationOptions = <
-  TError = unknown,
+  TError = ErrorType<unknown>,
   TContext = unknown
 >(options?: {
   mutation?: UseMutationOptions<
@@ -921,12 +925,12 @@ export type AbortVerificationMutationResult = NonNullable<
   Awaited<ReturnType<typeof abortVerification>>
 >;
 
-export type AbortVerificationMutationError = unknown;
+export type AbortVerificationMutationError = ErrorType<unknown>;
 
 /**
  * @summary Abort a running Verification process
  */
-export const useAbortVerification = <TError = unknown, TContext = unknown>(
+export const useAbortVerification = <TError = ErrorType<unknown>, TContext = unknown>(
   options?: {
     mutation?: UseMutationOptions<
       Awaited<ReturnType<typeof abortVerification>>,
@@ -982,7 +986,7 @@ export const getListClusterAnalysisTemplatesQueryKey = () => {
 
 export const getListClusterAnalysisTemplatesQueryOptions = <
   TData = Awaited<ReturnType<typeof listClusterAnalysisTemplates>>,
-  TError = unknown
+  TError = ErrorType<unknown>
 >(options?: {
   query?: Partial<
     UseQueryOptions<Awaited<ReturnType<typeof listClusterAnalysisTemplates>>, TError, TData>
@@ -1006,11 +1010,11 @@ export const getListClusterAnalysisTemplatesQueryOptions = <
 export type ListClusterAnalysisTemplatesQueryResult = NonNullable<
   Awaited<ReturnType<typeof listClusterAnalysisTemplates>>
 >;
-export type ListClusterAnalysisTemplatesQueryError = unknown;
+export type ListClusterAnalysisTemplatesQueryError = ErrorType<unknown>;
 
 export function useListClusterAnalysisTemplates<
   TData = Awaited<ReturnType<typeof listClusterAnalysisTemplates>>,
-  TError = unknown
+  TError = ErrorType<unknown>
 >(
   options: {
     query: Partial<
@@ -1030,7 +1034,7 @@ export function useListClusterAnalysisTemplates<
 ): DefinedUseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> };
 export function useListClusterAnalysisTemplates<
   TData = Awaited<ReturnType<typeof listClusterAnalysisTemplates>>,
-  TError = unknown
+  TError = ErrorType<unknown>
 >(
   options?: {
     query?: Partial<
@@ -1050,7 +1054,7 @@ export function useListClusterAnalysisTemplates<
 ): UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> };
 export function useListClusterAnalysisTemplates<
   TData = Awaited<ReturnType<typeof listClusterAnalysisTemplates>>,
-  TError = unknown
+  TError = ErrorType<unknown>
 >(
   options?: {
     query?: Partial<
@@ -1066,7 +1070,7 @@ export function useListClusterAnalysisTemplates<
 
 export function useListClusterAnalysisTemplates<
   TData = Awaited<ReturnType<typeof listClusterAnalysisTemplates>>,
-  TError = unknown
+  TError = ErrorType<unknown>
 >(
   options?: {
     query?: Partial<
@@ -1124,7 +1128,7 @@ export const getGetClusterAnalysisTemplateQueryKey = (clusterAnalysisTemplate?: 
 
 export const getGetClusterAnalysisTemplateQueryOptions = <
   TData = Awaited<ReturnType<typeof getClusterAnalysisTemplate>>,
-  TError = unknown
+  TError = ErrorType<unknown>
 >(
   clusterAnalysisTemplate: string,
   options?: {
@@ -1155,11 +1159,11 @@ export const getGetClusterAnalysisTemplateQueryOptions = <
 export type GetClusterAnalysisTemplateQueryResult = NonNullable<
   Awaited<ReturnType<typeof getClusterAnalysisTemplate>>
 >;
-export type GetClusterAnalysisTemplateQueryError = unknown;
+export type GetClusterAnalysisTemplateQueryError = ErrorType<unknown>;
 
 export function useGetClusterAnalysisTemplate<
   TData = Awaited<ReturnType<typeof getClusterAnalysisTemplate>>,
-  TError = unknown
+  TError = ErrorType<unknown>
 >(
   clusterAnalysisTemplate: string,
   options: {
@@ -1180,7 +1184,7 @@ export function useGetClusterAnalysisTemplate<
 ): DefinedUseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> };
 export function useGetClusterAnalysisTemplate<
   TData = Awaited<ReturnType<typeof getClusterAnalysisTemplate>>,
-  TError = unknown
+  TError = ErrorType<unknown>
 >(
   clusterAnalysisTemplate: string,
   options?: {
@@ -1201,7 +1205,7 @@ export function useGetClusterAnalysisTemplate<
 ): UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> };
 export function useGetClusterAnalysisTemplate<
   TData = Awaited<ReturnType<typeof getClusterAnalysisTemplate>>,
-  TError = unknown
+  TError = ErrorType<unknown>
 >(
   clusterAnalysisTemplate: string,
   options?: {
@@ -1218,7 +1222,7 @@ export function useGetClusterAnalysisTemplate<
 
 export function useGetClusterAnalysisTemplate<
   TData = Awaited<ReturnType<typeof getClusterAnalysisTemplate>>,
-  TError = unknown
+  TError = ErrorType<unknown>
 >(
   clusterAnalysisTemplate: string,
   options?: {
@@ -1273,7 +1277,7 @@ export const deleteClusterAnalysisTemplate = async (
 };
 
 export const getDeleteClusterAnalysisTemplateMutationOptions = <
-  TError = unknown,
+  TError = ErrorType<unknown>,
   TContext = unknown
 >(options?: {
   mutation?: UseMutationOptions<
@@ -1312,12 +1316,12 @@ export type DeleteClusterAnalysisTemplateMutationResult = NonNullable<
   Awaited<ReturnType<typeof deleteClusterAnalysisTemplate>>
 >;
 
-export type DeleteClusterAnalysisTemplateMutationError = unknown;
+export type DeleteClusterAnalysisTemplateMutationError = ErrorType<unknown>;
 
 /**
  * @summary Delete a ClusterAnalysisTemplate
  */
-export const useDeleteClusterAnalysisTemplate = <TError = unknown, TContext = unknown>(
+export const useDeleteClusterAnalysisTemplate = <TError = ErrorType<unknown>, TContext = unknown>(
   options?: {
     mutation?: UseMutationOptions<
       Awaited<ReturnType<typeof deleteClusterAnalysisTemplate>>,

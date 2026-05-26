@@ -2,7 +2,7 @@ import { CSSProperties, useContext, useMemo } from 'react';
 
 import { ColorContext } from '@ui/context/colors';
 import { ColorMapHex, parseColorAnnotation } from '@ui/features/stage/utils';
-import { Stage } from '@ui/gen/api/v1alpha1/generated_pb';
+import { Stage } from '@ui/gen/api/v2/models';
 import { getContrastTextColor } from '@ui/utils/get-contrast-text-color';
 
 import { IAction, useActionContext } from '../context/action-context';

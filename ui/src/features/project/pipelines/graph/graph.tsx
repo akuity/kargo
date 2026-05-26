@@ -12,7 +12,7 @@ import { useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react';
 
 import { WarehouseExpanded } from '@ui/extend/types';
 import { queryCache } from '@ui/features/utils/cache';
-import { Stage } from '@ui/gen/api/v1alpha1/generated_pb';
+import { Stage } from '@ui/gen/api/v2/models';
 
 import { useFreightTimelineControllerContext } from '../context/freight-timeline-controller-context';
 import { GraphContext } from '../context/graph-context';

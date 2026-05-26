@@ -7,7 +7,8 @@ import { useEffect, useState } from 'react';
 import { generatePath, useNavigate, useParams } from 'react-router-dom';
 
 import { paths } from '@ui/config/paths';
-import { Freight, FreightSchema } from '@ui/gen/api/v1alpha1/generated_pb';
+import { FreightSchema } from '@ui/gen/api/v1alpha1/generated_pb';
+import { Freight } from '@ui/gen/api/v2/models';
 
 import { Description } from '../common/description';
 import { ManifestPreview } from '../common/manifest-preview';
@@ -38,7 +39,7 @@ export const FreightDetails = ({
 
   useEffect(() => {
     if (freight) {
-      setAlias(getAlias(freight as Freight));
+      setAlias(getAlias(freight));
     }
   }, [freight]);
 

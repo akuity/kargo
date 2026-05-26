@@ -167,4 +167,7 @@ export class ApiError extends Error {
   }
 }
 
+// eslint-disable-next-line @typescript-eslint/no-unused-vars
+export type ErrorType<Error> = ApiError;
+
 export default customFetch;

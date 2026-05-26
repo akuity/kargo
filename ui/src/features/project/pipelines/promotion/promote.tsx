@@ -15,7 +15,7 @@ import {
   promoteDownstream,
   promoteToStage
 } from '@ui/gen/api/service/v1alpha1/service-KargoService_connectquery';
-import { Freight, Stage } from '@ui/gen/api/v1alpha1/generated_pb';
+import { Freight, Stage } from '@ui/gen/api/v2/models';
 
 import { useDictionaryContext } from '../context/dictionary-context';
 import { isStageControlFlow } from '../nodes/stage-meta-utils';
