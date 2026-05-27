@@ -135,7 +135,7 @@ export const FreightDetails = ({
                   children: (
                     <data.component
                       projectName={projectName || ''}
-                      freightId={freight?.metadata?.uid || ''}
+                      freightName={freight?.metadata?.name || ''}
                     />
                   ),
                   key: String(data.label + index),
