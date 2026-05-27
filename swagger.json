@@ -41,7 +41,7 @@
             "BearerAuth": []
           }
         ],
-        "description": "List all Projects resources. Returns a ProjectList resource.",
+        "description": "List all Projects resources. Supports server-side filtering by\nname substring, by UID, and by namespaces mapped to the\nauthenticated user's ServiceAccounts, plus offset-based\npagination.",
         "produces": [
           "application/json"
         ],
@@ -51,11 +51,47 @@
         ],
         "summary": "List projects",
         "operationId": "ListProjects",
+        "parameters": [
+          {
+            "type": "boolean",
+            "description": "Only return Projects whose namespaces are mapped to the user's ServiceAccounts.",
+            "name": "mine",
+            "in": "query"
+          },
+          {
+            "type": "string",
+            "description": "Case-insensitive substring filter applied to the Project name.",
+            "name": "filter",
+            "in": "query"
+          },
+          {
+            "type": "array",
+            "items": {
+              "type": "string"
+            },
+            "collectionFormat": "csv",
+            "description": "Return only Projects whose UID matches one of the given values.",
+            "name": "uid",
+            "in": "query"
+          },
+          {
+            "type": "integer",
+            "description": "Maximum number of Projects to return. Defaults to all matching Projects.",
+            "name": "pageSize",
+            "in": "query"
+          },
+          {
+            "type": "integer",
+            "description": "Zero-indexed page number used together with pageSize.",
+            "name": "page",
+            "in": "query"
+          }
+        ],
         "responses": {
           "200": {
-            "description": "ProjectList custom resource",
+            "description": "OK",
             "schema": {
-              "$ref": "#/definitions/ProjectList"
+              "$ref": "#/definitions/ListProjectsResponse"
             }
           }
         }
@@ -5037,6 +5073,20 @@
         }
       }
     },
+    "ListProjectsResponse": {
+      "type": "object",
+      "properties": {
+        "items": {
+          "type": "array",
+          "items": {
+            "$ref": "#/definitions/Project"
+          }
+        },
+        "total": {
+          "type": "integer"
+        }
+      }
+    },
     "OIDCConfig": {
       "type": "object",
       "properties": {
@@ -7375,28 +7425,6 @@
           "items": {
             "$ref": "#/definitions/WebhookReceiverDetails"
           }
-        }
-      }
-    },
-    "ProjectList": {
-      "type": "object",
-      "properties": {
-        "apiVersion": {
-          "description": "APIVersion defines the versioned schema of this representation of an object.\nServers should convert recognized schemas to the latest internal value, and\nmay reject unrecognized values.\nMore info: https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#resources\n+optional",
-          "type": "string"
-        },
-        "items": {
-          "type": "array",
-          "items": {
-            "$ref": "#/definitions/Project"
-          }
-        },
-        "kind": {
-          "description": "Kind is a string value representing the REST resource this object represents.\nServers may infer this from the endpoint the client submits requests to.\nCannot be updated.\nIn CamelCase.\nMore info: https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#types-kinds\n+optional",
-          "type": "string"
-        },
-        "metadata": {
-          "$ref": "#/definitions/V1ListMeta"
         }
       }
     },

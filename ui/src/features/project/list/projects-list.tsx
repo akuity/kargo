@@ -1,11 +1,10 @@
-import { useQuery } from '@connectrpc/connect-query';
 import { faStar, faUser } from '@fortawesome/free-solid-svg-icons';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
 import { Empty, Flex, Pagination, Space, Tag, Tooltip } from 'antd';
 import { useEffect, useState } from 'react';
 
 import { LoadingState } from '@ui/features/common';
-import { listProjects } from '@ui/gen/api/service/v1alpha1/service-KargoService_connectquery';
+import { useListProjects } from '@ui/gen/api/v2/core/core';
 
 import { useLocalStorage } from '../../../utils/use-local-storage';
 
@@ -29,19 +28,22 @@ export const ProjectsList = () => {
 
   const [starred, toggleStar] = useStarProjects();
 
-  const { data, isLoading } = useQuery(listProjects, {
-    pageSize: pageSize,
+  const { data, isLoading } = useListProjects({
+    pageSize,
     page: page - 1,
     filter,
-    uid: starredProjectsView ? starred : [],
+    uid: starredProjectsView ? starred : undefined,
     mine: myProjectsView || undefined
   });
 
+  const projects = data?.data?.items ?? [];
+  const total = data?.data?.total ?? 0;
+
   useEffect(() => {
-    if (data && page > Math.ceil(data.total / pageSize)) {
-      setPage(Math.ceil(data.total / pageSize) || 1);
+    if (total > 0 && page > Math.ceil(total / pageSize)) {
+      setPage(Math.ceil(total / pageSize) || 1);
     }
-  }, [data, page, pageSize, setPage]);
+  }, [total, page, pageSize, setPage]);
 
   const handlePaginationChange = (newPage: number, newPageSize: number) => {
     setPage(newPage);
@@ -55,7 +57,7 @@ export const ProjectsList = () => {
 
   if (isLoading) return <LoadingState />;
 
-  const isEmpty = !data || data.projects.length === 0;
+  const isEmpty = projects.length === 0;
 
   if (isEmpty) {
     return (
@@ -128,7 +130,7 @@ export const ProjectsList = () => {
         </Space>
       </Flex>
       <div className={styles.list}>
-        {data.projects.map((proj) => (
+        {projects.map((proj) => (
           <ProjectItem
             key={proj?.metadata?.name}
             project={proj}
@@ -139,7 +141,7 @@ export const ProjectsList = () => {
       </div>
       <Flex justify='flex-end' className='mt-8'>
         <Pagination
-          total={data?.total || 0}
+          total={total}
           className='ml-auto flex-shrink-0'
           pageSize={pageSize}
           current={page}
