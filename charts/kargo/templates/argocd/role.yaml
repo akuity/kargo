@@ -1,4 +1,4 @@
-{{- if and .Values.dataPlane.install .Values.controller.argocd.integrationEnabled .Values.controller.argocd.watchArgocdNamespaceOnly }}
+{{- if and .Values.argoCD.dataPlane.install .Values.controller.argocd.integrationEnabled .Values.controller.argocd.watchArgocdNamespaceOnly }}
 apiVersion: rbac.authorization.k8s.io/v1
 kind: Role
 metadata:
