@@ -46,13 +46,13 @@
 
 | Name                | Description                                                                                                                                                                                                                                                                                                                                                                                                                                                | Value  |
 | ------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ------ |
-| `dataPlane.install` | Coarse switch that, when `false`, suppresses every data-plane resource — even where finer-grained flags (`crds.install`, `rbac.installClusterRoles`, `rbac.installClusterRoleBindings`, `webhooks.register`, `global.createClusterSecretsNamespace`, `global.sharedResources.createNamespace`, `global.systemResources.createNamespace`) would otherwise install them. Note: Argo CD data-plane RBAC is governed separately by `argoCD.dataPlane.install`. | `true` |
+| `dataPlane.install` | Coarse switch that, when `false`, suppresses every data-plane resource — even where finer-grained flags (`crds.install`, `rbac.installClusterRoles`, `rbac.installClusterRoleBindings`, `webhooks.register`, `global.createClusterSecretsNamespace`, `global.sharedResources.createNamespace`, `global.systemResources.createNamespace`) would otherwise install them. Note: Argo CD data-plane RBAC is governed separately by `argocd.dataPlane.install`. | `true` |
 
 ### Argo CD Data Plane
 
 | Name                       | Description                                                                                                                                                                                                                                         | Value  |
 | -------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ------ |
-| `argoCD.dataPlane.install` | Coarse switch governing Argo CD data-plane resources — the RBAC granting the controller access to Argo CD `Application` resources. Separate from `dataPlane.install` because Argo CD may reside in a different cluster than Kargo's own data plane. | `true` |
+| `argocd.dataPlane.install` | Coarse switch governing Argo CD data-plane resources — the RBAC granting the controller access to Argo CD `Application` resources. Separate from `dataPlane.install` because Argo CD may reside in a different cluster than Kargo's own data plane. | `true` |
 
 ### CRDs
 
