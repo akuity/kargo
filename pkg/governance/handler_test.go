@@ -60,7 +60,7 @@ func Test_handler_ServeHTTP(t *testing.T) {
 			name:      "issues opened event with opened action",
 			eventType: "issues",
 			body: github.IssuesEvent{
-				Action: github.Ptr("opened"),
+				Action: github.Ptr(issueActionOpened),
 				Issue:  &github.Issue{Number: github.Ptr(1)},
 				Repo: &github.Repository{
 					Name:  github.Ptr("repo"),
@@ -86,7 +86,7 @@ func Test_handler_ServeHTTP(t *testing.T) {
 			name:      "pull_request opened event with opened action",
 			eventType: "pull_request",
 			body: github.PullRequestEvent{
-				Action: github.Ptr("opened"),
+				Action: github.Ptr(prActionOpened),
 				PullRequest: &github.PullRequest{
 					Number:            github.Ptr(1),
 					AuthorAssociation: github.Ptr("NONE"),
@@ -110,7 +110,7 @@ func Test_handler_ServeHTTP(t *testing.T) {
 			name:      "no governance config in repo",
 			eventType: "pull_request",
 			body: github.PullRequestEvent{
-				Action: github.Ptr("opened"),
+				Action: github.Ptr(prActionOpened),
 				PullRequest: &github.PullRequest{
 					Number:            github.Ptr(1),
 					AuthorAssociation: github.Ptr("NONE"),

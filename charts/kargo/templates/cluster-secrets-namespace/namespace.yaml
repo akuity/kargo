@@ -1,4 +1,4 @@
-{{- if .Values.global.createClusterSecretsNamespace }}
+{{- if and .Values.dataPlane.install .Values.global.createClusterSecretsNamespace }}
 apiVersion: v1
 kind: Namespace
 metadata:

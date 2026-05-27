@@ -13,6 +13,7 @@ export const useExtensionsContext = () => {
 
   return {
     stageTabs: ctx?.extensions.filter((extension) => extension.type === 'stageTab') || [],
+    freightTabs: ctx?.extensions.filter((extension) => extension.type === 'freightTab') || [],
     layoutExtensions:
       ctx?.extensions.filter((extension) => extension.type === 'layoutExtension') || [],
     projectSubpages:

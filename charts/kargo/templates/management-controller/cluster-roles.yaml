@@ -1,4 +1,4 @@
-{{- if and .Values.managementController.enabled .Values.rbac.installClusterRoles }}
+{{- if and .Values.dataPlane.install .Values.rbac.installClusterRoles .Values.managementController.enabled  }}
 apiVersion: rbac.authorization.k8s.io/v1
 kind: ClusterRole
 metadata:

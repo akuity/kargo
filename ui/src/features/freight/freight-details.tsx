@@ -7,6 +7,7 @@ import { useEffect, useState } from 'react';
 import { generatePath, useNavigate, useParams } from 'react-router-dom';
 
 import { paths } from '@ui/config/paths';
+import { useExtensionsContext } from '@ui/extensions/extensions-context';
 import { Freight, FreightSchema } from '@ui/gen/api/v1alpha1/generated_pb';
 import { useGetFreightLinks } from '@ui/gen/api/v2/core/core';
 
@@ -46,6 +47,7 @@ export const FreightDetails = ({
 
   const onClose = () => navigate(generatePath(paths.project, { name: projectName }));
   const { show } = useModal();
+  const { freightTabs } = useExtensionsContext();
 
   const freightNameOrAlias = alias || freight?.metadata?.name;
   const { data: freightLinksData } = useGetFreightLinks(
@@ -128,7 +130,18 @@ export const FreightDetails = ({
                   children: (
                     <ManifestPreview object={toJson(FreightSchema, freight)} height='900px' />
                   )
-                }
+                },
+                ...freightTabs.map((data, index) => ({
+                  children: (
+                    <data.component
+                      projectName={projectName || ''}
+                      freightName={freight?.metadata?.name || ''}
+                    />
+                  ),
+                  key: String(data.label + index),
+                  label: data.label,
+                  icon: data.icon
+                }))
               ]}
             />
           </div>

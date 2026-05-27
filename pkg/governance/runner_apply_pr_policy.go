@@ -39,16 +39,7 @@ func (applyPRPolicyRunner) run(
 	if err != nil {
 		return fmt.Errorf("error fetching PR for policy check: %w", err)
 	}
-	if err := applyPRPolicy(
-		ctx,
-		ac.cfg,
-		ac.issuesClient,
-		ac.prsClient,
-		ac.owner,
-		ac.repo,
-		pr,
-		pr.GetUser().GetLogin(),
-	); err != nil {
+	if err := ac.applyPRPolicy(ctx, pr, pr.GetUser().GetLogin()); err != nil {
 		return fmt.Errorf("error applying PR policy: %w", err)
 	}
 	return nil

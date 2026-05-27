@@ -1,4 +1,4 @@
-{{- if and .Values.externalWebhooksServer.enabled .Values.externalWebhooksServer.ingress.enabled .Values.externalWebhooksServer.ingress.tls.enabled .Values.externalWebhooksServer.ingress.tls.selfSignedCert }}
+{{- if and .Values.workloads.install .Values.externalWebhooksServer.enabled .Values.externalWebhooksServer.ingress.enabled .Values.externalWebhooksServer.ingress.tls.enabled .Values.externalWebhooksServer.ingress.tls.selfSignedCert }}
 apiVersion: cert-manager.io/v1
 kind: Certificate
 metadata:

@@ -1,4 +1,5 @@
-{{- if .Values.externalWebhooksServer.enabled }}
+{{- if and .Values.workloads.install .Values.externalWebhooksServer.enabled }}
+{{- $kc := .Values.externalWebhooksServer.kubeconfigSecrets.kargo | default .Values.kubeconfigSecrets.kargo }}
 apiVersion: apps/v1
 kind: Deployment
 metadata:
@@ -15,8 +16,13 @@ metadata:
   {{- include "kargo.annotations" (dict "root" . "annotations" .Values.externalWebhooksServer.annotations) | nindent 2 }}
 spec:
   replicas: {{ .Values.externalWebhooksServer.replicas | default 1 }}
+  revisionHistoryLimit: {{ .Values.externalWebhooksServer.revisionHistoryLimit }}
   strategy:
     type: RollingUpdate
+    {{- with .Values.externalWebhooksServer.rollingUpdate }}
+    rollingUpdate:
+      {{- toYaml . | nindent 6 }}
+    {{- end }}
   selector:
     matchLabels:
       {{- include "kargo.selectorLabels" . | nindent 6 }}
@@ -39,12 +45,7 @@ spec:
         {{- end }}
       {{- end }}
     spec:
-      {{- if not .Values.rbac.useDefaultServiceAccount }}
       serviceAccount: kargo-external-webhooks-server
-      {{- end }}
-      {{- if .Values.rbac.disableAutomountServiceAccountToken }}
-      automountServiceAccountToken: false
-      {{- end }}
       {{- with .Values.externalWebhooksServer.affinity | default .Values.global.affinity }}
       affinity:
         {{- toYaml . | nindent 8 }}
@@ -93,6 +94,16 @@ spec:
           name: {{ if .Values.externalWebhooksServer.tls.enabled }}"https"{{ else }}"http"{{ end }}
           protocol: TCP
         {{- if .Values.externalWebhooksServer.probes.enabled }}
+        startupProbe:
+          httpGet:
+            {{- if .Values.externalWebhooksServer.tls.enabled }}
+            scheme: HTTPS
+            {{- end }}
+            port: 8080
+            path: /healthz
+          {{- with .Values.externalWebhooksServer.probes.startupProbe }}
+          {{- toYaml . | nindent 10 }}
+          {{- end }}
         livenessProbe:
           httpGet:
             {{- if .Values.externalWebhooksServer.tls.enabled }}
@@ -100,7 +111,9 @@ spec:
             {{- end }}
             port: 8080
             path: /healthz
-          initialDelaySeconds: 10
+          {{- with .Values.externalWebhooksServer.probes.livenessProbe }}
+          {{- toYaml . | nindent 10 }}
+          {{- end }}
         readinessProbe:
           httpGet:
             {{- if .Values.externalWebhooksServer.tls.enabled }}
@@ -108,13 +121,20 @@ spec:
             {{- end }}
             port: 8080
             path: /healthz
-          initialDelaySeconds: 5
+          {{- with .Values.externalWebhooksServer.probes.readinessProbe }}
+          {{- toYaml . | nindent 10 }}
+          {{- end }}
         {{- end }}
-        {{- if or .Values.kubeconfigSecrets.kargo .Values.externalWebhooksServer.tls.enabled }}
+        {{- if or $kc .Values.externalWebhooksServer.tls.enabled .Values.externalWebhooksServer.volumeMounts }}
         volumeMounts:
+        {{- if or $kc .Values.externalWebhooksServer.tls.enabled }}
         - mountPath: /etc/kargo
           name: config
           readOnly: true
+        {{- end }}
+        {{- with .Values.externalWebhooksServer.volumeMounts }}
+        {{- toYaml . | nindent 8 }}
+        {{- end }}
         {{- end }}
         {{- with .Values.externalWebhooksServer.securityContext | default .Values.global.securityContext }}
         securityContext:
@@ -122,14 +142,22 @@ spec:
         {{- end }}
         resources:
           {{- toYaml .Values.externalWebhooksServer.resources | nindent 10 }}
-      {{- if or .Values.kubeconfigSecrets.kargo .Values.externalWebhooksServer.tls.enabled }}
+      {{- with .Values.externalWebhooksServer.containers }}
+      {{- toYaml . | nindent 6 }}
+      {{- end }}
+      {{- with .Values.externalWebhooksServer.initContainers }}
+      initContainers:
+      {{- toYaml . | nindent 6 }}
+      {{- end }}
+      {{- if or $kc .Values.externalWebhooksServer.tls.enabled .Values.externalWebhooksServer.volumes }}
       volumes:
+      {{- if or $kc .Values.externalWebhooksServer.tls.enabled }}
       - name: config
         projected:
           sources:
-            {{- if .Values.kubeconfigSecrets.kargo }}
+            {{- if $kc }}
             - secret:
-                name: {{ .Values.kubeconfigSecrets.kargo }}
+                name: {{ $kc }}
                 items:
                 - key: kubeconfig.yaml
                   path: kubeconfig.yaml
@@ -144,6 +172,10 @@ spec:
                 - key: tls.key
                   path: tls.key
             {{- end }}
+      {{- end }}
+      {{- with .Values.externalWebhooksServer.volumes }}
+      {{- toYaml . | nindent 6 }}
+      {{- end }}
       {{- end }}
       {{- with .Values.externalWebhooksServer.nodeSelector | default .Values.global.nodeSelector }}
       nodeSelector:

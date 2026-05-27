@@ -74,6 +74,16 @@ global:
   ## @param global.securityContext Default security context for all Kargo pods.
   securityContext: {}
 
+## @section Workloads
+workloads:
+  ## @param workloads.install Whether to install workload-bearing resources (Deployments, CronJobs, etc.) and their supporting resources.
+  install: true
+
+## @section Data Plane
+dataPlane:
+  ## @param dataPlane.install Coarse switch that, when `false`, suppresses every data-plane resource — even where finer-grained flags (`crds.install`, `rbac.installClusterRoles`, `rbac.installClusterRoleBindings`, `webhooks.register`, `global.createClusterSecretsNamespace`, `global.sharedResources.createNamespace`, `global.systemResources.createNamespace`) would otherwise install them.
+  install: true
+
 ## @section CRDs
 crds:
   ## @param crds.install Indicates if Custom Resource Definitions should be installed and upgraded as part of the release. If set to `false`, the CRDs will only be installed if they do not already exist.
@@ -101,16 +111,12 @@ webhooks:
 ##
 ## 2. A remote cluster hosting Argo CD resources
 ##
-## 3. A remote cluster that is running Argo Rollouts and is a suitable location
-##    to execute user-defined verification processes in the form of Argo
-##    Rollouts AnalysisRuns
-##
 ## This flexibility is useful for various advanced use cases -- especially
 ## topologies where Kargo data may be sharded, with Kargo controllers distributed
-## across many clusters. Any two, or even all three, of these configurations may
-## be the same. In the average case, these should all be left unspecified. All
-## that are unspecified will default to configuration for the cluster in which
-## the Kargo controller is running.
+## across many clusters. Either or both of these configurations may be the same.
+## In the average case, these should all be left unspecified. All that are
+## unspecified will default to configuration for the cluster in which the Kargo
+## controller is running.
 ## @descriptionEnd
 ## @skip kubeconfigSecrets
 kubeconfigSecrets: {}
@@ -124,8 +130,21 @@ api:
   ## @param api.enabled Whether the API server is enabled.
   enabled: true
 
+  ## @skip api.kubeconfigSecrets
+  kubeconfigSecrets: {}
+    ## @param api.kubeconfigSecrets.kargo [nullable] Per-component override for `kubeconfigSecrets.kargo`. Lets the API server mount its own kubeconfig secret rather than the shared one. Falls back to the chart-level value when unset.
+    # kargo: ""
+
   ## @param api.replicas The number of API server pods.
   replicas: 1
+
+  ## @param api.revisionHistoryLimit Number of old ReplicaSets the API server Deployment retains for rollback.
+  revisionHistoryLimit: 10
+
+  ## @param api.rollingUpdate Values merged into the chart-built `strategy.rollingUpdate` for the API server Deployment. Typically used to tune `maxSurge` and `maxUnavailable` (each an absolute number or a percentage). Default empty map — Kubernetes defaults (25% / 25%) apply.
+  rollingUpdate: {}
+    # maxSurge: 25%
+    # maxUnavailable: 25%
 
   ## @param api.host The domain name where Kargo's API server will be accessible. When applicable, this is used for generation of an Ingress resource, certificates, and the OpenID Connect issuer and callback URLs. Note: The value in this field MAY include a port number and MUST NOT specify the protocol (http vs https), which is automatically inferred from other configuration options.
   host: localhost
@@ -250,6 +269,14 @@ api:
       ## @param api.oidc.dex.enabled Whether to enable Dex as the identity provider. When set to true, the Kargo installation will include a Dex server and the Kargo API server will be configured to make the /dex endpoint a reverse proxy for the Dex server.
       enabled: false
 
+      ## @param api.oidc.dex.revisionHistoryLimit Number of old ReplicaSets the Dex server Deployment retains for rollback.
+      revisionHistoryLimit: 10
+
+      ## @param api.oidc.dex.rollingUpdate Values merged into the chart-built `strategy.rollingUpdate` for the Dex server Deployment. Typically used to tune `maxSurge` and `maxUnavailable` (each an absolute number or a percentage). Default empty map — Kubernetes defaults (25% / 25%) apply.
+      rollingUpdate: {}
+        # maxSurge: 25%
+        # maxUnavailable: 25%
+
       image:
         ## @param api.oidc.dex.image.repository Image repository of Dex
         repository: ghcr.io/dexidp/dex
@@ -323,6 +350,10 @@ api:
       #  - secretRef:
       #      name: secret-name
 
+      ## @param api.oidc.dex.containers Additional sidecar containers to add to Dex pods. Rendered as literal YAML.
+      containers: []
+      ## @param api.oidc.dex.initContainers Additional init containers to add to Dex pods. Rendered as literal YAML.
+      initContainers: []
       ## @param api.oidc.dex.volumes Add additional volumes to Dex pods. This is convenient for cases where api.oidc.dex.connectors needs to reference mounted data from a Secret that is managed "out of band" with a secret management solution such as Sealed Secrets.
       volumes: []
       # - name: google-json
@@ -360,8 +391,29 @@ api:
       securityContext: {}
 
       probes:
-        ## @param api.oidc.dex.probes.enabled Whether liveness and readiness probes should be included in the Dex server deployment. It is sometimes advantageous to disable these during local development.
+        ## @param api.oidc.dex.probes.enabled Whether startup, liveness, and readiness probes should be included in the Dex server deployment. It is sometimes advantageous to disable these during local development.
         enabled: true
+        ## @param api.oidc.dex.probes.startupProbe [object] Values merged into the chart-built `startupProbe` for the Dex server. Typically used to tune timing fields like `initialDelaySeconds`, `periodSeconds`, `timeoutSeconds`, `successThreshold`, and `failureThreshold`.
+        startupProbe:
+          initialDelaySeconds: 10
+          # periodSeconds: 10
+          # timeoutSeconds: 1
+          # successThreshold: 1
+          failureThreshold: 30
+        ## @param api.oidc.dex.probes.livenessProbe [object] Values merged into the chart-built `livenessProbe` for the Dex server. Default is an empty map, so the chart's `livenessProbe` renders with Kubernetes-default timings.
+        livenessProbe: {}
+          # initialDelaySeconds: 0
+          # periodSeconds: 10
+          # timeoutSeconds: 1
+          # successThreshold: 1
+          # failureThreshold: 3
+        ## @param api.oidc.dex.probes.readinessProbe [object] Values merged into the chart-built `readinessProbe` for the Dex server.
+        readinessProbe:
+          initialDelaySeconds: 5
+          # periodSeconds: 10
+          # timeoutSeconds: 1
+          # successThreshold: 1
+          # failureThreshold: 3
 
       tls:
         ## @param api.oidc.dex.tls.selfSignedCert Whether to generate a self-signed certificate for use with Dex. If `true`, `cert-manager` CRDs **must** be present in the cluster. The chart will create and use its own namespaced `Issuer`. If `false`, a cert `Secret` with the name specified by `api.oidc.dex.tls.secretName` **must** be provided in the same namespace as Kargo. There is no provision for running Dex without TLS.
@@ -422,6 +474,15 @@ api:
   #  - secretRef:
   #      name: secret-name
 
+  ## @param api.containers Additional sidecar containers to add to API server pods. Rendered as literal YAML.
+  containers: []
+  ## @param api.initContainers Additional init containers to add to API server pods. Rendered as literal YAML.
+  initContainers: []
+  ## @param api.volumes Additional pod-level volumes for API server pods. Rendered as literal YAML.
+  volumes: []
+  ## @param api.volumeMounts Additional volume mounts for the API server container. Rendered as literal YAML.
+  volumeMounts: []
+
   ## @param api.resources Resources limits and requests for the api containers.
   resources: {}
     # limits:
@@ -467,8 +528,29 @@ api:
     secretName: ""
 
   probes:
-    ## @param api.probes.enabled Whether liveness and readiness probes should be included in the API server deployment. It is sometimes advantageous to disable these during local development.
+    ## @param api.probes.enabled Whether startup, liveness, and readiness probes should be included in the API server deployment. It is sometimes advantageous to disable these during local development.
     enabled: true
+    ## @param api.probes.startupProbe [object] Values merged into the chart-built `startupProbe` for the API server. Typically used to tune timing fields like `initialDelaySeconds`, `periodSeconds`, `timeoutSeconds`, `successThreshold`, and `failureThreshold`.
+    startupProbe:
+      initialDelaySeconds: 10
+      # periodSeconds: 10
+      # timeoutSeconds: 1
+      # successThreshold: 1
+      failureThreshold: 30
+    ## @param api.probes.livenessProbe [object] Values merged into the chart-built `livenessProbe` for the API server. Default is an empty map, so the chart's `livenessProbe` renders with Kubernetes-default timings.
+    livenessProbe: {}
+      # initialDelaySeconds: 0
+      # periodSeconds: 10
+      # timeoutSeconds: 1
+      # successThreshold: 1
+      # failureThreshold: 3
+    ## @param api.probes.readinessProbe [object] Values merged into the chart-built `readinessProbe` for the API server.
+    readinessProbe:
+      initialDelaySeconds: 5
+      # periodSeconds: 10
+      # timeoutSeconds: 1
+      # successThreshold: 1
+      # failureThreshold: 3
 
   tls:
     ## @param api.tls.enabled Whether to enable TLS directly on the API server. This is helpful if you do not intend to use an ingress controller or if you require TLS end-to-end. All other settings in this section EXCEPT `terminatedUpstream` will be ignored when this is set to `false`.
@@ -511,6 +593,16 @@ api:
 controller:
   ## @param controller.enabled Whether the controller is enabled.
   enabled: true
+
+  ## @param controller.revisionHistoryLimit Number of old ReplicaSets the controller Deployment retains for rollback. The controller uses a `Recreate` rollout strategy (singleton), so `rollingUpdate.*` knobs do not apply.
+  revisionHistoryLimit: 10
+
+  ## @skip controller.kubeconfigSecrets
+  kubeconfigSecrets: {}
+    ## @param controller.kubeconfigSecrets.kargo [nullable] Per-component override for `kubeconfigSecrets.kargo`. Lets the controller mount its own kubeconfig secret rather than the shared one. Falls back to the chart-level value when unset.
+    # kargo: ""
+    ## @param controller.kubeconfigSecrets.argocd [nullable] Per-component override for `kubeconfigSecrets.argocd`. Falls back to the chart-level value when unset.
+    # argocd: ""
 
   ## @param controller.logLevel The log level for the controller. Valid options are ERROR, INFO, DEBUG, and TRACE (case insensitive). Note that INFO level messages are written during startup regardless of the selected level.
   logLevel: INFO
@@ -642,6 +734,8 @@ controller:
   #  - secretRef:
   #      name: secret-name
 
+  ## @param controller.containers Additional sidecar containers to add to controller pods. Rendered as literal YAML.
+  containers: []
   ## @param controller.volumes Volumes for the controller pods.
   volumes: []
   ## @param controller.volumeMounts Volume mounts for the controller pods.
@@ -677,6 +771,11 @@ controller:
 garbageCollector:
   ## @param garbageCollector.enabled Whether the garbage collector is enabled.
   enabled: true
+
+  ## @skip garbageCollector.kubeconfigSecrets
+  kubeconfigSecrets: {}
+    ## @param garbageCollector.kubeconfigSecrets.kargo [nullable] Per-component override for `kubeconfigSecrets.kargo`. Lets the garbage collector mount its own kubeconfig secret rather than the shared one. Falls back to the chart-level value when unset.
+    # kargo: ""
 
   ## @param garbageCollector.logLevel The log level for the garbage collector. Valid options are ERROR, INFO, DEBUG, and TRACE (case insensitive). Note that INFO level messages are written during startup regardless of the selected level.
   logLevel: INFO
@@ -725,6 +824,15 @@ garbageCollector:
   #  - secretRef:
   #      name: secret-name
 
+  ## @param garbageCollector.containers Additional sidecar containers to add to garbage collector pods. Rendered as literal YAML.
+  containers: []
+  ## @param garbageCollector.initContainers Additional init containers to add to garbage collector pods. Rendered as literal YAML.
+  initContainers: []
+  ## @param garbageCollector.volumes Additional pod-level volumes for garbage collector pods. Rendered as literal YAML.
+  volumes: []
+  ## @param garbageCollector.volumeMounts Additional volume mounts for the garbage collector container. Rendered as literal YAML.
+  volumeMounts: []
+
   ## @param garbageCollector.resources Resources limits and requests for the garbage collector containers.
   resources: {}
     # limits:
@@ -750,8 +858,21 @@ externalWebhooksServer:
   ## @param externalWebhooksServer.enabled Whether the external webhooks server is enabled.
   enabled: true
 
+  ## @skip externalWebhooksServer.kubeconfigSecrets
+  kubeconfigSecrets: {}
+    ## @param externalWebhooksServer.kubeconfigSecrets.kargo [nullable] Per-component override for `kubeconfigSecrets.kargo`. Lets the external webhooks server mount its own kubeconfig secret rather than the shared one. Falls back to the chart-level value when unset.
+    # kargo: ""
+
   ## @param externalWebhooksServer.replicas The number of external webhooks server pods.
   replicas: 1
+
+  ## @param externalWebhooksServer.revisionHistoryLimit Number of old ReplicaSets the external webhooks server Deployment retains for rollback.
+  revisionHistoryLimit: 10
+
+  ## @param externalWebhooksServer.rollingUpdate Values merged into the chart-built `strategy.rollingUpdate` for the external webhook server Deployment. Typically used to tune `maxSurge` and `maxUnavailable` (each an absolute number or a percentage). Default empty map — Kubernetes defaults (25% / 25%) apply.
+  rollingUpdate: {}
+    # maxSurge: 25%
+    # maxUnavailable: 25%
 
   ## @param externalWebhooksServer.host The domain name where Kargo's external webhooks server will be accessible. When applicable, this is used for generation of an Ingress resource and certificates. Note: The value in this field MAY include a port number and MUST NOT specify the protocol (http vs https), which is automatically inferred from other configuration options.
   host: localhost
@@ -789,6 +910,15 @@ externalWebhooksServer:
   #      name: config-map-name
   #  - secretRef:
   #      name: secret-name
+
+  ## @param externalWebhooksServer.containers Additional sidecar containers to add to external webhook server pods. Rendered as literal YAML.
+  containers: []
+  ## @param externalWebhooksServer.initContainers Additional init containers to add to external webhook server pods. Rendered as literal YAML.
+  initContainers: []
+  ## @param externalWebhooksServer.volumes Additional pod-level volumes for external webhook server pods. Rendered as literal YAML.
+  volumes: []
+  ## @param externalWebhooksServer.volumeMounts Additional volume mounts for the external webhook server container. Rendered as literal YAML.
+  volumeMounts: []
 
   ## @param externalWebhooksServer.resources Resources limits and requests for the external webhook server containers.
   resources: {}
@@ -829,8 +959,29 @@ externalWebhooksServer:
     maxUnavailable: ""
 
   probes:
-    ## @param externalWebhooksServer.probes.enabled Whether liveness and readiness probes should be included in the external webhook server deployment. It is sometimes advantageous to disable these during local development.
+    ## @param externalWebhooksServer.probes.enabled Whether startup, liveness, and readiness probes should be included in the external webhook server deployment. It is sometimes advantageous to disable these during local development.
     enabled: true
+    ## @param externalWebhooksServer.probes.startupProbe [object] Values merged into the chart-built `startupProbe` for the external webhook server. Typically used to tune timing fields like `initialDelaySeconds`, `periodSeconds`, `timeoutSeconds`, `successThreshold`, and `failureThreshold`.
+    startupProbe:
+      initialDelaySeconds: 10
+      # periodSeconds: 10
+      # timeoutSeconds: 1
+      # successThreshold: 1
+      failureThreshold: 30
+    ## @param externalWebhooksServer.probes.livenessProbe [object] Values merged into the chart-built `livenessProbe` for the external webhook server. Default is an empty map, so the chart's `livenessProbe` renders with Kubernetes-default timings.
+    livenessProbe: {}
+      # initialDelaySeconds: 0
+      # periodSeconds: 10
+      # timeoutSeconds: 1
+      # successThreshold: 1
+      # failureThreshold: 3
+    ## @param externalWebhooksServer.probes.readinessProbe [object] Values merged into the chart-built `readinessProbe` for the external webhook server.
+    readinessProbe:
+      initialDelaySeconds: 5
+      # periodSeconds: 10
+      # timeoutSeconds: 1
+      # successThreshold: 1
+      # failureThreshold: 3
 
   tls:
     ## @param externalWebhooksServer.tls.enabled Whether to enable TLS directly on the external webhook server. This is helpful if you do not intend to use an ingress controller or if you require TLS end-to-end. All other settings in this section EXCEPT `terminatedUpstream` will be ignored when this is set to `false`.
@@ -873,6 +1024,14 @@ externalWebhooksServer:
 managementController:
   ## @param managementController.enabled Whether the management controller is enabled.
   enabled: true
+
+  ## @param managementController.revisionHistoryLimit Number of old ReplicaSets the management controller Deployment retains for rollback. The management controller uses a `Recreate` rollout strategy (singleton), so `rollingUpdate.*` knobs do not apply.
+  revisionHistoryLimit: 10
+
+  ## @skip managementController.kubeconfigSecrets
+  kubeconfigSecrets: {}
+    ## @param managementController.kubeconfigSecrets.kargo [nullable] Per-component override for `kubeconfigSecrets.kargo`. Lets the management controller mount its own kubeconfig secret rather than the shared one. Falls back to the chart-level value when unset.
+    # kargo: ""
 
   ## @param managementController.logLevel The log level for the management controller. Valid options are ERROR, INFO, DEBUG, and TRACE (case insensitive). Note that INFO level messages are written during startup regardless of the selected level.
   logLevel: INFO
@@ -925,6 +1084,15 @@ managementController:
   #  - secretRef:
   #      name: secret-name
 
+  ## @param managementController.containers Additional sidecar containers to add to management controller pods. Rendered as literal YAML.
+  containers: []
+  ## @param managementController.initContainers Additional init containers to add to management controller pods. Rendered as literal YAML.
+  initContainers: []
+  ## @param managementController.volumes Additional pod-level volumes for management controller pods. Rendered as literal YAML.
+  volumes: []
+  ## @param managementController.volumeMounts Additional volume mounts for the management controller container. Rendered as literal YAML.
+  volumeMounts: []
+
   ## @param managementController.resources Resources limits and requests for the management controller containers.
   resources: {}
     # limits:
@@ -950,8 +1118,21 @@ webhooksServer:
   ## @param webhooksServer.enabled Whether the webhooks server is enabled.
   enabled: true
 
+  ## @skip webhooksServer.kubeconfigSecrets
+  kubeconfigSecrets: {}
+    ## @param webhooksServer.kubeconfigSecrets.kargo [nullable] Per-component override for `kubeconfigSecrets.kargo`. Lets the webhooks server mount its own kubeconfig secret rather than the shared one. Falls back to the chart-level value when unset.
+    # kargo: ""
+
   ## @param webhooksServer.replicas The number of webhooks server pods.
   replicas: 1
+
+  ## @param webhooksServer.revisionHistoryLimit Number of old ReplicaSets the webhooks server Deployment retains for rollback.
+  revisionHistoryLimit: 10
+
+  ## @param webhooksServer.rollingUpdate Values merged into the chart-built `strategy.rollingUpdate` for the webhooks server Deployment. Typically used to tune `maxSurge` and `maxUnavailable` (each an absolute number or a percentage). Default empty map — Kubernetes defaults (25% / 25%) apply.
+  rollingUpdate: {}
+    # maxSurge: 25%
+    # maxUnavailable: 25%
 
   ## @param webhooksServer.logLevel The log level for the webhooks server. Valid options are ERROR, INFO, DEBUG, and TRACE (case insensitive). Note that INFO level messages are written during startup regardless of the selected level.
   logLevel: INFO
@@ -989,6 +1170,15 @@ webhooksServer:
   #      name: config-map-name
   #  - secretRef:
   #      name: secret-name
+
+  ## @param webhooksServer.containers Additional sidecar containers to add to webhooks server pods. Rendered as literal YAML.
+  containers: []
+  ## @param webhooksServer.initContainers Additional init containers to add to webhooks server pods. Rendered as literal YAML.
+  initContainers: []
+  ## @param webhooksServer.volumes Additional pod-level volumes for webhooks server pods. Rendered as literal YAML.
+  volumes: []
+  ## @param webhooksServer.volumeMounts Additional volume mounts for the webhooks server container. Rendered as literal YAML.
+  volumeMounts: []
 
   ## @param webhooksServer.resources Resources limits and requests for the webhooks server containers.
   resources: {}

@@ -1,4 +1,4 @@
-{{- if and .Values.rbac.installClusterRoles }}
+{{- if and .Values.dataPlane.install .Values.rbac.installClusterRoles }}
 # This role is bound to the API server's and the Kargo admin's ServiceAccounts
 # in project namespaces as they are created. This dynamically extends their most
 # sensitive permissions on a per-namespace basis instead of granting them

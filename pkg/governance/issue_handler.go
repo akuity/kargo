@@ -9,13 +9,12 @@ import (
 	"github.com/akuity/kargo/pkg/logging"
 )
 
-// issueHandler handles issue-related events for a specific repository according
-// to specific configuration.
+// issueHandler handles issue-related events for a specific repository
+// according to specific configuration. It embeds repoContext so the shared
+// per-repository dependencies and their methods are accessible directly on
+// the handler.
 type issueHandler struct {
-	cfg          issuesConfig
-	owner        string
-	repo         string
-	issuesClient IssuesClient
+	repoContext
 }
 
 // handleOpened is the handler for the "issues.opened" event.
@@ -23,7 +22,8 @@ func (h *issueHandler) handleOpened(
 	ctx context.Context,
 	event *github.IssuesEvent,
 ) error {
-	if event == nil || len(h.cfg.RequiredLabelPrefixes) == 0 {
+	if event == nil || h.cfg.Issues == nil ||
+		len(h.cfg.Issues.RequiredLabelPrefixes) == 0 {
 		return nil
 	}
 
@@ -41,14 +41,11 @@ func (h *issueHandler) handleOpened(
 		existingLabels[l.GetName()] = struct{}{}
 	}
 
-	if err := enforceRequiredLabels(
+	if err := h.enforceRequiredLabels(
 		ctx,
-		h.issuesClient,
-		h.owner,
-		h.repo,
 		number,
 		existingLabels,
-		h.cfg.RequiredLabelPrefixes,
+		h.cfg.Issues.RequiredLabelPrefixes,
 	); err != nil {
 		return fmt.Errorf("error enforcing required labels: %w", err)
 	}
