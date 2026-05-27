@@ -110,7 +110,7 @@ func (n *newestFromBranchSelector) Select(ctx context.Context) (
 		&git.CloneOptions{
 			Branch:       n.branch,
 			SingleBranch: true,
-			Filter:       git.FilterBlobless,
+			Blobless:     n.blobless,
 		},
 	)
 	if err != nil {

@@ -18,6 +18,7 @@ type baseSelector struct {
 	repoURL               string
 	creds                 *git.RepoCredentials
 	insecureSkipTLSVerify bool
+	blobless              bool
 	filterExpression      *vm.Program
 	includePaths          pattern.Matcher
 	excludePaths          pattern.Matcher
@@ -38,6 +39,7 @@ func newBaseSelector(
 		repoURL:               sub.RepoURL,
 		creds:                 creds,
 		insecureSkipTLSVerify: sub.InsecureSkipTLSVerify,
+		blobless:             sub.Blobless != nil && *sub.Blobless,
 		discoveryLimit:        int(sub.DiscoveryLimit),
 		gitCloneFn:            git.Clone,
 	}
