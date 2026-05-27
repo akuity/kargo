@@ -394,7 +394,17 @@ func (r *RegularStageReconciler) Reconcile(ctx context.Context, req ctrl.Request
 	}
 	// Otherwise, requeue after a delay.
 	// TODO: Make the requeue delay configurable.
-	return ctrl.Result{RequeueAfter: 5 * time.Minute}, nil
+	requeueAfter := 5 * time.Minute
+
+	// If any candidate Freight is still soaking in an upstream Stage, requeue
+	// sooner so auto-promotion can fire as soon as the soak time elapses
+	// rather than waiting for the next default-interval tick.
+	if soakRequeue, soakErr := calculateNextSoakCheck(ctx, r.client, stage); soakErr != nil {
+		logger.Error(soakErr, "failed to calculate next soak check interval")
+	} else if soakRequeue > 0 && soakRequeue < requeueAfter {
+		requeueAfter = soakRequeue
+	}
+	return ctrl.Result{RequeueAfter: requeueAfter}, nil
 }
 
 func (r *RegularStageReconciler) reconcile(
