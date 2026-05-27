@@ -45,7 +45,7 @@ spec:
         {{- end }}
       {{- end }}
     spec:
-      serviceAccount: kargo-webhooks-server
+      serviceAccountName: kargo-webhooks-server
       {{- with .Values.webhooksServer.affinity | default .Values.global.affinity }}
       affinity:
         {{- toYaml . | nindent 8 }}

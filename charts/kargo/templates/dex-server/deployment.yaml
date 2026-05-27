@@ -34,7 +34,7 @@ spec:
         {{- end }}
       {{- end }}
     spec:
-      serviceAccount: kargo-dex-server
+      serviceAccountName: kargo-dex-server
       {{- with .Values.api.oidc.dex.affinity | default .Values.global.affinity }}
       affinity:
         {{- toYaml . | nindent 8 }}
