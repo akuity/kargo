@@ -24,7 +24,7 @@ export type StageTab = {
 
 export type FreightTabComponentProps = {
   projectName: string;
-  freightId: string;
+  freightName: string;
 };
 
 export type FreightTab = {
