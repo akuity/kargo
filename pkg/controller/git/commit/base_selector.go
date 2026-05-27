@@ -39,7 +39,7 @@ func newBaseSelector(
 		repoURL:               sub.RepoURL,
 		creds:                 creds,
 		insecureSkipTLSVerify: sub.InsecureSkipTLSVerify,
-		blobless:             sub.Blobless != nil && *sub.Blobless,
+		blobless:              sub.Blobless != nil && *sub.Blobless,
 		discoveryLimit:        int(sub.DiscoveryLimit),
 		gitCloneFn:            git.Clone,
 	}

@@ -71,7 +71,7 @@ type BareCloneOptions struct {
 	InsecureSkipTLSVerify bool
 	// Blobless enables blobless cloning (--filter=blob:none). When set, the
 	// initial clone downloads all commits and trees but defers blob downloads
-	// until checkout. Combine with sparse checkout to minimise disk usage on
+	// until checkout. Combine with sparse checkout to minimize disk usage on
 	// large repositories. The server must support partial clones; if it does
 	// not, the clone will fail.
 	Blobless bool
@@ -134,6 +134,7 @@ func (b *bareRepo) clone(opts *BareCloneOptions) error {
 	}
 	return nil
 }
+
 type LoadBareRepoOptions struct {
 	Credentials *RepoCredentials
 }

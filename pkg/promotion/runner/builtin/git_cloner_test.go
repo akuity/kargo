@@ -473,7 +473,6 @@ func Test_gitCloner_run_with_submodules(t *testing.T) {
 	require.FileExists(t, filepath.Join(stepCtx.WorkDir, "src", "sub", "sub.txt"))
 }
 
-
 // fakeGitUserResolver is a mock implementation of the promotion.GitUserResolver
 // interface that is used to facilitate unit testing.
 type fakeGitUserResolver struct {
