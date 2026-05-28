@@ -106,6 +106,10 @@ metadata:
 
 :::info
 
+Claim values may also be specified as a scalar string instead of a single-element
+list (e.g. `"email": "carl@example.com"`). Both forms are accepted, but the list
+form is preferred for consistency.
+
 Mappings specified using annotations with keys of the form
 `rbac.kargo.akuity.io/claim.<name>` with comma-delimited values are also
 supported for reasons of backwards compatibility. The effective mapping is
