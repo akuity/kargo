@@ -33,7 +33,7 @@ every submission.
 
 **Expected:** Mid-June, 2026
 
-v1.11.0 advances Kargo's event-driven model continues improving operator
+v1.11.0 advances Kargo's event-driven model and continues improving operator
 and end-user experience. The release also advances the ongoing UI migration 
 from the deprecated ConnectRPC API to the REST API. Freight and Stage details
 aim to become richer with configurable links to external platforms.
