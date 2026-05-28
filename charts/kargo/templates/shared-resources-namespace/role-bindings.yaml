@@ -1,3 +1,4 @@
+{{- if .Values.dataPlane.install }}
 apiVersion: rbac.authorization.k8s.io/v1
 kind: RoleBinding
 metadata:
@@ -5,6 +6,7 @@ metadata:
   namespace: {{ .Values.global.sharedResources.namespace }}
   labels:
     {{- include "kargo.labels" . | nindent 4 }}
+  {{- include "kargo.annotations" (dict "root" .) | nindent 2 }}
 roleRef:
   apiGroup: rbac.authorization.k8s.io
   kind: Role
@@ -27,6 +29,7 @@ metadata:
   namespace: {{ .Values.global.sharedResources.namespace }}
   labels:
     {{- include "kargo.labels" . | nindent 4 }}
+  {{- include "kargo.annotations" (dict "root" .) | nindent 2 }}
 roleRef:
   apiGroup: rbac.authorization.k8s.io
   kind: Role
@@ -42,4 +45,5 @@ subjects:
 - kind: ServiceAccount
   namespace:  {{ .Release.Namespace }}
   name: kargo-api
+{{- end }}
 {{- end }}

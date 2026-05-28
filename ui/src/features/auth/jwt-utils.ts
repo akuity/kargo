@@ -1,3 +1,5 @@
+import { parseJwtPayload } from '@ui/utils/jwt-payload';
+
 // https://openid.net/specs/openid-connect-core-1_0.html#StandardClaims
 export type JWTInfo = {
   sub: string;
@@ -11,7 +13,7 @@ export type JWTInfo = {
 // jwt claims register with "admin" subject on admin login
 export const isAdmin = (user?: JWTInfo | null) => user?.sub === 'admin';
 
-export const extractInfoFromJWT = (token: string): JWTInfo => JSON.parse(atob(token.split('.')[1]));
+export const extractInfoFromJWT = (token: string): JWTInfo => parseJwtPayload<JWTInfo>(token);
 
 export const isJWTValid = (token: string): boolean => {
   try {

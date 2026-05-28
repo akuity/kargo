@@ -83,6 +83,8 @@ type ClientService interface {
 
 	GetFreight(params *GetFreightParams, authInfo runtime.ClientAuthInfoWriter, opts ...ClientOption) (*GetFreightOK, error)
 
+	GetFreightLinks(params *GetFreightLinksParams, authInfo runtime.ClientAuthInfoWriter, opts ...ClientOption) (*GetFreightLinksOK, error)
+
 	GetProject(params *GetProjectParams, authInfo runtime.ClientAuthInfoWriter, opts ...ClientOption) (*GetProjectOK, error)
 
 	GetProjectConfig(params *GetProjectConfigParams, authInfo runtime.ClientAuthInfoWriter, opts ...ClientOption) (*GetProjectConfigOK, error)
@@ -96,6 +98,8 @@ type ClientService interface {
 	GetSharedConfigMap(params *GetSharedConfigMapParams, authInfo runtime.ClientAuthInfoWriter, opts ...ClientOption) (*GetSharedConfigMapOK, error)
 
 	GetStage(params *GetStageParams, authInfo runtime.ClientAuthInfoWriter, opts ...ClientOption) (*GetStageOK, error)
+
+	GetStageLinks(params *GetStageLinksParams, authInfo runtime.ClientAuthInfoWriter, opts ...ClientOption) (*GetStageLinksOK, error)
 
 	GetSystemConfigMap(params *GetSystemConfigMapParams, authInfo runtime.ClientAuthInfoWriter, opts ...ClientOption) (*GetSystemConfigMapOK, error)
 
@@ -855,6 +859,55 @@ func (a *Client) GetFreight(params *GetFreightParams, authInfo runtime.ClientAut
 }
 
 /*
+	GetFreightLinks retrieves deep links for a freight resource
+
+	Retrieve evaluated deep links for a Freight resource, combining
+
+cluster-level links from ClusterConfig and project-level links
+from ProjectConfig.
+*/
+func (a *Client) GetFreightLinks(params *GetFreightLinksParams, authInfo runtime.ClientAuthInfoWriter, opts ...ClientOption) (*GetFreightLinksOK, error) {
+	// NOTE: parameters are not validated before sending
+	if params == nil {
+		params = NewGetFreightLinksParams()
+	}
+	op := &runtime.ClientOperation{
+		ID:                 "GetFreightLinks",
+		Method:             "GET",
+		PathPattern:        "/v1beta1/projects/{project}/freight/{freight-name-or-alias}/links",
+		ProducesMediaTypes: []string{"application/json"},
+		ConsumesMediaTypes: []string{"application/json"},
+		Schemes:            []string{"http"},
+		Params:             params,
+		Reader:             &GetFreightLinksReader{formats: a.formats},
+		AuthInfo:           authInfo,
+		Context:            params.Context,
+		Client:             params.HTTPClient,
+	}
+	for _, opt := range opts {
+		opt(op)
+	}
+	result, err := a.transport.Submit(op)
+	if err != nil {
+		return nil, err
+	}
+
+	// only one success response has to be checked
+	success, ok := result.(*GetFreightLinksOK)
+	if ok {
+		return success, nil
+	}
+
+	// unexpected success response.
+
+	// no default response is defined.
+	//
+	// safeguard: normally, in the absence of a default response, unknown success responses return an error above: so this is a codegen issue
+	msg := fmt.Sprintf("unexpected success response for GetFreightLinks: API contract not enforced by server. Client expected to get an error, but got: %T", result)
+	panic(msg)
+}
+
+/*
 GetProject retrieves a project resource
 
 Retrieve a Project resource.
@@ -1179,6 +1232,55 @@ func (a *Client) GetStage(params *GetStageParams, authInfo runtime.ClientAuthInf
 }
 
 /*
+	GetStageLinks retrieves deep links for a stage resource
+
+	Retrieve evaluated deep links for a Stage resource, combining
+
+cluster-level links from ClusterConfig and project-level links
+from ProjectConfig.
+*/
+func (a *Client) GetStageLinks(params *GetStageLinksParams, authInfo runtime.ClientAuthInfoWriter, opts ...ClientOption) (*GetStageLinksOK, error) {
+	// NOTE: parameters are not validated before sending
+	if params == nil {
+		params = NewGetStageLinksParams()
+	}
+	op := &runtime.ClientOperation{
+		ID:                 "GetStageLinks",
+		Method:             "GET",
+		PathPattern:        "/v1beta1/projects/{project}/stages/{stage}/links",
+		ProducesMediaTypes: []string{"application/json"},
+		ConsumesMediaTypes: []string{"application/json"},
+		Schemes:            []string{"http"},
+		Params:             params,
+		Reader:             &GetStageLinksReader{formats: a.formats},
+		AuthInfo:           authInfo,
+		Context:            params.Context,
+		Client:             params.HTTPClient,
+	}
+	for _, opt := range opts {
+		opt(op)
+	}
+	result, err := a.transport.Submit(op)
+	if err != nil {
+		return nil, err
+	}
+
+	// only one success response has to be checked
+	success, ok := result.(*GetStageLinksOK)
+	if ok {
+		return success, nil
+	}
+
+	// unexpected success response.
+
+	// no default response is defined.
+	//
+	// safeguard: normally, in the absence of a default response, unknown success responses return an error above: so this is a codegen issue
+	msg := fmt.Sprintf("unexpected success response for GetStageLinks: API contract not enforced by server. Client expected to get an error, but got: %T", result)
+	panic(msg)
+}
+
+/*
 GetSystemConfigMap retrieves a system level config map
 
 Retrieve a system-level ConfigMap by name.
@@ -1415,9 +1517,13 @@ func (a *Client) ListProjectConfigMaps(params *ListProjectConfigMapsParams, auth
 }
 
 /*
-ListProjects lists projects
+	ListProjects lists projects
 
-List all Projects resources. Returns a ProjectList resource.
+	List all Projects resources. Supports server-side filtering by
+
+name substring, by UID, and by namespaces mapped to the
+authenticated user's ServiceAccounts, plus offset-based
+pagination.
 */
 func (a *Client) ListProjects(params *ListProjectsParams, authInfo runtime.ClientAuthInfoWriter, opts ...ClientOption) (*ListProjectsOK, error) {
 	// NOTE: parameters are not validated before sending

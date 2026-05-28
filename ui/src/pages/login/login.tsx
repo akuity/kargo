@@ -1,8 +1,7 @@
-import { useQuery } from '@connectrpc/connect-query';
 import { Divider, Typography } from 'antd';
 import { Navigate, generatePath, useSearchParams } from 'react-router-dom';
 
-import { redirectToQueryParam } from '@ui/config/auth';
+import { isSafeRedirectPath, redirectToQueryParam } from '@ui/config/auth';
 import { paths } from '@ui/config/paths';
 import { AdminLogin } from '@ui/features/auth/admin-login';
 import { useAuthContext } from '@ui/features/auth/context/use-auth-context';
@@ -10,23 +9,25 @@ import { OIDCLogin } from '@ui/features/auth/oidc-login';
 import { LoadingState } from '@ui/features/common';
 import { useDocumentTitle } from '@ui/features/common/document-title/use-document-title';
 import { KargoLogo } from '@ui/features/common/logo/logo';
-import { getPublicConfig } from '@ui/gen/api/service/v1alpha1/service-KargoService_connectquery';
+import { useGetPublicConfig } from '@ui/gen/api/v2/system/system';
 
 import * as styles from './login.module.less';
 
 export const Login = () => {
   useDocumentTitle(['Login']);
-  const { data, isLoading } = useQuery(getPublicConfig);
+  const { data: response, isLoading } = useGetPublicConfig();
+  const data = response?.data;
   const [params] = useSearchParams();
   const { isLoggedIn } = useAuthContext();
   const redirectTo = params.get(redirectToQueryParam);
+  const safeRedirectTo = isSafeRedirectPath(redirectTo) ? redirectTo : null;
 
   if (data?.skipAuth) {
     return <Navigate to={paths.home} replace />;
   }
 
   if (isLoggedIn) {
-    return <Navigate to={redirectTo ? generatePath(redirectTo) : paths.home} replace />;
+    return <Navigate to={safeRedirectTo ? generatePath(safeRedirectTo) : paths.home} replace />;
   }
 
   return (

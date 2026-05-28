@@ -1,4 +1,4 @@
-{{- if and .Values.controller.argocd.integrationEnabled .Values.controller.argocd.watchArgocdNamespaceOnly }}
+{{- if and .Values.argocd.dataPlane.install .Values.controller.enabled .Values.controller.argocd.integrationEnabled .Values.controller.argocd.watchArgocdNamespaceOnly }}
 apiVersion: rbac.authorization.k8s.io/v1
 kind: RoleBinding
 metadata:
@@ -7,6 +7,7 @@ metadata:
   labels:
     {{- include "kargo.labels" . | nindent 4 }}
     {{- include "kargo.controller.labels" . | nindent 4 }}
+  {{- include "kargo.annotations" (dict "root" .) | nindent 2 }}
 roleRef:
   apiGroup: rbac.authorization.k8s.io
   kind: Role

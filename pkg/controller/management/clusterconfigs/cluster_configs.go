@@ -200,6 +200,7 @@ func (r *reconciler) syncWebhookReceivers(
 
 	if len(clusterCfg.Spec.WebhookReceivers) == 0 {
 		logger.Debug("ClusterConfig does not define any webhook receiver configurations")
+		status.WebhookReceivers = nil
 		conditions.Delete(status, kargoapi.ConditionTypeReconciling)
 		conditions.Set(status, &metav1.Condition{
 			Type:               kargoapi.ConditionTypeReady,

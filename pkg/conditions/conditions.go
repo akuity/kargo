@@ -2,9 +2,14 @@ package conditions
 
 import (
 	"time"
+	"unicode/utf8"
 
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
+
+// maxConditionMessageLength is the Kubernetes-enforced maximum byte length for
+// a condition message field.
+const maxConditionMessageLength = 32768
 
 // Getter is an interface that allows getting conditions from a (sub)resource.
 type Getter interface {
@@ -60,6 +65,11 @@ func Set(on Setter, conditions ...*metav1.Condition) {
 		if condition == nil {
 			continue
 		}
+
+		// Kubernetes enforces a 32768-byte limit on condition messages. Truncate
+		// to prevent status patch failures when upstream sources (e.g. ArgoCD)
+		// embed large payloads in error messages.
+		condition.Message = truncateMessage(condition.Message)
 
 		// Set ObservedGeneration if applicable
 		if objGeneration != 0 && condition.ObservedGeneration == 0 {
@@ -121,4 +131,20 @@ func Delete(on Setter, conditionType string) {
 // generation.
 func Equal(a, b metav1.Condition) bool {
 	return a.Type == b.Type && a.Status == b.Status && a.Reason == b.Reason && a.Message == b.Message
+}
+
+// truncateMessage truncates msg to maxConditionMessageLength bytes, appending a
+// suffix to indicate truncation. The truncation point is adjusted to avoid
+// splitting a multi-byte UTF-8 character.
+func truncateMessage(msg string) string {
+	if len(msg) <= maxConditionMessageLength {
+		return msg
+	}
+	const suffix = " ... (truncated)"
+	end := maxConditionMessageLength - len(suffix)
+	// Walk back to a valid UTF-8 rune boundary.
+	for end > 0 && !utf8.RuneStart(msg[end]) {
+		end--
+	}
+	return msg[:end] + suffix
 }

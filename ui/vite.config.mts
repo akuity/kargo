@@ -3,7 +3,6 @@ import { theme } from 'antd';
 import { defineConfig } from 'vite';
 import viteCompression from 'vite-plugin-compression';
 import monacoEditorPlugin from 'vite-plugin-monaco-editor';
-import tsConfigPaths from 'vite-tsconfig-paths';
 
 import { token } from './src/config/themeConfig';
 
@@ -20,6 +19,9 @@ export default defineConfig({
   define: {
     __UI_VERSION__: JSON.stringify(UI_VERSION)
   },
+  resolve: {
+    tsconfigPaths: true
+  },
   build: {
     outDir: BUILD_TARGET_PATH,
     sourcemap: false
@@ -33,7 +35,6 @@ export default defineConfig({
     }
   },
   plugins: [
-    tsConfigPaths(),
     viteCompression(),
     react({ exclude: [/\/node_modules\//] }),
     // https://github.com/vdesjs/vite-plugin-monaco-editor/issues/21

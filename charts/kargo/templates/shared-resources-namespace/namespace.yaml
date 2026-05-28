@@ -1,8 +1,9 @@
-{{- if .Values.global.sharedResources.createNamespace }}
+{{- if and .Values.dataPlane.install .Values.global.sharedResources.createNamespace }}
 apiVersion: v1
 kind: Namespace
 metadata:
   name: {{ .Values.global.sharedResources.namespace }}
   labels:
     {{- include "kargo.labels" . | nindent 4 }}
+  {{- include "kargo.annotations" (dict "root" .) | nindent 2 }}
 {{- end }}

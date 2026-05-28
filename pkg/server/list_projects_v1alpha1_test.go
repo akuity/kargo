@@ -103,6 +103,7 @@ func TestListProjects(t *testing.T) {
 						_ context.Context,
 						_ *rest.Config,
 						scheme *runtime.Scheme,
+						_ string,
 					) (client.WithWatch, error) {
 						c := fake.NewClientBuilder().WithScheme(scheme)
 						if len(testCase.objects) > 0 {
@@ -136,10 +137,11 @@ func Test_server_listProjects(t *testing.T) {
 				name: "no Projects exist",
 				assertions: func(t *testing.T, w *httptest.ResponseRecorder, _ client.Client) {
 					require.Equal(t, http.StatusOK, w.Code)
-					list := &kargoapi.ProjectList{}
-					err := json.Unmarshal(w.Body.Bytes(), list)
+					resp := listProjectsResponse{}
+					err := json.Unmarshal(w.Body.Bytes(), &resp)
 					require.NoError(t, err)
-					require.Empty(t, list.Items)
+					require.Empty(t, resp.Items)
+					require.Equal(t, 0, resp.Total)
 				},
 			},
 			{
@@ -150,14 +152,13 @@ func Test_server_listProjects(t *testing.T) {
 				),
 				assertions: func(t *testing.T, w *httptest.ResponseRecorder, _ client.Client) {
 					require.Equal(t, http.StatusOK, w.Code)
-
-					// Examine the Projects in the response
-					projects := &kargoapi.ProjectList{}
-					err := json.Unmarshal(w.Body.Bytes(), projects)
+					resp := listProjectsResponse{}
+					err := json.Unmarshal(w.Body.Bytes(), &resp)
 					require.NoError(t, err)
-					require.Len(t, projects.Items, 2)
-					require.Equal(t, "a-project", projects.Items[0].Name)
-					require.Equal(t, "z-project", projects.Items[1].Name)
+					require.Len(t, resp.Items, 2)
+					require.Equal(t, 2, resp.Total)
+					require.Equal(t, "a-project", resp.Items[0].Name)
+					require.Equal(t, "z-project", resp.Items[1].Name)
 				},
 			},
 			{
@@ -169,10 +170,11 @@ func Test_server_listProjects(t *testing.T) {
 				),
 				assertions: func(t *testing.T, w *httptest.ResponseRecorder, _ client.Client) {
 					require.Equal(t, http.StatusOK, w.Code)
-					projects := &kargoapi.ProjectList{}
-					err := json.Unmarshal(w.Body.Bytes(), projects)
+					resp := listProjectsResponse{}
+					err := json.Unmarshal(w.Body.Bytes(), &resp)
 					require.NoError(t, err)
-					require.Empty(t, projects.Items)
+					require.Empty(t, resp.Items)
+					require.Equal(t, 0, resp.Total)
 				},
 			},
 			{
@@ -194,11 +196,88 @@ func Test_server_listProjects(t *testing.T) {
 				),
 				assertions: func(t *testing.T, w *httptest.ResponseRecorder, _ client.Client) {
 					require.Equal(t, http.StatusOK, w.Code)
-					projects := &kargoapi.ProjectList{}
-					err := json.Unmarshal(w.Body.Bytes(), projects)
+					resp := listProjectsResponse{}
+					err := json.Unmarshal(w.Body.Bytes(), &resp)
 					require.NoError(t, err)
-					require.Len(t, projects.Items, 1)
-					require.Equal(t, "project-a", projects.Items[0].Name)
+					require.Len(t, resp.Items, 1)
+					require.Equal(t, 1, resp.Total)
+					require.Equal(t, "project-a", resp.Items[0].Name)
+				},
+			},
+			{
+				name: "filter narrows by case-insensitive name substring",
+				url:  "/v1beta1/projects?filter=ALPH",
+				clientBuilder: fake.NewClientBuilder().WithObjects(
+					&kargoapi.Project{ObjectMeta: metav1.ObjectMeta{Name: "alpha"}},
+					&kargoapi.Project{ObjectMeta: metav1.ObjectMeta{Name: "beta"}},
+					&kargoapi.Project{ObjectMeta: metav1.ObjectMeta{Name: "alphabet"}},
+				),
+				assertions: func(t *testing.T, w *httptest.ResponseRecorder, _ client.Client) {
+					require.Equal(t, http.StatusOK, w.Code)
+					resp := listProjectsResponse{}
+					err := json.Unmarshal(w.Body.Bytes(), &resp)
+					require.NoError(t, err)
+					require.Len(t, resp.Items, 2)
+					require.Equal(t, 2, resp.Total)
+					require.Equal(t, "alpha", resp.Items[0].Name)
+					require.Equal(t, "alphabet", resp.Items[1].Name)
+				},
+			},
+			{
+				name: "uid restricts to matching Projects",
+				url:  "/v1beta1/projects?uid=uid-a&uid=uid-c",
+				clientBuilder: fake.NewClientBuilder().WithObjects(
+					&kargoapi.Project{ObjectMeta: metav1.ObjectMeta{Name: "alpha", UID: "uid-a"}},
+					&kargoapi.Project{ObjectMeta: metav1.ObjectMeta{Name: "beta", UID: "uid-b"}},
+					&kargoapi.Project{ObjectMeta: metav1.ObjectMeta{Name: "gamma", UID: "uid-c"}},
+				),
+				assertions: func(t *testing.T, w *httptest.ResponseRecorder, _ client.Client) {
+					require.Equal(t, http.StatusOK, w.Code)
+					resp := listProjectsResponse{}
+					err := json.Unmarshal(w.Body.Bytes(), &resp)
+					require.NoError(t, err)
+					require.Len(t, resp.Items, 2)
+					require.Equal(t, 2, resp.Total)
+					require.Equal(t, "alpha", resp.Items[0].Name)
+					require.Equal(t, "gamma", resp.Items[1].Name)
+				},
+			},
+			{
+				name: "pageSize and page paginate after filtering",
+				url:  "/v1beta1/projects?pageSize=2&page=1",
+				clientBuilder: fake.NewClientBuilder().WithObjects(
+					&kargoapi.Project{ObjectMeta: metav1.ObjectMeta{Name: "a"}},
+					&kargoapi.Project{ObjectMeta: metav1.ObjectMeta{Name: "b"}},
+					&kargoapi.Project{ObjectMeta: metav1.ObjectMeta{Name: "c"}},
+					&kargoapi.Project{ObjectMeta: metav1.ObjectMeta{Name: "d"}},
+					&kargoapi.Project{ObjectMeta: metav1.ObjectMeta{Name: "e"}},
+				),
+				assertions: func(t *testing.T, w *httptest.ResponseRecorder, _ client.Client) {
+					require.Equal(t, http.StatusOK, w.Code)
+					resp := listProjectsResponse{}
+					err := json.Unmarshal(w.Body.Bytes(), &resp)
+					require.NoError(t, err)
+					require.Len(t, resp.Items, 2)
+					require.Equal(t, 5, resp.Total)
+					require.Equal(t, "c", resp.Items[0].Name)
+					require.Equal(t, "d", resp.Items[1].Name)
+				},
+			},
+			{
+				name: "page past the end returns empty Items but preserves Total",
+				url:  "/v1beta1/projects?pageSize=2&page=5",
+				clientBuilder: fake.NewClientBuilder().WithObjects(
+					&kargoapi.Project{ObjectMeta: metav1.ObjectMeta{Name: "a"}},
+					&kargoapi.Project{ObjectMeta: metav1.ObjectMeta{Name: "b"}},
+					&kargoapi.Project{ObjectMeta: metav1.ObjectMeta{Name: "c"}},
+				),
+				assertions: func(t *testing.T, w *httptest.ResponseRecorder, _ client.Client) {
+					require.Equal(t, http.StatusOK, w.Code)
+					resp := listProjectsResponse{}
+					err := json.Unmarshal(w.Body.Bytes(), &resp)
+					require.NoError(t, err)
+					require.Empty(t, resp.Items)
+					require.Equal(t, 3, resp.Total)
 				},
 			},
 		},

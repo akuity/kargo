@@ -41,7 +41,7 @@
             "BearerAuth": []
           }
         ],
-        "description": "List all Projects resources. Returns a ProjectList resource.",
+        "description": "List all Projects resources. Supports server-side filtering by\nname substring, by UID, and by namespaces mapped to the\nauthenticated user's ServiceAccounts, plus offset-based\npagination.",
         "produces": [
           "application/json"
         ],
@@ -51,11 +51,47 @@
         ],
         "summary": "List projects",
         "operationId": "ListProjects",
+        "parameters": [
+          {
+            "type": "boolean",
+            "description": "Only return Projects whose namespaces are mapped to the user's ServiceAccounts.",
+            "name": "mine",
+            "in": "query"
+          },
+          {
+            "type": "string",
+            "description": "Case-insensitive substring filter applied to the Project name.",
+            "name": "filter",
+            "in": "query"
+          },
+          {
+            "type": "array",
+            "items": {
+              "type": "string"
+            },
+            "collectionFormat": "csv",
+            "description": "Return only Projects whose UID matches one of the given values.",
+            "name": "uid",
+            "in": "query"
+          },
+          {
+            "type": "integer",
+            "description": "Maximum number of Projects to return. Defaults to all matching Projects.",
+            "name": "pageSize",
+            "in": "query"
+          },
+          {
+            "type": "integer",
+            "description": "Zero-indexed page number used together with pageSize.",
+            "name": "page",
+            "in": "query"
+          }
+        ],
         "responses": {
           "200": {
-            "description": "ProjectList custom resource",
+            "description": "OK",
             "schema": {
-              "$ref": "#/definitions/ProjectList"
+              "$ref": "#/definitions/ListProjectsResponse"
             }
           }
         }
@@ -1118,6 +1154,49 @@
         "responses": {
           "200": {
             "description": "Success"
+          }
+        }
+      }
+    },
+    "/v1beta1/projects/{project}/freight/{freight-name-or-alias}/links": {
+      "get": {
+        "security": [
+          {
+            "BearerAuth": []
+          }
+        ],
+        "description": "Retrieve evaluated deep links for a Freight resource, combining\ncluster-level links from ClusterConfig and project-level links\nfrom ProjectConfig.",
+        "produces": [
+          "application/json"
+        ],
+        "tags": [
+          "Core",
+          "Project-Level"
+        ],
+        "summary": "Retrieve deep links for a Freight resource",
+        "operationId": "GetFreightLinks",
+        "parameters": [
+          {
+            "type": "string",
+            "description": "Project name",
+            "name": "project",
+            "in": "path",
+            "required": true
+          },
+          {
+            "type": "string",
+            "description": "Freight name or alias",
+            "name": "freight-name-or-alias",
+            "in": "path",
+            "required": true
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "schema": {
+              "$ref": "#/definitions/GetFreightLinksResponse"
+            }
           }
         }
       }
@@ -2338,6 +2417,16 @@
             "name": "project",
             "in": "path",
             "required": true
+          },
+          {
+            "type": "array",
+            "items": {
+              "type": "string"
+            },
+            "collectionFormat": "csv",
+            "description": "Warehouse names to filter Stages by",
+            "name": "freightOrigins",
+            "in": "query"
           }
         ],
         "responses": {
@@ -2424,6 +2513,49 @@
         "responses": {
           "204": {
             "description": "Deleted successfully"
+          }
+        }
+      }
+    },
+    "/v1beta1/projects/{project}/stages/{stage}/links": {
+      "get": {
+        "security": [
+          {
+            "BearerAuth": []
+          }
+        ],
+        "description": "Retrieve evaluated deep links for a Stage resource, combining\ncluster-level links from ClusterConfig and project-level links\nfrom ProjectConfig.",
+        "produces": [
+          "application/json"
+        ],
+        "tags": [
+          "Core",
+          "Project-Level"
+        ],
+        "summary": "Retrieve deep links for a Stage resource",
+        "operationId": "GetStageLinks",
+        "parameters": [
+          {
+            "type": "string",
+            "description": "Project name",
+            "name": "project",
+            "in": "path",
+            "required": true
+          },
+          {
+            "type": "string",
+            "description": "Stage name",
+            "name": "stage",
+            "in": "path",
+            "required": true
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "schema": {
+              "$ref": "#/definitions/GetStageLinksResponse"
+            }
           }
         }
       }
@@ -4183,6 +4315,32 @@
         }
       }
     },
+    "/v1beta1/system/controller-heartbeats": {
+      "get": {
+        "security": [
+          {
+            "BearerAuth": []
+          }
+        ],
+        "description": "Get the most recent heartbeat from every controller that has\nreported in. Any controller not represented in the response has\nnever reported a heartbeat and can therefore be assumed by the\ncaller to be dead or nonexistent.",
+        "produces": [
+          "application/json"
+        ],
+        "tags": [
+          "System"
+        ],
+        "summary": "Get controller heartbeats",
+        "operationId": "GetControllerHeartbeats",
+        "responses": {
+          "200": {
+            "description": "OK",
+            "schema": {
+              "$ref": "#/definitions/GetControllerHeartbeatsResponse"
+            }
+          }
+        }
+      }
+    },
     "/v1beta1/system/generic-credentials": {
       "get": {
         "security": [
@@ -4807,6 +4965,56 @@
         }
       }
     },
+    "GetControllerHeartbeatsResponse": {
+      "type": "object",
+      "properties": {
+        "defaultController": {
+          "description": "DefaultController is the name of the default controller. The default\ncontroller is often unnamed, so an empty string is a valid value. This is\nincluded in the response to give clients a canonical identity to associate\nwith Stages that have no explicit `spec.controller`.",
+          "type": "string"
+        },
+        "heartbeats": {
+          "description": "Heartbeats is the most recent heartbeat from every controller that has\nreported in indexed by controller name.",
+          "type": "object",
+          "additionalProperties": {
+            "$ref": "#/definitions/Heartbeat"
+          }
+        }
+      }
+    },
+    "GetFreightLinksResponse": {
+      "type": "object",
+      "properties": {
+        "errors": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        },
+        "links": {
+          "type": "array",
+          "items": {
+            "$ref": "#/definitions/ResolvedLink"
+          }
+        }
+      }
+    },
+    "GetStageLinksResponse": {
+      "type": "object",
+      "properties": {
+        "errors": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        },
+        "links": {
+          "type": "array",
+          "items": {
+            "$ref": "#/definitions/ResolvedLink"
+          }
+        }
+      }
+    },
     "GrantRequest": {
       "type": "object",
       "properties": {
@@ -4821,6 +5029,38 @@
         }
       }
     },
+    "Heartbeat": {
+      "type": "object",
+      "properties": {
+        "controller": {
+          "description": "Controller is the name of the controller as reported in the Lease's\nkargoapi.LabelKeyController label. This may be empty if the controller that\nproduced the heartbeat was unnamed.",
+          "type": "string"
+        },
+        "status": {
+          "description": "Status is point-in-time liveness synthesized from a heartbeat record.",
+          "allOf": [
+            {
+              "$ref": "#/definitions/HeartbeatStatus"
+            }
+          ]
+        },
+        "timestamp": {
+          "description": "Timestamp is the timestamp of the heartbeat. nil when the underlying record\ncarried no parseable timestamp.",
+          "type": "string"
+        }
+      }
+    },
+    "HeartbeatStatus": {
+      "type": "string",
+      "enum": [
+        "Alive",
+        "Dead"
+      ],
+      "x-enum-varnames": [
+        "StatusAlive",
+        "StatusDead"
+      ]
+    },
     "ImageStageMap": {
       "type": "object",
       "properties": {
@@ -4830,6 +5070,20 @@
             "type": "integer",
             "format": "int32"
           }
+        }
+      }
+    },
+    "ListProjectsResponse": {
+      "type": "object",
+      "properties": {
+        "items": {
+          "type": "array",
+          "items": {
+            "$ref": "#/definitions/Project"
+          }
+        },
+        "total": {
+          "type": "integer"
         }
       }
     },
@@ -4950,6 +5204,20 @@
         },
         "skipAuth": {
           "type": "boolean"
+        }
+      }
+    },
+    "ResolvedLink": {
+      "type": "object",
+      "properties": {
+        "description": {
+          "type": "string"
+        },
+        "title": {
+          "type": "string"
+        },
+        "url": {
+          "type": "string"
         }
       }
     },
@@ -6065,6 +6333,15 @@
         }
       }
     },
+    "AutoRollbackConfig": {
+      "type": "object",
+      "properties": {
+        "onFailedPromotions": {
+          "description": "OnFailedPromotions indicates whether a rollback should be triggered\nwhen a promotion to the Stage fails. Failed promotions (as opposed\nto failed verifications) does not necessarily indicate a problem the\nFreight, since promotions might fail due to transient issues with the\nStage itself (network, credential expirations, etc...). This defaults\nto false.",
+          "type": "boolean"
+        }
+      }
+    },
     "AzureWebhookReceiverConfig": {
       "type": "object",
       "properties": {
@@ -6173,6 +6450,13 @@
     "ClusterConfigSpec": {
       "type": "object",
       "properties": {
+        "freightLinks": {
+          "description": "FreightLinks defines deep links shown when viewing any Freight resource\nacross all projects in the cluster. Project-level FreightLinks defined\nin ProjectConfig are shown in addition to these.\n\n+optional",
+          "type": "array",
+          "items": {
+            "$ref": "#/definitions/DeepLink"
+          }
+        },
         "gitClient": {
           "description": "GitClient describes cluster-level configuration for Kargo's Git client,\nincluding committer identity and an optional signing key. If set, these\nvalues take precedence over any configuration provided at install time\nvia the Helm chart.\n+optional",
           "allOf": [
@@ -6180,6 +6464,13 @@
               "$ref": "#/definitions/GitClientConfig"
             }
           ]
+        },
+        "stageLinks": {
+          "description": "StageLinks defines deep links shown when viewing any Stage resource\nacross all projects in the cluster. Project-level StageLinks defined in\nProjectConfig are shown in addition to these.\n\n+optional",
+          "type": "array",
+          "items": {
+            "$ref": "#/definitions/DeepLink"
+          }
         },
         "webhookReceivers": {
           "description": "WebhookReceivers describes cluster-scoped webhook receivers used for\nprocessing events from various external platforms",
@@ -6271,6 +6562,27 @@
       "properties": {
         "since": {
           "description": "Since is the time at which the Stage most recently started using the\nFreight. This can be used to calculate how long the Freight has been in use\nby the Stage.",
+          "type": "string"
+        }
+      }
+    },
+    "DeepLink": {
+      "type": "object",
+      "properties": {
+        "description": {
+          "description": "Description is an optional human-readable summary shown alongside the\nlink.\n\n+optional",
+          "type": "string"
+        },
+        "if": {
+          "description": "If is an optional expression condition. When set, the link is only shown\nwhen the expression evaluates to true.\n\n+optional",
+          "type": "string"
+        },
+        "title": {
+          "description": "Title is the display label for the link.\n\n+kubebuilder:validation:MinLength=1",
+          "type": "string"
+        },
+        "url": {
+          "description": "URL is an expression that resolves to the link's href.\n\n+kubebuilder:validation:MinLength=1",
           "type": "string"
         }
       }
@@ -7059,11 +7371,25 @@
     "ProjectConfigSpec": {
       "type": "object",
       "properties": {
+        "freightLinks": {
+          "description": "FreightLinks defines deep links shown when viewing Freight resources\nwithin this project. These are shown in addition to any cluster-level\nFreightLinks defined in ClusterConfig.\n\n+optional",
+          "type": "array",
+          "items": {
+            "$ref": "#/definitions/DeepLink"
+          }
+        },
         "promotionPolicies": {
           "description": "PromotionPolicies defines policies governing the promotion of Freight to\nspecific Stages within the Project.",
           "type": "array",
           "items": {
             "$ref": "#/definitions/PromotionPolicy"
+          }
+        },
+        "stageLinks": {
+          "description": "StageLinks defines deep links shown when viewing Stage resources within\nthis project. These are shown in addition to any cluster-level\nStageLinks defined in ClusterConfig.\n\n+optional",
+          "type": "array",
+          "items": {
+            "$ref": "#/definitions/DeepLink"
           }
         },
         "webhookReceivers": {
@@ -7099,28 +7425,6 @@
           "items": {
             "$ref": "#/definitions/WebhookReceiverDetails"
           }
-        }
-      }
-    },
-    "ProjectList": {
-      "type": "object",
-      "properties": {
-        "apiVersion": {
-          "description": "APIVersion defines the versioned schema of this representation of an object.\nServers should convert recognized schemas to the latest internal value, and\nmay reject unrecognized values.\nMore info: https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#resources\n+optional",
-          "type": "string"
-        },
-        "items": {
-          "type": "array",
-          "items": {
-            "$ref": "#/definitions/Project"
-          }
-        },
-        "kind": {
-          "description": "Kind is a string value representing the REST resource this object represents.\nServers may infer this from the endpoint the client submits requests to.\nCannot be updated.\nIn CamelCase.\nMore info: https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#types-kinds\n+optional",
-          "type": "string"
-        },
-        "metadata": {
-          "$ref": "#/definitions/V1ListMeta"
         }
       }
     },
@@ -7228,6 +7532,14 @@
         "autoPromotionEnabled": {
           "description": "AutoPromotionEnabled indicates whether new Freight can automatically be\npromoted into the Stage referenced by the Stage field. Note: There are may\nbe other conditions also required for an auto-promotion to occur. This\nfield defaults to false, but is commonly set to true for Stages that\nsubscribe to Warehouses instead of other, upstream Stages. This allows\nusers to define Stages that are automatically updated as soon as new\nartifacts are detected.",
           "type": "boolean"
+        },
+        "autoRollback": {
+          "description": "AutoRollback describes the conditions under which this Stage should\nautomatically roll back to the last known-good (verified) Freight. When\nnil, auto-rollback is disabled.\n\nKargo Enterprise only: This field is ignored in Kargo OSS.",
+          "allOf": [
+            {
+              "$ref": "#/definitions/AutoRollbackConfig"
+            }
+          ]
         },
         "stage": {
           "description": "Stage is the name of the Stage to which this policy applies.\n\nDeprecated: Use StageSelector instead.\n\n+kubebuilder:validation:Pattern=^[a-z0-9]([-a-z0-9]*[a-z0-9])?(\\.[a-z0-9]([-a-z0-9]*[a-z0-9])?)*$",

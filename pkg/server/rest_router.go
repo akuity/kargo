@@ -97,6 +97,9 @@ func (s *server) setupRESTRouter(ctx context.Context) *gin.Engine {
 			system.POST("/cluster-config/refresh", s.refreshClusterConfig)
 			system.DELETE("/cluster-config", s.deleteClusterConfig)
 
+			// Controller heartbeats
+			system.GET("/controller-heartbeats", s.getControllerHeartbeats)
+
 			// Roles
 			system.GET("/roles", s.listSystemRoles)
 			system.GET("/roles/:role", s.getSystemRole)
@@ -191,6 +194,7 @@ func (s *server) setupRESTRouter(ctx context.Context) *gin.Engine {
 			// Stages
 			project.GET("/stages", s.listStages)
 			project.GET("/stages/:stage", s.getStage)
+			project.GET("/stages/:stage/links", s.getStageLinks)
 			project.POST("/stages/:stage/refresh", s.refreshStage)
 			project.DELETE("/stages/:stage", s.deleteStage)
 			// Stage Promotions
@@ -209,6 +213,7 @@ func (s *server) setupRESTRouter(ctx context.Context) *gin.Engine {
 			// Freight
 			project.GET("/freight", s.queryFreight)
 			project.GET("/freight/:freight-name-or-alias", s.getFreight)
+			project.GET("/freight/:freight-name-or-alias/links", s.getFreightLinks)
 			project.POST("/freight/:freight-name-or-alias/approve", s.approveFreight)
 			project.PATCH("/freight/:freight-name-or-alias/alias", s.patchFreightAliasHandler)
 			project.DELETE("/freight/:freight-name-or-alias", s.deleteFreight)

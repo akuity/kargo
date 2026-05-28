@@ -284,7 +284,7 @@ export const Promotion = (props: PromotionProps) => {
       open={props.visible}
       onClose={props.hide}
       size='large'
-      width={'1224px'}
+      width={'1400px'}
       title={`Promotion - ${props.promotionId}`}
     >
       {getPromotionQuery.isLoading && <LoadingState />}

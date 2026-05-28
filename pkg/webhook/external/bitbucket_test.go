@@ -8,6 +8,7 @@ import (
 	"testing"
 
 	"github.com/stretchr/testify/require"
+	apiextensionsv1 "k8s.io/apiextensions-apiserver/pkg/apis/apiextensions/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"
@@ -22,6 +23,57 @@ func TestBitbucketHandler(t *testing.T) {
 
 	const testProjectName = "fake-project"
 
+	const prFulfilledEventRequestBody = `
+	{
+		"pullrequest": {
+			"id": 42,
+			"links": {
+				"html": {
+					"href": "https://bitbucket.org/example/repo/pull-requests/42"
+				}
+			}
+		},
+		"repository": {
+			"links": {
+				"html": {
+					"href": "https://bitbucket.org/example/repo"
+				}
+			}
+		}
+	}`
+
+	const prMergedEventRequestBody = `
+	{
+		"pullRequest": {
+			"id": 42,
+			"links": {
+				"self": [
+					{
+						"href": "https://bitbucket.example.com/projects/EXAMPLE/repos/repo/pull-requests/42"
+					}
+				]
+			},
+			"fromRef": {
+				"repository": {
+					"links": {
+						"clone": [
+							{
+								"name": "http",
+								"href": "https://bitbucket.example.com/scm/example/repo.git"
+							},
+							{
+								"name": "ssh",
+								"href": "ssh://git@bitbucket.example.com:7999/example/repo.git"
+							}
+						]
+					}
+				}
+			}
+		}
+	}`
+
+	// pushEventRequestBody uses the real Bitbucket Cloud format: bare branch
+	// names without a refs/heads/ prefix.
 	const pushEventRequestBody = `
 	{
 		"actor": {
@@ -29,7 +81,25 @@ func TestBitbucketHandler(t *testing.T) {
 			"emailAddress": "admin@example.com"
 		},
 		"push": {
-			"changes": [{"new": {"name": "refs/heads/main"}}]
+			"changes": [{"new": {"type": "branch", "name": "main"}}]
+		},
+		"repository": {
+			"links": {
+				"html": {
+					"href": "https://bitbucket.org/example/repo"
+				}
+			}
+		}
+	}`
+
+	const tagPushEventRequestBody = `
+	{
+		"actor": {
+			"name": "admin",
+			"emailAddress": "admin@example.com"
+		},
+		"push": {
+			"changes": [{"new": {"type": "tag", "name": "v1.0.0"}}]
 		},
 		"repository": {
 			"links": {
@@ -144,10 +214,7 @@ func TestBitbucketHandler(t *testing.T) {
 			},
 		},
 		{
-			name: "no ref match",
-			// This event would prompt the Warehouse to refresh if not for the ref in
-			// the event being for the main branch whilst the subscription is
-			// interested in commits from a different branch.
+			name:       "branch qualifier does not match ref",
 			secretData: testSecretData,
 			client: fake.NewClientBuilder().WithScheme(testScheme).WithObjects(
 				&kargoapi.Warehouse{
@@ -186,7 +253,7 @@ func TestBitbucketHandler(t *testing.T) {
 			},
 		},
 		{
-			name:       "warehouse refreshed",
+			name:       "branch qualifier matches ref",
 			secretData: testSecretData,
 			client: fake.NewClientBuilder().WithScheme(testScheme).WithObjects(
 				&kargoapi.Warehouse{
@@ -221,6 +288,75 @@ func TestBitbucketHandler(t *testing.T) {
 					`{"msg":"refreshed 1 warehouse(s)"}`,
 					rr.Body.String(),
 				)
+			},
+		},
+		{
+			name:       "tag qualifier matches ref",
+			secretData: testSecretData,
+			client: fake.NewClientBuilder().WithScheme(testScheme).WithObjects(
+				&kargoapi.Warehouse{
+					ObjectMeta: metav1.ObjectMeta{
+						Namespace: testProjectName,
+						Name:      "fake-warehouse",
+					},
+					Spec: kargoapi.WarehouseSpec{
+						InternalSubscriptions: []kargoapi.RepoSubscription{{
+							Git: &kargoapi.GitSubscription{
+								RepoURL:                 "https://bitbucket.org/example/repo",
+								CommitSelectionStrategy: kargoapi.CommitSelectionStrategyNewestTag,
+							},
+						}},
+					},
+				},
+			).WithIndex(
+				&kargoapi.Warehouse{},
+				indexer.WarehousesBySubscribedURLsField,
+				indexer.WarehousesBySubscribedURLs,
+			).Build(),
+			req: func() *http.Request {
+				bodyBuf := bytes.NewBuffer([]byte(tagPushEventRequestBody))
+				req := httptest.NewRequest(http.MethodPost, testURL, bodyBuf)
+				req.Header.Set(bitbucketEventHeader, bitbucketPushEvent)
+				req.Header.Set(bitbucketSignatureHeader, sign(bodyBuf.Bytes()))
+				return req
+			},
+			assertions: func(t *testing.T, rr *httptest.ResponseRecorder) {
+				require.Equal(t, http.StatusOK, rr.Code)
+				require.JSONEq(t, `{"msg":"refreshed 1 warehouse(s)"}`, rr.Body.String())
+			},
+		},
+		{
+			name:       "tag qualifier does not match ref",
+			secretData: testSecretData,
+			client: fake.NewClientBuilder().WithScheme(testScheme).WithObjects(
+				&kargoapi.Warehouse{
+					ObjectMeta: metav1.ObjectMeta{
+						Namespace: testProjectName,
+						Name:      "fake-warehouse",
+					},
+					Spec: kargoapi.WarehouseSpec{
+						InternalSubscriptions: []kargoapi.RepoSubscription{{
+							Git: &kargoapi.GitSubscription{
+								RepoURL: "https://bitbucket.org/example/repo",
+							},
+						}},
+					},
+				},
+			).WithIndex(
+				&kargoapi.Warehouse{},
+				indexer.WarehousesBySubscribedURLsField,
+				indexer.WarehousesBySubscribedURLs,
+			).Build(),
+			req: func() *http.Request {
+				bodyBuf := bytes.NewBuffer([]byte(tagPushEventRequestBody))
+				req := httptest.NewRequest(http.MethodPost, testURL, bodyBuf)
+				req.Header.Set(bitbucketEventHeader, bitbucketPushEvent)
+				req.Header.Set(bitbucketSignatureHeader, sign(bodyBuf.Bytes()))
+				return req
+			},
+			assertions: func(t *testing.T, rr *httptest.ResponseRecorder) {
+				require.Equal(t, http.StatusOK, rr.Code)
+				require.JSONEq(t, `{"msg":"refreshed 0 warehouse(s)"}`, rr.Body.String())
 			},
 		},
 		{
@@ -259,6 +395,242 @@ func TestBitbucketHandler(t *testing.T) {
 					`{"msg":"refreshed 1 warehouse(s)"}`,
 					rr.Body.String(),
 				)
+			},
+		},
+		{
+			name:       "pullrequest:fulfilled refreshes matching Promotion",
+			secretData: testSecretData,
+			client: fake.NewClientBuilder().WithScheme(testScheme).WithObjects(
+				&kargoapi.Promotion{
+					ObjectMeta: metav1.ObjectMeta{
+						Namespace: testProjectName,
+						Name:      "promo-wait-for-pr",
+					},
+					Spec: kargoapi.PromotionSpec{
+						Stage: "test-stage",
+						Steps: []kargoapi.PromotionStep{{
+							Uses: "git-wait-for-pr",
+							As:   "wait-pr",
+						}},
+					},
+					Status: kargoapi.PromotionStatus{
+						Phase:       kargoapi.PromotionPhaseRunning,
+						CurrentStep: 0,
+						State: &apiextensionsv1.JSON{
+							Raw: []byte(`{
+								"wait-pr": {
+									"pr": {
+										"url": "https://bitbucket.org/example/repo/pull-requests/42",
+										"open": true,
+										"merged": false
+									}
+								}
+							}`),
+						},
+					},
+				},
+			).WithIndex(
+				&kargoapi.Promotion{},
+				indexer.RunningPromotionsByPullRequestURLField,
+				indexer.RunningPromotionsByPullRequestURL,
+			).Build(),
+			req: func() *http.Request {
+				bodyBuf := bytes.NewBuffer([]byte(prFulfilledEventRequestBody))
+				req := httptest.NewRequest(http.MethodPost, testURL, bodyBuf)
+				req.Header.Set(bitbucketEventHeader, bitbucketPRFulfilledEvent)
+				req.Header.Set(bitbucketSignatureHeader, sign(bodyBuf.Bytes()))
+				return req
+			},
+			assertions: func(t *testing.T, rr *httptest.ResponseRecorder) {
+				require.Equal(t, http.StatusOK, rr.Code)
+				require.JSONEq(t, `{"msg":"refreshed 1 promotion(s)"}`, rr.Body.String())
+			},
+		},
+		{
+			name:       "pullrequest:rejected refreshes matching Promotion",
+			secretData: testSecretData,
+			client: fake.NewClientBuilder().WithScheme(testScheme).WithObjects(
+				&kargoapi.Promotion{
+					ObjectMeta: metav1.ObjectMeta{
+						Namespace: testProjectName,
+						Name:      "promo-wait-for-pr",
+					},
+					Spec: kargoapi.PromotionSpec{
+						Stage: "test-stage",
+						Steps: []kargoapi.PromotionStep{{
+							Uses: "git-wait-for-pr",
+							As:   "wait-pr",
+						}},
+					},
+					Status: kargoapi.PromotionStatus{
+						Phase:       kargoapi.PromotionPhaseRunning,
+						CurrentStep: 0,
+						State: &apiextensionsv1.JSON{
+							Raw: []byte(`{
+								"wait-pr": {
+									"pr": {
+										"url": "https://bitbucket.org/example/repo/pull-requests/42",
+										"open": true,
+										"merged": false
+									}
+								}
+							}`),
+						},
+					},
+				},
+			).WithIndex(
+				&kargoapi.Promotion{},
+				indexer.RunningPromotionsByPullRequestURLField,
+				indexer.RunningPromotionsByPullRequestURL,
+			).Build(),
+			req: func() *http.Request {
+				bodyBuf := bytes.NewBuffer([]byte(prFulfilledEventRequestBody))
+				req := httptest.NewRequest(http.MethodPost, testURL, bodyBuf)
+				req.Header.Set(bitbucketEventHeader, bitbucketPRRejectedEvent)
+				req.Header.Set(bitbucketSignatureHeader, sign(bodyBuf.Bytes()))
+				return req
+			},
+			assertions: func(t *testing.T, rr *httptest.ResponseRecorder) {
+				require.Equal(t, http.StatusOK, rr.Code)
+				require.JSONEq(t, `{"msg":"refreshed 1 promotion(s)"}`, rr.Body.String())
+			},
+		},
+		{
+			name:       "pullrequest:fulfilled with no matching Promotions",
+			secretData: testSecretData,
+			client: fake.NewClientBuilder().WithScheme(testScheme).WithIndex(
+				&kargoapi.Promotion{},
+				indexer.RunningPromotionsByPullRequestURLField,
+				indexer.RunningPromotionsByPullRequestURL,
+			).Build(),
+			req: func() *http.Request {
+				bodyBuf := bytes.NewBuffer([]byte(prFulfilledEventRequestBody))
+				req := httptest.NewRequest(http.MethodPost, testURL, bodyBuf)
+				req.Header.Set(bitbucketEventHeader, bitbucketPRFulfilledEvent)
+				req.Header.Set(bitbucketSignatureHeader, sign(bodyBuf.Bytes()))
+				return req
+			},
+			assertions: func(t *testing.T, rr *httptest.ResponseRecorder) {
+				require.Equal(t, http.StatusOK, rr.Code)
+				require.JSONEq(t, `{"msg":"refreshed 0 promotion(s)"}`, rr.Body.String())
+			},
+		},
+		{
+			name:       "pr:merged refreshes matching Promotion",
+			secretData: testSecretData,
+			client: fake.NewClientBuilder().WithScheme(testScheme).WithObjects(
+				&kargoapi.Promotion{
+					ObjectMeta: metav1.ObjectMeta{
+						Namespace: testProjectName,
+						Name:      "promo-wait-for-pr",
+					},
+					Spec: kargoapi.PromotionSpec{
+						Stage: "test-stage",
+						Steps: []kargoapi.PromotionStep{{
+							Uses: "git-wait-for-pr",
+							As:   "wait-pr",
+						}},
+					},
+					Status: kargoapi.PromotionStatus{
+						Phase:       kargoapi.PromotionPhaseRunning,
+						CurrentStep: 0,
+						State: &apiextensionsv1.JSON{
+							Raw: []byte(`{
+								"wait-pr": {
+									"pr": {
+										"url": "https://bitbucket.example.com/projects/EXAMPLE/repos/repo/pull-requests/42",
+										"open": true,
+										"merged": false
+									}
+								}
+							}`),
+						},
+					},
+				},
+			).WithIndex(
+				&kargoapi.Promotion{},
+				indexer.RunningPromotionsByPullRequestURLField,
+				indexer.RunningPromotionsByPullRequestURL,
+			).Build(),
+			req: func() *http.Request {
+				bodyBuf := bytes.NewBuffer([]byte(prMergedEventRequestBody))
+				req := httptest.NewRequest(http.MethodPost, testURL, bodyBuf)
+				req.Header.Set(bitbucketEventHeader, bitbucketPRMergedEvent)
+				req.Header.Set(bitbucketSignatureHeader, sign(bodyBuf.Bytes()))
+				return req
+			},
+			assertions: func(t *testing.T, rr *httptest.ResponseRecorder) {
+				require.Equal(t, http.StatusOK, rr.Code)
+				require.JSONEq(t, `{"msg":"refreshed 1 promotion(s)"}`, rr.Body.String())
+			},
+		},
+		{
+			name:       "pr:declined refreshes matching Promotion",
+			secretData: testSecretData,
+			client: fake.NewClientBuilder().WithScheme(testScheme).WithObjects(
+				&kargoapi.Promotion{
+					ObjectMeta: metav1.ObjectMeta{
+						Namespace: testProjectName,
+						Name:      "promo-wait-for-pr",
+					},
+					Spec: kargoapi.PromotionSpec{
+						Stage: "test-stage",
+						Steps: []kargoapi.PromotionStep{{
+							Uses: "git-wait-for-pr",
+							As:   "wait-pr",
+						}},
+					},
+					Status: kargoapi.PromotionStatus{
+						Phase:       kargoapi.PromotionPhaseRunning,
+						CurrentStep: 0,
+						State: &apiextensionsv1.JSON{
+							Raw: []byte(`{
+								"wait-pr": {
+									"pr": {
+										"url": "https://bitbucket.example.com/projects/EXAMPLE/repos/repo/pull-requests/42",
+										"open": true,
+										"merged": false
+									}
+								}
+							}`),
+						},
+					},
+				},
+			).WithIndex(
+				&kargoapi.Promotion{},
+				indexer.RunningPromotionsByPullRequestURLField,
+				indexer.RunningPromotionsByPullRequestURL,
+			).Build(),
+			req: func() *http.Request {
+				bodyBuf := bytes.NewBuffer([]byte(prMergedEventRequestBody))
+				req := httptest.NewRequest(http.MethodPost, testURL, bodyBuf)
+				req.Header.Set(bitbucketEventHeader, bitbucketPRDeclinedEvent)
+				req.Header.Set(bitbucketSignatureHeader, sign(bodyBuf.Bytes()))
+				return req
+			},
+			assertions: func(t *testing.T, rr *httptest.ResponseRecorder) {
+				require.Equal(t, http.StatusOK, rr.Code)
+				require.JSONEq(t, `{"msg":"refreshed 1 promotion(s)"}`, rr.Body.String())
+			},
+		},
+		{
+			name:       "pr:merged with no matching Promotions",
+			secretData: testSecretData,
+			client: fake.NewClientBuilder().WithScheme(testScheme).WithIndex(
+				&kargoapi.Promotion{},
+				indexer.RunningPromotionsByPullRequestURLField,
+				indexer.RunningPromotionsByPullRequestURL,
+			).Build(),
+			req: func() *http.Request {
+				bodyBuf := bytes.NewBuffer([]byte(prMergedEventRequestBody))
+				req := httptest.NewRequest(http.MethodPost, testURL, bodyBuf)
+				req.Header.Set(bitbucketEventHeader, bitbucketPRMergedEvent)
+				req.Header.Set(bitbucketSignatureHeader, sign(bodyBuf.Bytes()))
+				return req
+			},
+			assertions: func(t *testing.T, rr *httptest.ResponseRecorder) {
+				require.Equal(t, http.StatusOK, rr.Code)
+				require.JSONEq(t, `{"msg":"refreshed 0 promotion(s)"}`, rr.Body.String())
 			},
 		},
 		{

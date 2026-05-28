@@ -1,10 +1,10 @@
-import { useMutation } from '@connectrpc/connect-query';
 import { zodResolver } from '@hookform/resolvers/zod';
+import { useMutation } from '@tanstack/react-query';
 import { Button, Input } from 'antd';
 import { useForm } from 'react-hook-form';
 import { z } from 'zod';
 
-import { adminLogin } from '@ui/gen/api/service/v1alpha1/service-KargoService_connectquery';
+import { adminLogin } from '@ui/gen/api/v2/system/system';
 import { zodValidators } from '@ui/utils/validators';
 
 import { FieldContainer } from '../common/form/field-container';
@@ -17,8 +17,14 @@ const formSchema = z.object({
 
 export const AdminLogin = () => {
   const { login } = useAuthContext();
-  const { mutate, isPending } = useMutation(adminLogin, {
-    onSuccess: (response) => login(response.idToken)
+  const { mutate, isPending } = useMutation({
+    mutationFn: (password: string) =>
+      adminLogin({ headers: { Authorization: `Bearer ${password}` } }),
+    onSuccess: (response) => {
+      if (response.data?.idToken) {
+        login(response.data.idToken);
+      }
+    }
   });
 
   const { control, handleSubmit } = useForm({
@@ -29,7 +35,7 @@ export const AdminLogin = () => {
   });
 
   const onSubmit = handleSubmit((values) => {
-    mutate(values);
+    mutate(values.password);
   });
 
   return (

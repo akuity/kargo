@@ -311,6 +311,7 @@ func TestRefreshResource(t *testing.T) {
 						_ context.Context,
 						_ *rest.Config,
 						_ *runtime.Scheme,
+						_ string,
 					) (client.WithWatch, error) {
 						return ts.kClient, nil
 					},

@@ -80,6 +80,23 @@ func TestConfigFromEnv(t *testing.T) {
 				)
 			},
 		},
+		"external webhooks server username is populated": {
+			envs: map[string]string{
+				"KARGO_NAMESPACE":                   "kargo",
+				"EXTERNAL_WEBHOOKS_SERVER_USERNAME": "system:serviceaccount:kargo:kargo-external-webhooks-server",
+			},
+			assertFn: func(t *testing.T, f func() Config) {
+				var cfg Config
+				require.NotPanics(t, func() {
+					cfg = f()
+				})
+				require.Equal(
+					t,
+					"system:serviceaccount:kargo:kargo-external-webhooks-server",
+					cfg.ExternalWebhooksServerUsername,
+				)
+			},
+		},
 	}
 	for name, tc := range testCases {
 		t.Run(name, func(t *testing.T) {

@@ -199,6 +199,20 @@ message AutoPromotionOptions {
   optional string selectionPolicy = 1;
 }
 
+// AutoRollbackConfig describes the conditions under which a Stage should
+// automatically roll back to the last known-good (verified) Freight.
+// Rollback on failed verifications is always enabled when this config is
+// present. Additional triggers may be enabled via the fields below.
+message AutoRollbackConfig {
+  // OnFailedPromotions indicates whether a rollback should be triggered
+  // when a promotion to the Stage fails. Failed promotions (as opposed
+  // to failed verifications) does not necessarily indicate a problem the
+  // Freight, since promotions might fail due to transient issues with the
+  // Stage itself (network, credential expirations, etc...). This defaults
+  // to false.
+  optional bool onFailedPromotions = 1;
+}
+
 // AzureWebhookReceiverConfig describes a webhook receiver that is compatible
 // with Azure Container Registry (ACR) and Azure DevOps payloads.
 message AzureWebhookReceiverConfig {
@@ -351,6 +365,20 @@ message ClusterConfigSpec {
   // via the Helm chart.
   // +optional
   optional GitClientConfig gitClient = 2;
+
+  // FreightLinks defines deep links shown when viewing any Freight resource
+  // across all projects in the cluster. Project-level FreightLinks defined
+  // in ProjectConfig are shown in addition to these.
+  //
+  // +optional
+  repeated DeepLink freightLinks = 3;
+
+  // StageLinks defines deep links shown when viewing any Stage resource
+  // across all projects in the cluster. Project-level StageLinks defined in
+  // ProjectConfig are shown in addition to these.
+  //
+  // +optional
+  repeated DeepLink stageLinks = 4;
 }
 
 // ClusterConfigStatus describes the current status of a ClusterConfig.
@@ -401,6 +429,34 @@ message CurrentStage {
   // Freight. This can be used to calculate how long the Freight has been in use
   // by the Stage.
   optional .k8s.io.apimachinery.pkg.apis.meta.v1.Time since = 1;
+}
+
+// DeepLink defines a configurable external link that is rendered in the UI
+// when viewing a Freight or Stage resource. The URL is an expression evaluated
+// against the resource. The optional If field is an expression condition;
+// when set, the link is only shown when the expression evaluates to true.
+message DeepLink {
+  // Title is the display label for the link.
+  //
+  // +kubebuilder:validation:MinLength=1
+  optional string title = 1;
+
+  // URL is an expression that resolves to the link's href.
+  //
+  // +kubebuilder:validation:MinLength=1
+  optional string url = 2;
+
+  // Description is an optional human-readable summary shown alongside the
+  // link.
+  //
+  // +optional
+  optional string description = 3;
+
+  // If is an optional expression condition. When set, the link is only shown
+  // when the expression evaluates to true.
+  //
+  // +optional
+  optional string if = 4;
 }
 
 // DiscoveredArtifacts holds the artifacts discovered by the Warehouse for its
@@ -1260,6 +1316,20 @@ message ProjectConfigSpec {
   // WebhookReceivers describes Project-specific webhook receivers used for
   // processing events from various external platforms
   repeated WebhookReceiverConfig webhookReceivers = 2;
+
+  // FreightLinks defines deep links shown when viewing Freight resources
+  // within this project. These are shown in addition to any cluster-level
+  // FreightLinks defined in ClusterConfig.
+  //
+  // +optional
+  repeated DeepLink freightLinks = 3;
+
+  // StageLinks defines deep links shown when viewing Stage resources within
+  // this project. These are shown in addition to any cluster-level
+  // StageLinks defined in ClusterConfig.
+  //
+  // +optional
+  repeated DeepLink stageLinks = 4;
 }
 
 // ProjectConfigStatus describes the current status of a ProjectConfig.
@@ -1368,6 +1438,13 @@ message PromotionPolicy {
   // users to define Stages that are automatically updated as soon as new
   // artifacts are detected.
   optional bool autoPromotionEnabled = 2;
+
+  // AutoRollback describes the conditions under which this Stage should
+  // automatically roll back to the last known-good (verified) Freight. When
+  // nil, auto-rollback is disabled.
+  //
+  // Kargo Enterprise only: This field is ignored in Kargo OSS.
+  optional AutoRollbackConfig autoRollback = 4;
 }
 
 // PromotionPolicySelector is a selector that matches the resource to which

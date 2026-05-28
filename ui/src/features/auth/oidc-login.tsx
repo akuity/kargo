@@ -16,7 +16,8 @@ import {
 import React from 'react';
 import { useLocation } from 'react-router-dom';
 
-import { OIDCConfig } from '@ui/gen/api/service/v1alpha1/service_pb';
+import { isSafeRedirectPath } from '@ui/config/auth';
+import { OIDCConfig } from '@ui/gen/api/v2/models';
 
 import { useAuthContext } from './context/use-auth-context';
 import {
@@ -40,7 +41,7 @@ export const OIDCLogin = ({ oidcConfig }: Props) => {
 
   const issuerUrl = React.useMemo(() => {
     try {
-      return new URL(oidcConfig.issuerUrl);
+      return oidcConfig.issuerUrl ? new URL(oidcConfig.issuerUrl) : undefined;
     } catch (_) {
       notification.error({
         message: 'Invalid issuerURL',
@@ -51,7 +52,7 @@ export const OIDCLogin = ({ oidcConfig }: Props) => {
 
   const client = React.useMemo(
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    () => ({ client_id: oidcConfig.clientId, token_endpoint_auth_method: 'none' as any }),
+    () => ({ client_id: oidcConfig.clientId ?? '', token_endpoint_auth_method: 'none' as any }),
     [oidcConfig]
   );
 
@@ -151,7 +152,7 @@ export const OIDCLogin = ({ oidcConfig }: Props) => {
         if (platformRedirect) {
           const redirectTo = new URLSearchParams(platformRedirect).get('redirectTo');
 
-          if (redirectTo) {
+          if (isSafeRedirectPath(redirectTo)) {
             window.location.replace(window.location.origin + redirectTo);
           }
         }

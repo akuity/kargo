@@ -1,8 +1,10 @@
 package conditions
 
 import (
+	"strings"
 	"testing"
 	"time"
+	"unicode/utf8"
 
 	"github.com/stretchr/testify/require"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -498,6 +500,23 @@ func TestSet(t *testing.T) {
 	}
 }
 
+func TestSet_TruncatesLongMessage(t *testing.T) {
+	t.Parallel()
+
+	longMsg := string(make([]byte, maxConditionMessageLength+100))
+	setter := &mockSetter{}
+	Set(setter, &metav1.Condition{
+		Type:    "Test",
+		Status:  metav1.ConditionTrue,
+		Reason:  "Reason",
+		Message: longMsg,
+	})
+
+	conds := setter.GetConditions()
+	require.Len(t, conds, 1)
+	require.LessOrEqual(t, len(conds[0].Message), maxConditionMessageLength)
+}
+
 func TestDelete(t *testing.T) {
 	const (
 		mockType1 = "MockType1"
@@ -729,6 +748,59 @@ func TestEqual(t *testing.T) {
 		t.Run(tt.name, func(t *testing.T) {
 			got := Equal(tt.a, tt.b)
 			require.Equal(t, tt.want, got)
+		})
+	}
+}
+
+func TestTruncateMessage(t *testing.T) {
+	t.Parallel()
+
+	testCases := []struct {
+		name   string
+		input  string
+		assert func(*testing.T, string)
+	}{
+		{
+			name:  "short message unchanged",
+			input: "short",
+			assert: func(t *testing.T, got string) {
+				require.Equal(t, "short", got)
+			},
+		},
+		{
+			name:  "exactly at limit unchanged",
+			input: string(make([]byte, maxConditionMessageLength)),
+			assert: func(t *testing.T, got string) {
+				require.Equal(t, maxConditionMessageLength, len(got))
+			},
+		},
+		{
+			name:  "over limit gets truncated",
+			input: string(make([]byte, maxConditionMessageLength+1)),
+			assert: func(t *testing.T, got string) {
+				require.LessOrEqual(t, len(got), maxConditionMessageLength)
+				require.Contains(t, got, "(truncated)")
+			},
+		},
+		{
+			name: "multi-byte UTF-8 not split",
+			// The suffix " ... (truncated)" is 16 bytes, so the cut index is
+			// maxConditionMessageLength-16 = 32752. Place é (UTF-8: 0xC3 0xA9)
+			// starting at index 32751 so its continuation byte (0xA9) lands
+			// exactly at the cut point, forcing the walk-back to trigger.
+			input: string(make([]byte, maxConditionMessageLength-len(" ... (truncated)")-1)) +
+				strings.Repeat("é", 20),
+			assert: func(t *testing.T, got string) {
+				require.LessOrEqual(t, len(got), maxConditionMessageLength)
+				require.Contains(t, got, "(truncated)")
+				require.True(t, utf8.ValidString(got))
+			},
+		},
+	}
+	for _, tc := range testCases {
+		t.Run(tc.name, func(t *testing.T) {
+			t.Parallel()
+			tc.assert(t, truncateMessage(tc.input))
 		})
 	}
 }

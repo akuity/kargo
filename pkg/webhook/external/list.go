@@ -56,6 +56,12 @@ func (g *genericWebhookReceiver) listTargetObjects(
 			return nil, fmt.Errorf("error listing %s targets: %w", targetSelectionCriteria.Kind, err)
 		}
 		objects = itemsToObjects(warehouses.Items)
+	case kargoapi.GenericWebhookTargetKindPromotion:
+		promotions := new(kargoapi.PromotionList)
+		if err = g.client.List(ctx, promotions, listOpts...); err != nil {
+			return nil, fmt.Errorf("error listing %s targets: %w", targetSelectionCriteria.Kind, err)
+		}
+		objects = itemsToObjects(promotions.Items)
 	default:
 		return nil, fmt.Errorf("unsupported target kind: %q", targetSelectionCriteria.Kind)
 	}

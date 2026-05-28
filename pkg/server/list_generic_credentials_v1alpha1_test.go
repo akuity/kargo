@@ -35,7 +35,12 @@ func TestListGenericCredentials(t *testing.T) {
 		&rest.Config{},
 		kubernetes.ClientOptions{
 			SkipAuthorization: true,
-			NewInternalClient: func(_ context.Context, _ *rest.Config, s *runtime.Scheme) (client.WithWatch, error) {
+			NewInternalClient: func(
+				_ context.Context,
+				_ *rest.Config,
+				s *runtime.Scheme,
+				_ string,
+			) (client.WithWatch, error) {
 				return fake.NewClientBuilder().
 					WithScheme(s).
 					WithObjects(

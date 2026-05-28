@@ -5,8 +5,10 @@ import (
 	"fmt"
 	stdruntime "runtime"
 	"sync"
+	"time"
 
 	"github.com/spf13/cobra"
+	coordinationv1 "k8s.io/api/coordination/v1"
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/labels"
 	"k8s.io/apimachinery/pkg/runtime"
@@ -29,6 +31,7 @@ import (
 	credsdb "github.com/akuity/kargo/pkg/credentials/kubernetes"
 	"github.com/akuity/kargo/pkg/health"
 	healthCheckers "github.com/akuity/kargo/pkg/health/checker/builtin"
+	"github.com/akuity/kargo/pkg/heartbeat"
 	"github.com/akuity/kargo/pkg/indexer"
 	"github.com/akuity/kargo/pkg/logging"
 	"github.com/akuity/kargo/pkg/os"
@@ -179,6 +182,12 @@ func (o *controllerOptions) setupKargoManager(
 			err,
 		)
 	}
+	if err = coordinationv1.AddToScheme(scheme); err != nil {
+		return nil, nil, stagesReconcilerCfg, fmt.Errorf(
+			"error adding Kubernetes coordination API to Kargo controller manager scheme: %w",
+			err,
+		)
+	}
 	if err = kargoapi.AddToScheme(scheme); err != nil {
 		return nil, nil, stagesReconcilerCfg, fmt.Errorf(
 			"error adding Kargo API to Kargo controller manager scheme: %w",
@@ -265,6 +274,9 @@ func (o *controllerOptions) setupKargoManager(
 						// ConfigMaps, but ConfigMaps have the potential to be quite large,
 						// so we prefer to not cache them.
 						&corev1.ConfigMap{},
+						// Leases are written by the heartbeat Runnable, never reconciled.
+						// Bypass the cache so the renewer doesn't need a watch on them.
+						&coordinationv1.Lease{},
 					},
 				},
 			},
@@ -473,6 +485,16 @@ func (o *controllerOptions) setupReconcilers(
 		warehouses.ReconcilerConfigFromEnv(),
 	); err != nil {
 		return fmt.Errorf("error setting up Warehouses reconciler: %w", err)
+	}
+
+	renewer := heartbeat.NewRenewer(
+		kargoMgr.GetClient(),
+		os.GetEnv("KARGO_NAMESPACE", "kargo"),
+		o.ShardName,
+		time.Duration(os.GetEnvInt("HEARTBEAT_TTL_SECONDS", 120))*time.Second,
+	)
+	if err := kargoMgr.Add(renewer); err != nil {
+		return fmt.Errorf("error registering shard liveness heartbeat renewer: %w", err)
 	}
 
 	return nil

@@ -110,7 +110,8 @@ func (p *StepEvaluator) BuildExprEnv(promoCtx Context, opts ...ExprEnvOption) ma
 			},
 			"meta": map[string]any{
 				"promotion": map[string]any{
-					"actor": promoCtx.Actor,
+					"actor":    promoCtx.Actor,
+					"rollback": promoCtx.Rollback,
 				},
 			},
 		},
@@ -319,6 +320,7 @@ func (p *StepEvaluator) BuildStepContext(
 		Stage:            promoCtx.Stage,
 		Promotion:        promoCtx.Promotion,
 		PromotionActor:   promoCtx.Actor,
+		Rollback:         promoCtx.Rollback,
 		FreightRequests:  freightRequests,
 		Freight:          *promoCtx.Freight.DeepCopy(),
 		TargetFreightRef: promoCtx.TargetFreightRef,

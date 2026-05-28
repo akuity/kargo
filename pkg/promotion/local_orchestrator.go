@@ -130,7 +130,9 @@ func (o *LocalOrchestrator) ExecuteSteps(
 		reg, err := o.registry.Get(step.Kind)
 		if err != nil {
 			meta.WithStatus(kargoapi.PromotionStepStatusErrored).WithMessagef(
-				"error getting runner for step kind %q", step.Kind,
+				"step kind %q is not registered; verify the kind is correct; if you "+
+					"are a Kargo Enterprise user, you may need to enable the promotion controller",
+				step.Kind,
 			)
 			// Continue, because despite this failure, some steps' "if" conditions may
 			// still allow them to run.

@@ -10,8 +10,8 @@ specified source and target branches. This step is often used after a
 [`git-push` step](git-push.md) and is commonly followed by a
 [`git-wait-for-pr` step](git-wait-for-pr.md).
 
-At present, this feature only supports GitHub, Gitea, Azure DevOps, and
-GitLab pull/merge requests.
+At present, this feature only supports GitHub, Gitea, Azure DevOps, GitLab and
+BitBucket pull/merge requests.
 
 ## Credentials
 
@@ -30,7 +30,16 @@ system to access the git repos.
 | `createTargetBranch` | `boolean` | N | **Deprecated**. Is a no-op if set. Will be removed in a future release.|
 | `title` | `string` | N | The title for the pull request. Kargo generates a title based on the commit messages if it is not explicitly specified. |
 | `description` | `string` | N | The description for the pull request. |
-| `labels` | `[]string` | N | Labels to add to the pull request. |
+| `labels` | `[]string` | N | Labels to add to the pull request. Not all Git providers support labels; see the note below. |
+
+:::note
+
+Label support varies by Git provider. GitHub and GitLab support labels on pull
+requests. Gitea does not currently support labels (tracked in
+[#6021](https://github.com/akuity/kargo/issues/6021)). Bitbucket does not
+support pull request labels at all.
+
+:::
 
 ## Output
 
@@ -129,16 +138,16 @@ by subsequent steps to determine if a preceding step was skipped.
   config:
     path: ./out
     generateTargetBranch: true
-  - uses: git-open-pr
-    as: open-pr
-    config:
-      repoURL: https://github.com/example/repo.git
-      sourceBranch: ${{ outputs.push.branch }}
-      targetBranch: stage/${{ ctx.stage }}
-  - if: ${{ status('open-pr') != 'Skipped' }}
-    uses: git-wait-for-pr
-    as: wait-for-pr
-    config:
-      repoURL: https://github.com/example/repo.git
-      prNumber: ${{ outputs['open-pr'].pr.id }}
+- uses: git-open-pr
+  as: open-pr
+  config:
+    repoURL: https://github.com/example/repo.git
+    sourceBranch: ${{ outputs.push.branch }}
+    targetBranch: stage/${{ ctx.stage }}
+- if: ${{ status('open-pr') != 'Skipped' }}
+  uses: git-wait-for-pr
+  as: wait-for-pr
+  config:
+    repoURL: https://github.com/example/repo.git
+    prNumber: ${{ outputs['open-pr'].pr.id }}
 ```
