@@ -6681,6 +6681,19 @@
         }
       }
     },
+    "DiscoveredRef": {
+      "type": "object",
+      "properties": {
+        "id": {
+          "description": "ID is the identifier of the object the ref points to, typically a SHA-1\nhash. For an annotated tag this is the tag object's ID, not the commit it\ndereferences to, because the value is obtained via git ls-remote --refs.\nThis is immaterial to its sole use -- change detection -- since the value\nmoves whenever the ref is re-pointed and is only ever compared against\nother values obtained the same way.\n\n+kubebuilder:validation:MinLength=1",
+          "type": "string"
+        },
+        "name": {
+          "description": "Name is the short name of the ref (e.g. a tag name such as \"v1.2.3\"),\nwithout its \"refs/tags/\" or \"refs/heads/\" prefix.\n\n+kubebuilder:validation:MinLength=1",
+          "type": "string"
+        }
+      }
+    },
     "DiscoveryResult": {
       "type": "object",
       "properties": {
@@ -7113,6 +7126,22 @@
         }
       }
     },
+    "GitDiscoveryRefs": {
+      "type": "object",
+      "properties": {
+        "branchHead": {
+          "description": "BranchHead is the unfiltered commit ID at the tip of the subscribed branch.\nIt is populated for branch-based selection strategies (NewestFromBranch).\nBecause it records the branch tip before any path filtering, an unchanged\nvalue guarantees the path-filtered selection cannot have changed either.\n\n+optional",
+          "type": "string"
+        },
+        "tags": {
+          "description": "Tags is the set of tags that satisfied the GitSubscription's name-based\nfilters (semver and/or regex), paired with the commit IDs they reference,\nsorted by tag name for a stable comparison. It is populated for tag-based\nselection strategies (NewestTag, SemVer, Lexical). Path filtering is\napplied later, during selection, and does not affect this set.\n\n+optional",
+          "type": "array",
+          "items": {
+            "$ref": "#/definitions/DiscoveredRef"
+          }
+        }
+      }
+    },
     "GitDiscoveryResult": {
       "type": "object",
       "properties": {
@@ -7122,6 +7151,14 @@
           "items": {
             "$ref": "#/definitions/DiscoveredCommit"
           }
+        },
+        "observedRefs": {
+          "description": "ObservedRefs records the raw remote ref state observed at the most recent\nsuccessful discovery, after name-based filtering but before path filtering\nor commit selection. The Warehouse uses it to short-circuit discovery: at\nthe start of a reconcile, a single git ls-remote call yields the current\nref state, and if it matches this field, nothing relevant has moved and the\npreviously selected Commits remain valid -- so an expensive clone and\nhistory walk can be skipped entirely. This field is optional; when absent\n(e.g. on a Warehouse that predates this feature), discovery falls through to\na full clone and repopulates it.\n\n+optional",
+          "allOf": [
+            {
+              "$ref": "#/definitions/GitDiscoveryRefs"
+            }
+          ]
         },
         "repoURL": {
           "description": "RepoURL is the repository URL of the GitSubscription.\n\nTODO(v1.13.0): Remove SSH/SCP-style URL support from this pattern.\n\n+kubebuilder:validation:MinLength=1\n+kubebuilder:validation:Pattern=`(?:^(ssh|https?)://(?:([\\w-]+)(:(.+))?@)?([\\w-]+(?:\\.[\\w-]+)*)(?::(\\d{1,5}))?(/.*)$)|(?:^([\\w-]+)@([\\w+]+(?:\\.[\\w-]+)*):(/?.*))`\n+akuity:test-kubebuilder-pattern=GitRepoURLPattern",

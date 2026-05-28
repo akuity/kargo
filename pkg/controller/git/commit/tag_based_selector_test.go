@@ -1,7 +1,9 @@
 package commit
 
 import (
+	"errors"
 	"regexp"
+	"strconv"
 	"testing"
 	"time"
 
@@ -12,6 +14,81 @@ import (
 	kargoapi "github.com/akuity/kargo/api/v1alpha1"
 	"github.com/akuity/kargo/pkg/controller/git"
 )
+
+func Test_tagBasedSelector_ListRefs(t *testing.T) {
+	makeRefs := func(n int) []git.RemoteRef {
+		refs := make([]git.RemoteRef, n)
+		for i := range refs {
+			refs[i] = git.RemoteRef{
+				Name: tagPrefix + "v0." + strconv.Itoa(i),
+				ID:   strconv.Itoa(i),
+			}
+		}
+		return refs
+	}
+	testCases := []struct {
+		name       string
+		selector   *tagBasedSelector
+		lsRemoteFn func(string, *git.ClientOptions, ...string) ([]git.RemoteRef, error)
+		assertions func(*testing.T, *kargoapi.GitDiscoveryRefs, error)
+	}{
+		{
+			name: "error listing refs",
+			lsRemoteFn: func(string, *git.ClientOptions, ...string) ([]git.RemoteRef, error) {
+				return nil, errors.New("something went wrong")
+			},
+			assertions: func(t *testing.T, refs *kargoapi.GitDiscoveryRefs, err error) {
+				require.ErrorContains(t, err, "something went wrong")
+				require.Nil(t, refs)
+			},
+		},
+		{
+			name: "filters by name and sorts",
+			selector: &tagBasedSelector{
+				allowTagsRegexes: []*regexp.Regexp{regexp.MustCompile(`^v1\.`)},
+			},
+			lsRemoteFn: func(_ string, _ *git.ClientOptions, patterns ...string) ([]git.RemoteRef, error) {
+				require.Equal(t, []string{tagPrefix + "*"}, patterns)
+				return []git.RemoteRef{
+					{Name: tagPrefix + "v1.2.0", ID: "b"},
+					{Name: tagPrefix + "v0.9.0", ID: "z"}, // filtered out
+					{Name: tagPrefix + "v1.1.0", ID: "a"},
+				}, nil
+			},
+			assertions: func(t *testing.T, refs *kargoapi.GitDiscoveryRefs, err error) {
+				require.NoError(t, err)
+				require.Equal(t, &kargoapi.GitDiscoveryRefs{
+					Tags: []kargoapi.DiscoveredRef{
+						{Name: "v1.1.0", ID: "a"},
+						{Name: "v1.2.0", ID: "b"},
+					},
+				}, refs)
+			},
+		},
+		{
+			name:     "tag count over cap suppresses observation",
+			selector: &tagBasedSelector{},
+			lsRemoteFn: func(string, *git.ClientOptions, ...string) ([]git.RemoteRef, error) {
+				return makeRefs(maxObservedTags + 1), nil
+			},
+			assertions: func(t *testing.T, refs *kargoapi.GitDiscoveryRefs, err error) {
+				require.NoError(t, err)
+				require.Nil(t, refs)
+			},
+		},
+	}
+	for _, testCase := range testCases {
+		t.Run(testCase.name, func(t *testing.T) {
+			s := testCase.selector
+			if s == nil {
+				s = &tagBasedSelector{}
+			}
+			s.baseSelector = &baseSelector{lsRemoteFn: testCase.lsRemoteFn}
+			refs, err := s.ListRefs(t.Context())
+			testCase.assertions(t, refs, err)
+		})
+	}
+}
 
 func TestNewTagBasedSelector(t *testing.T) {
 	testCases := []struct {

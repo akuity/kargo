@@ -408,6 +408,58 @@ type GitDiscoveryResult struct {
 	//
 	// +optional
 	Commits []DiscoveredCommit `json:"commits" protobuf:"bytes,2,rep,name=commits"`
+	// ObservedRefs records the raw remote ref state observed at the most recent
+	// successful discovery, after name-based filtering but before path filtering
+	// or commit selection. The Warehouse uses it to short-circuit discovery: at
+	// the start of a reconcile, a single git ls-remote call yields the current
+	// ref state, and if it matches this field, nothing relevant has moved and the
+	// previously selected Commits remain valid -- so an expensive clone and
+	// history walk can be skipped entirely. This field is optional; when absent
+	// (e.g. on a Warehouse that predates this feature), discovery falls through to
+	// a full clone and repopulates it.
+	//
+	// +optional
+	ObservedRefs *GitDiscoveryRefs `json:"observedRefs,omitempty" protobuf:"bytes,3,opt,name=observedRefs"`
+}
+
+// GitDiscoveryRefs records the raw remote ref state relevant to a
+// GitSubscription's commit selection strategy at the time of discovery. Exactly
+// one of its fields is populated, according to whether the strategy selects from
+// a branch or from tags.
+type GitDiscoveryRefs struct {
+	// BranchHead is the unfiltered commit ID at the tip of the subscribed branch.
+	// It is populated for branch-based selection strategies (NewestFromBranch).
+	// Because it records the branch tip before any path filtering, an unchanged
+	// value guarantees the path-filtered selection cannot have changed either.
+	//
+	// +optional
+	BranchHead string `json:"branchHead,omitempty" protobuf:"bytes,1,opt,name=branchHead"`
+	// Tags is the set of tags that satisfied the GitSubscription's name-based
+	// filters (semver and/or regex), paired with the commit IDs they reference,
+	// sorted by tag name for a stable comparison. It is populated for tag-based
+	// selection strategies (NewestTag, SemVer, Lexical). Path filtering is
+	// applied later, during selection, and does not affect this set.
+	//
+	// +optional
+	Tags []DiscoveredRef `json:"tags,omitempty" protobuf:"bytes,2,rep,name=tags"`
+}
+
+// DiscoveredRef pairs a Git ref name with the ID of the object it resolves to.
+type DiscoveredRef struct {
+	// Name is the short name of the ref (e.g. a tag name such as "v1.2.3"),
+	// without its "refs/tags/" or "refs/heads/" prefix.
+	//
+	// +kubebuilder:validation:MinLength=1
+	Name string `json:"name" protobuf:"bytes,1,opt,name=name"`
+	// ID is the identifier of the object the ref points to, typically a SHA-1
+	// hash. For an annotated tag this is the tag object's ID, not the commit it
+	// dereferences to, because the value is obtained via git ls-remote --refs.
+	// This is immaterial to its sole use -- change detection -- since the value
+	// moves whenever the ref is re-pointed and is only ever compared against
+	// other values obtained the same way.
+	//
+	// +kubebuilder:validation:MinLength=1
+	ID string `json:"id" protobuf:"bytes,2,opt,name=id"`
 }
 
 // DiscoveredCommit represents a commit discovered by a Warehouse for a
