@@ -100,9 +100,13 @@ pullRequests:
     maintainers: true
     # Bot-authored PRs (e.g. dependabot) skip policy.
     bots: true
-    # Drive-by typo fixes are exempt — saves the friction of opening an
-    # issue for a few-line cleanup.
-    maxChangedLines: 5
+    # Drive-by typo fixes and fixes for obvious bugs are exempt — saves the
+    # friction of opening an issue for a few-line cleanup.
+    #
+    # Note that a modification to one line is technically one line removed and a
+    # new line added, which is why this number is relatively generous. Five
+    # modified lines == 10 changed lines.
+    maxChangedLines: 10
     # Doc-only and chore PRs are exempt. Patterns are gitignore-style.
     pathPatterns:
     - 'README.md'
