@@ -11,6 +11,7 @@ import (
 	"github.com/go-openapi/runtime"
 	cr "github.com/go-openapi/runtime/client"
 	"github.com/go-openapi/strfmt"
+	"github.com/go-openapi/swag"
 )
 
 // NewListProjectsParams creates a new ListProjectsParams object,
@@ -57,6 +58,37 @@ ListProjectsParams contains all the parameters to send to the API endpoint
 	Typically these are written to a http.Request.
 */
 type ListProjectsParams struct {
+
+	/* Filter.
+
+	   Case-insensitive substring filter applied to the Project name.
+	*/
+	Filter *string
+
+	/* Mine.
+
+	   Only return Projects whose namespaces are mapped to the user's ServiceAccounts.
+	*/
+	Mine *bool
+
+	/* Page.
+
+	   Zero-indexed page number used together with pageSize.
+	*/
+	Page *int64
+
+	/* PageSize.
+
+	   Maximum number of Projects to return. Defaults to all matching Projects.
+	*/
+	PageSize *int64
+
+	/* UID.
+
+	   Return only Projects whose UID matches one of the given values.
+	*/
+	UID []string
+
 	timeout    time.Duration
 	Context    context.Context
 	HTTPClient *http.Client
@@ -110,6 +142,61 @@ func (o *ListProjectsParams) SetHTTPClient(client *http.Client) {
 	o.HTTPClient = client
 }
 
+// WithFilter adds the filter to the list projects params
+func (o *ListProjectsParams) WithFilter(filter *string) *ListProjectsParams {
+	o.SetFilter(filter)
+	return o
+}
+
+// SetFilter adds the filter to the list projects params
+func (o *ListProjectsParams) SetFilter(filter *string) {
+	o.Filter = filter
+}
+
+// WithMine adds the mine to the list projects params
+func (o *ListProjectsParams) WithMine(mine *bool) *ListProjectsParams {
+	o.SetMine(mine)
+	return o
+}
+
+// SetMine adds the mine to the list projects params
+func (o *ListProjectsParams) SetMine(mine *bool) {
+	o.Mine = mine
+}
+
+// WithPage adds the page to the list projects params
+func (o *ListProjectsParams) WithPage(page *int64) *ListProjectsParams {
+	o.SetPage(page)
+	return o
+}
+
+// SetPage adds the page to the list projects params
+func (o *ListProjectsParams) SetPage(page *int64) {
+	o.Page = page
+}
+
+// WithPageSize adds the pageSize to the list projects params
+func (o *ListProjectsParams) WithPageSize(pageSize *int64) *ListProjectsParams {
+	o.SetPageSize(pageSize)
+	return o
+}
+
+// SetPageSize adds the pageSize to the list projects params
+func (o *ListProjectsParams) SetPageSize(pageSize *int64) {
+	o.PageSize = pageSize
+}
+
+// WithUID adds the uid to the list projects params
+func (o *ListProjectsParams) WithUID(uid []string) *ListProjectsParams {
+	o.SetUID(uid)
+	return o
+}
+
+// SetUID adds the uid to the list projects params
+func (o *ListProjectsParams) SetUID(uid []string) {
+	o.UID = uid
+}
+
 // WriteToRequest writes these params to a swagger request
 func (o *ListProjectsParams) WriteToRequest(r runtime.ClientRequest, reg strfmt.Registry) error {
 
@@ -118,8 +205,104 @@ func (o *ListProjectsParams) WriteToRequest(r runtime.ClientRequest, reg strfmt.
 	}
 	var res []error
 
+	if o.Filter != nil {
+
+		// query param filter
+		var qrFilter string
+
+		if o.Filter != nil {
+			qrFilter = *o.Filter
+		}
+		qFilter := qrFilter
+		if qFilter != "" {
+
+			if err := r.SetQueryParam("filter", qFilter); err != nil {
+				return err
+			}
+		}
+	}
+
+	if o.Mine != nil {
+
+		// query param mine
+		var qrMine bool
+
+		if o.Mine != nil {
+			qrMine = *o.Mine
+		}
+		qMine := swag.FormatBool(qrMine)
+		if qMine != "" {
+
+			if err := r.SetQueryParam("mine", qMine); err != nil {
+				return err
+			}
+		}
+	}
+
+	if o.Page != nil {
+
+		// query param page
+		var qrPage int64
+
+		if o.Page != nil {
+			qrPage = *o.Page
+		}
+		qPage := swag.FormatInt64(qrPage)
+		if qPage != "" {
+
+			if err := r.SetQueryParam("page", qPage); err != nil {
+				return err
+			}
+		}
+	}
+
+	if o.PageSize != nil {
+
+		// query param pageSize
+		var qrPageSize int64
+
+		if o.PageSize != nil {
+			qrPageSize = *o.PageSize
+		}
+		qPageSize := swag.FormatInt64(qrPageSize)
+		if qPageSize != "" {
+
+			if err := r.SetQueryParam("pageSize", qPageSize); err != nil {
+				return err
+			}
+		}
+	}
+
+	if o.UID != nil {
+
+		// binding items for uid
+		joinedUID := o.bindParamUID(reg)
+
+		// query array param uid
+		if err := r.SetQueryParam("uid", joinedUID...); err != nil {
+			return err
+		}
+	}
+
 	if len(res) > 0 {
 		return errors.CompositeValidationError(res...)
 	}
 	return nil
+}
+
+// bindParamListProjects binds the parameter uid
+func (o *ListProjectsParams) bindParamUID(formats strfmt.Registry) []string {
+	uidIR := o.UID
+
+	var uidIC []string
+	for _, uidIIR := range uidIR { // explode []string
+
+		uidIIV := uidIIR // string as string
+		uidIC = append(uidIC, uidIIV)
+	}
+
+	// items.CollectionFormat: "csv"
+	uidIS := swag.JoinByFormat(uidIC, "csv")
+
+	return uidIS
 }

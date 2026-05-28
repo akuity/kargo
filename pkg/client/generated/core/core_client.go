@@ -1517,9 +1517,13 @@ func (a *Client) ListProjectConfigMaps(params *ListProjectConfigMapsParams, auth
 }
 
 /*
-ListProjects lists projects
+	ListProjects lists projects
 
-List all Projects resources. Returns a ProjectList resource.
+	List all Projects resources. Supports server-side filtering by
+
+name substring, by UID, and by namespaces mapped to the
+authenticated user's ServiceAccounts, plus offset-based
+pagination.
 */
 func (a *Client) ListProjects(params *ListProjectsParams, authInfo runtime.ClientAuthInfoWriter, opts ...ClientOption) (*ListProjectsOK, error) {
 	// NOTE: parameters are not validated before sending

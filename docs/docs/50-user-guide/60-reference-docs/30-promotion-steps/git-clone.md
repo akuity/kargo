@@ -31,6 +31,7 @@ system to access the git repos.
 |------|------|----------|-------------|
 | `repoURL` | `string` | Y | The URL of a remote Git repository to clone. **Deprecated:** Support for SSH URLs (`ssh://` and SCP-style `git@host:path`) is deprecated as of v1.10.0 and will be removed in v1.13.0. Use HTTPS URLs instead. |
 | `insecureSkipTLSVerify` | `boolean` | N | Whether to bypass TLS certificate verification when cloning (and for all subsequent operations involving this clone). Setting this to `true` is highly discouraged in production. |
+| `blobless` | `boolean` | N | Whether to perform a [blobless clone][] (`--filter=blob:none`). Defaults to `false`. Useful for large repositories, especially when combined with sparse checkouts. Requires that the Git server support partial clones; the clone will fail if it does not. |
 | `author` | `[]object` | N | Default authorship information for any commits made to the cloned repository. If provided, this overrides any system-level defaults. Note: Configuration of the [`git-commit`](./git-commit.md) step can override this information. |
 | `author.name` | `string` | Y | The committer's name. |
 | `author.email` | `string` | Y | The committer's email address. |
@@ -133,9 +134,9 @@ steps:
 ### Sparse Checkout
 
 For large repositories, you can use sparse checkout to check out only specific
-directories, reducing clone time and disk usage. When all checkouts specify
-sparse patterns, Kargo automatically uses a [blobless clone][], which avoids
-downloading file contents for directories that won't be checked out.
+directories, reducing the size of the working tree on disk. Combine with
+`blobless: true` to additionally skip downloading file contents that won't be
+checked out, further reducing clone time for large repositories.
 
 ```yaml
 vars:
@@ -145,6 +146,7 @@ steps:
 - uses: git-clone
   config:
     repoURL: ${{ vars.gitRepo }}
+    blobless: true
     checkout:
     - commit: ${{ commitFrom(vars.gitRepo).ID }}
       path: ./src
@@ -158,5 +160,13 @@ steps:
       - stages/${{ ctx.stage }}
 # Work with the sparse checkouts...
 ```
+
+:::note
+
+`blobless: true` requires that the Git server support partial clones. Most
+hosted services (GitHub, GitLab, Gitea) do; some older self-hosted servers do
+not, in which case the clone will fail.
+
+:::
 
 [blobless clone]: https://github.blog/open-source/git/get-up-to-speed-with-partial-clone-and-shallow-clone/

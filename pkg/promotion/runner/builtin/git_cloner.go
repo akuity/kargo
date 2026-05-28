@@ -54,19 +54,6 @@ type gitCloner struct {
 	schemaLoader    gojsonschema.JSONLoader
 }
 
-// filterForCheckouts returns the clone filter to use based on checkout
-// configurations. Returns git.FilterBlobless if all checkouts specify sparse
-// patterns, returns empty string otherwise to avoid on-demand blob fetches for
-// full checkouts.
-func filterForCheckouts(checkouts []builtin.Checkout) string {
-	for _, checkout := range checkouts {
-		if len(checkout.Sparse) == 0 {
-			return ""
-		}
-	}
-	return git.FilterBlobless
-}
-
 // newGitCloner returns an implementation of the promotion.StepRunner interface
 // that clones one or more refs from a remote Git repository to one or more
 // working directories.
@@ -160,8 +147,8 @@ func (g *gitCloner) run(
 			InsecureSkipTLSVerify: cfg.InsecureSkipTLSVerify,
 		},
 		&git.BareCloneOptions{
-			BaseDir: stepCtx.WorkDir,
-			Filter:  filterForCheckouts(cfg.Checkout),
+			BaseDir:  stepCtx.WorkDir,
+			Blobless: cfg.Blobless,
 		},
 	)
 	if err != nil {

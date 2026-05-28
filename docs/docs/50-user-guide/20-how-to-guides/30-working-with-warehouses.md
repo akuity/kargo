@@ -384,6 +384,13 @@ Git repository subscriptions can be defined using the following fields:
   This is a security risk and should only be used in development environments.
   :::
 
+- `blobless`: Set to `true` to perform a [blobless clone][blobless-clone]
+  (`--filter=blob:none`). This can significantly reduce clone time and disk
+  usage for large repositories by deferring blob downloads until checkout. The
+  Git server must support partial clones; if it does not, the clone will fail.
+
+[blobless-clone]: https://github.blog/open-source/git/get-up-to-speed-with-partial-clone-and-shallow-clone/
+
 #### Commit Selection Strategies
 
 For subscriptions to Git repositories, the `commitSelectionStrategy`

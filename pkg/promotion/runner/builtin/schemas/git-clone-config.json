@@ -13,6 +13,10 @@
       "type": "boolean",
       "description": "Indicates whether to recursively clone submodules. Default is false. Note that any provided credentials must also be valid for the submodules."
     },
+    "blobless": {
+      "type": "boolean",
+      "description": "Indicates whether to perform a blobless (--filter=blob:none) clone. Default is false."
+    },
     "repoURL": {
       "type": "string",
       "description": "The URL of a remote Git repository to clone. Required. Deprecated: Support for SSH URLs (ssh:// and SCP-style git@host:path) is deprecated as of v1.10.0 and will be removed in v1.13.0. Use HTTPS URLs instead.",

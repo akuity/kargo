@@ -5,6 +5,7 @@ import (
 	"errors"
 	"testing"
 
+	"github.com/google/uuid"
 	adogit "github.com/microsoft/azure-devops-go-api/azuredevops/v7/git"
 	"github.com/stretchr/testify/require"
 	"k8s.io/utils/ptr"
@@ -398,6 +399,221 @@ func TestMergePullRequest(t *testing.T) {
 			if tc.expectedMerged {
 				require.NotNil(t, pr)
 				require.Equal(t, tc.prNumber, pr.Number)
+			}
+		})
+	}
+}
+
+func TestCreatePullRequest(t *testing.T) {
+	testCases := []struct {
+		name          string
+		opts          *gitprovider.CreatePullRequestOpts
+		mockClient    *mockAzureGitClient
+		expectError   bool
+		errorContains string
+		assert        func(*testing.T, *gitprovider.PullRequest)
+	}{
+		{
+			name: "nil opts does not panic",
+			opts: nil,
+			mockClient: &mockAzureGitClient{
+				getRepositoryFn: func(
+					_ context.Context, _ adogit.GetRepositoryArgs,
+				) (*adogit.GitRepository, error) {
+					id := uuid.New()
+					return &adogit.GitRepository{Id: &id}, nil
+				},
+				createPullRequestFn: func(
+					_ context.Context, args adogit.CreatePullRequestArgs,
+				) (*adogit.GitPullRequest, error) {
+					require.NotNil(t, args.GitPullRequestToCreate)
+					return &adogit.GitPullRequest{
+						PullRequestId: ptr.To(1),
+						Status:        ptr.To(adogit.PullRequestStatusValues.Active),
+						Repository: &adogit.GitRepository{
+							WebUrl: ptr.To("https://dev.azure.com/org/project/_git/repo"),
+						},
+						LastMergeSourceCommit: &adogit.GitCommitRef{CommitId: ptr.To("abc")},
+					}, nil
+				},
+			},
+			assert: func(t *testing.T, pr *gitprovider.PullRequest) {
+				require.NotNil(t, pr)
+				require.Equal(t, int64(1), pr.Number)
+			},
+		},
+		{
+			name: "error getting repository",
+			opts: &gitprovider.CreatePullRequestOpts{Head: "feature", Base: "main", Title: "t"},
+			mockClient: &mockAzureGitClient{
+				getRepositoryFn: func(
+					context.Context, adogit.GetRepositoryArgs,
+				) (*adogit.GitRepository, error) {
+					return nil, errors.New("not found")
+				},
+			},
+			expectError:   true,
+			errorContains: "error getting repository",
+		},
+		{
+			name: "error creating pull request",
+			opts: &gitprovider.CreatePullRequestOpts{Head: "feature", Base: "main", Title: "t"},
+			mockClient: &mockAzureGitClient{
+				getRepositoryFn: func(
+					_ context.Context, _ adogit.GetRepositoryArgs,
+				) (*adogit.GitRepository, error) {
+					id := uuid.New()
+					return &adogit.GitRepository{Id: &id}, nil
+				},
+				createPullRequestFn: func(
+					context.Context, adogit.CreatePullRequestArgs,
+				) (*adogit.GitPullRequest, error) {
+					return nil, errors.New("create failed")
+				},
+			},
+			expectError:   true,
+			errorContains: "error creating pull request",
+		},
+	}
+
+	for _, tc := range testCases {
+		t.Run(tc.name, func(t *testing.T) {
+			p := &provider{
+				org:     "org",
+				project: "project",
+				repo:    "repo",
+				client:  tc.mockClient,
+			}
+			pr, err := p.CreatePullRequest(t.Context(), tc.opts)
+			if tc.expectError {
+				require.Error(t, err)
+				require.ErrorContains(t, err, tc.errorContains)
+				require.Nil(t, pr)
+				return
+			}
+			require.NoError(t, err)
+			if tc.assert != nil {
+				tc.assert(t, pr)
+			}
+		})
+	}
+}
+
+func TestListPullRequests(t *testing.T) {
+	testCases := []struct {
+		name          string
+		opts          *gitprovider.ListPullRequestOptions
+		mockClient    *mockAzureGitClient
+		expectError   bool
+		errorContains string
+		assert        func(*testing.T, []gitprovider.PullRequest)
+	}{
+		{
+			name: "nil opts defaults to open state",
+			opts: nil,
+			mockClient: &mockAzureGitClient{
+				getPullRequestsFn: func(
+					_ context.Context, args adogit.GetPullRequestsArgs,
+				) (*[]adogit.GitPullRequest, error) {
+					require.Equal(t,
+						adogit.PullRequestStatusValues.Active,
+						*args.SearchCriteria.Status,
+					)
+					return &[]adogit.GitPullRequest{}, nil
+				},
+			},
+			assert: func(t *testing.T, prs []gitprovider.PullRequest) {
+				require.Empty(t, prs)
+			},
+		},
+		{
+			name: "empty state defaults to open",
+			opts: &gitprovider.ListPullRequestOptions{State: ""},
+			mockClient: &mockAzureGitClient{
+				getPullRequestsFn: func(
+					_ context.Context, args adogit.GetPullRequestsArgs,
+				) (*[]adogit.GitPullRequest, error) {
+					require.Equal(t,
+						adogit.PullRequestStatusValues.Active,
+						*args.SearchCriteria.Status,
+					)
+					return &[]adogit.GitPullRequest{}, nil
+				},
+			},
+			assert: func(t *testing.T, prs []gitprovider.PullRequest) {
+				require.Empty(t, prs)
+			},
+		},
+		{
+			name: "nil adoPRs returns nil without panic",
+			opts: &gitprovider.ListPullRequestOptions{State: gitprovider.PullRequestStateOpen},
+			mockClient: &mockAzureGitClient{
+				getPullRequestsFn: func(
+					context.Context, adogit.GetPullRequestsArgs,
+				) (*[]adogit.GitPullRequest, error) {
+					return nil, nil
+				},
+			},
+			assert: func(t *testing.T, prs []gitprovider.PullRequest) {
+				require.Nil(t, prs)
+			},
+		},
+		{
+			name: "client error is propagated",
+			opts: &gitprovider.ListPullRequestOptions{State: gitprovider.PullRequestStateOpen},
+			mockClient: &mockAzureGitClient{
+				getPullRequestsFn: func(
+					context.Context, adogit.GetPullRequestsArgs,
+				) (*[]adogit.GitPullRequest, error) {
+					return nil, errors.New("list failed")
+				},
+			},
+			expectError:   true,
+			errorContains: "list failed",
+		},
+		{
+			name: "returns converted pull requests",
+			opts: &gitprovider.ListPullRequestOptions{State: gitprovider.PullRequestStateOpen},
+			mockClient: &mockAzureGitClient{
+				getPullRequestsFn: func(
+					context.Context, adogit.GetPullRequestsArgs,
+				) (*[]adogit.GitPullRequest, error) {
+					return &[]adogit.GitPullRequest{
+						{
+							PullRequestId: ptr.To(42),
+							Status:        ptr.To(adogit.PullRequestStatusValues.Active),
+							Repository: &adogit.GitRepository{
+								WebUrl: ptr.To("https://dev.azure.com/org/project/_git/repo"),
+							},
+							LastMergeSourceCommit: &adogit.GitCommitRef{CommitId: ptr.To("sha1")},
+						},
+					}, nil
+				},
+			},
+			assert: func(t *testing.T, prs []gitprovider.PullRequest) {
+				require.Len(t, prs, 1)
+				require.Equal(t, int64(42), prs[0].Number)
+			},
+		},
+	}
+
+	for _, tc := range testCases {
+		t.Run(tc.name, func(t *testing.T) {
+			p := &provider{
+				org:     "org",
+				project: "project",
+				repo:    "repo",
+				client:  tc.mockClient,
+			}
+			prs, err := p.ListPullRequests(t.Context(), tc.opts)
+			if tc.expectError {
+				require.Error(t, err)
+				require.ErrorContains(t, err, tc.errorContains)
+				return
+			}
+			require.NoError(t, err)
+			if tc.assert != nil {
+				tc.assert(t, prs)
 			}
 		})
 	}

@@ -46,7 +46,7 @@ spec:
         {{- end }}
       {{- end }}
     spec:
-      serviceAccount: kargo-api
+      serviceAccountName: kargo-api
       {{- with .Values.api.affinity | default .Values.global.affinity }}
       affinity:
         {{- toYaml . | nindent 8 }}

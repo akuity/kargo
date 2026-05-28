@@ -127,6 +127,9 @@ func (p *provider) CreatePullRequest(
 	ctx context.Context,
 	opts *gitprovider.CreatePullRequestOpts,
 ) (*gitprovider.PullRequest, error) {
+	if opts == nil {
+		opts = &gitprovider.CreatePullRequestOpts{}
+	}
 	repository, err := p.client.GetRepository(
 		ctx,
 		adogit.GetRepositoryArgs{
@@ -196,6 +199,12 @@ func (p *provider) ListPullRequests(
 	ctx context.Context,
 	opts *gitprovider.ListPullRequestOptions,
 ) ([]gitprovider.PullRequest, error) {
+	if opts == nil {
+		opts = &gitprovider.ListPullRequestOptions{}
+	}
+	if opts.State == "" {
+		opts.State = gitprovider.PullRequestStateOpen
+	}
 	adoPRs, err := p.client.GetPullRequests(
 		ctx,
 		adogit.GetPullRequestsArgs{
@@ -210,6 +219,9 @@ func (p *provider) ListPullRequests(
 	)
 	if err != nil {
 		return nil, err
+	}
+	if adoPRs == nil {
+		return nil, nil
 	}
 
 	pts := []gitprovider.PullRequest{}
