@@ -478,7 +478,7 @@ func TestBareRepo_WithFilter(t *testing.T) {
 			Credentials: &testRepoCreds,
 		},
 		&BareCloneOptions{
-			Filter: FilterBlobless,
+			Blobless: true,
 		},
 	)
 	require.NoError(t, err)

@@ -42,6 +42,11 @@ type GitSubscription struct {
 	// the tags that are considered. Only has effect when CommitSelectionStrategy is Lexical,
 	// NewestTag, or SemVer.
 	AllowTagsRegexes []string `json:"allowTagsRegexes,omitempty"`
+	// Blobless enables blobless cloning (--filter=blob:none) for this subscription. When true,
+	// git clones will defer blob downloads until checkout, significantly reducing clone time
+	// and disk usage for large repositories. The server must support partial clones; if it does
+	// not, the clone will fail.
+	Blobless *bool `json:"blobless,omitempty"`
 	// Branch references a particular branch of the repository. Only has effect when
 	// CommitSelectionStrategy is NewestFromBranch or unspecified. When left unspecified, the
 	// subscription is implicitly to the repository's default branch. Must be a valid branch

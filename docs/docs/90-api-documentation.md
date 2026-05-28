@@ -2027,6 +2027,7 @@ RawFormat specifies the format for raw resource representation.
 | ----- | ---- | ----------- |
 | allowTags | string |  AllowTags is a regular expression that can optionally be used to limit the tags that are considered in determining the newest commit of interest. Deprecated: Use allowTagsRegexes instead. |
 | allowTagsRegexes | string |  AllowTagsRegexes is a list of regular expressions that can optionally be used to limit the tags that are considered. Only has effect when CommitSelectionStrategy is Lexical, NewestTag, or SemVer. |
+| blobless | bool |  Blobless enables blobless cloning (--filter=blob:none) for this subscription. When true, git clones will defer blob downloads until checkout, significantly reducing clone time and disk usage for large repositories. The server must support partial clones; if it does not, the clone will fail. |
 | branch | string |  Branch references a particular branch of the repository. Only has effect when CommitSelectionStrategy is NewestFromBranch or unspecified. When left unspecified, the subscription is implicitly to the repository's default branch. Must be a valid branch name. |
 | commitSelectionStrategy | string |  CommitSelectionStrategy specifies the rules for how to identify the newest commit of interest in the repository specified by the RepoURL field. |
 | discoveryLimit | int64 |  DiscoveryLimit is an optional limit on the number of commits that can be discovered for this subscription. The upper limit is 100. |
