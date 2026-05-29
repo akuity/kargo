@@ -346,13 +346,13 @@ func TestFreightEventMarshalAnnotations(t *testing.T) {
 		"freight approved": {
 			event: NewFreightApproved("Freight approved", "test-actor", "test-stage", freight),
 			expected: map[string]string{
-				kargoapi.AnnotationKeyEventProject:           "test-project",
-				kargoapi.AnnotationKeyEventActor:             "test-actor",
-				kargoapi.AnnotationKeyEventFreightName:       "test-freight",
-				kargoapi.AnnotationKeyEventFreightCreateTime: "2024-01-01T00:00:00Z",
+				kargoapi.AnnotationKeyEventProject:              "test-project",
+				kargoapi.AnnotationKeyEventActor:                "test-actor",
+				kargoapi.AnnotationKeyEventFreightName:          "test-freight",
+				kargoapi.AnnotationKeyEventFreightCreateTime:    "2024-01-01T00:00:00Z",
 				kargoapi.AnnotationKeyEventFreightWarehouseName: "test-warehouse",
-				kargoapi.AnnotationKeyEventStageName:         "test-stage",
-				kargoapi.AnnotationKeyEventFreightAlias:      "v1.0.0",
+				kargoapi.AnnotationKeyEventStageName:            "test-stage",
+				kargoapi.AnnotationKeyEventFreightAlias:         "v1.0.0",
 			},
 		},
 		"freight created": {
