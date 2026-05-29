@@ -9,7 +9,10 @@ contents:
   - git~2
   - gpg~2
   - gpg-agent~2
-  - helm~3 # Required for Kustomize Helm plugin
+  # NOTE: Helm (required by the kustomize-build step's Helm plugin) is
+  # intentionally NOT sourced here. The Wolfi repo stopped patching Helm 3, so
+  # the binary is installed from Helm's official releases in the Dockerfile's
+  # "tools" stage instead.
   - openssh-client~10
   - tini
 
