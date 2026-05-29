@@ -22,6 +22,16 @@ Create chart name and version as used by the chart label.
 {{- end -}}
 
 {{/*
+Resolve the namespace where many of Kargo's own resources (accessed at runtime)
+reside. By default this is the chart's release namespace. In rare situations,
+Kargo workloads may run in one namespace (the chart's release namespace) while
+some resources accessed at runtime reside in another.
+*/}}
+{{- define "kargo.dataNamespace" -}}
+{{- .Values.global.kargoNamespace | default .Release.Namespace -}}
+{{- end -}}
+
+{{/*
 Check if TLS should be used for a service.
 */}}
 {{- define "kargo.useTLS" -}}
@@ -80,7 +90,7 @@ Create default controlplane user regular expression with well-known service acco
 {{- end -}}
 {{- end -}}
 {{- if $serviceAccounts -}}
-{{- printf "^system:serviceaccount:%s:(%s)$" .Release.Namespace (join "|" $serviceAccounts) -}}
+{{- printf "^system:serviceaccount:%s:(%s)$" (include "kargo.dataNamespace" .) (join "|" $serviceAccounts) -}}
 {{- end -}}
 {{- end -}}
 

@@ -10,7 +10,7 @@ metadata:
     {{- include "kargo.api.labels" . | nindent 4 }}
   {{- include "kargo.annotations" (dict "root" . "annotations" .Values.api.annotations) | nindent 2 }}
 data:
-  KARGO_NAMESPACE: {{ .Release.Namespace }}
+  KARGO_NAMESPACE: {{ include "kargo.dataNamespace" . }}
   LOG_LEVEL: {{ quote .Values.api.logLevel }}
   LOG_FORMAT: {{ quote .Values.api.logFormat }}
   {{- if $kc }}
@@ -40,9 +40,9 @@ data:
   OIDC_ENABLED: "true"
   OIDC_ADDITIONAL_SCOPES: {{ join "," .Values.api.oidc.additionalScopes | quote }}
   {{- if .Values.api.oidc.globalServiceAccounts.namespaces }}
-  GLOBAL_SERVICE_ACCOUNT_NAMESPACES: {{ .Release.Namespace }},{{ join "," .Values.api.oidc.globalServiceAccounts.namespaces }}
+  GLOBAL_SERVICE_ACCOUNT_NAMESPACES: {{ include "kargo.dataNamespace" . }},{{ join "," .Values.api.oidc.globalServiceAccounts.namespaces }}
   {{- else }}
-  GLOBAL_SERVICE_ACCOUNT_NAMESPACES: {{ .Release.Namespace }}
+  GLOBAL_SERVICE_ACCOUNT_NAMESPACES: {{ include "kargo.dataNamespace" . }}
   {{- end }}
   {{- if .Values.api.oidc.dex.enabled }}
   OIDC_ISSUER_URL: {{ include "kargo.api.baseURL" . }}/dex
