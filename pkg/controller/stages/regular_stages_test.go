@@ -4723,12 +4723,13 @@ func TestRegularStageReconciler_findExistingAnalysisRun(t *testing.T) {
 	twoHoursAgo := now.Add(-2 * time.Hour)
 
 	tests := []struct {
-		name         string
-		stage        types.NamespacedName
-		freightColID string
-		objects      []client.Object
-		interceptor  interceptor.Funcs
-		assertions   func(*testing.T, *rolloutsapi.AnalysisRun, error)
+		name          string
+		stage         types.NamespacedName
+		freightColID  string
+		promotionName string
+		objects       []client.Object
+		interceptor   interceptor.Funcs
+		assertions    func(*testing.T, *rolloutsapi.AnalysisRun, error)
 	}{
 		{
 			name: "no analysis runs found",
@@ -4770,7 +4771,8 @@ func TestRegularStageReconciler_findExistingAnalysisRun(t *testing.T) {
 				Namespace: "fake-project",
 				Name:      "test-stage",
 			},
-			freightColID: "test-collection",
+			freightColID:  "test-collection",
+			promotionName: "test-promotion",
 			objects: []client.Object{
 				&rolloutsapi.AnalysisRun{
 					ObjectMeta: metav1.ObjectMeta{
@@ -4780,6 +4782,9 @@ func TestRegularStageReconciler_findExistingAnalysisRun(t *testing.T) {
 						Labels: map[string]string{
 							kargoapi.LabelKeyStage:             "test-stage",
 							kargoapi.LabelKeyFreightCollection: "test-collection",
+						},
+						Annotations: map[string]string{
+							kargoapi.AnnotationKeyPromotion: "test-promotion",
 						},
 					},
 					Status: rolloutsapi.AnalysisRunStatus{
@@ -4795,6 +4800,9 @@ func TestRegularStageReconciler_findExistingAnalysisRun(t *testing.T) {
 							kargoapi.LabelKeyStage:             "test-stage",
 							kargoapi.LabelKeyFreightCollection: "test-collection",
 						},
+						Annotations: map[string]string{
+							kargoapi.AnnotationKeyPromotion: "test-promotion",
+						},
 					},
 					Status: rolloutsapi.AnalysisRunStatus{
 						Phase: "Failed",
@@ -4807,6 +4815,106 @@ func TestRegularStageReconciler_findExistingAnalysisRun(t *testing.T) {
 				require.NotNil(t, ar)
 				assert.Equal(t, "newer-analysis", ar.Name)
 				assert.Equal(t, hourAgo.Unix(), ar.CreationTimestamp.Unix())
+			},
+		},
+		{
+			name: "filters by promotion annotation",
+			stage: types.NamespacedName{
+				Namespace: "fake-project",
+				Name:      "test-stage",
+			},
+			freightColID:  "test-collection",
+			promotionName: "current-promotion",
+			objects: []client.Object{
+				&rolloutsapi.AnalysisRun{
+					ObjectMeta: metav1.ObjectMeta{
+						Name:              "previous-promotion-analysis",
+						Namespace:         "fake-project",
+						CreationTimestamp: metav1.Time{Time: hourAgo},
+						Labels: map[string]string{
+							kargoapi.LabelKeyStage:             "test-stage",
+							kargoapi.LabelKeyFreightCollection: "test-collection",
+						},
+						Annotations: map[string]string{
+							kargoapi.AnnotationKeyPromotion: "previous-promotion",
+						},
+					},
+				},
+				&rolloutsapi.AnalysisRun{
+					ObjectMeta: metav1.ObjectMeta{
+						Name:              "current-promotion-analysis",
+						Namespace:         "fake-project",
+						CreationTimestamp: metav1.Time{Time: twoHoursAgo},
+						Labels: map[string]string{
+							kargoapi.LabelKeyStage:             "test-stage",
+							kargoapi.LabelKeyFreightCollection: "test-collection",
+						},
+						Annotations: map[string]string{
+							kargoapi.AnnotationKeyPromotion: "current-promotion",
+						},
+					},
+				},
+			},
+			assertions: func(t *testing.T, ar *rolloutsapi.AnalysisRun, err error) {
+				require.NoError(t, err)
+
+				require.NotNil(t, ar)
+				assert.Equal(t, "current-promotion-analysis", ar.Name)
+			},
+		},
+		{
+			name: "returns nil when all runs belong to a different promotion",
+			stage: types.NamespacedName{
+				Namespace: "fake-project",
+				Name:      "test-stage",
+			},
+			freightColID:  "test-collection",
+			promotionName: "current-promotion",
+			objects: []client.Object{
+				&rolloutsapi.AnalysisRun{
+					ObjectMeta: metav1.ObjectMeta{
+						Name:      "previous-promotion-analysis",
+						Namespace: "fake-project",
+						Labels: map[string]string{
+							kargoapi.LabelKeyStage:             "test-stage",
+							kargoapi.LabelKeyFreightCollection: "test-collection",
+						},
+						Annotations: map[string]string{
+							kargoapi.AnnotationKeyPromotion: "previous-promotion",
+						},
+					},
+				},
+			},
+			assertions: func(t *testing.T, ar *rolloutsapi.AnalysisRun, err error) {
+				require.NoError(t, err)
+				assert.Nil(t, ar)
+			},
+		},
+		{
+			name: "skips promotion filter when promotionName is empty",
+			stage: types.NamespacedName{
+				Namespace: "fake-project",
+				Name:      "test-stage",
+			},
+			freightColID:  "test-collection",
+			promotionName: "",
+			objects: []client.Object{
+				&rolloutsapi.AnalysisRun{
+					ObjectMeta: metav1.ObjectMeta{
+						Name:      "test-analysis",
+						Namespace: "fake-project",
+						Labels: map[string]string{
+							kargoapi.LabelKeyStage:             "test-stage",
+							kargoapi.LabelKeyFreightCollection: "test-collection",
+						},
+					},
+				},
+			},
+			assertions: func(t *testing.T, ar *rolloutsapi.AnalysisRun, err error) {
+				require.NoError(t, err)
+
+				require.NotNil(t, ar)
+				assert.Equal(t, "test-analysis", ar.Name)
 			},
 		},
 		{
@@ -4969,7 +5077,7 @@ func TestRegularStageReconciler_findExistingAnalysisRun(t *testing.T) {
 				client: c,
 			}
 
-			ar, err := r.findExistingAnalysisRun(t.Context(), tt.stage, tt.freightColID)
+			ar, err := r.findExistingAnalysisRun(t.Context(), tt.stage, tt.freightColID, tt.promotionName)
 			tt.assertions(t, ar, err)
 		})
 	}

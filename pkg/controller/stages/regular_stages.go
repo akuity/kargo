@@ -1292,8 +1292,9 @@ func (r *RegularStageReconciler) recordFreightVerificationEvent(
 }
 
 // startVerification starts a new verification for the Freight that is associated
-// with the Stage. If the Freight has already been verified, then no verification
-// is started unless a re-verification is requested.
+// with the Stage. If an AnalysisRun already exists for the current promotion,
+// its status is returned without creating a new run. A re-verification request
+// always creates a new AnalysisRun.
 //
 // If there is no verification configuration for the Stage, then the verification
 // is automatically considered successful and no verification is started.
@@ -1332,14 +1333,18 @@ func (r *RegularStageReconciler) startVerification(
 
 	logger := logging.LoggerFromContext(ctx)
 
-	// If this is not a re-verification request, check if there is an existing
-	// AnalysisRun for the Stage and Freight. If there is, return the status
-	// of the existing AnalysisRun.
+	// If this is not a re-verification request, check if an AnalysisRun already
+	// exists for the current promotion. If so, return its status without
+	// creating a new run.
 	if req == nil {
+		var promotionName string
+		if stage.Status.LastPromotion != nil {
+			promotionName = stage.Status.LastPromotion.Name
+		}
 		existingAnalysisRun, err := r.findExistingAnalysisRun(ctx, types.NamespacedName{
 			Namespace: stage.Namespace,
 			Name:      stage.Name,
-		}, freight.ID)
+		}, freight.ID, promotionName)
 		if err != nil {
 			newVI.FinishTime = ptr.To(metav1.Now())
 			newVI.Phase = kargoapi.VerificationPhaseError
@@ -1414,12 +1419,10 @@ func (r *RegularStageReconciler) startVerification(
 			Reference:  types.NamespacedName{Namespace: stage.Namespace, Name: freightRef.Name},
 		})
 	}
-	if curVI == nil || (req.ForID(curVI.ID) && req.ControlPlane && req.Actor != "") {
-		if stage.Status.LastPromotion != nil {
-			builderOpts = append(builderOpts, rollouts.WithExtraAnnotations{
-				kargoapi.AnnotationKeyPromotion: stage.Status.LastPromotion.Name,
-			})
-		}
+	if stage.Status.LastPromotion != nil {
+		builderOpts = append(builderOpts, rollouts.WithExtraAnnotations{
+			kargoapi.AnnotationKeyPromotion: stage.Status.LastPromotion.Name,
+		})
 	}
 	ar, err := builder.Build(ctx, stage.Namespace, stage.Spec.Verification, builderOpts...)
 	if err != nil {
@@ -1628,13 +1631,16 @@ func (r *RegularStageReconciler) abortVerification(
 	}, nil
 }
 
-// findExistingAnalysisRun finds the most recent AnalysisRun for a Stage and
-// Freight collection in the namespace of the Stage. If no AnalysisRun is found,
-// it returns nil.
+// findExistingAnalysisRun finds the most recent AnalysisRun for a Stage,
+// Freight collection, and Promotion in the namespace of the Stage. The
+// promotionName is matched against the kargo.akuity.io/promotion annotation on
+// the AnalysisRun; when empty the annotation filter is skipped. Returns nil if
+// no matching AnalysisRun is found.
 func (r *RegularStageReconciler) findExistingAnalysisRun(
 	ctx context.Context,
 	stage types.NamespacedName,
 	freightColID string,
+	promotionName string,
 ) (*rolloutsapi.AnalysisRun, error) {
 	analysisRuns := &rolloutsapi.AnalysisRunList{}
 	if err := r.client.List(
@@ -1658,12 +1664,25 @@ func (r *RegularStageReconciler) findExistingAnalysisRun(
 		return nil, nil
 	}
 
+	// Filter by the promotion annotation so that AnalysisRuns belonging to a
+	// previous promotion of the same freight are not reused.
+	items := analysisRuns.Items
+	if promotionName != "" {
+		items = slices.DeleteFunc(items, func(ar rolloutsapi.AnalysisRun) bool {
+			return ar.Annotations[kargoapi.AnnotationKeyPromotion] != promotionName
+		})
+	}
+
+	if len(items) == 0 {
+		return nil, nil
+	}
+
 	// Sort the AnalysisRuns by creation timestamp, so that the most recent
 	// one is first.
-	slices.SortFunc(analysisRuns.Items, func(lhs, rhs rolloutsapi.AnalysisRun) int {
+	slices.SortFunc(items, func(lhs, rhs rolloutsapi.AnalysisRun) int {
 		return rhs.CreationTimestamp.Compare(lhs.CreationTimestamp.Time)
 	})
-	return &analysisRuns.Items[0], nil
+	return &items[0], nil
 }
 
 // autoPromoteFreight automatically promotes the latest promotable (i.e.
