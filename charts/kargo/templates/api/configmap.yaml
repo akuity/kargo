@@ -1,4 +1,7 @@
 {{- if and .Values.workloads.install .Values.api.enabled }}
+{{- if and .Values.api.oidc.dex.enabled .Values.api.oidc.dex.byo.enabled }}
+{{- fail "api.oidc.dex.enabled and api.oidc.dex.byo.enabled are mutually exclusive: choose either the chart-installed Dex (api.oidc.dex.enabled) or proxy to an externally-managed Dex (api.oidc.dex.byo.enabled), not both." }}
+{{- end }}
 {{- $kc := .Values.api.kubeconfigSecrets.kargo | default .Values.kubeconfigSecrets.kargo }}
 apiVersion: v1
 kind: ConfigMap
@@ -56,6 +59,13 @@ data:
   OIDC_CLIENT_ID: {{ quote .Values.api.oidc.clientID }}
   {{- if .Values.api.oidc.cliClientID }}
   OIDC_CLI_CLIENT_ID: {{ quote .Values.api.oidc.cliClientID }}
+  {{- end }}
+  {{- if .Values.api.oidc.dex.byo.enabled }}
+  DEX_ENABLED: "true"
+  DEX_SERVER_ADDRESS: {{ .Values.api.oidc.dex.byo.serverAddress | default (printf "https://kargo-dex-server.%s.svc" .Release.Namespace) }}
+  {{- if .Values.api.oidc.dex.byo.caCertPath }}
+  DEX_CA_CERT_PATH: {{ quote .Values.api.oidc.dex.byo.caCertPath }}
+  {{- end }}
   {{- end }}
   {{- end }}
   OIDC_USERNAME_CLAIM: {{ quote .Values.api.oidc.usernameClaim | default "email" }}
