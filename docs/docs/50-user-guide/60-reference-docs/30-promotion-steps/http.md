@@ -27,6 +27,7 @@ with a wide variety of external services.
 | `responseContentType` | `string` | N | Overrides automatic content-type detection for response parsing. Accepts `application/json`, `application/yaml`, or `text/plain`. When not set, the step uses the response's `Content-Type` header, falling back to JSON parsing for unrecognized types. |
 | `successExpression` | `string` | N | An [expr-lang] expression that can evaluate the response to determine success. When defined, the step succeeds only when this expression evaluates to `true`. If both `successExpression` and `failureExpression` are defined and both evaluate to `true`, the failure takes precedence and the step fails terminally. Note that this expression should _not_ be offset by `${{` and `}}`. See examples for more details. |
 | `failureExpression` | `string` | N | An [expr-lang] expression that can evaluate the response to determine failure. When defined and evaluates to `true`, the step fails terminally. If both `successExpression` and `failureExpression` are defined and both evaluate to `true`, the failure takes precedence. Note that this expression should _not_ be offset by `${{` and `}}`. See examples for more details. |
+| `errorExpression` | `string` | N | An [expr-lang] expression evaluated only when `failureExpression` is met, to extract a richer error message from the response. If empty, unset, fails to compile or evaluate, the default message is used instead. Note that this expression should _not_ be offset by `${{` and `}}`. |
 | `outputs` | `[]object` | N | A list of rules for extracting outputs from the HTTP response. These are only applied to responses deemed successful. |
 | `outputs[].name` | `string` | Y | The name of the output. |
 | `outputs[].fromExpression` | `string` | Y | An [expr-lang] expression that can extract a value from the HTTP response. Note that this expression should _not_ be offset by `${{` and `}}`. See examples for more details. |
@@ -56,7 +57,7 @@ Kargo to retry the step according to the configured
 
 ## Expressions
 
-The `successExpression`, `failureExpression`, and `outputs[].fromExpression`
+The `successExpression`, `failureExpression`, `errorExpression`, and `outputs[].fromExpression`
 fields all support [expr-lang][] expressions.
 
 :::warning
