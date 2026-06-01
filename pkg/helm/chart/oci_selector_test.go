@@ -82,3 +82,76 @@ func Test_ociSelector_Select(t *testing.T) {
 	require.NoError(t, err)
 	require.NotEmpty(t, versions)
 }
+
+func Test_parseOCITagSemver(t *testing.T) {
+	testCases := []struct {
+		name     string
+		tag      string
+		expected string
+		assert   func(*testing.T, error)
+	}{
+		{
+			name:     "strict semver",
+			tag:      "1.2.3",
+			expected: "1.2.3",
+			assert: func(t *testing.T, err error) {
+				require.NoError(t, err)
+			},
+		},
+		{
+			name:     "helm build metadata tag",
+			tag:      "1.2.3_build.1",
+			expected: "1.2.3+build.1",
+			assert: func(t *testing.T, err error) {
+				require.NoError(t, err)
+			},
+		},
+		{
+			name:     "prerelease",
+			tag:      "1.2.3-rc.1",
+			expected: "1.2.3-rc.1",
+			assert: func(t *testing.T, err error) {
+				require.NoError(t, err)
+			},
+		},
+		{
+			name:     "v-prefixed semver",
+			tag:      "v1.2.3",
+			expected: "1.2.3",
+			assert: func(t *testing.T, err error) {
+				require.NoError(t, err)
+			},
+		},
+		{
+			name:     "v-prefixed helm build metadata tag",
+			tag:      "v1.2.3_build.1",
+			expected: "1.2.3+build.1",
+			assert: func(t *testing.T, err error) {
+				require.NoError(t, err)
+			},
+		},
+		{
+			name: "partial semver",
+			tag:  "1.2",
+			assert: func(t *testing.T, err error) {
+				require.Error(t, err)
+			},
+		},
+		{
+			name: "non-semver tag",
+			tag:  "latest",
+			assert: func(t *testing.T, err error) {
+				require.Error(t, err)
+			},
+		},
+	}
+	for _, testCase := range testCases {
+		t.Run(testCase.name, func(t *testing.T) {
+			sv, err := parseOCITagSemver(testCase.tag)
+			testCase.assert(t, err)
+			if testCase.expected != "" {
+				require.Equal(t, testCase.expected, sv.Original())
+			}
+		})
+	}
+}
