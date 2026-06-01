@@ -60,10 +60,7 @@ func (o *ociSelector) Select(ctx context.Context) ([]string, error) {
 	semvers := make(semver.Collection, 0, o.repo.TagListPageSize)
 	if err := o.repo.Tags(ctx, "", func(tags []string) error {
 		for _, tag := range tags {
-			// OCI artifact tags are not allowed to contain the "+" character, which is
-			// used by SemVer to separate the version from the build metadata. To work
-			// around this, Helm uses "_" instead of "+".
-			if sv, err := semver.StrictNewVersion(strings.ReplaceAll(tag, "_", "+")); err == nil {
+			if sv, err := parseOCITagSemver(tag); err == nil {
 				semvers = append(semvers, sv)
 			}
 		}
@@ -78,4 +75,12 @@ func (o *ociSelector) Select(ctx context.Context) ([]string, error) {
 	semvers = o.filterSemvers(semvers)
 	o.sort(semvers)
 	return o.semversToVersionStrings(semvers), nil
+}
+
+func parseOCITagSemver(tag string) (*semver.Version, error) {
+	// OCI artifact tags are not allowed to contain the "+" character, which is
+	// used by SemVer to separate the version from the build metadata. To work
+	// around this, Helm uses "_" instead of "+".
+	version := strings.ReplaceAll(tag, "_", "+")
+	return semver.StrictNewVersion(strings.TrimPrefix(version, "v"))
 }
