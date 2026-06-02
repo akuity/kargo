@@ -4,7 +4,6 @@ import (
 	"context"
 	"errors"
 	"fmt"
-	"strings"
 	"time"
 
 	"github.com/xeipuuv/gojsonschema"
@@ -891,32 +890,24 @@ func (a *argocdUpdater) authorizeArgoCDAppUpdate(
 		return permErr
 	}
 
-	tokens := strings.SplitN(allowedStage, ":", 2)
-	if len(tokens) != 2 {
+	authorizedStages, err := kargoapi.AuthorizedStages(allowedStage)
+	if err != nil {
 		return fmt.Errorf(
-			"unable to parse value of annotation %q (%q) on Argo CD Application %q in namespace %q",
+			"unable to parse value of annotation %q (%q) on Argo CD Application %q in namespace %q: %w",
 			kargoapi.AnnotationKeyAuthorizedStage,
 			allowedStage,
 			appMeta.Name,
 			appMeta.Namespace,
+			err,
 		)
 	}
 
-	projectName, stageName := tokens[0], tokens[1]
-	if strings.Contains(projectName, "*") || strings.Contains(stageName, "*") {
-		// nolint:staticcheck
-		return fmt.Errorf(
-			"Argo CD Application %q in namespace %q has deprecated glob expression in annotation %q (%q)",
-			appMeta.Name,
-			appMeta.Namespace,
-			kargoapi.AnnotationKeyAuthorizedStage,
-			allowedStage,
-		)
+	for _, stage := range authorizedStages {
+		if stage.Namespace == stepCtx.Project && stage.Name == stepCtx.Stage {
+			return nil
+		}
 	}
-	if projectName != stepCtx.Project || stageName != stepCtx.Stage {
-		return permErr
-	}
-	return nil
+	return permErr
 }
 
 // applyArgoCDSourceUpdate updates a single Argo CD ApplicationSource.
