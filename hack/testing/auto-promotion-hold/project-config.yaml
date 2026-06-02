@@ -1,0 +1,10 @@
+apiVersion: kargo.akuity.io/v1alpha1
+kind: ProjectConfig
+metadata:
+  name: auto-promotion-hold
+  namespace: auto-promotion-hold
+spec:
+  promotionPolicies:
+  - stageSelector:
+      name: slow-pending-hold
+    autoPromotionEnabled: true
