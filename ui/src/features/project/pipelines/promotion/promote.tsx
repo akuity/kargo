@@ -4,7 +4,7 @@ import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
 import { Alert, Button, Drawer, Flex, Input } from 'antd';
 import classNames from 'classnames';
 import { useMemo, useState } from 'react';
-import { generatePath, useNavigate } from 'react-router-dom';
+import { generatePath, Link, useNavigate } from 'react-router-dom';
 
 import { paths } from '@ui/config/paths';
 import { useExtensionsContext } from '@ui/extensions/extensions-context';
@@ -70,6 +70,22 @@ export const Promote = (props: PromoteProps) => {
       ? autoPromotionCandidatesQuery.data.data.candidates
       : undefined;
   const candidateName = getAutoPromotionCandidateName(autoPromotionCandidates, props.freight);
+  const candidateFreightPath = candidateName
+    ? generatePath(paths.freight, { name: projectName, freightName: candidateName })
+    : undefined;
+  const candidateFreightLink = candidateFreightPath ? (
+    <Link
+      to={candidateFreightPath}
+      onClick={(event) => {
+        event.preventDefault();
+        actionContext?.cancel();
+        navigate(candidateFreightPath);
+      }}
+      style={{ overflowWrap: 'anywhere' }}
+    >
+      {candidateName}
+    </Link>
+  ) : undefined;
   const selectedOriginLabel = originLabel(props.freight?.origin);
   const isPromotingOlderThanCandidate = Boolean(candidateName && candidateName !== freightName);
   const activeHold = getAutoPromotionHold(props.stage, props.freight?.origin);
@@ -188,7 +204,9 @@ export const Promote = (props: PromoteProps) => {
             <Alert
               showIcon
               type='warning'
-              message={`This is older than the current auto-promotion candidate ${candidateName}.`}
+              message={
+                <>This is older than the current auto-promotion candidate {candidateFreightLink}.</>
+              }
               description={`Auto-promotion for ${selectedOriginLabel} will pause if this Promotion succeeds.`}
             />
             <Input.TextArea

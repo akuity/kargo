@@ -6,13 +6,14 @@ import {
   faExternalLink,
   faMinus,
   faPause,
+  faPlay,
   faTruckArrowRight
 } from '@fortawesome/free-solid-svg-icons';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
-import { Button, Card, Dropdown, Flex, message, Space, Typography } from 'antd';
+import { Button, Card, Dropdown, Flex, message, Popconfirm, Space, Typography } from 'antd';
 import classNames from 'classnames';
 import { formatDistance } from 'date-fns';
-import { ReactNode, useMemo } from 'react';
+import { ReactNode, useMemo, useState } from 'react';
 import { generatePath, Link, useNavigate } from 'react-router-dom';
 
 import { paths } from '@ui/config/paths';
@@ -24,11 +25,21 @@ import {
   queryFreight
 } from '@ui/gen/api/service/v1alpha1/service-KargoService_connectquery';
 import { Stage } from '@ui/gen/api/v1alpha1/generated_pb';
+import {
+  useGetStageAutoPromotionCandidates,
+  useResumeStageAutoPromotion
+} from '@ui/gen/api/v2/core/core';
+import { FreightOrigin } from '@ui/gen/api/v2/models/freightOrigin';
 import { timestampDate } from '@ui/utils/connectrpc-utils';
 
 import { useDictionaryContext } from '../context/dictionary-context';
 import { useGraphContext } from '../context/graph-context';
 import { stageIndexer } from '../graph/node-indexer';
+import {
+  autoPromotionHoldStateActive,
+  getAutoPromotionCandidateName,
+  originLabel
+} from '../promotion/auto-promotion';
 import { DropOverlay } from '../promotion/drag-and-drop/drop-overlay';
 
 import { AnalysisRunLogsLink } from './analysis-run-logs-link';
@@ -49,11 +60,14 @@ import './stage-node.less';
 
 export const StageNode = (props: { stage: Stage }) => {
   const stageName = props.stage?.metadata?.name || '';
+  const projectName = props.stage?.metadata?.namespace || '';
 
   const navigate = useNavigate();
   const dictionaryContext = useDictionaryContext();
   const graphContext = useGraphContext();
   const actionContext = useActionContext();
+  const [isResumeAutoPromotionConfirmationOpen, setIsResumeAutoPromotionConfirmationOpen] =
+    useState(false);
 
   const stageNodeIndex = useMemo(() => stageIndexer.index(props.stage), [props.stage]);
 
@@ -63,6 +77,81 @@ export const StageNode = (props: { stage: Stage }) => {
   const hasAutoPromotionHold = Boolean(
     Object.keys(props.stage?.status?.autoPromotionHolds || {}).length
   );
+  const activeAutoPromotionHolds = useMemo(
+    () =>
+      Object.values(props.stage?.status?.autoPromotionHolds || {}).filter(
+        (hold) => hold?.state === autoPromotionHoldStateActive && hold?.freight?.origin
+      ),
+    [props.stage]
+  );
+  const activeAutoPromotionHold = activeAutoPromotionHolds[0];
+  const activeAutoPromotionHoldOrigin = activeAutoPromotionHold?.freight?.origin as
+    | FreightOrigin
+    | undefined;
+  const activeAutoPromotionHoldOriginLabel = originLabel(activeAutoPromotionHoldOrigin);
+  const hasMultipleActiveAutoPromotionHolds = activeAutoPromotionHolds.length > 1;
+  const resumeAutoPromotionMutation = useResumeStageAutoPromotion({
+    mutation: {
+      onSuccess: () => message.success('Auto-promotion resumed')
+    }
+  });
+  const autoPromotionCandidatesQuery = useGetStageAutoPromotionCandidates(projectName, stageName, {
+    query: {
+      enabled: Boolean(projectName && stageName && activeAutoPromotionHoldOrigin)
+    }
+  });
+  const autoPromotionCandidates =
+    autoPromotionCandidatesQuery.data?.status === 200
+      ? autoPromotionCandidatesQuery.data.data.candidates
+      : undefined;
+  const resumeCandidateName = getAutoPromotionCandidateName(
+    autoPromotionCandidates,
+    activeAutoPromotionHold?.freight
+  );
+  const resumeCandidateFreightPath = resumeCandidateName
+    ? generatePath(paths.freight, { name: projectName, freightName: resumeCandidateName })
+    : undefined;
+  const resumeCandidateFreightLink = resumeCandidateFreightPath ? (
+    <Link
+      to={resumeCandidateFreightPath}
+      onClick={(event) => {
+        event.preventDefault();
+        event.stopPropagation();
+        setIsResumeAutoPromotionConfirmationOpen(false);
+        navigate(resumeCandidateFreightPath);
+      }}
+      style={{ overflowWrap: 'anywhere' }}
+    >
+      {resumeCandidateName}
+    </Link>
+  ) : undefined;
+  const isCheckingResumeCandidate = autoPromotionCandidatesQuery.isLoading;
+  const resumeAutoPromotionDescription = isCheckingResumeCandidate ? (
+    <>Checking the current auto-promotion candidate for {activeAutoPromotionHoldOriginLabel}.</>
+  ) : resumeCandidateName ? (
+    <>
+      Current auto-promotion candidate for {activeAutoPromotionHoldOriginLabel} is{' '}
+      {resumeCandidateFreightLink}.
+    </>
+  ) : (
+    <>No current auto-promotion candidate exists for {activeAutoPromotionHoldOriginLabel}.</>
+  );
+  const resumeAutoPromotionConfirmationDescription = (
+    <>
+      {resumeAutoPromotionDescription}
+      {hasMultipleActiveAutoPromotionHolds && ' Other held origins will remain paused.'}
+    </>
+  );
+  const resumeAutoPromotion = () => {
+    if (!projectName || !stageName || !activeAutoPromotionHoldOrigin) {
+      return;
+    }
+    resumeAutoPromotionMutation.mutate({
+      project: projectName,
+      stage: stageName,
+      data: { origin: activeAutoPromotionHoldOrigin }
+    });
+  };
 
   const stageHealth = getStageHealth(props.stage);
 
@@ -166,6 +255,42 @@ export const StageNode = (props: { stage: Stage }) => {
                 icon: <img src='/argo-logo.svg' alt='ArgoCD' style={{ width: '18px' }} />
               }}
             />
+            {activeAutoPromotionHoldOrigin && (
+              <Popconfirm
+                placement='bottomRight'
+                title='Resume auto-promotion?'
+                description={
+                  <span
+                    style={{
+                      display: 'block',
+                      maxWidth: 320,
+                      overflowWrap: 'anywhere'
+                    }}
+                  >
+                    {resumeAutoPromotionConfirmationDescription}
+                  </span>
+                }
+                styles={{ root: { maxWidth: 360 } }}
+                open={isResumeAutoPromotionConfirmationOpen}
+                onOpenChange={setIsResumeAutoPromotionConfirmationOpen}
+                okText='Resume'
+                cancelText='Cancel'
+                onCancel={() => setIsResumeAutoPromotionConfirmationOpen(false)}
+                onConfirm={() => {
+                  setIsResumeAutoPromotionConfirmationOpen(false);
+                  resumeAutoPromotion();
+                }}
+                disabled={isCheckingResumeCandidate || resumeAutoPromotionMutation.isPending}
+              >
+                <Button
+                  aria-label={`Resume auto-promotion for ${activeAutoPromotionHoldOriginLabel}`}
+                  size='small'
+                  loading={isCheckingResumeCandidate || resumeAutoPromotionMutation.isPending}
+                  disabled={isCheckingResumeCandidate}
+                  icon={<FontAwesomeIcon icon={faPlay} size='sm' />}
+                />
+              </Popconfirm>
+            )}
             <Dropdown
               trigger={['click']}
               overlayClassName='w-fit'

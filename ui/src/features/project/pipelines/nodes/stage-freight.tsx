@@ -6,7 +6,7 @@ import {
   faPause
 } from '@fortawesome/free-solid-svg-icons';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
-import { Button, Flex, Popconfirm, Tag, Tooltip, Typography, message } from 'antd';
+import { Button, Flex, Tag, Tooltip, Typography } from 'antd';
 import Link from 'antd/es/typography/Link';
 import { useEffect, useMemo, useState } from 'react';
 
@@ -25,10 +25,6 @@ import {
   Image,
   Stage
 } from '@ui/gen/api/v1alpha1/generated_pb';
-import {
-  useGetStageAutoPromotionCandidates,
-  useResumeStageAutoPromotion
-} from '@ui/gen/api/v2/core/core';
 
 import './stage-node.less';
 import { useDictionaryContext } from '../context/dictionary-context';
@@ -37,7 +33,6 @@ import { humanComprehendableArtifact } from '../freight/artifact-parts-utils';
 import { shortVersion } from '../freight/short-version-utils';
 import {
   autoPromotionHoldStatePending,
-  getAutoPromotionCandidateName,
   getAutoPromotionHold,
   originLabel
 } from '../promotion/auto-promotion';
@@ -54,13 +49,6 @@ export const StageFreight = (props: { stage: Stage }) => {
   const freightTimelineControllerContext = useFreightTimelineControllerContext();
 
   const currentFreight = useMemo(() => getCurrentFreight(props.stage), [props.stage]);
-  const projectName = props.stage?.metadata?.namespace || '';
-  const stageName = props.stage?.metadata?.name || '';
-  const resumeAutoPromotionMutation = useResumeStageAutoPromotion({
-    mutation: {
-      onSuccess: () => message.success('Auto-promotion resumed')
-    }
-  });
 
   const warehouses = currentFreight?.map((f) => f.origin?.name);
 
@@ -85,16 +73,6 @@ export const StageFreight = (props: { stage: Stage }) => {
     () => getAutoPromotionHold(props.stage, selectedFreight?.origin),
     [props.stage, selectedFreight]
   );
-  const autoPromotionCandidatesQuery = useGetStageAutoPromotionCandidates(projectName, stageName, {
-    query: {
-      enabled: Boolean(
-        projectName &&
-        stageName &&
-        selectedAutoPromotionHold &&
-        selectedAutoPromotionHold.state !== autoPromotionHoldStatePending
-      )
-    }
-  });
 
   const selectedFreightAlias = useMemo(
     () => dictionaryContext?.freightById?.[selectedFreight?.name]?.alias,
@@ -158,32 +136,6 @@ export const StageFreight = (props: { stage: Stage }) => {
     : `Auto-promotion is paused for ${originLabel(
         selectedFreight?.origin
       )} after rollback to ${selectedAutoPromotionHold?.freight?.name || selectedFreight?.name}.`;
-  const autoPromotionCandidates =
-    autoPromotionCandidatesQuery.data?.status === 200
-      ? autoPromotionCandidatesQuery.data.data.candidates
-      : undefined;
-  const resumeCandidateName = getAutoPromotionCandidateName(
-    autoPromotionCandidates,
-    selectedFreight
-  );
-  const isCheckingResumeCandidate = autoPromotionCandidatesQuery.isLoading;
-  const resumeDescription = isCheckingResumeCandidate
-    ? `Checking the current auto-promotion candidate for ${originLabel(selectedFreight?.origin)}.`
-    : resumeCandidateName
-      ? `Current auto-promotion candidate for ${originLabel(
-          selectedFreight?.origin
-        )} is ${resumeCandidateName}.`
-      : `No current auto-promotion candidate exists for ${originLabel(selectedFreight?.origin)}.`;
-  const resumeAutoPromotion = () => {
-    if (!projectName || !stageName || !selectedFreight?.origin) {
-      return;
-    }
-    resumeAutoPromotionMutation.mutate({
-      project: projectName,
-      stage: stageName,
-      data: { origin: selectedFreight.origin }
-    });
-  };
 
   return (
     <>
@@ -238,26 +190,6 @@ export const StageFreight = (props: { stage: Stage }) => {
                   {isHoldPending ? 'Pause pending' : 'Auto-paused'}
                 </Tag>
               </Tooltip>
-              {!isHoldPending && (
-                <Popconfirm
-                  title='Resume auto-promotion?'
-                  description={resumeDescription}
-                  okText='Resume'
-                  cancelText='Cancel'
-                  onConfirm={resumeAutoPromotion}
-                  disabled={isCheckingResumeCandidate}
-                >
-                  <Button
-                    size='small'
-                    type='link'
-                    className='h-auto p-0 text-[9px]'
-                    loading={isCheckingResumeCandidate || resumeAutoPromotionMutation.isPending}
-                    disabled={isCheckingResumeCandidate}
-                  >
-                    Resume
-                  </Button>
-                </Popconfirm>
-              )}
             </Flex>
           )}
 
