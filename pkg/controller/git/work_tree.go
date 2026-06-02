@@ -60,8 +60,10 @@ type WorkTree interface {
 	// who cloned the repo associated with this working tree.
 	HomeDir() string
 	// GetDiffPathsForCommitID returns a string slice indicating the paths,
-	// relative to the root of the repository, of any files that are new or
-	// modified in the commit with the given ID.
+	// relative to the root of the repository, of any files that are added,
+	// modified, deleted, or renamed/moved in the commit with the given ID. For
+	// renamed or moved files, both the old and new paths are included so that
+	// path-based filters can match on either side of the move.
 	GetDiffPathsForCommitID(commitID string) ([]string, error)
 	// IsAncestor returns true if parent branch is an ancestor of child
 	IsAncestor(parent string, child string) (bool, error)
@@ -399,18 +401,30 @@ func (w *workTree) Fetch(opts *FetchOptions) error {
 }
 
 func (w *workTree) GetDiffPathsForCommitID(commitID string) ([]string, error) {
-	resBytes, err := libExec.Exec(w.buildGitCommand("show", "--pretty=", "--name-only", "--first-parent", commitID))
+	resBytes, err := libExec.Exec(w.buildGitCommand("show", "--pretty=", "--name-status", "--first-parent", commitID))
 	if err != nil {
 		return nil, fmt.Errorf("error getting diff paths for commit %q: %w", commitID, err)
 	}
 	var paths []string
 	scanner := bufio.NewScanner(bytes.NewReader(resBytes))
-	scanner.Split(bufio.ScanLines)
 	for scanner.Scan() {
-		paths = append(
-			paths,
-			scanner.Text(),
-		)
+		line := scanner.Text()
+		if line == "" {
+			continue
+		}
+		// --name-status output is tab-separated: <status>\t<path> for most
+		// changes, or <status>\t<old-path>\t<new-path> for renames and copies.
+		parts := strings.SplitN(line, "\t", 3)
+		if len(parts) < 2 {
+			continue
+		}
+		// For renames (R) and copies (C), include both old and new paths so
+		// that a path filter matching the source directory detects the removal.
+		if len(parts) == 3 && len(parts[0]) > 0 && (parts[0][0] == 'R' || parts[0][0] == 'C') {
+			paths = append(paths, parts[1], parts[2])
+		} else {
+			paths = append(paths, parts[1])
+		}
 	}
 	return paths, nil
 }
