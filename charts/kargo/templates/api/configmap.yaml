@@ -38,7 +38,7 @@ data:
   {{- end }}
   {{- if .Values.api.oidc.enabled }}
   OIDC_ENABLED: "true"
-  OIDC_ADDITIONAL_SCOPES: {{ join "," .Values.api.oidc.additionalScopes }}
+  OIDC_ADDITIONAL_SCOPES: {{ join "," .Values.api.oidc.additionalScopes | quote }}
   {{- if .Values.api.oidc.globalServiceAccounts.namespaces }}
   GLOBAL_SERVICE_ACCOUNT_NAMESPACES: {{ .Release.Namespace }},{{ join "," .Values.api.oidc.globalServiceAccounts.namespaces }}
   {{- else }}
