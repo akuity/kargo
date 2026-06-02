@@ -585,6 +585,77 @@ func TestRunningPromotionsByArgoCDApplications(t *testing.T) {
 	}
 }
 
+func TestRunningPromotionsByStage(t *testing.T) {
+	t.Parallel()
+	const testShardName = "test-shard"
+
+	testCases := []struct {
+		name      string
+		obj       client.Object
+		shardName string
+		expected  []string
+	}{
+		{
+			name:     "Object is not a Promotion",
+			obj:      &kargoapi.Stage{},
+			expected: nil,
+		},
+		{
+			name: "Promotion is not running",
+			obj: &kargoapi.Promotion{
+				Spec:   kargoapi.PromotionSpec{Stage: "fake-stage"},
+				Status: kargoapi.PromotionStatus{Phase: kargoapi.PromotionPhaseSucceeded},
+			},
+			expected: nil,
+		},
+		{
+			name: "Promotion belongs to another shard",
+			obj: &kargoapi.Promotion{
+				ObjectMeta: metav1.ObjectMeta{
+					Labels: map[string]string{kargoapi.LabelKeyShard: "another"},
+				},
+				Spec:   kargoapi.PromotionSpec{Stage: "fake-stage"},
+				Status: kargoapi.PromotionStatus{Phase: kargoapi.PromotionPhaseRunning},
+			},
+			shardName: testShardName,
+			expected:  nil,
+		},
+		{
+			name: "running Promotion belongs to this shard",
+			obj: &kargoapi.Promotion{
+				ObjectMeta: metav1.ObjectMeta{
+					Labels: map[string]string{kargoapi.LabelKeyShard: testShardName},
+				},
+				Spec:   kargoapi.PromotionSpec{Stage: "fake-stage"},
+				Status: kargoapi.PromotionStatus{Phase: kargoapi.PromotionPhaseRunning},
+			},
+			shardName: testShardName,
+			expected:  []string{"fake-stage"},
+		},
+		{
+			name: "running Promotion for default controller",
+			obj: &kargoapi.Promotion{
+				Spec:   kargoapi.PromotionSpec{Stage: "fake-stage"},
+				Status: kargoapi.PromotionStatus{Phase: kargoapi.PromotionPhaseRunning},
+			},
+			expected: []string{"fake-stage"},
+		},
+	}
+	for _, testCase := range testCases {
+		t.Run(testCase.name, func(t *testing.T) {
+			t.Parallel()
+			require.Equal(
+				t,
+				testCase.expected,
+				RunningPromotionsByStage(
+					testCase.shardName,
+					testCase.shardName == "",
+				)(testCase.obj),
+			)
+		})
+	}
+}
+
 func TestRunningPromotionsByPullRequestURL(t *testing.T) {
 	t.Parallel()
 	testCases := []struct {

@@ -29,6 +29,7 @@ func TestUpdatedArgoCDAppHandler_Update(t *testing.T) {
 		name         string
 		applications []client.Object
 		indexer      client.IndexerFunc
+		stageIndexer client.IndexerFunc
 		interceptor  interceptor.Funcs
 		e            event.TypedUpdateEvent[*argocd.Application]
 		assertions   func(*testing.T, workqueue.TypedRateLimitingInterface[reconcile.Request])
@@ -217,11 +218,123 @@ func TestUpdatedArgoCDAppHandler_Update(t *testing.T) {
 				require.Equal(t, 0, wq.Len())
 			},
 		},
+		{
+			name: "Application authorizes a Stage with a selector-based Promotion",
+			applications: []client.Object{
+				&kargoapi.Promotion{
+					ObjectMeta: metav1.ObjectMeta{
+						Name:      "selector-promotion",
+						Namespace: "fake-namespace",
+					},
+					Spec: kargoapi.PromotionSpec{Stage: "fake-stage"},
+				},
+			},
+			// Name-based index finds nothing (selector-based step).
+			indexer: func(client.Object) []string { return nil },
+			stageIndexer: func(obj client.Object) []string {
+				if obj.GetName() == "selector-promotion" {
+					return []string{"fake-stage"}
+				}
+				return nil
+			},
+			e: event.TypedUpdateEvent[*argocd.Application]{
+				ObjectOld: &argocd.Application{},
+				ObjectNew: &argocd.Application{
+					ObjectMeta: metav1.ObjectMeta{
+						Name:      "fake-application-name",
+						Namespace: "fake-application-namespace",
+						Annotations: map[string]string{
+							kargoapi.AnnotationKeyAuthorizedStage: "fake-namespace:fake-stage",
+						},
+					},
+				},
+			},
+			assertions: func(t *testing.T, wq workqueue.TypedRateLimitingInterface[reconcile.Request]) {
+				require.Equal(t, 1, wq.Len())
+				item, _ := wq.Get()
+				require.Equal(t, reconcile.Request{
+					NamespacedName: types.NamespacedName{
+						Namespace: "fake-namespace",
+						Name:      "selector-promotion",
+					},
+				}, item)
+			},
+		},
+		{
+			name: "name-based and Stage-based lookups are deduplicated",
+			applications: []client.Object{
+				&kargoapi.Promotion{
+					ObjectMeta: metav1.ObjectMeta{
+						Name:      "matching-promotion",
+						Namespace: "fake-namespace",
+					},
+					Spec: kargoapi.PromotionSpec{Stage: "fake-stage"},
+				},
+			},
+			indexer: func(obj client.Object) []string {
+				if obj.GetName() == "matching-promotion" {
+					return []string{"fake-application-namespace:fake-application-name"}
+				}
+				return nil
+			},
+			stageIndexer: func(obj client.Object) []string {
+				if obj.GetName() == "matching-promotion" {
+					return []string{"fake-stage"}
+				}
+				return nil
+			},
+			e: event.TypedUpdateEvent[*argocd.Application]{
+				ObjectOld: &argocd.Application{},
+				ObjectNew: &argocd.Application{
+					ObjectMeta: metav1.ObjectMeta{
+						Name:      "fake-application-name",
+						Namespace: "fake-application-namespace",
+						Annotations: map[string]string{
+							kargoapi.AnnotationKeyAuthorizedStage: "fake-namespace:fake-stage",
+						},
+					},
+				},
+			},
+			assertions: func(t *testing.T, wq workqueue.TypedRateLimitingInterface[reconcile.Request]) {
+				require.Equal(t, 1, wq.Len())
+				item, _ := wq.Get()
+				require.Equal(t, reconcile.Request{
+					NamespacedName: types.NamespacedName{
+						Namespace: "fake-namespace",
+						Name:      "matching-promotion",
+					},
+				}, item)
+			},
+		},
+		{
+			name:    "malformed authorized-stage annotation enqueues nothing",
+			indexer: func(client.Object) []string { return nil },
+			e: event.TypedUpdateEvent[*argocd.Application]{
+				ObjectOld: &argocd.Application{},
+				ObjectNew: &argocd.Application{
+					ObjectMeta: metav1.ObjectMeta{
+						Name:      "fake-application-name",
+						Namespace: "fake-application-namespace",
+						Annotations: map[string]string{
+							kargoapi.AnnotationKeyAuthorizedStage: "bogus",
+						},
+					},
+				},
+			},
+			assertions: func(t *testing.T, wq workqueue.TypedRateLimitingInterface[reconcile.Request]) {
+				require.Equal(t, 0, wq.Len())
+			},
+		},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			scheme := runtime.NewScheme()
 			require.NoError(t, kargoapi.AddToScheme(scheme))
+
+			stageIndexer := tt.stageIndexer
+			if stageIndexer == nil {
+				stageIndexer = func(client.Object) []string { return nil }
+			}
 
 			c := fake.NewClientBuilder().
 				WithScheme(scheme).
@@ -230,6 +343,11 @@ func TestUpdatedArgoCDAppHandler_Update(t *testing.T) {
 					&kargoapi.Promotion{},
 					indexer.RunningPromotionsByArgoCDApplicationsField,
 					tt.indexer,
+				).
+				WithIndex(
+					&kargoapi.Promotion{},
+					indexer.RunningPromotionsByStageField,
+					stageIndexer,
 				).
 				WithInterceptorFuncs(tt.interceptor)
 

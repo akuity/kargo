@@ -69,6 +69,26 @@ func (u *UpdatedArgoCDAppHandler[T]) Update(
 		return
 	}
 
+	// Collect the running Promotions associated with this Application, deduped by
+	// key in case a Promotion is matched by both lookups below.
+	enqueued := make(map[types.NamespacedName]struct{})
+	enqueue := func(promo kargoapi.Promotion) {
+		key := types.NamespacedName{Namespace: promo.Namespace, Name: promo.Name}
+		if _, ok := enqueued[key]; ok {
+			return
+		}
+		enqueued[key] = struct{}{}
+		wq.Add(reconcile.Request{NamespacedName: key})
+		logger.Debug(
+			"enqueued Promotion for reconciliation",
+			"namespace", promo.Namespace,
+			"promotion", promo.Name,
+			"app", newApp.Name,
+		)
+	}
+
+	// Promotions that reference this Application by name are found via the
+	// name-based index.
 	promotions := &kargoapi.PromotionList{}
 	if err := u.kargoClient.List(
 		ctx,
@@ -88,22 +108,51 @@ func (u *UpdatedArgoCDAppHandler[T]) Update(
 		)
 		return
 	}
-
 	for _, promotion := range promotions.Items {
-		wq.Add(
-			reconcile.Request{
-				NamespacedName: types.NamespacedName{
-					Namespace: promotion.Namespace,
-					Name:      promotion.Name,
-				},
-			},
-		)
-		logger.Debug(
-			"enqueued Promotion for reconciliation",
-			"namespace", promotion.Namespace,
-			"promotion", promotion.Name,
+		enqueue(promotion)
+	}
+
+	// Promotions that selected this Application by label selector are not
+	// captured by the name-based index. The Application's authorized-stage
+	// annotation names the Stage(s) authorized to manage it, so enqueue the
+	// running Promotions for those Stages. This is a correct superset: a
+	// spuriously enqueued Promotion simply results in an idempotent re-check.
+	annotation, ok := newApp.Annotations[kargoapi.AnnotationKeyAuthorizedStage]
+	if !ok {
+		return
+	}
+	authorizedStages, err := kargoapi.AuthorizedStages(annotation)
+	if err != nil {
+		logger.Error(
+			err, "error parsing authorized Stages for Application",
 			"app", newApp.Name,
+			"namespace", newApp.Namespace,
 		)
+		return
+	}
+	for _, stage := range authorizedStages {
+		stagePromotions := &kargoapi.PromotionList{}
+		if err := u.kargoClient.List(
+			ctx,
+			stagePromotions,
+			client.InNamespace(stage.Namespace),
+			client.MatchingFields{
+				// Note: This index only includes running Promotions assigned to
+				// this shard.
+				indexer.RunningPromotionsByStageField: stage.Name,
+			},
+		); err != nil {
+			logger.Error(
+				err, "error listing Promotions for Stage authorized by Application",
+				"app", newApp.Name,
+				"namespace", stage.Namespace,
+				"stage", stage.Name,
+			)
+			continue
+		}
+		for _, promotion := range stagePromotions.Items {
+			enqueue(promotion)
+		}
 	}
 }
 

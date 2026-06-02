@@ -118,6 +118,21 @@ func SetupReconcilerWithManager(
 		return fmt.Errorf("index running Promotions by Argo CD Applications: %w", err)
 	}
 
+	// Index running Promotions by Stage. This is used to enqueue Promotions when
+	// an Argo CD Application they selected by label selector changes, since such
+	// Promotions are not captured by the name-based Applications index.
+	if err := kargoMgr.GetFieldIndexer().IndexField(
+		ctx,
+		&kargoapi.Promotion{},
+		indexer.RunningPromotionsByStageField,
+		indexer.RunningPromotionsByStage(
+			cfg.ShardName,
+			cfg.IsDefaultController,
+		),
+	); err != nil {
+		return fmt.Errorf("index running Promotions by Stage: %w", err)
+	}
+
 	reconciler := newReconciler(
 		kargoMgr.GetClient(),
 		kargoMgr.GetAPIReader(),
