@@ -426,7 +426,7 @@ func (w *workTree) GetDiffPathsForCommitID(commitID string) ([]string, error) {
 		// For renames (R), include both old and new paths so that a path filter
 		// matching the source directory detects the removal. Copies (C) leave
 		// the source unchanged, so only the destination path is relevant.
-		if len(parts) == 3 && (parts[0] == "R" || parts[0] == "C") {
+		if len(parts) == 3 && strings.HasPrefix(parts[0], "R") {
 			paths = append(paths, parts[1], parts[2])
 		} else {
 			paths = append(paths, parts[1])
