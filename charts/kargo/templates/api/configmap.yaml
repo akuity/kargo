@@ -72,7 +72,11 @@ data:
   {{- end }}
   {{- if .Values.api.argocd.urls }}
   ARGOCD_NAMESPACE: {{ .Values.controller.argocd.namespace | default "argocd" }}
-  ARGOCD_URLS: {{ range $key, $val := .Values.api.argocd.urls }}{{ $key }}={{ $val }},{{- end }}
+  {{- $pairs := list }}
+  {{- range $key, $val := .Values.api.argocd.urls }}
+  {{- $pairs = append $pairs (printf "%s=%s" $key $val) }}
+  {{- end }}
+  ARGOCD_URLS: {{ join "," $pairs }}
   {{- end }}
   ROLLOUTS_INTEGRATION_ENABLED: {{ quote .Values.api.rollouts.integrationEnabled }}
   {{- if and .Values.api.rollouts.integrationEnabled .Values.api.rollouts.logs.enabled }}
