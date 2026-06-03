@@ -155,6 +155,9 @@ api:
   ## @param api.host The domain name where Kargo's API server will be accessible. When applicable, this is used for generation of an Ingress resource, certificates, and the OpenID Connect issuer and callback URLs. Note: The value in this field MAY include a port number and MUST NOT specify the protocol (http vs https), which is automatically inferred from other configuration options.
   host: localhost
 
+  ## @param api.basePath URL path prefix at which the API server is reachable. When non-empty, MUST begin with a slash and MUST NOT end with one (e.g. `/kargo`). Used as the path on any chart-generated Ingress rule for the API server, and included in chart-generated URLs (`API_SERVER_BASE_URL`, `ADMIN_ACCOUNT_TOKEN_ISSUER`, `OIDC_ISSUER_URL`, etc.). The API server binary itself always serves at the root, so when this is set, the user is responsible for configuring their Ingress controller to strip the prefix before forwarding (e.g. via Traefik's `stripPrefix` middleware, NGINX's `rewrite`, etc.).
+  basePath: ""
+
   ## @param api.logLevel The log level for the API server. Valid options are ERROR, INFO, DEBUG, and TRACE (case insensitive). Note that INFO level messages are written during startup regardless of the selected level.
   logLevel: INFO
   ## @param api.logFormat The format of logs from the API server. Valid options are CONSOLE or JSON (case insensitive).
@@ -903,6 +906,9 @@ externalWebhooksServer:
 
   ## @param externalWebhooksServer.host The domain name where Kargo's external webhooks server will be accessible. When applicable, this is used for generation of an Ingress resource and certificates. Note: The value in this field MAY include a port number and MUST NOT specify the protocol (http vs https), which is automatically inferred from other configuration options.
   host: localhost
+
+  ## @param externalWebhooksServer.basePath URL path prefix at which the external webhooks server is reachable. When non-empty, MUST begin with a slash and MUST NOT end with one (e.g. `/webhook`). Used as the path on any chart-generated Ingress rule for the external webhooks server, and included in `EXTERNAL_WEBHOOK_SERVER_BASE_URL`. When the external webhooks server has no Ingress of its own and instead piggybacks on the API server's Ingress, this defaults to `<api.basePath>/webhooks`. The external webhooks server binary itself always serves at the root, so when this is set, the user is responsible for configuring their Ingress controller to strip the prefix before forwarding (e.g. via Traefik's `stripPrefix` middleware, NGINX's `rewrite`, etc.).
+  basePath: ""
 
   ## @param externalWebhooksServer.logLevel The log level for the external webhooks server. Valid options are ERROR, INFO, DEBUG, and TRACE (case insensitive). Note that INFO level messages are written during startup regardless of the selected level.
   logLevel: INFO

@@ -81,10 +81,11 @@ Generate base URL for a service.
 {{- define "kargo.baseURL" -}}
 {{- $service := .service -}}
 {{- $host := .host -}}
+{{- $basePath := .basePath | default "" -}}
 {{- if eq (include "kargo.useTLS" $service) "true" -}}
-{{- printf "https://%s" $host -}}
+{{- printf "https://%s%s" $host $basePath -}}
 {{- else -}}
-{{- printf "http://%s" $host -}}
+{{- printf "http://%s%s" $host $basePath -}}
 {{- end -}}
 {{- end -}}
 
@@ -92,19 +93,25 @@ Generate base URL for a service.
 Generate the base URL for the API service.
 */}}
 {{- define "kargo.api.baseURL" -}}
-{{- include "kargo.baseURL" (dict "service" .Values.api "host" .Values.api.host) -}}
+{{- include "kargo.baseURL" (dict "service" .Values.api "host" .Values.api.host "basePath" .Values.api.basePath) -}}
 {{- end -}}
 
 {{/*
-Generate the base URL for the external webhook server.
+Generate the base URL for the external webhook server. When the external
+webhooks server has its own Ingress, the URL is composed from its own host,
+TLS configuration, and basePath. When it instead piggybacks on the API
+server's Ingress, the URL is composed from the API server's host and TLS
+configuration, plus either an explicitly-set externalWebhooksServer.basePath
+or, by default, <api.basePath>/webhooks.
 */}}
 {{- define "kargo.externalWebhooksServer.baseURL" -}}
 {{- $apiService := .Values.api -}}
 {{- $webhookService := .Values.externalWebhooksServer -}}
 {{- if and (not $webhookService.ingress.enabled) $apiService.enabled $apiService.ingress.enabled -}}
-{{- printf "%s/webhooks" (include "kargo.api.baseURL" .) -}}
+{{- $basePath := $webhookService.basePath | default (printf "%s/webhooks" ($apiService.basePath | default "")) -}}
+{{- include "kargo.baseURL" (dict "service" $apiService "host" $apiService.host "basePath" $basePath) -}}
 {{- else -}}
-{{- include "kargo.baseURL" (dict "service" $webhookService "host" $webhookService.host) -}}
+{{- include "kargo.baseURL" (dict "service" $webhookService "host" $webhookService.host "basePath" $webhookService.basePath) -}}
 {{- end -}}
 {{- end -}}
 
