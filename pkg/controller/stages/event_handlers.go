@@ -16,6 +16,7 @@ import (
 
 	rollouts "github.com/akuity/kargo/api/stubs/rollouts/v1alpha1"
 	kargoapi "github.com/akuity/kargo/api/v1alpha1"
+	"github.com/akuity/kargo/pkg/api"
 	argocd "github.com/akuity/kargo/pkg/controller/argocd/api/v1alpha1"
 	"github.com/akuity/kargo/pkg/indexer"
 	"github.com/akuity/kargo/pkg/logging"
@@ -382,7 +383,7 @@ func (u *stageEnqueuerForArgoCDChanges[T]) Update(
 	}
 
 	logger := logging.LoggerFromContext(ctx)
-	authorizedStages, err := kargoapi.AuthorizedStages(stageRef)
+	authorizedStages, err := api.AuthorizedStages(stageRef)
 	if err != nil {
 		logger.Error(
 			err,

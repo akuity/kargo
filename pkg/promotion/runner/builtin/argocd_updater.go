@@ -14,6 +14,7 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
 	kargoapi "github.com/akuity/kargo/api/v1alpha1"
+	"github.com/akuity/kargo/pkg/api"
 	libargocd "github.com/akuity/kargo/pkg/argocd"
 	argocd "github.com/akuity/kargo/pkg/controller/argocd/api/v1alpha1"
 	"github.com/akuity/kargo/pkg/health"
@@ -890,7 +891,7 @@ func (a *argocdUpdater) authorizeArgoCDAppUpdate(
 		return permErr
 	}
 
-	authorizedStages, err := kargoapi.AuthorizedStages(allowedStage)
+	authorizedStages, err := api.AuthorizedStages(allowedStage)
 	if err != nil {
 		return fmt.Errorf(
 			"unable to parse value of annotation %q (%q) on Argo CD Application %q in namespace %q: %w",
