@@ -877,7 +877,7 @@ func (r *reconciler) ensureDefaultUserRoles(
 				},
 				{ // Full access to all mutable Kargo resource types
 					APIGroups: []string{kargoapi.GroupVersion.Group},
-					Resources: []string{"freights", "stages", "warehouses", "projectconfigs"},
+					Resources: []string{"freights", "projectconfigs", "promotiontasks", "stages", "warehouses"},
 					Verbs:     []string{"*"},
 				},
 				{ // Promote permission on all stages

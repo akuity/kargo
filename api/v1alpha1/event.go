@@ -9,6 +9,7 @@ const (
 	AnnotationKeyEventFreightAlias           = AnnotationKeyEventPrefix + "freight-alias"
 	AnnotationKeyEventFreightName            = AnnotationKeyEventPrefix + "freight-name"
 	AnnotationKeyEventFreightCreateTime      = AnnotationKeyEventPrefix + "freight-create-time"
+	AnnotationKeyEventFreightWarehouseName   = AnnotationKeyEventPrefix + "freight-warehouse-name"
 	AnnotationKeyEventFreightCommits         = AnnotationKeyEventPrefix + "freight-commits"
 	AnnotationKeyEventFreightImages          = AnnotationKeyEventPrefix + "freight-images"
 	AnnotationKeyEventFreightCharts          = AnnotationKeyEventPrefix + "freight-charts"

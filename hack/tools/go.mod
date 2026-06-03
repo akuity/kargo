@@ -9,7 +9,7 @@ require (
 	github.com/oapi-codegen/oapi-codegen/v2 v2.6.0
 	github.com/swaggo/swag v1.16.6
 	golang.org/x/tools v0.42.0
-	helm.sh/helm/v3 v3.19.4
+	helm.sh/helm/v3 v3.19.5
 	k8s.io/code-generator v0.34.3
 	sigs.k8s.io/controller-tools v0.19.0
 )
