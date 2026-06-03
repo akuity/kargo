@@ -143,6 +143,7 @@ export const Pipelines = (props: { creatingStage?: boolean; creatingWarehouse?: 
   };
 
   const [viewingFreight, setViewingFreight] = useState<Freight | null>(null);
+  const [stageSearch, setStageSearch] = useState<string>('');
 
   const stages = listStagesQuery?.data?.stages || [];
   const freightInStages = useFreightInStage(stages);
@@ -196,7 +197,9 @@ export const Pipelines = (props: { creatingStage?: boolean; creatingWarehouse?: 
           viewingFreight,
           setPreferredFilter,
           preferredFilter,
-          setViewingFreight
+          setViewingFreight,
+          stageSearch,
+          setStageSearch
         }}
       >
         <DictionaryContext.Provider
@@ -229,6 +232,7 @@ export const Pipelines = (props: { creatingStage?: boolean; creatingWarehouse?: 
                     <GraphFilters
                       warehouses={listWarehousesQuery.data?.warehouses || []}
                       stages={listStagesQuery.data?.stages || []}
+                      freights={freights}
                       pipelineView={pipelineView}
                       setPipelineView={setPipelineView}
                       className='z-10'

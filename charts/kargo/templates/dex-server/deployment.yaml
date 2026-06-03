@@ -1,4 +1,4 @@
-{{- if and .Values.api.enabled .Values.api.oidc.enabled .Values.api.oidc.dex.enabled }}
+{{- if and .Values.workloads.install .Values.api.enabled .Values.api.oidc.enabled .Values.api.oidc.dex.enabled }}
 apiVersion: apps/v1
 kind: Deployment
 metadata:
@@ -7,14 +7,16 @@ metadata:
   labels:
     {{- include "kargo.labels" . | nindent 4 }}
     {{- include "kargo.dexServer.labels" . | nindent 4 }}
-  {{- with (mergeOverwrite (deepCopy .Values.global.annotations) .Values.api.oidc.dex.annotations) }}
-  annotations:
-    {{- range $key, $value := . }}
-    {{ $key }}: {{ $value | quote }}
-    {{- end }}
-  {{- end }}
+  {{- include "kargo.annotations" (dict "root" . "annotations" .Values.api.oidc.dex.annotations) | nindent 2 }}
 spec:
   replicas: 1
+  revisionHistoryLimit: {{ .Values.api.oidc.dex.revisionHistoryLimit }}
+  {{- with .Values.api.oidc.dex.rollingUpdate }}
+  strategy:
+    type: RollingUpdate
+    rollingUpdate:
+      {{- toYaml . | nindent 6 }}
+  {{- end }}
   selector:
     matchLabels:
       {{- include "kargo.selectorLabels" . | nindent 6 }}
@@ -26,13 +28,13 @@ spec:
         {{- include "kargo.dexServer.labels" . | nindent 8 }}
       annotations:
         secret/checksum: {{ pick ( include (print $.Template.BasePath "/dex-server/secret.yaml") . | fromYaml ) "stringData" | toYaml | sha256sum }}
+      {{- with (mergeOverwrite (deepCopy .Values.global.podAnnotations) .Values.api.oidc.dex.podAnnotations) }}
+        {{- range $key, $value := . }}
+        {{ $key }}: {{ $value | quote }}
+        {{- end }}
+      {{- end }}
     spec:
-      {{- if not .Values.rbac.useDefaultServiceAccount }}
-      serviceAccount: kargo-dex-server
-      {{- end }}
-      {{- if .Values.rbac.disableAutomountServiceAccountToken }}
-      automountServiceAccountToken: false
-      {{- end }}
+      serviceAccountName: kargo-dex-server
       {{- with .Values.api.oidc.dex.affinity | default .Values.global.affinity }}
       affinity:
         {{- toYaml . | nindent 8 }}
@@ -84,25 +86,35 @@ spec:
         resources:
           {{- toYaml .Values.api.oidc.dex.resources | nindent 10 }}
         {{- if .Values.api.oidc.dex.probes.enabled }}
+        startupProbe:
+          httpGet:
+            path: /healthz/live
+            port: 5558
+          {{- with .Values.api.oidc.dex.probes.startupProbe }}
+          {{- toYaml . | nindent 10 }}
+          {{- end }}
         livenessProbe:
           httpGet:
             path: /healthz/live
             port: 5558
-          initialDelaySeconds: 10
-          periodSeconds: 10
-          timeoutSeconds: 1
-          successThreshold: 1
-          failureThreshold: 300
+          {{- with .Values.api.oidc.dex.probes.livenessProbe }}
+          {{- toYaml . | nindent 10 }}
+          {{- end }}
         readinessProbe:
           httpGet:
             path: /healthz/ready
             port: 5558
-          initialDelaySeconds: 10
-          periodSeconds: 10
-          timeoutSeconds: 1
-          successThreshold: 1
-          failureThreshold: 300
+          {{- with .Values.api.oidc.dex.probes.readinessProbe }}
+          {{- toYaml . | nindent 10 }}
           {{- end }}
+        {{- end }}
+      {{- with .Values.api.oidc.dex.containers }}
+      {{- toYaml . | nindent 6 }}
+      {{- end }}
+      {{- with .Values.api.oidc.dex.initContainers }}
+      initContainers:
+      {{- toYaml . | nindent 6 }}
+      {{- end }}
       volumes:
       - name: config
         projected:
@@ -120,7 +132,7 @@ spec:
               - key: config.yaml
                 path: config.yaml
       {{- if .Values.api.oidc.dex.volumes }}
-        {{- toYaml .Values.api.oidc.dex.volumes | nindent 6 }}
+      {{- toYaml .Values.api.oidc.dex.volumes | nindent 6 }}
       {{- end }}
       {{- with .Values.api.oidc.dex.nodeSelector | default .Values.global.nodeSelector }}
       nodeSelector:

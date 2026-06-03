@@ -1,4 +1,4 @@
-{{- if and .Values.garbageCollector.enabled .Values.rbac.installClusterRoles }}
+{{- if and .Values.dataPlane.install .Values.rbac.installClusterRoles .Values.garbageCollector.enabled }}
 apiVersion: rbac.authorization.k8s.io/v1
 kind: ClusterRole
 metadata:
@@ -6,6 +6,7 @@ metadata:
   labels:
     {{- include "kargo.labels" . | nindent 4 }}
     {{- include "kargo.garbageCollector.labels" . | nindent 4 }}
+  {{- include "kargo.annotations" (dict "root" . "annotations" .Values.garbageCollector.annotations) | nindent 2 }}
 rules:
 - apiGroups:
   - ""

@@ -84,7 +84,7 @@ func (h *handler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 		}
 		owner, repo, installationID = h.repoInfo(e)
 	case *github.IssuesEvent:
-		if e.GetAction() != "opened" {
+		if e.GetAction() != issueActionOpened {
 			logger.Debug("ignoring non-opened issues event", "action", e.GetAction())
 			w.WriteHeader(http.StatusNoContent)
 			return
@@ -92,9 +92,9 @@ func (h *handler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 		owner, repo, installationID = h.repoInfo(e)
 	case *github.PullRequestEvent:
 		action := e.GetAction()
-		if action != "opened" &&
-			action != "reopened" &&
-			action != "ready_for_review" {
+		if action != prActionOpened &&
+			action != prActionReopened &&
+			action != prActionReadyForReview {
 			logger.Debug("ignoring pull request event", "action", action)
 			w.WriteHeader(http.StatusNoContent)
 			return
@@ -122,6 +122,11 @@ func (h *handler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 		w.WriteHeader(http.StatusInternalServerError)
 		return
 	}
+	if cfg == nil {
+		logger.Debug("no config found, skipping event")
+		w.WriteHeader(http.StatusNoContent)
+		return
+	}
 
 	issuesClient, err := h.clientFactory.NewIssuesClient(installationID)
 	if err != nil {
@@ -130,53 +135,51 @@ func (h *handler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	orgsClient, err := h.clientFactory.NewOrganizationsClient(installationID)
+	if err != nil {
+		logger.Error(err, "error creating organizations client")
+		w.WriteHeader(http.StatusInternalServerError)
+		return
+	}
+
 	logger = logger.WithValues("owner", owner, "repo", repo)
 	ctx = logging.ContextWithLogger(ctx, logger)
 
+	// Per-request repo context shared by the PR and comment handlers. The
+	// pull-requests client is lazily attached in code branches that need it.
+	rc := repoContext{
+		cfg:          *cfg,
+		owner:        owner,
+		repo:         repo,
+		issuesClient: issuesClient,
+		orgsClient:   orgsClient,
+	}
+
 	switch e := event.(type) {
 	case *github.IssueCommentEvent:
-		var prsClient PullRequestsClient
-		prsClient, err = h.clientFactory.NewPullRequestsClient(installationID)
+		rc.prsClient, err = h.clientFactory.NewPullRequestsClient(installationID)
 		if err != nil {
 			logger.Error(err, "error creating pull requests client")
 			w.WriteHeader(http.StatusInternalServerError)
 			return
 		}
-		commentHandler := &commentHandler{
-			cfg:          cfg,
-			owner:        owner,
-			repo:         repo,
-			issuesClient: issuesClient,
-			prsClient:    prsClient,
-		}
+		commentHandler := &commentHandler{repoContext: rc}
 		err = commentHandler.handleCreated(ctx, e)
 	case *github.IssuesEvent:
 		if cfg.Issues != nil {
-			issueHandler := &issueHandler{
-				cfg:          *cfg.Issues,
-				owner:        owner,
-				repo:         repo,
-				issuesClient: issuesClient,
-			}
+			issueHandler := &issueHandler{repoContext: rc}
 			err = issueHandler.handleOpened(ctx, e)
 		}
 	case *github.PullRequestEvent:
-		var prsClient PullRequestsClient
-		prsClient, err = h.clientFactory.NewPullRequestsClient(installationID)
+		rc.prsClient, err = h.clientFactory.NewPullRequestsClient(installationID)
 		if err != nil {
 			logger.Error(err, "error creating pull requests client")
 			w.WriteHeader(http.StatusInternalServerError)
 			return
 		}
-		prHandler := &prHandler{
-			cfg:          cfg,
-			owner:        owner,
-			repo:         repo,
-			issuesClient: issuesClient,
-			prsClient:    prsClient,
-		}
+		prHandler := &prHandler{repoContext: rc}
 		opts := &handlePROpenedOpts{}
-		if e.GetAction() == "reopened" || e.GetAction() == "ready_for_review" {
+		if e.GetAction() == prActionReopened || e.GetAction() == prActionReadyForReview {
 			opts.applyPolicyOnly = true
 		}
 		err = prHandler.handleOpened(ctx, e, opts)
@@ -204,32 +207,34 @@ func (h *handler) repoInfo(
 		e.GetInstallation().GetID()
 }
 
-// loadConfig loads the governance config for the given repository. It returns
-// an error if the config cannot be loaded or parsed. Note that the config is
-// not cached, so it will be fetched and parsed on every event.
+// loadConfig loads and returns the governance config for the given repository.
+// It returns nil and no error if no such config exists. It returns nil and an
+// error if the config cannot be loaded or parsed for any other reason. Note
+// that the config is not cached, so it will be fetched and parsed on every
+// event.
 func (h *handler) loadConfig(
 	ctx context.Context,
 	reposClient RepositoriesClient,
 	owner string,
 	repo string,
-) (config, error) {
-	content, _, _, err := reposClient.GetContents(
+) (*config, error) {
+	content, _, resp, err := reposClient.GetContents(
 		ctx, owner, repo, configPath,
 		&github.RepositoryContentGetOptions{Ref: "HEAD"},
 	)
 	if err != nil {
-		return config{}, fmt.Errorf("error fetching governance config: %w", err)
-	}
-	if content == nil {
-		return config{}, fmt.Errorf("governance config not found at %s", configPath)
+		if resp != nil && resp.StatusCode == http.StatusNotFound {
+			return nil, nil
+		}
+		return nil, fmt.Errorf("error fetching governance config: %w", err)
 	}
 	raw, err := content.GetContent()
 	if err != nil {
-		return config{}, fmt.Errorf("error decoding governance config: %w", err)
+		return nil, fmt.Errorf("error decoding governance config: %w", err)
 	}
 	cfg := config{}
 	if err := yaml.Unmarshal([]byte(raw), &cfg); err != nil {
-		return config{}, fmt.Errorf("error parsing governance config: %w", err)
+		return nil, fmt.Errorf("error parsing governance config: %w", err)
 	}
-	return cfg, nil
+	return &cfg, nil
 }

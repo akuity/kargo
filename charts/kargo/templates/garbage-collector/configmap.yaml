@@ -1,4 +1,5 @@
-{{- if .Values.garbageCollector.enabled }}
+{{- if and .Values.workloads.install .Values.garbageCollector.enabled }}
+{{- $kc := .Values.garbageCollector.kubeconfigSecrets.kargo | default .Values.kubeconfigSecrets.kargo }}
 apiVersion: v1
 kind: ConfigMap
 metadata:
@@ -7,6 +8,7 @@ metadata:
   labels:
     {{- include "kargo.labels" . | nindent 4 }}
     {{- include "kargo.garbageCollector.labels" . | nindent 4 }}
+  {{- include "kargo.annotations" (dict "root" . "annotations" .Values.garbageCollector.annotations) | nindent 2 }}
 data:
   LOG_LEVEL: {{ quote .Values.garbageCollector.logLevel }}
   LOG_FORMAT: {{ quote .Values.garbageCollector.logFormat }}
@@ -15,4 +17,7 @@ data:
   MIN_PROMOTION_DELETION_AGE: {{ quote .Values.garbageCollector.minPromotionDeletionAge }}
   MAX_RETAINED_FREIGHT: {{ quote .Values.garbageCollector.maxRetainedFreight }}
   MIN_FREIGHT_DELETION_AGE: {{ quote .Values.garbageCollector.minFreightDeletionAge }}
+  {{- if $kc }}
+  KUBECONFIG: /etc/kargo/kubeconfigs/kubeconfig.yaml
+  {{- end }}
 {{- end }}

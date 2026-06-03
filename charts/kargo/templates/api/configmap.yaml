@@ -1,4 +1,5 @@
-{{- if .Values.api.enabled }}
+{{- if and .Values.workloads.install .Values.api.enabled }}
+{{- $kc := .Values.api.kubeconfigSecrets.kargo | default .Values.kubeconfigSecrets.kargo }}
 apiVersion: v1
 kind: ConfigMap
 metadata:
@@ -7,11 +8,12 @@ metadata:
   labels:
     {{- include "kargo.labels" . | nindent 4 }}
     {{- include "kargo.api.labels" . | nindent 4 }}
+  {{- include "kargo.annotations" (dict "root" . "annotations" .Values.api.annotations) | nindent 2 }}
 data:
   KARGO_NAMESPACE: {{ .Release.Namespace }}
   LOG_LEVEL: {{ quote .Values.api.logLevel }}
   LOG_FORMAT: {{ quote .Values.api.logFormat }}
-  {{- if .Values.kubeconfigSecrets.kargo }}
+  {{- if $kc }}
   KUBECONFIG: /etc/kargo/kubeconfig.yaml
   {{- end }}
   {{- if .Values.api.tls.enabled }}
@@ -36,7 +38,7 @@ data:
   {{- end }}
   {{- if .Values.api.oidc.enabled }}
   OIDC_ENABLED: "true"
-  OIDC_ADDITIONAL_SCOPES: {{ join "," .Values.api.oidc.additionalScopes }}
+  OIDC_ADDITIONAL_SCOPES: {{ join "," .Values.api.oidc.additionalScopes | quote }}
   {{- if .Values.api.oidc.globalServiceAccounts.namespaces }}
   GLOBAL_SERVICE_ACCOUNT_NAMESPACES: {{ .Release.Namespace }},{{ join "," .Values.api.oidc.globalServiceAccounts.namespaces }}
   {{- else }}

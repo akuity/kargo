@@ -58,7 +58,7 @@ func newRepoCredentialsCommand(cfg config.CLIConfig, streams genericiooptions.IO
     (--git | --helm | --image) \
     [--description=description] \
     --repo-url=repo-url [--regex] \
-    -username=username \
+    --username=username \
     [--password=password]`,
 		Aliases: []string{
 			"repo-credential",

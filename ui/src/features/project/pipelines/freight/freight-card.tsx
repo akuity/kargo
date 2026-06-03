@@ -109,7 +109,11 @@ export const FreightCard = (props: FreightCardProps) => {
     : undefined;
 
   return (
-    <div ref={setNodeRef} style={style} className='relative'>
+    <div
+      ref={setNodeRef}
+      style={{ width: 'var(--freight-card-width, 140px)', ...style }}
+      className='relative shrink-0'
+    >
       <div className='absolute bottom-0 left-0 right-0 p-1'>
         {props.promote ? (
           <Tooltip
@@ -191,12 +195,16 @@ export const FreightCard = (props: FreightCardProps) => {
         }
       >
         <div
-          className={classNames('relative px-2', {
+          className={classNames('relative px-2 flex-1 flex flex-col', {
             'pl-4': props.inUse
           })}
         >
-          <Flex align='center' justify='space-between' gap={4} className='-mr-2'>
-            <Typography.Text className='text-xs text-nowrap' type='secondary'>
+          <Flex align='center' justify='space-between' gap={4} className='-mr-2 min-w-0'>
+            <Typography.Text
+              className='text-xs min-w-0 flex-1 truncate'
+              type='secondary'
+              title={props.freight?.origin?.name}
+            >
               <FontAwesomeIcon className='mr-1' icon={faWarehouse} size='xs' />
               {props.freight?.origin?.name}
             </Typography.Text>
@@ -278,7 +286,7 @@ export const FreightCard = (props: FreightCardProps) => {
             <div className='text-[10px] text-nowrap mb-2'>{freightAlias}</div>
           )}
 
-          <div className='flex flex-col gap-1 justify-center items-center'>
+          <div className='flex flex-col gap-1 justify-center items-center min-w-0 max-w-full [&_.ant-tag]:block [&_.ant-tag]:max-w-full [&_.ant-tag]:truncate'>
             {props.freight?.commits?.slice(0, 2).map((commit) => (
               <FreightArtifact key={commit?.repoURL} artifact={commit} />
             ))}
@@ -309,7 +317,7 @@ export const FreightCard = (props: FreightCardProps) => {
             )}
           </div>
 
-          <div className='flex flex-col mx-auto w-full gap-0.5 items-center justify-center text-nowrap my-1'>
+          <div className='flex flex-col mx-auto w-full gap-0.5 items-center justify-center text-nowrap py-1 mt-auto'>
             {(noOfGitCommits ? 1 : 0) + (noOfHelmReleases ? 1 : 0) + (noOfContainerImages ? 1 : 0) >
               2 && (
               <>

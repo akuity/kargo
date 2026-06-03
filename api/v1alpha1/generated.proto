@@ -199,6 +199,20 @@ message AutoPromotionOptions {
   optional string selectionPolicy = 1;
 }
 
+// AutoRollbackConfig describes the conditions under which a Stage should
+// automatically roll back to the last known-good (verified) Freight.
+// Rollback on failed verifications is always enabled when this config is
+// present. Additional triggers may be enabled via the fields below.
+message AutoRollbackConfig {
+  // OnFailedPromotions indicates whether a rollback should be triggered
+  // when a promotion to the Stage fails. Failed promotions (as opposed
+  // to failed verifications) does not necessarily indicate a problem the
+  // Freight, since promotions might fail due to transient issues with the
+  // Stage itself (network, credential expirations, etc...). This defaults
+  // to false.
+  optional bool onFailedPromotions = 1;
+}
+
 // AzureWebhookReceiverConfig describes a webhook receiver that is compatible
 // with Azure Container Registry (ACR) and Azure DevOps payloads.
 message AzureWebhookReceiverConfig {
@@ -351,6 +365,20 @@ message ClusterConfigSpec {
   // via the Helm chart.
   // +optional
   optional GitClientConfig gitClient = 2;
+
+  // FreightLinks defines deep links shown when viewing any Freight resource
+  // across all projects in the cluster. Project-level FreightLinks defined
+  // in ProjectConfig are shown in addition to these.
+  //
+  // +optional
+  repeated DeepLink freightLinks = 3;
+
+  // StageLinks defines deep links shown when viewing any Stage resource
+  // across all projects in the cluster. Project-level StageLinks defined in
+  // ProjectConfig are shown in addition to these.
+  //
+  // +optional
+  repeated DeepLink stageLinks = 4;
 }
 
 // ClusterConfigStatus describes the current status of a ClusterConfig.
@@ -401,6 +429,34 @@ message CurrentStage {
   // Freight. This can be used to calculate how long the Freight has been in use
   // by the Stage.
   optional .k8s.io.apimachinery.pkg.apis.meta.v1.Time since = 1;
+}
+
+// DeepLink defines a configurable external link that is rendered in the UI
+// when viewing a Freight or Stage resource. The URL is an expression evaluated
+// against the resource. The optional If field is an expression condition;
+// when set, the link is only shown when the expression evaluates to true.
+message DeepLink {
+  // Title is the display label for the link.
+  //
+  // +kubebuilder:validation:MinLength=1
+  optional string title = 1;
+
+  // URL is an expression that resolves to the link's href.
+  //
+  // +kubebuilder:validation:MinLength=1
+  optional string url = 2;
+
+  // Description is an optional human-readable summary shown alongside the
+  // link.
+  //
+  // +optional
+  optional string description = 3;
+
+  // If is an optional expression condition. When set, the link is only shown
+  // when the expression evaluates to true.
+  //
+  // +optional
+  optional string if = 4;
 }
 
 // DiscoveredArtifacts holds the artifacts discovered by the Warehouse for its
@@ -948,65 +1004,71 @@ message GitSubscription {
   // NewestTag, or SemVer.
   repeated string allowTagsRegexes = 2;
 
+  // Blobless enables blobless cloning (--filter=blob:none) for this subscription. When true,
+  // git clones will defer blob downloads until checkout, significantly reducing clone time
+  // and disk usage for large repositories. The server must support partial clones; if it does
+  // not, the clone will fail.
+  optional bool blobless = 3;
+
   // Branch references a particular branch of the repository. Only has effect when
   // CommitSelectionStrategy is NewestFromBranch or unspecified. When left unspecified, the
   // subscription is implicitly to the repository's default branch. Must be a valid branch
   // name.
-  optional string branch = 3;
+  optional string branch = 4;
 
   // CommitSelectionStrategy specifies the rules for how to identify the newest commit of
   // interest in the repository specified by the RepoURL field.
-  optional string commitSelectionStrategy = 4;
+  optional string commitSelectionStrategy = 5;
 
   // DiscoveryLimit is an optional limit on the number of commits that can be discovered for
   // this subscription. The upper limit is 100.
-  optional int64 discoveryLimit = 5;
+  optional int64 discoveryLimit = 6;
 
   // ExcludePaths is a list of selectors that designate paths in the repository that should
   // NOT trigger the production of new Freight when changes are detected therein.
-  repeated string excludePaths = 6;
+  repeated string excludePaths = 7;
 
   // ExpressionFilter is an expression that can optionally be used to limit the commits or
   // tags that are considered in determining the newest commit of interest based on their
   // metadata.
-  optional string expressionFilter = 7;
+  optional string expressionFilter = 8;
 
   // IgnoreTags is a list of tags that must be ignored when determining the newest commit of
   // interest. Deprecated: Use ignoreTagsRegexes instead.
-  repeated string ignoreTags = 8;
+  repeated string ignoreTags = 9;
 
   // IgnoreTagsRegexes is a list of regular expressions that can optionally be used to exclude
   // tags from consideration. Only has effect when CommitSelectionStrategy is Lexical,
   // NewestTag, or SemVer.
-  repeated string ignoreTagsRegexes = 9;
+  repeated string ignoreTagsRegexes = 10;
 
   // IncludePaths is a list of selectors that designate paths in the repository that should
   // trigger the production of new Freight when changes are detected therein.
-  repeated string includePaths = 10;
+  repeated string includePaths = 11;
 
   // InsecureSkipTLSVerify specifies whether certificate verification errors should be ignored
   // when connecting to the repository. This should be enabled only with great caution.
-  optional bool insecureSkipTLSVerify = 11;
+  optional bool insecureSkipTLSVerify = 12;
 
   // URL is the repository's URL. This is a required field. Deprecated: Support for SSH URLs
   // (ssh:// and SCP-style git@host:path) is deprecated as of v1.10.0 and will be removed in
   // v1.13.0. Use HTTPS URLs instead.
-  optional string repoURL = 12;
+  optional string repoURL = 13;
 
   // SemverConstraint specifies constraints on what new tagged commits are considered in
   // determining the newest commit of interest. Only has effect when CommitSelectionStrategy
   // is SemVer.
-  optional string semverConstraint = 13;
+  optional string semverConstraint = 14;
 
   // An optional date (RFC 3339) that limits commit discovery to commits at or after this
   // date. When specified, discovery stops upon reaching a commit older than this date. When
   // left unspecified, there is no cutoff.
-  optional .k8s.io.apimachinery.pkg.apis.meta.v1.Time since = 14;
+  optional .k8s.io.apimachinery.pkg.apis.meta.v1.Time since = 15;
 
   // StrictSemvers specifies whether only "strict" semver tags should be considered. A
   // "strict" semver tag contains ALL of major, minor, and patch version components. Only has
   // effect when CommitSelectionStrategy is SemVer.
-  optional bool strictSemvers = 15;
+  optional bool strictSemvers = 16;
 }
 
 // GiteaWebhookReceiverConfig describes a webhook receiver that is compatible
@@ -1260,6 +1322,20 @@ message ProjectConfigSpec {
   // WebhookReceivers describes Project-specific webhook receivers used for
   // processing events from various external platforms
   repeated WebhookReceiverConfig webhookReceivers = 2;
+
+  // FreightLinks defines deep links shown when viewing Freight resources
+  // within this project. These are shown in addition to any cluster-level
+  // FreightLinks defined in ClusterConfig.
+  //
+  // +optional
+  repeated DeepLink freightLinks = 3;
+
+  // StageLinks defines deep links shown when viewing Stage resources within
+  // this project. These are shown in addition to any cluster-level
+  // StageLinks defined in ClusterConfig.
+  //
+  // +optional
+  repeated DeepLink stageLinks = 4;
 }
 
 // ProjectConfigStatus describes the current status of a ProjectConfig.
@@ -1368,6 +1444,13 @@ message PromotionPolicy {
   // users to define Stages that are automatically updated as soon as new
   // artifacts are detected.
   optional bool autoPromotionEnabled = 2;
+
+  // AutoRollback describes the conditions under which this Stage should
+  // automatically roll back to the last known-good (verified) Freight. When
+  // nil, auto-rollback is disabled.
+  //
+  // Kargo Enterprise only: This field is ignored in Kargo OSS.
+  optional AutoRollbackConfig autoRollback = 4;
 }
 
 // PromotionPolicySelector is a selector that matches the resource to which

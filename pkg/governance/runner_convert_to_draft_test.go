@@ -10,44 +10,57 @@ import (
 
 func Test_convertToDraftRunner_run(t *testing.T) {
 	testCases := []struct {
-		name              string
-		config            []byte
-		isPR              bool
-		convertErr        error
-		expectCalls       int
-		expectErrContains string
+		name       string
+		config     []byte
+		isPR       bool
+		convertErr error
+		assert     func(t *testing.T, calls int, err error)
 	}{
 		{
-			name:              "decode error — config is not a bool",
-			config:            []byte(`"yes"`),
-			isPR:              true,
-			expectErrContains: "decoding convertToDraft config",
+			name:   "decode error — config is not a bool",
+			config: []byte(`"yes"`),
+			isPR:   true,
+			assert: func(t *testing.T, calls int, err error) {
+				require.ErrorContains(t, err, "decoding convertToDraft config")
+				require.Zero(t, calls)
+			},
 		},
 		{
-			name:        "false on PR — no-op",
-			config:      []byte(`false`),
-			isPR:        true,
-			expectCalls: 0,
+			name:   "false on PR — no-op",
+			config: []byte(`false`),
+			isPR:   true,
+			assert: func(t *testing.T, calls int, err error) {
+				require.NoError(t, err)
+				require.Zero(t, calls)
+			},
 		},
 		{
-			name:        "true on issue — silent no-op (PR-only action)",
-			config:      []byte(`true`),
-			isPR:        false,
-			expectCalls: 0,
+			name:   "true on issue — silent no-op (PR-only action)",
+			config: []byte(`true`),
+			isPR:   false,
+			assert: func(t *testing.T, calls int, err error) {
+				require.NoError(t, err)
+				require.Zero(t, calls)
+			},
 		},
 		{
-			name:        "true on PR — ConvertToDraft called",
-			config:      []byte(`true`),
-			isPR:        true,
-			expectCalls: 1,
+			name:   "true on PR — ConvertToDraft called",
+			config: []byte(`true`),
+			isPR:   true,
+			assert: func(t *testing.T, calls int, err error) {
+				require.NoError(t, err)
+				require.Equal(t, 1, calls)
+			},
 		},
 		{
-			name:              "ConvertToDraft error propagates",
-			config:            []byte(`true`),
-			isPR:              true,
-			convertErr:        errors.New("boom"),
-			expectCalls:       1,
-			expectErrContains: "error converting PR to draft",
+			name:       "ConvertToDraft error propagates",
+			config:     []byte(`true`),
+			isPR:       true,
+			convertErr: errors.New("boom"),
+			assert: func(t *testing.T, calls int, err error) {
+				require.ErrorContains(t, err, "error converting PR to draft")
+				require.Equal(t, 1, calls)
+			},
 		},
 	}
 	for _, testCase := range testCases {
@@ -66,20 +79,17 @@ func Test_convertToDraftRunner_run(t *testing.T) {
 			err := convertToDraftRunner{}.run(
 				t.Context(),
 				&actionContext{
-					prsClient: fake,
-					owner:     "akuity",
-					repo:      "kargo",
-					number:    1,
-					isPR:      testCase.isPR,
+					repoContext: repoContext{
+						prsClient: fake,
+						owner:     "akuity",
+						repo:      "kargo",
+					},
+					number: 1,
+					isPR:   testCase.isPR,
 				},
 				testCase.config,
 			)
-			if testCase.expectErrContains != "" {
-				require.ErrorContains(t, err, testCase.expectErrContains)
-			} else {
-				require.NoError(t, err)
-			}
-			require.Equal(t, testCase.expectCalls, calls)
+			testCase.assert(t, calls, err)
 		})
 	}
 }

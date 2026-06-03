@@ -1,4 +1,4 @@
-{{- if and .Values.externalWebhooksServer.enabled .Values.rbac.installClusterRoleBindings }}
+{{- if and .Values.dataPlane.install .Values.rbac.installClusterRoleBindings .Values.externalWebhooksServer.enabled }}
 apiVersion: rbac.authorization.k8s.io/v1
 kind: ClusterRoleBinding
 metadata:
@@ -6,6 +6,7 @@ metadata:
   labels:
     {{- include "kargo.labels" . | nindent 4 }}
     {{- include "kargo.externalWebhooksServer.labels" . | nindent 4 }}
+  {{- include "kargo.annotations" (dict "root" . "annotations" .Values.externalWebhooksServer.annotations) | nindent 2 }}
 roleRef:
   apiGroup: rbac.authorization.k8s.io
   kind: ClusterRole

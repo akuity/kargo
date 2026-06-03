@@ -21,9 +21,25 @@ import (
 	"github.com/akuity/kargo/pkg/conditions"
 	"github.com/akuity/kargo/pkg/controller"
 	"github.com/akuity/kargo/pkg/credentials"
+	kargoEvent "github.com/akuity/kargo/pkg/event"
+	k8sevent "github.com/akuity/kargo/pkg/event/kubernetes"
+	fakeevent "github.com/akuity/kargo/pkg/kubernetes/event/fake"
 	"github.com/akuity/kargo/pkg/logging"
 	"github.com/akuity/kargo/pkg/subscription"
 )
+
+type testEventSender struct {
+	sendFn func(context.Context, kargoEvent.Meta) error
+}
+
+func (s *testEventSender) Send(ctx context.Context, evt kargoEvent.Meta) error {
+	if s.sendFn != nil {
+		return s.sendFn(ctx, evt)
+	}
+	return nil
+}
+
+func (s *testEventSender) Shutdown() {}
 
 func TestNewReconciler(t *testing.T) {
 	kubeClient := fake.NewClientBuilder().Build()
@@ -34,6 +50,7 @@ func TestNewReconciler(t *testing.T) {
 		&credentials.FakeDB{},
 		subscription.MustNewSubscriberRegistry(),
 		ReconcilerConfig{MinReconciliationInterval: minReconciliationInterval},
+		nil,
 	)
 	require.NotNil(t, e.client)
 	require.NotNil(t, e.credentialsDB)
@@ -47,7 +64,34 @@ func TestNewReconciler(t *testing.T) {
 	require.NotNil(t, e.patchStatusFn)
 }
 
+func TestReconcilerConfigName(t *testing.T) {
+	testCases := []struct {
+		name     string
+		cfg      ReconcilerConfig
+		expected string
+	}{
+		{
+			name:     "no shard name",
+			cfg:      ReconcilerConfig{},
+			expected: "warehouse-controller",
+		},
+		{
+			name:     "with shard name",
+			cfg:      ReconcilerConfig{ShardName: "my-shard"},
+			expected: "warehouse-controller-my-shard",
+		},
+	}
+	for _, tc := range testCases {
+		t.Run(tc.name, func(t *testing.T) {
+			t.Parallel()
+			require.Equal(t, tc.expected, tc.cfg.Name())
+		})
+	}
+}
+
 func TestSyncWarehouse(t *testing.T) {
+	fakeRecorder := fakeevent.NewEventRecorder(1)
+
 	testCases := []struct {
 		name       string
 		reconciler *reconciler
@@ -383,6 +427,8 @@ func TestSyncWarehouse(t *testing.T) {
 		{
 			name: "automatic Freight creation",
 			reconciler: &reconciler{
+				cfg:         ReconcilerConfig{},
+				eventSender: k8sevent.NewEventSender(fakeevent.NewEventRecorder(10)),
 				discoverArtifactsFn: func(
 					context.Context, string,
 					[]kargoapi.RepoSubscription,
@@ -458,6 +504,171 @@ func TestSyncWarehouse(t *testing.T) {
 				require.Equal(t, metav1.ConditionTrue, freightCreatedCondition.Status)
 				require.Equal(t, "NewFreight", freightCreatedCondition.Reason)
 				require.Equal(t, int64(1), freightCreatedCondition.ObservedGeneration)
+			},
+		},
+
+		{
+			name: "sends FreightCreated event on successful freight creation",
+			reconciler: &reconciler{
+				cfg:         ReconcilerConfig{},
+				eventSender: k8sevent.NewEventSender(fakeRecorder),
+				discoverArtifactsFn: func(
+					context.Context, string,
+					[]kargoapi.RepoSubscription,
+				) (*kargoapi.DiscoveredArtifacts, error) {
+					return &kargoapi.DiscoveredArtifacts{
+						Git: []kargoapi.GitDiscoveryResult{
+							{
+								RepoURL: "fake-repo",
+								Commits: []kargoapi.DiscoveredCommit{{ID: "fake-commit"}},
+							},
+						},
+					}, nil
+				},
+				buildFreightFromLatestArtifactsFn: func(
+					string,
+					*kargoapi.DiscoveredArtifacts,
+				) (*kargoapi.Freight, error) {
+					return &kargoapi.Freight{
+						ObjectMeta: metav1.ObjectMeta{
+							Name:      "fake-freight",
+							Namespace: "fake-namespace",
+						},
+					}, nil
+				},
+				createFreightFn: func(
+					context.Context,
+					client.Object,
+					...client.CreateOption,
+				) error {
+					return nil
+				},
+				patchStatusFn: func(context.Context, *kargoapi.Warehouse, func(*kargoapi.WarehouseStatus)) error {
+					return nil
+				},
+			},
+			warehouse: &kargoapi.Warehouse{
+				ObjectMeta: metav1.ObjectMeta{Generation: 1},
+				Spec: kargoapi.WarehouseSpec{
+					FreightCreationPolicy: kargoapi.FreightCreationPolicyAutomatic,
+				},
+			},
+			assertions: func(t *testing.T, _ kargoapi.WarehouseStatus, err error) {
+				require.NoError(t, err)
+				select {
+				case evt := <-fakeRecorder.Events:
+					require.Equal(t, string(kargoapi.EventTypeFreightCreated), evt.Reason)
+				default:
+					t.Fatal("expected FreightCreated event to be sent but got none")
+				}
+			},
+		},
+
+		{
+			name: "event send error does not fail reconciliation",
+			reconciler: &reconciler{
+				cfg: ReconcilerConfig{},
+				eventSender: &testEventSender{
+					sendFn: func(context.Context, kargoEvent.Meta) error {
+						return errors.New("failed to send event")
+					},
+				},
+				discoverArtifactsFn: func(
+					context.Context, string,
+					[]kargoapi.RepoSubscription,
+				) (*kargoapi.DiscoveredArtifacts, error) {
+					return &kargoapi.DiscoveredArtifacts{
+						Git: []kargoapi.GitDiscoveryResult{
+							{
+								RepoURL: "fake-repo",
+								Commits: []kargoapi.DiscoveredCommit{{ID: "fake-commit"}},
+							},
+						},
+					}, nil
+				},
+				buildFreightFromLatestArtifactsFn: func(
+					string,
+					*kargoapi.DiscoveredArtifacts,
+				) (*kargoapi.Freight, error) {
+					return &kargoapi.Freight{
+						ObjectMeta: metav1.ObjectMeta{
+							Name:      "fake-freight",
+							Namespace: "fake-namespace",
+						},
+					}, nil
+				},
+				createFreightFn: func(
+					context.Context,
+					client.Object,
+					...client.CreateOption,
+				) error {
+					return nil
+				},
+				patchStatusFn: func(context.Context, *kargoapi.Warehouse, func(*kargoapi.WarehouseStatus)) error {
+					return nil
+				},
+			},
+			warehouse: &kargoapi.Warehouse{
+				ObjectMeta: metav1.ObjectMeta{Generation: 1},
+				Spec: kargoapi.WarehouseSpec{
+					FreightCreationPolicy: kargoapi.FreightCreationPolicyAutomatic,
+				},
+			},
+			assertions: func(t *testing.T, status kargoapi.WarehouseStatus, err error) {
+				require.NoError(t, err)
+				require.NotEmpty(t, status.LastFreightID)
+			},
+		},
+
+		{
+			name: "successful freight creation with nil event sender",
+			reconciler: &reconciler{
+				cfg:         ReconcilerConfig{},
+				eventSender: nil,
+				discoverArtifactsFn: func(
+					context.Context, string,
+					[]kargoapi.RepoSubscription,
+				) (*kargoapi.DiscoveredArtifacts, error) {
+					return &kargoapi.DiscoveredArtifacts{
+						Git: []kargoapi.GitDiscoveryResult{
+							{
+								RepoURL: "fake-repo",
+								Commits: []kargoapi.DiscoveredCommit{{ID: "fake-commit"}},
+							},
+						},
+					}, nil
+				},
+				buildFreightFromLatestArtifactsFn: func(
+					string,
+					*kargoapi.DiscoveredArtifacts,
+				) (*kargoapi.Freight, error) {
+					return &kargoapi.Freight{
+						ObjectMeta: metav1.ObjectMeta{
+							Name:      "fake-freight",
+							Namespace: "fake-namespace",
+						},
+					}, nil
+				},
+				createFreightFn: func(
+					context.Context,
+					client.Object,
+					...client.CreateOption,
+				) error {
+					return nil
+				},
+				patchStatusFn: func(context.Context, *kargoapi.Warehouse, func(*kargoapi.WarehouseStatus)) error {
+					return nil
+				},
+			},
+			warehouse: &kargoapi.Warehouse{
+				ObjectMeta: metav1.ObjectMeta{Generation: 1},
+				Spec: kargoapi.WarehouseSpec{
+					FreightCreationPolicy: kargoapi.FreightCreationPolicyAutomatic,
+				},
+			},
+			assertions: func(t *testing.T, status kargoapi.WarehouseStatus, err error) {
+				require.NoError(t, err)
+				require.NotEmpty(t, status.LastFreightID)
 			},
 		},
 

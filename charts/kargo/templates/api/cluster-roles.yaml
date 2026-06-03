@@ -1,4 +1,4 @@
-{{- if and .Values.api.enabled .Values.rbac.installClusterRoles }}
+{{- if and .Values.dataPlane.install .Values.rbac.installClusterRoles .Values.api.enabled }}
 apiVersion: rbac.authorization.k8s.io/v1
 kind: ClusterRole
 metadata:
@@ -6,116 +6,117 @@ metadata:
   labels:
     {{- include "kargo.labels" . | nindent 4 }}
     {{- include "kargo.api.labels" . | nindent 4 }}
+  {{- include "kargo.annotations" (dict "root" . "annotations" .Values.api.annotations) | nindent 2 }}
 rules:
-  - apiGroups:
-      - ""
-    resources:
-      - namespaces
-    verbs:
-      - get
-      - list
-      - watch
-  - apiGroups:
-      - ""
-    resources:
-      - serviceaccounts
-    verbs:
-      - get
-      - list
-      - watch
-  - apiGroups:
-      - ""
-    resources:
-      - events
-    verbs:
-      - get
-      - list
-      - watch
-      - create
-      - patch
-  - apiGroups:
-      - ""
-    resources:
-      - configmaps
-    verbs:
-      - list
-      - get
-      - create
-      - watch
-      - delete
-      - update
-  - apiGroups:
-      - authorization.k8s.io
-    resources:
-      - subjectaccessreviews
-    verbs:
-      - create
-  - apiGroups:
-      - kargo.akuity.io
-    resources:
-      - freights
-    verbs:
-      - create
-      - get
-      - list
-      - patch
-      - watch
-      - delete
-  - apiGroups:
-      - kargo.akuity.io
-    resources:
-      - freights/status
-    verbs:
-      - update
-      - patch
-  - apiGroups:
-      - kargo.akuity.io
-    resources:
-      - clusterconfigs
-      - clusterpromotiontasks
-      - projects
-      - promotiontasks
-      - stages
-      - warehouses
-      - projectconfigs
-    verbs:
-      - "*"
-  - apiGroups:
-      - kargo.akuity.io
-    resources:
-      - promotions
-    verbs:
-      - create
-      - get
-      - list
-      - watch
-      - patch
-  - apiGroups:
-      - kargo.akuity.io
-    resources:
-      # Needed for OpenShift
-      - stages/finalizers
-    verbs:
-      - patch
-      - update
-  - apiGroups:
-      - rbac.authorization.k8s.io
-    resources:
-      - clusterroles
-      - rolebindings
-      - roles
-    verbs:
-      - get
-      - list
-      - watch
+- apiGroups:
+  - ""
+  resources:
+  - namespaces
+  verbs:
+  - get
+  - list
+  - watch
+- apiGroups:
+  - ""
+  resources:
+  - serviceaccounts
+  verbs:
+  - get
+  - list
+  - watch
+- apiGroups:
+  - ""
+  resources:
+  - events
+  verbs:
+  - get
+  - list
+  - watch
+  - create
+  - patch
+- apiGroups:
+  - ""
+  resources:
+  - configmaps
+  verbs:
+  - list
+  - get
+  - create
+  - watch
+  - delete
+  - update
+- apiGroups:
+  - authorization.k8s.io
+  resources:
+  - subjectaccessreviews
+  verbs:
+  - create
+- apiGroups:
+  - kargo.akuity.io
+  resources:
+  - freights
+  verbs:
+  - create
+  - get
+  - list
+  - patch
+  - watch
+  - delete
+- apiGroups:
+  - kargo.akuity.io
+  resources:
+  - freights/status
+  verbs:
+  - update
+  - patch
+- apiGroups:
+  - kargo.akuity.io
+  resources:
+  - clusterconfigs
+  - clusterpromotiontasks
+  - projects
+  - promotiontasks
+  - stages
+  - warehouses
+  - projectconfigs
+  verbs:
+  - "*"
+- apiGroups:
+  - kargo.akuity.io
+  resources:
+  - promotions
+  verbs:
+  - create
+  - get
+  - list
+  - watch
+  - patch
+- apiGroups:
+  - kargo.akuity.io
+  resources:
+  # Needed for OpenShift
+  - stages/finalizers
+  verbs:
+  - patch
+  - update
+- apiGroups:
+  - rbac.authorization.k8s.io
+  resources:
+  - clusterroles
+  - rolebindings
+  - roles
+  verbs:
+  - get
+  - list
+  - watch
 {{- if .Values.api.rollouts.integrationEnabled }}
-  - apiGroups:
-      - argoproj.io
-    resources:
-      - analysistemplates
-      - clusteranalysistemplates
-    verbs:
-      - "*"
+- apiGroups:
+  - argoproj.io
+  resources:
+  - analysistemplates
+  - clusteranalysistemplates
+  verbs:
+  - "*"
 {{- end }}
 {{- if .Values.api.rollouts.integrationEnabled }}
 ---
@@ -126,6 +127,7 @@ metadata:
   labels:
     {{- include "kargo.labels" . | nindent 4 }}
     {{- include "kargo.api.labels" . | nindent 4 }}
+  {{- include "kargo.annotations" (dict "root" . "annotations" .Values.api.annotations) | nindent 2 }}
 rules:
 - apiGroups:
   - argoproj.io

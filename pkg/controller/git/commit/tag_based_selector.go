@@ -153,7 +153,7 @@ func (t *tagBasedSelector) clone(ctx context.Context) (git.Repo, error) {
 	logger.Debug("cloning repository")
 	cloneOpts := &git.CloneOptions{
 		SingleBranch: true,
-		Filter:       git.FilterBlobless,
+		Blobless:     t.blobless,
 	}
 	repo, err := t.gitCloneFn(
 		t.repoURL,

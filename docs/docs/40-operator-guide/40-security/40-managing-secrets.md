@@ -78,7 +78,7 @@ team to refine and rename the concept:
 :::warning[Migration]
 
 If you are migrating from a Kargo version lesser than v1.9.0 to version v1.9.0
-or greater, please consult the [migration](#migrating-from-kargo--190) section
+or greater, please consult the [migration](#transitioning) section
 at the bottom of this page.
 
 :::
@@ -395,7 +395,7 @@ Kargo team to refine and rename the concept:
 :::warning[Migration]
 
 If you are migrating from a Kargo version lesser than v1.9.0 to version v1.9.0
-or greater, please consult the [migration](#migrating-from-kargo--190) section
+or greater, please consult the [migration](#transitioning) section
 at the bottom of this page.
 
 :::
@@ -406,7 +406,7 @@ The **system resources namespace**, by default, is `kargo-system-resources`.
 Operators may override this at the time of installation or upgrade by overriding
 the Kargo Helm chart's `global.systemResources.namespace` setting.
 
-## Migrating from Kargo < 1.9.0
+## Migrating from Kargo < 1.9.0 {#transitioning}
 
 Kargo v1.9.0 introduced terminology and configuration changes to better reflect
 the intended use of what are now the **shared resources namespace** and **system

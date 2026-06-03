@@ -1,4 +1,5 @@
-{{- if .Values.webhooksServer.enabled }}
+{{- if and .Values.workloads.install .Values.webhooksServer.enabled }}
+{{- $kc := .Values.webhooksServer.kubeconfigSecrets.kargo | default .Values.kubeconfigSecrets.kargo }}
 apiVersion: apps/v1
 kind: Deployment
 metadata:
@@ -12,16 +13,16 @@ metadata:
     {{ $key }}: {{ $value | quote }}
     {{- end }}
   {{- end }}
-  {{- with (mergeOverwrite (deepCopy .Values.global.annotations) .Values.webhooksServer.annotations) }}
-  annotations:
-    {{- range $key, $value := . }}
-    {{ $key }}: {{ $value | quote }}
-    {{- end }}
-  {{- end }}
+  {{- include "kargo.annotations" (dict "root" . "annotations" .Values.webhooksServer.annotations) | nindent 2 }}
 spec:
   replicas: {{ .Values.webhooksServer.replicas | default 1 }}
+  revisionHistoryLimit: {{ .Values.webhooksServer.revisionHistoryLimit }}
   strategy:
     type: RollingUpdate
+    {{- with .Values.webhooksServer.rollingUpdate }}
+    rollingUpdate:
+      {{- toYaml . | nindent 6 }}
+    {{- end }}
   selector:
     matchLabels:
       {{- include "kargo.selectorLabels" . | nindent 6 }}
@@ -44,12 +45,7 @@ spec:
         {{- end }}
       {{- end }}
     spec:
-      {{- if not .Values.rbac.useDefaultServiceAccount }}
-      serviceAccount: kargo-webhooks-server
-      {{- end }}
-      {{- if .Values.rbac.disableAutomountServiceAccountToken }}
-      automountServiceAccountToken: false
-      {{- end }}
+      serviceAccountName: kargo-webhooks-server
       {{- with .Values.webhooksServer.affinity | default .Values.global.affinity }}
       affinity:
         {{- toYaml . | nindent 8 }}
@@ -101,10 +97,13 @@ spec:
         - mountPath: /tmp/k8s-webhook-server/serving-certs
           name: cert
           readOnly: true
-        {{- if .Values.kubeconfigSecrets.kargo }}
+        {{- if $kc }}
         - mountPath: /etc/kargo/kubeconfigs
           name: kubeconfigs
           readOnly: true
+        {{- end }}
+        {{- with .Values.webhooksServer.volumeMounts }}
+        {{- toYaml . | nindent 8 }}
         {{- end }}
         {{- with .Values.webhooksServer.securityContext | default .Values.global.securityContext }}
         securityContext:
@@ -112,16 +111,26 @@ spec:
         {{- end }}
         resources:
           {{- toYaml .Values.webhooksServer.resources | nindent 10 }}
+      {{- with .Values.webhooksServer.containers }}
+      {{- toYaml . | nindent 6 }}
+      {{- end }}
+      {{- with .Values.webhooksServer.initContainers }}
+      initContainers:
+      {{- toYaml . | nindent 6 }}
+      {{- end }}
       volumes:
       - name: cert
         secret:
           defaultMode: 0644
           secretName: {{ .Values.webhooksServer.tls.secretName }}
-      {{- if .Values.kubeconfigSecrets.kargo }}
+      {{- if $kc }}
       - name: kubeconfigs
         secret:
           defaultMode: 0644
-          secretName: {{ .Values.kubeconfigSecrets.kargo }}
+          secretName: {{ $kc }}
+      {{- end }}
+      {{- with .Values.webhooksServer.volumes }}
+      {{- toYaml . | nindent 6 }}
       {{- end }}
       {{- with .Values.webhooksServer.nodeSelector | default .Values.global.nodeSelector }}
       nodeSelector:

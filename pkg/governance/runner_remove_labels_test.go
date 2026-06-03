@@ -26,45 +26,60 @@ func Test_removeLabelsRunner_run(t *testing.T) {
 		config []byte
 		// errByLabel chooses what the fake returns for each label, in
 		// order of the call. nil means success.
-		errByLabel        []error
-		expectedAttempts  []string
-		expectErrContains string
+		errByLabel []error
+		assert     func(t *testing.T, attempts []string, err error)
 	}{
 		{
-			name:              "decode error",
-			config:            []byte(`true`),
-			expectErrContains: "decoding removeLabels config",
+			name:   "decode error",
+			config: []byte(`true`),
+			assert: func(t *testing.T, attempts []string, err error) {
+				require.ErrorContains(t, err, "decoding removeLabels config")
+				require.Nil(t, attempts)
+			},
 		},
 		{
-			name:             "empty list — no API calls",
-			config:           []byte(`[]`),
-			expectedAttempts: nil,
+			name:   "empty list — no API calls",
+			config: []byte(`[]`),
+			assert: func(t *testing.T, attempts []string, err error) {
+				require.NoError(t, err)
+				require.Nil(t, attempts)
+			},
 		},
 		{
-			name:             "happy path — all labels removed",
-			config:           []byte("- foo\n- bar\n"),
-			errByLabel:       []error{nil, nil},
-			expectedAttempts: []string{"foo", "bar"},
+			name:       "happy path — all labels removed",
+			config:     []byte("- foo\n- bar\n"),
+			errByLabel: []error{nil, nil},
+			assert: func(t *testing.T, attempts []string, err error) {
+				require.NoError(t, err)
+				require.Equal(t, []string{"foo", "bar"}, attempts)
+			},
 		},
 		{
-			name:             "404 on one label — others continue, no error",
-			config:           []byte("- foo\n- bar\n- baz\n"),
-			errByLabel:       []error{nil, notFoundErr, nil},
-			expectedAttempts: []string{"foo", "bar", "baz"},
+			name:       "404 on one label — others continue, no error",
+			config:     []byte("- foo\n- bar\n- baz\n"),
+			errByLabel: []error{nil, notFoundErr, nil},
+			assert: func(t *testing.T, attempts []string, err error) {
+				require.NoError(t, err)
+				require.Equal(t, []string{"foo", "bar", "baz"}, attempts)
+			},
 		},
 		{
-			name:              "non-404 error halts and propagates with label name",
-			config:            []byte("- foo\n- bar\n- baz\n"),
-			errByLabel:        []error{nil, otherErr, nil},
-			expectedAttempts:  []string{"foo", "bar"},
-			expectErrContains: `error removing label "bar"`,
+			name:       "non-404 error halts and propagates with label name",
+			config:     []byte("- foo\n- bar\n- baz\n"),
+			errByLabel: []error{nil, otherErr, nil},
+			assert: func(t *testing.T, attempts []string, err error) {
+				require.ErrorContains(t, err, `error removing label "bar"`)
+				require.Equal(t, []string{"foo", "bar"}, attempts)
+			},
 		},
 		{
-			name:              "non-github error halts and propagates",
-			config:            []byte("- foo\n"),
-			errByLabel:        []error{errors.New("network")},
-			expectedAttempts:  []string{"foo"},
-			expectErrContains: `error removing label "foo": network`,
+			name:       "non-github error halts and propagates",
+			config:     []byte("- foo\n"),
+			errByLabel: []error{errors.New("network")},
+			assert: func(t *testing.T, attempts []string, err error) {
+				require.ErrorContains(t, err, `error removing label "foo": network`)
+				require.Equal(t, []string{"foo"}, attempts)
+			},
 		},
 	}
 	for _, testCase := range testCases {
@@ -88,19 +103,16 @@ func Test_removeLabelsRunner_run(t *testing.T) {
 			err := removeLabelsRunner{}.run(
 				t.Context(),
 				&actionContext{
-					issuesClient: fake,
-					owner:        "akuity",
-					repo:         "kargo",
-					number:       1,
+					repoContext: repoContext{
+						issuesClient: fake,
+						owner:        "akuity",
+						repo:         "kargo",
+					},
+					number: 1,
 				},
 				testCase.config,
 			)
-			if testCase.expectErrContains != "" {
-				require.ErrorContains(t, err, testCase.expectErrContains)
-			} else {
-				require.NoError(t, err)
-			}
-			require.Equal(t, testCase.expectedAttempts, attempts)
+			testCase.assert(t, attempts, err)
 		})
 	}
 }

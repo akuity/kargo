@@ -20,7 +20,7 @@ RUN --mount=type=cache,target=/root/.local/share/pnpm/store NODE_ENV='production
 ####################################################################################################
 # back-end-builder
 ####################################################################################################
-FROM --platform=$BUILDPLATFORM golang:1.26.2-trixie AS back-end-builder
+FROM --platform=$BUILDPLATFORM golang:1.26.3-trixie AS back-end-builder
 
 ARG TARGETOS
 ARG TARGETARCH
@@ -72,9 +72,22 @@ ARG TARGETARCH
 
 WORKDIR /tools
 
-RUN GRPC_HEALTH_PROBE_VERSION=v0.4.46 && \
+RUN GRPC_HEALTH_PROBE_VERSION=v0.4.50 && \
     curl -fL -o /tools/grpc_health_probe https://github.com/grpc-ecosystem/grpc-health-probe/releases/download/${GRPC_HEALTH_PROBE_VERSION}/grpc_health_probe-${TARGETOS}-${TARGETARCH} && \
     chmod +x /tools/grpc_health_probe
+
+# Helm is required by the kustomize-build promotion step's Helm plugin. We source
+# the binary directly from Helm's official releases (rather than a distro package)
+# so we always ship a current, CVE-patched build. This is intentionally ahead of
+# the helm.sh/helm/v3 library in go.mod: the standalone binary carries no k8s
+# dependency cascade, so we track the latest Helm 3 minor for CVE coverage.
+ARG HELM_VERSION=v3.21.0
+RUN curl -fL -o /tmp/helm.tar.gz https://get.helm.sh/helm-${HELM_VERSION}-${TARGETOS}-${TARGETARCH}.tar.gz && \
+    curl -fL -o /tmp/helm.tar.gz.sha256sum https://get.helm.sh/helm-${HELM_VERSION}-${TARGETOS}-${TARGETARCH}.tar.gz.sha256sum && \
+    echo "$(awk '{print $1}' /tmp/helm.tar.gz.sha256sum)  /tmp/helm.tar.gz" | sha256sum -c - && \
+    tar -xzf /tmp/helm.tar.gz -C /tmp && \
+    mv /tmp/${TARGETOS}-${TARGETARCH}/helm /tools/helm && \
+    chmod +x /tools/helm
 
 ####################################################################################################
 # back-end-dev
@@ -87,6 +100,10 @@ FROM alpine:latest AS back-end-dev
 
 RUN apk update && apk add ca-certificates git gpg gpg-agent openssh-client tini
 
+# Match the published image: source Helm (needed by the kustomize-build step's
+# Helm plugin) from the official-binary "tools" stage rather than a distro
+# package.
+COPY --from=tools /tools/helm /usr/local/bin/helm
 COPY bin/credential-helper /usr/local/bin/credential-helper
 COPY bin/controlplane/kargo /usr/local/bin/kargo
 

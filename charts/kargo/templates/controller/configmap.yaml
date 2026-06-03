@@ -1,4 +1,6 @@
-{{- if .Values.controller.enabled }}
+{{- if and .Values.workloads.install .Values.controller.enabled }}
+{{- $kc := .Values.controller.kubeconfigSecrets.kargo | default .Values.kubeconfigSecrets.kargo }}
+{{- $argocdKc := .Values.controller.kubeconfigSecrets.argocd | default .Values.kubeconfigSecrets.argocd }}
 apiVersion: v1
 kind: ConfigMap
 metadata:
@@ -7,6 +9,7 @@ metadata:
   labels:
     {{- include "kargo.labels" . | nindent 4 }}
     {{- include "kargo.controller.labels" . | nindent 4 }}
+  {{- include "kargo.annotations" (dict "root" . "annotations" .Values.controller.annotations) | nindent 2 }}
 data:
   {{- if .Values.api.enabled }}
   API_SERVER_BASE_URL: {{ include "kargo.api.baseURL" . }}
@@ -21,7 +24,7 @@ data:
   {{- if .Values.controller.shardName }}
   SHARD_NAME: {{ .Values.controller.shardName }}
   {{- end }}
-  {{- if .Values.kubeconfigSecrets.kargo }}
+  {{- if $kc }}
   KUBECONFIG: /etc/kargo/kubeconfigs/kubeconfig.yaml
   {{- end }}
   SHARED_RESOURCES_NAMESPACE: {{ quote .Values.global.sharedResources.namespace }}
@@ -45,7 +48,7 @@ data:
   {{- end }}
   ARGOCD_INTEGRATION_ENABLED: {{ quote .Values.controller.argocd.integrationEnabled }}
   {{- if .Values.controller.argocd.integrationEnabled }}
-  {{- if .Values.kubeconfigSecrets.argocd }}
+  {{- if $argocdKc }}
   ARGOCD_KUBECONFIG: /etc/kargo/kubeconfigs/argocd-kubeconfig.yaml
   {{- end }}
   ARGOCD_NAMESPACE: {{ .Values.controller.argocd.namespace | default "argocd" }}
