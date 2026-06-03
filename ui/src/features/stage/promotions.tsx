@@ -1,6 +1,6 @@
 import { createClient } from '@connectrpc/connect';
 import { createConnectQueryKey, useQuery } from '@connectrpc/connect-query';
-import { faUndo } from '@fortawesome/free-solid-svg-icons';
+import { faArrowRotateLeft, faUndo } from '@fortawesome/free-solid-svg-icons';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
 import { useQueryClient } from '@tanstack/react-query';
 import { Flex, Spin, Table, Tooltip } from 'antd';
@@ -24,7 +24,7 @@ import {
 import { ListPromotionsResponse } from '@ui/gen/api/service/v1alpha1/service_pb';
 import { KargoService } from '@ui/gen/api/service/v1alpha1/service_pb';
 import { ArgoCDShard } from '@ui/gen/api/service/v1alpha1/service_pb';
-import { Freight, Promotion } from '@ui/gen/api/v1alpha1/generated_pb';
+import { Freight, Promotion, Stage } from '@ui/gen/api/v1alpha1/generated_pb';
 import uiPlugins from '@ui/plugins';
 import { UiPluginHoles } from '@ui/plugins/atoms/ui-plugin-hole/ui-plugin-holes';
 import { timestampDate } from '@ui/utils/connectrpc-utils';
@@ -33,7 +33,14 @@ import { Promotion as PromotionComponent } from '../project/pipelines/promotion/
 
 import { hasAbortRequest, promotionCompareFn } from './utils/promotion';
 
-export const Promotions = ({ argocdShard }: { argocdShard?: ArgoCDShard }) => {
+const rollbackAnnotationKey = 'kargo.akuity.io/rollback';
+
+type PromotionsProps = {
+  argocdShard?: ArgoCDShard;
+  stage?: Stage;
+};
+
+export const Promotions = ({ argocdShard, stage }: PromotionsProps) => {
   const client = useQueryClient();
   const navigate = useNavigate();
 
@@ -132,15 +139,28 @@ export const Promotions = ({ argocdShard }: { argocdShard?: ArgoCDShard }) => {
     return [...(promotionsResponse?.promotions || [])].sort(promotionCompareFn);
   }, [promotionsResponse]);
 
+  const rollbackPromotionNames = React.useMemo(
+    () =>
+      new Set(
+        Object.values(stage?.status?.autoPromotionHolds || {})
+          .map((hold) => hold?.promotionName)
+          .filter(Boolean)
+      ),
+    [stage?.status?.autoPromotionHolds]
+  );
+
   const columns: ColumnsType<Promotion> = [
     {
       title: '',
-      width: 24,
+      width: 56,
       render: (_, promotion) => {
         const promotionStatusPhase = getPromotionStatusPhase(promotion);
         const isAbortRequestPending =
           hasAbortRequest(promotion) && !isPromotionPhaseTerminal(promotionStatusPhase);
         const canRetry = isPromotionRetryable(promotionStatusPhase);
+        const isRollbackPromotion =
+          promotion.metadata?.annotations?.[rollbackAnnotationKey] === 'true' ||
+          rollbackPromotionNames.has(promotion.metadata?.name || '');
 
         // generally controller quickly Abort promotion
         // but incase if controller is off for some reason, this messaging ensures accurate information
@@ -154,6 +174,12 @@ export const Promotions = ({ argocdShard }: { argocdShard?: ArgoCDShard }) => {
               status={promotion.status}
               color={isAbortRequestPending ? 'red' : ''}
             />
+
+            {isRollbackPromotion && (
+              <Tooltip title='Rollback promotion'>
+                <FontAwesomeIcon icon={faArrowRotateLeft} className='text-xs text-gray-500' />
+              </Tooltip>
+            )}
 
             {canRetry && (
               <Tooltip title='Retry promotion'>

@@ -1063,6 +1063,11 @@ func Test_server_promoteToStage(t *testing.T) {
 					require.Equal(t, testStage.Name, promos.Items[0].Spec.Stage)
 					require.Equal(t, testFreight.Name, promos.Items[0].Spec.Freight)
 					require.Equal(t, kargoapi.PromotionSourceNonAuto, promos.Items[0].Spec.Source)
+					require.NotContains(
+						t,
+						promos.Items[0].Annotations,
+						kargoapi.AnnotationKeyRollback,
+					)
 				},
 			},
 			{
@@ -1124,6 +1129,11 @@ func Test_server_promoteToStage(t *testing.T) {
 					err := c.List(t.Context(), promos, client.InNamespace(testProject.Name))
 					require.NoError(t, err)
 					require.Len(t, promos.Items, 1)
+					require.Equal(
+						t,
+						kargoapi.AnnotationValueTrue,
+						promos.Items[0].Annotations[kargoapi.AnnotationKeyRollback],
+					)
 
 					stage := &kargoapi.Stage{}
 					err = c.Get(
@@ -1306,6 +1316,11 @@ func Test_server_promoteToStage(t *testing.T) {
 					err := c.List(t.Context(), promos, client.InNamespace(testProject.Name))
 					require.NoError(t, err)
 					require.Len(t, promos.Items, 1)
+					require.Equal(
+						t,
+						kargoapi.AnnotationValueTrue,
+						promos.Items[0].Annotations[kargoapi.AnnotationKeyRollback],
+					)
 
 					stage := &kargoapi.Stage{}
 					err = c.Get(

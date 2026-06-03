@@ -27,6 +27,11 @@ const (
 	// hold creation time that should be cleared.
 	AnnotationKeyClearAutoPromotionHoldCreatedAt = "kargo.akuity.io/clear-auto-promotion-hold-created-at"
 
+	// AnnotationKeyRollback is an annotation key that can be set on a Promotion
+	// to indicate that it was created as a rollback to a previously verified
+	// piece of Freight.
+	AnnotationKeyRollback = "kargo.akuity.io/rollback"
+
 	// AnnotationKeyRefresh is an annotation key that can be set on a resource
 	// to trigger a refresh of the resource by the controller. The value of the
 	// annotation is interpreted as a token, and any change to the value of the

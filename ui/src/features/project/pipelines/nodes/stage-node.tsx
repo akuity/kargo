@@ -2,7 +2,6 @@ import { useMutation } from '@connectrpc/connect-query';
 import { useDroppable } from '@dnd-kit/core';
 import {
   faBarsStaggered,
-  faBolt,
   faExternalLink,
   faMinus,
   faTruckArrowRight
@@ -28,7 +27,8 @@ import { timestampDate } from '@ui/utils/connectrpc-utils';
 import { useDictionaryContext } from '../context/dictionary-context';
 import { useGraphContext } from '../context/graph-context';
 import { stageIndexer } from '../graph/node-indexer';
-import { AutoPromotionHoldsPopover } from '../promotion/auto-promotion-holds-popover';
+import { getAutoPromotionHoldEntries } from '../promotion/auto-promotion';
+import { AutoPromotionStatusIcon } from '../promotion/auto-promotion-status-icon';
 import { DropOverlay } from '../promotion/drag-and-drop/drop-overlay';
 
 import { AnalysisRunLogsLink } from './analysis-run-logs-link';
@@ -81,7 +81,7 @@ export const StageNode = (props: { stage: Stage }) => {
     }
   });
 
-  const dropdownItems = useGetPromotionDropdownItems(props.stage);
+  const { dropdownItems, resumeAutoPromotionDrawer } = useGetPromotionDropdownItems(props.stage);
 
   let descriptionItems: ReactNode;
 
@@ -119,6 +119,8 @@ export const StageNode = (props: { stage: Stage }) => {
     }
   });
 
+  const hasAutoPromotionHold = getAutoPromotionHoldEntries(props.stage).length > 0;
+
   return (
     <div
       ref={setNodeRef}
@@ -141,15 +143,17 @@ export const StageNode = (props: { stage: Stage }) => {
         }}
         title={
           <>
-            {autoPromotionMode && (
-              <FontAwesomeIcon title='Auto Promotion' icon={faBolt} className='text-[10px] mr-1' />
+            {(autoPromotionMode || hasAutoPromotionHold) && (
+              <AutoPromotionStatusIcon
+                stage={props.stage}
+                autoPromotionEnabled={Boolean(autoPromotionMode)}
+              />
             )}
             <span className='text-xs text-wrap mr-auto'>{props.stage.metadata?.name}</span>
           </>
         }
         extra={
           <Space size={6}>
-            <AutoPromotionHoldsPopover stage={props.stage} />
             <ArgoCDLink
               stage={props.stage}
               buttonProps={{
@@ -243,6 +247,8 @@ export const StageNode = (props: { stage: Stage }) => {
           </Link>
         )}
       </Card>
+
+      {resumeAutoPromotionDrawer}
 
       {!graphContext?.stackedNodesParents?.includes(stageNodeIndex) &&
         totalSubscribersToThisStage > 0 && (

@@ -6,8 +6,9 @@ import {
   faPause
 } from '@fortawesome/free-solid-svg-icons';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
-import { Button, Flex, Tag, Typography } from 'antd';
+import { Button, Flex, Tag, Tooltip, Typography } from 'antd';
 import Link from 'antd/es/typography/Link';
+import classNames from 'classnames';
 import { useEffect, useMemo, useState } from 'react';
 
 import { getCurrentFreight } from '@ui/features/common/utils';
@@ -74,6 +75,7 @@ export const StageFreight = (props: { stage: Stage }) => {
     () => dictionaryContext?.freightById?.[selectedFreight?.name]?.alias,
     [selectedFreight]
   );
+  const showFreightAlias = freightTimelineControllerContext?.preferredFilter?.showAlias;
 
   const defaultToFirstArtifact = () =>
     // @ts-expect-error FreightReference and Freight are same, at least in this case
@@ -127,6 +129,21 @@ export const StageFreight = (props: { stage: Stage }) => {
   const totalArtifacts =
     noOfContainerImages + noOfGitCommits + noOfHelmReleases + noOfGenericArtifacts;
   const isHoldPending = selectedAutoPromotionHold?.state === autoPromotionHoldStatePending;
+  const holdTooltip = isHoldPending
+    ? 'Rollback promotion pending. Auto-promotion will pause if it succeeds.'
+    : 'Auto-promotion paused after rollback.';
+  const holdIcon = selectedAutoPromotionHold ? (
+    <Tooltip title={holdTooltip}>
+      <span
+        className={classNames(
+          'inline-flex text-[10px]',
+          isHoldPending ? 'text-amber-500' : 'text-orange-600'
+        )}
+      >
+        <FontAwesomeIcon icon={isHoldPending ? faHourglassHalf : faPause} />
+      </span>
+    </Tooltip>
+  ) : null;
 
   return (
     <>
@@ -162,27 +179,17 @@ export const StageFreight = (props: { stage: Stage }) => {
         )}
 
         <div className='scale-90 flex flex-col items-center min-w-0 overflow-hidden'>
-          {freightTimelineControllerContext?.preferredFilter?.showAlias && (
-            <div className='text-[10px] mr-1 text-center mb-1'>{selectedFreightAlias}</div>
-          )}
-
-          {selectedAutoPromotionHold && (
-            <Flex align='center' gap={4} className='mb-1'>
-              <Tag
-                bordered={false}
-                color={isHoldPending ? 'gold' : 'volcano'}
-                className='text-[9px]'
-              >
-                <FontAwesomeIcon
-                  icon={isHoldPending ? faHourglassHalf : faPause}
-                  className='mr-1'
-                />
-                {isHoldPending ? 'Pause pending' : 'Auto-paused'}
-              </Tag>
+          {showFreightAlias && (
+            <Flex align='center' justify='center' gap={4} className='text-[10px] text-center mb-1'>
+              {holdIcon}
+              <span>{selectedFreightAlias}</span>
             </Flex>
           )}
 
-          <Artifact artifact={selectedArtifact} />
+          <Flex align='center' justify='center' gap={4}>
+            {!showFreightAlias && holdIcon}
+            <Artifact artifact={selectedArtifact} />
+          </Flex>
 
           {freightCreation && (
             <Typography.Text

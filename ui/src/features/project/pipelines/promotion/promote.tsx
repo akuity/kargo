@@ -217,9 +217,12 @@ export const Promote = (props: PromoteProps) => {
               showIcon
               type='warning'
               message={
-                <>This is older than the current auto-promotion candidate {candidateFreightLink}.</>
+                <>
+                  This is not the current auto-promotion candidate. Current candidate is{' '}
+                  {candidateFreightLink}.
+                </>
               }
-              description={`Auto-promotion for ${selectedOriginLabel} will pause if this Promotion succeeds.`}
+              description={`If this Promotion succeeds, auto-promotion for ${selectedOriginLabel} will pause.`}
             />
           </div>
         )}

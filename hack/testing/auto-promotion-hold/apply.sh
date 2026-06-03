@@ -11,6 +11,7 @@ FREIGHT_V002=7d96255278537d99b0c35445c3da426147d990bf
 FREIGHT_V003=3966bf28d5d67698bfd4816aecafd66d96a4226c
 API_FREIGHT_V001=10e608d617ce292f14398c07bcfadedd27b1ae6c
 API_FREIGHT_V002=d2f95df42a8f2ed206d7f4c15c5c5888454633eb
+MULTI_ORIGIN_SEED_PROMOTION=multi-origin-holds.00000000000000000000000000.seed
 
 SCRIPT_DIR=$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")" && pwd)
 NOW=$(date -u +"%Y-%m-%dT%H:%M:%SZ")
@@ -48,6 +49,27 @@ kubectl delete service slow-promotion-endpoint \
   --wait=true
 
 kubectl apply -f "${SCRIPT_DIR}/resources.yaml"
+
+kubectl apply -f - <<YAML
+apiVersion: kargo.akuity.io/v1alpha1
+kind: Promotion
+metadata:
+  name: ${MULTI_ORIGIN_SEED_PROMOTION}
+  namespace: ${PROJECT}
+spec:
+  stage: multi-origin-holds
+  freight: ${FREIGHT_V001}
+  source: nonAuto
+  steps:
+  - uses: set-metadata
+    config:
+      updates:
+      - kind: Stage
+        name: multi-origin-holds
+        values:
+          manualTest: auto-promotion-hold
+          lastStory: multi-origin-holds
+YAML
 
 kubectl patch stage single-origin-hold \
   --namespace "${PROJECT}" \
@@ -109,6 +131,41 @@ kubectl patch freight "${API_FREIGHT_V001}" \
   "status": {
     "currentlyIn": {
       "multi-origin-holds": {"since": "${NOW}"}
+    }
+  }
+}
+JSON
+)"
+
+kubectl patch promotion "${MULTI_ORIGIN_SEED_PROMOTION}" \
+  --namespace "${PROJECT}" \
+  --subresource=status \
+  --type=merge \
+  --patch "$(cat <<JSON
+{
+  "status": {
+    "phase": "Succeeded",
+    "startedAt": "${NOW}",
+    "finishedAt": "${NOW}",
+    "freight": {
+      "name": "${FREIGHT_V001}",
+      "origin": {"kind": "Warehouse", "name": "auto-hold"},
+      "images": [{"repoURL": "${IMAGE_REPO}", "tag": "1.26.0"}]
+    },
+    "freightCollection": {
+      "id": "multi-origin-holds-current",
+      "items": {
+        "${ORIGIN_KEY}": {
+          "name": "${FREIGHT_V001}",
+          "origin": {"kind": "Warehouse", "name": "auto-hold"},
+          "images": [{"repoURL": "${IMAGE_REPO}", "tag": "1.26.0"}]
+        },
+        "${API_ORIGIN_KEY}": {
+          "name": "${API_FREIGHT_V001}",
+          "origin": {"kind": "Warehouse", "name": "auto-hold-api"},
+          "images": [{"repoURL": "${API_IMAGE_REPO}", "tag": "7.2.4"}]
+        }
+      }
     }
   }
 }
@@ -214,6 +271,40 @@ kubectl patch stage multi-origin-holds \
       ],
       "freightSummary": "2/2 origins fulfilled",
       "health": {"status": "Healthy"},
+      "lastPromotion": {
+        "name": "${MULTI_ORIGIN_SEED_PROMOTION}",
+        "finishedAt": "${NOW}",
+        "freight": {
+          "name": "${FREIGHT_V001}",
+          "origin": {"kind": "Warehouse", "name": "auto-hold"},
+          "images": [{"repoURL": "${IMAGE_REPO}", "tag": "1.26.0"}]
+        },
+        "status": {
+          "phase": "Succeeded",
+          "startedAt": "${NOW}",
+          "finishedAt": "${NOW}",
+          "freight": {
+            "name": "${FREIGHT_V001}",
+            "origin": {"kind": "Warehouse", "name": "auto-hold"},
+            "images": [{"repoURL": "${IMAGE_REPO}", "tag": "1.26.0"}]
+          },
+          "freightCollection": {
+            "id": "multi-origin-holds-current",
+            "items": {
+              "${ORIGIN_KEY}": {
+                "name": "${FREIGHT_V001}",
+                "origin": {"kind": "Warehouse", "name": "auto-hold"},
+                "images": [{"repoURL": "${IMAGE_REPO}", "tag": "1.26.0"}]
+              },
+              "${API_ORIGIN_KEY}": {
+                "name": "${API_FREIGHT_V001}",
+                "origin": {"kind": "Warehouse", "name": "auto-hold-api"},
+                "images": [{"repoURL": "${API_IMAGE_REPO}", "tag": "7.2.4"}]
+              }
+            }
+          }
+        }
+      },
       "freightHistory": [
         {
           "id": "multi-origin-holds-current",

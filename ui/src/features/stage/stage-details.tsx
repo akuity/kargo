@@ -158,7 +158,7 @@ export const StageDetails = ({ stage }: { stage: Stage }) => {
                   key: TabsTypes.PROMOTION,
                   label: 'Promotions',
                   icon: <FontAwesomeIcon icon={faCircleUp} />,
-                  children: <Promotions argocdShard={argocdShard} />
+                  children: <Promotions argocdShard={argocdShard} stage={stage} />
                 },
                 {
                   key: TabsTypes.VERIFICATIONS,

@@ -1,11 +1,12 @@
-import { faPause, faTruckArrowRight } from '@fortawesome/free-solid-svg-icons';
+import { faTruckArrowRight } from '@fortawesome/free-solid-svg-icons';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
 import { Button, Space } from 'antd';
 import { ColumnType } from 'antd/es/table';
 
 import { isStageControlFlow } from '@ui/features/project/pipelines/nodes/stage-meta-utils';
-import { AutoPromotionHoldsPopover } from '@ui/features/project/pipelines/promotion/auto-promotion-holds-popover';
 import { Stage } from '@ui/gen/api/v1alpha1/generated_pb';
+
+import { ResumeAutoPromotionAction } from './resume-auto-promotion-action';
 
 type Props = {
   onPromote: (stage: Stage) => void;
@@ -19,11 +20,7 @@ export const actionColumn = (props: Props): ColumnType<Stage> => ({
 
     return (
       <Space size={6}>
-        <AutoPromotionHoldsPopover stage={stage} placement='bottomRight'>
-          <Button size='small' icon={<FontAwesomeIcon icon={faPause} />}>
-            Resume
-          </Button>
-        </AutoPromotionHoldsPopover>
+        <ResumeAutoPromotionAction stage={stage} />
         <Button
           onClick={() => props.onPromote(stage)}
           size='small'

@@ -467,6 +467,7 @@ func (s *server) createStagePromotion(
 		}
 		if createdHold {
 			createdPendingHold = hold
+			annotateRollbackPromotion(promotion)
 		}
 	} else if candidate != nil && candidate.Name == freight.Name {
 		hold, held := stage.Status.GetAutoPromotionHold(freight.Origin)
@@ -551,6 +552,13 @@ func autoPromotionHoldMatchesPendingCreate(
 		hold.PromotionName == expected.PromotionName &&
 		hold.Freight.Name == expected.Freight.Name &&
 		hold.Freight.Origin.Equals(&expected.Freight.Origin)
+}
+
+func annotateRollbackPromotion(promotion *kargoapi.Promotion) {
+	if promotion.Annotations == nil {
+		promotion.Annotations = make(map[string]string, 1)
+	}
+	promotion.Annotations[kargoapi.AnnotationKeyRollback] = kargoapi.AnnotationValueTrue
 }
 
 // expectedAutoCandidateConflict returns a conflict when a request's
