@@ -7,6 +7,40 @@ Expand the name of the chart.
 {{- end -}}
 
 {{/*
+Optional suffix appended to every controller-owned resource name. Default
+empty. Set .Values.controller.fullnameSuffix to apply a uniform tag
+(e.g. an instance discriminator) to the controller's Deployment,
+ServiceAccount, ConfigMap, Role/RoleBinding, ClusterRole/ClusterRoleBinding,
+and the derivative names below.
+*/}}
+{{- define "kargo.controller.fullnameSuffix" -}}
+{{- default "" .Values.controller.fullnameSuffix -}}
+{{- end -}}
+
+{{/*
+Per-resource fullname helpers for the controller subsystem. Each composes
+the resource's natural name with the chart-name prefix and the optional
+suffix. Resources reference these directly (rather than deriving sibling
+names by string concatenation) so the suffix lands at the end of every
+name uniformly.
+*/}}
+{{- define "kargo.controller.fullname" -}}
+{{- printf "%s-controller%s" (include "kargo.name" .) (include "kargo.controller.fullnameSuffix" .) | trunc 63 | trimSuffix "-" -}}
+{{- end -}}
+
+{{- define "kargo.controller.rolloutsFullname" -}}
+{{- printf "%s-controller-rollouts%s" (include "kargo.name" .) (include "kargo.controller.fullnameSuffix" .) | trunc 63 | trimSuffix "-" -}}
+{{- end -}}
+
+{{- define "kargo.controller.argocdFullname" -}}
+{{- printf "%s-controller-argocd%s" (include "kargo.name" .) (include "kargo.controller.fullnameSuffix" .) | trunc 63 | trimSuffix "-" -}}
+{{- end -}}
+
+{{- define "kargo.controller.readSecretsFullname" -}}
+{{- printf "%s-controller-read-secrets%s" (include "kargo.name" .) (include "kargo.controller.fullnameSuffix" .) | trunc 63 | trimSuffix "-" -}}
+{{- end -}}
+
+{{/*
 Create image reference as used by resources.
 */}}
 {{- define "kargo.image" -}}
