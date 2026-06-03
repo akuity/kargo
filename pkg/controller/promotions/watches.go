@@ -69,6 +69,26 @@ func (u *UpdatedArgoCDAppHandler[T]) Update(
 		return
 	}
 
+	// Collect the running Promotions to enqueue, deduped by key in case a
+	// Promotion is matched by both the name- and selector-based lookups below.
+	enqueued := make(map[types.NamespacedName]struct{})
+	enqueue := func(promo kargoapi.Promotion) {
+		key := types.NamespacedName{Namespace: promo.Namespace, Name: promo.Name}
+		if _, ok := enqueued[key]; ok {
+			return
+		}
+		enqueued[key] = struct{}{}
+		wq.Add(reconcile.Request{NamespacedName: key})
+		logger.Debug(
+			"enqueued Promotion for reconciliation",
+			"namespace", promo.Namespace,
+			"promotion", promo.Name,
+			"app", newApp.Name,
+		)
+	}
+
+	// Promotions that target this Application by name are found directly via the
+	// name-based index.
 	promotions := &kargoapi.PromotionList{}
 	if err := u.kargoClient.List(
 		ctx,
@@ -88,22 +108,48 @@ func (u *UpdatedArgoCDAppHandler[T]) Update(
 		)
 		return
 	}
-
 	for _, promotion := range promotions.Items {
-		wq.Add(
-			reconcile.Request{
-				NamespacedName: types.NamespacedName{
-					Namespace: promotion.Namespace,
-					Name:      promotion.Name,
-				},
-			},
-		)
-		logger.Debug(
-			"enqueued Promotion for reconciliation",
-			"namespace", promotion.Namespace,
-			"promotion", promotion.Name,
+		enqueue(promotion)
+	}
+
+	// Promotions that target this Application by label selector cannot be found
+	// via the name-based index, because a selector's match set depends on the
+	// Application's labels. Instead, narrow to the (small) set of running
+	// Promotions that use selectors via a coarse index, then evaluate each
+	// selector forward against the changed Application. We test both the old and
+	// new label sets so a Promotion is still woken when an Application's labels
+	// change such that it stops matching.
+	selectorPromotions := &kargoapi.PromotionList{}
+	if err := u.kargoClient.List(
+		ctx,
+		selectorPromotions,
+		&client.ListOptions{
+			FieldSelector: fields.OneTermEqualSelector(
+				// Note: This index only includes Promotions assigned to this shard.
+				indexer.RunningPromotionsByArgoCDSelectorsField,
+				indexer.RunningPromotionsByArgoCDSelectorsValue,
+			),
+		},
+	); err != nil {
+		logger.Error(
+			err, "error listing selector-based Promotions for Application",
 			"app", newApp.Name,
+			"namespace", newApp.Namespace,
 		)
+		return
+	}
+	for i := range selectorPromotions.Items {
+		promotion := selectorPromotions.Items[i]
+		if _, ok := enqueued[types.NamespacedName{
+			Namespace: promotion.Namespace,
+			Name:      promotion.Name,
+		}]; ok {
+			continue
+		}
+		if promotionSelectorsMatchApp(ctx, u.kargoClient, &promotion, newApp.Namespace, newApp.Labels) ||
+			promotionSelectorsMatchApp(ctx, u.kargoClient, &promotion, oldApp.Namespace, oldApp.Labels) {
+			enqueue(promotion)
+		}
 	}
 }
 

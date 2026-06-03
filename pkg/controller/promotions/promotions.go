@@ -118,6 +118,22 @@ func SetupReconcilerWithManager(
 		return fmt.Errorf("index running Promotions by Argo CD Applications: %w", err)
 	}
 
+	// Index running Promotions that target Argo CD Applications by label
+	// selector. This coarsely narrows the candidate set when an Application
+	// changes, so the watch handler can evaluate each selector forward against
+	// the changed Application rather than scanning every running Promotion.
+	if err := kargoMgr.GetFieldIndexer().IndexField(
+		ctx,
+		&kargoapi.Promotion{},
+		indexer.RunningPromotionsByArgoCDSelectorsField,
+		indexer.RunningPromotionsByArgoCDSelectors(
+			cfg.ShardName,
+			cfg.IsDefaultController,
+		),
+	); err != nil {
+		return fmt.Errorf("index running Promotions by Argo CD selectors: %w", err)
+	}
+
 	reconciler := newReconciler(
 		kargoMgr.GetClient(),
 		kargoMgr.GetAPIReader(),
