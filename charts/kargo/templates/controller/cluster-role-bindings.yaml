@@ -2,7 +2,7 @@
 apiVersion: rbac.authorization.k8s.io/v1
 kind: ClusterRoleBinding
 metadata:
-  name: kargo-controller
+  name: {{ include "kargo.controller.fullname" . }}
   labels:
     {{- include "kargo.labels" . | nindent 4 }}
     {{- include "kargo.controller.labels" . | nindent 4 }}
@@ -10,17 +10,17 @@ metadata:
 roleRef:
   apiGroup: rbac.authorization.k8s.io
   kind: ClusterRole
-  name: kargo-controller
+  name: {{ include "kargo.controller.fullname" . }}
 subjects:
 - kind: ServiceAccount
   namespace: {{ .Release.Namespace }}
-  name: kargo-controller
+  name: {{ include "kargo.controller.fullname" . }}
 {{- if .Values.controller.rollouts.integrationEnabled }}
 ---
 apiVersion: rbac.authorization.k8s.io/v1
 kind: ClusterRoleBinding
 metadata:
-  name: kargo-controller-rollouts
+  name: {{ include "kargo.controller.rolloutsFullname" . }}
   labels:
     {{- include "kargo.labels" . | nindent 4 }}
     {{- include "kargo.controller.labels" . | nindent 4 }}
@@ -28,11 +28,11 @@ metadata:
 roleRef:
   apiGroup: rbac.authorization.k8s.io
   kind: ClusterRole
-  name: kargo-controller-rollouts
+  name: {{ include "kargo.controller.rolloutsFullname" . }}
 subjects:
 - kind: ServiceAccount
   namespace: {{ .Release.Namespace }}
-  name: kargo-controller
+  name: {{ include "kargo.controller.fullname" . }}
 {{- end }}
 {{- end }}
 {{- if and .Values.argocd.dataPlane.install .Values.rbac.installClusterRoleBindings .Values.controller.enabled .Values.controller.argocd.integrationEnabled (not .Values.controller.argocd.watchArgocdNamespaceOnly) }}
@@ -40,7 +40,7 @@ subjects:
 apiVersion: rbac.authorization.k8s.io/v1
 kind: ClusterRoleBinding
 metadata:
-  name: kargo-controller-argocd
+  name: {{ include "kargo.controller.argocdFullname" . }}
   labels:
     {{- include "kargo.labels" . | nindent 4 }}
     {{- include "kargo.controller.labels" . | nindent 4 }}
@@ -48,9 +48,9 @@ metadata:
 roleRef:
   apiGroup: rbac.authorization.k8s.io
   kind: ClusterRole
-  name: kargo-controller-argocd
+  name: {{ include "kargo.controller.argocdFullname" . }}
 subjects:
 - kind: ServiceAccount
   namespace: {{ .Release.Namespace }}
-  name: kargo-controller
+  name: {{ include "kargo.controller.fullname" . }}
 {{- end }}
