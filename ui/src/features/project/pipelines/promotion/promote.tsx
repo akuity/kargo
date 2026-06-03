@@ -166,26 +166,38 @@ export const Promote = (props: PromoteProps) => {
       size='large'
       width={'1400px'}
       footer={
-        <Button
-          size='large'
-          className={classNames(styles['promote-btn'], 'ml-auto mt-5')}
-          icon={<FontAwesomeIcon icon={faTruckArrowRight} />}
-          onClick={onPromote}
-          loading={
-            isCheckingAutoPromotionCandidate ||
-            promoteActionMutation.isPending ||
-            promoteDownstreamActionMutation.isPending
-          }
-          disabled={isCheckingAutoPromotionCandidate}
-        >
-          {isCheckingAutoPromotionCandidate
-            ? 'Checking auto-promotion'
-            : isDownstreamPromotion
-              ? 'Promote to downstream'
-              : isPromotingOlderThanCandidate
-                ? 'Roll back and pause auto-promotion'
-                : 'Promote'}
-        </Button>
+        <Flex vertical gap={12}>
+          {isPromotingOlderThanCandidate && (
+            <Input.TextArea
+              placeholder='Reason (optional)'
+              value={reason}
+              onChange={(event) => setReason(event.target.value)}
+              maxLength={1024}
+              showCount
+              autoSize={{ minRows: 2, maxRows: 4 }}
+            />
+          )}
+          <Button
+            size='large'
+            className={classNames(styles['promote-btn'])}
+            icon={<FontAwesomeIcon icon={faTruckArrowRight} />}
+            onClick={onPromote}
+            loading={
+              isCheckingAutoPromotionCandidate ||
+              promoteActionMutation.isPending ||
+              promoteDownstreamActionMutation.isPending
+            }
+            disabled={isCheckingAutoPromotionCandidate}
+          >
+            {isCheckingAutoPromotionCandidate
+              ? 'Checking auto-promotion'
+              : isDownstreamPromotion
+                ? 'Promote to downstream'
+                : isPromotingOlderThanCandidate
+                  ? 'Roll back and pause auto-promotion'
+                  : 'Promote'}
+          </Button>
+        </Flex>
       }
     >
       <div className='-mt-4'>
@@ -208,15 +220,6 @@ export const Promote = (props: PromoteProps) => {
                 <>This is older than the current auto-promotion candidate {candidateFreightLink}.</>
               }
               description={`Auto-promotion for ${selectedOriginLabel} will pause if this Promotion succeeds.`}
-            />
-            <Input.TextArea
-              className='mt-3'
-              placeholder='Reason (optional)'
-              value={reason}
-              onChange={(event) => setReason(event.target.value)}
-              maxLength={1024}
-              showCount
-              autoSize={{ minRows: 2, maxRows: 4 }}
             />
           </div>
         )}

@@ -1,7 +1,7 @@
 import type { Freight, FreightReference, Stage } from '@ui/gen/api/v1alpha1/generated_pb';
 import type { AutoPromotionCandidate } from '@ui/gen/api/v2/models/autoPromotionCandidate';
 
-type OriginLike = {
+export type OriginLike = {
   kind?: string;
   name?: string;
 };

@@ -11,6 +11,18 @@ spec:
       discoveryLimit: 3
 ---
 apiVersion: kargo.akuity.io/v1alpha1
+kind: Warehouse
+metadata:
+  name: auto-hold-api
+  namespace: auto-promotion-hold
+spec:
+  freightCreationPolicy: Manual
+  subscriptions:
+  - image:
+      repoURL: public.ecr.aws/docker/library/redis
+      discoveryLimit: 2
+---
+apiVersion: kargo.akuity.io/v1alpha1
 kind: Freight
 metadata:
   name: 39f8209d87b5222d5dbebf5e6f1d9a54fe7d7b52
@@ -50,9 +62,35 @@ images:
   tag: 1.26.2
 ---
 apiVersion: kargo.akuity.io/v1alpha1
+kind: Freight
+metadata:
+  name: 10e608d617ce292f14398c07bcfadedd27b1ae6c
+  namespace: auto-promotion-hold
+alias: api-v001
+origin:
+  kind: Warehouse
+  name: auto-hold-api
+images:
+- repoURL: public.ecr.aws/docker/library/redis
+  tag: 7.2.4
+---
+apiVersion: kargo.akuity.io/v1alpha1
+kind: Freight
+metadata:
+  name: d2f95df42a8f2ed206d7f4c15c5c5888454633eb
+  namespace: auto-promotion-hold
+alias: api-v002
+origin:
+  kind: Warehouse
+  name: auto-hold-api
+images:
+- repoURL: public.ecr.aws/docker/library/redis
+  tag: 7.2.5
+---
+apiVersion: kargo.akuity.io/v1alpha1
 kind: Stage
 metadata:
-  name: slow-pending-hold
+  name: single-origin-hold
   namespace: auto-promotion-hold
 spec:
   requestedFreight:
@@ -77,7 +115,40 @@ spec:
         config:
           updates:
           - kind: Stage
-            name: slow-pending-hold
+            name: single-origin-hold
             values:
               manualTest: auto-promotion-hold
-              lastStory: slow-pending-hold
+              lastStory: single-origin-hold
+---
+apiVersion: kargo.akuity.io/v1alpha1
+kind: Stage
+metadata:
+  name: multi-origin-holds
+  namespace: auto-promotion-hold
+spec:
+  requestedFreight:
+  - origin:
+      kind: Warehouse
+      name: auto-hold
+    sources:
+      direct: true
+      autoPromotionOptions:
+        selectionPolicy: NewestFreight
+  - origin:
+      kind: Warehouse
+      name: auto-hold-api
+    sources:
+      direct: true
+      autoPromotionOptions:
+        selectionPolicy: NewestFreight
+  promotionTemplate:
+    spec:
+      steps:
+      - uses: set-metadata
+        config:
+          updates:
+          - kind: Stage
+            name: multi-origin-holds
+            values:
+              manualTest: auto-promotion-hold
+              lastStory: multi-origin-holds

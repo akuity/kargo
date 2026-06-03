@@ -6,5 +6,8 @@ metadata:
 spec:
   promotionPolicies:
   - stageSelector:
-      name: slow-pending-hold
+      name: single-origin-hold
+    autoPromotionEnabled: true
+  - stageSelector:
+      name: multi-origin-holds
     autoPromotionEnabled: true

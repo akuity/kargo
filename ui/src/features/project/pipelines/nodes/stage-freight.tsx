@@ -6,7 +6,7 @@ import {
   faPause
 } from '@fortawesome/free-solid-svg-icons';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
-import { Button, Flex, Tag, Tooltip, Typography } from 'antd';
+import { Button, Flex, Tag, Typography } from 'antd';
 import Link from 'antd/es/typography/Link';
 import { useEffect, useMemo, useState } from 'react';
 
@@ -31,11 +31,7 @@ import { useDictionaryContext } from '../context/dictionary-context';
 import { useFreightTimelineControllerContext } from '../context/freight-timeline-controller-context';
 import { humanComprehendableArtifact } from '../freight/artifact-parts-utils';
 import { shortVersion } from '../freight/short-version-utils';
-import {
-  autoPromotionHoldStatePending,
-  getAutoPromotionHold,
-  originLabel
-} from '../promotion/auto-promotion';
+import { autoPromotionHoldStatePending, getAutoPromotionHold } from '../promotion/auto-promotion';
 
 import {
   ArtifactTypes,
@@ -131,11 +127,6 @@ export const StageFreight = (props: { stage: Stage }) => {
   const totalArtifacts =
     noOfContainerImages + noOfGitCommits + noOfHelmReleases + noOfGenericArtifacts;
   const isHoldPending = selectedAutoPromotionHold?.state === autoPromotionHoldStatePending;
-  const holdTitle = isHoldPending
-    ? `Rollback Promotion is still in progress for ${originLabel(selectedFreight?.origin)}.`
-    : `Auto-promotion is paused for ${originLabel(
-        selectedFreight?.origin
-      )} after rollback to ${selectedAutoPromotionHold?.freight?.name || selectedFreight?.name}.`;
 
   return (
     <>
@@ -177,19 +168,17 @@ export const StageFreight = (props: { stage: Stage }) => {
 
           {selectedAutoPromotionHold && (
             <Flex align='center' gap={4} className='mb-1'>
-              <Tooltip title={holdTitle}>
-                <Tag
-                  bordered={false}
-                  color={isHoldPending ? 'gold' : 'volcano'}
-                  className='text-[9px]'
-                >
-                  <FontAwesomeIcon
-                    icon={isHoldPending ? faHourglassHalf : faPause}
-                    className='mr-1'
-                  />
-                  {isHoldPending ? 'Pause pending' : 'Auto-paused'}
-                </Tag>
-              </Tooltip>
+              <Tag
+                bordered={false}
+                color={isHoldPending ? 'gold' : 'volcano'}
+                className='text-[9px]'
+              >
+                <FontAwesomeIcon
+                  icon={isHoldPending ? faHourglassHalf : faPause}
+                  className='mr-1'
+                />
+                {isHoldPending ? 'Pause pending' : 'Auto-paused'}
+              </Tag>
             </Flex>
           )}
 
