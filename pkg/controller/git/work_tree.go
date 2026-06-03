@@ -60,10 +60,10 @@ type WorkTree interface {
 	// who cloned the repo associated with this working tree.
 	HomeDir() string
 	// GetDiffPathsForCommitID returns a string slice indicating the paths,
-	// relative to the root of the repository, of any files that are added,
-	// modified, deleted, or renamed/moved in the commit with the given ID. For
-	// renamed or moved files, both the old and new paths are included so that
-	// path-based filters can match on either side of the move.
+	// relative to the root of the repository, of any files changed in the
+	// commit with the given ID. For renamed or moved files, both the old and
+	// new paths are included so that path-based filters can match on either
+	// side of the move.
 	GetDiffPathsForCommitID(commitID string) ([]string, error)
 	// IsAncestor returns true if parent branch is an ancestor of child
 	IsAncestor(parent string, child string) (bool, error)
@@ -414,13 +414,19 @@ func (w *workTree) GetDiffPathsForCommitID(commitID string) ([]string, error) {
 		}
 		// --name-status output is tab-separated: <status>\t<path> for most
 		// changes, or <status>\t<old-path>\t<new-path> for renames and copies.
+		// The status field for renames and copies includes a similarity score
+		// (e.g. R100, C85), so we use HasPrefix rather than exact equality.
 		parts := strings.SplitN(line, "\t", 3)
 		if len(parts) < 2 {
-			continue
+			return nil, fmt.Errorf(
+				"unexpected output from git show for commit %q: %q",
+				commitID, line,
+			)
 		}
-		// For renames (R) and copies (C), include both old and new paths so
-		// that a path filter matching the source directory detects the removal.
-		if len(parts) == 3 && len(parts[0]) > 0 && (parts[0][0] == 'R' || parts[0][0] == 'C') {
+		// For renames (R), include both old and new paths so that a path filter
+		// matching the source directory detects the removal. Copies (C) leave
+		// the source unchanged, so only the destination path is relevant.
+		if len(parts) == 3 && strings.HasPrefix(parts[0], "R") {
 			paths = append(paths, parts[1], parts[2])
 		} else {
 			paths = append(paths, parts[1])
