@@ -16,6 +16,9 @@ data:
   KARGO_NAMESPACE: {{ include "kargo.dataNamespace" . }}
   LOG_LEVEL: {{ quote .Values.api.logLevel }}
   LOG_FORMAT: {{ quote .Values.api.logFormat }}
+  {{- if .Values.api.basePath }}
+  API_BASE_PATH: {{ quote .Values.api.basePath }}
+  {{- end }}
   {{- if $kc }}
   KUBECONFIG: /etc/kargo/kubeconfig.yaml
   {{- end }}

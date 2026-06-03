@@ -95,12 +95,13 @@ func TestGetKeySet(t *testing.T) {
 				mux := http.NewServeMux()
 				srv := httptest.NewServer(mux)
 				t.Cleanup(srv.Close)
+				issuerURL := srv.URL + "/dex"
 				mux.HandleFunc(
 					dexDiscoPath,
 					func(w http.ResponseWriter, _ *http.Request) {
 						_, err := w.Write([]byte(`{
-						"issuer": "` + srv.URL + `",
-						"jwks_uri": "` + srv.URL + `/keys"
+						"issuer": "` + issuerURL + `",
+						"jwks_uri": "` + issuerURL + `/keys"
 					}`))
 						require.NoError(t, err)
 					},
@@ -110,7 +111,34 @@ func TestGetKeySet(t *testing.T) {
 						ServerAddr: srv.URL,
 					},
 					OIDCConfig: &libOIDC.Config{
-						IssuerURL: srv.URL,
+						IssuerURL: issuerURL,
+					},
+				}
+			},
+		},
+		{
+			name: "with Dex proxy under basePath",
+			setup: func() (*httptest.Server, config.ServerConfig) {
+				mux := http.NewServeMux()
+				srv := httptest.NewServer(mux)
+				t.Cleanup(srv.Close)
+				issuerURL := srv.URL + "/kargo/dex"
+				mux.HandleFunc(
+					"/kargo/dex/.well-known/openid-configuration",
+					func(w http.ResponseWriter, _ *http.Request) {
+						_, err := w.Write([]byte(`{
+						"issuer": "` + issuerURL + `",
+						"jwks_uri": "` + issuerURL + `/keys"
+					}`))
+						require.NoError(t, err)
+					},
+				)
+				return srv, config.ServerConfig{
+					DexProxyConfig: &dex.ProxyConfig{
+						ServerAddr: srv.URL,
+					},
+					OIDCConfig: &libOIDC.Config{
+						IssuerURL: issuerURL,
 					},
 				}
 			},
@@ -121,12 +149,13 @@ func TestGetKeySet(t *testing.T) {
 				mux := http.NewServeMux()
 				srv := httptest.NewServer(mux)
 				t.Cleanup(srv.Close)
+				issuerURL := srv.URL + "/dex"
 				mux.HandleFunc(
 					dexDiscoPath,
 					func(w http.ResponseWriter, _ *http.Request) {
 						_, err := w.Write([]byte(`{
-						"issuer": "` + srv.URL + `",
-						"jwks_uri": "` + srv.URL + `/keys"
+						"issuer": "` + issuerURL + `",
+						"jwks_uri": "` + issuerURL + `/keys"
 					}`))
 						require.NoError(t, err)
 					},
@@ -137,7 +166,7 @@ func TestGetKeySet(t *testing.T) {
 						CACertPath: filepath.Join(t.TempDir(), "ca.crt"),
 					},
 					OIDCConfig: &libOIDC.Config{
-						IssuerURL: srv.URL,
+						IssuerURL: issuerURL,
 					},
 				}
 				err :=
