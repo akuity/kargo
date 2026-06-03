@@ -7,7 +7,7 @@ import { getCurrentFreight } from '@ui/features/common/utils';
 import { useDictionaryContext } from '@ui/features/project/pipelines/context/dictionary-context';
 import { useFreightTimelineControllerContext } from '@ui/features/project/pipelines/context/freight-timeline-controller-context';
 import { FreightArtifact } from '@ui/features/project/pipelines/freight/freight-artifact';
-import { Stage } from '@ui/gen/api/v1alpha1/generated_pb';
+import { Stage } from '@ui/gen/api/v2/models';
 
 export const versionColumn = (): ColumnType<Stage> => ({
   title: 'Version',
@@ -57,9 +57,9 @@ export const versionColumn = (): ColumnType<Stage> => ({
             <Typography.Text type='secondary' className='text-[10px]'>
               +{' '}
               {totalArtifacts -
-                (firstFreight?.charts?.slice(0, 2)?.length +
-                  firstFreight?.commits?.slice(0, 2)?.length +
-                  firstFreight?.images?.slice(0, 2)?.length)}{' '}
+                ((firstFreight?.charts?.slice(0, 2)?.length || 0) +
+                  (firstFreight?.commits?.slice(0, 2)?.length || 0) +
+                  (firstFreight?.images?.slice(0, 2)?.length || 0))}{' '}
               more
             </Typography.Text>
           )}

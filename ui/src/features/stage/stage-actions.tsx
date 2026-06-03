@@ -19,7 +19,7 @@ import {
   reverify
 } from '@ui/gen/api/service/v1alpha1/service-KargoService_connectquery';
 import { ArgoCDShard } from '@ui/gen/api/service/v1alpha1/service_pb';
-import { Stage } from '@ui/gen/api/v1alpha1/generated_pb';
+import { Stage } from '@ui/gen/api/v2/models';
 
 import { currentFreightHasVerification } from '../common/utils';
 import { ArgoCDLink } from '../project/pipelines/nodes/argocd-link';
@@ -48,7 +48,7 @@ export const StageActions = ({
 
   // Once the Refresh process is done, refetch Freight list
   React.useEffect(() => {
-    const refreshRequest = stage?.metadata?.annotations['kargo.akuity.io/refresh'];
+    const refreshRequest = stage?.metadata?.annotations?.['kargo.akuity.io/refresh'];
     const refreshStatus = stage?.status?.lastHandledRefresh;
     if (refreshRequest !== undefined && refreshRequest !== refreshStatus) {
       setShouldRefetchFreights(true);
@@ -118,7 +118,7 @@ export const StageActions = ({
           onClick={onRefresh}
           loading={
             isRefreshLoading ||
-            (!!stage?.metadata?.annotations['kargo.akuity.io/refresh'] &&
+            (!!stage?.metadata?.annotations?.['kargo.akuity.io/refresh'] &&
               stage?.metadata?.annotations?.['kargo.akuity.io/refresh'] !==
                 stage?.status?.lastHandledRefresh)
           }

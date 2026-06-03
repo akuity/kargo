@@ -1,5 +1,5 @@
 import { createClient } from '@connectrpc/connect';
-import { createConnectQueryKey, useMutation, useQuery } from '@connectrpc/connect-query';
+import { createConnectQueryKey, useMutation } from '@connectrpc/connect-query';
 import { faUndo } from '@fortawesome/free-solid-svg-icons';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
 import { useQueryClient } from '@tanstack/react-query';
@@ -18,14 +18,13 @@ import {
   isPromotionRetryable
 } from '@ui/features/common/promotion-status/utils';
 import {
-  getFreight,
   listPromotions,
   promoteToStage
 } from '@ui/gen/api/service/v1alpha1/service-KargoService_connectquery';
-import { ListPromotionsResponse } from '@ui/gen/api/service/v1alpha1/service_pb';
 import { KargoService } from '@ui/gen/api/service/v1alpha1/service_pb';
 import { ArgoCDShard } from '@ui/gen/api/service/v1alpha1/service_pb';
-import { Freight, Promotion } from '@ui/gen/api/v1alpha1/generated_pb';
+import { useGetFreight, useListPromotions } from '@ui/gen/api/v2/core/core';
+import { Promotion } from '@ui/gen/api/v2/models';
 import uiPlugins from '@ui/plugins';
 import { UiPluginHoles } from '@ui/plugins/atoms/ui-plugin-hole/ui-plugin-holes';
 import { timestampDate } from '@ui/utils/connectrpc-utils';
@@ -38,21 +37,18 @@ export const Promotions = ({ argocdShard }: { argocdShard?: ArgoCDShard }) => {
   const client = useQueryClient();
 
   const { name: projectName, stageName } = useParams();
-  const { data: promotionsResponse, isLoading } = useQuery(
-    listPromotions,
-    { project: projectName, stage: stageName },
-    { enabled: !!stageName }
+
+  const listPromotionsQuery = useListPromotions(
+    projectName || '',
+    { stage: stageName },
+    { query: { enabled: !!stageName } }
   );
 
   const [curFreight, setCurFreight] = useState<string | undefined>();
 
-  const { data: freightData, isLoading: isLoadingFreight } = useQuery(
-    getFreight,
-    { project: projectName, name: curFreight },
-    {
-      enabled: !!curFreight
-    }
-  );
+  const getFreightQuery = useGetFreight(projectName || '', curFreight || '', {
+    query: { enabled: !!curFreight }
+  });
 
   const promotionMutation = useMutation(promoteToStage);
 
@@ -72,7 +68,7 @@ export const Promotions = ({ argocdShard }: { argocdShard?: ArgoCDShard }) => {
   const [selectedPromotion, setSelectedPromotion] = useState<Promotion | undefined>();
 
   useEffect(() => {
-    if (isLoading || !promotionsResponse) {
+    if (listPromotionsQuery.isLoading || !listPromotionsQuery.data?.data?.items?.length) {
       return;
     }
     const cancel = new AbortController();
@@ -84,7 +80,7 @@ export const Promotions = ({ argocdShard }: { argocdShard?: ArgoCDShard }) => {
         { signal: cancel.signal }
       );
 
-      let promotions = (promotionsResponse as ListPromotionsResponse).promotions || [];
+      let promotions = listPromotionsQuery.data?.data?.items || [];
 
       for await (const e of stream) {
         const index = promotions?.findIndex(
@@ -96,7 +92,7 @@ export const Promotions = ({ argocdShard }: { argocdShard?: ArgoCDShard }) => {
           }
         } else {
           if (index === -1) {
-            promotions = [...promotions, e.promotion as Promotion];
+            promotions = [...promotions, e.promotion];
           } else {
             promotions = [
               ...promotions.slice(0, index),
@@ -125,12 +121,12 @@ export const Promotions = ({ argocdShard }: { argocdShard?: ArgoCDShard }) => {
     watchPromotions();
 
     return () => cancel.abort();
-  }, [isLoading]);
+  }, [listPromotionsQuery.isLoading]);
 
   const promotions = React.useMemo(() => {
     // Immutable sorting
-    return [...(promotionsResponse?.promotions || [])].sort(promotionCompareFn);
-  }, [promotionsResponse]);
+    return [...(listPromotionsQuery.data?.data?.items || [])].sort(promotionCompareFn);
+  }, [listPromotionsQuery?.data]);
 
   const columns: ColumnsType<Promotion> = [
     {
@@ -184,7 +180,7 @@ export const Promotions = ({ argocdShard }: { argocdShard?: ArgoCDShard }) => {
     {
       title: 'Created By',
       render: (_, promotion) => {
-        const annotation = promotion.metadata?.annotations['kargo.akuity.io/create-actor'];
+        const annotation = promotion.metadata?.annotations?.['kargo.akuity.io/create-actor'];
         const email = annotation ? annotation.split(':')[1] : 'N/A';
 
         return email || annotation;
@@ -195,10 +191,8 @@ export const Promotions = ({ argocdShard }: { argocdShard?: ArgoCDShard }) => {
       render: (_, promotion) => (
         <Tooltip
           overlay={
-            <Spin spinning={isLoadingFreight}>
-              <div className='w-40 text-center truncate'>
-                {(freightData?.result?.value as Freight)?.alias}
-              </div>
+            <Spin spinning={getFreightQuery.isLoading}>
+              <div className='w-40 text-center truncate'>{getFreightQuery.data?.data?.alias}</div>
             </Spin>
           }
           onOpenChange={() => {
@@ -259,7 +253,7 @@ export const Promotions = ({ argocdShard }: { argocdShard?: ArgoCDShard }) => {
         size='small'
         pagination={{ hideOnSinglePage: true }}
         rowKey={(p) => p.metadata?.uid || ''}
-        loading={isLoading}
+        loading={listPromotionsQuery.isLoading}
       />
 
       {selectedPromotion && (

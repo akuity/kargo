@@ -26,7 +26,7 @@ import {
   refreshResource
 } from '@ui/gen/api/service/v1alpha1/service-KargoService_connectquery';
 import { RawFormat } from '@ui/gen/api/service/v1alpha1/service_pb';
-import { Freight, Promotion as TPromotion } from '@ui/gen/api/v1alpha1/generated_pb';
+import { Promotion as TPromotion } from '@ui/gen/api/v2/models';
 import { timestampDate } from '@ui/utils/connectrpc-utils';
 import { decodeRawData } from '@ui/utils/decode-raw-data';
 
@@ -88,7 +88,7 @@ const Content = (props: { promotion: TPromotion; yaml: string }) => {
   const isAbortRequestPending = hasAbortRequest(promotion) && !isPromotionTerminal;
 
   const freight = useMemo(
-    () => dictionaryContext?.freightById?.[promotion?.spec?.freight || ''] as Freight,
+    () => dictionaryContext?.freightById?.[promotion?.spec?.freight || ''],
     [dictionaryContext?.freightById, promotion]
   );
 
@@ -255,7 +255,7 @@ const Content = (props: { promotion: TPromotion; yaml: string }) => {
         ]}
       />
 
-      <FreightDetails freight={freight} />
+      {!!freight && <FreightDetails freight={freight} />}
     </>
   );
 };

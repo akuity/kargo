@@ -27,23 +27,21 @@ export const FreightArtifact = (props: FreightArtifactProps) => {
 
   if (props.expand) {
     Expand = (
-      <span className='text-[10px] ml-1'>
-        {humanComprehendableArtifact(props.artifact.repoURL)}
-      </span>
+      <span className='text-[10px] ml-1'>{humanComprehendableArtifact(props.artifact)}</span>
     );
   }
 
   if (isArtifactGitCommit(props.artifact)) {
-    const url = getGitCommitURL(props.artifact.repoURL, props.artifact.id);
+    const url = getGitCommitURL(props.artifact.repoURL || '', props.artifact.id || '');
 
     // prioritize semver; use shortVersion for tags, 7-char slice for raw commit hashes
     const displayId = props.artifact.tag
       ? shortVersion(props.artifact.tag)
-      : props.artifact.id.slice(0, 7);
+      : props.artifact.id?.slice(0, 7);
 
     const TagComponent = (
       <Tag title={props.artifact.repoURL} bordered={false} color='geekblue' key={props.artifact.id}>
-        <ArtifactIcon artifactType={artifactType} className='mr-1' />
+        <ArtifactIcon artifact={props.artifact} className='mr-1' />
 
         {displayId}
 
@@ -75,7 +73,7 @@ export const FreightArtifact = (props: FreightArtifactProps) => {
         color='geekblue'
         key={props.artifact.repoURL}
       >
-        <ArtifactIcon artifactType={artifactType} className='mr-1' />
+        <ArtifactIcon artifact={props.artifact} className='mr-1' />
 
         {shortVersion(props.artifact.version)}
 
@@ -99,7 +97,7 @@ export const FreightArtifact = (props: FreightArtifactProps) => {
         key={props.artifact?.repoURL}
         className='hover:cursor-default'
       >
-        <ArtifactIcon artifactType={artifactType} className='mr-1' />
+        <ArtifactIcon artifact={props.artifact} className='mr-1' />
 
         {shortVersion(props.artifact?.tag)}
 

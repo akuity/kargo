@@ -24,7 +24,6 @@ import {
 } from '@ui/gen/api/service/v1alpha1/service-KargoService_connectquery';
 import { RawFormat } from '@ui/gen/api/service/v1alpha1/service_pb';
 import { Stage } from '@ui/gen/api/v2/models';
-import { timestampDate } from '@ui/utils/connectrpc-utils';
 import { decodeRawData } from '@ui/utils/decode-raw-data';
 
 import YamlEditor from '../common/code-editor/yaml-editor-lazy';
@@ -58,20 +57,19 @@ export const StageDetails = ({ stage }: { stage: Stage }) => {
   const verifications = useMemo(() => {
     setIsVerificationRunning(false);
     return (stage.status?.freightHistory || [])
-      .flatMap((freight) =>
-        freight.verificationHistory?.map((verification) => {
-          if (verification.phase === 'Running' || verification.phase === 'Pending') {
-            setIsVerificationRunning(true);
-          }
-          return {
-            ...verification,
-            freight
-          };
-        })
+      .flatMap(
+        (freight) =>
+          freight.verificationHistory?.map((verification) => {
+            if (verification.phase === 'Running' || verification.phase === 'Pending') {
+              setIsVerificationRunning(true);
+            }
+            return {
+              ...verification,
+              freight
+            };
+          }) || []
       )
-      .sort((a, b) =>
-        moment(timestampDate(b?.startTime)).diff(moment(timestampDate(a?.startTime)))
-      );
+      .sort((a, b) => moment(b?.startTime).diff(moment(a?.startTime)));
   }, [stage]);
 
   const rawStageYamlQuery = useQuery(getStage, {

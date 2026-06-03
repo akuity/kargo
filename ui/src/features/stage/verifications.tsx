@@ -7,7 +7,7 @@ import { Link as ReactRouterLink } from 'react-router-dom';
 import { generatePath } from 'react-router-dom';
 
 import { paths } from '@ui/config/paths';
-import { FreightCollection, VerificationInfo } from '@ui/gen/api/v1alpha1/generated_pb';
+import { FreightCollection, VerificationInfo } from '@ui/gen/api/v2/models';
 import { timestampDate } from '@ui/utils/connectrpc-utils';
 
 import { AnalysisModal } from '../common/analysis-modal/analysis-modal';

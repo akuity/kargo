@@ -12,7 +12,7 @@ import classNames from 'classnames';
 import { memo, useMemo } from 'react';
 
 import { StageConditionType, StageConditionStatus } from '@ui/features/common/stage-status/utils';
-import type { Condition } from '@ui/gen/k8s.io/apimachinery/pkg/apis/meta/v1/generated_pb';
+import { V1Condition } from '@ui/gen/api/v2/models';
 
 import styles from './styles.module.less';
 import { TruckIcon } from './truck-icon/truck-icon';
@@ -32,7 +32,7 @@ export const StageConditionIcon = memo(
     isControllerDead,
     controllerName
   }: {
-    conditions: Condition[];
+    conditions: V1Condition[];
     className?: string;
     noTooltip?: boolean;
     isControllerDead?: boolean;
@@ -60,7 +60,7 @@ export const StageConditionIcon = memo(
       const hasCondition = (
         type: StageConditionType,
         status: StageConditionStatus
-      ): { condition: Condition | undefined; isActive: boolean } => {
+      ): { condition: V1Condition | undefined; isActive: boolean } => {
         const condition = conditions.find((c) => c.type === type);
         return {
           condition,

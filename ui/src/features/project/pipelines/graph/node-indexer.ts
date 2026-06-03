@@ -1,5 +1,4 @@
-import { WarehouseExpanded } from '@ui/extend/types';
-import { RepoSubscription } from '@ui/gen/api/v1alpha1/generated_pb';
+import { RepoSubscription, WarehouseExpanded } from '@ui/extend/types';
 import { Stage, Warehouse } from '@ui/gen/api/v2/models';
 
 export const warehouseIndexer = {

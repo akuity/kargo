@@ -1,6 +1,6 @@
 import { graphlib } from '@dagrejs/dagre';
 
-import { WarehouseExpanded } from '@ui/extend/types';
+import { RepoSubscription, WarehouseExpanded } from '@ui/extend/types';
 import { ColorMap } from '@ui/features/stage/utils';
 import { Stage, Warehouse } from '@ui/gen/api/v2/models';
 

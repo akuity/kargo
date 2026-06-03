@@ -15,11 +15,10 @@ import {
   GetWarehouseRequestSchema,
   KargoService,
   ListStagesRequestSchema,
-  ListStagesResponse,
   ListWarehousesRequestSchema,
   ListWarehousesResponse
 } from '@ui/gen/api/service/v1alpha1/service_pb';
-import { Stage, Warehouse } from '@ui/gen/api/v1alpha1/generated_pb';
+import { Stage, Warehouse } from '@ui/gen/api/v2/models';
 import { ObjectMeta } from '@ui/gen/k8s.io/apimachinery/pkg/apis/meta/v1/generated_pb';
 
 async function ProcessEvents<T extends { type: string }, S extends { metadata?: ObjectMeta }>(
@@ -94,9 +93,9 @@ export class Watcher {
           })
         );
 
-        return (data as ListStagesResponse)?.stages || [];
+        return data?.stages || [];
       },
-      (e) => e.stage as Stage,
+      (e) => e.stage,
       (stage, data) => {
         // update Stages list
         const listStagesQueryKey = createConnectQueryKey({

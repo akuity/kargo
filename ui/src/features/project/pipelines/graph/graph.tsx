@@ -18,7 +18,7 @@ import { useFreightTimelineControllerContext } from '../context/freight-timeline
 import { GraphContext } from '../context/graph-context';
 import { StackedNodes } from '../nodes/stacked-nodes';
 
-import { CustomNode } from './custom-node';
+import { CustomRepoSubscriptionNode, CustomStageNode, CustomWarehouseNode } from './custom-node';
 import { repoSubscriptionIndexer, stageIndexer, warehouseIndexer } from './node-indexer';
 import { useEventsWatcher } from './use-events-watcher';
 import { reactFlowNodeConstants, useReactFlowPipelineGraph } from './use-pipeline-graph';
@@ -30,8 +30,10 @@ type GraphProps = {
 };
 
 const nodeTypes = {
-  [reactFlowNodeConstants.CUSTOM_NODE]: CustomNode,
-  [reactFlowNodeConstants.STACKED_NODE]: StackedNodes
+  [reactFlowNodeConstants.STACKED_NODE]: StackedNodes,
+  [reactFlowNodeConstants.CUSTOM_WAREHOUSE_NODE]: CustomWarehouseNode,
+  [reactFlowNodeConstants.CUSTOM_STAGE_NODE]: CustomStageNode,
+  [reactFlowNodeConstants.CUSTOM_REPO_SUBSCRIPTION_NODE]: CustomRepoSubscriptionNode
 };
 
 export const Graph = (props: GraphProps) => {

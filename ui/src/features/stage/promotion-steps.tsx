@@ -1,7 +1,7 @@
 import { Alert, Collapse } from 'antd';
 import { useMemo } from 'react';
 
-import { Promotion } from '@ui/gen/api/v1alpha1/generated_pb';
+import { Promotion } from '@ui/gen/api/v2/models';
 
 import {
   getPromotionDirectiveStepStatus,
@@ -22,7 +22,7 @@ type PromotionStepsProps = {
 
 export const PromotionSteps = (props: PromotionStepsProps) => {
   const outputsByStepAlias: Record<string, object> = useMemo(
-    () => getPromotionOutputsByStepAlias(props.promotion),
+    () => getPromotionOutputsByStepAlias(props.promotion) || {},
     [props.promotion]
   );
 

@@ -20,7 +20,8 @@ export const useIsColorsUsed = () => {
   return freightTimelineControllerContext?.preferredFilter?.showColors;
 };
 
-export const getLastPromotionDate = (stage: Stage) => stage?.status?.lastPromotion?.finishedAt;
+export const getLastPromotionDate = (stage: Stage) =>
+  new Date(stage?.status?.lastPromotion?.finishedAt || '');
 
 export const getCurrentPromotion = (stage: Stage) => stage?.status?.currentPromotion?.name;
 

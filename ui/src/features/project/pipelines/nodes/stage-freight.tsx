@@ -16,11 +16,12 @@ import {
   FreightReference,
   ArtifactReference as GenericArtifactReference,
   GitCommit,
-  Image,
-  Stage
+  Image
 } from '@ui/gen/api/v1alpha1/generated_pb';
+import { Stage } from '@ui/gen/api/v2/models';
 
 import './stage-node.less';
+
 import { useDictionaryContext } from '../context/dictionary-context';
 import { useFreightTimelineControllerContext } from '../context/freight-timeline-controller-context';
 import { humanComprehendableArtifact } from '../freight/artifact-parts-utils';
@@ -200,7 +201,7 @@ const Artifact = (props: {
   }
 
   const source = (
-    <span className='text-[10px] ml-1'>{humanComprehendableArtifact(props.artifact.repoURL)}</span>
+    <span className='text-[10px] ml-1'>{humanComprehendableArtifact(props.artifact)}</span>
   );
 
   if (props.artifact?.$typeName === 'github.com.akuity.kargo.api.v1alpha1.GitCommit') {

@@ -1,6 +1,6 @@
 import { graphlib } from '@dagrejs/dagre';
 
-import { Stage } from '@ui/gen/api/v1alpha1/generated_pb';
+import { Stage } from '@ui/gen/api/v2/models';
 
 import { stackedIndexer, stageIndexer } from './node-indexer';
 import { stackedLabelling } from './node-labeling';

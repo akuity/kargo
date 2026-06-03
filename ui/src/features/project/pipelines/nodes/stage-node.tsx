@@ -22,8 +22,7 @@ import {
   approveFreight,
   queryFreight
 } from '@ui/gen/api/service/v1alpha1/service-KargoService_connectquery';
-import { Stage } from '@ui/gen/api/v1alpha1/generated_pb';
-import { timestampDate } from '@ui/utils/connectrpc-utils';
+import { Stage } from '@ui/gen/api/v2/models';
 
 import { useDictionaryContext } from '../context/dictionary-context';
 import { useGraphContext } from '../context/graph-context';
@@ -85,7 +84,7 @@ export const StageNode = (props: { stage: Stage }) => {
   let descriptionItems: ReactNode;
 
   const lastPromotion = getLastPromotionDate(props.stage);
-  const date = timestampDate(lastPromotion) as Date;
+  const date = lastPromotion;
 
   if (!controlFlow) {
     descriptionItems = (
@@ -114,7 +113,7 @@ export const StageNode = (props: { stage: Stage }) => {
   const { isOver, setNodeRef } = useDroppable({
     id: props.stage.metadata?.name || 'stage-node',
     data: {
-      requestedFreightNames: props.stage.spec?.requestedFreight.map((f) => f.origin?.name) || []
+      requestedFreightNames: props.stage.spec?.requestedFreight?.map((f) => f.origin?.name) || []
     }
   });
 

@@ -14,7 +14,10 @@ import { stackNodes } from './stack-nodes';
 
 export const reactFlowNodeConstants = {
   CUSTOM_NODE: 'custom-node',
-  STACKED_NODE: 'stacked-node'
+  STACKED_NODE: 'stacked-node',
+  CUSTOM_WAREHOUSE_NODE: 'custom-warehouse-node',
+  CUSTOM_REPO_SUBSCRIPTION_NODE: 'custom-repo-subscription-node',
+  CUSTOM_STAGE_NODE: 'custom-stage-node'
 };
 
 export const useReactFlowPipelineGraph = (

@@ -1,4 +1,3 @@
-import { useQuery } from '@connectrpc/connect-query';
 import {
   faCircleNotch,
   faCodePullRequest,
@@ -11,8 +10,8 @@ import classNames from 'classnames';
 import { useMemo } from 'react';
 
 import { getPromotionOutputsByStepAlias } from '@ui/features/stage/utils/promotion';
-import { getPromotion } from '@ui/gen/api/service/v1alpha1/service-KargoService_connectquery';
-import { Promotion, Stage } from '@ui/gen/api/v1alpha1/generated_pb';
+import { useGetPromotion } from '@ui/gen/api/v2/core/core';
+import { Stage } from '@ui/gen/api/v2/models';
 import { getPromotionStepAlias } from '@ui/plugins/atoms/plugin-helper';
 
 import { getCurrentPromotion } from './stage-meta-utils';
@@ -25,15 +24,15 @@ type PullRequestLinkProps = {
 export const PullRequestLink = (props: PullRequestLinkProps) => {
   const currentPromotion = getCurrentPromotion(props.stage);
 
-  const getPromotionQuery = useQuery(
-    getPromotion,
-    { project: props.stage?.metadata?.namespace, name: currentPromotion },
+  const getPromotionQuery = useGetPromotion(
+    props.stage?.metadata?.namespace || '',
+    currentPromotion || '',
     {
-      enabled: !!currentPromotion
+      query: { enabled: !!currentPromotion }
     }
   );
 
-  const promotion = getPromotionQuery.data?.result?.value as Promotion;
+  const promotion = getPromotionQuery.data?.data;
 
   const outputsByStepAlias: Record<string, object> = useMemo(
     () => getPromotionOutputsByStepAlias(promotion),

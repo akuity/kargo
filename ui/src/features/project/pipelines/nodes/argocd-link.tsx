@@ -9,8 +9,7 @@ import { ARGOCD_CONTEXT_KEY, SHARD_LABEL_KEY } from '@ui/config/labels';
 import { paths } from '@ui/config/paths';
 import { useExtensionsContext } from '@ui/extensions/extensions-context';
 import { HealthStatusIcon } from '@ui/features/common/health-status/health-status-icon';
-import { Stage } from '@ui/gen/api/v1alpha1/generated_pb';
-import { decodeRawData } from '@ui/utils/decode-raw-data';
+import { HealthOutput, Stage } from '@ui/gen/api/v2/models';
 
 import { useDictionaryContext } from '../context/dictionary-context';
 
@@ -31,7 +30,7 @@ export const ArgoCDLink = ({
   const { argoCDExtension } = useExtensionsContext();
   const dictionaryContext = useDictionaryContext();
 
-  const shardKey = stage?.metadata?.labels[SHARD_LABEL_KEY] || '';
+  const shardKey = stage?.metadata?.labels?.[SHARD_LABEL_KEY] || '';
   // Remove trailing slash if present
   const argoCDShardURL = dictionaryContext?.argocdShards?.[shardKey]?.url?.replace(/\/$/, '');
   const isExtensionArgoCD = Boolean(argoCDExtension) && !externalLinksOnly;
@@ -90,7 +89,7 @@ export const ArgoCDLink = ({
         items: argoCDApps.map((app, idx) => {
           const status =
             stage.status?.health?.output?.raw &&
-            getStatusFromHealthOutput(stage.status?.health?.output?.raw, app.name);
+            getStatusFromHealthOutput(stage.status?.health.output, app.name);
 
           return {
             key: idx,
@@ -127,21 +126,11 @@ const argoCDContextSchema = z.array(
 
 type ArgoCDContext = z.infer<typeof argoCDContextSchema>[number];
 
-const getStatusFromHealthOutput = (healthOutputRaw: Uint8Array, app: string) => {
+const getStatusFromHealthOutput = (healthOutput: HealthOutput, app: string) => {
   try {
-    const parsed = JSON.parse(
-      decodeRawData({
-        result: {
-          case: 'raw',
-          value: healthOutputRaw
-        }
-      })
-    );
-
-    const appStatus =
-      // eslint-disable-next-line @typescript-eslint/ban-ts-comment
-      // @ts-ignore
-      parsed.flatMap((item) => item.applicationStatuses).find((status) => status.Name === app);
+    const appStatus = healthOutput
+      .flatMap((item) => item.applicationStatuses)
+      .find((status) => status.Name === app);
     return appStatus?.health;
   } catch {
     return undefined;

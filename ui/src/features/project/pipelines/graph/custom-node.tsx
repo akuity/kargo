@@ -1,184 +1,98 @@
 import { Handle, Position } from '@xyflow/react';
 import { Skeleton } from 'antd';
-import { PropsWithChildren } from 'react';
 
-import { WarehouseExpanded } from '@ui/extend/types';
-import { RepoSubscription, Stage, Warehouse } from '@ui/gen/api/v1alpha1/generated_pb';
+import { RepoSubscription, WarehouseExpanded } from '@ui/extend/types';
+import { Stage, Warehouse } from '@ui/gen/api/v2/models';
 
 import { useGraphContext } from '../context/graph-context';
 import { StageNode } from '../nodes/stage-node';
 import { SubscriptionNode } from '../nodes/subscription-node';
 import { WarehouseNode } from '../nodes/warehouse-node';
 
-import { repoSubscriptionIndexer, stageIndexer } from './node-indexer';
+import { repoSubscriptionIndexer } from './node-indexer';
 import { repoSubscriptionSizer, stageSizer, warehouseSizer } from './node-sizer';
 
 const NodePlaceholder = ({ width, height }: { width: number; height: number }) => (
   <Skeleton.Node active style={{ width, height }} />
 );
 
-export const CustomNode = (props: {
+export const CustomWarehouseNode = (props: {
   data: {
     label: string;
-    value: WarehouseExpanded | RepoSubscription | Stage;
+    value: WarehouseExpanded;
     subscriptionParent?: Warehouse;
     warehouseY?: Record<string, number>;
   };
   id?: string;
 }) => {
-  const ready = useGraphContext()?.ready ?? true;
+  const graphContext = useGraphContext();
+
+  const ready = graphContext?.ready || true;
 
   if (!props.data.value) {
     return null;
   }
 
-  if (props.data.value.$typeName === 'github.com.akuity.kargo.api.v1alpha1.Warehouse') {
-    return (
-      <CustomNode.Container id={props.id} warehouse={props.data.value}>
-        {ready ? (
-          <WarehouseNode warehouse={props.data.value} />
-        ) : (
-          <NodePlaceholder {...warehouseSizer.size()} />
-        )}
-      </CustomNode.Container>
-    );
-  }
+  const handleId = props.data?.value?.metadata?.name || '';
+  const height = warehouseSizer.size().height;
 
-  if (props.data.value.$typeName === 'github.com.akuity.kargo.api.v1alpha1.RepoSubscription') {
-    return (
-      <CustomNode.Container
-        id={props.id}
-        // @ts-expect-error parent is there when value is RepoSubscription, check use-pipeline-graph.ts
-        repoSubscription={{ data: props.data.value, parent: props.data.subscriptionParent }}
-      >
-        {ready ? (
-          <SubscriptionNode subscription={props.data.value} />
-        ) : (
-          <NodePlaceholder {...repoSubscriptionSizer.size()} />
-        )}
-      </CustomNode.Container>
-    );
-  }
-
-  if (props.data.value.$typeName === 'github.com.akuity.kargo.api.v1alpha1.Stage') {
-    return (
-      <CustomNode.Container
-        id={props.id}
-        stage={props.data.value}
-        warehouseY={props.data.warehouseY}
-      >
-        {ready ? (
-          <StageNode stage={props.data.value} />
-        ) : (
-          <NodePlaceholder {...stageSizer.size()} />
-        )}
-      </CustomNode.Container>
-    );
-  }
-
-  return <>Unknown Node</>;
-};
-
-CustomNode.Container = (
-  props: PropsWithChildren<{
-    stage?: Stage;
-    warehouse?: WarehouseExpanded;
-    repoSubscription?: { data: RepoSubscription; parent: WarehouseExpanded };
-    warehouseY?: Record<string, number>;
-    id?: string;
-  }>
-) => {
-  const graphContext = useGraphContext();
-
-  let id = '';
-  let height = 0;
-
-  if (props.stage) {
-    id = stageIndexer.index(props.stage);
-    height = stageSizer.size().height;
-  } else if (props.warehouse) {
-    id = props.warehouse?.metadata?.name || '';
-    height = warehouseSizer.size().height;
-  } else if (props.repoSubscription) {
-    id = repoSubscriptionIndexer.index(props.repoSubscription.parent, props.repoSubscription.data);
-    height = repoSubscriptionSizer.size().height;
-  }
-
-  const warehouseHoverProps = props.warehouse
-    ? {
-        onMouseEnter: () =>
-          graphContext?.setHoveredWarehouseName(props.warehouse?.metadata?.name || ''),
-        onMouseLeave: () => graphContext?.setHoveredWarehouseName(null)
-      }
-    : {};
-
-  // Fixed-height slot with content vertically centered. The slot height matches
-  // the predefined size used by dagre for layout, so handles -- positioned at
-  // 50% of this slot -- line up with the dagre-computed edge endpoints.
-  const Children = (
-    <div
-      id={props.id}
-      className='nodrag cursor-default flex items-center'
-      style={{ height }}
-      {...warehouseHoverProps}
-    >
-      {props.children}
-    </div>
+  const WarehouseNodeBox = ready ? (
+    <WarehouseNode warehouse={props.data.value} />
+  ) : (
+    <NodePlaceholder {...warehouseSizer.size()} />
   );
 
-  if (props.stage) {
-    // Sort the per-warehouse handles by the y-coordinate of their source
-    // warehouse in the dagre layout. This makes the handles' top-to-bottom
-    // order match the warehouses' top-to-bottom order, so edges enter the
-    // stage without crossing each other.
-    const sortedRequestedFreight = [...(props.stage.spec?.requestedFreight || [])].sort((a, b) => {
-      const yA = props.warehouseY?.[a?.origin?.name || ''] ?? 0;
-      const yB = props.warehouseY?.[b?.origin?.name || ''] ?? 0;
-      return yA - yB;
-    });
+  return (
+    <>
+      <Handle
+        id={handleId}
+        type='target'
+        position={Position.Left}
+        style={{
+          top: '50%',
+          backgroundColor: 'transparent',
+          stroke: 'none',
+          border: 'none',
+          left: 2
+        }}
+      />
+      <div id={props.id} className='nodrag cursor-default flex items-center' style={{ height }}>
+        {WarehouseNodeBox}
+      </div>
+      <Handle
+        id={handleId}
+        type='source'
+        position={Position.Right}
+        style={{
+          top: '50%',
+          backgroundColor: 'transparent',
+          stroke: 'none',
+          border: 'none',
+          right: 4
+        }}
+      />
+    </>
+  );
+};
 
-    const handleTop = (idx: number) =>
-      `calc(50% + ${-((sortedRequestedFreight.length - 1) * EDGE_GAP) / 2 + idx * EDGE_GAP}px)`;
+export const CustomRepoSubscriptionNode = (props: {
+  data: {
+    label: string;
+    value: RepoSubscription;
+    subscriptionParent: Warehouse;
+  };
+  id?: string;
+}) => {
+  const graphContext = useGraphContext();
 
-    return (
-      <>
-        {sortedRequestedFreight.map((freight, idx) => (
-          <Handle
-            key={idx}
-            id={freight?.origin?.name}
-            type='target'
-            position={Position.Left}
-            style={{
-              top: handleTop(idx),
-              backgroundColor: 'transparent',
-              border: 'none',
-              left: 1
-            }}
-          />
-        ))}
-        {Children}
-        {sortedRequestedFreight.map((freight, idx) => (
-          <Handle
-            key={idx}
-            id={freight?.origin?.name}
-            type='source'
-            position={Position.Right}
-            style={{
-              top: handleTop(idx),
-              backgroundColor: 'transparent',
-              border: 'none',
-              right: 4
-            }}
-          />
-        ))}
-        <Handle
-          type='source'
-          position={Position.Right}
-          style={{ top: '50%', backgroundColor: 'transparent', border: 'none', right: 4 }}
-        />
-      </>
-    );
-  }
+  const RepoSubscriptionNodeBox = graphContext?.ready ? (
+    <SubscriptionNode subscription={props.data.value} />
+  ) : (
+    <NodePlaceholder {...repoSubscriptionSizer.size()} />
+  );
+
+  const id = repoSubscriptionIndexer.index(props.data.subscriptionParent, props.data.value);
+  const height = repoSubscriptionSizer.size().height;
 
   return (
     <>
@@ -194,7 +108,9 @@ CustomNode.Container = (
           left: 2
         }}
       />
-      {Children}
+      <div id={props.id} className='nodrag cursor-default flex items-center' style={{ height }}>
+        {RepoSubscriptionNodeBox}
+      </div>
       <Handle
         id={id}
         type='source'
@@ -206,6 +122,81 @@ CustomNode.Container = (
           border: 'none',
           right: 4
         }}
+      />
+    </>
+  );
+};
+
+export const CustomStageNode = (props: {
+  data: {
+    label: string;
+    value: Stage;
+    warehouseY?: Record<string, number>;
+  };
+  id?: string;
+}) => {
+  const graphContext = useGraphContext();
+
+  const StageNodeBox = graphContext?.ready ? (
+    <StageNode stage={props.data.value} />
+  ) : (
+    <NodePlaceholder {...stageSizer.size()} />
+  );
+
+  const height = stageSizer.size().height;
+
+  // Sort the per-warehouse handles by the y-coordinate of their source
+  // warehouse in the dagre layout. This makes the handles' top-to-bottom
+  // order match the warehouses' top-to-bottom order, so edges enter the
+  // stage without crossing each other.
+  const sortedRequestedFreight = [...(props.data.value.spec?.requestedFreight || [])].sort(
+    (a, b) => {
+      const yA = props.data.warehouseY?.[a?.origin?.name || ''] ?? 0;
+      const yB = props.data.warehouseY?.[b?.origin?.name || ''] ?? 0;
+      return yA - yB;
+    }
+  );
+
+  const handleTop = (idx: number) =>
+    `calc(50% + ${-((sortedRequestedFreight.length - 1) * EDGE_GAP) / 2 + idx * EDGE_GAP}px)`;
+
+  return (
+    <>
+      {sortedRequestedFreight.map((freight, idx) => (
+        <Handle
+          key={idx}
+          id={freight?.origin?.name}
+          type='target'
+          position={Position.Left}
+          style={{
+            top: handleTop(idx),
+            backgroundColor: 'transparent',
+            border: 'none',
+            left: 1
+          }}
+        />
+      ))}
+      <div id={props.id} className='nodrag cursor-default flex items-center' style={{ height }}>
+        {StageNodeBox}
+      </div>
+      {sortedRequestedFreight.map((freight, idx) => (
+        <Handle
+          key={idx}
+          id={freight?.origin?.name}
+          type='source'
+          position={Position.Right}
+          style={{
+            top: handleTop(idx),
+            backgroundColor: 'transparent',
+            border: 'none',
+            right: 4
+          }}
+        />
+      ))}
+      <Handle
+        type='source'
+        position={Position.Right}
+        style={{ top: '50%', backgroundColor: 'transparent', border: 'none', right: 4 }}
       />
     </>
   );

@@ -15,7 +15,7 @@ import {
   promoteToStage,
   queryFreight
 } from '@ui/gen/api/service/v1alpha1/service-KargoService_connectquery';
-import { Stage } from '@ui/gen/api/v1alpha1/generated_pb';
+import { Stage } from '@ui/gen/api/v2/models';
 
 export const useGetPromotionDropdownItems = (stage: Stage) => {
   const projectName = stage?.metadata?.namespace || '';
@@ -140,7 +140,7 @@ export const useGetPromotionDropdownItems = (stage: Stage) => {
       },
       children: hasMultipleUpstreamFreights
         ? upstreamFreights?.map((upstreamFreight) => ({
-            key: upstreamFreight?.name,
+            key: upstreamFreight?.name || '',
             label: upstreamFreight?.origin?.name,
             onClick: () => handlePromoteFromUpstream(upstreamFreight?.name)
           }))
@@ -172,7 +172,7 @@ export const useGetPromotionDropdownItems = (stage: Stage) => {
       },
       children: hasMultipleUpstreamFreights
         ? upstreamFreights?.map((upstreamFreight) => ({
-            key: upstreamFreight?.name,
+            key: upstreamFreight?.name || '',
             label: upstreamFreight?.origin?.name,
             onClick: () => handleInstantPromoteFromUpstream(upstreamFreight?.name)
           }))

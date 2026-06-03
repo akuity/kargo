@@ -3,7 +3,7 @@ import { useEffect } from 'react';
 
 import { Watcher } from '@ui/features/project/pipelines/watcher';
 import { queryCache } from '@ui/features/utils/cache';
-import { Stage, Warehouse } from '@ui/gen/api/v1alpha1/generated_pb';
+import { Stage, Warehouse } from '@ui/gen/api/v2/models';
 import { useDocumentEvent } from '@ui/utils/document';
 
 export const useEventsWatcher = (

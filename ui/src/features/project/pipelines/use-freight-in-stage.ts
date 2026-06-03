@@ -10,6 +10,10 @@ export const useFreightInStage = (stages: Stage[]): Record<string, Stage[]> =>
       const currentFreights = getCurrentFreight(stage);
 
       for (const currentFreight of currentFreights) {
+        if (!currentFreight.name) {
+          continue;
+        }
+
         if (!freightInStage[currentFreight.name]) {
           freightInStage[currentFreight.name] = [];
         }

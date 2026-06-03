@@ -11,7 +11,7 @@ import {
   ListImagesResponse,
   TagMap
 } from '@ui/gen/api/service/v1alpha1/service_pb';
-import { Stage } from '@ui/gen/api/v1alpha1/generated_pb';
+import { Stage } from '@ui/gen/api/v2/models';
 
 export default {
   /**
@@ -67,9 +67,9 @@ export default {
     }
 
     for (const image of images) {
-      const repoURL: string = image.repoURL;
+      const repoURL: string = image.repoURL || '';
 
-      const tag: string = image.tag;
+      const tag: string = image.tag || '';
 
       // check the existance in matrix
       if (!imageStageMatrix?.images) {

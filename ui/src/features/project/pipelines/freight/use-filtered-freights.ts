@@ -3,7 +3,7 @@ import { useMemo } from 'react';
 import { IAction, useActionContext } from '@ui/features/project/pipelines/context/action-context';
 import { useDictionaryContext } from '@ui/features/project/pipelines/context/dictionary-context';
 import { FreightTimelineControllerContextType } from '@ui/features/project/pipelines/context/freight-timeline-controller-context';
-import { Freight } from '@ui/gen/api/v1alpha1/generated_pb';
+import { Freight } from '@ui/gen/api/v2/models';
 import { timestampDate } from '@ui/utils/connectrpc-utils';
 
 import { timerangeToDate } from './filter-timerange-utils';

@@ -6,7 +6,7 @@ import { Card, Flex, Tag } from 'antd';
 import Link from 'antd/es/typography/Link';
 import { useMemo } from 'react';
 
-import { RepoSubscription } from '@ui/gen/api/v1alpha1/generated_pb';
+import { RepoSubscription } from '@ui/extend/types';
 
 import {
   artifactBase,
@@ -23,7 +23,7 @@ export const SubscriptionNode = (props: { subscription: RepoSubscription }) => {
       props.subscription?.chart?.repoURL ||
       props.subscription?.image?.repoURL ||
       '';
-    const title = humanComprehendableArtifact(repoURL) || props.subscription.subscription?.name;
+    const title = humanComprehendableArtifact({ repoURL }) || props.subscription.subscription?.name;
     const base = artifactBase(repoURL) || repoURL;
     const link = artifactURL(repoURL);
 

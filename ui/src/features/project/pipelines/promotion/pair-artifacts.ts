@@ -2,7 +2,7 @@ import {
   flattenFreightOrigin,
   TableSource
 } from '@ui/features/freight/flatten-freight-origin-utils';
-import { Freight, FreightReference } from '@ui/gen/api/v1alpha1/generated_pb';
+import { Freight, FreightReference } from '@ui/gen/api/v2/models';
 
 export type PairStatus = 'CHANGED' | 'UNCHANGED' | 'NEW' | 'REMOVED';
 

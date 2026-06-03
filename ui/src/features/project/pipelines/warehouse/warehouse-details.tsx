@@ -17,12 +17,9 @@ import { WarehouseExpanded } from '@ui/extend/types';
 import { AssembleFreight } from '@ui/features/assemble-freight/assemble-freight';
 import { useWarehouseWithClonedFreight } from '@ui/features/assemble-freight/use-warehouse-with-cloned-freight';
 import YamlEditor from '@ui/features/common/code-editor/yaml-editor-lazy';
-import {
-  getFreight,
-  getWarehouse
-} from '@ui/gen/api/service/v1alpha1/service-KargoService_connectquery';
+import { getWarehouse } from '@ui/gen/api/service/v1alpha1/service-KargoService_connectquery';
 import { RawFormat } from '@ui/gen/api/service/v1alpha1/service_pb';
-import { Freight } from '@ui/gen/api/v1alpha1/generated_pb';
+import { useGetFreight } from '@ui/gen/api/v2/core/core';
 import { decodeRawData } from '@ui/utils/decode-raw-data';
 
 import { RepoSubscriptions } from './repo-subscriptions';
@@ -58,18 +55,11 @@ export const WarehouseDetails = ({
     [rawWarehouseYamlQuery.data]
   );
 
-  const freightQuery = useQuery(
-    getFreight,
-    {
-      project: projectName,
-      alias: cloneFreight || ''
-    },
-    {
-      enabled: !!cloneFreight && tab === 'create-freight'
-    }
-  );
+  const freightQuery = useGetFreight(projectName || '', cloneFreight || '', {
+    query: { enabled: !!cloneFreight && tab === 'create-freight' }
+  });
 
-  const cloneFreightData = freightQuery.data?.result.value as Freight | undefined;
+  const cloneFreightData = freightQuery.data?.data;
 
   const warehouseWithClonedFreight = useWarehouseWithClonedFreight(warehouse, cloneFreightData);
 

@@ -4,7 +4,7 @@ import { Button } from 'antd';
 import { ColumnType } from 'antd/es/table';
 
 import { isStageControlFlow } from '@ui/features/project/pipelines/nodes/stage-meta-utils';
-import { Stage } from '@ui/gen/api/v1alpha1/generated_pb';
+import { Stage } from '@ui/gen/api/v2/models';
 
 type Props = {
   onPromote: (stage: Stage) => void;

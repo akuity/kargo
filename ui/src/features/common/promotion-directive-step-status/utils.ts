@@ -1,4 +1,4 @@
-import { PromotionStatus } from '@ui/gen/api/v1alpha1/generated_pb';
+import { PromotionStatus } from '@ui/gen/api/v2/models';
 
 import { PromotionStepStatus } from './promotion-step-status';
 

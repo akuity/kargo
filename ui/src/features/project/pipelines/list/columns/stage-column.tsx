@@ -13,7 +13,7 @@ import {
   isStageControlFlow,
   useStageHeaderStyle
 } from '@ui/features/project/pipelines/nodes/stage-meta-utils';
-import { Stage } from '@ui/gen/api/v1alpha1/generated_pb';
+import { Stage } from '@ui/gen/api/v2/models';
 
 export const stageColumn = (filter: Filter): ColumnType<Stage> => ({
   title: 'Stage',

@@ -1,4 +1,3 @@
-import { create } from '@bufbuild/protobuf';
 import { faTruck } from '@fortawesome/free-solid-svg-icons';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
 import { Button, Descriptions, Flex, Select, Space, Table, Tag, Typography } from 'antd';
@@ -10,12 +9,7 @@ import { generatePath, Link, useNavigate } from 'react-router-dom';
 
 import { paths } from '@ui/config/paths';
 import { shortVersion } from '@ui/features/project/pipelines/freight/short-version-utils';
-import {
-  FreightReference,
-  FreightRequest,
-  FreightSchema,
-  StageStatus
-} from '@ui/gen/api/v1alpha1/generated_pb';
+import { Freight, FreightReference, FreightRequest, StageStatus } from '@ui/gen/api/v2/models';
 import { PlainMessage, timestampDate } from '@ui/utils/connectrpc-utils';
 
 import { FreightContents } from '../../../freight-timeline/freight-contents';
@@ -67,7 +61,7 @@ export const FreightHistory = ({
         }
 
         freightHistoryPerWarehouse[warehouseIdentifier].push({
-          id: freightCollection?.id,
+          id: freightCollection?.id || '',
           ...freightReference
         });
       }
@@ -144,12 +138,14 @@ export const FreightHistory = ({
               horizontal
               fullContentVisibility
               highlighted={false}
-              freight={create(FreightSchema, {
-                metadata: {
-                  name: record.name
-                },
-                ...record
-              })}
+              freight={
+                {
+                  metadata: {
+                    name: record.name
+                  },
+                  ...record
+                } as Freight
+              }
             />
           )}
         />
@@ -204,7 +200,7 @@ export const FreightHistory = ({
         <Table.Column<PlainMessage<FreightReference>>
           render={(_, record, idx) =>
             idx > 0 &&
-            freightMap[record?.name] && (
+            freightMap[record?.name || ''] && (
               <Button
                 size='small'
                 icon={<FontAwesomeIcon icon={faTruck} />}
