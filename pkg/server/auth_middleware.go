@@ -244,6 +244,10 @@ func (a *authMiddleware) authenticate(
 // account name extracted from the standard "sub" claim.
 func serviceAccountUsernameFromToken(rawToken string) (username, usernameClaim string) {
 	mapClaims := jwt.MapClaims{}
+	// #nosec G115 -- The token has already been verified by Kubernetes before
+	// this function is called; Kubernetes validates the JWT signature, so any
+	// claims present are trustworthy. The extracted username is used only for
+	// the create-actor display annotation and plays no role in authorization.
 	if _, _, err := jwt.NewParser(jwt.WithoutClaimsValidation()).
 		ParseUnverified(rawToken, &mapClaims); err != nil {
 		return "", ""

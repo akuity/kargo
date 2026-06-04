@@ -48,7 +48,6 @@ EZv4FqnG2KDTlXoV/Ku1ib5vzgQK5fTFfqO5dm5sLM4qQFmLadULaTcNOldyH3KG
 c1e3
 -----END CERTIFICATE-----`)
 
-
 func TestNewAuthMiddleware(t *testing.T) {
 	a := &authMiddleware{}
 	middleware := newAuthMiddleware(t.Context(), config.ServerConfig{}, nil)
