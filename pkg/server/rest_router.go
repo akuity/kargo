@@ -217,6 +217,8 @@ func (s *server) setupRESTRouter(ctx context.Context) *gin.Engine {
 			project.GET("/freight/:freight-name-or-alias", s.getFreight)
 			project.GET("/freight/:freight-name-or-alias/links", s.getFreightLinks)
 			project.POST("/freight/:freight-name-or-alias/approve", s.approveFreight)
+			project.POST("/freight/:freight-name-or-alias/reject", s.rejectFreight)
+			project.DELETE("/freight/:freight-name-or-alias/reject", s.clearFreightRejection)
 			project.PATCH("/freight/:freight-name-or-alias/alias", s.patchFreightAliasHandler)
 			project.DELETE("/freight/:freight-name-or-alias", s.deleteFreight)
 

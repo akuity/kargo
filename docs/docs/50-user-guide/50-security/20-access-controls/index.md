@@ -148,9 +148,9 @@ There are several "Kargo roles" pre-defined in a project's namespace when a new
 
 1. `kargo-promoter`: This Kargo role is a trio of `ServiceAccount`, `Role`, and
    `RoleBinding` resources created by the Kargo management controller. Its
-   permissions are pre-defined as those necessary to promote `Stage`s and create
-   `Promotion`s, but not to create, update, or delete core pipeline resources
-   such as `Stage`s and `Warehouse`s. It is not
+   permissions are pre-defined as those necessary to promote `Stage`s, reject
+   `Freight`, and create `Promotion`s, but not to create, update, or delete core
+   pipeline resources such as `Stage`s and `Warehouse`s. It is not
    initially mapped to any users. All three resources are annotated as being
    Kargo-managed, and as such, the "Kargo role" that abstracts them can be
    modified or deleted via the UI or CLI.
@@ -299,15 +299,20 @@ With the exception of the claim-mapping annotations on `ServiceAccount`
 resources, these resources do not need to be labeled or annotated in any special
 way.
 
-##### `promote` Verb
+##### Custom Verbs
 
 Kargo introduces custom verbs to extend Kubernetes'
-[standard RBAC verbs](https://kubernetes.io/docs/reference/access-authn-authz/authorization/#request-verb-resource) 
+[standard RBAC verbs](https://kubernetes.io/docs/reference/access-authn-authz/authorization/#request-verb-resource)
 (such as get, create, list) to support more granular authorization.
 
-One such verb is `promote`, which applies to the `stages` resource.
-Kargo uses this verb to determine whether a user or `ServiceAccount`
-is authorized to initiate a promotion into a specific Stage.
+The `promote` verb applies to the `stages` resource. Kargo uses this verb to
+determine whether a user or `ServiceAccount` is authorized to initiate a
+promotion into a specific Stage.
+
+The `reject` verb applies to the `freights` resource. Kargo uses this verb to
+determine whether a user or `ServiceAccount` is authorized to mark `Freight`
+rejected or clear an existing rejection. Users still need normal read access to
+locate and view the affected `Freight` resource.
 
 ##### Example: Custom Promoter Role
 

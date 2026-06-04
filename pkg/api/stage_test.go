@@ -454,6 +454,16 @@ func TestListFreightAvailableToStage(t *testing.T) {
 					},
 					Origin: testWarehouse1Origin,
 				},
+				&kargoapi.Freight{ // Not available because rejected Freight cannot be promoted
+					ObjectMeta: metav1.ObjectMeta{
+						Namespace: testProject,
+						Name:      "fake-freight-rejected-direct",
+					},
+					Origin: testWarehouse1Origin,
+					Status: kargoapi.FreightStatus{
+						Rejected: &kargoapi.FreightRejection{},
+					},
+				},
 				&kargoapi.Freight{ // Not available because Freight is not verified in upstream Stage
 					ObjectMeta: metav1.ObjectMeta{
 						Namespace: testProject,
@@ -498,6 +508,21 @@ func TestListFreightAvailableToStage(t *testing.T) {
 								LongestCompletedSoak: &metav1.Duration{Duration: 2 * time.Hour},
 							},
 						},
+					},
+				},
+				&kargoapi.Freight{ // Not available because rejected Freight cannot be promoted
+					ObjectMeta: metav1.ObjectMeta{
+						Namespace: testProject,
+						Name:      "fake-freight-rejected-verified",
+					},
+					Origin: testWarehouse2Origin,
+					Status: kargoapi.FreightStatus{
+						VerifiedIn: map[string]kargoapi.VerifiedStage{
+							testStage: {
+								LongestCompletedSoak: &metav1.Duration{Duration: 2 * time.Hour},
+							},
+						},
+						Rejected: &kargoapi.FreightRejection{},
 					},
 				},
 			},

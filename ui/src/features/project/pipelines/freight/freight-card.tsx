@@ -2,6 +2,7 @@ import { useDraggable } from '@dnd-kit/core';
 import { faDocker, faGithub } from '@fortawesome/free-brands-svg-icons';
 import {
   faAnchor,
+  faBan,
   faCheck,
   faEllipsis,
   faPlus,
@@ -21,10 +22,12 @@ import { generatePath, useNavigate } from 'react-router-dom';
 
 import { paths } from '@ui/config/paths';
 import { useModal } from '@ui/features/common/modal/use-modal';
+import { RejectedFreightTag } from '@ui/features/freight/rejection';
+import { isFreightRejected } from '@ui/features/freight/rejection-utils';
 import { useActionContext } from '@ui/features/project/pipelines/context/action-context';
-import { FreightTimelineControllerContextType } from '@ui/features/project/pipelines/context/freight-timeline-controller-context';
-import { ColorMap } from '@ui/features/stage/utils';
-import { Freight, Stage } from '@ui/gen/api/v1alpha1/generated_pb';
+import type { FreightTimelineControllerContextType } from '@ui/features/project/pipelines/context/freight-timeline-controller-context';
+import type { ColorMap } from '@ui/features/stage/utils';
+import type { Freight, Stage } from '@ui/gen/api/v1alpha1/generated_pb';
 import { timestampDate } from '@ui/utils/connectrpc-utils';
 
 import { useManualApprovalModal } from '../promotion/use-manual-approval-modal';
@@ -54,6 +57,7 @@ export const FreightCard = (props: FreightCardProps) => {
   const actionContext = useActionContext();
 
   const freightAlias = props.freight?.alias;
+  const freightRejected = isFreightRejected(props.freight);
 
   const deleteFreightModal = useModal();
 
@@ -118,11 +122,13 @@ export const FreightCard = (props: FreightCardProps) => {
         {props.promote ? (
           <Tooltip
             title={
-              !props.promotionEligible && !props.isPromotionEligibleLoading
-                ? soakTimeFormatted
-                  ? `Soak: ${soakTimeFormatted}`
-                  : 'Non-approved freight'
-                : ''
+              freightRejected
+                ? 'Rejected Freight cannot be promoted.'
+                : !props.promotionEligible && !props.isPromotionEligibleLoading
+                  ? soakTimeFormatted
+                    ? `Soak: ${soakTimeFormatted}`
+                    : 'Non-approved freight'
+                  : ''
             }
           >
             <Button
@@ -130,6 +136,9 @@ export const FreightCard = (props: FreightCardProps) => {
               type='primary'
               size='small'
               onClick={() => {
+                if (freightRejected) {
+                  return;
+                }
                 const freight = props.freight?.metadata?.name || '';
                 const stage = actionContext?.action?.stage?.metadata?.name || '';
                 const projectName = props.freight?.metadata?.namespace || '';
@@ -155,13 +164,16 @@ export const FreightCard = (props: FreightCardProps) => {
                 });
               }}
               loading={props.isPromotionEligibleLoading}
+              disabled={freightRejected}
               icon={
-                !props.promotionEligible && !props.isPromotionEligibleLoading ? (
+                freightRejected ? (
+                  <FontAwesomeIcon icon={faBan} />
+                ) : !props.promotionEligible && !props.isPromotionEligibleLoading ? (
                   <FontAwesomeIcon icon={soakTimeFormatted ? faHourglass : faTriangleExclamation} />
                 ) : undefined
               }
             >
-              Select
+              {freightRejected ? 'Rejected' : 'Select'}
             </Button>
           </Tooltip>
         ) : (
@@ -208,6 +220,7 @@ export const FreightCard = (props: FreightCardProps) => {
               <FontAwesomeIcon className='mr-1' icon={faWarehouse} size='xs' />
               {props.freight?.origin?.name}
             </Typography.Text>
+            <RejectedFreightTag freight={props.freight} compact />
             <Dropdown
               menu={{
                 items: [
@@ -233,7 +246,8 @@ export const FreightCard = (props: FreightCardProps) => {
                     onClick: (e) => {
                       e.domEvent.stopPropagation();
                       actionContext?.actManuallyApprove(props.freight);
-                    }
+                    },
+                    disabled: freightRejected
                   },
                   {
                     key: 'delete-freight',

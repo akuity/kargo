@@ -734,6 +734,20 @@ message FreightReference {
   repeated ArtifactReference artifacts = 9;
 }
 
+// FreightRejection describes a user-driven Freight rejection.
+message FreightRejection {
+  // RejectedAt is the time at which this Freight was rejected.
+  optional .k8s.io.apimachinery.pkg.apis.meta.v1.Time rejectedAt = 1;
+
+  // Actor identifies the user who rejected this Freight.
+  optional string actor = 2;
+
+  // Reason explains why this Freight was rejected.
+  //
+  // +kubebuilder:validation:MaxLength=1024
+  optional string reason = 3;
+}
+
 // FreightRequest expresses a Stage's need for Freight having originated from a
 // particular Warehouse.
 message FreightRequest {
@@ -815,6 +829,10 @@ message FreightStatus {
   // This is useful for storing additional information about the Freight
   // or Promotion that can be shared across steps or stages.
   map<string, .k8s.io.apiextensions_apiserver.pkg.apis.apiextensions.v1.JSON> metadata = 4;
+
+  // Rejected describes why this Freight has been marked unfit for promotion.
+  // Rejected Freight cannot be promoted.
+  optional FreightRejection rejected = 5;
 }
 
 // GenericWebhookAction describes an action to be performed on a resource

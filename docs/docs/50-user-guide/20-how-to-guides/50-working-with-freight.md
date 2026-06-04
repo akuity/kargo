@@ -244,6 +244,88 @@ kargo get freight \
 </TabItem>
 </Tabs>
 
+## Rejecting Freight
+
+If a `Freight` resource is known to contain a regression or another serious
+problem, you can reject it. Rejected `Freight` remains visible for audit
+purposes, but it cannot be promoted manually, selected by auto-promotion, or
+manually approved for any `Stage`.
+
+Rejecting `Freight` does not delete it, roll any `Stage` back, or stop a
+`Promotion` that is already running. It only prevents future promotion of that
+`Freight` resource until the rejection is cleared.
+
+<Tabs groupId="reject-freight">
+<TabItem value="ui" label="Using the UI" default>
+
+1. Click on the `Freight` in the `Freight` timeline to open the `Freight` view.
+
+1. Click <Hlt>Reject</Hlt>.
+
+1. Optionally enter a reason, then click <Hlt>Reject</Hlt>.
+
+</TabItem>
+<TabItem value="cli" label="Using the CLI">
+
+```shell
+kargo reject freight \
+  --project kargo-demo \
+  --name f5f87aa23c9e97f43eb83dd63768ee41f5ba3766 \
+  --reason "contains a regression"
+```
+
+Alternatively, you can reference the `Freight` you wish to reject using its
+alias:
+
+```shell
+kargo reject freight \
+  --project kargo-demo \
+  --alias frozen-tauntaun \
+  --reason "contains a regression"
+```
+
+</TabItem>
+</Tabs>
+
+After a `Freight` resource has been rejected, Kargo displays it with a
+<Hlt>Rejected</Hlt> label and includes the actor, time, and reason in the
+`Freight` details.
+
+To make rejected `Freight` eligible for promotion again, clear its rejection:
+
+<Tabs groupId="clear-freight-rejection">
+<TabItem value="ui" label="Using the UI" default>
+
+1. Click on the rejected `Freight` in the `Freight` timeline to open the
+   `Freight` view.
+
+1. Click <Hlt>Clear rejection</Hlt>, then confirm the action.
+
+</TabItem>
+<TabItem value="cli" label="Using the CLI">
+
+```shell
+kargo unreject freight \
+  --project kargo-demo \
+  --name f5f87aa23c9e97f43eb83dd63768ee41f5ba3766
+```
+
+Alternatively, you can reference the `Freight` whose rejection you wish to clear
+using its alias:
+
+```shell
+kargo unreject freight \
+  --project kargo-demo \
+  --alias frozen-tauntaun
+```
+
+</TabItem>
+</Tabs>
+
+Clearing a rejection does not automatically create a `Promotion`. It only
+allows the `Freight` resource to be considered by the usual manual promotion,
+manual approval, and auto-promotion workflows again.
+
 ## Promoting Freight to a Stage
 
 <Tabs groupId="promoting">

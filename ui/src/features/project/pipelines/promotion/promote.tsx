@@ -10,9 +10,10 @@ import { paths } from '@ui/config/paths';
 import { useExtensionsContext } from '@ui/extensions/extensions-context';
 import { ModalComponentProps } from '@ui/features/common/modal/modal-context';
 import { getCurrentFreight } from '@ui/features/common/utils';
+import { isFreightRejected } from '@ui/features/freight/rejection-utils';
 import { IAction, useActionContext } from '@ui/features/project/pipelines/context/action-context';
 import { promoteDownstream } from '@ui/gen/api/service/v1alpha1/service-KargoService_connectquery';
-import { Freight, Stage } from '@ui/gen/api/v1alpha1/generated_pb';
+import type { Freight, Stage } from '@ui/gen/api/v1alpha1/generated_pb';
 import { useGetStageAutoPromotionCandidates, usePromoteToStage } from '@ui/gen/api/v2/core/core';
 
 import { useDictionaryContext } from '../context/dictionary-context';
@@ -47,6 +48,7 @@ export const Promote = (props: PromoteProps) => {
   const stageName = props.stage?.metadata?.name || '';
   const projectName = props.stage?.metadata?.namespace || '';
   const freightName = props.freight?.metadata?.name || '';
+  const freightRejected = isFreightRejected(props.freight);
 
   const currentFreightOnStage = useMemo(() => getCurrentFreight(props.stage)[0], [props.stage]);
 
@@ -126,6 +128,10 @@ export const Promote = (props: PromoteProps) => {
   });
 
   const onPromote = () => {
+    if (freightRejected) {
+      return;
+    }
+
     const downstreamPayload = {
       stage: stageName,
       project: projectName,
@@ -187,15 +193,17 @@ export const Promote = (props: PromoteProps) => {
               promoteActionMutation.isPending ||
               promoteDownstreamActionMutation.isPending
             }
-            disabled={isCheckingAutoPromotionCandidate}
+            disabled={isCheckingAutoPromotionCandidate || freightRejected}
           >
-            {isCheckingAutoPromotionCandidate
-              ? 'Checking auto-promotion'
-              : isDownstreamPromotion
-                ? 'Promote to downstream'
-                : isPromotingOlderThanCandidate
-                  ? 'Roll back and pause auto-promotion'
-                  : 'Promote'}
+            {freightRejected
+              ? 'Freight rejected'
+              : isCheckingAutoPromotionCandidate
+                ? 'Checking auto-promotion'
+                : isDownstreamPromotion
+                  ? 'Promote to downstream'
+                  : isPromotingOlderThanCandidate
+                    ? 'Roll back and pause auto-promotion'
+                    : 'Promote'}
           </Button>
         </Flex>
       }
@@ -208,6 +216,15 @@ export const Promote = (props: PromoteProps) => {
             type='info'
             message='Checking the current auto-promotion candidate.'
             description='Promotion is disabled until Kargo can show whether this will pause auto-promotion.'
+          />
+        )}
+
+        {freightRejected && (
+          <Alert
+            className='mb-4'
+            showIcon
+            type='error'
+            message='Rejected Freight cannot be promoted.'
           />
         )}
 

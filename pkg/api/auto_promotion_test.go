@@ -180,6 +180,73 @@ func TestSelectAutoPromotionCandidates(t *testing.T) {
 	require.Equal(t, "other-freight", candidates[otherOrigin.String()].Name)
 }
 
+func TestSelectAutoPromotionCandidatesSkipsRejectedFreight(t *testing.T) {
+	now := time.Now()
+	origin := kargoapi.FreightOrigin{
+		Kind: kargoapi.FreightOriginKindWarehouse,
+		Name: "fake-warehouse",
+	}
+	otherOrigin := kargoapi.FreightOrigin{
+		Kind: kargoapi.FreightOriginKindWarehouse,
+		Name: "other-warehouse",
+	}
+	stage := &kargoapi.Stage{
+		Spec: kargoapi.StageSpec{
+			RequestedFreight: []kargoapi.FreightRequest{
+				{
+					Origin: origin,
+					Sources: kargoapi.FreightSources{
+						Direct: true,
+					},
+				},
+				{
+					Origin: otherOrigin,
+					Sources: kargoapi.FreightSources{
+						Direct: true,
+					},
+				},
+			},
+		},
+	}
+
+	candidates, err := SelectAutoPromotionCandidates(
+		stage,
+		[]kargoapi.Freight{
+			{
+				ObjectMeta: metav1.ObjectMeta{
+					Name:              "older-freight",
+					CreationTimestamp: metav1.Time{Time: now.Add(-time.Hour)},
+				},
+				Origin: origin,
+			},
+			{
+				ObjectMeta: metav1.ObjectMeta{
+					Name:              "newer-rejected-freight",
+					CreationTimestamp: metav1.Time{Time: now},
+				},
+				Origin: origin,
+				Status: kargoapi.FreightStatus{
+					Rejected: &kargoapi.FreightRejection{},
+				},
+			},
+			{
+				ObjectMeta: metav1.ObjectMeta{
+					Name:              "other-rejected-freight",
+					CreationTimestamp: metav1.Time{Time: now},
+				},
+				Origin: otherOrigin,
+				Status: kargoapi.FreightStatus{
+					Rejected: &kargoapi.FreightRejection{},
+				},
+			},
+		},
+	)
+	require.NoError(t, err)
+	require.Len(t, candidates, 1)
+	require.Equal(t, "older-freight", candidates[origin.String()].Name)
+	require.NotContains(t, candidates, otherOrigin.String())
+}
+
 func TestSelectAutoPromotionCandidatesForMatchUpstream(t *testing.T) {
 	origin := kargoapi.FreightOrigin{
 		Kind: kargoapi.FreightOriginKindWarehouse,

@@ -118,6 +118,21 @@ type FreightStatus struct {
 	// This is useful for storing additional information about the Freight
 	// or Promotion that can be shared across steps or stages.
 	Metadata map[string]apiextensionsv1.JSON `json:"metadata,omitempty" protobuf:"bytes,4,rep,name=metadata" protobuf_key:"bytes,1,opt,name=key" protobuf_val:"bytes,2,opt,name=value"`
+	// Rejected describes why this Freight has been marked unfit for promotion.
+	// Rejected Freight cannot be promoted.
+	Rejected *FreightRejection `json:"rejected,omitempty" protobuf:"bytes,5,opt,name=rejected"`
+}
+
+// FreightRejection describes a user-driven Freight rejection.
+type FreightRejection struct {
+	// RejectedAt is the time at which this Freight was rejected.
+	RejectedAt *metav1.Time `json:"rejectedAt,omitempty" protobuf:"bytes,1,opt,name=rejectedAt"`
+	// Actor identifies the user who rejected this Freight.
+	Actor string `json:"actor,omitempty" protobuf:"bytes,2,opt,name=actor"`
+	// Reason explains why this Freight was rejected.
+	//
+	// +kubebuilder:validation:MaxLength=1024
+	Reason string `json:"reason,omitempty" protobuf:"bytes,3,opt,name=reason"`
 }
 
 // IsCurrentlyIn returns whether the Freight is currently in the specified
@@ -145,6 +160,11 @@ func (f *Freight) IsApprovedFor(stage string) bool {
 	// know anything about the Freight status' internal data structure.
 	_, approved := f.Status.ApprovedFor[stage]
 	return approved
+}
+
+// IsRejected returns whether the Freight has been rejected.
+func (f *Freight) IsRejected() bool {
+	return f != nil && f.Status.Rejected != nil
 }
 
 // GetLongestSoak returns the longest soak time for the Freight in the specified
@@ -234,6 +254,22 @@ func (f *FreightStatus) AddApprovedStage(stage string, approvedAt time.Time) {
 		}
 		f.ApprovedFor[stage] = record
 	}
+}
+
+// Reject updates the Freight status to reflect that the Freight has been
+// rejected.
+func (f *FreightStatus) Reject(actor, reason string, rejectedAt time.Time) {
+	f.Rejected = &FreightRejection{
+		RejectedAt: &metav1.Time{Time: rejectedAt},
+		Actor:      actor,
+		Reason:     reason,
+	}
+}
+
+// ClearRejected updates the Freight status to reflect that the Freight is no
+// longer rejected.
+func (f *FreightStatus) ClearRejected() {
+	f.Rejected = nil
 }
 
 // UpsertMetadata inserts or updates the given key in Freight status Metadata

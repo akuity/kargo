@@ -65,6 +65,20 @@ func TestStage_IsFreightAvailable(t *testing.T) {
 			expected: true,
 		},
 		{
+			name:  "rejected freight is not available even when approved for stage",
+			stage: &Stage{ObjectMeta: testStageMeta},
+			freight: &Freight{
+				ObjectMeta: testFreightMeta,
+				Status: FreightStatus{
+					ApprovedFor: map[string]ApprovedStage{
+						testStage: {},
+					},
+					Rejected: &FreightRejection{},
+				},
+			},
+			expected: false,
+		},
+		{
 			name: "stage accepts freight direct from origin",
 			stage: &Stage{
 				ObjectMeta: testStageMeta,

@@ -57,6 +57,8 @@ type ClientService interface {
 
 	ApproveFreight(params *ApproveFreightParams, authInfo runtime.ClientAuthInfoWriter, opts ...ClientOption) (*ApproveFreightOK, error)
 
+	ClearFreightRejection(params *ClearFreightRejectionParams, authInfo runtime.ClientAuthInfoWriter, opts ...ClientOption) (*ClearFreightRejectionNoContent, error)
+
 	CreateProjectConfigMap(params *CreateProjectConfigMapParams, authInfo runtime.ClientAuthInfoWriter, opts ...ClientOption) (*CreateProjectConfigMapCreated, error)
 
 	CreateSharedConfigMap(params *CreateSharedConfigMapParams, authInfo runtime.ClientAuthInfoWriter, opts ...ClientOption) (*CreateSharedConfigMapCreated, error)
@@ -148,6 +150,8 @@ type ClientService interface {
 	RefreshStage(params *RefreshStageParams, authInfo runtime.ClientAuthInfoWriter, opts ...ClientOption) (*RefreshStageOK, error)
 
 	RefreshWarehouse(params *RefreshWarehouseParams, authInfo runtime.ClientAuthInfoWriter, opts ...ClientOption) (*RefreshWarehouseOK, error)
+
+	RejectFreight(params *RejectFreightParams, authInfo runtime.ClientAuthInfoWriter, opts ...ClientOption) (*RejectFreightOK, error)
 
 	ResumeStageAutoPromotion(params *ResumeStageAutoPromotionParams, authInfo runtime.ClientAuthInfoWriter, opts ...ClientOption) (*ResumeStageAutoPromotionNoContent, error)
 
@@ -249,6 +253,52 @@ func (a *Client) ApproveFreight(params *ApproveFreightParams, authInfo runtime.C
 	//
 	// safeguard: normally, in the absence of a default response, unknown success responses return an error above: so this is a codegen issue
 	msg := fmt.Sprintf("unexpected success response for ApproveFreight: API contract not enforced by server. Client expected to get an error, but got: %T", result)
+	panic(msg)
+}
+
+/*
+ClearFreightRejection clears freight rejection
+
+Clear a Freight resource's rejected status.
+*/
+func (a *Client) ClearFreightRejection(params *ClearFreightRejectionParams, authInfo runtime.ClientAuthInfoWriter, opts ...ClientOption) (*ClearFreightRejectionNoContent, error) {
+	// NOTE: parameters are not validated before sending
+	if params == nil {
+		params = NewClearFreightRejectionParams()
+	}
+	op := &runtime.ClientOperation{
+		ID:                 "ClearFreightRejection",
+		Method:             "DELETE",
+		PathPattern:        "/v1beta1/projects/{project}/freight/{freight-name-or-alias}/reject",
+		ProducesMediaTypes: []string{"application/json"},
+		ConsumesMediaTypes: []string{"application/json"},
+		Schemes:            []string{"http"},
+		Params:             params,
+		Reader:             &ClearFreightRejectionReader{formats: a.formats},
+		AuthInfo:           authInfo,
+		Context:            params.Context,
+		Client:             params.HTTPClient,
+	}
+	for _, opt := range opts {
+		opt(op)
+	}
+	result, err := a.transport.Submit(op)
+	if err != nil {
+		return nil, err
+	}
+
+	// only one success response has to be checked
+	success, ok := result.(*ClearFreightRejectionNoContent)
+	if ok {
+		return success, nil
+	}
+
+	// unexpected success response.
+
+	// no default response is defined.
+	//
+	// safeguard: normally, in the absence of a default response, unknown success responses return an error above: so this is a codegen issue
+	msg := fmt.Sprintf("unexpected success response for ClearFreightRejection: API contract not enforced by server. Client expected to get an error, but got: %T", result)
 	panic(msg)
 }
 
@@ -2430,6 +2480,52 @@ func (a *Client) RefreshWarehouse(params *RefreshWarehouseParams, authInfo runti
 	//
 	// safeguard: normally, in the absence of a default response, unknown success responses return an error above: so this is a codegen issue
 	msg := fmt.Sprintf("unexpected success response for RefreshWarehouse: API contract not enforced by server. Client expected to get an error, but got: %T", result)
+	panic(msg)
+}
+
+/*
+RejectFreight rejects freight
+
+Mark a Freight resource as rejected, preventing future promotion.
+*/
+func (a *Client) RejectFreight(params *RejectFreightParams, authInfo runtime.ClientAuthInfoWriter, opts ...ClientOption) (*RejectFreightOK, error) {
+	// NOTE: parameters are not validated before sending
+	if params == nil {
+		params = NewRejectFreightParams()
+	}
+	op := &runtime.ClientOperation{
+		ID:                 "RejectFreight",
+		Method:             "POST",
+		PathPattern:        "/v1beta1/projects/{project}/freight/{freight-name-or-alias}/reject",
+		ProducesMediaTypes: []string{"application/json"},
+		ConsumesMediaTypes: []string{"application/json"},
+		Schemes:            []string{"http"},
+		Params:             params,
+		Reader:             &RejectFreightReader{formats: a.formats},
+		AuthInfo:           authInfo,
+		Context:            params.Context,
+		Client:             params.HTTPClient,
+	}
+	for _, opt := range opts {
+		opt(op)
+	}
+	result, err := a.transport.Submit(op)
+	if err != nil {
+		return nil, err
+	}
+
+	// only one success response has to be checked
+	success, ok := result.(*RejectFreightOK)
+	if ok {
+		return success, nil
+	}
+
+	// unexpected success response.
+
+	// no default response is defined.
+	//
+	// safeguard: normally, in the absence of a default response, unknown success responses return an error above: so this is a codegen issue
+	msg := fmt.Sprintf("unexpected success response for RejectFreight: API contract not enforced by server. Client expected to get an error, but got: %T", result)
 	panic(msg)
 }
 

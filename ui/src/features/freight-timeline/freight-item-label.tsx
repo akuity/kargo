@@ -4,10 +4,12 @@ import { Tooltip } from 'antd';
 import { format, formatDistance } from 'date-fns';
 import { useEffect, useState } from 'react';
 
-import { Freight } from '@ui/gen/api/v1alpha1/generated_pb';
-import { timestampDate, PlainMessageRecursive } from '@ui/utils/connectrpc-utils';
+import type { Freight } from '@ui/gen/api/v1alpha1/generated_pb';
+import { timestampDate } from '@ui/utils/connectrpc-utils';
+import type { PlainMessageRecursive } from '@ui/utils/connectrpc-utils';
 
 import { getAlias } from '../common/utils';
+import { RejectedFreightTag } from '../freight/rejection';
 
 export const FreightItemLabel = ({ freight }: { freight?: PlainMessageRecursive<Freight> }) => {
   const [copied, setCopied] = useState<boolean>(false);
@@ -81,10 +83,11 @@ export const FreightItemLabel = ({ freight }: { freight?: PlainMessageRecursive<
           }
         >
           <div
-            className={'hover:text-gray-600 w-full h-8 flex justify-center items-end'}
+            className={'hover:text-gray-600 w-full h-8 flex justify-center items-end gap-1'}
             style={{ padding: '0 3px' }}
           >
             <div className='truncate'>{aliasLabel || id}</div>
+            <RejectedFreightTag freight={freight} compact />
           </div>
         </Tooltip>
       </div>

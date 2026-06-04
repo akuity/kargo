@@ -248,6 +248,24 @@ spec:
                   This is useful for storing additional information about the Freight
                   or Promotion that can be shared across steps or stages.
                 type: object
+              rejected:
+                description: |-
+                  Rejected describes why this Freight has been marked unfit for promotion.
+                  Rejected Freight cannot be promoted.
+                properties:
+                  actor:
+                    description: Actor identifies the user who rejected this Freight.
+                    type: string
+                  reason:
+                    description: Reason explains why this Freight was rejected.
+                    maxLength: 1024
+                    type: string
+                  rejectedAt:
+                    description: RejectedAt is the time at which this Freight was
+                      rejected.
+                    format: date-time
+                    type: string
+                type: object
               verifiedIn:
                 additionalProperties:
                   description: VerifiedStage describes a Stage in which Freight has

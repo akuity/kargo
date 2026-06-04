@@ -1,0 +1,188 @@
+apiVersion: kargo.akuity.io/v1alpha1
+kind: Warehouse
+metadata:
+  name: manual
+  namespace: freight-rejection
+spec:
+  freightCreationPolicy: Manual
+  subscriptions:
+  - image:
+      repoURL: public.ecr.aws/docker/library/busybox
+      discoveryLimit: 2
+---
+apiVersion: kargo.akuity.io/v1alpha1
+kind: Warehouse
+metadata:
+  name: frontend
+  namespace: freight-rejection
+spec:
+  freightCreationPolicy: Manual
+  subscriptions:
+  - image:
+      repoURL: public.ecr.aws/nginx/nginx
+      discoveryLimit: 3
+---
+apiVersion: kargo.akuity.io/v1alpha1
+kind: Freight
+metadata:
+  name: 803bc6d85d2e67d2f4ae8d5377557697026acf66
+  namespace: freight-rejection
+alias: manual-good
+origin:
+  kind: Warehouse
+  name: manual
+images:
+- repoURL: public.ecr.aws/docker/library/busybox
+  tag: 1.36.1
+---
+apiVersion: kargo.akuity.io/v1alpha1
+kind: Freight
+metadata:
+  name: ccac9166d8776fe89c7d56130e4e4eac43d67880
+  namespace: freight-rejection
+alias: manual-approve-then-reject
+origin:
+  kind: Warehouse
+  name: manual
+images:
+- repoURL: public.ecr.aws/docker/library/busybox
+  tag: 1.36.2
+---
+apiVersion: kargo.akuity.io/v1alpha1
+kind: Freight
+metadata:
+  name: 0044230c2e53ad2f5512a139d080f3370f4e6f84
+  namespace: freight-rejection
+alias: frontend-v001-current
+origin:
+  kind: Warehouse
+  name: frontend
+images:
+- repoURL: public.ecr.aws/nginx/nginx
+  tag: 1.26.31
+---
+apiVersion: kargo.akuity.io/v1alpha1
+kind: Freight
+metadata:
+  name: fb3165f8155d864b6133171bb4e1dcb10611575a
+  namespace: freight-rejection
+alias: frontend-v002-fallback
+origin:
+  kind: Warehouse
+  name: frontend
+images:
+- repoURL: public.ecr.aws/nginx/nginx
+  tag: 1.26.77
+---
+apiVersion: kargo.akuity.io/v1alpha1
+kind: Freight
+metadata:
+  name: fb556073349ba968d34d884ce7e3c47b3ee407a1
+  namespace: freight-rejection
+alias: frontend-v003-rejected
+origin:
+  kind: Warehouse
+  name: frontend
+images:
+- repoURL: public.ecr.aws/nginx/nginx
+  tag: 1.26.95
+---
+apiVersion: kargo.akuity.io/v1alpha1
+kind: Stage
+metadata:
+  name: manual-lab
+  namespace: freight-rejection
+spec:
+  requestedFreight:
+  - origin:
+      kind: Warehouse
+      name: manual
+    sources:
+      direct: true
+  promotionTemplate:
+    spec:
+      steps:
+      - uses: set-metadata
+        config:
+          updates:
+          - kind: Stage
+            name: manual-lab
+            values:
+              manualTest: freight-rejection
+              lastStory: manual-lab
+---
+apiVersion: kargo.akuity.io/v1alpha1
+kind: Stage
+metadata:
+  name: reject-lab
+  namespace: freight-rejection
+spec:
+  requestedFreight:
+  - origin:
+      kind: Warehouse
+      name: frontend
+    sources:
+      direct: true
+      autoPromotionOptions:
+        selectionPolicy: NewestFreight
+  promotionTemplate:
+    spec:
+      steps:
+      - uses: set-metadata
+        config:
+          updates:
+          - kind: Stage
+            name: reject-lab
+            values:
+              manualTest: freight-rejection
+              lastStory: reject-lab
+---
+apiVersion: kargo.akuity.io/v1alpha1
+kind: Stage
+metadata:
+  name: hold-resume-lab
+  namespace: freight-rejection
+spec:
+  requestedFreight:
+  - origin:
+      kind: Warehouse
+      name: frontend
+    sources:
+      direct: true
+      autoPromotionOptions:
+        selectionPolicy: NewestFreight
+  promotionTemplate:
+    spec:
+      steps:
+      - uses: set-metadata
+        config:
+          updates:
+          - kind: Stage
+            name: hold-resume-lab
+            values:
+              manualTest: freight-rejection
+              lastStory: hold-resume-lab
+---
+apiVersion: kargo.akuity.io/v1alpha1
+kind: Stage
+metadata:
+  name: pending-promo-lab
+  namespace: freight-rejection
+spec:
+  requestedFreight:
+  - origin:
+      kind: Warehouse
+      name: frontend
+    sources:
+      direct: true
+  promotionTemplate:
+    spec:
+      steps:
+      - uses: set-metadata
+        config:
+          updates:
+          - kind: Stage
+            name: pending-promo-lab
+            values:
+              manualTest: freight-rejection
+              lastStory: pending-promo-lab

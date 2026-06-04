@@ -97,6 +97,9 @@ const (
 	// RecursiveShortFlag is the short flag name for the recursive flag.
 	RecursiveShortFlag = "R"
 
+	// ReasonFlag is the flag name for the reason flag.
+	ReasonFlag = "reason"
+
 	// RegexFlag is the flag name for the regex flag.
 	RegexFlag = "regex"
 
@@ -287,6 +290,11 @@ func Recursive(fs *pflag.FlagSet, recursive *bool) {
 		"Process the directory used in -f, --filename recursively. Useful when "+
 			"you want to manage related manifests organized within the same directory.",
 	)
+}
+
+// Reason adds the ReasonFlag to the provided flag set.
+func Reason(fs *pflag.FlagSet, reason *string, usage string) {
+	fs.StringVar(reason, ReasonFlag, "", usage)
 }
 
 // RepoURL adds the RepoURLFlag to the provided flag set.

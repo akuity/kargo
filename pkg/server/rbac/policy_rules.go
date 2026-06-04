@@ -24,18 +24,21 @@ var (
 		"watch",
 	}
 
-	allStagesVerbs = append(allVerbs, "promote")
+	allFreightsVerbs = append(allVerbs, "reject")
+	allStagesVerbs   = append(allVerbs, "promote")
 )
 
 func init() {
 	slices.Sort(allVerbs)
+	slices.Sort(allFreightsVerbs)
 	slices.Sort(allStagesVerbs)
 }
 
 type PolicyRuleNormalizationOptions struct {
 	// IncludeCustomVerbsInExpansion indicates whether custom verbs (like
-	// "promote" for Stages) should be included in the expansion of the "*"
-	// wildcard verb. This is optional because when normalizing PolicyRules with
+	// "promote" for Stages or "reject" for Freight) should be included in the
+	// expansion of the "*" wildcard verb. This is optional because when
+	// normalizing PolicyRules with
 	// the intent to create or update a Role, this is how we would like "*" to be
 	// interpreted. However, when normalizing PolicyRules with the intent to
 	// display them to the user, we will not want to expand "*" to include custom
@@ -221,6 +224,8 @@ func allVerbsFor(resourceType string, includeCustom bool) []string {
 		return allVerbs
 	}
 	switch resourceType {
+	case "freights":
+		return allFreightsVerbs
 	case "stages":
 		return allStagesVerbs
 	default:

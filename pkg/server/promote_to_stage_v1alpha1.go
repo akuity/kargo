@@ -109,6 +109,10 @@ func (s *server) PromoteToStage(
 		return nil, connect.NewError(connect.CodeNotFound, err)
 	}
 
+	if err = rejectedFreightPromotionError(freight); err != nil {
+		return nil, connect.NewError(connect.CodeFailedPrecondition, err)
+	}
+
 	if !s.isFreightAvailableFn(stage, freight) {
 		// nolint:staticcheck
 		return nil, connect.NewError(
@@ -291,6 +295,11 @@ func (s *server) promoteToStage(c *gin.Context) {
 			return
 		}
 		freight = &list.Items[0]
+	}
+
+	if err := rejectedFreightPromotionError(freight); err != nil {
+		_ = c.Error(libhttp.Error(err, http.StatusBadRequest))
+		return
 	}
 
 	// Validate that the Freight is available to the Stage

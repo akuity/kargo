@@ -8,6 +8,7 @@
 import type { FreightStatusApprovedFor } from './freightStatusApprovedFor';
 import type { FreightStatusCurrentlyIn } from './freightStatusCurrentlyIn';
 import type { FreightStatusMetadata } from './freightStatusMetadata';
+import type { FreightRejection } from './freightRejection';
 import type { FreightStatusVerifiedIn } from './freightStatusVerifiedIn';
 
 export interface FreightStatus {
@@ -22,6 +23,9 @@ transiting the entire pipeline. */
 This is useful for storing additional information about the Freight
 or Promotion that can be shared across steps or stages. */
   metadata?: FreightStatusMetadata;
+  /** Rejected describes why this Freight has been marked unfit for promotion.
+Rejected Freight cannot be promoted. */
+  rejected?: FreightRejection;
   /** VerifiedIn describes the Stages in which this Freight has been verified
 through promotion and subsequent health checks. */
   verifiedIn?: FreightStatusVerifiedIn;

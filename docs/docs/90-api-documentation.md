@@ -1886,6 +1886,15 @@ RawFormat specifies the format for raw resource representation.
 | artifacts | [ArtifactReference](#github-com-akuity-kargo-api-v1alpha1-ArtifactReference) |  Artifacts describes specific versions of artifacts other than Git repository commits, container images, and Helm charts. |
 
 
+### FreightRejection {#github-com-akuity-kargo-api-v1alpha1-FreightRejection}
+ FreightRejection describes a user-driven Freight rejection.
+| Field | Type | Description |
+| ----- | ---- | ----------- |
+| rejectedAt | k8s.io.apimachinery.pkg.apis.meta.v1.Time |  RejectedAt is the time at which this Freight was rejected. |
+| actor | string |  Actor identifies the user who rejected this Freight. |
+| reason | string |  Reason explains why this Freight was rejected.   |
+
+
 ### FreightRequest {#github-com-akuity-kargo-api-v1alpha1-FreightRequest}
  FreightRequest expresses a Stage's need for Freight having originated from a particular Warehouse.
 | Field | Type | Description |
@@ -1913,6 +1922,7 @@ RawFormat specifies the format for raw resource representation.
 | verifiedIn | [FreightStatus.VerifiedInEntry](#github-com-akuity-kargo-api-v1alpha1-FreightStatus-VerifiedInEntry) |  VerifiedIn describes the Stages in which this Freight has been verified through promotion and subsequent health checks. |
 | approvedFor | [FreightStatus.ApprovedForEntry](#github-com-akuity-kargo-api-v1alpha1-FreightStatus-ApprovedForEntry) |  ApprovedFor describes the Stages for which this Freight has been approved preemptively/manually by a user. This is useful for hotfixes, where one might wish to promote a piece of Freight to a given Stage without transiting the entire pipeline. |
 | metadata | [FreightStatus.MetadataEntry](#github-com-akuity-kargo-api-v1alpha1-FreightStatus-MetadataEntry) |  Metadata is a map of arbitrary metadata associated with the Freight. This is useful for storing additional information about the Freight or Promotion that can be shared across steps or stages. |
+| rejected | [FreightRejection](#github-com-akuity-kargo-api-v1alpha1-FreightRejection) |  Rejected describes why this Freight has been marked unfit for promotion. Rejected Freight cannot be promoted. |
 
 
 ### FreightStatus.ApprovedForEntry {#github-com-akuity-kargo-api-v1alpha1-FreightStatus-ApprovedForEntry}

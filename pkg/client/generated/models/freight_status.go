@@ -31,6 +31,12 @@ type FreightStatus struct {
 	// or Promotion that can be shared across steps or stages.
 	Metadata map[string]any `json:"metadata,omitempty"`
 
+	// Rejected describes why this Freight has been marked unfit for promotion.
+	// Rejected Freight cannot be promoted.
+	Rejected struct {
+		FreightRejection
+	} `json:"rejected,omitempty"`
+
 	// VerifiedIn describes the Stages in which this Freight has been verified
 	// through promotion and subsequent health checks.
 	VerifiedIn map[string]VerifiedStage `json:"verifiedIn,omitempty"`
@@ -45,6 +51,10 @@ func (m *FreightStatus) Validate(formats strfmt.Registry) error {
 	}
 
 	if err := m.validateCurrentlyIn(formats); err != nil {
+		res = append(res, err)
+	}
+
+	if err := m.validateRejected(formats); err != nil {
 		res = append(res, err)
 	}
 
@@ -118,6 +128,14 @@ func (m *FreightStatus) validateCurrentlyIn(formats strfmt.Registry) error {
 	return nil
 }
 
+func (m *FreightStatus) validateRejected(formats strfmt.Registry) error {
+	if swag.IsZero(m.Rejected) { // not required
+		return nil
+	}
+
+	return nil
+}
+
 func (m *FreightStatus) validateVerifiedIn(formats strfmt.Registry) error {
 	if swag.IsZero(m.VerifiedIn) { // not required
 		return nil
@@ -160,6 +178,10 @@ func (m *FreightStatus) ContextValidate(ctx context.Context, formats strfmt.Regi
 		res = append(res, err)
 	}
 
+	if err := m.contextValidateRejected(ctx, formats); err != nil {
+		res = append(res, err)
+	}
+
 	if err := m.contextValidateVerifiedIn(ctx, formats); err != nil {
 		res = append(res, err)
 	}
@@ -196,6 +218,11 @@ func (m *FreightStatus) contextValidateCurrentlyIn(ctx context.Context, formats 
 		}
 
 	}
+
+	return nil
+}
+
+func (m *FreightStatus) contextValidateRejected(ctx context.Context, formats strfmt.Registry) error {
 
 	return nil
 }

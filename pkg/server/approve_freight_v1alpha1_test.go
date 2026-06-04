@@ -322,6 +322,61 @@ func TestApproveFreight(t *testing.T) {
 			},
 		},
 		{
+			name: "Freight is rejected",
+			req: &svcv1alpha1.ApproveFreightRequest{
+				Project: "fake-project",
+				Name:    "fake-freight",
+				Stage:   "fake-stage",
+			},
+			server: &server{
+				validateProjectExistsFn: func(context.Context, string) error {
+					return nil
+				},
+				getFreightByNameOrAliasFn: func(
+					context.Context,
+					client.Client,
+					string,
+					string,
+					string,
+				) (*kargoapi.Freight, error) {
+					return &kargoapi.Freight{
+						ObjectMeta: metav1.ObjectMeta{Name: "fake-freight"},
+						Status: kargoapi.FreightStatus{
+							Rejected: &kargoapi.FreightRejection{},
+						},
+					}, nil
+				},
+				getStageFn: func(
+					context.Context,
+					client.Client,
+					types.NamespacedName,
+				) (*kargoapi.Stage, error) {
+					return &kargoapi.Stage{}, nil
+				},
+				authorizeFn: func(
+					context.Context,
+					string,
+					schema.GroupVersionResource,
+					string,
+					client.ObjectKey,
+				) error {
+					return nil
+				},
+			},
+			assertions: func(
+				t *testing.T,
+				_ *fakeevent.EventRecorder,
+				_ *connect.Response[svcv1alpha1.ApproveFreightResponse],
+				err error,
+			) {
+				require.Error(t, err)
+				var connErr *connect.Error
+				require.True(t, errors.As(err, &connErr))
+				require.Equal(t, connect.CodeFailedPrecondition, connErr.Code())
+				require.Contains(t, connErr.Message(), "has been rejected and cannot be approved")
+			},
+		},
+		{
 			name: "success",
 			req: &svcv1alpha1.ApproveFreightRequest{
 				Project: "fake-project",

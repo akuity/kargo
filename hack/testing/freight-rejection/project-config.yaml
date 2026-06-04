@@ -1,0 +1,13 @@
+apiVersion: kargo.akuity.io/v1alpha1
+kind: ProjectConfig
+metadata:
+  name: freight-rejection
+  namespace: freight-rejection
+spec:
+  promotionPolicies:
+  - stageSelector:
+      name: reject-lab
+    autoPromotionEnabled: true
+  - stageSelector:
+      name: hold-resume-lab
+    autoPromotionEnabled: true

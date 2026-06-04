@@ -98,6 +98,10 @@ func (s *server) PromoteDownstream(
 		return nil, connect.NewError(connect.CodeNotFound, err)
 	}
 
+	if err = rejectedFreightPromotionError(freight); err != nil {
+		return nil, connect.NewError(connect.CodeFailedPrecondition, err)
+	}
+
 	downstreams, err := s.findDownstreamStagesFn(ctx, stage, freight.Origin)
 	if err != nil {
 		return nil, fmt.Errorf("find downstream stages: %w", err)
@@ -283,6 +287,11 @@ func (s *server) promoteDownstream(c *gin.Context) {
 			return
 		}
 		freight = &list.Items[0]
+	}
+
+	if err := rejectedFreightPromotionError(freight); err != nil {
+		_ = c.Error(libhttp.Error(err, http.StatusBadRequest))
+		return
 	}
 
 	// Find downstream stages

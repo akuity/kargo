@@ -279,6 +279,56 @@ func TestPromoteDownstream(t *testing.T) {
 			},
 		},
 		{
+			name: "Freight is rejected",
+			req: &svcv1alpha1.PromoteDownstreamRequest{
+				Project: "fake-project",
+				Stage:   "fake-stage",
+				Freight: "fake-freight",
+			},
+			server: &server{
+				validateProjectExistsFn: func(context.Context, string) error {
+					return nil
+				},
+				getStageFn: func(
+					context.Context,
+					client.Client,
+					types.NamespacedName,
+				) (*kargoapi.Stage, error) {
+					return &kargoapi.Stage{
+						ObjectMeta: metav1.ObjectMeta{
+							Namespace: "fake-project",
+							Name:      "fake-stage",
+						},
+						Spec: testStageSpec,
+					}, nil
+				},
+				getFreightByNameOrAliasFn: func(
+					context.Context,
+					client.Client,
+					string, string, string,
+				) (*kargoapi.Freight, error) {
+					return &kargoapi.Freight{
+						ObjectMeta: metav1.ObjectMeta{Name: "fake-freight"},
+						Status: kargoapi.FreightStatus{
+							Rejected: &kargoapi.FreightRejection{},
+						},
+					}, nil
+				},
+			},
+			assertions: func(
+				t *testing.T,
+				_ *fakeevent.EventRecorder,
+				_ *connect.Response[svcv1alpha1.PromoteDownstreamResponse],
+				err error,
+			) {
+				require.Error(t, err)
+				var connErr *connect.Error
+				require.True(t, errors.As(err, &connErr))
+				require.Equal(t, connect.CodeFailedPrecondition, connErr.Code())
+				require.Contains(t, connErr.Message(), "has been rejected and cannot be promoted")
+			},
+		},
+		{
 			name: "no downstream Stages found",
 			req: &svcv1alpha1.PromoteDownstreamRequest{
 				Project: "fake-project",

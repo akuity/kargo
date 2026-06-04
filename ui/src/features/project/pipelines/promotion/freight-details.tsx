@@ -8,9 +8,14 @@ import { ManifestPreview } from '@ui/features/common/manifest-preview';
 import TabsWithUrl from '@ui/features/common/tabs-with-url';
 import { FreightMetadata } from '@ui/features/freight/freight-metadata';
 import { FreightStatusList } from '@ui/features/freight/freight-status-list';
+import { RejectedFreightDetails, RejectedFreightTag } from '@ui/features/freight/rejection';
 import { FreightTable } from '@ui/features/project/pipelines/freight/freight-table';
 import { useGetFreightCreation } from '@ui/features/project/pipelines/freight/use-get-freight-creation';
-import { Freight, FreightReference, FreightSchema } from '@ui/gen/api/v1alpha1/generated_pb';
+import {
+  FreightSchema,
+  type Freight,
+  type FreightReference
+} from '@ui/gen/api/v1alpha1/generated_pb';
 
 import { FreightComparisonTable } from './freight-comparison-table';
 
@@ -46,7 +51,12 @@ export const FreightDetails = (props: FreightDetailsProps) => {
                   items={[
                     {
                       label: 'alias',
-                      children: props.freight?.alias
+                      children: (
+                        <>
+                          {props.freight?.alias}
+                          <RejectedFreightTag freight={props.freight} />
+                        </>
+                      )
                     },
                     {
                       label: 'id',
@@ -75,6 +85,8 @@ export const FreightDetails = (props: FreightDetailsProps) => {
                     }
                   ]}
                 />
+
+                <RejectedFreightDetails freight={props.freight} />
 
                 <FreightMetadata className='mt-5' freight={props.freight} />
 

@@ -162,6 +162,9 @@ func (s *Stage) IsFreightAvailable(freight *Freight) bool {
 	if s == nil || freight == nil || s.Namespace != freight.Namespace {
 		return false
 	}
+	if freight.IsRejected() {
+		return false
+	}
 	if freight.IsApprovedFor(s.Name) {
 		return true
 	}

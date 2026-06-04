@@ -146,6 +146,10 @@ func ListFreightAvailableToStage(
 		availableFreight = append(availableFreight, freightFromWarehouse...)
 	}
 
+	availableFreight = slices.DeleteFunc(availableFreight, func(f kargoapi.Freight) bool {
+		return f.IsRejected()
+	})
+
 	// Sort and de-dupe the available Freight
 	slices.SortFunc(availableFreight, func(lhs, rhs kargoapi.Freight) int {
 		return strings.Compare(lhs.Name, rhs.Name)

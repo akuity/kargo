@@ -56,6 +56,12 @@ rules:
 - apiGroups:
   - kargo.akuity.io
   resources:
+  - freights
+  verbs:
+  - reject # rejection permission for all Freight
+- apiGroups:
+  - kargo.akuity.io
+  resources:
   - promotions
   verbs: # nearly full access to all promotions, but they are immutable
   - create

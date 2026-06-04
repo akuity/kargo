@@ -1,14 +1,14 @@
 import { toJson } from '@bufbuild/protobuf';
-import { faFile, faInfoCircle, faPencil } from '@fortawesome/free-solid-svg-icons';
+import { faBan, faFile, faInfoCircle, faPencil } from '@fortawesome/free-solid-svg-icons';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
-import { Button, Drawer, Space, Tabs, Typography } from 'antd';
+import { Button, Drawer, Modal, Space, Tabs, Typography, message } from 'antd';
 import classNames from 'classnames';
 import { useEffect, useState } from 'react';
 import { generatePath, useNavigate, useParams } from 'react-router-dom';
 
 import { paths } from '@ui/config/paths';
-import { Freight, FreightSchema } from '@ui/gen/api/v1alpha1/generated_pb';
-import { useGetFreightLinks } from '@ui/gen/api/v2/core/core';
+import { FreightSchema, type Freight } from '@ui/gen/api/v1alpha1/generated_pb';
+import { useClearFreightRejection, useGetFreightLinks } from '@ui/gen/api/v2/core/core';
 
 import { DeepLinks } from '../common/deep-links';
 import { Description } from '../common/description';
@@ -19,6 +19,9 @@ import { FreightTable } from '../project/pipelines/freight/freight-table';
 
 import { FreightMetadata } from './freight-metadata';
 import { FreightStatusList } from './freight-status-list';
+import { RejectFreightModal } from './reject-freight-modal';
+import { RejectedFreightDetails, RejectedFreightTag } from './rejection';
+import { isFreightRejected } from './rejection-utils';
 import { UpdateFreightAliasModal } from './update-freight-alias-modal';
 
 const CopyValue = (props: { value: string; label: string; className?: string }) => (
@@ -53,17 +56,76 @@ export const FreightDetails = ({
     freightNameOrAlias || '',
     { query: { enabled: !!projectName && !!freightNameOrAlias } }
   );
+  const { mutate: clearRejectionAction, isPending: isClearingRejection } = useClearFreightRejection(
+    {
+      mutation: {
+        onSuccess: () => {
+          message.success('Freight rejection cleared');
+          refetchFreight();
+        },
+        onError: (err) => {
+          message.error(err?.toString());
+        }
+      }
+    }
+  );
+
+  const clearRejection = () => {
+    if (!projectName || !freightNameOrAlias) {
+      return;
+    }
+    Modal.confirm({
+      title: 'Clear Freight Rejection',
+      content: `Clear rejected status from ${freightNameOrAlias}?`,
+      okText: 'Clear rejection',
+      onOk: () =>
+        clearRejectionAction({
+          project: projectName,
+          freightNameOrAlias
+        })
+    });
+  };
 
   return (
     <Drawer
       open={!!freight}
       onClose={onClose}
       width='80%'
-      title={alias || freight?.metadata?.name}
+      title={
+        <Space>
+          <span>{alias || freight?.metadata?.name}</span>
+          <RejectedFreightTag freight={freight} />
+        </Space>
+      }
       extra={
         freight && (
           <Space size={16}>
             <DeepLinks links={freightLinksData?.data?.links ?? []} />
+            {isFreightRejected(freight) ? (
+              <Button loading={isClearingRejection} onClick={clearRejection}>
+                Clear rejection
+              </Button>
+            ) : (
+              <Button
+                danger
+                icon={<FontAwesomeIcon icon={faBan} />}
+                onClick={() =>
+                  show((p) => (
+                    <RejectFreightModal
+                      {...p}
+                      freight={freight}
+                      project={freight?.metadata?.namespace || ''}
+                      onSubmit={() => {
+                        refetchFreight();
+                        p.hide();
+                      }}
+                    />
+                  ))
+                }
+              >
+                Reject
+              </Button>
+            )}
             {alias && (
               <Button
                 icon={<FontAwesomeIcon icon={faPencil} />}
@@ -113,6 +175,7 @@ export const FreightDetails = ({
                           <CopyValue label='UID:' value={freight?.metadata?.uid} />
                         )}
                         <br />
+                        <RejectedFreightDetails freight={freight} />
                         <FreightMetadata freight={freight} className='mb-5' />
                         <FreightTable freight={freight} />
                       </div>

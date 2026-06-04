@@ -48,6 +48,7 @@ import type {
   PromotionTaskList,
   QueryFreightsRest200,
   QueryFreightsRestParams,
+  RejectFreightRequest,
   ResumeStageAutoPromotionRequest,
   Stage,
   StageList,
@@ -2174,6 +2175,254 @@ export function useGetFreightLinks<
   return query;
 }
 
+/**
+ * Mark a Freight resource as rejected, preventing future promotion.
+ * @summary Reject Freight
+ */
+export type rejectFreightResponse200 = {
+  data: void;
+  status: 200;
+};
+
+export type rejectFreightResponse400 = {
+  data: ErrorResponse;
+  status: 400;
+};
+
+export type rejectFreightResponse403 = {
+  data: ErrorResponse;
+  status: 403;
+};
+
+export type rejectFreightResponse404 = {
+  data: ErrorResponse;
+  status: 404;
+};
+
+export type rejectFreightResponse500 = {
+  data: ErrorResponse;
+  status: 500;
+};
+
+export type rejectFreightResponseSuccess = rejectFreightResponse200 & {
+  headers: Headers;
+};
+export type rejectFreightResponseError = (
+  | rejectFreightResponse400
+  | rejectFreightResponse403
+  | rejectFreightResponse404
+  | rejectFreightResponse500
+) & {
+  headers: Headers;
+};
+
+export type rejectFreightResponse = rejectFreightResponseSuccess | rejectFreightResponseError;
+
+export const getRejectFreightUrl = (project: string, freightNameOrAlias: string) => {
+  return `/v1beta1/projects/${project}/freight/${freightNameOrAlias}/reject`;
+};
+
+export const rejectFreight = async (
+  project: string,
+  freightNameOrAlias: string,
+  rejectFreightRequest: RejectFreightRequest,
+  options?: RequestInit
+): Promise<rejectFreightResponse> => {
+  return customFetch<rejectFreightResponse>(getRejectFreightUrl(project, freightNameOrAlias), {
+    ...options,
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', ...options?.headers },
+    body: JSON.stringify(rejectFreightRequest)
+  });
+};
+
+export const getRejectFreightMutationOptions = <
+  TError = ErrorResponse,
+  TContext = unknown
+>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof rejectFreight>>,
+    TError,
+    { project: string; freightNameOrAlias: string; data: RejectFreightRequest },
+    TContext
+  >;
+  request?: SecondParameter<typeof customFetch>;
+}): UseMutationOptions<
+  Awaited<ReturnType<typeof rejectFreight>>,
+  TError,
+  { project: string; freightNameOrAlias: string; data: RejectFreightRequest },
+  TContext
+> => {
+  const mutationKey = ['rejectFreight'];
+  const { mutation: mutationOptions, request: requestOptions } = options
+    ? options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey
+      ? options
+      : { ...options, mutation: { ...options.mutation, mutationKey } }
+    : { mutation: { mutationKey }, request: undefined };
+
+  const mutationFn: MutationFunction<
+    Awaited<ReturnType<typeof rejectFreight>>,
+    { project: string; freightNameOrAlias: string; data: RejectFreightRequest }
+  > = (props) => {
+    const { project, freightNameOrAlias, data } = props ?? {};
+
+    return rejectFreight(project, freightNameOrAlias, data, requestOptions);
+  };
+
+  return { mutationFn, ...mutationOptions };
+};
+
+export type RejectFreightMutationResult = NonNullable<Awaited<ReturnType<typeof rejectFreight>>>;
+export type RejectFreightMutationBody = RejectFreightRequest;
+export type RejectFreightMutationError = ErrorResponse;
+
+/**
+ * @summary Reject Freight
+ */
+export const useRejectFreight = <TError = ErrorResponse, TContext = unknown>(
+  options?: {
+    mutation?: UseMutationOptions<
+      Awaited<ReturnType<typeof rejectFreight>>,
+      TError,
+      { project: string; freightNameOrAlias: string; data: RejectFreightRequest },
+      TContext
+    >;
+    request?: SecondParameter<typeof customFetch>;
+  },
+  queryClient?: QueryClient
+): UseMutationResult<
+  Awaited<ReturnType<typeof rejectFreight>>,
+  TError,
+  { project: string; freightNameOrAlias: string; data: RejectFreightRequest },
+  TContext
+> => {
+  const mutationOptions = getRejectFreightMutationOptions(options);
+
+  return useMutation(mutationOptions, queryClient);
+};
+/**
+ * Clear a Freight resource's rejected status.
+ * @summary Clear Freight rejection
+ */
+export type clearFreightRejectionResponse204 = {
+  data: void;
+  status: 204;
+};
+
+export type clearFreightRejectionResponse403 = {
+  data: ErrorResponse;
+  status: 403;
+};
+
+export type clearFreightRejectionResponse404 = {
+  data: ErrorResponse;
+  status: 404;
+};
+
+export type clearFreightRejectionResponse500 = {
+  data: ErrorResponse;
+  status: 500;
+};
+
+export type clearFreightRejectionResponseSuccess = clearFreightRejectionResponse204 & {
+  headers: Headers;
+};
+export type clearFreightRejectionResponseError = (
+  | clearFreightRejectionResponse403
+  | clearFreightRejectionResponse404
+  | clearFreightRejectionResponse500
+) & {
+  headers: Headers;
+};
+
+export type clearFreightRejectionResponse =
+  | clearFreightRejectionResponseSuccess
+  | clearFreightRejectionResponseError;
+
+export const getClearFreightRejectionUrl = (project: string, freightNameOrAlias: string) => {
+  return `/v1beta1/projects/${project}/freight/${freightNameOrAlias}/reject`;
+};
+
+export const clearFreightRejection = async (
+  project: string,
+  freightNameOrAlias: string,
+  options?: RequestInit
+): Promise<clearFreightRejectionResponse> => {
+  return customFetch<clearFreightRejectionResponse>(
+    getClearFreightRejectionUrl(project, freightNameOrAlias),
+    {
+      ...options,
+      method: 'DELETE'
+    }
+  );
+};
+
+export const getClearFreightRejectionMutationOptions = <
+  TError = ErrorResponse,
+  TContext = unknown
+>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof clearFreightRejection>>,
+    TError,
+    { project: string; freightNameOrAlias: string },
+    TContext
+  >;
+  request?: SecondParameter<typeof customFetch>;
+}): UseMutationOptions<
+  Awaited<ReturnType<typeof clearFreightRejection>>,
+  TError,
+  { project: string; freightNameOrAlias: string },
+  TContext
+> => {
+  const mutationKey = ['clearFreightRejection'];
+  const { mutation: mutationOptions, request: requestOptions } = options
+    ? options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey
+      ? options
+      : { ...options, mutation: { ...options.mutation, mutationKey } }
+    : { mutation: { mutationKey }, request: undefined };
+
+  const mutationFn: MutationFunction<
+    Awaited<ReturnType<typeof clearFreightRejection>>,
+    { project: string; freightNameOrAlias: string }
+  > = (props) => {
+    const { project, freightNameOrAlias } = props ?? {};
+
+    return clearFreightRejection(project, freightNameOrAlias, requestOptions);
+  };
+
+  return { mutationFn, ...mutationOptions };
+};
+
+export type ClearFreightRejectionMutationResult = NonNullable<
+  Awaited<ReturnType<typeof clearFreightRejection>>
+>;
+
+export type ClearFreightRejectionMutationError = ErrorResponse;
+
+/**
+ * @summary Clear Freight rejection
+ */
+export const useClearFreightRejection = <TError = ErrorResponse, TContext = unknown>(
+  options?: {
+    mutation?: UseMutationOptions<
+      Awaited<ReturnType<typeof clearFreightRejection>>,
+      TError,
+      { project: string; freightNameOrAlias: string },
+      TContext
+    >;
+    request?: SecondParameter<typeof customFetch>;
+  },
+  queryClient?: QueryClient
+): UseMutationResult<
+  Awaited<ReturnType<typeof clearFreightRejection>>,
+  TError,
+  { project: string; freightNameOrAlias: string },
+  TContext
+> => {
+  const mutationOptions = getClearFreightRejectionMutationOptions(options);
+
+  return useMutation(mutationOptions, queryClient);
+};
 /**
  * List container images referenced by Freight resources in a
 project's namespace.

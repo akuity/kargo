@@ -88,7 +88,7 @@ func (s *server) ApproveFreight(
 		)
 	}
 
-	if err := s.authorizeFn(
+	if authErr := s.authorizeFn(
 		ctx,
 		"promote",
 		kargoapi.GroupVersion.WithResource("stages"),
@@ -97,8 +97,12 @@ func (s *server) ApproveFreight(
 			Namespace: project,
 			Name:      stageName,
 		},
-	); err != nil {
-		return nil, err
+	); authErr != nil {
+		return nil, authErr
+	}
+
+	if err = rejectedFreightApprovalError(freight); err != nil {
+		return nil, connect.NewError(connect.CodeFailedPrecondition, err)
 	}
 
 	if freight.IsApprovedFor(stageName) {
@@ -205,6 +209,11 @@ func (s *server) approveFreight(c *gin.Context) {
 		},
 	); err != nil {
 		_ = c.Error(err)
+		return
+	}
+
+	if err := rejectedFreightApprovalError(freight); err != nil {
+		_ = c.Error(libhttp.Error(err, http.StatusBadRequest))
 		return
 	}
 

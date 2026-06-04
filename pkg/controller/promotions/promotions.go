@@ -365,13 +365,33 @@ func (r *reconciler) Reconcile(
 		return ctrl.Result{}, nil
 	}
 
-	if freight == nil && promo.Spec.Source == kargoapi.PromotionSourceAuto {
-		if freight, err = r.getLiveFreight(
+	liveFreight, err := r.getLiveFreight(
+		ctx,
+		types.NamespacedName{Namespace: promo.Namespace, Name: promo.Spec.Freight},
+	)
+	if err != nil {
+		return ctrl.Result{}, err
+	}
+	if liveFreight != nil {
+		freight = liveFreight
+	}
+
+	if freight != nil &&
+		promo.Status.Phase != kargoapi.PromotionPhaseRunning &&
+		freight.IsRejected() {
+		var aborted bool
+		if aborted, err = r.abortPromotionForRejectedFreight(
 			ctx,
-			types.NamespacedName{Namespace: promo.Namespace, Name: promo.Spec.Freight},
+			req.NamespacedName,
+			freight.Name,
 		); err != nil {
 			return ctrl.Result{}, err
 		}
+		if !aborted {
+			return ctrl.Result{RequeueAfter: 100 * time.Millisecond}, nil
+		}
+		logger.Info("aborted Promotion for rejected Freight")
+		return ctrl.Result{}, nil
 	}
 
 	if freight != nil &&
@@ -632,9 +652,8 @@ func (r *reconciler) checkLiveStageForAutoPromotion(
 	return liveStage, true, held, nil
 }
 
-// getLiveFreight reads Freight directly from the API server for
-// auto-promotion safety checks that cannot rely on an eventually-consistent
-// informer cache.
+// getLiveFreight reads Freight directly from the API server for safety checks
+// that cannot rely on an eventually-consistent informer cache.
 func (r *reconciler) getLiveFreight(
 	ctx context.Context,
 	key types.NamespacedName,
@@ -722,6 +741,44 @@ func (r *reconciler) abortAutoPromotion(
 		now := metav1.Now()
 		live.Status.Phase = kargoapi.PromotionPhaseAborted
 		live.Status.Message = api.AutoPromotionBlockedByHoldMessage
+		live.Status.FinishedAt = &now
+		aborted = true
+		return r.kargoClient.Status().Patch(
+			ctx,
+			live,
+			client.MergeFromWithOptions(original, client.MergeFromWithOptimisticLock{}),
+		)
+	})
+	return aborted, err
+}
+
+// abortPromotionForRejectedFreight marks a non-running, non-terminal Promotion
+// as aborted when its Freight has been rejected before it begins.
+func (r *reconciler) abortPromotionForRejectedFreight(
+	ctx context.Context,
+	key client.ObjectKey,
+	freightName string,
+) (bool, error) {
+	var aborted bool
+	err := retry.RetryOnConflict(retry.DefaultRetry, func() error {
+		aborted = false
+		reader := r.apiReader
+		if reader == nil {
+			reader = r.kargoClient
+		}
+		live := &kargoapi.Promotion{}
+		if err := reader.Get(ctx, key, live); err != nil {
+			return client.IgnoreNotFound(err)
+		}
+		if live.Status.Phase.IsTerminal() ||
+			live.Status.Phase == kargoapi.PromotionPhaseRunning {
+			return nil
+		}
+
+		original := live.DeepCopy()
+		now := metav1.Now()
+		live.Status.Phase = kargoapi.PromotionPhaseAborted
+		live.Status.Message = api.RejectedFreightPromotionMessage(freightName)
 		live.Status.FinishedAt = &now
 		aborted = true
 		return r.kargoClient.Status().Patch(

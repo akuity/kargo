@@ -58,6 +58,15 @@ func RefreshPromotion(
 	return promo, nil
 }
 
+// RejectedFreightPromotionMessage returns the terminal Promotion message used
+// when Freight is rejected before a pending Promotion begins running.
+func RejectedFreightPromotionMessage(freightName string) string {
+	return fmt.Sprintf(
+		"Freight %q was rejected before this Promotion ran",
+		freightName,
+	)
+}
+
 // AbortPromotion forces aborting the Promotion by setting an annotation on the
 // object, causing the controller to abort the Promotion. The annotation value
 // is the action to take on the Promotion to abort it.

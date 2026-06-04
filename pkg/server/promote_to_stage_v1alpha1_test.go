@@ -340,6 +340,64 @@ func TestPromoteToStage(t *testing.T) {
 			},
 		},
 		{
+			name: "Freight is rejected",
+			req: &svcv1alpha1.PromoteToStageRequest{
+				Project: "fake-project",
+				Stage:   "fake-stage",
+				Freight: "fake-freight",
+			},
+			server: &server{
+				validateProjectExistsFn: func(context.Context, string) error {
+					return nil
+				},
+				getStageFn: func(
+					context.Context,
+					client.Client,
+					types.NamespacedName,
+				) (*kargoapi.Stage, error) {
+					return &kargoapi.Stage{
+						Spec: testStageSpec,
+					}, nil
+				},
+				getFreightByNameOrAliasFn: func(
+					context.Context,
+					client.Client,
+					string, string, string,
+				) (*kargoapi.Freight, error) {
+					return &kargoapi.Freight{
+						ObjectMeta: metav1.ObjectMeta{Name: "fake-freight"},
+						Status: kargoapi.FreightStatus{
+							Rejected: &kargoapi.FreightRejection{},
+						},
+					}, nil
+				},
+				authorizeFn: func(
+					context.Context,
+					string,
+					schema.GroupVersionResource,
+					string,
+					client.ObjectKey,
+				) error {
+					return nil
+				},
+				isFreightAvailableFn: func(*kargoapi.Stage, *kargoapi.Freight) bool {
+					return true
+				},
+			},
+			assertions: func(
+				t *testing.T,
+				_ *fakeevent.EventRecorder,
+				_ *connect.Response[svcv1alpha1.PromoteToStageResponse],
+				err error,
+			) {
+				require.Error(t, err)
+				var connErr *connect.Error
+				require.True(t, errors.As(err, &connErr))
+				require.Equal(t, connect.CodeFailedPrecondition, connErr.Code())
+				require.Contains(t, connErr.Message(), "has been rejected and cannot be promoted")
+			},
+		},
+		{
 			name: "error building Promotion",
 			req: &svcv1alpha1.PromoteToStageRequest{
 				Project: "fake-project",

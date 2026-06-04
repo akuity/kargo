@@ -885,6 +885,11 @@ func (r *reconciler) ensureDefaultUserRoles(
 					Resources: []string{"stages"},
 					Verbs:     []string{"promote"},
 				},
+				{ // Reject permission on all Freight
+					APIGroups: []string{kargoapi.GroupVersion.Group},
+					Resources: []string{"freights"},
+					Verbs:     []string{"reject"},
+				},
 				{ // Nearly full access to all Promotions, but they are immutable
 					APIGroups: []string{kargoapi.GroupVersion.Group},
 					Resources: []string{"promotions"},
@@ -967,6 +972,11 @@ func (r *reconciler) ensureDefaultUserRoles(
 					APIGroups: []string{kargoapi.GroupVersion.Group},
 					Resources: []string{"stages"},
 					Verbs:     []string{"promote"},
+				},
+				{ // Reject permission on all Freight
+					APIGroups: []string{kargoapi.GroupVersion.Group},
+					Resources: []string{"freights"},
+					Verbs:     []string{"reject"},
 				},
 				{ // Can create and view promotions
 					APIGroups: []string{kargoapi.GroupVersion.Group},

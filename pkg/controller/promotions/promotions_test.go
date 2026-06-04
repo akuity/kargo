@@ -236,6 +236,75 @@ func TestReconcile(t *testing.T) {
 			},
 		},
 		{
+			name:                  "Promotion for rejected Freight aborts before running",
+			expectPromoteFnCalled: false,
+			promoToReconcile:      &types.NamespacedName{Namespace: "fake-namespace", Name: "fake-promo"},
+			expectedPhase:         kargoapi.PromotionPhaseAborted,
+			expectedMessage:       api.RejectedFreightPromotionMessage("fake-freight"),
+			promos: []client.Object{
+				&kargoapi.Stage{
+					ObjectMeta: metav1.ObjectMeta{
+						Name:      "fake-stage",
+						Namespace: "fake-namespace",
+					},
+					Status: kargoapi.StageStatus{
+						CurrentPromotion: &kargoapi.PromotionReference{
+							Name: "fake-promo",
+						},
+					},
+				},
+				&kargoapi.Freight{
+					ObjectMeta: metav1.ObjectMeta{
+						Name:      "fake-freight",
+						Namespace: "fake-namespace",
+					},
+					Status: kargoapi.FreightStatus{
+						Rejected: &kargoapi.FreightRejection{},
+					},
+				},
+				func() *kargoapi.Promotion {
+					promo := newPromo("fake-namespace", "fake-promo", "fake-stage", kargoapi.PromotionPhasePending, now)
+					promo.Spec.Freight = "fake-freight"
+					return promo
+				}(),
+			},
+		},
+		{
+			name:                  "running Promotion for rejected Freight is not interrupted",
+			expectPromoteFnCalled: true,
+			promoToReconcile:      &types.NamespacedName{Namespace: "fake-namespace", Name: "fake-promo"},
+			expectedPhase:         kargoapi.PromotionPhaseSucceeded,
+			expectedEventRecorded: true,
+			expectedEventType:     kargoapi.EventTypePromotionSucceeded,
+			promos: []client.Object{
+				&kargoapi.Stage{
+					ObjectMeta: metav1.ObjectMeta{
+						Name:      "fake-stage",
+						Namespace: "fake-namespace",
+					},
+					Status: kargoapi.StageStatus{
+						CurrentPromotion: &kargoapi.PromotionReference{
+							Name: "fake-promo",
+						},
+					},
+				},
+				&kargoapi.Freight{
+					ObjectMeta: metav1.ObjectMeta{
+						Name:      "fake-freight",
+						Namespace: "fake-namespace",
+					},
+					Status: kargoapi.FreightStatus{
+						Rejected: &kargoapi.FreightRejection{},
+					},
+				},
+				func() *kargoapi.Promotion {
+					promo := newPromo("fake-namespace", "fake-promo", "fake-stage", kargoapi.PromotionPhaseRunning, now)
+					promo.Spec.Freight = "fake-freight"
+					return promo
+				}(),
+			},
+		},
+		{
 			name:                  "auto-promotion blocked by hold aborts before running",
 			expectPromoteFnCalled: false,
 			promoToReconcile:      &types.NamespacedName{Namespace: "fake-namespace", Name: "fake-promo"},

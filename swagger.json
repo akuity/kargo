@@ -1165,6 +1165,138 @@
         }
       }
     },
+    "/v1beta1/projects/{project}/freight/{freight-name-or-alias}/reject": {
+      "post": {
+        "security": [
+          {
+            "BearerAuth": []
+          }
+        ],
+        "description": "Mark a Freight resource as rejected, preventing future promotion.",
+        "consumes": [
+          "application/json"
+        ],
+        "produces": [
+          "application/json"
+        ],
+        "tags": [
+          "Core",
+          "Project-Level"
+        ],
+        "summary": "Reject Freight",
+        "operationId": "RejectFreight",
+        "parameters": [
+          {
+            "type": "string",
+            "description": "Project name",
+            "name": "project",
+            "in": "path",
+            "required": true
+          },
+          {
+            "type": "string",
+            "description": "Freight name or alias",
+            "name": "freight-name-or-alias",
+            "in": "path",
+            "required": true
+          },
+          {
+            "description": "Reject Freight request",
+            "name": "body",
+            "in": "body",
+            "required": true,
+            "schema": {
+              "$ref": "#/definitions/RejectFreightRequest"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Success"
+          },
+          "400": {
+            "description": "Bad Request",
+            "schema": {
+              "$ref": "#/definitions/ErrorResponse"
+            }
+          },
+          "403": {
+            "description": "Forbidden",
+            "schema": {
+              "$ref": "#/definitions/ErrorResponse"
+            }
+          },
+          "404": {
+            "description": "Not Found",
+            "schema": {
+              "$ref": "#/definitions/ErrorResponse"
+            }
+          },
+          "500": {
+            "description": "Internal Server Error",
+            "schema": {
+              "$ref": "#/definitions/ErrorResponse"
+            }
+          }
+        }
+      },
+      "delete": {
+        "security": [
+          {
+            "BearerAuth": []
+          }
+        ],
+        "description": "Clear a Freight resource's rejected status.",
+        "produces": [
+          "application/json"
+        ],
+        "tags": [
+          "Core",
+          "Project-Level"
+        ],
+        "summary": "Clear Freight rejection",
+        "operationId": "ClearFreightRejection",
+        "parameters": [
+          {
+            "type": "string",
+            "description": "Project name",
+            "name": "project",
+            "in": "path",
+            "required": true
+          },
+          {
+            "type": "string",
+            "description": "Freight name or alias",
+            "name": "freight-name-or-alias",
+            "in": "path",
+            "required": true
+          }
+        ],
+        "responses": {
+          "204": {
+            "description": "Success"
+          },
+          "403": {
+            "description": "Forbidden",
+            "schema": {
+              "$ref": "#/definitions/ErrorResponse"
+            }
+          },
+          "404": {
+            "description": "Not Found",
+            "schema": {
+              "$ref": "#/definitions/ErrorResponse"
+            }
+          },
+          "500": {
+            "description": "Internal Server Error",
+            "schema": {
+              "$ref": "#/definitions/ErrorResponse"
+            }
+          }
+        }
+      }
+    },
     "/v1beta1/projects/{project}/generic-credentials": {
       "get": {
         "security": [
@@ -5402,6 +5534,14 @@
         }
       }
     },
+    "RejectFreightRequest": {
+      "type": "object",
+      "properties": {
+        "reason": {
+          "type": "string"
+        }
+      }
+    },
     "ResolvedLink": {
       "type": "object",
       "properties": {
@@ -7130,6 +7270,23 @@
         }
       }
     },
+    "FreightRejection": {
+      "type": "object",
+      "properties": {
+        "actor": {
+          "description": "Actor identifies the user who rejected this Freight.",
+          "type": "string"
+        },
+        "reason": {
+          "description": "Reason explains why this Freight was rejected.\n\n+kubebuilder:validation:MaxLength=1024",
+          "type": "string"
+        },
+        "rejectedAt": {
+          "description": "RejectedAt is the time at which this Freight was rejected.",
+          "type": "string"
+        }
+      }
+    },
     "FreightRequest": {
       "type": "object",
       "properties": {
@@ -7209,6 +7366,14 @@
           "additionalProperties": {
             "type": "object"
           }
+        },
+        "rejected": {
+          "description": "Rejected describes why this Freight has been marked unfit for promotion.\nRejected Freight cannot be promoted.",
+          "allOf": [
+            {
+              "$ref": "#/definitions/FreightRejection"
+            }
+          ]
         },
         "verifiedIn": {
           "description": "VerifiedIn describes the Stages in which this Freight has been verified\nthrough promotion and subsequent health checks.",

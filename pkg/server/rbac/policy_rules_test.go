@@ -163,6 +163,29 @@ func TestNormalizePolicyRules(t *testing.T) {
 		)
 	})
 
+	t.Run("wildcard verbs expand with Freight custom verbs", func(t *testing.T) {
+		rules, err := NormalizePolicyRules(
+			[]rbacv1.PolicyRule{{
+				APIGroups: []string{kargoapi.GroupVersion.Group},
+				Resources: []string{"freights"},
+				Verbs:     []string{"*"},
+			}},
+			&PolicyRuleNormalizationOptions{IncludeCustomVerbsInExpansion: true},
+		)
+		require.NoError(t, err)
+		require.Equal(
+			t,
+			[]rbacv1.PolicyRule{
+				{
+					APIGroups: []string{kargoapi.GroupVersion.Group},
+					Resources: []string{"freights"},
+					Verbs:     allFreightsVerbs,
+				},
+			},
+			rules,
+		)
+	})
+
 	t.Run("correct groups are determined automatically", func(t *testing.T) {
 		rules, err := NormalizePolicyRules(
 			[]rbacv1.PolicyRule{{

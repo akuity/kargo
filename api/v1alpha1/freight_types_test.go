@@ -247,6 +247,14 @@ func TestFreight_IsApprovedFor(t *testing.T) {
 	require.True(t, freight.IsApprovedFor(testStage))
 }
 
+func TestFreight_IsRejected(t *testing.T) {
+	freight := &Freight{}
+	require.False(t, freight.IsRejected())
+	freight.Status.Rejected = &FreightRejection{}
+	require.True(t, freight.IsRejected())
+	require.False(t, (*Freight)(nil).IsRejected())
+}
+
 func TestFreight_GetLongestSoak(t *testing.T) {
 	testStage := "fake-stage"
 	testCases := []struct {
@@ -466,6 +474,32 @@ func TestFreightStatus_AddApprovedStage(t *testing.T) {
 		require.True(t, approved)
 		require.Equal(t, now, record.ApprovedAt.Time)
 	})
+}
+
+func TestFreightStatus_Reject(t *testing.T) {
+	rejectedAt := time.Now()
+	status := FreightStatus{}
+
+	status.Reject("fake-actor", "fake-reason", rejectedAt)
+
+	require.NotNil(t, status.Rejected)
+	require.Equal(t, rejectedAt, status.Rejected.RejectedAt.Time)
+	require.Equal(t, "fake-actor", status.Rejected.Actor)
+	require.Equal(t, "fake-reason", status.Rejected.Reason)
+}
+
+func TestFreightStatus_ClearRejected(t *testing.T) {
+	status := FreightStatus{
+		ApprovedFor: map[string]ApprovedStage{"fake-stage": {}},
+		Rejected:    &FreightRejection{},
+		VerifiedIn:  map[string]VerifiedStage{"upstream": {}},
+	}
+
+	status.ClearRejected()
+
+	require.Nil(t, status.Rejected)
+	require.Contains(t, status.ApprovedFor, "fake-stage")
+	require.Contains(t, status.VerifiedIn, "upstream")
 }
 
 func TestFreightStatus_UpsertMetadata(t *testing.T) {

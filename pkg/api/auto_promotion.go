@@ -83,6 +83,9 @@ func SelectAutoPromotionCandidates(
 ) (map[string]kargoapi.Freight, error) {
 	availableByOrigin := make(map[string][]kargoapi.Freight)
 	for _, freight := range availableFreight {
+		if freight.IsRejected() {
+			continue
+		}
 		origin := freight.Origin.String()
 		availableByOrigin[origin] = append(availableByOrigin[origin], freight)
 	}
