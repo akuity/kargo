@@ -48,6 +48,7 @@ EZv4FqnG2KDTlXoV/Ku1ib5vzgQK5fTFfqO5dm5sLM4qQFmLadULaTcNOldyH3KG
 c1e3
 -----END CERTIFICATE-----`)
 
+
 func TestNewAuthMiddleware(t *testing.T) {
 	a := &authMiddleware{}
 	middleware := newAuthMiddleware(t.Context(), config.ServerConfig{}, nil)
@@ -167,6 +168,20 @@ func TestAuthenticate(t *testing.T) {
 		testKargoIssuer = "fake-kargo-issuer"
 		testToken       = "some-token"
 	)
+	saTokenWithSecretName, err := jwt.NewWithClaims(jwt.SigningMethodHS256, jwt.MapClaims{
+		"iss":                                    "kubernetes/serviceaccount",
+		"kubernetes.io/serviceaccount/namespace": "my-project",
+		"kubernetes.io/serviceaccount/secret.name":          "my-ci-token",
+		"kubernetes.io/serviceaccount/service-account.name": "my-role",
+		"sub": "system:serviceaccount:my-project:my-role",
+	}).SignedString([]byte("test-key"))
+	require.NoError(t, err)
+	saTokenSubOnly, err := jwt.NewWithClaims(jwt.SigningMethodHS256, jwt.MapClaims{
+		"iss": "kubernetes/serviceaccount",
+		"sub": "system:serviceaccount:my-project:my-role",
+	}).SignedString([]byte("test-key"))
+	require.NoError(t, err)
+
 	testSets := map[string]struct {
 		path           string
 		authMiddleware *authMiddleware
@@ -401,6 +416,50 @@ func TestAuthenticate(t *testing.T) {
 				require.Equal(t, "invalid token", err.Error())
 				_, ok := user.InfoFromContext(ctx)
 				require.False(t, ok)
+			},
+		},
+		"Kubernetes SA token with secret name claim": {
+			path: testPath,
+			authMiddleware: &authMiddleware{
+				parseUnverifiedJWTFn: func(_ string, claims jwt.Claims) (*jwt.Token, []string, error) {
+					rc, ok := claims.(*jwt.RegisteredClaims)
+					require.True(t, ok)
+					rc.Issuer = "kubernetes/serviceaccount"
+					return nil, nil, nil
+				},
+				verifyKubernetesTokenFn: func(context.Context, string) error {
+					return nil
+				},
+			},
+			token: saTokenWithSecretName,
+			assertions: func(ctx context.Context, err error) {
+				require.NoError(t, err)
+				u, ok := user.InfoFromContext(ctx)
+				require.True(t, ok)
+				require.Equal(t, "my-ci-token", u.Username)
+				require.Equal(t, "serviceaccount", u.UsernameClaim)
+			},
+		},
+		"Kubernetes SA token without secret name claim falls back to SA name": {
+			path: testPath,
+			authMiddleware: &authMiddleware{
+				parseUnverifiedJWTFn: func(_ string, claims jwt.Claims) (*jwt.Token, []string, error) {
+					rc, ok := claims.(*jwt.RegisteredClaims)
+					require.True(t, ok)
+					rc.Issuer = "kubernetes/serviceaccount"
+					return nil, nil, nil
+				},
+				verifyKubernetesTokenFn: func(context.Context, string) error {
+					return nil
+				},
+			},
+			token: saTokenSubOnly,
+			assertions: func(ctx context.Context, err error) {
+				require.NoError(t, err)
+				u, ok := user.InfoFromContext(ctx)
+				require.True(t, ok)
+				require.Equal(t, "my-role", u.Username)
+				require.Equal(t, "serviceaccount", u.UsernameClaim)
 			},
 		},
 	}
@@ -736,6 +795,72 @@ func TestVerifyKubernetesToken(t *testing.T) {
 			}
 			err := authenticator.verifyKubernetesToken(t.Context(), testToken)
 			testCase.assertions(t, err)
+		})
+	}
+}
+
+func TestServiceAccountUsernameFromToken(t *testing.T) {
+	t.Parallel()
+
+	tokenWithSecretName, err := jwt.NewWithClaims(jwt.SigningMethodHS256, jwt.MapClaims{
+		"iss":                                    "kubernetes/serviceaccount",
+		"kubernetes.io/serviceaccount/namespace": "my-project",
+		"kubernetes.io/serviceaccount/secret.name":          "my-ci-token",
+		"kubernetes.io/serviceaccount/service-account.name": "my-role",
+		"sub": "system:serviceaccount:my-project:my-role",
+	}).SignedString([]byte("test-key"))
+	require.NoError(t, err)
+	tokenSubOnly, err := jwt.NewWithClaims(jwt.SigningMethodHS256, jwt.MapClaims{
+		"iss": "kubernetes/serviceaccount",
+		"sub": "system:serviceaccount:my-project:my-role",
+	}).SignedString([]byte("test-key"))
+	require.NoError(t, err)
+	tokenNonSASub, err := jwt.NewWithClaims(jwt.SigningMethodHS256, jwt.MapClaims{
+		"sub": "some-other-subject",
+	}).SignedString([]byte("test-key"))
+	require.NoError(t, err)
+	tokenMissingSub, err := jwt.NewWithClaims(jwt.SigningMethodHS256, jwt.MapClaims{
+		"iss": "kubernetes/serviceaccount",
+	}).SignedString([]byte("test-key"))
+	require.NoError(t, err)
+
+	testCases := []struct {
+		name             string
+		token            string
+		expectedUsername string
+		expectedClaim    string
+	}{
+		{
+			name:  "not a JWT",
+			token: "not-a-jwt",
+		},
+		{
+			name:             "secret name claim takes priority",
+			token:            tokenWithSecretName,
+			expectedUsername: "my-ci-token",
+			expectedClaim:    "serviceaccount",
+		},
+		{
+			name:             "fallback to SA name from sub when no secret name",
+			token:            tokenSubOnly,
+			expectedUsername: "my-role",
+			expectedClaim:    "serviceaccount",
+		},
+		{
+			name:  "non-SA sub returns empty",
+			token: tokenNonSASub,
+		},
+		{
+			name:  "missing sub returns empty",
+			token: tokenMissingSub,
+		},
+	}
+	for _, testCase := range testCases {
+		t.Run(testCase.name, func(t *testing.T) {
+			t.Parallel()
+			username, claim := serviceAccountUsernameFromToken(testCase.token)
+			require.Equal(t, testCase.expectedUsername, username)
+			require.Equal(t, testCase.expectedClaim, claim)
 		})
 	}
 }
