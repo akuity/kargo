@@ -255,9 +255,24 @@ jobs:
         platforms: linux/amd64,linux/arm64
         build-args: |
           BASE_IMAGE=localhost:5000/kargo-base
-        push: false
+        # Push to the job-local registry service (nothing leaves the runner)
+        # so the built image can be scanned for CVEs below.
+        tags: localhost:5000/kargo:scan
+        push: true
         cache-from: type=gha
         cache-to: type=gha,mode=max
+    - name: Install Grype
+      id: grype
+      uses: anchore/scan-action/download-grype@e1165082ffb1fe366ebaf02d8526e7c4989ea9d2 # v7.4.0
+      with:
+        cache-db: true
+    - name: Scan image for CVEs
+      env:
+        GRYPE_CMD: ${{ steps.grype.outputs.cmd }}
+        GRYPE_REGISTRY_INSECURE_USE_HTTP: "true" # job-local registry service
+        FAIL_ON: "" # report-only; set to "high" to enforce
+      # VEX lookups use the canonical published repo path.
+      run: ./hack/cve-scan.sh "registry:localhost:5000/kargo:scan" "ghcr.io/akuity/kargo"
 
   build-cli:
     needs: [test-unit, lint-go, lint-charts, lint-proto, lint-and-typecheck-ui, check-codegen]
