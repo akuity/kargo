@@ -101,7 +101,7 @@ func (s *server) ApproveFreight(
 		return nil, authErr
 	}
 
-	if err = rejectedFreightApprovalError(freight); err != nil {
+	if err = rejectedFreightError(freight, "approved"); err != nil {
 		return nil, connect.NewError(connect.CodeFailedPrecondition, err)
 	}
 
@@ -212,8 +212,8 @@ func (s *server) approveFreight(c *gin.Context) {
 		return
 	}
 
-	if err := rejectedFreightApprovalError(freight); err != nil {
-		_ = c.Error(libhttp.Error(err, http.StatusBadRequest))
+	if err := rejectedFreightError(freight, "approved"); err != nil {
+		_ = c.Error(libhttp.Error(err, http.StatusConflict))
 		return
 	}
 

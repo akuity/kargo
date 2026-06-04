@@ -365,6 +365,11 @@ func (r *reconciler) Reconcile(
 		return ctrl.Result{}, nil
 	}
 
+	// Re-read the Freight directly from the API server instead of trusting the
+	// cached copy fetched above. This controller does not watch Freight, and a
+	// Promotion's rejection is only checked here, before it starts running (once
+	// Running, it is never re-checked). A live read closes the window where the
+	// Freight is rejected after the cached read but before the Promotion runs.
 	liveFreight, err := r.getLiveFreight(
 		ctx,
 		types.NamespacedName{Namespace: promo.Namespace, Name: promo.Spec.Freight},
@@ -778,7 +783,10 @@ func (r *reconciler) abortPromotionForRejectedFreight(
 		original := live.DeepCopy()
 		now := metav1.Now()
 		live.Status.Phase = kargoapi.PromotionPhaseAborted
-		live.Status.Message = api.RejectedFreightPromotionMessage(freightName)
+		live.Status.Message = fmt.Sprintf(
+			"Freight %q was rejected before this Promotion ran",
+			freightName,
+		)
 		live.Status.FinishedAt = &now
 		aborted = true
 		return r.kargoClient.Status().Patch(

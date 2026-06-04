@@ -6,22 +6,16 @@ import (
 	kargoapi "github.com/akuity/kargo/api/v1alpha1"
 )
 
-func rejectedFreightPromotionError(freight *kargoapi.Freight) error {
+// rejectedFreightError returns an error explaining that the Freight has been
+// rejected and cannot have the given action (e.g. "promoted" or "approved")
+// performed on it. It returns nil if the Freight is not rejected.
+func rejectedFreightError(freight *kargoapi.Freight, action string) error {
 	if !freight.IsRejected() {
 		return nil
 	}
 	return fmt.Errorf(
-		"freight %q has been rejected and cannot be promoted",
+		"freight %q has been rejected and cannot be %s",
 		freight.Name,
-	)
-}
-
-func rejectedFreightApprovalError(freight *kargoapi.Freight) error {
-	if !freight.IsRejected() {
-		return nil
-	}
-	return fmt.Errorf(
-		"freight %q has been rejected and cannot be approved",
-		freight.Name,
+		action,
 	)
 }

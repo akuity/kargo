@@ -240,7 +240,7 @@ func TestReconcile(t *testing.T) {
 			expectPromoteFnCalled: false,
 			promoToReconcile:      &types.NamespacedName{Namespace: "fake-namespace", Name: "fake-promo"},
 			expectedPhase:         kargoapi.PromotionPhaseAborted,
-			expectedMessage:       api.RejectedFreightPromotionMessage("fake-freight"),
+			expectedMessage:       `Freight "fake-freight" was rejected before this Promotion ran`,
 			promos: []client.Object{
 				&kargoapi.Stage{
 					ObjectMeta: metav1.ObjectMeta{

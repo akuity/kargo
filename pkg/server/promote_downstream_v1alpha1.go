@@ -98,7 +98,7 @@ func (s *server) PromoteDownstream(
 		return nil, connect.NewError(connect.CodeNotFound, err)
 	}
 
-	if err = rejectedFreightPromotionError(freight); err != nil {
+	if err = rejectedFreightError(freight, "promoted"); err != nil {
 		return nil, connect.NewError(connect.CodeFailedPrecondition, err)
 	}
 
@@ -289,8 +289,8 @@ func (s *server) promoteDownstream(c *gin.Context) {
 		freight = &list.Items[0]
 	}
 
-	if err := rejectedFreightPromotionError(freight); err != nil {
-		_ = c.Error(libhttp.Error(err, http.StatusBadRequest))
+	if err := rejectedFreightError(freight, "promoted"); err != nil {
+		_ = c.Error(libhttp.Error(err, http.StatusConflict))
 		return
 	}
 

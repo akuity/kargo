@@ -18,7 +18,9 @@ import (
 )
 
 const (
-	freightRejectVerb               = "reject"
+	freightRejectVerb = "reject"
+	// maxFreightRejectionReasonLength mirrors the MaxLength validation marker on
+	// FreightRejection.Reason in api/v1alpha1/freight_types.go.
 	maxFreightRejectionReasonLength = 1024
 )
 
@@ -155,11 +157,7 @@ func (s *server) authorizeFreightRejection(
 	ctx context.Context,
 	freight *kargoapi.Freight,
 ) error {
-	authorizeFn := s.authorizeFn
-	if authorizeFn == nil {
-		authorizeFn = s.client.Authorize
-	}
-	return authorizeFn(
+	return s.authorizeFn(
 		ctx,
 		freightRejectVerb,
 		kargoapi.GroupVersion.WithResource("freights"),

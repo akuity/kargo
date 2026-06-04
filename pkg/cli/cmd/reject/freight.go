@@ -18,6 +18,9 @@ import (
 	"github.com/akuity/kargo/pkg/client/generated/models"
 )
 
+// maxReasonLength mirrors the MaxLength validation marker on
+// FreightRejection.Reason in api/v1alpha1/freight_types.go. It is enforced
+// client-side to fail fast before contacting the server.
 const maxReasonLength = 1024
 
 type freightOptions struct {
