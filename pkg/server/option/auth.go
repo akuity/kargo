@@ -454,12 +454,43 @@ func (a *authInterceptor) authenticate(
 	}
 	logger.Debug("token recognized by Kubernetes")
 
+	username, usernameClaim := serviceAccountUsernameFromToken(rawToken)
 	return user.ContextWithInfo(
 		ctx,
 		user.Info{
-			BearerToken: rawToken,
+			BearerToken:   rawToken,
+			Username:      username,
+			UsernameClaim: usernameClaim,
 		},
 	), nil
+}
+
+// serviceAccountUsernameFromToken extracts a meaningful username from a
+// Kubernetes service account JWT. For Kargo API tokens (legacy
+// ServiceAccountToken-type Secrets), the JWT contains the secret name in the
+// "kubernetes.io/serviceaccount/secret.name" claim, which is the name the user
+// chose when running "kargo create token --name=...". Falls back to the service
+// account name extracted from the standard "sub" claim.
+func serviceAccountUsernameFromToken(rawToken string) (username, usernameClaim string) {
+	mapClaims := jwt.MapClaims{}
+	if _, _, err := jwt.NewParser(jwt.WithoutClaimsValidation()).
+		ParseUnverified(rawToken, &mapClaims); err != nil {
+		return "", ""
+	}
+	if secretName, ok := mapClaims["kubernetes.io/serviceaccount/secret.name"]; ok {
+		if name, ok := secretName.(string); ok && name != "" {
+			return name, "serviceaccount"
+		}
+	}
+	// Fall back to the service account name from the sub claim.
+	// Sub format: "system:serviceaccount:<namespace>:<name>"
+	sub, _ := mapClaims["sub"].(string)
+	if strings.HasPrefix(sub, "system:serviceaccount:") {
+		if parts := strings.SplitN(sub, ":", 4); len(parts) == 4 && parts[3] != "" {
+			return parts[3], "serviceaccount"
+		}
+	}
+	return "", ""
 }
 
 var verifierMu = sync.Mutex{}
