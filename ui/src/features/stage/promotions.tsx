@@ -1,5 +1,3 @@
-import { createClient } from '@connectrpc/connect';
-import { createConnectQueryKey, useMutation } from '@connectrpc/connect-query';
 import { faUndo } from '@fortawesome/free-solid-svg-icons';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
 import { useQueryClient } from '@tanstack/react-query';
@@ -10,21 +8,15 @@ import React, { useEffect, useState } from 'react';
 import { Link, generatePath, useParams } from 'react-router-dom';
 
 import { paths } from '@ui/config/paths';
-import { transportWithAuth } from '@ui/config/transport';
 import { PromotionStatusIcon } from '@ui/features/common/promotion-status/promotion-status-icon';
 import {
   getPromotionStatusPhase,
   isPromotionPhaseTerminal,
   isPromotionRetryable
 } from '@ui/features/common/promotion-status/utils';
-import {
-  listPromotions,
-  promoteToStage
-} from '@ui/gen/api/service/v1alpha1/service-KargoService_connectquery';
-import { KargoService } from '@ui/gen/api/service/v1alpha1/service_pb';
-import { ArgoCDShard } from '@ui/gen/api/service/v1alpha1/service_pb';
-import { useGetFreight, useListPromotions } from '@ui/gen/api/v2/core/core';
-import { Promotion } from '@ui/gen/api/v2/models';
+import { Watcher } from '@ui/features/project/pipelines/watcher';
+import { useGetFreight, useListPromotions, usePromoteToStage } from '@ui/gen/api/v2/core/core';
+import { ArgoCDShard, Promotion } from '@ui/gen/api/v2/models';
 import uiPlugins from '@ui/plugins';
 import { UiPluginHoles } from '@ui/plugins/atoms/ui-plugin-hole/ui-plugin-holes';
 import { timestampDate } from '@ui/utils/connectrpc-utils';
@@ -35,7 +27,6 @@ import { hasAbortRequest, promotionCompareFn } from './utils/promotion';
 
 export const Promotions = ({ argocdShard }: { argocdShard?: ArgoCDShard }) => {
   const client = useQueryClient();
-
   const { name: projectName, stageName } = useParams();
 
   const listPromotionsQuery = useListPromotions(
@@ -50,17 +41,13 @@ export const Promotions = ({ argocdShard }: { argocdShard?: ArgoCDShard }) => {
     query: { enabled: !!curFreight }
   });
 
-  const promotionMutation = useMutation(promoteToStage);
+  const promotionMutation = usePromoteToStage();
 
   const onRetryPromotion = (promotion: Promotion) => {
-    const stage = stageName;
-    const project = promotion?.metadata?.namespace;
-    const freight = promotion?.spec?.freight;
-
     promotionMutation.mutate({
-      stage,
-      project,
-      freight
+      project: promotion?.metadata?.namespace || '',
+      stage: stageName || '',
+      data: { freight: promotion?.spec?.freight }
     });
   };
 
@@ -68,60 +55,13 @@ export const Promotions = ({ argocdShard }: { argocdShard?: ArgoCDShard }) => {
   const [selectedPromotion, setSelectedPromotion] = useState<Promotion | undefined>();
 
   useEffect(() => {
-    if (listPromotionsQuery.isLoading || !listPromotionsQuery.data?.data?.items?.length) {
+    if (!projectName || !stageName) {
       return;
     }
-    const cancel = new AbortController();
-
-    const watchPromotions = async () => {
-      const promiseClient = createClient(KargoService, transportWithAuth);
-      const stream = promiseClient.watchPromotions(
-        { project: projectName, stage: stageName },
-        { signal: cancel.signal }
-      );
-
-      let promotions = listPromotionsQuery.data?.data?.items || [];
-
-      for await (const e of stream) {
-        const index = promotions?.findIndex(
-          (item) => item.metadata?.name === e.promotion?.metadata?.name
-        );
-        if (e.type === 'DELETED') {
-          if (index !== -1) {
-            promotions = [...promotions.slice(0, index), ...promotions.slice(index + 1)];
-          }
-        } else {
-          if (index === -1) {
-            promotions = [...promotions, e.promotion];
-          } else {
-            promotions = [
-              ...promotions.slice(0, index),
-              e.promotion as Promotion,
-              ...promotions.slice(index + 1)
-            ];
-          }
-        }
-
-        // Update Promotions list
-        const listPromotionsQueryKey = createConnectQueryKey({
-          cardinality: 'finite',
-          schema: listPromotions,
-          input: {
-            project: projectName,
-            stage: stageName
-          },
-          transport: transportWithAuth
-        });
-        client.setQueryData(listPromotionsQueryKey, {
-          promotions,
-          $typeName: 'akuity.io.kargo.service.v1alpha1.ListPromotionsResponse'
-        });
-      }
-    };
-    watchPromotions();
-
-    return () => cancel.abort();
-  }, [listPromotionsQuery.isLoading]);
+    const watcher = new Watcher(projectName, client);
+    watcher.watchPromotions(stageName);
+    return () => watcher.cancelWatch();
+  }, [projectName, stageName]);
 
   const promotions = React.useMemo(() => {
     // Immutable sorting

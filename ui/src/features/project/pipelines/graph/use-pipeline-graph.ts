@@ -13,7 +13,6 @@ import { repoSubscriptionSizer, stackSizer, stageSizer, warehouseSizer } from '.
 import { stackNodes } from './stack-nodes';
 
 export const reactFlowNodeConstants = {
-  CUSTOM_NODE: 'custom-node',
   STACKED_NODE: 'stacked-node',
   CUSTOM_WAREHOUSE_NODE: 'custom-warehouse-node',
   CUSTOM_REPO_SUBSCRIPTION_NODE: 'custom-repo-subscription-node',
@@ -105,17 +104,21 @@ export const useReactFlowPipelineGraph = (
         }
 
         let actualHeight: number;
+        let customGraphType: string;
         if (dagreNode?.warehouse) {
+          customGraphType = reactFlowNodeConstants.CUSTOM_WAREHOUSE_NODE;
           actualHeight = warehouseSizer.size().height;
         } else if (dagreNode?.subscription) {
+          customGraphType = reactFlowNodeConstants.CUSTOM_REPO_SUBSCRIPTION_NODE;
           actualHeight = repoSubscriptionSizer.size().height;
         } else {
+          customGraphType = reactFlowNodeConstants.CUSTOM_STAGE_NODE;
           actualHeight = stageSizer.size().height;
         }
 
         reactFlowNodes.push({
           id: node,
-          type: reactFlowNodeConstants.CUSTOM_NODE,
+          type: customGraphType,
           position: {
             x: dagreNode?.x - dagreNode?.width / 2,
             y: dagreNode?.y - actualHeight / 2

@@ -6,6 +6,7 @@ import { Link, generatePath } from 'react-router-dom';
 
 import { paths } from '@ui/config/paths';
 import { ColorContext } from '@ui/context/colors';
+import { Stage } from '@ui/gen/api/v2/models';
 
 import { SmallLabel } from '../common/small-label';
 import { StageTag } from '../common/stage-tag';
@@ -94,7 +95,7 @@ export const RequestedFreight = ({
                     to={generatePath(paths.stage, { name: projectName, stageName: stage })}
                   >
                     <StageTag
-                      stage={{ metadata: { name: stage } }}
+                      stage={{ metadata: { name: stage } } as Stage}
                       projectName={projectName || ''}
                       stageColorMap={stageColorMap}
                     />

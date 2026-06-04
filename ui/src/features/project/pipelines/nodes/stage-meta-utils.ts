@@ -21,7 +21,9 @@ export const useIsColorsUsed = () => {
 };
 
 export const getLastPromotionDate = (stage: Stage) =>
-  new Date(stage?.status?.lastPromotion?.finishedAt || '');
+  stage?.status?.lastPromotion?.finishedAt
+    ? new Date(stage?.status?.lastPromotion?.finishedAt)
+    : null;
 
 export const getCurrentPromotion = (stage: Stage) => stage?.status?.currentPromotion?.name;
 

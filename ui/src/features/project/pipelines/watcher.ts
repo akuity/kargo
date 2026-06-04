@@ -1,208 +1,211 @@
-import { create } from '@bufbuild/protobuf';
-import { Client, createClient } from '@connectrpc/connect';
-import { createConnectQueryKey } from '@connectrpc/connect-query';
 import { QueryClient } from '@tanstack/react-query';
 
-import { transportWithAuth } from '@ui/config/transport';
+import { authTokenKey } from '@ui/config/auth';
 import {
-  getStage,
-  getWarehouse,
-  listStages,
-  listWarehouses
-} from '@ui/gen/api/service/v1alpha1/service-KargoService_connectquery';
-import {
-  GetStageRequestSchema,
-  GetWarehouseRequestSchema,
-  KargoService,
-  ListStagesRequestSchema,
-  ListWarehousesRequestSchema,
-  ListWarehousesResponse
-} from '@ui/gen/api/service/v1alpha1/service_pb';
-import { Stage, Warehouse } from '@ui/gen/api/v2/models';
-import { ObjectMeta } from '@ui/gen/k8s.io/apimachinery/pkg/apis/meta/v1/generated_pb';
+  getGetStageQueryKey,
+  getGetWarehouseQueryKey,
+  getListPromotionsQueryKey,
+  getListStagesQueryKey,
+  getListWarehousesQueryKey,
+  getStageResponse,
+  getWarehouseResponse,
+  listPromotionsResponse,
+  listStagesResponse,
+  listWarehousesResponse
+} from '@ui/gen/api/v2/core/core';
+import { Promotion, Stage, Warehouse } from '@ui/gen/api/v2/models';
 
-async function ProcessEvents<T extends { type: string }, S extends { metadata?: ObjectMeta }>(
-  stream: AsyncIterable<T>,
-  getData: () => S[],
-  getter: (e: T) => S,
-  callback: (item: S, data: S[]) => void
-) {
-  let timer: ReturnType<typeof setTimeout> | undefined;
-  for await (const e of stream) {
-    let data = getData();
-    const index = data.findIndex((item) => item.metadata?.name === getter(e).metadata?.name);
-    if (e.type === 'DELETED') {
-      if (index !== -1) {
-        data = [...data.slice(0, index), ...data.slice(index + 1)];
+const getBaseUrl = () => (import.meta.env.VITE_API_URL as string | undefined) || '';
+
+type SSEWatchEvent<T> = { type: string; object: T };
+
+async function* readSSEStream<T>(
+  url: string,
+  signal: AbortSignal
+): AsyncGenerator<SSEWatchEvent<T>> {
+  const token = localStorage.getItem(authTokenKey);
+  const response = await fetch(`${getBaseUrl()}${url}`, {
+    headers: token ? { Authorization: `Bearer ${token}` } : {},
+    signal
+  });
+
+  if (!response.ok || !response.body) {
+    return;
+  }
+
+  const reader = response.body.getReader();
+  const decoder = new TextDecoder();
+  let buffer = '';
+
+  try {
+    while (true) {
+      const { done, value } = await reader.read();
+      if (done) {
+        break;
       }
-    } else {
-      if (index === -1) {
-        data = [...data, getter(e)];
-      } else {
-        data = [...data.slice(0, index), getter(e), ...data.slice(index + 1)];
+      buffer += decoder.decode(value, { stream: true });
+      const parts = buffer.split('\n\n');
+      buffer = parts.pop() ?? '';
+
+      for (const part of parts) {
+        const dataLine = part.split('\n').find((l) => l.startsWith('data: '));
+        if (!dataLine) {
+          continue;
+        }
+        try {
+          yield JSON.parse(dataLine.slice(6)) as SSEWatchEvent<T>;
+        } catch (_) {
+          // skip malformed events
+        }
       }
     }
-
-    clearTimeout(timer);
-    timer = setTimeout(() => callback(getter(e), data));
+  } finally {
+    reader.releaseLock();
   }
 }
 
+function upsertOrDelete<T extends { metadata?: { name?: string } }>(
+  items: T[],
+  item: T,
+  eventType: string
+): T[] {
+  const index = items.findIndex((i) => i.metadata?.name === item.metadata?.name);
+  if (eventType === 'DELETED') {
+    return index !== -1 ? [...items.slice(0, index), ...items.slice(index + 1)] : items;
+  }
+  // ADDED or MODIFIED
+  return index !== -1
+    ? [...items.slice(0, index), item, ...items.slice(index + 1)]
+    : [...items, item];
+}
+
 export class Watcher {
-  cancel: AbortController;
-  client: QueryClient;
-  promiseClient: Client<typeof KargoService>;
+  private cancel: AbortController;
+  private _client: QueryClient;
   project: string;
 
   constructor(project: string, client: QueryClient) {
     this.cancel = new AbortController();
-    this.client = client;
+    this._client = client;
     this.project = project;
-    this.promiseClient = createClient(KargoService, transportWithAuth);
   }
 
   cancelWatch() {
     this.cancel.abort();
   }
 
-  async watchStages(
-    // utilise the fact that something changed in this stage
-    // avoid as much as re-construction of data as possible by using this parameter
-    onStageEvent?: (stage: Stage) => void,
-    warehouses?: string[]
-  ) {
-    const stream = this.promiseClient.watchStages(
-      { project: this.project, freightOrigins: warehouses || [] },
-      { signal: this.cancel.signal }
+  async watchStages(onStageEvent?: (stage: Stage) => void, warehouses?: string[]) {
+    const params = new URLSearchParams({ watch: 'true' });
+    for (const wh of warehouses || []) {
+      params.append('freightOrigins', wh);
+    }
+    const url = `/v1beta1/projects/${encodeURIComponent(this.project)}/stages?${params}`;
+    const listKey = getListStagesQueryKey(
+      this.project,
+      warehouses?.length ? { freightOrigins: warehouses } : {}
     );
 
-    const stagesInput = create(ListStagesRequestSchema, {
-      project: this.project,
-      freightOrigins: warehouses || []
-    });
+    for await (const event of readSSEStream<Stage>(url, this.cancel.signal)) {
+      const stage = event.object;
 
-    ProcessEvents(
-      stream,
-      () => {
-        const data = this.client.getQueryData(
-          createConnectQueryKey({
-            schema: listStages,
-            input: stagesInput,
-            cardinality: 'finite',
-            transport: transportWithAuth
-          })
+      // update list cache
+      this._client.setQueryData(listKey, (old: listStagesResponse | undefined) => {
+        if (!old?.data) {
+          return old;
+        }
+        return {
+          ...old,
+          data: { ...old.data, items: upsertOrDelete(old.data.items ?? [], stage, event.type) }
+        };
+      });
+
+      // update individual stage cache
+      const stageKey = getGetStageQueryKey(this.project, stage.metadata?.name);
+      if (event.type === 'DELETED') {
+        this._client.removeQueries({ queryKey: stageKey });
+      } else {
+        this._client.setQueryData(stageKey, (old: getStageResponse | undefined) =>
+          old ? { ...old, data: stage } : old
         );
-
-        return data?.stages || [];
-      },
-      (e) => e.stage,
-      (stage, data) => {
-        // update Stages list
-        const listStagesQueryKey = createConnectQueryKey({
-          schema: listStages,
-          input: stagesInput,
-          cardinality: 'finite',
-          transport: transportWithAuth
-        });
-        this.client.setQueryData(listStagesQueryKey, {
-          stages: data,
-          $typeName: 'akuity.io.kargo.service.v1alpha1.ListStagesResponse'
-        });
-
-        // update Stage details
-        const getStageQueryKey = createConnectQueryKey({
-          schema: getStage,
-          input: create(GetStageRequestSchema, {
-            project: this.project,
-            name: stage.metadata?.name
-          }),
-          cardinality: 'finite',
-          transport: transportWithAuth
-        });
-        this.client.setQueryData(getStageQueryKey, {
-          result: {
-            value: stage,
-            case: 'stage'
-          },
-          $typeName: 'akuity.io.kargo.service.v1alpha1.GetStageResponse'
-        });
-
         onStageEvent?.(stage);
       }
-    );
+    }
   }
 
   async watchWarehouses(opts?: {
     refreshHook?: () => void;
     onWarehouseEvent?: (warehouse: Warehouse) => void;
   }) {
-    const stream = this.promiseClient.watchWarehouses(
-      { project: this.project },
-      { signal: this.cancel.signal }
-    );
-    const refresh = {} as { [key: string]: boolean };
+    const url = `/v1beta1/projects/${encodeURIComponent(this.project)}/warehouses?watch=true`;
+    const listKey = getListWarehousesQueryKey(this.project);
+    const pendingRefresh: Record<string, boolean> = {};
 
-    ProcessEvents(
-      stream,
-      () => {
-        const data = this.client.getQueryData(
-          createConnectQueryKey({
-            schema: listWarehouses,
-            input: create(ListWarehousesRequestSchema, { project: this.project }),
-            cardinality: 'finite',
-            transport: transportWithAuth
-          })
+    for await (const event of readSSEStream<Warehouse>(url, this.cancel.signal)) {
+      const warehouse = event.object;
+      const name = warehouse.metadata?.name || '';
+
+      // update list cache
+      this._client.setQueryData(listKey, (old: listWarehousesResponse | undefined) => {
+        if (!old?.data) {
+          return old;
+        }
+        return {
+          ...old,
+          data: {
+            ...old.data,
+            items: upsertOrDelete(old.data.items ?? [], warehouse, event.type)
+          }
+        };
+      });
+
+      // update individual warehouse cache
+      const warehouseKey = getGetWarehouseQueryKey(this.project, name);
+      if (event.type === 'DELETED') {
+        this._client.removeQueries({ queryKey: warehouseKey });
+      } else {
+        this._client.setQueryData(warehouseKey, (old: getWarehouseResponse | undefined) =>
+          old ? { ...old, data: warehouse } : old
         );
 
-        return (data as ListWarehousesResponse)?.warehouses || [];
-      },
-      (e) => e.warehouse as Warehouse,
-      (warehouse, data) => {
-        // refetch freight if necessary
-        const refreshRequest = warehouse?.metadata?.annotations['kargo.akuity.io/refresh'];
-        const refreshStatus = warehouse?.status?.lastHandledRefresh;
-        const refreshing = refreshRequest !== undefined && refreshRequest !== refreshStatus;
-        if (refreshing) {
-          refresh[warehouse?.metadata?.name || ''] = true;
-        } else if (refresh[warehouse?.metadata?.name || '']) {
-          delete refresh[warehouse?.metadata?.name || ''];
+        const refreshRequest = warehouse.metadata?.annotations?.['kargo.akuity.io/refresh'];
+        const refreshStatus = warehouse.status?.lastHandledRefresh;
+        const isRefreshing = refreshRequest !== undefined && refreshRequest !== refreshStatus;
+
+        if (isRefreshing) {
+          pendingRefresh[name] = true;
+        } else if (pendingRefresh[name]) {
+          delete pendingRefresh[name];
           opts?.refreshHook?.();
         }
 
-        // update Warehouse list
-        const listWarehousesQueryKey = createConnectQueryKey({
-          schema: listWarehouses,
-          input: create(ListWarehousesRequestSchema, {
-            project: this.project
-          }),
-          cardinality: 'finite',
-          transport: transportWithAuth
-        });
-        this.client.setQueryData(listWarehousesQueryKey, {
-          warehouses: data,
-          $typeName: 'akuity.io.kargo.service.v1alpha1.ListWarehousesResponse'
-        });
-
-        // update Warehouse details
-        const getWarehouseQueryKey = createConnectQueryKey({
-          schema: getWarehouse,
-          input: create(GetWarehouseRequestSchema, {
-            project: this.project,
-            name: warehouse.metadata?.name
-          }),
-          cardinality: 'finite',
-          transport: transportWithAuth
-        });
-        this.client.setQueryData(getWarehouseQueryKey, {
-          $typeName: 'akuity.io.kargo.service.v1alpha1.GetWarehouseResponse',
-          result: {
-            value: warehouse,
-            case: 'warehouse'
-          }
-        });
-
         opts?.onWarehouseEvent?.(warehouse);
       }
-    );
+    }
+  }
+
+  async watchPromotions(stage: string) {
+    const params = new URLSearchParams({ watch: 'true' });
+    if (stage) {
+      params.set('stage', stage);
+    }
+    const url = `/v1beta1/projects/${encodeURIComponent(this.project)}/promotions?${params}`;
+    const listKey = getListPromotionsQueryKey(this.project, { stage });
+
+    for await (const event of readSSEStream<Promotion>(url, this.cancel.signal)) {
+      const promotion = event.object;
+
+      this._client.setQueryData(listKey, (old: listPromotionsResponse | undefined) => {
+        if (!old?.data) {
+          return old;
+        }
+        return {
+          ...old,
+          data: {
+            ...old.data,
+            items: upsertOrDelete(old.data.items ?? [], promotion, event.type)
+          }
+        };
+      });
+    }
   }
 }

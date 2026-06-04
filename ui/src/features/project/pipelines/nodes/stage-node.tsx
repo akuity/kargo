@@ -84,7 +84,6 @@ export const StageNode = (props: { stage: Stage }) => {
   let descriptionItems: ReactNode;
 
   const lastPromotion = getLastPromotionDate(props.stage);
-  const date = lastPromotion;
 
   if (!controlFlow) {
     descriptionItems = (
@@ -233,8 +232,8 @@ export const StageNode = (props: { stage: Stage }) => {
           >
             <Flex gap={4} align='center' justify='center' className='text-[10px]'>
               <span>Last Promotion: </span>
-              <span title={date?.toString()}>
-                {formatDistance(date, new Date(), { addSuffix: true })}
+              <span title={lastPromotion?.toString()}>
+                {formatDistance(lastPromotion, new Date(), { addSuffix: true })}
               </span>
               <FontAwesomeIcon icon={faExternalLink} className='text-[6px]' />
             </Flex>

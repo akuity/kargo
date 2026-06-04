@@ -119,7 +119,7 @@ export const getListProjectsQueryKey = (params?: ListProjectsParams) => {
 
 export const getListProjectsQueryOptions = <
   TData = Awaited<ReturnType<typeof listProjects>>,
-  TError = unknown
+  TError = ErrorType<unknown>
 >(
   params?: ListProjectsParams,
   options?: {
@@ -144,7 +144,10 @@ export const getListProjectsQueryOptions = <
 export type ListProjectsQueryResult = NonNullable<Awaited<ReturnType<typeof listProjects>>>;
 export type ListProjectsQueryError = ErrorType<unknown>;
 
-export function useListProjects<TData = Awaited<ReturnType<typeof listProjects>>, TError = unknown>(
+export function useListProjects<
+  TData = Awaited<ReturnType<typeof listProjects>>,
+  TError = ErrorType<unknown>
+>(
   params: undefined | ListProjectsParams,
   options: {
     query: Partial<UseQueryOptions<Awaited<ReturnType<typeof listProjects>>, TError, TData>> &
@@ -160,7 +163,10 @@ export function useListProjects<TData = Awaited<ReturnType<typeof listProjects>>
   },
   queryClient?: QueryClient
 ): DefinedUseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> };
-export function useListProjects<TData = Awaited<ReturnType<typeof listProjects>>, TError = unknown>(
+export function useListProjects<
+  TData = Awaited<ReturnType<typeof listProjects>>,
+  TError = ErrorType<unknown>
+>(
   params?: ListProjectsParams,
   options?: {
     query?: Partial<UseQueryOptions<Awaited<ReturnType<typeof listProjects>>, TError, TData>> &
@@ -176,7 +182,10 @@ export function useListProjects<TData = Awaited<ReturnType<typeof listProjects>>
   },
   queryClient?: QueryClient
 ): UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> };
-export function useListProjects<TData = Awaited<ReturnType<typeof listProjects>>, TError = unknown>(
+export function useListProjects<
+  TData = Awaited<ReturnType<typeof listProjects>>,
+  TError = ErrorType<unknown>
+>(
   params?: ListProjectsParams,
   options?: {
     query?: Partial<UseQueryOptions<Awaited<ReturnType<typeof listProjects>>, TError, TData>>;
@@ -188,7 +197,10 @@ export function useListProjects<TData = Awaited<ReturnType<typeof listProjects>>
  * @summary List projects
  */
 
-export function useListProjects<TData = Awaited<ReturnType<typeof listProjects>>, TError = unknown>(
+export function useListProjects<
+  TData = Awaited<ReturnType<typeof listProjects>>,
+  TError = ErrorType<unknown>
+>(
   params?: ListProjectsParams,
   options?: {
     query?: Partial<UseQueryOptions<Awaited<ReturnType<typeof listProjects>>, TError, TData>>;
@@ -2131,7 +2143,7 @@ export const getGetFreightLinksQueryKey = (project?: string, freightNameOrAlias?
 
 export const getGetFreightLinksQueryOptions = <
   TData = Awaited<ReturnType<typeof getFreightLinks>>,
-  TError = unknown
+  TError = ErrorType<unknown>
 >(
   project: string,
   freightNameOrAlias: string,
@@ -2159,11 +2171,11 @@ export const getGetFreightLinksQueryOptions = <
 };
 
 export type GetFreightLinksQueryResult = NonNullable<Awaited<ReturnType<typeof getFreightLinks>>>;
-export type GetFreightLinksQueryError = unknown;
+export type GetFreightLinksQueryError = ErrorType<unknown>;
 
 export function useGetFreightLinks<
   TData = Awaited<ReturnType<typeof getFreightLinks>>,
-  TError = unknown
+  TError = ErrorType<unknown>
 >(
   project: string,
   freightNameOrAlias: string,
@@ -2183,7 +2195,7 @@ export function useGetFreightLinks<
 ): DefinedUseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> };
 export function useGetFreightLinks<
   TData = Awaited<ReturnType<typeof getFreightLinks>>,
-  TError = unknown
+  TError = ErrorType<unknown>
 >(
   project: string,
   freightNameOrAlias: string,
@@ -2203,7 +2215,7 @@ export function useGetFreightLinks<
 ): UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> };
 export function useGetFreightLinks<
   TData = Awaited<ReturnType<typeof getFreightLinks>>,
-  TError = unknown
+  TError = ErrorType<unknown>
 >(
   project: string,
   freightNameOrAlias: string,
@@ -2219,7 +2231,7 @@ export function useGetFreightLinks<
 
 export function useGetFreightLinks<
   TData = Awaited<ReturnType<typeof getFreightLinks>>,
-  TError = unknown
+  TError = ErrorType<unknown>
 >(
   project: string,
   freightNameOrAlias: string,
@@ -3575,7 +3587,7 @@ export const getGetStageLinksQueryKey = (project?: string, stage?: string) => {
 
 export const getGetStageLinksQueryOptions = <
   TData = Awaited<ReturnType<typeof getStageLinks>>,
-  TError = unknown
+  TError = ErrorType<unknown>
 >(
   project: string,
   stage: string,
@@ -3599,11 +3611,11 @@ export const getGetStageLinksQueryOptions = <
 };
 
 export type GetStageLinksQueryResult = NonNullable<Awaited<ReturnType<typeof getStageLinks>>>;
-export type GetStageLinksQueryError = unknown;
+export type GetStageLinksQueryError = ErrorType<unknown>;
 
 export function useGetStageLinks<
   TData = Awaited<ReturnType<typeof getStageLinks>>,
-  TError = unknown
+  TError = ErrorType<unknown>
 >(
   project: string,
   stage: string,
@@ -3623,7 +3635,7 @@ export function useGetStageLinks<
 ): DefinedUseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> };
 export function useGetStageLinks<
   TData = Awaited<ReturnType<typeof getStageLinks>>,
-  TError = unknown
+  TError = ErrorType<unknown>
 >(
   project: string,
   stage: string,
@@ -3643,7 +3655,7 @@ export function useGetStageLinks<
 ): UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> };
 export function useGetStageLinks<
   TData = Awaited<ReturnType<typeof getStageLinks>>,
-  TError = unknown
+  TError = ErrorType<unknown>
 >(
   project: string,
   stage: string,
@@ -3659,7 +3671,7 @@ export function useGetStageLinks<
 
 export function useGetStageLinks<
   TData = Awaited<ReturnType<typeof getStageLinks>>,
-  TError = unknown
+  TError = ErrorType<unknown>
 >(
   project: string,
   stage: string,

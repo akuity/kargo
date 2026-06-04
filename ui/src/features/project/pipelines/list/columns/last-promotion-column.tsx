@@ -48,6 +48,13 @@ export const lastPromotionColumn = (): ColumnType<Stage> => ({
     const stage1LastPromotionDate = getLastPromotionDate(stage1);
     const stage2LastPromotionDate = getLastPromotionDate(stage2);
 
+    if (!stage1LastPromotionDate) {
+      return 1;
+    }
+    if (!stage2LastPromotionDate) {
+      return -1;
+    }
+
     return stage2LastPromotionDate > stage1LastPromotionDate ? 1 : -1;
   }
 });

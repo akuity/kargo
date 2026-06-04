@@ -79,7 +79,7 @@ export const Step = ({
   );
 
   const yamlView = {
-    config: meta?.config,
+    config: meta?.config ? JSON.stringify(meta.config, null, '  ') : '',
     output: output ? JSON.stringify(output || {}, null, ' ') : ''
   };
 

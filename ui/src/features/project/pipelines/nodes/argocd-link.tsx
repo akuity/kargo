@@ -9,7 +9,7 @@ import { ARGOCD_CONTEXT_KEY, SHARD_LABEL_KEY } from '@ui/config/labels';
 import { paths } from '@ui/config/paths';
 import { useExtensionsContext } from '@ui/extensions/extensions-context';
 import { HealthStatusIcon } from '@ui/features/common/health-status/health-status-icon';
-import { HealthOutput, Stage } from '@ui/gen/api/v2/models';
+import { Health, HealthOutput, Stage } from '@ui/gen/api/v2/models';
 
 import { useDictionaryContext } from '../context/dictionary-context';
 
@@ -88,8 +88,8 @@ export const ArgoCDLink = ({
         style: { maxHeight: '278px', overflowY: 'auto' },
         items: argoCDApps.map((app, idx) => {
           const status =
-            stage.status?.health?.output?.raw &&
-            getStatusFromHealthOutput(stage.status?.health.output, app.name);
+            stage.status?.health?.output &&
+            getStatusFromHealthOutput(stage.status.health.output, app.name);
 
           return {
             key: idx,
@@ -126,10 +126,12 @@ const argoCDContextSchema = z.array(
 
 type ArgoCDContext = z.infer<typeof argoCDContextSchema>[number];
 
-const getStatusFromHealthOutput = (healthOutput: HealthOutput, app: string) => {
+const getStatusFromHealthOutput = (healthOutput: HealthOutput, app: string): Health | undefined => {
   try {
-    const appStatus = healthOutput
-      .flatMap((item) => item.applicationStatuses)
+    type HealthEntry = { applicationStatuses?: Array<{ Name: string; health?: Health }> };
+    const outputs = healthOutput as unknown as HealthEntry[];
+    const appStatus = outputs
+      .flatMap((item) => item.applicationStatuses ?? [])
       .find((status) => status.Name === app);
     return appStatus?.health;
   } catch {

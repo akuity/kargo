@@ -97,7 +97,7 @@ export const Graph = (props: GraphProps) => {
         const index = stageIndexer.index(stage);
         setNodes((nodes) =>
           nodes.map((node) => {
-            if (node.id === index && node.type === reactFlowNodeConstants.CUSTOM_NODE) {
+            if (node.id === index && node.type === reactFlowNodeConstants.CUSTOM_STAGE_NODE) {
               return {
                 ...node,
                 data: {
@@ -121,7 +121,7 @@ export const Graph = (props: GraphProps) => {
         const index = warehouseIndexer.index(warehouse);
         setNodes((nodes) =>
           nodes.map((node) => {
-            if (node.id === index && node.type === reactFlowNodeConstants.CUSTOM_NODE) {
+            if (node.id === index && node.type === reactFlowNodeConstants.CUSTOM_WAREHOUSE_NODE) {
               return {
                 ...node,
                 data: {
