@@ -7,15 +7,15 @@ import (
 	"github.com/akuity/kargo/pkg/component"
 )
 
-// actionContext bundles resources every action runner might need. It's
-// constructed by callers of executeActions and threaded through to each
+// actionContext bundles resources every action runner might need. It
+// embeds repoContext for the per-repository dependencies and adds the
+// execution-specific fields (target issue/PR number, isPR flag, and the
+// template data evaluated against action templates).
+//
+// Constructed by callers of executeActions and threaded through to each
 // runner.
 type actionContext struct {
-	cfg          config
-	issuesClient IssuesClient
-	prsClient    PullRequestsClient
-	owner        string
-	repo         string
+	repoContext
 	number       int
 	isPR         bool
 	templateData map[string]string

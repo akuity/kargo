@@ -38,6 +38,18 @@ type ClusterConfigSpec struct {
 	// via the Helm chart.
 	// +optional
 	GitClient *GitClientConfig `json:"gitClient,omitempty" protobuf:"bytes,2,opt,name=gitClient"`
+	// FreightLinks defines deep links shown when viewing any Freight resource
+	// across all projects in the cluster. Project-level FreightLinks defined
+	// in ProjectConfig are shown in addition to these.
+	//
+	// +optional
+	FreightLinks []DeepLink `json:"freightLinks,omitempty" protobuf:"bytes,3,rep,name=freightLinks"`
+	// StageLinks defines deep links shown when viewing any Stage resource
+	// across all projects in the cluster. Project-level StageLinks defined in
+	// ProjectConfig are shown in addition to these.
+	//
+	// +optional
+	StageLinks []DeepLink `json:"stageLinks,omitempty" protobuf:"bytes,4,rep,name=stageLinks"`
 }
 
 // GitClientConfig describes cluster-level configuration for Kargo's Git

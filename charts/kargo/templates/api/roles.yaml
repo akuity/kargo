@@ -1,4 +1,4 @@
-{{- if .Values.api.enabled }}
+{{- if and .Values.dataPlane.install .Values.api.enabled }}
 apiVersion: rbac.authorization.k8s.io/v1
 kind: Role
 metadata:

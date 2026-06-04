@@ -1,4 +1,4 @@
-{{- if and .Values.externalWebhooksServer.enabled .Values.externalWebhooksServer.podDisruptionBudget.enabled }}
+{{- if and .Values.workloads.install .Values.externalWebhooksServer.enabled .Values.externalWebhooksServer.podDisruptionBudget.enabled }}
 apiVersion: policy/v1
 kind: PodDisruptionBudget
 metadata:

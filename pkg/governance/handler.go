@@ -84,7 +84,7 @@ func (h *handler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 		}
 		owner, repo, installationID = h.repoInfo(e)
 	case *github.IssuesEvent:
-		if e.GetAction() != "opened" {
+		if e.GetAction() != issueActionOpened {
 			logger.Debug("ignoring non-opened issues event", "action", e.GetAction())
 			w.WriteHeader(http.StatusNoContent)
 			return
@@ -92,9 +92,9 @@ func (h *handler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 		owner, repo, installationID = h.repoInfo(e)
 	case *github.PullRequestEvent:
 		action := e.GetAction()
-		if action != "opened" &&
-			action != "reopened" &&
-			action != "ready_for_review" {
+		if action != prActionOpened &&
+			action != prActionReopened &&
+			action != prActionReadyForReview {
 			logger.Debug("ignoring pull request event", "action", action)
 			w.WriteHeader(http.StatusNoContent)
 			return
@@ -135,53 +135,51 @@ func (h *handler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	orgsClient, err := h.clientFactory.NewOrganizationsClient(installationID)
+	if err != nil {
+		logger.Error(err, "error creating organizations client")
+		w.WriteHeader(http.StatusInternalServerError)
+		return
+	}
+
 	logger = logger.WithValues("owner", owner, "repo", repo)
 	ctx = logging.ContextWithLogger(ctx, logger)
 
+	// Per-request repo context shared by the PR and comment handlers. The
+	// pull-requests client is lazily attached in code branches that need it.
+	rc := repoContext{
+		cfg:          *cfg,
+		owner:        owner,
+		repo:         repo,
+		issuesClient: issuesClient,
+		orgsClient:   orgsClient,
+	}
+
 	switch e := event.(type) {
 	case *github.IssueCommentEvent:
-		var prsClient PullRequestsClient
-		prsClient, err = h.clientFactory.NewPullRequestsClient(installationID)
+		rc.prsClient, err = h.clientFactory.NewPullRequestsClient(installationID)
 		if err != nil {
 			logger.Error(err, "error creating pull requests client")
 			w.WriteHeader(http.StatusInternalServerError)
 			return
 		}
-		commentHandler := &commentHandler{
-			cfg:          *cfg,
-			owner:        owner,
-			repo:         repo,
-			issuesClient: issuesClient,
-			prsClient:    prsClient,
-		}
+		commentHandler := &commentHandler{repoContext: rc}
 		err = commentHandler.handleCreated(ctx, e)
 	case *github.IssuesEvent:
 		if cfg.Issues != nil {
-			issueHandler := &issueHandler{
-				cfg:          *cfg.Issues,
-				owner:        owner,
-				repo:         repo,
-				issuesClient: issuesClient,
-			}
+			issueHandler := &issueHandler{repoContext: rc}
 			err = issueHandler.handleOpened(ctx, e)
 		}
 	case *github.PullRequestEvent:
-		var prsClient PullRequestsClient
-		prsClient, err = h.clientFactory.NewPullRequestsClient(installationID)
+		rc.prsClient, err = h.clientFactory.NewPullRequestsClient(installationID)
 		if err != nil {
 			logger.Error(err, "error creating pull requests client")
 			w.WriteHeader(http.StatusInternalServerError)
 			return
 		}
-		prHandler := &prHandler{
-			cfg:          *cfg,
-			owner:        owner,
-			repo:         repo,
-			issuesClient: issuesClient,
-			prsClient:    prsClient,
-		}
+		prHandler := &prHandler{repoContext: rc}
 		opts := &handlePROpenedOpts{}
-		if e.GetAction() == "reopened" || e.GetAction() == "ready_for_review" {
+		if e.GetAction() == prActionReopened || e.GetAction() == prActionReadyForReview {
 			opts.applyPolicyOnly = true
 		}
 		err = prHandler.handleOpened(ctx, e, opts)

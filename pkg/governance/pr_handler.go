@@ -8,26 +8,17 @@ import (
 	"strconv"
 	"strings"
 
-	"github.com/go-git/go-git/v5/plumbing/format/gitignore"
 	"github.com/google/go-github/v76/github"
 
 	"github.com/akuity/kargo/pkg/logging"
 )
 
-// pathExemptionPerPage is the per-page size requested when fetching changed
-// files for the path-based exemption check. PRs whose file count meets or
-// exceeds this threshold are treated as not path-exempt without bothering
-// to paginate — they're not drive-bys by definition.
-const pathExemptionPerPage = 100
-
 // prHandler handles pull request-related events for a specific repository
-// according to specific configuration.
+// according to specific configuration. It embeds repoContext so the shared
+// per-repository dependencies (config, owner/repo, clients) and their
+// associated methods are accessible directly on the handler.
 type prHandler struct {
-	cfg          config
-	owner        string
-	repo         string
-	issuesClient IssuesClient
-	prsClient    PullRequestsClient
+	repoContext
 }
 
 type handlePROpenedOpts struct {
@@ -116,11 +107,8 @@ func (h *prHandler) handleOpened(
 			for _, l := range inheritedLabels {
 				existingLabels[l] = struct{}{}
 			}
-			if err := enforceRequiredLabels(
+			if err := h.enforceRequiredLabels(
 				ctx,
-				h.issuesClient,
-				h.owner,
-				h.repo,
 				number,
 				existingLabels,
 				h.cfg.PullRequests.RequiredLabelPrefixes,
@@ -136,153 +124,12 @@ func (h *prHandler) handleOpened(
 	// applyPRPolicy and gates only the blocking outcomes; OnPass runs
 	// regardless so that policy-label cleanup keeps working on PRs that
 	// only became exempt after the fact.
-	if err := applyPRPolicy(
-		ctx,
-		h.cfg,
-		h.issuesClient,
-		h.prsClient,
-		h.owner,
-		h.repo,
-		pr,
-		login,
-	); err != nil {
+	if err := h.applyPRPolicy(ctx, pr, login); err != nil {
 		logger.Error(err, "error applying PR policy")
 		errs = append(errs, fmt.Errorf("apply PR policy: %w", err))
 	}
 
 	return errors.Join(errs...)
-}
-
-// applyPRPolicy evaluates PR policy and runs the actions configured for the
-// matching outcome:
-//   - Blocking outcomes (OnNoLinkedIssue, OnBlockedIssue) fire only when
-//     the PR is NOT exempt from policy.
-//   - OnPass fires whenever neither blocking outcome fired — including for
-//     exempt PRs. This keeps cleanup-style OnPass actions (e.g. removing
-//     stale policy/* labels) working for PRs that became exempt after
-//     they'd already been drafted.
-//
-// PullRequests must be non-nil on the supplied config. The exemption check
-// makes a network call (ListFiles) when path patterns are configured;
-// errors there propagate to the caller.
-func applyPRPolicy(
-	ctx context.Context,
-	cfg config,
-	issuesClient IssuesClient,
-	prsClient PullRequestsClient,
-	owner string,
-	repo string,
-	pr *github.PullRequest,
-	login string,
-) error {
-	if cfg.PullRequests == nil {
-		return nil
-	}
-	logger := logging.LoggerFromContext(ctx)
-	number := pr.GetNumber()
-	issueNumber := parseLinkedIssue(pr.GetBody())
-
-	exempt, err := isExemptFromPRPolicy(
-		ctx, cfg, prsClient, owner, repo, pr, login,
-	)
-	if err != nil {
-		return fmt.Errorf("error checking PR policy exemption: %w", err)
-	}
-
-	// Blocking outcomes — gated by exemption.
-	if !exempt {
-		if issueNumber == 0 {
-			if cfg.PullRequests.OnNoLinkedIssue != nil {
-				logger.Info("PR has no linked issue, applying policy")
-				return executeActions(
-					ctx,
-					newPRPolicyActionContext(
-						cfg, issuesClient, prsClient, owner, repo, number, nil,
-					),
-					cfg.PullRequests.OnNoLinkedIssue.Actions,
-				)
-			}
-			// OnNoLinkedIssue not configured: fall through to OnPass.
-		} else if cfg.PullRequests.OnBlockedIssue != nil {
-			// Has a linked issue and OnBlockedIssue is configured: check
-			// for blocking labels.
-			logger = logger.WithValues("linkedIssue", issueNumber)
-			ctx = logging.ContextWithLogger(ctx, logger)
-
-			issue, _, err := issuesClient.Get(ctx, owner, repo, issueNumber)
-			if err != nil {
-				return fmt.Errorf("error fetching linked issue: %w", err)
-			}
-
-			issueLabels := make(map[string]bool)
-			for _, l := range issue.Labels {
-				issueLabels[l.GetName()] = true
-			}
-
-			var blockers []string
-			for _, blocking := range cfg.PullRequests.OnBlockedIssue.BlockingLabels {
-				if issueLabels[blocking] {
-					blockers = append(blockers, blocking)
-				}
-			}
-
-			if len(blockers) > 0 {
-				logger.Info("linked issue has blocking labels, applying policy",
-					"blockers", blockers,
-				)
-				return executeActions(
-					ctx,
-					newPRPolicyActionContext(
-						cfg, issuesClient, prsClient, owner, repo, number,
-						map[string]string{
-							"IssueNumber":    fmt.Sprintf("%d", issueNumber),
-							"BlockingLabels": formatBlockers(blockers),
-						},
-					),
-					cfg.PullRequests.OnBlockedIssue.Actions,
-				)
-			}
-			// No blocking labels: fall through to OnPass.
-		}
-	}
-
-	// Passing outcome (or exempt): run OnPass if configured.
-	if cfg.PullRequests.OnPass == nil {
-		return nil
-	}
-	logger.Info("PR passes policy, applying OnPass actions", "exempt", exempt)
-	return executeActions(
-		ctx,
-		newPRPolicyActionContext(
-			cfg, issuesClient, prsClient, owner, repo, number, nil,
-		),
-		cfg.PullRequests.OnPass.Actions,
-	)
-}
-
-// newPRPolicyActionContext builds an actionContext for the PR policy
-// path. PR policy always operates on a PR (isPR=true) and uses the
-// supplied templateData (which differs per outcome — nil for
-// no-linked-issue and OnPass; populated for OnBlockedIssue).
-func newPRPolicyActionContext(
-	cfg config,
-	issuesClient IssuesClient,
-	prsClient PullRequestsClient,
-	owner string,
-	repo string,
-	number int,
-	templateData map[string]string,
-) *actionContext {
-	return &actionContext{
-		cfg:          cfg,
-		issuesClient: issuesClient,
-		prsClient:    prsClient,
-		owner:        owner,
-		repo:         repo,
-		number:       number,
-		isPR:         true,
-		templateData: templateData,
-	}
 }
 
 // inheritLabels copies labels with configured prefixes from the linked
@@ -335,91 +182,6 @@ func (h *prHandler) inheritLabels(
 		return nil, fmt.Errorf("error adding inherited labels: %w", err)
 	}
 	return toAdd, nil
-}
-
-// isExemptFromPRPolicy reports whether the PR matches any of the configured
-// exemption criteria (maintainer, bot, size, path). Criteria are OR'd.
-// Cheaper checks run first; the path check makes a network call (ListFiles)
-// and is only reached if the cheaper checks didn't already exempt the PR.
-//
-// On error from the path check, returns (false, err) — the caller is
-// expected to treat that as "not exempt" and apply policy.
-func isExemptFromPRPolicy(
-	ctx context.Context,
-	cfg config,
-	prsClient PullRequestsClient,
-	owner string,
-	repo string,
-	pr *github.PullRequest,
-	login string,
-) (bool, error) {
-	if cfg.PullRequests == nil || cfg.PullRequests.Exemptions == nil {
-		return false, nil
-	}
-	ex := cfg.PullRequests.Exemptions
-
-	if ex.Maintainers && isMaintainer(cfg, pr.GetAuthorAssociation()) {
-		return true, nil
-	}
-	if ex.Bots && strings.HasSuffix(login, "[bot]") {
-		return true, nil
-	}
-	// MaxChangedLines is uint; pr additions/deletions are non-negative ints
-	// from go-github. The cast is safe (config-bound value).
-	if ex.MaxChangedLines > 0 &&
-		pr.GetAdditions()+pr.GetDeletions() <= int(ex.MaxChangedLines) { //nolint:gosec
-		return true, nil
-	}
-	if len(ex.PathPatterns) > 0 {
-		exempt, err := allFilesMatchPathPatterns(
-			ctx, prsClient, owner, repo, pr.GetNumber(), ex.PathPatterns,
-		)
-		if err != nil {
-			return false, err
-		}
-		if exempt {
-			return true, nil
-		}
-	}
-	return false, nil
-}
-
-// allFilesMatchPathPatterns returns true if every file changed by the PR
-// matches at least one of the supplied gitignore-style patterns. Returns
-// false (without error) when the PR's file count meets or exceeds the
-// per-page limit — at that scale the PR is not a drive-by and we don't
-// bother paginating.
-func allFilesMatchPathPatterns(
-	ctx context.Context,
-	prsClient PullRequestsClient,
-	owner string,
-	repo string,
-	prNumber int,
-	patterns []string,
-) (bool, error) {
-	files, _, err := prsClient.ListFiles(
-		ctx, owner, repo, prNumber,
-		&github.ListOptions{PerPage: pathExemptionPerPage},
-	)
-	if err != nil {
-		return false, fmt.Errorf("error listing PR files: %w", err)
-	}
-	if len(files) == 0 || len(files) >= pathExemptionPerPage {
-		return false, nil
-	}
-
-	parsed := make([]gitignore.Pattern, 0, len(patterns))
-	for _, p := range patterns {
-		parsed = append(parsed, gitignore.ParsePattern(p, nil))
-	}
-	matcher := gitignore.NewMatcher(parsed)
-
-	for _, f := range files {
-		if !matcher.Match(strings.Split(f.GetFilename(), "/"), false) {
-			return false, nil
-		}
-	}
-	return true, nil
 }
 
 func formatBlockers(blockers []string) string {

@@ -1,6 +1,6 @@
-import { faCircleNodes, faList, faObjectGroup } from '@fortawesome/free-solid-svg-icons';
+import { faCircleNodes, faList, faObjectGroup, faSearch } from '@fortawesome/free-solid-svg-icons';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
-import { Button, Card, Segmented, Select, Typography } from 'antd';
+import { Button, Card, Input, Segmented, Select, Space } from 'antd';
 import { useMemo } from 'react';
 
 import { Freight, Stage, Warehouse } from '@ui/gen/api/v2/models';
@@ -28,33 +28,37 @@ export const GraphFilters = (props: GraphFiltersProps) => {
 
   return (
     <Card size='small' className={props.className}>
-      <Typography.Text className='text-xs' type='secondary'>
-        Warehouses:{' '}
-      </Typography.Text>
-      <Select
-        size='small'
-        mode='multiple'
-        className='ml-1 min-w-[240px]'
-        maxTagCount={2}
-        placeholder='All'
-        value={filterContext?.preferredFilter?.warehouses || []}
-        options={props.warehouses.map((warehouse) => ({
-          label: warehouse?.metadata?.name,
-          value: warehouse?.metadata?.name
-        }))}
-        onChange={(warehouses) =>
-          filterContext?.setPreferredFilter({
-            ...filterContext?.preferredFilter,
-            warehouses
-          })
-        }
-      />
+      <Space size={12}>
+        <Select
+          mode='multiple'
+          className='min-w-[240px]'
+          maxTagCount={2}
+          placeholder='All Warehouses'
+          value={filterContext?.preferredFilter?.warehouses || []}
+          options={props.warehouses.map((warehouse) => ({
+            label: warehouse?.metadata?.name,
+            value: warehouse?.metadata?.name
+          }))}
+          onChange={(warehouses) =>
+            filterContext?.setPreferredFilter({
+              ...filterContext?.preferredFilter,
+              warehouses
+            })
+          }
+        />
 
-      <FreightTimelineFilterButton className='ml-3' freights={props.freights} />
+        <Input
+          allowClear
+          className='w-[180px]'
+          placeholder='Search stages...'
+          prefix={<FontAwesomeIcon icon={faSearch} className='text-xs text-gray-400' />}
+          value={filterContext?.stageSearch || ''}
+          onChange={(e) => filterContext?.setStageSearch(e.target.value)}
+        />
 
-      {props.pipelineView === 'graph' && (
+        <FreightTimelineFilterButton freights={props.freights} />
+
         <Button
-          className='ml-3'
           title='Group stages'
           icon={<FontAwesomeIcon icon={faObjectGroup} />}
           onClick={() => {
@@ -63,19 +67,18 @@ export const GraphFilters = (props: GraphFiltersProps) => {
               stackedNodesParents
             });
           }}
-          disabled={stackedNodesParents.length < 1}
+          disabled={stackedNodesParents.length < 1 || props.pipelineView !== 'graph'}
         />
-      )}
 
-      <Segmented
-        className='ml-3'
-        value={props.pipelineView}
-        options={[
-          { value: 'graph', icon: <FontAwesomeIcon icon={faCircleNodes} /> },
-          { value: 'list', icon: <FontAwesomeIcon icon={faList} /> }
-        ]}
-        onChange={props.setPipelineView}
-      />
+        <Segmented
+          value={props.pipelineView}
+          options={[
+            { value: 'graph', icon: <FontAwesomeIcon icon={faCircleNodes} /> },
+            { value: 'list', icon: <FontAwesomeIcon icon={faList} /> }
+          ]}
+          onChange={props.setPipelineView}
+        />
+      </Space>
     </Card>
   );
 };

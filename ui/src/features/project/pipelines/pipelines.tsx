@@ -131,6 +131,7 @@ export const Pipelines = (props: { creatingStage?: boolean; creatingWarehouse?: 
   };
 
   const [viewingFreight, setViewingFreight] = useState<Freight | null>(null);
+  const [stageSearch, setStageSearch] = useState<string>('');
 
   const freightInStages = useFreightInStage(stages);
   const freightById = useFreightById(getFreightQuery.data?.data?.groups?.['']?.items || []);
@@ -180,7 +181,9 @@ export const Pipelines = (props: { creatingStage?: boolean; creatingWarehouse?: 
           viewingFreight,
           setPreferredFilter,
           preferredFilter,
-          setViewingFreight
+          setViewingFreight,
+          stageSearch,
+          setStageSearch
         }}
       >
         <DictionaryContext.Provider

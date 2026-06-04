@@ -11,46 +11,62 @@ import (
 
 func Test_commentRunner_run(t *testing.T) {
 	testCases := []struct {
-		name              string
-		config            []byte
-		templateData      map[string]string
-		createCommentErr  error
-		expectedBody      string
-		expectErrContains string
+		name             string
+		config           []byte
+		templateData     map[string]string
+		createCommentErr error
+		assert           func(t *testing.T, sentBody string, err error)
 	}{
 		{
-			name:              "decode error — config is not a string",
-			config:            []byte(`[1, 2]`),
-			expectErrContains: "decoding comment config",
+			name:   "decode error — config is not a string",
+			config: []byte(`[1, 2]`),
+			assert: func(t *testing.T, sentBody string, err error) {
+				require.ErrorContains(t, err, "decoding comment config")
+				require.Empty(t, sentBody)
+			},
 		},
 		{
-			name:         "empty template — no API call",
-			config:       []byte(`""`),
-			expectedBody: "",
+			name:   "empty template — no API call",
+			config: []byte(`""`),
+			assert: func(t *testing.T, sentBody string, err error) {
+				require.NoError(t, err)
+				require.Empty(t, sentBody)
+			},
 		},
 		{
-			name:              "template parse error",
-			config:            []byte(`"hello {{ .Bad"`),
-			templateData:      map[string]string{"Foo": "bar"},
-			expectErrContains: "rendering comment template",
+			name:         "template parse error",
+			config:       []byte(`"hello {{ .Bad"`),
+			templateData: map[string]string{"Foo": "bar"},
+			assert: func(t *testing.T, sentBody string, err error) {
+				require.ErrorContains(t, err, "rendering comment template")
+				require.Empty(t, sentBody)
+			},
 		},
 		{
-			name:         "happy path — no template data passes through verbatim",
-			config:       []byte(`"hello world"`),
-			expectedBody: "hello world",
+			name:   "happy path — no template data passes through verbatim",
+			config: []byte(`"hello world"`),
+			assert: func(t *testing.T, sentBody string, err error) {
+				require.NoError(t, err)
+				require.Equal(t, "hello world", sentBody)
+			},
 		},
 		{
 			name:         "happy path — template variables substituted",
 			config:       []byte(`"Hello {{.Name}}!"`),
 			templateData: map[string]string{"Name": "world"},
-			expectedBody: "Hello world!",
+			assert: func(t *testing.T, sentBody string, err error) {
+				require.NoError(t, err)
+				require.Equal(t, "Hello world!", sentBody)
+			},
 		},
 		{
-			name:              "API error propagates",
-			config:            []byte(`"hi"`),
-			createCommentErr:  errors.New("upstream"),
-			expectedBody:      "hi",
-			expectErrContains: "error posting comment",
+			name:             "API error propagates",
+			config:           []byte(`"hi"`),
+			createCommentErr: errors.New("upstream"),
+			assert: func(t *testing.T, sentBody string, err error) {
+				require.ErrorContains(t, err, "error posting comment")
+				require.Equal(t, "hi", sentBody)
+			},
 		},
 	}
 	for _, testCase := range testCases {
@@ -70,20 +86,17 @@ func Test_commentRunner_run(t *testing.T) {
 			err := commentRunner{}.run(
 				t.Context(),
 				&actionContext{
-					issuesClient: fake,
-					owner:        "akuity",
-					repo:         "kargo",
+					repoContext: repoContext{
+						issuesClient: fake,
+						owner:        "akuity",
+						repo:         "kargo",
+					},
 					number:       1,
 					templateData: testCase.templateData,
 				},
 				testCase.config,
 			)
-			if testCase.expectErrContains != "" {
-				require.ErrorContains(t, err, testCase.expectErrContains)
-			} else {
-				require.NoError(t, err)
-			}
-			require.Equal(t, testCase.expectedBody, sentBody)
+			testCase.assert(t, sentBody, err)
 		})
 	}
 }

@@ -7,6 +7,8 @@ import { timerangeTypes } from '../freight/filter-timerange-utils';
 export type FreightTimelineControllerContextType = {
   viewingFreight: Freight | null;
   setViewingFreight: (freight: Freight | null) => void;
+  stageSearch: string;
+  setStageSearch: (search: string) => void;
   preferredFilter: {
     showColors: boolean;
     showAlias: boolean;

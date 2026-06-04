@@ -31,8 +31,10 @@ const (
 	AnnotationKeyDescription = "kargo.akuity.io/description"
 
 	// AnnotationKeyAuthorizedStage is an annotation key that can be set on a
-	// resource to indicate that a Stage is authorized to manage it. The value
-	// of the annotation should be in the format of "<project>:<stage>".
+	// resource to indicate that one or more Stages are authorized to manage it.
+	// The value of the annotation is a comma-separated list of
+	// "<project>:<stage>" entries. A single "<project>:<stage>" value is also
+	// valid and authorizes exactly one Stage.
 	AnnotationKeyAuthorizedStage = "kargo.akuity.io/authorized-stage"
 
 	// AnnotationKeyStage is an annotation key that can be set on a resource to
@@ -69,6 +71,11 @@ const (
 	// AnnotationValueTrue is the value used to indicate that an annotation
 	// is set to true.
 	AnnotationValueTrue = "true"
+
+	// AnnotationKeyRollback is an annotation key that can be set on a Promotion
+	// to indicate that it was created as a rollback to a previously verified
+	// piece of Freight.
+	AnnotationKeyRollback = "kargo.akuity.io/rollback"
 
 	// AnnotationKeyGitHubTokenScope is the key for an annotation that can
 	// optionally be added to any Secret resources that represents a GitHub App

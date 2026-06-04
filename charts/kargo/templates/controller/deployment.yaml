@@ -1,4 +1,6 @@
-{{- if .Values.controller.enabled }}
+{{- if and .Values.workloads.install .Values.controller.enabled }}
+{{- $kc := .Values.controller.kubeconfigSecrets.kargo | default .Values.kubeconfigSecrets.kargo }}
+{{- $argocdKc := .Values.controller.kubeconfigSecrets.argocd | default .Values.kubeconfigSecrets.argocd }}
 apiVersion: apps/v1
 kind: Deployment
 metadata:
@@ -15,6 +17,7 @@ metadata:
   {{- include "kargo.annotations" (dict "root" . "annotations" .Values.controller.annotations) | nindent 2 }}
 spec:
   replicas: 1
+  revisionHistoryLimit: {{ .Values.controller.revisionHistoryLimit }}
   strategy:
     type: Recreate
   selector:
@@ -39,12 +42,7 @@ spec:
         {{- end }}
       {{- end }}
     spec:
-      {{- if not .Values.rbac.useDefaultServiceAccount }}
-      serviceAccount: kargo-controller
-      {{- end }}
-      {{- if .Values.rbac.disableAutomountServiceAccountToken }}
-      automountServiceAccountToken: false
-      {{- end }}
+      serviceAccountName: kargo-controller
       {{- with .Values.controller.affinity | default .Values.global.affinity }}
       affinity:
         {{- toYaml . | nindent 8 }}
@@ -87,7 +85,7 @@ spec:
         volumeMounts:
         - mountPath: /tmp
           name: tmp-data
-        {{- if or .Values.kubeconfigSecrets.kargo .Values.kubeconfigSecrets.argocd }}
+        {{- if or $kc $argocdKc }}
         - mountPath: /etc/kargo/kubeconfigs
           name: kubeconfigs
           readOnly: true
@@ -98,8 +96,7 @@ spec:
           readOnly: true
         {{- end }}
         {{- if or .Values.controller.cabundle.configMapName .Values.controller.cabundle.secretName }}
-        - mountPath: /etc/ssl/certs
-          name: certs
+        {{- include "kargo.cabundle.volumeMount" .Values.controller.cabundle | nindent 8 }}
         {{- end }}
         {{- with .Values.controller.volumeMounts }}
           {{- toYaml . | nindent 8 }}
@@ -110,55 +107,37 @@ spec:
         {{- end }}
         resources:
           {{- toYaml .Values.controller.resources | nindent 10 }}
-
-      {{- if or .Values.controller.cabundle.configMapName .Values.controller.cabundle.secretName .Values.controller.initContainers  }}
-      initContainers:
-      {{- with .Values.controller.initContainers }}
-        {{- toYaml . | nindent 8 }}
+      {{- with .Values.controller.containers }}
+      {{- toYaml . | nindent 6 }}
       {{- end }}
+
+      {{- if or .Values.controller.cabundle.configMapName .Values.controller.cabundle.secretName .Values.controller.initContainers }}
+      initContainers:
       {{- if or .Values.controller.cabundle.configMapName .Values.controller.cabundle.secretName }}
-        - name: parse-cabundle
-          image: {{ include "kargo.image" . }}
-          imagePullPolicy: {{ .Values.image.pullPolicy }}
-          securityContext:
-            runAsUser: 0
-          command:
-          - "/bin/sh"
-          - "-c"
-          args:
-          - |
-            for file in /tmp/source/*; do
-              base_filename=$(basename "$file" .crt)
-              awk 'BEGIN {c=0;} /BEGIN CERT/{c++} { print > "/usr/local/share/ca-certificates/" base_filename "." c ".crt"}' base_filename="$base_filename" < $file
-            done
-            /usr/sbin/update-ca-certificates
-            find /etc/ssl/certs -type l -exec cp --remove-destination {} /etc/ssl/certs/ \;
-            cp -r /etc/ssl/certs/* /tmp/target/
-          volumeMounts:
-          - name: cabundle
-            mountPath: /tmp/source
-          - name: certs
-            mountPath: /tmp/target
+      {{- include "kargo.cabundle.initContainer" (dict "cabundle" .Values.controller.cabundle "context" .) | nindent 6 }}
+      {{- end }}
+      {{- with .Values.controller.initContainers }}
+      {{- toYaml . | nindent 6 }}
       {{- end }}
       {{- end }}
       volumes:
       - name: tmp-data
         emptyDir: {}
-      {{- if or .Values.kubeconfigSecrets.kargo .Values.kubeconfigSecrets.argocd }}
+      {{- if or $kc $argocdKc }}
       - name: kubeconfigs
         projected:
           sources:
-          {{- if .Values.kubeconfigSecrets.kargo }}
+          {{- if $kc }}
           - secret:
-              name: {{ .Values.kubeconfigSecrets.kargo }}
+              name: {{ $kc }}
               items:
               - key: kubeconfig.yaml
                 path: kubeconfig.yaml
                 mode: 0644
           {{- end }}
-          {{- if .Values.kubeconfigSecrets.argocd }}
+          {{- if $argocdKc }}
           - secret:
-              name: {{ .Values.kubeconfigSecrets.argocd }}
+              name: {{ $argocdKc }}
               items:
               - key: kubeconfig.yaml
                 path: argocd-kubeconfig.yaml
@@ -166,17 +145,7 @@ spec:
           {{- end }}
       {{- end }}
       {{- if or .Values.controller.cabundle.configMapName .Values.controller.cabundle.secretName }}
-      {{- if .Values.controller.cabundle.secretName }}
-      - name: cabundle
-        secret:
-          secretName: {{ .Values.controller.cabundle.secretName }}
-      {{- else }}
-      - name: cabundle
-        configMap:
-          name: {{ .Values.controller.cabundle.configMapName }}
-      {{- end }}
-      - name: certs
-        emptyDir: {}
+      {{- include "kargo.cabundle.volumes" .Values.controller.cabundle | nindent 6 }}
       {{- end }}
       {{- if .Values.controller.gitClient.signingKeySecret.name }}
       - name: git

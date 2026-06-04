@@ -16,6 +16,38 @@
     "spec": {
       "description": "Spec describes the configuration of a Project.",
       "properties": {
+        "freightLinks": {
+          "description": "FreightLinks defines deep links shown when viewing Freight resources\nwithin this project. These are shown in addition to any cluster-level\nFreightLinks defined in ClusterConfig.",
+          "items": {
+            "description": "DeepLink defines a configurable external link that is rendered in the UI\nwhen viewing a Freight or Stage resource. The URL is an expression evaluated\nagainst the resource. The optional If field is an expression condition;\nwhen set, the link is only shown when the expression evaluates to true.",
+            "properties": {
+              "description": {
+                "description": "Description is an optional human-readable summary shown alongside the\nlink.",
+                "type": "string"
+              },
+              "if": {
+                "description": "If is an optional expression condition. When set, the link is only shown\nwhen the expression evaluates to true.",
+                "type": "string"
+              },
+              "title": {
+                "description": "Title is the display label for the link.",
+                "minLength": 1,
+                "type": "string"
+              },
+              "url": {
+                "description": "URL is an expression that resolves to the link's href.",
+                "minLength": 1,
+                "type": "string"
+              }
+            },
+            "required": [
+              "title",
+              "url"
+            ],
+            "type": "object"
+          },
+          "type": "array"
+        },
         "promotionPolicies": {
           "description": "PromotionPolicies defines policies governing the promotion of Freight to\nspecific Stages within the Project.",
           "items": {
@@ -24,6 +56,16 @@
               "autoPromotionEnabled": {
                 "description": "AutoPromotionEnabled indicates whether new Freight can automatically be\npromoted into the Stage referenced by the Stage field. Note: There are may\nbe other conditions also required for an auto-promotion to occur. This\nfield defaults to false, but is commonly set to true for Stages that\nsubscribe to Warehouses instead of other, upstream Stages. This allows\nusers to define Stages that are automatically updated as soon as new\nartifacts are detected.",
                 "type": "boolean"
+              },
+              "autoRollback": {
+                "description": "AutoRollback describes the conditions under which this Stage should\nautomatically roll back to the last known-good (verified) Freight. When\nnil, auto-rollback is disabled.\n\nKargo Enterprise only: This field is ignored in Kargo OSS.",
+                "properties": {
+                  "onFailedPromotions": {
+                    "description": "OnFailedPromotions indicates whether a rollback should be triggered\nwhen a promotion to the Stage fails. Failed promotions (as opposed\nto failed verifications) does not necessarily indicate a problem the\nFreight, since promotions might fail due to transient issues with the\nStage itself (network, credential expirations, etc...). This defaults\nto false.",
+                    "type": "boolean"
+                  }
+                },
+                "type": "object"
               },
               "stage": {
                 "description": "Stage is the name of the Stage to which this policy applies.\n\nDeprecated: Use StageSelector instead.",
@@ -87,6 +129,38 @@
                 "rule": "has(self.stage) ? !has(self.stageSelector) : has(self.stageSelector)"
               }
             ]
+          },
+          "type": "array"
+        },
+        "stageLinks": {
+          "description": "StageLinks defines deep links shown when viewing Stage resources within\nthis project. These are shown in addition to any cluster-level\nStageLinks defined in ClusterConfig.",
+          "items": {
+            "description": "DeepLink defines a configurable external link that is rendered in the UI\nwhen viewing a Freight or Stage resource. The URL is an expression evaluated\nagainst the resource. The optional If field is an expression condition;\nwhen set, the link is only shown when the expression evaluates to true.",
+            "properties": {
+              "description": {
+                "description": "Description is an optional human-readable summary shown alongside the\nlink.",
+                "type": "string"
+              },
+              "if": {
+                "description": "If is an optional expression condition. When set, the link is only shown\nwhen the expression evaluates to true.",
+                "type": "string"
+              },
+              "title": {
+                "description": "Title is the display label for the link.",
+                "minLength": 1,
+                "type": "string"
+              },
+              "url": {
+                "description": "URL is an expression that resolves to the link's href.",
+                "minLength": 1,
+                "type": "string"
+              }
+            },
+            "required": [
+              "title",
+              "url"
+            ],
+            "type": "object"
           },
           "type": "array"
         },

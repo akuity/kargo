@@ -1,13 +1,6 @@
-import { useQuery } from '@connectrpc/connect-query';
-import yaml from 'yaml';
-
 import { SHARD_LABEL_KEY } from '@ui/config/labels';
-import {
-  getConfig,
-  getStage
-} from '@ui/gen/api/service/v1alpha1/service-KargoService_connectquery';
-import { RawFormat } from '@ui/gen/api/service/v1alpha1/service_pb';
-import { decodeRawData } from '@ui/utils/decode-raw-data';
+import { useGetStage } from '@ui/gen/api/v2/core/core';
+import { useGetConfig } from '@ui/gen/api/v2/system/system';
 
 export const useArgoCDURL = (params: {
   project: string | undefined;
@@ -15,22 +8,13 @@ export const useArgoCDURL = (params: {
 }) => {
   const enabled = !!params.project && !!params.stageName;
 
-  const stageQuery = useQuery(
-    getStage,
-    { project: params.project, name: params.stageName, format: RawFormat.YAML },
-    { enabled }
-  );
-  const configQuery = useQuery(getConfig, {}, { enabled });
+  const stageQuery = useGetStage(params.project || '', params.stageName || '', {
+    query: { enabled }
+  });
+  const configQuery = useGetConfig({ query: { enabled } });
 
-  let shardKey = '';
-  try {
-    shardKey =
-      yaml.parse(decodeRawData(stageQuery.data))?.metadata?.labels?.[SHARD_LABEL_KEY] || '';
-  } catch {
-    shardKey = '';
-  }
-
-  const argocdURL = configQuery.data?.argocdShards?.[shardKey]?.url?.replace(/\/$/, '') || '';
+  const shardKey = stageQuery.data?.data?.metadata?.labels?.[SHARD_LABEL_KEY] || '';
+  const argocdURL = configQuery.data?.data?.argocdShards?.[shardKey]?.url?.replace(/\/$/, '') || '';
 
   return {
     argocdURL,

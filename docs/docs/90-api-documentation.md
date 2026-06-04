@@ -1628,6 +1628,13 @@ RawFormat specifies the format for raw resource representation.
 | selectionPolicy | string |  SelectionPolicy specifies the rules for identifying new Freight that is eligible for auto-promotion to this Stage. This field is optional. When left unspecified, the field is implicitly treated as if its value were "NewestFreight".  Accepted Values:  - "NewestFreight": The newest Freight that is available to the Stage is   eligible for auto-promotion.  - "MatchUpstream": Only the Freight currently used immediately upstream   from this Stage is eligible for auto-promotion. This policy may only   be applied when the Stage has exactly one upstream Stage. |
 
 
+### AutoRollbackConfig {#github-com-akuity-kargo-api-v1alpha1-AutoRollbackConfig}
+ AutoRollbackConfig describes the conditions under which a Stage should automatically roll back to the last known-good (verified) Freight. Rollback on failed verifications is always enabled when this config is present. Additional triggers may be enabled via the fields below.
+| Field | Type | Description |
+| ----- | ---- | ----------- |
+| onFailedPromotions | bool |  OnFailedPromotions indicates whether a rollback should be triggered when a promotion to the Stage fails. Failed promotions (as opposed to failed verifications) does not necessarily indicate a problem the Freight, since promotions might fail due to transient issues with the Stage itself (network, credential expirations, etc...). This defaults to false. |
+
+
 ### AzureWebhookReceiverConfig {#github-com-akuity-kargo-api-v1alpha1-AzureWebhookReceiverConfig}
  AzureWebhookReceiverConfig describes a webhook receiver that is compatible with Azure Container Registry (ACR) and Azure DevOps payloads.
 | Field | Type | Description |
@@ -1695,6 +1702,8 @@ RawFormat specifies the format for raw resource representation.
 | ----- | ---- | ----------- |
 | webhookReceivers | [WebhookReceiverConfig](#github-com-akuity-kargo-api-v1alpha1-WebhookReceiverConfig) |  WebhookReceivers describes cluster-scoped webhook receivers used for processing events from various external platforms |
 | gitClient | [GitClientConfig](#github-com-akuity-kargo-api-v1alpha1-GitClientConfig) |  GitClient describes cluster-level configuration for Kargo's Git client, including committer identity and an optional signing key. If set, these values take precedence over any configuration provided at install time via the Helm chart. +optional |
+| freightLinks | [DeepLink](#github-com-akuity-kargo-api-v1alpha1-DeepLink) |  FreightLinks defines deep links shown when viewing any Freight resource across all projects in the cluster. Project-level FreightLinks defined in ProjectConfig are shown in addition to these.  +optional |
+| stageLinks | [DeepLink](#github-com-akuity-kargo-api-v1alpha1-DeepLink) |  StageLinks defines deep links shown when viewing any Stage resource across all projects in the cluster. Project-level StageLinks defined in ProjectConfig are shown in addition to these.  +optional |
 
 
 ### ClusterConfigStatus {#github-com-akuity-kargo-api-v1alpha1-ClusterConfigStatus}
@@ -1728,6 +1737,16 @@ RawFormat specifies the format for raw resource representation.
 | Field | Type | Description |
 | ----- | ---- | ----------- |
 | since | k8s.io.apimachinery.pkg.apis.meta.v1.Time |  Since is the time at which the Stage most recently started using the Freight. This can be used to calculate how long the Freight has been in use by the Stage. |
+
+
+### DeepLink {#github-com-akuity-kargo-api-v1alpha1-DeepLink}
+ DeepLink defines a configurable external link that is rendered in the UI when viewing a Freight or Stage resource. The URL is an expression evaluated against the resource. The optional If field is an expression condition; when set, the link is only shown when the expression evaluates to true.
+| Field | Type | Description |
+| ----- | ---- | ----------- |
+| title | string |  Title is the display label for the link.   |
+| url | string |  URL is an expression that resolves to the link's href.   |
+| description | string |  Description is an optional human-readable summary shown alongside the link.  +optional |
+| if | string |  If is an optional expression condition. When set, the link is only shown when the expression evaluates to true.  +optional |
 
 
 ### DiscoveredArtifacts {#github-com-akuity-kargo-api-v1alpha1-DiscoveredArtifacts}
@@ -2008,6 +2027,7 @@ RawFormat specifies the format for raw resource representation.
 | ----- | ---- | ----------- |
 | allowTags | string |  AllowTags is a regular expression that can optionally be used to limit the tags that are considered in determining the newest commit of interest. Deprecated: Use allowTagsRegexes instead. |
 | allowTagsRegexes | string |  AllowTagsRegexes is a list of regular expressions that can optionally be used to limit the tags that are considered. Only has effect when CommitSelectionStrategy is Lexical, NewestTag, or SemVer. |
+| blobless | bool |  Blobless enables blobless cloning (--filter=blob:none) for this subscription. When true, git clones will defer blob downloads until checkout, significantly reducing clone time and disk usage for large repositories. The server must support partial clones; if it does not, the clone will fail. |
 | branch | string |  Branch references a particular branch of the repository. Only has effect when CommitSelectionStrategy is NewestFromBranch or unspecified. When left unspecified, the subscription is implicitly to the repository's default branch. Must be a valid branch name. |
 | commitSelectionStrategy | string |  CommitSelectionStrategy specifies the rules for how to identify the newest commit of interest in the repository specified by the RepoURL field. |
 | discoveryLimit | int64 |  DiscoveryLimit is an optional limit on the number of commits that can be discovered for this subscription. The upper limit is 100. |
@@ -2154,6 +2174,8 @@ RawFormat specifies the format for raw resource representation.
 | ----- | ---- | ----------- |
 | promotionPolicies | [PromotionPolicy](#github-com-akuity-kargo-api-v1alpha1-PromotionPolicy) |  PromotionPolicies defines policies governing the promotion of Freight to specific Stages within the Project. |
 | webhookReceivers | [WebhookReceiverConfig](#github-com-akuity-kargo-api-v1alpha1-WebhookReceiverConfig) |  WebhookReceivers describes Project-specific webhook receivers used for processing events from various external platforms |
+| freightLinks | [DeepLink](#github-com-akuity-kargo-api-v1alpha1-DeepLink) |  FreightLinks defines deep links shown when viewing Freight resources within this project. These are shown in addition to any cluster-level FreightLinks defined in ClusterConfig.  +optional |
+| stageLinks | [DeepLink](#github-com-akuity-kargo-api-v1alpha1-DeepLink) |  StageLinks defines deep links shown when viewing Stage resources within this project. These are shown in addition to any cluster-level StageLinks defined in ClusterConfig.  +optional |
 
 
 ### ProjectConfigStatus {#github-com-akuity-kargo-api-v1alpha1-ProjectConfigStatus}
@@ -2214,6 +2236,7 @@ RawFormat specifies the format for raw resource representation.
 | stage | string |  Stage is the name of the Stage to which this policy applies.  Deprecated: Use StageSelector instead.   |
 | stageSelector | [PromotionPolicySelector](#github-com-akuity-kargo-api-v1alpha1-PromotionPolicySelector) |  StageSelector is a selector that matches the Stage resource to which this policy applies. |
 | autoPromotionEnabled | bool |  AutoPromotionEnabled indicates whether new Freight can automatically be promoted into the Stage referenced by the Stage field. Note: There are may be other conditions also required for an auto-promotion to occur. This field defaults to false, but is commonly set to true for Stages that subscribe to Warehouses instead of other, upstream Stages. This allows users to define Stages that are automatically updated as soon as new artifacts are detected. |
+| autoRollback | [AutoRollbackConfig](#github-com-akuity-kargo-api-v1alpha1-AutoRollbackConfig) |  AutoRollback describes the conditions under which this Stage should automatically roll back to the last known-good (verified) Freight. When nil, auto-rollback is disabled.  Kargo Enterprise only: This field is ignored in Kargo OSS. |
 
 
 ### PromotionPolicySelector {#github-com-akuity-kargo-api-v1alpha1-PromotionPolicySelector}

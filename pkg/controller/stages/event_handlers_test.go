@@ -1037,6 +1037,132 @@ func Test_stageEnqueuerForArgoCDChanges_Update(t *testing.T) {
 			},
 			expectedRequests: nil,
 		},
+		{
+			name: "multiple authorized Stages are each enqueued",
+			oldApp: &argocd.Application{
+				ObjectMeta: metav1.ObjectMeta{
+					Name: "test-app",
+					Annotations: map[string]string{
+						kargoapi.AnnotationKeyAuthorizedStage: "default:stage-a,default:stage-b",
+					},
+				},
+				Status: argocd.ApplicationStatus{
+					Health: argocd.HealthStatus{Status: "Healthy"},
+				},
+			},
+			newApp: &argocd.Application{
+				ObjectMeta: metav1.ObjectMeta{
+					Name: "test-app",
+					Annotations: map[string]string{
+						kargoapi.AnnotationKeyAuthorizedStage: "default:stage-a,default:stage-b",
+					},
+				},
+				Status: argocd.ApplicationStatus{
+					Health: argocd.HealthStatus{Status: "Degraded"},
+				},
+			},
+			objects: []client.Object{
+				&kargoapi.Stage{
+					ObjectMeta: metav1.ObjectMeta{
+						Namespace: "default",
+						Name:      "stage-a",
+					},
+					Spec: kargoapi.StageSpec{
+						PromotionTemplate: &kargoapi.PromotionTemplate{
+							Spec: kargoapi.PromotionTemplateSpec{
+								Steps: []kargoapi.PromotionStep{{}},
+							},
+						},
+					},
+				},
+				&kargoapi.Stage{
+					ObjectMeta: metav1.ObjectMeta{
+						Namespace: "default",
+						Name:      "stage-b",
+					},
+					Spec: kargoapi.StageSpec{
+						PromotionTemplate: &kargoapi.PromotionTemplate{
+							Spec: kargoapi.PromotionTemplateSpec{
+								Steps: []kargoapi.PromotionStep{{}},
+							},
+						},
+					},
+				},
+			},
+			expectedRequests: []reconcile.Request{
+				{NamespacedName: types.NamespacedName{Namespace: "default", Name: "stage-a"}},
+				{NamespacedName: types.NamespacedName{Namespace: "default", Name: "stage-b"}},
+			},
+		},
+		{
+			name: "missing Stage is skipped without blocking others",
+			oldApp: &argocd.Application{
+				ObjectMeta: metav1.ObjectMeta{
+					Name: "test-app",
+					Annotations: map[string]string{
+						kargoapi.AnnotationKeyAuthorizedStage: "default:missing,default:stage-b",
+					},
+				},
+				Status: argocd.ApplicationStatus{
+					Health: argocd.HealthStatus{Status: "Healthy"},
+				},
+			},
+			newApp: &argocd.Application{
+				ObjectMeta: metav1.ObjectMeta{
+					Name: "test-app",
+					Annotations: map[string]string{
+						kargoapi.AnnotationKeyAuthorizedStage: "default:missing,default:stage-b",
+					},
+				},
+				Status: argocd.ApplicationStatus{
+					Health: argocd.HealthStatus{Status: "Degraded"},
+				},
+			},
+			objects: []client.Object{
+				&kargoapi.Stage{
+					ObjectMeta: metav1.ObjectMeta{
+						Namespace: "default",
+						Name:      "stage-b",
+					},
+					Spec: kargoapi.StageSpec{
+						PromotionTemplate: &kargoapi.PromotionTemplate{
+							Spec: kargoapi.PromotionTemplateSpec{
+								Steps: []kargoapi.PromotionStep{{}},
+							},
+						},
+					},
+				},
+			},
+			expectedRequests: []reconcile.Request{
+				{NamespacedName: types.NamespacedName{Namespace: "default", Name: "stage-b"}},
+			},
+		},
+		{
+			name: "malformed annotation enqueues nothing",
+			oldApp: &argocd.Application{
+				ObjectMeta: metav1.ObjectMeta{
+					Name: "test-app",
+					Annotations: map[string]string{
+						kargoapi.AnnotationKeyAuthorizedStage: "bogus",
+					},
+				},
+				Status: argocd.ApplicationStatus{
+					Health: argocd.HealthStatus{Status: "Healthy"},
+				},
+			},
+			newApp: &argocd.Application{
+				ObjectMeta: metav1.ObjectMeta{
+					Name: "test-app",
+					Annotations: map[string]string{
+						kargoapi.AnnotationKeyAuthorizedStage: "bogus",
+					},
+				},
+				Status: argocd.ApplicationStatus{
+					Health: argocd.HealthStatus{Status: "Degraded"},
+				},
+			},
+			expectedRequests: nil,
+		},
 	}
 
 	for _, tt := range tests {

@@ -19,8 +19,10 @@ import {
   reverify
 } from '@ui/gen/api/service/v1alpha1/service-KargoService_connectquery';
 import { ArgoCDShard } from '@ui/gen/api/service/v1alpha1/service_pb';
+import { useGetStageLinks } from '@ui/gen/api/v2/core/core';
 import { Stage } from '@ui/gen/api/v2/models';
 
+import { DeepLinks } from '../common/deep-links';
 import { currentFreightHasVerification } from '../common/utils';
 import { ArgoCDLink } from '../project/pipelines/nodes/argocd-link';
 
@@ -71,6 +73,10 @@ export const StageActions = ({
 
   const verificationEnabled = stage?.spec?.verification;
 
+  const { data: stageLinksData } = useGetStageLinks(projectName || '', stageName || '', {
+    query: { enabled: !!projectName && !!stageName }
+  });
+
   return (
     <>
       <Space size={16}>
@@ -88,6 +94,7 @@ export const StageActions = ({
             ArgoCD
           </Space>
         </ArgoCDLink>
+        <DeepLinks links={stageLinksData?.data?.links ?? []} />
         {currentFreightHasVerification(stage) && (
           <>
             {verificationEnabled && (
