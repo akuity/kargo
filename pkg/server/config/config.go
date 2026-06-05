@@ -22,6 +22,13 @@ type StandardConfig struct {
 
 type ServerConfig struct {
 	StandardConfig
+	// BasePath is the URL path prefix the server is reachable at, normalized
+	// to begin with `/` and not end with one (e.g. `/kargo`). When non-empty,
+	// every HTTP route the server registers — REST API, ConnectRPC, dex
+	// proxy, dashboard SPA — lives under this prefix; the ingress controller
+	// in front of the server MUST preserve the prefix (i.e. must NOT strip
+	// it). Empty value means the server serves at the root.
+	BasePath                    string
 	SecretManagementEnabled     bool
 	LocalMode                   bool // LocalMode is true if the server is running as a non-containerized process
 	TLSConfig                   *TLSConfig
@@ -107,7 +114,23 @@ func ServerConfigFromEnv() ServerConfig {
 	)
 	cfg.KargoNamespace = os.GetEnv("KARGO_NAMESPACE", "kargo")
 	cfg.DefaultControllerName = os.GetEnv("DEFAULT_CONTROLLER_NAME", "")
+	cfg.BasePath = NormalizeBasePath(os.GetEnv("API_BASE_PATH", ""))
 	return cfg
+}
+
+// NormalizeBasePath canonicalizes an operator-supplied basePath: empty stays
+// empty; non-empty values are forced to begin with `/` and not end with one.
+// Used by both server bootstrap and tests so the normalization is a single
+// shared definition.
+func NormalizeBasePath(p string) string {
+	p = strings.TrimSpace(p)
+	if p == "" {
+		return ""
+	}
+	if !strings.HasPrefix(p, "/") {
+		p = "/" + p
+	}
+	return strings.TrimRight(p, "/")
 }
 
 type TLSConfig struct {

@@ -17,6 +17,11 @@ metadata:
 spec:
   schedule: {{ quote .Values.garbageCollector.schedule }}
   concurrencyPolicy: Forbid
+  {{- if .Values.garbageCollector.suspend }}
+  suspend: true
+  {{- end }}
+  successfulJobsHistoryLimit: {{ .Values.garbageCollector.successfulJobsHistoryLimit }}
+  failedJobsHistoryLimit: {{ .Values.garbageCollector.failedJobsHistoryLimit }}
   jobTemplate:
     metadata:
       labels:
@@ -25,6 +30,9 @@ spec:
       annotations:
         configmap/checksum: {{ pick ( include (print $.Template.BasePath "/garbage-collector/configmap.yaml") . | fromYaml ) "data" | toYaml | sha256sum }}
     spec:
+      {{- with .Values.garbageCollector.ttlSecondsAfterFinished }}
+      ttlSecondsAfterFinished: {{ . }}
+      {{- end }}
       template:
         metadata:
           labels:

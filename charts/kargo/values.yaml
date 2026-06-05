@@ -155,6 +155,9 @@ api:
   ## @param api.host The domain name where Kargo's API server will be accessible. When applicable, this is used for generation of an Ingress resource, certificates, and the OpenID Connect issuer and callback URLs. Note: The value in this field MAY include a port number and MUST NOT specify the protocol (http vs https), which is automatically inferred from other configuration options.
   host: localhost
 
+  ## @param api.basePath URL path prefix at which the API server is reachable. When non-empty, MUST begin with a slash and MUST NOT end with one (e.g. `/kargo`). Used as the path on any chart-generated Ingress rule for the API server, and included in chart-generated URLs (`API_SERVER_BASE_URL`, `ADMIN_ACCOUNT_TOKEN_ISSUER`, `OIDC_ISSUER_URL`, etc.). The API server binary itself always serves at the root, so when this is set, the user is responsible for configuring their Ingress controller to strip the prefix before forwarding (e.g. via Traefik's `stripPrefix` middleware, NGINX's `rewrite`, etc.).
+  basePath: ""
+
   ## @param api.logLevel The log level for the API server. Valid options are ERROR, INFO, DEBUG, and TRACE (case insensitive). Note that INFO level messages are written during startup regardless of the selected level.
   logLevel: INFO
   ## @param api.logFormat The format of logs from the API server. Valid options are CONSOLE or JSON (case insensitive).
@@ -274,6 +277,15 @@ api:
     dex:
       ## @param api.oidc.dex.enabled Whether to enable Dex as the identity provider. When set to true, the Kargo installation will include a Dex server and the Kargo API server will be configured to make the /dex endpoint a reverse proxy for the Dex server.
       enabled: false
+
+      ## All settings related to using an externally-managed Dex server (one not installed by this chart). When `byo.enabled` is `true`, the chart will NOT install a Dex server but the Kargo API server will still proxy `/dex` to the externally-managed Dex server. Configure `api.oidc.issuerURL`, `api.oidc.clientID`, etc. just as you would for any other OIDC identity provider. Mutually exclusive with `api.oidc.dex.enabled`.
+      byo:
+        ## @param api.oidc.dex.byo.enabled Whether to enable proxying to an externally-managed Dex server.
+        enabled: false
+        ## @param api.oidc.dex.byo.serverAddress Address (scheme + host + optional port) at which the Kargo API server should reach the externally-managed Dex server. This is used for in-cluster traffic from the API server pod to Dex, not for what end-user clients see (clients see `api.oidc.issuerURL`). Defaults to `https://kargo-dex-server.<release.namespace>.svc` — matching the chart's convention for a Dex Service named `kargo-dex-server` in the release namespace.
+        serverAddress: ""
+        ## @param api.oidc.dex.byo.caCertPath Path inside the Kargo API server container at which a CA certificate trusted by Dex is mounted. Optional. When set, the API server will use this certificate when making outbound TLS connections to the externally-managed Dex server. The cert itself must be made available via `api.containers` / `api.volumes` / `api.volumeMounts` (or another out-of-band mechanism).
+        caCertPath: ""
 
       ## @param api.oidc.dex.revisionHistoryLimit Number of old ReplicaSets the Dex server Deployment retains for rollback.
       revisionHistoryLimit: 10
@@ -790,6 +802,16 @@ garbageCollector:
 
   ## @param garbageCollector.schedule When to run the garbage collector.
   schedule: "0 * * * *"
+
+  ## @param garbageCollector.suspend Whether to suspend the garbage collector CronJob. When `true`, the CronJob remains in place but stops launching new Jobs.
+  suspend: false
+  ## @param garbageCollector.successfulJobsHistoryLimit Number of successful Job records to retain. Defaults to the Kubernetes CronJob default of `3`.
+  successfulJobsHistoryLimit: 3
+  ## @param garbageCollector.failedJobsHistoryLimit Number of failed Job records to retain. Defaults to the Kubernetes CronJob default of `1`.
+  failedJobsHistoryLimit: 1
+  ## @param garbageCollector.ttlSecondsAfterFinished Optional automatic cleanup delay (in seconds) for completed garbage collector Jobs. Each Job will be eligible for deletion this many seconds after it finishes. Leave empty/unset to retain Jobs indefinitely (subject to the `*JobsHistoryLimit` knobs).
+  ttlSecondsAfterFinished:
+
   ## @param garbageCollector.workers The number of concurrent workers to run. Tuning this too low will result in slow garbage collection. Tuning this too high will result in too many API calls and may result in throttling.
   workers: 3
   ## @param garbageCollector.maxRetainedPromotions The ideal maximum number of Promotions OLDER than the oldest Promotion in a non-terminal phase (for each Stage) that may be spared by the garbage collector. The ACTUAL number of older Promotions spared may exceed this ideal if some Promotions that would otherwise be deleted do not meet the minimum age criterion.
@@ -882,6 +904,9 @@ externalWebhooksServer:
 
   ## @param externalWebhooksServer.host The domain name where Kargo's external webhooks server will be accessible. When applicable, this is used for generation of an Ingress resource and certificates. Note: The value in this field MAY include a port number and MUST NOT specify the protocol (http vs https), which is automatically inferred from other configuration options.
   host: localhost
+
+  ## @param externalWebhooksServer.basePath URL path prefix at which the external webhooks server is reachable. When non-empty, MUST begin with a slash and MUST NOT end with one (e.g. `/webhook`). Used as the path on any chart-generated Ingress rule for the external webhooks server, and included in `EXTERNAL_WEBHOOK_SERVER_BASE_URL`. When the external webhooks server has no Ingress of its own and instead piggybacks on the API server's Ingress, this defaults to `<api.basePath>/webhooks`. The external webhooks server binary itself always serves at the root, so when this is set, the user is responsible for configuring their Ingress controller to strip the prefix before forwarding (e.g. via Traefik's `stripPrefix` middleware, NGINX's `rewrite`, etc.).
+  basePath: ""
 
   ## @param externalWebhooksServer.logLevel The log level for the external webhooks server. Valid options are ERROR, INFO, DEBUG, and TRACE (case insensitive). Note that INFO level messages are written during startup regardless of the selected level.
   logLevel: INFO
