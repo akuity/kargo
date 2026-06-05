@@ -166,9 +166,13 @@ k8s_resource(
     'kargo-controller:serviceaccount',
     'kargo-controller-argocd:clusterrole',
     'kargo-controller-argocd:clusterrolebinding',
+    'kargo-controller-cluster-secrets-reader:rolebinding',
     'kargo-controller-read-secrets:clusterrole',
     'kargo-controller-rollouts:clusterrole',
     'kargo-controller-rollouts:clusterrolebinding',
+    'kargo-controller-shared-resources-reader:rolebinding',
+    'kargo-controller-system-resources-reader:rolebinding',
+    'kargo-shared-resources-controller-reader:role',
     'kargo-test-gpg-signing-key:secret'
   ],
   resource_deps=['back-end-compile', 'credential-helper-compile', ]
