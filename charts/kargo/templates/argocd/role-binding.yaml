@@ -1,12 +1,13 @@
-{{- if and .Values.argocd.dataPlane.install .Values.controller.enabled .Values.controller.argocd.integrationEnabled .Values.controller.argocd.watchArgocdNamespaceOnly }}
+{{- if and .Values.argocd.dataPlane.kargoController.install .Values.controller.enabled .Values.controller.argocd.integrationEnabled .Values.controller.argocd.watchArgocdNamespaceOnly }}
 apiVersion: rbac.authorization.k8s.io/v1
 kind: RoleBinding
 metadata:
-  name: kargo-controller
+  name: {{ include "kargo.controller.fullname" . }}
   namespace: {{ .Values.controller.argocd.namespace | default "argocd" }}
   labels:
     {{- include "kargo.labels" . | nindent 4 }}
     {{- include "kargo.controller.labels" . | nindent 4 }}
+    {{- include "kargo.controller.idLabel" . | nindent 4 }}
   {{- include "kargo.annotations" (dict "root" .) | nindent 2 }}
 roleRef:
   apiGroup: rbac.authorization.k8s.io
@@ -15,5 +16,5 @@ roleRef:
 subjects:
 - kind: ServiceAccount
   namespace: {{ .Release.Namespace }}
-  name: kargo-controller
+  name: {{ include "kargo.controller.fullname" . }}
 {{- end }}

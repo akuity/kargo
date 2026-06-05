@@ -7,6 +7,36 @@ Expand the name of the chart.
 {{- end -}}
 
 {{/*
+kargo.controller.suffix returns `-<controller.id>` when controller.id is set,
+empty otherwise.
+*/}}
+{{- define "kargo.controller.suffix" -}}
+{{- if .Values.controller.id -}}-{{ .Values.controller.id }}{{- end -}}
+{{- end -}}
+
+{{/*
+kargo.controller.fullname returns the controller's base name, suffixed, if
+applicable with `-<controller.id>`. Setting `controller.id` therefore allows for
+installing multiple controllers into a single cluster or even a single namespace
+(each as its own, separate Helm release) without name collisions.
+*/}}
+{{- define "kargo.controller.fullname" -}}
+kargo-controller{{ include "kargo.controller.suffix" . }}
+{{- end -}}
+
+{{/*
+kargo.controller.idLabel emits the `akuity.io/kargo-controller-id` label line
+when controller.id is set, empty otherwise. Used inside `labels:` /
+`matchLabels:` blocks across templates in the controller's install set.
+Callers handle indentation via `| nindent N`.
+*/}}
+{{- define "kargo.controller.idLabel" -}}
+{{- with .Values.controller.id -}}
+akuity.io/kargo-controller-id: {{ . | quote }}
+{{- end -}}
+{{- end -}}
+
+{{/*
 Create image reference as used by resources.
 */}}
 {{- define "kargo.image" -}}

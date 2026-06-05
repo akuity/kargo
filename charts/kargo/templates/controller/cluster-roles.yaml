@@ -1,4 +1,4 @@
-{{- if and .Values.dataPlane.install .Values.rbac.installClusterRoles .Values.controller.enabled }}
+{{- if and .Values.dataPlane.install .Values.rbac.installClusterRoles }}
 apiVersion: rbac.authorization.k8s.io/v1
 kind: ClusterRole
 metadata:
@@ -153,7 +153,7 @@ rules:
   - deletecollection
 {{- end }}
 {{- end }}
-{{- if and .Values.argocd.dataPlane.install .Values.rbac.installClusterRoles .Values.controller.enabled .Values.controller.argocd.integrationEnabled (not .Values.controller.argocd.watchArgocdNamespaceOnly) }}
+{{- if and .Values.argocd.dataPlane.install .Values.rbac.installClusterRoles .Values.controller.argocd.integrationEnabled (not .Values.controller.argocd.watchArgocdNamespaceOnly) }}
 ---
 apiVersion: rbac.authorization.k8s.io/v1
 kind: ClusterRole
