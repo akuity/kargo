@@ -166,6 +166,7 @@ func Test_webhook_Default(t *testing.T) {
 			assertions: func(t *testing.T, promo *kargoapi.Promotion, err error) {
 				require.NoError(t, err)
 				require.Equal(t, "fake-shard", promo.Labels[kargoapi.LabelKeyShard])
+				require.Equal(t, "fake-stage", promo.Labels[kargoapi.LabelKeyStage])
 				require.NotEmpty(t, promo.OwnerReferences)
 			},
 		},
