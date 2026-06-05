@@ -384,7 +384,7 @@ func Test_httpRequester_run(t *testing.T) {
 				require.ErrorContains(
 					t,
 					err,
-					"HTTP (404) response met failure criteria: resource not found",
+					`HTTP (404) response met failure criteria: "resource not found"`,
 				)
 				require.True(t, promotion.IsTerminal(err))
 				require.Equal(t, kargoapi.PromotionStepStatusFailed, res.Status)
@@ -406,7 +406,7 @@ func Test_httpRequester_run(t *testing.T) {
 				require.ErrorContains(
 					t,
 					err,
-					"HTTP (404) response met failure criteria: something went wrong",
+					`HTTP (404) response met failure criteria: "something went wrong"`,
 				)
 				require.True(t, promotion.IsTerminal(err))
 				require.Equal(t, kargoapi.PromotionStepStatusFailed, res.Status)

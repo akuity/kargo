@@ -146,7 +146,7 @@ func (h *httpRequester) run(
 
 		return promotion.StepResult{Status: kargoapi.PromotionStepStatusFailed},
 			&promotion.TerminalError{Err: fmt.Errorf(
-				"HTTP (%d) response met failure criteria: %s",
+				"HTTP (%d) response met failure criteria: %q",
 				resp.StatusCode,
 				errorMessage,
 			)}
