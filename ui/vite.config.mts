@@ -56,9 +56,7 @@ export default defineConfig({
       apply: 'serve',
       transformIndexHtml(html: string) {
         const baseHref = KARGO_BASE_PATH ? `${KARGO_BASE_PATH}/` : '/';
-        return html
-          .replace(/__BASE_HREF__/g, baseHref)
-          .replace(/__BASE_PATH__/g, KARGO_BASE_PATH);
+        return html.replace(/__BASE_HREF__/g, baseHref).replace(/__BASE_PATH__/g, KARGO_BASE_PATH);
       }
     },
     viteCompression(),
