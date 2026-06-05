@@ -2,18 +2,24 @@ import { QueryClient } from '@tanstack/react-query';
 
 import { authTokenKey } from '@ui/config/auth';
 import {
+  getFreightResponse,
+  getGetFreightQueryKey,
+  getGetPromotionQueryKey,
   getGetStageQueryKey,
   getGetWarehouseQueryKey,
   getListPromotionsQueryKey,
   getListStagesQueryKey,
   getListWarehousesQueryKey,
+  getPromotionResponse,
+  getQueryFreightsRestQueryKey,
   getStageResponse,
   getWarehouseResponse,
   listPromotionsResponse,
   listStagesResponse,
-  listWarehousesResponse
+  listWarehousesResponse,
+  queryFreightsRestResponse
 } from '@ui/gen/api/v2/core/core';
-import { Promotion, Stage, Warehouse } from '@ui/gen/api/v2/models';
+import { Freight, Promotion, Stage, Warehouse } from '@ui/gen/api/v2/models';
 
 const getBaseUrl = () => (import.meta.env.VITE_API_URL as string | undefined) || '';
 
@@ -183,6 +189,44 @@ export class Watcher {
     }
   }
 
+  async watchFreights(params?: { origins?: string[]; stage?: string }) {
+    const urlParams = new URLSearchParams({ watch: 'true' });
+    for (const o of params?.origins || []) {
+      urlParams.append('origins', o);
+    }
+    if (params?.stage) {
+      urlParams.set('stage', params.stage);
+    }
+    const url = `/v1beta1/projects/${encodeURIComponent(this.project)}/freight?${urlParams}`;
+    const listKey = getQueryFreightsRestQueryKey(this.project, params);
+
+    for await (const event of readSSEStream<Freight>(url, this.cancel.signal)) {
+      const freight = event.object;
+
+      this._client.setQueryData(listKey, (old: queryFreightsRestResponse | undefined) => {
+        if (!old?.data?.groups) {
+          return old;
+        }
+        const updatedGroups = Object.fromEntries(
+          Object.entries(old.data.groups).map(([key, group]) => [
+            key,
+            { ...group, items: upsertOrDelete(group.items ?? [], freight, event.type) }
+          ])
+        );
+        return { ...old, data: { ...old.data, groups: updatedGroups } };
+      });
+
+      const freightKey = getGetFreightQueryKey(this.project, freight.metadata?.name);
+      if (event.type === 'DELETED') {
+        this._client.removeQueries({ queryKey: freightKey });
+      } else {
+        this._client.setQueryData(freightKey, (old: getFreightResponse | undefined) =>
+          old ? { ...old, data: freight } : old
+        );
+      }
+    }
+  }
+
   async watchPromotions(stage: string) {
     const params = new URLSearchParams({ watch: 'true' });
     if (stage) {
@@ -206,6 +250,23 @@ export class Watcher {
           }
         };
       });
+    }
+  }
+
+  async watchPromotion(name: string) {
+    const url = `/v1beta1/projects/${encodeURIComponent(this.project)}/promotions/${encodeURIComponent(name)}?watch=true`;
+    const promotionKey = getGetPromotionQueryKey(this.project, name);
+
+    for await (const event of readSSEStream<Promotion>(url, this.cancel.signal)) {
+      const promotion = event.object;
+
+      if (event.type === 'DELETED') {
+        this._client.removeQueries({ queryKey: promotionKey });
+      } else {
+        this._client.setQueryData(promotionKey, (old: getPromotionResponse | undefined) =>
+          old ? { ...old, data: promotion } : old
+        );
+      }
     }
   }
 }

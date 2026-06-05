@@ -1,5 +1,9 @@
-import { DiscoveredCommit, DiscoveredImageReference } from '@ui/gen/api/v1alpha1/generated_pb';
-import { DiscoveredArtifacts, Freight } from '@ui/gen/api/v2/models';
+import {
+  DiscoveredArtifacts,
+  DiscoveredCommit,
+  DiscoveredImageReference,
+  Freight
+} from '@ui/gen/api/v2/models';
 
 import {
   artifactInDiscoveredResults,

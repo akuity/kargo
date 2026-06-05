@@ -1,4 +1,11 @@
-import { ArtifactReference, Chart, GitCommit, Image } from '@ui/gen/api/v2/models';
+import {
+  ArtifactReference,
+  Chart,
+  DiscoveredCommit,
+  DiscoveredImageReference,
+  GitCommit,
+  Image
+} from '@ui/gen/api/v2/models';
 
 export const isArtifactImage = (
   artifact: Image | Chart | GitCommit | ArtifactReference
@@ -15,3 +22,11 @@ export const isArtifactGitCommit = (
 export const isArtifactGeneric = (
   artifact: Image | Chart | GitCommit | ArtifactReference
 ): artifact is ArtifactReference => 'subscriptionName' in artifact && 'version' in artifact;
+
+export const isDiscoveredCommit = (
+  item: DiscoveredCommit | DiscoveredImageReference
+): item is DiscoveredCommit => 'id' in item;
+
+export const isDiscoveredImage = (
+  item: DiscoveredCommit | DiscoveredImageReference
+): item is DiscoveredImageReference => 'tag' in item;

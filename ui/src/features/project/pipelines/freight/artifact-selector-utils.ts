@@ -1,4 +1,4 @@
-import { Freight } from '@ui/gen/api/v1alpha1/generated_pb';
+import { Freight } from '@ui/gen/api/v2/models';
 
 // to preserve the order of the artifacts in the carousel, we need to use the same order everywhere
 export const normalizeRepoURL = (freight: Freight) => {

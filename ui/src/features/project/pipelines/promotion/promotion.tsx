@@ -26,6 +26,7 @@ import {
   refreshResource
 } from '@ui/gen/api/service/v1alpha1/service-KargoService_connectquery';
 import { RawFormat } from '@ui/gen/api/service/v1alpha1/service_pb';
+import { useGetPromotion } from '@ui/gen/api/v2/core/core';
 import { Promotion as TPromotion } from '@ui/gen/api/v2/models';
 import { timestampDate } from '@ui/utils/connectrpc-utils';
 import { decodeRawData } from '@ui/utils/decode-raw-data';
@@ -261,10 +262,7 @@ const Content = (props: { promotion: TPromotion; yaml: string }) => {
 };
 
 export const Promotion = (props: PromotionProps) => {
-  const getPromotionQuery = useQuery(getPromotion, {
-    project: props.project,
-    name: props.promotionId
-  });
+  const getPromotionQuery = useGetPromotion(props.project, props.promotionId);
 
   const rawPromotionYamlQuery = useQuery(getPromotion, {
     project: props.project,
@@ -289,10 +287,7 @@ export const Promotion = (props: PromotionProps) => {
     >
       {getPromotionQuery.isLoading && <LoadingState />}
       {!getPromotionQuery.isLoading && (
-        <Content
-          promotion={getPromotionQuery.data?.result?.value as TPromotion}
-          yaml={rawPromotionYaml}
-        />
+        <Content promotion={getPromotionQuery.data?.data as TPromotion} yaml={rawPromotionYaml} />
       )}
     </Drawer>
   );

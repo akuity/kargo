@@ -11,18 +11,18 @@ import { newErrorHandler, newTransportWithAuth } from '@ui/config/transport';
 import { WarehouseExpanded } from '@ui/extend/types';
 import { createResource } from '@ui/gen/api/service/v1alpha1/service-KargoService_connectquery';
 import {
+  ArtifactReference,
   Chart,
   ChartDiscoveryResult,
   DiscoveredCommit,
   DiscoveredImageReference,
-  ArtifactReference,
-  DiscoveryResult as GenericDiscoveryResult,
+  Freight,
   GitCommit,
   GitDiscoveryResult,
   Image,
-  ImageDiscoveryResult
-} from '@ui/gen/api/v1alpha1/generated_pb';
-import { Freight } from '@ui/gen/api/v2/models';
+  ImageDiscoveryResult,
+  DiscoveryResult as GenericDiscoveryResult
+} from '@ui/gen/api/v2/models';
 
 import { FreightContents } from '../freight-timeline/freight-contents';
 

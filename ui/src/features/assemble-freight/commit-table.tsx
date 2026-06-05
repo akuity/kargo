@@ -1,7 +1,7 @@
 import { Radio, Table } from 'antd';
 import { useMemo } from 'react';
 
-import { DiscoveredCommit } from '@ui/gen/api/v1alpha1/generated_pb';
+import { DiscoveredCommit } from '@ui/gen/api/v2/models';
 import { timestampDate } from '@ui/utils/connectrpc-utils';
 
 import { TruncatedCopyable } from './truncated-copyable';

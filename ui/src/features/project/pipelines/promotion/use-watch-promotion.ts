@@ -1,68 +1,21 @@
-import { createClient } from '@connectrpc/connect';
-import { createConnectQueryKey } from '@connectrpc/connect-query';
 import { useQueryClient } from '@tanstack/react-query';
 import { useEffect } from 'react';
 
-import { transportWithAuth } from '@ui/config/transport';
-import { getPromotion } from '@ui/gen/api/service/v1alpha1/service-KargoService_connectquery';
-import { KargoService, RawFormat } from '@ui/gen/api/service/v1alpha1/service_pb';
+import { Watcher } from '@ui/features/project/pipelines/watcher';
 
 export const useWatchPromotion = (project: string, promotion: string) => {
   const client = useQueryClient();
 
   useEffect(() => {
-    const cancel = new AbortController();
+    if (!project || !promotion) {
+      return;
+    }
 
-    const watchPromotion = async () => {
-      const promiseClient = createClient(KargoService, transportWithAuth);
-      const stream = promiseClient.watchPromotion(
-        {
-          project,
-          name: promotion
-        },
-        { signal: cancel.signal }
-      );
+    const watcher = new Watcher(project, client);
+    watcher.watchPromotion(promotion);
 
-      for await (const e of stream) {
-        const updatedPromotion = e.promotion;
-
-        if (promotion && updatedPromotion) {
-          const promotionQueryKey = createConnectQueryKey({
-            cardinality: 'finite',
-            schema: getPromotion,
-            input: {
-              project,
-              name: promotion
-            },
-            transport: transportWithAuth
-          });
-
-          client.setQueryData(promotionQueryKey, {
-            result: {
-              value: updatedPromotion,
-              case: 'promotion'
-            },
-            $typeName: 'akuity.io.kargo.service.v1alpha1.GetPromotionResponse'
-          });
-
-          client.refetchQueries({
-            queryKey: createConnectQueryKey({
-              cardinality: 'finite',
-              schema: getPromotion,
-              input: {
-                project,
-                name: promotion,
-                format: RawFormat.YAML
-              },
-              transport: transportWithAuth
-            })
-          });
-        }
-      }
+    return () => {
+      watcher.cancelWatch();
     };
-
-    watchPromotion();
-
-    return () => cancel.abort();
   }, [project, promotion]);
 };
