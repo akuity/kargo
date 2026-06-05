@@ -84,11 +84,19 @@ dataPlane:
   ## @param dataPlane.install Coarse switch that, when `false`, suppresses every data-plane resource — even where finer-grained flags (`crds.install`, `rbac.installClusterRoles`, `rbac.installClusterRoleBindings`, `webhooks.register`, `global.createClusterSecretsNamespace`, `global.sharedResources.createNamespace`, `global.systemResources.createNamespace`) would otherwise install them. Note: Argo CD data-plane RBAC is governed separately by `argocd.dataPlane.install`.
   install: true
 
+  controller:
+    ## @param dataPlane.controller.install Coarse switch governing whether per-controller data-plane resources are rendered.
+    install: true
+
 ## @section Argo CD Data Plane
 argocd:
   ## @param argocd.dataPlane.install Coarse switch governing Argo CD data-plane resources — the RBAC granting the controller access to Argo CD `Application` resources. Separate from `dataPlane.install` because Argo CD may reside in a different cluster than Kargo's own data plane.
   dataPlane:
     install: true
+
+    kargoController:
+      ## @param argocd.dataPlane.kargoController.install Coarse switch governing whether per-Kargo-controller Argo CD data-plane resources are rendered.
+      install: true
 
 ## @section CRDs
 crds:
@@ -611,6 +619,9 @@ api:
 controller:
   ## @param controller.enabled Whether the controller is enabled.
   enabled: true
+
+  ## @param controller.id [nullable] When set per-controller data plane resources will be suffixed with this value. This allows for the installation of multiple controllers into a single cluster or even a single namespace (each as its own, separate Helm release) without name collisions.
+  # id:
 
   ## @param controller.revisionHistoryLimit Number of old ReplicaSets the controller Deployment retains for rollback. The controller uses a `Recreate` rollout strategy (singleton), so `rollingUpdate.*` knobs do not apply.
   revisionHistoryLimit: 10
