@@ -65,6 +65,12 @@ type ListProjectsParams struct {
 	*/
 	Filter *string
 
+	/* LabelSelector.
+
+	   Kubernetes label selector applied to Project labels (e.g. 'env=prod').
+	*/
+	LabelSelector *string
+
 	/* Mine.
 
 	   Only return Projects whose namespaces are mapped to the user's ServiceAccounts.
@@ -153,6 +159,17 @@ func (o *ListProjectsParams) SetFilter(filter *string) {
 	o.Filter = filter
 }
 
+// WithLabelSelector adds the labelSelector to the list projects params
+func (o *ListProjectsParams) WithLabelSelector(labelSelector *string) *ListProjectsParams {
+	o.SetLabelSelector(labelSelector)
+	return o
+}
+
+// SetLabelSelector adds the labelSelector to the list projects params
+func (o *ListProjectsParams) SetLabelSelector(labelSelector *string) {
+	o.LabelSelector = labelSelector
+}
+
 // WithMine adds the mine to the list projects params
 func (o *ListProjectsParams) WithMine(mine *bool) *ListProjectsParams {
 	o.SetMine(mine)
@@ -217,6 +234,23 @@ func (o *ListProjectsParams) WriteToRequest(r runtime.ClientRequest, reg strfmt.
 		if qFilter != "" {
 
 			if err := r.SetQueryParam("filter", qFilter); err != nil {
+				return err
+			}
+		}
+	}
+
+	if o.LabelSelector != nil {
+
+		// query param labelSelector
+		var qrLabelSelector string
+
+		if o.LabelSelector != nil {
+			qrLabelSelector = *o.LabelSelector
+		}
+		qLabelSelector := qrLabelSelector
+		if qLabelSelector != "" {
+
+			if err := r.SetQueryParam("labelSelector", qLabelSelector); err != nil {
 				return err
 			}
 		}
