@@ -4,7 +4,7 @@
 apiVersion: apps/v1
 kind: Deployment
 metadata:
-  name: {{ include "kargo.controller.fullname" . }}
+  name: kargo-controller
   namespace: {{ .Release.Namespace }}
   labels:
     {{- include "kargo.labels" . | nindent 4 }}
@@ -42,7 +42,7 @@ spec:
         {{- end }}
       {{- end }}
     spec:
-      serviceAccountName: {{ include "kargo.controller.fullname" . }}
+      serviceAccountName: kargo-controller
       {{- with .Values.controller.affinity | default .Values.global.affinity }}
       affinity:
         {{- toYaml . | nindent 8 }}
@@ -78,7 +78,7 @@ spec:
         {{- end }}
         envFrom:
         - configMapRef:
-            name: {{ include "kargo.controller.fullname" . }}
+            name: kargo-controller
         {{- with (concat .Values.global.envFrom .Values.controller.envFrom) }}
           {{- toYaml . | nindent 8 }}
         {{- end }}

@@ -14,7 +14,7 @@ roleRef:
 subjects:
 - kind: ServiceAccount
   namespace: {{ .Release.Namespace }}
-  name: {{ include "kargo.controller.fullname" . }}
+  name: kargo-controller
 - kind: ServiceAccount
   namespace: {{ .Release.Namespace }}
   name: kargo-external-webhooks-server

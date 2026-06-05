@@ -40,7 +40,7 @@ subjects:
   name: kargo-admin
 - kind: ServiceAccount
   namespace: {{ .Release.Namespace }}
-  name: {{ include "kargo.controller.fullname" . }}
+  name: kargo-controller
 {{- if .Values.api.secretManagementEnabled }}
 - kind: ServiceAccount
   namespace:  {{ .Release.Namespace }}
