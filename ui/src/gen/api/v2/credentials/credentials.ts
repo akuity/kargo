@@ -34,6 +34,8 @@ import type {
 
 import { customFetch } from '../../../../lib/api/custom-fetch';
 
+type SecondParameter<T extends (...args: never) => unknown> = Parameters<T>[1];
+
 /**
  * List project-level generic credentials. Returns a Kubernetes
 SecretList resource containing heavily redacted Secrets.
@@ -80,14 +82,15 @@ export const getListProjectGenericCredentialsQueryOptions = <
     query?: Partial<
       UseQueryOptions<Awaited<ReturnType<typeof listProjectGenericCredentials>>, TError, TData>
     >;
+    request?: SecondParameter<typeof customFetch>;
   }
 ) => {
-  const { query: queryOptions } = options ?? {};
+  const { query: queryOptions, request: requestOptions } = options ?? {};
 
   const queryKey = queryOptions?.queryKey ?? getListProjectGenericCredentialsQueryKey(project);
 
   const queryFn: QueryFunction<Awaited<ReturnType<typeof listProjectGenericCredentials>>> = () =>
-    listProjectGenericCredentials(project);
+    listProjectGenericCredentials(project, requestOptions);
 
   return { queryKey, queryFn, enabled: !!project, ...queryOptions } as UseQueryOptions<
     Awaited<ReturnType<typeof listProjectGenericCredentials>>,
@@ -118,6 +121,7 @@ export function useListProjectGenericCredentials<
         >,
         'initialData'
       >;
+    request?: SecondParameter<typeof customFetch>;
   },
   queryClient?: QueryClient
 ): DefinedUseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> };
@@ -138,6 +142,7 @@ export function useListProjectGenericCredentials<
         >,
         'initialData'
       >;
+    request?: SecondParameter<typeof customFetch>;
   },
   queryClient?: QueryClient
 ): UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> };
@@ -150,6 +155,7 @@ export function useListProjectGenericCredentials<
     query?: Partial<
       UseQueryOptions<Awaited<ReturnType<typeof listProjectGenericCredentials>>, TError, TData>
     >;
+    request?: SecondParameter<typeof customFetch>;
   },
   queryClient?: QueryClient
 ): UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> };
@@ -166,6 +172,7 @@ export function useListProjectGenericCredentials<
     query?: Partial<
       UseQueryOptions<Awaited<ReturnType<typeof listProjectGenericCredentials>>, TError, TData>
     >;
+    request?: SecondParameter<typeof customFetch>;
   },
   queryClient?: QueryClient
 ): UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> } {
@@ -227,6 +234,7 @@ export const getCreateProjectGenericCredentialsMutationOptions = <
     { project: string; data: CreateGenericCredentialsRequestBody },
     TContext
   >;
+  request?: SecondParameter<typeof customFetch>;
 }): UseMutationOptions<
   Awaited<ReturnType<typeof createProjectGenericCredentials>>,
   TError,
@@ -234,11 +242,11 @@ export const getCreateProjectGenericCredentialsMutationOptions = <
   TContext
 > => {
   const mutationKey = ['createProjectGenericCredentials'];
-  const { mutation: mutationOptions } = options
+  const { mutation: mutationOptions, request: requestOptions } = options
     ? options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey
       ? options
       : { ...options, mutation: { ...options.mutation, mutationKey } }
-    : { mutation: { mutationKey } };
+    : { mutation: { mutationKey }, request: undefined };
 
   const mutationFn: MutationFunction<
     Awaited<ReturnType<typeof createProjectGenericCredentials>>,
@@ -246,7 +254,7 @@ export const getCreateProjectGenericCredentialsMutationOptions = <
   > = (props) => {
     const { project, data } = props ?? {};
 
-    return createProjectGenericCredentials(project, data);
+    return createProjectGenericCredentials(project, data, requestOptions);
   };
 
   return { mutationFn, ...mutationOptions };
@@ -269,6 +277,7 @@ export const useCreateProjectGenericCredentials = <TError = unknown, TContext = 
       { project: string; data: CreateGenericCredentialsRequestBody },
       TContext
     >;
+    request?: SecondParameter<typeof customFetch>;
   },
   queryClient?: QueryClient
 ): UseMutationResult<
@@ -332,15 +341,16 @@ export const getGetProjectGenericCredentialsQueryOptions = <
     query?: Partial<
       UseQueryOptions<Awaited<ReturnType<typeof getProjectGenericCredentials>>, TError, TData>
     >;
+    request?: SecondParameter<typeof customFetch>;
   }
 ) => {
-  const { query: queryOptions } = options ?? {};
+  const { query: queryOptions, request: requestOptions } = options ?? {};
 
   const queryKey =
     queryOptions?.queryKey ?? getGetProjectGenericCredentialsQueryKey(project, genericCredentials);
 
   const queryFn: QueryFunction<Awaited<ReturnType<typeof getProjectGenericCredentials>>> = () =>
-    getProjectGenericCredentials(project, genericCredentials);
+    getProjectGenericCredentials(project, genericCredentials, requestOptions);
 
   return {
     queryKey,
@@ -375,6 +385,7 @@ export function useGetProjectGenericCredentials<
         >,
         'initialData'
       >;
+    request?: SecondParameter<typeof customFetch>;
   },
   queryClient?: QueryClient
 ): DefinedUseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> };
@@ -396,6 +407,7 @@ export function useGetProjectGenericCredentials<
         >,
         'initialData'
       >;
+    request?: SecondParameter<typeof customFetch>;
   },
   queryClient?: QueryClient
 ): UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> };
@@ -409,6 +421,7 @@ export function useGetProjectGenericCredentials<
     query?: Partial<
       UseQueryOptions<Awaited<ReturnType<typeof getProjectGenericCredentials>>, TError, TData>
     >;
+    request?: SecondParameter<typeof customFetch>;
   },
   queryClient?: QueryClient
 ): UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> };
@@ -426,6 +439,7 @@ export function useGetProjectGenericCredentials<
     query?: Partial<
       UseQueryOptions<Awaited<ReturnType<typeof getProjectGenericCredentials>>, TError, TData>
     >;
+    request?: SecondParameter<typeof customFetch>;
   },
   queryClient?: QueryClient
 ): UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> } {
@@ -495,6 +509,7 @@ export const getUpdateProjectGenericCredentialsMutationOptions = <
     { project: string; genericCredentials: string; data: UpdateGenericCredentialsRequestBody },
     TContext
   >;
+  request?: SecondParameter<typeof customFetch>;
 }): UseMutationOptions<
   Awaited<ReturnType<typeof updateProjectGenericCredentials>>,
   TError,
@@ -502,11 +517,11 @@ export const getUpdateProjectGenericCredentialsMutationOptions = <
   TContext
 > => {
   const mutationKey = ['updateProjectGenericCredentials'];
-  const { mutation: mutationOptions } = options
+  const { mutation: mutationOptions, request: requestOptions } = options
     ? options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey
       ? options
       : { ...options, mutation: { ...options.mutation, mutationKey } }
-    : { mutation: { mutationKey } };
+    : { mutation: { mutationKey }, request: undefined };
 
   const mutationFn: MutationFunction<
     Awaited<ReturnType<typeof updateProjectGenericCredentials>>,
@@ -514,7 +529,7 @@ export const getUpdateProjectGenericCredentialsMutationOptions = <
   > = (props) => {
     const { project, genericCredentials, data } = props ?? {};
 
-    return updateProjectGenericCredentials(project, genericCredentials, data);
+    return updateProjectGenericCredentials(project, genericCredentials, data, requestOptions);
   };
 
   return { mutationFn, ...mutationOptions };
@@ -537,6 +552,7 @@ export const useUpdateProjectGenericCredentials = <TError = unknown, TContext = 
       { project: string; genericCredentials: string; data: UpdateGenericCredentialsRequestBody },
       TContext
     >;
+    request?: SecondParameter<typeof customFetch>;
   },
   queryClient?: QueryClient
 ): UseMutationResult<
@@ -596,6 +612,7 @@ export const getDeleteProjectGenericCredentialsMutationOptions = <
     { project: string; genericCredentials: string },
     TContext
   >;
+  request?: SecondParameter<typeof customFetch>;
 }): UseMutationOptions<
   Awaited<ReturnType<typeof deleteProjectGenericCredentials>>,
   TError,
@@ -603,11 +620,11 @@ export const getDeleteProjectGenericCredentialsMutationOptions = <
   TContext
 > => {
   const mutationKey = ['deleteProjectGenericCredentials'];
-  const { mutation: mutationOptions } = options
+  const { mutation: mutationOptions, request: requestOptions } = options
     ? options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey
       ? options
       : { ...options, mutation: { ...options.mutation, mutationKey } }
-    : { mutation: { mutationKey } };
+    : { mutation: { mutationKey }, request: undefined };
 
   const mutationFn: MutationFunction<
     Awaited<ReturnType<typeof deleteProjectGenericCredentials>>,
@@ -615,7 +632,7 @@ export const getDeleteProjectGenericCredentialsMutationOptions = <
   > = (props) => {
     const { project, genericCredentials } = props ?? {};
 
-    return deleteProjectGenericCredentials(project, genericCredentials);
+    return deleteProjectGenericCredentials(project, genericCredentials, requestOptions);
   };
 
   return { mutationFn, ...mutationOptions };
@@ -638,6 +655,7 @@ export const useDeleteProjectGenericCredentials = <TError = unknown, TContext = 
       { project: string; genericCredentials: string },
       TContext
     >;
+    request?: SecondParameter<typeof customFetch>;
   },
   queryClient?: QueryClient
 ): UseMutationResult<
@@ -701,6 +719,7 @@ export const getPatchProjectGenericCredentialsMutationOptions = <
     { project: string; genericCredentials: string; data: PatchGenericCredentialsRequestBody },
     TContext
   >;
+  request?: SecondParameter<typeof customFetch>;
 }): UseMutationOptions<
   Awaited<ReturnType<typeof patchProjectGenericCredentials>>,
   TError,
@@ -708,11 +727,11 @@ export const getPatchProjectGenericCredentialsMutationOptions = <
   TContext
 > => {
   const mutationKey = ['patchProjectGenericCredentials'];
-  const { mutation: mutationOptions } = options
+  const { mutation: mutationOptions, request: requestOptions } = options
     ? options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey
       ? options
       : { ...options, mutation: { ...options.mutation, mutationKey } }
-    : { mutation: { mutationKey } };
+    : { mutation: { mutationKey }, request: undefined };
 
   const mutationFn: MutationFunction<
     Awaited<ReturnType<typeof patchProjectGenericCredentials>>,
@@ -720,7 +739,7 @@ export const getPatchProjectGenericCredentialsMutationOptions = <
   > = (props) => {
     const { project, genericCredentials, data } = props ?? {};
 
-    return patchProjectGenericCredentials(project, genericCredentials, data);
+    return patchProjectGenericCredentials(project, genericCredentials, data, requestOptions);
   };
 
   return { mutationFn, ...mutationOptions };
@@ -743,6 +762,7 @@ export const usePatchProjectGenericCredentials = <TError = unknown, TContext = u
       { project: string; genericCredentials: string; data: PatchGenericCredentialsRequestBody },
       TContext
     >;
+    request?: SecondParameter<typeof customFetch>;
   },
   queryClient?: QueryClient
 ): UseMutationResult<
@@ -800,14 +820,15 @@ export const getListProjectRepoCredentialsQueryOptions = <
     query?: Partial<
       UseQueryOptions<Awaited<ReturnType<typeof listProjectRepoCredentials>>, TError, TData>
     >;
+    request?: SecondParameter<typeof customFetch>;
   }
 ) => {
-  const { query: queryOptions } = options ?? {};
+  const { query: queryOptions, request: requestOptions } = options ?? {};
 
   const queryKey = queryOptions?.queryKey ?? getListProjectRepoCredentialsQueryKey(project);
 
   const queryFn: QueryFunction<Awaited<ReturnType<typeof listProjectRepoCredentials>>> = () =>
-    listProjectRepoCredentials(project);
+    listProjectRepoCredentials(project, requestOptions);
 
   return { queryKey, queryFn, enabled: !!project, ...queryOptions } as UseQueryOptions<
     Awaited<ReturnType<typeof listProjectRepoCredentials>>,
@@ -838,6 +859,7 @@ export function useListProjectRepoCredentials<
         >,
         'initialData'
       >;
+    request?: SecondParameter<typeof customFetch>;
   },
   queryClient?: QueryClient
 ): DefinedUseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> };
@@ -858,6 +880,7 @@ export function useListProjectRepoCredentials<
         >,
         'initialData'
       >;
+    request?: SecondParameter<typeof customFetch>;
   },
   queryClient?: QueryClient
 ): UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> };
@@ -870,6 +893,7 @@ export function useListProjectRepoCredentials<
     query?: Partial<
       UseQueryOptions<Awaited<ReturnType<typeof listProjectRepoCredentials>>, TError, TData>
     >;
+    request?: SecondParameter<typeof customFetch>;
   },
   queryClient?: QueryClient
 ): UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> };
@@ -886,6 +910,7 @@ export function useListProjectRepoCredentials<
     query?: Partial<
       UseQueryOptions<Awaited<ReturnType<typeof listProjectRepoCredentials>>, TError, TData>
     >;
+    request?: SecondParameter<typeof customFetch>;
   },
   queryClient?: QueryClient
 ): UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> } {
@@ -946,6 +971,7 @@ export const getCreateProjectRepoCredentialsMutationOptions = <
     { project: string; data: CreateRepoCredentialsRequestBody },
     TContext
   >;
+  request?: SecondParameter<typeof customFetch>;
 }): UseMutationOptions<
   Awaited<ReturnType<typeof createProjectRepoCredentials>>,
   TError,
@@ -953,11 +979,11 @@ export const getCreateProjectRepoCredentialsMutationOptions = <
   TContext
 > => {
   const mutationKey = ['createProjectRepoCredentials'];
-  const { mutation: mutationOptions } = options
+  const { mutation: mutationOptions, request: requestOptions } = options
     ? options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey
       ? options
       : { ...options, mutation: { ...options.mutation, mutationKey } }
-    : { mutation: { mutationKey } };
+    : { mutation: { mutationKey }, request: undefined };
 
   const mutationFn: MutationFunction<
     Awaited<ReturnType<typeof createProjectRepoCredentials>>,
@@ -965,7 +991,7 @@ export const getCreateProjectRepoCredentialsMutationOptions = <
   > = (props) => {
     const { project, data } = props ?? {};
 
-    return createProjectRepoCredentials(project, data);
+    return createProjectRepoCredentials(project, data, requestOptions);
   };
 
   return { mutationFn, ...mutationOptions };
@@ -988,6 +1014,7 @@ export const useCreateProjectRepoCredentials = <TError = unknown, TContext = unk
       { project: string; data: CreateRepoCredentialsRequestBody },
       TContext
     >;
+    request?: SecondParameter<typeof customFetch>;
   },
   queryClient?: QueryClient
 ): UseMutationResult<
@@ -1050,15 +1077,16 @@ export const getGetProjectRepoCredentialsQueryOptions = <
     query?: Partial<
       UseQueryOptions<Awaited<ReturnType<typeof getProjectRepoCredentials>>, TError, TData>
     >;
+    request?: SecondParameter<typeof customFetch>;
   }
 ) => {
-  const { query: queryOptions } = options ?? {};
+  const { query: queryOptions, request: requestOptions } = options ?? {};
 
   const queryKey =
     queryOptions?.queryKey ?? getGetProjectRepoCredentialsQueryKey(project, repoCredentials);
 
   const queryFn: QueryFunction<Awaited<ReturnType<typeof getProjectRepoCredentials>>> = () =>
-    getProjectRepoCredentials(project, repoCredentials);
+    getProjectRepoCredentials(project, repoCredentials, requestOptions);
 
   return {
     queryKey,
@@ -1093,6 +1121,7 @@ export function useGetProjectRepoCredentials<
         >,
         'initialData'
       >;
+    request?: SecondParameter<typeof customFetch>;
   },
   queryClient?: QueryClient
 ): DefinedUseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> };
@@ -1114,6 +1143,7 @@ export function useGetProjectRepoCredentials<
         >,
         'initialData'
       >;
+    request?: SecondParameter<typeof customFetch>;
   },
   queryClient?: QueryClient
 ): UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> };
@@ -1127,6 +1157,7 @@ export function useGetProjectRepoCredentials<
     query?: Partial<
       UseQueryOptions<Awaited<ReturnType<typeof getProjectRepoCredentials>>, TError, TData>
     >;
+    request?: SecondParameter<typeof customFetch>;
   },
   queryClient?: QueryClient
 ): UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> };
@@ -1144,6 +1175,7 @@ export function useGetProjectRepoCredentials<
     query?: Partial<
       UseQueryOptions<Awaited<ReturnType<typeof getProjectRepoCredentials>>, TError, TData>
     >;
+    request?: SecondParameter<typeof customFetch>;
   },
   queryClient?: QueryClient
 ): UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> } {
@@ -1205,6 +1237,7 @@ export const getUpdateProjectRepoCredentialsMutationOptions = <
     { project: string; repoCredentials: string; data: UpdateRepoCredentialsRequestBody },
     TContext
   >;
+  request?: SecondParameter<typeof customFetch>;
 }): UseMutationOptions<
   Awaited<ReturnType<typeof updateProjectRepoCredentials>>,
   TError,
@@ -1212,11 +1245,11 @@ export const getUpdateProjectRepoCredentialsMutationOptions = <
   TContext
 > => {
   const mutationKey = ['updateProjectRepoCredentials'];
-  const { mutation: mutationOptions } = options
+  const { mutation: mutationOptions, request: requestOptions } = options
     ? options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey
       ? options
       : { ...options, mutation: { ...options.mutation, mutationKey } }
-    : { mutation: { mutationKey } };
+    : { mutation: { mutationKey }, request: undefined };
 
   const mutationFn: MutationFunction<
     Awaited<ReturnType<typeof updateProjectRepoCredentials>>,
@@ -1224,7 +1257,7 @@ export const getUpdateProjectRepoCredentialsMutationOptions = <
   > = (props) => {
     const { project, repoCredentials, data } = props ?? {};
 
-    return updateProjectRepoCredentials(project, repoCredentials, data);
+    return updateProjectRepoCredentials(project, repoCredentials, data, requestOptions);
   };
 
   return { mutationFn, ...mutationOptions };
@@ -1247,6 +1280,7 @@ export const useUpdateProjectRepoCredentials = <TError = unknown, TContext = unk
       { project: string; repoCredentials: string; data: UpdateRepoCredentialsRequestBody },
       TContext
     >;
+    request?: SecondParameter<typeof customFetch>;
   },
   queryClient?: QueryClient
 ): UseMutationResult<
@@ -1302,6 +1336,7 @@ export const getDeleteProjectRepoCredentialsMutationOptions = <
     { project: string; repoCredentials: string },
     TContext
   >;
+  request?: SecondParameter<typeof customFetch>;
 }): UseMutationOptions<
   Awaited<ReturnType<typeof deleteProjectRepoCredentials>>,
   TError,
@@ -1309,11 +1344,11 @@ export const getDeleteProjectRepoCredentialsMutationOptions = <
   TContext
 > => {
   const mutationKey = ['deleteProjectRepoCredentials'];
-  const { mutation: mutationOptions } = options
+  const { mutation: mutationOptions, request: requestOptions } = options
     ? options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey
       ? options
       : { ...options, mutation: { ...options.mutation, mutationKey } }
-    : { mutation: { mutationKey } };
+    : { mutation: { mutationKey }, request: undefined };
 
   const mutationFn: MutationFunction<
     Awaited<ReturnType<typeof deleteProjectRepoCredentials>>,
@@ -1321,7 +1356,7 @@ export const getDeleteProjectRepoCredentialsMutationOptions = <
   > = (props) => {
     const { project, repoCredentials } = props ?? {};
 
-    return deleteProjectRepoCredentials(project, repoCredentials);
+    return deleteProjectRepoCredentials(project, repoCredentials, requestOptions);
   };
 
   return { mutationFn, ...mutationOptions };
@@ -1344,6 +1379,7 @@ export const useDeleteProjectRepoCredentials = <TError = unknown, TContext = unk
       { project: string; repoCredentials: string },
       TContext
     >;
+    request?: SecondParameter<typeof customFetch>;
   },
   queryClient?: QueryClient
 ): UseMutationResult<
@@ -1402,6 +1438,7 @@ export const getPatchProjectRepoCredentialsMutationOptions = <
     { project: string; repoCredentials: string; data: PatchRepoCredentialsRequestBody },
     TContext
   >;
+  request?: SecondParameter<typeof customFetch>;
 }): UseMutationOptions<
   Awaited<ReturnType<typeof patchProjectRepoCredentials>>,
   TError,
@@ -1409,11 +1446,11 @@ export const getPatchProjectRepoCredentialsMutationOptions = <
   TContext
 > => {
   const mutationKey = ['patchProjectRepoCredentials'];
-  const { mutation: mutationOptions } = options
+  const { mutation: mutationOptions, request: requestOptions } = options
     ? options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey
       ? options
       : { ...options, mutation: { ...options.mutation, mutationKey } }
-    : { mutation: { mutationKey } };
+    : { mutation: { mutationKey }, request: undefined };
 
   const mutationFn: MutationFunction<
     Awaited<ReturnType<typeof patchProjectRepoCredentials>>,
@@ -1421,7 +1458,7 @@ export const getPatchProjectRepoCredentialsMutationOptions = <
   > = (props) => {
     const { project, repoCredentials, data } = props ?? {};
 
-    return patchProjectRepoCredentials(project, repoCredentials, data);
+    return patchProjectRepoCredentials(project, repoCredentials, data, requestOptions);
   };
 
   return { mutationFn, ...mutationOptions };
@@ -1444,6 +1481,7 @@ export const usePatchProjectRepoCredentials = <TError = unknown, TContext = unkn
       { project: string; repoCredentials: string; data: PatchRepoCredentialsRequestBody },
       TContext
     >;
+    request?: SecondParameter<typeof customFetch>;
   },
   queryClient?: QueryClient
 ): UseMutationResult<
@@ -1496,13 +1534,14 @@ export const getListSharedGenericCredentialsQueryOptions = <
   query?: Partial<
     UseQueryOptions<Awaited<ReturnType<typeof listSharedGenericCredentials>>, TError, TData>
   >;
+  request?: SecondParameter<typeof customFetch>;
 }) => {
-  const { query: queryOptions } = options ?? {};
+  const { query: queryOptions, request: requestOptions } = options ?? {};
 
   const queryKey = queryOptions?.queryKey ?? getListSharedGenericCredentialsQueryKey();
 
   const queryFn: QueryFunction<Awaited<ReturnType<typeof listSharedGenericCredentials>>> = () =>
-    listSharedGenericCredentials();
+    listSharedGenericCredentials(requestOptions);
 
   return { queryKey, queryFn, ...queryOptions } as UseQueryOptions<
     Awaited<ReturnType<typeof listSharedGenericCredentials>>,
@@ -1532,6 +1571,7 @@ export function useListSharedGenericCredentials<
         >,
         'initialData'
       >;
+    request?: SecondParameter<typeof customFetch>;
   },
   queryClient?: QueryClient
 ): DefinedUseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> };
@@ -1551,6 +1591,7 @@ export function useListSharedGenericCredentials<
         >,
         'initialData'
       >;
+    request?: SecondParameter<typeof customFetch>;
   },
   queryClient?: QueryClient
 ): UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> };
@@ -1562,6 +1603,7 @@ export function useListSharedGenericCredentials<
     query?: Partial<
       UseQueryOptions<Awaited<ReturnType<typeof listSharedGenericCredentials>>, TError, TData>
     >;
+    request?: SecondParameter<typeof customFetch>;
   },
   queryClient?: QueryClient
 ): UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> };
@@ -1577,6 +1619,7 @@ export function useListSharedGenericCredentials<
     query?: Partial<
       UseQueryOptions<Awaited<ReturnType<typeof listSharedGenericCredentials>>, TError, TData>
     >;
+    request?: SecondParameter<typeof customFetch>;
   },
   queryClient?: QueryClient
 ): UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> } {
@@ -1636,6 +1679,7 @@ export const getCreateSharedGenericCredentialsMutationOptions = <
     { data: CreateGenericCredentialsRequestBody },
     TContext
   >;
+  request?: SecondParameter<typeof customFetch>;
 }): UseMutationOptions<
   Awaited<ReturnType<typeof createSharedGenericCredentials>>,
   TError,
@@ -1643,11 +1687,11 @@ export const getCreateSharedGenericCredentialsMutationOptions = <
   TContext
 > => {
   const mutationKey = ['createSharedGenericCredentials'];
-  const { mutation: mutationOptions } = options
+  const { mutation: mutationOptions, request: requestOptions } = options
     ? options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey
       ? options
       : { ...options, mutation: { ...options.mutation, mutationKey } }
-    : { mutation: { mutationKey } };
+    : { mutation: { mutationKey }, request: undefined };
 
   const mutationFn: MutationFunction<
     Awaited<ReturnType<typeof createSharedGenericCredentials>>,
@@ -1655,7 +1699,7 @@ export const getCreateSharedGenericCredentialsMutationOptions = <
   > = (props) => {
     const { data } = props ?? {};
 
-    return createSharedGenericCredentials(data);
+    return createSharedGenericCredentials(data, requestOptions);
   };
 
   return { mutationFn, ...mutationOptions };
@@ -1678,6 +1722,7 @@ export const useCreateSharedGenericCredentials = <TError = unknown, TContext = u
       { data: CreateGenericCredentialsRequestBody },
       TContext
     >;
+    request?: SecondParameter<typeof customFetch>;
   },
   queryClient?: QueryClient
 ): UseMutationResult<
@@ -1735,15 +1780,16 @@ export const getGetSharedGenericCredentialsQueryOptions = <
     query?: Partial<
       UseQueryOptions<Awaited<ReturnType<typeof getSharedGenericCredentials>>, TError, TData>
     >;
+    request?: SecondParameter<typeof customFetch>;
   }
 ) => {
-  const { query: queryOptions } = options ?? {};
+  const { query: queryOptions, request: requestOptions } = options ?? {};
 
   const queryKey =
     queryOptions?.queryKey ?? getGetSharedGenericCredentialsQueryKey(genericCredentials);
 
   const queryFn: QueryFunction<Awaited<ReturnType<typeof getSharedGenericCredentials>>> = () =>
-    getSharedGenericCredentials(genericCredentials);
+    getSharedGenericCredentials(genericCredentials, requestOptions);
 
   return { queryKey, queryFn, enabled: !!genericCredentials, ...queryOptions } as UseQueryOptions<
     Awaited<ReturnType<typeof getSharedGenericCredentials>>,
@@ -1774,6 +1820,7 @@ export function useGetSharedGenericCredentials<
         >,
         'initialData'
       >;
+    request?: SecondParameter<typeof customFetch>;
   },
   queryClient?: QueryClient
 ): DefinedUseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> };
@@ -1794,6 +1841,7 @@ export function useGetSharedGenericCredentials<
         >,
         'initialData'
       >;
+    request?: SecondParameter<typeof customFetch>;
   },
   queryClient?: QueryClient
 ): UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> };
@@ -1806,6 +1854,7 @@ export function useGetSharedGenericCredentials<
     query?: Partial<
       UseQueryOptions<Awaited<ReturnType<typeof getSharedGenericCredentials>>, TError, TData>
     >;
+    request?: SecondParameter<typeof customFetch>;
   },
   queryClient?: QueryClient
 ): UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> };
@@ -1822,6 +1871,7 @@ export function useGetSharedGenericCredentials<
     query?: Partial<
       UseQueryOptions<Awaited<ReturnType<typeof getSharedGenericCredentials>>, TError, TData>
     >;
+    request?: SecondParameter<typeof customFetch>;
   },
   queryClient?: QueryClient
 ): UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> } {
@@ -1882,6 +1932,7 @@ export const getUpdateSharedGenericCredentialsMutationOptions = <
     { genericCredentials: string; data: UpdateGenericCredentialsRequestBody },
     TContext
   >;
+  request?: SecondParameter<typeof customFetch>;
 }): UseMutationOptions<
   Awaited<ReturnType<typeof updateSharedGenericCredentials>>,
   TError,
@@ -1889,11 +1940,11 @@ export const getUpdateSharedGenericCredentialsMutationOptions = <
   TContext
 > => {
   const mutationKey = ['updateSharedGenericCredentials'];
-  const { mutation: mutationOptions } = options
+  const { mutation: mutationOptions, request: requestOptions } = options
     ? options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey
       ? options
       : { ...options, mutation: { ...options.mutation, mutationKey } }
-    : { mutation: { mutationKey } };
+    : { mutation: { mutationKey }, request: undefined };
 
   const mutationFn: MutationFunction<
     Awaited<ReturnType<typeof updateSharedGenericCredentials>>,
@@ -1901,7 +1952,7 @@ export const getUpdateSharedGenericCredentialsMutationOptions = <
   > = (props) => {
     const { genericCredentials, data } = props ?? {};
 
-    return updateSharedGenericCredentials(genericCredentials, data);
+    return updateSharedGenericCredentials(genericCredentials, data, requestOptions);
   };
 
   return { mutationFn, ...mutationOptions };
@@ -1924,6 +1975,7 @@ export const useUpdateSharedGenericCredentials = <TError = unknown, TContext = u
       { genericCredentials: string; data: UpdateGenericCredentialsRequestBody },
       TContext
     >;
+    request?: SecondParameter<typeof customFetch>;
   },
   queryClient?: QueryClient
 ): UseMutationResult<
@@ -1978,6 +2030,7 @@ export const getDeleteSharedGenericCredentialsMutationOptions = <
     { genericCredentials: string },
     TContext
   >;
+  request?: SecondParameter<typeof customFetch>;
 }): UseMutationOptions<
   Awaited<ReturnType<typeof deleteSharedGenericCredentials>>,
   TError,
@@ -1985,11 +2038,11 @@ export const getDeleteSharedGenericCredentialsMutationOptions = <
   TContext
 > => {
   const mutationKey = ['deleteSharedGenericCredentials'];
-  const { mutation: mutationOptions } = options
+  const { mutation: mutationOptions, request: requestOptions } = options
     ? options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey
       ? options
       : { ...options, mutation: { ...options.mutation, mutationKey } }
-    : { mutation: { mutationKey } };
+    : { mutation: { mutationKey }, request: undefined };
 
   const mutationFn: MutationFunction<
     Awaited<ReturnType<typeof deleteSharedGenericCredentials>>,
@@ -1997,7 +2050,7 @@ export const getDeleteSharedGenericCredentialsMutationOptions = <
   > = (props) => {
     const { genericCredentials } = props ?? {};
 
-    return deleteSharedGenericCredentials(genericCredentials);
+    return deleteSharedGenericCredentials(genericCredentials, requestOptions);
   };
 
   return { mutationFn, ...mutationOptions };
@@ -2020,6 +2073,7 @@ export const useDeleteSharedGenericCredentials = <TError = unknown, TContext = u
       { genericCredentials: string },
       TContext
     >;
+    request?: SecondParameter<typeof customFetch>;
   },
   queryClient?: QueryClient
 ): UseMutationResult<
@@ -2079,6 +2133,7 @@ export const getPatchSharedGenericCredentialsMutationOptions = <
     { genericCredentials: string; data: PatchGenericCredentialsRequestBody },
     TContext
   >;
+  request?: SecondParameter<typeof customFetch>;
 }): UseMutationOptions<
   Awaited<ReturnType<typeof patchSharedGenericCredentials>>,
   TError,
@@ -2086,11 +2141,11 @@ export const getPatchSharedGenericCredentialsMutationOptions = <
   TContext
 > => {
   const mutationKey = ['patchSharedGenericCredentials'];
-  const { mutation: mutationOptions } = options
+  const { mutation: mutationOptions, request: requestOptions } = options
     ? options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey
       ? options
       : { ...options, mutation: { ...options.mutation, mutationKey } }
-    : { mutation: { mutationKey } };
+    : { mutation: { mutationKey }, request: undefined };
 
   const mutationFn: MutationFunction<
     Awaited<ReturnType<typeof patchSharedGenericCredentials>>,
@@ -2098,7 +2153,7 @@ export const getPatchSharedGenericCredentialsMutationOptions = <
   > = (props) => {
     const { genericCredentials, data } = props ?? {};
 
-    return patchSharedGenericCredentials(genericCredentials, data);
+    return patchSharedGenericCredentials(genericCredentials, data, requestOptions);
   };
 
   return { mutationFn, ...mutationOptions };
@@ -2121,6 +2176,7 @@ export const usePatchSharedGenericCredentials = <TError = unknown, TContext = un
       { genericCredentials: string; data: PatchGenericCredentialsRequestBody },
       TContext
     >;
+    request?: SecondParameter<typeof customFetch>;
   },
   queryClient?: QueryClient
 ): UseMutationResult<
@@ -2172,13 +2228,14 @@ export const getListSharedRepoCredentialsQueryOptions = <
   query?: Partial<
     UseQueryOptions<Awaited<ReturnType<typeof listSharedRepoCredentials>>, TError, TData>
   >;
+  request?: SecondParameter<typeof customFetch>;
 }) => {
-  const { query: queryOptions } = options ?? {};
+  const { query: queryOptions, request: requestOptions } = options ?? {};
 
   const queryKey = queryOptions?.queryKey ?? getListSharedRepoCredentialsQueryKey();
 
   const queryFn: QueryFunction<Awaited<ReturnType<typeof listSharedRepoCredentials>>> = () =>
-    listSharedRepoCredentials();
+    listSharedRepoCredentials(requestOptions);
 
   return { queryKey, queryFn, ...queryOptions } as UseQueryOptions<
     Awaited<ReturnType<typeof listSharedRepoCredentials>>,
@@ -2208,6 +2265,7 @@ export function useListSharedRepoCredentials<
         >,
         'initialData'
       >;
+    request?: SecondParameter<typeof customFetch>;
   },
   queryClient?: QueryClient
 ): DefinedUseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> };
@@ -2227,6 +2285,7 @@ export function useListSharedRepoCredentials<
         >,
         'initialData'
       >;
+    request?: SecondParameter<typeof customFetch>;
   },
   queryClient?: QueryClient
 ): UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> };
@@ -2238,6 +2297,7 @@ export function useListSharedRepoCredentials<
     query?: Partial<
       UseQueryOptions<Awaited<ReturnType<typeof listSharedRepoCredentials>>, TError, TData>
     >;
+    request?: SecondParameter<typeof customFetch>;
   },
   queryClient?: QueryClient
 ): UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> };
@@ -2253,6 +2313,7 @@ export function useListSharedRepoCredentials<
     query?: Partial<
       UseQueryOptions<Awaited<ReturnType<typeof listSharedRepoCredentials>>, TError, TData>
     >;
+    request?: SecondParameter<typeof customFetch>;
   },
   queryClient?: QueryClient
 ): UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> } {
@@ -2308,6 +2369,7 @@ export const getCreateSharedRepoCredentialsMutationOptions = <
     { data: CreateRepoCredentialsRequestBody },
     TContext
   >;
+  request?: SecondParameter<typeof customFetch>;
 }): UseMutationOptions<
   Awaited<ReturnType<typeof createSharedRepoCredentials>>,
   TError,
@@ -2315,11 +2377,11 @@ export const getCreateSharedRepoCredentialsMutationOptions = <
   TContext
 > => {
   const mutationKey = ['createSharedRepoCredentials'];
-  const { mutation: mutationOptions } = options
+  const { mutation: mutationOptions, request: requestOptions } = options
     ? options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey
       ? options
       : { ...options, mutation: { ...options.mutation, mutationKey } }
-    : { mutation: { mutationKey } };
+    : { mutation: { mutationKey }, request: undefined };
 
   const mutationFn: MutationFunction<
     Awaited<ReturnType<typeof createSharedRepoCredentials>>,
@@ -2327,7 +2389,7 @@ export const getCreateSharedRepoCredentialsMutationOptions = <
   > = (props) => {
     const { data } = props ?? {};
 
-    return createSharedRepoCredentials(data);
+    return createSharedRepoCredentials(data, requestOptions);
   };
 
   return { mutationFn, ...mutationOptions };
@@ -2350,6 +2412,7 @@ export const useCreateSharedRepoCredentials = <TError = unknown, TContext = unkn
       { data: CreateRepoCredentialsRequestBody },
       TContext
     >;
+    request?: SecondParameter<typeof customFetch>;
   },
   queryClient?: QueryClient
 ): UseMutationResult<
@@ -2407,14 +2470,15 @@ export const getGetSharedRepoCredentialsQueryOptions = <
     query?: Partial<
       UseQueryOptions<Awaited<ReturnType<typeof getSharedRepoCredentials>>, TError, TData>
     >;
+    request?: SecondParameter<typeof customFetch>;
   }
 ) => {
-  const { query: queryOptions } = options ?? {};
+  const { query: queryOptions, request: requestOptions } = options ?? {};
 
   const queryKey = queryOptions?.queryKey ?? getGetSharedRepoCredentialsQueryKey(repoCredentials);
 
   const queryFn: QueryFunction<Awaited<ReturnType<typeof getSharedRepoCredentials>>> = () =>
-    getSharedRepoCredentials(repoCredentials);
+    getSharedRepoCredentials(repoCredentials, requestOptions);
 
   return { queryKey, queryFn, enabled: !!repoCredentials, ...queryOptions } as UseQueryOptions<
     Awaited<ReturnType<typeof getSharedRepoCredentials>>,
@@ -2445,6 +2509,7 @@ export function useGetSharedRepoCredentials<
         >,
         'initialData'
       >;
+    request?: SecondParameter<typeof customFetch>;
   },
   queryClient?: QueryClient
 ): DefinedUseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> };
@@ -2465,6 +2530,7 @@ export function useGetSharedRepoCredentials<
         >,
         'initialData'
       >;
+    request?: SecondParameter<typeof customFetch>;
   },
   queryClient?: QueryClient
 ): UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> };
@@ -2477,6 +2543,7 @@ export function useGetSharedRepoCredentials<
     query?: Partial<
       UseQueryOptions<Awaited<ReturnType<typeof getSharedRepoCredentials>>, TError, TData>
     >;
+    request?: SecondParameter<typeof customFetch>;
   },
   queryClient?: QueryClient
 ): UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> };
@@ -2493,6 +2560,7 @@ export function useGetSharedRepoCredentials<
     query?: Partial<
       UseQueryOptions<Awaited<ReturnType<typeof getSharedRepoCredentials>>, TError, TData>
     >;
+    request?: SecondParameter<typeof customFetch>;
   },
   queryClient?: QueryClient
 ): UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> } {
@@ -2552,6 +2620,7 @@ export const getUpdateSharedRepoCredentialsMutationOptions = <
     { repoCredentials: string; data: UpdateRepoCredentialsRequestBody },
     TContext
   >;
+  request?: SecondParameter<typeof customFetch>;
 }): UseMutationOptions<
   Awaited<ReturnType<typeof updateSharedRepoCredentials>>,
   TError,
@@ -2559,11 +2628,11 @@ export const getUpdateSharedRepoCredentialsMutationOptions = <
   TContext
 > => {
   const mutationKey = ['updateSharedRepoCredentials'];
-  const { mutation: mutationOptions } = options
+  const { mutation: mutationOptions, request: requestOptions } = options
     ? options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey
       ? options
       : { ...options, mutation: { ...options.mutation, mutationKey } }
-    : { mutation: { mutationKey } };
+    : { mutation: { mutationKey }, request: undefined };
 
   const mutationFn: MutationFunction<
     Awaited<ReturnType<typeof updateSharedRepoCredentials>>,
@@ -2571,7 +2640,7 @@ export const getUpdateSharedRepoCredentialsMutationOptions = <
   > = (props) => {
     const { repoCredentials, data } = props ?? {};
 
-    return updateSharedRepoCredentials(repoCredentials, data);
+    return updateSharedRepoCredentials(repoCredentials, data, requestOptions);
   };
 
   return { mutationFn, ...mutationOptions };
@@ -2594,6 +2663,7 @@ export const useUpdateSharedRepoCredentials = <TError = unknown, TContext = unkn
       { repoCredentials: string; data: UpdateRepoCredentialsRequestBody },
       TContext
     >;
+    request?: SecondParameter<typeof customFetch>;
   },
   queryClient?: QueryClient
 ): UseMutationResult<
@@ -2647,6 +2717,7 @@ export const getDeleteSharedRepoCredentialsMutationOptions = <
     { repoCredentials: string },
     TContext
   >;
+  request?: SecondParameter<typeof customFetch>;
 }): UseMutationOptions<
   Awaited<ReturnType<typeof deleteSharedRepoCredentials>>,
   TError,
@@ -2654,11 +2725,11 @@ export const getDeleteSharedRepoCredentialsMutationOptions = <
   TContext
 > => {
   const mutationKey = ['deleteSharedRepoCredentials'];
-  const { mutation: mutationOptions } = options
+  const { mutation: mutationOptions, request: requestOptions } = options
     ? options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey
       ? options
       : { ...options, mutation: { ...options.mutation, mutationKey } }
-    : { mutation: { mutationKey } };
+    : { mutation: { mutationKey }, request: undefined };
 
   const mutationFn: MutationFunction<
     Awaited<ReturnType<typeof deleteSharedRepoCredentials>>,
@@ -2666,7 +2737,7 @@ export const getDeleteSharedRepoCredentialsMutationOptions = <
   > = (props) => {
     const { repoCredentials } = props ?? {};
 
-    return deleteSharedRepoCredentials(repoCredentials);
+    return deleteSharedRepoCredentials(repoCredentials, requestOptions);
   };
 
   return { mutationFn, ...mutationOptions };
@@ -2689,6 +2760,7 @@ export const useDeleteSharedRepoCredentials = <TError = unknown, TContext = unkn
       { repoCredentials: string },
       TContext
     >;
+    request?: SecondParameter<typeof customFetch>;
   },
   queryClient?: QueryClient
 ): UseMutationResult<
@@ -2746,6 +2818,7 @@ export const getPatchSharedRepoCredentialsMutationOptions = <
     { repoCredentials: string; data: PatchRepoCredentialsRequestBody },
     TContext
   >;
+  request?: SecondParameter<typeof customFetch>;
 }): UseMutationOptions<
   Awaited<ReturnType<typeof patchSharedRepoCredentials>>,
   TError,
@@ -2753,11 +2826,11 @@ export const getPatchSharedRepoCredentialsMutationOptions = <
   TContext
 > => {
   const mutationKey = ['patchSharedRepoCredentials'];
-  const { mutation: mutationOptions } = options
+  const { mutation: mutationOptions, request: requestOptions } = options
     ? options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey
       ? options
       : { ...options, mutation: { ...options.mutation, mutationKey } }
-    : { mutation: { mutationKey } };
+    : { mutation: { mutationKey }, request: undefined };
 
   const mutationFn: MutationFunction<
     Awaited<ReturnType<typeof patchSharedRepoCredentials>>,
@@ -2765,7 +2838,7 @@ export const getPatchSharedRepoCredentialsMutationOptions = <
   > = (props) => {
     const { repoCredentials, data } = props ?? {};
 
-    return patchSharedRepoCredentials(repoCredentials, data);
+    return patchSharedRepoCredentials(repoCredentials, data, requestOptions);
   };
 
   return { mutationFn, ...mutationOptions };
@@ -2788,6 +2861,7 @@ export const usePatchSharedRepoCredentials = <TError = unknown, TContext = unkno
       { repoCredentials: string; data: PatchRepoCredentialsRequestBody },
       TContext
     >;
+    request?: SecondParameter<typeof customFetch>;
   },
   queryClient?: QueryClient
 ): UseMutationResult<
@@ -2840,13 +2914,14 @@ export const getListSystemGenericCredentialsQueryOptions = <
   query?: Partial<
     UseQueryOptions<Awaited<ReturnType<typeof listSystemGenericCredentials>>, TError, TData>
   >;
+  request?: SecondParameter<typeof customFetch>;
 }) => {
-  const { query: queryOptions } = options ?? {};
+  const { query: queryOptions, request: requestOptions } = options ?? {};
 
   const queryKey = queryOptions?.queryKey ?? getListSystemGenericCredentialsQueryKey();
 
   const queryFn: QueryFunction<Awaited<ReturnType<typeof listSystemGenericCredentials>>> = () =>
-    listSystemGenericCredentials();
+    listSystemGenericCredentials(requestOptions);
 
   return { queryKey, queryFn, ...queryOptions } as UseQueryOptions<
     Awaited<ReturnType<typeof listSystemGenericCredentials>>,
@@ -2876,6 +2951,7 @@ export function useListSystemGenericCredentials<
         >,
         'initialData'
       >;
+    request?: SecondParameter<typeof customFetch>;
   },
   queryClient?: QueryClient
 ): DefinedUseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> };
@@ -2895,6 +2971,7 @@ export function useListSystemGenericCredentials<
         >,
         'initialData'
       >;
+    request?: SecondParameter<typeof customFetch>;
   },
   queryClient?: QueryClient
 ): UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> };
@@ -2906,6 +2983,7 @@ export function useListSystemGenericCredentials<
     query?: Partial<
       UseQueryOptions<Awaited<ReturnType<typeof listSystemGenericCredentials>>, TError, TData>
     >;
+    request?: SecondParameter<typeof customFetch>;
   },
   queryClient?: QueryClient
 ): UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> };
@@ -2921,6 +2999,7 @@ export function useListSystemGenericCredentials<
     query?: Partial<
       UseQueryOptions<Awaited<ReturnType<typeof listSystemGenericCredentials>>, TError, TData>
     >;
+    request?: SecondParameter<typeof customFetch>;
   },
   queryClient?: QueryClient
 ): UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> } {
@@ -2980,6 +3059,7 @@ export const getCreateSystemGenericCredentialsMutationOptions = <
     { data: CreateGenericCredentialsRequestBody },
     TContext
   >;
+  request?: SecondParameter<typeof customFetch>;
 }): UseMutationOptions<
   Awaited<ReturnType<typeof createSystemGenericCredentials>>,
   TError,
@@ -2987,11 +3067,11 @@ export const getCreateSystemGenericCredentialsMutationOptions = <
   TContext
 > => {
   const mutationKey = ['createSystemGenericCredentials'];
-  const { mutation: mutationOptions } = options
+  const { mutation: mutationOptions, request: requestOptions } = options
     ? options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey
       ? options
       : { ...options, mutation: { ...options.mutation, mutationKey } }
-    : { mutation: { mutationKey } };
+    : { mutation: { mutationKey }, request: undefined };
 
   const mutationFn: MutationFunction<
     Awaited<ReturnType<typeof createSystemGenericCredentials>>,
@@ -2999,7 +3079,7 @@ export const getCreateSystemGenericCredentialsMutationOptions = <
   > = (props) => {
     const { data } = props ?? {};
 
-    return createSystemGenericCredentials(data);
+    return createSystemGenericCredentials(data, requestOptions);
   };
 
   return { mutationFn, ...mutationOptions };
@@ -3022,6 +3102,7 @@ export const useCreateSystemGenericCredentials = <TError = unknown, TContext = u
       { data: CreateGenericCredentialsRequestBody },
       TContext
     >;
+    request?: SecondParameter<typeof customFetch>;
   },
   queryClient?: QueryClient
 ): UseMutationResult<
@@ -3079,15 +3160,16 @@ export const getGetSystemGenericCredentialsQueryOptions = <
     query?: Partial<
       UseQueryOptions<Awaited<ReturnType<typeof getSystemGenericCredentials>>, TError, TData>
     >;
+    request?: SecondParameter<typeof customFetch>;
   }
 ) => {
-  const { query: queryOptions } = options ?? {};
+  const { query: queryOptions, request: requestOptions } = options ?? {};
 
   const queryKey =
     queryOptions?.queryKey ?? getGetSystemGenericCredentialsQueryKey(genericCredentials);
 
   const queryFn: QueryFunction<Awaited<ReturnType<typeof getSystemGenericCredentials>>> = () =>
-    getSystemGenericCredentials(genericCredentials);
+    getSystemGenericCredentials(genericCredentials, requestOptions);
 
   return { queryKey, queryFn, enabled: !!genericCredentials, ...queryOptions } as UseQueryOptions<
     Awaited<ReturnType<typeof getSystemGenericCredentials>>,
@@ -3118,6 +3200,7 @@ export function useGetSystemGenericCredentials<
         >,
         'initialData'
       >;
+    request?: SecondParameter<typeof customFetch>;
   },
   queryClient?: QueryClient
 ): DefinedUseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> };
@@ -3138,6 +3221,7 @@ export function useGetSystemGenericCredentials<
         >,
         'initialData'
       >;
+    request?: SecondParameter<typeof customFetch>;
   },
   queryClient?: QueryClient
 ): UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> };
@@ -3150,6 +3234,7 @@ export function useGetSystemGenericCredentials<
     query?: Partial<
       UseQueryOptions<Awaited<ReturnType<typeof getSystemGenericCredentials>>, TError, TData>
     >;
+    request?: SecondParameter<typeof customFetch>;
   },
   queryClient?: QueryClient
 ): UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> };
@@ -3166,6 +3251,7 @@ export function useGetSystemGenericCredentials<
     query?: Partial<
       UseQueryOptions<Awaited<ReturnType<typeof getSystemGenericCredentials>>, TError, TData>
     >;
+    request?: SecondParameter<typeof customFetch>;
   },
   queryClient?: QueryClient
 ): UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> } {
@@ -3226,6 +3312,7 @@ export const getUpdateSystemGenericCredentialsMutationOptions = <
     { genericCredentials: string; data: UpdateGenericCredentialsRequestBody },
     TContext
   >;
+  request?: SecondParameter<typeof customFetch>;
 }): UseMutationOptions<
   Awaited<ReturnType<typeof updateSystemGenericCredentials>>,
   TError,
@@ -3233,11 +3320,11 @@ export const getUpdateSystemGenericCredentialsMutationOptions = <
   TContext
 > => {
   const mutationKey = ['updateSystemGenericCredentials'];
-  const { mutation: mutationOptions } = options
+  const { mutation: mutationOptions, request: requestOptions } = options
     ? options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey
       ? options
       : { ...options, mutation: { ...options.mutation, mutationKey } }
-    : { mutation: { mutationKey } };
+    : { mutation: { mutationKey }, request: undefined };
 
   const mutationFn: MutationFunction<
     Awaited<ReturnType<typeof updateSystemGenericCredentials>>,
@@ -3245,7 +3332,7 @@ export const getUpdateSystemGenericCredentialsMutationOptions = <
   > = (props) => {
     const { genericCredentials, data } = props ?? {};
 
-    return updateSystemGenericCredentials(genericCredentials, data);
+    return updateSystemGenericCredentials(genericCredentials, data, requestOptions);
   };
 
   return { mutationFn, ...mutationOptions };
@@ -3268,6 +3355,7 @@ export const useUpdateSystemGenericCredentials = <TError = unknown, TContext = u
       { genericCredentials: string; data: UpdateGenericCredentialsRequestBody },
       TContext
     >;
+    request?: SecondParameter<typeof customFetch>;
   },
   queryClient?: QueryClient
 ): UseMutationResult<
@@ -3322,6 +3410,7 @@ export const getDeleteSystemGenericCredentialsMutationOptions = <
     { genericCredentials: string },
     TContext
   >;
+  request?: SecondParameter<typeof customFetch>;
 }): UseMutationOptions<
   Awaited<ReturnType<typeof deleteSystemGenericCredentials>>,
   TError,
@@ -3329,11 +3418,11 @@ export const getDeleteSystemGenericCredentialsMutationOptions = <
   TContext
 > => {
   const mutationKey = ['deleteSystemGenericCredentials'];
-  const { mutation: mutationOptions } = options
+  const { mutation: mutationOptions, request: requestOptions } = options
     ? options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey
       ? options
       : { ...options, mutation: { ...options.mutation, mutationKey } }
-    : { mutation: { mutationKey } };
+    : { mutation: { mutationKey }, request: undefined };
 
   const mutationFn: MutationFunction<
     Awaited<ReturnType<typeof deleteSystemGenericCredentials>>,
@@ -3341,7 +3430,7 @@ export const getDeleteSystemGenericCredentialsMutationOptions = <
   > = (props) => {
     const { genericCredentials } = props ?? {};
 
-    return deleteSystemGenericCredentials(genericCredentials);
+    return deleteSystemGenericCredentials(genericCredentials, requestOptions);
   };
 
   return { mutationFn, ...mutationOptions };
@@ -3364,6 +3453,7 @@ export const useDeleteSystemGenericCredentials = <TError = unknown, TContext = u
       { genericCredentials: string },
       TContext
     >;
+    request?: SecondParameter<typeof customFetch>;
   },
   queryClient?: QueryClient
 ): UseMutationResult<
@@ -3423,6 +3513,7 @@ export const getPatchSystemGenericCredentialsMutationOptions = <
     { genericCredentials: string; data: PatchGenericCredentialsRequestBody },
     TContext
   >;
+  request?: SecondParameter<typeof customFetch>;
 }): UseMutationOptions<
   Awaited<ReturnType<typeof patchSystemGenericCredentials>>,
   TError,
@@ -3430,11 +3521,11 @@ export const getPatchSystemGenericCredentialsMutationOptions = <
   TContext
 > => {
   const mutationKey = ['patchSystemGenericCredentials'];
-  const { mutation: mutationOptions } = options
+  const { mutation: mutationOptions, request: requestOptions } = options
     ? options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey
       ? options
       : { ...options, mutation: { ...options.mutation, mutationKey } }
-    : { mutation: { mutationKey } };
+    : { mutation: { mutationKey }, request: undefined };
 
   const mutationFn: MutationFunction<
     Awaited<ReturnType<typeof patchSystemGenericCredentials>>,
@@ -3442,7 +3533,7 @@ export const getPatchSystemGenericCredentialsMutationOptions = <
   > = (props) => {
     const { genericCredentials, data } = props ?? {};
 
-    return patchSystemGenericCredentials(genericCredentials, data);
+    return patchSystemGenericCredentials(genericCredentials, data, requestOptions);
   };
 
   return { mutationFn, ...mutationOptions };
@@ -3465,6 +3556,7 @@ export const usePatchSystemGenericCredentials = <TError = unknown, TContext = un
       { genericCredentials: string; data: PatchGenericCredentialsRequestBody },
       TContext
     >;
+    request?: SecondParameter<typeof customFetch>;
   },
   queryClient?: QueryClient
 ): UseMutationResult<
