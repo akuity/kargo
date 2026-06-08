@@ -23,6 +23,7 @@ import (
 	kargoEvent "github.com/akuity/kargo/pkg/event"
 	k8sevent "github.com/akuity/kargo/pkg/event/kubernetes"
 	"github.com/akuity/kargo/pkg/kargo"
+	"github.com/akuity/kargo/pkg/kubernetes"
 	libEvent "github.com/akuity/kargo/pkg/kubernetes/event"
 	"github.com/akuity/kargo/pkg/logging"
 	libWebhook "github.com/akuity/kargo/pkg/webhook/kubernetes"
@@ -144,7 +145,7 @@ func (w *webhook) Default(ctx context.Context, obj runtime.Object) error {
 	}
 
 	if promo.Annotations == nil {
-		promo.Annotations = make(map[string]string, 1)
+		promo.Annotations = make(map[string]string, 2)
 	}
 
 	switch req.Operation {
@@ -216,8 +217,9 @@ func (w *webhook) Default(ctx context.Context, obj runtime.Object) error {
 		delete(promo.Labels, kargoapi.LabelKeyShard)
 	}
 
-	// Always label the Promotion with the Stage name for easy filtering.
-	promo.Labels[kargoapi.LabelKeyStage] = promo.Spec.Stage
+	// Always label/annotate the Promotion with the Stage name for easy filtering.
+	promo.Labels[kargoapi.LabelKeyStage] = kubernetes.ShortenLabelValue(promo.Spec.Stage)
+	promo.Annotations[kargoapi.AnnotationKeyStage] = promo.Spec.Stage
 
 	ownerRef := metav1.NewControllerRef(stage, kargoapi.GroupVersion.WithKind("Stage"))
 	promo.OwnerReferences = []metav1.OwnerReference{*ownerRef}
