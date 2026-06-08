@@ -2671,7 +2671,7 @@ func Test_argoCDUpdater_getAuthorizedApplications(t *testing.T) {
 			runner := &argocdUpdater{
 				argocdClient: c.Build(),
 			}
-			runner.buildLabelSelectorFn = buildArgoCDAppLabelSelector
+			runner.buildLabelSelectorFn = BuildArgoCDAppLabelSelector
 
 			apps, err := runner.getAuthorizedApplications(
 				t.Context(),

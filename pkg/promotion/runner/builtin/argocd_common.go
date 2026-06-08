@@ -9,9 +9,9 @@ import (
 	"github.com/akuity/kargo/pkg/x/promotion/runner/builtin"
 )
 
-// buildArgoCDAppLabelSelector converts an ArgoCDAppSelector into a Kubernetes
+// BuildArgoCDAppLabelSelector converts an ArgoCDAppSelector into a Kubernetes
 // labels.Selector.
-func buildArgoCDAppLabelSelector(
+func BuildArgoCDAppLabelSelector(
 	selector *builtin.ArgoCDAppSelector,
 ) (labels.Selector, error) {
 	if len(selector.MatchLabels) == 0 && len(selector.MatchExpressions) == 0 {
