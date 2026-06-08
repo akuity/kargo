@@ -32,8 +32,6 @@ import type {
 
 import { customFetch } from '../../../../lib/api/custom-fetch';
 
-type SecondParameter<T extends (...args: never) => unknown> = Parameters<T>[1];
-
 /**
  * Authenticate as the admin user if enabled.
  * @summary Admin login
@@ -61,17 +59,16 @@ export const adminLogin = async (options?: RequestInit): Promise<adminLoginRespo
 
 export const getAdminLoginMutationOptions = <TError = unknown, TContext = unknown>(options?: {
   mutation?: UseMutationOptions<Awaited<ReturnType<typeof adminLogin>>, TError, void, TContext>;
-  request?: SecondParameter<typeof customFetch>;
 }): UseMutationOptions<Awaited<ReturnType<typeof adminLogin>>, TError, void, TContext> => {
   const mutationKey = ['adminLogin'];
-  const { mutation: mutationOptions, request: requestOptions } = options
+  const { mutation: mutationOptions } = options
     ? options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey
       ? options
       : { ...options, mutation: { ...options.mutation, mutationKey } }
-    : { mutation: { mutationKey }, request: undefined };
+    : { mutation: { mutationKey } };
 
   const mutationFn: MutationFunction<Awaited<ReturnType<typeof adminLogin>>, void> = () => {
-    return adminLogin(requestOptions);
+    return adminLogin();
   };
 
   return { mutationFn, ...mutationOptions };
@@ -87,7 +84,6 @@ export type AdminLoginMutationError = unknown;
 export const useAdminLogin = <TError = unknown, TContext = unknown>(
   options?: {
     mutation?: UseMutationOptions<Awaited<ReturnType<typeof adminLogin>>, TError, void, TContext>;
-    request?: SecondParameter<typeof customFetch>;
   },
   queryClient?: QueryClient
 ): UseMutationResult<Awaited<ReturnType<typeof adminLogin>>, TError, void, TContext> => {
@@ -131,14 +127,13 @@ export const getGetClusterConfigQueryOptions = <
   TError = unknown
 >(options?: {
   query?: Partial<UseQueryOptions<Awaited<ReturnType<typeof getClusterConfig>>, TError, TData>>;
-  request?: SecondParameter<typeof customFetch>;
 }) => {
-  const { query: queryOptions, request: requestOptions } = options ?? {};
+  const { query: queryOptions } = options ?? {};
 
   const queryKey = queryOptions?.queryKey ?? getGetClusterConfigQueryKey();
 
   const queryFn: QueryFunction<Awaited<ReturnType<typeof getClusterConfig>>> = () =>
-    getClusterConfig(requestOptions);
+    getClusterConfig();
 
   return { queryKey, queryFn, ...queryOptions } as UseQueryOptions<
     Awaited<ReturnType<typeof getClusterConfig>>,
@@ -164,7 +159,6 @@ export function useGetClusterConfig<
         >,
         'initialData'
       >;
-    request?: SecondParameter<typeof customFetch>;
   },
   queryClient?: QueryClient
 ): DefinedUseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> };
@@ -182,7 +176,6 @@ export function useGetClusterConfig<
         >,
         'initialData'
       >;
-    request?: SecondParameter<typeof customFetch>;
   },
   queryClient?: QueryClient
 ): UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> };
@@ -192,7 +185,6 @@ export function useGetClusterConfig<
 >(
   options?: {
     query?: Partial<UseQueryOptions<Awaited<ReturnType<typeof getClusterConfig>>, TError, TData>>;
-    request?: SecondParameter<typeof customFetch>;
   },
   queryClient?: QueryClient
 ): UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> };
@@ -206,7 +198,6 @@ export function useGetClusterConfig<
 >(
   options?: {
     query?: Partial<UseQueryOptions<Awaited<ReturnType<typeof getClusterConfig>>, TError, TData>>;
-    request?: SecondParameter<typeof customFetch>;
   },
   queryClient?: QueryClient
 ): UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> } {
@@ -258,20 +249,19 @@ export const getDeleteClusterConfigMutationOptions = <
     void,
     TContext
   >;
-  request?: SecondParameter<typeof customFetch>;
 }): UseMutationOptions<Awaited<ReturnType<typeof deleteClusterConfig>>, TError, void, TContext> => {
   const mutationKey = ['deleteClusterConfig'];
-  const { mutation: mutationOptions, request: requestOptions } = options
+  const { mutation: mutationOptions } = options
     ? options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey
       ? options
       : { ...options, mutation: { ...options.mutation, mutationKey } }
-    : { mutation: { mutationKey }, request: undefined };
+    : { mutation: { mutationKey } };
 
   const mutationFn: MutationFunction<
     Awaited<ReturnType<typeof deleteClusterConfig>>,
     void
   > = () => {
-    return deleteClusterConfig(requestOptions);
+    return deleteClusterConfig();
   };
 
   return { mutationFn, ...mutationOptions };
@@ -294,7 +284,6 @@ export const useDeleteClusterConfig = <TError = unknown, TContext = unknown>(
       void,
       TContext
     >;
-    request?: SecondParameter<typeof customFetch>;
   },
   queryClient?: QueryClient
 ): UseMutationResult<Awaited<ReturnType<typeof deleteClusterConfig>>, TError, void, TContext> => {
@@ -340,7 +329,6 @@ export const getRefreshClusterConfigMutationOptions = <
     void,
     TContext
   >;
-  request?: SecondParameter<typeof customFetch>;
 }): UseMutationOptions<
   Awaited<ReturnType<typeof refreshClusterConfig>>,
   TError,
@@ -348,17 +336,17 @@ export const getRefreshClusterConfigMutationOptions = <
   TContext
 > => {
   const mutationKey = ['refreshClusterConfig'];
-  const { mutation: mutationOptions, request: requestOptions } = options
+  const { mutation: mutationOptions } = options
     ? options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey
       ? options
       : { ...options, mutation: { ...options.mutation, mutationKey } }
-    : { mutation: { mutationKey }, request: undefined };
+    : { mutation: { mutationKey } };
 
   const mutationFn: MutationFunction<
     Awaited<ReturnType<typeof refreshClusterConfig>>,
     void
   > = () => {
-    return refreshClusterConfig(requestOptions);
+    return refreshClusterConfig();
   };
 
   return { mutationFn, ...mutationOptions };
@@ -381,7 +369,6 @@ export const useRefreshClusterConfig = <TError = unknown, TContext = unknown>(
       void,
       TContext
     >;
-    request?: SecondParameter<typeof customFetch>;
   },
   queryClient?: QueryClient
 ): UseMutationResult<Awaited<ReturnType<typeof refreshClusterConfig>>, TError, void, TContext> => {
@@ -430,14 +417,13 @@ export const getGetControllerHeartbeatsQueryOptions = <
   query?: Partial<
     UseQueryOptions<Awaited<ReturnType<typeof getControllerHeartbeats>>, TError, TData>
   >;
-  request?: SecondParameter<typeof customFetch>;
 }) => {
-  const { query: queryOptions, request: requestOptions } = options ?? {};
+  const { query: queryOptions } = options ?? {};
 
   const queryKey = queryOptions?.queryKey ?? getGetControllerHeartbeatsQueryKey();
 
   const queryFn: QueryFunction<Awaited<ReturnType<typeof getControllerHeartbeats>>> = () =>
-    getControllerHeartbeats(requestOptions);
+    getControllerHeartbeats();
 
   return { queryKey, queryFn, ...queryOptions } as UseQueryOptions<
     Awaited<ReturnType<typeof getControllerHeartbeats>>,
@@ -467,7 +453,6 @@ export function useGetControllerHeartbeats<
         >,
         'initialData'
       >;
-    request?: SecondParameter<typeof customFetch>;
   },
   queryClient?: QueryClient
 ): DefinedUseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> };
@@ -487,7 +472,6 @@ export function useGetControllerHeartbeats<
         >,
         'initialData'
       >;
-    request?: SecondParameter<typeof customFetch>;
   },
   queryClient?: QueryClient
 ): UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> };
@@ -499,7 +483,6 @@ export function useGetControllerHeartbeats<
     query?: Partial<
       UseQueryOptions<Awaited<ReturnType<typeof getControllerHeartbeats>>, TError, TData>
     >;
-    request?: SecondParameter<typeof customFetch>;
   },
   queryClient?: QueryClient
 ): UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> };
@@ -515,7 +498,6 @@ export function useGetControllerHeartbeats<
     query?: Partial<
       UseQueryOptions<Awaited<ReturnType<typeof getControllerHeartbeats>>, TError, TData>
     >;
-    request?: SecondParameter<typeof customFetch>;
   },
   queryClient?: QueryClient
 ): UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> } {
@@ -566,14 +548,13 @@ export const getGetPublicConfigQueryOptions = <
   TError = unknown
 >(options?: {
   query?: Partial<UseQueryOptions<Awaited<ReturnType<typeof getPublicConfig>>, TError, TData>>;
-  request?: SecondParameter<typeof customFetch>;
 }) => {
-  const { query: queryOptions, request: requestOptions } = options ?? {};
+  const { query: queryOptions } = options ?? {};
 
   const queryKey = queryOptions?.queryKey ?? getGetPublicConfigQueryKey();
 
   const queryFn: QueryFunction<Awaited<ReturnType<typeof getPublicConfig>>> = () =>
-    getPublicConfig(requestOptions);
+    getPublicConfig();
 
   return { queryKey, queryFn, ...queryOptions } as UseQueryOptions<
     Awaited<ReturnType<typeof getPublicConfig>>,
@@ -599,7 +580,6 @@ export function useGetPublicConfig<
         >,
         'initialData'
       >;
-    request?: SecondParameter<typeof customFetch>;
   },
   queryClient?: QueryClient
 ): DefinedUseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> };
@@ -617,7 +597,6 @@ export function useGetPublicConfig<
         >,
         'initialData'
       >;
-    request?: SecondParameter<typeof customFetch>;
   },
   queryClient?: QueryClient
 ): UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> };
@@ -627,7 +606,6 @@ export function useGetPublicConfig<
 >(
   options?: {
     query?: Partial<UseQueryOptions<Awaited<ReturnType<typeof getPublicConfig>>, TError, TData>>;
-    request?: SecondParameter<typeof customFetch>;
   },
   queryClient?: QueryClient
 ): UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> };
@@ -641,7 +619,6 @@ export function useGetPublicConfig<
 >(
   options?: {
     query?: Partial<UseQueryOptions<Awaited<ReturnType<typeof getPublicConfig>>, TError, TData>>;
-    request?: SecondParameter<typeof customFetch>;
   },
   queryClient?: QueryClient
 ): UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> } {
@@ -691,14 +668,12 @@ export const getGetConfigQueryOptions = <
   TError = unknown
 >(options?: {
   query?: Partial<UseQueryOptions<Awaited<ReturnType<typeof getConfig>>, TError, TData>>;
-  request?: SecondParameter<typeof customFetch>;
 }) => {
-  const { query: queryOptions, request: requestOptions } = options ?? {};
+  const { query: queryOptions } = options ?? {};
 
   const queryKey = queryOptions?.queryKey ?? getGetConfigQueryKey();
 
-  const queryFn: QueryFunction<Awaited<ReturnType<typeof getConfig>>> = () =>
-    getConfig(requestOptions);
+  const queryFn: QueryFunction<Awaited<ReturnType<typeof getConfig>>> = () => getConfig();
 
   return { queryKey, queryFn, ...queryOptions } as UseQueryOptions<
     Awaited<ReturnType<typeof getConfig>>,
@@ -721,7 +696,6 @@ export function useGetConfig<TData = Awaited<ReturnType<typeof getConfig>>, TErr
         >,
         'initialData'
       >;
-    request?: SecondParameter<typeof customFetch>;
   },
   queryClient?: QueryClient
 ): DefinedUseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> };
@@ -736,14 +710,12 @@ export function useGetConfig<TData = Awaited<ReturnType<typeof getConfig>>, TErr
         >,
         'initialData'
       >;
-    request?: SecondParameter<typeof customFetch>;
   },
   queryClient?: QueryClient
 ): UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> };
 export function useGetConfig<TData = Awaited<ReturnType<typeof getConfig>>, TError = unknown>(
   options?: {
     query?: Partial<UseQueryOptions<Awaited<ReturnType<typeof getConfig>>, TError, TData>>;
-    request?: SecondParameter<typeof customFetch>;
   },
   queryClient?: QueryClient
 ): UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> };
@@ -754,7 +726,6 @@ export function useGetConfig<TData = Awaited<ReturnType<typeof getConfig>>, TErr
 export function useGetConfig<TData = Awaited<ReturnType<typeof getConfig>>, TError = unknown>(
   options?: {
     query?: Partial<UseQueryOptions<Awaited<ReturnType<typeof getConfig>>, TError, TData>>;
-    request?: SecondParameter<typeof customFetch>;
   },
   queryClient?: QueryClient
 ): UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> } {
@@ -803,14 +774,12 @@ export const getGetVersionInfoQueryOptions = <
   TError = unknown
 >(options?: {
   query?: Partial<UseQueryOptions<Awaited<ReturnType<typeof getVersionInfo>>, TError, TData>>;
-  request?: SecondParameter<typeof customFetch>;
 }) => {
-  const { query: queryOptions, request: requestOptions } = options ?? {};
+  const { query: queryOptions } = options ?? {};
 
   const queryKey = queryOptions?.queryKey ?? getGetVersionInfoQueryKey();
 
-  const queryFn: QueryFunction<Awaited<ReturnType<typeof getVersionInfo>>> = () =>
-    getVersionInfo(requestOptions);
+  const queryFn: QueryFunction<Awaited<ReturnType<typeof getVersionInfo>>> = () => getVersionInfo();
 
   return { queryKey, queryFn, ...queryOptions } as UseQueryOptions<
     Awaited<ReturnType<typeof getVersionInfo>>,
@@ -836,7 +805,6 @@ export function useGetVersionInfo<
         >,
         'initialData'
       >;
-    request?: SecondParameter<typeof customFetch>;
   },
   queryClient?: QueryClient
 ): DefinedUseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> };
@@ -854,7 +822,6 @@ export function useGetVersionInfo<
         >,
         'initialData'
       >;
-    request?: SecondParameter<typeof customFetch>;
   },
   queryClient?: QueryClient
 ): UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> };
@@ -864,7 +831,6 @@ export function useGetVersionInfo<
 >(
   options?: {
     query?: Partial<UseQueryOptions<Awaited<ReturnType<typeof getVersionInfo>>, TError, TData>>;
-    request?: SecondParameter<typeof customFetch>;
   },
   queryClient?: QueryClient
 ): UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> };
@@ -878,7 +844,6 @@ export function useGetVersionInfo<
 >(
   options?: {
     query?: Partial<UseQueryOptions<Awaited<ReturnType<typeof getVersionInfo>>, TError, TData>>;
-    request?: SecondParameter<typeof customFetch>;
   },
   queryClient?: QueryClient
 ): UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> } {
