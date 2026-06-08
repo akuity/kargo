@@ -296,4 +296,48 @@ steps:
       fromExpression: response.body.key
 ```
 
+### Error Expression
+
+This example demonstrates how to extract a richer error message from an HTTP
+response when `failureExpression` is met. The extracted message is included in
+the step failure and displayed in the Kargo UI.
+
+Some APIs return errors using different field names. [expr-lang]'s
+[optional chaining](https://expr-lang.org/docs/language-definition#optional-chaining)
+(`?.`) and [nil coalescing](https://expr-lang.org/docs/language-definition#nil-coalescing)
+(`??`) can handle multiple formats in a single expression.
+
+```yaml
+steps:
+# ...
+- uses: http
+  config:
+    url: https://api.example.com/data
+    successExpression: response.status == 200
+    failureExpression: response.status >= 400 && response.status < 500
+    errorExpression: response.body?.message ?? response.body?.error
+```
+
+If the server returns a `404` response with the following JSON body:
+
+```json
+{
+  "message": "resource not found"
+}
+```
+
+The step fails terminally and the promotion displays the following error message:
+
+`HTTP (404) response met failure criteria: "resource not found"`
+
+If the response instead has the following body:
+
+```json
+{
+  "error": "resource is disabled"
+}
+```
+
+The nil coalescing operator evaluates the alternate field, and `"resource is disabled"` is used as the error message.
+
 [expr-lang]: https://expr-lang.org/
