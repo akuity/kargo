@@ -83,13 +83,13 @@ spec:
                   divisor: "1"
                   resource: {{ include "kargo.selectCpuResourceField" (dict "resources" .Values.garbageCollector.resources) }}
             {{- with (concat .Values.global.env .Values.garbageCollector.env) }}
-            {{- toYaml . | nindent 12 }}
+            {{- tpl (toYaml .) $ | nindent 12 }}
             {{- end }}
             envFrom:
             - configMapRef:
                 name: kargo-garbage-collector
             {{- with (concat .Values.global.envFrom .Values.garbageCollector.envFrom) }}
-              {{- toYaml . | nindent 12 }}
+              {{- tpl (toYaml .) $ | nindent 12 }}
             {{- end }}
             {{- if or $kc .Values.garbageCollector.volumeMounts }}
             volumeMounts:
