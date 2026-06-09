@@ -4,7 +4,6 @@ import { useEffect } from 'react';
 import { Watcher } from '@ui/features/project/pipelines/watcher';
 import { queryCache } from '@ui/features/utils/cache';
 import { Stage, Warehouse } from '@ui/gen/api/v1alpha1/generated_pb';
-import { useDocumentEvent } from '@ui/utils/document';
 
 export const useEventsWatcher = (
   project: string,
@@ -15,26 +14,44 @@ export const useEventsWatcher = (
   warehouses?: string[]
 ) => {
   const client = useQueryClient();
-  const isWindowVisible = useDocumentEvent(
-    'visibilitychange',
-    () => document.visibilityState === 'visible'
-  );
 
   useEffect(() => {
-    if (!isWindowVisible || !project) {
+    if (!project) {
       return;
     }
 
-    const watcher = new Watcher(project, client);
+    let watcher: Watcher | undefined;
 
-    watcher.watchStages(act?.onStage, warehouses);
-    watcher.watchWarehouses({
-      onWarehouseEvent: act?.onWarehouse,
-      refreshHook: queryCache.freight.refetchQueryFreight
-    });
+    // (Re)establish the watch streams. Aborts any previous watcher first so we
+    // never leak a connection.
+    const connect = () => {
+      watcher?.cancelWatch();
+      watcher = new Watcher(project, client);
+      watcher.watchStages(act?.onStage, warehouses);
+      watcher.watchWarehouses({
+        onWarehouseEvent: act?.onWarehouse,
+        refreshHook: queryCache.freight.refetchQueryFreight
+      });
+    };
+
+    connect();
+
+    // Reconnect when the tab becomes visible again. The watch is left running
+    // while the tab is hidden (we do NOT cancel on leave), but a hidden tab can
+    // be throttled/frozen and have its stream silently dropped -- reconnecting
+    // on return guarantees a live stream again.
+    const onVisibilityChange = () => {
+      // Reuse the existing connection if it is still alive; only reconnect when
+      // the stream has actually ended (e.g. dropped while the tab was hidden).
+      if (document.visibilityState === 'visible' && !watcher?.isActive()) {
+        connect();
+      }
+    };
+    document.addEventListener('visibilitychange', onVisibilityChange);
 
     return () => {
-      watcher.cancelWatch();
+      document.removeEventListener('visibilitychange', onVisibilityChange);
+      watcher?.cancelWatch();
     };
-  }, [isWindowVisible, project, (warehouses || []).join(',')]);
+  }, [project, (warehouses || []).join(',')]);
 };
