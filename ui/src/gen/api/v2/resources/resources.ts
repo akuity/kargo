@@ -17,6 +17,7 @@ import type {
   CreateOrUpdateResourceResponse,
   CreateResourceResponse,
   DeleteResourceResponse,
+  ResourceErrorResponse,
   UpdateResourceManifestBody,
   UpdateResourceParams
 } from '.././models';
@@ -142,10 +143,19 @@ export type createResourceResponse201 = {
   status: 201;
 };
 
+export type createResourceResponse409 = {
+  data: ResourceErrorResponse;
+  status: 409;
+};
+
 export type createResourceResponseSuccess = createResourceResponse201 & {
   headers: Headers;
 };
-export type createResourceResponse = createResourceResponseSuccess;
+export type createResourceResponseError = createResourceResponse409 & {
+  headers: Headers;
+};
+
+export type createResourceResponse = createResourceResponseSuccess | createResourceResponseError;
 
 export const getCreateResourceUrl = () => {
   return `/v1beta1/resources`;
@@ -164,7 +174,7 @@ export const createResource = async (
 };
 
 export const getCreateResourceMutationOptions = <
-  TError = ErrorType<unknown>,
+  TError = ResourceErrorResponse,
   TContext = unknown
 >(options?: {
   mutation?: UseMutationOptions<
@@ -201,12 +211,12 @@ export const getCreateResourceMutationOptions = <
 
 export type CreateResourceMutationResult = NonNullable<Awaited<ReturnType<typeof createResource>>>;
 export type CreateResourceMutationBody = UpdateResourceManifestBody;
-export type CreateResourceMutationError = ErrorType<unknown>;
+export type CreateResourceMutationError = ResourceErrorResponse;
 
 /**
  * @summary Create resources
  */
-export const useCreateResource = <TError = ErrorType<unknown>, TContext = unknown>(
+export const useCreateResource = <TError = ResourceErrorResponse, TContext = unknown>(
   options?: {
     mutation?: UseMutationOptions<
       Awaited<ReturnType<typeof createResource>>,

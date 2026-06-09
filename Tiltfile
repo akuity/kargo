@@ -72,6 +72,7 @@ k8s_resource(
   labels = ['kargo']
 )
 
+kargo_base_path = os.environ.get('KARGO_BASE_PATH', '')
 k8s_yaml(
   helm(
     './charts/kargo',
@@ -80,13 +81,18 @@ k8s_yaml(
     values = 'hack/tilt/values.dev.yaml',
     set = [
       'externalWebhooksServer.host=' + os.environ.get('KARGO_EXTERNAL_WEBHOOKS_SERVER_HOSTNAME', 'localhost:30083'),
-      'externalWebhooksServer.tls.terminatedUpstream=' + os.environ.get('KARGO_EXTERNAL_WEBHOOKS_SERVER_TLS_TERMINATED_UPSTREAM', 'false')
+      'externalWebhooksServer.tls.terminatedUpstream=' + os.environ.get('KARGO_EXTERNAL_WEBHOOKS_SERVER_TLS_TERMINATED_UPSTREAM', 'false'),
+      'api.basePath=' + kargo_base_path
     ]
   )
 )
 # Normally the API server serves up the front end, but we want live updates
 # of the UI, so we're breaking it out into its own separate deployment here.
-k8s_yaml('hack/tilt/ui.yaml')
+# The __KARGO_BASE_PATH__ placeholder in the manifest is substituted so the UI
+# pod runs Vite with the same basePath the API server is configured with.
+k8s_yaml(blob(
+  str(read_file('hack/tilt/ui.yaml')).replace('__KARGO_BASE_PATH__', kargo_base_path)
+))
 k8s_yaml('hack/tilt/gpg-secret.yaml')
 
 k8s_resource(
@@ -160,9 +166,13 @@ k8s_resource(
     'kargo-controller:serviceaccount',
     'kargo-controller-argocd:clusterrole',
     'kargo-controller-argocd:clusterrolebinding',
+    'kargo-controller-cluster-secrets-reader:rolebinding',
     'kargo-controller-read-secrets:clusterrole',
     'kargo-controller-rollouts:clusterrole',
     'kargo-controller-rollouts:clusterrolebinding',
+    'kargo-controller-shared-resources-reader:rolebinding',
+    'kargo-controller-system-resources-reader:rolebinding',
+    'kargo-shared-resources-controller-reader:role',
     'kargo-test-gpg-signing-key:secret'
   ],
   resource_deps=['back-end-compile', 'credential-helper-compile', ]

@@ -18,7 +18,7 @@ export const User = () => {
   if (isJWTDirty(JWTInfo)) {
     // other pages depend on API failure code to redirect to login
     // since this page doesn't make any API call, this is the only reason to redirect
-    return <Navigate to={`${paths.login}?${redirectToQueryParam}=${paths.user}`} />;
+    return <Navigate to={`${paths.login}?${redirectToQueryParam}=${window.location.pathname}`} />;
   }
 
   const items: DescriptionsItemType[] = [];

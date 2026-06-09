@@ -27,27 +27,37 @@ export const useWatchFreight = (project: string) => {
       for await (const event of readSSEStream<Freight>(url, abort.signal)) {
         const freight = event.object;
 
-        client.setQueryData(listKey, (old: queryFreightsRestResponse | undefined) => {
-          if (!old?.data?.groups) {
-            return old;
+        // Update all queryFreight caches for this project, including
+        // warehouse-filtered variants, which use a different cache key.
+        // Using setQueriesData (rather than setQueryData) ensures we only
+        // touch caches that already have an active query backing them,
+        // avoiding orphaned entries with no queryFn that would crash on
+        // refetch.
+        client.setQueriesData<queryFreightsRestResponse>(
+          { queryKey: listKey, exact: false },
+          (old) => {
+            if (!old?.data?.groups) {
+              return old;
+            }
+            const updatedGroups = Object.fromEntries(
+              Object.entries(old.data.groups).map(([key, group]) => [
+                key,
+                { ...group, items: upsertOrDelete(group.items ?? [], freight, event.type) }
+              ])
+            );
+            return { ...old, data: { ...old.data, groups: updatedGroups } };
           }
-          const updatedGroups = Object.fromEntries(
-            Object.entries(old.data.groups).map(([key, group]) => [
-              key,
-              { ...group, items: upsertOrDelete(group.items ?? [], freight, event.type) }
-            ])
-          );
-          return { ...old, data: { ...old.data, groups: updatedGroups } };
-        });
+        );
 
         const freightKey = getGetFreightQueryKey(project, freight.metadata?.name);
 
         if (event.type === 'DELETED') {
           client.removeQueries({ queryKey: freightKey });
         } else {
-          client.setQueryData(freightKey, (old: getFreightResponse | undefined) =>
-            old ? { ...old, data: freight } : old
-          );
+          client.setQueryData(freightKey, (old: getFreightResponse | undefined) => ({
+            ...old,
+            data: freight
+          }));
         }
       }
     })();

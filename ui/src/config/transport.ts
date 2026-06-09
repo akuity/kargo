@@ -5,16 +5,19 @@ import { notification } from 'antd';
 import { parseJwtPayload } from '@ui/utils/jwt-payload';
 
 import { authTokenKey, redirectToQueryParam, refreshTokenKey } from './auth';
+import { basePath, withBasePath } from './base-path';
 import { paths } from './paths';
 
 const logout = () => {
   localStorage.removeItem(authTokenKey);
-  window.location.replace(`${paths.login}?${redirectToQueryParam}=${window.location.pathname}`);
+  window.location.replace(
+    `${withBasePath(paths.login)}?${redirectToQueryParam}=${window.location.pathname}`
+  );
 };
 
 const renewToken = () => {
   window.location.replace(
-    `${paths.tokenRenew}?${redirectToQueryParam}=${window.location.pathname}`
+    `${withBasePath(paths.tokenRenew)}?${redirectToQueryParam}=${window.location.pathname}`
   );
 };
 
@@ -75,14 +78,14 @@ export const defaultErrorHandler = (err: ConnectError) => {
 };
 
 export const transport = createConnectTransport({
-  baseUrl: '',
+  baseUrl: basePath(),
   useBinaryFormat: true,
   interceptors: [newErrorHandler(defaultErrorHandler)]
 });
 
 export const newTransportWithAuth = (errorHandler: Interceptor) =>
   createConnectTransport({
-    baseUrl: '',
+    baseUrl: basePath(),
     useBinaryFormat: true,
     interceptors: [authHandler, errorHandler]
   });

@@ -11,6 +11,7 @@
  */
 
 import { authTokenKey, redirectToQueryParam, refreshTokenKey } from '@ui/config/auth';
+import { basePath, withBasePath } from '@ui/config/base-path';
 import { paths } from '@ui/config/paths';
 import { parseJwtPayload } from '@ui/utils/jwt-payload';
 
@@ -18,18 +19,20 @@ const getBaseUrl = (): string => {
   if (import.meta.env.VITE_API_URL) {
     return import.meta.env.VITE_API_URL;
   }
-  return '';
+  return basePath();
 };
 
 const logout = () => {
   localStorage.removeItem(authTokenKey);
   localStorage.removeItem(refreshTokenKey);
-  window.location.replace(`${paths.login}?${redirectToQueryParam}=${window.location.pathname}`);
+  window.location.replace(
+    `${withBasePath(paths.login)}?${redirectToQueryParam}=${window.location.pathname}`
+  );
 };
 
 const renewToken = () => {
   window.location.replace(
-    `${paths.tokenRenew}?${redirectToQueryParam}=${window.location.pathname}`
+    `${withBasePath(paths.tokenRenew)}?${redirectToQueryParam}=${window.location.pathname}`
   );
 };
 

@@ -7,6 +7,36 @@ Expand the name of the chart.
 {{- end -}}
 
 {{/*
+kargo.controller.suffix returns `-<controller.id>` when controller.id is set,
+empty otherwise.
+*/}}
+{{- define "kargo.controller.suffix" -}}
+{{- if .Values.controller.id -}}-{{ .Values.controller.id }}{{- end -}}
+{{- end -}}
+
+{{/*
+kargo.controller.fullname returns the controller's base name, suffixed, if
+applicable with `-<controller.id>`. Setting `controller.id` therefore allows for
+installing multiple controllers into a single cluster or even a single namespace
+(each as its own, separate Helm release) without name collisions.
+*/}}
+{{- define "kargo.controller.fullname" -}}
+kargo-controller{{ include "kargo.controller.suffix" . }}
+{{- end -}}
+
+{{/*
+kargo.controller.idLabel emits the `akuity.io/kargo-controller-id` label line
+when controller.id is set, empty otherwise. Used inside `labels:` /
+`matchLabels:` blocks across templates in the controller's install set.
+Callers handle indentation via `| nindent N`.
+*/}}
+{{- define "kargo.controller.idLabel" -}}
+{{- with .Values.controller.id -}}
+akuity.io/kargo-controller-id: {{ . | quote }}
+{{- end -}}
+{{- end -}}
+
+{{/*
 Create image reference as used by resources.
 */}}
 {{- define "kargo.image" -}}
@@ -19,6 +49,16 @@ Create chart name and version as used by the chart label.
 */}}
 {{- define "kargo.chart" -}}
 {{- printf "%s-%s" .Chart.Name .Chart.Version | replace "+" "_" | trunc 63 | trimSuffix "-" -}}
+{{- end -}}
+
+{{/*
+Resolve the namespace where many of Kargo's own resources (accessed at runtime)
+reside. By default this is the chart's release namespace. In rare situations,
+Kargo workloads may run in one namespace (the chart's release namespace) while
+some resources accessed at runtime reside in another.
+*/}}
+{{- define "kargo.dataNamespace" -}}
+{{- .Values.global.kargoNamespace | default .Release.Namespace -}}
 {{- end -}}
 
 {{/*
@@ -37,10 +77,11 @@ Generate base URL for a service.
 {{- define "kargo.baseURL" -}}
 {{- $service := .service -}}
 {{- $host := .host -}}
+{{- $basePath := .basePath | default "" -}}
 {{- if eq (include "kargo.useTLS" $service) "true" -}}
-{{- printf "https://%s" $host -}}
+{{- printf "https://%s%s" $host $basePath -}}
 {{- else -}}
-{{- printf "http://%s" $host -}}
+{{- printf "http://%s%s" $host $basePath -}}
 {{- end -}}
 {{- end -}}
 
@@ -48,19 +89,25 @@ Generate base URL for a service.
 Generate the base URL for the API service.
 */}}
 {{- define "kargo.api.baseURL" -}}
-{{- include "kargo.baseURL" (dict "service" .Values.api "host" .Values.api.host) -}}
+{{- include "kargo.baseURL" (dict "service" .Values.api "host" .Values.api.host "basePath" .Values.api.basePath) -}}
 {{- end -}}
 
 {{/*
-Generate the base URL for the external webhook server.
+Generate the base URL for the external webhook server. When the external
+webhooks server has its own Ingress, the URL is composed from its own host,
+TLS configuration, and basePath. When it instead piggybacks on the API
+server's Ingress, the URL is composed from the API server's host and TLS
+configuration, plus either an explicitly-set externalWebhooksServer.basePath
+or, by default, <api.basePath>/webhooks.
 */}}
 {{- define "kargo.externalWebhooksServer.baseURL" -}}
 {{- $apiService := .Values.api -}}
 {{- $webhookService := .Values.externalWebhooksServer -}}
 {{- if and (not $webhookService.ingress.enabled) $apiService.enabled $apiService.ingress.enabled -}}
-{{- printf "%s/webhooks" (include "kargo.api.baseURL" .) -}}
+{{- $basePath := $webhookService.basePath | default (printf "%s/webhooks" ($apiService.basePath | default "")) -}}
+{{- include "kargo.baseURL" (dict "service" $apiService "host" $apiService.host "basePath" $basePath) -}}
 {{- else -}}
-{{- include "kargo.baseURL" (dict "service" $webhookService "host" $webhookService.host) -}}
+{{- include "kargo.baseURL" (dict "service" $webhookService "host" $webhookService.host "basePath" $webhookService.basePath) -}}
 {{- end -}}
 {{- end -}}
 
@@ -80,7 +127,7 @@ Create default controlplane user regular expression with well-known service acco
 {{- end -}}
 {{- end -}}
 {{- if $serviceAccounts -}}
-{{- printf "^system:serviceaccount:%s:(%s)$" .Release.Namespace (join "|" $serviceAccounts) -}}
+{{- printf "^system:serviceaccount:%s:(%s)$" (include "kargo.dataNamespace" .) (join "|" $serviceAccounts) -}}
 {{- end -}}
 {{- end -}}
 

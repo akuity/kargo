@@ -168,6 +168,7 @@ export * from './queryFreightsRestParams';
 export * from './rbacRole';
 export * from './resolvedLink';
 export * from './resourceDetails';
+export * from './resourceErrorResponse';
 export * from './revokeRequest';
 export * from './rolloutsAnalysisRun';
 export * from './rolloutsAnalysisRunSpec';

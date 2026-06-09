@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 	"errors"
 	"regexp"
+	"strings"
 	"testing"
 
 	"github.com/stretchr/testify/require"
@@ -166,7 +167,52 @@ func Test_webhook_Default(t *testing.T) {
 			assertions: func(t *testing.T, promo *kargoapi.Promotion, err error) {
 				require.NoError(t, err)
 				require.Equal(t, "fake-shard", promo.Labels[kargoapi.LabelKeyShard])
+				require.Equal(t, "fake-stage", promo.Labels[kargoapi.LabelKeyStage])
+				require.Equal(t, "fake-stage", promo.Annotations[kargoapi.AnnotationKeyStage])
 				require.NotEmpty(t, promo.OwnerReferences)
+			},
+		},
+		{
+			name: "long stage name: label is shortened, annotation preserves full name",
+			webhook: &webhook{
+				admissionRequestFromContextFn: admission.RequestFromContext,
+				getStageFn: func(
+					context.Context,
+					client.Client,
+					types.NamespacedName,
+				) (*kargoapi.Stage, error) {
+					return &kargoapi.Stage{
+						ObjectMeta: metav1.ObjectMeta{
+							Name: strings.Repeat("a", 64),
+						},
+						Spec: kargoapi.StageSpec{},
+					}, nil
+				},
+				isRequestFromKargoControlplaneFn: func(admission.Request) bool {
+					return false
+				},
+			},
+			req: admission.Request{
+				AdmissionRequest: admissionv1.AdmissionRequest{
+					Operation: admissionv1.Create,
+				},
+			},
+			promotion: &kargoapi.Promotion{
+				Spec: kargoapi.PromotionSpec{
+					Stage: strings.Repeat("a", 64),
+					Steps: []kargoapi.PromotionStep{
+						{},
+					},
+				},
+			},
+			assertions: func(t *testing.T, promo *kargoapi.Promotion, err error) {
+				require.NoError(t, err)
+				fullName := strings.Repeat("a", 64)
+				// Label value must be within the 63-character Kubernetes limit.
+				require.LessOrEqual(t, len(promo.Labels[kargoapi.LabelKeyStage]), 63)
+				require.NotEqual(t, fullName, promo.Labels[kargoapi.LabelKeyStage])
+				// Annotation preserves the full, untruncated stage name.
+				require.Equal(t, fullName, promo.Annotations[kargoapi.AnnotationKeyStage])
 			},
 		},
 		{
