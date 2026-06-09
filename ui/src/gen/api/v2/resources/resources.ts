@@ -174,7 +174,7 @@ export const createResource = async (
 };
 
 export const getCreateResourceMutationOptions = <
-  TError = ResourceErrorResponse,
+  TError = ErrorType<ResourceErrorResponse>,
   TContext = unknown
 >(options?: {
   mutation?: UseMutationOptions<
@@ -211,12 +211,12 @@ export const getCreateResourceMutationOptions = <
 
 export type CreateResourceMutationResult = NonNullable<Awaited<ReturnType<typeof createResource>>>;
 export type CreateResourceMutationBody = UpdateResourceManifestBody;
-export type CreateResourceMutationError = ResourceErrorResponse;
+export type CreateResourceMutationError = ErrorType<ResourceErrorResponse>;
 
 /**
  * @summary Create resources
  */
-export const useCreateResource = <TError = ResourceErrorResponse, TContext = unknown>(
+export const useCreateResource = <TError = ErrorType<ResourceErrorResponse>, TContext = unknown>(
   options?: {
     mutation?: UseMutationOptions<
       Awaited<ReturnType<typeof createResource>>,
