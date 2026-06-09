@@ -400,3 +400,45 @@ func TestGetDiffPathsForMergeCommit(t *testing.T) {
 	require.NoError(t, err)
 	require.Equal(t, []string{"foo/file1.txt"}, paths)
 }
+
+func TestGetDiffPathsForMovedFile(t *testing.T) {
+	testServer, testRepoURL, testRepoCreds := setupRemoteRepo(t)
+	defer testServer.Close()
+
+	rep, err := Clone(
+		testRepoURL,
+		&ClientOptions{Credentials: &testRepoCreds},
+		nil,
+	)
+	require.NoError(t, err)
+	require.NotNil(t, rep)
+	defer rep.Close()
+
+	wt := internalWorkTree(t, rep)
+
+	// Create initial commit with a file in app/
+	require.NoError(t, os.MkdirAll(fmt.Sprintf("%s/app", rep.Dir()), 0o755))
+	require.NoError(t, os.WriteFile(
+		fmt.Sprintf("%s/app/pod.yaml", rep.Dir()),
+		[]byte("kind: Pod"),
+		0o600,
+	))
+	require.NoError(t, rep.AddAllAndCommit("initial commit", nil))
+
+	// Move the file to a different directory
+	require.NoError(t, os.MkdirAll(fmt.Sprintf("%s/different-app", rep.Dir()), 0o755))
+	_, err = libExec.Exec(wt.buildGitCommand(
+		"mv", "app/pod.yaml", "different-app/pod.yaml",
+	))
+	require.NoError(t, err)
+	require.NoError(t, rep.AddAllAndCommit("move pod.yaml to different-app/", nil))
+
+	moveCommitID, err := rep.LastCommitID()
+	require.NoError(t, err)
+
+	// GetDiffPathsForCommitID should return both the old and new paths so
+	// that a warehouse watching app/ detects the removal.
+	paths, err := rep.GetDiffPathsForCommitID(moveCommitID)
+	require.NoError(t, err)
+	require.ElementsMatch(t, []string{"app/pod.yaml", "different-app/pod.yaml"}, paths)
+}
