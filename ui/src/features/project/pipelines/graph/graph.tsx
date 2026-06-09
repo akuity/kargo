@@ -139,7 +139,7 @@ export const Graph = (props: GraphProps) => {
           setRedraw((prev) => !prev);
         }
 
-        queryCache.freight.refetch();
+        queryCache.freight.refetch(props.project);
       }
     },
     filterContext?.preferredFilter?.warehouses || []

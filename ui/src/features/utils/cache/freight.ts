@@ -1,43 +1,26 @@
-import { createConnectQueryKey } from '@connectrpc/connect-query';
-
 import { queryClient } from '@ui/config/query-client';
-import { transportWithAuth } from '@ui/config/transport';
 import {
-  getFreight,
-  queryFreight
-} from '@ui/gen/api/service/v1alpha1/service-KargoService_connectquery';
-import { QueryFreightResponse } from '@ui/gen/api/service/v1alpha1/service_pb';
+  getGetFreightQueryKey,
+  getQueryFreightsRestQueryKey,
+  queryFreightsRestResponse
+} from '@ui/gen/api/v2/core/core';
 
 export default {
-  refetch: () => {
-    queryClient.refetchQueries({
-      queryKey: createConnectQueryKey({
-        schema: getFreight,
-        cardinality: 'finite'
-      })
-    });
-  },
-  refetchQueryFreight: () => {
+  refetch: (project: string) => {
     queryClient.refetchQueries({
       exact: false,
-      queryKey: createConnectQueryKey({
-        schema: queryFreight,
-        cardinality: 'finite'
-      })
+      queryKey: getGetFreightQueryKey(project)
+    });
+  },
+  refetchQueryFreight: (project: string) => {
+    queryClient.refetchQueries({
+      exact: false,
+      queryKey: getQueryFreightsRestQueryKey(project)
     });
   },
   get: (project: string) => {
-    const data = queryClient.getQueryData(
-      createConnectQueryKey({
-        schema: queryFreight,
-        input: {
-          project
-        },
-        cardinality: 'finite',
-        transport: transportWithAuth
-      })
-    ) as QueryFreightResponse;
-
-    return data;
+    return queryClient.getQueryData(
+      getQueryFreightsRestQueryKey(project)
+    ) as queryFreightsRestResponse;
   }
 };

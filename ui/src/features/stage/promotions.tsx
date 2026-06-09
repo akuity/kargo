@@ -1,10 +1,9 @@
 import { faUndo } from '@fortawesome/free-solid-svg-icons';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
-import { useQueryClient } from '@tanstack/react-query';
 import { Flex, Spin, Table, Tooltip } from 'antd';
 import { ColumnsType } from 'antd/es/table';
 import { format } from 'date-fns';
-import React, { useEffect, useState } from 'react';
+import React, { useState } from 'react';
 import { Link, generatePath, useParams } from 'react-router-dom';
 
 import { paths } from '@ui/config/paths';
@@ -14,7 +13,7 @@ import {
   isPromotionPhaseTerminal,
   isPromotionRetryable
 } from '@ui/features/common/promotion-status/utils';
-import { Watcher } from '@ui/features/project/pipelines/watcher';
+import { useWatchPromotions } from '@ui/features/project/pipelines/promotion/use-watch-promotions';
 import { useGetFreight, useListPromotions, usePromoteToStage } from '@ui/gen/api/v2/core/core';
 import { ArgoCDShard, Promotion } from '@ui/gen/api/v2/models';
 import uiPlugins from '@ui/plugins';
@@ -26,7 +25,6 @@ import { Promotion as PromotionComponent } from '../project/pipelines/promotion/
 import { hasAbortRequest, promotionCompareFn } from './utils/promotion';
 
 export const Promotions = ({ argocdShard }: { argocdShard?: ArgoCDShard }) => {
-  const client = useQueryClient();
   const { name: projectName, stageName } = useParams();
 
   const listPromotionsQuery = useListPromotions(
@@ -54,14 +52,7 @@ export const Promotions = ({ argocdShard }: { argocdShard?: ArgoCDShard }) => {
   // modal kept in the same component for live view
   const [selectedPromotion, setSelectedPromotion] = useState<Promotion | undefined>();
 
-  useEffect(() => {
-    if (!projectName || !stageName) {
-      return;
-    }
-    const watcher = new Watcher(projectName, client);
-    watcher.watchPromotions(stageName);
-    return () => watcher.cancelWatch();
-  }, [projectName, stageName]);
+  useWatchPromotions(projectName || '', stageName || '');
 
   const promotions = React.useMemo(() => {
     // Immutable sorting

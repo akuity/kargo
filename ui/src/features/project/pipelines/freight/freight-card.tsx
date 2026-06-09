@@ -81,7 +81,7 @@ export const FreightCard = (props: FreightCardProps) => {
     props.viewingFreight?.metadata?.name === props.freight?.metadata?.name ||
     actionContext?.action?.freight?.metadata?.name === props.freight?.metadata?.name;
 
-  const soakTime = useSoakTimeCounter(props.soakTime);
+  const soakTime = useSoakTimeCounter(props.soakTime, props.freight?.metadata?.namespace);
 
   const frozenInitialSoakTime = useRef(props.soakTime);
 

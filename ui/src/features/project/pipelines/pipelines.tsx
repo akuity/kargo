@@ -145,6 +145,7 @@ export const Pipelines = (props: { creatingStage?: boolean; creatingWarehouse?: 
   );
 
   useSyncFreight({
+    project: name,
     freights: freightById,
     freightInStages
   });
