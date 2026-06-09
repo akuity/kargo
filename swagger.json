@@ -2902,6 +2902,12 @@
             "schema": {
               "$ref": "#/definitions/CreateResourceResponse"
             }
+          },
+          "409": {
+            "description": "Conflict",
+            "schema": {
+              "$ref": "#/definitions/ResourceErrorResponse"
+            }
           }
         }
       },
@@ -5051,6 +5057,14 @@
           "items": {
             "type": "string"
           }
+        }
+      }
+    },
+    "ResourceErrorResponse": {
+      "type": "object",
+      "properties": {
+        "error": {
+          "type": "string"
         }
       }
     },
