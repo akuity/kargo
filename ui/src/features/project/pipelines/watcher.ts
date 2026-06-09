@@ -54,6 +54,10 @@ export class Watcher {
   client: QueryClient;
   promiseClient: Client<typeof KargoService>;
   project: string;
+  // Set once either stream ends or errors for a reason other than an
+  // intentional cancel. Used by isActive() so callers can reuse a live watcher
+  // instead of needlessly reconnecting.
+  private ended = false;
 
   constructor(project: string, client: QueryClient) {
     this.cancel = new AbortController();
@@ -64,6 +68,18 @@ export class Watcher {
 
   cancelWatch() {
     this.cancel.abort();
+  }
+
+  // Whether the watch is still running: not cancelled and neither stream has
+  // ended/errored.
+  isActive() {
+    return !this.cancel.signal.aborted && !this.ended;
+  }
+
+  private markEnded() {
+    if (!this.cancel.signal.aborted) {
+      this.ended = true;
+    }
   }
 
   async watchStages(
@@ -130,7 +146,9 @@ export class Watcher {
 
         onStageEvent?.(stage);
       }
-    );
+    )
+      .catch(() => {})
+      .finally(() => this.markEnded());
   }
 
   async watchWarehouses(opts?: {
@@ -204,6 +222,8 @@ export class Watcher {
 
         opts?.onWarehouseEvent?.(warehouse);
       }
-    );
+    )
+      .catch(() => {})
+      .finally(() => this.markEnded());
   }
 }

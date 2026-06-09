@@ -41,7 +41,9 @@ export const useEventsWatcher = (
     // be throttled/frozen and have its stream silently dropped -- reconnecting
     // on return guarantees a live stream again.
     const onVisibilityChange = () => {
-      if (document.visibilityState === 'visible') {
+      // Reuse the existing connection if it is still alive; only reconnect when
+      // the stream has actually ended (e.g. dropped while the tab was hidden).
+      if (document.visibilityState === 'visible' && !watcher?.isActive()) {
         connect();
       }
     };
