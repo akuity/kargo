@@ -33,6 +33,14 @@ func init() {
 // commits from a Git repository.
 type gitSubscriber struct {
 	credentialsDB credentials.Database
+
+	// newSelectorFn constructs the commit Selector for a subscription. It is a
+	// field so tests can substitute a fake Selector for the real one.
+	newSelectorFn func(
+		ctx context.Context,
+		sub kargoapi.GitSubscription,
+		creds *git.RepoCredentials,
+	) (commit.Selector, error)
 }
 
 // newGitSubscriber returns an implementation of the Subscriber interface that
@@ -41,7 +49,10 @@ func newGitSubscriber(
 	_ context.Context,
 	credentialsDB credentials.Database,
 ) (Subscriber, error) {
-	return &gitSubscriber{credentialsDB: credentialsDB}, nil
+	return &gitSubscriber{
+		credentialsDB: credentialsDB,
+		newSelectorFn: commit.NewSelector,
+	}, nil
 }
 
 var (
@@ -177,6 +188,7 @@ func (g *gitSubscriber) DiscoverArtifacts(
 	ctx context.Context,
 	project string,
 	sub kargoapi.RepoSubscription,
+	last any,
 ) (any, error) {
 	gitSub := sub.Git
 
@@ -211,13 +223,41 @@ func (g *gitSubscriber) DiscoverArtifacts(
 		logger.Debug("found no credentials for git repo")
 	}
 
-	selector, err := commit.NewSelector(ctx, *gitSub, repoCreds)
+	selector, err := g.newSelectorFn(ctx, *gitSub, repoCreds)
 	if err != nil {
 		return nil, fmt.Errorf(
 			"error obtaining selector for commits from git repo %q: %w",
 			gitSub.RepoURL, err,
 		)
 	}
+
+	// Observe the current remote ref state with a single ls-remote round-trip,
+	// before committing to an expensive clone. If it matches what we recorded at
+	// the previous successful discovery, nothing relevant has moved and the
+	// previously selected commits remain valid -- so we can skip the clone.
+	observedRefs, err := selector.ListRefs(ctx)
+	if err != nil {
+		// Treat ls-remote failure as non-fatal: fall through to the clone path,
+		// which preserves today's behavior (and will surface any real
+		// connectivity error there).
+		logger.Debug("error listing remote refs; proceeding to clone", "err", err)
+	} else if prev, ok := last.(kargoapi.GitDiscoveryResult); ok &&
+		prev.RepoURL == gitSub.RepoURL && observedRefs != nil &&
+		gitRefsEqual(prev.ObservedRefs, observedRefs) {
+		// The RepoURL check makes this short-circuit self-defending: the caller
+		// pairs prior results to subscriptions positionally, and this ensures a
+		// mispaired prior (a different repo's result) can never be reused.
+		logger.Debug(
+			"remote refs unchanged since last discovery; skipping clone",
+			"commits", len(prev.Commits),
+		)
+		return kargoapi.GitDiscoveryResult{
+			RepoURL:      gitSub.RepoURL,
+			Commits:      prev.Commits,
+			ObservedRefs: observedRefs,
+		}, nil
+	}
+
 	commits, err := selector.Select(ctx)
 	if err != nil {
 		return nil, fmt.Errorf(
@@ -232,7 +272,27 @@ func (g *gitSubscriber) DiscoverArtifacts(
 	}
 
 	return kargoapi.GitDiscoveryResult{
-		RepoURL: gitSub.RepoURL,
-		Commits: commits,
+		RepoURL:      gitSub.RepoURL,
+		Commits:      commits,
+		ObservedRefs: observedRefs,
 	}, nil
+}
+
+// gitRefsEqual reports whether two recorded ref observations are equal. A nil
+// observation (e.g. recorded before this feature existed, or suppressed because
+// a subscription's tag set exceeded the cap) never compares equal, so discovery
+// always falls through to a clone in those cases.
+func gitRefsEqual(a, b *kargoapi.GitDiscoveryRefs) bool {
+	if a == nil || b == nil {
+		return false
+	}
+	if a.BranchHead != b.BranchHead || len(a.Tags) != len(b.Tags) {
+		return false
+	}
+	for i := range a.Tags {
+		if a.Tags[i] != b.Tags[i] {
+			return false
+		}
+	}
+	return true
 }

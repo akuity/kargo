@@ -133,6 +133,90 @@ func Test_newestFromBranchSelector_MatchesRef(t *testing.T) {
 	}
 }
 
+func Test_newestFromBranchSelector_ListRefs(t *testing.T) {
+	const head = "aa12bb34cc56dd78ee90ff12aabb34ccdd56ee78"
+	testCases := []struct {
+		name       string
+		branch     string
+		lsRemoteFn func(string, *git.ClientOptions, ...string) ([]git.RemoteRef, error)
+		assertions func(*testing.T, *kargoapi.GitDiscoveryRefs, error)
+	}{
+		{
+			name:   "error listing refs",
+			branch: "main",
+			lsRemoteFn: func(string, *git.ClientOptions, ...string) ([]git.RemoteRef, error) {
+				return nil, errors.New("something went wrong")
+			},
+			assertions: func(t *testing.T, refs *kargoapi.GitDiscoveryRefs, err error) {
+				require.ErrorContains(t, err, "something went wrong")
+				require.Nil(t, refs)
+			},
+		},
+		{
+			name:   "records branch head",
+			branch: "main",
+			lsRemoteFn: func(_ string, _ *git.ClientOptions, patterns ...string) ([]git.RemoteRef, error) {
+				require.Equal(t, []string{"refs/heads/main"}, patterns)
+				return []git.RemoteRef{{Name: "refs/heads/main", ID: head}}, nil
+			},
+			assertions: func(t *testing.T, refs *kargoapi.GitDiscoveryRefs, err error) {
+				require.NoError(t, err)
+				require.Equal(t, &kargoapi.GitDiscoveryRefs{BranchHead: head}, refs)
+			},
+		},
+		{
+			// An unspecified branch resolves the remote HEAD, so the default
+			// branch tip is observed regardless of the branch's name (e.g.
+			// "develop", not just "main"/"master").
+			name:   "unspecified branch resolves HEAD",
+			branch: "",
+			lsRemoteFn: func(_ string, _ *git.ClientOptions, patterns ...string) ([]git.RemoteRef, error) {
+				require.Equal(t, []string{"HEAD"}, patterns)
+				return []git.RemoteRef{{Name: "HEAD", ID: head}}, nil
+			},
+			assertions: func(t *testing.T, refs *kargoapi.GitDiscoveryRefs, err error) {
+				require.NoError(t, err)
+				require.Equal(t, &kargoapi.GitDiscoveryRefs{BranchHead: head}, refs)
+			},
+		},
+		{
+			name:   "missing configured branch yields nil observation",
+			branch: "main",
+			lsRemoteFn: func(string, *git.ClientOptions, ...string) ([]git.RemoteRef, error) {
+				return nil, nil
+			},
+			assertions: func(t *testing.T, refs *kargoapi.GitDiscoveryRefs, err error) {
+				require.NoError(t, err)
+				require.Nil(t, refs)
+			},
+		},
+		{
+			// HEAD absent (e.g. an empty repository with no commits) yields a nil
+			// observation, so discovery falls through to a clone rather than
+			// short-circuiting on a repeated empty observation.
+			name:   "unspecified branch with no HEAD yields nil observation",
+			branch: "",
+			lsRemoteFn: func(string, *git.ClientOptions, ...string) ([]git.RemoteRef, error) {
+				return nil, nil
+			},
+			assertions: func(t *testing.T, refs *kargoapi.GitDiscoveryRefs, err error) {
+				require.NoError(t, err)
+				require.Nil(t, refs)
+			},
+		},
+	}
+	for _, testCase := range testCases {
+		t.Run(testCase.name, func(t *testing.T) {
+			s := &newestFromBranchSelector{
+				baseSelector: &baseSelector{lsRemoteFn: testCase.lsRemoteFn},
+				branch:       testCase.branch,
+			}
+			refs, err := s.ListRefs(t.Context())
+			testCase.assertions(t, refs, err)
+		})
+	}
+}
+
 func Test_newestFromBranchSelector_Select(t *testing.T) {
 	testCases := []struct {
 		name       string

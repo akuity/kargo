@@ -104,6 +104,7 @@ func TestSyncWarehouse(t *testing.T) {
 				discoverArtifactsFn: func(
 					context.Context, string,
 					[]kargoapi.RepoSubscription,
+					*kargoapi.DiscoveredArtifacts,
 				) (*kargoapi.DiscoveredArtifacts, error) {
 					return nil, errors.New("something went wrong")
 				},
@@ -159,6 +160,7 @@ func TestSyncWarehouse(t *testing.T) {
 				discoverArtifactsFn: func(
 					context.Context, string,
 					[]kargoapi.RepoSubscription,
+					*kargoapi.DiscoveredArtifacts,
 				) (*kargoapi.DiscoveredArtifacts, error) {
 					return &kargoapi.DiscoveredArtifacts{
 						Git: []kargoapi.GitDiscoveryResult{
@@ -202,6 +204,7 @@ func TestSyncWarehouse(t *testing.T) {
 				discoverArtifactsFn: func(
 					context.Context, string,
 					[]kargoapi.RepoSubscription,
+					*kargoapi.DiscoveredArtifacts,
 				) (*kargoapi.DiscoveredArtifacts, error) {
 					return &kargoapi.DiscoveredArtifacts{
 						Git: []kargoapi.GitDiscoveryResult{
@@ -268,6 +271,7 @@ func TestSyncWarehouse(t *testing.T) {
 				discoverArtifactsFn: func(
 					context.Context, string,
 					[]kargoapi.RepoSubscription,
+					*kargoapi.DiscoveredArtifacts,
 				) (*kargoapi.DiscoveredArtifacts, error) {
 					return &kargoapi.DiscoveredArtifacts{
 						Git: []kargoapi.GitDiscoveryResult{
@@ -354,6 +358,7 @@ func TestSyncWarehouse(t *testing.T) {
 				discoverArtifactsFn: func(
 					context.Context, string,
 					[]kargoapi.RepoSubscription,
+					*kargoapi.DiscoveredArtifacts,
 				) (*kargoapi.DiscoveredArtifacts, error) {
 					return &kargoapi.DiscoveredArtifacts{
 						Git: []kargoapi.GitDiscoveryResult{
@@ -432,6 +437,7 @@ func TestSyncWarehouse(t *testing.T) {
 				discoverArtifactsFn: func(
 					context.Context, string,
 					[]kargoapi.RepoSubscription,
+					*kargoapi.DiscoveredArtifacts,
 				) (*kargoapi.DiscoveredArtifacts, error) {
 					return &kargoapi.DiscoveredArtifacts{
 						Git: []kargoapi.GitDiscoveryResult{
@@ -515,6 +521,7 @@ func TestSyncWarehouse(t *testing.T) {
 				discoverArtifactsFn: func(
 					context.Context, string,
 					[]kargoapi.RepoSubscription,
+					*kargoapi.DiscoveredArtifacts,
 				) (*kargoapi.DiscoveredArtifacts, error) {
 					return &kargoapi.DiscoveredArtifacts{
 						Git: []kargoapi.GitDiscoveryResult{
@@ -576,6 +583,7 @@ func TestSyncWarehouse(t *testing.T) {
 				discoverArtifactsFn: func(
 					context.Context, string,
 					[]kargoapi.RepoSubscription,
+					*kargoapi.DiscoveredArtifacts,
 				) (*kargoapi.DiscoveredArtifacts, error) {
 					return &kargoapi.DiscoveredArtifacts{
 						Git: []kargoapi.GitDiscoveryResult{
@@ -628,6 +636,7 @@ func TestSyncWarehouse(t *testing.T) {
 				discoverArtifactsFn: func(
 					context.Context, string,
 					[]kargoapi.RepoSubscription,
+					*kargoapi.DiscoveredArtifacts,
 				) (*kargoapi.DiscoveredArtifacts, error) {
 					return &kargoapi.DiscoveredArtifacts{
 						Git: []kargoapi.GitDiscoveryResult{
@@ -678,6 +687,7 @@ func TestSyncWarehouse(t *testing.T) {
 				discoverArtifactsFn: func(
 					context.Context, string,
 					[]kargoapi.RepoSubscription,
+					*kargoapi.DiscoveredArtifacts,
 				) (*kargoapi.DiscoveredArtifacts, error) {
 					return &kargoapi.DiscoveredArtifacts{
 						Git: []kargoapi.GitDiscoveryResult{
@@ -727,6 +737,7 @@ func TestSyncWarehouse(t *testing.T) {
 				discoverArtifactsFn: func(
 					context.Context, string,
 					[]kargoapi.RepoSubscription,
+					*kargoapi.DiscoveredArtifacts,
 				) (*kargoapi.DiscoveredArtifacts, error) {
 					return &kargoapi.DiscoveredArtifacts{}, nil
 				},
@@ -760,6 +771,7 @@ func TestSyncWarehouse(t *testing.T) {
 				discoverArtifactsFn: func(
 					context.Context, string,
 					[]kargoapi.RepoSubscription,
+					*kargoapi.DiscoveredArtifacts,
 				) (*kargoapi.DiscoveredArtifacts, error) {
 					return &kargoapi.DiscoveredArtifacts{}, nil
 				},
@@ -790,6 +802,7 @@ func TestSyncWarehouse(t *testing.T) {
 				discoverArtifactsFn: func(
 					context.Context, string,
 					[]kargoapi.RepoSubscription,
+					*kargoapi.DiscoveredArtifacts,
 				) (*kargoapi.DiscoveredArtifacts, error) {
 					return &kargoapi.DiscoveredArtifacts{
 						Git: []kargoapi.GitDiscoveryResult{
@@ -853,6 +866,73 @@ func TestSyncWarehouse(t *testing.T) {
 	}
 }
 
+// Test_syncWarehouse_generationGate verifies that previously discovered
+// artifacts are only offered to subscribers (for short-circuiting) when the
+// spec is unchanged since that discovery, i.e. the observed generation still
+// matches the current generation. A spec change must force full rediscovery.
+func Test_syncWarehouse_generationGate(t *testing.T) {
+	priorArtifacts := &kargoapi.DiscoveredArtifacts{
+		Git: []kargoapi.GitDiscoveryResult{{RepoURL: "https://example.com/repo"}},
+	}
+	testCases := []struct {
+		name               string
+		generation         int64
+		observedGeneration int64
+		expectLast         *kargoapi.DiscoveredArtifacts
+	}{
+		{
+			name:               "generation unchanged passes prior artifacts",
+			generation:         3,
+			observedGeneration: 3,
+			expectLast:         priorArtifacts,
+		},
+		{
+			name:               "generation advanced withholds prior artifacts",
+			generation:         4,
+			observedGeneration: 3,
+			expectLast:         nil,
+		},
+	}
+	for _, testCase := range testCases {
+		t.Run(testCase.name, func(t *testing.T) {
+			var capturedLast *kargoapi.DiscoveredArtifacts
+			captured := false
+			r := &reconciler{
+				discoverArtifactsFn: func(
+					_ context.Context,
+					_ string,
+					_ []kargoapi.RepoSubscription,
+					last *kargoapi.DiscoveredArtifacts,
+				) (*kargoapi.DiscoveredArtifacts, error) {
+					capturedLast = last
+					captured = true
+					// Return an error to short-circuit the rest of syncWarehouse;
+					// only the value passed for last is under test here.
+					return nil, errors.New("stop here")
+				},
+				patchStatusFn: func(
+					context.Context,
+					*kargoapi.Warehouse,
+					func(*kargoapi.WarehouseStatus),
+				) error {
+					return nil
+				},
+			}
+			warehouse := &kargoapi.Warehouse{
+				ObjectMeta: metav1.ObjectMeta{Generation: testCase.generation},
+				Status: kargoapi.WarehouseStatus{
+					ObservedGeneration:  testCase.observedGeneration,
+					DiscoveredArtifacts: priorArtifacts,
+				},
+			}
+			_, err := r.syncWarehouse(t.Context(), warehouse)
+			require.ErrorContains(t, err, "stop here")
+			require.True(t, captured, "discoverArtifactsFn was not invoked")
+			require.Equal(t, testCase.expectLast, capturedLast)
+		})
+	}
+}
+
 func TestDiscoverArtifacts(t *testing.T) {
 	testCases := []struct {
 		name       string
@@ -879,6 +959,7 @@ func TestDiscoverArtifacts(t *testing.T) {
 									context.Context,
 									string,
 									kargoapi.RepoSubscription,
+									any,
 								) (any, error) {
 									return nil, errors.New("something went wrong")
 								},
@@ -916,6 +997,7 @@ func TestDiscoverArtifacts(t *testing.T) {
 									context.Context,
 									string,
 									kargoapi.RepoSubscription,
+									any,
 								) (any, error) {
 									return kargoapi.ChartDiscoveryResult{}, nil
 								},
@@ -953,6 +1035,7 @@ func TestDiscoverArtifacts(t *testing.T) {
 									context.Context,
 									string,
 									kargoapi.RepoSubscription,
+									any,
 								) (any, error) {
 									return kargoapi.GitDiscoveryResult{}, nil
 								},
@@ -990,6 +1073,7 @@ func TestDiscoverArtifacts(t *testing.T) {
 									context.Context,
 									string,
 									kargoapi.RepoSubscription,
+									any,
 								) (any, error) {
 									return kargoapi.ImageDiscoveryResult{}, nil
 								},
@@ -1027,6 +1111,7 @@ func TestDiscoverArtifacts(t *testing.T) {
 									context.Context,
 									string,
 									kargoapi.RepoSubscription,
+									any,
 								) (any, error) {
 									return kargoapi.DiscoveryResult{}, nil
 								},
@@ -1051,6 +1136,7 @@ func TestDiscoverArtifacts(t *testing.T) {
 				t.Context(),
 				"fake-project",
 				[]kargoapi.RepoSubscription{{}},
+				nil,
 			)
 			testCase.assertions(t, discoveredArtifacts, err)
 		})
@@ -1559,6 +1645,7 @@ func TestReconcile(t *testing.T) {
 					discoverArtifactsFn: func(
 						context.Context, string,
 						[]kargoapi.RepoSubscription,
+						*kargoapi.DiscoveredArtifacts,
 					) (*kargoapi.DiscoveredArtifacts, error) {
 						return &kargoapi.DiscoveredArtifacts{}, nil
 					},

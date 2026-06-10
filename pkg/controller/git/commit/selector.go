@@ -18,6 +18,13 @@ type Selector interface {
 	// would consider a commit with the specified changed paths to be eligible for
 	// selection.
 	MatchesPaths([]string) bool
+	// ListRefs returns the raw remote ref state relevant to the Selector's commit
+	// selection strategy, obtained via a single git ls-remote round-trip without
+	// cloning. Name-based filters (semver and/or regex) are applied; path filters
+	// are not, as those are evaluated during Select. The result is suitable for
+	// recording in Warehouse status and for a cheap equality check that detects
+	// whether anything relevant has moved since the last discovery.
+	ListRefs(context.Context) (*kargoapi.GitDiscoveryRefs, error)
 	// Select selects images from a container image repository.
 	Select(context.Context) ([]kargoapi.DiscoveredCommit, error)
 }
