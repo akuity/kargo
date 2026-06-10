@@ -1,4 +1,4 @@
-import { createConnectQueryKey, useMutation } from '@connectrpc/connect-query';
+import { useMutation } from '@connectrpc/connect-query';
 import {
   faExclamationCircle,
   faExternalLink,
@@ -11,15 +11,13 @@ import { Button, Space } from 'antd';
 import React from 'react';
 import { useParams } from 'react-router-dom';
 
-import { transportWithAuth } from '@ui/config/transport';
 import {
   abortVerification,
-  queryFreight,
   refreshResource,
   reverify
 } from '@ui/gen/api/service/v1alpha1/service-KargoService_connectquery';
 import { ArgoCDShard } from '@ui/gen/api/service/v1alpha1/service_pb';
-import { useGetStageLinks } from '@ui/gen/api/v2/core/core';
+import { getQueryFreightsRestQueryKey, useGetStageLinks } from '@ui/gen/api/v2/core/core';
 import { Stage } from '@ui/gen/api/v2/models';
 
 import { DeepLinks } from '../common/deep-links';
@@ -34,8 +32,8 @@ export const StageActions = ({
   verificationRunning?: boolean;
   argocdShard?: ArgoCDShard;
 }) => {
+  const client = useQueryClient();
   const { name: projectName, stageName } = useParams();
-  const queryClient = useQueryClient();
   const [shouldRefetchFreights, setShouldRefetchFreights] = React.useState(false);
 
   const { mutate: refresh, isPending: isRefreshLoading } = useMutation(refreshResource);
@@ -57,12 +55,8 @@ export const StageActions = ({
     }
 
     if (refreshRequest === refreshStatus && shouldRefetchFreights) {
-      queryClient.invalidateQueries({
-        queryKey: createConnectQueryKey({
-          schema: queryFreight,
-          cardinality: 'finite',
-          transport: transportWithAuth
-        })
+      client.invalidateQueries({
+        queryKey: getQueryFreightsRestQueryKey(stage?.metadata?.namespace)
       });
       setShouldRefetchFreights(false);
     }

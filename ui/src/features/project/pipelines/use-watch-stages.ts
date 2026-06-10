@@ -36,22 +36,26 @@ export const useWatchStages = (
       for await (const event of readSSEStream<Stage>(url, abort.signal)) {
         const stage = event.object;
 
-        client.setQueryData(listKey, (old: listStagesResponse | undefined) => {
-          if (!old?.data) {
-            return old;
+        client.setQueriesData(
+          { exact: false, queryKey: listKey },
+          (old: listStagesResponse | undefined) => {
+            if (!old?.data) {
+              return old;
+            }
+            return {
+              ...old,
+              data: { ...old.data, items: upsertOrDelete(old.data.items ?? [], stage, event.type) }
+            };
           }
-          return {
-            ...old,
-            data: { ...old.data, items: upsertOrDelete(old.data.items ?? [], stage, event.type) }
-          };
-        });
+        );
 
         const stageKey = getGetStageQueryKey(project, stage.metadata?.name);
         if (event.type === 'DELETED') {
           client.removeQueries({ queryKey: stageKey });
         } else {
-          client.setQueryData(stageKey, (old: getStageResponse | undefined) =>
-            old ? { ...old, data: stage } : old
+          client.setQueriesData(
+            { exact: false, queryKey: stageKey },
+            (old: getStageResponse | undefined) => (old ? { ...old, data: stage } : old)
           );
           onStageEvent?.(stage);
         }

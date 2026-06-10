@@ -75,14 +75,7 @@ export const Pipelines = (props: { creatingStage?: boolean; creatingWarehouse?: 
 
   const listImagesQuery = useListImages(name);
 
-  const listWarehousesQuery = useListWarehouses(projectName, {
-    query: {
-      select: (data) => {
-        // TODO(Marvin9): transform warehouseExpand
-        return data;
-      }
-    }
-  });
+  const listWarehousesQuery = useListWarehouses(projectName);
 
   const warehouses = listWarehousesQuery?.data?.data?.items || [];
 
@@ -99,6 +92,7 @@ export const Pipelines = (props: { creatingStage?: boolean; creatingWarehouse?: 
   const stages = listStagesQuery.data?.data?.items || [];
 
   const loading =
+    listStagesQuery.isLoading ||
     projectQuery.isLoading ||
     getFreightQuery.isLoading ||
     listWarehousesQuery.isLoading ||

@@ -35,26 +35,33 @@ export const useWatchWarehouses = (
         const warehouse = event.object;
         const name = warehouse.metadata?.name || '';
 
-        client.setQueryData(listKey, (old: listWarehousesResponse | undefined) => {
-          if (!old?.data) {
-            return old;
-          }
-          return {
-            ...old,
-            data: {
-              ...old.data,
-              items: upsertOrDelete(old.data.items ?? [], warehouse, event.type)
+        client.setQueriesData(
+          { exact: false, queryKey: listKey },
+          (old: listWarehousesResponse | undefined) => {
+            if (!old?.data) {
+              return old;
             }
-          };
-        });
+            return {
+              ...old,
+              data: {
+                ...old.data,
+                items: upsertOrDelete(old.data.items ?? [], warehouse, event.type)
+              }
+            };
+          }
+        );
 
         const warehouseKey = getGetWarehouseQueryKey(project, name);
 
         if (event.type === 'DELETED') {
           client.removeQueries({ queryKey: warehouseKey });
         } else {
-          client.setQueryData(warehouseKey, (old: getWarehouseResponse | undefined) =>
-            old ? { ...old, data: warehouse } : old
+          client.setQueriesData(
+            {
+              exact: false,
+              queryKey: warehouseKey
+            },
+            (old: getWarehouseResponse | undefined) => (old ? { ...old, data: warehouse } : old)
           );
 
           const refreshRequest = warehouse.metadata?.annotations?.['kargo.akuity.io/refresh'];

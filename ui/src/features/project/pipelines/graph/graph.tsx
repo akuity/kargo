@@ -112,7 +112,9 @@ export const Graph = (props: GraphProps) => {
         );
 
         if (!nodes.find((n) => n.id === index)) {
-          setRedraw((prev) => !prev);
+          setTimeout(() => {
+            setRedraw((prev) => !prev);
+          });
         }
 
         queryCache.imageStageMatrix.update(stage);
@@ -136,7 +138,9 @@ export const Graph = (props: GraphProps) => {
         );
 
         if (!nodes.find((n) => n.id === index)) {
-          setRedraw((prev) => !prev);
+          setTimeout(() => {
+            setRedraw((prev) => !prev);
+          });
         }
 
         queryCache.freight.refetch(props.project);
