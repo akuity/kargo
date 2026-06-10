@@ -60,12 +60,35 @@
               "autoRollback": {
                 "description": "AutoRollback describes the conditions under which this Stage should\nautomatically roll back to the last known-good (verified) Freight. When\nnil, auto-rollback is disabled.\n\nKargo Enterprise only: This field is ignored in Kargo OSS.",
                 "properties": {
-                  "onFailedPromotions": {
-                    "description": "OnFailedPromotions indicates whether a rollback should be triggered\nwhen a promotion to the Stage fails. Failed promotions (as opposed\nto failed verifications) does not necessarily indicate a problem the\nFreight, since promotions might fail due to transient issues with the\nStage itself (network, credential expirations, etc...). This defaults\nto false.",
-                    "type": "boolean"
+                  "onPromotion": {
+                    "description": "OnPromotion is the list of terminal Promotion phases that should trigger\nan automated rollback. Only Failed and Errored are accepted. Note that\nunsuccessful promotions (as opposed to unsuccessful verifications) may not\nnecessarily indicate a problem with the Freight, since promotions might fail\ndue to transient issues with the deployment itself (network, credential\nexpirations, etc...). Defaults to [].",
+                    "items": {
+                      "description": "PromotionPhase is a high-level summary of the current state of a Promotion.",
+                      "type": "string"
+                    },
+                    "type": "array",
+                    "x-kubernetes-list-type": "set"
+                  },
+                  "onVerification": {
+                    "description": "OnVerification is the list of terminal verification phases that should\ntrigger an automated rollback. Only Failed and Error are accepted (note:\n\"Error\", not \"Errored\" as in onPromotion). When absent or empty,\ndefaults to [Failed].",
+                    "items": {
+                      "type": "string"
+                    },
+                    "type": "array",
+                    "x-kubernetes-list-type": "set"
                   }
                 },
-                "type": "object"
+                "type": "object",
+                "x-kubernetes-validations": [
+                  {
+                    "message": "onPromotion items must be Failed or Errored",
+                    "rule": "!has(self.onPromotion) || self.onPromotion.all(p, p == 'Failed' || p == 'Errored')"
+                  },
+                  {
+                    "message": "onVerification items must be Failed or Error",
+                    "rule": "!has(self.onVerification) || self.onVerification.all(p, p == 'Failed' || p == 'Error')"
+                  }
+                ]
               },
               "stage": {
                 "description": "Stage is the name of the Stage to which this policy applies.\n\nDeprecated: Use StageSelector instead.",

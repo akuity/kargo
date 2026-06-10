@@ -7,11 +7,22 @@
  */
 
 export interface AutoRollbackConfig {
-  /** OnFailedPromotions indicates whether a rollback should be triggered
-when a promotion to the Stage fails. Failed promotions (as opposed
-to failed verifications) does not necessarily indicate a problem the
-Freight, since promotions might fail due to transient issues with the
-Stage itself (network, credential expirations, etc...). This defaults
-to false. */
-  onFailedPromotions?: boolean;
+  /** OnPromotion is the list of terminal Promotion phases that should trigger
+an automated rollback. Only Failed and Errored are accepted. Note that
+unsuccessful promotions (as opposed to unsuccessful verifications) may not
+necessarily indicate a problem with the Freight, since promotions might fail
+due to transient issues with the deployment itself (network, credential
+expirations, etc...). Defaults to [].
+
++optional
++listType=set */
+  onPromotion?: string[];
+  /** OnVerification is the list of terminal verification phases that should
+trigger an automated rollback. Only Failed and Error are accepted (note:
+"Error", not "Errored" as in onPromotion). When absent or empty,
+defaults to [Failed].
+
++optional
++listType=set */
+  onVerification?: string[];
 }
