@@ -38,6 +38,12 @@ func (w *webhook) Handle(
 	if req.UserInfo.Username == w.cfg.ManagementControllerUsername {
 		return admission.Allowed("request from Kargo management controller")
 	}
+	if libWebhook.IsRequestFromKubernetesSystemController(req) {
+		return admission.Allowed("request from Kubernetes system controller")
+	}
+	if libWebhook.IsRequestFromClusterAdmin(req) {
+		return admission.Allowed("request from cluster administrator")
+	}
 	return admission.Denied(
 		"replicated resources are managed by Kargo" +
 			" and cannot be created, modified, or deleted by end users",
