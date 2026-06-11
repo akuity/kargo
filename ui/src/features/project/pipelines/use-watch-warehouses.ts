@@ -81,5 +81,5 @@ export const useWatchWarehouses = (
     })();
 
     return () => abort.abort();
-  }, [project]);
+  }, [project, client]);
 };

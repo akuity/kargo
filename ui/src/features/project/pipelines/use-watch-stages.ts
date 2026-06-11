@@ -63,5 +63,5 @@ export const useWatchStages = (
     })();
 
     return () => abort.abort();
-  }, [project, (warehouses || []).join(',')]);
+  }, [project, (warehouses || []).join(','), client]);
 };

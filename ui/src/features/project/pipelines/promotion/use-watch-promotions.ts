@@ -39,5 +39,5 @@ export const useWatchPromotions = (project: string, stage: string) => {
     })();
 
     return () => abort.abort();
-  }, [project, stage]);
+  }, [project, stage, client]);
 };

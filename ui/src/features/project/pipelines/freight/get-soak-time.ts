@@ -1,7 +1,6 @@
-import { add, intervalToDuration, isBefore } from 'date-fns';
+import { addSeconds, intervalToDuration, isBefore } from 'date-fns';
 
 import { Freight, Stage } from '@ui/gen/api/v2/models';
-import { timestampDate } from '@ui/utils/connectrpc-utils';
 
 // freight is in stage since X
 // required soak time is Y duration
@@ -24,17 +23,16 @@ export const getSoakTime = (payload: {
 
   const sourceStageName = payload.freightInStage?.metadata?.name || '';
 
-  const inSourceStageSince = timestampDate(
-    payload.freight?.status?.currentlyIn?.[sourceStageName].since
-  );
+  const inSourceStageSince = payload.freight?.status?.currentlyIn?.[sourceStageName]?.since;
 
   if (!inSourceStageSince) {
     return '';
   }
 
-  const requiredSoakTime = durationToHMS(payload.requiredSoakTime);
-
-  const calculateSoakTimeSinceInFreight = add(inSourceStageSince, requiredSoakTime);
+  const calculateSoakTimeSinceInFreight = addSeconds(
+    inSourceStageSince,
+    parseDurationSeconds(payload.requiredSoakTime)
+  );
 
   const now = new Date();
 
@@ -45,7 +43,7 @@ export const getSoakTime = (payload: {
   return null;
 };
 
-const durationToHMS = (duration: string) => {
+const parseDurationSeconds = (duration: string): number => {
   let totalSeconds = 0;
   const re = /([0-9]+(?:\.[0-9]+)?)(h|m|s)/g;
   let match;
@@ -63,9 +61,5 @@ const durationToHMS = (duration: string) => {
         break;
     }
   }
-  return {
-    hours: Math.floor(totalSeconds / 3600),
-    minutes: Math.floor((totalSeconds % 3600) / 60),
-    seconds: Math.floor(totalSeconds % 60)
-  };
+  return totalSeconds;
 };
