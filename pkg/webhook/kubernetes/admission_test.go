@@ -11,6 +11,85 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/webhook/admission"
 )
 
+func TestIsRequestFromKubernetesGarbageCollector(t *testing.T) {
+	testCases := []struct {
+		name     string
+		username string
+		expected bool
+	}{
+		{
+			name:     "namespace-controller is allowed",
+			username: "system:serviceaccount:kube-system:namespace-controller",
+			expected: true,
+		},
+		{
+			name:     "generic-garbage-collector is allowed",
+			username: "system:serviceaccount:kube-system:generic-garbage-collector",
+			expected: true,
+		},
+		{
+			name:     "kube-controller-manager is allowed",
+			username: "system:kube-controller-manager",
+			expected: true,
+		},
+		{
+			name:     "other user is not allowed",
+			username: "some-user",
+			expected: false,
+		},
+	}
+	for _, testCase := range testCases {
+		t.Run(testCase.name, func(t *testing.T) {
+			t.Parallel()
+			req := admission.Request{
+				AdmissionRequest: admissionv1.AdmissionRequest{
+					UserInfo: authnv1.UserInfo{Username: testCase.username},
+				},
+			}
+			require.Equal(t, testCase.expected, IsRequestFromKubernetesGarbageCollector(req))
+		})
+	}
+}
+
+func TestIsRequestFromClusterAdmin(t *testing.T) {
+	testCases := []struct {
+		name     string
+		groups   []string
+		expected bool
+	}{
+		{
+			name:     "system:masters group member is allowed",
+			groups:   []string{"system:masters"},
+			expected: true,
+		},
+		{
+			name:     "system:masters among multiple groups is allowed",
+			groups:   []string{"some-group", "system:masters"},
+			expected: true,
+		},
+		{
+			name:     "no groups is not allowed",
+			expected: false,
+		},
+		{
+			name:     "other groups only is not allowed",
+			groups:   []string{"some-group"},
+			expected: false,
+		},
+	}
+	for _, testCase := range testCases {
+		t.Run(testCase.name, func(t *testing.T) {
+			t.Parallel()
+			req := admission.Request{
+				AdmissionRequest: admissionv1.AdmissionRequest{
+					UserInfo: authnv1.UserInfo{Groups: testCase.groups},
+				},
+			}
+			require.Equal(t, testCase.expected, IsRequestFromClusterAdmin(req))
+		})
+	}
+}
+
 func TestIsRequestFromKargoControlplane(t *testing.T) {
 	testCases := map[string]struct {
 		regex    *regexp.Regexp
