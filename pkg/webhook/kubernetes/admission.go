@@ -7,14 +7,15 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/webhook/admission"
 )
 
-// kubernetesSystemControllerUsernames is the set of well-known Kubernetes
+// kubernetesGarbageCollectorUsernames is the set of well-known Kubernetes
 // system identities that perform garbage collection and namespace teardown.
 // These must be allowed to delete replicated secrets when a namespace is
 // removed so that namespaces do not become stuck in Terminating.
-var kubernetesSystemControllerUsernames = map[string]struct{}{
+var kubernetesGarbageCollectorUsernames = map[string]struct{}{
 	"system:serviceaccount:kube-system:namespace-controller":      {},
 	"system:serviceaccount:kube-system:generic-garbage-collector": {},
-	"system:kube-controller-manager":                              {},
+	// when --use-service-account-credentials=false or unset
+	"system:kube-controller-manager": {},
 }
 
 type IsRequestFromKargoControlplaneFn func(admission.Request) bool
@@ -29,11 +30,11 @@ func IsRequestFromKargoControlplane(regex *regexp.Regexp) IsRequestFromKargoCont
 	}
 }
 
-// IsRequestFromKubernetesSystemController returns true when the admission
+// IsRequestFromKubernetesGarbageCollector returns true when the admission
 // request originates from one of the well-known Kubernetes system controllers
 // responsible for garbage collection and namespace teardown.
-func IsRequestFromKubernetesSystemController(req admission.Request) bool {
-	_, ok := kubernetesSystemControllerUsernames[req.UserInfo.Username]
+func IsRequestFromKubernetesGarbageCollector(req admission.Request) bool {
+	_, ok := kubernetesGarbageCollectorUsernames[req.UserInfo.Username]
 	return ok
 }
 

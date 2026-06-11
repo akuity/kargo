@@ -11,7 +11,7 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/webhook/admission"
 )
 
-func TestIsRequestFromKubernetesSystemController(t *testing.T) {
+func TestIsRequestFromKubernetesGarbageCollector(t *testing.T) {
 	testCases := []struct {
 		name     string
 		username string
@@ -46,7 +46,7 @@ func TestIsRequestFromKubernetesSystemController(t *testing.T) {
 					UserInfo: authnv1.UserInfo{Username: testCase.username},
 				},
 			}
-			require.Equal(t, testCase.expected, IsRequestFromKubernetesSystemController(req))
+			require.Equal(t, testCase.expected, IsRequestFromKubernetesGarbageCollector(req))
 		})
 	}
 }

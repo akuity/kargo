@@ -118,7 +118,7 @@ func TestHandle(t *testing.T) {
 			},
 		},
 		{
-			name: "system:masters group member is allowed",
+			name: "system:masters group member DELETE is allowed",
 			req: admission.Request{
 				AdmissionRequest: admissionv1.AdmissionRequest{
 					Operation: admissionv1.Delete,
@@ -130,6 +130,35 @@ func TestHandle(t *testing.T) {
 			},
 			assert: func(t *testing.T, resp admission.Response) {
 				require.True(t, resp.Allowed)
+			},
+		},
+		{
+			name: "system:masters group member UPDATE is allowed",
+			req: admission.Request{
+				AdmissionRequest: admissionv1.AdmissionRequest{
+					Operation: admissionv1.Update,
+					UserInfo: authnv1.UserInfo{
+						Username: "cluster-admin",
+						Groups:   []string{"system:masters"},
+					},
+				},
+			},
+			assert: func(t *testing.T, resp admission.Response) {
+				require.True(t, resp.Allowed)
+			},
+		},
+		{
+			name: "garbage collector non-DELETE is denied",
+			req: admission.Request{
+				AdmissionRequest: admissionv1.AdmissionRequest{
+					Operation: admissionv1.Update,
+					UserInfo: authnv1.UserInfo{
+						Username: "system:serviceaccount:kube-system:namespace-controller",
+					},
+				},
+			},
+			assert: func(t *testing.T, resp admission.Response) {
+				require.False(t, resp.Allowed)
 			},
 		},
 		{
