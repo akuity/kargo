@@ -20,6 +20,9 @@ export const useWatchPromotion = (project: string, promotion: string) => {
 
     (async () => {
       for await (const event of readSSEStream<Promotion>(url, abort.signal)) {
+        if ('error' in event) {
+          continue;
+        }
         const p = event.object;
 
         if (event.type === 'DELETED') {

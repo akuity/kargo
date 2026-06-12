@@ -2,7 +2,14 @@ import { authTokenKey } from '@ui/config/auth';
 
 export const getBaseUrl = () => (import.meta.env.VITE_API_URL as string | undefined) || '';
 
-export type SSEWatchEvent<T> = { type: string; object: T };
+// Code the server emits (as `event: error`) when the resourceVersion used to
+// seed a watch is older than the API server's watch window. Clients respond by
+// relisting to obtain a fresh, watchable resourceVersion.
+export const WATCH_ERROR_EXPIRED = 'out_of_range';
+
+export type SSEWatchError = { code: string; message: string };
+
+export type SSEWatchEvent<T> = { type: string; object: T } | { error: SSEWatchError };
 
 export async function* readSSEStream<T>(
   url: string,
@@ -33,12 +40,17 @@ export async function* readSSEStream<T>(
       buffer = parts.pop() ?? '';
 
       for (const part of parts) {
-        const dataLine = part.split('\n').find((l) => l.startsWith('data: '));
+        const lines = part.split('\n');
+        const dataLine = lines.find((l) => l.startsWith('data: '));
         if (!dataLine) {
           continue;
         }
+        const isError = lines.some((l) => l.startsWith('event: error'));
         try {
-          yield JSON.parse(dataLine.slice(6)) as SSEWatchEvent<T>;
+          const parsed = JSON.parse(dataLine.slice(6));
+          yield isError
+            ? { error: parsed as SSEWatchError }
+            : (parsed as { type: string; object: T });
         } catch (_) {
           // skip malformed events
         }
@@ -46,6 +58,67 @@ export async function* readSSEStream<T>(
     }
   } finally {
     reader.releaseLock();
+  }
+}
+
+// runSeededWatch opens a Kubernetes-style list-then-watch SSE stream seeded from
+// the list's resourceVersion, so the API server does not replay every existing
+// object as an ADDED event. The seed resourceVersion is read once per connection
+// from `seedResourceVersion()` (kept out of any React effect deps by the caller
+// so a cache-advancing event never tears the stream down). If the seed is too
+// old, the server reports `WATCH_ERROR_EXPIRED`; we then `relist()` for a fresh
+// resourceVersion and reopen. A clean close or generic error stops the stream
+// (matching the pre-seeding behavior — no auto-reconnect).
+export async function runSeededWatch<T>(params: {
+  signal: AbortSignal;
+  buildUrl: (resourceVersion: string) => string;
+  seedResourceVersion: () => string | undefined;
+  relist: () => Promise<string | undefined>;
+  onEvent: (type: string, object: T) => void;
+}): Promise<void> {
+  let resourceVersion = params.seedResourceVersion() || '';
+
+  for (;;) {
+    let expired = false;
+    try {
+      for await (const event of readSSEStream<T>(params.buildUrl(resourceVersion), params.signal)) {
+        if ('error' in event) {
+          if (event.error.code === WATCH_ERROR_EXPIRED) {
+            expired = true;
+            break;
+          }
+          continue;
+        }
+        params.onEvent(event.type, event.object);
+      }
+    } catch (_) {
+      // Aborted unmount or a network failure: stop.
+      return;
+    }
+
+    if (params.signal.aborted || !expired) {
+      return;
+    }
+
+    resourceVersion = (await params.relist()) || '';
+  }
+}
+
+// isNewerResourceVersion reports whether incoming is a strictly newer Kubernetes
+// resourceVersion than existing. resourceVersions are officially opaque, so we
+// only compare numerically (their actual encoding today) and otherwise fail open
+// (treat as newer) to avoid suppressing a real update.
+function isNewerResourceVersion(incoming?: string, existing?: string): boolean {
+  if (!incoming) {
+    return false;
+  }
+  if (!existing) {
+    return true;
+  }
+  try {
+    return BigInt(incoming) > BigInt(existing);
+  } catch (_) {
+    return true;
   }
 }
 
@@ -102,16 +175,25 @@ export async function* readSSETextStream(url: string, signal: AbortSignal): Asyn
   }
 }
 
-export function upsertOrDelete<T extends { metadata?: { name?: string } }>(
-  items: T[],
-  item: T,
-  eventType: string
-): T[] {
+export function upsertOrDelete<
+  T extends { metadata?: { name?: string; resourceVersion?: string } }
+>(items: T[], item: T, eventType: string): T[] {
   const index = items.findIndex((i) => i.metadata?.name === item.metadata?.name);
   if (eventType === 'DELETED') {
     return index !== -1 ? [...items.slice(0, index), ...items.slice(index + 1)] : items;
   }
-  return index !== -1
-    ? [...items.slice(0, index), item, ...items.slice(index + 1)]
-    : [...items, item];
+  if (index === -1) {
+    return [...items, item];
+  }
+  // Skip a replayed ADDED for an object we already hold at the same or newer
+  // resourceVersion. Seeding should prevent these server-side; this is a
+  // belt-and-suspenders guard for an unseeded or just-relisted watch. MODIFIED
+  // events always carry a newer resourceVersion and are applied unconditionally.
+  if (
+    eventType === 'ADDED' &&
+    !isNewerResourceVersion(item.metadata?.resourceVersion, items[index].metadata?.resourceVersion)
+  ) {
+    return items;
+  }
+  return [...items.slice(0, index), item, ...items.slice(index + 1)];
 }
