@@ -18,10 +18,8 @@ import { paths } from '@ui/config/paths';
 import { HealthStatusIcon } from '@ui/features/common/health-status/health-status-icon';
 import { IAction, useActionContext } from '@ui/features/project/pipelines/context/action-context';
 import { ArgoCDLink } from '@ui/features/project/pipelines/nodes/argocd-link';
-import {
-  approveFreight,
-  queryFreight
-} from '@ui/gen/api/service/v1alpha1/service-KargoService_connectquery';
+import { queryFreight } from '@ui/gen/api/service/v1alpha1/service-KargoService_connectquery';
+import { useApproveFreight } from '@ui/gen/api/v2/core/core';
 import { Stage } from '@ui/gen/api/v2/models';
 
 import { useDictionaryContext } from '../context/dictionary-context';
@@ -69,13 +67,15 @@ export const StageNode = (props: { stage: Stage }) => {
 
   const totalSubscribersToThisStage = dictionaryContext?.subscribersByStage?.[stageName]?.size || 0;
 
-  const manualApproveActionMutation = useMutation(approveFreight, {
-    onSuccess: (_, vars) => {
-      message.success(
-        `Freight ${actionContext?.action?.freight?.alias} has been manually approved for stage ${vars.stage}`
-      );
+  const manualApproveActionMutation = useApproveFreight({
+    mutation: {
+      onSuccess: (_, vars) => {
+        message.success(
+          `Freight ${actionContext?.action?.freight?.alias} has been manually approved for stage ${vars.params.stage}`
+        );
 
-      actionContext?.cancel();
+        actionContext?.cancel();
+      }
     }
   });
 
@@ -210,9 +210,11 @@ export const StageNode = (props: { stage: Stage }) => {
               loading={manualApproveActionMutation.isPending}
               onClick={() => {
                 manualApproveActionMutation.mutate({
-                  stage: props.stage?.metadata?.name || '',
-                  project: props.stage?.metadata?.namespace,
-                  name: actionContext?.action?.freight?.metadata?.name
+                  params: {
+                    stage: props.stage?.metadata?.name || ''
+                  },
+                  project: props.stage?.metadata?.namespace || '',
+                  freightNameOrAlias: actionContext?.action?.freight?.metadata?.name || ''
                 });
               }}
             >

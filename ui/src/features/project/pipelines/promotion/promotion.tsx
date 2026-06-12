@@ -20,13 +20,11 @@ import { useDictionaryContext } from '@ui/features/project/pipelines/context/dic
 import { PromotionSteps } from '@ui/features/stage/promotion-steps';
 import { canAbortPromotion, hasAbortRequest } from '@ui/features/stage/utils/promotion';
 import {
-  abortPromotion,
   getPromotion,
-  promoteToStage,
   refreshResource
 } from '@ui/gen/api/service/v1alpha1/service-KargoService_connectquery';
 import { RawFormat } from '@ui/gen/api/service/v1alpha1/service_pb';
-import { useGetPromotion } from '@ui/gen/api/v2/core/core';
+import { useAbortPromotion, useGetPromotion, usePromoteToStage } from '@ui/gen/api/v2/core/core';
 import { Promotion as TPromotion } from '@ui/gen/api/v2/models';
 import { timestampDate } from '@ui/utils/connectrpc-utils';
 import { decodeRawData } from '@ui/utils/decode-raw-data';
@@ -46,22 +44,26 @@ const Content = (props: { promotion: TPromotion; yaml: string }) => {
   const dictionaryContext = useDictionaryContext();
   const promotionDescriptions: DescriptionsProps['items'] = [];
 
-  const abortPromotionMutation = useMutation(abortPromotion, {
-    onSuccess: () =>
-      // Abort promotion annotates the Promotion resource and then controller acts
-      message.success({
-        content: `Abort Promotion ${promotion.metadata?.name} requested successfully.`
-      })
+  const abortPromotionMutation = useAbortPromotion({
+    mutation: {
+      onSuccess: () =>
+        // Abort promotion annotates the Promotion resource and then controller acts
+        message.success({
+          content: `Abort Promotion ${promotion.metadata?.name} requested successfully.`
+        })
+    }
   });
 
-  const promoteMutation = useMutation(promoteToStage, {
-    onSuccess(data) {
-      navigate(
-        generatePath(paths.promotion, {
-          name: props.promotion?.metadata?.namespace,
-          promotionId: data.promotion?.metadata?.name
-        })
-      );
+  const promoteMutation = usePromoteToStage({
+    mutation: {
+      onSuccess(data) {
+        navigate(
+          generatePath(paths.promotion, {
+            name: props.promotion?.metadata?.namespace,
+            promotionId: data.data?.metadata?.name
+          })
+        );
+      }
     }
   });
 
@@ -72,14 +74,16 @@ const Content = (props: { promotion: TPromotion; yaml: string }) => {
   const affiliatedStage = getPromotionStage(promotion);
 
   const onRetryPromotion = () => {
-    const stage = affiliatedStage;
-    const project = props.promotion?.metadata?.namespace;
+    const stage = affiliatedStage || '';
+    const project = props.promotion?.metadata?.namespace || '';
     const freight = promotion?.spec?.freight;
 
     promoteMutation.mutate({
       stage,
       project,
-      freight
+      data: {
+        freight
+      }
     });
   };
 
@@ -162,8 +166,8 @@ const Content = (props: { promotion: TPromotion; yaml: string }) => {
       title: 'Abort Promotion Request',
       onOk: () =>
         abortPromotionMutation.mutate({
-          project: promotion?.metadata?.namespace,
-          name: promotion?.metadata?.name
+          project: promotion?.metadata?.namespace || '',
+          promotion: promotion?.metadata?.name || ''
         }),
       okText: 'Abort',
       okButtonProps: {

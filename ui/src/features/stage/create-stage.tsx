@@ -1,4 +1,3 @@
-import { useMutation } from '@connectrpc/connect-query';
 import { faCode, faListCheck, faTimes } from '@fortawesome/free-solid-svg-icons';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
 import { zodResolver } from '@hookform/resolvers/zod';
@@ -13,8 +12,8 @@ import { z } from 'zod';
 import { paths } from '@ui/config/paths';
 import { YamlEditor } from '@ui/features/common/code-editor/yaml-editor';
 import { FieldContainer } from '@ui/features/common/form/field-container';
-import { createResource } from '@ui/gen/api/service/v1alpha1/service-KargoService_connectquery';
 import { PromotionStep, Stage } from '@ui/gen/api/v2/models';
+import { useCreateResource } from '@ui/gen/api/v2/resources/resources';
 import schema from '@ui/gen/schema/stages.kargo.akuity.io_v1alpha1.json';
 import { cleanEmptyObjectValues } from '@ui/utils/helpers';
 import { zodValidators } from '@ui/utils/validators';
@@ -80,11 +79,7 @@ export const CreateStage = ({
   const close = () => navigate(generatePath(paths.project, { name: project }));
   const [tab, setTab] = useState('wizard');
 
-  const { mutateAsync, isPending } = useMutation(createResource, {
-    onSuccess: () => {
-      close();
-    }
-  });
+  const { mutateAsync, isPending } = useCreateResource({ mutation: { onSuccess: () => close() } });
 
   const { control, handleSubmit, setValue, getValues } = useForm({
     defaultValues: {
@@ -126,9 +121,8 @@ export const CreateStage = ({
       setValue('value', unmarshalled);
       value = unmarshalled;
     }
-    const textEncoder = new TextEncoder();
     await mutateAsync({
-      manifest: textEncoder.encode(value)
+      data: value
     });
   });
 

@@ -1,4 +1,3 @@
-import { useMutation } from '@connectrpc/connect-query';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { Button, Flex, message, Space, Typography } from 'antd';
 import type { JSONSchema4 } from 'json-schema';
@@ -9,8 +8,8 @@ import { z } from 'zod';
 
 import { YamlEditor } from '@ui/features/common/code-editor/yaml-editor';
 import { FieldContainer } from '@ui/features/common/form/field-container';
-import { updateResource } from '@ui/gen/api/service/v1alpha1/service-KargoService_connectquery';
 import { useGetStage } from '@ui/gen/api/v2/core/core';
+import { useUpdateResource } from '@ui/gen/api/v2/resources/resources';
 import schema from '@ui/gen/schema/stages.kargo.akuity.io_v1alpha1.json';
 import { zodValidators } from '@ui/utils/validators';
 
@@ -25,8 +24,10 @@ export const StageEditForm = () => {
 
   const getStageQuery = useGetStage(projectName || '', stageName || '');
 
-  const { mutateAsync, isPending } = useMutation(updateResource, {
-    onSuccess: () => message.success('Stage has been updated')
+  const { mutateAsync, isPending } = useUpdateResource({
+    mutation: {
+      onSuccess: () => message.success('Stage has been updated')
+    }
   });
 
   const { control, handleSubmit } = useForm({
@@ -37,9 +38,8 @@ export const StageEditForm = () => {
   });
 
   const onSubmit = handleSubmit(async (data) => {
-    const textEncoder = new TextEncoder();
     await mutateAsync({
-      manifest: textEncoder.encode(data.value)
+      data: data.value
     });
   });
 

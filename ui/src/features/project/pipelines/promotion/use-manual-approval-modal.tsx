@@ -1,8 +1,7 @@
-import { useMutation } from '@connectrpc/connect-query';
 import { Alert, Typography } from 'antd';
 
 import { useConfirmModal } from '@ui/features/common/confirm-modal/use-confirm-modal';
-import { approveFreight } from '@ui/gen/api/service/v1alpha1/service-KargoService_connectquery';
+import { useApproveFreight } from '@ui/gen/api/v2/core/core';
 
 type CallbackProps = {
   projectName: string;
@@ -14,7 +13,8 @@ type CallbackProps = {
 
 export const useManualApprovalModal = () => {
   const confirm = useConfirmModal();
-  const manualApproveActionMutation = useMutation(approveFreight);
+
+  const manualApproveActionMutation = useApproveFreight();
 
   return ({ freight, onClose, projectName, stage, onApprove }: CallbackProps) =>
     confirm({
@@ -43,9 +43,11 @@ export const useManualApprovalModal = () => {
       onOk: async () =>
         await manualApproveActionMutation.mutateAsync(
           {
-            stage,
-            project: projectName,
-            name: freight
+            params: {
+              stage
+            },
+            freightNameOrAlias: freight,
+            project: projectName
           },
           {
             onSuccess: () => {

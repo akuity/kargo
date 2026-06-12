@@ -1,4 +1,3 @@
-import { useMutation } from '@connectrpc/connect-query';
 import {
   faBarsStaggered,
   faCircleNotch,
@@ -17,7 +16,7 @@ import { paths } from '@ui/config/paths';
 import { ColorContext } from '@ui/context/colors';
 import { WarehouseExpanded } from '@ui/extend/types';
 import { useFreightTimelineControllerContext } from '@ui/features/project/pipelines/context/freight-timeline-controller-context';
-import { refreshResource } from '@ui/gen/api/service/v1alpha1/service-KargoService_connectquery';
+import { useRefreshWarehouse } from '@ui/gen/api/v2/core/core';
 
 import styles from './node-size-source-of-truth.module.less';
 
@@ -29,10 +28,11 @@ export const WarehouseNode = (props: { warehouse: WarehouseExpanded }) => {
 
   const warehouseState = useWarehouseState(props.warehouse);
 
-  const refreshResourceTypeWarehouse = 'Warehouse';
-  const refreshResourceMutation = useMutation(refreshResource, {
-    onSuccess: () => {
-      message.success('Warehouse successfully refreshed');
+  const refreshResourceMutation = useRefreshWarehouse({
+    mutation: {
+      onSuccess: () => {
+        message.success('Warehouse successfully refreshed');
+      }
     }
   });
 
@@ -121,9 +121,8 @@ export const WarehouseNode = (props: { warehouse: WarehouseExpanded }) => {
           onClick={(e) => {
             e.stopPropagation();
             refreshResourceMutation.mutate({
-              project: props.warehouse?.metadata?.namespace,
-              name: props.warehouse?.metadata?.name,
-              resourceType: refreshResourceTypeWarehouse
+              project: props.warehouse?.metadata?.namespace || '',
+              warehouse: props.warehouse?.metadata?.name || ''
             });
           }}
           loading={warehouseState.refreshing}

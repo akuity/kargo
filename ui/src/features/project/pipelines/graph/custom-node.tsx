@@ -85,6 +85,10 @@ export const CustomRepoSubscriptionNode = (props: {
 }) => {
   const graphContext = useGraphContext();
 
+  if (!props.data.value) {
+    return null;
+  }
+
   const RepoSubscriptionNodeBox = graphContext?.ready ? (
     <SubscriptionNode subscription={props.data.value} />
   ) : (
@@ -136,6 +140,10 @@ export const CustomStageNode = (props: {
   id?: string;
 }) => {
   const graphContext = useGraphContext();
+
+  if (!props.data.value) {
+    return null;
+  }
 
   const StageNodeBox = graphContext?.ready ? (
     <StageNode stage={props.data.value} />

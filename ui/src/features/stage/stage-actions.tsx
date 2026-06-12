@@ -1,4 +1,3 @@
-import { useMutation } from '@connectrpc/connect-query';
 import {
   faExclamationCircle,
   faExternalLink,
@@ -12,12 +11,12 @@ import React from 'react';
 import { useParams } from 'react-router-dom';
 
 import {
-  abortVerification,
-  refreshResource,
-  reverify
-} from '@ui/gen/api/service/v1alpha1/service-KargoService_connectquery';
-import { getQueryFreightsRestQueryKey, useGetStageLinks } from '@ui/gen/api/v2/core/core';
+  getQueryFreightsRestQueryKey,
+  useGetStageLinks,
+  useRefreshStage
+} from '@ui/gen/api/v2/core/core';
 import { ArgoCDShard, Stage } from '@ui/gen/api/v2/models';
+import { useAbortVerification, useReverify } from '@ui/gen/api/v2/verifications/verifications';
 
 import { DeepLinks } from '../common/deep-links';
 import { currentFreightHasVerification } from '../common/utils';
@@ -35,14 +34,12 @@ export const StageActions = ({
   const { name: projectName, stageName } = useParams();
   const [shouldRefetchFreights, setShouldRefetchFreights] = React.useState(false);
 
-  const { mutate: refresh, isPending: isRefreshLoading } = useMutation(refreshResource);
+  const { mutate: refresh, isPending: isRefreshLoading } = useRefreshStage();
 
-  const refreshResourceTypeStage = 'Stage';
   const onRefresh = () =>
     refresh({
-      name: stageName,
-      project: projectName,
-      resourceType: refreshResourceTypeStage
+      stage: stageName || '',
+      project: projectName || ''
     });
 
   // Once the Refresh process is done, refetch Freight list
@@ -61,8 +58,8 @@ export const StageActions = ({
     }
   }, [stage, shouldRefetchFreights]);
 
-  const { mutate: reverifyStage, isPending } = useMutation(reverify);
-  const { mutate: abortVerificationAction } = useMutation(abortVerification);
+  const { mutate: reverifyStage, isPending } = useReverify();
+  const { mutate: abortVerificationAction } = useAbortVerification();
 
   const verificationEnabled = stage?.spec?.verification;
 
@@ -95,7 +92,7 @@ export const StageActions = ({
                 icon={<FontAwesomeIcon icon={faRedo} spin={isPending} />}
                 disabled={isPending || verificationRunning}
                 onClick={() => {
-                  reverifyStage({ project: projectName, stage: stageName });
+                  reverifyStage({ project: projectName || '', stage: stageName || '' });
                 }}
               >
                 Reverify
@@ -105,7 +102,9 @@ export const StageActions = ({
               type='default'
               disabled={!verificationRunning}
               icon={<FontAwesomeIcon icon={faExclamationCircle} size='1x' />}
-              onClick={() => abortVerificationAction({ project: projectName, stage: stageName })}
+              onClick={() =>
+                abortVerificationAction({ project: projectName || '', stage: stageName || '' })
+              }
             >
               Abort Verification
             </Button>

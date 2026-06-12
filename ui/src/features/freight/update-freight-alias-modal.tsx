@@ -1,4 +1,3 @@
-import { useMutation } from '@connectrpc/connect-query';
 import { faPencil } from '@fortawesome/free-solid-svg-icons';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
 import { zodResolver } from '@hookform/resolvers/zod';
@@ -9,7 +8,7 @@ import { z } from 'zod';
 import { FieldContainer } from '@ui/features/common/form/field-container';
 import { ModalComponentProps } from '@ui/features/common/modal/modal-context';
 import { getAlias } from '@ui/features/common/utils';
-import { updateFreightAlias } from '@ui/gen/api/service/v1alpha1/service-KargoService_connectquery';
+import { usePatchFreightAlias } from '@ui/gen/api/v2/core/core';
 import { Freight } from '@ui/gen/api/v2/models';
 import { zodValidators } from '@ui/utils/validators';
 
@@ -31,12 +30,14 @@ export const UpdateFreightAliasModal = ({ freight, project, onSubmit, hide, ...p
     resolver: zodResolver(formSchema)
   });
 
-  const { mutateAsync: updateAliasAction } = useMutation(updateFreightAlias, {
-    onError: (err) => {
-      message.error(err?.toString());
-    },
-    onSuccess: () => {
-      message.success('Alias successfully updated');
+  const { mutateAsync: updateAliasAction } = usePatchFreightAlias({
+    mutation: {
+      onError: (err) => {
+        message.error(err?.toString());
+      },
+      onSuccess: () => {
+        message.success('Alias successfully updated');
+      }
     }
   });
 
@@ -54,8 +55,10 @@ export const UpdateFreightAliasModal = ({ freight, project, onSubmit, hide, ...p
       onOk={handleSubmit(async (data) => {
         await updateAliasAction({
           project,
-          name: freight?.metadata?.name || '',
-          newAlias: data.value || ''
+          freightNameOrAlias: freight?.metadata?.name || '',
+          params: {
+            newAlias: data.value || ''
+          }
         });
         onSubmit(data.value || '');
       })}

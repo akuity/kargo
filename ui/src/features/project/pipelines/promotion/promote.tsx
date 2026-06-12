@@ -1,4 +1,3 @@
-import { useMutation } from '@connectrpc/connect-query';
 import { faTruckArrowRight } from '@fortawesome/free-solid-svg-icons';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
 import { Button, Drawer, Flex } from 'antd';
@@ -11,10 +10,7 @@ import { useExtensionsContext } from '@ui/extensions/extensions-context';
 import { ModalComponentProps } from '@ui/features/common/modal/modal-context';
 import { getCurrentFreight } from '@ui/features/common/utils';
 import { IAction, useActionContext } from '@ui/features/project/pipelines/context/action-context';
-import {
-  promoteDownstream,
-  promoteToStage
-} from '@ui/gen/api/service/v1alpha1/service-KargoService_connectquery';
+import { usePromoteDownstream, usePromoteToStage } from '@ui/gen/api/v2/core/core';
 import { Freight, Stage } from '@ui/gen/api/v2/models';
 
 import { useDictionaryContext } from '../context/dictionary-context';
@@ -44,38 +40,42 @@ export const Promote = (props: PromoteProps) => {
 
   const currentFreightOnStage = useMemo(() => getCurrentFreight(props.stage)[0], [props.stage]);
 
-  const promoteActionMutation = useMutation(promoteToStage, {
-    onSuccess: (response) => {
-      // navigate
-      navigate(
-        generatePath(paths.promotion, {
-          name: projectName,
-          promotionId: response.promotion?.metadata?.name
-        })
-      );
+  const promoteActionMutation = usePromoteToStage({
+    mutation: {
+      onSuccess: (response) => {
+        // navigate
+        navigate(
+          generatePath(paths.promotion, {
+            name: projectName,
+            promotionId: response.data?.metadata?.name
+          })
+        );
 
-      actionContext?.cancel();
+        actionContext?.cancel();
+      }
     }
   });
 
-  const promoteDownstreamActionMutation = useMutation(promoteDownstream, {
-    onSuccess: () => {
-      // navigate
-      navigate(
-        generatePath(paths.project, {
-          name: projectName
-        })
-      );
+  const promoteDownstreamActionMutation = usePromoteDownstream({
+    mutation: {
+      onSuccess: () => {
+        // navigate
+        navigate(
+          generatePath(paths.project, {
+            name: projectName
+          })
+        );
 
-      actionContext?.cancel();
+        actionContext?.cancel();
+      }
     }
   });
 
   const onPromote = () => {
     const payload = {
-      stage: stageName,
-      project: projectName,
-      freight: props.freight?.metadata?.name
+      stage: stageName || '',
+      project: projectName || '',
+      data: { freight: props.freight?.metadata?.name }
     };
 
     if (isDownstreamPromotion) {
