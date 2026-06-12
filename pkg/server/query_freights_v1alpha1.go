@@ -7,6 +7,7 @@ import (
 	"path"
 	"slices"
 	"strings"
+	"time"
 
 	"connectrpc.com/connect"
 	"github.com/Masterminds/semver/v3"
@@ -21,6 +22,7 @@ import (
 	"github.com/akuity/kargo/pkg/api"
 	libhttp "github.com/akuity/kargo/pkg/http"
 	"github.com/akuity/kargo/pkg/indexer"
+	"github.com/akuity/kargo/pkg/logging"
 )
 
 type freightGroupList struct {
@@ -392,6 +394,11 @@ func (s *server) queryFreight(c *gin.Context) {
 	// Get origins from query parameters (can be multiple)
 	origins := c.QueryArray("origins")
 
+	if watchMode := c.Query("watch") == trueStr; watchMode {
+		s.watchFreight(c, project, origins)
+		return
+	}
+
 	// Validate groupBy and orderBy
 	if err := validateGroupByOrderBy(group, groupBy, orderBy); err != nil {
 		_ = c.Error(libhttp.Error(err, http.StatusBadRequest))
@@ -461,6 +468,56 @@ func (s *server) queryFreight(c *gin.Context) {
 	}
 
 	c.JSON(http.StatusOK, queryFreightsResponse{Groups: result})
+}
+
+func (s *server) watchFreight(c *gin.Context, project string, origins []string) {
+	ctx := c.Request.Context()
+	logger := logging.LoggerFromContext(ctx)
+
+	w, err := s.client.Watch(ctx, &kargoapi.FreightList{}, client.InNamespace(project))
+	if err != nil {
+		logger.Error(err, "failed to start watch")
+		_ = c.Error(fmt.Errorf("watch freight: %w", err))
+		return
+	}
+	defer w.Stop()
+
+	keepaliveTicker := time.NewTicker(30 * time.Second)
+	defer keepaliveTicker.Stop()
+
+	setSSEHeaders(c)
+
+	for {
+		select {
+		case <-ctx.Done():
+			logger.Debug("watch context done", "error", ctx.Err())
+			return
+
+		case <-keepaliveTicker.C:
+			if !writeSSEKeepalive(c) {
+				return
+			}
+
+		case e, ok := <-w.ResultChan():
+			if !ok {
+				logger.Debug("watch channel closed")
+				return
+			}
+
+			freight, ok := convertWatchEventObject(c, e, (*kargoapi.Freight)(nil))
+			if !ok {
+				continue
+			}
+
+			if len(origins) > 0 && !slices.Contains(origins, freight.Origin.Name) {
+				continue
+			}
+
+			if !sendSSEWatchEvent(c, e.Type, freight) {
+				return
+			}
+		}
+	}
 }
 
 // getFreightFromWarehousesREST is a helper for the REST endpoint that gets freight from warehouses
