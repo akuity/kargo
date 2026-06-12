@@ -129,6 +129,7 @@ func (c *chartSubscriber) DiscoverArtifacts(
 	ctx context.Context,
 	project string,
 	sub kargoapi.RepoSubscription,
+	_ any,
 ) (any, error) {
 	chartSub := sub.Chart
 

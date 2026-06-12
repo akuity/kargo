@@ -19,6 +19,12 @@ import (
 
 const tagPrefix = "refs/tags/"
 
+// maxObservedTags bounds the number of tags recorded in a Warehouse's
+// observedRefs. Above it, the observation is stored as nil rather than
+// truncated -- truncation would be a correctness bug -- and the subscription
+// degrades to cloning on every reconcile until its tag filter is tightened.
+const maxObservedTags = 1000
+
 // tagBasedSelector is a base implementation of Selector that provides common
 // functionality for all Selector implementations that select commits on the
 // basis of tag names or metadata. It is not intended to be used directly.
@@ -105,6 +111,53 @@ func (t *tagBasedSelector) MatchesRef(ref string) bool {
 		return false
 	}
 	return t.matchesTag(ref)
+}
+
+// ListRefs implements Selector.
+func (t *tagBasedSelector) ListRefs(
+	ctx context.Context,
+) (*kargoapi.GitDiscoveryRefs, error) {
+	return t.listTagRefs(ctx, t.matchesTag)
+}
+
+// listTagRefs lists the remote tag refs via a single ls-remote round-trip,
+// retains those whose name satisfies the provided matcher, and returns them
+// paired with the commit IDs they reference, sorted by name for a stable
+// comparison. The matcher is supplied by the concrete selector so that
+// strategy-specific name filtering (e.g. semver) is honored. If the retained
+// set exceeds maxObservedTags, it returns (nil, nil) to signal that the
+// short-circuit must be skipped for this subscription.
+func (t *tagBasedSelector) listTagRefs(
+	ctx context.Context,
+	matches func(tag string) bool,
+) (*kargoapi.GitDiscoveryRefs, error) {
+	refs, err := t.lsRemoteFn(t.repoURL, t.clientOptions(), tagPrefix+"*")
+	if err != nil {
+		return nil, fmt.Errorf(
+			"error listing tag refs in git repo %q: %w", t.repoURL, err,
+		)
+	}
+	tags := make([]kargoapi.DiscoveredRef, 0, len(refs))
+	for _, ref := range refs {
+		name := strings.TrimPrefix(ref.Name, tagPrefix)
+		if !matches(name) {
+			continue
+		}
+		tags = append(tags, kargoapi.DiscoveredRef{Name: name, ID: ref.ID})
+	}
+	if len(tags) > maxObservedTags {
+		logging.LoggerFromContext(ctx).Info(
+			"observed tag count exceeds cap; ref short-circuit disabled for subscription",
+			"repo", t.repoURL,
+			"count", len(tags),
+			"cap", maxObservedTags,
+		)
+		return nil, nil
+	}
+	slices.SortFunc(tags, func(a, b kargoapi.DiscoveredRef) int {
+		return strings.Compare(a.Name, b.Name)
+	})
+	return &kargoapi.GitDiscoveryRefs{Tags: tags}, nil
 }
 
 // getLoggerContext returns key/value pairs that can be used by any selector
