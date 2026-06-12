@@ -1,4 +1,3 @@
-import { ConnectError, createClient } from '@connectrpc/connect';
 import { faExternalLink, faSearch } from '@fortawesome/free-solid-svg-icons';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
 import { Editor } from '@monaco-editor/react';
@@ -8,10 +7,11 @@ import { editor } from 'monaco-editor';
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { generatePath, Link } from 'react-router-dom';
 
+import { authTokenKey } from '@ui/config/auth';
+import { basePath } from '@ui/config/base-path';
 import { paths } from '@ui/config/paths';
-import { transportWithAuth } from '@ui/config/transport';
-import { KargoService } from '@ui/gen/api/service/v1alpha1/service_pb';
-import { AnalysisRun } from '@ui/gen/api/stubs/rollouts/v1alpha1/generated_pb';
+import { RolloutsAnalysisRun } from '@ui/gen/api/v2/models';
+import { getGetAnalysisRunLogsUrl } from '@ui/gen/api/v2/verifications/verifications';
 
 import { extractFilters } from './extract-analysis-run';
 import {
@@ -20,10 +20,64 @@ import {
   useMonacoEditorLogLanguage
 } from './use-monaco-editor-log-language';
 
+// The logs endpoint streams raw text chunks as SSE events, with each line of a
+// chunk written as its own `data:` line. Rejoining the data lines with `\n`
+// reconstructs the original chunk verbatim.
+async function* readLogsSSEStream(url: string, signal: AbortSignal): AsyncGenerator<string> {
+  const baseUrl = (import.meta.env.VITE_API_URL as string | undefined) || basePath();
+  const token = localStorage.getItem(authTokenKey);
+
+  const response = await fetch(`${baseUrl}${url}`, {
+    headers: token ? { Authorization: `Bearer ${token}` } : {},
+    signal
+  });
+
+  if (!response.ok) {
+    let message = response.statusText;
+    try {
+      const body = await response.json();
+      message = body?.error || body?.message || message;
+    } catch (_) {
+      // keep status text
+    }
+    throw new Error(message);
+  }
+
+  if (!response.body) {
+    return;
+  }
+
+  const reader = response.body.getReader();
+  const decoder = new TextDecoder();
+  let buffer = '';
+
+  try {
+    while (true) {
+      const { done, value } = await reader.read();
+      if (done) {
+        break;
+      }
+      buffer += decoder.decode(value, { stream: true });
+      const events = buffer.split('\n\n');
+      buffer = events.pop() ?? '';
+
+      for (const event of events) {
+        yield event
+          .split('\n')
+          .filter((line) => line.startsWith('data: '))
+          .map((line) => line.slice(6))
+          .join('\n');
+      }
+    }
+  } finally {
+    reader.releaseLock();
+  }
+}
+
 export const AnalysisRunLogs = (props: {
   linkFullScreen?: boolean;
   height?: string;
-  analysisRun: AnalysisRun;
+  analysisRun?: RolloutsAnalysisRun;
   defaultFilters?: {
     selectedJob?: string;
     selectedContainer?: string;
@@ -84,7 +138,7 @@ export const AnalysisRunLogs = (props: {
 
   const project = props.analysisRun?.metadata?.namespace;
   const analysisRunId = props.analysisRun?.metadata?.name;
-  const stage = props.analysisRun?.metadata?.labels['kargo.akuity.io/stage'];
+  const stage = props.analysisRun?.metadata?.labels?.['kargo.akuity.io/stage'];
 
   useEffect(() => {
     if (!filterableItems?.jobNames?.length) {
@@ -98,11 +152,9 @@ export const AnalysisRunLogs = (props: {
       return;
     }
 
-    const promiseClient = createClient(KargoService, transportWithAuth);
+    const abortController = new AbortController();
 
-    const stream = promiseClient.getAnalysisRunLogs({
-      namespace: project,
-      name: analysisRunId,
+    const url = getGetAnalysisRunLogsUrl(project || '', analysisRunId || '', {
       metricName: filters.selectedJob,
       containerName: filters.selectedContainer
     });
@@ -113,19 +165,21 @@ export const AnalysisRunLogs = (props: {
       setLogsInitiLoading(true);
       setLogsError('');
       try {
-        for await (const e of stream) {
-          logLine += `${e.chunk}`;
+        for await (const chunk of readLogsSSEStream(url, abortController.signal)) {
+          logLine += chunk;
           setLogs(logLine);
         }
       } catch (err) {
-        if (err instanceof ConnectError) {
-          setLogsError(err?.message);
+        if (!abortController.signal.aborted) {
+          setLogsError(err instanceof Error ? err.message : String(err));
           setLogs('');
         }
       } finally {
         setLogsInitiLoading(false);
       }
     })();
+
+    return () => abortController.abort();
   }, [filters, filterableItems, props.analysisRun]);
 
   const [showLineNumbers, setShowLineNumbers] = useState(true);
