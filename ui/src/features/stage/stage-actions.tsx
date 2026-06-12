@@ -16,9 +16,8 @@ import {
   refreshResource,
   reverify
 } from '@ui/gen/api/service/v1alpha1/service-KargoService_connectquery';
-import { ArgoCDShard } from '@ui/gen/api/service/v1alpha1/service_pb';
 import { getQueryFreightsRestQueryKey, useGetStageLinks } from '@ui/gen/api/v2/core/core';
-import { Stage } from '@ui/gen/api/v2/models';
+import { ArgoCDShard, Stage } from '@ui/gen/api/v2/models';
 
 import { DeepLinks } from '../common/deep-links';
 import { currentFreightHasVerification } from '../common/utils';

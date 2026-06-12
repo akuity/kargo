@@ -55,7 +55,18 @@ export const useWatchStages = (
         } else {
           client.setQueriesData(
             { exact: false, queryKey: stageKey },
-            (old: getStageResponse | undefined) => (old ? { ...old, data: stage } : old)
+            (old: getStageResponse | undefined) =>
+              old
+                ? {
+                    ...old,
+                    data: {
+                      // WATCH ENDPOINT STAGE COMES WITHOUT kind, apiVersion etc..
+                      // SO WE NEED TO PRESERVE IT FROM INITIAL DATA
+                      ...old?.data,
+                      ...stage
+                    }
+                  }
+                : old
           );
           onStageEvent?.(stage);
         }

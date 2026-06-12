@@ -61,7 +61,18 @@ export const useWatchWarehouses = (
               exact: false,
               queryKey: warehouseKey
             },
-            (old: getWarehouseResponse | undefined) => (old ? { ...old, data: warehouse } : old)
+            (old: getWarehouseResponse | undefined) =>
+              old
+                ? {
+                    ...old,
+                    data: {
+                      // WATCH ENDPOINT WAREHOUSE COMES WITHOUT kind, apiVersion etc..
+                      // SO WE NEED TO PRESERVE IT FROM INITIAL DATA
+                      ...old?.data,
+                      ...warehouse
+                    }
+                  }
+                : old
           );
 
           const refreshRequest = warehouse.metadata?.annotations?.['kargo.akuity.io/refresh'];

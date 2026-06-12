@@ -42,12 +42,10 @@ export const FreightMetadata = (props: FreightMetadataProps) => {
         </>
       }
       items={Object.entries(props.freight.status?.metadata || {}).map(([key, value]) => {
-        // TODO(Marvin9): verify
-        console.log({ value });
         return {
           key,
           label: key,
-          children: ''
+          children: value ? JSON.stringify(value, null, ' ') : ''
         };
       })}
       bordered
