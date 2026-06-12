@@ -4,14 +4,11 @@ import { Editor } from '@monaco-editor/react';
 import { Checkbox, Empty, Input, Select, Skeleton } from 'antd';
 import Alert from 'antd/es/alert/Alert';
 import { editor } from 'monaco-editor';
-import { useEffect, useMemo, useRef, useState } from 'react';
+import { useMemo, useRef, useState } from 'react';
 import { generatePath, Link } from 'react-router-dom';
 
-import { authTokenKey } from '@ui/config/auth';
-import { basePath } from '@ui/config/base-path';
 import { paths } from '@ui/config/paths';
 import { RolloutsAnalysisRun } from '@ui/gen/api/v2/models';
-import { getGetAnalysisRunLogsUrl } from '@ui/gen/api/v2/verifications/verifications';
 
 import { extractFilters } from './extract-analysis-run';
 import {
@@ -19,60 +16,7 @@ import {
   monacoEditorLogLanguageTheme,
   useMonacoEditorLogLanguage
 } from './use-monaco-editor-log-language';
-
-// The logs endpoint streams raw text chunks as SSE events, with each line of a
-// chunk written as its own `data:` line. Rejoining the data lines with `\n`
-// reconstructs the original chunk verbatim.
-async function* readLogsSSEStream(url: string, signal: AbortSignal): AsyncGenerator<string> {
-  const baseUrl = (import.meta.env.VITE_API_URL as string | undefined) || basePath();
-  const token = localStorage.getItem(authTokenKey);
-
-  const response = await fetch(`${baseUrl}${url}`, {
-    headers: token ? { Authorization: `Bearer ${token}` } : {},
-    signal
-  });
-
-  if (!response.ok) {
-    let message = response.statusText;
-    try {
-      const body = await response.json();
-      message = body?.error || body?.message || message;
-    } catch (_) {
-      // keep status text
-    }
-    throw new Error(message);
-  }
-
-  if (!response.body) {
-    return;
-  }
-
-  const reader = response.body.getReader();
-  const decoder = new TextDecoder();
-  let buffer = '';
-
-  try {
-    while (true) {
-      const { done, value } = await reader.read();
-      if (done) {
-        break;
-      }
-      buffer += decoder.decode(value, { stream: true });
-      const events = buffer.split('\n\n');
-      buffer = events.pop() ?? '';
-
-      for (const event of events) {
-        yield event
-          .split('\n')
-          .filter((line) => line.startsWith('data: '))
-          .map((line) => line.slice(6))
-          .join('\n');
-      }
-    }
-  } finally {
-    reader.releaseLock();
-  }
-}
+import { useWatchAnalysisRunLogs } from './use-watch-analysis-run-logs';
 
 export const AnalysisRunLogs = (props: {
   linkFullScreen?: boolean;
@@ -130,57 +74,27 @@ export const AnalysisRunLogs = (props: {
     }
   };
 
-  const [logs, setLogs] = useState('');
-  const [logsInitLoading, setLogsInitiLoading] = useState(false);
-  const [logsError, setLogsError] = useState('');
-
-  const logsLoading = logsInitLoading && !logs;
-
   const project = props.analysisRun?.metadata?.namespace;
   const analysisRunId = props.analysisRun?.metadata?.name;
   const stage = props.analysisRun?.metadata?.labels?.['kargo.akuity.io/stage'];
 
-  useEffect(() => {
-    if (!filterableItems?.jobNames?.length) {
-      return;
-    }
+  const validSelection = filterableItems?.containerNames?.[filters.selectedJob]?.includes(
+    filters.selectedContainer
+  );
 
-    if (
-      !filterableItems?.containerNames?.[filters.selectedJob]?.includes(filters.selectedContainer)
-    ) {
-      setLogs('');
-      return;
-    }
+  const {
+    logs,
+    isLoading: logsInitLoading,
+    error: logsError
+  } = useWatchAnalysisRunLogs(
+    project,
+    analysisRunId,
+    validSelection
+      ? { metricName: filters.selectedJob, containerName: filters.selectedContainer }
+      : undefined
+  );
 
-    const abortController = new AbortController();
-
-    const url = getGetAnalysisRunLogsUrl(project || '', analysisRunId || '', {
-      metricName: filters.selectedJob,
-      containerName: filters.selectedContainer
-    });
-
-    (async () => {
-      let logLine = '';
-      setLogs('');
-      setLogsInitiLoading(true);
-      setLogsError('');
-      try {
-        for await (const chunk of readLogsSSEStream(url, abortController.signal)) {
-          logLine += chunk;
-          setLogs(logLine);
-        }
-      } catch (err) {
-        if (!abortController.signal.aborted) {
-          setLogsError(err instanceof Error ? err.message : String(err));
-          setLogs('');
-        }
-      } finally {
-        setLogsInitiLoading(false);
-      }
-    })();
-
-    return () => abortController.abort();
-  }, [filters, filterableItems, props.analysisRun]);
+  const logsLoading = logsInitLoading && !logs;
 
   const [showLineNumbers, setShowLineNumbers] = useState(true);
   const [search, setSearch] = useState(props.defaultFilters?.search || '');
