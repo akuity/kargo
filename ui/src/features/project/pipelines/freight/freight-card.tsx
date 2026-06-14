@@ -31,6 +31,7 @@ import { useManualApprovalModal } from '../promotion/use-manual-approval-modal';
 
 import { DeleteFreightModal } from './delete-freight-modal';
 import { FreightArtifact } from './freight-artifact';
+import { FreightProvenanceRows } from './freight-provenance-rows';
 import { useSoakTimeCounter } from './use-soak-time-counter';
 
 type FreightCardProps = {
@@ -107,6 +108,7 @@ export const FreightCard = (props: FreightCardProps) => {
         boxShadow: '0 4px 8px rgba(0,0,0,.1)'
       }
     : undefined;
+  const isProvenanceView = props.preferredFilter.freightCardView === 'provenance';
 
   return (
     <div
@@ -282,60 +284,72 @@ export const FreightCard = (props: FreightCardProps) => {
             </div>
           )}
 
-          {props?.preferredFilter?.showAlias && (
+          {props?.preferredFilter?.showAlias && !isProvenanceView && (
             <div className='text-[10px] text-nowrap mb-2'>{freightAlias}</div>
           )}
 
-          <div className='flex flex-col gap-1 justify-center items-center min-w-0 max-w-full [&_.ant-tag]:block [&_.ant-tag]:max-w-full [&_.ant-tag]:truncate'>
-            {props.freight?.commits?.slice(0, 2).map((commit) => (
-              <FreightArtifact key={commit?.repoURL} artifact={commit} />
-            ))}
+          {isProvenanceView ? (
+            <FreightProvenanceRows
+              freight={props.freight}
+              showAlias={props.preferredFilter.showAlias}
+              age={creation.relative}
+            />
+          ) : (
+            <>
+              <div className='flex flex-col gap-1 justify-center items-center min-w-0 max-w-full [&_.ant-tag]:block [&_.ant-tag]:max-w-full [&_.ant-tag]:truncate'>
+                {props.freight?.commits?.slice(0, 2).map((commit) => (
+                  <FreightArtifact key={commit?.repoURL} artifact={commit} />
+                ))}
 
-            {props.freight?.charts?.slice(0, 2).map((chart) => (
-              <FreightArtifact key={chart?.repoURL} artifact={chart} />
-            ))}
+                {props.freight?.charts?.slice(0, 2).map((chart) => (
+                  <FreightArtifact key={chart?.repoURL} artifact={chart} />
+                ))}
 
-            {props.freight?.images?.slice(0, 2).map((image) => (
-              <FreightArtifact key={image?.repoURL} artifact={image} />
-            ))}
+                {props.freight?.images?.slice(0, 2).map((image) => (
+                  <FreightArtifact key={image?.repoURL} artifact={image} />
+                ))}
 
-            {props.freight?.artifacts?.slice(0, 2).map((other) => (
-              <FreightArtifact key={other?.version} artifact={other} />
-            ))}
+                {props.freight?.artifacts?.slice(0, 2).map((other) => (
+                  <FreightArtifact key={other?.version} artifact={other} />
+                ))}
 
-            {noOfGitCommits + noOfHelmReleases + noOfContainerImages > 6 && (
-              <Typography.Text type='secondary' className='text-[10px]'>
-                +
-                {noOfGitCommits +
-                  noOfHelmReleases +
-                  noOfContainerImages -
-                  (props.freight?.charts?.slice(0, 2)?.length +
-                    props.freight?.commits?.slice(0, 2)?.length +
-                    props.freight?.images?.slice(0, 2)?.length)}{' '}
-                more
-              </Typography.Text>
-            )}
-          </div>
+                {noOfGitCommits + noOfHelmReleases + noOfContainerImages > 6 && (
+                  <Typography.Text type='secondary' className='text-[10px]'>
+                    +
+                    {noOfGitCommits +
+                      noOfHelmReleases +
+                      noOfContainerImages -
+                      (props.freight?.charts?.slice(0, 2)?.length +
+                        props.freight?.commits?.slice(0, 2)?.length +
+                        props.freight?.images?.slice(0, 2)?.length)}{' '}
+                    more
+                  </Typography.Text>
+                )}
+              </div>
 
-          <div className='flex flex-col mx-auto w-full gap-0.5 items-center justify-center text-nowrap py-1 mt-auto'>
-            {(noOfGitCommits ? 1 : 0) + (noOfHelmReleases ? 1 : 0) + (noOfContainerImages ? 1 : 0) >
-              2 && (
-              <>
-                <FreightCard.ArtifactCount icon={faGithub} count={noOfGitCommits} />
+              <div className='flex flex-col mx-auto w-full gap-0.5 items-center justify-center text-nowrap py-1 mt-auto'>
+                {(noOfGitCommits ? 1 : 0) +
+                  (noOfHelmReleases ? 1 : 0) +
+                  (noOfContainerImages ? 1 : 0) >
+                  2 && (
+                  <>
+                    <FreightCard.ArtifactCount icon={faGithub} count={noOfGitCommits} />
 
-                <FreightCard.ArtifactCount icon={faAnchor} count={noOfHelmReleases} />
+                    <FreightCard.ArtifactCount icon={faAnchor} count={noOfHelmReleases} />
 
-                <FreightCard.ArtifactCount icon={faDocker} count={noOfContainerImages} />
-              </>
-            )}
-            <Typography.Text
-              className='text-xs text-nowrap'
-              type='secondary'
-              title={creation.abs?.toString()}
-            >
-              {creation.relative}
-            </Typography.Text>
-          </div>
+                    <FreightCard.ArtifactCount icon={faDocker} count={noOfContainerImages} />
+                  </>
+                )}
+                <Typography.Text
+                  className='text-xs text-nowrap'
+                  type='secondary'
+                  title={creation.abs?.toString()}
+                >
+                  {creation.relative}
+                </Typography.Text>
+              </div>
+            </>
+          )}
         </div>
       </div>
     </div>

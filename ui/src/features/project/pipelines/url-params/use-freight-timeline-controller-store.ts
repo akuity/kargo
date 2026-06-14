@@ -22,7 +22,8 @@ export const useFreightTimelineControllerStore = (project: string) => {
       images: false,
       view: 'graph',
       showMinimap: true,
-      stepEdges: false
+      stepEdges: false,
+      freightCardView: 'compact'
     };
 
     const hasFilterParams = Object.keys(filters).some((name) => searchParams.has(name));
@@ -49,6 +50,11 @@ export const useFreightTimelineControllerStore = (project: string) => {
     const stepEdges = searchParams.get('stepEdges');
     if (stepEdges && stepEdges !== '') {
       filters.stepEdges = stepEdges === 'true';
+    }
+
+    const freightCardView = searchParams.get('freightCardView');
+    if (freightCardView && ['compact', 'provenance'].includes(freightCardView)) {
+      filters.freightCardView = freightCardView as 'compact' | 'provenance';
     }
 
     const sourcesParam = searchParams.getAll('sources');
@@ -117,6 +123,8 @@ export const useFreightTimelineControllerStore = (project: string) => {
         currentSearchParams.set('showMinimap', `${nextPartial.showMinimap}`);
 
         currentSearchParams.set('stepEdges', `${nextPartial.stepEdges}`);
+
+        currentSearchParams.set('freightCardView', `${nextPartial.freightCardView}`);
 
         currentSearchParams.set('showColors', `${nextPartial.showColors}`);
 

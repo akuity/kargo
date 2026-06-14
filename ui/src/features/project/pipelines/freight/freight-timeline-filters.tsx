@@ -85,6 +85,24 @@ export const FreightTimelineFilters = (props: FreightTimelineFiltersProps) => {
           }
         />
       </div>
+      <div className='text-xs flex items-center gap-3 mt-2'>
+        <label>Card: </label>
+        <Select
+          className='min-w-[200px] ml-auto'
+          size='small'
+          value={props.preferredFilter?.freightCardView}
+          options={[
+            { value: 'compact', label: 'Compact' },
+            { value: 'provenance', label: 'Provenance' }
+          ]}
+          onChange={(freightCardView) =>
+            props.onPreferredFilterChange({
+              ...props.preferredFilter,
+              freightCardView
+            })
+          }
+        />
+      </div>
 
       <div className='flex mt-3 gap-2'>
         <Checkbox

@@ -22,6 +22,7 @@ export type FreightTimelineControllerContextType = {
     view: 'graph' | 'list';
     showMinimap: boolean;
     stepEdges: boolean;
+    freightCardView: 'compact' | 'provenance';
   };
   setPreferredFilter: (filter: FreightTimelineControllerContextType['preferredFilter']) => void;
 };

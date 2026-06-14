@@ -4,6 +4,7 @@ import { FreightTimelineControllerContextType } from '@ui/features/project/pipel
 
 const PAGE_SIZE = 20;
 const MIN_CARD_WIDTH = 140;
+const PROVENANCE_CARD_WIDTH = 220;
 const CARD_GAP = 4;
 
 type PreferredFilter = FreightTimelineControllerContextType['preferredFilter'];
@@ -42,6 +43,8 @@ export const useFreightCarousel = (
   const [offset, setOffset] = useState(0);
   const [cardWidth, setCardWidth] = useState(MIN_CARD_WIDTH);
   const [canSlideRight, setCanSlideRight] = useState(false);
+  const minCardWidth =
+    preferredFilter.freightCardView === 'provenance' ? PROVENANCE_CARD_WIDTH : MIN_CARD_WIDTH;
 
   useEffect(() => {
     const viewport = viewportRef.current;
@@ -53,7 +56,7 @@ export const useFreightCarousel = (
       // makes the next card peek through on certain resolutions.
       const W = viewport.getBoundingClientRect().width;
       if (W <= 0) return;
-      const n = Math.max(1, Math.floor((W + CARD_GAP) / (MIN_CARD_WIDTH + CARD_GAP)));
+      const n = Math.max(1, Math.floor((W + CARD_GAP) / (minCardWidth + CARD_GAP)));
       const exactW = (W - (n - 1) * CARD_GAP) / n;
       cardsPerPageRef.current = n;
       setCardWidth(exactW);
@@ -68,7 +71,7 @@ export const useFreightCarousel = (
     const ro = new ResizeObserver(compute);
     ro.observe(viewport);
     return () => ro.disconnect();
-  }, []);
+  }, [minCardWidth]);
 
   useEffect(() => {
     setVisibleCount(Math.max(PAGE_SIZE, cardsPerPageRef.current * 2));
@@ -77,7 +80,8 @@ export const useFreightCarousel = (
     preferredFilter.sources,
     preferredFilter.timerange,
     preferredFilter.warehouses,
-    preferredFilter.hideUnusedFreights
+    preferredFilter.hideUnusedFreights,
+    preferredFilter.freightCardView
   ]);
 
   const loadMore = useCallback(() => {
