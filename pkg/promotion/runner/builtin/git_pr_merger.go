@@ -127,8 +127,12 @@ func (g *gitPRMerger) run(
 			cfg.PRNumber,
 			&gitprovider.MergePullRequestOpts{MergeMethod: cfg.MergeMethod},
 		); err != nil {
-			// Only actual errors (auth, network, invalid PR, closed but not merged,
-			// etc.) reach here
+			// When wait is enabled, treat merge errors as transient (e.g. 405
+			// "Required status check is expected") so the step retries on the
+			// next reconciliation instead of failing permanently.
+			if cfg.Wait {
+				return promotion.StepResult{Status: kargoapi.PromotionStepStatusRunning}, nil
+			}
 			return promotion.StepResult{Status: kargoapi.PromotionStepStatusFailed},
 				&promotion.TerminalError{
 					Err: fmt.Errorf("error merging pull request %d: %w", cfg.PRNumber, err),

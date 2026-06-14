@@ -113,7 +113,7 @@ func Test_gitPRMerger_run(t *testing.T) {
 		assertions func(*testing.T, promotion.StepResult, error)
 	}{
 		{
-			name: "error during merge attempt",
+			name: "error during merge attempt with wait disabled",
 			provider: &gitprovider.Fake{
 				MergePullRequestFn: func(
 					context.Context,
@@ -131,6 +131,26 @@ func Test_gitPRMerger_run(t *testing.T) {
 				require.ErrorContains(t, err, "authentication failed")
 				require.True(t, promotion.IsTerminal(err))
 				require.Equal(t, kargoapi.PromotionStepStatusFailed, res.Status)
+			},
+		},
+		{
+			name: "error during merge attempt with wait enabled returns running",
+			provider: &gitprovider.Fake{
+				MergePullRequestFn: func(
+					context.Context,
+					int64,
+					*gitprovider.MergePullRequestOpts,
+				) (*gitprovider.PullRequest, bool, error) {
+					return nil, false, errors.New("405 Repository rule violations found: Required status check is expected")
+				},
+			},
+			config: builtin.GitMergePRConfig{
+				PRNumber: 42,
+				Wait:     true,
+			},
+			assertions: func(t *testing.T, res promotion.StepResult, err error) {
+				require.NoError(t, err)
+				require.Equal(t, kargoapi.PromotionStepStatusRunning, res.Status)
 			},
 		},
 		{
