@@ -111,6 +111,18 @@ jobs:
           -a "sha=${{ github.sha }}" \
           --yes \
           ${{ steps.repo.outputs.repo}}@${{ steps.image.outputs.digest}}
+    - name: Install Grype
+      id: grype
+      uses: anchore/scan-action/download-grype@e1165082ffb1fe366ebaf02d8526e7c4989ea9d2 # v7.4.0
+      with:
+        cache-db: true
+    - name: Scan image for CVEs
+      env:
+        GRYPE_CMD: ${{ steps.grype.outputs.cmd }}
+        FAIL_ON: "" # report-only; set to "high" to enforce
+      # Scan the just-pushed digest; VEX lookups always use the canonical
+      # (non-unstable) repo path.
+      run: ./hack/cve-scan.sh "registry:${{ steps.repo.outputs.repo }}@${{ steps.image.outputs.digest }}" "ghcr.io/akuity/kargo"
     - name: Publish SBOM
       if: github.event_name == 'release'
       uses: anchore/sbom-action@e22c389904149dbc22b58101806040fa8d37a610 # v0.24.0
