@@ -51,6 +51,7 @@ func newOCISelector(
 		repo: &remote.Repository{
 			Reference: ref,
 			Client:    authorizer,
+			PlainHTTP: helm.IsPlainHTTP(context.Background(), ref.Host(), sub.InsecureSkipTLSVerify),
 		},
 	}, nil
 }
