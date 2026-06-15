@@ -1000,6 +1000,10 @@ func (r *reconciler) ensureDefaultUserRoles(
 			}
 		}
 	}
+	// Only normalize Roles and RoleBindings when the create-actor annotation
+	// is present. Without it, the Project's kargo-* Roles are self-managed
+	// (e.g. via GitOps) and the controller should not overwrite them.
+	if _, ok := project.Annotations[kargoapi.AnnotationKeyCreateActor]; ok {
 	for _, role := range roles {
 		roleLogger := logger.WithValues(
 			"name", role.Name,
@@ -1038,6 +1042,7 @@ func (r *reconciler) ensureDefaultUserRoles(
 		}
 		roleLogger.Debug("updated Role in project namespace")
 	}
+	} // end create-actor annotation check
 
 	for _, rbName := range allRoles {
 		rbLogger := logger.WithValues(
