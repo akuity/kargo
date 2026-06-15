@@ -2,6 +2,7 @@ package builtin
 
 import (
 	"io"
+	"maps"
 	"net/http"
 	"net/http/httptest"
 	"strings"
@@ -180,6 +181,15 @@ func Test_httpRequester_convert(t *testing.T) {
 			},
 		},
 		{
+			name: "proxy url has no scheme",
+			config: promotion.Config{
+				"proxy": "proxy.example.com:3000",
+			},
+			expectedProblems: []string{
+				"proxy: Does not match pattern",
+			},
+		},
+		{
 			name: "valid kitchen sink",
 			config: promotion.Config{
 				"method": "GET",
@@ -196,6 +206,7 @@ func Test_httpRequester_convert(t *testing.T) {
 				"timeout":               "30s",
 				"successExpression":     "response.status == 200",
 				"failureExpression":     "response.status == 404",
+				"proxy":                 "https://proxy.example.com:3000",
 				"outputs": []promotion.Config{
 					{
 						"name":           "fact1",
@@ -1357,5 +1368,81 @@ func Test_httpRequester_determineResponseParseMode(t *testing.T) {
 			result := h.determineResponseParseMode(tc.contentType)
 			require.Equal(t, tc.expected, result)
 		})
+	}
+}
+
+func Test_httpRequester_proxy(t *testing.T) {
+	// Target server
+	backend := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		// Check that the request passed through the proxy
+		require.Equal(t, "true", r.Header.Get("X-Test-HttpRequester-Proxy-Injected"))
+
+		w.Header().Set("Content-Type", "application/json")
+		w.WriteHeader(http.StatusOK)
+		_, err := w.Write([]byte(`{"reachedBackend": true}`))
+		require.NoError(t, err)
+	}))
+	defer backend.Close()
+
+	// Forward proxy
+	proxy := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		outReq, err := http.NewRequestWithContext(r.Context(), r.Method, r.URL.String(), r.Body)
+		require.NoError(t, err)
+
+		// Add an extra header, to prove that the request passed through this proxy
+		maps.Copy(outReq.Header, r.Header)
+		outReq.Header.Set("X-Test-HttpRequester-Proxy-Injected", "true")
+
+		// Forward the request to the target URL
+		resp, err := http.DefaultClient.Do(outReq)
+		require.NoError(t, err)
+		defer resp.Body.Close()
+
+		// Relay response to the client
+		maps.Copy(w.Header(), resp.Header)
+		w.WriteHeader(resp.StatusCode)
+		_, err = io.Copy(w, resp.Body)
+		require.NoError(t, err)
+	}))
+	defer proxy.Close()
+
+	testCases := []struct {
+		name       string
+		cfg        builtin.HTTPConfig
+		assertions func(t *testing.T, res promotion.StepResult, err error)
+	}{
+		{
+			name: "proxy URL with invalid format returns error",
+			cfg: builtin.HTTPConfig{
+				URL:   backend.URL,
+				Proxy: "http://[invalid-url",
+			},
+			assertions: func(t *testing.T, _ promotion.StepResult, err error) {
+				require.ErrorContains(t, err, "error parsing proxy URL")
+			},
+		},
+		{
+			name: "proxy is used when configured",
+			cfg: builtin.HTTPConfig{
+				URL:               backend.URL,
+				Proxy:             proxy.URL,
+				SuccessExpression: "response.status == 200",
+				Outputs: []builtin.HTTPOutput{{
+					Name:           "reachedBackend",
+					FromExpression: "response.body.reachedBackend",
+				}},
+			},
+			assertions: func(t *testing.T, res promotion.StepResult, err error) {
+				require.NoError(t, err)
+				require.Equal(t, kargoapi.PromotionStepStatusSucceeded, res.Status)
+				require.Equal(t, true, res.Output["reachedBackend"])
+			},
+		},
+	}
+
+	for _, tc := range testCases {
+		h := &httpRequester{}
+		result, err := h.run(t.Context(), nil, tc.cfg)
+		tc.assertions(t, result, err)
 	}
 }
