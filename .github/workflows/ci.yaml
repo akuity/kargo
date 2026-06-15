@@ -266,10 +266,15 @@ jobs:
       uses: anchore/scan-action/download-grype@e1165082ffb1fe366ebaf02d8526e7c4989ea9d2 # v7.4.0
       with:
         cache-db: true
+    # cve-scan.sh re-stamps the VEX product @id to the scanned digest, which it
+    # resolves from the job-local registry tag via crane.
+    - name: Install Crane
+      uses: imjasonh/setup-crane@31b88efe9de28ae0ffa220711af4b60be9435f6e # v0.4
     - name: Scan image for CVEs
       env:
         GRYPE_CMD: ${{ steps.grype.outputs.cmd }}
         GRYPE_REGISTRY_INSECURE_USE_HTTP: "true" # job-local registry service
+        CRANE_INSECURE: "true" # job-local registry is plain HTTP
         FAIL_ON: "" # report-only; set to "high" to enforce
       # VEX lookups use the canonical published repo path.
       run: ./hack/cve-scan.sh "registry:localhost:5000/kargo:scan" "ghcr.io/akuity/kargo"
