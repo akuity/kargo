@@ -81,13 +81,13 @@ spec:
               divisor: "1"
               resource: {{ include "kargo.selectCpuResourceField" (dict "resources" .Values.externalWebhooksServer.resources) }}
         {{- with (concat .Values.global.env .Values.externalWebhooksServer.env) }}
-        {{- toYaml . | nindent 8 }}
+        {{- tpl (toYaml .) $ | nindent 8 }}
         {{- end }}
         envFrom:
         - configMapRef:
             name: kargo-external-webhooks-server
         {{- with (concat .Values.global.envFrom .Values.externalWebhooksServer.envFrom) }}
-          {{- toYaml . | nindent 8 }}
+          {{- tpl (toYaml .) $ | nindent 8 }}
         {{- end }}
         ports:
         - containerPort: 8080
