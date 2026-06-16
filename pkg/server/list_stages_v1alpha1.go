@@ -170,7 +170,7 @@ func (s *server) listStagesByWarehouses(
 	if err := s.listForWatchSeed(ctx, "stages", &list, client.InNamespace(project)); err != nil {
 		return nil, err
 	}
-	list.ResourceVersion = resourceVersionForStageList(&list)
+	list.ResourceVersion = normalizeListResourceVersion(list.ResourceVersion)
 	if len(warehouses) == 0 {
 		return &list, nil
 	}
@@ -182,14 +182,4 @@ func (s *server) listStagesByWarehouses(
 	}
 	list.Items = stages
 	return &list, nil
-}
-
-// resourceVersionForStageList returns the list ResourceVersion when useful,
-// otherwise it falls back to the maximum Stage item ResourceVersion.
-func resourceVersionForStageList(list *kargoapi.StageList) string {
-	return effectiveResourceVersionForList(
-		list.ResourceVersion,
-		list.Items,
-		func(s kargoapi.Stage) string { return s.ResourceVersion },
-	)
 }

@@ -87,11 +87,7 @@ func (s *server) listPromotions(c *gin.Context) {
 		list.Items = filterPromotionsByStage(list.Items, stage)
 	}
 
-	list.ResourceVersion = effectiveResourceVersionForList(
-		list.ResourceVersion,
-		list.Items,
-		func(p kargoapi.Promotion) string { return p.ResourceVersion },
-	)
+	list.ResourceVersion = normalizeListResourceVersion(list.ResourceVersion)
 
 	// Sort ascending by name
 	slices.SortFunc(list.Items, func(lhs, rhs kargoapi.Promotion) int {

@@ -450,7 +450,7 @@ func (s *server) queryFreight(c *gin.Context) {
 			return
 		}
 		freight = filterFreightByOrigins(freightList.Items, origins)
-		resourceVersion = resourceVersionForFreightList(freightList)
+		resourceVersion = normalizeListResourceVersion(freightList.ResourceVersion)
 
 	default:
 		// Get all freight in the project
@@ -460,7 +460,7 @@ func (s *server) queryFreight(c *gin.Context) {
 			return
 		}
 		freight = freightList.Items
-		resourceVersion = resourceVersionForFreightList(freightList)
+		resourceVersion = normalizeListResourceVersion(freightList.ResourceVersion)
 	}
 
 	// Split the Freight into groups using the generic functions
@@ -577,14 +577,4 @@ func filterFreightByOrigins(freight []kargoapi.Freight, origins []string) []karg
 		}
 	}
 	return filtered
-}
-
-// resourceVersionForFreightList returns the list ResourceVersion when useful,
-// otherwise it falls back to the maximum Freight item ResourceVersion.
-func resourceVersionForFreightList(list *kargoapi.FreightList) string {
-	return effectiveResourceVersionForList(
-		list.ResourceVersion,
-		list.Items,
-		func(f kargoapi.Freight) string { return f.ResourceVersion },
-	)
 }

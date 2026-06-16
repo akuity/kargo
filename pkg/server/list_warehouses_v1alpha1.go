@@ -78,7 +78,7 @@ func (s *server) listWarehouses(c *gin.Context) {
 		_ = c.Error(err)
 		return
 	}
-	list.ResourceVersion = resourceVersionForWarehouseList(list)
+	list.ResourceVersion = normalizeListResourceVersion(list.ResourceVersion)
 
 	c.JSON(http.StatusOK, list)
 }
@@ -133,14 +133,4 @@ func (s *server) watchWarehouses(c *gin.Context, project string, resourceVersion
 			}
 		}
 	}
-}
-
-// resourceVersionForWarehouseList returns the list ResourceVersion when useful,
-// otherwise it falls back to the maximum Warehouse item ResourceVersion.
-func resourceVersionForWarehouseList(list *kargoapi.WarehouseList) string {
-	return effectiveResourceVersionForList(
-		list.ResourceVersion,
-		list.Items,
-		func(w kargoapi.Warehouse) string { return w.ResourceVersion },
-	)
 }
