@@ -1,12 +1,11 @@
 import { Freight, FreightReference, Stage, V1ObjectMeta } from '@ui/gen/api/v2/models';
-import { PlainMessageRecursive } from '@ui/utils/connectrpc-utils';
 
 export const ALIAS_LABEL_KEY = 'kargo.akuity.io/alias';
 export const DESCRIPTION_ANNOTATION_KEY = 'kargo.akuity.io/description';
 export const REPLICATE_TO_ANNOTATION_KEY = 'kargo.akuity.io/replicate-to';
 export const REPLICATE_TO_ALL_VALUE = '*';
 
-export const getAlias = (freight?: PlainMessageRecursive<Freight>): string | undefined => {
+export const getAlias = (freight?: Freight): string | undefined => {
   return freight?.alias || freight?.metadata?.labels?.[ALIAS_LABEL_KEY] || undefined;
 };
 

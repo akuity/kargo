@@ -1,4 +1,3 @@
-import { useMutation } from '@connectrpc/connect-query';
 import { useDroppable } from '@dnd-kit/core';
 import {
   faBarsStaggered,
@@ -8,6 +7,7 @@ import {
   faTruckArrowRight
 } from '@fortawesome/free-solid-svg-icons';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
+import { useMutation } from '@tanstack/react-query';
 import { Button, Card, Dropdown, Flex, message, Space, Typography } from 'antd';
 import classNames from 'classnames';
 import { formatDistance } from 'date-fns';
@@ -18,8 +18,7 @@ import { paths } from '@ui/config/paths';
 import { HealthStatusIcon } from '@ui/features/common/health-status/health-status-icon';
 import { IAction, useActionContext } from '@ui/features/project/pipelines/context/action-context';
 import { ArgoCDLink } from '@ui/features/project/pipelines/nodes/argocd-link';
-import { queryFreight } from '@ui/gen/api/service/v1alpha1/service-KargoService_connectquery';
-import { useApproveFreight } from '@ui/gen/api/v2/core/core';
+import { queryFreightsRest, useApproveFreight } from '@ui/gen/api/v2/core/core';
 import { Stage } from '@ui/gen/api/v2/models';
 
 import { useDictionaryContext } from '../context/dictionary-context';
@@ -63,7 +62,10 @@ export const StageNode = (props: { stage: Stage }) => {
 
   const hideStage = useHideStageIfInPromotionMode(props.stage);
 
-  const queryFreightMutation = useMutation(queryFreight);
+  const queryFreightMutation = useMutation({
+    mutationFn: (payload: { project: string; stage: string }) =>
+      queryFreightsRest(payload.project, { stage: payload.stage })
+  });
 
   const totalSubscribersToThisStage = dictionaryContext?.subscribersByStage?.[stageName]?.size || 0;
 

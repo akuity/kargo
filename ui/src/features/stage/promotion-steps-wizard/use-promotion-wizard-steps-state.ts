@@ -4,7 +4,6 @@ import { parse, stringify } from 'yaml';
 import { usePromotionDirectivesRegistryContext } from '@ui/features/promotion-directives/registry/context/use-registry-context';
 import { Runner } from '@ui/features/promotion-directives/registry/types';
 import { PromotionStep } from '@ui/gen/api/v2/models';
-import { PlainMessage } from '@ui/utils/connectrpc-utils';
 
 import { RunnerWithConfiguration } from './types';
 
@@ -72,7 +71,7 @@ const yamlToState = (stepsYaml: string, runnersRegistry: Runner[]): RunnerWithCo
 };
 
 const stateToYAML = (state: RunnerWithConfiguration[]): string => {
-  const promotionSteps: PlainMessage<PromotionStep>[] = [];
+  const promotionSteps: PromotionStep[] = [];
 
   for (const step of state) {
     promotionSteps.push({

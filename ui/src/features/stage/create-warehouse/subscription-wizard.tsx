@@ -15,7 +15,6 @@ import { FieldTemplate } from '@ui/features/common/form/rjsf/field-template';
 import { ObjectFieldTemplate } from '@ui/features/common/form/rjsf/object-field-template';
 import { IconSetByKargoTerminology } from '@ui/features/common/icons';
 import { ObjectDescription } from '@ui/features/common/object-description';
-import { PlainMessage } from '@ui/utils/connectrpc-utils';
 
 import { warehouseCreateFormJSONSchema } from './schema';
 
@@ -26,7 +25,7 @@ const subscriptionTypes = Object.keys(
 
 export const SubscriptionWizard = (props: {
   subscriptions: RepoSubscription[];
-  onChange(subscriptions: PlainMessage<RepoSubscription>[]): void;
+  onChange(subscriptions: RepoSubscription[]): void;
 }) => {
   const [selectedNewSubscription, setSelectedNewSubscription] = useState(
     subscriptionTypes[2] /* image as default and common subscription */

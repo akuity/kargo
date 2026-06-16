@@ -2,18 +2,17 @@ import { formatDistance } from 'date-fns';
 import { useMemo } from 'react';
 
 import { Freight } from '@ui/gen/api/v2/models';
-import { timestampDate } from '@ui/utils/connectrpc-utils';
 
 export const useGetFreightCreation = (freight?: Freight) =>
   useMemo(() => {
-    const creationDate = timestampDate(freight?.metadata?.creationTimestamp);
-
-    if (!creationDate) {
+    if (!freight?.metadata?.creationTimestamp) {
       return {
         relative: '',
-        abs: creationDate
+        abs: null
       };
     }
+
+    const creationDate = new Date(freight?.metadata?.creationTimestamp);
 
     return {
       relative: formatDistance(creationDate, new Date(), { addSuffix: false })?.replace(

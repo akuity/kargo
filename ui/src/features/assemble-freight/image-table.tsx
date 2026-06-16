@@ -3,7 +3,6 @@ import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
 import { Radio, Table } from 'antd';
 
 import { DiscoveredImageReference } from '@ui/gen/api/v2/models';
-import { timestampDate } from '@ui/utils/connectrpc-utils';
 
 import { TruncatedCopyable } from './truncated-copyable';
 import { useDetectPage } from './use-detect-page';
@@ -60,7 +59,7 @@ export const ImageTable = ({
         {
           title: 'Created At',
           render: (record: DiscoveredImageReference) =>
-            timestampDate(record.createdAt)?.toLocaleString()
+            new Date(record.createdAt || '')?.toLocaleString()
         }
       ]}
     />
