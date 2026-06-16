@@ -133,6 +133,23 @@ func (w *webhook) ensureNamespace(
 				),
 			)
 		}
+		// The namespace is a Project namespace but is still being terminated from
+		// a previous deletion. Attempting to create resources in a terminating
+		// namespace will fail with a confusing 500 error, so surface a clear 409
+		// Conflict here instead and tell the user to retry.
+		if ns.DeletionTimestamp != nil {
+			return apierrors.NewConflict(
+				projectGroupResource,
+				project.Name,
+				fmt.Errorf(
+					"failed to initialize Project %q because namespace %q is still "+
+						"being terminated; please try again after the namespace has "+
+						"been fully deleted",
+					project.Name,
+					project.Name,
+				),
+			)
+		}
 		logger.Debug("namespace exists but no conflict was found")
 		return nil
 	}

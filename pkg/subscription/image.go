@@ -229,6 +229,7 @@ func (i *imageSubscriber) DiscoverArtifacts(
 	ctx context.Context,
 	project string,
 	sub kargoapi.RepoSubscription,
+	_ any,
 ) (any, error) {
 	imgSub := sub.Image
 

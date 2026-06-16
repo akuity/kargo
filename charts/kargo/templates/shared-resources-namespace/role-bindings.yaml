@@ -38,12 +38,30 @@ subjects:
 - kind: ServiceAccount
   namespace: {{ .Release.Namespace }}
   name: kargo-admin
-- kind: ServiceAccount
-  namespace: {{ .Release.Namespace }}
-  name: kargo-controller
 {{- if .Values.api.secretManagementEnabled }}
 - kind: ServiceAccount
   namespace:  {{ .Release.Namespace }}
   name: kargo-api
 {{- end }}
+{{- end }}
+{{- if and .Values.dataPlane.controller.install .Values.controller.enabled }}
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: RoleBinding
+metadata:
+  name: {{ include "kargo.controller.fullname" . }}-shared-resources-reader
+  namespace: {{ .Values.global.sharedResources.namespace }}
+  labels:
+    {{- include "kargo.labels" . | nindent 4 }}
+    {{- include "kargo.controller.labels" . | nindent 4 }}
+    {{- include "kargo.controller.idLabel" . | nindent 4 }}
+  {{- include "kargo.annotations" (dict "root" . "annotations" .Values.controller.annotations) | nindent 2 }}
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: Role
+  name: kargo-shared-resources-controller-reader
+subjects:
+- kind: ServiceAccount
+  namespace: {{ .Release.Namespace }}
+  name: {{ include "kargo.controller.fullname" . }}
 {{- end }}

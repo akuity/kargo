@@ -464,6 +464,9 @@ type HTTPConfig struct {
 	Method string `json:"method,omitempty"`
 	// Outputs to extract from the HTTP response.
 	Outputs []HTTPOutput `json:"outputs,omitempty"`
+	// The URL of the proxy server to send the HTTP request through. If not specified, defers to
+	// the HTTP transport's default proxy behavior (http.ProxyFromEnvironment).
+	Proxy string `json:"proxy,omitempty"`
 	// Query parameters to include in the HTTP request.
 	QueryParams []HTTPConfigQueryParam `json:"queryParams,omitempty"`
 	// Optionally overrides the Content-Type header for response parsing. Accepts MIME media

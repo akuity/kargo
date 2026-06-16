@@ -11,7 +11,7 @@ metadata:
   {{- include "kargo.annotations" (dict "root" . "annotations" .Values.managementController.annotations) | nindent 2 }}
 data:
   EXTERNAL_WEBHOOK_SERVER_BASE_URL: {{ include "kargo.externalWebhooksServer.baseURL" . }}
-  KARGO_NAMESPACE: {{ .Release.Namespace }}
+  KARGO_NAMESPACE: {{ include "kargo.dataNamespace" . }}
   CLUSTER_SECRETS_NAMESPACE: {{ quote .Values.global.clusterSecretsNamespace }}
   SYSTEM_RESOURCES_NAMESPACE: {{ quote .Values.global.systemResources.namespace }}
   {{- if .Values.controller.serviceAccount.clusterWideSecretReadingEnabled }}

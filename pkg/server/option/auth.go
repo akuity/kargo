@@ -143,6 +143,10 @@ func getKeySet(ctx context.Context, cfg config.ServerConfig) (oidc.KeySet, error
 	httpClient := cleanhttp.DefaultClient()
 
 	var discoURL string
+	// dexBaseAddr is the in-cluster URL of Dex, with the path component Dex
+	// serves its endpoints under (derived from its configured issuer URL).
+	// Only set when DexProxyConfig is non-nil.
+	var dexBaseAddr string
 	var err error
 	if cfg.DexProxyConfig == nil {
 		if discoURL, err = url.JoinPath(
@@ -157,9 +161,20 @@ func getKeySet(ctx context.Context, cfg config.ServerConfig) (oidc.KeySet, error
 			)
 		}
 	} else {
+		var issuerURL *url.URL
+		if issuerURL, err = url.Parse(cfg.OIDCConfig.IssuerURL); err != nil {
+			return nil, fmt.Errorf(
+				"error parsing OIDC issuer URL %q: %w",
+				cfg.OIDCConfig.IssuerURL,
+				err,
+			)
+		}
+		// Dex routes its endpoints based on the path of its configured issuer
+		// URL, which includes the API server's basePath when one is set. Use
+		// that same path with the in-cluster Dex address so paths line up.
+		dexBaseAddr = cfg.DexProxyConfig.ServerAddr + issuerURL.Path
 		if discoURL, err = url.JoinPath(
-			cfg.DexProxyConfig.ServerAddr,
-			"dex",
+			dexBaseAddr,
 			".well-known",
 			"openid-configuration",
 		); err != nil {
@@ -210,7 +225,7 @@ func getKeySet(ctx context.Context, cfg config.ServerConfig) (oidc.KeySet, error
 		keysURL = strings.Replace(
 			keysURL,
 			cfg.OIDCConfig.IssuerURL,
-			fmt.Sprintf("%s/dex", cfg.DexProxyConfig.ServerAddr),
+			dexBaseAddr,
 			1,
 		)
 	}

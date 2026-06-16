@@ -37,6 +37,11 @@ type createResourceResult struct {
 	Error                   string         `json:"error,omitempty"`
 } // @name CreateResourceResult
 
+// resourceErrorResponse is the response body for resource API errors
+type resourceErrorResponse struct {
+	Error string `json:"error"`
+} // @name ResourceErrorResponse
+
 func (s *server) CreateResource(
 	ctx context.Context,
 	req *connect.Request[svcv1alpha1.CreateResourceRequest],
@@ -113,6 +118,7 @@ func (s *server) CreateResource(
 // @Produce json
 // @Param manifest body string true "YAML or JSON manifest(s)"
 // @Success 201 {object} createResourceResponse "Created successfully"
+// @Failure 409 {object} resourceErrorResponse "Conflict"
 // @Router /v1beta1/resources [post]
 func (s *server) createResources(c *gin.Context) {
 	ctx := c.Request.Context()

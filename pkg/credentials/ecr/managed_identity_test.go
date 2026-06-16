@@ -62,6 +62,24 @@ func TestManagedIdentityProvider_Supports(t *testing.T) {
 			repoURL:  fakeRepoURL,
 			expected: false,
 		},
+		{
+			name: "non-ECR image URL not supported",
+			provider: &ManagedIdentityProvider{
+				accountID: fakeAccountID,
+			},
+			credType: credentials.TypeImage,
+			repoURL:  "us-docker.pkg.dev/project/repo/image",
+			expected: false,
+		},
+		{
+			name: "non-ECR helm URL not supported",
+			provider: &ManagedIdentityProvider{
+				accountID: fakeAccountID,
+			},
+			credType: credentials.TypeHelm,
+			repoURL:  "us-docker.pkg.dev/project/repo/chart",
+			expected: false,
+		},
 	}
 
 	for _, testCase := range testCases {

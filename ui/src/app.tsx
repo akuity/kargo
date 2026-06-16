@@ -7,6 +7,7 @@ import { BrowserRouter, Route, Routes } from 'react-router-dom';
 import { transport } from '@ui/config/transport';
 import { Project } from '@ui/pages/project';
 
+import { basePath } from './config/base-path';
 import { paths } from './config/paths';
 import { queryClient } from './config/query-client';
 import { themeConfig } from './config/themeConfig';
@@ -34,7 +35,7 @@ export const App = () => (
     <QueryClientProvider client={queryClient}>
       <ConfigProvider theme={themeConfig}>
         <AuthContextProvider>
-          <BrowserRouter>
+          <BrowserRouter basename={basePath()}>
             <Routes>
               <Route element={<ProtectedRoute />}>
                 <Route element={<MainLayout />}>

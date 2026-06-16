@@ -1806,6 +1806,14 @@ RawFormat specifies the format for raw resource representation.
 | value | string |   |
 
 
+### DiscoveredRef {#github-com-akuity-kargo-api-v1alpha1-DiscoveredRef}
+ DiscoveredRef pairs a Git ref name with the ID of the object it resolves to.
+| Field | Type | Description |
+| ----- | ---- | ----------- |
+| name | string |  Name is the short name of the ref (e.g. a tag name such as "v1.2.3"), without its "refs/tags/" or "refs/heads/" prefix.   |
+| id | string |  ID is the identifier of the object the ref points to, typically a SHA-1 hash. For an annotated tag this is the tag object's ID, not the commit it dereferences to, because the value is obtained via git ls-remote --refs. This is immaterial to its sole use -- change detection -- since the value moves whenever the ref is re-pointed and is only ever compared against other values obtained the same way.   |
+
+
 ### DiscoveryResult {#github-com-akuity-kargo-api-v1alpha1-DiscoveryResult}
  DiscoveryResult represents the result of an artifact discovery operation for some subscription.
 | Field | Type | Description |
@@ -2025,13 +2033,25 @@ RawFormat specifies the format for raw resource representation.
 >>>>>>> main
 
 
+### GitDiscoveryRefs {#github-com-akuity-kargo-api-v1alpha1-GitDiscoveryRefs}
+ GitDiscoveryRefs records the raw remote ref state relevant to a GitSubscription's commit selection strategy at the time of discovery. Exactly one of its fields is populated, according to whether the strategy selects from a branch or from tags.
+| Field | Type | Description |
+| ----- | ---- | ----------- |
+| branchHead | string |  BranchHead is the unfiltered commit ID at the tip of the subscribed branch. It is populated for branch-based selection strategies (NewestFromBranch). Because it records the branch tip before any path filtering, an unchanged value guarantees the path-filtered selection cannot have changed either.  +optional |
+| tags | [DiscoveredRef](#github-com-akuity-kargo-api-v1alpha1-DiscoveredRef) |  Tags is the set of tags that satisfied the GitSubscription's name-based filters (semver and/or regex), paired with the commit IDs they reference, sorted by tag name for a stable comparison. It is populated for tag-based selection strategies (NewestTag, SemVer, Lexical). Path filtering is applied later, during selection, and does not affect this set.  +optional |
+
+
 ### GitDiscoveryResult {#github-com-akuity-kargo-api-v1alpha1-GitDiscoveryResult}
  GitDiscoveryResult represents the result of a Git discovery operation for a GitSubscription.
 | Field | Type | Description |
 | ----- | ---- | ----------- |
 | repoURL | string |  RepoURL is the repository URL of the GitSubscription.  TODO(v1.13.0): Remove SSH/SCP-style URL support from this pattern.     |
 | commits | [DiscoveredCommit](#github-com-akuity-kargo-api-v1alpha1-DiscoveredCommit) |  Commits is a list of commits discovered by the Warehouse for the GitSubscription. An empty list indicates that the discovery operation was successful, but no commits matching the GitSubscription criteria were found.  +optional |
+<<<<<<< HEAD
 | subscriptionName | [string](#string) |  SubscriptionName is the optional human-readable name of the subscription that produced this discovery result.  +optional |
+=======
+| observedRefs | [GitDiscoveryRefs](#github-com-akuity-kargo-api-v1alpha1-GitDiscoveryRefs) |  ObservedRefs records the raw remote ref state observed at the most recent successful discovery, after name-based filtering but before path filtering or commit selection. The Warehouse uses it to short-circuit discovery: at the start of a reconcile, a single git ls-remote call yields the current ref state, and if it matches this field, nothing relevant has moved and the previously selected Commits remain valid -- so an expensive clone and history walk can be skipped entirely. This field is optional; when absent (e.g. on a Warehouse that predates this feature), discovery falls through to a full clone and repopulates it.  +optional |
+>>>>>>> upstream/main
 
 
 ### GitHubWebhookReceiverConfig {#github-com-akuity-kargo-api-v1alpha1-GitHubWebhookReceiverConfig}

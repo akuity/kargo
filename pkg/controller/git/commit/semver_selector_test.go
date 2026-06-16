@@ -13,6 +13,37 @@ import (
 	"github.com/akuity/kargo/pkg/controller/git"
 )
 
+func Test_semverSelector_ListRefs(t *testing.T) {
+	constraint, err := semver.NewConstraint(">=1.2.0")
+	require.NoError(t, err)
+	s := &semverSelector{
+		tagBasedSelector: &tagBasedSelector{
+			baseSelector: &baseSelector{
+				lsRemoteFn: func(string, *git.ClientOptions, ...string) ([]git.RemoteRef, error) {
+					return []git.RemoteRef{
+						{Name: tagPrefix + "v1.2.4", ID: "d"},
+						{Name: tagPrefix + "v1.1.0", ID: "a"},     // below constraint
+						{Name: tagPrefix + "not-semver", ID: "x"}, // not a semver
+						{Name: tagPrefix + "v1.2.3", ID: "c"},
+					}, nil
+				},
+			},
+		},
+		constraint:    constraint,
+		strictSemvers: true,
+	}
+	refs, err := s.ListRefs(t.Context())
+	require.NoError(t, err)
+	// Only tags that parse as semvers AND satisfy the constraint are retained,
+	// sorted by name.
+	require.Equal(t, &kargoapi.GitDiscoveryRefs{
+		Tags: []kargoapi.DiscoveredRef{
+			{Name: "v1.2.3", ID: "c"},
+			{Name: "v1.2.4", ID: "d"},
+		},
+	}, refs)
+}
+
 func TestNewSemverSelectorTest(t *testing.T) {
 	testCases := []struct {
 		name       string

@@ -24,6 +24,21 @@ type GitDiscoveryResult struct {
 	// +optional
 	Commits []*DiscoveredCommit `json:"commits"`
 
+	// ObservedRefs records the raw remote ref state observed at the most recent
+	// successful discovery, after name-based filtering but before path filtering
+	// or commit selection. The Warehouse uses it to short-circuit discovery: at
+	// the start of a reconcile, a single git ls-remote call yields the current
+	// ref state, and if it matches this field, nothing relevant has moved and the
+	// previously selected Commits remain valid -- so an expensive clone and
+	// history walk can be skipped entirely. This field is optional; when absent
+	// (e.g. on a Warehouse that predates this feature), discovery falls through to
+	// a full clone and repopulates it.
+	//
+	// +optional
+	ObservedRefs struct {
+		GitDiscoveryRefs
+	} `json:"observedRefs,omitempty"`
+
 	// RepoURL is the repository URL of the GitSubscription.
 	//
 	// TODO(v1.13.0): Remove SSH/SCP-style URL support from this pattern.
@@ -45,6 +60,10 @@ func (m *GitDiscoveryResult) Validate(formats strfmt.Registry) error {
 	var res []error
 
 	if err := m.validateCommits(formats); err != nil {
+		res = append(res, err)
+	}
+
+	if err := m.validateObservedRefs(formats); err != nil {
 		res = append(res, err)
 	}
 
@@ -84,11 +103,23 @@ func (m *GitDiscoveryResult) validateCommits(formats strfmt.Registry) error {
 	return nil
 }
 
+func (m *GitDiscoveryResult) validateObservedRefs(formats strfmt.Registry) error {
+	if swag.IsZero(m.ObservedRefs) { // not required
+		return nil
+	}
+
+	return nil
+}
+
 // ContextValidate validate this git discovery result based on the context it is used
 func (m *GitDiscoveryResult) ContextValidate(ctx context.Context, formats strfmt.Registry) error {
 	var res []error
 
 	if err := m.contextValidateCommits(ctx, formats); err != nil {
+		res = append(res, err)
+	}
+
+	if err := m.contextValidateObservedRefs(ctx, formats); err != nil {
 		res = append(res, err)
 	}
 
@@ -123,6 +154,11 @@ func (m *GitDiscoveryResult) contextValidateCommits(ctx context.Context, formats
 		}
 
 	}
+
+	return nil
+}
+
+func (m *GitDiscoveryResult) contextValidateObservedRefs(ctx context.Context, formats strfmt.Registry) error {
 
 	return nil
 }

@@ -1,6 +1,7 @@
 package server
 
 import (
+	"bytes"
 	"context"
 	"embed"
 	"errors"
@@ -223,17 +224,24 @@ func (s *server) Serve(ctx context.Context, l net.Listener) error {
 			return fmt.Errorf("error initializing UI file system: %w", err)
 		}
 	}
-	mux.Handle("/", newDashboardRequestHandler(dashboardFS))
+	mux.Handle("/", newDashboardRequestHandler(dashboardFS, s.cfg.BasePath))
+
+	handler := wrapWithBasePath(mux, s.cfg.BasePath)
+
+	// Dex's own configured issuer URL includes the API server's basePath, so
+	// Dex routes its endpoints under that prefix on its own listener. Mount
+	// the reverse proxy on an outer mux at the prefixed path so the basePath
+	// is preserved end-to-end rather than getting stripped before forwarding.
 	if s.cfg.DexProxyConfig != nil {
-		dexProxyCfg := dex.ProxyConfigFromEnv()
-		dexProxy, err := dex.NewProxy(dexProxyCfg)
+		dexProxy, err := dex.NewProxy(dex.ProxyConfigFromEnv())
 		if err != nil {
 			return fmt.Errorf("error initializing dex proxy: %w", err)
 		}
-		mux.Handle("/dex/", dexProxy)
+		outer := http.NewServeMux()
+		outer.Handle(s.cfg.BasePath+"/dex/", dexProxy)
+		outer.Handle("/", handler)
+		handler = outer
 	}
-
-	var handler http.Handler = mux
 
 	// Sometimes a permissive CORS policy is useful during local development.
 	if s.cfg.PermissiveCORSPolicyEnabled {
@@ -288,8 +296,73 @@ func (s *server) Serve(ctx context.Context, l net.Listener) error {
 	}
 }
 
-func newDashboardRequestHandler(uiFS fs.FS) http.HandlerFunc {
+// wrapWithBasePath returns inner if basePath is empty, or otherwise an
+// http.Handler that mounts inner under basePath via http.StripPrefix —
+// inner's handlers continue to register at root-relative paths and the
+// StripPrefix layer removes the basePath from each incoming URL before
+// dispatching.
+//
+// The gRPC health endpoint stays addressable at the root in parallel with
+// the basePath-wrapped routes, so liveness / readiness probes that hit the
+// Pod directly (never traversing the ingress that would otherwise prepend
+// the basePath) keep working without basePath awareness. The k8s native
+// gRPC probe and grpc_health_probe both send requests to the well-known
+// `/grpc.health.v1.Health/...` path with no path-prefixing support, so the
+// only way to make probes work transparently under any deployed basePath
+// is to leave their well-known endpoint reachable at root.
+func wrapWithBasePath(inner http.Handler, basePath string) http.Handler {
+	if basePath == "" {
+		return inner
+	}
+	const grpcHealthPathPrefix = "/grpc.health.v1.Health/"
+	stripped := http.StripPrefix(basePath, inner)
+	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		if strings.HasPrefix(r.URL.Path, grpcHealthPathPrefix) {
+			inner.ServeHTTP(w, r)
+			return
+		}
+		// Bare basePath (e.g. "/my-kargo") with no trailing slash: redirect
+		// to "/my-kargo/" ourselves. Otherwise StripPrefix would leave the
+		// inner mux with an empty path, and its canonical-path redirect
+		// would point at "/" (which has no basePath context).
+		if r.URL.Path == basePath {
+			u := *r.URL
+			u.Path = basePath + "/"
+			http.Redirect(w, r, u.RequestURI(), http.StatusMovedPermanently)
+			return
+		}
+		stripped.ServeHTTP(w, r)
+	})
+}
+
+// indexHTMLBasePlaceholder is the literal string the bundled UI's index.html
+// is expected to contain in the `<base href>` slot. The dashboard handler
+// substitutes the runtime basePath into this placeholder on each serve,
+// allowing a single bundled artifact to serve correctly under any prefix.
+// When the placeholder is absent (e.g. an older UI build), the HTML is
+// served unchanged.
+const indexHTMLBasePlaceholder = "__BASE_HREF__"
+
+// indexHTMLBasePathPlaceholder is the literal string in the bundled UI's
+// index.html that the dashboard handler replaces with the runtime basePath,
+// surfaced to the UI as `window.__KARGO_BASE_PATH__` so the React app can
+// configure routing and absolute-URL construction against the deployed
+// prefix.
+const indexHTMLBasePathPlaceholder = "__BASE_PATH__"
+
+func newDashboardRequestHandler(uiFS fs.FS, basePath string) http.HandlerFunc {
 	const indexHTML = "index.html"
+
+	// Pre-render the index.html body once, substituting the basePath
+	// placeholders. The render result is small and held in memory for the
+	// life of the process so we don't pay the read+replace cost on every
+	// request that falls through to index.html.
+	renderedIndex, indexLastModified := renderIndexHTML(uiFS, indexHTML, basePath)
+	serveIndex := func(w http.ResponseWriter, req *http.Request) {
+		httputil.SetNoCacheHeaders(w)
+		w.Header().Set("Content-Type", "text/html; charset=utf-8")
+		http.ServeContent(w, req, indexHTML, indexLastModified, bytes.NewReader(renderedIndex))
+	}
 
 	handler := http.FileServer(http.FS(uiFS))
 	withoutGzip := http.HandlerFunc(func(w http.ResponseWriter, req *http.Request) {
@@ -300,8 +373,7 @@ func newDashboardRequestHandler(uiFS fs.FS) http.HandlerFunc {
 
 		path := filepath.Clean(req.URL.Path)
 		if path == "/" {
-			httputil.SetNoCacheHeaders(w)
-			http.ServeFileFS(w, req, uiFS, indexHTML)
+			serveIndex(w, req)
 			return
 		}
 
@@ -311,8 +383,7 @@ func newDashboardRequestHandler(uiFS fs.FS) http.HandlerFunc {
 		}
 		if os.IsNotExist(err) {
 			// When the path doesn't match an embedded file, serve index.html
-			httputil.SetNoCacheHeaders(w)
-			http.ServeFileFS(w, req, uiFS, indexHTML)
+			serveIndex(w, req)
 			return
 		}
 		if err != nil {
@@ -329,8 +400,7 @@ func newDashboardRequestHandler(uiFS fs.FS) http.HandlerFunc {
 		}
 		if info.IsDir() {
 			// Serve index.html to prevent enumerating files in the directory
-			httputil.SetNoCacheHeaders(w)
-			http.ServeFileFS(w, req, uiFS, indexHTML)
+			serveIndex(w, req)
 			return
 		}
 
@@ -341,4 +411,29 @@ func newDashboardRequestHandler(uiFS fs.FS) http.HandlerFunc {
 
 	withGz := gzhttp.GzipHandler(withoutGzip)
 	return http.HandlerFunc(withGz.ServeHTTP)
+}
+
+// renderIndexHTML reads the dashboard's index.html out of uiFS, substitutes
+// the basePath placeholders, and returns the rendered bytes plus a
+// last-modified timestamp suitable for http.ServeContent. Returns an
+// empty-bodied result and a zero timestamp if the file can't be read; the
+// dashboard handler degrades to serving an empty document rather than
+// returning errors at request time.
+func renderIndexHTML(uiFS fs.FS, name, basePath string) ([]byte, time.Time) {
+	raw, err := fs.ReadFile(uiFS, name)
+	if err != nil {
+		return nil, time.Time{}
+	}
+	baseHref := "/"
+	basePathValue := ""
+	if basePath != "" {
+		baseHref = basePath + "/"
+		basePathValue = basePath
+	}
+	rendered := bytes.ReplaceAll(raw, []byte(indexHTMLBasePlaceholder), []byte(baseHref))
+	rendered = bytes.ReplaceAll(rendered, []byte(indexHTMLBasePathPlaceholder), []byte(basePathValue))
+	// The embedded FS doesn't carry meaningful mtimes; pretend the file was
+	// stamped at process start so ServeContent's If-Modified-Since logic is
+	// well-defined.
+	return rendered, time.Now()
 }
