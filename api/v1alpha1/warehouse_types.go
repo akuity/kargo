@@ -421,13 +421,11 @@ type GitDiscoveryResult struct {
 	//
 	// +optional
 	Commits []DiscoveredCommit `json:"commits" protobuf:"bytes,2,rep,name=commits"`
-<<<<<<< HEAD
 	// SubscriptionName is the optional human-readable name of the subscription
 	// that produced this discovery result.
 	//
 	// +optional
 	SubscriptionName string `json:"subscriptionName,omitempty" protobuf:"bytes,3,opt,name=subscriptionName"`
-=======
 	// ObservedRefs records the raw remote ref state observed at the most recent
 	// successful discovery, after name-based filtering but before path filtering
 	// or commit selection. The Warehouse uses it to short-circuit discovery: at
@@ -439,7 +437,7 @@ type GitDiscoveryResult struct {
 	// a full clone and repopulates it.
 	//
 	// +optional
-	ObservedRefs *GitDiscoveryRefs `json:"observedRefs,omitempty" protobuf:"bytes,3,opt,name=observedRefs"`
+	ObservedRefs *GitDiscoveryRefs `json:"observedRefs,omitempty" protobuf:"bytes,4,opt,name=observedRefs"`
 }
 
 // GitDiscoveryRefs records the raw remote ref state relevant to a
@@ -480,7 +478,6 @@ type DiscoveredRef struct {
 	//
 	// +kubebuilder:validation:MinLength=1
 	ID string `json:"id" protobuf:"bytes,2,opt,name=id"`
->>>>>>> upstream/main
 }
 
 // DiscoveredCommit represents a commit discovered by a Warehouse for a

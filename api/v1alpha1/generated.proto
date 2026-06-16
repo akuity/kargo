@@ -1011,13 +1011,11 @@ message GitDiscoveryResult {
   // +optional
   repeated DiscoveredCommit commits = 2;
 
-<<<<<<< HEAD
   // SubscriptionName is the optional human-readable name of the subscription
   // that produced this discovery result.
   //
   // +optional
   optional string subscriptionName = 3;
-=======
   // ObservedRefs records the raw remote ref state observed at the most recent
   // successful discovery, after name-based filtering but before path filtering
   // or commit selection. The Warehouse uses it to short-circuit discovery: at
@@ -1029,8 +1027,7 @@ message GitDiscoveryResult {
   // a full clone and repopulates it.
   //
   // +optional
-  optional GitDiscoveryRefs observedRefs = 3;
->>>>>>> upstream/main
+  optional GitDiscoveryRefs observedRefs = 4;
 }
 
 // GitHubWebhookReceiverConfig describes a webhook receiver that is compatible
