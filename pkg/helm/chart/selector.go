@@ -24,6 +24,7 @@ type Selector interface {
 // selects chart versions from a Helm chart repository based on the provided
 // subscription.
 func NewSelector(
+	ctx context.Context,
 	sub kargoapi.ChartSubscription,
 	creds *helm.Credentials,
 ) (Selector, error) {
@@ -32,7 +33,7 @@ func NewSelector(
 		strings.HasPrefix(sub.RepoURL, "https://"):
 		return newHTTPSelector(sub, creds)
 	case strings.HasPrefix(sub.RepoURL, "oci://"):
-		return newOCISelector(sub, creds)
+		return newOCISelector(ctx, sub, creds)
 	default:
 		return nil, fmt.Errorf("repository URL %q is invalid", sub.RepoURL)
 	}

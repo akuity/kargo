@@ -166,7 +166,7 @@ func (c *chartSubscriber) DiscoverArtifacts(
 		logger.Debug("found no credentials for chart repo")
 	}
 
-	selector, err := chart.NewSelector(*chartSub, helmCreds)
+	selector, err := chart.NewSelector(ctx, *chartSub, helmCreds)
 	if err != nil {
 		return nil, fmt.Errorf(
 			"error obtaining selector for chart versions from helm chart repo %q: %w",
