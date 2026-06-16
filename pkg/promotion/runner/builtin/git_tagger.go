@@ -73,7 +73,7 @@ func (g *gitTagTagger) run(
 		return promotion.StepResult{Status: kargoapi.PromotionStepStatusErrored},
 			fmt.Errorf("error loading working tree from %s: %w", cfg.Path, err)
 	}
-	if err = workTree.CreateTag(cfg.Tag, cfg.Message); err != nil {
+	if err = workTree.CreateTag(cfg.Tag, cfg.Message, cfg.Force); err != nil {
 		return promotion.StepResult{Status: kargoapi.PromotionStepStatusErrored},
 			fmt.Errorf("error creating tag %s: %w", cfg.Tag, err)
 	}

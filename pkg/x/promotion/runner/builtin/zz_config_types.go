@@ -336,6 +336,10 @@ type GitPushConfig struct {
 }
 
 type GitTagConfig struct {
+	// Indicates whether to overwrite an existing tag of the same name. WARNING: Force
+	// overwriting tags is an unconventional use of tags and should be utilized only with
+	// extreme caution. Default is false.
+	Force bool `json:"force,omitempty"`
 	// The annotation message for the tag.
 	Message string `json:"message"`
 	// The path to a working directory of a local repository.

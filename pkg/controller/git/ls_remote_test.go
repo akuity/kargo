@@ -13,7 +13,7 @@ func Test_LsRemote(t *testing.T) {
 		func(t *testing.T, rep WorkTree) {
 			// Create and push an annotated tag so we can verify that its peeled
 			// "^{}" entry is dropped and only the tag object is reported.
-			require.NoError(t, rep.CreateTag("v1.0.0", "release v1.0.0"))
+			require.NoError(t, rep.CreateTag("v1.0.0", "release v1.0.0", false))
 			require.NoError(t, rep.Push(&PushOptions{Tag: "v1.0.0"}))
 		},
 	)

@@ -88,6 +88,15 @@ func Test_gitTagger_convert(t *testing.T) {
 				"message": "hello",
 			},
 		},
+		{
+			name: "valid config with force",
+			config: promotion.Config{
+				"path":    "/tmp/foo",
+				"tag":     "v1.0.0",
+				"message": "hello",
+				"force":   true,
+			},
+		},
 	}
 
 	r := newGitTagger(promotion.StepRunnerCapabilities{})
@@ -176,6 +185,47 @@ func Test_gitTagger_run(t *testing.T) {
 	expectedCommit, err := workTree.LastCommitID()
 	require.NoError(t, err)
 	actualCommit, ok := res.Output[stateKeyCommit]
+	require.True(t, ok)
+	require.Equal(t, expectedCommit, actualCommit)
+
+	// Switch back to the branch and add another commit so the tag would need to
+	// move to a different commit.
+	require.NoError(t, workTree.Checkout("master"))
+	require.NoError(t, os.WriteFile(
+		filepath.Join(workTree.Dir(), "test.txt"),
+		[]byte("bar"), 0600,
+	))
+	require.NoError(t, workTree.AddAll())
+	require.NoError(t, workTree.Commit("Second commit", nil))
+
+	// Re-tagging without force should fail because the tag already exists.
+	res, err = runner.run(
+		t.Context(),
+		&promotion.StepContext{WorkDir: workDir},
+		builtin.GitTagConfig{
+			Path: "master",
+			Tag:  "v1.0.0",
+		},
+	)
+	require.Error(t, err)
+	require.Equal(t, kargoapi.PromotionStepStatusErrored, res.Status)
+
+	// Re-tagging with force should succeed and move the tag to the new commit.
+	res, err = runner.run(
+		t.Context(),
+		&promotion.StepContext{WorkDir: workDir},
+		builtin.GitTagConfig{
+			Path:  "master",
+			Tag:   "v1.0.0",
+			Force: true,
+		},
+	)
+	require.NoError(t, err)
+	require.Equal(t, kargoapi.PromotionStepStatusSucceeded, res.Status)
+	require.NoError(t, workTree.Checkout("v1.0.0"))
+	expectedCommit, err = workTree.LastCommitID()
+	require.NoError(t, err)
+	actualCommit, ok = res.Output[stateKeyCommit]
 	require.True(t, ok)
 	require.Equal(t, expectedCommit, actualCommit)
 }
