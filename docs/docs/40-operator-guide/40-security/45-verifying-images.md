@@ -22,16 +22,25 @@ There are two ways to consume these assessments.
 
 The assessments are published as OpenVEX documents at `vex.akuity.io`, keyed by
 image repository. This path works with any scanner that supports VEX and needs
-no additional tooling. For example, with
-[Grype](https://github.com/anchore/grype):
+no additional tooling. Fetch the document once, then pass it to your scanner —
+CVEs that Akuity has assessed as `not_affected` are suppressed (and annotated
+with their justification).
 
 ```bash
 # Fetch Akuity's VEX document for the Kargo image.
 curl -fsSL https://vex.akuity.io/pkg/oci/ghcr.io/akuity/kargo/vex.json -o kargo-vex.json
+```
 
-# Scan, applying the assessments. CVEs assessed as not_affected are
-# suppressed (and annotated with their justification).
+With [Grype](https://github.com/anchore/grype):
+
+```bash
 grype ghcr.io/akuity/kargo:<version> --vex kargo-vex.json
+```
+
+With [Trivy](https://github.com/aquasecurity/trivy):
+
+```bash
+trivy image --vex kargo-vex.json ghcr.io/akuity/kargo:<version>
 ```
 
 The published document carries assessments for the latest patch of each
