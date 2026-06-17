@@ -1,0 +1,228 @@
+suite: api/deployment.yaml
+values:
+  - ../test/values-unittest.yaml
+# configmap + secret are listed so the Deployment's checksum includes resolve;
+# each test scopes assertions to the Deployment with template:.
+templates:
+  - templates/api/deployment.yaml
+  - templates/api/configmap.yaml
+  - templates/api/secret.yaml
+tests:
+  - it: renders the API Deployment by default
+    template: templates/api/deployment.yaml
+    asserts:
+      - hasDocuments:
+          count: 1
+      - isKind:
+          of: Deployment
+      - equal:
+          path: metadata.name
+          value: kargo-api
+      - equal:
+          path: spec.template.spec.serviceAccountName
+          value: kargo-api
+      - matchRegex:
+          path: spec.template.spec.containers[0].image
+          pattern: "^.+/kargo:.+"
+      - equal:
+          path: spec.template.spec.containers[0].ports[0].containerPort
+          value: 8080
+      - equal:
+          path: spec.template.spec.containers[0].envFrom[0].configMapRef.name
+          value: kargo-api
+      - equal:
+          path: spec.template.spec.containers[0].envFrom[1].secretRef.name
+          value: kargo-api
+
+  - it: is not rendered when the API is disabled
+    template: templates/api/deployment.yaml
+    set:
+      api.enabled: false
+    asserts:
+      - hasDocuments:
+          count: 0
+
+  - it: is not rendered when workloads are not installed
+    template: templates/api/deployment.yaml
+    set:
+      workloads.install: false
+    asserts:
+      - hasDocuments:
+          count: 0
+
+  - it: uses an exec health probe when TLS is enabled (default)
+    template: templates/api/deployment.yaml
+    asserts:
+      - exists:
+          path: spec.template.spec.containers[0].livenessProbe.exec
+      - notExists:
+          path: spec.template.spec.containers[0].livenessProbe.grpc
+
+  - it: uses a gRPC health probe when TLS is disabled
+    template: templates/api/deployment.yaml
+    set:
+      api.tls.enabled: false
+    asserts:
+      - exists:
+          path: spec.template.spec.containers[0].livenessProbe.grpc
+      - notExists:
+          path: spec.template.spec.containers[0].livenessProbe.exec
+
+---
+suite: api/configmap.yaml
+values:
+  - ../test/values-unittest.yaml
+templates:
+  - templates/api/configmap.yaml
+tests:
+  - it: renders API configuration with defaults
+    asserts:
+      - isKind:
+          of: ConfigMap
+      - equal:
+          path: data.LOG_LEVEL
+          value: INFO
+      - equal:
+          path: data.SECRET_MANAGEMENT_ENABLED
+          value: "true"
+      - equal:
+          path: data.ROLLOUTS_INTEGRATION_ENABLED
+          value: "true"
+      - equal:
+          path: data.ADMIN_ACCOUNT_ENABLED
+          value: "true"
+
+  - it: derives an https token issuer and TLS env when TLS is enabled (default)
+    asserts:
+      - equal:
+          path: data.ADMIN_ACCOUNT_TOKEN_ISSUER
+          value: https://localhost
+      - equal:
+          path: data.TLS_ENABLED
+          value: "true"
+
+  - it: derives an http token issuer when TLS is disabled
+    set:
+      api.tls.enabled: false
+    asserts:
+      - equal:
+          path: data.ADMIN_ACCOUNT_TOKEN_ISSUER
+          value: http://localhost
+      - notExists:
+          path: data.TLS_ENABLED
+
+  - it: omits secret management when disabled
+    set:
+      api.secretManagementEnabled: false
+    asserts:
+      - notExists:
+          path: data.SECRET_MANAGEMENT_ENABLED
+
+  - it: enables OIDC config when OIDC is turned on
+    set:
+      api.oidc.enabled: true
+      api.oidc.issuerURL: https://idp.example.com
+      api.oidc.clientID: kargo
+    asserts:
+      - equal:
+          path: data.OIDC_ENABLED
+          value: "true"
+      - equal:
+          path: data.OIDC_ISSUER_URL
+          value: https://idp.example.com
+
+---
+suite: api/secret.yaml
+values:
+  - ../test/values-unittest.yaml
+templates:
+  - templates/api/secret.yaml
+tests:
+  - it: renders the admin account secret by default
+    asserts:
+      - hasDocuments:
+          count: 1
+      - isKind:
+          of: Secret
+      - equal:
+          path: type
+          value: Opaque
+      - equal:
+          path: stringData.ADMIN_ACCOUNT_PASSWORD_HASH
+          value: "$2a$10$unittestunittestunittestunittestunittestunittestun"
+      - isNotEmpty:
+          path: stringData.ADMIN_ACCOUNT_TOKEN_SIGNING_KEY
+
+  - it: is not rendered when an external secret name is provided
+    set:
+      api.secret.name: my-external-secret
+    asserts:
+      - hasDocuments:
+          count: 0
+
+---
+suite: api/service.yaml
+values:
+  - ../test/values-unittest.yaml
+templates:
+  - templates/api/service.yaml
+tests:
+  - it: exposes port 443 over https by default (TLS enabled)
+    asserts:
+      - isKind:
+          of: Service
+      - equal:
+          path: spec.ports[0].port
+          value: 443
+      - equal:
+          path: spec.ports[0].appProtocol
+          value: https
+      - equal:
+          path: spec.ports[0].targetPort
+          value: 8080
+
+  - it: exposes port 80 over http when TLS is disabled
+    set:
+      api.tls.enabled: false
+    asserts:
+      - equal:
+          path: spec.ports[0].port
+          value: 80
+      - equal:
+          path: spec.ports[0].appProtocol
+          value: http
+
+---
+suite: api/ingress.yaml
+values:
+  - ../test/values-unittest.yaml
+templates:
+  - templates/api/ingress.yaml
+tests:
+  - it: is not rendered by default
+    asserts:
+      - hasDocuments:
+          count: 0
+
+  - it: renders an Ingress for the API host when enabled
+    set:
+      api.ingress.enabled: true
+    asserts:
+      - hasDocuments:
+          count: 1
+      - isKind:
+          of: Ingress
+      - equal:
+          path: spec.rules[0].host
+          value: localhost
+
+  - it: routes /webhooks to the external webhooks server when it has no own ingress
+    set:
+      api.ingress.enabled: true
+    asserts:
+      - equal:
+          path: spec.rules[0].http.paths[1].path
+          value: /webhooks
+      - equal:
+          path: spec.rules[0].http.paths[1].backend.service.name
+          value: kargo-external-webhooks-server

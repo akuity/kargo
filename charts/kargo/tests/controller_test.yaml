@@ -1,0 +1,126 @@
+suite: controller/deployment.yaml
+values:
+  - ../test/values-unittest.yaml
+templates:
+  - templates/controller/deployment.yaml
+  - templates/controller/configmap.yaml
+tests:
+  - it: renders the controller Deployment by default
+    template: templates/controller/deployment.yaml
+    asserts:
+      - hasDocuments:
+          count: 1
+      - isKind:
+          of: Deployment
+      - equal:
+          path: metadata.name
+          value: kargo-controller
+      - equal:
+          path: spec.strategy.type
+          value: Recreate
+      - equal:
+          path: spec.template.spec.serviceAccountName
+          value: kargo-controller
+      - equal:
+          path: spec.template.spec.containers[0].envFrom[0].configMapRef.name
+          value: kargo-controller
+
+  - it: is not rendered when the controller is disabled
+    template: templates/controller/deployment.yaml
+    set:
+      controller.enabled: false
+    asserts:
+      - hasDocuments:
+          count: 0
+
+---
+suite: controller/configmap.yaml
+values:
+  - ../test/values-unittest.yaml
+templates:
+  - templates/controller/configmap.yaml
+tests:
+  - it: marks the controller as default when no shard name is set
+    asserts:
+      - isKind:
+          of: ConfigMap
+      - equal:
+          path: data.IS_DEFAULT_CONTROLLER
+          value: "true"
+      - notExists:
+          path: data.SHARD_NAME
+
+  - it: sets the shard name and is not default when a shard is named
+    set:
+      controller.shardName: shard-a
+    asserts:
+      - equal:
+          path: data.SHARD_NAME
+          value: shard-a
+      - notExists:
+          path: data.IS_DEFAULT_CONTROLLER
+
+  - it: is both sharded and default when isDefault is set with a shard name
+    set:
+      controller.shardName: shard-a
+      controller.isDefault: true
+    asserts:
+      - equal:
+          path: data.SHARD_NAME
+          value: shard-a
+      - equal:
+          path: data.IS_DEFAULT_CONTROLLER
+          value: "true"
+
+  - it: includes the API server base URL when the API is enabled
+    asserts:
+      - equal:
+          path: data.API_SERVER_BASE_URL
+          value: https://localhost
+
+  - it: omits the API server base URL when the API is disabled
+    set:
+      api.enabled: false
+    asserts:
+      - notExists:
+          path: data.API_SERVER_BASE_URL
+
+---
+suite: controller/cluster-role-bindings.yaml
+values:
+  - ../test/values-unittest.yaml
+templates:
+  - templates/controller/cluster-role-bindings.yaml
+tests:
+  - it: binds the controller and its integration roles by default
+    asserts:
+      - documentSelector:
+          path: metadata.name
+          value: kargo-controller
+        equal:
+          path: roleRef.name
+          value: kargo-controller
+      - documentSelector:
+          path: metadata.name
+          value: kargo-controller-rollouts
+        isKind:
+          of: ClusterRoleBinding
+
+  - it: drops the rollouts binding when rollouts integration is disabled
+    set:
+      controller.rollouts.integrationEnabled: false
+      controller.argocd.integrationEnabled: false
+    asserts:
+      - hasDocuments:
+          count: 1
+      - equal:
+          path: metadata.name
+          value: kargo-controller
+
+  - it: is not rendered when cluster role bindings are disabled
+    set:
+      rbac.installClusterRoleBindings: false
+      argocd.dataPlane.install: false
+    asserts:
+      - hasDocuments:
+          count: 0
