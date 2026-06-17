@@ -261,7 +261,7 @@ func InflateSteps(
 			)
 			if err != nil {
 				return fmt.Errorf(
-					"inflate tasks steps for task %q (%q): %w",
+					"inflate task steps for task %q (%q): %w",
 					step.Task.Name, alias, err,
 				)
 			}
