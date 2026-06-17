@@ -187,6 +187,11 @@ protoc -I $temp_doc_dir \
 
   { msg "Generating .pb.go and .connect.go files from service.proto"; } 2> /dev/null
   buf generate . --path api/service
+
+  { msg "Generating TypeScript bindings for UI..."; } 2> /dev/null
+  buf generate . --path api \
+    --include-imports \
+    --template=buf.ui.gen.yaml
 }
 
 function msg() {
