@@ -1,6 +1,125 @@
 ---
+title: Frequently Asked Questions
 sidebar_label: FAQs
+description: Frequently asked questions about Kargo, the Kubernetes-native continuous promotion platform for GitOps workflows.
 ---
+
+import Head from '@docusaurus/Head';
+
+<Head>
+  <script type="application/ld+json">{`
+{
+  "@context": "https://schema.org",
+  "@type": "FAQPage",
+  "mainEntity": [
+    {
+      "@type": "Question",
+      "name": "What is Kargo?",
+      "acceptedAnswer": {
+        "@type": "Answer",
+        "text": "Kargo is an unopinionated continuous promotion platform that helps developers orchestrate the movement of new code and configuration through the various stages of their applications' lifecycles using GitOps principles."
+      }
+    },
+    {
+      "@type": "Question",
+      "name": "What exactly is continuous promotion?",
+      "acceptedAnswer": {
+        "@type": "Answer",
+        "text": "Continuous promotion is the process of propagating desirable changes from the desired state of one stage in an application's lifecycle to the desired state of the next, codified into a pipeline and either partly or fully automated. Kargo focuses on this propagation; the actual deployment is performed by a GitOps agent such as Argo CD."
+      }
+    },
+    {
+      "@type": "Question",
+      "name": "Is a stage the same as an environment?",
+      "acceptedAnswer": {
+        "@type": "Answer",
+        "text": "Not exactly. Technically, a stage is a promotion target: a set of desired state that needs to be altered by a promotion process. The underlying resources reconciled against that desired state can be an entire application instance, a few microservices, or even an entire Kubernetes cluster."
+      }
+    },
+    {
+      "@type": "Question",
+      "name": "Is Kargo open source?",
+      "acceptedAnswer": {
+        "@type": "Answer",
+        "text": "Yes. Kargo is an open-source project hosted on GitHub at https://github.com/akuity/kargo and licensed under Apache 2.0."
+      }
+    },
+    {
+      "@type": "Question",
+      "name": "How do I get started with Kargo?",
+      "acceptedAnswer": {
+        "@type": "Answer",
+        "text": "Read the Core Concepts section of the documentation, or follow the Quickstart at https://docs.kargo.io/quickstart to install Kargo locally and walk through a complete promotion pipeline."
+      }
+    },
+    {
+      "@type": "Question",
+      "name": "Where can I get support for Kargo?",
+      "acceptedAnswer": {
+        "@type": "Answer",
+        "text": "Open an issue or discussion in the GitHub repository at https://github.com/akuity/kargo, or join the community Discord at https://akuity.community. Commercial support is available through Akuity at https://akuity.io."
+      }
+    },
+    {
+      "@type": "Question",
+      "name": "How can I contribute to Kargo?",
+      "acceptedAnswer": {
+        "@type": "Answer",
+        "text": "See the Contributor Guide at https://docs.kargo.io/contributor-guide for setup instructions. Look for issues labeled 'good first issue' or 'help wanted' on GitHub, comment on the issue to claim it, and submit a pull request. Propose larger features with maintainers before starting implementation."
+      }
+    },
+    {
+      "@type": "Question",
+      "name": "Does Kargo require a separate branch per stage?",
+      "acceptedAnswer": {
+        "@type": "Answer",
+        "text": "No. Kargo needs somewhere to store the output of your promotion processes so a GitOps agent can pick it up. Stage-specific branches are one option, but you can equally use a well-structured directory layout within a single branch, including main."
+      }
+    },
+    {
+      "@type": "Question",
+      "name": "Does Kargo support monorepos?",
+      "acceptedAnswer": {
+        "@type": "Answer",
+        "text": "Yes. Kargo is unopinionated about whether you use one repository or many, and mostly unopinionated about how you structure them, provided commits can be selected or ignored based on the paths they affect. See the Patterns section for monorepo guidance."
+      }
+    },
+    {
+      "@type": "Question",
+      "name": "Does Kargo support microservices?",
+      "acceptedAnswer": {
+        "@type": "Answer",
+        "text": "Yes. Kargo can promote microservices independently or as a unit, and supports promoting in a specific order when required. See the Patterns section for detailed guidance."
+      }
+    },
+    {
+      "@type": "Question",
+      "name": "How do I integrate Kargo with multiple Argo CD control planes?",
+      "acceptedAnswer": {
+        "@type": "Answer",
+        "text": "Refer to the Architecture section of the documentation to learn about the topology of a large-scale Kargo deployment connected to multiple Argo CD control planes."
+      }
+    },
+    {
+      "@type": "Question",
+      "name": "How does Kargo integrate with CI pipelines?",
+      "acceptedAnswer": {
+        "@type": "Answer",
+        "text": "Kargo and CI integrate indirectly via your artifact repositories: CI tests code and builds artifacts; Kargo notices new artifacts and moves them through the stages of your application's lifecycle. Direct integration is possible but generally not recommended."
+      }
+    },
+    {
+      "@type": "Question",
+      "name": "How do I implement SSO with Kargo?",
+      "acceptedAnswer": {
+        "@type": "Answer",
+        "text": "Kargo can authenticate users with any OpenID Connect provider supporting PKCE, including Okta, Auth0, and Microsoft Entra ID. Optional integration with Dex extends support to providers without PKCE or OIDC, such as GitHub. See the OpenID Connect integration documentation for details."
+      }
+    }
+  ]
+}
+  `}</script>
+</Head>
 
 # Frequently Asked Questions
 

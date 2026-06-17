@@ -18,6 +18,7 @@ type baseSelector struct {
 	repoURL               string
 	creds                 *git.RepoCredentials
 	insecureSkipTLSVerify bool
+	blobless              bool
 	filterExpression      *vm.Program
 	includePaths          pattern.Matcher
 	excludePaths          pattern.Matcher
@@ -28,6 +29,12 @@ type baseSelector struct {
 		clientOpts *git.ClientOptions,
 		cloneOpts *git.CloneOptions,
 	) (git.Repo, error)
+
+	lsRemoteFn func(
+		repoURL string,
+		clientOpts *git.ClientOptions,
+		patterns ...string,
+	) ([]git.RemoteRef, error)
 }
 
 func newBaseSelector(
@@ -38,8 +45,10 @@ func newBaseSelector(
 		repoURL:               sub.RepoURL,
 		creds:                 creds,
 		insecureSkipTLSVerify: sub.InsecureSkipTLSVerify,
+		blobless:              sub.Blobless != nil && *sub.Blobless,
 		discoveryLimit:        int(sub.DiscoveryLimit),
 		gitCloneFn:            git.Clone,
+		lsRemoteFn:            git.LsRemote,
 	}
 	var err error
 	if sub.ExpressionFilter != "" {
@@ -85,5 +94,15 @@ func (b *baseSelector) getLoggerContext() []any {
 	return []any{
 		"repo", b.repoURL,
 		"pathConstrained", b.includePaths != nil || b.excludePaths != nil,
+	}
+}
+
+// clientOptions returns the git.ClientOptions used by this selector for both
+// cloning and listing remote refs, so that the two paths authenticate
+// identically.
+func (b *baseSelector) clientOptions() *git.ClientOptions {
+	return &git.ClientOptions{
+		Credentials:           b.creds,
+		InsecureSkipTLSVerify: b.insecureSkipTLSVerify,
 	}
 }

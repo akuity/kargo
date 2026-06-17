@@ -10,8 +10,8 @@ specified source and target branches. This step is often used after a
 [`git-push` step](git-push.md) and is commonly followed by a
 [`git-wait-for-pr` step](git-wait-for-pr.md).
 
-At present, this feature only supports GitHub, Gitea, Azure DevOps, and
-GitLab pull/merge requests.
+At present, this feature only supports GitHub, Gitea, Azure DevOps, GitLab and
+BitBucket pull/merge requests.
 
 ## Credentials
 
@@ -138,16 +138,16 @@ by subsequent steps to determine if a preceding step was skipped.
   config:
     path: ./out
     generateTargetBranch: true
-  - uses: git-open-pr
-    as: open-pr
-    config:
-      repoURL: https://github.com/example/repo.git
-      sourceBranch: ${{ outputs.push.branch }}
-      targetBranch: stage/${{ ctx.stage }}
-  - if: ${{ status('open-pr') != 'Skipped' }}
-    uses: git-wait-for-pr
-    as: wait-for-pr
-    config:
-      repoURL: https://github.com/example/repo.git
-      prNumber: ${{ outputs['open-pr'].pr.id }}
+- uses: git-open-pr
+  as: open-pr
+  config:
+    repoURL: https://github.com/example/repo.git
+    sourceBranch: ${{ outputs.push.branch }}
+    targetBranch: stage/${{ ctx.stage }}
+- if: ${{ status('open-pr') != 'Skipped' }}
+  uses: git-wait-for-pr
+  as: wait-for-pr
+  config:
+    repoURL: https://github.com/example/repo.git
+    prNumber: ${{ outputs['open-pr'].pr.id }}
 ```

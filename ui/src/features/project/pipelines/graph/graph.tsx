@@ -1,4 +1,4 @@
-import { faMap } from '@fortawesome/free-solid-svg-icons';
+import { faShareNodes, faMap } from '@fortawesome/free-solid-svg-icons';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
 import {
   ControlButton,
@@ -153,6 +153,48 @@ export const Graph = (props: GraphProps) => {
     return warehouseByName;
   }, [props.warehouses]);
 
+  const [hoveredWarehouseName, setHoveredWarehouseName] = useState<string | null>(null);
+
+  const distinctEdgeWarehouses = useMemo(
+    () =>
+      new Set(graph.edges.map((e) => e.data?.warehouseName as string | undefined).filter(Boolean))
+        .size,
+    [graph.edges]
+  );
+
+  const edgeType = filterContext?.preferredFilter?.stepEdges ? 'step' : 'default';
+
+  const typedEdges = useMemo(
+    () => graph.edges.map((e) => (e.type === edgeType ? e : { ...e, type: edgeType })),
+    [graph.edges, edgeType]
+  );
+
+  const edges = useMemo(() => {
+    if (!hoveredWarehouseName || distinctEdgeWarehouses < 2) {
+      return typedEdges;
+    }
+    const dimmed: typeof typedEdges = [];
+    const highlighted: typeof typedEdges = [];
+    for (const edge of typedEdges) {
+      if (edge.data?.warehouseName !== hoveredWarehouseName) {
+        dimmed.push(edge);
+        continue;
+      }
+      const color = (edge.style?.stroke as string) || '#000';
+      highlighted.push({
+        ...edge,
+        style: {
+          ...edge.style,
+          strokeOpacity: 0.8,
+          filter: `drop-shadow(0 0 7px ${color}50)`
+        }
+      });
+    }
+    // Highlighted edges paint last so they sit on top of overlapping dimmed
+    // edges from other warehouses.
+    return [...dimmed, ...highlighted];
+  }, [typedEdges, hoveredWarehouseName, distinctEdgeWarehouses]);
+
   const nodesExcludingSubscriptionNodes = useMemo(() => {
     const subscriptionNodes = nodes.filter((n) => repoSubscriptionIndexer.is(n.id));
 
@@ -168,6 +210,42 @@ export const Graph = (props: GraphProps) => {
       reactFlowInstance.current?.fitView();
     });
   }, [filterContext?.preferredFilter?.hideSubscriptions]);
+
+  const stageSearch = filterContext?.stageSearch || '';
+  const matchedStageIndices = useMemo(() => {
+    const matched = new Set<string>();
+    const trimmed = stageSearch.trim().toLowerCase();
+    if (!trimmed) {
+      return matched;
+    }
+    for (const stage of props.stages) {
+      const name = stage.metadata?.name?.toLowerCase() || '';
+      if (name.includes(trimmed)) {
+        matched.add(stageIndexer.index(stage));
+      }
+    }
+    return matched;
+  }, [stageSearch, props.stages]);
+
+  // Debounce centering the graph on matches so the view does not jitter while
+  // the user is still typing.
+  useEffect(() => {
+    if (matchedStageIndices.size === 0) {
+      return;
+    }
+    const timer = setTimeout(() => {
+      const nodesToFit = nodes.filter((n) => matchedStageIndices.has(n.id));
+      if (nodesToFit.length > 0) {
+        reactFlowInstance.current?.fitView({
+          nodes: nodesToFit,
+          duration: 400,
+          padding: 0.3,
+          maxZoom: 1
+        });
+      }
+    }, 250);
+    return () => clearTimeout(timer);
+  }, [matchedStageIndices, nodes]);
 
   const loggedRef = useRef(false);
   const mountTimeRef = useRef(performance.now());
@@ -186,11 +264,20 @@ export const Graph = (props: GraphProps) => {
 
   return (
     <GraphContext.Provider
-      value={{ warehouseByName, stackedNodesParents, onStack, onUnstack, ready }}
+      value={{
+        warehouseByName,
+        stackedNodesParents,
+        onStack,
+        onUnstack,
+        ready,
+        hoveredWarehouseName,
+        setHoveredWarehouseName,
+        matchedStageIndices
+      }}
     >
       <ReactFlow
         nodes={nodes}
-        edges={graph.edges}
+        edges={edges}
         nodeTypes={nodeTypes}
         fitView
         fitViewOptions={{
@@ -198,6 +285,7 @@ export const Graph = (props: GraphProps) => {
         }}
         proOptions={{ hideAttribution: true }}
         minZoom={nodes.length > 100 ? 0.4 : 0.1}
+        maxZoom={1.4}
         onlyRenderVisibleElements
         panOnDrag
         onInit={(inst) => (reactFlowInstance.current = inst)}
@@ -224,6 +312,19 @@ export const Graph = (props: GraphProps) => {
             }
           >
             <FontAwesomeIcon icon={faMap} />
+          </ControlButton>
+          <ControlButton
+            title={
+              filterContext?.preferredFilter?.stepEdges ? 'Use Curved Edges' : 'Use Step Edges'
+            }
+            onClick={() =>
+              filterContext?.setPreferredFilter({
+                ...filterContext?.preferredFilter,
+                stepEdges: !filterContext?.preferredFilter?.stepEdges
+              })
+            }
+          >
+            <FontAwesomeIcon icon={faShareNodes} />
           </ControlButton>
         </Controls>
       </ReactFlow>

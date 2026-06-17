@@ -15,7 +15,13 @@ import (
 	"github.com/akuity/kargo/pkg/logging"
 )
 
-const branchPrefix = "refs/heads/"
+const (
+	branchPrefix = "refs/heads/"
+	// headRef is the symbolic ref that points at a repository's default branch.
+	// Querying it with ls-remote yields the default branch tip without needing
+	// to know the branch's name.
+	headRef = "HEAD"
+)
 
 func init() {
 	defaultSelectorRegistry.MustRegister(
@@ -87,6 +93,41 @@ func (n *newestFromBranchSelector) MatchesRef(ref string) bool {
 	return n.branch == branch
 }
 
+// ListRefs implements Selector. It records the unfiltered tip of the subscribed
+// branch, which is sufficient to detect any change relevant to selection: if the
+// tip has not moved, no new commit (path-filtered or not) can have appeared.
+//
+// When the subscription names no branch, it implicitly targets the repository's
+// default branch. Rather than guess that branch's name, this resolves the
+// remote's HEAD, whose commit is the default branch tip whatever it is called --
+// the same branch Select clones via an empty CloneOptions.Branch.
+func (n *newestFromBranchSelector) ListRefs(
+	_ context.Context,
+) (*kargoapi.GitDiscoveryRefs, error) {
+	ref := headRef
+	if n.branch != "" {
+		ref = branchPrefix + n.branch
+	}
+	refs, err := n.lsRemoteFn(n.repoURL, n.clientOptions(), ref)
+	if err != nil {
+		return nil, fmt.Errorf(
+			"error listing branch refs in git repo %q: %w", n.repoURL, err,
+		)
+	}
+	for _, r := range refs {
+		if r.Name == ref {
+			return &kargoapi.GitDiscoveryRefs{BranchHead: r.ID}, nil
+		}
+	}
+	// The ref was not observed -- an explicitly configured branch is absent, or
+	// the repository has no commits yet. Returning a nil (rather than empty)
+	// observation ensures gitRefsEqual never matches, so discovery falls through
+	// to a clone that surfaces a missing branch as it does today. An empty
+	// observation would compare equal to a subsequent empty one and wrongly
+	// short-circuit.
+	return nil, nil
+}
+
 // Select implements the Selector interface.
 func (n *newestFromBranchSelector) Select(ctx context.Context) (
 	[]kargoapi.DiscoveredCommit,
@@ -110,7 +151,7 @@ func (n *newestFromBranchSelector) Select(ctx context.Context) (
 		&git.CloneOptions{
 			Branch:       n.branch,
 			SingleBranch: true,
-			Filter:       git.FilterBlobless,
+			Blobless:     n.blobless,
 		},
 	)
 	if err != nil {

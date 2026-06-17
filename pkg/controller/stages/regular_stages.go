@@ -1350,14 +1350,13 @@ func (r *RegularStageReconciler) startVerification(
 		if existingAnalysisRun != nil {
 			logger.Debug("AnalysisRun already exists for FreightCollection")
 
-			newVI.FinishTime = existingAnalysisRun.Status.CompletedAt()
+			newVI.FinishTime = ptr.To(metav1.Now())
 			newVI.Phase = kargoapi.VerificationPhase(existingAnalysisRun.Status.Phase)
 			newVI.AnalysisRun = &kargoapi.AnalysisRunReference{
 				Name:      existingAnalysisRun.Name,
 				Namespace: existingAnalysisRun.Namespace,
 				Phase:     string(existingAnalysisRun.Status.Phase),
 			}
-			newVI.FinishTime = existingAnalysisRun.Status.CompletedAt()
 			return newVI, nil
 		}
 	}

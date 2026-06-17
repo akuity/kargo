@@ -49,7 +49,11 @@ system to access the git repos.
 
 :::warning
 
-The `wait` option is unreliable for repositories hosted by Bitbucket due to API limitations.
+The `wait` option is unreliable for repositories hosted by Bitbucket. The
+Bitbucket Cloud API does not provide a way to check merge eligibility before
+attempting a merge, so Kargo cannot determine in advance whether a PR is blocked
+by conflicts, failing checks, or other conditions. As a result, Kargo will
+attempt the merge regardless, which may fail unexpectedly.
 
 :::
 
@@ -61,7 +65,7 @@ currently supported Git hosting providers.
 | Provider | Supported Methods | Default |
 | -------- | ----------------- | ------- |
 | Azure | <ul><li>`noFastForward`</li><li>`rebase`</li><li>`rebaseMerge`</li><li>`squash`</li></ul> | First allowed strategy per the target branch's merge type policy; merge commit if no policy is configured |
-| BitBucket | Client does not yet support specifying a merge strategy | The repository's configured default merge strategy |
+| BitBucket | <ul><li>`fast_forward`</li><li>`merge_commit`</li><li>`squash`</li></ul> | The repository's configured default merge strategy |
 | Gitea | <ul><li>`fast-forward-only`</li><li>`manually-merged`</li><li>`merge`</li><li>`rebase`</li><li>`rebase-merge`</li><li>`squash`</li></ul> | `merge` |
 | GitHub | <ul><li>`merge`</li><li>`rebase`</li><li>`squash`</li></ul> | `merge` |
 | GitLab | <ul><li>`merge`</li><li>`squash`</li></ul> | Defers to the merge request and project-level squash settings |

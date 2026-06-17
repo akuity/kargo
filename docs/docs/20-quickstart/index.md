@@ -1,8 +1,31 @@
 ---
+title: Kargo Quickstart
 description: Learn about Kargo by progressing a change through multiple stages in a local Kubernetes cluster
 sidebar_label: Quickstart
 slug: /quickstart
 ---
+
+import Head from '@docusaurus/Head';
+
+<Head>
+  <script type="application/ld+json">{`
+{
+  "@context": "https://schema.org",
+  "@type": "HowTo",
+  "name": "Kargo Quickstart",
+  "description": "Install Kargo locally and progress a change through multiple stages in a Kubernetes cluster.",
+  "totalTime": "PT20M",
+  "step": [
+    {"@type": "HowToStep", "position": 1, "name": "Spin up a local cluster with Kargo installed", "url": "https://docs.kargo.io/quickstart#spin-up-a-local-cluster-with-kargo-installed"},
+    {"@type": "HowToStep", "position": 2, "name": "Set up your demo repository", "url": "https://docs.kargo.io/quickstart#set-up-your-demo-repository"},
+    {"@type": "HowToStep", "position": 3, "name": "Create Argo CD Applications for each stage", "url": "https://docs.kargo.io/quickstart#create-argo-cd-applications-for-each-stage"},
+    {"@type": "HowToStep", "position": 4, "name": "Create your Kargo project and pipeline", "url": "https://docs.kargo.io/quickstart#create-your-kargo-project-and-pipeline"},
+    {"@type": "HowToStep", "position": 5, "name": "Promote freight to the test stage", "url": "https://docs.kargo.io/quickstart#promote-freight-to-the-test-stage"},
+    {"@type": "HowToStep", "position": 6, "name": "Promote to UAT and then production", "url": "https://docs.kargo.io/quickstart#promote-to-uat-and-then-production"}
+  ]
+}
+  `}</script>
+</Head>
 
 # Kargo Quickstart
 

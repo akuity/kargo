@@ -2006,6 +2006,40 @@ func Test_argoCDUpdater_authorizeArgoCDAppUpdate(t *testing.T) {
 			},
 		},
 		{
+			name: "mutation is allowed via list (last entry matches)",
+			appMeta: metav1.ObjectMeta{
+				Annotations: map[string]string{
+					kargoapi.AnnotationKeyAuthorizedStage: "ns-nope:name-nope,ns-yep:name-yep",
+				},
+			},
+		},
+		{
+			name: "mutation is allowed via list with whitespace (first entry matches)",
+			appMeta: metav1.ObjectMeta{
+				Annotations: map[string]string{
+					kargoapi.AnnotationKeyAuthorizedStage: " ns-yep : name-yep , other:stage ",
+				},
+			},
+		},
+		{
+			name: "mutation is not allowed for any list entry",
+			appMeta: metav1.ObjectMeta{
+				Annotations: map[string]string{
+					kargoapi.AnnotationKeyAuthorizedStage: "ns-nope:name-nope,other:stage",
+				},
+			},
+			errMsg: permErr,
+		},
+		{
+			name: "list with a malformed entry cannot be parsed",
+			appMeta: metav1.ObjectMeta{
+				Annotations: map[string]string{
+					kargoapi.AnnotationKeyAuthorizedStage: "ns-yep:name-yep,bogus",
+				},
+			},
+			errMsg: parseErr,
+		},
+		{
 			name: "wildcard namespace with full name",
 			appMeta: metav1.ObjectMeta{
 				Annotations: map[string]string{

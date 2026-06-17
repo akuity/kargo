@@ -12,14 +12,15 @@ import (
 
 // Freight is a struct that contains common fields for freight-related events.
 type Freight struct {
-	Name       string                       `json:"name"`
-	StageName  string                       `json:"stageName"`
-	CreateTime time.Time                    `json:"createTime"`
-	Alias      *string                      `json:"alias,omitempty"`
-	Commits    []kargoapi.GitCommit         `json:"commits,omitempty"`
-	Images     []kargoapi.Image             `json:"images,omitempty"`
-	Charts     []kargoapi.Chart             `json:"charts,omitempty"`
-	Artifacts  []kargoapi.ArtifactReference `json:"artifacts,omitempty"`
+	Name          string                       `json:"name"`
+	StageName     string                       `json:"stageName"`
+	WarehouseName string                       `json:"warehouseName,omitempty"`
+	CreateTime    time.Time                    `json:"createTime"`
+	Alias         *string                      `json:"alias,omitempty"`
+	Commits       []kargoapi.GitCommit         `json:"commits,omitempty"`
+	Images        []kargoapi.Image             `json:"images,omitempty"`
+	Charts        []kargoapi.Chart             `json:"charts,omitempty"`
+	Artifacts     []kargoapi.ArtifactReference `json:"artifacts,omitempty"`
 }
 
 func (f Freight) GetName() string {
@@ -189,6 +190,17 @@ func (f *FreightVerificationUnknown) Type() kargoapi.EventType {
 	return kargoapi.EventTypeFreightVerificationUnknown
 }
 
+// FreightCreated is an event fired when a new piece of Freight is created by
+// a Warehouse or API server
+type FreightCreated struct {
+	Common
+	Freight
+}
+
+func (f *FreightCreated) Type() kargoapi.EventType {
+	return kargoapi.EventTypeFreightCreated
+}
+
 type FreightApproved struct {
 	Common
 	Freight
@@ -290,6 +302,16 @@ func NewFreightVerificationInconclusive(actor, stageName string, freight *kargoa
 	}
 }
 
+// NewFreightCreated creates a new `FreightCreated` event.
+func NewFreightCreated(message, actor string, freight *kargoapi.Freight) *FreightCreated {
+	common := newCommonFromFreight(message, actor, freight)
+	freightEvent := newFreight(freight, "")
+	return &FreightCreated{
+		Common:  common,
+		Freight: freightEvent,
+	}
+}
+
 // NewFreightApproved creates a new `FreightApproved` event.
 func NewFreightApproved(message, actor, stageName string, freight *kargoapi.Freight,
 ) *FreightApproved {
@@ -304,6 +326,9 @@ func (f *Freight) MarshalAnnotationsTo(annotations map[string]string) {
 	annotations[kargoapi.AnnotationKeyEventFreightName] = f.Name
 	annotations[kargoapi.AnnotationKeyEventFreightCreateTime] = f.CreateTime.Format(time.RFC3339)
 	annotations[kargoapi.AnnotationKeyEventStageName] = f.StageName
+	if f.WarehouseName != "" {
+		annotations[kargoapi.AnnotationKeyEventFreightWarehouseName] = f.WarehouseName
+	}
 	if f.Alias != nil {
 		annotations[kargoapi.AnnotationKeyEventFreightAlias] = *f.Alias
 	}
@@ -377,6 +402,13 @@ func (f *FreightVerificationInconclusive) MarshalAnnotations() map[string]string
 	return annotations
 }
 
+func (f *FreightCreated) MarshalAnnotations() map[string]string {
+	annotations := map[string]string{}
+	f.Common.MarshalAnnotationsTo(annotations)
+	f.Freight.MarshalAnnotationsTo(annotations)
+	return annotations
+}
+
 func (f *FreightApproved) MarshalAnnotations() map[string]string {
 	annotations := map[string]string{}
 	f.Common.MarshalAnnotationsTo(annotations)
@@ -392,6 +424,7 @@ func UnmarshalFreightAnnotations(annotations map[string]string) (Freight, error)
 	if name, ok := annotations[kargoapi.AnnotationKeyEventFreightName]; ok && name != "" {
 		evt.Name = name
 		evt.StageName = annotations[kargoapi.AnnotationKeyEventStageName]
+		evt.WarehouseName = annotations[kargoapi.AnnotationKeyEventFreightWarehouseName]
 
 		if createTimeStr, ok := annotations[kargoapi.AnnotationKeyEventFreightCreateTime]; ok && createTimeStr != "" {
 			createTime, err := parseTime(createTimeStr)
@@ -598,6 +631,27 @@ func UnmarshalFreightVerificationAbortedAnnotations(
 	return &evt, nil
 }
 
+// UnmarshalFreightCreatedAnnotations converts the given annotations into a
+// FreightCreated event. This is used by the main event handler to convert the data
+// into a normal structured event, but is exposed for convenience.
+func UnmarshalFreightCreatedAnnotations(
+	eventID string,
+	annotations map[string]string,
+) (*FreightCreated, error) {
+	freight, err := UnmarshalFreightAnnotations(annotations)
+	if err != nil {
+		return nil, fmt.Errorf("failed to unmarshal freight annotations: %w", err)
+	}
+	common, err := UnmarshalCommonAnnotations(eventID, annotations)
+	if err != nil {
+		return nil, fmt.Errorf("failed to unmarshal common annotations: %w", err)
+	}
+	return &FreightCreated{
+		Common:  common,
+		Freight: freight,
+	}, nil
+}
+
 // UnmarshalFreightApprovedAnnotations converts the given annotations into a
 // FreightApproved event. This is used by the main event handler to convert the data
 // into a normal structured event, but is exposed for convenience.
@@ -628,6 +682,9 @@ func newFreight(freight *kargoapi.Freight, stageName string) Freight {
 		CreateTime: freight.CreationTimestamp.Time,
 		Name:       freight.Name,
 		StageName:  stageName,
+	}
+	if freight.Origin.Name != "" {
+		evt.WarehouseName = freight.Origin.Name
 	}
 	if freight.Alias != "" {
 		evt.Alias = &freight.Alias

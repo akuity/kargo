@@ -30,6 +30,9 @@ spec:
         env:
         - name: API_URL
           value: http://kargo-api
+        # Substituted by Tiltfile from $KARGO_BASE_PATH ('' for no basePath).
+        - name: KARGO_BASE_PATH
+          value: "__KARGO_BASE_PATH__"
         ports:
         - name: http
           containerPort: 3333

@@ -106,7 +106,7 @@ func (p *ManagedIdentityProvider) Supports(
 	if req.Type != credentials.TypeImage && req.Type != credentials.TypeHelm {
 		return false, nil
 	}
-	return true, nil
+	return ecrURLRegex.MatchString(req.RepoURL), nil
 }
 
 func (p *ManagedIdentityProvider) GetCredentials(

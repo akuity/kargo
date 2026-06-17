@@ -1,4 +1,4 @@
-{{- if and .Values.api.enabled .Values.api.ingress.enabled }}
+{{- if and .Values.workloads.install .Values.api.enabled .Values.api.ingress.enabled }}
 apiVersion: networking.k8s.io/v1
 kind: Ingress
 metadata:
@@ -7,12 +7,7 @@ metadata:
   labels:
     {{- include "kargo.labels" . | nindent 4 }}
     {{- include "kargo.api.labels" . | nindent 4 }}
-  {{- with (mergeOverwrite (deepCopy .Values.global.annotations) .Values.api.ingress.annotations) }}
-  annotations:
-    {{- range $key, $value := . }}
-    {{ $key }}: {{ $value | quote }}
-    {{- end }}
-  {{- end }}
+  {{- include "kargo.annotations" (dict "root" . "annotations" .Values.api.ingress.annotations) | nindent 2 }}
 spec:
   {{- if .Values.api.ingress.ingressClassName }}
   ingressClassName: {{ .Values.api.ingress.ingressClassName }}
@@ -22,7 +17,7 @@ spec:
     http:
       paths:
       - pathType: {{ .Values.api.ingress.pathType | default "ImplementationSpecific" }}
-        path: /
+        path: {{ .Values.api.basePath | default "/" }}
         backend:
           service:
             name: kargo-api
@@ -34,7 +29,7 @@ spec:
               {{- end }}
       {{- if and .Values.externalWebhooksServer.enabled (not .Values.externalWebhooksServer.ingress.enabled) }}
       - pathType: {{ .Values.api.ingress.pathType | default "ImplementationSpecific" }}
-        path: /webhooks
+        path: {{ .Values.externalWebhooksServer.basePath | default (printf "%s/webhooks" (.Values.api.basePath | default "")) }}
         backend:
           service:
             name: kargo-external-webhooks-server

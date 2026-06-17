@@ -1,0 +1,52 @@
+# Kargo
+
+> Kargo is a Kubernetes-native continuous promotion platform for GitOps workflows. Warehouses watch for new artifacts (container images, Git commits, Helm charts), bundle them together as Freight, and promote that as a unit through a pipeline of Stages.
+
+Kargo complements GitOps agents like Argo CD by automating the movement of changes from one environment to the next, while leaving deployment itself to the GitOps agent. Core resources are Kubernetes CRDs: `Project`, `Warehouse`, `Freight`, `Stage`, and `Promotion`.
+
+## Getting Started
+
+- [Home](https://docs.kargo.io/): Overview of Kargo and entry point to the documentation.
+- [Quickstart](https://docs.kargo.io/quickstart): Run Kargo locally and walk through a complete promotion pipeline.
+- [FAQs](https://docs.kargo.io/faqs): Answers to common questions about Kargo's design and usage.
+
+## Operator Guide
+
+- [Operator Guide](https://docs.kargo.io/operator-guide): For platform engineers installing and configuring Kargo.
+- [Basic Installation](https://docs.kargo.io/operator-guide/basic-installation): Install Kargo via Helm with default settings.
+- [Advanced Installation](https://docs.kargo.io/operator-guide/advanced-installation): Production-grade installation, ingress, OIDC, and external services.
+- [Architecture](https://docs.kargo.io/operator-guide/architecture): How the API server, controllers, webhooks, and garbage collector fit together.
+- [Cluster Configuration](https://docs.kargo.io/operator-guide/cluster-configuration): Cluster-wide settings and resources.
+- [Security](https://docs.kargo.io/operator-guide/security): Authentication, authorization, and securing a Kargo installation.
+
+## User Guide
+
+- [User Guide](https://docs.kargo.io/user-guide): For end users defining and operating promotion pipelines.
+- [Installing the CLI](https://docs.kargo.io/user-guide/installing-the-cli): Install and configure the `kargo` CLI.
+- [Core Concepts](https://docs.kargo.io/user-guide/core-concepts): Projects, Warehouses, Freight, Stages, Promotions, and how they relate.
+- [How-To Guides](https://docs.kargo.io/user-guide/how-to-guides): Task-oriented guides for common promotion workflows.
+- [Patterns](https://docs.kargo.io/user-guide/patterns): Reference patterns for structuring pipelines.
+- [Examples](https://docs.kargo.io/user-guide/examples): Worked examples of complete pipelines.
+- [Security](https://docs.kargo.io/user-guide/security): Project-level RBAC and credential management.
+- [Reference Docs](https://docs.kargo.io/user-guide/reference-docs): Promotion step reference, expression language, and CRD field reference.
+
+## Contributor Guide
+
+- [Contributor Guide](https://docs.kargo.io/contributor-guide): For developers working on Kargo itself.
+- [Hacking on Kargo](https://docs.kargo.io/contributor-guide/hacking-on-kargo): Local development setup with Tilt.
+- [Debugging Kargo](https://docs.kargo.io/contributor-guide/debugging-kargo): Debugging the controllers and API server.
+- [Signing Commits](https://docs.kargo.io/contributor-guide/signing-commits): DCO sign-off requirements.
+- [Code of Conduct](https://docs.kargo.io/contributor-guide/code-of-conduct): Community standards.
+
+## API Reference
+
+- [REST API Reference](https://docs.kargo.io/api-docs): OpenAPI reference for the Kargo REST API.
+- [API Documentation](https://docs.kargo.io/api-documentation): Notes on the deprecated ConnectRPC API and migration guidance.
+
+## Optional
+
+- [Roadmap](https://docs.kargo.io/roadmap): Planned and in-progress work.
+- [Resources](https://docs.kargo.io/resources): Talks, articles, and community resources.
+- [Release Notes](https://docs.kargo.io/release-notes): Per-version changelogs.
+- [GitHub Repository](https://github.com/akuity/kargo): Source code, issues, and discussions.
+- [Discord Community](https://akuity.community): Community chat.

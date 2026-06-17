@@ -7,6 +7,8 @@ import { timerangeTypes } from '../freight/filter-timerange-utils';
 export type FreightTimelineControllerContextType = {
   viewingFreight: Freight | null;
   setViewingFreight: (freight: Freight | null) => void;
+  stageSearch: string;
+  setStageSearch: (search: string) => void;
   preferredFilter: {
     showColors: boolean;
     showAlias: boolean;
@@ -19,6 +21,7 @@ export type FreightTimelineControllerContextType = {
     images: boolean;
     view: 'graph' | 'list';
     showMinimap: boolean;
+    stepEdges: boolean;
   };
   setPreferredFilter: (filter: FreightTimelineControllerContextType['preferredFilter']) => void;
 };

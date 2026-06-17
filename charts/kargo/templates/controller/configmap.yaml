@@ -1,19 +1,23 @@
-{{- if .Values.controller.enabled }}
+{{- if and .Values.workloads.install .Values.controller.enabled }}
+{{- $kc := .Values.controller.kubeconfigSecrets.kargo | default .Values.kubeconfigSecrets.kargo }}
+{{- $argocdKc := .Values.controller.kubeconfigSecrets.argocd | default .Values.kubeconfigSecrets.argocd }}
 apiVersion: v1
 kind: ConfigMap
 metadata:
-  name: kargo-controller
+  name: {{ include "kargo.controller.fullname" . }}
   namespace: {{ .Release.Namespace }}
   labels:
     {{- include "kargo.labels" . | nindent 4 }}
     {{- include "kargo.controller.labels" . | nindent 4 }}
+    {{- include "kargo.controller.idLabel" . | nindent 4 }}
+  {{- include "kargo.annotations" (dict "root" . "annotations" .Values.controller.annotations) | nindent 2 }}
 data:
   {{- if .Values.api.enabled }}
   API_SERVER_BASE_URL: {{ include "kargo.api.baseURL" . }}
   {{- end }}
   LOG_LEVEL: {{ quote .Values.controller.logLevel }}
   LOG_FORMAT: {{ quote .Values.controller.logFormat }}
-  KARGO_NAMESPACE: {{ .Release.Namespace }}
+  KARGO_NAMESPACE: {{ include "kargo.dataNamespace" . }}
   SYSTEM_RESOURCES_NAMESPACE: {{ quote .Values.global.systemResources.namespace }}
   {{- if or (not .Values.controller.shardName) .Values.controller.isDefault }}
   IS_DEFAULT_CONTROLLER: "true"
@@ -21,7 +25,7 @@ data:
   {{- if .Values.controller.shardName }}
   SHARD_NAME: {{ .Values.controller.shardName }}
   {{- end }}
-  {{- if .Values.kubeconfigSecrets.kargo }}
+  {{- if $kc }}
   KUBECONFIG: /etc/kargo/kubeconfigs/kubeconfig.yaml
   {{- end }}
   SHARED_RESOURCES_NAMESPACE: {{ quote .Values.global.sharedResources.namespace }}
@@ -45,7 +49,7 @@ data:
   {{- end }}
   ARGOCD_INTEGRATION_ENABLED: {{ quote .Values.controller.argocd.integrationEnabled }}
   {{- if .Values.controller.argocd.integrationEnabled }}
-  {{- if .Values.kubeconfigSecrets.argocd }}
+  {{- if $argocdKc }}
   ARGOCD_KUBECONFIG: /etc/kargo/kubeconfigs/argocd-kubeconfig.yaml
   {{- end }}
   ARGOCD_NAMESPACE: {{ .Values.controller.argocd.namespace | default "argocd" }}

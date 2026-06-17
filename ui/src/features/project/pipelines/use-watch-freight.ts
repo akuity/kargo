@@ -95,14 +95,24 @@ export const useWatchFreight = (project: string) => {
             (current) => deleteFreight(current, freight)
           );
         } else {
-          const updatedFreight = upsertFreight(currentFreight, freight);
-          const queryFreightKey = createConnectQueryKey({
-            cardinality: 'finite',
-            schema: queryFreight,
-            input: { project },
-            transport: transportWithAuth
-          });
-          client.setQueryData(queryFreightKey, updatedFreight);
+          // Update all queryFreight caches for this project, including
+          // warehouse-filtered variants, which use a different cache key.
+          // Using setQueriesData (rather than setQueryData) ensures we only
+          // touch caches that already have an active query backing them,
+          // avoiding orphaned entries with no queryFn that would crash on
+          // refetch.
+          client.setQueriesData<QueryFreightResponse>(
+            {
+              queryKey: createConnectQueryKey({
+                cardinality: 'finite',
+                schema: queryFreight,
+                input: { project },
+                transport: transportWithAuth
+              }),
+              exact: false
+            },
+            (current) => upsertFreight(current, freight)
+          );
         }
       }
     };

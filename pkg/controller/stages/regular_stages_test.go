@@ -3692,6 +3692,13 @@ func TestRegularStageReconciler_startVerification(t *testing.T) {
 				assert.NotEmpty(t, vi.ID)
 				assert.Equal(t, kargoapi.VerificationPhaseSuccessful, vi.Phase)
 				assert.Equal(t, "existing-analysis", vi.AnalysisRun.Name)
+				// Both timestamps should be the reconciliation time so that
+				// startTime <= finishTime always holds regardless of when the
+				// AnalysisRun internally ran.
+				require.NotNil(t, vi.StartTime)
+				require.NotNil(t, vi.FinishTime)
+				assert.Equal(t, now.Unix(), vi.StartTime.Unix())
+				assert.Equal(t, now.Unix(), vi.FinishTime.Unix())
 			},
 		},
 		{
@@ -3737,6 +3744,10 @@ func TestRegularStageReconciler_startVerification(t *testing.T) {
 				assert.NotEmpty(t, vi.ID)
 				assert.Equal(t, kargoapi.VerificationPhaseSuccessful, vi.Phase)
 				assert.Equal(t, "existing-analysis", vi.AnalysisRun.Name)
+				require.NotNil(t, vi.StartTime)
+				require.NotNil(t, vi.FinishTime)
+				assert.Equal(t, now.Unix(), vi.StartTime.Unix())
+				assert.Equal(t, now.Unix(), vi.FinishTime.Unix())
 			},
 		},
 		{

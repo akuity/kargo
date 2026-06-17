@@ -1,4 +1,8 @@
-{{- if .Values.api.enabled }}
+{{- if and .Values.workloads.install .Values.api.enabled }}
+{{- if and .Values.api.oidc.dex.enabled .Values.api.oidc.dex.byo.enabled }}
+{{- fail "api.oidc.dex.enabled and api.oidc.dex.byo.enabled are mutually exclusive: choose either the chart-installed Dex (api.oidc.dex.enabled) or proxy to an externally-managed Dex (api.oidc.dex.byo.enabled), not both." }}
+{{- end }}
+{{- $kc := .Values.api.kubeconfigSecrets.kargo | default .Values.kubeconfigSecrets.kargo }}
 apiVersion: v1
 kind: ConfigMap
 metadata:
@@ -7,11 +11,15 @@ metadata:
   labels:
     {{- include "kargo.labels" . | nindent 4 }}
     {{- include "kargo.api.labels" . | nindent 4 }}
+  {{- include "kargo.annotations" (dict "root" . "annotations" .Values.api.annotations) | nindent 2 }}
 data:
-  KARGO_NAMESPACE: {{ .Release.Namespace }}
+  KARGO_NAMESPACE: {{ include "kargo.dataNamespace" . }}
   LOG_LEVEL: {{ quote .Values.api.logLevel }}
   LOG_FORMAT: {{ quote .Values.api.logFormat }}
-  {{- if .Values.kubeconfigSecrets.kargo }}
+  {{- if .Values.api.basePath }}
+  API_BASE_PATH: {{ quote .Values.api.basePath }}
+  {{- end }}
+  {{- if $kc }}
   KUBECONFIG: /etc/kargo/kubeconfig.yaml
   {{- end }}
   {{- if .Values.api.tls.enabled }}
@@ -36,11 +44,11 @@ data:
   {{- end }}
   {{- if .Values.api.oidc.enabled }}
   OIDC_ENABLED: "true"
-  OIDC_ADDITIONAL_SCOPES: {{ join "," .Values.api.oidc.additionalScopes }}
+  OIDC_ADDITIONAL_SCOPES: {{ join "," .Values.api.oidc.additionalScopes | quote }}
   {{- if .Values.api.oidc.globalServiceAccounts.namespaces }}
-  GLOBAL_SERVICE_ACCOUNT_NAMESPACES: {{ .Release.Namespace }},{{ join "," .Values.api.oidc.globalServiceAccounts.namespaces }}
+  GLOBAL_SERVICE_ACCOUNT_NAMESPACES: {{ include "kargo.dataNamespace" . }},{{ join "," .Values.api.oidc.globalServiceAccounts.namespaces }}
   {{- else }}
-  GLOBAL_SERVICE_ACCOUNT_NAMESPACES: {{ .Release.Namespace }}
+  GLOBAL_SERVICE_ACCOUNT_NAMESPACES: {{ include "kargo.dataNamespace" . }}
   {{- end }}
   {{- if .Values.api.oidc.dex.enabled }}
   OIDC_ISSUER_URL: {{ include "kargo.api.baseURL" . }}/dex
@@ -55,12 +63,23 @@ data:
   {{- if .Values.api.oidc.cliClientID }}
   OIDC_CLI_CLIENT_ID: {{ quote .Values.api.oidc.cliClientID }}
   {{- end }}
+  {{- if .Values.api.oidc.dex.byo.enabled }}
+  DEX_ENABLED: "true"
+  DEX_SERVER_ADDRESS: {{ .Values.api.oidc.dex.byo.serverAddress | default (printf "https://kargo-dex-server.%s.svc" .Release.Namespace) }}
+  {{- if .Values.api.oidc.dex.byo.caCertPath }}
+  DEX_CA_CERT_PATH: {{ quote .Values.api.oidc.dex.byo.caCertPath }}
+  {{- end }}
+  {{- end }}
   {{- end }}
   OIDC_USERNAME_CLAIM: {{ quote .Values.api.oidc.usernameClaim | default "email" }}
   {{- end }}
   {{- if .Values.api.argocd.urls }}
   ARGOCD_NAMESPACE: {{ .Values.controller.argocd.namespace | default "argocd" }}
-  ARGOCD_URLS: {{ range $key, $val := .Values.api.argocd.urls }}{{ $key }}={{ $val }},{{- end }}
+  {{- $pairs := list }}
+  {{- range $key, $val := .Values.api.argocd.urls }}
+  {{- $pairs = append $pairs (printf "%s=%s" $key $val) }}
+  {{- end }}
+  ARGOCD_URLS: {{ join "," $pairs }}
   {{- end }}
   ROLLOUTS_INTEGRATION_ENABLED: {{ quote .Values.api.rollouts.integrationEnabled }}
   {{- if and .Values.api.rollouts.integrationEnabled .Values.api.rollouts.logs.enabled }}

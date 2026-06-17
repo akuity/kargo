@@ -37,6 +37,12 @@ var (
 		Kind:    "Secret",
 	}
 
+	freightGVK = schema.GroupVersionKind{
+		Group:   kargoapi.GroupVersion.Group,
+		Version: kargoapi.GroupVersion.Version,
+		Kind:    "Freight",
+	}
+
 	errSecretManagementDisabled = libhttp.ErrorStr(
 		"secret management is not enabled",
 		http.StatusNotImplemented,

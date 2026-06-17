@@ -29,7 +29,7 @@ jobs:
       unstable-version: ${{ steps.unstable-version.outputs.unstable-version }}
     steps:
     - name: Harden the runner (Audit all outbound calls)
-      uses: step-security/harden-runner@8d3c67de8e2fe68ef647c8db1e6a09f647780f40 # v2.19.0
+      uses: step-security/harden-runner@9af89fc71515a100421586dfdb3dc9c984fbf411 # v2.19.4
       with:
         egress-policy: audit
 
@@ -44,7 +44,7 @@ jobs:
         echo "Repository is set to: $REPO"
         echo "repo=$REPO" >> $GITHUB_OUTPUT
     - name: Checkout
-      uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
+      uses: actions/checkout@df4cb1c069e1874edd31b4311f1884172cec0e10 # v6.0.3
     - name: Setup Go
       uses: actions/setup-go@4a3601121dd01d1626a1e23e37211e3254c1c06c # v6.4.0
       with:
@@ -58,24 +58,24 @@ jobs:
         NEW_VERSION=$(awk 'BEGIN {FS=OFS="."} {$2++; print}' <<< "${LATEST_VERSION}")
         echo "unstable-version=${NEW_VERSION}-unstable-$(date +'%Y%m%d')" >> $GITHUB_OUTPUT
     - name: Set up QEMU
-      uses: docker/setup-qemu-action@ce360397dd3f832beb865e1373c09c0e9f86d70a # v4.0.0
+      uses: docker/setup-qemu-action@06116385d9baf250c9f4dcb4858b16962ea869c3 # v4.1.0
     - name: Set up Docker Buildx
-      uses: docker/setup-buildx-action@4d04d5d9486b7bd6fa91e7baf45bbb4f8b9deedd # v4.0.0
+      uses: docker/setup-buildx-action@d7f5e7f509e45cec5c76c4d5afdd7de93d0b3df5 # v4.1.0
       with:
         driver-opts: network=host
     - name: Install Cosign
-      uses: sigstore/cosign-installer@cad07c2e89fa2edd6e2d7bab4c1aa38e53f76003 # v4.1.1
+      uses: sigstore/cosign-installer@6f9f17788090df1f26f669e9d70d6ae9567deba6 # v4.1.2
       with:
         cosign-release: 'v2.2.1' # optional
     - name: Login to GHCR
-      uses: docker/login-action@4907a6ddec9925e35a0a9e82d7399ccc52663121 # v4.1.0
+      uses: docker/login-action@650006c6eb7dba73a995cc03b0b2d7f5ca915bee # v4.2.0
       with:
         registry: ghcr.io
         username: ${{ github.actor }}
         password: ${{ secrets.GITHUB_TOKEN }}
     - name: Docker meta
       id: meta
-      uses: docker/metadata-action@030e881283bb7a6894de51c315a6bfe6a94e05cf # v6.0.0
+      uses: docker/metadata-action@80c7e94dd9b9319bd5eb7a0e0fe9291e23a2a2e9 # v6.1.0
       with:
         images: ${{ steps.repo.outputs.repo }}
         flavor: latest=false
@@ -89,7 +89,7 @@ jobs:
         docker push localhost:5000/kargo-base:latest-amd64
     - name: Build and push final image
       id: image
-      uses: docker/build-push-action@bcafcacb16a39f128d818304e6c9c0c18556b85f # v7.1.0
+      uses: docker/build-push-action@f9f3042f7e2789586610d6e8b85c8f03e5195baf # v7.2.0
       with:
         platforms: linux/amd64,linux/arm64
         build-args: |
@@ -111,6 +111,18 @@ jobs:
           -a "sha=${{ github.sha }}" \
           --yes \
           ${{ steps.repo.outputs.repo}}@${{ steps.image.outputs.digest}}
+    - name: Install Grype
+      id: grype
+      uses: anchore/scan-action/download-grype@e1165082ffb1fe366ebaf02d8526e7c4989ea9d2 # v7.4.0
+      with:
+        cache-db: true
+    - name: Scan image for CVEs
+      env:
+        GRYPE_CMD: ${{ steps.grype.outputs.cmd }}
+        FAIL_ON: "" # report-only; set to "high" to enforce
+      # Scan the just-pushed digest; VEX lookups always use the canonical
+      # (non-unstable) repo path.
+      run: ./hack/cve-scan.sh "registry:${{ steps.repo.outputs.repo }}@${{ steps.image.outputs.digest }}" "ghcr.io/akuity/kargo"
     - name: Publish SBOM
       if: github.event_name == 'release'
       uses: anchore/sbom-action@e22c389904149dbc22b58101806040fa8d37a610 # v0.24.0
@@ -141,7 +153,7 @@ jobs:
     runs-on: ubuntu-latest
     steps:
     - name: Harden the runner (Audit all outbound calls)
-      uses: step-security/harden-runner@8d3c67de8e2fe68ef647c8db1e6a09f647780f40 # v2.19.0
+      uses: step-security/harden-runner@9af89fc71515a100421586dfdb3dc9c984fbf411 # v2.19.4
       with:
         egress-policy: audit
 
@@ -170,13 +182,13 @@ jobs:
       with:
         version: '3.19.4'
     - name: Login to GHCR
-      uses: docker/login-action@4907a6ddec9925e35a0a9e82d7399ccc52663121 # v4.1.0
+      uses: docker/login-action@650006c6eb7dba73a995cc03b0b2d7f5ca915bee # v4.2.0
       with:
         registry: ghcr.io
         username: ${{ github.actor }}
         password: ${{ secrets.GITHUB_TOKEN }}
     - name: Checkout code
-      uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
+      uses: actions/checkout@df4cb1c069e1874edd31b4311f1884172cec0e10 # v6.0.3
     - name: Publish chart
       env:
         HELM_EXPERIMENTAL_OCI: '1'
@@ -193,12 +205,12 @@ jobs:
     runs-on: ubuntu-latest
     steps:
     - name: Harden the runner (Audit all outbound calls)
-      uses: step-security/harden-runner@8d3c67de8e2fe68ef647c8db1e6a09f647780f40 # v2.19.0
+      uses: step-security/harden-runner@9af89fc71515a100421586dfdb3dc9c984fbf411 # v2.19.4
       with:
         egress-policy: audit
 
     - name: Checkout code
-      uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
+      uses: actions/checkout@df4cb1c069e1874edd31b4311f1884172cec0e10 # v6.0.3
     - name: Install pnpm
       uses: pnpm/action-setup@fc06bc1257f339d1d5d8b3a19a8cae5388b55320 # v4.4.0
       with:
@@ -231,7 +243,7 @@ jobs:
       contents: write
     runs-on: ubuntu-latest
     container:
-      image: &golangImage golang:1.26.2-trixie
+      image: &golangImage golang:1.26.3-trixie
     strategy:
       matrix:
         os: [linux, darwin, windows]
@@ -245,12 +257,12 @@ jobs:
       hash-windows-arm64: ${{ steps.hash.outputs.hash-windows-arm64 }}
     steps:
     - name: Harden the runner (Audit all outbound calls)
-      uses: step-security/harden-runner@8d3c67de8e2fe68ef647c8db1e6a09f647780f40 # v2.19.0
+      uses: step-security/harden-runner@9af89fc71515a100421586dfdb3dc9c984fbf411 # v2.19.4
       with:
         egress-policy: audit
 
     - name: Checkout code
-      uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
+      uses: actions/checkout@df4cb1c069e1874edd31b4311f1884172cec0e10 # v6.0.3
     - uses: actions/cache@27d5ce7f107fe9357f9df03efb73ab90386fccae # v5.0.5
       with:
         path: /go/pkg/mod
@@ -308,12 +320,12 @@ jobs:
         arch: [amd64, arm64]
     steps:
     - name: Harden the runner (Audit all outbound calls)
-      uses: step-security/harden-runner@8d3c67de8e2fe68ef647c8db1e6a09f647780f40 # v2.19.0
+      uses: step-security/harden-runner@9af89fc71515a100421586dfdb3dc9c984fbf411 # v2.19.4
       with:
         egress-policy: audit
 
     - name: Checkout code
-      uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
+      uses: actions/checkout@df4cb1c069e1874edd31b4311f1884172cec0e10 # v6.0.3
     - uses: actions/cache@27d5ce7f107fe9357f9df03efb73ab90386fccae # v5.0.5
       with:
         path: /go/pkg/mod
@@ -349,7 +361,7 @@ jobs:
       run: |
         apt update && apt install awscli -y
     - name: Configure AWS credentials
-      uses: aws-actions/configure-aws-credentials@ec61189d14ec14c8efccab744f656cffd0e33f37 # v6.1.0
+      uses: aws-actions/configure-aws-credentials@e7f100cf4c008499ea8adda475de1042d6975c7b # v6.2.0
       with:
         role-to-assume: ${{ secrets.AWS_ROLE }}
         aws-region: us-west-2
@@ -375,7 +387,7 @@ jobs:
       HASHES: ${{ toJSON(needs.publish-cli.outputs) }}
     steps:
     - name: Harden the runner (Audit all outbound calls)
-      uses: step-security/harden-runner@8d3c67de8e2fe68ef647c8db1e6a09f647780f40 # v2.19.0
+      uses: step-security/harden-runner@9af89fc71515a100421586dfdb3dc9c984fbf411 # v2.19.4
       with:
         egress-policy: audit
 
@@ -413,12 +425,12 @@ jobs:
       image: *golangImage
     steps:
     - name: Harden the runner (Audit all outbound calls)
-      uses: step-security/harden-runner@8d3c67de8e2fe68ef647c8db1e6a09f647780f40 # v2.19.0
+      uses: step-security/harden-runner@9af89fc71515a100421586dfdb3dc9c984fbf411 # v2.19.4
       with:
         egress-policy: audit
 
     - name: Checkout code
-      uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
+      uses: actions/checkout@df4cb1c069e1874edd31b4311f1884172cec0e10 # v6.0.3
     - name: Generate best releases JSON
       run: |
         mkdir _site

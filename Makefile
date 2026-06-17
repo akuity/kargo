@@ -186,6 +186,25 @@ build-cli:
 		-o bin/kargo-$(GOOS)-$(GOARCH)$(shell [ ${GOOS} = windows ] && echo .exe) \
 		./cmd/cli
 
+.PHONY: build-governance-bot
+build-governance-bot:
+	CGO_ENABLED=0 go build \
+		-ldflags "-w -s" \
+		-o bin/governance-bot \
+		./cmd/governance-bot
+
+.PHONY: build-governance-bot-lambda
+build-governance-bot-lambda:
+	GOOS=linux GOARCH=arm64 CGO_ENABLED=0 go build \
+		-ldflags "-w -s" \
+		-o bin/governance-bot-lambda/bootstrap \
+		./cmd/governance-bot
+
+.PHONY: package-governance-bot-lambda
+package-governance-bot-lambda: build-governance-bot-lambda
+	cd bin/governance-bot-lambda && zip -j governance-bot.zip bootstrap
+	@echo "Package ready: bin/governance-bot-lambda/governance-bot.zip"
+
 .PHONY: sign-and-notarize-cli
 sign-and-notarize-cli: install-quill
 	$(QUILL) sign-and-notarize --p12 $(QUILL_SIGN_P12) $(KARGO_BIN_PATH)
@@ -260,6 +279,10 @@ codegen-controller: install-controller-gen
 	$(CONTROLLER_GEN) \
 		object:headerFile=hack/boilerplate.go.txt \
 		paths=./...
+
+.PHONY: codegen-bitbucket-client
+codegen-bitbucket-client: install-oapi-codegen
+	cd pkg/gitprovider/bitbucket/cloud && $(OAPI_CODEGEN_LINK) --config spec/oapi-codegen.yaml spec/bitbucket.gen.json
 
 .PHONY: codegen-schema-to-go
 codegen-schema-to-go: install-goimports
@@ -381,6 +404,11 @@ hack-build: build-base-image
 hack-build-cli: hack-build-dev-tools
 	@# Local values of GOOS and GOARCH get passed into the container.
 	$(DOCKER_CMD) sh -c 'GOOS=$(GOOS) GOARCH=$(GOARCH) make build-cli'
+
+.PHONY: hack-build-governance-bot
+hack-build-governance-bot: hack-build-dev-tools
+	@# Local values of GOOS and GOARCH get passed into the container.
+	$(DOCKER_CMD) sh -c 'GOOS=$(GOOS) GOARCH=$(GOARCH) make build-governance-bot'
 
 .PHONY: hack-kind-up
 hack-kind-up: install-ctlptl install-kind

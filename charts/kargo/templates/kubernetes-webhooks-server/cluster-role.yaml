@@ -1,4 +1,4 @@
-{{- if and .Values.webhooksServer.enabled .Values.rbac.installClusterRoles }}
+{{- if and .Values.dataPlane.install .Values.rbac.installClusterRoles .Values.webhooksServer.enabled }}
 apiVersion: rbac.authorization.k8s.io/v1
 kind: ClusterRole
 metadata:
@@ -6,6 +6,7 @@ metadata:
   labels:
     {{- include "kargo.labels" . | nindent 4 }}
     {{- include "kargo.kubernetesWebhooksServer.labels" . | nindent 4 }}
+  {{- include "kargo.annotations" (dict "root" . "annotations" .Values.webhooksServer.annotations) | nindent 2 }}
 rules:
 - apiGroups:
   - ""
@@ -80,6 +81,7 @@ metadata:
   labels:
     {{- include "kargo.labels" . | nindent 4 }}
     {{- include "kargo.kubernetesWebhooksServer.labels" . | nindent 4 }}
+  {{- include "kargo.annotations" (dict "root" . "annotations" .Values.webhooksServer.annotations) | nindent 2 }}
 rules:
 - apiGroups:
   - kargo.akuity.io
@@ -101,6 +103,7 @@ metadata:
   labels:
     {{- include "kargo.labels" . | nindent 4 }}
     {{- include "kargo.kubernetesWebhooksServer.labels" . | nindent 4 }}
+  {{- include "kargo.annotations" (dict "root" . "annotations" .Values.webhooksServer.annotations) | nindent 2 }}
 rules:
 - apiGroups:
   - kargo.akuity.io

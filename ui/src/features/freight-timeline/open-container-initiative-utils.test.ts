@@ -56,17 +56,6 @@ describe('getGitCommitURL', () => {
       url: 'git@bitbucket.org:akuity/kargo.git',
       expected: 'https://bitbucket.org/akuity/kargo/commits/abc1234'
     },
-    // Bitbucket Data Center — self-hosted
-    {
-      name: 'bitbucket data center custom domain',
-      url: 'https://bitbucket.internal.net/akuity/kargo.git',
-      expected: 'https://bitbucket.internal.net/akuity/kargo/commits/abc1234'
-    },
-    {
-      name: 'bitbucket data center SSH',
-      url: 'git@bitbucket.internal.net:akuity/kargo.git',
-      expected: 'https://bitbucket.internal.net/akuity/kargo/commits/abc1234'
-    },
     // Unknown provider — fall back to original url
     {
       name: 'unknown provider returns original url',

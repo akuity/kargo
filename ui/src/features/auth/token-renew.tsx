@@ -1,4 +1,3 @@
-import { useQuery as useConnectQuery } from '@connectrpc/connect-query';
 import { useQuery } from '@tanstack/react-query';
 import { notification } from 'antd';
 import {
@@ -13,7 +12,7 @@ import { useNavigate, useSearchParams } from 'react-router-dom';
 
 import { isSafeRedirectPath, redirectToQueryParam, refreshTokenKey } from '@ui/config/auth';
 import { paths } from '@ui/config/paths';
-import { getPublicConfig } from '@ui/gen/api/service/v1alpha1/service-KargoService_connectquery';
+import { useGetPublicConfig } from '@ui/gen/api/v2/system/system';
 
 import { LoadingState } from '../common';
 
@@ -25,7 +24,8 @@ export const TokenRenew = () => {
   const [searchParams] = useSearchParams();
   const { login: onLogin, logout } = useAuthContext();
 
-  const { data, isError } = useConnectQuery(getPublicConfig);
+  const { data: response, isError } = useGetPublicConfig();
+  const data = response?.data;
 
   const issuerUrl = React.useMemo(() => {
     try {
@@ -94,7 +94,14 @@ export const TokenRenew = () => {
         }
 
         onLogin(result.id_token, result.refresh_token);
-        navigate(safeRedirectQuery || paths.home);
+        if (safeRedirectQuery) {
+          // safeRedirectQuery is an absolute path that already carries the
+          // deployed basePath, so go through window.location to avoid
+          // react-router applying its basename a second time.
+          window.location.replace(window.location.origin + safeRedirectQuery);
+        } else {
+          navigate(paths.home);
+        }
       } catch (err) {
         logout();
         navigate(

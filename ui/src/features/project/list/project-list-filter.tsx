@@ -1,4 +1,3 @@
-import { useQuery } from '@connectrpc/connect-query';
 import { faMagnifyingGlass } from '@fortawesome/free-solid-svg-icons';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
 import { AutoComplete, Button } from 'antd';
@@ -6,7 +5,7 @@ import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 
 import { paths } from '@ui/config/paths';
-import { listProjects } from '@ui/gen/api/service/v1alpha1/service-KargoService_connectquery';
+import { useListProjects } from '@ui/gen/api/v2/core/core';
 
 export const ProjectListFilter = ({
   onChange,
@@ -15,11 +14,11 @@ export const ProjectListFilter = ({
   onChange: (filter: string) => void;
   init?: string;
 }) => {
-  const { data } = useQuery(listProjects);
+  const { data } = useListProjects();
   const [filter, setFilter] = useState(init || '');
   const navigate = useNavigate();
 
-  const filteredProjects = data?.projects.filter((p) =>
+  const filteredProjects = data?.data?.items?.filter((p) =>
     p.metadata?.name?.toLowerCase().includes(filter.toLowerCase())
   );
 

@@ -1,4 +1,5 @@
-{{- if .Values.managementController.enabled }}
+{{- if and .Values.workloads.install .Values.managementController.enabled }}
+{{- $kc := .Values.managementController.kubeconfigSecrets.kargo | default .Values.kubeconfigSecrets.kargo }}
 apiVersion: v1
 kind: ConfigMap
 metadata:
@@ -7,9 +8,10 @@ metadata:
   labels:
     {{- include "kargo.labels" . | nindent 4 }}
     {{- include "kargo.managementController.labels" . | nindent 4 }}
+  {{- include "kargo.annotations" (dict "root" . "annotations" .Values.managementController.annotations) | nindent 2 }}
 data:
   EXTERNAL_WEBHOOK_SERVER_BASE_URL: {{ include "kargo.externalWebhooksServer.baseURL" . }}
-  KARGO_NAMESPACE: {{ .Release.Namespace }}
+  KARGO_NAMESPACE: {{ include "kargo.dataNamespace" . }}
   CLUSTER_SECRETS_NAMESPACE: {{ quote .Values.global.clusterSecretsNamespace }}
   SYSTEM_RESOURCES_NAMESPACE: {{ quote .Values.global.systemResources.namespace }}
   {{- if .Values.controller.serviceAccount.clusterWideSecretReadingEnabled }}
@@ -26,7 +28,7 @@ data:
   SHARED_RESOURCES_NAMESPACE: {{ quote .Values.global.sharedResources.namespace }}
   LOG_LEVEL: {{ quote .Values.managementController.logLevel }}
   LOG_FORMAT: {{ quote .Values.managementController.logFormat }}
-  {{- if .Values.kubeconfigSecrets.kargo }}
+  {{- if $kc }}
   KUBECONFIG: /etc/kargo/kubeconfigs/kubeconfig.yaml
   {{- end }}
   MAX_CONCURRENT_NAMESPACE_RECONCILES: {{ .Values.managementController.reconcilers.namespaces.maxConcurrentReconciles | default .Values.managementController.reconcilers.maxConcurrentReconciles | quote }}

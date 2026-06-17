@@ -7,6 +7,36 @@ Expand the name of the chart.
 {{- end -}}
 
 {{/*
+kargo.controller.suffix returns `-<controller.id>` when controller.id is set,
+empty otherwise.
+*/}}
+{{- define "kargo.controller.suffix" -}}
+{{- if .Values.controller.id -}}-{{ .Values.controller.id }}{{- end -}}
+{{- end -}}
+
+{{/*
+kargo.controller.fullname returns the controller's base name, suffixed, if
+applicable with `-<controller.id>`. Setting `controller.id` therefore allows for
+installing multiple controllers into a single cluster or even a single namespace
+(each as its own, separate Helm release) without name collisions.
+*/}}
+{{- define "kargo.controller.fullname" -}}
+kargo-controller{{ include "kargo.controller.suffix" . }}
+{{- end -}}
+
+{{/*
+kargo.controller.idLabel emits the `akuity.io/kargo-controller-id` label line
+when controller.id is set, empty otherwise. Used inside `labels:` /
+`matchLabels:` blocks across templates in the controller's install set.
+Callers handle indentation via `| nindent N`.
+*/}}
+{{- define "kargo.controller.idLabel" -}}
+{{- with .Values.controller.id -}}
+akuity.io/kargo-controller-id: {{ . | quote }}
+{{- end -}}
+{{- end -}}
+
+{{/*
 Create image reference as used by resources.
 */}}
 {{- define "kargo.image" -}}
@@ -19,6 +49,16 @@ Create chart name and version as used by the chart label.
 */}}
 {{- define "kargo.chart" -}}
 {{- printf "%s-%s" .Chart.Name .Chart.Version | replace "+" "_" | trunc 63 | trimSuffix "-" -}}
+{{- end -}}
+
+{{/*
+Resolve the namespace where many of Kargo's own resources (accessed at runtime)
+reside. By default this is the chart's release namespace. In rare situations,
+Kargo workloads may run in one namespace (the chart's release namespace) while
+some resources accessed at runtime reside in another.
+*/}}
+{{- define "kargo.dataNamespace" -}}
+{{- .Values.global.kargoNamespace | default .Release.Namespace -}}
 {{- end -}}
 
 {{/*
@@ -37,10 +77,11 @@ Generate base URL for a service.
 {{- define "kargo.baseURL" -}}
 {{- $service := .service -}}
 {{- $host := .host -}}
+{{- $basePath := .basePath | default "" -}}
 {{- if eq (include "kargo.useTLS" $service) "true" -}}
-{{- printf "https://%s" $host -}}
+{{- printf "https://%s%s" $host $basePath -}}
 {{- else -}}
-{{- printf "http://%s" $host -}}
+{{- printf "http://%s%s" $host $basePath -}}
 {{- end -}}
 {{- end -}}
 
@@ -48,19 +89,25 @@ Generate base URL for a service.
 Generate the base URL for the API service.
 */}}
 {{- define "kargo.api.baseURL" -}}
-{{- include "kargo.baseURL" (dict "service" .Values.api "host" .Values.api.host) -}}
+{{- include "kargo.baseURL" (dict "service" .Values.api "host" .Values.api.host "basePath" .Values.api.basePath) -}}
 {{- end -}}
 
 {{/*
-Generate the base URL for the external webhook server.
+Generate the base URL for the external webhook server. When the external
+webhooks server has its own Ingress, the URL is composed from its own host,
+TLS configuration, and basePath. When it instead piggybacks on the API
+server's Ingress, the URL is composed from the API server's host and TLS
+configuration, plus either an explicitly-set externalWebhooksServer.basePath
+or, by default, <api.basePath>/webhooks.
 */}}
 {{- define "kargo.externalWebhooksServer.baseURL" -}}
 {{- $apiService := .Values.api -}}
 {{- $webhookService := .Values.externalWebhooksServer -}}
 {{- if and (not $webhookService.ingress.enabled) $apiService.enabled $apiService.ingress.enabled -}}
-{{- printf "%s/webhooks" (include "kargo.api.baseURL" .) -}}
+{{- $basePath := $webhookService.basePath | default (printf "%s/webhooks" ($apiService.basePath | default "")) -}}
+{{- include "kargo.baseURL" (dict "service" $apiService "host" $apiService.host "basePath" $basePath) -}}
 {{- else -}}
-{{- include "kargo.baseURL" (dict "service" $webhookService "host" $webhookService.host) -}}
+{{- include "kargo.baseURL" (dict "service" $webhookService "host" $webhookService.host "basePath" $webhookService.basePath) -}}
 {{- end -}}
 {{- end -}}
 
@@ -80,7 +127,7 @@ Create default controlplane user regular expression with well-known service acco
 {{- end -}}
 {{- end -}}
 {{- if $serviceAccounts -}}
-{{- printf "^system:serviceaccount:%s:(%s)$" .Release.Namespace (join "|" $serviceAccounts) -}}
+{{- printf "^system:serviceaccount:%s:(%s)$" (include "kargo.dataNamespace" .) (join "|" $serviceAccounts) -}}
 {{- end -}}
 {{- end -}}
 
@@ -102,6 +149,38 @@ Determine the most appropriate CPU resource field for GOMAXPROCS.
 {{- $cpu = set $cpu "field" "limits.cpu" -}}
 {{- end -}}
 {{- $cpu.field -}}
+{{- end -}}
+
+{{/*
+kargo.annotations renders a complete metadata annotations block by merging
+.Values.global.annotations with a per-component annotations map.
+
+Call it by passing a dict with two keys:
+  - "root": the top-level chart context (.)
+  - "annotations": the component-specific annotations map (e.g. .Values.controller.annotations)
+
+Example:
+  {{- include "kargo.annotations" (dict "root" . "annotations" .Values.controller.annotations) | nindent 2 }}
+
+When the merged result is empty the helper emits nothing, so it is always safe to
+include unconditionally — no surrounding `with` is required.
+
+Use this helper only when the annotations block consists solely of the merged
+global + component values. When additional static annotations are required (e.g.
+cert-manager CA injection, configmap checksums), write the annotations block
+inline and call mergeOverwrite directly.
+
+For resources that have no component-specific annotations, omit the "annotations"
+key or pass an empty dict:
+  {{- include "kargo.annotations" (dict "root" .) | nindent 2 }}
+*/}}
+{{- define "kargo.annotations" -}}
+{{- with (mergeOverwrite (deepCopy .root.Values.global.annotations) (.annotations | default dict)) -}}
+annotations:
+  {{- range $key, $value := . }}
+  {{ $key }}: {{ $value | quote }}
+  {{- end }}
+{{- end }}
 {{- end -}}
 
 {{/*
@@ -153,4 +232,117 @@ app.kubernetes.io/component: kubernetes-webhooks-server
 
 {{- define "kargo.managementController.labels" -}}
 app.kubernetes.io/component: management-controller
+{{- end -}}
+
+{{/*
+kargo.cabundle.enabled returns the string "true" when the passed cabundle dict
+has either `configMapName` or `secretName` set; empty string otherwise. Useful
+inside `or` expressions in callers' outer guards.
+
+Usage:
+  {{- if or $kc (include "kargo.cabundle.enabled" .Values.api.cabundle) }}
+  volumeMounts:
+  ...
+*/}}
+{{- define "kargo.cabundle.enabled" -}}
+{{- if or .configMapName .secretName -}}
+true
+{{- end -}}
+{{- end -}}
+
+{{/*
+kargo.cabundle.volumeMount renders the volumeMount entry for the
+cabundle-derived trust bundle at /etc/ssl/certs, if either configMapName or
+secretName is set on the passed cabundle dict. Empty otherwise.
+
+Pair with kargo.cabundle.initContainer and kargo.cabundle.volumes.
+
+Usage:
+  volumeMounts:
+  ...
+  {{- include "kargo.cabundle.volumeMount" .Values.api.cabundle | nindent 8 }}
+*/}}
+{{- define "kargo.cabundle.volumeMount" -}}
+{{- if or .configMapName .secretName -}}
+- mountPath: /etc/ssl/certs
+  name: certs
+{{- end -}}
+{{- end -}}
+
+{{/*
+kargo.cabundle.initContainer renders the `parse-cabundle` init container that
+unpacks the customer-supplied CA cert source (mounted at /tmp/source) into a
+writable trust bundle mounted at /tmp/target. Pair with kargo.cabundle.volumes
+which exposes the `cabundle` and `certs` volumes the init container expects.
+
+The init container uses the kargo image (which has `update-ca-certificates`).
+
+Args (dict):
+  cabundle — the per-component cabundle config (configMapName / secretName)
+  context  — the chart context whose .Values.image and .Chart back the kargo
+             image lookup. Templates inside this chart pass `.` (their chart
+             root). Templates in a parent chart that depends on this one as a
+             subchart pass `.Subcharts.kargo` to point at this chart's context.
+
+Empty when the passed cabundle dict has neither configMapName nor secretName.
+
+Usage:
+  initContainers:
+  ...
+  {{- include "kargo.cabundle.initContainer" (dict "cabundle" .Values.api.cabundle "context" .) | nindent 6 }}
+*/}}
+{{- define "kargo.cabundle.initContainer" -}}
+{{- if or .cabundle.configMapName .cabundle.secretName -}}
+- name: parse-cabundle
+  image: {{ include "kargo.image" .context }}
+  imagePullPolicy: {{ .context.Values.image.pullPolicy }}
+  securityContext:
+    runAsUser: 0
+  command:
+  - "/bin/sh"
+  - "-c"
+  args:
+  - |
+    for file in /tmp/source/*; do
+      base_filename=$(basename "$file" .crt)
+      awk 'BEGIN {c=0;} /BEGIN CERT/{c++} { print > "/usr/local/share/ca-certificates/" base_filename "." c ".crt"}' base_filename="$base_filename" < $file
+    done
+    /usr/sbin/update-ca-certificates
+    find /etc/ssl/certs -type l -exec cp --remove-destination {} /etc/ssl/certs/ \;
+    cp -r /etc/ssl/certs/* /tmp/target/
+  volumeMounts:
+  - name: cabundle
+    mountPath: /tmp/source
+  - name: certs
+    mountPath: /tmp/target
+{{- end -}}
+{{- end -}}
+
+{{/*
+kargo.cabundle.volumes renders the `cabundle` source volume (sourced from a
+Secret if `secretName` is set, otherwise from a ConfigMap by `configMapName`)
+and the writable `certs` emptyDir volume that the init container populates.
+
+Empty when the passed cabundle dict has neither configMapName nor secretName.
+
+Usage:
+  volumes:
+  ...
+  {{- include "kargo.cabundle.volumes" .Values.api.cabundle | nindent 6 }}
+*/}}
+{{- define "kargo.cabundle.volumes" -}}
+{{- if .secretName -}}
+- name: cabundle
+  secret:
+    secretName: {{ .secretName }}
+{{ end -}}
+{{- if and .configMapName (not .secretName) -}}
+- name: cabundle
+  configMap:
+    name: {{ .configMapName }}
+{{ end -}}
+{{- if or .configMapName .secretName -}}
+- name: certs
+  emptyDir: {}
+{{- end -}}
 {{- end -}}

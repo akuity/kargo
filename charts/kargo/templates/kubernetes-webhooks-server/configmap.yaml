@@ -1,4 +1,5 @@
-{{- if .Values.webhooksServer.enabled }}
+{{- if and .Values.workloads.install .Values.webhooksServer.enabled }}
+{{- $kc := .Values.webhooksServer.kubeconfigSecrets.kargo | default .Values.kubeconfigSecrets.kargo }}
 apiVersion: v1
 kind: ConfigMap
 metadata:
@@ -7,11 +8,12 @@ metadata:
   labels:
     {{- include "kargo.labels" . | nindent 4 }}
     {{- include "kargo.kubernetesWebhooksServer.labels" . | nindent 4 }}
+  {{- include "kargo.annotations" (dict "root" . "annotations" .Values.webhooksServer.annotations) | nindent 2 }}
 data:
-  KARGO_NAMESPACE: {{ .Release.Namespace }}
+  KARGO_NAMESPACE: {{ include "kargo.dataNamespace" . }}
   LOG_LEVEL: {{ quote .Values.webhooksServer.logLevel }}
   LOG_FORMAT: {{ quote .Values.webhooksServer.logFormat }}
-  {{- if .Values.kubeconfigSecrets.kargo }}
+  {{- if $kc }}
   KUBECONFIG: /etc/kargo/kubeconfigs/kubeconfig.yaml
   {{- end }}
   {{- if .Values.webhooksServer.controlplaneUserRegex }}
@@ -19,7 +21,7 @@ data:
   {{- else }}
   CONTROLPLANE_USER_REGEX: {{ include "kargo.controlplane.defaultUserRegex" . }}
   {{- end }}
-  MANAGEMENT_CONTROLLER_USERNAME: system:serviceaccount:{{ .Release.Namespace }}:kargo-management-controller
-  EXTERNAL_WEBHOOKS_SERVER_USERNAME: system:serviceaccount:{{ .Release.Namespace }}:kargo-external-webhooks-server
+  MANAGEMENT_CONTROLLER_USERNAME: system:serviceaccount:{{ include "kargo.dataNamespace" . }}:kargo-management-controller
+  EXTERNAL_WEBHOOKS_SERVER_USERNAME: system:serviceaccount:{{ include "kargo.dataNamespace" . }}:kargo-external-webhooks-server
   CACHE_BY_TAG_POLICY: {{ quote .Values.controller.images.cache.cacheByTagPolicy }}
 {{- end }}

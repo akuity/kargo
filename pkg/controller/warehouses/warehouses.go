@@ -22,9 +22,12 @@ import (
 	"github.com/akuity/kargo/pkg/conditions"
 	"github.com/akuity/kargo/pkg/controller"
 	"github.com/akuity/kargo/pkg/credentials"
+	kargoEvent "github.com/akuity/kargo/pkg/event"
+	k8sevent "github.com/akuity/kargo/pkg/event/kubernetes"
 	"github.com/akuity/kargo/pkg/expressions/function"
 	"github.com/akuity/kargo/pkg/kargo"
 	"github.com/akuity/kargo/pkg/kubeclient"
+	libEvent "github.com/akuity/kargo/pkg/kubernetes/event"
 	"github.com/akuity/kargo/pkg/logging"
 	intpredicate "github.com/akuity/kargo/pkg/predicate"
 	"github.com/akuity/kargo/pkg/subscription"
@@ -43,6 +46,15 @@ func ReconcilerConfigFromEnv() ReconcilerConfig {
 	return cfg
 }
 
+// Name returns the name of the Warehouse controller.
+func (c ReconcilerConfig) Name() string {
+	const name = "warehouse-controller"
+	if c.ShardName != "" {
+		return name + "-" + c.ShardName
+	}
+	return name
+}
+
 // reconciler reconciles Warehouse resources.
 type reconciler struct {
 	client             client.Client
@@ -50,6 +62,7 @@ type reconciler struct {
 	subscriberRegistry subscription.SubscriberRegistry
 	cfg                ReconcilerConfig
 	shardPredicate     controller.ResponsibleFor[kargoapi.Warehouse]
+	eventSender        kargoEvent.Sender
 
 	// The following behaviors are overridable for testing purposes:
 
@@ -57,6 +70,7 @@ type reconciler struct {
 		ctx context.Context,
 		project string,
 		subs []kargoapi.RepoSubscription,
+		last *kargoapi.DiscoveredArtifacts,
 	) (*kargoapi.DiscoveredArtifacts, error)
 
 	buildFreightFromLatestArtifactsFn func(string, *kargoapi.DiscoveredArtifacts) (*kargoapi.Freight, error)
@@ -94,6 +108,9 @@ func SetupReconcilerWithManager(
 			credentialsDB,
 			subscriberRegistry,
 			cfg,
+			k8sevent.NewEventSender(
+				libEvent.NewRecorder(ctx, mgr.GetScheme(), mgr.GetClient(), cfg.Name()),
+			),
 		)); err != nil {
 		return fmt.Errorf("error building Warehouse reconciler: %w", err)
 	}
@@ -111,12 +128,14 @@ func newReconciler(
 	credentialsDB credentials.Database,
 	subscriberRegistry subscription.SubscriberRegistry,
 	cfg ReconcilerConfig,
+	eventSender kargoEvent.Sender,
 ) *reconciler {
 	r := &reconciler{
 		client:             kubeClient,
 		credentialsDB:      credentialsDB,
 		subscriberRegistry: subscriberRegistry,
 		cfg:                cfg,
+		eventSender:        eventSender,
 		shardPredicate: controller.ResponsibleFor[kargoapi.Warehouse]{
 			IsDefaultController: cfg.IsDefaultController,
 			ShardName:           cfg.ShardName,
@@ -248,11 +267,19 @@ func (r *reconciler) syncWarehouse(
 			logger.Error(err, "error updating Warehouse status")
 		}
 
-		// Discover the latest artifacts.
+		// Pass the previously discovered artifacts so subscribers can
+		// short-circuit expensive work (e.g. via git ls-remote) when nothing
+		// relevant has changed. Only do so when the spec is unchanged since that
+		// discovery; otherwise a spec change (e.g. includePaths) would be ignored.
+		var lastArtifacts *kargoapi.DiscoveredArtifacts
+		if warehouse.Status.ObservedGeneration == warehouse.GetGeneration() {
+			lastArtifacts = warehouse.Status.DiscoveredArtifacts
+		}
 		discoveredArtifacts, err := r.discoverArtifactsFn(
 			ctx,
 			warehouse.Namespace,
 			warehouse.Spec.InternalSubscriptions,
+			lastArtifacts,
 		)
 		if err != nil {
 			// Mark the Warehouse as unhealthy and not ready if we failed to
@@ -480,6 +507,17 @@ func (r *reconciler) syncWarehouse(
 						ObservedGeneration: warehouse.GetGeneration(),
 					},
 				)
+				if r.eventSender != nil {
+					evt := kargoEvent.NewFreightCreated(
+						"Freight created from discovered artifacts",
+						api.FormatEventControllerActor(r.cfg.Name()),
+						freight,
+					)
+					if err := r.eventSender.Send(ctx, evt); err != nil {
+						logger.Error(err, "failed to send FreightCreated event",
+							"freight", freight.Name)
+					}
+				}
 			}
 
 			status.LastFreightID = freight.Name
@@ -519,6 +557,7 @@ func (r *reconciler) discoverArtifacts(
 	ctx context.Context,
 	project string,
 	subs []kargoapi.RepoSubscription,
+	last *kargoapi.DiscoveredArtifacts,
 ) (*kargoapi.DiscoveredArtifacts, error) {
 	discovered := &kargoapi.DiscoveredArtifacts{
 		Charts:  []kargoapi.ChartDiscoveryResult{},
@@ -526,6 +565,16 @@ func (r *reconciler) discoverArtifacts(
 		Images:  []kargoapi.ImageDiscoveryResult{},
 		Results: []kargoapi.DiscoveryResult{},
 	}
+	// Pair each subscription with its prior result positionally within a type:
+	// the Nth Git subscription pairs with the Nth prior GitDiscoveryResult. This
+	// assumes subs and last are from the same generation, which the caller
+	// guarantees. The range index can't serve as the position because subs mixes
+	// subscription types while prevGit holds only Git results.
+	var prevGit []kargoapi.GitDiscoveryResult
+	if last != nil {
+		prevGit = last.Git
+	}
+	var gitIdx int
 	for _, sub := range subs {
 		subReg, err := r.subscriberRegistry.Get(ctx, sub)
 		if err != nil {
@@ -537,7 +586,16 @@ func (r *reconciler) discoverArtifacts(
 		if err != nil {
 			return nil, fmt.Errorf("error instantiating subscriber: %w", err)
 		}
-		res, err := subscriber.DiscoverArtifacts(ctx, project, sub)
+		// Pair the subscription with its prior result, if any. Only Git
+		// subscriptions currently make use of it.
+		var lastResult any
+		if sub.Git != nil {
+			if gitIdx < len(prevGit) {
+				lastResult = prevGit[gitIdx]
+			}
+			gitIdx++
+		}
+		res, err := subscriber.DiscoverArtifacts(ctx, project, sub, lastResult)
 		if err != nil {
 			return nil, fmt.Errorf("error discovering artifacts: %w", err)
 		}

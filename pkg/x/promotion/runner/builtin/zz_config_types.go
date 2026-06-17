@@ -170,6 +170,8 @@ type GitCloneConfig struct {
 	// provided, this overrides any system-level defaults. Note: Configuration of the
 	// `git-commit` and `git-tag` steps can override this information.
 	Author *GitCloneConfigAuthor `json:"author,omitempty"`
+	// Indicates whether to perform a blobless (--filter=blob:none) clone. Default is false.
+	Blobless bool `json:"blobless,omitempty"`
 	// The commits, branches, or tags to check out from the repository and the paths where they
 	// should be checked out. At least one must be specified.
 	Checkout []Checkout `json:"checkout"`
@@ -462,6 +464,9 @@ type HTTPConfig struct {
 	Method string `json:"method,omitempty"`
 	// Outputs to extract from the HTTP response.
 	Outputs []HTTPOutput `json:"outputs,omitempty"`
+	// The URL of the proxy server to send the HTTP request through. If not specified, defers to
+	// the HTTP transport's default proxy behavior (http.ProxyFromEnvironment).
+	Proxy string `json:"proxy,omitempty"`
 	// Query parameters to include in the HTTP request.
 	QueryParams []HTTPConfigQueryParam `json:"queryParams,omitempty"`
 	// Optionally overrides the Content-Type header for response parsing. Accepts MIME media

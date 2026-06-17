@@ -17,14 +17,14 @@ jobs:
   test-unit:
     runs-on: ubuntu-latest
     container:
-      image: &golangImage golang:1.26.2-trixie
+      image: &golangImage golang:1.26.3-trixie
     steps:
     # Install Git from "trixie" repository to get a more recent version than
     # the one available in "stable". This can be removed once the version in
     # "stable" is updated to >= 2.42.0 (which supports `--orphan` for `git
     # worktree add`).
     - name: Harden the runner (Audit all outbound calls)
-      uses: step-security/harden-runner@8d3c67de8e2fe68ef647c8db1e6a09f647780f40 # v2.19.0
+      uses: step-security/harden-runner@9af89fc71515a100421586dfdb3dc9c984fbf411 # v2.19.4
       with:
         egress-policy: audit
 
@@ -33,7 +33,7 @@ jobs:
         echo "deb http://deb.debian.org/debian trixie main" > /etc/apt/sources.list.d/trixie.list
         apt update && apt install -y -t trixie git
     - name: Checkout code
-      uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
+      uses: actions/checkout@df4cb1c069e1874edd31b4311f1884172cec0e10 # v6.0.3
     - uses: actions/cache@27d5ce7f107fe9357f9df03efb73ab90386fccae # v5.0.5
       with:
         path: /go/pkg/mod
@@ -50,7 +50,7 @@ jobs:
           mv $tmp_file $report
         done
     - name: Upload coverage reports
-      uses: codecov/codecov-action@57e3a136b779b570ffcdbf80b3bdc90e7fab3de2 # v6.0.0
+      uses: codecov/codecov-action@fb8b3582c8e4def4969c97caa2f19720cb33a72f # v7.0.0
       with:
         token: ${{ secrets.CODECOV_TOKEN }}
   
@@ -58,12 +58,12 @@ jobs:
     runs-on: ubuntu-latest
     steps:
     - name: Harden the runner (Audit all outbound calls)
-      uses: step-security/harden-runner@8d3c67de8e2fe68ef647c8db1e6a09f647780f40 # v2.19.0
+      uses: step-security/harden-runner@9af89fc71515a100421586dfdb3dc9c984fbf411 # v2.19.4
       with:
         egress-policy: audit
 
     - name: Checkout code
-      uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
+      uses: actions/checkout@df4cb1c069e1874edd31b4311f1884172cec0e10 # v6.0.3
     - uses: actions/cache@27d5ce7f107fe9357f9df03efb73ab90386fccae # v5.0.5
       with:
         path: ~/.pnpm-store
@@ -94,12 +94,12 @@ jobs:
       image: *golangImage
     steps:
     - name: Harden the runner (Audit all outbound calls)
-      uses: step-security/harden-runner@8d3c67de8e2fe68ef647c8db1e6a09f647780f40 # v2.19.0
+      uses: step-security/harden-runner@9af89fc71515a100421586dfdb3dc9c984fbf411 # v2.19.4
       with:
         egress-policy: audit
 
     - name: Checkout code
-      uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
+      uses: actions/checkout@df4cb1c069e1874edd31b4311f1884172cec0e10 # v6.0.3
     - name: Cache golangci-lint
       id: cache-golangci-lint
       uses: actions/cache@27d5ce7f107fe9357f9df03efb73ab90386fccae # v5.0.5
@@ -122,12 +122,12 @@ jobs:
       image: *golangImage
     steps:
     - name: Harden the runner (Audit all outbound calls)
-      uses: step-security/harden-runner@8d3c67de8e2fe68ef647c8db1e6a09f647780f40 # v2.19.0
+      uses: step-security/harden-runner@9af89fc71515a100421586dfdb3dc9c984fbf411 # v2.19.4
       with:
         egress-policy: audit
 
     - name: Checkout code
-      uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
+      uses: actions/checkout@df4cb1c069e1874edd31b4311f1884172cec0e10 # v6.0.3
     - name: Cache helm
       id: cache-helm
       uses: actions/cache@27d5ce7f107fe9357f9df03efb73ab90386fccae # v5.0.5
@@ -152,12 +152,12 @@ jobs:
       image: *golangImage
     steps:
     - name: Harden the runner (Audit all outbound calls)
-      uses: step-security/harden-runner@8d3c67de8e2fe68ef647c8db1e6a09f647780f40 # v2.19.0
+      uses: step-security/harden-runner@9af89fc71515a100421586dfdb3dc9c984fbf411 # v2.19.4
       with:
         egress-policy: audit
 
     - name: Checkout code
-      uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
+      uses: actions/checkout@df4cb1c069e1874edd31b4311f1884172cec0e10 # v6.0.3
     - name: Cache buf
       id: cache-buf
       uses: actions/cache@27d5ce7f107fe9357f9df03efb73ab90386fccae # v5.0.5
@@ -180,12 +180,12 @@ jobs:
       image: *golangImage
     steps:
     - name: Harden the runner (Audit all outbound calls)
-      uses: step-security/harden-runner@8d3c67de8e2fe68ef647c8db1e6a09f647780f40 # v2.19.0
+      uses: step-security/harden-runner@9af89fc71515a100421586dfdb3dc9c984fbf411 # v2.19.4
       with:
         egress-policy: audit
 
     - name: Checkout code
-      uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
+      uses: actions/checkout@df4cb1c069e1874edd31b4311f1884172cec0e10 # v6.0.3
     - name: Install tools
       run: apt update && apt install unzip
     - name: Install pnpm
@@ -232,32 +232,52 @@ jobs:
         - 5000:5000
     steps:
     - name: Harden the runner (Audit all outbound calls)
-      uses: step-security/harden-runner@8d3c67de8e2fe68ef647c8db1e6a09f647780f40 # v2.19.0
+      uses: step-security/harden-runner@9af89fc71515a100421586dfdb3dc9c984fbf411 # v2.19.4
       with:
         egress-policy: audit
 
     - name: Set up QEMU
-      uses: docker/setup-qemu-action@ce360397dd3f832beb865e1373c09c0e9f86d70a # v4.0.0
+      uses: docker/setup-qemu-action@06116385d9baf250c9f4dcb4858b16962ea869c3 # v4.1.0
     - name: Set up Docker Buildx
-      uses: docker/setup-buildx-action@4d04d5d9486b7bd6fa91e7baf45bbb4f8b9deedd # v4.0.0
+      uses: docker/setup-buildx-action@d7f5e7f509e45cec5c76c4d5afdd7de93d0b3df5 # v4.1.0
       with:
         driver-opts: network=host
     - name: Checkout code
-      uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
+      uses: actions/checkout@df4cb1c069e1874edd31b4311f1884172cec0e10 # v6.0.3
     - name: Build base image
       run: |
         BASE_IMAGE=localhost:5000/kargo-base make build-base-image
         docker push localhost:5000/kargo-base:latest-arm64
         docker push localhost:5000/kargo-base:latest-amd64
     - name: Build final image
-      uses: docker/build-push-action@bcafcacb16a39f128d818304e6c9c0c18556b85f # v7.1.0
+      uses: docker/build-push-action@f9f3042f7e2789586610d6e8b85c8f03e5195baf # v7.2.0
       with:
         platforms: linux/amd64,linux/arm64
         build-args: |
           BASE_IMAGE=localhost:5000/kargo-base
-        push: false
+        # Push to the job-local registry service (nothing leaves the runner)
+        # so the built image can be scanned for CVEs below.
+        tags: localhost:5000/kargo:scan
+        push: true
         cache-from: type=gha
         cache-to: type=gha,mode=max
+    - name: Install Grype
+      id: grype
+      uses: anchore/scan-action/download-grype@e1165082ffb1fe366ebaf02d8526e7c4989ea9d2 # v7.4.0
+      with:
+        cache-db: true
+    # cve-scan.sh re-stamps the VEX product @id to the scanned digest, which it
+    # resolves from the job-local registry tag via crane.
+    - name: Install Crane
+      uses: imjasonh/setup-crane@31b88efe9de28ae0ffa220711af4b60be9435f6e # v0.4
+    - name: Scan image for CVEs
+      env:
+        GRYPE_CMD: ${{ steps.grype.outputs.cmd }}
+        GRYPE_REGISTRY_INSECURE_USE_HTTP: "true" # job-local registry service
+        CRANE_INSECURE: "true" # job-local registry is plain HTTP
+        FAIL_ON: "" # report-only; set to "high" to enforce
+      # VEX lookups use the canonical published repo path.
+      run: ./hack/cve-scan.sh "registry:localhost:5000/kargo:scan" "ghcr.io/akuity/kargo"
 
   build-cli:
     needs: [test-unit, lint-go, lint-charts, lint-proto, lint-and-typecheck-ui, check-codegen]
@@ -266,12 +286,12 @@ jobs:
       image: *golangImage
     steps:
     - name: Harden the runner (Audit all outbound calls)
-      uses: step-security/harden-runner@8d3c67de8e2fe68ef647c8db1e6a09f647780f40 # v2.19.0
+      uses: step-security/harden-runner@9af89fc71515a100421586dfdb3dc9c984fbf411 # v2.19.4
       with:
         egress-policy: audit
 
     - name: Checkout code
-      uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
+      uses: actions/checkout@df4cb1c069e1874edd31b4311f1884172cec0e10 # v6.0.3
     - uses: actions/cache@27d5ce7f107fe9357f9df03efb73ab90386fccae # v5.0.5
       with:
         path: /go/pkg/mod

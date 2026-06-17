@@ -1,4 +1,5 @@
-{{- if .Values.garbageCollector.enabled }}
+{{- if and .Values.workloads.install .Values.garbageCollector.enabled }}
+{{- $kc := .Values.garbageCollector.kubeconfigSecrets.kargo | default .Values.kubeconfigSecrets.kargo }}
 apiVersion: batch/v1
 kind: CronJob
 metadata:
@@ -12,15 +13,15 @@ metadata:
     {{ $key }}: {{ $value | quote }}
     {{- end }}
   {{- end }}
-  {{- with (mergeOverwrite (deepCopy .Values.global.annotations) .Values.garbageCollector.annotations) }}
-  annotations:
-    {{- range $key, $value := . }}
-    {{ $key }}: {{ $value | quote }}
-    {{- end }}
-  {{- end }}
+  {{- include "kargo.annotations" (dict "root" . "annotations" .Values.garbageCollector.annotations) | nindent 2 }}
 spec:
   schedule: {{ quote .Values.garbageCollector.schedule }}
   concurrencyPolicy: Forbid
+  {{- if .Values.garbageCollector.suspend }}
+  suspend: true
+  {{- end }}
+  successfulJobsHistoryLimit: {{ .Values.garbageCollector.successfulJobsHistoryLimit }}
+  failedJobsHistoryLimit: {{ .Values.garbageCollector.failedJobsHistoryLimit }}
   jobTemplate:
     metadata:
       labels:
@@ -29,6 +30,9 @@ spec:
       annotations:
         configmap/checksum: {{ pick ( include (print $.Template.BasePath "/garbage-collector/configmap.yaml") . | fromYaml ) "data" | toYaml | sha256sum }}
     spec:
+      {{- with .Values.garbageCollector.ttlSecondsAfterFinished }}
+      ttlSecondsAfterFinished: {{ . }}
+      {{- end }}
       template:
         metadata:
           labels:
@@ -47,12 +51,7 @@ spec:
             {{- end }}
           {{- end }}
         spec:
-          {{- if not .Values.rbac.useDefaultServiceAccount }}
           serviceAccountName: kargo-garbage-collector
-          {{- end }}
-          {{- if .Values.rbac.disableAutomountServiceAccountToken }}
-          automountServiceAccountToken: false
-          {{- end }}
           {{- with .Values.garbageCollector.affinity | default .Values.global.affinity }}
           affinity:
             {{- toYaml . | nindent 12 }}
@@ -84,13 +83,24 @@ spec:
                   divisor: "1"
                   resource: {{ include "kargo.selectCpuResourceField" (dict "resources" .Values.garbageCollector.resources) }}
             {{- with (concat .Values.global.env .Values.garbageCollector.env) }}
-            {{- toYaml . | nindent 12 }}
+            {{- tpl (toYaml .) $ | nindent 12 }}
             {{- end }}
             envFrom:
             - configMapRef:
                 name: kargo-garbage-collector
             {{- with (concat .Values.global.envFrom .Values.garbageCollector.envFrom) }}
-              {{- toYaml . | nindent 12 }}
+              {{- tpl (toYaml .) $ | nindent 12 }}
+            {{- end }}
+            {{- if or $kc .Values.garbageCollector.volumeMounts }}
+            volumeMounts:
+            {{- if $kc }}
+            - mountPath: /etc/kargo/kubeconfigs
+              name: kubeconfigs
+              readOnly: true
+            {{- end }}
+            {{- with .Values.garbageCollector.volumeMounts }}
+            {{- toYaml . | nindent 12 }}
+            {{- end }}
             {{- end }}
             {{- with .Values.garbageCollector.securityContext | default .Values.global.securityContext }}
             securityContext:
@@ -98,6 +108,30 @@ spec:
             {{- end }}
             resources:
               {{- toYaml .Values.garbageCollector.resources | nindent 14 }}
+          {{- with .Values.garbageCollector.containers }}
+          {{- toYaml . | nindent 10 }}
+          {{- end }}
+          {{- with .Values.garbageCollector.initContainers }}
+          initContainers:
+          {{- toYaml . | nindent 10 }}
+          {{- end }}
+          {{- if or $kc .Values.garbageCollector.volumes }}
+          volumes:
+          {{- if $kc }}
+          - name: kubeconfigs
+            projected:
+              sources:
+              - secret:
+                  name: {{ $kc }}
+                  items:
+                  - key: kubeconfig.yaml
+                    path: kubeconfig.yaml
+                    mode: 0644
+          {{- end }}
+          {{- with .Values.garbageCollector.volumes }}
+          {{- toYaml . | nindent 10 }}
+          {{- end }}
+          {{- end }}
           restartPolicy: Never
           {{- with .Values.garbageCollector.nodeSelector | default .Values.global.nodeSelector }}
           nodeSelector:

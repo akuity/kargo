@@ -110,7 +110,7 @@ func TestEphemeralDependencyManager_update(t *testing.T) {
 				b, err := os.ReadFile("testdata/charts/demo-0.1.0.tgz")
 				require.NoError(t, err)
 
-				client, err := NewRegistryClient(NewEphemeralAuthorizer(false).Client)
+				client, err := NewRegistryClient(NewEphemeralAuthorizer(false).Client, true)
 				require.NoError(t, err)
 				_, err = client.Push(b, hostForRepositoryURL(server.URL)+"/demo:0.1.0")
 				require.NoError(t, err)
@@ -283,8 +283,9 @@ generated: "2023-01-01T00:00:00Z"
 				require.NoError(t, os.WriteFile(chartFile, b, 0o600))
 			}
 
+			var dependencies []ChartDependency
 			if tt.chartMetadata != nil && tt.chartMetadata.Dependencies != nil {
-				dependencies := make([]ChartDependency, len(tt.chartMetadata.Dependencies))
+				dependencies = make([]ChartDependency, len(tt.chartMetadata.Dependencies))
 				for i, dep := range tt.chartMetadata.Dependencies {
 					dependencies[i] = ChartDependency{
 						Name:       dep.Name,
@@ -295,7 +296,7 @@ generated: "2023-01-01T00:00:00Z"
 				require.NoError(t, em.setupRepositories(t.Context(), dependencies))
 			}
 
-			updates, err := em.update(chartDir)
+			updates, err := em.update(t.Context(), chartDir, dependencies)
 			tt.assertions(t, chartDir, updates, err)
 		})
 	}
@@ -818,6 +819,40 @@ func TestEphemeralDependencyManager_setupRepositories(t *testing.T) {
 				assert.NoError(t, err)
 
 				// Verify an entry exists for the OCI host
+				ociHost := hostForRepositoryURL(ociServer)
+				entry, err := em.authorizer.Get(t.Context(), ociHost)
+				assert.NoError(t, err)
+				assert.NotNil(t, entry)
+			},
+		},
+		{
+			// A path-less repository (the registry host itself, with the chart
+			// supplied by the dependency name) must authenticate against the
+			// full host:port. This guards against extracting the host from the
+			// canonical URL, which would drop the port.
+			name: "path-less OCI repository with credentials",
+			dependencies: []ChartDependency{
+				{Name: "postgres", Repository: fmt.Sprintf("oci://%s", testOCIHostReplace)},
+			},
+			credsDB: &credentials.FakeDB{
+				GetFn: func(_ context.Context, _ string, _ credentials.Type, _ string) (*credentials.Credentials, error) {
+					return &credentials.Credentials{
+						Username: testOCIUsername,
+						Password: testOCIPassword,
+					}, nil
+				},
+			},
+			setupOCIRegistry: func(t *testing.T) string {
+				server := newAuthRegistryServer(testOCIUsername, testOCIPassword)
+				server.Start()
+				t.Cleanup(server.Close)
+				return server.URL
+			},
+			assertions: func(t *testing.T, ociServer string, em *EphemeralDependencyManager, err error) {
+				assert.NoError(t, err)
+
+				// The login must target the full host:port, not the
+				// port-stripped host produced by canonicalization.
 				ociHost := hostForRepositoryURL(ociServer)
 				entry, err := em.authorizer.Get(t.Context(), ociHost)
 				assert.NoError(t, err)
@@ -1579,6 +1614,56 @@ func Test_hostForRepositoryURL(t *testing.T) {
 		t.Run(tt.name, func(t *testing.T) {
 			result := hostForRepositoryURL(tt.repoURL)
 			assert.Equal(t, tt.expected, result)
+		})
+	}
+}
+
+func Test_ociHost(t *testing.T) {
+	tests := []struct {
+		name       string
+		repository string
+		depName    string
+		expected   string
+	}{
+		{
+			name:       "registry host with repository path",
+			repository: "oci://ghcr.io/akuity",
+			depName:    "kargo",
+			expected:   "ghcr.io",
+		},
+		{
+			name:       "path-less registry host",
+			repository: "oci://registry.example.com",
+			depName:    "my-chart",
+			expected:   "registry.example.com",
+		},
+		{
+			name:       "host:port preserves the port",
+			repository: "oci://127.0.0.1:5000",
+			depName:    "my-chart",
+			expected:   "127.0.0.1:5000",
+		},
+		{
+			name:       "host:port with path preserves the port",
+			repository: "oci://127.0.0.1:5000/sub",
+			depName:    "my-chart",
+			expected:   "127.0.0.1:5000",
+		},
+		{
+			// Docker Hub: oras rewrites docker.io to its real API endpoint, so
+			// the host we probe and authenticate against matches what Helm dials.
+			name:       "docker.io rewrites to registry-1.docker.io",
+			repository: "oci://docker.io/akuity",
+			depName:    "kargo",
+			expected:   "registry-1.docker.io",
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			host, err := ociHost(tt.repository, tt.depName)
+			require.NoError(t, err)
+			assert.Equal(t, tt.expected, host)
 		})
 	}
 }
