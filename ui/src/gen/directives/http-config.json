@@ -154,6 +154,10 @@
   "failureExpression": {
    "type": "string",
    "description": "An expression to evaluate to determine if the request failed."
+  },
+  "errorExpression": {
+   "type": "string",
+   "description": "An expression to evaluate to extract an error message from the HTTP response."
   }
  }
 }

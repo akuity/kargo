@@ -128,10 +128,27 @@ func (h *httpRequester) run(
 	switch {
 	case failureResult != nil && *failureResult:
 		// Failure criteria met: terminal failure
+
+		errorMessage, err := h.extractErrorMessageFromResponse(cfg, env)
+		if err != nil {
+			logging.LoggerFromContext(ctx).Trace(
+				"error extracting error message from HTTP response",
+				"error", err,
+			)
+		}
+		if err != nil || errorMessage == "" {
+			return promotion.StepResult{Status: kargoapi.PromotionStepStatusFailed},
+				&promotion.TerminalError{Err: fmt.Errorf(
+					"HTTP (%d) response met failure criteria",
+					resp.StatusCode,
+				)}
+		}
+
 		return promotion.StepResult{Status: kargoapi.PromotionStepStatusFailed},
 			&promotion.TerminalError{Err: fmt.Errorf(
-				"HTTP (%d) response met failure criteria",
+				"HTTP (%d) response met failure criteria: %s",
 				resp.StatusCode,
+				errorMessage,
 			)}
 	case successResult != nil && *successResult:
 		// Success criteria met: success
@@ -226,6 +243,25 @@ func (h *httpRequester) evaluateFailureCriteria(
 		"failure expression %q did not evaluate to a boolean (got %T)",
 		cfg.FailureExpression, failureAny,
 	)
+}
+
+func (h *httpRequester) extractErrorMessageFromResponse(cfg builtin.HTTPConfig, env map[string]any) (string, error) {
+	if cfg.ErrorExpression == "" {
+		return "", nil
+	}
+
+	program, err := expr.Compile(cfg.ErrorExpression)
+	if err != nil {
+		return "", fmt.Errorf("error compiling error expression %q: %w", cfg.ErrorExpression, err)
+	}
+	errorAny, err := expr.Run(program, env)
+	if err != nil {
+		return "", fmt.Errorf("error evaluating error expression %q: %w", cfg.ErrorExpression, err)
+	}
+	if errorMessage, ok := errorAny.(string); ok {
+		return errorMessage, nil
+	}
+	return "", fmt.Errorf("error expression %q did not evaluate to a string (got %T)", cfg.ErrorExpression, errorAny)
 }
 
 func (h *httpRequester) buildRequest(cfg builtin.HTTPConfig) (*http.Request, error) {

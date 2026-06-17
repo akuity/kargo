@@ -454,6 +454,8 @@ type Chart struct {
 type HTTPConfig struct {
 	// The body of the HTTP request.
 	Body string `json:"body,omitempty"`
+	// An expression to evaluate to extract an error message from the HTTP response.
+	ErrorExpression string `json:"errorExpression,omitempty"`
 	// An expression to evaluate to determine if the request failed.
 	FailureExpression string `json:"failureExpression,omitempty"`
 	// Headers to include in the HTTP request.
