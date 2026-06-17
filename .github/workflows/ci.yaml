@@ -168,7 +168,19 @@ jobs:
       if: steps.cache-helm.outputs.cache-hit != 'true'
       run: make install-helm
     - name: Run chart unit tests
-      run: make test-chart
+      run: |
+        set -o pipefail
+        make test-chart 2>&1 | tee /tmp/chart-tests.log
+    - name: Publish chart test summary
+      if: always()
+      run: |
+        [ -f /tmp/chart-tests.log ] || exit 0
+        {
+          echo '## Chart unit tests'
+          echo '```'
+          sed -n '/^### Chart/,$p' /tmp/chart-tests.log
+          echo '```'
+        } >> "$GITHUB_STEP_SUMMARY"
 
   lint-proto:
     permissions:

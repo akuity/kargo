@@ -118,8 +118,10 @@ HELM_UNITTEST_VERSION ?= v1.1.0
 
 .PHONY: test-chart
 test-chart: install-helm
+	@# stdout of the install is redirected to silence the plugin's usage
+	@# banner; errors still surface on stderr.
 	$(HELM) plugin list | grep -q unittest || \
-		$(HELM) plugin install --version $(HELM_UNITTEST_VERSION) https://github.com/helm-unittest/helm-unittest
+		$(HELM) plugin install --version $(HELM_UNITTEST_VERSION) https://github.com/helm-unittest/helm-unittest >/dev/null
 	cd charts/kargo && \
 	$(HELM) dep up && \
 	$(HELM) unittest .
