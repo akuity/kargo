@@ -1,8 +1,8 @@
 // @ts-nocheck cannot use class as "new Promotion" because they are being deprecated in new protobuf version, using those would mean tech debt
 
-import { expect, test } from 'vitest';
+import { describe, expect, test } from 'vitest';
 
-import { promotionCompareFn } from './promotion';
+import { objectToYAML, promotionCompareFn } from './promotion';
 
 test('promotionCompareFn', () => {
   expect(
@@ -106,4 +106,33 @@ test('promotionCompareFn', () => {
       .sort(promotionCompareFn)
       .map((p) => p.name)
   ).toStrictEqual(['c', 'd', 'a', 'b']);
+});
+
+describe('objectToYAML', () => {
+  test('returns an empty string when there is no value', () => {
+    expect(objectToYAML(undefined)).toBe('');
+  });
+
+  test('renders multi-line string values with real line breaks', () => {
+    const output = {
+      plan: 'line one\nline two\nline three'
+    };
+
+    const result = objectToYAML(output);
+
+    // block scalar, not an escaped single line
+    expect(result).not.toContain('\\n');
+    expect(result).toContain('plan: |-');
+    expect(result).toContain('  line one\n  line two\n  line three');
+  });
+
+  test('does not fold long single lines', () => {
+    const longLine = 'a'.repeat(200);
+
+    expect(objectToYAML({ value: longLine })).toBe(`value: ${longLine}\n`);
+  });
+
+  test('preserves scalar values', () => {
+    expect(objectToYAML({ commit: 'abc123', count: 3 })).toBe('commit: abc123\ncount: 3\n');
+  });
 });
