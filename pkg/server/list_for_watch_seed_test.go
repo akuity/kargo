@@ -17,17 +17,16 @@ import (
 	"github.com/akuity/kargo/pkg/server/kubernetes"
 )
 
-func TestServer_listForWatchSeed(t *testing.T) {
-	t.Parallel()
-
-	scheme := mustNewScheme()
-	internalClient := fake.NewClientBuilder().WithScheme(scheme).Build()
+// newSeedKubeClient builds a kubernetes.Client whose internal client (and thus
+// its uncached APIReader) is the supplied fake.
+func newSeedKubeClient(t *testing.T, internalClient client.WithWatch) kubernetes.Client {
+	t.Helper()
 	kubeClient, err := kubernetes.NewClient(
 		t.Context(),
 		&rest.Config{},
 		kubernetes.ClientOptions{
 			SkipAuthorization: true,
-			Scheme:            scheme,
+			Scheme:            mustNewScheme(),
 			NewInternalClient: func(
 				context.Context,
 				*rest.Config,
@@ -39,19 +38,26 @@ func TestServer_listForWatchSeed(t *testing.T) {
 		},
 	)
 	require.NoError(t, err)
+	return kubeClient
+}
 
-	t.Run("authorizes and lists through direct reader", func(t *testing.T) {
+func TestServer_listForWatchSeed(t *testing.T) {
+	t.Parallel()
+
+	scheme := mustNewScheme()
+
+	t.Run("authorizes and lists through the API reader", func(t *testing.T) {
 		t.Parallel()
 
 		var (
-			authorized       bool
-			authorizedVerb   string
-			authorizedGVR    schema.GroupVersionResource
-			authorizedSub    string
-			authorizedKey    client.ObjectKey
-			directListCalled bool
+			authorized     bool
+			authorizedVerb string
+			authorizedGVR  schema.GroupVersionResource
+			authorizedSub  string
+			authorizedKey  client.ObjectKey
+			listCalled     bool
 		)
-		directReader := fake.NewClientBuilder().
+		internalClient := fake.NewClientBuilder().
 			WithScheme(scheme).
 			WithInterceptorFuncs(interceptor.Funcs{
 				List: func(
@@ -60,7 +66,7 @@ func TestServer_listForWatchSeed(t *testing.T) {
 					list client.ObjectList,
 					opts ...client.ListOption,
 				) error {
-					directListCalled = true
+					listCalled = true
 					if err := cl.List(ctx, list, opts...); err != nil {
 						return err
 					}
@@ -73,8 +79,7 @@ func TestServer_listForWatchSeed(t *testing.T) {
 			Build()
 
 		s := &server{
-			client:       kubeClient,
-			directReader: directReader,
+			client: newSeedKubeClient(t, internalClient),
 			authorizeFn: func(
 				_ context.Context,
 				verb string,
@@ -100,7 +105,7 @@ func TestServer_listForWatchSeed(t *testing.T) {
 		)
 		require.NoError(t, err)
 		require.True(t, authorized)
-		require.True(t, directListCalled)
+		require.True(t, listCalled)
 		require.Equal(t, "list", authorizedVerb)
 		require.Empty(t, authorizedSub)
 		require.Equal(t, kargoapi.GroupVersion.WithResource("promotions"), authorizedGVR)
@@ -108,12 +113,12 @@ func TestServer_listForWatchSeed(t *testing.T) {
 		require.Equal(t, "42", promotions.ResourceVersion)
 	})
 
-	t.Run("authorization failure short-circuits direct list", func(t *testing.T) {
+	t.Run("authorization failure short-circuits the list", func(t *testing.T) {
 		t.Parallel()
 
 		authErr := errors.New("not authorized")
-		var directListCalled bool
-		directReader := fake.NewClientBuilder().
+		var listCalled bool
+		internalClient := fake.NewClientBuilder().
 			WithScheme(scheme).
 			WithInterceptorFuncs(interceptor.Funcs{
 				List: func(
@@ -122,15 +127,14 @@ func TestServer_listForWatchSeed(t *testing.T) {
 					client.ObjectList,
 					...client.ListOption,
 				) error {
-					directListCalled = true
+					listCalled = true
 					return nil
 				},
 			}).
 			Build()
 
 		s := &server{
-			client:       kubeClient,
-			directReader: directReader,
+			client: newSeedKubeClient(t, internalClient),
 			authorizeFn: func(
 				context.Context,
 				string,
@@ -149,37 +153,22 @@ func TestServer_listForWatchSeed(t *testing.T) {
 			client.InNamespace("fake-project"),
 		)
 		require.ErrorIs(t, err, authErr)
-		require.False(t, directListCalled)
+		require.False(t, listCalled)
 	})
 
-	t.Run("falls back to cached client when no direct reader is wired", func(t *testing.T) {
+	t.Run("errors when authorize function is not configured", func(t *testing.T) {
 		t.Parallel()
 
-		var authorizeCalled bool
 		s := &server{
-			client: kubeClient,
-			authorizeFn: func(
-				context.Context,
-				string,
-				schema.GroupVersionResource,
-				string,
-				client.ObjectKey,
-			) error {
-				authorizeCalled = true
-				return nil
-			},
+			client: newSeedKubeClient(t, fake.NewClientBuilder().WithScheme(scheme).Build()),
 		}
 
-		// Should not error and should not invoke authorizeFn directly;
-		// the cached authorizing client performs its own SAR per call,
-		// which is bypassed here via SkipAuthorization on kubeClient.
 		err := s.listForWatchSeed(
 			t.Context(),
 			"promotions",
 			&kargoapi.PromotionList{},
 			client.InNamespace("fake-project"),
 		)
-		require.NoError(t, err)
-		require.False(t, authorizeCalled)
+		require.ErrorContains(t, err, "authorize function is not configured")
 	})
 }
