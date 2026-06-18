@@ -8,7 +8,7 @@ export const getSubscriptionKey = (res: DiscoveryResult) => {
     return res.name || '';
   }
 
-  if ('versions' in res) {
+  if ('name' in res && 'repoURL' in res) {
     return `${res.repoURL}/${res.name}`;
   }
 
