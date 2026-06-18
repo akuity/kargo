@@ -12,14 +12,15 @@ import (
 
 // Freight is a struct that contains common fields for freight-related events.
 type Freight struct {
-	Name       string                       `json:"name"`
-	StageName  string                       `json:"stageName"`
-	CreateTime time.Time                    `json:"createTime"`
-	Alias      *string                      `json:"alias,omitempty"`
-	Commits    []kargoapi.GitCommit         `json:"commits,omitempty"`
-	Images     []kargoapi.Image             `json:"images,omitempty"`
-	Charts     []kargoapi.Chart             `json:"charts,omitempty"`
-	Artifacts  []kargoapi.ArtifactReference `json:"artifacts,omitempty"`
+	Name          string                       `json:"name"`
+	StageName     string                       `json:"stageName"`
+	WarehouseName string                       `json:"warehouseName,omitempty"`
+	CreateTime    time.Time                    `json:"createTime"`
+	Alias         *string                      `json:"alias,omitempty"`
+	Commits       []kargoapi.GitCommit         `json:"commits,omitempty"`
+	Images        []kargoapi.Image             `json:"images,omitempty"`
+	Charts        []kargoapi.Chart             `json:"charts,omitempty"`
+	Artifacts     []kargoapi.ArtifactReference `json:"artifacts,omitempty"`
 }
 
 func (f Freight) GetName() string {
@@ -325,6 +326,9 @@ func (f *Freight) MarshalAnnotationsTo(annotations map[string]string) {
 	annotations[kargoapi.AnnotationKeyEventFreightName] = f.Name
 	annotations[kargoapi.AnnotationKeyEventFreightCreateTime] = f.CreateTime.Format(time.RFC3339)
 	annotations[kargoapi.AnnotationKeyEventStageName] = f.StageName
+	if f.WarehouseName != "" {
+		annotations[kargoapi.AnnotationKeyEventFreightWarehouseName] = f.WarehouseName
+	}
 	if f.Alias != nil {
 		annotations[kargoapi.AnnotationKeyEventFreightAlias] = *f.Alias
 	}
@@ -420,6 +424,7 @@ func UnmarshalFreightAnnotations(annotations map[string]string) (Freight, error)
 	if name, ok := annotations[kargoapi.AnnotationKeyEventFreightName]; ok && name != "" {
 		evt.Name = name
 		evt.StageName = annotations[kargoapi.AnnotationKeyEventStageName]
+		evt.WarehouseName = annotations[kargoapi.AnnotationKeyEventFreightWarehouseName]
 
 		if createTimeStr, ok := annotations[kargoapi.AnnotationKeyEventFreightCreateTime]; ok && createTimeStr != "" {
 			createTime, err := parseTime(createTimeStr)
@@ -677,6 +682,9 @@ func newFreight(freight *kargoapi.Freight, stageName string) Freight {
 		CreateTime: freight.CreationTimestamp.Time,
 		Name:       freight.Name,
 		StageName:  stageName,
+	}
+	if freight.Origin.Name != "" {
+		evt.WarehouseName = freight.Origin.Name
 	}
 	if freight.Alias != "" {
 		evt.Alias = &freight.Alias

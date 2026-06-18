@@ -6,6 +6,7 @@
  * OpenAPI spec version: v1alpha1
  */
 import type { DiscoveredCommit } from './discoveredCommit';
+import type { GitDiscoveryRefs } from './gitDiscoveryRefs';
 
 export interface GitDiscoveryResult {
   /** Commits is a list of commits discovered by the Warehouse for the
@@ -14,6 +15,18 @@ successful, but no commits matching the GitSubscription criteria were found.
 
 +optional */
   commits?: DiscoveredCommit[];
+  /** ObservedRefs records the raw remote ref state observed at the most recent
+successful discovery, after name-based filtering but before path filtering
+or commit selection. The Warehouse uses it to short-circuit discovery: at
+the start of a reconcile, a single git ls-remote call yields the current
+ref state, and if it matches this field, nothing relevant has moved and the
+previously selected Commits remain valid -- so an expensive clone and
+history walk can be skipped entirely. This field is optional; when absent
+(e.g. on a Warehouse that predates this feature), discovery falls through to
+a full clone and repopulates it.
+
++optional */
+  observedRefs?: GitDiscoveryRefs;
   /** RepoURL is the repository URL of the GitSubscription.
 
 TODO(v1.13.0): Remove SSH/SCP-style URL support from this pattern.

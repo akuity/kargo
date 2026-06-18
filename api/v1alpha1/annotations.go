@@ -31,8 +31,10 @@ const (
 	AnnotationKeyDescription = "kargo.akuity.io/description"
 
 	// AnnotationKeyAuthorizedStage is an annotation key that can be set on a
-	// resource to indicate that a Stage is authorized to manage it. The value
-	// of the annotation should be in the format of "<project>:<stage>".
+	// resource to indicate that one or more Stages are authorized to manage it.
+	// The value of the annotation is a comma-separated list of
+	// "<project>:<stage>" entries. A single "<project>:<stage>" value is also
+	// valid and authorizes exactly one Stage.
 	AnnotationKeyAuthorizedStage = "kargo.akuity.io/authorized-stage"
 
 	// AnnotationKeyStage is an annotation key that can be set on a resource to

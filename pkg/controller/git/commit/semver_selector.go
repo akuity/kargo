@@ -87,6 +87,14 @@ func (s *semverSelector) matchesTag(tag string) bool {
 	return s.constraint == nil || s.constraint.Check(sv)
 }
 
+// ListRefs implements Selector. Note: This uses this type's own matchesTag()
+// implementation, which imposes semver-aware criteria beyond tagBasedSelector's.
+func (s *semverSelector) ListRefs(
+	ctx context.Context,
+) (*kargoapi.GitDiscoveryRefs, error) {
+	return s.listTagRefs(ctx, s.matchesTag)
+}
+
 // Select implements the Selector interface.
 func (s *semverSelector) Select(ctx context.Context) (
 	[]kargoapi.DiscoveredCommit,

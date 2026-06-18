@@ -17,6 +17,11 @@ metadata:
 spec:
   schedule: {{ quote .Values.garbageCollector.schedule }}
   concurrencyPolicy: Forbid
+  {{- if .Values.garbageCollector.suspend }}
+  suspend: true
+  {{- end }}
+  successfulJobsHistoryLimit: {{ .Values.garbageCollector.successfulJobsHistoryLimit }}
+  failedJobsHistoryLimit: {{ .Values.garbageCollector.failedJobsHistoryLimit }}
   jobTemplate:
     metadata:
       labels:
@@ -25,6 +30,9 @@ spec:
       annotations:
         configmap/checksum: {{ pick ( include (print $.Template.BasePath "/garbage-collector/configmap.yaml") . | fromYaml ) "data" | toYaml | sha256sum }}
     spec:
+      {{- with .Values.garbageCollector.ttlSecondsAfterFinished }}
+      ttlSecondsAfterFinished: {{ . }}
+      {{- end }}
       template:
         metadata:
           labels:
@@ -75,13 +83,13 @@ spec:
                   divisor: "1"
                   resource: {{ include "kargo.selectCpuResourceField" (dict "resources" .Values.garbageCollector.resources) }}
             {{- with (concat .Values.global.env .Values.garbageCollector.env) }}
-            {{- toYaml . | nindent 12 }}
+            {{- tpl (toYaml .) $ | nindent 12 }}
             {{- end }}
             envFrom:
             - configMapRef:
                 name: kargo-garbage-collector
             {{- with (concat .Values.global.envFrom .Values.garbageCollector.envFrom) }}
-              {{- toYaml . | nindent 12 }}
+              {{- tpl (toYaml .) $ | nindent 12 }}
             {{- end }}
             {{- if or $kc .Values.garbageCollector.volumeMounts }}
             volumeMounts:

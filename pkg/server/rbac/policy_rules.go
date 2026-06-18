@@ -182,7 +182,7 @@ func validateResourceTypeName(resource string) error {
 	switch resource {
 	case "analysisruns", "analysistemplates", "configmaps", "events", "freights",
 		"freights/status", "projectconfigs", "promotions", "rolebindings", "roles",
-		"secrets", "serviceaccounts", "stages", "warehouses":
+		"secrets", "serviceaccounts", "stages", "warehouses", "promotiontasks":
 		return nil
 	case "analysisrun", "analysistemplate", "configmap", "event", "freight",
 		"projectconfig", "promotion", "role", "rolebinding", "secret",

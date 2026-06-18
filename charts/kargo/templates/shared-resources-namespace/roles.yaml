@@ -33,4 +33,29 @@ rules:
   - configmaps
   verbs:
   - "*"
+---
+# Slightly broader than kargo-shared-resources-reader above: also grants read
+# access to Secrets, which the controller needs to use shared credentials at
+# runtime. Kept as its own Role (rather than expanding the more widely-bound
+# kargo-shared-resources-reader) to avoid handing Secret read access to
+# user-facing roles bound to that Role (kargo-user, kargo-viewer,
+# kargo-project-creator).
+apiVersion: rbac.authorization.k8s.io/v1
+kind: Role
+metadata:
+  name: kargo-shared-resources-controller-reader
+  namespace: {{ .Values.global.sharedResources.namespace }}
+  labels:
+    {{- include "kargo.labels" . | nindent 4 }}
+  {{- include "kargo.annotations" (dict "root" .) | nindent 2 }}
+rules:
+- apiGroups:
+  - ""
+  resources:
+  - configmaps
+  - secrets
+  verbs:
+  - get
+  - list
+  - watch
 {{- end }}

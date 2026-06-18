@@ -435,26 +435,24 @@ func (o *controllerOptions) setupReconcilers(
 
 	sharedIndexer := indexer.NewSharedFieldIndexer(kargoMgr.GetFieldIndexer())
 
-	if promotionsReconcilerCfg := promotions.ReconcilerConfigFromEnv(); promotionsReconcilerCfg.Enable {
-		if err := promotions.SetupReconcilerWithManager(
-			ctx,
-			kargoMgr,
-			argocdMgr,
-			promotion.NewLocalEngine(
+	if err := promotions.SetupReconcilerWithManager(
+		ctx,
+		kargoMgr,
+		argocdMgr,
+		promotion.NewLocalEngine(
+			kargoMgr.GetClient(),
+			argoCDClient,
+			credentialsDB,
+			promotion.NewGitUserResolver(
 				kargoMgr.GetClient(),
-				argoCDClient,
-				credentialsDB,
-				promotion.NewGitUserResolver(
-					kargoMgr.GetClient(),
-					os.GetEnv("SYSTEM_RESOURCES_NAMESPACE", ""),
-					promotion.GitUserFromEnv(),
-				),
-				promotion.DefaultExprDataCacheFn,
+				os.GetEnv("SYSTEM_RESOURCES_NAMESPACE", ""),
+				promotion.GitUserFromEnv(),
 			),
-			promotionsReconcilerCfg,
-		); err != nil {
-			return fmt.Errorf("error setting up Promotions reconciler: %w", err)
-		}
+			promotion.DefaultExprDataCacheFn,
+		),
+		promotions.ReconcilerConfigFromEnv(),
+	); err != nil {
+		return fmt.Errorf("error setting up Promotions reconciler: %w", err)
 	}
 
 	if err := stages.NewRegularStageReconciler(

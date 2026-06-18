@@ -8,6 +8,7 @@ import (
 	"fmt"
 	"mime"
 	"net/http"
+	"net/url"
 	"strings"
 	"time"
 
@@ -263,6 +264,13 @@ func (h *httpRequester) getClient(cfg builtin.HTTPConfig) (*http.Client, error) 
 			// Input is validated, so this really should not happen
 			return nil, fmt.Errorf("error parsing timeout: %w", err)
 		}
+	}
+	if cfg.Proxy != "" {
+		proxyURL, err := url.Parse(cfg.Proxy)
+		if err != nil {
+			return nil, fmt.Errorf("error parsing proxy URL: %w", err)
+		}
+		httpTransport.Proxy = http.ProxyURL(proxyURL)
 	}
 	return &http.Client{
 		Transport: httpTransport,

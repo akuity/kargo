@@ -113,6 +113,19 @@ lint-charts: install-helm
 	$(HELM) dep up && \
 	$(HELM) lint .
 
+# helm-unittest plugin version used by `make test-chart`.
+HELM_UNITTEST_VERSION ?= v1.1.0
+
+.PHONY: test-chart
+test-chart: install-helm
+	@# stdout of the install is redirected to silence the plugin's usage
+	@# banner; errors still surface on stderr.
+	$(HELM) plugin list | grep -q unittest || \
+		$(HELM) plugin install --version $(HELM_UNITTEST_VERSION) https://github.com/helm-unittest/helm-unittest >/dev/null
+	cd charts/kargo && \
+	$(HELM) dep up && \
+	$(HELM) unittest .
+
 .PHONY: lint-ui
 lint-ui:
 	pnpm --dir=ui install --dev
@@ -360,6 +373,10 @@ hack-lint-proto: hack-build-dev-tools
 .PHONY: hack-lint-charts
 hack-lint-charts: hack-build-dev-tools
 	$(DOCKER_CMD) make lint-charts
+
+.PHONY: hack-test-chart
+hack-test-chart: hack-build-dev-tools
+	$(DOCKER_CMD) make test-chart
 
 .PHONY: hack-lint-ui
 hack-lint-ui: hack-build-dev-tools

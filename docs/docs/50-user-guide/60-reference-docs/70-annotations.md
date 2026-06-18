@@ -17,7 +17,7 @@ programmatically with Kargo.
 | Key | Target Resource(s) | Possible Values | Description |
 |-----|--------------------|-----------------|-------------|
 | `kargo.akuity.io/abort` | `Stage` | A plain string (verification ID from `.status.verifications[*].id` of the `Stage`). | Aborts an in-progress `Freight` verification. |
-| `kargo.akuity.io/authorized-stage` | `Argo CD Application` | `<project>:<stage>` | Indicates which `Stage` is authorized to manage the `Application` resource. |
+| `kargo.akuity.io/authorized-stage` | `Argo CD Application` | A comma-separated list of `<project>:<stage>` entries (a single `<project>:<stage>` is also valid). | Indicates which `Stage`(s) are authorized to manage the `Application` resource. List more than one entry to allow multiple `Stage`s to manage the same `Application`. |
 | `kargo.akuity.io/color` | `Stage` | Hex color code (e.g. `#ff8800`) | Optional cosmetic color used in the UI's pipeline view. |
 | `kargo.akuity.io/description` | Any | Any string | Optional human-readable description of the resource. May be used by the Kargo UI to display additional context or details. |
 | `kargo.akuity.io/refresh` | `Warehouse`, `Stage`, `Promotion` | A string that is unique or at least unlikely to repeat, such as a UUID or a timestamp of "now" | Triggers reconciliation of the resource when its value changes. |
