@@ -9,7 +9,7 @@ import { generatePath, useNavigate } from 'react-router-dom';
 import { paths } from '@ui/config/paths';
 import { useExtensionsContext } from '@ui/extensions/extensions-context';
 import { ModalComponentProps } from '@ui/features/common/modal/modal-context';
-import { getCurrentFreight } from '@ui/features/common/utils';
+import { getCurrentFreightForComparison } from '@ui/features/common/utils';
 import { IAction, useActionContext } from '@ui/features/project/pipelines/context/action-context';
 import {
   promoteDownstream,
@@ -42,7 +42,10 @@ export const Promote = (props: PromoteProps) => {
   const stageName = props.stage?.metadata?.name;
   const projectName = props.stage?.metadata?.namespace;
 
-  const currentFreightOnStage = useMemo(() => getCurrentFreight(props.stage)[0], [props.stage]);
+  const currentFreightOnStage = useMemo(
+    () => getCurrentFreightForComparison(props.stage, props.freight),
+    [props.stage, props.freight]
+  );
 
   const promoteActionMutation = useMutation(promoteToStage, {
     onSuccess: (response) => {
