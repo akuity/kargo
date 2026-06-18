@@ -27,8 +27,6 @@ export const CustomWarehouseNode = (props: {
 }) => {
   const graphContext = useGraphContext();
 
-  const ready = graphContext?.ready || true;
-
   if (!props.data.value) {
     return null;
   }
@@ -36,7 +34,7 @@ export const CustomWarehouseNode = (props: {
   const handleId = props.data?.value?.metadata?.name || '';
   const height = warehouseSizer.size().height;
 
-  const WarehouseNodeBox = ready ? (
+  const WarehouseNodeBox = graphContext?.ready ? (
     <WarehouseNode warehouse={props.data.value} />
   ) : (
     <NodePlaceholder {...warehouseSizer.size()} />
