@@ -22,6 +22,25 @@ tests:
           path: metadata.name
           value: custom-system
 
+  - it: has no annotations by default
+    asserts:
+      - notExists:
+          path: metadata.annotations
+
+  - it: applies extra namespace labels and annotations when configured
+    set:
+      global.systemResources.extraNamespaceLabels:
+        team: platform
+      global.systemResources.extraNamespaceAnnotations:
+        kyverno.io/required: enforce
+    asserts:
+      - equal:
+          path: metadata.labels.team
+          value: platform
+      - equal:
+          path: metadata.annotations["kyverno.io/required"]
+          value: enforce
+
   - it: is not created when namespace creation is disabled
     set:
       global.systemResources.createNamespace: false
@@ -53,6 +72,25 @@ tests:
           path: metadata.name
           value: kargo-shared-resources
 
+  - it: has no annotations by default
+    asserts:
+      - notExists:
+          path: metadata.annotations
+
+  - it: applies extra namespace labels and annotations when configured
+    set:
+      global.sharedResources.extraNamespaceLabels:
+        team: platform
+      global.sharedResources.extraNamespaceAnnotations:
+        kyverno.io/required: enforce
+    asserts:
+      - equal:
+          path: metadata.labels.team
+          value: platform
+      - equal:
+          path: metadata.annotations["kyverno.io/required"]
+          value: enforce
+
   - it: is not created when namespace creation is disabled
     set:
       global.sharedResources.createNamespace: false
@@ -83,3 +121,207 @@ tests:
     asserts:
       - hasDocuments:
           count: 0
+
+---
+suite: system-resources-namespace/roles.yaml
+values:
+  - ../test/values-unittest.yaml
+templates:
+  - templates/system-resources-namespace/roles.yaml
+tests:
+  - it: renders the system resources Roles by default
+    asserts:
+      - documentSelector:
+          path: metadata.name
+          value: kargo-system-resources-reader
+        isKind:
+          of: Role
+      - documentSelector:
+          path: metadata.name
+          value: kargo-system-resources-admin
+        isKind:
+          of: Role
+
+  - it: is not rendered when RBAC creation is disabled
+    set:
+      global.systemResources.createRBAC: false
+    asserts:
+      - hasDocuments:
+          count: 0
+
+  - it: is not rendered when the data plane is not installed
+    set:
+      dataPlane.install: false
+    asserts:
+      - hasDocuments:
+          count: 0
+
+---
+suite: system-resources-namespace/role-bindings.yaml
+values:
+  - ../test/values-unittest.yaml
+templates:
+  - templates/system-resources-namespace/role-bindings.yaml
+tests:
+  - it: renders the system resources RoleBindings by default
+    asserts:
+      - documentSelector:
+          path: metadata.name
+          value: kargo-system-resources-reader
+        isKind:
+          of: RoleBinding
+      - documentSelector:
+          path: metadata.name
+          value: kargo-system-resources-admin
+        isKind:
+          of: RoleBinding
+
+  - it: omits the reader and admin RoleBindings when RBAC creation is disabled
+    # The controller-reader RoleBinding is gated separately (on the controller
+    # being installed), so it is unaffected by this flag and remains.
+    set:
+      global.systemResources.createRBAC: false
+    asserts:
+      - hasDocuments:
+          count: 1
+      - documentSelector:
+          path: metadata.name
+          value: kargo-controller-system-resources-reader
+        isKind:
+          of: RoleBinding
+
+---
+suite: shared-resources-namespace/roles.yaml
+values:
+  - ../test/values-unittest.yaml
+templates:
+  - templates/shared-resources-namespace/roles.yaml
+tests:
+  - it: renders the shared resources Roles by default
+    asserts:
+      - documentSelector:
+          path: metadata.name
+          value: kargo-shared-resources-reader
+        isKind:
+          of: Role
+      - documentSelector:
+          path: metadata.name
+          value: kargo-shared-resources-admin
+        isKind:
+          of: Role
+
+  - it: is not rendered when RBAC creation is disabled
+    set:
+      global.sharedResources.createRBAC: false
+    asserts:
+      - hasDocuments:
+          count: 0
+
+  - it: is not rendered when the data plane is not installed
+    set:
+      dataPlane.install: false
+    asserts:
+      - hasDocuments:
+          count: 0
+
+---
+suite: shared-resources-namespace/role-bindings.yaml
+values:
+  - ../test/values-unittest.yaml
+templates:
+  - templates/shared-resources-namespace/role-bindings.yaml
+tests:
+  - it: renders the shared resources RoleBindings by default
+    asserts:
+      - documentSelector:
+          path: metadata.name
+          value: kargo-shared-resources-reader
+        isKind:
+          of: RoleBinding
+      - documentSelector:
+          path: metadata.name
+          value: kargo-shared-resources-admin
+        isKind:
+          of: RoleBinding
+
+  - it: omits the reader and admin RoleBindings when RBAC creation is disabled
+    # The controller-reader RoleBinding is gated separately (on the controller
+    # being installed), so it is unaffected by this flag and remains.
+    set:
+      global.sharedResources.createRBAC: false
+    asserts:
+      - hasDocuments:
+          count: 1
+      - documentSelector:
+          path: metadata.name
+          value: kargo-controller-shared-resources-reader
+        isKind:
+          of: RoleBinding
+
+---
+suite: cluster-secrets-namespace/roles.yaml
+values:
+  - ../test/values-unittest.yaml
+templates:
+  - templates/cluster-secrets-namespace/roles.yaml
+tests:
+  - it: renders the (deprecated) cluster secrets Roles by default
+    asserts:
+      - documentSelector:
+          path: metadata.name
+          value: kargo-cluster-secrets-reader
+        isKind:
+          of: Role
+      - documentSelector:
+          path: metadata.name
+          value: kargo-cluster-secrets-admin
+        isKind:
+          of: Role
+
+  - it: is not rendered when RBAC creation is disabled
+    set:
+      global.createClusterSecretsRBAC: false
+    asserts:
+      - hasDocuments:
+          count: 0
+
+  - it: is not rendered when the data plane is not installed
+    set:
+      dataPlane.install: false
+    asserts:
+      - hasDocuments:
+          count: 0
+
+---
+suite: cluster-secrets-namespace/role-bindings.yaml
+values:
+  - ../test/values-unittest.yaml
+templates:
+  - templates/cluster-secrets-namespace/role-bindings.yaml
+tests:
+  - it: renders the (deprecated) cluster secrets RoleBindings by default
+    asserts:
+      - documentSelector:
+          path: metadata.name
+          value: kargo-cluster-secrets-reader
+        isKind:
+          of: RoleBinding
+      - documentSelector:
+          path: metadata.name
+          value: kargo-cluster-secrets-admin
+        isKind:
+          of: RoleBinding
+
+  - it: omits the reader and admin RoleBindings when RBAC creation is disabled
+    # The controller-reader RoleBinding is gated separately (on the controller
+    # being installed), so it is unaffected by this flag and remains.
+    set:
+      global.createClusterSecretsRBAC: false
+    asserts:
+      - hasDocuments:
+          count: 1
+      - documentSelector:
+          path: metadata.name
+          value: kargo-controller-cluster-secrets-reader
+        isKind:
+          of: RoleBinding
