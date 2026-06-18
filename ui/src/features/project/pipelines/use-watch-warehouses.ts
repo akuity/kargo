@@ -9,7 +9,7 @@ import {
 } from '@ui/gen/api/v2/core/core';
 import { Warehouse } from '@ui/gen/api/v2/models';
 
-import { readSSEStream, upsertOrDelete } from './watch-utils';
+import { debounce, readSSEStream, upsertOrDelete } from './watch-utils';
 
 export const useWatchWarehouses = (
   project: string,
@@ -29,6 +29,12 @@ export const useWatchWarehouses = (
     const url = `/v1beta1/projects/${encodeURIComponent(project)}/warehouses?watch=true`;
     const listKey = getListWarehousesQueryKey(project);
     const pendingRefresh: Record<string, boolean> = {};
+
+    // Coalesce bursts of warehouse events so the graph recompute is triggered
+    // once per burst rather than once per event.
+    const emitWarehouseEvent = debounce((warehouse: Warehouse) =>
+      opts?.onWarehouseEvent?.(warehouse)
+    );
 
     (async () => {
       for await (const event of readSSEStream<Warehouse>(url, abort.signal)) {
@@ -86,11 +92,14 @@ export const useWatchWarehouses = (
             opts?.refreshHook?.();
           }
 
-          opts?.onWarehouseEvent?.(warehouse);
+          emitWarehouseEvent.call(warehouse);
         }
       }
     })();
 
-    return () => abort.abort();
+    return () => {
+      abort.abort();
+      emitWarehouseEvent.cancel();
+    };
   }, [project, client]);
 };

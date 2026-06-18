@@ -9,7 +9,7 @@ import {
 } from '@ui/gen/api/v2/core/core';
 import { Stage } from '@ui/gen/api/v2/models';
 
-import { readSSEStream, upsertOrDelete } from './watch-utils';
+import { debounce, readSSEStream, upsertOrDelete } from './watch-utils';
 
 export const useWatchStages = (
   project: string,
@@ -31,6 +31,10 @@ export const useWatchStages = (
     }
     const url = `/v1beta1/projects/${encodeURIComponent(project)}/stages?${params}`;
     const listKey = getListStagesQueryKey(project, { freightOrigins: warehouses || [] });
+
+    // Coalesce bursts of stage events so the graph recompute is triggered once
+    // per burst rather than once per event.
+    const emitStageEvent = debounce((stage: Stage) => onStageEvent?.(stage));
 
     (async () => {
       for await (const event of readSSEStream<Stage>(url, abort.signal)) {
@@ -68,11 +72,14 @@ export const useWatchStages = (
                   }
                 : old
           );
-          onStageEvent?.(stage);
+          emitStageEvent.call(stage);
         }
       }
     })();
 
-    return () => abort.abort();
+    return () => {
+      abort.abort();
+      emitStageEvent.cancel();
+    };
   }, [project, (warehouses || []).join(','), client]);
 };

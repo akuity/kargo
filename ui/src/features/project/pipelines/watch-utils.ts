@@ -102,6 +102,27 @@ export async function* readSSETextStream(url: string, signal: AbortSignal): Asyn
   }
 }
 
+// Coalesces rapid invocations into a single trailing call. Watch streams emit
+// bursts of events (e.g. during a refresh storm); without this the per-event
+// callback would fire once per event, and the pipeline graph's recompute
+// debounce would be starved by the constant stream of redraw triggers. Mirrors
+// the throttling the pre-REST watch implementation had. The default zero delay
+// coalesces every event parsed from a single network chunk, since the stream
+// consumer processes them synchronously before the next read.
+export function debounce<A extends unknown[]>(
+  fn: (...args: A) => void,
+  delayMs = 0
+): { call: (...args: A) => void; cancel: () => void } {
+  let timer: ReturnType<typeof setTimeout> | undefined;
+  return {
+    call: (...args: A) => {
+      clearTimeout(timer);
+      timer = setTimeout(() => fn(...args), delayMs);
+    },
+    cancel: () => clearTimeout(timer)
+  };
+}
+
 export function upsertOrDelete<T extends { metadata?: { name?: string } }>(
   items: T[],
   item: T,
