@@ -92,7 +92,7 @@ tests:
           path: data.ADMIN_ACCOUNT_ENABLED
           value: "true"
 
-  - it: derives an https token issuer and TLS env when TLS is enabled (default)
+  - it: token issuer URL uses the https scheme when TLS is enabled (default)
     asserts:
       - equal:
           path: data.ADMIN_ACCOUNT_TOKEN_ISSUER
@@ -101,7 +101,7 @@ tests:
           path: data.TLS_ENABLED
           value: "true"
 
-  - it: derives an http token issuer when TLS is disabled
+  - it: token issuer URL uses the http scheme when TLS is disabled
     set:
       api.tls.enabled: false
     asserts:
