@@ -6,6 +6,7 @@
  * OpenAPI spec version: v1alpha1
  */
 import type { RolloutsDatadogMetricQueries } from './rolloutsDatadogMetricQueries';
+import type { RolloutsSecretRef } from './rolloutsSecretRef';
 
 export interface RolloutsDatadogMetric {
   aggregator?: string;
@@ -14,4 +15,5 @@ export interface RolloutsDatadogMetric {
   interval?: string;
   queries?: RolloutsDatadogMetricQueries;
   query?: string;
+  secretRef?: RolloutsSecretRef;
 }

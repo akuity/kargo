@@ -31,6 +31,9 @@ type RolloutsAnalysisRunSpec struct {
 
 	// terminate
 	Terminate bool `json:"terminate,omitempty"`
+
+	// ttl strategy
+	TTLStrategy *RolloutsTTLStrategy `json:"ttlStrategy,omitempty"`
 }
 
 // Validate validates this rollouts analysis run spec
@@ -50,6 +53,10 @@ func (m *RolloutsAnalysisRunSpec) Validate(formats strfmt.Registry) error {
 	}
 
 	if err := m.validateMetrics(formats); err != nil {
+		res = append(res, err)
+	}
+
+	if err := m.validateTTLStrategy(formats); err != nil {
 		res = append(res, err)
 	}
 
@@ -179,6 +186,29 @@ func (m *RolloutsAnalysisRunSpec) validateMetrics(formats strfmt.Registry) error
 	return nil
 }
 
+func (m *RolloutsAnalysisRunSpec) validateTTLStrategy(formats strfmt.Registry) error {
+	if swag.IsZero(m.TTLStrategy) { // not required
+		return nil
+	}
+
+	if m.TTLStrategy != nil {
+		if err := m.TTLStrategy.Validate(formats); err != nil {
+			ve := new(errors.Validation)
+			if stderrors.As(err, &ve) {
+				return ve.ValidateName("ttlStrategy")
+			}
+			ce := new(errors.CompositeError)
+			if stderrors.As(err, &ce) {
+				return ce.ValidateName("ttlStrategy")
+			}
+
+			return err
+		}
+	}
+
+	return nil
+}
+
 // ContextValidate validate this rollouts analysis run spec based on the context it is used
 func (m *RolloutsAnalysisRunSpec) ContextValidate(ctx context.Context, formats strfmt.Registry) error {
 	var res []error
@@ -196,6 +226,10 @@ func (m *RolloutsAnalysisRunSpec) ContextValidate(ctx context.Context, formats s
 	}
 
 	if err := m.contextValidateMetrics(ctx, formats); err != nil {
+		res = append(res, err)
+	}
+
+	if err := m.contextValidateTTLStrategy(ctx, formats); err != nil {
 		res = append(res, err)
 	}
 
@@ -316,6 +350,31 @@ func (m *RolloutsAnalysisRunSpec) contextValidateMetrics(ctx context.Context, fo
 			}
 		}
 
+	}
+
+	return nil
+}
+
+func (m *RolloutsAnalysisRunSpec) contextValidateTTLStrategy(ctx context.Context, formats strfmt.Registry) error {
+
+	if m.TTLStrategy != nil {
+
+		if swag.IsZero(m.TTLStrategy) { // not required
+			return nil
+		}
+
+		if err := m.TTLStrategy.ContextValidate(ctx, formats); err != nil {
+			ve := new(errors.Validation)
+			if stderrors.As(err, &ve) {
+				return ve.ValidateName("ttlStrategy")
+			}
+			ce := new(errors.CompositeError)
+			if stderrors.As(err, &ce) {
+				return ce.ValidateName("ttlStrategy")
+			}
+
+			return err
+		}
 	}
 
 	return nil

@@ -1529,7 +1529,7 @@ func (r *RegularStageReconciler) getVerificationResult(
 		ID:         currentVI.ID,
 		Actor:      currentVI.Actor,
 		StartTime:  currentVI.StartTime,
-		FinishTime: ar.Status.CompletedAt(),
+		FinishTime: ar.Status.CompletedAt,
 		Phase:      kargoapi.VerificationPhase(ar.Status.Phase),
 		Message:    ar.Status.Message,
 		AnalysisRun: &kargoapi.AnalysisRunReference{

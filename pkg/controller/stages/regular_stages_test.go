@@ -4213,8 +4213,9 @@ func TestRegularStageReconciler_getVerificationResult(t *testing.T) {
 						Namespace: "fake-project",
 					},
 					Status: rolloutsapi.AnalysisRunStatus{
-						Phase:   rolloutsapi.AnalysisPhaseSuccessful,
-						Message: "Analysis completed successfully",
+						Phase:       rolloutsapi.AnalysisPhaseSuccessful,
+						Message:     "Analysis completed successfully",
+						CompletedAt: &metav1.Time{Time: fiveMinutesLater},
 						MetricResults: []rolloutsapi.MetricResult{
 							{
 								Measurements: []rolloutsapi.Measurement{
@@ -4263,8 +4264,9 @@ func TestRegularStageReconciler_getVerificationResult(t *testing.T) {
 						Namespace: "fake-project",
 					},
 					Status: rolloutsapi.AnalysisRunStatus{
-						Phase:   "Failed",
-						Message: "Something went wrong",
+						Phase:       "Failed",
+						Message:     "Something went wrong",
+						CompletedAt: &metav1.Time{Time: fiveMinutesLater},
 						MetricResults: []rolloutsapi.MetricResult{
 							{
 								Measurements: []rolloutsapi.Measurement{
@@ -4314,8 +4316,9 @@ func TestRegularStageReconciler_getVerificationResult(t *testing.T) {
 						Namespace: "fake-project",
 					},
 					Status: rolloutsapi.AnalysisRunStatus{
-						Phase:   rolloutsapi.AnalysisPhaseError,
-						Message: "Something went wrong",
+						Phase:       rolloutsapi.AnalysisPhaseError,
+						Message:     "Something went wrong",
+						CompletedAt: &metav1.Time{Time: fiveMinutesLater},
 						MetricResults: []rolloutsapi.MetricResult{
 							{
 								Measurements: []rolloutsapi.Measurement{

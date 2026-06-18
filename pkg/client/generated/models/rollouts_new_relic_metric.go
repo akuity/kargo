@@ -19,6 +19,9 @@ type RolloutsNewRelicMetric struct {
 
 	// query
 	Query string `json:"query,omitempty"`
+
+	// timeout
+	Timeout int64 `json:"timeout,omitempty"`
 }
 
 // Validate validates this rollouts new relic metric

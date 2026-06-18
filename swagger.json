@@ -5461,12 +5461,18 @@
         },
         "terminate": {
           "type": "boolean"
+        },
+        "ttlStrategy": {
+          "$ref": "#/definitions/RolloutsTTLStrategy"
         }
       }
     },
     "RolloutsAnalysisRunStatus": {
       "type": "object",
       "properties": {
+        "completedAt": {
+          "type": "string"
+        },
         "dryRunSummary": {
           "$ref": "#/definitions/RolloutsRunSummary"
         },
@@ -5531,6 +5537,17 @@
         }
       }
     },
+    "RolloutsAnalysisTemplateRef": {
+      "type": "object",
+      "properties": {
+        "clusterScope": {
+          "type": "boolean"
+        },
+        "templateName": {
+          "type": "string"
+        }
+      }
+    },
     "RolloutsAnalysisTemplateSpec": {
       "type": "object",
       "properties": {
@@ -5556,6 +5573,12 @@
           "type": "array",
           "items": {
             "$ref": "#/definitions/RolloutsMetric"
+          }
+        },
+        "templates": {
+          "type": "array",
+          "items": {
+            "$ref": "#/definitions/RolloutsAnalysisTemplateRef"
           }
         }
       }
@@ -5731,6 +5754,9 @@
         },
         "query": {
           "type": "string"
+        },
+        "secretRef": {
+          "$ref": "#/definitions/RolloutsSecretRef"
         }
       }
     },
@@ -5798,6 +5824,9 @@
         },
         "configurationAccountName": {
           "type": "string"
+        },
+        "lookback": {
+          "type": "boolean"
         },
         "metricsAccountName": {
           "type": "string"
@@ -5970,6 +5999,9 @@
         "consecutiveError": {
           "type": "integer"
         },
+        "consecutiveSuccess": {
+          "type": "integer"
+        },
         "count": {
           "type": "integer"
         },
@@ -6019,6 +6051,9 @@
         },
         "query": {
           "type": "string"
+        },
+        "timeout": {
+          "type": "integer"
         }
       }
     },
@@ -6063,8 +6098,25 @@
         "query": {
           "type": "string"
         },
+        "rangeQuery": {
+          "$ref": "#/definitions/RolloutsPrometheusRangeQueryArgs"
+        },
         "timeout": {
           "type": "integer"
+        }
+      }
+    },
+    "RolloutsPrometheusRangeQueryArgs": {
+      "type": "object",
+      "properties": {
+        "end": {
+          "type": "string"
+        },
+        "start": {
+          "type": "string"
+        },
+        "step": {
+          "type": "string"
         }
       }
     },
@@ -6119,6 +6171,17 @@
         }
       }
     },
+    "RolloutsSecretRef": {
+      "type": "object",
+      "properties": {
+        "name": {
+          "type": "string"
+        },
+        "namespaced": {
+          "type": "boolean"
+        }
+      }
+    },
     "RolloutsSigv4Config": {
       "type": "object",
       "properties": {
@@ -6144,6 +6207,20 @@
         },
         "query": {
           "type": "string"
+        }
+      }
+    },
+    "RolloutsTTLStrategy": {
+      "type": "object",
+      "properties": {
+        "secondsAfterCompletion": {
+          "type": "integer"
+        },
+        "secondsAfterFailure": {
+          "type": "integer"
+        },
+        "secondsAfterSuccess": {
+          "type": "integer"
         }
       }
     },

@@ -17,6 +17,9 @@ import (
 // swagger:model RolloutsAnalysisRunStatus
 type RolloutsAnalysisRunStatus struct {
 
+	// completed at
+	CompletedAt string `json:"completedAt,omitempty"`
+
 	// dry run summary
 	DryRunSummary *RolloutsRunSummary `json:"dryRunSummary,omitempty"`
 

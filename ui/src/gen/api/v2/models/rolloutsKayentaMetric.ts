@@ -13,6 +13,7 @@ export interface RolloutsKayentaMetric {
   application?: string;
   canaryConfigName?: string;
   configurationAccountName?: string;
+  lookback?: boolean;
   metricsAccountName?: string;
   scopes?: RolloutsKayentaScope[];
   storageAccountName?: string;

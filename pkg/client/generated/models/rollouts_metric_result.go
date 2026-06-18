@@ -20,6 +20,9 @@ type RolloutsMetricResult struct {
 	// consecutive error
 	ConsecutiveError int64 `json:"consecutiveError,omitempty"`
 
+	// consecutive success
+	ConsecutiveSuccess int64 `json:"consecutiveSuccess,omitempty"`
+
 	// count
 	Count int64 `json:"count,omitempty"`
 
