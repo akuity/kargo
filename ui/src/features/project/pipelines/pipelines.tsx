@@ -92,7 +92,6 @@ export const Pipelines = (props: { creatingStage?: boolean; creatingWarehouse?: 
   const stages = listStagesQuery.data?.data?.items || [];
 
   const loading =
-    listStagesQuery.isLoading ||
     projectQuery.isLoading ||
     getFreightQuery.isLoading ||
     listWarehousesQuery.isLoading ||

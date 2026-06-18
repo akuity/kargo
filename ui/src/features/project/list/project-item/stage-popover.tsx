@@ -8,7 +8,6 @@ import { paths } from '@ui/config/paths';
 import { getAlias } from '@ui/features/common/utils';
 import { getGetFreightQueryOptions, useGetPromotion } from '@ui/gen/api/v2/core/core';
 import { FreightReference, Stage } from '@ui/gen/api/v2/models';
-import { timestampDate } from '@ui/utils/connectrpc-utils';
 
 export const StagePopover = ({ project, stage }: { project?: string; stage?: Stage }) => {
   const getPromotionQuery = useGetPromotion(
@@ -37,11 +36,7 @@ export const StagePopover = ({ project, stage }: { project?: string; stage?: Sta
       <_label>LAST PROMOTED</_label>
       <div className='flex items-center mb-4'>
         <FontAwesomeIcon icon={faClock} className='mr-2' />
-        <div>
-          {moment(timestampDate(promotion?.metadata?.creationTimestamp)).format(
-            'MMM do yyyy HH:mm:ss'
-          )}
-        </div>
+        <div>{moment(promotion?.metadata?.creationTimestamp).format('MMM do yyyy HH:mm:ss')}</div>
       </div>
       <_label>CURRENT FREIGHT</_label>
       {Object.values(stage?.status?.freightHistory?.[0]?.items || {}).map((_, i) => (

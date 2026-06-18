@@ -18,7 +18,6 @@ import { useGetFreight, useListPromotions, usePromoteToStage } from '@ui/gen/api
 import { ArgoCDShard, Promotion } from '@ui/gen/api/v2/models';
 import uiPlugins from '@ui/plugins';
 import { UiPluginHoles } from '@ui/plugins/atoms/ui-plugin-hole/ui-plugin-holes';
-import { timestampDate } from '@ui/utils/connectrpc-utils';
 
 import { Promotion as PromotionComponent } from '../project/pipelines/promotion/promotion';
 
@@ -98,7 +97,7 @@ export const Promotions = ({ argocdShard }: { argocdShard?: ArgoCDShard }) => {
     {
       title: 'Date',
       render: (_, promotion) => {
-        const date = timestampDate(promotion.metadata?.creationTimestamp);
+        const date = new Date(promotion.metadata?.creationTimestamp || '');
         return date ? format(date, 'MMM do yyyy HH:mm:ss') : '';
       }
     },

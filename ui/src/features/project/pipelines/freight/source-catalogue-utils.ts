@@ -1,7 +1,6 @@
 import { isAfter } from 'date-fns';
 
 import { Freight } from '@ui/gen/api/v2/models';
-import { timestampDate } from '@ui/utils/connectrpc-utils';
 
 export const catalogueFreights = (freights: Freight[]) => {
   const catalogue = {
@@ -106,11 +105,11 @@ export const filterFreightByAlias = (alias: string[]) => (freight: Freight) =>
   alias?.includes(freight?.alias || '');
 
 export const filterFreightByTimerange = (till: Date) => (freight: Freight) => {
-  const creationTimestamp = timestampDate(freight.metadata?.creationTimestamp);
-
-  if (!creationTimestamp) {
+  if (!freight?.metadata?.creationTimestamp) {
     return false;
   }
+
+  const creationTimestamp = new Date(freight.metadata?.creationTimestamp);
 
   return isAfter(creationTimestamp, till);
 };

@@ -9,7 +9,7 @@ import {
 } from '@ui/gen/api/v2/core/core';
 import { Warehouse } from '@ui/gen/api/v2/models';
 
-import { runSeededWatch, upsertOrDelete } from './watch-utils';
+import { debounce, runSeededWatch, upsertOrDelete } from './watch-utils';
 
 export const useWatchWarehouses = (
   project: string,
@@ -28,6 +28,12 @@ export const useWatchWarehouses = (
     const abort = new AbortController();
     const listKey = getListWarehousesQueryKey(project);
     const pendingRefresh: Record<string, boolean> = {};
+
+    // Coalesce bursts of warehouse events so the graph recompute is triggered
+    // once per burst rather than once per event.
+    const emitWarehouseEvent = debounce((warehouse: Warehouse) =>
+      opts?.onWarehouseEvent?.(warehouse)
+    );
 
     const seedResourceVersion = () =>
       (client.getQueryData(listKey) as listWarehousesResponse | undefined)?.data?.metadata
@@ -100,7 +106,7 @@ export const useWatchWarehouses = (
           opts?.refreshHook?.();
         }
 
-        opts?.onWarehouseEvent?.(warehouse);
+        emitWarehouseEvent.call(warehouse);
       }
     };
 
@@ -112,6 +118,9 @@ export const useWatchWarehouses = (
       onEvent
     });
 
-    return () => abort.abort();
+    return () => {
+      abort.abort();
+      emitWarehouseEvent.cancel();
+    };
   }, [project, client]);
 };

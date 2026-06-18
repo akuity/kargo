@@ -9,7 +9,7 @@ import {
 } from '@ui/gen/api/v2/core/core';
 import { Stage } from '@ui/gen/api/v2/models';
 
-import { runSeededWatch, upsertOrDelete } from './watch-utils';
+import { debounce, runSeededWatch, upsertOrDelete } from './watch-utils';
 
 export const useWatchStages = (
   project: string,
@@ -25,6 +25,10 @@ export const useWatchStages = (
 
     const abort = new AbortController();
     const listKey = getListStagesQueryKey(project, { freightOrigins: warehouses || [] });
+
+    // Coalesce bursts of stage events so the graph recompute is triggered once
+    // per burst rather than once per event.
+    const emitStageEvent = debounce((stage: Stage) => onStageEvent?.(stage));
 
     const seedResourceVersion = () =>
       (client.getQueryData(listKey) as listStagesResponse | undefined)?.data?.metadata
@@ -79,12 +83,15 @@ export const useWatchStages = (
                 }
               : old
         );
-        onStageEvent?.(stage);
+        emitStageEvent.call(stage);
       }
     };
 
     runSeededWatch<Stage>({ signal: abort.signal, buildUrl, seedResourceVersion, relist, onEvent });
 
-    return () => abort.abort();
+    return () => {
+      abort.abort();
+      emitStageEvent.cancel();
+    };
   }, [project, (warehouses || []).join(','), client]);
 };

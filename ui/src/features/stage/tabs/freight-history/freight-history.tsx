@@ -10,7 +10,6 @@ import { generatePath, Link, useNavigate } from 'react-router-dom';
 import { paths } from '@ui/config/paths';
 import { shortVersion } from '@ui/features/project/pipelines/freight/short-version-utils';
 import { Freight, FreightReference, FreightRequest, StageStatus } from '@ui/gen/api/v2/models';
-import { PlainMessage, timestampDate } from '@ui/utils/connectrpc-utils';
 
 import { FreightContents } from '../../../freight-timeline/freight-contents';
 
@@ -47,7 +46,7 @@ export const FreightHistory = ({
     // to show the history
     const freightHistoryPerWarehouse: Record<
       string /* warehouse eg. Warehouse/w-1 or Warehouse/w-2 */,
-      PlainMessage<{ id: string } & FreightReference>[]
+      ({ id: string } & FreightReference)[]
     > = {};
 
     for (const freightCollection of freightHistory || []) {
@@ -111,7 +110,7 @@ export const FreightHistory = ({
         pagination={{ hideOnSinglePage: true }}
         rowKey={(record, index) => `${record.name}${index}`}
       >
-        <Table.Column<PlainMessage<FreightReference>>
+        <Table.Column<FreightReference>
           title='Alias'
           width={240}
           render={(value, record, index) => {
@@ -131,7 +130,7 @@ export const FreightHistory = ({
             );
           }}
         />
-        <Table.Column<PlainMessage<FreightReference>>
+        <Table.Column<FreightReference>
           title='Contents'
           render={(value, record) => (
             <FreightContents
@@ -149,12 +148,10 @@ export const FreightHistory = ({
             />
           )}
         />
-        <Table.Column<PlainMessage<FreightReference>>
+        <Table.Column<FreightReference>
           title='Created at'
           render={(_, record) => {
-            const freightCreation = timestampDate(
-              freightMap[record?.name || '']?.metadata?.creationTimestamp
-            );
+            const freightCreation = freightMap[record?.name || '']?.metadata?.creationTimestamp;
 
             if (freightCreation) {
               return (
@@ -171,13 +168,13 @@ export const FreightHistory = ({
             return '-';
           }}
         />
-        <Table.Column<PlainMessage<{ id: string } & FreightReference>>
+        <Table.Column<{ id: string } & FreightReference>
           title='Promoted at'
           render={(_, record) => {
             const promotion = promotionsByFreightCollection[record.id];
 
             if (promotion) {
-              const promotedAt = timestampDate(promotion?.metadata?.creationTimestamp);
+              const promotedAt = promotion?.metadata?.creationTimestamp;
 
               if (promotedAt) {
                 return (
@@ -197,7 +194,7 @@ export const FreightHistory = ({
             return '-';
           }}
         />
-        <Table.Column<PlainMessage<FreightReference>>
+        <Table.Column<FreightReference>
           render={(_, record, idx) =>
             idx > 0 &&
             freightMap[record?.name || ''] && (

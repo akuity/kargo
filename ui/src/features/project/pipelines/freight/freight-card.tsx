@@ -25,7 +25,6 @@ import { useActionContext } from '@ui/features/project/pipelines/context/action-
 import { FreightTimelineControllerContextType } from '@ui/features/project/pipelines/context/freight-timeline-controller-context';
 import { ColorMap } from '@ui/features/stage/utils';
 import { Freight, Stage } from '@ui/gen/api/v2/models';
-import { timestampDate } from '@ui/utils/connectrpc-utils';
 
 import { useManualApprovalModal } from '../promotion/use-manual-approval-modal';
 
@@ -58,11 +57,11 @@ export const FreightCard = (props: FreightCardProps) => {
   const deleteFreightModal = useModal();
 
   const creation = useMemo(() => {
-    const creationDate = timestampDate(props.freight?.metadata?.creationTimestamp);
-
-    if (!creationDate) {
-      return { relative: '', abs: creationDate };
+    if (!props.freight?.metadata?.creationTimestamp) {
+      return { relative: '', abs: null };
     }
+
+    const creationDate = new Date(props.freight?.metadata?.creationTimestamp);
 
     return {
       relative: formatDistance(creationDate, new Date(), { addSuffix: false })?.replace(

@@ -37,6 +37,7 @@ export const useReactFlowPipelineGraph = (
     edges: []
   });
   const lastRunRef = useRef(0);
+  const functionCalled = useRef(false);
 
   useEffect(() => {
     const compute = () => {
@@ -164,8 +165,21 @@ export const useReactFlowPipelineGraph = (
       setResult({ nodes: reactFlowNodes, edges: reactFlowEdges });
     };
 
-    // TODO(Marvin9): debouncing caused a bug after migration (due to no throttling in watch), so temporarily disabling it
-    compute();
+    // Run the first layout immediately so the graph paints without delay.
+    // Subsequent recomputes are throttled to at most once per 3s, since layout
+    // is expensive and watch-driven redraws can fire frequently. The watch
+    // hooks coalesce their event bursts (see watch-utils debounce), which keeps
+    // this throttle from being starved by a constant stream of redraw triggers.
+    if (!functionCalled.current) {
+      functionCalled.current = true;
+      compute();
+      return;
+    }
+
+    const elapsed = Date.now() - lastRunRef.current;
+    const delay = Math.max(0, 3000 - elapsed);
+    const id = setTimeout(compute, delay);
+    return () => clearTimeout(id);
   }, [stack?.afterNodes, pipeline, redraw, warehouseColorMap, hideSubscriptions]);
 
   return result;
