@@ -31,6 +31,21 @@ export function getCurrentFreight(stage: Stage): FreightReference[] {
     : [];
 }
 
+// getCurrentFreightForComparison returns the piece of Freight currently on the
+// Stage that originates from the same Warehouse as the incoming Freight, so a
+// promotion comparison pairs like-for-like artifacts. A Stage in a
+// multi-Warehouse project holds one piece of Freight per Warehouse; comparing
+// the incoming Freight against an arbitrary one (e.g. the first) would mislabel
+// every artifact as changed or new. Returns undefined when the Stage has no
+// Freight from the incoming Freight's origin.
+export function getCurrentFreightForComparison(
+  stage: Stage,
+  incoming?: Freight
+): FreightReference | undefined {
+  const originName = incoming?.origin?.name;
+  return getCurrentFreight(stage).find((freight) => freight?.origin?.name === originName);
+}
+
 export function getCurrentFreightWarehouse(stage: Stage) {
   const freightRef = getCurrentFreight(stage);
   const isWarehouseKind = freightRef.some((freight) => freight?.origin?.kind === 'Warehouse');
