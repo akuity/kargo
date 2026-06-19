@@ -13,7 +13,7 @@ export const ChartTable = ({
   select: (version?: string) => void;
   show?: boolean;
 }) => {
-  const [page, setPage] = useDetectPage(versions, selected, !show);
+  const [page, setPage] = useDetectPage(versions, selected, (a, b) => a === b, !show);
 
   if (!show) {
     return null;

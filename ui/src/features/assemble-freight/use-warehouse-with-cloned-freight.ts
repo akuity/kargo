@@ -10,7 +10,7 @@ import {
   ImageDiscoveryResult
 } from '@ui/gen/api/v2/models';
 
-import { getSubscriptionKey, getSubscriptionKeyFreight } from './unique-subscription-key';
+import { getArtifactSubscriptionKey, getChartSubscriptionKey } from './unique-subscription-key';
 
 // WHY: A Warehouse's discoveredArtifacts is a rolling window of recently seen
 // artifact versions — it does not retain a full history. When a user wants to
@@ -51,7 +51,7 @@ export const useWarehouseWithClonedFreight = (
 
     for (const image of cloneFreightData.images || []) {
       let subscription = images.find(
-        (s) => getSubscriptionKey(s) === getSubscriptionKeyFreight(image)
+        (s) => getArtifactSubscriptionKey(s) === getArtifactSubscriptionKey(image)
       );
       if (!subscription) {
         subscription = {
@@ -72,7 +72,7 @@ export const useWarehouseWithClonedFreight = (
 
     for (const chart of cloneFreightData.charts || []) {
       let subscription = charts.find(
-        (s) => getSubscriptionKey(s) === getSubscriptionKeyFreight(chart)
+        (s) => getChartSubscriptionKey(s) === getChartSubscriptionKey(chart)
       );
       if (!subscription) {
         subscription = {
@@ -91,7 +91,7 @@ export const useWarehouseWithClonedFreight = (
 
     for (const commit of cloneFreightData.commits || []) {
       let subscription = git.find(
-        (s) => getSubscriptionKey(s) === getSubscriptionKeyFreight(commit)
+        (s) => getArtifactSubscriptionKey(s) === getArtifactSubscriptionKey(commit)
       );
       if (!subscription) {
         subscription = {

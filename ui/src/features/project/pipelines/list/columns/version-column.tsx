@@ -6,7 +6,11 @@ import { paths } from '@ui/config/paths';
 import { getCurrentFreight } from '@ui/features/common/utils';
 import { useDictionaryContext } from '@ui/features/project/pipelines/context/dictionary-context';
 import { useFreightTimelineControllerContext } from '@ui/features/project/pipelines/context/freight-timeline-controller-context';
-import { FreightArtifact } from '@ui/features/project/pipelines/freight/freight-artifact';
+import {
+  ChartArtifact,
+  GitCommitArtifact,
+  ImageArtifact
+} from '@ui/features/project/pipelines/freight/freight-artifact';
 import { Stage } from '@ui/gen/api/v2/models';
 
 export const versionColumn = (): ColumnType<Stage> => ({
@@ -42,15 +46,15 @@ export const versionColumn = (): ColumnType<Stage> => ({
 
         <div>
           {firstFreight?.commits?.slice(0, 2).map((commit) => (
-            <FreightArtifact expand key={commit?.repoURL} artifact={commit} />
+            <GitCommitArtifact expand key={commit?.repoURL} commit={commit} />
           ))}
 
           {firstFreight?.charts?.slice(0, 2).map((chart) => (
-            <FreightArtifact expand key={chart?.repoURL} artifact={chart} />
+            <ChartArtifact expand key={chart?.repoURL} chart={chart} />
           ))}
 
           {firstFreight?.images?.slice(0, 2).map((image) => (
-            <FreightArtifact expand key={image?.repoURL} artifact={image} />
+            <ImageArtifact expand key={image?.repoURL} image={image} />
           ))}
 
           {totalArtifacts > 6 && (

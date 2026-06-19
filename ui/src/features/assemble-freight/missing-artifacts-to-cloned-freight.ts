@@ -1,28 +1,38 @@
 import { Chart, DiscoveredArtifacts, Freight, GitCommit, Image } from '@ui/gen/api/v2/models';
 
-import { artifactInDiscoveredResults } from './artifact-in-discovered-results';
+import {
+  chartInDiscoveredResults,
+  commitInDiscoveredResults,
+  imageInDiscoveredResults
+} from './artifact-in-discovered-results';
+
+export type MissingArtifacts = {
+  images: Image[];
+  charts: Chart[];
+  commits: GitCommit[];
+};
 
 export const missingArtifactsToClonedFreight = (
   discoveredArtifacts: DiscoveredArtifacts | undefined,
-  cloneFreight: Freight
-) => {
-  const missingArtifacts: (Image | GitCommit | Chart)[] = [];
+  cloneFreight: Freight | undefined
+): MissingArtifacts => {
+  const missingArtifacts: MissingArtifacts = { images: [], charts: [], commits: [] };
 
   for (const image of cloneFreight?.images || []) {
-    if (!artifactInDiscoveredResults(image, discoveredArtifacts)) {
-      missingArtifacts.push(image);
+    if (!imageInDiscoveredResults(image, discoveredArtifacts)) {
+      missingArtifacts.images.push(image);
     }
   }
 
   for (const chart of cloneFreight?.charts || []) {
-    if (!artifactInDiscoveredResults(chart, discoveredArtifacts)) {
-      missingArtifacts.push(chart);
+    if (!chartInDiscoveredResults(chart, discoveredArtifacts)) {
+      missingArtifacts.charts.push(chart);
     }
   }
 
   for (const commit of cloneFreight?.commits || []) {
-    if (!artifactInDiscoveredResults(commit, discoveredArtifacts)) {
-      missingArtifacts.push(commit);
+    if (!commitInDiscoveredResults(commit, discoveredArtifacts)) {
+      missingArtifacts.commits.push(commit);
     }
   }
 

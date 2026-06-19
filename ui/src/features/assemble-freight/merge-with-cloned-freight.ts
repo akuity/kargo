@@ -1,52 +1,52 @@
-import {
-  DiscoveredArtifacts,
-  DiscoveredCommit,
-  DiscoveredImageReference,
-  Freight
-} from '@ui/gen/api/v2/models';
+import { DiscoveredArtifacts, Freight } from '@ui/gen/api/v2/models';
 
 import {
-  artifactInDiscoveredResults,
+  chartInDiscoveredResults,
+  commitInDiscoveredResults,
   findChartReference,
   findCommitReference,
-  findImageReference
+  findImageReference,
+  imageInDiscoveredResults
 } from './artifact-in-discovered-results';
-import { DiscoveryResult, FreightInfo } from './types';
-import { getSubscriptionKey } from './unique-subscription-key';
+import { ChosenItems } from './types';
+import { getArtifactSubscriptionKey, getChartSubscriptionKey } from './unique-subscription-key';
 
 export const mergeWithClonedFreight = (
-  itemsToBeMerged: Record<string, { artifact: DiscoveryResult; info: FreightInfo }>,
+  itemsToBeMerged: ChosenItems,
   discoveredArtifacts: DiscoveredArtifacts | undefined,
   cloneFreight: Freight
 ) => {
   for (const image of cloneFreight?.images || []) {
-    const imageArtifact = artifactInDiscoveredResults(image, discoveredArtifacts);
-    if (imageArtifact && 'references' in imageArtifact) {
-      itemsToBeMerged[getSubscriptionKey(imageArtifact)] = {
+    const imageArtifact = imageInDiscoveredResults(image, discoveredArtifacts);
+    if (imageArtifact) {
+      itemsToBeMerged.image[getArtifactSubscriptionKey(imageArtifact)] = {
         artifact: imageArtifact,
-        info: findImageReference(image, imageArtifact.references || []) as DiscoveredImageReference // it is there because then only 'artifactInDiscoveredResults' omits truthy value
+        // it is there because then only 'imageInDiscoveredResults' omits truthy value
+        info: findImageReference(image, imageArtifact.references || [])!
       };
     }
   }
 
   for (const chart of cloneFreight?.charts || []) {
-    const chartArtifact = artifactInDiscoveredResults(chart, discoveredArtifacts);
+    const chartArtifact = chartInDiscoveredResults(chart, discoveredArtifacts);
 
-    if (chartArtifact && 'versions' in chartArtifact) {
-      itemsToBeMerged[getSubscriptionKey(chartArtifact)] = {
+    if (chartArtifact) {
+      itemsToBeMerged.chart[getChartSubscriptionKey(chartArtifact)] = {
         artifact: chartArtifact,
-        info: findChartReference(chart, chartArtifact.versions || []) as string // it is there because then only 'artifactInDiscoveredResults' omits truthy value
+        // it is there because then only 'chartInDiscoveredResults' omits truthy value
+        info: findChartReference(chart, chartArtifact.versions || [])!
       };
     }
   }
 
   for (const commit of cloneFreight?.commits || []) {
-    const commitArtifact = artifactInDiscoveredResults(commit, discoveredArtifacts);
+    const commitArtifact = commitInDiscoveredResults(commit, discoveredArtifacts);
 
-    if (commitArtifact && 'commits' in commitArtifact) {
-      itemsToBeMerged[getSubscriptionKey(commitArtifact)] = {
+    if (commitArtifact) {
+      itemsToBeMerged.git[getArtifactSubscriptionKey(commitArtifact)] = {
         artifact: commitArtifact,
-        info: findCommitReference(commit, commitArtifact.commits || []) as DiscoveredCommit // it is there because then only 'artifactInDiscoveredResults' omits truthy value
+        // it is there because then only 'commitInDiscoveredResults' omits truthy value
+        info: findCommitReference(commit, commitArtifact.commits || [])!
       };
     }
   }

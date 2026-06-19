@@ -1,22 +1,9 @@
-import { ArtifactReference, Chart, GitCommit, Image } from '@ui/gen/api/v2/models';
+// humanComprehendableArtifact returns the last path segment of a repository URL
+// (e.g. "my-app" from "ghcr.io/acme/my-app") for display.
+export const humanComprehendableArtifact = (artifact: { repoURL?: string }) => {
+  const parts = artifact.repoURL?.split('/') || [];
 
-export const humanComprehendableArtifact = (
-  artifact: GitCommit | Chart | Image | ArtifactReference
-) => {
-  if ('repoURL' in artifact) {
-    const repoURL = artifact.repoURL;
-
-    const parts = repoURL?.split('/') || [];
-    const lastPart = parts[parts.length - 1];
-
-    return lastPart;
-  }
-
-  if ('version' in artifact) {
-    return artifact.version;
-  }
-
-  return '';
+  return parts[parts.length - 1];
 };
 
 export const artifactBase = (repoURL: string) => {

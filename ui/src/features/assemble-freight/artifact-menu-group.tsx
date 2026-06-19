@@ -4,18 +4,20 @@ import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
 import { ArtifactMenuItems } from './artifact-menu-item';
 import { DiscoveryResult } from './types';
 
-export const ArtifactMenuGroup = ({
+export const ArtifactMenuGroup = <T extends DiscoveryResult>({
   label,
   icon,
   items,
   onClick,
-  selected
+  selected,
+  getKey
 }: {
   label: string;
   icon: IconDefinition | null;
-  items: DiscoveryResult[];
-  onClick: (item: DiscoveryResult) => void;
-  selected?: DiscoveryResult;
+  items: T[];
+  onClick: (item: T) => void;
+  selected?: T;
+  getKey: (item: T) => string;
 }) =>
   items?.length > 0 && (
     <div className='mb-5'>
@@ -24,7 +26,7 @@ export const ArtifactMenuGroup = ({
         <span>{label}</span>
       </div>
       <div>
-        <ArtifactMenuItems onClick={onClick} selected={selected} items={items} />
+        <ArtifactMenuItems onClick={onClick} selected={selected} items={items} getKey={getKey} />
       </div>
     </div>
   );

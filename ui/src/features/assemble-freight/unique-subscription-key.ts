@@ -1,31 +1,12 @@
-import { Chart, GitCommit, Image } from '@ui/gen/api/v2/models';
+// Images, git commits, and their discovery results each correspond to a single
+// repository, so the repoURL identifies their subscription.
+export const getArtifactSubscriptionKey = (artifact: { repoURL?: string }) =>
+  artifact.repoURL || '';
 
-import { isArtifactChart } from './artifact-type-guards';
-import { DiscoveryResult } from './types';
+// Classic (HTTP/S) chart repositories can contain differently named charts, so a
+// chart's subscription key is keyed by both repoURL and name.
+export const getChartSubscriptionKey = (artifact: { repoURL?: string; name?: string }) =>
+  `${artifact.repoURL}/${artifact.name}`;
 
-export const getSubscriptionKey = (res: DiscoveryResult) => {
-  if ('artifactReferences' in res) {
-    return res.name || '';
-  }
-
-  if ('name' in res && 'repoURL' in res) {
-    return `${res.repoURL}/${res.name}`;
-  }
-
-  if ('repoURL' in res) {
-    return res.repoURL || '';
-  }
-
-  return '';
-};
-
-export const getSubscriptionKeyFreight = (res: Image | Chart | GitCommit) => {
-  if (isArtifactChart(res)) {
-    return `${res.repoURL}/${res.name}`;
-  }
-
-  return res.repoURL;
-};
-
-export const isEqualSubscriptions = (a: DiscoveryResult, b: DiscoveryResult) =>
-  getSubscriptionKey(a) === getSubscriptionKey(b);
+// Generic artifacts are keyed by the name of the subscription that discovered them.
+export const getGenericSubscriptionKey = (artifact: { name?: string }) => artifact.name || '';

@@ -1,7 +1,6 @@
 import classNames from 'classnames';
 
 import { DiscoveryResult } from './types';
-import { getSubscriptionKey, isEqualSubscriptions } from './unique-subscription-key';
 
 export interface ArtifactMenuItemProps {
   onClick: () => void;
@@ -21,19 +20,21 @@ export const ArtifactMenuItem = ({ onClick, selected, children }: ArtifactMenuIt
   </div>
 );
 
-export const ArtifactMenuItems = ({
+export const ArtifactMenuItems = <T extends DiscoveryResult>({
   onClick,
   selected,
-  items
+  items,
+  getKey
 }: {
-  onClick: (item: DiscoveryResult) => void;
-  selected?: DiscoveryResult;
-  items: DiscoveryResult[];
+  onClick: (item: T) => void;
+  selected?: T;
+  items: T[];
+  getKey: (item: T) => string;
 }) => (
   <>
     {items.map((item) => {
-      const isSelected = !!selected && isEqualSubscriptions(selected, item);
-      const key = getSubscriptionKey(item);
+      const key = getKey(item);
+      const isSelected = !!selected && getKey(selected) === key;
 
       return (
         <ArtifactMenuItem key={key} onClick={() => onClick(item)} selected={isSelected}>

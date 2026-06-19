@@ -7,8 +7,7 @@ import {
   Image
 } from '@ui/gen/api/v2/models';
 
-import { isArtifactChart, isArtifactGitCommit, isArtifactImage } from './artifact-type-guards';
-import { getSubscriptionKey, getSubscriptionKeyFreight } from './unique-subscription-key';
+import { getArtifactSubscriptionKey, getChartSubscriptionKey } from './unique-subscription-key';
 
 export const findImageReference = (artifact: Image, refs: DiscoveredImageReference[]) => {
   return refs?.find((imgRef) => imgRef?.tag === artifact?.tag);
@@ -22,33 +21,32 @@ export const findCommitReference = (artifact: GitCommit, refs: DiscoveredCommit[
   return refs?.find((commit) => commit?.id === artifact?.id && commit?.tag === artifact?.tag);
 };
 
-export const artifactInDiscoveredResults = (
-  artifact: Image | Chart | GitCommit,
+export const imageInDiscoveredResults = (
+  artifact: Image,
   discoveredResults?: DiscoveredArtifacts
-) => {
-  if (isArtifactImage(artifact)) {
-    return discoveredResults?.images?.find(
-      (img) =>
-        getSubscriptionKey(img) === getSubscriptionKeyFreight(artifact) &&
-        findImageReference(artifact, img.references ?? [])
-    );
-  }
+) =>
+  discoveredResults?.images?.find(
+    (img) =>
+      getArtifactSubscriptionKey(img) === getArtifactSubscriptionKey(artifact) &&
+      findImageReference(artifact, img.references ?? [])
+  );
 
-  if (isArtifactChart(artifact)) {
-    return discoveredResults?.charts?.find(
-      (chart) =>
-        getSubscriptionKey(chart) === getSubscriptionKeyFreight(artifact) &&
-        findChartReference(artifact, chart.versions ?? [])
-    );
-  }
+export const chartInDiscoveredResults = (
+  artifact: Chart,
+  discoveredResults?: DiscoveredArtifacts
+) =>
+  discoveredResults?.charts?.find(
+    (chart) =>
+      getChartSubscriptionKey(chart) === getChartSubscriptionKey(artifact) &&
+      findChartReference(artifact, chart.versions ?? [])
+  );
 
-  if (isArtifactGitCommit(artifact)) {
-    return discoveredResults?.git?.find(
-      (git) =>
-        getSubscriptionKey(git) === getSubscriptionKeyFreight(artifact) &&
-        findCommitReference(artifact, git.commits ?? [])
-    );
-  }
-
-  return false;
-};
+export const commitInDiscoveredResults = (
+  artifact: GitCommit,
+  discoveredResults?: DiscoveredArtifacts
+) =>
+  discoveredResults?.git?.find(
+    (git) =>
+      getArtifactSubscriptionKey(git) === getArtifactSubscriptionKey(artifact) &&
+      findCommitReference(artifact, git.commits ?? [])
+  );

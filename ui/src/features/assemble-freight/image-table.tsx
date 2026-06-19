@@ -18,7 +18,7 @@ export const ImageTable = ({
   select: (reference?: DiscoveredImageReference) => void;
   show?: boolean;
 }) => {
-  const [page, setPage] = useDetectPage(references, selected, !show);
+  const [page, setPage] = useDetectPage(references, selected, (a, b) => a.tag === b.tag, !show);
 
   if (!show) {
     return null;

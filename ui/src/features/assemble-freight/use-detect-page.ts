@@ -1,37 +1,20 @@
 import { useEffect, useState } from 'react';
 
-import { DiscoveredCommit, DiscoveredImageReference } from '@ui/gen/api/v2/models';
-
-import { isDiscoveredCommit, isDiscoveredImage } from './artifact-type-guards';
-
-export const useDetectPage = (
-  items: DiscoveredImageReference[] | DiscoveredCommit[] | string[],
-  selected?: DiscoveredImageReference | DiscoveredCommit | string,
+export const useDetectPage = <T>(
+  items: T[],
+  selected: T | undefined,
+  isEqual: (item: T, selected: T) => boolean,
   pause?: boolean,
   pageLimit = 10
 ) => {
   const [page, setPage] = useState(1);
 
   useEffect(() => {
-    if (pause) {
+    if (pause || selected === undefined) {
       return;
     }
 
-    const index = items.findIndex((item) => {
-      if (typeof item === 'string') {
-        return item === selected;
-      }
-
-      if (isDiscoveredCommit(item)) {
-        const _selected = selected as DiscoveredCommit;
-        return item?.id === _selected?.id && item?.tag === _selected?.tag;
-      }
-
-      if (isDiscoveredImage(item)) {
-        const _selected = selected as DiscoveredImageReference;
-        return item?.tag === _selected?.tag;
-      }
-    });
+    const index = items.findIndex((item) => isEqual(item, selected));
 
     if (index === -1) {
       return;
