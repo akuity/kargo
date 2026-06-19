@@ -1,0 +1,44 @@
+suite: crds.yaml
+values:
+  - ../test/values-unittest.yaml
+templates:
+  - templates/crds.yaml
+tests:
+  - it: installs all CRDs by default
+    asserts:
+      - hasDocuments:
+          count: 9
+      - documentSelector:
+          path: metadata.name
+          value: stages.kargo.akuity.io
+        isKind:
+          of: CustomResourceDefinition
+
+  - it: keeps CRDs on uninstall by default
+    asserts:
+      - equal:
+          path: metadata.annotations["helm.sh/resource-policy"]
+          value: keep
+          documentIndex: 0
+
+  - it: does not annotate CRDs to keep when crds.keep is false
+    set:
+      crds.keep: false
+    asserts:
+      - notExists:
+          path: metadata.annotations["helm.sh/resource-policy"]
+          documentIndex: 0
+
+  - it: installs no CRDs when crds.install is false
+    set:
+      crds.install: false
+    asserts:
+      - hasDocuments:
+          count: 0
+
+  - it: installs no CRDs when the data plane is not installed
+    set:
+      dataPlane.install: false
+    asserts:
+      - hasDocuments:
+          count: 0
