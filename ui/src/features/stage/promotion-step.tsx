@@ -21,6 +21,8 @@ import uiPlugins from '@ui/plugins';
 import { UiPluginHoles } from '@ui/plugins/atoms/ui-plugin-hole/ui-plugin-holes';
 import { decodeRawData } from '@ui/utils/decode-raw-data';
 
+import { objectToYAML } from './utils/promotion';
+
 export const Step = ({
   step,
   result,
@@ -43,14 +45,12 @@ export const Step = ({
 
     let userConfig = '';
     if (step?.config?.raw) {
-      userConfig = JSON.stringify(
+      userConfig = objectToYAML(
         JSON.parse(
           decodeRawData({
             result: { case: 'raw', value: step?.config?.raw || new Uint8Array() }
           })
-        ),
-        null,
-        ' '
+        )
       );
     }
 
@@ -92,7 +92,7 @@ export const Step = ({
 
   const yamlView = {
     config: meta?.config,
-    output: output ? JSON.stringify(output || {}, null, ' ') : ''
+    output: objectToYAML(output)
   };
 
   const filteredUiPlugins = uiPlugins
