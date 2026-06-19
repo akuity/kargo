@@ -4,15 +4,17 @@ import { format } from 'date-fns';
 import moment from 'moment';
 import { useMemo, useState } from 'react';
 import { Link as ReactRouterLink } from 'react-router-dom';
-import { generatePath } from 'react-router-dom';
+import { generatePath, useParams } from 'react-router-dom';
 
 import { paths } from '@ui/config/paths';
+import { getAlias, getShortFreightLabel } from '@ui/features/common/utils';
 import { FreightCollection, VerificationInfo } from '@ui/gen/api/v1alpha1/generated_pb';
 import { timestampDate } from '@ui/utils/connectrpc-utils';
 
 import { AnalysisModal } from '../common/analysis-modal/analysis-modal';
 import { useModal } from '../common/modal/use-modal';
 
+import { useGetFreightMap } from './tabs/freight-history/use-get-freight-map';
 import { verificationPhaseIsTerminal } from './utils/verification-phase';
 import { VerificationIcon } from './verification-icon';
 
@@ -23,6 +25,8 @@ type Props = {
 
 export const Verifications = ({ verifications, images }: Props) => {
   const { show } = useModal();
+  const { name: projectName } = useParams();
+  const freightMap = useGetFreightMap(projectName || '');
 
   const [showImplicitVerifications, setShowImplicitVerifications] = useState(false);
 
@@ -144,11 +148,10 @@ export const Verifications = ({ verifications, images }: Props) => {
                   freightName: freight?.name
                 })}
               >
-                {freight?.name?.slice(0, 7)}
+                {getShortFreightLabel(freight.name, getAlias(freightMap[freight.name]))}
               </ReactRouterLink>
             );
           }}
-          width={120}
         />
       </Table>
     </>

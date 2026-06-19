@@ -111,9 +111,6 @@ export const FreightDetails = ({
                         {alias && freight?.metadata?.name && (
                           <CopyValue label='NAME:' value={freight.metadata?.name} />
                         )}
-                        {freight?.metadata?.uid && (
-                          <CopyValue label='UID:' value={freight?.metadata?.uid} />
-                        )}
                         <br />
                         <FreightMetadata freight={freight} className='mb-5' />
                         <FreightTable freight={freight} />
