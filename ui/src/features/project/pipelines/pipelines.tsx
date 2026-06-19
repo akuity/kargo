@@ -298,14 +298,14 @@ export const Pipelines = (props: { creatingStage?: boolean; creatingWarehouse?: 
                       <LoadingState />
                     </div>
                   )}
-                  {pipelineView === 'graph' && stages?.length && (
+                  {pipelineView === 'graph' && stages?.length > 0 && (
                     <Graph
                       project={project.metadata?.name || ''}
                       warehouses={warehouses}
                       stages={stages}
                     />
                   )}
-                  {pipelineView === 'list' && stages?.length && (
+                  {pipelineView === 'list' && stages?.length > 0 && (
                     <PipelineListView
                       stages={stages}
                       warehouses={warehouses}
