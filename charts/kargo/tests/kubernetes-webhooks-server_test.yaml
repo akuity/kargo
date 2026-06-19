@@ -1,0 +1,102 @@
+suite: kubernetes-webhooks-server/webhooks.yaml
+values:
+  - ../test/values-unittest.yaml
+templates:
+  - templates/kubernetes-webhooks-server/webhooks.yaml
+tests:
+  - it: registers the mutating and validating webhook configurations by default
+    asserts:
+      - hasDocuments:
+          count: 2
+      - documentSelector:
+          path: kind
+          value: MutatingWebhookConfiguration
+        lengthEqual:
+          path: webhooks
+          count: 4
+
+  - it: is not rendered when webhook registration is disabled
+    set:
+      webhooks.register: false
+    asserts:
+      - hasDocuments:
+          count: 0
+
+  - it: is not rendered when the data plane is not installed
+    set:
+      dataPlane.install: false
+    asserts:
+      - hasDocuments:
+          count: 0
+
+  - it: omits the CA bundle when a self-signed cert is used (default)
+    documentSelector:
+      path: kind
+      value: MutatingWebhookConfiguration
+    asserts:
+      - notExists:
+          path: webhooks[0].clientConfig.caBundle
+
+  - it: injects the CA bundle when provided and not self-signed
+    documentSelector:
+      path: kind
+      value: MutatingWebhookConfiguration
+    set:
+      webhooksServer.tls.selfSignedCert: false
+      webhooksServer.tls.caBundle: test-ca-bundle
+    asserts:
+      - isNotEmpty:
+          path: webhooks[0].clientConfig.caBundle
+
+---
+suite: kubernetes-webhooks-server/configmap.yaml
+values:
+  - ../test/values-unittest.yaml
+templates:
+  - templates/kubernetes-webhooks-server/configmap.yaml
+tests:
+  - it: derives the control-plane user regex from enabled components by default
+    asserts:
+      - isKind:
+          of: ConfigMap
+      - matchRegex:
+          path: data.CONTROLPLANE_USER_REGEX
+          pattern: "kargo-controller"
+
+  - it: honors an explicit control-plane user regex
+    set:
+      webhooksServer.controlplaneUserRegex: "^my-custom-regex$"
+    asserts:
+      - equal:
+          path: data.CONTROLPLANE_USER_REGEX
+          value: "^my-custom-regex$"
+
+---
+suite: kubernetes-webhooks-server/deployment.yaml
+values:
+  - ../test/values-unittest.yaml
+templates:
+  - templates/kubernetes-webhooks-server/deployment.yaml
+  - templates/kubernetes-webhooks-server/configmap.yaml
+tests:
+  - it: renders the webhooks server Deployment by default
+    template: templates/kubernetes-webhooks-server/deployment.yaml
+    asserts:
+      - hasDocuments:
+          count: 1
+      - isKind:
+          of: Deployment
+      - equal:
+          path: metadata.name
+          value: kargo-webhooks-server
+      - equal:
+          path: spec.template.spec.serviceAccountName
+          value: kargo-webhooks-server
+
+  - it: is not rendered when the webhooks server is disabled
+    template: templates/kubernetes-webhooks-server/deployment.yaml
+    set:
+      webhooksServer.enabled: false
+    asserts:
+      - hasDocuments:
+          count: 0

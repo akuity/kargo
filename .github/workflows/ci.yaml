@@ -17,7 +17,7 @@ jobs:
   test-unit:
     runs-on: ubuntu-latest
     container:
-      image: &golangImage golang:1.26.3-trixie
+      image: &golangImage golang:1.26.4-trixie
     steps:
     # Install Git from "trixie" repository to get a more recent version than
     # the one available in "stable". This can be removed once the version in
@@ -33,7 +33,7 @@ jobs:
         echo "deb http://deb.debian.org/debian trixie main" > /etc/apt/sources.list.d/trixie.list
         apt update && apt install -y -t trixie git
     - name: Checkout code
-      uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
+      uses: actions/checkout@df4cb1c069e1874edd31b4311f1884172cec0e10 # v6.0.3
     - uses: actions/cache@27d5ce7f107fe9357f9df03efb73ab90386fccae # v5.0.5
       with:
         path: /go/pkg/mod
@@ -50,7 +50,7 @@ jobs:
           mv $tmp_file $report
         done
     - name: Upload coverage reports
-      uses: codecov/codecov-action@e79a6962e0d4c0c17b229090214935d2e33f8354 # v6.0.1
+      uses: codecov/codecov-action@fb8b3582c8e4def4969c97caa2f19720cb33a72f # v7.0.0
       with:
         token: ${{ secrets.CODECOV_TOKEN }}
   
@@ -63,7 +63,7 @@ jobs:
         egress-policy: audit
 
     - name: Checkout code
-      uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
+      uses: actions/checkout@df4cb1c069e1874edd31b4311f1884172cec0e10 # v6.0.3
     - uses: actions/cache@27d5ce7f107fe9357f9df03efb73ab90386fccae # v5.0.5
       with:
         path: ~/.pnpm-store
@@ -99,7 +99,7 @@ jobs:
         egress-policy: audit
 
     - name: Checkout code
-      uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
+      uses: actions/checkout@df4cb1c069e1874edd31b4311f1884172cec0e10 # v6.0.3
     - name: Cache golangci-lint
       id: cache-golangci-lint
       uses: actions/cache@27d5ce7f107fe9357f9df03efb73ab90386fccae # v5.0.5
@@ -127,7 +127,7 @@ jobs:
         egress-policy: audit
 
     - name: Checkout code
-      uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
+      uses: actions/checkout@df4cb1c069e1874edd31b4311f1884172cec0e10 # v6.0.3
     - name: Cache helm
       id: cache-helm
       uses: actions/cache@27d5ce7f107fe9357f9df03efb73ab90386fccae # v5.0.5
@@ -143,6 +143,45 @@ jobs:
     - name: Run linter
       run: make lint-charts
 
+  test-chart:
+    runs-on: ubuntu-latest
+    container:
+      image: *golangImage
+    steps:
+    - name: Harden the runner (Audit all outbound calls)
+      uses: step-security/harden-runner@9af89fc71515a100421586dfdb3dc9c984fbf411 # v2.19.4
+      with:
+        egress-policy: audit
+
+    - name: Checkout code
+      uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
+    - name: Cache helm
+      id: cache-helm
+      uses: actions/cache@27d5ce7f107fe9357f9df03efb73ab90386fccae # v5.0.5
+      with:
+        path: |
+          hack/bin/helm
+          hack/bin/helm-*
+        key:
+          ${{ runner.os }}-helm-${{ hashFiles('hack/tools/go.mod') }}
+    - name: Install helm
+      if: steps.cache-helm.outputs.cache-hit != 'true'
+      run: make install-helm
+    - name: Run chart unit tests
+      run: |
+        set -o pipefail
+        make test-chart 2>&1 | tee /tmp/chart-tests.log
+    - name: Publish chart test summary
+      if: always()
+      run: |
+        [ -f /tmp/chart-tests.log ] || exit 0
+        {
+          echo '## Chart unit tests'
+          echo '```'
+          sed -n '/^### Chart/,$p' /tmp/chart-tests.log
+          echo '```'
+        } >> "$GITHUB_STEP_SUMMARY"
+
   lint-proto:
     permissions:
       contents: read # Permissions to read the repository, required because we override the default permissions
@@ -157,7 +196,7 @@ jobs:
         egress-policy: audit
 
     - name: Checkout code
-      uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
+      uses: actions/checkout@df4cb1c069e1874edd31b4311f1884172cec0e10 # v6.0.3
     - name: Cache buf
       id: cache-buf
       uses: actions/cache@27d5ce7f107fe9357f9df03efb73ab90386fccae # v5.0.5
@@ -185,7 +224,7 @@ jobs:
         egress-policy: audit
 
     - name: Checkout code
-      uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
+      uses: actions/checkout@df4cb1c069e1874edd31b4311f1884172cec0e10 # v6.0.3
     - name: Install tools
       run: apt update && apt install unzip
     - name: Install pnpm
@@ -237,13 +276,13 @@ jobs:
         egress-policy: audit
 
     - name: Set up QEMU
-      uses: docker/setup-qemu-action@ce360397dd3f832beb865e1373c09c0e9f86d70a # v4.0.0
+      uses: docker/setup-qemu-action@06116385d9baf250c9f4dcb4858b16962ea869c3 # v4.1.0
     - name: Set up Docker Buildx
       uses: docker/setup-buildx-action@d7f5e7f509e45cec5c76c4d5afdd7de93d0b3df5 # v4.1.0
       with:
         driver-opts: network=host
     - name: Checkout code
-      uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
+      uses: actions/checkout@df4cb1c069e1874edd31b4311f1884172cec0e10 # v6.0.3
     - name: Build base image
       run: |
         BASE_IMAGE=localhost:5000/kargo-base make build-base-image
@@ -255,9 +294,29 @@ jobs:
         platforms: linux/amd64,linux/arm64
         build-args: |
           BASE_IMAGE=localhost:5000/kargo-base
-        push: false
+        # Push to the job-local registry service (nothing leaves the runner)
+        # so the built image can be scanned for CVEs below.
+        tags: localhost:5000/kargo:scan
+        push: true
         cache-from: type=gha
         cache-to: type=gha,mode=max
+    - name: Install Grype
+      id: grype
+      uses: anchore/scan-action/download-grype@e1165082ffb1fe366ebaf02d8526e7c4989ea9d2 # v7.4.0
+      with:
+        cache-db: true
+    # cve-scan.sh re-stamps the VEX product @id to the scanned digest, which it
+    # resolves from the job-local registry tag via crane.
+    - name: Install Crane
+      uses: imjasonh/setup-crane@31b88efe9de28ae0ffa220711af4b60be9435f6e # v0.4
+    - name: Scan image for CVEs
+      env:
+        GRYPE_CMD: ${{ steps.grype.outputs.cmd }}
+        GRYPE_REGISTRY_INSECURE_USE_HTTP: "true" # job-local registry service
+        CRANE_INSECURE: "true" # job-local registry is plain HTTP
+        FAIL_ON: "" # report-only; set to "high" to enforce
+      # VEX lookups use the canonical published repo path.
+      run: ./hack/cve-scan.sh "registry:localhost:5000/kargo:scan" "ghcr.io/akuity/kargo"
 
   build-cli:
     needs: [test-unit, lint-go, lint-charts, lint-proto, lint-and-typecheck-ui, check-codegen]
@@ -271,7 +330,7 @@ jobs:
         egress-policy: audit
 
     - name: Checkout code
-      uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
+      uses: actions/checkout@df4cb1c069e1874edd31b4311f1884172cec0e10 # v6.0.3
     - uses: actions/cache@27d5ce7f107fe9357f9df03efb73ab90386fccae # v5.0.5
       with:
         path: /go/pkg/mod

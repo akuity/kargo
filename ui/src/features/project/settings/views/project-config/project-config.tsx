@@ -14,7 +14,7 @@ import { FieldContainer } from '@ui/features/common/form/field-container';
 import { useModal } from '@ui/features/common/modal/use-modal';
 import { projectConfigYAMLExample } from '@ui/features/project/list/utils/project-yaml-example';
 import { useGetProjectConfig } from '@ui/gen/api/v2/core/core';
-import { useUpdateResource } from '@ui/gen/api/v2/resources/resources';
+import { useCreateResource, useUpdateResource } from '@ui/gen/api/v2/resources/resources';
 import projectConfigSchema from '@ui/gen/schema/projectconfigs.kargo.akuity.io_v1alpha1.json';
 import { zodValidators } from '@ui/utils/validators';
 
@@ -73,14 +73,19 @@ export const ProjectConfig = () => {
     resolver: zodResolver(formSchema)
   });
 
-  const createOrUpdateMutation = useUpdateResource({
+  const mutationOptions = {
     mutation: {
       onSuccess: () => {
         message.success({ content: `ProjectConfig has been ${creation ? 'created' : 'updated'}` });
         projectConfigQuery.refetch();
       }
     }
-  });
+  };
+
+  const createMutation = useCreateResource(mutationOptions);
+  const updateMutation = useUpdateResource(mutationOptions);
+
+  const createOrUpdateMutation = creation ? createMutation : updateMutation;
 
   const onSubmitConfig = projectConfigForm.handleSubmit((data) =>
     createOrUpdateMutation.mutate({ data: data.value })

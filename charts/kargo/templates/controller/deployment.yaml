@@ -77,13 +77,13 @@ spec:
               divisor: "1"
               resource: {{ include "kargo.selectCpuResourceField" (dict "resources" .Values.controller.resources) }}
         {{- with (concat .Values.global.env .Values.controller.env) }}
-        {{- toYaml . | nindent 8 }}
+        {{- tpl (toYaml .) $ | nindent 8 }}
         {{- end }}
         envFrom:
         - configMapRef:
             name: {{ include "kargo.controller.fullname" . }}
         {{- with (concat .Values.global.envFrom .Values.controller.envFrom) }}
-          {{- toYaml . | nindent 8 }}
+          {{- tpl (toYaml .) $ | nindent 8 }}
         {{- end }}
         volumeMounts:
         - mountPath: /tmp

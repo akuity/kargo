@@ -21,6 +21,7 @@ type ociSelector struct {
 }
 
 func newOCISelector(
+	ctx context.Context,
 	sub kargoapi.ChartSubscription,
 	creds *helm.Credentials,
 ) (Selector, error) {
@@ -37,7 +38,7 @@ func newOCISelector(
 
 	authorizer := helm.NewEphemeralAuthorizer(sub.InsecureSkipTLSVerify)
 	if creds != nil {
-		if err = authorizer.Login(context.Background(), ref.Host(), creds.Username, creds.Password); err != nil {
+		if err = authorizer.Login(ctx, ref.Host(), creds.Username, creds.Password); err != nil {
 			return nil, fmt.Errorf(
 				"error logging in to OCI repository %q: %w",
 				sub.RepoURL,
@@ -51,6 +52,7 @@ func newOCISelector(
 		repo: &remote.Repository{
 			Reference: ref,
 			Client:    authorizer,
+			PlainHTTP: helm.IsPlainHTTP(ctx, ref.Host(), sub.InsecureSkipTLSVerify),
 		},
 	}, nil
 }

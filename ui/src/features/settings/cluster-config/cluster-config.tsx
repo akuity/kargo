@@ -14,7 +14,7 @@ import { YamlEditor } from '@ui/features/common/code-editor/yaml-editor';
 import { FieldContainer } from '@ui/features/common/form/field-container';
 import { useModal } from '@ui/features/common/modal/use-modal';
 import { Webhooks } from '@ui/features/project/settings/views/project-config/webhooks';
-import { useUpdateResource } from '@ui/gen/api/v2/resources/resources';
+import { useCreateResource, useUpdateResource } from '@ui/gen/api/v2/resources/resources';
 import { useGetClusterConfig } from '@ui/gen/api/v2/system/system';
 import clusterConfigSchema from '@ui/gen/schema/clusterconfigs.kargo.akuity.io_v1alpha1.json';
 import { zodValidators } from '@ui/utils/validators';
@@ -75,7 +75,7 @@ export const ClusterConfig = () => {
     resolver: zodResolver(formSchema)
   });
 
-  const updateResourceMutation = useUpdateResource({
+  const mutationOptions = {
     mutation: {
       onSuccess: () => {
         message.success({
@@ -84,14 +84,19 @@ export const ClusterConfig = () => {
         getClusterConfigQuery.refetch();
       }
     }
-  });
+  };
+
+  const createMutation = useCreateResource(mutationOptions);
+  const updateMutation = useUpdateResource(mutationOptions);
+
+  const createOrUpdateMutation = creation ? createMutation : updateMutation;
 
   const createWebhookModal = useModal((props) => (
     <CreateWebhookModal clusterConfigYAML={clusterConfigYAML} project={name || ''} {...props} />
   ));
 
   const onSubmitConfig = clusterConfigForm.handleSubmit((data) =>
-    updateResourceMutation.mutate({ data: data.value })
+    createOrUpdateMutation.mutate({ data: data.value })
   );
 
   return (
@@ -121,7 +126,7 @@ export const ClusterConfig = () => {
             className='ml-auto'
             type='primary'
             onClick={onSubmitConfig}
-            loading={updateResourceMutation.isPending}
+            loading={createOrUpdateMutation.isPending}
           >
             {creation ? 'Create' : 'Update'}
           </Button>

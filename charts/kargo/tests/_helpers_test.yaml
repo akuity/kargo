@@ -1,0 +1,91 @@
+suite: _helpers.tpl/kargo.image
+values:
+  - ../test/values-unittest.yaml
+templates:
+  - templates/api/deployment.yaml
+  - templates/api/configmap.yaml
+  - templates/api/secret.yaml
+tests:
+  - it: defaults the image tag to the chart appVersion
+    template: templates/api/deployment.yaml
+    asserts:
+      - matchRegex:
+          path: spec.template.spec.containers[0].image
+          pattern: ":.+$"
+
+  - it: honors an explicit repository and tag override
+    template: templates/api/deployment.yaml
+    set:
+      image.repository: example.com/custom/kargo
+      image.tag: v9.9.9
+    asserts:
+      - equal:
+          path: spec.template.spec.containers[0].image
+          value: example.com/custom/kargo:v9.9.9
+
+---
+suite: _helpers.tpl/kargo.labels
+values:
+  - ../test/values-unittest.yaml
+templates:
+  - templates/api/configmap.yaml
+tests:
+  - it: emits the standard chart + managed-by labels
+    asserts:
+      - matchRegex:
+          path: metadata.labels["helm.sh/chart"]
+          pattern: "^kargo-"
+      - equal:
+          path: metadata.labels["app.kubernetes.io/managed-by"]
+          value: Helm
+      - equal:
+          path: metadata.labels["app.kubernetes.io/component"]
+          value: api
+
+  - it: merges global labels into every resource
+    set:
+      global.labels.team: platform
+    asserts:
+      - equal:
+          path: metadata.labels.team
+          value: platform
+
+---
+suite: _helpers.tpl/kargo.baseURL
+values:
+  - ../test/values-unittest.yaml
+templates:
+  - templates/api/configmap.yaml
+tests:
+  - it: produces an https URL when direct TLS is enabled (default)
+    asserts:
+      - equal:
+          path: data.ADMIN_ACCOUNT_TOKEN_ISSUER
+          value: https://localhost
+
+  - it: produces an http URL when no TLS is in use
+    set:
+      api.tls.enabled: false
+    asserts:
+      - equal:
+          path: data.ADMIN_ACCOUNT_TOKEN_ISSUER
+          value: http://localhost
+
+  - it: produces an https URL via ingress TLS even when direct TLS is off
+    set:
+      api.tls.enabled: false
+      api.ingress.enabled: true
+      api.ingress.tls.enabled: true
+    asserts:
+      - equal:
+          path: data.ADMIN_ACCOUNT_TOKEN_ISSUER
+          value: https://localhost
+
+  - it: produces an https URL when upstream TLS termination is configured
+    set:
+      api.tls.enabled: false
+      api.tls.terminatedUpstream: true
+    asserts:
+      - equal:
+          path: data.ADMIN_ACCOUNT_TOKEN_ISSUER
+          value: https://localhost
