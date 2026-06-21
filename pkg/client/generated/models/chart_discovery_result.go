@@ -28,6 +28,12 @@ type ChartDiscoveryResult struct {
 	// specifies a SemverConstraint.
 	SemverConstraint string `json:"semverConstraint,omitempty"`
 
+	// SubscriptionName is the optional human-readable name of the subscription
+	// that produced this discovery result.
+	//
+	// +optional
+	SubscriptionName string `json:"subscriptionName,omitempty"`
+
 	// Versions is a list of versions discovered by the Warehouse for the
 	// ChartSubscription. An empty list indicates that the discovery operation was
 	// successful, but no versions matching the ChartSubscription criteria were

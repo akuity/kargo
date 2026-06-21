@@ -35,6 +35,12 @@ type ImageDiscoveryResult struct {
 	//
 	// +kubebuilder:validation:MinLength=1
 	RepoURL string `json:"repoURL,omitempty"`
+
+	// SubscriptionName is the optional human-readable name of the subscription
+	// that produced this discovery result.
+	//
+	// +optional
+	SubscriptionName string `json:"subscriptionName,omitempty"`
 }
 
 // Validate validates this image discovery result

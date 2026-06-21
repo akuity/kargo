@@ -47,6 +47,12 @@ type GitDiscoveryResult struct {
 	// +kubebuilder:validation:Pattern=`(?:^(ssh|https?)://(?:([\w-]+)(:(.+))?@)?([\w-]+(?:\.[\w-]+)*)(?::(\d{1,5}))?(/.*)$)|(?:^([\w-]+)@([\w+]+(?:\.[\w-]+)*):(/?.*))`
 	// +akuity:test-kubebuilder-pattern=GitRepoURLPattern
 	RepoURL string `json:"repoURL,omitempty"`
+
+	// SubscriptionName is the optional human-readable name of the subscription
+	// that produced this discovery result.
+	//
+	// +optional
+	SubscriptionName string `json:"subscriptionName,omitempty"`
 }
 
 // Validate validates this git discovery result

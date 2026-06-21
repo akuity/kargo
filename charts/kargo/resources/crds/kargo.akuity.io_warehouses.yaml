@@ -200,6 +200,11 @@ spec:
                             This field is optional, and only populated if the ChartSubscription
                             specifies a SemverConstraint.
                           type: string
+                        subscriptionName:
+                          description: |-
+                            SubscriptionName is the optional human-readable name of the subscription
+                            that produced this discovery result.
+                          type: string
                         versions:
                           description: |-
                             Versions is a list of versions discovered by the Warehouse for the
@@ -331,6 +336,11 @@ spec:
                           minLength: 1
                           pattern: (?:^(ssh|https?)://(?:([\w-]+)(:(.+))?@)?([\w-]+(?:\.[\w-]+)*)(?::(\d{1,5}))?(/.*)$)|(?:^([\w-]+)@([\w+]+(?:\.[\w-]+)*):(/?.*))
                           type: string
+                        subscriptionName:
+                          description: |-
+                            SubscriptionName is the optional human-readable name of the subscription
+                            that produced this discovery result.
+                          type: string
                       required:
                       - repoURL
                       type: object
@@ -395,6 +405,11 @@ spec:
                             RepoURL is the repository URL of the image, as specified in the
                             ImageSubscription.
                           minLength: 1
+                          type: string
+                        subscriptionName:
+                          description: |-
+                            SubscriptionName is the optional human-readable name of the subscription
+                            that produced this discovery result.
                           type: string
                       required:
                       - repoURL

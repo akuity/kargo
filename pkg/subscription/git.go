@@ -252,9 +252,10 @@ func (g *gitSubscriber) DiscoverArtifacts(
 			"commits", len(prev.Commits),
 		)
 		return kargoapi.GitDiscoveryResult{
-			RepoURL:      gitSub.RepoURL,
-			Commits:      prev.Commits,
-			ObservedRefs: observedRefs,
+			RepoURL:          gitSub.RepoURL,
+			Commits:          prev.Commits,
+			SubscriptionName: sub.Name,
+			ObservedRefs:     observedRefs,
 		}, nil
 	}
 
@@ -272,9 +273,10 @@ func (g *gitSubscriber) DiscoverArtifacts(
 	}
 
 	return kargoapi.GitDiscoveryResult{
-		RepoURL:      gitSub.RepoURL,
-		Commits:      commits,
-		ObservedRefs: observedRefs,
+		RepoURL:          gitSub.RepoURL,
+		Commits:          commits,
+		SubscriptionName: sub.Name,
+		ObservedRefs:     observedRefs,
 	}, nil
 }
 

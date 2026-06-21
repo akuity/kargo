@@ -1653,19 +1653,34 @@ RawFormat specifies the format for raw resource representation.
  Chart describes a specific version of a Helm chart.
 | Field | Type | Description |
 | ----- | ---- | ----------- |
+<<<<<<< feat/2839-named-subscriptions
+| repoURL | [string](#string) |  RepoURL specifies the URL of a Helm chart repository. Classic chart repositories (using HTTP/S) can contain differently named charts. When this field points to such a repository, the Name field will specify the name of the chart within the repository. In the case of a repository within an OCI registry, the URL implicitly points to a specific chart and the Name field will be empty. |
+| name | [string](#string) |  Name specifies the name of the chart. |
+| version | [string](#string) |  Version specifies a particular version of the chart. |
+| subscriptionName | [string](#string) |  SubscriptionName is the name of the subscription that discovered this chart. This field is only populated if the subscription was assigned a name. |
+=======
 | repoURL | string |  RepoURL specifies the URL of a Helm chart repository. Classic chart repositories (using HTTP/S) can contain differently named charts. When this field points to such a repository, the Name field will specify the name of the chart within the repository. In the case of a repository within an OCI registry, the URL implicitly points to a specific chart and the Name field will be empty. |
 | name | string |  Name specifies the name of the chart. |
 | version | string |  Version specifies a particular version of the chart. |
+>>>>>>> main
 
 
 ### ChartDiscoveryResult {#github-com-akuity-kargo-api-v1alpha1-ChartDiscoveryResult}
  ChartDiscoveryResult represents the result of a chart discovery operation for a ChartSubscription.
 | Field | Type | Description |
 | ----- | ---- | ----------- |
+<<<<<<< feat/2839-named-subscriptions
+| repoURL | [string](#string) |  RepoURL is the repository URL of the Helm chart, as specified in the ChartSubscription.   |
+| name | [string](#string) |  Name is the name of the Helm chart, as specified in the ChartSubscription. |
+| semverConstraint | [string](#string) |  SemverConstraint is the constraint for which versions were discovered. This field is optional, and only populated if the ChartSubscription specifies a SemverConstraint. |
+| versions | [string](#string) |  Versions is a list of versions discovered by the Warehouse for the ChartSubscription. An empty list indicates that the discovery operation was successful, but no versions matching the ChartSubscription criteria were found.  +optional |
+| subscriptionName | [string](#string) |  SubscriptionName is the optional human-readable name of the subscription that produced this discovery result.  +optional |
+=======
 | repoURL | string |  RepoURL is the repository URL of the Helm chart, as specified in the ChartSubscription.   |
 | name | string |  Name is the name of the Helm chart, as specified in the ChartSubscription. |
 | semverConstraint | string |  SemverConstraint is the constraint for which versions were discovered. This field is optional, and only populated if the ChartSubscription specifies a SemverConstraint. |
 | versions | string |  Versions is a list of versions discovered by the Warehouse for the ChartSubscription. An empty list indicates that the discovery operation was successful, but no versions matching the ChartSubscription criteria were found.  +optional |
+>>>>>>> main
 
 
 ### ChartSubscription {#github-com-akuity-kargo-api-v1alpha1-ChartSubscription}
@@ -1998,6 +2013,16 @@ RawFormat specifies the format for raw resource representation.
  GitCommit describes a specific commit from a specific Git repository.
 | Field | Type | Description |
 | ----- | ---- | ----------- |
+<<<<<<< feat/2839-named-subscriptions
+| repoURL | [string](#string) |  RepoURL is the URL of a Git repository. |
+| id | [string](#string) |  ID is the ID of a specific commit in the Git repository specified by RepoURL. |
+| branch | [string](#string) |  Branch denotes the branch of the repository where this commit was found. |
+| tag | [string](#string) |  Tag denotes a tag in the repository that matched selection criteria and resolved to this commit. |
+| message | [string](#string) |  Message is the message associated with the commit. At present, this only contains the first line (subject) of the commit message. |
+| author | [string](#string) |  Author is the author of the commit. |
+| committer | [string](#string) |  Committer is the person who committed the commit. |
+| subscriptionName | [string](#string) |  SubscriptionName is the name of the subscription that discovered this commit. This field is only populated if the subscription was assigned a name. |
+=======
 | repoURL | string |  RepoURL is the URL of a Git repository. |
 | id | string |  ID is the ID of a specific commit in the Git repository specified by RepoURL. |
 | branch | string |  Branch denotes the branch of the repository where this commit was found. |
@@ -2005,6 +2030,7 @@ RawFormat specifies the format for raw resource representation.
 | message | string |  Message is the message associated with the commit. At present, this only contains the first line (subject) of the commit message. |
 | author | string |  Author is the author of the commit. |
 | committer | string |  Committer is the person who committed the commit. |
+>>>>>>> main
 
 
 ### GitDiscoveryRefs {#github-com-akuity-kargo-api-v1alpha1-GitDiscoveryRefs}
@@ -2021,7 +2047,11 @@ RawFormat specifies the format for raw resource representation.
 | ----- | ---- | ----------- |
 | repoURL | string |  RepoURL is the repository URL of the GitSubscription.  TODO(v1.13.0): Remove SSH/SCP-style URL support from this pattern.     |
 | commits | [DiscoveredCommit](#github-com-akuity-kargo-api-v1alpha1-DiscoveredCommit) |  Commits is a list of commits discovered by the Warehouse for the GitSubscription. An empty list indicates that the discovery operation was successful, but no commits matching the GitSubscription criteria were found.  +optional |
+<<<<<<< HEAD
+| subscriptionName | [string](#string) |  SubscriptionName is the optional human-readable name of the subscription that produced this discovery result.  +optional |
+=======
 | observedRefs | [GitDiscoveryRefs](#github-com-akuity-kargo-api-v1alpha1-GitDiscoveryRefs) |  ObservedRefs records the raw remote ref state observed at the most recent successful discovery, after name-based filtering but before path filtering or commit selection. The Warehouse uses it to short-circuit discovery: at the start of a reconcile, a single git ls-remote call yields the current ref state, and if it matches this field, nothing relevant has moved and the previously selected Commits remain valid -- so an expensive clone and history walk can be skipped entirely. This field is optional; when absent (e.g. on a Warehouse that predates this feature), discovery falls through to a full clone and repopulates it.  +optional |
+>>>>>>> upstream/main
 
 
 ### GitHubWebhookReceiverConfig {#github-com-akuity-kargo-api-v1alpha1-GitHubWebhookReceiverConfig}
@@ -2107,6 +2137,7 @@ RawFormat specifies the format for raw resource representation.
 | tag | string |  Tag identifies a specific version of the image in the repository specified by RepoURL. |
 | digest | string |  Digest identifies a specific version of the image in the repository specified by RepoURL. This is a more precise identifier than Tag. |
 | annotations | [Image.AnnotationsEntry](#github-com-akuity-kargo-api-v1alpha1-Image-AnnotationsEntry) |  Annotations is a map of arbitrary metadata for the image. |
+| subscriptionName | [string](#string) |  SubscriptionName is the name of the subscription that discovered this image. This field is only populated if the subscription was assigned a name. |
 
 
 ### Image.AnnotationsEntry {#github-com-akuity-kargo-api-v1alpha1-Image-AnnotationsEntry}
@@ -2124,6 +2155,7 @@ RawFormat specifies the format for raw resource representation.
 | repoURL | string |  RepoURL is the repository URL of the image, as specified in the ImageSubscription.   |
 | platform | string |  Platform is the target platform constraint of the ImageSubscription for which references were discovered. This field is optional, and only populated if the ImageSubscription specifies a Platform. |
 | references | [DiscoveredImageReference](#github-com-akuity-kargo-api-v1alpha1-DiscoveredImageReference) |  References is a list of image references discovered by the Warehouse for the ImageSubscription. An empty list indicates that the discovery operation was successful, but no images matching the ImageSubscription criteria were found.  +optional |
+| subscriptionName | [string](#string) |  SubscriptionName is the optional human-readable name of the subscription that produced this discovery result.  +optional |
 
 
 ### ImageSubscription {#github-com-akuity-kargo-api-v1alpha1-ImageSubscription}
@@ -2381,6 +2413,7 @@ RawFormat specifies the format for raw resource representation.
  RepoSubscription describes a subscription to ONE OF a Git repository, a container image repository, a Helm chart repository, or something else.
 | Field | Type | Description |
 | ----- | ---- | ----------- |
+| name | [string](#string) |  Name is an optional, human-readable identifier for this subscription. Subscription names are primarily intended as a stepping stone toward allowing a single Warehouse to subscribe to the same repository more than once, which in turn would allow a single Freight resource to reference multiple distinct revisions of an artifact from one repository. As an incidental benefit, a name may also be surfaced in the Kargo UI and other tooling as a more human-readable label where a repository URL would otherwise appear.     |
 | git | [GitSubscription](#github-com-akuity-kargo-api-v1alpha1-GitSubscription) |  Git describes a subscriptions to a Git repository. |
 | image | [ImageSubscription](#github-com-akuity-kargo-api-v1alpha1-ImageSubscription) |  Image describes a subscription to container image repository. |
 | chart | [ChartSubscription](#github-com-akuity-kargo-api-v1alpha1-ChartSubscription) |  Chart describes a subscription to a Helm chart repository. |

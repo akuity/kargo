@@ -34,6 +34,11 @@ type GitCommit struct {
 	// RepoURL is the URL of a Git repository.
 	RepoURL string `json:"repoURL,omitempty"`
 
+	// SubscriptionName is the name of the subscription that discovered this
+	// commit. This field is only populated if the subscription was assigned
+	// a name.
+	SubscriptionName string `json:"subscriptionName,omitempty"`
+
 	// Tag denotes a tag in the repository that matched selection criteria and
 	// resolved to this commit.
 	Tag string `json:"tag,omitempty"`

@@ -144,6 +144,10 @@
                     "description": "SemverConstraint is the constraint for which versions were discovered.\nThis field is optional, and only populated if the ChartSubscription\nspecifies a SemverConstraint.",
                     "type": "string"
                   },
+                  "subscriptionName": {
+                    "description": "SubscriptionName is the optional human-readable name of the subscription\nthat produced this discovery result.",
+                    "type": "string"
+                  },
                   "versions": {
                     "description": "Versions is a list of versions discovered by the Warehouse for the\nChartSubscription. An empty list indicates that the discovery operation was\nsuccessful, but no versions matching the ChartSubscription criteria were\nfound.",
                     "items": {
@@ -248,6 +252,10 @@
                     "minLength": 1,
                     "pattern": "(?:^(ssh|https?)://(?:([\\w-]+)(:(.+))?@)?([\\w-]+(?:\\.[\\w-]+)*)(?::(\\d{1,5}))?(/.*)$)|(?:^([\\w-]+)@([\\w+]+(?:\\.[\\w-]+)*):(/?.*))",
                     "type": "string"
+                  },
+                  "subscriptionName": {
+                    "description": "SubscriptionName is the optional human-readable name of the subscription\nthat produced this discovery result.",
+                    "type": "string"
                   }
                 },
                 "required": [
@@ -308,6 +316,10 @@
                   "repoURL": {
                     "description": "RepoURL is the repository URL of the image, as specified in the\nImageSubscription.",
                     "minLength": 1,
+                    "type": "string"
+                  },
+                  "subscriptionName": {
+                    "description": "SubscriptionName is the optional human-readable name of the subscription\nthat produced this discovery result.",
                     "type": "string"
                   }
                 },
