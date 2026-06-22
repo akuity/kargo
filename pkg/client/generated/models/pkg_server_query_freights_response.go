@@ -19,6 +19,13 @@ type PkgServerQueryFreightsResponse struct {
 
 	// groups
 	Groups map[string]PkgServerFreightGroupList `json:"groups,omitempty"`
+
+	// ResourceVersion is the Kubernetes list resourceVersion clients use to
+	// seed a follow-up Freight watch so the API server does not replay every
+	// existing Freight as an ADDED event. It is empty for the stage-scoped
+	// query, whose result is assembled from multiple sources rather than a
+	// single watchable namespace list.
+	ResourceVersion string `json:"resourceVersion,omitempty"`
 }
 
 // Validate validates this pkg server query freights response

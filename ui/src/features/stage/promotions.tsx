@@ -51,7 +51,7 @@ export const Promotions = ({ argocdShard }: { argocdShard?: ArgoCDShard }) => {
   // modal kept in the same component for live view
   const [selectedPromotion, setSelectedPromotion] = useState<Promotion | undefined>();
 
-  useWatchPromotions(projectName || '', stageName || '');
+  useWatchPromotions(projectName || '', stageName || '', !listPromotionsQuery.isLoading);
 
   const promotions = React.useMemo(() => {
     // Immutable sorting

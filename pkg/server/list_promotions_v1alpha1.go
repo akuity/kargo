@@ -74,21 +74,20 @@ func (s *server) listPromotions(c *gin.Context) {
 	stage := c.Query("stage")
 
 	if watchMode := c.Query("watch") == trueStr; watchMode {
-		s.watchPromotions(c, project, stage)
+		s.watchPromotions(c, project, stage, c.Query("resourceVersion"))
 		return
 	}
 
 	list := &kargoapi.PromotionList{}
-	opts := []client.ListOption{
-		client.InNamespace(project),
-	}
-	if stage != "" {
-		opts = append(opts, client.MatchingFields{indexer.PromotionsByStageField: stage})
-	}
-	if err := s.client.List(ctx, list, opts...); err != nil {
+	if err := s.listForWatchSeed(ctx, "promotions", list, client.InNamespace(project)); err != nil {
 		_ = c.Error(err)
 		return
 	}
+	if stage != "" {
+		list.Items = filterPromotionsByStage(list.Items, stage)
+	}
+
+	list.ResourceVersion = normalizeListResourceVersion(list.ResourceVersion)
 
 	// Sort ascending by name
 	slices.SortFunc(list.Items, func(lhs, rhs kargoapi.Promotion) int {
@@ -98,14 +97,39 @@ func (s *server) listPromotions(c *gin.Context) {
 	c.JSON(http.StatusOK, list)
 }
 
-func (s *server) watchPromotions(c *gin.Context, project, stage string) {
+// filterPromotionsByStage returns Promotions that target the specified Stage.
+//
+// Stage filtering is done in-process rather than via the PromotionsByStage
+// field index because the watch-seed list goes through listForWatchSeed's
+// uncached reader, which cannot serve controller-runtime field indexes. This
+// over-fetches the whole namespace, but it matches the (also unfiltered)
+// follow-up watch and keeps the returned ResourceVersion watchable.
+func filterPromotionsByStage(promotions []kargoapi.Promotion, stage string) []kargoapi.Promotion {
+	filtered := make([]kargoapi.Promotion, 0, len(promotions))
+	for _, promotion := range promotions {
+		if promotion.Spec.Stage == stage {
+			filtered = append(filtered, promotion)
+		}
+	}
+	return filtered
+}
+
+// watchPromotions streams Promotion changes through the REST SSE endpoint.
+func (s *server) watchPromotions(c *gin.Context, project, stage, resourceVersion string) {
 	ctx := c.Request.Context()
 	logger := logging.LoggerFromContext(ctx)
 
 	// Note: We can't filter by stage using field selector in the watch API.
 	// The indexer is for List operations only. We filter events client-side.
-	w, err := s.client.Watch(ctx, &kargoapi.PromotionList{}, client.InNamespace(project))
+	w, err := s.client.Watch(
+		ctx,
+		&kargoapi.PromotionList{},
+		buildWatchListOptions(project, resourceVersion)...,
+	)
 	if err != nil {
+		if sendSSEWatchStartError(c, err) {
+			return
+		}
 		logger.Error(err, "failed to start watch")
 		_ = c.Error(fmt.Errorf("watch promotions: %w", err))
 		return
@@ -133,18 +157,26 @@ func (s *server) watchPromotions(c *gin.Context, project, stage string) {
 				logger.Debug("watch channel closed")
 				return
 			}
+			if watchErr := errorFromWatchEvent(e); watchErr != nil {
+				sendSSEWatchError(c, watchErr)
+				return
+			}
 
 			promotion, ok := convertWatchEventObject(c, e, (*kargoapi.Promotion)(nil))
 			if !ok {
 				continue
 			}
 
-			// Filter by stage if specified (client-side filtering)
-			if stage != "" && promotion.Spec.Stage != stage {
-				continue
+			eventType := e.Type
+			if stage != "" {
+				var send bool
+				eventType, send = filteredWatchEventType(e.Type, promotion.Spec.Stage == stage)
+				if !send {
+					continue
+				}
 			}
 
-			if !sendSSEWatchEvent(c, e.Type, promotion) {
+			if !sendSSEWatchEvent(c, eventType, promotion) {
 				return
 			}
 		}

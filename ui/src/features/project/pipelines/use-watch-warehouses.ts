@@ -9,7 +9,7 @@ import {
 } from '@ui/gen/api/v2/core/core';
 import { Warehouse } from '@ui/gen/api/v2/models';
 
-import { debounce, readSSEStream, upsertOrDelete } from './watch-utils';
+import { debounce, runSeededWatch, upsertOrDelete } from './watch-utils';
 
 export const useWatchWarehouses = (
   project: string,
@@ -26,7 +26,6 @@ export const useWatchWarehouses = (
     }
 
     const abort = new AbortController();
-    const url = `/v1beta1/projects/${encodeURIComponent(project)}/warehouses?watch=true`;
     const listKey = getListWarehousesQueryKey(project);
     const pendingRefresh: Record<string, boolean> = {};
 
@@ -36,66 +35,88 @@ export const useWatchWarehouses = (
       opts?.onWarehouseEvent?.(warehouse)
     );
 
-    (async () => {
-      for await (const event of readSSEStream<Warehouse>(url, abort.signal)) {
-        const warehouse = event.object;
-        const name = warehouse.metadata?.name || '';
+    const seedResourceVersion = () =>
+      (client.getQueryData(listKey) as listWarehousesResponse | undefined)?.data?.metadata
+        ?.resourceVersion;
 
-        client.setQueriesData(
-          { exact: false, queryKey: listKey },
-          (old: listWarehousesResponse | undefined) => {
-            if (!old?.data) {
-              return old;
-            }
-            return {
-              ...old,
-              data: {
-                ...old.data,
-                items: upsertOrDelete(old.data.items ?? [], warehouse, event.type)
-              }
-            };
+    const buildUrl = (resourceVersion: string) => {
+      const params = new URLSearchParams({ watch: 'true' });
+      if (resourceVersion) {
+        params.append('resourceVersion', resourceVersion);
+      }
+      return `/v1beta1/projects/${encodeURIComponent(project)}/warehouses?${params}`;
+    };
+
+    const relist = async () => {
+      await client.refetchQueries({ queryKey: listKey, exact: false });
+      return seedResourceVersion();
+    };
+
+    const onEvent = (type: string, warehouse: Warehouse) => {
+      const name = warehouse.metadata?.name || '';
+
+      client.setQueriesData(
+        { exact: false, queryKey: listKey },
+        (old: listWarehousesResponse | undefined) => {
+          if (!old?.data) {
+            return old;
           }
+          return {
+            ...old,
+            data: {
+              ...old.data,
+              items: upsertOrDelete(old.data.items ?? [], warehouse, type)
+            }
+          };
+        }
+      );
+
+      const warehouseKey = getGetWarehouseQueryKey(project, name);
+
+      if (type === 'DELETED') {
+        client.removeQueries({ queryKey: warehouseKey });
+      } else {
+        client.setQueriesData(
+          {
+            exact: false,
+            queryKey: warehouseKey
+          },
+          (old: getWarehouseResponse | undefined) =>
+            old
+              ? {
+                  ...old,
+                  data: {
+                    // WATCH ENDPOINT WAREHOUSE COMES WITHOUT kind, apiVersion etc..
+                    // SO WE NEED TO PRESERVE IT FROM INITIAL DATA
+                    ...old?.data,
+                    ...warehouse
+                  }
+                }
+              : old
         );
 
-        const warehouseKey = getGetWarehouseQueryKey(project, name);
+        const refreshRequest = warehouse.metadata?.annotations?.['kargo.akuity.io/refresh'];
+        const refreshStatus = warehouse.status?.lastHandledRefresh;
+        const isRefreshing = refreshRequest !== undefined && refreshRequest !== refreshStatus;
 
-        if (event.type === 'DELETED') {
-          client.removeQueries({ queryKey: warehouseKey });
-        } else {
-          client.setQueriesData(
-            {
-              exact: false,
-              queryKey: warehouseKey
-            },
-            (old: getWarehouseResponse | undefined) =>
-              old
-                ? {
-                    ...old,
-                    data: {
-                      // WATCH ENDPOINT WAREHOUSE COMES WITHOUT kind, apiVersion etc..
-                      // SO WE NEED TO PRESERVE IT FROM INITIAL DATA
-                      ...old?.data,
-                      ...warehouse
-                    }
-                  }
-                : old
-          );
-
-          const refreshRequest = warehouse.metadata?.annotations?.['kargo.akuity.io/refresh'];
-          const refreshStatus = warehouse.status?.lastHandledRefresh;
-          const isRefreshing = refreshRequest !== undefined && refreshRequest !== refreshStatus;
-
-          if (isRefreshing) {
-            pendingRefresh[name] = true;
-          } else if (pendingRefresh[name]) {
-            delete pendingRefresh[name];
-            opts?.refreshHook?.();
-          }
-
-          emitWarehouseEvent.call(warehouse);
+        if (isRefreshing) {
+          pendingRefresh[name] = true;
+        } else if (pendingRefresh[name]) {
+          delete pendingRefresh[name];
+          opts?.refreshHook?.();
         }
+
+        emitWarehouseEvent.call(warehouse);
       }
-    })();
+    };
+
+    runSeededWatch<Warehouse>({
+      signal: abort.signal,
+      buildUrl,
+      seedResourceVersion,
+      relist,
+      onEvent
+    });
 
     return () => {
       abort.abort();

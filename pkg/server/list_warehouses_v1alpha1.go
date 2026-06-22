@@ -69,25 +69,34 @@ func (s *server) listWarehouses(c *gin.Context) {
 	project := c.Param("project")
 
 	if watchMode := c.Query("watch") == trueStr; watchMode {
-		s.watchWarehouses(c, project)
+		s.watchWarehouses(c, project, c.Query("resourceVersion"))
 		return
 	}
 
 	list := &kargoapi.WarehouseList{}
-	if err := s.client.List(ctx, list, client.InNamespace(project)); err != nil {
+	if err := s.listForWatchSeed(ctx, "warehouses", list, client.InNamespace(project)); err != nil {
 		_ = c.Error(err)
 		return
 	}
+	list.ResourceVersion = normalizeListResourceVersion(list.ResourceVersion)
 
 	c.JSON(http.StatusOK, list)
 }
 
-func (s *server) watchWarehouses(c *gin.Context, project string) {
+// watchWarehouses streams Warehouse changes through the REST SSE endpoint.
+func (s *server) watchWarehouses(c *gin.Context, project string, resourceVersion string) {
 	ctx := c.Request.Context()
 	logger := logging.LoggerFromContext(ctx)
 
-	w, err := s.client.Watch(ctx, &kargoapi.WarehouseList{}, client.InNamespace(project))
+	w, err := s.client.Watch(
+		ctx,
+		&kargoapi.WarehouseList{},
+		buildWatchListOptions(project, resourceVersion)...,
+	)
 	if err != nil {
+		if sendSSEWatchStartError(c, err) {
+			return
+		}
 		logger.Error(err, "failed to start watch")
 		_ = c.Error(fmt.Errorf("watch warehouses: %w", err))
 		return
@@ -115,6 +124,10 @@ func (s *server) watchWarehouses(c *gin.Context, project string) {
 				logger.Debug("watch channel closed")
 				return
 			}
+			// convertAndSendWatchEvent surfaces watch.Error events itself, so
+			// no separate errorFromWatchEvent check is needed here (unlike the
+			// filtered Stage/Promotion handlers, which inspect the event before
+			// applying their event-type filter).
 			if !convertAndSendWatchEvent(c, e, (*kargoapi.Warehouse)(nil)) {
 				return
 			}

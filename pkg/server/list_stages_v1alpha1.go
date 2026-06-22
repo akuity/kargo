@@ -73,30 +73,33 @@ func (s *server) listStages(c *gin.Context) {
 	warehouses := c.QueryArray("freightOrigins")
 
 	if watchMode := c.Query("watch") == trueStr; watchMode {
-		s.watchStages(c, project, warehouses)
+		s.watchStages(c, project, warehouses, c.Query("resourceVersion"))
 		return
 	}
 
-	items, err := api.ListStagesByWarehouses(
-		ctx,
-		s.client,
-		project,
-		&api.ListStagesOptions{Warehouses: warehouses},
-	)
+	list, err := s.listStagesByWarehouses(ctx, project, warehouses)
 	if err != nil {
 		_ = c.Error(err)
 		return
 	}
 
-	c.JSON(http.StatusOK, &kargoapi.StageList{Items: items})
+	c.JSON(http.StatusOK, list)
 }
 
-func (s *server) watchStages(c *gin.Context, project string, warehouses []string) {
+// watchStages streams Stage changes through the REST SSE endpoint.
+func (s *server) watchStages(c *gin.Context, project string, warehouses []string, resourceVersion string) {
 	ctx := c.Request.Context()
 	logger := logging.LoggerFromContext(ctx)
 
-	w, err := s.client.Watch(ctx, &kargoapi.StageList{}, client.InNamespace(project))
+	w, err := s.client.Watch(
+		ctx,
+		&kargoapi.StageList{},
+		buildWatchListOptions(project, resourceVersion)...,
+	)
 	if err != nil {
+		if sendSSEWatchStartError(c, err) {
+			return
+		}
 		logger.Error(err, "failed to start watch")
 		_ = c.Error(fmt.Errorf("watch stages: %w", err))
 		return
@@ -124,19 +127,59 @@ func (s *server) watchStages(c *gin.Context, project string, warehouses []string
 				logger.Debug("watch channel closed")
 				return
 			}
+			if watchErr := errorFromWatchEvent(e); watchErr != nil {
+				sendSSEWatchError(c, watchErr)
+				return
+			}
 
 			stage, ok := convertWatchEventObject(c, e, (*kargoapi.Stage)(nil))
 			if !ok {
 				continue
 			}
 
-			if len(warehouses) > 0 && !api.StageMatchesAnyWarehouse(stage, warehouses) {
-				continue
+			eventType := e.Type
+			if len(warehouses) > 0 {
+				var send bool
+				eventType, send = filteredWatchEventType(
+					e.Type,
+					api.StageMatchesAnyWarehouse(stage, warehouses),
+				)
+				if !send {
+					continue
+				}
 			}
 
-			if !sendSSEWatchEvent(c, e.Type, stage) {
+			if !sendSSEWatchEvent(c, eventType, stage) {
 				return
 			}
 		}
 	}
+}
+
+// listStagesByWarehouses lists Stages in the given project, optionally
+// filtered to those that request Freight from at least one of the specified
+// warehouses (directly or through upstream stages). When warehouses is empty,
+// all Stages are returned. The returned StageList carries an effective
+// ResourceVersion derived from the list response or listed items.
+func (s *server) listStagesByWarehouses(
+	ctx context.Context,
+	project string,
+	warehouses []string,
+) (*kargoapi.StageList, error) {
+	var list kargoapi.StageList
+	if err := s.listForWatchSeed(ctx, "stages", &list, client.InNamespace(project)); err != nil {
+		return nil, err
+	}
+	list.ResourceVersion = normalizeListResourceVersion(list.ResourceVersion)
+	if len(warehouses) == 0 {
+		return &list, nil
+	}
+	var stages []kargoapi.Stage
+	for _, stage := range list.Items {
+		if api.StageMatchesAnyWarehouse(&stage, warehouses) {
+			stages = append(stages, stage)
+		}
+	}
+	list.Items = stages
+	return &list, nil
 }
