@@ -93,6 +93,11 @@ spec:
         - containerPort: 9443
           name: webhooks-server
           protocol: TCP
+        {{- if .Values.webhooksServer.metrics.enabled }}
+        - containerPort: {{ .Values.webhooksServer.metrics.service.servicePort }}
+          name: {{ .Values.webhooksServer.metrics.service.portName }}
+          protocol: TCP
+        {{- end }}
         volumeMounts:
         - mountPath: /tmp/k8s-webhook-server/serving-certs
           name: cert

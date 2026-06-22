@@ -81,6 +81,12 @@ spec:
         {{- with (concat .Values.global.envFrom .Values.managementController.envFrom) }}
           {{- tpl (toYaml .) $ | nindent 8 }}
         {{- end }}
+        {{- if .Values.managementController.metrics.enabled }}
+        ports:
+        - containerPort: {{ .Values.managementController.metrics.service.servicePort }}
+          name: {{ .Values.managementController.metrics.service.portName }}
+          protocol: TCP
+        {{- end }}
         {{- if or $kc .Values.managementController.volumeMounts }}
         volumeMounts:
         {{- if $kc }}

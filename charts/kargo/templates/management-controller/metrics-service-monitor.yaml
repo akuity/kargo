@@ -1,0 +1,41 @@
+{{- if and .Values.workloads.install .Values.managementController.enabled .Values.managementController.metrics.enabled .Values.managementController.metrics.serviceMonitor.enabled (.Capabilities.APIVersions.Has "monitoring.coreos.com/v1") }}
+{{- $svc := .Values.managementController.metrics.service }}
+{{- $sm := .Values.managementController.metrics.serviceMonitor }}
+apiVersion: monitoring.coreos.com/v1
+kind: ServiceMonitor
+metadata:
+  name: kargo-management-controller-metrics
+  namespace: {{ $sm.namespace | default .Release.Namespace }}
+  labels:
+    {{- include "kargo.labels" . | nindent 4 }}
+    {{- include "kargo.managementController.labels" . | nindent 4 }}
+  {{- range $key, $value := $sm.additionalLabels }}
+    {{ $key }}: {{ $value | quote }}
+  {{- end }}
+spec:
+  selector:
+    matchLabels:
+      {{- include "kargo.selectorLabels" . | nindent 6 }}
+      {{- include "kargo.managementController.labels" . | nindent 6 }}
+  namespaceSelector:
+    matchNames:
+    - {{ .Release.Namespace }}
+  endpoints:
+  - port: {{ $svc.portName }}
+    interval: {{ $sm.interval }}
+    {{- with $sm.scheme }}
+    scheme: {{ . }}
+    {{- end }}
+    {{- with $sm.tlsConfig }}
+    tlsConfig:
+      {{- toYaml . | nindent 6 }}
+    {{- end }}
+    {{- with $sm.relabelings }}
+    relabelings:
+      {{- toYaml . | nindent 6 }}
+    {{- end }}
+    {{- with $sm.metricRelabelings }}
+    metricRelabelings:
+      {{- toYaml . | nindent 6 }}
+    {{- end }}
+{{- end }}

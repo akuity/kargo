@@ -33,6 +33,24 @@ tests:
       - hasDocuments:
           count: 0
 
+  - it: declares no metrics container port by default
+    template: templates/controller/deployment.yaml
+    asserts:
+      - notExists:
+          path: spec.template.spec.containers[0].ports
+
+  - it: declares the metrics container port when metrics are enabled
+    template: templates/controller/deployment.yaml
+    set:
+      controller.metrics.enabled: true
+    asserts:
+      - contains:
+          path: spec.template.spec.containers[0].ports
+          content:
+            containerPort: 9090
+            name: http-metrics
+            protocol: TCP
+
 ---
 suite: controller/configmap.yaml
 values:
@@ -85,6 +103,20 @@ tests:
       - notExists:
           path: data.API_SERVER_BASE_URL
 
+  - it: omits METRICS_BIND_ADDRESS by default
+    asserts:
+      - notExists:
+          path: data.METRICS_BIND_ADDRESS
+
+  - it: sets METRICS_BIND_ADDRESS when metrics are enabled
+    set:
+      controller.metrics.enabled: true
+      controller.metrics.service.servicePort: 9095
+    asserts:
+      - equal:
+          path: data.METRICS_BIND_ADDRESS
+          value: ":9095"
+
 ---
 suite: controller/cluster-role-bindings.yaml
 values:
@@ -124,3 +156,125 @@ tests:
     asserts:
       - hasDocuments:
           count: 0
+
+---
+suite: controller/metrics-service.yaml
+values:
+  - ../test/values-unittest.yaml
+templates:
+  - templates/controller/metrics-service.yaml
+tests:
+  - it: is not rendered by default
+    asserts:
+      - hasDocuments:
+          count: 0
+
+  - it: renders the metrics Service when metrics are enabled
+    set:
+      controller.metrics.enabled: true
+    asserts:
+      - hasDocuments:
+          count: 1
+      - isKind:
+          of: Service
+      - equal:
+          path: metadata.name
+          value: kargo-controller-metrics
+      - equal:
+          path: spec.type
+          value: ClusterIP
+      - equal:
+          path: spec.ports[0].port
+          value: 9090
+      - equal:
+          path: spec.ports[0].targetPort
+          value: 9090
+      - equal:
+          path: spec.ports[0].name
+          value: http-metrics
+      - equal:
+          path: spec.selector["app.kubernetes.io/component"]
+          value: controller
+      - notExists:
+          path: spec.clusterIP
+
+  - it: supports a headless Service and custom port
+    set:
+      controller.metrics.enabled: true
+      controller.metrics.service.clusterIP: None
+      controller.metrics.service.servicePort: 9095
+      controller.metrics.service.portName: telemetry
+    asserts:
+      - equal:
+          path: spec.clusterIP
+          value: None
+      - equal:
+          path: spec.ports[0].port
+          value: 9095
+      - equal:
+          path: spec.ports[0].name
+          value: telemetry
+
+---
+suite: controller/metrics-service-monitor.yaml
+values:
+  - ../test/values-unittest.yaml
+templates:
+  - templates/controller/metrics-service-monitor.yaml
+tests:
+  - it: is not rendered by default
+    capabilities:
+      apiVersions:
+        - monitoring.coreos.com/v1
+    asserts:
+      - hasDocuments:
+          count: 0
+
+  - it: is not rendered when only metrics are enabled
+    set:
+      controller.metrics.enabled: true
+    capabilities:
+      apiVersions:
+        - monitoring.coreos.com/v1
+    asserts:
+      - hasDocuments:
+          count: 0
+
+  - it: is not rendered when the Prometheus Operator CRDs are absent
+    set:
+      controller.metrics.enabled: true
+      controller.metrics.serviceMonitor.enabled: true
+    asserts:
+      - hasDocuments:
+          count: 0
+
+  - it: renders the ServiceMonitor when enabled and the CRDs are present
+    set:
+      controller.metrics.enabled: true
+      controller.metrics.serviceMonitor.enabled: true
+      controller.metrics.serviceMonitor.interval: 15s
+      controller.metrics.serviceMonitor.additionalLabels:
+        release: prometheus
+    capabilities:
+      apiVersions:
+        - monitoring.coreos.com/v1
+    asserts:
+      - hasDocuments:
+          count: 1
+      - isKind:
+          of: ServiceMonitor
+      - equal:
+          path: metadata.name
+          value: kargo-controller-metrics
+      - equal:
+          path: metadata.labels.release
+          value: prometheus
+      - equal:
+          path: spec.endpoints[0].port
+          value: http-metrics
+      - equal:
+          path: spec.endpoints[0].interval
+          value: 15s
+      - equal:
+          path: spec.selector.matchLabels["app.kubernetes.io/component"]
+          value: controller
