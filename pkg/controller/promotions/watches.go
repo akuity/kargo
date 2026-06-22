@@ -26,20 +26,40 @@ type UpdatedArgoCDAppHandler[T any] struct {
 
 // Create implements TypedEventHandler.
 func (u *UpdatedArgoCDAppHandler[T]) Create(
-	context.Context,
-	event.TypedCreateEvent[T],
-	workqueue.TypedRateLimitingInterface[reconcile.Request],
+	ctx context.Context,
+	e event.TypedCreateEvent[T],
+	wq workqueue.TypedRateLimitingInterface[reconcile.Request],
 ) {
-	// No-op
+	logger := logging.LoggerFromContext(ctx)
+	app := any(e.Object).(*argocd.Application) // nolint: forcetypeassert
+	if app == nil {
+		logger.Error(nil, "Create event has no object", "event", e)
+		return
+	}
+	// A newly-created Application can enter a label selector's match set. Name-
+	// based targeting is unaffected by creation (such a Promotion already
+	// references the Application by name and will be reconciled when the
+	// Application is next updated), so only selector-based Promotions are woken.
+	enqueued, enqueue := newEnqueuer(logger, wq, app.Name)
+	u.enqueueSelectorMatches(ctx, enqueued, enqueue, app)
 }
 
 // Delete implements TypedEventHandler.
 func (u *UpdatedArgoCDAppHandler[T]) Delete(
-	context.Context,
-	event.TypedDeleteEvent[T],
-	workqueue.TypedRateLimitingInterface[reconcile.Request],
+	ctx context.Context,
+	e event.TypedDeleteEvent[T],
+	wq workqueue.TypedRateLimitingInterface[reconcile.Request],
 ) {
-	// No-op
+	logger := logging.LoggerFromContext(ctx)
+	app := any(e.Object).(*argocd.Application) // nolint: forcetypeassert
+	if app == nil {
+		logger.Error(nil, "Delete event has no object", "event", e)
+		return
+	}
+	// A deleted Application leaves a label selector's match set. The deleted
+	// object still carries its labels, so we can evaluate selectors against it.
+	enqueued, enqueue := newEnqueuer(logger, wq, app.Name)
+	u.enqueueSelectorMatches(ctx, enqueued, enqueue, app)
 }
 
 // Generic implements TypedEventHandler.
@@ -71,21 +91,7 @@ func (u *UpdatedArgoCDAppHandler[T]) Update(
 
 	// Collect the running Promotions to enqueue, deduped by key in case a
 	// Promotion is matched by both the name- and selector-based lookups below.
-	enqueued := make(map[types.NamespacedName]struct{})
-	enqueue := func(promo kargoapi.Promotion) {
-		key := types.NamespacedName{Namespace: promo.Namespace, Name: promo.Name}
-		if _, ok := enqueued[key]; ok {
-			return
-		}
-		enqueued[key] = struct{}{}
-		wq.Add(reconcile.Request{NamespacedName: key})
-		logger.Debug(
-			"enqueued Promotion for reconciliation",
-			"namespace", promo.Namespace,
-			"promotion", promo.Name,
-			"app", newApp.Name,
-		)
-	}
+	enqueued, enqueue := newEnqueuer(logger, wq, newApp.Name)
 
 	// Promotions that target this Application by name are found directly via the
 	// name-based index.
@@ -114,11 +120,51 @@ func (u *UpdatedArgoCDAppHandler[T]) Update(
 
 	// Promotions that target this Application by label selector cannot be found
 	// via the name-based index, because a selector's match set depends on the
-	// Application's labels. Instead, narrow to the (small) set of running
-	// Promotions that use selectors via a coarse index, then evaluate each
-	// selector forward against the changed Application. We test both the old and
-	// new label sets so a Promotion is still woken when an Application's labels
-	// change such that it stops matching.
+	// Application's labels. We test both the old and new label sets so a
+	// Promotion is still woken when an Application's labels change such that it
+	// enters or stops matching the selector.
+	u.enqueueSelectorMatches(ctx, enqueued, enqueue, newApp, oldApp)
+}
+
+// newEnqueuer returns a dedupe set and an enqueue function that adds a Promotion
+// to the workqueue at most once, logging the Application that triggered it.
+func newEnqueuer(
+	logger *logging.Logger,
+	wq workqueue.TypedRateLimitingInterface[reconcile.Request],
+	appName string,
+) (map[types.NamespacedName]struct{}, func(kargoapi.Promotion)) {
+	enqueued := make(map[types.NamespacedName]struct{})
+	enqueue := func(promo kargoapi.Promotion) {
+		key := types.NamespacedName{Namespace: promo.Namespace, Name: promo.Name}
+		if _, ok := enqueued[key]; ok {
+			return
+		}
+		enqueued[key] = struct{}{}
+		wq.Add(reconcile.Request{NamespacedName: key})
+		logger.Debug(
+			"enqueued Promotion for reconciliation",
+			"namespace", promo.Namespace,
+			"promotion", promo.Name,
+			"app", appName,
+		)
+	}
+	return enqueued, enqueue
+}
+
+// enqueueSelectorMatches enqueues every running, selector-based Promotion in
+// this shard whose argocd-update/argocd-wait selectors match any of the given
+// Applications. The candidate set is narrowed via a coarse index
+// (RunningPromotionsByArgoCDSelectorsField) before each selector is evaluated
+// forward against the Applications. Passing multiple Applications (e.g. an
+// Update event's old and new states) wakes a Promotion both when an Application
+// enters and when it leaves a selector's match set.
+func (u *UpdatedArgoCDAppHandler[T]) enqueueSelectorMatches(
+	ctx context.Context,
+	enqueued map[types.NamespacedName]struct{},
+	enqueue func(kargoapi.Promotion),
+	apps ...*argocd.Application,
+) {
+	logger := logging.LoggerFromContext(ctx)
 	selectorPromotions := &kargoapi.PromotionList{}
 	if err := u.kargoClient.List(
 		ctx,
@@ -131,11 +177,7 @@ func (u *UpdatedArgoCDAppHandler[T]) Update(
 			),
 		},
 	); err != nil {
-		logger.Error(
-			err, "error listing selector-based Promotions for Application",
-			"app", newApp.Name,
-			"namespace", newApp.Namespace,
-		)
+		logger.Error(err, "error listing selector-based Promotions for Application")
 		return
 	}
 	for i := range selectorPromotions.Items {
@@ -146,9 +188,14 @@ func (u *UpdatedArgoCDAppHandler[T]) Update(
 		}]; ok {
 			continue
 		}
-		if promotionSelectorsMatchApp(ctx, u.kargoClient, &promotion, newApp.Namespace, newApp.Labels) ||
-			promotionSelectorsMatchApp(ctx, u.kargoClient, &promotion, oldApp.Namespace, oldApp.Labels) {
-			enqueue(promotion)
+		for _, app := range apps {
+			if app == nil {
+				continue
+			}
+			if promotionSelectorsMatchApp(ctx, u.kargoClient, &promotion, app.Namespace, app.Labels) {
+				enqueue(promotion)
+				break
+			}
 		}
 	}
 }

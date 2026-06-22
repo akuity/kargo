@@ -210,6 +210,10 @@ func SetupReconcilerWithManager(
 					ArgoCDAppReconciledAfterOperation[*argocd.Application]{
 						logger: logger,
 					},
+					ArgoCDAppLabelsChanged[*argocd.Application]{
+						logger: logger,
+					},
+					ArgoCDAppCreatedOrDeleted[*argocd.Application]{},
 				),
 			),
 		); err != nil {
