@@ -20,6 +20,8 @@ import { PromotionStep } from '@ui/gen/api/v2/models';
 import uiPlugins from '@ui/plugins';
 import { UiPluginHoles } from '@ui/plugins/atoms/ui-plugin-hole/ui-plugin-holes';
 
+import { objectToYAML } from './utils/promotion';
+
 export const Step = ({
   step,
   result,
@@ -40,7 +42,10 @@ export const Step = ({
       config: {}
     };
 
-    const userConfig = step?.config || {};
+    let userConfig = '';
+    if (step?.config) {
+      userConfig = objectToYAML(step?.config);
+    }
 
     return {
       spec: runnerMetadata,
@@ -79,8 +84,8 @@ export const Step = ({
   );
 
   const yamlView = {
-    config: meta?.config ? JSON.stringify(meta.config, null, '  ') : '',
-    output: output ? JSON.stringify(output || {}, null, ' ') : ''
+    config: meta?.config,
+    output: objectToYAML(output)
   };
 
   const filteredUiPlugins = uiPlugins
