@@ -9,6 +9,7 @@ import type { RolloutsArgument } from './rolloutsArgument';
 import type { RolloutsDryRun } from './rolloutsDryRun';
 import type { RolloutsMeasurementRetention } from './rolloutsMeasurementRetention';
 import type { RolloutsMetric } from './rolloutsMetric';
+import type { RolloutsTTLStrategy } from './rolloutsTTLStrategy';
 
 export interface RolloutsAnalysisRunSpec {
   args?: RolloutsArgument[];
@@ -16,4 +17,5 @@ export interface RolloutsAnalysisRunSpec {
   measurementRetention?: RolloutsMeasurementRetention[];
   metrics?: RolloutsMetric[];
   terminate?: boolean;
+  ttlStrategy?: RolloutsTTLStrategy;
 }

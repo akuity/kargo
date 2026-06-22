@@ -6,8 +6,7 @@
  * OpenAPI spec version: v1alpha1
  */
 
-export interface RolloutsNewRelicMetric {
-  profile?: string;
-  query?: string;
-  timeout?: number;
+export interface RolloutsAnalysisTemplateRef {
+  clusterScope?: boolean;
+  templateName?: string;
 }

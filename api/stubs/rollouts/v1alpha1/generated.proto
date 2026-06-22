@@ -38,6 +38,8 @@ message AnalysisRunSpec {
   repeated DryRun dryRun = 4;
 
   repeated MeasurementRetention measurementRetention = 5;
+
+  optional TTLStrategy ttlStrategy = 6;
 }
 
 message AnalysisRunStatus {
@@ -52,6 +54,8 @@ message AnalysisRunStatus {
   optional RunSummary runSummary = 5;
 
   optional RunSummary dryRunSummary = 6;
+
+  optional .k8s.io.apimachinery.pkg.apis.meta.v1.Time completedAt = 7;
 }
 
 message AnalysisTemplate {
@@ -66,6 +70,12 @@ message AnalysisTemplateList {
   repeated AnalysisTemplate items = 2;
 }
 
+message AnalysisTemplateRef {
+  optional string templateName = 1;
+
+  optional bool clusterScope = 2;
+}
+
 message AnalysisTemplateSpec {
   repeated Metric metrics = 1;
 
@@ -74,6 +84,8 @@ message AnalysisTemplateSpec {
   repeated DryRun dryRun = 3;
 
   repeated MeasurementRetention measurementRetention = 4;
+
+  repeated AnalysisTemplateRef templates = 5;
 }
 
 message Argument {
@@ -158,6 +170,8 @@ message DatadogMetric {
   optional string apiVersion = 5;
 
   optional string aggregator = 6;
+
+  optional SecretRef secretRef = 7;
 }
 
 message DryRun {
@@ -203,6 +217,8 @@ message KayentaMetric {
   optional KayentaThreshold threshold = 7;
 
   repeated KayentaScope scopes = 8;
+
+  optional bool lookback = 9;
 }
 
 message KayentaScope {
@@ -315,12 +331,16 @@ message MetricResult {
   optional bool dryRun = 11;
 
   map<string, string> metadata = 12;
+
+  optional int32 consecutiveSuccess = 13;
 }
 
 message NewRelicMetric {
   optional string profile = 1;
 
   optional string query = 2;
+
+  optional int64 timeout = 3;
 }
 
 message OAuth2Config {
@@ -345,6 +365,16 @@ message PrometheusMetric {
   optional bool insecure = 5;
 
   repeated WebMetricHeader headers = 6;
+
+  optional PrometheusRangeQueryArgs rangeQuery = 7;
+}
+
+message PrometheusRangeQueryArgs {
+  optional string start = 1;
+
+  optional string end = 2;
+
+  optional string step = 3;
 }
 
 message RunSummary {
@@ -377,6 +407,12 @@ message SecretKeyRef {
   optional string key = 2;
 }
 
+message SecretRef {
+  optional string name = 1;
+
+  optional bool namespaced = 2;
+}
+
 message Sigv4Config {
   optional string region = 1;
 
@@ -391,6 +427,14 @@ message SkyWalkingMetric {
   optional string query = 2;
 
   optional string interval = 3;
+}
+
+message TTLStrategy {
+  optional int32 secondsAfterCompletion = 1;
+
+  optional int32 secondsAfterFailure = 2;
+
+  optional int32 secondsAfterSuccess = 3;
 }
 
 message ValueFrom {

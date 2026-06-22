@@ -7,6 +7,7 @@
  */
 import type { RolloutsAuthentication } from './rolloutsAuthentication';
 import type { RolloutsWebMetricHeader } from './rolloutsWebMetricHeader';
+import type { RolloutsPrometheusRangeQueryArgs } from './rolloutsPrometheusRangeQueryArgs';
 
 export interface RolloutsPrometheusMetric {
   address?: string;
@@ -14,5 +15,6 @@ export interface RolloutsPrometheusMetric {
   headers?: RolloutsWebMetricHeader[];
   insecure?: boolean;
   query?: string;
+  rangeQuery?: RolloutsPrometheusRangeQueryArgs;
   timeout?: number;
 }

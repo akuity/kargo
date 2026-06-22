@@ -9,6 +9,7 @@ import type { RolloutsRunSummary } from './rolloutsRunSummary';
 import type { RolloutsMetricResult } from './rolloutsMetricResult';
 
 export interface RolloutsAnalysisRunStatus {
+  completedAt?: string;
   dryRunSummary?: RolloutsRunSummary;
   message?: string;
   metricResults?: RolloutsMetricResult[];

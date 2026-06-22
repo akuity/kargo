@@ -32,6 +32,9 @@ type RolloutsPrometheusMetric struct {
 	// query
 	Query string `json:"query,omitempty"`
 
+	// range query
+	RangeQuery *RolloutsPrometheusRangeQueryArgs `json:"rangeQuery,omitempty"`
+
 	// timeout
 	Timeout int64 `json:"timeout,omitempty"`
 }
@@ -45,6 +48,10 @@ func (m *RolloutsPrometheusMetric) Validate(formats strfmt.Registry) error {
 	}
 
 	if err := m.validateHeaders(formats); err != nil {
+		res = append(res, err)
+	}
+
+	if err := m.validateRangeQuery(formats); err != nil {
 		res = append(res, err)
 	}
 
@@ -107,6 +114,29 @@ func (m *RolloutsPrometheusMetric) validateHeaders(formats strfmt.Registry) erro
 	return nil
 }
 
+func (m *RolloutsPrometheusMetric) validateRangeQuery(formats strfmt.Registry) error {
+	if swag.IsZero(m.RangeQuery) { // not required
+		return nil
+	}
+
+	if m.RangeQuery != nil {
+		if err := m.RangeQuery.Validate(formats); err != nil {
+			ve := new(errors.Validation)
+			if stderrors.As(err, &ve) {
+				return ve.ValidateName("rangeQuery")
+			}
+			ce := new(errors.CompositeError)
+			if stderrors.As(err, &ce) {
+				return ce.ValidateName("rangeQuery")
+			}
+
+			return err
+		}
+	}
+
+	return nil
+}
+
 // ContextValidate validate this rollouts prometheus metric based on the context it is used
 func (m *RolloutsPrometheusMetric) ContextValidate(ctx context.Context, formats strfmt.Registry) error {
 	var res []error
@@ -116,6 +146,10 @@ func (m *RolloutsPrometheusMetric) ContextValidate(ctx context.Context, formats 
 	}
 
 	if err := m.contextValidateHeaders(ctx, formats); err != nil {
+		res = append(res, err)
+	}
+
+	if err := m.contextValidateRangeQuery(ctx, formats); err != nil {
 		res = append(res, err)
 	}
 
@@ -174,6 +208,31 @@ func (m *RolloutsPrometheusMetric) contextValidateHeaders(ctx context.Context, f
 			}
 		}
 
+	}
+
+	return nil
+}
+
+func (m *RolloutsPrometheusMetric) contextValidateRangeQuery(ctx context.Context, formats strfmt.Registry) error {
+
+	if m.RangeQuery != nil {
+
+		if swag.IsZero(m.RangeQuery) { // not required
+			return nil
+		}
+
+		if err := m.RangeQuery.ContextValidate(ctx, formats); err != nil {
+			ve := new(errors.Validation)
+			if stderrors.As(err, &ve) {
+				return ve.ValidateName("rangeQuery")
+			}
+			ce := new(errors.CompositeError)
+			if stderrors.As(err, &ce) {
+				return ce.ValidateName("rangeQuery")
+			}
+
+			return err
+		}
 	}
 
 	return nil
