@@ -17,7 +17,7 @@ jobs:
   test-unit:
     runs-on: ubuntu-latest
     container:
-      image: &golangImage golang:1.26.3-trixie
+      image: &golangImage golang:1.26.4-trixie
     steps:
     # Install Git from "trixie" repository to get a more recent version than
     # the one available in "stable". This can be removed once the version in
@@ -142,6 +142,45 @@ jobs:
       run: make install-helm
     - name: Run linter
       run: make lint-charts
+
+  test-chart:
+    runs-on: ubuntu-latest
+    container:
+      image: *golangImage
+    steps:
+    - name: Harden the runner (Audit all outbound calls)
+      uses: step-security/harden-runner@9af89fc71515a100421586dfdb3dc9c984fbf411 # v2.19.4
+      with:
+        egress-policy: audit
+
+    - name: Checkout code
+      uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
+    - name: Cache helm
+      id: cache-helm
+      uses: actions/cache@27d5ce7f107fe9357f9df03efb73ab90386fccae # v5.0.5
+      with:
+        path: |
+          hack/bin/helm
+          hack/bin/helm-*
+        key:
+          ${{ runner.os }}-helm-${{ hashFiles('hack/tools/go.mod') }}
+    - name: Install helm
+      if: steps.cache-helm.outputs.cache-hit != 'true'
+      run: make install-helm
+    - name: Run chart unit tests
+      run: |
+        set -o pipefail
+        make test-chart 2>&1 | tee /tmp/chart-tests.log
+    - name: Publish chart test summary
+      if: always()
+      run: |
+        [ -f /tmp/chart-tests.log ] || exit 0
+        {
+          echo '## Chart unit tests'
+          echo '```'
+          sed -n '/^### Chart/,$p' /tmp/chart-tests.log
+          echo '```'
+        } >> "$GITHUB_STEP_SUMMARY"
 
   lint-proto:
     permissions:

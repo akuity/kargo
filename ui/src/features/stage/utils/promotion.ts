@@ -1,5 +1,7 @@
 // action, reaction and behaviour of everything related to promotion
 
+import yaml from 'yaml';
+
 import {
   getPromotionStatusPhase,
   isPromotionPhaseTerminal
@@ -64,3 +66,10 @@ export const getPromotionOutputsByStepAlias = (promotion: Promotion) => {
 
   return {};
 };
+
+// Renders a value (a promotion step's output or config) as YAML so that
+// multi-line string values (e.g. Terraform plan output) are displayed with real
+// line breaks instead of a single escaped JSON line. lineWidth: 0 disables line
+// folding so long lines are preserved verbatim.
+export const objectToYAML = (value?: object): string =>
+  value ? yaml.stringify(value, { lineWidth: 0 }) : '';
