@@ -122,10 +122,14 @@ spec:
                             necessarily indicate a problem with the Freight, since promotions might fail
                             due to transient issues with the deployment itself (network, credential
                             expirations, etc...). Defaults to [].
+                          enum:
+                          - Failed
+                          - Errored
                           items:
                             description: PromotionPhase is a high-level summary of
                               the current state of a Promotion.
                             type: string
+                          maxItems: 2
                           type: array
                           x-kubernetes-list-type: set
                         onVerification:
@@ -134,18 +138,15 @@ spec:
                             trigger an automated rollback. Only Failed and Error are accepted (note:
                             "Error", not "Errored" as in onPromotion). When absent or empty,
                             defaults to [Failed].
+                          enum:
+                          - Failed
+                          - Error
                           items:
                             type: string
+                          maxItems: 2
                           type: array
                           x-kubernetes-list-type: set
                       type: object
-                      x-kubernetes-validations:
-                      - message: onPromotion items must be Failed or Errored
-                        rule: '!has(self.onPromotion) || self.onPromotion.all(p, p
-                          == ''Failed'' || p == ''Errored'')'
-                      - message: onVerification items must be Failed or Error
-                        rule: '!has(self.onVerification) || self.onVerification.all(p,
-                          p == ''Failed'' || p == ''Error'')'
                     stage:
                       description: |-
                         Stage is the name of the Stage to which this policy applies.

@@ -15,7 +15,9 @@ due to transient issues with the deployment itself (network, credential
 expirations, etc...). Defaults to [].
 
 +optional
-+listType=set */
++listType=set
++kubebuilder:validation:MaxItems=2
++kubebuilder:validation:Enum=Failed;Errored */
   onPromotion?: string[];
   /** OnVerification is the list of terminal verification phases that should
 trigger an automated rollback. Only Failed and Error are accepted (note:
@@ -23,6 +25,8 @@ trigger an automated rollback. Only Failed and Error are accepted (note:
 defaults to [Failed].
 
 +optional
-+listType=set */
++listType=set
++kubebuilder:validation:MaxItems=2
++kubebuilder:validation:Enum=Failed;Error */
   onVerification?: string[];
 }
