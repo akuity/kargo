@@ -131,7 +131,7 @@ export const RequestedFreight = ({
                       wrap
                       gap={4}
                       align='center'
-                      className='[&_.ant-tag]:m-0 [&_.ant-tag]:max-w-full [&_.ant-tag]:truncate [&_a_.ant-tag]:cursor-pointer'
+                      className='[&_.ant-tag]:m-0 [&_.ant-tag]:max-w-full [&_.ant-tag]:truncate [&>a]:flex [&>a]:items-center [&_a_.ant-tag]:cursor-pointer'
                     >
                       <FreightArtifactList freight={current.reference} />
                     </Flex>
