@@ -239,7 +239,13 @@ func Test_webhook_Default(t *testing.T) {
 						ObjectMeta: metav1.ObjectMeta{
 							Name: strings.Repeat("a", 64),
 						},
-						Spec: kargoapi.StageSpec{},
+						Spec: kargoapi.StageSpec{
+							PromotionTemplate: &kargoapi.PromotionTemplate{
+								Spec: kargoapi.PromotionTemplateSpec{
+									Steps: []kargoapi.PromotionStep{{}},
+								},
+							},
+						},
 					}, nil
 				},
 				isRequestFromKargoControlplaneFn: func(admission.Request) bool {
