@@ -1,6 +1,5 @@
 import { authTokenKey } from '@ui/config/auth';
-
-export const getBaseUrl = () => (import.meta.env.VITE_API_URL as string | undefined) || '';
+import { getBaseUrl } from '@ui/lib/api/custom-fetch';
 
 export type SSEWatchEvent<T> = { type: string; object: T };
 
