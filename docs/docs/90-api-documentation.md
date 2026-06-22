@@ -1629,10 +1629,11 @@ RawFormat specifies the format for raw resource representation.
 
 
 ### AutoRollbackConfig {#github-com-akuity-kargo-api-v1alpha1-AutoRollbackConfig}
- AutoRollbackConfig describes the conditions under which a Stage should automatically roll back to the last known-good (verified) Freight. Rollback on failed verifications is always enabled when this config is present. Additional triggers may be enabled via the fields below.
+ AutoRollbackConfig describes the conditions under which a Stage should automatically roll back to the last known-good (verified) Freight.   
 | Field | Type | Description |
 | ----- | ---- | ----------- |
-| onFailedPromotions | bool |  OnFailedPromotions indicates whether a rollback should be triggered when a promotion to the Stage fails. Failed promotions (as opposed to failed verifications) does not necessarily indicate a problem the Freight, since promotions might fail due to transient issues with the Stage itself (network, credential expirations, etc...). This defaults to false. |
+| onPromotion | string |  OnPromotion is the list of terminal Promotion phases that should trigger an automated rollback. Only Failed and Errored are accepted. Note that unsuccessful promotions (as opposed to unsuccessful verifications) may not necessarily indicate a problem with the Freight, since promotions might fail due to transient issues with the deployment itself (network, credential expirations, etc...). Defaults to [].  +optional +listType=set |
+| onVerification | string |  OnVerification is the list of terminal verification phases that should trigger an automated rollback. Only Failed and Error are accepted (note: "Error", not "Errored" as in onPromotion). When absent or empty, defaults to [Failed].  +optional +listType=set |
 
 
 ### AzureWebhookReceiverConfig {#github-com-akuity-kargo-api-v1alpha1-AzureWebhookReceiverConfig}

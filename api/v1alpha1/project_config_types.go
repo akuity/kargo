@@ -109,16 +109,28 @@ type DeepLink struct {
 
 // AutoRollbackConfig describes the conditions under which a Stage should
 // automatically roll back to the last known-good (verified) Freight.
-// Rollback on failed verifications is always enabled when this config is
-// present. Additional triggers may be enabled via the fields below.
+//
+// +kubebuilder:validation:XValidation:message="onPromotion items must be Failed or Errored",rule="!has(self.onPromotion) || self.onPromotion.all(p, p == 'Failed' || p == 'Errored')"
+// +kubebuilder:validation:XValidation:message="onVerification items must be Failed or Error",rule="!has(self.onVerification) || self.onVerification.all(p, p == 'Failed' || p == 'Error')"
 type AutoRollbackConfig struct {
-	// OnFailedPromotions indicates whether a rollback should be triggered
-	// when a promotion to the Stage fails. Failed promotions (as opposed
-	// to failed verifications) does not necessarily indicate a problem the
-	// Freight, since promotions might fail due to transient issues with the
-	// Stage itself (network, credential expirations, etc...). This defaults
-	// to false.
-	OnFailedPromotions bool `json:"onFailedPromotions,omitempty" protobuf:"varint,1,opt,name=onFailedPromotions"`
+	// OnPromotion is the list of terminal Promotion phases that should trigger
+	// an automated rollback. Only Failed and Errored are accepted. Note that
+	// unsuccessful promotions (as opposed to unsuccessful verifications) may not
+	// necessarily indicate a problem with the Freight, since promotions might fail
+	// due to transient issues with the deployment itself (network, credential
+	// expirations, etc...). Defaults to [].
+	//
+	// +optional
+	// +listType=set
+	OnPromotion []PromotionPhase `json:"onPromotion,omitempty" protobuf:"bytes,1,rep,name=onPromotion"`
+	// OnVerification is the list of terminal verification phases that should
+	// trigger an automated rollback. Only Failed and Error are accepted (note:
+	// "Error", not "Errored" as in onPromotion). When absent or empty,
+	// defaults to [Failed].
+	//
+	// +optional
+	// +listType=set
+	OnVerification []VerificationPhase `json:"onVerification,omitempty" protobuf:"bytes,2,rep,name=onVerification"`
 }
 
 // PromotionPolicy defines policies governing the promotion of Freight to a
