@@ -9,13 +9,13 @@ import {
 } from '@ui/gen/api/v2/core/core';
 import { Warehouse } from '@ui/gen/api/v2/models';
 
-import { debounce, runSeededWatch, upsertOrDelete } from './watch-utils';
+import { batchEmitter, runSeededWatch, upsertOrDelete } from './watch-utils';
 
 export const useWatchWarehouses = (
   project: string,
   opts?: {
     refreshHook?: () => void;
-    onWarehouseEvent?: (warehouse: Warehouse) => void;
+    onWarehousesEvent?: (warehouses: Warehouse[]) => void;
   }
 ) => {
   const client = useQueryClient();
@@ -29,10 +29,13 @@ export const useWatchWarehouses = (
     const listKey = getListWarehousesQueryKey(project);
     const pendingRefresh: Record<string, boolean> = {};
 
-    // Coalesce bursts of warehouse events so the graph recompute is triggered
-    // once per burst rather than once per event.
-    const emitWarehouseEvent = debounce((warehouse: Warehouse) =>
-      opts?.onWarehouseEvent?.(warehouse)
+    // Batch bursts of warehouse events so the graph applies them all at once
+    // rather than once per event. Keying by name keeps every distinct
+    // warehouse's latest update — a plain debounce would drop all but the last
+    // object in a burst.
+    const emitWarehouseEvents = batchEmitter(
+      (warehouses: Warehouse[]) => opts?.onWarehousesEvent?.(warehouses),
+      (warehouse) => warehouse.metadata?.name ?? ''
     );
 
     const seedResourceVersion = () =>
@@ -106,7 +109,7 @@ export const useWatchWarehouses = (
           opts?.refreshHook?.();
         }
 
-        emitWarehouseEvent.call(warehouse);
+        emitWarehouseEvents.call(warehouse);
       }
     };
 
@@ -120,7 +123,7 @@ export const useWatchWarehouses = (
 
     return () => {
       abort.abort();
-      emitWarehouseEvent.cancel();
+      emitWarehouseEvents.cancel();
     };
   }, [project, client]);
 };

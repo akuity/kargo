@@ -8,8 +8,8 @@ import { useWatchWarehouses } from '../use-watch-warehouses';
 export const useEventsWatcher = (
   project: string,
   act?: {
-    onStage: (stage: Stage) => void;
-    onWarehouse: (warehouse: Warehouse) => void;
+    onStages: (stages: Stage[]) => void;
+    onWarehouses: (warehouses: Warehouse[]) => void;
   },
   warehouses?: string[]
 ) => {
@@ -21,9 +21,9 @@ export const useEventsWatcher = (
   // Pass empty string when not visible — each hook's guard handles it
   const activeProject = isWindowVisible ? project : '';
 
-  useWatchStages(activeProject, act?.onStage, warehouses);
+  useWatchStages(activeProject, act?.onStages, warehouses);
   useWatchWarehouses(activeProject, {
     refreshHook: () => queryCache.freight.refetchQueryFreight(project),
-    onWarehouseEvent: act?.onWarehouse
+    onWarehousesEvent: act?.onWarehouses
   });
 };

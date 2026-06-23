@@ -174,24 +174,37 @@ export async function* readSSETextStream(url: string, signal: AbortSignal): Asyn
   }
 }
 
-// Coalesces rapid invocations into a single trailing call. Watch streams emit
-// bursts of events (e.g. during a refresh storm); without this the per-event
-// callback would fire once per event, and the pipeline graph's recompute
-// debounce would be starved by the constant stream of redraw triggers. Mirrors
-// the throttling the pre-REST watch implementation had. The default zero delay
-// coalesces every event parsed from a single network chunk, since the stream
-// consumer processes them synchronously before the next read.
-export function debounce<A extends unknown[]>(
-  fn: (...args: A) => void,
+// Accumulates objects into a batch and flushes the whole batch on a trailing
+// timer. Watch streams emit bursts of events (e.g. during a refresh storm);
+// firing the consumer once per event would starve the pipeline graph's recompute
+// throttle with redraw triggers. Unlike a plain debounce — which keeps only the
+// last invocation's argument and so silently drops updates for every other object
+// in a burst — this keys pending items by `keyOf`: repeated updates to the same
+// object collapse to the latest, while updates to distinct objects all survive
+// and are delivered together. The default zero delay batches every event parsed
+// from a single network chunk, since the stream consumer processes them
+// synchronously before the next read.
+export function batchEmitter<T>(
+  flush: (items: T[]) => void,
+  keyOf: (item: T) => string,
   delayMs = 0
-): { call: (...args: A) => void; cancel: () => void } {
+): { call: (item: T) => void; cancel: () => void } {
+  const pending = new Map<string, T>();
   let timer: ReturnType<typeof setTimeout> | undefined;
   return {
-    call: (...args: A) => {
+    call: (item: T) => {
+      pending.set(keyOf(item), item);
       clearTimeout(timer);
-      timer = setTimeout(() => fn(...args), delayMs);
+      timer = setTimeout(() => {
+        const batch = [...pending.values()];
+        pending.clear();
+        flush(batch);
+      }, delayMs);
     },
-    cancel: () => clearTimeout(timer)
+    cancel: () => {
+      clearTimeout(timer);
+      pending.clear();
+    }
   };
 }
 

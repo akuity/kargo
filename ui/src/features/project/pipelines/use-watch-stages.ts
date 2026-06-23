@@ -9,11 +9,11 @@ import {
 } from '@ui/gen/api/v2/core/core';
 import { Stage } from '@ui/gen/api/v2/models';
 
-import { debounce, runSeededWatch, upsertOrDelete } from './watch-utils';
+import { batchEmitter, runSeededWatch, upsertOrDelete } from './watch-utils';
 
 export const useWatchStages = (
   project: string,
-  onStageEvent?: (stage: Stage) => void,
+  onStagesEvent?: (stages: Stage[]) => void,
   warehouses?: string[]
 ) => {
   const client = useQueryClient();
@@ -26,9 +26,13 @@ export const useWatchStages = (
     const abort = new AbortController();
     const listKey = getListStagesQueryKey(project, { freightOrigins: warehouses || [] });
 
-    // Coalesce bursts of stage events so the graph recompute is triggered once
-    // per burst rather than once per event.
-    const emitStageEvent = debounce((stage: Stage) => onStageEvent?.(stage));
+    // Batch bursts of stage events so the graph applies them all at once rather
+    // than once per event. Keying by name keeps every distinct stage's latest
+    // update — a plain debounce would drop all but the last object in a burst.
+    const emitStageEvents = batchEmitter(
+      (stages: Stage[]) => onStagesEvent?.(stages),
+      (stage) => stage.metadata?.name ?? ''
+    );
 
     const seedResourceVersion = () =>
       (client.getQueryData(listKey) as listStagesResponse | undefined)?.data?.metadata
@@ -83,7 +87,8 @@ export const useWatchStages = (
                 }
               : old
         );
-        emitStageEvent.call(stage);
+
+        emitStageEvents.call(stage);
       }
     };
 
@@ -91,7 +96,7 @@ export const useWatchStages = (
 
     return () => {
       abort.abort();
-      emitStageEvent.cancel();
+      emitStageEvents.cancel();
     };
   }, [project, (warehouses || []).join(','), client]);
 };

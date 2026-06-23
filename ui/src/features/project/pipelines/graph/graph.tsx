@@ -93,11 +93,12 @@ export const Graph = (props: GraphProps) => {
   useEventsWatcher(
     props.project,
     {
-      onStage(stage) {
-        const index = stageIndexer.index(stage);
+      onStages(stages) {
+        const stageByIndex = new Map(stages.map((stage) => [stageIndexer.index(stage), stage]));
         setNodes((nodes) =>
           nodes.map((node) => {
-            if (node.id === index && node.type === reactFlowNodeConstants.CUSTOM_STAGE_NODE) {
+            const stage = stageByIndex.get(node.id);
+            if (stage && node.type === reactFlowNodeConstants.CUSTOM_STAGE_NODE) {
               return {
                 ...node,
                 data: {
@@ -111,19 +112,25 @@ export const Graph = (props: GraphProps) => {
           })
         );
 
-        if (!nodes.find((n) => n.id === index)) {
+        // A stage without an existing node is new and needs a full relayout.
+        if (stages.some((stage) => !nodes.find((n) => n.id === stageIndexer.index(stage)))) {
           setTimeout(() => {
             setRedraw((prev) => !prev);
           });
         }
 
-        queryCache.imageStageMatrix.update(stage);
+        for (const stage of stages) {
+          queryCache.imageStageMatrix.update(stage);
+        }
       },
-      onWarehouse(warehouse) {
-        const index = warehouseIndexer.index(warehouse);
+      onWarehouses(warehouses) {
+        const warehouseByIndex = new Map(
+          warehouses.map((warehouse) => [warehouseIndexer.index(warehouse), warehouse])
+        );
         setNodes((nodes) =>
           nodes.map((node) => {
-            if (node.id === index && node.type === reactFlowNodeConstants.CUSTOM_WAREHOUSE_NODE) {
+            const warehouse = warehouseByIndex.get(node.id);
+            if (warehouse && node.type === reactFlowNodeConstants.CUSTOM_WAREHOUSE_NODE) {
               return {
                 ...node,
                 data: {
@@ -137,7 +144,12 @@ export const Graph = (props: GraphProps) => {
           })
         );
 
-        if (!nodes.find((n) => n.id === index)) {
+        // A warehouse without an existing node is new and needs a full relayout.
+        if (
+          warehouses.some(
+            (warehouse) => !nodes.find((n) => n.id === warehouseIndexer.index(warehouse))
+          )
+        ) {
           setTimeout(() => {
             setRedraw((prev) => !prev);
           });
