@@ -71,9 +71,8 @@ TLS.
 :::note
 
 The default port name (`http-metrics`) carries an `http-` prefix so that
-service meshes such as [Istio](https://istio.io/) -- which infer a port's
-protocol from its name -- treat it as HTTP. If you rename the port for a
-meshed cluster, keep the `http-` prefix.
+service meshes that infer a port's protocol from its name treat it as HTTP. If
+you rename the port for a meshed cluster, keep the `http-` prefix.
 
 :::
 
@@ -119,9 +118,8 @@ for the full list.
 ## Scraping Without the Prometheus Operator
 
 If you collect metrics with a tool that performs its own endpoint discovery
-(for example, [Grafana Alloy](https://grafana.com/docs/alloy/latest/) or an
-annotation-based scrape config), enable `metrics.enabled` and point your
-scraper at the metrics `Service`.
+(for example, an annotation-based scrape config), enable `metrics.enabled` and
+point your scraper at the metrics `Service`.
 
 A headless `Service` is often convenient in this case, since it resolves
 directly to individual pod IPs. Set `clusterIP` to `None`:
