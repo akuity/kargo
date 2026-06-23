@@ -17,7 +17,8 @@ expirations, etc...). Defaults to [].
 +optional
 +listType=set
 +kubebuilder:validation:MaxItems=2
-+kubebuilder:validation:Enum=Failed;Errored */
++kubebuilder:validation:XValidation:message="onPromotion[0] must be Failed or Errored",rule="self.size() == 0 || self[0] == 'Failed' || self[0] == 'Errored'"
++kubebuilder:validation:XValidation:message="onPromotion[1] must be Failed or Errored",rule="self.size() <= 1 || self[1] == 'Failed' || self[1] == 'Errored'" */
   onPromotion?: string[];
   /** OnVerification is the list of terminal verification phases that should
 trigger an automated rollback. Only Failed and Error are accepted (note:
@@ -27,6 +28,7 @@ defaults to [Failed].
 +optional
 +listType=set
 +kubebuilder:validation:MaxItems=2
-+kubebuilder:validation:Enum=Failed;Error */
++kubebuilder:validation:XValidation:message="onVerification[0] must be Failed or Error",rule="self.size() == 0 || self[0] == 'Failed' || self[0] == 'Error'"
++kubebuilder:validation:XValidation:message="onVerification[1] must be Failed or Error",rule="self.size() <= 1 || self[1] == 'Failed' || self[1] == 'Error'" */
   onVerification?: string[];
 }

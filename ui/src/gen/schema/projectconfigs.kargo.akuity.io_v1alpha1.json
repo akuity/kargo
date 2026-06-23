@@ -62,30 +62,42 @@
                 "properties": {
                   "onPromotion": {
                     "description": "OnPromotion is the list of terminal Promotion phases that should trigger\nan automated rollback. Only Failed and Errored are accepted. Note that\nunsuccessful promotions (as opposed to unsuccessful verifications) may not\nnecessarily indicate a problem with the Freight, since promotions might fail\ndue to transient issues with the deployment itself (network, credential\nexpirations, etc...). Defaults to [].",
-                    "enum": [
-                      "Failed",
-                      "Errored"
-                    ],
                     "items": {
                       "description": "PromotionPhase is a high-level summary of the current state of a Promotion.",
                       "type": "string"
                     },
                     "maxItems": 2,
                     "type": "array",
-                    "x-kubernetes-list-type": "set"
+                    "x-kubernetes-list-type": "set",
+                    "x-kubernetes-validations": [
+                      {
+                        "message": "onPromotion[0] must be Failed or Errored",
+                        "rule": "self.size() == 0 || self[0] == 'Failed' || self[0] == 'Errored'"
+                      },
+                      {
+                        "message": "onPromotion[1] must be Failed or Errored",
+                        "rule": "self.size() <= 1 || self[1] == 'Failed' || self[1] == 'Errored'"
+                      }
+                    ]
                   },
                   "onVerification": {
                     "description": "OnVerification is the list of terminal verification phases that should\ntrigger an automated rollback. Only Failed and Error are accepted (note:\n\"Error\", not \"Errored\" as in onPromotion). When absent or empty,\ndefaults to [Failed].",
-                    "enum": [
-                      "Failed",
-                      "Error"
-                    ],
                     "items": {
                       "type": "string"
                     },
                     "maxItems": 2,
                     "type": "array",
-                    "x-kubernetes-list-type": "set"
+                    "x-kubernetes-list-type": "set",
+                    "x-kubernetes-validations": [
+                      {
+                        "message": "onVerification[0] must be Failed or Error",
+                        "rule": "self.size() == 0 || self[0] == 'Failed' || self[0] == 'Error'"
+                      },
+                      {
+                        "message": "onVerification[1] must be Failed or Error",
+                        "rule": "self.size() <= 1 || self[1] == 'Failed' || self[1] == 'Error'"
+                      }
+                    ]
                   }
                 },
                 "type": "object"

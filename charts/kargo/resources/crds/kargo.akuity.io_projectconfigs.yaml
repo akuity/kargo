@@ -122,9 +122,6 @@ spec:
                             necessarily indicate a problem with the Freight, since promotions might fail
                             due to transient issues with the deployment itself (network, credential
                             expirations, etc...). Defaults to [].
-                          enum:
-                          - Failed
-                          - Errored
                           items:
                             description: PromotionPhase is a high-level summary of
                               the current state of a Promotion.
@@ -132,20 +129,31 @@ spec:
                           maxItems: 2
                           type: array
                           x-kubernetes-list-type: set
+                          x-kubernetes-validations:
+                          - message: onPromotion[0] must be Failed or Errored
+                            rule: self.size() == 0 || self[0] == 'Failed' || self[0]
+                              == 'Errored'
+                          - message: onPromotion[1] must be Failed or Errored
+                            rule: self.size() <= 1 || self[1] == 'Failed' || self[1]
+                              == 'Errored'
                         onVerification:
                           description: |-
                             OnVerification is the list of terminal verification phases that should
                             trigger an automated rollback. Only Failed and Error are accepted (note:
                             "Error", not "Errored" as in onPromotion). When absent or empty,
                             defaults to [Failed].
-                          enum:
-                          - Failed
-                          - Error
                           items:
                             type: string
                           maxItems: 2
                           type: array
                           x-kubernetes-list-type: set
+                          x-kubernetes-validations:
+                          - message: onVerification[0] must be Failed or Error
+                            rule: self.size() == 0 || self[0] == 'Failed' || self[0]
+                              == 'Error'
+                          - message: onVerification[1] must be Failed or Error
+                            rule: self.size() <= 1 || self[1] == 'Failed' || self[1]
+                              == 'Error'
                       type: object
                     stage:
                       description: |-
