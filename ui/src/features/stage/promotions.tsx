@@ -3,7 +3,7 @@ import { createConnectQueryKey, useMutation, useQuery } from '@connectrpc/connec
 import { faUndo } from '@fortawesome/free-solid-svg-icons';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
 import { useQueryClient } from '@tanstack/react-query';
-import { Flex, Spin, Table, Tooltip } from 'antd';
+import { Flex, Table, Tooltip } from 'antd';
 import { ColumnsType } from 'antd/es/table';
 import { format } from 'date-fns';
 import React, { useEffect, useState } from 'react';
@@ -17,21 +17,22 @@ import {
   isPromotionPhaseTerminal,
   isPromotionRetryable
 } from '@ui/features/common/promotion-status/utils';
+import { getAlias, getShortFreightLabel } from '@ui/features/common/utils';
 import {
-  getFreight,
   listPromotions,
   promoteToStage
 } from '@ui/gen/api/service/v1alpha1/service-KargoService_connectquery';
 import { ListPromotionsResponse } from '@ui/gen/api/service/v1alpha1/service_pb';
 import { KargoService } from '@ui/gen/api/service/v1alpha1/service_pb';
 import { ArgoCDShard } from '@ui/gen/api/service/v1alpha1/service_pb';
-import { Freight, Promotion } from '@ui/gen/api/v1alpha1/generated_pb';
+import { Promotion } from '@ui/gen/api/v1alpha1/generated_pb';
 import uiPlugins from '@ui/plugins';
 import { UiPluginHoles } from '@ui/plugins/atoms/ui-plugin-hole/ui-plugin-holes';
 import { timestampDate } from '@ui/utils/connectrpc-utils';
 
 import { Promotion as PromotionComponent } from '../project/pipelines/promotion/promotion';
 
+import { useGetFreightMap } from './tabs/freight-history/use-get-freight-map';
 import { hasAbortRequest, promotionCompareFn } from './utils/promotion';
 
 export const Promotions = ({ argocdShard }: { argocdShard?: ArgoCDShard }) => {
@@ -44,15 +45,7 @@ export const Promotions = ({ argocdShard }: { argocdShard?: ArgoCDShard }) => {
     { enabled: !!stageName }
   );
 
-  const [curFreight, setCurFreight] = useState<string | undefined>();
-
-  const { data: freightData, isLoading: isLoadingFreight } = useQuery(
-    getFreight,
-    { project: projectName, name: curFreight },
-    {
-      enabled: !!curFreight
-    }
-  );
+  const freightMap = useGetFreightMap(projectName || '');
 
   const promotionMutation = useMutation(promoteToStage);
 
@@ -192,29 +185,20 @@ export const Promotions = ({ argocdShard }: { argocdShard?: ArgoCDShard }) => {
     },
     {
       title: 'Freight',
-      render: (_, promotion) => (
-        <Tooltip
-          overlay={
-            <Spin spinning={isLoadingFreight}>
-              <div className='w-40 text-center truncate'>
-                {(freightData?.result?.value as Freight)?.alias}
-              </div>
-            </Spin>
-          }
-          onOpenChange={() => {
-            setCurFreight(promotion.spec?.freight);
-          }}
-        >
+      render: (_, promotion) => {
+        const freightName = promotion.spec?.freight || '';
+
+        return (
           <Link
             to={generatePath(paths.freight, {
               name: projectName,
-              freightName: promotion.spec?.freight
+              freightName
             })}
           >
-            {promotion.spec?.freight?.substring(0, 7)}
+            {getShortFreightLabel(freightName, getAlias(freightMap[freightName]))}
           </Link>
-        </Tooltip>
-      )
+        );
+      }
     },
     {
       title: '',

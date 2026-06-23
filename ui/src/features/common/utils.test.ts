@@ -1,8 +1,20 @@
-import { describe, expect, test } from 'vitest';
+import { create } from '@bufbuild/protobuf';
+import { describe, expect, it, test } from 'vitest';
 
-import { Freight, FreightReference, Stage } from '@ui/gen/api/v1alpha1/generated_pb';
+import {
+  Freight,
+  FreightReference,
+  FreightSchema,
+  Stage,
+  StageSchema
+} from '@ui/gen/api/v1alpha1/generated_pb';
 
-import { getCurrentFreightForComparison } from './utils';
+import {
+  ALIAS_LABEL_KEY,
+  getCurrentFreightByWarehouse,
+  getCurrentFreightForComparison,
+  getShortFreightLabel
+} from './utils';
 
 const ref = (origin: string, image: string): FreightReference =>
   ({
@@ -61,5 +73,91 @@ describe('getCurrentFreightForComparison', () => {
     const empty = { status: { freightHistory: [] } } as unknown as Stage;
 
     expect(getCurrentFreightForComparison(empty, incoming('warehouse-a'))).toBeUndefined();
+  });
+});
+
+describe('getCurrentFreightByWarehouse', () => {
+  it('returns an empty map when the stage has no freight history', () => {
+    const stage = create(StageSchema, { metadata: { name: 'test' } });
+    expect(getCurrentFreightByWarehouse(stage)).toEqual({});
+  });
+
+  it('keys the current freight by warehouse identifier', () => {
+    const stage = create(StageSchema, {
+      status: {
+        freightHistory: [
+          {
+            items: {
+              'Warehouse/w-1': { name: 'freight-aaa' },
+              'Warehouse/w-2': { name: 'freight-bbb' }
+            }
+          },
+          // older collection -- must be ignored
+          { items: { 'Warehouse/w-1': { name: 'freight-old' } } }
+        ]
+      }
+    });
+
+    const result = getCurrentFreightByWarehouse(stage);
+
+    expect(Object.keys(result).sort()).toEqual(['Warehouse/w-1', 'Warehouse/w-2']);
+    expect(result['Warehouse/w-1'].reference.name).toBe('freight-aaa');
+    expect(result['Warehouse/w-2'].reference.name).toBe('freight-bbb');
+  });
+
+  it('resolves the alias from the freight map, preferring the alias field', () => {
+    const stage = create(StageSchema, {
+      status: {
+        freightHistory: [{ items: { 'Warehouse/w-1': { name: 'freight-aaa' } } }]
+      }
+    });
+    const freightMap: Record<string, Freight> = {
+      'freight-aaa': create(FreightSchema, { alias: 'tasty-tiger' })
+    };
+
+    expect(getCurrentFreightByWarehouse(stage, freightMap)['Warehouse/w-1'].alias).toBe(
+      'tasty-tiger'
+    );
+  });
+
+  it('falls back to the alias label when the alias field is empty', () => {
+    const stage = create(StageSchema, {
+      status: {
+        freightHistory: [{ items: { 'Warehouse/w-1': { name: 'freight-aaa' } } }]
+      }
+    });
+    const freightMap: Record<string, Freight> = {
+      'freight-aaa': create(FreightSchema, {
+        metadata: { labels: { [ALIAS_LABEL_KEY]: 'brave-bear' } }
+      })
+    };
+
+    expect(getCurrentFreightByWarehouse(stage, freightMap)['Warehouse/w-1'].alias).toBe(
+      'brave-bear'
+    );
+  });
+
+  it('leaves the alias undefined when the freight is not in the map', () => {
+    const stage = create(StageSchema, {
+      status: {
+        freightHistory: [{ items: { 'Warehouse/w-1': { name: 'freight-aaa' } } }]
+      }
+    });
+
+    expect(getCurrentFreightByWarehouse(stage, {})['Warehouse/w-1'].alias).toBeUndefined();
+  });
+});
+
+describe('getShortFreightLabel', () => {
+  it('truncates the hash to seven characters when there is no alias', () => {
+    expect(getShortFreightLabel('abcdef0123456789')).toBe('abcdef0');
+  });
+
+  it('combines the alias with the short hash when an alias is provided', () => {
+    expect(getShortFreightLabel('abcdef0123456789', 'tasty-tiger')).toBe('tasty-tiger (abcdef0)');
+  });
+
+  it('returns an empty string when the name is missing', () => {
+    expect(getShortFreightLabel()).toBe('');
   });
 });
