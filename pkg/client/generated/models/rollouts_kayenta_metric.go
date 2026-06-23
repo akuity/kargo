@@ -29,6 +29,9 @@ type RolloutsKayentaMetric struct {
 	// configuration account name
 	ConfigurationAccountName string `json:"configurationAccountName,omitempty"`
 
+	// lookback
+	Lookback bool `json:"lookback,omitempty"`
+
 	// metrics account name
 	MetricsAccountName string `json:"metricsAccountName,omitempty"`
 

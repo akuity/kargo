@@ -9,10 +9,12 @@ import type { RolloutsArgument } from './rolloutsArgument';
 import type { RolloutsDryRun } from './rolloutsDryRun';
 import type { RolloutsMeasurementRetention } from './rolloutsMeasurementRetention';
 import type { RolloutsMetric } from './rolloutsMetric';
+import type { RolloutsAnalysisTemplateRef } from './rolloutsAnalysisTemplateRef';
 
 export interface RolloutsAnalysisTemplateSpec {
   args?: RolloutsArgument[];
   dryRun?: RolloutsDryRun[];
   measurementRetention?: RolloutsMeasurementRetention[];
   metrics?: RolloutsMetric[];
+  templates?: RolloutsAnalysisTemplateRef[];
 }

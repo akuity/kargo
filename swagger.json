@@ -5461,12 +5461,18 @@
         },
         "terminate": {
           "type": "boolean"
+        },
+        "ttlStrategy": {
+          "$ref": "#/definitions/RolloutsTTLStrategy"
         }
       }
     },
     "RolloutsAnalysisRunStatus": {
       "type": "object",
       "properties": {
+        "completedAt": {
+          "type": "string"
+        },
         "dryRunSummary": {
           "$ref": "#/definitions/RolloutsRunSummary"
         },
@@ -5531,6 +5537,17 @@
         }
       }
     },
+    "RolloutsAnalysisTemplateRef": {
+      "type": "object",
+      "properties": {
+        "clusterScope": {
+          "type": "boolean"
+        },
+        "templateName": {
+          "type": "string"
+        }
+      }
+    },
     "RolloutsAnalysisTemplateSpec": {
       "type": "object",
       "properties": {
@@ -5556,6 +5573,12 @@
           "type": "array",
           "items": {
             "$ref": "#/definitions/RolloutsMetric"
+          }
+        },
+        "templates": {
+          "type": "array",
+          "items": {
+            "$ref": "#/definitions/RolloutsAnalysisTemplateRef"
           }
         }
       }
@@ -5731,6 +5754,9 @@
         },
         "query": {
           "type": "string"
+        },
+        "secretRef": {
+          "$ref": "#/definitions/RolloutsSecretRef"
         }
       }
     },
@@ -5798,6 +5824,9 @@
         },
         "configurationAccountName": {
           "type": "string"
+        },
+        "lookback": {
+          "type": "boolean"
         },
         "metricsAccountName": {
           "type": "string"
@@ -5970,6 +5999,9 @@
         "consecutiveError": {
           "type": "integer"
         },
+        "consecutiveSuccess": {
+          "type": "integer"
+        },
         "count": {
           "type": "integer"
         },
@@ -6019,6 +6051,9 @@
         },
         "query": {
           "type": "string"
+        },
+        "timeout": {
+          "type": "integer"
         }
       }
     },
@@ -6063,8 +6098,25 @@
         "query": {
           "type": "string"
         },
+        "rangeQuery": {
+          "$ref": "#/definitions/RolloutsPrometheusRangeQueryArgs"
+        },
         "timeout": {
           "type": "integer"
+        }
+      }
+    },
+    "RolloutsPrometheusRangeQueryArgs": {
+      "type": "object",
+      "properties": {
+        "end": {
+          "type": "string"
+        },
+        "start": {
+          "type": "string"
+        },
+        "step": {
+          "type": "string"
         }
       }
     },
@@ -6119,6 +6171,17 @@
         }
       }
     },
+    "RolloutsSecretRef": {
+      "type": "object",
+      "properties": {
+        "name": {
+          "type": "string"
+        },
+        "namespaced": {
+          "type": "boolean"
+        }
+      }
+    },
     "RolloutsSigv4Config": {
       "type": "object",
       "properties": {
@@ -6144,6 +6207,20 @@
         },
         "query": {
           "type": "string"
+        }
+      }
+    },
+    "RolloutsTTLStrategy": {
+      "type": "object",
+      "properties": {
+        "secondsAfterCompletion": {
+          "type": "integer"
+        },
+        "secondsAfterFailure": {
+          "type": "integer"
+        },
+        "secondsAfterSuccess": {
+          "type": "integer"
         }
       }
     },
@@ -6350,9 +6427,19 @@
     "AutoRollbackConfig": {
       "type": "object",
       "properties": {
-        "onFailedPromotions": {
-          "description": "OnFailedPromotions indicates whether a rollback should be triggered\nwhen a promotion to the Stage fails. Failed promotions (as opposed\nto failed verifications) does not necessarily indicate a problem the\nFreight, since promotions might fail due to transient issues with the\nStage itself (network, credential expirations, etc...). This defaults\nto false.",
-          "type": "boolean"
+        "onPromotion": {
+          "description": "OnPromotion is the list of terminal Promotion phases that should trigger\nan automated rollback. Only Failed and Errored are accepted. Note that\nunsuccessful promotions (as opposed to unsuccessful verifications) may not\nnecessarily indicate a problem with the Freight, since promotions might fail\ndue to transient issues with the deployment itself (network, credential\nexpirations, etc...). Defaults to [].\n\n+optional\n+listType=set\n+kubebuilder:validation:MaxItems=2\n+kubebuilder:validation:Enum=Failed;Errored",
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        },
+        "onVerification": {
+          "description": "OnVerification is the list of terminal verification phases that should\ntrigger an automated rollback. Only Failed and Error are accepted (note:\n\"Error\", not \"Errored\" as in onPromotion). When absent or empty,\ndefaults to [Failed].\n\n+optional\n+listType=set\n+kubebuilder:validation:MaxItems=2\n+kubebuilder:validation:Enum=Failed;Error",
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
         }
       }
     },

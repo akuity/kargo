@@ -10,6 +10,7 @@ import type { RolloutsMetricResultMetadata } from './rolloutsMetricResultMetadat
 
 export interface RolloutsMetricResult {
   consecutiveError?: number;
+  consecutiveSuccess?: number;
   count?: number;
   dryRun?: boolean;
   error?: number;

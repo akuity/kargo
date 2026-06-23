@@ -4213,8 +4213,9 @@ func TestRegularStageReconciler_getVerificationResult(t *testing.T) {
 						Namespace: "fake-project",
 					},
 					Status: rolloutsapi.AnalysisRunStatus{
-						Phase:   rolloutsapi.AnalysisPhaseSuccessful,
-						Message: "Analysis completed successfully",
+						Phase:       rolloutsapi.AnalysisPhaseSuccessful,
+						Message:     "Analysis completed successfully",
+						CompletedAt: &metav1.Time{Time: fiveMinutesLater},
 						MetricResults: []rolloutsapi.MetricResult{
 							{
 								Measurements: []rolloutsapi.Measurement{
@@ -4263,8 +4264,9 @@ func TestRegularStageReconciler_getVerificationResult(t *testing.T) {
 						Namespace: "fake-project",
 					},
 					Status: rolloutsapi.AnalysisRunStatus{
-						Phase:   "Failed",
-						Message: "Something went wrong",
+						Phase:       "Failed",
+						Message:     "Something went wrong",
+						CompletedAt: &metav1.Time{Time: fiveMinutesLater},
 						MetricResults: []rolloutsapi.MetricResult{
 							{
 								Measurements: []rolloutsapi.Measurement{
@@ -4314,8 +4316,9 @@ func TestRegularStageReconciler_getVerificationResult(t *testing.T) {
 						Namespace: "fake-project",
 					},
 					Status: rolloutsapi.AnalysisRunStatus{
-						Phase:   rolloutsapi.AnalysisPhaseError,
-						Message: "Something went wrong",
+						Phase:       rolloutsapi.AnalysisPhaseError,
+						Message:     "Something went wrong",
+						CompletedAt: &metav1.Time{Time: fiveMinutesLater},
 						MetricResults: []rolloutsapi.MetricResult{
 							{
 								Measurements: []rolloutsapi.Measurement{
@@ -6013,73 +6016,6 @@ func TestRegularStageReconciler_autoPromoteFreight(t *testing.T) {
 				promoList := &kargoapi.PromotionList{}
 				require.NoError(t, c.List(t.Context(), promoList, client.InNamespace("fake-project")))
 				assert.Len(t, promoList.Items, 1)
-			},
-		},
-		{
-			name: "handles promotion build error",
-			stage: &kargoapi.Stage{
-				ObjectMeta: metav1.ObjectMeta{
-					Namespace: "fake-project",
-					Name:      "test-stage",
-				},
-				Spec: kargoapi.StageSpec{
-					RequestedFreight: []kargoapi.FreightRequest{
-						{
-							Origin: kargoapi.FreightOrigin{
-								Kind: kargoapi.FreightOriginKindWarehouse,
-								Name: "test-warehouse",
-							},
-							Sources: kargoapi.FreightSources{
-								Direct: true,
-							},
-						},
-					},
-					// Missing template to build Promotion
-					PromotionTemplate: nil,
-				},
-			},
-			objects: []client.Object{
-				&kargoapi.ProjectConfig{
-					ObjectMeta: metav1.ObjectMeta{
-						Name:      "fake-project",
-						Namespace: "fake-project",
-					},
-					Spec: kargoapi.ProjectConfigSpec{
-						PromotionPolicies: []kargoapi.PromotionPolicy{
-							{
-								Stage:                "test-stage",
-								AutoPromotionEnabled: true,
-							},
-						},
-					},
-				},
-				&kargoapi.Warehouse{
-					ObjectMeta: metav1.ObjectMeta{
-						Namespace: "fake-project",
-						Name:      "test-warehouse",
-					},
-				},
-				&kargoapi.Freight{
-					ObjectMeta: metav1.ObjectMeta{
-						Namespace:         "fake-project",
-						Name:              "test-freight",
-						CreationTimestamp: metav1.Time{Time: now},
-					},
-					Origin: kargoapi.FreightOrigin{
-						Kind: kargoapi.FreightOriginKindWarehouse,
-						Name: "test-warehouse",
-					},
-					Status: kargoapi.FreightStatus{},
-				},
-			},
-			assertions: func(
-				t *testing.T,
-				_ *fakeevent.EventRecorder,
-				_ client.Client,
-				_ kargoapi.StageStatus,
-				err error,
-			) {
-				require.ErrorContains(t, err, "error building Promotion")
 			},
 		},
 		{

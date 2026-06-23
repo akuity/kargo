@@ -6,8 +6,8 @@
  * OpenAPI spec version: v1alpha1
  */
 
-export interface RolloutsNewRelicMetric {
-  profile?: string;
-  query?: string;
-  timeout?: number;
+export interface RolloutsPrometheusRangeQueryArgs {
+  end?: string;
+  start?: string;
+  step?: string;
 }

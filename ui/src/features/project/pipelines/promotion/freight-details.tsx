@@ -65,10 +65,6 @@ export const FreightDetails = (props: FreightDetailsProps) => {
                       )
                     },
                     {
-                      label: 'uid',
-                      children: props.freight?.metadata?.uid
-                    },
-                    {
                       label: 'created',
                       children: `${freightCreatedAt.relative}${freightCreatedAt.relative && ' , on'} ${freightCreatedAt.abs}`
                     }

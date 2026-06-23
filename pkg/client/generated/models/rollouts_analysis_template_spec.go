@@ -28,6 +28,9 @@ type RolloutsAnalysisTemplateSpec struct {
 
 	// metrics
 	Metrics []*RolloutsMetric `json:"metrics"`
+
+	// templates
+	Templates []*RolloutsAnalysisTemplateRef `json:"templates"`
 }
 
 // Validate validates this rollouts analysis template spec
@@ -47,6 +50,10 @@ func (m *RolloutsAnalysisTemplateSpec) Validate(formats strfmt.Registry) error {
 	}
 
 	if err := m.validateMetrics(formats); err != nil {
+		res = append(res, err)
+	}
+
+	if err := m.validateTemplates(formats); err != nil {
 		res = append(res, err)
 	}
 
@@ -176,6 +183,36 @@ func (m *RolloutsAnalysisTemplateSpec) validateMetrics(formats strfmt.Registry) 
 	return nil
 }
 
+func (m *RolloutsAnalysisTemplateSpec) validateTemplates(formats strfmt.Registry) error {
+	if swag.IsZero(m.Templates) { // not required
+		return nil
+	}
+
+	for i := 0; i < len(m.Templates); i++ {
+		if swag.IsZero(m.Templates[i]) { // not required
+			continue
+		}
+
+		if m.Templates[i] != nil {
+			if err := m.Templates[i].Validate(formats); err != nil {
+				ve := new(errors.Validation)
+				if stderrors.As(err, &ve) {
+					return ve.ValidateName("templates" + "." + strconv.Itoa(i))
+				}
+				ce := new(errors.CompositeError)
+				if stderrors.As(err, &ce) {
+					return ce.ValidateName("templates" + "." + strconv.Itoa(i))
+				}
+
+				return err
+			}
+		}
+
+	}
+
+	return nil
+}
+
 // ContextValidate validate this rollouts analysis template spec based on the context it is used
 func (m *RolloutsAnalysisTemplateSpec) ContextValidate(ctx context.Context, formats strfmt.Registry) error {
 	var res []error
@@ -193,6 +230,10 @@ func (m *RolloutsAnalysisTemplateSpec) ContextValidate(ctx context.Context, form
 	}
 
 	if err := m.contextValidateMetrics(ctx, formats); err != nil {
+		res = append(res, err)
+	}
+
+	if err := m.contextValidateTemplates(ctx, formats); err != nil {
 		res = append(res, err)
 	}
 
@@ -307,6 +348,35 @@ func (m *RolloutsAnalysisTemplateSpec) contextValidateMetrics(ctx context.Contex
 				ce := new(errors.CompositeError)
 				if stderrors.As(err, &ce) {
 					return ce.ValidateName("metrics" + "." + strconv.Itoa(i))
+				}
+
+				return err
+			}
+		}
+
+	}
+
+	return nil
+}
+
+func (m *RolloutsAnalysisTemplateSpec) contextValidateTemplates(ctx context.Context, formats strfmt.Registry) error {
+
+	for i := 0; i < len(m.Templates); i++ {
+
+		if m.Templates[i] != nil {
+
+			if swag.IsZero(m.Templates[i]) { // not required
+				return nil
+			}
+
+			if err := m.Templates[i].ContextValidate(ctx, formats); err != nil {
+				ve := new(errors.Validation)
+				if stderrors.As(err, &ve) {
+					return ve.ValidateName("templates" + "." + strconv.Itoa(i))
+				}
+				ce := new(errors.CompositeError)
+				if stderrors.As(err, &ce) {
+					return ce.ValidateName("templates" + "." + strconv.Itoa(i))
 				}
 
 				return err

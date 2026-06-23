@@ -1,6 +1,6 @@
 import { faUndo } from '@fortawesome/free-solid-svg-icons';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
-import { Flex, Spin, Table, Tooltip } from 'antd';
+import { Flex, Table, Tooltip } from 'antd';
 import { ColumnsType } from 'antd/es/table';
 import { format } from 'date-fns';
 import React, { useState } from 'react';
@@ -13,8 +13,9 @@ import {
   isPromotionPhaseTerminal,
   isPromotionRetryable
 } from '@ui/features/common/promotion-status/utils';
+import { getAlias, getShortFreightLabel } from '@ui/features/common/utils';
 import { useWatchPromotions } from '@ui/features/project/pipelines/promotion/use-watch-promotions';
-import { useGetFreight, useListPromotions, usePromoteToStage } from '@ui/gen/api/v2/core/core';
+import { useListPromotions, usePromoteToStage } from '@ui/gen/api/v2/core/core';
 import { ArgoCDShard, Promotion } from '@ui/gen/api/v2/models';
 import uiPlugins from '@ui/plugins';
 import { UiPluginHoles } from '@ui/plugins/atoms/ui-plugin-hole/ui-plugin-holes';
@@ -22,6 +23,7 @@ import { parseDate } from '@ui/utils/dates';
 
 import { Promotion as PromotionComponent } from '../project/pipelines/promotion/promotion';
 
+import { useGetFreightMap } from './tabs/freight-history/use-get-freight-map';
 import { hasAbortRequest, promotionCompareFn } from './utils/promotion';
 
 export const Promotions = ({ argocdShard }: { argocdShard?: ArgoCDShard }) => {
@@ -33,11 +35,7 @@ export const Promotions = ({ argocdShard }: { argocdShard?: ArgoCDShard }) => {
     { query: { enabled: !!stageName } }
   );
 
-  const [curFreight, setCurFreight] = useState<string | undefined>();
-
-  const getFreightQuery = useGetFreight(projectName || '', curFreight || '', {
-    query: { enabled: !!curFreight }
-  });
+  const freightMap = useGetFreightMap(projectName || '');
 
   const promotionMutation = usePromoteToStage();
 
@@ -119,27 +117,20 @@ export const Promotions = ({ argocdShard }: { argocdShard?: ArgoCDShard }) => {
     },
     {
       title: 'Freight',
-      render: (_, promotion) => (
-        <Tooltip
-          overlay={
-            <Spin spinning={getFreightQuery.isLoading}>
-              <div className='w-40 text-center truncate'>{getFreightQuery.data?.data?.alias}</div>
-            </Spin>
-          }
-          onOpenChange={() => {
-            setCurFreight(promotion.spec?.freight);
-          }}
-        >
+      render: (_, promotion) => {
+        const freightName = promotion.spec?.freight || '';
+
+        return (
           <Link
             to={generatePath(paths.freight, {
               name: projectName,
-              freightName: promotion.spec?.freight
+              freightName
             })}
           >
-            {promotion.spec?.freight?.substring(0, 7)}
+            {getShortFreightLabel(freightName, getAlias(freightMap[freightName]))}
           </Link>
-        </Tooltip>
-      )
+        );
+      }
     },
     {
       title: '',

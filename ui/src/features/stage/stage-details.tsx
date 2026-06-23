@@ -18,6 +18,7 @@ import { useExtensionsContext } from '@ui/extensions/extensions-context';
 import { Description } from '@ui/features/common/description';
 import { HealthStatusIcon } from '@ui/features/common/health-status/health-status-icon';
 import { useStageControllerStatus } from '@ui/features/common/stage-status/use-stage-controller-status';
+import { getCurrentFreightByWarehouse } from '@ui/features/common/utils';
 import { useGetStage } from '@ui/gen/api/v2/core/core';
 import { Stage } from '@ui/gen/api/v2/models';
 import { useGetConfig } from '@ui/gen/api/v2/system/system';
@@ -29,6 +30,7 @@ import { Promotions } from './promotions';
 import { RequestedFreight } from './requested-freight';
 import { StageActions } from './stage-actions';
 import { FreightHistory } from './tabs/freight-history/freight-history';
+import { useGetFreightMap } from './tabs/freight-history/use-get-freight-map';
 import { StageSettings } from './tabs/settings/stage-settings';
 import { useImages } from './use-images';
 import { Verifications } from './verifications';
@@ -46,6 +48,12 @@ export const StageDetails = ({ stage }: { stage: Stage }) => {
   const navigate = useNavigate();
 
   const images = useImages([stage]);
+
+  const freightMap = useGetFreightMap(projectName || '');
+  const currentFreight = useMemo(
+    () => getCurrentFreightByWarehouse(stage, freightMap),
+    [stage, freightMap]
+  );
 
   const onClose = () => navigate(generatePath(paths.project, { name: projectName }));
   const [isVerificationRunning, setIsVerificationRunning] = useState(false);
@@ -133,8 +141,9 @@ export const StageDetails = ({ stage }: { stage: Stage }) => {
             <RequestedFreight
               requestedFreight={stage?.spec?.requestedFreight || []}
               projectName={projectName}
-              itemStyle={{ width: '250px' }}
+              itemStyle={{ minWidth: '250px', maxWidth: '480px' }}
               className='space-y-5'
+              currentFreight={currentFreight}
             />
             <Tabs
               className='flex-1'

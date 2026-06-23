@@ -44,6 +44,34 @@ export function getCurrentFreightForComparison(
   return getCurrentFreight(stage).find((freight) => freight?.origin?.name === originName);
 }
 
+export interface CurrentFreightItem {
+  reference: FreightReference;
+  alias?: string;
+}
+
+export function getCurrentFreightByWarehouse(
+  stage: Stage,
+  freightMap?: Record<string, Freight>
+): Record<string, CurrentFreightItem> {
+  const items = stage?.status?.freightHistory?.[0]?.items || {};
+
+  const result: Record<string, CurrentFreightItem> = {};
+  for (const [warehouseIdentifier, reference] of Object.entries(items)) {
+    const fullFreight = reference.name ? freightMap?.[reference.name] : undefined;
+    result[warehouseIdentifier] = {
+      reference,
+      alias: fullFreight ? getAlias(fullFreight) : undefined
+    };
+  }
+
+  return result;
+}
+
+export function getShortFreightLabel(name?: string, alias?: string): string {
+  const shortID = (name || '').slice(0, 7);
+  return alias ? `${alias} (${shortID})` : shortID;
+}
+
 export function getCurrentFreightWarehouse(stage: Stage) {
   const freightRef = getCurrentFreight(stage);
   const isWarehouseKind = freightRef.some((freight) => freight?.origin?.kind === 'Warehouse');

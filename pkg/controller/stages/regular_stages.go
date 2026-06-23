@@ -1529,7 +1529,7 @@ func (r *RegularStageReconciler) getVerificationResult(
 		ID:         currentVI.ID,
 		Actor:      currentVI.Actor,
 		StartTime:  currentVI.StartTime,
-		FinishTime: ar.Status.CompletedAt(),
+		FinishTime: ar.Status.CompletedAt,
 		Phase:      kargoapi.VerificationPhase(ar.Status.Phase),
 		Message:    ar.Status.Message,
 		AnalysisRun: &kargoapi.AnalysisRunReference{
@@ -1868,15 +1868,10 @@ func (r *RegularStageReconciler) autoPromoteFreight(
 			}
 		}
 
-		// Auto promote the latest available Freight and record an event.
-		promotion, err := kargo.NewPromotionBuilder(r.client).
-			Build(ctx, *stage, latestFreight.Name)
-		if err != nil {
-			return newStatus, fmt.Errorf(
-				"error building Promotion for Freight %q in namespace %q: %w",
-				latestFreight.Name, stage.Namespace, err,
-			)
-		}
+		// Auto promote the latest available Freight and record an event. Create a
+		// minimal Promotion. The defaulting webhook fills in the rest from the
+		// Stage's PromotionTemplate.
+		promotion := api.NewMinimalPromotion(stage, latestFreight.Name)
 		if err = r.client.Create(ctx, promotion); err != nil {
 			return newStatus, fmt.Errorf(
 				"error creating Promotion for Freight %q in namespace %q: %w",

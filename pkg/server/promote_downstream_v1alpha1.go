@@ -14,8 +14,9 @@ import (
 
 	svcv1alpha1 "github.com/akuity/kargo/api/service/v1alpha1"
 	kargoapi "github.com/akuity/kargo/api/v1alpha1"
+	"github.com/akuity/kargo/pkg/api"
 	libhttp "github.com/akuity/kargo/pkg/http"
-	"github.com/akuity/kargo/pkg/kargo"
+	"github.com/akuity/kargo/pkg/server/user"
 )
 
 // PromoteDownstream creates Promotion resources to transition all Stages
@@ -107,7 +108,7 @@ func (s *server) PromoteDownstream(
 	}
 
 	for _, downstream := range downstreams {
-		if err := s.authorizeFn(
+		if err = s.authorizeFn(
 			ctx,
 			"promote",
 			kargoapi.GroupVersion.WithResource("stages"),
@@ -135,6 +136,11 @@ func (s *server) PromoteDownstream(
 		}
 	}
 
+	var actor string
+	if u, ok := user.InfoFromContext(ctx); ok {
+		actor = api.FormatEventUserActor(u)
+	}
+
 	promoteErrs := make([]error, 0, len(downstreams))
 	createdPromos := make([]*kargoapi.Promotion, 0, len(downstreams))
 	for _, downstream := range downstreams {
@@ -144,10 +150,11 @@ func (s *server) PromoteDownstream(
 			// steps and is therefore a "control flow" Stage.
 			continue
 		}
-		newPromo, err := kargo.NewPromotionBuilder(s.client).Build(ctx, downstream, freight.Name)
-		if err != nil {
-			promoteErrs = append(promoteErrs, err)
-			continue
+		newPromo := api.NewMinimalPromotion(&downstream, freight.Name)
+		if actor != "" {
+			newPromo.Annotations = map[string]string{
+				kargoapi.AnnotationKeyCreateActor: actor,
+			}
 		}
 		if err = s.createPromotionFn(ctx, newPromo); err != nil {
 			promoteErrs = append(promoteErrs, err)
@@ -328,6 +335,11 @@ func (s *server) promoteDownstream(c *gin.Context) {
 	}
 
 	// Create promotions for all downstream stages
+	var actor string
+	if u, ok := user.InfoFromContext(ctx); ok {
+		actor = api.FormatEventUserActor(u)
+	}
+
 	promoteErrs := make([]error, 0, len(downstreams))
 	createdPromos := make([]*kargoapi.Promotion, 0, len(downstreams))
 
@@ -338,13 +350,14 @@ func (s *server) promoteDownstream(c *gin.Context) {
 			continue
 		}
 
-		newPromo, err := kargo.NewPromotionBuilder(s.client).Build(ctx, downstream, freight.Name)
-		if err != nil {
-			promoteErrs = append(promoteErrs, err)
-			continue
+		newPromo := api.NewMinimalPromotion(&downstream, freight.Name)
+		if actor != "" {
+			newPromo.Annotations = map[string]string{
+				kargoapi.AnnotationKeyCreateActor: actor,
+			}
 		}
 
-		if err = s.client.Create(ctx, newPromo); err != nil {
+		if err := s.client.Create(ctx, newPromo); err != nil {
 			promoteErrs = append(promoteErrs, err)
 			continue
 		}

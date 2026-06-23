@@ -29,7 +29,7 @@ import { Freight, Stage } from '@ui/gen/api/v2/models';
 import { useManualApprovalModal } from '../promotion/use-manual-approval-modal';
 
 import { DeleteFreightModal } from './delete-freight-modal';
-import { FreightArtifact } from './freight-artifact';
+import { FreightArtifactList } from './freight-artifact-list';
 import { useSoakTimeCounter } from './use-soak-time-counter';
 
 type FreightCardProps = {
@@ -286,34 +286,7 @@ export const FreightCard = (props: FreightCardProps) => {
           )}
 
           <div className='flex flex-col gap-1 justify-center items-center min-w-0 max-w-full [&_.ant-tag]:block [&_.ant-tag]:max-w-full [&_.ant-tag]:truncate'>
-            {props.freight?.commits?.slice(0, 2).map((commit) => (
-              <FreightArtifact key={commit?.repoURL} artifact={commit} />
-            ))}
-
-            {props.freight?.charts?.slice(0, 2).map((chart) => (
-              <FreightArtifact key={chart?.repoURL} artifact={chart} />
-            ))}
-
-            {props.freight?.images?.slice(0, 2).map((image) => (
-              <FreightArtifact key={image?.repoURL} artifact={image} />
-            ))}
-
-            {props.freight?.artifacts?.slice(0, 2).map((other) => (
-              <FreightArtifact key={other?.version} artifact={other} />
-            ))}
-
-            {noOfGitCommits + noOfHelmReleases + noOfContainerImages > 6 && (
-              <Typography.Text type='secondary' className='text-[10px]'>
-                +
-                {noOfGitCommits +
-                  noOfHelmReleases +
-                  noOfContainerImages -
-                  ((props.freight?.charts?.slice(0, 2)?.length || 0) +
-                    (props.freight?.commits?.slice(0, 2)?.length || 0) +
-                    (props.freight?.images?.slice(0, 2)?.length || 0))}{' '}
-                more
-              </Typography.Text>
-            )}
+            <FreightArtifactList freight={props.freight} />
           </div>
 
           <div className='flex flex-col mx-auto w-full gap-0.5 items-center justify-center text-nowrap py-1 mt-auto'>
