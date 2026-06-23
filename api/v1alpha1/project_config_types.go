@@ -109,9 +109,6 @@ type DeepLink struct {
 
 // AutoRollbackConfig describes the conditions under which a Stage should
 // automatically roll back to the last known-good (verified) Freight.
-//
-// +kubebuilder:validation:XValidation:message="onPromotion items must be Failed or Errored",rule="!has(self.onPromotion) || self.onPromotion.all(p, p == 'Failed' || p == 'Errored')"
-// +kubebuilder:validation:XValidation:message="onVerification items must be Failed or Error",rule="!has(self.onVerification) || self.onVerification.all(p, p == 'Failed' || p == 'Error')"
 type AutoRollbackConfig struct {
 	// OnPromotion is the list of terminal Promotion phases that should trigger
 	// an automated rollback. Only Failed and Errored are accepted. Note that
@@ -122,6 +119,8 @@ type AutoRollbackConfig struct {
 	//
 	// +optional
 	// +listType=set
+	// +kubebuilder:validation:MaxItems=2
+	// +kubebuilder:validation:Enum=Failed;Errored
 	OnPromotion []PromotionPhase `json:"onPromotion,omitempty" protobuf:"bytes,1,rep,name=onPromotion"`
 	// OnVerification is the list of terminal verification phases that should
 	// trigger an automated rollback. Only Failed and Error are accepted (note:
@@ -130,6 +129,8 @@ type AutoRollbackConfig struct {
 	//
 	// +optional
 	// +listType=set
+	// +kubebuilder:validation:MaxItems=2
+	// +kubebuilder:validation:Enum=Failed;Error
 	OnVerification []VerificationPhase `json:"onVerification,omitempty" protobuf:"bytes,2,rep,name=onVerification"`
 }
 

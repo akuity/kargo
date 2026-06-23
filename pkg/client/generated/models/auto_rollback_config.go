@@ -23,6 +23,8 @@ type AutoRollbackConfig struct {
 	//
 	// +optional
 	// +listType=set
+	// +kubebuilder:validation:MaxItems=2
+	// +kubebuilder:validation:Enum=Failed;Errored
 	OnPromotion []string `json:"onPromotion"`
 
 	// OnVerification is the list of terminal verification phases that should
@@ -32,6 +34,8 @@ type AutoRollbackConfig struct {
 	//
 	// +optional
 	// +listType=set
+	// +kubebuilder:validation:MaxItems=2
+	// +kubebuilder:validation:Enum=Failed;Error
 	OnVerification []string `json:"onVerification"`
 }
 

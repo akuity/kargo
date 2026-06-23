@@ -431,9 +431,6 @@ export const AutoPromotionOptionsSchema: GenMessage<AutoPromotionOptions> = /*@_
  * AutoRollbackConfig describes the conditions under which a Stage should
  * automatically roll back to the last known-good (verified) Freight.
  *
- * +kubebuilder:validation:XValidation:message="onPromotion items must be Failed or Errored",rule="!has(self.onPromotion) || self.onPromotion.all(p, p == 'Failed' || p == 'Errored')"
- * +kubebuilder:validation:XValidation:message="onVerification items must be Failed or Error",rule="!has(self.onVerification) || self.onVerification.all(p, p == 'Failed' || p == 'Error')"
- *
  * @generated from message github.com.akuity.kargo.api.v1alpha1.AutoRollbackConfig
  */
 export type AutoRollbackConfig = Message<"github.com.akuity.kargo.api.v1alpha1.AutoRollbackConfig"> & {
@@ -447,6 +444,8 @@ export type AutoRollbackConfig = Message<"github.com.akuity.kargo.api.v1alpha1.A
    *
    * +optional
    * +listType=set
+   * +kubebuilder:validation:MaxItems=2
+   * +kubebuilder:validation:Enum=Failed;Errored
    *
    * @generated from field: repeated string onPromotion = 1;
    */
@@ -460,6 +459,8 @@ export type AutoRollbackConfig = Message<"github.com.akuity.kargo.api.v1alpha1.A
    *
    * +optional
    * +listType=set
+   * +kubebuilder:validation:MaxItems=2
+   * +kubebuilder:validation:Enum=Failed;Error
    *
    * @generated from field: repeated string onVerification = 2;
    */
