@@ -34,6 +34,7 @@ const (
 	PromotionsByTerminalField        = "terminal"
 
 	RunningPromotionsByArgoCDApplicationsField = "applications"
+	RunningPromotionsByArgoCDSelectorsField    = "argoCDSelectors"
 	RunningPromotionsByPullRequestURLField     = "pullRequestURL"
 
 	StagesByAnalysisRunField    = "analysisRun"
@@ -298,6 +299,89 @@ func RunningPromotionsByArgoCDApplications(
 			}
 		}
 		return res
+	}
+}
+
+// RunningPromotionsByArgoCDSelectorsValue is the sentinel value indexed for
+// running Promotions that have at least one label-selector-based argocd-update
+// or argocd-wait step. It is the value with which to query the
+// RunningPromotionsByArgoCDSelectorsField index.
+const RunningPromotionsByArgoCDSelectorsValue = "true"
+
+// RunningPromotionsByArgoCDSelectors returns a client.IndexerFunc that indexes
+// running Promotions that have at least one label-selector-based argocd-update
+// or argocd-wait step (as opposed to one that targets an Argo CD Application by
+// name).
+//
+// Unlike RunningPromotionsByArgoCDApplications, this index cannot key on the
+// matched Application(s): a selector's match set depends on Application labels,
+// which change independently of the Promotion, so it cannot be derived from the
+// Promotion alone. Instead this is a coarse index whose only value is a
+// sentinel. It exists so that, on an Application event, the watch handler can
+// cheaply narrow the candidate set to the (small) population of running
+// Promotions that use selectors before evaluating each selector forward against
+// the changed Application.
+//
+// When the provided shardName is non-empty, only Promotions labeled with the
+// provided shardName are indexed. When the provided shardName is empty, only
+// Promotions not labeled with a shardName are indexed.
+func RunningPromotionsByArgoCDSelectors(
+	shardName string,
+	isDefaultController bool,
+) client.IndexerFunc {
+	return func(obj client.Object) []string {
+		// Return early if the Promotion is not the responsibility of this
+		// controller.
+		objShard := obj.GetLabels()[kargoapi.LabelKeyShard]
+		// Note(krancour): staticcheck wants us to apply De Morgan's law here, but
+		// this logic feels more readable as is. i.e. NOT (responsible for).
+		if !(objShard == shardName || (objShard == "" && isDefaultController)) { // nolint: staticcheck
+			return nil
+		}
+
+		promo, ok := obj.(*kargoapi.Promotion)
+		if !ok {
+			return nil
+		}
+
+		// We are only interested in running Promotions.
+		if promo.Status.Phase != kargoapi.PromotionPhaseRunning {
+			return nil
+		}
+
+		for i, step := range promo.Spec.Steps {
+			if int64(i) > promo.Status.CurrentStep {
+				// We are only interested in steps that have already been executed or
+				// are about to be.
+				break
+			}
+			if (step.Uses != "argocd-update" && step.Uses != "argocd-wait") ||
+				step.Config == nil {
+				continue
+			}
+			// A cheap structural check for the presence of a selector. No
+			// expression evaluation is required to know whether this Promotion
+			// belongs in the candidate set; the watch handler does the precise
+			// matching.
+			cfgMap := map[string]any{}
+			if err := json.Unmarshal(step.Config.Raw, &cfgMap); err != nil {
+				continue
+			}
+			apps, ok := cfgMap["apps"].([]any)
+			if !ok {
+				continue
+			}
+			for _, app := range apps {
+				appMap, ok := app.(map[string]any)
+				if !ok {
+					continue
+				}
+				if selector, ok := appMap["selector"]; ok && selector != nil {
+					return []string{RunningPromotionsByArgoCDSelectorsValue}
+				}
+			}
+		}
+		return nil
 	}
 }
 

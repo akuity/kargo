@@ -114,7 +114,7 @@ func newArgocdUpdater(caps promotion.StepRunnerCapabilities) promotion.StepRunne
 	r := &argocdUpdater{argocdClient: caps.ArgoCDClient}
 	r.schemaLoader = getConfigSchemaLoader(stepKindArgoCDUpdate)
 	r.getAuthorizedApplicationsFn = r.getAuthorizedApplications
-	r.buildLabelSelectorFn = buildArgoCDAppLabelSelector
+	r.buildLabelSelectorFn = BuildArgoCDAppLabelSelector
 	r.buildDesiredSourcesFn = r.buildDesiredSources
 	r.mustPerformUpdateFn = r.mustPerformUpdate
 	r.syncApplicationFn = r.syncApplication

@@ -7,6 +7,7 @@ import (
 	"testing"
 
 	"github.com/stretchr/testify/require"
+	apiextensionsv1 "k8s.io/apiextensions-apiserver/pkg/apis/apiextensions/v1"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
@@ -26,12 +27,13 @@ import (
 
 func TestUpdatedArgoCDAppHandler_Update(t *testing.T) {
 	tests := []struct {
-		name         string
-		applications []client.Object
-		indexer      client.IndexerFunc
-		interceptor  interceptor.Funcs
-		e            event.TypedUpdateEvent[*argocd.Application]
-		assertions   func(*testing.T, workqueue.TypedRateLimitingInterface[reconcile.Request])
+		name            string
+		applications    []client.Object
+		indexer         client.IndexerFunc
+		selectorIndexer client.IndexerFunc
+		interceptor     interceptor.Funcs
+		e               event.TypedUpdateEvent[*argocd.Application]
+		assertions      func(*testing.T, workqueue.TypedRateLimitingInterface[reconcile.Request])
 	}{
 		{
 			name: "Event without new object",
@@ -217,11 +219,155 @@ func TestUpdatedArgoCDAppHandler_Update(t *testing.T) {
 				require.Equal(t, 0, wq.Len())
 			},
 		},
+		{
+			name: "Application matched by label selector enqueues the Promotion",
+			applications: []client.Object{
+				&kargoapi.Stage{
+					ObjectMeta: metav1.ObjectMeta{
+						Name:      "fake-stage",
+						Namespace: "fake-project",
+					},
+				},
+				&kargoapi.Promotion{
+					ObjectMeta: metav1.ObjectMeta{
+						Name:      "selector-promotion",
+						Namespace: "fake-project",
+					},
+					Spec: kargoapi.PromotionSpec{
+						Stage: "fake-stage",
+						Steps: []kargoapi.PromotionStep{{
+							Uses: "argocd-update",
+							Config: &apiextensionsv1.JSON{
+								Raw: []byte(
+									`{"apps":[{"namespace":"argocd","selector":{"matchLabels":{"app":"foo"}}}]}`,
+								),
+							},
+						}},
+					},
+					Status: kargoapi.PromotionStatus{
+						Phase:       kargoapi.PromotionPhaseRunning,
+						CurrentStep: 0,
+					},
+				},
+			},
+			// Name-based index finds nothing for a selector-based step.
+			indexer: func(client.Object) []string { return nil },
+			selectorIndexer: func(obj client.Object) []string {
+				if obj.GetName() == "selector-promotion" {
+					return []string{indexer.RunningPromotionsByArgoCDSelectorsValue}
+				}
+				return nil
+			},
+			e: event.TypedUpdateEvent[*argocd.Application]{
+				ObjectOld: &argocd.Application{},
+				ObjectNew: &argocd.Application{
+					ObjectMeta: metav1.ObjectMeta{
+						Name:      "fake-application-name",
+						Namespace: "argocd",
+						Labels:    map[string]string{"app": "foo"},
+					},
+				},
+			},
+			assertions: func(t *testing.T, wq workqueue.TypedRateLimitingInterface[reconcile.Request]) {
+				require.Equal(t, 1, wq.Len())
+				item, _ := wq.Get()
+				require.Equal(t, reconcile.Request{
+					NamespacedName: types.NamespacedName{
+						Namespace: "fake-project",
+						Name:      "selector-promotion",
+					},
+				}, item)
+			},
+		},
+		{
+			name: "Application not matching label selector is not enqueued",
+			applications: []client.Object{
+				&kargoapi.Stage{
+					ObjectMeta: metav1.ObjectMeta{
+						Name:      "fake-stage",
+						Namespace: "fake-project",
+					},
+				},
+				&kargoapi.Promotion{
+					ObjectMeta: metav1.ObjectMeta{
+						Name:      "selector-promotion",
+						Namespace: "fake-project",
+					},
+					Spec: kargoapi.PromotionSpec{
+						Stage: "fake-stage",
+						Steps: []kargoapi.PromotionStep{{
+							Uses: "argocd-update",
+							Config: &apiextensionsv1.JSON{
+								Raw: []byte(
+									`{"apps":[{"namespace":"argocd","selector":{"matchLabels":{"app":"foo"}}}]}`,
+								),
+							},
+						}},
+					},
+					Status: kargoapi.PromotionStatus{
+						Phase:       kargoapi.PromotionPhaseRunning,
+						CurrentStep: 0,
+					},
+				},
+			},
+			indexer: func(client.Object) []string { return nil },
+			selectorIndexer: func(obj client.Object) []string {
+				if obj.GetName() == "selector-promotion" {
+					return []string{indexer.RunningPromotionsByArgoCDSelectorsValue}
+				}
+				return nil
+			},
+			e: event.TypedUpdateEvent[*argocd.Application]{
+				ObjectOld: &argocd.Application{},
+				ObjectNew: &argocd.Application{
+					ObjectMeta: metav1.ObjectMeta{
+						Name:      "fake-application-name",
+						Namespace: "argocd",
+						Labels:    map[string]string{"app": "bar"},
+					},
+				},
+			},
+			assertions: func(t *testing.T, wq workqueue.TypedRateLimitingInterface[reconcile.Request]) {
+				require.Equal(t, 0, wq.Len())
+			},
+		},
+		{
+			name:         "Application relabeled out of selector still enqueues (old labels matched)",
+			applications: selectorTestObjects(),
+			indexer:      func(client.Object) []string { return nil },
+			selectorIndexer: func(obj client.Object) []string {
+				if obj.GetName() == "selector-promotion" {
+					return []string{indexer.RunningPromotionsByArgoCDSelectorsValue}
+				}
+				return nil
+			},
+			e: event.TypedUpdateEvent[*argocd.Application]{
+				// Old labels match the selector; new labels do not. The Promotion
+				// must still be woken so it re-evaluates the shrunken match set.
+				ObjectOld: matchingSelectorApp(),
+				ObjectNew: nonMatchingSelectorApp(),
+			},
+			assertions: func(t *testing.T, wq workqueue.TypedRateLimitingInterface[reconcile.Request]) {
+				require.Equal(t, 1, wq.Len())
+				item, _ := wq.Get()
+				require.Equal(t, reconcile.Request{
+					NamespacedName: types.NamespacedName{
+						Namespace: "fake-project",
+						Name:      "selector-promotion",
+					},
+				}, item)
+			},
+		},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			scheme := runtime.NewScheme()
 			require.NoError(t, kargoapi.AddToScheme(scheme))
+
+			selectorIndexer := tt.selectorIndexer
+			if selectorIndexer == nil {
+				selectorIndexer = func(client.Object) []string { return nil }
+			}
 
 			c := fake.NewClientBuilder().
 				WithScheme(scheme).
@@ -230,6 +376,11 @@ func TestUpdatedArgoCDAppHandler_Update(t *testing.T) {
 					&kargoapi.Promotion{},
 					indexer.RunningPromotionsByArgoCDApplicationsField,
 					tt.indexer,
+				).
+				WithIndex(
+					&kargoapi.Promotion{},
+					indexer.RunningPromotionsByArgoCDSelectorsField,
+					selectorIndexer,
 				).
 				WithInterceptorFuncs(tt.interceptor)
 
@@ -381,4 +532,168 @@ func TestPromotionAcknowledgedByStageHandler_Update(t *testing.T) {
 			testCase.assertions(t, wq)
 		})
 	}
+}
+
+// selectorTestObjects returns a Stage and a running, selector-based Promotion
+// (argocd-update with matchLabels app=foo, namespace argocd) for exercising the
+// selector-driven enqueue paths.
+func selectorTestObjects() []client.Object {
+	return []client.Object{
+		&kargoapi.Stage{
+			ObjectMeta: metav1.ObjectMeta{Name: "fake-stage", Namespace: "fake-project"},
+		},
+		&kargoapi.Promotion{
+			ObjectMeta: metav1.ObjectMeta{Name: "selector-promotion", Namespace: "fake-project"},
+			Spec: kargoapi.PromotionSpec{
+				Stage: "fake-stage",
+				Steps: []kargoapi.PromotionStep{{
+					Uses: "argocd-update",
+					Config: &apiextensionsv1.JSON{
+						Raw: []byte(
+							`{"apps":[{"namespace":"argocd","selector":{"matchLabels":{"app":"foo"}}}]}`,
+						),
+					},
+				}},
+			},
+			Status: kargoapi.PromotionStatus{
+				Phase:       kargoapi.PromotionPhaseRunning,
+				CurrentStep: 0,
+			},
+		},
+	}
+}
+
+func matchingSelectorApp() *argocd.Application {
+	return &argocd.Application{
+		ObjectMeta: metav1.ObjectMeta{
+			Name:      "fake-application-name",
+			Namespace: "argocd",
+			Labels:    map[string]string{"app": "foo"},
+		},
+	}
+}
+
+func nonMatchingSelectorApp() *argocd.Application {
+	return &argocd.Application{
+		ObjectMeta: metav1.ObjectMeta{
+			Name:      "fake-application-name",
+			Namespace: "argocd",
+			Labels:    map[string]string{"app": "bar"},
+		},
+	}
+}
+
+// newSelectorAppHandler builds an UpdatedArgoCDAppHandler whose client indexes
+// "selector-promotion" into the coarse selector index and finds nothing in the
+// name-based index.
+func newSelectorAppHandler(
+	t *testing.T,
+	objs ...client.Object,
+) *UpdatedArgoCDAppHandler[*argocd.Application] {
+	t.Helper()
+	scheme := runtime.NewScheme()
+	require.NoError(t, kargoapi.AddToScheme(scheme))
+	c := fake.NewClientBuilder().
+		WithScheme(scheme).
+		WithObjects(objs...).
+		WithIndex(
+			&kargoapi.Promotion{},
+			indexer.RunningPromotionsByArgoCDApplicationsField,
+			func(client.Object) []string { return nil },
+		).
+		WithIndex(
+			&kargoapi.Promotion{},
+			indexer.RunningPromotionsByArgoCDSelectorsField,
+			func(obj client.Object) []string {
+				if obj.GetName() == "selector-promotion" {
+					return []string{indexer.RunningPromotionsByArgoCDSelectorsValue}
+				}
+				return nil
+			},
+		).
+		Build()
+	return &UpdatedArgoCDAppHandler[*argocd.Application]{kargoClient: c}
+}
+
+func newTestWorkqueue() workqueue.TypedRateLimitingInterface[reconcile.Request] {
+	return workqueue.NewTypedRateLimitingQueue(
+		workqueue.DefaultTypedControllerRateLimiter[reconcile.Request](),
+	)
+}
+
+func requireSelectorPromotionEnqueued(
+	t *testing.T,
+	wq workqueue.TypedRateLimitingInterface[reconcile.Request],
+) {
+	t.Helper()
+	require.Equal(t, 1, wq.Len())
+	item, _ := wq.Get()
+	require.Equal(t, reconcile.Request{
+		NamespacedName: types.NamespacedName{
+			Namespace: "fake-project",
+			Name:      "selector-promotion",
+		},
+	}, item)
+}
+
+func TestUpdatedArgoCDAppHandler_Create(t *testing.T) {
+	t.Run("matching Application enqueues selector Promotion", func(t *testing.T) {
+		u := newSelectorAppHandler(t, selectorTestObjects()...)
+		wq := newTestWorkqueue()
+		u.Create(
+			t.Context(),
+			event.TypedCreateEvent[*argocd.Application]{Object: matchingSelectorApp()},
+			wq,
+		)
+		requireSelectorPromotionEnqueued(t, wq)
+	})
+
+	t.Run("non-matching Application does not enqueue", func(t *testing.T) {
+		u := newSelectorAppHandler(t, selectorTestObjects()...)
+		wq := newTestWorkqueue()
+		u.Create(
+			t.Context(),
+			event.TypedCreateEvent[*argocd.Application]{Object: nonMatchingSelectorApp()},
+			wq,
+		)
+		require.Equal(t, 0, wq.Len())
+	})
+
+	t.Run("nil object is a no-op", func(t *testing.T) {
+		u := newSelectorAppHandler(t, selectorTestObjects()...)
+		wq := newTestWorkqueue()
+		u.Create(t.Context(), event.TypedCreateEvent[*argocd.Application]{}, wq)
+		require.Equal(t, 0, wq.Len())
+	})
+}
+
+func TestUpdatedArgoCDAppHandler_Delete(t *testing.T) {
+	t.Run("matching Application enqueues selector Promotion", func(t *testing.T) {
+		u := newSelectorAppHandler(t, selectorTestObjects()...)
+		wq := newTestWorkqueue()
+		u.Delete(
+			t.Context(),
+			event.TypedDeleteEvent[*argocd.Application]{Object: matchingSelectorApp()},
+			wq,
+		)
+		requireSelectorPromotionEnqueued(t, wq)
+	})
+
+	t.Run("non-matching Application does not enqueue", func(t *testing.T) {
+		u := newSelectorAppHandler(t, selectorTestObjects()...)
+		wq := newTestWorkqueue()
+		u.Delete(
+			t.Context(),
+			event.TypedDeleteEvent[*argocd.Application]{Object: nonMatchingSelectorApp()},
+			wq,
+		)
+		require.Equal(t, 0, wq.Len())
+	})
+
+	t.Run("nil object is a no-op", func(t *testing.T) {
+		u := newSelectorAppHandler(t, selectorTestObjects()...)
+		wq := newTestWorkqueue()
+		u.Delete(t.Context(), event.TypedDeleteEvent[*argocd.Application]{}, wq)
+		require.Equal(t, 0, wq.Len())
+	})
 }
