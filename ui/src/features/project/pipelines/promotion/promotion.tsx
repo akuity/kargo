@@ -27,6 +27,7 @@ import {
   usePromoteToStage
 } from '@ui/gen/api/v2/core/core';
 import { Promotion as TPromotion } from '@ui/gen/api/v2/models';
+import { parseDate } from '@ui/utils/dates';
 
 import { FreightDetails } from './freight-details';
 import { getPromotionActor } from './get-promotion-actor';
@@ -126,7 +127,7 @@ const Content = (props: { promotion: TPromotion; yaml: string }) => {
     )
   });
 
-  const promotionStartTime = new Date(promotion?.metadata?.creationTimestamp || '');
+  const promotionStartTime = parseDate(promotion?.metadata?.creationTimestamp);
 
   if (promotionStartTime) {
     const promotionRelativeStartTime = formatDistance(promotionStartTime, new Date(), {
@@ -140,7 +141,7 @@ const Content = (props: { promotion: TPromotion; yaml: string }) => {
   }
 
   if (isPromotionTerminal) {
-    const promotionEndTime = new Date(promotion?.status?.finishedAt || '');
+    const promotionEndTime = parseDate(promotion?.status?.finishedAt);
 
     if (promotionEndTime && promotionStartTime) {
       const duration = formatDistance(promotionStartTime, promotionEndTime, {

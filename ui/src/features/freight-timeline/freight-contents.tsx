@@ -82,7 +82,7 @@ export const FreightContents = (props: {
       ))}
       {(freight?.artifacts || []).map((g) => (
         <FreightContentItem
-          key={g.subscriptionName || '' + g.artifactType}
+          key={(g.subscriptionName || '') + g.artifactType}
           highlighted={highlighted}
           linkClass={linkClass}
           fullContentVisibility={props.fullContentVisibility}

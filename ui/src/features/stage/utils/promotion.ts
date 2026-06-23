@@ -7,6 +7,7 @@ import {
   isPromotionPhaseTerminal
 } from '@ui/features/common/promotion-status/utils';
 import { Promotion } from '@ui/gen/api/v2/models';
+import { parseDate } from '@ui/utils/dates';
 
 export const canAbortPromotion = (promotion: Promotion) =>
   !isPromotionPhaseTerminal(getPromotionStatusPhase(promotion));
@@ -26,8 +27,8 @@ export const promotionCompareFn = (
   promotion1: Partial<Promotion>,
   promotion2: Partial<Promotion>
 ) => {
-  const promo1Date = new Date(promotion1.metadata?.creationTimestamp || '');
-  const promo2Date = new Date(promotion2.metadata?.creationTimestamp || '');
+  const promo1Date = parseDate(promotion1.metadata?.creationTimestamp);
+  const promo2Date = parseDate(promotion2.metadata?.creationTimestamp);
 
   if (promo1Date && promo2Date) {
     // latest promotion should have lower index in array

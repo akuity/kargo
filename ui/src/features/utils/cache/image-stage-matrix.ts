@@ -35,7 +35,15 @@ export default {
 
     const cached = queryClient.getQueryData<listImagesResponse>(getListImagesQueryKey(projectName));
 
-    const imageStageMatrix = cached?.data || {};
+    // Nothing to patch until the API-computed matrix has loaded. Building one
+    // from a single promotion here would produce a misleading, mostly-empty
+    // matrix, and writing it unwrapped (without the `{ data }` response
+    // envelope) would break every consumer that reads `.data`.
+    if (!cached?.data) {
+      return;
+    }
+
+    const imageStageMatrix = cached.data;
 
     const lastPromotionFreight = lastPromotion?.freight;
 
@@ -84,9 +92,9 @@ export default {
       imageStageMatrix[repoURL].tags![tag].stages![stageName] = 0;
     }
 
-    queryClient.setQueryData(
-      getListImagesQueryKey(projectName),
-      cached ? { ...cached, data: imageStageMatrix } : imageStageMatrix
-    );
+    queryClient.setQueryData(getListImagesQueryKey(projectName), {
+      ...cached,
+      data: imageStageMatrix
+    });
   }
 };

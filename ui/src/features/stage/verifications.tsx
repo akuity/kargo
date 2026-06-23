@@ -8,6 +8,7 @@ import { generatePath } from 'react-router-dom';
 
 import { paths } from '@ui/config/paths';
 import { FreightCollection, VerificationInfo } from '@ui/gen/api/v2/models';
+import { parseDate } from '@ui/utils/dates';
 
 import { AnalysisModal } from '../common/analysis-modal/analysis-modal';
 import { useModal } from '../common/modal/use-modal';
@@ -80,7 +81,7 @@ export const Verifications = ({ verifications, images }: Props) => {
           title='Date'
           width={220}
           render={(_, verification) => {
-            const date = new Date(verification.startTime || '');
+            const date = parseDate(verification.startTime);
             return date ? format(date, 'MMM do yyyy HH:mm:ss') : '';
           }}
         />
@@ -92,8 +93,8 @@ export const Verifications = ({ verifications, images }: Props) => {
             }
 
             try {
-              const startTime = moment(verification.startTime);
-              const finishTime = moment(verification.finishTime);
+              const startTime = moment(verification.startTime || null);
+              const finishTime = moment(verification.finishTime || null);
 
               if (!startTime.isValid() || !finishTime.isValid()) {
                 return null;
