@@ -174,7 +174,7 @@ func (s *server) listStagesByWarehouses(
 	if len(warehouses) == 0 {
 		return &list, nil
 	}
-	var stages []kargoapi.Stage
+	stages := make([]kargoapi.Stage, 0, len(list.Items))
 	for _, stage := range list.Items {
 		if api.StageMatchesAnyWarehouse(&stage, warehouses) {
 			stages = append(stages, stage)

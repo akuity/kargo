@@ -106,10 +106,24 @@ func Test_filteredWatchEventType(t *testing.T) {
 		wantSend  bool
 	}{
 		{
-			name:      "matching event passes through",
+			name:      "matching modified passes through",
 			eventType: watch.Modified,
 			matches:   true,
 			wantType:  watch.Modified,
+			wantSend:  true,
+		},
+		{
+			name:      "matching added passes through",
+			eventType: watch.Added,
+			matches:   true,
+			wantType:  watch.Added,
+			wantSend:  true,
+		},
+		{
+			name:      "matching deleted passes through",
+			eventType: watch.Deleted,
+			matches:   true,
+			wantType:  watch.Deleted,
 			wantSend:  true,
 		},
 		{
@@ -121,6 +135,10 @@ func Test_filteredWatchEventType(t *testing.T) {
 		{
 			name:      "non-matching added is skipped",
 			eventType: watch.Added,
+		},
+		{
+			name:      "non-matching deleted is skipped",
+			eventType: watch.Deleted,
 		},
 	}
 	for _, testCase := range testCases {

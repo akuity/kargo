@@ -2,7 +2,7 @@ package server
 
 import (
 	"context"
-	"fmt"
+	"errors"
 
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
@@ -31,10 +31,10 @@ func (s *server) listForWatchSeed(
 	opts ...client.ListOption,
 ) error {
 	if s.client == nil {
-		return fmt.Errorf("kubernetes client is not configured")
+		return errors.New("kubernetes client is not configured")
 	}
 	if s.authorizeFn == nil {
-		return fmt.Errorf("authorize function is not configured")
+		return errors.New("authorize function is not configured")
 	}
 
 	var listOpts client.ListOptions
