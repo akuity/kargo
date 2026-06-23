@@ -445,7 +445,8 @@ export type AutoRollbackConfig = Message<"github.com.akuity.kargo.api.v1alpha1.A
    * +optional
    * +listType=set
    * +kubebuilder:validation:MaxItems=2
-   * +kubebuilder:validation:Enum=Failed;Errored
+   * +kubebuilder:validation:XValidation:message="onPromotion[0] must be Failed or Errored",rule="self.size() == 0 || self[0] == 'Failed' || self[0] == 'Errored'"
+   * +kubebuilder:validation:XValidation:message="onPromotion[1] must be Failed or Errored",rule="self.size() <= 1 || self[1] == 'Failed' || self[1] == 'Errored'"
    *
    * @generated from field: repeated string onPromotion = 1;
    */
@@ -460,7 +461,8 @@ export type AutoRollbackConfig = Message<"github.com.akuity.kargo.api.v1alpha1.A
    * +optional
    * +listType=set
    * +kubebuilder:validation:MaxItems=2
-   * +kubebuilder:validation:Enum=Failed;Error
+   * +kubebuilder:validation:XValidation:message="onVerification[0] must be Failed or Error",rule="self.size() == 0 || self[0] == 'Failed' || self[0] == 'Error'"
+   * +kubebuilder:validation:XValidation:message="onVerification[1] must be Failed or Error",rule="self.size() <= 1 || self[1] == 'Failed' || self[1] == 'Error'"
    *
    * @generated from field: repeated string onVerification = 2;
    */

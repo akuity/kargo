@@ -6428,14 +6428,14 @@
       "type": "object",
       "properties": {
         "onPromotion": {
-          "description": "OnPromotion is the list of terminal Promotion phases that should trigger\nan automated rollback. Only Failed and Errored are accepted. Note that\nunsuccessful promotions (as opposed to unsuccessful verifications) may not\nnecessarily indicate a problem with the Freight, since promotions might fail\ndue to transient issues with the deployment itself (network, credential\nexpirations, etc...). Defaults to [].\n\n+optional\n+listType=set\n+kubebuilder:validation:MaxItems=2\n+kubebuilder:validation:Enum=Failed;Errored",
+          "description": "OnPromotion is the list of terminal Promotion phases that should trigger\nan automated rollback. Only Failed and Errored are accepted. Note that\nunsuccessful promotions (as opposed to unsuccessful verifications) may not\nnecessarily indicate a problem with the Freight, since promotions might fail\ndue to transient issues with the deployment itself (network, credential\nexpirations, etc...). Defaults to [].\n\n+optional\n+listType=set\n+kubebuilder:validation:MaxItems=2\n+kubebuilder:validation:XValidation:message=\"onPromotion[0] must be Failed or Errored\",rule=\"self.size() == 0 || self[0] == 'Failed' || self[0] == 'Errored'\"\n+kubebuilder:validation:XValidation:message=\"onPromotion[1] must be Failed or Errored\",rule=\"self.size() <= 1 || self[1] == 'Failed' || self[1] == 'Errored'\"",
           "type": "array",
           "items": {
             "type": "string"
           }
         },
         "onVerification": {
-          "description": "OnVerification is the list of terminal verification phases that should\ntrigger an automated rollback. Only Failed and Error are accepted (note:\n\"Error\", not \"Errored\" as in onPromotion). When absent or empty,\ndefaults to [Failed].\n\n+optional\n+listType=set\n+kubebuilder:validation:MaxItems=2\n+kubebuilder:validation:Enum=Failed;Error",
+          "description": "OnVerification is the list of terminal verification phases that should\ntrigger an automated rollback. Only Failed and Error are accepted (note:\n\"Error\", not \"Errored\" as in onPromotion). When absent or empty,\ndefaults to [Failed].\n\n+optional\n+listType=set\n+kubebuilder:validation:MaxItems=2\n+kubebuilder:validation:XValidation:message=\"onVerification[0] must be Failed or Error\",rule=\"self.size() == 0 || self[0] == 'Failed' || self[0] == 'Error'\"\n+kubebuilder:validation:XValidation:message=\"onVerification[1] must be Failed or Error\",rule=\"self.size() <= 1 || self[1] == 'Failed' || self[1] == 'Error'\"",
           "type": "array",
           "items": {
             "type": "string"
