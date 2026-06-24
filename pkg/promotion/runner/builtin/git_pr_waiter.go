@@ -3,6 +3,7 @@ package builtin
 import (
 	"context"
 	"fmt"
+	"time"
 
 	"github.com/xeipuuv/gojsonschema"
 
@@ -21,6 +22,11 @@ import (
 )
 
 const stepKindGitWaitForPR = "git-wait-for-pr"
+
+// gitWaitForPRPollIntervalDefault is the suggested interval at which the
+// git-wait-for-pr step re-polls the pull request's status while it remains open,
+// absent an explicitly configured pollInterval.
+const gitWaitForPRPollIntervalDefault = 30 * time.Second
 
 func init() {
 	promotion.DefaultStepRunnerRegistry.MustRegister(
@@ -121,9 +127,14 @@ func (g *gitPRWaiter) run(
 	output := buildPRWaiterOutput(pr)
 
 	if pr.Open {
+		pollInterval, err := resolvePollInterval(cfg.PollInterval, gitWaitForPRPollIntervalDefault)
+		if err != nil {
+			return promotion.StepResult{Status: kargoapi.PromotionStepStatusErrored}, err
+		}
 		return promotion.StepResult{
-			Status: kargoapi.PromotionStepStatusRunning,
-			Output: output,
+			Status:     kargoapi.PromotionStepStatusRunning,
+			Output:     output,
+			RetryAfter: &pollInterval,
 		}, nil
 	}
 	if !pr.Merged {
