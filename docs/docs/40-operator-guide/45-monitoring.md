@@ -49,8 +49,8 @@ webhooksServer:
 ```
 
 Each component's metrics are served over plain HTTP on port `9090` by default,
-named `http-metrics`. The port name and number are configurable per component,
-for example:
+named `http-metrics`; scrapers do not need to be configured for TLS. The port
+name and number are configurable per component, for example:
 
 ```yaml
 controller:
@@ -60,13 +60,6 @@ controller:
       servicePort: 8080
       portName: telemetry
 ```
-
-:::note
-
-Metrics are served over plain HTTP. Scrapers do not need to be configured for
-TLS.
-
-:::
 
 :::note
 
