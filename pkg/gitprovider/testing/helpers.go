@@ -211,6 +211,150 @@ func cloneAndPush(
 	return repo
 }
 
+// cloneMain clones the test repo at its main branch and returns the working
+// copy.
+func cloneMain(t *testing.T, cfg RepoConfig) git.Repo {
+	t.Helper()
+	repo, err := git.Clone(
+		cfg.RepoURL,
+		cfg.clientOpts(),
+		&git.CloneOptions{Branch: "main", SingleBranch: true},
+	)
+	require.NoError(t, err)
+	return repo
+}
+
+// commitFileAndPush writes a file in the repo's working tree, commits it, and
+// pushes the currently checked-out branch.
+func commitFileAndPush(
+	t *testing.T, repo git.Repo, name, content, message string,
+) {
+	t.Helper()
+	require.NoError(t, os.WriteFile(
+		filepath.Join(repo.Dir(), name), []byte(content), 0600,
+	))
+	require.NoError(t, repo.AddAllAndCommit(message, nil))
+	require.NoError(t, repo.Push(nil))
+}
+
+// openPR opens a pull request from headBranch into main and returns its number.
+func openPR(
+	t *testing.T,
+	prov gitprovider.Interface,
+	headBranch, title string,
+) int64 {
+	t.Helper()
+	pr, err := prov.CreatePullRequest(
+		t.Context(),
+		&gitprovider.CreatePullRequestOpts{
+			Title: title,
+			Head:  headBranch,
+			Base:  "main",
+		},
+	)
+	require.NoError(t, err)
+	require.NotNil(t, pr)
+	require.True(t, pr.Open)
+	return pr.Number
+}
+
+// deleteBranchAndClose deletes the remote feature branch over an authenticated
+// URL and closes the repo. Unlike cleanupBranch, it embeds credentials in the
+// push URL and disables interactive prompts, so it never blocks waiting for
+// input on hosts with a GUI credential helper. Best-effort.
+func deleteBranchAndClose(cfg RepoConfig, repo git.Repo, branchName string) {
+	// nolint:gosec // Test helper; the push URL is built from test config, not
+	// external input. The authed URL avoids depending on the credential-helper
+	// binary path, which is not present on developer hosts.
+	cmd := exec.Command(
+		"git", "push", cfg.authedRepoURL(), "--delete", branchName,
+	)
+	cmd.Dir = repo.Dir()
+	cmd.Env = append(
+		os.Environ(),
+		fmt.Sprintf("HOME=%s", repo.HomeDir()),
+		"GIT_TERMINAL_PROMPT=0",
+	)
+	_ = cmd.Run()
+	repo.Close() // nolint: errcheck
+}
+
+// SetupCleanPR creates a PR with a single non-conflicting commit. It returns the
+// PR number and a cleanup function that deletes the feature branch.
+func SetupCleanPR(
+	t *testing.T, cfg RepoConfig, prov gitprovider.Interface,
+) (int64, func()) {
+	t.Helper()
+	branchName := uniqueBranchName("clean")
+	repo := cloneAndPush(t, cfg, branchName)
+	prNumber := openPR(t, prov, branchName, "integration test: clean")
+	return prNumber, func() { deleteBranchAndClose(cfg, repo, branchName) }
+}
+
+// SetupConflictingPR creates a PR whose feature branch conflicts with main: both
+// add the same file with different content, producing an add/add conflict. GitHub
+// reports the PR's mergeable_state as "dirty". It returns the PR number and a
+// cleanup function that deletes the feature branch.
+func SetupConflictingPR(
+	t *testing.T, cfg RepoConfig, prov gitprovider.Interface,
+) (int64, func()) {
+	t.Helper()
+	branchName := uniqueBranchName("dirty")
+	// A per-run filename keeps the setup idempotent across runs while still
+	// producing an add/add conflict (both branches add the same new path).
+	conflictFile := fmt.Sprintf("conflict-%s.txt", branchName)
+
+	// Feature branch adds the file with one content.
+	featureRepo := cloneMain(t, cfg)
+	require.NoError(t, featureRepo.CreateChildBranch(branchName))
+	commitFileAndPush(
+		t, featureRepo, conflictFile, "feature content\n", "feature change",
+	)
+
+	// main adds the same file with different content, diverging from the feature
+	// branch.
+	mainRepo := cloneMain(t, cfg)
+	defer mainRepo.Close() // nolint: errcheck
+	commitFileAndPush(
+		t, mainRepo, conflictFile, "main content\n", "conflicting main change",
+	)
+
+	prNumber := openPR(t, prov, branchName, "integration test: dirty")
+	return prNumber, func() { deleteBranchAndClose(cfg, featureRepo, branchName) }
+}
+
+// SetupBehindPR creates a PR whose feature branch is behind main without
+// conflicting: the feature branch and main each add a different file. When the
+// repo requires branches to be up to date before merging, GitHub reports the PR's
+// mergeable_state as "behind". It returns the PR number and a cleanup function
+// that deletes the feature branch.
+func SetupBehindPR(
+	t *testing.T, cfg RepoConfig, prov gitprovider.Interface,
+) (int64, func()) {
+	t.Helper()
+	branchName := uniqueBranchName("behind")
+
+	// Feature branch adds a file. Per-run filenames keep the setup idempotent.
+	featureRepo := cloneMain(t, cfg)
+	require.NoError(t, featureRepo.CreateChildBranch(branchName))
+	commitFileAndPush(
+		t, featureRepo,
+		fmt.Sprintf("feature-%s.txt", branchName), "feature\n", "feature change",
+	)
+
+	// main advances with a non-conflicting change, leaving the feature branch
+	// behind.
+	mainRepo := cloneMain(t, cfg)
+	defer mainRepo.Close() // nolint: errcheck
+	commitFileAndPush(
+		t, mainRepo,
+		fmt.Sprintf("mainline-%s.txt", branchName), "mainline\n", "advance main",
+	)
+
+	prNumber := openPR(t, prov, branchName, "integration test: behind")
+	return prNumber, func() { deleteBranchAndClose(cfg, featureRepo, branchName) }
+}
+
 // fetchMain fetches the latest main branch from the remote.
 func fetchMain(t *testing.T, cfg RepoConfig, repo git.Repo) {
 	t.Helper()
