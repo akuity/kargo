@@ -2,11 +2,13 @@
 apiVersion: v1
 kind: Namespace
 metadata:
-  {{- include "kargo.annotations" (dict "root" . "annotations" .Values.global.sharedResources.extraNamespaceAnnotations) | nindent 2 }}
+  name: {{ quote .Values.global.sharedResources.namespace }}
   labels:
     {{- include "kargo.labels" . | nindent 4 }}
-  {{- with .Values.global.sharedResources.extraNamespaceLabels }}
-    {{- toYaml . | nindent 4 }}
+  {{- with (mergeOverwrite (deepCopy .Values.global.labels) .Values.global.sharedResources.extraNamespaceLabels) }}
+    {{- range $key, $value := . }}
+    {{ $key }}: {{ $value | quote }}
+    {{- end }}
   {{- end }}
-  name: {{ .Values.global.sharedResources.namespace }}
+  {{- include "kargo.annotations" (dict "root" . "annotations" .Values.global.sharedResources.extraNamespaceAnnotations) | nindent 2 }}
 {{- end }}
