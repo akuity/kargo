@@ -324,38 +324,6 @@ func SetupConflictingPR(
 	return prNumber, func() { deleteBranchAndClose(cfg, featureRepo, branchName) }
 }
 
-// SetupBehindPR creates a PR whose feature branch is behind main without
-// conflicting: the feature branch and main each add a different file. When the
-// repo requires branches to be up to date before merging, GitHub reports the PR's
-// mergeable_state as "behind". It returns the PR number and a cleanup function
-// that deletes the feature branch.
-func SetupBehindPR(
-	t *testing.T, cfg RepoConfig, prov gitprovider.Interface,
-) (int64, func()) {
-	t.Helper()
-	branchName := uniqueBranchName("behind")
-
-	// Feature branch adds a file. Per-run filenames keep the setup idempotent.
-	featureRepo := cloneMain(t, cfg)
-	require.NoError(t, featureRepo.CreateChildBranch(branchName))
-	commitFileAndPush(
-		t, featureRepo,
-		fmt.Sprintf("feature-%s.txt", branchName), "feature\n", "feature change",
-	)
-
-	// main advances with a non-conflicting change, leaving the feature branch
-	// behind.
-	mainRepo := cloneMain(t, cfg)
-	defer mainRepo.Close() // nolint: errcheck
-	commitFileAndPush(
-		t, mainRepo,
-		fmt.Sprintf("mainline-%s.txt", branchName), "mainline\n", "advance main",
-	)
-
-	prNumber := openPR(t, prov, branchName, "integration test: behind")
-	return prNumber, func() { deleteBranchAndClose(cfg, featureRepo, branchName) }
-}
-
 // fetchMain fetches the latest main branch from the remote.
 func fetchMain(t *testing.T, cfg RepoConfig, repo git.Repo) {
 	t.Helper()

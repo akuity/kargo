@@ -27,23 +27,30 @@ with the `repo` scope works (`gh auth token` if it has that scope).
 ### GitHub `TestMergeGate` extras
 
 `TestMergeGate` verifies the `mergeable_state`-aware merge gate. Its `clean` and
-`dirty` subtests need only the three GitHub variables above. The `behind` subtest
-is **opt-in** and additionally requires:
+`dirty` subtests need only the three GitHub variables above. The `blocked`
+subtest is **opt-in** and additionally requires:
 
-- `TEST_GITHUB_REQUIRE_UP_TO_DATE=true`, and
-- the repo's `main` branch protected with **"Require branches to be up to date
-  before merging"** (otherwise GitHub merges out-of-date branches and the state
-  never becomes `behind`):
+- `TEST_GITHUB_REQUIRE_STATUS_CHECK=true`, and
+- the repo's `main` branch protected with a **required status check the PR will
+  never satisfy**. With an unsatisfied required check, GitHub reports the PR's
+  `mergeable_state` as `blocked` — the same not-ready gate branch as `behind`:
 
   ```bash
   gh api -X PUT repos/<owner>/<repo>/branches/main/protection --input - <<'JSON'
-  {"required_status_checks":{"strict":true,"contexts":[]},
+  {"required_status_checks":{"strict":true,"contexts":["kargo-required-check"]},
    "enforce_admins":true,"required_pull_request_reviews":null,"restrictions":null}
   JSON
   ```
 
-  Branch protection is free on **public** repos; on private repos it needs
-  GitHub Pro. The subtest skips cleanly when not configured.
+  Branch protection needs a **public** repo or GitHub Pro. Because a required
+  check is repo-global, it blocks *every* PR — so this mode is mutually exclusive
+  with the `clean`/`dirty` subtests, which skip when
+  `TEST_GITHUB_REQUIRE_STATUS_CHECK=true`. Run the two modes separately. Each
+  subtest skips cleanly when its mode is not selected.
+
+  (`behind` itself is not exercised live: it additionally requires a *passing*
+  required check on an out-of-date branch, i.e. publishing commit statuses. It
+  takes the same gate path as `blocked` and is covered by the unit tests.)
 
 ## Running (in the dev container)
 
