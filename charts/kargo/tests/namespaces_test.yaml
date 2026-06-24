@@ -176,19 +176,12 @@ tests:
         isKind:
           of: RoleBinding
 
-  - it: omits the reader and admin RoleBindings when RBAC creation is disabled
-    # The controller-reader RoleBinding is gated separately (on the controller
-    # being installed), so it is unaffected by this flag and remains.
+  - it: omits all RoleBindings when RBAC creation is disabled
     set:
       global.systemResources.createRBAC: false
     asserts:
       - hasDocuments:
-          count: 1
-      - documentSelector:
-          path: metadata.name
-          value: kargo-controller-system-resources-reader
-        isKind:
-          of: RoleBinding
+          count: 0
 
 ---
 suite: shared-resources-namespace/roles.yaml
@@ -244,19 +237,12 @@ tests:
         isKind:
           of: RoleBinding
 
-  - it: omits the reader and admin RoleBindings when RBAC creation is disabled
-    # The controller-reader RoleBinding is gated separately (on the controller
-    # being installed), so it is unaffected by this flag and remains.
+  - it: omits all RoleBindings when RBAC creation is disabled
     set:
       global.sharedResources.createRBAC: false
     asserts:
       - hasDocuments:
-          count: 1
-      - documentSelector:
-          path: metadata.name
-          value: kargo-controller-shared-resources-reader
-        isKind:
-          of: RoleBinding
+          count: 0
 
 ---
 suite: cluster-secrets-namespace/roles.yaml
@@ -312,16 +298,9 @@ tests:
         isKind:
           of: RoleBinding
 
-  - it: omits the reader and admin RoleBindings when RBAC creation is disabled
-    # The controller-reader RoleBinding is gated separately (on the controller
-    # being installed), so it is unaffected by this flag and remains.
+  - it: omits all RoleBindings when RBAC creation is disabled
     set:
       global.createClusterSecretsRBAC: false
     asserts:
       - hasDocuments:
-          count: 1
-      - documentSelector:
-          path: metadata.name
-          value: kargo-controller-cluster-secrets-reader
-        isKind:
-          of: RoleBinding
+          count: 0
