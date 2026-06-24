@@ -2,7 +2,9 @@ package github
 
 import (
 	"context"
+	"errors"
 	"fmt"
+	"net/http"
 	"net/url"
 	"strings"
 
@@ -366,6 +368,19 @@ func (p *provider) MergePullRequest(
 		&github.PullRequestOptions{MergeMethod: opts.MergeMethod},
 	)
 	if err != nil {
+		// GitHub returns 405 ("Method Not Allowed") when the merge cannot be
+		// performed -- most notably "Base branch was modified" when the base tip
+		// moved between the mergeability check above and this merge call (a TOCTOU
+		// race that fires whenever concurrent merges land on the same base). The
+		// gate above already rejected the permanent conditions (conflict, blocked,
+		// etc.), so a 405 here is transient: report "not ready" so the caller
+		// retries. The next attempt re-runs the gate, which surfaces any condition
+		// that has since become permanent (e.g. a real conflict) as such.
+		var ghErr *github.ErrorResponse
+		if errors.As(err, &ghErr) && ghErr.Response != nil &&
+			ghErr.Response.StatusCode == http.StatusMethodNotAllowed {
+			return nil, false, nil
+		}
 		return nil, false, fmt.Errorf("error merging pull request %d: %w", id, err)
 	}
 	if mergeResult == nil {

@@ -3,6 +3,7 @@ package github
 import (
 	"context"
 	"errors"
+	"net/http"
 	"testing"
 	"time"
 
@@ -561,6 +562,32 @@ func TestMergePullRequest(t *testing.T) {
 			},
 			expectError:   true,
 			errorContains: "error merging pull request",
+		},
+		{
+			name:     "merge call returns 405 base branch modified is not ready",
+			prNumber: 405,
+			setupMock: func(m *mockGithubClient) {
+				m.On("GetPullRequests", mock.Anything, testRepoOwner, testRepoName, int(405)).
+					Return(&github.PullRequest{
+						Number:    github.Ptr(405),
+						State:     github.Ptr("open"),
+						Merged:    github.Ptr(false),
+						Mergeable: github.Ptr(true),
+						Head:      &github.PullRequestBranch{SHA: github.Ptr("head_sha")},
+						HTMLURL:   github.Ptr("https://github.com/akuity/kargo/pull/405"),
+					}, &github.Response{}, nil).Once()
+
+				// The base branch moved between the mergeability check and this
+				// merge call; GitHub returns a 405. The provider treats it as
+				// not-ready (no error, not merged) so the caller retries.
+				m.On("MergePullRequest", mock.Anything, testRepoOwner, testRepoName, int(405), "",
+					mock.AnythingOfType("*github.PullRequestOptions")).
+					Return(nil, nil, &github.ErrorResponse{
+						Response: &http.Response{StatusCode: http.StatusMethodNotAllowed},
+						Message:  "Base branch was modified. Review and try the merge again.",
+					})
+			},
+			expectedMerged: false,
 		},
 		{
 			name:     "nil merge result",
