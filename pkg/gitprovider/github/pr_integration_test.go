@@ -89,14 +89,14 @@ func TestMergeGate(t *testing.T) {
 		prNumber, cleanup := gptest.SetupCleanPR(t, repoCfg, prov)
 		defer cleanup()
 
-		state := waitForMergeableComputed(t, prov, prNumber)
-		t.Logf("PR #%d: GitHub reports mergeable_state=%q", prNumber, state)
+		ghPR := waitForMergeableComputed(t, prov, prNumber)
+		require.Equal(t, "clean", ghPR.GetMergeableState())
 
 		mergedPR, merged, mergeErr := prov.MergePullRequest(t.Context(), prNumber, nil)
 		require.NoError(t, mergeErr)
 		require.True(t, merged)
 		require.NotNil(t, mergedPR)
-		t.Logf("gate proceeded with the merge (commit %s)", mergedPR.MergeCommitSHA)
+		logGateComparison(t, prNumber, ghPR, gateMerge)
 	})
 
 	t.Run("dirty fails with conflict", func(t *testing.T) {
@@ -106,16 +106,15 @@ func TestMergeGate(t *testing.T) {
 		prNumber, cleanup := gptest.SetupConflictingPR(t, repoCfg, prov)
 		defer cleanup()
 
-		state := waitForMergeableComputed(t, prov, prNumber)
-		t.Logf("PR #%d: GitHub reports mergeable_state=%q", prNumber, state)
-		require.Equal(t, "dirty", state, "expected GitHub to report a conflict")
+		ghPR := waitForMergeableComputed(t, prov, prNumber)
+		require.Equal(t, "dirty", ghPR.GetMergeableState(), "expected GitHub to report a conflict")
 
 		mergedPR, merged, mergeErr := prov.MergePullRequest(t.Context(), prNumber, nil)
 		require.Error(t, mergeErr)
 		require.Contains(t, mergeErr.Error(), "has conflicts and cannot be merged")
 		require.False(t, merged)
 		require.Nil(t, mergedPR)
-		t.Logf("gate returned a terminal error: %v", mergeErr)
+		logGateComparison(t, prNumber, ghPR, gateFail)
 	})
 
 	t.Run("blocked is not ready", func(t *testing.T) {
@@ -129,27 +128,64 @@ func TestMergeGate(t *testing.T) {
 		defer cleanup()
 
 		// With an unsatisfied required status check, GitHub blocks the merge.
-		state := waitForMergeableComputed(t, prov, prNumber)
-		t.Logf("PR #%d: GitHub reports mergeable_state=%q", prNumber, state)
-		require.Equal(t, "blocked", state, "expected GitHub to block the merge")
+		ghPR := waitForMergeableComputed(t, prov, prNumber)
+		require.Equal(t, "blocked", ghPR.GetMergeableState(), "expected GitHub to block the merge")
 
 		mergedPR, merged, mergeErr := prov.MergePullRequest(t.Context(), prNumber, nil)
 		require.NoError(t, mergeErr)
 		require.False(t, merged)
 		require.Nil(t, mergedPR)
-		t.Logf("gate returned not-ready (no merge, no error), so the caller retries")
+		logGateComparison(t, prNumber, ghPR, gateRetry)
 	})
+}
+
+// Gate outcomes, used to compare the new mergeable_state gate against the legacy
+// Mergeable-boolean gate.
+const (
+	gateMerge = "merge"
+	gateFail  = "fail (terminal error)"
+	gateRetry = "not-ready (retry)"
+)
+
+// logGateComparison records, for one PR, the inputs GitHub returned, the outcome
+// the legacy gate (Draft || !Mergeable) would have produced, and the new gate's
+// observed outcome -- flagging where the added mergeable_state detail changes
+// behavior. The legacy gate can only ever merge or retry; it cannot distinguish
+// a permanent conflict (so it would retry "dirty" forever) and trusts the
+// Mergeable boolean (so it would attempt to merge a "blocked" PR that GitHub
+// then rejects).
+func logGateComparison(
+	t *testing.T,
+	prNumber int64,
+	ghPR github.PullRequest,
+	newGate string,
+) {
+	t.Helper()
+	legacy := gateMerge
+	if ghPR.GetDraft() || !ghPR.GetMergeable() {
+		legacy = gateRetry
+	}
+	verdict := "same as legacy"
+	if legacy != newGate {
+		verdict = "DIVERGES from legacy"
+	}
+	t.Logf(
+		"PR #%d: mergeable_state=%q mergeable=%v draft=%v",
+		prNumber, ghPR.GetMergeableState(), ghPR.GetMergeable(), ghPR.GetDraft(),
+	)
+	t.Logf("  legacy boolean gate -> %s", legacy)
+	t.Logf("  new gate            -> %s  (%s)", newGate, verdict)
 }
 
 // waitForMergeableComputed polls the PR until GitHub has finished computing its
 // mergeability (mergeable_state is neither empty nor "unknown") and returns the
-// resolved state. GitHub computes mergeability asynchronously, so reading too
-// early would observe "unknown" and mask the state the test is exercising.
+// resolved PR. GitHub computes mergeability asynchronously, so reading too early
+// would observe "unknown" and mask the state the test is exercising.
 func waitForMergeableComputed(
 	t *testing.T,
 	prov gitprovider.Interface,
 	prNumber int64,
-) string {
+) github.PullRequest {
 	t.Helper()
 	deadline := time.Now().Add(30 * time.Second)
 	for {
@@ -158,7 +194,7 @@ func waitForMergeableComputed(
 		ghPR, ok := pr.Object.(github.PullRequest)
 		require.True(t, ok, "expected PR object to be a github.PullRequest")
 		if state := ghPR.GetMergeableState(); state != "" && state != "unknown" {
-			return state
+			return ghPR
 		}
 		if time.Now().After(deadline) {
 			t.Fatalf("timed out waiting for mergeable_state of PR %d", prNumber)
