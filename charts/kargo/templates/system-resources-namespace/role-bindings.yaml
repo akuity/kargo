@@ -1,4 +1,4 @@
-{{- if .Values.dataPlane.install }}
+{{- if and .Values.dataPlane.install .Values.global.systemResources.createRBAC }}
 apiVersion: rbac.authorization.k8s.io/v1
 kind: RoleBinding
 metadata:
@@ -36,7 +36,7 @@ subjects:
   namespace: {{ .Release.Namespace }}
   name: kargo-admin
 {{- end }}
-{{- if and .Values.dataPlane.controller.install .Values.controller.enabled }}
+{{- if and .Values.dataPlane.controller.install .Values.controller.enabled .Values.global.systemResources.createRBAC }}
 ---
 apiVersion: rbac.authorization.k8s.io/v1
 kind: RoleBinding
