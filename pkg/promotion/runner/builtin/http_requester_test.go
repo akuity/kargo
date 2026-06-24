@@ -438,9 +438,30 @@ func Test_httpRequester_run(t *testing.T) {
 				FailureExpression: "true",
 				ErrorExpression:   "(1 + 2",
 			},
+			// A compile error is a misconfiguration, surfaced terminally and as
+			// an errored step, consistent with the success/failure expressions.
 			assertions: func(t *testing.T, res promotion.StepResult, err error) {
-				require.ErrorContains(t, err, "HTTP (200) response met failure criteria")
-				require.NotContains(t, err.Error(), "HTTP (200) response met failure criteria:")
+				require.ErrorContains(t, err, `error compiling error expression "(1 + 2"`)
+				require.True(t, promotion.IsTerminal(err))
+				require.Equal(t, kargoapi.PromotionStepStatusErrored, res.Status)
+			},
+		},
+		{
+			name: "failed with errorExpression non-string result",
+			handler: func(w http.ResponseWriter, _ *http.Request) {
+				w.Header().Set(contentTypeHeader, contentTypeJSON)
+				w.WriteHeader(http.StatusNotFound)
+				_, err := w.Write([]byte(`{"error": 42}`))
+				require.NoError(t, err)
+			},
+			cfg: builtin.HTTPConfig{
+				FailureExpression: "response.status == 404",
+				ErrorExpression:   "response.body.error",
+			},
+			// A non-string result falls back to the default message.
+			assertions: func(t *testing.T, res promotion.StepResult, err error) {
+				require.ErrorContains(t, err, "HTTP (404) response met failure criteria")
+				require.NotContains(t, err.Error(), "HTTP (404) response met failure criteria:")
 				require.True(t, promotion.IsTerminal(err))
 				require.Equal(t, kargoapi.PromotionStepStatusFailed, res.Status)
 			},
