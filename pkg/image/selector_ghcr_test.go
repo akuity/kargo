@@ -122,7 +122,7 @@ func TestSelectImageGHCR(t *testing.T) {
 			kargoapi.ImageSubscription{
 				RepoURL:                kargoRepo,
 				ImageSelectionStrategy: kargoapi.ImageSelectionStrategyNewestBuild,
-				AllowTags:              `^v0.1.0-rc.2\d$`,
+				AllowTagsRegexes:       []string{`^v0.1.0-rc.2\d$`},
 				DiscoveryLimit:         1,
 			},
 			nil,
@@ -145,7 +145,7 @@ func TestSelectImageGHCR(t *testing.T) {
 			kargoapi.ImageSubscription{
 				RepoURL:                kargoRepo,
 				ImageSelectionStrategy: kargoapi.ImageSelectionStrategyNewestBuild,
-				AllowTags:              `^v0.1.0-rc.2\d$`,
+				AllowTagsRegexes:       []string{`^v0.1.0-rc.2\d$`},
 				Platform:               platform,
 				DiscoveryLimit:         1,
 			},

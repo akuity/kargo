@@ -2,6 +2,7 @@ package image
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"regexp"
 	"slices"
@@ -53,35 +54,22 @@ func newTagBasedSelector(
 		return nil, fmt.Errorf("error compiling allow tags regex: %w", err)
 	}
 
-	// TODO(v1.11.0): Return an error if sub.AllowTags is non-empty.
-	// TODO(v1.13.0): Remove this block after the AllowTags field is removed.
+	// TODO(v1.13.0): Remove this check after the AllowTags field is removed.
 	if sub.AllowTags != "" { // nolint: staticcheck
-		var allowTagsRegex *regexp.Regexp
-		if allowTagsRegex, err = regexp.Compile(sub.AllowTags); err != nil { // nolint: staticcheck
-			return nil, fmt.Errorf(
-				"error compiling regular expression %q: %w",
-				sub.AllowTags, err, // nolint: staticcheck
-			)
-		}
-		s.allowTagsRegexes = append(s.allowTagsRegexes, allowTagsRegex)
+		return nil, errors.New(
+			"AllowTags is deprecated and unsupported as of v1.11.0; use AllowTagsRegexes instead",
+		)
 	}
 
 	if s.ignoreTagsRegexes, err = compileRegexes(sub.IgnoreTagsRegexes); err != nil {
 		return nil, fmt.Errorf("error compiling ignore tags regex: %w", err)
 	}
 
-	// TODO(v1.11.0): Return an error if sub.IgnoreTags is non-empty.
-	// TODO(v1.13.0): Remove this block after the IgnoreTags field is removed.
+	// TODO(v1.13.0): Remove this check after the IgnoreTags field is removed.
 	if len(sub.IgnoreTags) > 0 { // nolint: staticcheck
-		ignoreTagsRegexStrs := make([]string, len(sub.IgnoreTags))
-		for i, ignoreTag := range sub.IgnoreTags { // nolint: staticcheck
-			ignoreTagsRegexStrs[i] = fmt.Sprintf("^%s$", regexp.QuoteMeta(ignoreTag))
-		}
-		ignoreTagsRegexes, err := compileRegexes(ignoreTagsRegexStrs)
-		if err != nil {
-			return nil, err
-		}
-		s.ignoreTagsRegexes = append(s.ignoreTagsRegexes, ignoreTagsRegexes...)
+		return nil, errors.New(
+			"IgnoreTags is deprecated and unsupported as of v1.11.0; use IgnoreTagsRegexes instead",
+		)
 	}
 
 	return s, nil
