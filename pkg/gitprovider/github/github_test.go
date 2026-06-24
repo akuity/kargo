@@ -453,6 +453,93 @@ func TestMergePullRequest(t *testing.T) {
 			},
 		},
 		{
+			name:     "mergeable_state clean proceeds to merge",
+			prNumber: 201,
+			setupMock: func(m *mockGithubClient) {
+				m.On("GetPullRequests", mock.Anything, testRepoOwner, testRepoName, int(201)).
+					Return(&github.PullRequest{
+						Number:         github.Ptr(201),
+						State:          github.Ptr("open"),
+						Merged:         github.Ptr(false),
+						Mergeable:      github.Ptr(true),
+						MergeableState: github.Ptr("clean"),
+						Head:           &github.PullRequestBranch{SHA: github.Ptr("head_sha")},
+						HTMLURL:        github.Ptr("https://github.com/akuity/kargo/pull/201"),
+					}, &github.Response{}, nil).Once()
+
+				m.On("MergePullRequest", mock.Anything, testRepoOwner, testRepoName, int(201), "",
+					mock.AnythingOfType("*github.PullRequestOptions")).
+					Return(&github.PullRequestMergeResult{
+						SHA:    github.Ptr("merge_sha"),
+						Merged: github.Ptr(true),
+					}, &github.Response{}, nil)
+
+				m.On("GetPullRequests", mock.Anything, testRepoOwner, testRepoName, int(201)).
+					Return(&github.PullRequest{
+						Number:         github.Ptr(201),
+						State:          github.Ptr("closed"),
+						Merged:         github.Ptr(true),
+						MergeCommitSHA: github.Ptr("merge_sha"),
+						Head:           &github.PullRequestBranch{SHA: github.Ptr("head_sha")},
+						HTMLURL:        github.Ptr("https://github.com/akuity/kargo/pull/201"),
+						MergedAt:       &github.Timestamp{Time: time.Now()},
+					}, &github.Response{}, nil).Once()
+			},
+			expectedMerged: true,
+		},
+		{
+			name:     "mergeable_state unknown is not ready",
+			prNumber: 202,
+			setupMock: func(m *mockGithubClient) {
+				m.On("GetPullRequests", mock.Anything, testRepoOwner, testRepoName, int(202)).
+					Return(&github.PullRequest{
+						Number:         github.Ptr(202),
+						State:          github.Ptr("open"),
+						Merged:         github.Ptr(false),
+						Mergeable:      nil,
+						MergeableState: github.Ptr("unknown"),
+						Head:           &github.PullRequestBranch{SHA: github.Ptr("head_sha")},
+						HTMLURL:        github.Ptr("https://github.com/akuity/kargo/pull/202"),
+					}, &github.Response{}, nil)
+			},
+			expectError: false,
+		},
+		{
+			name:     "mergeable_state behind is not ready",
+			prNumber: 203,
+			setupMock: func(m *mockGithubClient) {
+				m.On("GetPullRequests", mock.Anything, testRepoOwner, testRepoName, int(203)).
+					Return(&github.PullRequest{
+						Number:         github.Ptr(203),
+						State:          github.Ptr("open"),
+						Merged:         github.Ptr(false),
+						Mergeable:      github.Ptr(true),
+						MergeableState: github.Ptr("behind"),
+						Head:           &github.PullRequestBranch{SHA: github.Ptr("head_sha")},
+						HTMLURL:        github.Ptr("https://github.com/akuity/kargo/pull/203"),
+					}, &github.Response{}, nil)
+			},
+			expectError: false,
+		},
+		{
+			name:     "mergeable_state dirty fails with conflict",
+			prNumber: 204,
+			setupMock: func(m *mockGithubClient) {
+				m.On("GetPullRequests", mock.Anything, testRepoOwner, testRepoName, int(204)).
+					Return(&github.PullRequest{
+						Number:         github.Ptr(204),
+						State:          github.Ptr("open"),
+						Merged:         github.Ptr(false),
+						Mergeable:      github.Ptr(false),
+						MergeableState: github.Ptr("dirty"),
+						Head:           &github.PullRequestBranch{SHA: github.Ptr("head_sha")},
+						HTMLURL:        github.Ptr("https://github.com/akuity/kargo/pull/204"),
+					}, &github.Response{}, nil)
+			},
+			expectError:   true,
+			errorContains: "has conflicts and cannot be merged",
+		},
+		{
 			name:     "merge call fails",
 			prNumber: 555,
 			setupMock: func(m *mockGithubClient) {
