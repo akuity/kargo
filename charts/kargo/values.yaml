@@ -810,6 +810,41 @@ controller:
     ## @param controller.cabundle.secretName Specifies the name of an optional Secret containing CA certs that is managed "out of band." Values in the Secret named here should each contain a single PEM-encoded CA cert. If defined, the value of this field takes precedence over any in configMapName.
     secretName: ""
 
+  ## All settings relating to exposing the controller's Prometheus metrics.
+  metrics:
+    ## @param controller.metrics.enabled Whether to expose the controller's Prometheus metrics. When enabled, the controller binds its metrics server (via `METRICS_BIND_ADDRESS`), declares a metrics container port, and a metrics `Service` is created. Metrics are served over plain HTTP.
+    enabled: false
+    service:
+      ## @param controller.metrics.service.type The type of the metrics `Service`.
+      type: ClusterIP
+      ## @param controller.metrics.service.clusterIP The cluster IP of the metrics `Service`. Set to `None` for a headless `Service`, which resolves directly to individual pod IPs -- useful for scrapers that perform their own endpoint discovery.
+      clusterIP: ""
+      ## @param controller.metrics.service.annotations Annotations to add to the metrics `Service`.
+      annotations: {}
+      ## @param controller.metrics.service.labels Additional labels to add to the metrics `Service`.
+      labels: {}
+      ## @param controller.metrics.service.servicePort The port exposed by the metrics `Service`. Also used as the container port and the address the metrics server binds to.
+      servicePort: 9090
+      ## @param controller.metrics.service.portName The name of the metrics port. Referenced by the `ServiceMonitor` endpoint.
+      portName: http-metrics
+    serviceMonitor:
+      ## @param controller.metrics.serviceMonitor.enabled Whether to create a Prometheus Operator `ServiceMonitor` for the controller's metrics. Requires `controller.metrics.enabled` to be `true` and the Prometheus Operator CRDs (`monitoring.coreos.com/v1`) to be present in the cluster; otherwise it is silently skipped.
+      enabled: false
+      ## @param controller.metrics.serviceMonitor.interval The scrape interval for the `ServiceMonitor`.
+      interval: 30s
+      ## @param controller.metrics.serviceMonitor.scheme The scheme to use when scraping. Defaults to `http` (metrics are served over plain HTTP).
+      scheme: ""
+      ## @param controller.metrics.serviceMonitor.tlsConfig TLS configuration for the `ServiceMonitor` endpoint. Rendered as literal YAML.
+      tlsConfig: {}
+      ## @param controller.metrics.serviceMonitor.relabelings Relabeling rules applied to samples before scraping. Rendered as literal YAML.
+      relabelings: []
+      ## @param controller.metrics.serviceMonitor.metricRelabelings Relabeling rules applied to samples before ingestion. Rendered as literal YAML.
+      metricRelabelings: []
+      ## @param controller.metrics.serviceMonitor.additionalLabels Additional labels to add to the `ServiceMonitor`. Often required to match the label selector of your Prometheus Operator instance.
+      additionalLabels: {}
+      ## @param controller.metrics.serviceMonitor.namespace The namespace in which to create the `ServiceMonitor`. Defaults to the release namespace.
+      namespace: ""
+
 ## @section Garbage Collector
 garbageCollector:
   ## @param garbageCollector.enabled Whether the garbage collector is enabled.
@@ -1169,6 +1204,41 @@ managementController:
   ## @param managementController.securityContext Security context for management controller pods. Defaults to `global.securityContext`.
   securityContext: {}
 
+  ## All settings relating to exposing the management controller's Prometheus metrics.
+  metrics:
+    ## @param managementController.metrics.enabled Whether to expose the management controller's Prometheus metrics. When enabled, the management controller binds its metrics server (via `METRICS_BIND_ADDRESS`), declares a metrics container port, and a metrics `Service` is created. Metrics are served over plain HTTP.
+    enabled: false
+    service:
+      ## @param managementController.metrics.service.type The type of the metrics `Service`.
+      type: ClusterIP
+      ## @param managementController.metrics.service.clusterIP The cluster IP of the metrics `Service`. Set to `None` for a headless `Service`, which resolves directly to individual pod IPs -- useful for scrapers that perform their own endpoint discovery.
+      clusterIP: ""
+      ## @param managementController.metrics.service.annotations Annotations to add to the metrics `Service`.
+      annotations: {}
+      ## @param managementController.metrics.service.labels Additional labels to add to the metrics `Service`.
+      labels: {}
+      ## @param managementController.metrics.service.servicePort The port exposed by the metrics `Service`. Also used as the container port and the address the metrics server binds to.
+      servicePort: 9090
+      ## @param managementController.metrics.service.portName The name of the metrics port. Referenced by the `ServiceMonitor` endpoint.
+      portName: http-metrics
+    serviceMonitor:
+      ## @param managementController.metrics.serviceMonitor.enabled Whether to create a Prometheus Operator `ServiceMonitor` for the management controller's metrics. Requires `managementController.metrics.enabled` to be `true` and the Prometheus Operator CRDs (`monitoring.coreos.com/v1`) to be present in the cluster; otherwise it is silently skipped.
+      enabled: false
+      ## @param managementController.metrics.serviceMonitor.interval The scrape interval for the `ServiceMonitor`.
+      interval: 30s
+      ## @param managementController.metrics.serviceMonitor.scheme The scheme to use when scraping. Defaults to `http` (metrics are served over plain HTTP).
+      scheme: ""
+      ## @param managementController.metrics.serviceMonitor.tlsConfig TLS configuration for the `ServiceMonitor` endpoint. Rendered as literal YAML.
+      tlsConfig: {}
+      ## @param managementController.metrics.serviceMonitor.relabelings Relabeling rules applied to samples before scraping. Rendered as literal YAML.
+      relabelings: []
+      ## @param managementController.metrics.serviceMonitor.metricRelabelings Relabeling rules applied to samples before ingestion. Rendered as literal YAML.
+      metricRelabelings: []
+      ## @param managementController.metrics.serviceMonitor.additionalLabels Additional labels to add to the `ServiceMonitor`. Often required to match the label selector of your Prometheus Operator instance.
+      additionalLabels: {}
+      ## @param managementController.metrics.serviceMonitor.namespace The namespace in which to create the `ServiceMonitor`. Defaults to the release namespace.
+      namespace: ""
+
 ## @section Webhooks Server
 webhooksServer:
   ## @param webhooksServer.enabled Whether the webhooks server is enabled.
@@ -1265,6 +1335,41 @@ webhooksServer:
   # priorityClassName:
   ## @param webhooksServer.securityContext Security context for webhooks server pods. Defaults to `global.securityContext`.
   securityContext: {}
+
+  ## All settings relating to exposing the webhooks server's Prometheus metrics.
+  metrics:
+    ## @param webhooksServer.metrics.enabled Whether to expose the webhooks server's Prometheus metrics. When enabled, the webhooks server binds its metrics server (via `METRICS_BIND_ADDRESS`), declares a metrics container port, and a metrics `Service` is created. Metrics are served over plain HTTP.
+    enabled: false
+    service:
+      ## @param webhooksServer.metrics.service.type The type of the metrics `Service`.
+      type: ClusterIP
+      ## @param webhooksServer.metrics.service.clusterIP The cluster IP of the metrics `Service`. Set to `None` for a headless `Service`, which resolves directly to individual pod IPs -- useful for scrapers that perform their own endpoint discovery.
+      clusterIP: ""
+      ## @param webhooksServer.metrics.service.annotations Annotations to add to the metrics `Service`.
+      annotations: {}
+      ## @param webhooksServer.metrics.service.labels Additional labels to add to the metrics `Service`.
+      labels: {}
+      ## @param webhooksServer.metrics.service.servicePort The port exposed by the metrics `Service`. Also used as the container port and the address the metrics server binds to.
+      servicePort: 9090
+      ## @param webhooksServer.metrics.service.portName The name of the metrics port. Referenced by the `ServiceMonitor` endpoint.
+      portName: http-metrics
+    serviceMonitor:
+      ## @param webhooksServer.metrics.serviceMonitor.enabled Whether to create a Prometheus Operator `ServiceMonitor` for the webhooks server's metrics. Requires `webhooksServer.metrics.enabled` to be `true` and the Prometheus Operator CRDs (`monitoring.coreos.com/v1`) to be present in the cluster; otherwise it is silently skipped.
+      enabled: false
+      ## @param webhooksServer.metrics.serviceMonitor.interval The scrape interval for the `ServiceMonitor`.
+      interval: 30s
+      ## @param webhooksServer.metrics.serviceMonitor.scheme The scheme to use when scraping. Defaults to `http` (metrics are served over plain HTTP).
+      scheme: ""
+      ## @param webhooksServer.metrics.serviceMonitor.tlsConfig TLS configuration for the `ServiceMonitor` endpoint. Rendered as literal YAML.
+      tlsConfig: {}
+      ## @param webhooksServer.metrics.serviceMonitor.relabelings Relabeling rules applied to samples before scraping. Rendered as literal YAML.
+      relabelings: []
+      ## @param webhooksServer.metrics.serviceMonitor.metricRelabelings Relabeling rules applied to samples before ingestion. Rendered as literal YAML.
+      metricRelabelings: []
+      ## @param webhooksServer.metrics.serviceMonitor.additionalLabels Additional labels to add to the `ServiceMonitor`. Often required to match the label selector of your Prometheus Operator instance.
+      additionalLabels: {}
+      ## @param webhooksServer.metrics.serviceMonitor.namespace The namespace in which to create the `ServiceMonitor`. Defaults to the release namespace.
+      namespace: ""
 
   podDisruptionBudget:
     ## @param webhooksServer.podDisruptionBudget.enabled Whether to create a PodDisruptionBudget for the webhooks server.

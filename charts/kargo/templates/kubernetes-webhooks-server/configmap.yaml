@@ -24,4 +24,7 @@ data:
   MANAGEMENT_CONTROLLER_USERNAME: system:serviceaccount:{{ include "kargo.dataNamespace" . }}:kargo-management-controller
   EXTERNAL_WEBHOOKS_SERVER_USERNAME: system:serviceaccount:{{ include "kargo.dataNamespace" . }}:kargo-external-webhooks-server
   CACHE_BY_TAG_POLICY: {{ quote .Values.controller.images.cache.cacheByTagPolicy }}
+  {{- if .Values.webhooksServer.metrics.enabled }}
+  METRICS_BIND_ADDRESS: ":{{ .Values.webhooksServer.metrics.service.servicePort }}"
+  {{- end }}
 {{- end }}

@@ -71,6 +71,19 @@ tests:
           path: data.CONTROLPLANE_USER_REGEX
           value: "^my-custom-regex$"
 
+  - it: omits METRICS_BIND_ADDRESS by default
+    asserts:
+      - notExists:
+          path: data.METRICS_BIND_ADDRESS
+
+  - it: sets METRICS_BIND_ADDRESS when metrics are enabled
+    set:
+      webhooksServer.metrics.enabled: true
+    asserts:
+      - equal:
+          path: data.METRICS_BIND_ADDRESS
+          value: ":9090"
+
 ---
 suite: kubernetes-webhooks-server/deployment.yaml
 values:
@@ -100,3 +113,95 @@ tests:
     asserts:
       - hasDocuments:
           count: 0
+
+  - it: declares only the webhooks port by default
+    template: templates/kubernetes-webhooks-server/deployment.yaml
+    asserts:
+      - lengthEqual:
+          path: spec.template.spec.containers[0].ports
+          count: 1
+      - equal:
+          path: spec.template.spec.containers[0].ports[0].name
+          value: webhooks-server
+
+  - it: appends the metrics container port when metrics are enabled
+    template: templates/kubernetes-webhooks-server/deployment.yaml
+    set:
+      webhooksServer.metrics.enabled: true
+    asserts:
+      - contains:
+          path: spec.template.spec.containers[0].ports
+          content:
+            containerPort: 9090
+            name: http-metrics
+            protocol: TCP
+
+---
+suite: kubernetes-webhooks-server/metrics-service.yaml
+values:
+  - ../test/values-unittest.yaml
+templates:
+  - templates/kubernetes-webhooks-server/metrics-service.yaml
+tests:
+  - it: is not rendered by default
+    asserts:
+      - hasDocuments:
+          count: 0
+
+  - it: renders the metrics Service when metrics are enabled
+    set:
+      webhooksServer.metrics.enabled: true
+    asserts:
+      - hasDocuments:
+          count: 1
+      - isKind:
+          of: Service
+      - equal:
+          path: metadata.name
+          value: kargo-webhooks-server-metrics
+      - equal:
+          path: spec.ports[0].port
+          value: 9090
+      - equal:
+          path: spec.ports[0].name
+          value: http-metrics
+      - equal:
+          path: spec.selector["app.kubernetes.io/component"]
+          value: kubernetes-webhooks-server
+
+---
+suite: kubernetes-webhooks-server/metrics-service-monitor.yaml
+values:
+  - ../test/values-unittest.yaml
+templates:
+  - templates/kubernetes-webhooks-server/metrics-service-monitor.yaml
+tests:
+  - it: is not rendered when the Prometheus Operator CRDs are absent
+    set:
+      webhooksServer.metrics.enabled: true
+      webhooksServer.metrics.serviceMonitor.enabled: true
+    asserts:
+      - hasDocuments:
+          count: 0
+
+  - it: renders the ServiceMonitor when enabled and the CRDs are present
+    set:
+      webhooksServer.metrics.enabled: true
+      webhooksServer.metrics.serviceMonitor.enabled: true
+    capabilities:
+      apiVersions:
+        - monitoring.coreos.com/v1
+    asserts:
+      - hasDocuments:
+          count: 1
+      - isKind:
+          of: ServiceMonitor
+      - equal:
+          path: metadata.name
+          value: kargo-webhooks-server-metrics
+      - equal:
+          path: spec.endpoints[0].port
+          value: http-metrics
+      - equal:
+          path: spec.selector.matchLabels["app.kubernetes.io/component"]
+          value: kubernetes-webhooks-server
