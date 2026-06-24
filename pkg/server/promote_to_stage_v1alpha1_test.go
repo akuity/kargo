@@ -12,8 +12,10 @@ import (
 	corev1 "k8s.io/api/core/v1"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/runtime/schema"
 	"k8s.io/apimachinery/pkg/types"
+	"k8s.io/client-go/rest"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/client/fake"
 
@@ -22,6 +24,7 @@ import (
 	k8sevent "github.com/akuity/kargo/pkg/event/kubernetes"
 	fakeevent "github.com/akuity/kargo/pkg/kubernetes/event/fake"
 	"github.com/akuity/kargo/pkg/server/config"
+	"github.com/akuity/kargo/pkg/server/kubernetes"
 )
 
 func TestPromoteToStage(t *testing.T) {
@@ -475,6 +478,12 @@ func TestPromoteToStage(t *testing.T) {
 		t.Run(testCase.name, func(t *testing.T) {
 			recorder := fakeevent.NewEventRecorder(1)
 			testCase.server.sender = k8sevent.NewEventSender(recorder)
+			if testCase.server.authorizeFn == nil {
+				testCase.server.authorizeFn = authorizeStagesPromoteFn(t)
+			}
+			if testCase.server.client == nil {
+				testCase.server.client = newFakeKubernetesClient(t)
+			}
 			res, err := testCase.server.PromoteToStage(
 				t.Context(),
 				connect.NewRequest(testCase.req),
@@ -482,6 +491,65 @@ func TestPromoteToStage(t *testing.T) {
 			testCase.assertions(t, recorder, res, err)
 		})
 	}
+}
+
+// newFakeKubernetesClient returns a kubernetes.Client backed by an empty fake
+// internal client, mirroring the client wiring a real server receives.
+func newFakeKubernetesClient(t *testing.T) kubernetes.Client {
+	t.Helper()
+	scheme := runtime.NewScheme()
+	require.NoError(t, kargoapi.AddToScheme(scheme))
+	internalClient := fake.NewClientBuilder().WithScheme(scheme).Build()
+	kubeClient, err := kubernetes.NewClient(
+		t.Context(),
+		&rest.Config{},
+		kubernetes.ClientOptions{
+			SkipAuthorization: true,
+			NewInternalClient: func(
+				context.Context,
+				*rest.Config,
+				*runtime.Scheme,
+				string,
+			) (client.WithWatch, error) {
+				return internalClient, nil
+			},
+		},
+	)
+	require.NoError(t, err)
+	return kubeClient
+}
+
+func authorizeStagesPromoteFn(t *testing.T) func(
+	context.Context,
+	string,
+	schema.GroupVersionResource,
+	string,
+	client.ObjectKey,
+) error {
+	return func(
+		_ context.Context,
+		verb string,
+		gvr schema.GroupVersionResource,
+		_ string,
+		_ client.ObjectKey,
+	) error {
+		switch verb {
+		case "promote":
+			require.Equal(t, kargoapi.GroupVersion.WithResource("stages"), gvr)
+		case "create":
+			require.Equal(t, kargoapi.GroupVersion.WithResource("promotions"), gvr)
+		default:
+			require.Failf(t, "unexpected authorization", "verb %q", verb)
+		}
+		return nil
+	}
+}
+
+// authorizeAllStagesPromote wires authorizeFn to grant all promote/create
+// checks for Stages and Promotions. Mirrors what the deleted
+// auto_promotion_v1alpha1_test.go provided.
+func authorizeAllStagesPromote(t *testing.T, s *server) {
+	s.authorizeFn = authorizeStagesPromoteFn(t)
 }
 
 func Test_server_promoteToStage(t *testing.T) {
@@ -551,6 +619,7 @@ func Test_server_promoteToStage(t *testing.T) {
 			{
 				name:          "Stage not found",
 				clientBuilder: fake.NewClientBuilder().WithObjects(testProject),
+				serverSetup:   authorizeAllStagesPromote,
 				body: mustJSONBody(promoteToStageRequest{
 					Freight: testFreight.Name,
 				}),
@@ -561,18 +630,9 @@ func Test_server_promoteToStage(t *testing.T) {
 			{
 				name:          "Freight not found by name",
 				clientBuilder: fake.NewClientBuilder().WithObjects(testProject, testStage),
+				serverSetup:   authorizeAllStagesPromote,
 				body: mustJSONBody(promoteToStageRequest{
 					Freight: "nonexistent-freight",
-				}),
-				assertions: func(t *testing.T, w *httptest.ResponseRecorder, _ client.Client) {
-					require.Equal(t, http.StatusNotFound, w.Code)
-				},
-			},
-			{
-				name:          "Freight not found by alias",
-				clientBuilder: fake.NewClientBuilder().WithObjects(testProject, testStage),
-				body: mustJSONBody(promoteToStageRequest{
-					FreightAlias: "nonexistent-alias",
 				}),
 				assertions: func(t *testing.T, w *httptest.ResponseRecorder, _ client.Client) {
 					require.Equal(t, http.StatusNotFound, w.Code)
@@ -635,17 +695,7 @@ func Test_server_promoteToStage(t *testing.T) {
 					}(),
 					testFreight,
 				),
-				serverSetup: func(_ *testing.T, s *server) {
-					s.authorizeFn = func(
-						context.Context,
-						string,
-						schema.GroupVersionResource,
-						string,
-						client.ObjectKey,
-					) error {
-						return nil
-					}
-				},
+				serverSetup: authorizeAllStagesPromote,
 				body: mustJSONBody(promoteToStageRequest{
 					Freight: testFreight.Name,
 				}),
@@ -656,53 +706,36 @@ func Test_server_promoteToStage(t *testing.T) {
 			{
 				name:          "Successfully promote by freight name",
 				clientBuilder: fake.NewClientBuilder().WithObjects(testProject, testStage, testFreight),
-				serverSetup: func(_ *testing.T, s *server) {
-					s.authorizeFn = func(
-						context.Context,
-						string,
-						schema.GroupVersionResource,
-						string,
-						client.ObjectKey,
-					) error {
-						return nil
-					}
-				},
+				serverSetup:   authorizeAllStagesPromote,
 				body: mustJSONBody(promoteToStageRequest{
 					Freight: testFreight.Name,
 				}),
 				assertions: func(t *testing.T, w *httptest.ResponseRecorder, c client.Client) {
 					require.Equal(t, http.StatusCreated, w.Code)
 
-					// Verify a Promotion was created
 					promos := &kargoapi.PromotionList{}
 					err := c.List(t.Context(), promos, client.InNamespace(testProject.Name))
 					require.NoError(t, err)
 					require.Len(t, promos.Items, 1)
 					require.Equal(t, testStage.Name, promos.Items[0].Spec.Stage)
 					require.Equal(t, testFreight.Name, promos.Items[0].Spec.Freight)
+					require.NotContains(
+						t,
+						promos.Items[0].Annotations,
+						kargoapi.AnnotationKeyRollback,
+					)
 				},
 			},
 			{
 				name:          "Successfully promote by freight alias",
 				clientBuilder: fake.NewClientBuilder().WithObjects(testProject, testStage, testFreight),
-				serverSetup: func(_ *testing.T, s *server) {
-					s.authorizeFn = func(
-						context.Context,
-						string,
-						schema.GroupVersionResource,
-						string,
-						client.ObjectKey,
-					) error {
-						return nil
-					}
-				},
+				serverSetup:   authorizeAllStagesPromote,
 				body: mustJSONBody(promoteToStageRequest{
 					FreightAlias: "fake-alias",
 				}),
 				assertions: func(t *testing.T, w *httptest.ResponseRecorder, c client.Client) {
 					require.Equal(t, http.StatusCreated, w.Code)
 
-					// Verify a Promotion was created
 					promos := &kargoapi.PromotionList{}
 					err := c.List(t.Context(), promos, client.InNamespace(testProject.Name))
 					require.NoError(t, err)

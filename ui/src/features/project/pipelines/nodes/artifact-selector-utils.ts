@@ -7,8 +7,6 @@ import {
   Image
 } from '@ui/gen/api/v2/models';
 
-import { selectFirstArtifact as _selectFirstArtifact } from '../freight/artifact-selector-utils';
-
 export type ArtifactTypes = Image | Chart | GitCommit | ArtifactReference;
 
 export const normalizeFreight = (freight: FreightReference) => {
@@ -33,7 +31,19 @@ export const normalizeFreight = (freight: FreightReference) => {
   return artifacts;
 };
 
-export const selectFirstArtifact = _selectFirstArtifact;
+export const selectFirstArtifact = (freights: (FreightReference | undefined)[]) => {
+  for (const freight of freights || []) {
+    if (!freight) {
+      continue;
+    }
+    const artifacts = normalizeFreight(freight);
+    if (artifacts.length) {
+      return artifacts[0];
+    }
+  }
+
+  return '';
+};
 
 const isSameArtifact = (a: ArtifactTypes, b: ArtifactTypes) => {
   if (isArtifactGeneric(a) && isArtifactGeneric(b)) {

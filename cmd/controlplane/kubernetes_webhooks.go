@@ -135,6 +135,16 @@ func (o *kubernetesWebhooksServerOptions) run(ctx context.Context) error {
 		return fmt.Errorf("new manager: %w", err)
 	}
 
+	// Promotion defaulting resolves spec.origin by listing Freight for the origin's Warehouse.
+	if err = mgr.GetFieldIndexer().IndexField(
+		ctx,
+		&kargoapi.Freight{},
+		indexer.FreightByWarehouseField,
+		indexer.FreightByWarehouse,
+	); err != nil {
+		return fmt.Errorf("index Freight by Warehouse: %w", err)
+	}
+
 	// Index Stages by Freight
 	if err = mgr.GetFieldIndexer().IndexField(
 		ctx,

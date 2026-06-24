@@ -19,6 +19,10 @@ import { Description } from '@ui/features/common/description';
 import { HealthStatusIcon } from '@ui/features/common/health-status/health-status-icon';
 import { useStageControllerStatus } from '@ui/features/common/stage-status/use-stage-controller-status';
 import { getCurrentFreightByWarehouse } from '@ui/features/common/utils';
+import {
+  getAutoPromotionHoldEntries,
+  holdStateMessage
+} from '@ui/features/project/pipelines/promotion/auto-promotion';
 import { useGetStage } from '@ui/gen/api/v2/core/core';
 import { Stage } from '@ui/gen/api/v2/models';
 import { useGetConfig } from '@ui/gen/api/v2/system/system';
@@ -145,6 +149,7 @@ export const StageDetails = ({ stage }: { stage: Stage }) => {
               className='space-y-5'
               currentFreight={currentFreight}
             />
+            <AutoPromotionHolds stage={stage} />
             <Tabs
               className='flex-1'
               defaultActiveKey='1'
@@ -212,6 +217,18 @@ export const StageDetails = ({ stage }: { stage: Stage }) => {
         </div>
       )}
     </Drawer>
+  );
+};
+
+const AutoPromotionHolds = ({ stage }: { stage: Stage }) => {
+  const holds = getAutoPromotionHoldEntries(stage);
+  if (holds.length === 0) {
+    return null;
+  }
+  return (
+    <div className='rounded-md border border-solid border-orange-200 bg-orange-50 px-3 py-2'>
+      <Typography.Text strong>{holdStateMessage(stage)}</Typography.Text>
+    </div>
   );
 };
 

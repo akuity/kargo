@@ -2611,6 +2611,30 @@
             "schema": {
               "$ref": "#/definitions/Promotion"
             }
+          },
+          "400": {
+            "description": "Bad Request",
+            "schema": {
+              "$ref": "#/definitions/ErrorResponse"
+            }
+          },
+          "403": {
+            "description": "Forbidden",
+            "schema": {
+              "$ref": "#/definitions/ErrorResponse"
+            }
+          },
+          "404": {
+            "description": "Not Found",
+            "schema": {
+              "$ref": "#/definitions/ErrorResponse"
+            }
+          },
+          "500": {
+            "description": "Internal Server Error",
+            "schema": {
+              "$ref": "#/definitions/ErrorResponse"
+            }
           }
         }
       }
@@ -4945,6 +4969,14 @@
         }
       }
     },
+    "ErrorResponse": {
+      "type": "object",
+      "properties": {
+        "error": {
+          "type": "string"
+        }
+      }
+    },
     "GetConfigResponse": {
       "type": "object",
       "properties": {
@@ -5195,6 +5227,10 @@
           "type": "string"
         },
         "freightAlias": {
+          "type": "string"
+        },
+        "origin": {
+          "description": "Origin is the canonical Freight origin key (e.g. \"Warehouse/foo\"). When\nset, the promotion webhook resolves it to the current auto-promotion\ncandidate. Exactly one of Freight, FreightAlias, or Origin must be set.",
           "type": "string"
         }
       }
@@ -6414,6 +6450,52 @@
       "required": [
         "secretRef"
       ]
+    },
+    "AutoPromotionHold": {
+      "type": "object",
+      "properties": {
+        "actor": {
+          "description": "Actor identifies the user who triggered the rollback.",
+          "type": "string"
+        },
+        "createdAt": {
+          "description": "CreatedAt is the creation timestamp of the rollback Promotion.",
+          "type": "string"
+        },
+        "freightName": {
+          "description": "FreightName is the name of the Freight selected when the hold was created.\n+kubebuilder:validation:Required",
+          "type": "string"
+        },
+        "origin": {
+          "description": "Origin describes the FreightOrigin pinned by this hold. It matches the\nenclosing map key.\n+kubebuilder:validation:Required",
+          "allOf": [
+            {
+              "$ref": "#/definitions/FreightOrigin"
+            }
+          ]
+        },
+        "promotionName": {
+          "description": "PromotionName is the name of the rollback Promotion that established this\nhold.",
+          "type": "string"
+        }
+      },
+      "required": [
+        "freightName",
+        "origin"
+      ]
+    },
+    "AutoPromotionHoldsWatermark": {
+      "type": "object",
+      "properties": {
+        "creationTimestamp": {
+          "description": "CreationTimestamp is the CreationTimestamp of the latest processed intent\nPromotion.",
+          "type": "string"
+        },
+        "name": {
+          "description": "Name is the name of the latest processed intent Promotion, used as a\ntie-breaker when two Promotions share the same CreationTimestamp.",
+          "type": "string"
+        }
+      }
     },
     "AutoPromotionOptions": {
       "type": "object",
@@ -7749,8 +7831,16 @@
       "type": "object",
       "properties": {
         "freight": {
-          "description": "Freight specifies the piece of Freight to be promoted into the Stage\nreferenced by the Stage field.\n\n+kubebuilder:validation:Required\n+kubebuilder:validation:MinLength=1\n+kubebuilder:validation:MaxLength=253\n+kubebuilder:validation:Pattern=`^[a-z0-9]([-a-z0-9]*[a-z0-9])?(\\.[a-z0-9]([-a-z0-9]*[a-z0-9])?)*$`\n+akuity:test-kubebuilder-pattern=KubernetesName",
+          "description": "Freight specifies the piece of Freight to be promoted into the Stage.\nExactly one of Freight or Origin must be set.\n\n+kubebuilder:validation:Optional\n+kubebuilder:validation:MinLength=1\n+kubebuilder:validation:MaxLength=253\n+kubebuilder:validation:Pattern=`^[a-z0-9]([-a-z0-9]*[a-z0-9])?(\\.[a-z0-9]([-a-z0-9]*[a-z0-9])?)*$`\n+akuity:test-kubebuilder-pattern=KubernetesName",
           "type": "string"
+        },
+        "origin": {
+          "description": "Origin, when set, identifies the FreightOrigin whose current\nauto-promotion candidate should be promoted. The mutating webhook resolves\nthis to the candidate Freight and fills Freight before the Promotion is\npersisted. Exactly one of Freight or Origin must be set.\n\n+kubebuilder:validation:Optional",
+          "allOf": [
+            {
+              "$ref": "#/definitions/FreightOrigin"
+            }
+          ]
         },
         "stage": {
           "description": "Stage specifies the name of the Stage to which this Promotion\napplies. The Stage referenced by this field MUST be in the same\nnamespace as the Promotion.\n\n+kubebuilder:validation:Required\n+kubebuilder:validation:MinLength=1\n+kubebuilder:validation:MaxLength=253\n+kubebuilder:validation:Pattern=`^[a-z0-9]([-a-z0-9]*[a-z0-9])?(\\.[a-z0-9]([-a-z0-9]*[a-z0-9])?)*$`\n+akuity:test-kubebuilder-pattern=KubernetesName",
@@ -7772,7 +7862,6 @@
         }
       },
       "required": [
-        "freight",
         "stage",
         "steps"
       ]
@@ -8150,6 +8239,21 @@
         "autoPromotionEnabled": {
           "description": "AutoPromotionEnabled indicates whether automatic promotion is enabled\nfor the Stage based on the ProjectConfig.",
           "type": "boolean"
+        },
+        "autoPromotionHolds": {
+          "description": "AutoPromotionHolds pause auto-promotion for specific FreightOrigins on\nthis Stage after a user-directed promotion intentionally selects Freight\nother than the current auto-promotion candidate for the same origin. Each\nmap entry pins a single origin keyed by the canonical string\nrepresentation of the FreightOrigin.",
+          "type": "object",
+          "additionalProperties": {
+            "$ref": "#/definitions/AutoPromotionHold"
+          }
+        },
+        "autoPromotionHoldsThrough": {
+          "description": "AutoPromotionHoldsThrough is the watermark used by the Stage controller to\nprocess hold and release intent Promotions incrementally. It records the\nCreationTimestamp and Name of the latest intent Promotion that has already\nbeen applied to AutoPromotionHolds. On each reconcile only Promotions\nstrictly newer than this watermark are processed, ensuring that\ngarbage-collected Promotions do not corrupt the accumulated hold state.",
+          "allOf": [
+            {
+              "$ref": "#/definitions/AutoPromotionHoldsWatermark"
+            }
+          ]
         },
         "conditions": {
           "description": "Conditions contains the last observations of the Stage's current\nstate.\n+patchMergeKey=type\n+patchStrategy=merge\n+listType=map\n+listMapKey=type",

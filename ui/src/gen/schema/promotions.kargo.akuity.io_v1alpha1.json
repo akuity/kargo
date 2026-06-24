@@ -17,11 +17,32 @@
       "description": "Spec describes the desired transition of a specific Stage into a specific\nFreight.",
       "properties": {
         "freight": {
-          "description": "Freight specifies the piece of Freight to be promoted into the Stage\nreferenced by the Stage field.",
+          "description": "Freight specifies the piece of Freight to be promoted into the Stage.\nExactly one of Freight or Origin must be set.",
           "maxLength": 253,
           "minLength": 1,
           "pattern": "^[a-z0-9]([-a-z0-9]*[a-z0-9])?(\\.[a-z0-9]([-a-z0-9]*[a-z0-9])?)*$",
           "type": "string"
+        },
+        "origin": {
+          "description": "Origin, when set, identifies the FreightOrigin whose current\nauto-promotion candidate should be promoted. The mutating webhook resolves\nthis to the candidate Freight and fills Freight before the Promotion is\npersisted. Exactly one of Freight or Origin must be set.",
+          "properties": {
+            "kind": {
+              "description": "Kind is the kind of resource from which Freight may have originated. At\npresent, this can only be \"Warehouse\".",
+              "enum": [
+                "Warehouse"
+              ],
+              "type": "string"
+            },
+            "name": {
+              "description": "Name is the name of the resource of the kind indicated by the Kind field\nfrom which Freight may originate.",
+              "type": "string"
+            }
+          },
+          "required": [
+            "kind",
+            "name"
+          ],
+          "type": "object"
         },
         "stage": {
           "description": "Stage specifies the name of the Stage to which this Promotion\napplies. The Stage referenced by this field MUST be in the same\nnamespace as the Promotion.",
@@ -157,11 +178,16 @@
         }
       },
       "required": [
-        "freight",
         "stage",
         "steps"
       ],
-      "type": "object"
+      "type": "object",
+      "x-kubernetes-validations": [
+        {
+          "message": "exactly one of freight or origin must be set",
+          "rule": "has(self.freight) != has(self.origin)"
+        }
+      ]
     },
     "status": {
       "description": "Status describes the current state of the transition represented by this\nPromotion.",

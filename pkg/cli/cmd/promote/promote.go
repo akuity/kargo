@@ -33,6 +33,7 @@ type promotionOptions struct {
 	Project        string
 	FreightName    string
 	FreightAlias   string
+	Origin         string
 	Promotion      string
 	Stage          string
 	DownstreamFrom string
@@ -48,7 +49,7 @@ func NewCommand(cfg config.CLIConfig, streams genericiooptions.IOStreams) *cobra
 	}
 
 	cmd := &cobra.Command{
-		Use: "promote [--project=project] (--freight=freight | --freight-alias=alias | --name=name) " +
+		Use: "promote [--project=project] (--freight=freight | --freight-alias=alias | --origin=origin | --name=name) " +
 			"[(--stage=stage | --downstream-from=stage) | --abort]",
 		Short: "Promote a piece of freight",
 		Args:  option.NoArgs,
@@ -66,6 +67,10 @@ kargo promote --project=my-project --freight=abc123 --downstream-from=qa
 # Promote a piece of freight specified by alias to stages immediately downstream from the QA stage
 kargo promote --project=my-project --freight-alias=wonky-wombat --downstream-from=qa
 
+# Promote the current auto-promotion candidate for a Warehouse origin to the QA stage
+# (the webhook resolves the origin to the candidate Freight; this also clears any active hold)
+kargo promote --project=my-project --origin=Warehouse/my-warehouse --stage=qa
+
 # Abort a Promotion by name
 kargo promote --project=my-project --name=my-promotion --abort
 
@@ -81,9 +86,9 @@ kargo promote --freight-alias=wonky-wombat --stage=qa
 kargo config set-project my-project
 kargo promote --freight=abc123 --downstream-from=qa
 
-# Promote a piece of freight specified by alias to stages immediately downstream from of the QA stage in the default project
+# Promote a piece of freight specified by alias to stages immediately downstream from the QA stage in the default project
 kargo config set-project my-project
-kargo promote --freight-alias=wonky-wombat --downstream-from=qas
+kargo promote --freight-alias=wonky-wombat --downstream-from=qa
 `),
 		RunE: func(cmd *cobra.Command, _ []string) error {
 			if err := cmdOpts.validate(); err != nil {
@@ -114,6 +119,13 @@ func (o *promotionOptions) addFlags(cmd *cobra.Command) {
 	)
 	option.Freight(cmd.Flags(), &o.FreightName, "The name of piece of freight to promote.")
 	option.FreightAlias(cmd.Flags(), &o.FreightAlias, "The alias of piece of freight to promote.")
+	cmd.Flags().StringVar(
+		&o.Origin,
+		option.OriginFlag,
+		"",
+		"The origin key (e.g. \"Warehouse/foo\") to promote. The webhook resolves this to the "+
+			"current auto-promotion candidate. Exactly one of --freight, --freight-alias, or --origin must be set.",
+	)
 	option.Name(cmd.Flags(), &o.Promotion, "The name of a promotion. Only used when aborting a promotion.")
 	option.Stage(
 		cmd.Flags(), &o.Stage,
@@ -133,9 +145,8 @@ func (o *promotionOptions) addFlags(cmd *cobra.Command) {
 		"Abort a non-terminal promotion. If set, --%s must be set.", option.NameFlag,
 	))
 	option.Wait(cmd.Flags(), &o.Wait, false, "Wait for the promotion(s) to complete.")
-
-	cmd.MarkFlagsOneRequired(option.FreightFlag, option.FreightAliasFlag, option.NameFlag)
-	cmd.MarkFlagsMutuallyExclusive(option.FreightFlag, option.FreightAliasFlag, option.NameFlag)
+	cmd.MarkFlagsOneRequired(option.FreightFlag, option.FreightAliasFlag, option.OriginFlag, option.NameFlag)
+	cmd.MarkFlagsMutuallyExclusive(option.FreightFlag, option.FreightAliasFlag, option.OriginFlag, option.NameFlag)
 
 	cmd.MarkFlagsOneRequired(option.StageFlag, option.DownstreamFromFlag, option.AbortFlag)
 	cmd.MarkFlagsMutuallyExclusive(option.StageFlag, option.DownstreamFromFlag, option.AbortFlag)
@@ -152,15 +163,21 @@ func (o *promotionOptions) validate() error {
 	if o.Project == "" {
 		errs = append(errs, fmt.Errorf("%s is required", option.ProjectFlag))
 	}
+
 	if o.Abort {
 		if o.Promotion == "" {
 			errs = append(errs, fmt.Errorf("%s is required when aborting a promotion", option.NameFlag))
 		}
 	} else {
-		if o.FreightName == "" && o.FreightAlias == "" {
+		if o.FreightName == "" && o.FreightAlias == "" && o.Origin == "" {
 			errs = append(
 				errs,
-				fmt.Errorf("either %s or %s is required", option.FreightFlag, option.FreightAliasFlag),
+				fmt.Errorf(
+					"one of %s, %s, or %s is required",
+					option.FreightFlag,
+					option.FreightAliasFlag,
+					option.OriginFlag,
+				),
 			)
 		}
 		if o.Stage == "" && o.DownstreamFrom == "" {
@@ -169,7 +186,14 @@ func (o *promotionOptions) validate() error {
 				fmt.Errorf("either %s or %s is required", option.StageFlag, option.DownstreamFromFlag),
 			)
 		}
+		if o.Origin != "" && o.DownstreamFrom != "" {
+			errs = append(
+				errs,
+				fmt.Errorf("%s can only be used with %s", option.OriginFlag, option.StageFlag),
+			)
+		}
 	}
+
 	return errors.Join(errs...)
 }
 
@@ -203,10 +227,11 @@ func (o *promotionOptions) run(ctx context.Context) error {
 				WithBody(&models.PromoteToStageRequest{
 					Freight:      o.FreightName,
 					FreightAlias: o.FreightAlias,
+					Origin:       o.Origin,
 				}),
 			nil,
 		); err != nil {
-			return err
+			return client.FormatAPIError("promote to stage", err)
 		}
 		promoJSON, err := json.Marshal(res.Payload)
 		if err != nil {
@@ -235,7 +260,7 @@ func (o *promotionOptions) run(ctx context.Context) error {
 			nil,
 		)
 		if err != nil {
-			return err
+			return client.FormatAPIError("promote downstream", err)
 		}
 		promotionsJSON, err := json.Marshal(res.Payload)
 		if err != nil {

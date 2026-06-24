@@ -36,6 +36,9 @@ const (
 	EventTypeFreightVerificationAborted      EventType = "FreightVerificationAborted"
 	EventTypeFreightVerificationInconclusive EventType = "FreightVerificationInconclusive"
 	EventTypeFreightVerificationUnknown      EventType = "FreightVerificationUnknown"
+	// EventTypeStageAutoPromotionHoldAbandoned indicates a pending hold's
+	// Promotion never appeared or disappeared before the hold became active.
+	EventTypeStageAutoPromotionHoldAbandoned EventType = "StageAutoPromotionHoldAbandoned"
 )
 
 const (

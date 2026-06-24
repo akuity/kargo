@@ -5,19 +5,27 @@
  * REST API for Kargo
  * OpenAPI spec version: v1alpha1
  */
+import type { FreightOrigin } from './freightOrigin';
 import type { PromotionStep } from './promotionStep';
 import type { ExpressionVariable } from './expressionVariable';
 
 export interface PromotionSpec {
-  /** Freight specifies the piece of Freight to be promoted into the Stage
-referenced by the Stage field.
+  /** Freight specifies the piece of Freight to be promoted into the Stage.
+Exactly one of Freight or Origin must be set.
 
-+kubebuilder:validation:Required
++kubebuilder:validation:Optional
 +kubebuilder:validation:MinLength=1
 +kubebuilder:validation:MaxLength=253
 +kubebuilder:validation:Pattern=`^[a-z0-9]([-a-z0-9]*[a-z0-9])?(\.[a-z0-9]([-a-z0-9]*[a-z0-9])?)*$`
 +akuity:test-kubebuilder-pattern=KubernetesName */
-  freight: string;
+  freight?: string;
+  /** Origin, when set, identifies the FreightOrigin whose current
+auto-promotion candidate should be promoted. The mutating webhook resolves
+this to the candidate Freight and fills Freight before the Promotion is
+persisted. Exactly one of Freight or Origin must be set.
+
++kubebuilder:validation:Optional */
+  origin?: FreightOrigin;
   /** Stage specifies the name of the Stage to which this Promotion
 applies. The Stage referenced by this field MUST be in the same
 namespace as the Promotion.

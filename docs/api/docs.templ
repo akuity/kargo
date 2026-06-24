@@ -28,7 +28,7 @@ Stability is not guaranteed.
 {{- range .Messages}}
 
 ### {{.LongName}} {#{{.FullName | anchor}}}
-{{range (.Description | splitList "\n" )  }} {{if not (contains "kubebuilder" .)}}{{.}}{{end}}{{end}}
+{{if .Description}}{{range (.Description | splitList "\n" )  }} {{if not (contains "kubebuilder" .)}}{{.}}{{end}}{{end}}{{end}}
 
 {{- if .HasFields}}
 | Field | Type | Description |

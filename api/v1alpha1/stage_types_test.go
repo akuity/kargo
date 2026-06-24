@@ -974,6 +974,236 @@ func TestChartDeepEquals(t *testing.T) {
 	}
 }
 
+func TestFreightOrigin_String(t *testing.T) {
+	origin := &FreightOrigin{
+		Kind: FreightOriginKindWarehouse,
+		Name: "fake-warehouse",
+	}
+
+	require.Equal(t, "Warehouse/fake-warehouse", origin.String())
+	require.Empty(t, (*FreightOrigin)(nil).String())
+}
+
+func TestFreightOrigin_Validate(t *testing.T) {
+	testCases := []struct {
+		name      string
+		origin    FreightOrigin
+		expectErr string
+	}{
+		{
+			name: "valid warehouse origin",
+			origin: FreightOrigin{
+				Kind: FreightOriginKindWarehouse,
+				Name: "fake-warehouse",
+			},
+		},
+		{
+			name:      "empty kind",
+			origin:    FreightOrigin{Name: "fake-warehouse"},
+			expectErr: "invalid Freight origin kind",
+		},
+		{
+			name: "unsupported kind",
+			origin: FreightOrigin{
+				Kind: FreightOriginKind("Stage"),
+				Name: "fake-stage",
+			},
+			expectErr: "invalid Freight origin kind",
+		},
+		{
+			name:      "empty name",
+			origin:    FreightOrigin{Kind: FreightOriginKindWarehouse},
+			expectErr: "name must not be empty",
+		},
+	}
+
+	for _, testCase := range testCases {
+		t.Run(testCase.name, func(t *testing.T) {
+			err := testCase.origin.Validate()
+			if testCase.expectErr != "" {
+				require.ErrorContains(t, err, testCase.expectErr)
+				return
+			}
+			require.NoError(t, err)
+		})
+	}
+}
+
+func TestParseFreightOriginKey(t *testing.T) {
+	testCases := []struct {
+		name           string
+		key            string
+		expectedOrigin FreightOrigin
+		expectErr      bool
+	}{
+		{
+			name: "valid warehouse origin",
+			key:  "Warehouse/fake-warehouse",
+			expectedOrigin: FreightOrigin{
+				Kind: FreightOriginKindWarehouse,
+				Name: "fake-warehouse",
+			},
+		},
+		{
+			name:      "missing slash",
+			key:       "Warehouse",
+			expectErr: true,
+		},
+		{
+			name:      "missing kind",
+			key:       "/fake-warehouse",
+			expectErr: true,
+		},
+		{
+			name:      "missing name",
+			key:       "Warehouse/",
+			expectErr: true,
+		},
+		{
+			name:      "unknown kind",
+			key:       "Stage/fake-stage",
+			expectErr: true,
+		},
+	}
+
+	for _, testCase := range testCases {
+		t.Run(testCase.name, func(t *testing.T) {
+			origin, err := ParseFreightOriginKey(testCase.key)
+			if testCase.expectErr {
+				require.Error(t, err)
+				return
+			}
+			require.NoError(t, err)
+			require.Equal(t, testCase.expectedOrigin, origin)
+		})
+	}
+}
+
+func TestStageStatus_GetAutoPromotionHold(t *testing.T) {
+	testOrigin := FreightOrigin{
+		Kind: FreightOriginKindWarehouse,
+		Name: "fake-warehouse",
+	}
+	testHold := AutoPromotionHold{
+		FreightName: "fake-freight",
+		Origin:      testOrigin,
+	}
+
+	testCases := []struct {
+		name       string
+		status     *StageStatus
+		assertions func(*testing.T, AutoPromotionHold, bool)
+	}{
+		{
+			name:   "nil status",
+			status: nil,
+			assertions: func(t *testing.T, hold AutoPromotionHold, ok bool) {
+				require.False(t, ok)
+				require.Empty(t, hold)
+			},
+		},
+		{
+			name: "hold exists",
+			status: &StageStatus{
+				AutoPromotionHolds: map[string]AutoPromotionHold{
+					testOrigin.String(): testHold,
+				},
+			},
+			assertions: func(t *testing.T, hold AutoPromotionHold, ok bool) {
+				require.True(t, ok)
+				require.Equal(t, testHold, hold)
+			},
+		},
+		{
+			name:   "hold does not exist",
+			status: &StageStatus{},
+			assertions: func(t *testing.T, hold AutoPromotionHold, ok bool) {
+				require.False(t, ok)
+				require.Empty(t, hold)
+			},
+		},
+	}
+
+	for _, testCase := range testCases {
+		t.Run(testCase.name, func(t *testing.T) {
+			hold, ok := testCase.status.GetAutoPromotionHold(testOrigin)
+			testCase.assertions(t, hold, ok)
+		})
+	}
+}
+
+func TestStageStatus_DeleteAutoPromotionHold(t *testing.T) {
+	testOrigin := FreightOrigin{
+		Kind: FreightOriginKindWarehouse,
+		Name: "fake-warehouse",
+	}
+	otherOrigin := FreightOrigin{
+		Kind: FreightOriginKindWarehouse,
+		Name: "other-warehouse",
+	}
+	testHold := AutoPromotionHold{
+		FreightName: "fake-freight",
+		Origin:      testOrigin,
+	}
+
+	testCases := []struct {
+		name       string
+		status     *StageStatus
+		assertions func(*testing.T, *StageStatus)
+	}{
+		{
+			name:   "nil status",
+			status: nil,
+			assertions: func(t *testing.T, status *StageStatus) {
+				require.Nil(t, status)
+			},
+		},
+		{
+			name:   "nil map",
+			status: &StageStatus{},
+			assertions: func(t *testing.T, status *StageStatus) {
+				require.Nil(t, status.AutoPromotionHolds)
+			},
+		},
+		{
+			name: "deleting the last hold normalizes the map to nil",
+			status: &StageStatus{
+				AutoPromotionHolds: map[string]AutoPromotionHold{
+					testOrigin.String(): testHold,
+				},
+			},
+			assertions: func(t *testing.T, status *StageStatus) {
+				require.Nil(t, status.AutoPromotionHolds)
+			},
+		},
+		{
+			name: "other origins' holds are untouched",
+			status: &StageStatus{
+				AutoPromotionHolds: map[string]AutoPromotionHold{
+					testOrigin.String():  testHold,
+					otherOrigin.String(): {Origin: otherOrigin},
+				},
+			},
+			assertions: func(t *testing.T, status *StageStatus) {
+				require.Equal(
+					t,
+					map[string]AutoPromotionHold{
+						otherOrigin.String(): {Origin: otherOrigin},
+					},
+					status.AutoPromotionHolds,
+				)
+			},
+		},
+	}
+
+	for _, testCase := range testCases {
+		t.Run(testCase.name, func(t *testing.T) {
+			testCase.status.DeleteAutoPromotionHold(testOrigin.String())
+			testCase.assertions(t, testCase.status)
+		})
+	}
+}
+
 func TestStageStatus_UpsertMetadata(t *testing.T) {
 	testCases := []struct {
 		name         string

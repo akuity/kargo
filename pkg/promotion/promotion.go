@@ -146,8 +146,7 @@ func NewContext(
 		StepExecutionMetadata: promo.Status.StepExecutionMetadata,
 		State:                 State(promo.Status.GetState()),
 		Vars:                  promo.Spec.Vars,
-		Rollback: promo.Annotations[kargoapi.AnnotationKeyRollback] ==
-			kargoapi.AnnotationValueTrue,
+		Rollback:              promo.Annotations[kargoapi.AnnotationKeyRollback] != "",
 	}
 
 	if stage != nil && len(stage.Spec.RequestedFreight) > 0 {

@@ -58,6 +58,24 @@ func NewMinimalPromotion(
 	}
 }
 
+// NewMinimalPromotionForOrigin constructs a Promotion that asks the mutating
+// webhook to resolve the current auto-promotion candidate for origin.
+func NewMinimalPromotionForOrigin(
+	stage *kargoapi.Stage,
+	origin kargoapi.FreightOrigin,
+) *kargoapi.Promotion {
+	return &kargoapi.Promotion{
+		ObjectMeta: metav1.ObjectMeta{
+			Namespace:    stage.Namespace,
+			GenerateName: "promo-",
+		},
+		Spec: kargoapi.PromotionSpec{
+			Stage:  stage.Name,
+			Origin: &origin,
+		},
+	}
+}
+
 // GeneratePromotionName generates a name for a Promotion by combining the
 // Stage name, a ULID, and a short hash of the Freight.
 //

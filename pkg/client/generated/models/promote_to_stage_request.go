@@ -19,6 +19,11 @@ type PromoteToStageRequest struct {
 
 	// freight alias
 	FreightAlias string `json:"freightAlias,omitempty"`
+
+	// Origin is the canonical Freight origin key (e.g. "Warehouse/foo"). When
+	// set, the promotion webhook resolves it to the current auto-promotion
+	// candidate. Exactly one of Freight, FreightAlias, or Origin must be set.
+	Origin string `json:"origin,omitempty"`
 }
 
 // Validate validates this promote to stage request

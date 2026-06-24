@@ -1,6 +1,6 @@
 import { faTruckArrowRight } from '@fortawesome/free-solid-svg-icons';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
-import { Button } from 'antd';
+import { Button, Space } from 'antd';
 import { ColumnType } from 'antd/es/table';
 
 import { isStageControlFlow } from '@ui/features/project/pipelines/nodes/stage-meta-utils';
@@ -17,13 +17,15 @@ export const actionColumn = (props: Props): ColumnType<Stage> => ({
     }
 
     return (
-      <Button
-        onClick={() => props.onPromote(stage)}
-        size='small'
-        icon={<FontAwesomeIcon icon={faTruckArrowRight} />}
-      >
-        Promote
-      </Button>
+      <Space size={6}>
+        <Button
+          onClick={() => props.onPromote(stage)}
+          size='small'
+          icon={<FontAwesomeIcon icon={faTruckArrowRight} />}
+        >
+          Promote
+        </Button>
+      </Space>
     );
   }
 });

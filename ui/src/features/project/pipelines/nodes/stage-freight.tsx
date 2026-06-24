@@ -1,6 +1,6 @@
 import { faChevronLeft, faChevronRight, faCodeCommit } from '@fortawesome/free-solid-svg-icons';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
-import { Button, Flex, Tag, Typography } from 'antd';
+import { Button, Flex, Tag, Tooltip, Typography } from 'antd';
 import Link from 'antd/es/typography/Link';
 import { useEffect, useMemo, useState } from 'react';
 
@@ -32,6 +32,7 @@ import { useDictionaryContext } from '../context/dictionary-context';
 import { useFreightTimelineControllerContext } from '../context/freight-timeline-controller-context';
 import { humanComprehendableArtifact } from '../freight/artifact-parts-utils';
 import { shortVersion } from '../freight/short-version-utils';
+import { getAutoPromotionHold, holdStateIcon, holdStateMessage } from '../promotion/auto-promotion';
 
 import {
   ArtifactTypes,
@@ -65,14 +66,18 @@ export const StageFreight = (props: { stage: Stage }) => {
 
   useEffect(() => setSelectedFreight(defaultToFirstFreight()), [selectedWarehouse, props.stage]);
 
+  const selectedAutoPromotionHold = useMemo(
+    () => getAutoPromotionHold(props.stage, selectedFreight?.origin),
+    [props.stage, selectedFreight]
+  );
+
   const selectedFreightAlias = useMemo(
     () => dictionaryContext?.freightById?.[selectedFreight?.name || '']?.alias,
     [selectedFreight]
   );
+  const showFreightAlias = freightTimelineControllerContext?.preferredFilter?.showAlias;
 
-  const defaultToFirstArtifact = () =>
-    // @ts-expect-error FreightReference and Freight are same, at least in this case
-    selectFirstArtifact([selectedFreight]) as ArtifactTypes;
+  const defaultToFirstArtifact = () => selectFirstArtifact([selectedFreight]) as ArtifactTypes;
 
   const [selectedArtifact, setSelectedArtifact] = useState(defaultToFirstArtifact());
 
@@ -121,6 +126,13 @@ export const StageFreight = (props: { stage: Stage }) => {
 
   const totalArtifacts =
     noOfContainerImages + noOfGitCommits + noOfHelmReleases + noOfGenericArtifacts;
+  const holdIcon = selectedAutoPromotionHold ? (
+    <Tooltip title={holdStateMessage(props.stage, selectedFreight?.origin)}>
+      <span className='inline-flex text-[10px] text-orange-600'>
+        <FontAwesomeIcon icon={holdStateIcon()} />
+      </span>
+    </Tooltip>
+  ) : null;
 
   return (
     <>
@@ -156,11 +168,17 @@ export const StageFreight = (props: { stage: Stage }) => {
         )}
 
         <div className='scale-90 flex flex-col items-center min-w-0 overflow-hidden'>
-          {freightTimelineControllerContext?.preferredFilter?.showAlias && (
-            <div className='text-[10px] mr-1 text-center mb-1'>{selectedFreightAlias}</div>
+          {showFreightAlias && (
+            <Flex align='center' justify='center' gap={4} className='text-[10px] text-center mb-1'>
+              {holdIcon}
+              <span>{selectedFreightAlias}</span>
+            </Flex>
           )}
 
-          <Artifact artifact={selectedArtifact} />
+          <Flex align='center' justify='center' gap={4}>
+            {!showFreightAlias && holdIcon}
+            <Artifact artifact={selectedArtifact} />
+          </Flex>
 
           {freightCreation && (
             <Typography.Text

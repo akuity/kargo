@@ -1,10 +1,10 @@
-import { faUndo } from '@fortawesome/free-solid-svg-icons';
+import { faArrowRotateLeft, faUndo } from '@fortawesome/free-solid-svg-icons';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
 import { Flex, Table, Tooltip } from 'antd';
 import { ColumnsType } from 'antd/es/table';
 import { format } from 'date-fns';
 import React, { useState } from 'react';
-import { Link, generatePath, useParams } from 'react-router-dom';
+import { Link, generatePath, useNavigate, useParams } from 'react-router-dom';
 
 import { paths } from '@ui/config/paths';
 import { PromotionStatusIcon } from '@ui/features/common/promotion-status/promotion-status-icon';
@@ -15,7 +15,7 @@ import {
 } from '@ui/features/common/promotion-status/utils';
 import { getAlias, getShortFreightLabel } from '@ui/features/common/utils';
 import { useWatchPromotions } from '@ui/features/project/pipelines/promotion/use-watch-promotions';
-import { useListPromotions, usePromoteToStage } from '@ui/gen/api/v2/core/core';
+import { useListPromotions } from '@ui/gen/api/v2/core/core';
 import { ArgoCDShard, Promotion } from '@ui/gen/api/v2/models';
 import uiPlugins from '@ui/plugins';
 import { UiPluginHoles } from '@ui/plugins/atoms/ui-plugin-hole/ui-plugin-holes';
@@ -26,8 +26,11 @@ import { Promotion as PromotionComponent } from '../project/pipelines/promotion/
 import { useGetFreightMap } from './tabs/freight-history/use-get-freight-map';
 import { hasAbortRequest, promotionCompareFn } from './utils/promotion';
 
+const rollbackAnnotationKey = 'kargo.akuity.io/rollback';
+
 export const Promotions = ({ argocdShard }: { argocdShard?: ArgoCDShard }) => {
   const { name: projectName, stageName } = useParams();
+  const navigate = useNavigate();
 
   const listPromotionsQuery = useListPromotions(
     projectName || '',
@@ -37,14 +40,14 @@ export const Promotions = ({ argocdShard }: { argocdShard?: ArgoCDShard }) => {
 
   const freightMap = useGetFreightMap(projectName || '');
 
-  const promotionMutation = usePromoteToStage();
-
   const onRetryPromotion = (promotion: Promotion) => {
-    promotionMutation.mutate({
-      project: promotion?.metadata?.namespace || '',
-      stage: stageName || '',
-      data: { freight: promotion?.spec?.freight }
-    });
+    navigate(
+      generatePath(paths.promote, {
+        name: promotion?.metadata?.namespace || '',
+        freight: promotion?.spec?.freight || '',
+        stage: stageName || ''
+      })
+    );
   };
 
   // modal kept in the same component for live view
@@ -60,12 +63,13 @@ export const Promotions = ({ argocdShard }: { argocdShard?: ArgoCDShard }) => {
   const columns: ColumnsType<Promotion> = [
     {
       title: '',
-      width: 24,
+      width: 56,
       render: (_, promotion) => {
         const promotionStatusPhase = getPromotionStatusPhase(promotion);
         const isAbortRequestPending =
           hasAbortRequest(promotion) && !isPromotionPhaseTerminal(promotionStatusPhase);
         const canRetry = isPromotionRetryable(promotionStatusPhase);
+        const rollbackOrigin = promotion.metadata?.annotations?.[rollbackAnnotationKey];
 
         // generally controller quickly Abort promotion
         // but incase if controller is off for some reason, this messaging ensures accurate information
@@ -80,12 +84,18 @@ export const Promotions = ({ argocdShard }: { argocdShard?: ArgoCDShard }) => {
               color={isAbortRequestPending ? 'red' : ''}
             />
 
+            {rollbackOrigin && (
+              <Tooltip title={`Rollback promotion: ${rollbackOrigin}`}>
+                <FontAwesomeIcon icon={faArrowRotateLeft} className='text-xs text-gray-500' />
+              </Tooltip>
+            )}
+
             {canRetry && (
               <Tooltip title='Retry promotion'>
                 <FontAwesomeIcon
                   className='text-xs cursor-pointer'
                   icon={faUndo}
-                  onClick={() => !promotionMutation.isPending && onRetryPromotion(promotion)}
+                  onClick={() => onRetryPromotion(promotion)}
                 />
               </Tooltip>
             )}

@@ -124,7 +124,7 @@ the previous section and automatically initiate a promotion when suitable
 Auto-promotion being enabled through Project-level configuration is a security
 measure.
 
-If it were possible to enabled auto-promotion at the `Stage`-level, users with
+If it were possible to enable auto-promotion at the `Stage`-level, users with
 the requisite permissions to update a `Stage` resource, but _without_ the
 permissions to promote to that same `Stage` could effect a promotion regardless
 by enabling auto-promotion.
@@ -148,6 +148,21 @@ Valid policies are:
   suitably verified or approved, will be be auto-promoted to the `Stage` on a
   continuous basis. This option is valid only when the `Stage` accepts `Freight`
   from _exactly one_ upstream `Stage`.
+
+When a user deliberately promotes `Freight` other than the current
+auto-promotion candidate directly to a `Stage` (from the dashboard or with
+`kargo promote --stage`), Kargo pauses auto-promotion for that `Freight` origin
+on that `Stage`. This prevents automation from immediately moving the `Stage`
+back to that candidate. Auto-promotion remains paused until a user promotes the
+current auto-promotion candidate directly to the `Stage`. To have Kargo resolve
+the current candidate at promotion time, promote by origin:
+
+```shell
+kargo promote \
+  --project my-project \
+  --stage test \
+  --origin Warehouse/my-warehouse
+```
 
 #### Examples
 

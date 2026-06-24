@@ -485,6 +485,88 @@ spec:
                   AutoPromotionEnabled indicates whether automatic promotion is enabled
                   for the Stage based on the ProjectConfig.
                 type: boolean
+              autoPromotionHolds:
+                additionalProperties:
+                  description: |-
+                    AutoPromotionHold pins a single FreightOrigin on a Stage, pausing
+                    auto-promotion for that origin after a user-directed Promotion selects
+                    Freight other than the current auto-promotion candidate. Other origins
+                    continue to auto-promote normally. The origin is identified by the enclosing
+                    map key.
+                  properties:
+                    actor:
+                      description: Actor identifies the user who triggered the rollback.
+                      type: string
+                    createdAt:
+                      description: CreatedAt is the creation timestamp of the rollback
+                        Promotion.
+                      format: date-time
+                      type: string
+                    freightName:
+                      description: FreightName is the name of the Freight selected
+                        when the hold was created.
+                      type: string
+                    origin:
+                      description: |-
+                        Origin describes the FreightOrigin pinned by this hold. It matches the
+                        enclosing map key.
+                      properties:
+                        kind:
+                          description: |-
+                            Kind is the kind of resource from which Freight may have originated. At
+                            present, this can only be "Warehouse".
+                          enum:
+                          - Warehouse
+                          type: string
+                        name:
+                          description: |-
+                            Name is the name of the resource of the kind indicated by the Kind field
+                            from which Freight may originate.
+                          type: string
+                      required:
+                      - kind
+                      - name
+                      type: object
+                    promotionName:
+                      description: |-
+                        PromotionName is the name of the rollback Promotion that established this
+                        hold.
+                      type: string
+                  required:
+                  - freightName
+                  - origin
+                  type: object
+                description: |-
+                  AutoPromotionHolds pause auto-promotion for specific FreightOrigins on
+                  this Stage after a user-directed promotion intentionally selects Freight
+                  other than the current auto-promotion candidate for the same origin. Each
+                  map entry pins a single origin keyed by the canonical string
+                  representation of the FreightOrigin.
+                type: object
+              autoPromotionHoldsThrough:
+                description: |-
+                  AutoPromotionHoldsThrough is the watermark used by the Stage controller to
+                  process hold and release intent Promotions incrementally. It records the
+                  CreationTimestamp and Name of the latest intent Promotion that has already
+                  been applied to AutoPromotionHolds. On each reconcile only Promotions
+                  strictly newer than this watermark are processed, ensuring that
+                  garbage-collected Promotions do not corrupt the accumulated hold state.
+                properties:
+                  creationTimestamp:
+                    description: |-
+                      CreationTimestamp is the CreationTimestamp of the latest processed intent
+                      Promotion.
+                    format: date-time
+                    type: string
+                  name:
+                    description: |-
+                      Name is the name of the latest processed intent Promotion, used as a
+                      tie-breaker when two Promotions share the same CreationTimestamp.
+                    type: string
+                required:
+                - creationTimestamp
+                - name
+                type: object
               conditions:
                 description: |-
                   Conditions contains the last observations of the Stage's current

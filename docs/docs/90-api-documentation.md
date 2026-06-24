@@ -199,7 +199,7 @@ Stability is not guaranteed.
 
 
 ### CreateConfigMapRequest.DataEntry {#akuity-io-kargo-service-v1alpha1-CreateConfigMapRequest-DataEntry}
- 
+
 | Field | Type | Description |
 | ----- | ---- | ----------- |
 | key | string |   |
@@ -226,7 +226,7 @@ Stability is not guaranteed.
 
 
 ### CreateGenericCredentialsRequest.DataEntry {#akuity-io-kargo-service-v1alpha1-CreateGenericCredentialsRequest-DataEntry}
- 
+
 | Field | Type | Description |
 | ----- | ---- | ----------- |
 | key | string |   |
@@ -574,14 +574,14 @@ Stability is not guaranteed.
 
 
 ### GetClusterConfigRequest {#akuity-io-kargo-service-v1alpha1-GetClusterConfigRequest}
- 
+
 | Field | Type | Description |
 | ----- | ---- | ----------- |
 | format | [RawFormat](#akuity-io-kargo-service-v1alpha1-RawFormat) |   |
 
 
 ### GetClusterConfigResponse {#akuity-io-kargo-service-v1alpha1-GetClusterConfigResponse}
- 
+
 | Field | Type | Description |
 | ----- | ---- | ----------- |
 | cluster_config | [github.com.akuity.kargo.api.v1alpha1.ClusterConfig](#github-com-akuity-kargo-api-v1alpha1-ClusterConfig) |   |
@@ -636,7 +636,7 @@ Stability is not guaranteed.
 
 
 ### GetConfigResponse.ArgocdShardsEntry {#akuity-io-kargo-service-v1alpha1-GetConfigResponse-ArgocdShardsEntry}
- 
+
 | Field | Type | Description |
 | ----- | ---- | ----------- |
 | key | string |   |
@@ -845,7 +845,7 @@ Stability is not guaranteed.
 
 
 ### ImageStageMap.StagesEntry {#akuity-io-kargo-service-v1alpha1-ImageStageMap-StagesEntry}
- 
+
 | Field | Type | Description |
 | ----- | ---- | ----------- |
 | key | string |   |
@@ -947,7 +947,7 @@ Stability is not guaranteed.
 
 
 ### ListImagesResponse.ImagesEntry {#akuity-io-kargo-service-v1alpha1-ListImagesResponse-ImagesEntry}
- 
+
 | Field | Type | Description |
 | ----- | ---- | ----------- |
 | key | string |   |
@@ -1141,7 +1141,7 @@ Stability is not guaranteed.
 
 
 ### QueryFreightResponse.GroupsEntry {#akuity-io-kargo-service-v1alpha1-QueryFreightResponse-GroupsEntry}
- 
+
 | Field | Type | Description |
 | ----- | ---- | ----------- |
 | key | string |   |
@@ -1149,7 +1149,7 @@ Stability is not guaranteed.
 
 
 ### RefreshResourceRequest {#akuity-io-kargo-service-v1alpha1-RefreshResourceRequest}
- 
+
 | Field | Type | Description |
 | ----- | ---- | ----------- |
 | project | string |  project is the name of the project containing the object to refresh. leave blank if refreshing a cluster-config. |
@@ -1158,7 +1158,7 @@ Stability is not guaranteed.
 
 
 ### RefreshResourceResponse {#akuity-io-kargo-service-v1alpha1-RefreshResourceResponse}
- 
+
 | Field | Type | Description |
 | ----- | ---- | ----------- |
 | resource | google.protobuf.Any |   |
@@ -1200,7 +1200,7 @@ Stability is not guaranteed.
 
 
 ### TagMap.TagsEntry {#akuity-io-kargo-service-v1alpha1-TagMap-TagsEntry}
- 
+
 | Field | Type | Description |
 | ----- | ---- | ----------- |
 | key | string |   |
@@ -1220,7 +1220,7 @@ Stability is not guaranteed.
 
 
 ### UpdateConfigMapRequest.DataEntry {#akuity-io-kargo-service-v1alpha1-UpdateConfigMapRequest-DataEntry}
- 
+
 | Field | Type | Description |
 | ----- | ---- | ----------- |
 | key | string |   |
@@ -1260,7 +1260,7 @@ Stability is not guaranteed.
 
 
 ### UpdateGenericCredentialsRequest.DataEntry {#akuity-io-kargo-service-v1alpha1-UpdateGenericCredentialsRequest-DataEntry}
- 
+
 | Field | Type | Description |
 | ----- | ---- | ----------- |
 | key | string |   |
@@ -1348,7 +1348,7 @@ Stability is not guaranteed.
  explicitly empty
 
 ### WatchClusterConfigResponse {#akuity-io-kargo-service-v1alpha1-WatchClusterConfigResponse}
- 
+
 | Field | Type | Description |
 | ----- | ---- | ----------- |
 | cluster_config | [github.com.akuity.kargo.api.v1alpha1.ClusterConfig](#github-com-akuity-kargo-api-v1alpha1-ClusterConfig) |   |
@@ -1469,7 +1469,7 @@ RawFormat specifies the format for raw resource representation.
 ## rbac/v1alpha1
 
 ### Claim {#github-com-akuity-kargo-api-rbac-v1alpha1-Claim}
- 
+
 | Field | Type | Description |
 | ----- | ---- | ----------- |
 | name | string |   |
@@ -1477,7 +1477,7 @@ RawFormat specifies the format for raw resource representation.
 
 
 ### ResourceDetails {#github-com-akuity-kargo-api-rbac-v1alpha1-ResourceDetails}
- 
+
 | Field | Type | Description |
 | ----- | ---- | ----------- |
 | resourceType | string |   |
@@ -1507,7 +1507,7 @@ RawFormat specifies the format for raw resource representation.
 
 
 ### ServiceAccountReference {#github-com-akuity-kargo-api-rbac-v1alpha1-ServiceAccountReference}
- 
+
 | Field | Type | Description |
 | ----- | ---- | ----------- |
 | name | string |   |
@@ -1537,7 +1537,7 @@ RawFormat specifies the format for raw resource representation.
 
 
 ### AnalysisRunMetadata.AnnotationsEntry {#github-com-akuity-kargo-api-v1alpha1-AnalysisRunMetadata-AnnotationsEntry}
- 
+
 | Field | Type | Description |
 | ----- | ---- | ----------- |
 | key | string |   |
@@ -1545,7 +1545,7 @@ RawFormat specifies the format for raw resource representation.
 
 
 ### AnalysisRunMetadata.LabelsEntry {#github-com-akuity-kargo-api-v1alpha1-AnalysisRunMetadata-LabelsEntry}
- 
+
 | Field | Type | Description |
 | ----- | ---- | ----------- |
 | key | string |   |
@@ -1619,6 +1619,25 @@ RawFormat specifies the format for raw resource representation.
 | ----- | ---- | ----------- |
 | secretRef | k8s.io.api.core.v1.LocalObjectReference |  SecretRef contains a reference to a Secret. For Project-scoped webhook receivers, the referenced Secret must be in the same namespace as the ProjectConfig.  For cluster-scoped webhook receivers, the referenced Secret must be in the designated "system resources" namespace.  The Secret's data map is expected to contain a `secret-token` key whose value is the shared secret used to authenticate the webhook requests sent by JFrog Artifactory. For more information please refer to the JFrog Artifactory documentation:   https://jfrog.com/help/r/jfrog-platform-administration-documentation/webhooks   |
 | virtualRepoName | string |  VirtualRepoName is the name of an Artifactory virtual repository.  When unspecified, the Artifactory webhook receiver depends on the value of the webhook payload's `data.repo_key` field when inferring the URL of the repository from which the webhook originated, which will always be an Artifactory "local repository." In cases where a Warehouse subscribes to such a repository indirectly via a "virtual repository," there will be a discrepancy between the inferred (local) repository URL and the URL actually used by the subscription, which can prevent the receiver from identifying such a Warehouse as one in need of refreshing. When specified, the value of the VirtualRepoName field supersedes the value of the webhook payload's `data.repo_key` field to compensate for that discrepancy.  In practice, when using virtual repositories, a separate Artifactory webhook receiver should be configured for each, but one such receiver can handle inbound webhooks from any number of local repositories that are aggregated by that virtual repository. For example, if a virtual repository `proj-virtual` aggregates container images from all of the `proj` Artifactory project's local image repositories, with a single webhook configured to post to a single receiver configured for the `proj-virtual` virtual repository, an image pushed to `example.frog.io/proj-&lt;local-repo-name&gt;/&lt;path&gt;/image`, will cause that receiver to refresh all Warehouses subscribed to `example.frog.io/proj-virtual/&lt;path&gt;/image`.  +optional |
+
+
+### AutoPromotionHold {#github-com-akuity-kargo-api-v1alpha1-AutoPromotionHold}
+ AutoPromotionHold pins a single FreightOrigin on a Stage, pausing auto-promotion for that origin after a user-directed Promotion selects Freight other than the current auto-promotion candidate. Other origins continue to auto-promote normally. The origin is identified by the enclosing map key.
+| Field | Type | Description |
+| ----- | ---- | ----------- |
+| freightName | string |  FreightName is the name of the Freight selected when the hold was created.  |
+| origin | [FreightOrigin](#github-com-akuity-kargo-api-v1alpha1-FreightOrigin) |  Origin describes the FreightOrigin pinned by this hold. It matches the enclosing map key.  |
+| promotionName | string |  PromotionName is the name of the rollback Promotion that established this hold. |
+| actor | string |  Actor identifies the user who triggered the rollback. |
+| createdAt | k8s.io.apimachinery.pkg.apis.meta.v1.Time |  CreatedAt is the creation timestamp of the rollback Promotion. |
+
+
+### AutoPromotionHoldsWatermark {#github-com-akuity-kargo-api-v1alpha1-AutoPromotionHoldsWatermark}
+ AutoPromotionHoldsWatermark records the most recently processed hold/release intent Promotion so the Stage controller can skip already-applied events even after Promotion GC removes them from the cache.
+| Field | Type | Description |
+| ----- | ---- | ----------- |
+| creationTimestamp | k8s.io.apimachinery.pkg.apis.meta.v1.Time |  CreationTimestamp is the CreationTimestamp of the latest processed intent Promotion. |
+| name | string |  Name is the name of the latest processed intent Promotion, used as a tie-breaker when two Promotions share the same CreationTimestamp. |
 
 
 ### AutoPromotionOptions {#github-com-akuity-kargo-api-v1alpha1-AutoPromotionOptions}
@@ -1718,7 +1737,7 @@ RawFormat specifies the format for raw resource representation.
 
 
 ### ClusterPromotionTask {#github-com-akuity-kargo-api-v1alpha1-ClusterPromotionTask}
- 
+
 | Field | Type | Description |
 | ----- | ---- | ----------- |
 | metadata | k8s.io.apimachinery.pkg.apis.meta.v1.ObjectMeta |   |
@@ -1785,7 +1804,7 @@ RawFormat specifies the format for raw resource representation.
 
 
 ### DiscoveredImageReference.AnnotationsEntry {#github-com-akuity-kargo-api-v1alpha1-DiscoveredImageReference-AnnotationsEntry}
- 
+
 | Field | Type | Description |
 | ----- | ---- | ----------- |
 | key | string |   |
@@ -1847,7 +1866,7 @@ RawFormat specifies the format for raw resource representation.
 
 
 ### FreightCollection.ItemsEntry {#github-com-akuity-kargo-api-v1alpha1-FreightCollection-ItemsEntry}
- 
+
 | Field | Type | Description |
 | ----- | ---- | ----------- |
 | key | string |   |
@@ -1898,7 +1917,7 @@ RawFormat specifies the format for raw resource representation.
 
 
 ### FreightSources {#github-com-akuity-kargo-api-v1alpha1-FreightSources}
- 
+
 | Field | Type | Description |
 | ----- | ---- | ----------- |
 | direct | bool |  Direct indicates the requested Freight may be obtained directly from the Warehouse from which it originated. If this field's value is false, then the value of the Stages field must be non-empty. i.e. Between the two fields, at least one source must be specified. |
@@ -1919,7 +1938,7 @@ RawFormat specifies the format for raw resource representation.
 
 
 ### FreightStatus.ApprovedForEntry {#github-com-akuity-kargo-api-v1alpha1-FreightStatus-ApprovedForEntry}
- 
+
 | Field | Type | Description |
 | ----- | ---- | ----------- |
 | key | string |   |
@@ -1927,7 +1946,7 @@ RawFormat specifies the format for raw resource representation.
 
 
 ### FreightStatus.CurrentlyInEntry {#github-com-akuity-kargo-api-v1alpha1-FreightStatus-CurrentlyInEntry}
- 
+
 | Field | Type | Description |
 | ----- | ---- | ----------- |
 | key | string |   |
@@ -1935,7 +1954,7 @@ RawFormat specifies the format for raw resource representation.
 
 
 ### FreightStatus.MetadataEntry {#github-com-akuity-kargo-api-v1alpha1-FreightStatus-MetadataEntry}
- 
+
 | Field | Type | Description |
 | ----- | ---- | ----------- |
 | key | string |   |
@@ -1943,7 +1962,7 @@ RawFormat specifies the format for raw resource representation.
 
 
 ### FreightStatus.VerifiedInEntry {#github-com-akuity-kargo-api-v1alpha1-FreightStatus-VerifiedInEntry}
- 
+
 | Field | Type | Description |
 | ----- | ---- | ----------- |
 | key | string |   |
@@ -1961,7 +1980,7 @@ RawFormat specifies the format for raw resource representation.
 
 
 ### GenericWebhookAction.ParametersEntry {#github-com-akuity-kargo-api-v1alpha1-GenericWebhookAction-ParametersEntry}
- 
+
 | Field | Type | Description |
 | ----- | ---- | ----------- |
 | key | string |   |
@@ -2111,7 +2130,7 @@ RawFormat specifies the format for raw resource representation.
 
 
 ### Image.AnnotationsEntry {#github-com-akuity-kargo-api-v1alpha1-Image-AnnotationsEntry}
- 
+
 | Field | Type | Description |
 | ----- | ---- | ----------- |
 | key | string |   |
@@ -2280,7 +2299,8 @@ RawFormat specifies the format for raw resource representation.
 | Field | Type | Description |
 | ----- | ---- | ----------- |
 | stage | string |  Stage specifies the name of the Stage to which this Promotion applies. The Stage referenced by this field MUST be in the same namespace as the Promotion.       |
-| freight | string |  Freight specifies the piece of Freight to be promoted into the Stage referenced by the Stage field.       |
+| freight | string |  Freight specifies the piece of Freight to be promoted into the Stage. Exactly one of Freight or Origin must be set.       |
+| origin | [FreightOrigin](#github-com-akuity-kargo-api-v1alpha1-FreightOrigin) |  Origin, when set, identifies the FreightOrigin whose current auto-promotion candidate should be promoted. The mutating webhook resolves this to the candidate Freight and fills Freight before the Promotion is persisted. Exactly one of Freight or Origin must be set.   |
 | vars | [ExpressionVariable](#github-com-akuity-kargo-api-v1alpha1-ExpressionVariable) |  Vars is a list of variables that can be referenced by expressions in promotion steps. |
 | steps | [PromotionStep](#github-com-akuity-kargo-api-v1alpha1-PromotionStep) |  Steps specifies the directives to be executed as part of this Promotion. The order in which the directives are executed is the order in which they are listed in this field.     |
 
@@ -2325,7 +2345,7 @@ RawFormat specifies the format for raw resource representation.
 
 
 ### PromotionTask {#github-com-akuity-kargo-api-v1alpha1-PromotionTask}
- 
+
 | Field | Type | Description |
 | ----- | ---- | ----------- |
 | metadata | k8s.io.apimachinery.pkg.apis.meta.v1.ObjectMeta |   |
@@ -2349,7 +2369,7 @@ RawFormat specifies the format for raw resource representation.
 
 
 ### PromotionTaskSpec {#github-com-akuity-kargo-api-v1alpha1-PromotionTaskSpec}
- 
+
 | Field | Type | Description |
 | ----- | ---- | ----------- |
 | vars | [ExpressionVariable](#github-com-akuity-kargo-api-v1alpha1-ExpressionVariable) |  Vars specifies the variables available to the PromotionTask. The values of these variables are the default values that can be overridden by the step referencing the task. |
@@ -2438,10 +2458,20 @@ RawFormat specifies the format for raw resource representation.
 | lastPromotion | [PromotionReference](#github-com-akuity-kargo-api-v1alpha1-PromotionReference) |  LastPromotion is a reference to the last completed promotion. |
 | autoPromotionEnabled | bool |  AutoPromotionEnabled indicates whether automatic promotion is enabled for the Stage based on the ProjectConfig. |
 | metadata | [StageStatus.MetadataEntry](#github-com-akuity-kargo-api-v1alpha1-StageStatus-MetadataEntry) |  Metadata is a map of arbitrary metadata associated with the Stage. This is useful for storing additional information about the Stage that can be shared across promotions, verifications, or other processes. |
+| autoPromotionHolds | [StageStatus.AutoPromotionHoldsEntry](#github-com-akuity-kargo-api-v1alpha1-StageStatus-AutoPromotionHoldsEntry) |  AutoPromotionHolds pause auto-promotion for specific FreightOrigins on this Stage after a user-directed promotion intentionally selects Freight other than the current auto-promotion candidate for the same origin. Each map entry pins a single origin keyed by the canonical string representation of the FreightOrigin. |
+| autoPromotionHoldsThrough | [AutoPromotionHoldsWatermark](#github-com-akuity-kargo-api-v1alpha1-AutoPromotionHoldsWatermark) |  AutoPromotionHoldsThrough is the watermark used by the Stage controller to process hold and release intent Promotions incrementally. It records the CreationTimestamp and Name of the latest intent Promotion that has already been applied to AutoPromotionHolds. On each reconcile only Promotions strictly newer than this watermark are processed, ensuring that garbage-collected Promotions do not corrupt the accumulated hold state. |
+
+
+### StageStatus.AutoPromotionHoldsEntry {#github-com-akuity-kargo-api-v1alpha1-StageStatus-AutoPromotionHoldsEntry}
+
+| Field | Type | Description |
+| ----- | ---- | ----------- |
+| key | string |   |
+| value | [AutoPromotionHold](#github-com-akuity-kargo-api-v1alpha1-AutoPromotionHold) |   |
 
 
 ### StageStatus.MetadataEntry {#github-com-akuity-kargo-api-v1alpha1-StageStatus-MetadataEntry}
- 
+
 | Field | Type | Description |
 | ----- | ---- | ----------- |
 | key | string |   |
@@ -2594,4 +2624,3 @@ RawFormat specifies the format for raw resource representation.
 | <a name="bool" /> bool |  | bool | boolean | boolean | bool | bool | boolean | TrueClass/FalseClass |
 | <a name="string" /> string | A string must always contain UTF-8 encoded or 7-bit ASCII text. | string | String | str/unicode | string | string | string | String (UTF-8) |
 | <a name="bytes" /> bytes | May contain any arbitrary sequence of bytes. | string | ByteString | str | []byte | ByteString | string | String (ASCII-8BIT) |
-

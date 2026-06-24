@@ -79,9 +79,11 @@ func TestReconcile(t *testing.T) {
 		) (*kargoapi.PromotionStatus, *time.Duration, error)
 		terminateFn             func(context.Context, *kargoapi.Promotion) error
 		promoToReconcile        *types.NamespacedName // if nil, uses the first of the promos
+		configure               func(*testing.T, *reconciler)
 		expectPromoteFnCalled   bool
 		expectTerminateFnCalled bool
 		expectedPhase           kargoapi.PromotionPhase
+		expectedMessage         string
 		expectedEventRecorded   bool
 		expectedEventType       kargoapi.EventType
 	}{
@@ -230,6 +232,38 @@ func TestReconcile(t *testing.T) {
 					},
 				},
 				newPromo("fake-namespace", "fake-promo", "fake-stage", kargoapi.PromotionPhasePending, now),
+			},
+		},
+		{
+			name:                  "auto-promotion with missing Freight does not panic",
+			expectPromoteFnCalled: true,
+			promoToReconcile:      &types.NamespacedName{Namespace: "fake-namespace", Name: "fake-promo"},
+			expectedPhase:         kargoapi.PromotionPhaseSucceeded,
+			expectedEventRecorded: true,
+			expectedEventType:     kargoapi.EventTypePromotionSucceeded,
+			promos: []client.Object{
+				&kargoapi.Stage{
+					ObjectMeta: metav1.ObjectMeta{
+						Name:      "fake-stage",
+						Namespace: "fake-namespace",
+					},
+					Status: kargoapi.StageStatus{
+						CurrentPromotion: &kargoapi.PromotionReference{
+							Name: "fake-promo",
+						},
+					},
+				},
+				newAutoPromo("fake-namespace", "fake-promo", "fake-stage", "missing-freight"),
+			},
+			promoteFn: func(
+				_ context.Context,
+				_ kargoapi.Promotion,
+				freight *kargoapi.Freight,
+			) (*kargoapi.PromotionStatus, *time.Duration, error) {
+				if freight != nil {
+					return nil, nil, fmt.Errorf("expected missing Freight, got %q", freight.Name)
+				}
+				return &kargoapi.PromotionStatus{Phase: kargoapi.PromotionPhaseSucceeded}, nil, nil
 			},
 		},
 		{
@@ -384,6 +418,9 @@ func TestReconcile(t *testing.T) {
 			if tc.apiReader != nil {
 				r.apiReader = tc.apiReader
 			}
+			if tc.configure != nil {
+				tc.configure(t, r)
+			}
 
 			promoteWasCalled := false
 			r.promoteFn = func(
@@ -440,11 +477,15 @@ func TestReconcile(t *testing.T) {
 				err = r.kargoClient.Get(ctx, req.NamespacedName, &updatedPromo)
 				require.NoError(t, err)
 				require.Equal(t, tc.expectedPhase, updatedPromo.Status.Phase)
+				if tc.expectedMessage != "" {
+					require.Equal(t, tc.expectedMessage, updatedPromo.Status.Message)
+				}
 				if tc.expectedEventRecorded {
 					require.Len(t, recorder.Events, 1)
 					event := <-recorder.Events
 					require.Equal(t, tc.expectedEventType, kargoapi.EventType(event.Reason))
 				}
+				require.Empty(t, recorder.Events)
 			}
 		})
 	}
@@ -601,6 +642,7 @@ func Test_reconciler_terminatePromotion(t *testing.T) {
 
 			r := &reconciler{
 				kargoClient: c,
+				apiReader:   c,
 				sender:      k8sevent.NewEventSender(recorder),
 				cleanupWorkDirFn: func(context.Context, types.UID) {
 					// no-op for tests
@@ -735,6 +777,7 @@ func Test_reconciler_terminatePromotion_cleansUpWorkDir(t *testing.T) {
 	cleanupCalled := false
 	r := &reconciler{
 		kargoClient: c,
+		apiReader:   c,
 		sender:      k8sevent.NewEventSender(recorder),
 		cleanupWorkDirFn: func(context.Context, types.UID) {
 			cleanupCalled = true
@@ -1052,6 +1095,14 @@ func newPromo(namespace, name, stage string,
 			Phase: phase,
 		},
 	}
+}
+
+// newAutoPromo returns a Pending Promotion for the given Freight.
+// nolint: unparam
+func newAutoPromo(namespace, name, stage, freight string) *kargoapi.Promotion {
+	promo := newPromo(namespace, name, stage, kargoapi.PromotionPhasePending, now)
+	promo.Spec.Freight = freight
+	return promo
 }
 
 func Test_buildTargetFreightCollection(t *testing.T) {

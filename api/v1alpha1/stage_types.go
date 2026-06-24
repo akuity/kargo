@@ -3,6 +3,7 @@ package v1alpha1
 import (
 	"crypto/sha1"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"maps"
 	"slices"
@@ -262,7 +263,36 @@ func (f *FreightOrigin) String() string {
 	if f == nil {
 		return ""
 	}
+	// This format is persisted in annotations and status keys. Do not change it
+	// without a migration for existing resources.
 	return fmt.Sprintf("%s/%s", f.Kind, f.Name)
+}
+
+// ParseFreightOriginKey parses a canonical Freight origin key in "Kind/name"
+// form and rejects empty parts or unsupported origin kinds.
+func ParseFreightOriginKey(key string) (FreightOrigin, error) {
+	kind, name, ok := strings.Cut(key, "/")
+	if !ok {
+		return FreightOrigin{}, fmt.Errorf("invalid Freight origin key %q", key)
+	}
+
+	origin := FreightOrigin{Kind: FreightOriginKind(kind), Name: name}
+	if err := origin.Validate(); err != nil {
+		return FreightOrigin{}, err
+	}
+	return origin, nil
+}
+
+// Validate returns an error if the FreightOrigin has an unsupported kind or an
+// empty name.
+func (f FreightOrigin) Validate() error {
+	if f.Kind != FreightOriginKindWarehouse {
+		return fmt.Errorf("invalid Freight origin kind %q", f.Kind)
+	}
+	if f.Name == "" {
+		return errors.New("Freight origin name must not be empty")
+	}
+	return nil
 }
 
 func (f *FreightOrigin) Equals(other *FreightOrigin) bool {
@@ -426,6 +456,80 @@ type StageStatus struct {
 	// This is useful for storing additional information about the Stage
 	// that can be shared across promotions, verifications, or other processes.
 	Metadata map[string]apiextensionsv1.JSON `json:"metadata,omitempty" protobuf:"bytes,15,rep,name=metadata" protobuf_key:"bytes,1,opt,name=key" protobuf_val:"bytes,2,opt,name=value"`
+	// AutoPromotionHolds pause auto-promotion for specific FreightOrigins on
+	// this Stage after a user-directed promotion intentionally selects Freight
+	// other than the current auto-promotion candidate for the same origin. Each
+	// map entry pins a single origin keyed by the canonical string
+	// representation of the FreightOrigin.
+	AutoPromotionHolds map[string]AutoPromotionHold `json:"autoPromotionHolds,omitempty" protobuf:"bytes,16,rep,name=autoPromotionHolds" protobuf_key:"bytes,1,opt,name=key" protobuf_val:"bytes,2,opt,name=value"`
+	// AutoPromotionHoldsThrough is the watermark used by the Stage controller to
+	// process hold and release intent Promotions incrementally. It records the
+	// CreationTimestamp and Name of the latest intent Promotion that has already
+	// been applied to AutoPromotionHolds. On each reconcile only Promotions
+	// strictly newer than this watermark are processed, ensuring that
+	// garbage-collected Promotions do not corrupt the accumulated hold state.
+	AutoPromotionHoldsThrough *AutoPromotionHoldsWatermark `json:"autoPromotionHoldsThrough,omitempty" protobuf:"bytes,17,opt,name=autoPromotionHoldsThrough"`
+}
+
+// AutoPromotionHoldsWatermark records the most recently processed hold/release
+// intent Promotion so the Stage controller can skip already-applied events even
+// after Promotion GC removes them from the cache.
+type AutoPromotionHoldsWatermark struct {
+	// CreationTimestamp is the CreationTimestamp of the latest processed intent
+	// Promotion.
+	CreationTimestamp metav1.Time `json:"creationTimestamp" protobuf:"bytes,1,opt,name=creationTimestamp"`
+	// Name is the name of the latest processed intent Promotion, used as a
+	// tie-breaker when two Promotions share the same CreationTimestamp.
+	Name string `json:"name" protobuf:"bytes,2,opt,name=name"`
+}
+
+// AutoPromotionHold pins a single FreightOrigin on a Stage, pausing
+// auto-promotion for that origin after a user-directed Promotion selects
+// Freight other than the current auto-promotion candidate. Other origins
+// continue to auto-promote normally. The origin is identified by the enclosing
+// map key.
+type AutoPromotionHold struct {
+	// FreightName is the name of the Freight selected when the hold was created.
+	// +kubebuilder:validation:Required
+	FreightName string `json:"freightName" protobuf:"bytes,1,opt,name=freightName"`
+	// Origin describes the FreightOrigin pinned by this hold. It matches the
+	// enclosing map key.
+	// +kubebuilder:validation:Required
+	Origin FreightOrigin `json:"origin" protobuf:"bytes,8,opt,name=origin"`
+	// PromotionName is the name of the rollback Promotion that established this
+	// hold.
+	PromotionName string `json:"promotionName,omitempty" protobuf:"bytes,3,opt,name=promotionName"`
+	// Actor identifies the user who triggered the rollback.
+	Actor string `json:"actor,omitempty" protobuf:"bytes,5,opt,name=actor"`
+	// CreatedAt is the creation timestamp of the rollback Promotion.
+	CreatedAt *metav1.Time `json:"createdAt,omitempty" protobuf:"bytes,7,opt,name=createdAt"`
+}
+
+// GetAutoPromotionHold returns the AutoPromotionHold for the given origin, if
+// one exists. The second return value indicates whether a hold was found.
+func (s *StageStatus) GetAutoPromotionHold(origin FreightOrigin) (AutoPromotionHold, bool) {
+	if s == nil {
+		return AutoPromotionHold{}, false
+	}
+
+	hold, ok := s.AutoPromotionHolds[origin.String()]
+	if !ok {
+		return AutoPromotionHold{}, false
+	}
+	return hold, true
+}
+
+// DeleteAutoPromotionHold removes the AutoPromotionHold for the given origin
+// key, normalizing an empty map to nil.
+func (s *StageStatus) DeleteAutoPromotionHold(key string) {
+	if s == nil {
+		return
+	}
+
+	delete(s.AutoPromotionHolds, key)
+	if len(s.AutoPromotionHolds) == 0 {
+		s.AutoPromotionHolds = nil
+	}
 }
 
 // GetConditions implements the conditions.Getter interface.

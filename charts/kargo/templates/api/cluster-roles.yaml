@@ -66,6 +66,7 @@ rules:
   - kargo.akuity.io
   resources:
   - freights/status
+  - stages/status
   verbs:
   - update
   - patch

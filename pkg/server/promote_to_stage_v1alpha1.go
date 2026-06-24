@@ -50,6 +50,19 @@ func (s *server) PromoteToStage(
 		return nil, err
 	}
 
+	if err := s.authorizeFn(
+		ctx,
+		"promote",
+		kargoapi.GroupVersion.WithResource("stages"),
+		"",
+		types.NamespacedName{
+			Namespace: project,
+			Name:      stageName,
+		},
+	); err != nil {
+		return nil, err
+	}
+
 	stage, err := s.getStageFn(
 		ctx,
 		s.client,
@@ -92,19 +105,6 @@ func (s *server) PromoteToStage(
 		return nil, connect.NewError(connect.CodeNotFound, err)
 	}
 
-	if err = s.authorizeFn(
-		ctx,
-		"promote",
-		kargoapi.GroupVersion.WithResource("stages"),
-		"",
-		types.NamespacedName{
-			Namespace: project,
-			Name:      stageName,
-		},
-	); err != nil {
-		return nil, err
-	}
-
 	if !s.isFreightAvailableFn(stage, freight) {
 		// nolint:staticcheck
 		return nil, connect.NewError(
@@ -144,6 +144,10 @@ func (s *server) recordPromotionCreatedEvent(
 	p *kargoapi.Promotion,
 	f *kargoapi.Freight,
 ) {
+	if s.sender == nil {
+		return
+	}
+
 	var actor string
 	msg := fmt.Sprintf("Promotion created for Stage %q", p.Spec.Stage)
 	if u, ok := user.InfoFromContext(ctx); ok {
@@ -161,6 +165,10 @@ func (s *server) recordPromotionCreatedEvent(
 type promoteToStageRequest struct {
 	Freight      string `json:"freight,omitempty"`
 	FreightAlias string `json:"freightAlias,omitempty"`
+	// Origin is the canonical Freight origin key (e.g. "Warehouse/foo"). When
+	// set, the promotion webhook resolves it to the current auto-promotion
+	// candidate. Exactly one of Freight, FreightAlias, or Origin must be set.
+	Origin string `json:"origin,omitempty"`
 } // @name PromoteToStageRequest
 
 // @id PromoteToStage
@@ -175,6 +183,10 @@ type promoteToStageRequest struct {
 // @Param stage path string true "Stage name"
 // @Param body body promoteToStageRequest true "Promote request"
 // @Success 201 {object} kargoapi.Promotion "Promotion resource (github.com/akuity/kargo/api/v1alpha1.Promotion)"
+// @Failure 400 {object} ErrorResponse
+// @Failure 403 {object} ErrorResponse
+// @Failure 404 {object} ErrorResponse
+// @Failure 500 {object} ErrorResponse
 // @Router /v1beta1/projects/{project}/stages/{stage}/promotions [post]
 func (s *server) promoteToStage(c *gin.Context) {
 	ctx := c.Request.Context()
@@ -186,34 +198,82 @@ func (s *server) promoteToStage(c *gin.Context) {
 		return
 	}
 
-	// Validate that exactly one of freight or freightAlias is provided
-	if (req.Freight == "" && req.FreightAlias == "") || (req.Freight != "" && req.FreightAlias != "") {
+	nonEmpty := 0
+	for _, v := range []string{req.Freight, req.FreightAlias, req.Origin} {
+		if v != "" {
+			nonEmpty++
+		}
+	}
+	if nonEmpty != 1 {
 		_ = c.Error(libhttp.ErrorStr(
-			"exactly one of freight or freightAlias must be provided",
+			"exactly one of freight, freightAlias, or origin must be provided",
 			http.StatusBadRequest,
 		))
 		return
 	}
 
-	// Get the Stage
-	stage := &kargoapi.Stage{}
-	if err := s.client.Get(ctx, client.ObjectKey{Namespace: project, Name: stageName}, stage); err != nil {
-		if apierrors.IsNotFound(err) {
-			_ = c.Error(libhttp.ErrorStr(
-				fmt.Sprintf("Stage %q not found in project %q", stageName, project),
-				http.StatusNotFound,
-			))
-			return
-		}
+	if err := s.authorizeFn(
+		ctx,
+		"promote",
+		kargoapi.GroupVersion.WithResource("stages"),
+		"",
+		types.NamespacedName{
+			Namespace: project,
+			Name:      stageName,
+		},
+	); err != nil {
 		_ = c.Error(err)
 		return
 	}
 
-	// Get the Freight by name or alias
+	stage, err := s.getStageFn(
+		ctx,
+		s.client,
+		types.NamespacedName{
+			Namespace: project,
+			Name:      stageName,
+		},
+	)
+	if err != nil {
+		_ = c.Error(err)
+		return
+	}
+	if stage == nil {
+		_ = c.Error(libhttp.ErrorStr(
+			fmt.Sprintf("Stage %q not found in project %q", stageName, project),
+			http.StatusNotFound,
+		))
+		return
+	}
+
+	// Origin-based promotions: let the webhook resolve origin to freight.
+	if req.Origin != "" {
+		origin, parseErr := kargoapi.ParseFreightOriginKey(req.Origin)
+		if parseErr != nil {
+			_ = c.Error(libhttp.ErrorStr(
+				fmt.Sprintf("invalid origin %q: %s", req.Origin, parseErr),
+				http.StatusBadRequest,
+			))
+			return
+		}
+		promotion := api.NewMinimalPromotionForOrigin(stage, origin)
+		if u, ok := user.InfoFromContext(ctx); ok {
+			promotion.Annotations = map[string]string{
+				kargoapi.AnnotationKeyCreateActor: api.FormatEventUserActor(u),
+			}
+		}
+		if err = s.createPromotionFn(ctx, promotion); err != nil {
+			_ = c.Error(createPromotionError(err))
+			return
+		}
+		c.JSON(http.StatusCreated, promotion)
+		return
+	}
+
 	var freight *kargoapi.Freight
 	if req.Freight != "" {
 		freight = &kargoapi.Freight{}
-		if err := s.client.Get(ctx, client.ObjectKey{Namespace: project, Name: req.Freight}, freight); err != nil {
+		if err = s.client.Get(ctx, client.ObjectKey{Namespace: project, Name: req.Freight}, freight); err != nil {
 			if apierrors.IsNotFound(err) {
 				_ = c.Error(libhttp.ErrorStr(
 					fmt.Sprintf("Freight %q not found in project %q", req.Freight, project),
@@ -225,9 +285,8 @@ func (s *server) promoteToStage(c *gin.Context) {
 			return
 		}
 	} else {
-		// Search by alias
 		list := &kargoapi.FreightList{}
-		if err := s.client.List(
+		if err = s.client.List(
 			ctx,
 			list,
 			client.InNamespace(project),
@@ -246,21 +305,6 @@ func (s *server) promoteToStage(c *gin.Context) {
 		freight = &list.Items[0]
 	}
 
-	if err := s.authorizeFn(
-		ctx,
-		"promote",
-		kargoapi.GroupVersion.WithResource("stages"),
-		"",
-		types.NamespacedName{
-			Namespace: project,
-			Name:      stageName,
-		},
-	); err != nil {
-		_ = c.Error(err)
-		return
-	}
-
-	// Validate that the Freight is available to the Stage
 	if !stage.IsFreightAvailable(freight) {
 		_ = c.Error(libhttp.ErrorStr(
 			fmt.Sprintf("Freight %q is not available to Stage %q", freight.Name, stageName),
@@ -278,14 +322,22 @@ func (s *server) promoteToStage(c *gin.Context) {
 		}
 	}
 
-	if err := s.client.Create(ctx, promotion); err != nil {
-		_ = c.Error(fmt.Errorf("create promotion: %w", err))
+	if err := s.createPromotionFn(ctx, promotion); err != nil {
+		_ = c.Error(createPromotionError(err))
 		return
 	}
 
-	if s.sender != nil {
-		s.recordPromotionCreatedEvent(ctx, promotion, freight)
-	}
+	s.recordPromotionCreatedEvent(ctx, promotion, freight)
 
 	c.JSON(http.StatusCreated, promotion)
+}
+
+func createPromotionError(err error) error {
+	var statusErr *apierrors.StatusError
+	if errors.As(err, &statusErr) {
+		status := statusErr.ErrStatus
+		status.Message = fmt.Sprintf("create promotion: %s", status.Message)
+		return &apierrors.StatusError{ErrStatus: status}
+	}
+	return apierrors.NewInternalError(fmt.Errorf("create promotion: %w", err))
 }

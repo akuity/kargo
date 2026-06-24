@@ -20,12 +20,7 @@ import {
 import { useDictionaryContext } from '@ui/features/project/pipelines/context/dictionary-context';
 import { PromotionSteps } from '@ui/features/stage/promotion-steps';
 import { canAbortPromotion, hasAbortRequest } from '@ui/features/stage/utils/promotion';
-import {
-  refreshStage,
-  useAbortPromotion,
-  useGetPromotion,
-  usePromoteToStage
-} from '@ui/gen/api/v2/core/core';
+import { refreshStage, useAbortPromotion, useGetPromotion } from '@ui/gen/api/v2/core/core';
 import { Promotion as TPromotion } from '@ui/gen/api/v2/models';
 import { parseDate } from '@ui/utils/dates';
 
@@ -54,19 +49,6 @@ const Content = (props: { promotion: TPromotion; yaml: string }) => {
     }
   });
 
-  const promoteMutation = usePromoteToStage({
-    mutation: {
-      onSuccess(data) {
-        navigate(
-          generatePath(paths.promotion, {
-            name: props.promotion?.metadata?.namespace,
-            promotionId: data.data?.metadata?.name
-          })
-        );
-      }
-    }
-  });
-
   const refreshResourceMutation = useMutation({
     mutationFn: (payload: { project: string; stage: string }) =>
       refreshStage(payload.project, payload.stage)
@@ -80,13 +62,7 @@ const Content = (props: { promotion: TPromotion; yaml: string }) => {
     const project = props.promotion?.metadata?.namespace || '';
     const freight = promotion?.spec?.freight;
 
-    promoteMutation.mutate({
-      stage,
-      project,
-      data: {
-        freight
-      }
-    });
+    navigate(generatePath(paths.promote, { name: project, freight: freight || '', stage }));
   };
 
   const promotionStatusPhase = getPromotionStatusPhase(promotion);
@@ -114,12 +90,7 @@ const Content = (props: { promotion: TPromotion; yaml: string }) => {
         <span>{promotion?.status?.phase}</span>
 
         {canRetry && (
-          <Button
-            loading={promoteMutation.isPending}
-            size='small'
-            icon={<FontAwesomeIcon icon={faUndo} />}
-            onClick={onRetryPromotion}
-          >
+          <Button size='small' icon={<FontAwesomeIcon icon={faUndo} />} onClick={onRetryPromotion}>
             Retry
           </Button>
         )}

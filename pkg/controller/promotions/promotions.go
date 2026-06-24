@@ -13,6 +13,7 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/types"
 	toolscache "k8s.io/client-go/tools/cache"
+	"k8s.io/client-go/util/retry"
 	"k8s.io/utils/ptr"
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"
@@ -335,12 +336,21 @@ func (r *reconciler) Reconcile(
 	}
 
 	// If the Promotion does not have a Phase, it must be new and (initially)
-	// pending. Mark it as such.
+	// pending. Mark it as such. This goes through patchPromotionStatus instead
+	// of patching the cached object because an auto-promotion hold may have
+	// already aborted this Promotion from another reconcile.
 	if promo.Status.Phase == "" {
-		if err = kubeclient.PatchStatus(ctx, r.kargoClient, promo, func(status *kargoapi.PromotionStatus) {
-			status.Phase = kargoapi.PromotionPhasePending
+		if promo, err = r.patchPromotionStatus(ctx, req.NamespacedName, func(live *kargoapi.Promotion) (bool, error) {
+			if live.Status.Phase != "" {
+				return false, nil
+			}
+			live.Status.Phase = kargoapi.PromotionPhasePending
+			return true, nil
 		}); err != nil {
 			return ctrl.Result{}, err
+		}
+		if promo == nil || promo.Status.Phase.IsTerminal() {
+			return ctrl.Result{}, nil
 		}
 	}
 
@@ -379,11 +389,24 @@ func (r *reconciler) Reconcile(
 	// Update promo status as Running to give visibility in UI. Also, a promo which
 	// has already entered Running status will be allowed to continue to reconcile.
 	if promo.Status.Phase != kargoapi.PromotionPhaseRunning {
-		if err = kubeclient.PatchStatus(ctx, r.kargoClient, promo, func(status *kargoapi.PromotionStatus) {
-			status.Phase = kargoapi.PromotionPhaseRunning
-			status.StartedAt = &metav1.Time{Time: time.Now()}
+		if promo, err = r.patchPromotionStatus(ctx, req.NamespacedName, func(live *kargoapi.Promotion) (bool, error) {
+			if live.Status.Phase == kargoapi.PromotionPhaseRunning {
+				return false, nil
+			}
+			if live.Status.Phase != "" && live.Status.Phase != kargoapi.PromotionPhasePending {
+				return false, nil
+			}
+			live.Status.Phase = kargoapi.PromotionPhaseRunning
+			live.Status.StartedAt = &metav1.Time{Time: time.Now()}
+			return true, nil
 		}); err != nil {
 			return ctrl.Result{}, err
+		}
+		if promo == nil || promo.Status.Phase.IsTerminal() {
+			return ctrl.Result{}, nil
+		}
+		if promo.Status.Phase != kargoapi.PromotionPhaseRunning {
+			return ctrl.Result{}, nil
 		}
 		logger.Info("began promotion")
 	} else {
@@ -477,7 +500,7 @@ func (r *reconciler) Reconcile(
 			},
 		)
 		if getStageErr != nil {
-			return ctrl.Result{}, fmt.Errorf("get stage: %w", err)
+			return ctrl.Result{}, fmt.Errorf("get stage: %w", getStageErr)
 		}
 		if stage == nil {
 			return ctrl.Result{}, fmt.Errorf(
@@ -544,6 +567,59 @@ func (r *reconciler) Reconcile(
 		}, nil
 	}
 	return ctrl.Result{}, nil
+}
+
+// patchPromotionStatus updates Promotion status with optimistic locking and
+// returns the latest Promotion observed during the retry loop. The mutate
+// callback receives the live Promotion so it can evaluate preconditions
+// against any of its fields; returning false skips the patch, and any error
+// it returns aborts the retries.
+func (r *reconciler) patchPromotionStatus(
+	ctx context.Context,
+	key client.ObjectKey,
+	mutate func(live *kargoapi.Promotion) (bool, error),
+) (*kargoapi.Promotion, error) {
+	var live *kargoapi.Promotion
+
+	err := retry.RetryOnConflict(retry.DefaultRetry, func() error {
+		live = &kargoapi.Promotion{}
+		if err := r.apiReader.Get(ctx, key, live); err != nil {
+			live = nil
+			if err = client.IgnoreNotFound(err); err == nil {
+				return nil
+			}
+			return fmt.Errorf(
+				"error getting live Promotion %q in namespace %q: %w",
+				key.Name, key.Namespace, err,
+			)
+		}
+
+		original := live.DeepCopy()
+		changed, err := mutate(live)
+		if err != nil {
+			return err
+		}
+		if !changed {
+			return nil
+		}
+
+		original.SetResourceVersion(live.GetResourceVersion())
+
+		if err = r.kargoClient.Status().Patch(
+			ctx,
+			live,
+			client.MergeFromWithOptions(original, client.MergeFromWithOptimisticLock{}),
+		); err != nil {
+			// Conflicts still trigger a retry: IsConflict unwraps wrapped errors.
+			return fmt.Errorf(
+				"error patching status of Promotion %q in namespace %q: %w",
+				key.Name, key.Namespace, err,
+			)
+		}
+		return nil
+	})
+
+	return live, err
 }
 
 func (r *reconciler) promote(
