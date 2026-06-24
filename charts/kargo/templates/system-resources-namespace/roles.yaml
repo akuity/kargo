@@ -1,4 +1,4 @@
-{{- if and .Values.dataPlane.install }} .Values.global.systemResources.createRBAC }}
+{{- if and .Values.dataPlane.install .Values.global.systemResources.createRBAC }}
 apiVersion: rbac.authorization.k8s.io/v1
 kind: Role
 metadata:
