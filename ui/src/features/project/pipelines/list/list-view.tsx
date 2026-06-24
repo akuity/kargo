@@ -5,7 +5,7 @@ import { useMemo } from 'react';
 import { WarehouseExpanded } from '@ui/extend/types';
 import { IAction, useActionContext } from '@ui/features/project/pipelines/context/action-context';
 import { useEventsWatcher } from '@ui/features/project/pipelines/graph/use-events-watcher';
-import { Freight, Stage } from '@ui/gen/api/v1alpha1/generated_pb';
+import { Freight, Stage } from '@ui/gen/api/v2/models';
 
 import { useFreightTimelineControllerContext } from '../context/freight-timeline-controller-context';
 

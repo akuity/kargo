@@ -1,17 +1,7 @@
-import { create } from '@bufbuild/protobuf';
-import { createConnectQueryKey } from '@connectrpc/connect-query';
-
 import { queryClient } from '@ui/config/query-client';
-import { transportWithAuth } from '@ui/config/transport';
 import { PromotionStatusPhase } from '@ui/features/common/promotion-status/utils';
-import { listImages } from '@ui/gen/api/service/v1alpha1/service-KargoService_connectquery';
-import {
-  ImageStageMap,
-  ListImagesRequestSchema,
-  ListImagesResponse,
-  TagMap
-} from '@ui/gen/api/service/v1alpha1/service_pb';
-import { Stage } from '@ui/gen/api/v1alpha1/generated_pb';
+import { getListImagesQueryKey, listImagesResponse } from '@ui/gen/api/v2/core/core';
+import { ImageStageMap, Stage, TagMap } from '@ui/gen/api/v2/models';
 
 export default {
   /**
@@ -43,14 +33,17 @@ export default {
       return;
     }
 
-    const imageStageMatrix = (queryClient.getQueryData(
-      createConnectQueryKey({
-        schema: listImages,
-        input: { project: projectName },
-        cardinality: 'finite',
-        transport: transportWithAuth
-      })
-    ) || {}) as ListImagesResponse;
+    const cached = queryClient.getQueryData<listImagesResponse>(getListImagesQueryKey(projectName));
+
+    // Nothing to patch until the API-computed matrix has loaded. Building one
+    // from a single promotion here would produce a misleading, mostly-empty
+    // matrix, and writing it unwrapped (without the `{ data }` response
+    // envelope) would break every consumer that reads `.data`.
+    if (!cached?.data) {
+      return;
+    }
+
+    const imageStageMatrix = cached.data;
 
     const lastPromotionFreight = lastPromotion?.freight;
 
@@ -67,51 +60,41 @@ export default {
     }
 
     for (const image of images) {
-      const repoURL: string = image.repoURL;
+      const repoURL: string = image.repoURL || '';
 
-      const tag: string = image.tag;
+      const tag: string = image.tag || '';
 
       // check the existance in matrix
-      if (!imageStageMatrix?.images) {
-        imageStageMatrix.images = {};
+      if (!imageStageMatrix[repoURL]?.tags) {
+        imageStageMatrix[repoURL] = { tags: {} } as TagMap;
       }
 
-      if (!imageStageMatrix.images[repoURL]?.tags) {
-        imageStageMatrix.images[repoURL] = { tags: {} } as TagMap;
-      }
-
-      if (!imageStageMatrix.images[repoURL].tags[tag]) {
-        imageStageMatrix.images[repoURL].tags[tag] = { stages: {} } as ImageStageMap;
+      if (!imageStageMatrix[repoURL].tags![tag]) {
+        imageStageMatrix[repoURL].tags![tag] = { stages: {} } as ImageStageMap;
       }
 
       // idempotent check
-      if (imageStageMatrix.images[repoURL].tags[tag].stages[stageName] === 0) {
+      if (imageStageMatrix[repoURL].tags![tag].stages![stageName] === 0) {
         continue;
       }
 
       // bump all the tags<-><stageName> distance by 1 because promotion made them 1 step away
-      for (const oldPromotedTag of Object.keys(imageStageMatrix.images[repoURL].tags)) {
+      for (const oldPromotedTag of Object.keys(imageStageMatrix[repoURL].tags!)) {
         const currentDistance =
-          imageStageMatrix.images[repoURL].tags[oldPromotedTag]?.stages?.[stageName];
+          imageStageMatrix[repoURL].tags![oldPromotedTag]?.stages?.[stageName];
 
-        if (currentDistance >= 0) {
-          imageStageMatrix.images[repoURL].tags[oldPromotedTag].stages[stageName] =
-            currentDistance + 1;
+        if (currentDistance !== undefined && currentDistance >= 0) {
+          imageStageMatrix[repoURL].tags![oldPromotedTag].stages![stageName] = currentDistance + 1;
         }
       }
 
       // reset distance for this tag<-><stageName>
-      imageStageMatrix.images[repoURL].tags[tag].stages[stageName] = 0;
+      imageStageMatrix[repoURL].tags![tag].stages![stageName] = 0;
     }
 
-    queryClient.setQueryData(
-      createConnectQueryKey({
-        schema: listImages,
-        input: create(ListImagesRequestSchema, { project: projectName }),
-        cardinality: 'finite',
-        transport: transportWithAuth
-      }),
-      imageStageMatrix
-    );
+    queryClient.setQueryData(getListImagesQueryKey(projectName), {
+      ...cached,
+      data: imageStageMatrix
+    });
   }
 };

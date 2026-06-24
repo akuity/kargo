@@ -1,7 +1,7 @@
 import { Label } from '@dagrejs/dagre';
 
-import { WarehouseExpanded } from '@ui/extend/types';
-import { RepoSubscription, Stage } from '@ui/gen/api/v1alpha1/generated_pb';
+import { RepoSubscription, WarehouseExpanded } from '@ui/extend/types';
+import { Stage } from '@ui/gen/api/v2/models';
 
 export const warehouseLabelling = {
   label: (warehouse: WarehouseExpanded): Label => ({ warehouse })

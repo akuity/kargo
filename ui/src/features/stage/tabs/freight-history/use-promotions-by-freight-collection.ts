@@ -1,14 +1,13 @@
-import { useQuery } from '@connectrpc/connect-query';
 import { useMemo } from 'react';
 
-import { listPromotions } from '@ui/gen/api/service/v1alpha1/service-KargoService_connectquery';
-import { Promotion } from '@ui/gen/api/v1alpha1/generated_pb';
+import { useListPromotions } from '@ui/gen/api/v2/core/core';
+import { Promotion } from '@ui/gen/api/v2/models';
 
 export const usePromotionsByFreightCollection = (payload: { project: string; stage: string }) => {
-  const promotionsQuery = useQuery(listPromotions, payload);
+  const promotionsQuery = useListPromotions(payload.project, { stage: payload.stage });
 
   return useMemo(() => {
-    const promotions = promotionsQuery.data?.promotions || [];
+    const promotions = promotionsQuery.data?.data?.items || [];
 
     const promotionsByFreightCollection: Record<string, Promotion> = {};
 

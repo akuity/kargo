@@ -1,6 +1,6 @@
 import { createContext, useContext } from 'react';
 
-import { Freight } from '@ui/gen/api/v1alpha1/generated_pb';
+import { Freight } from '@ui/gen/api/v2/models';
 
 import { timerangeTypes } from '../freight/filter-timerange-utils';
 

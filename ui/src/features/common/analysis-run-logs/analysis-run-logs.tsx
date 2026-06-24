@@ -1,17 +1,14 @@
-import { ConnectError, createClient } from '@connectrpc/connect';
 import { faExternalLink, faSearch } from '@fortawesome/free-solid-svg-icons';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
 import { Editor } from '@monaco-editor/react';
 import { Checkbox, Empty, Input, Select, Skeleton } from 'antd';
 import Alert from 'antd/es/alert/Alert';
 import { editor } from 'monaco-editor';
-import { useEffect, useMemo, useRef, useState } from 'react';
+import { useMemo, useRef, useState } from 'react';
 import { generatePath, Link } from 'react-router-dom';
 
 import { paths } from '@ui/config/paths';
-import { transportWithAuth } from '@ui/config/transport';
-import { KargoService } from '@ui/gen/api/service/v1alpha1/service_pb';
-import { AnalysisRun } from '@ui/gen/api/stubs/rollouts/v1alpha1/generated_pb';
+import { RolloutsAnalysisRun } from '@ui/gen/api/v2/models';
 
 import { extractFilters } from './extract-analysis-run';
 import {
@@ -19,11 +16,12 @@ import {
   monacoEditorLogLanguageTheme,
   useMonacoEditorLogLanguage
 } from './use-monaco-editor-log-language';
+import { useWatchAnalysisRunLogs } from './use-watch-analysis-run-logs';
 
 export const AnalysisRunLogs = (props: {
   linkFullScreen?: boolean;
   height?: string;
-  analysisRun: AnalysisRun;
+  analysisRun?: RolloutsAnalysisRun;
   defaultFilters?: {
     selectedJob?: string;
     selectedContainer?: string;
@@ -76,57 +74,27 @@ export const AnalysisRunLogs = (props: {
     }
   };
 
-  const [logs, setLogs] = useState('');
-  const [logsInitLoading, setLogsInitiLoading] = useState(false);
-  const [logsError, setLogsError] = useState('');
-
-  const logsLoading = logsInitLoading && !logs;
-
   const project = props.analysisRun?.metadata?.namespace;
   const analysisRunId = props.analysisRun?.metadata?.name;
-  const stage = props.analysisRun?.metadata?.labels['kargo.akuity.io/stage'];
+  const stage = props.analysisRun?.metadata?.labels?.['kargo.akuity.io/stage'];
 
-  useEffect(() => {
-    if (!filterableItems?.jobNames?.length) {
-      return;
-    }
+  const validSelection = filterableItems?.containerNames?.[filters.selectedJob]?.includes(
+    filters.selectedContainer
+  );
 
-    if (
-      !filterableItems?.containerNames?.[filters.selectedJob]?.includes(filters.selectedContainer)
-    ) {
-      setLogs('');
-      return;
-    }
+  const {
+    logs,
+    isLoading: logsInitLoading,
+    error: logsError
+  } = useWatchAnalysisRunLogs(
+    project,
+    analysisRunId,
+    validSelection
+      ? { metricName: filters.selectedJob, containerName: filters.selectedContainer }
+      : undefined
+  );
 
-    const promiseClient = createClient(KargoService, transportWithAuth);
-
-    const stream = promiseClient.getAnalysisRunLogs({
-      namespace: project,
-      name: analysisRunId,
-      metricName: filters.selectedJob,
-      containerName: filters.selectedContainer
-    });
-
-    (async () => {
-      let logLine = '';
-      setLogs('');
-      setLogsInitiLoading(true);
-      setLogsError('');
-      try {
-        for await (const e of stream) {
-          logLine += `${e.chunk}`;
-          setLogs(logLine);
-        }
-      } catch (err) {
-        if (err instanceof ConnectError) {
-          setLogsError(err?.message);
-          setLogs('');
-        }
-      } finally {
-        setLogsInitiLoading(false);
-      }
-    })();
-  }, [filters, filterableItems, props.analysisRun]);
+  const logsLoading = logsInitLoading && !logs;
 
   const [showLineNumbers, setShowLineNumbers] = useState(true);
   const [search, setSearch] = useState(props.defaultFilters?.search || '');

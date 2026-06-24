@@ -6,7 +6,7 @@ import { Link, generatePath } from 'react-router-dom';
 
 import { paths } from '@ui/config/paths';
 import { ColorContext } from '@ui/context/colors';
-import { Stage } from '@ui/gen/api/v1alpha1/generated_pb';
+import { Stage } from '@ui/gen/api/v2/models';
 
 import { SmallLabel } from '../common/small-label';
 import { StageTag } from '../common/stage-tag';

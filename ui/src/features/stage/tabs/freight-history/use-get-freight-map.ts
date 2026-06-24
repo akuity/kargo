@@ -1,10 +1,9 @@
-import { useQuery } from '@connectrpc/connect-query';
 import { useMemo } from 'react';
 
 import { useDictionaryContext } from '@ui/features/project/pipelines/context/dictionary-context';
 import { useFreightTimelineControllerStore } from '@ui/features/project/pipelines/url-params/use-freight-timeline-controller-store';
-import { queryFreight } from '@ui/gen/api/service/v1alpha1/service-KargoService_connectquery';
-import { Freight } from '@ui/gen/api/v1alpha1/generated_pb';
+import { useQueryFreightsRest } from '@ui/gen/api/v2/core/core';
+import { Freight } from '@ui/gen/api/v2/models';
 
 export const useGetFreightMap = (project: string) => {
   const dictionaryContext = useDictionaryContext();
@@ -18,7 +17,7 @@ export const useGetFreightMap = (project: string) => {
   // in that case we fall back to our own unfiltered fetch.
   const canReuseContext = !!dictionaryContext && preferredFilter.warehouses.length === 0;
 
-  const freightQuery = useQuery(queryFreight, { project }, { enabled: !canReuseContext });
+  const freightQuery = useQueryFreightsRest(project, {}, { query: { enabled: !canReuseContext } });
 
   return useMemo(() => {
     if (canReuseContext) {
@@ -28,7 +27,7 @@ export const useGetFreightMap = (project: string) => {
     // generate metadata.name -> full freight data (because history doesn't have it all) to show in freight history
     const freightMap: Record<string, Freight> = {};
 
-    for (const freight of freightQuery.data?.groups?.['']?.freight || []) {
+    for (const freight of freightQuery.data?.data.groups?.['']?.items || []) {
       const freightId = freight?.metadata?.name;
       if (freightId) {
         freightMap[freightId] = freight;

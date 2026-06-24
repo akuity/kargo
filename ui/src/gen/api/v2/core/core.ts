@@ -36,6 +36,7 @@ import type {
   ListStagesParams,
   PatchConfigMapRequestBody,
   PatchFreightAliasParams,
+  PkgServerQueryFreightsResponse,
   Project,
   ProjectConfig,
   PromoteDownstream201,
@@ -45,7 +46,6 @@ import type {
   PromotionList,
   PromotionTask,
   PromotionTaskList,
-  QueryFreightsRest200,
   QueryFreightsRestParams,
   Stage,
   StageList,
@@ -57,6 +57,7 @@ import type {
 } from '.././models';
 
 import { customFetch } from '../../../../lib/api/custom-fetch';
+import type { ErrorType } from '../../../../lib/api/custom-fetch';
 
 type SecondParameter<T extends (...args: never) => unknown> = Parameters<T>[1];
 
@@ -118,7 +119,7 @@ export const getListProjectsQueryKey = (params?: ListProjectsParams) => {
 
 export const getListProjectsQueryOptions = <
   TData = Awaited<ReturnType<typeof listProjects>>,
-  TError = unknown
+  TError = ErrorType<unknown>
 >(
   params?: ListProjectsParams,
   options?: {
@@ -141,9 +142,12 @@ export const getListProjectsQueryOptions = <
 };
 
 export type ListProjectsQueryResult = NonNullable<Awaited<ReturnType<typeof listProjects>>>;
-export type ListProjectsQueryError = unknown;
+export type ListProjectsQueryError = ErrorType<unknown>;
 
-export function useListProjects<TData = Awaited<ReturnType<typeof listProjects>>, TError = unknown>(
+export function useListProjects<
+  TData = Awaited<ReturnType<typeof listProjects>>,
+  TError = ErrorType<unknown>
+>(
   params: undefined | ListProjectsParams,
   options: {
     query: Partial<UseQueryOptions<Awaited<ReturnType<typeof listProjects>>, TError, TData>> &
@@ -159,7 +163,10 @@ export function useListProjects<TData = Awaited<ReturnType<typeof listProjects>>
   },
   queryClient?: QueryClient
 ): DefinedUseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> };
-export function useListProjects<TData = Awaited<ReturnType<typeof listProjects>>, TError = unknown>(
+export function useListProjects<
+  TData = Awaited<ReturnType<typeof listProjects>>,
+  TError = ErrorType<unknown>
+>(
   params?: ListProjectsParams,
   options?: {
     query?: Partial<UseQueryOptions<Awaited<ReturnType<typeof listProjects>>, TError, TData>> &
@@ -175,7 +182,10 @@ export function useListProjects<TData = Awaited<ReturnType<typeof listProjects>>
   },
   queryClient?: QueryClient
 ): UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> };
-export function useListProjects<TData = Awaited<ReturnType<typeof listProjects>>, TError = unknown>(
+export function useListProjects<
+  TData = Awaited<ReturnType<typeof listProjects>>,
+  TError = ErrorType<unknown>
+>(
   params?: ListProjectsParams,
   options?: {
     query?: Partial<UseQueryOptions<Awaited<ReturnType<typeof listProjects>>, TError, TData>>;
@@ -187,7 +197,10 @@ export function useListProjects<TData = Awaited<ReturnType<typeof listProjects>>
  * @summary List projects
  */
 
-export function useListProjects<TData = Awaited<ReturnType<typeof listProjects>>, TError = unknown>(
+export function useListProjects<
+  TData = Awaited<ReturnType<typeof listProjects>>,
+  TError = ErrorType<unknown>
+>(
   params?: ListProjectsParams,
   options?: {
     query?: Partial<UseQueryOptions<Awaited<ReturnType<typeof listProjects>>, TError, TData>>;
@@ -240,7 +253,7 @@ export const getGetProjectQueryKey = (project?: string) => {
 
 export const getGetProjectQueryOptions = <
   TData = Awaited<ReturnType<typeof getProject>>,
-  TError = unknown
+  TError = ErrorType<unknown>
 >(
   project: string,
   options?: {
@@ -263,9 +276,12 @@ export const getGetProjectQueryOptions = <
 };
 
 export type GetProjectQueryResult = NonNullable<Awaited<ReturnType<typeof getProject>>>;
-export type GetProjectQueryError = unknown;
+export type GetProjectQueryError = ErrorType<unknown>;
 
-export function useGetProject<TData = Awaited<ReturnType<typeof getProject>>, TError = unknown>(
+export function useGetProject<
+  TData = Awaited<ReturnType<typeof getProject>>,
+  TError = ErrorType<unknown>
+>(
   project: string,
   options: {
     query: Partial<UseQueryOptions<Awaited<ReturnType<typeof getProject>>, TError, TData>> &
@@ -281,7 +297,10 @@ export function useGetProject<TData = Awaited<ReturnType<typeof getProject>>, TE
   },
   queryClient?: QueryClient
 ): DefinedUseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> };
-export function useGetProject<TData = Awaited<ReturnType<typeof getProject>>, TError = unknown>(
+export function useGetProject<
+  TData = Awaited<ReturnType<typeof getProject>>,
+  TError = ErrorType<unknown>
+>(
   project: string,
   options?: {
     query?: Partial<UseQueryOptions<Awaited<ReturnType<typeof getProject>>, TError, TData>> &
@@ -297,7 +316,10 @@ export function useGetProject<TData = Awaited<ReturnType<typeof getProject>>, TE
   },
   queryClient?: QueryClient
 ): UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> };
-export function useGetProject<TData = Awaited<ReturnType<typeof getProject>>, TError = unknown>(
+export function useGetProject<
+  TData = Awaited<ReturnType<typeof getProject>>,
+  TError = ErrorType<unknown>
+>(
   project: string,
   options?: {
     query?: Partial<UseQueryOptions<Awaited<ReturnType<typeof getProject>>, TError, TData>>;
@@ -309,7 +331,10 @@ export function useGetProject<TData = Awaited<ReturnType<typeof getProject>>, TE
  * @summary Retrieve a Project resource
  */
 
-export function useGetProject<TData = Awaited<ReturnType<typeof getProject>>, TError = unknown>(
+export function useGetProject<
+  TData = Awaited<ReturnType<typeof getProject>>,
+  TError = ErrorType<unknown>
+>(
   project: string,
   options?: {
     query?: Partial<UseQueryOptions<Awaited<ReturnType<typeof getProject>>, TError, TData>>;
@@ -356,7 +381,10 @@ export const deleteProject = async (
   });
 };
 
-export const getDeleteProjectMutationOptions = <TError = unknown, TContext = unknown>(options?: {
+export const getDeleteProjectMutationOptions = <
+  TError = ErrorType<unknown>,
+  TContext = unknown
+>(options?: {
   mutation?: UseMutationOptions<
     Awaited<ReturnType<typeof deleteProject>>,
     TError,
@@ -391,12 +419,12 @@ export const getDeleteProjectMutationOptions = <TError = unknown, TContext = unk
 
 export type DeleteProjectMutationResult = NonNullable<Awaited<ReturnType<typeof deleteProject>>>;
 
-export type DeleteProjectMutationError = unknown;
+export type DeleteProjectMutationError = ErrorType<unknown>;
 
 /**
  * @summary Delete a Project
  */
-export const useDeleteProject = <TError = unknown, TContext = unknown>(
+export const useDeleteProject = <TError = ErrorType<unknown>, TContext = unknown>(
   options?: {
     mutation?: UseMutationOptions<
       Awaited<ReturnType<typeof deleteProject>>,
@@ -452,7 +480,7 @@ export const getGetProjectConfigQueryKey = (project?: string) => {
 
 export const getGetProjectConfigQueryOptions = <
   TData = Awaited<ReturnType<typeof getProjectConfig>>,
-  TError = unknown
+  TError = ErrorType<unknown>
 >(
   project: string,
   options?: {
@@ -475,11 +503,11 @@ export const getGetProjectConfigQueryOptions = <
 };
 
 export type GetProjectConfigQueryResult = NonNullable<Awaited<ReturnType<typeof getProjectConfig>>>;
-export type GetProjectConfigQueryError = unknown;
+export type GetProjectConfigQueryError = ErrorType<unknown>;
 
 export function useGetProjectConfig<
   TData = Awaited<ReturnType<typeof getProjectConfig>>,
-  TError = unknown
+  TError = ErrorType<unknown>
 >(
   project: string,
   options: {
@@ -498,7 +526,7 @@ export function useGetProjectConfig<
 ): DefinedUseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> };
 export function useGetProjectConfig<
   TData = Awaited<ReturnType<typeof getProjectConfig>>,
-  TError = unknown
+  TError = ErrorType<unknown>
 >(
   project: string,
   options?: {
@@ -517,7 +545,7 @@ export function useGetProjectConfig<
 ): UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> };
 export function useGetProjectConfig<
   TData = Awaited<ReturnType<typeof getProjectConfig>>,
-  TError = unknown
+  TError = ErrorType<unknown>
 >(
   project: string,
   options?: {
@@ -532,7 +560,7 @@ export function useGetProjectConfig<
 
 export function useGetProjectConfig<
   TData = Awaited<ReturnType<typeof getProjectConfig>>,
-  TError = unknown
+  TError = ErrorType<unknown>
 >(
   project: string,
   options?: {
@@ -582,7 +610,7 @@ export const deleteProjectConfig = async (
 };
 
 export const getDeleteProjectConfigMutationOptions = <
-  TError = unknown,
+  TError = ErrorType<unknown>,
   TContext = unknown
 >(options?: {
   mutation?: UseMutationOptions<
@@ -621,12 +649,12 @@ export type DeleteProjectConfigMutationResult = NonNullable<
   Awaited<ReturnType<typeof deleteProjectConfig>>
 >;
 
-export type DeleteProjectConfigMutationError = unknown;
+export type DeleteProjectConfigMutationError = ErrorType<unknown>;
 
 /**
  * @summary Delete a ProjectConfig resource
  */
-export const useDeleteProjectConfig = <TError = unknown, TContext = unknown>(
+export const useDeleteProjectConfig = <TError = ErrorType<unknown>, TContext = unknown>(
   options?: {
     mutation?: UseMutationOptions<
       Awaited<ReturnType<typeof deleteProjectConfig>>,
@@ -678,7 +706,7 @@ export const refreshProjectConfig = async (
 };
 
 export const getRefreshProjectConfigMutationOptions = <
-  TError = unknown,
+  TError = ErrorType<unknown>,
   TContext = unknown
 >(options?: {
   mutation?: UseMutationOptions<
@@ -717,12 +745,12 @@ export type RefreshProjectConfigMutationResult = NonNullable<
   Awaited<ReturnType<typeof refreshProjectConfig>>
 >;
 
-export type RefreshProjectConfigMutationError = unknown;
+export type RefreshProjectConfigMutationError = ErrorType<unknown>;
 
 /**
  * @summary Refresh ProjectConfig
  */
-export const useRefreshProjectConfig = <TError = unknown, TContext = unknown>(
+export const useRefreshProjectConfig = <TError = ErrorType<unknown>, TContext = unknown>(
   options?: {
     mutation?: UseMutationOptions<
       Awaited<ReturnType<typeof refreshProjectConfig>>,
@@ -778,7 +806,7 @@ export const getListProjectConfigMapsQueryKey = (project?: string) => {
 
 export const getListProjectConfigMapsQueryOptions = <
   TData = Awaited<ReturnType<typeof listProjectConfigMaps>>,
-  TError = unknown
+  TError = ErrorType<unknown>
 >(
   project: string,
   options?: {
@@ -805,11 +833,11 @@ export const getListProjectConfigMapsQueryOptions = <
 export type ListProjectConfigMapsQueryResult = NonNullable<
   Awaited<ReturnType<typeof listProjectConfigMaps>>
 >;
-export type ListProjectConfigMapsQueryError = unknown;
+export type ListProjectConfigMapsQueryError = ErrorType<unknown>;
 
 export function useListProjectConfigMaps<
   TData = Awaited<ReturnType<typeof listProjectConfigMaps>>,
-  TError = unknown
+  TError = ErrorType<unknown>
 >(
   project: string,
   options: {
@@ -830,7 +858,7 @@ export function useListProjectConfigMaps<
 ): DefinedUseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> };
 export function useListProjectConfigMaps<
   TData = Awaited<ReturnType<typeof listProjectConfigMaps>>,
-  TError = unknown
+  TError = ErrorType<unknown>
 >(
   project: string,
   options?: {
@@ -851,7 +879,7 @@ export function useListProjectConfigMaps<
 ): UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> };
 export function useListProjectConfigMaps<
   TData = Awaited<ReturnType<typeof listProjectConfigMaps>>,
-  TError = unknown
+  TError = ErrorType<unknown>
 >(
   project: string,
   options?: {
@@ -868,7 +896,7 @@ export function useListProjectConfigMaps<
 
 export function useListProjectConfigMaps<
   TData = Awaited<ReturnType<typeof listProjectConfigMaps>>,
-  TError = unknown
+  TError = ErrorType<unknown>
 >(
   project: string,
   options?: {
@@ -923,7 +951,7 @@ export const createProjectConfigMap = async (
 };
 
 export const getCreateProjectConfigMapMutationOptions = <
-  TError = unknown,
+  TError = ErrorType<unknown>,
   TContext = unknown
 >(options?: {
   mutation?: UseMutationOptions<
@@ -962,12 +990,12 @@ export type CreateProjectConfigMapMutationResult = NonNullable<
   Awaited<ReturnType<typeof createProjectConfigMap>>
 >;
 export type CreateProjectConfigMapMutationBody = CreateConfigMapRequestBody;
-export type CreateProjectConfigMapMutationError = unknown;
+export type CreateProjectConfigMapMutationError = ErrorType<unknown>;
 
 /**
  * @summary Create a project-level ConfigMap
  */
-export const useCreateProjectConfigMap = <TError = unknown, TContext = unknown>(
+export const useCreateProjectConfigMap = <TError = ErrorType<unknown>, TContext = unknown>(
   options?: {
     mutation?: UseMutationOptions<
       Awaited<ReturnType<typeof createProjectConfigMap>>,
@@ -1023,7 +1051,7 @@ export const getGetProjectConfigMapQueryKey = (project?: string, configmap?: str
 
 export const getGetProjectConfigMapQueryOptions = <
   TData = Awaited<ReturnType<typeof getProjectConfigMap>>,
-  TError = unknown
+  TError = ErrorType<unknown>
 >(
   project: string,
   configmap: string,
@@ -1054,11 +1082,11 @@ export const getGetProjectConfigMapQueryOptions = <
 export type GetProjectConfigMapQueryResult = NonNullable<
   Awaited<ReturnType<typeof getProjectConfigMap>>
 >;
-export type GetProjectConfigMapQueryError = unknown;
+export type GetProjectConfigMapQueryError = ErrorType<unknown>;
 
 export function useGetProjectConfigMap<
   TData = Awaited<ReturnType<typeof getProjectConfigMap>>,
-  TError = unknown
+  TError = ErrorType<unknown>
 >(
   project: string,
   configmap: string,
@@ -1080,7 +1108,7 @@ export function useGetProjectConfigMap<
 ): DefinedUseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> };
 export function useGetProjectConfigMap<
   TData = Awaited<ReturnType<typeof getProjectConfigMap>>,
-  TError = unknown
+  TError = ErrorType<unknown>
 >(
   project: string,
   configmap: string,
@@ -1102,7 +1130,7 @@ export function useGetProjectConfigMap<
 ): UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> };
 export function useGetProjectConfigMap<
   TData = Awaited<ReturnType<typeof getProjectConfigMap>>,
-  TError = unknown
+  TError = ErrorType<unknown>
 >(
   project: string,
   configmap: string,
@@ -1120,7 +1148,7 @@ export function useGetProjectConfigMap<
 
 export function useGetProjectConfigMap<
   TData = Awaited<ReturnType<typeof getProjectConfigMap>>,
-  TError = unknown
+  TError = ErrorType<unknown>
 >(
   project: string,
   configmap: string,
@@ -1180,7 +1208,7 @@ export const updateProjectConfigMap = async (
 };
 
 export const getUpdateProjectConfigMapMutationOptions = <
-  TError = unknown,
+  TError = ErrorType<unknown>,
   TContext = unknown
 >(options?: {
   mutation?: UseMutationOptions<
@@ -1219,12 +1247,12 @@ export type UpdateProjectConfigMapMutationResult = NonNullable<
   Awaited<ReturnType<typeof updateProjectConfigMap>>
 >;
 export type UpdateProjectConfigMapMutationBody = UpdateConfigMapRequestBody;
-export type UpdateProjectConfigMapMutationError = unknown;
+export type UpdateProjectConfigMapMutationError = ErrorType<unknown>;
 
 /**
  * @summary Replace a project-level ConfigMap
  */
-export const useUpdateProjectConfigMap = <TError = unknown, TContext = unknown>(
+export const useUpdateProjectConfigMap = <TError = ErrorType<unknown>, TContext = unknown>(
   options?: {
     mutation?: UseMutationOptions<
       Awaited<ReturnType<typeof updateProjectConfigMap>>,
@@ -1278,7 +1306,7 @@ export const deleteProjectConfigMap = async (
 };
 
 export const getDeleteProjectConfigMapMutationOptions = <
-  TError = unknown,
+  TError = ErrorType<unknown>,
   TContext = unknown
 >(options?: {
   mutation?: UseMutationOptions<
@@ -1317,12 +1345,12 @@ export type DeleteProjectConfigMapMutationResult = NonNullable<
   Awaited<ReturnType<typeof deleteProjectConfigMap>>
 >;
 
-export type DeleteProjectConfigMapMutationError = unknown;
+export type DeleteProjectConfigMapMutationError = ErrorType<unknown>;
 
 /**
  * @summary Delete a project-level ConfigMap
  */
-export const useDeleteProjectConfigMap = <TError = unknown, TContext = unknown>(
+export const useDeleteProjectConfigMap = <TError = ErrorType<unknown>, TContext = unknown>(
   options?: {
     mutation?: UseMutationOptions<
       Awaited<ReturnType<typeof deleteProjectConfigMap>>,
@@ -1381,7 +1409,7 @@ export const patchProjectConfigMap = async (
 };
 
 export const getPatchProjectConfigMapMutationOptions = <
-  TError = unknown,
+  TError = ErrorType<unknown>,
   TContext = unknown
 >(options?: {
   mutation?: UseMutationOptions<
@@ -1420,12 +1448,12 @@ export type PatchProjectConfigMapMutationResult = NonNullable<
   Awaited<ReturnType<typeof patchProjectConfigMap>>
 >;
 export type PatchProjectConfigMapMutationBody = PatchConfigMapRequestBody;
-export type PatchProjectConfigMapMutationError = unknown;
+export type PatchProjectConfigMapMutationError = ErrorType<unknown>;
 
 /**
  * @summary Patch a project-level ConfigMap
  */
-export const usePatchProjectConfigMap = <TError = unknown, TContext = unknown>(
+export const usePatchProjectConfigMap = <TError = ErrorType<unknown>, TContext = unknown>(
   options?: {
     mutation?: UseMutationOptions<
       Awaited<ReturnType<typeof patchProjectConfigMap>>,
@@ -1451,7 +1479,7 @@ export const usePatchProjectConfigMap = <TError = unknown, TContext = unknown>(
  * @summary Query Freight
  */
 export type queryFreightsRestResponse200 = {
-  data: QueryFreightsRest200;
+  data: PkgServerQueryFreightsResponse;
   status: 200;
 };
 
@@ -1505,7 +1533,7 @@ export const getQueryFreightsRestQueryKey = (
 
 export const getQueryFreightsRestQueryOptions = <
   TData = Awaited<ReturnType<typeof queryFreightsRest>>,
-  TError = unknown
+  TError = ErrorType<unknown>
 >(
   project: string,
   params?: QueryFreightsRestParams,
@@ -1531,11 +1559,11 @@ export const getQueryFreightsRestQueryOptions = <
 export type QueryFreightsRestQueryResult = NonNullable<
   Awaited<ReturnType<typeof queryFreightsRest>>
 >;
-export type QueryFreightsRestQueryError = unknown;
+export type QueryFreightsRestQueryError = ErrorType<unknown>;
 
 export function useQueryFreightsRest<
   TData = Awaited<ReturnType<typeof queryFreightsRest>>,
-  TError = unknown
+  TError = ErrorType<unknown>
 >(
   project: string,
   params: undefined | QueryFreightsRestParams,
@@ -1555,7 +1583,7 @@ export function useQueryFreightsRest<
 ): DefinedUseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> };
 export function useQueryFreightsRest<
   TData = Awaited<ReturnType<typeof queryFreightsRest>>,
-  TError = unknown
+  TError = ErrorType<unknown>
 >(
   project: string,
   params?: QueryFreightsRestParams,
@@ -1575,7 +1603,7 @@ export function useQueryFreightsRest<
 ): UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> };
 export function useQueryFreightsRest<
   TData = Awaited<ReturnType<typeof queryFreightsRest>>,
-  TError = unknown
+  TError = ErrorType<unknown>
 >(
   project: string,
   params?: QueryFreightsRestParams,
@@ -1591,7 +1619,7 @@ export function useQueryFreightsRest<
 
 export function useQueryFreightsRest<
   TData = Awaited<ReturnType<typeof queryFreightsRest>>,
-  TError = unknown
+  TError = ErrorType<unknown>
 >(
   project: string,
   params?: QueryFreightsRestParams,
@@ -1648,7 +1676,7 @@ export const getGetFreightQueryKey = (project?: string, freightNameOrAlias?: str
 
 export const getGetFreightQueryOptions = <
   TData = Awaited<ReturnType<typeof getFreight>>,
-  TError = unknown
+  TError = ErrorType<unknown>
 >(
   project: string,
   freightNameOrAlias: string,
@@ -1675,9 +1703,12 @@ export const getGetFreightQueryOptions = <
 };
 
 export type GetFreightQueryResult = NonNullable<Awaited<ReturnType<typeof getFreight>>>;
-export type GetFreightQueryError = unknown;
+export type GetFreightQueryError = ErrorType<unknown>;
 
-export function useGetFreight<TData = Awaited<ReturnType<typeof getFreight>>, TError = unknown>(
+export function useGetFreight<
+  TData = Awaited<ReturnType<typeof getFreight>>,
+  TError = ErrorType<unknown>
+>(
   project: string,
   freightNameOrAlias: string,
   options: {
@@ -1694,7 +1725,10 @@ export function useGetFreight<TData = Awaited<ReturnType<typeof getFreight>>, TE
   },
   queryClient?: QueryClient
 ): DefinedUseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> };
-export function useGetFreight<TData = Awaited<ReturnType<typeof getFreight>>, TError = unknown>(
+export function useGetFreight<
+  TData = Awaited<ReturnType<typeof getFreight>>,
+  TError = ErrorType<unknown>
+>(
   project: string,
   freightNameOrAlias: string,
   options?: {
@@ -1711,7 +1745,10 @@ export function useGetFreight<TData = Awaited<ReturnType<typeof getFreight>>, TE
   },
   queryClient?: QueryClient
 ): UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> };
-export function useGetFreight<TData = Awaited<ReturnType<typeof getFreight>>, TError = unknown>(
+export function useGetFreight<
+  TData = Awaited<ReturnType<typeof getFreight>>,
+  TError = ErrorType<unknown>
+>(
   project: string,
   freightNameOrAlias: string,
   options?: {
@@ -1724,7 +1761,10 @@ export function useGetFreight<TData = Awaited<ReturnType<typeof getFreight>>, TE
  * @summary Retrieve a Freight resource
  */
 
-export function useGetFreight<TData = Awaited<ReturnType<typeof getFreight>>, TError = unknown>(
+export function useGetFreight<
+  TData = Awaited<ReturnType<typeof getFreight>>,
+  TError = ErrorType<unknown>
+>(
   project: string,
   freightNameOrAlias: string,
   options?: {
@@ -1774,7 +1814,10 @@ export const deleteFreight = async (
   });
 };
 
-export const getDeleteFreightMutationOptions = <TError = unknown, TContext = unknown>(options?: {
+export const getDeleteFreightMutationOptions = <
+  TError = ErrorType<unknown>,
+  TContext = unknown
+>(options?: {
   mutation?: UseMutationOptions<
     Awaited<ReturnType<typeof deleteFreight>>,
     TError,
@@ -1809,12 +1852,12 @@ export const getDeleteFreightMutationOptions = <TError = unknown, TContext = unk
 
 export type DeleteFreightMutationResult = NonNullable<Awaited<ReturnType<typeof deleteFreight>>>;
 
-export type DeleteFreightMutationError = unknown;
+export type DeleteFreightMutationError = ErrorType<unknown>;
 
 /**
  * @summary Delete a Freight resource
  */
-export const useDeleteFreight = <TError = unknown, TContext = unknown>(
+export const useDeleteFreight = <TError = ErrorType<unknown>, TContext = unknown>(
   options?: {
     mutation?: UseMutationOptions<
       Awaited<ReturnType<typeof deleteFreight>>,
@@ -1885,7 +1928,7 @@ export const patchFreightAlias = async (
 };
 
 export const getPatchFreightAliasMutationOptions = <
-  TError = unknown,
+  TError = ErrorType<unknown>,
   TContext = unknown
 >(options?: {
   mutation?: UseMutationOptions<
@@ -1924,12 +1967,12 @@ export type PatchFreightAliasMutationResult = NonNullable<
   Awaited<ReturnType<typeof patchFreightAlias>>
 >;
 
-export type PatchFreightAliasMutationError = unknown;
+export type PatchFreightAliasMutationError = ErrorType<unknown>;
 
 /**
  * @summary Patch a Freight resource's alias
  */
-export const usePatchFreightAlias = <TError = unknown, TContext = unknown>(
+export const usePatchFreightAlias = <TError = ErrorType<unknown>, TContext = unknown>(
   options?: {
     mutation?: UseMutationOptions<
       Awaited<ReturnType<typeof patchFreightAlias>>,
@@ -1999,7 +2042,10 @@ export const approveFreight = async (
   );
 };
 
-export const getApproveFreightMutationOptions = <TError = unknown, TContext = unknown>(options?: {
+export const getApproveFreightMutationOptions = <
+  TError = ErrorType<unknown>,
+  TContext = unknown
+>(options?: {
   mutation?: UseMutationOptions<
     Awaited<ReturnType<typeof approveFreight>>,
     TError,
@@ -2034,12 +2080,12 @@ export const getApproveFreightMutationOptions = <TError = unknown, TContext = un
 
 export type ApproveFreightMutationResult = NonNullable<Awaited<ReturnType<typeof approveFreight>>>;
 
-export type ApproveFreightMutationError = unknown;
+export type ApproveFreightMutationError = ErrorType<unknown>;
 
 /**
  * @summary Approve Freight for promotion to a Stage
  */
-export const useApproveFreight = <TError = unknown, TContext = unknown>(
+export const useApproveFreight = <TError = ErrorType<unknown>, TContext = unknown>(
   options?: {
     mutation?: UseMutationOptions<
       Awaited<ReturnType<typeof approveFreight>>,
@@ -2097,7 +2143,7 @@ export const getGetFreightLinksQueryKey = (project?: string, freightNameOrAlias?
 
 export const getGetFreightLinksQueryOptions = <
   TData = Awaited<ReturnType<typeof getFreightLinks>>,
-  TError = unknown
+  TError = ErrorType<unknown>
 >(
   project: string,
   freightNameOrAlias: string,
@@ -2125,11 +2171,11 @@ export const getGetFreightLinksQueryOptions = <
 };
 
 export type GetFreightLinksQueryResult = NonNullable<Awaited<ReturnType<typeof getFreightLinks>>>;
-export type GetFreightLinksQueryError = unknown;
+export type GetFreightLinksQueryError = ErrorType<unknown>;
 
 export function useGetFreightLinks<
   TData = Awaited<ReturnType<typeof getFreightLinks>>,
-  TError = unknown
+  TError = ErrorType<unknown>
 >(
   project: string,
   freightNameOrAlias: string,
@@ -2149,7 +2195,7 @@ export function useGetFreightLinks<
 ): DefinedUseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> };
 export function useGetFreightLinks<
   TData = Awaited<ReturnType<typeof getFreightLinks>>,
-  TError = unknown
+  TError = ErrorType<unknown>
 >(
   project: string,
   freightNameOrAlias: string,
@@ -2169,7 +2215,7 @@ export function useGetFreightLinks<
 ): UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> };
 export function useGetFreightLinks<
   TData = Awaited<ReturnType<typeof getFreightLinks>>,
-  TError = unknown
+  TError = ErrorType<unknown>
 >(
   project: string,
   freightNameOrAlias: string,
@@ -2185,7 +2231,7 @@ export function useGetFreightLinks<
 
 export function useGetFreightLinks<
   TData = Awaited<ReturnType<typeof getFreightLinks>>,
-  TError = unknown
+  TError = ErrorType<unknown>
 >(
   project: string,
   freightNameOrAlias: string,
@@ -2241,7 +2287,7 @@ export const getListImagesQueryKey = (project?: string) => {
 
 export const getListImagesQueryOptions = <
   TData = Awaited<ReturnType<typeof listImages>>,
-  TError = unknown
+  TError = ErrorType<unknown>
 >(
   project: string,
   options?: {
@@ -2264,9 +2310,12 @@ export const getListImagesQueryOptions = <
 };
 
 export type ListImagesQueryResult = NonNullable<Awaited<ReturnType<typeof listImages>>>;
-export type ListImagesQueryError = unknown;
+export type ListImagesQueryError = ErrorType<unknown>;
 
-export function useListImages<TData = Awaited<ReturnType<typeof listImages>>, TError = unknown>(
+export function useListImages<
+  TData = Awaited<ReturnType<typeof listImages>>,
+  TError = ErrorType<unknown>
+>(
   project: string,
   options: {
     query: Partial<UseQueryOptions<Awaited<ReturnType<typeof listImages>>, TError, TData>> &
@@ -2282,7 +2331,10 @@ export function useListImages<TData = Awaited<ReturnType<typeof listImages>>, TE
   },
   queryClient?: QueryClient
 ): DefinedUseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> };
-export function useListImages<TData = Awaited<ReturnType<typeof listImages>>, TError = unknown>(
+export function useListImages<
+  TData = Awaited<ReturnType<typeof listImages>>,
+  TError = ErrorType<unknown>
+>(
   project: string,
   options?: {
     query?: Partial<UseQueryOptions<Awaited<ReturnType<typeof listImages>>, TError, TData>> &
@@ -2298,7 +2350,10 @@ export function useListImages<TData = Awaited<ReturnType<typeof listImages>>, TE
   },
   queryClient?: QueryClient
 ): UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> };
-export function useListImages<TData = Awaited<ReturnType<typeof listImages>>, TError = unknown>(
+export function useListImages<
+  TData = Awaited<ReturnType<typeof listImages>>,
+  TError = ErrorType<unknown>
+>(
   project: string,
   options?: {
     query?: Partial<UseQueryOptions<Awaited<ReturnType<typeof listImages>>, TError, TData>>;
@@ -2310,7 +2365,10 @@ export function useListImages<TData = Awaited<ReturnType<typeof listImages>>, TE
  * @summary List container images
  */
 
-export function useListImages<TData = Awaited<ReturnType<typeof listImages>>, TError = unknown>(
+export function useListImages<
+  TData = Awaited<ReturnType<typeof listImages>>,
+  TError = ErrorType<unknown>
+>(
   project: string,
   options?: {
     query?: Partial<UseQueryOptions<Awaited<ReturnType<typeof listImages>>, TError, TData>>;
@@ -2364,7 +2422,7 @@ export const getListPromotionTasksQueryKey = (project?: string) => {
 
 export const getListPromotionTasksQueryOptions = <
   TData = Awaited<ReturnType<typeof listPromotionTasks>>,
-  TError = unknown
+  TError = ErrorType<unknown>
 >(
   project: string,
   options?: {
@@ -2389,11 +2447,11 @@ export const getListPromotionTasksQueryOptions = <
 export type ListPromotionTasksQueryResult = NonNullable<
   Awaited<ReturnType<typeof listPromotionTasks>>
 >;
-export type ListPromotionTasksQueryError = unknown;
+export type ListPromotionTasksQueryError = ErrorType<unknown>;
 
 export function useListPromotionTasks<
   TData = Awaited<ReturnType<typeof listPromotionTasks>>,
-  TError = unknown
+  TError = ErrorType<unknown>
 >(
   project: string,
   options: {
@@ -2412,7 +2470,7 @@ export function useListPromotionTasks<
 ): DefinedUseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> };
 export function useListPromotionTasks<
   TData = Awaited<ReturnType<typeof listPromotionTasks>>,
-  TError = unknown
+  TError = ErrorType<unknown>
 >(
   project: string,
   options?: {
@@ -2433,7 +2491,7 @@ export function useListPromotionTasks<
 ): UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> };
 export function useListPromotionTasks<
   TData = Awaited<ReturnType<typeof listPromotionTasks>>,
-  TError = unknown
+  TError = ErrorType<unknown>
 >(
   project: string,
   options?: {
@@ -2448,7 +2506,7 @@ export function useListPromotionTasks<
 
 export function useListPromotionTasks<
   TData = Awaited<ReturnType<typeof listPromotionTasks>>,
-  TError = unknown
+  TError = ErrorType<unknown>
 >(
   project: string,
   options?: {
@@ -2503,7 +2561,7 @@ export const getGetPromotionTaskQueryKey = (project?: string, promotionTask?: st
 
 export const getGetPromotionTaskQueryOptions = <
   TData = Awaited<ReturnType<typeof getPromotionTask>>,
-  TError = unknown
+  TError = ErrorType<unknown>
 >(
   project: string,
   promotionTask: string,
@@ -2530,11 +2588,11 @@ export const getGetPromotionTaskQueryOptions = <
 };
 
 export type GetPromotionTaskQueryResult = NonNullable<Awaited<ReturnType<typeof getPromotionTask>>>;
-export type GetPromotionTaskQueryError = unknown;
+export type GetPromotionTaskQueryError = ErrorType<unknown>;
 
 export function useGetPromotionTask<
   TData = Awaited<ReturnType<typeof getPromotionTask>>,
-  TError = unknown
+  TError = ErrorType<unknown>
 >(
   project: string,
   promotionTask: string,
@@ -2554,7 +2612,7 @@ export function useGetPromotionTask<
 ): DefinedUseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> };
 export function useGetPromotionTask<
   TData = Awaited<ReturnType<typeof getPromotionTask>>,
-  TError = unknown
+  TError = ErrorType<unknown>
 >(
   project: string,
   promotionTask: string,
@@ -2574,7 +2632,7 @@ export function useGetPromotionTask<
 ): UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> };
 export function useGetPromotionTask<
   TData = Awaited<ReturnType<typeof getPromotionTask>>,
-  TError = unknown
+  TError = ErrorType<unknown>
 >(
   project: string,
   promotionTask: string,
@@ -2590,7 +2648,7 @@ export function useGetPromotionTask<
 
 export function useGetPromotionTask<
   TData = Awaited<ReturnType<typeof getPromotionTask>>,
-  TError = unknown
+  TError = ErrorType<unknown>
 >(
   project: string,
   promotionTask: string,
@@ -2659,7 +2717,7 @@ export const getListPromotionsQueryKey = (project?: string, params?: ListPromoti
 
 export const getListPromotionsQueryOptions = <
   TData = Awaited<ReturnType<typeof listPromotions>>,
-  TError = unknown
+  TError = ErrorType<unknown>
 >(
   project: string,
   params?: ListPromotionsParams,
@@ -2683,11 +2741,11 @@ export const getListPromotionsQueryOptions = <
 };
 
 export type ListPromotionsQueryResult = NonNullable<Awaited<ReturnType<typeof listPromotions>>>;
-export type ListPromotionsQueryError = unknown;
+export type ListPromotionsQueryError = ErrorType<unknown>;
 
 export function useListPromotions<
   TData = Awaited<ReturnType<typeof listPromotions>>,
-  TError = unknown
+  TError = ErrorType<unknown>
 >(
   project: string,
   params: undefined | ListPromotionsParams,
@@ -2707,7 +2765,7 @@ export function useListPromotions<
 ): DefinedUseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> };
 export function useListPromotions<
   TData = Awaited<ReturnType<typeof listPromotions>>,
-  TError = unknown
+  TError = ErrorType<unknown>
 >(
   project: string,
   params?: ListPromotionsParams,
@@ -2727,7 +2785,7 @@ export function useListPromotions<
 ): UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> };
 export function useListPromotions<
   TData = Awaited<ReturnType<typeof listPromotions>>,
-  TError = unknown
+  TError = ErrorType<unknown>
 >(
   project: string,
   params?: ListPromotionsParams,
@@ -2743,7 +2801,7 @@ export function useListPromotions<
 
 export function useListPromotions<
   TData = Awaited<ReturnType<typeof listPromotions>>,
-  TError = unknown
+  TError = ErrorType<unknown>
 >(
   project: string,
   params?: ListPromotionsParams,
@@ -2799,7 +2857,7 @@ export const getGetPromotionQueryKey = (project?: string, promotion?: string) =>
 
 export const getGetPromotionQueryOptions = <
   TData = Awaited<ReturnType<typeof getPromotion>>,
-  TError = unknown
+  TError = ErrorType<unknown>
 >(
   project: string,
   promotion: string,
@@ -2826,9 +2884,12 @@ export const getGetPromotionQueryOptions = <
 };
 
 export type GetPromotionQueryResult = NonNullable<Awaited<ReturnType<typeof getPromotion>>>;
-export type GetPromotionQueryError = unknown;
+export type GetPromotionQueryError = ErrorType<unknown>;
 
-export function useGetPromotion<TData = Awaited<ReturnType<typeof getPromotion>>, TError = unknown>(
+export function useGetPromotion<
+  TData = Awaited<ReturnType<typeof getPromotion>>,
+  TError = ErrorType<unknown>
+>(
   project: string,
   promotion: string,
   options: {
@@ -2845,7 +2906,10 @@ export function useGetPromotion<TData = Awaited<ReturnType<typeof getPromotion>>
   },
   queryClient?: QueryClient
 ): DefinedUseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> };
-export function useGetPromotion<TData = Awaited<ReturnType<typeof getPromotion>>, TError = unknown>(
+export function useGetPromotion<
+  TData = Awaited<ReturnType<typeof getPromotion>>,
+  TError = ErrorType<unknown>
+>(
   project: string,
   promotion: string,
   options?: {
@@ -2862,7 +2926,10 @@ export function useGetPromotion<TData = Awaited<ReturnType<typeof getPromotion>>
   },
   queryClient?: QueryClient
 ): UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> };
-export function useGetPromotion<TData = Awaited<ReturnType<typeof getPromotion>>, TError = unknown>(
+export function useGetPromotion<
+  TData = Awaited<ReturnType<typeof getPromotion>>,
+  TError = ErrorType<unknown>
+>(
   project: string,
   promotion: string,
   options?: {
@@ -2875,7 +2942,10 @@ export function useGetPromotion<TData = Awaited<ReturnType<typeof getPromotion>>
  * @summary Retrieve a Promotion
  */
 
-export function useGetPromotion<TData = Awaited<ReturnType<typeof getPromotion>>, TError = unknown>(
+export function useGetPromotion<
+  TData = Awaited<ReturnType<typeof getPromotion>>,
+  TError = ErrorType<unknown>
+>(
   project: string,
   promotion: string,
   options?: {
@@ -2924,7 +2994,10 @@ export const abortPromotion = async (
   });
 };
 
-export const getAbortPromotionMutationOptions = <TError = unknown, TContext = unknown>(options?: {
+export const getAbortPromotionMutationOptions = <
+  TError = ErrorType<unknown>,
+  TContext = unknown
+>(options?: {
   mutation?: UseMutationOptions<
     Awaited<ReturnType<typeof abortPromotion>>,
     TError,
@@ -2959,12 +3032,12 @@ export const getAbortPromotionMutationOptions = <TError = unknown, TContext = un
 
 export type AbortPromotionMutationResult = NonNullable<Awaited<ReturnType<typeof abortPromotion>>>;
 
-export type AbortPromotionMutationError = unknown;
+export type AbortPromotionMutationError = ErrorType<unknown>;
 
 /**
  * @summary Abort a Promotion
  */
-export const useAbortPromotion = <TError = unknown, TContext = unknown>(
+export const useAbortPromotion = <TError = ErrorType<unknown>, TContext = unknown>(
   options?: {
     mutation?: UseMutationOptions<
       Awaited<ReturnType<typeof abortPromotion>>,
@@ -3016,7 +3089,10 @@ export const refreshPromotion = async (
   });
 };
 
-export const getRefreshPromotionMutationOptions = <TError = unknown, TContext = unknown>(options?: {
+export const getRefreshPromotionMutationOptions = <
+  TError = ErrorType<unknown>,
+  TContext = unknown
+>(options?: {
   mutation?: UseMutationOptions<
     Awaited<ReturnType<typeof refreshPromotion>>,
     TError,
@@ -3053,12 +3129,12 @@ export type RefreshPromotionMutationResult = NonNullable<
   Awaited<ReturnType<typeof refreshPromotion>>
 >;
 
-export type RefreshPromotionMutationError = unknown;
+export type RefreshPromotionMutationError = ErrorType<unknown>;
 
 /**
  * @summary Refresh a Promotion
  */
-export const useRefreshPromotion = <TError = unknown, TContext = unknown>(
+export const useRefreshPromotion = <TError = ErrorType<unknown>, TContext = unknown>(
   options?: {
     mutation?: UseMutationOptions<
       Awaited<ReturnType<typeof refreshPromotion>>,
@@ -3136,7 +3212,7 @@ export const getListStagesQueryKey = (project?: string, params?: ListStagesParam
 
 export const getListStagesQueryOptions = <
   TData = Awaited<ReturnType<typeof listStages>>,
-  TError = unknown
+  TError = ErrorType<unknown>
 >(
   project: string,
   params?: ListStagesParams,
@@ -3160,9 +3236,12 @@ export const getListStagesQueryOptions = <
 };
 
 export type ListStagesQueryResult = NonNullable<Awaited<ReturnType<typeof listStages>>>;
-export type ListStagesQueryError = unknown;
+export type ListStagesQueryError = ErrorType<unknown>;
 
-export function useListStages<TData = Awaited<ReturnType<typeof listStages>>, TError = unknown>(
+export function useListStages<
+  TData = Awaited<ReturnType<typeof listStages>>,
+  TError = ErrorType<unknown>
+>(
   project: string,
   params: undefined | ListStagesParams,
   options: {
@@ -3179,7 +3258,10 @@ export function useListStages<TData = Awaited<ReturnType<typeof listStages>>, TE
   },
   queryClient?: QueryClient
 ): DefinedUseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> };
-export function useListStages<TData = Awaited<ReturnType<typeof listStages>>, TError = unknown>(
+export function useListStages<
+  TData = Awaited<ReturnType<typeof listStages>>,
+  TError = ErrorType<unknown>
+>(
   project: string,
   params?: ListStagesParams,
   options?: {
@@ -3196,7 +3278,10 @@ export function useListStages<TData = Awaited<ReturnType<typeof listStages>>, TE
   },
   queryClient?: QueryClient
 ): UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> };
-export function useListStages<TData = Awaited<ReturnType<typeof listStages>>, TError = unknown>(
+export function useListStages<
+  TData = Awaited<ReturnType<typeof listStages>>,
+  TError = ErrorType<unknown>
+>(
   project: string,
   params?: ListStagesParams,
   options?: {
@@ -3209,7 +3294,10 @@ export function useListStages<TData = Awaited<ReturnType<typeof listStages>>, TE
  * @summary List Stages
  */
 
-export function useListStages<TData = Awaited<ReturnType<typeof listStages>>, TError = unknown>(
+export function useListStages<
+  TData = Awaited<ReturnType<typeof listStages>>,
+  TError = ErrorType<unknown>
+>(
   project: string,
   params?: ListStagesParams,
   options?: {
@@ -3264,7 +3352,7 @@ export const getGetStageQueryKey = (project?: string, stage?: string) => {
 
 export const getGetStageQueryOptions = <
   TData = Awaited<ReturnType<typeof getStage>>,
-  TError = unknown
+  TError = ErrorType<unknown>
 >(
   project: string,
   stage: string,
@@ -3288,9 +3376,12 @@ export const getGetStageQueryOptions = <
 };
 
 export type GetStageQueryResult = NonNullable<Awaited<ReturnType<typeof getStage>>>;
-export type GetStageQueryError = unknown;
+export type GetStageQueryError = ErrorType<unknown>;
 
-export function useGetStage<TData = Awaited<ReturnType<typeof getStage>>, TError = unknown>(
+export function useGetStage<
+  TData = Awaited<ReturnType<typeof getStage>>,
+  TError = ErrorType<unknown>
+>(
   project: string,
   stage: string,
   options: {
@@ -3307,7 +3398,10 @@ export function useGetStage<TData = Awaited<ReturnType<typeof getStage>>, TError
   },
   queryClient?: QueryClient
 ): DefinedUseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> };
-export function useGetStage<TData = Awaited<ReturnType<typeof getStage>>, TError = unknown>(
+export function useGetStage<
+  TData = Awaited<ReturnType<typeof getStage>>,
+  TError = ErrorType<unknown>
+>(
   project: string,
   stage: string,
   options?: {
@@ -3324,7 +3418,10 @@ export function useGetStage<TData = Awaited<ReturnType<typeof getStage>>, TError
   },
   queryClient?: QueryClient
 ): UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> };
-export function useGetStage<TData = Awaited<ReturnType<typeof getStage>>, TError = unknown>(
+export function useGetStage<
+  TData = Awaited<ReturnType<typeof getStage>>,
+  TError = ErrorType<unknown>
+>(
   project: string,
   stage: string,
   options?: {
@@ -3337,7 +3434,10 @@ export function useGetStage<TData = Awaited<ReturnType<typeof getStage>>, TError
  * @summary Retrieve a Stage
  */
 
-export function useGetStage<TData = Awaited<ReturnType<typeof getStage>>, TError = unknown>(
+export function useGetStage<
+  TData = Awaited<ReturnType<typeof getStage>>,
+  TError = ErrorType<unknown>
+>(
   project: string,
   stage: string,
   options?: {
@@ -3386,7 +3486,10 @@ export const deleteStage = async (
   });
 };
 
-export const getDeleteStageMutationOptions = <TError = unknown, TContext = unknown>(options?: {
+export const getDeleteStageMutationOptions = <
+  TError = ErrorType<unknown>,
+  TContext = unknown
+>(options?: {
   mutation?: UseMutationOptions<
     Awaited<ReturnType<typeof deleteStage>>,
     TError,
@@ -3421,12 +3524,12 @@ export const getDeleteStageMutationOptions = <TError = unknown, TContext = unkno
 
 export type DeleteStageMutationResult = NonNullable<Awaited<ReturnType<typeof deleteStage>>>;
 
-export type DeleteStageMutationError = unknown;
+export type DeleteStageMutationError = ErrorType<unknown>;
 
 /**
  * @summary Delete a Stage
  */
-export const useDeleteStage = <TError = unknown, TContext = unknown>(
+export const useDeleteStage = <TError = ErrorType<unknown>, TContext = unknown>(
   options?: {
     mutation?: UseMutationOptions<
       Awaited<ReturnType<typeof deleteStage>>,
@@ -3484,7 +3587,7 @@ export const getGetStageLinksQueryKey = (project?: string, stage?: string) => {
 
 export const getGetStageLinksQueryOptions = <
   TData = Awaited<ReturnType<typeof getStageLinks>>,
-  TError = unknown
+  TError = ErrorType<unknown>
 >(
   project: string,
   stage: string,
@@ -3508,11 +3611,11 @@ export const getGetStageLinksQueryOptions = <
 };
 
 export type GetStageLinksQueryResult = NonNullable<Awaited<ReturnType<typeof getStageLinks>>>;
-export type GetStageLinksQueryError = unknown;
+export type GetStageLinksQueryError = ErrorType<unknown>;
 
 export function useGetStageLinks<
   TData = Awaited<ReturnType<typeof getStageLinks>>,
-  TError = unknown
+  TError = ErrorType<unknown>
 >(
   project: string,
   stage: string,
@@ -3532,7 +3635,7 @@ export function useGetStageLinks<
 ): DefinedUseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> };
 export function useGetStageLinks<
   TData = Awaited<ReturnType<typeof getStageLinks>>,
-  TError = unknown
+  TError = ErrorType<unknown>
 >(
   project: string,
   stage: string,
@@ -3552,7 +3655,7 @@ export function useGetStageLinks<
 ): UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> };
 export function useGetStageLinks<
   TData = Awaited<ReturnType<typeof getStageLinks>>,
-  TError = unknown
+  TError = ErrorType<unknown>
 >(
   project: string,
   stage: string,
@@ -3568,7 +3671,7 @@ export function useGetStageLinks<
 
 export function useGetStageLinks<
   TData = Awaited<ReturnType<typeof getStageLinks>>,
-  TError = unknown
+  TError = ErrorType<unknown>
 >(
   project: string,
   stage: string,
@@ -3622,7 +3725,10 @@ export const promoteToStage = async (
   });
 };
 
-export const getPromoteToStageMutationOptions = <TError = unknown, TContext = unknown>(options?: {
+export const getPromoteToStageMutationOptions = <
+  TError = ErrorType<unknown>,
+  TContext = unknown
+>(options?: {
   mutation?: UseMutationOptions<
     Awaited<ReturnType<typeof promoteToStage>>,
     TError,
@@ -3657,12 +3763,12 @@ export const getPromoteToStageMutationOptions = <TError = unknown, TContext = un
 
 export type PromoteToStageMutationResult = NonNullable<Awaited<ReturnType<typeof promoteToStage>>>;
 export type PromoteToStageMutationBody = PromoteToStageRequest;
-export type PromoteToStageMutationError = unknown;
+export type PromoteToStageMutationError = ErrorType<unknown>;
 
 /**
  * @summary Promote to Stage
  */
-export const usePromoteToStage = <TError = unknown, TContext = unknown>(
+export const usePromoteToStage = <TError = ErrorType<unknown>, TContext = unknown>(
   options?: {
     mutation?: UseMutationOptions<
       Awaited<ReturnType<typeof promoteToStage>>,
@@ -3717,7 +3823,7 @@ export const promoteDownstream = async (
 };
 
 export const getPromoteDownstreamMutationOptions = <
-  TError = unknown,
+  TError = ErrorType<unknown>,
   TContext = unknown
 >(options?: {
   mutation?: UseMutationOptions<
@@ -3756,12 +3862,12 @@ export type PromoteDownstreamMutationResult = NonNullable<
   Awaited<ReturnType<typeof promoteDownstream>>
 >;
 export type PromoteDownstreamMutationBody = PromoteDownstreamRequest;
-export type PromoteDownstreamMutationError = unknown;
+export type PromoteDownstreamMutationError = ErrorType<unknown>;
 
 /**
  * @summary Promote downstream
  */
-export const usePromoteDownstream = <TError = unknown, TContext = unknown>(
+export const usePromoteDownstream = <TError = ErrorType<unknown>, TContext = unknown>(
   options?: {
     mutation?: UseMutationOptions<
       Awaited<ReturnType<typeof promoteDownstream>>,
@@ -3813,7 +3919,10 @@ export const refreshStage = async (
   });
 };
 
-export const getRefreshStageMutationOptions = <TError = unknown, TContext = unknown>(options?: {
+export const getRefreshStageMutationOptions = <
+  TError = ErrorType<unknown>,
+  TContext = unknown
+>(options?: {
   mutation?: UseMutationOptions<
     Awaited<ReturnType<typeof refreshStage>>,
     TError,
@@ -3848,12 +3957,12 @@ export const getRefreshStageMutationOptions = <TError = unknown, TContext = unkn
 
 export type RefreshStageMutationResult = NonNullable<Awaited<ReturnType<typeof refreshStage>>>;
 
-export type RefreshStageMutationError = unknown;
+export type RefreshStageMutationError = ErrorType<unknown>;
 
 /**
  * @summary Refresh a Stage
  */
-export const useRefreshStage = <TError = unknown, TContext = unknown>(
+export const useRefreshStage = <TError = ErrorType<unknown>, TContext = unknown>(
   options?: {
     mutation?: UseMutationOptions<
       Awaited<ReturnType<typeof refreshStage>>,
@@ -3909,7 +4018,7 @@ export const getListWarehousesQueryKey = (project?: string) => {
 
 export const getListWarehousesQueryOptions = <
   TData = Awaited<ReturnType<typeof listWarehouses>>,
-  TError = unknown
+  TError = ErrorType<unknown>
 >(
   project: string,
   options?: {
@@ -3932,11 +4041,11 @@ export const getListWarehousesQueryOptions = <
 };
 
 export type ListWarehousesQueryResult = NonNullable<Awaited<ReturnType<typeof listWarehouses>>>;
-export type ListWarehousesQueryError = unknown;
+export type ListWarehousesQueryError = ErrorType<unknown>;
 
 export function useListWarehouses<
   TData = Awaited<ReturnType<typeof listWarehouses>>,
-  TError = unknown
+  TError = ErrorType<unknown>
 >(
   project: string,
   options: {
@@ -3955,7 +4064,7 @@ export function useListWarehouses<
 ): DefinedUseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> };
 export function useListWarehouses<
   TData = Awaited<ReturnType<typeof listWarehouses>>,
-  TError = unknown
+  TError = ErrorType<unknown>
 >(
   project: string,
   options?: {
@@ -3974,7 +4083,7 @@ export function useListWarehouses<
 ): UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> };
 export function useListWarehouses<
   TData = Awaited<ReturnType<typeof listWarehouses>>,
-  TError = unknown
+  TError = ErrorType<unknown>
 >(
   project: string,
   options?: {
@@ -3989,7 +4098,7 @@ export function useListWarehouses<
 
 export function useListWarehouses<
   TData = Awaited<ReturnType<typeof listWarehouses>>,
-  TError = unknown
+  TError = ErrorType<unknown>
 >(
   project: string,
   options?: {
@@ -4044,7 +4153,7 @@ export const getGetWarehouseQueryKey = (project?: string, warehouse?: string) =>
 
 export const getGetWarehouseQueryOptions = <
   TData = Awaited<ReturnType<typeof getWarehouse>>,
-  TError = unknown
+  TError = ErrorType<unknown>
 >(
   project: string,
   warehouse: string,
@@ -4071,9 +4180,12 @@ export const getGetWarehouseQueryOptions = <
 };
 
 export type GetWarehouseQueryResult = NonNullable<Awaited<ReturnType<typeof getWarehouse>>>;
-export type GetWarehouseQueryError = unknown;
+export type GetWarehouseQueryError = ErrorType<unknown>;
 
-export function useGetWarehouse<TData = Awaited<ReturnType<typeof getWarehouse>>, TError = unknown>(
+export function useGetWarehouse<
+  TData = Awaited<ReturnType<typeof getWarehouse>>,
+  TError = ErrorType<unknown>
+>(
   project: string,
   warehouse: string,
   options: {
@@ -4090,7 +4202,10 @@ export function useGetWarehouse<TData = Awaited<ReturnType<typeof getWarehouse>>
   },
   queryClient?: QueryClient
 ): DefinedUseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> };
-export function useGetWarehouse<TData = Awaited<ReturnType<typeof getWarehouse>>, TError = unknown>(
+export function useGetWarehouse<
+  TData = Awaited<ReturnType<typeof getWarehouse>>,
+  TError = ErrorType<unknown>
+>(
   project: string,
   warehouse: string,
   options?: {
@@ -4107,7 +4222,10 @@ export function useGetWarehouse<TData = Awaited<ReturnType<typeof getWarehouse>>
   },
   queryClient?: QueryClient
 ): UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> };
-export function useGetWarehouse<TData = Awaited<ReturnType<typeof getWarehouse>>, TError = unknown>(
+export function useGetWarehouse<
+  TData = Awaited<ReturnType<typeof getWarehouse>>,
+  TError = ErrorType<unknown>
+>(
   project: string,
   warehouse: string,
   options?: {
@@ -4120,7 +4238,10 @@ export function useGetWarehouse<TData = Awaited<ReturnType<typeof getWarehouse>>
  * @summary Retrieve a Warehouse
  */
 
-export function useGetWarehouse<TData = Awaited<ReturnType<typeof getWarehouse>>, TError = unknown>(
+export function useGetWarehouse<
+  TData = Awaited<ReturnType<typeof getWarehouse>>,
+  TError = ErrorType<unknown>
+>(
   project: string,
   warehouse: string,
   options?: {
@@ -4169,7 +4290,10 @@ export const deleteWarehouse = async (
   });
 };
 
-export const getDeleteWarehouseMutationOptions = <TError = unknown, TContext = unknown>(options?: {
+export const getDeleteWarehouseMutationOptions = <
+  TError = ErrorType<unknown>,
+  TContext = unknown
+>(options?: {
   mutation?: UseMutationOptions<
     Awaited<ReturnType<typeof deleteWarehouse>>,
     TError,
@@ -4206,12 +4330,12 @@ export type DeleteWarehouseMutationResult = NonNullable<
   Awaited<ReturnType<typeof deleteWarehouse>>
 >;
 
-export type DeleteWarehouseMutationError = unknown;
+export type DeleteWarehouseMutationError = ErrorType<unknown>;
 
 /**
  * @summary Delete a Warehouse
  */
-export const useDeleteWarehouse = <TError = unknown, TContext = unknown>(
+export const useDeleteWarehouse = <TError = ErrorType<unknown>, TContext = unknown>(
   options?: {
     mutation?: UseMutationOptions<
       Awaited<ReturnType<typeof deleteWarehouse>>,
@@ -4263,7 +4387,10 @@ export const refreshWarehouse = async (
   });
 };
 
-export const getRefreshWarehouseMutationOptions = <TError = unknown, TContext = unknown>(options?: {
+export const getRefreshWarehouseMutationOptions = <
+  TError = ErrorType<unknown>,
+  TContext = unknown
+>(options?: {
   mutation?: UseMutationOptions<
     Awaited<ReturnType<typeof refreshWarehouse>>,
     TError,
@@ -4300,12 +4427,12 @@ export type RefreshWarehouseMutationResult = NonNullable<
   Awaited<ReturnType<typeof refreshWarehouse>>
 >;
 
-export type RefreshWarehouseMutationError = unknown;
+export type RefreshWarehouseMutationError = ErrorType<unknown>;
 
 /**
  * @summary Refresh a Warehouse
  */
-export const useRefreshWarehouse = <TError = unknown, TContext = unknown>(
+export const useRefreshWarehouse = <TError = ErrorType<unknown>, TContext = unknown>(
   options?: {
     mutation?: UseMutationOptions<
       Awaited<ReturnType<typeof refreshWarehouse>>,
@@ -4360,7 +4487,7 @@ export const getListClusterPromotionTasksQueryKey = () => {
 
 export const getListClusterPromotionTasksQueryOptions = <
   TData = Awaited<ReturnType<typeof listClusterPromotionTasks>>,
-  TError = unknown
+  TError = ErrorType<unknown>
 >(options?: {
   query?: Partial<
     UseQueryOptions<Awaited<ReturnType<typeof listClusterPromotionTasks>>, TError, TData>
@@ -4384,11 +4511,11 @@ export const getListClusterPromotionTasksQueryOptions = <
 export type ListClusterPromotionTasksQueryResult = NonNullable<
   Awaited<ReturnType<typeof listClusterPromotionTasks>>
 >;
-export type ListClusterPromotionTasksQueryError = unknown;
+export type ListClusterPromotionTasksQueryError = ErrorType<unknown>;
 
 export function useListClusterPromotionTasks<
   TData = Awaited<ReturnType<typeof listClusterPromotionTasks>>,
-  TError = unknown
+  TError = ErrorType<unknown>
 >(
   options: {
     query: Partial<
@@ -4408,7 +4535,7 @@ export function useListClusterPromotionTasks<
 ): DefinedUseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> };
 export function useListClusterPromotionTasks<
   TData = Awaited<ReturnType<typeof listClusterPromotionTasks>>,
-  TError = unknown
+  TError = ErrorType<unknown>
 >(
   options?: {
     query?: Partial<
@@ -4428,7 +4555,7 @@ export function useListClusterPromotionTasks<
 ): UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> };
 export function useListClusterPromotionTasks<
   TData = Awaited<ReturnType<typeof listClusterPromotionTasks>>,
-  TError = unknown
+  TError = ErrorType<unknown>
 >(
   options?: {
     query?: Partial<
@@ -4444,7 +4571,7 @@ export function useListClusterPromotionTasks<
 
 export function useListClusterPromotionTasks<
   TData = Awaited<ReturnType<typeof listClusterPromotionTasks>>,
-  TError = unknown
+  TError = ErrorType<unknown>
 >(
   options?: {
     query?: Partial<
@@ -4502,7 +4629,7 @@ export const getGetClusterPromotionTaskQueryKey = (clusterPromotionTask?: string
 
 export const getGetClusterPromotionTaskQueryOptions = <
   TData = Awaited<ReturnType<typeof getClusterPromotionTask>>,
-  TError = unknown
+  TError = ErrorType<unknown>
 >(
   clusterPromotionTask: string,
   options?: {
@@ -4530,11 +4657,11 @@ export const getGetClusterPromotionTaskQueryOptions = <
 export type GetClusterPromotionTaskQueryResult = NonNullable<
   Awaited<ReturnType<typeof getClusterPromotionTask>>
 >;
-export type GetClusterPromotionTaskQueryError = unknown;
+export type GetClusterPromotionTaskQueryError = ErrorType<unknown>;
 
 export function useGetClusterPromotionTask<
   TData = Awaited<ReturnType<typeof getClusterPromotionTask>>,
-  TError = unknown
+  TError = ErrorType<unknown>
 >(
   clusterPromotionTask: string,
   options: {
@@ -4555,7 +4682,7 @@ export function useGetClusterPromotionTask<
 ): DefinedUseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> };
 export function useGetClusterPromotionTask<
   TData = Awaited<ReturnType<typeof getClusterPromotionTask>>,
-  TError = unknown
+  TError = ErrorType<unknown>
 >(
   clusterPromotionTask: string,
   options?: {
@@ -4576,7 +4703,7 @@ export function useGetClusterPromotionTask<
 ): UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> };
 export function useGetClusterPromotionTask<
   TData = Awaited<ReturnType<typeof getClusterPromotionTask>>,
-  TError = unknown
+  TError = ErrorType<unknown>
 >(
   clusterPromotionTask: string,
   options?: {
@@ -4593,7 +4720,7 @@ export function useGetClusterPromotionTask<
 
 export function useGetClusterPromotionTask<
   TData = Awaited<ReturnType<typeof getClusterPromotionTask>>,
-  TError = unknown
+  TError = ErrorType<unknown>
 >(
   clusterPromotionTask: string,
   options?: {
@@ -4649,7 +4776,7 @@ export const getListSharedConfigMapsQueryKey = () => {
 
 export const getListSharedConfigMapsQueryOptions = <
   TData = Awaited<ReturnType<typeof listSharedConfigMaps>>,
-  TError = unknown
+  TError = ErrorType<unknown>
 >(options?: {
   query?: Partial<UseQueryOptions<Awaited<ReturnType<typeof listSharedConfigMaps>>, TError, TData>>;
   request?: SecondParameter<typeof customFetch>;
@@ -4671,11 +4798,11 @@ export const getListSharedConfigMapsQueryOptions = <
 export type ListSharedConfigMapsQueryResult = NonNullable<
   Awaited<ReturnType<typeof listSharedConfigMaps>>
 >;
-export type ListSharedConfigMapsQueryError = unknown;
+export type ListSharedConfigMapsQueryError = ErrorType<unknown>;
 
 export function useListSharedConfigMaps<
   TData = Awaited<ReturnType<typeof listSharedConfigMaps>>,
-  TError = unknown
+  TError = ErrorType<unknown>
 >(
   options: {
     query: Partial<
@@ -4695,7 +4822,7 @@ export function useListSharedConfigMaps<
 ): DefinedUseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> };
 export function useListSharedConfigMaps<
   TData = Awaited<ReturnType<typeof listSharedConfigMaps>>,
-  TError = unknown
+  TError = ErrorType<unknown>
 >(
   options?: {
     query?: Partial<
@@ -4715,7 +4842,7 @@ export function useListSharedConfigMaps<
 ): UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> };
 export function useListSharedConfigMaps<
   TData = Awaited<ReturnType<typeof listSharedConfigMaps>>,
-  TError = unknown
+  TError = ErrorType<unknown>
 >(
   options?: {
     query?: Partial<
@@ -4731,7 +4858,7 @@ export function useListSharedConfigMaps<
 
 export function useListSharedConfigMaps<
   TData = Awaited<ReturnType<typeof listSharedConfigMaps>>,
-  TError = unknown
+  TError = ErrorType<unknown>
 >(
   options?: {
     query?: Partial<
@@ -4784,7 +4911,7 @@ export const createSharedConfigMap = async (
 };
 
 export const getCreateSharedConfigMapMutationOptions = <
-  TError = unknown,
+  TError = ErrorType<unknown>,
   TContext = unknown
 >(options?: {
   mutation?: UseMutationOptions<
@@ -4823,12 +4950,12 @@ export type CreateSharedConfigMapMutationResult = NonNullable<
   Awaited<ReturnType<typeof createSharedConfigMap>>
 >;
 export type CreateSharedConfigMapMutationBody = CreateConfigMapRequestBody;
-export type CreateSharedConfigMapMutationError = unknown;
+export type CreateSharedConfigMapMutationError = ErrorType<unknown>;
 
 /**
  * @summary Create a shared ConfigMap
  */
-export const useCreateSharedConfigMap = <TError = unknown, TContext = unknown>(
+export const useCreateSharedConfigMap = <TError = ErrorType<unknown>, TContext = unknown>(
   options?: {
     mutation?: UseMutationOptions<
       Awaited<ReturnType<typeof createSharedConfigMap>>,
@@ -4883,7 +5010,7 @@ export const getGetSharedConfigMapQueryKey = (configmap?: string) => {
 
 export const getGetSharedConfigMapQueryOptions = <
   TData = Awaited<ReturnType<typeof getSharedConfigMap>>,
-  TError = unknown
+  TError = ErrorType<unknown>
 >(
   configmap: string,
   options?: {
@@ -4908,11 +5035,11 @@ export const getGetSharedConfigMapQueryOptions = <
 export type GetSharedConfigMapQueryResult = NonNullable<
   Awaited<ReturnType<typeof getSharedConfigMap>>
 >;
-export type GetSharedConfigMapQueryError = unknown;
+export type GetSharedConfigMapQueryError = ErrorType<unknown>;
 
 export function useGetSharedConfigMap<
   TData = Awaited<ReturnType<typeof getSharedConfigMap>>,
-  TError = unknown
+  TError = ErrorType<unknown>
 >(
   configmap: string,
   options: {
@@ -4931,7 +5058,7 @@ export function useGetSharedConfigMap<
 ): DefinedUseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> };
 export function useGetSharedConfigMap<
   TData = Awaited<ReturnType<typeof getSharedConfigMap>>,
-  TError = unknown
+  TError = ErrorType<unknown>
 >(
   configmap: string,
   options?: {
@@ -4952,7 +5079,7 @@ export function useGetSharedConfigMap<
 ): UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> };
 export function useGetSharedConfigMap<
   TData = Awaited<ReturnType<typeof getSharedConfigMap>>,
-  TError = unknown
+  TError = ErrorType<unknown>
 >(
   configmap: string,
   options?: {
@@ -4967,7 +5094,7 @@ export function useGetSharedConfigMap<
 
 export function useGetSharedConfigMap<
   TData = Awaited<ReturnType<typeof getSharedConfigMap>>,
-  TError = unknown
+  TError = ErrorType<unknown>
 >(
   configmap: string,
   options?: {
@@ -5020,7 +5147,7 @@ export const updateSharedConfigMap = async (
 };
 
 export const getUpdateSharedConfigMapMutationOptions = <
-  TError = unknown,
+  TError = ErrorType<unknown>,
   TContext = unknown
 >(options?: {
   mutation?: UseMutationOptions<
@@ -5059,12 +5186,12 @@ export type UpdateSharedConfigMapMutationResult = NonNullable<
   Awaited<ReturnType<typeof updateSharedConfigMap>>
 >;
 export type UpdateSharedConfigMapMutationBody = UpdateConfigMapRequestBody;
-export type UpdateSharedConfigMapMutationError = unknown;
+export type UpdateSharedConfigMapMutationError = ErrorType<unknown>;
 
 /**
  * @summary Replace a shared ConfigMap
  */
-export const useUpdateSharedConfigMap = <TError = unknown, TContext = unknown>(
+export const useUpdateSharedConfigMap = <TError = ErrorType<unknown>, TContext = unknown>(
   options?: {
     mutation?: UseMutationOptions<
       Awaited<ReturnType<typeof updateSharedConfigMap>>,
@@ -5114,7 +5241,7 @@ export const deleteSharedConfigMap = async (
 };
 
 export const getDeleteSharedConfigMapMutationOptions = <
-  TError = unknown,
+  TError = ErrorType<unknown>,
   TContext = unknown
 >(options?: {
   mutation?: UseMutationOptions<
@@ -5153,12 +5280,12 @@ export type DeleteSharedConfigMapMutationResult = NonNullable<
   Awaited<ReturnType<typeof deleteSharedConfigMap>>
 >;
 
-export type DeleteSharedConfigMapMutationError = unknown;
+export type DeleteSharedConfigMapMutationError = ErrorType<unknown>;
 
 /**
  * @summary Delete a shared ConfigMap
  */
-export const useDeleteSharedConfigMap = <TError = unknown, TContext = unknown>(
+export const useDeleteSharedConfigMap = <TError = ErrorType<unknown>, TContext = unknown>(
   options?: {
     mutation?: UseMutationOptions<
       Awaited<ReturnType<typeof deleteSharedConfigMap>>,
@@ -5213,7 +5340,7 @@ export const patchSharedConfigMap = async (
 };
 
 export const getPatchSharedConfigMapMutationOptions = <
-  TError = unknown,
+  TError = ErrorType<unknown>,
   TContext = unknown
 >(options?: {
   mutation?: UseMutationOptions<
@@ -5252,12 +5379,12 @@ export type PatchSharedConfigMapMutationResult = NonNullable<
   Awaited<ReturnType<typeof patchSharedConfigMap>>
 >;
 export type PatchSharedConfigMapMutationBody = PatchConfigMapRequestBody;
-export type PatchSharedConfigMapMutationError = unknown;
+export type PatchSharedConfigMapMutationError = ErrorType<unknown>;
 
 /**
  * @summary Patch a shared ConfigMap
  */
-export const usePatchSharedConfigMap = <TError = unknown, TContext = unknown>(
+export const usePatchSharedConfigMap = <TError = ErrorType<unknown>, TContext = unknown>(
   options?: {
     mutation?: UseMutationOptions<
       Awaited<ReturnType<typeof patchSharedConfigMap>>,
@@ -5312,7 +5439,7 @@ export const getListSystemConfigMapsQueryKey = () => {
 
 export const getListSystemConfigMapsQueryOptions = <
   TData = Awaited<ReturnType<typeof listSystemConfigMaps>>,
-  TError = unknown
+  TError = ErrorType<unknown>
 >(options?: {
   query?: Partial<UseQueryOptions<Awaited<ReturnType<typeof listSystemConfigMaps>>, TError, TData>>;
   request?: SecondParameter<typeof customFetch>;
@@ -5334,11 +5461,11 @@ export const getListSystemConfigMapsQueryOptions = <
 export type ListSystemConfigMapsQueryResult = NonNullable<
   Awaited<ReturnType<typeof listSystemConfigMaps>>
 >;
-export type ListSystemConfigMapsQueryError = unknown;
+export type ListSystemConfigMapsQueryError = ErrorType<unknown>;
 
 export function useListSystemConfigMaps<
   TData = Awaited<ReturnType<typeof listSystemConfigMaps>>,
-  TError = unknown
+  TError = ErrorType<unknown>
 >(
   options: {
     query: Partial<
@@ -5358,7 +5485,7 @@ export function useListSystemConfigMaps<
 ): DefinedUseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> };
 export function useListSystemConfigMaps<
   TData = Awaited<ReturnType<typeof listSystemConfigMaps>>,
-  TError = unknown
+  TError = ErrorType<unknown>
 >(
   options?: {
     query?: Partial<
@@ -5378,7 +5505,7 @@ export function useListSystemConfigMaps<
 ): UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> };
 export function useListSystemConfigMaps<
   TData = Awaited<ReturnType<typeof listSystemConfigMaps>>,
-  TError = unknown
+  TError = ErrorType<unknown>
 >(
   options?: {
     query?: Partial<
@@ -5394,7 +5521,7 @@ export function useListSystemConfigMaps<
 
 export function useListSystemConfigMaps<
   TData = Awaited<ReturnType<typeof listSystemConfigMaps>>,
-  TError = unknown
+  TError = ErrorType<unknown>
 >(
   options?: {
     query?: Partial<
@@ -5447,7 +5574,7 @@ export const createSystemConfigMap = async (
 };
 
 export const getCreateSystemConfigMapMutationOptions = <
-  TError = unknown,
+  TError = ErrorType<unknown>,
   TContext = unknown
 >(options?: {
   mutation?: UseMutationOptions<
@@ -5486,12 +5613,12 @@ export type CreateSystemConfigMapMutationResult = NonNullable<
   Awaited<ReturnType<typeof createSystemConfigMap>>
 >;
 export type CreateSystemConfigMapMutationBody = CreateConfigMapRequestBody;
-export type CreateSystemConfigMapMutationError = unknown;
+export type CreateSystemConfigMapMutationError = ErrorType<unknown>;
 
 /**
  * @summary Create a system-level ConfigMap
  */
-export const useCreateSystemConfigMap = <TError = unknown, TContext = unknown>(
+export const useCreateSystemConfigMap = <TError = ErrorType<unknown>, TContext = unknown>(
   options?: {
     mutation?: UseMutationOptions<
       Awaited<ReturnType<typeof createSystemConfigMap>>,
@@ -5546,7 +5673,7 @@ export const getGetSystemConfigMapQueryKey = (configmap?: string) => {
 
 export const getGetSystemConfigMapQueryOptions = <
   TData = Awaited<ReturnType<typeof getSystemConfigMap>>,
-  TError = unknown
+  TError = ErrorType<unknown>
 >(
   configmap: string,
   options?: {
@@ -5571,11 +5698,11 @@ export const getGetSystemConfigMapQueryOptions = <
 export type GetSystemConfigMapQueryResult = NonNullable<
   Awaited<ReturnType<typeof getSystemConfigMap>>
 >;
-export type GetSystemConfigMapQueryError = unknown;
+export type GetSystemConfigMapQueryError = ErrorType<unknown>;
 
 export function useGetSystemConfigMap<
   TData = Awaited<ReturnType<typeof getSystemConfigMap>>,
-  TError = unknown
+  TError = ErrorType<unknown>
 >(
   configmap: string,
   options: {
@@ -5594,7 +5721,7 @@ export function useGetSystemConfigMap<
 ): DefinedUseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> };
 export function useGetSystemConfigMap<
   TData = Awaited<ReturnType<typeof getSystemConfigMap>>,
-  TError = unknown
+  TError = ErrorType<unknown>
 >(
   configmap: string,
   options?: {
@@ -5615,7 +5742,7 @@ export function useGetSystemConfigMap<
 ): UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> };
 export function useGetSystemConfigMap<
   TData = Awaited<ReturnType<typeof getSystemConfigMap>>,
-  TError = unknown
+  TError = ErrorType<unknown>
 >(
   configmap: string,
   options?: {
@@ -5630,7 +5757,7 @@ export function useGetSystemConfigMap<
 
 export function useGetSystemConfigMap<
   TData = Awaited<ReturnType<typeof getSystemConfigMap>>,
-  TError = unknown
+  TError = ErrorType<unknown>
 >(
   configmap: string,
   options?: {
@@ -5683,7 +5810,7 @@ export const updateSystemConfigMap = async (
 };
 
 export const getUpdateSystemConfigMapMutationOptions = <
-  TError = unknown,
+  TError = ErrorType<unknown>,
   TContext = unknown
 >(options?: {
   mutation?: UseMutationOptions<
@@ -5722,12 +5849,12 @@ export type UpdateSystemConfigMapMutationResult = NonNullable<
   Awaited<ReturnType<typeof updateSystemConfigMap>>
 >;
 export type UpdateSystemConfigMapMutationBody = UpdateConfigMapRequestBody;
-export type UpdateSystemConfigMapMutationError = unknown;
+export type UpdateSystemConfigMapMutationError = ErrorType<unknown>;
 
 /**
  * @summary Replace a system-level ConfigMap
  */
-export const useUpdateSystemConfigMap = <TError = unknown, TContext = unknown>(
+export const useUpdateSystemConfigMap = <TError = ErrorType<unknown>, TContext = unknown>(
   options?: {
     mutation?: UseMutationOptions<
       Awaited<ReturnType<typeof updateSystemConfigMap>>,
@@ -5777,7 +5904,7 @@ export const deleteSystemConfigMap = async (
 };
 
 export const getDeleteSystemConfigMapMutationOptions = <
-  TError = unknown,
+  TError = ErrorType<unknown>,
   TContext = unknown
 >(options?: {
   mutation?: UseMutationOptions<
@@ -5816,12 +5943,12 @@ export type DeleteSystemConfigMapMutationResult = NonNullable<
   Awaited<ReturnType<typeof deleteSystemConfigMap>>
 >;
 
-export type DeleteSystemConfigMapMutationError = unknown;
+export type DeleteSystemConfigMapMutationError = ErrorType<unknown>;
 
 /**
  * @summary Delete a system-level ConfigMap
  */
-export const useDeleteSystemConfigMap = <TError = unknown, TContext = unknown>(
+export const useDeleteSystemConfigMap = <TError = ErrorType<unknown>, TContext = unknown>(
   options?: {
     mutation?: UseMutationOptions<
       Awaited<ReturnType<typeof deleteSystemConfigMap>>,
@@ -5876,7 +6003,7 @@ export const patchSystemConfigMap = async (
 };
 
 export const getPatchSystemConfigMapMutationOptions = <
-  TError = unknown,
+  TError = ErrorType<unknown>,
   TContext = unknown
 >(options?: {
   mutation?: UseMutationOptions<
@@ -5915,12 +6042,12 @@ export type PatchSystemConfigMapMutationResult = NonNullable<
   Awaited<ReturnType<typeof patchSystemConfigMap>>
 >;
 export type PatchSystemConfigMapMutationBody = PatchConfigMapRequestBody;
-export type PatchSystemConfigMapMutationError = unknown;
+export type PatchSystemConfigMapMutationError = ErrorType<unknown>;
 
 /**
  * @summary Patch a system-level ConfigMap
  */
-export const usePatchSystemConfigMap = <TError = unknown, TContext = unknown>(
+export const usePatchSystemConfigMap = <TError = ErrorType<unknown>, TContext = unknown>(
   options?: {
     mutation?: UseMutationOptions<
       Awaited<ReturnType<typeof patchSystemConfigMap>>,

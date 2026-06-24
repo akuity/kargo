@@ -1,11 +1,10 @@
-import { useMutation } from '@connectrpc/connect-query';
 import { Alert, Modal, message } from 'antd';
 import { useParams } from 'react-router-dom';
 
 import { ModalComponentProps } from '@ui/features/common/modal/modal-context';
 import { getAlias } from '@ui/features/common/utils';
-import { deleteFreight } from '@ui/gen/api/service/v1alpha1/service-KargoService_connectquery';
-import { Freight } from '@ui/gen/api/v1alpha1/generated_pb';
+import { useDeleteFreight } from '@ui/gen/api/v2/core/core';
+import { Freight } from '@ui/gen/api/v2/models';
 
 export const DeleteFreightModal = ({
   visible,
@@ -15,10 +14,12 @@ export const DeleteFreightModal = ({
 }: ModalComponentProps & { onDelete: () => void; freight: Freight }) => {
   const { name: project } = useParams();
 
-  const { mutate: deleteAction, isPending } = useMutation(deleteFreight, {
-    onSuccess: () => {
-      message.success('Freight successfully deleted');
-      onDelete();
+  const { mutate: deleteAction, isPending } = useDeleteFreight({
+    mutation: {
+      onSuccess: () => {
+        message.success('Freight successfully deleted');
+        onDelete();
+      }
     }
   });
 
@@ -32,8 +33,8 @@ export const DeleteFreightModal = ({
       onCancel={hide}
       onOk={() =>
         deleteAction({
-          name: freight.metadata?.name || '',
-          project
+          freightNameOrAlias: freight.metadata?.name || '',
+          project: project || ''
         })
       }
       okText='Delete'

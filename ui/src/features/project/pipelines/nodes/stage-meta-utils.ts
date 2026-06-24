@@ -2,7 +2,7 @@ import { CSSProperties, useContext, useMemo } from 'react';
 
 import { ColorContext } from '@ui/context/colors';
 import { ColorMapHex, parseColorAnnotation } from '@ui/features/stage/utils';
-import { Stage } from '@ui/gen/api/v1alpha1/generated_pb';
+import { Stage } from '@ui/gen/api/v2/models';
 import { getContrastTextColor } from '@ui/utils/get-contrast-text-color';
 
 import { IAction, useActionContext } from '../context/action-context';
@@ -20,7 +20,10 @@ export const useIsColorsUsed = () => {
   return freightTimelineControllerContext?.preferredFilter?.showColors;
 };
 
-export const getLastPromotionDate = (stage: Stage) => stage?.status?.lastPromotion?.finishedAt;
+export const getLastPromotionDate = (stage: Stage) =>
+  stage?.status?.lastPromotion?.finishedAt
+    ? new Date(stage?.status?.lastPromotion?.finishedAt)
+    : null;
 
 export const getCurrentPromotion = (stage: Stage) => stage?.status?.currentPromotion?.name;
 

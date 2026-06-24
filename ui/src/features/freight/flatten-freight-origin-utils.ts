@@ -1,4 +1,4 @@
-import { ArtifactReference, Freight, FreightReference } from '@ui/gen/api/v1alpha1/generated_pb';
+import { ArtifactReference, Freight, FreightReference } from '@ui/gen/api/v2/models';
 
 export type TableSource =
   | {
@@ -33,29 +33,29 @@ export const flattenFreightOrigin = (
   const images: TableSource[] =
     freight?.images?.map((image) => ({
       type: 'image',
-      repoURL: image?.repoURL,
-      tag: image?.tag,
-      annotations: image?.annotations
+      repoURL: image?.repoURL || '',
+      tag: image?.tag || '',
+      annotations: image?.annotations || {}
     })) || [];
 
   const git: TableSource[] =
     freight?.commits?.map((commit) => ({
       type: 'git',
-      repoURL: commit?.repoURL,
-      author: commit?.author,
-      branch: commit?.branch,
-      committer: commit?.committer,
-      id: commit?.id,
-      message: commit?.message,
-      tag: commit?.tag
+      repoURL: commit?.repoURL || '',
+      author: commit?.author || '',
+      branch: commit?.branch || '',
+      committer: commit?.committer || '',
+      id: commit?.id || '',
+      message: commit?.message || '',
+      tag: commit?.tag || ''
     })) || [];
 
   const helm: TableSource[] =
     freight?.charts?.map((chart) => ({
       type: 'helm',
-      repoURL: chart?.repoURL,
-      name: chart?.name,
-      version: chart?.version
+      repoURL: chart?.repoURL || '',
+      name: chart?.name || '',
+      version: chart?.version || ''
     })) || [];
 
   const other: TableSource[] =

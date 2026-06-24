@@ -4,6 +4,12 @@ import { Button, Flex, Tag, Typography } from 'antd';
 import Link from 'antd/es/typography/Link';
 import { useEffect, useMemo, useState } from 'react';
 
+import {
+  isArtifactChart,
+  isArtifactGeneric,
+  isArtifactGitCommit,
+  isArtifactImage
+} from '@ui/features/assemble-freight/artifact-type-guards';
 import { getCurrentFreight } from '@ui/features/common/utils';
 import {
   getGitCommitURL,
@@ -12,15 +18,16 @@ import {
 } from '@ui/features/freight-timeline/open-container-initiative-utils';
 import { useGetFreightCreation } from '@ui/features/project/pipelines/freight/use-get-freight-creation';
 import {
+  ArtifactReference,
   Chart,
   FreightReference,
-  ArtifactReference as GenericArtifactReference,
   GitCommit,
   Image,
   Stage
-} from '@ui/gen/api/v1alpha1/generated_pb';
+} from '@ui/gen/api/v2/models';
 
 import './stage-node.less';
+
 import { useDictionaryContext } from '../context/dictionary-context';
 import { useFreightTimelineControllerContext } from '../context/freight-timeline-controller-context';
 import { humanComprehendableArtifact } from '../freight/artifact-parts-utils';
@@ -59,7 +66,7 @@ export const StageFreight = (props: { stage: Stage }) => {
   useEffect(() => setSelectedFreight(defaultToFirstFreight()), [selectedWarehouse, props.stage]);
 
   const selectedFreightAlias = useMemo(
-    () => dictionaryContext?.freightById?.[selectedFreight?.name]?.alias,
+    () => dictionaryContext?.freightById?.[selectedFreight?.name || '']?.alias,
     [selectedFreight]
   );
 
@@ -100,7 +107,7 @@ export const StageFreight = (props: { stage: Stage }) => {
   };
 
   const freightCreation = useGetFreightCreation(
-    dictionaryContext?.freightById?.[selectedFreight?.name]
+    dictionaryContext?.freightById?.[selectedFreight?.name || '']
   );
 
   if (!currentFreight?.length) {
@@ -180,9 +187,7 @@ export const StageFreight = (props: { stage: Stage }) => {
   );
 };
 
-const Artifact = (props: {
-  artifact: string | GitCommit | Chart | Image | GenericArtifactReference;
-}) => {
+const Artifact = (props: { artifact: string | GitCommit | Chart | Image | ArtifactReference }) => {
   if (typeof props.artifact === 'string') {
     return (
       <Typography.Text type='secondary' className='text-xs'>
@@ -191,7 +196,7 @@ const Artifact = (props: {
     );
   }
 
-  if (props.artifact.$typeName === 'github.com.akuity.kargo.api.v1alpha1.ArtifactReference') {
+  if (isArtifactGeneric(props.artifact)) {
     return (
       <Tag bordered={false} color='geekblue'>
         {props.artifact.version}
@@ -200,16 +205,16 @@ const Artifact = (props: {
   }
 
   const source = (
-    <span className='text-[10px] ml-1'>{humanComprehendableArtifact(props.artifact.repoURL)}</span>
+    <span className='text-[10px] ml-1'>{humanComprehendableArtifact(props.artifact)}</span>
   );
 
-  if (props.artifact?.$typeName === 'github.com.akuity.kargo.api.v1alpha1.GitCommit') {
-    const url = getGitCommitURL(props.artifact.repoURL, props.artifact.id);
+  if (isArtifactGitCommit(props.artifact)) {
+    const url = getGitCommitURL(props.artifact.repoURL || '', props.artifact.id || '');
 
     let TagComponent = (
       <Tag title={props.artifact.repoURL} bordered={false} color='geekblue'>
         <Flex justify='center' align='center' wrap>
-          <div>{props.artifact.id.slice(0, 7)}</div>
+          <div>{props.artifact.id?.slice(0, 7)}</div>
 
           {source}
         </Flex>
@@ -234,13 +239,13 @@ const Artifact = (props: {
         >
           <FontAwesomeIcon icon={faCodeCommit} className='mr-1' />
           {props.artifact.message?.slice(0, 35)}
-          {props.artifact?.message?.length > 35 ? '...' : ''}
+          {(props.artifact?.message?.length || 0) > 35 ? '...' : ''}
         </Typography.Text>
       </Flex>
     );
   }
 
-  if (props.artifact?.$typeName === 'github.com.akuity.kargo.api.v1alpha1.Chart') {
+  if (isArtifactChart(props.artifact)) {
     return (
       <Tag
         title={`${props.artifact.repoURL}:${props.artifact.version}`}
@@ -256,45 +261,47 @@ const Artifact = (props: {
     );
   }
 
-  let imageSourceFromOci = '';
-  let imageBuiltDate = '';
+  if (isArtifactImage(props.artifact)) {
+    let imageSourceFromOci = '';
+    let imageBuiltDate = '';
 
-  if (props.artifact.annotations) {
-    imageSourceFromOci = getImageSource(props.artifact.annotations);
-    imageBuiltDate = getImageBuiltDate(props.artifact.annotations);
-  }
+    if (props.artifact.annotations) {
+      imageSourceFromOci = getImageSource(props.artifact.annotations);
+      imageBuiltDate = getImageBuiltDate(props.artifact.annotations);
+    }
 
-  let TagComponent = (
-    <Tag
-      title={`${props.artifact.repoURL}:${props.artifact.tag}`}
-      bordered={false}
-      color='geekblue'
-    >
-      <Flex justify='center' wrap>
-        <div className='text-center'>{shortVersion(props.artifact?.tag)}</div>
-        {source}
-      </Flex>
-    </Tag>
-  );
-
-  if (imageSourceFromOci) {
-    TagComponent = (
-      <Link href={imageSourceFromOci} target='_blank' onClick={(e) => e.stopPropagation()}>
-        {TagComponent}
-      </Link>
+    let TagComponent = (
+      <Tag
+        title={`${props.artifact.repoURL}:${props.artifact.tag}`}
+        bordered={false}
+        color='geekblue'
+      >
+        <Flex justify='center' wrap>
+          <div className='text-center'>{shortVersion(props.artifact?.tag)}</div>
+          {source}
+        </Flex>
+      </Tag>
     );
-  }
 
-  if (imageBuiltDate) {
-    TagComponent = (
-      <Flex vertical gap={8}>
-        {TagComponent}
-        <Typography.Text className='text-[10px] text-center' type='secondary'>
-          {imageBuiltDate}
-        </Typography.Text>
-      </Flex>
-    );
-  }
+    if (imageSourceFromOci) {
+      TagComponent = (
+        <Link href={imageSourceFromOci} target='_blank' onClick={(e) => e.stopPropagation()}>
+          {TagComponent}
+        </Link>
+      );
+    }
 
-  return TagComponent;
+    if (imageBuiltDate) {
+      TagComponent = (
+        <Flex vertical gap={8}>
+          {TagComponent}
+          <Typography.Text className='text-[10px] text-center' type='secondary'>
+            {imageBuiltDate}
+          </Typography.Text>
+        </Flex>
+      );
+    }
+
+    return TagComponent;
+  }
 };

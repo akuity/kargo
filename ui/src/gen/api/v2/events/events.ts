@@ -21,6 +21,7 @@ import type {
 import type { V1EventList } from '.././models';
 
 import { customFetch } from '../../../../lib/api/custom-fetch';
+import type { ErrorType } from '../../../../lib/api/custom-fetch';
 
 type SecondParameter<T extends (...args: never) => unknown> = Parameters<T>[1];
 
@@ -59,7 +60,7 @@ export const getListProjectEventsQueryKey = (project?: string) => {
 
 export const getListProjectEventsQueryOptions = <
   TData = Awaited<ReturnType<typeof listProjectEvents>>,
-  TError = unknown
+  TError = ErrorType<unknown>
 >(
   project: string,
   options?: {
@@ -84,11 +85,11 @@ export const getListProjectEventsQueryOptions = <
 export type ListProjectEventsQueryResult = NonNullable<
   Awaited<ReturnType<typeof listProjectEvents>>
 >;
-export type ListProjectEventsQueryError = unknown;
+export type ListProjectEventsQueryError = ErrorType<unknown>;
 
 export function useListProjectEvents<
   TData = Awaited<ReturnType<typeof listProjectEvents>>,
-  TError = unknown
+  TError = ErrorType<unknown>
 >(
   project: string,
   options: {
@@ -107,7 +108,7 @@ export function useListProjectEvents<
 ): DefinedUseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> };
 export function useListProjectEvents<
   TData = Awaited<ReturnType<typeof listProjectEvents>>,
-  TError = unknown
+  TError = ErrorType<unknown>
 >(
   project: string,
   options?: {
@@ -126,7 +127,7 @@ export function useListProjectEvents<
 ): UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> };
 export function useListProjectEvents<
   TData = Awaited<ReturnType<typeof listProjectEvents>>,
-  TError = unknown
+  TError = ErrorType<unknown>
 >(
   project: string,
   options?: {
@@ -141,7 +142,7 @@ export function useListProjectEvents<
 
 export function useListProjectEvents<
   TData = Awaited<ReturnType<typeof listProjectEvents>>,
-  TError = unknown
+  TError = ErrorType<unknown>
 >(
   project: string,
   options?: {

@@ -1,124 +1,91 @@
-import { createClient } from '@connectrpc/connect';
-import { createConnectQueryKey } from '@connectrpc/connect-query';
 import { useQueryClient } from '@tanstack/react-query';
 import { useEffect } from 'react';
 
-import { transportWithAuth } from '@ui/config/transport';
-import { queryCache } from '@ui/features/utils/cache';
-import { queryFreight } from '@ui/gen/api/service/v1alpha1/service-KargoService_connectquery';
-import { KargoService, QueryFreightResponse } from '@ui/gen/api/service/v1alpha1/service_pb';
-import { Freight } from '@ui/gen/api/v1alpha1/generated_pb';
+import {
+  getGetFreightQueryKey,
+  getQueryFreightsRestQueryKey,
+  getFreightResponse,
+  queryFreightsRestResponse
+} from '@ui/gen/api/v2/core/core';
+import { Freight } from '@ui/gen/api/v2/models';
 
-const upsertFreight = (
-  current: QueryFreightResponse | undefined,
-  freight: Freight
-): QueryFreightResponse => {
-  const existing = current?.groups?.['']?.freight || [];
-  const found = existing.some((f) => f?.metadata?.name === freight?.metadata?.name);
-  const updated = found
-    ? existing.map((f) => (f?.metadata?.name === freight?.metadata?.name ? freight : f))
-    : [...existing, freight];
-  return {
-    ...current,
-    groups: {
-      ...current?.groups,
-      '': { ...current?.groups?.[''], freight: updated }
-    }
-  } as QueryFreightResponse;
-};
+import { runSeededWatch, upsertOrDelete } from './watch-utils';
 
-const deleteFreight = (
-  current: QueryFreightResponse | undefined,
-  freight: Freight
-): QueryFreightResponse =>
-  ({
-    ...current,
-    groups: {
-      ...current?.groups,
-      '': {
-        ...current?.groups?.[''],
-        freight: (current?.groups?.['']?.freight || []).filter(
-          (f) => f?.metadata?.name !== freight?.metadata?.name
-        )
-      }
-    }
-  }) as QueryFreightResponse;
-
-export const useWatchFreight = (project: string) => {
+// origins must match the params the page's useQueryFreightsRest uses, so the
+// seed resourceVersion is read from the same query cache entry. enabled gates
+// the watch on the initial list having loaded, so it never opens before a seed
+// resourceVersion is available (which would start an unseeded, replaying watch).
+export const useWatchFreight = (project: string, origins?: string[], enabled = true) => {
   const client = useQueryClient();
 
   useEffect(() => {
-    const cancel = new AbortController();
+    if (!project || !enabled) {
+      return;
+    }
 
-    const watchFreight = async () => {
-      const promiseClient = createClient(KargoService, transportWithAuth);
+    const abort = new AbortController();
+    const listKey = getQueryFreightsRestQueryKey(project, { origins });
 
-      const stream = promiseClient.watchFreight(
-        {
-          project
-        },
-        { signal: cancel.signal }
+    const seedResourceVersion = () =>
+      (client.getQueryData(listKey) as queryFreightsRestResponse | undefined)?.data
+        ?.resourceVersion;
+
+    const buildUrl = (resourceVersion: string) => {
+      const params = new URLSearchParams({ watch: 'true' });
+      if (resourceVersion) {
+        params.append('resourceVersion', resourceVersion);
+      }
+      return `/v1beta1/projects/${encodeURIComponent(project)}/freight?${params}`;
+    };
+
+    const relist = async () => {
+      await client.refetchQueries({ queryKey: listKey, exact: false });
+      return seedResourceVersion();
+    };
+
+    const onEvent = (type: string, freight: Freight) => {
+      // Update all queryFreight caches for this project, including
+      // warehouse-filtered variants, which use a different cache key.
+      // Using setQueriesData (rather than setQueryData) ensures we only
+      // touch caches that already have an active query backing them,
+      // avoiding orphaned entries with no queryFn that would crash on
+      // refetch.
+      client.setQueriesData<queryFreightsRestResponse>(
+        { queryKey: getQueryFreightsRestQueryKey(project, undefined), exact: false },
+        (old) => {
+          if (!old?.data?.groups) {
+            return old;
+          }
+          const updatedGroups = Object.fromEntries(
+            Object.entries(old.data.groups).map(([key, group]) => [
+              key,
+              { ...group, items: upsertOrDelete(group.items ?? [], freight, type) }
+            ])
+          );
+          return { ...old, data: { ...old.data, groups: updatedGroups } };
+        }
       );
 
-      for await (const e of stream) {
-        const freight = e.freight;
+      const freightKey = getGetFreightQueryKey(project, freight.metadata?.name);
 
-        if (!freight) {
-          continue;
-        }
-
-        const currentFreight = queryCache.freight.get(project);
-
-        // Skip ADDED events for freight that already exists in the cache.
-        // Kubernetes watches replay all existing objects as ADDED on connect,
-        // which duplicates the initial GET and causes unnecessary re-renders.
-        if (e.type === 'ADDED') {
-          const existing = currentFreight?.groups?.['']?.freight || [];
-          if (existing.some((f) => f?.metadata?.name === freight?.metadata?.name)) {
-            continue;
-          }
-        }
-
-        if (e.type === 'DELETED') {
-          // Remove from all queryFreight caches for this project, including
-          // warehouse-filtered variants, which use a different cache key.
-          client.setQueriesData<QueryFreightResponse>(
-            {
-              queryKey: createConnectQueryKey({
-                cardinality: 'finite',
-                schema: queryFreight,
-                input: { project },
-                transport: transportWithAuth
-              }),
-              exact: false
-            },
-            (current) => deleteFreight(current, freight)
-          );
-        } else {
-          // Update all queryFreight caches for this project, including
-          // warehouse-filtered variants, which use a different cache key.
-          // Using setQueriesData (rather than setQueryData) ensures we only
-          // touch caches that already have an active query backing them,
-          // avoiding orphaned entries with no queryFn that would crash on
-          // refetch.
-          client.setQueriesData<QueryFreightResponse>(
-            {
-              queryKey: createConnectQueryKey({
-                cardinality: 'finite',
-                schema: queryFreight,
-                input: { project },
-                transport: transportWithAuth
-              }),
-              exact: false
-            },
-            (current) => upsertFreight(current, freight)
-          );
-        }
+      if (type === 'DELETED') {
+        client.removeQueries({ queryKey: freightKey });
+      } else {
+        client.setQueryData(freightKey, (old: getFreightResponse | undefined) => ({
+          ...old,
+          data: freight
+        }));
       }
     };
 
-    watchFreight();
+    runSeededWatch<Freight>({
+      signal: abort.signal,
+      buildUrl,
+      seedResourceVersion,
+      relist,
+      onEvent
+    });
 
-    return () => cancel.abort();
-  }, [project]);
+    return () => abort.abort();
+  }, [project, client, enabled, (origins || []).join(',')]);
 };

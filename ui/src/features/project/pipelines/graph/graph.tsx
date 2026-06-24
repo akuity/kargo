@@ -12,13 +12,13 @@ import { useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react';
 
 import { WarehouseExpanded } from '@ui/extend/types';
 import { queryCache } from '@ui/features/utils/cache';
-import { Stage } from '@ui/gen/api/v1alpha1/generated_pb';
+import { Stage } from '@ui/gen/api/v2/models';
 
 import { useFreightTimelineControllerContext } from '../context/freight-timeline-controller-context';
 import { GraphContext } from '../context/graph-context';
 import { StackedNodes } from '../nodes/stacked-nodes';
 
-import { CustomNode } from './custom-node';
+import { CustomRepoSubscriptionNode, CustomStageNode, CustomWarehouseNode } from './custom-node';
 import { repoSubscriptionIndexer, stageIndexer, warehouseIndexer } from './node-indexer';
 import { useEventsWatcher } from './use-events-watcher';
 import { reactFlowNodeConstants, useReactFlowPipelineGraph } from './use-pipeline-graph';
@@ -30,8 +30,10 @@ type GraphProps = {
 };
 
 const nodeTypes = {
-  [reactFlowNodeConstants.CUSTOM_NODE]: CustomNode,
-  [reactFlowNodeConstants.STACKED_NODE]: StackedNodes
+  [reactFlowNodeConstants.STACKED_NODE]: StackedNodes,
+  [reactFlowNodeConstants.CUSTOM_WAREHOUSE_NODE]: CustomWarehouseNode,
+  [reactFlowNodeConstants.CUSTOM_STAGE_NODE]: CustomStageNode,
+  [reactFlowNodeConstants.CUSTOM_REPO_SUBSCRIPTION_NODE]: CustomRepoSubscriptionNode
 };
 
 export const Graph = (props: GraphProps) => {
@@ -91,11 +93,12 @@ export const Graph = (props: GraphProps) => {
   useEventsWatcher(
     props.project,
     {
-      onStage(stage) {
-        const index = stageIndexer.index(stage);
+      onStages(stages) {
+        const stageByIndex = new Map(stages.map((stage) => [stageIndexer.index(stage), stage]));
         setNodes((nodes) =>
           nodes.map((node) => {
-            if (node.id === index && node.type === reactFlowNodeConstants.CUSTOM_NODE) {
+            const stage = stageByIndex.get(node.id);
+            if (stage && node.type === reactFlowNodeConstants.CUSTOM_STAGE_NODE) {
               return {
                 ...node,
                 data: {
@@ -109,17 +112,25 @@ export const Graph = (props: GraphProps) => {
           })
         );
 
-        if (!nodes.find((n) => n.id === index)) {
-          setRedraw((prev) => !prev);
+        // A stage without an existing node is new and needs a full relayout.
+        if (stages.some((stage) => !nodes.find((n) => n.id === stageIndexer.index(stage)))) {
+          setTimeout(() => {
+            setRedraw((prev) => !prev);
+          });
         }
 
-        queryCache.imageStageMatrix.update(stage);
+        for (const stage of stages) {
+          queryCache.imageStageMatrix.update(stage);
+        }
       },
-      onWarehouse(warehouse) {
-        const index = warehouseIndexer.index(warehouse);
+      onWarehouses(warehouses) {
+        const warehouseByIndex = new Map(
+          warehouses.map((warehouse) => [warehouseIndexer.index(warehouse), warehouse])
+        );
         setNodes((nodes) =>
           nodes.map((node) => {
-            if (node.id === index && node.type === reactFlowNodeConstants.CUSTOM_NODE) {
+            const warehouse = warehouseByIndex.get(node.id);
+            if (warehouse && node.type === reactFlowNodeConstants.CUSTOM_WAREHOUSE_NODE) {
               return {
                 ...node,
                 data: {
@@ -133,11 +144,18 @@ export const Graph = (props: GraphProps) => {
           })
         );
 
-        if (!nodes.find((n) => n.id === index)) {
-          setRedraw((prev) => !prev);
+        // A warehouse without an existing node is new and needs a full relayout.
+        if (
+          warehouses.some(
+            (warehouse) => !nodes.find((n) => n.id === warehouseIndexer.index(warehouse))
+          )
+        ) {
+          setTimeout(() => {
+            setRedraw((prev) => !prev);
+          });
         }
 
-        queryCache.freight.refetch();
+        queryCache.freight.refetch(props.project);
       }
     },
     filterContext?.preferredFilter?.warehouses || []

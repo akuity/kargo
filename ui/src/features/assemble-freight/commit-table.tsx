@@ -1,8 +1,7 @@
 import { Radio, Table } from 'antd';
 import { useMemo } from 'react';
 
-import { DiscoveredCommit } from '@ui/gen/api/v1alpha1/generated_pb';
-import { timestampDate } from '@ui/utils/connectrpc-utils';
+import { DiscoveredCommit } from '@ui/gen/api/v2/models';
 
 import { TruncatedCopyable } from './truncated-copyable';
 import { useDetectPage } from './use-detect-page';
@@ -69,7 +68,7 @@ export const CommitTable = ({
         },
         {
           title: 'Date',
-          render: (record: DiscoveredCommit) => timestampDate(record.creatorDate)?.toLocaleString()
+          render: (record: DiscoveredCommit) => new Date(record.creatorDate || '')?.toLocaleString()
         }
       ]}
     />

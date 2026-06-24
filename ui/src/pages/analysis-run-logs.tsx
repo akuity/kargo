@@ -1,4 +1,3 @@
-import { useQuery } from '@connectrpc/connect-query';
 import { Breadcrumb } from 'antd';
 import { generatePath, useNavigate, useParams, useSearchParams } from 'react-router-dom';
 
@@ -6,8 +5,7 @@ import { paths } from '@ui/config/paths';
 import { LoadingState } from '@ui/features/common';
 import { AnalysisRunLogs } from '@ui/features/common/analysis-run-logs/analysis-run-logs';
 import { useDocumentTitle } from '@ui/features/common/document-title/use-document-title';
-import { getAnalysisRun } from '@ui/gen/api/service/v1alpha1/service-KargoService_connectquery';
-import { AnalysisRun } from '@ui/gen/api/stubs/rollouts/v1alpha1/generated_pb';
+import { useGetAnalysisRun } from '@ui/gen/api/v2/verifications/verifications';
 
 export const AnalysisRunLogsPage = () => {
   const { name, stageName, analysisRunId } = useParams();
@@ -15,10 +13,7 @@ export const AnalysisRunLogsPage = () => {
   const [searchParams] = useSearchParams();
   useDocumentTitle([analysisRunId && `Logs: ${analysisRunId}`, stageName, name]);
 
-  const getAnalysisRunQuery = useQuery(getAnalysisRun, {
-    namespace: name,
-    name: analysisRunId
-  });
+  const getAnalysisRunQuery = useGetAnalysisRun(name || '', analysisRunId || '');
 
   if (!name || !stageName || !analysisRunId) {
     return <>Not found</>;
@@ -54,7 +49,7 @@ export const AnalysisRunLogsPage = () => {
       />
       <AnalysisRunLogs
         height='80vh'
-        analysisRun={getAnalysisRunQuery?.data?.result?.value as AnalysisRun}
+        analysisRun={getAnalysisRunQuery.data?.data}
         defaultFilters={{
           selectedJob: searchParams.get('job') || '',
           selectedContainer: searchParams.get('container') || '',

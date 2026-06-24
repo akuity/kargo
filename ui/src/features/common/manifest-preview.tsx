@@ -1,4 +1,3 @@
-import { JsonValue } from '@bufbuild/protobuf';
 import yaml from 'yaml';
 
 import YamlEditor from './code-editor/yaml-editor-lazy';
@@ -7,7 +6,7 @@ export const ManifestPreview = ({
   object,
   height = '100%'
 }: {
-  object: JsonValue;
+  object: object;
   height?: string;
 }) => {
   const encodedObject = yaml.stringify(object, (_, v) => {

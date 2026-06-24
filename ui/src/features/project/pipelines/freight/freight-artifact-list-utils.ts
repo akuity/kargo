@@ -5,8 +5,7 @@ import {
   FreightReference,
   GitCommit,
   Image
-} from '@ui/gen/api/v1alpha1/generated_pb';
-
+} from '@ui/gen/api/v2/models';
 // DEFAULT_MAX_ARTIFACTS is the number of artifact tags rendered before the
 // remainder is collapsed into a "+N more" indicator.
 export const DEFAULT_MAX_ARTIFACTS = 3;

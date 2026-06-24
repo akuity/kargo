@@ -3,7 +3,7 @@ import { useMemo } from 'react';
 
 import { IAction, useActionContext } from '@ui/features/project/pipelines/context/action-context';
 import { useDictionaryContext } from '@ui/features/project/pipelines/context/dictionary-context';
-import { Freight, Stage } from '@ui/gen/api/v1alpha1/generated_pb';
+import { Freight, Stage } from '@ui/gen/api/v2/models';
 
 import { getSoakTime } from './get-soak-time';
 
@@ -22,7 +22,7 @@ import { getSoakTime } from './get-soak-time';
  */
 
 const soakTimeForPromotingStage = (payload: {
-  stage: Stage;
+  stage?: Stage;
   subscribersByStage: Record<string, Set<string>>;
   freights: Freight[];
   stageByName: Record<string, Stage>;
@@ -124,11 +124,11 @@ export const useSoakTime = (freights: Freight[]) => {
 
     for (const currentlyPromotingStage of currentlyPromotingStages) {
       soakTimes = soakTimeForPromotingStage({
-        stage: dictionaryContext?.stageByName?.[currentlyPromotingStage] as Stage,
+        stage: dictionaryContext?.stageByName?.[currentlyPromotingStage],
         freights,
         soakTimesByFreight: soakTimes,
-        stageByName: dictionaryContext?.stageByName as Record<string, Stage>,
-        subscribersByStage: dictionaryContext?.subscribersByStage as Record<string, Set<string>>
+        stageByName: dictionaryContext?.stageByName || {},
+        subscribersByStage: dictionaryContext?.subscribersByStage || {}
       });
     }
 

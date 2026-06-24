@@ -23,6 +23,7 @@ import type {
 } from '.././models';
 
 import { customFetch } from '../../../../lib/api/custom-fetch';
+import type { ErrorType } from '../../../../lib/api/custom-fetch';
 
 type SecondParameter<T extends (...args: never) => unknown> = Parameters<T>[1];
 
@@ -69,7 +70,10 @@ export const updateResource = async (
   });
 };
 
-export const getUpdateResourceMutationOptions = <TError = unknown, TContext = unknown>(options?: {
+export const getUpdateResourceMutationOptions = <
+  TError = ErrorType<unknown>,
+  TContext = unknown
+>(options?: {
   mutation?: UseMutationOptions<
     Awaited<ReturnType<typeof updateResource>>,
     TError,
@@ -104,12 +108,12 @@ export const getUpdateResourceMutationOptions = <TError = unknown, TContext = un
 
 export type UpdateResourceMutationResult = NonNullable<Awaited<ReturnType<typeof updateResource>>>;
 export type UpdateResourceMutationBody = UpdateResourceManifestBody;
-export type UpdateResourceMutationError = unknown;
+export type UpdateResourceMutationError = ErrorType<unknown>;
 
 /**
  * @summary Update resources
  */
-export const useUpdateResource = <TError = unknown, TContext = unknown>(
+export const useUpdateResource = <TError = ErrorType<unknown>, TContext = unknown>(
   options?: {
     mutation?: UseMutationOptions<
       Awaited<ReturnType<typeof updateResource>>,
@@ -170,7 +174,7 @@ export const createResource = async (
 };
 
 export const getCreateResourceMutationOptions = <
-  TError = ResourceErrorResponse,
+  TError = ErrorType<ResourceErrorResponse>,
   TContext = unknown
 >(options?: {
   mutation?: UseMutationOptions<
@@ -207,12 +211,12 @@ export const getCreateResourceMutationOptions = <
 
 export type CreateResourceMutationResult = NonNullable<Awaited<ReturnType<typeof createResource>>>;
 export type CreateResourceMutationBody = UpdateResourceManifestBody;
-export type CreateResourceMutationError = ResourceErrorResponse;
+export type CreateResourceMutationError = ErrorType<ResourceErrorResponse>;
 
 /**
  * @summary Create resources
  */
-export const useCreateResource = <TError = ResourceErrorResponse, TContext = unknown>(
+export const useCreateResource = <TError = ErrorType<ResourceErrorResponse>, TContext = unknown>(
   options?: {
     mutation?: UseMutationOptions<
       Awaited<ReturnType<typeof createResource>>,
@@ -264,7 +268,10 @@ export const deleteResource = async (
   });
 };
 
-export const getDeleteResourceMutationOptions = <TError = unknown, TContext = unknown>(options?: {
+export const getDeleteResourceMutationOptions = <
+  TError = ErrorType<unknown>,
+  TContext = unknown
+>(options?: {
   mutation?: UseMutationOptions<
     Awaited<ReturnType<typeof deleteResource>>,
     TError,
@@ -299,12 +306,12 @@ export const getDeleteResourceMutationOptions = <TError = unknown, TContext = un
 
 export type DeleteResourceMutationResult = NonNullable<Awaited<ReturnType<typeof deleteResource>>>;
 export type DeleteResourceMutationBody = UpdateResourceManifestBody;
-export type DeleteResourceMutationError = unknown;
+export type DeleteResourceMutationError = ErrorType<unknown>;
 
 /**
  * @summary Delete resources
  */
-export const useDeleteResource = <TError = unknown, TContext = unknown>(
+export const useDeleteResource = <TError = ErrorType<unknown>, TContext = unknown>(
   options?: {
     mutation?: UseMutationOptions<
       Awaited<ReturnType<typeof deleteResource>>,

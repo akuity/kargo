@@ -1,15 +1,15 @@
 // eslint-disable-file @typescript-eslint/ban-ts-comment
 import {
-  AnalysisRunSpec,
-  AnalysisRunStatus,
-  Argument,
-  CloudWatchMetric,
-  DatadogMetric,
-  Measurement,
-  MetricProvider,
-  MetricResult
-} from '@ui/gen/api/stubs/rollouts/v1alpha1/generated_pb';
-import { IntOrString } from '@ui/gen/k8s.io/apimachinery/pkg/util/intstr/generated_pb';
+  IntOrString,
+  RolloutsAnalysisRunSpec,
+  RolloutsAnalysisRunStatus,
+  RolloutsArgument,
+  RolloutsCloudWatchMetric,
+  RolloutsDatadogMetric,
+  RolloutsMeasurement,
+  RolloutsMetricProvider,
+  RolloutsMetricResult
+} from '@ui/gen/api/v2/models';
 
 import {
   AnalysisStatus,
@@ -40,8 +40,10 @@ export const getFiniteNumber = (
   if (!value || !isFiniteNumber(value)) {
     return fallback ? fallback : 0;
   }
-  const intVal = 'intVal' in (value as IntOrString) ? (value as IntOrString).intVal : value;
-  return intVal as number;
+  // Over REST, IntOrString serializes as a raw number or string rather than
+  // an object, so only look for intVal when value is actually an object.
+  const intVal = typeof value === 'object' && 'intVal' in value ? value.intVal : value;
+  return Number(intVal);
 };
 
 export const roundNumber = (value: number): number => Math.round(value * 100) / 100;
@@ -53,7 +55,7 @@ export const roundNumber = (value: number): number => Math.round(value * 100) / 
  * @param metricResults array of metric results
  * @returns timestamp in ms or null
  */
-export const analysisEndTime = (metricResults: MetricResult[]): number => {
+export const analysisEndTime = (metricResults: RolloutsMetricResult[]): number => {
   if (metricResults.length === 0) {
     return 0;
   }
@@ -61,7 +63,9 @@ export const analysisEndTime = (metricResults: MetricResult[]): number => {
   const measurementEndTimes: number[] = [];
   metricResults.forEach((metricResult) => {
     (metricResult.measurements ?? []).forEach((measurement) => {
-      const seconds = Number(measurement.finishedAt?.seconds);
+      const seconds = measurement.finishedAt
+        ? new Date(measurement.finishedAt).getTime() / 1000
+        : 0;
       if (seconds > 0) {
         measurementEndTimes.push(seconds);
       }
@@ -83,7 +87,7 @@ export const analysisEndTime = (metricResults: MetricResult[]): number => {
  * or null if argName is not present in args
  * or null if arg value is undefined or null
  */
-export const argValue = (args: Argument[], argName: string): string | null =>
+export const argValue = (args: RolloutsArgument[], argName: string): string | null =>
   args.find((arg) => arg.name === argName)?.value ?? null;
 
 // Metric Utils
@@ -93,7 +97,7 @@ export const argValue = (args: Argument[], argName: string): string | null =>
  * @param providerInfo metric provider object
  * @returns first key in the provider object
  */
-export const metricProvider = (providerInfo: MetricProvider): string =>
+export const metricProvider = (providerInfo: RolloutsMetricProvider): string =>
   Object.keys(providerInfo)?.[0] ?? 'unsupported provider';
 
 const PROVIDER_CONDITION_SUPPORT: {
@@ -149,8 +153,8 @@ const PROVIDER_CONDITION_SUPPORT: {
  */
 export const conditionDetails = (
   condition?: string,
-  args: Argument[] = [],
-  provider?: MetricProvider
+  args: RolloutsArgument[] = [],
+  provider?: RolloutsMetricProvider
 ): {
   label: string | null;
   thresholds: number[];
@@ -253,8 +257,8 @@ export const getAdjustedMetricPhase = (phase?: AnalysisStatus): AnalysisStatus =
  * @returns analysis metrics with additional information to render to the UI
  */
 export const transformMetrics = (
-  spec?: AnalysisRunSpec,
-  status?: AnalysisRunStatus
+  spec?: RolloutsAnalysisRunSpec,
+  status?: RolloutsAnalysisRunStatus
 ): { [key: string]: TransformedMetric } => {
   if (!spec || !status) {
     return {};
@@ -341,7 +345,7 @@ export const transformMetrics = (
   return transformedMetrics;
 };
 
-export const analysisSubstatus = (status?: AnalysisRunStatus) => {
+export const analysisSubstatus = (status?: RolloutsAnalysisRunStatus) => {
   return status
     ? metricSubstatus(
         status.phase as AnalysisStatus,
@@ -387,7 +391,7 @@ export const metricSubstatus = (
   }
 };
 
-export const analysisStatusLabel = (status?: AnalysisRunStatus) => {
+export const analysisStatusLabel = (status?: RolloutsAnalysisRunStatus) => {
   return metricStatusLabel(
     (status?.phase ?? AnalysisStatus.Unknown) as AnalysisStatus,
     status?.runSummary?.failed ?? 0,
@@ -451,7 +455,7 @@ export const metricStatusLabel = (
  * @returns the query with all {{ args.[argName] }} replaced with
  * the value of the arg
  */
-export const interpolateQuery = (query?: string, args?: Argument[]) => {
+export const interpolateQuery = (query?: string, args?: RolloutsArgument[]) => {
   if (!query) {
     return;
   }
@@ -467,7 +471,7 @@ export const interpolateQuery = (query?: string, args?: Argument[]) => {
   });
 };
 
-const interpolatedQueryArray = (query?: string, args?: Argument[]): string[] => {
+const interpolatedQueryArray = (query?: string, args?: RolloutsArgument[]): string[] => {
   const interpolated = interpolateQuery(query, args);
   if (interpolated) {
     return [interpolated];
@@ -481,7 +485,10 @@ const interpolatedQueryArray = (query?: string, args?: Argument[]): string[] => 
  * @param args arguments name/value pairs associated with the analysis run
  * @returns query formatted for display
  */
-export const printableDatadogQuery = (datadog?: DatadogMetric, args?: Argument[]): string[] => {
+export const printableDatadogQuery = (
+  datadog?: RolloutsDatadogMetric,
+  args?: RolloutsArgument[]
+): string[] => {
   if (datadog && (datadog?.apiVersion ?? '').toLowerCase() === 'v1' && 'query' in datadog) {
     return interpolatedQueryArray(datadog.query, args);
   }
@@ -493,16 +500,17 @@ export const printableDatadogQuery = (datadog?: DatadogMetric, args?: Argument[]
       return interpolatedQueryArray(datadog.query, args);
     }
     if (datadog?.queries) {
+      const queries = datadog.queries;
       const interpolatedQueries: { [key: string]: string } = {};
-      Object.keys(datadog.queries).forEach((queryKey) => {
-        const interpolated = interpolateQuery(datadog.queries[queryKey], args);
+      Object.keys(queries).forEach((queryKey) => {
+        const interpolated = interpolateQuery(queries[queryKey], args);
         if (interpolated) {
           interpolatedQueries[queryKey] = interpolated;
         }
       });
       return datadog?.formula
         ? [`queries: ${JSON.stringify(interpolatedQueries)}, formula: ${datadog.formula}`]
-        : Object.values(datadog.queries).reduce((result, query) => {
+        : Object.values(queries).reduce((result, query) => {
             const interpolated = interpolateQuery(query, args);
             if (interpolated) {
               result.push(interpolated);
@@ -519,7 +527,9 @@ export const printableDatadogQuery = (datadog?: DatadogMetric, args?: Argument[]
  * @param cloudWatch cloudwatch metric object
  * @returns query formatted for display or undefined
  */
-export const printableCloudWatchQuery = (cloudWatch?: CloudWatchMetric): string[] | undefined => {
+export const printableCloudWatchQuery = (
+  cloudWatch?: RolloutsCloudWatchMetric
+): string[] | undefined => {
   return Array.isArray(cloudWatch?.metricDataQueries)
     ? cloudWatch.metricDataQueries.map((query) => JSON.stringify(query))
     : undefined;
@@ -532,8 +542,8 @@ export const printableCloudWatchQuery = (cloudWatch?: CloudWatchMetric): string[
  * @returns query formatted for display or undefined
  */
 export const metricQueries = (
-  provider?: MetricProvider,
-  args: Argument[] = []
+  provider?: RolloutsMetricProvider,
+  args: RolloutsArgument[] = []
 ): string[] | undefined => {
   if (provider === undefined || provider === null) {
     return undefined;
@@ -572,7 +582,7 @@ export const metricQueries = (
  */
 export const transformMeasurements = (
   conditionKeys: string[],
-  measurements?: Measurement[]
+  measurements?: RolloutsMeasurement[]
 ): MeasurementSetInfo => {
   if (measurements === undefined || measurements.length === 0) {
     return {
@@ -591,7 +601,7 @@ export const transformMeasurements = (
         max: number | null;
         measurements: TransformedMeasurement[];
       },
-      currMeasurement: Measurement
+      currMeasurement: RolloutsMeasurement
     ) => {
       const transformedValue = transformMeasurementValue(conditionKeys, currMeasurement.value);
       const { canChart, tableValue } = transformedValue;

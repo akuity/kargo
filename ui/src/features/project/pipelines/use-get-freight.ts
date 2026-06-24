@@ -1,9 +1,9 @@
 import { useMemo } from 'react';
 
-import { FreightList } from '@ui/gen/api/service/v1alpha1/service_pb';
+import { Freight } from '@ui/gen/api/v2/models';
 
-export const useGetFreight = (freights: FreightList, search?: string) =>
+export const useGetFreight = (freights: Freight[], search?: string) =>
   useMemo(
-    () => !!search && freights?.freight?.find((f) => f?.metadata?.name === search),
+    () => !!search && freights?.find((f) => f?.metadata?.name === search),
     [freights, search]
   );

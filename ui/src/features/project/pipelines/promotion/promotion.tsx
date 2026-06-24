@@ -1,10 +1,11 @@
-import { useMutation, useQuery } from '@connectrpc/connect-query';
 import { faRefresh, faStopCircle, faUndo } from '@fortawesome/free-solid-svg-icons';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
+import { useMutation } from '@tanstack/react-query';
 import { Button, Descriptions, DescriptionsProps, Drawer, Flex, message, Modal, Tabs } from 'antd';
 import { formatDistance } from 'date-fns';
 import { useMemo } from 'react';
 import { generatePath, useNavigate } from 'react-router-dom';
+import { stringify } from 'yaml';
 
 import { paths } from '@ui/config/paths';
 import { LoadingState } from '@ui/features/common';
@@ -20,15 +21,13 @@ import { useDictionaryContext } from '@ui/features/project/pipelines/context/dic
 import { PromotionSteps } from '@ui/features/stage/promotion-steps';
 import { canAbortPromotion, hasAbortRequest } from '@ui/features/stage/utils/promotion';
 import {
-  abortPromotion,
-  getPromotion,
-  promoteToStage,
-  refreshResource
-} from '@ui/gen/api/service/v1alpha1/service-KargoService_connectquery';
-import { RawFormat } from '@ui/gen/api/service/v1alpha1/service_pb';
-import { Freight, Promotion as TPromotion } from '@ui/gen/api/v1alpha1/generated_pb';
-import { timestampDate } from '@ui/utils/connectrpc-utils';
-import { decodeRawData } from '@ui/utils/decode-raw-data';
+  refreshStage,
+  useAbortPromotion,
+  useGetPromotion,
+  usePromoteToStage
+} from '@ui/gen/api/v2/core/core';
+import { Promotion as TPromotion } from '@ui/gen/api/v2/models';
+import { parseDate } from '@ui/utils/dates';
 
 import { FreightDetails } from './freight-details';
 import { getPromotionActor } from './get-promotion-actor';
@@ -45,40 +44,48 @@ const Content = (props: { promotion: TPromotion; yaml: string }) => {
   const dictionaryContext = useDictionaryContext();
   const promotionDescriptions: DescriptionsProps['items'] = [];
 
-  const abortPromotionMutation = useMutation(abortPromotion, {
-    onSuccess: () =>
-      // Abort promotion annotates the Promotion resource and then controller acts
-      message.success({
-        content: `Abort Promotion ${promotion.metadata?.name} requested successfully.`
-      })
-  });
-
-  const promoteMutation = useMutation(promoteToStage, {
-    onSuccess(data) {
-      navigate(
-        generatePath(paths.promotion, {
-          name: props.promotion?.metadata?.namespace,
-          promotionId: data.promotion?.metadata?.name
+  const abortPromotionMutation = useAbortPromotion({
+    mutation: {
+      onSuccess: () =>
+        // Abort promotion annotates the Promotion resource and then controller acts
+        message.success({
+          content: `Abort Promotion ${promotion.metadata?.name} requested successfully.`
         })
-      );
     }
   });
 
-  const refreshResouceTypeStage = 'Stage';
-  const refreshResourceMutation = useMutation(refreshResource);
+  const promoteMutation = usePromoteToStage({
+    mutation: {
+      onSuccess(data) {
+        navigate(
+          generatePath(paths.promotion, {
+            name: props.promotion?.metadata?.namespace,
+            promotionId: data.data?.metadata?.name
+          })
+        );
+      }
+    }
+  });
+
+  const refreshResourceMutation = useMutation({
+    mutationFn: (payload: { project: string; stage: string }) =>
+      refreshStage(payload.project, payload.stage)
+  });
 
   const promotion = props.promotion;
   const affiliatedStage = getPromotionStage(promotion);
 
   const onRetryPromotion = () => {
-    const stage = affiliatedStage;
-    const project = props.promotion?.metadata?.namespace;
+    const stage = affiliatedStage || '';
+    const project = props.promotion?.metadata?.namespace || '';
     const freight = promotion?.spec?.freight;
 
     promoteMutation.mutate({
       stage,
       project,
-      freight
+      data: {
+        freight
+      }
     });
   };
 
@@ -88,7 +95,7 @@ const Content = (props: { promotion: TPromotion; yaml: string }) => {
   const isAbortRequestPending = hasAbortRequest(promotion) && !isPromotionTerminal;
 
   const freight = useMemo(
-    () => dictionaryContext?.freightById?.[promotion?.spec?.freight || ''] as Freight,
+    () => dictionaryContext?.freightById?.[promotion?.spec?.freight || ''],
     [dictionaryContext?.freightById, promotion]
   );
 
@@ -120,7 +127,7 @@ const Content = (props: { promotion: TPromotion; yaml: string }) => {
     )
   });
 
-  const promotionStartTime = timestampDate(promotion?.metadata?.creationTimestamp);
+  const promotionStartTime = parseDate(promotion?.metadata?.creationTimestamp);
 
   if (promotionStartTime) {
     const promotionRelativeStartTime = formatDistance(promotionStartTime, new Date(), {
@@ -134,7 +141,7 @@ const Content = (props: { promotion: TPromotion; yaml: string }) => {
   }
 
   if (isPromotionTerminal) {
-    const promotionEndTime = timestampDate(promotion?.status?.finishedAt);
+    const promotionEndTime = parseDate(promotion?.status?.finishedAt);
 
     if (promotionEndTime && promotionStartTime) {
       const duration = formatDistance(promotionStartTime, promotionEndTime, {
@@ -161,8 +168,8 @@ const Content = (props: { promotion: TPromotion; yaml: string }) => {
       title: 'Abort Promotion Request',
       onOk: () =>
         abortPromotionMutation.mutate({
-          project: promotion?.metadata?.namespace,
-          name: promotion?.metadata?.name
+          project: promotion?.metadata?.namespace || '',
+          promotion: promotion?.metadata?.name || ''
         }),
       okText: 'Abort',
       okButtonProps: {
@@ -183,7 +190,7 @@ const Content = (props: { promotion: TPromotion; yaml: string }) => {
             {
               key: 'date',
               label: 'Start Date',
-              children: timestampDate(promotion.metadata?.creationTimestamp)?.toString()
+              children: new Date(promotion.metadata?.creationTimestamp || '')?.toString()
             }
           ]}
         />
@@ -201,9 +208,8 @@ const Content = (props: { promotion: TPromotion; yaml: string }) => {
             icon={<FontAwesomeIcon icon={faRefresh} size='1x' />}
             onClick={() =>
               refreshResourceMutation.mutate({
-                project: promotion?.metadata?.namespace,
-                name: affiliatedStage,
-                resourceType: refreshResouceTypeStage
+                project: promotion?.metadata?.namespace || '',
+                stage: affiliatedStage || ''
               })
             }
             loading={refreshResourceMutation.isPending}
@@ -255,28 +261,19 @@ const Content = (props: { promotion: TPromotion; yaml: string }) => {
         ]}
       />
 
-      <FreightDetails freight={freight} />
+      {!!freight && <FreightDetails freight={freight} />}
     </>
   );
 };
 
 export const Promotion = (props: PromotionProps) => {
-  const getPromotionQuery = useQuery(getPromotion, {
-    project: props.project,
-    name: props.promotionId
-  });
-
-  const rawPromotionYamlQuery = useQuery(getPromotion, {
-    project: props.project,
-    name: props.promotionId,
-    format: RawFormat.YAML
-  });
+  const getPromotionQuery = useGetPromotion(props.project, props.promotionId);
 
   useWatchPromotion(props.project, props.promotionId);
 
   const rawPromotionYaml = useMemo(
-    () => decodeRawData(rawPromotionYamlQuery.data),
-    [rawPromotionYamlQuery.data]
+    () => stringify(getPromotionQuery.data?.data),
+    [getPromotionQuery.data?.data]
   );
 
   return (
@@ -289,10 +286,7 @@ export const Promotion = (props: PromotionProps) => {
     >
       {getPromotionQuery.isLoading && <LoadingState />}
       {!getPromotionQuery.isLoading && (
-        <Content
-          promotion={getPromotionQuery.data?.result?.value as TPromotion}
-          yaml={rawPromotionYaml}
-        />
+        <Content promotion={getPromotionQuery.data?.data as TPromotion} yaml={rawPromotionYaml} />
       )}
     </Drawer>
   );

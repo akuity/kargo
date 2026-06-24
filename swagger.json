@@ -975,9 +975,9 @@
         ],
         "responses": {
           "200": {
-            "description": "Map of freight groups",
+            "description": "OK",
             "schema": {
-              "type": "object"
+              "$ref": "#/definitions/pkg_server.queryFreightsResponse"
             }
           }
         }
@@ -8732,6 +8732,32 @@
         },
         "request": {
           "description": "Request is the name chosen for a request in the referenced claim.\nIf empty, everything from the claim is made available, otherwise\nonly the result of this request.\n\n+optional",
+          "type": "string"
+        }
+      }
+    },
+    "pkg_server.freightGroupList": {
+      "type": "object",
+      "properties": {
+        "items": {
+          "type": "array",
+          "items": {
+            "$ref": "#/definitions/Freight"
+          }
+        }
+      }
+    },
+    "pkg_server.queryFreightsResponse": {
+      "type": "object",
+      "properties": {
+        "groups": {
+          "type": "object",
+          "additionalProperties": {
+            "$ref": "#/definitions/pkg_server.freightGroupList"
+          }
+        },
+        "resourceVersion": {
+          "description": "ResourceVersion is the Kubernetes list resourceVersion clients use to\nseed a follow-up Freight watch so the API server does not replay every\nexisting Freight as an ADDED event. It is empty for the stage-scoped\nquery, whose result is assembled from multiple sources rather than a\nsingle watchable namespace list.",
           "type": "string"
         }
       }

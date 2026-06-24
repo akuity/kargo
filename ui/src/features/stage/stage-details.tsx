@@ -1,4 +1,3 @@
-import { useQuery } from '@connectrpc/connect-query';
 import {
   faBarsStaggered,
   faCircleCheck,
@@ -11,6 +10,7 @@ import { Drawer, Flex, Skeleton, Tabs, Typography } from 'antd';
 import moment from 'moment';
 import { useEffect, useMemo, useState } from 'react';
 import { generatePath, useNavigate, useParams } from 'react-router-dom';
+import { stringify } from 'yaml';
 
 import { SHARD_LABEL_KEY } from '@ui/config/labels';
 import { paths } from '@ui/config/paths';
@@ -19,14 +19,9 @@ import { Description } from '@ui/features/common/description';
 import { HealthStatusIcon } from '@ui/features/common/health-status/health-status-icon';
 import { useStageControllerStatus } from '@ui/features/common/stage-status/use-stage-controller-status';
 import { getCurrentFreightByWarehouse } from '@ui/features/common/utils';
-import {
-  getConfig,
-  getStage
-} from '@ui/gen/api/service/v1alpha1/service-KargoService_connectquery';
-import { RawFormat } from '@ui/gen/api/service/v1alpha1/service_pb';
-import { Stage } from '@ui/gen/api/v1alpha1/generated_pb';
-import { timestampDate } from '@ui/utils/connectrpc-utils';
-import { decodeRawData } from '@ui/utils/decode-raw-data';
+import { useGetStage } from '@ui/gen/api/v2/core/core';
+import { Stage } from '@ui/gen/api/v2/models';
+import { useGetConfig } from '@ui/gen/api/v2/system/system';
 
 import YamlEditor from '../common/code-editor/yaml-editor-lazy';
 import { StageConditionIcon } from '../common/stage-status/stage-condition-icon';
@@ -66,43 +61,37 @@ export const StageDetails = ({ stage }: { stage: Stage }) => {
   const verifications = useMemo(() => {
     setIsVerificationRunning(false);
     return (stage.status?.freightHistory || [])
-      .flatMap((freight) =>
-        freight.verificationHistory.map((verification) => {
-          if (verification.phase === 'Running' || verification.phase === 'Pending') {
-            setIsVerificationRunning(true);
-          }
-          return {
-            ...verification,
-            freight
-          };
-        })
+      .flatMap(
+        (freight) =>
+          freight.verificationHistory?.map((verification) => {
+            if (verification.phase === 'Running' || verification.phase === 'Pending') {
+              setIsVerificationRunning(true);
+            }
+            return {
+              ...verification,
+              freight
+            };
+          }) || []
       )
-      .sort((a, b) => moment(timestampDate(b.startTime)).diff(moment(timestampDate(a.startTime))));
+      .sort((a, b) => moment(b?.startTime).diff(moment(a?.startTime)));
   }, [stage]);
 
-  const rawStageYamlQuery = useQuery(getStage, {
-    project: projectName,
-    name: stage?.metadata?.name,
-    format: RawFormat.YAML
-  });
+  const stageQuery = useGetStage(projectName || '', stage?.metadata?.name || '');
 
   const [activeTab, setActiveTab] = useState(TabsTypes.PROMOTION);
 
   useEffect(() => {
     if (activeTab === TabsTypes.LIVE_MANIFEST) {
-      rawStageYamlQuery.refetch();
+      stageQuery.refetch();
     }
   }, [stage, activeTab]);
 
-  const rawStageYaml = useMemo(
-    () => decodeRawData(rawStageYamlQuery.data),
-    [rawStageYamlQuery.data]
-  );
+  const rawStageYaml = useMemo(() => stringify(stageQuery.data?.data), [stageQuery.data?.data]);
 
-  const getConfigQuery = useQuery(getConfig);
-  const config = getConfigQuery.data;
+  const getConfigQuery = useGetConfig();
+  const config = getConfigQuery.data?.data;
 
-  const shardKey = stage?.metadata?.labels[SHARD_LABEL_KEY] || '';
+  const shardKey = stage?.metadata?.labels?.[SHARD_LABEL_KEY] || '';
   const argocdShard = config?.argocdShards?.[shardKey];
 
   const { stageTabs } = useExtensionsContext();
@@ -185,7 +174,7 @@ export const StageDetails = ({ stage }: { stage: Stage }) => {
                   label: 'Live Manifest',
                   icon: <FontAwesomeIcon icon={faBarsStaggered} />,
                   className: 'h-full pb-2',
-                  children: rawStageYamlQuery.isLoading ? (
+                  children: stageQuery.isLoading ? (
                     <Skeleton />
                   ) : (
                     <YamlEditor value={rawStageYaml} height='700px' disabled />

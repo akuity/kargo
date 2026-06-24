@@ -1,13 +1,11 @@
-import { Freight, FreightReference, Stage } from '@ui/gen/api/v1alpha1/generated_pb';
-import { ObjectMeta } from '@ui/gen/k8s.io/apimachinery/pkg/apis/meta/v1/generated_pb';
-import { PlainMessageRecursive } from '@ui/utils/connectrpc-utils';
+import { Freight, FreightReference, Stage, V1ObjectMeta } from '@ui/gen/api/v2/models';
 
 export const ALIAS_LABEL_KEY = 'kargo.akuity.io/alias';
 export const DESCRIPTION_ANNOTATION_KEY = 'kargo.akuity.io/description';
 export const REPLICATE_TO_ANNOTATION_KEY = 'kargo.akuity.io/replicate-to';
 export const REPLICATE_TO_ALL_VALUE = '*';
 
-export const getAlias = (freight?: PlainMessageRecursive<Freight>): string | undefined => {
+export const getAlias = (freight?: Freight): string | undefined => {
   return freight?.alias || freight?.metadata?.labels?.[ALIAS_LABEL_KEY] || undefined;
 };
 
@@ -26,8 +24,8 @@ export function getDescription<T extends HasDescriptionAnnotation>(item: T) {
 }
 
 export function getCurrentFreight(stage: Stage): FreightReference[] {
-  return stage?.status?.freightHistory[0]
-    ? Object.values(stage?.status?.freightHistory[0]?.items)
+  return stage?.status?.freightHistory?.[0]
+    ? Object.values(stage?.status?.freightHistory[0]?.items ?? {})
     : [];
 }
 
@@ -79,7 +77,7 @@ export function getCurrentFreightWarehouse(stage: Stage) {
   const isWarehouseKind = freightRef.some((freight) => freight?.origin?.kind === 'Warehouse');
 
   if (isWarehouseKind) {
-    return freightRef[0]?.origin?.name || stage?.spec?.requestedFreight[0]?.origin?.name || '';
+    return freightRef[0]?.origin?.name || stage?.spec?.requestedFreight?.[0]?.origin?.name || '';
   }
 
   return '';
@@ -96,11 +94,11 @@ export function selectFreightByWarehouse(
 }
 
 export function currentFreightHasVerification(stage: Stage): boolean {
-  const collection = stage?.status?.freightHistory[0];
+  const collection = stage?.status?.freightHistory?.[0];
   return (collection && (collection.verificationHistory || []).length > 0) || false;
 }
 
-export function mapToNames<T extends { metadata?: ObjectMeta }>(objects: T[]) {
+export function mapToNames<T extends { metadata?: V1ObjectMeta }>(objects: T[]) {
   return (objects || []).reduce((acc, obj) => {
     if (obj?.metadata?.name) {
       acc.push(obj.metadata.name);

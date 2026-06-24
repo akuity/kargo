@@ -1,6 +1,6 @@
 import { Typography } from 'antd';
 
-import { Freight, FreightReference } from '@ui/gen/api/v1alpha1/generated_pb';
+import { Freight, FreightReference } from '@ui/gen/api/v2/models';
 
 import { FreightArtifact } from './freight-artifact';
 import { DEFAULT_MAX_ARTIFACTS, getFreightArtifacts } from './freight-artifact-list-utils';

@@ -4,7 +4,7 @@ import { useContext, useEffect, useRef, useState } from 'react';
 
 import { ColorContext } from '@ui/context/colors';
 import { WarehouseExpanded } from '@ui/extend/types';
-import { Stage } from '@ui/gen/api/v1alpha1/generated_pb';
+import { Stage } from '@ui/gen/api/v2/models';
 
 import { edgeIndexer } from './edge-indexer';
 import { layoutGraph } from './layout-graph';
@@ -13,8 +13,10 @@ import { repoSubscriptionSizer, stackSizer, stageSizer, warehouseSizer } from '.
 import { stackNodes } from './stack-nodes';
 
 export const reactFlowNodeConstants = {
-  CUSTOM_NODE: 'custom-node',
-  STACKED_NODE: 'stacked-node'
+  STACKED_NODE: 'stacked-node',
+  CUSTOM_WAREHOUSE_NODE: 'custom-warehouse-node',
+  CUSTOM_REPO_SUBSCRIPTION_NODE: 'custom-repo-subscription-node',
+  CUSTOM_STAGE_NODE: 'custom-stage-node'
 };
 
 export const useReactFlowPipelineGraph = (
@@ -102,17 +104,21 @@ export const useReactFlowPipelineGraph = (
         }
 
         let actualHeight: number;
+        let customGraphType: string;
         if (dagreNode?.warehouse) {
+          customGraphType = reactFlowNodeConstants.CUSTOM_WAREHOUSE_NODE;
           actualHeight = warehouseSizer.size().height;
         } else if (dagreNode?.subscription) {
+          customGraphType = reactFlowNodeConstants.CUSTOM_REPO_SUBSCRIPTION_NODE;
           actualHeight = repoSubscriptionSizer.size().height;
         } else {
+          customGraphType = reactFlowNodeConstants.CUSTOM_STAGE_NODE;
           actualHeight = stageSizer.size().height;
         }
 
         reactFlowNodes.push({
           id: node,
-          type: reactFlowNodeConstants.CUSTOM_NODE,
+          type: customGraphType,
           position: {
             x: dagreNode?.x - dagreNode?.width / 2,
             y: dagreNode?.y - actualHeight / 2
@@ -159,6 +165,11 @@ export const useReactFlowPipelineGraph = (
       setResult({ nodes: reactFlowNodes, edges: reactFlowEdges });
     };
 
+    // Run the first layout immediately so the graph paints without delay.
+    // Subsequent recomputes are throttled to at most once per 3s, since layout
+    // is expensive and watch-driven redraws can fire frequently. The watch
+    // hooks coalesce their event bursts (see watch-utils debounce), which keeps
+    // this throttle from being starved by a constant stream of redraw triggers.
     if (!functionCalled.current) {
       functionCalled.current = true;
       compute();

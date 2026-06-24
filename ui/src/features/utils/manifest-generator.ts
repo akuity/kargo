@@ -1,20 +1,11 @@
 import { stringify } from 'yaml';
 
-import {
-  ClusterPromotionTask,
-  PromotionTask,
-  WarehouseSpec
-} from '@ui/gen/api/v1alpha1/generated_pb';
-import { PartialRecursive, PlainMessageRecursive } from '@ui/utils/connectrpc-utils';
+import { ClusterPromotionTask, PromotionTask, WarehouseSpec } from '@ui/gen/api/v2/models';
 import { cleanEmptyObjectValues } from '@ui/utils/helpers';
 
 // generate manifests for kargo resources
 export const warehouseManifestsGen = {
-  v1alpha1: (def: {
-    projectName: string;
-    warehouseName: string;
-    spec: PartialRecursive<PlainMessageRecursive<WarehouseSpec>>;
-  }) =>
+  v1alpha1: (def: { projectName: string; warehouseName: string; spec: WarehouseSpec }) =>
     stringify({
       apiVersion: 'kargo.akuity.io/v1alpha1',
       kind: 'Warehouse',
@@ -22,7 +13,7 @@ export const warehouseManifestsGen = {
         name: def.warehouseName,
         namespace: def.projectName
       },
-      spec: cleanEmptyObjectValues(def.spec)
+      spec: cleanEmptyObjectValues(def.spec as Record<string, unknown>)
     })
 };
 

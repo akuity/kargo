@@ -6,7 +6,9 @@ import { ReactNode } from 'react';
 import { generatePath, Link } from 'react-router-dom';
 
 import { paths } from '@ui/config/paths';
-import { Chart, Freight, GitCommit, Image } from '@ui/gen/api/v1alpha1/generated_pb';
+import { Chart, Freight, GitCommit, Image } from '@ui/gen/api/v2/models';
+
+import { isArtifactChart, isArtifactImage } from './artifact-type-guards';
 
 export const CloneFreightNote = (props: {
   cloneFreight?: Freight;
@@ -25,7 +27,7 @@ export const CloneFreightNote = (props: {
         {props.missingArtifacts.map((artifact, idx) => {
           const isLast = props.missingArtifacts?.length === idx + 1;
 
-          if (artifact.$typeName === 'github.com.akuity.kargo.api.v1alpha1.Image') {
+          if (isArtifactImage(artifact)) {
             return (
               <>
                 {artifact?.repoURL}:{artifact.tag}
@@ -34,7 +36,7 @@ export const CloneFreightNote = (props: {
             );
           }
 
-          if (artifact.$typeName === 'github.com.akuity.kargo.api.v1alpha1.Chart') {
+          if (isArtifactChart(artifact)) {
             return (
               <>
                 {artifact?.repoURL}:{artifact.version}

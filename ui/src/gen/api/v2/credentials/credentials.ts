@@ -33,6 +33,7 @@ import type {
 } from '.././models';
 
 import { customFetch } from '../../../../lib/api/custom-fetch';
+import type { ErrorType } from '../../../../lib/api/custom-fetch';
 
 type SecondParameter<T extends (...args: never) => unknown> = Parameters<T>[1];
 
@@ -75,7 +76,7 @@ export const getListProjectGenericCredentialsQueryKey = (project?: string) => {
 
 export const getListProjectGenericCredentialsQueryOptions = <
   TData = Awaited<ReturnType<typeof listProjectGenericCredentials>>,
-  TError = unknown
+  TError = ErrorType<unknown>
 >(
   project: string,
   options?: {
@@ -102,11 +103,11 @@ export const getListProjectGenericCredentialsQueryOptions = <
 export type ListProjectGenericCredentialsQueryResult = NonNullable<
   Awaited<ReturnType<typeof listProjectGenericCredentials>>
 >;
-export type ListProjectGenericCredentialsQueryError = unknown;
+export type ListProjectGenericCredentialsQueryError = ErrorType<unknown>;
 
 export function useListProjectGenericCredentials<
   TData = Awaited<ReturnType<typeof listProjectGenericCredentials>>,
-  TError = unknown
+  TError = ErrorType<unknown>
 >(
   project: string,
   options: {
@@ -127,7 +128,7 @@ export function useListProjectGenericCredentials<
 ): DefinedUseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> };
 export function useListProjectGenericCredentials<
   TData = Awaited<ReturnType<typeof listProjectGenericCredentials>>,
-  TError = unknown
+  TError = ErrorType<unknown>
 >(
   project: string,
   options?: {
@@ -148,7 +149,7 @@ export function useListProjectGenericCredentials<
 ): UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> };
 export function useListProjectGenericCredentials<
   TData = Awaited<ReturnType<typeof listProjectGenericCredentials>>,
-  TError = unknown
+  TError = ErrorType<unknown>
 >(
   project: string,
   options?: {
@@ -165,7 +166,7 @@ export function useListProjectGenericCredentials<
 
 export function useListProjectGenericCredentials<
   TData = Awaited<ReturnType<typeof listProjectGenericCredentials>>,
-  TError = unknown
+  TError = ErrorType<unknown>
 >(
   project: string,
   options?: {
@@ -225,7 +226,7 @@ export const createProjectGenericCredentials = async (
 };
 
 export const getCreateProjectGenericCredentialsMutationOptions = <
-  TError = unknown,
+  TError = ErrorType<unknown>,
   TContext = unknown
 >(options?: {
   mutation?: UseMutationOptions<
@@ -264,12 +265,12 @@ export type CreateProjectGenericCredentialsMutationResult = NonNullable<
   Awaited<ReturnType<typeof createProjectGenericCredentials>>
 >;
 export type CreateProjectGenericCredentialsMutationBody = CreateGenericCredentialsRequestBody;
-export type CreateProjectGenericCredentialsMutationError = unknown;
+export type CreateProjectGenericCredentialsMutationError = ErrorType<unknown>;
 
 /**
  * @summary Create project-level generic credentials
  */
-export const useCreateProjectGenericCredentials = <TError = unknown, TContext = unknown>(
+export const useCreateProjectGenericCredentials = <TError = ErrorType<unknown>, TContext = unknown>(
   options?: {
     mutation?: UseMutationOptions<
       Awaited<ReturnType<typeof createProjectGenericCredentials>>,
@@ -333,7 +334,7 @@ export const getGetProjectGenericCredentialsQueryKey = (
 
 export const getGetProjectGenericCredentialsQueryOptions = <
   TData = Awaited<ReturnType<typeof getProjectGenericCredentials>>,
-  TError = unknown
+  TError = ErrorType<unknown>
 >(
   project: string,
   genericCredentials: string,
@@ -365,11 +366,11 @@ export const getGetProjectGenericCredentialsQueryOptions = <
 export type GetProjectGenericCredentialsQueryResult = NonNullable<
   Awaited<ReturnType<typeof getProjectGenericCredentials>>
 >;
-export type GetProjectGenericCredentialsQueryError = unknown;
+export type GetProjectGenericCredentialsQueryError = ErrorType<unknown>;
 
 export function useGetProjectGenericCredentials<
   TData = Awaited<ReturnType<typeof getProjectGenericCredentials>>,
-  TError = unknown
+  TError = ErrorType<unknown>
 >(
   project: string,
   genericCredentials: string,
@@ -391,7 +392,7 @@ export function useGetProjectGenericCredentials<
 ): DefinedUseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> };
 export function useGetProjectGenericCredentials<
   TData = Awaited<ReturnType<typeof getProjectGenericCredentials>>,
-  TError = unknown
+  TError = ErrorType<unknown>
 >(
   project: string,
   genericCredentials: string,
@@ -413,7 +414,7 @@ export function useGetProjectGenericCredentials<
 ): UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> };
 export function useGetProjectGenericCredentials<
   TData = Awaited<ReturnType<typeof getProjectGenericCredentials>>,
-  TError = unknown
+  TError = ErrorType<unknown>
 >(
   project: string,
   genericCredentials: string,
@@ -431,7 +432,7 @@ export function useGetProjectGenericCredentials<
 
 export function useGetProjectGenericCredentials<
   TData = Awaited<ReturnType<typeof getProjectGenericCredentials>>,
-  TError = unknown
+  TError = ErrorType<unknown>
 >(
   project: string,
   genericCredentials: string,
@@ -500,7 +501,7 @@ export const updateProjectGenericCredentials = async (
 };
 
 export const getUpdateProjectGenericCredentialsMutationOptions = <
-  TError = unknown,
+  TError = ErrorType<unknown>,
   TContext = unknown
 >(options?: {
   mutation?: UseMutationOptions<
@@ -539,12 +540,12 @@ export type UpdateProjectGenericCredentialsMutationResult = NonNullable<
   Awaited<ReturnType<typeof updateProjectGenericCredentials>>
 >;
 export type UpdateProjectGenericCredentialsMutationBody = UpdateGenericCredentialsRequestBody;
-export type UpdateProjectGenericCredentialsMutationError = unknown;
+export type UpdateProjectGenericCredentialsMutationError = ErrorType<unknown>;
 
 /**
  * @summary Replace project-level generic credentials
  */
-export const useUpdateProjectGenericCredentials = <TError = unknown, TContext = unknown>(
+export const useUpdateProjectGenericCredentials = <TError = ErrorType<unknown>, TContext = unknown>(
   options?: {
     mutation?: UseMutationOptions<
       Awaited<ReturnType<typeof updateProjectGenericCredentials>>,
@@ -603,7 +604,7 @@ export const deleteProjectGenericCredentials = async (
 };
 
 export const getDeleteProjectGenericCredentialsMutationOptions = <
-  TError = unknown,
+  TError = ErrorType<unknown>,
   TContext = unknown
 >(options?: {
   mutation?: UseMutationOptions<
@@ -642,12 +643,12 @@ export type DeleteProjectGenericCredentialsMutationResult = NonNullable<
   Awaited<ReturnType<typeof deleteProjectGenericCredentials>>
 >;
 
-export type DeleteProjectGenericCredentialsMutationError = unknown;
+export type DeleteProjectGenericCredentialsMutationError = ErrorType<unknown>;
 
 /**
  * @summary Delete project-level generic credentials
  */
-export const useDeleteProjectGenericCredentials = <TError = unknown, TContext = unknown>(
+export const useDeleteProjectGenericCredentials = <TError = ErrorType<unknown>, TContext = unknown>(
   options?: {
     mutation?: UseMutationOptions<
       Awaited<ReturnType<typeof deleteProjectGenericCredentials>>,
@@ -710,7 +711,7 @@ export const patchProjectGenericCredentials = async (
 };
 
 export const getPatchProjectGenericCredentialsMutationOptions = <
-  TError = unknown,
+  TError = ErrorType<unknown>,
   TContext = unknown
 >(options?: {
   mutation?: UseMutationOptions<
@@ -749,12 +750,12 @@ export type PatchProjectGenericCredentialsMutationResult = NonNullable<
   Awaited<ReturnType<typeof patchProjectGenericCredentials>>
 >;
 export type PatchProjectGenericCredentialsMutationBody = PatchGenericCredentialsRequestBody;
-export type PatchProjectGenericCredentialsMutationError = unknown;
+export type PatchProjectGenericCredentialsMutationError = ErrorType<unknown>;
 
 /**
  * @summary Patch project-level generic credentials
  */
-export const usePatchProjectGenericCredentials = <TError = unknown, TContext = unknown>(
+export const usePatchProjectGenericCredentials = <TError = ErrorType<unknown>, TContext = unknown>(
   options?: {
     mutation?: UseMutationOptions<
       Awaited<ReturnType<typeof patchProjectGenericCredentials>>,
@@ -813,7 +814,7 @@ export const getListProjectRepoCredentialsQueryKey = (project?: string) => {
 
 export const getListProjectRepoCredentialsQueryOptions = <
   TData = Awaited<ReturnType<typeof listProjectRepoCredentials>>,
-  TError = unknown
+  TError = ErrorType<unknown>
 >(
   project: string,
   options?: {
@@ -840,11 +841,11 @@ export const getListProjectRepoCredentialsQueryOptions = <
 export type ListProjectRepoCredentialsQueryResult = NonNullable<
   Awaited<ReturnType<typeof listProjectRepoCredentials>>
 >;
-export type ListProjectRepoCredentialsQueryError = unknown;
+export type ListProjectRepoCredentialsQueryError = ErrorType<unknown>;
 
 export function useListProjectRepoCredentials<
   TData = Awaited<ReturnType<typeof listProjectRepoCredentials>>,
-  TError = unknown
+  TError = ErrorType<unknown>
 >(
   project: string,
   options: {
@@ -865,7 +866,7 @@ export function useListProjectRepoCredentials<
 ): DefinedUseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> };
 export function useListProjectRepoCredentials<
   TData = Awaited<ReturnType<typeof listProjectRepoCredentials>>,
-  TError = unknown
+  TError = ErrorType<unknown>
 >(
   project: string,
   options?: {
@@ -886,7 +887,7 @@ export function useListProjectRepoCredentials<
 ): UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> };
 export function useListProjectRepoCredentials<
   TData = Awaited<ReturnType<typeof listProjectRepoCredentials>>,
-  TError = unknown
+  TError = ErrorType<unknown>
 >(
   project: string,
   options?: {
@@ -903,7 +904,7 @@ export function useListProjectRepoCredentials<
 
 export function useListProjectRepoCredentials<
   TData = Awaited<ReturnType<typeof listProjectRepoCredentials>>,
-  TError = unknown
+  TError = ErrorType<unknown>
 >(
   project: string,
   options?: {
@@ -962,7 +963,7 @@ export const createProjectRepoCredentials = async (
 };
 
 export const getCreateProjectRepoCredentialsMutationOptions = <
-  TError = unknown,
+  TError = ErrorType<unknown>,
   TContext = unknown
 >(options?: {
   mutation?: UseMutationOptions<
@@ -1001,12 +1002,12 @@ export type CreateProjectRepoCredentialsMutationResult = NonNullable<
   Awaited<ReturnType<typeof createProjectRepoCredentials>>
 >;
 export type CreateProjectRepoCredentialsMutationBody = CreateRepoCredentialsRequestBody;
-export type CreateProjectRepoCredentialsMutationError = unknown;
+export type CreateProjectRepoCredentialsMutationError = ErrorType<unknown>;
 
 /**
  * @summary Create project-level repository credentials
  */
-export const useCreateProjectRepoCredentials = <TError = unknown, TContext = unknown>(
+export const useCreateProjectRepoCredentials = <TError = ErrorType<unknown>, TContext = unknown>(
   options?: {
     mutation?: UseMutationOptions<
       Awaited<ReturnType<typeof createProjectRepoCredentials>>,
@@ -1069,7 +1070,7 @@ export const getGetProjectRepoCredentialsQueryKey = (
 
 export const getGetProjectRepoCredentialsQueryOptions = <
   TData = Awaited<ReturnType<typeof getProjectRepoCredentials>>,
-  TError = unknown
+  TError = ErrorType<unknown>
 >(
   project: string,
   repoCredentials: string,
@@ -1101,11 +1102,11 @@ export const getGetProjectRepoCredentialsQueryOptions = <
 export type GetProjectRepoCredentialsQueryResult = NonNullable<
   Awaited<ReturnType<typeof getProjectRepoCredentials>>
 >;
-export type GetProjectRepoCredentialsQueryError = unknown;
+export type GetProjectRepoCredentialsQueryError = ErrorType<unknown>;
 
 export function useGetProjectRepoCredentials<
   TData = Awaited<ReturnType<typeof getProjectRepoCredentials>>,
-  TError = unknown
+  TError = ErrorType<unknown>
 >(
   project: string,
   repoCredentials: string,
@@ -1127,7 +1128,7 @@ export function useGetProjectRepoCredentials<
 ): DefinedUseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> };
 export function useGetProjectRepoCredentials<
   TData = Awaited<ReturnType<typeof getProjectRepoCredentials>>,
-  TError = unknown
+  TError = ErrorType<unknown>
 >(
   project: string,
   repoCredentials: string,
@@ -1149,7 +1150,7 @@ export function useGetProjectRepoCredentials<
 ): UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> };
 export function useGetProjectRepoCredentials<
   TData = Awaited<ReturnType<typeof getProjectRepoCredentials>>,
-  TError = unknown
+  TError = ErrorType<unknown>
 >(
   project: string,
   repoCredentials: string,
@@ -1167,7 +1168,7 @@ export function useGetProjectRepoCredentials<
 
 export function useGetProjectRepoCredentials<
   TData = Awaited<ReturnType<typeof getProjectRepoCredentials>>,
-  TError = unknown
+  TError = ErrorType<unknown>
 >(
   project: string,
   repoCredentials: string,
@@ -1228,7 +1229,7 @@ export const updateProjectRepoCredentials = async (
 };
 
 export const getUpdateProjectRepoCredentialsMutationOptions = <
-  TError = unknown,
+  TError = ErrorType<unknown>,
   TContext = unknown
 >(options?: {
   mutation?: UseMutationOptions<
@@ -1267,12 +1268,12 @@ export type UpdateProjectRepoCredentialsMutationResult = NonNullable<
   Awaited<ReturnType<typeof updateProjectRepoCredentials>>
 >;
 export type UpdateProjectRepoCredentialsMutationBody = UpdateRepoCredentialsRequestBody;
-export type UpdateProjectRepoCredentialsMutationError = unknown;
+export type UpdateProjectRepoCredentialsMutationError = ErrorType<unknown>;
 
 /**
  * @summary Replace project-level repository credentials
  */
-export const useUpdateProjectRepoCredentials = <TError = unknown, TContext = unknown>(
+export const useUpdateProjectRepoCredentials = <TError = ErrorType<unknown>, TContext = unknown>(
   options?: {
     mutation?: UseMutationOptions<
       Awaited<ReturnType<typeof updateProjectRepoCredentials>>,
@@ -1327,7 +1328,7 @@ export const deleteProjectRepoCredentials = async (
 };
 
 export const getDeleteProjectRepoCredentialsMutationOptions = <
-  TError = unknown,
+  TError = ErrorType<unknown>,
   TContext = unknown
 >(options?: {
   mutation?: UseMutationOptions<
@@ -1366,12 +1367,12 @@ export type DeleteProjectRepoCredentialsMutationResult = NonNullable<
   Awaited<ReturnType<typeof deleteProjectRepoCredentials>>
 >;
 
-export type DeleteProjectRepoCredentialsMutationError = unknown;
+export type DeleteProjectRepoCredentialsMutationError = ErrorType<unknown>;
 
 /**
  * @summary Delete project-level repository credentials
  */
-export const useDeleteProjectRepoCredentials = <TError = unknown, TContext = unknown>(
+export const useDeleteProjectRepoCredentials = <TError = ErrorType<unknown>, TContext = unknown>(
   options?: {
     mutation?: UseMutationOptions<
       Awaited<ReturnType<typeof deleteProjectRepoCredentials>>,
@@ -1429,7 +1430,7 @@ export const patchProjectRepoCredentials = async (
 };
 
 export const getPatchProjectRepoCredentialsMutationOptions = <
-  TError = unknown,
+  TError = ErrorType<unknown>,
   TContext = unknown
 >(options?: {
   mutation?: UseMutationOptions<
@@ -1468,12 +1469,12 @@ export type PatchProjectRepoCredentialsMutationResult = NonNullable<
   Awaited<ReturnType<typeof patchProjectRepoCredentials>>
 >;
 export type PatchProjectRepoCredentialsMutationBody = PatchRepoCredentialsRequestBody;
-export type PatchProjectRepoCredentialsMutationError = unknown;
+export type PatchProjectRepoCredentialsMutationError = ErrorType<unknown>;
 
 /**
  * @summary Patch project-level repository credentials
  */
-export const usePatchProjectRepoCredentials = <TError = unknown, TContext = unknown>(
+export const usePatchProjectRepoCredentials = <TError = ErrorType<unknown>, TContext = unknown>(
   options?: {
     mutation?: UseMutationOptions<
       Awaited<ReturnType<typeof patchProjectRepoCredentials>>,
@@ -1529,7 +1530,7 @@ export const getListSharedGenericCredentialsQueryKey = () => {
 
 export const getListSharedGenericCredentialsQueryOptions = <
   TData = Awaited<ReturnType<typeof listSharedGenericCredentials>>,
-  TError = unknown
+  TError = ErrorType<unknown>
 >(options?: {
   query?: Partial<
     UseQueryOptions<Awaited<ReturnType<typeof listSharedGenericCredentials>>, TError, TData>
@@ -1553,11 +1554,11 @@ export const getListSharedGenericCredentialsQueryOptions = <
 export type ListSharedGenericCredentialsQueryResult = NonNullable<
   Awaited<ReturnType<typeof listSharedGenericCredentials>>
 >;
-export type ListSharedGenericCredentialsQueryError = unknown;
+export type ListSharedGenericCredentialsQueryError = ErrorType<unknown>;
 
 export function useListSharedGenericCredentials<
   TData = Awaited<ReturnType<typeof listSharedGenericCredentials>>,
-  TError = unknown
+  TError = ErrorType<unknown>
 >(
   options: {
     query: Partial<
@@ -1577,7 +1578,7 @@ export function useListSharedGenericCredentials<
 ): DefinedUseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> };
 export function useListSharedGenericCredentials<
   TData = Awaited<ReturnType<typeof listSharedGenericCredentials>>,
-  TError = unknown
+  TError = ErrorType<unknown>
 >(
   options?: {
     query?: Partial<
@@ -1597,7 +1598,7 @@ export function useListSharedGenericCredentials<
 ): UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> };
 export function useListSharedGenericCredentials<
   TData = Awaited<ReturnType<typeof listSharedGenericCredentials>>,
-  TError = unknown
+  TError = ErrorType<unknown>
 >(
   options?: {
     query?: Partial<
@@ -1613,7 +1614,7 @@ export function useListSharedGenericCredentials<
 
 export function useListSharedGenericCredentials<
   TData = Awaited<ReturnType<typeof listSharedGenericCredentials>>,
-  TError = unknown
+  TError = ErrorType<unknown>
 >(
   options?: {
     query?: Partial<
@@ -1670,7 +1671,7 @@ export const createSharedGenericCredentials = async (
 };
 
 export const getCreateSharedGenericCredentialsMutationOptions = <
-  TError = unknown,
+  TError = ErrorType<unknown>,
   TContext = unknown
 >(options?: {
   mutation?: UseMutationOptions<
@@ -1709,12 +1710,12 @@ export type CreateSharedGenericCredentialsMutationResult = NonNullable<
   Awaited<ReturnType<typeof createSharedGenericCredentials>>
 >;
 export type CreateSharedGenericCredentialsMutationBody = CreateGenericCredentialsRequestBody;
-export type CreateSharedGenericCredentialsMutationError = unknown;
+export type CreateSharedGenericCredentialsMutationError = ErrorType<unknown>;
 
 /**
  * @summary Create shared generic credentials
  */
-export const useCreateSharedGenericCredentials = <TError = unknown, TContext = unknown>(
+export const useCreateSharedGenericCredentials = <TError = ErrorType<unknown>, TContext = unknown>(
   options?: {
     mutation?: UseMutationOptions<
       Awaited<ReturnType<typeof createSharedGenericCredentials>>,
@@ -1773,7 +1774,7 @@ export const getGetSharedGenericCredentialsQueryKey = (genericCredentials?: stri
 
 export const getGetSharedGenericCredentialsQueryOptions = <
   TData = Awaited<ReturnType<typeof getSharedGenericCredentials>>,
-  TError = unknown
+  TError = ErrorType<unknown>
 >(
   genericCredentials: string,
   options?: {
@@ -1801,11 +1802,11 @@ export const getGetSharedGenericCredentialsQueryOptions = <
 export type GetSharedGenericCredentialsQueryResult = NonNullable<
   Awaited<ReturnType<typeof getSharedGenericCredentials>>
 >;
-export type GetSharedGenericCredentialsQueryError = unknown;
+export type GetSharedGenericCredentialsQueryError = ErrorType<unknown>;
 
 export function useGetSharedGenericCredentials<
   TData = Awaited<ReturnType<typeof getSharedGenericCredentials>>,
-  TError = unknown
+  TError = ErrorType<unknown>
 >(
   genericCredentials: string,
   options: {
@@ -1826,7 +1827,7 @@ export function useGetSharedGenericCredentials<
 ): DefinedUseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> };
 export function useGetSharedGenericCredentials<
   TData = Awaited<ReturnType<typeof getSharedGenericCredentials>>,
-  TError = unknown
+  TError = ErrorType<unknown>
 >(
   genericCredentials: string,
   options?: {
@@ -1847,7 +1848,7 @@ export function useGetSharedGenericCredentials<
 ): UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> };
 export function useGetSharedGenericCredentials<
   TData = Awaited<ReturnType<typeof getSharedGenericCredentials>>,
-  TError = unknown
+  TError = ErrorType<unknown>
 >(
   genericCredentials: string,
   options?: {
@@ -1864,7 +1865,7 @@ export function useGetSharedGenericCredentials<
 
 export function useGetSharedGenericCredentials<
   TData = Awaited<ReturnType<typeof getSharedGenericCredentials>>,
-  TError = unknown
+  TError = ErrorType<unknown>
 >(
   genericCredentials: string,
   options?: {
@@ -1923,7 +1924,7 @@ export const updateSharedGenericCredentials = async (
 };
 
 export const getUpdateSharedGenericCredentialsMutationOptions = <
-  TError = unknown,
+  TError = ErrorType<unknown>,
   TContext = unknown
 >(options?: {
   mutation?: UseMutationOptions<
@@ -1962,12 +1963,12 @@ export type UpdateSharedGenericCredentialsMutationResult = NonNullable<
   Awaited<ReturnType<typeof updateSharedGenericCredentials>>
 >;
 export type UpdateSharedGenericCredentialsMutationBody = UpdateGenericCredentialsRequestBody;
-export type UpdateSharedGenericCredentialsMutationError = unknown;
+export type UpdateSharedGenericCredentialsMutationError = ErrorType<unknown>;
 
 /**
  * @summary Replace shared generic credentials
  */
-export const useUpdateSharedGenericCredentials = <TError = unknown, TContext = unknown>(
+export const useUpdateSharedGenericCredentials = <TError = ErrorType<unknown>, TContext = unknown>(
   options?: {
     mutation?: UseMutationOptions<
       Awaited<ReturnType<typeof updateSharedGenericCredentials>>,
@@ -2021,7 +2022,7 @@ export const deleteSharedGenericCredentials = async (
 };
 
 export const getDeleteSharedGenericCredentialsMutationOptions = <
-  TError = unknown,
+  TError = ErrorType<unknown>,
   TContext = unknown
 >(options?: {
   mutation?: UseMutationOptions<
@@ -2060,12 +2061,12 @@ export type DeleteSharedGenericCredentialsMutationResult = NonNullable<
   Awaited<ReturnType<typeof deleteSharedGenericCredentials>>
 >;
 
-export type DeleteSharedGenericCredentialsMutationError = unknown;
+export type DeleteSharedGenericCredentialsMutationError = ErrorType<unknown>;
 
 /**
  * @summary Delete shared generic credentials
  */
-export const useDeleteSharedGenericCredentials = <TError = unknown, TContext = unknown>(
+export const useDeleteSharedGenericCredentials = <TError = ErrorType<unknown>, TContext = unknown>(
   options?: {
     mutation?: UseMutationOptions<
       Awaited<ReturnType<typeof deleteSharedGenericCredentials>>,
@@ -2124,7 +2125,7 @@ export const patchSharedGenericCredentials = async (
 };
 
 export const getPatchSharedGenericCredentialsMutationOptions = <
-  TError = unknown,
+  TError = ErrorType<unknown>,
   TContext = unknown
 >(options?: {
   mutation?: UseMutationOptions<
@@ -2163,12 +2164,12 @@ export type PatchSharedGenericCredentialsMutationResult = NonNullable<
   Awaited<ReturnType<typeof patchSharedGenericCredentials>>
 >;
 export type PatchSharedGenericCredentialsMutationBody = PatchGenericCredentialsRequestBody;
-export type PatchSharedGenericCredentialsMutationError = unknown;
+export type PatchSharedGenericCredentialsMutationError = ErrorType<unknown>;
 
 /**
  * @summary Patch shared generic credentials
  */
-export const usePatchSharedGenericCredentials = <TError = unknown, TContext = unknown>(
+export const usePatchSharedGenericCredentials = <TError = ErrorType<unknown>, TContext = unknown>(
   options?: {
     mutation?: UseMutationOptions<
       Awaited<ReturnType<typeof patchSharedGenericCredentials>>,
@@ -2223,7 +2224,7 @@ export const getListSharedRepoCredentialsQueryKey = () => {
 
 export const getListSharedRepoCredentialsQueryOptions = <
   TData = Awaited<ReturnType<typeof listSharedRepoCredentials>>,
-  TError = unknown
+  TError = ErrorType<unknown>
 >(options?: {
   query?: Partial<
     UseQueryOptions<Awaited<ReturnType<typeof listSharedRepoCredentials>>, TError, TData>
@@ -2247,11 +2248,11 @@ export const getListSharedRepoCredentialsQueryOptions = <
 export type ListSharedRepoCredentialsQueryResult = NonNullable<
   Awaited<ReturnType<typeof listSharedRepoCredentials>>
 >;
-export type ListSharedRepoCredentialsQueryError = unknown;
+export type ListSharedRepoCredentialsQueryError = ErrorType<unknown>;
 
 export function useListSharedRepoCredentials<
   TData = Awaited<ReturnType<typeof listSharedRepoCredentials>>,
-  TError = unknown
+  TError = ErrorType<unknown>
 >(
   options: {
     query: Partial<
@@ -2271,7 +2272,7 @@ export function useListSharedRepoCredentials<
 ): DefinedUseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> };
 export function useListSharedRepoCredentials<
   TData = Awaited<ReturnType<typeof listSharedRepoCredentials>>,
-  TError = unknown
+  TError = ErrorType<unknown>
 >(
   options?: {
     query?: Partial<
@@ -2291,7 +2292,7 @@ export function useListSharedRepoCredentials<
 ): UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> };
 export function useListSharedRepoCredentials<
   TData = Awaited<ReturnType<typeof listSharedRepoCredentials>>,
-  TError = unknown
+  TError = ErrorType<unknown>
 >(
   options?: {
     query?: Partial<
@@ -2307,7 +2308,7 @@ export function useListSharedRepoCredentials<
 
 export function useListSharedRepoCredentials<
   TData = Awaited<ReturnType<typeof listSharedRepoCredentials>>,
-  TError = unknown
+  TError = ErrorType<unknown>
 >(
   options?: {
     query?: Partial<
@@ -2360,7 +2361,7 @@ export const createSharedRepoCredentials = async (
 };
 
 export const getCreateSharedRepoCredentialsMutationOptions = <
-  TError = unknown,
+  TError = ErrorType<unknown>,
   TContext = unknown
 >(options?: {
   mutation?: UseMutationOptions<
@@ -2399,12 +2400,12 @@ export type CreateSharedRepoCredentialsMutationResult = NonNullable<
   Awaited<ReturnType<typeof createSharedRepoCredentials>>
 >;
 export type CreateSharedRepoCredentialsMutationBody = CreateRepoCredentialsRequestBody;
-export type CreateSharedRepoCredentialsMutationError = unknown;
+export type CreateSharedRepoCredentialsMutationError = ErrorType<unknown>;
 
 /**
  * @summary Create shared repository credentials
  */
-export const useCreateSharedRepoCredentials = <TError = unknown, TContext = unknown>(
+export const useCreateSharedRepoCredentials = <TError = ErrorType<unknown>, TContext = unknown>(
   options?: {
     mutation?: UseMutationOptions<
       Awaited<ReturnType<typeof createSharedRepoCredentials>>,
@@ -2463,7 +2464,7 @@ export const getGetSharedRepoCredentialsQueryKey = (repoCredentials?: string) =>
 
 export const getGetSharedRepoCredentialsQueryOptions = <
   TData = Awaited<ReturnType<typeof getSharedRepoCredentials>>,
-  TError = unknown
+  TError = ErrorType<unknown>
 >(
   repoCredentials: string,
   options?: {
@@ -2490,11 +2491,11 @@ export const getGetSharedRepoCredentialsQueryOptions = <
 export type GetSharedRepoCredentialsQueryResult = NonNullable<
   Awaited<ReturnType<typeof getSharedRepoCredentials>>
 >;
-export type GetSharedRepoCredentialsQueryError = unknown;
+export type GetSharedRepoCredentialsQueryError = ErrorType<unknown>;
 
 export function useGetSharedRepoCredentials<
   TData = Awaited<ReturnType<typeof getSharedRepoCredentials>>,
-  TError = unknown
+  TError = ErrorType<unknown>
 >(
   repoCredentials: string,
   options: {
@@ -2515,7 +2516,7 @@ export function useGetSharedRepoCredentials<
 ): DefinedUseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> };
 export function useGetSharedRepoCredentials<
   TData = Awaited<ReturnType<typeof getSharedRepoCredentials>>,
-  TError = unknown
+  TError = ErrorType<unknown>
 >(
   repoCredentials: string,
   options?: {
@@ -2536,7 +2537,7 @@ export function useGetSharedRepoCredentials<
 ): UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> };
 export function useGetSharedRepoCredentials<
   TData = Awaited<ReturnType<typeof getSharedRepoCredentials>>,
-  TError = unknown
+  TError = ErrorType<unknown>
 >(
   repoCredentials: string,
   options?: {
@@ -2553,7 +2554,7 @@ export function useGetSharedRepoCredentials<
 
 export function useGetSharedRepoCredentials<
   TData = Awaited<ReturnType<typeof getSharedRepoCredentials>>,
-  TError = unknown
+  TError = ErrorType<unknown>
 >(
   repoCredentials: string,
   options?: {
@@ -2611,7 +2612,7 @@ export const updateSharedRepoCredentials = async (
 };
 
 export const getUpdateSharedRepoCredentialsMutationOptions = <
-  TError = unknown,
+  TError = ErrorType<unknown>,
   TContext = unknown
 >(options?: {
   mutation?: UseMutationOptions<
@@ -2650,12 +2651,12 @@ export type UpdateSharedRepoCredentialsMutationResult = NonNullable<
   Awaited<ReturnType<typeof updateSharedRepoCredentials>>
 >;
 export type UpdateSharedRepoCredentialsMutationBody = UpdateRepoCredentialsRequestBody;
-export type UpdateSharedRepoCredentialsMutationError = unknown;
+export type UpdateSharedRepoCredentialsMutationError = ErrorType<unknown>;
 
 /**
  * @summary Replace shared repository credentials
  */
-export const useUpdateSharedRepoCredentials = <TError = unknown, TContext = unknown>(
+export const useUpdateSharedRepoCredentials = <TError = ErrorType<unknown>, TContext = unknown>(
   options?: {
     mutation?: UseMutationOptions<
       Awaited<ReturnType<typeof updateSharedRepoCredentials>>,
@@ -2708,7 +2709,7 @@ export const deleteSharedRepoCredentials = async (
 };
 
 export const getDeleteSharedRepoCredentialsMutationOptions = <
-  TError = unknown,
+  TError = ErrorType<unknown>,
   TContext = unknown
 >(options?: {
   mutation?: UseMutationOptions<
@@ -2747,12 +2748,12 @@ export type DeleteSharedRepoCredentialsMutationResult = NonNullable<
   Awaited<ReturnType<typeof deleteSharedRepoCredentials>>
 >;
 
-export type DeleteSharedRepoCredentialsMutationError = unknown;
+export type DeleteSharedRepoCredentialsMutationError = ErrorType<unknown>;
 
 /**
  * @summary Delete shared repository credentials
  */
-export const useDeleteSharedRepoCredentials = <TError = unknown, TContext = unknown>(
+export const useDeleteSharedRepoCredentials = <TError = ErrorType<unknown>, TContext = unknown>(
   options?: {
     mutation?: UseMutationOptions<
       Awaited<ReturnType<typeof deleteSharedRepoCredentials>>,
@@ -2809,7 +2810,7 @@ export const patchSharedRepoCredentials = async (
 };
 
 export const getPatchSharedRepoCredentialsMutationOptions = <
-  TError = unknown,
+  TError = ErrorType<unknown>,
   TContext = unknown
 >(options?: {
   mutation?: UseMutationOptions<
@@ -2848,12 +2849,12 @@ export type PatchSharedRepoCredentialsMutationResult = NonNullable<
   Awaited<ReturnType<typeof patchSharedRepoCredentials>>
 >;
 export type PatchSharedRepoCredentialsMutationBody = PatchRepoCredentialsRequestBody;
-export type PatchSharedRepoCredentialsMutationError = unknown;
+export type PatchSharedRepoCredentialsMutationError = ErrorType<unknown>;
 
 /**
  * @summary Patch shared repository credentials
  */
-export const usePatchSharedRepoCredentials = <TError = unknown, TContext = unknown>(
+export const usePatchSharedRepoCredentials = <TError = ErrorType<unknown>, TContext = unknown>(
   options?: {
     mutation?: UseMutationOptions<
       Awaited<ReturnType<typeof patchSharedRepoCredentials>>,
@@ -2909,7 +2910,7 @@ export const getListSystemGenericCredentialsQueryKey = () => {
 
 export const getListSystemGenericCredentialsQueryOptions = <
   TData = Awaited<ReturnType<typeof listSystemGenericCredentials>>,
-  TError = unknown
+  TError = ErrorType<unknown>
 >(options?: {
   query?: Partial<
     UseQueryOptions<Awaited<ReturnType<typeof listSystemGenericCredentials>>, TError, TData>
@@ -2933,11 +2934,11 @@ export const getListSystemGenericCredentialsQueryOptions = <
 export type ListSystemGenericCredentialsQueryResult = NonNullable<
   Awaited<ReturnType<typeof listSystemGenericCredentials>>
 >;
-export type ListSystemGenericCredentialsQueryError = unknown;
+export type ListSystemGenericCredentialsQueryError = ErrorType<unknown>;
 
 export function useListSystemGenericCredentials<
   TData = Awaited<ReturnType<typeof listSystemGenericCredentials>>,
-  TError = unknown
+  TError = ErrorType<unknown>
 >(
   options: {
     query: Partial<
@@ -2957,7 +2958,7 @@ export function useListSystemGenericCredentials<
 ): DefinedUseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> };
 export function useListSystemGenericCredentials<
   TData = Awaited<ReturnType<typeof listSystemGenericCredentials>>,
-  TError = unknown
+  TError = ErrorType<unknown>
 >(
   options?: {
     query?: Partial<
@@ -2977,7 +2978,7 @@ export function useListSystemGenericCredentials<
 ): UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> };
 export function useListSystemGenericCredentials<
   TData = Awaited<ReturnType<typeof listSystemGenericCredentials>>,
-  TError = unknown
+  TError = ErrorType<unknown>
 >(
   options?: {
     query?: Partial<
@@ -2993,7 +2994,7 @@ export function useListSystemGenericCredentials<
 
 export function useListSystemGenericCredentials<
   TData = Awaited<ReturnType<typeof listSystemGenericCredentials>>,
-  TError = unknown
+  TError = ErrorType<unknown>
 >(
   options?: {
     query?: Partial<
@@ -3050,7 +3051,7 @@ export const createSystemGenericCredentials = async (
 };
 
 export const getCreateSystemGenericCredentialsMutationOptions = <
-  TError = unknown,
+  TError = ErrorType<unknown>,
   TContext = unknown
 >(options?: {
   mutation?: UseMutationOptions<
@@ -3089,12 +3090,12 @@ export type CreateSystemGenericCredentialsMutationResult = NonNullable<
   Awaited<ReturnType<typeof createSystemGenericCredentials>>
 >;
 export type CreateSystemGenericCredentialsMutationBody = CreateGenericCredentialsRequestBody;
-export type CreateSystemGenericCredentialsMutationError = unknown;
+export type CreateSystemGenericCredentialsMutationError = ErrorType<unknown>;
 
 /**
  * @summary Create system-level generic credentials
  */
-export const useCreateSystemGenericCredentials = <TError = unknown, TContext = unknown>(
+export const useCreateSystemGenericCredentials = <TError = ErrorType<unknown>, TContext = unknown>(
   options?: {
     mutation?: UseMutationOptions<
       Awaited<ReturnType<typeof createSystemGenericCredentials>>,
@@ -3153,7 +3154,7 @@ export const getGetSystemGenericCredentialsQueryKey = (genericCredentials?: stri
 
 export const getGetSystemGenericCredentialsQueryOptions = <
   TData = Awaited<ReturnType<typeof getSystemGenericCredentials>>,
-  TError = unknown
+  TError = ErrorType<unknown>
 >(
   genericCredentials: string,
   options?: {
@@ -3181,11 +3182,11 @@ export const getGetSystemGenericCredentialsQueryOptions = <
 export type GetSystemGenericCredentialsQueryResult = NonNullable<
   Awaited<ReturnType<typeof getSystemGenericCredentials>>
 >;
-export type GetSystemGenericCredentialsQueryError = unknown;
+export type GetSystemGenericCredentialsQueryError = ErrorType<unknown>;
 
 export function useGetSystemGenericCredentials<
   TData = Awaited<ReturnType<typeof getSystemGenericCredentials>>,
-  TError = unknown
+  TError = ErrorType<unknown>
 >(
   genericCredentials: string,
   options: {
@@ -3206,7 +3207,7 @@ export function useGetSystemGenericCredentials<
 ): DefinedUseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> };
 export function useGetSystemGenericCredentials<
   TData = Awaited<ReturnType<typeof getSystemGenericCredentials>>,
-  TError = unknown
+  TError = ErrorType<unknown>
 >(
   genericCredentials: string,
   options?: {
@@ -3227,7 +3228,7 @@ export function useGetSystemGenericCredentials<
 ): UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> };
 export function useGetSystemGenericCredentials<
   TData = Awaited<ReturnType<typeof getSystemGenericCredentials>>,
-  TError = unknown
+  TError = ErrorType<unknown>
 >(
   genericCredentials: string,
   options?: {
@@ -3244,7 +3245,7 @@ export function useGetSystemGenericCredentials<
 
 export function useGetSystemGenericCredentials<
   TData = Awaited<ReturnType<typeof getSystemGenericCredentials>>,
-  TError = unknown
+  TError = ErrorType<unknown>
 >(
   genericCredentials: string,
   options?: {
@@ -3303,7 +3304,7 @@ export const updateSystemGenericCredentials = async (
 };
 
 export const getUpdateSystemGenericCredentialsMutationOptions = <
-  TError = unknown,
+  TError = ErrorType<unknown>,
   TContext = unknown
 >(options?: {
   mutation?: UseMutationOptions<
@@ -3342,12 +3343,12 @@ export type UpdateSystemGenericCredentialsMutationResult = NonNullable<
   Awaited<ReturnType<typeof updateSystemGenericCredentials>>
 >;
 export type UpdateSystemGenericCredentialsMutationBody = UpdateGenericCredentialsRequestBody;
-export type UpdateSystemGenericCredentialsMutationError = unknown;
+export type UpdateSystemGenericCredentialsMutationError = ErrorType<unknown>;
 
 /**
  * @summary Replace system-level generic credentials
  */
-export const useUpdateSystemGenericCredentials = <TError = unknown, TContext = unknown>(
+export const useUpdateSystemGenericCredentials = <TError = ErrorType<unknown>, TContext = unknown>(
   options?: {
     mutation?: UseMutationOptions<
       Awaited<ReturnType<typeof updateSystemGenericCredentials>>,
@@ -3401,7 +3402,7 @@ export const deleteSystemGenericCredentials = async (
 };
 
 export const getDeleteSystemGenericCredentialsMutationOptions = <
-  TError = unknown,
+  TError = ErrorType<unknown>,
   TContext = unknown
 >(options?: {
   mutation?: UseMutationOptions<
@@ -3440,12 +3441,12 @@ export type DeleteSystemGenericCredentialsMutationResult = NonNullable<
   Awaited<ReturnType<typeof deleteSystemGenericCredentials>>
 >;
 
-export type DeleteSystemGenericCredentialsMutationError = unknown;
+export type DeleteSystemGenericCredentialsMutationError = ErrorType<unknown>;
 
 /**
  * @summary Delete system-level generic credentials
  */
-export const useDeleteSystemGenericCredentials = <TError = unknown, TContext = unknown>(
+export const useDeleteSystemGenericCredentials = <TError = ErrorType<unknown>, TContext = unknown>(
   options?: {
     mutation?: UseMutationOptions<
       Awaited<ReturnType<typeof deleteSystemGenericCredentials>>,
@@ -3504,7 +3505,7 @@ export const patchSystemGenericCredentials = async (
 };
 
 export const getPatchSystemGenericCredentialsMutationOptions = <
-  TError = unknown,
+  TError = ErrorType<unknown>,
   TContext = unknown
 >(options?: {
   mutation?: UseMutationOptions<
@@ -3543,12 +3544,12 @@ export type PatchSystemGenericCredentialsMutationResult = NonNullable<
   Awaited<ReturnType<typeof patchSystemGenericCredentials>>
 >;
 export type PatchSystemGenericCredentialsMutationBody = PatchGenericCredentialsRequestBody;
-export type PatchSystemGenericCredentialsMutationError = unknown;
+export type PatchSystemGenericCredentialsMutationError = ErrorType<unknown>;
 
 /**
  * @summary Patch system-level generic credentials
  */
-export const usePatchSystemGenericCredentials = <TError = unknown, TContext = unknown>(
+export const usePatchSystemGenericCredentials = <TError = ErrorType<unknown>, TContext = unknown>(
   options?: {
     mutation?: UseMutationOptions<
       Awaited<ReturnType<typeof patchSystemGenericCredentials>>,

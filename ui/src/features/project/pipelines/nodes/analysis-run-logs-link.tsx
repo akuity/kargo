@@ -6,7 +6,7 @@ import { generatePath, Link } from 'react-router-dom';
 
 import { paths } from '@ui/config/paths';
 import { StageConditionType } from '@ui/features/common/stage-status/utils';
-import { Stage } from '@ui/gen/api/v1alpha1/generated_pb';
+import { Stage } from '@ui/gen/api/v2/models';
 
 type AnalysisRunLogsLinkProps = {
   stage: Stage;

@@ -1,6 +1,5 @@
 import { useDictionaryContext } from '@ui/features/project/pipelines/context/dictionary-context';
-import { Stage } from '@ui/gen/api/v1alpha1/generated_pb';
-import { HeartbeatStatus } from '@ui/gen/api/v2/models';
+import { HeartbeatStatus, Stage } from '@ui/gen/api/v2/models';
 
 // useStageControllerStatus resolves which controller a Stage is reconciled
 // by (its `spec.shard`, or — when empty — the cluster's default controller

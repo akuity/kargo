@@ -3,8 +3,7 @@ import { parse, stringify } from 'yaml';
 
 import { usePromotionDirectivesRegistryContext } from '@ui/features/promotion-directives/registry/context/use-registry-context';
 import { Runner } from '@ui/features/promotion-directives/registry/types';
-import { PromotionStep } from '@ui/gen/api/v1alpha1/generated_pb';
-import { PlainMessage } from '@ui/utils/connectrpc-utils';
+import { PromotionStep } from '@ui/gen/api/v2/models';
 
 import { RunnerWithConfiguration } from './types';
 
@@ -72,12 +71,12 @@ const yamlToState = (stepsYaml: string, runnersRegistry: Runner[]): RunnerWithCo
 };
 
 const stateToYAML = (state: RunnerWithConfiguration[]): string => {
-  const promotionSteps: PlainMessage<PromotionStep>[] = [];
+  const promotionSteps: PromotionStep[] = [];
 
   for (const step of state) {
     promotionSteps.push({
       uses: step.identifier,
-      // @ts-expect-error this will be object but its hard to convey in types after migration of connectrpc to v2
+      // this will be object but its hard to convey in types after migration of connectrpc to v2
       config: step.state,
       as: step.as || '',
       continueOnError: step.continueOnError || false,
