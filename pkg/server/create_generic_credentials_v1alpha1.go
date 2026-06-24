@@ -22,6 +22,7 @@ type genericCredentials struct {
 	name        string
 	description string
 	replicate   bool
+	secretType  string
 	data        map[string]string
 }
 
@@ -84,10 +85,14 @@ func (s *server) validateGenericCredentialsRequest(
 // createGenericCredentialsRequest is the request body for creating generic
 // credentials.
 type createGenericCredentialsRequest struct {
-	Name        string            `json:"name"`
-	Description string            `json:"description,omitempty"`
-	Replicate   bool              `json:"replicate,omitempty"`
-	Data        map[string]string `json:"data,omitempty"`
+	Name        string `json:"name"`
+	Description string `json:"description,omitempty"`
+	Replicate   bool   `json:"replicate,omitempty"`
+	// Type is the Kubernetes Secret type (e.g. "Opaque" or
+	// "kubernetes.io/dockerconfigjson"). It is immutable, so it may only be set
+	// at creation time. When empty, Kubernetes defaults it to "Opaque".
+	Type string            `json:"type,omitempty"`
+	Data map[string]string `json:"data,omitempty"`
 } // @name CreateGenericCredentialsRequest
 
 // @id CreateProjectGenericCredentials
@@ -126,6 +131,7 @@ func (s *server) createProjectGenericCredentials(c *gin.Context) {
 			name:        req.Name,
 			description: req.Description,
 			replicate:   req.Replicate,
+			secretType:  req.Type,
 			data:        req.Data,
 		},
 	)
@@ -171,6 +177,7 @@ func (s *server) createSystemGenericCredentials(c *gin.Context) {
 			name:        req.Name,
 			description: req.Description,
 			replicate:   req.Replicate,
+			secretType:  req.Type,
 			data:        req.Data,
 		},
 	)
@@ -215,6 +222,7 @@ func (s *server) createSharedGenericCredentials(c *gin.Context) {
 			name:        req.Name,
 			description: req.Description,
 			replicate:   req.Replicate,
+			secretType:  req.Type,
 			data:        req.Data,
 		},
 	)
@@ -265,6 +273,12 @@ func (s *server) genericCredentialsToK8sSecret(
 			},
 		},
 		Data: secretsData,
+	}
+
+	// Secret type is immutable, so it is only ever set at creation time. When
+	// empty, Kubernetes defaults it to corev1.SecretTypeOpaque.
+	if creds.secretType != "" {
+		secret.Type = corev1.SecretType(creds.secretType)
 	}
 
 	annotations := make(map[string]string)
