@@ -193,6 +193,9 @@ func (s *server) promoteToStage(c *gin.Context) {
 		return
 	}
 
+	// A request may identify the target by Freight, alias, or origin. Keep that
+	// split here because freightAlias is a REST convenience; Promotion specs only
+	// carry freight or origin.
 	nonEmpty := 0
 	for _, v := range []string{req.Freight, req.FreightAlias, req.Origin} {
 		if v != "" {
@@ -244,8 +247,9 @@ func (s *server) promoteToStage(c *gin.Context) {
 		return true
 	}
 
-	// Origin-based promotions: let the webhook resolve origin to freight.
 	if req.Origin != "" {
+		// Let admission resolve the origin to the current candidate Freight. That
+		// keeps "promote latest for this origin" race-free for REST clients.
 		origin, parseErr := kargoapi.ParseFreightOriginKey(req.Origin)
 		if parseErr != nil {
 			_ = c.Error(libhttp.ErrorStr(

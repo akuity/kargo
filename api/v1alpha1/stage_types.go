@@ -283,9 +283,12 @@ func ParseFreightOriginKey(key string) (FreightOrigin, error) {
 	return origin, nil
 }
 
-// Validate returns an error if the FreightOrigin has an unsupported kind or an
-// empty name.
-func (f FreightOrigin) Validate() error {
+// Validate returns an error if the FreightOrigin is nil, has an unsupported
+// kind, or has an empty name.
+func (f *FreightOrigin) Validate() error {
+	if f == nil {
+		return errors.New("Freight origin must not be nil")
+	}
 	if f.Kind != FreightOriginKindWarehouse {
 		return fmt.Errorf("invalid Freight origin kind %q", f.Kind)
 	}
@@ -462,12 +465,10 @@ type StageStatus struct {
 	// map entry pins a single origin keyed by the canonical string
 	// representation of the FreightOrigin.
 	AutoPromotionHolds map[string]AutoPromotionHold `json:"autoPromotionHolds,omitempty" protobuf:"bytes,16,rep,name=autoPromotionHolds" protobuf_key:"bytes,1,opt,name=key" protobuf_val:"bytes,2,opt,name=value"`
-	// AutoPromotionHoldsThrough is the watermark used by the Stage controller to
-	// process hold and release intent Promotions incrementally. It records the
-	// CreationTimestamp and Name of the latest intent Promotion that has already
-	// been applied to AutoPromotionHolds. On each reconcile only Promotions
-	// strictly newer than this watermark are processed, ensuring that
-	// garbage-collected Promotions do not corrupt the accumulated hold state.
+	// AutoPromotionHoldsThrough is controller bookkeeping for processing hold
+	// and release intent Promotions once. It records the newest intent Promotion
+	// already applied to AutoPromotionHolds, so a hold or release is not replayed
+	// incorrectly after old Promotion resources are garbage-collected.
 	AutoPromotionHoldsThrough *AutoPromotionHoldsWatermark `json:"autoPromotionHoldsThrough,omitempty" protobuf:"bytes,17,opt,name=autoPromotionHoldsThrough"`
 }
 

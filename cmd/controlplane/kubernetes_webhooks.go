@@ -136,8 +136,9 @@ func (o *kubernetesWebhooksServerOptions) run(ctx context.Context) error {
 		return fmt.Errorf("new manager: %w", err)
 	}
 
-	// Promotion defaulting resolves spec.origin using the same availability
-	// query as the Stage controller.
+	// The Promotion webhook may receive spec.origin without spec.freight. To
+	// resolve that origin, it lists the same available Freight the Stage
+	// controller considers for auto-promotion, so it needs those Freight indexes.
 	for _, freightIndex := range []struct {
 		field string
 		fn    client.IndexerFunc

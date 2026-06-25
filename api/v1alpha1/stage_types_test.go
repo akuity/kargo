@@ -987,24 +987,24 @@ func TestFreightOrigin_String(t *testing.T) {
 func TestFreightOrigin_Validate(t *testing.T) {
 	testCases := []struct {
 		name      string
-		origin    FreightOrigin
+		origin    *FreightOrigin
 		expectErr string
 	}{
 		{
 			name: "valid warehouse origin",
-			origin: FreightOrigin{
+			origin: &FreightOrigin{
 				Kind: FreightOriginKindWarehouse,
 				Name: "fake-warehouse",
 			},
 		},
 		{
 			name:      "empty kind",
-			origin:    FreightOrigin{Name: "fake-warehouse"},
+			origin:    &FreightOrigin{Name: "fake-warehouse"},
 			expectErr: "invalid Freight origin kind",
 		},
 		{
 			name: "unsupported kind",
-			origin: FreightOrigin{
+			origin: &FreightOrigin{
 				Kind: FreightOriginKind("Stage"),
 				Name: "fake-stage",
 			},
@@ -1012,8 +1012,12 @@ func TestFreightOrigin_Validate(t *testing.T) {
 		},
 		{
 			name:      "empty name",
-			origin:    FreightOrigin{Kind: FreightOriginKindWarehouse},
+			origin:    &FreightOrigin{Kind: FreightOriginKindWarehouse},
 			expectErr: "name must not be empty",
+		},
+		{
+			name:      "nil origin",
+			expectErr: "must not be nil",
 		},
 	}
 

@@ -187,6 +187,8 @@ func (r *RegularStageReconciler) SetupWithManager(
 		return fmt.Errorf("index Freight by Stages for which it has been approved: %w", err)
 	}
 
+	// Match-upstream auto-promotion selection finds candidate Freight by the
+	// upstream Stage it is currently in.
 	if err := sharedIndexer.IndexField(
 		ctx,
 		&kargoapi.Freight{},
@@ -429,7 +431,9 @@ func (r *RegularStageReconciler) reconcile(
 		reconcile           func() (kargoapi.StageStatus, error)
 	}{
 		{
-			name:                "syncing Promotions",
+			name: "syncing Promotions",
+			// syncPromotions owns auto-promotion hold status; do not continue
+			// reconciling with stale hold state if its status patch fails.
 			requireStatusUpdate: true,
 			reconcile: func() (kargoapi.StageStatus, error) {
 				status, hasPendingPromotions, err := r.syncPromotions(ctx, stage)
@@ -1848,10 +1852,9 @@ func (r *RegularStageReconciler) autoPromoteFreight(
 			continue
 		}
 
-		// Also skip origins with a non-terminal hold-intent Promotion. This
-		// prevents a race where auto-promotion fires between the hold Promotion
-		// being created and it succeeding (i.e., before syncAutoPromotionHolds
-		// has processed it into committed hold state).
+		// A hold only reaches Stage status after its Promotion succeeds. Until
+		// then, skip this origin so auto-promotion cannot start while the user's
+		// hold intent is still running.
 		holdPending, holdErr := r.nonTerminalHoldIntentPromotionExistsForOrigin(ctx, stage, origin)
 		if holdErr != nil {
 			return newStatus, fmt.Errorf(
@@ -1967,6 +1970,10 @@ func (r *RegularStageReconciler) autoPromoteFreight(
 	return newStatus, nil
 }
 
+// stageAwaitingFreightForOrigin reports whether this reconcile pass has already
+// observed a Promotion for the named Freight and origin. autoPromoteFreight uses
+// it to avoid creating a duplicate Promotion before the status patch from
+// syncPromotions reaches the API server.
 func stageAwaitingFreightForOrigin(
 	stage *kargoapi.Stage,
 	origin string,
@@ -1982,10 +1989,10 @@ func stageAwaitingFreightForOrigin(
 		stage.Status.CurrentPromotion.Freight.Origin.String() == origin
 }
 
-// nonTerminalHoldIntentPromotionExistsForOrigin reports whether there is a
-// non-terminal Promotion for the Stage carrying hold intent for the given
-// origin. Used by autoPromoteFreight to avoid a race between auto-promotion
-// and a pending hold Promotion.
+// nonTerminalHoldIntentPromotionExistsForOrigin reports whether a user
+// hold-intent Promotion for this origin is still pending or running.
+// autoPromoteFreight uses this to wait for that Promotion to establish a hold
+// or finish without one before considering the origin again.
 func (r *RegularStageReconciler) nonTerminalHoldIntentPromotionExistsForOrigin(
 	ctx context.Context,
 	stage *kargoapi.Stage,
@@ -2016,6 +2023,9 @@ func (r *RegularStageReconciler) nonTerminalHoldIntentPromotionExistsForOrigin(
 	return false, nil
 }
 
+// nonTerminalPromotionExistsForStageFreight reports whether a Promotion for this
+// Stage and Freight is already pending or running. autoPromoteFreight uses it
+// to avoid creating duplicate work for the same candidate.
 func (r *RegularStageReconciler) nonTerminalPromotionExistsForStageFreight(
 	ctx context.Context,
 	stage *kargoapi.Stage,
@@ -2030,6 +2040,10 @@ func (r *RegularStageReconciler) nonTerminalPromotionExistsForStageFreight(
 	return len(promotions.Items) > 0, nil
 }
 
+// newestTerminalPromotionForStageFreight returns the newest completed Promotion
+// for this Stage and Freight. autoPromoteFreight uses it to avoid retrying
+// terminal failures and, under newest-Freight selection, avoid re-promoting a
+// candidate already tried.
 func (r *RegularStageReconciler) newestTerminalPromotionForStageFreight(
 	ctx context.Context,
 	stage *kargoapi.Stage,
@@ -2051,6 +2065,9 @@ func (r *RegularStageReconciler) newestTerminalPromotionForStageFreight(
 	return &promotions.Items[0], nil
 }
 
+// listPromotionsForStageFreight lists Promotions for this Stage and Freight
+// filtered by terminal state. The field indexes keep autoPromoteFreight from
+// scanning every Promotion in the project.
 func (r *RegularStageReconciler) listPromotionsForStageFreight(
 	ctx context.Context,
 	stage *kargoapi.Stage,

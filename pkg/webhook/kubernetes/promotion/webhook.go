@@ -257,6 +257,9 @@ func (w *webhook) Default(ctx context.Context, obj runtime.Object) error {
 			return fmt.Errorf("decode old object: %w", err)
 		}
 
+		// These annotations describe the creation request. Preserve the admitted
+		// values on every update so status writers and clients cannot change hold
+		// or release intent after the Promotion has been created.
 		preserveAnnotation := func(key string) {
 			if oldValue, ok := oldPromo.Annotations[key]; ok {
 				promo.Annotations[key] = oldValue
@@ -326,11 +329,21 @@ func (w *webhook) resolveOriginToFreight(
 // holds. Errors are swallowed; intent inference is best-effort and must not
 // block Promotion creation.
 //
-// Accepted race: the candidate can change between this lookup and the
-// Promotion succeeding. That may misclassify intent once, but the selected
-// Freight is still promoted and the next candidate promotion corrects the hold.
-// A newer candidate can also auto-promote before the user's Promotion exists;
-// the pending-hold check in autoPromoteFreight closes the window after that.
+// Accepted races:
+//
+// 1. A user can submit a Promotion for the current candidate, then newer Freight
+// can become available before this webhook infers intent. The Promotion may be
+// stamped as hold intent even though the user picked the candidate they saw.
+// This is benign: the selected Freight is still promoted, and promoting the new
+// current candidate releases the hold. Resolving this fully would require extra
+// candidate identity plumbing and still could not eliminate every stale-read
+// window.
+//
+// 2. A user can submit a Promotion for non-candidate Freight while an
+// auto-promotion for the candidate is also being created. If the auto-promotion
+// reaches the queue first, it runs first; the user's hold-intent Promotion runs
+// after it and blocks future auto-promotion. That order is self-correcting, so
+// avoiding it is not worth more coordination state.
 func (w *webhook) stampIntentAnnotations(
 	ctx context.Context,
 	promo *kargoapi.Promotion,

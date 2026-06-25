@@ -26,7 +26,7 @@ func TestNewContext_Rollback(t *testing.T) {
 			name: "rollback annotation absent",
 		},
 		{
-			name:     "legacy rollback annotation origin value",
+			name:     "rollback marker with origin value",
 			value:    "Warehouse/fake-warehouse",
 			expected: true,
 		},
