@@ -5680,6 +5680,11 @@ func TestRegularStageReconciler_autoPromoteFreight(t *testing.T) {
 				require.NoError(t, c.List(t.Context(), promoList, client.InNamespace("fake-project")))
 				require.Len(t, promoList.Items, 1)
 				assert.Equal(t, "test-freight-1", promoList.Items[0].Spec.Freight)
+				assert.Equal(
+					t,
+					kargoapi.AnnotationValueTrue,
+					promoList.Items[0].Annotations[kargoapi.AnnotationKeyStageAutoPromotion],
+				)
 			},
 		},
 		{
@@ -7279,6 +7284,11 @@ func TestRegularStageReconciler_autoPromoteFreight(t *testing.T) {
 				))
 				require.Len(t, promoList.Items, 1)
 				assert.Equal(t, "open-freight-new", promoList.Items[0].Spec.Freight)
+				assert.Equal(
+					t,
+					kargoapi.AnnotationValueTrue,
+					promoList.Items[0].Annotations[kargoapi.AnnotationKeyStageAutoPromotion],
+				)
 			},
 		},
 	}

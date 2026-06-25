@@ -460,10 +460,10 @@ type StageStatus struct {
 	// that can be shared across promotions, verifications, or other processes.
 	Metadata map[string]apiextensionsv1.JSON `json:"metadata,omitempty" protobuf:"bytes,15,rep,name=metadata" protobuf_key:"bytes,1,opt,name=key" protobuf_val:"bytes,2,opt,name=value"`
 	// AutoPromotionHolds pause auto-promotion for specific FreightOrigins on
-	// this Stage after a user-directed promotion intentionally selects Freight
-	// other than the current auto-promotion candidate for the same origin. Each
-	// map entry pins a single origin keyed by the canonical string
-	// representation of the FreightOrigin.
+	// this Stage after a Promotion selects Freight other than the current
+	// auto-promotion candidate for the same origin. Stage-controller
+	// auto-promotions do not create holds. Each map entry pins a single origin
+	// keyed by the canonical string representation of the FreightOrigin.
 	AutoPromotionHolds map[string]AutoPromotionHold `json:"autoPromotionHolds,omitempty" protobuf:"bytes,16,rep,name=autoPromotionHolds" protobuf_key:"bytes,1,opt,name=key" protobuf_val:"bytes,2,opt,name=value"`
 	// AutoPromotionHoldsThrough is controller bookkeeping for processing hold
 	// and release intent Promotions once. It records the newest intent Promotion
@@ -485,10 +485,10 @@ type AutoPromotionHoldsWatermark struct {
 }
 
 // AutoPromotionHold pins a single FreightOrigin on a Stage, pausing
-// auto-promotion for that origin after a user-directed Promotion selects
-// Freight other than the current auto-promotion candidate. Other origins
-// continue to auto-promote normally. The origin is identified by the enclosing
-// map key.
+// auto-promotion for that origin after a Promotion selects Freight other than
+// the current auto-promotion candidate. Stage-controller auto-promotions do not
+// create holds. Other origins continue to auto-promote normally. The origin is
+// identified by the enclosing map key.
 type AutoPromotionHold struct {
 	// FreightName is the name of the Freight selected when the hold was created.
 	FreightName string `json:"freightName" protobuf:"bytes,1,opt,name=freightName"`

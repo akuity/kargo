@@ -198,10 +198,12 @@ func (w *webhook) Default(ctx context.Context, obj runtime.Object) error {
 			promo.Name = api.GeneratePromotionName(stage.Name, promo.Spec.Freight)
 		}
 
+		requestFromControlPlane := w.isRequestFromKargoControlplaneFn(req)
 		// Set actor as an admission request's user info when the promotion is
 		// created to allow controllers to track who created it.
-		if !w.isRequestFromKargoControlplaneFn(req) {
+		if !requestFromControlPlane {
 			promo.Annotations[kargoapi.AnnotationKeyCreateActor] = api.FormatEventKubernetesUserActor(req.UserInfo)
+			delete(promo.Annotations, kargoapi.AnnotationKeyStageAutoPromotion)
 		}
 
 		// Enrich the annotation with the actor and control plane information.
@@ -240,13 +242,14 @@ func (w *webhook) Default(ctx context.Context, obj runtime.Object) error {
 			return fmt.Errorf("failed to inflate Promotion steps: %w", err)
 		}
 
-		// For user-created Promotions, stamp intent annotations so the Stage
-		// controller can maintain auto-promotion holds. Use create-actor instead
-		// of request identity: UI/CLI Promotions are created by the API server
-		// service account, while Stage-controller auto-promotions have no actor.
+		// Stamp intent annotations on created Promotions so the Stage controller
+		// can maintain auto-promotion holds. Skip only Kargo's own Stage
+		// auto-promotions; other controller-created Promotions can still represent
+		// a deliberate choice of Freight.
 		delete(promo.Annotations, kargoapi.AnnotationKeyAutoPromotionHold)
 		delete(promo.Annotations, kargoapi.AnnotationKeyAutoPromotionRelease)
-		if promo.Annotations[kargoapi.AnnotationKeyCreateActor] != "" {
+		if promo.Annotations[kargoapi.AnnotationKeyStageAutoPromotion] !=
+			kargoapi.AnnotationValueTrue {
 			w.stampIntentAnnotations(ctx, promo, stage)
 		}
 	case admissionv1.Update:
@@ -268,6 +271,7 @@ func (w *webhook) Default(ctx context.Context, obj runtime.Object) error {
 			delete(promo.Annotations, key)
 		}
 		preserveAnnotation(kargoapi.AnnotationKeyCreateActor)
+		preserveAnnotation(kargoapi.AnnotationKeyStageAutoPromotion)
 		preserveAnnotation(kargoapi.AnnotationKeyAutoPromotionHold)
 		preserveAnnotation(kargoapi.AnnotationKeyAutoPromotionRelease)
 
@@ -324,25 +328,24 @@ func (w *webhook) resolveOriginToFreight(
 	return nil
 }
 
-// stampIntentAnnotations stamps hold or release intent annotations on a
-// user-created Promotion so the Stage controller can maintain auto-promotion
-// holds. Errors are swallowed; intent inference is best-effort and must not
-// block Promotion creation.
+// stampIntentAnnotations stamps hold or release intent annotations so the Stage
+// controller can maintain auto-promotion holds. Errors are swallowed; intent
+// inference is best-effort and must not block Promotion creation.
 //
 // Accepted races:
 //
-// 1. A user can submit a Promotion for the current candidate, then newer Freight
-// can become available before this webhook infers intent. The Promotion may be
-// stamped as hold intent even though the user picked the candidate they saw.
-// This is benign: the selected Freight is still promoted, and promoting the new
-// current candidate releases the hold. Resolving this fully would require extra
-// candidate identity plumbing and still could not eliminate every stale-read
-// window.
+// 1. A Promotion can be created for the current candidate, then newer
+// Freight can become available before this webhook infers intent. The Promotion
+// may be stamped as hold intent even though it selected the candidate visible
+// at creation time. This is benign: the selected Freight is still promoted, and
+// promoting the new current candidate releases the hold. Resolving this fully
+// would require extra candidate identity plumbing and still could not eliminate
+// every stale-read window.
 //
-// 2. A user can submit a Promotion for non-candidate Freight while an
+// 2. A Promotion can select non-candidate Freight while an
 // auto-promotion for the candidate is also being created. If the auto-promotion
-// reaches the queue first, it runs first; the user's hold-intent Promotion runs
-// after it and blocks future auto-promotion. That order is self-correcting, so
+// reaches the queue first, it runs first; the hold-intent Promotion runs after
+// it and blocks future auto-promotion. That order is self-correcting, so
 // avoiding it is not worth more coordination state.
 func (w *webhook) stampIntentAnnotations(
 	ctx context.Context,
@@ -520,6 +523,7 @@ func (w *webhook) ValidateUpdate(
 	}
 
 	for _, key := range []string{
+		kargoapi.AnnotationKeyStageAutoPromotion,
 		kargoapi.AnnotationKeyAutoPromotionHold,
 		kargoapi.AnnotationKeyAutoPromotionRelease,
 	} {

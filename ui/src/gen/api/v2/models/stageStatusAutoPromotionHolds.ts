@@ -9,9 +9,9 @@ import type { AutoPromotionHold } from './autoPromotionHold';
 
 /**
  * AutoPromotionHolds pause auto-promotion for specific FreightOrigins on
-this Stage after a user-directed promotion intentionally selects Freight
-other than the current auto-promotion candidate for the same origin. Each
-map entry pins a single origin keyed by the canonical string
-representation of the FreightOrigin.
+this Stage after a Promotion selects Freight other than the current
+auto-promotion candidate for the same origin. Stage-controller
+auto-promotions do not create holds. Each map entry pins a single origin
+keyed by the canonical string representation of the FreightOrigin.
  */
 export type StageStatusAutoPromotionHolds = { [key: string]: AutoPromotionHold };
