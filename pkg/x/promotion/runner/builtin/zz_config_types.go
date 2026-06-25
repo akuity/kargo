@@ -258,6 +258,11 @@ type GitMergePRConfig struct {
 	MergeMethod string `json:"mergeMethod,omitempty"`
 	// The number of the pull request to merge.
 	PRNumber int64 `json:"prNumber"`
+	// When 'wait' is true, the suggested interval at which to re-attempt the merge while the
+	// pull request is not yet mergeable. This is only a suggestion: the controller enforces a
+	// lower bound and may reconcile sooner in response to other events. If not specified, the
+	// default is 10 seconds.
+	PollInterval string `json:"pollInterval,omitempty"`
 	// The name of the Git provider to use. Currently 'azure', 'bitbucket', 'gitea', 'github',
 	// and 'gitlab' are supported. Kargo will try to infer the provider if it is not explicitly
 	// specified.
@@ -349,6 +354,11 @@ type GitWaitForPRConfig struct {
 	InsecureSkipTLSVerify bool `json:"insecureSkipTLSVerify,omitempty"`
 	// The number of the pull request to wait for.
 	PRNumber int64 `json:"prNumber"`
+	// The suggested interval at which to poll the pull request's status while waiting for it to
+	// be merged or closed. This is only a suggestion: the controller enforces a lower bound and
+	// may reconcile sooner in response to other events (such as a pull request merge webhook).
+	// If not specified, the default is 30 seconds.
+	PollInterval string `json:"pollInterval,omitempty"`
 	// The name of the Git provider to use. Currently 'azure', 'bitbucket', 'gitea', 'github',
 	// and 'gitlab' are supported. Kargo will try to infer the provider if it is not explicitly
 	// specified.
@@ -464,6 +474,11 @@ type HTTPConfig struct {
 	Method string `json:"method,omitempty"`
 	// Outputs to extract from the HTTP response.
 	Outputs []HTTPOutput `json:"outputs,omitempty"`
+	// The suggested interval at which to poll the URL while the step is waiting for its success
+	// or failure criteria to be met. This is only a suggestion: the controller enforces a lower
+	// bound and may reconcile sooner in response to other events. If not specified, the default
+	// is 30 seconds.
+	PollInterval string `json:"pollInterval,omitempty"`
 	// The URL of the proxy server to send the HTTP request through. If not specified, defers to
 	// the HTTP transport's default proxy behavior (http.ProxyFromEnvironment).
 	Proxy string `json:"proxy,omitempty"`

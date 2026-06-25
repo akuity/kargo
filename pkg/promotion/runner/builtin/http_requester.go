@@ -31,6 +31,11 @@ const (
 	maxResponseBytes      = 2 << 20
 	requestTimeoutDefault = 10 * time.Second
 
+	// httpPollIntervalDefault is the suggested interval at which the http step
+	// re-polls its URL while waiting for its success or failure criteria to be
+	// met, absent an explicitly configured pollInterval.
+	httpPollIntervalDefault = 30 * time.Second
+
 	contentTypeHeader = "Content-Type"
 
 	contentTypeJSON      = "application/json"
@@ -161,12 +166,19 @@ func (h *httpRequester) run(
 		// Non-2xx: retried failure (not terminal)
 		return promotion.StepResult{Status: kargoapi.PromotionStepStatusFailed}, nil
 	default:
-		// All other cases: running (retried)
+		// All other cases: running (polled)
 		// This includes:
 		// - Success unmet, failure undefined
 		// - Success undefined, failure unmet
 		// - Success unmet, failure unmet
-		return promotion.StepResult{Status: kargoapi.PromotionStepStatusRunning}, nil
+		pollInterval, err := resolvePollInterval(cfg.PollInterval, httpPollIntervalDefault)
+		if err != nil {
+			return promotion.StepResult{Status: kargoapi.PromotionStepStatusErrored}, err
+		}
+		return promotion.StepResult{
+			Status:     kargoapi.PromotionStepStatusRunning,
+			RetryAfter: &pollInterval,
+		}, nil
 	}
 }
 

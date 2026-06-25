@@ -7,6 +7,7 @@ import (
 	"net/http/httptest"
 	"strings"
 	"testing"
+	"time"
 
 	"github.com/stretchr/testify/require"
 
@@ -132,6 +133,15 @@ func Test_httpRequester_convert(t *testing.T) {
 			},
 		},
 		{
+			name: "invalid pollInterval",
+			config: promotion.Config{
+				"pollInterval": "invalid",
+			},
+			expectedProblems: []string{
+				"pollInterval: Does not match pattern",
+			},
+		},
+		{
 			name: "invalid response content type",
 			config: promotion.Config{
 				"responseContentType": "invalid",
@@ -204,6 +214,7 @@ func Test_httpRequester_convert(t *testing.T) {
 				}},
 				"insecureSkipTLSVerify": true,
 				"timeout":               "30s",
+				"pollInterval":          "20s",
 				"successExpression":     "response.status == 200",
 				"failureExpression":     "response.status == 404",
 				"proxy":                 "https://proxy.example.com:3000",
@@ -392,6 +403,26 @@ func Test_httpRequester_run(t *testing.T) {
 			assertions: func(t *testing.T, res promotion.StepResult, err error) {
 				require.NoError(t, err)
 				require.Equal(t, kargoapi.PromotionStepStatusRunning, res.Status)
+				// Suggests the default poll interval while waiting.
+				require.NotNil(t, res.RetryAfter)
+				require.Equal(t, httpPollIntervalDefault, *res.RetryAfter)
+			},
+		},
+		{
+			name: "neither success nor failed with explicit pollInterval",
+			handler: func(w http.ResponseWriter, _ *http.Request) {
+				w.WriteHeader(http.StatusBadGateway)
+			},
+			cfg: builtin.HTTPConfig{
+				SuccessExpression: "response.status == 200",
+				FailureExpression: "response.status == 404",
+				PollInterval:      "15s",
+			},
+			assertions: func(t *testing.T, res promotion.StepResult, err error) {
+				require.NoError(t, err)
+				require.Equal(t, kargoapi.PromotionStepStatusRunning, res.Status)
+				require.NotNil(t, res.RetryAfter)
+				require.Equal(t, 15*time.Second, *res.RetryAfter)
 			},
 		},
 		{
