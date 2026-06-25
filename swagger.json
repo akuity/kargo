@@ -2615,25 +2615,25 @@
           "400": {
             "description": "Bad Request",
             "schema": {
-              "$ref": "#/definitions/ErrorResponse"
+              "$ref": "#/definitions/ResourceErrorResponse"
             }
           },
           "403": {
             "description": "Forbidden",
             "schema": {
-              "$ref": "#/definitions/ErrorResponse"
+              "$ref": "#/definitions/ResourceErrorResponse"
             }
           },
           "404": {
             "description": "Not Found",
             "schema": {
-              "$ref": "#/definitions/ErrorResponse"
+              "$ref": "#/definitions/ResourceErrorResponse"
             }
           },
           "500": {
             "description": "Internal Server Error",
             "schema": {
-              "$ref": "#/definitions/ErrorResponse"
+              "$ref": "#/definitions/ResourceErrorResponse"
             }
           }
         }
@@ -4964,14 +4964,6 @@
           "type": "object",
           "additionalProperties": {}
         },
-        "error": {
-          "type": "string"
-        }
-      }
-    },
-    "ErrorResponse": {
-      "type": "object",
-      "properties": {
         "error": {
           "type": "string"
         }

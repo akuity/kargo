@@ -50,19 +50,6 @@ func (s *server) PromoteToStage(
 		return nil, err
 	}
 
-	if err := s.authorizeFn(
-		ctx,
-		"promote",
-		kargoapi.GroupVersion.WithResource("stages"),
-		"",
-		types.NamespacedName{
-			Namespace: project,
-			Name:      stageName,
-		},
-	); err != nil {
-		return nil, err
-	}
-
 	stage, err := s.getStageFn(
 		ctx,
 		s.client,
@@ -103,6 +90,19 @@ func (s *server) PromoteToStage(
 			err = fmt.Errorf("freight with alias %q not found in namespace %q", freightAlias, project)
 		}
 		return nil, connect.NewError(connect.CodeNotFound, err)
+	}
+
+	if err = s.authorizeFn(
+		ctx,
+		"promote",
+		kargoapi.GroupVersion.WithResource("stages"),
+		"",
+		types.NamespacedName{
+			Namespace: project,
+			Name:      stageName,
+		},
+	); err != nil {
+		return nil, err
 	}
 
 	if !s.isFreightAvailableFn(stage, freight) {
@@ -183,10 +183,10 @@ type promoteToStageRequest struct {
 // @Param stage path string true "Stage name"
 // @Param body body promoteToStageRequest true "Promote request"
 // @Success 201 {object} kargoapi.Promotion "Promotion resource (github.com/akuity/kargo/api/v1alpha1.Promotion)"
-// @Failure 400 {object} ErrorResponse
-// @Failure 403 {object} ErrorResponse
-// @Failure 404 {object} ErrorResponse
-// @Failure 500 {object} ErrorResponse
+// @Failure 400 {object} resourceErrorResponse
+// @Failure 403 {object} resourceErrorResponse
+// @Failure 404 {object} resourceErrorResponse
+// @Failure 500 {object} resourceErrorResponse
 // @Router /v1beta1/projects/{project}/stages/{stage}/promotions [post]
 func (s *server) promoteToStage(c *gin.Context) {
 	ctx := c.Request.Context()
@@ -212,20 +212,6 @@ func (s *server) promoteToStage(c *gin.Context) {
 		return
 	}
 
-	if err := s.authorizeFn(
-		ctx,
-		"promote",
-		kargoapi.GroupVersion.WithResource("stages"),
-		"",
-		types.NamespacedName{
-			Namespace: project,
-			Name:      stageName,
-		},
-	); err != nil {
-		_ = c.Error(err)
-		return
-	}
-
 	stage, err := s.getStageFn(
 		ctx,
 		s.client,
@@ -246,6 +232,23 @@ func (s *server) promoteToStage(c *gin.Context) {
 		return
 	}
 
+	authorize := func() bool {
+		if err = s.authorizeFn(
+			ctx,
+			"promote",
+			kargoapi.GroupVersion.WithResource("stages"),
+			"",
+			types.NamespacedName{
+				Namespace: project,
+				Name:      stageName,
+			},
+		); err != nil {
+			_ = c.Error(err)
+			return false
+		}
+		return true
+	}
+
 	// Origin-based promotions: let the webhook resolve origin to freight.
 	if req.Origin != "" {
 		origin, parseErr := kargoapi.ParseFreightOriginKey(req.Origin)
@@ -254,6 +257,9 @@ func (s *server) promoteToStage(c *gin.Context) {
 				fmt.Sprintf("invalid origin %q: %s", req.Origin, parseErr),
 				http.StatusBadRequest,
 			))
+			return
+		}
+		if !authorize() {
 			return
 		}
 		promotion := api.NewMinimalPromotionForOrigin(stage, origin)
@@ -303,6 +309,10 @@ func (s *server) promoteToStage(c *gin.Context) {
 			return
 		}
 		freight = &list.Items[0]
+	}
+
+	if !authorize() {
+		return
 	}
 
 	if !stage.IsFreightAvailable(freight) {

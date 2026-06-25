@@ -138,7 +138,7 @@ PromoteToStageBadRequest describes a response with status code 400, with default
 Bad Request
 */
 type PromoteToStageBadRequest struct {
-	Payload *models.ErrorResponse
+	Payload *models.ResourceErrorResponse
 }
 
 // IsSuccess returns true when this promote to stage bad request response has a 2xx status code
@@ -181,13 +181,13 @@ func (o *PromoteToStageBadRequest) String() string {
 	return fmt.Sprintf("[POST /v1beta1/projects/{project}/stages/{stage}/promotions][%d] promoteToStageBadRequest %s", 400, payload)
 }
 
-func (o *PromoteToStageBadRequest) GetPayload() *models.ErrorResponse {
+func (o *PromoteToStageBadRequest) GetPayload() *models.ResourceErrorResponse {
 	return o.Payload
 }
 
 func (o *PromoteToStageBadRequest) readResponse(response runtime.ClientResponse, consumer runtime.Consumer, formats strfmt.Registry) error {
 
-	o.Payload = new(models.ErrorResponse)
+	o.Payload = new(models.ResourceErrorResponse)
 
 	// response payload
 	if err := consumer.Consume(response.Body(), o.Payload); err != nil && !stderrors.Is(err, io.EOF) {
@@ -208,7 +208,7 @@ PromoteToStageForbidden describes a response with status code 403, with default 
 Forbidden
 */
 type PromoteToStageForbidden struct {
-	Payload *models.ErrorResponse
+	Payload *models.ResourceErrorResponse
 }
 
 // IsSuccess returns true when this promote to stage forbidden response has a 2xx status code
@@ -251,13 +251,13 @@ func (o *PromoteToStageForbidden) String() string {
 	return fmt.Sprintf("[POST /v1beta1/projects/{project}/stages/{stage}/promotions][%d] promoteToStageForbidden %s", 403, payload)
 }
 
-func (o *PromoteToStageForbidden) GetPayload() *models.ErrorResponse {
+func (o *PromoteToStageForbidden) GetPayload() *models.ResourceErrorResponse {
 	return o.Payload
 }
 
 func (o *PromoteToStageForbidden) readResponse(response runtime.ClientResponse, consumer runtime.Consumer, formats strfmt.Registry) error {
 
-	o.Payload = new(models.ErrorResponse)
+	o.Payload = new(models.ResourceErrorResponse)
 
 	// response payload
 	if err := consumer.Consume(response.Body(), o.Payload); err != nil && !stderrors.Is(err, io.EOF) {
@@ -278,7 +278,7 @@ PromoteToStageNotFound describes a response with status code 404, with default h
 Not Found
 */
 type PromoteToStageNotFound struct {
-	Payload *models.ErrorResponse
+	Payload *models.ResourceErrorResponse
 }
 
 // IsSuccess returns true when this promote to stage not found response has a 2xx status code
@@ -321,13 +321,13 @@ func (o *PromoteToStageNotFound) String() string {
 	return fmt.Sprintf("[POST /v1beta1/projects/{project}/stages/{stage}/promotions][%d] promoteToStageNotFound %s", 404, payload)
 }
 
-func (o *PromoteToStageNotFound) GetPayload() *models.ErrorResponse {
+func (o *PromoteToStageNotFound) GetPayload() *models.ResourceErrorResponse {
 	return o.Payload
 }
 
 func (o *PromoteToStageNotFound) readResponse(response runtime.ClientResponse, consumer runtime.Consumer, formats strfmt.Registry) error {
 
-	o.Payload = new(models.ErrorResponse)
+	o.Payload = new(models.ResourceErrorResponse)
 
 	// response payload
 	if err := consumer.Consume(response.Body(), o.Payload); err != nil && !stderrors.Is(err, io.EOF) {
@@ -348,7 +348,7 @@ PromoteToStageInternalServerError describes a response with status code 500, wit
 Internal Server Error
 */
 type PromoteToStageInternalServerError struct {
-	Payload *models.ErrorResponse
+	Payload *models.ResourceErrorResponse
 }
 
 // IsSuccess returns true when this promote to stage internal server error response has a 2xx status code
@@ -391,13 +391,13 @@ func (o *PromoteToStageInternalServerError) String() string {
 	return fmt.Sprintf("[POST /v1beta1/projects/{project}/stages/{stage}/promotions][%d] promoteToStageInternalServerError %s", 500, payload)
 }
 
-func (o *PromoteToStageInternalServerError) GetPayload() *models.ErrorResponse {
+func (o *PromoteToStageInternalServerError) GetPayload() *models.ResourceErrorResponse {
 	return o.Payload
 }
 
 func (o *PromoteToStageInternalServerError) readResponse(response runtime.ClientResponse, consumer runtime.Consumer, formats strfmt.Registry) error {
 
-	o.Payload = new(models.ErrorResponse)
+	o.Payload = new(models.ResourceErrorResponse)
 
 	// response payload
 	if err := consumer.Consume(response.Body(), o.Payload); err != nil && !stderrors.Is(err, io.EOF) {

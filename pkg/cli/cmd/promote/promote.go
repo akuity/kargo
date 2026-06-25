@@ -231,7 +231,7 @@ func (o *promotionOptions) run(ctx context.Context) error {
 				}),
 			nil,
 		); err != nil {
-			return client.FormatAPIError("promote to stage", err)
+			return err
 		}
 		promoJSON, err := json.Marshal(res.Payload)
 		if err != nil {
@@ -260,7 +260,7 @@ func (o *promotionOptions) run(ctx context.Context) error {
 			nil,
 		)
 		if err != nil {
-			return client.FormatAPIError("promote downstream", err)
+			return err
 		}
 		promotionsJSON, err := json.Marshal(res.Payload)
 		if err != nil {

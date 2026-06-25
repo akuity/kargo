@@ -26,7 +26,6 @@ import type {
   ClusterPromotionTask,
   ClusterPromotionTaskList,
   CreateConfigMapRequestBody,
-  ErrorResponse,
   Freight,
   GetFreightLinksResponse,
   GetStageLinksResponse,
@@ -48,6 +47,7 @@ import type {
   PromotionTask,
   PromotionTaskList,
   QueryFreightsRestParams,
+  ResourceErrorResponse,
   Stage,
   StageList,
   UpdateConfigMapRequestBody,
@@ -3704,22 +3704,22 @@ export type promoteToStageResponse201 = {
 };
 
 export type promoteToStageResponse400 = {
-  data: ErrorResponse;
+  data: ResourceErrorResponse;
   status: 400;
 };
 
 export type promoteToStageResponse403 = {
-  data: ErrorResponse;
+  data: ResourceErrorResponse;
   status: 403;
 };
 
 export type promoteToStageResponse404 = {
-  data: ErrorResponse;
+  data: ResourceErrorResponse;
   status: 404;
 };
 
 export type promoteToStageResponse500 = {
-  data: ErrorResponse;
+  data: ResourceErrorResponse;
   status: 500;
 };
 
@@ -3756,7 +3756,7 @@ export const promoteToStage = async (
 };
 
 export const getPromoteToStageMutationOptions = <
-  TError = ErrorType<ErrorResponse>,
+  TError = ErrorType<ResourceErrorResponse>,
   TContext = unknown
 >(options?: {
   mutation?: UseMutationOptions<
@@ -3793,12 +3793,12 @@ export const getPromoteToStageMutationOptions = <
 
 export type PromoteToStageMutationResult = NonNullable<Awaited<ReturnType<typeof promoteToStage>>>;
 export type PromoteToStageMutationBody = PromoteToStageRequest;
-export type PromoteToStageMutationError = ErrorType<ErrorResponse>;
+export type PromoteToStageMutationError = ErrorType<ResourceErrorResponse>;
 
 /**
  * @summary Promote to Stage
  */
-export const usePromoteToStage = <TError = ErrorType<ErrorResponse>, TContext = unknown>(
+export const usePromoteToStage = <TError = ErrorType<ResourceErrorResponse>, TContext = unknown>(
   options?: {
     mutation?: UseMutationOptions<
       Awaited<ReturnType<typeof promoteToStage>>,

@@ -63,7 +63,6 @@ export * from './discoveredImageReferenceAnnotations';
 export * from './discoveredRef';
 export * from './discoveryResult';
 export * from './dockerHubWebhookReceiverConfig';
-export * from './errorResponse';
 export * from './expressionVariable';
 export * from './freight';
 export * from './freightCollection';
