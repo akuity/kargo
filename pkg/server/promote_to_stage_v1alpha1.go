@@ -27,6 +27,9 @@ func (s *server) PromoteToStage(
 	ctx context.Context,
 	req *connect.Request[svcv1alpha1.PromoteToStageRequest],
 ) (*connect.Response[svcv1alpha1.PromoteToStageResponse], error) {
+	// ConnectRPC is deprecated and intentionally remains freight/freightAlias
+	// only. Promote-by-origin is supported by REST and raw Promotion specs; adding
+	// it here would expand a retiring surface for no current caller.
 	project := req.Msg.GetProject()
 	if err := validateFieldNotEmpty("project", project); err != nil {
 		return nil, err
@@ -264,6 +267,7 @@ func (s *server) promoteToStage(c *gin.Context) {
 			_ = c.Error(createPromotionError(err))
 			return
 		}
+		s.recordResolvedPromotionCreatedEvent(ctx, promotion)
 		c.JSON(http.StatusCreated, promotion)
 		return
 	}
@@ -334,6 +338,32 @@ func (s *server) promoteToStage(c *gin.Context) {
 	}
 
 	c.JSON(http.StatusCreated, promotion)
+}
+
+// recordResolvedPromotionCreatedEvent records the normal PromotionCreated event
+// after admission has resolved spec.origin to spec.freight. If a fake client or
+// future caller creates an unresolved Promotion, there is no Freight to attach,
+// so event recording is skipped instead of blocking the request.
+func (s *server) recordResolvedPromotionCreatedEvent(
+	ctx context.Context,
+	promotion *kargoapi.Promotion,
+) {
+	if s.sender == nil || promotion.Spec.Freight == "" {
+		return
+	}
+	freight := &kargoapi.Freight{}
+	if err := s.client.Get(
+		ctx,
+		client.ObjectKey{Namespace: promotion.Namespace, Name: promotion.Spec.Freight},
+		freight,
+	); err != nil {
+		logging.LoggerFromContext(ctx).Error(
+			err,
+			"error getting resolved Freight for Promotion created event",
+		)
+		return
+	}
+	s.recordPromotionCreatedEvent(ctx, promotion, freight)
 }
 
 func createPromotionError(err error) error {

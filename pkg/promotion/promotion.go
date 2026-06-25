@@ -146,7 +146,10 @@ func NewContext(
 		StepExecutionMetadata: promo.Status.StepExecutionMetadata,
 		State:                 State(promo.Status.GetState()),
 		Vars:                  promo.Spec.Vars,
-		Rollback:              promo.Annotations[kargoapi.AnnotationKeyRollback] != "",
+		// The webhook writes "true" now, but older/in-flight Promotions may carry
+		// an origin key from the auto-promotion hold work. Treat any non-empty value
+		// as true so ctx.meta.promotion.rollback remains backward-compatible.
+		Rollback: promo.Annotations[kargoapi.AnnotationKeyRollback] != "",
 	}
 
 	if stage != nil && len(stage.Spec.RequestedFreight) > 0 {

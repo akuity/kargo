@@ -774,6 +774,8 @@ func syncAutoPromotionHolds(
 	}
 
 	// Collect succeeded intent Promotions strictly newer than the watermark.
+	// CreationTimestamp is the API-server ordering source; name is only a
+	// deterministic tie-break.
 	watermark := status.AutoPromotionHoldsThrough
 	var pending []*kargoapi.Promotion
 	for i := range promotions.Items {
@@ -1950,6 +1952,8 @@ func stageAwaitingFreightForOrigin(
 		stage.Status.CurrentPromotion.Freight == nil {
 		return false
 	}
+	// Reconcile patches stage.Status back onto the in-memory Stage after each
+	// sub-reconciler, so this sees Promotions observed earlier in this pass.
 	return stage.Status.CurrentPromotion.Freight.Name == name &&
 		stage.Status.CurrentPromotion.Freight.Origin.String() == origin
 }

@@ -181,6 +181,9 @@ func (w *webhook) Default(ctx context.Context, obj runtime.Object) error {
 		return fmt.Errorf("exactly one of spec.freight or spec.origin must be set")
 	}
 	if req.Operation == admissionv1.Create && promo.Spec.Origin != nil {
+		// Do not infer an omitted origin from a single requested origin. Raw
+		// Promotion specs are clearer and more stable when promote-by-origin is
+		// explicit; endpoint-only conveniences like freightAlias stay out here.
 		if err = w.resolveOriginToFreight(ctx, promo, stage); err != nil {
 			return err
 		}
@@ -238,7 +241,9 @@ func (w *webhook) Default(ctx context.Context, obj runtime.Object) error {
 		}
 
 		// For user-created Promotions, stamp intent annotations so the Stage
-		// controller can maintain auto-promotion holds.
+		// controller can maintain auto-promotion holds. Use create-actor instead
+		// of request identity: UI/CLI Promotions are created by the API server
+		// service account, while Stage-controller auto-promotions have no actor.
 		if promo.Annotations[kargoapi.AnnotationKeyCreateActor] != "" {
 			w.stampIntentAnnotations(ctx, promo, stage)
 		}
@@ -318,6 +323,8 @@ func (w *webhook) resolveOriginToFreight(
 // Accepted race: the candidate can change between this lookup and the
 // Promotion succeeding. That may misclassify intent once, but the selected
 // Freight is still promoted and the next candidate promotion corrects the hold.
+// A newer candidate can also auto-promote before the user's Promotion exists;
+// the pending-hold check in autoPromoteFreight closes the window after that.
 func (w *webhook) stampIntentAnnotations(
 	ctx context.Context,
 	promo *kargoapi.Promotion,
@@ -375,11 +382,11 @@ func (w *webhook) stampIntentAnnotations(
 		api.SetAutoPromotionReleaseAnnotation(promo, origin)
 		return
 	}
-	// Promoted Freight is not the candidate; stamp hold intent. Also stamp
-	// AnnotationKeyRollback; its presence makes ctx.meta.promotion.rollback true
-	// in step templates, and its value identifies the origin.
+	// Promoted Freight is not the candidate; stamp hold intent. Also stamp the
+	// legacy rollback flag so ctx.meta.promotion.rollback remains true for any
+	// steps that already branch on manual non-candidate promotions.
 	api.SetAutoPromotionHoldAnnotation(promo, origin)
-	promo.Annotations[kargoapi.AnnotationKeyRollback] = origin.String()
+	promo.Annotations[kargoapi.AnnotationKeyRollback] = kargoapi.AnnotationValueTrue
 }
 
 func (w *webhook) ValidateCreate(

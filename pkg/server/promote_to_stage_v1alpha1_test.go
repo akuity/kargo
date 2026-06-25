@@ -791,6 +791,44 @@ func Test_server_promoteToStage(t *testing.T) {
 					require.Equal(t, testFreight.Origin, *promos.Items[0].Spec.Origin)
 				},
 			},
+			func() restTestCase {
+				recorder := fakeevent.NewEventRecorder(1)
+				return restTestCase{
+					name: "Successfully promote by origin records created event after resolution",
+					clientBuilder: fake.NewClientBuilder().WithObjects(
+						testProject,
+						testStage,
+						testFreight,
+					),
+					serverSetup: func(t *testing.T, s *server) {
+						authorizeAllStagesPromote(t, s)
+						s.sender = k8sevent.NewEventSender(recorder)
+						s.createPromotionFn = func(
+							ctx context.Context,
+							obj client.Object,
+							opts ...client.CreateOption,
+						) error {
+							promo, ok := obj.(*kargoapi.Promotion)
+							require.True(t, ok)
+							// Simulate the mutating webhook. REST only supplies origin;
+							// admission resolves it before the created object is returned.
+							promo.Spec.Freight = testFreight.Name
+							promo.Spec.Origin = nil
+							return s.client.Create(ctx, obj, opts...)
+						}
+					},
+					body: mustJSONBody(promoteToStageRequest{
+						Origin: testFreight.Origin.String(),
+					}),
+					assertions: func(t *testing.T, w *httptest.ResponseRecorder, _ client.Client) {
+						require.Equal(t, http.StatusCreated, w.Code)
+						require.Len(t, recorder.Events, 1)
+						event := <-recorder.Events
+						require.Equal(t, corev1.EventTypeNormal, event.EventType)
+						require.Equal(t, string(kargoapi.EventTypePromotionCreated), event.Reason)
+					},
+				}
+			}(),
 		},
 	)
 }

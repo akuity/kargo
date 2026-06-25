@@ -995,7 +995,11 @@ func Test_webhook_Default(t *testing.T) {
 					Name: "my-warehouse",
 				}
 				require.Equal(t, origin.String(), promo.Annotations[kargoapi.AnnotationKeyAutoPromotionHold])
-				require.Equal(t, origin.String(), promo.Annotations[kargoapi.AnnotationKeyRollback])
+				require.Equal(
+					t,
+					kargoapi.AnnotationValueTrue,
+					promo.Annotations[kargoapi.AnnotationKeyRollback],
+				)
 			},
 		},
 		{
