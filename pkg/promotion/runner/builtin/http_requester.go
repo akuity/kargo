@@ -132,11 +132,27 @@ func (h *httpRequester) run(
 	// Determine outcome based on criteria evaluation results
 	switch {
 	case failureResult != nil && *failureResult:
-		// Failure criteria met: terminal failure
+		// Failure criteria met: terminal failure. Optionally enrich the error
+		// with a message extracted from the response.
+		errorMessage, err := h.extractErrorMessageFromResponse(ctx, cfg, env)
+		if err != nil {
+			// Only a misconfigured (uncompilable) expression is surfaced here,
+			// consistent with the success and failure expressions.
+			return promotion.StepResult{Status: kargoapi.PromotionStepStatusErrored}, err
+		}
+		if errorMessage == "" {
+			return promotion.StepResult{Status: kargoapi.PromotionStepStatusFailed},
+				&promotion.TerminalError{Err: fmt.Errorf(
+					"HTTP (%d) response met failure criteria",
+					resp.StatusCode,
+				)}
+		}
+
 		return promotion.StepResult{Status: kargoapi.PromotionStepStatusFailed},
 			&promotion.TerminalError{Err: fmt.Errorf(
-				"HTTP (%d) response met failure criteria",
+				"HTTP (%d) response met failure criteria: %q",
 				resp.StatusCode,
+				errorMessage,
 			)}
 	case successResult != nil && *successResult:
 		// Success criteria met: success
@@ -238,6 +254,47 @@ func (h *httpRequester) evaluateFailureCriteria(
 		"failure expression %q did not evaluate to a boolean (got %T)",
 		cfg.FailureExpression, failureAny,
 	)
+}
+
+// extractErrorMessageFromResponse evaluates the error expression, if defined,
+// returning the message it extracts from the response. The cases are
+// distinguished as follows:
+//
+//   - No expression defined: returns an empty string and no error.
+//   - Compilation error: returns a TerminalError, consistent with the success
+//     and failure expressions, since an uncompilable expression is a
+//     misconfiguration the user must fix.
+//   - Evaluation error: best-effort, since the response may not be shaped as the
+//     expression expects. Logs at debug level and returns an empty string so the
+//     caller falls back to the default error message.
+//   - Nil or non-string result: expected (e.g. nil coalescing that finds no
+//     matching field). Returns an empty string so the caller falls back.
+func (h *httpRequester) extractErrorMessageFromResponse(
+	ctx context.Context,
+	cfg builtin.HTTPConfig,
+	env map[string]any,
+) (string, error) {
+	if cfg.ErrorExpression == "" {
+		return "", nil
+	}
+
+	program, err := expr.Compile(cfg.ErrorExpression)
+	if err != nil {
+		return "", &promotion.TerminalError{
+			Err: fmt.Errorf("error compiling error expression %q: %w", cfg.ErrorExpression, err),
+		}
+	}
+	errorAny, err := expr.Run(program, env)
+	if err != nil {
+		logging.LoggerFromContext(ctx).Debug(
+			"error evaluating error expression for HTTP response",
+			"expression", cfg.ErrorExpression,
+			"error", err,
+		)
+		return "", nil
+	}
+	errorMessage, _ := errorAny.(string)
+	return errorMessage, nil
 }
 
 func (h *httpRequester) buildRequest(cfg builtin.HTTPConfig) (*http.Request, error) {

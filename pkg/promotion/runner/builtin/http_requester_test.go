@@ -218,6 +218,7 @@ func Test_httpRequester_convert(t *testing.T) {
 				"successExpression":     "response.status == 200",
 				"failureExpression":     "response.status == 404",
 				"proxy":                 "https://proxy.example.com:3000",
+				"errorExpression":       "response.body?.error ?? response.body?.errorMessage",
 				"outputs": []promotion.Config{
 					{
 						"name":           "fact1",
@@ -374,6 +375,118 @@ func Test_httpRequester_run(t *testing.T) {
 			},
 			assertions: func(t *testing.T, res promotion.StepResult, err error) {
 				require.ErrorContains(t, err, "HTTP (404) response met failure criteria")
+				require.True(t, promotion.IsTerminal(err))
+				require.Equal(t, kargoapi.PromotionStepStatusFailed, res.Status)
+			},
+		},
+		{
+			name: "failed with errorExpression",
+			handler: func(w http.ResponseWriter, _ *http.Request) {
+				w.Header().Set(contentTypeHeader, contentTypeJSON)
+				w.WriteHeader(http.StatusNotFound)
+				_, err := w.Write([]byte(`{"error": "resource not found"}`))
+				require.NoError(t, err)
+			},
+			cfg: builtin.HTTPConfig{
+				FailureExpression: "response.status == 404",
+				ErrorExpression:   "response.body.error",
+			},
+			assertions: func(t *testing.T, res promotion.StepResult, err error) {
+				require.ErrorContains(
+					t,
+					err,
+					`HTTP (404) response met failure criteria: "resource not found"`,
+				)
+				require.True(t, promotion.IsTerminal(err))
+				require.Equal(t, kargoapi.PromotionStepStatusFailed, res.Status)
+			},
+		},
+		{
+			name: "failed with errorExpression null coalescing",
+			handler: func(w http.ResponseWriter, _ *http.Request) {
+				w.Header().Set(contentTypeHeader, contentTypeJSON)
+				w.WriteHeader(http.StatusNotFound)
+				_, err := w.Write([]byte(`{"errorMessage": "something went wrong"}`))
+				require.NoError(t, err)
+			},
+			cfg: builtin.HTTPConfig{
+				FailureExpression: "response.status == 404",
+				ErrorExpression:   "response.body?.error ?? response.body?.errorMessage",
+			},
+			assertions: func(t *testing.T, res promotion.StepResult, err error) {
+				require.ErrorContains(
+					t,
+					err,
+					`HTTP (404) response met failure criteria: "something went wrong"`,
+				)
+				require.True(t, promotion.IsTerminal(err))
+				require.Equal(t, kargoapi.PromotionStepStatusFailed, res.Status)
+			},
+		},
+		{
+			name: "failed with errorExpression evaluating to nil",
+			handler: func(w http.ResponseWriter, _ *http.Request) {
+				w.Header().Set(contentTypeHeader, contentTypeJSON)
+				w.WriteHeader(http.StatusNotFound)
+				_, err := w.Write([]byte(`{}`))
+				require.NoError(t, err)
+			},
+			cfg: builtin.HTTPConfig{
+				FailureExpression: "response.status == 404",
+				ErrorExpression:   "response.body?.error ?? response.body?.errorMessage",
+			},
+			assertions: func(t *testing.T, res promotion.StepResult, err error) {
+				require.ErrorContains(t, err, "HTTP (404) response met failure criteria")
+				require.NotContains(t, err.Error(), "HTTP (404) response met failure criteria:")
+				require.True(t, promotion.IsTerminal(err))
+				require.Equal(t, kargoapi.PromotionStepStatusFailed, res.Status)
+			},
+		},
+		{
+			name:    "failed with errorExpression compile error",
+			handler: func(_ http.ResponseWriter, _ *http.Request) {},
+			cfg: builtin.HTTPConfig{
+				FailureExpression: "true",
+				ErrorExpression:   "(1 + 2",
+			},
+			// A compile error is a misconfiguration, surfaced terminally and as
+			// an errored step, consistent with the success/failure expressions.
+			assertions: func(t *testing.T, res promotion.StepResult, err error) {
+				require.ErrorContains(t, err, `error compiling error expression "(1 + 2"`)
+				require.True(t, promotion.IsTerminal(err))
+				require.Equal(t, kargoapi.PromotionStepStatusErrored, res.Status)
+			},
+		},
+		{
+			name: "failed with errorExpression non-string result",
+			handler: func(w http.ResponseWriter, _ *http.Request) {
+				w.Header().Set(contentTypeHeader, contentTypeJSON)
+				w.WriteHeader(http.StatusNotFound)
+				_, err := w.Write([]byte(`{"error": 42}`))
+				require.NoError(t, err)
+			},
+			cfg: builtin.HTTPConfig{
+				FailureExpression: "response.status == 404",
+				ErrorExpression:   "response.body.error",
+			},
+			// A non-string result falls back to the default message.
+			assertions: func(t *testing.T, res promotion.StepResult, err error) {
+				require.ErrorContains(t, err, "HTTP (404) response met failure criteria")
+				require.NotContains(t, err.Error(), "HTTP (404) response met failure criteria:")
+				require.True(t, promotion.IsTerminal(err))
+				require.Equal(t, kargoapi.PromotionStepStatusFailed, res.Status)
+			},
+		},
+		{
+			name:    "failed with errorExpression eval error",
+			handler: func(_ http.ResponseWriter, _ *http.Request) {},
+			cfg: builtin.HTTPConfig{
+				FailureExpression: "true",
+				ErrorExpression:   "invalid()",
+			},
+			assertions: func(t *testing.T, res promotion.StepResult, err error) {
+				require.ErrorContains(t, err, "HTTP (200) response met failure criteria")
+				require.NotContains(t, err.Error(), "HTTP (200) response met failure criteria:")
 				require.True(t, promotion.IsTerminal(err))
 				require.Equal(t, kargoapi.PromotionStepStatusFailed, res.Status)
 			},
@@ -597,6 +710,24 @@ func Test_httpRequester_run(t *testing.T) {
 					},
 					res.Output,
 				)
+			},
+		},
+		{
+			name: "ignored errorExpression",
+			handler: func(w http.ResponseWriter, _ *http.Request) {
+				w.Header().Set(contentTypeHeader, contentTypeJSON)
+				w.WriteHeader(http.StatusBadGateway)
+				_, err := w.Write([]byte(`{"error": "should not appear"}`))
+				require.NoError(t, err)
+			},
+			cfg: builtin.HTTPConfig{
+				SuccessExpression: "response.status == 200",
+				FailureExpression: "response.status == 404",
+				ErrorExpression:   "response.body.error",
+			},
+			assertions: func(t *testing.T, res promotion.StepResult, err error) {
+				require.NoError(t, err)
+				require.Equal(t, kargoapi.PromotionStepStatusRunning, res.Status)
 			},
 		},
 	}
