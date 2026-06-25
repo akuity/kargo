@@ -1,13 +1,11 @@
-import { faPause } from '@fortawesome/free-solid-svg-icons';
-
 import type { AutoPromotionHold, Stage } from '@ui/gen/api/v2/models';
 
-export type OriginLike = {
+type OriginLike = {
   kind?: string;
   name?: string;
 };
 
-export type AutoPromotionHoldEntry = {
+type AutoPromotionHoldEntry = {
   key: string;
   hold: AutoPromotionHold;
   origin?: OriginLike;
@@ -38,8 +36,6 @@ export const getAutoPromotionHold = (stage: Stage | undefined, origin?: OriginLi
 export const stageHasAutoPromotionHold = (stage: Stage | undefined): boolean =>
   Object.keys(stage?.status?.autoPromotionHolds || {}).length > 0;
 
-export const holdStateIcon = () => faPause;
-
 export const getAutoPromotionHoldEntries = (stage: Stage | undefined): AutoPromotionHoldEntry[] => {
   const holds = (stage?.status?.autoPromotionHolds ?? {}) as Record<string, AutoPromotionHold>;
   return Object.entries(holds)
@@ -49,11 +45,11 @@ export const getAutoPromotionHoldEntries = (stage: Stage | undefined): AutoPromo
 
 export const holdStateMessage = (stage?: Stage, origin?: OriginLike) => {
   if (origin) {
-    return `Auto-promotion paused after rollback: ${originLabel(origin)}`;
+    return `Auto-promotion paused: ${originLabel(origin)}`;
   }
   const origins = getAutoPromotionHoldEntries(stage).map((entry) => entry.key);
   if (origins.length === 0) {
-    return 'Auto-promotion paused after rollback.';
+    return 'Auto-promotion paused.';
   }
-  return `Auto-promotion paused after rollback: ${origins.join(', ')}`;
+  return `Auto-promotion paused: ${origins.join(', ')}`;
 };

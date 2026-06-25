@@ -8,7 +8,6 @@ import (
 	"github.com/go-openapi/errors"
 	"github.com/go-openapi/strfmt"
 	"github.com/go-openapi/swag"
-	"github.com/go-openapi/validate"
 )
 
 // AutoPromotionHold auto promotion hold
@@ -16,37 +15,29 @@ import (
 // swagger:model AutoPromotionHold
 type AutoPromotionHold struct {
 
-	// Actor identifies the user who triggered the rollback.
+	// Actor identifies the user who triggered the hold.
 	Actor string `json:"actor,omitempty"`
 
-	// CreatedAt is the creation timestamp of the rollback Promotion.
+	// CreatedAt is the creation timestamp of the Promotion that established this
+	// hold.
 	CreatedAt string `json:"createdAt,omitempty"`
 
 	// FreightName is the name of the Freight selected when the hold was created.
-	// +kubebuilder:validation:Required
-	// Required: true
-	FreightName *string `json:"freightName"`
+	FreightName string `json:"freightName,omitempty"`
 
 	// Origin describes the FreightOrigin pinned by this hold. It matches the
 	// enclosing map key.
-	// +kubebuilder:validation:Required
-	// Required: true
 	Origin struct {
 		FreightOrigin
-	} `json:"origin"`
+	} `json:"origin,omitempty"`
 
-	// PromotionName is the name of the rollback Promotion that established this
-	// hold.
+	// PromotionName is the name of the Promotion that established this hold.
 	PromotionName string `json:"promotionName,omitempty"`
 }
 
 // Validate validates this auto promotion hold
 func (m *AutoPromotionHold) Validate(formats strfmt.Registry) error {
 	var res []error
-
-	if err := m.validateFreightName(formats); err != nil {
-		res = append(res, err)
-	}
 
 	if err := m.validateOrigin(formats); err != nil {
 		res = append(res, err)
@@ -58,16 +49,10 @@ func (m *AutoPromotionHold) Validate(formats strfmt.Registry) error {
 	return nil
 }
 
-func (m *AutoPromotionHold) validateFreightName(formats strfmt.Registry) error {
-
-	if err := validate.Required("freightName", "body", m.FreightName); err != nil {
-		return err
-	}
-
-	return nil
-}
-
 func (m *AutoPromotionHold) validateOrigin(formats strfmt.Registry) error {
+	if swag.IsZero(m.Origin) { // not required
+		return nil
+	}
 
 	return nil
 }

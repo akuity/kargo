@@ -495,11 +495,12 @@ spec:
                     map key.
                   properties:
                     actor:
-                      description: Actor identifies the user who triggered the rollback.
+                      description: Actor identifies the user who triggered the hold.
                       type: string
                     createdAt:
-                      description: CreatedAt is the creation timestamp of the rollback
-                        Promotion.
+                      description: |-
+                        CreatedAt is the creation timestamp of the Promotion that established this
+                        hold.
                       format: date-time
                       type: string
                     freightName:
@@ -528,9 +529,8 @@ spec:
                       - name
                       type: object
                     promotionName:
-                      description: |-
-                        PromotionName is the name of the rollback Promotion that established this
-                        hold.
+                      description: PromotionName is the name of the Promotion that
+                        established this hold.
                       type: string
                   required:
                   - freightName

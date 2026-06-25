@@ -14,7 +14,7 @@ const (
 	AnnotationKeyAutoPromotionHold = "kargo.akuity.io/auto-promotion-hold"
 
 	// AnnotationKeyAutoPromotionRelease is an annotation key set on a
-	// user-directed Promotion when the promoted Freight IS the current
+	// user-directed Promotion when the promoted Freight is the current
 	// auto-promotion candidate for that origin. The Stage controller uses a
 	// succeeded Promotion with this annotation to clear an active hold for the
 	// origin. The value is the canonical origin key (e.g. "Warehouse/foo").
@@ -86,10 +86,9 @@ const (
 	// is set to true.
 	AnnotationValueTrue = "true"
 
-	// AnnotationKeyRollback is an annotation key set alongside
-	// AnnotationKeyAutoPromotionHold on rollback Promotions. Its presence makes
-	// ctx.meta.promotion.rollback true in promotion step templates; the value is
-	// the canonical origin key.
+	// AnnotationKeyRollback is an annotation key that can be set on a Promotion
+	// to indicate that it was created as a rollback to a previously verified
+	// piece of Freight.
 	AnnotationKeyRollback = "kargo.akuity.io/rollback"
 
 	// AnnotationKeyGitHubTokenScope is the key for an annotation that can

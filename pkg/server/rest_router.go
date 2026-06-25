@@ -317,35 +317,24 @@ func (s *server) handleError(c *gin.Context) {
 		var httpErr *libhttp.HTTPError
 		if ok := errors.As(err, &httpErr); ok {
 			if code := httpErr.Code(); code == http.StatusInternalServerError {
-				respondInternalServerError(c, err)
-				return
+				logging.LoggerFromContext(c.Request.Context()).
+					Error(err, "internal server error")
+				c.JSON(
+					http.StatusInternalServerError,
+					resourceErrorResponse{Error: "internal server error"},
+				)
 			}
 			c.JSON(httpErr.Code(), resourceErrorResponse{Error: httpErr.Error()})
 			return
 		}
 		var statusErr *apierrors.StatusError
 		if ok := errors.As(err, &statusErr); ok {
-			// 4xx StatusErrors (Forbidden, NotFound, Conflict, ...) carry
-			// user-actionable messages and pass through verbatim. 5xx messages
-			// can embed internal details, so log them and respond generically.
-			if code := int(statusErr.Status().Code); code < http.StatusInternalServerError {
-				c.JSON(code, resourceErrorResponse{Error: err.Error()})
-				return
-			}
-			respondInternalServerError(c, err)
+			c.JSON(int(statusErr.Status().Code), resourceErrorResponse{Error: err.Error()})
 			return
 		}
-		respondInternalServerError(c, err)
+		_ = c.Error(libhttp.Error(
+			errors.New("internal server error"),
+			http.StatusInternalServerError,
+		))
 	}
-}
-
-// respondInternalServerError logs err and responds with a generic 500 that
-// does not leak the underlying error to the client.
-func respondInternalServerError(c *gin.Context, err error) {
-	logging.LoggerFromContext(c.Request.Context()).
-		Error(err, "internal server error")
-	c.JSON(
-		http.StatusInternalServerError,
-		resourceErrorResponse{Error: "internal server error"},
-	)
 }

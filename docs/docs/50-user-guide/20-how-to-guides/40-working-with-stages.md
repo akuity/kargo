@@ -164,6 +164,10 @@ kargo promote \
   --origin Warehouse/my-warehouse
 ```
 
+You can do the same with `kubectl` by creating a `Promotion` that sets
+`spec.origin` instead of `spec.freight`. The promotion webhook resolves the
+origin before the `Promotion` is persisted.
+
 #### Examples
 
 In the following example, the `test` `Stage` requests `Freight` that has

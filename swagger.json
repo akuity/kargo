@@ -2611,30 +2611,6 @@
             "schema": {
               "$ref": "#/definitions/Promotion"
             }
-          },
-          "400": {
-            "description": "Bad Request",
-            "schema": {
-              "$ref": "#/definitions/ResourceErrorResponse"
-            }
-          },
-          "403": {
-            "description": "Forbidden",
-            "schema": {
-              "$ref": "#/definitions/ResourceErrorResponse"
-            }
-          },
-          "404": {
-            "description": "Not Found",
-            "schema": {
-              "$ref": "#/definitions/ResourceErrorResponse"
-            }
-          },
-          "500": {
-            "description": "Internal Server Error",
-            "schema": {
-              "$ref": "#/definitions/ResourceErrorResponse"
-            }
           }
         }
       }
@@ -6447,19 +6423,19 @@
       "type": "object",
       "properties": {
         "actor": {
-          "description": "Actor identifies the user who triggered the rollback.",
+          "description": "Actor identifies the user who triggered the hold.",
           "type": "string"
         },
         "createdAt": {
-          "description": "CreatedAt is the creation timestamp of the rollback Promotion.",
+          "description": "CreatedAt is the creation timestamp of the Promotion that established this\nhold.",
           "type": "string"
         },
         "freightName": {
-          "description": "FreightName is the name of the Freight selected when the hold was created.\n+kubebuilder:validation:Required",
+          "description": "FreightName is the name of the Freight selected when the hold was created.",
           "type": "string"
         },
         "origin": {
-          "description": "Origin describes the FreightOrigin pinned by this hold. It matches the\nenclosing map key.\n+kubebuilder:validation:Required",
+          "description": "Origin describes the FreightOrigin pinned by this hold. It matches the\nenclosing map key.",
           "allOf": [
             {
               "$ref": "#/definitions/FreightOrigin"
@@ -6467,14 +6443,10 @@
           ]
         },
         "promotionName": {
-          "description": "PromotionName is the name of the rollback Promotion that established this\nhold.",
+          "description": "PromotionName is the name of the Promotion that established this hold.",
           "type": "string"
         }
-      },
-      "required": [
-        "freightName",
-        "origin"
-      ]
+      }
     },
     "AutoPromotionHoldsWatermark": {
       "type": "object",

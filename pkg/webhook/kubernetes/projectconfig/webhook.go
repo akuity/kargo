@@ -161,18 +161,6 @@ func (w *webhook) validatePromotionPolicies(
 		stage := policy.Stage // nolint:staticcheck
 		if policy.StageSelector != nil {
 			stage = policy.StageSelector.Name
-
-			// A label selector that cannot be parsed would otherwise persist
-			// and fail every request that evaluates promotion policies.
-			if policy.StageSelector.LabelSelector != nil {
-				if _, err := metav1.LabelSelectorAsSelector(policy.StageSelector.LabelSelector); err != nil {
-					errs = append(errs, field.Invalid(
-						f.Index(i).Child("stageSelector").Child("labelSelector"),
-						policy.StageSelector.LabelSelector,
-						err.Error(),
-					))
-				}
-			}
 		}
 
 		// Skip empty stage names

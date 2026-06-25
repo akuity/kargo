@@ -545,9 +545,8 @@ func authorizeStagesPromoteFn(t *testing.T) func(
 	}
 }
 
-// authorizeAllStagesPromote wires authorizeFn to grant all promote/create
-// checks for Stages and Promotions. Mirrors what the deleted
-// auto_promotion_v1alpha1_test.go provided.
+// authorizeAllStagesPromote grants the promote/create checks used by successful
+// promotion creation paths.
 func authorizeAllStagesPromote(t *testing.T, s *server) {
 	s.authorizeFn = authorizeStagesPromoteFn(t)
 }
@@ -619,7 +618,6 @@ func Test_server_promoteToStage(t *testing.T) {
 			{
 				name:          "Stage not found",
 				clientBuilder: fake.NewClientBuilder().WithObjects(testProject),
-				serverSetup:   authorizeAllStagesPromote,
 				body: mustJSONBody(promoteToStageRequest{
 					Freight: testFreight.Name,
 				}),
@@ -630,9 +628,18 @@ func Test_server_promoteToStage(t *testing.T) {
 			{
 				name:          "Freight not found by name",
 				clientBuilder: fake.NewClientBuilder().WithObjects(testProject, testStage),
-				serverSetup:   authorizeAllStagesPromote,
 				body: mustJSONBody(promoteToStageRequest{
 					Freight: "nonexistent-freight",
+				}),
+				assertions: func(t *testing.T, w *httptest.ResponseRecorder, _ client.Client) {
+					require.Equal(t, http.StatusNotFound, w.Code)
+				},
+			},
+			{
+				name:          "Freight not found by alias",
+				clientBuilder: fake.NewClientBuilder().WithObjects(testProject, testStage),
+				body: mustJSONBody(promoteToStageRequest{
+					FreightAlias: "nonexistent-alias",
 				}),
 				assertions: func(t *testing.T, w *httptest.ResponseRecorder, _ client.Client) {
 					require.Equal(t, http.StatusNotFound, w.Code)
@@ -652,6 +659,27 @@ func Test_server_promoteToStage(t *testing.T) {
 				body: mustJSONBody(promoteToStageRequest{
 					Freight:      testFreight.Name,
 					FreightAlias: "fake-alias",
+				}),
+				assertions: func(t *testing.T, w *httptest.ResponseRecorder, _ client.Client) {
+					require.Equal(t, http.StatusBadRequest, w.Code)
+				},
+			},
+			{
+				name:          "Both freight and origin provided",
+				clientBuilder: fake.NewClientBuilder().WithObjects(testProject, testStage),
+				body: mustJSONBody(promoteToStageRequest{
+					Freight: testFreight.Name,
+					Origin:  testFreight.Origin.String(),
+				}),
+				assertions: func(t *testing.T, w *httptest.ResponseRecorder, _ client.Client) {
+					require.Equal(t, http.StatusBadRequest, w.Code)
+				},
+			},
+			{
+				name:          "Invalid origin",
+				clientBuilder: fake.NewClientBuilder().WithObjects(testProject, testStage),
+				body: mustJSONBody(promoteToStageRequest{
+					Origin: "Warehouse/",
 				}),
 				assertions: func(t *testing.T, w *httptest.ResponseRecorder, _ client.Client) {
 					require.Equal(t, http.StatusBadRequest, w.Code)
@@ -742,6 +770,25 @@ func Test_server_promoteToStage(t *testing.T) {
 					require.Len(t, promos.Items, 1)
 					require.Equal(t, testStage.Name, promos.Items[0].Spec.Stage)
 					require.Equal(t, testFreight.Name, promos.Items[0].Spec.Freight)
+				},
+			},
+			{
+				name:          "Successfully promote by origin",
+				clientBuilder: fake.NewClientBuilder().WithObjects(testProject, testStage),
+				serverSetup:   authorizeAllStagesPromote,
+				body: mustJSONBody(promoteToStageRequest{
+					Origin: testFreight.Origin.String(),
+				}),
+				assertions: func(t *testing.T, w *httptest.ResponseRecorder, c client.Client) {
+					require.Equal(t, http.StatusCreated, w.Code)
+
+					promos := &kargoapi.PromotionList{}
+					err := c.List(t.Context(), promos, client.InNamespace(testProject.Name))
+					require.NoError(t, err)
+					require.Len(t, promos.Items, 1)
+					require.Equal(t, testStage.Name, promos.Items[0].Spec.Stage)
+					require.Empty(t, promos.Items[0].Spec.Freight)
+					require.Equal(t, testFreight.Origin, *promos.Items[0].Spec.Origin)
 				},
 			},
 		},

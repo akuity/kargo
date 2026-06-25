@@ -47,7 +47,6 @@ import type {
   PromotionTask,
   PromotionTaskList,
   QueryFreightsRestParams,
-  ResourceErrorResponse,
   Stage,
   StageList,
   UpdateConfigMapRequestBody,
@@ -3703,39 +3702,10 @@ export type promoteToStageResponse201 = {
   status: 201;
 };
 
-export type promoteToStageResponse400 = {
-  data: ResourceErrorResponse;
-  status: 400;
-};
-
-export type promoteToStageResponse403 = {
-  data: ResourceErrorResponse;
-  status: 403;
-};
-
-export type promoteToStageResponse404 = {
-  data: ResourceErrorResponse;
-  status: 404;
-};
-
-export type promoteToStageResponse500 = {
-  data: ResourceErrorResponse;
-  status: 500;
-};
-
 export type promoteToStageResponseSuccess = promoteToStageResponse201 & {
   headers: Headers;
 };
-export type promoteToStageResponseError = (
-  | promoteToStageResponse400
-  | promoteToStageResponse403
-  | promoteToStageResponse404
-  | promoteToStageResponse500
-) & {
-  headers: Headers;
-};
-
-export type promoteToStageResponse = promoteToStageResponseSuccess | promoteToStageResponseError;
+export type promoteToStageResponse = promoteToStageResponseSuccess;
 
 export const getPromoteToStageUrl = (project: string, stage: string) => {
   return `/v1beta1/projects/${project}/stages/${stage}/promotions`;
@@ -3756,7 +3726,7 @@ export const promoteToStage = async (
 };
 
 export const getPromoteToStageMutationOptions = <
-  TError = ErrorType<ResourceErrorResponse>,
+  TError = ErrorType<unknown>,
   TContext = unknown
 >(options?: {
   mutation?: UseMutationOptions<
@@ -3793,12 +3763,12 @@ export const getPromoteToStageMutationOptions = <
 
 export type PromoteToStageMutationResult = NonNullable<Awaited<ReturnType<typeof promoteToStage>>>;
 export type PromoteToStageMutationBody = PromoteToStageRequest;
-export type PromoteToStageMutationError = ErrorType<ResourceErrorResponse>;
+export type PromoteToStageMutationError = ErrorType<unknown>;
 
 /**
  * @summary Promote to Stage
  */
-export const usePromoteToStage = <TError = ErrorType<ResourceErrorResponse>, TContext = unknown>(
+export const usePromoteToStage = <TError = ErrorType<unknown>, TContext = unknown>(
   options?: {
     mutation?: UseMutationOptions<
       Awaited<ReturnType<typeof promoteToStage>>,

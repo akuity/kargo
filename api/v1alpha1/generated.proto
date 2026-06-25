@@ -188,22 +188,20 @@ message ArtifactoryWebhookReceiverConfig {
 // map key.
 message AutoPromotionHold {
   // FreightName is the name of the Freight selected when the hold was created.
-  // +kubebuilder:validation:Required
   optional string freightName = 1;
 
   // Origin describes the FreightOrigin pinned by this hold. It matches the
   // enclosing map key.
-  // +kubebuilder:validation:Required
   optional FreightOrigin origin = 8;
 
-  // PromotionName is the name of the rollback Promotion that established this
-  // hold.
+  // PromotionName is the name of the Promotion that established this hold.
   optional string promotionName = 3;
 
-  // Actor identifies the user who triggered the rollback.
+  // Actor identifies the user who triggered the hold.
   optional string actor = 5;
 
-  // CreatedAt is the creation timestamp of the rollback Promotion.
+  // CreatedAt is the creation timestamp of the Promotion that established this
+  // hold.
   optional .k8s.io.apimachinery.pkg.apis.meta.v1.Time createdAt = 7;
 }
 

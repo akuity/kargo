@@ -363,11 +363,11 @@
             "description": "AutoPromotionHold pins a single FreightOrigin on a Stage, pausing\nauto-promotion for that origin after a user-directed Promotion selects\nFreight other than the current auto-promotion candidate. Other origins\ncontinue to auto-promote normally. The origin is identified by the enclosing\nmap key.",
             "properties": {
               "actor": {
-                "description": "Actor identifies the user who triggered the rollback.",
+                "description": "Actor identifies the user who triggered the hold.",
                 "type": "string"
               },
               "createdAt": {
-                "description": "CreatedAt is the creation timestamp of the rollback Promotion.",
+                "description": "CreatedAt is the creation timestamp of the Promotion that established this\nhold.",
                 "format": "date-time",
                 "type": "string"
               },
@@ -397,7 +397,7 @@
                 "type": "object"
               },
               "promotionName": {
-                "description": "PromotionName is the name of the rollback Promotion that established this\nhold.",
+                "description": "PromotionName is the name of the Promotion that established this hold.",
                 "type": "string"
               }
             },

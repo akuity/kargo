@@ -1,4 +1,9 @@
-import { faChevronLeft, faChevronRight, faCodeCommit } from '@fortawesome/free-solid-svg-icons';
+import {
+  faChevronLeft,
+  faChevronRight,
+  faCodeCommit,
+  faPause
+} from '@fortawesome/free-solid-svg-icons';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
 import { Button, Flex, Tag, Tooltip, Typography } from 'antd';
 import Link from 'antd/es/typography/Link';
@@ -32,7 +37,7 @@ import { useDictionaryContext } from '../context/dictionary-context';
 import { useFreightTimelineControllerContext } from '../context/freight-timeline-controller-context';
 import { humanComprehendableArtifact } from '../freight/artifact-parts-utils';
 import { shortVersion } from '../freight/short-version-utils';
-import { getAutoPromotionHold, holdStateIcon, holdStateMessage } from '../promotion/auto-promotion';
+import { getAutoPromotionHold, holdStateMessage } from '../promotion/auto-promotion';
 
 import {
   ArtifactTypes,
@@ -77,7 +82,9 @@ export const StageFreight = (props: { stage: Stage }) => {
   );
   const showFreightAlias = freightTimelineControllerContext?.preferredFilter?.showAlias;
 
-  const defaultToFirstArtifact = () => selectFirstArtifact([selectedFreight]) as ArtifactTypes;
+  const defaultToFirstArtifact = () =>
+    // @ts-expect-error FreightReference and Freight are same, at least in this case
+    selectFirstArtifact([selectedFreight]) as ArtifactTypes;
 
   const [selectedArtifact, setSelectedArtifact] = useState(defaultToFirstArtifact());
 
@@ -129,7 +136,7 @@ export const StageFreight = (props: { stage: Stage }) => {
   const holdIcon = selectedAutoPromotionHold ? (
     <Tooltip title={holdStateMessage(props.stage, selectedFreight?.origin)}>
       <span className='inline-flex text-[10px] text-orange-600'>
-        <FontAwesomeIcon icon={holdStateIcon()} />
+        <FontAwesomeIcon icon={faPause} />
       </span>
     </Tooltip>
   ) : null;

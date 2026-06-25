@@ -77,7 +77,6 @@ func ReconcilerConfigFromEnv() ReconcilerConfig {
 type RegularStageReconciler struct {
 	cfg            ReconcilerConfig
 	client         client.Client
-	apiReader      client.Reader
 	eventSender    kargoEvent.Sender
 	healthChecker  health.AggregatingChecker
 	shardPredicate controller.ResponsibleFor[kargoapi.Stage]
@@ -117,7 +116,6 @@ func (r *RegularStageReconciler) SetupWithManager(
 ) error {
 	// Configure client and event recorder using manager.
 	r.client = kargoMgr.GetClient()
-	r.apiReader = kargoMgr.GetAPIReader()
 	r.eventSender = k8sevent.NewEventSender(
 		libEvent.NewRecorder(ctx, kargoMgr.GetScheme(), kargoMgr.GetClient(), r.cfg.Name()),
 	)
@@ -375,7 +373,9 @@ func (r *RegularStageReconciler) Reconcile(ctx context.Context, req ctrl.Request
 	}
 
 	// Patch the status of the Stage.
-	if err := patchRegularStageStatus(ctx, r.client, stage, newStatus); err != nil {
+	if err := kubeclient.PatchStatus(ctx, r.client, stage, func(status *kargoapi.StageStatus) {
+		*status = newStatus
+	}); err != nil {
 		// Prioritize the reconcile error if it exists.
 		if reconcileErr != nil {
 			logger.Error(err, "failed to update Stage status after reconciliation error")
@@ -512,7 +512,9 @@ func (r *RegularStageReconciler) reconcile(
 
 		// Patch the status of the Stage after each sub-reconciler to show
 		// progress.
-		if err = patchRegularStageStatus(ctx, r.client, stage, newStatus); err != nil {
+		if err = kubeclient.PatchStatus(ctx, r.client, stage, func(status *kargoapi.StageStatus) {
+			*status = newStatus
+		}); err != nil {
 			logger.Error(err, fmt.Sprintf("failed to update Stage status after %s", subR.name))
 		} else {
 			stage.Status = newStatus
@@ -527,19 +529,6 @@ func (r *RegularStageReconciler) reconcile(
 	}
 
 	return newStatus, requestRequeue, nil
-}
-
-// patchRegularStageStatus patches the Stage status. The Stage controller is the
-// sole writer of auto-promotion holds, so no hold exclusion is needed.
-func patchRegularStageStatus(
-	ctx context.Context,
-	c client.Client,
-	stage *kargoapi.Stage,
-	newStatus kargoapi.StageStatus,
-) error {
-	return kubeclient.PatchStatus(ctx, c, stage, func(status *kargoapi.StageStatus) {
-		*status = newStatus
-	})
 }
 
 // syncPromotions synchronizes the Promotions for a Stage. It determines the
@@ -578,7 +567,7 @@ func (r *RegularStageReconciler) syncPromotions(
 		return newStatus, false, err
 	}
 
-	r.syncAutoPromotionHolds(ctx, stage, promotions, &newStatus)
+	syncAutoPromotionHolds(stage, promotions, &newStatus)
 
 	// If there are no Promotions, then we are not promoting any Freight.
 	if len(promotions.Items) == 0 {
@@ -774,8 +763,7 @@ func (r *RegularStageReconciler) syncPromotions(
 // Holds persist in status after their establishing Promotion is
 // garbage-collected. Once a release Promotion has been observed and watermarked,
 // its effect also survives Promotion GC.
-func (r *RegularStageReconciler) syncAutoPromotionHolds(
-	_ context.Context,
+func syncAutoPromotionHolds(
 	stage *kargoapi.Stage,
 	promotions *kargoapi.PromotionList,
 	status *kargoapi.StageStatus,
@@ -810,16 +798,6 @@ func (r *RegularStageReconciler) syncAutoPromotionHolds(
 		pending = append(pending, promo)
 	}
 
-	if len(pending) == 0 {
-		// Drop holds for origins no longer requested.
-		for key := range status.AutoPromotionHolds {
-			if _, ok := requestedOrigins[key]; !ok {
-				status.DeleteAutoPromotionHold(key)
-			}
-		}
-		return
-	}
-
 	// Sort by (creationTimestamp, name) ascending so we apply effects in order.
 	slices.SortFunc(pending, func(a, b *kargoapi.Promotion) int {
 		if a.CreationTimestamp.Before(&b.CreationTimestamp) {
@@ -831,10 +809,6 @@ func (r *RegularStageReconciler) syncAutoPromotionHolds(
 		return strings.Compare(a.Name, b.Name)
 	})
 
-	if status.AutoPromotionHolds == nil {
-		status.AutoPromotionHolds = make(map[string]kargoapi.AutoPromotionHold)
-	}
-
 	for _, promo := range pending {
 		if originKey := promo.Annotations[kargoapi.AnnotationKeyAutoPromotionHold]; originKey != "" {
 			if _, requested := requestedOrigins[originKey]; !requested {
@@ -843,6 +817,9 @@ func (r *RegularStageReconciler) syncAutoPromotionHolds(
 			origin, err := kargoapi.ParseFreightOriginKey(originKey)
 			if err != nil {
 				continue
+			}
+			if status.AutoPromotionHolds == nil {
+				status.AutoPromotionHolds = make(map[string]kargoapi.AutoPromotionHold)
 			}
 			hold := kargoapi.AutoPromotionHold{
 				FreightName:   promo.Spec.Freight,
@@ -862,21 +839,22 @@ func (r *RegularStageReconciler) syncAutoPromotionHolds(
 		}
 	}
 
+	// Drop holds for origins no longer requested.
+	for key := range status.AutoPromotionHolds {
+		if _, ok := requestedOrigins[key]; !ok {
+			delete(status.AutoPromotionHolds, key)
+		}
+	}
 	if len(status.AutoPromotionHolds) == 0 {
 		status.AutoPromotionHolds = nil
 	}
 
-	// Advance watermark to the newest processed Promotion.
-	newest := pending[len(pending)-1]
-	status.AutoPromotionHoldsThrough = &kargoapi.AutoPromotionHoldsWatermark{
-		CreationTimestamp: newest.CreationTimestamp,
-		Name:              newest.Name,
-	}
-
-	// Drop holds for origins no longer requested.
-	for key := range status.AutoPromotionHolds {
-		if _, ok := requestedOrigins[key]; !ok {
-			status.DeleteAutoPromotionHold(key)
+	if len(pending) > 0 {
+		// Advance watermark to the newest processed Promotion.
+		newest := pending[len(pending)-1]
+		status.AutoPromotionHoldsThrough = &kargoapi.AutoPromotionHoldsWatermark{
+			CreationTimestamp: newest.CreationTimestamp,
+			Name:              newest.Name,
 		}
 	}
 }
@@ -1479,9 +1457,7 @@ func (r *RegularStageReconciler) startVerification(
 		if existingAnalysisRun != nil {
 			logger.Debug("AnalysisRun already exists for FreightCollection")
 
-			// Finish at the reconciliation time so that startTime <= finishTime
-			// always holds regardless of when the AnalysisRun internally ran.
-			newVI.FinishTime = &metav1.Time{Time: startTime}
+			newVI.FinishTime = ptr.To(metav1.Now())
 			newVI.Phase = kargoapi.VerificationPhase(existingAnalysisRun.Status.Phase)
 			newVI.AnalysisRun = &kargoapi.AnalysisRunReference{
 				Name:      existingAnalysisRun.Name,
@@ -1839,7 +1815,7 @@ func (r *RegularStageReconciler) autoPromoteFreight(
 		return newStatus, err
 	}
 
-	// If the Stage has no current Freight, then we can promote any available
+	// If the Stage has no current Freight, any candidate is new to it.
 	currentFreight := newStatus.FreightHistory.Current()
 
 	// Check if there is any new Freight which can be auto-promoted.
@@ -1878,7 +1854,7 @@ func (r *RegularStageReconciler) autoPromoteFreight(
 
 		// Only proceed if the latest available Freight is different from the
 		// current Freight in the Stage.
-		if stageHasFreightForOrigin(currentFreight, stage, origin, latestFreight.Name) {
+		if freightCollectionHasFreight(currentFreight, origin, latestFreight.Name) {
 			freightLogger.Debug("Stage already has latest available Freight for origin")
 			continue
 		}
@@ -1889,7 +1865,7 @@ func (r *RegularStageReconciler) autoPromoteFreight(
 
 		// Do not create duplicate work for a non-terminal Promotion. Also do
 		// not immediately retry the latest failed terminal Promotion. Explicit
-		// holds now carry user rollback intent, so a previously successful
+		// holds now carry user-directed promotion intent, so a previously successful
 		// Promotion is allowed to run again after the hold is resumed.
 		var nonTerminalPromotionExists bool
 		nonTerminalPromotionExists, err = r.nonTerminalPromotionExistsForStageFreight(
@@ -1924,7 +1900,7 @@ func (r *RegularStageReconciler) autoPromoteFreight(
 			)
 		}
 		if newestPromotion != nil {
-			if !autoPromotionTerminalAllowsRetry(newestPromotion) {
+			if newestPromotion.Status.Phase != kargoapi.PromotionPhaseSucceeded {
 				freightLogger.Debug(
 					"most recent terminal Promotion for Stage and Freight was not "+
 						"successful; skipping auto-promotion to avoid an infinite loop",
@@ -1963,16 +1939,6 @@ func (r *RegularStageReconciler) autoPromoteFreight(
 	}
 
 	return newStatus, nil
-}
-
-func stageHasFreightForOrigin(
-	currentFreight *kargoapi.FreightCollection,
-	stage *kargoapi.Stage,
-	origin string,
-	name string,
-) bool {
-	return freightCollectionHasFreight(currentFreight, origin, name) ||
-		freightCollectionHasFreight(stage.Status.FreightHistory.Current(), origin, name)
 }
 
 func stageAwaitingFreightForOrigin(
@@ -2091,12 +2057,6 @@ func freightCollectionHasFreight(
 	}
 	freightRef, ok := collection.Freight[origin]
 	return ok && freightRef.Name == name
-}
-
-// autoPromotionTerminalAllowsRetry reports whether a terminal Promotion should
-// allow auto-promotion to create a replacement for the same Freight.
-func autoPromotionTerminalAllowsRetry(promo *kargoapi.Promotion) bool {
-	return promo.Status.Phase == kargoapi.PromotionPhaseSucceeded
 }
 
 // handleDelete handles the deletion of the given Stage. It clears the

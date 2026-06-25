@@ -421,7 +421,6 @@ func TestRegularStageReconciler_Reconcile(t *testing.T) {
 
 			r := &RegularStageReconciler{
 				client:      c,
-				apiReader:   c,
 				eventSender: k8sevent.NewEventSender(fakeevent.NewEventRecorder(10)),
 			}
 
@@ -561,7 +560,6 @@ func TestRegularStagesReconciler_reconcile(t *testing.T) {
 
 			r := &RegularStageReconciler{
 				client:        c,
-				apiReader:     c,
 				eventSender:   k8sevent.NewEventSender(fakeevent.NewEventRecorder(10)),
 				healthChecker: &health.MockAggregatingChecker{},
 			}
@@ -661,7 +659,7 @@ func TestRegularStageReconciler_syncPromotions(t *testing.T) {
 			objects: []client.Object{
 				&kargoapi.Promotion{
 					ObjectMeta: metav1.ObjectMeta{
-						Name:              "rollback-promo",
+						Name:              "hold-promo",
 						Namespace:         "fake-project",
 						CreationTimestamp: metav1.Time{Time: hourAgo},
 						Annotations: map[string]string{
@@ -684,12 +682,12 @@ func TestRegularStageReconciler_syncPromotions(t *testing.T) {
 				require.Len(t, status.AutoPromotionHolds, 1)
 				hold := status.AutoPromotionHolds[origin.String()]
 				assert.Equal(t, "older-freight", hold.FreightName)
-				assert.Equal(t, "rollback-promo", hold.PromotionName)
+				assert.Equal(t, "hold-promo", hold.PromotionName)
 				assert.Equal(t, "user:alice", hold.Actor)
 				assert.True(t, hold.Origin.Equals(&origin))
 				require.NotNil(t, status.AutoPromotionHoldsThrough)
 				assert.Equal(t, hourAgo, status.AutoPromotionHoldsThrough.CreationTimestamp.Time)
-				assert.Equal(t, "rollback-promo", status.AutoPromotionHoldsThrough.Name)
+				assert.Equal(t, "hold-promo", status.AutoPromotionHoldsThrough.Name)
 			},
 		},
 		{
@@ -706,7 +704,7 @@ func TestRegularStageReconciler_syncPromotions(t *testing.T) {
 			objects: []client.Object{
 				&kargoapi.Promotion{
 					ObjectMeta: metav1.ObjectMeta{
-						Name:              "rollback-promo",
+						Name:              "hold-promo",
 						Namespace:         "fake-project",
 						CreationTimestamp: metav1.Time{Time: twoHoursAgo},
 						Annotations: map[string]string{
@@ -760,7 +758,7 @@ func TestRegularStageReconciler_syncPromotions(t *testing.T) {
 			objects: []client.Object{
 				&kargoapi.Promotion{
 					ObjectMeta: metav1.ObjectMeta{
-						Name:              "a-rollback-promo",
+						Name:              "a-hold-promo",
 						Namespace:         "fake-project",
 						CreationTimestamp: metav1.Time{Time: hourAgo},
 						Annotations: map[string]string{
@@ -829,7 +827,7 @@ func TestRegularStageReconciler_syncPromotions(t *testing.T) {
 				},
 				&kargoapi.Promotion{
 					ObjectMeta: metav1.ObjectMeta{
-						Name:              "newer-rollback-promo",
+						Name:              "newer-hold-promo",
 						Namespace:         "fake-project",
 						CreationTimestamp: metav1.Time{Time: hourAgo},
 						Annotations: map[string]string{
@@ -850,10 +848,10 @@ func TestRegularStageReconciler_syncPromotions(t *testing.T) {
 				assert.False(t, hasPendingPromotions)
 				require.Len(t, status.AutoPromotionHolds, 1)
 				hold := status.AutoPromotionHolds[origin.String()]
-				assert.Equal(t, "newer-rollback-promo", hold.PromotionName)
+				assert.Equal(t, "newer-hold-promo", hold.PromotionName)
 				require.NotNil(t, status.AutoPromotionHoldsThrough)
 				assert.Equal(t, hourAgo, status.AutoPromotionHoldsThrough.CreationTimestamp.Time)
-				assert.Equal(t, "newer-rollback-promo", status.AutoPromotionHoldsThrough.Name)
+				assert.Equal(t, "newer-hold-promo", status.AutoPromotionHoldsThrough.Name)
 			},
 		},
 		{
@@ -870,7 +868,7 @@ func TestRegularStageReconciler_syncPromotions(t *testing.T) {
 			objects: []client.Object{
 				&kargoapi.Promotion{
 					ObjectMeta: metav1.ObjectMeta{
-						Name:      "rollback-promo",
+						Name:      "hold-promo",
 						Namespace: "fake-project",
 						Annotations: map[string]string{
 							kargoapi.AnnotationKeyAutoPromotionHold: "Warehouse/other-warehouse",
@@ -908,7 +906,7 @@ func TestRegularStageReconciler_syncPromotions(t *testing.T) {
 						"Warehouse/test-warehouse": {
 							FreightName:   "older-freight",
 							Origin:        origin,
-							PromotionName: "rollback-promo",
+							PromotionName: "hold-promo",
 						},
 					},
 				},
@@ -939,7 +937,7 @@ func TestRegularStageReconciler_syncPromotions(t *testing.T) {
 				},
 				&kargoapi.Promotion{
 					ObjectMeta: metav1.ObjectMeta{
-						Name:      "rollback-promo",
+						Name:      "hold-promo",
 						Namespace: "fake-project",
 						Annotations: map[string]string{
 							kargoapi.AnnotationKeyAutoPromotionHold: origin.String(),
@@ -1654,7 +1652,6 @@ func TestRegularStageReconciler_syncPromotions(t *testing.T) {
 
 			r := &RegularStageReconciler{
 				client:      c,
-				apiReader:   c,
 				eventSender: k8sevent.NewEventSender(fakeevent.NewEventRecorder(10)),
 			}
 
@@ -2147,7 +2144,7 @@ func TestRegularStageReconciler_syncFreight(t *testing.T) {
 				WithInterceptorFuncs(testCase.interceptor).
 				Build()
 
-			r := &RegularStageReconciler{client: c, apiReader: c}
+			r := &RegularStageReconciler{client: c}
 
 			err := r.syncFreight(t.Context(), testStage)
 			testCase.assertions(t, c, err)
@@ -2389,8 +2386,7 @@ func TestRegularStageReconciler_assessHealth(t *testing.T) {
 				Build()
 
 			r := &RegularStageReconciler{
-				client:    c,
-				apiReader: c,
+				client: c,
 				healthChecker: &health.MockAggregatingChecker{
 					CheckFn: tt.checkHealthFn,
 				},
@@ -3234,8 +3230,7 @@ func TestRegularStageReconciler_verifyStageFreight(t *testing.T) {
 			recorder := fakeevent.NewEventRecorder(10)
 
 			r := &RegularStageReconciler{
-				client:    c,
-				apiReader: c,
+				client: c,
 				cfg: ReconcilerConfig{
 					RolloutsIntegrationEnabled: !tt.rolloutsDisabled,
 				},
@@ -3674,7 +3669,6 @@ func TestRegularStageReconciler_markFreightVerifiedForStage(t *testing.T) {
 
 			r := &RegularStageReconciler{
 				client:        c,
-				apiReader:     c,
 				healthChecker: &health.MockAggregatingChecker{},
 			}
 
@@ -3934,7 +3928,6 @@ func TestRegularStageReconciler_recordFreightVerificationEvent(t *testing.T) {
 
 			r := &RegularStageReconciler{
 				client:      c,
-				apiReader:   c,
 				eventSender: k8sevent.NewEventSender(recorder),
 			}
 
@@ -4362,8 +4355,7 @@ func TestRegularStageReconciler_startVerification(t *testing.T) {
 				Build()
 
 			r := &RegularStageReconciler{
-				client:    c,
-				apiReader: c,
+				client: c,
 				cfg: ReconcilerConfig{
 					RolloutsIntegrationEnabled:   !tt.rolloutsDisabled,
 					RolloutsControllerInstanceID: "test-instance",
@@ -4691,8 +4683,7 @@ func TestRegularStageReconciler_getVerificationResult(t *testing.T) {
 				Build()
 
 			r := &RegularStageReconciler{
-				client:    c,
-				apiReader: c,
+				client: c,
 				cfg: ReconcilerConfig{
 					RolloutsIntegrationEnabled: !tt.rolloutsDisabled,
 				},
@@ -5043,8 +5034,7 @@ func TestRegularStageReconciler_abortVerification(t *testing.T) {
 			c := builder.Build()
 
 			r := &RegularStageReconciler{
-				client:    c,
-				apiReader: c,
+				client: c,
 				cfg: ReconcilerConfig{
 					RolloutsIntegrationEnabled: !tt.rolloutsDisabled,
 				},
@@ -5308,7 +5298,7 @@ func TestRegularStageReconciler_findExistingAnalysisRun(t *testing.T) {
 
 			c := builder.Build()
 
-			r := &RegularStageReconciler{client: c, apiReader: c}
+			r := &RegularStageReconciler{client: c}
 
 			ar, err := r.findExistingAnalysisRun(t.Context(), tt.stage, tt.freightColID)
 			tt.assertions(t, ar, err)
@@ -5324,12 +5314,11 @@ func TestRegularStageReconciler_autoPromoteFreight(t *testing.T) {
 	hourAgo := now.Add(-time.Hour)
 
 	tests := []struct {
-		name             string
-		stage            *kargoapi.Stage
-		objects          []client.Object
-		apiReaderObjects []client.Object
-		interceptor      interceptor.Funcs
-		assertions       func(*testing.T, *fakeevent.EventRecorder, client.Client, kargoapi.StageStatus, error)
+		name        string
+		stage       *kargoapi.Stage
+		objects     []client.Object
+		interceptor interceptor.Funcs
+		assertions  func(*testing.T, *fakeevent.EventRecorder, client.Client, kargoapi.StageStatus, error)
 	}{
 		{
 			name: "no requested freight",
@@ -6752,9 +6741,6 @@ func TestRegularStageReconciler_autoPromoteFreight(t *testing.T) {
 			},
 		},
 		{
-			// Regression coverage for #3016: an AutoPromotionHold on a
-			// FreightOrigin must suppress auto-promotion for that origin even
-			// when newer eligible Freight exists.
 			name: "skips promotion when origin has an AutoPromotionHold",
 			stage: &kargoapi.Stage{
 				ObjectMeta: metav1.ObjectMeta{
@@ -6839,9 +6825,96 @@ func TestRegularStageReconciler_autoPromoteFreight(t *testing.T) {
 			},
 		},
 		{
-			// Regression coverage for #3016: holds are origin-scoped. A held
-			// origin must not suppress auto-promotion for another origin on the
-			// same Stage.
+			name: "skips promotion when origin has a pending hold-intent Promotion",
+			stage: &kargoapi.Stage{
+				ObjectMeta: metav1.ObjectMeta{
+					Namespace: "fake-project",
+					Name:      "test-stage",
+				},
+				Spec: kargoapi.StageSpec{
+					RequestedFreight: []kargoapi.FreightRequest{{
+						Origin: kargoapi.FreightOrigin{
+							Kind: kargoapi.FreightOriginKindWarehouse,
+							Name: "test-warehouse",
+						},
+						Sources: kargoapi.FreightSources{Direct: true},
+					}},
+					PromotionTemplate: &kargoapi.PromotionTemplate{
+						Spec: kargoapi.PromotionTemplateSpec{
+							Steps: []kargoapi.PromotionStep{{Uses: "fake-step"}},
+						},
+					},
+				},
+			},
+			objects: []client.Object{
+				&kargoapi.ProjectConfig{
+					ObjectMeta: metav1.ObjectMeta{
+						Name:      "fake-project",
+						Namespace: "fake-project",
+					},
+					Spec: kargoapi.ProjectConfigSpec{
+						PromotionPolicies: []kargoapi.PromotionPolicy{{
+							Stage:                "test-stage",
+							AutoPromotionEnabled: true,
+						}},
+					},
+				},
+				&kargoapi.Warehouse{
+					ObjectMeta: metav1.ObjectMeta{
+						Namespace: "fake-project",
+						Name:      "test-warehouse",
+					},
+				},
+				&kargoapi.Freight{
+					ObjectMeta: metav1.ObjectMeta{
+						Namespace:         "fake-project",
+						Name:              "test-freight-new",
+						CreationTimestamp: metav1.Time{Time: now},
+					},
+					Origin: kargoapi.FreightOrigin{
+						Kind: kargoapi.FreightOriginKindWarehouse,
+						Name: "test-warehouse",
+					},
+				},
+				&kargoapi.Promotion{
+					ObjectMeta: metav1.ObjectMeta{
+						Namespace: "fake-project",
+						Name:      "hold-promo",
+						Labels: map[string]string{
+							kargoapi.LabelKeyStage: "test-stage",
+						},
+						Annotations: map[string]string{
+							kargoapi.AnnotationKeyAutoPromotionHold: "Warehouse/test-warehouse",
+						},
+					},
+					Spec: kargoapi.PromotionSpec{
+						Stage:   "test-stage",
+						Freight: "test-freight-old",
+					},
+					Status: kargoapi.PromotionStatus{
+						Phase: kargoapi.PromotionPhasePending,
+					},
+				},
+			},
+			assertions: func(
+				t *testing.T,
+				_ *fakeevent.EventRecorder,
+				c client.Client,
+				status kargoapi.StageStatus,
+				err error,
+			) {
+				require.NoError(t, err)
+				assert.True(t, status.AutoPromotionEnabled)
+
+				promoList := &kargoapi.PromotionList{}
+				require.NoError(t, c.List(
+					t.Context(), promoList, client.InNamespace("fake-project"),
+				))
+				require.Len(t, promoList.Items, 1)
+				assert.Equal(t, "hold-promo", promoList.Items[0].Name)
+			},
+		},
+		{
 			name: "continues promotion for unheld origin on multi-origin stage",
 			stage: &kargoapi.Stage{
 				ObjectMeta: metav1.ObjectMeta{
@@ -6986,16 +7059,7 @@ func TestRegularStageReconciler_autoPromoteFreight(t *testing.T) {
 
 			r := &RegularStageReconciler{
 				client:      c,
-				apiReader:   c,
 				eventSender: k8sevent.NewEventSender(recorder),
-			}
-			// Override only when a case needs the cache (client) and the API
-			// server (apiReader) to diverge.
-			if tt.apiReaderObjects != nil {
-				r.apiReader = fake.NewClientBuilder().
-					WithScheme(scheme).
-					WithObjects(tt.apiReaderObjects...).
-					Build()
 			}
 
 			status, err := r.autoPromoteFreight(t.Context(), tt.stage)

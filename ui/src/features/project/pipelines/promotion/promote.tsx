@@ -46,9 +46,6 @@ export const Promote = (props: PromoteProps) => {
   const promoteActionMutation = usePromoteToStage({
     mutation: {
       onSuccess: (response) => {
-        if (response.status !== 201) {
-          return;
-        }
         // navigate
         navigate(
           generatePath(paths.promotion, {
@@ -64,10 +61,7 @@ export const Promote = (props: PromoteProps) => {
 
   const promoteDownstreamActionMutation = usePromoteDownstream({
     mutation: {
-      onSuccess: (response) => {
-        if (response.status !== 201) {
-          return;
-        }
+      onSuccess: () => {
         // navigate
         navigate(
           generatePath(paths.project, {
@@ -113,20 +107,18 @@ export const Promote = (props: PromoteProps) => {
       size='large'
       width={'1400px'}
       footer={
-        <Flex vertical gap={12}>
-          <Button
-            size='large'
-            className={classNames(styles['promote-btn'])}
-            icon={<FontAwesomeIcon icon={faTruckArrowRight} />}
-            onClick={onPromote}
-            loading={promoteActionMutation.isPending || promoteDownstreamActionMutation.isPending}
-          >
-            {isDownstreamPromotion ? 'Promote to downstream' : 'Promote'}
-          </Button>
-        </Flex>
+        <Button
+          size='large'
+          className={classNames(styles['promote-btn'], 'ml-auto mt-5')}
+          icon={<FontAwesomeIcon icon={faTruckArrowRight} />}
+          onClick={onPromote}
+          loading={promoteActionMutation.isPending || promoteDownstreamActionMutation.isPending}
+        >
+          Promote{isDownstreamPromotion && ' to downstream'}
+        </Button>
       }
     >
-      <div className='-mt-6'>
+      <div className='-mt-4'>
         <FreightDetails
           freight={props.freight}
           comparison={{ currentFreight: currentFreightOnStage }}

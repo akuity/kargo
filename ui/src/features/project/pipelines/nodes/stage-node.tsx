@@ -81,7 +81,7 @@ export const StageNode = (props: { stage: Stage }) => {
     }
   });
 
-  const { dropdownItems } = useGetPromotionDropdownItems(props.stage);
+  const dropdownItems = useGetPromotionDropdownItems(props.stage);
 
   let descriptionItems: ReactNode;
 

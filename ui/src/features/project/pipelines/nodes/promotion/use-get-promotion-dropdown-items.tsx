@@ -1,4 +1,7 @@
+import { faBoltLightning, faCircleNotch } from '@fortawesome/free-solid-svg-icons';
+import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
 import { useMutation } from '@tanstack/react-query';
+import { Typography } from 'antd';
 import { ItemType } from 'antd/es/menu/interface';
 import { generatePath, useNavigate } from 'react-router-dom';
 
@@ -8,7 +11,7 @@ import { useDictionaryContext } from '@ui/features/project/pipelines/context/dic
 import { isStageControlFlow } from '@ui/features/project/pipelines/nodes/stage-meta-utils';
 import { useGetUpstreamFreight } from '@ui/features/project/pipelines/nodes/use-get-upstream-freight';
 import { useManualApprovalModal } from '@ui/features/project/pipelines/promotion/use-manual-approval-modal';
-import { queryFreightsRest } from '@ui/gen/api/v2/core/core';
+import { promoteToStage, queryFreightsRest } from '@ui/gen/api/v2/core/core';
 import { Stage } from '@ui/gen/api/v2/models';
 
 export const useGetPromotionDropdownItems = (stage: Stage) => {
@@ -79,6 +82,31 @@ export const useGetPromotionDropdownItems = (stage: Stage) => {
     });
   };
 
+  const promoteMutation = useMutation({
+    mutationFn: (payload: { project: string; stage: string; freight: string }) =>
+      promoteToStage(payload.project, payload.stage, { freight: payload.freight }),
+    onSuccess: (response) => {
+      navigate(
+        generatePath(paths.promotion, {
+          name: projectName,
+          promotionId: response.data?.metadata?.name
+        })
+      );
+    }
+  });
+
+  const handleInstantPromoteFromUpstream = (freight?: string) => {
+    ensureEligibilityBeforeAction({
+      freight,
+      onSuccess: (eligibleFreight) =>
+        promoteMutation.mutate({
+          stage: stageName,
+          project: projectName,
+          freight: eligibleFreight
+        })
+    });
+  };
+
   const dropdownItems: ItemType[] = [];
 
   if (!controlFlow) {
@@ -120,9 +148,39 @@ export const useGetPromotionDropdownItems = (stage: Stage) => {
           }))
         : undefined
     });
+
+    dropdownItems.push({
+      key: 'quick-promote-upstream-freight-promo',
+      label: (
+        <>
+          {promoteMutation.isPending ? (
+            <FontAwesomeIcon icon={faCircleNotch} className='mr-1' spin />
+          ) : (
+            <Typography.Text type='danger' className='mr-2'>
+              <FontAwesomeIcon icon={faBoltLightning} />
+            </Typography.Text>
+          )}
+          Instant promote from upstream
+        </>
+      ),
+      onClick: () => {
+        if (hasMultipleUpstreamFreights) {
+          return;
+        }
+
+        const freight = upstreamFreights?.[0]?.name;
+
+        handleInstantPromoteFromUpstream(freight);
+      },
+      children: hasMultipleUpstreamFreights
+        ? upstreamFreights?.map((upstreamFreight) => ({
+            key: upstreamFreight?.name || '',
+            label: upstreamFreight?.origin?.name,
+            onClick: () => handleInstantPromoteFromUpstream(upstreamFreight?.name)
+          }))
+        : undefined
+    });
   }
 
-  return {
-    dropdownItems
-  };
+  return dropdownItems;
 };

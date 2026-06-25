@@ -288,9 +288,6 @@ func (w *webhook) resolveOriginToFreight(
 	promo *kargoapi.Promotion,
 	stage *kargoapi.Stage,
 ) error {
-	if w.listFreightAvailableToStageFn == nil {
-		return fmt.Errorf("origin resolution is not available")
-	}
 	availableFreight, err := w.listFreightAvailableToStageFn(ctx, w.client, stage)
 	if err != nil {
 		return fmt.Errorf("list available freight: %w", err)
@@ -315,7 +312,7 @@ func (w *webhook) resolveOriginToFreight(
 
 // stampIntentAnnotations stamps hold or release intent annotations on a
 // user-created Promotion so the Stage controller can maintain auto-promotion
-// holds. Errors are swallowed — intent inference is best-effort and must not
+// holds. Errors are swallowed; intent inference is best-effort and must not
 // block Promotion creation.
 //
 // Accepted race: the candidate can change between this lookup and the
@@ -330,43 +327,55 @@ func (w *webhook) stampIntentAnnotations(
 		w.isAutoPromotionEnabledFn == nil || promo.Spec.Freight == "" {
 		return
 	}
+	logger := logging.LoggerFromContext(ctx)
 	// Only stamp intent for Stages that have auto-promotion enabled. Use the
 	// live ProjectConfig rather than the cached stage.Status.AutoPromotionEnabled,
 	// which may lag behind ProjectConfig changes.
 	enabled, err := w.isAutoPromotionEnabledFn(ctx, w.client, stage.ObjectMeta)
-	if err != nil || !enabled {
+	if err != nil {
+		logger.Debug("skipping auto-promotion intent annotation", "error", err)
+		return
+	}
+	if !enabled {
 		return
 	}
 	freight, err := w.getFreightFn(ctx, w.client, types.NamespacedName{
 		Namespace: promo.Namespace,
 		Name:      promo.Spec.Freight,
 	})
-	if err != nil || freight == nil {
+	if err != nil {
+		logger.Debug("skipping auto-promotion intent annotation", "error", err)
+		return
+	}
+	if freight == nil {
 		return
 	}
 	origin := freight.Origin
 
 	availableFreight, err := w.listFreightAvailableToStageFn(ctx, w.client, stage)
 	if err != nil {
+		logger.Debug("skipping auto-promotion intent annotation", "error", err)
 		return
 	}
 	candidates, err := api.SelectAutoPromotionCandidates(stage, availableFreight)
 	if err != nil {
+		logger.Debug("skipping auto-promotion intent annotation", "error", err)
 		return
 	}
 
 	candidate, ok := candidates[origin.String()]
 	if !ok {
+		logger.Debug("skipping auto-promotion intent annotation; no candidate", "origin", origin.String())
 		return
 	}
 	if candidate.Name == promo.Spec.Freight {
-		// Promoted Freight IS the candidate — stamp release intent. The Stage
+		// Promoted Freight is the candidate; stamp release intent. The Stage
 		// controller clears any active hold for this origin when a succeeded
 		// Promotion carries this annotation.
 		api.SetAutoPromotionReleaseAnnotation(promo, origin)
 		return
 	}
-	// Promoted Freight is NOT the candidate — stamp hold intent. Also stamp
+	// Promoted Freight is not the candidate; stamp hold intent. Also stamp
 	// AnnotationKeyRollback; its presence makes ctx.meta.promotion.rollback true
 	// in step templates, and its value identifies the origin.
 	api.SetAutoPromotionHoldAnnotation(promo, origin)

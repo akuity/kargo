@@ -144,10 +144,6 @@ func (s *server) recordPromotionCreatedEvent(
 	p *kargoapi.Promotion,
 	f *kargoapi.Freight,
 ) {
-	if s.sender == nil {
-		return
-	}
-
 	var actor string
 	msg := fmt.Sprintf("Promotion created for Stage %q", p.Spec.Stage)
 	if u, ok := user.InfoFromContext(ctx); ok {
@@ -183,10 +179,6 @@ type promoteToStageRequest struct {
 // @Param stage path string true "Stage name"
 // @Param body body promoteToStageRequest true "Promote request"
 // @Success 201 {object} kargoapi.Promotion "Promotion resource (github.com/akuity/kargo/api/v1alpha1.Promotion)"
-// @Failure 400 {object} resourceErrorResponse
-// @Failure 403 {object} resourceErrorResponse
-// @Failure 404 {object} resourceErrorResponse
-// @Failure 500 {object} resourceErrorResponse
 // @Router /v1beta1/projects/{project}/stages/{stage}/promotions [post]
 func (s *server) promoteToStage(c *gin.Context) {
 	ctx := c.Request.Context()
@@ -337,7 +329,9 @@ func (s *server) promoteToStage(c *gin.Context) {
 		return
 	}
 
-	s.recordPromotionCreatedEvent(ctx, promotion, freight)
+	if s.sender != nil {
+		s.recordPromotionCreatedEvent(ctx, promotion, freight)
+	}
 
 	c.JSON(http.StatusCreated, promotion)
 }

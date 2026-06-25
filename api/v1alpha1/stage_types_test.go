@@ -1060,6 +1060,11 @@ func TestParseFreightOriginKey(t *testing.T) {
 			expectErr: true,
 		},
 		{
+			name:      "too many parts",
+			key:       "Warehouse/fake-warehouse/extra",
+			expectErr: true,
+		},
+		{
 			name:      "unknown kind",
 			key:       "Stage/fake-stage",
 			expectErr: true,
@@ -1075,131 +1080,6 @@ func TestParseFreightOriginKey(t *testing.T) {
 			}
 			require.NoError(t, err)
 			require.Equal(t, testCase.expectedOrigin, origin)
-		})
-	}
-}
-
-func TestStageStatus_GetAutoPromotionHold(t *testing.T) {
-	testOrigin := FreightOrigin{
-		Kind: FreightOriginKindWarehouse,
-		Name: "fake-warehouse",
-	}
-	testHold := AutoPromotionHold{
-		FreightName: "fake-freight",
-		Origin:      testOrigin,
-	}
-
-	testCases := []struct {
-		name       string
-		status     *StageStatus
-		assertions func(*testing.T, AutoPromotionHold, bool)
-	}{
-		{
-			name:   "nil status",
-			status: nil,
-			assertions: func(t *testing.T, hold AutoPromotionHold, ok bool) {
-				require.False(t, ok)
-				require.Empty(t, hold)
-			},
-		},
-		{
-			name: "hold exists",
-			status: &StageStatus{
-				AutoPromotionHolds: map[string]AutoPromotionHold{
-					testOrigin.String(): testHold,
-				},
-			},
-			assertions: func(t *testing.T, hold AutoPromotionHold, ok bool) {
-				require.True(t, ok)
-				require.Equal(t, testHold, hold)
-			},
-		},
-		{
-			name:   "hold does not exist",
-			status: &StageStatus{},
-			assertions: func(t *testing.T, hold AutoPromotionHold, ok bool) {
-				require.False(t, ok)
-				require.Empty(t, hold)
-			},
-		},
-	}
-
-	for _, testCase := range testCases {
-		t.Run(testCase.name, func(t *testing.T) {
-			hold, ok := testCase.status.GetAutoPromotionHold(testOrigin)
-			testCase.assertions(t, hold, ok)
-		})
-	}
-}
-
-func TestStageStatus_DeleteAutoPromotionHold(t *testing.T) {
-	testOrigin := FreightOrigin{
-		Kind: FreightOriginKindWarehouse,
-		Name: "fake-warehouse",
-	}
-	otherOrigin := FreightOrigin{
-		Kind: FreightOriginKindWarehouse,
-		Name: "other-warehouse",
-	}
-	testHold := AutoPromotionHold{
-		FreightName: "fake-freight",
-		Origin:      testOrigin,
-	}
-
-	testCases := []struct {
-		name       string
-		status     *StageStatus
-		assertions func(*testing.T, *StageStatus)
-	}{
-		{
-			name:   "nil status",
-			status: nil,
-			assertions: func(t *testing.T, status *StageStatus) {
-				require.Nil(t, status)
-			},
-		},
-		{
-			name:   "nil map",
-			status: &StageStatus{},
-			assertions: func(t *testing.T, status *StageStatus) {
-				require.Nil(t, status.AutoPromotionHolds)
-			},
-		},
-		{
-			name: "deleting the last hold normalizes the map to nil",
-			status: &StageStatus{
-				AutoPromotionHolds: map[string]AutoPromotionHold{
-					testOrigin.String(): testHold,
-				},
-			},
-			assertions: func(t *testing.T, status *StageStatus) {
-				require.Nil(t, status.AutoPromotionHolds)
-			},
-		},
-		{
-			name: "other origins' holds are untouched",
-			status: &StageStatus{
-				AutoPromotionHolds: map[string]AutoPromotionHold{
-					testOrigin.String():  testHold,
-					otherOrigin.String(): {Origin: otherOrigin},
-				},
-			},
-			assertions: func(t *testing.T, status *StageStatus) {
-				require.Equal(
-					t,
-					map[string]AutoPromotionHold{
-						otherOrigin.String(): {Origin: otherOrigin},
-					},
-					status.AutoPromotionHolds,
-				)
-			},
-		},
-	}
-
-	for _, testCase := range testCases {
-		t.Run(testCase.name, func(t *testing.T) {
-			testCase.status.DeleteAutoPromotionHold(testOrigin.String())
-			testCase.assertions(t, testCase.status)
 		})
 	}
 }

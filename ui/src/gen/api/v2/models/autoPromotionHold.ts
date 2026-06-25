@@ -8,18 +8,16 @@
 import type { FreightOrigin } from './freightOrigin';
 
 export interface AutoPromotionHold {
-  /** Actor identifies the user who triggered the rollback. */
+  /** Actor identifies the user who triggered the hold. */
   actor?: string;
-  /** CreatedAt is the creation timestamp of the rollback Promotion. */
-  createdAt?: string;
-  /** FreightName is the name of the Freight selected when the hold was created.
-+kubebuilder:validation:Required */
-  freightName: string;
-  /** Origin describes the FreightOrigin pinned by this hold. It matches the
-enclosing map key.
-+kubebuilder:validation:Required */
-  origin: FreightOrigin;
-  /** PromotionName is the name of the rollback Promotion that established this
+  /** CreatedAt is the creation timestamp of the Promotion that established this
 hold. */
+  createdAt?: string;
+  /** FreightName is the name of the Freight selected when the hold was created. */
+  freightName?: string;
+  /** Origin describes the FreightOrigin pinned by this hold. It matches the
+enclosing map key. */
+  origin?: FreightOrigin;
+  /** PromotionName is the name of the Promotion that established this hold. */
   promotionName?: string;
 }

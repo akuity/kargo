@@ -406,7 +406,6 @@ export const ArtifactoryWebhookReceiverConfigSchema: GenMessage<ArtifactoryWebho
 export type AutoPromotionHold = Message<"github.com.akuity.kargo.api.v1alpha1.AutoPromotionHold"> & {
   /**
    * FreightName is the name of the Freight selected when the hold was created.
-   * +kubebuilder:validation:Required
    *
    * @generated from field: optional string freightName = 1;
    */
@@ -415,29 +414,28 @@ export type AutoPromotionHold = Message<"github.com.akuity.kargo.api.v1alpha1.Au
   /**
    * Origin describes the FreightOrigin pinned by this hold. It matches the
    * enclosing map key.
-   * +kubebuilder:validation:Required
    *
    * @generated from field: optional github.com.akuity.kargo.api.v1alpha1.FreightOrigin origin = 8;
    */
   origin?: FreightOrigin;
 
   /**
-   * PromotionName is the name of the rollback Promotion that established this
-   * hold.
+   * PromotionName is the name of the Promotion that established this hold.
    *
    * @generated from field: optional string promotionName = 3;
    */
   promotionName: string;
 
   /**
-   * Actor identifies the user who triggered the rollback.
+   * Actor identifies the user who triggered the hold.
    *
    * @generated from field: optional string actor = 5;
    */
   actor: string;
 
   /**
-   * CreatedAt is the creation timestamp of the rollback Promotion.
+   * CreatedAt is the creation timestamp of the Promotion that established this
+   * hold.
    *
    * @generated from field: optional k8s.io.apimachinery.pkg.apis.meta.v1.Time createdAt = 7;
    */

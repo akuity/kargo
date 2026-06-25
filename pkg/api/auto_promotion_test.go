@@ -16,7 +16,7 @@ import (
 	kargoapi "github.com/akuity/kargo/api/v1alpha1"
 )
 
-func TestFindMatchingPromotionPolicy(t *testing.T) {
+func Test_findMatchingPromotionPolicy(t *testing.T) {
 	scheme := runtime.NewScheme()
 	require.NoError(t, kargoapi.AddToScheme(scheme))
 
@@ -135,7 +135,7 @@ func TestFindMatchingPromotionPolicy(t *testing.T) {
 				WithRuntimeObjects(testCase.objects...).
 				WithInterceptorFuncs(testCase.interceptor).
 				Build()
-			policy, err := FindMatchingPromotionPolicy(t.Context(), c, stageMeta)
+			policy, err := findMatchingPromotionPolicy(t.Context(), c, stageMeta)
 			testCase.assert(t, policy, err)
 		})
 	}

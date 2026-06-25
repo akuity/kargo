@@ -314,47 +314,6 @@ func Test_webhook_ValidateCreate(t *testing.T) {
 			},
 		},
 		{
-			name: "invalid label selector in stage selector",
-			projectConfig: &kargoapi.ProjectConfig{
-				ObjectMeta: metav1.ObjectMeta{
-					Name:      testProjectName,
-					Namespace: testProjectName,
-				},
-				Spec: kargoapi.ProjectConfigSpec{
-					PromotionPolicies: []kargoapi.PromotionPolicy{
-						{Stage: "stage-1"},
-						{
-							StageSelector: &kargoapi.PromotionPolicySelector{
-								LabelSelector: &metav1.LabelSelector{
-									MatchExpressions: []metav1.LabelSelectorRequirement{{
-										Key:      "app",
-										Operator: metav1.LabelSelectorOpIn,
-										// "In" requires at least one value.
-										Values: []string{},
-									}},
-								},
-							},
-						},
-					},
-				},
-			},
-			objects: []client.Object{testNs},
-			assertions: func(t *testing.T, warnings admission.Warnings, err error) {
-				assert.Empty(t, warnings)
-				require.Error(t, err)
-
-				var statusErr *apierrors.StatusError
-				require.True(t, errors.As(err, &statusErr))
-
-				assert.Equal(t, metav1.StatusReasonInvalid, statusErr.ErrStatus.Reason)
-				assert.Equal(t, 1, len(statusErr.ErrStatus.Details.Causes))
-
-				assert.Equal(t, "spec.promotionPolicies[1].stageSelector.labelSelector",
-					statusErr.ErrStatus.Details.Causes[0].Field)
-				assert.Equal(t, metav1.CauseTypeFieldValueInvalid, statusErr.ErrStatus.Details.Causes[0].Type)
-			},
-		},
-		{
 			name: "valid pattern in stage selector",
 			projectConfig: &kargoapi.ProjectConfig{
 				ObjectMeta: metav1.ObjectMeta{

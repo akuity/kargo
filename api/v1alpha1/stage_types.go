@@ -272,7 +272,7 @@ func (f *FreightOrigin) String() string {
 // form and rejects empty parts or unsupported origin kinds.
 func ParseFreightOriginKey(key string) (FreightOrigin, error) {
 	kind, name, ok := strings.Cut(key, "/")
-	if !ok {
+	if !ok || strings.Contains(name, "/") {
 		return FreightOrigin{}, fmt.Errorf("invalid Freight origin key %q", key)
 	}
 
@@ -490,46 +490,17 @@ type AutoPromotionHoldsWatermark struct {
 // map key.
 type AutoPromotionHold struct {
 	// FreightName is the name of the Freight selected when the hold was created.
-	// +kubebuilder:validation:Required
 	FreightName string `json:"freightName" protobuf:"bytes,1,opt,name=freightName"`
 	// Origin describes the FreightOrigin pinned by this hold. It matches the
 	// enclosing map key.
-	// +kubebuilder:validation:Required
 	Origin FreightOrigin `json:"origin" protobuf:"bytes,8,opt,name=origin"`
-	// PromotionName is the name of the rollback Promotion that established this
-	// hold.
+	// PromotionName is the name of the Promotion that established this hold.
 	PromotionName string `json:"promotionName,omitempty" protobuf:"bytes,3,opt,name=promotionName"`
-	// Actor identifies the user who triggered the rollback.
+	// Actor identifies the user who triggered the hold.
 	Actor string `json:"actor,omitempty" protobuf:"bytes,5,opt,name=actor"`
-	// CreatedAt is the creation timestamp of the rollback Promotion.
+	// CreatedAt is the creation timestamp of the Promotion that established this
+	// hold.
 	CreatedAt *metav1.Time `json:"createdAt,omitempty" protobuf:"bytes,7,opt,name=createdAt"`
-}
-
-// GetAutoPromotionHold returns the AutoPromotionHold for the given origin, if
-// one exists. The second return value indicates whether a hold was found.
-func (s *StageStatus) GetAutoPromotionHold(origin FreightOrigin) (AutoPromotionHold, bool) {
-	if s == nil {
-		return AutoPromotionHold{}, false
-	}
-
-	hold, ok := s.AutoPromotionHolds[origin.String()]
-	if !ok {
-		return AutoPromotionHold{}, false
-	}
-	return hold, true
-}
-
-// DeleteAutoPromotionHold removes the AutoPromotionHold for the given origin
-// key, normalizing an empty map to nil.
-func (s *StageStatus) DeleteAutoPromotionHold(key string) {
-	if s == nil {
-		return
-	}
-
-	delete(s.AutoPromotionHolds, key)
-	if len(s.AutoPromotionHolds) == 0 {
-		s.AutoPromotionHolds = nil
-	}
 }
 
 // GetConditions implements the conditions.Getter interface.

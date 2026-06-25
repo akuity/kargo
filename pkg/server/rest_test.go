@@ -4,7 +4,6 @@ import (
 	"bytes"
 	"context"
 	"encoding/json"
-	"errors"
 	"io"
 	"net/http"
 	"net/http/httptest"
@@ -17,7 +16,6 @@ import (
 	coordinationv1 "k8s.io/api/coordination/v1"
 	corev1 "k8s.io/api/core/v1"
 	rbacv1 "k8s.io/api/rbac/v1"
-	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/client-go/rest"
 	"sigs.k8s.io/controller-runtime/pkg/client"
@@ -149,56 +147,6 @@ func testRESTEndpoint(
 			testCase.assertions(t, w, internalClient)
 		})
 	}
-}
-
-func TestServerHandleErrorPlainError(t *testing.T) {
-	gin.DefaultWriter = io.Discard
-	gin.DefaultErrorWriter = io.Discard
-
-	s := &server{}
-	router := gin.New()
-	router.Use(s.handleError)
-	router.GET("/error", func(c *gin.Context) {
-		_ = c.Error(errors.New("something went wrong"))
-	})
-
-	w := httptest.NewRecorder()
-	req := httptest.NewRequest(http.MethodGet, "/error", nil)
-	router.ServeHTTP(w, req)
-
-	require.Equal(t, http.StatusInternalServerError, w.Code)
-	require.JSONEq(t, `{"error":"internal server error"}`, w.Body.String())
-}
-
-func TestServerHandleErrorStatusError(t *testing.T) {
-	gin.DefaultWriter = io.Discard
-	gin.DefaultErrorWriter = io.Discard
-
-	s := &server{}
-	router := gin.New()
-	router.Use(s.handleError)
-	router.GET("/bad-request", func(c *gin.Context) {
-		_ = c.Error(apierrors.NewBadRequest("freight name is required"))
-	})
-	router.GET("/internal", func(c *gin.Context) {
-		_ = c.Error(apierrors.NewInternalError(
-			errors.New("dial tcp 10.0.0.1:443: connection refused"),
-		))
-	})
-
-	t.Run("4xx StatusError passes through verbatim", func(t *testing.T) {
-		w := httptest.NewRecorder()
-		router.ServeHTTP(w, httptest.NewRequest(http.MethodGet, "/bad-request", nil))
-		require.Equal(t, http.StatusBadRequest, w.Code)
-		require.Contains(t, w.Body.String(), "freight name is required")
-	})
-
-	t.Run("5xx StatusError is sanitized", func(t *testing.T) {
-		w := httptest.NewRecorder()
-		router.ServeHTTP(w, httptest.NewRequest(http.MethodGet, "/internal", nil))
-		require.Equal(t, http.StatusInternalServerError, w.Code)
-		require.JSONEq(t, `{"error":"internal server error"}`, w.Body.String())
-	})
 }
 
 // restWatchTestCase represents a test case for a REST watch endpoint that uses

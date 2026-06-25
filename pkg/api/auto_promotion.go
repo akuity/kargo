@@ -16,12 +16,12 @@ import (
 	"github.com/akuity/kargo/pkg/pattern"
 )
 
-// FindMatchingPromotionPolicy returns the first PromotionPolicy in the
+// findMatchingPromotionPolicy returns the first PromotionPolicy in the
 // Project's ProjectConfig whose stage selector matches the supplied Stage
 // metadata. Policies are evaluated in order and the first match wins, even
 // when a later policy also matches. It returns nil when the Project has no
 // ProjectConfig or no policy matches.
-func FindMatchingPromotionPolicy(
+func findMatchingPromotionPolicy(
 	ctx context.Context,
 	c client.Client,
 	stage metav1.ObjectMeta,
@@ -79,7 +79,7 @@ func IsAutoPromotionEnabled(
 	c client.Client,
 	stage metav1.ObjectMeta,
 ) (bool, error) {
-	policy, err := FindMatchingPromotionPolicy(ctx, c, stage)
+	policy, err := findMatchingPromotionPolicy(ctx, c, stage)
 	if err != nil {
 		return false, err
 	}
@@ -151,38 +151,4 @@ func SetAutoPromotionReleaseAnnotation(promo *kargoapi.Promotion, origin kargoap
 		promo.Annotations = make(map[string]string, 1)
 	}
 	promo.Annotations[kargoapi.AnnotationKeyAutoPromotionRelease] = origin.String()
-}
-
-// AutoPromotionHoldOriginFromPromotion reads AnnotationKeyAutoPromotionHold
-// and parses the origin key. Returns false if the annotation is absent or
-// malformed.
-func AutoPromotionHoldOriginFromPromotion(
-	promo *kargoapi.Promotion,
-) (kargoapi.FreightOrigin, bool) {
-	val := promo.Annotations[kargoapi.AnnotationKeyAutoPromotionHold]
-	if val == "" {
-		return kargoapi.FreightOrigin{}, false
-	}
-	origin, err := kargoapi.ParseFreightOriginKey(val)
-	if err != nil {
-		return kargoapi.FreightOrigin{}, false
-	}
-	return origin, true
-}
-
-// AutoPromotionReleaseOriginFromPromotion reads AnnotationKeyAutoPromotionRelease
-// and parses the origin key. Returns false if the annotation is absent or
-// malformed.
-func AutoPromotionReleaseOriginFromPromotion(
-	promo *kargoapi.Promotion,
-) (kargoapi.FreightOrigin, bool) {
-	val := promo.Annotations[kargoapi.AnnotationKeyAutoPromotionRelease]
-	if val == "" {
-		return kargoapi.FreightOrigin{}, false
-	}
-	origin, err := kargoapi.ParseFreightOriginKey(val)
-	if err != nil {
-		return kargoapi.FreightOrigin{}, false
-	}
-	return origin, true
 }
