@@ -4243,12 +4243,10 @@ export type StageStatus = Message<"github.com.akuity.kargo.api.v1alpha1.StageSta
   autoPromotionHolds: { [key: string]: AutoPromotionHold };
 
   /**
-   * AutoPromotionHoldsThrough is the watermark used by the Stage controller to
-   * process hold and release intent Promotions incrementally. It records the
-   * CreationTimestamp and Name of the latest intent Promotion that has already
-   * been applied to AutoPromotionHolds. On each reconcile only Promotions
-   * strictly newer than this watermark are processed, ensuring that
-   * garbage-collected Promotions do not corrupt the accumulated hold state.
+   * AutoPromotionHoldsThrough is controller bookkeeping for processing hold
+   * and release intent Promotions once. It records the newest intent Promotion
+   * already applied to AutoPromotionHolds, so a hold or release is not replayed
+   * incorrectly after old Promotion resources are garbage-collected.
    *
    * @generated from field: optional github.com.akuity.kargo.api.v1alpha1.AutoPromotionHoldsWatermark autoPromotionHoldsThrough = 17;
    */

@@ -23,12 +23,10 @@ other than the current auto-promotion candidate for the same origin. Each
 map entry pins a single origin keyed by the canonical string
 representation of the FreightOrigin. */
   autoPromotionHolds?: StageStatusAutoPromotionHolds;
-  /** AutoPromotionHoldsThrough is the watermark used by the Stage controller to
-process hold and release intent Promotions incrementally. It records the
-CreationTimestamp and Name of the latest intent Promotion that has already
-been applied to AutoPromotionHolds. On each reconcile only Promotions
-strictly newer than this watermark are processed, ensuring that
-garbage-collected Promotions do not corrupt the accumulated hold state. */
+  /** AutoPromotionHoldsThrough is controller bookkeeping for processing hold
+and release intent Promotions once. It records the newest intent Promotion
+already applied to AutoPromotionHolds, so a hold or release is not replayed
+incorrectly after old Promotion resources are garbage-collected. */
   autoPromotionHoldsThrough?: AutoPromotionHoldsWatermark;
   /** Conditions contains the last observations of the Stage's current
 state.

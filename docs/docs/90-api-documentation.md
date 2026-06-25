@@ -2295,7 +2295,7 @@ RawFormat specifies the format for raw resource representation.
 
 
 ### PromotionSpec {#github-com-akuity-kargo-api-v1alpha1-PromotionSpec}
- PromotionSpec describes the desired transition of a specific Stage into a specific Freight.
+ PromotionSpec describes the desired transition of a specific Stage into a specific Freight.  
 | Field | Type | Description |
 | ----- | ---- | ----------- |
 | stage | string |  Stage specifies the name of the Stage to which this Promotion applies. The Stage referenced by this field MUST be in the same namespace as the Promotion.       |
@@ -2459,11 +2459,11 @@ RawFormat specifies the format for raw resource representation.
 | autoPromotionEnabled | bool |  AutoPromotionEnabled indicates whether automatic promotion is enabled for the Stage based on the ProjectConfig. |
 | metadata | [StageStatus.MetadataEntry](#github-com-akuity-kargo-api-v1alpha1-StageStatus-MetadataEntry) |  Metadata is a map of arbitrary metadata associated with the Stage. This is useful for storing additional information about the Stage that can be shared across promotions, verifications, or other processes. |
 | autoPromotionHolds | [StageStatus.AutoPromotionHoldsEntry](#github-com-akuity-kargo-api-v1alpha1-StageStatus-AutoPromotionHoldsEntry) |  AutoPromotionHolds pause auto-promotion for specific FreightOrigins on this Stage after a user-directed promotion intentionally selects Freight other than the current auto-promotion candidate for the same origin. Each map entry pins a single origin keyed by the canonical string representation of the FreightOrigin. |
-| autoPromotionHoldsThrough | [AutoPromotionHoldsWatermark](#github-com-akuity-kargo-api-v1alpha1-AutoPromotionHoldsWatermark) |  AutoPromotionHoldsThrough is the watermark used by the Stage controller to process hold and release intent Promotions incrementally. It records the CreationTimestamp and Name of the latest intent Promotion that has already been applied to AutoPromotionHolds. On each reconcile only Promotions strictly newer than this watermark are processed, ensuring that garbage-collected Promotions do not corrupt the accumulated hold state. |
+| autoPromotionHoldsThrough | [AutoPromotionHoldsWatermark](#github-com-akuity-kargo-api-v1alpha1-AutoPromotionHoldsWatermark) |  AutoPromotionHoldsThrough is controller bookkeeping for processing hold and release intent Promotions once. It records the newest intent Promotion already applied to AutoPromotionHolds, so a hold or release is not replayed incorrectly after old Promotion resources are garbage-collected. |
 
 
 ### StageStatus.AutoPromotionHoldsEntry {#github-com-akuity-kargo-api-v1alpha1-StageStatus-AutoPromotionHoldsEntry}
-
+ 
 | Field | Type | Description |
 | ----- | ---- | ----------- |
 | key | string |   |
