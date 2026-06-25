@@ -15,15 +15,7 @@ referencing the current `HEAD` of a checked-out branch.
 | `path` | `string` | Y        | Path to a working directory of a local repository. This path is relative to the temporary workspace that Kargo provisions for use by the promotion process. |
 | `tag`  | `string` | Y        | The tag to create. |
 | `message` | `string` | Y | The message with which to annotate the tag. |
-| `force` | `boolean` | N | Whether to overwrite an existing tag of the same name. Defaults to `false`. |
-
-:::caution
-Force overwriting a tag is an unconventional use of tags. Tags are conventionally
-immutable references to a specific commit, and many tools and workflows assume
-they never change. Enable `force` only when you fully understand the
-consequences and have a deliberate reason to move an existing tag to a new
-commit.
-:::
+| `force` | `boolean` | N | Whether to overwrite an existing tag of the same name. Defaults to `false`. **Caution:** Overwriting a tag is unconventional—tags are normally immutable references to a specific commit—so enable this only with a deliberate reason. |
 
 ## Output
 
