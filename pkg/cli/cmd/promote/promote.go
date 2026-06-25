@@ -242,7 +242,7 @@ func (o *promotionOptions) run(ctx context.Context) error {
 			return fmt.Errorf("unmarshal promotion: %w", err)
 		}
 		if o.Wait {
-			if err = o.waitForPromotion(ctx, nil, promo); err != nil {
+			if promo, err = o.waitForPromotion(ctx, nil, promo); err != nil {
 				return fmt.Errorf("wait for promotion: %w", err)
 			}
 		}
@@ -275,7 +275,7 @@ func (o *promotionOptions) run(ctx context.Context) error {
 		}
 		promotions := result.Promotions
 		if o.Wait {
-			if err = o.waitForPromotions(ctx, promotions...); err != nil {
+			if promotions, err = o.waitForPromotions(ctx, promotions...); err != nil {
 				return fmt.Errorf("wait for promotion: %w", err)
 			}
 		}
@@ -290,32 +290,35 @@ func (o *promotionOptions) run(ctx context.Context) error {
 func (o *promotionOptions) waitForPromotions(
 	ctx context.Context,
 	p ...*kargoapi.Promotion,
-) error {
+) ([]*kargoapi.Promotion, error) {
 	watchClient, err := client.GetWatchClientFromConfig(
 		ctx,
 		o.Config,
 		o.ClientOptions,
 	)
 	if err != nil {
-		return fmt.Errorf("get client from config: %w", err)
+		return nil, fmt.Errorf("get client from config: %w", err)
 	}
 	g, ctx := errgroup.WithContext(ctx)
-	for _, promo := range p {
+	promotions := make([]*kargoapi.Promotion, len(p))
+	for i, promo := range p {
 		g.Go(func() error {
-			return o.waitForPromotion(ctx, watchClient, promo)
+			var err error
+			promotions[i], err = o.waitForPromotion(ctx, watchClient, promo)
+			return err
 		})
 	}
-	return g.Wait()
+	return promotions, g.Wait()
 }
 
 func (o *promotionOptions) waitForPromotion(
 	ctx context.Context,
 	watchClient *watch.Client,
 	p *kargoapi.Promotion,
-) error {
+) (*kargoapi.Promotion, error) {
 	if p == nil || p.Status.Phase.IsTerminal() {
 		// No need to wait for a promotion that is already terminal.
-		return nil
+		return p, nil
 	}
 
 	if watchClient == nil {
@@ -325,11 +328,26 @@ func (o *promotionOptions) waitForPromotion(
 			o.Config,
 			o.ClientOptions,
 		); err != nil {
-			return fmt.Errorf("get client from config: %w", err)
+			return nil, fmt.Errorf("get client from config: %w", err)
 		}
 	}
 
 	eventCh, errCh := watchClient.WatchPromotion(ctx, p.Namespace, p.Name)
+	promo, err := waitForTerminalPromotion(ctx, eventCh, errCh)
+	if err != nil {
+		return nil, err
+	}
+	if promo != nil {
+		*p = *promo
+	}
+	return p, nil
+}
+
+func waitForTerminalPromotion(
+	ctx context.Context,
+	eventCh <-chan watch.Event[*kargoapi.Promotion],
+	errCh <-chan error,
+) (*kargoapi.Promotion, error) {
 	for {
 		select {
 		case event, ok := <-eventCh:
@@ -337,21 +355,21 @@ func (o *promotionOptions) waitForPromotion(
 				select {
 				case err := <-errCh:
 					if err != nil {
-						return fmt.Errorf("watch promotion: %w", err)
+						return nil, fmt.Errorf("watch promotion: %w", err)
 					}
 				default:
 				}
-				return errors.New("unexpected end of watch stream")
+				return nil, errors.New("unexpected end of watch stream")
 			}
 			if event.Object != nil && event.Object.Status.Phase.IsTerminal() {
-				return nil
+				return event.Object, nil
 			}
 		case err := <-errCh:
 			if err != nil {
-				return fmt.Errorf("watch promotion: %w", err)
+				return nil, fmt.Errorf("watch promotion: %w", err)
 			}
 		case <-ctx.Done():
-			return ctx.Err()
+			return nil, ctx.Err()
 		}
 	}
 }
