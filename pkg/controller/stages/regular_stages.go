@@ -1720,10 +1720,11 @@ func (r *RegularStageReconciler) autoPromoteFreight(
 			)
 		}
 
-		// Find the latest Freight by sorting the available Freight by creation time
-		// in descending order.
+		// Find the latest Freight by sorting the available Freight by discovery
+		// time in descending order, falling back to creation time if the
+		// discovery timestamp is not set.
 		slices.SortFunc(freight, func(lhs, rhs kargoapi.Freight) int {
-			return rhs.CreationTimestamp.Compare(lhs.CreationTimestamp.Time)
+			return rhs.EffectiveDiscoveredAt().Compare(lhs.EffectiveDiscoveredAt())
 		})
 		latestFreight := freight[0]
 

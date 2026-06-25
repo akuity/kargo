@@ -30,6 +30,11 @@ type Freight struct {
 	// present, the defaulting webhook will choose an available alias and assign
 	// it to both the field and label.
 	Alias string `json:"alias,omitempty" protobuf:"bytes,7,opt,name=alias"`
+	// DiscoveredAt is the time at which this Freight was discovered/created.
+	// A defaulting webhook initializes this to the creation time of the Freight.
+	//
+	// +optional
+	DiscoveredAt *metav1.Time `json:"discoveredAt,omitempty" protobuf:"bytes,11,opt,name=discoveredAt"`
 	// Origin describes a kind of Freight in terms of its origin.
 	//
 	// +kubebuilder:validation:Required
@@ -49,6 +54,16 @@ type Freight struct {
 
 func (f *Freight) GetStatus() *FreightStatus {
 	return &f.Status
+}
+
+// EffectiveDiscoveredAt returns DiscoveredAt if set, falling back to
+// CreationTimestamp. Use this instead of CreationTimestamp directly whenever
+// the intent is to know when the Freight was first discovered.
+func (f *Freight) EffectiveDiscoveredAt() time.Time {
+	if f.DiscoveredAt != nil {
+		return f.DiscoveredAt.Time
+	}
+	return f.CreationTimestamp.Time
 }
 
 // GitCommit describes a specific commit from a specific Git repository.

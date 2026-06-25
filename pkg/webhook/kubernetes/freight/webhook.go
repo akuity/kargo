@@ -10,6 +10,7 @@ import (
 	"github.com/technosophos/moniker"
 	admissionv1 "k8s.io/api/admission/v1"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/runtime/schema"
 	"k8s.io/apimachinery/pkg/types"
@@ -127,6 +128,18 @@ func (w *webhook) Default(ctx context.Context, obj runtime.Object) error {
 		// Re-calculate ID in case it wasn't set correctly to begin with -- possible
 		// when users create their own Freight.
 		freight.Name = api.GenerateFreightID(freight)
+	}
+
+	// Initialize discoveredAt when unset, regardless of whether this is a create
+	// or update. For updates this backfills the field on pre-existing Freight.
+	if freight.DiscoveredAt == nil {
+		if !freight.CreationTimestamp.IsZero() {
+			t := freight.CreationTimestamp
+			freight.DiscoveredAt = &t
+		} else {
+			t := metav1.Now()
+			freight.DiscoveredAt = &t
+		}
 	}
 
 	// Sync the convenience alias field with the alias label

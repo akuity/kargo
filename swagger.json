@@ -6872,6 +6872,10 @@
             "$ref": "#/definitions/GitCommit"
           }
         },
+        "discoveredAt": {
+          "description": "DiscoveredAt is the time at which this Freight was discovered/created.\nA defaulting webhook initializes this to the creation time of the Freight.\n\n+optional",
+          "type": "string"
+        },
         "images": {
           "description": "Images describes specific versions of specific container images.",
           "type": "array",

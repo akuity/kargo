@@ -45,6 +45,12 @@ type Freight struct {
 	// Commits describes specific Git repository commits.
 	Commits []*GitCommit `json:"commits"`
 
+	// DiscoveredAt is the time at which this Freight was discovered/created.
+	// A defaulting webhook initializes this to the creation time of the Freight.
+	//
+	// +optional
+	DiscoveredAt string `json:"discoveredAt,omitempty"`
+
 	// Images describes specific versions of specific container images.
 	Images []*Image `json:"images"`
 

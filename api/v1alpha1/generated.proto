@@ -653,6 +653,12 @@ message Freight {
   // it to both the field and label.
   optional string alias = 7;
 
+  // DiscoveredAt is the time at which this Freight was discovered/created.
+  // A defaulting webhook initializes this to the creation time of the Freight.
+  //
+  // +optional
+  optional .k8s.io.apimachinery.pkg.apis.meta.v1.Time discoveredAt = 11;
+
   // Origin describes a kind of Freight in terms of its origin.
   //
   // +kubebuilder:validation:Required
