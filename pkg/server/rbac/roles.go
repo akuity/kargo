@@ -15,6 +15,7 @@ import (
 
 	rbacapi "github.com/akuity/kargo/api/rbac/v1alpha1"
 	kargoapi "github.com/akuity/kargo/api/v1alpha1"
+	"github.com/akuity/kargo/pkg/server/kubernetes"
 )
 
 // RolesDatabase is an interface for the Kargo Roles store.
@@ -96,6 +97,9 @@ type RolesDatabase interface {
 // trios.
 type rolesDatabase struct {
 	client client.Client
+	// NOTE(thomastaylor312): this just ends up being the same client as `client`, but we have it as
+	// a separate field so testing is easier because we can nil this out or mock what we need
+	authorizer kubernetes.Authorizer
 }
 
 // NewKubernetesRolesDatabase returns an implementation of the RolesDatabase
@@ -103,7 +107,19 @@ type rolesDatabase struct {
 // retrieve Kargo Roles stored Kubernetes in the form of
 // ServiceAccount/Role/RoleBinding trios.
 func NewKubernetesRolesDatabase(c client.Client) RolesDatabase {
-	return &rolesDatabase{client: c}
+	db := &rolesDatabase{client: c}
+	// The API server passes its authorizing client here. We use it to verify --
+	// as the requesting user -- that a Role edit does not grant permissions the
+	// user does not already hold. This is necessary because Role writes are
+	// performed with the API server's own broadly-privileged ServiceAccount, so
+	// Kubernetes' built-in escalation prevention runs against the server rather
+	// than the user. Clients that do not implement Authorizer (test fakes, or the
+	// non-authorizing local-mode client whose writes are already constrained by
+	// the user's own credentials) leave this nil, disabling the check.
+	if authz, ok := c.(kubernetes.Authorizer); ok {
+		db.authorizer = authz
+	}
+	return db
 }
 
 // CreateRole implements the RolesDatabase interface.
@@ -170,6 +186,14 @@ func (r *rolesDatabase) Create(
 	sa, role, rb, err := RoleToResources(kargoRole)
 	if err != nil {
 		return nil, fmt.Errorf("error converting Kargo Role to resources: %w", err)
+	}
+
+	// Reject the create unless the requester already holds every permission in
+	// the new Role's rule set (prevents privilege escalation via Role creation).
+	if _, err = verifyRulesNotEscalating(
+		ctx, r.authorizer, kargoRole.Namespace, role.Rules,
+	); err != nil {
+		return nil, err
 	}
 
 	// Append the description annotation to the Role if it exists
@@ -376,6 +400,16 @@ func (r *rolesDatabase) GrantPermissionsToRole(
 	if resourceDetails.ResourceName != "" {
 		newRule.ResourceNames = []string{resourceDetails.ResourceName}
 	}
+
+	// Reject the grant unless the requester already holds every permission they
+	// are attempting to confer (prevents privilege escalation via Role editing).
+	// Only the new rule is checked; pre-existing rules were vetted when added.
+	if _, err = verifyRulesNotEscalating(
+		ctx, r.authorizer, project, []rbacv1.PolicyRule{newRule},
+	); err != nil {
+		return nil, err
+	}
+
 	if newRole.Rules, err = NormalizePolicyRules(append(newRole.Rules, newRule), nil); err != nil {
 		return nil, fmt.Errorf("error normalizing RBAC policy rules: %w", err)
 	}
@@ -413,6 +447,13 @@ func (r *rolesDatabase) GrantRoleToUsers(
 	// reason.
 	role, _, err := manageableResources(*sa, roles, rbs)
 	if err != nil {
+		return nil, err
+	}
+	// Binding a user to a Kargo Role maps their identity onto its ServiceAccount,
+	// conferring the Role's permissions. Reject unless the requester already holds
+	// those permissions (prevents privilege escalation by binding a user --
+	// possibly the requester themselves -- to a more powerful Role).
+	if err = verifyBindingNotEscalating(ctx, r.authorizer, project, roles); err != nil {
 		return nil, err
 	}
 	if err = amendClaimAnnotations(sa, claimListToMap(claims)); err != nil {
@@ -616,21 +657,25 @@ func (r *rolesDatabase) Update(
 		delete(sa.Annotations, kargoapi.AnnotationKeyDescription)
 	}
 
-	if err = r.client.Update(ctx, sa); err != nil {
-		return nil, fmt.Errorf(
-			"error updating ServiceAccount %q in namespace %q: %w", kargoRole.Name, kargoRole.Namespace, err,
-		)
-	}
-
 	newRole := role
 	if newRole == nil {
 		newRole = buildNewRole(kargoRole.Namespace, kargoRole.Name)
 	}
-	if newRole.Rules, err = NormalizePolicyRules(
-		kargoRole.Rules,
-		&PolicyRuleNormalizationOptions{IncludeCustomVerbsInExpansion: true},
+	// Reject the update unless the requester already holds every permission in
+	// the resulting rule set (prevents privilege escalation via Role editing).
+	// The check runs before anything is persisted, so a denied update has no
+	// side effects. verifyRulesNotEscalating normalizes the rules and returns
+	// them, so the result is suitable for storage.
+	if newRole.Rules, err = verifyRulesNotEscalating(
+		ctx, r.authorizer, kargoRole.Namespace, kargoRole.Rules,
 	); err != nil {
-		return nil, fmt.Errorf("error normalizing RBAC policy rules: %w", err)
+		return nil, err
+	}
+
+	if err = r.client.Update(ctx, sa); err != nil {
+		return nil, fmt.Errorf(
+			"error updating ServiceAccount %q in namespace %q: %w", kargoRole.Name, kargoRole.Namespace, err,
+		)
 	}
 	if role == nil {
 		if err := r.client.Create(ctx, newRole); err != nil {

@@ -107,12 +107,17 @@ func setOptionsDefaults(opts ClientOptions) (ClientOptions, error) {
 	return opts, nil
 }
 
-// The Client interface combines the familiar controller-runtime Client
-// interface with helpful Authorized and Watch functions that are absent from
-// that interface.
-type Client interface {
-	libClient.Client
-
+// Authorizer authorizes a single (verb, resource) operation for the user bound
+// to the context. The API server's authorizing Kubernetes client satisfies this
+// interface; it returns a forbidden error when the user is not permitted.
+//
+// This mirrors the subset of kubernetes.Client used to prevent privilege
+// escalation when editing Kargo Roles: because the API server performs Role
+// writes with its own (broadly privileged) ServiceAccount, Kubernetes' own
+// escalation check runs against the server, not the user. We therefore verify --
+// as the user -- that the caller already holds every permission they are trying
+// to grant.
+type Authorizer interface {
 	// Authorize attempts to authorize the user to perform the desired operation
 	// on the specified resource. If the user is not authorized, an error is
 	// returned.
@@ -123,6 +128,15 @@ type Client interface {
 		subresource string,
 		key libClient.ObjectKey,
 	) error
+}
+
+// The Client interface combines the familiar controller-runtime Client
+// interface with helpful Authorized and Watch functions that are absent from
+// that interface.
+type Client interface {
+	libClient.Client
+
+	Authorizer
 
 	// InternalClient returns the internal controller-runtime client used by this
 	// client. This is useful for cases where the API server needs to bypass
