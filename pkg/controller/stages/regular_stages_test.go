@@ -6880,9 +6880,6 @@ func TestRegularStageReconciler_autoPromoteFreight(t *testing.T) {
 					ObjectMeta: metav1.ObjectMeta{
 						Namespace: "fake-project",
 						Name:      "hold-promo",
-						Labels: map[string]string{
-							kargoapi.LabelKeyStage: "test-stage",
-						},
 						Annotations: map[string]string{
 							kargoapi.AnnotationKeyAutoPromotionHold: "Warehouse/test-warehouse",
 						},
@@ -7028,6 +7025,11 @@ func TestRegularStageReconciler_autoPromoteFreight(t *testing.T) {
 				WithObjects(objects...).
 				WithStatusSubresource(&kargoapi.Stage{}, &kargoapi.Freight{}).
 				WithInterceptorFuncs(tt.interceptor).
+				WithIndex(
+					&kargoapi.Promotion{},
+					indexer.PromotionsByStageField,
+					indexer.PromotionsByStage,
+				).
 				WithIndex(
 					&kargoapi.Promotion{},
 					indexer.PromotionsByStageAndFreightField,

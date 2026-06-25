@@ -145,7 +145,7 @@ Valid policies are:
   basis.
 
 * `MatchUpstream`: The `Freight` currently in use _immediately upstream_, if
-  suitably verified or approved, will be be auto-promoted to the `Stage` on a
+  suitably verified or approved, will be auto-promoted to the `Stage` on a
   continuous basis. This option is valid only when the `Stage` accepts `Freight`
   from _exactly one_ upstream `Stage`.
 

@@ -292,6 +292,134 @@ func Test_webhook_Default(t *testing.T) {
 			},
 		},
 		{
+			name: "resolves origin to candidate freight",
+			webhook: &webhook{
+				admissionRequestFromContextFn: admission.RequestFromContext,
+				getStageFn: func(
+					context.Context,
+					client.Client,
+					types.NamespacedName,
+				) (*kargoapi.Stage, error) {
+					return &kargoapi.Stage{
+						ObjectMeta: metav1.ObjectMeta{
+							Name:      "fake-stage",
+							Namespace: "fake-project",
+						},
+						Spec: kargoapi.StageSpec{
+							RequestedFreight: []kargoapi.FreightRequest{{
+								Origin: kargoapi.FreightOrigin{
+									Kind: kargoapi.FreightOriginKindWarehouse,
+									Name: "my-warehouse",
+								},
+								Sources: kargoapi.FreightSources{Direct: true},
+							}},
+							PromotionTemplate: &kargoapi.PromotionTemplate{
+								Spec: kargoapi.PromotionTemplateSpec{
+									Steps: []kargoapi.PromotionStep{{Uses: "set-metadata"}},
+								},
+							},
+						},
+					}, nil
+				},
+				listFreightAvailableToStageFn: func(
+					_ context.Context,
+					_ client.Client,
+					_ *kargoapi.Stage,
+				) ([]kargoapi.Freight, error) {
+					return []kargoapi.Freight{{
+						ObjectMeta: metav1.ObjectMeta{Name: "candidate-freight"},
+						Origin: kargoapi.FreightOrigin{
+							Kind: kargoapi.FreightOriginKindWarehouse,
+							Name: "my-warehouse",
+						},
+					}}, nil
+				},
+				isRequestFromKargoControlplaneFn: func(admission.Request) bool {
+					return false
+				},
+			},
+			req: admission.Request{
+				AdmissionRequest: admissionv1.AdmissionRequest{
+					Operation: admissionv1.Create,
+				},
+			},
+			promotion: &kargoapi.Promotion{
+				Spec: kargoapi.PromotionSpec{
+					Stage: "fake-stage",
+					Origin: &kargoapi.FreightOrigin{
+						Kind: kargoapi.FreightOriginKindWarehouse,
+						Name: "my-warehouse",
+					},
+				},
+			},
+			assertions: func(t *testing.T, promo *kargoapi.Promotion, err error) {
+				require.NoError(t, err)
+				require.Equal(t, "candidate-freight", promo.Spec.Freight)
+				require.Nil(t, promo.Spec.Origin)
+				require.Contains(t, promo.Name, "fake-stage")
+				require.Contains(t, promo.Name, "candida")
+			},
+		},
+		{
+			name: "origin resolution fails without candidate",
+			webhook: &webhook{
+				admissionRequestFromContextFn: admission.RequestFromContext,
+				getStageFn: func(
+					context.Context,
+					client.Client,
+					types.NamespacedName,
+				) (*kargoapi.Stage, error) {
+					return &kargoapi.Stage{
+						ObjectMeta: metav1.ObjectMeta{
+							Name:      "fake-stage",
+							Namespace: "fake-project",
+						},
+						Spec: kargoapi.StageSpec{
+							RequestedFreight: []kargoapi.FreightRequest{{
+								Origin: kargoapi.FreightOrigin{
+									Kind: kargoapi.FreightOriginKindWarehouse,
+									Name: "my-warehouse",
+								},
+								Sources: kargoapi.FreightSources{Direct: true},
+							}},
+							PromotionTemplate: &kargoapi.PromotionTemplate{
+								Spec: kargoapi.PromotionTemplateSpec{
+									Steps: []kargoapi.PromotionStep{{Uses: "set-metadata"}},
+								},
+							},
+						},
+					}, nil
+				},
+				listFreightAvailableToStageFn: func(
+					_ context.Context,
+					_ client.Client,
+					_ *kargoapi.Stage,
+				) ([]kargoapi.Freight, error) {
+					return nil, nil
+				},
+				isRequestFromKargoControlplaneFn: func(admission.Request) bool {
+					return false
+				},
+			},
+			req: admission.Request{
+				AdmissionRequest: admissionv1.AdmissionRequest{
+					Operation: admissionv1.Create,
+				},
+			},
+			promotion: &kargoapi.Promotion{
+				Spec: kargoapi.PromotionSpec{
+					Stage: "fake-stage",
+					Origin: &kargoapi.FreightOrigin{
+						Kind: kargoapi.FreightOriginKindWarehouse,
+						Name: "my-warehouse",
+					},
+				},
+			},
+			assertions: func(t *testing.T, _ *kargoapi.Promotion, err error) {
+				require.ErrorContains(t, err, "no auto-promotion candidate found")
+			},
+		},
+		{
 			name: "long stage name: label is shortened, annotation preserves full name",
 			webhook: &webhook{
 				admissionRequestFromContextFn: admission.RequestFromContext,

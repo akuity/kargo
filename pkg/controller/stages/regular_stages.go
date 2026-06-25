@@ -1968,8 +1968,15 @@ func (r *RegularStageReconciler) nonTerminalHoldIntentPromotionExistsForOrigin(
 		ctx,
 		promos,
 		client.InNamespace(stage.Namespace),
-		client.MatchingFields{indexer.PromotionsByTerminalField: strconv.FormatBool(false)},
-		client.MatchingLabels{kargoapi.LabelKeyStage: kubernetes.ShortenLabelValue(stage.Name)},
+		client.MatchingFieldsSelector{
+			Selector: fields.AndSelectors(
+				fields.OneTermEqualSelector(indexer.PromotionsByStageField, stage.Name),
+				fields.OneTermEqualSelector(
+					indexer.PromotionsByTerminalField,
+					strconv.FormatBool(false),
+				),
+			),
+		},
 	); err != nil {
 		return false, err
 	}
