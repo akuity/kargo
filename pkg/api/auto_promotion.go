@@ -139,6 +139,7 @@ func SetAutoPromotionHoldAnnotation(promo *kargoapi.Promotion, origin kargoapi.F
 	if promo.Annotations == nil {
 		promo.Annotations = make(map[string]string, 1)
 	}
+	delete(promo.Annotations, kargoapi.AnnotationKeyAutoPromotionRelease)
 	promo.Annotations[kargoapi.AnnotationKeyAutoPromotionHold] = origin.String()
 }
 
@@ -150,5 +151,6 @@ func SetAutoPromotionReleaseAnnotation(promo *kargoapi.Promotion, origin kargoap
 	if promo.Annotations == nil {
 		promo.Annotations = make(map[string]string, 1)
 	}
+	delete(promo.Annotations, kargoapi.AnnotationKeyAutoPromotionHold)
 	promo.Annotations[kargoapi.AnnotationKeyAutoPromotionRelease] = origin.String()
 }

@@ -292,7 +292,7 @@ func TestRegularStageReconciler_Reconcile(t *testing.T) {
 			},
 		},
 		{
-			name: "status update error after successful reconcile",
+			name: "status update error after syncing Promotions",
 			req: ctrl.Request{
 				NamespacedName: types.NamespacedName{
 					Namespace: "default",
@@ -328,7 +328,7 @@ func TestRegularStageReconciler_Reconcile(t *testing.T) {
 				},
 			},
 			assertions: func(t *testing.T, _ client.Client, result ctrl.Result, err error) {
-				require.ErrorContains(t, err, "failed to update Stage status: status update error")
+				require.ErrorContains(t, err, "failed to update Stage status after syncing Promotions")
 				assert.Equal(t, ctrl.Result{}, result)
 			},
 		},
@@ -442,7 +442,7 @@ func TestRegularStagesReconciler_reconcile(t *testing.T) {
 		stage       *kargoapi.Stage
 		objects     []client.Object
 		interceptor interceptor.Funcs
-		assertions  func(*testing.T, kargoapi.StageStatus, bool, error)
+		assertions  func(*testing.T, client.Client, kargoapi.StageStatus, bool, error)
 	}{
 		{
 			name: "subreconciler error preserves reconciling condition",
@@ -458,7 +458,7 @@ func TestRegularStagesReconciler_reconcile(t *testing.T) {
 					return fmt.Errorf("forced error")
 				},
 			},
-			assertions: func(t *testing.T, status kargoapi.StageStatus, requeue bool, err error) {
+			assertions: func(t *testing.T, _ client.Client, status kargoapi.StageStatus, requeue bool, err error) {
 				require.Error(t, err)
 				require.False(t, requeue)
 
@@ -477,7 +477,7 @@ func TestRegularStagesReconciler_reconcile(t *testing.T) {
 					Generation: 1,
 				},
 			},
-			assertions: func(t *testing.T, status kargoapi.StageStatus, requeue bool, err error) {
+			assertions: func(t *testing.T, _ client.Client, status kargoapi.StageStatus, requeue bool, err error) {
 				require.NoError(t, err)
 				require.False(t, requeue)
 
@@ -506,12 +506,108 @@ func TestRegularStagesReconciler_reconcile(t *testing.T) {
 					},
 				},
 			},
-			assertions: func(t *testing.T, status kargoapi.StageStatus, requeue bool, err error) {
+			assertions: func(t *testing.T, _ client.Client, status kargoapi.StageStatus, requeue bool, err error) {
 				require.NoError(t, err)
 				assert.False(t, requeue)
 
 				reconciling := conditions.Get(&status, kargoapi.ConditionTypeReconciling)
 				assert.Nil(t, reconciling)
+			},
+		},
+		{
+			name: "status update error after syncing Promotions stops before auto-promotion",
+			stage: &kargoapi.Stage{
+				ObjectMeta: metav1.ObjectMeta{
+					Namespace:  "test-project",
+					Name:       "test-stage",
+					Generation: 1,
+				},
+				Spec: kargoapi.StageSpec{
+					RequestedFreight: []kargoapi.FreightRequest{{
+						Origin: kargoapi.FreightOrigin{
+							Kind: kargoapi.FreightOriginKindWarehouse,
+							Name: "test-warehouse",
+						},
+						Sources: kargoapi.FreightSources{Direct: true},
+					}},
+					PromotionTemplate: &kargoapi.PromotionTemplate{
+						Spec: kargoapi.PromotionTemplateSpec{
+							Steps: []kargoapi.PromotionStep{{Uses: "fake-step"}},
+						},
+					},
+				},
+			},
+			objects: []client.Object{
+				&kargoapi.ProjectConfig{
+					ObjectMeta: metav1.ObjectMeta{
+						Namespace: "test-project",
+						Name:      "test-project",
+					},
+					Spec: kargoapi.ProjectConfigSpec{
+						PromotionPolicies: []kargoapi.PromotionPolicy{{
+							Stage:                "test-stage",
+							AutoPromotionEnabled: true,
+						}},
+					},
+				},
+				&kargoapi.Warehouse{
+					ObjectMeta: metav1.ObjectMeta{
+						Namespace: "test-project",
+						Name:      "test-warehouse",
+					},
+				},
+				&kargoapi.Freight{
+					ObjectMeta: metav1.ObjectMeta{
+						Namespace:         "test-project",
+						Name:              "new-freight",
+						CreationTimestamp: metav1.Time{Time: now},
+					},
+					Origin: kargoapi.FreightOrigin{
+						Kind: kargoapi.FreightOriginKindWarehouse,
+						Name: "test-warehouse",
+					},
+				},
+				&kargoapi.Promotion{
+					ObjectMeta: metav1.ObjectMeta{
+						Namespace:         "test-project",
+						Name:              "hold-promotion",
+						CreationTimestamp: metav1.Time{Time: now.Add(-time.Minute)},
+						Labels: map[string]string{
+							kargoapi.LabelKeyStage: "test-stage",
+						},
+						Annotations: map[string]string{
+							kargoapi.AnnotationKeyAutoPromotionHold: "Warehouse/test-warehouse",
+						},
+					},
+					Spec: kargoapi.PromotionSpec{
+						Stage:   "test-stage",
+						Freight: "old-freight",
+					},
+					Status: kargoapi.PromotionStatus{
+						Phase: kargoapi.PromotionPhaseSucceeded,
+					},
+				},
+			},
+			interceptor: interceptor.Funcs{
+				SubResourcePatch: func(
+					context.Context,
+					client.Client,
+					string,
+					client.Object,
+					client.Patch,
+					...client.SubResourcePatchOption,
+				) error {
+					return fmt.Errorf("status update error")
+				},
+			},
+			assertions: func(t *testing.T, c client.Client, _ kargoapi.StageStatus, requeue bool, err error) {
+				require.ErrorContains(t, err, "failed to update Stage status after syncing Promotions")
+				require.False(t, requeue)
+
+				promoList := &kargoapi.PromotionList{}
+				require.NoError(t, c.List(t.Context(), promoList, client.InNamespace("test-project")))
+				require.Len(t, promoList.Items, 1)
+				assert.Equal(t, "hold-promotion", promoList.Items[0].Name)
 			},
 		},
 	}
@@ -565,7 +661,7 @@ func TestRegularStagesReconciler_reconcile(t *testing.T) {
 			}
 
 			status, requeue, err := r.reconcile(t.Context(), tt.stage, now)
-			tt.assertions(t, status, requeue, err)
+			tt.assertions(t, c, status, requeue, err)
 		})
 	}
 }
@@ -880,6 +976,68 @@ func TestRegularStageReconciler_syncPromotions(t *testing.T) {
 					},
 					Status: kargoapi.PromotionStatus{
 						Phase: kargoapi.PromotionPhaseSucceeded,
+					},
+				},
+			},
+			assertions: func(t *testing.T, status kargoapi.StageStatus, hasPendingPromotions bool, err error) {
+				require.NoError(t, err)
+				assert.False(t, hasPendingPromotions)
+				assert.Empty(t, status.AutoPromotionHolds)
+			},
+		},
+		{
+			name: "existing hold survives promotion garbage collection",
+			stage: &kargoapi.Stage{
+				ObjectMeta: metav1.ObjectMeta{
+					Namespace: "fake-project",
+					Name:      "test-stage",
+				},
+				Spec: kargoapi.StageSpec{
+					RequestedFreight: []kargoapi.FreightRequest{{Origin: origin}},
+				},
+				Status: kargoapi.StageStatus{
+					AutoPromotionHolds: map[string]kargoapi.AutoPromotionHold{
+						origin.String(): {
+							FreightName:   "older-freight",
+							Origin:        origin,
+							PromotionName: "garbage-collected-promotion",
+						},
+					},
+				},
+			},
+			assertions: func(t *testing.T, status kargoapi.StageStatus, hasPendingPromotions bool, err error) {
+				require.NoError(t, err)
+				assert.False(t, hasPendingPromotions)
+				require.Len(t, status.AutoPromotionHolds, 1)
+				assert.Equal(
+					t,
+					"garbage-collected-promotion",
+					status.AutoPromotionHolds[origin.String()].PromotionName,
+				)
+			},
+		},
+		{
+			name: "existing hold is removed when origin is no longer requested",
+			stage: &kargoapi.Stage{
+				ObjectMeta: metav1.ObjectMeta{
+					Namespace: "fake-project",
+					Name:      "test-stage",
+				},
+				Spec: kargoapi.StageSpec{
+					RequestedFreight: []kargoapi.FreightRequest{{
+						Origin: kargoapi.FreightOrigin{
+							Kind: kargoapi.FreightOriginKindWarehouse,
+							Name: "other-warehouse",
+						},
+					}},
+				},
+				Status: kargoapi.StageStatus{
+					AutoPromotionHolds: map[string]kargoapi.AutoPromotionHold{
+						origin.String(): {
+							FreightName:   "older-freight",
+							Origin:        origin,
+							PromotionName: "hold-promotion",
+						},
 					},
 				},
 			},
@@ -5778,7 +5936,7 @@ func TestRegularStageReconciler_autoPromoteFreight(t *testing.T) {
 			},
 		},
 		{
-			name: "allows re-promotion when the last terminal one succeeded",
+			name: "skips NewestFreight re-promotion when the last terminal one succeeded",
 			stage: &kargoapi.Stage{
 				ObjectMeta: metav1.ObjectMeta{
 					Namespace: "fake-project",
@@ -5883,14 +6041,8 @@ func TestRegularStageReconciler_autoPromoteFreight(t *testing.T) {
 
 				promoList := &kargoapi.PromotionList{}
 				require.NoError(t, c.List(t.Context(), promoList, client.InNamespace("fake-project")))
-				require.Len(t, promoList.Items, 2)
-				var promotionsForLatest int
-				for _, promo := range promoList.Items {
-					if promo.Spec.Freight == "test-freight-1" {
-						promotionsForLatest++
-					}
-				}
-				require.Equal(t, 2, promotionsForLatest)
+				require.Len(t, promoList.Items, 1)
+				assert.Equal(t, "existing-promotion", promoList.Items[0].Name)
 			},
 		},
 		{
@@ -5935,7 +6087,7 @@ func TestRegularStageReconciler_autoPromoteFreight(t *testing.T) {
 			},
 		},
 		{
-			name: "allows when newest terminal promotion succeeded even if an older one failed",
+			name: "allows MatchUpstream when newest terminal promotion succeeded even if an older one failed",
 			stage: &kargoapi.Stage{
 				ObjectMeta: metav1.ObjectMeta{
 					Namespace: "fake-project",
@@ -5947,7 +6099,12 @@ func TestRegularStageReconciler_autoPromoteFreight(t *testing.T) {
 							Kind: kargoapi.FreightOriginKindWarehouse,
 							Name: "test-warehouse",
 						},
-						Sources: kargoapi.FreightSources{Direct: true},
+						Sources: kargoapi.FreightSources{
+							Stages: []string{"upstream-stage"},
+							AutoPromotionOptions: &kargoapi.AutoPromotionOptions{
+								SelectionPolicy: kargoapi.AutoPromotionSelectionPolicyMatchUpstream,
+							},
+						},
 					}},
 					PromotionTemplate: &kargoapi.PromotionTemplate{
 						Spec: kargoapi.PromotionTemplateSpec{
@@ -7052,6 +7209,11 @@ func TestRegularStageReconciler_autoPromoteFreight(t *testing.T) {
 				).
 				WithIndex(
 					&kargoapi.Freight{},
+					indexer.FreightByCurrentStagesField,
+					indexer.FreightByCurrentStages,
+				).
+				WithIndex(
+					&kargoapi.Freight{},
 					indexer.FreightApprovedForStagesField,
 					indexer.FreightApprovedForStages,
 				)
@@ -7104,6 +7266,14 @@ func terminalPromotionOrderingObjects(
 			Origin: kargoapi.FreightOrigin{
 				Kind: kargoapi.FreightOriginKindWarehouse,
 				Name: "test-warehouse",
+			},
+			Status: kargoapi.FreightStatus{
+				CurrentlyIn: map[string]kargoapi.CurrentStage{
+					"upstream-stage": {},
+				},
+				VerifiedIn: map[string]kargoapi.VerifiedStage{
+					"upstream-stage": {},
+				},
 			},
 		},
 		&kargoapi.Promotion{

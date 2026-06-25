@@ -19,10 +19,7 @@ import { Description } from '@ui/features/common/description';
 import { HealthStatusIcon } from '@ui/features/common/health-status/health-status-icon';
 import { useStageControllerStatus } from '@ui/features/common/stage-status/use-stage-controller-status';
 import { getCurrentFreightByWarehouse } from '@ui/features/common/utils';
-import {
-  getAutoPromotionHoldEntries,
-  holdStateMessage
-} from '@ui/features/project/pipelines/promotion/auto-promotion';
+import { getAutoPromotionHoldEntries } from '@ui/features/project/pipelines/promotion/auto-promotion';
 import { useGetStage } from '@ui/gen/api/v2/core/core';
 import { Stage } from '@ui/gen/api/v2/models';
 import { useGetConfig } from '@ui/gen/api/v2/system/system';
@@ -227,7 +224,18 @@ const AutoPromotionHolds = ({ stage }: { stage: Stage }) => {
   }
   return (
     <div className='rounded-md border border-solid border-orange-200 bg-orange-50 px-3 py-2'>
-      <Typography.Text strong>{holdStateMessage(stage)}</Typography.Text>
+      <Typography.Text strong>Auto-promotion paused</Typography.Text>
+      <div className='mt-1 flex flex-col gap-1'>
+        {holds.map(({ key, hold }) => (
+          <Typography.Text key={key} type='secondary' className='text-sm'>
+            {key}
+            {hold.freightName && `: ${hold.freightName}`}
+            {hold.promotionName && ` via ${hold.promotionName}`}
+            {hold.actor && ` by ${hold.actor}`}
+            {hold.createdAt && ` at ${moment(hold.createdAt).format('YYYY-MM-DD HH:mm')}`}
+          </Typography.Text>
+        ))}
+      </div>
     </div>
   );
 };

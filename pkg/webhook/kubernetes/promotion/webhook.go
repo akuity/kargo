@@ -244,6 +244,8 @@ func (w *webhook) Default(ctx context.Context, obj runtime.Object) error {
 		// controller can maintain auto-promotion holds. Use create-actor instead
 		// of request identity: UI/CLI Promotions are created by the API server
 		// service account, while Stage-controller auto-promotions have no actor.
+		delete(promo.Annotations, kargoapi.AnnotationKeyAutoPromotionHold)
+		delete(promo.Annotations, kargoapi.AnnotationKeyAutoPromotionRelease)
 		if promo.Annotations[kargoapi.AnnotationKeyCreateActor] != "" {
 			w.stampIntentAnnotations(ctx, promo, stage)
 		}
@@ -255,12 +257,16 @@ func (w *webhook) Default(ctx context.Context, obj runtime.Object) error {
 			return fmt.Errorf("decode old object: %w", err)
 		}
 
-		// Ensure actor annotation immutability.
-		if oldActor, ok := oldPromo.Annotations[kargoapi.AnnotationKeyCreateActor]; ok {
-			promo.Annotations[kargoapi.AnnotationKeyCreateActor] = oldActor
-		} else {
-			delete(promo.Annotations, kargoapi.AnnotationKeyCreateActor)
+		preserveAnnotation := func(key string) {
+			if oldValue, ok := oldPromo.Annotations[key]; ok {
+				promo.Annotations[key] = oldValue
+				return
+			}
+			delete(promo.Annotations, key)
 		}
+		preserveAnnotation(kargoapi.AnnotationKeyCreateActor)
+		preserveAnnotation(kargoapi.AnnotationKeyAutoPromotionHold)
+		preserveAnnotation(kargoapi.AnnotationKeyAutoPromotionRelease)
 
 		// Enrich the annotation with the actor and control plane information.
 		w.setAbortAnnotationActor(req, oldPromo, promo)
@@ -479,14 +485,14 @@ func (w *webhook) ValidateUpdate(
 	oldObj runtime.Object,
 	newObj runtime.Object,
 ) (admission.Warnings, error) {
-	promo := newObj.(*kargoapi.Promotion) // nolint: forcetypeassert
+	promo := newObj.(*kargoapi.Promotion)    // nolint: forcetypeassert
+	oldPromo := oldObj.(*kargoapi.Promotion) // nolint: forcetypeassert
 	if err := w.authorizeFn(ctx, promo, "update"); err != nil {
 		return nil, apierrors.NewInternalError(err)
 	}
 
 	// PromotionSpecs are meant to be immutable
-	// nolint: forcetypeassert
-	if !reflect.DeepEqual(promo.Spec, oldObj.(*kargoapi.Promotion).Spec) {
+	if !reflect.DeepEqual(promo.Spec, oldPromo.Spec) {
 		return nil, apierrors.NewInvalid(
 			promotionGroupKind,
 			promo.Name,
@@ -495,6 +501,26 @@ func (w *webhook) ValidateUpdate(
 					field.NewPath("spec"),
 					promo.Spec,
 					"spec is immutable",
+				),
+			},
+		)
+	}
+
+	for _, key := range []string{
+		kargoapi.AnnotationKeyAutoPromotionHold,
+		kargoapi.AnnotationKeyAutoPromotionRelease,
+	} {
+		if promo.Annotations[key] == oldPromo.Annotations[key] {
+			continue
+		}
+		return nil, apierrors.NewInvalid(
+			promotionGroupKind,
+			promo.Name,
+			field.ErrorList{
+				field.Invalid(
+					field.NewPath("metadata", "annotations").Key(key),
+					promo.Annotations[key],
+					"annotation is immutable",
 				),
 			},
 		)

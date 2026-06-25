@@ -187,6 +187,15 @@ func (r *RegularStageReconciler) SetupWithManager(
 		return fmt.Errorf("index Freight by Stages for which it has been approved: %w", err)
 	}
 
+	if err := sharedIndexer.IndexField(
+		ctx,
+		&kargoapi.Freight{},
+		indexer.FreightByCurrentStagesField,
+		indexer.FreightByCurrentStages,
+	); err != nil {
+		return fmt.Errorf("error setting up index for Freight by current Stages: %w", err)
+	}
+
 	// Build the controller with the reconciler.
 	c, err := ctrl.NewControllerManagedBy(kargoMgr).
 		For(&kargoapi.Stage{}).
@@ -415,11 +424,13 @@ func (r *RegularStageReconciler) reconcile(
 
 	var requestRequeue bool
 	subReconcilers := []struct {
-		name      string
-		reconcile func() (kargoapi.StageStatus, error)
+		name                string
+		requireStatusUpdate bool
+		reconcile           func() (kargoapi.StageStatus, error)
 	}{
 		{
-			name: "syncing Promotions",
+			name:                "syncing Promotions",
+			requireStatusUpdate: true,
 			reconcile: func() (kargoapi.StageStatus, error) {
 				status, hasPendingPromotions, err := r.syncPromotions(ctx, stage)
 				if err != nil {
@@ -516,6 +527,13 @@ func (r *RegularStageReconciler) reconcile(
 			*status = newStatus
 		}); err != nil {
 			logger.Error(err, fmt.Sprintf("failed to update Stage status after %s", subR.name))
+			if subR.requireStatusUpdate {
+				return newStatus, false, fmt.Errorf(
+					"failed to update Stage status after %s: %w",
+					subR.name,
+					err,
+				)
+			}
 		} else {
 			stage.Status = newStatus
 		}
@@ -1865,10 +1883,8 @@ func (r *RegularStageReconciler) autoPromoteFreight(
 			continue
 		}
 
-		// Do not create duplicate work for a non-terminal Promotion. Also do
-		// not immediately retry the latest failed terminal Promotion. Explicit
-		// holds now carry user-directed promotion intent, so a previously successful
-		// Promotion is allowed to run again after the hold is resumed.
+		// Do not create duplicate work for a non-terminal Promotion, and do not
+		// retry terminal failures automatically.
 		var nonTerminalPromotionExists bool
 		nonTerminalPromotionExists, err = r.nonTerminalPromotionExistsForStageFreight(
 			ctx,
@@ -1902,6 +1918,14 @@ func (r *RegularStageReconciler) autoPromoteFreight(
 			)
 		}
 		if newestPromotion != nil {
+			newestFreightPolicy := req.Sources.AutoPromotionOptions == nil ||
+				req.Sources.AutoPromotionOptions.SelectionPolicy == "" ||
+				req.Sources.AutoPromotionOptions.SelectionPolicy ==
+					kargoapi.AutoPromotionSelectionPolicyNewestFreight
+			if newestFreightPolicy {
+				freightLogger.Debug("Promotion already exists for Stage and Freight")
+				continue
+			}
 			if newestPromotion.Status.Phase != kargoapi.PromotionPhaseSucceeded {
 				freightLogger.Debug(
 					"most recent terminal Promotion for Stage and Freight was not "+

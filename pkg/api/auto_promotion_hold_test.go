@@ -11,14 +11,30 @@ import (
 
 func TestSetAutoPromotionHoldAnnotation(t *testing.T) {
 	origin := kargoapi.FreightOrigin{Kind: kargoapi.FreightOriginKindWarehouse, Name: "fake-warehouse"}
-	promo := &kargoapi.Promotion{ObjectMeta: metav1.ObjectMeta{Name: "p"}}
+	promo := &kargoapi.Promotion{
+		ObjectMeta: metav1.ObjectMeta{
+			Name: "p",
+			Annotations: map[string]string{
+				kargoapi.AnnotationKeyAutoPromotionRelease: "Warehouse/old",
+			},
+		},
+	}
 	SetAutoPromotionHoldAnnotation(promo, origin)
 	require.Equal(t, "Warehouse/fake-warehouse", promo.Annotations[kargoapi.AnnotationKeyAutoPromotionHold])
+	require.NotContains(t, promo.Annotations, kargoapi.AnnotationKeyAutoPromotionRelease)
 }
 
 func TestSetAutoPromotionReleaseAnnotation(t *testing.T) {
 	origin := kargoapi.FreightOrigin{Kind: kargoapi.FreightOriginKindWarehouse, Name: "fake-warehouse"}
-	promo := &kargoapi.Promotion{ObjectMeta: metav1.ObjectMeta{Name: "p"}}
+	promo := &kargoapi.Promotion{
+		ObjectMeta: metav1.ObjectMeta{
+			Name: "p",
+			Annotations: map[string]string{
+				kargoapi.AnnotationKeyAutoPromotionHold: "Warehouse/old",
+			},
+		},
+	}
 	SetAutoPromotionReleaseAnnotation(promo, origin)
 	require.Equal(t, "Warehouse/fake-warehouse", promo.Annotations[kargoapi.AnnotationKeyAutoPromotionRelease])
+	require.NotContains(t, promo.Annotations, kargoapi.AnnotationKeyAutoPromotionHold)
 }

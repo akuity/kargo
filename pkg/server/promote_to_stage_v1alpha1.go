@@ -341,9 +341,9 @@ func (s *server) promoteToStage(c *gin.Context) {
 }
 
 // recordResolvedPromotionCreatedEvent records the normal PromotionCreated event
-// after admission has resolved spec.origin to spec.freight. If a fake client or
-// future caller creates an unresolved Promotion, there is no Freight to attach,
-// so event recording is skipped instead of blocking the request.
+// after admission has resolved spec.origin to spec.freight. If admission has
+// not resolved the Promotion yet, there is no Freight object to attach, so event
+// recording is skipped instead of blocking the request.
 func (s *server) recordResolvedPromotionCreatedEvent(
 	ctx context.Context,
 	promotion *kargoapi.Promotion,

@@ -67,8 +67,8 @@ type Context struct {
 	Vars []kargoapi.ExpressionVariable
 	// Actor is the name of the actor triggering the Promotion.
 	Actor string
-	// Rollback indicates whether this Promotion is a rollback to a previously
-	// verified piece of Freight.
+	// Rollback backs ctx.meta.promotion.rollback for Promotion steps that branch
+	// on manual non-candidate or rollback-style Promotions.
 	Rollback bool
 
 	// currentStepMetadata is a pointer to the StepMetadata for the
@@ -146,9 +146,9 @@ func NewContext(
 		StepExecutionMetadata: promo.Status.StepExecutionMetadata,
 		State:                 State(promo.Status.GetState()),
 		Vars:                  promo.Spec.Vars,
-		// The webhook writes "true" now, but older/in-flight Promotions may carry
-		// an origin key from the auto-promotion hold work. Treat any non-empty value
-		// as true so ctx.meta.promotion.rollback remains backward-compatible.
+		// Treat any non-empty rollback annotation value as true so existing
+		// Promotions with non-boolean values keep ctx.meta.promotion.rollback
+		// behavior.
 		Rollback: promo.Annotations[kargoapi.AnnotationKeyRollback] != "",
 	}
 
@@ -393,8 +393,8 @@ type StepContext struct {
 	Promotion string
 	// PromotionActor is the name of the actor triggering the Promotion.
 	PromotionActor string
-	// Rollback indicates whether this Promotion is a rollback to a previously
-	// verified piece of Freight.
+	// Rollback backs ctx.meta.promotion.rollback for Promotion steps that branch
+	// on manual non-candidate or rollback-style Promotions.
 	Rollback bool
 	// FreightRequests is the list of Freight from various origins that is
 	// requested by the Stage targeted by the Promotion. This information is
