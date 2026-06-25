@@ -42,9 +42,8 @@ type WorkTree interface {
 	// CreateOrphanedBranch creates a new branch that shares no commit history
 	// with any other branch.
 	CreateOrphanedBranch(branch string) error
-	// CreateTag creates a new tag with the specified name. If force is true,
-	// an existing tag with the same name is overwritten.
-	CreateTag(name, msg string, force bool) error
+	// CreateTag creates a new annotated tag with the specified name and message.
+	CreateTag(name, msg string, opts *CreateTagOptions) error
 	// CurrentBranch returns the current branch
 	CurrentBranch() (string, error)
 	// DeleteBranch deletes the specified branch
@@ -335,9 +334,18 @@ func (w *workTree) CreateOrphanedBranch(branch string) error {
 	return w.Clean()
 }
 
-func (w *workTree) CreateTag(tag, msg string, force bool) error {
+// CreateTagOptions represents options for creating a tag.
+type CreateTagOptions struct {
+	// Force indicates whether to overwrite an existing tag of the same name.
+	Force bool
+}
+
+func (w *workTree) CreateTag(tag, msg string, opts *CreateTagOptions) error {
+	if opts == nil {
+		opts = &CreateTagOptions{}
+	}
 	args := []string{"tag", "-a", tag, "-m", msg}
-	if force {
+	if opts.Force {
 		args = append(args, "--force")
 	}
 	cmd := w.buildGitCommand(args...)
