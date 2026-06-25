@@ -43,6 +43,18 @@ func Test_server_createProjectRole(t *testing.T) {
 			Namespace: testKargoRole.Namespace,
 		},
 	}
+	// testGroupLessRole mirrors how the UI submits rules: apiGroups is omitted, so
+	// the server must resolve the group from the resource type.
+	testGroupLessRole := rbacapi.Role{
+		ObjectMeta: metav1.ObjectMeta{
+			Name:      "group-less-role",
+			Namespace: testProject.Name,
+		},
+		Rules: []rbacv1.PolicyRule{{
+			Resources: []string{"stages"},
+			Verbs:     []string{"get"},
+		}},
+	}
 	testRESTEndpoint(
 		t, nil,
 		http.MethodPost, "/v1beta1/projects/"+testProject.Name+"/roles",
@@ -117,6 +129,26 @@ func Test_server_createProjectRole(t *testing.T) {
 						role,
 					)
 					require.NoError(t, err)
+				},
+			},
+			{
+				name:          "resolves omitted apiGroups from the resource type",
+				body:          mustJSONBody(testGroupLessRole),
+				clientBuilder: fake.NewClientBuilder().WithObjects(testProject),
+				assertions: func(t *testing.T, w *httptest.ResponseRecorder, c client.Client) {
+					require.Equal(t, http.StatusCreated, w.Code)
+
+					// The UI omits apiGroups; the server must resolve "stages" to the
+					// Kargo API group rather than leaving it in the core ("") group.
+					role := &rbacv1.Role{}
+					require.NoError(t, c.Get(
+						t.Context(),
+						client.ObjectKey{Namespace: testProject.Name, Name: testGroupLessRole.Name},
+						role,
+					))
+					require.Len(t, role.Rules, 1)
+					require.Equal(t, []string{kargoapi.GroupVersion.Group}, role.Rules[0].APIGroups)
+					require.Equal(t, []string{"stages"}, role.Rules[0].Resources)
 				},
 			},
 		},
