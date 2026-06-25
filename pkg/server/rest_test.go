@@ -15,6 +15,7 @@ import (
 	"github.com/stretchr/testify/require"
 	corev1 "k8s.io/api/core/v1"
 	rbacv1 "k8s.io/api/rbac/v1"
+	"k8s.io/apimachinery/pkg/api/meta"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/client-go/rest"
 	"sigs.k8s.io/controller-runtime/pkg/client"
@@ -45,6 +46,21 @@ type restTestCase struct {
 	// case-specific server initialization.
 	serverSetup func(*testing.T, *server)
 	assertions  func(*testing.T, *httptest.ResponseRecorder, client.Client)
+}
+
+// testRESTMapper builds a RESTMapper from a scheme so fake clients can resolve a
+// resource type's API group the way the production discovery-backed mapper does.
+// It mirrors a real cluster by omitting rbac.kargo.akuity.io types, which are
+// virtual API objects rather than resources the cluster actually serves.
+func testRESTMapper(s *runtime.Scheme) meta.RESTMapper {
+	m := meta.NewDefaultRESTMapper(nil)
+	for gvk := range s.AllKnownTypes() {
+		if strings.HasSuffix(gvk.Kind, "List") || gvk.Group == rbacapi.GroupVersion.Group {
+			continue
+		}
+		m.Add(gvk, meta.RESTScopeNamespace)
+	}
+	return m
 }
 
 func testRESTEndpoint(
@@ -90,7 +106,10 @@ func testRESTEndpoint(
 			if testCase.clientBuilder == nil {
 				testCase.clientBuilder = fake.NewClientBuilder()
 			}
-			internalClient := testCase.clientBuilder.WithScheme(testScheme).Build()
+			internalClient := testCase.clientBuilder.
+				WithScheme(testScheme).
+				WithRESTMapper(testRESTMapper(testScheme)).
+				Build()
 			s.client, err = kubernetes.NewClient(
 				t.Context(),
 				&rest.Config{},
@@ -195,7 +214,10 @@ func testRESTWatchEndpoint(
 			if testCase.clientBuilder == nil {
 				testCase.clientBuilder = fake.NewClientBuilder()
 			}
-			internalClient := testCase.clientBuilder.WithScheme(testScheme).Build()
+			internalClient := testCase.clientBuilder.
+				WithScheme(testScheme).
+				WithRESTMapper(testRESTMapper(testScheme)).
+				Build()
 			var err error
 			s.client, err = kubernetes.NewClient(
 				context.Background(),

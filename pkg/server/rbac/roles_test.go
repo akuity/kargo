@@ -2,7 +2,9 @@ package rbac
 
 import (
 	"context"
+	"fmt"
 	"maps"
+	"strings"
 	"testing"
 	"time"
 
@@ -29,6 +31,23 @@ var (
 	scheme *runtime.Scheme
 	objKey = client.ObjectKey{Namespace: testProject, Name: testKargoRoleName}
 )
+
+// fakeGroupResolver stands in for the discovery-backed group resolver (which a
+// fake client lacks), mapping the resource types used in tests to their API
+// groups. It mirrors the mapping the old getGroupName table provided.
+func fakeGroupResolver(resource string) (string, error) {
+	base, _, _ := strings.Cut(resource, "/")
+	switch base {
+	case "secrets", "serviceaccounts", "configmaps", "events":
+		return "", nil
+	case "roles", "rolebindings":
+		return rbacv1.SchemeGroupVersion.Group, nil
+	case "stages", "warehouses", "promotions", "freights", "projectconfigs", "promotiontasks":
+		return kargoapi.GroupVersion.Group, nil
+	default:
+		return "", apierrors.NewBadRequest(fmt.Sprintf("unrecognized resource type %q", resource))
+	}
+}
 
 func init() {
 	scheme = runtime.NewScheme()
@@ -441,6 +460,9 @@ func Test_rolesDatabase_GrantPermissionToRole(t *testing.T) {
 			managedServiceAccount(nil),
 		).Build()
 		db := NewKubernetesRolesDatabase(c, RolesDatabaseConfig{})
+		rdb, ok := db.(*rolesDatabase)
+		require.True(t, ok)
+		rdb.resolveGroup = fakeGroupResolver
 		kargoRole, err := db.GrantPermissionsToRole(
 			t.Context(),
 			testProject,
@@ -500,6 +522,9 @@ func Test_rolesDatabase_GrantPermissionToRole(t *testing.T) {
 			managedRoleBinding(),
 		).Build()
 		db := NewKubernetesRolesDatabase(c, RolesDatabaseConfig{})
+		rdb, ok := db.(*rolesDatabase)
+		require.True(t, ok)
+		rdb.resolveGroup = fakeGroupResolver
 		kargoRole, err := db.GrantPermissionsToRole(
 			t.Context(),
 			testProject,
@@ -818,6 +843,9 @@ func Test_rolesDatabase_RevokePermissionsFromRole(t *testing.T) {
 			managedRoleBinding(),
 		).Build()
 		db := NewKubernetesRolesDatabase(c, RolesDatabaseConfig{})
+		rdb, ok := db.(*rolesDatabase)
+		require.True(t, ok)
+		rdb.resolveGroup = fakeGroupResolver
 		kargoRole, err := db.RevokePermissionsFromRole(
 			t.Context(),
 			testProject,
