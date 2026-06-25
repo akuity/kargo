@@ -89,6 +89,40 @@ func ExprEnvWithTaskOutputs(alias string, outputs State) ExprEnvOption {
 	}
 }
 
+// BuildCtxMap builds the "ctx" entry of the expression language environment
+// for a Promotion step. The returned map has a single "ctx" key whose value
+// contains all promotion and step context fields available to expressions.
+//
+// It is exported so that external step executors (e.g. pod-based runners that
+// receive a StepContext over a file channel) can build a consistent expression
+// environment without reimplementing this mapping.
+func BuildCtxMap(stepCtx StepContext) map[string]any {
+	return map[string]any{
+		"ctx": map[string]any{
+			"uiBaseUrl": stepCtx.UIBaseURL,
+			"project":   stepCtx.Project,
+			"promotion": stepCtx.Promotion,
+			"stage":     stepCtx.Stage,
+			"targetFreight": map[string]any{
+				"name":  stepCtx.TargetFreightRef.Name,
+				"alias": stepCtx.TargetFreightAlias,
+				"origin": map[string]any{
+					"name": stepCtx.TargetFreightRef.Origin.Name,
+				},
+			},
+			"meta": map[string]any{
+				"promotion": map[string]any{
+					"actor":    stepCtx.PromotionActor,
+					"rollback": stepCtx.Rollback,
+				},
+				"step": map[string]any{
+					"alias": stepCtx.Alias,
+				},
+			},
+		},
+	}
+}
+
 // BuildExprEnv builds an environment map for evaluating expressions in
 // Promotion steps. The environment includes context information, such as the
 // Project, Promotion, Stage, and target Freight reference.
@@ -96,28 +130,18 @@ func ExprEnvWithTaskOutputs(alias string, outputs State) ExprEnvOption {
 // The environment can be extended with additional options provided via the
 // ExprEnvOption functional options. These options can be used to add variables
 // or modify the expression language environment.
-func (p *StepEvaluator) BuildExprEnv(promoCtx Context, opts ...ExprEnvOption) map[string]any {
-	env := map[string]any{
-		"ctx": map[string]any{
-			"project":   promoCtx.Project,
-			"promotion": promoCtx.Promotion,
-			"stage":     promoCtx.Stage,
-			"targetFreight": map[string]any{
-				"name": promoCtx.TargetFreightRef.Name,
-				"origin": map[string]any{
-					"name": promoCtx.TargetFreightRef.Origin.Name,
-				},
-			},
-			"meta": map[string]any{
-				"promotion": map[string]any{
-					"actor":    promoCtx.Actor,
-					"rollback": promoCtx.Rollback,
-				},
-			},
-		},
-	}
+func BuildExprEnv(promoCtx Context, opts ...ExprEnvOption) map[string]any {
+	env := BuildCtxMap(StepContext{
+		UIBaseURL:          promoCtx.UIBaseURL,
+		Project:            promoCtx.Project,
+		Promotion:          promoCtx.Promotion,
+		Stage:              promoCtx.Stage,
+		TargetFreightRef:   promoCtx.TargetFreightRef,
+		TargetFreightAlias: promoCtx.TargetFreightAlias,
+		PromotionActor:     promoCtx.Actor,
+		Rollback:           promoCtx.Rollback,
+	})
 
-	// Apply all provided options
 	for _, opt := range opts {
 		opt(env)
 	}
@@ -152,7 +176,7 @@ func (p *StepEvaluator) Vars(ctx context.Context, promoCtx Context, step Step) (
 	for _, v := range promoCtx.Vars {
 		newVar, err := expressions.EvaluateTemplate(
 			v.Value,
-			p.BuildExprEnv(promoCtx, ExprEnvWithVars(vars)),
+			BuildExprEnv(promoCtx, ExprEnvWithVars(vars)),
 			exprOpts...,
 		)
 		if err != nil {
@@ -166,7 +190,7 @@ func (p *StepEvaluator) Vars(ctx context.Context, promoCtx Context, step Step) (
 	for _, v := range step.Vars {
 		newVar, err := expressions.EvaluateTemplate(
 			v.Value,
-			p.BuildExprEnv(
+			BuildExprEnv(
 				promoCtx,
 				ExprEnvWithStepMetas(promoCtx),
 				ExprEnvWithOutputs(promoCtx.State),
@@ -202,7 +226,7 @@ func (p *StepEvaluator) ShouldSkip(ctx context.Context, promoCtx Context, step S
 		return false, err
 	}
 
-	env := p.BuildExprEnv(
+	env := BuildExprEnv(
 		promoCtx,
 		ExprEnvWithStepMetas(promoCtx),
 		ExprEnvWithOutputs(promoCtx.State),
@@ -253,7 +277,7 @@ func (p *StepEvaluator) Config(ctx context.Context, promoCtx Context, step Step)
 		return nil, err
 	}
 
-	env := p.BuildExprEnv(
+	env := BuildExprEnv(
 		promoCtx,
 		ExprEnvWithStepMetas(promoCtx),
 		ExprEnvWithOutputs(promoCtx.State),
@@ -311,19 +335,20 @@ func (p *StepEvaluator) BuildStepContext(
 	}
 
 	return &StepContext{
-		UIBaseURL:        promoCtx.UIBaseURL,
-		WorkDir:          promoCtx.WorkDir,
-		SharedState:      promoCtx.State.DeepCopy(),
-		Alias:            step.Alias,
-		Config:           stepCfg,
-		Project:          promoCtx.Project,
-		Stage:            promoCtx.Stage,
-		Promotion:        promoCtx.Promotion,
-		PromotionActor:   promoCtx.Actor,
-		Rollback:         promoCtx.Rollback,
-		FreightRequests:  freightRequests,
-		Freight:          *promoCtx.Freight.DeepCopy(),
-		TargetFreightRef: promoCtx.TargetFreightRef,
+		UIBaseURL:          promoCtx.UIBaseURL,
+		WorkDir:            promoCtx.WorkDir,
+		SharedState:        promoCtx.State.DeepCopy(),
+		Alias:              step.Alias,
+		Config:             stepCfg,
+		Project:            promoCtx.Project,
+		Stage:              promoCtx.Stage,
+		Promotion:          promoCtx.Promotion,
+		PromotionActor:     promoCtx.Actor,
+		Rollback:           promoCtx.Rollback,
+		FreightRequests:    freightRequests,
+		Freight:            *promoCtx.Freight.DeepCopy(),
+		TargetFreightRef:   promoCtx.TargetFreightRef,
+		TargetFreightAlias: promoCtx.TargetFreightAlias,
 	}, nil
 }
 
