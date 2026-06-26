@@ -50,10 +50,12 @@ creation. This includes things such as project-level RBAC resources and
 ## Project Configuration
 
 A `ProjectConfig` resource defines project-level configuration for an associated
-`Project`. At present, this only includes
+`Project`. This includes
 [promotion policies](#promotion-policies)
 that describe which `Stage`s are eligible for automatic promotion of newly
-available `Freight`.
+available `Freight`, as well as
+[auto-rollback](#auto-rollback) configuration for automatically reverting a
+`Stage` to a previously verified `Freight` when verification fails.
 
 The `ProjectConfig` resource must have the same name as its associated `Project`
 and be created in the `Namespace` of the `Project`. This separation of
@@ -223,6 +225,159 @@ spec:
 In the example above, the promotion policy applies to all `Stage`s with the
 `example.org/allow-auto-promotion: "true"` label and names matching the
 `glob:prod-*` pattern.
+
+#### Auto-Rollback
+
+<span class="tag professional"></span>
+<span class="tag beta"></span>
+
+When verification fails on a `Stage`, Kargo can automatically promote that
+`Stage` back to its most recently verified `Freight` — its *stable Freight* —
+without manual intervention. This reduces mean time to recovery (MTTR) by
+eliminating the need for a human to notice, decide, and trigger a rollback.
+
+**How it works:** Each time `Freight` is successfully verified in a `Stage`,
+the rollback controller records it as that `Stage`'s *stable Freight* — the
+known-good version it will roll back to if something goes wrong. When a
+subsequent verification or promotion fails, the controller automatically creates
+a new `Promotion` targeting that stable `Freight`. The rollback `Promotion`
+follows the same promotion steps as any normal `Promotion` — no special step
+logic is required, though steps can opt into rollback-specific behavior if
+needed.
+
+To enable auto-rollback, add an `autoRollback` field to any entry in the
+`promotionPolicies` stanza of a `ProjectConfig`. The `stageSelector` field
+supports the same exact names, regex patterns, glob patterns, and label
+selectors described in
+[Advanced Promotion Policies with Selectors](#advanced-promotion-policies-with-selectors):
+
+```yaml
+apiVersion: kargo.akuity.io/v1alpha1
+kind: ProjectConfig
+metadata:
+  name: my-project
+  namespace: my-project
+spec:
+  promotionPolicies:
+  - stageSelector:
+      name: prod
+    autoRollback: {}
+```
+
+**Stable Freight:** Kargo tracks a *stable Freight* for each `Warehouse` a
+`Stage` subscribes to. The stable Freight is updated whenever `Freight` passes
+verification in that `Stage`. When a subsequent promotion or verification of a
+different `Freight` fails, the rollback controller automatically creates a new
+`Promotion` back to the stable Freight.
+The stable Freight is recorded in the `Stage`'s status:
+
+```yaml
+status:
+  metadata:
+    stableFreight:
+      Warehouse/my-warehouse: abc1234...
+```
+
+**Rollback Promotions:** A rollback `Promotion` is functionally identical to a
+normal `Promotion` — it follows the same promotion steps. It is distinguishable
+from regular promotions by the annotation `kargo.akuity.io/rollback: "true"`.
+Promotion steps can inspect the `ctx.meta.promotion.rollback` boolean to behave
+differently during a rollback, for example to skip manual approval steps or send
+a high-severity alert:
+
+```yaml
+steps:
+- if: "${{ ctx.meta.promotion.rollback }}"
+  uses: send-message
+  config:
+    channel:
+      kind: MessageChannel
+      name: slack
+    message: "${{ ctx.stage }} was rolled back to ${{ ctx.targetFreight.name }}"
+```
+
+`autoRollback` has two sub-fields that control
+which terminal phases trigger a rollback:
+
+| Field | Accepted values | Default |
+|---|---|---|
+| `onVerification` | `Failed`, `Error` | `[Failed]` |
+| `onPromotion` | `Failed`, `Errored` | `[]` |
+
+`Failed` means the process ran to completion and produced a definitive negative
+result — for example, an `AnalysisRun` metric that exceeded its failure
+threshold. `Error`/`Errored` means the process was unable to complete due to a
+transient or infrastructure problem — for example, a network timeout, a missing
+secret, or a crashed pod. Whether to roll back on errors is a judgment call:
+the `Freight` itself may be fine, and retrying the promotion or verification
+might succeed.
+
+:::note
+
+The spelling difference between `Errored` (promotion) and `Error`
+(verification) is intentional — the latter draws from `AnalysisRun` phase
+enums.
+
+:::
+
+To roll back on both failed and errored verifications:
+
+```yaml
+spec:
+  promotionPolicies:
+  - stageSelector:
+      name: prod
+    autoRollback:
+      onVerification:
+      - Failed
+      - Error
+```
+
+To enable rollback on promotion outcomes as well:
+
+```yaml
+spec:
+  promotionPolicies:
+  - stageSelector:
+      name: prod
+    autoRollback:
+      onPromotion:
+      - Failed
+      - Errored
+```
+
+:::warning
+
+`onPromotion` defaults to `[]` because promotions can fail for infrastructure
+reasons entirely unrelated to the `Freight` — for example, an expired
+credential or a network timeout. Enable it only when promotion failures
+reliably reflect a problem with the `Freight` itself.
+
+:::
+
+**Considerations:**
+
+- **Settled state:** A rollback `Promotion` is only created when the `Stage`
+  is settled — meaning no `Promotion` is currently running or pending. This
+  prevents conflicts with in-flight manual or automated promotions.
+
+- **Maximum failure age:** The rollback controller ignores failed verifications
+  or promotions whose completion time is older than 20 minutes. This prevents
+  spurious rollbacks from historical failures when auto-rollback is first
+  enabled on a `Stage` that is not in a clean state.
+
+- **`MatchUpstream` stages:** Auto-rollback is not supported for `Stage`s that
+  use a `MatchUpstream` auto-promotion policy. Such `Stage`s are silently
+  skipped by the rollback controller. To recover a `MatchUpstream` `Stage`,
+  promote the appropriate upstream `Stage` back to the desired `Freight`.
+
+- **No rollbacks of rollbacks:** If a rollback `Promotion` itself fails, the
+  controller does not create another rollback `Promotion`. This prevents
+  infinite rollback loops.
+
+- **No stable Freight:** If a `Stage` has never successfully verified any
+  `Freight`, there is nothing to roll back to and no rollback `Promotion` is
+  created.
 
 ### Message Channels
 
