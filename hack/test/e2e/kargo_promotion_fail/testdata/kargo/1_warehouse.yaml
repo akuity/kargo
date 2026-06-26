@@ -1,0 +1,16 @@
+apiVersion: kargo.akuity.io/v1alpha1
+kind: Warehouse
+metadata:
+  name: images
+  namespace: kargo-promotion-fail
+spec:
+  freightCreationPolicy: Automatic
+  subscriptions:
+  - image:
+      allowTagsRegexes:
+        - big
+      cacheByTag: true
+      discoveryLimit: 20
+      imageSelectionStrategy: Lexical
+      repoURL: ghcr.io/hairyhum/steps-test
+      

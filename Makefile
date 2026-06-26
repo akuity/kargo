@@ -291,7 +291,7 @@ codegen-controller: install-controller-gen
 		output:crd:artifacts:config=charts/kargo/resources/crds
 	$(CONTROLLER_GEN) \
 		object:headerFile=hack/boilerplate.go.txt \
-		paths=./...
+		paths="{./api/..., ./pkg/..., ./cmd/...}"
 
 .PHONY: codegen-bitbucket-client
 codegen-bitbucket-client: install-oapi-codegen

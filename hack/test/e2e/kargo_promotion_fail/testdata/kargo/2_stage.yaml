@@ -1,0 +1,22 @@
+apiVersion: kargo.akuity.io/v1alpha1
+kind: Stage
+metadata:
+  name: kargo-promotion-fail-stage
+  namespace: kargo-promotion-fail
+spec:
+  promotionTemplate:
+    spec:
+      steps:
+      - uses: fail
+        if: ${{ true }}
+        config:
+          message: Always fails
+  requestedFreight:
+    - origin:
+        kind: Warehouse
+        name: images
+      sources:
+        direct: true
+        stages: []
+
+
