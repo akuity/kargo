@@ -9,10 +9,9 @@ import (
 )
 
 func GetFuncs() ([]env.Func, []env.Func) {
-
+	// All setup functions should be added here
 	return []env.Func{
 			envfuncs.LoadEnvFile,
-			// TODO: add all setup functions here
 			envfuncs.LoadKargoConfig,
 			envfuncs.LoadArgocdConfig,
 		},

@@ -21,9 +21,13 @@ import (
 const groupArgocd = "argocd"
 const ArgoCDClientKey envfuncs.ContextKey = "argocd_client"
 
+// TODO: we might make this configurable
+const argocdCLIPath = "argocd"
+
 type ArgocdE2EClient struct {
 	Path       string
 	ConfigFile string
+	T          *testing.T
 }
 
 func (client ArgocdE2EClient) Create(obj k8s.Object) error {
@@ -62,23 +66,30 @@ func (client ArgocdE2EClient) CreateResource(obj runtime.Unstructured, resourceT
 
 	configFile := client.ConfigFile
 
-	// FIXME: use testing tempfile tools here
-	tmpfile := "/tmp/manifest.yaml"
+	tmpDir := client.T.TempDir()
 
 	manifest, err := yaml.Marshal(obj)
 	if err != nil {
 		return fmt.Errorf("error encoding resource manifest: %w", err)
 	}
 
-	err = os.WriteFile(tmpfile, manifest, 0600)
+	tmpFile, err := os.CreateTemp(tmpDir, "manifest*.yaml")
 	if err != nil {
-		return fmt.Errorf("error writing manifest tempfile: %w", err)
+		return err
 	}
+	defer tmpFile.Close()
+
+	_, err = tmpFile.Write(manifest)
+	if err != nil {
+		return err
+	}
+
+	tmpFileName := tmpFile.Name()
 
 	// TODO we could use command builder, but it's not necessary now
 	cmdArgs := []string{resourceType, "create"}
 	cmdArgs = append(cmdArgs, args...)
-	cmdArgs = append(cmdArgs, tmpfile, fmt.Sprintf("--config=%v", configFile))
+	cmdArgs = append(cmdArgs, tmpFileName, fmt.Sprintf("--config=%v", configFile))
 
 	//nolint:gosec
 	cmd := exec.Command(client.Path, cmdArgs...)
@@ -104,7 +115,6 @@ func (client ArgocdE2EClient) DeleteResource(resourceType, name string) error {
 }
 
 func RequireArgoCDCLI(ctx context.Context, t *testing.T, _ *envconf.Config) context.Context {
-	argocdCLIPath := "argocd" // FIXME: configurable?
 	_, err := exec.LookPath(argocdCLIPath)
 	if err != nil {
 		t.Fatalf("error locating argocd executable %s: %v", argocdCLIPath, err)
@@ -119,8 +129,13 @@ func SetupArgocdClient(ctx context.Context, t *testing.T, cfg *envconf.Config) c
 
 	if config, ok := ctx.Value(envfuncs.ArgoCDConfigFile).(string); ok {
 		ctx = RequireArgoCDCLI(ctx, t, cfg)
-		argocdCLIPath := "argocd" // FIXME: configurable?
-		return context.WithValue(ctx, ArgoCDClientKey, ArgocdE2EClient{Path: argocdCLIPath, ConfigFile: config})
+		return context.WithValue(
+			ctx, ArgoCDClientKey,
+			ArgocdE2EClient{
+				Path:       argocdCLIPath,
+				ConfigFile: config,
+				T:          t,
+			})
 	}
 
 	t.Fatalf("error getting argocd config from the context %v", ctx)
