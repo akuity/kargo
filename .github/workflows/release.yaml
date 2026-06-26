@@ -80,7 +80,7 @@ jobs:
         images: ${{ steps.repo.outputs.repo }}
         flavor: latest=false
         tags: |
-          type=semver,pattern={{raw}}
+          type=raw,value=${{ github.event.release.tag_name }},enable=${{ github.event_name == 'release' }}
           type=raw,value=${{ steps.unstable-version.outputs.unstable-version }},enable=${{ github.event_name != 'release'}}
     - name: Build base image
       run: |
@@ -94,7 +94,7 @@ jobs:
         platforms: linux/amd64,linux/arm64
         build-args: |
           BASE_IMAGE=localhost:5000/kargo-base
-          VERSION=${{ github.ref_name }}
+          VERSION=${{ github.event.release.tag_name || github.ref_name }}
           GIT_COMMIT=${{ github.sha }}
           GIT_TREE_STATE=clean
         tags: ${{ steps.meta.outputs.tags }}
@@ -170,7 +170,7 @@ jobs:
     - name: Determine Version
       id: version
       run: |
-        VERSION=${{ github.ref_name }}
+        VERSION=${{ github.event.release.tag_name }}
         if ${{ github.event_name != 'release' }}
         then
         VERSION=${{ needs.publish-image.outputs.unstable-version }}
@@ -223,7 +223,7 @@ jobs:
         cache-dependency-path: "**/pnpm-lock.yaml"
     - name: Build UI
       env:
-        VERSION: ${{ github.ref_name }}
+        VERSION: ${{ github.event.release.tag_name || github.ref_name }}
       working-directory: ./ui
       run: |
         pnpm install
@@ -279,7 +279,7 @@ jobs:
         GOFLAGS: -buildvcs=false
         GOOS: ${{ matrix.os }}
         GOARCH: ${{ matrix.arch }}
-        VERSION: ${{ github.ref_name }}
+        VERSION: ${{ github.event.release.tag_name }}
         GIT_COMMIT: ${{ github.sha }}
         GIT_TREE_STATE: clean
       run: make build-cli
@@ -299,6 +299,7 @@ jobs:
       with:
         file: bin/*
         file_glob: true
+        tag: ${{ github.event.release.tag_name }}
         repo_token: ${{ secrets.GITHUB_TOKEN }}
     - name: Generate subject
       id: hash
