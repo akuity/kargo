@@ -3,6 +3,11 @@
  "title": "GitTagConfig",
  "type": "object",
  "properties": {
+  "force": {
+   "type": "boolean",
+   "description": "Indicates whether to overwrite an existing tag of the same name. WARNING: Force overwriting tags is an unconventional use of tags and should be utilized only with extreme caution. Default is false.",
+   "default": false
+  },
   "message": {
    "type": "string",
    "description": "The annotation message for the tag.",
