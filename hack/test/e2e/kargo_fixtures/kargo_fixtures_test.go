@@ -1,6 +1,9 @@
-//go:build e2e
+//go:build e2e && examples
 //nolint:forcetypeassert
 package kargo_example
+
+// This test shows an example of using YAML files to define Kargo fixtures to use in tests.
+// It sets up fixtures and verifies that they exist.
 
 import (
 	"context"

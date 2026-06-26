@@ -4,7 +4,6 @@ import (
 	"context"
 	"errors"
 	"fmt"
-	"io/fs"
 	"os"
 	"path/filepath"
 	"slices"
@@ -28,15 +27,6 @@ import (
 const groupKargo = "kargo"
 const KargoCLIKey envfuncs.ContextKey = "kargo_cli"
 const KargoCLIWatchKey envfuncs.ContextKey = "kargo_watch"
-
-func testFiles(testdata fs.FS) ([]string, error) {
-	pattern := "*"
-	files, err := fs.Glob(testdata, pattern)
-	if err != nil {
-		return nil, err
-	}
-	return files, nil
-}
 
 func SetupKargoClients(ctx context.Context, t *testing.T, cfg *envconf.Config) context.Context {
 	ctx = SetupKargoApiClient(ctx, t, cfg)
@@ -131,8 +121,8 @@ func scanFixtures(
 	handlerFun decoder.HandlerFunc,
 	options ...decoder.DecodeOption) error {
 
-	testdata := os.DirFS(filepath.Join("testdata", group))
-	files, err := testFiles(testdata)
+	fixturesDir := filepath.Join("testdata", group)
+	files, err := filepath.Glob(filepath.Join(fixturesDir, "*.yaml"))
 	if err != nil {
 		return err
 	}
@@ -140,7 +130,7 @@ func scanFixtures(
 	files = sortFun(files)
 
 	for _, file := range files {
-		err := scanFile(ctx, testdata, file, handlerFun, options...)
+		err := scanFile(ctx, file, handlerFun, options...)
 		if err != nil {
 			return err
 		}
@@ -151,12 +141,11 @@ func scanFixtures(
 
 func scanFile(
 	ctx context.Context,
-	testdata fs.FS,
 	fileName string,
 	handlerFun decoder.HandlerFunc,
 	options ...decoder.DecodeOption,
 ) error {
-	f, err := testdata.Open(fileName)
+	f, err := os.Open(fileName)
 	if err != nil {
 		return err
 	}

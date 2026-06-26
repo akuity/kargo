@@ -45,37 +45,6 @@ func RefreshStage(
 	return err
 }
 
-// func PromoteDownstream(
-// 	t *testing.T,
-// 	kargoClient generated.KargoAPI,
-// 	project, stage, freightName string,
-// 	timeout time.Duration,
-// ) {
-
-// 	promoteRes, err := kargoClient.Core.PromoteDownstream(
-// 		core.NewPromoteDownstreamParams().
-// 			WithProject(project).
-// 			WithStage(stage).
-// 			WithBody(&models.PromoteDownstreamRequest{
-// 				Freight: freightName,
-// 			}),
-// 		nil,
-// 	)
-
-// 	if err != nil {
-// 		t.Fatalf("Error promoting %v", err)
-// 	}
-
-// 	promoName := promoteRes.Payload.Metadata.Name
-
-// 	promotion, err := WaitForPromotion(t, kargoClient, project, promoName, 5*time.Minute)
-
-// 	if err != nil {
-// 		t.Fatalf("Error getting promotion %v", err)
-// 	}
-// 	return promotion, nil
-// }
-
 func PromoteAndWaitForCompletion(
 	ctx context.Context,
 	t *testing.T,

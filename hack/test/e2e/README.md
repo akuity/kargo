@@ -55,7 +55,7 @@ func TestMyFeature(t *testing.T) {
 }
 ```
 
-It's possivle to create YAML fixtures for each test by placing them in the `testdata` folder in the test project and adding `SetupKargoFixtures` and `TeardownKargoFixtures` callbacks:
+It's possible to create YAML fixtures for each test by placing them in the `testdata` folder in the test project and adding `SetupKargoFixtures` and `TeardownKargoFixtures` callbacks:
 ```
 func TestMyFeature(t *testing.T) {
 	feature := features.New("Example kargo promotion")
@@ -82,4 +82,3 @@ This folder contains the main e2e test module `github.com/akuity/kargo/hack/test
 
 The purpose of that is to be able to override `envs` and `funcsloader` in dependent `e2e` test modules to provide different environment configuration and setup/teardown functions to test in more environments than this package provides.
 
-We mostly use that in `Kargo Enterprise`.

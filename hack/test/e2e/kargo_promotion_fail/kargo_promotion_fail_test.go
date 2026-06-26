@@ -2,6 +2,9 @@
 //nolint:forcetypeassert
 package kargo_promotion_fail_test
 
+// This test shows an example of running Kargo promotion with stage defined in YAML fixtures.
+// Specifically it executes the `fail` stage and checks that promotion fails.
+
 import (
 	"context"
 	"testing"

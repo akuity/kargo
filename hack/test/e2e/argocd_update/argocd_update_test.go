@@ -2,6 +2,9 @@
 //nolint:forcetypeassert
 package argocd_update_test
 
+// This test implements an example of promoting argocd applications similar to https://github.com/akuity/kargo-examples
+// The difference is that this example does not have an AnalysisTemplate verification.
+
 import (
 	"context"
 	"testing"
@@ -31,7 +34,6 @@ func TestArgocdUpdate(t *testing.T) {
 	feature.Setup(utils.SetupArgoCDFixtures)
 	feature.Teardown(utils.TeardownArgoCDFixtures)
 
-	// FIXME: do not do LoadKargoClient, replace with this
 	feature.Setup(utils.SetupKargoClients)
 
 	// Setup and teardown fixtures from testdata folder

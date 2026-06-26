@@ -15,22 +15,6 @@ import (
 	"sigs.k8s.io/yaml"
 )
 
-// func init() {
-// 	// FIMXE: set up flags to configure kargo config here
-// 	// flag.StringVar(&kargoAuthMethod, "kargo-auth-method", "", "")
-// }
-
-// func loadConfigFromFlags() config.CLIConfig {
-// 	return config.CLIConfig{
-// 		// AuthMethod: "admin", // FIXME: modify that? "kubeconfig" | "sso"
-// 		// APIAddress: kargoApiAddress,
-// 		// BearerToken: kargoBearerToken,
-// 		// RefreshToken: kargoRefreshToken,
-// 		// InsecureSkipTLSVerify: kargoInsecureSkipTLSVerify,
-// 		// Project: kargoProject,
-// 	}
-// }
-
 const KargoConfigKey ContextKey = "kargo_config"
 
 func LoadKargoConfig(ctx context.Context, cfg *envconf.Config) (context.Context, error) {
