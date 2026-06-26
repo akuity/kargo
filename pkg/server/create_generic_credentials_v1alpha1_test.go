@@ -217,6 +217,35 @@ func Test_server_createProjectGenericCredentials(t *testing.T) {
 						map[string][]byte{"foo": []byte("bar"), "bat": []byte("baz")},
 						secret.Data,
 					)
+					// No type was requested, so it defaults to empty (Opaque).
+					require.Empty(t, secret.Type)
+				},
+			},
+			{
+				name: "creates Secret with k8s type",
+				body: mustJSONBody(createGenericCredentialsRequest{
+					Name: testSecret.Name,
+					Type: string(corev1.SecretTypeDockerConfigJson),
+					Data: testData,
+				}),
+				clientBuilder: fake.NewClientBuilder().WithObjects(testProject),
+				assertions: func(t *testing.T, w *httptest.ResponseRecorder, c client.Client) {
+					require.Equal(t, http.StatusCreated, w.Code)
+
+					resSecret := &corev1.Secret{}
+					err := json.Unmarshal(w.Body.Bytes(), resSecret)
+					require.NoError(t, err)
+					require.Equal(t, corev1.SecretTypeDockerConfigJson, resSecret.Type)
+
+					// Verify the Secret was created in the cluster with the type.
+					secret := &corev1.Secret{}
+					err = c.Get(
+						t.Context(),
+						client.ObjectKeyFromObject(resSecret),
+						secret,
+					)
+					require.NoError(t, err)
+					require.Equal(t, corev1.SecretTypeDockerConfigJson, secret.Type)
 				},
 			},
 		},
@@ -453,4 +482,57 @@ func Test_server_createSharedGenericCredentials(t *testing.T) {
 			},
 		},
 	)
+}
+
+func Test_server_genericCredentialsToK8sSecret(t *testing.T) {
+	s := &server{
+		cfg: config.ServerConfig{
+			SystemResourcesNamespace: testSystemResourcesNamespace,
+			SharedResourcesNamespace: testSharedResourcesNamespace,
+		},
+	}
+
+	testCases := []struct {
+		name   string
+		creds  genericCredentials
+		assert func(*testing.T, *corev1.Secret)
+	}{
+		{
+			name: "no type defaults to empty (Opaque)",
+			creds: genericCredentials{
+				project: "fake-project",
+				name:    "fake-secret",
+				data:    map[string]string{"foo": "bar"},
+			},
+			assert: func(t *testing.T, secret *corev1.Secret) {
+				require.Equal(t, "fake-project", secret.Namespace)
+				require.Equal(t, "fake-secret", secret.Name)
+				require.Empty(t, secret.Type)
+				require.Equal(
+					t,
+					kargoapi.LabelValueCredentialTypeGeneric,
+					secret.Labels[kargoapi.LabelKeyCredentialType],
+				)
+				require.Equal(t, map[string][]byte{"foo": []byte("bar")}, secret.Data)
+			},
+		},
+		{
+			name: "type is set when provided",
+			creds: genericCredentials{
+				project:    "fake-project",
+				name:       "fake-secret",
+				secretType: string(corev1.SecretTypeDockerConfigJson),
+				data:       map[string]string{".dockerconfigjson": "{}"},
+			},
+			assert: func(t *testing.T, secret *corev1.Secret) {
+				require.Equal(t, corev1.SecretTypeDockerConfigJson, secret.Type)
+			},
+		},
+	}
+
+	for _, testCase := range testCases {
+		t.Run(testCase.name, func(t *testing.T) {
+			testCase.assert(t, s.genericCredentialsToK8sSecret(testCase.creds))
+		})
+	}
 }

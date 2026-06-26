@@ -25,6 +25,11 @@ type CreateGenericCredentialsRequest struct {
 
 	// replicate
 	Replicate bool `json:"replicate,omitempty"`
+
+	// Type is the Kubernetes Secret type (e.g. "Opaque" or
+	// "kubernetes.io/dockerconfigjson"). It is immutable, so it may only be set
+	// at creation time. When empty, Kubernetes defaults it to "Opaque".
+	Type string `json:"type,omitempty"`
 }
 
 // Validate validates this create generic credentials request

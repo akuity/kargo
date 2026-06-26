@@ -86,6 +86,11 @@ export const GenericCredentialsList = ({ project = '', description }: Props) => 
             render: (_, record) => record?.metadata?.name
           },
           {
+            title: 'Type',
+            key: 'type',
+            render: (_, record) => <Tag>{record?.type}</Tag>
+          },
+          {
             title: 'Keys',
             key: 'secrets',
             render: (_, record) => {
