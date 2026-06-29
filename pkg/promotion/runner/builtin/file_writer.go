@@ -115,7 +115,9 @@ func (f *fileWriter) run(
 
 	if _, err = os.Stat(absPath); err == nil && !cfg.Overwrite {
 		return promotion.StepResult{Status: kargoapi.PromotionStepStatusFailed},
-			&promotion.TerminalError{Err: fmt.Errorf("file %q already exists", cfg.Path)}
+			&promotion.TerminalError{Err: fmt.Errorf(
+				"file %q already exists; set overwrite to true to replace it", cfg.Path,
+			)}
 	}
 
 	if err = os.MkdirAll(filepath.Dir(absPath), 0o700); err != nil {

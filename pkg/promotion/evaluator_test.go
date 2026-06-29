@@ -1207,6 +1207,42 @@ func TestStepEvaluator_Config(t *testing.T) {
 			},
 		},
 		{
+			name:     "test asYAML structured map",
+			promoCtx: Context{},
+			step: Step{
+				Config: []byte(`{
+					"contents": "${{ asYAML({ 'foo': 'bar', 'count': 2 }) }}"
+				}`),
+			},
+			expectedCfg: Config{
+				"contents": "count: 2\nfoo: bar\n",
+			},
+		},
+		{
+			name:     "test asYAML structured list",
+			promoCtx: Context{},
+			step: Step{
+				Config: []byte(`{
+					"contents": "${{ asYAML([ 'one', 'two' ]) }}"
+				}`),
+			},
+			expectedCfg: Config{
+				"contents": "- one\n- two\n",
+			},
+		},
+		{
+			name:     "test asJSON structured object",
+			promoCtx: Context{},
+			step: Step{
+				Config: []byte(`{
+					"contents": "${{ asJSON({ 'foo': 'bar', 'count': 2 }) }}"
+				}`),
+			},
+			expectedCfg: Config{
+				"contents": "{\n  \"count\": 2,\n  \"foo\": \"bar\"\n}\n",
+			},
+		},
+		{
 			name: "test warehouse function",
 			// Test that the warehouse() function can be used to reference freight
 			// origins
