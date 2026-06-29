@@ -134,11 +134,9 @@ func (w *webhook) Default(ctx context.Context, obj runtime.Object) error {
 	// or update. For updates this backfills the field on pre-existing Freight.
 	if freight.DiscoveredAt == nil {
 		if !freight.CreationTimestamp.IsZero() {
-			t := freight.CreationTimestamp
-			freight.DiscoveredAt = &t
+			freight.DiscoveredAt = &freight.CreationTimestamp
 		} else {
-			t := metav1.Now()
-			freight.DiscoveredAt = &t
+			freight.DiscoveredAt = new(metav1.Now())
 		}
 	}
 
