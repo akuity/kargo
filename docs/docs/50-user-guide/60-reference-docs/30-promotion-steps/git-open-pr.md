@@ -88,7 +88,7 @@ spec:
         as: open-pr
         config:
           repoURL: https://github.com/example/repo.git
-          sourceBranch: ${{ outputs.push.branch }}
+          sourceBranch: ${{ outputs.push.branch }} # Or task.outputs in a (Cluster)PromotionTask
           targetBranch: stage/${{ ctx.stage }}
       # Wait for the PR to be merged or closed...
 ```
@@ -124,7 +124,7 @@ spec:
         as: open-pr
         config:
           repoURL: https://github.com/example/repo.git
-          sourceBranch: ${{ outputs.push.branch }}
+          sourceBranch: ${{ outputs.push.branch }} # Or task.outputs in a (Cluster)PromotionTask
           targetBranch: stage/${{ ctx.stage }}
           title: Deploy to ${{ ctx.stage }}
           labels: ["infra", "needs-review"]
@@ -163,7 +163,7 @@ spec:
         as: open-pr
         config:
           repoURL: https://github.com/example/repo.git
-          sourceBranch: ${{ outputs.push.branch }}
+          sourceBranch: ${{ outputs.push.branch }} # Or task.outputs in a (Cluster)PromotionTask
           targetBranch: stage/${{ ctx.stage }}
       - if: ${{ status('open-pr') != 'Skipped' }}
         uses: git-wait-for-pr

@@ -85,7 +85,7 @@ spec:
         config:
           repoURL: https://github.com/example/repo.git
           createTargetBranch: true
-          sourceBranch: ${{ outputs.push.branch }}
+          sourceBranch: ${{ outputs.push.branch }} # Or task.outputs in a (Cluster)PromotionTask
           targetBranch: stage/${{ ctx.stage }}
       - uses: git-wait-for-pr
         as: wait-for-pr

@@ -103,7 +103,7 @@ spec:
         as: commit
         config:
           path: ./out
-          message: ${{ outputs['update-image'].commitMessage }}
+          message: ${{ outputs['update-image'].commitMessage }} # Or task.outputs in a (Cluster)PromotionTask
       - uses: git-push
         config:
           path: ./out

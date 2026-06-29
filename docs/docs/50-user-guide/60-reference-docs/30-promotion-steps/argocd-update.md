@@ -190,7 +190,7 @@ spec:
         as: commit
         config:
           path: ./out
-          message: ${{ outputs['update-image'].commitMessage }}
+          message: ${{ outputs['update-image'].commitMessage }} # Or task.outputs in a (Cluster)PromotionTask
       - uses: git-push
         config:
           path: ./out
@@ -320,7 +320,7 @@ spec:
                 team: platform
             sources:
             - repoURL: https://github.com/example/repo.git
-              desiredRevision: ${{ outputs.commit.commit }}
+              desiredRevision: ${{ outputs.commit.commit }} # Or task.outputs in a (Cluster)PromotionTask
 ```
 
 This configuration will select all Argo CD `Application` resources in the
@@ -354,7 +354,7 @@ spec:
                 - production
             sources:
             - repoURL: https://github.com/example/repo.git
-              desiredRevision: ${{ outputs.commit.commit }}
+              desiredRevision: ${{ outputs.commit.commit }} # Or task.outputs in a (Cluster)PromotionTask
 ```
 
 This configuration will select all Argo CD `Application` resources that have
@@ -394,7 +394,7 @@ spec:
                 - legacy-system
             sources:
             - repoURL: https://github.com/example/repo.git
-              desiredRevision: ${{ outputs.commit.commit }}
+              desiredRevision: ${{ outputs.commit.commit }} # Or task.outputs in a (Cluster)PromotionTask
 ```
 
 This configuration will select all Argo CD `Application` resources that:
@@ -462,7 +462,7 @@ spec:
                 deployment-group: blue
             sources:
             - repoURL: ${{ vars.gitRepo }}
-              desiredRevision: ${{ outputs.commit.commit }}
+              desiredRevision: ${{ outputs.commit.commit }} # Or task.outputs in a (Cluster)PromotionTask
 ```
 
 This configuration will update all Argo CD `Application` resources that have

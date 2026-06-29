@@ -126,7 +126,7 @@ spec:
       # Commit and push state changes...
       - uses: http
         config:
-          url: ${{ outputs.infra.function_url.value }}
+          url: ${{ outputs.infra.function_url.value }} # Or task.outputs in a (Cluster)PromotionTask
 ```
 
 ### Retrieving a Specific Output
@@ -159,7 +159,7 @@ spec:
             value: ${{ secret('aws-creds').awsSecretAccessKey }}
       - uses: http
         config:
-          url: ${{ outputs.endpoint.function_url }}
+          url: ${{ outputs.endpoint.function_url }} # Or task.outputs in a (Cluster)PromotionTask
 ```
 
 ### Writing Outputs to a File
