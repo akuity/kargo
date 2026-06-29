@@ -166,8 +166,7 @@ type FileWriteConfig struct {
 	Overwrite bool `json:"overwrite,omitempty"`
 	// Path is the destination file path to write.
 	Path string `json:"path"`
-	// Permissions is an optional octal file mode to apply to the written file. Defaults to
-	// 0600.
+	// Permissions is an optional octal file mode to apply to the written file. Defaults to 0600.
 	Permissions string `json:"permissions,omitempty"`
 }
 
