@@ -119,15 +119,6 @@ Valid values for `expectedConclusion`:
 
 ## Example
 
-:::note
-
-Examples that reference previous step outputs assume the steps are defined
-directly in a `Stage`'s `spec.promotionTemplate`, where those outputs are
-referenced with `outputs`. In a `PromotionTask` or `ClusterPromotionTask`,
-use `task.outputs` instead.
-
-:::
-
 ### v1.9 and Above
 
 This example waits for a previously dispatched workflow to complete successfully using the new configuration format.
@@ -137,7 +128,7 @@ steps:
 - uses: gha-wait-for-workflow
   config:
     repoURL: https://github.com/myorg/my-app
-    runID: "${{ outputs['dispatch-deployment'].runID }}"
+    runID: "${{ outputs['dispatch-deployment'].runID }}" # Or task.outputs in a (Cluster)PromotionTask
     expectedConclusion: success
     insecureSkipTLSVerify: false
 ```
@@ -152,7 +143,7 @@ steps:
       secretName: github-credentials
     owner: myorg
     repo: my-app
-    runID: "${{ outputs['dispatch-deployment'].runID }}"
+    runID: "${{ outputs['dispatch-deployment'].runID }}" # Or task.outputs in a (Cluster)PromotionTask
     expectedConclusion: success
 ```
 
@@ -177,7 +168,7 @@ steps:
 - uses: gha-wait-for-workflow
   config:
     repoURL: https://github.com/example/test
-    runID: "${{ outputs['dispatch-deployment'].runID }}"
+    runID: "${{ outputs['dispatch-deployment'].runID }}" # Or task.outputs in a (Cluster)PromotionTask
     expectedConclusion: success
 
 # Continue with other promotion steps after workflow completes...

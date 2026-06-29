@@ -44,15 +44,6 @@ The referenced `Secret` should contain the following keys:
 
 ## Evidence Management
 
-:::note
-
-Examples that reference previous step outputs assume the steps are defined
-directly in a `Stage`'s `spec.promotionTemplate`, where those outputs are
-referenced with `outputs`. In a `PromotionTask` or `ClusterPromotionTask`,
-use `task.outputs` instead.
-
-:::
-
 ### Create Evidence
 
 Creates cryptographically signed kargo promotion evidence for an artifact in JFrog Artifactory.
@@ -155,7 +146,7 @@ steps:
       packageRepo: ${{ vars.packageRepo }}
       packageName: ${{ vars.packageName }}
       packageVersion: ${{ imageFrom(vars.packageRegistry+"/"+vars.packageRepo+"/"+vars.packageName).Tag }}
-      evidenceName: ${{ outputs['create-test-evidence'].name }}
+      evidenceName: ${{ outputs['create-test-evidence'].name }} # Or task.outputs in a (Cluster)PromotionTask
 ```
 
 ### Process Evidence (Query and Verify)

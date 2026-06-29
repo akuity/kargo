@@ -52,15 +52,6 @@ system to access the git repos.
 
 ## Examples
 
-:::note
-
-This example references previous step outputs and assumes the steps are defined
-directly in a `Stage`'s `spec.promotionTemplate`, where those outputs are
-referenced with `outputs`. In a `PromotionTask` or `ClusterPromotionTask`,
-use `task.outputs` instead.
-
-:::
-
 ### Common Usage
 
 In this example, a complete promotion flow is demonstrated where changes are
@@ -86,7 +77,7 @@ steps:
   config:
     repoURL: https://github.com/example/repo.git
     createTargetBranch: true
-    sourceBranch: ${{ outputs.push.branch }}
+    sourceBranch: ${{ outputs.push.branch }} # Or task.outputs in a (Cluster)PromotionTask
     targetBranch: stage/${{ ctx.stage }}
 - uses: git-wait-for-pr
   as: wait-for-pr

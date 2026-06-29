@@ -70,15 +70,6 @@ The step writes outputs to the specified file as JSON and returns an empty map.
 
 ## Examples
 
-:::note
-
-Examples that reference previous step outputs assume the steps are defined
-directly in a `Stage`'s `spec.promotionTemplate`, where those outputs are
-referenced with `outputs`. In a `PromotionTask` or `ClusterPromotionTask`,
-use `task.outputs` instead.
-
-:::
-
 ### Common Usage
 
 The most common usage of this step is to retrieve outputs from the OpenTofu
@@ -133,7 +124,7 @@ The outputs can then be referenced in subsequent steps:
 ```yaml
 - uses: http
   config:
-    url: ${{ outputs.infra.function_url.value }}
+    url: ${{ outputs.infra.function_url.value }} # Or task.outputs in a (Cluster)PromotionTask
 ```
 
 ### Retrieving a Specific Output
@@ -164,7 +155,7 @@ The output value can be referenced directly:
 ```yaml
 - uses: http
   config:
-    url: ${{ outputs.endpoint.function_url }}
+    url: ${{ outputs.endpoint.function_url }} # Or task.outputs in a (Cluster)PromotionTask
 ```
 
 ### Writing Outputs to a File

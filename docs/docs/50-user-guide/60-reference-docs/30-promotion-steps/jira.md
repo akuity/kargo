@@ -48,15 +48,6 @@ The referenced `Secret` should contain the following keys:
 
 ## Issue Management
 
-:::note
-
-Examples that reference previous step outputs assume the steps are defined
-directly in a `Stage`'s `spec.promotionTemplate`, where those outputs are
-referenced with `outputs`. In a `PromotionTask` or `ClusterPromotionTask`,
-use `task.outputs` instead.
-
-:::
-
 ### Create Issue
 
 Creates a new Jira issue with specified details.
@@ -109,7 +100,7 @@ steps:
     credentials:
       secretName: jira-credentials
     updateIssue:
-      issueKey: "${{ outputs['create-promotion-issue'].key }}"
+      issueKey: "${{ outputs['create-promotion-issue'].key }}" # Or task.outputs in a (Cluster)PromotionTask
       status: "IN PROGRESS"
 ```
 
@@ -295,7 +286,7 @@ steps:
       secretName: jira-credentials
     deleteComment:
       issueKey: "${{ freightMetadata(ctx.targetFreight.name)['jira-issue-key'] }}"
-      commentID: "${{ quote(outputs['add-progress-comment'].commentID) }}"
+      commentID: "${{ quote(outputs['add-progress-comment'].commentID) }}" # Or task.outputs in a (Cluster)PromotionTask
 ```
 
 ### Delete Comment
@@ -325,7 +316,7 @@ steps:
       secretName: jira-credentials
     deleteComment:
       issueKey: "${{ freightMetadata(ctx.targetFreight.name)['jira-issue-key'] }}"
-      commentID: "${{ outputs['previous-comment-step'].commentID }}"
+      commentID: "${{ outputs['previous-comment-step'].commentID }}" # Or task.outputs in a (Cluster)PromotionTask
 ```
 
 ## Status Tracking
@@ -504,7 +495,7 @@ spec:
           credentials:
             secretName: jira
           commentOnIssue:
-            issueKey: ${{ outputs['create-promotion-issue'].key }}
+            issueKey: ${{ outputs['create-promotion-issue'].key }} # Or task.outputs in a (Cluster)PromotionTask
             body: "Release ${{ imageFrom(vars.imageRepo).Tag }} has been promoted to ${{ ctx.stage }} environment. Freight: ${{ ctx.targetFreight.name }}. Ready for testing."
 
       # Cleanup on failure

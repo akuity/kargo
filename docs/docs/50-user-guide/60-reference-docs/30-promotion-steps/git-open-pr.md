@@ -51,15 +51,6 @@ support pull request labels at all.
 
 ## Examples
 
-:::note
-
-Examples that reference previous step outputs assume the steps are defined
-directly in a `Stage`'s `spec.promotionTemplate`, where those outputs are
-referenced with `outputs`. In a `PromotionTask` or `ClusterPromotionTask`,
-use `task.outputs` instead.
-
-:::
-
 ### Common Usage
 
 The following example demonstrates a common use case for `git-open-pr`. It
@@ -90,7 +81,7 @@ steps:
   as: open-pr
   config:
     repoURL: https://github.com/example/repo.git
-    sourceBranch: ${{ outputs.push.branch }}
+    sourceBranch: ${{ outputs.push.branch }} # Or task.outputs in a (Cluster)PromotionTask
     targetBranch: stage/${{ ctx.stage }}
 # Wait for the PR to be merged or closed...
 ```
@@ -120,7 +111,7 @@ steps:
   as: open-pr
   config:
     repoURL: https://github.com/example/repo.git
-    sourceBranch: ${{ outputs.push.branch }}
+    sourceBranch: ${{ outputs.push.branch }} # Or task.outputs in a (Cluster)PromotionTask
     targetBranch: stage/${{ ctx.stage }}
     title: Deploy to ${{ ctx.stage }}
     labels: ["infra", "needs-review"]
@@ -151,7 +142,7 @@ by subsequent steps to determine if a preceding step was skipped.
   as: open-pr
   config:
     repoURL: https://github.com/example/repo.git
-    sourceBranch: ${{ outputs.push.branch }}
+    sourceBranch: ${{ outputs.push.branch }} # Or task.outputs in a (Cluster)PromotionTask
     targetBranch: stage/${{ ctx.stage }}
 - if: ${{ status('open-pr') != 'Skipped' }}
   uses: git-wait-for-pr

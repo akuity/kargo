@@ -83,15 +83,6 @@ during the wait.
 
 ## Examples
 
-:::note
-
-Examples that reference previous step outputs assume the steps are defined
-directly in a `Stage`'s `spec.promotionTemplate`, where those outputs are
-referenced with `outputs`. In a `PromotionTask` or `ClusterPromotionTask`,
-use `task.outputs` instead.
-
-:::
-
 ### Common Usage
 
 In this example, `argocd-wait` is used after [`argocd-update`](argocd-update.md)
@@ -105,7 +96,7 @@ steps:
   as: commit
   config:
     path: ./out
-    message: ${{ outputs['update-image'].commitMessage }}
+    message: ${{ outputs['update-image'].commitMessage }} # Or task.outputs in a (Cluster)PromotionTask
 - uses: git-push
   config:
     path: ./out

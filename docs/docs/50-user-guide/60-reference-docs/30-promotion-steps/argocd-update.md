@@ -174,15 +174,6 @@ or by a `Promotion` which failed to complete successfully.
 
 ## Examples
 
-:::note
-
-Examples that reference previous step outputs assume the steps are defined
-directly in a `Stage`'s `spec.promotionTemplate`, where those outputs are
-referenced with `outputs`. In a `PromotionTask` or `ClusterPromotionTask`,
-use `task.outputs` instead.
-
-:::
-
 ### Common Usage
 
 ```yaml
@@ -192,7 +183,7 @@ steps:
   as: commit
   config:
     path: ./out
-    message: ${{ outputs['update-image'].commitMessage }}
+    message: ${{ outputs['update-image'].commitMessage }} # Or task.outputs in a (Cluster)PromotionTask
 - uses: git-push
   config:
     path: ./out
@@ -314,7 +305,7 @@ steps:
           team: platform
       sources:
       - repoURL: https://github.com/example/repo.git
-        desiredRevision: ${{ outputs.commit.commit }}
+        desiredRevision: ${{ outputs.commit.commit }} # Or task.outputs in a (Cluster)PromotionTask
 ```
 
 This configuration will select all Argo CD `Application` resources in the
@@ -340,7 +331,7 @@ steps:
           - production
       sources:
       - repoURL: https://github.com/example/repo.git
-        desiredRevision: ${{ outputs.commit.commit }}
+        desiredRevision: ${{ outputs.commit.commit }} # Or task.outputs in a (Cluster)PromotionTask
 ```
 
 This configuration will select all Argo CD `Application` resources that have
@@ -372,7 +363,7 @@ steps:
           - legacy-system
       sources:
       - repoURL: https://github.com/example/repo.git
-        desiredRevision: ${{ outputs.commit.commit }}
+        desiredRevision: ${{ outputs.commit.commit }} # Or task.outputs in a (Cluster)PromotionTask
 ```
 
 This configuration will select all Argo CD `Application` resources that:
@@ -433,7 +424,7 @@ steps:
           deployment-group: blue
       sources:
       - repoURL: ${{ vars.gitRepo }}
-        desiredRevision: ${{ outputs.commit.commit }}
+        desiredRevision: ${{ outputs.commit.commit }} # Or task.outputs in a (Cluster)PromotionTask
 ```
 
 This configuration will update all Argo CD `Application` resources that have
