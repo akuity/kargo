@@ -136,6 +136,11 @@ typecheck-ui:
 	pnpm --dir=ui install
 	pnpm --dir=ui run typecheck
 
+.PHONY: test-unit-ui
+test-unit-ui:
+	pnpm --dir=ui install
+	pnpm --dir=ui exec vitest run
+
 .PHONY: format-ui
 format-ui:
 	pnpm --dir=ui install --dev
