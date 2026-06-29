@@ -353,6 +353,37 @@ config:
   rawField: ${{ unsafeQuote("string") }} # Will result in "\"string\""
 ```
 
+### `asYAML(value)`
+
+The `asYAML()` function converts any value to a YAML string. It has one required
+argument:
+
+- `value` (Required): A value of any type to be converted to YAML.
+
+This is useful with steps such as [`file-write`](./30-promotion-steps/file-write.md)
+when an object from a previous step should be rendered into a YAML file.
+
+Example:
+
+```yaml
+config:
+  contents: ${{ asYAML(outputs['read-config'].appConfig) }}
+```
+
+### `asJSON(value)`
+
+The `asJSON()` function converts any value to a pretty-printed JSON string. It
+has one required argument:
+
+- `value` (Required): A value of any type to be converted to JSON.
+
+Example:
+
+```yaml
+config:
+  contents: ${{ asJSON(outputs['read-config'].appConfig) }}
+```
+
 ### `configMap(name)`
 
 The `configMap()` function returns the `Data` field (a `map[string]string`) of a
