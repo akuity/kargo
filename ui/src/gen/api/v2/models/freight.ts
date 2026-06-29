@@ -37,6 +37,11 @@ than Git repository commits, container images, and Helm charts. */
   charts?: Chart[];
   /** Commits describes specific Git repository commits. */
   commits?: GitCommit[];
+  /** DiscoveredAt is the time at which this Freight was discovered/created.
+A defaulting webhook initializes this to the creation time of the Freight.
+
++optional */
+  discoveredAt?: string;
   /** Images describes specific versions of specific container images. */
   images?: Image[];
   /** Kind is a string value representing the REST resource this object represents.

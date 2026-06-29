@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"regexp"
 	"testing"
+	"time"
 
 	"github.com/stretchr/testify/require"
 	admissionv1 "k8s.io/api/admission/v1"
@@ -116,6 +117,71 @@ func Test_webhook_Default(t *testing.T) {
 			assertions: func(t *testing.T, freight *kargoapi.Freight, err error) {
 				require.NoError(t, err)
 				require.NotEmpty(t, freight.Name)
+			},
+		},
+		{
+			name: "sets discoveredAt to now on create when unset and creationTimestamp is zero",
+			op:   admissionv1.Create,
+			webhook: &webhook{
+				getAvailableFreightAliasFn: func(context.Context) (string, error) {
+					return "fake-alias", nil
+				},
+			},
+			freight: &kargoapi.Freight{},
+			assertions: func(t *testing.T, freight *kargoapi.Freight, err error) {
+				require.NoError(t, err)
+				require.NotNil(t, freight.DiscoveredAt)
+				require.False(t, freight.DiscoveredAt.IsZero())
+			},
+		},
+		{
+			name: "preserves existing discoveredAt on create",
+			op:   admissionv1.Create,
+			webhook: &webhook{
+				getAvailableFreightAliasFn: func(context.Context) (string, error) {
+					return "fake-alias", nil
+				},
+			},
+			freight: &kargoapi.Freight{
+				DiscoveredAt: &metav1.Time{Time: time.Unix(1000, 0)},
+			},
+			assertions: func(t *testing.T, freight *kargoapi.Freight, err error) {
+				require.NoError(t, err)
+				require.NotNil(t, freight.DiscoveredAt)
+				require.Equal(t, time.Unix(1000, 0), freight.DiscoveredAt.Time)
+			},
+		},
+		{
+			name:    "backfills discoveredAt from creationTimestamp on update when unset",
+			op:      admissionv1.Update,
+			webhook: &webhook{},
+			freight: &kargoapi.Freight{
+				ObjectMeta: metav1.ObjectMeta{
+					CreationTimestamp: metav1.Time{Time: time.Unix(1000, 0)},
+				},
+				Alias: "fake-alias",
+			},
+			assertions: func(t *testing.T, freight *kargoapi.Freight, err error) {
+				require.NoError(t, err)
+				require.NotNil(t, freight.DiscoveredAt)
+				require.Equal(t, time.Unix(1000, 0), freight.DiscoveredAt.Time)
+			},
+		},
+		{
+			name:    "preserves existing discoveredAt on update",
+			op:      admissionv1.Update,
+			webhook: &webhook{},
+			freight: &kargoapi.Freight{
+				ObjectMeta: metav1.ObjectMeta{
+					CreationTimestamp: metav1.Time{Time: time.Unix(1000, 0)},
+				},
+				DiscoveredAt: &metav1.Time{Time: time.Unix(2000, 0)},
+				Alias:        "fake-alias",
+			},
+			assertions: func(t *testing.T, freight *kargoapi.Freight, err error) {
+				require.NoError(t, err)
+				require.NotNil(t, freight.DiscoveredAt)
+				require.Equal(t, time.Unix(2000, 0), freight.DiscoveredAt.Time)
 			},
 		},
 		{

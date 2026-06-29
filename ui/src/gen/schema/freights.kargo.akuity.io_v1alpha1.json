@@ -103,6 +103,11 @@
       },
       "type": "array"
     },
+    "discoveredAt": {
+      "description": "DiscoveredAt is the time at which this Freight was discovered/created.\nA defaulting webhook initializes this to the creation time of the Freight.",
+      "format": "date-time",
+      "type": "string"
+    },
     "images": {
       "description": "Images describes specific versions of specific container images.",
       "items": {
