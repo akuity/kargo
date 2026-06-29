@@ -193,6 +193,7 @@ The `ctx` object has the following structure:
 
 ```console
 ctx
+├── uiBaseUrl: string         # The base URL of the Kargo UI
 ├── project: string           # The name of the Project
 ├── stage: string             # The name of the Stage
 ├── promotion: string         # The name of the Promotion
@@ -202,9 +203,11 @@ ctx
 │   └── origin
 │       └── name: string      # The name of the Warehouse that contains the Freight
 └── meta
-    └── promotion
-        ├── actor: string     # The creator of the Promotion
-        └── rollback: bool    # Whether this Promotion is a rollback
+    ├── promotion
+    │   ├── actor: string     # The creator of the Promotion
+    │   └── rollback: bool    # Whether this Promotion is a rollback
+    └── step
+        └── alias: string     # The alias of the current step
 ```
 
 :::warning

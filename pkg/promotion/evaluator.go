@@ -96,6 +96,9 @@ func ExprEnvWithTaskOutputs(alias string, outputs State) ExprEnvOption {
 // It is exported so that external step executors (e.g. pod-based runners that
 // receive a StepContext over a file channel) can build a consistent expression
 // environment without reimplementing this mapping.
+// NOTE: When modifying the structure returned by this function, update the
+// ctx object documentation in
+// docs/docs/50-user-guide/60-reference-docs/40-expressions.md.
 func BuildCtxMap(stepCtx StepContext) map[string]any {
 	return map[string]any{
 		"ctx": map[string]any{
@@ -131,6 +134,10 @@ func BuildCtxMap(stepCtx StepContext) map[string]any {
 // ExprEnvOption functional options. These options can be used to add variables
 // or modify the expression language environment.
 func BuildExprEnv(promoCtx Context, opts ...ExprEnvOption) map[string]any {
+	var stepAlias string
+	if promoCtx.currentStepMetadata != nil {
+		stepAlias = promoCtx.currentStepMetadata.Alias
+	}
 	env := BuildCtxMap(StepContext{
 		UIBaseURL:          promoCtx.UIBaseURL,
 		Project:            promoCtx.Project,
@@ -140,6 +147,7 @@ func BuildExprEnv(promoCtx Context, opts ...ExprEnvOption) map[string]any {
 		TargetFreightAlias: promoCtx.TargetFreightAlias,
 		PromotionActor:     promoCtx.Actor,
 		Rollback:           promoCtx.Rollback,
+		Alias:              stepAlias,
 	})
 
 	for _, opt := range opts {
