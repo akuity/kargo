@@ -278,7 +278,7 @@ func ParseFreightOriginKey(key string) (FreightOrigin, error) {
 
 	origin := FreightOrigin{Kind: FreightOriginKind(kind), Name: name}
 	if err := origin.Validate(); err != nil {
-		return FreightOrigin{}, err
+		return FreightOrigin{}, fmt.Errorf("invalid freight origin: %w", err)
 	}
 	return origin, nil
 }
