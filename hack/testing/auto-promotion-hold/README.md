@@ -13,9 +13,6 @@ A running Tilt dev environment (`make hack-tilt-up`).
 ./hack/testing/auto-promotion-hold/apply.sh
 ```
 
-Re-run the same command to reset between scenario runs. It deletes all
-Promotions, Stages, and ProjectConfig before re-seeding.
-
 This creates the `auto-promotion-hold` project with two Stages:
 
 - **`single-origin-hold`** — single-origin Stage with auto-promotion enabled
