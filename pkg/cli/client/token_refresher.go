@@ -11,6 +11,7 @@ import (
 	"golang.org/x/oauth2"
 
 	"github.com/akuity/kargo/pkg/cli/config"
+	"github.com/akuity/kargo/pkg/client/generated/models"
 	"github.com/akuity/kargo/pkg/client/generated/system"
 )
 
@@ -126,7 +127,7 @@ func redeemRefreshToken(
 	}
 
 	cfg := oauth2.Config{
-		ClientID: res.Payload.OidcConfig.ClientID,
+		ClientID: clientIDForRefresh(res.Payload.OidcConfig),
 		Endpoint: provider.Endpoint(),
 	}
 
@@ -144,4 +145,16 @@ func redeemRefreshToken(
 		return "", "", errors.New("no id_token in token response")
 	}
 	return idToken, token.RefreshToken, nil
+}
+
+// clientIDForRefresh returns the OIDC client ID to use when redeeming a refresh
+// token. When the server advertises a client ID specifically meant for CLI use,
+// that ID must be used, because the refresh token was issued to that client
+// during login (see ssoLogin). Otherwise, identity providers such as Dex reject
+// the refresh as an attempt to claim a token belonging to a different client.
+func clientIDForRefresh(cfg *models.OIDCConfig) string {
+	if cfg.CliClientID != "" {
+		return cfg.CliClientID
+	}
+	return cfg.ClientID
 }
