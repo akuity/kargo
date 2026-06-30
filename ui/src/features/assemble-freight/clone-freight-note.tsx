@@ -65,9 +65,9 @@ export const CloneFreightNote = (props: {
   const sourceFreightLink =
     isSourceFreightPersisted && cloneFreight.metadata?.name
       ? generatePath(paths.freight, {
-        name: cloneFreight.metadata?.namespace,
-        freightName: cloneFreight.metadata.name
-      })
+          name: cloneFreight.metadata?.namespace,
+          freightName: cloneFreight.metadata.name
+        })
       : undefined;
 
   return (
@@ -77,7 +77,8 @@ export const CloneFreightNote = (props: {
       message={
         sourceFreightLink && cloneName ? (
           <>
-            Based on <Link to={sourceFreightLink}>{cloneName}</Link> - matching versions are pre-filled.
+            Based on <Link to={sourceFreightLink}>{cloneName}</Link> - matching versions are
+            pre-filled.
           </>
         ) : (
           <>Based on historical Freight {cloneName} - matching versions are pre-filled.</>

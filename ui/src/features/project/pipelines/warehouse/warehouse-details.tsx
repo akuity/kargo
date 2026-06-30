@@ -9,7 +9,13 @@ import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
 import { Drawer, Flex, Skeleton, Tabs, Typography } from 'antd';
 import Alert from 'antd/es/alert/Alert';
 import { useMemo } from 'react';
-import { generatePath, useLocation, useNavigate, useParams, useSearchParams } from 'react-router-dom';
+import {
+  generatePath,
+  useLocation,
+  useNavigate,
+  useParams,
+  useSearchParams
+} from 'react-router-dom';
 import { stringify } from 'yaml';
 
 import { paths } from '@ui/config/paths';

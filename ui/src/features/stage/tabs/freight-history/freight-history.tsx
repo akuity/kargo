@@ -120,20 +120,20 @@ export const FreightHistory = ({
             // Otherwise route to assemble freight and seed state from history.
             const linkTo = existingFreight
               ? generatePath(paths.freight, {
-                name: projectName,
-                freightName: record.name
-              })
+                  name: projectName,
+                  freightName: record.name
+                })
               : generatePath(paths.warehouse, {
-                name: projectName,
-                warehouseName: record.origin?.name || '',
-                tab: 'create-freight'
-              });
+                  name: projectName,
+                  warehouseName: record.origin?.name || '',
+                  tab: 'create-freight'
+                });
             // Only pass clone state for reconstructed historical Freight.
             const linkState = existingFreight
               ? undefined
               : {
-                cloneFreight: reconstructedFreight
-              };
+                  cloneFreight: reconstructedFreight
+                };
 
             return (
               <Space>

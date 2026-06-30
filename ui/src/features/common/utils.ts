@@ -109,7 +109,7 @@ export function getCurrentFreightWarehouse(stage: Stage) {
 }
 
 export function selectFreightByWarehouse(
-  freightsInOrder /* they should be in order as if applied latest to old */: Freight[],
+  freightsInOrder /* they should be in order as if applied latest to old */ : Freight[],
   warehouse?: string
 ) {
   const LATEST_FREIGHT = 0;
