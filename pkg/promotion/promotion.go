@@ -54,6 +54,9 @@ type Context struct {
 	Freight kargoapi.FreightCollection
 	// TargetFreightRef is the actual Freight that triggered this Promotion.
 	TargetFreightRef kargoapi.FreightReference
+	// TargetFreightAlias is the human-friendly alias of the Freight that
+	// triggered this Promotion.
+	TargetFreightAlias string
 	// StartFromStep is the index of the step from which the promotion should
 	// begin execution.
 	StartFromStep int64
@@ -127,6 +130,13 @@ func WithWorkDir(dir string) ContextOption {
 func WithActor(actor string) ContextOption {
 	return func(c *Context) {
 		c.Actor = actor
+	}
+}
+
+// WithTargetFreightAlias sets the TargetFreightAlias of the Context.
+func WithTargetFreightAlias(alias string) ContextOption {
+	return func(c *Context) {
+		c.TargetFreightAlias = alias
 	}
 }
 
@@ -418,6 +428,9 @@ type StepContext struct {
 	Freight kargoapi.FreightCollection
 	// TargetFreightRef is the actual Freight that triggered this Promotion.
 	TargetFreightRef kargoapi.FreightReference
+	// TargetFreightAlias is the human-friendly alias of the Freight that
+	// triggered this Promotion.
+	TargetFreightAlias string
 }
 
 // StepResult represents the results of a single Step of a user-defined promotion
