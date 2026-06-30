@@ -121,7 +121,7 @@ func SelectAutoPromotionCandidates(
 		}
 
 		slices.SortFunc(freight, func(lhs, rhs kargoapi.Freight) int {
-			cmp := rhs.CreationTimestamp.Compare(lhs.CreationTimestamp.Time)
+			cmp := rhs.EffectiveDiscoveredAt().Compare(lhs.EffectiveDiscoveredAt())
 			if cmp != 0 {
 				return cmp
 			}
