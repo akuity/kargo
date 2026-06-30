@@ -52,6 +52,13 @@ const (
 	mergeableStateUnknown = "unknown"
 )
 
+// mergeBaseModifiedMsg is the substring GitHub includes in the message of a 405
+// merge error when the base branch moved between the mergeability check and the
+// merge call. This is the one transient 405 (it clears on retry); all other 405s
+// from the merge endpoint are permanent. Full message: "Base branch was
+// modified. Review and try the merge again."
+const mergeBaseModifiedMsg = "Base branch was modified"
+
 var registration = gitprovider.Registration{
 	Predicate: func(repoURL string) bool {
 		u, err := url.Parse(repoURL)
@@ -368,17 +375,25 @@ func (p *provider) MergePullRequest(
 		&github.PullRequestOptions{MergeMethod: opts.MergeMethod},
 	)
 	if err != nil {
-		// GitHub returns 405 ("Method Not Allowed") when the merge cannot be
-		// performed -- most notably "Base branch was modified" when the base tip
-		// moved between the mergeability check above and this merge call (a TOCTOU
-		// race that fires whenever concurrent merges land on the same base). The
-		// gate above already rejected the permanent conditions (conflict, blocked,
-		// etc.), so a 405 here is transient: report "not ready" so the caller
-		// retries. The next attempt re-runs the gate, which surfaces any condition
-		// that has since become permanent (e.g. a real conflict) as such.
+		// GitHub returns 405 ("Method Not Allowed") whenever the merge cannot be
+		// performed, which spans both transient and permanent conditions. The one
+		// transient case is "Base branch was modified": the base tip moved between
+		// the mergeability check above and this merge call (a TOCTOU race that
+		// fires when concurrent merges land on the same base). It is the only 405
+		// we retry -- report "not ready" so the caller tries again on the next
+		// reconciliation.
+		//
+		// Other 405s are permanent and must not be retried, or the step would loop
+		// forever under wait=true. The most common is a configured merge method
+		// that is disabled on the repo (e.g. mergeMethod: squash with squash
+		// merges turned off): the gate sees the PR as mergeable, so every retry
+		// would re-attempt and re-fail. We fall through and surface GitHub's
+		// message (carried by the wrapped error) so the misconfiguration is
+		// visible instead of silently looping.
 		var ghErr *github.ErrorResponse
 		if errors.As(err, &ghErr) && ghErr.Response != nil &&
-			ghErr.Response.StatusCode == http.StatusMethodNotAllowed {
+			ghErr.Response.StatusCode == http.StatusMethodNotAllowed &&
+			strings.Contains(ghErr.Message, mergeBaseModifiedMsg) {
 			return nil, false, nil
 		}
 		return nil, false, fmt.Errorf("error merging pull request %d: %w", id, err)

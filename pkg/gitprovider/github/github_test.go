@@ -590,6 +590,37 @@ func TestMergePullRequest(t *testing.T) {
 			expectedMerged: false,
 		},
 		{
+			name:     "merge call returns 405 for disabled merge method is terminal",
+			prNumber: 406,
+			setupMock: func(m *mockGithubClient) {
+				m.On("GetPullRequests", mock.Anything, testRepoOwner, testRepoName, int(406)).
+					Return(&github.PullRequest{
+						Number:    github.Ptr(406),
+						State:     github.Ptr("open"),
+						Merged:    github.Ptr(false),
+						Mergeable: github.Ptr(true),
+						Head:      &github.PullRequestBranch{SHA: github.Ptr("head_sha")},
+						HTMLURL:   github.Ptr("https://github.com/akuity/kargo/pull/406"),
+					}, &github.Response{}, nil).Once()
+
+				// The PR is mergeable, but the configured merge method is disabled
+				// on the repo. GitHub returns a 405 with a different message. This
+				// is permanent: the provider must surface it as an error rather
+				// than treating it as not-ready (which would loop forever under
+				// wait=true).
+				m.On("MergePullRequest", mock.Anything, testRepoOwner, testRepoName, int(406), "",
+					mock.AnythingOfType("*github.PullRequestOptions")).
+					Return(nil, nil, &github.ErrorResponse{
+						Response: &http.Response{StatusCode: http.StatusMethodNotAllowed},
+						// Real message observed from GitHub when the configured
+						// merge method is disabled on the repo.
+						Message: "Squash merges are not allowed on this repository.",
+					})
+			},
+			expectError:   true,
+			errorContains: "Squash merges are not allowed",
+		},
+		{
 			name:     "nil merge result",
 			prNumber: 333,
 			setupMock: func(m *mockGithubClient) {
