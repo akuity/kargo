@@ -3612,7 +3612,9 @@ func TestRegularStageReconciler_startVerification(t *testing.T) {
 	require.NoError(t, kargoapi.AddToScheme(scheme))
 	require.NoError(t, rolloutsapi.AddToScheme(scheme))
 
-	now := time.Now()
+	startTime := time.Now()
+	endTime := startTime.Add(5 * time.Minute)
+	fixedEndTime := func() time.Time { return endTime }
 
 	tests := []struct {
 		name             string
@@ -3648,8 +3650,9 @@ func TestRegularStageReconciler_startVerification(t *testing.T) {
 				assert.NotEmpty(t, vi.ID)
 				assert.Equal(t, kargoapi.VerificationPhaseError, vi.Phase)
 				assert.Contains(t, vi.Message, "Rollouts integration is disabled")
-				assert.Equal(t, now, vi.StartTime.Time)
-				assert.NotNil(t, vi.FinishTime)
+				assert.Equal(t, startTime, vi.StartTime.Time)
+				require.NotNil(t, vi.FinishTime)
+				assert.Equal(t, endTime.Unix(), vi.FinishTime.Unix())
 			},
 		},
 		{
@@ -3692,13 +3695,12 @@ func TestRegularStageReconciler_startVerification(t *testing.T) {
 				assert.NotEmpty(t, vi.ID)
 				assert.Equal(t, kargoapi.VerificationPhaseSuccessful, vi.Phase)
 				assert.Equal(t, "existing-analysis", vi.AnalysisRun.Name)
-				// Both timestamps should be the reconciliation time so that
-				// startTime <= finishTime always holds regardless of when the
-				// AnalysisRun internally ran.
+				// StartTime is the injected reconciliation time; FinishTime is
+				// the injected end time stamped when the result is recorded.
 				require.NotNil(t, vi.StartTime)
 				require.NotNil(t, vi.FinishTime)
-				assert.Equal(t, now.Unix(), vi.StartTime.Unix())
-				assert.Equal(t, now.Unix(), vi.FinishTime.Unix())
+				assert.Equal(t, startTime.Unix(), vi.StartTime.Unix())
+				assert.Equal(t, endTime.Unix(), vi.FinishTime.Unix())
 			},
 		},
 		{
@@ -3746,8 +3748,8 @@ func TestRegularStageReconciler_startVerification(t *testing.T) {
 				assert.Equal(t, "existing-analysis", vi.AnalysisRun.Name)
 				require.NotNil(t, vi.StartTime)
 				require.NotNil(t, vi.FinishTime)
-				assert.Equal(t, now.Unix(), vi.StartTime.Unix())
-				assert.Equal(t, now.Unix(), vi.FinishTime.Unix())
+				assert.Equal(t, startTime.Unix(), vi.StartTime.Unix())
+				assert.Equal(t, endTime.Unix(), vi.FinishTime.Unix())
 			},
 		},
 		{
@@ -4032,7 +4034,7 @@ func TestRegularStageReconciler_startVerification(t *testing.T) {
 				},
 			}
 
-			vi, err := r.startVerification(t.Context(), tt.stage, tt.freightCol, tt.req, now)
+			vi, err := r.startVerification(t.Context(), tt.stage, tt.freightCol, tt.req, startTime, fixedEndTime)
 			tt.assertions(t, c, vi, err)
 		})
 	}
@@ -4044,7 +4046,8 @@ func TestRegularStageReconciler_getVerificationResult(t *testing.T) {
 	require.NoError(t, rolloutsapi.AddToScheme(scheme))
 
 	now := time.Now()
-	fiveMinutesLater := now.Add(5 * time.Minute)
+	endTime := now.Add(5 * time.Minute)
+	fixedEndTime := func() time.Time { return endTime }
 
 	tests := []struct {
 		name             string
@@ -4114,6 +4117,8 @@ func TestRegularStageReconciler_getVerificationResult(t *testing.T) {
 				assert.Equal(t, kargoapi.VerificationPhaseError, vi.Phase)
 				assert.Equal(t, "test-verification", vi.ID)
 				assert.Contains(t, vi.Message, "Rollouts integration is disabled")
+				require.NotNil(t, vi.FinishTime)
+				assert.Equal(t, endTime.Unix(), vi.FinishTime.Unix())
 			},
 		},
 		{
@@ -4215,12 +4220,12 @@ func TestRegularStageReconciler_getVerificationResult(t *testing.T) {
 					Status: rolloutsapi.AnalysisRunStatus{
 						Phase:       rolloutsapi.AnalysisPhaseSuccessful,
 						Message:     "Analysis completed successfully",
-						CompletedAt: &metav1.Time{Time: fiveMinutesLater},
+						CompletedAt: &metav1.Time{Time: endTime},
 						MetricResults: []rolloutsapi.MetricResult{
 							{
 								Measurements: []rolloutsapi.Measurement{
 									{
-										FinishedAt: &metav1.Time{Time: fiveMinutesLater},
+										FinishedAt: &metav1.Time{Time: endTime},
 									},
 								},
 							},
@@ -4235,7 +4240,8 @@ func TestRegularStageReconciler_getVerificationResult(t *testing.T) {
 				assert.Equal(t, kargoapi.VerificationPhaseSuccessful, vi.Phase)
 				assert.Equal(t, "test-verification", vi.ID)
 				assert.Equal(t, "Analysis completed successfully", vi.Message)
-				assert.NotNil(t, vi.FinishTime)
+				require.NotNil(t, vi.FinishTime)
+				assert.Equal(t, endTime.Unix(), vi.FinishTime.Unix())
 			},
 		},
 		{
@@ -4266,12 +4272,12 @@ func TestRegularStageReconciler_getVerificationResult(t *testing.T) {
 					Status: rolloutsapi.AnalysisRunStatus{
 						Phase:       "Failed",
 						Message:     "Something went wrong",
-						CompletedAt: &metav1.Time{Time: fiveMinutesLater},
+						CompletedAt: &metav1.Time{Time: endTime},
 						MetricResults: []rolloutsapi.MetricResult{
 							{
 								Measurements: []rolloutsapi.Measurement{
 									{
-										FinishedAt: &metav1.Time{Time: fiveMinutesLater},
+										FinishedAt: &metav1.Time{Time: endTime},
 									},
 								},
 							},
@@ -4286,7 +4292,8 @@ func TestRegularStageReconciler_getVerificationResult(t *testing.T) {
 				assert.Equal(t, kargoapi.VerificationPhaseFailed, vi.Phase)
 				assert.Equal(t, "test-verification", vi.ID)
 				assert.Equal(t, "Something went wrong", vi.Message)
-				assert.NotNil(t, vi.FinishTime)
+				require.NotNil(t, vi.FinishTime)
+				assert.Equal(t, endTime.Unix(), vi.FinishTime.Unix())
 				assert.Equal(t, string(rolloutsapi.AnalysisPhaseFailed), vi.AnalysisRun.Phase)
 			},
 		},
@@ -4318,12 +4325,12 @@ func TestRegularStageReconciler_getVerificationResult(t *testing.T) {
 					Status: rolloutsapi.AnalysisRunStatus{
 						Phase:       rolloutsapi.AnalysisPhaseError,
 						Message:     "Something went wrong",
-						CompletedAt: &metav1.Time{Time: fiveMinutesLater},
+						CompletedAt: &metav1.Time{Time: endTime},
 						MetricResults: []rolloutsapi.MetricResult{
 							{
 								Measurements: []rolloutsapi.Measurement{
 									{
-										FinishedAt: &metav1.Time{Time: fiveMinutesLater},
+										FinishedAt: &metav1.Time{Time: endTime},
 									},
 								},
 							},
@@ -4338,7 +4345,8 @@ func TestRegularStageReconciler_getVerificationResult(t *testing.T) {
 				assert.Equal(t, kargoapi.VerificationPhaseError, vi.Phase)
 				assert.Equal(t, "test-verification", vi.ID)
 				assert.Equal(t, "Something went wrong", vi.Message)
-				assert.NotNil(t, vi.FinishTime)
+				require.NotNil(t, vi.FinishTime)
+				assert.Equal(t, endTime.Unix(), vi.FinishTime.Unix())
 				assert.Equal(t, string(rolloutsapi.AnalysisPhaseError), vi.AnalysisRun.Phase)
 			},
 		},
@@ -4366,7 +4374,7 @@ func TestRegularStageReconciler_getVerificationResult(t *testing.T) {
 				},
 			}
 
-			vi, err := r.getVerificationResult(t.Context(), tt.freight)
+			vi, err := r.getVerificationResult(t.Context(), tt.freight, fixedEndTime)
 			tt.assertions(t, vi, err)
 		})
 	}
@@ -4378,6 +4386,8 @@ func TestRegularStageReconciler_abortVerification(t *testing.T) {
 	require.NoError(t, rolloutsapi.AddToScheme(scheme))
 
 	now := time.Now()
+	endTime := now.Add(5 * time.Minute)
+	fixedEndTime := func() time.Time { return endTime }
 
 	tests := []struct {
 		name             string
@@ -4477,7 +4487,8 @@ func TestRegularStageReconciler_abortVerification(t *testing.T) {
 				assert.Contains(t, vi.Message, "Rollouts integration is disabled")
 				assert.Equal(t, "test-verification", vi.ID)
 				assert.NotNil(t, vi.StartTime)
-				assert.NotNil(t, vi.FinishTime)
+				require.NotNil(t, vi.FinishTime)
+				assert.Equal(t, endTime.Unix(), vi.FinishTime.Unix())
 			},
 		},
 		{
@@ -4561,7 +4572,8 @@ func TestRegularStageReconciler_abortVerification(t *testing.T) {
 				assert.Equal(t, "Verification aborted by user", vi.Message)
 				assert.Equal(t, "test-verification", vi.ID)
 				assert.NotNil(t, vi.StartTime)
-				assert.NotNil(t, vi.FinishTime)
+				require.NotNil(t, vi.FinishTime)
+				assert.Equal(t, endTime.Unix(), vi.FinishTime.Unix())
 				assert.Equal(t, "test-analysis", vi.AnalysisRun.Name)
 
 				// Verify analysis run was patched with terminate = true
@@ -4618,7 +4630,8 @@ func TestRegularStageReconciler_abortVerification(t *testing.T) {
 				assert.Equal(t, "Verification aborted by user", vi.Message)
 				assert.Equal(t, "test-verification", vi.ID)
 				assert.NotNil(t, vi.StartTime)
-				assert.NotNil(t, vi.FinishTime)
+				require.NotNil(t, vi.FinishTime)
+				assert.Equal(t, endTime.Unix(), vi.FinishTime.Unix())
 				assert.Equal(t, "test-analysis", vi.AnalysisRun.Name)
 			},
 		},
@@ -4710,7 +4723,7 @@ func TestRegularStageReconciler_abortVerification(t *testing.T) {
 				},
 			}
 
-			vi, err := r.abortVerification(t.Context(), tt.freightCol, tt.req)
+			vi, err := r.abortVerification(t.Context(), tt.freightCol, tt.req, fixedEndTime)
 			tt.assertions(t, c, vi, err)
 		})
 	}
