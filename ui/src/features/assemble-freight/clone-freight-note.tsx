@@ -15,7 +15,9 @@ export const CloneFreightNote = (props: {
   missingArtifacts: (Image | GitCommit | Chart)[];
   className?: string;
 }) => {
-  if (!props.cloneFreight) {
+  const cloneFreight = props.cloneFreight;
+
+  if (!cloneFreight) {
     return null;
   }
 
@@ -58,23 +60,28 @@ export const CloneFreightNote = (props: {
     );
   }
 
+  const cloneName = cloneFreight.alias || cloneFreight.metadata?.name;
+  const isSourceFreightPersisted = !!cloneFreight.metadata?.creationTimestamp;
+  const sourceFreightLink =
+    isSourceFreightPersisted && cloneFreight.metadata?.name
+      ? generatePath(paths.freight, {
+        name: cloneFreight.metadata?.namespace,
+        freightName: cloneFreight.metadata.name
+      })
+      : undefined;
+
   return (
     <Alert
       type='info'
       className={classNames(props.className)}
       message={
-        <>
-          Based on{' '}
-          <Link
-            to={generatePath(paths.freight, {
-              name: props.cloneFreight?.metadata?.namespace,
-              freightName: props.cloneFreight?.metadata?.name
-            })}
-          >
-            {props.cloneFreight?.alias}
-          </Link>{' '}
-          - matching versions are pre-filled.
-        </>
+        sourceFreightLink && cloneName ? (
+          <>
+            Based on <Link to={sourceFreightLink}>{cloneName}</Link> - matching versions are pre-filled.
+          </>
+        ) : (
+          <>Based on historical Freight {cloneName} - matching versions are pre-filled.</>
+        )
       }
       icon={<FontAwesomeIcon icon={faMagicWandSparkles} />}
       showIcon

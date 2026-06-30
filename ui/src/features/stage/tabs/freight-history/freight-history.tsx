@@ -2,15 +2,14 @@ import { faTruck } from '@fortawesome/free-solid-svg-icons';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
 import { Button, Descriptions, Flex, Select, Space, Table, Tag, Typography } from 'antd';
 import { formatDistance } from 'date-fns';
-import { useMemo } from 'react';
-import { useState } from 'react';
-import { useEffect } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { generatePath, Link, useNavigate } from 'react-router-dom';
 
 import { paths } from '@ui/config/paths';
 import { shortVersion } from '@ui/features/project/pipelines/freight/short-version-utils';
 import { Freight, FreightReference, FreightRequest, StageStatus } from '@ui/gen/api/v2/models';
 
+import { reconstructFreightFromHistory } from '../../../common/utils';
 import { FreightContents } from '../../../freight-timeline/freight-contents';
 
 import { useGetFreightMap } from './use-get-freight-map';
@@ -115,14 +114,30 @@ export const FreightHistory = ({
           width={240}
           render={(value, record, index) => {
             const alias = shortVersion(freightMap[record?.name || '']?.alias || record.name, 20);
+            const existingFreight = record?.name ? freightMap[record.name] : undefined;
+            const reconstructedFreight = reconstructFreightFromHistory(record, projectName);
+            // If the referenced Freight still exists, open its details view.
+            // Otherwise route to assemble freight and seed state from history.
+            const linkTo = existingFreight
+              ? generatePath(paths.freight, {
+                name: projectName,
+                freightName: record.name
+              })
+              : generatePath(paths.warehouse, {
+                name: projectName,
+                warehouseName: record.origin?.name || '',
+                tab: 'create-freight'
+              });
+            // Only pass clone state for reconstructed historical Freight.
+            const linkState = existingFreight
+              ? undefined
+              : {
+                cloneFreight: reconstructedFreight
+              };
+
             return (
               <Space>
-                <Link
-                  to={generatePath(paths.freight, {
-                    name: projectName,
-                    freightName: record.name
-                  })}
-                >
+                <Link to={linkTo} state={linkState}>
                   {alias}
                 </Link>
                 {index === 0 && <Tag color='success'>Active</Tag>}
