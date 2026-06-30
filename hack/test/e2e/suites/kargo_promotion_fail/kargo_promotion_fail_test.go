@@ -14,7 +14,7 @@ import (
 	"sigs.k8s.io/e2e-framework/pkg/features"
 
 	kargoapi "github.com/akuity/kargo/api/v1alpha1"
-	"github.com/akuity/kargo/hack/test/e2e/utils"
+	"github.com/akuity/kargo/hack/test/e2e/framework/utils"
 )
 
 // This file provides necessary setup for a test package to run environment setup for e2e test.

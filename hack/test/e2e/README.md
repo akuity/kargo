@@ -34,7 +34,7 @@ Each test package should configure the following `TestMain`:
 ```
 package my_package_test
 
-import "github.com/akuity/kargo/hack/test/e2e/utils"
+import "github.com/akuity/kargo/hack/test/e2e/framework/utils"
 
 func TestMain(m *testing.M) {
 	utils.InitEnv(m)

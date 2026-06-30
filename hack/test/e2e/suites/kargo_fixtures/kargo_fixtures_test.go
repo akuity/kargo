@@ -13,7 +13,7 @@ import (
 	"sigs.k8s.io/e2e-framework/pkg/envconf"
 	"sigs.k8s.io/e2e-framework/pkg/features"
 
-	"github.com/akuity/kargo/hack/test/e2e/utils"
+	"github.com/akuity/kargo/hack/test/e2e/framework/utils"
 	"github.com/akuity/kargo/pkg/client/generated"
 	"github.com/akuity/kargo/pkg/client/generated/core"
 	"github.com/akuity/kargo/pkg/client/generated/models"
