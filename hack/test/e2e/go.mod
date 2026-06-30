@@ -8,11 +8,11 @@ replace (
 	github.com/akuity/kargo/pkg/client/generated => ../../../pkg/client/generated
 )
 
-replace funcsloader => ./funcsloader
-
-replace envs => ./envs
-
-replace github.com/akuity/kargo/hack/test/e2e/envfuncs => ./envfuncs
+replace (
+	envs => ./envs
+	funcsloader => ./framework/funcsloader
+	github.com/akuity/kargo/hack/test/e2e/envfuncs => ./framework/envfuncs
+)
 
 replace (
 	helm.sh/helm/v3 => helm.sh/helm/v3 v3.19.5

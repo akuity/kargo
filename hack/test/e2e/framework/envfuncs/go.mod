@@ -1,26 +1,24 @@
-module funcsloader
+module github.com/akuity/kargo/hack/test/e2e/envfuncs
 
 replace (
-	github.com/akuity/kargo => ../../../../
-	github.com/akuity/kargo/api => ../../../../api
-	github.com/akuity/kargo/pkg/client/generated => ../../../../pkg/client/generated
+	github.com/akuity/kargo => ../../../../../
+	github.com/akuity/kargo/api => ../../../../../api
+	github.com/akuity/kargo/pkg/client/generated => ../../../../../pkg/client/generated
 )
 
-replace envs => ../envs
-
-replace github.com/akuity/kargo/hack/test/e2e/envfuncs => ../envfuncs
+replace envs => ../../envs
 
 go 1.26.3
 
 require (
-	github.com/akuity/kargo/hack/test/e2e/envfuncs v0.0.0-00010101000000-000000000000
+	envs v0.0.0-00010101000000-000000000000
+	github.com/akuity/kargo v0.0.0-00010101000000-000000000000
 	sigs.k8s.io/e2e-framework v0.6.0
+	sigs.k8s.io/yaml v1.6.0
 )
 
 require (
-	envs v0.0.0-00010101000000-000000000000 // indirect
 	github.com/adrg/xdg v0.5.3 // indirect
-	github.com/akuity/kargo v0.0.0 // indirect
 	github.com/beorn7/perks v1.0.1 // indirect
 	github.com/blang/semver/v4 v4.0.0 // indirect
 	github.com/cespare/xxhash/v2 v2.3.0 // indirect
@@ -43,6 +41,8 @@ require (
 	github.com/go-openapi/swag/stringutils v0.26.0 // indirect
 	github.com/go-openapi/swag/typeutils v0.26.0 // indirect
 	github.com/go-openapi/swag/yamlutils v0.26.0 // indirect
+	github.com/go-openapi/testify/enable/yaml/v2 v2.5.1 // indirect
+	github.com/go-openapi/testify/v2 v2.5.1 // indirect
 	github.com/gogo/protobuf v1.3.2 // indirect
 	github.com/google/gnostic-models v0.7.0 // indirect
 	github.com/google/uuid v1.6.0 // indirect
@@ -58,6 +58,7 @@ require (
 	github.com/prometheus/client_model v0.6.2 // indirect
 	github.com/prometheus/common v0.65.0 // indirect
 	github.com/prometheus/procfs v0.16.1 // indirect
+	github.com/rogpeppe/go-internal v1.14.1 // indirect
 	github.com/spf13/pflag v1.0.10 // indirect
 	github.com/x448/float16 v0.8.4 // indirect
 	go.opentelemetry.io/otel v1.43.0 // indirect
@@ -84,5 +85,4 @@ require (
 	sigs.k8s.io/json v0.0.0-20250730193827-2d320260d730 // indirect
 	sigs.k8s.io/randfill v1.0.0 // indirect
 	sigs.k8s.io/structured-merge-diff/v6 v6.3.0 // indirect
-	sigs.k8s.io/yaml v1.6.0 // indirect
 )
