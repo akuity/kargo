@@ -67,6 +67,30 @@ should be limited only to read-only access to applicable ECR repositories.
 
 :::info
 
+**Cross-account ECR registries**
+
+If the ECR registry URL belongs to a different AWS account than the one in which
+the Kargo controller is running, Kargo will automatically attempt a second
+role-assumption step before falling back to the controller's own role:
+
+1. **Controller's account** — attempt to assume `kargo-project-<project name>`
+   in the controller's own AWS account and use it to obtain an ECR auth token.
+2. **ECR registry's account** _(cross-account only)_ — if step 1 fails and the
+   ECR registry account differs from the controller account, attempt to assume
+   `kargo-project-<project name>` in the ECR account. This requires:
+   - The controller's IAM role (or the step-1 project role) must be permitted to
+     `sts:AssumeRole` on `arn:aws:iam::<ecr-account>:role/kargo-project-<project>`.
+   - That cross-account role must trust the controller's IAM role and have
+     read-only ECR permissions in the ECR account.
+3. **Controller's role directly** — if both role-assumption attempts fail, Kargo
+   falls back to the controller's own IAM role. For organisations without strict
+   multi-account tenancy requirements this can simplify setup, but is not
+   recommended for production.
+
+:::
+
+:::info
+
 If the Kargo controller is unable to assume a Project-specific IAM role, it will
 fall back to using its own IAM role directly. For organizations without strict
 tenancy requirements, this can eliminate the need to manage a large number of
