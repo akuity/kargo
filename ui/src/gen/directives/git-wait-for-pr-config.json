@@ -19,6 +19,11 @@
     "gitlab"
    ]
   },
+  "pollInterval": {
+   "type": "string",
+   "pattern": "(?:\\d+(ns|us|µs|ms|s|m|h))+",
+   "description": "The suggested interval at which to poll the pull request's status while waiting for it to be merged or closed. This is only a suggestion: the controller enforces a lower bound and may reconcile sooner in response to other events (such as a pull request merge webhook). If not specified, the default is 30 seconds."
+  },
   "prNumber": {
    "type": "integer",
    "description": "The number of the pull request to wait for.",

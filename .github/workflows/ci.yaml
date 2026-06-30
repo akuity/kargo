@@ -84,6 +84,8 @@ jobs:
       run: make typecheck-ui
     - name: Run linter
       run: make lint-ui
+    - name: Run unit tests
+      run: make test-unit-ui
 
   lint-go:
     permissions:

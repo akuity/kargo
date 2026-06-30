@@ -215,7 +215,7 @@ func newFreightTable(list *metav1.List) *metav1.Table {
 				frt.Name,
 				alias,
 				frt.Origin.String(),
-				duration.HumanDuration(time.Since(frt.CreationTimestamp.Time)),
+				duration.HumanDuration(time.Since(frt.EffectiveDiscoveredAt())),
 			},
 			Object: list.Items[i],
 		}

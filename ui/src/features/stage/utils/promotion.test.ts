@@ -8,10 +8,10 @@ test('promotionCompareFn', () => {
   expect(
     promotionCompareFn(
       {
-        metadata: { creationTimestamp: { toDate: () => new Date('01/01/2000 01:01:01') } }
+        metadata: { creationTimestamp: '2000-01-01T01:01:01Z' }
       },
       {
-        metadata: { creationTimestamp: { toDate: () => new Date('01/01/2000 01:01:02') } }
+        metadata: { creationTimestamp: '2000-01-01T01:01:02Z' }
       }
     )
   ).toBe(1);
@@ -19,10 +19,10 @@ test('promotionCompareFn', () => {
   expect(
     promotionCompareFn(
       {
-        metadata: { creationTimestamp: { toDate: () => new Date('01/01/2000 01:01:02') } }
+        metadata: { creationTimestamp: '2000-01-01T01:01:02Z' }
       },
       {
-        metadata: { creationTimestamp: { toDate: () => new Date('01/01/2000 01:01:01') } }
+        metadata: { creationTimestamp: '2000-01-01T01:01:01Z' }
       }
     )
   ).toBe(-1);
@@ -31,13 +31,13 @@ test('promotionCompareFn', () => {
     promotionCompareFn(
       {
         metadata: {
-          creationTimestamp: { toDate: () => new Date('01/01/2000 01:01:01') },
+          creationTimestamp: '2000-01-01T01:01:01Z',
           name: 'a'
         }
       },
       {
         metadata: {
-          creationTimestamp: { toDate: () => new Date('01/01/2000 01:01:01') },
+          creationTimestamp: '2000-01-01T01:01:01Z',
           name: 'b'
         }
       }
@@ -48,13 +48,13 @@ test('promotionCompareFn', () => {
     promotionCompareFn(
       {
         metadata: {
-          creationTimestamp: { toDate: () => new Date('01/01/2000 01:01:01') },
+          creationTimestamp: '2000-01-01T01:01:01Z',
           name: 'b'
         }
       },
       {
         metadata: {
-          creationTimestamp: { toDate: () => new Date('01/01/2000 01:01:01') },
+          creationTimestamp: '2000-01-01T01:01:01Z',
           name: 'a'
         }
       }
@@ -64,19 +64,19 @@ test('promotionCompareFn', () => {
   expect(
     [
       {
-        metadata: { creationTimestamp: { toDate: () => new Date('01/01/2000 01:01:01') } },
+        metadata: { creationTimestamp: '2000-01-01T01:01:01Z' },
         name: 10
       },
       {
-        metadata: { creationTimestamp: { toDate: () => new Date('01/01/2000 01:01:02') } },
+        metadata: { creationTimestamp: '2000-01-01T01:01:02Z' },
         name: 1
       },
       {
-        metadata: { creationTimestamp: { toDate: () => new Date('01/01/2000 01:01:04') } },
+        metadata: { creationTimestamp: '2000-01-01T01:01:04Z' },
         name: 2
       },
       {
-        metadata: { creationTimestamp: { toDate: () => new Date('01/01/2000 01:01:03') } },
+        metadata: { creationTimestamp: '2000-01-01T01:01:03Z' },
         name: 100
       }
     ]
@@ -87,19 +87,19 @@ test('promotionCompareFn', () => {
   expect(
     [
       {
-        metadata: { creationTimestamp: { toDate: () => new Date('01/01/2000 01:01:01') } },
+        metadata: { creationTimestamp: '2000-01-01T01:01:01Z' },
         name: 'a'
       },
       {
-        metadata: { creationTimestamp: { toDate: () => new Date('01/01/2000 01:01:01') } },
+        metadata: { creationTimestamp: '2000-01-01T01:01:01Z' },
         name: 'b'
       },
       {
-        metadata: { creationTimestamp: { toDate: () => new Date('01/01/2000 01:01:04') } },
+        metadata: { creationTimestamp: '2000-01-01T01:01:04Z' },
         name: 'c'
       },
       {
-        metadata: { creationTimestamp: { toDate: () => new Date('01/01/2000 01:01:03') } },
+        metadata: { creationTimestamp: '2000-01-01T01:01:03Z' },
         name: 'd'
       }
     ]

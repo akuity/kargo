@@ -679,7 +679,7 @@ func newFreight(freight *kargoapi.Freight, stageName string) Freight {
 		return Freight{}
 	}
 	evt := Freight{
-		CreateTime: freight.CreationTimestamp.Time,
+		CreateTime: freight.EffectiveDiscoveredAt(),
 		Name:       freight.Name,
 		StageName:  stageName,
 	}

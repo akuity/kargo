@@ -24,9 +24,11 @@ with a wide variety of external services.
 | `insecureSkipTLSVerify` | `boolean` | N | Indicates whether to bypass TLS certificate verification when making the request. Setting this to `true` is highly discouraged. |
 | `proxy` | `string` | N | An optional URL: the proxy server to send the request through. If provided, it must include a scheme. This overrides Go's [default proxy behavior](https://pkg.go.dev/net/http#ProxyFromEnvironment). __Note:__ The format of `proxy` is more restrictive than the standard HTTP(S)_PROXY environment variables, because of the scheme requirement. |
 | `timeout` | `string` | N | A string representation of the maximum time interval to wait for a request to complete. _This is the timeout for an individual HTTP request. If a request is retried, each attempt is independently subject to this timeout._ See Go's [`time` package docs](https://pkg.go.dev/time#ParseDuration) for a description of the accepted format. |
+| `pollInterval` | `string` | N | The suggested interval at which to repeat the request while the step is waiting for its `successExpression` or `failureExpression` to be met (e.g. `30s`, `2m`). This is only a suggestion: Kargo enforces a lower bound of 10 seconds and may reconcile sooner in response to other events. Defaults to `30s`. See Go's [`time` package docs](https://pkg.go.dev/time#ParseDuration) for the accepted format. |
 | `responseContentType` | `string` | N | Overrides automatic content-type detection for response parsing. Accepts `application/json`, `application/yaml`, or `text/plain`. When not set, the step uses the response's `Content-Type` header, falling back to JSON parsing for unrecognized types. |
 | `successExpression` | `string` | N | An [expr-lang] expression that can evaluate the response to determine success. When defined, the step succeeds only when this expression evaluates to `true`. If both `successExpression` and `failureExpression` are defined and both evaluate to `true`, the failure takes precedence and the step fails terminally. Note that this expression should _not_ be offset by `${{` and `}}`. See examples for more details. |
 | `failureExpression` | `string` | N | An [expr-lang] expression that can evaluate the response to determine failure. When defined and evaluates to `true`, the step fails terminally. If both `successExpression` and `failureExpression` are defined and both evaluate to `true`, the failure takes precedence. Note that this expression should _not_ be offset by `${{` and `}}`. See examples for more details. |
+| `errorExpression` | `string` | N | An [expr-lang] expression evaluated only when `failureExpression` is met, to extract a richer error message from the response. If it is unset, or evaluates to an empty, nil, or non-string value, the default message is used. If it fails to evaluate (e.g. the response is not shaped as expected), the default message is also used. A malformed expression that fails to compile causes the step to error. Note that this expression should _not_ be offset by `${{` and `}}`. |
 | `outputs` | `[]object` | N | A list of rules for extracting outputs from the HTTP response. These are only applied to responses deemed successful. |
 | `outputs[].name` | `string` | Y | The name of the output. |
 | `outputs[].fromExpression` | `string` | Y | An [expr-lang] expression that can extract a value from the HTTP response. Note that this expression should _not_ be offset by `${{` and `}}`. See examples for more details. |
@@ -56,7 +58,7 @@ Kargo to retry the step according to the configured
 
 ## Expressions
 
-The `successExpression`, `failureExpression`, and `outputs[].fromExpression`
+The `successExpression`, `failureExpression`, `errorExpression`, and `outputs[].fromExpression`
 fields all support [expr-lang][] expressions.
 
 :::warning
@@ -294,5 +296,49 @@ steps:
     - name: value
       fromExpression: response.body.key
 ```
+
+### Error Expression
+
+This example demonstrates how to extract a richer error message from an HTTP
+response when `failureExpression` is met. The extracted message is included in
+the step failure and displayed in the Kargo UI.
+
+Some APIs return errors using different field names. [expr-lang]'s
+[optional chaining](https://expr-lang.org/docs/language-definition#optional-chaining)
+(`?.`) and [nil coalescing](https://expr-lang.org/docs/language-definition#nil-coalescing)
+(`??`) can handle multiple formats in a single expression.
+
+```yaml
+steps:
+# ...
+- uses: http
+  config:
+    url: https://api.example.com/data
+    successExpression: response.status == 200
+    failureExpression: response.status >= 400 && response.status < 500
+    errorExpression: response.body?.message ?? response.body?.error
+```
+
+If the server returns a `404` response with the following JSON body:
+
+```json
+{
+  "message": "resource not found"
+}
+```
+
+The step fails terminally and the promotion displays the following error message:
+
+`HTTP (404) response met failure criteria: "resource not found"`
+
+If the response instead has the following body:
+
+```json
+{
+  "error": "resource is disabled"
+}
+```
+
+The nil coalescing operator evaluates the alternate field, and `"resource is disabled"` is used as the error message.
 
 [expr-lang]: https://expr-lang.org/

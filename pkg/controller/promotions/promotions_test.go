@@ -1050,6 +1050,47 @@ func Test_calculateRequeueInterval(t *testing.T) {
 			},
 		},
 		{
+			name:                     "suggested interval below the floor is clamped",
+			suggestedRequeueInterval: ptr.To(time.Second),
+			promo: &kargoapi.Promotion{
+				Spec: kargoapi.PromotionSpec{
+					Steps: []kargoapi.PromotionStep{{
+						Uses: testStepKindWithTimeout,
+					}},
+				},
+				Status: kargoapi.PromotionStatus{
+					CurrentStep: 0,
+					StepExecutionMetadata: []kargoapi.StepExecutionMetadata{{
+						StartedAt: &metav1.Time{Time: time.Now()},
+					}},
+				},
+			},
+			assertions: func(t *testing.T, requeueInterval time.Duration) {
+				// A sub-floor suggestion is raised to the floor.
+				require.Equal(t, minSuggestedRequeueInterval, requeueInterval)
+			},
+		},
+		{
+			name:                     "suggested interval at or above the floor is honored",
+			suggestedRequeueInterval: ptr.To(20 * time.Second),
+			promo: &kargoapi.Promotion{
+				Spec: kargoapi.PromotionSpec{
+					Steps: []kargoapi.PromotionStep{{
+						Uses: testStepKindWithTimeout,
+					}},
+				},
+				Status: kargoapi.PromotionStatus{
+					CurrentStep: 0,
+					StepExecutionMetadata: []kargoapi.StepExecutionMetadata{{
+						StartedAt: &metav1.Time{Time: time.Now()},
+					}},
+				},
+			},
+			assertions: func(t *testing.T, requeueInterval time.Duration) {
+				require.Equal(t, 20*time.Second, requeueInterval)
+			},
+		},
+		{
 			name: "timeout would occur before next default interval elapses",
 			promo: &kargoapi.Promotion{
 				Spec: kargoapi.PromotionSpec{

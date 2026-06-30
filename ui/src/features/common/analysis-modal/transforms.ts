@@ -72,7 +72,9 @@ export const analysisEndTime = (metricResults: RolloutsMetricResult[]): number =
     });
   });
 
-  return Math.max(...measurementEndTimes);
+  // Guard against Math.max() returning -Infinity when no measurement has a
+  // finishedAt time; 0 is the sentinel the consumer treats as "no end time".
+  return measurementEndTimes.length > 0 ? Math.max(...measurementEndTimes) : 0;
 };
 
 // Arg Utils
@@ -680,8 +682,12 @@ export const formatSingleItemArrayMeasurement = (
   value: FormattedMeasurementValue[],
   accessor: number
 ): MeasurementValueInfo => {
-  if (isFiniteNumber(accessor)) {
-    const measurementValue = value?.[accessor] as number;
+  // Use Number.isFinite (not isFiniteNumber) so accessor 0 -- the common
+  // result[0] case -- is treated as a valid index rather than a falsy value.
+  if (Number.isFinite(accessor)) {
+    // Coalesce out-of-bounds access to null so it charts like an empty value
+    // instead of throwing on undefined.toString() below.
+    const measurementValue = (value?.[accessor] ?? null) as number;
     // if it's a number or null, chart it
     if (isFiniteNumber(measurementValue as number) || measurementValue === null) {
       const displayValue = formattedValue(measurementValue);

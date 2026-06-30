@@ -159,6 +159,17 @@ type FailConfig struct {
 	Message string `json:"message,omitempty"`
 }
 
+type FileWriteConfig struct {
+	// Contents is the file content to write.
+	Contents string `json:"contents"`
+	// Overwrite allows an existing file to be replaced.
+	Overwrite bool `json:"overwrite,omitempty"`
+	// Path is the destination file path to write.
+	Path string `json:"path"`
+	// Permissions is an optional octal file mode to apply to the written file. Defaults to 0600.
+	Permissions string `json:"permissions,omitempty"`
+}
+
 type GitClearConfig struct {
 	// Path to a working directory of a local repository from which to remove all files,
 	// excluding the .git/ directory.
@@ -258,6 +269,11 @@ type GitMergePRConfig struct {
 	MergeMethod string `json:"mergeMethod,omitempty"`
 	// The number of the pull request to merge.
 	PRNumber int64 `json:"prNumber"`
+	// When 'wait' is true, the suggested interval at which to re-attempt the merge while the
+	// pull request is not yet mergeable. This is only a suggestion: the controller enforces a
+	// lower bound and may reconcile sooner in response to other events. If not specified, the
+	// default is 10 seconds.
+	PollInterval string `json:"pollInterval,omitempty"`
 	// The name of the Git provider to use. Currently 'azure', 'bitbucket', 'gitea', 'github',
 	// and 'gitlab' are supported. Kargo will try to infer the provider if it is not explicitly
 	// specified.
@@ -336,6 +352,10 @@ type GitPushConfig struct {
 }
 
 type GitTagConfig struct {
+	// Indicates whether to overwrite an existing tag of the same name. WARNING: Force
+	// overwriting tags is an unconventional use of tags and should be utilized only with
+	// extreme caution. Default is false.
+	Force bool `json:"force,omitempty"`
 	// The annotation message for the tag.
 	Message string `json:"message"`
 	// The path to a working directory of a local repository.
@@ -349,6 +369,11 @@ type GitWaitForPRConfig struct {
 	InsecureSkipTLSVerify bool `json:"insecureSkipTLSVerify,omitempty"`
 	// The number of the pull request to wait for.
 	PRNumber int64 `json:"prNumber"`
+	// The suggested interval at which to poll the pull request's status while waiting for it to
+	// be merged or closed. This is only a suggestion: the controller enforces a lower bound and
+	// may reconcile sooner in response to other events (such as a pull request merge webhook).
+	// If not specified, the default is 30 seconds.
+	PollInterval string `json:"pollInterval,omitempty"`
 	// The name of the Git provider to use. Currently 'azure', 'bitbucket', 'gitea', 'github',
 	// and 'gitlab' are supported. Kargo will try to infer the provider if it is not explicitly
 	// specified.
@@ -454,6 +479,8 @@ type Chart struct {
 type HTTPConfig struct {
 	// The body of the HTTP request.
 	Body string `json:"body,omitempty"`
+	// An expression to evaluate to extract an error message from the HTTP response.
+	ErrorExpression string `json:"errorExpression,omitempty"`
 	// An expression to evaluate to determine if the request failed.
 	FailureExpression string `json:"failureExpression,omitempty"`
 	// Headers to include in the HTTP request.
@@ -464,6 +491,11 @@ type HTTPConfig struct {
 	Method string `json:"method,omitempty"`
 	// Outputs to extract from the HTTP response.
 	Outputs []HTTPOutput `json:"outputs,omitempty"`
+	// The suggested interval at which to poll the URL while the step is waiting for its success
+	// or failure criteria to be met. This is only a suggestion: the controller enforces a lower
+	// bound and may reconcile sooner in response to other events. If not specified, the default
+	// is 30 seconds.
+	PollInterval string `json:"pollInterval,omitempty"`
 	// The URL of the proxy server to send the HTTP request through. If not specified, defers to
 	// the HTTP transport's default proxy behavior (http.ProxyFromEnvironment).
 	Proxy string `json:"proxy,omitempty"`

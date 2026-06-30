@@ -839,6 +839,13 @@ func (r *reconciler) cleanupWorkDir(ctx context.Context, promoUID types.UID) {
 
 var defaultRequeueInterval = 5 * time.Minute
 
+// minSuggestedRequeueInterval is the lower bound enforced on a poll interval
+// suggested by a step (via StepResult.RetryAfter). Reconciling a Promotion too
+// frequently raises CPU usage sharply and, with enough concurrent Promotions,
+// reduces overall throughput. Enforcing the floor centrally guarantees no step
+// -- now or in the future -- can drive a pathologically short interval.
+var minSuggestedRequeueInterval = 10 * time.Second
+
 func calculateRequeueInterval(
 	ctx context.Context,
 	p *kargoapi.Promotion,
@@ -847,6 +854,15 @@ func calculateRequeueInterval(
 	requeueInterval := defaultRequeueInterval
 	if suggestedRequeueInterval != nil {
 		requeueInterval = *suggestedRequeueInterval
+		// A step's suggested interval is only a suggestion; clamp it to the floor.
+		if requeueInterval < minSuggestedRequeueInterval {
+			logging.LoggerFromContext(ctx).Debug(
+				"clamping suggested requeue interval to minimum",
+				"suggested", requeueInterval.String(),
+				"minimum", minSuggestedRequeueInterval.String(),
+			)
+			requeueInterval = minSuggestedRequeueInterval
+		}
 	}
 
 	// Ensure we have a step for the current step index.

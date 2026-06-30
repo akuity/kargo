@@ -4842,6 +4842,10 @@
         },
         "replicate": {
           "type": "boolean"
+        },
+        "type": {
+          "description": "Type is the Kubernetes Secret type (e.g. \"Opaque\" or\n\"kubernetes.io/dockerconfigjson\"). It is immutable, so it may only be set\nat creation time. When empty, Kubernetes defaults it to \"Opaque\".",
+          "type": "string"
         }
       }
     },
@@ -6917,6 +6921,10 @@
           "items": {
             "$ref": "#/definitions/GitCommit"
           }
+        },
+        "discoveredAt": {
+          "description": "DiscoveredAt is the time at which this Freight was discovered/created.\nA defaulting webhook initializes this to the creation time of the Freight.\n\n+optional",
+          "type": "string"
         },
         "images": {
           "description": "Images describes specific versions of specific container images.",
