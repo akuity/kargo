@@ -54,7 +54,7 @@ const YamlEditor: FC<YamlEditorProps> = (props) => {
       completion: true,
       validate: true,
       isKubernetes: true,
-      format: true,
+      format: {},
       // @ts-expect-error correct schema
       schemas: schema && [
         {
