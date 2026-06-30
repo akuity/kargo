@@ -22,11 +22,11 @@ providing either `issueNumber` or `query`:
 
 GitHub Issues integration for Kargo is a group of promotion steps:
 
-1. [gh-add-comment](./gh-add-comment.md)
+1. [gh-issue-add-comment](./gh-issue-add-comment.md)
 2. [gh-create-issue](./gh-create-issue.md)
-3. [gh-delete-comment](./gh-delete-comment.md)
+3. [gh-issue-delete-comment](./gh-issue-delete-comment.md)
 4. [gh-search-issues](./gh-search-issues.md)
-5. [gh-update-comment](./gh-update-comment.md)
+5. [gh-issue-update-comment](./gh-issue-update-comment.md)
 6. [gh-update-issue](./gh-update-issue.md)
 7. [gh-wait-for-issue-state](./gh-wait-for-issue-state.md)
 
@@ -74,7 +74,7 @@ steps:
     repoURL: https://github.com/myorg/myrepo
     issueNumber: ${{ freightMetadata(ctx.targetFreight.name)['github-issue-number'] }}
 
-- uses: gh-add-comment
+- uses: gh-issue-add-comment
   config:
     repoURL: https://github.com/myorg/myrepo
     issueNumber: ${{ outputs['fetch-issue'].issues[0].number }}
@@ -126,7 +126,7 @@ steps:
     repoURL: https://github.com/myorg/myrepo
     query: "is:open label:release"
 
-- uses: gh-add-comment
+- uses: gh-issue-add-comment
   if: ${{ len(outputs['find-release-issues'].issues) > 0 }}
   config:
     repoURL: https://github.com/myorg/myrepo

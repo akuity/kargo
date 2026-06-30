@@ -1,9 +1,9 @@
 ---
-sidebar_label: gh-update-comment
-description: Replaces the body of an existing GitHub issue or pull request comment.
+sidebar_label: gh-issue-delete-comment
+description: Deletes a comment from a GitHub issue or pull request, typically used in failure cleanup steps.
 ---
 
-# `gh-update-comment`
+# `gh-issue-delete-comment`
 
 <span class="tag professional"></span>
 <span class="tag beta"></span>
@@ -13,17 +13,18 @@ This promotion step is only available in Kargo on the
 [Akuity Platform](https://akuity.io/akuity-platform), versions v1.11.0 and above.
 :::
 
-The `gh-update-comment` step replaces the body of an existing comment on a
-GitHub issue or pull request. The `commentID` must come from a previous
-[`gh-add-comment`](./gh-add-comment.md) step in the same stage.
+The `gh-issue-delete-comment` step removes a comment from a GitHub issue or pull
+request. It is typically used in `if: ${{ failure() }}` cleanup steps to remove
+progress comments that were posted by an earlier
+[`gh-issue-add-comment`](./gh-issue-add-comment.md) step in the same stage.
 
 GitHub Issues integration for Kargo is a group of promotion steps:
 
-1. [gh-add-comment](./gh-add-comment.md)
+1. [gh-issue-add-comment](./gh-issue-add-comment.md)
 2. [gh-create-issue](./gh-create-issue.md)
-3. [gh-delete-comment](./gh-delete-comment.md)
+3. [gh-issue-delete-comment](./gh-issue-delete-comment.md)
 4. [gh-search-issues](./gh-search-issues.md)
-5. [gh-update-comment](./gh-update-comment.md)
+5. [gh-issue-update-comment](./gh-issue-update-comment.md)
 6. [gh-update-issue](./gh-update-issue.md)
 7. [gh-wait-for-issue-state](./gh-wait-for-issue-state.md)
 
@@ -44,24 +45,20 @@ The GitHub token must have **Issues: Read and write** access for the repository
 | ----------------------- | --------- | -------- | ------------------------------------------------------------------------------------------------------------------------------------------------------- |
 | `repoURL`               | `string`  | Y        | The URL of the GitHub repository (e.g. `https://github.com/owner/repo`).                                                                               |
 | `insecureSkipTLSVerify` | `boolean` | N        | If `true`, TLS verification of the GitHub server certificate is skipped. Use only for GitHub Enterprise Server instances with self-signed certificates. |
-| `commentID`             | `integer` | Y        | The ID of the comment to update, as returned by `gh-add-comment`.                                                                                      |
-| `body`                  | `string`  | Y        | The new body text of the comment. Replaces the existing body. Supports GitHub Flavored Markdown.                                                        |
+| `commentID`             | `integer` | Y        | The ID of the comment to delete, as returned by `gh-issue-add-comment`.                                                                                      |
 
 ## Output
 
-| Name  | Type     | Description                          |
-| ----- | -------- | ------------------------------------ |
-| `url` | `string` | The HTML URL of the updated comment. |
+This step does not produce any output.
 
 ## Example
 
-This example posts a "promotion started" comment and then updates it with the
-final outcome:
+This example deletes a progress comment if the promotion fails:
 
 ```yaml
 steps:
 - as: post-comment
-  uses: gh-add-comment
+  uses: gh-issue-add-comment
   config:
     repoURL: https://github.com/myorg/myrepo
     issueNumber: ${{ freightMetadata(ctx.targetFreight.name)['github-issue-number'] }}
@@ -69,9 +66,9 @@ steps:
 
 # ... your promotion steps ...
 
-- uses: gh-update-comment
+- uses: gh-issue-delete-comment
+  if: ${{ failure() && status('post-comment') == 'Succeeded' }}
   config:
     repoURL: https://github.com/myorg/myrepo
     commentID: ${{ outputs['post-comment'].commentID }}
-    body: "Promotion to **${{ ctx.stage }}** completed successfully."
 ```
