@@ -29,11 +29,13 @@ you only apply assessments whose Akuity signature checks out:
 IMAGE=ghcr.io/akuity/kargo:<version>
 
 # Verify Akuity's signature and extract the OpenVEX document in one step.
+# A digest may carry more than one attestation (assessments are appended as
+# dispositions change), so take the most recent by timestamp.
 cosign verify-attestation --type openvex \
   --certificate-oidc-issuer https://token.actions.githubusercontent.com \
   --certificate-identity https://github.com/akuityio/cve-triage/.github/workflows/attest-vex.yml@refs/heads/main \
   "$IMAGE" \
-  | jq -r '.payload | @base64d | fromjson | .predicate' > kargo-vex.json
+  | jq -s 'map(.payload | @base64d | fromjson | .predicate) | max_by(.timestamp)' > kargo-vex.json
 
 # Scan, applying the assessments. CVEs Akuity has marked not_affected are
 # suppressed (Grype lists them under its ignored set with vex-status
