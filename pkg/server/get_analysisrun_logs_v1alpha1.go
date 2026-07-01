@@ -643,7 +643,7 @@ func (s *server) getAnalysisRunLogs(c *gin.Context) {
 		return
 	}
 
-	setSSEHeaders(c)
+	SetSSEHeaders(c)
 
 	for {
 		select {

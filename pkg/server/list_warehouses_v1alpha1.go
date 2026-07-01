@@ -94,7 +94,7 @@ func (s *server) watchWarehouses(c *gin.Context, project string, resourceVersion
 		buildWatchListOptions(project, resourceVersion)...,
 	)
 	if err != nil {
-		if sendSSEWatchStartError(c, err) {
+		if SendSSEWatchStartError(c, err) {
 			return
 		}
 		logger.Error(err, "failed to start watch")
@@ -106,7 +106,7 @@ func (s *server) watchWarehouses(c *gin.Context, project string, resourceVersion
 	keepaliveTicker := time.NewTicker(30 * time.Second)
 	defer keepaliveTicker.Stop()
 
-	setSSEHeaders(c)
+	SetSSEHeaders(c)
 
 	for {
 		select {
@@ -115,7 +115,7 @@ func (s *server) watchWarehouses(c *gin.Context, project string, resourceVersion
 			return
 
 		case <-keepaliveTicker.C:
-			if !writeSSEKeepalive(c) {
+			if !WriteSSEKeepalive(c) {
 				return
 			}
 
@@ -128,7 +128,7 @@ func (s *server) watchWarehouses(c *gin.Context, project string, resourceVersion
 			// no separate errorFromWatchEvent check is needed here (unlike the
 			// filtered Stage/Promotion handlers, which inspect the event before
 			// applying their event-type filter).
-			if !convertAndSendWatchEvent(c, e, (*kargoapi.Warehouse)(nil)) {
+			if !ConvertAndSendWatchEvent(c, e, (*kargoapi.Warehouse)(nil)) {
 				return
 			}
 		}
