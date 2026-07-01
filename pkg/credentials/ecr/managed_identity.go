@@ -42,7 +42,7 @@ type ManagedIdentityProvider struct {
 	getAuthTokenFn func(
 		ctx context.Context,
 		region string,
-		ecrAccountID string,
+		accountID string,
 		project string,
 	) (string, time.Time, error)
 }
@@ -120,9 +120,9 @@ func (p *ManagedIdentityProvider) GetCredentials(
 		return nil, nil
 	}
 
-	ecrAccountID := matches[1]
+	accountID := matches[1]
 	region := matches[2]
-	cacheKey := tokenCacheKey(region, ecrAccountID, req.Project)
+	cacheKey := tokenCacheKey(region, accountID, req.Project)
 
 	logger := logging.LoggerFromContext(ctx).WithValues(
 		"provider", "ecrManagedIdentity",
@@ -137,7 +137,7 @@ func (p *ManagedIdentityProvider) GetCredentials(
 	logger.Debug("auth token cache miss")
 
 	// Cache miss, get a new token
-	encodedToken, expiry, err := p.getAuthTokenFn(ctx, region, ecrAccountID, req.Project)
+	encodedToken, expiry, err := p.getAuthTokenFn(ctx, region, accountID, req.Project)
 	if err != nil {
 		// This might mean the controller's IAM role isn't authorized to assume the
 		// project-specific IAM role, or that the project-specific IAM role doesn't
@@ -177,7 +177,7 @@ func (p *ManagedIdentityProvider) GetCredentials(
 func (p *ManagedIdentityProvider) getAuthToken(
 	ctx context.Context,
 	region string,
-	ecrAccountID string,
+	accountID string,
 	project string,
 ) (string, time.Time, error) {
 	logger := logging.LoggerFromContext(ctx)
@@ -192,39 +192,26 @@ func (p *ManagedIdentityProvider) getAuthToken(
 	stsSvc := sts.NewFromConfig(cfg)
 
 	logger = logger.WithValues(
-		"awsAccountID", p.accountID,
-		"ecrAccountID", ecrAccountID,
+		"controllerAccountID", p.accountID,
+		"accountID", accountID,
 		"awsRegion", region,
 		"project", project,
 	)
 
-	// Step 1: try kargo-project-<project> in the controller's account.
+	if accountID != p.accountID {
+		logger.Debug(
+			"ECR registry is in a different account than the controller; " +
+				"attempting to assume project-specific role in registry account",
+		)
+	}
 	token, expiry, err := p.getAuthTokenWithRole(
 		ctx,
-		fmt.Sprintf(roleARNFormat, p.accountID, project),
+		fmt.Sprintf(roleARNFormat, accountID, project),
 		region,
 		stsSvc,
 	)
 	if err == nil && token != "" {
 		return token, expiry, nil
-	}
-
-	// Step 2: if the ECR registry is in a different account, try
-	// kargo-project-<project> in that account.
-	if ecrAccountID != p.accountID {
-		logger.Debug(
-			"ECR registry is in a different account than the controller; " +
-				"attempting to assume project-specific role in ECR account",
-		)
-		token, expiry, err = p.getAuthTokenWithRole(
-			ctx,
-			fmt.Sprintf(roleARNFormat, ecrAccountID, project),
-			region,
-			stsSvc,
-		)
-		if err == nil && token != "" {
-			return token, expiry, nil
-		}
 	}
 
 	// Step 3: fall back to the controller's IAM role directly.
