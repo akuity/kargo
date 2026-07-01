@@ -60,10 +60,10 @@ The GitHub token must have **Issues: Read and write** access for the repository
 
 ## Output
 
-| Name        | Type     | Description                                                     |
-| ----------- | -------- | --------------------------------------------------------------- |
-| `commentID` | `int`    | The ID of the created comment.                                  |
-| `url`       | `string` | The HTML URL of the created comment.                            |
+| Name        | Type       | Description                                                                                             |
+| ----------- | ---------- | ------------------------------------------------------------------------------------------------------- |
+| `commentID` | `integer`  | The ID of the created comment.                                                                          |
+| `url`       | `string`   | The HTML URL of the created comment.                                                                    |
 
 ## Examples
 

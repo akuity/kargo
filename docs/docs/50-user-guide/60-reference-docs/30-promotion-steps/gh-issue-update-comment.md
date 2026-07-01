@@ -49,9 +49,10 @@ The GitHub token must have **Issues: Read and write** access for the repository
 
 ## Output
 
-| Name  | Type     | Description                          |
-| ----- | -------- | ------------------------------------ |
-| `url` | `string` | The HTML URL of the updated comment. |
+| Name        | Type       | Description                                                                                             |
+| ----------- | ---------- | ------------------------------------------------------------------------------------------------------- |
+| `commentID` | `integer`  | The ID of the updated comment (same value passed as input, echoed for convenience).                     |
+| `url`       | `string`   | The HTML URL of the updated comment.                                                                    |
 
 ## Example
 

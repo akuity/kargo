@@ -47,7 +47,7 @@ The GitHub token must have **Issues: Read and write** access for the repository
 | `insecureSkipTLSVerify` | `boolean`  | N        | If `true`, TLS verification of the GitHub server certificate is skipped. Use only for GitHub Enterprise Server instances with self-signed certificates. |
 | `issueNumber`           | `integer`  | Y        | The number of the issue to update.                                                                                                                      |
 | `title`                 | `string`   | N        | New title for the issue.                                                                                                                                |
-| `body`                  | `string`   | N        | New body text for the issue. Supports GitHub Flavored Markdown.                                                                                         |
+| `body`                  | `string`   | N        | New body text for the issue. Supports GitHub Flavored Markdown. Pass an empty string (`""`) to clear the existing body.                                 |
 | `state`                 | `string`   | N        | Set the issue state to `open` or `closed`.                                                                                                              |
 | `addLabels`             | `[]string` | N        | Labels to add to the issue. Labels must already exist in the repository.                                                                                |
 | `removeLabels`          | `[]string` | N        | Labels to remove from the issue.                                                                                                                        |

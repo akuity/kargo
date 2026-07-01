@@ -52,10 +52,10 @@ The GitHub token must have **Issues: Read and write** access for the repository
 
 ## Output
 
-| Name     | Type     | Description                                   |
-| -------- | -------- | --------------------------------------------- |
-| `number` | `int`    | The number of the created issue (e.g. `42`).  |
-| `url`    | `string` | The HTML URL of the created issue.            |
+| Name     | Type       | Description                                                                                             |
+| -------- | ---------- | ------------------------------------------------------------------------------------------------------- |
+| `number` | `integer`  | The number of the created issue (e.g. `42`).                                                            |
+| `url`    | `string`   | The HTML URL of the created issue.                                                                      |
 
 ## Example
 

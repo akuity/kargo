@@ -51,7 +51,7 @@ The GitHub token must have **Issues: Read** access for the repository (or the
 | `issueNumber`           | `integer` | Y        | The number of the issue to watch.                                                                                                                                                   |
 | `state`                 | `string`  | N        | Wait until the issue is in this state. Must be `open` or `closed`. At least one of `state` or `label` is required.                                                                 |
 | `label`                 | `string`  | N        | Wait until the issue has this label. At least one of `state` or `label` is required.                                                                                               |
-| `pollInterval`          | `string`  | N        | How often to check the issue state, specified as a [Go duration string](https://pkg.go.dev/time#ParseDuration) (e.g., `30s`, `5m`). Overrides the default controller reconciliation interval when set. |
+| `pollInterval`          | `string`  | N        | How often to check the issue state, specified as a [Go duration string](https://pkg.go.dev/time#ParseDuration) (e.g., `30s`, `5m`, `1.5h`). Overrides the default controller reconciliation interval when set. |
 
 ## Output
 
