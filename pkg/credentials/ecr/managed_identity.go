@@ -204,7 +204,6 @@ func (p *ManagedIdentityProvider) getAuthToken(
 		fmt.Sprintf(roleARNFormat, p.accountID, project),
 		region,
 		stsSvc,
-		logger,
 	)
 	if err == nil && token != "" {
 		return token, expiry, nil
@@ -222,7 +221,6 @@ func (p *ManagedIdentityProvider) getAuthToken(
 			fmt.Sprintf(roleARNFormat, ecrAccountID, project),
 			region,
 			stsSvc,
-			logger,
 		)
 		if err == nil && token != "" {
 			return token, expiry, nil
@@ -264,8 +262,8 @@ func (p *ManagedIdentityProvider) getAuthTokenWithRole(
 	roleARN string,
 	region string,
 	stsSvc *sts.Client,
-	logger interface{ Debug(string, ...any) },
 ) (string, time.Time, error) {
+	logger := logging.LoggerFromContext(ctx)
 	ecrSvc := ecr.NewFromConfig(aws.Config{
 		HTTPClient: cleanhttp.DefaultClient(),
 		Region:     region,
