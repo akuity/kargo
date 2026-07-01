@@ -191,26 +191,23 @@ export const Graph = (props: GraphProps) => {
     if (!hoveredWarehouseName || distinctEdgeWarehouses < 2) {
       return typedEdges;
     }
-    const dimmed: typeof typedEdges = [];
-    const highlighted: typeof typedEdges = [];
-    for (const edge of typedEdges) {
+
+    // Highlight edges belonging to the hovered warehouse and dim all others.
+    // zIndex is used to ensure that the highlighted edges are drawn on top of the dimmed edges.
+    return typedEdges.map((edge) => {
       if (edge.data?.warehouseName !== hoveredWarehouseName) {
-        dimmed.push(edge);
-        continue;
+        return { ...edge, zIndex: -1 };
       }
       const color = (edge.style?.stroke as string) || '#000';
-      highlighted.push({
+      return {
         ...edge,
         style: {
           ...edge.style,
-          strokeOpacity: 0.8,
+          strokeOpacity: 0.6,
           filter: `drop-shadow(0 0 7px ${color}50)`
         }
-      });
-    }
-    // Highlighted edges paint last so they sit on top of overlapping dimmed
-    // edges from other warehouses.
-    return [...dimmed, ...highlighted];
+      };
+    });
   }, [typedEdges, hoveredWarehouseName, distinctEdgeWarehouses]);
 
   const nodesExcludingSubscriptionNodes = useMemo(() => {

@@ -149,15 +149,15 @@ export const useReactFlowPipelineGraph = (
           markerEnd: {
             type: MarkerType.ArrowClosed,
             color: '#777',
-            width: 8,
-            height: 8,
+            width: 6,
+            height: 6,
             strokeWidth: 2
           },
           style: {
             strokeWidth: 4,
             stroke: dagreEdge.edgeColor || '#9ca3af',
             strokeOpacity: 0.3,
-            transition: 'd 0.3s ease, stroke-opacity 0.2s ease, filter 0.2s ease'
+            transition: 'd 0.3s ease, stroke-opacity 0.5s ease, filter 0.2s ease'
           }
         });
       }
