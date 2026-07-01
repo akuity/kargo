@@ -115,7 +115,7 @@ func (p *ManagedIdentityProvider) GetCredentials(
 	req credentials.Request,
 ) (*credentials.Credentials, error) {
 	// Extract the account ID and region from the ECR URL
-	matches := ecrURLAccountRegex.FindStringSubmatch(req.RepoURL)
+	matches := ecrURLRegex.FindStringSubmatch(req.RepoURL)
 	if len(matches) != 3 { // This doesn't look like an ECR URL
 		return nil, nil
 	}
