@@ -116,7 +116,7 @@ func (s *server) watchClusterConfig(c *gin.Context) {
 	keepaliveTicker := time.NewTicker(30 * time.Second)
 	defer keepaliveTicker.Stop()
 
-	setSSEHeaders(c)
+	SetSSEHeaders(c)
 
 	for {
 		select {
@@ -125,7 +125,7 @@ func (s *server) watchClusterConfig(c *gin.Context) {
 			return
 
 		case <-keepaliveTicker.C:
-			if !writeSSEKeepalive(c) {
+			if !WriteSSEKeepalive(c) {
 				return
 			}
 
@@ -134,7 +134,7 @@ func (s *server) watchClusterConfig(c *gin.Context) {
 				logger.Debug("watch channel closed")
 				return
 			}
-			if !convertAndSendWatchEvent(c, e, (*kargoapi.ClusterConfig)(nil)) {
+			if !ConvertAndSendWatchEvent(c, e, (*kargoapi.ClusterConfig)(nil)) {
 				return
 			}
 		}

@@ -97,7 +97,7 @@ func (s *server) watchStages(c *gin.Context, project string, warehouses []string
 		buildWatchListOptions(project, resourceVersion)...,
 	)
 	if err != nil {
-		if sendSSEWatchStartError(c, err) {
+		if SendSSEWatchStartError(c, err) {
 			return
 		}
 		logger.Error(err, "failed to start watch")
@@ -109,7 +109,7 @@ func (s *server) watchStages(c *gin.Context, project string, warehouses []string
 	keepaliveTicker := time.NewTicker(30 * time.Second)
 	defer keepaliveTicker.Stop()
 
-	setSSEHeaders(c)
+	SetSSEHeaders(c)
 
 	for {
 		select {
@@ -118,7 +118,7 @@ func (s *server) watchStages(c *gin.Context, project string, warehouses []string
 			return
 
 		case <-keepaliveTicker.C:
-			if !writeSSEKeepalive(c) {
+			if !WriteSSEKeepalive(c) {
 				return
 			}
 
@@ -127,12 +127,12 @@ func (s *server) watchStages(c *gin.Context, project string, warehouses []string
 				logger.Debug("watch channel closed")
 				return
 			}
-			if watchErr := errorFromWatchEvent(e); watchErr != nil {
-				sendSSEWatchError(c, watchErr)
+			if watchErr := ErrorFromWatchEvent(e); watchErr != nil {
+				SendSSEWatchError(c, watchErr)
 				return
 			}
 
-			stage, ok := convertWatchEventObject(c, e, (*kargoapi.Stage)(nil))
+			stage, ok := ConvertWatchEventObject(c, e, (*kargoapi.Stage)(nil))
 			if !ok {
 				continue
 			}
@@ -140,7 +140,7 @@ func (s *server) watchStages(c *gin.Context, project string, warehouses []string
 			eventType := e.Type
 			if len(warehouses) > 0 {
 				var send bool
-				eventType, send = filteredWatchEventType(
+				eventType, send = FilteredWatchEventType(
 					e.Type,
 					api.StageMatchesAnyWarehouse(stage, warehouses),
 				)
@@ -149,7 +149,7 @@ func (s *server) watchStages(c *gin.Context, project string, warehouses []string
 				}
 			}
 
-			if !sendSSEWatchEvent(c, eventType, stage) {
+			if !SendSSEWatchEvent(c, eventType, stage) {
 				return
 			}
 		}
