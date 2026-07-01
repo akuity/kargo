@@ -119,10 +119,10 @@ jobs:
     - name: Scan image for CVEs
       env:
         GRYPE_CMD: ${{ steps.grype.outputs.cmd }}
+        VEX_IMAGE: kargo-oss # monitored image name for the VEX lookup
         FAIL_ON: "" # report-only; set to "high" to enforce
-      # Scan the just-pushed digest; VEX lookups always use the canonical
-      # (non-unstable) repo path.
-      run: ./hack/cve-scan.sh "registry:${{ steps.repo.outputs.repo }}@${{ steps.image.outputs.digest }}" "ghcr.io/akuity/kargo"
+      # Scan the just-pushed digest.
+      run: ./hack/cve-scan.sh "registry:${{ steps.repo.outputs.repo }}@${{ steps.image.outputs.digest }}"
     - name: Publish SBOM
       if: github.event_name == 'release'
       uses: anchore/sbom-action@e22c389904149dbc22b58101806040fa8d37a610 # v0.24.0
