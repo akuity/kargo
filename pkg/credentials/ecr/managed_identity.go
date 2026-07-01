@@ -167,13 +167,11 @@ func (p *ManagedIdentityProvider) GetCredentials(
 // getAuthToken returns an ECR authorization token. It attempts the following
 // in order, stopping at the first success:
 //
-//  1. Assume kargo-project-<project> in the controller's own AWS account and
-//     use those credentials to obtain an ECR auth token.
-//  2. If the ECR registry belongs to a different account, assume
-//     kargo-project-<project> in that account and obtain an ECR auth token
-//     from there. This supports multi-account AWS setups where ECR registries
-//     live in team-owned accounts separate from the EKS platform account.
-//  3. Fall back to using the controller's IAM role directly.
+//  1. Assume kargo-project-<project> in the registry's AWS account and use
+//     those credentials to obtain an ECR auth token. When the registry is in
+//     the same account as the controller this is a same-account assumption;
+//     when it is in a different account this is a cross-account assumption.
+//  2. Fall back to using the controller's IAM role directly.
 func (p *ManagedIdentityProvider) getAuthToken(
 	ctx context.Context,
 	region string,
