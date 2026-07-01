@@ -212,7 +212,7 @@ func (p *ManagedIdentityProvider) getAuthToken(
 		return token, expiry, nil
 	}
 
-	// Step 3: fall back to the controller's IAM role directly.
+	// Fall back to the controller's IAM role directly.
 	logger.Debug(
 		"Falling back to using controller's IAM role directly.",
 	)
