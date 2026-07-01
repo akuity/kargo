@@ -104,7 +104,7 @@ func RunPRTests(
 		t.Run(tc.Name, func(t *testing.T) {
 			branchName := uniqueBranchName(tc.Name)
 			repo := cloneAndPush(t, cfg, branchName)
-			defer cleanupBranch(repo, branchName)
+			defer deleteBranchAndClose(cfg, repo, branchName)
 
 			pr, err := prov.CreatePullRequest(
 				t.Context(),
@@ -211,6 +211,119 @@ func cloneAndPush(
 	return repo
 }
 
+// cloneMain clones the test repo at its main branch and returns the working
+// copy.
+func cloneMain(t *testing.T, cfg RepoConfig) git.Repo {
+	t.Helper()
+	repo, err := git.Clone(
+		cfg.RepoURL,
+		cfg.clientOpts(),
+		&git.CloneOptions{Branch: "main", SingleBranch: true},
+	)
+	require.NoError(t, err)
+	return repo
+}
+
+// commitFileAndPush writes a file in the repo's working tree, commits it, and
+// pushes the currently checked-out branch.
+func commitFileAndPush(
+	t *testing.T, repo git.Repo, name, content, message string,
+) {
+	t.Helper()
+	require.NoError(t, os.WriteFile(
+		filepath.Join(repo.Dir(), name), []byte(content), 0600,
+	))
+	require.NoError(t, repo.AddAllAndCommit(message, nil))
+	require.NoError(t, repo.Push(nil))
+}
+
+// openPR opens a pull request from headBranch into main and returns its number.
+func openPR(
+	t *testing.T,
+	prov gitprovider.Interface,
+	headBranch, title string,
+) int64 {
+	t.Helper()
+	pr, err := prov.CreatePullRequest(
+		t.Context(),
+		&gitprovider.CreatePullRequestOpts{
+			Title: title,
+			Head:  headBranch,
+			Base:  "main",
+		},
+	)
+	require.NoError(t, err)
+	require.NotNil(t, pr)
+	require.True(t, pr.Open)
+	return pr.Number
+}
+
+// deleteBranchAndClose deletes the remote feature branch and closes the repo.
+// It pushes the delete over an authenticated URL with interactive prompts
+// disabled, so it authenticates without relying on ambient credentials and
+// never blocks waiting for input (e.g. on a host with a GUI credential helper).
+// Best-effort.
+func deleteBranchAndClose(cfg RepoConfig, repo git.Repo, branchName string) {
+	// nolint:gosec // Test helper; the push URL is built from test config, not
+	// external input. The authed URL avoids depending on the credential-helper
+	// binary path, which is not present on developer hosts.
+	cmd := exec.Command(
+		"git", "push", cfg.authedRepoURL(), "--delete", branchName,
+	)
+	cmd.Dir = repo.Dir()
+	cmd.Env = append(
+		os.Environ(),
+		fmt.Sprintf("HOME=%s", repo.HomeDir()),
+		"GIT_TERMINAL_PROMPT=0",
+	)
+	_ = cmd.Run()
+	repo.Close() // nolint: errcheck
+}
+
+// SetupCleanPR creates a PR with a single non-conflicting commit. It returns the
+// PR number and a cleanup function that deletes the feature branch.
+func SetupCleanPR(
+	t *testing.T, cfg RepoConfig, prov gitprovider.Interface,
+) (int64, func()) {
+	t.Helper()
+	branchName := uniqueBranchName("clean")
+	repo := cloneAndPush(t, cfg, branchName)
+	prNumber := openPR(t, prov, branchName, "integration test: clean")
+	return prNumber, func() { deleteBranchAndClose(cfg, repo, branchName) }
+}
+
+// SetupConflictingPR creates a PR whose feature branch conflicts with main: both
+// add the same file with different content, producing an add/add conflict. GitHub
+// reports the PR's mergeable_state as "dirty". It returns the PR number and a
+// cleanup function that deletes the feature branch.
+func SetupConflictingPR(
+	t *testing.T, cfg RepoConfig, prov gitprovider.Interface,
+) (int64, func()) {
+	t.Helper()
+	branchName := uniqueBranchName("dirty")
+	// A per-run filename keeps the setup idempotent across runs while still
+	// producing an add/add conflict (both branches add the same new path).
+	conflictFile := fmt.Sprintf("conflict-%s.txt", branchName)
+
+	// Feature branch adds the file with one content.
+	featureRepo := cloneMain(t, cfg)
+	require.NoError(t, featureRepo.CreateChildBranch(branchName))
+	commitFileAndPush(
+		t, featureRepo, conflictFile, "feature content\n", "feature change",
+	)
+
+	// main adds the same file with different content, diverging from the feature
+	// branch.
+	mainRepo := cloneMain(t, cfg)
+	defer mainRepo.Close() // nolint: errcheck
+	commitFileAndPush(
+		t, mainRepo, conflictFile, "main content\n", "conflicting main change",
+	)
+
+	prNumber := openPR(t, prov, branchName, "integration test: dirty")
+	return prNumber, func() { deleteBranchAndClose(cfg, featureRepo, branchName) }
+}
+
 // fetchMain fetches the latest main branch from the remote.
 func fetchMain(t *testing.T, cfg RepoConfig, repo git.Repo) {
 	t.Helper()
@@ -253,17 +366,6 @@ func requireParentCount(
 	require.Equal(t, expected, parentCount,
 		"commit %s: expected %d parent(s), got %d", sha, expected, parentCount,
 	)
-}
-
-// cleanupBranch deletes the remote branch and closes the repo. Best-effort.
-func cleanupBranch(repo git.Repo, branchName string) {
-	cmd := exec.Command("git", "push", "origin", "--delete", branchName)
-	cmd.Dir = repo.Dir()
-	cmd.Env = append(
-		os.Environ(), fmt.Sprintf("HOME=%s", repo.HomeDir()),
-	)
-	_ = cmd.Run()
-	repo.Close() // nolint: errcheck
 }
 
 // runGit runs a git command in the given directory and fails the test on error.

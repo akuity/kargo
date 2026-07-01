@@ -10,6 +10,7 @@ import (
 	"github.com/stretchr/testify/require"
 
 	"github.com/akuity/kargo/pkg/cli/config"
+	"github.com/akuity/kargo/pkg/client/generated/models"
 )
 
 func TestNewTokenRefresher(t *testing.T) {
@@ -195,6 +196,39 @@ func TestRefreshToken(t *testing.T) {
 			newCfg, err :=
 				tf.refreshToken(t.Context(), testCase.setup(), false)
 			testCase.assertions(t, cfg, newCfg, err)
+		})
+	}
+}
+
+func TestClientIDForRefresh(t *testing.T) {
+	testCases := []struct {
+		name     string
+		cfg      *models.OIDCConfig
+		expected string
+	}{
+		{
+			name:     "only client ID is set",
+			cfg:      &models.OIDCConfig{ClientID: "kargo"},
+			expected: "kargo",
+		},
+		{
+			name: "CLI client ID is set; takes precedence",
+			cfg: &models.OIDCConfig{
+				ClientID:    "kargo",
+				CliClientID: "kargo-cli",
+			},
+			expected: "kargo-cli",
+		},
+		{
+			name:     "CLI client ID is empty; falls back to client ID",
+			cfg:      &models.OIDCConfig{ClientID: "kargo", CliClientID: ""},
+			expected: "kargo",
+		},
+	}
+	for _, testCase := range testCases {
+		t.Run(testCase.name, func(t *testing.T) {
+			t.Parallel()
+			require.Equal(t, testCase.expected, clientIDForRefresh(testCase.cfg))
 		})
 	}
 }

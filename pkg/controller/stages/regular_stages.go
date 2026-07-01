@@ -1202,7 +1202,7 @@ func (r *RegularStageReconciler) verifyStageFreight(
 				logger.Debug("aborting verification of Stage Freight")
 
 				// Abort the verification.
-				newVI, err = r.abortVerification(ctx, *curFreight, abortReq)
+				newVI, err = r.abortVerification(ctx, *curFreight, abortReq, endTime)
 				if newVI != nil {
 					newStatus.FreightHistory.Current().VerificationHistory.UpdateOrPush(*newVI)
 				}
@@ -1216,7 +1216,7 @@ func (r *RegularStageReconciler) verifyStageFreight(
 			}
 
 			// Get the latest result of the verification.
-			newVI, err = r.getVerificationResult(ctx, *curFreight)
+			newVI, err = r.getVerificationResult(ctx, *curFreight, endTime)
 			if newVI != nil {
 				newStatus.FreightHistory.Current().VerificationHistory.UpdateOrPush(*newVI)
 
@@ -1265,7 +1265,7 @@ func (r *RegularStageReconciler) verifyStageFreight(
 	}
 
 	// Start a new (re-)verification.
-	newVI, err = r.startVerification(ctx, stage, *curFreight, reverifyReq, startTime)
+	newVI, err = r.startVerification(ctx, stage, *curFreight, reverifyReq, startTime, endTime)
 	if newVI != nil {
 		newStatus.FreightHistory.Current().VerificationHistory.UpdateOrPush(*newVI)
 
@@ -1439,6 +1439,7 @@ func (r *RegularStageReconciler) startVerification(
 	freight kargoapi.FreightCollection,
 	req *kargoapi.VerificationRequest,
 	startTime time.Time,
+	endTime func() time.Time,
 ) (*kargoapi.VerificationInfo, error) {
 	newVI := &kargoapi.VerificationInfo{
 		ID:        uuid.NewString(),
@@ -1455,7 +1456,7 @@ func (r *RegularStageReconciler) startVerification(
 	// Return early, as we cannot start the verification if the Rollouts
 	// integration is disabled.
 	if !r.cfg.RolloutsIntegrationEnabled {
-		newVI.FinishTime = ptr.To(metav1.Now())
+		newVI.FinishTime = ptr.To(metav1.NewTime(endTime()))
 		newVI.Phase = kargoapi.VerificationPhaseError
 		newVI.Message = "Rollouts integration is disabled on this controller: cannot start verification"
 		return newVI, nil
@@ -1472,7 +1473,7 @@ func (r *RegularStageReconciler) startVerification(
 			Name:      stage.Name,
 		}, freight.ID)
 		if err != nil {
-			newVI.FinishTime = ptr.To(metav1.Now())
+			newVI.FinishTime = ptr.To(metav1.NewTime(endTime()))
 			newVI.Phase = kargoapi.VerificationPhaseError
 			newVI.Message = err.Error()
 			return newVI, nil
@@ -1481,7 +1482,7 @@ func (r *RegularStageReconciler) startVerification(
 		if existingAnalysisRun != nil {
 			logger.Debug("AnalysisRun already exists for FreightCollection")
 
-			newVI.FinishTime = ptr.To(metav1.Now())
+			newVI.FinishTime = ptr.To(metav1.NewTime(endTime()))
 			newVI.Phase = kargoapi.VerificationPhase(existingAnalysisRun.Status.Phase)
 			newVI.AnalysisRun = &kargoapi.AnalysisRunReference{
 				Name:      existingAnalysisRun.Name,
@@ -1554,7 +1555,7 @@ func (r *RegularStageReconciler) startVerification(
 	}
 	ar, err := builder.Build(ctx, stage.Namespace, stage.Spec.Verification, builderOpts...)
 	if err != nil {
-		newVI.FinishTime = ptr.To(metav1.Now())
+		newVI.FinishTime = ptr.To(metav1.NewTime(endTime()))
 		newVI.Phase = kargoapi.VerificationPhaseError
 		newVI.Message = fmt.Errorf(
 			"error building AnalysisRun for Stage %q and Freight collection %q in namespace %q: %w",
@@ -1566,7 +1567,7 @@ func (r *RegularStageReconciler) startVerification(
 		return newVI, nil
 	}
 	if err = r.client.Create(ctx, ar); err != nil {
-		newVI.FinishTime = ptr.To(metav1.Now())
+		newVI.FinishTime = ptr.To(metav1.NewTime(endTime()))
 		newVI.Phase = kargoapi.VerificationPhaseError
 		newVI.Message = fmt.Errorf(
 			"error creating AnalysisRun %q in namespace %q: %w",
@@ -1599,6 +1600,7 @@ func (r *RegularStageReconciler) startVerification(
 func (r *RegularStageReconciler) getVerificationResult(
 	ctx context.Context,
 	freight kargoapi.FreightCollection,
+	endTime func() time.Time,
 ) (*kargoapi.VerificationInfo, error) {
 	// Ensure all necessary information is available to get the verification.
 	currentVI := freight.VerificationHistory.Current()
@@ -1618,7 +1620,7 @@ func (r *RegularStageReconciler) getVerificationResult(
 		return &kargoapi.VerificationInfo{
 			ID:         currentVI.ID,
 			StartTime:  currentVI.StartTime,
-			FinishTime: ptr.To(metav1.Now()),
+			FinishTime: ptr.To(metav1.NewTime(endTime())),
 			Phase:      kargoapi.VerificationPhaseError,
 			Message:    "Rollouts integration is disabled on this controller: cannot get verification result",
 		}, nil
@@ -1676,6 +1678,7 @@ func (r *RegularStageReconciler) abortVerification(
 	ctx context.Context,
 	freight kargoapi.FreightCollection,
 	req *kargoapi.VerificationRequest,
+	endTime func() time.Time,
 ) (*kargoapi.VerificationInfo, error) {
 	// Ensure all necessary information is available to abort the verification.
 	currentVI := freight.VerificationHistory.Current()
@@ -1708,7 +1711,7 @@ func (r *RegularStageReconciler) abortVerification(
 			ID:          currentVI.ID,
 			Actor:       actor,
 			StartTime:   currentVI.StartTime,
-			FinishTime:  ptr.To(metav1.Now()),
+			FinishTime:  ptr.To(metav1.NewTime(endTime())),
 			Phase:       kargoapi.VerificationPhaseError,
 			Message:     "Rollouts integration is disabled on this controller: cannot abort verification",
 			AnalysisRun: currentVI.AnalysisRun.DeepCopy(),
@@ -1734,7 +1737,7 @@ func (r *RegularStageReconciler) abortVerification(
 			ID:         currentVI.ID,
 			Actor:      actor,
 			StartTime:  currentVI.StartTime,
-			FinishTime: ptr.To(metav1.Now()),
+			FinishTime: ptr.To(metav1.NewTime(endTime())),
 			Phase:      kargoapi.VerificationPhaseError,
 			Message: fmt.Errorf(
 				"error terminating AnalysisRun %q in namespace %q: %w", ar.Name, ar.Namespace, err,
@@ -1752,7 +1755,7 @@ func (r *RegularStageReconciler) abortVerification(
 		ID:          currentVI.ID,
 		Actor:       actor,
 		StartTime:   currentVI.StartTime,
-		FinishTime:  ptr.To(metav1.Now()),
+		FinishTime:  ptr.To(metav1.NewTime(endTime())),
 		Phase:       kargoapi.VerificationPhaseFailed,
 		Message:     "Verification aborted by user",
 		AnalysisRun: currentVI.AnalysisRun.DeepCopy(),
