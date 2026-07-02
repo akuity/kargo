@@ -1646,10 +1646,10 @@ message PromotionSpec {
   // +akuity:test-kubebuilder-pattern=KubernetesName
   optional string freight = 2;
 
-  // Origin, when set, identifies the FreightOrigin whose current
-  // auto-promotion candidate should be promoted. The mutating webhook resolves
-  // this to the candidate Freight and fills Freight before the Promotion is
-  // persisted. Exactly one of Freight or Origin must be set.
+  // Origin, when set, identifies the FreightOrigin whose latest available
+  // Freight should be promoted. The mutating webhook resolves this to the
+  // latest available Freight for that origin and fills Freight before the
+  // Promotion is persisted. Exactly one of Freight or Origin must be set.
   //
   // +kubebuilder:validation:Optional
   optional FreightOrigin origin = 14;

@@ -298,9 +298,9 @@ func (w *webhook) Default(ctx context.Context, obj runtime.Object) error {
 	return nil
 }
 
-// resolveOriginToFreight resolves promo.Spec.Origin to the current
-// auto-promotion candidate Freight and sets promo.Spec.Freight. Returns an
-// error (denying admission) if no candidate exists for the origin.
+// resolveOriginToFreight resolves promo.Spec.Origin to the latest available
+// Freight for that origin and sets promo.Spec.Freight. Returns an error
+// (denying admission) if no Freight is available for the origin.
 func (w *webhook) resolveOriginToFreight(
 	ctx context.Context,
 	promo *kargoapi.Promotion,

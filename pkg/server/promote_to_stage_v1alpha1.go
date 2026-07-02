@@ -248,7 +248,7 @@ func (s *server) promoteToStage(c *gin.Context) {
 	}
 
 	if req.Origin != "" {
-		// Let admission resolve the origin to the current candidate Freight. That
+		// Let admission resolve the origin to the latest available Freight. That
 		// keeps "promote latest for this origin" race-free for REST clients.
 		origin, parseErr := kargoapi.ParseFreightOriginKey(req.Origin)
 		if parseErr != nil {

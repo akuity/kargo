@@ -2301,7 +2301,7 @@ RawFormat specifies the format for raw resource representation.
 | ----- | ---- | ----------- |
 | stage | string |  Stage specifies the name of the Stage to which this Promotion applies. The Stage referenced by this field MUST be in the same namespace as the Promotion.       |
 | freight | string |  Freight specifies the piece of Freight to be promoted into the Stage. Exactly one of Freight or Origin must be set.       |
-| origin | [FreightOrigin](#github-com-akuity-kargo-api-v1alpha1-FreightOrigin) |  Origin, when set, identifies the FreightOrigin whose current auto-promotion candidate should be promoted. The mutating webhook resolves this to the candidate Freight and fills Freight before the Promotion is persisted. Exactly one of Freight or Origin must be set.   |
+| origin | [FreightOrigin](#github-com-akuity-kargo-api-v1alpha1-FreightOrigin) |  Origin, when set, identifies the FreightOrigin whose latest available Freight should be promoted. The mutating webhook resolves this to the latest available Freight for that origin and fills Freight before the Promotion is persisted. Exactly one of Freight or Origin must be set.   |
 | vars | [ExpressionVariable](#github-com-akuity-kargo-api-v1alpha1-ExpressionVariable) |  Vars is a list of variables that can be referenced by expressions in promotion steps. |
 | steps | [PromotionStep](#github-com-akuity-kargo-api-v1alpha1-PromotionStep) |  Steps specifies the directives to be executed as part of this Promotion. The order in which the directives are executed is the order in which they are listed in this field.     |
 

@@ -67,8 +67,8 @@ kargo promote --project=my-project --freight=abc123 --downstream-from=qa
 # Promote a piece of freight specified by alias to stages immediately downstream from the QA stage
 kargo promote --project=my-project --freight-alias=wonky-wombat --downstream-from=qa
 
-# Promote the current auto-promotion candidate for a Warehouse origin to the QA stage
-# (the webhook resolves the origin to the candidate Freight; this also clears any active hold)
+# Promote the latest available Freight for a Warehouse origin to the QA stage
+# (the webhook resolves the origin to the latest Freight; this also clears any active hold)
 kargo promote --project=my-project --origin=Warehouse/my-warehouse --stage=qa
 
 # Abort a Promotion by name
@@ -124,7 +124,7 @@ func (o *promotionOptions) addFlags(cmd *cobra.Command) {
 		option.OriginFlag,
 		"",
 		"The origin key (e.g. \"Warehouse/foo\") to promote. The webhook resolves this to the "+
-			"current auto-promotion candidate. Exactly one of --freight, --freight-alias, or --origin must be set.",
+			"latest available Freight for that origin. Exactly one of --freight, --freight-alias, or --origin must be set.",
 	)
 	option.Name(cmd.Flags(), &o.Promotion, "The name of a promotion. Only used when aborting a promotion.")
 	option.Stage(
