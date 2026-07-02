@@ -339,12 +339,14 @@ func (s *server) promoteToStage(c *gin.Context) {
 }
 
 // recordResolvedPromotionCreatedEvent records the normal PromotionCreated event
-// after admission has resolved spec.origin to spec.freight.
+// after admission has resolved spec.origin to spec.freight. If admission has
+// not resolved the Promotion yet, there is no Freight object to attach, so event
+// recording is skipped instead of blocking the request.
 func (s *server) recordResolvedPromotionCreatedEvent(
 	ctx context.Context,
 	promotion *kargoapi.Promotion,
 ) {
-	if s.sender == nil {
+	if s.sender == nil || promotion.Spec.Freight == "" {
 		return
 	}
 	freight := &kargoapi.Freight{}
@@ -361,4 +363,3 @@ func (s *server) recordResolvedPromotionCreatedEvent(
 	}
 	s.recordPromotionCreatedEvent(ctx, promotion, freight)
 }
-
