@@ -1521,9 +1521,9 @@ func (a *Client) ListProjectConfigMaps(params *ListProjectConfigMapsParams, auth
 
 	List all Projects resources. Supports server-side filtering by
 
-name substring, by UID, and by namespaces mapped to the
-authenticated user's ServiceAccounts, plus offset-based
-pagination.
+name substring, by Kubernetes label selector, by UID, and by
+namespaces mapped to the authenticated user's ServiceAccounts,
+plus offset-based pagination.
 */
 func (a *Client) ListProjects(params *ListProjectsParams, authInfo runtime.ClientAuthInfoWriter, opts ...ClientOption) (*ListProjectsOK, error) {
 	// NOTE: parameters are not validated before sending

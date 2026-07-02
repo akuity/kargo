@@ -10,9 +10,11 @@ import (
 
 	"connectrpc.com/connect"
 	"github.com/gin-gonic/gin"
+	"k8s.io/apimachinery/pkg/labels"
 
 	svcv1alpha1 "github.com/akuity/kargo/api/service/v1alpha1"
 	kargoapi "github.com/akuity/kargo/api/v1alpha1"
+	libhttp "github.com/akuity/kargo/pkg/http"
 	"github.com/akuity/kargo/pkg/server/user"
 )
 
@@ -97,13 +99,14 @@ func (s *server) ListProjects(
 // @id ListProjects
 // @Summary List projects
 // @Description List all Projects resources. Supports server-side filtering by
-// @Description name substring, by UID, and by namespaces mapped to the
-// @Description authenticated user's ServiceAccounts, plus offset-based
-// @Description pagination.
+// @Description name substring, by Kubernetes label selector, by UID, and by
+// @Description namespaces mapped to the authenticated user's ServiceAccounts,
+// @Description plus offset-based pagination.
 // @Tags Core, Cluster-Scoped Resource
 // @Security BearerAuth
 // @Param mine query bool false "Only return Projects whose namespaces are mapped to the user's ServiceAccounts."
 // @Param filter query string false "Case-insensitive substring filter applied to the Project name."
+// @Param labelSelector query string false "Kubernetes label selector applied to Project labels (e.g. 'env=prod')."
 // @Param uid query []string false "Return only Projects whose UID matches one of the given values."
 // @Param pageSize query int false "Maximum number of Projects to return. Defaults to all matching Projects."
 // @Param page query int false "Zero-indexed page number used together with pageSize."
@@ -113,6 +116,18 @@ func (s *server) ListProjects(
 func (s *server) listProjects(c *gin.Context) {
 	ctx := c.Request.Context()
 
+	var selector labels.Selector
+	if rawSelector := c.Query("labelSelector"); rawSelector != "" {
+		var err error
+		if selector, err = labels.Parse(rawSelector); err != nil {
+			_ = c.Error(libhttp.Error(
+				fmt.Errorf("invalid labelSelector: %w", err),
+				http.StatusBadRequest,
+			))
+			return
+		}
+	}
+
 	list := &kargoapi.ProjectList{}
 	if err := s.client.List(ctx, list); err != nil {
 		_ = c.Error(err)
@@ -121,6 +136,16 @@ func (s *server) listProjects(c *gin.Context) {
 
 	if c.Query("mine") == trueStr {
 		list.Items = filterProjectsByAccess(ctx, list.Items)
+	}
+
+	if selector != nil {
+		filtered := list.Items[:0]
+		for _, project := range list.Items {
+			if selector.Matches(labels.Set(project.Labels)) {
+				filtered = append(filtered, project)
+			}
+		}
+		list.Items = filtered
 	}
 
 	if filter := strings.ToLower(c.Query("filter")); filter != "" {

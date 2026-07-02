@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 	"net/http"
 	"net/http/httptest"
+	"net/url"
 	"testing"
 
 	"connectrpc.com/connect"
@@ -240,6 +241,72 @@ func Test_server_listProjects(t *testing.T) {
 					require.Equal(t, 2, resp.Total)
 					require.Equal(t, "alpha", resp.Items[0].Name)
 					require.Equal(t, "gamma", resp.Items[1].Name)
+				},
+			},
+			{
+				name: "labelSelector narrows by matching labels",
+				url:  "/v1beta1/projects?labelSelector=env%3Dprod",
+				clientBuilder: fake.NewClientBuilder().WithObjects(
+					&kargoapi.Project{ObjectMeta: metav1.ObjectMeta{
+						Name:   "alpha",
+						Labels: map[string]string{"env": "prod"},
+					}},
+					&kargoapi.Project{ObjectMeta: metav1.ObjectMeta{
+						Name:   "beta",
+						Labels: map[string]string{"env": "dev"},
+					}},
+					&kargoapi.Project{ObjectMeta: metav1.ObjectMeta{
+						Name:   "gamma",
+						Labels: map[string]string{"env": "prod", "team": "infra"},
+					}},
+				),
+				assertions: func(t *testing.T, w *httptest.ResponseRecorder, _ client.Client) {
+					require.Equal(t, http.StatusOK, w.Code)
+					resp := listProjectsResponse{}
+					err := json.Unmarshal(w.Body.Bytes(), &resp)
+					require.NoError(t, err)
+					require.Len(t, resp.Items, 2)
+					require.Equal(t, 2, resp.Total)
+					require.Equal(t, "alpha", resp.Items[0].Name)
+					require.Equal(t, "gamma", resp.Items[1].Name)
+				},
+			},
+			{
+				name: "labelSelector with set-based requirement",
+				url:  "/v1beta1/projects?labelSelector=" + url.QueryEscape("team in (infra,platform)"),
+				clientBuilder: fake.NewClientBuilder().WithObjects(
+					&kargoapi.Project{ObjectMeta: metav1.ObjectMeta{
+						Name:   "alpha",
+						Labels: map[string]string{"team": "infra"},
+					}},
+					&kargoapi.Project{ObjectMeta: metav1.ObjectMeta{
+						Name:   "beta",
+						Labels: map[string]string{"team": "apps"},
+					}},
+					&kargoapi.Project{ObjectMeta: metav1.ObjectMeta{
+						Name:   "gamma",
+						Labels: map[string]string{"team": "platform"},
+					}},
+				),
+				assertions: func(t *testing.T, w *httptest.ResponseRecorder, _ client.Client) {
+					require.Equal(t, http.StatusOK, w.Code)
+					resp := listProjectsResponse{}
+					err := json.Unmarshal(w.Body.Bytes(), &resp)
+					require.NoError(t, err)
+					require.Len(t, resp.Items, 2)
+					require.Equal(t, 2, resp.Total)
+					require.Equal(t, "alpha", resp.Items[0].Name)
+					require.Equal(t, "gamma", resp.Items[1].Name)
+				},
+			},
+			{
+				name: "invalid labelSelector returns 400",
+				url:  "/v1beta1/projects?labelSelector=" + url.QueryEscape("env in prod"),
+				clientBuilder: fake.NewClientBuilder().WithObjects(
+					&kargoapi.Project{ObjectMeta: metav1.ObjectMeta{Name: "alpha"}},
+				),
+				assertions: func(t *testing.T, w *httptest.ResponseRecorder, _ client.Client) {
+					require.Equal(t, http.StatusBadRequest, w.Code)
 				},
 			},
 			{
