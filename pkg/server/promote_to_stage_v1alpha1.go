@@ -228,21 +228,18 @@ func (s *server) promoteToStage(c *gin.Context) {
 		return
 	}
 
-	authorize := func() bool {
-		if err = s.authorizeFn(
-			ctx,
-			"promote",
-			kargoapi.GroupVersion.WithResource("stages"),
-			"",
-			types.NamespacedName{
-				Namespace: project,
-				Name:      stageName,
-			},
-		); err != nil {
-			_ = c.Error(err)
-			return false
-		}
-		return true
+	if err = s.authorizeFn(
+		ctx,
+		"promote",
+		kargoapi.GroupVersion.WithResource("stages"),
+		"",
+		types.NamespacedName{
+			Namespace: project,
+			Name:      stageName,
+		},
+	); err != nil {
+		_ = c.Error(err)
+		return
 	}
 
 	if req.Origin != "" {
@@ -254,9 +251,6 @@ func (s *server) promoteToStage(c *gin.Context) {
 				fmt.Sprintf("invalid origin %q: %s", req.Origin, parseErr),
 				http.StatusBadRequest,
 			))
-			return
-		}
-		if !authorize() {
 			return
 		}
 		promotion := api.NewMinimalPromotionForOrigin(stage, origin)
@@ -305,10 +299,6 @@ func (s *server) promoteToStage(c *gin.Context) {
 			return
 		}
 		freight = &list.Items[0]
-	}
-
-	if !authorize() {
-		return
 	}
 
 	if !stage.IsFreightAvailable(freight) {
