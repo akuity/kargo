@@ -58,8 +58,10 @@ func NewMinimalPromotion(
 	}
 }
 
-// NewMinimalPromotionForOrigin constructs a Promotion that asks the mutating
-// webhook to resolve the latest available Freight for origin.
+// NewMinimalPromotionForOrigin constructs a Promotion that, unlike
+// NewMinimalPromotion which is explicit about the exact Freight to promote,
+// specifies only an origin. The mutating webhook resolves the origin to the
+// latest available Freight at admission time.
 func NewMinimalPromotionForOrigin(
 	stage *kargoapi.Stage,
 	origin kargoapi.FreightOrigin,
