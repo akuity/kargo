@@ -181,9 +181,10 @@ func (w *webhook) Default(ctx context.Context, obj runtime.Object) error {
 		return fmt.Errorf("exactly one of spec.freight or spec.origin must be set")
 	}
 	if req.Operation == admissionv1.Create && promo.Spec.Origin != nil {
-		// Do not infer an omitted origin from a single requested origin. Raw
-		// Promotion specs are clearer and more stable when promote-by-origin is
-		// explicit; endpoint-only conveniences like freightAlias stay out here.
+		// Note: we could theoretically infer an omitted origin when the Stage
+		// requests Freight from only one origin, but we've elected not to.
+		// Raw Promotion specs are clearer and more stable when promote-by-origin
+		// is explicit; endpoint-only conveniences like freightAlias stay out here.
 		if err = w.resolveOriginToFreight(ctx, promo, stage); err != nil {
 			return err
 		}
