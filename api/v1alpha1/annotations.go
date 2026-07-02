@@ -87,9 +87,7 @@ const (
 	AnnotationValueTrue = "true"
 
 	// AnnotationKeyRollback is an annotation key that can be set on a Promotion
-	// to make ctx.meta.promotion.rollback true for promotion steps. Hold-intent
-	// Promotions also set this marker so existing steps that branch on that
-	// metadata treat user-selected non-candidate Freight consistently.
+	// to make ctx.meta.promotion.rollback true for promotion steps.
 	AnnotationKeyRollback = "kargo.akuity.io/rollback"
 
 	// AnnotationKeyGitHubTokenScope is the key for an annotation that can

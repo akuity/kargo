@@ -398,11 +398,8 @@ func (w *webhook) stampIntentAnnotations(
 		api.SetAutoPromotionResumeAnnotation(promo, origin)
 		return
 	}
-	// Promoted Freight is not the candidate; stamp hold intent. Also stamp the
-	// legacy rollback flag so ctx.meta.promotion.rollback remains true for any
-	// steps that already branch on manual non-candidate promotions.
+	// Promoted Freight is not the candidate; stamp hold intent.
 	api.SetAutoPromotionHoldAnnotation(promo, origin)
-	promo.Annotations[kargoapi.AnnotationKeyRollback] = kargoapi.AnnotationValueTrue
 }
 
 func (w *webhook) ValidateCreate(

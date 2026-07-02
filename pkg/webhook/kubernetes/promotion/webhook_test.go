@@ -956,7 +956,7 @@ func Test_webhook_Default(t *testing.T) {
 			},
 		},
 		{
-			name: "stamps hold and rollback intent on non-candidate user promotion",
+			name: "stamps hold intent on non-candidate user promotion",
 			webhook: &webhook{
 				admissionRequestFromContextFn: admission.RequestFromContext,
 				isRequestFromKargoControlplaneFn: func(admission.Request) bool {
@@ -1044,11 +1044,7 @@ func Test_webhook_Default(t *testing.T) {
 					Name: "my-warehouse",
 				}
 				require.Equal(t, origin.String(), promo.Annotations[kargoapi.AnnotationKeyAutoPromotionHold])
-				require.Equal(
-					t,
-					kargoapi.AnnotationValueTrue,
-					promo.Annotations[kargoapi.AnnotationKeyRollback],
-				)
+				require.NotContains(t, promo.Annotations, kargoapi.AnnotationKeyRollback)
 			},
 		},
 		{
