@@ -105,6 +105,12 @@ and the index has had time to catch up.
 
 :::
 
+:::note
+
+Query mode returns at most **30 results**. 
+
+:::
+
 ### Configuration
 
 | Name                    | Type      | Required | Description                                                                                                                                                                                                                                               |
