@@ -131,8 +131,8 @@ func (o *promotionOptions) addFlags(cmd *cobra.Command) {
 		&o.Origin,
 		option.OriginFlag,
 		"",
-		"The origin key (e.g. \"Warehouse/foo\") to promote. The webhook resolves this to the "+
-			"latest available Freight for that origin. Exactly one of --freight, --freight-alias, or --origin must be set.",
+		"The origin (e.g. \"Warehouse/foo\") whose latest available Freight should be promoted. "+
+			"Exactly one of --freight, --freight-alias, or --origin must be set.",
 	)
 	option.Name(cmd.Flags(), &o.Promotion, "The name of a promotion. Only used when aborting a promotion.")
 	option.Stage(
