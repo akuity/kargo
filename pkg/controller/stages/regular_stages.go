@@ -806,7 +806,7 @@ func syncAutoPromotionHolds(
 			continue
 		}
 		hasHold := promo.Annotations[kargoapi.AnnotationKeyAutoPromotionHold] != ""
-		hasRelease := promo.Annotations[kargoapi.AnnotationKeyAutoPromotionRelease] != ""
+		hasRelease := promo.Annotations[kargoapi.AnnotationKeyAutoPromotionResume] != ""
 		if !hasHold && !hasRelease {
 			continue
 		}
@@ -858,7 +858,7 @@ func syncAutoPromotionHolds(
 				hold.CreatedAt = &t
 			}
 			status.AutoPromotionHolds[originKey] = hold
-		} else if originKey := promo.Annotations[kargoapi.AnnotationKeyAutoPromotionRelease]; originKey != "" {
+		} else if originKey := promo.Annotations[kargoapi.AnnotationKeyAutoPromotionResume]; originKey != "" {
 			delete(status.AutoPromotionHolds, originKey)
 		}
 	}

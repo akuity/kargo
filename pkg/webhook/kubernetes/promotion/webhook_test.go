@@ -552,7 +552,7 @@ func Test_webhook_Default(t *testing.T) {
 			promotion: &kargoapi.Promotion{
 				ObjectMeta: metav1.ObjectMeta{
 					Annotations: map[string]string{
-						kargoapi.AnnotationKeyAutoPromotionRelease: "Warehouse/injected",
+						kargoapi.AnnotationKeyAutoPromotionResume: "Warehouse/injected",
 					},
 				},
 				Spec: kargoapi.PromotionSpec{
@@ -566,7 +566,7 @@ func Test_webhook_Default(t *testing.T) {
 					"Warehouse/original",
 					promotion.Annotations[kargoapi.AnnotationKeyAutoPromotionHold],
 				)
-				require.NotContains(t, promotion.Annotations, kargoapi.AnnotationKeyAutoPromotionRelease)
+				require.NotContains(t, promotion.Annotations, kargoapi.AnnotationKeyAutoPromotionResume)
 			},
 		},
 		{
@@ -1084,7 +1084,7 @@ func Test_webhook_Default(t *testing.T) {
 				ObjectMeta: metav1.ObjectMeta{
 					Annotations: map[string]string{
 						kargoapi.AnnotationKeyAutoPromotionHold:    "Warehouse/my-warehouse",
-						kargoapi.AnnotationKeyAutoPromotionRelease: "Warehouse/my-warehouse",
+						kargoapi.AnnotationKeyAutoPromotionResume: "Warehouse/my-warehouse",
 					},
 				},
 				Spec: kargoapi.PromotionSpec{
@@ -1096,7 +1096,7 @@ func Test_webhook_Default(t *testing.T) {
 			assertions: func(t *testing.T, promo *kargoapi.Promotion, err error) {
 				require.NoError(t, err)
 				require.NotContains(t, promo.Annotations, kargoapi.AnnotationKeyAutoPromotionHold)
-				require.NotContains(t, promo.Annotations, kargoapi.AnnotationKeyAutoPromotionRelease)
+				require.NotContains(t, promo.Annotations, kargoapi.AnnotationKeyAutoPromotionResume)
 			},
 		},
 		{
@@ -1151,7 +1151,7 @@ func Test_webhook_Default(t *testing.T) {
 			assertions: func(t *testing.T, promo *kargoapi.Promotion, err error) {
 				require.NoError(t, err)
 				require.NotContains(t, promo.Annotations, kargoapi.AnnotationKeyAutoPromotionHold)
-				require.NotContains(t, promo.Annotations, kargoapi.AnnotationKeyAutoPromotionRelease)
+				require.NotContains(t, promo.Annotations, kargoapi.AnnotationKeyAutoPromotionResume)
 				require.NotContains(t, promo.Annotations, kargoapi.AnnotationKeyRollback)
 			},
 		},
@@ -1230,7 +1230,7 @@ func Test_webhook_Default(t *testing.T) {
 				ObjectMeta: metav1.ObjectMeta{
 					Annotations: map[string]string{
 						kargoapi.AnnotationKeyCreateActor:          "real-user",
-						kargoapi.AnnotationKeyAutoPromotionRelease: "Warehouse/my-warehouse",
+						kargoapi.AnnotationKeyAutoPromotionResume: "Warehouse/my-warehouse",
 					},
 				},
 				Spec: kargoapi.PromotionSpec{
@@ -1241,7 +1241,7 @@ func Test_webhook_Default(t *testing.T) {
 			},
 			assertions: func(t *testing.T, promo *kargoapi.Promotion, err error) {
 				require.NoError(t, err)
-				require.Contains(t, promo.Annotations, kargoapi.AnnotationKeyAutoPromotionRelease)
+				require.Contains(t, promo.Annotations, kargoapi.AnnotationKeyAutoPromotionResume)
 				require.NotContains(t, promo.Annotations, kargoapi.AnnotationKeyAutoPromotionHold)
 			},
 		},
@@ -1321,7 +1321,7 @@ func Test_webhook_Default(t *testing.T) {
 			},
 			assertions: func(t *testing.T, promo *kargoapi.Promotion, err error) {
 				require.NoError(t, err)
-				require.NotContains(t, promo.Annotations, kargoapi.AnnotationKeyAutoPromotionRelease)
+				require.NotContains(t, promo.Annotations, kargoapi.AnnotationKeyAutoPromotionResume)
 				require.NotContains(t, promo.Annotations, kargoapi.AnnotationKeyAutoPromotionHold)
 			},
 		},

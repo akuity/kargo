@@ -13,12 +13,12 @@ const (
 	// "Warehouse/foo").
 	AnnotationKeyAutoPromotionHold = "kargo.akuity.io/auto-promotion-hold"
 
-	// AnnotationKeyAutoPromotionRelease is an annotation key set on a
+	// AnnotationKeyAutoPromotionResume is an annotation key set on a
 	// Promotion when the promoted Freight is the current auto-promotion candidate
 	// for that origin. The Stage controller uses a succeeded Promotion with this
 	// annotation to clear an active hold for the origin. The value is the
 	// canonical origin key (e.g. "Warehouse/foo").
-	AnnotationKeyAutoPromotionRelease = "kargo.akuity.io/auto-promotion-release"
+	AnnotationKeyAutoPromotionResume = "kargo.akuity.io/auto-promotion-resume"
 
 	// AnnotationKeyRefresh is an annotation key that can be set on a resource
 	// to trigger a refresh of the resource by the controller. The value of the

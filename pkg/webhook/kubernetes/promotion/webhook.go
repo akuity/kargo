@@ -243,7 +243,7 @@ func (w *webhook) Default(ctx context.Context, obj runtime.Object) error {
 		// (auto-promotion loop, rollback controller) since they carry no user
 		// intent to establish or release a hold.
 		delete(promo.Annotations, kargoapi.AnnotationKeyAutoPromotionHold)
-		delete(promo.Annotations, kargoapi.AnnotationKeyAutoPromotionRelease)
+		delete(promo.Annotations, kargoapi.AnnotationKeyAutoPromotionResume)
 		if !w.isRequestFromKargoControlplaneFn(req) {
 			w.stampIntentAnnotations(ctx, promo, stage)
 		}
@@ -267,7 +267,7 @@ func (w *webhook) Default(ctx context.Context, obj runtime.Object) error {
 		}
 		preserveAnnotation(kargoapi.AnnotationKeyCreateActor)
 		preserveAnnotation(kargoapi.AnnotationKeyAutoPromotionHold)
-		preserveAnnotation(kargoapi.AnnotationKeyAutoPromotionRelease)
+		preserveAnnotation(kargoapi.AnnotationKeyAutoPromotionResume)
 
 		// Enrich the annotation with the actor and control plane information.
 		w.setAbortAnnotationActor(req, oldPromo, promo)
@@ -392,10 +392,10 @@ func (w *webhook) stampIntentAnnotations(
 		return
 	}
 	if candidate.Name == promo.Spec.Freight {
-		// Promoted Freight is the candidate; stamp release intent. The Stage
-		// controller clears any active hold for this origin when a succeeded
+		// Promoted Freight is the candidate; stamp resume intent. The Stage
+		// controller resumes auto-promotion for this origin when a succeeded
 		// Promotion carries this annotation.
-		api.SetAutoPromotionReleaseAnnotation(promo, origin)
+		api.SetAutoPromotionResumeAnnotation(promo, origin)
 		return
 	}
 	// Promoted Freight is not the candidate; stamp hold intent. Also stamp the
@@ -518,7 +518,7 @@ func (w *webhook) ValidateUpdate(
 
 	for _, key := range []string{
 		kargoapi.AnnotationKeyAutoPromotionHold,
-		kargoapi.AnnotationKeyAutoPromotionRelease,
+		kargoapi.AnnotationKeyAutoPromotionResume,
 	} {
 		if promo.Annotations[key] == oldPromo.Annotations[key] {
 			continue

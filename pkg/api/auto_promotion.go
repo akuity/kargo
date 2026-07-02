@@ -139,18 +139,18 @@ func SetAutoPromotionHoldAnnotation(promo *kargoapi.Promotion, origin kargoapi.F
 	if promo.Annotations == nil {
 		promo.Annotations = make(map[string]string, 1)
 	}
-	delete(promo.Annotations, kargoapi.AnnotationKeyAutoPromotionRelease)
+	delete(promo.Annotations, kargoapi.AnnotationKeyAutoPromotionResume)
 	promo.Annotations[kargoapi.AnnotationKeyAutoPromotionHold] = origin.String()
 }
 
-// SetAutoPromotionReleaseAnnotation stamps promo with
-// AnnotationKeyAutoPromotionRelease set to origin's canonical key. The Stage
-// controller reads a succeeded Promotion carrying this annotation to clear any
-// active hold for that origin.
-func SetAutoPromotionReleaseAnnotation(promo *kargoapi.Promotion, origin kargoapi.FreightOrigin) {
+// SetAutoPromotionResumeAnnotation stamps promo with
+// AnnotationKeyAutoPromotionResume set to origin's canonical key. The Stage
+// controller reads a succeeded Promotion carrying this annotation to resume
+// auto-promotion for that origin by clearing any active hold.
+func SetAutoPromotionResumeAnnotation(promo *kargoapi.Promotion, origin kargoapi.FreightOrigin) {
 	if promo.Annotations == nil {
 		promo.Annotations = make(map[string]string, 1)
 	}
 	delete(promo.Annotations, kargoapi.AnnotationKeyAutoPromotionHold)
-	promo.Annotations[kargoapi.AnnotationKeyAutoPromotionRelease] = origin.String()
+	promo.Annotations[kargoapi.AnnotationKeyAutoPromotionResume] = origin.String()
 }

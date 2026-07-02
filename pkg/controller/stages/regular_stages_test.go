@@ -669,7 +669,7 @@ func TestRegularStagesReconciler_reconcile(t *testing.T) {
 // releaseHoldAnnotations returns the annotations set on a release-intent Promotion.
 func releaseHoldAnnotations(origin kargoapi.FreightOrigin) map[string]string {
 	promo := &kargoapi.Promotion{}
-	api.SetAutoPromotionReleaseAnnotation(promo, origin)
+	api.SetAutoPromotionResumeAnnotation(promo, origin)
 	return promo.Annotations
 }
 
