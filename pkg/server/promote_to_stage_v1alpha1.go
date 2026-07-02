@@ -264,7 +264,7 @@ func (s *server) promoteToStage(c *gin.Context) {
 			api.SetCreateActorAnnotation(promotion, api.FormatEventUserActor(u))
 		}
 		if err = s.createPromotionFn(ctx, promotion); err != nil {
-			_ = c.Error(createPromotionError(err))
+			_ = c.Error(err)
 			return
 		}
 		s.recordResolvedPromotionCreatedEvent(ctx, promotion)
@@ -327,7 +327,7 @@ func (s *server) promoteToStage(c *gin.Context) {
 	}
 
 	if err := s.createPromotionFn(ctx, promotion); err != nil {
-		_ = c.Error(createPromotionError(err))
+		_ = c.Error(err)
 		return
 	}
 
@@ -339,14 +339,12 @@ func (s *server) promoteToStage(c *gin.Context) {
 }
 
 // recordResolvedPromotionCreatedEvent records the normal PromotionCreated event
-// after admission has resolved spec.origin to spec.freight. If admission has
-// not resolved the Promotion yet, there is no Freight object to attach, so event
-// recording is skipped instead of blocking the request.
+// after admission has resolved spec.origin to spec.freight.
 func (s *server) recordResolvedPromotionCreatedEvent(
 	ctx context.Context,
 	promotion *kargoapi.Promotion,
 ) {
-	if s.sender == nil || promotion.Spec.Freight == "" {
+	if s.sender == nil {
 		return
 	}
 	freight := &kargoapi.Freight{}
@@ -364,12 +362,3 @@ func (s *server) recordResolvedPromotionCreatedEvent(
 	s.recordPromotionCreatedEvent(ctx, promotion, freight)
 }
 
-func createPromotionError(err error) error {
-	var statusErr *apierrors.StatusError
-	if errors.As(err, &statusErr) {
-		status := statusErr.ErrStatus
-		status.Message = fmt.Sprintf("create promotion: %s", status.Message)
-		return &apierrors.StatusError{ErrStatus: status}
-	}
-	return apierrors.NewInternalError(fmt.Errorf("create promotion: %w", err))
-}
