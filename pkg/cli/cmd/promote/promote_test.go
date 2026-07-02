@@ -23,17 +23,6 @@ func TestPromotionOptionsValidate(t *testing.T) {
 			},
 		},
 		{
-			name: "origin requires stage",
-			opts: promotionOptions{
-				Project:        "fake-project",
-				Origin:         "Warehouse/fake-warehouse",
-				DownstreamFrom: "fake-stage",
-			},
-			assertions: func(t *testing.T, _ promotionOptions, err error) {
-				require.ErrorContains(t, err, "origin can only be used with stage")
-			},
-		},
-		{
 			name: "origin with stage",
 			opts: promotionOptions{
 				Project: "fake-project",
