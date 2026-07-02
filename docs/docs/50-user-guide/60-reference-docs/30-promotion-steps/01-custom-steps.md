@@ -271,11 +271,11 @@ is given a bootstrap token and a local HTTP endpoint it can use to look up crede
 given repository URL, backed by the same credential resolution used by built-in steps such as
 `git-clone` and `git-push`. This means a Git credential Secret configured for a
 [GitHub App](../../50-security/30-managing-secrets.md) is resolved the same way for a custom
-step as it would be for a built-in one -- the response already contains a live, short-lived
-installation access token, so the step does not need to perform its own App-to-token exchange.
+step as it would be for a built-in one, so the response already contains a live, short-lived
+installation access token, and the step does not need to perform its own App-to-token exchange.
 
 The credential lookup checks for a matching Secret in the promotion's own Project namespace
-first, then falls back to the shared credentials namespace configured by the operator (if any).
+first, then falls back to the shared resources namespace configured by the operator (if any).
 
 :::info
 
@@ -323,7 +323,7 @@ endpoint responds with `404 Not Found`.
 
 :::warning
 
-There is no built-in helper for this exchange yet -- the bootstrap-to-session exchange and the
+There is no built-in helper for this exchange yet. The bootstrap-to-session exchange and the
 credentials lookup must currently be scripted by the `command`, as shown above.
 
 :::
