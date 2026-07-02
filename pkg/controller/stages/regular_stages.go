@@ -1957,9 +1957,6 @@ func (r *RegularStageReconciler) autoPromoteFreight(
 		// minimal Promotion. The defaulting webhook fills in the rest from the
 		// Stage's PromotionTemplate.
 		promotion := api.NewMinimalPromotion(stage, latestFreight.Name)
-		promotion.Annotations = map[string]string{
-			kargoapi.AnnotationKeyStageAutoPromotion: kargoapi.AnnotationValueTrue,
-		}
 		if err = r.client.Create(ctx, promotion); err != nil {
 			return newStatus, fmt.Errorf(
 				"error creating Promotion for Freight %q in namespace %q: %w",

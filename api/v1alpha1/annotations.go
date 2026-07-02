@@ -20,12 +20,6 @@ const (
 	// canonical origin key (e.g. "Warehouse/foo").
 	AnnotationKeyAutoPromotionRelease = "kargo.akuity.io/auto-promotion-release"
 
-	// AnnotationKeyStageAutoPromotion is an annotation key set on Promotions
-	// created by the Stage controller's auto-promotion loop. The Promotion
-	// webhook uses it to avoid stamping hold or release intent on Kargo's own
-	// auto-promotions.
-	AnnotationKeyStageAutoPromotion = "kargo.akuity.io/stage-auto-promotion"
-
 	// AnnotationKeyRefresh is an annotation key that can be set on a resource
 	// to trigger a refresh of the resource by the controller. The value of the
 	// annotation is interpreted as a token, and any change to the value of the

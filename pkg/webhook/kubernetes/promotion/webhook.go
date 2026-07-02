@@ -203,7 +203,6 @@ func (w *webhook) Default(ctx context.Context, obj runtime.Object) error {
 		// created to allow controllers to track who created it.
 		if !w.isRequestFromKargoControlplaneFn(req) {
 			promo.Annotations[kargoapi.AnnotationKeyCreateActor] = api.FormatEventKubernetesUserActor(req.UserInfo)
-			delete(promo.Annotations, kargoapi.AnnotationKeyStageAutoPromotion)
 		}
 
 		// Enrich the annotation with the actor and control plane information.
@@ -243,13 +242,12 @@ func (w *webhook) Default(ctx context.Context, obj runtime.Object) error {
 		}
 
 		// Stamp intent annotations on created Promotions so the Stage controller
-		// can maintain auto-promotion holds. Skip only Kargo's own Stage
-		// auto-promotions; other controller-created Promotions can still represent
-		// a deliberate choice of Freight.
+		// can maintain auto-promotion holds. Skip system-generated Promotions
+		// (auto-promotion loop, rollback controller) since they carry no user
+		// intent to establish or release a hold.
 		delete(promo.Annotations, kargoapi.AnnotationKeyAutoPromotionHold)
 		delete(promo.Annotations, kargoapi.AnnotationKeyAutoPromotionRelease)
-		if promo.Annotations[kargoapi.AnnotationKeyStageAutoPromotion] !=
-			kargoapi.AnnotationValueTrue {
+		if !w.isRequestFromKargoControlplaneFn(req) {
 			w.stampIntentAnnotations(ctx, promo, stage)
 		}
 	case admissionv1.Update:
@@ -271,7 +269,6 @@ func (w *webhook) Default(ctx context.Context, obj runtime.Object) error {
 			delete(promo.Annotations, key)
 		}
 		preserveAnnotation(kargoapi.AnnotationKeyCreateActor)
-		preserveAnnotation(kargoapi.AnnotationKeyStageAutoPromotion)
 		preserveAnnotation(kargoapi.AnnotationKeyAutoPromotionHold)
 		preserveAnnotation(kargoapi.AnnotationKeyAutoPromotionRelease)
 
@@ -523,7 +520,6 @@ func (w *webhook) ValidateUpdate(
 	}
 
 	for _, key := range []string{
-		kargoapi.AnnotationKeyStageAutoPromotion,
 		kargoapi.AnnotationKeyAutoPromotionHold,
 		kargoapi.AnnotationKeyAutoPromotionRelease,
 	} {

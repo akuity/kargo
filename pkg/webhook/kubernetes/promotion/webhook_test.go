@@ -542,8 +542,7 @@ func Test_webhook_Default(t *testing.T) {
 						Object: &kargoapi.Promotion{
 							ObjectMeta: metav1.ObjectMeta{
 								Annotations: map[string]string{
-									kargoapi.AnnotationKeyStageAutoPromotion: "true",
-									kargoapi.AnnotationKeyAutoPromotionHold:  "Warehouse/original",
+									kargoapi.AnnotationKeyAutoPromotionHold: "Warehouse/original",
 								},
 							},
 						},
@@ -553,7 +552,6 @@ func Test_webhook_Default(t *testing.T) {
 			promotion: &kargoapi.Promotion{
 				ObjectMeta: metav1.ObjectMeta{
 					Annotations: map[string]string{
-						kargoapi.AnnotationKeyStageAutoPromotion:   "false",
 						kargoapi.AnnotationKeyAutoPromotionRelease: "Warehouse/injected",
 					},
 				},
@@ -567,11 +565,6 @@ func Test_webhook_Default(t *testing.T) {
 					t,
 					"Warehouse/original",
 					promotion.Annotations[kargoapi.AnnotationKeyAutoPromotionHold],
-				)
-				require.Equal(
-					t,
-					kargoapi.AnnotationValueTrue,
-					promotion.Annotations[kargoapi.AnnotationKeyStageAutoPromotion],
 				)
 				require.NotContains(t, promotion.Annotations, kargoapi.AnnotationKeyAutoPromotionRelease)
 			},
@@ -1059,7 +1052,7 @@ func Test_webhook_Default(t *testing.T) {
 			},
 		},
 		{
-			name: "stamps no intent annotation on marked stage auto-promotion",
+			name: "stamps no intent annotation on control plane promotion",
 			webhook: &webhook{
 				admissionRequestFromContextFn: admission.RequestFromContext,
 				isRequestFromKargoControlplaneFn: func(admission.Request) bool {
@@ -1090,7 +1083,6 @@ func Test_webhook_Default(t *testing.T) {
 			promotion: &kargoapi.Promotion{
 				ObjectMeta: metav1.ObjectMeta{
 					Annotations: map[string]string{
-						kargoapi.AnnotationKeyStageAutoPromotion:   kargoapi.AnnotationValueTrue,
 						kargoapi.AnnotationKeyAutoPromotionHold:    "Warehouse/my-warehouse",
 						kargoapi.AnnotationKeyAutoPromotionRelease: "Warehouse/my-warehouse",
 					},
@@ -1105,11 +1097,6 @@ func Test_webhook_Default(t *testing.T) {
 				require.NoError(t, err)
 				require.NotContains(t, promo.Annotations, kargoapi.AnnotationKeyAutoPromotionHold)
 				require.NotContains(t, promo.Annotations, kargoapi.AnnotationKeyAutoPromotionRelease)
-				require.Equal(
-					t,
-					kargoapi.AnnotationValueTrue,
-					promo.Annotations[kargoapi.AnnotationKeyStageAutoPromotion],
-				)
 			},
 		},
 		{
@@ -1151,9 +1138,8 @@ func Test_webhook_Default(t *testing.T) {
 			promotion: &kargoapi.Promotion{
 				ObjectMeta: metav1.ObjectMeta{
 					Annotations: map[string]string{
-						kargoapi.AnnotationKeyCreateActor:        "real-user",
-						kargoapi.AnnotationKeyStageAutoPromotion: kargoapi.AnnotationValueTrue,
-						kargoapi.AnnotationKeyAutoPromotionHold:  "Warehouse/my-warehouse",
+						kargoapi.AnnotationKeyCreateActor:       "real-user",
+						kargoapi.AnnotationKeyAutoPromotionHold: "Warehouse/my-warehouse",
 					},
 				},
 				Spec: kargoapi.PromotionSpec{
@@ -1167,7 +1153,6 @@ func Test_webhook_Default(t *testing.T) {
 				require.NotContains(t, promo.Annotations, kargoapi.AnnotationKeyAutoPromotionHold)
 				require.NotContains(t, promo.Annotations, kargoapi.AnnotationKeyAutoPromotionRelease)
 				require.NotContains(t, promo.Annotations, kargoapi.AnnotationKeyRollback)
-				require.NotContains(t, promo.Annotations, kargoapi.AnnotationKeyStageAutoPromotion)
 			},
 		},
 		{
@@ -1822,36 +1807,6 @@ func Test_webhook_ValidateUpdate(t *testing.T) {
 				newPromo.Annotations = map[string]string{
 					kargoapi.AnnotationKeyAutoPromotionHold: "Warehouse/fake-warehouse",
 				}
-				return oldPromo, newPromo
-			},
-			authorizeFn: func(context.Context, *kargoapi.Promotion, string) error {
-				return nil
-			},
-			assertions: func(t *testing.T, err error) {
-				var statusErr *apierrors.StatusError
-				require.True(t, errors.As(err, &statusErr))
-				require.Equal(t, metav1.StatusReasonInvalid, statusErr.ErrStatus.Reason)
-				require.Contains(t, statusErr.ErrStatus.Message, "annotation is immutable")
-			},
-		},
-		{
-			name: "attempt to mutate stage auto-promotion marker",
-			setup: func() (*kargoapi.Promotion, *kargoapi.Promotion) {
-				oldPromo := &kargoapi.Promotion{
-					ObjectMeta: metav1.ObjectMeta{
-						Name:      "fake-name",
-						Namespace: "fake-namespace",
-						Annotations: map[string]string{
-							kargoapi.AnnotationKeyStageAutoPromotion: kargoapi.AnnotationValueTrue,
-						},
-					},
-					Spec: kargoapi.PromotionSpec{
-						Stage:   "fake-stage",
-						Freight: "fake-freight",
-					},
-				}
-				newPromo := oldPromo.DeepCopy()
-				delete(newPromo.Annotations, kargoapi.AnnotationKeyStageAutoPromotion)
 				return oldPromo, newPromo
 			},
 			authorizeFn: func(context.Context, *kargoapi.Promotion, string) error {
