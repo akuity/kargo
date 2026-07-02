@@ -275,27 +275,13 @@ func ParseFreightOriginKey(key string) (FreightOrigin, error) {
 	if !ok || strings.Contains(name, "/") {
 		return FreightOrigin{}, fmt.Errorf("invalid Freight origin key %q", key)
 	}
-
-	origin := FreightOrigin{Kind: FreightOriginKind(kind), Name: name}
-	if err := origin.Validate(); err != nil {
-		return FreightOrigin{}, fmt.Errorf("invalid freight origin: %w", err)
+	if FreightOriginKind(kind) != FreightOriginKindWarehouse {
+		return FreightOrigin{}, fmt.Errorf("invalid Freight origin kind %q", kind)
 	}
-	return origin, nil
-}
-
-// Validate returns an error if the FreightOrigin is nil, has an unsupported
-// kind, or has an empty name.
-func (f *FreightOrigin) Validate() error {
-	if f == nil {
-		return errors.New("Freight origin must not be nil")
+	if name == "" {
+		return FreightOrigin{}, errors.New("Freight origin name must not be empty")
 	}
-	if f.Kind != FreightOriginKindWarehouse {
-		return fmt.Errorf("invalid Freight origin kind %q", f.Kind)
-	}
-	if f.Name == "" {
-		return errors.New("Freight origin name must not be empty")
-	}
-	return nil
+	return FreightOrigin{Kind: FreightOriginKind(kind), Name: name}, nil
 }
 
 func (f *FreightOrigin) Equals(other *FreightOrigin) bool {

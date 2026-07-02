@@ -984,54 +984,6 @@ func TestFreightOrigin_String(t *testing.T) {
 	require.Empty(t, (*FreightOrigin)(nil).String())
 }
 
-func TestFreightOrigin_Validate(t *testing.T) {
-	testCases := []struct {
-		name      string
-		origin    *FreightOrigin
-		expectErr string
-	}{
-		{
-			name: "valid warehouse origin",
-			origin: &FreightOrigin{
-				Kind: FreightOriginKindWarehouse,
-				Name: "fake-warehouse",
-			},
-		},
-		{
-			name:      "empty kind",
-			origin:    &FreightOrigin{Name: "fake-warehouse"},
-			expectErr: "invalid Freight origin kind",
-		},
-		{
-			name: "unsupported kind",
-			origin: &FreightOrigin{
-				Kind: FreightOriginKind("Stage"),
-				Name: "fake-stage",
-			},
-			expectErr: "invalid Freight origin kind",
-		},
-		{
-			name:      "empty name",
-			origin:    &FreightOrigin{Kind: FreightOriginKindWarehouse},
-			expectErr: "name must not be empty",
-		},
-		{
-			name:      "nil origin",
-			expectErr: "must not be nil",
-		},
-	}
-
-	for _, testCase := range testCases {
-		t.Run(testCase.name, func(t *testing.T) {
-			err := testCase.origin.Validate()
-			if testCase.expectErr != "" {
-				require.ErrorContains(t, err, testCase.expectErr)
-				return
-			}
-			require.NoError(t, err)
-		})
-	}
-}
 
 func TestParseFreightOriginKey(t *testing.T) {
 	testCases := []struct {
