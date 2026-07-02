@@ -199,10 +199,9 @@ func (w *webhook) Default(ctx context.Context, obj runtime.Object) error {
 			promo.Name = api.GeneratePromotionName(stage.Name, promo.Spec.Freight)
 		}
 
-		requestFromControlPlane := w.isRequestFromKargoControlplaneFn(req)
 		// Set actor as an admission request's user info when the promotion is
 		// created to allow controllers to track who created it.
-		if !requestFromControlPlane {
+		if !w.isRequestFromKargoControlplaneFn(req) {
 			promo.Annotations[kargoapi.AnnotationKeyCreateActor] = api.FormatEventKubernetesUserActor(req.UserInfo)
 			delete(promo.Annotations, kargoapi.AnnotationKeyStageAutoPromotion)
 		}

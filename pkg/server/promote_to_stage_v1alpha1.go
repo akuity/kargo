@@ -261,9 +261,7 @@ func (s *server) promoteToStage(c *gin.Context) {
 		}
 		promotion := api.NewMinimalPromotionForOrigin(stage, origin)
 		if u, ok := user.InfoFromContext(ctx); ok {
-			promotion.Annotations = map[string]string{
-				kargoapi.AnnotationKeyCreateActor: api.FormatEventUserActor(u),
-			}
+			api.SetCreateActorAnnotation(promotion, api.FormatEventUserActor(u))
 		}
 		if err = s.createPromotionFn(ctx, promotion); err != nil {
 			_ = c.Error(createPromotionError(err))
