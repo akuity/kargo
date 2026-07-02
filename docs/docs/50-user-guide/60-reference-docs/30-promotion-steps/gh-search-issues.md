@@ -47,7 +47,7 @@ Both modes return the same output shape:
 
 | Name     | Type           | Description                                                                                                                    |
 | -------- | -------------- | ------------------------------------------------------------------------------------------------------------------------------ |
-| `issues` | `[]object`     | Array of matching issues. Each object contains `number` (int), `title`, `body`, `state`, `labels` ([]string), `assignees` ([]string), and `url`. |
+| `issues` | `[]object`     | Array of matching issues. Each object contains `number` (integer), `title`, `body`, `state`, `labels` ([]string), `assignees` ([]string), and `url`. |
 
 ---
 

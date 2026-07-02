@@ -93,7 +93,7 @@ steps:
 
 ### Comment on a pull request
 
-Posts a deployment status comment directly on the PR that triggered the
+Posts a promotion status comment directly on the PR that triggered the
 promotion. The PR number is stored in freight metadata by an upstream step:
 
 ```yaml
@@ -103,5 +103,5 @@ steps:
     repoURL: https://github.com/myorg/myrepo
     issueNumber: ${{ freightMetadata(ctx.targetFreight.name)['github-pr-number'] }}
     body: |
-      Deployed to **${{ ctx.stage }}** successfully.
+      Promoted to **${{ ctx.stage }}** successfully.
 ```

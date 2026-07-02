@@ -47,7 +47,7 @@ The GitHub token must have **Issues: Read and write** access for the repository
 | `title`                 | `string`   | Y        | The title of the issue.                                                                                                                                 |
 | `body`                  | `string`   | N        | The body text of the issue. Supports GitHub Flavored Markdown.                                                                                          |
 | `labels`                | `[]string` | N        | Labels to apply to the issue. Labels must already exist in the repository.                                                                              |
-| `assignees`             | `[]string` | N        | GitHub usernames to assign to the issue.                                                                                                                |
+| `assignees`             | `[]string` | N        | GitHub usernames to assign to the issue. GitHub allows a maximum of 10 assignees per issue; entries beyond 10 are silently ignored.                     |
 | `issueAlias`            | `string`   | N        | Override for the Freight metadata key used to store the created issue number. Defaults to `github-issue-number`. See [Issue Alias](#issue-alias).       |
 
 ## Output

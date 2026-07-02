@@ -14,8 +14,9 @@ This promotion step is only available in Kargo on the
 :::
 
 The `gh-issue-update-comment` step replaces the body of an existing comment on a
-GitHub issue or pull request. The `commentID` must come from a previous
-[`gh-issue-add-comment`](./gh-issue-add-comment.md) step in the same stage.
+GitHub issue or pull request. The `commentID` is typically sourced from a
+[`gh-issue-add-comment`](./gh-issue-add-comment.md) step output in the same
+stage, but any valid GitHub comment ID may be provided.
 
 GitHub Issues integration for Kargo is a group of promotion steps:
 
@@ -44,7 +45,7 @@ The GitHub token must have **Issues: Read and write** access for the repository
 | ----------------------- | --------- | -------- | ------------------------------------------------------------------------------------------------------------------------------------------------------- |
 | `repoURL`               | `string`  | Y        | The URL of the GitHub repository (e.g. `https://github.com/owner/repo`).                                                                               |
 | `insecureSkipTLSVerify` | `boolean` | N        | If `true`, TLS verification of the GitHub server certificate is skipped. Use only for GitHub Enterprise Server instances with self-signed certificates. |
-| `commentID`             | `integer` | Y        | The ID of the comment to update, as returned by `gh-issue-add-comment`.                                                                                      |
+| `commentID`             | `integer` | Y        | The ID of the comment to update. Typically from `gh-issue-add-comment` output, but any valid GitHub comment ID may be provided.                               |
 | `body`                  | `string`  | Y        | The new body text of the comment. Replaces the existing body. Supports GitHub Flavored Markdown.                                                        |
 
 ## Output

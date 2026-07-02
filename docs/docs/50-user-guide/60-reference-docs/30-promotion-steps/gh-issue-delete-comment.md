@@ -15,8 +15,8 @@ This promotion step is only available in Kargo on the
 
 The `gh-issue-delete-comment` step removes a comment from a GitHub issue or pull
 request. It is typically used in `if: ${{ failure() }}` cleanup steps to remove
-progress comments that were posted by an earlier
-[`gh-issue-add-comment`](./gh-issue-add-comment.md) step in the same stage.
+progress comments posted by a [`gh-issue-add-comment`](./gh-issue-add-comment.md)
+step, but any valid GitHub comment ID may be provided.
 
 GitHub Issues integration for Kargo is a group of promotion steps:
 
@@ -45,7 +45,7 @@ The GitHub token must have **Issues: Read and write** access for the repository
 | ----------------------- | --------- | -------- | ------------------------------------------------------------------------------------------------------------------------------------------------------- |
 | `repoURL`               | `string`  | Y        | The URL of the GitHub repository (e.g. `https://github.com/owner/repo`).                                                                               |
 | `insecureSkipTLSVerify` | `boolean` | N        | If `true`, TLS verification of the GitHub server certificate is skipped. Use only for GitHub Enterprise Server instances with self-signed certificates. |
-| `commentID`             | `integer` | Y        | The ID of the comment to delete, as returned by `gh-issue-add-comment`.                                                                                      |
+| `commentID`             | `integer` | Y        | The ID of the comment to delete. Typically from `gh-issue-add-comment` output, but any valid GitHub comment ID may be provided.                               |
 
 ## Output
 

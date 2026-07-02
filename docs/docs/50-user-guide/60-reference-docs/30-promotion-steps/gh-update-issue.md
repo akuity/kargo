@@ -51,13 +51,13 @@ The GitHub token must have **Issues: Read and write** access for the repository
 | `state`                 | `string`   | N        | Set the issue state to `open` or `closed`.                                                                                                              |
 | `addLabels`             | `[]string` | N        | Labels to add to the issue. Labels must already exist in the repository.                                                                                |
 | `removeLabels`          | `[]string` | N        | Labels to remove from the issue. Pass `["*"]` to remove all existing labels (any other entries in the list are ignored when `"*"` is present).          |
-| `assignees`             | `[]string` | N        | Replace the issue's assignee list with these GitHub usernames. Pass an empty list to remove all assignees.                                              |
+| `assignees`             | `[]string` | N        | Replace the issue's assignee list with these GitHub usernames. Pass an empty list to remove all assignees. GitHub allows a maximum of 10 assignees per issue; entries beyond 10 are silently ignored. |
 
 :::info
 
 `addLabels` and `removeLabels` are computed against the issue's current label
 set, so they can be used together safely. If the same label appears in both
-lists, the remove takes precedence. Pass `["*"]` in `removeLabels` to clear all
+lists, the add takes precedence. Pass `["*"]` in `removeLabels` to clear all
 existing labels; any labels in `addLabels` are then applied on top of the empty
 set.
 
