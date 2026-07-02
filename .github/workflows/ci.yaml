@@ -109,7 +109,7 @@ jobs:
         path: |
           hack/bin/golangci-lint
           hack/bin/golangci-lint-*
-        key: ${{ runner.os }}-golangci-lint-${{ hashFiles('hack/tools/go.mod') }}
+        key: ${{ runner.os }}-golangci-lint-${{ hashFiles('hack/tools.mk') }}
     - name: Install golangci-lint
       if: steps.cache-golangci-lint.outputs.cache-hit != 'true'
       run: make install-golangci-lint
@@ -138,7 +138,7 @@ jobs:
           hack/bin/helm
           hack/bin/helm-*
         key:
-          ${{ runner.os }}-helm-${{ hashFiles('hack/tools/go.mod') }}
+          ${{ runner.os }}-helm-${{ hashFiles('go.mod', 'hack/tools.mk') }}
     - name: Install helm
       if: steps.cache-helm.outputs.cache-hit != 'true'
       run: make install-helm
@@ -165,7 +165,7 @@ jobs:
           hack/bin/helm
           hack/bin/helm-*
         key:
-          ${{ runner.os }}-helm-${{ hashFiles('hack/tools/go.mod') }}
+          ${{ runner.os }}-helm-${{ hashFiles('go.mod', 'hack/tools.mk') }}
     - name: Install helm
       if: steps.cache-helm.outputs.cache-hit != 'true'
       run: make install-helm
@@ -199,17 +199,11 @@ jobs:
 
     - name: Checkout code
       uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7.0.0
-    - name: Cache buf
-      id: cache-buf
+    - name: Cache Go modules
       uses: actions/cache@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
       with:
-        path: |
-          hack/bin/buf
-          hack/bin/buf-*
-        key: ${{ runner.os }}-buf-${{ hashFiles('hack/tools/go.mod') }}
-    - name: Install buf
-      if: steps.cache-buf.outputs.cache-hit != 'true'
-      run: make install-buf
+        path: /go/pkg/mod
+        key: ${{ runner.os }}-go-${{ hashFiles('**/go.sum') }}
     - name: Run linter
       env:
         BUF_LINT_ERROR_FORMAT: github-actions
@@ -253,7 +247,7 @@ jobs:
         path: |
           hack/bin
           hack/include
-        key: ${{ runner.os }}-tools-${{ hashFiles('hack/tools/go.mod', 'hack/tools.mk') }}
+        key: ${{ runner.os }}-tools-${{ hashFiles('hack/tools.mk') }}
     - name: Git stuff
       # As of go 1.20, this seems to be necessary for invoking git commands
       # within the container
