@@ -23,11 +23,11 @@ func TestPromotionOptionsValidate(t *testing.T) {
 			},
 		},
 		{
-			name: "origin with stage",
+			name: "warehouse with stage",
 			opts: promotionOptions{
-				Project: "fake-project",
-				Origin:  "Warehouse/fake-warehouse",
-				Stage:   "fake-stage",
+				Project:   "fake-project",
+				Warehouse: "fake-warehouse",
+				Stage:     "fake-stage",
 			},
 			assertions: func(t *testing.T, _ promotionOptions, err error) {
 				require.NoError(t, err)

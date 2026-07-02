@@ -130,6 +130,10 @@ const (
 	// VerbFlag is the flag name for the verb flag.
 	VerbFlag = "verb"
 
+	// WarehouseFlag is the flag name for the warehouse flag used when promoting
+	// the latest available Freight for a specific Warehouse origin.
+	WarehouseFlag = "warehouse"
+
 	// WaitFlag is the flag name for the wait flag.
 	WaitFlag = "wait"
 )
