@@ -316,9 +316,9 @@ jobs:
         GRYPE_CMD: ${{ steps.grype.outputs.cmd }}
         GRYPE_REGISTRY_INSECURE_USE_HTTP: "true" # job-local registry service
         CRANE_INSECURE: "true" # job-local registry is plain HTTP
+        VEX_IMAGE: kargo-oss # monitored image name for the VEX lookup
         FAIL_ON: "" # report-only; set to "high" to enforce
-      # VEX lookups use the canonical published repo path.
-      run: ./hack/cve-scan.sh "registry:localhost:5000/kargo:scan" "ghcr.io/akuity/kargo"
+      run: ./hack/cve-scan.sh "registry:localhost:5000/kargo:scan"
 
   build-cli:
     needs: [test-unit, lint-go, lint-charts, lint-proto, lint-and-typecheck-ui, check-codegen]
