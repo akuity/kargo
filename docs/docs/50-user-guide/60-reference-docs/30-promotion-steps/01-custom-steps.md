@@ -250,3 +250,80 @@ Kargo steps can have the following capabilities configured:
 
 - `access-control-plane` - allow access to Kargo controlplane via k8s API. `kubeconfig` or `token` (for local in-cluster access) will be provisioned to `coordination/kubernetes/kargo` directory in the container.
 - `access-argocd` - allow access to ArgoCD controlplane via k8s API. `kubeconfig` or `token` (for local in-cluster access) will be provisioned to `coordination/kubernetes/argocd` directory in the container.
+- `access-credentials` - allow the step to look up repository credentials (Git, Helm, or image) the same way built-in steps like `git-clone` do, without having to duplicate a credential Secret as step `config`. See [Accessing repository credentials](#accessing-repository-credentials) below.
+
+```yaml
+apiVersion: ee.kargo.akuity.io/v1alpha1
+kind: CustomPromotionStep
+metadata:
+  name: hello-world
+spec:
+  image: ubuntu
+  command: ["sh", "-c", "..."]
+  capabilities:
+    - access-credentials
+```
+
+### Accessing repository credentials
+
+When a `CustomPromotionStep` requests the `access-credentials` capability, the step container
+is given a bootstrap token and a local HTTP endpoint it can use to look up credentials for a
+given repository URL, backed by the same credential resolution used by built-in steps such as
+`git-clone` and `git-push`. This means a Git credential Secret configured for a
+[GitHub App](../../50-security/30-managing-secrets.md) is resolved the same way for a custom
+step as it would be for a built-in one -- the response already contains a live, short-lived
+installation access token, so the step does not need to perform its own App-to-token exchange.
+
+The credential lookup checks for a matching Secret in the promotion's own Project namespace
+first, then falls back to the shared credentials namespace configured by the operator (if any).
+
+:::info
+
+`access-credentials` only grants the ability to resolve a credential for a specific
+`(credential type, repository URL)` pair. It does not give the step direct read access to
+Secrets, and it cannot be used to enumerate or dump credentials it wasn't specifically asked to
+resolve.
+
+:::
+
+The bootstrap token is written to a `credentials/token` file within the step's coordination
+directory (`$STEP_DIRECTORY`), and the base URL of the credentials API is provided via the
+`CREDENTIALS_SERVER_HOST` environment variable. A step must exchange the bootstrap token for a
+session token before it can make lookups:
+
+```bash
+BOOTSTRAP=$(cat "$STEP_DIRECTORY/credentials/token")
+
+SESSION=$(curl -sf -X POST "$CREDENTIALS_SERVER_HOST/tokens/exchange" \
+  -H "Authorization: Bearer $BOOTSTRAP" | jq -r .token)
+
+curl -sf -X POST "$CREDENTIALS_SERVER_HOST/credentials" \
+  -H "Authorization: Bearer $SESSION" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "namespace": "'"$PROJECT"'",
+    "credType": "git",
+    "repoURL": "https://github.com/example/repo.git"
+  }'
+```
+
+A successful lookup returns a JSON body containing the resolved credentials:
+
+```json
+{
+  "credentials": {
+    "username": "kargo",
+    "password": "<resolved token or password>"
+  }
+}
+```
+
+`credType` must be one of `git`, `helm`, or `image`. If no matching credential is found, the
+endpoint responds with `404 Not Found`.
+
+:::warning
+
+There is no built-in helper for this exchange yet -- the bootstrap-to-session exchange and the
+credentials lookup must currently be scripted by the `command`, as shown above.
+
+:::
