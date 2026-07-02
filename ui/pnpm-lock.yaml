@@ -32,9 +32,6 @@ importers:
       '@dnd-kit/core':
         specifier: 6.3.1
         version: 6.3.1(react-dom@19.2.7(react@19.2.7))(react@19.2.7)
-      '@eslint/config-helpers':
-        specifier: ^0.6.0
-        version: 0.6.0
       '@fortawesome/fontawesome-svg-core':
         specifier: 7.2.0
         version: 7.2.0
@@ -132,6 +129,9 @@ importers:
       '@eslint/compat':
         specifier: 2.1.0
         version: 2.1.0(eslint@9.39.4(jiti@1.21.7))
+      '@eslint/config-helpers':
+        specifier: 0.6.0
+        version: 0.6.0
       '@eslint/eslintrc':
         specifier: 3.3.5
         version: 3.3.5
@@ -4071,7 +4071,7 @@ packages:
     peerDependencies:
       '@types/node': ^20.19.0 || >=22.12.0
       '@vitejs/devtools': ^0.3.0
-      esbuild: ^0.27.0 || ^0.28.0
+      esbuild: 0.28.1
       jiti: '>=1.21.0'
       less: ^4.0.0
       sass: ^1.70.0
