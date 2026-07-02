@@ -15,6 +15,7 @@ import (
 
 	k8sevent "github.com/akuity/kargo/pkg/event/kubernetes"
 	fakeevent "github.com/akuity/kargo/pkg/kubernetes/event/fake"
+	"github.com/akuity/kargo/pkg/server/argocd"
 	"github.com/akuity/kargo/pkg/server/config"
 	"github.com/akuity/kargo/pkg/server/kubernetes"
 	"github.com/akuity/kargo/pkg/server/rbac"
@@ -38,6 +39,7 @@ func TestNewServer(t *testing.T) {
 	)
 	require.NoError(t, err)
 	testSender := k8sevent.NewEventSender(fakeevent.NewEventRecorder(0))
+	testURLStore := argocd.NewURLStore()
 
 	s, ok := NewServer(
 		testServerConfig,
@@ -48,6 +50,7 @@ func TestNewServer(t *testing.T) {
 			rbac.RolesDatabaseConfigFromEnv(),
 		),
 		testSender,
+		testURLStore,
 	).(*server)
 
 	require.True(t, ok)
@@ -55,6 +58,7 @@ func TestNewServer(t *testing.T) {
 	require.Same(t, testClient, s.client)
 	require.NotNil(t, testClient, s.rolesDB)
 	require.Same(t, testSender, s.sender)
+	require.Same(t, testURLStore, s.argoCDURLStore)
 	require.Equal(t, testServerConfig, s.cfg)
 	require.NotNil(t, s.validateProjectExistsFn)
 	require.NotNil(t, s.externalValidateProjectFn)
