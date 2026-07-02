@@ -22,11 +22,13 @@ type StageStatus struct {
 	// for the Stage based on the ProjectConfig.
 	AutoPromotionEnabled bool `json:"autoPromotionEnabled,omitempty"`
 
-	// AutoPromotionHolds pause auto-promotion for specific FreightOrigins on
-	// this Stage after a Promotion selects Freight other than the current
-	// auto-promotion candidate for the same origin. Stage-controller
-	// auto-promotions do not create holds. Each map entry pins a single origin
-	// keyed by the canonical string representation of the FreightOrigin.
+	// AutoPromotionHolds records active auto-promotion holds for this Stage.
+	// A hold is established when a Promotion selects Freight other than the
+	// latest available for its origin, pausing auto-promotion for that origin
+	// until explicitly released. Stage-controller auto-promotions do not
+	// establish holds. Keys are the canonical string representation of the
+	// FreightOrigin (e.g. "Warehouse/my-warehouse"); values describe the
+	// Promotion that established the hold.
 	AutoPromotionHolds map[string]AutoPromotionHold `json:"autoPromotionHolds,omitempty"`
 
 	// AutoPromotionHoldsThrough is controller bookkeeping for processing hold

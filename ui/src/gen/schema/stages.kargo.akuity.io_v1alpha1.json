@@ -407,7 +407,7 @@
             ],
             "type": "object"
           },
-          "description": "AutoPromotionHolds pause auto-promotion for specific FreightOrigins on\nthis Stage after a Promotion selects Freight other than the current\nauto-promotion candidate for the same origin. Stage-controller\nauto-promotions do not create holds. Each map entry pins a single origin\nkeyed by the canonical string representation of the FreightOrigin.",
+          "description": "AutoPromotionHolds records active auto-promotion holds for this Stage.\nA hold is established when a Promotion selects Freight other than the\nlatest available for its origin, pausing auto-promotion for that origin\nuntil explicitly released. Stage-controller auto-promotions do not\nestablish holds. Keys are the canonical string representation of the\nFreightOrigin (e.g. \"Warehouse/my-warehouse\"); values describe the\nPromotion that established the hold.",
           "type": "object"
         },
         "autoPromotionHoldsThrough": {

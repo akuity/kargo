@@ -117,8 +117,16 @@ func (o *promotionOptions) addFlags(cmd *cobra.Command) {
 		cmd.Flags(), &o.Project, o.Config.Project,
 		"The project the freight belongs to. If not set, the default project will be used.",
 	)
-	option.Freight(cmd.Flags(), &o.FreightName, "The name of a piece of freight to promote. Exactly one of --freight, --freight-alias, or --origin must be set.")
-	option.FreightAlias(cmd.Flags(), &o.FreightAlias, "The alias of a piece of freight to promote. Exactly one of --freight, --freight-alias, or --origin must be set.")
+	option.Freight(
+		cmd.Flags(), &o.FreightName,
+		"The name of a piece of freight to promote. "+
+			"Exactly one of --freight, --freight-alias, or --origin must be set.",
+	)
+	option.FreightAlias(
+		cmd.Flags(), &o.FreightAlias,
+		"The alias of a piece of freight to promote. "+
+			"Exactly one of --freight, --freight-alias, or --origin must be set.",
+	)
 	cmd.Flags().StringVar(
 		&o.Origin,
 		option.OriginFlag,

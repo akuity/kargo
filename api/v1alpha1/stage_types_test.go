@@ -984,7 +984,6 @@ func TestFreightOrigin_String(t *testing.T) {
 	require.Empty(t, (*FreightOrigin)(nil).String())
 }
 
-
 func TestParseFreightOriginKey(t *testing.T) {
 	testCases := []struct {
 		name           string

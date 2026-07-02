@@ -17,11 +17,13 @@ export interface StageStatus {
   /** AutoPromotionEnabled indicates whether automatic promotion is enabled
 for the Stage based on the ProjectConfig. */
   autoPromotionEnabled?: boolean;
-  /** AutoPromotionHolds pause auto-promotion for specific FreightOrigins on
-this Stage after a Promotion selects Freight other than the current
-auto-promotion candidate for the same origin. Stage-controller
-auto-promotions do not create holds. Each map entry pins a single origin
-keyed by the canonical string representation of the FreightOrigin. */
+  /** AutoPromotionHolds records active auto-promotion holds for this Stage.
+A hold is established when a Promotion selects Freight other than the
+latest available for its origin, pausing auto-promotion for that origin
+until explicitly released. Stage-controller auto-promotions do not
+establish holds. Keys are the canonical string representation of the
+FreightOrigin (e.g. "Warehouse/my-warehouse"); values describe the
+Promotion that established the hold. */
   autoPromotionHolds?: StageStatusAutoPromotionHolds;
   /** AutoPromotionHoldsThrough is controller bookkeeping for processing hold
 and release intent Promotions once. It records the newest intent Promotion
