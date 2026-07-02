@@ -122,9 +122,7 @@ func (s *server) PromoteToStage(
 
 	promotion := api.NewMinimalPromotion(stage, freight.Name)
 	if u, ok := user.InfoFromContext(ctx); ok {
-		promotion.Annotations = map[string]string{
-			kargoapi.AnnotationKeyCreateActor: api.FormatEventUserActor(u),
-		}
+		api.SetCreateActorAnnotation(promotion, api.FormatEventUserActor(u))
 	}
 	if err := s.createPromotionFn(ctx, promotion); err != nil {
 		return nil, fmt.Errorf("create promotion: %w", err)
@@ -327,9 +325,7 @@ func (s *server) promoteToStage(c *gin.Context) {
 	// the Stage's PromotionTemplate.
 	promotion := api.NewMinimalPromotion(stage, freight.Name)
 	if u, ok := user.InfoFromContext(ctx); ok {
-		promotion.Annotations = map[string]string{
-			kargoapi.AnnotationKeyCreateActor: api.FormatEventUserActor(u),
-		}
+		api.SetCreateActorAnnotation(promotion, api.FormatEventUserActor(u))
 	}
 
 	if err := s.createPromotionFn(ctx, promotion); err != nil {

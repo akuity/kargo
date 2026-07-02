@@ -152,9 +152,7 @@ func (s *server) PromoteDownstream(
 		}
 		newPromo := api.NewMinimalPromotion(&downstream, freight.Name)
 		if actor != "" {
-			newPromo.Annotations = map[string]string{
-				kargoapi.AnnotationKeyCreateActor: actor,
-			}
+			api.SetCreateActorAnnotation(newPromo, actor)
 		}
 		if err = s.createPromotionFn(ctx, newPromo); err != nil {
 			promoteErrs = append(promoteErrs, err)
@@ -352,9 +350,7 @@ func (s *server) promoteDownstream(c *gin.Context) {
 
 		newPromo := api.NewMinimalPromotion(&downstream, freight.Name)
 		if actor != "" {
-			newPromo.Annotations = map[string]string{
-				kargoapi.AnnotationKeyCreateActor: actor,
-			}
+			api.SetCreateActorAnnotation(newPromo, actor)
 		}
 
 		if err := s.client.Create(ctx, newPromo); err != nil {
