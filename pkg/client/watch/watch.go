@@ -60,6 +60,17 @@ func (c *Client) WatchStage(
 	return watchResource[*kargoapi.Stage](ctx, c, url)
 }
 
+// WatchFreight watches a specific Freight for changes. Cancel the provided context
+// to stop watching.
+func (c *Client) WatchFreight(
+	ctx context.Context,
+	project string,
+	freight string,
+) (<-chan Event[*kargoapi.Freight], <-chan error) {
+	url := fmt.Sprintf("%s/v1beta1/projects/%s/freight/%s?watch=true", c.baseURL, project, freight)
+	return watchResource[*kargoapi.Freight](ctx, c, url)
+}
+
 // WatchWarehouses watches all Warehouses in a project for changes. Cancel the
 // provided context to stop watching.
 func (c *Client) WatchWarehouses(
