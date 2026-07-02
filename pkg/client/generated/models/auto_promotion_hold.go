@@ -32,6 +32,7 @@ type AutoPromotionHold struct {
 	} `json:"origin,omitempty"`
 
 	// PromotionName is the name of the Promotion that established this hold.
+	// Stored here as a paper trail that survives Promotion garbage collection.
 	PromotionName string `json:"promotionName,omitempty"`
 }
 

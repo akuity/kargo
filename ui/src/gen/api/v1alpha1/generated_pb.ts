@@ -421,6 +421,7 @@ export type AutoPromotionHold = Message<"github.com.akuity.kargo.api.v1alpha1.Au
 
   /**
    * PromotionName is the name of the Promotion that established this hold.
+   * Stored here as a paper trail that survives Promotion garbage collection.
    *
    * @generated from field: optional string promotionName = 3;
    */

@@ -195,6 +195,7 @@ message AutoPromotionHold {
   optional FreightOrigin origin = 8;
 
   // PromotionName is the name of the Promotion that established this hold.
+  // Stored here as a paper trail that survives Promotion garbage collection.
   optional string promotionName = 3;
 
   // Actor identifies the user who triggered the hold.

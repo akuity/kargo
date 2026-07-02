@@ -484,6 +484,7 @@ type AutoPromotionHold struct {
 	// enclosing map key.
 	Origin FreightOrigin `json:"origin" protobuf:"bytes,8,opt,name=origin"`
 	// PromotionName is the name of the Promotion that established this hold.
+	// Stored here as a paper trail that survives Promotion garbage collection.
 	PromotionName string `json:"promotionName,omitempty" protobuf:"bytes,3,opt,name=promotionName"`
 	// Actor identifies the user who triggered the hold.
 	Actor string `json:"actor,omitempty" protobuf:"bytes,5,opt,name=actor"`

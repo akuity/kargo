@@ -1627,7 +1627,7 @@ RawFormat specifies the format for raw resource representation.
 | ----- | ---- | ----------- |
 | freightName | string |  FreightName is the name of the Freight selected when the hold was created. |
 | origin | [FreightOrigin](#github-com-akuity-kargo-api-v1alpha1-FreightOrigin) |  Origin describes the FreightOrigin pinned by this hold. It matches the enclosing map key. |
-| promotionName | string |  PromotionName is the name of the Promotion that established this hold. |
+| promotionName | string |  PromotionName is the name of the Promotion that established this hold. Stored here as a paper trail that survives Promotion garbage collection. |
 | actor | string |  Actor identifies the user who triggered the hold. |
 | createdAt | k8s.io.apimachinery.pkg.apis.meta.v1.Time |  CreatedAt is the creation timestamp of the Promotion that established this hold. |
 

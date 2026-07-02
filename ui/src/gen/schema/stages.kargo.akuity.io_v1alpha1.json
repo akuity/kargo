@@ -397,7 +397,7 @@
                 "type": "object"
               },
               "promotionName": {
-                "description": "PromotionName is the name of the Promotion that established this hold.",
+                "description": "PromotionName is the name of the Promotion that established this hold.\nStored here as a paper trail that survives Promotion garbage collection.",
                 "type": "string"
               }
             },

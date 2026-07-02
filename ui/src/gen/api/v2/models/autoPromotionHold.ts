@@ -18,6 +18,7 @@ hold. */
   /** Origin describes the FreightOrigin pinned by this hold. It matches the
 enclosing map key. */
   origin?: FreightOrigin;
-  /** PromotionName is the name of the Promotion that established this hold. */
+  /** PromotionName is the name of the Promotion that established this hold.
+Stored here as a paper trail that survives Promotion garbage collection. */
   promotionName?: string;
 }
