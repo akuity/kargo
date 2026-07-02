@@ -259,6 +259,19 @@ func (r *ControlFlowStageReconciler) Reconcile(ctx context.Context, req ctrl.Req
 		}
 		return ctrl.Result{}, fmt.Errorf("failed to update Stage status: %w", err)
 	}
+
+	// Control-flow Stages are normally driven entirely by watches, but when a
+	// source has a RequiredSoakTime, no watch fires once the soak deadline
+	// elapses. In that case we must explicitly schedule a requeue so the soak
+	// can be re-evaluated and the Freight verified for downstream consumers.
+	// See: https://github.com/akuity/kargo/issues/4586
+	if reconcileErr == nil {
+		if soakRequeue, soakErr := calculateNextSoakCheck(ctx, r.client, stage); soakErr != nil {
+			logger.Error(soakErr, "failed to calculate next soak check interval")
+		} else if soakRequeue > 0 {
+			return ctrl.Result{RequeueAfter: soakRequeue}, nil
+		}
+	}
 	return ctrl.Result{}, reconcileErr
 }
 
