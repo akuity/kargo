@@ -150,6 +150,7 @@ func (o *promotionOptions) addFlags(cmd *cobra.Command) {
 
 	cmd.MarkFlagsOneRequired(option.StageFlag, option.DownstreamFromFlag, option.AbortFlag)
 	cmd.MarkFlagsMutuallyExclusive(option.StageFlag, option.DownstreamFromFlag, option.AbortFlag)
+	cmd.MarkFlagsMutuallyExclusive(option.OriginFlag, option.DownstreamFromFlag)
 
 	cmd.MarkFlagsRequiredTogether(option.NameFlag, option.AbortFlag)
 }
@@ -184,12 +185,6 @@ func (o *promotionOptions) validate() error {
 			errs = append(
 				errs,
 				fmt.Errorf("either %s or %s is required", option.StageFlag, option.DownstreamFromFlag),
-			)
-		}
-		if o.Origin != "" && o.DownstreamFrom != "" {
-			errs = append(
-				errs,
-				fmt.Errorf("%s can only be used with %s", option.OriginFlag, option.StageFlag),
 			)
 		}
 	}
