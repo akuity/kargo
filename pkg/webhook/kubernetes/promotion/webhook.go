@@ -177,9 +177,6 @@ func (w *webhook) Default(ctx context.Context, obj runtime.Object) error {
 		)
 	}
 
-	if promo.Spec.Freight != "" && promo.Spec.Origin != nil {
-		return fmt.Errorf("exactly one of spec.freight or spec.origin must be set")
-	}
 	if req.Operation == admissionv1.Create && promo.Spec.Origin != nil {
 		// Note: we could theoretically infer an omitted origin when the Stage
 		// requests Freight from only one origin, but we've elected not to.
