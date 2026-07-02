@@ -956,11 +956,11 @@ func Test_webhook_Default(t *testing.T) {
 			},
 		},
 		{
-			name: "stamps hold and rollback intent on control plane request without stage auto-promotion marker",
+			name: "stamps hold and rollback intent on non-candidate user promotion",
 			webhook: &webhook{
 				admissionRequestFromContextFn: admission.RequestFromContext,
 				isRequestFromKargoControlplaneFn: func(admission.Request) bool {
-					return true
+					return false
 				},
 				isAutoPromotionEnabledFn: func(
 					_ context.Context,
