@@ -66,7 +66,7 @@ func (p *AccessKeyProvider) Supports(
 		len(req.Data) == 0 {
 		return false, nil
 	}
-	if matches := ecrURLRegex.FindStringSubmatch(req.RepoURL); len(matches) != 2 {
+	if matches := ecrURLRegex.FindStringSubmatch(req.RepoURL); len(matches) != 3 {
 		return false, nil
 	}
 	return req.Data[regionKey] != nil &&

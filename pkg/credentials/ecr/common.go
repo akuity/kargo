@@ -9,8 +9,9 @@ import (
 
 const tokenCacheExpiryMargin = 5 * time.Minute
 
-// ecrURLRegex is a regex that matches ECR URLs.
-var ecrURLRegex = regexp.MustCompile(`^[0-9]{12}\.dkr\.ecr\.(.+)\.amazonaws\.com/`)
+// ecrURLRegex is a regex that matches ECR URLs and captures the account ID (group 1)
+// and region (group 2).
+var ecrURLRegex = regexp.MustCompile(`^([0-9]{12})\.dkr\.ecr\.(.+)\.amazonaws\.com/`)
 
 // tokenCacheKey returns a cache key in the form of a hash for the given parts.
 // Using a hash ensures that any sensitive data is not stored in a decodable

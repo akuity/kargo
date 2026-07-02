@@ -42,6 +42,7 @@ type ManagedIdentityProvider struct {
 	getAuthTokenFn func(
 		ctx context.Context,
 		region string,
+		accountID string,
 		project string,
 	) (string, time.Time, error)
 }
@@ -113,14 +114,15 @@ func (p *ManagedIdentityProvider) GetCredentials(
 	ctx context.Context,
 	req credentials.Request,
 ) (*credentials.Credentials, error) {
-	// Extract the region from the ECR URL
+	// Extract the account ID and region from the ECR URL
 	matches := ecrURLRegex.FindStringSubmatch(req.RepoURL)
-	if len(matches) != 2 { // This doesn't look like an ECR URL
+	if len(matches) != 3 { // This doesn't look like an ECR URL
 		return nil, nil
 	}
 
-	region := matches[1]
-	cacheKey := tokenCacheKey(region, req.Project)
+	accountID := matches[1]
+	region := matches[2]
+	cacheKey := tokenCacheKey(region, accountID, req.Project)
 
 	logger := logging.LoggerFromContext(ctx).WithValues(
 		"provider", "ecrManagedIdentity",
@@ -135,7 +137,7 @@ func (p *ManagedIdentityProvider) GetCredentials(
 	logger.Debug("auth token cache miss")
 
 	// Cache miss, get a new token
-	encodedToken, expiry, err := p.getAuthTokenFn(ctx, region, req.Project)
+	encodedToken, expiry, err := p.getAuthTokenFn(ctx, region, accountID, req.Project)
 	if err != nil {
 		// This might mean the controller's IAM role isn't authorized to assume the
 		// project-specific IAM role, or that the project-specific IAM role doesn't
@@ -162,12 +164,18 @@ func (p *ManagedIdentityProvider) GetCredentials(
 	return decodeAuthToken(encodedToken)
 }
 
-// getAuthToken returns an ECR authorization token obtained by assuming a
-// project-specific IAM role and using that to obtain a short-lived ECR access
-// token.
+// getAuthToken returns an ECR authorization token. It attempts the following
+// in order, stopping at the first success:
+//
+//  1. Assume kargo-project-<project> in the registry's AWS account and use
+//     those credentials to obtain an ECR auth token. When the registry is in
+//     the same account as the controller this is a same-account assumption;
+//     when it is in a different account this is a cross-account assumption.
+//  2. Fall back to using the controller's IAM role directly.
 func (p *ManagedIdentityProvider) getAuthToken(
 	ctx context.Context,
 	region string,
+	accountID string,
 	project string,
 ) (string, time.Time, error) {
 	logger := logging.LoggerFromContext(ctx)
@@ -179,56 +187,94 @@ func (p *ManagedIdentityProvider) getAuthToken(
 	}
 	cfg.HTTPClient = cleanhttp.DefaultClient()
 
-	ecrSvc := ecr.NewFromConfig(aws.Config{
-		HTTPClient: cleanhttp.DefaultClient(),
-		Region:     region,
-		Credentials: stscreds.NewAssumeRoleProvider(
-			sts.NewFromConfig(cfg),
-			fmt.Sprintf(roleARNFormat, p.accountID, project),
-		),
-	})
+	stsSvc := sts.NewFromConfig(cfg)
 
 	logger = logger.WithValues(
-		"awsAccountID", p.accountID,
+		"controllerAccountID", p.accountID,
+		"accountID", accountID,
 		"awsRegion", region,
 		"project", project,
 	)
 
-	output, err := ecrSvc.GetAuthorizationToken(
+	if accountID != p.accountID {
+		logger.Debug(
+			"ECR registry is in a different account than the controller; " +
+				"attempting to assume project-specific role in registry account",
+		)
+	}
+	token, expiry, err := p.getAuthTokenWithRole(
 		ctx,
-		&ecr.GetAuthorizationTokenInput{},
+		fmt.Sprintf(roleARNFormat, accountID, project),
+		region,
+		stsSvc,
 	)
+	if err == nil && token != "" {
+		return token, expiry, nil
+	}
+
+	// Fall back to the controller's IAM role directly.
+	logger.Debug(
+		"Falling back to using controller's IAM role directly.",
+	)
+	cfg.Region = region
+	ecrSvc := ecr.NewFromConfig(cfg)
+	output, err := ecrSvc.GetAuthorizationToken(ctx, &ecr.GetAuthorizationTokenInput{})
 	if err != nil {
 		var re *awshttp.ResponseError
-		if !errors.As(err, &re) || re.HTTPStatusCode() != http.StatusForbidden {
-			return "", time.Time{}, err
-		}
-		logger.Debug(
-			"Controller IAM role is not authorized to assume project-specific role " +
-				"or project-specific role is not authorized to obtain an ECR auth token. " +
-				"Falling back to using controller's IAM role directly.",
-		)
-
-		cfg.Region = region
-		ecrSvc = ecr.NewFromConfig(cfg)
-		output, err = ecrSvc.GetAuthorizationToken(ctx, &ecr.GetAuthorizationTokenInput{})
-		if err != nil {
-			if !errors.As(err, &re) || re.HTTPStatusCode() != http.StatusForbidden {
-				return "", time.Time{}, err
-			}
+		if errors.As(err, &re) && (re.HTTPStatusCode() == http.StatusForbidden || re.HTTPStatusCode() == http.StatusBadRequest) {
 			logger.Debug(
 				"Controller's IAM role is not authorized to obtain an ECR auth token. " +
 					"Treating this as no credentials found.",
 			)
 			return "", time.Time{}, nil
 		}
+		return "", time.Time{}, err
+	}
+
+	var expiry2 time.Time
+	if output.AuthorizationData[0].ExpiresAt != nil {
+		expiry2 = *output.AuthorizationData[0].ExpiresAt
+	}
+	logger.Debug("got ECR authorization token via controller role")
+	return *output.AuthorizationData[0].AuthorizationToken, expiry2, nil
+}
+
+// getAuthTokenWithRole attempts to obtain an ECR auth token by assuming the
+// given IAM role. Returns an empty token (and nil error) if the role cannot be
+// assumed or does not have ECR permissions, so the caller can try alternatives.
+func (p *ManagedIdentityProvider) getAuthTokenWithRole(
+	ctx context.Context,
+	roleARN string,
+	region string,
+	stsSvc *sts.Client,
+) (string, time.Time, error) {
+	logger := logging.LoggerFromContext(ctx)
+	ecrSvc := ecr.NewFromConfig(aws.Config{
+		HTTPClient: cleanhttp.DefaultClient(),
+		Region:     region,
+		Credentials: stscreds.NewAssumeRoleProvider(
+			stsSvc,
+			roleARN,
+		),
+	})
+
+	output, err := ecrSvc.GetAuthorizationToken(ctx, &ecr.GetAuthorizationTokenInput{})
+	if err != nil {
+		var re *awshttp.ResponseError
+		if errors.As(err, &re) && (re.HTTPStatusCode() == http.StatusForbidden || re.HTTPStatusCode() == http.StatusBadRequest) {
+			logger.Debug(
+				"not authorized to assume role or role lacks ECR permissions",
+				"roleARN", roleARN,
+			)
+			return "", time.Time{}, nil
+		}
+		return "", time.Time{}, err
 	}
 
 	var expiry time.Time
 	if output.AuthorizationData[0].ExpiresAt != nil {
 		expiry = *output.AuthorizationData[0].ExpiresAt
 	}
-
-	logger.Debug("got ECR authorization token")
+	logger.Debug("got ECR authorization token", "roleARN", roleARN)
 	return *output.AuthorizationData[0].AuthorizationToken, expiry, nil
 }

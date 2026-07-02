@@ -154,7 +154,7 @@ func TestManagedIdentityProvider_GetCredentials(t *testing.T) {
 			credType: credentials.TypeImage,
 			repoURL:  fakeRepoURL,
 			setupCache: func(c *cache.Cache) {
-				cacheKey := tokenCacheKey(fakeRegion, fakeProject)
+				cacheKey := tokenCacheKey(fakeRegion, fakeAccountID, fakeProject)
 				c.Set(cacheKey, fakeToken, cache.DefaultExpiration)
 			},
 			assertions: func(t *testing.T, _ *cache.Cache, creds *credentials.Credentials, err error) {
@@ -173,6 +173,7 @@ func TestManagedIdentityProvider_GetCredentials(t *testing.T) {
 					context.Context,
 					string,
 					string,
+					string,
 				) (string, time.Time, error) {
 					return fakeToken, time.Now().Add(12 * time.Hour), nil
 				},
@@ -189,7 +190,7 @@ func TestManagedIdentityProvider_GetCredentials(t *testing.T) {
 				// Verify the token was cached with a TTL based on the
 				// token's actual expiry
 				items := c.Items()
-				item, found := items[tokenCacheKey(fakeRegion, fakeProject)]
+				item, found := items[tokenCacheKey(fakeRegion, fakeAccountID, fakeProject)]
 				assert.True(t, found)
 				expectedTTL := 12*time.Hour - 5*time.Minute // 12h expiry - 5m margin
 				actualTTL := time.Until(time.Unix(0, item.Expiration))
@@ -203,6 +204,7 @@ func TestManagedIdentityProvider_GetCredentials(t *testing.T) {
 				tokenCache: cache.New(10*time.Hour, time.Hour),
 				getAuthTokenFn: func(
 					context.Context,
+					string,
 					string,
 					string,
 				) (string, time.Time, error) {
@@ -224,6 +226,7 @@ func TestManagedIdentityProvider_GetCredentials(t *testing.T) {
 				tokenCache: cache.New(10*time.Hour, time.Hour),
 				getAuthTokenFn: func(
 					context.Context,
+					string,
 					string,
 					string,
 				) (string, time.Time, error) {
