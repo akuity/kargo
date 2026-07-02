@@ -38,7 +38,9 @@ func TestNewWebhook(t *testing.T) {
 	)
 	// Assert that all overridable behaviors were initialized to a default:
 	require.NotNil(t, w.getFreightFn)
+	require.NotNil(t, w.listFreightAvailableToStageFn)
 	require.NotNil(t, w.getStageFn)
+	require.NotNil(t, w.isAutoPromotionEnabledFn)
 	require.NotNil(t, w.validateProjectFn)
 	require.NotNil(t, w.authorizeFn)
 	require.NotNil(t, w.admissionRequestFromContextFn)
@@ -144,7 +146,70 @@ func Test_webhook_Default(t *testing.T) {
 			},
 		},
 		{
-			name: "success with PromotionTemplate",
+			name: "defaults Stage promotion template when steps omitted",
+			webhook: &webhook{
+				admissionRequestFromContextFn: admission.RequestFromContext,
+				getStageFn: func(
+					context.Context,
+					client.Client,
+					types.NamespacedName,
+				) (*kargoapi.Stage, error) {
+					return &kargoapi.Stage{
+						ObjectMeta: metav1.ObjectMeta{
+							Name: "fake-stage",
+						},
+						Spec: kargoapi.StageSpec{
+							Vars: []kargoapi.ExpressionVariable{{
+								Name:  "stage-var",
+								Value: "stage-value",
+							}},
+							PromotionTemplate: &kargoapi.PromotionTemplate{
+								Spec: kargoapi.PromotionTemplateSpec{
+									Vars: []kargoapi.ExpressionVariable{{
+										Name:  "template-var",
+										Value: "template-value",
+									}},
+									Steps: []kargoapi.PromotionStep{{
+										Uses: "set-metadata",
+									}},
+								},
+							},
+						},
+					}, nil
+				},
+				isRequestFromKargoControlplaneFn: func(admission.Request) bool {
+					return false
+				},
+			},
+			req: admission.Request{
+				AdmissionRequest: admissionv1.AdmissionRequest{
+					Operation: admissionv1.Create,
+				},
+			},
+			promotion: &kargoapi.Promotion{
+				Spec: kargoapi.PromotionSpec{
+					Stage:   "fake-stage",
+					Freight: "fake-freight",
+					Vars: []kargoapi.ExpressionVariable{{
+						Name:  "user-var",
+						Value: "user-value",
+					}},
+				},
+			},
+			assertions: func(t *testing.T, promo *kargoapi.Promotion, err error) {
+				require.NoError(t, err)
+				require.Equal(t, []kargoapi.ExpressionVariable{
+					{Name: "stage-var", Value: "stage-value"},
+					{Name: "template-var", Value: "template-value"},
+				}, promo.Spec.Vars)
+				require.Equal(t, []kargoapi.PromotionStep{{
+					Uses: "set-metadata",
+					As:   "step-1",
+				}}, promo.Spec.Steps)
+			},
+		},
+		{
+			name: "success with explicit steps",
 			webhook: &webhook{
 				admissionRequestFromContextFn: admission.RequestFromContext,
 				getStageFn: func(
@@ -224,6 +289,134 @@ func Test_webhook_Default(t *testing.T) {
 				require.Equal(t, "fake-stage", promo.Labels[kargoapi.LabelKeyStage])
 				require.Equal(t, "fake-stage", promo.Annotations[kargoapi.AnnotationKeyStage])
 				require.NotEmpty(t, promo.OwnerReferences)
+			},
+		},
+		{
+			name: "resolves origin to candidate freight",
+			webhook: &webhook{
+				admissionRequestFromContextFn: admission.RequestFromContext,
+				getStageFn: func(
+					context.Context,
+					client.Client,
+					types.NamespacedName,
+				) (*kargoapi.Stage, error) {
+					return &kargoapi.Stage{
+						ObjectMeta: metav1.ObjectMeta{
+							Name:      "fake-stage",
+							Namespace: "fake-project",
+						},
+						Spec: kargoapi.StageSpec{
+							RequestedFreight: []kargoapi.FreightRequest{{
+								Origin: kargoapi.FreightOrigin{
+									Kind: kargoapi.FreightOriginKindWarehouse,
+									Name: "my-warehouse",
+								},
+								Sources: kargoapi.FreightSources{Direct: true},
+							}},
+							PromotionTemplate: &kargoapi.PromotionTemplate{
+								Spec: kargoapi.PromotionTemplateSpec{
+									Steps: []kargoapi.PromotionStep{{Uses: "set-metadata"}},
+								},
+							},
+						},
+					}, nil
+				},
+				listFreightAvailableToStageFn: func(
+					_ context.Context,
+					_ client.Client,
+					_ *kargoapi.Stage,
+				) ([]kargoapi.Freight, error) {
+					return []kargoapi.Freight{{
+						ObjectMeta: metav1.ObjectMeta{Name: "candidate-freight"},
+						Origin: kargoapi.FreightOrigin{
+							Kind: kargoapi.FreightOriginKindWarehouse,
+							Name: "my-warehouse",
+						},
+					}}, nil
+				},
+				isRequestFromKargoControlplaneFn: func(admission.Request) bool {
+					return false
+				},
+			},
+			req: admission.Request{
+				AdmissionRequest: admissionv1.AdmissionRequest{
+					Operation: admissionv1.Create,
+				},
+			},
+			promotion: &kargoapi.Promotion{
+				Spec: kargoapi.PromotionSpec{
+					Stage: "fake-stage",
+					Origin: &kargoapi.FreightOrigin{
+						Kind: kargoapi.FreightOriginKindWarehouse,
+						Name: "my-warehouse",
+					},
+				},
+			},
+			assertions: func(t *testing.T, promo *kargoapi.Promotion, err error) {
+				require.NoError(t, err)
+				require.Equal(t, "candidate-freight", promo.Spec.Freight)
+				require.Nil(t, promo.Spec.Origin)
+				require.Contains(t, promo.Name, "fake-stage")
+				require.Contains(t, promo.Name, "candida")
+			},
+		},
+		{
+			name: "origin resolution fails without candidate",
+			webhook: &webhook{
+				admissionRequestFromContextFn: admission.RequestFromContext,
+				getStageFn: func(
+					context.Context,
+					client.Client,
+					types.NamespacedName,
+				) (*kargoapi.Stage, error) {
+					return &kargoapi.Stage{
+						ObjectMeta: metav1.ObjectMeta{
+							Name:      "fake-stage",
+							Namespace: "fake-project",
+						},
+						Spec: kargoapi.StageSpec{
+							RequestedFreight: []kargoapi.FreightRequest{{
+								Origin: kargoapi.FreightOrigin{
+									Kind: kargoapi.FreightOriginKindWarehouse,
+									Name: "my-warehouse",
+								},
+								Sources: kargoapi.FreightSources{Direct: true},
+							}},
+							PromotionTemplate: &kargoapi.PromotionTemplate{
+								Spec: kargoapi.PromotionTemplateSpec{
+									Steps: []kargoapi.PromotionStep{{Uses: "set-metadata"}},
+								},
+							},
+						},
+					}, nil
+				},
+				listFreightAvailableToStageFn: func(
+					_ context.Context,
+					_ client.Client,
+					_ *kargoapi.Stage,
+				) ([]kargoapi.Freight, error) {
+					return nil, nil
+				},
+				isRequestFromKargoControlplaneFn: func(admission.Request) bool {
+					return false
+				},
+			},
+			req: admission.Request{
+				AdmissionRequest: admissionv1.AdmissionRequest{
+					Operation: admissionv1.Create,
+				},
+			},
+			promotion: &kargoapi.Promotion{
+				Spec: kargoapi.PromotionSpec{
+					Stage: "fake-stage",
+					Origin: &kargoapi.FreightOrigin{
+						Kind: kargoapi.FreightOriginKindWarehouse,
+						Name: "my-warehouse",
+					},
+				},
+			},
+			assertions: func(t *testing.T, _ *kargoapi.Promotion, err error) {
+				require.ErrorContains(t, err, "no auto-promotion candidate found")
 			},
 		},
 		{
@@ -325,6 +518,55 @@ func Test_webhook_Default(t *testing.T) {
 					}),
 					ControlPlane: false,
 				}, rr)
+			},
+		},
+		{
+			name: "preserves intent annotations on update",
+			webhook: &webhook{
+				admissionRequestFromContextFn: admission.RequestFromContext,
+				getStageFn: func(
+					context.Context,
+					client.Client,
+					types.NamespacedName,
+				) (*kargoapi.Stage, error) {
+					return &kargoapi.Stage{}, nil
+				},
+				isRequestFromKargoControlplaneFn: func(admission.Request) bool {
+					return false
+				},
+			},
+			req: admission.Request{
+				AdmissionRequest: admissionv1.AdmissionRequest{
+					Operation: admissionv1.Update,
+					OldObject: runtime.RawExtension{
+						Object: &kargoapi.Promotion{
+							ObjectMeta: metav1.ObjectMeta{
+								Annotations: map[string]string{
+									kargoapi.AnnotationKeyAutoPromotionHold: "Warehouse/original",
+								},
+							},
+						},
+					},
+				},
+			},
+			promotion: &kargoapi.Promotion{
+				ObjectMeta: metav1.ObjectMeta{
+					Annotations: map[string]string{
+						kargoapi.AnnotationKeyAutoPromotionResume: "Warehouse/injected",
+					},
+				},
+				Spec: kargoapi.PromotionSpec{
+					Steps: []kargoapi.PromotionStep{{}},
+				},
+			},
+			assertions: func(t *testing.T, promotion *kargoapi.Promotion, err error) {
+				require.NoError(t, err)
+				require.Equal(
+					t,
+					"Warehouse/original",
+					promotion.Annotations[kargoapi.AnnotationKeyAutoPromotionHold],
+				)
+				require.NotContains(t, promotion.Annotations, kargoapi.AnnotationKeyAutoPromotionResume)
 			},
 		},
 		{
@@ -713,6 +955,372 @@ func Test_webhook_Default(t *testing.T) {
 				}).String(), v)
 			},
 		},
+		{
+			name: "stamps hold intent on non-candidate user promotion",
+			webhook: &webhook{
+				admissionRequestFromContextFn: admission.RequestFromContext,
+				isRequestFromKargoControlplaneFn: func(admission.Request) bool {
+					return false
+				},
+				isAutoPromotionEnabledFn: func(
+					_ context.Context,
+					_ client.Client,
+					_ metav1.ObjectMeta,
+				) (bool, error) {
+					return true, nil
+				},
+				getStageFn: func(
+					_ context.Context,
+					_ client.Client,
+					_ types.NamespacedName,
+				) (*kargoapi.Stage, error) {
+					return &kargoapi.Stage{
+						Spec: kargoapi.StageSpec{
+							PromotionTemplate: &kargoapi.PromotionTemplate{
+								Spec: kargoapi.PromotionTemplateSpec{
+									Steps: []kargoapi.PromotionStep{{}},
+								},
+							},
+							RequestedFreight: []kargoapi.FreightRequest{{
+								Origin: kargoapi.FreightOrigin{
+									Kind: kargoapi.FreightOriginKindWarehouse,
+									Name: "my-warehouse",
+								},
+								Sources: kargoapi.FreightSources{Direct: true},
+							}},
+						},
+					}, nil
+				},
+				getFreightFn: func(
+					_ context.Context,
+					_ client.Client,
+					_ types.NamespacedName,
+				) (*kargoapi.Freight, error) {
+					return &kargoapi.Freight{
+						Origin: kargoapi.FreightOrigin{
+							Kind: kargoapi.FreightOriginKindWarehouse,
+							Name: "my-warehouse",
+						},
+					}, nil
+				},
+				listFreightAvailableToStageFn: func(
+					_ context.Context,
+					_ client.Client,
+					_ *kargoapi.Stage,
+				) ([]kargoapi.Freight, error) {
+					return []kargoapi.Freight{
+						{
+							ObjectMeta: metav1.ObjectMeta{Name: "candidate-freight"},
+							Origin: kargoapi.FreightOrigin{
+								Kind: kargoapi.FreightOriginKindWarehouse,
+								Name: "my-warehouse",
+							},
+						},
+					}, nil
+				},
+			},
+			req: admission.Request{
+				AdmissionRequest: admissionv1.AdmissionRequest{
+					Operation: admissionv1.Create,
+					UserInfo:  authnv1.UserInfo{Username: "real-user"},
+				},
+			},
+			promotion: &kargoapi.Promotion{
+				ObjectMeta: metav1.ObjectMeta{
+					Annotations: map[string]string{
+						kargoapi.AnnotationKeyAutoPromotionHold: "Warehouse/my-warehouse",
+					},
+				},
+				Spec: kargoapi.PromotionSpec{
+					Stage:   "fake-stage",
+					Freight: "non-candidate-freight",
+					Steps:   []kargoapi.PromotionStep{{}},
+				},
+			},
+			assertions: func(t *testing.T, promo *kargoapi.Promotion, err error) {
+				require.NoError(t, err)
+				origin := &kargoapi.FreightOrigin{
+					Kind: kargoapi.FreightOriginKindWarehouse,
+					Name: "my-warehouse",
+				}
+				require.Equal(t, origin.String(), promo.Annotations[kargoapi.AnnotationKeyAutoPromotionHold])
+				require.NotContains(t, promo.Annotations, kargoapi.AnnotationKeyRollback)
+			},
+		},
+		{
+			name: "stamps no intent annotation on control plane promotion",
+			webhook: &webhook{
+				admissionRequestFromContextFn: admission.RequestFromContext,
+				isRequestFromKargoControlplaneFn: func(admission.Request) bool {
+					return true
+				},
+				getStageFn: func(
+					_ context.Context,
+					_ client.Client,
+					_ types.NamespacedName,
+				) (*kargoapi.Stage, error) {
+					return &kargoapi.Stage{
+						Spec: kargoapi.StageSpec{
+							PromotionTemplate: &kargoapi.PromotionTemplate{
+								Spec: kargoapi.PromotionTemplateSpec{
+									Steps: []kargoapi.PromotionStep{{}},
+								},
+							},
+						},
+					}, nil
+				},
+			},
+			req: admission.Request{
+				AdmissionRequest: admissionv1.AdmissionRequest{
+					Operation: admissionv1.Create,
+					UserInfo:  authnv1.UserInfo{Username: "system:serviceaccount:kargo:kargo-api"},
+				},
+			},
+			promotion: &kargoapi.Promotion{
+				ObjectMeta: metav1.ObjectMeta{
+					Annotations: map[string]string{
+						kargoapi.AnnotationKeyAutoPromotionHold:    "Warehouse/my-warehouse",
+						kargoapi.AnnotationKeyAutoPromotionResume: "Warehouse/my-warehouse",
+					},
+				},
+				Spec: kargoapi.PromotionSpec{
+					Stage:   "fake-stage",
+					Freight: "non-candidate-freight",
+					Steps:   []kargoapi.PromotionStep{{}},
+				},
+			},
+			assertions: func(t *testing.T, promo *kargoapi.Promotion, err error) {
+				require.NoError(t, err)
+				require.NotContains(t, promo.Annotations, kargoapi.AnnotationKeyAutoPromotionHold)
+				require.NotContains(t, promo.Annotations, kargoapi.AnnotationKeyAutoPromotionResume)
+			},
+		},
+		{
+			name: "stamps no intent annotation when auto-promotion is disabled",
+			webhook: &webhook{
+				admissionRequestFromContextFn: admission.RequestFromContext,
+				isRequestFromKargoControlplaneFn: func(admission.Request) bool {
+					return false
+				},
+				isAutoPromotionEnabledFn: func(
+					_ context.Context,
+					_ client.Client,
+					_ metav1.ObjectMeta,
+				) (bool, error) {
+					return false, nil
+				},
+				getStageFn: func(
+					_ context.Context,
+					_ client.Client,
+					_ types.NamespacedName,
+				) (*kargoapi.Stage, error) {
+					return &kargoapi.Stage{
+						Spec: kargoapi.StageSpec{
+							PromotionTemplate: &kargoapi.PromotionTemplate{
+								Spec: kargoapi.PromotionTemplateSpec{
+									Steps: []kargoapi.PromotionStep{{}},
+								},
+							},
+						},
+					}, nil
+				},
+			},
+			req: admission.Request{
+				AdmissionRequest: admissionv1.AdmissionRequest{
+					Operation: admissionv1.Create,
+					UserInfo:  authnv1.UserInfo{Username: "real-user"},
+				},
+			},
+			promotion: &kargoapi.Promotion{
+				ObjectMeta: metav1.ObjectMeta{
+					Annotations: map[string]string{
+						kargoapi.AnnotationKeyCreateActor:       "real-user",
+						kargoapi.AnnotationKeyAutoPromotionHold: "Warehouse/my-warehouse",
+					},
+				},
+				Spec: kargoapi.PromotionSpec{
+					Stage:   "fake-stage",
+					Freight: "non-candidate-freight",
+					Steps:   []kargoapi.PromotionStep{{}},
+				},
+			},
+			assertions: func(t *testing.T, promo *kargoapi.Promotion, err error) {
+				require.NoError(t, err)
+				require.NotContains(t, promo.Annotations, kargoapi.AnnotationKeyAutoPromotionHold)
+				require.NotContains(t, promo.Annotations, kargoapi.AnnotationKeyAutoPromotionResume)
+				require.NotContains(t, promo.Annotations, kargoapi.AnnotationKeyRollback)
+			},
+		},
+		{
+			name: "stamps release intent when promoting candidate freight",
+			webhook: &webhook{
+				admissionRequestFromContextFn: admission.RequestFromContext,
+				isRequestFromKargoControlplaneFn: func(admission.Request) bool {
+					return false
+				},
+				isAutoPromotionEnabledFn: func(
+					_ context.Context,
+					_ client.Client,
+					_ metav1.ObjectMeta,
+				) (bool, error) {
+					return true, nil
+				},
+				getStageFn: func(
+					_ context.Context,
+					_ client.Client,
+					_ types.NamespacedName,
+				) (*kargoapi.Stage, error) {
+					return &kargoapi.Stage{
+						Spec: kargoapi.StageSpec{
+							PromotionTemplate: &kargoapi.PromotionTemplate{
+								Spec: kargoapi.PromotionTemplateSpec{
+									Steps: []kargoapi.PromotionStep{{}},
+								},
+							},
+							RequestedFreight: []kargoapi.FreightRequest{{
+								Origin: kargoapi.FreightOrigin{
+									Kind: kargoapi.FreightOriginKindWarehouse,
+									Name: "my-warehouse",
+								},
+								Sources: kargoapi.FreightSources{Direct: true},
+							}},
+						},
+					}, nil
+				},
+				getFreightFn: func(
+					_ context.Context,
+					_ client.Client,
+					_ types.NamespacedName,
+				) (*kargoapi.Freight, error) {
+					return &kargoapi.Freight{
+						ObjectMeta: metav1.ObjectMeta{Name: "candidate-freight"},
+						Origin: kargoapi.FreightOrigin{
+							Kind: kargoapi.FreightOriginKindWarehouse,
+							Name: "my-warehouse",
+						},
+					}, nil
+				},
+				listFreightAvailableToStageFn: func(
+					_ context.Context,
+					_ client.Client,
+					_ *kargoapi.Stage,
+				) ([]kargoapi.Freight, error) {
+					return []kargoapi.Freight{
+						{
+							ObjectMeta: metav1.ObjectMeta{Name: "candidate-freight"},
+							Origin: kargoapi.FreightOrigin{
+								Kind: kargoapi.FreightOriginKindWarehouse,
+								Name: "my-warehouse",
+							},
+						},
+					}, nil
+				},
+			},
+			req: admission.Request{
+				AdmissionRequest: admissionv1.AdmissionRequest{
+					Operation: admissionv1.Create,
+					UserInfo:  authnv1.UserInfo{Username: "real-user"},
+				},
+			},
+			promotion: &kargoapi.Promotion{
+				ObjectMeta: metav1.ObjectMeta{
+					Annotations: map[string]string{
+						kargoapi.AnnotationKeyCreateActor:          "real-user",
+						kargoapi.AnnotationKeyAutoPromotionResume: "Warehouse/my-warehouse",
+					},
+				},
+				Spec: kargoapi.PromotionSpec{
+					Stage:   "fake-stage",
+					Freight: "candidate-freight",
+					Steps:   []kargoapi.PromotionStep{{}},
+				},
+			},
+			assertions: func(t *testing.T, promo *kargoapi.Promotion, err error) {
+				require.NoError(t, err)
+				require.Contains(t, promo.Annotations, kargoapi.AnnotationKeyAutoPromotionResume)
+				require.NotContains(t, promo.Annotations, kargoapi.AnnotationKeyAutoPromotionHold)
+			},
+		},
+		{
+			name: "stamps no intent annotation when no candidate exists",
+			webhook: &webhook{
+				admissionRequestFromContextFn: admission.RequestFromContext,
+				isRequestFromKargoControlplaneFn: func(admission.Request) bool {
+					return false
+				},
+				isAutoPromotionEnabledFn: func(
+					_ context.Context,
+					_ client.Client,
+					_ metav1.ObjectMeta,
+				) (bool, error) {
+					return true, nil
+				},
+				getStageFn: func(
+					_ context.Context,
+					_ client.Client,
+					_ types.NamespacedName,
+				) (*kargoapi.Stage, error) {
+					return &kargoapi.Stage{
+						Spec: kargoapi.StageSpec{
+							PromotionTemplate: &kargoapi.PromotionTemplate{
+								Spec: kargoapi.PromotionTemplateSpec{
+									Steps: []kargoapi.PromotionStep{{}},
+								},
+							},
+							RequestedFreight: []kargoapi.FreightRequest{{
+								Origin: kargoapi.FreightOrigin{
+									Kind: kargoapi.FreightOriginKindWarehouse,
+									Name: "my-warehouse",
+								},
+								Sources: kargoapi.FreightSources{Direct: true},
+							}},
+						},
+					}, nil
+				},
+				getFreightFn: func(
+					_ context.Context,
+					_ client.Client,
+					_ types.NamespacedName,
+				) (*kargoapi.Freight, error) {
+					return &kargoapi.Freight{
+						Origin: kargoapi.FreightOrigin{
+							Kind: kargoapi.FreightOriginKindWarehouse,
+							Name: "my-warehouse",
+						},
+					}, nil
+				},
+				listFreightAvailableToStageFn: func(
+					_ context.Context,
+					_ client.Client,
+					_ *kargoapi.Stage,
+				) ([]kargoapi.Freight, error) {
+					return nil, nil
+				},
+			},
+			req: admission.Request{
+				AdmissionRequest: admissionv1.AdmissionRequest{
+					Operation: admissionv1.Create,
+					UserInfo:  authnv1.UserInfo{Username: "real-user"},
+				},
+			},
+			promotion: &kargoapi.Promotion{
+				ObjectMeta: metav1.ObjectMeta{
+					Annotations: map[string]string{
+						kargoapi.AnnotationKeyCreateActor: "real-user",
+					},
+				},
+				Spec: kargoapi.PromotionSpec{
+					Stage:   "fake-stage",
+					Freight: "candidate-freight",
+					Steps:   []kargoapi.PromotionStep{{}},
+				},
+			},
+			assertions: func(t *testing.T, promo *kargoapi.Promotion, err error) {
+				require.NoError(t, err)
+				require.NotContains(t, promo.Annotations, kargoapi.AnnotationKeyAutoPromotionResume)
+				require.NotContains(t, promo.Annotations, kargoapi.AnnotationKeyAutoPromotionHold)
+			},
+		},
 	}
 	for _, testCase := range testCases {
 		t.Run(testCase.name, func(t *testing.T) {
@@ -802,6 +1410,34 @@ func Test_webhook_ValidateCreate(t *testing.T) {
 					statusErr.ErrStatus.Reason,
 				)
 				require.Contains(t, statusErr.ErrStatus.Message, "something went wrong")
+			},
+		},
+		{
+			name: "neither freight nor origin is set",
+			webhook: &webhook{
+				validateProjectFn: func(
+					context.Context,
+					client.Client,
+					client.Object,
+				) error {
+					return nil
+				},
+				authorizeFn: func(context.Context, *kargoapi.Promotion, string) error {
+					return nil
+				},
+			},
+			promotion: &kargoapi.Promotion{
+				Spec: kargoapi.PromotionSpec{},
+			},
+			assertions: func(t *testing.T, _ *fakeevent.EventRecorder, err error) {
+				var statusErr *apierrors.StatusError
+				require.True(t, errors.As(err, &statusErr))
+				require.Equal(t, metav1.StatusReasonInvalid, statusErr.ErrStatus.Reason)
+				require.Contains(
+					t,
+					statusErr.ErrStatus.Message,
+					"exactly one of spec.freight or spec.origin must be set",
+				)
 			},
 		},
 		{
@@ -1068,7 +1704,7 @@ func Test_webhook_ValidateCreate(t *testing.T) {
 	}
 }
 
-func Tes_webhook_tValidateUpdate(t *testing.T) {
+func Test_webhook_ValidateUpdate(t *testing.T) {
 	testCases := []struct {
 		name        string
 		setup       func() (*kargoapi.Promotion, *kargoapi.Promotion)
@@ -1148,6 +1784,35 @@ func Tes_webhook_tValidateUpdate(t *testing.T) {
 			},
 			assertions: func(t *testing.T, err error) {
 				require.NoError(t, err)
+			},
+		},
+		{
+			name: "attempt to mutate intent annotation",
+			setup: func() (*kargoapi.Promotion, *kargoapi.Promotion) {
+				oldPromo := &kargoapi.Promotion{
+					ObjectMeta: metav1.ObjectMeta{
+						Name:      "fake-name",
+						Namespace: "fake-namespace",
+					},
+					Spec: kargoapi.PromotionSpec{
+						Stage:   "fake-stage",
+						Freight: "fake-freight",
+					},
+				}
+				newPromo := oldPromo.DeepCopy()
+				newPromo.Annotations = map[string]string{
+					kargoapi.AnnotationKeyAutoPromotionHold: "Warehouse/fake-warehouse",
+				}
+				return oldPromo, newPromo
+			},
+			authorizeFn: func(context.Context, *kargoapi.Promotion, string) error {
+				return nil
+			},
+			assertions: func(t *testing.T, err error) {
+				var statusErr *apierrors.StatusError
+				require.True(t, errors.As(err, &statusErr))
+				require.Equal(t, metav1.StatusReasonInvalid, statusErr.ErrStatus.Reason)
+				require.Contains(t, statusErr.ErrStatus.Message, "annotation is immutable")
 			},
 		},
 	}

@@ -27,6 +27,9 @@ func (s *server) PromoteToStage(
 	ctx context.Context,
 	req *connect.Request[svcv1alpha1.PromoteToStageRequest],
 ) (*connect.Response[svcv1alpha1.PromoteToStageResponse], error) {
+	// ConnectRPC is deprecated and intentionally remains freight/freightAlias
+	// only. Promote-by-origin is supported by REST and raw Promotion specs; adding
+	// it here would expand a retiring surface for no current caller.
 	project := req.Msg.GetProject()
 	if err := validateFieldNotEmpty("project", project); err != nil {
 		return nil, err
@@ -119,9 +122,7 @@ func (s *server) PromoteToStage(
 
 	promotion := api.NewMinimalPromotion(stage, freight.Name)
 	if u, ok := user.InfoFromContext(ctx); ok {
-		promotion.Annotations = map[string]string{
-			kargoapi.AnnotationKeyCreateActor: api.FormatEventUserActor(u),
-		}
+		api.SetCreateActorAnnotation(promotion, api.FormatEventUserActor(u))
 	}
 	if err := s.createPromotionFn(ctx, promotion); err != nil {
 		return nil, fmt.Errorf("create promotion: %w", err)
@@ -161,6 +162,10 @@ func (s *server) recordPromotionCreatedEvent(
 type promoteToStageRequest struct {
 	Freight      string `json:"freight,omitempty"`
 	FreightAlias string `json:"freightAlias,omitempty"`
+	// Origin is the canonical Freight origin key (e.g. "Warehouse/foo"). When
+	// set, the promotion webhook resolves it to the current auto-promotion
+	// candidate. Exactly one of Freight, FreightAlias, or Origin must be set.
+	Origin string `json:"origin,omitempty"`
 } // @name PromoteToStageRequest
 
 // @id PromoteToStage
@@ -186,34 +191,85 @@ func (s *server) promoteToStage(c *gin.Context) {
 		return
 	}
 
-	// Validate that exactly one of freight or freightAlias is provided
-	if (req.Freight == "" && req.FreightAlias == "") || (req.Freight != "" && req.FreightAlias != "") {
+	// A request may identify the target by Freight, alias, or origin. Keep that
+	// split here because freightAlias is a REST convenience; Promotion specs only
+	// carry freight or origin.
+	nonEmpty := 0
+	for _, v := range []string{req.Freight, req.FreightAlias, req.Origin} {
+		if v != "" {
+			nonEmpty++
+		}
+	}
+	if nonEmpty != 1 {
 		_ = c.Error(libhttp.ErrorStr(
-			"exactly one of freight or freightAlias must be provided",
+			"exactly one of freight, freightAlias, or origin must be provided",
 			http.StatusBadRequest,
 		))
 		return
 	}
 
-	// Get the Stage
-	stage := &kargoapi.Stage{}
-	if err := s.client.Get(ctx, client.ObjectKey{Namespace: project, Name: stageName}, stage); err != nil {
-		if apierrors.IsNotFound(err) {
-			_ = c.Error(libhttp.ErrorStr(
-				fmt.Sprintf("Stage %q not found in project %q", stageName, project),
-				http.StatusNotFound,
-			))
-			return
-		}
+	stage, err := s.getStageFn(
+		ctx,
+		s.client,
+		types.NamespacedName{
+			Namespace: project,
+			Name:      stageName,
+		},
+	)
+	if err != nil {
+		_ = c.Error(err)
+		return
+	}
+	if stage == nil {
+		_ = c.Error(libhttp.ErrorStr(
+			fmt.Sprintf("Stage %q not found in project %q", stageName, project),
+			http.StatusNotFound,
+		))
+		return
+	}
+
+	if err = s.authorizeFn(
+		ctx,
+		"promote",
+		kargoapi.GroupVersion.WithResource("stages"),
+		"",
+		types.NamespacedName{
+			Namespace: project,
+			Name:      stageName,
+		},
+	); err != nil {
 		_ = c.Error(err)
 		return
 	}
 
-	// Get the Freight by name or alias
+	if req.Origin != "" {
+		// Let admission resolve the origin to the latest available Freight. That
+		// keeps "promote latest for this origin" race-free for REST clients.
+		origin, parseErr := kargoapi.ParseFreightOriginKey(req.Origin)
+		if parseErr != nil {
+			_ = c.Error(libhttp.ErrorStr(
+				fmt.Sprintf("invalid origin %q: %s", req.Origin, parseErr),
+				http.StatusBadRequest,
+			))
+			return
+		}
+		promotion := api.NewMinimalPromotionForOrigin(stage, origin)
+		if u, ok := user.InfoFromContext(ctx); ok {
+			api.SetCreateActorAnnotation(promotion, api.FormatEventUserActor(u))
+		}
+		if err = s.createPromotionFn(ctx, promotion); err != nil {
+			_ = c.Error(err)
+			return
+		}
+		s.recordResolvedPromotionCreatedEvent(ctx, promotion)
+		c.JSON(http.StatusCreated, promotion)
+		return
+	}
+
 	var freight *kargoapi.Freight
 	if req.Freight != "" {
 		freight = &kargoapi.Freight{}
-		if err := s.client.Get(ctx, client.ObjectKey{Namespace: project, Name: req.Freight}, freight); err != nil {
+		if err = s.client.Get(ctx, client.ObjectKey{Namespace: project, Name: req.Freight}, freight); err != nil {
 			if apierrors.IsNotFound(err) {
 				_ = c.Error(libhttp.ErrorStr(
 					fmt.Sprintf("Freight %q not found in project %q", req.Freight, project),
@@ -225,9 +281,8 @@ func (s *server) promoteToStage(c *gin.Context) {
 			return
 		}
 	} else {
-		// Search by alias
 		list := &kargoapi.FreightList{}
-		if err := s.client.List(
+		if err = s.client.List(
 			ctx,
 			list,
 			client.InNamespace(project),
@@ -246,21 +301,6 @@ func (s *server) promoteToStage(c *gin.Context) {
 		freight = &list.Items[0]
 	}
 
-	if err := s.authorizeFn(
-		ctx,
-		"promote",
-		kargoapi.GroupVersion.WithResource("stages"),
-		"",
-		types.NamespacedName{
-			Namespace: project,
-			Name:      stageName,
-		},
-	); err != nil {
-		_ = c.Error(err)
-		return
-	}
-
-	// Validate that the Freight is available to the Stage
 	if !stage.IsFreightAvailable(freight) {
 		_ = c.Error(libhttp.ErrorStr(
 			fmt.Sprintf("Freight %q is not available to Stage %q", freight.Name, stageName),
@@ -273,13 +313,11 @@ func (s *server) promoteToStage(c *gin.Context) {
 	// the Stage's PromotionTemplate.
 	promotion := api.NewMinimalPromotion(stage, freight.Name)
 	if u, ok := user.InfoFromContext(ctx); ok {
-		promotion.Annotations = map[string]string{
-			kargoapi.AnnotationKeyCreateActor: api.FormatEventUserActor(u),
-		}
+		api.SetCreateActorAnnotation(promotion, api.FormatEventUserActor(u))
 	}
 
-	if err := s.client.Create(ctx, promotion); err != nil {
-		_ = c.Error(fmt.Errorf("create promotion: %w", err))
+	if err := s.createPromotionFn(ctx, promotion); err != nil {
+		_ = c.Error(err)
 		return
 	}
 
@@ -288,4 +326,30 @@ func (s *server) promoteToStage(c *gin.Context) {
 	}
 
 	c.JSON(http.StatusCreated, promotion)
+}
+
+// recordResolvedPromotionCreatedEvent records the normal PromotionCreated event
+// after admission has resolved spec.origin to spec.freight. If admission has
+// not resolved the Promotion yet, there is no Freight object to attach, so event
+// recording is skipped instead of blocking the request.
+func (s *server) recordResolvedPromotionCreatedEvent(
+	ctx context.Context,
+	promotion *kargoapi.Promotion,
+) {
+	if s.sender == nil || promotion.Spec.Freight == "" {
+		return
+	}
+	freight := &kargoapi.Freight{}
+	if err := s.client.Get(
+		ctx,
+		client.ObjectKey{Namespace: promotion.Namespace, Name: promotion.Spec.Freight},
+		freight,
+	); err != nil {
+		logging.LoggerFromContext(ctx).Error(
+			err,
+			"error getting resolved Freight for Promotion created event",
+		)
+		return
+	}
+	s.recordPromotionCreatedEvent(ctx, promotion, freight)
 }

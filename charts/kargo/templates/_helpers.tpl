@@ -123,7 +123,11 @@ Create default controlplane user regular expression with well-known service acco
 {{- $serviceAccounts := list -}}
 {{- range $name, $enabled := $components -}}
 {{- if $enabled -}}
+{{- if eq $name "controller" -}}
+{{- $serviceAccounts = append $serviceAccounts (include "kargo.controller.fullname" $) -}}
+{{- else -}}
 {{- $serviceAccounts = append $serviceAccounts (printf "kargo-%s" $name) -}}
+{{- end -}}
 {{- end -}}
 {{- end -}}
 {{- if $serviceAccounts -}}

@@ -1621,6 +1621,25 @@ RawFormat specifies the format for raw resource representation.
 | virtualRepoName | string |  VirtualRepoName is the name of an Artifactory virtual repository.  When unspecified, the Artifactory webhook receiver depends on the value of the webhook payload's `data.repo_key` field when inferring the URL of the repository from which the webhook originated, which will always be an Artifactory "local repository." In cases where a Warehouse subscribes to such a repository indirectly via a "virtual repository," there will be a discrepancy between the inferred (local) repository URL and the URL actually used by the subscription, which can prevent the receiver from identifying such a Warehouse as one in need of refreshing. When specified, the value of the VirtualRepoName field supersedes the value of the webhook payload's `data.repo_key` field to compensate for that discrepancy.  In practice, when using virtual repositories, a separate Artifactory webhook receiver should be configured for each, but one such receiver can handle inbound webhooks from any number of local repositories that are aggregated by that virtual repository. For example, if a virtual repository `proj-virtual` aggregates container images from all of the `proj` Artifactory project's local image repositories, with a single webhook configured to post to a single receiver configured for the `proj-virtual` virtual repository, an image pushed to `example.frog.io/proj-&lt;local-repo-name&gt;/&lt;path&gt;/image`, will cause that receiver to refresh all Warehouses subscribed to `example.frog.io/proj-virtual/&lt;path&gt;/image`.  +optional |
 
 
+### AutoPromotionHold {#github-com-akuity-kargo-api-v1alpha1-AutoPromotionHold}
+ AutoPromotionHold pins a single FreightOrigin on a Stage, pausing auto-promotion for that origin after a Promotion selects Freight other than the current auto-promotion candidate. Stage-controller auto-promotions do not create holds. Other origins continue to auto-promote normally. The origin is identified by the enclosing map key.
+| Field | Type | Description |
+| ----- | ---- | ----------- |
+| freightName | string |  FreightName is the name of the Freight selected when the hold was created. |
+| origin | [FreightOrigin](#github-com-akuity-kargo-api-v1alpha1-FreightOrigin) |  Origin describes the FreightOrigin pinned by this hold. It matches the enclosing map key. |
+| promotionName | string |  PromotionName is the name of the Promotion that established this hold. Stored here as a paper trail that survives Promotion garbage collection. |
+| actor | string |  Actor identifies the user who triggered the hold. |
+| createdAt | k8s.io.apimachinery.pkg.apis.meta.v1.Time |  CreatedAt is the creation timestamp of the Promotion that established this hold. |
+
+
+### AutoPromotionHoldsWatermark {#github-com-akuity-kargo-api-v1alpha1-AutoPromotionHoldsWatermark}
+ AutoPromotionHoldsWatermark records the most recently processed hold/release intent Promotion so the Stage controller can skip already-applied events even after Promotion GC removes them from the cache.
+| Field | Type | Description |
+| ----- | ---- | ----------- |
+| creationTimestamp | k8s.io.apimachinery.pkg.apis.meta.v1.Time |  CreationTimestamp is the CreationTimestamp of the latest processed intent Promotion. |
+| name | string |  Name is the name of the latest processed intent Promotion, used as a tie-breaker when two Promotions share the same CreationTimestamp. |
+
+
 ### AutoPromotionOptions {#github-com-akuity-kargo-api-v1alpha1-AutoPromotionOptions}
  AutoPromotionOptions specifies options pertaining to auto-promotion.
 | Field | Type | Description |
@@ -2277,11 +2296,12 @@ RawFormat specifies the format for raw resource representation.
 
 
 ### PromotionSpec {#github-com-akuity-kargo-api-v1alpha1-PromotionSpec}
- PromotionSpec describes the desired transition of a specific Stage into a specific Freight.
+ PromotionSpec describes the desired transition of a specific Stage into a specific Freight.  
 | Field | Type | Description |
 | ----- | ---- | ----------- |
 | stage | string |  Stage specifies the name of the Stage to which this Promotion applies. The Stage referenced by this field MUST be in the same namespace as the Promotion.       |
-| freight | string |  Freight specifies the piece of Freight to be promoted into the Stage referenced by the Stage field.       |
+| freight | string |  Freight specifies the piece of Freight to be promoted into the Stage. Exactly one of Freight or Origin must be set.       |
+| origin | [FreightOrigin](#github-com-akuity-kargo-api-v1alpha1-FreightOrigin) |  Origin, when set, identifies the FreightOrigin whose latest available Freight should be promoted. The mutating webhook resolves this to the latest available Freight for that origin and fills Freight before the Promotion is persisted. Exactly one of Freight or Origin must be set.   |
 | vars | [ExpressionVariable](#github-com-akuity-kargo-api-v1alpha1-ExpressionVariable) |  Vars is a list of variables that can be referenced by expressions in promotion steps. |
 | steps | [PromotionStep](#github-com-akuity-kargo-api-v1alpha1-PromotionStep) |  Steps specifies the directives to be executed as part of this Promotion. The order in which the directives are executed is the order in which they are listed in this field.     |
 
@@ -2439,6 +2459,16 @@ RawFormat specifies the format for raw resource representation.
 | lastPromotion | [PromotionReference](#github-com-akuity-kargo-api-v1alpha1-PromotionReference) |  LastPromotion is a reference to the last completed promotion. |
 | autoPromotionEnabled | bool |  AutoPromotionEnabled indicates whether automatic promotion is enabled for the Stage based on the ProjectConfig. |
 | metadata | [StageStatus.MetadataEntry](#github-com-akuity-kargo-api-v1alpha1-StageStatus-MetadataEntry) |  Metadata is a map of arbitrary metadata associated with the Stage. This is useful for storing additional information about the Stage that can be shared across promotions, verifications, or other processes. |
+| autoPromotionHolds | [StageStatus.AutoPromotionHoldsEntry](#github-com-akuity-kargo-api-v1alpha1-StageStatus-AutoPromotionHoldsEntry) |  AutoPromotionHolds records active auto-promotion holds for this Stage. A hold is established when a Promotion selects Freight other than the latest available for its origin, pausing auto-promotion for that origin until explicitly released. Stage-controller auto-promotions do not establish holds. Keys are the canonical string representation of the FreightOrigin (e.g. "Warehouse/my-warehouse"); values describe the Promotion that established the hold. |
+| autoPromotionHoldsThrough | [AutoPromotionHoldsWatermark](#github-com-akuity-kargo-api-v1alpha1-AutoPromotionHoldsWatermark) |  AutoPromotionHoldsThrough is controller bookkeeping for processing hold and release intent Promotions once. It records the newest intent Promotion already applied to AutoPromotionHolds, so a hold or release is not replayed incorrectly after old Promotion resources are garbage-collected. |
+
+
+### StageStatus.AutoPromotionHoldsEntry {#github-com-akuity-kargo-api-v1alpha1-StageStatus-AutoPromotionHoldsEntry}
+ 
+| Field | Type | Description |
+| ----- | ---- | ----------- |
+| key | string |   |
+| value | [AutoPromotionHold](#github-com-akuity-kargo-api-v1alpha1-AutoPromotionHold) |   |
 
 
 ### StageStatus.MetadataEntry {#github-com-akuity-kargo-api-v1alpha1-StageStatus-MetadataEntry}

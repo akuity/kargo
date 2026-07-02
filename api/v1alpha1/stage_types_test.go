@@ -974,6 +974,71 @@ func TestChartDeepEquals(t *testing.T) {
 	}
 }
 
+func TestFreightOrigin_String(t *testing.T) {
+	origin := &FreightOrigin{
+		Kind: FreightOriginKindWarehouse,
+		Name: "fake-warehouse",
+	}
+
+	require.Equal(t, "Warehouse/fake-warehouse", origin.String())
+	require.Empty(t, (*FreightOrigin)(nil).String())
+}
+
+func TestParseFreightOriginKey(t *testing.T) {
+	testCases := []struct {
+		name           string
+		key            string
+		expectedOrigin FreightOrigin
+		expectErr      bool
+	}{
+		{
+			name: "valid warehouse origin",
+			key:  "Warehouse/fake-warehouse",
+			expectedOrigin: FreightOrigin{
+				Kind: FreightOriginKindWarehouse,
+				Name: "fake-warehouse",
+			},
+		},
+		{
+			name:      "missing slash",
+			key:       "Warehouse",
+			expectErr: true,
+		},
+		{
+			name:      "missing kind",
+			key:       "/fake-warehouse",
+			expectErr: true,
+		},
+		{
+			name:      "missing name",
+			key:       "Warehouse/",
+			expectErr: true,
+		},
+		{
+			name:      "too many parts",
+			key:       "Warehouse/fake-warehouse/extra",
+			expectErr: true,
+		},
+		{
+			name:      "unknown kind",
+			key:       "Stage/fake-stage",
+			expectErr: true,
+		},
+	}
+
+	for _, testCase := range testCases {
+		t.Run(testCase.name, func(t *testing.T) {
+			origin, err := ParseFreightOriginKey(testCase.key)
+			if testCase.expectErr {
+				require.Error(t, err)
+				return
+			}
+			require.NoError(t, err)
+			require.Equal(t, testCase.expectedOrigin, origin)
+		})
+	}
+}
+
 func TestStageStatus_UpsertMetadata(t *testing.T) {
 	testCases := []struct {
 		name         string

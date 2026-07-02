@@ -477,7 +477,7 @@ func (r *reconciler) Reconcile(
 			},
 		)
 		if getStageErr != nil {
-			return ctrl.Result{}, fmt.Errorf("get stage: %w", err)
+			return ctrl.Result{}, fmt.Errorf("get stage: %w", getStageErr)
 		}
 		if stage == nil {
 			return ctrl.Result{}, fmt.Errorf(

@@ -5,6 +5,8 @@
  * REST API for Kargo
  * OpenAPI spec version: v1alpha1
  */
+import type { StageStatusAutoPromotionHolds } from './stageStatusAutoPromotionHolds';
+import type { AutoPromotionHoldsWatermark } from './autoPromotionHoldsWatermark';
 import type { V1Condition } from './v1Condition';
 import type { PromotionReference } from './promotionReference';
 import type { FreightCollection } from './freightCollection';
@@ -15,6 +17,19 @@ export interface StageStatus {
   /** AutoPromotionEnabled indicates whether automatic promotion is enabled
 for the Stage based on the ProjectConfig. */
   autoPromotionEnabled?: boolean;
+  /** AutoPromotionHolds records active auto-promotion holds for this Stage.
+A hold is established when a Promotion selects Freight other than the
+latest available for its origin, pausing auto-promotion for that origin
+until explicitly released. Stage-controller auto-promotions do not
+establish holds. Keys are the canonical string representation of the
+FreightOrigin (e.g. "Warehouse/my-warehouse"); values describe the
+Promotion that established the hold. */
+  autoPromotionHolds?: StageStatusAutoPromotionHolds;
+  /** AutoPromotionHoldsThrough is controller bookkeeping for processing hold
+and release intent Promotions once. It records the newest intent Promotion
+already applied to AutoPromotionHolds, so a hold or release is not replayed
+incorrectly after old Promotion resources are garbage-collected. */
+  autoPromotionHoldsThrough?: AutoPromotionHoldsWatermark;
   /** Conditions contains the last observations of the Stage's current
 state.
 +patchMergeKey=type

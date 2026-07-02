@@ -1,7 +1,6 @@
 import { useDroppable } from '@dnd-kit/core';
 import {
   faBarsStaggered,
-  faBolt,
   faExternalLink,
   faMinus,
   faTruckArrowRight
@@ -24,6 +23,7 @@ import { Stage } from '@ui/gen/api/v2/models';
 import { useDictionaryContext } from '../context/dictionary-context';
 import { useGraphContext } from '../context/graph-context';
 import { stageIndexer } from '../graph/node-indexer';
+import { AutoPromotionStatusIcon } from '../promotion/auto-promotion-status-icon';
 import { DropOverlay } from '../promotion/drag-and-drop/drop-overlay';
 
 import { AnalysisRunLogsLink } from './analysis-run-logs-link';
@@ -140,9 +140,10 @@ export const StageNode = (props: { stage: Stage }) => {
         }}
         title={
           <>
-            {autoPromotionMode && (
-              <FontAwesomeIcon title='Auto Promotion' icon={faBolt} className='text-[10px] mr-1' />
-            )}
+            <AutoPromotionStatusIcon
+              stage={props.stage}
+              autoPromotionEnabled={Boolean(autoPromotionMode)}
+            />
             <span className='text-xs text-wrap mr-auto'>{props.stage.metadata?.name}</span>
           </>
         }

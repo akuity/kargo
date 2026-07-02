@@ -6,6 +6,20 @@ const (
 	// the resource.
 	AnnotationKeyCreateActor = "kargo.akuity.io/create-actor"
 
+	// AnnotationKeyAutoPromotionHold is an annotation key set on a Promotion
+	// when the promoted Freight is not the current auto-promotion candidate for
+	// that origin. The Stage controller uses this to establish an auto-promotion
+	// hold for the origin. The value is the canonical origin key (e.g.
+	// "Warehouse/foo").
+	AnnotationKeyAutoPromotionHold = "kargo.akuity.io/auto-promotion-hold"
+
+	// AnnotationKeyAutoPromotionResume is an annotation key set on a
+	// Promotion when the promoted Freight is the current auto-promotion candidate
+	// for that origin. The Stage controller uses a succeeded Promotion with this
+	// annotation to clear an active hold for the origin. The value is the
+	// canonical origin key (e.g. "Warehouse/foo").
+	AnnotationKeyAutoPromotionResume = "kargo.akuity.io/auto-promotion-resume"
+
 	// AnnotationKeyRefresh is an annotation key that can be set on a resource
 	// to trigger a refresh of the resource by the controller. The value of the
 	// annotation is interpreted as a token, and any change to the value of the
@@ -73,8 +87,7 @@ const (
 	AnnotationValueTrue = "true"
 
 	// AnnotationKeyRollback is an annotation key that can be set on a Promotion
-	// to indicate that it was created as a rollback to a previously verified
-	// piece of Freight.
+	// to make ctx.meta.promotion.rollback true for promotion steps.
 	AnnotationKeyRollback = "kargo.akuity.io/rollback"
 
 	// AnnotationKeyGitHubTokenScope is the key for an annotation that can

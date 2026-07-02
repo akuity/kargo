@@ -5200,6 +5200,10 @@
         },
         "freightAlias": {
           "type": "string"
+        },
+        "origin": {
+          "description": "Origin is the canonical Freight origin key (e.g. \"Warehouse/foo\"). When\nset, the promotion webhook resolves it to the current auto-promotion\ncandidate. Exactly one of Freight, FreightAlias, or Origin must be set.",
+          "type": "string"
         }
       }
     },
@@ -6418,6 +6422,48 @@
       "required": [
         "secretRef"
       ]
+    },
+    "AutoPromotionHold": {
+      "type": "object",
+      "properties": {
+        "actor": {
+          "description": "Actor identifies the user who triggered the hold.",
+          "type": "string"
+        },
+        "createdAt": {
+          "description": "CreatedAt is the creation timestamp of the Promotion that established this\nhold.",
+          "type": "string"
+        },
+        "freightName": {
+          "description": "FreightName is the name of the Freight selected when the hold was created.",
+          "type": "string"
+        },
+        "origin": {
+          "description": "Origin describes the FreightOrigin pinned by this hold. It matches the\nenclosing map key.",
+          "allOf": [
+            {
+              "$ref": "#/definitions/FreightOrigin"
+            }
+          ]
+        },
+        "promotionName": {
+          "description": "PromotionName is the name of the Promotion that established this hold.\nStored here as a paper trail that survives Promotion garbage collection.",
+          "type": "string"
+        }
+      }
+    },
+    "AutoPromotionHoldsWatermark": {
+      "type": "object",
+      "properties": {
+        "creationTimestamp": {
+          "description": "CreationTimestamp is the CreationTimestamp of the latest processed intent\nPromotion.",
+          "type": "string"
+        },
+        "name": {
+          "description": "Name is the name of the latest processed intent Promotion, used as a\ntie-breaker when two Promotions share the same CreationTimestamp.",
+          "type": "string"
+        }
+      }
     },
     "AutoPromotionOptions": {
       "type": "object",
@@ -7757,8 +7803,16 @@
       "type": "object",
       "properties": {
         "freight": {
-          "description": "Freight specifies the piece of Freight to be promoted into the Stage\nreferenced by the Stage field.\n\n+kubebuilder:validation:Required\n+kubebuilder:validation:MinLength=1\n+kubebuilder:validation:MaxLength=253\n+kubebuilder:validation:Pattern=`^[a-z0-9]([-a-z0-9]*[a-z0-9])?(\\.[a-z0-9]([-a-z0-9]*[a-z0-9])?)*$`\n+akuity:test-kubebuilder-pattern=KubernetesName",
+          "description": "Freight specifies the piece of Freight to be promoted into the Stage.\nExactly one of Freight or Origin must be set.\n\n+kubebuilder:validation:Optional\n+kubebuilder:validation:MinLength=1\n+kubebuilder:validation:MaxLength=253\n+kubebuilder:validation:Pattern=`^[a-z0-9]([-a-z0-9]*[a-z0-9])?(\\.[a-z0-9]([-a-z0-9]*[a-z0-9])?)*$`\n+akuity:test-kubebuilder-pattern=KubernetesName",
           "type": "string"
+        },
+        "origin": {
+          "description": "Origin, when set, identifies the FreightOrigin whose latest available\nFreight should be promoted. The mutating webhook resolves this to the\nlatest available Freight for that origin and fills Freight before the\nPromotion is persisted. Exactly one of Freight or Origin must be set.\n\n+kubebuilder:validation:Optional",
+          "allOf": [
+            {
+              "$ref": "#/definitions/FreightOrigin"
+            }
+          ]
         },
         "stage": {
           "description": "Stage specifies the name of the Stage to which this Promotion\napplies. The Stage referenced by this field MUST be in the same\nnamespace as the Promotion.\n\n+kubebuilder:validation:Required\n+kubebuilder:validation:MinLength=1\n+kubebuilder:validation:MaxLength=253\n+kubebuilder:validation:Pattern=`^[a-z0-9]([-a-z0-9]*[a-z0-9])?(\\.[a-z0-9]([-a-z0-9]*[a-z0-9])?)*$`\n+akuity:test-kubebuilder-pattern=KubernetesName",
@@ -7780,7 +7834,6 @@
         }
       },
       "required": [
-        "freight",
         "stage",
         "steps"
       ]
@@ -8158,6 +8211,21 @@
         "autoPromotionEnabled": {
           "description": "AutoPromotionEnabled indicates whether automatic promotion is enabled\nfor the Stage based on the ProjectConfig.",
           "type": "boolean"
+        },
+        "autoPromotionHolds": {
+          "description": "AutoPromotionHolds records active auto-promotion holds for this Stage.\nA hold is established when a Promotion selects Freight other than the\nlatest available for its origin, pausing auto-promotion for that origin\nuntil explicitly released. Stage-controller auto-promotions do not\nestablish holds. Keys are the canonical string representation of the\nFreightOrigin (e.g. \"Warehouse/my-warehouse\"); values describe the\nPromotion that established the hold.",
+          "type": "object",
+          "additionalProperties": {
+            "$ref": "#/definitions/AutoPromotionHold"
+          }
+        },
+        "autoPromotionHoldsThrough": {
+          "description": "AutoPromotionHoldsThrough is controller bookkeeping for processing hold\nand release intent Promotions once. It records the newest intent Promotion\nalready applied to AutoPromotionHolds, so a hold or release is not replayed\nincorrectly after old Promotion resources are garbage-collected.",
+          "allOf": [
+            {
+              "$ref": "#/definitions/AutoPromotionHoldsWatermark"
+            }
+          ]
         },
         "conditions": {
           "description": "Conditions contains the last observations of the Stage's current\nstate.\n+patchMergeKey=type\n+patchStrategy=merge\n+listType=map\n+listMapKey=type",

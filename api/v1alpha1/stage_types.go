@@ -3,6 +3,7 @@ package v1alpha1
 import (
 	"crypto/sha1"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"maps"
 	"slices"
@@ -262,7 +263,25 @@ func (f *FreightOrigin) String() string {
 	if f == nil {
 		return ""
 	}
+	// This format is persisted in annotations and status keys. Do not change it
+	// without a migration for existing resources.
 	return fmt.Sprintf("%s/%s", f.Kind, f.Name)
+}
+
+// ParseFreightOriginKey parses a canonical Freight origin key in "Kind/name"
+// form and rejects empty parts or unsupported origin kinds.
+func ParseFreightOriginKey(key string) (FreightOrigin, error) {
+	kind, name, ok := strings.Cut(key, "/")
+	if !ok || strings.Contains(name, "/") {
+		return FreightOrigin{}, fmt.Errorf("invalid Freight origin key %q", key)
+	}
+	if FreightOriginKind(kind) != FreightOriginKindWarehouse {
+		return FreightOrigin{}, fmt.Errorf("invalid Freight origin kind %q", kind)
+	}
+	if name == "" {
+		return FreightOrigin{}, errors.New("Freight origin name must not be empty")
+	}
+	return FreightOrigin{Kind: FreightOriginKind(kind), Name: name}, nil
 }
 
 func (f *FreightOrigin) Equals(other *FreightOrigin) bool {
@@ -426,6 +445,52 @@ type StageStatus struct {
 	// This is useful for storing additional information about the Stage
 	// that can be shared across promotions, verifications, or other processes.
 	Metadata map[string]apiextensionsv1.JSON `json:"metadata,omitempty" protobuf:"bytes,15,rep,name=metadata" protobuf_key:"bytes,1,opt,name=key" protobuf_val:"bytes,2,opt,name=value"`
+	// AutoPromotionHolds records active auto-promotion holds for this Stage.
+	// A hold is established when a Promotion selects Freight other than the
+	// latest available for its origin, pausing auto-promotion for that origin
+	// until explicitly released. Stage-controller auto-promotions do not
+	// establish holds. Keys are the canonical string representation of the
+	// FreightOrigin (e.g. "Warehouse/my-warehouse"); values describe the
+	// Promotion that established the hold.
+	AutoPromotionHolds map[string]AutoPromotionHold `json:"autoPromotionHolds,omitempty" protobuf:"bytes,16,rep,name=autoPromotionHolds" protobuf_key:"bytes,1,opt,name=key" protobuf_val:"bytes,2,opt,name=value"`
+	// AutoPromotionHoldsThrough is controller bookkeeping for processing hold
+	// and release intent Promotions once. It records the newest intent Promotion
+	// already applied to AutoPromotionHolds, so a hold or release is not replayed
+	// incorrectly after old Promotion resources are garbage-collected.
+	AutoPromotionHoldsThrough *AutoPromotionHoldsWatermark `json:"autoPromotionHoldsThrough,omitempty" protobuf:"bytes,17,opt,name=autoPromotionHoldsThrough"`
+}
+
+// AutoPromotionHoldsWatermark records the most recently processed hold/release
+// intent Promotion so the Stage controller can skip already-applied events even
+// after Promotion GC removes them from the cache.
+type AutoPromotionHoldsWatermark struct {
+	// CreationTimestamp is the CreationTimestamp of the latest processed intent
+	// Promotion.
+	CreationTimestamp metav1.Time `json:"creationTimestamp" protobuf:"bytes,1,opt,name=creationTimestamp"`
+	// Name is the name of the latest processed intent Promotion, used as a
+	// tie-breaker when two Promotions share the same CreationTimestamp.
+	Name string `json:"name" protobuf:"bytes,2,opt,name=name"`
+}
+
+// AutoPromotionHold pins a single FreightOrigin on a Stage, pausing
+// auto-promotion for that origin after a Promotion selects Freight other than
+// the current auto-promotion candidate. Stage-controller auto-promotions do not
+// create holds. Other origins continue to auto-promote normally. The origin is
+// identified by the enclosing map key.
+type AutoPromotionHold struct {
+	// FreightName is the name of the Freight selected when the hold was created.
+	FreightName string `json:"freightName" protobuf:"bytes,1,opt,name=freightName"`
+	// Origin describes the FreightOrigin pinned by this hold. It matches the
+	// enclosing map key.
+	Origin FreightOrigin `json:"origin" protobuf:"bytes,8,opt,name=origin"`
+	// PromotionName is the name of the Promotion that established this hold.
+	// Stored here as a paper trail that survives Promotion garbage collection.
+	PromotionName string `json:"promotionName,omitempty" protobuf:"bytes,3,opt,name=promotionName"`
+	// Actor identifies the user who triggered the hold.
+	Actor string `json:"actor,omitempty" protobuf:"bytes,5,opt,name=actor"`
+	// CreatedAt is the creation timestamp of the Promotion that established this
+	// hold.
+	CreatedAt *metav1.Time `json:"createdAt,omitempty" protobuf:"bytes,7,opt,name=createdAt"`
 }
 
 // GetConditions implements the conditions.Getter interface.
