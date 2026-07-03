@@ -553,19 +553,12 @@ spec:
                   already applied to AutoPromotionHolds, so a hold or release is not replayed
                   incorrectly after old Promotion resources are garbage-collected.
                 properties:
-                  creationTimestamp:
-                    description: |-
-                      CreationTimestamp is the CreationTimestamp of the latest processed intent
-                      Promotion.
-                    format: date-time
-                    type: string
                   name:
                     description: |-
-                      Name is the name of the latest processed intent Promotion, used as a
-                      tie-breaker when two Promotions share the same CreationTimestamp.
+                      Name is the name of the latest processed intent Promotion. Promotion names
+                      embed a ULID, so lexicographic order on Name equals chronological order.
                     type: string
                 required:
-                - creationTimestamp
                 - name
                 type: object
               conditions:

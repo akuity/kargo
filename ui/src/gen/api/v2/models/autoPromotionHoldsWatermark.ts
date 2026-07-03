@@ -7,10 +7,7 @@
  */
 
 export interface AutoPromotionHoldsWatermark {
-  /** CreationTimestamp is the CreationTimestamp of the latest processed intent
-Promotion. */
-  creationTimestamp?: string;
-  /** Name is the name of the latest processed intent Promotion, used as a
-tie-breaker when two Promotions share the same CreationTimestamp. */
+  /** Name is the name of the latest processed intent Promotion. Promotion names
+embed a ULID, so lexicographic order on Name equals chronological order. */
   name?: string;
 }

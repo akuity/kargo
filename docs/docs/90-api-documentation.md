@@ -1636,8 +1636,7 @@ RawFormat specifies the format for raw resource representation.
  AutoPromotionHoldsWatermark records the most recently processed hold/release intent Promotion so the Stage controller can skip already-applied events even after Promotion GC removes them from the cache.
 | Field | Type | Description |
 | ----- | ---- | ----------- |
-| creationTimestamp | k8s.io.apimachinery.pkg.apis.meta.v1.Time |  CreationTimestamp is the CreationTimestamp of the latest processed intent Promotion. |
-| name | string |  Name is the name of the latest processed intent Promotion, used as a tie-breaker when two Promotions share the same CreationTimestamp. |
+| name | string |  Name is the name of the latest processed intent Promotion. Promotion names embed a ULID, so lexicographic order on Name equals chronological order. |
 
 
 ### AutoPromotionOptions {#github-com-akuity-kargo-api-v1alpha1-AutoPromotionOptions}

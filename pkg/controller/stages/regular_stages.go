@@ -796,8 +796,8 @@ func syncAutoPromotionHolds(
 	}
 
 	// Collect succeeded intent Promotions strictly newer than the watermark.
-	// CreationTimestamp is the API-server ordering source; name is only a
-	// deterministic tie-break.
+	// Promotion names embed a ULID, so lexicographic order equals chronological
+	// order for Promotions on the same Stage.
 	watermark := status.AutoPromotionHoldsThrough
 	var pending []*kargoapi.Promotion
 	for i := range promotions.Items {
@@ -810,26 +810,14 @@ func syncAutoPromotionHolds(
 		if !hasHold && !hasRelease {
 			continue
 		}
-		if watermark != nil {
-			ts := promo.CreationTimestamp
-			if ts.Before(&watermark.CreationTimestamp) {
-				continue
-			}
-			if ts.Equal(&watermark.CreationTimestamp) && promo.Name <= watermark.Name {
-				continue
-			}
+		if watermark != nil && promo.Name <= watermark.Name {
+			continue
 		}
 		pending = append(pending, promo)
 	}
 
-	// Sort by (creationTimestamp, name) ascending so we apply effects in order.
+	// Sort by name ascending so we apply effects in chronological order.
 	slices.SortFunc(pending, func(a, b *kargoapi.Promotion) int {
-		if a.CreationTimestamp.Before(&b.CreationTimestamp) {
-			return -1
-		}
-		if b.CreationTimestamp.Before(&a.CreationTimestamp) {
-			return 1
-		}
 		return strings.Compare(a.Name, b.Name)
 	})
 
@@ -877,8 +865,7 @@ func syncAutoPromotionHolds(
 		// Advance watermark to the newest processed Promotion.
 		newest := pending[len(pending)-1]
 		status.AutoPromotionHoldsThrough = &kargoapi.AutoPromotionHoldsWatermark{
-			CreationTimestamp: newest.CreationTimestamp,
-			Name:              newest.Name,
+			Name: newest.Name,
 		}
 	}
 }

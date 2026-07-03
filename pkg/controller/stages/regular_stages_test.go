@@ -782,7 +782,6 @@ func TestRegularStageReconciler_syncPromotions(t *testing.T) {
 				assert.Equal(t, "user:alice", hold.Actor)
 				assert.True(t, hold.Origin.Equals(&origin))
 				require.NotNil(t, status.AutoPromotionHoldsThrough)
-				assert.Equal(t, hourAgo, status.AutoPromotionHoldsThrough.CreationTimestamp.Time)
 				assert.Equal(t, "hold-promo", status.AutoPromotionHoldsThrough.Name)
 			},
 		},
@@ -836,7 +835,6 @@ func TestRegularStageReconciler_syncPromotions(t *testing.T) {
 				assert.False(t, hasPendingPromotions)
 				assert.Empty(t, status.AutoPromotionHolds)
 				require.NotNil(t, status.AutoPromotionHoldsThrough)
-				assert.Equal(t, hourAgo, status.AutoPromotionHoldsThrough.CreationTimestamp.Time)
 				assert.Equal(t, "release-promo", status.AutoPromotionHoldsThrough.Name)
 			},
 		},
@@ -890,7 +888,6 @@ func TestRegularStageReconciler_syncPromotions(t *testing.T) {
 				assert.False(t, hasPendingPromotions)
 				assert.Empty(t, status.AutoPromotionHolds)
 				require.NotNil(t, status.AutoPromotionHoldsThrough)
-				assert.Equal(t, hourAgo, status.AutoPromotionHoldsThrough.CreationTimestamp.Time)
 				assert.Equal(t, "b-release-promo", status.AutoPromotionHoldsThrough.Name)
 			},
 		},
@@ -908,7 +905,7 @@ func TestRegularStageReconciler_syncPromotions(t *testing.T) {
 			objects: []client.Object{
 				&kargoapi.Promotion{
 					ObjectMeta: metav1.ObjectMeta{
-						Name:              "old-release-promo",
+						Name:              "a-release-promo",
 						Namespace:         "fake-project",
 						CreationTimestamp: metav1.Time{Time: twoHoursAgo},
 						Annotations:       releaseHoldAnnotations(origin),
@@ -923,7 +920,7 @@ func TestRegularStageReconciler_syncPromotions(t *testing.T) {
 				},
 				&kargoapi.Promotion{
 					ObjectMeta: metav1.ObjectMeta{
-						Name:              "newer-hold-promo",
+						Name:              "b-hold-promo",
 						Namespace:         "fake-project",
 						CreationTimestamp: metav1.Time{Time: hourAgo},
 						Annotations: map[string]string{
@@ -944,10 +941,9 @@ func TestRegularStageReconciler_syncPromotions(t *testing.T) {
 				assert.False(t, hasPendingPromotions)
 				require.Len(t, status.AutoPromotionHolds, 1)
 				hold := status.AutoPromotionHolds[origin.String()]
-				assert.Equal(t, "newer-hold-promo", hold.PromotionName)
+				assert.Equal(t, "b-hold-promo", hold.PromotionName)
 				require.NotNil(t, status.AutoPromotionHoldsThrough)
-				assert.Equal(t, hourAgo, status.AutoPromotionHoldsThrough.CreationTimestamp.Time)
-				assert.Equal(t, "newer-hold-promo", status.AutoPromotionHoldsThrough.Name)
+				assert.Equal(t, "b-hold-promo", status.AutoPromotionHoldsThrough.Name)
 			},
 		},
 		{

@@ -464,12 +464,9 @@ type StageStatus struct {
 // intent Promotion so the Stage controller can skip already-applied events even
 // after Promotion GC removes them from the cache.
 type AutoPromotionHoldsWatermark struct {
-	// CreationTimestamp is the CreationTimestamp of the latest processed intent
-	// Promotion.
-	CreationTimestamp metav1.Time `json:"creationTimestamp" protobuf:"bytes,1,opt,name=creationTimestamp"`
-	// Name is the name of the latest processed intent Promotion, used as a
-	// tie-breaker when two Promotions share the same CreationTimestamp.
-	Name string `json:"name" protobuf:"bytes,2,opt,name=name"`
+	// Name is the name of the latest processed intent Promotion. Promotion names
+	// embed a ULID, so lexicographic order on Name equals chronological order.
+	Name string `json:"name" protobuf:"bytes,1,opt,name=name"`
 }
 
 // AutoPromotionHold pins a single FreightOrigin on a Stage, pausing

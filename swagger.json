@@ -6455,12 +6455,8 @@
     "AutoPromotionHoldsWatermark": {
       "type": "object",
       "properties": {
-        "creationTimestamp": {
-          "description": "CreationTimestamp is the CreationTimestamp of the latest processed intent\nPromotion.",
-          "type": "string"
-        },
         "name": {
-          "description": "Name is the name of the latest processed intent Promotion, used as a\ntie-breaker when two Promotions share the same CreationTimestamp.",
+          "description": "Name is the name of the latest processed intent Promotion. Promotion names\nembed a ULID, so lexicographic order on Name equals chronological order.",
           "type": "string"
         }
       }

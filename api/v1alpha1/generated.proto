@@ -210,13 +210,9 @@ message AutoPromotionHold {
 // intent Promotion so the Stage controller can skip already-applied events even
 // after Promotion GC removes them from the cache.
 message AutoPromotionHoldsWatermark {
-  // CreationTimestamp is the CreationTimestamp of the latest processed intent
-  // Promotion.
-  optional .k8s.io.apimachinery.pkg.apis.meta.v1.Time creationTimestamp = 1;
-
-  // Name is the name of the latest processed intent Promotion, used as a
-  // tie-breaker when two Promotions share the same CreationTimestamp.
-  optional string name = 2;
+  // Name is the name of the latest processed intent Promotion. Promotion names
+  // embed a ULID, so lexicographic order on Name equals chronological order.
+  optional string name = 1;
 }
 
 // AutoPromotionOptions specifies options pertaining to auto-promotion.
