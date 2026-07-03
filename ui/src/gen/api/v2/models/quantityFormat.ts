@@ -12,8 +12,8 @@ export type QuantityFormat = (typeof QuantityFormat)[keyof typeof QuantityFormat
 export const QuantityFormat = {
   /** e.g., 12e6 */
   DecimalExponent: 'DecimalExponent',
-  /** e.g., 12Mi (12 * 2^20) */
+  /** e.g., 12Mi (12 \* 2^20) */
   BinarySI: 'BinarySI',
-  /** e.g., 12M  (12 * 10^6) */
+  /** e.g., 12M  (12 \* 10^6) */
   DecimalSI: 'DecimalSI'
 } as const;
