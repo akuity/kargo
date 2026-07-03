@@ -589,7 +589,23 @@ func (r *RegularStageReconciler) syncPromotions(
 		return newStatus, false, err
 	}
 
-	syncAutoPromotionHolds(stage, promotions, &newStatus)
+	// Build a map of origin keys that are currently requested by this Stage,
+	// used both to filter new holds and to evict stale ones.
+	requestedOrigins := make(map[string]struct{}, len(stage.Spec.RequestedFreight))
+	for _, req := range stage.Spec.RequestedFreight {
+		requestedOrigins[req.Origin.String()] = struct{}{}
+	}
+
+	// Drop holds for origins that are no longer requested. This runs before
+	// the early-exit below so it takes effect even when there are no Promotions.
+	for key := range newStatus.AutoPromotionHolds {
+		if _, ok := requestedOrigins[key]; !ok {
+			delete(newStatus.AutoPromotionHolds, key)
+		}
+	}
+	if len(newStatus.AutoPromotionHolds) == 0 {
+		newStatus.AutoPromotionHolds = nil
+	}
 
 	// If there are no Promotions, then we are not promoting any Freight.
 	if len(promotions.Items) == 0 {
@@ -628,49 +644,90 @@ func (r *RegularStageReconciler) syncPromotions(
 		}
 	}
 
+	// Build an index of Promotions by name for annotation lookup during hold
+	// processing below.
+	promoByName := make(map[string]*kargoapi.Promotion, len(promotions.Items))
+	for i := range promotions.Items {
+		promoByName[promotions.Items[i].Name] = &promotions.Items[i]
+	}
+
+	// Gather terminal Promotions newer than the last processed one. Promotion
+	// names embed a ULID so lexicographic order equals chronological order.
+	var newPromotions []kargoapi.PromotionReference
+	for _, promo := range promotions.Items {
+		if lastPromo != nil {
+			// We can break here since we know that all subsequent Promotions
+			// will be older than the last Promotion we saw.
+			// NB: This makes use of the fact that Promotion names are
+			// generated, and contain a timestamp component which will ensure
+			// that they can be sorted in a consistent order.
+			if strings.Compare(promo.Name, lastPromo.Name) <= 0 {
+				break
+			}
+		}
+		if promo.Status.Phase.IsTerminal() {
+			info := kargoapi.PromotionReference{
+				Name:       promo.Name,
+				Status:     promo.Status.DeepCopy(),
+				FinishedAt: promo.Status.FinishedAt,
+			}
+			if promo.Status.Freight != nil {
+				info.Freight = promo.Status.Freight.DeepCopy()
+			}
+			newPromotions = append(newPromotions, info)
+		}
+	}
+	// Sort oldest-to-newest: holds must be applied in chronological order, and
+	// Freight history entries must be appended oldest-first so GC removes the
+	// oldest entries first.
+	slices.SortFunc(newPromotions, func(a, b kargoapi.PromotionReference) int {
+		return strings.Compare(a.Name, b.Name)
+	})
+
+	// Apply hold and release intent from new Promotions in chronological order
+	// so a later release correctly supersedes an earlier hold and vice versa.
+	// Holds persist in status even after their establishing Promotion is GC'd.
+	for _, p := range newPromotions {
+		fullPromo := promoByName[p.Name]
+		if fullPromo == nil {
+			continue
+		}
+		if originKey := fullPromo.Annotations[kargoapi.AnnotationKeyAutoPromotionHold]; originKey != "" {
+			if _, requested := requestedOrigins[originKey]; !requested {
+				continue
+			}
+			origin, err := kargoapi.ParseFreightOrigin(originKey)
+			if err != nil {
+				continue
+			}
+			if newStatus.AutoPromotionHolds == nil {
+				newStatus.AutoPromotionHolds = make(map[string]kargoapi.AutoPromotionHold)
+			}
+			hold := kargoapi.AutoPromotionHold{
+				FreightName:   fullPromo.Spec.Freight,
+				Origin:        origin,
+				PromotionName: fullPromo.Name,
+			}
+			if actor := fullPromo.Annotations[kargoapi.AnnotationKeyCreateActor]; actor != "" {
+				hold.Actor = actor
+			}
+			if !fullPromo.CreationTimestamp.IsZero() {
+				t := fullPromo.CreationTimestamp
+				hold.CreatedAt = &t
+			}
+			newStatus.AutoPromotionHolds[originKey] = hold
+		} else if originKey := fullPromo.Annotations[kargoapi.AnnotationKeyAutoPromotionResume]; originKey != "" {
+			delete(newStatus.AutoPromotionHolds, originKey)
+		}
+	}
+
 	// If the current Promotion is not the highest priority Promotion, or the
 	// highest priority Promotion is in a terminal phase, then we must have
 	// finished promoting.
 	if currentPromo != nil && (currentPromo.Name != highestPrioPromo.Name || highestPrioPromo.Status.Phase.IsTerminal()) {
-		// Gather information about the Promotions that have terminated since the
-		// last reconciliation.
-		var newPromotions []kargoapi.PromotionReference
-		for _, promo := range promotions.Items {
-			// Update the conditions to reflect that we are no longer promoting.
-			conditions.Delete(&newStatus, kargoapi.ConditionTypePromoting)
-			newStatus.CurrentPromotion = nil
-
-			if lastPromo != nil {
-				// We can break here since we know that all subsequent Promotions
-				// will be older than the last Promotion we saw.
-				// NB: This makes use of the fact that Promotion names are
-				// generated, and contain a timestamp component which will ensure
-				// that they can be sorted in a consistent order.
-				if strings.Compare(promo.Name, lastPromo.Name) <= 0 {
-					break
-				}
-			}
-
-			if promo.Status.Phase.IsTerminal() {
-				info := kargoapi.PromotionReference{
-					Name:       promo.Name,
-					Status:     promo.Status.DeepCopy(),
-					FinishedAt: promo.Status.FinishedAt,
-				}
-				if promo.Status.Freight != nil {
-					info.Freight = promo.Status.Freight.DeepCopy()
-				}
-				newPromotions = append(newPromotions, info)
-			}
-		}
-
-		// As we will be appending to the Freight history, we need to ensure that
-		// we order the Promotions from oldest to newest. This is because the
-		// Freight history is garbage collected based on the number of entries,
-		// and we want to ensure that the oldest entries are removed first.
-		slices.SortFunc(newPromotions, func(a, b kargoapi.PromotionReference) int {
-			return strings.Compare(a.Name, b.Name)
-		})
+		// Update the conditions to reflect that we are no longer promoting.
+		conditions.Delete(&newStatus, kargoapi.ConditionTypePromoting)
+		newStatus.CurrentPromotion = nil
 
 		// Update the Stage status with the information about the newly terminated
 		// Promotions, and any new Freight that was successfully promoted.
@@ -776,89 +833,6 @@ func (r *RegularStageReconciler) syncPromotions(
 	// not promoting.
 	conditions.Delete(&newStatus, kargoapi.ConditionTypePromoting)
 	return newStatus, hasNonTerminalPromotions, nil
-}
-
-// syncAutoPromotionHolds applies any hold or release intent Promotions that
-// have succeeded since the last processed Promotion to status.AutoPromotionHolds.
-//
-// Holds persist in status after their establishing Promotion is
-// garbage-collected. Once a release Promotion has been observed and its effect
-// recorded in status, it also survives Promotion GC.
-func syncAutoPromotionHolds(
-	stage *kargoapi.Stage,
-	promotions *kargoapi.PromotionList,
-	status *kargoapi.StageStatus,
-) {
-	requestedOrigins := make(map[string]struct{}, len(stage.Spec.RequestedFreight))
-	for _, req := range stage.Spec.RequestedFreight {
-		requestedOrigins[req.Origin.String()] = struct{}{}
-	}
-
-	// Collect succeeded intent Promotions strictly newer than the last
-	// processed Promotion. Promotion names embed a ULID, so lexicographic
-	// order equals chronological order for Promotions on the same Stage.
-	lastPromo := stage.Status.LastPromotion
-	var pending []*kargoapi.Promotion
-	for i := range promotions.Items {
-		promo := &promotions.Items[i]
-		if promo.Status.Phase != kargoapi.PromotionPhaseSucceeded {
-			continue
-		}
-		hasHold := promo.Annotations[kargoapi.AnnotationKeyAutoPromotionHold] != ""
-		hasRelease := promo.Annotations[kargoapi.AnnotationKeyAutoPromotionResume] != ""
-		if !hasHold && !hasRelease {
-			continue
-		}
-		if lastPromo != nil && promo.Name <= lastPromo.Name {
-			continue
-		}
-		pending = append(pending, promo)
-	}
-
-	// Sort by name ascending so we apply effects in chronological order.
-	slices.SortFunc(pending, func(a, b *kargoapi.Promotion) int {
-		return strings.Compare(a.Name, b.Name)
-	})
-
-	for _, promo := range pending {
-		if originKey := promo.Annotations[kargoapi.AnnotationKeyAutoPromotionHold]; originKey != "" {
-			if _, requested := requestedOrigins[originKey]; !requested {
-				continue
-			}
-			origin, err := kargoapi.ParseFreightOrigin(originKey)
-			if err != nil {
-				continue
-			}
-			if status.AutoPromotionHolds == nil {
-				status.AutoPromotionHolds = make(map[string]kargoapi.AutoPromotionHold)
-			}
-			hold := kargoapi.AutoPromotionHold{
-				FreightName:   promo.Spec.Freight,
-				Origin:        origin,
-				PromotionName: promo.Name,
-			}
-			if actor := promo.Annotations[kargoapi.AnnotationKeyCreateActor]; actor != "" {
-				hold.Actor = actor
-			}
-			if !promo.CreationTimestamp.IsZero() {
-				t := promo.CreationTimestamp
-				hold.CreatedAt = &t
-			}
-			status.AutoPromotionHolds[originKey] = hold
-		} else if originKey := promo.Annotations[kargoapi.AnnotationKeyAutoPromotionResume]; originKey != "" {
-			delete(status.AutoPromotionHolds, originKey)
-		}
-	}
-
-	// Drop holds for origins no longer requested.
-	for key := range status.AutoPromotionHolds {
-		if _, ok := requestedOrigins[key]; !ok {
-			delete(status.AutoPromotionHolds, key)
-		}
-	}
-	if len(status.AutoPromotionHolds) == 0 {
-		status.AutoPromotionHolds = nil
-	}
 }
 
 // assessHealth assesses the health of a Stage based on the health checks from
@@ -1982,7 +1956,68 @@ func (r *RegularStageReconciler) activeAutoPromotionHolds(
 	); err != nil {
 		return nil, err
 	}
-	syncAutoPromotionHolds(stage, promotions, &status)
+	requestedOrigins := make(map[string]struct{}, len(stage.Spec.RequestedFreight))
+	for _, req := range stage.Spec.RequestedFreight {
+		requestedOrigins[req.Origin.String()] = struct{}{}
+	}
+
+	lastPromo := stage.Status.LastPromotion
+	var pending []*kargoapi.Promotion
+	for i := range promotions.Items {
+		promo := &promotions.Items[i]
+		if promo.Status.Phase != kargoapi.PromotionPhaseSucceeded {
+			continue
+		}
+		hasHold := promo.Annotations[kargoapi.AnnotationKeyAutoPromotionHold] != ""
+		hasRelease := promo.Annotations[kargoapi.AnnotationKeyAutoPromotionResume] != ""
+		if !hasHold && !hasRelease {
+			continue
+		}
+		if lastPromo != nil && promo.Name <= lastPromo.Name {
+			continue
+		}
+		pending = append(pending, promo)
+	}
+	slices.SortFunc(pending, func(a, b *kargoapi.Promotion) int {
+		return strings.Compare(a.Name, b.Name)
+	})
+	for _, promo := range pending {
+		if originKey := promo.Annotations[kargoapi.AnnotationKeyAutoPromotionHold]; originKey != "" {
+			if _, requested := requestedOrigins[originKey]; !requested {
+				continue
+			}
+			origin, err := kargoapi.ParseFreightOrigin(originKey)
+			if err != nil {
+				continue
+			}
+			if status.AutoPromotionHolds == nil {
+				status.AutoPromotionHolds = make(map[string]kargoapi.AutoPromotionHold)
+			}
+			hold := kargoapi.AutoPromotionHold{
+				FreightName:   promo.Spec.Freight,
+				Origin:        origin,
+				PromotionName: promo.Name,
+			}
+			if actor := promo.Annotations[kargoapi.AnnotationKeyCreateActor]; actor != "" {
+				hold.Actor = actor
+			}
+			if !promo.CreationTimestamp.IsZero() {
+				t := promo.CreationTimestamp
+				hold.CreatedAt = &t
+			}
+			status.AutoPromotionHolds[originKey] = hold
+		} else if originKey := promo.Annotations[kargoapi.AnnotationKeyAutoPromotionResume]; originKey != "" {
+			delete(status.AutoPromotionHolds, originKey)
+		}
+	}
+	for key := range status.AutoPromotionHolds {
+		if _, ok := requestedOrigins[key]; !ok {
+			delete(status.AutoPromotionHolds, key)
+		}
+	}
+	if len(status.AutoPromotionHolds) == 0 {
+		status.AutoPromotionHolds = nil
+	}
 	return status.AutoPromotionHolds, nil
 }
 
