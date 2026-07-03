@@ -130,8 +130,7 @@ const (
 	// VerbFlag is the flag name for the verb flag.
 	VerbFlag = "verb"
 
-	// WarehouseFlag is the flag name for the warehouse flag used when promoting
-	// the latest available Freight for a specific Warehouse origin.
+	// WarehouseFlag is the flag name for the warehouse flag.
 	WarehouseFlag = "warehouse"
 
 	// WaitFlag is the flag name for the wait flag.
@@ -272,6 +271,11 @@ func OldAlias(fs *pflag.FlagSet, stage *string, usage string) {
 // Origins adds the OriginsFlag to the provided flag set.
 func Origins(fs *pflag.FlagSet, origin *[]string, usage string) {
 	fs.StringArrayVar(origin, OriginFlag, nil, usage)
+}
+
+// Warehouses adds the WarehouseFlag to the provided flag set.
+func Warehouses(fs *pflag.FlagSet, warehouses *[]string, usage string) {
+	fs.StringArrayVar(warehouses, WarehouseFlag, nil, usage)
 }
 
 // Password adds the PasswordFlag to the provided flag set.

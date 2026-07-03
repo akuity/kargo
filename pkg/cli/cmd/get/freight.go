@@ -32,10 +32,10 @@ type getFreightOptions struct {
 	Config        config.CLIConfig
 	ClientOptions client.Options
 
-	Project string
-	Names   []string
-	Aliases []string
-	Origins []string
+	Project    string
+	Names      []string
+	Aliases    []string
+	Warehouses []string
 }
 
 func newGetFreightCommand(
@@ -60,7 +60,7 @@ func newGetFreightCommand(
 kargo get freight --project=my-project
 
 # List all freight in my-project for a specific warehouse
-kargo get freight --project=my-project --origin=warehouse-1
+kargo get freight --project=my-project --warehouse=warehouse-1
 
 # List all freight in my-project in JSON output format
 kargo get freight --project=my-project -o json
@@ -112,9 +112,12 @@ func (o *getFreightOptions) addFlags(cmd *cobra.Command) {
 	)
 	option.Names(cmd.Flags(), &o.Names, "The name of a piece of freight to get.")
 	option.Aliases(cmd.Flags(), &o.Aliases, "The alias of a piece of freight to get.")
-	option.Origins(cmd.Flags(), &o.Origins, "The origin of the freight to get.")
+	option.Warehouses(cmd.Flags(), &o.Warehouses, "Filter by Warehouse name.")
+	option.Origins(cmd.Flags(), &o.Warehouses, "Filter by Warehouse name. Deprecated: use --warehouse.")
+	_ = cmd.Flags().MarkDeprecated(option.OriginFlag, "use --warehouse instead")
 
-	// Origin and name/alias are mutually exclusive
+	cmd.MarkFlagsMutuallyExclusive(option.NameFlag, option.WarehouseFlag)
+	cmd.MarkFlagsMutuallyExclusive(option.AliasFlag, option.WarehouseFlag)
 	cmd.MarkFlagsMutuallyExclusive(option.NameFlag, option.OriginFlag)
 	cmd.MarkFlagsMutuallyExclusive(option.AliasFlag, option.OriginFlag)
 }
@@ -140,8 +143,8 @@ func (o *getFreightOptions) run(ctx context.Context) error {
 	if len(o.Names) == 0 && len(o.Aliases) == 0 {
 		params := core.NewQueryFreightsRestParams().
 			WithProject(o.Project)
-		if len(o.Origins) > 0 {
-			params = params.WithOrigins(o.Origins)
+		if len(o.Warehouses) > 0 {
+			params = params.WithOrigins(o.Warehouses)
 		}
 		var res *core.QueryFreightsRestOK
 		if res, err = apiClient.Core.QueryFreightsRest(params, nil); err != nil {
