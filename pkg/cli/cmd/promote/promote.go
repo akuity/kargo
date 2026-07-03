@@ -221,7 +221,10 @@ func (o *promotionOptions) run(ctx context.Context) error {
 	case o.Stage != "":
 		var origin string
 		if o.Warehouse != "" {
-			origin = "Warehouse/" + o.Warehouse
+			origin = (&kargoapi.FreightOrigin{
+				Kind: kargoapi.FreightOriginKindWarehouse,
+				Name: o.Warehouse,
+			}).String()
 		}
 		var res *core.PromoteToStageCreated
 		if res, err = apiClient.Core.PromoteToStage(
