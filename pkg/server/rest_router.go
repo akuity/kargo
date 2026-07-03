@@ -61,7 +61,7 @@ func (s *server) setupRESTRouter(ctx context.Context) *gin.Engine {
 
 	// Authentication middleware (only if auth is configured)
 	if s.cfg.AdminConfig != nil || s.cfg.OIDCConfig != nil {
-		router.Use(newAuthMiddleware(ctx, s.cfg, s.client.InternalClient()))
+		router.Use(NewAuthMiddleware(ctx, s.cfg, s.client.InternalClient()))
 	}
 
 	v1beta1 := router.Group("/v1beta1")
