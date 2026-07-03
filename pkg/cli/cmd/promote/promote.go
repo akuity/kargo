@@ -126,10 +126,8 @@ func (o *promotionOptions) addFlags(cmd *cobra.Command) {
 		"The alias of a piece of freight to promote. "+
 			"Exactly one of --freight, --freight-alias, or --warehouse must be set.",
 	)
-	cmd.Flags().StringVar(
-		&o.Warehouse,
-		option.WarehouseFlag,
-		"",
+	option.Warehouse(
+		cmd.Flags(), &o.Warehouse,
 		"The Warehouse whose latest available Freight should be promoted. "+
 			"Exactly one of --freight, --freight-alias, or --warehouse must be set.",
 	)

@@ -273,6 +273,11 @@ func Origins(fs *pflag.FlagSet, origin *[]string, usage string) {
 	fs.StringArrayVar(origin, OriginFlag, nil, usage)
 }
 
+// Warehouse adds the WarehouseFlag to the provided flag set.
+func Warehouse(fs *pflag.FlagSet, warehouse *string, usage string) {
+	fs.StringVar(warehouse, WarehouseFlag, "", usage)
+}
+
 // Warehouses adds the WarehouseFlag to the provided flag set.
 func Warehouses(fs *pflag.FlagSet, warehouses *[]string, usage string) {
 	fs.StringArrayVar(warehouses, WarehouseFlag, nil, usage)
