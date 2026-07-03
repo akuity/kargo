@@ -375,7 +375,6 @@ func (r *ControlFlowStageReconciler) initializeStatus(stage *kargoapi.Stage) kar
 	// otherwise be orphaned: only the regular Stage reconciler transitions or
 	// removes them.
 	newStatus.AutoPromotionHolds = nil
-	newStatus.AutoPromotionHoldsThrough = nil
 
 	return *newStatus
 }

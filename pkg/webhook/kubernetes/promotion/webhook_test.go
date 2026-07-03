@@ -1079,7 +1079,7 @@ func Test_webhook_Default(t *testing.T) {
 			promotion: &kargoapi.Promotion{
 				ObjectMeta: metav1.ObjectMeta{
 					Annotations: map[string]string{
-						kargoapi.AnnotationKeyAutoPromotionHold:    "Warehouse/my-warehouse",
+						kargoapi.AnnotationKeyAutoPromotionHold:   "Warehouse/my-warehouse",
 						kargoapi.AnnotationKeyAutoPromotionResume: "Warehouse/my-warehouse",
 					},
 				},
@@ -1225,7 +1225,7 @@ func Test_webhook_Default(t *testing.T) {
 			promotion: &kargoapi.Promotion{
 				ObjectMeta: metav1.ObjectMeta{
 					Annotations: map[string]string{
-						kargoapi.AnnotationKeyCreateActor:          "real-user",
+						kargoapi.AnnotationKeyCreateActor:         "real-user",
 						kargoapi.AnnotationKeyAutoPromotionResume: "Warehouse/my-warehouse",
 					},
 				},

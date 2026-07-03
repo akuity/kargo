@@ -49,7 +49,8 @@ func NewCommand(cfg config.CLIConfig, streams genericiooptions.IOStreams) *cobra
 	}
 
 	cmd := &cobra.Command{
-		Use: "promote [--project=project] (--freight=freight | --freight-alias=alias | --warehouse=warehouse | --name=name) " +
+		Use: "promote [--project=project] " +
+			"(--freight=freight | --freight-alias=alias | --warehouse=warehouse | --name=name) " +
 			"[(--stage=stage | --downstream-from=stage) | --abort]",
 		Short: "Promote a piece of freight",
 		Args:  option.NoArgs,

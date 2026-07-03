@@ -410,19 +410,6 @@
           "description": "AutoPromotionHolds records active auto-promotion holds for this Stage.\nA hold is established when a Promotion selects Freight other than the\nlatest available for its origin, pausing auto-promotion for that origin\nuntil explicitly released. Stage-controller auto-promotions do not\nestablish holds. Keys are the canonical string representation of the\nFreightOrigin (e.g. \"Warehouse/my-warehouse\"); values describe the\nPromotion that established the hold.",
           "type": "object"
         },
-        "autoPromotionHoldsThrough": {
-          "description": "AutoPromotionHoldsThrough is controller bookkeeping for processing hold\nand release intent Promotions once. It records the newest intent Promotion\nalready applied to AutoPromotionHolds, so a hold or release is not replayed\nincorrectly after old Promotion resources are garbage-collected.",
-          "properties": {
-            "name": {
-              "description": "Name is the name of the latest processed intent Promotion. Promotion names\nembed a ULID, so lexicographic order on Name equals chronological order.",
-              "type": "string"
-            }
-          },
-          "required": [
-            "name"
-          ],
-          "type": "object"
-        },
         "conditions": {
           "description": "Conditions contains the last observations of the Stage's current\nstate.",
           "items": {

@@ -1632,13 +1632,6 @@ RawFormat specifies the format for raw resource representation.
 | createdAt | k8s.io.apimachinery.pkg.apis.meta.v1.Time |  CreatedAt is the creation timestamp of the Promotion that established this hold. |
 
 
-### AutoPromotionHoldsWatermark {#github-com-akuity-kargo-api-v1alpha1-AutoPromotionHoldsWatermark}
- AutoPromotionHoldsWatermark records the most recently processed hold/release intent Promotion so the Stage controller can skip already-applied events even after Promotion GC removes them from the cache.
-| Field | Type | Description |
-| ----- | ---- | ----------- |
-| name | string |  Name is the name of the latest processed intent Promotion. Promotion names embed a ULID, so lexicographic order on Name equals chronological order. |
-
-
 ### AutoPromotionOptions {#github-com-akuity-kargo-api-v1alpha1-AutoPromotionOptions}
  AutoPromotionOptions specifies options pertaining to auto-promotion.
 | Field | Type | Description |
@@ -2459,7 +2452,6 @@ RawFormat specifies the format for raw resource representation.
 | autoPromotionEnabled | bool |  AutoPromotionEnabled indicates whether automatic promotion is enabled for the Stage based on the ProjectConfig. |
 | metadata | [StageStatus.MetadataEntry](#github-com-akuity-kargo-api-v1alpha1-StageStatus-MetadataEntry) |  Metadata is a map of arbitrary metadata associated with the Stage. This is useful for storing additional information about the Stage that can be shared across promotions, verifications, or other processes. |
 | autoPromotionHolds | [StageStatus.AutoPromotionHoldsEntry](#github-com-akuity-kargo-api-v1alpha1-StageStatus-AutoPromotionHoldsEntry) |  AutoPromotionHolds records active auto-promotion holds for this Stage. A hold is established when a Promotion selects Freight other than the latest available for its origin, pausing auto-promotion for that origin until explicitly released. Stage-controller auto-promotions do not establish holds. Keys are the canonical string representation of the FreightOrigin (e.g. "Warehouse/my-warehouse"); values describe the Promotion that established the hold. |
-| autoPromotionHoldsThrough | [AutoPromotionHoldsWatermark](#github-com-akuity-kargo-api-v1alpha1-AutoPromotionHoldsWatermark) |  AutoPromotionHoldsThrough is controller bookkeeping for processing hold and release intent Promotions once. It records the newest intent Promotion already applied to AutoPromotionHolds, so a hold or release is not replayed incorrectly after old Promotion resources are garbage-collected. |
 
 
 ### StageStatus.AutoPromotionHoldsEntry {#github-com-akuity-kargo-api-v1alpha1-StageStatus-AutoPromotionHoldsEntry}

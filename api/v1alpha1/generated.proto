@@ -206,15 +206,6 @@ message AutoPromotionHold {
   optional .k8s.io.apimachinery.pkg.apis.meta.v1.Time createdAt = 7;
 }
 
-// AutoPromotionHoldsWatermark records the most recently processed hold/release
-// intent Promotion so the Stage controller can skip already-applied events even
-// after Promotion GC removes them from the cache.
-message AutoPromotionHoldsWatermark {
-  // Name is the name of the latest processed intent Promotion. Promotion names
-  // embed a ULID, so lexicographic order on Name equals chronological order.
-  optional string name = 1;
-}
-
 // AutoPromotionOptions specifies options pertaining to auto-promotion.
 message AutoPromotionOptions {
   // SelectionPolicy specifies the rules for identifying new Freight that is
@@ -2044,12 +2035,6 @@ message StageStatus {
   // FreightOrigin (e.g. "Warehouse/my-warehouse"); values describe the
   // Promotion that established the hold.
   map<string, AutoPromotionHold> autoPromotionHolds = 16;
-
-  // AutoPromotionHoldsThrough is controller bookkeeping for processing hold
-  // and release intent Promotions once. It records the newest intent Promotion
-  // already applied to AutoPromotionHolds, so a hold or release is not replayed
-  // incorrectly after old Promotion resources are garbage-collected.
-  optional AutoPromotionHoldsWatermark autoPromotionHoldsThrough = 17;
 }
 
 // StepExecutionMetadata tracks metadata pertaining to the execution of

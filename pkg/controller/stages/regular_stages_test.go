@@ -781,8 +781,6 @@ func TestRegularStageReconciler_syncPromotions(t *testing.T) {
 				assert.Equal(t, "hold-promo", hold.PromotionName)
 				assert.Equal(t, "user:alice", hold.Actor)
 				assert.True(t, hold.Origin.Equals(&origin))
-				require.NotNil(t, status.AutoPromotionHoldsThrough)
-				assert.Equal(t, "hold-promo", status.AutoPromotionHoldsThrough.Name)
 			},
 		},
 		{
@@ -834,8 +832,6 @@ func TestRegularStageReconciler_syncPromotions(t *testing.T) {
 				require.NoError(t, err)
 				assert.False(t, hasPendingPromotions)
 				assert.Empty(t, status.AutoPromotionHolds)
-				require.NotNil(t, status.AutoPromotionHoldsThrough)
-				assert.Equal(t, "release-promo", status.AutoPromotionHoldsThrough.Name)
 			},
 		},
 		{
@@ -887,8 +883,6 @@ func TestRegularStageReconciler_syncPromotions(t *testing.T) {
 				require.NoError(t, err)
 				assert.False(t, hasPendingPromotions)
 				assert.Empty(t, status.AutoPromotionHolds)
-				require.NotNil(t, status.AutoPromotionHoldsThrough)
-				assert.Equal(t, "b-release-promo", status.AutoPromotionHoldsThrough.Name)
 			},
 		},
 		{
@@ -942,8 +936,6 @@ func TestRegularStageReconciler_syncPromotions(t *testing.T) {
 				require.Len(t, status.AutoPromotionHolds, 1)
 				hold := status.AutoPromotionHolds[origin.String()]
 				assert.Equal(t, "b-hold-promo", hold.PromotionName)
-				require.NotNil(t, status.AutoPromotionHoldsThrough)
-				assert.Equal(t, "b-hold-promo", status.AutoPromotionHoldsThrough.Name)
 			},
 		},
 		{

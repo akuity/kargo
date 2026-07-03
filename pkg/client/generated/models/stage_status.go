@@ -31,14 +31,6 @@ type StageStatus struct {
 	// Promotion that established the hold.
 	AutoPromotionHolds map[string]AutoPromotionHold `json:"autoPromotionHolds,omitempty"`
 
-	// AutoPromotionHoldsThrough is controller bookkeeping for processing hold
-	// and release intent Promotions once. It records the newest intent Promotion
-	// already applied to AutoPromotionHolds, so a hold or release is not replayed
-	// incorrectly after old Promotion resources are garbage-collected.
-	AutoPromotionHoldsThrough struct {
-		AutoPromotionHoldsWatermark
-	} `json:"autoPromotionHoldsThrough,omitempty"`
-
 	// Conditions contains the last observations of the Stage's current
 	// state.
 	// +patchMergeKey=type
@@ -104,10 +96,6 @@ func (m *StageStatus) Validate(formats strfmt.Registry) error {
 		res = append(res, err)
 	}
 
-	if err := m.validateAutoPromotionHoldsThrough(formats); err != nil {
-		res = append(res, err)
-	}
-
 	if err := m.validateConditions(formats); err != nil {
 		res = append(res, err)
 	}
@@ -159,14 +147,6 @@ func (m *StageStatus) validateAutoPromotionHolds(formats strfmt.Registry) error 
 			}
 		}
 
-	}
-
-	return nil
-}
-
-func (m *StageStatus) validateAutoPromotionHoldsThrough(formats strfmt.Registry) error {
-	if swag.IsZero(m.AutoPromotionHoldsThrough) { // not required
-		return nil
 	}
 
 	return nil
@@ -264,10 +244,6 @@ func (m *StageStatus) ContextValidate(ctx context.Context, formats strfmt.Regist
 		res = append(res, err)
 	}
 
-	if err := m.contextValidateAutoPromotionHoldsThrough(ctx, formats); err != nil {
-		res = append(res, err)
-	}
-
 	if err := m.contextValidateConditions(ctx, formats); err != nil {
 		res = append(res, err)
 	}
@@ -305,11 +281,6 @@ func (m *StageStatus) contextValidateAutoPromotionHolds(ctx context.Context, for
 		}
 
 	}
-
-	return nil
-}
-
-func (m *StageStatus) contextValidateAutoPromotionHoldsThrough(ctx context.Context, formats strfmt.Registry) error {
 
 	return nil
 }

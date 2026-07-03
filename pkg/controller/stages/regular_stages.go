@@ -779,12 +779,11 @@ func (r *RegularStageReconciler) syncPromotions(
 }
 
 // syncAutoPromotionHolds applies any hold or release intent Promotions that
-// have succeeded since the last watermark to status.AutoPromotionHolds, then
-// advances the watermark.
+// have succeeded since the last processed Promotion to status.AutoPromotionHolds.
 //
 // Holds persist in status after their establishing Promotion is
-// garbage-collected. Once a release Promotion has been observed and watermarked,
-// its effect also survives Promotion GC.
+// garbage-collected. Once a release Promotion has been observed and its effect
+// recorded in status, it also survives Promotion GC.
 func syncAutoPromotionHolds(
 	stage *kargoapi.Stage,
 	promotions *kargoapi.PromotionList,
@@ -795,10 +794,10 @@ func syncAutoPromotionHolds(
 		requestedOrigins[req.Origin.String()] = struct{}{}
 	}
 
-	// Collect succeeded intent Promotions strictly newer than the watermark.
-	// Promotion names embed a ULID, so lexicographic order equals chronological
-	// order for Promotions on the same Stage.
-	watermark := status.AutoPromotionHoldsThrough
+	// Collect succeeded intent Promotions strictly newer than the last
+	// processed Promotion. Promotion names embed a ULID, so lexicographic
+	// order equals chronological order for Promotions on the same Stage.
+	lastPromo := stage.Status.LastPromotion
 	var pending []*kargoapi.Promotion
 	for i := range promotions.Items {
 		promo := &promotions.Items[i]
@@ -810,7 +809,7 @@ func syncAutoPromotionHolds(
 		if !hasHold && !hasRelease {
 			continue
 		}
-		if watermark != nil && promo.Name <= watermark.Name {
+		if lastPromo != nil && promo.Name <= lastPromo.Name {
 			continue
 		}
 		pending = append(pending, promo)
@@ -859,14 +858,6 @@ func syncAutoPromotionHolds(
 	}
 	if len(status.AutoPromotionHolds) == 0 {
 		status.AutoPromotionHolds = nil
-	}
-
-	if len(pending) > 0 {
-		// Advance watermark to the newest processed Promotion.
-		newest := pending[len(pending)-1]
-		status.AutoPromotionHoldsThrough = &kargoapi.AutoPromotionHoldsWatermark{
-			Name: newest.Name,
-		}
 	}
 }
 
@@ -1972,9 +1963,9 @@ func (r *RegularStageReconciler) autoPromoteFreight(
 
 // activeAutoPromotionHolds returns Stage auto-promotion holds after applying
 // any succeeded hold/release intent Promotions that are newer than the Stage's
-// watermark. autoPromoteFreight uses this instead of raw Stage status to close
-// the stale-read race between a hold-intent Promotion succeeding and the Stage
-// status patch that records the hold becoming visible to every reconciler.
+// last processed Promotion. autoPromoteFreight uses this instead of raw Stage
+// status to close the stale-read race between a hold-intent Promotion
+// succeeding and the Stage status patch that records the hold becoming visible.
 func (r *RegularStageReconciler) activeAutoPromotionHolds(
 	ctx context.Context,
 	stage *kargoapi.Stage,

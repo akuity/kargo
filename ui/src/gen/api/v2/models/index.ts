@@ -20,7 +20,6 @@ export * from './artifactReference';
 export * from './artifactReferenceMetadata';
 export * from './artifactoryWebhookReceiverConfig';
 export * from './autoPromotionHold';
-export * from './autoPromotionHoldsWatermark';
 export * from './autoPromotionOptions';
 export * from './autoRollbackConfig';
 export * from './azureWebhookReceiverConfig';
