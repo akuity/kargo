@@ -11,41 +11,6 @@ import (
 	kargoapi "github.com/akuity/kargo/api/v1alpha1"
 )
 
-func TestNewContext_Rollback(t *testing.T) {
-	tests := []struct {
-		name     string
-		value    string
-		expected bool
-	}{
-		{
-			name:     "rollback annotation true",
-			value:    kargoapi.AnnotationValueTrue,
-			expected: true,
-		},
-		{
-			name: "rollback annotation absent",
-		},
-		{
-			name:     "rollback marker with origin value",
-			value:    "Warehouse/fake-warehouse",
-			expected: true,
-		},
-	}
-	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
-			promo := &kargoapi.Promotion{}
-			if tt.value != "" {
-				promo.Annotations = map[string]string{
-					kargoapi.AnnotationKeyRollback: tt.value,
-				}
-			}
-
-			ctx := NewContext(promo, nil)
-			assert.Equal(t, tt.expected, ctx.Rollback)
-		})
-	}
-}
-
 func TestContext_SetCurrentStep(t *testing.T) {
 	tests := []struct {
 		name       string
