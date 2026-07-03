@@ -984,7 +984,7 @@ func TestFreightOrigin_String(t *testing.T) {
 	require.Empty(t, (*FreightOrigin)(nil).String())
 }
 
-func TestParseFreightOriginKey(t *testing.T) {
+func TestParseFreightOrigin(t *testing.T) {
 	testCases := []struct {
 		name           string
 		key            string
@@ -1028,7 +1028,7 @@ func TestParseFreightOriginKey(t *testing.T) {
 
 	for _, testCase := range testCases {
 		t.Run(testCase.name, func(t *testing.T) {
-			origin, err := ParseFreightOriginKey(testCase.key)
+			origin, err := ParseFreightOrigin(testCase.key)
 			if testCase.expectErr {
 				require.Error(t, err)
 				return

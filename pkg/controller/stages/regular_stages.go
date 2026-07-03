@@ -838,7 +838,7 @@ func syncAutoPromotionHolds(
 			if _, requested := requestedOrigins[originKey]; !requested {
 				continue
 			}
-			origin, err := kargoapi.ParseFreightOriginKey(originKey)
+			origin, err := kargoapi.ParseFreightOrigin(originKey)
 			if err != nil {
 				continue
 			}

@@ -268,9 +268,9 @@ func (f *FreightOrigin) String() string {
 	return fmt.Sprintf("%s/%s", f.Kind, f.Name)
 }
 
-// ParseFreightOriginKey parses a canonical Freight origin key in "Kind/name"
-// form and rejects empty parts or unsupported origin kinds.
-func ParseFreightOriginKey(key string) (FreightOrigin, error) {
+// ParseFreightOrigin parses a string representation of a FreightOrigin in
+// "Kind/name" form and rejects empty parts or unsupported origin kinds.
+func ParseFreightOrigin(key string) (FreightOrigin, error) {
 	kind, name, ok := strings.Cut(key, "/")
 	if !ok || strings.Contains(name, "/") {
 		return FreightOrigin{}, fmt.Errorf("invalid Freight origin key %q", key)
