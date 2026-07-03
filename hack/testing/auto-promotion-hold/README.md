@@ -62,14 +62,14 @@ kubectl get stage single-origin-hold -n auto-promotion-hold \
 
 ### 2. Resume via promote-by-origin (race-free)
 
-Promoting by origin resolves to the current candidate server-side, stamps
-`kargo.akuity.io/auto-promotion-release`, and clears the hold when the
+Promoting by warehouse resolves to the current candidate server-side, stamps
+`kargo.akuity.io/auto-promotion-resume`, and clears the hold when the
 Promotion succeeds.
 
 ```shell
 # Via CLI
 kargo promote --project auto-promotion-hold --stage single-origin-hold \
-  --origin Warehouse/auto-hold
+  --warehouse auto-hold
 
 # Via kubectl (spec.origin; webhook resolves to candidate Freight)
 kubectl apply -f - <<YAML
@@ -97,7 +97,7 @@ only and confirm `Warehouse/auto-hold-api` remains held:
 
 ```shell
 kargo promote --project auto-promotion-hold --stage multi-origin-holds \
-  --origin Warehouse/auto-hold
+  --warehouse auto-hold
 ```
 
 ### 4. Verify hold survives Promotion GC

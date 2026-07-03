@@ -161,7 +161,7 @@ the current candidate at promotion time, promote by origin:
 kargo promote \
   --project my-project \
   --stage test \
-  --origin Warehouse/my-warehouse
+  --warehouse my-warehouse
 ```
 
 You can do the same with `kubectl` by creating a `Promotion` that sets
