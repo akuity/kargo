@@ -261,7 +261,21 @@ func (s *server) promoteToStage(c *gin.Context) {
 			_ = c.Error(err)
 			return
 		}
-		s.recordResolvedPromotionCreatedEvent(ctx, promotion)
+		if s.sender != nil && promotion.Spec.Freight != "" {
+			freight := &kargoapi.Freight{}
+			if err = s.client.Get(
+				ctx,
+				client.ObjectKey{Namespace: promotion.Namespace, Name: promotion.Spec.Freight},
+				freight,
+			); err != nil {
+				logging.LoggerFromContext(ctx).Error(
+					err,
+					"error getting resolved Freight for Promotion created event",
+				)
+			} else {
+				s.recordPromotionCreatedEvent(ctx, promotion, freight)
+			}
+		}
 		c.JSON(http.StatusCreated, promotion)
 		return
 	}
@@ -326,30 +340,4 @@ func (s *server) promoteToStage(c *gin.Context) {
 	}
 
 	c.JSON(http.StatusCreated, promotion)
-}
-
-// recordResolvedPromotionCreatedEvent records the normal PromotionCreated event
-// after admission has resolved spec.origin to spec.freight. If admission has
-// not resolved the Promotion yet, there is no Freight object to attach, so event
-// recording is skipped instead of blocking the request.
-func (s *server) recordResolvedPromotionCreatedEvent(
-	ctx context.Context,
-	promotion *kargoapi.Promotion,
-) {
-	if s.sender == nil || promotion.Spec.Freight == "" {
-		return
-	}
-	freight := &kargoapi.Freight{}
-	if err := s.client.Get(
-		ctx,
-		client.ObjectKey{Namespace: promotion.Namespace, Name: promotion.Spec.Freight},
-		freight,
-	); err != nil {
-		logging.LoggerFromContext(ctx).Error(
-			err,
-			"error getting resolved Freight for Promotion created event",
-		)
-		return
-	}
-	s.recordPromotionCreatedEvent(ctx, promotion, freight)
 }
