@@ -19,28 +19,52 @@
     "typecheck": "tsc"
   },
   "packageManager": "pnpm@9.0.3",
+  "pnpm": {
+    "overrides": {
+      "shell-quote": "1.8.4",
+      "serialize-javascript": "7.0.5",
+      "lodash": "4.18.1",
+      "ws": "8.21.0",
+      "path-to-regexp": "0.1.13",
+      "picomatch": "2.3.2",
+      "svgo": "3.3.3",
+      "http-proxy-middleware": "2.0.10",
+      "mdast-util-to-hast": "13.2.1",
+      "brace-expansion": "1.1.14",
+      "follow-redirects": "1.16.0",
+      "qs": "6.15.3",
+      "uuid": "11.1.1",
+      "postcss": "8.5.14",
+      "launch-editor": "2.14.1",
+      "js-yaml": "4.2.0",
+      "webpack": "5.106.2",
+      "webpack-dev-server": "5.2.5",
+      "joi": "17.13.4",
+      "@babel/core": "7.29.6"
+    }
+  },
   "dependencies": {
     "@docusaurus/core": "^3.10.1",
     "@docusaurus/preset-classic": "^3.10.1",
     "@docusaurus/theme-classic": "^3.10.1",
     "@mdx-js/react": "^3.1.1",
-    "@scalar/docusaurus": "^0.8.14",
+    "@scalar/docusaurus": "^0.8.26",
     "clsx": "^2.1.1",
     "docusaurus-plugin-llms": "^0.4.0",
     "docusaurus-plugin-sass": "^0.2.6",
-    "prism-react-renderer": "^2.1.0",
-    "react": "^18.2.0",
-    "react-dom": "^18.2.0",
+    "prism-react-renderer": "^2.4.1",
+    "react": "^18.3.1",
+    "react-dom": "^18.3.1",
     "react-icons": "^5.6.0",
-    "sass": "^1.99.0"
+    "sass": "^1.101.0"
   },
   "devDependencies": {
     "@docusaurus/module-type-aliases": "^3.10.1",
     "@docusaurus/tsconfig": "3.10.1",
     "@docusaurus/types": "3.10.1",
     "@types/node": "^20.10.5",
-    "@types/react": "^18.2.29",
-    "typescript": "~5.2.2"
+    "@types/react": "^18.3.22",
+    "typescript": "~5.9.3"
   },
   "browserslist": {
     "production": [
