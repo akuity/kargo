@@ -101,11 +101,11 @@ format-go:
 	}
 
 .PHONY: lint-proto
-lint-proto: install-buf
+lint-proto:
 	# Vendor go dependencies to build protobuf definitions
 	go mod vendor
 	@# Only lint hand-written .proto files
-	$(BUF) lint . --path api/service --error-format=$(BUF_LINT_ERROR_FORMAT)
+	go tool buf lint . --path api/service --error-format=$(BUF_LINT_ERROR_FORMAT)
 
 .PHONY: lint-charts
 lint-charts: install-helm
@@ -258,12 +258,12 @@ build-cli-with-ui: build-ui build-cli
 codegen: codegen-openapi codegen-proto codegen-controller codegen-schema-to-go codegen-ui codegen-docs
 
 .PHONY: codegen-openapi
-codegen-openapi: install-swag install-go-swagger install-jq
+codegen-openapi: install-jq
 	rm -f swagger.json
 	find pkg/client/generated -mindepth 1 ! -name go.mod ! -name go.sum -exec rm -rf {} +
 	rm -rf /tmp/swagger-build
 	mkdir -p /tmp/swagger-build
-	$(SWAG_LINK) init \
+	go tool swag init \
 		--generalInfo pkg/server/rest_router.go \
 		--output /tmp/swagger-build \
 		--parseDependency \
@@ -273,7 +273,7 @@ codegen-openapi: install-swag install-go-swagger install-jq
 	rm -rf /tmp/swagger-build
 	hack/codegen/fix-swagger-spec.sh swagger.json
 	mkdir -p pkg/client/generated
-	$(GO_SWAGGER_LINK) generate client \
+	go tool swagger generate client \
 		-f swagger.json \
 		-t pkg \
 		--client-package client/generated \
@@ -283,27 +283,27 @@ codegen-openapi: install-swag install-go-swagger install-jq
 	pnpm --dir=ui run generate:api
 
 .PHONY: codegen-proto
-codegen-proto: install-protoc install-go-to-protobuf install-protoc-gen-gogo install-goimports install-buf install-protoc-gen-doc
+codegen-proto: install-protoc
 	./hack/codegen/proto.sh
 
 .PHONY: codegen-controller
-codegen-controller: install-controller-gen
-	$(CONTROLLER_GEN) \
+codegen-controller:
+	go tool controller-gen \
 		rbac:roleName=manager-role \
 		crd \
 		webhook \
 		paths=./api/v1alpha1/... \
 		output:crd:artifacts:config=charts/kargo/resources/crds
-	$(CONTROLLER_GEN) \
+	go tool controller-gen \
 		object:headerFile=hack/boilerplate.go.txt \
 		paths=./...
 
 .PHONY: codegen-bitbucket-client
-codegen-bitbucket-client: install-oapi-codegen
-	cd pkg/gitprovider/bitbucket/cloud && $(OAPI_CODEGEN_LINK) --config spec/oapi-codegen.yaml spec/bitbucket.gen.json
+codegen-bitbucket-client:
+	cd pkg/gitprovider/bitbucket/cloud && go tool oapi-codegen --config spec/oapi-codegen.yaml spec/bitbucket.gen.json
 
 .PHONY: codegen-schema-to-go
-codegen-schema-to-go: install-goimports
+codegen-schema-to-go:
 	npm install -g quicktype@23.0.176
 	./hack/codegen/promotion-step-configs.sh
 	./hack/codegen/subscriptions.sh
@@ -433,12 +433,15 @@ hack-build-governance-bot: hack-build-dev-tools
 	$(DOCKER_CMD) sh -c 'GOOS=$(GOOS) GOARCH=$(GOARCH) make build-governance-bot'
 
 .PHONY: hack-kind-up
-hack-kind-up: install-ctlptl install-kind
-	PATH=$(EXTENDED_PATH) $(CTLPTL) apply -f hack/kind/cluster.yaml
+hack-kind-up:
+	# ctlptl shells out to the `kind` binary, so build it (pinned via go.mod)
+	# onto PATH before invoking ctlptl.
+	go build -o hack/bin/kind sigs.k8s.io/kind
+	PATH=$(EXTENDED_PATH) go tool ctlptl apply -f hack/kind/cluster.yaml
 
 .PHONY: hack-k3d-up
-hack-k3d-up: install-ctlptl install-k3d
-	PATH=$(EXTENDED_PATH) $(CTLPTL) apply -f hack/k3d/cluster.yaml
+hack-k3d-up: install-k3d
+	PATH=$(EXTENDED_PATH) go tool ctlptl apply -f hack/k3d/cluster.yaml
 
 .PHONY: hack-tilt-up
 hack-tilt-up: install-tilt install-helm
@@ -449,12 +452,15 @@ hack-tilt-down: install-tilt
 	PATH=$(EXTENDED_PATH) $(TILT) down
 
 .PHONY: hack-kind-down
-hack-kind-down: install-ctlptl install-kind
-	PATH=$(EXTENDED_PATH) $(CTLPTL) delete -f hack/kind/cluster.yaml
+hack-kind-down:
+	# ctlptl shells out to the `kind` binary, so build it (pinned via go.mod)
+	# onto PATH before invoking ctlptl.
+	go build -o hack/bin/kind sigs.k8s.io/kind
+	PATH=$(EXTENDED_PATH) go tool ctlptl delete -f hack/kind/cluster.yaml
 
 .PHONY: hack-k3d-down
-hack-k3d-down: install-ctlptl install-k3d
-	PATH=$(EXTENDED_PATH) $(CTLPTL) delete -f hack/k3d/cluster.yaml
+hack-k3d-down: install-k3d
+	PATH=$(EXTENDED_PATH) go tool ctlptl delete -f hack/k3d/cluster.yaml
 
 .PHONY: hack-install-prereqs
 hack-install-prereqs: hack-install-cert-manager hack-install-argocd hack-install-argo-rollouts
