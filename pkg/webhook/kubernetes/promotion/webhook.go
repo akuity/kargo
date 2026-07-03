@@ -239,15 +239,7 @@ func (w *webhook) Default(ctx context.Context, obj runtime.Object) error {
 			return fmt.Errorf("failed to inflate Promotion steps: %w", err)
 		}
 
-		// Stamp intent annotations on created Promotions so the Stage controller
-		// can maintain auto-promotion holds. Skip system-generated Promotions
-		// (auto-promotion loop, rollback controller) since they carry no user
-		// intent to establish or release a hold.
-		delete(promo.Annotations, kargoapi.AnnotationKeyAutoPromotionHold)
-		delete(promo.Annotations, kargoapi.AnnotationKeyAutoPromotionResume)
-		if !w.isRequestFromKargoControlplaneFn(req) {
-			w.stampIntentAnnotations(ctx, promo, stage)
-		}
+		w.syncHoldAnnotations(ctx, req, promo, stage)
 	case admissionv1.Update:
 		// We need to decode the old object manually since controller-runtime
 		// doesn't decode it for us.
@@ -321,9 +313,12 @@ func (w *webhook) resolveOriginToFreight(
 	return &candidate, nil
 }
 
-// stampIntentAnnotations stamps hold or release intent annotations so the Stage
-// controller can maintain auto-promotion holds. Errors are swallowed; intent
-// inference is best-effort and must not block Promotion creation.
+// syncHoldAnnotations clears any user-supplied hold/resume annotations, then
+// infers and stamps the correct intent for user-initiated Promotions so the
+// Stage controller can maintain auto-promotion holds. Errors are swallowed;
+// intent inference is best-effort and must not block Promotion creation.
+// System-generated Promotions (auto-promotion loop, rollback controller) carry
+// no user intent and are left with both annotations absent.
 //
 // Accepted races:
 //
@@ -340,11 +335,19 @@ func (w *webhook) resolveOriginToFreight(
 // reaches the queue first, it runs first; the hold-intent Promotion runs after
 // it and blocks future auto-promotion. That order is self-correcting, so
 // avoiding it is not worth more coordination state.
-func (w *webhook) stampIntentAnnotations(
+func (w *webhook) syncHoldAnnotations(
 	ctx context.Context,
+	req admission.Request,
 	promo *kargoapi.Promotion,
 	stage *kargoapi.Stage,
 ) {
+	// Always start fresh — prevent user-supplied annotations from interfering.
+	delete(promo.Annotations, kargoapi.AnnotationKeyAutoPromotionHold)
+	delete(promo.Annotations, kargoapi.AnnotationKeyAutoPromotionResume)
+	// System-generated Promotions carry no user intent; skip inference.
+	if w.isRequestFromKargoControlplaneFn(req) {
+		return
+	}
 	if w.getFreightFn == nil || w.listFreightAvailableToStageFn == nil ||
 		w.isAutoPromotionEnabledFn == nil || promo.Spec.Freight == "" {
 		return
