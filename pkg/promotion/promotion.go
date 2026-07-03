@@ -70,9 +70,8 @@ type Context struct {
 	Vars []kargoapi.ExpressionVariable
 	// Actor is the name of the actor triggering the Promotion.
 	Actor string
-	// Rollback is exposed to promotion steps as ctx.meta.promotion.rollback.
-	// Steps can use it to choose different behavior for Promotions that are
-	// moving a Stage away from the current auto-promotion candidate.
+	// Rollback indicates whether this Promotion is a rollback to a previously
+	// verified piece of Freight.
 	Rollback bool
 
 	// currentStepMetadata is a pointer to the StepMetadata for the
@@ -157,10 +156,8 @@ func NewContext(
 		StepExecutionMetadata: promo.Status.StepExecutionMetadata,
 		State:                 State(promo.Status.GetState()),
 		Vars:                  promo.Spec.Vars,
-		// The rollback annotation is a marker. Only its presence matters; some
-		// Promotions store an origin string as the value, so do not parse it as a
-		// boolean.
-		Rollback: promo.Annotations[kargoapi.AnnotationKeyRollback] != "",
+		Rollback: promo.Annotations[kargoapi.AnnotationKeyRollback] ==
+			kargoapi.AnnotationValueTrue,
 	}
 
 	if stage != nil && len(stage.Spec.RequestedFreight) > 0 {
@@ -404,9 +401,8 @@ type StepContext struct {
 	Promotion string
 	// PromotionActor is the name of the actor triggering the Promotion.
 	PromotionActor string
-	// Rollback is exposed to promotion steps as ctx.meta.promotion.rollback.
-	// Steps can use it to choose different behavior for Promotions that are
-	// moving a Stage away from the current auto-promotion candidate.
+	// Rollback indicates whether this Promotion is a rollback to a previously
+	// verified piece of Freight.
 	Rollback bool
 	// FreightRequests is the list of Freight from various origins that is
 	// requested by the Stage targeted by the Promotion. This information is
