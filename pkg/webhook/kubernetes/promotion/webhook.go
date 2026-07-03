@@ -182,9 +182,12 @@ func (w *webhook) Default(ctx context.Context, obj runtime.Object) error {
 		// requests Freight from only one origin, but we've elected not to.
 		// Raw Promotion specs are clearer and more stable when promote-by-origin
 		// is explicit; endpoint-only conveniences like freightAlias stay out here.
-		if err = w.resolveOriginToFreight(ctx, promo, stage); err != nil {
+		var freight *kargoapi.Freight
+		if freight, err = w.resolveOriginToFreight(ctx, *promo.Spec.Origin, stage); err != nil {
 			return err
 		}
+		promo.Spec.Freight = freight.Name
+		promo.Spec.Origin = nil
 	}
 
 	switch req.Operation {
@@ -292,34 +295,32 @@ func (w *webhook) Default(ctx context.Context, obj runtime.Object) error {
 	return nil
 }
 
-// resolveOriginToFreight resolves promo.Spec.Origin to the latest available
-// Freight for that origin and sets promo.Spec.Freight. Returns an error
-// (denying admission) if no Freight is available for the origin.
+// resolveOriginToFreight resolves origin to the latest Freight available to
+// stage for that origin. Returns an error (denying admission) if no Freight
+// is available.
 func (w *webhook) resolveOriginToFreight(
 	ctx context.Context,
-	promo *kargoapi.Promotion,
+	origin kargoapi.FreightOrigin,
 	stage *kargoapi.Stage,
-) error {
+) (*kargoapi.Freight, error) {
 	availableFreight, err := w.listFreightAvailableToStageFn(ctx, w.client, stage)
 	if err != nil {
-		return fmt.Errorf("list available freight: %w", err)
+		return nil, fmt.Errorf("list available freight: %w", err)
 	}
 	candidates, err := api.SelectAutoPromotionCandidates(stage, availableFreight)
 	if err != nil {
-		return fmt.Errorf("select candidates: %w", err)
+		return nil, fmt.Errorf("select candidates: %w", err)
 	}
-	originKey := promo.Spec.Origin.String()
+	originKey := origin.String()
 	candidate, ok := candidates[originKey]
 	if !ok {
-		return fmt.Errorf(
+		return nil, fmt.Errorf(
 			"no auto-promotion candidate found for origin %q on Stage %q",
 			originKey,
 			stage.Name,
 		)
 	}
-	promo.Spec.Freight = candidate.Name
-	promo.Spec.Origin = nil
-	return nil
+	return &candidate, nil
 }
 
 // stampIntentAnnotations stamps hold or release intent annotations so the Stage
