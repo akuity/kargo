@@ -651,8 +651,7 @@ func (r *RegularStageReconciler) syncPromotions(
 		promoByName[promotions.Items[i].Name] = &promotions.Items[i]
 	}
 
-	// Gather terminal Promotions newer than the last processed one. Promotion
-	// names embed a ULID so lexicographic order equals chronological order.
+	// Gather terminal Promotions newer than the last processed one.
 	var newPromotions []kargoapi.PromotionReference
 	for _, promo := range promotions.Items {
 		if lastPromo != nil {
