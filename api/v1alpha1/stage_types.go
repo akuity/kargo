@@ -270,10 +270,10 @@ func (f *FreightOrigin) String() string {
 
 // ParseFreightOrigin parses a string representation of a FreightOrigin in
 // "Kind/name" form and rejects empty parts or unsupported origin kinds.
-func ParseFreightOrigin(key string) (FreightOrigin, error) {
-	kind, name, ok := strings.Cut(key, "/")
+func ParseFreightOrigin(str string) (FreightOrigin, error) {
+	kind, name, ok := strings.Cut(str, "/")
 	if !ok || strings.Contains(name, "/") {
-		return FreightOrigin{}, fmt.Errorf("invalid Freight origin key %q", key)
+		return FreightOrigin{}, fmt.Errorf("invalid Freight origin string %q", str)
 	}
 	if FreightOriginKind(kind) != FreightOriginKindWarehouse {
 		return FreightOrigin{}, fmt.Errorf("invalid Freight origin kind %q", kind)
@@ -445,21 +445,18 @@ type StageStatus struct {
 	// This is useful for storing additional information about the Stage
 	// that can be shared across promotions, verifications, or other processes.
 	Metadata map[string]apiextensionsv1.JSON `json:"metadata,omitempty" protobuf:"bytes,15,rep,name=metadata" protobuf_key:"bytes,1,opt,name=key" protobuf_val:"bytes,2,opt,name=value"`
-	// AutoPromotionHolds records active auto-promotion holds for this Stage.
-	// A hold is established when a Promotion selects Freight other than the
-	// latest available for its origin, pausing auto-promotion for that origin
-	// until explicitly released. Stage-controller auto-promotions do not
-	// establish holds. Keys are the canonical string representation of the
-	// FreightOrigin (e.g. "Warehouse/my-warehouse"); values describe the
+	// AutoPromotionHolds records active auto-promotion holds for this Stage. A
+	// hold is established when a Promotion selects Freight other than the latest
+	// available to the target Stage from that Freight's origin, pausing
+	// auto-promotion for that origin until explicitly released. Auto-promotions
+	// themselves never establish holds. Keys are string representations of
+	// FreightOrigins (e.g. "Warehouse/my-warehouse"); values describe the
 	// Promotion that established the hold.
 	AutoPromotionHolds map[string]AutoPromotionHold `json:"autoPromotionHolds,omitempty" protobuf:"bytes,16,rep,name=autoPromotionHolds" protobuf_key:"bytes,1,opt,name=key" protobuf_val:"bytes,2,opt,name=value"`
 }
 
-// AutoPromotionHold pins a single FreightOrigin on a Stage, pausing
-// auto-promotion for that origin after a Promotion selects Freight other than
-// the current auto-promotion candidate. Stage-controller auto-promotions do not
-// create holds. Other origins continue to auto-promote normally. The origin is
-// identified by the enclosing map key.
+// AutoPromotionHold is a value in the AutoPromotionHolds map. It records the
+// details of the Promotion that established the hold.
 type AutoPromotionHold struct {
 	// FreightName is the name of the Freight selected when the hold was created.
 	FreightName string `json:"freightName" protobuf:"bytes,1,opt,name=freightName"`

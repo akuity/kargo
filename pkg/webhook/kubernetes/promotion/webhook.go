@@ -180,7 +180,7 @@ func (w *webhook) Default(ctx context.Context, obj runtime.Object) error {
 	if req.Operation == admissionv1.Create && promo.Spec.Origin != nil {
 		// Note: we could theoretically infer an omitted origin when the Stage
 		// requests Freight from only one origin, but we've elected not to.
-		// Raw Promotion specs are clearer and more stable when promote-by-origin
+		// Promotion specs are clearer and more stable when promote-by-origin
 		// is explicit; endpoint-only conveniences like freightAlias stay out here.
 		var freight *kargoapi.Freight
 		if freight, err = w.resolveOriginToFreight(ctx, *promo.Spec.Origin, stage); err != nil {

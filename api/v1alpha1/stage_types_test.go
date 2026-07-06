@@ -987,13 +987,13 @@ func TestFreightOrigin_String(t *testing.T) {
 func TestParseFreightOrigin(t *testing.T) {
 	testCases := []struct {
 		name           string
-		key            string
+		str            string
 		expectedOrigin FreightOrigin
 		expectErr      bool
 	}{
 		{
 			name: "valid warehouse origin",
-			key:  "Warehouse/fake-warehouse",
+			str:  "Warehouse/fake-warehouse",
 			expectedOrigin: FreightOrigin{
 				Kind: FreightOriginKindWarehouse,
 				Name: "fake-warehouse",
@@ -1001,34 +1001,34 @@ func TestParseFreightOrigin(t *testing.T) {
 		},
 		{
 			name:      "missing slash",
-			key:       "Warehouse",
+			str:       "Warehouse",
 			expectErr: true,
 		},
 		{
 			name:      "missing kind",
-			key:       "/fake-warehouse",
+			str:       "/fake-warehouse",
 			expectErr: true,
 		},
 		{
 			name:      "missing name",
-			key:       "Warehouse/",
+			str:       "Warehouse/",
 			expectErr: true,
 		},
 		{
 			name:      "too many parts",
-			key:       "Warehouse/fake-warehouse/extra",
+			str:       "Warehouse/fake-warehouse/extra",
 			expectErr: true,
 		},
 		{
 			name:      "unknown kind",
-			key:       "Stage/fake-stage",
+			str:       "Stage/fake-stage",
 			expectErr: true,
 		},
 	}
 
 	for _, testCase := range testCases {
 		t.Run(testCase.name, func(t *testing.T) {
-			origin, err := ParseFreightOrigin(testCase.key)
+			origin, err := ParseFreightOrigin(testCase.str)
 			if testCase.expectErr {
 				require.Error(t, err)
 				return
