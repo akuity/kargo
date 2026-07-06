@@ -127,7 +127,7 @@ func (s *server) watchPromotions(c *gin.Context, project, stage, resourceVersion
 		buildWatchListOptions(project, resourceVersion)...,
 	)
 	if err != nil {
-		if sendSSEWatchStartError(c, err) {
+		if SendSSEWatchStartError(c, err) {
 			return
 		}
 		logger.Error(err, "failed to start watch")
@@ -139,7 +139,7 @@ func (s *server) watchPromotions(c *gin.Context, project, stage, resourceVersion
 	keepaliveTicker := time.NewTicker(30 * time.Second)
 	defer keepaliveTicker.Stop()
 
-	setSSEHeaders(c)
+	SetSSEHeaders(c)
 
 	for {
 		select {
@@ -148,7 +148,7 @@ func (s *server) watchPromotions(c *gin.Context, project, stage, resourceVersion
 			return
 
 		case <-keepaliveTicker.C:
-			if !writeSSEKeepalive(c) {
+			if !WriteSSEKeepalive(c) {
 				return
 			}
 
@@ -157,12 +157,12 @@ func (s *server) watchPromotions(c *gin.Context, project, stage, resourceVersion
 				logger.Debug("watch channel closed")
 				return
 			}
-			if watchErr := errorFromWatchEvent(e); watchErr != nil {
-				sendSSEWatchError(c, watchErr)
+			if watchErr := ErrorFromWatchEvent(e); watchErr != nil {
+				SendSSEWatchError(c, watchErr)
 				return
 			}
 
-			promotion, ok := convertWatchEventObject(c, e, (*kargoapi.Promotion)(nil))
+			promotion, ok := ConvertWatchEventObject(c, e, (*kargoapi.Promotion)(nil))
 			if !ok {
 				continue
 			}
@@ -170,13 +170,13 @@ func (s *server) watchPromotions(c *gin.Context, project, stage, resourceVersion
 			eventType := e.Type
 			if stage != "" {
 				var send bool
-				eventType, send = filteredWatchEventType(e.Type, promotion.Spec.Stage == stage)
+				eventType, send = FilteredWatchEventType(e.Type, promotion.Spec.Stage == stage)
 				if !send {
 					continue
 				}
 			}
 
-			if !sendSSEWatchEvent(c, eventType, promotion) {
+			if !SendSSEWatchEvent(c, eventType, promotion) {
 				return
 			}
 		}

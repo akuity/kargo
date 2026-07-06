@@ -202,6 +202,7 @@ function clean() {
   { msg "Cleaning up all intermediate resources..."; } 2> /dev/null
   rm -rf "${proj_dir}/vendor" || true
   rm -rf "${proj_dir}/tmp" || true
+  rm -rf "${tools_bin}" || true
 
   if [[ "${CLEANUP_TMP}" == "true" ]]; then
     { msg "Cleaning up temporary directory..."; } 2> /dev/null
@@ -218,8 +219,32 @@ proj_dir=$(dirname "${0}")
 proj_dir=$(readlink -f "${proj_dir}/../..")
 msg "Project root is ${proj_dir}"
 
-# Include local binaries in the PATH
-export PATH="${proj_dir}/hack/bin:${PATH}"
+# Build the Go tools declared in the main go.mod (`tool` directives) into a
+# temporary bin directory and prepend it to PATH.
+#
+# These are built up front, before any vendoring happens below, because:
+#   - go-to-protobuf runs with its working directory inside the temporary build
+#     directory (which has its own throwaway go.mod), where `go tool` cannot
+#     resolve the tool from this module.
+#   - protoc-gen-gogo, goimports, and protoc-gen-doc are invoked by name (as
+#     protoc plugins and by go-to-protobuf, respectively), so they must exist as
+#     real executables on PATH.
+# Building here also avoids the "inconsistent vendoring" errors that a `go tool`
+# invocation would hit once a partial vendor/ tree exists at the project root.
+msg "Building Go tools from the main module..."
+tools_bin=$(mktemp -d)
+(
+  cd "${proj_dir}"
+  GOBIN="${tools_bin}" go install \
+    k8s.io/code-generator/cmd/go-to-protobuf \
+    k8s.io/code-generator/cmd/go-to-protobuf/protoc-gen-gogo \
+    golang.org/x/tools/cmd/goimports \
+    github.com/bufbuild/buf/cmd/buf \
+    github.com/pseudomuto/protoc-gen-doc/cmd/protoc-gen-doc
+)
+
+# Include the freshly built tools and local binaries (protoc) in the PATH.
+export PATH="${tools_bin}:${proj_dir}/hack/bin:${PATH}"
 
 msg "Creating temporary directory..."
 tmp_dir=$(mktemp -d)

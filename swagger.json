@@ -10,11 +10,6 @@
   "paths": {
     "/v1beta1/login": {
       "post": {
-        "security": [
-          {
-            "BearerAuth": []
-          }
-        ],
         "description": "Authenticate as the admin user if enabled.",
         "produces": [
           "application/json"
@@ -31,16 +26,16 @@
               "$ref": "#/definitions/AdminLoginResponse"
             }
           }
-        }
-      }
-    },
-    "/v1beta1/projects": {
-      "get": {
+        },
         "security": [
           {
             "BearerAuth": []
           }
-        ],
+        ]
+      }
+    },
+    "/v1beta1/projects": {
+      "get": {
         "description": "List all Projects resources. Supports server-side filtering by\nname substring, by UID, and by namespaces mapped to the\nauthenticated user's ServiceAccounts, plus offset-based\npagination.",
         "produces": [
           "application/json"
@@ -94,16 +89,16 @@
               "$ref": "#/definitions/ListProjectsResponse"
             }
           }
-        }
-      }
-    },
-    "/v1beta1/projects/{project}": {
-      "get": {
+        },
         "security": [
           {
             "BearerAuth": []
           }
-        ],
+        ]
+      }
+    },
+    "/v1beta1/projects/{project}": {
+      "get": {
         "description": "Retrieve a Project resource.",
         "produces": [
           "application/json"
@@ -130,14 +125,14 @@
               "$ref": "#/definitions/Project"
             }
           }
-        }
-      },
-      "delete": {
+        },
         "security": [
           {
             "BearerAuth": []
           }
-        ],
+        ]
+      },
+      "delete": {
         "description": "Delete a Project resource and its associated namespace.",
         "tags": [
           "Core",
@@ -158,16 +153,16 @@
           "204": {
             "description": "Deleted successfully"
           }
-        }
-      }
-    },
-    "/v1beta1/projects/{project}/analysis-runs/{analysis-run}": {
-      "get": {
+        },
         "security": [
           {
             "BearerAuth": []
           }
-        ],
+        ]
+      }
+    },
+    "/v1beta1/projects/{project}/analysis-runs/{analysis-run}": {
+      "get": {
         "description": "Retrieve an AnalysisRun resource from a project's namespace.",
         "produces": [
           "application/json"
@@ -201,16 +196,16 @@
               "$ref": "#/definitions/RolloutsAnalysisRun"
             }
           }
-        }
-      }
-    },
-    "/v1beta1/projects/{project}/analysis-runs/{analysis-run}/logs": {
-      "get": {
+        },
         "security": [
           {
             "BearerAuth": []
           }
-        ],
+        ]
+      }
+    },
+    "/v1beta1/projects/{project}/analysis-runs/{analysis-run}/logs": {
+      "get": {
         "description": "Stream logs from an AnalysisRun job as Server-Sent Events (SSE).",
         "produces": [
           "text/event-stream"
@@ -256,16 +251,16 @@
               "type": "string"
             }
           }
-        }
-      }
-    },
-    "/v1beta1/projects/{project}/analysis-templates": {
-      "get": {
+        },
         "security": [
           {
             "BearerAuth": []
           }
-        ],
+        ]
+      }
+    },
+    "/v1beta1/projects/{project}/analysis-templates": {
+      "get": {
         "description": "List AnalysisTemplate resources from a project's namespace.",
         "produces": [
           "application/json"
@@ -292,16 +287,16 @@
               "$ref": "#/definitions/RolloutsAnalysisTemplateList"
             }
           }
-        }
-      }
-    },
-    "/v1beta1/projects/{project}/analysis-templates/{analysis-template}": {
-      "get": {
+        },
         "security": [
           {
             "BearerAuth": []
           }
-        ],
+        ]
+      }
+    },
+    "/v1beta1/projects/{project}/analysis-templates/{analysis-template}": {
+      "get": {
         "description": "Retrieve an AnalysisTemplate resource from a project's\nnamespace.",
         "produces": [
           "application/json"
@@ -335,14 +330,14 @@
               "$ref": "#/definitions/RolloutsAnalysisTemplate"
             }
           }
-        }
-      },
-      "delete": {
+        },
         "security": [
           {
             "BearerAuth": []
           }
-        ],
+        ]
+      },
+      "delete": {
         "description": "Delete an AnalysisTemplate resource from a project's namespace.",
         "tags": [
           "Verifications",
@@ -370,16 +365,16 @@
           "204": {
             "description": "Deleted successfully"
           }
-        }
-      }
-    },
-    "/v1beta1/projects/{project}/api-tokens": {
-      "get": {
+        },
         "security": [
           {
             "BearerAuth": []
           }
-        ],
+        ]
+      }
+    },
+    "/v1beta1/projects/{project}/api-tokens": {
+      "get": {
         "description": "List project-level API tokens. Returns a Kubernetes SecretList\nresource containing heavily redacted Secrets.",
         "produces": [
           "application/json"
@@ -413,16 +408,16 @@
               "$ref": "#/definitions/V1SecretList"
             }
           }
-        }
-      }
-    },
-    "/v1beta1/projects/{project}/api-tokens/{apitoken}": {
-      "get": {
+        },
         "security": [
           {
             "BearerAuth": []
           }
-        ],
+        ]
+      }
+    },
+    "/v1beta1/projects/{project}/api-tokens/{apitoken}": {
+      "get": {
         "description": "Retrieve a project-level API token by name. Returns a heavily\nredacted Kubernetes Secret resource.",
         "produces": [
           "application/json"
@@ -457,14 +452,14 @@
               "$ref": "#/definitions/V1Secret"
             }
           }
-        }
-      },
-      "delete": {
+        },
         "security": [
           {
             "BearerAuth": []
           }
-        ],
+        ]
+      },
+      "delete": {
         "description": "Delete a project-level API token from a project's namespace.",
         "tags": [
           "Rbac",
@@ -493,16 +488,16 @@
           "204": {
             "description": "Deleted successfully"
           }
-        }
-      }
-    },
-    "/v1beta1/projects/{project}/config": {
-      "get": {
+        },
         "security": [
           {
             "BearerAuth": []
           }
-        ],
+        ]
+      }
+    },
+    "/v1beta1/projects/{project}/config": {
+      "get": {
         "description": "Retrieve the single ProjectConfig resource from a project's\nnamespace.",
         "produces": [
           "application/json"
@@ -531,14 +526,14 @@
               "$ref": "#/definitions/ProjectConfig"
             }
           }
-        }
-      },
-      "delete": {
+        },
         "security": [
           {
             "BearerAuth": []
           }
-        ],
+        ]
+      },
+      "delete": {
         "description": "Delete the single ProjectConfig resource from a project's\nnamespace.",
         "tags": [
           "Core",
@@ -561,16 +556,16 @@
           "204": {
             "description": "Deleted successfully"
           }
-        }
-      }
-    },
-    "/v1beta1/projects/{project}/config/refresh": {
-      "post": {
+        },
         "security": [
           {
             "BearerAuth": []
           }
-        ],
+        ]
+      }
+    },
+    "/v1beta1/projects/{project}/config/refresh": {
+      "post": {
         "description": "Refresh the single ProjectConfig resource in a project's\nnamespace. Refreshing enqueues the resource for reconciliation\nby its corresponding controller.",
         "produces": [
           "application/json"
@@ -596,16 +591,16 @@
           "200": {
             "description": "Success"
           }
-        }
-      }
-    },
-    "/v1beta1/projects/{project}/configmaps": {
-      "get": {
+        },
         "security": [
           {
             "BearerAuth": []
           }
-        ],
+        ]
+      }
+    },
+    "/v1beta1/projects/{project}/configmaps": {
+      "get": {
         "description": "List ConfigMap resources from a project's namespace. Returns a\nKubernetes ConfigMapList resource.",
         "produces": [
           "application/json"
@@ -633,14 +628,14 @@
               "$ref": "#/definitions/V1ConfigMapList"
             }
           }
-        }
-      },
-      "post": {
+        },
         "security": [
           {
             "BearerAuth": []
           }
-        ],
+        ]
+      },
+      "post": {
         "description": "Create a ConfigMap in a project's namespace. Returns the created\nKubernetes ConfigMap resource.",
         "consumes": [
           "application/json"
@@ -680,16 +675,16 @@
               "$ref": "#/definitions/V1ConfigMap"
             }
           }
-        }
-      }
-    },
-    "/v1beta1/projects/{project}/configmaps/{configmap}": {
-      "get": {
+        },
         "security": [
           {
             "BearerAuth": []
           }
-        ],
+        ]
+      }
+    },
+    "/v1beta1/projects/{project}/configmaps/{configmap}": {
+      "get": {
         "description": "Retrieve a ConfigMap by name from a project's namespace.",
         "produces": [
           "application/json"
@@ -724,14 +719,14 @@
               "$ref": "#/definitions/V1ConfigMap"
             }
           }
-        }
-      },
-      "put": {
+        },
         "security": [
           {
             "BearerAuth": []
           }
-        ],
+        ]
+      },
+      "put": {
         "description": "Replace a ConfigMap in a project's namespace. All existing data\nis replaced. Returns the updated Kubernetes ConfigMap resource.",
         "consumes": [
           "application/json"
@@ -778,14 +773,14 @@
               "$ref": "#/definitions/V1ConfigMap"
             }
           }
-        }
-      },
-      "delete": {
+        },
         "security": [
           {
             "BearerAuth": []
           }
-        ],
+        ]
+      },
+      "delete": {
         "description": "Delete a ConfigMap from a project's namespace.",
         "tags": [
           "Core",
@@ -814,14 +809,14 @@
           "204": {
             "description": "Deleted successfully"
           }
-        }
-      },
-      "patch": {
+        },
         "security": [
           {
             "BearerAuth": []
           }
-        ],
+        ]
+      },
+      "patch": {
         "description": "Patch a ConfigMap in a project's namespace. Merges provided data\nwith existing data. Use removeKeys to delete specific keys.\nReturns the updated Kubernetes ConfigMap resource.",
         "consumes": [
           "application/json"
@@ -868,16 +863,16 @@
               "$ref": "#/definitions/V1ConfigMap"
             }
           }
-        }
-      }
-    },
-    "/v1beta1/projects/{project}/events": {
-      "get": {
+        },
         "security": [
           {
             "BearerAuth": []
           }
-        ],
+        ]
+      }
+    },
+    "/v1beta1/projects/{project}/events": {
+      "get": {
         "description": "List Kubernetes Events from a project's namespace. Returns a\nKubernetes EventList resource.",
         "produces": [
           "application/json"
@@ -904,16 +899,16 @@
               "$ref": "#/definitions/V1EventList"
             }
           }
-        }
-      }
-    },
-    "/v1beta1/projects/{project}/freight": {
-      "get": {
+        },
         "security": [
           {
             "BearerAuth": []
           }
-        ],
+        ]
+      }
+    },
+    "/v1beta1/projects/{project}/freight": {
+      "get": {
         "description": "Query and filter Freight resources from a project's namespace.",
         "produces": [
           "application/json"
@@ -980,16 +975,16 @@
               "$ref": "#/definitions/pkg_server.queryFreightsResponse"
             }
           }
-        }
-      }
-    },
-    "/v1beta1/projects/{project}/freight/{freight-name-or-alias}": {
-      "get": {
+        },
         "security": [
           {
             "BearerAuth": []
           }
-        ],
+        ]
+      }
+    },
+    "/v1beta1/projects/{project}/freight/{freight-name-or-alias}": {
+      "get": {
         "description": "Retrieve a Freight resource from a project's namespace by name\nor alias.",
         "produces": [
           "application/json"
@@ -1023,14 +1018,14 @@
               "$ref": "#/definitions/Freight"
             }
           }
-        }
-      },
-      "delete": {
+        },
         "security": [
           {
             "BearerAuth": []
           }
-        ],
+        ]
+      },
+      "delete": {
         "description": "Delete a Freight resource from a project's namespace by name or\nalias.",
         "tags": [
           "Core",
@@ -1058,16 +1053,16 @@
           "204": {
             "description": "Deleted successfully"
           }
-        }
-      }
-    },
-    "/v1beta1/projects/{project}/freight/{freight-name-or-alias}/alias": {
-      "patch": {
+        },
         "security": [
           {
             "BearerAuth": []
           }
-        ],
+        ]
+      }
+    },
+    "/v1beta1/projects/{project}/freight/{freight-name-or-alias}/alias": {
+      "patch": {
         "description": "Patch a Freight resource's human-friendly alias.",
         "consumes": [
           "application/json"
@@ -1108,16 +1103,16 @@
           "200": {
             "description": "Success"
           }
-        }
-      }
-    },
-    "/v1beta1/projects/{project}/freight/{freight-name-or-alias}/approve": {
-      "post": {
+        },
         "security": [
           {
             "BearerAuth": []
           }
-        ],
+        ]
+      }
+    },
+    "/v1beta1/projects/{project}/freight/{freight-name-or-alias}/approve": {
+      "post": {
         "description": "Approve Freight for promotion to a Stage.",
         "produces": [
           "application/json"
@@ -1155,16 +1150,16 @@
           "200": {
             "description": "Success"
           }
-        }
-      }
-    },
-    "/v1beta1/projects/{project}/freight/{freight-name-or-alias}/links": {
-      "get": {
+        },
         "security": [
           {
             "BearerAuth": []
           }
-        ],
+        ]
+      }
+    },
+    "/v1beta1/projects/{project}/freight/{freight-name-or-alias}/links": {
+      "get": {
         "description": "Retrieve evaluated deep links for a Freight resource, combining\ncluster-level links from ClusterConfig and project-level links\nfrom ProjectConfig.",
         "produces": [
           "application/json"
@@ -1198,16 +1193,16 @@
               "$ref": "#/definitions/GetFreightLinksResponse"
             }
           }
-        }
-      }
-    },
-    "/v1beta1/projects/{project}/generic-credentials": {
-      "get": {
+        },
         "security": [
           {
             "BearerAuth": []
           }
-        ],
+        ]
+      }
+    },
+    "/v1beta1/projects/{project}/generic-credentials": {
+      "get": {
         "description": "List project-level generic credentials. Returns a Kubernetes\nSecretList resource containing heavily redacted Secrets.",
         "produces": [
           "application/json"
@@ -1235,14 +1230,14 @@
               "$ref": "#/definitions/V1SecretList"
             }
           }
-        }
-      },
-      "post": {
+        },
         "security": [
           {
             "BearerAuth": []
           }
-        ],
+        ]
+      },
+      "post": {
         "description": "Create project-level generic credentials. Returns a heavily\nredacted Kubernetes Secret resource.",
         "consumes": [
           "application/json"
@@ -1282,16 +1277,16 @@
               "$ref": "#/definitions/V1Secret"
             }
           }
-        }
-      }
-    },
-    "/v1beta1/projects/{project}/generic-credentials/{generic-credentials}": {
-      "get": {
+        },
         "security": [
           {
             "BearerAuth": []
           }
-        ],
+        ]
+      }
+    },
+    "/v1beta1/projects/{project}/generic-credentials/{generic-credentials}": {
+      "get": {
         "description": "Retrieve project-level generic credentials by name. Returns a\nheavily redacted Kubernetes Secret resource.",
         "produces": [
           "application/json"
@@ -1326,14 +1321,14 @@
               "$ref": "#/definitions/V1Secret"
             }
           }
-        }
-      },
-      "put": {
+        },
         "security": [
           {
             "BearerAuth": []
           }
-        ],
+        ]
+      },
+      "put": {
         "description": "Replace project-level generic credentials. All existing data is\nreplaced. Returns a heavily redacted Kubernetes Secret resource.",
         "consumes": [
           "application/json"
@@ -1380,14 +1375,14 @@
               "$ref": "#/definitions/V1Secret"
             }
           }
-        }
-      },
-      "delete": {
+        },
         "security": [
           {
             "BearerAuth": []
           }
-        ],
+        ]
+      },
+      "delete": {
         "description": "Delete generic credentials from a project's namespace.",
         "tags": [
           "Credentials",
@@ -1416,14 +1411,14 @@
           "204": {
             "description": "Deleted successfully"
           }
-        }
-      },
-      "patch": {
+        },
         "security": [
           {
             "BearerAuth": []
           }
-        ],
+        ]
+      },
+      "patch": {
         "description": "Patch project-level generic credentials. Merges provided data\nwith existing data. Use removeKeys to delete specific keys.\nReturns a heavily redacted Kubernetes Secret resource.",
         "consumes": [
           "application/json"
@@ -1470,16 +1465,16 @@
               "$ref": "#/definitions/V1Secret"
             }
           }
-        }
-      }
-    },
-    "/v1beta1/projects/{project}/images": {
-      "get": {
+        },
         "security": [
           {
             "BearerAuth": []
           }
-        ],
+        ]
+      }
+    },
+    "/v1beta1/projects/{project}/images": {
+      "get": {
         "description": "List container images referenced by Freight resources in a\nproject's namespace.",
         "produces": [
           "application/json"
@@ -1509,16 +1504,16 @@
               }
             }
           }
-        }
-      }
-    },
-    "/v1beta1/projects/{project}/promotion-tasks": {
-      "get": {
+        },
         "security": [
           {
             "BearerAuth": []
           }
-        ],
+        ]
+      }
+    },
+    "/v1beta1/projects/{project}/promotion-tasks": {
+      "get": {
         "description": "List PromotionTask resources from a project's namespace. Returns\na PromotionTaskList resource.",
         "produces": [
           "application/json"
@@ -1545,16 +1540,16 @@
               "$ref": "#/definitions/PromotionTaskList"
             }
           }
-        }
-      }
-    },
-    "/v1beta1/projects/{project}/promotion-tasks/{promotion-task}": {
-      "get": {
+        },
         "security": [
           {
             "BearerAuth": []
           }
-        ],
+        ]
+      }
+    },
+    "/v1beta1/projects/{project}/promotion-tasks/{promotion-task}": {
+      "get": {
         "description": "Retrieve a PromotionTask resource from a project's namespace.",
         "produces": [
           "application/json"
@@ -1588,16 +1583,16 @@
               "$ref": "#/definitions/PromotionTask"
             }
           }
-        }
-      }
-    },
-    "/v1beta1/projects/{project}/promotions": {
-      "get": {
+        },
         "security": [
           {
             "BearerAuth": []
           }
-        ],
+        ]
+      }
+    },
+    "/v1beta1/projects/{project}/promotions": {
+      "get": {
         "description": "List Promotion resources from a project's namespace. Returns a\nPromotionList resource.",
         "produces": [
           "application/json"
@@ -1630,16 +1625,16 @@
               "$ref": "#/definitions/PromotionList"
             }
           }
-        }
-      }
-    },
-    "/v1beta1/projects/{project}/promotions/{promotion}": {
-      "get": {
+        },
         "security": [
           {
             "BearerAuth": []
           }
-        ],
+        ]
+      }
+    },
+    "/v1beta1/projects/{project}/promotions/{promotion}": {
+      "get": {
         "description": "Retrieve a Promotion resource from a project's namespace.",
         "produces": [
           "application/json"
@@ -1673,16 +1668,16 @@
               "$ref": "#/definitions/Promotion"
             }
           }
-        }
-      }
-    },
-    "/v1beta1/projects/{project}/promotions/{promotion}/abort": {
-      "post": {
+        },
         "security": [
           {
             "BearerAuth": []
           }
-        ],
+        ]
+      }
+    },
+    "/v1beta1/projects/{project}/promotions/{promotion}/abort": {
+      "post": {
         "description": "Abort a running Promotion.",
         "produces": [
           "application/json"
@@ -1713,16 +1708,16 @@
           "200": {
             "description": "Success"
           }
-        }
-      }
-    },
-    "/v1beta1/projects/{project}/promotions/{promotion}/refresh": {
-      "post": {
+        },
         "security": [
           {
             "BearerAuth": []
           }
-        ],
+        ]
+      }
+    },
+    "/v1beta1/projects/{project}/promotions/{promotion}/refresh": {
+      "post": {
         "description": "Refresh a Promotion resource in a project's namespace.\nRefreshing enqueues the resource for reconciliation by its\ncorresponding controller.",
         "produces": [
           "application/json"
@@ -1753,16 +1748,16 @@
           "200": {
             "description": "Success"
           }
-        }
-      }
-    },
-    "/v1beta1/projects/{project}/repo-credentials": {
-      "get": {
+        },
         "security": [
           {
             "BearerAuth": []
           }
-        ],
+        ]
+      }
+    },
+    "/v1beta1/projects/{project}/repo-credentials": {
+      "get": {
         "description": "List project-level repository credentials. Returns a SecretList\nresource containing heavily redacted Secrets.",
         "produces": [
           "application/json"
@@ -1790,14 +1785,14 @@
               "$ref": "#/definitions/V1SecretList"
             }
           }
-        }
-      },
-      "post": {
+        },
         "security": [
           {
             "BearerAuth": []
           }
-        ],
+        ]
+      },
+      "post": {
         "description": "Create project-level repository credentials. Returns a heavily\nredacted Kubernetes Secret resource.",
         "consumes": [
           "application/json"
@@ -1837,16 +1832,16 @@
               "$ref": "#/definitions/V1Secret"
             }
           }
-        }
-      }
-    },
-    "/v1beta1/projects/{project}/repo-credentials/{repo-credentials}": {
-      "get": {
+        },
         "security": [
           {
             "BearerAuth": []
           }
-        ],
+        ]
+      }
+    },
+    "/v1beta1/projects/{project}/repo-credentials/{repo-credentials}": {
+      "get": {
         "description": "Retrieve project-level repository credentials by name. Returns a\nheavily redacted Kubernetes Secret resource.",
         "produces": [
           "application/json"
@@ -1881,14 +1876,14 @@
               "$ref": "#/definitions/V1Secret"
             }
           }
-        }
-      },
-      "put": {
+        },
         "security": [
           {
             "BearerAuth": []
           }
-        ],
+        ]
+      },
+      "put": {
         "description": "Replace project-level repository credentials. All fields are replaced.\nReturns a heavily redacted Kubernetes Secret resource.",
         "consumes": [
           "application/json"
@@ -1935,14 +1930,14 @@
               "$ref": "#/definitions/V1Secret"
             }
           }
-        }
-      },
-      "delete": {
+        },
         "security": [
           {
             "BearerAuth": []
           }
-        ],
+        ]
+      },
+      "delete": {
         "description": "Delete repository credentials from a project's namespace.",
         "tags": [
           "Credentials",
@@ -1971,14 +1966,14 @@
           "204": {
             "description": "Deleted successfully"
           }
-        }
-      },
-      "patch": {
+        },
         "security": [
           {
             "BearerAuth": []
           }
-        ],
+        ]
+      },
+      "patch": {
         "description": "Patch project-level repository credentials. Only provided fields\nare updated. Returns a heavily redacted Kubernetes Secret resource.",
         "consumes": [
           "application/json"
@@ -2025,16 +2020,16 @@
               "$ref": "#/definitions/V1Secret"
             }
           }
-        }
-      }
-    },
-    "/v1beta1/projects/{project}/roles": {
-      "get": {
+        },
         "security": [
           {
             "BearerAuth": []
           }
-        ],
+        ]
+      }
+    },
+    "/v1beta1/projects/{project}/roles": {
+      "get": {
         "description": "List project-level Kargo Role virtual resources. Returns a\nRoleList resource.",
         "produces": [
           "application/json"
@@ -2061,14 +2056,14 @@
               "type": "object"
             }
           }
-        }
-      },
-      "post": {
+        },
         "security": [
           {
             "BearerAuth": []
           }
-        ],
+        ]
+      },
+      "post": {
         "description": "Create a project-level Kargo Role virtual resource by creating\nthe underlying Kubernetes ServiceAccount, Role, and RoleBinding\nresources.",
         "consumes": [
           "application/json"
@@ -2107,16 +2102,16 @@
               "$ref": "#/definitions/RbacRole"
             }
           }
-        }
-      }
-    },
-    "/v1beta1/projects/{project}/roles/grants": {
-      "post": {
+        },
         "security": [
           {
             "BearerAuth": []
           }
-        ],
+        ]
+      }
+    },
+    "/v1beta1/projects/{project}/roles/grants": {
+      "post": {
         "description": "Grant a project-level Kargo Role to users or grant permissions\nto a project-level Kargo Role.",
         "consumes": [
           "application/json"
@@ -2155,16 +2150,16 @@
               "$ref": "#/definitions/RbacRole"
             }
           }
-        }
-      }
-    },
-    "/v1beta1/projects/{project}/roles/revocations": {
-      "post": {
+        },
         "security": [
           {
             "BearerAuth": []
           }
-        ],
+        ]
+      }
+    },
+    "/v1beta1/projects/{project}/roles/revocations": {
+      "post": {
         "description": "Revoke a project-level Kargo Role from users or revoke\npermissions from a project-level Kargo Role.",
         "consumes": [
           "application/json"
@@ -2203,16 +2198,16 @@
               "$ref": "#/definitions/RbacRole"
             }
           }
-        }
-      }
-    },
-    "/v1beta1/projects/{project}/roles/{role}": {
-      "get": {
+        },
         "security": [
           {
             "BearerAuth": []
           }
-        ],
+        ]
+      }
+    },
+    "/v1beta1/projects/{project}/roles/{role}": {
+      "get": {
         "description": "Retrieve a project-level Kargo Role virtual resource by name.\nReturns a Kargo Role virtual resource or its underlying\nKubernetes resources.",
         "produces": [
           "application/json"
@@ -2246,14 +2241,14 @@
               "type": "object"
             }
           }
-        }
-      },
-      "put": {
+        },
         "security": [
           {
             "BearerAuth": []
           }
-        ],
+        ]
+      },
+      "put": {
         "description": "Update a project-level Kargo Role virtual resource by updating\nthe underlying Kubernetes ServiceAccount, Role, and RoleBinding\nresources.",
         "consumes": [
           "application/json"
@@ -2299,14 +2294,14 @@
               "$ref": "#/definitions/RbacRole"
             }
           }
-        }
-      },
-      "delete": {
+        },
         "security": [
           {
             "BearerAuth": []
           }
-        ],
+        ]
+      },
+      "delete": {
         "description": "Delete a project-level Kargo Role virtual resource by deleting\nthe underlying Kubernetes ServiceAccount, Role, and RoleBinding\nresources from the project's namespace.",
         "tags": [
           "Rbac",
@@ -2334,16 +2329,16 @@
           "204": {
             "description": "Deleted successfully"
           }
-        }
-      }
-    },
-    "/v1beta1/projects/{project}/roles/{role}/api-tokens": {
-      "post": {
+        },
         "security": [
           {
             "BearerAuth": []
           }
-        ],
+        ]
+      }
+    },
+    "/v1beta1/projects/{project}/roles/{role}/api-tokens": {
+      "post": {
         "description": "Create a project-level API token associated with a Kargo Role\nvirtual resource. Returns a Kubernetes Secret resource\nrepresenting the token. Store it securely. The token is not\nretrievable via the Kargo API after creation except in a\nredacted form.",
         "consumes": [
           "application/json"
@@ -2390,16 +2385,16 @@
               "$ref": "#/definitions/V1Secret"
             }
           }
-        }
-      }
-    },
-    "/v1beta1/projects/{project}/stages": {
-      "get": {
+        },
         "security": [
           {
             "BearerAuth": []
           }
-        ],
+        ]
+      }
+    },
+    "/v1beta1/projects/{project}/stages": {
+      "get": {
         "description": "List Stage resources from a project's namespace. Returns a\nStageList resource.",
         "produces": [
           "application/json"
@@ -2436,16 +2431,16 @@
               "$ref": "#/definitions/StageList"
             }
           }
-        }
-      }
-    },
-    "/v1beta1/projects/{project}/stages/{stage}": {
-      "get": {
+        },
         "security": [
           {
             "BearerAuth": []
           }
-        ],
+        ]
+      }
+    },
+    "/v1beta1/projects/{project}/stages/{stage}": {
+      "get": {
         "description": "Retrieve a Stage resource from a project's namespace.",
         "produces": [
           "application/json"
@@ -2479,14 +2474,14 @@
               "$ref": "#/definitions/Stage"
             }
           }
-        }
-      },
-      "delete": {
+        },
         "security": [
           {
             "BearerAuth": []
           }
-        ],
+        ]
+      },
+      "delete": {
         "description": "Delete a Stage resource from a project's namespace.",
         "tags": [
           "Core",
@@ -2514,16 +2509,16 @@
           "204": {
             "description": "Deleted successfully"
           }
-        }
-      }
-    },
-    "/v1beta1/projects/{project}/stages/{stage}/links": {
-      "get": {
+        },
         "security": [
           {
             "BearerAuth": []
           }
-        ],
+        ]
+      }
+    },
+    "/v1beta1/projects/{project}/stages/{stage}/links": {
+      "get": {
         "description": "Retrieve evaluated deep links for a Stage resource, combining\ncluster-level links from ClusterConfig and project-level links\nfrom ProjectConfig.",
         "produces": [
           "application/json"
@@ -2557,16 +2552,16 @@
               "$ref": "#/definitions/GetStageLinksResponse"
             }
           }
-        }
-      }
-    },
-    "/v1beta1/projects/{project}/stages/{stage}/promotions": {
-      "post": {
+        },
         "security": [
           {
             "BearerAuth": []
           }
-        ],
+        ]
+      }
+    },
+    "/v1beta1/projects/{project}/stages/{stage}/promotions": {
+      "post": {
         "description": "Create a Promotion resource to transition a specified Stage into\nthe state represented by the specified Freight.",
         "consumes": [
           "application/json"
@@ -2612,16 +2607,16 @@
               "$ref": "#/definitions/Promotion"
             }
           }
-        }
-      }
-    },
-    "/v1beta1/projects/{project}/stages/{stage}/promotions/downstream": {
-      "post": {
+        },
         "security": [
           {
             "BearerAuth": []
           }
-        ],
+        ]
+      }
+    },
+    "/v1beta1/projects/{project}/stages/{stage}/promotions/downstream": {
+      "post": {
         "description": "Creates a Promotion resource for each of a Stage's immediately\ndownstream Stages.",
         "consumes": [
           "application/json"
@@ -2667,16 +2662,16 @@
               "type": "object"
             }
           }
-        }
-      }
-    },
-    "/v1beta1/projects/{project}/stages/{stage}/refresh": {
-      "post": {
+        },
         "security": [
           {
             "BearerAuth": []
           }
-        ],
+        ]
+      }
+    },
+    "/v1beta1/projects/{project}/stages/{stage}/refresh": {
+      "post": {
         "description": "Refresh a Stage resource in a project's namespace. Refreshing\nenqueues the resource for reconciliation by its corresponding\ncontroller.",
         "produces": [
           "application/json"
@@ -2707,16 +2702,16 @@
           "200": {
             "description": "Success"
           }
-        }
-      }
-    },
-    "/v1beta1/projects/{project}/stages/{stage}/verification": {
-      "post": {
+        },
         "security": [
           {
             "BearerAuth": []
           }
-        ],
+        ]
+      }
+    },
+    "/v1beta1/projects/{project}/stages/{stage}/verification": {
+      "post": {
         "description": "Trigger re-verification of the Freight currently in use by a\nStage.",
         "produces": [
           "application/json"
@@ -2747,16 +2742,16 @@
           "200": {
             "description": "Success"
           }
-        }
-      }
-    },
-    "/v1beta1/projects/{project}/stages/{stage}/verification/abort": {
-      "post": {
+        },
         "security": [
           {
             "BearerAuth": []
           }
-        ],
+        ]
+      }
+    },
+    "/v1beta1/projects/{project}/stages/{stage}/verification/abort": {
+      "post": {
         "description": "Abort a running Verification process.",
         "produces": [
           "application/json"
@@ -2787,16 +2782,16 @@
           "200": {
             "description": "Success"
           }
-        }
-      }
-    },
-    "/v1beta1/projects/{project}/warehouses": {
-      "get": {
+        },
         "security": [
           {
             "BearerAuth": []
           }
-        ],
+        ]
+      }
+    },
+    "/v1beta1/projects/{project}/warehouses": {
+      "get": {
         "description": "List Warehouse resources from a project's namespace. Returns a\nWarehouseList resource.",
         "produces": [
           "application/json"
@@ -2823,16 +2818,16 @@
               "$ref": "#/definitions/WarehouseList"
             }
           }
-        }
-      }
-    },
-    "/v1beta1/projects/{project}/warehouses/{warehouse}": {
-      "get": {
+        },
         "security": [
           {
             "BearerAuth": []
           }
-        ],
+        ]
+      }
+    },
+    "/v1beta1/projects/{project}/warehouses/{warehouse}": {
+      "get": {
         "description": "Retrieve a Warehouse resource from a project's namespace.",
         "produces": [
           "application/json"
@@ -2866,14 +2861,14 @@
               "$ref": "#/definitions/Warehouse"
             }
           }
-        }
-      },
-      "delete": {
+        },
         "security": [
           {
             "BearerAuth": []
           }
-        ],
+        ]
+      },
+      "delete": {
         "description": "Delete a Warehouse resource from a project's namespace.",
         "tags": [
           "Core",
@@ -2901,16 +2896,16 @@
           "204": {
             "description": "Deleted successfully"
           }
-        }
-      }
-    },
-    "/v1beta1/projects/{project}/warehouses/{warehouse}/refresh": {
-      "post": {
+        },
         "security": [
           {
             "BearerAuth": []
           }
-        ],
+        ]
+      }
+    },
+    "/v1beta1/projects/{project}/warehouses/{warehouse}/refresh": {
+      "post": {
         "description": "Refresh a Warehouse resource in a project's namespace.\nRefreshing enqueues the resource for reconciliation by its\ncorresponding controller.",
         "produces": [
           "application/json"
@@ -2941,16 +2936,16 @@
           "200": {
             "description": "Success"
           }
-        }
-      }
-    },
-    "/v1beta1/resources": {
-      "put": {
+        },
         "security": [
           {
             "BearerAuth": []
           }
-        ],
+        ]
+      }
+    },
+    "/v1beta1/resources": {
+      "put": {
         "description": "Update (or optionally, upsert) one or more Kargo resources from",
         "consumes": [
           "text/plain"
@@ -2987,14 +2982,14 @@
               "$ref": "#/definitions/CreateOrUpdateResourceResponse"
             }
           }
-        }
-      },
-      "post": {
+        },
         "security": [
           {
             "BearerAuth": []
           }
-        ],
+        ]
+      },
+      "post": {
         "description": "Create one or more Kargo resources from YAML or JSON manifests.",
         "consumes": [
           "text/plain"
@@ -3031,14 +3026,14 @@
               "$ref": "#/definitions/ResourceErrorResponse"
             }
           }
-        }
-      },
-      "delete": {
+        },
         "security": [
           {
             "BearerAuth": []
           }
-        ],
+        ]
+      },
+      "delete": {
         "description": "Delete one or more Kargo resources using namespaces and names\nobtained from YAML or JSON manifests.",
         "consumes": [
           "text/plain"
@@ -3069,16 +3064,16 @@
               "$ref": "#/definitions/DeleteResourceResponse"
             }
           }
-        }
-      }
-    },
-    "/v1beta1/shared/cluster-analysis-templates": {
-      "get": {
+        },
         "security": [
           {
             "BearerAuth": []
           }
-        ],
+        ]
+      }
+    },
+    "/v1beta1/shared/cluster-analysis-templates": {
+      "get": {
         "description": "List ClusterAnalysisTemplate resources. Returns a\nClusterAnalysisTemplateList resource.",
         "produces": [
           "application/json"
@@ -3097,16 +3092,16 @@
               "$ref": "#/definitions/RolloutsClusterAnalysisTemplateList"
             }
           }
-        }
-      }
-    },
-    "/v1beta1/shared/cluster-analysis-templates/{cluster-analysis-template}": {
-      "get": {
+        },
         "security": [
           {
             "BearerAuth": []
           }
-        ],
+        ]
+      }
+    },
+    "/v1beta1/shared/cluster-analysis-templates/{cluster-analysis-template}": {
+      "get": {
         "description": "Retrieve a ClusterAnalysisTemplate by name.",
         "produces": [
           "application/json"
@@ -3134,14 +3129,14 @@
               "$ref": "#/definitions/RolloutsClusterAnalysisTemplate"
             }
           }
-        }
-      },
-      "delete": {
+        },
         "security": [
           {
             "BearerAuth": []
           }
-        ],
+        ]
+      },
+      "delete": {
         "description": "Delete a ClusterAnalysisTemplate resource.",
         "tags": [
           "Verifications",
@@ -3163,16 +3158,16 @@
           "204": {
             "description": "Deleted successfully"
           }
-        }
-      }
-    },
-    "/v1beta1/shared/cluster-promotion-tasks": {
-      "get": {
+        },
         "security": [
           {
             "BearerAuth": []
           }
-        ],
+        ]
+      }
+    },
+    "/v1beta1/shared/cluster-promotion-tasks": {
+      "get": {
         "description": "List ClusterPromotionTask resources. Returns a\nClusterPromotionTaskList resource.",
         "produces": [
           "application/json"
@@ -3191,16 +3186,16 @@
               "$ref": "#/definitions/ClusterPromotionTaskList"
             }
           }
-        }
-      }
-    },
-    "/v1beta1/shared/cluster-promotion-tasks/{cluster-promotion-task}": {
-      "get": {
+        },
         "security": [
           {
             "BearerAuth": []
           }
-        ],
+        ]
+      }
+    },
+    "/v1beta1/shared/cluster-promotion-tasks/{cluster-promotion-task}": {
+      "get": {
         "description": "Retrieve a ClusterPromotionTask by name.",
         "produces": [
           "application/json"
@@ -3228,16 +3223,16 @@
               "$ref": "#/definitions/ClusterPromotionTask"
             }
           }
-        }
-      }
-    },
-    "/v1beta1/shared/configmaps": {
-      "get": {
+        },
         "security": [
           {
             "BearerAuth": []
           }
-        ],
+        ]
+      }
+    },
+    "/v1beta1/shared/configmaps": {
+      "get": {
         "description": "List shared ConfigMap resources referenceable by all projects.\nReturns a Kubernetes ConfigMapList resource.",
         "produces": [
           "application/json"
@@ -3256,14 +3251,14 @@
               "$ref": "#/definitions/V1ConfigMapList"
             }
           }
-        }
-      },
-      "post": {
+        },
         "security": [
           {
             "BearerAuth": []
           }
-        ],
+        ]
+      },
+      "post": {
         "description": "Create a shared ConfigMap referenceable by all projects. Returns\nthe created Kubernetes ConfigMap resource.",
         "consumes": [
           "application/json"
@@ -3296,16 +3291,16 @@
               "$ref": "#/definitions/V1ConfigMap"
             }
           }
-        }
-      }
-    },
-    "/v1beta1/shared/configmaps/{configmap}": {
-      "get": {
+        },
         "security": [
           {
             "BearerAuth": []
           }
-        ],
+        ]
+      }
+    },
+    "/v1beta1/shared/configmaps/{configmap}": {
+      "get": {
         "description": "Retrieve a shared ConfigMap by name.",
         "produces": [
           "application/json"
@@ -3333,14 +3328,14 @@
               "$ref": "#/definitions/V1ConfigMap"
             }
           }
-        }
-      },
-      "put": {
+        },
         "security": [
           {
             "BearerAuth": []
           }
-        ],
+        ]
+      },
+      "put": {
         "description": "Replace a shared ConfigMap. All existing data is replaced.\nReturns the updated Kubernetes ConfigMap resource.",
         "consumes": [
           "application/json"
@@ -3380,14 +3375,14 @@
               "$ref": "#/definitions/V1ConfigMap"
             }
           }
-        }
-      },
-      "delete": {
+        },
         "security": [
           {
             "BearerAuth": []
           }
-        ],
+        ]
+      },
+      "delete": {
         "description": "Delete a shared ConfigMap.",
         "tags": [
           "Core",
@@ -3409,14 +3404,14 @@
           "204": {
             "description": "Deleted successfully"
           }
-        }
-      },
-      "patch": {
+        },
         "security": [
           {
             "BearerAuth": []
           }
-        ],
+        ]
+      },
+      "patch": {
         "description": "Patch a shared ConfigMap. Merges provided data\nwith existing data. Use removeKeys to delete specific keys.\nReturns the updated Kubernetes ConfigMap resource.",
         "consumes": [
           "application/json"
@@ -3456,16 +3451,16 @@
               "$ref": "#/definitions/V1ConfigMap"
             }
           }
-        }
-      }
-    },
-    "/v1beta1/shared/generic-credentials": {
-      "get": {
+        },
         "security": [
           {
             "BearerAuth": []
           }
-        ],
+        ]
+      }
+    },
+    "/v1beta1/shared/generic-credentials": {
+      "get": {
         "description": "List shared generic credentials. Returns a Kubernetes SecretList\nresource containing heavily redacted Secrets.",
         "produces": [
           "application/json"
@@ -3484,14 +3479,14 @@
               "$ref": "#/definitions/V1SecretList"
             }
           }
-        }
-      },
-      "post": {
+        },
         "security": [
           {
             "BearerAuth": []
           }
-        ],
+        ]
+      },
+      "post": {
         "description": "Create shared generic credentials referenceable by all\nprojects. Returns a heavily redacted Kubernetes Secret resource.",
         "consumes": [
           "application/json"
@@ -3524,16 +3519,16 @@
               "$ref": "#/definitions/V1Secret"
             }
           }
-        }
-      }
-    },
-    "/v1beta1/shared/generic-credentials/{generic-credentials}": {
-      "get": {
+        },
         "security": [
           {
             "BearerAuth": []
           }
-        ],
+        ]
+      }
+    },
+    "/v1beta1/shared/generic-credentials/{generic-credentials}": {
+      "get": {
         "description": "Retrieve shared generic credentials by name. Returns a\nheavily redacted Kubernetes Secret resource.",
         "produces": [
           "application/json"
@@ -3561,14 +3556,14 @@
               "$ref": "#/definitions/V1Secret"
             }
           }
-        }
-      },
-      "put": {
+        },
         "security": [
           {
             "BearerAuth": []
           }
-        ],
+        ]
+      },
+      "put": {
         "description": "Replace shared generic credentials. All existing data is replaced.\nReturns a heavily redacted Kubernetes Secret resource.",
         "consumes": [
           "application/json"
@@ -3608,14 +3603,14 @@
               "$ref": "#/definitions/V1Secret"
             }
           }
-        }
-      },
-      "delete": {
+        },
         "security": [
           {
             "BearerAuth": []
           }
-        ],
+        ]
+      },
+      "delete": {
         "description": "Delete shared generic credentials.",
         "tags": [
           "Credentials",
@@ -3637,14 +3632,14 @@
           "204": {
             "description": "Deleted successfully"
           }
-        }
-      },
-      "patch": {
+        },
         "security": [
           {
             "BearerAuth": []
           }
-        ],
+        ]
+      },
+      "patch": {
         "description": "Patch shared generic credentials. Merges provided data\nwith existing data. Use removeKeys to delete specific keys.\nReturns a heavily redacted Kubernetes Secret resource.",
         "consumes": [
           "application/json"
@@ -3684,16 +3679,16 @@
               "$ref": "#/definitions/V1Secret"
             }
           }
-        }
-      }
-    },
-    "/v1beta1/shared/repo-credentials": {
-      "get": {
+        },
         "security": [
           {
             "BearerAuth": []
           }
-        ],
+        ]
+      }
+    },
+    "/v1beta1/shared/repo-credentials": {
+      "get": {
         "description": "List shared repository credentials. Returns a SecretList\nresource containing heavily redacted Secrets.",
         "produces": [
           "application/json"
@@ -3712,14 +3707,14 @@
               "$ref": "#/definitions/V1SecretList"
             }
           }
-        }
-      },
-      "post": {
+        },
         "security": [
           {
             "BearerAuth": []
           }
-        ],
+        ]
+      },
+      "post": {
         "description": "Create shared repository credentials. Returns a heavily\nredacted Kubernetes Secret resource.",
         "consumes": [
           "application/json"
@@ -3752,16 +3747,16 @@
               "$ref": "#/definitions/V1Secret"
             }
           }
-        }
-      }
-    },
-    "/v1beta1/shared/repo-credentials/{repo-credentials}": {
-      "get": {
+        },
         "security": [
           {
             "BearerAuth": []
           }
-        ],
+        ]
+      }
+    },
+    "/v1beta1/shared/repo-credentials/{repo-credentials}": {
+      "get": {
         "description": "Retrieve shared repository credentials by name. Returns a\nheavily redacted Kubernetes Secret resource.",
         "produces": [
           "application/json"
@@ -3789,14 +3784,14 @@
               "$ref": "#/definitions/V1Secret"
             }
           }
-        }
-      },
-      "put": {
+        },
         "security": [
           {
             "BearerAuth": []
           }
-        ],
+        ]
+      },
+      "put": {
         "description": "Replace shared repository credentials. All fields are replaced.\nReturns a heavily redacted Kubernetes Secret resource.",
         "consumes": [
           "application/json"
@@ -3836,14 +3831,14 @@
               "$ref": "#/definitions/V1Secret"
             }
           }
-        }
-      },
-      "delete": {
+        },
         "security": [
           {
             "BearerAuth": []
           }
-        ],
+        ]
+      },
+      "delete": {
         "description": "Delete shared repository credentials.",
         "tags": [
           "Credentials",
@@ -3865,14 +3860,14 @@
           "204": {
             "description": "Deleted successfully"
           }
-        }
-      },
-      "patch": {
+        },
         "security": [
           {
             "BearerAuth": []
           }
-        ],
+        ]
+      },
+      "patch": {
         "description": "Patch shared repository credentials. Only provided fields\nare updated. Returns a heavily redacted Kubernetes Secret resource.",
         "consumes": [
           "application/json"
@@ -3912,16 +3907,16 @@
               "$ref": "#/definitions/V1Secret"
             }
           }
-        }
-      }
-    },
-    "/v1beta1/system/api-tokens": {
-      "get": {
+        },
         "security": [
           {
             "BearerAuth": []
           }
-        ],
+        ]
+      }
+    },
+    "/v1beta1/system/api-tokens": {
+      "get": {
         "description": "List system-level API tokens. Returns a Kubernetes SecretList\nresource containing heavily redacted Secrets.",
         "produces": [
           "application/json"
@@ -3948,16 +3943,16 @@
               "$ref": "#/definitions/V1SecretList"
             }
           }
-        }
-      }
-    },
-    "/v1beta1/system/api-tokens/{apitoken}": {
-      "get": {
+        },
         "security": [
           {
             "BearerAuth": []
           }
-        ],
+        ]
+      }
+    },
+    "/v1beta1/system/api-tokens/{apitoken}": {
+      "get": {
         "description": "Retrieve a system-level API token by name. Returns a heavily\nredacted Kubernetes Secret resource.",
         "produces": [
           "application/json"
@@ -3985,14 +3980,14 @@
               "$ref": "#/definitions/V1Secret"
             }
           }
-        }
-      },
-      "delete": {
+        },
         "security": [
           {
             "BearerAuth": []
           }
-        ],
+        ]
+      },
+      "delete": {
         "description": "Delete a system-level API token.",
         "tags": [
           "Rbac",
@@ -4014,16 +4009,16 @@
           "204": {
             "description": "Deleted successfully"
           }
-        }
-      }
-    },
-    "/v1beta1/system/cluster-config": {
-      "get": {
+        },
         "security": [
           {
             "BearerAuth": []
           }
-        ],
+        ]
+      }
+    },
+    "/v1beta1/system/cluster-config": {
+      "get": {
         "description": "Retrieve the single ClusterConfig resource.",
         "produces": [
           "application/json"
@@ -4043,14 +4038,14 @@
               "$ref": "#/definitions/ClusterConfig"
             }
           }
-        }
-      },
-      "delete": {
+        },
         "security": [
           {
             "BearerAuth": []
           }
-        ],
+        ]
+      },
+      "delete": {
         "description": "Deletes the single ClusterConfig resource.",
         "tags": [
           "System",
@@ -4064,16 +4059,16 @@
           "204": {
             "description": "Deleted successfully"
           }
-        }
-      }
-    },
-    "/v1beta1/system/cluster-config/refresh": {
-      "post": {
+        },
         "security": [
           {
             "BearerAuth": []
           }
-        ],
+        ]
+      }
+    },
+    "/v1beta1/system/cluster-config/refresh": {
+      "post": {
         "description": "Refresh the single ClusterConfig resource. Refreshing enqueues\nthe resource for reconciliation by its corresponding controller.",
         "produces": [
           "application/json"
@@ -4090,16 +4085,16 @@
           "200": {
             "description": "Success"
           }
-        }
-      }
-    },
-    "/v1beta1/system/configmaps": {
-      "get": {
+        },
         "security": [
           {
             "BearerAuth": []
           }
-        ],
+        ]
+      }
+    },
+    "/v1beta1/system/configmaps": {
+      "get": {
         "description": "List system-level ConfigMap resources. Returns a Kubernetes\nConfigMapList resource.",
         "produces": [
           "application/json"
@@ -4118,14 +4113,14 @@
               "$ref": "#/definitions/V1ConfigMapList"
             }
           }
-        }
-      },
-      "post": {
+        },
         "security": [
           {
             "BearerAuth": []
           }
-        ],
+        ]
+      },
+      "post": {
         "description": "Create a system-level ConfigMap. Returns the created Kubernetes\nConfigMap resource.",
         "consumes": [
           "application/json"
@@ -4158,16 +4153,16 @@
               "$ref": "#/definitions/V1ConfigMap"
             }
           }
-        }
-      }
-    },
-    "/v1beta1/system/configmaps/{configmap}": {
-      "get": {
+        },
         "security": [
           {
             "BearerAuth": []
           }
-        ],
+        ]
+      }
+    },
+    "/v1beta1/system/configmaps/{configmap}": {
+      "get": {
         "description": "Retrieve a system-level ConfigMap by name.",
         "produces": [
           "application/json"
@@ -4195,14 +4190,14 @@
               "$ref": "#/definitions/V1ConfigMap"
             }
           }
-        }
-      },
-      "put": {
+        },
         "security": [
           {
             "BearerAuth": []
           }
-        ],
+        ]
+      },
+      "put": {
         "description": "Replace a system-level ConfigMap. All existing data is replaced.\nReturns the updated Kubernetes ConfigMap resource.",
         "consumes": [
           "application/json"
@@ -4242,14 +4237,14 @@
               "$ref": "#/definitions/V1ConfigMap"
             }
           }
-        }
-      },
-      "delete": {
+        },
         "security": [
           {
             "BearerAuth": []
           }
-        ],
+        ]
+      },
+      "delete": {
         "description": "Delete a system-level ConfigMap.",
         "tags": [
           "Core",
@@ -4271,14 +4266,14 @@
           "204": {
             "description": "Deleted successfully"
           }
-        }
-      },
-      "patch": {
+        },
         "security": [
           {
             "BearerAuth": []
           }
-        ],
+        ]
+      },
+      "patch": {
         "description": "Patch a system-level ConfigMap. Merges provided data\nwith existing data. Use removeKeys to delete specific keys.\nReturns the updated Kubernetes ConfigMap resource.",
         "consumes": [
           "application/json"
@@ -4318,16 +4313,16 @@
               "$ref": "#/definitions/V1ConfigMap"
             }
           }
-        }
-      }
-    },
-    "/v1beta1/system/controller-heartbeats": {
-      "get": {
+        },
         "security": [
           {
             "BearerAuth": []
           }
-        ],
+        ]
+      }
+    },
+    "/v1beta1/system/controller-heartbeats": {
+      "get": {
         "description": "Get the most recent heartbeat from every controller that has\nreported in. Any controller not represented in the response has\nnever reported a heartbeat and can therefore be assumed by the\ncaller to be dead or nonexistent.",
         "produces": [
           "application/json"
@@ -4344,16 +4339,16 @@
               "$ref": "#/definitions/GetControllerHeartbeatsResponse"
             }
           }
-        }
-      }
-    },
-    "/v1beta1/system/generic-credentials": {
-      "get": {
+        },
         "security": [
           {
             "BearerAuth": []
           }
-        ],
+        ]
+      }
+    },
+    "/v1beta1/system/generic-credentials": {
+      "get": {
         "description": "List system-level generic credentials. Returns a Kubernetes\nSecretList resource containing heavily redacted Secrets.",
         "produces": [
           "application/json"
@@ -4372,14 +4367,14 @@
               "$ref": "#/definitions/V1SecretList"
             }
           }
-        }
-      },
-      "post": {
+        },
         "security": [
           {
             "BearerAuth": []
           }
-        ],
+        ]
+      },
+      "post": {
         "description": "Create system-level generic credentials. Returns a heavily\nredacted Kubernetes Secret resource.",
         "consumes": [
           "application/json"
@@ -4412,16 +4407,16 @@
               "$ref": "#/definitions/V1Secret"
             }
           }
-        }
-      }
-    },
-    "/v1beta1/system/generic-credentials/{generic-credentials}": {
-      "get": {
+        },
         "security": [
           {
             "BearerAuth": []
           }
-        ],
+        ]
+      }
+    },
+    "/v1beta1/system/generic-credentials/{generic-credentials}": {
+      "get": {
         "description": "Retrieve system-level generic credentials by name. Returns a\nheavily redacted Kubernetes Secret resource.",
         "produces": [
           "application/json"
@@ -4449,14 +4444,14 @@
               "$ref": "#/definitions/V1Secret"
             }
           }
-        }
-      },
-      "put": {
+        },
         "security": [
           {
             "BearerAuth": []
           }
-        ],
+        ]
+      },
+      "put": {
         "description": "Replace system-level generic credentials. All existing data is\nreplaced. Returns a heavily redacted Kubernetes Secret resource.",
         "consumes": [
           "application/json"
@@ -4496,14 +4491,14 @@
               "$ref": "#/definitions/V1Secret"
             }
           }
-        }
-      },
-      "delete": {
+        },
         "security": [
           {
             "BearerAuth": []
           }
-        ],
+        ]
+      },
+      "delete": {
         "description": "Delete system-level generic credentials.",
         "tags": [
           "Credentials",
@@ -4525,14 +4520,14 @@
           "204": {
             "description": "Deleted successfully"
           }
-        }
-      },
-      "patch": {
+        },
         "security": [
           {
             "BearerAuth": []
           }
-        ],
+        ]
+      },
+      "patch": {
         "description": "Patch system-level generic credentials. Merges provided data\nwith existing data. Use removeKeys to delete specific keys.\nReturns a heavily redacted Kubernetes Secret resource.",
         "consumes": [
           "application/json"
@@ -4572,7 +4567,12 @@
               "$ref": "#/definitions/V1Secret"
             }
           }
-        }
+        },
+        "security": [
+          {
+            "BearerAuth": []
+          }
+        ]
       }
     },
     "/v1beta1/system/public-server-config": {
@@ -4599,11 +4599,6 @@
     },
     "/v1beta1/system/roles": {
       "get": {
-        "security": [
-          {
-            "BearerAuth": []
-          }
-        ],
         "description": "List system-level Kargo Role virtual resources. Returns a\nRoleList resource.",
         "produces": [
           "application/json"
@@ -4621,16 +4616,16 @@
               "type": "object"
             }
           }
-        }
-      }
-    },
-    "/v1beta1/system/roles/{role}": {
-      "get": {
+        },
         "security": [
           {
             "BearerAuth": []
           }
-        ],
+        ]
+      }
+    },
+    "/v1beta1/system/roles/{role}": {
+      "get": {
         "description": "Retrieve a system-level Kargo Role virtual resource by name.\nReturns a Kargo Role virtual resource or its underlying\nKubernetes resources.",
         "produces": [
           "application/json"
@@ -4657,16 +4652,16 @@
               "type": "object"
             }
           }
-        }
-      }
-    },
-    "/v1beta1/system/roles/{role}/api-tokens": {
-      "post": {
+        },
         "security": [
           {
             "BearerAuth": []
           }
-        ],
+        ]
+      }
+    },
+    "/v1beta1/system/roles/{role}/api-tokens": {
+      "post": {
         "description": "Create a system-level API token associated with a system-level\nKargo Role virtual resource. Returns a Kubernetes Secret\nresource representing the token. Store it securely. The token\nis not retrievable via the Kargo API after creation except in\na redacted form.",
         "consumes": [
           "application/json"
@@ -4706,16 +4701,16 @@
               "$ref": "#/definitions/V1Secret"
             }
           }
-        }
-      }
-    },
-    "/v1beta1/system/server-config": {
-      "get": {
+        },
         "security": [
           {
             "BearerAuth": []
           }
-        ],
+        ]
+      }
+    },
+    "/v1beta1/system/server-config": {
+      "get": {
         "description": "Retrieve information a client may need to know about how the\nKargo API server is configured.",
         "produces": [
           "application/json"
@@ -4733,16 +4728,16 @@
               "$ref": "#/definitions/GetConfigResponse"
             }
           }
-        }
-      }
-    },
-    "/v1beta1/system/server-version": {
-      "get": {
+        },
         "security": [
           {
             "BearerAuth": []
           }
-        ],
+        ]
+      }
+    },
+    "/v1beta1/system/server-version": {
+      "get": {
         "description": "Retrieve API Server version information.",
         "produces": [
           "application/json"
@@ -4759,7 +4754,12 @@
               "$ref": "#/definitions/VersionInfo"
             }
           }
-        }
+        },
+        "security": [
+          {
+            "BearerAuth": []
+          }
+        ]
       }
     }
   },

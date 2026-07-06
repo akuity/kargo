@@ -31,9 +31,19 @@ domain is needed.
 
 ### Prerequisites
 
-Make, Go, Node.js, pnpm, and Docker are the primary prerequisites. Appropriate
-versions of most other tools (golangci-lint, buf, controller-gen, swag, etc.)
-are installed automatically in `hack/bin/` by Make targets.
+Make, Go, Node.js, pnpm, and Docker are the primary prerequisites. Most other
+tools fall into two buckets:
+
+- **Go-based tools** (buf, controller-gen, go-to-protobuf, protoc-gen-gogo,
+  protoc-gen-doc, goimports, swag, go-swagger, oapi-codegen, ctlptl, kind) are
+  declared as `tool` directives in the root `go.mod` and invoked via
+  `go tool <name>`. No install step is needed -- `go tool` builds them on demand
+  from the module.
+- **Prebuilt-binary tools** (golangci-lint, helm, protoc, quill, tilt, k3d, jq)
+  are installed automatically into `hack/bin/` by Make targets (see
+  `hack/tools.mk`). golangci-lint stays a prebuilt binary rather than a
+  `go tool` because building it from source is slow and can drift from the
+  release binary's lint results; its version is pinned in `hack/tools.mk`.
 
 ### Common commands
 

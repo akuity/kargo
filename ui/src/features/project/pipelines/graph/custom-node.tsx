@@ -51,10 +51,18 @@ export const CustomWarehouseNode = (props: {
           backgroundColor: 'transparent',
           stroke: 'none',
           border: 'none',
-          left: 2
+          left: 3
         }}
       />
-      <div id={props.id} className='nodrag cursor-default flex items-center' style={{ height }}>
+      <div
+        id={props.id}
+        className='nodrag cursor-default flex items-center'
+        style={{ height }}
+        onMouseEnter={() =>
+          graphContext?.setHoveredWarehouseName(props.data.value?.metadata?.name || '')
+        }
+        onMouseLeave={() => graphContext?.setHoveredWarehouseName(null)}
+      >
         {WarehouseNodeBox}
       </div>
       <Handle
@@ -178,7 +186,7 @@ export const CustomStageNode = (props: {
             top: handleTop(idx),
             backgroundColor: 'transparent',
             border: 'none',
-            left: 1
+            left: 2
           }}
         />
       ))}

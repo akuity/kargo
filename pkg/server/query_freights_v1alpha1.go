@@ -502,7 +502,7 @@ func (s *server) watchFreight(c *gin.Context, project string, origins []string, 
 		buildWatchListOptions(project, resourceVersion)...,
 	)
 	if err != nil {
-		if sendSSEWatchStartError(c, err) {
+		if SendSSEWatchStartError(c, err) {
 			return
 		}
 		logger.Error(err, "failed to start watch")
@@ -514,7 +514,7 @@ func (s *server) watchFreight(c *gin.Context, project string, origins []string, 
 	keepaliveTicker := time.NewTicker(30 * time.Second)
 	defer keepaliveTicker.Stop()
 
-	setSSEHeaders(c)
+	SetSSEHeaders(c)
 
 	for {
 		select {
@@ -523,7 +523,7 @@ func (s *server) watchFreight(c *gin.Context, project string, origins []string, 
 			return
 
 		case <-keepaliveTicker.C:
-			if !writeSSEKeepalive(c) {
+			if !WriteSSEKeepalive(c) {
 				return
 			}
 
@@ -532,12 +532,12 @@ func (s *server) watchFreight(c *gin.Context, project string, origins []string, 
 				logger.Debug("watch channel closed")
 				return
 			}
-			if watchErr := errorFromWatchEvent(e); watchErr != nil {
-				sendSSEWatchError(c, watchErr)
+			if watchErr := ErrorFromWatchEvent(e); watchErr != nil {
+				SendSSEWatchError(c, watchErr)
 				return
 			}
 
-			freight, ok := convertWatchEventObject(c, e, (*kargoapi.Freight)(nil))
+			freight, ok := ConvertWatchEventObject(c, e, (*kargoapi.Freight)(nil))
 			if !ok {
 				continue
 			}
@@ -545,7 +545,7 @@ func (s *server) watchFreight(c *gin.Context, project string, origins []string, 
 			eventType := e.Type
 			if len(origins) > 0 {
 				var send bool
-				eventType, send = filteredWatchEventType(
+				eventType, send = FilteredWatchEventType(
 					e.Type,
 					slices.Contains(origins, freight.Origin.Name),
 				)
@@ -554,7 +554,7 @@ func (s *server) watchFreight(c *gin.Context, project string, origins []string, 
 				}
 			}
 
-			if !sendSSEWatchEvent(c, eventType, freight) {
+			if !SendSSEWatchEvent(c, eventType, freight) {
 				return
 			}
 		}

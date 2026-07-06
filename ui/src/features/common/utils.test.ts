@@ -7,7 +7,7 @@ import {
   FreightSchema,
   Stage,
   StageSchema
-} from '@ui/gen/api/v1alpha1/generated_pb';
+} from '../../gen/api/v1alpha1/generated_pb';
 
 import {
   ALIAS_LABEL_KEY,
