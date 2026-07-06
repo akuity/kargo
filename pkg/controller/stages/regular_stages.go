@@ -187,17 +187,6 @@ func (r *RegularStageReconciler) SetupWithManager(
 		return fmt.Errorf("index Freight by Stages for which it has been approved: %w", err)
 	}
 
-	// Match-upstream auto-promotion selection finds candidate Freight by the
-	// upstream Stage it is currently in.
-	if err := sharedIndexer.IndexField(
-		ctx,
-		&kargoapi.Freight{},
-		indexer.FreightByCurrentStagesField,
-		indexer.FreightByCurrentStages,
-	); err != nil {
-		return fmt.Errorf("error setting up index for Freight by current Stages: %w", err)
-	}
-
 	// Build the controller with the reconciler.
 	c, err := ctrl.NewControllerManagedBy(kargoMgr).
 		For(&kargoapi.Stage{}).
