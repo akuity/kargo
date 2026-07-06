@@ -672,29 +672,26 @@ func (r *RegularStageReconciler) syncPromotions(
 		// persist in status even after their establishing Promotion is GC'd.
 		for _, promo := range newPromos {
 			if originKey := promo.Annotations[kargoapi.AnnotationKeyAutoPromotionHold]; originKey != "" {
-				if _, requested := requestedOrigins[originKey]; !requested {
-					continue
+				if _, requested := requestedOrigins[originKey]; requested {
+					if origin, err := kargoapi.ParseFreightOrigin(originKey); err == nil {
+						if newStatus.AutoPromotionHolds == nil {
+							newStatus.AutoPromotionHolds = make(map[string]kargoapi.AutoPromotionHold)
+						}
+						hold := kargoapi.AutoPromotionHold{
+							FreightName:   promo.Spec.Freight,
+							Origin:        origin,
+							PromotionName: promo.Name,
+						}
+						if actor := promo.Annotations[kargoapi.AnnotationKeyCreateActor]; actor != "" {
+							hold.Actor = actor
+						}
+						if !promo.CreationTimestamp.IsZero() {
+							t := promo.CreationTimestamp
+							hold.CreatedAt = &t
+						}
+						newStatus.AutoPromotionHolds[originKey] = hold
+					}
 				}
-				origin, err := kargoapi.ParseFreightOrigin(originKey)
-				if err != nil {
-					continue
-				}
-				if newStatus.AutoPromotionHolds == nil {
-					newStatus.AutoPromotionHolds = make(map[string]kargoapi.AutoPromotionHold)
-				}
-				hold := kargoapi.AutoPromotionHold{
-					FreightName:   promo.Spec.Freight,
-					Origin:        origin,
-					PromotionName: promo.Name,
-				}
-				if actor := promo.Annotations[kargoapi.AnnotationKeyCreateActor]; actor != "" {
-					hold.Actor = actor
-				}
-				if !promo.CreationTimestamp.IsZero() {
-					t := promo.CreationTimestamp
-					hold.CreatedAt = &t
-				}
-				newStatus.AutoPromotionHolds[originKey] = hold
 			} else if originKey := promo.Annotations[kargoapi.AnnotationKeyAutoPromotionResume]; originKey != "" {
 				delete(newStatus.AutoPromotionHolds, originKey)
 			}
