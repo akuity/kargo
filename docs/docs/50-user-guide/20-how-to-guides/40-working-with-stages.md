@@ -149,13 +149,31 @@ Valid policies are:
   continuous basis. This option is valid only when the `Stage` accepts `Freight`
   from _exactly one_ upstream `Stage`.
 
-When a user deliberately promotes `Freight` other than the current
-auto-promotion candidate directly to a `Stage` (from the dashboard or with
-`kargo promote --stage`), Kargo pauses auto-promotion for that `Freight` origin
-on that `Stage`. This prevents automation from immediately moving the `Stage`
-back to that candidate. Auto-promotion remains paused until a user promotes the
-current auto-promotion candidate directly to the `Stage`. To have Kargo resolve
-the current candidate at promotion time, promote by origin:
+**Establishing a hold:** When you promote `Freight` other than the current
+auto-promotion candidate to a `Stage` — for example, to pin the `Stage` to a
+known-good version or to roll back — Kargo pauses auto-promotion for that
+`Freight` origin. This prevents automation from immediately undoing your intent
+by re-promoting the candidate you bypassed.
+
+For example, suppose the current auto-promotion candidate from `my-warehouse` is
+`freight-abc`, but you promote `freight-xyz` instead. Kargo records a hold for
+the `my-warehouse` origin on that `Stage`, and auto-promotion will not resume
+until the hold is lifted.
+
+**Lifting a hold:** Auto-promotion resumes when you promote exactly the `Freight`
+that auto-promotion _would have_ chosen — that is, the current candidate for that
+origin. Promoting the candidate signals that you are ready for automation to take
+over again, and Kargo clears the hold.
+
+Continuing the example above: once `freight-abc` is again the current
+auto-promotion candidate, promoting `freight-abc` to the `Stage` lifts the hold
+and auto-promotion resumes from that point forward.
+
+:::info
+
+The easiest way to promote the current candidate without having to identify it
+yourself is to promote by origin rather than by a specific `Freight` name. Kargo
+resolves the latest available `Freight` for that origin at promotion time:
 
 ```shell
 kargo promote \
@@ -164,9 +182,11 @@ kargo promote \
   --warehouse my-warehouse
 ```
 
-You can do the same with `kubectl` by creating a `Promotion` that sets
-`spec.origin` instead of `spec.freight`. The promotion webhook resolves the
-origin before the `Promotion` is persisted.
+You can do the same with `kubectl` by creating a `Promotion` with `spec.origin`
+set instead of `spec.freight`. The promotion webhook resolves the origin to the
+current candidate before the `Promotion` is persisted.
+
+:::
 
 #### Examples
 
