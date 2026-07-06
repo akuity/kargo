@@ -751,6 +751,9 @@ func TestRegularStageReconciler_syncPromotions(t *testing.T) {
 				Spec: kargoapi.StageSpec{
 					RequestedFreight: []kargoapi.FreightRequest{{Origin: origin}},
 				},
+				Status: kargoapi.StageStatus{
+					CurrentPromotion: &kargoapi.PromotionReference{Name: "hold-promo"},
+				},
 			},
 			objects: []client.Object{
 				&kargoapi.Promotion{
@@ -792,6 +795,9 @@ func TestRegularStageReconciler_syncPromotions(t *testing.T) {
 				},
 				Spec: kargoapi.StageSpec{
 					RequestedFreight: []kargoapi.FreightRequest{{Origin: origin}},
+				},
+				Status: kargoapi.StageStatus{
+					CurrentPromotion: &kargoapi.PromotionReference{Name: "release-promo"},
 				},
 			},
 			objects: []client.Object{
@@ -844,6 +850,9 @@ func TestRegularStageReconciler_syncPromotions(t *testing.T) {
 				Spec: kargoapi.StageSpec{
 					RequestedFreight: []kargoapi.FreightRequest{{Origin: origin}},
 				},
+				Status: kargoapi.StageStatus{
+					CurrentPromotion: &kargoapi.PromotionReference{Name: "b-release-promo"},
+				},
 			},
 			objects: []client.Object{
 				&kargoapi.Promotion{
@@ -894,6 +903,9 @@ func TestRegularStageReconciler_syncPromotions(t *testing.T) {
 				},
 				Spec: kargoapi.StageSpec{
 					RequestedFreight: []kargoapi.FreightRequest{{Origin: origin}},
+				},
+				Status: kargoapi.StageStatus{
+					CurrentPromotion: &kargoapi.PromotionReference{Name: "b-hold-promo"},
 				},
 			},
 			objects: []client.Object{
@@ -947,6 +959,9 @@ func TestRegularStageReconciler_syncPromotions(t *testing.T) {
 				},
 				Spec: kargoapi.StageSpec{
 					RequestedFreight: []kargoapi.FreightRequest{{Origin: origin}},
+				},
+				Status: kargoapi.StageStatus{
+					CurrentPromotion: &kargoapi.PromotionReference{Name: "hold-promo"},
 				},
 			},
 			objects: []client.Object{
