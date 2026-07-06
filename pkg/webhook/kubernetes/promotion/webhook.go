@@ -318,15 +318,13 @@ func (w *webhook) resolveOriginToFreight(
 // are swallowed; intent inference is best-effort and must not block Promotion
 // creation.
 //
+// System-generated Promotions (auto-promotion loop, rollback controller) are
+// left untouched — they carry no user intent, and any annotations they set
+// explicitly are preserved as-is.
+//
 // For user-initiated Promotions, any caller-supplied intent annotation is
 // stripped first to prevent circumvention, then intent is inferred from
 // whether the promoted Freight matches the current auto-promotion candidate.
-//
-// For system-generated Promotions (auto-promotion loop, rollback controller),
-// any explicitly-set intent annotation is preserved. If none is present,
-// intent is inferred by the same candidate comparison — this ensures rollbacks,
-// which always promote non-candidate Freight, establish a hold without
-// requiring the caller to set the annotation explicitly.
 //
 // Accepted races:
 //
@@ -349,18 +347,13 @@ func (w *webhook) syncHoldAnnotations(
 	promo *kargoapi.Promotion,
 	stage *kargoapi.Stage,
 ) {
+	// System-generated Promotions carry no user intent; leave them untouched.
 	if w.isRequestFromKargoControlplaneFn(req) {
-		// System-generated Promotions may carry explicit intent; preserve it and
-		// skip inference only when it is present.
-		if promo.Annotations[kargoapi.AnnotationKeyAutoPromotionHold] != "" ||
-			promo.Annotations[kargoapi.AnnotationKeyAutoPromotionResume] != "" {
-			return
-		}
-	} else {
-		// Strip any caller-supplied intent to prevent circumvention, then infer.
-		delete(promo.Annotations, kargoapi.AnnotationKeyAutoPromotionHold)
-		delete(promo.Annotations, kargoapi.AnnotationKeyAutoPromotionResume)
+		return
 	}
+	// Strip any caller-supplied intent to prevent circumvention, then infer.
+	delete(promo.Annotations, kargoapi.AnnotationKeyAutoPromotionHold)
+	delete(promo.Annotations, kargoapi.AnnotationKeyAutoPromotionResume)
 	if w.getFreightFn == nil || w.listFreightAvailableToStageFn == nil ||
 		w.isAutoPromotionEnabledFn == nil || promo.Spec.Freight == "" {
 		return

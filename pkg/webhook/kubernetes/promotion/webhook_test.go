@@ -1048,53 +1048,7 @@ func Test_webhook_Default(t *testing.T) {
 			},
 		},
 		{
-			name: "preserves explicit hold annotation on control plane promotion",
-			webhook: &webhook{
-				admissionRequestFromContextFn: admission.RequestFromContext,
-				isRequestFromKargoControlplaneFn: func(admission.Request) bool {
-					return true
-				},
-				getStageFn: func(
-					_ context.Context,
-					_ client.Client,
-					_ types.NamespacedName,
-				) (*kargoapi.Stage, error) {
-					return &kargoapi.Stage{
-						Spec: kargoapi.StageSpec{
-							PromotionTemplate: &kargoapi.PromotionTemplate{
-								Spec: kargoapi.PromotionTemplateSpec{
-									Steps: []kargoapi.PromotionStep{{}},
-								},
-							},
-						},
-					}, nil
-				},
-			},
-			req: admission.Request{
-				AdmissionRequest: admissionv1.AdmissionRequest{
-					Operation: admissionv1.Create,
-					UserInfo:  authnv1.UserInfo{Username: "system:serviceaccount:kargo:kargo-api"},
-				},
-			},
-			promotion: &kargoapi.Promotion{
-				ObjectMeta: metav1.ObjectMeta{
-					Annotations: map[string]string{
-						kargoapi.AnnotationKeyAutoPromotionHold: "Warehouse/my-warehouse",
-					},
-				},
-				Spec: kargoapi.PromotionSpec{
-					Stage:   "fake-stage",
-					Freight: "non-candidate-freight",
-					Steps:   []kargoapi.PromotionStep{{}},
-				},
-			},
-			assertions: func(t *testing.T, promo *kargoapi.Promotion, err error) {
-				require.NoError(t, err)
-				require.Equal(t, "Warehouse/my-warehouse", promo.Annotations[kargoapi.AnnotationKeyAutoPromotionHold])
-			},
-		},
-		{
-			name: "infers intent for control plane promotion without explicit annotation",
+			name: "stamps no intent annotation on control plane promotion",
 			webhook: &webhook{
 				admissionRequestFromContextFn: admission.RequestFromContext,
 				isRequestFromKargoControlplaneFn: func(admission.Request) bool {
@@ -1133,7 +1087,6 @@ func Test_webhook_Default(t *testing.T) {
 				},
 			},
 			assertions: func(t *testing.T, promo *kargoapi.Promotion, err error) {
-				// getFreightFn is nil so inference bails out — no annotation stamped.
 				require.NoError(t, err)
 				require.NotContains(t, promo.Annotations, kargoapi.AnnotationKeyAutoPromotionHold)
 				require.NotContains(t, promo.Annotations, kargoapi.AnnotationKeyAutoPromotionResume)
