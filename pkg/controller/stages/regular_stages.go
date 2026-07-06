@@ -644,16 +644,14 @@ func (r *RegularStageReconciler) syncPromotions(
 		}
 	}
 
-	// Build an index of Promotions by name for annotation lookup during hold
-	// processing below.
-	promoByName := make(map[string]*kargoapi.Promotion, len(promotions.Items))
-	for i := range promotions.Items {
-		promoByName[promotions.Items[i].Name] = &promotions.Items[i]
-	}
-
-	// Gather terminal Promotions newer than the last processed one.
+	// Gather terminal Promotions newer than the last processed one. A parallel
+	// slice of full Promotion pointers is kept alongside the references so that
+	// annotations are accessible in the hold-processing loop below without an
+	// extra index.
 	var newPromotions []kargoapi.PromotionReference
-	for _, promo := range promotions.Items {
+	var newFullPromos []*kargoapi.Promotion
+	for i := range promotions.Items {
+		promo := &promotions.Items[i]
 		if lastPromo != nil {
 			// We can break here since we know that all subsequent Promotions
 			// will be older than the last Promotion we saw.
@@ -674,6 +672,7 @@ func (r *RegularStageReconciler) syncPromotions(
 				info.Freight = promo.Status.Freight.DeepCopy()
 			}
 			newPromotions = append(newPromotions, info)
+			newFullPromos = append(newFullPromos, promo)
 		}
 	}
 	// Sort oldest-to-newest: holds must be applied in chronological order, and
@@ -682,16 +681,15 @@ func (r *RegularStageReconciler) syncPromotions(
 	slices.SortFunc(newPromotions, func(a, b kargoapi.PromotionReference) int {
 		return strings.Compare(a.Name, b.Name)
 	})
+	slices.SortFunc(newFullPromos, func(a, b *kargoapi.Promotion) int {
+		return strings.Compare(a.Name, b.Name)
+	})
 
 	// Apply hold and release intent from new Promotions in chronological order
 	// so a later release correctly supersedes an earlier hold and vice versa.
 	// Holds persist in status even after their establishing Promotion is GC'd.
-	for _, p := range newPromotions {
-		fullPromo := promoByName[p.Name]
-		if fullPromo == nil {
-			continue
-		}
-		if originKey := fullPromo.Annotations[kargoapi.AnnotationKeyAutoPromotionHold]; originKey != "" {
+	for _, promo := range newFullPromos {
+		if originKey := promo.Annotations[kargoapi.AnnotationKeyAutoPromotionHold]; originKey != "" {
 			if _, requested := requestedOrigins[originKey]; !requested {
 				continue
 			}
@@ -703,19 +701,19 @@ func (r *RegularStageReconciler) syncPromotions(
 				newStatus.AutoPromotionHolds = make(map[string]kargoapi.AutoPromotionHold)
 			}
 			hold := kargoapi.AutoPromotionHold{
-				FreightName:   fullPromo.Spec.Freight,
+				FreightName:   promo.Spec.Freight,
 				Origin:        origin,
-				PromotionName: fullPromo.Name,
+				PromotionName: promo.Name,
 			}
-			if actor := fullPromo.Annotations[kargoapi.AnnotationKeyCreateActor]; actor != "" {
+			if actor := promo.Annotations[kargoapi.AnnotationKeyCreateActor]; actor != "" {
 				hold.Actor = actor
 			}
-			if !fullPromo.CreationTimestamp.IsZero() {
-				t := fullPromo.CreationTimestamp
+			if !promo.CreationTimestamp.IsZero() {
+				t := promo.CreationTimestamp
 				hold.CreatedAt = &t
 			}
 			newStatus.AutoPromotionHolds[originKey] = hold
-		} else if originKey := fullPromo.Annotations[kargoapi.AnnotationKeyAutoPromotionResume]; originKey != "" {
+		} else if originKey := promo.Annotations[kargoapi.AnnotationKeyAutoPromotionResume]; originKey != "" {
 			delete(newStatus.AutoPromotionHolds, originKey)
 		}
 	}
