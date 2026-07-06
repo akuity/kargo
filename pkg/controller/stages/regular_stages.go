@@ -530,7 +530,6 @@ func (r *RegularStageReconciler) reconcile(
 		if err = kubeclient.PatchStatus(ctx, r.client, stage, func(status *kargoapi.StageStatus) {
 			*status = newStatus
 		}); err != nil {
-			logger.Error(err, fmt.Sprintf("failed to update Stage status after %s", subR.name))
 			if subR.requireStatusUpdate {
 				return newStatus, false, fmt.Errorf(
 					"failed to update Stage status after %s: %w",
@@ -538,6 +537,7 @@ func (r *RegularStageReconciler) reconcile(
 					err,
 				)
 			}
+			logger.Error(err, fmt.Sprintf("failed to update Stage status after %s", subR.name))
 		} else {
 			stage.Status = newStatus
 		}
