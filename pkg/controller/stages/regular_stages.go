@@ -1774,7 +1774,7 @@ func (r *RegularStageReconciler) autoPromoteFreight(
 		newStatus.AutoPromotionEnabled = false
 		return newStatus, err
 	}
-	logger.Debug("checked auto-promotion policy for Stage", "autoPromotionEnabled", autoPromotionEnabled)
+	logger.Debug("checked auto-promotion policy for Stage", "enabled", autoPromotionEnabled)
 	if !autoPromotionEnabled {
 		newStatus.AutoPromotionEnabled = false
 		return newStatus, nil
