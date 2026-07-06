@@ -191,9 +191,6 @@ func (s *server) promoteToStage(c *gin.Context) {
 		return
 	}
 
-	// A request may identify the target by Freight, alias, or origin. Keep that
-	// split here because freightAlias is a REST convenience; Promotion specs only
-	// carry freight or origin.
 	nonEmpty := 0
 	for _, v := range []string{req.Freight, req.FreightAlias, req.Origin} {
 		if v != "" {
