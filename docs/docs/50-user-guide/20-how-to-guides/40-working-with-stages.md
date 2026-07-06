@@ -182,10 +182,6 @@ kargo promote \
   --warehouse my-warehouse
 ```
 
-You can do the same with `kubectl` by creating a `Promotion` with `spec.origin`
-set instead of `spec.freight`. The promotion webhook resolves the origin to the
-current candidate before the `Promotion` is persisted.
-
 :::
 
 #### Examples
