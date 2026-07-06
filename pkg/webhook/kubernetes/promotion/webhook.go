@@ -313,12 +313,20 @@ func (w *webhook) resolveOriginToFreight(
 	return &candidate, nil
 }
 
-// syncHoldAnnotations clears any user-supplied hold/resume annotations, then
-// infers and stamps the correct intent for user-initiated Promotions so the
-// Stage controller can maintain auto-promotion holds. Errors are swallowed;
-// intent inference is best-effort and must not block Promotion creation.
-// System-generated Promotions (auto-promotion loop, rollback controller) carry
-// no user intent and are left with both annotations absent.
+// syncHoldAnnotations stamps the correct hold/resume intent annotation on a
+// Promotion so the Stage controller can maintain auto-promotion holds. Errors
+// are swallowed; intent inference is best-effort and must not block Promotion
+// creation.
+//
+// For user-initiated Promotions, any caller-supplied intent annotation is
+// stripped first to prevent circumvention, then intent is inferred from
+// whether the promoted Freight matches the current auto-promotion candidate.
+//
+// For system-generated Promotions (auto-promotion loop, rollback controller),
+// any explicitly-set intent annotation is preserved. If none is present,
+// intent is inferred by the same candidate comparison — this ensures rollbacks,
+// which always promote non-candidate Freight, establish a hold without
+// requiring the caller to set the annotation explicitly.
 //
 // Accepted races:
 //
@@ -341,12 +349,17 @@ func (w *webhook) syncHoldAnnotations(
 	promo *kargoapi.Promotion,
 	stage *kargoapi.Stage,
 ) {
-	// Always start fresh — prevent user-supplied annotations from interfering.
-	delete(promo.Annotations, kargoapi.AnnotationKeyAutoPromotionHold)
-	delete(promo.Annotations, kargoapi.AnnotationKeyAutoPromotionResume)
-	// System-generated Promotions carry no user intent; skip inference.
 	if w.isRequestFromKargoControlplaneFn(req) {
-		return
+		// System-generated Promotions may carry explicit intent; preserve it and
+		// skip inference only when it is present.
+		if promo.Annotations[kargoapi.AnnotationKeyAutoPromotionHold] != "" ||
+			promo.Annotations[kargoapi.AnnotationKeyAutoPromotionResume] != "" {
+			return
+		}
+	} else {
+		// Strip any caller-supplied intent to prevent circumvention, then infer.
+		delete(promo.Annotations, kargoapi.AnnotationKeyAutoPromotionHold)
+		delete(promo.Annotations, kargoapi.AnnotationKeyAutoPromotionResume)
 	}
 	if w.getFreightFn == nil || w.listFreightAvailableToStageFn == nil ||
 		w.isAutoPromotionEnabledFn == nil || promo.Spec.Freight == "" {
