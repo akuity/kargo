@@ -644,12 +644,8 @@ func (r *RegularStageReconciler) syncPromotions(
 		}
 	}
 
-	// Gather terminal Promotions newer than the last processed one. A parallel
-	// slice of full Promotion pointers is kept alongside the references so that
-	// annotations are accessible in the hold-processing loop below without an
-	// extra index.
-	var newPromotions []kargoapi.PromotionReference
-	var newFullPromos []*kargoapi.Promotion
+	// Gather terminal Promotions newer than the last processed one.
+	var newPromos []*kargoapi.Promotion
 	for i := range promotions.Items {
 		promo := &promotions.Items[i]
 		if lastPromo != nil {
@@ -663,32 +659,20 @@ func (r *RegularStageReconciler) syncPromotions(
 			}
 		}
 		if promo.Status.Phase.IsTerminal() {
-			info := kargoapi.PromotionReference{
-				Name:       promo.Name,
-				Status:     promo.Status.DeepCopy(),
-				FinishedAt: promo.Status.FinishedAt,
-			}
-			if promo.Status.Freight != nil {
-				info.Freight = promo.Status.Freight.DeepCopy()
-			}
-			newPromotions = append(newPromotions, info)
-			newFullPromos = append(newFullPromos, promo)
+			newPromos = append(newPromos, promo)
 		}
 	}
 	// Sort oldest-to-newest: holds must be applied in chronological order, and
 	// Freight history entries must be appended oldest-first so GC removes the
 	// oldest entries first.
-	slices.SortFunc(newPromotions, func(a, b kargoapi.PromotionReference) int {
-		return strings.Compare(a.Name, b.Name)
-	})
-	slices.SortFunc(newFullPromos, func(a, b *kargoapi.Promotion) int {
+	slices.SortFunc(newPromos, func(a, b *kargoapi.Promotion) int {
 		return strings.Compare(a.Name, b.Name)
 	})
 
 	// Apply hold and release intent from new Promotions in chronological order
 	// so a later release correctly supersedes an earlier hold and vice versa.
 	// Holds persist in status even after their establishing Promotion is GC'd.
-	for _, promo := range newFullPromos {
+	for _, promo := range newPromos {
 		if originKey := promo.Annotations[kargoapi.AnnotationKeyAutoPromotionHold]; originKey != "" {
 			if _, requested := requestedOrigins[originKey]; !requested {
 				continue
@@ -728,13 +712,20 @@ func (r *RegularStageReconciler) syncPromotions(
 
 		// Update the Stage status with the information about the newly terminated
 		// Promotions, and any new Freight that was successfully promoted.
-		for _, p := range newPromotions {
-			promo := p
-			newStatus.LastPromotion = &promo
-			if p.Status.Phase == kargoapi.PromotionPhaseSucceeded {
+		for _, promo := range newPromos {
+			ref := kargoapi.PromotionReference{
+				Name:       promo.Name,
+				Status:     promo.Status.DeepCopy(),
+				FinishedAt: promo.Status.FinishedAt,
+			}
+			if promo.Status.Freight != nil {
+				ref.Freight = promo.Status.Freight.DeepCopy()
+			}
+			newStatus.LastPromotion = &ref
+			if promo.Status.Phase == kargoapi.PromotionPhaseSucceeded {
 				// If the Promotion was successful, then we should add the Freight
 				// to the history of successfully promoted Freight.
-				newStatus.FreightHistory.Record(promo.Status.FreightCollection)
+				newStatus.FreightHistory.Record(ref.Status.FreightCollection)
 
 				// Erase any health checks that were performed for the previous
 				// Freight, as they are no longer relevant.
@@ -763,7 +754,7 @@ func (r *RegularStageReconciler) syncPromotions(
 				//
 				// NB: If the health checks do not include ArgoCD Applications,
 				// then the annotation will be removed.
-				if err := api.AnnotateStageWithArgoCDContext(ctx, r.client, p.Status.HealthChecks, stage); err != nil {
+				if err := api.AnnotateStageWithArgoCDContext(ctx, r.client, promo.Status.HealthChecks, stage); err != nil {
 					// Let the error be logged, but do not return it as it is not
 					// critical to the operation of the Stage.
 					logger.Error(err, "failed to annotate Stage with ArgoCD context")
