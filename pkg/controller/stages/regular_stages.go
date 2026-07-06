@@ -666,10 +666,10 @@ func (r *RegularStageReconciler) syncPromotions(
 			return strings.Compare(a.Name, b.Name)
 		})
 
-		// Apply hold and release intent from new Promotions in chronological
-		// order so a later release correctly supersedes an earlier hold and vice
-		// versa. Holds persist in status even after their establishing Promotion
-		// is GC'd.
+		// Replay new Promotions in chronological order to update hold state and
+		// Stage status. Hold/release intent is applied in order so a later
+		// release correctly supersedes an earlier hold and vice versa. Holds
+		// persist in status even after their establishing Promotion is GC'd.
 		for _, promo := range newPromos {
 			if originKey := promo.Annotations[kargoapi.AnnotationKeyAutoPromotionHold]; originKey != "" {
 				if _, requested := requestedOrigins[originKey]; !requested {
@@ -698,11 +698,6 @@ func (r *RegularStageReconciler) syncPromotions(
 			} else if originKey := promo.Annotations[kargoapi.AnnotationKeyAutoPromotionResume]; originKey != "" {
 				delete(newStatus.AutoPromotionHolds, originKey)
 			}
-		}
-
-		// Update the Stage status with the information about the newly terminated
-		// Promotions, and any new Freight that was successfully promoted.
-		for _, promo := range newPromos {
 			ref := kargoapi.PromotionReference{
 				Name:       promo.Name,
 				Status:     promo.Status.DeepCopy(),
