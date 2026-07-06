@@ -181,11 +181,8 @@ message ArtifactoryWebhookReceiverConfig {
   optional string virtualRepoName = 2;
 }
 
-// AutoPromotionHold pins a single FreightOrigin on a Stage, pausing
-// auto-promotion for that origin after a Promotion selects Freight other than
-// the current auto-promotion candidate. Stage-controller auto-promotions do not
-// create holds. Other origins continue to auto-promote normally. The origin is
-// identified by the enclosing map key.
+// AutoPromotionHold is a value in the AutoPromotionHolds map. It records the
+// details of the Promotion that established the hold.
 message AutoPromotionHold {
   // FreightName is the name of the Freight selected when the hold was created.
   optional string freightName = 1;
@@ -2027,12 +2024,12 @@ message StageStatus {
   // that can be shared across promotions, verifications, or other processes.
   map<string, .k8s.io.apiextensions_apiserver.pkg.apis.apiextensions.v1.JSON> metadata = 15;
 
-  // AutoPromotionHolds records active auto-promotion holds for this Stage.
-  // A hold is established when a Promotion selects Freight other than the
-  // latest available for its origin, pausing auto-promotion for that origin
-  // until explicitly released. Stage-controller auto-promotions do not
-  // establish holds. Keys are the canonical string representation of the
-  // FreightOrigin (e.g. "Warehouse/my-warehouse"); values describe the
+  // AutoPromotionHolds records active auto-promotion holds for this Stage. A
+  // hold is established when a Promotion selects Freight other than the latest
+  // available to the target Stage from that Freight's origin, pausing
+  // auto-promotion for that origin until explicitly released. Auto-promotions
+  // themselves never establish holds. Keys are string representations of
+  // FreightOrigins (e.g. "Warehouse/my-warehouse"); values describe the
   // Promotion that established the hold.
   map<string, AutoPromotionHold> autoPromotionHolds = 16;
 }

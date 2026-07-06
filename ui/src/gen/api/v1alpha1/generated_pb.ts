@@ -395,11 +395,8 @@ export const ArtifactoryWebhookReceiverConfigSchema: GenMessage<ArtifactoryWebho
   messageDesc(file_api_v1alpha1_generated, 9);
 
 /**
- * AutoPromotionHold pins a single FreightOrigin on a Stage, pausing
- * auto-promotion for that origin after a Promotion selects Freight other than
- * the current auto-promotion candidate. Stage-controller auto-promotions do not
- * create holds. Other origins continue to auto-promote normally. The origin is
- * identified by the enclosing map key.
+ * AutoPromotionHold is a value in the AutoPromotionHolds map. It records the
+ * details of the Promotion that established the hold.
  *
  * @generated from message github.com.akuity.kargo.api.v1alpha1.AutoPromotionHold
  */
@@ -4211,12 +4208,12 @@ export type StageStatus = Message<"github.com.akuity.kargo.api.v1alpha1.StageSta
   metadata: { [key: string]: JSON };
 
   /**
-   * AutoPromotionHolds records active auto-promotion holds for this Stage.
-   * A hold is established when a Promotion selects Freight other than the
-   * latest available for its origin, pausing auto-promotion for that origin
-   * until explicitly released. Stage-controller auto-promotions do not
-   * establish holds. Keys are the canonical string representation of the
-   * FreightOrigin (e.g. "Warehouse/my-warehouse"); values describe the
+   * AutoPromotionHolds records active auto-promotion holds for this Stage. A
+   * hold is established when a Promotion selects Freight other than the latest
+   * available to the target Stage from that Freight's origin, pausing
+   * auto-promotion for that origin until explicitly released. Auto-promotions
+   * themselves never establish holds. Keys are string representations of
+   * FreightOrigins (e.g. "Warehouse/my-warehouse"); values describe the
    * Promotion that established the hold.
    *
    * @generated from field: map<string, github.com.akuity.kargo.api.v1alpha1.AutoPromotionHold> autoPromotionHolds = 16;

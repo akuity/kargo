@@ -1622,7 +1622,7 @@ RawFormat specifies the format for raw resource representation.
 
 
 ### AutoPromotionHold {#github-com-akuity-kargo-api-v1alpha1-AutoPromotionHold}
- AutoPromotionHold pins a single FreightOrigin on a Stage, pausing auto-promotion for that origin after a Promotion selects Freight other than the current auto-promotion candidate. Stage-controller auto-promotions do not create holds. Other origins continue to auto-promote normally. The origin is identified by the enclosing map key.
+ AutoPromotionHold is a value in the AutoPromotionHolds map. It records the details of the Promotion that established the hold.
 | Field | Type | Description |
 | ----- | ---- | ----------- |
 | freightName | string |  FreightName is the name of the Freight selected when the hold was created. |
@@ -2451,7 +2451,7 @@ RawFormat specifies the format for raw resource representation.
 | lastPromotion | [PromotionReference](#github-com-akuity-kargo-api-v1alpha1-PromotionReference) |  LastPromotion is a reference to the last completed promotion. |
 | autoPromotionEnabled | bool |  AutoPromotionEnabled indicates whether automatic promotion is enabled for the Stage based on the ProjectConfig. |
 | metadata | [StageStatus.MetadataEntry](#github-com-akuity-kargo-api-v1alpha1-StageStatus-MetadataEntry) |  Metadata is a map of arbitrary metadata associated with the Stage. This is useful for storing additional information about the Stage that can be shared across promotions, verifications, or other processes. |
-| autoPromotionHolds | [StageStatus.AutoPromotionHoldsEntry](#github-com-akuity-kargo-api-v1alpha1-StageStatus-AutoPromotionHoldsEntry) |  AutoPromotionHolds records active auto-promotion holds for this Stage. A hold is established when a Promotion selects Freight other than the latest available for its origin, pausing auto-promotion for that origin until explicitly released. Stage-controller auto-promotions do not establish holds. Keys are the canonical string representation of the FreightOrigin (e.g. "Warehouse/my-warehouse"); values describe the Promotion that established the hold. |
+| autoPromotionHolds | [StageStatus.AutoPromotionHoldsEntry](#github-com-akuity-kargo-api-v1alpha1-StageStatus-AutoPromotionHoldsEntry) |  AutoPromotionHolds records active auto-promotion holds for this Stage. A hold is established when a Promotion selects Freight other than the latest available to the target Stage from that Freight's origin, pausing auto-promotion for that origin until explicitly released. Auto-promotions themselves never establish holds. Keys are string representations of FreightOrigins (e.g. "Warehouse/my-warehouse"); values describe the Promotion that established the hold. |
 
 
 ### StageStatus.AutoPromotionHoldsEntry {#github-com-akuity-kargo-api-v1alpha1-StageStatus-AutoPromotionHoldsEntry}
