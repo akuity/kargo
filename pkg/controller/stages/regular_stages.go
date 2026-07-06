@@ -1386,6 +1386,10 @@ func (r *RegularStageReconciler) startVerification(
 				exprfn.DataOperations(
 					ctx,
 					r.client,
+					// The Stage reconciler does not wire a credentials database,
+					// so repoCredentials() is unavailable during verification
+					// argument evaluation.
+					nil,
 					gocache.New(gocache.NoExpiration, gocache.NoExpiration),
 					stage.Namespace,
 				),
