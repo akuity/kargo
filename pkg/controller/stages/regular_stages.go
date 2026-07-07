@@ -532,8 +532,6 @@ func (r *RegularStageReconciler) reconcile(
 			*status = newStatus
 		}); err != nil {
 			logger.Error(err, fmt.Sprintf("failed to update Stage status after %s", subR.name))
-		} else {
-			stage.Status = newStatus
 		}
 		working.Status = newStatus
 	}
