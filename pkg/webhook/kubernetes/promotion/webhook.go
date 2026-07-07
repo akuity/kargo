@@ -328,8 +328,9 @@ func (w *webhook) resolveOriginToFreight(
 // explicitly are preserved as-is.
 //
 // For user-initiated Promotions, any caller-supplied intent annotation is
-// stripped first to prevent circumvention, then intent is inferred from
-// whether the promoted Freight matches the current auto-promotion candidate.
+// stripped first to prevent circumvention, then intent is inferred: resume if
+// the promoted Freight matches the current auto-promotion candidate, hold
+// otherwise (including when no candidate exists yet).
 //
 // Accepted races:
 //
@@ -401,7 +402,11 @@ func (w *webhook) syncHoldAnnotations(
 
 	candidate, ok := candidates[origin.String()]
 	if !ok {
-		logger.Debug("skipping auto-promotion intent annotation; no candidate", "origin", origin.String())
+		// No candidate exists right now e.g. MatchUpstream policy when
+		// upstream Freight has not yet passed verification or its soak time.
+		// Stamp hold intent so auto-promotion does not immediately proceed the
+		// moment a candidate does appear.
+		api.SetAutoPromotionHoldAnnotation(promo, origin)
 		return
 	}
 	if candidate.Name == promo.Spec.Freight {

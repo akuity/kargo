@@ -1239,7 +1239,7 @@ func Test_webhook_Default(t *testing.T) {
 			},
 		},
 		{
-			name: "stamps no intent annotation when no candidate exists",
+			name: "stamps hold intent when no candidate exists",
 			webhook: &webhook{
 				admissionRequestFromContextFn: admission.RequestFromContext,
 				isRequestFromKargoControlplaneFn: func(admission.Request) bool {
@@ -1315,7 +1315,7 @@ func Test_webhook_Default(t *testing.T) {
 			assertions: func(t *testing.T, promo *kargoapi.Promotion, err error) {
 				require.NoError(t, err)
 				require.NotContains(t, promo.Annotations, kargoapi.AnnotationKeyAutoPromotionResume)
-				require.NotContains(t, promo.Annotations, kargoapi.AnnotationKeyAutoPromotionHold)
+				require.Contains(t, promo.Annotations, kargoapi.AnnotationKeyAutoPromotionHold)
 			},
 		},
 	}
