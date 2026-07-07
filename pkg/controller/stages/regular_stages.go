@@ -1852,24 +1852,15 @@ func (r *RegularStageReconciler) autoPromoteFreight(
 				candidate.Name, stage.Namespace, err,
 			)
 		}
-		if newestPromotion != nil {
-			newestFreightPolicy := req.Sources.AutoPromotionOptions == nil ||
-				req.Sources.AutoPromotionOptions.SelectionPolicy == "" ||
-				req.Sources.AutoPromotionOptions.SelectionPolicy ==
-					kargoapi.AutoPromotionSelectionPolicyNewestFreight
-			if newestFreightPolicy {
-				freightLogger.Debug("Promotion already exists for Stage and Freight")
-				continue
-			}
-			if newestPromotion.Status.Phase != kargoapi.PromotionPhaseSucceeded {
-				freightLogger.Debug(
-					"most recent terminal Promotion for Stage and Freight was not "+
-						"successful; skipping auto-promotion to avoid an infinite loop",
-					"lastPromotion", newestPromotion.Name,
-					"lastPromotionPhase", newestPromotion.Status.Phase,
-				)
-				continue
-			}
+		if newestPromotion != nil &&
+			newestPromotion.Status.Phase != kargoapi.PromotionPhaseSucceeded {
+			freightLogger.Debug(
+				"most recent terminal Promotion for Stage and Freight was not "+
+					"successful; skipping auto-promotion to avoid an infinite loop",
+				"lastPromotion", newestPromotion.Name,
+				"lastPromotionPhase", newestPromotion.Status.Phase,
+			)
+			continue
 		}
 
 		// Auto-promote the candidate Freight and record an event. Create a minimal
