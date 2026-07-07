@@ -13,6 +13,7 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
 	kargoapi "github.com/akuity/kargo/api/v1alpha1"
+	"github.com/akuity/kargo/pkg/logging"
 	"github.com/akuity/kargo/pkg/pattern"
 )
 
@@ -94,9 +95,10 @@ func IsAutoPromotionEnabled(
 // Stage's current Freight, that no Promotion for it already exists, and that
 // no auto-promotion hold blocks its origin.
 func SelectAutoPromotionCandidates(
+	ctx context.Context,
 	stage *kargoapi.Stage,
 	availableFreight []kargoapi.Freight,
-) (map[string]kargoapi.Freight, error) {
+) map[string]kargoapi.Freight {
 	availableByOrigin := make(map[string][]kargoapi.Freight)
 	for _, freight := range availableFreight {
 		origin := freight.Origin.String()
@@ -113,11 +115,17 @@ func SelectAutoPromotionCandidates(
 		if req.Sources.AutoPromotionOptions != nil &&
 			req.Sources.AutoPromotionOptions.SelectionPolicy == kargoapi.AutoPromotionSelectionPolicyMatchUpstream &&
 			len(freight) > 1 {
-			return nil, fmt.Errorf(
-				"unexpectedly found %d available Freight running immediately "+
-					"upstream from Stage %q in namespace %q; this should not be possible",
-				len(freight), stage.Name, stage.Namespace,
+			// This is a transient race: the Stage reconciler updates two Freight
+			// resources after every Promotion completes (the incoming gains the
+			// Stage, the outgoing loses it), so momentarily both report the same
+			// Stage. Treat the origin as having no candidate this pass; the next
+			// reconciliation will see only one.
+			logging.LoggerFromContext(ctx).Debug(
+				"transiently found multiple Freight upstream; skipping origin",
+				"origin", origin,
+				"count", len(freight),
 			)
+			continue
 		}
 
 		slices.SortFunc(freight, func(lhs, rhs kargoapi.Freight) int {
@@ -129,7 +137,7 @@ func SelectAutoPromotionCandidates(
 		})
 		candidates[origin] = freight[0]
 	}
-	return candidates, nil
+	return candidates
 }
 
 // SetAutoPromotionHoldAnnotation stamps promo with AnnotationKeyAutoPromotionHold

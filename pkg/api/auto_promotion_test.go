@@ -388,7 +388,7 @@ func TestSelectAutoPromotionCandidates(t *testing.T) {
 		name             string
 		stage            *kargoapi.Stage
 		availableFreight []kargoapi.Freight
-		assert           func(*testing.T, map[string]kargoapi.Freight, error)
+		assert           func(*testing.T, map[string]kargoapi.Freight)
 	}{
 		{
 			name:  "newest Freight selected per origin",
@@ -416,8 +416,7 @@ func TestSelectAutoPromotionCandidates(t *testing.T) {
 					Origin: otherOrigin,
 				},
 			},
-			assert: func(t *testing.T, candidates map[string]kargoapi.Freight, err error) {
-				require.NoError(t, err)
+			assert: func(t *testing.T, candidates map[string]kargoapi.Freight) {
 				require.Len(t, candidates, 2)
 				require.Equal(t, "newer-freight", candidates[warehouseOrigin.String()].Name)
 				require.Equal(t, "other-freight", candidates[otherOrigin.String()].Name)
@@ -442,8 +441,7 @@ func TestSelectAutoPromotionCandidates(t *testing.T) {
 					Origin: warehouseOrigin,
 				},
 			},
-			assert: func(t *testing.T, candidates map[string]kargoapi.Freight, err error) {
-				require.NoError(t, err)
+			assert: func(t *testing.T, candidates map[string]kargoapi.Freight) {
 				require.Equal(t, "bbb-freight", candidates[warehouseOrigin.String()].Name)
 			},
 		},
@@ -454,13 +452,12 @@ func TestSelectAutoPromotionCandidates(t *testing.T) {
 				ObjectMeta: metav1.ObjectMeta{Name: "upstream-current-freight"},
 				Origin:     warehouseOrigin,
 			}},
-			assert: func(t *testing.T, candidates map[string]kargoapi.Freight, err error) {
-				require.NoError(t, err)
+			assert: func(t *testing.T, candidates map[string]kargoapi.Freight) {
 				require.Equal(t, "upstream-current-freight", candidates[warehouseOrigin.String()].Name)
 			},
 		},
 		{
-			name:  "matchUpstream with multiple available Freight errors",
+			name:  "matchUpstream skips origin when multiple Freight transiently available",
 			stage: matchUpstreamStage,
 			availableFreight: []kargoapi.Freight{
 				{
@@ -472,19 +469,20 @@ func TestSelectAutoPromotionCandidates(t *testing.T) {
 					Origin:     warehouseOrigin,
 				},
 			},
-			assert: func(t *testing.T, _ map[string]kargoapi.Freight, err error) {
-				require.ErrorContains(t, err, "unexpectedly found 2 available Freight")
+			assert: func(t *testing.T, candidates map[string]kargoapi.Freight) {
+				require.Empty(t, candidates)
 			},
 		},
 	}
 
 	for _, testCase := range testCases {
 		t.Run(testCase.name, func(t *testing.T) {
-			candidates, err := SelectAutoPromotionCandidates(
+			candidates := SelectAutoPromotionCandidates(
+				context.Background(),
 				testCase.stage,
 				testCase.availableFreight,
 			)
-			testCase.assert(t, candidates, err)
+			testCase.assert(t, candidates)
 		})
 	}
 }

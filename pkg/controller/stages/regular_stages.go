@@ -1772,10 +1772,7 @@ func (r *RegularStageReconciler) autoPromoteFreight(
 			stage.Name, err,
 		)
 	}
-	candidates, err := api.SelectAutoPromotionCandidates(stage, availableFreight)
-	if err != nil {
-		return newStatus, err
-	}
+	candidates := api.SelectAutoPromotionCandidates(ctx, stage, availableFreight)
 	// If the Stage has no current Freight, any candidate is new to it.
 	currentFreight := newStatus.FreightHistory.Current()
 

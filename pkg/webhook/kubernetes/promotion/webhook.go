@@ -302,10 +302,7 @@ func (w *webhook) resolveOriginToFreight(
 	if err != nil {
 		return nil, fmt.Errorf("list available freight: %w", err)
 	}
-	candidates, err := api.SelectAutoPromotionCandidates(stage, availableFreight)
-	if err != nil {
-		return nil, fmt.Errorf("select candidates: %w", err)
-	}
+	candidates := api.SelectAutoPromotionCandidates(ctx, stage, availableFreight)
 	originKey := origin.String()
 	candidate, ok := candidates[originKey]
 	if !ok {
@@ -394,11 +391,7 @@ func (w *webhook) syncHoldAnnotations(
 		logger.Error(err, "skipping auto-promotion intent annotation")
 		return
 	}
-	candidates, err := api.SelectAutoPromotionCandidates(stage, availableFreight)
-	if err != nil {
-		logger.Error(err, "skipping auto-promotion intent annotation")
-		return
-	}
+	candidates := api.SelectAutoPromotionCandidates(ctx, stage, availableFreight)
 
 	candidate, ok := candidates[origin.String()]
 	if !ok {
