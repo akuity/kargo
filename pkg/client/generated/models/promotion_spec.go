@@ -28,10 +28,10 @@ type PromotionSpec struct {
 	// +akuity:test-kubebuilder-pattern=KubernetesName
 	Freight string `json:"freight,omitempty"`
 
-	// Origin, when set, identifies the FreightOrigin whose latest available
-	// Freight should be promoted. The mutating webhook resolves this to the
-	// latest available Freight for that origin and fills Freight before the
-	// Promotion is persisted. Exactly one of Freight or Origin must be set.
+	// Origin, when set, identifies the FreightOrigin whose auto-promotion
+	// candidate should be promoted. The mutating webhook resolves this to the
+	// candidate Freight for that origin and fills Freight before the Promotion
+	// is persisted. Exactly one of Freight or Origin must be set.
 	//
 	// +kubebuilder:validation:Optional
 	Origin struct {

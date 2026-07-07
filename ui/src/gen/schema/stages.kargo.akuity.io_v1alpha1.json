@@ -407,7 +407,7 @@
             ],
             "type": "object"
           },
-          "description": "AutoPromotionHolds records active auto-promotion holds for this Stage. A\nhold is established when a Promotion selects Freight other than the latest\navailable to the target Stage from that Freight's origin, pausing\nauto-promotion for that origin until explicitly released. Auto-promotions\nthemselves never establish holds. Keys are string representations of\nFreightOrigins (e.g. \"Warehouse/my-warehouse\"); values describe the\nPromotion that established the hold.",
+          "description": "AutoPromotionHolds records active auto-promotion holds for this Stage. A\nhold is established when a Promotion selects Freight other than the\nauto-promotion candidate for that origin, pausing auto-promotion for that\norigin until explicitly released. Auto-promotions themselves never\nestablish holds. Keys are string representations of FreightOrigins (e.g.\n\"Warehouse/my-warehouse\"); values describe the Promotion that established\nthe hold.",
           "type": "object"
         },
         "conditions": {

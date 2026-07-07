@@ -3400,10 +3400,10 @@ export type PromotionSpec = Message<"github.com.akuity.kargo.api.v1alpha1.Promot
   freight: string;
 
   /**
-   * Origin, when set, identifies the FreightOrigin whose latest available
-   * Freight should be promoted. The mutating webhook resolves this to the
-   * latest available Freight for that origin and fills Freight before the
-   * Promotion is persisted. Exactly one of Freight or Origin must be set.
+   * Origin, when set, identifies the FreightOrigin whose auto-promotion
+   * candidate should be promoted. The mutating webhook resolves this to the
+   * candidate Freight for that origin and fills Freight before the Promotion
+   * is persisted. Exactly one of Freight or Origin must be set.
    *
    * +kubebuilder:validation:Optional
    *
@@ -4209,12 +4209,12 @@ export type StageStatus = Message<"github.com.akuity.kargo.api.v1alpha1.StageSta
 
   /**
    * AutoPromotionHolds records active auto-promotion holds for this Stage. A
-   * hold is established when a Promotion selects Freight other than the latest
-   * available to the target Stage from that Freight's origin, pausing
-   * auto-promotion for that origin until explicitly released. Auto-promotions
-   * themselves never establish holds. Keys are string representations of
-   * FreightOrigins (e.g. "Warehouse/my-warehouse"); values describe the
-   * Promotion that established the hold.
+   * hold is established when a Promotion selects Freight other than the
+   * auto-promotion candidate for that origin, pausing auto-promotion for that
+   * origin until explicitly released. Auto-promotions themselves never
+   * establish holds. Keys are string representations of FreightOrigins (e.g.
+   * "Warehouse/my-warehouse"); values describe the Promotion that established
+   * the hold.
    *
    * @generated from field: map<string, github.com.akuity.kargo.api.v1alpha1.AutoPromotionHold> autoPromotionHolds = 16;
    */

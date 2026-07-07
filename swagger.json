@@ -7794,7 +7794,7 @@
           "type": "string"
         },
         "origin": {
-          "description": "Origin, when set, identifies the FreightOrigin whose latest available\nFreight should be promoted. The mutating webhook resolves this to the\nlatest available Freight for that origin and fills Freight before the\nPromotion is persisted. Exactly one of Freight or Origin must be set.\n\n+kubebuilder:validation:Optional",
+          "description": "Origin, when set, identifies the FreightOrigin whose auto-promotion\ncandidate should be promoted. The mutating webhook resolves this to the\ncandidate Freight for that origin and fills Freight before the Promotion\nis persisted. Exactly one of Freight or Origin must be set.\n\n+kubebuilder:validation:Optional",
           "allOf": [
             {
               "$ref": "#/definitions/FreightOrigin"
@@ -8200,7 +8200,7 @@
           "type": "boolean"
         },
         "autoPromotionHolds": {
-          "description": "AutoPromotionHolds records active auto-promotion holds for this Stage. A\nhold is established when a Promotion selects Freight other than the latest\navailable to the target Stage from that Freight's origin, pausing\nauto-promotion for that origin until explicitly released. Auto-promotions\nthemselves never establish holds. Keys are string representations of\nFreightOrigins (e.g. \"Warehouse/my-warehouse\"); values describe the\nPromotion that established the hold.",
+          "description": "AutoPromotionHolds records active auto-promotion holds for this Stage. A\nhold is established when a Promotion selects Freight other than the\nauto-promotion candidate for that origin, pausing auto-promotion for that\norigin until explicitly released. Auto-promotions themselves never\nestablish holds. Keys are string representations of FreightOrigins (e.g.\n\"Warehouse/my-warehouse\"); values describe the Promotion that established\nthe hold.",
           "type": "object",
           "additionalProperties": {
             "$ref": "#/definitions/AutoPromotionHold"
