@@ -833,12 +833,15 @@ func TestAnnotateStageWithArgoCDContext(t *testing.T) {
 	t.Run("not found", func(t *testing.T) {
 		c := fake.NewClientBuilder().WithScheme(scheme).Build()
 
-		err := AnnotateStageWithArgoCDContext(t.Context(), c, []kargoapi.HealthCheckStep{}, &kargoapi.Stage{
-			ObjectMeta: metav1.ObjectMeta{
-				Name:      "fake-stage",
+		err := AnnotateStageWithArgoCDContext(
+			t.Context(),
+			c,
+			[]kargoapi.HealthCheckStep{},
+			types.NamespacedName{
 				Namespace: "fake-namespace",
+				Name:      "fake-stage",
 			},
-		})
+		)
 		require.ErrorContains(t, err, "not found")
 	})
 
@@ -852,19 +855,22 @@ func TestAnnotateStageWithArgoCDContext(t *testing.T) {
 			},
 		).Build()
 
-		err := AnnotateStageWithArgoCDContext(t.Context(), c, []kargoapi.HealthCheckStep{
-			{
-				Uses: "argocd-update",
-				Config: &apiextensionsv1.JSON{
-					Raw: []byte(`{"apps": [{"name": "fake-argo-app", "namespace": "fake-argo-namespace"}]}`),
+		err := AnnotateStageWithArgoCDContext(
+			t.Context(),
+			c,
+			[]kargoapi.HealthCheckStep{
+				{
+					Uses: "argocd-update",
+					Config: &apiextensionsv1.JSON{
+						Raw: []byte(`{"apps": [{"name": "fake-argo-app", "namespace": "fake-argo-namespace"}]}`),
+					},
 				},
 			},
-		}, &kargoapi.Stage{
-			ObjectMeta: metav1.ObjectMeta{
-				Name:      "fake-stage",
+			types.NamespacedName{
 				Namespace: "fake-namespace",
+				Name:      "fake-stage",
 			},
-		})
+		)
 		require.NoError(t, err)
 
 		stage, err := GetStage(t.Context(), c, types.NamespacedName{
@@ -890,12 +896,15 @@ func TestAnnotateStageWithArgoCDContext(t *testing.T) {
 			},
 		).Build()
 
-		err := AnnotateStageWithArgoCDContext(t.Context(), c, []kargoapi.HealthCheckStep{}, &kargoapi.Stage{
-			ObjectMeta: metav1.ObjectMeta{
-				Name:      "fake-stage",
+		err := AnnotateStageWithArgoCDContext(
+			t.Context(),
+			c,
+			[]kargoapi.HealthCheckStep{},
+			types.NamespacedName{
 				Namespace: "fake-namespace",
+				Name:      "fake-stage",
 			},
-		})
+		)
 		require.NoError(t, err)
 
 		stage, err := GetStage(t.Context(), c, types.NamespacedName{

@@ -746,7 +746,12 @@ func (r *RegularStageReconciler) syncPromotions(
 				//
 				// NB: If the health checks do not include ArgoCD Applications,
 				// then the annotation will be removed.
-				if err := api.AnnotateStageWithArgoCDContext(ctx, r.client, promo.Status.HealthChecks, stage); err != nil {
+				if err := api.AnnotateStageWithArgoCDContext(
+					ctx,
+					r.client,
+					promo.Status.HealthChecks,
+					client.ObjectKeyFromObject(stage),
+				); err != nil {
 					// Let the error be logged, but do not return it as it is not
 					// critical to the operation of the Stage.
 					logger.Error(err, "failed to annotate Stage with ArgoCD context")
