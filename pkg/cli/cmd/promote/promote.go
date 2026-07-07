@@ -68,7 +68,7 @@ kargo promote --project=my-project --freight=abc123 --downstream-from=qa
 # Promote a piece of freight specified by alias to stages immediately downstream from the QA stage
 kargo promote --project=my-project --freight-alias=wonky-wombat --downstream-from=qa
 
-# Promote the latest freight originating from my-warehouse, and available to the QA stage, to QA (this also clears any active auto-promotion hold)
+# Promote freight from my-warehouse to QA, selected as auto-promotion would (this also clears any active auto-promotion hold)
 kargo promote --project=my-project --warehouse=my-warehouse --stage=qa
 
 # Abort a Promotion by name
@@ -129,7 +129,9 @@ func (o *promotionOptions) addFlags(cmd *cobra.Command) {
 	)
 	option.Warehouse(
 		cmd.Flags(), &o.Warehouse,
-		"The Warehouse whose latest available Freight should be promoted. "+
+		"The Warehouse from which to promote Freight. The specific Freight is "+
+			"selected using the same selection policy configured for that origin "+
+			"(independent of whether auto-promotion is enabled). "+
 			"Exactly one of --freight, --freight-alias, or --warehouse must be set.",
 	)
 	option.Name(cmd.Flags(), &o.Promotion, "The name of a promotion. Only used when aborting a promotion.")

@@ -1800,22 +1800,21 @@ func (r *RegularStageReconciler) autoPromoteFreight(
 			continue
 		}
 
-		latestFreight, exists := candidates[origin]
+		candidate, exists := candidates[origin]
 		if !exists {
 			logger.Debug("no Freight from origin available for auto-promotion", "origin", origin)
 			continue
 		}
 
-		freightLogger := logger.WithValues("origin", origin, "freight", latestFreight.Name)
+		freightLogger := logger.WithValues("origin", origin, "freight", candidate.Name)
 
-		// Only proceed if the latest available Freight is different from the
-		// current Freight in the Stage.
-		if freightCollectionHasFreight(currentFreight, origin, latestFreight.Name) {
-			freightLogger.Debug("Stage already has latest available Freight for origin")
+		// Only proceed if the candidate Freight is not already current in the Stage.
+		if freightCollectionHasFreight(currentFreight, origin, candidate.Name) {
+			freightLogger.Debug("Stage already has candidate Freight for origin")
 			continue
 		}
-		if stageAwaitingFreightForOrigin(stage, origin, latestFreight.Name) {
-			freightLogger.Debug("Stage is already awaiting latest available Freight for origin")
+		if stageAwaitingFreightForOrigin(stage, origin, candidate.Name) {
+			freightLogger.Debug("Stage is already awaiting candidate Freight for origin")
 			continue
 		}
 
@@ -1825,13 +1824,13 @@ func (r *RegularStageReconciler) autoPromoteFreight(
 		nonTerminalPromotionExists, err = r.nonTerminalPromotionExistsForStageFreight(
 			ctx,
 			stage,
-			latestFreight.Name,
+			candidate.Name,
 		)
 		if err != nil {
 			return newStatus, fmt.Errorf(
 				"error listing existing non-terminal Promotions for Freight %q "+
 					"in namespace %q: %w",
-				latestFreight.Name, stage.Namespace, err,
+				candidate.Name, stage.Namespace, err,
 			)
 		}
 		if nonTerminalPromotionExists {
@@ -1844,13 +1843,13 @@ func (r *RegularStageReconciler) autoPromoteFreight(
 		newestPromotion, err = r.newestTerminalPromotionForStageFreight(
 			ctx,
 			stage,
-			latestFreight.Name,
+			candidate.Name,
 		)
 		if err != nil {
 			return newStatus, fmt.Errorf(
 				"error listing existing terminal Promotions for Freight %q in "+
 					"namespace %q: %w",
-				latestFreight.Name, stage.Namespace, err,
+				candidate.Name, stage.Namespace, err,
 			)
 		}
 		if newestPromotion != nil {
@@ -1873,14 +1872,14 @@ func (r *RegularStageReconciler) autoPromoteFreight(
 			}
 		}
 
-		// Auto promote the latest available Freight and record an event. Create a
-		// minimal Promotion. The defaulting webhook fills in the rest from the
-		// Stage's PromotionTemplate.
-		promotion := api.NewMinimalPromotion(stage, latestFreight.Name)
+		// Auto-promote the candidate Freight and record an event. Create a minimal
+		// Promotion. The defaulting webhook fills in the rest from the Stage's
+		// PromotionTemplate.
+		promotion := api.NewMinimalPromotion(stage, candidate.Name)
 		if err = r.client.Create(ctx, promotion); err != nil {
 			return newStatus, fmt.Errorf(
 				"error creating Promotion for Freight %q in namespace %q: %w",
-				latestFreight.Name, stage.Namespace, err,
+				candidate.Name, stage.Namespace, err,
 			)
 		}
 		evt := kargoEvent.NewPromotionCreated(
@@ -1889,7 +1888,7 @@ func (r *RegularStageReconciler) autoPromoteFreight(
 				promotion.Spec.Stage),
 			api.FormatEventControllerActor(r.cfg.Name()),
 			promotion,
-			&latestFreight,
+			&candidate,
 		)
 		if err := r.eventSender.Send(ctx, evt); err != nil {
 			logger.Error(err, "failed to send promotion event")

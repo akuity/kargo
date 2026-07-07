@@ -290,9 +290,9 @@ func (w *webhook) Default(ctx context.Context, obj runtime.Object) error {
 	return nil
 }
 
-// resolveOriginToFreight resolves origin to the latest Freight available to
-// stage for that origin. Returns an error (denying admission) if no Freight
-// is available.
+// resolveOriginToFreight resolves origin to the Freight that the origin's
+// selection policy would choose for stage. Returns an error (denying
+// admission) if no Freight is available.
 func (w *webhook) resolveOriginToFreight(
 	ctx context.Context,
 	origin kargoapi.FreightOrigin,

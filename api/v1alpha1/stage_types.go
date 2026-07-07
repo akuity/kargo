@@ -446,12 +446,12 @@ type StageStatus struct {
 	// that can be shared across promotions, verifications, or other processes.
 	Metadata map[string]apiextensionsv1.JSON `json:"metadata,omitempty" protobuf:"bytes,15,rep,name=metadata" protobuf_key:"bytes,1,opt,name=key" protobuf_val:"bytes,2,opt,name=value"`
 	// AutoPromotionHolds records active auto-promotion holds for this Stage. A
-	// hold is established when a Promotion selects Freight other than the latest
-	// available to the target Stage from that Freight's origin, pausing
-	// auto-promotion for that origin until explicitly released. Auto-promotions
-	// themselves never establish holds. Keys are string representations of
-	// FreightOrigins (e.g. "Warehouse/my-warehouse"); values describe the
-	// Promotion that established the hold.
+	// hold is established when a Promotion selects Freight other than the
+	// auto-promotion candidate for that origin, pausing auto-promotion for that
+	// origin until explicitly released. Auto-promotions themselves never
+	// establish holds. Keys are string representations of FreightOrigins (e.g.
+	// "Warehouse/my-warehouse"); values describe the Promotion that established
+	// the hold.
 	AutoPromotionHolds map[string]AutoPromotionHold `json:"autoPromotionHolds,omitempty" protobuf:"bytes,16,rep,name=autoPromotionHolds" protobuf_key:"bytes,1,opt,name=key" protobuf_val:"bytes,2,opt,name=value"`
 }
 

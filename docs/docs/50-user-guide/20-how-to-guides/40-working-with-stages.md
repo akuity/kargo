@@ -173,7 +173,8 @@ and auto-promotion resumes from that point forward.
 
 The easiest way to promote the current candidate without having to identify it
 yourself is to promote by origin rather than by a specific `Freight` name. Kargo
-resolves the latest available `Freight` for that origin at promotion time:
+selects `Freight` for that origin using the same selection policy configured for
+that origin (independent of whether auto-promotion is enabled):
 
 ```shell
 kargo promote \
