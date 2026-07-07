@@ -397,6 +397,57 @@ func TestReconciler_reconcile(t *testing.T) {
 				require.NotNil(t, status.Stats)
 			},
 		},
+		{
+			// Stats collection is gated on the Ready condition. It must see the
+			// readiness computed by syncProject in this same pass even when
+			// intermediate status updates fail.
+			name: "stats reflect readiness computed this pass even when status updates fail",
+			reconciler: &reconciler{
+				ensureNamespaceFn: func(context.Context, *kargoapi.Project) error {
+					return nil
+				},
+				ensureSystemPermissionsFn: func(context.Context, *kargoapi.Project) error {
+					return nil
+				},
+				ensureDefaultUserRolesFn: func(context.Context, *kargoapi.Project) error {
+					return nil
+				},
+			},
+			// Requires no phase --> conditions migration.
+			// Requires no spec --> ProjectConfig migration.
+			// Is NOT yet ready; becomes ready during this pass.
+			project: &kargoapi.Project{
+				ObjectMeta: metav1.ObjectMeta{Name: testProject},
+			},
+			interceptor: interceptor.Funcs{
+				SubResourcePatch: func(
+					context.Context,
+					client.Client,
+					string,
+					client.Object,
+					client.Patch,
+					...client.SubResourcePatchOption,
+				) error {
+					return fmt.Errorf("status update error")
+				},
+			},
+			assertions: func(
+				t *testing.T,
+				status kargoapi.ProjectStatus,
+				_ client.Client,
+				err error,
+			) {
+				// Status update failures between sub-reconcilers are non-fatal.
+				require.NoError(t, err)
+
+				readyCondition := conditions.Get(&status, kargoapi.ConditionTypeReady)
+				require.NotNil(t, readyCondition)
+				require.Equal(t, metav1.ConditionTrue, readyCondition.Status)
+
+				// Status has stats
+				require.NotNil(t, status.Stats)
+			},
+		},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
