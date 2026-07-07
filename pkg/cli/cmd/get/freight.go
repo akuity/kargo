@@ -116,6 +116,7 @@ func (o *getFreightOptions) addFlags(cmd *cobra.Command) {
 	option.Origins(cmd.Flags(), &o.Warehouses, "Filter by Warehouse name. Deprecated: use --warehouse.")
 	_ = cmd.Flags().MarkDeprecated(option.OriginFlag, "use --warehouse instead")
 
+	cmd.MarkFlagsMutuallyExclusive(option.WarehouseFlag, option.OriginFlag)
 	cmd.MarkFlagsMutuallyExclusive(option.NameFlag, option.WarehouseFlag)
 	cmd.MarkFlagsMutuallyExclusive(option.AliasFlag, option.WarehouseFlag)
 	cmd.MarkFlagsMutuallyExclusive(option.NameFlag, option.OriginFlag)
