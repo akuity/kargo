@@ -462,15 +462,15 @@ type AutoPromotionHold struct {
 	FreightName string `json:"freightName" protobuf:"bytes,1,opt,name=freightName"`
 	// Origin describes the FreightOrigin pinned by this hold. It matches the
 	// enclosing map key.
-	Origin FreightOrigin `json:"origin" protobuf:"bytes,8,opt,name=origin"`
+	Origin FreightOrigin `json:"origin" protobuf:"bytes,2,opt,name=origin"`
 	// PromotionName is the name of the Promotion that established this hold.
 	// Stored here as a paper trail that survives Promotion garbage collection.
 	PromotionName string `json:"promotionName,omitempty" protobuf:"bytes,3,opt,name=promotionName"`
 	// Actor identifies the user who triggered the hold.
-	Actor string `json:"actor,omitempty" protobuf:"bytes,5,opt,name=actor"`
+	Actor string `json:"actor,omitempty" protobuf:"bytes,4,opt,name=actor"`
 	// CreatedAt is the creation timestamp of the Promotion that established this
 	// hold.
-	CreatedAt *metav1.Time `json:"createdAt,omitempty" protobuf:"bytes,7,opt,name=createdAt"`
+	CreatedAt *metav1.Time `json:"createdAt,omitempty" protobuf:"bytes,5,opt,name=createdAt"`
 }
 
 // GetConditions implements the conditions.Getter interface.

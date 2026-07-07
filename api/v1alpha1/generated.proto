@@ -189,18 +189,18 @@ message AutoPromotionHold {
 
   // Origin describes the FreightOrigin pinned by this hold. It matches the
   // enclosing map key.
-  optional FreightOrigin origin = 8;
+  optional FreightOrigin origin = 2;
 
   // PromotionName is the name of the Promotion that established this hold.
   // Stored here as a paper trail that survives Promotion garbage collection.
   optional string promotionName = 3;
 
   // Actor identifies the user who triggered the hold.
-  optional string actor = 5;
+  optional string actor = 4;
 
   // CreatedAt is the creation timestamp of the Promotion that established this
   // hold.
-  optional .k8s.io.apimachinery.pkg.apis.meta.v1.Time createdAt = 7;
+  optional .k8s.io.apimachinery.pkg.apis.meta.v1.Time createdAt = 5;
 }
 
 // AutoPromotionOptions specifies options pertaining to auto-promotion.
