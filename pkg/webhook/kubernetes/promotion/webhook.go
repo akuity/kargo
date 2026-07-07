@@ -179,7 +179,7 @@ func (w *webhook) Default(ctx context.Context, obj runtime.Object) error {
 
 	switch req.Operation {
 	case admissionv1.Create:
-		if promo.Spec.Origin != nil {
+		if promo.Spec.Origin != nil && promo.Spec.Freight == "" {
 			// Note: we could theoretically infer an omitted origin when the Stage
 			// requests Freight from only one origin, but we've elected not to.
 			// Promotion specs are clearer and more stable when promote-by-origin
