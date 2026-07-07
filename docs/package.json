@@ -19,28 +19,31 @@
     "typecheck": "tsc"
   },
   "packageManager": "pnpm@9.0.3",
+  "pnpm": {
+    "overrides": {}
+  },
   "dependencies": {
     "@docusaurus/core": "^3.10.1",
     "@docusaurus/preset-classic": "^3.10.1",
     "@docusaurus/theme-classic": "^3.10.1",
     "@mdx-js/react": "^3.1.1",
-    "@scalar/docusaurus": "^0.8.14",
+    "@scalar/docusaurus": "^0.8.26",
     "clsx": "^2.1.1",
     "docusaurus-plugin-llms": "^0.4.0",
     "docusaurus-plugin-sass": "^0.2.6",
-    "prism-react-renderer": "^2.1.0",
-    "react": "^18.2.0",
-    "react-dom": "^18.2.0",
+    "prism-react-renderer": "^2.4.1",
+    "react": "^18.3.1",
+    "react-dom": "^18.3.1",
     "react-icons": "^5.6.0",
-    "sass": "^1.99.0"
+    "sass": "^1.101.0"
   },
   "devDependencies": {
     "@docusaurus/module-type-aliases": "^3.10.1",
     "@docusaurus/tsconfig": "3.10.1",
     "@docusaurus/types": "3.10.1",
     "@types/node": "^20.10.5",
-    "@types/react": "^18.2.29",
-    "typescript": "~5.2.2"
+    "@types/react": "^18.3.22",
+    "typescript": "~5.9.3"
   },
   "browserslist": {
     "production": [
