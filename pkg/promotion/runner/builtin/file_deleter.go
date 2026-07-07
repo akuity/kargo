@@ -151,7 +151,8 @@ func (f *fileDeleter) resolveGlobs(
 	var absPaths []string
 	seen := make(map[string]struct{})
 	for _, pattern := range patterns {
-		// Strip a leading "./" so that glob patterns to match  literal paths
+		// Strip a leading "./" so that glob patterns are matched relative to
+		// the working directory.
 		globPattern := strings.TrimPrefix(pattern, "./")
 		matches, err := doublestar.Glob(workDirFS, globPattern)
 		if err != nil {
