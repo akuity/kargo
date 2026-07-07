@@ -52,10 +52,35 @@ func TestStage_IsFreightAvailable(t *testing.T) {
 			expected: false,
 		},
 		{
-			name:  "freight is approved for stage",
+			name:  "freight is approved for stage but stage does not request freight from its origin",
 			stage: &Stage{ObjectMeta: testStageMeta},
 			freight: &Freight{
 				ObjectMeta: testFreightMeta,
+				Origin:     testOrigin,
+				Status: FreightStatus{
+					ApprovedFor: map[string]ApprovedStage{
+						testStage: {},
+					},
+				},
+			},
+			expected: false,
+		},
+		{
+			name: "freight is approved for stage and stage requests freight from its origin",
+			stage: &Stage{
+				ObjectMeta: testStageMeta,
+				Spec: StageSpec{
+					RequestedFreight: []FreightRequest{{
+						Origin: testOrigin,
+						Sources: FreightSources{
+							Stages: []string{"upstream-stage"},
+						},
+					}},
+				},
+			},
+			freight: &Freight{
+				ObjectMeta: testFreightMeta,
+				Origin:     testOrigin,
 				Status: FreightStatus{
 					ApprovedFor: map[string]ApprovedStage{
 						testStage: {},
@@ -279,6 +304,74 @@ func TestStage_IsFreightAvailable(t *testing.T) {
 				t,
 				testCase.expected,
 				testCase.stage.IsFreightAvailable(testCase.freight),
+			)
+		})
+	}
+}
+
+func TestStage_RequestsFreightFromOrigin(t *testing.T) {
+	testOrigin := FreightOrigin{
+		Kind: FreightOriginKindWarehouse,
+		Name: "fake-warehouse",
+	}
+
+	testCases := []struct {
+		name     string
+		stage    *Stage
+		origin   FreightOrigin
+		expected bool
+	}{
+		{
+			name:     "stage is nil",
+			origin:   testOrigin,
+			expected: false,
+		},
+		{
+			name:     "stage requests no freight",
+			stage:    &Stage{},
+			origin:   testOrigin,
+			expected: false,
+		},
+		{
+			name: "no request names the origin",
+			stage: &Stage{
+				Spec: StageSpec{
+					RequestedFreight: []FreightRequest{{
+						Origin: FreightOrigin{
+							Kind: FreightOriginKindWarehouse,
+							Name: "other-warehouse",
+						},
+					}},
+				},
+			},
+			origin:   testOrigin,
+			expected: false,
+		},
+		{
+			name: "a request names the origin",
+			stage: &Stage{
+				Spec: StageSpec{
+					RequestedFreight: []FreightRequest{
+						{
+							Origin: FreightOrigin{
+								Kind: FreightOriginKindWarehouse,
+								Name: "other-warehouse",
+							},
+						},
+						{Origin: testOrigin},
+					},
+				},
+			},
+			origin:   testOrigin,
+			expected: true,
+		},
+	}
+	for _, testCase := range testCases {
+		t.Run(testCase.name, func(t *testing.T) {
+			require.Equal(
+				t,
+				testCase.expected,
+				testCase.stage.RequestsFreightFromOrigin(testCase.origin),
 			)
 		})
 	}
