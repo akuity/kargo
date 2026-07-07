@@ -403,29 +403,39 @@ func (r *RegularStageReconciler) reconcile(
 	startTime time.Time,
 ) (kargoapi.StageStatus, bool, error) {
 	logger := logging.LoggerFromContext(ctx)
-	newStatus := *stage.Status.DeepCopy()
+
+	// working is the Stage the sub-reconcilers operate on. Its status is
+	// unconditionally brought up to date after each sub-reconciler, whether or
+	// not persisting that status succeeded, so no sub-reconciler ever computes
+	// from a stale view of this pass.
+	//
+	// stage itself is only ever touched by PatchStatus, which refreshes it from
+	// the server's response on success and leaves it alone on failure. It
+	// therefore always reflects persisted state. Because it is also the base
+	// PatchStatus diffs against, a failed patch loses nothing: the next patch
+	// (including the final one in Reconcile) diffs against true server state and
+	// re-carries any unpersisted changes.
+	working := stage.DeepCopy()
+
+	newStatus := *working.Status.DeepCopy()
 
 	// Mark the Stage as reconciling.
 	conditions.Set(&newStatus, &metav1.Condition{
 		Type:               kargoapi.ConditionTypeReconciling,
 		Status:             metav1.ConditionTrue,
 		Reason:             "Reconciling",
-		ObservedGeneration: stage.Generation,
+		ObservedGeneration: working.Generation,
 	})
 
 	var requestRequeue bool
 	subReconcilers := []struct {
-		name                string
-		requireStatusUpdate bool
-		reconcile           func() (kargoapi.StageStatus, error)
+		name      string
+		reconcile func() (kargoapi.StageStatus, error)
 	}{
 		{
 			name: "syncing Promotions",
-			// syncPromotions owns auto-promotion hold status; do not continue
-			// reconciling with stale hold state if its status patch fails.
-			requireStatusUpdate: true,
 			reconcile: func() (kargoapi.StageStatus, error) {
-				status, hasPendingPromotions, err := r.syncPromotions(ctx, stage)
+				status, hasPendingPromotions, err := r.syncPromotions(ctx, working)
 				if err != nil {
 					err = fmt.Errorf("failed to sync Promotions: %w", err)
 				}
@@ -441,16 +451,16 @@ func (r *RegularStageReconciler) reconcile(
 		{
 			name: "syncing Freight",
 			reconcile: func() (kargoapi.StageStatus, error) {
-				if err := r.syncFreight(ctx, stage); err != nil {
-					return stage.Status, fmt.Errorf("failed to sync Freight: %w", err)
+				if err := r.syncFreight(ctx, working); err != nil {
+					return working.Status, fmt.Errorf("failed to sync Freight: %w", err)
 				}
-				return stage.Status, nil
+				return working.Status, nil
 			},
 		},
 		{
 			name: "assessing health",
 			reconcile: func() (kargoapi.StageStatus, error) {
-				status := r.assessHealth(ctx, stage)
+				status := r.assessHealth(ctx, working)
 				// Unknown health is a normal, expected transient state (e.g. waiting
 				// for Argo CD to reconcile after an operation). The Application watcher
 				// will re-enqueue the Stage when the relevant condition changes, so
@@ -462,7 +472,7 @@ func (r *RegularStageReconciler) reconcile(
 		{
 			name: "verifying Stage Freight",
 			reconcile: func() (kargoapi.StageStatus, error) {
-				status, err := r.verifyStageFreight(ctx, stage, startTime, time.Now)
+				status, err := r.verifyStageFreight(ctx, working, startTime, time.Now)
 				if err != nil {
 					err = fmt.Errorf("failed to verify Stage Freight: %w", err)
 				}
@@ -479,7 +489,7 @@ func (r *RegularStageReconciler) reconcile(
 		{
 			name: "verifying Freight for Stage",
 			reconcile: func() (kargoapi.StageStatus, error) {
-				status, err := r.markFreightVerifiedForStage(ctx, stage)
+				status, err := r.markFreightVerifiedForStage(ctx, working)
 				if err != nil {
 					err = fmt.Errorf("failed to verify Freight for Stage: %w", err)
 				}
@@ -489,7 +499,7 @@ func (r *RegularStageReconciler) reconcile(
 		{
 			name: "auto-promoting Freight",
 			reconcile: func() (kargoapi.StageStatus, error) {
-				status, err := r.autoPromoteFreight(ctx, stage)
+				status, err := r.autoPromoteFreight(ctx, working)
 				if err != nil {
 					err = fmt.Errorf("failed to auto-promote Freight: %w", err)
 				}
@@ -506,7 +516,7 @@ func (r *RegularStageReconciler) reconcile(
 
 		// Summarize the conditions after each sub-reconciler to ensure that
 		// we have a consistent view of the Stage status.
-		summarizeConditions(stage, &newStatus, err)
+		summarizeConditions(working, &newStatus, err)
 
 		// If an error occurred during the sub-reconciler, then we should
 		// return the error which will cause the Stage to be requeued.
@@ -514,22 +524,18 @@ func (r *RegularStageReconciler) reconcile(
 			return newStatus, false, err
 		}
 
-		// Patch the status of the Stage after each sub-reconciler to show
-		// progress.
+		// Patch the status of the Stage after each sub-reconciler to show progress.
+		// Failure is non-fatal: working carries this pass's status forward
+		// regardless, and the next patch attempt's diff against stage (which still
+		// reflects persisted state) will include these changes.
 		if err = kubeclient.PatchStatus(ctx, r.client, stage, func(status *kargoapi.StageStatus) {
 			*status = newStatus
 		}); err != nil {
-			if subR.requireStatusUpdate {
-				return newStatus, false, fmt.Errorf(
-					"failed to update Stage status after %s: %w",
-					subR.name,
-					err,
-				)
-			}
 			logger.Error(err, fmt.Sprintf("failed to update Stage status after %s", subR.name))
 		} else {
 			stage.Status = newStatus
 		}
+		working.Status = newStatus
 	}
 
 	// If an immediate requeue was not requested, then we can delete the
