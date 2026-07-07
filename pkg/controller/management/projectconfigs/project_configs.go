@@ -155,7 +155,21 @@ func (r *reconciler) reconcile(
 	error,
 ) {
 	logger := logging.LoggerFromContext(ctx)
-	status := *projectCfg.Status.DeepCopy()
+
+	// working is the ProjectConfig the sub-reconcilers operate on. Its status is
+	// unconditionally brought up to date after each sub-reconciler, whether or
+	// not persisting that status succeeded, so no sub-reconciler ever computes
+	// from a stale view of this pass.
+	//
+	// projectCfg itself is only ever touched by PatchStatus, which refreshes it
+	// from the server's response on success and leaves it alone on failure. It
+	// therefore always reflects persisted state. Because it is also the base
+	// PatchStatus diffs against, a failed patch loses nothing: the next patch
+	// (including the final one in Reconcile) diffs against true server state and
+	// re-carries any unpersisted changes.
+	working := projectCfg.DeepCopy()
+
+	status := *working.Status.DeepCopy()
 
 	subReconcilers := []struct {
 		name      string
@@ -163,7 +177,7 @@ func (r *reconciler) reconcile(
 	}{{
 		name: "syncing WebhookReceivers",
 		reconcile: func() (kargoapi.ProjectConfigStatus, error) {
-			return r.syncWebhookReceivers(ctx, projectCfg)
+			return r.syncWebhookReceivers(ctx, working)
 		},
 	}}
 	for _, subR := range subReconcilers {
@@ -179,7 +193,9 @@ func (r *reconciler) reconcile(
 		}
 
 		// Patch the status of the ProjectConfig after each sub-reconciler to show
-		// progress.
+		// progress. Failure is non-fatal: working carries this pass's status
+		// forward regardless, and the next patch attempt's diff against projectCfg
+		// (which still reflects persisted state) will include these changes.
 		if err = kubeclient.PatchStatus(
 			ctx,
 			r.client,
@@ -191,6 +207,7 @@ func (r *reconciler) reconcile(
 				fmt.Sprintf("failed to update Project status after %s", subR.name),
 			)
 		}
+		working.Status = status
 	}
 
 	// At this point, we have successfully reconciled the ProjectConfig and
