@@ -1782,7 +1782,7 @@ func (r *RegularStageReconciler) autoPromoteFreight(
 	// Check if there is any new Freight which can be auto-promoted.
 	for _, req := range stage.Spec.RequestedFreight {
 		origin := req.Origin.String()
-		// Never create an auto-promotion for an origin with an active hold. This
+		// Never create an auto-promotion for an origin with an active hold.
 		if _, held := stage.Status.AutoPromotionHolds[origin]; held {
 			logger.Debug("auto-promotion is blocked by an auto-promotion hold", "origin", origin)
 			continue
