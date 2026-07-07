@@ -369,7 +369,7 @@ func (w *webhook) syncHoldAnnotations(
 	// which may lag behind ProjectConfig changes.
 	enabled, err := w.isAutoPromotionEnabledFn(ctx, w.client, stage.ObjectMeta)
 	if err != nil {
-		logger.Debug("skipping auto-promotion intent annotation", "error", err)
+		logger.Error(err, "skipping auto-promotion intent annotation")
 		return
 	}
 	if !enabled {
@@ -380,7 +380,7 @@ func (w *webhook) syncHoldAnnotations(
 		Name:      promo.Spec.Freight,
 	})
 	if err != nil {
-		logger.Debug("skipping auto-promotion intent annotation", "error", err)
+		logger.Error(err, "skipping auto-promotion intent annotation")
 		return
 	}
 	if freight == nil {
@@ -390,12 +390,12 @@ func (w *webhook) syncHoldAnnotations(
 
 	availableFreight, err := w.listFreightAvailableToStageFn(ctx, w.client, stage)
 	if err != nil {
-		logger.Debug("skipping auto-promotion intent annotation", "error", err)
+		logger.Error(err, "skipping auto-promotion intent annotation")
 		return
 	}
 	candidates, err := api.SelectAutoPromotionCandidates(stage, availableFreight)
 	if err != nil {
-		logger.Debug("skipping auto-promotion intent annotation", "error", err)
+		logger.Error(err, "skipping auto-promotion intent annotation")
 		return
 	}
 
