@@ -671,29 +671,33 @@ func (r *RegularStageReconciler) syncPromotions(
 		// release correctly supersedes an earlier hold and vice versa. Holds
 		// persist in status even after their establishing Promotion is GC'd.
 		for _, promo := range newPromos {
-			if originKey := promo.Annotations[kargoapi.AnnotationKeyAutoPromotionHold]; originKey != "" {
-				if _, requested := requestedOrigins[originKey]; requested {
-					if origin, err := kargoapi.ParseFreightOrigin(originKey); err == nil {
-						if newStatus.AutoPromotionHolds == nil {
-							newStatus.AutoPromotionHolds = make(map[string]kargoapi.AutoPromotionHold)
+			// Hold/resume intent only takes effect when the Promotion succeeded.
+			// A failed Promotion carries no meaningful signal about user intent.
+			if promo.Status.Phase == kargoapi.PromotionPhaseSucceeded {
+				if originKey := promo.Annotations[kargoapi.AnnotationKeyAutoPromotionHold]; originKey != "" {
+					if _, requested := requestedOrigins[originKey]; requested {
+						if origin, err := kargoapi.ParseFreightOrigin(originKey); err == nil {
+							if newStatus.AutoPromotionHolds == nil {
+								newStatus.AutoPromotionHolds = make(map[string]kargoapi.AutoPromotionHold)
+							}
+							hold := kargoapi.AutoPromotionHold{
+								FreightName:   promo.Spec.Freight,
+								Origin:        origin,
+								PromotionName: promo.Name,
+							}
+							if actor := promo.Annotations[kargoapi.AnnotationKeyCreateActor]; actor != "" {
+								hold.Actor = actor
+							}
+							if !promo.CreationTimestamp.IsZero() {
+								t := promo.CreationTimestamp
+								hold.CreatedAt = &t
+							}
+							newStatus.AutoPromotionHolds[originKey] = hold
 						}
-						hold := kargoapi.AutoPromotionHold{
-							FreightName:   promo.Spec.Freight,
-							Origin:        origin,
-							PromotionName: promo.Name,
-						}
-						if actor := promo.Annotations[kargoapi.AnnotationKeyCreateActor]; actor != "" {
-							hold.Actor = actor
-						}
-						if !promo.CreationTimestamp.IsZero() {
-							t := promo.CreationTimestamp
-							hold.CreatedAt = &t
-						}
-						newStatus.AutoPromotionHolds[originKey] = hold
 					}
+				} else if originKey := promo.Annotations[kargoapi.AnnotationKeyAutoPromotionResume]; originKey != "" {
+					delete(newStatus.AutoPromotionHolds, originKey)
 				}
-			} else if originKey := promo.Annotations[kargoapi.AnnotationKeyAutoPromotionResume]; originKey != "" {
-				delete(newStatus.AutoPromotionHolds, originKey)
 			}
 			ref := kargoapi.PromotionReference{
 				Name:       promo.Name,
