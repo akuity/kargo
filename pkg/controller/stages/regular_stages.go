@@ -1773,14 +1773,6 @@ func (r *RegularStageReconciler) autoPromoteFreight(
 	if err != nil {
 		return newStatus, err
 	}
-	activeHolds, err := r.activeAutoPromotionHolds(ctx, stage)
-	if err != nil {
-		return newStatus, fmt.Errorf(
-			"error syncing auto-promotion holds for Stage %q: %w",
-			stage.Name, err,
-		)
-	}
-
 	// If the Stage has no current Freight, any candidate is new to it.
 	currentFreight := newStatus.FreightHistory.Current()
 
@@ -1788,11 +1780,7 @@ func (r *RegularStageReconciler) autoPromoteFreight(
 	for _, req := range stage.Spec.RequestedFreight {
 		origin := req.Origin.String()
 		// Never create an auto-promotion for an origin with an active hold. This
-		// uses freshly synced hold intent Promotions instead of only
-		// stage.Status.AutoPromotionHolds, because another reconcile can observe
-		// a succeeded hold-intent Promotion before the status patch that records
-		// the hold is visible.
-		if _, held := activeHolds[origin]; held {
+		if _, held := stage.Status.AutoPromotionHolds[origin]; held {
 			logger.Debug("auto-promotion is blocked by an auto-promotion hold", "origin", origin)
 			continue
 		}
@@ -1913,91 +1901,6 @@ func (r *RegularStageReconciler) autoPromoteFreight(
 	}
 
 	return newStatus, nil
-}
-
-// activeAutoPromotionHolds returns Stage auto-promotion holds after applying
-// any succeeded hold/release intent Promotions that are newer than the Stage's
-// last processed Promotion. autoPromoteFreight uses this instead of raw Stage
-// status to close the stale-read race between a hold-intent Promotion
-// succeeding and the Stage status patch that records the hold becoming visible.
-func (r *RegularStageReconciler) activeAutoPromotionHolds(
-	ctx context.Context,
-	stage *kargoapi.Stage,
-) (map[string]kargoapi.AutoPromotionHold, error) {
-	status := *stage.Status.DeepCopy()
-	promotions := &kargoapi.PromotionList{}
-	if err := r.client.List(
-		ctx,
-		promotions,
-		client.InNamespace(stage.Namespace),
-		client.MatchingFieldsSelector{
-			Selector: fields.OneTermEqualSelector(indexer.PromotionsByStageField, stage.Name),
-		},
-	); err != nil {
-		return nil, err
-	}
-	requestedOrigins := make(map[string]struct{}, len(stage.Spec.RequestedFreight))
-	for _, req := range stage.Spec.RequestedFreight {
-		requestedOrigins[req.Origin.String()] = struct{}{}
-	}
-
-	var pending []*kargoapi.Promotion
-	for i := range promotions.Items {
-		promo := &promotions.Items[i]
-		if promo.Status.Phase != kargoapi.PromotionPhaseSucceeded {
-			continue
-		}
-		hasHold := promo.Annotations[kargoapi.AnnotationKeyAutoPromotionHold] != ""
-		hasRelease := promo.Annotations[kargoapi.AnnotationKeyAutoPromotionResume] != ""
-		if !hasHold && !hasRelease {
-			continue
-		}
-		if stage.Status.LastPromotion != nil && promo.Name <= stage.Status.LastPromotion.Name {
-			continue
-		}
-		pending = append(pending, promo)
-	}
-	slices.SortFunc(pending, func(a, b *kargoapi.Promotion) int {
-		return strings.Compare(a.Name, b.Name)
-	})
-	for _, promo := range pending {
-		if originKey := promo.Annotations[kargoapi.AnnotationKeyAutoPromotionHold]; originKey != "" {
-			if _, requested := requestedOrigins[originKey]; !requested {
-				continue
-			}
-			origin, err := kargoapi.ParseFreightOrigin(originKey)
-			if err != nil {
-				continue
-			}
-			if status.AutoPromotionHolds == nil {
-				status.AutoPromotionHolds = make(map[string]kargoapi.AutoPromotionHold)
-			}
-			hold := kargoapi.AutoPromotionHold{
-				FreightName:   promo.Spec.Freight,
-				Origin:        origin,
-				PromotionName: promo.Name,
-			}
-			if actor := promo.Annotations[kargoapi.AnnotationKeyCreateActor]; actor != "" {
-				hold.Actor = actor
-			}
-			if !promo.CreationTimestamp.IsZero() {
-				t := promo.CreationTimestamp
-				hold.CreatedAt = &t
-			}
-			status.AutoPromotionHolds[originKey] = hold
-		} else if originKey := promo.Annotations[kargoapi.AnnotationKeyAutoPromotionResume]; originKey != "" {
-			delete(status.AutoPromotionHolds, originKey)
-		}
-	}
-	for key := range status.AutoPromotionHolds {
-		if _, ok := requestedOrigins[key]; !ok {
-			delete(status.AutoPromotionHolds, key)
-		}
-	}
-	if len(status.AutoPromotionHolds) == 0 {
-		status.AutoPromotionHolds = nil
-	}
-	return status.AutoPromotionHolds, nil
 }
 
 // stageAwaitingFreightForOrigin reports whether this reconcile pass has already
