@@ -998,6 +998,185 @@ func TestRegularStageReconciler_syncPromotions(t *testing.T) {
 			},
 		},
 		{
+			// The auto-promotion candidate rotated while a hold was active.
+			// The user promotes the new candidate (not the original hold Freight).
+			// The hold must clear because the resume annotation — not the Freight
+			// name — is the authoritative signal.
+			name: "hold is cleared when rotated candidate is promoted",
+			stage: &kargoapi.Stage{
+				ObjectMeta: metav1.ObjectMeta{
+					Namespace: "fake-project",
+					Name:      "test-stage",
+				},
+				Spec: kargoapi.StageSpec{
+					RequestedFreight: []kargoapi.FreightRequest{{Origin: origin}},
+				},
+				Status: kargoapi.StageStatus{
+					AutoPromotionHolds: map[string]kargoapi.AutoPromotionHold{
+						origin.String(): {
+							FreightName:   "freight-original",
+							Origin:        origin,
+							PromotionName: "original-hold-promo",
+						},
+					},
+					CurrentPromotion: &kargoapi.PromotionReference{Name: "rotated-candidate-promo"},
+				},
+			},
+			objects: []client.Object{
+				// The original hold-intent Promotion (older).
+				&kargoapi.Promotion{
+					ObjectMeta: metav1.ObjectMeta{
+						Name:              "original-hold-promo",
+						Namespace:         "fake-project",
+						CreationTimestamp: metav1.Time{Time: twoHoursAgo},
+						Annotations: map[string]string{
+							kargoapi.AnnotationKeyAutoPromotionHold: origin.String(),
+						},
+					},
+					Spec: kargoapi.PromotionSpec{
+						Stage:   "test-stage",
+						Freight: "freight-original",
+					},
+					Status: kargoapi.PromotionStatus{
+						Phase: kargoapi.PromotionPhaseSucceeded,
+					},
+				},
+				// The user later promoted the new candidate (different Freight),
+				// stamping a resume annotation. This should clear the hold.
+				&kargoapi.Promotion{
+					ObjectMeta: metav1.ObjectMeta{
+						Name:              "rotated-candidate-promo",
+						Namespace:         "fake-project",
+						CreationTimestamp: metav1.Time{Time: hourAgo},
+						Annotations:       releaseHoldAnnotations(origin),
+					},
+					Spec: kargoapi.PromotionSpec{
+						Stage:   "test-stage",
+						Freight: "freight-rotated-new",
+					},
+					Status: kargoapi.PromotionStatus{
+						Phase: kargoapi.PromotionPhaseSucceeded,
+					},
+				},
+			},
+			assertions: func(t *testing.T, status kargoapi.StageStatus, hasPendingPromotions bool, err error) {
+				require.NoError(t, err)
+				assert.False(t, hasPendingPromotions)
+				assert.Empty(
+					t,
+					status.AutoPromotionHolds,
+					"resume annotation on the rotated-candidate Promotion should clear the hold",
+				)
+			},
+		},
+		{
+			// Two origins; in the same reconcile pass one origin's hold is
+			// cleared by a resume Promotion and the other gains a new hold from
+			// a hold-intent Promotion.
+			name: "hold cleared for one origin and established for another in same reconcile",
+			stage: &kargoapi.Stage{
+				ObjectMeta: metav1.ObjectMeta{
+					Namespace: "fake-project",
+					Name:      "test-stage",
+				},
+				Spec: kargoapi.StageSpec{
+					RequestedFreight: []kargoapi.FreightRequest{
+						{
+							Origin: kargoapi.FreightOrigin{
+								Kind: kargoapi.FreightOriginKindWarehouse,
+								Name: "warehouse-a",
+							},
+						},
+						{
+							Origin: kargoapi.FreightOrigin{
+								Kind: kargoapi.FreightOriginKindWarehouse,
+								Name: "warehouse-b",
+							},
+						},
+					},
+				},
+				Status: kargoapi.StageStatus{
+					// Origin A has an active hold; origin B does not.
+					AutoPromotionHolds: map[string]kargoapi.AutoPromotionHold{
+						"Warehouse/warehouse-a": {
+							FreightName: "freight-a-old",
+							Origin: kargoapi.FreightOrigin{
+								Kind: kargoapi.FreightOriginKindWarehouse,
+								Name: "warehouse-a",
+							},
+							PromotionName: "hold-promo-a",
+						},
+					},
+					CurrentPromotion: &kargoapi.PromotionReference{Name: "hold-promo-b"},
+				},
+			},
+			objects: []client.Object{
+				// Origin A: release Promotion (newer) → hold must clear.
+				&kargoapi.Promotion{
+					ObjectMeta: metav1.ObjectMeta{
+						Name:              "hold-promo-a",
+						Namespace:         "fake-project",
+						CreationTimestamp: metav1.Time{Time: twoHoursAgo},
+						Annotations: map[string]string{
+							kargoapi.AnnotationKeyAutoPromotionHold: "Warehouse/warehouse-a",
+						},
+					},
+					Spec: kargoapi.PromotionSpec{
+						Stage:   "test-stage",
+						Freight: "freight-a-old",
+					},
+					Status: kargoapi.PromotionStatus{Phase: kargoapi.PromotionPhaseSucceeded},
+				},
+				&kargoapi.Promotion{
+					ObjectMeta: metav1.ObjectMeta{
+						Name:      "release-promo-a",
+						Namespace: "fake-project",
+						// Newer than hold-promo-a → outranks it for origin A.
+						CreationTimestamp: metav1.Time{Time: hourAgo},
+						Annotations: releaseHoldAnnotations(kargoapi.FreightOrigin{
+							Kind: kargoapi.FreightOriginKindWarehouse,
+							Name: "warehouse-a",
+						}),
+					},
+					Spec: kargoapi.PromotionSpec{
+						Stage:   "test-stage",
+						Freight: "freight-a-new",
+					},
+					Status: kargoapi.PromotionStatus{Phase: kargoapi.PromotionPhaseSucceeded},
+				},
+				// Origin B: hold-intent Promotion (newest overall) → new hold.
+				&kargoapi.Promotion{
+					ObjectMeta: metav1.ObjectMeta{
+						Name:      "hold-promo-b",
+						Namespace: "fake-project",
+						// Newer than release-promo-a → wins for origin B.
+						CreationTimestamp: metav1.Time{Time: now},
+						Annotations: map[string]string{
+							kargoapi.AnnotationKeyAutoPromotionHold: "Warehouse/warehouse-b",
+						},
+					},
+					Spec: kargoapi.PromotionSpec{
+						Stage:   "test-stage",
+						Freight: "freight-b-old",
+					},
+					Status: kargoapi.PromotionStatus{Phase: kargoapi.PromotionPhaseSucceeded},
+				},
+			},
+			assertions: func(t *testing.T, status kargoapi.StageStatus, hasPendingPromotions bool, err error) {
+				require.NoError(t, err)
+				assert.False(t, hasPendingPromotions)
+
+				// Origin A's hold must be cleared.
+				_, hasHoldA := status.AutoPromotionHolds["Warehouse/warehouse-a"]
+				assert.False(t, hasHoldA, "origin A hold should be cleared by its resume Promotion")
+
+				// Origin B must have a new hold.
+				holdB, hasHoldB := status.AutoPromotionHolds["Warehouse/warehouse-b"]
+				assert.True(t, hasHoldB, "origin B should have a new hold from its hold-intent Promotion")
+				assert.Equal(t, "freight-b-old", holdB.FreightName)
+			},
+		},
+		{
 			name: "existing hold is removed when origin is no longer requested",
 			stage: &kargoapi.Stage{
 				ObjectMeta: metav1.ObjectMeta{
@@ -6209,6 +6388,55 @@ func TestRegularStageReconciler_autoPromoteFreight(t *testing.T) {
 			},
 		},
 		{
+			name: "skips MatchUpstream when newest terminal promotion failed",
+			stage: &kargoapi.Stage{
+				ObjectMeta: metav1.ObjectMeta{
+					Namespace: "fake-project",
+					Name:      "test-stage",
+				},
+				Spec: kargoapi.StageSpec{
+					RequestedFreight: []kargoapi.FreightRequest{{
+						Origin: kargoapi.FreightOrigin{
+							Kind: kargoapi.FreightOriginKindWarehouse,
+							Name: "test-warehouse",
+						},
+						Sources: kargoapi.FreightSources{
+							Stages: []string{"upstream-stage"},
+							AutoPromotionOptions: &kargoapi.AutoPromotionOptions{
+								SelectionPolicy: kargoapi.AutoPromotionSelectionPolicyMatchUpstream,
+							},
+						},
+					}},
+					PromotionTemplate: &kargoapi.PromotionTemplate{
+						Spec: kargoapi.PromotionTemplateSpec{
+							Steps: []kargoapi.PromotionStep{{Uses: "fake-step"}},
+						},
+					},
+				},
+			},
+			objects: terminalPromotionOrderingObjects(
+				kargoapi.PromotionPhaseSucceeded,
+				kargoapi.PromotionPhaseErrored,
+			),
+			assertions: func(
+				t *testing.T,
+				_ *fakeevent.EventRecorder,
+				c client.Client,
+				status kargoapi.StageStatus,
+				err error,
+			) {
+				require.NoError(t, err)
+				assert.True(t, status.AutoPromotionEnabled)
+
+				// Newest terminal Promotion errored; failure-loop prevention must
+				// apply to MatchUpstream just as it does to NewestFreight.
+				promoList := &kargoapi.PromotionList{}
+				require.NoError(t, c.List(t.Context(), promoList, client.InNamespace("fake-project")))
+				assert.Len(t, promoList.Items, 2,
+					"no new Promotion should be created when newest terminal failed")
+			},
+		},
+		{
 			name: "handles verified freight from upstream stages",
 			stage: &kargoapi.Stage{
 				ObjectMeta: metav1.ObjectMeta{
@@ -7240,6 +7468,253 @@ func TestRegularStageReconciler_autoPromoteFreight(t *testing.T) {
 				))
 				require.Len(t, promoList.Items, 1)
 				assert.Equal(t, "open-freight-new", promoList.Items[0].Spec.Freight)
+			},
+		},
+		{
+			// After a user clears a hold by promoting the candidate, the Stage
+			// has no active hold and a newer Freight has since arrived.
+			// Auto-promotion must fire for the new candidate.
+			name: "auto-promotes new freight after hold is cleared (NewestFreight)",
+			stage: &kargoapi.Stage{
+				ObjectMeta: metav1.ObjectMeta{
+					Namespace: "fake-project",
+					Name:      "test-stage",
+				},
+				Spec: kargoapi.StageSpec{
+					RequestedFreight: []kargoapi.FreightRequest{{
+						Origin: kargoapi.FreightOrigin{
+							Kind: kargoapi.FreightOriginKindWarehouse,
+							Name: "test-warehouse",
+						},
+						Sources: kargoapi.FreightSources{Direct: true},
+					}},
+					PromotionTemplate: &kargoapi.PromotionTemplate{
+						Spec: kargoapi.PromotionTemplateSpec{
+							Steps: []kargoapi.PromotionStep{{Uses: "fake-step"}},
+						},
+					},
+				},
+				Status: kargoapi.StageStatus{
+					// freight-old is currently deployed; no active hold.
+					FreightHistory: kargoapi.FreightHistory{{
+						Freight: map[string]kargoapi.FreightReference{
+							"Warehouse/test-warehouse": {Name: "freight-old"},
+						},
+					}},
+				},
+			},
+			objects: []client.Object{
+				&kargoapi.ProjectConfig{
+					ObjectMeta: metav1.ObjectMeta{
+						Name:      "fake-project",
+						Namespace: "fake-project",
+					},
+					Spec: kargoapi.ProjectConfigSpec{
+						PromotionPolicies: []kargoapi.PromotionPolicy{{
+							Stage:                "test-stage",
+							AutoPromotionEnabled: true,
+						}},
+					},
+				},
+				&kargoapi.Warehouse{
+					ObjectMeta: metav1.ObjectMeta{
+						Namespace: "fake-project",
+						Name:      "test-warehouse",
+					},
+				},
+				&kargoapi.Freight{
+					ObjectMeta: metav1.ObjectMeta{
+						Namespace:         "fake-project",
+						Name:              "freight-old",
+						CreationTimestamp: metav1.Time{Time: hourAgo},
+					},
+					Origin: kargoapi.FreightOrigin{
+						Kind: kargoapi.FreightOriginKindWarehouse,
+						Name: "test-warehouse",
+					},
+				},
+				&kargoapi.Freight{
+					ObjectMeta: metav1.ObjectMeta{
+						Namespace:         "fake-project",
+						Name:              "freight-new",
+						CreationTimestamp: metav1.Time{Time: now},
+					},
+					Origin: kargoapi.FreightOrigin{
+						Kind: kargoapi.FreightOriginKindWarehouse,
+						Name: "test-warehouse",
+					},
+				},
+				// The hold-clearing Promotion that put the Stage at freight-old.
+				&kargoapi.Promotion{
+					ObjectMeta: metav1.ObjectMeta{
+						Namespace:         "fake-project",
+						Name:              "hold-clearing-promotion",
+						CreationTimestamp: metav1.Time{Time: hourAgo},
+						Labels: map[string]string{
+							kargoapi.LabelKeyStage: "test-stage",
+						},
+					},
+					Spec: kargoapi.PromotionSpec{
+						Stage:   "test-stage",
+						Freight: "freight-old",
+					},
+					Status: kargoapi.PromotionStatus{
+						Phase: kargoapi.PromotionPhaseSucceeded,
+					},
+				},
+			},
+			assertions: func(
+				t *testing.T,
+				_ *fakeevent.EventRecorder,
+				c client.Client,
+				status kargoapi.StageStatus,
+				err error,
+			) {
+				require.NoError(t, err)
+				assert.True(t, status.AutoPromotionEnabled)
+
+				// Auto-promotion must have fired for the new candidate.
+				promoList := &kargoapi.PromotionList{}
+				require.NoError(t, c.List(t.Context(), promoList, client.InNamespace("fake-project")))
+				newPromos := make([]kargoapi.Promotion, 0)
+				for _, p := range promoList.Items {
+					if p.Name != "hold-clearing-promotion" {
+						newPromos = append(newPromos, p)
+					}
+				}
+				require.Len(t, newPromos, 1, "auto-promotion should fire after hold is cleared")
+				assert.Equal(t, "freight-new", newPromos[0].Spec.Freight)
+			},
+		},
+		{
+			// Same as the NewestFreight case but with MatchUpstream policy. The
+			// upstream Stage has advanced to a newer Freight while the downstream
+			// held; after the hold is cleared the downstream should follow.
+			name: "auto-promotes new upstream freight after hold is cleared (MatchUpstream)",
+			stage: &kargoapi.Stage{
+				ObjectMeta: metav1.ObjectMeta{
+					Namespace: "fake-project",
+					Name:      "test-stage",
+				},
+				Spec: kargoapi.StageSpec{
+					RequestedFreight: []kargoapi.FreightRequest{{
+						Origin: kargoapi.FreightOrigin{
+							Kind: kargoapi.FreightOriginKindWarehouse,
+							Name: "test-warehouse",
+						},
+						Sources: kargoapi.FreightSources{
+							Stages: []string{"upstream-stage"},
+							AutoPromotionOptions: &kargoapi.AutoPromotionOptions{
+								SelectionPolicy: kargoapi.AutoPromotionSelectionPolicyMatchUpstream,
+							},
+						},
+					}},
+					PromotionTemplate: &kargoapi.PromotionTemplate{
+						Spec: kargoapi.PromotionTemplateSpec{
+							Steps: []kargoapi.PromotionStep{{Uses: "fake-step"}},
+						},
+					},
+				},
+				Status: kargoapi.StageStatus{
+					// freight-old is currently deployed; no active hold.
+					FreightHistory: kargoapi.FreightHistory{{
+						Freight: map[string]kargoapi.FreightReference{
+							"Warehouse/test-warehouse": {Name: "freight-old"},
+						},
+					}},
+				},
+			},
+			objects: []client.Object{
+				&kargoapi.ProjectConfig{
+					ObjectMeta: metav1.ObjectMeta{
+						Name:      "fake-project",
+						Namespace: "fake-project",
+					},
+					Spec: kargoapi.ProjectConfigSpec{
+						PromotionPolicies: []kargoapi.PromotionPolicy{{
+							Stage:                "test-stage",
+							AutoPromotionEnabled: true,
+						}},
+					},
+				},
+				&kargoapi.Warehouse{
+					ObjectMeta: metav1.ObjectMeta{
+						Namespace: "fake-project",
+						Name:      "test-warehouse",
+					},
+				},
+				// freight-old is no longer in the upstream Stage.
+				&kargoapi.Freight{
+					ObjectMeta: metav1.ObjectMeta{
+						Namespace:         "fake-project",
+						Name:              "freight-old",
+						CreationTimestamp: metav1.Time{Time: hourAgo},
+					},
+					Origin: kargoapi.FreightOrigin{
+						Kind: kargoapi.FreightOriginKindWarehouse,
+						Name: "test-warehouse",
+					},
+				},
+				// freight-new is the current upstream candidate.
+				&kargoapi.Freight{
+					ObjectMeta: metav1.ObjectMeta{
+						Namespace:         "fake-project",
+						Name:              "freight-new",
+						CreationTimestamp: metav1.Time{Time: now},
+					},
+					Origin: kargoapi.FreightOrigin{
+						Kind: kargoapi.FreightOriginKindWarehouse,
+						Name: "test-warehouse",
+					},
+					Status: kargoapi.FreightStatus{
+						CurrentlyIn: map[string]kargoapi.CurrentStage{
+							"upstream-stage": {},
+						},
+						VerifiedIn: map[string]kargoapi.VerifiedStage{
+							"upstream-stage": {},
+						},
+					},
+				},
+				// The hold-clearing Promotion that put the Stage at freight-old.
+				&kargoapi.Promotion{
+					ObjectMeta: metav1.ObjectMeta{
+						Namespace:         "fake-project",
+						Name:              "hold-clearing-promotion",
+						CreationTimestamp: metav1.Time{Time: hourAgo},
+						Labels: map[string]string{
+							kargoapi.LabelKeyStage: "test-stage",
+						},
+					},
+					Spec: kargoapi.PromotionSpec{
+						Stage:   "test-stage",
+						Freight: "freight-old",
+					},
+					Status: kargoapi.PromotionStatus{
+						Phase: kargoapi.PromotionPhaseSucceeded,
+					},
+				},
+			},
+			assertions: func(
+				t *testing.T,
+				_ *fakeevent.EventRecorder,
+				c client.Client,
+				status kargoapi.StageStatus,
+				err error,
+			) {
+				require.NoError(t, err)
+				assert.True(t, status.AutoPromotionEnabled)
+
+				// Auto-promotion must follow the upstream after the hold clears.
+				promoList := &kargoapi.PromotionList{}
+				require.NoError(t, c.List(t.Context(), promoList, client.InNamespace("fake-project")))
+				newPromos := make([]kargoapi.Promotion, 0)
+				for _, p := range promoList.Items {
+					if p.Name != "hold-clearing-promotion" {
+						newPromos = append(newPromos, p)
+					}
+				}
+				require.Len(t, newPromos, 1, "auto-promotion should follow upstream after hold is cleared")
+				assert.Equal(t, "freight-new", newPromos[0].Spec.Freight)
 			},
 		},
 	}
