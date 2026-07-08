@@ -1735,8 +1735,8 @@ func (r *RegularStageReconciler) findExistingAnalysisRun(
 	return &analysisRuns.Items[0], nil
 }
 
-// autoPromoteFreight automatically promotes the latest promotable (i.e.
-// verified) Freight for a Stage if auto-promotion is enabled for the Stage
+// autoPromoteFreight automatically promotes the candidate Freight for each
+// requested origin if auto-promotion is enabled for the Stage
 // (see api.IsAutoPromotionEnabled).
 func (r *RegularStageReconciler) autoPromoteFreight(
 	ctx context.Context,
@@ -1965,8 +1965,7 @@ func (r *RegularStageReconciler) nonTerminalPromotionExistsForStageFreight(
 
 // newestTerminalPromotionForStageFreight returns the newest completed Promotion
 // for this Stage and Freight. autoPromoteFreight uses it to avoid retrying
-// terminal failures and, under newest-Freight selection, avoid re-promoting a
-// candidate already tried.
+// terminal failures in a loop.
 func (r *RegularStageReconciler) newestTerminalPromotionForStageFreight(
 	ctx context.Context,
 	stage *kargoapi.Stage,

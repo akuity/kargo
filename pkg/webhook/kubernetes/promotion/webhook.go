@@ -180,8 +180,8 @@ func (w *webhook) Default(ctx context.Context, obj runtime.Object) error {
 	switch req.Operation {
 	case admissionv1.Create:
 		// Note: Validation makes these mutually exclusive, but defaulting webhooks
-		// fire before validating webhooks. Only try to resolve origin to latest
-		// available Freight FROM that origin if the Freight field is also empty.
+		// fire before validating webhooks. Only try to resolve origin to the
+		// candidate Freight for that origin if the Freight field is also empty.
 		// If Origin is non-nil AND Freight is non-empty, validation will catch it
 		// when it eventually fires, so skipping resolution is all we need to do.
 		if promo.Spec.Origin != nil && promo.Spec.Freight == "" {
