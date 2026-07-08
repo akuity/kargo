@@ -148,9 +148,17 @@ type CopyConfig struct {
 }
 
 type DeleteConfig struct {
-	// Path is the path to the file or directory to delete.
-	Path string `json:"path"`
-	// Strict will cause the directive to fail if the path does not exist.
+	// Path is the path to the file or directory to delete. It is mutually exclusive with paths.
+	// When pathsAreGlobs is true, it is interpreted as a glob pattern.
+	Path string `json:"path,omitempty"`
+	// Paths is a list of paths to files or directories to delete. It is mutually exclusive with
+	// path. When pathsAreGlobs is true, each entry is interpreted as a glob pattern.
+	Paths []string `json:"paths,omitempty"`
+	// PathsAreGlobs causes path and paths to be treated as glob patterns instead of literal
+	// paths. Defaults to false.
+	PathsAreGlobs bool `json:"pathsAreGlobs,omitempty"`
+	// Strict will cause the directive to fail if a path does not exist or a glob pattern
+	// matches nothing.
 	Strict bool `json:"strict,omitempty"`
 }
 

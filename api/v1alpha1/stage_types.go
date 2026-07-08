@@ -157,20 +157,33 @@ func (s *Stage) IsControlFlow() bool {
 	}
 }
 
+// RequestsFreightFromOrigin returns whether any of the Stage's Freight requests
+// name the specified origin.
+func (s *Stage) RequestsFreightFromOrigin(origin FreightOrigin) bool {
+	if s == nil {
+		return false
+	}
+	for _, req := range s.Spec.RequestedFreight {
+		if req.Origin.Equals(&origin) {
+			return true
+		}
+	}
+	return false
+}
+
 // IsFreightAvailable answers whether the specified Freight is available to the
 // Stage.
 func (s *Stage) IsFreightAvailable(freight *Freight) bool {
 	if s == nil || freight == nil || s.Namespace != freight.Namespace {
 		return false
 	}
-	if freight.IsApprovedFor(s.Name) {
-		return true
-	}
 	for _, req := range s.Spec.RequestedFreight {
 		if !freight.Origin.Equals(&req.Origin) {
 			continue
 		}
-
+		if freight.IsApprovedFor(s.Name) {
+			return true
+		}
 		if req.Sources.Direct {
 			return true
 		}

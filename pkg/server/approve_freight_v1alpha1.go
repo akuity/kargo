@@ -101,6 +101,20 @@ func (s *server) ApproveFreight(
 		return nil, err
 	}
 
+	// Approval bypasses verification and soak requirements, but not origin
+	// membership: an approval for a Stage that doesn't request Freight from the
+	// Freight's origin could never be acted upon and is certainly a mistake.
+	if !stage.RequestsFreightFromOrigin(freight.Origin) {
+		return nil, connect.NewError(
+			connect.CodeInvalidArgument,
+			// nolint:staticcheck
+			fmt.Errorf(
+				"Stage %q does not request Freight from origin %q",
+				stageName, freight.Origin.String(),
+			),
+		)
+	}
+
 	if freight.IsApprovedFor(stageName) {
 		return &connect.Response[svcv1alpha1.ApproveFreightResponse]{}, nil
 	}
@@ -205,6 +219,20 @@ func (s *server) approveFreight(c *gin.Context) {
 		},
 	); err != nil {
 		_ = c.Error(err)
+		return
+	}
+
+	// Approval bypasses verification and soak requirements, but not origin
+	// membership: an approval for a Stage that doesn't request Freight from the
+	// Freight's origin could never be acted upon and is certainly a mistake.
+	if !stage.RequestsFreightFromOrigin(freight.Origin) {
+		_ = c.Error(libhttp.ErrorStr(
+			fmt.Sprintf(
+				"Stage %q does not request Freight from origin %q",
+				stageName, freight.Origin.String(),
+			),
+			http.StatusBadRequest,
+		))
 		return
 	}
 
