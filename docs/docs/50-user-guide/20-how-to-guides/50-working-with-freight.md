@@ -203,6 +203,15 @@ create a corresponding `Promotion` resource.
 
 :::
 
+:::info
+
+Manual approval bypasses verification requirements only. The `Stage` must still
+request `Freight` from the origin of the `Freight` resource being approved.
+Attempting to approve `Freight` for a `Stage` that does not request `Freight`
+from its origin will fail.
+
+:::
+
 After successfully granting manual approval for a `Freight` resource to be
 promoted to a given `Stage`, the `Freight` resource's `status` field will
 reflect that approval.

@@ -25,6 +25,11 @@ import (
 )
 
 func TestApproveFreight(t *testing.T) {
+	testOrigin := kargoapi.FreightOrigin{
+		Kind: kargoapi.FreightOriginKindWarehouse,
+		Name: "fake-warehouse",
+	}
+
 	testCases := []struct {
 		name       string
 		req        *svcv1alpha1.ApproveFreightRequest
@@ -268,6 +273,54 @@ func TestApproveFreight(t *testing.T) {
 			},
 		},
 		{
+			name: "Stage does not request Freight from origin",
+			req: &svcv1alpha1.ApproveFreightRequest{
+				Project: "fake-project",
+				Name:    "fake-freight",
+				Stage:   "fake-stage",
+			},
+			server: &server{
+				validateProjectExistsFn: func(context.Context, string) error {
+					return nil
+				},
+				getFreightByNameOrAliasFn: func(
+					context.Context,
+					client.Client,
+					string,
+					string,
+					string,
+				) (*kargoapi.Freight, error) {
+					return &kargoapi.Freight{Origin: testOrigin}, nil
+				},
+				getStageFn: func(
+					context.Context,
+					client.Client,
+					types.NamespacedName,
+				) (*kargoapi.Stage, error) {
+					return &kargoapi.Stage{}, nil
+				},
+				authorizeFn: func(
+					context.Context,
+					string,
+					schema.GroupVersionResource,
+					string,
+					client.ObjectKey,
+				) error {
+					return nil
+				},
+			},
+			assertions: func(
+				t *testing.T,
+				_ *fakeevent.EventRecorder,
+				_ *connect.Response[svcv1alpha1.ApproveFreightResponse],
+				err error,
+			) {
+				require.Error(t, err)
+				require.Equal(t, connect.CodeInvalidArgument, connect.CodeOf(err))
+				require.ErrorContains(t, err, "does not request Freight from origin")
+			},
+		},
+		{
 			name: "error patching Freight",
 			req: &svcv1alpha1.ApproveFreightRequest{
 				Project: "fake-project",
@@ -285,14 +338,18 @@ func TestApproveFreight(t *testing.T) {
 					string,
 					string,
 				) (*kargoapi.Freight, error) {
-					return &kargoapi.Freight{}, nil
+					return &kargoapi.Freight{Origin: testOrigin}, nil
 				},
 				getStageFn: func(
 					context.Context,
 					client.Client,
 					types.NamespacedName,
 				) (*kargoapi.Stage, error) {
-					return &kargoapi.Stage{}, nil
+					return &kargoapi.Stage{
+						Spec: kargoapi.StageSpec{
+							RequestedFreight: []kargoapi.FreightRequest{{Origin: testOrigin}},
+						},
+					}, nil
 				},
 				authorizeFn: func(
 					context.Context,
@@ -339,14 +396,18 @@ func TestApproveFreight(t *testing.T) {
 					string,
 					string,
 				) (*kargoapi.Freight, error) {
-					return &kargoapi.Freight{}, nil
+					return &kargoapi.Freight{Origin: testOrigin}, nil
 				},
 				getStageFn: func(
 					context.Context,
 					client.Client,
 					types.NamespacedName,
 				) (*kargoapi.Stage, error) {
-					return &kargoapi.Stage{}, nil
+					return &kargoapi.Stage{
+						Spec: kargoapi.StageSpec{
+							RequestedFreight: []kargoapi.FreightRequest{{Origin: testOrigin}},
+						},
+					}, nil
 				},
 				authorizeFn: func(
 					context.Context,
@@ -394,6 +455,10 @@ func TestApproveFreight(t *testing.T) {
 
 func Test_server_approveFreight(t *testing.T) {
 	const testStageName = "fake-stage"
+	testOrigin := kargoapi.FreightOrigin{
+		Kind: kargoapi.FreightOriginKindWarehouse,
+		Name: "fake-warehouse",
+	}
 	testProject := &kargoapi.Project{
 		ObjectMeta: metav1.ObjectMeta{
 			Name: "fake-project",
@@ -404,8 +469,19 @@ func Test_server_approveFreight(t *testing.T) {
 			Name:      "fake-freight",
 			Namespace: testProject.Name,
 		},
+		Origin: testOrigin,
 	}
 	testStage := &kargoapi.Stage{
+		ObjectMeta: metav1.ObjectMeta{
+			Name:      "fake-stage",
+			Namespace: testProject.Name,
+		},
+		Spec: kargoapi.StageSpec{
+			RequestedFreight: []kargoapi.FreightRequest{{Origin: testOrigin}},
+		},
+	}
+	// Same name as testStage, but doesn't request Freight from testOrigin.
+	testStageWithoutRequest := &kargoapi.Stage{
 		ObjectMeta: metav1.ObjectMeta{
 			Name:      "fake-stage",
 			Namespace: testProject.Name,
@@ -464,6 +540,37 @@ func Test_server_approveFreight(t *testing.T) {
 				},
 				assertions: func(t *testing.T, w *httptest.ResponseRecorder, _ client.Client) {
 					require.Equal(t, http.StatusForbidden, w.Code)
+				},
+			},
+			{
+				name: "Stage does not request Freight from origin",
+				clientBuilder: fake.NewClientBuilder().
+					WithObjects(testProject, testFreight, testStageWithoutRequest).
+					WithStatusSubresource(testFreight),
+				serverSetup: func(_ *testing.T, s *server) {
+					s.authorizeFn = func(
+						context.Context,
+						string,
+						schema.GroupVersionResource,
+						string,
+						client.ObjectKey,
+					) error {
+						return nil
+					}
+				},
+				assertions: func(t *testing.T, w *httptest.ResponseRecorder, c client.Client) {
+					require.Equal(t, http.StatusBadRequest, w.Code)
+					require.Contains(t, w.Body.String(), "does not request Freight from origin")
+
+					// Verify the Freight was NOT approved for the Stage
+					freight := &kargoapi.Freight{}
+					err := c.Get(
+						t.Context(),
+						client.ObjectKeyFromObject(testFreight),
+						freight,
+					)
+					require.NoError(t, err)
+					require.False(t, freight.IsApprovedFor(testStageName))
 				},
 			},
 			{
