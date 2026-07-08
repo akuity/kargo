@@ -76,6 +76,14 @@ rules:
 - apiGroups:
   - kargo.akuity.io
   resources:
+  - targets
+  verbs:
+  - get
+  - list
+  - watch
+- apiGroups:
+  - kargo.akuity.io
+  resources:
   - clusterpromotiontasks
   - promotiontasks
   - warehouses
