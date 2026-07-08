@@ -235,6 +235,23 @@ func (r *RegularStageReconciler) SetupWithManager(
 		return fmt.Errorf("unable to watch Promotions: %w", err)
 	}
 
+	// Watch the Targets we own so that drift or deletion of an auto-created
+	// Target re-triggers reconciliation of the owning Stage.
+	if err = c.Watch(
+		source.Kind(
+			kargoMgr.GetCache(),
+			&kargoapi.Target{},
+			handler.TypedEnqueueRequestForOwner[*kargoapi.Target](
+				kargoMgr.GetScheme(),
+				kargoMgr.GetRESTMapper(),
+				&kargoapi.Stage{},
+				handler.OnlyControllerOwner(),
+			),
+		),
+	); err != nil {
+		return fmt.Errorf("unable to watch Targets: %w", err)
+	}
+
 	// Watch for Freight that have been newly promoted to a Stage or newly marked
 	// as verified in a Stage and enqueue downstream Stages for reconciliation.
 	if err = c.Watch(
@@ -432,6 +449,15 @@ func (r *RegularStageReconciler) reconcile(
 		name      string
 		reconcile func() (kargoapi.StageStatus, error)
 	}{
+		{
+			name: "ensuring Target",
+			reconcile: func() (kargoapi.StageStatus, error) {
+				if err := r.syncTarget(ctx, working); err != nil {
+					return working.Status, fmt.Errorf("failed to ensure Target: %w", err)
+				}
+				return working.Status, nil
+			},
+		},
 		{
 			name: "syncing Promotions",
 			reconcile: func() (kargoapi.StageStatus, error) {

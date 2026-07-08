@@ -42,6 +42,19 @@ type StageSpec struct {
 	// is empty, the webhook will ensure that label is absent.
 	Shard string `json:"shard,omitempty"`
 
+	// TargetSelector selects the Target(s) that Freight promoted to this Stage
+	// is destined for, matching Targets in the Stage's namespace by label.
+	//
+	// When nil, Kargo automatically creates and manages a single Target for the
+	// Stage -- named after the Stage and owned by it -- and uses that. When set,
+	// the Stage brings its own Target(s) via the selector, and any Target
+	// previously auto-created for the Stage is removed.
+	//
+	// +optional
+	TargetSelector struct {
+		V1LabelSelector
+	} `json:"targetSelector,omitempty"`
+
 	// Vars is a list of variables that can be referenced anywhere in the
 	// StageSpec that supports expressions. For example, the PromotionTemplate
 	// and arguments of the Verification.
@@ -63,6 +76,10 @@ func (m *StageSpec) Validate(formats strfmt.Registry) error {
 	}
 
 	if err := m.validateRequestedFreight(formats); err != nil {
+		res = append(res, err)
+	}
+
+	if err := m.validateTargetSelector(formats); err != nil {
 		res = append(res, err)
 	}
 
@@ -118,6 +135,14 @@ func (m *StageSpec) validateRequestedFreight(formats strfmt.Registry) error {
 	return nil
 }
 
+func (m *StageSpec) validateTargetSelector(formats strfmt.Registry) error {
+	if swag.IsZero(m.TargetSelector) { // not required
+		return nil
+	}
+
+	return nil
+}
+
 func (m *StageSpec) validateVars(formats strfmt.Registry) error {
 	if swag.IsZero(m.Vars) { // not required
 		return nil
@@ -168,6 +193,10 @@ func (m *StageSpec) ContextValidate(ctx context.Context, formats strfmt.Registry
 		res = append(res, err)
 	}
 
+	if err := m.contextValidateTargetSelector(ctx, formats); err != nil {
+		res = append(res, err)
+	}
+
 	if err := m.contextValidateVars(ctx, formats); err != nil {
 		res = append(res, err)
 	}
@@ -212,6 +241,11 @@ func (m *StageSpec) contextValidateRequestedFreight(ctx context.Context, formats
 		}
 
 	}
+
+	return nil
+}
+
+func (m *StageSpec) contextValidateTargetSelector(ctx context.Context, formats strfmt.Registry) error {
 
 	return nil
 }

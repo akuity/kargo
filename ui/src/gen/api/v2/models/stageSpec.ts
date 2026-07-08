@@ -7,6 +7,7 @@
  */
 import type { PromotionTemplate } from './promotionTemplate';
 import type { FreightRequest } from './freightRequest';
+import type { V1LabelSelector } from './v1LabelSelector';
 import type { ExpressionVariable } from './expressionVariable';
 import type { Verification } from './verification';
 
@@ -31,6 +32,16 @@ shard. A defaulting webhook will sync the value of the
 kargo.akuity.io/shard label with the value of this field. When this field
 is empty, the webhook will ensure that label is absent. */
   shard?: string;
+  /** TargetSelector selects the Target(s) that Freight promoted to this Stage
+is destined for, matching Targets in the Stage's namespace by label.
+
+When nil, Kargo automatically creates and manages a single Target for the
+Stage -- named after the Stage and owned by it -- and uses that. When set,
+the Stage brings its own Target(s) via the selector, and any Target
+previously auto-created for the Stage is removed.
+
++optional */
+  targetSelector?: V1LabelSelector;
   /** Vars is a list of variables that can be referenced anywhere in the
 StageSpec that supports expressions. For example, the PromotionTemplate
 and arguments of the Verification. */

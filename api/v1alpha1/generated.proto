@@ -1923,6 +1923,17 @@ message StageSpec {
   // Verification describes how to verify a Stage's current Freight is fit for
   // promotion downstream.
   optional Verification verification = 3;
+
+  // TargetSelector selects the Target(s) that Freight promoted to this Stage
+  // is destined for, matching Targets in the Stage's namespace by label.
+  //
+  // When nil, Kargo automatically creates and manages a single Target for the
+  // Stage -- named after the Stage and owned by it -- and uses that. When set,
+  // the Stage brings its own Target(s) via the selector, and any Target
+  // previously auto-created for the Stage is removed.
+  //
+  // +optional
+  optional .k8s.io.apimachinery.pkg.apis.meta.v1.LabelSelector targetSelector = 8;
 }
 
 // StageStats contains a summary of the collective state of a Project's

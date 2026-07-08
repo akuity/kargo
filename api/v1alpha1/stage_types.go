@@ -226,6 +226,16 @@ type StageSpec struct {
 	// Verification describes how to verify a Stage's current Freight is fit for
 	// promotion downstream.
 	Verification *Verification `json:"verification,omitempty" protobuf:"bytes,3,opt,name=verification"`
+	// TargetSelector selects the Target(s) that Freight promoted to this Stage
+	// is destined for, matching Targets in the Stage's namespace by label.
+	//
+	// When nil, Kargo automatically creates and manages a single Target for the
+	// Stage -- named after the Stage and owned by it -- and uses that. When set,
+	// the Stage brings its own Target(s) via the selector, and any Target
+	// previously auto-created for the Stage is removed.
+	//
+	// +optional
+	TargetSelector *metav1.LabelSelector `json:"targetSelector,omitempty" protobuf:"bytes,8,opt,name=targetSelector"`
 }
 
 // FreightRequest expresses a Stage's need for Freight having originated from a
