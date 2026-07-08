@@ -72,7 +72,7 @@ ARG TARGETARCH
 
 WORKDIR /tools
 
-RUN GRPC_HEALTH_PROBE_VERSION=v0.4.50 && \
+RUN GRPC_HEALTH_PROBE_VERSION=v0.4.52 && \
     curl -fL -o /tools/grpc_health_probe https://github.com/grpc-ecosystem/grpc-health-probe/releases/download/${GRPC_HEALTH_PROBE_VERSION}/grpc_health_probe-${TARGETOS}-${TARGETARCH} && \
     chmod +x /tools/grpc_health_probe
 
@@ -81,7 +81,7 @@ RUN GRPC_HEALTH_PROBE_VERSION=v0.4.50 && \
 # so we always ship a current, CVE-patched build. This is intentionally ahead of
 # the helm.sh/helm/v3 library in go.mod: the standalone binary carries no k8s
 # dependency cascade, so we track the latest Helm 3 minor for CVE coverage.
-ARG HELM_VERSION=v3.21.0
+ARG HELM_VERSION=v3.21.2
 RUN curl -fL -o /tmp/helm.tar.gz https://get.helm.sh/helm-${HELM_VERSION}-${TARGETOS}-${TARGETARCH}.tar.gz && \
     curl -fL -o /tmp/helm.tar.gz.sha256sum https://get.helm.sh/helm-${HELM_VERSION}-${TARGETOS}-${TARGETARCH}.tar.gz.sha256sum && \
     echo "$(awk '{print $1}' /tmp/helm.tar.gz.sha256sum)  /tmp/helm.tar.gz" | sha256sum -c - && \
