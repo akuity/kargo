@@ -9,6 +9,7 @@ import Link from 'antd/es/typography/Link';
 import classNames from 'classnames';
 import { useMemo } from 'react';
 
+import { isPromotionStepStatusTerminal } from '@ui/features/common/promotion-status/utils';
 import { getPromotionOutputsByStepAlias } from '@ui/features/stage/utils/promotion';
 import { useGetPromotion } from '@ui/gen/api/v2/core/core';
 import { Stage } from '@ui/gen/api/v2/models';
@@ -39,9 +40,13 @@ export const PullRequestLink = (props: PullRequestLinkProps) => {
     [promotion]
   );
 
-  const indexOfPullRequest = promotion?.spec?.steps?.findIndex(
-    (step: { uses?: string }) => step?.uses === 'git-open-pr' || step?.uses === 'git-wait-for-pr'
-  );
+  // "Waiting for Approval" tracks the git-wait-for-pr step, which is the only
+  // step that actually waits on a pull request. git-open-pr succeeds as soon as
+  // the PR is opened and never represents a waiting state.
+  const indexOfPullRequest =
+    promotion?.spec?.steps?.findIndex(
+      (step: { uses?: string }) => step?.uses === 'git-wait-for-pr'
+    ) ?? -1;
 
   if (getPromotionQuery.isFetching) {
     return <Spin size='small' />;
@@ -57,7 +62,6 @@ export const PullRequestLink = (props: PullRequestLinkProps) => {
   }
 
   const step = promotion.spec.steps[indexOfPullRequest];
-  const stepType = step?.uses;
   const stepMetadata = promotion?.status?.stepExecutionMetadata?.[indexOfPullRequest];
   const stepStatus = stepMetadata?.status;
 
@@ -71,18 +75,10 @@ export const PullRequestLink = (props: PullRequestLinkProps) => {
     return null;
   }
 
-  // For git-open-pr: only show when succeeded
-  // For git-wait-for-pr: show when running (has PR URL) or succeeded
-  const isGitWaitForPr = stepType === 'git-wait-for-pr';
-  const isGitOpenPr = stepType === 'git-open-pr';
-  const hasPullRequestStepSucceeded = stepStatus === 'Succeeded';
-  const hasPullRequestStepRunning = stepStatus === 'Running';
-
-  const isStatusAcceptable =
-    (isGitOpenPr && hasPullRequestStepSucceeded) ||
-    (isGitWaitForPr && (hasPullRequestStepSucceeded || hasPullRequestStepRunning));
-
-  if (!isStatusAcceptable) {
+  // Only surface "Waiting for Approval" while the pull request step has not yet
+  // terminated. Once it reaches a terminal status (e.g. the PR is merged or the
+  // step fails), the Promotion is no longer waiting on approval.
+  if (isPromotionStepStatusTerminal(stepStatus)) {
     return null;
   }
 
