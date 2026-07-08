@@ -117,8 +117,7 @@ SubscriptionWizard.Subscription = (props: {
 
   // one of git, image or chart
   const subscriptionType = (Object.keys(props.subscription)[0] || '') as
-    | keyof RepoSubscription
-    | '';
+    keyof RepoSubscription | '';
 
   if (subscriptionType === '') {
     return <Tag color='red'>Corrupt Subscription! Please Check YAML</Tag>;
