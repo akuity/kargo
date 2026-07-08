@@ -2472,6 +2472,37 @@ RawFormat specifies the format for raw resource representation.
 | discoveryLimit | int32 |  DiscoveryLimit is an optional limit on the number of artifacts that can be discovered for this subscription.     |
 
 
+### Target {#github-com-akuity-kargo-api-v1alpha1-Target}
+ Target is a resource type that describes a single destination -- such as a cluster -- to which Freight may be promoted. Targets are typically selected by label, with each selected Target's parameters used to shape an otherwise identical promotion process for that specific destination.
+| Field | Type | Description |
+| ----- | ---- | ----------- |
+| metadata | k8s.io.apimachinery.pkg.apis.meta.v1.ObjectMeta |   |
+| spec | [TargetSpec](#github-com-akuity-kargo-api-v1alpha1-TargetSpec) |  Spec describes the Target. |
+
+
+### TargetList {#github-com-akuity-kargo-api-v1alpha1-TargetList}
+ TargetList is a list of Target resources.
+| Field | Type | Description |
+| ----- | ---- | ----------- |
+| metadata | k8s.io.apimachinery.pkg.apis.meta.v1.ListMeta |   |
+| items | [Target](#github-com-akuity-kargo-api-v1alpha1-Target) |   |
+
+
+### TargetSpec {#github-com-akuity-kargo-api-v1alpha1-TargetSpec}
+ TargetSpec describes a Target.
+| Field | Type | Description |
+| ----- | ---- | ----------- |
+| params | [TargetSpec.ParamsEntry](#github-com-akuity-kargo-api-v1alpha1-TargetSpec-ParamsEntry) |  Params is a map of arbitrary, user-defined parameters describing the Target -- for example, a cluster's address or the name of a branch containing that cluster's configuration. Keys are strings; values may be any valid JSON, including deeply nested objects and arrays.  +optional |
+
+
+### TargetSpec.ParamsEntry {#github-com-akuity-kargo-api-v1alpha1-TargetSpec-ParamsEntry}
+ 
+| Field | Type | Description |
+| ----- | ---- | ----------- |
+| key | string |   |
+| value | k8s.io.apiextensions_apiserver.pkg.apis.apiextensions.v1.JSON |   |
+
+
 ### Verification {#github-com-akuity-kargo-api-v1alpha1-Verification}
  Verification describes how to verify that a Promotion has been successful using Argo Rollouts AnalysisTemplates.
 | Field | Type | Description |
