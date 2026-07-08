@@ -5,6 +5,7 @@ import (
 	"errors"
 	"fmt"
 	"reflect"
+	"strings"
 
 	admissionv1 "k8s.io/api/admission/v1"
 	authzv1 "k8s.io/api/authorization/v1"
@@ -320,9 +321,16 @@ func (w *webhook) resolveOriginToFreight(
 // are swallowed; intent inference is best-effort and must not block Promotion
 // creation.
 //
-// System-generated Promotions (auto-promotion loop, rollback controller) are
-// left untouched — they carry no user intent, and any annotations they set
-// explicitly are preserved as-is.
+// A Promotion is treated as user-initiated when the admission request did
+// not originate from the Kargo control plane OR when it did, but the
+// Promotion carries a create-actor annotation identifying a non-controller
+// actor. The latter covers the Kargo API server, which creates Promotions on
+// users' behalf using its own service account (a control-plane identity) and
+// records the requesting user in that annotation. Genuinely system-generated
+// Promotions (the auto-promotion loop, which sets no create-actor; rollback
+// controllers, which set a controller: actor) are left untouched — they carry
+// no user intent, and any intent annotations they set explicitly are
+// preserved as-is.
 //
 // For user-initiated Promotions, any caller-supplied intent annotation is
 // stripped first to prevent circumvention, then intent is inferred: resume if
@@ -351,8 +359,16 @@ func (w *webhook) syncHoldAnnotations(
 	stage *kargoapi.Stage,
 ) {
 	// System-generated Promotions carry no user intent; leave them untouched.
+	// Control-plane requests are user-initiated only when the Promotion names
+	// a non-controller actor: the API server records the requesting user in
+	// the create-actor annotation before creating a Promotion on their behalf,
+	// while the Stage controller's auto-promotions set no actor at all and
+	// other controllers identify themselves with a controller: actor.
 	if w.isRequestFromKargoControlplaneFn(req) {
-		return
+		actor := promo.Annotations[kargoapi.AnnotationKeyCreateActor]
+		if actor == "" || strings.HasPrefix(actor, kargoapi.EventActorControllerPrefix) {
+			return
+		}
 	}
 	// Strip any caller-supplied intent to prevent circumvention, then infer.
 	delete(promo.Annotations, kargoapi.AnnotationKeyAutoPromotionHold)
