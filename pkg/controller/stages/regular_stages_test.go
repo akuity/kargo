@@ -513,6 +513,80 @@ func TestRegularStagesReconciler_reconcile(t *testing.T) {
 				assert.Nil(t, reconciling)
 			},
 		},
+		{
+			// Sub-reconcilers must see the status computed by their
+			// predecessors in the same pass even when persisting that status
+			// fails. Here, every Stage status update fails, yet the state
+			// computed by syncPromotions must survive through the rest of the
+			// pass and be reflected in the returned status.
+			name: "subreconcilers see status computed earlier in the pass when status updates fail",
+			stage: &kargoapi.Stage{
+				ObjectMeta: metav1.ObjectMeta{
+					Namespace:  "test-project",
+					Name:       "test-stage",
+					Generation: 1,
+				},
+				Status: kargoapi.StageStatus{
+					CurrentPromotion: &kargoapi.PromotionReference{Name: "test-promotion"},
+				},
+			},
+			objects: []client.Object{
+				&kargoapi.Freight{
+					ObjectMeta: metav1.ObjectMeta{
+						Namespace: "test-project",
+						Name:      "test-freight",
+					},
+					Origin: kargoapi.FreightOrigin{
+						Kind: kargoapi.FreightOriginKindWarehouse,
+						Name: "test-warehouse",
+					},
+				},
+				&kargoapi.Promotion{
+					ObjectMeta: metav1.ObjectMeta{
+						Namespace: "test-project",
+						Name:      "test-promotion",
+					},
+					Spec: kargoapi.PromotionSpec{Stage: "test-stage"},
+					Status: kargoapi.PromotionStatus{
+						Phase:      kargoapi.PromotionPhaseSucceeded,
+						FinishedAt: &metav1.Time{Time: now},
+						FreightCollection: &kargoapi.FreightCollection{
+							ID: "test-collection-id",
+							Freight: map[string]kargoapi.FreightReference{
+								"Warehouse/test-warehouse": {Name: "test-freight"},
+							},
+						},
+					},
+				},
+			},
+			interceptor: interceptor.Funcs{
+				SubResourcePatch: func(
+					ctx context.Context,
+					c client.Client,
+					subResourceName string,
+					obj client.Object,
+					patch client.Patch,
+					opts ...client.SubResourcePatchOption,
+				) error {
+					// Fail all Stage status updates; let others through.
+					if _, ok := obj.(*kargoapi.Stage); ok {
+						return fmt.Errorf("status update error")
+					}
+					return c.SubResource(subResourceName).Patch(ctx, obj, patch, opts...)
+				},
+			},
+			assertions: func(t *testing.T, status kargoapi.StageStatus, requeue bool, err error) {
+				// Status update failures between sub-reconcilers are non-fatal.
+				require.NoError(t, err)
+				require.False(t, requeue)
+
+				// The results of syncPromotions were carried through the rest
+				// of the pass despite never having been persisted.
+				require.NotNil(t, status.LastPromotion)
+				assert.Equal(t, "test-promotion", status.LastPromotion.Name)
+				require.Len(t, status.FreightHistory, 1)
+			},
+		},
 	}
 
 	for _, tt := range tests {
@@ -523,7 +597,7 @@ func TestRegularStagesReconciler_reconcile(t *testing.T) {
 			c := fake.NewClientBuilder().
 				WithScheme(scheme).
 				WithObjects(objects...).
-				WithStatusSubresource(&kargoapi.Stage{}).
+				WithStatusSubresource(&kargoapi.Stage{}, &kargoapi.Freight{}).
 				WithIndex(
 					&kargoapi.Promotion{},
 					indexer.PromotionsByStageField,
