@@ -1923,6 +1923,17 @@ message StageSpec {
   // Verification describes how to verify a Stage's current Freight is fit for
   // promotion downstream.
   optional Verification verification = 3;
+
+  // TargetSelector selects the Target(s) that Freight promoted to this Stage
+  // is destined for, matching Targets in the Stage's namespace by label.
+  //
+  // When nil, the Stage promotes to a single default destination derived from
+  // the Stage itself; no Target resource is required. When set, the Stage
+  // promotes to every Target in its namespace whose labels satisfy the
+  // selector.
+  //
+  // +optional
+  optional .k8s.io.apimachinery.pkg.apis.meta.v1.LabelSelector targetSelector = 8;
 }
 
 // StageStats contains a summary of the collective state of a Project's
