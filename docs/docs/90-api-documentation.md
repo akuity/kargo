@@ -2489,6 +2489,34 @@ RawFormat specifies the format for raw resource representation.
 | items | [Target](#github-com-akuity-kargo-api-v1alpha1-Target) |   |
 
 
+### TargetPromotion {#github-com-akuity-kargo-api-v1alpha1-TargetPromotion}
+ TargetPromotion represents the execution of a Promotion's pipeline against a single Target of the Stage being promoted to. A Promotion creates one TargetPromotion per Target it runs against, owning each so they are garbage-collected with the parent Promotion.
+| Field | Type | Description |
+| ----- | ---- | ----------- |
+| metadata | k8s.io.apimachinery.pkg.apis.meta.v1.ObjectMeta |   |
+| spec | [TargetPromotionSpec](#github-com-akuity-kargo-api-v1alpha1-TargetPromotionSpec) |  Spec describes the desired transition of a specific Stage into a specific Freight against a specific Target.   |
+| status | [PromotionStatus](#github-com-akuity-kargo-api-v1alpha1-PromotionStatus) |  Status describes the current state of the transition represented by this TargetPromotion. |
+
+
+### TargetPromotionList {#github-com-akuity-kargo-api-v1alpha1-TargetPromotionList}
+ TargetPromotionList contains a list of TargetPromotion resources.
+| Field | Type | Description |
+| ----- | ---- | ----------- |
+| metadata | k8s.io.apimachinery.pkg.apis.meta.v1.ListMeta |   |
+| items | [TargetPromotion](#github-com-akuity-kargo-api-v1alpha1-TargetPromotion) |   |
+
+
+### TargetPromotionSpec {#github-com-akuity-kargo-api-v1alpha1-TargetPromotionSpec}
+ TargetPromotionSpec describes the desired transition of a specific Stage into a specific Freight against a specific Target. It mirrors PromotionSpec, adding the Target the pipeline runs against.
+| Field | Type | Description |
+| ----- | ---- | ----------- |
+| stage | string |  Stage specifies the name of the Stage to which this TargetPromotion applies. The Stage referenced by this field MUST be in the same namespace as the TargetPromotion.       |
+| freight | string |  Freight specifies the piece of Freight to be promoted into the Stage referenced by the Stage field.       |
+| target | string |  Target specifies the name of the Target that this TargetPromotion's pipeline runs against. The Target referenced by this field MUST be in the same namespace as the TargetPromotion.       |
+| vars | [ExpressionVariable](#github-com-akuity-kargo-api-v1alpha1-ExpressionVariable) |  Vars is a list of variables that can be referenced by expressions in promotion steps. |
+| steps | [PromotionStep](#github-com-akuity-kargo-api-v1alpha1-PromotionStep) |  Steps specifies the directives to be executed as part of this TargetPromotion. The order in which the directives are executed is the order in which they are listed in this field.     |
+
+
 ### TargetSpec {#github-com-akuity-kargo-api-v1alpha1-TargetSpec}
  TargetSpec describes a Target.
 | Field | Type | Description |

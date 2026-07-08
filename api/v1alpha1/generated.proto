@@ -2082,6 +2082,81 @@ message TargetList {
   repeated Target items = 2;
 }
 
+// TargetPromotion represents the execution of a Promotion's pipeline against a
+// single Target of the Stage being promoted to. A Promotion creates one
+// TargetPromotion per Target it runs against, owning each so they are
+// garbage-collected with the parent Promotion.
+message TargetPromotion {
+  optional .k8s.io.apimachinery.pkg.apis.meta.v1.ObjectMeta metadata = 1;
+
+  // Spec describes the desired transition of a specific Stage into a specific
+  // Freight against a specific Target.
+  //
+  // +kubebuilder:validation:Required
+  optional TargetPromotionSpec spec = 2;
+
+  // Status describes the current state of the transition represented by this
+  // TargetPromotion.
+  optional PromotionStatus status = 3;
+}
+
+// TargetPromotionList contains a list of TargetPromotion resources.
+message TargetPromotionList {
+  optional .k8s.io.apimachinery.pkg.apis.meta.v1.ListMeta metadata = 1;
+
+  repeated TargetPromotion items = 2;
+}
+
+// TargetPromotionSpec describes the desired transition of a specific Stage into
+// a specific Freight against a specific Target. It mirrors PromotionSpec, adding
+// the Target the pipeline runs against.
+message TargetPromotionSpec {
+  // Stage specifies the name of the Stage to which this TargetPromotion
+  // applies. The Stage referenced by this field MUST be in the same namespace
+  // as the TargetPromotion.
+  //
+  // +kubebuilder:validation:Required
+  // +kubebuilder:validation:MinLength=1
+  // +kubebuilder:validation:MaxLength=253
+  // +kubebuilder:validation:Pattern=`^[a-z0-9]([-a-z0-9]*[a-z0-9])?(\.[a-z0-9]([-a-z0-9]*[a-z0-9])?)*$`
+  // +akuity:test-kubebuilder-pattern=KubernetesName
+  optional string stage = 1;
+
+  // Freight specifies the piece of Freight to be promoted into the Stage
+  // referenced by the Stage field.
+  //
+  // +kubebuilder:validation:Required
+  // +kubebuilder:validation:MinLength=1
+  // +kubebuilder:validation:MaxLength=253
+  // +kubebuilder:validation:Pattern=`^[a-z0-9]([-a-z0-9]*[a-z0-9])?(\.[a-z0-9]([-a-z0-9]*[a-z0-9])?)*$`
+  // +akuity:test-kubebuilder-pattern=KubernetesName
+  optional string freight = 2;
+
+  // Target specifies the name of the Target that this TargetPromotion's
+  // pipeline runs against. The Target referenced by this field MUST be in the
+  // same namespace as the TargetPromotion.
+  //
+  // +kubebuilder:validation:Required
+  // +kubebuilder:validation:MinLength=1
+  // +kubebuilder:validation:MaxLength=253
+  // +kubebuilder:validation:Pattern=`^[a-z0-9]([-a-z0-9]*[a-z0-9])?(\.[a-z0-9]([-a-z0-9]*[a-z0-9])?)*$`
+  // +akuity:test-kubebuilder-pattern=KubernetesName
+  optional string target = 3;
+
+  // Vars is a list of variables that can be referenced by expressions in
+  // promotion steps.
+  repeated ExpressionVariable vars = 4;
+
+  // Steps specifies the directives to be executed as part of this
+  // TargetPromotion. The order in which the directives are executed is the
+  // order in which they are listed in this field.
+  //
+  // +kubebuilder:validation:Required
+  // +kubebuilder:validation:MinItems=1
+  // +kubebuilder:validation:items:XValidation:message="Promotion step must have uses set and must not reference a task",rule="has(self.uses) && !has(self.task)"
+  repeated PromotionStep steps = 5;
+}
+
 // TargetSpec describes a Target.
 message TargetSpec {
   // Params is a map of arbitrary, user-defined parameters describing the
