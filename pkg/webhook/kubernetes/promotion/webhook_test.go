@@ -361,6 +361,107 @@ func Test_webhook_Default(t *testing.T) {
 			},
 		},
 		{
+			// When a user promotes by --warehouse (Spec.Origin set), the webhook
+			// resolves the origin to the candidate Freight AND stamps the resume
+			// annotation — clearing any active hold for that origin.
+			name: "origin-resolved promotion stamps resume intent",
+			webhook: &webhook{
+				admissionRequestFromContextFn: admission.RequestFromContext,
+				getStageFn: func(
+					context.Context,
+					client.Client,
+					types.NamespacedName,
+				) (*kargoapi.Stage, error) {
+					return &kargoapi.Stage{
+						ObjectMeta: metav1.ObjectMeta{
+							Name:      "fake-stage",
+							Namespace: "fake-project",
+						},
+						Spec: kargoapi.StageSpec{
+							RequestedFreight: []kargoapi.FreightRequest{{
+								Origin: kargoapi.FreightOrigin{
+									Kind: kargoapi.FreightOriginKindWarehouse,
+									Name: "my-warehouse",
+								},
+								Sources: kargoapi.FreightSources{Direct: true},
+							}},
+							PromotionTemplate: &kargoapi.PromotionTemplate{
+								Spec: kargoapi.PromotionTemplateSpec{
+									Steps: []kargoapi.PromotionStep{{Uses: "set-metadata"}},
+								},
+							},
+						},
+					}, nil
+				},
+				listFreightAvailableToStageFn: func(
+					_ context.Context,
+					_ client.Client,
+					_ *kargoapi.Stage,
+				) ([]kargoapi.Freight, error) {
+					return []kargoapi.Freight{{
+						ObjectMeta: metav1.ObjectMeta{Name: "candidate-freight"},
+						Origin: kargoapi.FreightOrigin{
+							Kind: kargoapi.FreightOriginKindWarehouse,
+							Name: "my-warehouse",
+						},
+					}}, nil
+				},
+				getFreightFn: func(
+					_ context.Context,
+					_ client.Client,
+					_ types.NamespacedName,
+				) (*kargoapi.Freight, error) {
+					return &kargoapi.Freight{
+						ObjectMeta: metav1.ObjectMeta{Name: "candidate-freight"},
+						Origin: kargoapi.FreightOrigin{
+							Kind: kargoapi.FreightOriginKindWarehouse,
+							Name: "my-warehouse",
+						},
+					}, nil
+				},
+				isAutoPromotionEnabledFn: func(
+					_ context.Context,
+					_ client.Client,
+					_ metav1.ObjectMeta,
+				) (bool, error) {
+					return true, nil
+				},
+				isRequestFromKargoControlplaneFn: func(admission.Request) bool {
+					return false
+				},
+			},
+			req: admission.Request{
+				AdmissionRequest: admissionv1.AdmissionRequest{
+					Operation: admissionv1.Create,
+					UserInfo:  authnv1.UserInfo{Username: "real-user"},
+				},
+			},
+			promotion: &kargoapi.Promotion{
+				Spec: kargoapi.PromotionSpec{
+					Stage: "fake-stage",
+					Origin: &kargoapi.FreightOrigin{
+						Kind: kargoapi.FreightOriginKindWarehouse,
+						Name: "my-warehouse",
+					},
+				},
+			},
+			assertions: func(t *testing.T, promo *kargoapi.Promotion, err error) {
+				require.NoError(t, err)
+				// Origin was resolved to the candidate.
+				require.Equal(t, "candidate-freight", promo.Spec.Freight)
+				require.Nil(t, promo.Spec.Origin)
+				// Resume annotation must be present so the Stage controller clears
+				// any active hold for this origin when the Promotion succeeds.
+				require.Contains(
+					t,
+					promo.Annotations,
+					kargoapi.AnnotationKeyAutoPromotionResume,
+					"promoting by origin to the candidate should stamp a resume annotation",
+				)
+				require.NotContains(t, promo.Annotations, kargoapi.AnnotationKeyAutoPromotionHold)
+			},
+		},
+		{
 			name: "origin resolution fails without candidate",
 			webhook: &webhook{
 				admissionRequestFromContextFn: admission.RequestFromContext,
