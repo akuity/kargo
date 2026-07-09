@@ -16,6 +16,20 @@ A running Tilt dev environment (`make hack-tilt-up`).
 ./hack/testing/auto-promotion-hold/apply-newest-freight-policy-harness.sh
 ```
 
+## Automated test runner
+
+All scenarios below can be run automatically from the repo root after applying
+the harness:
+
+```shell
+./hack/testing/auto-promotion-hold/run-newest-freight-policy-tests.sh
+```
+
+The script builds the CLI from source, runs every scenario in order, waits for
+each Promotion to reach a terminal phase, and exits non-zero if any assertion
+fails. The manual steps below remain useful for investigating individual
+scenarios or failures.
+
 Creates two Stages in the `auto-promotion-hold` project:
 
 - **`single-origin-hold`** — single-origin Stage with auto-promotion enabled
