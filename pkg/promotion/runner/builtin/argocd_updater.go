@@ -11,7 +11,10 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 	"k8s.io/apimachinery/pkg/labels"
+	"k8s.io/apimachinery/pkg/util/wait"
+	"k8s.io/client-go/util/retry"
 	"sigs.k8s.io/controller-runtime/pkg/client"
+	"sigs.k8s.io/controller-runtime/pkg/client/apiutil"
 
 	kargoapi "github.com/akuity/kargo/api/v1alpha1"
 	"github.com/akuity/kargo/pkg/api"
@@ -802,7 +805,9 @@ func (a *argocdUpdater) getAuthorizedApplications(
 			client.MatchingLabelsSelector{Selector: labelSelector},
 		}
 
-		if err = a.argocdClient.List(ctx, appList, listOpts...); err != nil {
+		if err = a.withDiscoveryRetry(ctx, func(ctx context.Context) error {
+			return a.argocdClient.List(ctx, appList, listOpts...)
+		}); err != nil {
 			return nil, fmt.Errorf("error listing Argo CD Applications matching selector: %w", err)
 		}
 
@@ -812,8 +817,12 @@ func (a *argocdUpdater) getAuthorizedApplications(
 		}
 	} else {
 		// Get single Application by name
-		app, err := argocd.GetApplication(ctx, a.argocdClient, namespace, update.Name)
-		if err != nil {
+		var app *argocd.Application
+		if err := a.withDiscoveryRetry(ctx, func(ctx context.Context) error {
+			var getErr error
+			app, getErr = argocd.GetApplication(ctx, a.argocdClient, namespace, update.Name)
+			return getErr
+		}); err != nil {
 			return nil, fmt.Errorf(
 				"error finding Argo CD Application %q in namespace %q: %w",
 				update.Name, namespace, err,
@@ -867,6 +876,64 @@ func (a *argocdUpdater) getAuthorizedApplications(
 	}
 
 	return authorizedApps, nil
+}
+
+// discoveryRetryBackoff bounds retries of Argo CD Application reads that fail
+// because the API server's discovery information was momentarily incomplete.
+// Five attempts over a capped exponential backoff (~15s total) comfortably fit
+// within the step's default 5m timeout while giving a flapping aggregated
+// discovery endpoint time to recover.
+var discoveryRetryBackoff = wait.Backoff{
+	Steps:    5,
+	Duration: time.Second,
+	Factor:   2,
+	Jitter:   0.1,
+	Cap:      15 * time.Second,
+}
+
+// withDiscoveryRetry runs fn, retrying it with backoff for as long as it fails
+// because the discovery-backed RESTMapper could not map the Argo CD Application
+// kind due to incomplete or temporarily unavailable API discovery. It does NOT
+// retry when the Application kind is genuinely not served by the cluster (e.g.
+// the Argo CD CRDs are not installed), so a real misconfiguration still fails
+// fast instead of blocking for the full backoff.
+//
+// The passed function requires a context to help cancel any inflight work rather
+// than waiting for the retry period
+func (a *argocdUpdater) withDiscoveryRetry(ctx context.Context, fn func(ctx context.Context) error) error {
+	logger := logging.LoggerFromContext(ctx)
+	return retry.OnError(discoveryRetryBackoff, isIncompleteDiscoveryError, func() error {
+		err := fn(ctx)
+		if isIncompleteDiscoveryError(err) {
+			logger.Debug(
+				"could not map Argo CD Application kind because API discovery was "+
+					"incomplete; retrying",
+				"error", err.Error(),
+			)
+		}
+		return err
+	})
+}
+
+// isIncompleteDiscoveryError reports whether err indicates that the
+// discovery-backed RESTMapper could not map a kind because a discovery call
+// failed or returned incomplete results -- as opposed to the kind genuinely not
+// being served by the cluster.
+//
+// controller-runtime's RESTMapper returns an *apiutil.ErrResourceDiscoveryFailed
+// only when discovery for a GroupVersion fails or comes back incomplete. This is
+// transient and worth retrying: on the next attempt the mapper performs a
+// targeted discovery of just that group-version, which typically succeeds. When
+// the kind is genuinely absent, that targeted discovery returns NotFound and the
+// mapper instead returns a bare *meta.NoKindMatchError, which is not matched
+// here, so the caller fails fast rather than looping until the backoff is
+// exhausted.
+func isIncompleteDiscoveryError(err error) bool {
+	if err == nil {
+		return false
+	}
+	var discoveryErr *apiutil.ErrResourceDiscoveryFailed
+	return errors.As(err, &discoveryErr)
 }
 
 // authorizeArgoCDAppUpdate returns an error if the Argo CD Application
