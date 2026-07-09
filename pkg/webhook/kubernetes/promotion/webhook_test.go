@@ -107,6 +107,7 @@ func Test_webhook_Default(t *testing.T) {
 			promotion: &kargoapi.Promotion{},
 			assertions: func(t *testing.T, _ *kargoapi.Promotion, err error) {
 				require.ErrorContains(t, err, "could not find Stage")
+				require.True(t, apierrors.IsInvalid(err))
 			},
 		},
 		{
@@ -143,6 +144,7 @@ func Test_webhook_Default(t *testing.T) {
 			},
 			assertions: func(t *testing.T, _ *kargoapi.Promotion, err error) {
 				require.ErrorContains(t, err, "defines no promotion steps")
+				require.True(t, apierrors.IsInvalid(err))
 			},
 		},
 		{
@@ -518,6 +520,67 @@ func Test_webhook_Default(t *testing.T) {
 			},
 			assertions: func(t *testing.T, _ *kargoapi.Promotion, err error) {
 				require.ErrorContains(t, err, "no auto-promotion candidate found")
+				require.True(t, apierrors.IsInvalid(err))
+			},
+		},
+		{
+			name: "origin resolution surfaces freight listing failure as internal error",
+			webhook: &webhook{
+				admissionRequestFromContextFn: admission.RequestFromContext,
+				getStageFn: func(
+					context.Context,
+					client.Client,
+					types.NamespacedName,
+				) (*kargoapi.Stage, error) {
+					return &kargoapi.Stage{
+						ObjectMeta: metav1.ObjectMeta{
+							Name:      "fake-stage",
+							Namespace: "fake-project",
+						},
+						Spec: kargoapi.StageSpec{
+							RequestedFreight: []kargoapi.FreightRequest{{
+								Origin: kargoapi.FreightOrigin{
+									Kind: kargoapi.FreightOriginKindWarehouse,
+									Name: "my-warehouse",
+								},
+								Sources: kargoapi.FreightSources{Direct: true},
+							}},
+							PromotionTemplate: &kargoapi.PromotionTemplate{
+								Spec: kargoapi.PromotionTemplateSpec{
+									Steps: []kargoapi.PromotionStep{{Uses: "set-metadata"}},
+								},
+							},
+						},
+					}, nil
+				},
+				listFreightAvailableToStageFn: func(
+					_ context.Context,
+					_ client.Client,
+					_ *kargoapi.Stage,
+				) ([]kargoapi.Freight, error) {
+					return nil, errors.New("something went wrong")
+				},
+				isRequestFromKargoControlplaneFn: func(admission.Request) bool {
+					return false
+				},
+			},
+			req: admission.Request{
+				AdmissionRequest: admissionv1.AdmissionRequest{
+					Operation: admissionv1.Create,
+				},
+			},
+			promotion: &kargoapi.Promotion{
+				Spec: kargoapi.PromotionSpec{
+					Stage: "fake-stage",
+					Origin: &kargoapi.FreightOrigin{
+						Kind: kargoapi.FreightOriginKindWarehouse,
+						Name: "my-warehouse",
+					},
+				},
+			},
+			assertions: func(t *testing.T, _ *kargoapi.Promotion, err error) {
+				require.ErrorContains(t, err, "list available freight")
+				require.True(t, apierrors.IsInternalError(err))
 			},
 		},
 		{

@@ -145,7 +145,9 @@ func newWebhook(
 func (w *webhook) Default(ctx context.Context, obj runtime.Object) error {
 	req, err := w.admissionRequestFromContextFn(ctx)
 	if err != nil {
-		return fmt.Errorf("get admission request from context: %w", err)
+		return apierrors.NewInternalError(
+			fmt.Errorf("get admission request from context: %w", err),
+		)
 	}
 
 	promo := obj.(*kargoapi.Promotion) // nolint: forcetypeassert
@@ -163,18 +165,26 @@ func (w *webhook) Default(ctx context.Context, obj runtime.Object) error {
 		},
 	)
 	if err != nil {
-		return fmt.Errorf(
+		return apierrors.NewInternalError(fmt.Errorf(
 			"error finding Stage %q in namespace %q: %w",
 			promo.Spec.Stage,
 			promo.Namespace,
 			err,
-		)
+		))
 	}
 	if stage == nil {
-		return fmt.Errorf(
-			"could not find Stage %q in namespace %q",
-			promo.Spec.Stage,
-			promo.Namespace,
+		return apierrors.NewInvalid(
+			promotionGroupKind,
+			promo.Name,
+			field.ErrorList{field.Invalid(
+				field.NewPath("spec", "stage"),
+				promo.Spec.Stage,
+				fmt.Sprintf(
+					"could not find Stage %q in namespace %q",
+					promo.Spec.Stage,
+					promo.Namespace,
+				),
+			)},
 		)
 	}
 
@@ -191,7 +201,7 @@ func (w *webhook) Default(ctx context.Context, obj runtime.Object) error {
 			// Promotion specs are clearer and more stable when promote-by-origin
 			// is explicit; endpoint-only conveniences like freightAlias stay out here.
 			var freight *kargoapi.Freight
-			if freight, err = w.resolveOriginToFreight(ctx, *promo.Spec.Origin, stage); err != nil {
+			if freight, err = w.resolveOriginToFreight(ctx, promo, stage); err != nil {
 				return err
 			}
 			promo.Spec.Freight = freight.Name
@@ -218,11 +228,18 @@ func (w *webhook) Default(ctx context.Context, obj runtime.Object) error {
 		// would otherwise get when the CRD's declarative validation fails due to
 		// the missing steps.
 		if stage.Spec.PromotionTemplate == nil || len(stage.Spec.PromotionTemplate.Spec.Steps) == 0 {
-			// nolint:staticcheck
-			return fmt.Errorf(
-				"Stage %q in namespace %q defines no promotion steps",
-				promo.Spec.Stage,
-				promo.Namespace,
+			return apierrors.NewInvalid(
+				promotionGroupKind,
+				promo.Name,
+				field.ErrorList{field.Invalid(
+					field.NewPath("spec", "stage"),
+					promo.Spec.Stage,
+					fmt.Sprintf(
+						"Stage %q in namespace %q defines no promotion steps",
+						promo.Spec.Stage,
+						promo.Namespace,
+					),
+				)},
 			)
 		}
 
@@ -242,7 +259,15 @@ func (w *webhook) Default(ctx context.Context, obj runtime.Object) error {
 
 		// Inflate any PromotionTasks in the Promotion's steps.
 		if err = api.InflateSteps(ctx, w.client, promo); err != nil {
-			return fmt.Errorf("failed to inflate Promotion steps: %w", err)
+			err = fmt.Errorf("failed to inflate Promotion steps: %w", err)
+			// Preserve the status of any underlying typed error (e.g. a
+			// referenced PromotionTask not being found) instead of demoting
+			// everything to a generic denial.
+			var statusErr *apierrors.StatusError
+			if errors.As(err, &statusErr) {
+				return err
+			}
+			return apierrors.NewInternalError(err)
 		}
 
 		w.syncHoldAnnotations(ctx, req, promo, stage)
@@ -251,7 +276,7 @@ func (w *webhook) Default(ctx context.Context, obj runtime.Object) error {
 		// doesn't decode it for us.
 		oldPromo := &kargoapi.Promotion{}
 		if err = w.decoder.DecodeRaw(req.OldObject, oldPromo); err != nil {
-			return fmt.Errorf("decode old object: %w", err)
+			return apierrors.NewInternalError(fmt.Errorf("decode old object: %w", err))
 		}
 
 		// These annotations describe the creation request. Preserve the admitted
@@ -291,26 +316,36 @@ func (w *webhook) Default(ctx context.Context, obj runtime.Object) error {
 	return nil
 }
 
-// resolveOriginToFreight resolves origin to the Freight that the origin's
-// selection policy would choose for stage. Returns an error (denying
+// resolveOriginToFreight resolves promo's origin to the Freight that the
+// origin's selection policy would choose for stage. Returns an error (denying
 // admission) if no Freight is available.
 func (w *webhook) resolveOriginToFreight(
 	ctx context.Context,
-	origin kargoapi.FreightOrigin,
+	promo *kargoapi.Promotion,
 	stage *kargoapi.Stage,
 ) (*kargoapi.Freight, error) {
 	availableFreight, err := w.listFreightAvailableToStageFn(ctx, w.client, stage)
 	if err != nil {
-		return nil, fmt.Errorf("list available freight: %w", err)
+		return nil, apierrors.NewInternalError(
+			fmt.Errorf("list available freight: %w", err),
+		)
 	}
 	candidates := api.SelectAutoPromotionCandidates(ctx, stage, availableFreight)
-	originKey := origin.String()
+	originKey := promo.Spec.Origin.String()
 	candidate, ok := candidates[originKey]
 	if !ok {
-		return nil, fmt.Errorf(
-			"no auto-promotion candidate found for origin %q on Stage %q",
-			originKey,
-			stage.Name,
+		return nil, apierrors.NewInvalid(
+			promotionGroupKind,
+			promo.Name,
+			field.ErrorList{field.Invalid(
+				field.NewPath("spec", "origin"),
+				originKey,
+				fmt.Sprintf(
+					"no auto-promotion candidate found for origin %q on Stage %q",
+					originKey,
+					stage.Name,
+				),
+			)},
 		)
 	}
 	return &candidate, nil
