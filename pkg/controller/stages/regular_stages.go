@@ -1820,24 +1820,25 @@ func (r *RegularStageReconciler) autoPromoteFreight(
 			continue
 		}
 
-		// Do not create duplicate work for a non-terminal Promotion, and do not
-		// retry terminal failures automatically.
-		var nonTerminalPromotionExists bool
-		nonTerminalPromotionExists, err = r.nonTerminalPromotionExistsForStageFreight(
+		// Do not create duplicate work: stand down while any Promotion for
+		// this candidate is either still in flight or succeeded with an
+		// outcome not yet recorded in Stage status.
+		var unprocessedPromotionExists bool
+		unprocessedPromotionExists, err = r.unprocessedPromotionExistsForStageFreight(
 			ctx,
 			stage,
 			candidate.Name,
 		)
 		if err != nil {
 			return newStatus, fmt.Errorf(
-				"error listing existing non-terminal Promotions for Freight %q "+
-					"in namespace %q: %w",
+				"error listing existing Promotions for Freight %q in namespace "+
+					"%q: %w",
 				candidate.Name, stage.Namespace, err,
 			)
 		}
-		if nonTerminalPromotionExists {
-			freightLogger.Debug("at least one non-terminal Promotion already " +
-				"exists for Stage and Freight")
+		if unprocessedPromotionExists {
+			freightLogger.Debug("an unprocessed Promotion already exists for " +
+				"Stage and Freight")
 			continue
 		}
 
@@ -1916,16 +1917,18 @@ func stageAwaitingFreightForOrigin(
 
 // unprocessedHoldIntentPromotionExistsForOrigin reports whether a hold-intent
 // Promotion for this origin exists whose outcome syncPromotions has not yet
-// recorded: one that is still non-terminal, or one that reached a terminal
-// phase after this reconciliation's hold state was computed (i.e., one newer
-// than status.lastPromotion). autoPromoteFreight stands down for the origin
-// in either case. The second case matters because a Promotion can succeed in
+// recorded: one that is still non-terminal, or one that SUCCEEDED after this
+// reconciliation's hold state was computed (i.e., is newer than
+// status.lastPromotion). autoPromoteFreight stands down for the origin in
+// either case. The second case matters because a Promotion can succeed in
 // the interval between syncPromotions computing hold state and
 // autoPromoteFreight acting on it; without it, auto-promotion could supersede
 // older Freight the user just deliberately promoted, moments before the hold
-// that protects it is recorded. A hold-intent Promotion that failed blocks
-// only until the next reconciliation records it and advances
-// status.lastPromotion.
+// that protects it is recorded. Promotions that reached any other terminal
+// phase never establish holds, so they never block -- deliberately: an
+// unsuccessful Promotion may go unrecorded for a long time (e.g. one aborted
+// before it was ever acknowledged), and blocking on it would pause
+// auto-promotion for no benefit.
 func (r *RegularStageReconciler) unprocessedHoldIntentPromotionExistsForOrigin(
 	ctx context.Context,
 	stage *kargoapi.Stage,
@@ -1949,29 +1952,57 @@ func (r *RegularStageReconciler) unprocessedHoldIntentPromotionExistsForOrigin(
 			continue
 		}
 		if !promo.Status.Phase.IsTerminal() ||
-			lastPromo == nil ||
-			strings.Compare(promo.Name, lastPromo.Name) > 0 {
+			(promo.Status.Phase == kargoapi.PromotionPhaseSucceeded &&
+				(lastPromo == nil || strings.Compare(promo.Name, lastPromo.Name) > 0)) {
 			return true, nil
 		}
 	}
 	return false, nil
 }
 
-// nonTerminalPromotionExistsForStageFreight reports whether a Promotion for this
-// Stage and Freight is already pending or running. autoPromoteFreight uses it
-// to avoid creating duplicate work for the same candidate.
-func (r *RegularStageReconciler) nonTerminalPromotionExistsForStageFreight(
+// unprocessedPromotionExistsForStageFreight reports whether a Promotion for
+// this Stage and Freight exists whose outcome syncPromotions has not yet
+// recorded: one that is still non-terminal, or one that SUCCEEDED after this
+// reconciliation's view of the Stage was computed (i.e., is newer than
+// status.lastPromotion). autoPromoteFreight uses it to avoid creating
+// duplicate work for the same candidate. The second case matters because a
+// fast Promotion can go from pending to succeeded in the interval between
+// syncPromotions observing it and autoPromoteFreight acting; a
+// non-terminal-only check misses it, and a succeeded Promotion for the
+// candidate is deliberately not otherwise disqualifying. Once the next
+// reconciliation records the success, the candidate-is-already-current check
+// takes over. Promotions that reached any other terminal phase are handled
+// by the newest-terminal-not-successful check regardless of whether they
+// have been recorded, so they never block here.
+func (r *RegularStageReconciler) unprocessedPromotionExistsForStageFreight(
 	ctx context.Context,
 	stage *kargoapi.Stage,
 	freightName string,
 ) (bool, error) {
-	promotions, err := r.listPromotionsForStageFreight(
-		ctx, stage, freightName, false, client.Limit(1),
-	)
-	if err != nil {
+	promotions := &kargoapi.PromotionList{}
+	if err := r.client.List(
+		ctx,
+		promotions,
+		client.InNamespace(stage.Namespace),
+		client.MatchingFieldsSelector{
+			Selector: fields.OneTermEqualSelector(
+				indexer.PromotionsByStageAndFreightField,
+				indexer.StageAndFreightKey(stage.Name, freightName),
+			),
+		},
+	); err != nil {
 		return false, err
 	}
-	return len(promotions.Items) > 0, nil
+	lastPromo := stage.Status.LastPromotion
+	for i := range promotions.Items {
+		promo := &promotions.Items[i]
+		if !promo.Status.Phase.IsTerminal() ||
+			(promo.Status.Phase == kargoapi.PromotionPhaseSucceeded &&
+				(lastPromo == nil || strings.Compare(promo.Name, lastPromo.Name) > 0)) {
+			return true, nil
+		}
+	}
+	return false, nil
 }
 
 // newestTerminalPromotionForStageFreight returns the newest completed Promotion
@@ -1982,8 +2013,24 @@ func (r *RegularStageReconciler) newestTerminalPromotionForStageFreight(
 	stage *kargoapi.Stage,
 	freightName string,
 ) (*kargoapi.Promotion, error) {
-	promotions, err := r.listPromotionsForStageFreight(ctx, stage, freightName, true)
-	if err != nil {
+	promotions := &kargoapi.PromotionList{}
+	if err := r.client.List(
+		ctx,
+		promotions,
+		client.InNamespace(stage.Namespace),
+		client.MatchingFieldsSelector{
+			Selector: fields.AndSelectors(
+				fields.OneTermEqualSelector(
+					indexer.PromotionsByStageAndFreightField,
+					indexer.StageAndFreightKey(stage.Name, freightName),
+				),
+				fields.OneTermEqualSelector(
+					indexer.PromotionsByTerminalField,
+					strconv.FormatBool(true),
+				),
+			),
+		},
+	); err != nil {
 		return nil, err
 	}
 	if len(promotions.Items) == 0 {
@@ -1996,39 +2043,6 @@ func (r *RegularStageReconciler) newestTerminalPromotionForStageFreight(
 		return strings.Compare(rhs.Name, lhs.Name)
 	})
 	return &promotions.Items[0], nil
-}
-
-// listPromotionsForStageFreight lists Promotions for this Stage and Freight
-// filtered by terminal state. The field indexes keep autoPromoteFreight from
-// scanning every Promotion in the project.
-func (r *RegularStageReconciler) listPromotionsForStageFreight(
-	ctx context.Context,
-	stage *kargoapi.Stage,
-	freightName string,
-	terminal bool,
-	opts ...client.ListOption,
-) (*kargoapi.PromotionList, error) {
-	promotions := &kargoapi.PromotionList{}
-	listOpts := append(
-		[]client.ListOption{
-			client.InNamespace(stage.Namespace),
-			client.MatchingFieldsSelector{
-				Selector: fields.AndSelectors(
-					fields.OneTermEqualSelector(
-						indexer.PromotionsByStageAndFreightField,
-						indexer.StageAndFreightKey(stage.Name, freightName),
-					),
-					fields.OneTermEqualSelector(
-						indexer.PromotionsByTerminalField,
-						strconv.FormatBool(terminal),
-					),
-				),
-			},
-		},
-		opts...,
-	)
-	err := r.client.List(ctx, promotions, listOpts...)
-	return promotions, err
 }
 
 // freightCollectionHasFreight checks a single origin in a FreightCollection.
