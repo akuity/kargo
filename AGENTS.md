@@ -607,6 +607,13 @@ Signed-off-by: Legal Name <email@example.com>
 
 Use `git commit -s` to add this automatically.
 
+### Pull requests
+
+Before creating or substantially updating a pull request, read and follow
+`.github/PULL_REQUEST_TEMPLATE.md`. Preserve its structure, complete every
+applicable checklist accurately, and include all automated and manual testing
+performed.
+
 ### Problem-solving
 
 - **Read before guessing.** Understand existing code, tests, and error messages
