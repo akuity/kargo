@@ -1,0 +1,127 @@
+apiVersion: kargo.akuity.io/v1alpha1
+kind: Stage
+metadata:
+  name: upstream
+  namespace: auto-promotion-hold
+spec:
+  requestedFreight:
+  - origin:
+      kind: Warehouse
+      name: auto-hold
+    sources:
+      direct: true
+      autoPromotionOptions:
+        selectionPolicy: NewestFreight
+  promotionTemplate:
+    spec:
+      steps:
+      - uses: set-metadata
+        config:
+          updates:
+          - kind: Stage
+            name: upstream
+            values:
+              manualTest: auto-promotion-hold
+              lastStory: upstream
+---
+apiVersion: kargo.akuity.io/v1alpha1
+kind: Stage
+metadata:
+  name: downstream-single-origin
+  namespace: auto-promotion-hold
+spec:
+  requestedFreight:
+  - origin:
+      kind: Warehouse
+      name: auto-hold
+    sources:
+      stages:
+      - name: upstream
+      autoPromotionOptions:
+        selectionPolicy: MatchUpstream
+  promotionTemplate:
+    spec:
+      steps:
+      - uses: http
+        as: wait-10-seconds
+        config:
+          url: https://postman-echo.com/delay/10
+          timeout: 30s
+          responseContentType: application/json
+          successExpression: response.status == 200 && response.body.delay == "10"
+      - uses: set-metadata
+        config:
+          updates:
+          - kind: Stage
+            name: downstream-single-origin
+            values:
+              manualTest: auto-promotion-hold
+              lastStory: downstream-single-origin
+---
+apiVersion: kargo.akuity.io/v1alpha1
+kind: Stage
+metadata:
+  name: upstream-multi
+  namespace: auto-promotion-hold
+spec:
+  requestedFreight:
+  - origin:
+      kind: Warehouse
+      name: auto-hold
+    sources:
+      direct: true
+      autoPromotionOptions:
+        selectionPolicy: NewestFreight
+  - origin:
+      kind: Warehouse
+      name: auto-hold-api
+    sources:
+      direct: true
+      autoPromotionOptions:
+        selectionPolicy: NewestFreight
+  promotionTemplate:
+    spec:
+      steps:
+      - uses: set-metadata
+        config:
+          updates:
+          - kind: Stage
+            name: upstream-multi
+            values:
+              manualTest: auto-promotion-hold
+              lastStory: upstream-multi
+---
+apiVersion: kargo.akuity.io/v1alpha1
+kind: Stage
+metadata:
+  name: downstream-multi-origin
+  namespace: auto-promotion-hold
+spec:
+  requestedFreight:
+  - origin:
+      kind: Warehouse
+      name: auto-hold
+    sources:
+      stages:
+      - name: upstream-multi
+      autoPromotionOptions:
+        selectionPolicy: MatchUpstream
+  - origin:
+      kind: Warehouse
+      name: auto-hold-api
+    sources:
+      stages:
+      - name: upstream-multi
+      autoPromotionOptions:
+        selectionPolicy: MatchUpstream
+  promotionTemplate:
+    spec:
+      steps:
+      - uses: set-metadata
+        config:
+          updates:
+          - kind: Stage
+            name: downstream-multi-origin
+            values:
+              manualTest: auto-promotion-hold
+              lastStory: downstream-multi-origin

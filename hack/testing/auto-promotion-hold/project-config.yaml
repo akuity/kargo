@@ -11,3 +11,15 @@ spec:
   - stageSelector:
       name: multi-origin-holds
     autoPromotionEnabled: true
+  - stageSelector:
+      name: upstream
+    autoPromotionEnabled: true
+  - stageSelector:
+      name: downstream-single-origin
+    autoPromotionEnabled: true
+  - stageSelector:
+      name: upstream-multi
+    autoPromotionEnabled: true
+  - stageSelector:
+      name: downstream-multi-origin
+    autoPromotionEnabled: true
