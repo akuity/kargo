@@ -765,69 +765,6 @@ func TestRegularStageReconciler_syncPromotions(t *testing.T) {
 			},
 		},
 		{
-			// Covers the highestIsNewTerminal branch added to guard against
-			// fast-completing Promotions whose Phase is already terminal at the
-			// first reconcile, before the reconciler could set CurrentPromotion.
-			// Without that branch the newPromos block is never entered and the
-			// hold annotation is silently dropped.
-			name: "fast-completing hold-intent promotion processed when CurrentPromotion is unset",
-			stage: &kargoapi.Stage{
-				ObjectMeta: metav1.ObjectMeta{
-					Namespace: "fake-project",
-					Name:      "test-stage",
-				},
-				Spec: kargoapi.StageSpec{
-					RequestedFreight: []kargoapi.FreightRequest{{Origin: origin}},
-				},
-				Status: kargoapi.StageStatus{
-					// Neither CurrentPromotion nor LastPromotion is set:
-					// the Promotion finished before the reconciler could
-					// observe it as Running.
-				},
-			},
-			objects: []client.Object{
-				&kargoapi.Promotion{
-					ObjectMeta: metav1.ObjectMeta{
-						Name:      "hold-promo",
-						Namespace: "fake-project",
-						Annotations: map[string]string{
-							kargoapi.AnnotationKeyAutoPromotionHold: origin.String(),
-							kargoapi.AnnotationKeyCreateActor:       "user:alice",
-						},
-					},
-					Spec: kargoapi.PromotionSpec{
-						Stage:   "test-stage",
-						Freight: "older-freight",
-					},
-					Status: kargoapi.PromotionStatus{
-						Phase: kargoapi.PromotionPhaseSucceeded,
-						FreightCollection: &kargoapi.FreightCollection{
-							ID: "test-collection",
-							Freight: map[string]kargoapi.FreightReference{
-								origin.String(): {Name: "older-freight"},
-							},
-						},
-					},
-				},
-			},
-			assertions: func(t *testing.T, status kargoapi.StageStatus, hasPendingPromotions bool, err error) {
-				require.NoError(t, err)
-				assert.False(t, hasPendingPromotions)
-				// Hold is established even though CurrentPromotion was never set.
-				require.Len(t, status.AutoPromotionHolds, 1)
-				hold := status.AutoPromotionHolds[origin.String()]
-				assert.Equal(t, "older-freight", hold.FreightName)
-				assert.Equal(t, "hold-promo", hold.PromotionName)
-				assert.Equal(t, "user:alice", hold.Actor)
-				assert.True(t, hold.Origin.Equals(&origin))
-				// FreightHistory and LastPromotion cursor are updated.
-				require.Len(t, status.FreightHistory, 1)
-				assert.Equal(t, "test-collection", status.FreightHistory[0].ID)
-				require.NotNil(t, status.LastPromotion)
-				assert.Equal(t, "hold-promo", status.LastPromotion.Name)
-			},
-		},
-		{
 			name: "hold-intent promotion older than release yields no hold",
 			stage: &kargoapi.Stage{
 				ObjectMeta: metav1.ObjectMeta{

@@ -54,9 +54,6 @@ func PatchStatus[T HasStatus[S], S any](
 	}
 
 	patch, err := json.Marshal(map[string]any{
-		"metadata": map[string]any{
-			"resourceVersion": resource.GetResourceVersion(),
-		},
 		"status": patchMap,
 	})
 	if err != nil {
