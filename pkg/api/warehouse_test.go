@@ -116,6 +116,7 @@ func TestListFreightFromWarehouse(t *testing.T) {
 	const testStage = "fake-stage"
 	const testUpstreamStage = "fake-upstream-stage"
 	const testUpstreamStage2 = "fake-upstream-stage2"
+	const testUpstreamOfUpstreamStage = "fake-upstream-of-upstream-stage"
 
 	testCases := []struct {
 		name        string
@@ -382,6 +383,144 @@ func TestListFreightFromWarehouse(t *testing.T) {
 				require.Equal(t, "fake-freight-1", freight[0].Name)
 				require.Equal(t, testProject, freight[1].Namespace)
 				require.Equal(t, "fake-freight-2", freight[1].Name)
+			},
+		},
+		{
+			// Regression test for a bug where AvailabilityStrategy: All did an
+			// exact set-equality check between the Stages the Freight had soaked
+			// in and the configured upstream Stages. Freight that had also soaked
+			// in a Stage NOT in VerifiedIn (e.g. an upstream-of-upstream Stage)
+			// formed a superset that never equaled the configured set, so it was
+			// never considered available.
+			name: "success with AvailabilityStrategy All and extra soaked Stage",
+			opts: &ListWarehouseFreightOptions{
+				AvailabilityStrategy: kargoapi.FreightAvailabilityStrategyAll,
+				VerifiedIn:           []string{testUpstreamStage, testUpstreamStage2},
+				RequiredSoakTime:     &metav1.Duration{Duration: time.Hour},
+			},
+			objects: []client.Object{
+				&kargoapi.Freight{
+					// This should be returned: it has soaked in both configured
+					// upstream Stages AND additionally in an upstream-of-upstream
+					// Stage that is not in VerifiedIn.
+					ObjectMeta: metav1.ObjectMeta{
+						Namespace: testProject,
+						Name:      "fake-freight-1",
+					},
+					Origin: kargoapi.FreightOrigin{
+						Kind: kargoapi.FreightOriginKindWarehouse,
+						Name: testWarehouse,
+					},
+					Status: kargoapi.FreightStatus{
+						VerifiedIn: map[string]kargoapi.VerifiedStage{
+							testUpstreamStage: {
+								LongestCompletedSoak: &metav1.Duration{Duration: 2 * time.Hour},
+							},
+							testUpstreamStage2: {
+								LongestCompletedSoak: &metav1.Duration{Duration: 2 * time.Hour},
+							},
+							testUpstreamOfUpstreamStage: {
+								LongestCompletedSoak: &metav1.Duration{Duration: 2 * time.Hour},
+							},
+						},
+					},
+				},
+			},
+			assertions: func(t *testing.T, freight []kargoapi.Freight, err error) {
+				require.NoError(t, err)
+				require.Len(t, freight, 1)
+				require.Equal(t, testProject, freight[0].Namespace)
+				require.Equal(t, "fake-freight-1", freight[0].Name)
+			},
+		},
+		{
+			name: "success with AvailabilityStrategy All and partial soak",
+			opts: &ListWarehouseFreightOptions{
+				AvailabilityStrategy: kargoapi.FreightAvailabilityStrategyAll,
+				VerifiedIn:           []string{testUpstreamStage, testUpstreamStage2},
+				RequiredSoakTime:     &metav1.Duration{Duration: time.Hour},
+			},
+			objects: []client.Object{
+				&kargoapi.Freight{
+					// This should NOT be returned: it has soaked in only one of the
+					// two configured upstream Stages.
+					ObjectMeta: metav1.ObjectMeta{
+						Namespace: testProject,
+						Name:      "fake-freight-1",
+					},
+					Origin: kargoapi.FreightOrigin{
+						Kind: kargoapi.FreightOriginKindWarehouse,
+						Name: testWarehouse,
+					},
+					Status: kargoapi.FreightStatus{
+						VerifiedIn: map[string]kargoapi.VerifiedStage{
+							testUpstreamStage: {
+								LongestCompletedSoak: &metav1.Duration{Duration: 2 * time.Hour},
+							},
+							testUpstreamStage2: {
+								LongestCompletedSoak: &metav1.Duration{Duration: 30 * time.Minute},
+							},
+						},
+					},
+				},
+			},
+			assertions: func(t *testing.T, freight []kargoapi.Freight, err error) {
+				require.NoError(t, err)
+				require.Empty(t, freight)
+			},
+		},
+		{
+			name: "success with AvailabilityStrategy OneOf and soak in non-upstream Stage",
+			opts: &ListWarehouseFreightOptions{
+				AvailabilityStrategy: kargoapi.FreightAvailabilityStrategyOneOf,
+				VerifiedIn:           []string{testUpstreamStage, testUpstreamStage2},
+				RequiredSoakTime:     &metav1.Duration{Duration: time.Hour},
+			},
+			objects: []client.Object{
+				&kargoapi.Freight{
+					// This should NOT be returned: it has only soaked in a Stage
+					// that is not one of the configured upstream Stages.
+					ObjectMeta: metav1.ObjectMeta{
+						Namespace: testProject,
+						Name:      "fake-freight-1",
+					},
+					Origin: kargoapi.FreightOrigin{
+						Kind: kargoapi.FreightOriginKindWarehouse,
+						Name: testWarehouse,
+					},
+					Status: kargoapi.FreightStatus{
+						VerifiedIn: map[string]kargoapi.VerifiedStage{
+							testUpstreamOfUpstreamStage: {
+								LongestCompletedSoak: &metav1.Duration{Duration: 2 * time.Hour},
+							},
+						},
+					},
+				},
+				&kargoapi.Freight{
+					// This should be returned: it has soaked in one of the
+					// configured upstream Stages.
+					ObjectMeta: metav1.ObjectMeta{
+						Namespace: testProject,
+						Name:      "fake-freight-2",
+					},
+					Origin: kargoapi.FreightOrigin{
+						Kind: kargoapi.FreightOriginKindWarehouse,
+						Name: testWarehouse,
+					},
+					Status: kargoapi.FreightStatus{
+						VerifiedIn: map[string]kargoapi.VerifiedStage{
+							testUpstreamStage: {
+								LongestCompletedSoak: &metav1.Duration{Duration: 2 * time.Hour},
+							},
+						},
+					},
+				},
+			},
+			assertions: func(t *testing.T, freight []kargoapi.Freight, err error) {
+				require.NoError(t, err)
+				require.Len(t, freight, 1)
+				require.Equal(t, testProject, freight[0].Namespace)
+				require.Equal(t, "fake-freight-2", freight[0].Name)
 			},
 		},
 		{

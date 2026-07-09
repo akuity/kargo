@@ -10,7 +10,6 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/fields"
 	"k8s.io/apimachinery/pkg/types"
-	"k8s.io/apimachinery/pkg/util/sets"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
 	kargoapi "github.com/akuity/kargo/api/v1alpha1"
@@ -215,7 +214,10 @@ func ListFreightFromWarehouse(
 		return freight, nil
 	}
 
-	// Filter out Freight whose soak time has not yet elapsed
+	// Filter out Freight whose soak time has not yet elapsed. The soak check is
+	// scoped to the configured upstream Stages in opts.VerifiedIn mirroring
+	// the canonical semantics in Stage.IsFreightAvailable rather than the
+	// full set of Stages in which the Freight has been verified.
 	filtered := make([]kargoapi.Freight, 0, len(freight))
 	for _, f := range freight {
 		if opts.ApprovedFor != "" {
@@ -225,30 +227,27 @@ func ListFreightFromWarehouse(
 			}
 		}
 
-		// Track set of Stages that have passed the verification soak time
-		// for the Freight.
-		verifiedStages := sets.New[string]()
-		for stage := range f.Status.VerifiedIn {
+		// Count how many of the configured upstream Stages the Freight has
+		// soaked in.
+		var soakedIn int
+		for _, stage := range opts.VerifiedIn {
 			if f.HasSoakedIn(stage, opts.RequiredSoakTime) {
-				verifiedStages.Insert(stage)
+				soakedIn++
 			}
 		}
 
-		// Filter out Freight that has passed its verification soak time in ALL
-		// the specified VerifiedIn Stages if AvailabilityStrategy is set to All.
-		// Otherwise, include Freight if it has passed the soak time in a single
-		// Stage.
 		if opts.AvailabilityStrategy == kargoapi.FreightAvailabilityStrategyAll {
-			// If Freight is verified in ALL upstream Stages, then it is
-			// available.
-			if verifiedStages.Equal(sets.New(opts.VerifiedIn...)) {
+			// Freight is available only if it has soaked in ALL the configured
+			// upstream Stages.
+			if soakedIn == len(opts.VerifiedIn) {
 				filtered = append(filtered, f)
 			}
 			continue
 		}
 
-		// If Freight is verified in ANY upstream Stage, then it is available.
-		if verifiedStages.Len() > 0 {
+		// Freight is available if it has soaked in ANY of the configured
+		// upstream Stages.
+		if soakedIn > 0 {
 			filtered = append(filtered, f)
 		}
 	}
