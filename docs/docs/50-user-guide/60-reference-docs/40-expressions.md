@@ -466,8 +466,8 @@ config:
 ### `repoCredentials(repoURL, type)`
 
 The `repoCredentials()` function resolves repository credentials by repository
-URL and credential type, returning them as a `map[string]string`. It takes two
-required arguments:
+URL and credential type, returning them as an object whose fields are accessed
+by name. It takes two required arguments:
 
 - `repoURL` (Required): A string representing the URL of the repository whose
   credentials should be resolved.
@@ -487,17 +487,18 @@ tokens or a cloud provider's ambient (Pod identity) credentials — instead of
 returning the raw material (e.g. an app ID and private key) from which those
 credentials are derived.
 
-Because the result is normalized, the set of available keys is **fixed** and
-does not vary by credential type or provider. When credentials are found, the
-returned map always contains all of the following keys:
+Because the result is normalized, the set of available fields is **fixed** and
+does not vary by credential type or provider. The returned object always exposes
+all of the following fields:
 
-| Key | Description |
-|-----|-------------|
-| `username` | The username identifying the principal. For token-based credentials this is often an inconsequential placeholder. |
-| `password` | The password or token used to authenticate. **API keys and personal access tokens are surfaced here.** |
-| `sshPrivateKey` | The SSH private key, when applicable. **Deprecated as of v1.10.0** and slated for removal in v1.13.0. |
+| Field | Description |
+|-------|-------------|
+| `Username` | The username identifying the principal. For token-based credentials this is often an inconsequential placeholder. |
+| `Password` | The password or token used to authenticate. **API keys and personal access tokens are surfaced here.** |
+| `SSHPrivateKey` | The SSH private key, when applicable. **Deprecated as of v1.10.0** and slated for removal in v1.13.0. |
 
-If no matching credentials are found, an empty map is returned.
+If no matching credentials are found, an object with all fields empty is
+returned.
 
 For details on how each field is populated for a given credential type or
 provider (e.g. GitHub App, ECR, or basic username/password), see the
@@ -510,13 +511,14 @@ Examples:
 config:
   headers:
   - name: Authorization
-    value: Bearer ${{ repoCredentials('https://github.com/example/repo.git', 'git').password }}
+    value: Bearer ${{ repoCredentials('https://github.com/example/repo.git', 'git').Password }}
 ```
 
 :::note
 
-`repoCredentials()` is only available within `Promotion` step expressions, where
-Kargo's credentials database is available.
+`repoCredentials()` is available wherever Kargo's credentials database is wired:
+within `Promotion` step expressions and within a `Stage`'s verification argument
+expressions.
 
 :::
 
