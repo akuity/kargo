@@ -1558,7 +1558,7 @@ func Test_getRepoCredentials(t *testing.T) {
 			args:    []any{testRepoURL, "git"},
 			assertions: func(t *testing.T, _ *cache.Cache, result any, err error) {
 				assert.NoError(t, err)
-				assert.Equal(t, map[string]string{}, result)
+				assert.Equal(t, credentials.Credentials{}, result)
 			},
 		},
 		{
@@ -1582,12 +1582,9 @@ func Test_getRepoCredentials(t *testing.T) {
 			args: []any{testRepoURL, "git"},
 			assertions: func(t *testing.T, _ *cache.Cache, result any, err error) {
 				assert.NoError(t, err)
-				// The full, fixed set of keys is always returned when credentials
-				// are found, even when a field is empty.
-				assert.Equal(t, map[string]string{
-					"username":      "user",
-					"password":      "token",
-					"sshPrivateKey": "",
+				assert.Equal(t, credentials.Credentials{
+					Username: "user",
+					Password: "token",
 				}, result)
 			},
 		},
@@ -1610,10 +1607,10 @@ func Test_getRepoCredentials(t *testing.T) {
 			args: []any{testRepoURL, "git"},
 			assertions: func(t *testing.T, _ *cache.Cache, result any, err error) {
 				assert.NoError(t, err)
-				assert.Equal(t, map[string]string{
-					"username":      "user",
-					"password":      "token",
-					"sshPrivateKey": "private-key",
+				assert.Equal(t, credentials.Credentials{
+					Username:      "user",
+					Password:      "token",
+					SSHPrivateKey: "private-key",
 				}, result)
 			},
 		},
@@ -1636,18 +1633,16 @@ func Test_getRepoCredentials(t *testing.T) {
 			args:  []any{testRepoURL, "git"},
 			assertions: func(t *testing.T, cache *cache.Cache, result any, err error) {
 				assert.NoError(t, err)
-				assert.Equal(t, map[string]string{
-					"username":      "user",
-					"password":      "token",
-					"sshPrivateKey": "",
+				assert.Equal(t, credentials.Credentials{
+					Username: "user",
+					Password: "token",
 				}, result)
 
 				data, ok := cache.Get(cacheKey)
 				assert.True(t, ok)
-				assert.Equal(t, map[string]string{
-					"username":      "user",
-					"password":      "token",
-					"sshPrivateKey": "",
+				assert.Equal(t, credentials.Credentials{
+					Username: "user",
+					Password: "token",
 				}, data)
 			},
 		},
@@ -1666,13 +1661,13 @@ func Test_getRepoCredentials(t *testing.T) {
 			},
 			cache: cache.NewFrom(cache.NoExpiration, cache.NoExpiration, map[string]cache.Item{
 				cacheKey: {
-					Object: map[string]string{"username": "cached-user"},
+					Object: credentials.Credentials{Username: "cached-user"},
 				},
 			}),
 			args: []any{testRepoURL, "git"},
 			assertions: func(t *testing.T, _ *cache.Cache, result any, err error) {
 				assert.NoError(t, err)
-				assert.Equal(t, map[string]string{"username": "cached-user"}, result)
+				assert.Equal(t, credentials.Credentials{Username: "cached-user"}, result)
 			},
 		},
 	}

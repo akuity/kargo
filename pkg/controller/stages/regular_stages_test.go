@@ -24,6 +24,7 @@ import (
 	rolloutsapi "github.com/akuity/kargo/api/stubs/rollouts/v1alpha1"
 	kargoapi "github.com/akuity/kargo/api/v1alpha1"
 	"github.com/akuity/kargo/pkg/conditions"
+	"github.com/akuity/kargo/pkg/credentials"
 	k8sevent "github.com/akuity/kargo/pkg/event/kubernetes"
 	"github.com/akuity/kargo/pkg/health"
 	"github.com/akuity/kargo/pkg/indexer"
@@ -3622,6 +3623,7 @@ func TestRegularStageReconciler_startVerification(t *testing.T) {
 		freightCol       kargoapi.FreightCollection
 		req              *kargoapi.VerificationRequest
 		objects          []client.Object
+		credsDB          credentials.Database
 		rolloutsDisabled bool
 		assertions       func(*testing.T, client.Client, *kargoapi.VerificationInfo, error)
 	}{
@@ -3989,6 +3991,137 @@ func TestRegularStageReconciler_startVerification(t *testing.T) {
 			},
 		},
 		{
+			name: "resolves repoCredentials() in verification arguments",
+			stage: &kargoapi.Stage{
+				ObjectMeta: metav1.ObjectMeta{
+					Namespace: "fake-project",
+					Name:      "test-stage",
+				},
+				Spec: kargoapi.StageSpec{
+					Verification: &kargoapi.Verification{
+						AnalysisTemplates: []kargoapi.AnalysisTemplateReference{
+							{Name: "test-template"},
+						},
+						Args: []kargoapi.AnalysisRunArgument{
+							{
+								Name: "token",
+								Value: "${{ repoCredentials(" +
+									"'https://github.com/example/repo.git', 'git'" +
+									").Password }}",
+							},
+						},
+					},
+				},
+			},
+			freightCol: kargoapi.FreightCollection{
+				ID: "test-collection",
+				Freight: map[string]kargoapi.FreightReference{
+					"warehouse": {Name: "test-freight"},
+				},
+			},
+			objects: []client.Object{
+				&kargoapi.Freight{
+					ObjectMeta: metav1.ObjectMeta{
+						Name:      "test-freight",
+						Namespace: "fake-project",
+					},
+				},
+				&rolloutsapi.AnalysisTemplate{
+					ObjectMeta: metav1.ObjectMeta{
+						Name:      "test-template",
+						Namespace: "fake-project",
+					},
+					Spec: rolloutsapi.AnalysisTemplateSpec{
+						Args: []rolloutsapi.Argument{{Name: "token"}},
+					},
+				},
+			},
+			credsDB: &credentials.FakeDB{
+				GetFn: func(
+					context.Context,
+					string,
+					credentials.Type,
+					string,
+				) (*credentials.Credentials, error) {
+					return &credentials.Credentials{Password: "s3cr3t"}, nil
+				},
+			},
+			assertions: func(t *testing.T, c client.Client, vi *kargoapi.VerificationInfo, err error) {
+				require.NoError(t, err)
+
+				require.NotNil(t, vi)
+				assert.Equal(t, kargoapi.VerificationPhasePending, vi.Phase)
+				require.NotNil(t, vi.AnalysisRun)
+
+				ar := &rolloutsapi.AnalysisRun{}
+				require.NoError(t, c.Get(t.Context(), types.NamespacedName{
+					Namespace: vi.AnalysisRun.Namespace,
+					Name:      vi.AnalysisRun.Name,
+				}, ar))
+
+				require.Len(t, ar.Spec.Args, 1)
+				assert.Equal(t, "token", ar.Spec.Args[0].Name)
+				require.NotNil(t, ar.Spec.Args[0].Value)
+				assert.Equal(t, "s3cr3t", *ar.Spec.Args[0].Value)
+			},
+		},
+		{
+			name: "surfaces error when repoCredentials() is unavailable",
+			stage: &kargoapi.Stage{
+				ObjectMeta: metav1.ObjectMeta{
+					Namespace: "fake-project",
+					Name:      "test-stage",
+				},
+				Spec: kargoapi.StageSpec{
+					Verification: &kargoapi.Verification{
+						AnalysisTemplates: []kargoapi.AnalysisTemplateReference{
+							{Name: "test-template"},
+						},
+						Args: []kargoapi.AnalysisRunArgument{
+							{
+								Name: "token",
+								Value: "${{ repoCredentials(" +
+									"'https://github.com/example/repo.git', 'git'" +
+									").Password }}",
+							},
+						},
+					},
+				},
+			},
+			freightCol: kargoapi.FreightCollection{
+				ID: "test-collection",
+				Freight: map[string]kargoapi.FreightReference{
+					"warehouse": {Name: "test-freight"},
+				},
+			},
+			objects: []client.Object{
+				&kargoapi.Freight{
+					ObjectMeta: metav1.ObjectMeta{
+						Name:      "test-freight",
+						Namespace: "fake-project",
+					},
+				},
+				&rolloutsapi.AnalysisTemplate{
+					ObjectMeta: metav1.ObjectMeta{
+						Name:      "test-template",
+						Namespace: "fake-project",
+					},
+					Spec: rolloutsapi.AnalysisTemplateSpec{
+						Args: []rolloutsapi.Argument{{Name: "token"}},
+					},
+				},
+			},
+			// credsDB intentionally left nil.
+			assertions: func(t *testing.T, _ client.Client, vi *kargoapi.VerificationInfo, err error) {
+				require.NoError(t, err)
+
+				require.NotNil(t, vi)
+				assert.Equal(t, kargoapi.VerificationPhaseError, vi.Phase)
+				assert.Contains(t, vi.Message, "error building AnalysisRun")
+				assert.Contains(t, vi.Message, "repoCredentials is not available")
+			},
+		},
+		{
 			name: "handles analysis run build error",
 			stage: &kargoapi.Stage{
 				ObjectMeta: metav1.ObjectMeta{
@@ -4027,7 +4160,8 @@ func TestRegularStageReconciler_startVerification(t *testing.T) {
 				Build()
 
 			r := &RegularStageReconciler{
-				client: c,
+				client:        c,
+				credentialsDB: tt.credsDB,
 				cfg: ReconcilerConfig{
 					RolloutsIntegrationEnabled:   !tt.rolloutsDisabled,
 					RolloutsControllerInstanceID: "test-instance",

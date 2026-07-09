@@ -1095,9 +1095,11 @@ func isGenericSecretType(secret corev1.Secret) bool {
 // delegates to the provided credentials database, which is the same component
 // used by built-in promotion steps, so the returned credentials may be
 // narrowly-scoped, short-lived credentials derived from the underlying Secret
-// rather than the Secret's raw contents. The credentials are returned as a map
-// with "username", "password", and (when set) "sshPrivateKey" keys. If no
-// credentials are found, an empty map is returned.
+// rather than the Secret's raw contents. The credentials are returned as a
+// credentials.Credentials struct, whose fields are accessed by name (e.g.
+// .Username, .Password). If no credentials are found, a zero-value struct (all
+// fields empty) is returned, so expression authors can rely on a predictable
+// shape regardless of whether credentials were found.
 //
 // If a cache is provided, it will be used to store the resolved credentials to
 // avoid repeated lookups within the same evaluation. The cache key is generated
@@ -1154,11 +1156,8 @@ func getRepoCredentials(
 		)
 		if cache != nil {
 			if cachedData, ok := cache.Get(cacheKey); ok {
-				if cachedData == nil {
-					return map[string]string{}, nil
-				}
-				if data, ok := cachedData.(map[string]string); ok {
-					return maps.Clone(data), nil
+				if creds, ok := cachedData.(credentials.Credentials); ok {
+					return creds, nil
 				}
 			}
 		}
@@ -1170,21 +1169,19 @@ func getRepoCredentials(
 			)
 		}
 
-		// When credentials are found, always return the full, fixed set of keys
-		// so that expression authors can rely on a predictable shape regardless
-		// of credential type or provider. When no credentials are found, an empty
-		// map is returned, mirroring the behavior of secret().
-		data := make(map[string]string)
+		// Return the resolved credentials as a value struct so that expression
+		// authors can rely on a predictable shape regardless of credential type
+		// or provider. When no credentials are found, a zero-value struct (all
+		// fields empty) is returned.
+		var result credentials.Credentials
 		if creds != nil {
-			data[credentials.FieldUsername] = creds.Username
-			data[credentials.FieldPassword] = creds.Password
-			data[credFieldSSHPrivateKey] = creds.SSHPrivateKey
+			result = *creds
 		}
 
 		if cache != nil {
-			cache.Set(cacheKey, maps.Clone(data), gocache.NoExpiration)
+			cache.Set(cacheKey, result, gocache.NoExpiration)
 		}
-		return data, nil
+		return result, nil
 	}
 }
 
@@ -1303,11 +1300,6 @@ const (
 	cacheKeyPrefixSecret          = "Secret"
 	cacheKeyPrefixRepoCredentials = "RepoCredentials"
 )
-
-// credFieldSSHPrivateKey is the key used for the SSH private key in the map
-// returned by the repoCredentials() function. Username and password use the
-// credentials.FieldUsername and credentials.FieldPassword constants.
-const credFieldSSHPrivateKey = "sshPrivateKey"
 
 // getCacheKey generates a cache key for the given prefix, project, and name.
 // The cache key is a string formatted as "<prefix>/<project>/<name>".
