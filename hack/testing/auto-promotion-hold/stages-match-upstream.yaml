@@ -36,7 +36,7 @@ spec:
       name: auto-hold
     sources:
       stages:
-      - name: upstream
+      - upstream
       autoPromotionOptions:
         selectionPolicy: MatchUpstream
   promotionTemplate:
@@ -103,7 +103,7 @@ spec:
       name: auto-hold
     sources:
       stages:
-      - name: upstream-multi
+      - upstream-multi
       autoPromotionOptions:
         selectionPolicy: MatchUpstream
   - origin:
@@ -111,7 +111,7 @@ spec:
       name: auto-hold-api
     sources:
       stages:
-      - name: upstream-multi
+      - upstream-multi
       autoPromotionOptions:
         selectionPolicy: MatchUpstream
   promotionTemplate:

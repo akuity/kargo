@@ -16,6 +16,20 @@ A running Tilt dev environment (`make hack-tilt-up`).
 ./hack/testing/auto-promotion-hold/apply-match-upstream-policy-harness.sh
 ```
 
+## Automated test runner
+
+All automatable scenarios below can be run from the repo root after applying
+the harness:
+
+```shell
+./hack/testing/auto-promotion-hold/run-match-upstream-policy-tests.sh
+```
+
+The script builds the CLI from source, runs scenarios A2, B2, B4, C2, C3, D2,
+and E1 in order, waits for each Promotion to reach a terminal phase, and exits
+non-zero if any assertion fails. G1 requires precise timing (upstream
+mid-promotion) and must be run manually.
+
 Creates four Stages in the `auto-promotion-hold` project:
 
 - **`upstream`** — single-origin NewestFreight Stage. Auto-promotes to the
