@@ -65,12 +65,20 @@ including in promotion templates and verification arguments.
 
 ### Requested Freight
 
-The `spec.requestedFreight` field is used to describe one or more "types" of
-`Freight`, as specified by an `origin`, that the `Stage`'s promotion process, as
-specified by `spec.promotionTemplate`, will operate on, and the acceptable
-sources from which to obtain that `Freight`. Those sources may include the
-origin itself (e.g. a `Warehouse`) and/or any number of "upstream" `Stage`
-resources.
+The `spec.requestedFreight` field is a list of _freight requests_. Each freight
+request describes a "type" of `Freight`, as specified by an `origin`, that the
+`Stage`'s promotion process, as specified by `spec.promotionTemplate`, will
+operate on, and the acceptable sources from which to obtain that `Freight`.
+Those sources may include the origin itself (e.g. a `Warehouse`) and/or any
+number of "upstream" `Stage` resources.
+
+:::info
+
+It is helpful to think of freight requests as "slots," each of which can be
+filled, at any given moment, with a single piece of `Freight` from a specific
+origin.
+
+:::
 
 :::info
 
@@ -83,13 +91,13 @@ subfields instead of being described only by the name of a `Warehouse`.
 
 #### Freight Availability
 
-When a `Stage` accepts `Freight` directly from its origin, _all_ new `Freight`
-created by that origin (e.g. a `Warehouse` ) are immediately available for
-promotion to that `Stage`.
+When a freight request accepts `Freight` directly from its origin, _all_ new
+`Freight` created by that origin (e.g. a `Warehouse`) is immediately available
+for promotion to that `Stage`.
 
-When a `Stage` accepts `Freight` from one or more "upstream" `Stage`s, `Freight`
-is considered available for promotion to that `Stage` only after being
-_verified_ in the upstream `Stage`(s). A `requestedFreight`'s
+When a freight request accepts `Freight` from one or more "upstream" `Stage`s,
+`Freight` is considered available for promotion to that `Stage` only after being
+_verified_ in the upstream `Stage`(s). A freight request's
 `sources.availabilityStrategy` field specifies whether `Freight` must be
 verified in _any_ upstream `Stage` or _all_ upstream `Stage`s before becoming
 available.
@@ -114,10 +122,16 @@ without waiting for a `Freight` resource to traverse the entirety of a pipeline.
 #### Auto-Promotion
 
 When [auto-promotion](./20-working-with-projects.md#promotion-policies) is
-enabled for a `Stage` through the project's `ProjectConfig`, `Stage`s will
+enabled for a `Stage` through the project's `ProjectConfig`, the `Stage` will
 periodically search for available `Freight` according to the rules defined in
 the previous section and automatically initiate a promotion when suitable
-`Freight` are found to be available.
+`Freight` is found to be available.
+
+Auto-promotion operates independently on each of the `Stage`'s freight requests
+(the entries of `spec.requestedFreight`, each identified by the `origin` it
+names). At any given moment, each freight request has at most one auto-promotion
+_candidate_: the available `Freight` that the request's selection policy would
+choose.
 
 :::info
 
@@ -135,8 +149,8 @@ disable auto-promotion for any `Stage`.
 
 :::
 
-The definition of "suitable" `Freight` is dependent on the `requestedFreight`'s
-`sources.autoPromotionOptions.selectionPolicy`.
+Which available `Freight` is a freight request's candidate is determined by that
+request's `sources.autoPromotionOptions.selectionPolicy`.
 
 Valid policies are:
 
@@ -146,34 +160,43 @@ Valid policies are:
 
 * `MatchUpstream`: The `Freight` currently in use _immediately upstream_, if
   suitably verified or approved, will be auto-promoted to the `Stage` on a
-  continuous basis. This option is valid only when the `Stage` accepts `Freight`
-  from _exactly one_ upstream `Stage`.
+  continuous basis. This option is valid only when the freight request accepts
+  `Freight` from _exactly one_ upstream `Stage`.
 
-**Establishing a hold:** When you promote `Freight` other than the current
-auto-promotion candidate to a `Stage` — for example, to pin the `Stage` to a
-known-good version or to roll back — Kargo pauses auto-promotion for that
-`Freight` origin. This prevents automation from immediately undoing your intent
-by re-promoting the candidate you bypassed.
+**Establishing a hold:** Every `Freight` you promote fills exactly one of the
+`Stage`'s freight requests: the one matching its origin. If the `Freight` you
+promote is not that request's candidate — for example, if you are pinning the
+`Stage` to an older, known-good version — Kargo establishes a _hold_ on the
+request. The hold is recorded in the `Stage`'s `status.autoPromotionHolds` and
+suspends auto-promotion for that freight request only; the `Stage`'s other
+freight requests, if any, are unaffected. This prevents automation from
+immediately undoing your intent by re-promoting the candidate you bypassed.
 
-For example, suppose the current auto-promotion candidate from `my-warehouse` is
-`freight-abc`, but you promote `freight-xyz` instead. Kargo records a hold for
-the `my-warehouse` origin on that `Stage`, and auto-promotion will not resume
-until the hold is lifted.
+For example, suppose a `Stage` requests `Freight` originating from
+`my-warehouse` and the candidate for that request is currently `freight-abc`,
+but you promote `freight-xyz` instead. Kargo records a hold for that freight
+request, and auto-promotion driven by it will not resume until the hold is
+lifted.
 
-**Lifting a hold:** Auto-promotion resumes when you promote exactly the `Freight`
-that auto-promotion _would have_ chosen — that is, the current candidate for that
-origin. Promoting the candidate signals that you are ready for automation to take
-over again, and Kargo clears the hold.
+**Lifting a hold:** A hold is lifted when you promote exactly the `Freight` that
+auto-promotion would otherwise have selected — the freight request's _current_
+candidate (which may differ from its candidate at the time the hold was
+established). Promoting the candidate signals that you are ready for automation
+to take over again, and Kargo clears the hold.
 
-Continuing the example above: once `freight-abc` is again the current
-auto-promotion candidate, promoting `freight-abc` to the `Stage` lifts the hold
-and auto-promotion resumes from that point forward.
+Continuing the example above: promoting `freight-abc` to the `Stage` lifts the
+hold and auto-promotion resumes from that point forward.
+
+In both cases, this intent takes effect only if the `Promotion` succeeds: a
+failed `Promotion` neither establishes nor lifts a hold. And it is only
+user-initiated `Promotion`s that carry such intent; those created by
+auto-promotion itself never establish or lift holds.
 
 :::info
 
 The easiest way to promote the current candidate without having to identify it
 yourself is to promote by origin rather than by a specific `Freight` name. Kargo
-selects `Freight` for that origin using the same selection policy configured for
+resolves the `Freight` using the selection policy of the freight request naming
 that origin (independent of whether auto-promotion is enabled):
 
 ```shell
