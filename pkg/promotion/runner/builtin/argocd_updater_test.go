@@ -5,13 +5,18 @@ import (
 	"errors"
 	"fmt"
 	"testing"
+	"time"
 
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 	corev1 "k8s.io/api/core/v1"
+	"k8s.io/apimachinery/pkg/api/meta"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
+	"k8s.io/apimachinery/pkg/runtime/schema"
+	"k8s.io/apimachinery/pkg/util/wait"
 	"sigs.k8s.io/controller-runtime/pkg/client"
+	"sigs.k8s.io/controller-runtime/pkg/client/apiutil"
 	"sigs.k8s.io/controller-runtime/pkg/client/fake"
 	"sigs.k8s.io/controller-runtime/pkg/client/interceptor"
 
@@ -1735,7 +1740,8 @@ func Test_argoCDUpdater_syncApplication(t *testing.T) {
 					string,
 					string,
 				) {
-				}},
+				},
+			},
 			app: &argocd.Application{
 				ObjectMeta: metav1.ObjectMeta{Name: "fake", Namespace: "fake"},
 				Spec: argocd.ApplicationSpec{
@@ -1766,7 +1772,8 @@ func Test_argoCDUpdater_syncApplication(t *testing.T) {
 					string,
 					string,
 				) {
-				}},
+				},
+			},
 			app: &argocd.Application{
 				ObjectMeta: metav1.ObjectMeta{Name: "fake", Namespace: "fake"},
 				Spec: argocd.ApplicationSpec{
@@ -3135,6 +3142,144 @@ func Test_argoCDUpdater_validateSourceUpdatesApplicable(t *testing.T) {
 				testCase.apps,
 			)
 			testCase.assertions(t, err)
+		})
+	}
+}
+
+// incompleteDiscoveryErr builds the error that controller-runtime's
+// discovery-backed RESTMapper returns when discovery for the Argo CD Application
+// group-version fails or comes back incomplete.
+func incompleteDiscoveryErr() error {
+	gv := schema.GroupVersion{Group: "argoproj.io", Version: "v1alpha1"}
+	discErr := apiutil.ErrResourceDiscoveryFailed{
+		gv: &meta.NoResourceMatchError{PartialResource: gv.WithResource("")},
+	}
+	return &discErr
+}
+
+// noKindMatchErr builds the error that the RESTMapper returns when the Argo CD
+// Application kind is genuinely not served by the cluster (e.g. the CRDs are not
+// installed).
+func noKindMatchErr() error {
+	return &meta.NoKindMatchError{
+		GroupKind:        schema.GroupKind{Group: "argoproj.io", Kind: "Application"},
+		SearchedVersions: []string{"v1alpha1"},
+	}
+}
+
+func Test_isIncompleteDiscoveryError(t *testing.T) {
+	testCases := map[string]struct {
+		err      error
+		expected bool
+	}{
+		"nil error": {
+			err:      nil,
+			expected: false,
+		},
+		"incomplete discovery error": {
+			err:      incompleteDiscoveryErr(),
+			expected: true,
+		},
+		"wrapped incomplete discovery error": {
+			err:      fmt.Errorf("error getting Application: %w", incompleteDiscoveryErr()),
+			expected: true,
+		},
+		"genuine no-kind-match error is not retriable": {
+			err:      noKindMatchErr(),
+			expected: false,
+		},
+		"genuine no-resource-match error is not retriable": {
+			err: &meta.NoResourceMatchError{
+				PartialResource: schema.GroupVersionResource{Group: "argoproj.io", Version: "v1alpha1"},
+			},
+			expected: false,
+		},
+		"unrelated error": {
+			err:      errors.New("some other error"),
+			expected: false,
+		},
+	}
+	for name, testCase := range testCases {
+		t.Run(name, func(t *testing.T) {
+			assert.Equal(t, testCase.expected, isIncompleteDiscoveryError(testCase.err))
+		})
+	}
+}
+
+func Test_argoCDUpdater_withDiscoveryRetry(t *testing.T) {
+	// Use a fast backoff so the retry tests do not sleep for seconds.
+	original := discoveryRetryBackoff
+	discoveryRetryBackoff = wait.Backoff{
+		Steps:    5,
+		Duration: time.Millisecond,
+		Factor:   1,
+	}
+	t.Cleanup(func() { discoveryRetryBackoff = original })
+
+	testCases := map[string]struct {
+		fn            func(callCount *int) error
+		assertErr     func(*testing.T, error)
+		expectedCalls int
+	}{
+		"succeeds on first attempt": {
+			fn: func(callCount *int) error {
+				*callCount++
+				return nil
+			},
+			assertErr:     func(t *testing.T, err error) { assert.NoError(t, err) },
+			expectedCalls: 1,
+		},
+		"retries incomplete discovery error then succeeds": {
+			fn: func(callCount *int) error {
+				*callCount++
+				if *callCount < 3 {
+					return incompleteDiscoveryErr()
+				}
+				return nil
+			},
+			assertErr:     func(t *testing.T, err error) { assert.NoError(t, err) },
+			expectedCalls: 3,
+		},
+		"does not retry a genuine no-match error": {
+			fn: func(callCount *int) error {
+				*callCount++
+				return noKindMatchErr()
+			},
+			assertErr: func(t *testing.T, err error) {
+				assert.True(t, meta.IsNoMatchError(err))
+			},
+			expectedCalls: 1,
+		},
+		"does not retry an unrelated error": {
+			fn: func(callCount *int) error {
+				*callCount++
+				return errors.New("boom")
+			},
+			assertErr: func(t *testing.T, err error) {
+				assert.ErrorContains(t, err, "boom")
+			},
+			expectedCalls: 1,
+		},
+		"gives up after exhausting attempts": {
+			fn: func(callCount *int) error {
+				*callCount++
+				return incompleteDiscoveryErr()
+			},
+			assertErr: func(t *testing.T, err error) {
+				assert.True(t, isIncompleteDiscoveryError(err))
+			},
+			expectedCalls: 5,
+		},
+	}
+	for name, testCase := range testCases {
+		t.Run(name, func(t *testing.T) {
+			var callCount int
+			runner := &argocdUpdater{}
+			err := runner.withDiscoveryRetry(context.Background(), func(_ context.Context) error {
+				return testCase.fn(&callCount)
+			})
+			testCase.assertErr(t, err)
+			assert.Equal(t, testCase.expectedCalls, callCount)
 		})
 	}
 }
