@@ -644,8 +644,8 @@ func (r *RegularStageReconciler) syncPromotions(
 	// reconciler can set CurrentPromotion).
 	highestIsNewTerminal := highestPrioPromo.Status.Phase.IsTerminal() &&
 		(lastPromo == nil || strings.Compare(highestPrioPromo.Name, lastPromo.Name) > 0)
-	if (currentPromo != nil && (currentPromo.Name != highestPrioPromo.Name || highestPrioPromo.Status.Phase.IsTerminal())) ||
-		highestIsNewTerminal {
+	if (currentPromo != nil && (currentPromo.Name != highestPrioPromo.Name ||
+		highestPrioPromo.Status.Phase.IsTerminal())) || highestIsNewTerminal {
 		// Update the conditions to reflect that we are no longer promoting.
 		conditions.Delete(&newStatus, kargoapi.ConditionTypePromoting)
 		newStatus.CurrentPromotion = nil
