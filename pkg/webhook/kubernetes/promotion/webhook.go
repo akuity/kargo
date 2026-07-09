@@ -351,7 +351,14 @@ func (w *webhook) resolveOriginToFreight(
 // auto-promotion for the candidate is also being created. If the auto-promotion
 // reaches the queue first, it runs first; the hold-intent Promotion runs after
 // it and blocks future auto-promotion. That order is self-correcting, so
-// avoiding it is not worth more coordination state.
+// avoiding it is not worth more coordination state. In the mirror ordering --
+// the hold-intent Promotion is created first, but only after auto-promotion
+// already decided to act -- the queued auto-promotion runs second and
+// supersedes the user's Freight once. The hold still takes effect (the
+// auto-promotion carries no resume intent), so the anomaly is visible in
+// Stage status, future auto-promotion stays blocked, and re-promoting the
+// older Freight recovers. No read-time guard can see a Promotion created
+// after the read, so this too is accepted.
 func (w *webhook) syncHoldAnnotations(
 	ctx context.Context,
 	req admission.Request,

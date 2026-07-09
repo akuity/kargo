@@ -1785,18 +1785,20 @@ func (r *RegularStageReconciler) autoPromoteFreight(
 			continue
 		}
 
-		// A hold only reaches Stage status after its Promotion succeeds. Until
-		// then, skip this origin so auto-promotion cannot start while the user's
-		// hold intent is still running.
-		holdPending, holdErr := r.nonTerminalHoldIntentPromotionExistsForOrigin(ctx, stage, origin)
+		// A hold only reaches Stage status after syncPromotions records a
+		// succeeded hold-intent Promotion. Skip this origin while any
+		// hold-intent Promotion exists whose outcome has not been recorded
+		// yet -- whether still running or terminal since this reconciliation's
+		// hold state was computed.
+		holdPending, holdErr := r.unprocessedHoldIntentPromotionExistsForOrigin(ctx, stage, origin)
 		if holdErr != nil {
 			return newStatus, fmt.Errorf(
-				"error checking for pending hold Promotions for origin %q: %w",
+				"error checking for unprocessed hold-intent Promotions for origin %q: %w",
 				origin, holdErr,
 			)
 		}
 		if holdPending {
-			logger.Debug("auto-promotion is blocked by a pending hold-intent Promotion", "origin", origin)
+			logger.Debug("auto-promotion is blocked by an unprocessed hold-intent Promotion", "origin", origin)
 			continue
 		}
 
@@ -1912,11 +1914,19 @@ func stageAwaitingFreightForOrigin(
 		stage.Status.CurrentPromotion.Freight.Origin.String() == origin
 }
 
-// nonTerminalHoldIntentPromotionExistsForOrigin reports whether a user
-// hold-intent Promotion for this origin is still pending or running.
-// autoPromoteFreight uses this to wait for that Promotion to establish a hold
-// or finish without one before considering the origin again.
-func (r *RegularStageReconciler) nonTerminalHoldIntentPromotionExistsForOrigin(
+// unprocessedHoldIntentPromotionExistsForOrigin reports whether a hold-intent
+// Promotion for this origin exists whose outcome syncPromotions has not yet
+// recorded: one that is still non-terminal, or one that reached a terminal
+// phase after this reconciliation's hold state was computed (i.e., one newer
+// than status.lastPromotion). autoPromoteFreight stands down for the origin
+// in either case. The second case matters because a Promotion can succeed in
+// the interval between syncPromotions computing hold state and
+// autoPromoteFreight acting on it; without it, auto-promotion could supersede
+// older Freight the user just deliberately promoted, moments before the hold
+// that protects it is recorded. A hold-intent Promotion that failed blocks
+// only until the next reconciliation records it and advances
+// status.lastPromotion.
+func (r *RegularStageReconciler) unprocessedHoldIntentPromotionExistsForOrigin(
 	ctx context.Context,
 	stage *kargoapi.Stage,
 	origin string,
@@ -1927,19 +1937,20 @@ func (r *RegularStageReconciler) nonTerminalHoldIntentPromotionExistsForOrigin(
 		promos,
 		client.InNamespace(stage.Namespace),
 		client.MatchingFieldsSelector{
-			Selector: fields.AndSelectors(
-				fields.OneTermEqualSelector(indexer.PromotionsByStageField, stage.Name),
-				fields.OneTermEqualSelector(
-					indexer.PromotionsByTerminalField,
-					strconv.FormatBool(false),
-				),
-			),
+			Selector: fields.OneTermEqualSelector(indexer.PromotionsByStageField, stage.Name),
 		},
 	); err != nil {
 		return false, err
 	}
+	lastPromo := stage.Status.LastPromotion
 	for i := range promos.Items {
-		if promos.Items[i].Annotations[kargoapi.AnnotationKeyAutoPromotionHold] == origin {
+		promo := &promos.Items[i]
+		if promo.Annotations[kargoapi.AnnotationKeyAutoPromotionHold] != origin {
+			continue
+		}
+		if !promo.Status.Phase.IsTerminal() ||
+			lastPromo == nil ||
+			strings.Compare(promo.Name, lastPromo.Name) > 0 {
 			return true, nil
 		}
 	}
