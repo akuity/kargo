@@ -637,10 +637,15 @@ func (r *RegularStageReconciler) syncPromotions(
 		}
 	}
 
-	// If the current Promotion is not the highest priority Promotion, or the
-	// highest priority Promotion is in a terminal phase, then we must have
-	// finished promoting.
-	if currentPromo != nil && (currentPromo.Name != highestPrioPromo.Name || highestPrioPromo.Status.Phase.IsTerminal()) {
+	// Enter the block when something has settled that we need to react to:
+	// the tracked current Promotion completed or changed, OR the highest-
+	// priority Promotion is already terminal and we haven't recorded it yet
+	// (the latter covers fast-completing Promotions that finish before the
+	// reconciler can set CurrentPromotion).
+	highestIsNewTerminal := highestPrioPromo.Status.Phase.IsTerminal() &&
+		(lastPromo == nil || strings.Compare(highestPrioPromo.Name, lastPromo.Name) > 0)
+	if (currentPromo != nil && (currentPromo.Name != highestPrioPromo.Name || highestPrioPromo.Status.Phase.IsTerminal())) ||
+		highestIsNewTerminal {
 		// Update the conditions to reflect that we are no longer promoting.
 		conditions.Delete(&newStatus, kargoapi.ConditionTypePromoting)
 		newStatus.CurrentPromotion = nil
