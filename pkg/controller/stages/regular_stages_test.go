@@ -372,6 +372,174 @@ func TestRegularStageReconciler_Reconcile(t *testing.T) {
 				assert.Equal(t, metav1.ConditionFalse, readyCond.Status)
 			},
 		},
+		{
+			name: "soak-aware requeue for partially soaked upstream Freight",
+			req: ctrl.Request{
+				NamespacedName: types.NamespacedName{
+					Namespace: "fake-project",
+					Name:      "test-stage",
+				},
+			},
+			stage: &kargoapi.Stage{
+				ObjectMeta: metav1.ObjectMeta{
+					Namespace:  "fake-project",
+					Name:       "test-stage",
+					Finalizers: []string{kargoapi.FinalizerName},
+				},
+				Spec: kargoapi.StageSpec{
+					RequestedFreight: []kargoapi.FreightRequest{{
+						Origin: kargoapi.FreightOrigin{
+							Kind: kargoapi.FreightOriginKindWarehouse,
+							Name: "test-warehouse",
+						},
+						Sources: kargoapi.FreightSources{
+							Stages:           []string{"upstream-stage"},
+							RequiredSoakTime: &metav1.Duration{Duration: time.Hour},
+						},
+					}},
+					PromotionTemplate: &kargoapi.PromotionTemplate{
+						Spec: kargoapi.PromotionTemplateSpec{
+							Steps: []kargoapi.PromotionStep{{Uses: "fake-step"}},
+						},
+					},
+				},
+			},
+			objects: []client.Object{
+				&kargoapi.ProjectConfig{
+					ObjectMeta: metav1.ObjectMeta{
+						Namespace: "fake-project",
+						Name:      "fake-project",
+					},
+					Spec: kargoapi.ProjectConfigSpec{
+						PromotionPolicies: []kargoapi.PromotionPolicy{{
+							Stage:                "test-stage",
+							AutoPromotionEnabled: true,
+						}},
+					},
+				},
+				&kargoapi.Warehouse{
+					ObjectMeta: metav1.ObjectMeta{
+						Namespace: "fake-project",
+						Name:      "test-warehouse",
+					},
+				},
+				&kargoapi.Freight{
+					ObjectMeta: metav1.ObjectMeta{
+						Namespace: "fake-project",
+						Name:      "soaking-freight",
+					},
+					Origin: kargoapi.FreightOrigin{
+						Kind: kargoapi.FreightOriginKindWarehouse,
+						Name: "test-warehouse",
+					},
+					Status: kargoapi.FreightStatus{
+						VerifiedIn: map[string]kargoapi.VerifiedStage{
+							"upstream-stage": {},
+						},
+						CurrentlyIn: map[string]kargoapi.CurrentStage{
+							// 58m of a 1h requirement, so ~2m remain.
+							"upstream-stage": {Since: &metav1.Time{Time: time.Now().Add(-58 * time.Minute)}},
+						},
+					},
+				},
+			},
+			assertions: func(t *testing.T, c client.Client, result ctrl.Result, err error) {
+				require.NoError(t, err)
+
+				// The requeue should be soak-aware: sooner than the default poll
+				// interval and roughly equal to the remaining soak.
+				assert.Greater(t, result.RequeueAfter, time.Minute)
+				assert.Less(t, result.RequeueAfter, 3*time.Minute)
+
+				// The Freight has not yet soaked, so no Promotion should exist.
+				promoList := &kargoapi.PromotionList{}
+				require.NoError(t, c.List(t.Context(), promoList, client.InNamespace("fake-project")))
+				assert.Empty(t, promoList.Items)
+			},
+		},
+		{
+			name: "default requeue and promotion for already soaked Freight",
+			req: ctrl.Request{
+				NamespacedName: types.NamespacedName{
+					Namespace: "fake-project",
+					Name:      "test-stage",
+				},
+			},
+			stage: &kargoapi.Stage{
+				ObjectMeta: metav1.ObjectMeta{
+					Namespace:  "fake-project",
+					Name:       "test-stage",
+					Finalizers: []string{kargoapi.FinalizerName},
+				},
+				Spec: kargoapi.StageSpec{
+					RequestedFreight: []kargoapi.FreightRequest{{
+						Origin: kargoapi.FreightOrigin{
+							Kind: kargoapi.FreightOriginKindWarehouse,
+							Name: "test-warehouse",
+						},
+						Sources: kargoapi.FreightSources{
+							Stages:           []string{"upstream-stage"},
+							RequiredSoakTime: &metav1.Duration{Duration: time.Hour},
+						},
+					}},
+					PromotionTemplate: &kargoapi.PromotionTemplate{
+						Spec: kargoapi.PromotionTemplateSpec{
+							Steps: []kargoapi.PromotionStep{{Uses: "fake-step"}},
+						},
+					},
+				},
+			},
+			objects: []client.Object{
+				&kargoapi.ProjectConfig{
+					ObjectMeta: metav1.ObjectMeta{
+						Namespace: "fake-project",
+						Name:      "fake-project",
+					},
+					Spec: kargoapi.ProjectConfigSpec{
+						PromotionPolicies: []kargoapi.PromotionPolicy{{
+							Stage:                "test-stage",
+							AutoPromotionEnabled: true,
+						}},
+					},
+				},
+				&kargoapi.Warehouse{
+					ObjectMeta: metav1.ObjectMeta{
+						Namespace: "fake-project",
+						Name:      "test-warehouse",
+					},
+				},
+				&kargoapi.Freight{
+					ObjectMeta: metav1.ObjectMeta{
+						Namespace:         "fake-project",
+						Name:              "soaked-freight",
+						CreationTimestamp: metav1.Time{Time: time.Now()},
+					},
+					Origin: kargoapi.FreightOrigin{
+						Kind: kargoapi.FreightOriginKindWarehouse,
+						Name: "test-warehouse",
+					},
+					Status: kargoapi.FreightStatus{
+						VerifiedIn: map[string]kargoapi.VerifiedStage{
+							"upstream-stage": {
+								LongestCompletedSoak: &metav1.Duration{Duration: 2 * time.Hour},
+							},
+						},
+					},
+				},
+			},
+			assertions: func(t *testing.T, c client.Client, result ctrl.Result, err error) {
+				require.NoError(t, err)
+
+				// Nothing is pending soak, so the default poll interval applies.
+				assert.Equal(t, 5*time.Minute, result.RequeueAfter)
+
+				// The already-soaked Freight should have been auto-promoted.
+				promoList := &kargoapi.PromotionList{}
+				require.NoError(t, c.List(t.Context(), promoList, client.InNamespace("fake-project")))
+				require.Len(t, promoList.Items, 1)
+				assert.Equal(t, "soaked-freight", promoList.Items[0].Spec.Freight)
+			},
+		},
 	}
 
 	for _, tt := range tests {
@@ -637,7 +805,7 @@ func TestRegularStagesReconciler_reconcile(t *testing.T) {
 				healthChecker: &health.MockAggregatingChecker{},
 			}
 
-			status, requeue, err := r.reconcile(t.Context(), tt.stage, now)
+			status, requeue, _, err := r.reconcile(t.Context(), tt.stage, now)
 			tt.assertions(t, status, requeue, err)
 		})
 	}
@@ -7103,6 +7271,256 @@ func Test_buildFreightSummary(t *testing.T) {
 		t.Run(tt.name, func(t *testing.T) {
 			result := buildFreightSummary(tt.requested, tt.current)
 			assert.Equal(t, tt.expected, result)
+		})
+	}
+}
+
+func TestRegularStageReconciler_shortestRemainingSoak(t *testing.T) {
+	scheme := runtime.NewScheme()
+	require.NoError(t, kargoapi.AddToScheme(scheme))
+
+	now := time.Now()
+
+	const (
+		project   = "fake-project"
+		warehouse = "test-warehouse"
+		upstream  = "upstream-stage"
+	)
+
+	testWarehouse := &kargoapi.Warehouse{
+		ObjectMeta: metav1.ObjectMeta{
+			Namespace: project,
+			Name:      warehouse,
+		},
+	}
+
+	newStage := func(sources kargoapi.FreightSources) *kargoapi.Stage {
+		return &kargoapi.Stage{
+			ObjectMeta: metav1.ObjectMeta{
+				Namespace: project,
+				Name:      "test-stage",
+			},
+			Spec: kargoapi.StageSpec{
+				RequestedFreight: []kargoapi.FreightRequest{{
+					Origin: kargoapi.FreightOrigin{
+						Kind: kargoapi.FreightOriginKindWarehouse,
+						Name: warehouse,
+					},
+					Sources: sources,
+				}},
+			},
+		}
+	}
+
+	tests := []struct {
+		name       string
+		stage      *kargoapi.Stage
+		objects    []client.Object
+		assertions func(*testing.T, time.Duration, error)
+	}{
+		{
+			name: "no soak time configured",
+			stage: newStage(kargoapi.FreightSources{
+				Stages: []string{upstream},
+			}),
+			assertions: func(t *testing.T, d time.Duration, err error) {
+				require.NoError(t, err)
+				assert.Zero(t, d)
+			},
+		},
+		{
+			name: "direct sources are ignored",
+			stage: newStage(kargoapi.FreightSources{
+				Direct:           true,
+				RequiredSoakTime: &metav1.Duration{Duration: time.Hour},
+			}),
+			assertions: func(t *testing.T, d time.Duration, err error) {
+				require.NoError(t, err)
+				assert.Zero(t, d)
+			},
+		},
+		{
+			name: "freight already soaked yields no requeue",
+			stage: newStage(kargoapi.FreightSources{
+				Stages:           []string{upstream},
+				RequiredSoakTime: &metav1.Duration{Duration: time.Hour},
+			}),
+			objects: []client.Object{
+				testWarehouse,
+				&kargoapi.Freight{
+					ObjectMeta: metav1.ObjectMeta{
+						Namespace: project,
+						Name:      "soaked-freight",
+					},
+					Origin: kargoapi.FreightOrigin{
+						Kind: kargoapi.FreightOriginKindWarehouse,
+						Name: warehouse,
+					},
+					Status: kargoapi.FreightStatus{
+						VerifiedIn: map[string]kargoapi.VerifiedStage{
+							upstream: {},
+						},
+						CurrentlyIn: map[string]kargoapi.CurrentStage{
+							// In the upstream Stage for 2h, well beyond the 1h
+							// requirement.
+							upstream: {Since: &metav1.Time{Time: now.Add(-2 * time.Hour)}},
+						},
+					},
+				},
+			},
+			assertions: func(t *testing.T, d time.Duration, err error) {
+				require.NoError(t, err)
+				assert.Zero(t, d)
+			},
+		},
+		{
+			name: "verified but no longer in upstream yields no requeue",
+			stage: newStage(kargoapi.FreightSources{
+				Stages:           []string{upstream},
+				RequiredSoakTime: &metav1.Duration{Duration: time.Hour},
+			}),
+			objects: []client.Object{
+				testWarehouse,
+				&kargoapi.Freight{
+					ObjectMeta: metav1.ObjectMeta{
+						Namespace: project,
+						Name:      "stalled-freight",
+					},
+					Origin: kargoapi.FreightOrigin{
+						Kind: kargoapi.FreightOriginKindWarehouse,
+						Name: warehouse,
+					},
+					Status: kargoapi.FreightStatus{
+						VerifiedIn: map[string]kargoapi.VerifiedStage{
+							// Verified with an incomplete soak, but no longer in the
+							// upstream Stage, so the soak clock is not running and a
+							// requeue would not help.
+							upstream: {
+								LongestCompletedSoak: &metav1.Duration{Duration: 30 * time.Minute},
+							},
+						},
+					},
+				},
+			},
+			assertions: func(t *testing.T, d time.Duration, err error) {
+				require.NoError(t, err)
+				assert.Zero(t, d)
+			},
+		},
+		{
+			name: "partially soaked freight yields remaining soak requeue",
+			stage: newStage(kargoapi.FreightSources{
+				Stages:           []string{upstream},
+				RequiredSoakTime: &metav1.Duration{Duration: time.Hour},
+			}),
+			objects: []client.Object{
+				testWarehouse,
+				&kargoapi.Freight{
+					ObjectMeta: metav1.ObjectMeta{
+						Namespace: project,
+						Name:      "soaking-freight",
+					},
+					Origin: kargoapi.FreightOrigin{
+						Kind: kargoapi.FreightOriginKindWarehouse,
+						Name: warehouse,
+					},
+					Status: kargoapi.FreightStatus{
+						VerifiedIn: map[string]kargoapi.VerifiedStage{
+							upstream: {},
+						},
+						CurrentlyIn: map[string]kargoapi.CurrentStage{
+							// In the upstream Stage for 58m of a 1h requirement, so
+							// ~2m remain.
+							upstream: {Since: &metav1.Time{Time: now.Add(-58 * time.Minute)}},
+						},
+					},
+				},
+			},
+			assertions: func(t *testing.T, d time.Duration, err error) {
+				require.NoError(t, err)
+				// ~2m remaining plus a small buffer, and well under the 5m poll
+				// interval so it actually takes effect.
+				assert.Greater(t, d, time.Minute)
+				assert.Less(t, d, 3*time.Minute)
+			},
+		},
+		{
+			name: "multiple soaking freight yields the shortest remaining",
+			stage: newStage(kargoapi.FreightSources{
+				Stages:           []string{upstream},
+				RequiredSoakTime: &metav1.Duration{Duration: time.Hour},
+			}),
+			objects: []client.Object{
+				testWarehouse,
+				&kargoapi.Freight{
+					ObjectMeta: metav1.ObjectMeta{
+						Namespace: project,
+						Name:      "freight-a",
+					},
+					Origin: kargoapi.FreightOrigin{
+						Kind: kargoapi.FreightOriginKindWarehouse,
+						Name: warehouse,
+					},
+					Status: kargoapi.FreightStatus{
+						VerifiedIn: map[string]kargoapi.VerifiedStage{upstream: {}},
+						CurrentlyIn: map[string]kargoapi.CurrentStage{
+							// ~10m remaining.
+							upstream: {Since: &metav1.Time{Time: now.Add(-50 * time.Minute)}},
+						},
+					},
+				},
+				&kargoapi.Freight{
+					ObjectMeta: metav1.ObjectMeta{
+						Namespace: project,
+						Name:      "freight-b",
+					},
+					Origin: kargoapi.FreightOrigin{
+						Kind: kargoapi.FreightOriginKindWarehouse,
+						Name: warehouse,
+					},
+					Status: kargoapi.FreightStatus{
+						VerifiedIn: map[string]kargoapi.VerifiedStage{upstream: {}},
+						CurrentlyIn: map[string]kargoapi.CurrentStage{
+							// ~2m remaining -- the shortest.
+							upstream: {Since: &metav1.Time{Time: now.Add(-58 * time.Minute)}},
+						},
+					},
+				},
+			},
+			assertions: func(t *testing.T, d time.Duration, err error) {
+				require.NoError(t, err)
+				assert.Greater(t, d, time.Minute)
+				assert.Less(t, d, 3*time.Minute)
+			},
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			c := fake.NewClientBuilder().
+				WithScheme(scheme).
+				WithObjects(tt.objects...).
+				WithIndex(
+					&kargoapi.Freight{},
+					indexer.FreightByWarehouseField,
+					indexer.FreightByWarehouse,
+				).
+				WithIndex(
+					&kargoapi.Freight{},
+					indexer.FreightByVerifiedStagesField,
+					indexer.FreightByVerifiedStages,
+				).
+				WithIndex(
+					&kargoapi.Freight{},
+					indexer.FreightApprovedForStagesField,
+					indexer.FreightApprovedForStages,
+				).
+				Build()
+
+			r := &RegularStageReconciler{client: c}
+
+			d, err := r.shortestRemainingSoak(t.Context(), tt.stage)
+			tt.assertions(t, d, err)
 		})
 	}
 }

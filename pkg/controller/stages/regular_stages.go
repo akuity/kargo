@@ -364,7 +364,7 @@ func (r *RegularStageReconciler) Reconcile(ctx context.Context, req ctrl.Request
 
 	// Reconcile the Stage.
 	logger.Debug("reconciling Stage")
-	newStatus, needsRequeue, reconcileErr := r.reconcile(ctx, stage, time.Now())
+	newStatus, needsRequeue, soakRequeueAfter, reconcileErr := r.reconcile(ctx, stage, time.Now())
 	logger.Debug("done reconciling Stage")
 
 	// Record the current refresh token as having been handled.
@@ -394,14 +394,22 @@ func (r *RegularStageReconciler) Reconcile(ctx context.Context, req ctrl.Request
 	}
 	// Otherwise, requeue after a delay.
 	// TODO: Make the requeue delay configurable.
-	return ctrl.Result{RequeueAfter: 5 * time.Minute}, nil
+	requeueAfter := 5 * time.Minute
+	// Prefer a soak-aware requeue when one was computed and it is sooner than
+	// the default poll interval. This ensures the Stage is re-reconciled
+	// promptly when a piece of verified Freight's soak time elapses, rather
+	// than waiting for the next poll.
+	if soakRequeueAfter > 0 && soakRequeueAfter < requeueAfter {
+		requeueAfter = soakRequeueAfter
+	}
+	return ctrl.Result{RequeueAfter: requeueAfter}, nil
 }
 
 func (r *RegularStageReconciler) reconcile(
 	ctx context.Context,
 	stage *kargoapi.Stage,
 	startTime time.Time,
-) (kargoapi.StageStatus, bool, error) {
+) (kargoapi.StageStatus, bool, time.Duration, error) {
 	logger := logging.LoggerFromContext(ctx)
 
 	// working is the Stage the sub-reconcilers operate on. Its status is
@@ -428,6 +436,11 @@ func (r *RegularStageReconciler) reconcile(
 	})
 
 	var requestRequeue bool
+	// soakRequeueAfter is a soft requeue hint: the shortest remaining soak time
+	// across the Stage's requested Freight that is verified upstream but not yet
+	// soaked. It lets Reconcile wake the Stage up precisely when that soak
+	// completes instead of waiting for the default poll interval.
+	var soakRequeueAfter time.Duration
 	subReconcilers := []struct {
 		name      string
 		reconcile func() (kargoapi.StageStatus, error)
@@ -501,7 +514,19 @@ func (r *RegularStageReconciler) reconcile(
 			reconcile: func() (kargoapi.StageStatus, error) {
 				status, err := r.autoPromoteFreight(ctx, working)
 				if err != nil {
-					err = fmt.Errorf("failed to auto-promote Freight: %w", err)
+					return status, fmt.Errorf("failed to auto-promote Freight: %w", err)
+				}
+				// When auto-promotion is enabled, determine how long until the
+				// next piece of verified-but-not-yet-soaked Freight becomes
+				// available, so we can requeue precisely when its soak completes.
+				if status.AutoPromotionEnabled {
+					remaining, soakErr := r.shortestRemainingSoak(ctx, working)
+					if soakErr != nil {
+						return status, fmt.Errorf(
+							"failed to compute remaining soak time: %w", soakErr,
+						)
+					}
+					soakRequeueAfter = remaining
 				}
 				return status, err
 			},
@@ -521,7 +546,7 @@ func (r *RegularStageReconciler) reconcile(
 		// If an error occurred during the sub-reconciler, then we should
 		// return the error which will cause the Stage to be requeued.
 		if err != nil {
-			return newStatus, false, err
+			return newStatus, false, 0, err
 		}
 
 		// Patch the status of the Stage after each sub-reconciler to show progress.
@@ -543,7 +568,7 @@ func (r *RegularStageReconciler) reconcile(
 		conditions.Delete(&newStatus, kargoapi.ConditionTypeReconciling)
 	}
 
-	return newStatus, requestRequeue, nil
+	return newStatus, requestRequeue, soakRequeueAfter, nil
 }
 
 // syncPromotions synchronizes the Promotions for a Stage. It determines the
@@ -2016,6 +2041,99 @@ func (r *RegularStageReconciler) getPromotableFreight(
 	}
 
 	return promotableFreight, nil
+}
+
+// soakRequeueBuffer is added to a computed remaining soak time when determining
+// a soak-aware requeue delay. It ensures the controller wakes up a hair after a
+// soak requirement is satisfied rather than a moment before, avoiding an extra
+// no-op reconcile.
+const soakRequeueBuffer = 2 * time.Second
+
+// shortestRemainingSoak returns the shortest remaining soak time across all of
+// the Stage's requested Freight that is verified in a configured upstream Stage
+// but has not yet satisfied its RequiredSoakTime. The returned duration
+// includes a small buffer and is intended for use as a soft requeue hint, so
+// that the Stage is re-reconciled promptly when a piece of Freight's soak
+// completes instead of waiting for the default poll interval.
+//
+// It returns zero when there is nothing to wait for: no source configures a
+// soak time, or every relevant piece of Freight has either already soaked or is
+// no longer accruing soak time (i.e. is no longer in the upstream Stage).
+func (r *RegularStageReconciler) shortestRemainingSoak(
+	ctx context.Context,
+	stage *kargoapi.Stage,
+) (time.Duration, error) {
+	var shortest time.Duration
+	for _, req := range stage.Spec.RequestedFreight {
+		// Only sources with a soak requirement and upstream Stages can have a
+		// pending soak.
+		if req.Sources.Direct ||
+			req.Sources.RequiredSoakTime == nil ||
+			len(req.Sources.Stages) == 0 {
+			continue
+		}
+		soak := req.Sources.RequiredSoakTime.Duration
+		if soak <= 0 {
+			continue
+		}
+
+		warehouse, err := api.GetWarehouse(
+			ctx,
+			r.client,
+			types.NamespacedName{Namespace: stage.Namespace, Name: req.Origin.Name},
+		)
+		if err != nil {
+			return 0, err
+		}
+		if warehouse == nil {
+			continue
+		}
+
+		// List Freight verified in the configured upstream Stage(s), ignoring
+		// soak, so we can find Freight that is verified but not yet soaked. The
+		// AvailabilityStrategy is honored so the candidate set matches the one
+		// used to determine availability.
+		freight, err := api.ListFreightFromWarehouse(
+			ctx,
+			r.client,
+			warehouse,
+			&api.ListWarehouseFreightOptions{
+				VerifiedIn:           req.Sources.Stages,
+				AvailabilityStrategy: req.Sources.AvailabilityStrategy,
+			},
+		)
+		if err != nil {
+			return 0, err
+		}
+
+		for _, f := range freight {
+			for _, upstream := range req.Sources.Stages {
+				// The soak clock only advances while the Freight is both verified
+				// in and currently in the upstream Stage. Freight that has left
+				// the upstream Stage without completing its soak will not accrue
+				// more soak time, so requeuing would not help it.
+				if _, verified := f.Status.VerifiedIn[upstream]; !verified {
+					continue
+				}
+				if _, current := f.Status.CurrentlyIn[upstream]; !current {
+					continue
+				}
+				remaining := soak - f.GetLongestSoak(upstream)
+				if remaining <= 0 {
+					// Already soaked in this upstream Stage.
+					continue
+				}
+				if shortest == 0 || remaining < shortest {
+					shortest = remaining
+				}
+			}
+		}
+	}
+
+	if shortest == 0 {
+		return 0, nil
+	}
+	return shortest + soakRequeueBuffer, nil
 }
 
 // handleDelete handles the deletion of the given Stage. It clears the
