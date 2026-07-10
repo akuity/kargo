@@ -218,9 +218,9 @@ func (s *server) createResource(
 	// If we get to here, the resource does not already exists, so we can create
 	// it.
 
-	// If the object is a Project, annotate it with information about the user who
-	// created it.
-	annotateProjectWithCreator(ctx, obj)
+	// Annotate the object with information about the user who created it, if
+	// it is of a type for which that annotation is load-bearing.
+	annotateResourceWithCreator(ctx, obj)
 
 	if err = cl.Create(ctx, obj); err != nil {
 		return createResourceResult{

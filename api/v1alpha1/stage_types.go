@@ -3,6 +3,7 @@ package v1alpha1
 import (
 	"crypto/sha1"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"maps"
 	"slices"
@@ -275,7 +276,25 @@ func (f *FreightOrigin) String() string {
 	if f == nil {
 		return ""
 	}
+	// This format is persisted in annotations and status keys. Do not change it
+	// without a migration for existing resources.
 	return fmt.Sprintf("%s/%s", f.Kind, f.Name)
+}
+
+// ParseFreightOrigin parses a string representation of a FreightOrigin in
+// "Kind/name" form and rejects empty parts or unsupported origin kinds.
+func ParseFreightOrigin(str string) (FreightOrigin, error) {
+	kind, name, ok := strings.Cut(str, "/")
+	if !ok || strings.Contains(name, "/") {
+		return FreightOrigin{}, fmt.Errorf("invalid Freight origin string %q", str)
+	}
+	if FreightOriginKind(kind) != FreightOriginKindWarehouse {
+		return FreightOrigin{}, fmt.Errorf("invalid Freight origin kind %q", kind)
+	}
+	if name == "" {
+		return FreightOrigin{}, errors.New("Freight origin name must not be empty")
+	}
+	return FreightOrigin{Kind: FreightOriginKind(kind), Name: name}, nil
 }
 
 func (f *FreightOrigin) Equals(other *FreightOrigin) bool {
@@ -439,6 +458,32 @@ type StageStatus struct {
 	// This is useful for storing additional information about the Stage
 	// that can be shared across promotions, verifications, or other processes.
 	Metadata map[string]apiextensionsv1.JSON `json:"metadata,omitempty" protobuf:"bytes,15,rep,name=metadata" protobuf_key:"bytes,1,opt,name=key" protobuf_val:"bytes,2,opt,name=value"`
+	// AutoPromotionHolds records active auto-promotion holds for this Stage. A
+	// hold is established when a Promotion selects Freight other than the
+	// auto-promotion candidate for that origin, pausing auto-promotion for that
+	// origin until explicitly released. Auto-promotions themselves never
+	// establish holds. Keys are string representations of FreightOrigins (e.g.
+	// "Warehouse/my-warehouse"); values describe the Promotion that established
+	// the hold.
+	AutoPromotionHolds map[string]AutoPromotionHold `json:"autoPromotionHolds,omitempty" protobuf:"bytes,16,rep,name=autoPromotionHolds" protobuf_key:"bytes,1,opt,name=key" protobuf_val:"bytes,2,opt,name=value"`
+}
+
+// AutoPromotionHold is a value in the AutoPromotionHolds map. It records the
+// details of the Promotion that established the hold.
+type AutoPromotionHold struct {
+	// FreightName is the name of the Freight selected when the hold was created.
+	FreightName string `json:"freightName" protobuf:"bytes,1,opt,name=freightName"`
+	// Origin describes the FreightOrigin pinned by this hold. It matches the
+	// enclosing map key.
+	Origin FreightOrigin `json:"origin" protobuf:"bytes,2,opt,name=origin"`
+	// PromotionName is the name of the Promotion that established this hold.
+	// Stored here as a paper trail that survives Promotion garbage collection.
+	PromotionName string `json:"promotionName,omitempty" protobuf:"bytes,3,opt,name=promotionName"`
+	// Actor identifies the user who triggered the hold.
+	Actor string `json:"actor,omitempty" protobuf:"bytes,4,opt,name=actor"`
+	// CreatedAt is the creation timestamp of the Promotion that established this
+	// hold.
+	CreatedAt *metav1.Time `json:"createdAt,omitempty" protobuf:"bytes,5,opt,name=createdAt"`
 }
 
 // GetConditions implements the conditions.Getter interface.

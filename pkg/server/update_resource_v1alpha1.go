@@ -175,9 +175,9 @@ func (s *server) updateResource(
 				Error: "resource does not exist",
 			}, libhttp.ErrorStr("resource does not exist", http.StatusNotFound)
 		}
-		// If the object is a Project, annotate it with information about the user
-		// who created it.
-		annotateProjectWithCreator(ctx, obj)
+		// Annotate the object with information about the user who created it,
+		// if it is of a type for which that annotation is load-bearing.
+		annotateResourceWithCreator(ctx, obj)
 		if err := cl.Create(ctx, obj); err != nil {
 			return createOrUpdateResourceResult{
 				Error: fmt.Errorf("create resource: %w", err).Error(),

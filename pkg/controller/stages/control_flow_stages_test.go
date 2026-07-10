@@ -749,6 +749,9 @@ func TestControlFlowStageReconciler_initializeStatus(t *testing.T) {
 					CurrentPromotion: &kargoapi.PromotionReference{},
 					LastPromotion:    &kargoapi.PromotionReference{},
 					FreightSummary:   "old freight summary",
+					AutoPromotionHolds: map[string]kargoapi.AutoPromotionHold{
+						"Warehouse/fake-warehouse": {FreightName: "fake-freight"},
+					},
 				},
 			},
 			assertions: func(t *testing.T, newStatus kargoapi.StageStatus) {
@@ -757,6 +760,7 @@ func TestControlFlowStageReconciler_initializeStatus(t *testing.T) {
 				assert.Nil(t, newStatus.CurrentPromotion)
 				assert.Nil(t, newStatus.LastPromotion)
 				assert.Equal(t, "N/A", newStatus.FreightSummary)
+				assert.Nil(t, newStatus.AutoPromotionHolds)
 			},
 		},
 	}

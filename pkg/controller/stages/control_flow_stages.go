@@ -376,6 +376,10 @@ func (r *ControlFlowStageReconciler) initializeStatus(stage *kargoapi.Stage) kar
 	newStatus.LastPromotion = nil
 	newStatus.FreightSummary = "N/A"
 	newStatus.AutoPromotionEnabled = false
+	// Holds left behind by a regular Stage converted to control flow would
+	// otherwise be orphaned: only the regular Stage reconciler transitions or
+	// removes them.
+	newStatus.AutoPromotionHolds = nil
 
 	return *newStatus
 }

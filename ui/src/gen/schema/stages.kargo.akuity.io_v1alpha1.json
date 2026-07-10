@@ -358,6 +358,58 @@
           "description": "AutoPromotionEnabled indicates whether automatic promotion is enabled\nfor the Stage based on the ProjectConfig.",
           "type": "boolean"
         },
+        "autoPromotionHolds": {
+          "additionalProperties": {
+            "description": "AutoPromotionHold is a value in the AutoPromotionHolds map. It records the\ndetails of the Promotion that established the hold.",
+            "properties": {
+              "actor": {
+                "description": "Actor identifies the user who triggered the hold.",
+                "type": "string"
+              },
+              "createdAt": {
+                "description": "CreatedAt is the creation timestamp of the Promotion that established this\nhold.",
+                "format": "date-time",
+                "type": "string"
+              },
+              "freightName": {
+                "description": "FreightName is the name of the Freight selected when the hold was created.",
+                "type": "string"
+              },
+              "origin": {
+                "description": "Origin describes the FreightOrigin pinned by this hold. It matches the\nenclosing map key.",
+                "properties": {
+                  "kind": {
+                    "description": "Kind is the kind of resource from which Freight may have originated. At\npresent, this can only be \"Warehouse\".",
+                    "enum": [
+                      "Warehouse"
+                    ],
+                    "type": "string"
+                  },
+                  "name": {
+                    "description": "Name is the name of the resource of the kind indicated by the Kind field\nfrom which Freight may originate.",
+                    "type": "string"
+                  }
+                },
+                "required": [
+                  "kind",
+                  "name"
+                ],
+                "type": "object"
+              },
+              "promotionName": {
+                "description": "PromotionName is the name of the Promotion that established this hold.\nStored here as a paper trail that survives Promotion garbage collection.",
+                "type": "string"
+              }
+            },
+            "required": [
+              "freightName",
+              "origin"
+            ],
+            "type": "object"
+          },
+          "description": "AutoPromotionHolds records active auto-promotion holds for this Stage. A\nhold is established when a Promotion selects Freight other than the\nauto-promotion candidate for that origin, pausing auto-promotion for that\norigin until explicitly released. Auto-promotions themselves never\nestablish holds. Keys are string representations of FreightOrigins (e.g.\n\"Warehouse/my-warehouse\"); values describe the Promotion that established\nthe hold.",
+          "type": "object"
+        },
         "conditions": {
           "description": "Conditions contains the last observations of the Stage's current\nstate.",
           "items": {
