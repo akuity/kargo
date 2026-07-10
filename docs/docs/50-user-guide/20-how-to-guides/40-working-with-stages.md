@@ -192,6 +192,14 @@ failed `Promotion` neither establishes nor lifts a hold. And it is only
 user-initiated `Promotion`s that carry such intent; those created by
 auto-promotion itself never establish or lift holds.
 
+A hold is only meaningful while auto-promotion is enabled, so disabling
+auto-promotion for a `Stage` clears its holds. While auto-promotion is
+disabled, the `Stage` remains on its current `Freight` regardless — nothing
+auto-promotes — so no hold is needed to keep it there. If auto-promotion is
+later re-enabled, it resumes from a clean slate and will promote each freight
+request's current candidate; re-establish a hold by promoting the older
+`Freight` again if you need the `Stage` to stay put.
+
 :::info
 
 The easiest way to promote the current candidate without having to identify it

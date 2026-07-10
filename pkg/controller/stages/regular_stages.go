@@ -1761,6 +1761,14 @@ func (r *RegularStageReconciler) autoPromoteFreight(
 	logger.Debug("checked auto-promotion policy for Stage", "enabled", autoPromotionEnabled)
 	if !autoPromotionEnabled {
 		newStatus.AutoPromotionEnabled = false
+		// Auto-promotion holds only modify auto-promotion behavior, so they are
+		// meaningless while auto-promotion is disabled: the Stage's current
+		// Freight is held in place by auto-promotion being disabled, not by the
+		// holds. Clear them so that re-enabling auto-promotion is a uniform
+		// fresh start -- consistent with the fact that promoting non-candidate
+		// Freight while auto-promotion is disabled never establishes a hold to
+		// begin with.
+		newStatus.AutoPromotionHolds = nil
 		return newStatus, nil
 	}
 	newStatus.AutoPromotionEnabled = true
