@@ -158,6 +158,8 @@ func (p *Promotion) GetStatus() *PromotionStatus {
 
 // PromotionSpec describes the desired transition of a specific Stage into a
 // specific Freight.
+//
+// +kubebuilder:validation:XValidation:message="exactly one of freight or origin must be set",rule="has(self.freight) != has(self.origin)"
 type PromotionSpec struct {
 	// Stage specifies the name of the Stage to which this Promotion
 	// applies. The Stage referenced by this field MUST be in the same
@@ -169,15 +171,22 @@ type PromotionSpec struct {
 	// +kubebuilder:validation:Pattern=`^[a-z0-9]([-a-z0-9]*[a-z0-9])?(\.[a-z0-9]([-a-z0-9]*[a-z0-9])?)*$`
 	// +akuity:test-kubebuilder-pattern=KubernetesName
 	Stage string `json:"stage" protobuf:"bytes,1,opt,name=stage"`
-	// Freight specifies the piece of Freight to be promoted into the Stage
-	// referenced by the Stage field.
+	// Freight specifies the piece of Freight to be promoted into the Stage.
+	// Exactly one of Freight or Origin must be set.
 	//
-	// +kubebuilder:validation:Required
+	// +kubebuilder:validation:Optional
 	// +kubebuilder:validation:MinLength=1
 	// +kubebuilder:validation:MaxLength=253
 	// +kubebuilder:validation:Pattern=`^[a-z0-9]([-a-z0-9]*[a-z0-9])?(\.[a-z0-9]([-a-z0-9]*[a-z0-9])?)*$`
 	// +akuity:test-kubebuilder-pattern=KubernetesName
-	Freight string `json:"freight" protobuf:"bytes,2,opt,name=freight"`
+	Freight string `json:"freight,omitempty" protobuf:"bytes,2,opt,name=freight"`
+	// Origin, when set, identifies the FreightOrigin whose auto-promotion
+	// candidate should be promoted. The mutating webhook resolves this to the
+	// candidate Freight for that origin and fills Freight before the Promotion
+	// is persisted. Exactly one of Freight or Origin must be set.
+	//
+	// +kubebuilder:validation:Optional
+	Origin *FreightOrigin `json:"origin,omitempty" protobuf:"bytes,14,opt,name=origin"`
 	// Vars is a list of variables that can be referenced by expressions in
 	// promotion steps.
 	Vars []ExpressionVariable `json:"vars,omitempty" protobuf:"bytes,4,rep,name=vars"`

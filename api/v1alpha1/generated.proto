@@ -181,6 +181,28 @@ message ArtifactoryWebhookReceiverConfig {
   optional string virtualRepoName = 2;
 }
 
+// AutoPromotionHold is a value in the AutoPromotionHolds map. It records the
+// details of the Promotion that established the hold.
+message AutoPromotionHold {
+  // FreightName is the name of the Freight selected when the hold was created.
+  optional string freightName = 1;
+
+  // Origin describes the FreightOrigin pinned by this hold. It matches the
+  // enclosing map key.
+  optional FreightOrigin origin = 2;
+
+  // PromotionName is the name of the Promotion that established this hold.
+  // Stored here as a paper trail that survives Promotion garbage collection.
+  optional string promotionName = 3;
+
+  // Actor identifies the user who triggered the hold.
+  optional string actor = 4;
+
+  // CreatedAt is the creation timestamp of the Promotion that established this
+  // hold.
+  optional .k8s.io.apimachinery.pkg.apis.meta.v1.Time createdAt = 5;
+}
+
 // AutoPromotionOptions specifies options pertaining to auto-promotion.
 message AutoPromotionOptions {
   // SelectionPolicy specifies the rules for identifying new Freight that is
@@ -1585,6 +1607,8 @@ message PromotionReference {
 
 // PromotionSpec describes the desired transition of a specific Stage into a
 // specific Freight.
+//
+// +kubebuilder:validation:XValidation:message="exactly one of freight or origin must be set",rule="has(self.freight) != has(self.origin)"
 message PromotionSpec {
   // Stage specifies the name of the Stage to which this Promotion
   // applies. The Stage referenced by this field MUST be in the same
@@ -1597,15 +1621,23 @@ message PromotionSpec {
   // +akuity:test-kubebuilder-pattern=KubernetesName
   optional string stage = 1;
 
-  // Freight specifies the piece of Freight to be promoted into the Stage
-  // referenced by the Stage field.
+  // Freight specifies the piece of Freight to be promoted into the Stage.
+  // Exactly one of Freight or Origin must be set.
   //
-  // +kubebuilder:validation:Required
+  // +kubebuilder:validation:Optional
   // +kubebuilder:validation:MinLength=1
   // +kubebuilder:validation:MaxLength=253
   // +kubebuilder:validation:Pattern=`^[a-z0-9]([-a-z0-9]*[a-z0-9])?(\.[a-z0-9]([-a-z0-9]*[a-z0-9])?)*$`
   // +akuity:test-kubebuilder-pattern=KubernetesName
   optional string freight = 2;
+
+  // Origin, when set, identifies the FreightOrigin whose auto-promotion
+  // candidate should be promoted. The mutating webhook resolves this to the
+  // candidate Freight for that origin and fills Freight before the Promotion
+  // is persisted. Exactly one of Freight or Origin must be set.
+  //
+  // +kubebuilder:validation:Optional
+  optional FreightOrigin origin = 14;
 
   // Vars is a list of variables that can be referenced by expressions in
   // promotion steps.
@@ -1991,6 +2023,15 @@ message StageStatus {
   // This is useful for storing additional information about the Stage
   // that can be shared across promotions, verifications, or other processes.
   map<string, .k8s.io.apiextensions_apiserver.pkg.apis.apiextensions.v1.JSON> metadata = 15;
+
+  // AutoPromotionHolds records active auto-promotion holds for this Stage. A
+  // hold is established when a Promotion selects Freight other than the
+  // auto-promotion candidate for that origin, pausing auto-promotion for that
+  // origin until explicitly released. Auto-promotions themselves never
+  // establish holds. Keys are string representations of FreightOrigins (e.g.
+  // "Warehouse/my-warehouse"); values describe the Promotion that established
+  // the hold.
+  map<string, AutoPromotionHold> autoPromotionHolds = 16;
 }
 
 // StepExecutionMetadata tracks metadata pertaining to the execution of

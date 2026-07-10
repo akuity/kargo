@@ -64,12 +64,35 @@ spec:
             properties:
               freight:
                 description: |-
-                  Freight specifies the piece of Freight to be promoted into the Stage
-                  referenced by the Stage field.
+                  Freight specifies the piece of Freight to be promoted into the Stage.
+                  Exactly one of Freight or Origin must be set.
                 maxLength: 253
                 minLength: 1
                 pattern: ^[a-z0-9]([-a-z0-9]*[a-z0-9])?(\.[a-z0-9]([-a-z0-9]*[a-z0-9])?)*$
                 type: string
+              origin:
+                description: |-
+                  Origin, when set, identifies the FreightOrigin whose auto-promotion
+                  candidate should be promoted. The mutating webhook resolves this to the
+                  candidate Freight for that origin and fills Freight before the Promotion
+                  is persisted. Exactly one of Freight or Origin must be set.
+                properties:
+                  kind:
+                    description: |-
+                      Kind is the kind of resource from which Freight may have originated. At
+                      present, this can only be "Warehouse".
+                    enum:
+                    - Warehouse
+                    type: string
+                  name:
+                    description: |-
+                      Name is the name of the resource of the kind indicated by the Kind field
+                      from which Freight may originate.
+                    type: string
+                required:
+                - kind
+                - name
+                type: object
               stage:
                 description: |-
                   Stage specifies the name of the Stage to which this Promotion
@@ -248,10 +271,12 @@ spec:
                   type: object
                 type: array
             required:
-            - freight
             - stage
             - steps
             type: object
+            x-kubernetes-validations:
+            - message: exactly one of freight or origin must be set
+              rule: has(self.freight) != has(self.origin)
           status:
             description: |-
               Status describes the current state of the transition represented by this

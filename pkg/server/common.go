@@ -31,6 +31,12 @@ var (
 		Kind:    "Project",
 	}
 
+	promotionGVK = schema.GroupVersionKind{
+		Group:   kargoapi.GroupVersion.Group,
+		Version: kargoapi.GroupVersion.Version,
+		Kind:    "Promotion",
+	}
+
 	secretGVK = schema.GroupVersionKind{
 		Group:   "",
 		Version: "v1",
@@ -180,14 +186,23 @@ func objectOrRaw[T client.Object](
 		fmt.Errorf("type mismatch: cannot input to expected type")
 }
 
-// annotateProjectWithCreator annotates an unstructured object with information
-// about the user who is creating the object only if that unstructured object
-// represents a Project.
-func annotateProjectWithCreator(
+// annotateResourceWithCreator annotates an unstructured object with information
+// about the user who is creating the object, but only for resource types where
+// that annotation is load-bearing -- i.e. where system behavior keys off of it.
+// The API server creates resources using its own (control-plane) service
+// account, so for those types, this annotation is the only record of the user
+// on whose behalf it acted. The value set here overwrites anything in the
+// caller's manifest, which also prevents callers from spoofing another
+// identity. Types for which the annotation is purely informational are
+// deliberately left untouched to avoid mutating user manifests unnecessarily.
+func annotateResourceWithCreator(
 	ctx context.Context,
 	obj *unstructured.Unstructured,
 ) {
-	if obj == nil || obj.GroupVersionKind() != projectGVK {
+	if obj == nil {
+		return
+	}
+	if gvk := obj.GroupVersionKind(); gvk != projectGVK && gvk != promotionGVK {
 		return
 	}
 	if userInfo, found := user.InfoFromContext(ctx); found {

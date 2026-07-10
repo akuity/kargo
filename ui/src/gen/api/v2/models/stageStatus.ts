@@ -5,6 +5,7 @@
  * REST API for Kargo
  * OpenAPI spec version: v1alpha1
  */
+import type { StageStatusAutoPromotionHolds } from './stageStatusAutoPromotionHolds';
 import type { V1Condition } from './v1Condition';
 import type { PromotionReference } from './promotionReference';
 import type { FreightCollection } from './freightCollection';
@@ -15,6 +16,14 @@ export interface StageStatus {
   /** AutoPromotionEnabled indicates whether automatic promotion is enabled
 for the Stage based on the ProjectConfig. */
   autoPromotionEnabled?: boolean;
+  /** AutoPromotionHolds records active auto-promotion holds for this Stage. A
+hold is established when a Promotion selects Freight other than the
+auto-promotion candidate for that origin, pausing auto-promotion for that
+origin until explicitly released. Auto-promotions themselves never
+establish holds. Keys are string representations of FreightOrigins (e.g.
+"Warehouse/my-warehouse"); values describe the Promotion that established
+the hold. */
+  autoPromotionHolds?: StageStatusAutoPromotionHolds;
   /** Conditions contains the last observations of the Stage's current
 state.
 +patchMergeKey=type
