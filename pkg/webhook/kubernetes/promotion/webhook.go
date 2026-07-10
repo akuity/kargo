@@ -582,26 +582,6 @@ func (w *webhook) ValidateUpdate(
 		)
 	}
 
-	for _, key := range []string{
-		kargoapi.AnnotationKeyAutoPromotionHold,
-		kargoapi.AnnotationKeyAutoPromotionResume,
-	} {
-		if promo.Annotations[key] == oldPromo.Annotations[key] {
-			continue
-		}
-		return nil, apierrors.NewInvalid(
-			promotionGroupKind,
-			promo.Name,
-			field.ErrorList{
-				field.Invalid(
-					field.NewPath("metadata", "annotations").Key(key),
-					promo.Annotations[key],
-					"annotation is immutable",
-				),
-			},
-		)
-	}
-
 	return nil, nil
 }
 

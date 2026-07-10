@@ -2095,35 +2095,6 @@ func Test_webhook_ValidateUpdate(t *testing.T) {
 				require.NoError(t, err)
 			},
 		},
-		{
-			name: "attempt to mutate intent annotation",
-			setup: func() (*kargoapi.Promotion, *kargoapi.Promotion) {
-				oldPromo := &kargoapi.Promotion{
-					ObjectMeta: metav1.ObjectMeta{
-						Name:      "fake-name",
-						Namespace: "fake-namespace",
-					},
-					Spec: kargoapi.PromotionSpec{
-						Stage:   "fake-stage",
-						Freight: "fake-freight",
-					},
-				}
-				newPromo := oldPromo.DeepCopy()
-				newPromo.Annotations = map[string]string{
-					kargoapi.AnnotationKeyAutoPromotionHold: "Warehouse/fake-warehouse",
-				}
-				return oldPromo, newPromo
-			},
-			authorizeFn: func(context.Context, *kargoapi.Promotion, string) error {
-				return nil
-			},
-			assertions: func(t *testing.T, err error) {
-				var statusErr *apierrors.StatusError
-				require.True(t, errors.As(err, &statusErr))
-				require.Equal(t, metav1.StatusReasonInvalid, statusErr.ErrStatus.Reason)
-				require.Contains(t, statusErr.ErrStatus.Message, "annotation is immutable")
-			},
-		},
 	}
 	for _, testCase := range testCases {
 		t.Run(testCase.name, func(t *testing.T) {
