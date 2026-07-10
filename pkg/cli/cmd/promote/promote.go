@@ -68,7 +68,7 @@ kargo promote --project=my-project --freight=abc123 --downstream-from=qa
 # Promote a piece of freight specified by alias to stages immediately downstream from the QA stage
 kargo promote --project=my-project --freight-alias=wonky-wombat --downstream-from=qa
 
-# Promote freight from my-warehouse to QA, selected as auto-promotion would (this also clears any active auto-promotion hold)
+# Promote freight from my-warehouse to QA, selected as auto-promotion would (on success, this clears any active auto-promotion hold)
 kargo promote --project=my-project --warehouse=my-warehouse --stage=qa
 
 # Abort a Promotion by name
