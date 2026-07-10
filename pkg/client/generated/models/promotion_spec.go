@@ -18,16 +18,25 @@ import (
 // swagger:model PromotionSpec
 type PromotionSpec struct {
 
-	// Freight specifies the piece of Freight to be promoted into the Stage
-	// referenced by the Stage field.
+	// Freight specifies the piece of Freight to be promoted into the Stage.
+	// Exactly one of Freight or Origin must be set.
 	//
-	// +kubebuilder:validation:Required
+	// +kubebuilder:validation:Optional
 	// +kubebuilder:validation:MinLength=1
 	// +kubebuilder:validation:MaxLength=253
 	// +kubebuilder:validation:Pattern=`^[a-z0-9]([-a-z0-9]*[a-z0-9])?(\.[a-z0-9]([-a-z0-9]*[a-z0-9])?)*$`
 	// +akuity:test-kubebuilder-pattern=KubernetesName
-	// Required: true
-	Freight *string `json:"freight"`
+	Freight string `json:"freight,omitempty"`
+
+	// Origin, when set, identifies the FreightOrigin whose auto-promotion
+	// candidate should be promoted. The mutating webhook resolves this to the
+	// candidate Freight for that origin and fills Freight before the Promotion
+	// is persisted. Exactly one of Freight or Origin must be set.
+	//
+	// +kubebuilder:validation:Optional
+	Origin struct {
+		FreightOrigin
+	} `json:"origin,omitempty"`
 
 	// Stage specifies the name of the Stage to which this Promotion
 	// applies. The Stage referenced by this field MUST be in the same
@@ -60,7 +69,7 @@ type PromotionSpec struct {
 func (m *PromotionSpec) Validate(formats strfmt.Registry) error {
 	var res []error
 
-	if err := m.validateFreight(formats); err != nil {
+	if err := m.validateOrigin(formats); err != nil {
 		res = append(res, err)
 	}
 
@@ -82,10 +91,9 @@ func (m *PromotionSpec) Validate(formats strfmt.Registry) error {
 	return nil
 }
 
-func (m *PromotionSpec) validateFreight(formats strfmt.Registry) error {
-
-	if err := validate.Required("freight", "body", m.Freight); err != nil {
-		return err
+func (m *PromotionSpec) validateOrigin(formats strfmt.Registry) error {
+	if swag.IsZero(m.Origin) { // not required
+		return nil
 	}
 
 	return nil
@@ -165,6 +173,10 @@ func (m *PromotionSpec) validateVars(formats strfmt.Registry) error {
 func (m *PromotionSpec) ContextValidate(ctx context.Context, formats strfmt.Registry) error {
 	var res []error
 
+	if err := m.contextValidateOrigin(ctx, formats); err != nil {
+		res = append(res, err)
+	}
+
 	if err := m.contextValidateSteps(ctx, formats); err != nil {
 		res = append(res, err)
 	}
@@ -176,6 +188,11 @@ func (m *PromotionSpec) ContextValidate(ctx context.Context, formats strfmt.Regi
 	if len(res) > 0 {
 		return errors.CompositeValidationError(res...)
 	}
+	return nil
+}
+
+func (m *PromotionSpec) contextValidateOrigin(ctx context.Context, formats strfmt.Registry) error {
+
 	return nil
 }
 
