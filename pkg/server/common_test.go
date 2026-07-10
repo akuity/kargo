@@ -1,6 +1,7 @@
 package server
 
 import (
+	"context"
 	"encoding/json"
 	"strings"
 	"testing"
@@ -16,6 +17,7 @@ import (
 
 	svcv1alpha1 "github.com/akuity/kargo/api/service/v1alpha1"
 	kargoapi "github.com/akuity/kargo/api/v1alpha1"
+	"github.com/akuity/kargo/pkg/server/user"
 )
 
 func Test_splitYAML(t *testing.T) {
@@ -447,5 +449,105 @@ func TestObjectOrRaw(t *testing.T) {
 	}
 	for _, testCase := range testCases {
 		t.Run(testCase.name, testCase.test)
+	}
+}
+
+func Test_annotateResourceWithCreator(t *testing.T) {
+	newObj := func(kind string, annotations map[string]any) *unstructured.Unstructured {
+		metadata := map[string]any{"name": "fake-resource"}
+		if annotations != nil {
+			metadata["annotations"] = annotations
+		}
+		return &unstructured.Unstructured{
+			Object: map[string]any{
+				"apiVersion": kargoapi.GroupVersion.String(),
+				"kind":       kind,
+				"metadata":   metadata,
+			},
+		}
+	}
+
+	testCases := []struct {
+		name     string
+		obj      *unstructured.Unstructured
+		userInfo *user.Info
+		assert   func(*testing.T, *unstructured.Unstructured)
+	}{
+		{
+			name: "nil object does not panic",
+		},
+		{
+			name:     "Project is annotated",
+			obj:      newObj("Project", nil),
+			userInfo: &user.Info{IsAdmin: true},
+			assert: func(t *testing.T, obj *unstructured.Unstructured) {
+				require.Equal(
+					t,
+					kargoapi.EventActorAdmin,
+					obj.GetAnnotations()[kargoapi.AnnotationKeyCreateActor],
+				)
+			},
+		},
+		{
+			name:     "Promotion is annotated",
+			obj:      newObj("Promotion", nil),
+			userInfo: &user.Info{IsAdmin: true},
+			assert: func(t *testing.T, obj *unstructured.Unstructured) {
+				require.Equal(
+					t,
+					kargoapi.EventActorAdmin,
+					obj.GetAnnotations()[kargoapi.AnnotationKeyCreateActor],
+				)
+			},
+		},
+		{
+			name: "caller-supplied actor on a Promotion is overwritten",
+			obj: newObj("Promotion", map[string]any{
+				kargoapi.AnnotationKeyCreateActor: "controller:forged",
+			}),
+			userInfo: &user.Info{IsAdmin: true},
+			assert: func(t *testing.T, obj *unstructured.Unstructured) {
+				require.Equal(
+					t,
+					kargoapi.EventActorAdmin,
+					obj.GetAnnotations()[kargoapi.AnnotationKeyCreateActor],
+				)
+			},
+		},
+		{
+			name:     "other kinds are not annotated",
+			obj:      newObj("Stage", nil),
+			userInfo: &user.Info{IsAdmin: true},
+			assert: func(t *testing.T, obj *unstructured.Unstructured) {
+				require.NotContains(
+					t,
+					obj.GetAnnotations(),
+					kargoapi.AnnotationKeyCreateActor,
+				)
+			},
+		},
+		{
+			name: "no user info in context leaves object untouched",
+			obj:  newObj("Promotion", nil),
+			assert: func(t *testing.T, obj *unstructured.Unstructured) {
+				require.NotContains(
+					t,
+					obj.GetAnnotations(),
+					kargoapi.AnnotationKeyCreateActor,
+				)
+			},
+		},
+	}
+	for _, testCase := range testCases {
+		t.Run(testCase.name, func(t *testing.T) {
+			ctx := context.Background()
+			if testCase.userInfo != nil {
+				ctx = user.ContextWithInfo(ctx, *testCase.userInfo)
+			}
+			annotateResourceWithCreator(ctx, testCase.obj)
+			if testCase.assert != nil {
+				testCase.assert(t, testCase.obj)
+			}
+		})
 	}
 }
