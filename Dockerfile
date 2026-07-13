@@ -20,7 +20,7 @@ RUN --mount=type=cache,target=/root/.local/share/pnpm/store NODE_ENV='production
 ####################################################################################################
 # back-end-builder
 ####################################################################################################
-FROM --platform=$BUILDPLATFORM golang:1.26.4-trixie AS back-end-builder
+FROM --platform=$BUILDPLATFORM golang:1.26.5-trixie AS back-end-builder
 
 ARG TARGETOS
 ARG TARGETARCH
