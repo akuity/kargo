@@ -776,7 +776,7 @@ const transformMeasurementValue = (
 ): MeasurementValueInfo => {
   if (value === undefined || value === '') {
     return {
-      canChart: true,
+      canChart: false,
       chartValue: null,
       tableValue: null
     };
