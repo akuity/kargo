@@ -776,7 +776,8 @@ const transformMeasurementValue = (
 ): MeasurementValueInfo => {
   if (value === undefined || value === '') {
     return {
-      canChart: true,
+      // most probably AR was terminated so value wasn't recorded, so no point of chart without any values
+      canChart: false,
       chartValue: null,
       tableValue: null
     };
