@@ -2,13 +2,17 @@ package server
 
 import (
 	"bytes"
+	"context"
 	"encoding/json"
+	"errors"
 	"net/http"
 	"net/http/httptest"
 	"testing"
 
 	"github.com/stretchr/testify/require"
+	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/apimachinery/pkg/runtime/schema"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/client/fake"
 
@@ -193,6 +197,85 @@ func Test_server_createResources(t *testing.T) {
 						warehouse,
 					)
 					require.NoError(t, err)
+				},
+			},
+			{
+				name: "denies Promotion creation without promote permission",
+				serverSetup: func(_ *testing.T, s *server) {
+					s.authorizeFn = func(
+						_ context.Context,
+						_ string,
+						gvr schema.GroupVersionResource,
+						_ string,
+						key client.ObjectKey,
+					) error {
+						return apierrors.NewForbidden(
+							gvr.GroupResource(),
+							key.Name,
+							errors.New("not permitted to promote"),
+						)
+					}
+				},
+				body: mustJSONBody(&kargoapi.Promotion{
+					TypeMeta: metav1.TypeMeta{
+						APIVersion: kargoapi.GroupVersion.String(),
+						Kind:       "Promotion",
+					},
+					ObjectMeta: metav1.ObjectMeta{
+						Name:      "fake-promotion",
+						Namespace: testProject.Name,
+					},
+					Spec: kargoapi.PromotionSpec{
+						Stage:   "fake-stage",
+						Freight: "fake-freight",
+					},
+				}),
+				assertions: func(t *testing.T, w *httptest.ResponseRecorder, c client.Client) {
+					require.Equal(t, http.StatusForbidden, w.Code)
+					// The Promotion must not have been created.
+					err := c.Get(
+						t.Context(),
+						client.ObjectKey{Namespace: testProject.Name, Name: "fake-promotion"},
+						&kargoapi.Promotion{},
+					)
+					require.True(t, apierrors.IsNotFound(err))
+				},
+			},
+			{
+				name: "creates Promotion when promote is permitted",
+				serverSetup: func(_ *testing.T, s *server) {
+					s.authorizeFn = func(
+						context.Context,
+						string,
+						schema.GroupVersionResource,
+						string,
+						client.ObjectKey,
+					) error {
+						return nil
+					}
+				},
+				body: mustJSONBody(&kargoapi.Promotion{
+					TypeMeta: metav1.TypeMeta{
+						APIVersion: kargoapi.GroupVersion.String(),
+						Kind:       "Promotion",
+					},
+					ObjectMeta: metav1.ObjectMeta{
+						Name:      "fake-promotion",
+						Namespace: testProject.Name,
+					},
+					Spec: kargoapi.PromotionSpec{
+						Stage:   "fake-stage",
+						Freight: "fake-freight",
+					},
+				}),
+				assertions: func(t *testing.T, w *httptest.ResponseRecorder, c client.Client) {
+					require.Equal(t, http.StatusCreated, w.Code)
+					// The Promotion must have been created.
+					require.NoError(t, c.Get(
+						t.Context(),
+						client.ObjectKey{Namespace: testProject.Name, Name: "fake-promotion"},
+						&kargoapi.Promotion{},
+					))
 				},
 			},
 		},

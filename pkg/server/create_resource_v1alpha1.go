@@ -183,6 +183,16 @@ func (s *server) createResource(
 		}, errSecretManagementDisabled
 	}
 
+	// Enforce authorization checks the authorizing client cannot perform
+	// implicitly (e.g. the "promote" verb required to create a Promotion).
+	if err := s.authorizeResourceCreate(ctx, obj); err != nil {
+		return createResourceResult{Error: err.Error()}, err
+	}
+	// Block RBAC privilege escalation via this generic path.
+	if err := s.verifyNoEscalation(ctx, obj); err != nil {
+		return createResourceResult{Error: err.Error()}, err
+	}
+
 	// Note: We don't blindly attempt creating the resource because many resource
 	// types have defaulting and/or validating webhooks and what we do not want is
 	// for some error from a webhook to obscure the fact that the resource already
