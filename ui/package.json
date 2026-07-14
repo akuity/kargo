@@ -14,11 +14,6 @@
     "test": "vitest"
   },
   "license": "ISC",
-  "pnpm": {
-    "overrides": {
-      "@ant-design/icons": "6.1.1"
-    }
-  },
   "devDependencies": {
     "@apidevtools/json-schema-ref-parser": "15.4.0",
     "@eslint/compat": "2.1.0",
@@ -60,7 +55,7 @@
     "vitest": "4.1.9",
     "zx": "8.8.5"
   },
-  "packageManager": "pnpm@9.0.3",
+  "packageManager": "pnpm@11.13.0",
   "dependencies": {
     "@ant-design/v5-patch-for-react-19": "1.0.3",
     "@bufbuild/protobuf": "2.11.0",
