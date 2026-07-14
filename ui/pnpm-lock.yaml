@@ -17,15 +17,6 @@ importers:
       '@bufbuild/protobuf':
         specifier: 2.11.0
         version: 2.11.0
-      '@connectrpc/connect':
-        specifier: 2.1.1
-        version: 2.1.1(@bufbuild/protobuf@2.11.0)
-      '@connectrpc/connect-query':
-        specifier: 2.2.0
-        version: 2.2.0(@bufbuild/protobuf@2.11.0)(@connectrpc/connect@2.1.1(@bufbuild/protobuf@2.11.0))(@tanstack/query-core@5.101.0)(@tanstack/react-query@5.101.0(react@19.2.7))(react-dom@19.2.7(react@19.2.7))(react@19.2.7)
-      '@connectrpc/connect-web':
-        specifier: 2.1.1
-        version: 2.1.1(@bufbuild/protobuf@2.11.0)(@connectrpc/connect@2.1.1(@bufbuild/protobuf@2.11.0))
       '@dagrejs/dagre':
         specifier: 1.1.8
         version: 1.1.8
@@ -335,33 +326,6 @@ packages:
     resolution: {integrity: sha512-hIn0ncNaJRLkZrxBIp5AsW/eXEHNKYQBh0aPdoUqNgD+Io3NIykQqpKFyKcuasZhicGaEZJX/JBSIkZ4e5x8Dg==}
     peerDependencies:
       commander: ~14.0.0
-
-  '@connectrpc/connect-query-core@2.2.0':
-    resolution: {integrity: sha512-t/CuxW/vP84y2iyS+PnbAnBwgOTYMzHXTSoBUKC1vIn706aNiZP40Y6mGJybglyH63RhAPcOdUgzG7DjzaAHCw==}
-    peerDependencies:
-      '@bufbuild/protobuf': 2.x
-      '@connectrpc/connect': ^2.0.1
-      '@tanstack/query-core': '>=5.62.0'
-
-  '@connectrpc/connect-query@2.2.0':
-    resolution: {integrity: sha512-oQ+coXOwBmfl4/t6EOrTfzW0zdoGDe3kvUYqZHrbzORkRFd693Cz8PxuDBjRCjmBPhDRCQMxFhR1jn2+SbgEKQ==}
-    peerDependencies:
-      '@bufbuild/protobuf': 2.x
-      '@connectrpc/connect': ^2.0.1
-      '@tanstack/react-query': '>=5.62.0'
-      react: ^18 || ^19
-      react-dom: ^18 || ^19
-
-  '@connectrpc/connect-web@2.1.1':
-    resolution: {integrity: sha512-J8317Q2MaFRCT1jzVR1o06bZhDIBmU0UAzWx6xOIXzOq8+k71/+k7MUF7AwcBUX+34WIvbm5syRgC5HXQA8fOg==}
-    peerDependencies:
-      '@bufbuild/protobuf': ^2.7.0
-      '@connectrpc/connect': 2.1.1
-
-  '@connectrpc/connect@2.1.1':
-    resolution: {integrity: sha512-JzhkaTvM73m2K1URT6tv53k2RwngSmCXLZJgK580qNQOXRzZRR/BCMfZw3h+90JpnG6XksP5bYT+cz0rpUzUWQ==}
-    peerDependencies:
-      '@bufbuild/protobuf': ^2.7.0
 
   '@dagrejs/dagre@1.1.8':
     resolution: {integrity: sha512-5SEDlndt4W/LaVzPYJW+bSmSEZc9EzTf8rJ20WCKvjS5EAZAN0b+x0Yww7VMT4R3Wootkg+X9bUfUxazYw6Blw==}
@@ -4354,32 +4318,6 @@ snapshots:
   '@commander-js/extra-typings@14.0.0(commander@14.0.2)':
     dependencies:
       commander: 14.0.2
-
-  '@connectrpc/connect-query-core@2.2.0(@bufbuild/protobuf@2.11.0)(@connectrpc/connect@2.1.1(@bufbuild/protobuf@2.11.0))(@tanstack/query-core@5.101.0)':
-    dependencies:
-      '@bufbuild/protobuf': 2.11.0
-      '@connectrpc/connect': 2.1.1(@bufbuild/protobuf@2.11.0)
-      '@tanstack/query-core': 5.101.0
-
-  '@connectrpc/connect-query@2.2.0(@bufbuild/protobuf@2.11.0)(@connectrpc/connect@2.1.1(@bufbuild/protobuf@2.11.0))(@tanstack/query-core@5.101.0)(@tanstack/react-query@5.101.0(react@19.2.7))(react-dom@19.2.7(react@19.2.7))(react@19.2.7)':
-    dependencies:
-      '@bufbuild/protobuf': 2.11.0
-      '@connectrpc/connect': 2.1.1(@bufbuild/protobuf@2.11.0)
-      '@connectrpc/connect-query-core': 2.2.0(@bufbuild/protobuf@2.11.0)(@connectrpc/connect@2.1.1(@bufbuild/protobuf@2.11.0))(@tanstack/query-core@5.101.0)
-      '@tanstack/react-query': 5.101.0(react@19.2.7)
-      react: 19.2.7
-      react-dom: 19.2.7(react@19.2.7)
-    transitivePeerDependencies:
-      - '@tanstack/query-core'
-
-  '@connectrpc/connect-web@2.1.1(@bufbuild/protobuf@2.11.0)(@connectrpc/connect@2.1.1(@bufbuild/protobuf@2.11.0))':
-    dependencies:
-      '@bufbuild/protobuf': 2.11.0
-      '@connectrpc/connect': 2.1.1(@bufbuild/protobuf@2.11.0)
-
-  '@connectrpc/connect@2.1.1(@bufbuild/protobuf@2.11.0)':
-    dependencies:
-      '@bufbuild/protobuf': 2.11.0
 
   '@dagrejs/dagre@1.1.8':
     dependencies:
