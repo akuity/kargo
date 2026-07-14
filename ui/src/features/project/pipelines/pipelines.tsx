@@ -1,7 +1,7 @@
 import { faDocker } from '@fortawesome/free-brands-svg-icons';
 import { faPlus } from '@fortawesome/free-solid-svg-icons';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
-import { Button, Dropdown, Flex, Result } from 'antd';
+import { Button, Dropdown, Flex, Result, Tooltip } from 'antd';
 import classNames from 'classnames';
 import { useMemo, useState } from 'react';
 import { generatePath, Link, useNavigate, useParams } from 'react-router-dom';
@@ -246,7 +246,15 @@ export const Pipelines = (props: { creatingStage?: boolean; creatingWarehouse?: 
                           },
                           {
                             key: '2',
-                            label: 'Freight',
+                            label:
+                              warehouses.length === 0 ? (
+                                <Tooltip title='Create a Warehouse before creating Freight.'>
+                                  <span>Freight</span>
+                                </Tooltip>
+                              ) : (
+                                'Freight'
+                              ),
+                            disabled: warehouses.length === 0,
                             children: warehouses.map((warehouse) => ({
                               key: warehouse?.metadata?.name || '',
                               label: warehouse?.metadata?.name || '',
