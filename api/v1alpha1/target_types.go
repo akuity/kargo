@@ -1,6 +1,7 @@
 package v1alpha1
 
 import (
+	apiextensionsv1 "k8s.io/apiextensions-apiserver/pkg/apis/apiextensions/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
 
@@ -32,12 +33,14 @@ func (t *Target) GetStatus() *TargetStatus {
 
 // TargetSpec describes a Target.
 type TargetSpec struct {
-	// Params is a map of arbitrary, target-specific values. Promotion steps of
-	// Stages that govern this Target may reference these values by key in their
-	// expressions (for example, target.params.branch).
+	// Params is a map of arbitrary, target-specific values. Values may be any
+	// valid JSON -- including nested objects and arrays -- so promotion steps
+	// can reference deeply nested data. Promotion steps of Stages that govern
+	// this Target may reference these values by key in their expressions (for
+	// example, target.params.branch or target.params.cluster.region).
 	//
 	// +optional
-	Params map[string]string `json:"params,omitempty" protobuf:"bytes,1,rep,name=params" protobuf_key:"bytes,1,opt,name=key" protobuf_val:"bytes,2,opt,name=value"`
+	Params map[string]apiextensionsv1.JSON `json:"params,omitempty" protobuf:"bytes,1,rep,name=params" protobuf_key:"bytes,1,opt,name=key" protobuf_val:"bytes,2,opt,name=value"`
 }
 
 // TargetStatus describes the current status of a Target.

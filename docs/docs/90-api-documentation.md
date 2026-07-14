@@ -2524,7 +2524,7 @@ RawFormat specifies the format for raw resource representation.
  TargetSpec describes a Target.
 | Field | Type | Description |
 | ----- | ---- | ----------- |
-| params | [TargetSpec.ParamsEntry](#github-com-akuity-kargo-api-v1alpha1-TargetSpec-ParamsEntry) |  Params is a map of arbitrary, target-specific values. Promotion steps of Stages that govern this Target may reference these values by key in their expressions (for example, target.params.branch).  +optional |
+| params | [TargetSpec.ParamsEntry](#github-com-akuity-kargo-api-v1alpha1-TargetSpec-ParamsEntry) |  Params is a map of arbitrary, target-specific values. Values may be any valid JSON -- including nested objects and arrays -- so promotion steps can reference deeply nested data. Promotion steps of Stages that govern this Target may reference these values by key in their expressions (for example, target.params.branch or target.params.cluster.region).  +optional |
 
 
 ### TargetSpec.ParamsEntry {#github-com-akuity-kargo-api-v1alpha1-TargetSpec-ParamsEntry}
@@ -2532,7 +2532,7 @@ RawFormat specifies the format for raw resource representation.
 | Field | Type | Description |
 | ----- | ---- | ----------- |
 | key | string |   |
-| value | string |   |
+| value | k8s.io.apiextensions_apiserver.pkg.apis.apiextensions.v1.JSON |   |
 
 
 ### TargetStatus {#github-com-akuity-kargo-api-v1alpha1-TargetStatus}
