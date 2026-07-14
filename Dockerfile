@@ -5,11 +5,11 @@ ARG BASE_IMAGE=kargo-base
 ####################################################################################################
 FROM --platform=$BUILDPLATFORM docker.io/library/node:26.4.0 AS ui-builder
 
-ARG PNPM_VERSION=9.0.3
+ARG PNPM_VERSION=11.13.0
 RUN npm install --global pnpm@${PNPM_VERSION}
 
 WORKDIR /ui
-COPY ["ui/package.json", "ui/pnpm-lock.yaml", "./"]
+COPY ["ui/package.json", "ui/pnpm-lock.yaml", "ui/pnpm-workspace.yaml", "./"]
 
 RUN --mount=type=cache,target=/root/.local/share/pnpm/store pnpm install
 COPY ["ui/", "."]
@@ -122,10 +122,10 @@ CMD ["/usr/local/bin/kargo"]
 ####################################################################################################
 FROM --platform=$BUILDPLATFORM docker.io/library/node:26.4.0 AS ui-dev
 
-ARG PNPM_VERSION=9.0.3
+ARG PNPM_VERSION=11.13.0
 RUN npm install --global pnpm@${PNPM_VERSION}
 WORKDIR /ui
-COPY ["ui/package.json", "ui/pnpm-lock.yaml", "./"]
+COPY ["ui/package.json", "ui/pnpm-lock.yaml", "ui/pnpm-workspace.yaml", "./"]
 
 RUN --mount=type=cache,target=/root/.local/share/pnpm/store pnpm install
 

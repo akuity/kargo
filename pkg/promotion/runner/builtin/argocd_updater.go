@@ -8,6 +8,7 @@ import (
 
 	"github.com/xeipuuv/gojsonschema"
 	corev1 "k8s.io/api/core/v1"
+	"k8s.io/apimachinery/pkg/api/meta"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 	"k8s.io/apimachinery/pkg/labels"
@@ -891,12 +892,19 @@ var discoveryRetryBackoff = wait.Backoff{
 	Cap:      15 * time.Second,
 }
 
+// argoCDApplicationGroupKind identifies the Argo CD Application kind that this
+// file discovers. isIncompleteDiscoveryError only treats a bare
+// *meta.NoKindMatchError as retryable when it names this exact GroupKind, so a
+// NoKindMatchError for some unrelated kind is never mistaken for a transient
+// Application discovery hiccup.
+var argoCDApplicationGroupKind = argocd.GroupVersion.WithKind("Application").GroupKind()
+
 // withDiscoveryRetry runs fn, retrying it with backoff for as long as it fails
 // because the discovery-backed RESTMapper could not map the Argo CD Application
 // kind due to incomplete or temporarily unavailable API discovery. It does NOT
-// retry when the Application kind is genuinely not served by the cluster (e.g.
-// the Argo CD CRDs are not installed), so a real misconfiguration still fails
-// fast instead of blocking for the full backoff.
+// retry a *meta.NoKindMatchError naming any kind other than the Argo CD
+// Application kind, so a real misconfiguration involving some other kind still
+// fails fast instead of blocking for the full backoff.
 //
 // The passed function requires a context to help cancel any inflight work rather
 // than waiting for the retry period
@@ -921,19 +929,29 @@ func (a *argocdUpdater) withDiscoveryRetry(ctx context.Context, fn func(ctx cont
 // being served by the cluster.
 //
 // controller-runtime's RESTMapper returns an *apiutil.ErrResourceDiscoveryFailed
-// only when discovery for a GroupVersion fails or comes back incomplete. This is
+// when discovery for a GroupVersion fails or comes back incomplete. This is
 // transient and worth retrying: on the next attempt the mapper performs a
-// targeted discovery of just that group-version, which typically succeeds. When
-// the kind is genuinely absent, that targeted discovery returns NotFound and the
-// mapper instead returns a bare *meta.NoKindMatchError, which is not matched
-// here, so the caller fails fast rather than looping until the backoff is
-// exhausted.
+// targeted discovery of just that group-version, which typically succeeds.
+//
+// When the kind is genuinely absent, that targeted discovery returns NotFound
+// and the mapper instead returns a bare *meta.NoKindMatchError. Behind a flaky
+// proxy or HA API server, that same bare error can also surface when the
+// Application kind IS served but the targeted discovery request itself failed
+// in flight (e.g. a dropped connection), making it indistinguishable from a
+// genuine absence at the error-type level alone. Because this file only ever
+// discovers the Argo CD Application kind, a *meta.NoKindMatchError naming that
+// exact GroupKind (argoCDApplicationGroupKind) is treated as retryable too; a
+// NoKindMatchError naming any other GroupKind still fails fast.
 func isIncompleteDiscoveryError(err error) bool {
 	if err == nil {
 		return false
 	}
 	var discoveryErr *apiutil.ErrResourceDiscoveryFailed
-	return errors.As(err, &discoveryErr)
+	if errors.As(err, &discoveryErr) {
+		return true
+	}
+	var noKindMatchErr *meta.NoKindMatchError
+	return errors.As(err, &noKindMatchErr) && noKindMatchErr.GroupKind == argoCDApplicationGroupKind
 }
 
 // authorizeArgoCDAppUpdate returns an error if the Argo CD Application
