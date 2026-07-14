@@ -2,8 +2,8 @@ FROM golang:1.26.5-trixie
 
 ARG TARGETARCH
 
-ARG NODE_MAJOR=20
-ARG PNPM_VERSION=9.0.3
+ARG NODE_MAJOR=22
+ARG PNPM_VERSION=11.13.0
 
 RUN apt update && apt install -y ca-certificates curl gnupg unzip \
     && mkdir -p /etc/apt/keyrings \
