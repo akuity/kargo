@@ -33,8 +33,8 @@ func (t *Target) GetStatus() *TargetStatus {
 // TargetSpec describes a Target.
 type TargetSpec struct {
 	// Params is a map of arbitrary, target-specific values. Promotion steps of
-	// Stages that govern this Target may reference these values using
-	// expressions of the form ${{ target.params.<key> }}.
+	// Stages that govern this Target may reference these values by key in their
+	// expressions (for example, target.params.branch).
 	//
 	// +optional
 	Params map[string]string `json:"params,omitempty" protobuf:"bytes,1,rep,name=params" protobuf_key:"bytes,1,opt,name=key" protobuf_val:"bytes,2,opt,name=value"`

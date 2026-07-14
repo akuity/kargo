@@ -60,8 +60,8 @@ spec:
                   type: string
                 description: |-
                   Params is a map of arbitrary, target-specific values. Promotion steps of
-                  Stages that govern this Target may reference these values using
-                  expressions of the form ${{ target.params.<key> }}.
+                  Stages that govern this Target may reference these values by key in their
+                  expressions (for example, target.params.branch).
                 type: object
             type: object
           status:

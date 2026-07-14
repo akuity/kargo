@@ -20,7 +20,7 @@
           "additionalProperties": {
             "type": "string"
           },
-          "description": "Params is a map of arbitrary, target-specific values. Promotion steps of\nStages that govern this Target may reference these values using\nexpressions of the form ${{ target.params.<key> }}.",
+          "description": "Params is a map of arbitrary, target-specific values. Promotion steps of\nStages that govern this Target may reference these values by key in their\nexpressions (for example, target.params.branch).",
           "type": "object"
         }
       },
