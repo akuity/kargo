@@ -105,14 +105,13 @@ spec:
         {{- if .Values.api.probes.enabled }}
         startupProbe:
           {{- if .Values.api.tls.enabled }}
-          exec:
-            command:
-            - /usr/local/bin/grpc_health_probe
-            - -addr=:8080
-            - -tls
-            - -tls-no-verify
+          httpsGet:
+            path: /healthz
+            port: 8080
+            scheme: HTTPS
           {{- else }}
-          grpc:
+          httpGet:
+            path: /healthz
             port: 8080
           {{- end }}
           {{- with .Values.api.probes.startupProbe }}
@@ -120,14 +119,13 @@ spec:
           {{- end }}
         livenessProbe:
           {{- if .Values.api.tls.enabled }}
-          exec:
-            command:
-            - /usr/local/bin/grpc_health_probe
-            - -addr=:8080
-            - -tls
-            - -tls-no-verify
+          httpsGet:
+            path: /healthz
+            port: 8080
+            scheme: HTTPS
           {{- else }}
-          grpc:
+          httpGet:
+            path: /healthz
             port: 8080
           {{- end }}
           {{- with .Values.api.probes.livenessProbe }}
@@ -135,14 +133,13 @@ spec:
           {{- end }}
         readinessProbe:
           {{- if .Values.api.tls.enabled }}
-          exec:
-            command:
-            - /usr/local/bin/grpc_health_probe
-            - -addr=:8080
-            - -tls
-            - -tls-no-verify
+          httpsGet:
+            path: /healthz
+            port: 8080
+            scheme: HTTPS
           {{- else }}
-          grpc:
+          httpGet:
+            path: /healthz
             port: 8080
           {{- end }}
           {{- with .Values.api.probes.readinessProbe }}
