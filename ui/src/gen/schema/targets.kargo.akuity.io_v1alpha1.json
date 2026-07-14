@@ -18,9 +18,9 @@
       "properties": {
         "params": {
           "additionalProperties": {
-            "type": "string"
+            "x-kubernetes-preserve-unknown-fields": true
           },
-          "description": "Params is a map of arbitrary, target-specific values. Promotion steps of\nStages that govern this Target may reference these values by key in their\nexpressions (for example, target.params.branch).",
+          "description": "Params is a map of arbitrary, target-specific values. Values may be any\nvalid JSON -- including nested objects and arrays -- so promotion steps\ncan reference deeply nested data. Promotion steps of Stages that govern\nthis Target may reference these values by key in their expressions (for\nexample, target.params.branch or target.params.cluster.region).",
           "type": "object"
         }
       },
