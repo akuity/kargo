@@ -2,17 +2,14 @@ package server
 
 import (
 	"context"
-	"errors"
 	"fmt"
 	"net/http"
 
-	"connectrpc.com/connect"
 	"github.com/gin-gonic/gin"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/apimachinery/pkg/types"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
-	svcv1alpha1 "github.com/akuity/kargo/api/service/v1alpha1"
 	kargoapi "github.com/akuity/kargo/api/v1alpha1"
 	"github.com/akuity/kargo/pkg/api"
 	"github.com/akuity/kargo/pkg/event"
@@ -20,118 +17,6 @@ import (
 	"github.com/akuity/kargo/pkg/logging"
 	"github.com/akuity/kargo/pkg/server/user"
 )
-
-// PromoteToStage creates a Promotion resource to transition a specified Stage
-// into the state represented by the specified Freight.
-func (s *server) PromoteToStage(
-	ctx context.Context,
-	req *connect.Request[svcv1alpha1.PromoteToStageRequest],
-) (*connect.Response[svcv1alpha1.PromoteToStageResponse], error) {
-	// ConnectRPC is deprecated and intentionally remains freight/freightAlias
-	// only. Promote-by-origin is supported by REST and raw Promotion specs; adding
-	// it here would expand a retiring surface for no current caller.
-	project := req.Msg.GetProject()
-	if err := validateFieldNotEmpty("project", project); err != nil {
-		return nil, err
-	}
-
-	stageName := req.Msg.GetStage()
-	if err := validateFieldNotEmpty("stage", stageName); err != nil {
-		return nil, err
-	}
-
-	freightName := req.Msg.GetFreight()
-	freightAlias := req.Msg.GetFreightAlias()
-	if (freightName == "" && freightAlias == "") || (freightName != "" && freightAlias != "") {
-		return nil, connect.NewError(
-			connect.CodeInvalidArgument,
-			errors.New("exactly one of freight or freightAlias should not be empty"),
-		)
-	}
-
-	if err := s.validateProjectExistsFn(ctx, project); err != nil {
-		return nil, err
-	}
-
-	stage, err := s.getStageFn(
-		ctx,
-		s.client,
-		types.NamespacedName{
-			Namespace: project,
-			Name:      stageName,
-		},
-	)
-	if err != nil {
-		return nil, fmt.Errorf("get stage: %w", err)
-	}
-	if stage == nil {
-		// nolint:staticcheck
-		return nil, connect.NewError(
-			connect.CodeNotFound,
-			fmt.Errorf(
-				"Stage %q not found in namespace %q",
-				stageName,
-				project,
-			),
-		)
-	}
-
-	freight, err := s.getFreightByNameOrAliasFn(
-		ctx,
-		s.client,
-		project,
-		freightName,
-		freightAlias,
-	)
-	if err != nil {
-		return nil, fmt.Errorf("get freight: %w", err)
-	}
-	if freight == nil {
-		if freightName != "" {
-			err = fmt.Errorf("freight %q not found in namespace %q", freightName, project)
-		} else {
-			err = fmt.Errorf("freight with alias %q not found in namespace %q", freightAlias, project)
-		}
-		return nil, connect.NewError(connect.CodeNotFound, err)
-	}
-
-	if err = s.authorizeFn(
-		ctx,
-		"promote",
-		kargoapi.GroupVersion.WithResource("stages"),
-		"",
-		types.NamespacedName{
-			Namespace: project,
-			Name:      stageName,
-		},
-	); err != nil {
-		return nil, err
-	}
-
-	if !s.isFreightAvailableFn(stage, freight) {
-		// nolint:staticcheck
-		return nil, connect.NewError(
-			connect.CodeInvalidArgument,
-			fmt.Errorf(
-				"Freight %q is not available to Stage %q",
-				freightName,
-				stageName,
-			),
-		)
-	}
-
-	promotion := api.NewMinimalPromotion(stage, freight.Name)
-	if u, ok := user.InfoFromContext(ctx); ok {
-		api.SetCreateActorAnnotation(promotion, api.FormatEventUserActor(u))
-	}
-	if err := s.createPromotionFn(ctx, promotion); err != nil {
-		return nil, fmt.Errorf("create promotion: %w", err)
-	}
-	s.recordPromotionCreatedEvent(ctx, promotion, freight)
-	return connect.NewResponse(&svcv1alpha1.PromoteToStageResponse{
-		Promotion: promotion,
-	}), nil
-}
 
 func (s *server) isFreightAvailable(
 	stage *kargoapi.Stage,

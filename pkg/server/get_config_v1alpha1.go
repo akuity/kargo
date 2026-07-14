@@ -1,35 +1,12 @@
 package server
 
 import (
-	"context"
 	"net/http"
 
-	"connectrpc.com/connect"
 	"github.com/gin-gonic/gin"
 
-	svcv1alpha1 "github.com/akuity/kargo/api/service/v1alpha1"
 	libargocd "github.com/akuity/kargo/pkg/argocd"
 )
-
-func (s *server) GetConfig(
-	context.Context,
-	*connect.Request[svcv1alpha1.GetConfigRequest],
-) (*connect.Response[svcv1alpha1.GetConfigResponse], error) {
-	resp := svcv1alpha1.GetConfigResponse{
-		ArgocdShards:                  make(map[string]*svcv1alpha1.ArgoCDShard),
-		SecretManagementEnabled:       s.cfg.SecretManagementEnabled,
-		SystemResourcesNamespace:      s.cfg.SystemResourcesNamespace,
-		HasAnalysisRunLogsUrlTemplate: s.cfg.AnalysisRunLogURLTemplate != "",
-	}
-	for shardName, url := range s.cfg.ArgoCDConfig.URLs {
-		resp.ArgocdShards[shardName] = &svcv1alpha1.ArgoCDShard{
-			Url: url,
-			// TODO: currently, all shards must use the same namespace
-			Namespace: libargocd.Namespace(),
-		}
-	}
-	return connect.NewResponse(&resp), nil
-}
 
 // getConfigResponse represents the server configuration response
 type getConfigResponse struct {

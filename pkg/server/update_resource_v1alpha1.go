@@ -17,6 +17,18 @@ import (
 	libhttp "github.com/akuity/kargo/pkg/http"
 )
 
+// createOrUpdateResourceResponse is the response for creating or updating resources
+type createOrUpdateResourceResponse struct {
+	Results []createOrUpdateResourceResult `json:"results"`
+} // @name CreateOrUpdateResourceResponse
+
+// createOrUpdateResourceResult is the result of creating or updating a resource
+type createOrUpdateResourceResult struct {
+	CreatedResourceManifest map[string]any `json:"createdResourceManifest,omitempty"`
+	UpdatedResourceManifest map[string]any `json:"updatedResourceManifest,omitempty"`
+	Error                   string         `json:"error,omitempty"`
+} // @name CreateOrUpdateResourceResult
+
 func (s *server) UpdateResource(
 	ctx context.Context,
 	req *connect.Request[svcv1alpha1.UpdateResourceRequest],

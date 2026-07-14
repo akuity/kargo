@@ -9,15 +9,12 @@ import (
 	"strings"
 	"time"
 
-	"connectrpc.com/connect"
 	"github.com/Masterminds/semver/v3"
 	"github.com/gin-gonic/gin"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/apimachinery/pkg/fields"
-	"k8s.io/apimachinery/pkg/types"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
-	svcv1alpha1 "github.com/akuity/kargo/api/service/v1alpha1"
 	kargoapi "github.com/akuity/kargo/api/v1alpha1"
 	"github.com/akuity/kargo/pkg/api"
 	libhttp "github.com/akuity/kargo/pkg/http"
@@ -49,100 +46,6 @@ const (
 	// TODO: KR: Maybe we should add OrderBySemVer since charts are always
 	// semantically versioned and images sometimes are.
 )
-
-// QueryFreight retrieves and tabulates Freight according to the criteria
-// specified in the request.
-func (s *server) QueryFreight(
-	ctx context.Context,
-	req *connect.Request[svcv1alpha1.QueryFreightRequest],
-) (*connect.Response[svcv1alpha1.QueryFreightResponse], error) {
-	project := req.Msg.GetProject()
-	if err := validateFieldNotEmpty("project", project); err != nil {
-		return nil, err
-	}
-
-	group := req.Msg.GetGroup()
-	groupBy := req.Msg.GetGroupBy()
-	orderBy := req.Msg.GetOrderBy()
-	if err := validateGroupByOrderBy(group, groupBy, orderBy); err != nil {
-		return nil, err // This already returns a connect.Error
-	}
-
-	if err := s.validateProjectExistsFn(ctx, project); err != nil {
-		return nil, err // This already returns a connect.Error
-	}
-
-	stageName := req.Msg.GetStage()
-	origins := req.Msg.GetOrigins()
-	reverse := req.Msg.GetReverse()
-
-	var freight []kargoapi.Freight
-	switch {
-	case stageName != "":
-		stage, err := s.getStageFn(
-			ctx,
-			s.client,
-			types.NamespacedName{
-				Namespace: project,
-				Name:      stageName,
-			},
-		)
-		if err != nil {
-			return nil, fmt.Errorf("get stage: %w", err)
-		}
-		if stage == nil {
-			// nolint:staticcheck
-			return nil, connect.NewError(
-				connect.CodeNotFound,
-				fmt.Errorf(
-					"Stage %q not found in namespace %q",
-					stageName,
-					project,
-				),
-			)
-		}
-		freight, err = s.getAvailableFreightForStageFn(ctx, stage)
-		if err != nil {
-			return nil, fmt.Errorf("get available freight for stage: %w", err)
-		}
-	case len(origins) > 0:
-		var err error
-		freight, err = s.getFreightFromWarehousesFn(ctx, project, origins)
-		if err != nil {
-			return nil, fmt.Errorf("get freight from warehouse: %w", err)
-		}
-	default:
-		freightList := &kargoapi.FreightList{}
-		// Get ALL Freight in the project/namespace
-		if err := s.listFreightFn(
-			ctx,
-			freightList,
-			client.InNamespace(project),
-		); err != nil {
-			return nil, fmt.Errorf("list freight: %w", err)
-		}
-		freight = freightList.Items
-	}
-
-	// Split the Freight into groups
-	var freightGroups map[string]*svcv1alpha1.FreightList
-	switch groupBy {
-	case GroupByImageRepository:
-		freightGroups = groupByImageRepo(freight, group)
-	case GroupByGitRepository:
-		freightGroups = groupByGitRepo(freight, group)
-	case GroupByChartRepository:
-		freightGroups = groupByChart(freight, group)
-	default:
-		freightGroups = noGroupBy(freight)
-	}
-
-	sortFreightGroups(orderBy, reverse, freightGroups)
-
-	return connect.NewResponse(&svcv1alpha1.QueryFreightResponse{
-		Groups: freightGroups,
-	}), nil
-}
 
 func (s *server) getAvailableFreightForStage(
 	ctx context.Context,
@@ -320,40 +223,6 @@ func sortFreightGroupsGeneric(orderBy string, reverse bool, groups map[string][]
 	for k := range groups {
 		sortFreightSlice(orderBy, reverse, groups[k])
 	}
-}
-
-// Legacy helper functions for Connect RPC endpoint compatibility.
-// These wrap the generic functions and convert to svcv1alpha1.FreightList.
-
-func groupByImageRepo(freight []kargoapi.Freight, group string) map[string]*svcv1alpha1.FreightList {
-	return toSvcFreightListMap(groupFreightByImageRepo(freight, group))
-}
-
-func groupByGitRepo(freight []kargoapi.Freight, group string) map[string]*svcv1alpha1.FreightList {
-	return toSvcFreightListMap(groupFreightByGitRepo(freight, group))
-}
-
-func groupByChart(freight []kargoapi.Freight, group string) map[string]*svcv1alpha1.FreightList {
-	return toSvcFreightListMap(groupFreightByChart(freight, group))
-}
-
-func noGroupBy(freight []kargoapi.Freight) map[string]*svcv1alpha1.FreightList {
-	return toSvcFreightListMap(groupFreight(freight))
-}
-
-func sortFreightGroups(orderBy string, reverse bool, groups map[string]*svcv1alpha1.FreightList) {
-	for k := range groups {
-		sortFreightSlice(orderBy, reverse, groups[k].Freight)
-	}
-}
-
-// toSvcFreightListMap converts the generic freight groups to svcv1alpha1.FreightList format.
-func toSvcFreightListMap(groups map[string][]*kargoapi.Freight) map[string]*svcv1alpha1.FreightList {
-	result := make(map[string]*svcv1alpha1.FreightList, len(groups))
-	for k, v := range groups {
-		result[k] = &svcv1alpha1.FreightList{Freight: v}
-	}
-	return result
 }
 
 func getRepoAndTag(s *kargoapi.Freight) (string, string, *semver.Version) {

@@ -2,100 +2,21 @@ package server
 
 import (
 	"bytes"
-	"context"
 	"encoding/json"
 	"net/http"
 	"net/http/httptest"
 	"testing"
 
-	"connectrpc.com/connect"
 	"github.com/stretchr/testify/require"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	"k8s.io/apimachinery/pkg/runtime"
-	"k8s.io/apimachinery/pkg/types"
-	"k8s.io/client-go/rest"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/client/fake"
 
-	svcv1alpha1 "github.com/akuity/kargo/api/service/v1alpha1"
 	kargoapi "github.com/akuity/kargo/api/v1alpha1"
 	libCreds "github.com/akuity/kargo/pkg/credentials"
 	"github.com/akuity/kargo/pkg/server/config"
-	"github.com/akuity/kargo/pkg/server/kubernetes"
-	"github.com/akuity/kargo/pkg/server/validation"
 )
-
-func TestUpdateRepoCredentials(t *testing.T) {
-	ctx := t.Context()
-
-	cl, err := kubernetes.NewClient(
-		ctx,
-		&rest.Config{},
-		kubernetes.ClientOptions{
-			SkipAuthorization: true,
-			NewInternalClient: func(
-				_ context.Context,
-				_ *rest.Config,
-				s *runtime.Scheme,
-				_ string,
-			) (client.WithWatch, error) {
-				return fake.NewClientBuilder().
-					WithScheme(s).
-					WithObjects(
-						mustNewObject[corev1.Namespace]("testdata/namespace.yaml"),
-						&corev1.Secret{
-							ObjectMeta: metav1.ObjectMeta{
-								Namespace: "kargo-demo",
-								Name:      "secret",
-								Labels: map[string]string{
-									kargoapi.LabelKeyCredentialType: kargoapi.LabelValueCredentialTypeGit,
-								},
-							},
-							Data: map[string][]byte{
-								libCreds.FieldRepoURL:  []byte("https://github.com/example/repo"),
-								libCreds.FieldUsername: []byte("user"),
-								libCreds.FieldPassword: []byte("pass"),
-							},
-						},
-					).
-					Build(), nil
-			},
-		},
-	)
-	require.NoError(t, err)
-
-	s := &server{
-		client:                    cl,
-		cfg:                       config.ServerConfig{SecretManagementEnabled: true},
-		externalValidateProjectFn: validation.ValidateProject,
-	}
-
-	_, err = s.UpdateRepoCredentials(ctx, connect.NewRequest(&svcv1alpha1.UpdateRepoCredentialsRequest{
-		Project:  "kargo-demo",
-		Name:     "secret",
-		Type:     "helm",
-		RepoUrl:  "https://charts.example.com",
-		Username: "new-user",
-		Password: "new-pass",
-	}))
-	require.NoError(t, err)
-
-	secret := corev1.Secret{}
-
-	require.NoError(t, s.client.Get(ctx, types.NamespacedName{
-		Namespace: "kargo-demo",
-		Name:      "secret",
-	}, &secret))
-
-	// Verify credential type was updated
-	require.Equal(t, kargoapi.LabelValueCredentialTypeHelm, secret.Labels[kargoapi.LabelKeyCredentialType])
-
-	// Verify all data fields were replaced
-	require.Equal(t, "https://charts.example.com", string(secret.Data[libCreds.FieldRepoURL]))
-	require.Equal(t, "new-user", string(secret.Data[libCreds.FieldUsername]))
-	require.Equal(t, "new-pass", string(secret.Data[libCreds.FieldPassword]))
-}
 
 func TestApplyUpdateRepoCredentialsRequestToK8sSecret(t *testing.T) {
 	baseSecret := &corev1.Secret{

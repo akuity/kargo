@@ -2,96 +2,20 @@ package server
 
 import (
 	"bytes"
-	"context"
 	"encoding/json"
 	"net/http"
 	"net/http/httptest"
 	"testing"
 
-	"connectrpc.com/connect"
 	"github.com/stretchr/testify/require"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	"k8s.io/apimachinery/pkg/runtime"
-	"k8s.io/apimachinery/pkg/types"
-	"k8s.io/client-go/rest"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/client/fake"
 
-	svcv1alpha1 "github.com/akuity/kargo/api/service/v1alpha1"
 	kargoapi "github.com/akuity/kargo/api/v1alpha1"
 	"github.com/akuity/kargo/pkg/server/config"
-	"github.com/akuity/kargo/pkg/server/kubernetes"
-	"github.com/akuity/kargo/pkg/server/validation"
 )
-
-func TestUpdateGenericCredentials(t *testing.T) {
-	ctx := t.Context()
-
-	cl, err := kubernetes.NewClient(
-		ctx,
-		&rest.Config{},
-		kubernetes.ClientOptions{
-			SkipAuthorization: true,
-			NewInternalClient: func(
-				_ context.Context,
-				_ *rest.Config,
-				s *runtime.Scheme,
-				_ string,
-			) (client.WithWatch, error) {
-				return fake.NewClientBuilder().
-					WithScheme(s).
-					WithObjects(
-						mustNewObject[corev1.Namespace]("testdata/namespace.yaml"),
-						&corev1.Secret{
-							ObjectMeta: metav1.ObjectMeta{
-								Namespace: "kargo-demo",
-								Name:      "secret",
-								Labels: map[string]string{
-									kargoapi.LabelKeyCredentialType: kargoapi.LabelValueCredentialTypeGeneric,
-								},
-							},
-							StringData: map[string]string{
-								"TOKEN_1": "foo",
-								"TOKEN_2": "baz",
-							},
-						},
-					).
-					Build(), nil
-			},
-		},
-	)
-	require.NoError(t, err)
-
-	s := &server{
-		client:                    cl,
-		cfg:                       config.ServerConfig{SecretManagementEnabled: true},
-		externalValidateProjectFn: validation.ValidateProject,
-	}
-
-	_, err = s.UpdateGenericCredentials(ctx, connect.NewRequest(&svcv1alpha1.UpdateGenericCredentialsRequest{
-		Project: "kargo-demo",
-		Name:    "secret",
-		Data: map[string]string{
-			"TOKEN_1": "bar",
-		},
-	}))
-	require.NoError(t, err)
-
-	secret := corev1.Secret{}
-
-	require.NoError(t, s.client.Get(ctx, types.NamespacedName{
-		Namespace: "kargo-demo",
-		Name:      "secret",
-	}, &secret))
-
-	secret1, ok := secret.Data["TOKEN_1"]
-	require.True(t, ok)
-	require.Equal(t, "bar", string(secret1))
-
-	_, ok = secret.Data["TOKEN_2"]
-	require.False(t, ok)
-}
 
 func Test_server_updateProjectGenericCredentials(t *testing.T) {
 	testProject := &kargoapi.Project{

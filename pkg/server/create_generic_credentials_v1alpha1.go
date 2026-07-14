@@ -1,17 +1,13 @@
 package server
 
 import (
-	"context"
 	"errors"
-	"fmt"
 	"net/http"
 
-	"connectrpc.com/connect"
 	"github.com/gin-gonic/gin"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 
-	svcv1alpha1 "github.com/akuity/kargo/api/service/v1alpha1"
 	kargoapi "github.com/akuity/kargo/api/v1alpha1"
 	libhttp "github.com/akuity/kargo/pkg/http"
 )
@@ -24,62 +20,6 @@ type genericCredentials struct {
 	replicate   bool
 	secretType  string
 	data        map[string]string
-}
-
-func (s *server) CreateGenericCredentials(
-	ctx context.Context,
-	req *connect.Request[svcv1alpha1.CreateGenericCredentialsRequest],
-) (*connect.Response[svcv1alpha1.CreateGenericCredentialsResponse], error) {
-	// Check if secret management is enabled
-	if !s.cfg.SecretManagementEnabled {
-		return nil, connect.NewError(connect.CodeUnimplemented, errSecretManagementDisabled)
-	}
-
-	if err := s.validateGenericCredentialsRequest(ctx, req.Msg); err != nil {
-		return nil, err
-	}
-
-	secret := s.genericCredentialsToK8sSecret(
-		genericCredentials{
-			systemLevel: req.Msg.SystemLevel,
-			project:     req.Msg.Project,
-			name:        req.Msg.Name,
-			data:        req.Msg.Data,
-			description: req.Msg.Description,
-			replicate:   req.Msg.Replicate,
-		},
-	)
-	if err := s.client.Create(ctx, secret); err != nil {
-		return nil, fmt.Errorf("create secret: %w", err)
-	}
-
-	return connect.NewResponse(
-		&svcv1alpha1.CreateGenericCredentialsResponse{
-			Credentials: sanitizeGenericCredentials(*secret),
-		},
-	), nil
-}
-
-func (s *server) validateGenericCredentialsRequest(
-	ctx context.Context,
-	req *svcv1alpha1.CreateGenericCredentialsRequest,
-) error {
-	if !req.SystemLevel && req.Project != "" {
-		if err := s.validateProjectExists(ctx, req.Project); err != nil {
-			return err
-		}
-	}
-
-	if err := validateFieldNotEmpty("name", req.Name); err != nil {
-		return err
-	}
-
-	if len(req.Data) == 0 {
-		return connect.NewError(connect.CodeInvalidArgument,
-			errors.New("cannot create empty secret"))
-	}
-
-	return nil
 }
 
 // createGenericCredentialsRequest is the request body for creating generic

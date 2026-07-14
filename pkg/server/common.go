@@ -7,6 +7,7 @@ import (
 	"fmt"
 	"io"
 	"net/http"
+	"strings"
 
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 	"k8s.io/apimachinery/pkg/runtime"
@@ -23,6 +24,38 @@ import (
 )
 
 const trueStr = "true"
+
+// RefreshResourceType represents the type of Kargo resource to refresh. It is
+// exported for use by the CLI, which uses it to identify the resource type
+// requested by the user and to determine how to build the corresponding
+// refresh request.
+type RefreshResourceType string
+
+// RefreshResourceType constants for supported resource types. They are
+// PascalCase representations of the Kargo resource kinds for compatibility
+// purposes with Kubernetes REST mappers.
+const (
+	RefreshResourceTypeClusterConfig RefreshResourceType = "ClusterConfig"
+	RefreshResourceTypeProjectConfig RefreshResourceType = "ProjectConfig"
+	RefreshResourceTypeStage         RefreshResourceType = "Stage"
+	RefreshResourceTypeWarehouse     RefreshResourceType = "Warehouse"
+)
+
+// String returns the string representation of the RefreshResourceType.
+func (t RefreshResourceType) String() string {
+	return string(t)
+}
+
+// IsNamespaced returns true if the resource type is namespaced.
+func (t RefreshResourceType) IsNamespaced() bool {
+	return !strings.EqualFold(string(t), string(RefreshResourceTypeClusterConfig))
+}
+
+// NameEqualsProject returns true if the name of the resource should be the same
+// as the project name. This is true for ProjectConfig resources.
+func (t RefreshResourceType) NameEqualsProject() bool {
+	return strings.EqualFold(string(t), string(RefreshResourceTypeProjectConfig))
+}
 
 var (
 	projectGVK = schema.GroupVersionKind{

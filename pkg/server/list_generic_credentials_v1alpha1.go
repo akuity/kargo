@@ -1,81 +1,16 @@
 package server
 
 import (
-	"context"
-	"fmt"
 	"net/http"
 	"slices"
 	"strings"
 
-	"connectrpc.com/connect"
 	"github.com/gin-gonic/gin"
 	corev1 "k8s.io/api/core/v1"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
-	svcv1alpha1 "github.com/akuity/kargo/api/service/v1alpha1"
 	kargoapi "github.com/akuity/kargo/api/v1alpha1"
 )
-
-func (s *server) ListGenericCredentials(
-	ctx context.Context,
-	req *connect.Request[svcv1alpha1.ListGenericCredentialsRequest],
-) (*connect.Response[svcv1alpha1.ListGenericCredentialsResponse], error) {
-	// Check if secret management is enabled
-	if !s.cfg.SecretManagementEnabled {
-		return nil, connect.NewError(connect.CodeUnimplemented, errSecretManagementDisabled)
-	}
-
-	var cl client.Client = s.client
-
-	var namespace string
-	if req.Msg.SystemLevel {
-		namespace = s.cfg.SystemResourcesNamespace
-	} else {
-		project := req.Msg.Project
-		if project != "" {
-			if err := s.validateProjectExists(ctx, project); err != nil {
-				return nil, err
-			}
-		}
-		namespace = project
-		if namespace == "" {
-			namespace = s.cfg.SharedResourcesNamespace
-			// Note: We're using the internal client here so that all authenticated
-			// users can see what shared generic credentials exist without requiring
-			// actual permissions to list those Secrets. The Secrets are heavily
-			// redacted.
-			cl = s.client.InternalClient()
-		}
-	}
-
-	// List secrets having the label that indicates this is a generic secret.
-	var secretsList corev1.SecretList
-	if err := cl.List(
-		ctx,
-		&secretsList,
-		client.InNamespace(namespace),
-		client.MatchingLabels{
-			kargoapi.LabelKeyCredentialType: kargoapi.LabelValueCredentialTypeGeneric,
-		},
-	); err != nil {
-		return nil, fmt.Errorf("list secrets: %w", err)
-	}
-
-	// Sort the secrets by name
-	secrets := secretsList.Items
-	slices.SortFunc(secrets, func(lhs, rhs corev1.Secret) int {
-		return strings.Compare(lhs.Name, rhs.Name)
-	})
-
-	sanitizedSecrets := make([]*corev1.Secret, len(secrets))
-	for i, secret := range secrets {
-		sanitizedSecrets[i] = sanitizeGenericCredentials(secret)
-	}
-
-	return connect.NewResponse(&svcv1alpha1.ListGenericCredentialsResponse{
-		Credentials: sanitizedSecrets,
-	}), nil
-}
 
 // @id ListProjectGenericCredentials
 // @Summary List project-level generic credentials

@@ -1,103 +1,15 @@
 package server
 
 import (
-	"context"
-	"errors"
-	"fmt"
 	"net/http"
 
-	"connectrpc.com/connect"
 	"github.com/gin-gonic/gin"
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/types"
 
-	svcv1alpha1 "github.com/akuity/kargo/api/service/v1alpha1"
 	kargoapi "github.com/akuity/kargo/api/v1alpha1"
 	libhttp "github.com/akuity/kargo/pkg/http"
 )
-
-func (s *server) UpdateGenericCredentials(
-	ctx context.Context,
-	req *connect.Request[svcv1alpha1.UpdateGenericCredentialsRequest],
-) (*connect.Response[svcv1alpha1.UpdateGenericCredentialsResponse], error) {
-	// Check if secret management is enabled
-	if !s.cfg.SecretManagementEnabled {
-		return nil, connect.NewError(connect.CodeUnimplemented, errSecretManagementDisabled)
-	}
-
-	var namespace string
-	if req.Msg.SystemLevel {
-		namespace = s.cfg.SystemResourcesNamespace
-	} else {
-		project := req.Msg.Project
-		if project != "" {
-			if err := s.validateProjectExists(ctx, project); err != nil {
-				return nil, err
-			}
-		}
-		namespace = project
-		if namespace == "" {
-			namespace = s.cfg.SharedResourcesNamespace
-		}
-	}
-
-	name := req.Msg.Name
-
-	if err := validateFieldNotEmpty("name", name); err != nil {
-		return nil, err
-	}
-
-	secret := corev1.Secret{}
-	if err := s.client.Get(
-		ctx,
-		types.NamespacedName{
-			Namespace: namespace,
-			Name:      name,
-		},
-		&secret,
-	); err != nil {
-		return nil, fmt.Errorf("get secret: %w", err)
-	}
-
-	// Check for the label that indicates this is a generic secret.
-	if secret.Labels[kargoapi.LabelKeyCredentialType] != kargoapi.LabelValueCredentialTypeGeneric {
-		return nil, connect.NewError(
-			connect.CodeNotFound,
-			fmt.Errorf(
-				"secret %s/%s exists, but is not labeled with %s=%s",
-				secret.Namespace,
-				secret.Name,
-				kargoapi.LabelKeyCredentialType,
-				kargoapi.LabelValueCredentialTypeGeneric,
-			),
-		)
-	}
-
-	genericCredsUpdate := genericCredentials{
-		data:        req.Msg.Data,
-		description: req.Msg.Description,
-	}
-
-	if len(genericCredsUpdate.data) == 0 {
-		return nil, connect.NewError(connect.CodeInvalidArgument, errors.New("cannot create empty secret"))
-	}
-
-	applyGenericCredentialsUpdateToK8sSecret(&secret, updateGenericCredentialsRequest{
-		Description: genericCredsUpdate.description,
-		Replicate:   req.Msg.Replicate,
-		Data:        genericCredsUpdate.data,
-	})
-
-	if err := s.client.Update(ctx, &secret); err != nil {
-		return nil, fmt.Errorf("update secret: %w", err)
-	}
-
-	return connect.NewResponse(
-		&svcv1alpha1.UpdateGenericCredentialsResponse{
-			Credentials: sanitizeGenericCredentials(secret),
-		},
-	), nil
-}
 
 type updateGenericCredentialsRequest struct {
 	Description string            `json:"description,omitempty"`

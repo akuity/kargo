@@ -1,17 +1,13 @@
 package server
 
 import (
-	"context"
 	"errors"
-	"fmt"
 	"net/http"
 
-	"connectrpc.com/connect"
 	"github.com/gin-gonic/gin"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 
-	svcv1alpha1 "github.com/akuity/kargo/api/service/v1alpha1"
 	kargoapi "github.com/akuity/kargo/api/v1alpha1"
 	libCreds "github.com/akuity/kargo/pkg/credentials"
 	libhttp "github.com/akuity/kargo/pkg/http"
@@ -26,76 +22,6 @@ type repoCredentials struct {
 	username       string
 	password       string
 	description    string
-}
-
-func (s *server) CreateRepoCredentials(
-	ctx context.Context,
-	req *connect.Request[svcv1alpha1.CreateRepoCredentialsRequest],
-) (*connect.Response[svcv1alpha1.CreateRepoCredentialsResponse], error) {
-	// Check if secret management is enabled
-	if !s.cfg.SecretManagementEnabled {
-		return nil, connect.NewError(
-			connect.CodeUnimplemented,
-			errSecretManagementDisabled,
-		)
-	}
-
-	if err := s.validateCreateRepoCredentialsRequest(req.Msg); err != nil {
-		return nil, err
-	}
-
-	secret := s.repoCredentialsToK8sSecret(
-		repoCredentials{
-			project:        req.Msg.GetProject(),
-			name:           req.Msg.GetName(),
-			description:    req.Msg.GetDescription(),
-			credType:       req.Msg.GetType(),
-			repoURL:        req.Msg.GetRepoUrl(),
-			repoURLIsRegex: req.Msg.GetRepoUrlIsRegex(),
-			username:       req.Msg.GetUsername(),
-			password:       req.Msg.GetPassword(),
-		},
-	)
-	if err := s.client.Create(ctx, secret); err != nil {
-		return nil, fmt.Errorf("create secret: %w", err)
-	}
-
-	return connect.NewResponse(
-		&svcv1alpha1.CreateRepoCredentialsResponse{
-			Credentials: sanitizeCredentialSecret(*secret),
-		},
-	), nil
-}
-
-func (s *server) validateCreateRepoCredentialsRequest(
-	req *svcv1alpha1.CreateRepoCredentialsRequest,
-) error {
-	if err := validateFieldNotEmpty("name", req.GetName()); err != nil {
-		return err
-	}
-	if err := validateFieldNotEmpty("type", req.GetType()); err != nil {
-		return err
-	}
-	switch req.GetType() {
-	case kargoapi.LabelValueCredentialTypeGit,
-		kargoapi.LabelValueCredentialTypeHelm,
-		kargoapi.LabelValueCredentialTypeImage:
-	default:
-		return connect.NewError(
-			connect.CodeInvalidArgument,
-			errors.New("type should be one of git, helm, or image"),
-		)
-	}
-	if req.GetRepoUrl() == "" {
-		return connect.NewError(
-			connect.CodeInvalidArgument,
-			errors.New("repoURL should not be empty"),
-		)
-	}
-	if err := validateFieldNotEmpty("username", req.GetUsername()); err != nil {
-		return err
-	}
-	return validateFieldNotEmpty("password", req.GetPassword())
 }
 
 // createRepoCredentialsRequest is the request body for creating repository

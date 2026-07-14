@@ -14,14 +14,12 @@ import (
 	"strings"
 	"time"
 
-	"connectrpc.com/grpchealth"
 	"github.com/klauspost/compress/gzhttp"
 	"github.com/rs/cors"
 	"k8s.io/apimachinery/pkg/runtime/schema"
 	"k8s.io/apimachinery/pkg/types"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
-	"github.com/akuity/kargo/api/service/v1alpha1/svcv1alpha1connect"
 	rolloutsapi "github.com/akuity/kargo/api/stubs/rollouts/v1alpha1"
 	kargoapi "github.com/akuity/kargo/api/v1alpha1"
 	"github.com/akuity/kargo/pkg/api"
@@ -32,17 +30,12 @@ import (
 	"github.com/akuity/kargo/pkg/server/config"
 	"github.com/akuity/kargo/pkg/server/dex"
 	"github.com/akuity/kargo/pkg/server/kubernetes"
-	"github.com/akuity/kargo/pkg/server/option"
 	"github.com/akuity/kargo/pkg/server/rbac"
 	"github.com/akuity/kargo/pkg/server/validation"
 )
 
-var (
-	_ svcv1alpha1connect.KargoServiceHandler = &server{}
-
-	//go:embed all:ui
-	ui embed.FS
-)
+//go:embed all:ui
+var ui embed.FS
 
 type server struct {
 	cfg     config.ServerConfig
@@ -199,13 +192,7 @@ func (s *server) Serve(ctx context.Context, l net.Listener) error {
 	logger := logging.LoggerFromContext(ctx)
 	mux := http.NewServeMux()
 
-	opts, err := option.NewHandlerOption(ctx, s.cfg, s.client.InternalClient())
-	if err != nil {
-		return fmt.Errorf("error initializing handler options: %w", err)
-	}
-	mux.Handle(grpchealth.NewHandler(NewHealthChecker(), opts))
-	path, svcHandler := svcv1alpha1connect.NewKargoServiceHandler(s, opts)
-	mux.Handle(path, svcHandler)
+	mux.Handle("/healthz", newHealthHandler())
 
 	for p, h := range s.cfg.AdditionalHandlers {
 		mux.Handle(p, h)
@@ -219,6 +206,7 @@ func (s *server) Serve(ctx context.Context, l net.Listener) error {
 	if s.cfg.DashboardFS != nil {
 		dashboardFS = s.cfg.DashboardFS
 	} else {
+		var err error
 		dashboardFS, err = fs.Sub(ui, "ui")
 		if err != nil {
 			return fmt.Errorf("error initializing UI file system: %w", err)
@@ -302,22 +290,17 @@ func (s *server) Serve(ctx context.Context, l net.Listener) error {
 // StripPrefix layer removes the basePath from each incoming URL before
 // dispatching.
 //
-// The gRPC health endpoint stays addressable at the root in parallel with
+// The health check endpoint stays addressable at the root in parallel with
 // the basePath-wrapped routes, so liveness / readiness probes that hit the
 // Pod directly (never traversing the ingress that would otherwise prepend
-// the basePath) keep working without basePath awareness. The k8s native
-// gRPC probe and grpc_health_probe both send requests to the well-known
-// `/grpc.health.v1.Health/...` path with no path-prefixing support, so the
-// only way to make probes work transparently under any deployed basePath
-// is to leave their well-known endpoint reachable at root.
+// the basePath) keep working without basePath awareness.
 func wrapWithBasePath(inner http.Handler, basePath string) http.Handler {
 	if basePath == "" {
 		return inner
 	}
-	const grpcHealthPathPrefix = "/grpc.health.v1.Health/"
 	stripped := http.StripPrefix(basePath, inner)
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		if strings.HasPrefix(r.URL.Path, grpcHealthPathPrefix) {
+		if r.URL.Path == "/healthz" {
 			inner.ServeHTTP(w, r)
 			return
 		}

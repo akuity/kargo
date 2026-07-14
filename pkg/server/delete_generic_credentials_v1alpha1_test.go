@@ -1,90 +1,20 @@
 package server
 
 import (
-	"context"
 	"net/http"
 	"net/http/httptest"
 	"testing"
 
-	"connectrpc.com/connect"
 	"github.com/stretchr/testify/require"
 	corev1 "k8s.io/api/core/v1"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	"k8s.io/apimachinery/pkg/runtime"
-	"k8s.io/apimachinery/pkg/types"
-	"k8s.io/client-go/rest"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/client/fake"
 
-	svcv1alpha1 "github.com/akuity/kargo/api/service/v1alpha1"
 	kargoapi "github.com/akuity/kargo/api/v1alpha1"
 	"github.com/akuity/kargo/pkg/server/config"
-	"github.com/akuity/kargo/pkg/server/kubernetes"
-	"github.com/akuity/kargo/pkg/server/validation"
 )
-
-func TestDeleteGenericCredentials(t *testing.T) {
-	ctx := t.Context()
-
-	cl, err := kubernetes.NewClient(
-		ctx,
-		&rest.Config{},
-		kubernetes.ClientOptions{
-			SkipAuthorization: true,
-			NewInternalClient: func(
-				_ context.Context,
-				_ *rest.Config,
-				s *runtime.Scheme,
-				_ string,
-			) (client.WithWatch, error) {
-				return fake.NewClientBuilder().
-					WithScheme(s).
-					WithObjects(
-						mustNewObject[corev1.Namespace]("testdata/namespace.yaml"),
-						&corev1.Secret{
-							ObjectMeta: metav1.ObjectMeta{
-								Namespace: "kargo-demo",
-								Name:      "secret-a",
-								Labels: map[string]string{
-									kargoapi.LabelKeyCredentialType: kargoapi.LabelValueCredentialTypeGeneric,
-								},
-							},
-						},
-					).Build(), nil
-			},
-		},
-	)
-	require.NoError(t, err)
-
-	s := &server{
-		client:                    cl,
-		cfg:                       config.ServerConfig{SecretManagementEnabled: true},
-		externalValidateProjectFn: validation.ValidateProject,
-	}
-
-	_, err = s.DeleteGenericCredentials(
-		ctx,
-		connect.NewRequest(
-			&svcv1alpha1.DeleteGenericCredentialsRequest{
-				Project: "kargo-demo",
-				Name:    "secret-a",
-			},
-		),
-	)
-	require.NoError(t, err)
-
-	secret := corev1.Secret{}
-	err = s.client.Get(
-		ctx,
-		types.NamespacedName{
-			Namespace: "kargo-demo",
-			Name:      "secret-a",
-		},
-		&secret,
-	)
-	require.True(t, apierrors.IsNotFound(err))
-}
 
 func Test_server_deleteProjectGenericCredentials(t *testing.T) {
 	testProject := &kargoapi.Project{

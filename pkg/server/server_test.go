@@ -75,9 +75,9 @@ func TestNewServer(t *testing.T) {
 
 func TestWrapWithBasePath(t *testing.T) {
 	// Inner mux registers handlers at root paths; the wrap moves them under
-	// basePath with the carve-out for gRPC health.
+	// basePath with the carve-out for the health check endpoint.
 	innerMux := http.NewServeMux()
-	innerMux.HandleFunc("/grpc.health.v1.Health/Check", func(w http.ResponseWriter, _ *http.Request) {
+	innerMux.HandleFunc("/healthz", func(w http.ResponseWriter, _ *http.Request) {
 		w.WriteHeader(http.StatusOK)
 		_, _ = w.Write([]byte("health-ok"))
 	})
@@ -104,7 +104,7 @@ func TestWrapWithBasePath(t *testing.T) {
 		{
 			name:        "no basePath: health at root reaches handler",
 			basePath:    "",
-			requestPath: "/grpc.health.v1.Health/Check",
+			requestPath: "/healthz",
 			wantStatus:  http.StatusOK,
 			wantBodyHas: "health-ok",
 		},
@@ -124,14 +124,14 @@ func TestWrapWithBasePath(t *testing.T) {
 		{
 			name:        "basePath set: health at root still reaches handler (probes don't traverse ingress)",
 			basePath:    "/kargo",
-			requestPath: "/grpc.health.v1.Health/Check",
+			requestPath: "/healthz",
 			wantStatus:  http.StatusOK,
 			wantBodyHas: "health-ok",
 		},
 		{
 			name:        "basePath set: health under basePath also works",
 			basePath:    "/kargo",
-			requestPath: "/kargo/grpc.health.v1.Health/Check",
+			requestPath: "/kargo/healthz",
 			wantStatus:  http.StatusOK,
 			wantBodyHas: "health-ok",
 		},
