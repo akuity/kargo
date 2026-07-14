@@ -41,7 +41,6 @@ Kargo complements GitOps agents like Argo CD by automating the movement of chang
 ## API Reference
 
 - [REST API Reference](https://docs.kargo.io/api-docs): OpenAPI reference for the Kargo REST API.
-- [API Documentation](https://docs.kargo.io/api-documentation): Notes on the deprecated ConnectRPC API and migration guidance.
 
 ## Optional
 

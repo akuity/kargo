@@ -15,7 +15,7 @@ domain is needed.
 | `api/v1alpha1/` | CRD types (Warehouse, Freight, Stage, Promotion, Project, etc.) and protobuf specs. Separate Go module |
 | `cmd/controlplane/` | Back end entry point -- single binary with subcommands: `api`, `controller`, `management-controller`, `kubernetes-webhooks`, `external-webhooks`, `garbage-collector` |
 | `cmd/cli/` | CLI entry point |
-| `pkg/server/` | API server handlers. Two coexisting APIs: **ConnectRPC** (DEPRECATED, removal in v1.12.0; still used by UI -- avoid investing in fixes or enhancements) and **REST API** (the replacement; used by CLI; UI has not yet migrated) |
+| `pkg/server/` | API server handlers, exposing Kargo's REST API (used by both the CLI and UI). |
 | `pkg/cli/` | CLI -- Cobra-based, subcommands in `pkg/cli/cmd/`, REST API client in `pkg/cli/client/` |
 | `pkg/controller/` | Kubernetes controllers for Kargo resources |
 | `pkg/promotion/` | Promotion engine and step runner |
