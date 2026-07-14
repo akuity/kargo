@@ -34,9 +34,7 @@ type V1HTTPGetAction struct {
 	// Name or number of the port to access on the container.
 	// Number must be in the range 1 to 65535.
 	// Name must be an IANA_SVC_NAME.
-	Port struct {
-		IntOrString
-	} `json:"port,omitempty"`
+	Port *IntOrString `json:"port,omitempty"`
 
 	// Scheme to use for connecting to the host.
 	// Defaults to HTTP.
@@ -97,6 +95,21 @@ func (m *V1HTTPGetAction) validatePort(formats strfmt.Registry) error {
 		return nil
 	}
 
+	if m.Port != nil {
+		if err := m.Port.Validate(formats); err != nil {
+			ve := new(errors.Validation)
+			if stderrors.As(err, &ve) {
+				return ve.ValidateName("port")
+			}
+			ce := new(errors.CompositeError)
+			if stderrors.As(err, &ce) {
+				return ce.ValidateName("port")
+			}
+
+			return err
+		}
+	}
+
 	return nil
 }
 
@@ -148,6 +161,26 @@ func (m *V1HTTPGetAction) contextValidateHTTPHeaders(ctx context.Context, format
 }
 
 func (m *V1HTTPGetAction) contextValidatePort(ctx context.Context, formats strfmt.Registry) error {
+
+	if m.Port != nil {
+
+		if swag.IsZero(m.Port) { // not required
+			return nil
+		}
+
+		if err := m.Port.ContextValidate(ctx, formats); err != nil {
+			ve := new(errors.Validation)
+			if stderrors.As(err, &ve) {
+				return ve.ValidateName("port")
+			}
+			ce := new(errors.CompositeError)
+			if stderrors.As(err, &ce) {
+				return ce.ValidateName("port")
+			}
+
+			return err
+		}
+	}
 
 	return nil
 }

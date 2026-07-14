@@ -4,6 +4,7 @@ package models
 
 import (
 	"context"
+	stderrors "errors"
 
 	"github.com/go-openapi/errors"
 	"github.com/go-openapi/strfmt"
@@ -18,16 +19,12 @@ type V1PodTemplateSpec struct {
 	// Standard object's metadata.
 	// More info: https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#metadata
 	// +optional
-	Metadata struct {
-		V1ObjectMeta
-	} `json:"metadata,omitempty"`
+	Metadata *V1ObjectMeta `json:"metadata,omitempty"`
 
 	// Specification of the desired behavior of the pod.
 	// More info: https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#spec-and-status
 	// +optional
-	Spec struct {
-		V1PodSpec
-	} `json:"spec,omitempty"`
+	Spec *V1PodSpec `json:"spec,omitempty"`
 }
 
 // Validate validates this v1 pod template spec
@@ -53,12 +50,42 @@ func (m *V1PodTemplateSpec) validateMetadata(formats strfmt.Registry) error {
 		return nil
 	}
 
+	if m.Metadata != nil {
+		if err := m.Metadata.Validate(formats); err != nil {
+			ve := new(errors.Validation)
+			if stderrors.As(err, &ve) {
+				return ve.ValidateName("metadata")
+			}
+			ce := new(errors.CompositeError)
+			if stderrors.As(err, &ce) {
+				return ce.ValidateName("metadata")
+			}
+
+			return err
+		}
+	}
+
 	return nil
 }
 
 func (m *V1PodTemplateSpec) validateSpec(formats strfmt.Registry) error {
 	if swag.IsZero(m.Spec) { // not required
 		return nil
+	}
+
+	if m.Spec != nil {
+		if err := m.Spec.Validate(formats); err != nil {
+			ve := new(errors.Validation)
+			if stderrors.As(err, &ve) {
+				return ve.ValidateName("spec")
+			}
+			ce := new(errors.CompositeError)
+			if stderrors.As(err, &ce) {
+				return ce.ValidateName("spec")
+			}
+
+			return err
+		}
 	}
 
 	return nil
@@ -84,10 +111,50 @@ func (m *V1PodTemplateSpec) ContextValidate(ctx context.Context, formats strfmt.
 
 func (m *V1PodTemplateSpec) contextValidateMetadata(ctx context.Context, formats strfmt.Registry) error {
 
+	if m.Metadata != nil {
+
+		if swag.IsZero(m.Metadata) { // not required
+			return nil
+		}
+
+		if err := m.Metadata.ContextValidate(ctx, formats); err != nil {
+			ve := new(errors.Validation)
+			if stderrors.As(err, &ve) {
+				return ve.ValidateName("metadata")
+			}
+			ce := new(errors.CompositeError)
+			if stderrors.As(err, &ce) {
+				return ce.ValidateName("metadata")
+			}
+
+			return err
+		}
+	}
+
 	return nil
 }
 
 func (m *V1PodTemplateSpec) contextValidateSpec(ctx context.Context, formats strfmt.Registry) error {
+
+	if m.Spec != nil {
+
+		if swag.IsZero(m.Spec) { // not required
+			return nil
+		}
+
+		if err := m.Spec.ContextValidate(ctx, formats); err != nil {
+			ve := new(errors.Validation)
+			if stderrors.As(err, &ve) {
+				return ve.ValidateName("spec")
+			}
+			ce := new(errors.CompositeError)
+			if stderrors.As(err, &ce) {
+				return ce.ValidateName("spec")
+			}
+
+			return err
+		}
+	}
 
 	return nil
 }

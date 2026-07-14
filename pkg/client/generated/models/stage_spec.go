@@ -19,9 +19,7 @@ type StageSpec struct {
 
 	// PromotionTemplate describes how to incorporate Freight into the Stage
 	// using a Promotion.
-	PromotionTemplate struct {
-		PromotionTemplate
-	} `json:"promotionTemplate,omitempty"`
+	PromotionTemplate *PromotionTemplate `json:"promotionTemplate,omitempty"`
 
 	// RequestedFreight expresses the Stage's need for certain pieces of Freight,
 	// each having originated from a particular Warehouse. This list must be
@@ -49,9 +47,7 @@ type StageSpec struct {
 
 	// Verification describes how to verify a Stage's current Freight is fit for
 	// promotion downstream.
-	Verification struct {
-		Verification
-	} `json:"verification,omitempty"`
+	Verification *Verification `json:"verification,omitempty"`
 }
 
 // Validate validates this stage spec
@@ -83,6 +79,21 @@ func (m *StageSpec) Validate(formats strfmt.Registry) error {
 func (m *StageSpec) validatePromotionTemplate(formats strfmt.Registry) error {
 	if swag.IsZero(m.PromotionTemplate) { // not required
 		return nil
+	}
+
+	if m.PromotionTemplate != nil {
+		if err := m.PromotionTemplate.Validate(formats); err != nil {
+			ve := new(errors.Validation)
+			if stderrors.As(err, &ve) {
+				return ve.ValidateName("promotionTemplate")
+			}
+			ce := new(errors.CompositeError)
+			if stderrors.As(err, &ce) {
+				return ce.ValidateName("promotionTemplate")
+			}
+
+			return err
+		}
 	}
 
 	return nil
@@ -153,6 +164,21 @@ func (m *StageSpec) validateVerification(formats strfmt.Registry) error {
 		return nil
 	}
 
+	if m.Verification != nil {
+		if err := m.Verification.Validate(formats); err != nil {
+			ve := new(errors.Validation)
+			if stderrors.As(err, &ve) {
+				return ve.ValidateName("verification")
+			}
+			ce := new(errors.CompositeError)
+			if stderrors.As(err, &ce) {
+				return ce.ValidateName("verification")
+			}
+
+			return err
+		}
+	}
+
 	return nil
 }
 
@@ -183,6 +209,26 @@ func (m *StageSpec) ContextValidate(ctx context.Context, formats strfmt.Registry
 }
 
 func (m *StageSpec) contextValidatePromotionTemplate(ctx context.Context, formats strfmt.Registry) error {
+
+	if m.PromotionTemplate != nil {
+
+		if swag.IsZero(m.PromotionTemplate) { // not required
+			return nil
+		}
+
+		if err := m.PromotionTemplate.ContextValidate(ctx, formats); err != nil {
+			ve := new(errors.Validation)
+			if stderrors.As(err, &ve) {
+				return ve.ValidateName("promotionTemplate")
+			}
+			ce := new(errors.CompositeError)
+			if stderrors.As(err, &ce) {
+				return ce.ValidateName("promotionTemplate")
+			}
+
+			return err
+		}
+	}
 
 	return nil
 }
@@ -246,6 +292,26 @@ func (m *StageSpec) contextValidateVars(ctx context.Context, formats strfmt.Regi
 }
 
 func (m *StageSpec) contextValidateVerification(ctx context.Context, formats strfmt.Registry) error {
+
+	if m.Verification != nil {
+
+		if swag.IsZero(m.Verification) { // not required
+			return nil
+		}
+
+		if err := m.Verification.ContextValidate(ctx, formats); err != nil {
+			ve := new(errors.Validation)
+			if stderrors.As(err, &ve) {
+				return ve.ValidateName("verification")
+			}
+			ce := new(errors.CompositeError)
+			if stderrors.As(err, &ce) {
+				return ce.ValidateName("verification")
+			}
+
+			return err
+		}
+	}
 
 	return nil
 }

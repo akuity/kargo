@@ -4,6 +4,7 @@ package models
 
 import (
 	"context"
+	stderrors "errors"
 
 	"github.com/go-openapi/errors"
 	"github.com/go-openapi/strfmt"
@@ -29,9 +30,7 @@ type PromotionPolicy struct {
 	// nil, auto-rollback is disabled.
 	//
 	// Kargo Enterprise only: This field is ignored in Kargo OSS.
-	AutoRollback struct {
-		AutoRollbackConfig
-	} `json:"autoRollback,omitempty"`
+	AutoRollback *AutoRollbackConfig `json:"autoRollback,omitempty"`
 
 	// Stage is the name of the Stage to which this policy applies.
 	//
@@ -42,9 +41,7 @@ type PromotionPolicy struct {
 
 	// StageSelector is a selector that matches the Stage resource to which
 	// this policy applies.
-	StageSelector struct {
-		PromotionPolicySelector
-	} `json:"stageSelector,omitempty"`
+	StageSelector *PromotionPolicySelector `json:"stageSelector,omitempty"`
 }
 
 // Validate validates this promotion policy
@@ -70,12 +67,42 @@ func (m *PromotionPolicy) validateAutoRollback(formats strfmt.Registry) error {
 		return nil
 	}
 
+	if m.AutoRollback != nil {
+		if err := m.AutoRollback.Validate(formats); err != nil {
+			ve := new(errors.Validation)
+			if stderrors.As(err, &ve) {
+				return ve.ValidateName("autoRollback")
+			}
+			ce := new(errors.CompositeError)
+			if stderrors.As(err, &ce) {
+				return ce.ValidateName("autoRollback")
+			}
+
+			return err
+		}
+	}
+
 	return nil
 }
 
 func (m *PromotionPolicy) validateStageSelector(formats strfmt.Registry) error {
 	if swag.IsZero(m.StageSelector) { // not required
 		return nil
+	}
+
+	if m.StageSelector != nil {
+		if err := m.StageSelector.Validate(formats); err != nil {
+			ve := new(errors.Validation)
+			if stderrors.As(err, &ve) {
+				return ve.ValidateName("stageSelector")
+			}
+			ce := new(errors.CompositeError)
+			if stderrors.As(err, &ce) {
+				return ce.ValidateName("stageSelector")
+			}
+
+			return err
+		}
 	}
 
 	return nil
@@ -101,10 +128,50 @@ func (m *PromotionPolicy) ContextValidate(ctx context.Context, formats strfmt.Re
 
 func (m *PromotionPolicy) contextValidateAutoRollback(ctx context.Context, formats strfmt.Registry) error {
 
+	if m.AutoRollback != nil {
+
+		if swag.IsZero(m.AutoRollback) { // not required
+			return nil
+		}
+
+		if err := m.AutoRollback.ContextValidate(ctx, formats); err != nil {
+			ve := new(errors.Validation)
+			if stderrors.As(err, &ve) {
+				return ve.ValidateName("autoRollback")
+			}
+			ce := new(errors.CompositeError)
+			if stderrors.As(err, &ce) {
+				return ce.ValidateName("autoRollback")
+			}
+
+			return err
+		}
+	}
+
 	return nil
 }
 
 func (m *PromotionPolicy) contextValidateStageSelector(ctx context.Context, formats strfmt.Registry) error {
+
+	if m.StageSelector != nil {
+
+		if swag.IsZero(m.StageSelector) { // not required
+			return nil
+		}
+
+		if err := m.StageSelector.ContextValidate(ctx, formats); err != nil {
+			ve := new(errors.Validation)
+			if stderrors.As(err, &ve) {
+				return ve.ValidateName("stageSelector")
+			}
+			ce := new(errors.CompositeError)
+			if stderrors.As(err, &ce) {
+				return ce.ValidateName("stageSelector")
+			}
+
+			return err
+		}
+	}
 
 	return nil
 }

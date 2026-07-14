@@ -4,6 +4,7 @@ package models
 
 import (
 	"context"
+	stderrors "errors"
 
 	"github.com/go-openapi/errors"
 	"github.com/go-openapi/strfmt"
@@ -16,9 +17,7 @@ import (
 type V1WeightedPodAffinityTerm struct {
 
 	// Required. A pod affinity term, associated with the corresponding weight.
-	PodAffinityTerm struct {
-		V1PodAffinityTerm
-	} `json:"podAffinityTerm,omitempty"`
+	PodAffinityTerm *V1PodAffinityTerm `json:"podAffinityTerm,omitempty"`
 
 	// weight associated with matching the corresponding podAffinityTerm,
 	// in the range 1-100.
@@ -44,6 +43,21 @@ func (m *V1WeightedPodAffinityTerm) validatePodAffinityTerm(formats strfmt.Regis
 		return nil
 	}
 
+	if m.PodAffinityTerm != nil {
+		if err := m.PodAffinityTerm.Validate(formats); err != nil {
+			ve := new(errors.Validation)
+			if stderrors.As(err, &ve) {
+				return ve.ValidateName("podAffinityTerm")
+			}
+			ce := new(errors.CompositeError)
+			if stderrors.As(err, &ce) {
+				return ce.ValidateName("podAffinityTerm")
+			}
+
+			return err
+		}
+	}
+
 	return nil
 }
 
@@ -62,6 +76,26 @@ func (m *V1WeightedPodAffinityTerm) ContextValidate(ctx context.Context, formats
 }
 
 func (m *V1WeightedPodAffinityTerm) contextValidatePodAffinityTerm(ctx context.Context, formats strfmt.Registry) error {
+
+	if m.PodAffinityTerm != nil {
+
+		if swag.IsZero(m.PodAffinityTerm) { // not required
+			return nil
+		}
+
+		if err := m.PodAffinityTerm.ContextValidate(ctx, formats); err != nil {
+			ve := new(errors.Validation)
+			if stderrors.As(err, &ve) {
+				return ve.ValidateName("podAffinityTerm")
+			}
+			ce := new(errors.CompositeError)
+			if stderrors.As(err, &ce) {
+				return ce.ValidateName("podAffinityTerm")
+			}
+
+			return err
+		}
+	}
 
 	return nil
 }

@@ -4,6 +4,7 @@ package models
 
 import (
 	"context"
+	stderrors "errors"
 
 	"github.com/go-openapi/errors"
 	"github.com/go-openapi/strfmt"
@@ -29,17 +30,13 @@ type V1SecurityContext struct {
 	// overrides the pod's appArmorProfile.
 	// Note that this field cannot be set when spec.os.name is windows.
 	// +optional
-	AppArmorProfile struct {
-		V1AppArmorProfile
-	} `json:"appArmorProfile,omitempty"`
+	AppArmorProfile *V1AppArmorProfile `json:"appArmorProfile,omitempty"`
 
 	// The capabilities to add/drop when running containers.
 	// Defaults to the default set of capabilities granted by the container runtime.
 	// Note that this field cannot be set when spec.os.name is windows.
 	// +optional
-	Capabilities struct {
-		V1Capabilities
-	} `json:"capabilities,omitempty"`
+	Capabilities *V1Capabilities `json:"capabilities,omitempty"`
 
 	// Run container in privileged mode.
 	// Processes in privileged containers are essentially equivalent to root on the host.
@@ -93,27 +90,21 @@ type V1SecurityContext struct {
 	// PodSecurityContext, the value specified in SecurityContext takes precedence.
 	// Note that this field cannot be set when spec.os.name is windows.
 	// +optional
-	SeLinuxOptions struct {
-		V1SELinuxOptions
-	} `json:"seLinuxOptions,omitempty"`
+	SeLinuxOptions *V1SELinuxOptions `json:"seLinuxOptions,omitempty"`
 
 	// The seccomp options to use by this container. If seccomp options are
 	// provided at both the pod & container level, the container options
 	// override the pod options.
 	// Note that this field cannot be set when spec.os.name is windows.
 	// +optional
-	SeccompProfile struct {
-		V1SeccompProfile
-	} `json:"seccompProfile,omitempty"`
+	SeccompProfile *V1SeccompProfile `json:"seccompProfile,omitempty"`
 
 	// The Windows specific settings applied to all containers.
 	// If unspecified, the options from the PodSecurityContext will be used.
 	// If set in both SecurityContext and PodSecurityContext, the value specified in SecurityContext takes precedence.
 	// Note that this field cannot be set when spec.os.name is linux.
 	// +optional
-	WindowsOptions struct {
-		V1WindowsSecurityContextOptions
-	} `json:"windowsOptions,omitempty"`
+	WindowsOptions *V1WindowsSecurityContextOptions `json:"windowsOptions,omitempty"`
 }
 
 // Validate validates this v1 security context
@@ -151,12 +142,42 @@ func (m *V1SecurityContext) validateAppArmorProfile(formats strfmt.Registry) err
 		return nil
 	}
 
+	if m.AppArmorProfile != nil {
+		if err := m.AppArmorProfile.Validate(formats); err != nil {
+			ve := new(errors.Validation)
+			if stderrors.As(err, &ve) {
+				return ve.ValidateName("appArmorProfile")
+			}
+			ce := new(errors.CompositeError)
+			if stderrors.As(err, &ce) {
+				return ce.ValidateName("appArmorProfile")
+			}
+
+			return err
+		}
+	}
+
 	return nil
 }
 
 func (m *V1SecurityContext) validateCapabilities(formats strfmt.Registry) error {
 	if swag.IsZero(m.Capabilities) { // not required
 		return nil
+	}
+
+	if m.Capabilities != nil {
+		if err := m.Capabilities.Validate(formats); err != nil {
+			ve := new(errors.Validation)
+			if stderrors.As(err, &ve) {
+				return ve.ValidateName("capabilities")
+			}
+			ce := new(errors.CompositeError)
+			if stderrors.As(err, &ce) {
+				return ce.ValidateName("capabilities")
+			}
+
+			return err
+		}
 	}
 
 	return nil
@@ -167,6 +188,21 @@ func (m *V1SecurityContext) validateSeLinuxOptions(formats strfmt.Registry) erro
 		return nil
 	}
 
+	if m.SeLinuxOptions != nil {
+		if err := m.SeLinuxOptions.Validate(formats); err != nil {
+			ve := new(errors.Validation)
+			if stderrors.As(err, &ve) {
+				return ve.ValidateName("seLinuxOptions")
+			}
+			ce := new(errors.CompositeError)
+			if stderrors.As(err, &ce) {
+				return ce.ValidateName("seLinuxOptions")
+			}
+
+			return err
+		}
+	}
+
 	return nil
 }
 
@@ -175,12 +211,42 @@ func (m *V1SecurityContext) validateSeccompProfile(formats strfmt.Registry) erro
 		return nil
 	}
 
+	if m.SeccompProfile != nil {
+		if err := m.SeccompProfile.Validate(formats); err != nil {
+			ve := new(errors.Validation)
+			if stderrors.As(err, &ve) {
+				return ve.ValidateName("seccompProfile")
+			}
+			ce := new(errors.CompositeError)
+			if stderrors.As(err, &ce) {
+				return ce.ValidateName("seccompProfile")
+			}
+
+			return err
+		}
+	}
+
 	return nil
 }
 
 func (m *V1SecurityContext) validateWindowsOptions(formats strfmt.Registry) error {
 	if swag.IsZero(m.WindowsOptions) { // not required
 		return nil
+	}
+
+	if m.WindowsOptions != nil {
+		if err := m.WindowsOptions.Validate(formats); err != nil {
+			ve := new(errors.Validation)
+			if stderrors.As(err, &ve) {
+				return ve.ValidateName("windowsOptions")
+			}
+			ce := new(errors.CompositeError)
+			if stderrors.As(err, &ce) {
+				return ce.ValidateName("windowsOptions")
+			}
+
+			return err
+		}
 	}
 
 	return nil
@@ -218,25 +284,125 @@ func (m *V1SecurityContext) ContextValidate(ctx context.Context, formats strfmt.
 
 func (m *V1SecurityContext) contextValidateAppArmorProfile(ctx context.Context, formats strfmt.Registry) error {
 
+	if m.AppArmorProfile != nil {
+
+		if swag.IsZero(m.AppArmorProfile) { // not required
+			return nil
+		}
+
+		if err := m.AppArmorProfile.ContextValidate(ctx, formats); err != nil {
+			ve := new(errors.Validation)
+			if stderrors.As(err, &ve) {
+				return ve.ValidateName("appArmorProfile")
+			}
+			ce := new(errors.CompositeError)
+			if stderrors.As(err, &ce) {
+				return ce.ValidateName("appArmorProfile")
+			}
+
+			return err
+		}
+	}
+
 	return nil
 }
 
 func (m *V1SecurityContext) contextValidateCapabilities(ctx context.Context, formats strfmt.Registry) error {
+
+	if m.Capabilities != nil {
+
+		if swag.IsZero(m.Capabilities) { // not required
+			return nil
+		}
+
+		if err := m.Capabilities.ContextValidate(ctx, formats); err != nil {
+			ve := new(errors.Validation)
+			if stderrors.As(err, &ve) {
+				return ve.ValidateName("capabilities")
+			}
+			ce := new(errors.CompositeError)
+			if stderrors.As(err, &ce) {
+				return ce.ValidateName("capabilities")
+			}
+
+			return err
+		}
+	}
 
 	return nil
 }
 
 func (m *V1SecurityContext) contextValidateSeLinuxOptions(ctx context.Context, formats strfmt.Registry) error {
 
+	if m.SeLinuxOptions != nil {
+
+		if swag.IsZero(m.SeLinuxOptions) { // not required
+			return nil
+		}
+
+		if err := m.SeLinuxOptions.ContextValidate(ctx, formats); err != nil {
+			ve := new(errors.Validation)
+			if stderrors.As(err, &ve) {
+				return ve.ValidateName("seLinuxOptions")
+			}
+			ce := new(errors.CompositeError)
+			if stderrors.As(err, &ce) {
+				return ce.ValidateName("seLinuxOptions")
+			}
+
+			return err
+		}
+	}
+
 	return nil
 }
 
 func (m *V1SecurityContext) contextValidateSeccompProfile(ctx context.Context, formats strfmt.Registry) error {
 
+	if m.SeccompProfile != nil {
+
+		if swag.IsZero(m.SeccompProfile) { // not required
+			return nil
+		}
+
+		if err := m.SeccompProfile.ContextValidate(ctx, formats); err != nil {
+			ve := new(errors.Validation)
+			if stderrors.As(err, &ve) {
+				return ve.ValidateName("seccompProfile")
+			}
+			ce := new(errors.CompositeError)
+			if stderrors.As(err, &ce) {
+				return ce.ValidateName("seccompProfile")
+			}
+
+			return err
+		}
+	}
+
 	return nil
 }
 
 func (m *V1SecurityContext) contextValidateWindowsOptions(ctx context.Context, formats strfmt.Registry) error {
+
+	if m.WindowsOptions != nil {
+
+		if swag.IsZero(m.WindowsOptions) { // not required
+			return nil
+		}
+
+		if err := m.WindowsOptions.ContextValidate(ctx, formats); err != nil {
+			ve := new(errors.Validation)
+			if stderrors.As(err, &ve) {
+				return ve.ValidateName("windowsOptions")
+			}
+			ce := new(errors.CompositeError)
+			if stderrors.As(err, &ce) {
+				return ce.ValidateName("windowsOptions")
+			}
+
+			return err
+		}
+	}
 
 	return nil
 }

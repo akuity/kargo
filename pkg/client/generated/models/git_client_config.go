@@ -4,6 +4,7 @@ package models
 
 import (
 	"context"
+	stderrors "errors"
 
 	"github.com/go-openapi/errors"
 	"github.com/go-openapi/strfmt"
@@ -33,9 +34,7 @@ type GitClientConfig struct {
 	// a GPG signing key for commit signing. The Secret must contain a data
 	// key named "signingKey" with the GPG private key material.
 	// +optional
-	SigningKeySecret struct {
-		V1LocalObjectReference
-	} `json:"signingKeySecret,omitempty"`
+	SigningKeySecret *V1LocalObjectReference `json:"signingKeySecret,omitempty"`
 }
 
 // Validate validates this git client config
@@ -83,6 +82,21 @@ func (m *GitClientConfig) validateSigningKeySecret(formats strfmt.Registry) erro
 		return nil
 	}
 
+	if m.SigningKeySecret != nil {
+		if err := m.SigningKeySecret.Validate(formats); err != nil {
+			ve := new(errors.Validation)
+			if stderrors.As(err, &ve) {
+				return ve.ValidateName("signingKeySecret")
+			}
+			ce := new(errors.CompositeError)
+			if stderrors.As(err, &ce) {
+				return ce.ValidateName("signingKeySecret")
+			}
+
+			return err
+		}
+	}
+
 	return nil
 }
 
@@ -101,6 +115,26 @@ func (m *GitClientConfig) ContextValidate(ctx context.Context, formats strfmt.Re
 }
 
 func (m *GitClientConfig) contextValidateSigningKeySecret(ctx context.Context, formats strfmt.Registry) error {
+
+	if m.SigningKeySecret != nil {
+
+		if swag.IsZero(m.SigningKeySecret) { // not required
+			return nil
+		}
+
+		if err := m.SigningKeySecret.ContextValidate(ctx, formats); err != nil {
+			ve := new(errors.Validation)
+			if stderrors.As(err, &ve) {
+				return ve.ValidateName("signingKeySecret")
+			}
+			ce := new(errors.CompositeError)
+			if stderrors.As(err, &ce) {
+				return ce.ValidateName("signingKeySecret")
+			}
+
+			return err
+		}
+	}
 
 	return nil
 }

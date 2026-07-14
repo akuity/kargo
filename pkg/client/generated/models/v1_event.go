@@ -4,6 +4,7 @@ package models
 
 import (
 	"context"
+	stderrors "errors"
 
 	"github.com/go-openapi/errors"
 	"github.com/go-openapi/strfmt"
@@ -32,18 +33,14 @@ type V1Event struct {
 
 	// Time when this Event was first observed.
 	// +optional
-	EventTime struct {
-		V1MicroTime
-	} `json:"eventTime,omitempty"`
+	EventTime *V1MicroTime `json:"eventTime,omitempty"`
 
 	// The time at which the event was first recorded. (Time of server receipt is in TypeMeta.)
 	// +optional
 	FirstTimestamp string `json:"firstTimestamp,omitempty"`
 
 	// The object that this event is about.
-	InvolvedObject struct {
-		V1ObjectReference
-	} `json:"involvedObject,omitempty"`
+	InvolvedObject *V1ObjectReference `json:"involvedObject,omitempty"`
 
 	// Kind is a string value representing the REST resource this object represents.
 	// Servers may infer this from the endpoint the client submits requests to.
@@ -64,9 +61,7 @@ type V1Event struct {
 
 	// Standard object's metadata.
 	// More info: https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#metadata
-	Metadata struct {
-		V1ObjectMeta
-	} `json:"metadata,omitempty"`
+	Metadata *V1ObjectMeta `json:"metadata,omitempty"`
 
 	// This should be a short, machine understandable string that gives the reason
 	// for the transition into the object's current status.
@@ -76,9 +71,7 @@ type V1Event struct {
 
 	// Optional secondary object for more complex actions.
 	// +optional
-	Related struct {
-		V1ObjectReference
-	} `json:"related,omitempty"`
+	Related *V1ObjectReference `json:"related,omitempty"`
 
 	// Name of the controller that emitted this Event, e.g. `kubernetes.io/kubelet`.
 	// +optional
@@ -90,15 +83,11 @@ type V1Event struct {
 
 	// Data about the Event series this event represents or nil if it's a singleton Event.
 	// +optional
-	Series struct {
-		V1EventSeries
-	} `json:"series,omitempty"`
+	Series *V1EventSeries `json:"series,omitempty"`
 
 	// The component reporting this event. Should be a short machine understandable string.
 	// +optional
-	Source struct {
-		V1EventSource
-	} `json:"source,omitempty"`
+	Source *V1EventSource `json:"source,omitempty"`
 
 	// Type of this event (Normal, Warning), new types could be added in the future
 	// +optional
@@ -144,12 +133,42 @@ func (m *V1Event) validateEventTime(formats strfmt.Registry) error {
 		return nil
 	}
 
+	if m.EventTime != nil {
+		if err := m.EventTime.Validate(formats); err != nil {
+			ve := new(errors.Validation)
+			if stderrors.As(err, &ve) {
+				return ve.ValidateName("eventTime")
+			}
+			ce := new(errors.CompositeError)
+			if stderrors.As(err, &ce) {
+				return ce.ValidateName("eventTime")
+			}
+
+			return err
+		}
+	}
+
 	return nil
 }
 
 func (m *V1Event) validateInvolvedObject(formats strfmt.Registry) error {
 	if swag.IsZero(m.InvolvedObject) { // not required
 		return nil
+	}
+
+	if m.InvolvedObject != nil {
+		if err := m.InvolvedObject.Validate(formats); err != nil {
+			ve := new(errors.Validation)
+			if stderrors.As(err, &ve) {
+				return ve.ValidateName("involvedObject")
+			}
+			ce := new(errors.CompositeError)
+			if stderrors.As(err, &ce) {
+				return ce.ValidateName("involvedObject")
+			}
+
+			return err
+		}
 	}
 
 	return nil
@@ -160,12 +179,42 @@ func (m *V1Event) validateMetadata(formats strfmt.Registry) error {
 		return nil
 	}
 
+	if m.Metadata != nil {
+		if err := m.Metadata.Validate(formats); err != nil {
+			ve := new(errors.Validation)
+			if stderrors.As(err, &ve) {
+				return ve.ValidateName("metadata")
+			}
+			ce := new(errors.CompositeError)
+			if stderrors.As(err, &ce) {
+				return ce.ValidateName("metadata")
+			}
+
+			return err
+		}
+	}
+
 	return nil
 }
 
 func (m *V1Event) validateRelated(formats strfmt.Registry) error {
 	if swag.IsZero(m.Related) { // not required
 		return nil
+	}
+
+	if m.Related != nil {
+		if err := m.Related.Validate(formats); err != nil {
+			ve := new(errors.Validation)
+			if stderrors.As(err, &ve) {
+				return ve.ValidateName("related")
+			}
+			ce := new(errors.CompositeError)
+			if stderrors.As(err, &ce) {
+				return ce.ValidateName("related")
+			}
+
+			return err
+		}
 	}
 
 	return nil
@@ -176,12 +225,42 @@ func (m *V1Event) validateSeries(formats strfmt.Registry) error {
 		return nil
 	}
 
+	if m.Series != nil {
+		if err := m.Series.Validate(formats); err != nil {
+			ve := new(errors.Validation)
+			if stderrors.As(err, &ve) {
+				return ve.ValidateName("series")
+			}
+			ce := new(errors.CompositeError)
+			if stderrors.As(err, &ce) {
+				return ce.ValidateName("series")
+			}
+
+			return err
+		}
+	}
+
 	return nil
 }
 
 func (m *V1Event) validateSource(formats strfmt.Registry) error {
 	if swag.IsZero(m.Source) { // not required
 		return nil
+	}
+
+	if m.Source != nil {
+		if err := m.Source.Validate(formats); err != nil {
+			ve := new(errors.Validation)
+			if stderrors.As(err, &ve) {
+				return ve.ValidateName("source")
+			}
+			ce := new(errors.CompositeError)
+			if stderrors.As(err, &ce) {
+				return ce.ValidateName("source")
+			}
+
+			return err
+		}
 	}
 
 	return nil
@@ -223,30 +302,150 @@ func (m *V1Event) ContextValidate(ctx context.Context, formats strfmt.Registry) 
 
 func (m *V1Event) contextValidateEventTime(ctx context.Context, formats strfmt.Registry) error {
 
+	if m.EventTime != nil {
+
+		if swag.IsZero(m.EventTime) { // not required
+			return nil
+		}
+
+		if err := m.EventTime.ContextValidate(ctx, formats); err != nil {
+			ve := new(errors.Validation)
+			if stderrors.As(err, &ve) {
+				return ve.ValidateName("eventTime")
+			}
+			ce := new(errors.CompositeError)
+			if stderrors.As(err, &ce) {
+				return ce.ValidateName("eventTime")
+			}
+
+			return err
+		}
+	}
+
 	return nil
 }
 
 func (m *V1Event) contextValidateInvolvedObject(ctx context.Context, formats strfmt.Registry) error {
+
+	if m.InvolvedObject != nil {
+
+		if swag.IsZero(m.InvolvedObject) { // not required
+			return nil
+		}
+
+		if err := m.InvolvedObject.ContextValidate(ctx, formats); err != nil {
+			ve := new(errors.Validation)
+			if stderrors.As(err, &ve) {
+				return ve.ValidateName("involvedObject")
+			}
+			ce := new(errors.CompositeError)
+			if stderrors.As(err, &ce) {
+				return ce.ValidateName("involvedObject")
+			}
+
+			return err
+		}
+	}
 
 	return nil
 }
 
 func (m *V1Event) contextValidateMetadata(ctx context.Context, formats strfmt.Registry) error {
 
+	if m.Metadata != nil {
+
+		if swag.IsZero(m.Metadata) { // not required
+			return nil
+		}
+
+		if err := m.Metadata.ContextValidate(ctx, formats); err != nil {
+			ve := new(errors.Validation)
+			if stderrors.As(err, &ve) {
+				return ve.ValidateName("metadata")
+			}
+			ce := new(errors.CompositeError)
+			if stderrors.As(err, &ce) {
+				return ce.ValidateName("metadata")
+			}
+
+			return err
+		}
+	}
+
 	return nil
 }
 
 func (m *V1Event) contextValidateRelated(ctx context.Context, formats strfmt.Registry) error {
+
+	if m.Related != nil {
+
+		if swag.IsZero(m.Related) { // not required
+			return nil
+		}
+
+		if err := m.Related.ContextValidate(ctx, formats); err != nil {
+			ve := new(errors.Validation)
+			if stderrors.As(err, &ve) {
+				return ve.ValidateName("related")
+			}
+			ce := new(errors.CompositeError)
+			if stderrors.As(err, &ce) {
+				return ce.ValidateName("related")
+			}
+
+			return err
+		}
+	}
 
 	return nil
 }
 
 func (m *V1Event) contextValidateSeries(ctx context.Context, formats strfmt.Registry) error {
 
+	if m.Series != nil {
+
+		if swag.IsZero(m.Series) { // not required
+			return nil
+		}
+
+		if err := m.Series.ContextValidate(ctx, formats); err != nil {
+			ve := new(errors.Validation)
+			if stderrors.As(err, &ve) {
+				return ve.ValidateName("series")
+			}
+			ce := new(errors.CompositeError)
+			if stderrors.As(err, &ce) {
+				return ce.ValidateName("series")
+			}
+
+			return err
+		}
+	}
+
 	return nil
 }
 
 func (m *V1Event) contextValidateSource(ctx context.Context, formats strfmt.Registry) error {
+
+	if m.Source != nil {
+
+		if swag.IsZero(m.Source) { // not required
+			return nil
+		}
+
+		if err := m.Source.ContextValidate(ctx, formats); err != nil {
+			ve := new(errors.Validation)
+			if stderrors.As(err, &ve) {
+				return ve.ValidateName("source")
+			}
+			ce := new(errors.CompositeError)
+			if stderrors.As(err, &ce) {
+				return ce.ValidateName("source")
+			}
+
+			return err
+		}
+	}
 
 	return nil
 }

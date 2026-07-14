@@ -4,6 +4,7 @@ package models
 
 import (
 	"context"
+	stderrors "errors"
 
 	"github.com/go-openapi/errors"
 	"github.com/go-openapi/strfmt"
@@ -34,9 +35,7 @@ type V1PodFailurePolicyOnExitCodesRequirement struct {
 	//   by the 'containerName' field) is not in the set of specified values.
 	// Additional values are considered to be added in the future. Clients should
 	// react to an unknown operator by assuming the requirement is not satisfied.
-	Operator struct {
-		V1PodFailurePolicyOnExitCodesOperator
-	} `json:"operator,omitempty"`
+	Operator V1PodFailurePolicyOnExitCodesOperator `json:"operator,omitempty"`
 
 	// Specifies the set of values. Each returned container exit code (might be
 	// multiple in case of multiple containers) is checked against this set of
@@ -66,6 +65,19 @@ func (m *V1PodFailurePolicyOnExitCodesRequirement) validateOperator(formats strf
 		return nil
 	}
 
+	if err := m.Operator.Validate(formats); err != nil {
+		ve := new(errors.Validation)
+		if stderrors.As(err, &ve) {
+			return ve.ValidateName("operator")
+		}
+		ce := new(errors.CompositeError)
+		if stderrors.As(err, &ce) {
+			return ce.ValidateName("operator")
+		}
+
+		return err
+	}
+
 	return nil
 }
 
@@ -84,6 +96,23 @@ func (m *V1PodFailurePolicyOnExitCodesRequirement) ContextValidate(ctx context.C
 }
 
 func (m *V1PodFailurePolicyOnExitCodesRequirement) contextValidateOperator(ctx context.Context, formats strfmt.Registry) error {
+
+	if swag.IsZero(m.Operator) { // not required
+		return nil
+	}
+
+	if err := m.Operator.ContextValidate(ctx, formats); err != nil {
+		ve := new(errors.Validation)
+		if stderrors.As(err, &ve) {
+			return ve.ValidateName("operator")
+		}
+		ce := new(errors.CompositeError)
+		if stderrors.As(err, &ce) {
+			return ce.ValidateName("operator")
+		}
+
+		return err
+	}
 
 	return nil
 }

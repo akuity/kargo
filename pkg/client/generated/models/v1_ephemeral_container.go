@@ -74,15 +74,11 @@ type V1EphemeralContainer struct {
 
 	// Lifecycle is not allowed for ephemeral containers.
 	// +optional
-	Lifecycle struct {
-		V1Lifecycle
-	} `json:"lifecycle,omitempty"`
+	Lifecycle *V1Lifecycle `json:"lifecycle,omitempty"`
 
 	// Probes are not allowed for ephemeral containers.
 	// +optional
-	LivenessProbe struct {
-		V1Probe
-	} `json:"livenessProbe,omitempty"`
+	LivenessProbe *V1Probe `json:"livenessProbe,omitempty"`
 
 	// Name of the ephemeral container specified as a DNS_LABEL.
 	// This name must be unique among all containers, init containers and ephemeral containers.
@@ -99,9 +95,7 @@ type V1EphemeralContainer struct {
 
 	// Probes are not allowed for ephemeral containers.
 	// +optional
-	ReadinessProbe struct {
-		V1Probe
-	} `json:"readinessProbe,omitempty"`
+	ReadinessProbe *V1Probe `json:"readinessProbe,omitempty"`
 
 	// Resources resize policy for the container.
 	// +featureGate=InPlacePodVerticalScaling
@@ -112,9 +106,7 @@ type V1EphemeralContainer struct {
 	// Resources are not allowed for ephemeral containers. Ephemeral containers use spare resources
 	// already allocated to the pod.
 	// +optional
-	Resources struct {
-		V1ResourceRequirements
-	} `json:"resources,omitempty"`
+	Resources *V1ResourceRequirements `json:"resources,omitempty"`
 
 	// Restart policy for the container to manage the restart behavior of each
 	// container within a pod.
@@ -134,15 +126,11 @@ type V1EphemeralContainer struct {
 	// Optional: SecurityContext defines the security options the ephemeral container should be run with.
 	// If set, the fields of SecurityContext override the equivalent fields of PodSecurityContext.
 	// +optional
-	SecurityContext struct {
-		V1SecurityContext
-	} `json:"securityContext,omitempty"`
+	SecurityContext *V1SecurityContext `json:"securityContext,omitempty"`
 
 	// Probes are not allowed for ephemeral containers.
 	// +optional
-	StartupProbe struct {
-		V1Probe
-	} `json:"startupProbe,omitempty"`
+	StartupProbe *V1Probe `json:"startupProbe,omitempty"`
 
 	// Whether this container should allocate a buffer for stdin in the container runtime. If this
 	// is not set, reads from stdin in the container will always result in EOF.
@@ -346,12 +334,42 @@ func (m *V1EphemeralContainer) validateLifecycle(formats strfmt.Registry) error 
 		return nil
 	}
 
+	if m.Lifecycle != nil {
+		if err := m.Lifecycle.Validate(formats); err != nil {
+			ve := new(errors.Validation)
+			if stderrors.As(err, &ve) {
+				return ve.ValidateName("lifecycle")
+			}
+			ce := new(errors.CompositeError)
+			if stderrors.As(err, &ce) {
+				return ce.ValidateName("lifecycle")
+			}
+
+			return err
+		}
+	}
+
 	return nil
 }
 
 func (m *V1EphemeralContainer) validateLivenessProbe(formats strfmt.Registry) error {
 	if swag.IsZero(m.LivenessProbe) { // not required
 		return nil
+	}
+
+	if m.LivenessProbe != nil {
+		if err := m.LivenessProbe.Validate(formats); err != nil {
+			ve := new(errors.Validation)
+			if stderrors.As(err, &ve) {
+				return ve.ValidateName("livenessProbe")
+			}
+			ce := new(errors.CompositeError)
+			if stderrors.As(err, &ce) {
+				return ce.ValidateName("livenessProbe")
+			}
+
+			return err
+		}
 	}
 
 	return nil
@@ -392,6 +410,21 @@ func (m *V1EphemeralContainer) validateReadinessProbe(formats strfmt.Registry) e
 		return nil
 	}
 
+	if m.ReadinessProbe != nil {
+		if err := m.ReadinessProbe.Validate(formats); err != nil {
+			ve := new(errors.Validation)
+			if stderrors.As(err, &ve) {
+				return ve.ValidateName("readinessProbe")
+			}
+			ce := new(errors.CompositeError)
+			if stderrors.As(err, &ce) {
+				return ce.ValidateName("readinessProbe")
+			}
+
+			return err
+		}
+	}
+
 	return nil
 }
 
@@ -428,6 +461,21 @@ func (m *V1EphemeralContainer) validateResizePolicy(formats strfmt.Registry) err
 func (m *V1EphemeralContainer) validateResources(formats strfmt.Registry) error {
 	if swag.IsZero(m.Resources) { // not required
 		return nil
+	}
+
+	if m.Resources != nil {
+		if err := m.Resources.Validate(formats); err != nil {
+			ve := new(errors.Validation)
+			if stderrors.As(err, &ve) {
+				return ve.ValidateName("resources")
+			}
+			ce := new(errors.CompositeError)
+			if stderrors.As(err, &ce) {
+				return ce.ValidateName("resources")
+			}
+
+			return err
+		}
 	}
 
 	return nil
@@ -468,12 +516,42 @@ func (m *V1EphemeralContainer) validateSecurityContext(formats strfmt.Registry) 
 		return nil
 	}
 
+	if m.SecurityContext != nil {
+		if err := m.SecurityContext.Validate(formats); err != nil {
+			ve := new(errors.Validation)
+			if stderrors.As(err, &ve) {
+				return ve.ValidateName("securityContext")
+			}
+			ce := new(errors.CompositeError)
+			if stderrors.As(err, &ce) {
+				return ce.ValidateName("securityContext")
+			}
+
+			return err
+		}
+	}
+
 	return nil
 }
 
 func (m *V1EphemeralContainer) validateStartupProbe(formats strfmt.Registry) error {
 	if swag.IsZero(m.StartupProbe) { // not required
 		return nil
+	}
+
+	if m.StartupProbe != nil {
+		if err := m.StartupProbe.Validate(formats); err != nil {
+			ve := new(errors.Validation)
+			if stderrors.As(err, &ve) {
+				return ve.ValidateName("startupProbe")
+			}
+			ce := new(errors.CompositeError)
+			if stderrors.As(err, &ce) {
+				return ce.ValidateName("startupProbe")
+			}
+
+			return err
+		}
 	}
 
 	return nil
@@ -661,10 +739,50 @@ func (m *V1EphemeralContainer) contextValidateEnvFrom(ctx context.Context, forma
 
 func (m *V1EphemeralContainer) contextValidateLifecycle(ctx context.Context, formats strfmt.Registry) error {
 
+	if m.Lifecycle != nil {
+
+		if swag.IsZero(m.Lifecycle) { // not required
+			return nil
+		}
+
+		if err := m.Lifecycle.ContextValidate(ctx, formats); err != nil {
+			ve := new(errors.Validation)
+			if stderrors.As(err, &ve) {
+				return ve.ValidateName("lifecycle")
+			}
+			ce := new(errors.CompositeError)
+			if stderrors.As(err, &ce) {
+				return ce.ValidateName("lifecycle")
+			}
+
+			return err
+		}
+	}
+
 	return nil
 }
 
 func (m *V1EphemeralContainer) contextValidateLivenessProbe(ctx context.Context, formats strfmt.Registry) error {
+
+	if m.LivenessProbe != nil {
+
+		if swag.IsZero(m.LivenessProbe) { // not required
+			return nil
+		}
+
+		if err := m.LivenessProbe.ContextValidate(ctx, formats); err != nil {
+			ve := new(errors.Validation)
+			if stderrors.As(err, &ve) {
+				return ve.ValidateName("livenessProbe")
+			}
+			ce := new(errors.CompositeError)
+			if stderrors.As(err, &ce) {
+				return ce.ValidateName("livenessProbe")
+			}
+
+			return err
+		}
+	}
 
 	return nil
 }
@@ -700,6 +818,26 @@ func (m *V1EphemeralContainer) contextValidatePorts(ctx context.Context, formats
 
 func (m *V1EphemeralContainer) contextValidateReadinessProbe(ctx context.Context, formats strfmt.Registry) error {
 
+	if m.ReadinessProbe != nil {
+
+		if swag.IsZero(m.ReadinessProbe) { // not required
+			return nil
+		}
+
+		if err := m.ReadinessProbe.ContextValidate(ctx, formats); err != nil {
+			ve := new(errors.Validation)
+			if stderrors.As(err, &ve) {
+				return ve.ValidateName("readinessProbe")
+			}
+			ce := new(errors.CompositeError)
+			if stderrors.As(err, &ce) {
+				return ce.ValidateName("readinessProbe")
+			}
+
+			return err
+		}
+	}
+
 	return nil
 }
 
@@ -733,6 +871,26 @@ func (m *V1EphemeralContainer) contextValidateResizePolicy(ctx context.Context, 
 }
 
 func (m *V1EphemeralContainer) contextValidateResources(ctx context.Context, formats strfmt.Registry) error {
+
+	if m.Resources != nil {
+
+		if swag.IsZero(m.Resources) { // not required
+			return nil
+		}
+
+		if err := m.Resources.ContextValidate(ctx, formats); err != nil {
+			ve := new(errors.Validation)
+			if stderrors.As(err, &ve) {
+				return ve.ValidateName("resources")
+			}
+			ce := new(errors.CompositeError)
+			if stderrors.As(err, &ce) {
+				return ce.ValidateName("resources")
+			}
+
+			return err
+		}
+	}
 
 	return nil
 }
@@ -768,10 +926,50 @@ func (m *V1EphemeralContainer) contextValidateRestartPolicyRules(ctx context.Con
 
 func (m *V1EphemeralContainer) contextValidateSecurityContext(ctx context.Context, formats strfmt.Registry) error {
 
+	if m.SecurityContext != nil {
+
+		if swag.IsZero(m.SecurityContext) { // not required
+			return nil
+		}
+
+		if err := m.SecurityContext.ContextValidate(ctx, formats); err != nil {
+			ve := new(errors.Validation)
+			if stderrors.As(err, &ve) {
+				return ve.ValidateName("securityContext")
+			}
+			ce := new(errors.CompositeError)
+			if stderrors.As(err, &ce) {
+				return ce.ValidateName("securityContext")
+			}
+
+			return err
+		}
+	}
+
 	return nil
 }
 
 func (m *V1EphemeralContainer) contextValidateStartupProbe(ctx context.Context, formats strfmt.Registry) error {
+
+	if m.StartupProbe != nil {
+
+		if swag.IsZero(m.StartupProbe) { // not required
+			return nil
+		}
+
+		if err := m.StartupProbe.ContextValidate(ctx, formats); err != nil {
+			ve := new(errors.Validation)
+			if stderrors.As(err, &ve) {
+				return ve.ValidateName("startupProbe")
+			}
+			ce := new(errors.CompositeError)
+			if stderrors.As(err, &ce) {
+				return ce.ValidateName("startupProbe")
+			}
+
+			return err
+		}
+	}
 
 	return nil
 }

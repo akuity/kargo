@@ -26,16 +26,12 @@ type PromotionStatus struct {
 	FinishedAt string `json:"finishedAt,omitempty"`
 
 	// Freight is the detail of the piece of freight that was referenced by this promotion.
-	Freight struct {
-		FreightReference
-	} `json:"freight,omitempty"`
+	Freight *FreightReference `json:"freight,omitempty"`
 
 	// FreightCollection contains the details of the piece of Freight referenced
 	// by this Promotion as well as any additional Freight that is carried over
 	// from the target Stage's current state.
-	FreightCollection struct {
-		FreightCollection
-	} `json:"freightCollection,omitempty"`
+	FreightCollection *FreightCollection `json:"freightCollection,omitempty"`
 
 	// HealthChecks contains the health check directives to be executed after
 	// the Promotion has completed.
@@ -99,12 +95,42 @@ func (m *PromotionStatus) validateFreight(formats strfmt.Registry) error {
 		return nil
 	}
 
+	if m.Freight != nil {
+		if err := m.Freight.Validate(formats); err != nil {
+			ve := new(errors.Validation)
+			if stderrors.As(err, &ve) {
+				return ve.ValidateName("freight")
+			}
+			ce := new(errors.CompositeError)
+			if stderrors.As(err, &ce) {
+				return ce.ValidateName("freight")
+			}
+
+			return err
+		}
+	}
+
 	return nil
 }
 
 func (m *PromotionStatus) validateFreightCollection(formats strfmt.Registry) error {
 	if swag.IsZero(m.FreightCollection) { // not required
 		return nil
+	}
+
+	if m.FreightCollection != nil {
+		if err := m.FreightCollection.Validate(formats); err != nil {
+			ve := new(errors.Validation)
+			if stderrors.As(err, &ve) {
+				return ve.ValidateName("freightCollection")
+			}
+			ce := new(errors.CompositeError)
+			if stderrors.As(err, &ce) {
+				return ce.ValidateName("freightCollection")
+			}
+
+			return err
+		}
 	}
 
 	return nil
@@ -198,10 +224,50 @@ func (m *PromotionStatus) ContextValidate(ctx context.Context, formats strfmt.Re
 
 func (m *PromotionStatus) contextValidateFreight(ctx context.Context, formats strfmt.Registry) error {
 
+	if m.Freight != nil {
+
+		if swag.IsZero(m.Freight) { // not required
+			return nil
+		}
+
+		if err := m.Freight.ContextValidate(ctx, formats); err != nil {
+			ve := new(errors.Validation)
+			if stderrors.As(err, &ve) {
+				return ve.ValidateName("freight")
+			}
+			ce := new(errors.CompositeError)
+			if stderrors.As(err, &ce) {
+				return ce.ValidateName("freight")
+			}
+
+			return err
+		}
+	}
+
 	return nil
 }
 
 func (m *PromotionStatus) contextValidateFreightCollection(ctx context.Context, formats strfmt.Registry) error {
+
+	if m.FreightCollection != nil {
+
+		if swag.IsZero(m.FreightCollection) { // not required
+			return nil
+		}
+
+		if err := m.FreightCollection.ContextValidate(ctx, formats); err != nil {
+			ve := new(errors.Validation)
+			if stderrors.As(err, &ve) {
+				return ve.ValidateName("freightCollection")
+			}
+			ce := new(errors.CompositeError)
+			if stderrors.As(err, &ce) {
+				return ce.ValidateName("freightCollection")
+			}
+
+			return err
+		}
+	}
 
 	return nil
 }

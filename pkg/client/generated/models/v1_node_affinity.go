@@ -36,9 +36,7 @@ type V1NodeAffinity struct {
 	// at some point during pod execution (e.g. due to an update), the system
 	// may or may not try to eventually evict the pod from its node.
 	// +optional
-	RequiredDuringSchedulingIgnoredDuringExecution struct {
-		V1NodeSelector
-	} `json:"requiredDuringSchedulingIgnoredDuringExecution,omitempty"`
+	RequiredDuringSchedulingIgnoredDuringExecution *V1NodeSelector `json:"requiredDuringSchedulingIgnoredDuringExecution,omitempty"`
 }
 
 // Validate validates this v1 node affinity
@@ -94,6 +92,21 @@ func (m *V1NodeAffinity) validateRequiredDuringSchedulingIgnoredDuringExecution(
 		return nil
 	}
 
+	if m.RequiredDuringSchedulingIgnoredDuringExecution != nil {
+		if err := m.RequiredDuringSchedulingIgnoredDuringExecution.Validate(formats); err != nil {
+			ve := new(errors.Validation)
+			if stderrors.As(err, &ve) {
+				return ve.ValidateName("requiredDuringSchedulingIgnoredDuringExecution")
+			}
+			ce := new(errors.CompositeError)
+			if stderrors.As(err, &ce) {
+				return ce.ValidateName("requiredDuringSchedulingIgnoredDuringExecution")
+			}
+
+			return err
+		}
+	}
+
 	return nil
 }
 
@@ -145,6 +158,26 @@ func (m *V1NodeAffinity) contextValidatePreferredDuringSchedulingIgnoredDuringEx
 }
 
 func (m *V1NodeAffinity) contextValidateRequiredDuringSchedulingIgnoredDuringExecution(ctx context.Context, formats strfmt.Registry) error {
+
+	if m.RequiredDuringSchedulingIgnoredDuringExecution != nil {
+
+		if swag.IsZero(m.RequiredDuringSchedulingIgnoredDuringExecution) { // not required
+			return nil
+		}
+
+		if err := m.RequiredDuringSchedulingIgnoredDuringExecution.ContextValidate(ctx, formats); err != nil {
+			ve := new(errors.Validation)
+			if stderrors.As(err, &ve) {
+				return ve.ValidateName("requiredDuringSchedulingIgnoredDuringExecution")
+			}
+			ce := new(errors.CompositeError)
+			if stderrors.As(err, &ce) {
+				return ce.ValidateName("requiredDuringSchedulingIgnoredDuringExecution")
+			}
+
+			return err
+		}
+	}
 
 	return nil
 }

@@ -27,9 +27,7 @@ type ProjectStatus struct {
 
 	// Stats contains a summary of the collective state of a Project's
 	// constituent resources.
-	Stats struct {
-		ProjectStats
-	} `json:"stats,omitempty"`
+	Stats *ProjectStats `json:"stats,omitempty"`
 }
 
 // Validate validates this project status
@@ -85,6 +83,21 @@ func (m *ProjectStatus) validateStats(formats strfmt.Registry) error {
 		return nil
 	}
 
+	if m.Stats != nil {
+		if err := m.Stats.Validate(formats); err != nil {
+			ve := new(errors.Validation)
+			if stderrors.As(err, &ve) {
+				return ve.ValidateName("stats")
+			}
+			ce := new(errors.CompositeError)
+			if stderrors.As(err, &ce) {
+				return ce.ValidateName("stats")
+			}
+
+			return err
+		}
+	}
+
 	return nil
 }
 
@@ -136,6 +149,26 @@ func (m *ProjectStatus) contextValidateConditions(ctx context.Context, formats s
 }
 
 func (m *ProjectStatus) contextValidateStats(ctx context.Context, formats strfmt.Registry) error {
+
+	if m.Stats != nil {
+
+		if swag.IsZero(m.Stats) { // not required
+			return nil
+		}
+
+		if err := m.Stats.ContextValidate(ctx, formats); err != nil {
+			ve := new(errors.Validation)
+			if stderrors.As(err, &ve) {
+				return ve.ValidateName("stats")
+			}
+			ce := new(errors.CompositeError)
+			if stderrors.As(err, &ce) {
+				return ce.ValidateName("stats")
+			}
+
+			return err
+		}
+	}
 
 	return nil
 }

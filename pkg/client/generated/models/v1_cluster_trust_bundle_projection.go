@@ -4,6 +4,7 @@ package models
 
 import (
 	"context"
+	stderrors "errors"
 
 	"github.com/go-openapi/errors"
 	"github.com/go-openapi/strfmt"
@@ -20,9 +21,7 @@ type V1ClusterTrustBundleProjection struct {
 	// interpreted as "match nothing".  If set but empty, interpreted as "match
 	// everything".
 	// +optional
-	LabelSelector struct {
-		V1LabelSelector
-	} `json:"labelSelector,omitempty"`
+	LabelSelector *V1LabelSelector `json:"labelSelector,omitempty"`
 
 	// Select a single ClusterTrustBundle by object name.  Mutually-exclusive
 	// with signerName and labelSelector.
@@ -66,6 +65,21 @@ func (m *V1ClusterTrustBundleProjection) validateLabelSelector(formats strfmt.Re
 		return nil
 	}
 
+	if m.LabelSelector != nil {
+		if err := m.LabelSelector.Validate(formats); err != nil {
+			ve := new(errors.Validation)
+			if stderrors.As(err, &ve) {
+				return ve.ValidateName("labelSelector")
+			}
+			ce := new(errors.CompositeError)
+			if stderrors.As(err, &ce) {
+				return ce.ValidateName("labelSelector")
+			}
+
+			return err
+		}
+	}
+
 	return nil
 }
 
@@ -84,6 +98,26 @@ func (m *V1ClusterTrustBundleProjection) ContextValidate(ctx context.Context, fo
 }
 
 func (m *V1ClusterTrustBundleProjection) contextValidateLabelSelector(ctx context.Context, formats strfmt.Registry) error {
+
+	if m.LabelSelector != nil {
+
+		if swag.IsZero(m.LabelSelector) { // not required
+			return nil
+		}
+
+		if err := m.LabelSelector.ContextValidate(ctx, formats); err != nil {
+			ve := new(errors.Validation)
+			if stderrors.As(err, &ve) {
+				return ve.ValidateName("labelSelector")
+			}
+			ce := new(errors.CompositeError)
+			if stderrors.As(err, &ce) {
+				return ce.ValidateName("labelSelector")
+			}
+
+			return err
+		}
+	}
 
 	return nil
 }

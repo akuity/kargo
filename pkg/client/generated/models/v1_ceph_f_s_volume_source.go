@@ -4,6 +4,7 @@ package models
 
 import (
 	"context"
+	stderrors "errors"
 
 	"github.com/go-openapi/errors"
 	"github.com/go-openapi/strfmt"
@@ -38,9 +39,7 @@ type V1CephFSVolumeSource struct {
 	// secretRef is Optional: SecretRef is reference to the authentication secret for User, default is empty.
 	// More info: https://examples.k8s.io/volumes/cephfs/README.md#how-to-use-it
 	// +optional
-	SecretRef struct {
-		V1LocalObjectReference
-	} `json:"secretRef,omitempty"`
+	SecretRef *V1LocalObjectReference `json:"secretRef,omitempty"`
 
 	// user is optional: User is the rados user name, default is admin
 	// More info: https://examples.k8s.io/volumes/cephfs/README.md#how-to-use-it
@@ -67,6 +66,21 @@ func (m *V1CephFSVolumeSource) validateSecretRef(formats strfmt.Registry) error 
 		return nil
 	}
 
+	if m.SecretRef != nil {
+		if err := m.SecretRef.Validate(formats); err != nil {
+			ve := new(errors.Validation)
+			if stderrors.As(err, &ve) {
+				return ve.ValidateName("secretRef")
+			}
+			ce := new(errors.CompositeError)
+			if stderrors.As(err, &ce) {
+				return ce.ValidateName("secretRef")
+			}
+
+			return err
+		}
+	}
+
 	return nil
 }
 
@@ -85,6 +99,26 @@ func (m *V1CephFSVolumeSource) ContextValidate(ctx context.Context, formats strf
 }
 
 func (m *V1CephFSVolumeSource) contextValidateSecretRef(ctx context.Context, formats strfmt.Registry) error {
+
+	if m.SecretRef != nil {
+
+		if swag.IsZero(m.SecretRef) { // not required
+			return nil
+		}
+
+		if err := m.SecretRef.ContextValidate(ctx, formats); err != nil {
+			ve := new(errors.Validation)
+			if stderrors.As(err, &ve) {
+				return ve.ValidateName("secretRef")
+			}
+			ce := new(errors.CompositeError)
+			if stderrors.As(err, &ce) {
+				return ce.ValidateName("secretRef")
+			}
+
+			return err
+		}
+	}
 
 	return nil
 }

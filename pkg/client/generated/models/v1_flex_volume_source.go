@@ -4,6 +4,7 @@ package models
 
 import (
 	"context"
+	stderrors "errors"
 
 	"github.com/go-openapi/errors"
 	"github.com/go-openapi/strfmt"
@@ -39,9 +40,7 @@ type V1FlexVolumeSource struct {
 	// contains more than one secret, all secrets are passed to the plugin
 	// scripts.
 	// +optional
-	SecretRef struct {
-		V1LocalObjectReference
-	} `json:"secretRef,omitempty"`
+	SecretRef *V1LocalObjectReference `json:"secretRef,omitempty"`
 }
 
 // Validate validates this v1 flex volume source
@@ -63,6 +62,21 @@ func (m *V1FlexVolumeSource) validateSecretRef(formats strfmt.Registry) error {
 		return nil
 	}
 
+	if m.SecretRef != nil {
+		if err := m.SecretRef.Validate(formats); err != nil {
+			ve := new(errors.Validation)
+			if stderrors.As(err, &ve) {
+				return ve.ValidateName("secretRef")
+			}
+			ce := new(errors.CompositeError)
+			if stderrors.As(err, &ce) {
+				return ce.ValidateName("secretRef")
+			}
+
+			return err
+		}
+	}
+
 	return nil
 }
 
@@ -81,6 +95,26 @@ func (m *V1FlexVolumeSource) ContextValidate(ctx context.Context, formats strfmt
 }
 
 func (m *V1FlexVolumeSource) contextValidateSecretRef(ctx context.Context, formats strfmt.Registry) error {
+
+	if m.SecretRef != nil {
+
+		if swag.IsZero(m.SecretRef) { // not required
+			return nil
+		}
+
+		if err := m.SecretRef.ContextValidate(ctx, formats); err != nil {
+			ve := new(errors.Validation)
+			if stderrors.As(err, &ve) {
+				return ve.ValidateName("secretRef")
+			}
+			ce := new(errors.CompositeError)
+			if stderrors.As(err, &ce) {
+				return ce.ValidateName("secretRef")
+			}
+
+			return err
+		}
+	}
 
 	return nil
 }

@@ -19,9 +19,7 @@ type Verification struct {
 
 	// AnalysisRunMetadata contains optional metadata that should be applied to
 	// all AnalysisRuns.
-	AnalysisRunMetadata struct {
-		AnalysisRunMetadata
-	} `json:"analysisRunMetadata,omitempty"`
+	AnalysisRunMetadata *AnalysisRunMetadata `json:"analysisRunMetadata,omitempty"`
 
 	// AnalysisTemplates is a list of AnalysisTemplates from which AnalysisRuns
 	// should be created to verify a Stage's current Freight is fit to be promoted
@@ -57,6 +55,21 @@ func (m *Verification) Validate(formats strfmt.Registry) error {
 func (m *Verification) validateAnalysisRunMetadata(formats strfmt.Registry) error {
 	if swag.IsZero(m.AnalysisRunMetadata) { // not required
 		return nil
+	}
+
+	if m.AnalysisRunMetadata != nil {
+		if err := m.AnalysisRunMetadata.Validate(formats); err != nil {
+			ve := new(errors.Validation)
+			if stderrors.As(err, &ve) {
+				return ve.ValidateName("analysisRunMetadata")
+			}
+			ce := new(errors.CompositeError)
+			if stderrors.As(err, &ce) {
+				return ce.ValidateName("analysisRunMetadata")
+			}
+
+			return err
+		}
 	}
 
 	return nil
@@ -145,6 +158,26 @@ func (m *Verification) ContextValidate(ctx context.Context, formats strfmt.Regis
 }
 
 func (m *Verification) contextValidateAnalysisRunMetadata(ctx context.Context, formats strfmt.Registry) error {
+
+	if m.AnalysisRunMetadata != nil {
+
+		if swag.IsZero(m.AnalysisRunMetadata) { // not required
+			return nil
+		}
+
+		if err := m.AnalysisRunMetadata.ContextValidate(ctx, formats); err != nil {
+			ve := new(errors.Validation)
+			if stderrors.As(err, &ve) {
+				return ve.ValidateName("analysisRunMetadata")
+			}
+			ce := new(errors.CompositeError)
+			if stderrors.As(err, &ce) {
+				return ce.ValidateName("analysisRunMetadata")
+			}
+
+			return err
+		}
+	}
 
 	return nil
 }

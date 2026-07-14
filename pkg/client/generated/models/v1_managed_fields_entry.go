@@ -5,7 +5,6 @@ package models
 import (
 	"context"
 
-	"github.com/go-openapi/errors"
 	"github.com/go-openapi/strfmt"
 	"github.com/go-openapi/swag"
 )
@@ -27,9 +26,7 @@ type V1ManagedFieldsEntry struct {
 
 	// FieldsV1 holds the first JSON version format as described in the "FieldsV1" type.
 	// +optional
-	FieldsV1 struct {
-		V1FieldsV1
-	} `json:"fieldsV1,omitempty"`
+	FieldsV1 V1FieldsV1 `json:"fieldsV1,omitempty"`
 
 	// Manager is an identifier of the workflow managing these fields.
 	Manager string `json:"manager,omitempty"`
@@ -58,23 +55,6 @@ type V1ManagedFieldsEntry struct {
 
 // Validate validates this v1 managed fields entry
 func (m *V1ManagedFieldsEntry) Validate(formats strfmt.Registry) error {
-	var res []error
-
-	if err := m.validateFieldsV1(formats); err != nil {
-		res = append(res, err)
-	}
-
-	if len(res) > 0 {
-		return errors.CompositeValidationError(res...)
-	}
-	return nil
-}
-
-func (m *V1ManagedFieldsEntry) validateFieldsV1(formats strfmt.Registry) error {
-	if swag.IsZero(m.FieldsV1) { // not required
-		return nil
-	}
-
 	return nil
 }
 

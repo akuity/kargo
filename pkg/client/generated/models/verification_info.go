@@ -4,6 +4,7 @@ package models
 
 import (
 	"context"
+	stderrors "errors"
 
 	"github.com/go-openapi/errors"
 	"github.com/go-openapi/strfmt"
@@ -21,9 +22,7 @@ type VerificationInfo struct {
 
 	// AnalysisRun is a reference to the Argo Rollouts AnalysisRun that implements
 	// the Verification process.
-	AnalysisRun struct {
-		AnalysisRunReference
-	} `json:"analysisRun,omitempty"`
+	AnalysisRun *AnalysisRunReference `json:"analysisRun,omitempty"`
 
 	// FinishTime is the time at which the Verification process finished.
 	FinishTime string `json:"finishTime,omitempty"`
@@ -64,6 +63,21 @@ func (m *VerificationInfo) validateAnalysisRun(formats strfmt.Registry) error {
 		return nil
 	}
 
+	if m.AnalysisRun != nil {
+		if err := m.AnalysisRun.Validate(formats); err != nil {
+			ve := new(errors.Validation)
+			if stderrors.As(err, &ve) {
+				return ve.ValidateName("analysisRun")
+			}
+			ce := new(errors.CompositeError)
+			if stderrors.As(err, &ce) {
+				return ce.ValidateName("analysisRun")
+			}
+
+			return err
+		}
+	}
+
 	return nil
 }
 
@@ -82,6 +96,26 @@ func (m *VerificationInfo) ContextValidate(ctx context.Context, formats strfmt.R
 }
 
 func (m *VerificationInfo) contextValidateAnalysisRun(ctx context.Context, formats strfmt.Registry) error {
+
+	if m.AnalysisRun != nil {
+
+		if swag.IsZero(m.AnalysisRun) { // not required
+			return nil
+		}
+
+		if err := m.AnalysisRun.ContextValidate(ctx, formats); err != nil {
+			ve := new(errors.Validation)
+			if stderrors.As(err, &ve) {
+				return ve.ValidateName("analysisRun")
+			}
+			ce := new(errors.CompositeError)
+			if stderrors.As(err, &ce) {
+				return ce.ValidateName("analysisRun")
+			}
+
+			return err
+		}
+	}
 
 	return nil
 }

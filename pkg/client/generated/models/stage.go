@@ -44,9 +44,7 @@ type Stage struct {
 	} `json:"spec"`
 
 	// Status describes the Stage's current and recent Freight, health, and more.
-	Status struct {
-		StageStatus
-	} `json:"status,omitempty"`
+	Status *StageStatus `json:"status,omitempty"`
 }
 
 // Validate validates this stage
@@ -102,6 +100,21 @@ func (m *Stage) validateSpec(formats strfmt.Registry) error {
 func (m *Stage) validateStatus(formats strfmt.Registry) error {
 	if swag.IsZero(m.Status) { // not required
 		return nil
+	}
+
+	if m.Status != nil {
+		if err := m.Status.Validate(formats); err != nil {
+			ve := new(errors.Validation)
+			if stderrors.As(err, &ve) {
+				return ve.ValidateName("status")
+			}
+			ce := new(errors.CompositeError)
+			if stderrors.As(err, &ce) {
+				return ce.ValidateName("status")
+			}
+
+			return err
+		}
 	}
 
 	return nil
@@ -160,6 +173,26 @@ func (m *Stage) contextValidateSpec(ctx context.Context, formats strfmt.Registry
 }
 
 func (m *Stage) contextValidateStatus(ctx context.Context, formats strfmt.Registry) error {
+
+	if m.Status != nil {
+
+		if swag.IsZero(m.Status) { // not required
+			return nil
+		}
+
+		if err := m.Status.ContextValidate(ctx, formats); err != nil {
+			ve := new(errors.Validation)
+			if stderrors.As(err, &ve) {
+				return ve.ValidateName("status")
+			}
+			ce := new(errors.CompositeError)
+			if stderrors.As(err, &ce) {
+				return ce.ValidateName("status")
+			}
+
+			return err
+		}
+	}
 
 	return nil
 }

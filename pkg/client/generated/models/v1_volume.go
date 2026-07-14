@@ -4,6 +4,7 @@ package models
 
 import (
 	"context"
+	stderrors "errors"
 
 	"github.com/go-openapi/errors"
 	"github.com/go-openapi/strfmt"
@@ -21,66 +22,48 @@ type V1Volume struct {
 	// awsElasticBlockStore type are redirected to the ebs.csi.aws.com CSI driver.
 	// More info: https://kubernetes.io/docs/concepts/storage/volumes#awselasticblockstore
 	// +optional
-	AwsElasticBlockStore struct {
-		V1AWSElasticBlockStoreVolumeSource
-	} `json:"awsElasticBlockStore,omitempty"`
+	AwsElasticBlockStore *V1AWSElasticBlockStoreVolumeSource `json:"awsElasticBlockStore,omitempty"`
 
 	// azureDisk represents an Azure Data Disk mount on the host and bind mount to the pod.
 	// Deprecated: AzureDisk is deprecated. All operations for the in-tree azureDisk type
 	// are redirected to the disk.csi.azure.com CSI driver.
 	// +optional
-	AzureDisk struct {
-		V1AzureDiskVolumeSource
-	} `json:"azureDisk,omitempty"`
+	AzureDisk *V1AzureDiskVolumeSource `json:"azureDisk,omitempty"`
 
 	// azureFile represents an Azure File Service mount on the host and bind mount to the pod.
 	// Deprecated: AzureFile is deprecated. All operations for the in-tree azureFile type
 	// are redirected to the file.csi.azure.com CSI driver.
 	// +optional
-	AzureFile struct {
-		V1AzureFileVolumeSource
-	} `json:"azureFile,omitempty"`
+	AzureFile *V1AzureFileVolumeSource `json:"azureFile,omitempty"`
 
 	// cephFS represents a Ceph FS mount on the host that shares a pod's lifetime.
 	// Deprecated: CephFS is deprecated and the in-tree cephfs type is no longer supported.
 	// +optional
-	Cephfs struct {
-		V1CephFSVolumeSource
-	} `json:"cephfs,omitempty"`
+	Cephfs *V1CephFSVolumeSource `json:"cephfs,omitempty"`
 
 	// cinder represents a cinder volume attached and mounted on kubelets host machine.
 	// Deprecated: Cinder is deprecated. All operations for the in-tree cinder type
 	// are redirected to the cinder.csi.openstack.org CSI driver.
 	// More info: https://examples.k8s.io/mysql-cinder-pd/README.md
 	// +optional
-	Cinder struct {
-		V1CinderVolumeSource
-	} `json:"cinder,omitempty"`
+	Cinder *V1CinderVolumeSource `json:"cinder,omitempty"`
 
 	// configMap represents a configMap that should populate this volume
 	// +optional
-	ConfigMap struct {
-		V1ConfigMapVolumeSource
-	} `json:"configMap,omitempty"`
+	ConfigMap *V1ConfigMapVolumeSource `json:"configMap,omitempty"`
 
 	// csi (Container Storage Interface) represents ephemeral storage that is handled by certain external CSI drivers.
 	// +optional
-	Csi struct {
-		V1CSIVolumeSource
-	} `json:"csi,omitempty"`
+	Csi *V1CSIVolumeSource `json:"csi,omitempty"`
 
 	// downwardAPI represents downward API about the pod that should populate this volume
 	// +optional
-	DownwardAPI struct {
-		V1DownwardAPIVolumeSource
-	} `json:"downwardAPI,omitempty"`
+	DownwardAPI *V1DownwardAPIVolumeSource `json:"downwardAPI,omitempty"`
 
 	// emptyDir represents a temporary directory that shares a pod's lifetime.
 	// More info: https://kubernetes.io/docs/concepts/storage/volumes#emptydir
 	// +optional
-	EmptyDir struct {
-		V1EmptyDirVolumeSource
-	} `json:"emptyDir,omitempty"`
+	EmptyDir *V1EmptyDirVolumeSource `json:"emptyDir,omitempty"`
 
 	// ephemeral represents a volume that is handled by a cluster storage driver.
 	// The volume's lifecycle is tied to the pod that defines it - it will be created before the pod starts,
@@ -108,30 +91,22 @@ type V1Volume struct {
 	// persistent volumes at the same time.
 	//
 	// +optional
-	Ephemeral struct {
-		V1EphemeralVolumeSource
-	} `json:"ephemeral,omitempty"`
+	Ephemeral *V1EphemeralVolumeSource `json:"ephemeral,omitempty"`
 
 	// fc represents a Fibre Channel resource that is attached to a kubelet's host machine and then exposed to the pod.
 	// +optional
-	Fc struct {
-		V1FCVolumeSource
-	} `json:"fc,omitempty"`
+	Fc *V1FCVolumeSource `json:"fc,omitempty"`
 
 	// flexVolume represents a generic volume resource that is
 	// provisioned/attached using an exec based plugin.
 	// Deprecated: FlexVolume is deprecated. Consider using a CSIDriver instead.
 	// +optional
-	FlexVolume struct {
-		V1FlexVolumeSource
-	} `json:"flexVolume,omitempty"`
+	FlexVolume *V1FlexVolumeSource `json:"flexVolume,omitempty"`
 
 	// flocker represents a Flocker volume attached to a kubelet's host machine. This depends on the Flocker control service being running.
 	// Deprecated: Flocker is deprecated and the in-tree flocker type is no longer supported.
 	// +optional
-	Flocker struct {
-		V1FlockerVolumeSource
-	} `json:"flocker,omitempty"`
+	Flocker *V1FlockerVolumeSource `json:"flocker,omitempty"`
 
 	// gcePersistentDisk represents a GCE Disk resource that is attached to a
 	// kubelet's host machine and then exposed to the pod.
@@ -139,25 +114,19 @@ type V1Volume struct {
 	// gcePersistentDisk type are redirected to the pd.csi.storage.gke.io CSI driver.
 	// More info: https://kubernetes.io/docs/concepts/storage/volumes#gcepersistentdisk
 	// +optional
-	GcePersistentDisk struct {
-		V1GCEPersistentDiskVolumeSource
-	} `json:"gcePersistentDisk,omitempty"`
+	GcePersistentDisk *V1GCEPersistentDiskVolumeSource `json:"gcePersistentDisk,omitempty"`
 
 	// gitRepo represents a git repository at a particular revision.
 	// Deprecated: GitRepo is deprecated. To provision a container with a git repo, mount an
 	// EmptyDir into an InitContainer that clones the repo using git, then mount the EmptyDir
 	// into the Pod's container.
 	// +optional
-	GitRepo struct {
-		V1GitRepoVolumeSource
-	} `json:"gitRepo,omitempty"`
+	GitRepo *V1GitRepoVolumeSource `json:"gitRepo,omitempty"`
 
 	// glusterfs represents a Glusterfs mount on the host that shares a pod's lifetime.
 	// Deprecated: Glusterfs is deprecated and the in-tree glusterfs type is no longer supported.
 	// +optional
-	Glusterfs struct {
-		V1GlusterfsVolumeSource
-	} `json:"glusterfs,omitempty"`
+	Glusterfs *V1GlusterfsVolumeSource `json:"glusterfs,omitempty"`
 
 	// hostPath represents a pre-existing file or directory on the host
 	// machine that is directly exposed to the container. This is generally
@@ -168,9 +137,7 @@ type V1Volume struct {
 	// TODO(jonesdl) We need to restrict who can use host directory mounts and who can/can not
 	// mount host directories as read/write.
 	// +optional
-	HostPath struct {
-		V1HostPathVolumeSource
-	} `json:"hostPath,omitempty"`
+	HostPath *V1HostPathVolumeSource `json:"hostPath,omitempty"`
 
 	// image represents an OCI object (a container image or artifact) pulled and mounted on the kubelet's host machine.
 	// The volume is resolved at pod startup depending on which PullPolicy value is provided:
@@ -188,17 +155,13 @@ type V1Volume struct {
 	// The field spec.securityContext.fsGroupChangePolicy has no effect on this volume type.
 	// +featureGate=ImageVolume
 	// +optional
-	Image struct {
-		V1ImageVolumeSource
-	} `json:"image,omitempty"`
+	Image *V1ImageVolumeSource `json:"image,omitempty"`
 
 	// iscsi represents an ISCSI Disk resource that is attached to a
 	// kubelet's host machine and then exposed to the pod.
 	// More info: https://kubernetes.io/docs/concepts/storage/volumes/#iscsi
 	// +optional
-	Iscsi struct {
-		V1ISCSIVolumeSource
-	} `json:"iscsi,omitempty"`
+	Iscsi *V1ISCSIVolumeSource `json:"iscsi,omitempty"`
 
 	// name of the volume.
 	// Must be a DNS_LABEL and unique within the pod.
@@ -208,80 +171,58 @@ type V1Volume struct {
 	// nfs represents an NFS mount on the host that shares a pod's lifetime
 	// More info: https://kubernetes.io/docs/concepts/storage/volumes#nfs
 	// +optional
-	Nfs struct {
-		V1NFSVolumeSource
-	} `json:"nfs,omitempty"`
+	Nfs *V1NFSVolumeSource `json:"nfs,omitempty"`
 
 	// persistentVolumeClaimVolumeSource represents a reference to a
 	// PersistentVolumeClaim in the same namespace.
 	// More info: https://kubernetes.io/docs/concepts/storage/persistent-volumes#persistentvolumeclaims
 	// +optional
-	PersistentVolumeClaim struct {
-		V1PersistentVolumeClaimVolumeSource
-	} `json:"persistentVolumeClaim,omitempty"`
+	PersistentVolumeClaim *V1PersistentVolumeClaimVolumeSource `json:"persistentVolumeClaim,omitempty"`
 
 	// photonPersistentDisk represents a PhotonController persistent disk attached and mounted on kubelets host machine.
 	// Deprecated: PhotonPersistentDisk is deprecated and the in-tree photonPersistentDisk type is no longer supported.
-	PhotonPersistentDisk struct {
-		V1PhotonPersistentDiskVolumeSource
-	} `json:"photonPersistentDisk,omitempty"`
+	PhotonPersistentDisk *V1PhotonPersistentDiskVolumeSource `json:"photonPersistentDisk,omitempty"`
 
 	// portworxVolume represents a portworx volume attached and mounted on kubelets host machine.
 	// Deprecated: PortworxVolume is deprecated. All operations for the in-tree portworxVolume type
 	// are redirected to the pxd.portworx.com CSI driver when the CSIMigrationPortworx feature-gate
 	// is on.
 	// +optional
-	PortworxVolume struct {
-		V1PortworxVolumeSource
-	} `json:"portworxVolume,omitempty"`
+	PortworxVolume *V1PortworxVolumeSource `json:"portworxVolume,omitempty"`
 
 	// projected items for all in one resources secrets, configmaps, and downward API
-	Projected struct {
-		V1ProjectedVolumeSource
-	} `json:"projected,omitempty"`
+	Projected *V1ProjectedVolumeSource `json:"projected,omitempty"`
 
 	// quobyte represents a Quobyte mount on the host that shares a pod's lifetime.
 	// Deprecated: Quobyte is deprecated and the in-tree quobyte type is no longer supported.
 	// +optional
-	Quobyte struct {
-		V1QuobyteVolumeSource
-	} `json:"quobyte,omitempty"`
+	Quobyte *V1QuobyteVolumeSource `json:"quobyte,omitempty"`
 
 	// rbd represents a Rados Block Device mount on the host that shares a pod's lifetime.
 	// Deprecated: RBD is deprecated and the in-tree rbd type is no longer supported.
 	// +optional
-	Rbd struct {
-		V1RBDVolumeSource
-	} `json:"rbd,omitempty"`
+	Rbd *V1RBDVolumeSource `json:"rbd,omitempty"`
 
 	// scaleIO represents a ScaleIO persistent volume attached and mounted on Kubernetes nodes.
 	// Deprecated: ScaleIO is deprecated and the in-tree scaleIO type is no longer supported.
 	// +optional
-	ScaleIO struct {
-		V1ScaleIOVolumeSource
-	} `json:"scaleIO,omitempty"`
+	ScaleIO *V1ScaleIOVolumeSource `json:"scaleIO,omitempty"`
 
 	// secret represents a secret that should populate this volume.
 	// More info: https://kubernetes.io/docs/concepts/storage/volumes#secret
 	// +optional
-	Secret struct {
-		V1SecretVolumeSource
-	} `json:"secret,omitempty"`
+	Secret *V1SecretVolumeSource `json:"secret,omitempty"`
 
 	// storageOS represents a StorageOS volume attached and mounted on Kubernetes nodes.
 	// Deprecated: StorageOS is deprecated and the in-tree storageos type is no longer supported.
 	// +optional
-	Storageos struct {
-		V1StorageOSVolumeSource
-	} `json:"storageos,omitempty"`
+	Storageos *V1StorageOSVolumeSource `json:"storageos,omitempty"`
 
 	// vsphereVolume represents a vSphere volume attached and mounted on kubelets host machine.
 	// Deprecated: VsphereVolume is deprecated. All operations for the in-tree vsphereVolume type
 	// are redirected to the csi.vsphere.vmware.com CSI driver.
 	// +optional
-	VsphereVolume struct {
-		V1VsphereVirtualDiskVolumeSource
-	} `json:"vsphereVolume,omitempty"`
+	VsphereVolume *V1VsphereVirtualDiskVolumeSource `json:"vsphereVolume,omitempty"`
 }
 
 // Validate validates this v1 volume
@@ -419,12 +360,42 @@ func (m *V1Volume) validateAwsElasticBlockStore(formats strfmt.Registry) error {
 		return nil
 	}
 
+	if m.AwsElasticBlockStore != nil {
+		if err := m.AwsElasticBlockStore.Validate(formats); err != nil {
+			ve := new(errors.Validation)
+			if stderrors.As(err, &ve) {
+				return ve.ValidateName("awsElasticBlockStore")
+			}
+			ce := new(errors.CompositeError)
+			if stderrors.As(err, &ce) {
+				return ce.ValidateName("awsElasticBlockStore")
+			}
+
+			return err
+		}
+	}
+
 	return nil
 }
 
 func (m *V1Volume) validateAzureDisk(formats strfmt.Registry) error {
 	if swag.IsZero(m.AzureDisk) { // not required
 		return nil
+	}
+
+	if m.AzureDisk != nil {
+		if err := m.AzureDisk.Validate(formats); err != nil {
+			ve := new(errors.Validation)
+			if stderrors.As(err, &ve) {
+				return ve.ValidateName("azureDisk")
+			}
+			ce := new(errors.CompositeError)
+			if stderrors.As(err, &ce) {
+				return ce.ValidateName("azureDisk")
+			}
+
+			return err
+		}
 	}
 
 	return nil
@@ -435,12 +406,42 @@ func (m *V1Volume) validateAzureFile(formats strfmt.Registry) error {
 		return nil
 	}
 
+	if m.AzureFile != nil {
+		if err := m.AzureFile.Validate(formats); err != nil {
+			ve := new(errors.Validation)
+			if stderrors.As(err, &ve) {
+				return ve.ValidateName("azureFile")
+			}
+			ce := new(errors.CompositeError)
+			if stderrors.As(err, &ce) {
+				return ce.ValidateName("azureFile")
+			}
+
+			return err
+		}
+	}
+
 	return nil
 }
 
 func (m *V1Volume) validateCephfs(formats strfmt.Registry) error {
 	if swag.IsZero(m.Cephfs) { // not required
 		return nil
+	}
+
+	if m.Cephfs != nil {
+		if err := m.Cephfs.Validate(formats); err != nil {
+			ve := new(errors.Validation)
+			if stderrors.As(err, &ve) {
+				return ve.ValidateName("cephfs")
+			}
+			ce := new(errors.CompositeError)
+			if stderrors.As(err, &ce) {
+				return ce.ValidateName("cephfs")
+			}
+
+			return err
+		}
 	}
 
 	return nil
@@ -451,12 +452,42 @@ func (m *V1Volume) validateCinder(formats strfmt.Registry) error {
 		return nil
 	}
 
+	if m.Cinder != nil {
+		if err := m.Cinder.Validate(formats); err != nil {
+			ve := new(errors.Validation)
+			if stderrors.As(err, &ve) {
+				return ve.ValidateName("cinder")
+			}
+			ce := new(errors.CompositeError)
+			if stderrors.As(err, &ce) {
+				return ce.ValidateName("cinder")
+			}
+
+			return err
+		}
+	}
+
 	return nil
 }
 
 func (m *V1Volume) validateConfigMap(formats strfmt.Registry) error {
 	if swag.IsZero(m.ConfigMap) { // not required
 		return nil
+	}
+
+	if m.ConfigMap != nil {
+		if err := m.ConfigMap.Validate(formats); err != nil {
+			ve := new(errors.Validation)
+			if stderrors.As(err, &ve) {
+				return ve.ValidateName("configMap")
+			}
+			ce := new(errors.CompositeError)
+			if stderrors.As(err, &ce) {
+				return ce.ValidateName("configMap")
+			}
+
+			return err
+		}
 	}
 
 	return nil
@@ -467,12 +498,42 @@ func (m *V1Volume) validateCsi(formats strfmt.Registry) error {
 		return nil
 	}
 
+	if m.Csi != nil {
+		if err := m.Csi.Validate(formats); err != nil {
+			ve := new(errors.Validation)
+			if stderrors.As(err, &ve) {
+				return ve.ValidateName("csi")
+			}
+			ce := new(errors.CompositeError)
+			if stderrors.As(err, &ce) {
+				return ce.ValidateName("csi")
+			}
+
+			return err
+		}
+	}
+
 	return nil
 }
 
 func (m *V1Volume) validateDownwardAPI(formats strfmt.Registry) error {
 	if swag.IsZero(m.DownwardAPI) { // not required
 		return nil
+	}
+
+	if m.DownwardAPI != nil {
+		if err := m.DownwardAPI.Validate(formats); err != nil {
+			ve := new(errors.Validation)
+			if stderrors.As(err, &ve) {
+				return ve.ValidateName("downwardAPI")
+			}
+			ce := new(errors.CompositeError)
+			if stderrors.As(err, &ce) {
+				return ce.ValidateName("downwardAPI")
+			}
+
+			return err
+		}
 	}
 
 	return nil
@@ -483,12 +544,42 @@ func (m *V1Volume) validateEmptyDir(formats strfmt.Registry) error {
 		return nil
 	}
 
+	if m.EmptyDir != nil {
+		if err := m.EmptyDir.Validate(formats); err != nil {
+			ve := new(errors.Validation)
+			if stderrors.As(err, &ve) {
+				return ve.ValidateName("emptyDir")
+			}
+			ce := new(errors.CompositeError)
+			if stderrors.As(err, &ce) {
+				return ce.ValidateName("emptyDir")
+			}
+
+			return err
+		}
+	}
+
 	return nil
 }
 
 func (m *V1Volume) validateEphemeral(formats strfmt.Registry) error {
 	if swag.IsZero(m.Ephemeral) { // not required
 		return nil
+	}
+
+	if m.Ephemeral != nil {
+		if err := m.Ephemeral.Validate(formats); err != nil {
+			ve := new(errors.Validation)
+			if stderrors.As(err, &ve) {
+				return ve.ValidateName("ephemeral")
+			}
+			ce := new(errors.CompositeError)
+			if stderrors.As(err, &ce) {
+				return ce.ValidateName("ephemeral")
+			}
+
+			return err
+		}
 	}
 
 	return nil
@@ -499,12 +590,42 @@ func (m *V1Volume) validateFc(formats strfmt.Registry) error {
 		return nil
 	}
 
+	if m.Fc != nil {
+		if err := m.Fc.Validate(formats); err != nil {
+			ve := new(errors.Validation)
+			if stderrors.As(err, &ve) {
+				return ve.ValidateName("fc")
+			}
+			ce := new(errors.CompositeError)
+			if stderrors.As(err, &ce) {
+				return ce.ValidateName("fc")
+			}
+
+			return err
+		}
+	}
+
 	return nil
 }
 
 func (m *V1Volume) validateFlexVolume(formats strfmt.Registry) error {
 	if swag.IsZero(m.FlexVolume) { // not required
 		return nil
+	}
+
+	if m.FlexVolume != nil {
+		if err := m.FlexVolume.Validate(formats); err != nil {
+			ve := new(errors.Validation)
+			if stderrors.As(err, &ve) {
+				return ve.ValidateName("flexVolume")
+			}
+			ce := new(errors.CompositeError)
+			if stderrors.As(err, &ce) {
+				return ce.ValidateName("flexVolume")
+			}
+
+			return err
+		}
 	}
 
 	return nil
@@ -515,12 +636,42 @@ func (m *V1Volume) validateFlocker(formats strfmt.Registry) error {
 		return nil
 	}
 
+	if m.Flocker != nil {
+		if err := m.Flocker.Validate(formats); err != nil {
+			ve := new(errors.Validation)
+			if stderrors.As(err, &ve) {
+				return ve.ValidateName("flocker")
+			}
+			ce := new(errors.CompositeError)
+			if stderrors.As(err, &ce) {
+				return ce.ValidateName("flocker")
+			}
+
+			return err
+		}
+	}
+
 	return nil
 }
 
 func (m *V1Volume) validateGcePersistentDisk(formats strfmt.Registry) error {
 	if swag.IsZero(m.GcePersistentDisk) { // not required
 		return nil
+	}
+
+	if m.GcePersistentDisk != nil {
+		if err := m.GcePersistentDisk.Validate(formats); err != nil {
+			ve := new(errors.Validation)
+			if stderrors.As(err, &ve) {
+				return ve.ValidateName("gcePersistentDisk")
+			}
+			ce := new(errors.CompositeError)
+			if stderrors.As(err, &ce) {
+				return ce.ValidateName("gcePersistentDisk")
+			}
+
+			return err
+		}
 	}
 
 	return nil
@@ -531,12 +682,42 @@ func (m *V1Volume) validateGitRepo(formats strfmt.Registry) error {
 		return nil
 	}
 
+	if m.GitRepo != nil {
+		if err := m.GitRepo.Validate(formats); err != nil {
+			ve := new(errors.Validation)
+			if stderrors.As(err, &ve) {
+				return ve.ValidateName("gitRepo")
+			}
+			ce := new(errors.CompositeError)
+			if stderrors.As(err, &ce) {
+				return ce.ValidateName("gitRepo")
+			}
+
+			return err
+		}
+	}
+
 	return nil
 }
 
 func (m *V1Volume) validateGlusterfs(formats strfmt.Registry) error {
 	if swag.IsZero(m.Glusterfs) { // not required
 		return nil
+	}
+
+	if m.Glusterfs != nil {
+		if err := m.Glusterfs.Validate(formats); err != nil {
+			ve := new(errors.Validation)
+			if stderrors.As(err, &ve) {
+				return ve.ValidateName("glusterfs")
+			}
+			ce := new(errors.CompositeError)
+			if stderrors.As(err, &ce) {
+				return ce.ValidateName("glusterfs")
+			}
+
+			return err
+		}
 	}
 
 	return nil
@@ -547,12 +728,42 @@ func (m *V1Volume) validateHostPath(formats strfmt.Registry) error {
 		return nil
 	}
 
+	if m.HostPath != nil {
+		if err := m.HostPath.Validate(formats); err != nil {
+			ve := new(errors.Validation)
+			if stderrors.As(err, &ve) {
+				return ve.ValidateName("hostPath")
+			}
+			ce := new(errors.CompositeError)
+			if stderrors.As(err, &ce) {
+				return ce.ValidateName("hostPath")
+			}
+
+			return err
+		}
+	}
+
 	return nil
 }
 
 func (m *V1Volume) validateImage(formats strfmt.Registry) error {
 	if swag.IsZero(m.Image) { // not required
 		return nil
+	}
+
+	if m.Image != nil {
+		if err := m.Image.Validate(formats); err != nil {
+			ve := new(errors.Validation)
+			if stderrors.As(err, &ve) {
+				return ve.ValidateName("image")
+			}
+			ce := new(errors.CompositeError)
+			if stderrors.As(err, &ce) {
+				return ce.ValidateName("image")
+			}
+
+			return err
+		}
 	}
 
 	return nil
@@ -563,12 +774,42 @@ func (m *V1Volume) validateIscsi(formats strfmt.Registry) error {
 		return nil
 	}
 
+	if m.Iscsi != nil {
+		if err := m.Iscsi.Validate(formats); err != nil {
+			ve := new(errors.Validation)
+			if stderrors.As(err, &ve) {
+				return ve.ValidateName("iscsi")
+			}
+			ce := new(errors.CompositeError)
+			if stderrors.As(err, &ce) {
+				return ce.ValidateName("iscsi")
+			}
+
+			return err
+		}
+	}
+
 	return nil
 }
 
 func (m *V1Volume) validateNfs(formats strfmt.Registry) error {
 	if swag.IsZero(m.Nfs) { // not required
 		return nil
+	}
+
+	if m.Nfs != nil {
+		if err := m.Nfs.Validate(formats); err != nil {
+			ve := new(errors.Validation)
+			if stderrors.As(err, &ve) {
+				return ve.ValidateName("nfs")
+			}
+			ce := new(errors.CompositeError)
+			if stderrors.As(err, &ce) {
+				return ce.ValidateName("nfs")
+			}
+
+			return err
+		}
 	}
 
 	return nil
@@ -579,12 +820,42 @@ func (m *V1Volume) validatePersistentVolumeClaim(formats strfmt.Registry) error 
 		return nil
 	}
 
+	if m.PersistentVolumeClaim != nil {
+		if err := m.PersistentVolumeClaim.Validate(formats); err != nil {
+			ve := new(errors.Validation)
+			if stderrors.As(err, &ve) {
+				return ve.ValidateName("persistentVolumeClaim")
+			}
+			ce := new(errors.CompositeError)
+			if stderrors.As(err, &ce) {
+				return ce.ValidateName("persistentVolumeClaim")
+			}
+
+			return err
+		}
+	}
+
 	return nil
 }
 
 func (m *V1Volume) validatePhotonPersistentDisk(formats strfmt.Registry) error {
 	if swag.IsZero(m.PhotonPersistentDisk) { // not required
 		return nil
+	}
+
+	if m.PhotonPersistentDisk != nil {
+		if err := m.PhotonPersistentDisk.Validate(formats); err != nil {
+			ve := new(errors.Validation)
+			if stderrors.As(err, &ve) {
+				return ve.ValidateName("photonPersistentDisk")
+			}
+			ce := new(errors.CompositeError)
+			if stderrors.As(err, &ce) {
+				return ce.ValidateName("photonPersistentDisk")
+			}
+
+			return err
+		}
 	}
 
 	return nil
@@ -595,12 +866,42 @@ func (m *V1Volume) validatePortworxVolume(formats strfmt.Registry) error {
 		return nil
 	}
 
+	if m.PortworxVolume != nil {
+		if err := m.PortworxVolume.Validate(formats); err != nil {
+			ve := new(errors.Validation)
+			if stderrors.As(err, &ve) {
+				return ve.ValidateName("portworxVolume")
+			}
+			ce := new(errors.CompositeError)
+			if stderrors.As(err, &ce) {
+				return ce.ValidateName("portworxVolume")
+			}
+
+			return err
+		}
+	}
+
 	return nil
 }
 
 func (m *V1Volume) validateProjected(formats strfmt.Registry) error {
 	if swag.IsZero(m.Projected) { // not required
 		return nil
+	}
+
+	if m.Projected != nil {
+		if err := m.Projected.Validate(formats); err != nil {
+			ve := new(errors.Validation)
+			if stderrors.As(err, &ve) {
+				return ve.ValidateName("projected")
+			}
+			ce := new(errors.CompositeError)
+			if stderrors.As(err, &ce) {
+				return ce.ValidateName("projected")
+			}
+
+			return err
+		}
 	}
 
 	return nil
@@ -611,12 +912,42 @@ func (m *V1Volume) validateQuobyte(formats strfmt.Registry) error {
 		return nil
 	}
 
+	if m.Quobyte != nil {
+		if err := m.Quobyte.Validate(formats); err != nil {
+			ve := new(errors.Validation)
+			if stderrors.As(err, &ve) {
+				return ve.ValidateName("quobyte")
+			}
+			ce := new(errors.CompositeError)
+			if stderrors.As(err, &ce) {
+				return ce.ValidateName("quobyte")
+			}
+
+			return err
+		}
+	}
+
 	return nil
 }
 
 func (m *V1Volume) validateRbd(formats strfmt.Registry) error {
 	if swag.IsZero(m.Rbd) { // not required
 		return nil
+	}
+
+	if m.Rbd != nil {
+		if err := m.Rbd.Validate(formats); err != nil {
+			ve := new(errors.Validation)
+			if stderrors.As(err, &ve) {
+				return ve.ValidateName("rbd")
+			}
+			ce := new(errors.CompositeError)
+			if stderrors.As(err, &ce) {
+				return ce.ValidateName("rbd")
+			}
+
+			return err
+		}
 	}
 
 	return nil
@@ -627,12 +958,42 @@ func (m *V1Volume) validateScaleIO(formats strfmt.Registry) error {
 		return nil
 	}
 
+	if m.ScaleIO != nil {
+		if err := m.ScaleIO.Validate(formats); err != nil {
+			ve := new(errors.Validation)
+			if stderrors.As(err, &ve) {
+				return ve.ValidateName("scaleIO")
+			}
+			ce := new(errors.CompositeError)
+			if stderrors.As(err, &ce) {
+				return ce.ValidateName("scaleIO")
+			}
+
+			return err
+		}
+	}
+
 	return nil
 }
 
 func (m *V1Volume) validateSecret(formats strfmt.Registry) error {
 	if swag.IsZero(m.Secret) { // not required
 		return nil
+	}
+
+	if m.Secret != nil {
+		if err := m.Secret.Validate(formats); err != nil {
+			ve := new(errors.Validation)
+			if stderrors.As(err, &ve) {
+				return ve.ValidateName("secret")
+			}
+			ce := new(errors.CompositeError)
+			if stderrors.As(err, &ce) {
+				return ce.ValidateName("secret")
+			}
+
+			return err
+		}
 	}
 
 	return nil
@@ -643,12 +1004,42 @@ func (m *V1Volume) validateStorageos(formats strfmt.Registry) error {
 		return nil
 	}
 
+	if m.Storageos != nil {
+		if err := m.Storageos.Validate(formats); err != nil {
+			ve := new(errors.Validation)
+			if stderrors.As(err, &ve) {
+				return ve.ValidateName("storageos")
+			}
+			ce := new(errors.CompositeError)
+			if stderrors.As(err, &ce) {
+				return ce.ValidateName("storageos")
+			}
+
+			return err
+		}
+	}
+
 	return nil
 }
 
 func (m *V1Volume) validateVsphereVolume(formats strfmt.Registry) error {
 	if swag.IsZero(m.VsphereVolume) { // not required
 		return nil
+	}
+
+	if m.VsphereVolume != nil {
+		if err := m.VsphereVolume.Validate(formats); err != nil {
+			ve := new(errors.Validation)
+			if stderrors.As(err, &ve) {
+				return ve.ValidateName("vsphereVolume")
+			}
+			ce := new(errors.CompositeError)
+			if stderrors.As(err, &ce) {
+				return ce.ValidateName("vsphereVolume")
+			}
+
+			return err
+		}
 	}
 
 	return nil
@@ -786,150 +1177,750 @@ func (m *V1Volume) ContextValidate(ctx context.Context, formats strfmt.Registry)
 
 func (m *V1Volume) contextValidateAwsElasticBlockStore(ctx context.Context, formats strfmt.Registry) error {
 
+	if m.AwsElasticBlockStore != nil {
+
+		if swag.IsZero(m.AwsElasticBlockStore) { // not required
+			return nil
+		}
+
+		if err := m.AwsElasticBlockStore.ContextValidate(ctx, formats); err != nil {
+			ve := new(errors.Validation)
+			if stderrors.As(err, &ve) {
+				return ve.ValidateName("awsElasticBlockStore")
+			}
+			ce := new(errors.CompositeError)
+			if stderrors.As(err, &ce) {
+				return ce.ValidateName("awsElasticBlockStore")
+			}
+
+			return err
+		}
+	}
+
 	return nil
 }
 
 func (m *V1Volume) contextValidateAzureDisk(ctx context.Context, formats strfmt.Registry) error {
+
+	if m.AzureDisk != nil {
+
+		if swag.IsZero(m.AzureDisk) { // not required
+			return nil
+		}
+
+		if err := m.AzureDisk.ContextValidate(ctx, formats); err != nil {
+			ve := new(errors.Validation)
+			if stderrors.As(err, &ve) {
+				return ve.ValidateName("azureDisk")
+			}
+			ce := new(errors.CompositeError)
+			if stderrors.As(err, &ce) {
+				return ce.ValidateName("azureDisk")
+			}
+
+			return err
+		}
+	}
 
 	return nil
 }
 
 func (m *V1Volume) contextValidateAzureFile(ctx context.Context, formats strfmt.Registry) error {
 
+	if m.AzureFile != nil {
+
+		if swag.IsZero(m.AzureFile) { // not required
+			return nil
+		}
+
+		if err := m.AzureFile.ContextValidate(ctx, formats); err != nil {
+			ve := new(errors.Validation)
+			if stderrors.As(err, &ve) {
+				return ve.ValidateName("azureFile")
+			}
+			ce := new(errors.CompositeError)
+			if stderrors.As(err, &ce) {
+				return ce.ValidateName("azureFile")
+			}
+
+			return err
+		}
+	}
+
 	return nil
 }
 
 func (m *V1Volume) contextValidateCephfs(ctx context.Context, formats strfmt.Registry) error {
+
+	if m.Cephfs != nil {
+
+		if swag.IsZero(m.Cephfs) { // not required
+			return nil
+		}
+
+		if err := m.Cephfs.ContextValidate(ctx, formats); err != nil {
+			ve := new(errors.Validation)
+			if stderrors.As(err, &ve) {
+				return ve.ValidateName("cephfs")
+			}
+			ce := new(errors.CompositeError)
+			if stderrors.As(err, &ce) {
+				return ce.ValidateName("cephfs")
+			}
+
+			return err
+		}
+	}
 
 	return nil
 }
 
 func (m *V1Volume) contextValidateCinder(ctx context.Context, formats strfmt.Registry) error {
 
+	if m.Cinder != nil {
+
+		if swag.IsZero(m.Cinder) { // not required
+			return nil
+		}
+
+		if err := m.Cinder.ContextValidate(ctx, formats); err != nil {
+			ve := new(errors.Validation)
+			if stderrors.As(err, &ve) {
+				return ve.ValidateName("cinder")
+			}
+			ce := new(errors.CompositeError)
+			if stderrors.As(err, &ce) {
+				return ce.ValidateName("cinder")
+			}
+
+			return err
+		}
+	}
+
 	return nil
 }
 
 func (m *V1Volume) contextValidateConfigMap(ctx context.Context, formats strfmt.Registry) error {
+
+	if m.ConfigMap != nil {
+
+		if swag.IsZero(m.ConfigMap) { // not required
+			return nil
+		}
+
+		if err := m.ConfigMap.ContextValidate(ctx, formats); err != nil {
+			ve := new(errors.Validation)
+			if stderrors.As(err, &ve) {
+				return ve.ValidateName("configMap")
+			}
+			ce := new(errors.CompositeError)
+			if stderrors.As(err, &ce) {
+				return ce.ValidateName("configMap")
+			}
+
+			return err
+		}
+	}
 
 	return nil
 }
 
 func (m *V1Volume) contextValidateCsi(ctx context.Context, formats strfmt.Registry) error {
 
+	if m.Csi != nil {
+
+		if swag.IsZero(m.Csi) { // not required
+			return nil
+		}
+
+		if err := m.Csi.ContextValidate(ctx, formats); err != nil {
+			ve := new(errors.Validation)
+			if stderrors.As(err, &ve) {
+				return ve.ValidateName("csi")
+			}
+			ce := new(errors.CompositeError)
+			if stderrors.As(err, &ce) {
+				return ce.ValidateName("csi")
+			}
+
+			return err
+		}
+	}
+
 	return nil
 }
 
 func (m *V1Volume) contextValidateDownwardAPI(ctx context.Context, formats strfmt.Registry) error {
+
+	if m.DownwardAPI != nil {
+
+		if swag.IsZero(m.DownwardAPI) { // not required
+			return nil
+		}
+
+		if err := m.DownwardAPI.ContextValidate(ctx, formats); err != nil {
+			ve := new(errors.Validation)
+			if stderrors.As(err, &ve) {
+				return ve.ValidateName("downwardAPI")
+			}
+			ce := new(errors.CompositeError)
+			if stderrors.As(err, &ce) {
+				return ce.ValidateName("downwardAPI")
+			}
+
+			return err
+		}
+	}
 
 	return nil
 }
 
 func (m *V1Volume) contextValidateEmptyDir(ctx context.Context, formats strfmt.Registry) error {
 
+	if m.EmptyDir != nil {
+
+		if swag.IsZero(m.EmptyDir) { // not required
+			return nil
+		}
+
+		if err := m.EmptyDir.ContextValidate(ctx, formats); err != nil {
+			ve := new(errors.Validation)
+			if stderrors.As(err, &ve) {
+				return ve.ValidateName("emptyDir")
+			}
+			ce := new(errors.CompositeError)
+			if stderrors.As(err, &ce) {
+				return ce.ValidateName("emptyDir")
+			}
+
+			return err
+		}
+	}
+
 	return nil
 }
 
 func (m *V1Volume) contextValidateEphemeral(ctx context.Context, formats strfmt.Registry) error {
+
+	if m.Ephemeral != nil {
+
+		if swag.IsZero(m.Ephemeral) { // not required
+			return nil
+		}
+
+		if err := m.Ephemeral.ContextValidate(ctx, formats); err != nil {
+			ve := new(errors.Validation)
+			if stderrors.As(err, &ve) {
+				return ve.ValidateName("ephemeral")
+			}
+			ce := new(errors.CompositeError)
+			if stderrors.As(err, &ce) {
+				return ce.ValidateName("ephemeral")
+			}
+
+			return err
+		}
+	}
 
 	return nil
 }
 
 func (m *V1Volume) contextValidateFc(ctx context.Context, formats strfmt.Registry) error {
 
+	if m.Fc != nil {
+
+		if swag.IsZero(m.Fc) { // not required
+			return nil
+		}
+
+		if err := m.Fc.ContextValidate(ctx, formats); err != nil {
+			ve := new(errors.Validation)
+			if stderrors.As(err, &ve) {
+				return ve.ValidateName("fc")
+			}
+			ce := new(errors.CompositeError)
+			if stderrors.As(err, &ce) {
+				return ce.ValidateName("fc")
+			}
+
+			return err
+		}
+	}
+
 	return nil
 }
 
 func (m *V1Volume) contextValidateFlexVolume(ctx context.Context, formats strfmt.Registry) error {
+
+	if m.FlexVolume != nil {
+
+		if swag.IsZero(m.FlexVolume) { // not required
+			return nil
+		}
+
+		if err := m.FlexVolume.ContextValidate(ctx, formats); err != nil {
+			ve := new(errors.Validation)
+			if stderrors.As(err, &ve) {
+				return ve.ValidateName("flexVolume")
+			}
+			ce := new(errors.CompositeError)
+			if stderrors.As(err, &ce) {
+				return ce.ValidateName("flexVolume")
+			}
+
+			return err
+		}
+	}
 
 	return nil
 }
 
 func (m *V1Volume) contextValidateFlocker(ctx context.Context, formats strfmt.Registry) error {
 
+	if m.Flocker != nil {
+
+		if swag.IsZero(m.Flocker) { // not required
+			return nil
+		}
+
+		if err := m.Flocker.ContextValidate(ctx, formats); err != nil {
+			ve := new(errors.Validation)
+			if stderrors.As(err, &ve) {
+				return ve.ValidateName("flocker")
+			}
+			ce := new(errors.CompositeError)
+			if stderrors.As(err, &ce) {
+				return ce.ValidateName("flocker")
+			}
+
+			return err
+		}
+	}
+
 	return nil
 }
 
 func (m *V1Volume) contextValidateGcePersistentDisk(ctx context.Context, formats strfmt.Registry) error {
+
+	if m.GcePersistentDisk != nil {
+
+		if swag.IsZero(m.GcePersistentDisk) { // not required
+			return nil
+		}
+
+		if err := m.GcePersistentDisk.ContextValidate(ctx, formats); err != nil {
+			ve := new(errors.Validation)
+			if stderrors.As(err, &ve) {
+				return ve.ValidateName("gcePersistentDisk")
+			}
+			ce := new(errors.CompositeError)
+			if stderrors.As(err, &ce) {
+				return ce.ValidateName("gcePersistentDisk")
+			}
+
+			return err
+		}
+	}
 
 	return nil
 }
 
 func (m *V1Volume) contextValidateGitRepo(ctx context.Context, formats strfmt.Registry) error {
 
+	if m.GitRepo != nil {
+
+		if swag.IsZero(m.GitRepo) { // not required
+			return nil
+		}
+
+		if err := m.GitRepo.ContextValidate(ctx, formats); err != nil {
+			ve := new(errors.Validation)
+			if stderrors.As(err, &ve) {
+				return ve.ValidateName("gitRepo")
+			}
+			ce := new(errors.CompositeError)
+			if stderrors.As(err, &ce) {
+				return ce.ValidateName("gitRepo")
+			}
+
+			return err
+		}
+	}
+
 	return nil
 }
 
 func (m *V1Volume) contextValidateGlusterfs(ctx context.Context, formats strfmt.Registry) error {
+
+	if m.Glusterfs != nil {
+
+		if swag.IsZero(m.Glusterfs) { // not required
+			return nil
+		}
+
+		if err := m.Glusterfs.ContextValidate(ctx, formats); err != nil {
+			ve := new(errors.Validation)
+			if stderrors.As(err, &ve) {
+				return ve.ValidateName("glusterfs")
+			}
+			ce := new(errors.CompositeError)
+			if stderrors.As(err, &ce) {
+				return ce.ValidateName("glusterfs")
+			}
+
+			return err
+		}
+	}
 
 	return nil
 }
 
 func (m *V1Volume) contextValidateHostPath(ctx context.Context, formats strfmt.Registry) error {
 
+	if m.HostPath != nil {
+
+		if swag.IsZero(m.HostPath) { // not required
+			return nil
+		}
+
+		if err := m.HostPath.ContextValidate(ctx, formats); err != nil {
+			ve := new(errors.Validation)
+			if stderrors.As(err, &ve) {
+				return ve.ValidateName("hostPath")
+			}
+			ce := new(errors.CompositeError)
+			if stderrors.As(err, &ce) {
+				return ce.ValidateName("hostPath")
+			}
+
+			return err
+		}
+	}
+
 	return nil
 }
 
 func (m *V1Volume) contextValidateImage(ctx context.Context, formats strfmt.Registry) error {
+
+	if m.Image != nil {
+
+		if swag.IsZero(m.Image) { // not required
+			return nil
+		}
+
+		if err := m.Image.ContextValidate(ctx, formats); err != nil {
+			ve := new(errors.Validation)
+			if stderrors.As(err, &ve) {
+				return ve.ValidateName("image")
+			}
+			ce := new(errors.CompositeError)
+			if stderrors.As(err, &ce) {
+				return ce.ValidateName("image")
+			}
+
+			return err
+		}
+	}
 
 	return nil
 }
 
 func (m *V1Volume) contextValidateIscsi(ctx context.Context, formats strfmt.Registry) error {
 
+	if m.Iscsi != nil {
+
+		if swag.IsZero(m.Iscsi) { // not required
+			return nil
+		}
+
+		if err := m.Iscsi.ContextValidate(ctx, formats); err != nil {
+			ve := new(errors.Validation)
+			if stderrors.As(err, &ve) {
+				return ve.ValidateName("iscsi")
+			}
+			ce := new(errors.CompositeError)
+			if stderrors.As(err, &ce) {
+				return ce.ValidateName("iscsi")
+			}
+
+			return err
+		}
+	}
+
 	return nil
 }
 
 func (m *V1Volume) contextValidateNfs(ctx context.Context, formats strfmt.Registry) error {
+
+	if m.Nfs != nil {
+
+		if swag.IsZero(m.Nfs) { // not required
+			return nil
+		}
+
+		if err := m.Nfs.ContextValidate(ctx, formats); err != nil {
+			ve := new(errors.Validation)
+			if stderrors.As(err, &ve) {
+				return ve.ValidateName("nfs")
+			}
+			ce := new(errors.CompositeError)
+			if stderrors.As(err, &ce) {
+				return ce.ValidateName("nfs")
+			}
+
+			return err
+		}
+	}
 
 	return nil
 }
 
 func (m *V1Volume) contextValidatePersistentVolumeClaim(ctx context.Context, formats strfmt.Registry) error {
 
+	if m.PersistentVolumeClaim != nil {
+
+		if swag.IsZero(m.PersistentVolumeClaim) { // not required
+			return nil
+		}
+
+		if err := m.PersistentVolumeClaim.ContextValidate(ctx, formats); err != nil {
+			ve := new(errors.Validation)
+			if stderrors.As(err, &ve) {
+				return ve.ValidateName("persistentVolumeClaim")
+			}
+			ce := new(errors.CompositeError)
+			if stderrors.As(err, &ce) {
+				return ce.ValidateName("persistentVolumeClaim")
+			}
+
+			return err
+		}
+	}
+
 	return nil
 }
 
 func (m *V1Volume) contextValidatePhotonPersistentDisk(ctx context.Context, formats strfmt.Registry) error {
+
+	if m.PhotonPersistentDisk != nil {
+
+		if swag.IsZero(m.PhotonPersistentDisk) { // not required
+			return nil
+		}
+
+		if err := m.PhotonPersistentDisk.ContextValidate(ctx, formats); err != nil {
+			ve := new(errors.Validation)
+			if stderrors.As(err, &ve) {
+				return ve.ValidateName("photonPersistentDisk")
+			}
+			ce := new(errors.CompositeError)
+			if stderrors.As(err, &ce) {
+				return ce.ValidateName("photonPersistentDisk")
+			}
+
+			return err
+		}
+	}
 
 	return nil
 }
 
 func (m *V1Volume) contextValidatePortworxVolume(ctx context.Context, formats strfmt.Registry) error {
 
+	if m.PortworxVolume != nil {
+
+		if swag.IsZero(m.PortworxVolume) { // not required
+			return nil
+		}
+
+		if err := m.PortworxVolume.ContextValidate(ctx, formats); err != nil {
+			ve := new(errors.Validation)
+			if stderrors.As(err, &ve) {
+				return ve.ValidateName("portworxVolume")
+			}
+			ce := new(errors.CompositeError)
+			if stderrors.As(err, &ce) {
+				return ce.ValidateName("portworxVolume")
+			}
+
+			return err
+		}
+	}
+
 	return nil
 }
 
 func (m *V1Volume) contextValidateProjected(ctx context.Context, formats strfmt.Registry) error {
+
+	if m.Projected != nil {
+
+		if swag.IsZero(m.Projected) { // not required
+			return nil
+		}
+
+		if err := m.Projected.ContextValidate(ctx, formats); err != nil {
+			ve := new(errors.Validation)
+			if stderrors.As(err, &ve) {
+				return ve.ValidateName("projected")
+			}
+			ce := new(errors.CompositeError)
+			if stderrors.As(err, &ce) {
+				return ce.ValidateName("projected")
+			}
+
+			return err
+		}
+	}
 
 	return nil
 }
 
 func (m *V1Volume) contextValidateQuobyte(ctx context.Context, formats strfmt.Registry) error {
 
+	if m.Quobyte != nil {
+
+		if swag.IsZero(m.Quobyte) { // not required
+			return nil
+		}
+
+		if err := m.Quobyte.ContextValidate(ctx, formats); err != nil {
+			ve := new(errors.Validation)
+			if stderrors.As(err, &ve) {
+				return ve.ValidateName("quobyte")
+			}
+			ce := new(errors.CompositeError)
+			if stderrors.As(err, &ce) {
+				return ce.ValidateName("quobyte")
+			}
+
+			return err
+		}
+	}
+
 	return nil
 }
 
 func (m *V1Volume) contextValidateRbd(ctx context.Context, formats strfmt.Registry) error {
+
+	if m.Rbd != nil {
+
+		if swag.IsZero(m.Rbd) { // not required
+			return nil
+		}
+
+		if err := m.Rbd.ContextValidate(ctx, formats); err != nil {
+			ve := new(errors.Validation)
+			if stderrors.As(err, &ve) {
+				return ve.ValidateName("rbd")
+			}
+			ce := new(errors.CompositeError)
+			if stderrors.As(err, &ce) {
+				return ce.ValidateName("rbd")
+			}
+
+			return err
+		}
+	}
 
 	return nil
 }
 
 func (m *V1Volume) contextValidateScaleIO(ctx context.Context, formats strfmt.Registry) error {
 
+	if m.ScaleIO != nil {
+
+		if swag.IsZero(m.ScaleIO) { // not required
+			return nil
+		}
+
+		if err := m.ScaleIO.ContextValidate(ctx, formats); err != nil {
+			ve := new(errors.Validation)
+			if stderrors.As(err, &ve) {
+				return ve.ValidateName("scaleIO")
+			}
+			ce := new(errors.CompositeError)
+			if stderrors.As(err, &ce) {
+				return ce.ValidateName("scaleIO")
+			}
+
+			return err
+		}
+	}
+
 	return nil
 }
 
 func (m *V1Volume) contextValidateSecret(ctx context.Context, formats strfmt.Registry) error {
+
+	if m.Secret != nil {
+
+		if swag.IsZero(m.Secret) { // not required
+			return nil
+		}
+
+		if err := m.Secret.ContextValidate(ctx, formats); err != nil {
+			ve := new(errors.Validation)
+			if stderrors.As(err, &ve) {
+				return ve.ValidateName("secret")
+			}
+			ce := new(errors.CompositeError)
+			if stderrors.As(err, &ce) {
+				return ce.ValidateName("secret")
+			}
+
+			return err
+		}
+	}
 
 	return nil
 }
 
 func (m *V1Volume) contextValidateStorageos(ctx context.Context, formats strfmt.Registry) error {
 
+	if m.Storageos != nil {
+
+		if swag.IsZero(m.Storageos) { // not required
+			return nil
+		}
+
+		if err := m.Storageos.ContextValidate(ctx, formats); err != nil {
+			ve := new(errors.Validation)
+			if stderrors.As(err, &ve) {
+				return ve.ValidateName("storageos")
+			}
+			ce := new(errors.CompositeError)
+			if stderrors.As(err, &ce) {
+				return ce.ValidateName("storageos")
+			}
+
+			return err
+		}
+	}
+
 	return nil
 }
 
 func (m *V1Volume) contextValidateVsphereVolume(ctx context.Context, formats strfmt.Registry) error {
+
+	if m.VsphereVolume != nil {
+
+		if swag.IsZero(m.VsphereVolume) { // not required
+			return nil
+		}
+
+		if err := m.VsphereVolume.ContextValidate(ctx, formats); err != nil {
+			ve := new(errors.Validation)
+			if stderrors.As(err, &ve) {
+				return ve.ValidateName("vsphereVolume")
+			}
+			ce := new(errors.CompositeError)
+			if stderrors.As(err, &ce) {
+				return ce.ValidateName("vsphereVolume")
+			}
+
+			return err
+		}
+	}
 
 	return nil
 }

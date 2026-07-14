@@ -4,6 +4,7 @@ package models
 
 import (
 	"context"
+	stderrors "errors"
 
 	"github.com/go-openapi/errors"
 	"github.com/go-openapi/strfmt"
@@ -18,56 +19,38 @@ type WebhookReceiverConfig struct {
 
 	// Artifactory contains the configuration for a webhook receiver that is
 	// compatible with JFrog Artifactory payloads.
-	Artifactory struct {
-		ArtifactoryWebhookReceiverConfig
-	} `json:"artifactory,omitempty"`
+	Artifactory *ArtifactoryWebhookReceiverConfig `json:"artifactory,omitempty"`
 
 	// Azure contains the configuration for a webhook receiver that is compatible
 	// with Azure Container Registry (ACR) and Azure DevOps payloads.
-	Azure struct {
-		AzureWebhookReceiverConfig
-	} `json:"azure,omitempty"`
+	Azure *AzureWebhookReceiverConfig `json:"azure,omitempty"`
 
 	// Bitbucket contains the configuration for a webhook receiver that is
 	// compatible with Bitbucket payloads.
-	Bitbucket struct {
-		BitbucketWebhookReceiverConfig
-	} `json:"bitbucket,omitempty"`
+	Bitbucket *BitbucketWebhookReceiverConfig `json:"bitbucket,omitempty"`
 
 	// DockerHub contains the configuration for a webhook receiver that is
 	// compatible with DockerHub payloads.
-	Dockerhub struct {
-		DockerHubWebhookReceiverConfig
-	} `json:"dockerhub,omitempty"`
+	Dockerhub *DockerHubWebhookReceiverConfig `json:"dockerhub,omitempty"`
 
 	// Generic contains the configuration for a generic webhook receiver.
-	Generic struct {
-		GenericWebhookReceiverConfig
-	} `json:"generic,omitempty"`
+	Generic *GenericWebhookReceiverConfig `json:"generic,omitempty"`
 
 	// Gitea contains the configuration for a webhook receiver that is compatible
 	// with Gitea payloads.
-	Gitea struct {
-		GiteaWebhookReceiverConfig
-	} `json:"gitea,omitempty"`
+	Gitea *GiteaWebhookReceiverConfig `json:"gitea,omitempty"`
 
 	// GitHub contains the configuration for a webhook receiver that is compatible
 	// with GitHub payloads.
-	Github struct {
-		GitHubWebhookReceiverConfig
-	} `json:"github,omitempty"`
+	Github *GitHubWebhookReceiverConfig `json:"github,omitempty"`
 
 	// GitLab contains the configuration for a webhook receiver that is compatible
 	// with GitLab payloads.
-	Gitlab struct {
-		GitLabWebhookReceiverConfig
-	} `json:"gitlab,omitempty"`
+	Gitlab *GitLabWebhookReceiverConfig `json:"gitlab,omitempty"`
 
 	// Harbor contains the configuration for a webhook receiver that is compatible
 	// with Harbor payloads.
-	Harbor struct {
-		HarborWebhookReceiverConfig
-	} `json:"harbor,omitempty"`
+	Harbor *HarborWebhookReceiverConfig `json:"harbor,omitempty"`
 
 	// Name is the name of the webhook receiver.
 	//
@@ -81,9 +64,7 @@ type WebhookReceiverConfig struct {
 
 	// Quay contains the configuration for a webhook receiver that is compatible
 	// with Quay payloads.
-	Quay struct {
-		QuayWebhookReceiverConfig
-	} `json:"quay,omitempty"`
+	Quay *QuayWebhookReceiverConfig `json:"quay,omitempty"`
 }
 
 // Validate validates this webhook receiver config
@@ -145,12 +126,42 @@ func (m *WebhookReceiverConfig) validateArtifactory(formats strfmt.Registry) err
 		return nil
 	}
 
+	if m.Artifactory != nil {
+		if err := m.Artifactory.Validate(formats); err != nil {
+			ve := new(errors.Validation)
+			if stderrors.As(err, &ve) {
+				return ve.ValidateName("artifactory")
+			}
+			ce := new(errors.CompositeError)
+			if stderrors.As(err, &ce) {
+				return ce.ValidateName("artifactory")
+			}
+
+			return err
+		}
+	}
+
 	return nil
 }
 
 func (m *WebhookReceiverConfig) validateAzure(formats strfmt.Registry) error {
 	if swag.IsZero(m.Azure) { // not required
 		return nil
+	}
+
+	if m.Azure != nil {
+		if err := m.Azure.Validate(formats); err != nil {
+			ve := new(errors.Validation)
+			if stderrors.As(err, &ve) {
+				return ve.ValidateName("azure")
+			}
+			ce := new(errors.CompositeError)
+			if stderrors.As(err, &ce) {
+				return ce.ValidateName("azure")
+			}
+
+			return err
+		}
 	}
 
 	return nil
@@ -161,12 +172,42 @@ func (m *WebhookReceiverConfig) validateBitbucket(formats strfmt.Registry) error
 		return nil
 	}
 
+	if m.Bitbucket != nil {
+		if err := m.Bitbucket.Validate(formats); err != nil {
+			ve := new(errors.Validation)
+			if stderrors.As(err, &ve) {
+				return ve.ValidateName("bitbucket")
+			}
+			ce := new(errors.CompositeError)
+			if stderrors.As(err, &ce) {
+				return ce.ValidateName("bitbucket")
+			}
+
+			return err
+		}
+	}
+
 	return nil
 }
 
 func (m *WebhookReceiverConfig) validateDockerhub(formats strfmt.Registry) error {
 	if swag.IsZero(m.Dockerhub) { // not required
 		return nil
+	}
+
+	if m.Dockerhub != nil {
+		if err := m.Dockerhub.Validate(formats); err != nil {
+			ve := new(errors.Validation)
+			if stderrors.As(err, &ve) {
+				return ve.ValidateName("dockerhub")
+			}
+			ce := new(errors.CompositeError)
+			if stderrors.As(err, &ce) {
+				return ce.ValidateName("dockerhub")
+			}
+
+			return err
+		}
 	}
 
 	return nil
@@ -177,12 +218,42 @@ func (m *WebhookReceiverConfig) validateGeneric(formats strfmt.Registry) error {
 		return nil
 	}
 
+	if m.Generic != nil {
+		if err := m.Generic.Validate(formats); err != nil {
+			ve := new(errors.Validation)
+			if stderrors.As(err, &ve) {
+				return ve.ValidateName("generic")
+			}
+			ce := new(errors.CompositeError)
+			if stderrors.As(err, &ce) {
+				return ce.ValidateName("generic")
+			}
+
+			return err
+		}
+	}
+
 	return nil
 }
 
 func (m *WebhookReceiverConfig) validateGitea(formats strfmt.Registry) error {
 	if swag.IsZero(m.Gitea) { // not required
 		return nil
+	}
+
+	if m.Gitea != nil {
+		if err := m.Gitea.Validate(formats); err != nil {
+			ve := new(errors.Validation)
+			if stderrors.As(err, &ve) {
+				return ve.ValidateName("gitea")
+			}
+			ce := new(errors.CompositeError)
+			if stderrors.As(err, &ce) {
+				return ce.ValidateName("gitea")
+			}
+
+			return err
+		}
 	}
 
 	return nil
@@ -193,6 +264,21 @@ func (m *WebhookReceiverConfig) validateGithub(formats strfmt.Registry) error {
 		return nil
 	}
 
+	if m.Github != nil {
+		if err := m.Github.Validate(formats); err != nil {
+			ve := new(errors.Validation)
+			if stderrors.As(err, &ve) {
+				return ve.ValidateName("github")
+			}
+			ce := new(errors.CompositeError)
+			if stderrors.As(err, &ce) {
+				return ce.ValidateName("github")
+			}
+
+			return err
+		}
+	}
+
 	return nil
 }
 
@@ -201,12 +287,42 @@ func (m *WebhookReceiverConfig) validateGitlab(formats strfmt.Registry) error {
 		return nil
 	}
 
+	if m.Gitlab != nil {
+		if err := m.Gitlab.Validate(formats); err != nil {
+			ve := new(errors.Validation)
+			if stderrors.As(err, &ve) {
+				return ve.ValidateName("gitlab")
+			}
+			ce := new(errors.CompositeError)
+			if stderrors.As(err, &ce) {
+				return ce.ValidateName("gitlab")
+			}
+
+			return err
+		}
+	}
+
 	return nil
 }
 
 func (m *WebhookReceiverConfig) validateHarbor(formats strfmt.Registry) error {
 	if swag.IsZero(m.Harbor) { // not required
 		return nil
+	}
+
+	if m.Harbor != nil {
+		if err := m.Harbor.Validate(formats); err != nil {
+			ve := new(errors.Validation)
+			if stderrors.As(err, &ve) {
+				return ve.ValidateName("harbor")
+			}
+			ce := new(errors.CompositeError)
+			if stderrors.As(err, &ce) {
+				return ce.ValidateName("harbor")
+			}
+
+			return err
+		}
 	}
 
 	return nil
@@ -224,6 +340,21 @@ func (m *WebhookReceiverConfig) validateName(formats strfmt.Registry) error {
 func (m *WebhookReceiverConfig) validateQuay(formats strfmt.Registry) error {
 	if swag.IsZero(m.Quay) { // not required
 		return nil
+	}
+
+	if m.Quay != nil {
+		if err := m.Quay.Validate(formats); err != nil {
+			ve := new(errors.Validation)
+			if stderrors.As(err, &ve) {
+				return ve.ValidateName("quay")
+			}
+			ce := new(errors.CompositeError)
+			if stderrors.As(err, &ce) {
+				return ce.ValidateName("quay")
+			}
+
+			return err
+		}
 	}
 
 	return nil
@@ -281,50 +412,250 @@ func (m *WebhookReceiverConfig) ContextValidate(ctx context.Context, formats str
 
 func (m *WebhookReceiverConfig) contextValidateArtifactory(ctx context.Context, formats strfmt.Registry) error {
 
+	if m.Artifactory != nil {
+
+		if swag.IsZero(m.Artifactory) { // not required
+			return nil
+		}
+
+		if err := m.Artifactory.ContextValidate(ctx, formats); err != nil {
+			ve := new(errors.Validation)
+			if stderrors.As(err, &ve) {
+				return ve.ValidateName("artifactory")
+			}
+			ce := new(errors.CompositeError)
+			if stderrors.As(err, &ce) {
+				return ce.ValidateName("artifactory")
+			}
+
+			return err
+		}
+	}
+
 	return nil
 }
 
 func (m *WebhookReceiverConfig) contextValidateAzure(ctx context.Context, formats strfmt.Registry) error {
+
+	if m.Azure != nil {
+
+		if swag.IsZero(m.Azure) { // not required
+			return nil
+		}
+
+		if err := m.Azure.ContextValidate(ctx, formats); err != nil {
+			ve := new(errors.Validation)
+			if stderrors.As(err, &ve) {
+				return ve.ValidateName("azure")
+			}
+			ce := new(errors.CompositeError)
+			if stderrors.As(err, &ce) {
+				return ce.ValidateName("azure")
+			}
+
+			return err
+		}
+	}
 
 	return nil
 }
 
 func (m *WebhookReceiverConfig) contextValidateBitbucket(ctx context.Context, formats strfmt.Registry) error {
 
+	if m.Bitbucket != nil {
+
+		if swag.IsZero(m.Bitbucket) { // not required
+			return nil
+		}
+
+		if err := m.Bitbucket.ContextValidate(ctx, formats); err != nil {
+			ve := new(errors.Validation)
+			if stderrors.As(err, &ve) {
+				return ve.ValidateName("bitbucket")
+			}
+			ce := new(errors.CompositeError)
+			if stderrors.As(err, &ce) {
+				return ce.ValidateName("bitbucket")
+			}
+
+			return err
+		}
+	}
+
 	return nil
 }
 
 func (m *WebhookReceiverConfig) contextValidateDockerhub(ctx context.Context, formats strfmt.Registry) error {
+
+	if m.Dockerhub != nil {
+
+		if swag.IsZero(m.Dockerhub) { // not required
+			return nil
+		}
+
+		if err := m.Dockerhub.ContextValidate(ctx, formats); err != nil {
+			ve := new(errors.Validation)
+			if stderrors.As(err, &ve) {
+				return ve.ValidateName("dockerhub")
+			}
+			ce := new(errors.CompositeError)
+			if stderrors.As(err, &ce) {
+				return ce.ValidateName("dockerhub")
+			}
+
+			return err
+		}
+	}
 
 	return nil
 }
 
 func (m *WebhookReceiverConfig) contextValidateGeneric(ctx context.Context, formats strfmt.Registry) error {
 
+	if m.Generic != nil {
+
+		if swag.IsZero(m.Generic) { // not required
+			return nil
+		}
+
+		if err := m.Generic.ContextValidate(ctx, formats); err != nil {
+			ve := new(errors.Validation)
+			if stderrors.As(err, &ve) {
+				return ve.ValidateName("generic")
+			}
+			ce := new(errors.CompositeError)
+			if stderrors.As(err, &ce) {
+				return ce.ValidateName("generic")
+			}
+
+			return err
+		}
+	}
+
 	return nil
 }
 
 func (m *WebhookReceiverConfig) contextValidateGitea(ctx context.Context, formats strfmt.Registry) error {
+
+	if m.Gitea != nil {
+
+		if swag.IsZero(m.Gitea) { // not required
+			return nil
+		}
+
+		if err := m.Gitea.ContextValidate(ctx, formats); err != nil {
+			ve := new(errors.Validation)
+			if stderrors.As(err, &ve) {
+				return ve.ValidateName("gitea")
+			}
+			ce := new(errors.CompositeError)
+			if stderrors.As(err, &ce) {
+				return ce.ValidateName("gitea")
+			}
+
+			return err
+		}
+	}
 
 	return nil
 }
 
 func (m *WebhookReceiverConfig) contextValidateGithub(ctx context.Context, formats strfmt.Registry) error {
 
+	if m.Github != nil {
+
+		if swag.IsZero(m.Github) { // not required
+			return nil
+		}
+
+		if err := m.Github.ContextValidate(ctx, formats); err != nil {
+			ve := new(errors.Validation)
+			if stderrors.As(err, &ve) {
+				return ve.ValidateName("github")
+			}
+			ce := new(errors.CompositeError)
+			if stderrors.As(err, &ce) {
+				return ce.ValidateName("github")
+			}
+
+			return err
+		}
+	}
+
 	return nil
 }
 
 func (m *WebhookReceiverConfig) contextValidateGitlab(ctx context.Context, formats strfmt.Registry) error {
+
+	if m.Gitlab != nil {
+
+		if swag.IsZero(m.Gitlab) { // not required
+			return nil
+		}
+
+		if err := m.Gitlab.ContextValidate(ctx, formats); err != nil {
+			ve := new(errors.Validation)
+			if stderrors.As(err, &ve) {
+				return ve.ValidateName("gitlab")
+			}
+			ce := new(errors.CompositeError)
+			if stderrors.As(err, &ce) {
+				return ce.ValidateName("gitlab")
+			}
+
+			return err
+		}
+	}
 
 	return nil
 }
 
 func (m *WebhookReceiverConfig) contextValidateHarbor(ctx context.Context, formats strfmt.Registry) error {
 
+	if m.Harbor != nil {
+
+		if swag.IsZero(m.Harbor) { // not required
+			return nil
+		}
+
+		if err := m.Harbor.ContextValidate(ctx, formats); err != nil {
+			ve := new(errors.Validation)
+			if stderrors.As(err, &ve) {
+				return ve.ValidateName("harbor")
+			}
+			ce := new(errors.CompositeError)
+			if stderrors.As(err, &ce) {
+				return ce.ValidateName("harbor")
+			}
+
+			return err
+		}
+	}
+
 	return nil
 }
 
 func (m *WebhookReceiverConfig) contextValidateQuay(ctx context.Context, formats strfmt.Registry) error {
+
+	if m.Quay != nil {
+
+		if swag.IsZero(m.Quay) { // not required
+			return nil
+		}
+
+		if err := m.Quay.ContextValidate(ctx, formats); err != nil {
+			ve := new(errors.Validation)
+			if stderrors.As(err, &ve) {
+				return ve.ValidateName("quay")
+			}
+			ce := new(errors.CompositeError)
+			if stderrors.As(err, &ce) {
+				return ce.ValidateName("quay")
+			}
+
+			return err
+		}
+	}
 
 	return nil
 }

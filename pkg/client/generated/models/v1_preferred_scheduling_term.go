@@ -4,6 +4,7 @@ package models
 
 import (
 	"context"
+	stderrors "errors"
 
 	"github.com/go-openapi/errors"
 	"github.com/go-openapi/strfmt"
@@ -16,9 +17,7 @@ import (
 type V1PreferredSchedulingTerm struct {
 
 	// A node selector term, associated with the corresponding weight.
-	Preference struct {
-		V1NodeSelectorTerm
-	} `json:"preference,omitempty"`
+	Preference *V1NodeSelectorTerm `json:"preference,omitempty"`
 
 	// Weight associated with matching the corresponding nodeSelectorTerm, in the range 1-100.
 	Weight int64 `json:"weight,omitempty"`
@@ -43,6 +42,21 @@ func (m *V1PreferredSchedulingTerm) validatePreference(formats strfmt.Registry) 
 		return nil
 	}
 
+	if m.Preference != nil {
+		if err := m.Preference.Validate(formats); err != nil {
+			ve := new(errors.Validation)
+			if stderrors.As(err, &ve) {
+				return ve.ValidateName("preference")
+			}
+			ce := new(errors.CompositeError)
+			if stderrors.As(err, &ce) {
+				return ce.ValidateName("preference")
+			}
+
+			return err
+		}
+	}
+
 	return nil
 }
 
@@ -61,6 +75,26 @@ func (m *V1PreferredSchedulingTerm) ContextValidate(ctx context.Context, formats
 }
 
 func (m *V1PreferredSchedulingTerm) contextValidatePreference(ctx context.Context, formats strfmt.Registry) error {
+
+	if m.Preference != nil {
+
+		if swag.IsZero(m.Preference) { // not required
+			return nil
+		}
+
+		if err := m.Preference.ContextValidate(ctx, formats); err != nil {
+			ve := new(errors.Validation)
+			if stderrors.As(err, &ve) {
+				return ve.ValidateName("preference")
+			}
+			ce := new(errors.CompositeError)
+			if stderrors.As(err, &ce) {
+				return ce.ValidateName("preference")
+			}
+
+			return err
+		}
+	}
 
 	return nil
 }

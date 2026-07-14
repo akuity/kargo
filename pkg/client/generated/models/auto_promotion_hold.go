@@ -4,6 +4,7 @@ package models
 
 import (
 	"context"
+	stderrors "errors"
 
 	"github.com/go-openapi/errors"
 	"github.com/go-openapi/strfmt"
@@ -27,9 +28,7 @@ type AutoPromotionHold struct {
 
 	// Origin describes the FreightOrigin pinned by this hold. It matches the
 	// enclosing map key.
-	Origin struct {
-		FreightOrigin
-	} `json:"origin,omitempty"`
+	Origin *FreightOrigin `json:"origin,omitempty"`
 
 	// PromotionName is the name of the Promotion that established this hold.
 	// Stored here as a paper trail that survives Promotion garbage collection.
@@ -55,6 +54,21 @@ func (m *AutoPromotionHold) validateOrigin(formats strfmt.Registry) error {
 		return nil
 	}
 
+	if m.Origin != nil {
+		if err := m.Origin.Validate(formats); err != nil {
+			ve := new(errors.Validation)
+			if stderrors.As(err, &ve) {
+				return ve.ValidateName("origin")
+			}
+			ce := new(errors.CompositeError)
+			if stderrors.As(err, &ce) {
+				return ce.ValidateName("origin")
+			}
+
+			return err
+		}
+	}
+
 	return nil
 }
 
@@ -73,6 +87,26 @@ func (m *AutoPromotionHold) ContextValidate(ctx context.Context, formats strfmt.
 }
 
 func (m *AutoPromotionHold) contextValidateOrigin(ctx context.Context, formats strfmt.Registry) error {
+
+	if m.Origin != nil {
+
+		if swag.IsZero(m.Origin) { // not required
+			return nil
+		}
+
+		if err := m.Origin.ContextValidate(ctx, formats); err != nil {
+			ve := new(errors.Validation)
+			if stderrors.As(err, &ve) {
+				return ve.ValidateName("origin")
+			}
+			ce := new(errors.CompositeError)
+			if stderrors.As(err, &ce) {
+				return ce.ValidateName("origin")
+			}
+
+			return err
+		}
+	}
 
 	return nil
 }

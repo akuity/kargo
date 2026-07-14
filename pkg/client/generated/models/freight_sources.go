@@ -4,6 +4,7 @@ package models
 
 import (
 	"context"
+	stderrors "errors"
 
 	"github.com/go-openapi/errors"
 	"github.com/go-openapi/strfmt"
@@ -18,9 +19,7 @@ type FreightSources struct {
 	// AutoPromotionOptions specifies options pertaining to auto-promotion. These
 	// settings have no effect if auto-promotion is not enabled for this Stage at
 	// the ProjectConfig level.
-	AutoPromotionOptions struct {
-		AutoPromotionOptions
-	} `json:"autoPromotionOptions,omitempty"`
+	AutoPromotionOptions *AutoPromotionOptions `json:"autoPromotionOptions,omitempty"`
 
 	// AvailabilityStrategy specifies the semantics for how requested Freight is
 	// made available to the Stage. This field is optional. When left unspecified,
@@ -83,6 +82,21 @@ func (m *FreightSources) validateAutoPromotionOptions(formats strfmt.Registry) e
 		return nil
 	}
 
+	if m.AutoPromotionOptions != nil {
+		if err := m.AutoPromotionOptions.Validate(formats); err != nil {
+			ve := new(errors.Validation)
+			if stderrors.As(err, &ve) {
+				return ve.ValidateName("autoPromotionOptions")
+			}
+			ce := new(errors.CompositeError)
+			if stderrors.As(err, &ce) {
+				return ce.ValidateName("autoPromotionOptions")
+			}
+
+			return err
+		}
+	}
+
 	return nil
 }
 
@@ -101,6 +115,26 @@ func (m *FreightSources) ContextValidate(ctx context.Context, formats strfmt.Reg
 }
 
 func (m *FreightSources) contextValidateAutoPromotionOptions(ctx context.Context, formats strfmt.Registry) error {
+
+	if m.AutoPromotionOptions != nil {
+
+		if swag.IsZero(m.AutoPromotionOptions) { // not required
+			return nil
+		}
+
+		if err := m.AutoPromotionOptions.ContextValidate(ctx, formats); err != nil {
+			ve := new(errors.Validation)
+			if stderrors.As(err, &ve) {
+				return ve.ValidateName("autoPromotionOptions")
+			}
+			ce := new(errors.CompositeError)
+			if stderrors.As(err, &ce) {
+				return ce.ValidateName("autoPromotionOptions")
+			}
+
+			return err
+		}
+	}
 
 	return nil
 }

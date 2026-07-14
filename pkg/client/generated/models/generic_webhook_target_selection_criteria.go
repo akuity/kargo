@@ -4,6 +4,7 @@ package models
 
 import (
 	"context"
+	stderrors "errors"
 
 	"github.com/go-openapi/errors"
 	"github.com/go-openapi/strfmt"
@@ -19,9 +20,7 @@ type GenericWebhookTargetSelectionCriteria struct {
 	// If used with LabelSelector and/or Name, the results are the combined (logical AND) of all the criteria.
 	//
 	// +optional
-	IndexSelector struct {
-		IndexSelector
-	} `json:"indexSelector,omitempty"`
+	IndexSelector *IndexSelector `json:"indexSelector,omitempty"`
 
 	// Kind is the kind of the target resource.
 	//
@@ -32,9 +31,7 @@ type GenericWebhookTargetSelectionCriteria struct {
 	// If used with IndexSelector and/or Name, the results are the combined (logical AND) of all the criteria.
 	//
 	// +optional
-	LabelSelector struct {
-		V1LabelSelector
-	} `json:"labelSelector,omitempty"`
+	LabelSelector *V1LabelSelector `json:"labelSelector,omitempty"`
 
 	// Name is the name of the target resource. If LabelSelector and/or IndexSelectors
 	// are also specified, the results are the combined (logical AND) of the criteria.
@@ -66,12 +63,42 @@ func (m *GenericWebhookTargetSelectionCriteria) validateIndexSelector(formats st
 		return nil
 	}
 
+	if m.IndexSelector != nil {
+		if err := m.IndexSelector.Validate(formats); err != nil {
+			ve := new(errors.Validation)
+			if stderrors.As(err, &ve) {
+				return ve.ValidateName("indexSelector")
+			}
+			ce := new(errors.CompositeError)
+			if stderrors.As(err, &ce) {
+				return ce.ValidateName("indexSelector")
+			}
+
+			return err
+		}
+	}
+
 	return nil
 }
 
 func (m *GenericWebhookTargetSelectionCriteria) validateLabelSelector(formats strfmt.Registry) error {
 	if swag.IsZero(m.LabelSelector) { // not required
 		return nil
+	}
+
+	if m.LabelSelector != nil {
+		if err := m.LabelSelector.Validate(formats); err != nil {
+			ve := new(errors.Validation)
+			if stderrors.As(err, &ve) {
+				return ve.ValidateName("labelSelector")
+			}
+			ce := new(errors.CompositeError)
+			if stderrors.As(err, &ce) {
+				return ce.ValidateName("labelSelector")
+			}
+
+			return err
+		}
 	}
 
 	return nil
@@ -97,10 +124,50 @@ func (m *GenericWebhookTargetSelectionCriteria) ContextValidate(ctx context.Cont
 
 func (m *GenericWebhookTargetSelectionCriteria) contextValidateIndexSelector(ctx context.Context, formats strfmt.Registry) error {
 
+	if m.IndexSelector != nil {
+
+		if swag.IsZero(m.IndexSelector) { // not required
+			return nil
+		}
+
+		if err := m.IndexSelector.ContextValidate(ctx, formats); err != nil {
+			ve := new(errors.Validation)
+			if stderrors.As(err, &ve) {
+				return ve.ValidateName("indexSelector")
+			}
+			ce := new(errors.CompositeError)
+			if stderrors.As(err, &ce) {
+				return ce.ValidateName("indexSelector")
+			}
+
+			return err
+		}
+	}
+
 	return nil
 }
 
 func (m *GenericWebhookTargetSelectionCriteria) contextValidateLabelSelector(ctx context.Context, formats strfmt.Registry) error {
+
+	if m.LabelSelector != nil {
+
+		if swag.IsZero(m.LabelSelector) { // not required
+			return nil
+		}
+
+		if err := m.LabelSelector.ContextValidate(ctx, formats); err != nil {
+			ve := new(errors.Validation)
+			if stderrors.As(err, &ve) {
+				return ve.ValidateName("labelSelector")
+			}
+			ce := new(errors.CompositeError)
+			if stderrors.As(err, &ce) {
+				return ce.ValidateName("labelSelector")
+			}
+
+			return err
+		}
+	}
 
 	return nil
 }

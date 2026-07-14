@@ -78,18 +78,14 @@ type V1Container struct {
 	// Actions that the management system should take in response to container lifecycle events.
 	// Cannot be updated.
 	// +optional
-	Lifecycle struct {
-		V1Lifecycle
-	} `json:"lifecycle,omitempty"`
+	Lifecycle *V1Lifecycle `json:"lifecycle,omitempty"`
 
 	// Periodic probe of container liveness.
 	// Container will be restarted if the probe fails.
 	// Cannot be updated.
 	// More info: https://kubernetes.io/docs/concepts/workloads/pods/pod-lifecycle#container-probes
 	// +optional
-	LivenessProbe struct {
-		V1Probe
-	} `json:"livenessProbe,omitempty"`
+	LivenessProbe *V1Probe `json:"livenessProbe,omitempty"`
 
 	// Name of the container specified as a DNS_LABEL.
 	// Each container in a pod must have a unique name (DNS_LABEL).
@@ -116,9 +112,7 @@ type V1Container struct {
 	// Cannot be updated.
 	// More info: https://kubernetes.io/docs/concepts/workloads/pods/pod-lifecycle#container-probes
 	// +optional
-	ReadinessProbe struct {
-		V1Probe
-	} `json:"readinessProbe,omitempty"`
+	ReadinessProbe *V1Probe `json:"readinessProbe,omitempty"`
 
 	// Resources resize policy for the container.
 	// +featureGate=InPlacePodVerticalScaling
@@ -130,9 +124,7 @@ type V1Container struct {
 	// Cannot be updated.
 	// More info: https://kubernetes.io/docs/concepts/configuration/manage-resources-containers/
 	// +optional
-	Resources struct {
-		V1ResourceRequirements
-	} `json:"resources,omitempty"`
+	Resources *V1ResourceRequirements `json:"resources,omitempty"`
 
 	// RestartPolicy defines the restart behavior of individual containers in a pod.
 	// This overrides the pod-level restart policy. When this field is not specified,
@@ -173,9 +165,7 @@ type V1Container struct {
 	// If set, the fields of SecurityContext override the equivalent fields of PodSecurityContext.
 	// More info: https://kubernetes.io/docs/tasks/configure-pod-container/security-context/
 	// +optional
-	SecurityContext struct {
-		V1SecurityContext
-	} `json:"securityContext,omitempty"`
+	SecurityContext *V1SecurityContext `json:"securityContext,omitempty"`
 
 	// StartupProbe indicates that the Pod has successfully initialized.
 	// If specified, no other probes are executed until this completes successfully.
@@ -185,9 +175,7 @@ type V1Container struct {
 	// This cannot be updated.
 	// More info: https://kubernetes.io/docs/concepts/workloads/pods/pod-lifecycle#container-probes
 	// +optional
-	StartupProbe struct {
-		V1Probe
-	} `json:"startupProbe,omitempty"`
+	StartupProbe *V1Probe `json:"startupProbe,omitempty"`
 
 	// Whether this container should allocate a buffer for stdin in the container runtime. If this
 	// is not set, reads from stdin in the container will always result in EOF.
@@ -382,12 +370,42 @@ func (m *V1Container) validateLifecycle(formats strfmt.Registry) error {
 		return nil
 	}
 
+	if m.Lifecycle != nil {
+		if err := m.Lifecycle.Validate(formats); err != nil {
+			ve := new(errors.Validation)
+			if stderrors.As(err, &ve) {
+				return ve.ValidateName("lifecycle")
+			}
+			ce := new(errors.CompositeError)
+			if stderrors.As(err, &ce) {
+				return ce.ValidateName("lifecycle")
+			}
+
+			return err
+		}
+	}
+
 	return nil
 }
 
 func (m *V1Container) validateLivenessProbe(formats strfmt.Registry) error {
 	if swag.IsZero(m.LivenessProbe) { // not required
 		return nil
+	}
+
+	if m.LivenessProbe != nil {
+		if err := m.LivenessProbe.Validate(formats); err != nil {
+			ve := new(errors.Validation)
+			if stderrors.As(err, &ve) {
+				return ve.ValidateName("livenessProbe")
+			}
+			ce := new(errors.CompositeError)
+			if stderrors.As(err, &ce) {
+				return ce.ValidateName("livenessProbe")
+			}
+
+			return err
+		}
 	}
 
 	return nil
@@ -428,6 +446,21 @@ func (m *V1Container) validateReadinessProbe(formats strfmt.Registry) error {
 		return nil
 	}
 
+	if m.ReadinessProbe != nil {
+		if err := m.ReadinessProbe.Validate(formats); err != nil {
+			ve := new(errors.Validation)
+			if stderrors.As(err, &ve) {
+				return ve.ValidateName("readinessProbe")
+			}
+			ce := new(errors.CompositeError)
+			if stderrors.As(err, &ce) {
+				return ce.ValidateName("readinessProbe")
+			}
+
+			return err
+		}
+	}
+
 	return nil
 }
 
@@ -464,6 +497,21 @@ func (m *V1Container) validateResizePolicy(formats strfmt.Registry) error {
 func (m *V1Container) validateResources(formats strfmt.Registry) error {
 	if swag.IsZero(m.Resources) { // not required
 		return nil
+	}
+
+	if m.Resources != nil {
+		if err := m.Resources.Validate(formats); err != nil {
+			ve := new(errors.Validation)
+			if stderrors.As(err, &ve) {
+				return ve.ValidateName("resources")
+			}
+			ce := new(errors.CompositeError)
+			if stderrors.As(err, &ce) {
+				return ce.ValidateName("resources")
+			}
+
+			return err
+		}
 	}
 
 	return nil
@@ -504,12 +552,42 @@ func (m *V1Container) validateSecurityContext(formats strfmt.Registry) error {
 		return nil
 	}
 
+	if m.SecurityContext != nil {
+		if err := m.SecurityContext.Validate(formats); err != nil {
+			ve := new(errors.Validation)
+			if stderrors.As(err, &ve) {
+				return ve.ValidateName("securityContext")
+			}
+			ce := new(errors.CompositeError)
+			if stderrors.As(err, &ce) {
+				return ce.ValidateName("securityContext")
+			}
+
+			return err
+		}
+	}
+
 	return nil
 }
 
 func (m *V1Container) validateStartupProbe(formats strfmt.Registry) error {
 	if swag.IsZero(m.StartupProbe) { // not required
 		return nil
+	}
+
+	if m.StartupProbe != nil {
+		if err := m.StartupProbe.Validate(formats); err != nil {
+			ve := new(errors.Validation)
+			if stderrors.As(err, &ve) {
+				return ve.ValidateName("startupProbe")
+			}
+			ce := new(errors.CompositeError)
+			if stderrors.As(err, &ce) {
+				return ce.ValidateName("startupProbe")
+			}
+
+			return err
+		}
 	}
 
 	return nil
@@ -697,10 +775,50 @@ func (m *V1Container) contextValidateEnvFrom(ctx context.Context, formats strfmt
 
 func (m *V1Container) contextValidateLifecycle(ctx context.Context, formats strfmt.Registry) error {
 
+	if m.Lifecycle != nil {
+
+		if swag.IsZero(m.Lifecycle) { // not required
+			return nil
+		}
+
+		if err := m.Lifecycle.ContextValidate(ctx, formats); err != nil {
+			ve := new(errors.Validation)
+			if stderrors.As(err, &ve) {
+				return ve.ValidateName("lifecycle")
+			}
+			ce := new(errors.CompositeError)
+			if stderrors.As(err, &ce) {
+				return ce.ValidateName("lifecycle")
+			}
+
+			return err
+		}
+	}
+
 	return nil
 }
 
 func (m *V1Container) contextValidateLivenessProbe(ctx context.Context, formats strfmt.Registry) error {
+
+	if m.LivenessProbe != nil {
+
+		if swag.IsZero(m.LivenessProbe) { // not required
+			return nil
+		}
+
+		if err := m.LivenessProbe.ContextValidate(ctx, formats); err != nil {
+			ve := new(errors.Validation)
+			if stderrors.As(err, &ve) {
+				return ve.ValidateName("livenessProbe")
+			}
+			ce := new(errors.CompositeError)
+			if stderrors.As(err, &ce) {
+				return ce.ValidateName("livenessProbe")
+			}
+
+			return err
+		}
+	}
 
 	return nil
 }
@@ -736,6 +854,26 @@ func (m *V1Container) contextValidatePorts(ctx context.Context, formats strfmt.R
 
 func (m *V1Container) contextValidateReadinessProbe(ctx context.Context, formats strfmt.Registry) error {
 
+	if m.ReadinessProbe != nil {
+
+		if swag.IsZero(m.ReadinessProbe) { // not required
+			return nil
+		}
+
+		if err := m.ReadinessProbe.ContextValidate(ctx, formats); err != nil {
+			ve := new(errors.Validation)
+			if stderrors.As(err, &ve) {
+				return ve.ValidateName("readinessProbe")
+			}
+			ce := new(errors.CompositeError)
+			if stderrors.As(err, &ce) {
+				return ce.ValidateName("readinessProbe")
+			}
+
+			return err
+		}
+	}
+
 	return nil
 }
 
@@ -769,6 +907,26 @@ func (m *V1Container) contextValidateResizePolicy(ctx context.Context, formats s
 }
 
 func (m *V1Container) contextValidateResources(ctx context.Context, formats strfmt.Registry) error {
+
+	if m.Resources != nil {
+
+		if swag.IsZero(m.Resources) { // not required
+			return nil
+		}
+
+		if err := m.Resources.ContextValidate(ctx, formats); err != nil {
+			ve := new(errors.Validation)
+			if stderrors.As(err, &ve) {
+				return ve.ValidateName("resources")
+			}
+			ce := new(errors.CompositeError)
+			if stderrors.As(err, &ce) {
+				return ce.ValidateName("resources")
+			}
+
+			return err
+		}
+	}
 
 	return nil
 }
@@ -804,10 +962,50 @@ func (m *V1Container) contextValidateRestartPolicyRules(ctx context.Context, for
 
 func (m *V1Container) contextValidateSecurityContext(ctx context.Context, formats strfmt.Registry) error {
 
+	if m.SecurityContext != nil {
+
+		if swag.IsZero(m.SecurityContext) { // not required
+			return nil
+		}
+
+		if err := m.SecurityContext.ContextValidate(ctx, formats); err != nil {
+			ve := new(errors.Validation)
+			if stderrors.As(err, &ve) {
+				return ve.ValidateName("securityContext")
+			}
+			ce := new(errors.CompositeError)
+			if stderrors.As(err, &ce) {
+				return ce.ValidateName("securityContext")
+			}
+
+			return err
+		}
+	}
+
 	return nil
 }
 
 func (m *V1Container) contextValidateStartupProbe(ctx context.Context, formats strfmt.Registry) error {
+
+	if m.StartupProbe != nil {
+
+		if swag.IsZero(m.StartupProbe) { // not required
+			return nil
+		}
+
+		if err := m.StartupProbe.ContextValidate(ctx, formats); err != nil {
+			ve := new(errors.Validation)
+			if stderrors.As(err, &ve) {
+				return ve.ValidateName("startupProbe")
+			}
+			ce := new(errors.CompositeError)
+			if stderrors.As(err, &ce) {
+				return ce.ValidateName("startupProbe")
+			}
+
+			return err
+		}
+	}
 
 	return nil
 }

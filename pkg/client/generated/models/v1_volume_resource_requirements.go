@@ -4,6 +4,7 @@ package models
 
 import (
 	"context"
+	stderrors "errors"
 
 	"github.com/go-openapi/errors"
 	"github.com/go-openapi/strfmt"
@@ -18,18 +19,14 @@ type V1VolumeResourceRequirements struct {
 	// Limits describes the maximum amount of compute resources allowed.
 	// More info: https://kubernetes.io/docs/concepts/configuration/manage-resources-containers/
 	// +optional
-	Limits struct {
-		V1ResourceList
-	} `json:"limits,omitempty"`
+	Limits V1ResourceList `json:"limits,omitempty"`
 
 	// Requests describes the minimum amount of compute resources required.
 	// If Requests is omitted for a container, it defaults to Limits if that is explicitly specified,
 	// otherwise to an implementation-defined value. Requests cannot exceed Limits.
 	// More info: https://kubernetes.io/docs/concepts/configuration/manage-resources-containers/
 	// +optional
-	Requests struct {
-		V1ResourceList
-	} `json:"requests,omitempty"`
+	Requests V1ResourceList `json:"requests,omitempty"`
 }
 
 // Validate validates this v1 volume resource requirements
@@ -55,12 +52,42 @@ func (m *V1VolumeResourceRequirements) validateLimits(formats strfmt.Registry) e
 		return nil
 	}
 
+	if m.Limits != nil {
+		if err := m.Limits.Validate(formats); err != nil {
+			ve := new(errors.Validation)
+			if stderrors.As(err, &ve) {
+				return ve.ValidateName("limits")
+			}
+			ce := new(errors.CompositeError)
+			if stderrors.As(err, &ce) {
+				return ce.ValidateName("limits")
+			}
+
+			return err
+		}
+	}
+
 	return nil
 }
 
 func (m *V1VolumeResourceRequirements) validateRequests(formats strfmt.Registry) error {
 	if swag.IsZero(m.Requests) { // not required
 		return nil
+	}
+
+	if m.Requests != nil {
+		if err := m.Requests.Validate(formats); err != nil {
+			ve := new(errors.Validation)
+			if stderrors.As(err, &ve) {
+				return ve.ValidateName("requests")
+			}
+			ce := new(errors.CompositeError)
+			if stderrors.As(err, &ce) {
+				return ce.ValidateName("requests")
+			}
+
+			return err
+		}
 	}
 
 	return nil
@@ -86,10 +113,44 @@ func (m *V1VolumeResourceRequirements) ContextValidate(ctx context.Context, form
 
 func (m *V1VolumeResourceRequirements) contextValidateLimits(ctx context.Context, formats strfmt.Registry) error {
 
+	if swag.IsZero(m.Limits) { // not required
+		return nil
+	}
+
+	if err := m.Limits.ContextValidate(ctx, formats); err != nil {
+		ve := new(errors.Validation)
+		if stderrors.As(err, &ve) {
+			return ve.ValidateName("limits")
+		}
+		ce := new(errors.CompositeError)
+		if stderrors.As(err, &ce) {
+			return ce.ValidateName("limits")
+		}
+
+		return err
+	}
+
 	return nil
 }
 
 func (m *V1VolumeResourceRequirements) contextValidateRequests(ctx context.Context, formats strfmt.Registry) error {
+
+	if swag.IsZero(m.Requests) { // not required
+		return nil
+	}
+
+	if err := m.Requests.ContextValidate(ctx, formats); err != nil {
+		ve := new(errors.Validation)
+		if stderrors.As(err, &ve) {
+			return ve.ValidateName("requests")
+		}
+		ce := new(errors.CompositeError)
+		if stderrors.As(err, &ce) {
+			return ce.ValidateName("requests")
+		}
+
+		return err
+	}
 
 	return nil
 }

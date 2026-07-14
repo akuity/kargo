@@ -43,9 +43,7 @@ type Warehouse struct {
 	} `json:"spec"`
 
 	// Status describes the Warehouse's most recently observed state.
-	Status struct {
-		WarehouseStatus
-	} `json:"status,omitempty"`
+	Status *WarehouseStatus `json:"status,omitempty"`
 }
 
 // Validate validates this warehouse
@@ -101,6 +99,21 @@ func (m *Warehouse) validateSpec(formats strfmt.Registry) error {
 func (m *Warehouse) validateStatus(formats strfmt.Registry) error {
 	if swag.IsZero(m.Status) { // not required
 		return nil
+	}
+
+	if m.Status != nil {
+		if err := m.Status.Validate(formats); err != nil {
+			ve := new(errors.Validation)
+			if stderrors.As(err, &ve) {
+				return ve.ValidateName("status")
+			}
+			ce := new(errors.CompositeError)
+			if stderrors.As(err, &ce) {
+				return ce.ValidateName("status")
+			}
+
+			return err
+		}
 	}
 
 	return nil
@@ -159,6 +172,26 @@ func (m *Warehouse) contextValidateSpec(ctx context.Context, formats strfmt.Regi
 }
 
 func (m *Warehouse) contextValidateStatus(ctx context.Context, formats strfmt.Registry) error {
+
+	if m.Status != nil {
+
+		if swag.IsZero(m.Status) { // not required
+			return nil
+		}
+
+		if err := m.Status.ContextValidate(ctx, formats); err != nil {
+			ve := new(errors.Validation)
+			if stderrors.As(err, &ve) {
+				return ve.ValidateName("status")
+			}
+			ce := new(errors.CompositeError)
+			if stderrors.As(err, &ce) {
+				return ce.ValidateName("status")
+			}
+
+			return err
+		}
+	}
 
 	return nil
 }

@@ -39,15 +39,11 @@ type PromotionStep struct {
 	If string `json:"if,omitempty"`
 
 	// Retry is the retry policy for this step.
-	Retry struct {
-		PromotionStepRetry
-	} `json:"retry,omitempty"`
+	Retry *PromotionStepRetry `json:"retry,omitempty"`
 
 	// Task is a reference to a PromotionTask that should be inflated into a
 	// Promotion when it is built from a PromotionTemplate.
-	Task struct {
-		PromotionTaskReference
-	} `json:"task,omitempty"`
+	Task *PromotionTaskReference `json:"task,omitempty"`
 
 	// Uses identifies a runner that can execute this step.
 	//
@@ -88,12 +84,42 @@ func (m *PromotionStep) validateRetry(formats strfmt.Registry) error {
 		return nil
 	}
 
+	if m.Retry != nil {
+		if err := m.Retry.Validate(formats); err != nil {
+			ve := new(errors.Validation)
+			if stderrors.As(err, &ve) {
+				return ve.ValidateName("retry")
+			}
+			ce := new(errors.CompositeError)
+			if stderrors.As(err, &ce) {
+				return ce.ValidateName("retry")
+			}
+
+			return err
+		}
+	}
+
 	return nil
 }
 
 func (m *PromotionStep) validateTask(formats strfmt.Registry) error {
 	if swag.IsZero(m.Task) { // not required
 		return nil
+	}
+
+	if m.Task != nil {
+		if err := m.Task.Validate(formats); err != nil {
+			ve := new(errors.Validation)
+			if stderrors.As(err, &ve) {
+				return ve.ValidateName("task")
+			}
+			ce := new(errors.CompositeError)
+			if stderrors.As(err, &ce) {
+				return ce.ValidateName("task")
+			}
+
+			return err
+		}
 	}
 
 	return nil
@@ -153,10 +179,50 @@ func (m *PromotionStep) ContextValidate(ctx context.Context, formats strfmt.Regi
 
 func (m *PromotionStep) contextValidateRetry(ctx context.Context, formats strfmt.Registry) error {
 
+	if m.Retry != nil {
+
+		if swag.IsZero(m.Retry) { // not required
+			return nil
+		}
+
+		if err := m.Retry.ContextValidate(ctx, formats); err != nil {
+			ve := new(errors.Validation)
+			if stderrors.As(err, &ve) {
+				return ve.ValidateName("retry")
+			}
+			ce := new(errors.CompositeError)
+			if stderrors.As(err, &ce) {
+				return ce.ValidateName("retry")
+			}
+
+			return err
+		}
+	}
+
 	return nil
 }
 
 func (m *PromotionStep) contextValidateTask(ctx context.Context, formats strfmt.Registry) error {
+
+	if m.Task != nil {
+
+		if swag.IsZero(m.Task) { // not required
+			return nil
+		}
+
+		if err := m.Task.ContextValidate(ctx, formats); err != nil {
+			ve := new(errors.Validation)
+			if stderrors.As(err, &ve) {
+				return ve.ValidateName("task")
+			}
+			ce := new(errors.CompositeError)
+			if stderrors.As(err, &ce) {
+				return ce.ValidateName("task")
+			}
+
+			return err
+		}
+	}
 
 	return nil
 }

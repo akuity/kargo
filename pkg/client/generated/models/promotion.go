@@ -45,9 +45,7 @@ type Promotion struct {
 
 	// Status describes the current state of the transition represented by this
 	// Promotion.
-	Status struct {
-		PromotionStatus
-	} `json:"status,omitempty"`
+	Status *PromotionStatus `json:"status,omitempty"`
 }
 
 // Validate validates this promotion
@@ -103,6 +101,21 @@ func (m *Promotion) validateSpec(formats strfmt.Registry) error {
 func (m *Promotion) validateStatus(formats strfmt.Registry) error {
 	if swag.IsZero(m.Status) { // not required
 		return nil
+	}
+
+	if m.Status != nil {
+		if err := m.Status.Validate(formats); err != nil {
+			ve := new(errors.Validation)
+			if stderrors.As(err, &ve) {
+				return ve.ValidateName("status")
+			}
+			ce := new(errors.CompositeError)
+			if stderrors.As(err, &ce) {
+				return ce.ValidateName("status")
+			}
+
+			return err
+		}
 	}
 
 	return nil
@@ -161,6 +174,26 @@ func (m *Promotion) contextValidateSpec(ctx context.Context, formats strfmt.Regi
 }
 
 func (m *Promotion) contextValidateStatus(ctx context.Context, formats strfmt.Registry) error {
+
+	if m.Status != nil {
+
+		if swag.IsZero(m.Status) { // not required
+			return nil
+		}
+
+		if err := m.Status.ContextValidate(ctx, formats); err != nil {
+			ve := new(errors.Validation)
+			if stderrors.As(err, &ve) {
+				return ve.ValidateName("status")
+			}
+			ce := new(errors.CompositeError)
+			if stderrors.As(err, &ce) {
+				return ce.ValidateName("status")
+			}
+
+			return err
+		}
+	}
 
 	return nil
 }

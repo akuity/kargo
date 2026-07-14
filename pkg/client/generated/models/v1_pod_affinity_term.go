@@ -4,6 +4,7 @@ package models
 
 import (
 	"context"
+	stderrors "errors"
 
 	"github.com/go-openapi/errors"
 	"github.com/go-openapi/strfmt"
@@ -18,9 +19,7 @@ type V1PodAffinityTerm struct {
 	// A label query over a set of resources, in this case pods.
 	// If it's null, this PodAffinityTerm matches with no Pods.
 	// +optional
-	LabelSelector struct {
-		V1LabelSelector
-	} `json:"labelSelector,omitempty"`
+	LabelSelector *V1LabelSelector `json:"labelSelector,omitempty"`
 
 	// MatchLabelKeys is a set of pod label keys to select which pods will
 	// be taken into consideration. The keys are used to lookup values from the
@@ -54,9 +53,7 @@ type V1PodAffinityTerm struct {
 	// null selector and null or empty namespaces list means "this pod's namespace".
 	// An empty selector ({}) matches all namespaces.
 	// +optional
-	NamespaceSelector struct {
-		V1LabelSelector
-	} `json:"namespaceSelector,omitempty"`
+	NamespaceSelector *V1LabelSelector `json:"namespaceSelector,omitempty"`
 
 	// namespaces specifies a static list of namespace names that the term applies to.
 	// The term is applied to the union of the namespaces listed in this field
@@ -97,12 +94,42 @@ func (m *V1PodAffinityTerm) validateLabelSelector(formats strfmt.Registry) error
 		return nil
 	}
 
+	if m.LabelSelector != nil {
+		if err := m.LabelSelector.Validate(formats); err != nil {
+			ve := new(errors.Validation)
+			if stderrors.As(err, &ve) {
+				return ve.ValidateName("labelSelector")
+			}
+			ce := new(errors.CompositeError)
+			if stderrors.As(err, &ce) {
+				return ce.ValidateName("labelSelector")
+			}
+
+			return err
+		}
+	}
+
 	return nil
 }
 
 func (m *V1PodAffinityTerm) validateNamespaceSelector(formats strfmt.Registry) error {
 	if swag.IsZero(m.NamespaceSelector) { // not required
 		return nil
+	}
+
+	if m.NamespaceSelector != nil {
+		if err := m.NamespaceSelector.Validate(formats); err != nil {
+			ve := new(errors.Validation)
+			if stderrors.As(err, &ve) {
+				return ve.ValidateName("namespaceSelector")
+			}
+			ce := new(errors.CompositeError)
+			if stderrors.As(err, &ce) {
+				return ce.ValidateName("namespaceSelector")
+			}
+
+			return err
+		}
 	}
 
 	return nil
@@ -128,10 +155,50 @@ func (m *V1PodAffinityTerm) ContextValidate(ctx context.Context, formats strfmt.
 
 func (m *V1PodAffinityTerm) contextValidateLabelSelector(ctx context.Context, formats strfmt.Registry) error {
 
+	if m.LabelSelector != nil {
+
+		if swag.IsZero(m.LabelSelector) { // not required
+			return nil
+		}
+
+		if err := m.LabelSelector.ContextValidate(ctx, formats); err != nil {
+			ve := new(errors.Validation)
+			if stderrors.As(err, &ve) {
+				return ve.ValidateName("labelSelector")
+			}
+			ce := new(errors.CompositeError)
+			if stderrors.As(err, &ce) {
+				return ce.ValidateName("labelSelector")
+			}
+
+			return err
+		}
+	}
+
 	return nil
 }
 
 func (m *V1PodAffinityTerm) contextValidateNamespaceSelector(ctx context.Context, formats strfmt.Registry) error {
+
+	if m.NamespaceSelector != nil {
+
+		if swag.IsZero(m.NamespaceSelector) { // not required
+			return nil
+		}
+
+		if err := m.NamespaceSelector.ContextValidate(ctx, formats); err != nil {
+			ve := new(errors.Validation)
+			if stderrors.As(err, &ve) {
+				return ve.ValidateName("namespaceSelector")
+			}
+			ce := new(errors.CompositeError)
+			if stderrors.As(err, &ce) {
+				return ce.ValidateName("namespaceSelector")
+			}
+
+			return err
+		}
+	}
 
 	return nil
 }

@@ -4,6 +4,7 @@ package models
 
 import (
 	"context"
+	stderrors "errors"
 
 	"github.com/go-openapi/errors"
 	"github.com/go-openapi/strfmt"
@@ -19,17 +20,13 @@ type PromotionReference struct {
 	FinishedAt string `json:"finishedAt,omitempty"`
 
 	// Freight is the freight being promoted.
-	Freight struct {
-		FreightReference
-	} `json:"freight,omitempty"`
+	Freight *FreightReference `json:"freight,omitempty"`
 
 	// Name is the name of the Promotion.
 	Name string `json:"name,omitempty"`
 
 	// Status is the (optional) status of the Promotion.
-	Status struct {
-		PromotionStatus
-	} `json:"status,omitempty"`
+	Status *PromotionStatus `json:"status,omitempty"`
 }
 
 // Validate validates this promotion reference
@@ -55,12 +52,42 @@ func (m *PromotionReference) validateFreight(formats strfmt.Registry) error {
 		return nil
 	}
 
+	if m.Freight != nil {
+		if err := m.Freight.Validate(formats); err != nil {
+			ve := new(errors.Validation)
+			if stderrors.As(err, &ve) {
+				return ve.ValidateName("freight")
+			}
+			ce := new(errors.CompositeError)
+			if stderrors.As(err, &ce) {
+				return ce.ValidateName("freight")
+			}
+
+			return err
+		}
+	}
+
 	return nil
 }
 
 func (m *PromotionReference) validateStatus(formats strfmt.Registry) error {
 	if swag.IsZero(m.Status) { // not required
 		return nil
+	}
+
+	if m.Status != nil {
+		if err := m.Status.Validate(formats); err != nil {
+			ve := new(errors.Validation)
+			if stderrors.As(err, &ve) {
+				return ve.ValidateName("status")
+			}
+			ce := new(errors.CompositeError)
+			if stderrors.As(err, &ce) {
+				return ce.ValidateName("status")
+			}
+
+			return err
+		}
 	}
 
 	return nil
@@ -86,10 +113,50 @@ func (m *PromotionReference) ContextValidate(ctx context.Context, formats strfmt
 
 func (m *PromotionReference) contextValidateFreight(ctx context.Context, formats strfmt.Registry) error {
 
+	if m.Freight != nil {
+
+		if swag.IsZero(m.Freight) { // not required
+			return nil
+		}
+
+		if err := m.Freight.ContextValidate(ctx, formats); err != nil {
+			ve := new(errors.Validation)
+			if stderrors.As(err, &ve) {
+				return ve.ValidateName("freight")
+			}
+			ce := new(errors.CompositeError)
+			if stderrors.As(err, &ce) {
+				return ce.ValidateName("freight")
+			}
+
+			return err
+		}
+	}
+
 	return nil
 }
 
 func (m *PromotionReference) contextValidateStatus(ctx context.Context, formats strfmt.Registry) error {
+
+	if m.Status != nil {
+
+		if swag.IsZero(m.Status) { // not required
+			return nil
+		}
+
+		if err := m.Status.ContextValidate(ctx, formats); err != nil {
+			ve := new(errors.Validation)
+			if stderrors.As(err, &ve) {
+				return ve.ValidateName("status")
+			}
+			ce := new(errors.CompositeError)
+			if stderrors.As(err, &ce) {
+				return ce.ValidateName("status")
+			}
+
+			return err
+		}
+	}
 
 	return nil
 }

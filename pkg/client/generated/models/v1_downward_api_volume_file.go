@@ -4,6 +4,7 @@ package models
 
 import (
 	"context"
+	stderrors "errors"
 
 	"github.com/go-openapi/errors"
 	"github.com/go-openapi/strfmt"
@@ -17,9 +18,7 @@ type V1DownwardAPIVolumeFile struct {
 
 	// Required: Selects a field of the pod: only annotations, labels, name, namespace and uid are supported.
 	// +optional
-	FieldRef struct {
-		V1ObjectFieldSelector
-	} `json:"fieldRef,omitempty"`
+	FieldRef *V1ObjectFieldSelector `json:"fieldRef,omitempty"`
 
 	// Optional: mode bits used to set permissions on this file, must be an octal value
 	// between 0000 and 0777 or a decimal value between 0 and 511.
@@ -36,9 +35,7 @@ type V1DownwardAPIVolumeFile struct {
 	// Selects a resource of the container: only resources limits and requests
 	// (limits.cpu, limits.memory, requests.cpu and requests.memory) are currently supported.
 	// +optional
-	ResourceFieldRef struct {
-		V1ResourceFieldSelector
-	} `json:"resourceFieldRef,omitempty"`
+	ResourceFieldRef *V1ResourceFieldSelector `json:"resourceFieldRef,omitempty"`
 }
 
 // Validate validates this v1 downward API volume file
@@ -64,12 +61,42 @@ func (m *V1DownwardAPIVolumeFile) validateFieldRef(formats strfmt.Registry) erro
 		return nil
 	}
 
+	if m.FieldRef != nil {
+		if err := m.FieldRef.Validate(formats); err != nil {
+			ve := new(errors.Validation)
+			if stderrors.As(err, &ve) {
+				return ve.ValidateName("fieldRef")
+			}
+			ce := new(errors.CompositeError)
+			if stderrors.As(err, &ce) {
+				return ce.ValidateName("fieldRef")
+			}
+
+			return err
+		}
+	}
+
 	return nil
 }
 
 func (m *V1DownwardAPIVolumeFile) validateResourceFieldRef(formats strfmt.Registry) error {
 	if swag.IsZero(m.ResourceFieldRef) { // not required
 		return nil
+	}
+
+	if m.ResourceFieldRef != nil {
+		if err := m.ResourceFieldRef.Validate(formats); err != nil {
+			ve := new(errors.Validation)
+			if stderrors.As(err, &ve) {
+				return ve.ValidateName("resourceFieldRef")
+			}
+			ce := new(errors.CompositeError)
+			if stderrors.As(err, &ce) {
+				return ce.ValidateName("resourceFieldRef")
+			}
+
+			return err
+		}
 	}
 
 	return nil
@@ -95,10 +122,50 @@ func (m *V1DownwardAPIVolumeFile) ContextValidate(ctx context.Context, formats s
 
 func (m *V1DownwardAPIVolumeFile) contextValidateFieldRef(ctx context.Context, formats strfmt.Registry) error {
 
+	if m.FieldRef != nil {
+
+		if swag.IsZero(m.FieldRef) { // not required
+			return nil
+		}
+
+		if err := m.FieldRef.ContextValidate(ctx, formats); err != nil {
+			ve := new(errors.Validation)
+			if stderrors.As(err, &ve) {
+				return ve.ValidateName("fieldRef")
+			}
+			ce := new(errors.CompositeError)
+			if stderrors.As(err, &ce) {
+				return ce.ValidateName("fieldRef")
+			}
+
+			return err
+		}
+	}
+
 	return nil
 }
 
 func (m *V1DownwardAPIVolumeFile) contextValidateResourceFieldRef(ctx context.Context, formats strfmt.Registry) error {
+
+	if m.ResourceFieldRef != nil {
+
+		if swag.IsZero(m.ResourceFieldRef) { // not required
+			return nil
+		}
+
+		if err := m.ResourceFieldRef.ContextValidate(ctx, formats); err != nil {
+			ve := new(errors.Validation)
+			if stderrors.As(err, &ve) {
+				return ve.ValidateName("resourceFieldRef")
+			}
+			ce := new(errors.CompositeError)
+			if stderrors.As(err, &ce) {
+				return ce.ValidateName("resourceFieldRef")
+			}
+
+			return err
+		}
+	}
 
 	return nil
 }

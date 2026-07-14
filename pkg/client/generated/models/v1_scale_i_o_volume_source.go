@@ -4,6 +4,7 @@ package models
 
 import (
 	"context"
+	stderrors "errors"
 
 	"github.com/go-openapi/errors"
 	"github.com/go-openapi/strfmt"
@@ -37,9 +38,7 @@ type V1ScaleIOVolumeSource struct {
 
 	// secretRef references to the secret for ScaleIO user and other
 	// sensitive information. If this is not provided, Login operation will fail.
-	SecretRef struct {
-		V1LocalObjectReference
-	} `json:"secretRef,omitempty"`
+	SecretRef *V1LocalObjectReference `json:"secretRef,omitempty"`
 
 	// sslEnabled Flag enable/disable SSL communication with Gateway, default false
 	// +optional
@@ -82,6 +81,21 @@ func (m *V1ScaleIOVolumeSource) validateSecretRef(formats strfmt.Registry) error
 		return nil
 	}
 
+	if m.SecretRef != nil {
+		if err := m.SecretRef.Validate(formats); err != nil {
+			ve := new(errors.Validation)
+			if stderrors.As(err, &ve) {
+				return ve.ValidateName("secretRef")
+			}
+			ce := new(errors.CompositeError)
+			if stderrors.As(err, &ce) {
+				return ce.ValidateName("secretRef")
+			}
+
+			return err
+		}
+	}
+
 	return nil
 }
 
@@ -100,6 +114,26 @@ func (m *V1ScaleIOVolumeSource) ContextValidate(ctx context.Context, formats str
 }
 
 func (m *V1ScaleIOVolumeSource) contextValidateSecretRef(ctx context.Context, formats strfmt.Registry) error {
+
+	if m.SecretRef != nil {
+
+		if swag.IsZero(m.SecretRef) { // not required
+			return nil
+		}
+
+		if err := m.SecretRef.ContextValidate(ctx, formats); err != nil {
+			ve := new(errors.Validation)
+			if stderrors.As(err, &ve) {
+				return ve.ValidateName("secretRef")
+			}
+			ce := new(errors.CompositeError)
+			if stderrors.As(err, &ce) {
+				return ce.ValidateName("secretRef")
+			}
+
+			return err
+		}
+	}
 
 	return nil
 }

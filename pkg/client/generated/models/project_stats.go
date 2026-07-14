@@ -4,6 +4,7 @@ package models
 
 import (
 	"context"
+	stderrors "errors"
 
 	"github.com/go-openapi/errors"
 	"github.com/go-openapi/strfmt"
@@ -16,15 +17,11 @@ import (
 type ProjectStats struct {
 
 	// Stages contains a summary of the collective state of the Project's Stages.
-	Stages struct {
-		StageStats
-	} `json:"stages,omitempty"`
+	Stages *StageStats `json:"stages,omitempty"`
 
 	// Warehouses contains a summary of the collective state of the Project's
 	// Warehouses.
-	Warehouses struct {
-		WarehouseStats
-	} `json:"warehouses,omitempty"`
+	Warehouses *WarehouseStats `json:"warehouses,omitempty"`
 }
 
 // Validate validates this project stats
@@ -50,12 +47,42 @@ func (m *ProjectStats) validateStages(formats strfmt.Registry) error {
 		return nil
 	}
 
+	if m.Stages != nil {
+		if err := m.Stages.Validate(formats); err != nil {
+			ve := new(errors.Validation)
+			if stderrors.As(err, &ve) {
+				return ve.ValidateName("stages")
+			}
+			ce := new(errors.CompositeError)
+			if stderrors.As(err, &ce) {
+				return ce.ValidateName("stages")
+			}
+
+			return err
+		}
+	}
+
 	return nil
 }
 
 func (m *ProjectStats) validateWarehouses(formats strfmt.Registry) error {
 	if swag.IsZero(m.Warehouses) { // not required
 		return nil
+	}
+
+	if m.Warehouses != nil {
+		if err := m.Warehouses.Validate(formats); err != nil {
+			ve := new(errors.Validation)
+			if stderrors.As(err, &ve) {
+				return ve.ValidateName("warehouses")
+			}
+			ce := new(errors.CompositeError)
+			if stderrors.As(err, &ce) {
+				return ce.ValidateName("warehouses")
+			}
+
+			return err
+		}
 	}
 
 	return nil
@@ -81,10 +108,50 @@ func (m *ProjectStats) ContextValidate(ctx context.Context, formats strfmt.Regis
 
 func (m *ProjectStats) contextValidateStages(ctx context.Context, formats strfmt.Registry) error {
 
+	if m.Stages != nil {
+
+		if swag.IsZero(m.Stages) { // not required
+			return nil
+		}
+
+		if err := m.Stages.ContextValidate(ctx, formats); err != nil {
+			ve := new(errors.Validation)
+			if stderrors.As(err, &ve) {
+				return ve.ValidateName("stages")
+			}
+			ce := new(errors.CompositeError)
+			if stderrors.As(err, &ce) {
+				return ce.ValidateName("stages")
+			}
+
+			return err
+		}
+	}
+
 	return nil
 }
 
 func (m *ProjectStats) contextValidateWarehouses(ctx context.Context, formats strfmt.Registry) error {
+
+	if m.Warehouses != nil {
+
+		if swag.IsZero(m.Warehouses) { // not required
+			return nil
+		}
+
+		if err := m.Warehouses.ContextValidate(ctx, formats); err != nil {
+			ve := new(errors.Validation)
+			if stderrors.As(err, &ve) {
+				return ve.ValidateName("warehouses")
+			}
+			ce := new(errors.CompositeError)
+			if stderrors.As(err, &ce) {
+				return ce.ValidateName("warehouses")
+			}
+
+			return err
+		}
+	}
 
 	return nil
 }

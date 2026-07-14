@@ -4,6 +4,7 @@ package models
 
 import (
 	"context"
+	stderrors "errors"
 
 	"github.com/go-openapi/errors"
 	"github.com/go-openapi/strfmt"
@@ -36,9 +37,7 @@ type V1EphemeralVolumeSource struct {
 	// to the PVC after it has been created.
 	//
 	// Required, must not be nil.
-	VolumeClaimTemplate struct {
-		V1PersistentVolumeClaimTemplate
-	} `json:"volumeClaimTemplate,omitempty"`
+	VolumeClaimTemplate *V1PersistentVolumeClaimTemplate `json:"volumeClaimTemplate,omitempty"`
 }
 
 // Validate validates this v1 ephemeral volume source
@@ -60,6 +59,21 @@ func (m *V1EphemeralVolumeSource) validateVolumeClaimTemplate(formats strfmt.Reg
 		return nil
 	}
 
+	if m.VolumeClaimTemplate != nil {
+		if err := m.VolumeClaimTemplate.Validate(formats); err != nil {
+			ve := new(errors.Validation)
+			if stderrors.As(err, &ve) {
+				return ve.ValidateName("volumeClaimTemplate")
+			}
+			ce := new(errors.CompositeError)
+			if stderrors.As(err, &ce) {
+				return ce.ValidateName("volumeClaimTemplate")
+			}
+
+			return err
+		}
+	}
+
 	return nil
 }
 
@@ -78,6 +92,26 @@ func (m *V1EphemeralVolumeSource) ContextValidate(ctx context.Context, formats s
 }
 
 func (m *V1EphemeralVolumeSource) contextValidateVolumeClaimTemplate(ctx context.Context, formats strfmt.Registry) error {
+
+	if m.VolumeClaimTemplate != nil {
+
+		if swag.IsZero(m.VolumeClaimTemplate) { // not required
+			return nil
+		}
+
+		if err := m.VolumeClaimTemplate.ContextValidate(ctx, formats); err != nil {
+			ve := new(errors.Validation)
+			if stderrors.As(err, &ve) {
+				return ve.ValidateName("volumeClaimTemplate")
+			}
+			ce := new(errors.CompositeError)
+			if stderrors.As(err, &ce) {
+				return ce.ValidateName("volumeClaimTemplate")
+			}
+
+			return err
+		}
+	}
 
 	return nil
 }

@@ -40,9 +40,7 @@ type StageStatus struct {
 	Conditions []*V1Condition `json:"conditions"`
 
 	// CurrentPromotion is a reference to the currently Running promotion.
-	CurrentPromotion struct {
-		PromotionReference
-	} `json:"currentPromotion,omitempty"`
+	CurrentPromotion *PromotionReference `json:"currentPromotion,omitempty"`
 
 	// FreightHistory is a list of recent Freight selections that were deployed
 	// to the Stage. By default, the last ten Freight selections are stored.
@@ -63,9 +61,7 @@ type StageStatus struct {
 	FreightSummary string `json:"freightSummary,omitempty"`
 
 	// Health is the Stage's last observed health.
-	Health struct {
-		Health
-	} `json:"health,omitempty"`
+	Health *Health `json:"health,omitempty"`
 
 	// LastHandledRefresh holds the value of the most recent AnnotationKeyRefresh
 	// annotation that was handled by the controller. This field can be used to
@@ -74,9 +70,7 @@ type StageStatus struct {
 	LastHandledRefresh string `json:"lastHandledRefresh,omitempty"`
 
 	// LastPromotion is a reference to the last completed promotion.
-	LastPromotion struct {
-		PromotionReference
-	} `json:"lastPromotion,omitempty"`
+	LastPromotion *PromotionReference `json:"lastPromotion,omitempty"`
 
 	// Metadata is a map of arbitrary metadata associated with the Stage.
 	// This is useful for storing additional information about the Stage
@@ -187,6 +181,21 @@ func (m *StageStatus) validateCurrentPromotion(formats strfmt.Registry) error {
 		return nil
 	}
 
+	if m.CurrentPromotion != nil {
+		if err := m.CurrentPromotion.Validate(formats); err != nil {
+			ve := new(errors.Validation)
+			if stderrors.As(err, &ve) {
+				return ve.ValidateName("currentPromotion")
+			}
+			ce := new(errors.CompositeError)
+			if stderrors.As(err, &ce) {
+				return ce.ValidateName("currentPromotion")
+			}
+
+			return err
+		}
+	}
+
 	return nil
 }
 
@@ -225,12 +234,42 @@ func (m *StageStatus) validateHealth(formats strfmt.Registry) error {
 		return nil
 	}
 
+	if m.Health != nil {
+		if err := m.Health.Validate(formats); err != nil {
+			ve := new(errors.Validation)
+			if stderrors.As(err, &ve) {
+				return ve.ValidateName("health")
+			}
+			ce := new(errors.CompositeError)
+			if stderrors.As(err, &ce) {
+				return ce.ValidateName("health")
+			}
+
+			return err
+		}
+	}
+
 	return nil
 }
 
 func (m *StageStatus) validateLastPromotion(formats strfmt.Registry) error {
 	if swag.IsZero(m.LastPromotion) { // not required
 		return nil
+	}
+
+	if m.LastPromotion != nil {
+		if err := m.LastPromotion.Validate(formats); err != nil {
+			ve := new(errors.Validation)
+			if stderrors.As(err, &ve) {
+				return ve.ValidateName("lastPromotion")
+			}
+			ce := new(errors.CompositeError)
+			if stderrors.As(err, &ce) {
+				return ce.ValidateName("lastPromotion")
+			}
+
+			return err
+		}
 	}
 
 	return nil
@@ -316,6 +355,26 @@ func (m *StageStatus) contextValidateConditions(ctx context.Context, formats str
 
 func (m *StageStatus) contextValidateCurrentPromotion(ctx context.Context, formats strfmt.Registry) error {
 
+	if m.CurrentPromotion != nil {
+
+		if swag.IsZero(m.CurrentPromotion) { // not required
+			return nil
+		}
+
+		if err := m.CurrentPromotion.ContextValidate(ctx, formats); err != nil {
+			ve := new(errors.Validation)
+			if stderrors.As(err, &ve) {
+				return ve.ValidateName("currentPromotion")
+			}
+			ce := new(errors.CompositeError)
+			if stderrors.As(err, &ce) {
+				return ce.ValidateName("currentPromotion")
+			}
+
+			return err
+		}
+	}
+
 	return nil
 }
 
@@ -350,10 +409,50 @@ func (m *StageStatus) contextValidateFreightHistory(ctx context.Context, formats
 
 func (m *StageStatus) contextValidateHealth(ctx context.Context, formats strfmt.Registry) error {
 
+	if m.Health != nil {
+
+		if swag.IsZero(m.Health) { // not required
+			return nil
+		}
+
+		if err := m.Health.ContextValidate(ctx, formats); err != nil {
+			ve := new(errors.Validation)
+			if stderrors.As(err, &ve) {
+				return ve.ValidateName("health")
+			}
+			ce := new(errors.CompositeError)
+			if stderrors.As(err, &ce) {
+				return ce.ValidateName("health")
+			}
+
+			return err
+		}
+	}
+
 	return nil
 }
 
 func (m *StageStatus) contextValidateLastPromotion(ctx context.Context, formats strfmt.Registry) error {
+
+	if m.LastPromotion != nil {
+
+		if swag.IsZero(m.LastPromotion) { // not required
+			return nil
+		}
+
+		if err := m.LastPromotion.ContextValidate(ctx, formats); err != nil {
+			ve := new(errors.Validation)
+			if stderrors.As(err, &ve) {
+				return ve.ValidateName("lastPromotion")
+			}
+			ce := new(errors.CompositeError)
+			if stderrors.As(err, &ce) {
+				return ce.ValidateName("lastPromotion")
+			}
+
+			return err
+		}
+	}
 
 	return nil
 }

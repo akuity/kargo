@@ -35,9 +35,7 @@ type Project struct {
 	Metadata *V1ObjectMeta `json:"metadata,omitempty"`
 
 	// Status describes the Project's current status.
-	Status struct {
-		ProjectStatus
-	} `json:"status,omitempty"`
+	Status *ProjectStatus `json:"status,omitempty"`
 }
 
 // Validate validates this project
@@ -84,6 +82,21 @@ func (m *Project) validateMetadata(formats strfmt.Registry) error {
 func (m *Project) validateStatus(formats strfmt.Registry) error {
 	if swag.IsZero(m.Status) { // not required
 		return nil
+	}
+
+	if m.Status != nil {
+		if err := m.Status.Validate(formats); err != nil {
+			ve := new(errors.Validation)
+			if stderrors.As(err, &ve) {
+				return ve.ValidateName("status")
+			}
+			ce := new(errors.CompositeError)
+			if stderrors.As(err, &ce) {
+				return ce.ValidateName("status")
+			}
+
+			return err
+		}
 	}
 
 	return nil
@@ -133,6 +146,26 @@ func (m *Project) contextValidateMetadata(ctx context.Context, formats strfmt.Re
 }
 
 func (m *Project) contextValidateStatus(ctx context.Context, formats strfmt.Registry) error {
+
+	if m.Status != nil {
+
+		if swag.IsZero(m.Status) { // not required
+			return nil
+		}
+
+		if err := m.Status.ContextValidate(ctx, formats); err != nil {
+			ve := new(errors.Validation)
+			if stderrors.As(err, &ve) {
+				return ve.ValidateName("status")
+			}
+			ce := new(errors.CompositeError)
+			if stderrors.As(err, &ce) {
+				return ce.ValidateName("status")
+			}
+
+			return err
+		}
+	}
 
 	return nil
 }

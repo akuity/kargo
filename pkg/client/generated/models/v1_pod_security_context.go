@@ -20,9 +20,7 @@ type V1PodSecurityContext struct {
 	// appArmorProfile is the AppArmor options to use by the containers in this pod.
 	// Note that this field cannot be set when spec.os.name is windows.
 	// +optional
-	AppArmorProfile struct {
-		V1AppArmorProfile
-	} `json:"appArmorProfile,omitempty"`
+	AppArmorProfile *V1AppArmorProfile `json:"appArmorProfile,omitempty"`
 
 	// A special supplemental group that applies to all containers in a pod.
 	// Some volume types allow the Kubelet to change the ownership of that volume
@@ -108,16 +106,12 @@ type V1PodSecurityContext struct {
 	// takes precedence for that container.
 	// Note that this field cannot be set when spec.os.name is windows.
 	// +optional
-	SeLinuxOptions struct {
-		V1SELinuxOptions
-	} `json:"seLinuxOptions,omitempty"`
+	SeLinuxOptions *V1SELinuxOptions `json:"seLinuxOptions,omitempty"`
 
 	// The seccomp options to use by the containers in this pod.
 	// Note that this field cannot be set when spec.os.name is windows.
 	// +optional
-	SeccompProfile struct {
-		V1SeccompProfile
-	} `json:"seccompProfile,omitempty"`
+	SeccompProfile *V1SeccompProfile `json:"seccompProfile,omitempty"`
 
 	// A list of groups applied to the first process run in each container, in
 	// addition to the container's primary GID and fsGroup (if specified).  If
@@ -154,9 +148,7 @@ type V1PodSecurityContext struct {
 	// If set in both SecurityContext and PodSecurityContext, the value specified in SecurityContext takes precedence.
 	// Note that this field cannot be set when spec.os.name is linux.
 	// +optional
-	WindowsOptions struct {
-		V1WindowsSecurityContextOptions
-	} `json:"windowsOptions,omitempty"`
+	WindowsOptions *V1WindowsSecurityContextOptions `json:"windowsOptions,omitempty"`
 }
 
 // Validate validates this v1 pod security context
@@ -194,6 +186,21 @@ func (m *V1PodSecurityContext) validateAppArmorProfile(formats strfmt.Registry) 
 		return nil
 	}
 
+	if m.AppArmorProfile != nil {
+		if err := m.AppArmorProfile.Validate(formats); err != nil {
+			ve := new(errors.Validation)
+			if stderrors.As(err, &ve) {
+				return ve.ValidateName("appArmorProfile")
+			}
+			ce := new(errors.CompositeError)
+			if stderrors.As(err, &ce) {
+				return ce.ValidateName("appArmorProfile")
+			}
+
+			return err
+		}
+	}
+
 	return nil
 }
 
@@ -202,12 +209,42 @@ func (m *V1PodSecurityContext) validateSeLinuxOptions(formats strfmt.Registry) e
 		return nil
 	}
 
+	if m.SeLinuxOptions != nil {
+		if err := m.SeLinuxOptions.Validate(formats); err != nil {
+			ve := new(errors.Validation)
+			if stderrors.As(err, &ve) {
+				return ve.ValidateName("seLinuxOptions")
+			}
+			ce := new(errors.CompositeError)
+			if stderrors.As(err, &ce) {
+				return ce.ValidateName("seLinuxOptions")
+			}
+
+			return err
+		}
+	}
+
 	return nil
 }
 
 func (m *V1PodSecurityContext) validateSeccompProfile(formats strfmt.Registry) error {
 	if swag.IsZero(m.SeccompProfile) { // not required
 		return nil
+	}
+
+	if m.SeccompProfile != nil {
+		if err := m.SeccompProfile.Validate(formats); err != nil {
+			ve := new(errors.Validation)
+			if stderrors.As(err, &ve) {
+				return ve.ValidateName("seccompProfile")
+			}
+			ce := new(errors.CompositeError)
+			if stderrors.As(err, &ce) {
+				return ce.ValidateName("seccompProfile")
+			}
+
+			return err
+		}
 	}
 
 	return nil
@@ -248,6 +285,21 @@ func (m *V1PodSecurityContext) validateWindowsOptions(formats strfmt.Registry) e
 		return nil
 	}
 
+	if m.WindowsOptions != nil {
+		if err := m.WindowsOptions.Validate(formats); err != nil {
+			ve := new(errors.Validation)
+			if stderrors.As(err, &ve) {
+				return ve.ValidateName("windowsOptions")
+			}
+			ce := new(errors.CompositeError)
+			if stderrors.As(err, &ce) {
+				return ce.ValidateName("windowsOptions")
+			}
+
+			return err
+		}
+	}
+
 	return nil
 }
 
@@ -283,15 +335,75 @@ func (m *V1PodSecurityContext) ContextValidate(ctx context.Context, formats strf
 
 func (m *V1PodSecurityContext) contextValidateAppArmorProfile(ctx context.Context, formats strfmt.Registry) error {
 
+	if m.AppArmorProfile != nil {
+
+		if swag.IsZero(m.AppArmorProfile) { // not required
+			return nil
+		}
+
+		if err := m.AppArmorProfile.ContextValidate(ctx, formats); err != nil {
+			ve := new(errors.Validation)
+			if stderrors.As(err, &ve) {
+				return ve.ValidateName("appArmorProfile")
+			}
+			ce := new(errors.CompositeError)
+			if stderrors.As(err, &ce) {
+				return ce.ValidateName("appArmorProfile")
+			}
+
+			return err
+		}
+	}
+
 	return nil
 }
 
 func (m *V1PodSecurityContext) contextValidateSeLinuxOptions(ctx context.Context, formats strfmt.Registry) error {
 
+	if m.SeLinuxOptions != nil {
+
+		if swag.IsZero(m.SeLinuxOptions) { // not required
+			return nil
+		}
+
+		if err := m.SeLinuxOptions.ContextValidate(ctx, formats); err != nil {
+			ve := new(errors.Validation)
+			if stderrors.As(err, &ve) {
+				return ve.ValidateName("seLinuxOptions")
+			}
+			ce := new(errors.CompositeError)
+			if stderrors.As(err, &ce) {
+				return ce.ValidateName("seLinuxOptions")
+			}
+
+			return err
+		}
+	}
+
 	return nil
 }
 
 func (m *V1PodSecurityContext) contextValidateSeccompProfile(ctx context.Context, formats strfmt.Registry) error {
+
+	if m.SeccompProfile != nil {
+
+		if swag.IsZero(m.SeccompProfile) { // not required
+			return nil
+		}
+
+		if err := m.SeccompProfile.ContextValidate(ctx, formats); err != nil {
+			ve := new(errors.Validation)
+			if stderrors.As(err, &ve) {
+				return ve.ValidateName("seccompProfile")
+			}
+			ce := new(errors.CompositeError)
+			if stderrors.As(err, &ce) {
+				return ce.ValidateName("seccompProfile")
+			}
+
+			return err
+		}
+	}
 
 	return nil
 }
@@ -326,6 +438,26 @@ func (m *V1PodSecurityContext) contextValidateSysctls(ctx context.Context, forma
 }
 
 func (m *V1PodSecurityContext) contextValidateWindowsOptions(ctx context.Context, formats strfmt.Registry) error {
+
+	if m.WindowsOptions != nil {
+
+		if swag.IsZero(m.WindowsOptions) { // not required
+			return nil
+		}
+
+		if err := m.WindowsOptions.ContextValidate(ctx, formats); err != nil {
+			ve := new(errors.Validation)
+			if stderrors.As(err, &ve) {
+				return ve.ValidateName("windowsOptions")
+			}
+			ce := new(errors.CompositeError)
+			if stderrors.As(err, &ce) {
+				return ce.ValidateName("windowsOptions")
+			}
+
+			return err
+		}
+	}
 
 	return nil
 }

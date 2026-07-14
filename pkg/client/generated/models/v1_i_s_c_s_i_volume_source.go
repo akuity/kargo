@@ -4,6 +4,7 @@ package models
 
 import (
 	"context"
+	stderrors "errors"
 
 	"github.com/go-openapi/errors"
 	"github.com/go-openapi/strfmt"
@@ -62,9 +63,7 @@ type V1ISCSIVolumeSource struct {
 
 	// secretRef is the CHAP Secret for iSCSI target and initiator authentication
 	// +optional
-	SecretRef struct {
-		V1LocalObjectReference
-	} `json:"secretRef,omitempty"`
+	SecretRef *V1LocalObjectReference `json:"secretRef,omitempty"`
 
 	// targetPortal is iSCSI Target Portal. The Portal is either an IP or ip_addr:port if the port
 	// is other than default (typically TCP ports 860 and 3260).
@@ -90,6 +89,21 @@ func (m *V1ISCSIVolumeSource) validateSecretRef(formats strfmt.Registry) error {
 		return nil
 	}
 
+	if m.SecretRef != nil {
+		if err := m.SecretRef.Validate(formats); err != nil {
+			ve := new(errors.Validation)
+			if stderrors.As(err, &ve) {
+				return ve.ValidateName("secretRef")
+			}
+			ce := new(errors.CompositeError)
+			if stderrors.As(err, &ce) {
+				return ce.ValidateName("secretRef")
+			}
+
+			return err
+		}
+	}
+
 	return nil
 }
 
@@ -108,6 +122,26 @@ func (m *V1ISCSIVolumeSource) ContextValidate(ctx context.Context, formats strfm
 }
 
 func (m *V1ISCSIVolumeSource) contextValidateSecretRef(ctx context.Context, formats strfmt.Registry) error {
+
+	if m.SecretRef != nil {
+
+		if swag.IsZero(m.SecretRef) { // not required
+			return nil
+		}
+
+		if err := m.SecretRef.ContextValidate(ctx, formats); err != nil {
+			ve := new(errors.Validation)
+			if stderrors.As(err, &ve) {
+				return ve.ValidateName("secretRef")
+			}
+			ce := new(errors.CompositeError)
+			if stderrors.As(err, &ce) {
+				return ce.ValidateName("secretRef")
+			}
+
+			return err
+		}
+	}
 
 	return nil
 }

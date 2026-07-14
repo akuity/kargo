@@ -4,6 +4,7 @@ package models
 
 import (
 	"context"
+	stderrors "errors"
 
 	"github.com/go-openapi/errors"
 	"github.com/go-openapi/strfmt"
@@ -61,9 +62,7 @@ type V1JobSpec struct {
 	// is possible during upgrades due to version skew, the controller
 	// skips updates for the Job.
 	// +optional
-	CompletionMode struct {
-		V1CompletionMode
-	} `json:"completionMode,omitempty"`
+	CompletionMode V1CompletionMode `json:"completionMode,omitempty"`
 
 	// Specifies the desired number of successfully finished pods the
 	// job should be run with.  Setting to null means that the success of any
@@ -130,9 +129,7 @@ type V1JobSpec struct {
 	// with restartPolicy=OnFailure.
 	//
 	// +optional
-	PodFailurePolicy struct {
-		V1PodFailurePolicy
-	} `json:"podFailurePolicy,omitempty"`
+	PodFailurePolicy *V1PodFailurePolicy `json:"podFailurePolicy,omitempty"`
 
 	// podReplacementPolicy specifies when to create replacement Pods.
 	// Possible values are:
@@ -144,17 +141,13 @@ type V1JobSpec struct {
 	// When using podFailurePolicy, Failed is the the only allowed value.
 	// TerminatingOrFailed and Failed are allowed values when podFailurePolicy is not in use.
 	// +optional
-	PodReplacementPolicy struct {
-		V1PodReplacementPolicy
-	} `json:"podReplacementPolicy,omitempty"`
+	PodReplacementPolicy V1PodReplacementPolicy `json:"podReplacementPolicy,omitempty"`
 
 	// A label query over pods that should match the pod count.
 	// Normally, the system sets this field for you.
 	// More info: https://kubernetes.io/docs/concepts/overview/working-with-objects/labels/#label-selectors
 	// +optional
-	Selector struct {
-		V1LabelSelector
-	} `json:"selector,omitempty"`
+	Selector *V1LabelSelector `json:"selector,omitempty"`
 
 	// successPolicy specifies the policy when the Job can be declared as succeeded.
 	// If empty, the default behavior applies - the Job is declared as succeeded
@@ -163,9 +156,7 @@ type V1JobSpec struct {
 	// Once the Job meets the SuccessPolicy, the lingering pods are terminated.
 	//
 	// +optional
-	SuccessPolicy struct {
-		V1SuccessPolicy
-	} `json:"successPolicy,omitempty"`
+	SuccessPolicy *V1SuccessPolicy `json:"successPolicy,omitempty"`
 
 	// suspend specifies whether the Job controller should create Pods or not. If
 	// a Job is created with suspend set to true, no Pods are created by the Job
@@ -181,9 +172,7 @@ type V1JobSpec struct {
 	// Describes the pod that will be created when executing a job.
 	// The only allowed template.spec.restartPolicy values are "Never" or "OnFailure".
 	// More info: https://kubernetes.io/docs/concepts/workloads/controllers/jobs-run-to-completion/
-	Template struct {
-		V1PodTemplateSpec
-	} `json:"template,omitempty"`
+	Template *V1PodTemplateSpec `json:"template,omitempty"`
 
 	// ttlSecondsAfterFinished limits the lifetime of a Job that has finished
 	// execution (either Complete or Failed). If this field is set,
@@ -235,12 +224,40 @@ func (m *V1JobSpec) validateCompletionMode(formats strfmt.Registry) error {
 		return nil
 	}
 
+	if err := m.CompletionMode.Validate(formats); err != nil {
+		ve := new(errors.Validation)
+		if stderrors.As(err, &ve) {
+			return ve.ValidateName("completionMode")
+		}
+		ce := new(errors.CompositeError)
+		if stderrors.As(err, &ce) {
+			return ce.ValidateName("completionMode")
+		}
+
+		return err
+	}
+
 	return nil
 }
 
 func (m *V1JobSpec) validatePodFailurePolicy(formats strfmt.Registry) error {
 	if swag.IsZero(m.PodFailurePolicy) { // not required
 		return nil
+	}
+
+	if m.PodFailurePolicy != nil {
+		if err := m.PodFailurePolicy.Validate(formats); err != nil {
+			ve := new(errors.Validation)
+			if stderrors.As(err, &ve) {
+				return ve.ValidateName("podFailurePolicy")
+			}
+			ce := new(errors.CompositeError)
+			if stderrors.As(err, &ce) {
+				return ce.ValidateName("podFailurePolicy")
+			}
+
+			return err
+		}
 	}
 
 	return nil
@@ -251,12 +268,40 @@ func (m *V1JobSpec) validatePodReplacementPolicy(formats strfmt.Registry) error 
 		return nil
 	}
 
+	if err := m.PodReplacementPolicy.Validate(formats); err != nil {
+		ve := new(errors.Validation)
+		if stderrors.As(err, &ve) {
+			return ve.ValidateName("podReplacementPolicy")
+		}
+		ce := new(errors.CompositeError)
+		if stderrors.As(err, &ce) {
+			return ce.ValidateName("podReplacementPolicy")
+		}
+
+		return err
+	}
+
 	return nil
 }
 
 func (m *V1JobSpec) validateSelector(formats strfmt.Registry) error {
 	if swag.IsZero(m.Selector) { // not required
 		return nil
+	}
+
+	if m.Selector != nil {
+		if err := m.Selector.Validate(formats); err != nil {
+			ve := new(errors.Validation)
+			if stderrors.As(err, &ve) {
+				return ve.ValidateName("selector")
+			}
+			ce := new(errors.CompositeError)
+			if stderrors.As(err, &ce) {
+				return ce.ValidateName("selector")
+			}
+
+			return err
+		}
 	}
 
 	return nil
@@ -267,12 +312,42 @@ func (m *V1JobSpec) validateSuccessPolicy(formats strfmt.Registry) error {
 		return nil
 	}
 
+	if m.SuccessPolicy != nil {
+		if err := m.SuccessPolicy.Validate(formats); err != nil {
+			ve := new(errors.Validation)
+			if stderrors.As(err, &ve) {
+				return ve.ValidateName("successPolicy")
+			}
+			ce := new(errors.CompositeError)
+			if stderrors.As(err, &ce) {
+				return ce.ValidateName("successPolicy")
+			}
+
+			return err
+		}
+	}
+
 	return nil
 }
 
 func (m *V1JobSpec) validateTemplate(formats strfmt.Registry) error {
 	if swag.IsZero(m.Template) { // not required
 		return nil
+	}
+
+	if m.Template != nil {
+		if err := m.Template.Validate(formats); err != nil {
+			ve := new(errors.Validation)
+			if stderrors.As(err, &ve) {
+				return ve.ValidateName("template")
+			}
+			ce := new(errors.CompositeError)
+			if stderrors.As(err, &ce) {
+				return ce.ValidateName("template")
+			}
+
+			return err
+		}
 	}
 
 	return nil
@@ -314,30 +389,144 @@ func (m *V1JobSpec) ContextValidate(ctx context.Context, formats strfmt.Registry
 
 func (m *V1JobSpec) contextValidateCompletionMode(ctx context.Context, formats strfmt.Registry) error {
 
+	if swag.IsZero(m.CompletionMode) { // not required
+		return nil
+	}
+
+	if err := m.CompletionMode.ContextValidate(ctx, formats); err != nil {
+		ve := new(errors.Validation)
+		if stderrors.As(err, &ve) {
+			return ve.ValidateName("completionMode")
+		}
+		ce := new(errors.CompositeError)
+		if stderrors.As(err, &ce) {
+			return ce.ValidateName("completionMode")
+		}
+
+		return err
+	}
+
 	return nil
 }
 
 func (m *V1JobSpec) contextValidatePodFailurePolicy(ctx context.Context, formats strfmt.Registry) error {
+
+	if m.PodFailurePolicy != nil {
+
+		if swag.IsZero(m.PodFailurePolicy) { // not required
+			return nil
+		}
+
+		if err := m.PodFailurePolicy.ContextValidate(ctx, formats); err != nil {
+			ve := new(errors.Validation)
+			if stderrors.As(err, &ve) {
+				return ve.ValidateName("podFailurePolicy")
+			}
+			ce := new(errors.CompositeError)
+			if stderrors.As(err, &ce) {
+				return ce.ValidateName("podFailurePolicy")
+			}
+
+			return err
+		}
+	}
 
 	return nil
 }
 
 func (m *V1JobSpec) contextValidatePodReplacementPolicy(ctx context.Context, formats strfmt.Registry) error {
 
+	if swag.IsZero(m.PodReplacementPolicy) { // not required
+		return nil
+	}
+
+	if err := m.PodReplacementPolicy.ContextValidate(ctx, formats); err != nil {
+		ve := new(errors.Validation)
+		if stderrors.As(err, &ve) {
+			return ve.ValidateName("podReplacementPolicy")
+		}
+		ce := new(errors.CompositeError)
+		if stderrors.As(err, &ce) {
+			return ce.ValidateName("podReplacementPolicy")
+		}
+
+		return err
+	}
+
 	return nil
 }
 
 func (m *V1JobSpec) contextValidateSelector(ctx context.Context, formats strfmt.Registry) error {
+
+	if m.Selector != nil {
+
+		if swag.IsZero(m.Selector) { // not required
+			return nil
+		}
+
+		if err := m.Selector.ContextValidate(ctx, formats); err != nil {
+			ve := new(errors.Validation)
+			if stderrors.As(err, &ve) {
+				return ve.ValidateName("selector")
+			}
+			ce := new(errors.CompositeError)
+			if stderrors.As(err, &ce) {
+				return ce.ValidateName("selector")
+			}
+
+			return err
+		}
+	}
 
 	return nil
 }
 
 func (m *V1JobSpec) contextValidateSuccessPolicy(ctx context.Context, formats strfmt.Registry) error {
 
+	if m.SuccessPolicy != nil {
+
+		if swag.IsZero(m.SuccessPolicy) { // not required
+			return nil
+		}
+
+		if err := m.SuccessPolicy.ContextValidate(ctx, formats); err != nil {
+			ve := new(errors.Validation)
+			if stderrors.As(err, &ve) {
+				return ve.ValidateName("successPolicy")
+			}
+			ce := new(errors.CompositeError)
+			if stderrors.As(err, &ce) {
+				return ce.ValidateName("successPolicy")
+			}
+
+			return err
+		}
+	}
+
 	return nil
 }
 
 func (m *V1JobSpec) contextValidateTemplate(ctx context.Context, formats strfmt.Registry) error {
+
+	if m.Template != nil {
+
+		if swag.IsZero(m.Template) { // not required
+			return nil
+		}
+
+		if err := m.Template.ContextValidate(ctx, formats); err != nil {
+			ve := new(errors.Validation)
+			if stderrors.As(err, &ve) {
+				return ve.ValidateName("template")
+			}
+			ce := new(errors.CompositeError)
+			if stderrors.As(err, &ce) {
+				return ce.ValidateName("template")
+			}
+
+			return err
+		}
+	}
 
 	return nil
 }

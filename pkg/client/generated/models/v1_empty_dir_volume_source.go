@@ -4,6 +4,7 @@ package models
 
 import (
 	"context"
+	stderrors "errors"
 
 	"github.com/go-openapi/errors"
 	"github.com/go-openapi/strfmt"
@@ -29,9 +30,7 @@ type V1EmptyDirVolumeSource struct {
 	// The default is nil which means that the limit is undefined.
 	// More info: https://kubernetes.io/docs/concepts/storage/volumes#emptydir
 	// +optional
-	SizeLimit struct {
-		Quantity
-	} `json:"sizeLimit,omitempty"`
+	SizeLimit *Quantity `json:"sizeLimit,omitempty"`
 }
 
 // Validate validates this v1 empty dir volume source
@@ -53,6 +52,21 @@ func (m *V1EmptyDirVolumeSource) validateSizeLimit(formats strfmt.Registry) erro
 		return nil
 	}
 
+	if m.SizeLimit != nil {
+		if err := m.SizeLimit.Validate(formats); err != nil {
+			ve := new(errors.Validation)
+			if stderrors.As(err, &ve) {
+				return ve.ValidateName("sizeLimit")
+			}
+			ce := new(errors.CompositeError)
+			if stderrors.As(err, &ce) {
+				return ce.ValidateName("sizeLimit")
+			}
+
+			return err
+		}
+	}
+
 	return nil
 }
 
@@ -71,6 +85,26 @@ func (m *V1EmptyDirVolumeSource) ContextValidate(ctx context.Context, formats st
 }
 
 func (m *V1EmptyDirVolumeSource) contextValidateSizeLimit(ctx context.Context, formats strfmt.Registry) error {
+
+	if m.SizeLimit != nil {
+
+		if swag.IsZero(m.SizeLimit) { // not required
+			return nil
+		}
+
+		if err := m.SizeLimit.ContextValidate(ctx, formats); err != nil {
+			ve := new(errors.Validation)
+			if stderrors.As(err, &ve) {
+				return ve.ValidateName("sizeLimit")
+			}
+			ce := new(errors.CompositeError)
+			if stderrors.As(err, &ce) {
+				return ce.ValidateName("sizeLimit")
+			}
+
+			return err
+		}
+	}
 
 	return nil
 }

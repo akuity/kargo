@@ -4,6 +4,7 @@ package models
 
 import (
 	"context"
+	stderrors "errors"
 
 	"github.com/go-openapi/errors"
 	"github.com/go-openapi/strfmt"
@@ -24,9 +25,7 @@ type V1ContainerRestartRule struct {
 	// Represents the exit codes to check on container exits.
 	// +optional
 	// +oneOf=when
-	ExitCodes struct {
-		V1ContainerRestartRuleOnExitCodes
-	} `json:"exitCodes,omitempty"`
+	ExitCodes *V1ContainerRestartRuleOnExitCodes `json:"exitCodes,omitempty"`
 }
 
 // Validate validates this v1 container restart rule
@@ -48,6 +47,21 @@ func (m *V1ContainerRestartRule) validateExitCodes(formats strfmt.Registry) erro
 		return nil
 	}
 
+	if m.ExitCodes != nil {
+		if err := m.ExitCodes.Validate(formats); err != nil {
+			ve := new(errors.Validation)
+			if stderrors.As(err, &ve) {
+				return ve.ValidateName("exitCodes")
+			}
+			ce := new(errors.CompositeError)
+			if stderrors.As(err, &ce) {
+				return ce.ValidateName("exitCodes")
+			}
+
+			return err
+		}
+	}
+
 	return nil
 }
 
@@ -66,6 +80,26 @@ func (m *V1ContainerRestartRule) ContextValidate(ctx context.Context, formats st
 }
 
 func (m *V1ContainerRestartRule) contextValidateExitCodes(ctx context.Context, formats strfmt.Registry) error {
+
+	if m.ExitCodes != nil {
+
+		if swag.IsZero(m.ExitCodes) { // not required
+			return nil
+		}
+
+		if err := m.ExitCodes.ContextValidate(ctx, formats); err != nil {
+			ve := new(errors.Validation)
+			if stderrors.As(err, &ve) {
+				return ve.ValidateName("exitCodes")
+			}
+			ce := new(errors.CompositeError)
+			if stderrors.As(err, &ce) {
+				return ce.ValidateName("exitCodes")
+			}
+
+			return err
+		}
+	}
 
 	return nil
 }

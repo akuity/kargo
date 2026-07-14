@@ -4,6 +4,7 @@ package models
 
 import (
 	"context"
+	stderrors "errors"
 
 	"github.com/go-openapi/errors"
 	"github.com/go-openapi/strfmt"
@@ -30,9 +31,7 @@ type V1PersistentVolumeClaimSpec struct {
 	// and dataSourceRef contents will be copied to dataSource when dataSourceRef.namespace is not specified.
 	// If the namespace is specified, then dataSourceRef will not be copied to dataSource.
 	// +optional
-	DataSource struct {
-		V1TypedLocalObjectReference
-	} `json:"dataSource,omitempty"`
+	DataSource *V1TypedLocalObjectReference `json:"dataSource,omitempty"`
 
 	// dataSourceRef specifies the object from which to populate the volume with data, if a non-empty
 	// volume is desired. This may be any object from a non-empty API group (non
@@ -58,9 +57,7 @@ type V1PersistentVolumeClaimSpec struct {
 	// (Beta) Using this field requires the AnyVolumeDataSource feature gate to be enabled.
 	// (Alpha) Using the namespace field of dataSourceRef requires the CrossNamespaceVolumeDataSource feature gate to be enabled.
 	// +optional
-	DataSourceRef struct {
-		V1TypedObjectReference
-	} `json:"dataSourceRef,omitempty"`
+	DataSourceRef *V1TypedObjectReference `json:"dataSourceRef,omitempty"`
 
 	// resources represents the minimum resources the volume should have.
 	// If RecoverVolumeExpansionFailure feature is enabled users are allowed to specify resource requirements
@@ -68,15 +65,11 @@ type V1PersistentVolumeClaimSpec struct {
 	// status field of the claim.
 	// More info: https://kubernetes.io/docs/concepts/storage/persistent-volumes#resources
 	// +optional
-	Resources struct {
-		V1VolumeResourceRequirements
-	} `json:"resources,omitempty"`
+	Resources *V1VolumeResourceRequirements `json:"resources,omitempty"`
 
 	// selector is a label query over volumes to consider for binding.
 	// +optional
-	Selector struct {
-		V1LabelSelector
-	} `json:"selector,omitempty"`
+	Selector *V1LabelSelector `json:"selector,omitempty"`
 
 	// storageClassName is the name of the StorageClass required by the claim.
 	// More info: https://kubernetes.io/docs/concepts/storage/persistent-volumes#class-1
@@ -138,12 +131,42 @@ func (m *V1PersistentVolumeClaimSpec) validateDataSource(formats strfmt.Registry
 		return nil
 	}
 
+	if m.DataSource != nil {
+		if err := m.DataSource.Validate(formats); err != nil {
+			ve := new(errors.Validation)
+			if stderrors.As(err, &ve) {
+				return ve.ValidateName("dataSource")
+			}
+			ce := new(errors.CompositeError)
+			if stderrors.As(err, &ce) {
+				return ce.ValidateName("dataSource")
+			}
+
+			return err
+		}
+	}
+
 	return nil
 }
 
 func (m *V1PersistentVolumeClaimSpec) validateDataSourceRef(formats strfmt.Registry) error {
 	if swag.IsZero(m.DataSourceRef) { // not required
 		return nil
+	}
+
+	if m.DataSourceRef != nil {
+		if err := m.DataSourceRef.Validate(formats); err != nil {
+			ve := new(errors.Validation)
+			if stderrors.As(err, &ve) {
+				return ve.ValidateName("dataSourceRef")
+			}
+			ce := new(errors.CompositeError)
+			if stderrors.As(err, &ce) {
+				return ce.ValidateName("dataSourceRef")
+			}
+
+			return err
+		}
 	}
 
 	return nil
@@ -154,12 +177,42 @@ func (m *V1PersistentVolumeClaimSpec) validateResources(formats strfmt.Registry)
 		return nil
 	}
 
+	if m.Resources != nil {
+		if err := m.Resources.Validate(formats); err != nil {
+			ve := new(errors.Validation)
+			if stderrors.As(err, &ve) {
+				return ve.ValidateName("resources")
+			}
+			ce := new(errors.CompositeError)
+			if stderrors.As(err, &ce) {
+				return ce.ValidateName("resources")
+			}
+
+			return err
+		}
+	}
+
 	return nil
 }
 
 func (m *V1PersistentVolumeClaimSpec) validateSelector(formats strfmt.Registry) error {
 	if swag.IsZero(m.Selector) { // not required
 		return nil
+	}
+
+	if m.Selector != nil {
+		if err := m.Selector.Validate(formats); err != nil {
+			ve := new(errors.Validation)
+			if stderrors.As(err, &ve) {
+				return ve.ValidateName("selector")
+			}
+			ce := new(errors.CompositeError)
+			if stderrors.As(err, &ce) {
+				return ce.ValidateName("selector")
+			}
+
+			return err
+		}
 	}
 
 	return nil
@@ -193,20 +246,100 @@ func (m *V1PersistentVolumeClaimSpec) ContextValidate(ctx context.Context, forma
 
 func (m *V1PersistentVolumeClaimSpec) contextValidateDataSource(ctx context.Context, formats strfmt.Registry) error {
 
+	if m.DataSource != nil {
+
+		if swag.IsZero(m.DataSource) { // not required
+			return nil
+		}
+
+		if err := m.DataSource.ContextValidate(ctx, formats); err != nil {
+			ve := new(errors.Validation)
+			if stderrors.As(err, &ve) {
+				return ve.ValidateName("dataSource")
+			}
+			ce := new(errors.CompositeError)
+			if stderrors.As(err, &ce) {
+				return ce.ValidateName("dataSource")
+			}
+
+			return err
+		}
+	}
+
 	return nil
 }
 
 func (m *V1PersistentVolumeClaimSpec) contextValidateDataSourceRef(ctx context.Context, formats strfmt.Registry) error {
+
+	if m.DataSourceRef != nil {
+
+		if swag.IsZero(m.DataSourceRef) { // not required
+			return nil
+		}
+
+		if err := m.DataSourceRef.ContextValidate(ctx, formats); err != nil {
+			ve := new(errors.Validation)
+			if stderrors.As(err, &ve) {
+				return ve.ValidateName("dataSourceRef")
+			}
+			ce := new(errors.CompositeError)
+			if stderrors.As(err, &ce) {
+				return ce.ValidateName("dataSourceRef")
+			}
+
+			return err
+		}
+	}
 
 	return nil
 }
 
 func (m *V1PersistentVolumeClaimSpec) contextValidateResources(ctx context.Context, formats strfmt.Registry) error {
 
+	if m.Resources != nil {
+
+		if swag.IsZero(m.Resources) { // not required
+			return nil
+		}
+
+		if err := m.Resources.ContextValidate(ctx, formats); err != nil {
+			ve := new(errors.Validation)
+			if stderrors.As(err, &ve) {
+				return ve.ValidateName("resources")
+			}
+			ce := new(errors.CompositeError)
+			if stderrors.As(err, &ce) {
+				return ce.ValidateName("resources")
+			}
+
+			return err
+		}
+	}
+
 	return nil
 }
 
 func (m *V1PersistentVolumeClaimSpec) contextValidateSelector(ctx context.Context, formats strfmt.Registry) error {
+
+	if m.Selector != nil {
+
+		if swag.IsZero(m.Selector) { // not required
+			return nil
+		}
+
+		if err := m.Selector.ContextValidate(ctx, formats); err != nil {
+			ve := new(errors.Validation)
+			if stderrors.As(err, &ve) {
+				return ve.ValidateName("selector")
+			}
+			ce := new(errors.CompositeError)
+			if stderrors.As(err, &ce) {
+				return ce.ValidateName("selector")
+			}
+
+			return err
+		}
+	}
 
 	return nil
 }

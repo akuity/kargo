@@ -39,9 +39,7 @@ type V1SecretList struct {
 	// Standard list metadata.
 	// More info: https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#types-kinds
 	// +optional
-	Metadata struct {
-		V1ListMeta
-	} `json:"metadata,omitempty"`
+	Metadata *V1ListMeta `json:"metadata,omitempty"`
 }
 
 // Validate validates this v1 secret list
@@ -97,6 +95,21 @@ func (m *V1SecretList) validateMetadata(formats strfmt.Registry) error {
 		return nil
 	}
 
+	if m.Metadata != nil {
+		if err := m.Metadata.Validate(formats); err != nil {
+			ve := new(errors.Validation)
+			if stderrors.As(err, &ve) {
+				return ve.ValidateName("metadata")
+			}
+			ce := new(errors.CompositeError)
+			if stderrors.As(err, &ce) {
+				return ce.ValidateName("metadata")
+			}
+
+			return err
+		}
+	}
+
 	return nil
 }
 
@@ -148,6 +161,26 @@ func (m *V1SecretList) contextValidateItems(ctx context.Context, formats strfmt.
 }
 
 func (m *V1SecretList) contextValidateMetadata(ctx context.Context, formats strfmt.Registry) error {
+
+	if m.Metadata != nil {
+
+		if swag.IsZero(m.Metadata) { // not required
+			return nil
+		}
+
+		if err := m.Metadata.ContextValidate(ctx, formats); err != nil {
+			ve := new(errors.Validation)
+			if stderrors.As(err, &ve) {
+				return ve.ValidateName("metadata")
+			}
+			ce := new(errors.CompositeError)
+			if stderrors.As(err, &ce) {
+				return ce.ValidateName("metadata")
+			}
+
+			return err
+		}
+	}
 
 	return nil
 }

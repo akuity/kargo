@@ -34,9 +34,7 @@ type PromotionSpec struct {
 	// is persisted. Exactly one of Freight or Origin must be set.
 	//
 	// +kubebuilder:validation:Optional
-	Origin struct {
-		FreightOrigin
-	} `json:"origin,omitempty"`
+	Origin *FreightOrigin `json:"origin,omitempty"`
 
 	// Stage specifies the name of the Stage to which this Promotion
 	// applies. The Stage referenced by this field MUST be in the same
@@ -94,6 +92,21 @@ func (m *PromotionSpec) Validate(formats strfmt.Registry) error {
 func (m *PromotionSpec) validateOrigin(formats strfmt.Registry) error {
 	if swag.IsZero(m.Origin) { // not required
 		return nil
+	}
+
+	if m.Origin != nil {
+		if err := m.Origin.Validate(formats); err != nil {
+			ve := new(errors.Validation)
+			if stderrors.As(err, &ve) {
+				return ve.ValidateName("origin")
+			}
+			ce := new(errors.CompositeError)
+			if stderrors.As(err, &ce) {
+				return ce.ValidateName("origin")
+			}
+
+			return err
+		}
 	}
 
 	return nil
@@ -192,6 +205,26 @@ func (m *PromotionSpec) ContextValidate(ctx context.Context, formats strfmt.Regi
 }
 
 func (m *PromotionSpec) contextValidateOrigin(ctx context.Context, formats strfmt.Registry) error {
+
+	if m.Origin != nil {
+
+		if swag.IsZero(m.Origin) { // not required
+			return nil
+		}
+
+		if err := m.Origin.ContextValidate(ctx, formats); err != nil {
+			ve := new(errors.Validation)
+			if stderrors.As(err, &ve) {
+				return ve.ValidateName("origin")
+			}
+			ce := new(errors.CompositeError)
+			if stderrors.As(err, &ce) {
+				return ce.ValidateName("origin")
+			}
+
+			return err
+		}
+	}
 
 	return nil
 }

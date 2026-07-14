@@ -4,6 +4,7 @@ package models
 
 import (
 	"context"
+	stderrors "errors"
 
 	"github.com/go-openapi/errors"
 	"github.com/go-openapi/strfmt"
@@ -21,9 +22,7 @@ type Heartbeat struct {
 	Controller string `json:"controller,omitempty"`
 
 	// Status is point-in-time liveness synthesized from a heartbeat record.
-	Status struct {
-		HeartbeatStatus
-	} `json:"status,omitempty"`
+	Status HeartbeatStatus `json:"status,omitempty"`
 
 	// Timestamp is the timestamp of the heartbeat. nil when the underlying record
 	// carried no parseable timestamp.
@@ -49,6 +48,19 @@ func (m *Heartbeat) validateStatus(formats strfmt.Registry) error {
 		return nil
 	}
 
+	if err := m.Status.Validate(formats); err != nil {
+		ve := new(errors.Validation)
+		if stderrors.As(err, &ve) {
+			return ve.ValidateName("status")
+		}
+		ce := new(errors.CompositeError)
+		if stderrors.As(err, &ce) {
+			return ce.ValidateName("status")
+		}
+
+		return err
+	}
+
 	return nil
 }
 
@@ -67,6 +79,23 @@ func (m *Heartbeat) ContextValidate(ctx context.Context, formats strfmt.Registry
 }
 
 func (m *Heartbeat) contextValidateStatus(ctx context.Context, formats strfmt.Registry) error {
+
+	if swag.IsZero(m.Status) { // not required
+		return nil
+	}
+
+	if err := m.Status.ContextValidate(ctx, formats); err != nil {
+		ve := new(errors.Validation)
+		if stderrors.As(err, &ve) {
+			return ve.ValidateName("status")
+		}
+		ce := new(errors.CompositeError)
+		if stderrors.As(err, &ce) {
+			return ce.ValidateName("status")
+		}
+
+		return err
+	}
 
 	return nil
 }

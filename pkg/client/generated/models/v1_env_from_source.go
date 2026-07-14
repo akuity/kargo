@@ -4,6 +4,7 @@ package models
 
 import (
 	"context"
+	stderrors "errors"
 
 	"github.com/go-openapi/errors"
 	"github.com/go-openapi/strfmt"
@@ -17,9 +18,7 @@ type V1EnvFromSource struct {
 
 	// The ConfigMap to select from
 	// +optional
-	ConfigMapRef struct {
-		V1ConfigMapEnvSource
-	} `json:"configMapRef,omitempty"`
+	ConfigMapRef *V1ConfigMapEnvSource `json:"configMapRef,omitempty"`
 
 	// Optional text to prepend to the name of each environment variable.
 	// May consist of any printable ASCII characters except '='.
@@ -28,9 +27,7 @@ type V1EnvFromSource struct {
 
 	// The Secret to select from
 	// +optional
-	SecretRef struct {
-		V1SecretEnvSource
-	} `json:"secretRef,omitempty"`
+	SecretRef *V1SecretEnvSource `json:"secretRef,omitempty"`
 }
 
 // Validate validates this v1 env from source
@@ -56,12 +53,42 @@ func (m *V1EnvFromSource) validateConfigMapRef(formats strfmt.Registry) error {
 		return nil
 	}
 
+	if m.ConfigMapRef != nil {
+		if err := m.ConfigMapRef.Validate(formats); err != nil {
+			ve := new(errors.Validation)
+			if stderrors.As(err, &ve) {
+				return ve.ValidateName("configMapRef")
+			}
+			ce := new(errors.CompositeError)
+			if stderrors.As(err, &ce) {
+				return ce.ValidateName("configMapRef")
+			}
+
+			return err
+		}
+	}
+
 	return nil
 }
 
 func (m *V1EnvFromSource) validateSecretRef(formats strfmt.Registry) error {
 	if swag.IsZero(m.SecretRef) { // not required
 		return nil
+	}
+
+	if m.SecretRef != nil {
+		if err := m.SecretRef.Validate(formats); err != nil {
+			ve := new(errors.Validation)
+			if stderrors.As(err, &ve) {
+				return ve.ValidateName("secretRef")
+			}
+			ce := new(errors.CompositeError)
+			if stderrors.As(err, &ce) {
+				return ce.ValidateName("secretRef")
+			}
+
+			return err
+		}
 	}
 
 	return nil
@@ -87,10 +114,50 @@ func (m *V1EnvFromSource) ContextValidate(ctx context.Context, formats strfmt.Re
 
 func (m *V1EnvFromSource) contextValidateConfigMapRef(ctx context.Context, formats strfmt.Registry) error {
 
+	if m.ConfigMapRef != nil {
+
+		if swag.IsZero(m.ConfigMapRef) { // not required
+			return nil
+		}
+
+		if err := m.ConfigMapRef.ContextValidate(ctx, formats); err != nil {
+			ve := new(errors.Validation)
+			if stderrors.As(err, &ve) {
+				return ve.ValidateName("configMapRef")
+			}
+			ce := new(errors.CompositeError)
+			if stderrors.As(err, &ce) {
+				return ce.ValidateName("configMapRef")
+			}
+
+			return err
+		}
+	}
+
 	return nil
 }
 
 func (m *V1EnvFromSource) contextValidateSecretRef(ctx context.Context, formats strfmt.Registry) error {
+
+	if m.SecretRef != nil {
+
+		if swag.IsZero(m.SecretRef) { // not required
+			return nil
+		}
+
+		if err := m.SecretRef.ContextValidate(ctx, formats); err != nil {
+			ve := new(errors.Validation)
+			if stderrors.As(err, &ve) {
+				return ve.ValidateName("secretRef")
+			}
+			ce := new(errors.CompositeError)
+			if stderrors.As(err, &ce) {
+				return ce.ValidateName("secretRef")
+			}
+
+			return err
+		}
+	}
 
 	return nil
 }

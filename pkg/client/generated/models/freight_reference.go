@@ -36,9 +36,7 @@ type FreightReference struct {
 	Name string `json:"name,omitempty"`
 
 	// Origin describes a kind of Freight in terms of its origin.
-	Origin struct {
-		FreightOrigin
-	} `json:"origin,omitempty"`
+	Origin *FreightOrigin `json:"origin,omitempty"`
 }
 
 // Validate validates this freight reference
@@ -196,6 +194,21 @@ func (m *FreightReference) validateOrigin(formats strfmt.Registry) error {
 		return nil
 	}
 
+	if m.Origin != nil {
+		if err := m.Origin.Validate(formats); err != nil {
+			ve := new(errors.Validation)
+			if stderrors.As(err, &ve) {
+				return ve.ValidateName("origin")
+			}
+			ce := new(errors.CompositeError)
+			if stderrors.As(err, &ce) {
+				return ce.ValidateName("origin")
+			}
+
+			return err
+		}
+	}
+
 	return nil
 }
 
@@ -346,6 +359,26 @@ func (m *FreightReference) contextValidateImages(ctx context.Context, formats st
 }
 
 func (m *FreightReference) contextValidateOrigin(ctx context.Context, formats strfmt.Registry) error {
+
+	if m.Origin != nil {
+
+		if swag.IsZero(m.Origin) { // not required
+			return nil
+		}
+
+		if err := m.Origin.ContextValidate(ctx, formats); err != nil {
+			ve := new(errors.Validation)
+			if stderrors.As(err, &ve) {
+				return ve.ValidateName("origin")
+			}
+			ce := new(errors.CompositeError)
+			if stderrors.As(err, &ce) {
+				return ce.ValidateName("origin")
+			}
+
+			return err
+		}
+	}
 
 	return nil
 }

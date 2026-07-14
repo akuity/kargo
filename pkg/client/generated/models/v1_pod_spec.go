@@ -25,9 +25,7 @@ type V1PodSpec struct {
 
 	// If specified, the pod's scheduling constraints
 	// +optional
-	Affinity struct {
-		V1Affinity
-	} `json:"affinity,omitempty"`
+	Affinity *V1Affinity `json:"affinity,omitempty"`
 
 	// AutomountServiceAccountToken indicates whether a service account token should be automatically mounted.
 	// +optional
@@ -47,9 +45,7 @@ type V1PodSpec struct {
 	// Parameters specified here will be merged to the generated DNS
 	// configuration based on DNSPolicy.
 	// +optional
-	DNSConfig struct {
-		V1PodDNSConfig
-	} `json:"dnsConfig,omitempty"`
+	DNSConfig *V1PodDNSConfig `json:"dnsConfig,omitempty"`
 
 	// Set DNS policy for the pod.
 	// Defaults to "ClusterFirst".
@@ -217,9 +213,7 @@ type V1PodSpec struct {
 	// - spec.containers[*].securityContext.runAsUser
 	// - spec.containers[*].securityContext.runAsGroup
 	// +optional
-	Os struct {
-		V1PodOS
-	} `json:"os,omitempty"`
+	Os *V1PodOS `json:"os,omitempty"`
 
 	// Overhead represents the resource overhead associated with running a pod for a given RuntimeClass.
 	// This field will be autopopulated at admission time by the RuntimeClass admission controller. If
@@ -229,9 +223,7 @@ type V1PodSpec struct {
 	// defined in the corresponding RuntimeClass, otherwise it will remain unset and treated as zero.
 	// More info: https://git.k8s.io/enhancements/keps/sig-node/688-pod-overhead/README.md
 	// +optional
-	Overhead struct {
-		V1ResourceList
-	} `json:"overhead,omitempty"`
+	Overhead V1ResourceList `json:"overhead,omitempty"`
 
 	// PreemptionPolicy is the Policy for preempting pods with lower priority.
 	// One of Never, PreemptLowerPriority.
@@ -295,9 +287,7 @@ type V1PodSpec struct {
 	//
 	// +featureGate=PodLevelResources
 	// +optional
-	Resources struct {
-		V1ResourceRequirements
-	} `json:"resources,omitempty"`
+	Resources *V1ResourceRequirements `json:"resources,omitempty"`
 
 	// Restart policy for all containers within the pod.
 	// One of Always, OnFailure, Never. In some contexts, only a subset of those values may be permitted.
@@ -335,9 +325,7 @@ type V1PodSpec struct {
 	// SecurityContext holds pod-level security attributes and common container settings.
 	// Optional: Defaults to empty.  See type description for default values of each field.
 	// +optional
-	SecurityContext struct {
-		V1PodSecurityContext
-	} `json:"securityContext,omitempty"`
+	SecurityContext *V1PodSecurityContext `json:"securityContext,omitempty"`
 
 	// DeprecatedServiceAccount is a deprecated alias for ServiceAccountName.
 	// Deprecated: Use serviceAccountName instead.
@@ -492,6 +480,21 @@ func (m *V1PodSpec) validateAffinity(formats strfmt.Registry) error {
 		return nil
 	}
 
+	if m.Affinity != nil {
+		if err := m.Affinity.Validate(formats); err != nil {
+			ve := new(errors.Validation)
+			if stderrors.As(err, &ve) {
+				return ve.ValidateName("affinity")
+			}
+			ce := new(errors.CompositeError)
+			if stderrors.As(err, &ce) {
+				return ce.ValidateName("affinity")
+			}
+
+			return err
+		}
+	}
+
 	return nil
 }
 
@@ -528,6 +531,21 @@ func (m *V1PodSpec) validateContainers(formats strfmt.Registry) error {
 func (m *V1PodSpec) validateDNSConfig(formats strfmt.Registry) error {
 	if swag.IsZero(m.DNSConfig) { // not required
 		return nil
+	}
+
+	if m.DNSConfig != nil {
+		if err := m.DNSConfig.Validate(formats); err != nil {
+			ve := new(errors.Validation)
+			if stderrors.As(err, &ve) {
+				return ve.ValidateName("dnsConfig")
+			}
+			ce := new(errors.CompositeError)
+			if stderrors.As(err, &ce) {
+				return ce.ValidateName("dnsConfig")
+			}
+
+			return err
+		}
 	}
 
 	return nil
@@ -658,12 +676,42 @@ func (m *V1PodSpec) validateOs(formats strfmt.Registry) error {
 		return nil
 	}
 
+	if m.Os != nil {
+		if err := m.Os.Validate(formats); err != nil {
+			ve := new(errors.Validation)
+			if stderrors.As(err, &ve) {
+				return ve.ValidateName("os")
+			}
+			ce := new(errors.CompositeError)
+			if stderrors.As(err, &ce) {
+				return ce.ValidateName("os")
+			}
+
+			return err
+		}
+	}
+
 	return nil
 }
 
 func (m *V1PodSpec) validateOverhead(formats strfmt.Registry) error {
 	if swag.IsZero(m.Overhead) { // not required
 		return nil
+	}
+
+	if m.Overhead != nil {
+		if err := m.Overhead.Validate(formats); err != nil {
+			ve := new(errors.Validation)
+			if stderrors.As(err, &ve) {
+				return ve.ValidateName("overhead")
+			}
+			ce := new(errors.CompositeError)
+			if stderrors.As(err, &ce) {
+				return ce.ValidateName("overhead")
+			}
+
+			return err
+		}
 	}
 
 	return nil
@@ -734,6 +782,21 @@ func (m *V1PodSpec) validateResources(formats strfmt.Registry) error {
 		return nil
 	}
 
+	if m.Resources != nil {
+		if err := m.Resources.Validate(formats); err != nil {
+			ve := new(errors.Validation)
+			if stderrors.As(err, &ve) {
+				return ve.ValidateName("resources")
+			}
+			ce := new(errors.CompositeError)
+			if stderrors.As(err, &ce) {
+				return ce.ValidateName("resources")
+			}
+
+			return err
+		}
+	}
+
 	return nil
 }
 
@@ -770,6 +833,21 @@ func (m *V1PodSpec) validateSchedulingGates(formats strfmt.Registry) error {
 func (m *V1PodSpec) validateSecurityContext(formats strfmt.Registry) error {
 	if swag.IsZero(m.SecurityContext) { // not required
 		return nil
+	}
+
+	if m.SecurityContext != nil {
+		if err := m.SecurityContext.Validate(formats); err != nil {
+			ve := new(errors.Validation)
+			if stderrors.As(err, &ve) {
+				return ve.ValidateName("securityContext")
+			}
+			ce := new(errors.CompositeError)
+			if stderrors.As(err, &ce) {
+				return ce.ValidateName("securityContext")
+			}
+
+			return err
+		}
 	}
 
 	return nil
@@ -945,6 +1023,26 @@ func (m *V1PodSpec) ContextValidate(ctx context.Context, formats strfmt.Registry
 
 func (m *V1PodSpec) contextValidateAffinity(ctx context.Context, formats strfmt.Registry) error {
 
+	if m.Affinity != nil {
+
+		if swag.IsZero(m.Affinity) { // not required
+			return nil
+		}
+
+		if err := m.Affinity.ContextValidate(ctx, formats); err != nil {
+			ve := new(errors.Validation)
+			if stderrors.As(err, &ve) {
+				return ve.ValidateName("affinity")
+			}
+			ce := new(errors.CompositeError)
+			if stderrors.As(err, &ce) {
+				return ce.ValidateName("affinity")
+			}
+
+			return err
+		}
+	}
+
 	return nil
 }
 
@@ -978,6 +1076,26 @@ func (m *V1PodSpec) contextValidateContainers(ctx context.Context, formats strfm
 }
 
 func (m *V1PodSpec) contextValidateDNSConfig(ctx context.Context, formats strfmt.Registry) error {
+
+	if m.DNSConfig != nil {
+
+		if swag.IsZero(m.DNSConfig) { // not required
+			return nil
+		}
+
+		if err := m.DNSConfig.ContextValidate(ctx, formats); err != nil {
+			ve := new(errors.Validation)
+			if stderrors.As(err, &ve) {
+				return ve.ValidateName("dnsConfig")
+			}
+			ce := new(errors.CompositeError)
+			if stderrors.As(err, &ce) {
+				return ce.ValidateName("dnsConfig")
+			}
+
+			return err
+		}
+	}
 
 	return nil
 }
@@ -1100,10 +1218,47 @@ func (m *V1PodSpec) contextValidateInitContainers(ctx context.Context, formats s
 
 func (m *V1PodSpec) contextValidateOs(ctx context.Context, formats strfmt.Registry) error {
 
+	if m.Os != nil {
+
+		if swag.IsZero(m.Os) { // not required
+			return nil
+		}
+
+		if err := m.Os.ContextValidate(ctx, formats); err != nil {
+			ve := new(errors.Validation)
+			if stderrors.As(err, &ve) {
+				return ve.ValidateName("os")
+			}
+			ce := new(errors.CompositeError)
+			if stderrors.As(err, &ce) {
+				return ce.ValidateName("os")
+			}
+
+			return err
+		}
+	}
+
 	return nil
 }
 
 func (m *V1PodSpec) contextValidateOverhead(ctx context.Context, formats strfmt.Registry) error {
+
+	if swag.IsZero(m.Overhead) { // not required
+		return nil
+	}
+
+	if err := m.Overhead.ContextValidate(ctx, formats); err != nil {
+		ve := new(errors.Validation)
+		if stderrors.As(err, &ve) {
+			return ve.ValidateName("overhead")
+		}
+		ce := new(errors.CompositeError)
+		if stderrors.As(err, &ce) {
+			return ce.ValidateName("overhead")
+		}
+
+		return err
+	}
 
 	return nil
 }
@@ -1168,6 +1323,26 @@ func (m *V1PodSpec) contextValidateResourceClaims(ctx context.Context, formats s
 
 func (m *V1PodSpec) contextValidateResources(ctx context.Context, formats strfmt.Registry) error {
 
+	if m.Resources != nil {
+
+		if swag.IsZero(m.Resources) { // not required
+			return nil
+		}
+
+		if err := m.Resources.ContextValidate(ctx, formats); err != nil {
+			ve := new(errors.Validation)
+			if stderrors.As(err, &ve) {
+				return ve.ValidateName("resources")
+			}
+			ce := new(errors.CompositeError)
+			if stderrors.As(err, &ce) {
+				return ce.ValidateName("resources")
+			}
+
+			return err
+		}
+	}
+
 	return nil
 }
 
@@ -1201,6 +1376,26 @@ func (m *V1PodSpec) contextValidateSchedulingGates(ctx context.Context, formats 
 }
 
 func (m *V1PodSpec) contextValidateSecurityContext(ctx context.Context, formats strfmt.Registry) error {
+
+	if m.SecurityContext != nil {
+
+		if swag.IsZero(m.SecurityContext) { // not required
+			return nil
+		}
+
+		if err := m.SecurityContext.ContextValidate(ctx, formats); err != nil {
+			ve := new(errors.Validation)
+			if stderrors.As(err, &ve) {
+				return ve.ValidateName("securityContext")
+			}
+			ce := new(errors.CompositeError)
+			if stderrors.As(err, &ce) {
+				return ce.ValidateName("securityContext")
+			}
+
+			return err
+		}
+	}
 
 	return nil
 }

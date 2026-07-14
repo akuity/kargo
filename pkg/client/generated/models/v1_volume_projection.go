@@ -4,6 +4,7 @@ package models
 
 import (
 	"context"
+	stderrors "errors"
 
 	"github.com/go-openapi/errors"
 	"github.com/go-openapi/strfmt"
@@ -31,21 +32,15 @@ type V1VolumeProjection struct {
 	//
 	// +featureGate=ClusterTrustBundleProjection
 	// +optional
-	ClusterTrustBundle struct {
-		V1ClusterTrustBundleProjection
-	} `json:"clusterTrustBundle,omitempty"`
+	ClusterTrustBundle *V1ClusterTrustBundleProjection `json:"clusterTrustBundle,omitempty"`
 
 	// configMap information about the configMap data to project
 	// +optional
-	ConfigMap struct {
-		V1ConfigMapProjection
-	} `json:"configMap,omitempty"`
+	ConfigMap *V1ConfigMapProjection `json:"configMap,omitempty"`
 
 	// downwardAPI information about the downwardAPI data to project
 	// +optional
-	DownwardAPI struct {
-		V1DownwardAPIProjection
-	} `json:"downwardAPI,omitempty"`
+	DownwardAPI *V1DownwardAPIProjection `json:"downwardAPI,omitempty"`
 
 	// Projects an auto-rotating credential bundle (private key and certificate
 	// chain) that the pod can use either as a TLS client or server.
@@ -83,21 +78,15 @@ type V1VolumeProjection struct {
 	// use the certificates it issues.
 	//
 	// +featureGate=PodCertificateProjection +optional
-	PodCertificate struct {
-		V1PodCertificateProjection
-	} `json:"podCertificate,omitempty"`
+	PodCertificate *V1PodCertificateProjection `json:"podCertificate,omitempty"`
 
 	// secret information about the secret data to project
 	// +optional
-	Secret struct {
-		V1SecretProjection
-	} `json:"secret,omitempty"`
+	Secret *V1SecretProjection `json:"secret,omitempty"`
 
 	// serviceAccountToken is information about the serviceAccountToken data to project
 	// +optional
-	ServiceAccountToken struct {
-		V1ServiceAccountTokenProjection
-	} `json:"serviceAccountToken,omitempty"`
+	ServiceAccountToken *V1ServiceAccountTokenProjection `json:"serviceAccountToken,omitempty"`
 }
 
 // Validate validates this v1 volume projection
@@ -139,12 +128,42 @@ func (m *V1VolumeProjection) validateClusterTrustBundle(formats strfmt.Registry)
 		return nil
 	}
 
+	if m.ClusterTrustBundle != nil {
+		if err := m.ClusterTrustBundle.Validate(formats); err != nil {
+			ve := new(errors.Validation)
+			if stderrors.As(err, &ve) {
+				return ve.ValidateName("clusterTrustBundle")
+			}
+			ce := new(errors.CompositeError)
+			if stderrors.As(err, &ce) {
+				return ce.ValidateName("clusterTrustBundle")
+			}
+
+			return err
+		}
+	}
+
 	return nil
 }
 
 func (m *V1VolumeProjection) validateConfigMap(formats strfmt.Registry) error {
 	if swag.IsZero(m.ConfigMap) { // not required
 		return nil
+	}
+
+	if m.ConfigMap != nil {
+		if err := m.ConfigMap.Validate(formats); err != nil {
+			ve := new(errors.Validation)
+			if stderrors.As(err, &ve) {
+				return ve.ValidateName("configMap")
+			}
+			ce := new(errors.CompositeError)
+			if stderrors.As(err, &ce) {
+				return ce.ValidateName("configMap")
+			}
+
+			return err
+		}
 	}
 
 	return nil
@@ -155,12 +174,42 @@ func (m *V1VolumeProjection) validateDownwardAPI(formats strfmt.Registry) error 
 		return nil
 	}
 
+	if m.DownwardAPI != nil {
+		if err := m.DownwardAPI.Validate(formats); err != nil {
+			ve := new(errors.Validation)
+			if stderrors.As(err, &ve) {
+				return ve.ValidateName("downwardAPI")
+			}
+			ce := new(errors.CompositeError)
+			if stderrors.As(err, &ce) {
+				return ce.ValidateName("downwardAPI")
+			}
+
+			return err
+		}
+	}
+
 	return nil
 }
 
 func (m *V1VolumeProjection) validatePodCertificate(formats strfmt.Registry) error {
 	if swag.IsZero(m.PodCertificate) { // not required
 		return nil
+	}
+
+	if m.PodCertificate != nil {
+		if err := m.PodCertificate.Validate(formats); err != nil {
+			ve := new(errors.Validation)
+			if stderrors.As(err, &ve) {
+				return ve.ValidateName("podCertificate")
+			}
+			ce := new(errors.CompositeError)
+			if stderrors.As(err, &ce) {
+				return ce.ValidateName("podCertificate")
+			}
+
+			return err
+		}
 	}
 
 	return nil
@@ -171,12 +220,42 @@ func (m *V1VolumeProjection) validateSecret(formats strfmt.Registry) error {
 		return nil
 	}
 
+	if m.Secret != nil {
+		if err := m.Secret.Validate(formats); err != nil {
+			ve := new(errors.Validation)
+			if stderrors.As(err, &ve) {
+				return ve.ValidateName("secret")
+			}
+			ce := new(errors.CompositeError)
+			if stderrors.As(err, &ce) {
+				return ce.ValidateName("secret")
+			}
+
+			return err
+		}
+	}
+
 	return nil
 }
 
 func (m *V1VolumeProjection) validateServiceAccountToken(formats strfmt.Registry) error {
 	if swag.IsZero(m.ServiceAccountToken) { // not required
 		return nil
+	}
+
+	if m.ServiceAccountToken != nil {
+		if err := m.ServiceAccountToken.Validate(formats); err != nil {
+			ve := new(errors.Validation)
+			if stderrors.As(err, &ve) {
+				return ve.ValidateName("serviceAccountToken")
+			}
+			ce := new(errors.CompositeError)
+			if stderrors.As(err, &ce) {
+				return ce.ValidateName("serviceAccountToken")
+			}
+
+			return err
+		}
 	}
 
 	return nil
@@ -218,30 +297,150 @@ func (m *V1VolumeProjection) ContextValidate(ctx context.Context, formats strfmt
 
 func (m *V1VolumeProjection) contextValidateClusterTrustBundle(ctx context.Context, formats strfmt.Registry) error {
 
+	if m.ClusterTrustBundle != nil {
+
+		if swag.IsZero(m.ClusterTrustBundle) { // not required
+			return nil
+		}
+
+		if err := m.ClusterTrustBundle.ContextValidate(ctx, formats); err != nil {
+			ve := new(errors.Validation)
+			if stderrors.As(err, &ve) {
+				return ve.ValidateName("clusterTrustBundle")
+			}
+			ce := new(errors.CompositeError)
+			if stderrors.As(err, &ce) {
+				return ce.ValidateName("clusterTrustBundle")
+			}
+
+			return err
+		}
+	}
+
 	return nil
 }
 
 func (m *V1VolumeProjection) contextValidateConfigMap(ctx context.Context, formats strfmt.Registry) error {
+
+	if m.ConfigMap != nil {
+
+		if swag.IsZero(m.ConfigMap) { // not required
+			return nil
+		}
+
+		if err := m.ConfigMap.ContextValidate(ctx, formats); err != nil {
+			ve := new(errors.Validation)
+			if stderrors.As(err, &ve) {
+				return ve.ValidateName("configMap")
+			}
+			ce := new(errors.CompositeError)
+			if stderrors.As(err, &ce) {
+				return ce.ValidateName("configMap")
+			}
+
+			return err
+		}
+	}
 
 	return nil
 }
 
 func (m *V1VolumeProjection) contextValidateDownwardAPI(ctx context.Context, formats strfmt.Registry) error {
 
+	if m.DownwardAPI != nil {
+
+		if swag.IsZero(m.DownwardAPI) { // not required
+			return nil
+		}
+
+		if err := m.DownwardAPI.ContextValidate(ctx, formats); err != nil {
+			ve := new(errors.Validation)
+			if stderrors.As(err, &ve) {
+				return ve.ValidateName("downwardAPI")
+			}
+			ce := new(errors.CompositeError)
+			if stderrors.As(err, &ce) {
+				return ce.ValidateName("downwardAPI")
+			}
+
+			return err
+		}
+	}
+
 	return nil
 }
 
 func (m *V1VolumeProjection) contextValidatePodCertificate(ctx context.Context, formats strfmt.Registry) error {
+
+	if m.PodCertificate != nil {
+
+		if swag.IsZero(m.PodCertificate) { // not required
+			return nil
+		}
+
+		if err := m.PodCertificate.ContextValidate(ctx, formats); err != nil {
+			ve := new(errors.Validation)
+			if stderrors.As(err, &ve) {
+				return ve.ValidateName("podCertificate")
+			}
+			ce := new(errors.CompositeError)
+			if stderrors.As(err, &ce) {
+				return ce.ValidateName("podCertificate")
+			}
+
+			return err
+		}
+	}
 
 	return nil
 }
 
 func (m *V1VolumeProjection) contextValidateSecret(ctx context.Context, formats strfmt.Registry) error {
 
+	if m.Secret != nil {
+
+		if swag.IsZero(m.Secret) { // not required
+			return nil
+		}
+
+		if err := m.Secret.ContextValidate(ctx, formats); err != nil {
+			ve := new(errors.Validation)
+			if stderrors.As(err, &ve) {
+				return ve.ValidateName("secret")
+			}
+			ce := new(errors.CompositeError)
+			if stderrors.As(err, &ce) {
+				return ce.ValidateName("secret")
+			}
+
+			return err
+		}
+	}
+
 	return nil
 }
 
 func (m *V1VolumeProjection) contextValidateServiceAccountToken(ctx context.Context, formats strfmt.Registry) error {
+
+	if m.ServiceAccountToken != nil {
+
+		if swag.IsZero(m.ServiceAccountToken) { // not required
+			return nil
+		}
+
+		if err := m.ServiceAccountToken.ContextValidate(ctx, formats); err != nil {
+			ve := new(errors.Validation)
+			if stderrors.As(err, &ve) {
+				return ve.ValidateName("serviceAccountToken")
+			}
+			ce := new(errors.CompositeError)
+			if stderrors.As(err, &ce) {
+				return ce.ValidateName("serviceAccountToken")
+			}
+
+			return err
+		}
+	}
 
 	return nil
 }

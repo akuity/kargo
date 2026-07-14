@@ -4,6 +4,7 @@ package models
 
 import (
 	"context"
+	stderrors "errors"
 
 	"github.com/go-openapi/errors"
 	"github.com/go-openapi/strfmt"
@@ -26,9 +27,7 @@ type FreightRequest struct {
 
 	// Sources describes where the requested Freight may be obtained from. This is
 	// a required field.
-	Sources struct {
-		FreightSources
-	} `json:"sources,omitempty"`
+	Sources *FreightSources `json:"sources,omitempty"`
 }
 
 // Validate validates this freight request
@@ -59,6 +58,21 @@ func (m *FreightRequest) validateSources(formats strfmt.Registry) error {
 		return nil
 	}
 
+	if m.Sources != nil {
+		if err := m.Sources.Validate(formats); err != nil {
+			ve := new(errors.Validation)
+			if stderrors.As(err, &ve) {
+				return ve.ValidateName("sources")
+			}
+			ce := new(errors.CompositeError)
+			if stderrors.As(err, &ce) {
+				return ce.ValidateName("sources")
+			}
+
+			return err
+		}
+	}
+
 	return nil
 }
 
@@ -86,6 +100,26 @@ func (m *FreightRequest) contextValidateOrigin(ctx context.Context, formats strf
 }
 
 func (m *FreightRequest) contextValidateSources(ctx context.Context, formats strfmt.Registry) error {
+
+	if m.Sources != nil {
+
+		if swag.IsZero(m.Sources) { // not required
+			return nil
+		}
+
+		if err := m.Sources.ContextValidate(ctx, formats); err != nil {
+			ve := new(errors.Validation)
+			if stderrors.As(err, &ve) {
+				return ve.ValidateName("sources")
+			}
+			ce := new(errors.CompositeError)
+			if stderrors.As(err, &ce) {
+				return ce.ValidateName("sources")
+			}
+
+			return err
+		}
+	}
 
 	return nil
 }

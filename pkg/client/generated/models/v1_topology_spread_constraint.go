@@ -4,6 +4,7 @@ package models
 
 import (
 	"context"
+	stderrors "errors"
 
 	"github.com/go-openapi/errors"
 	"github.com/go-openapi/strfmt"
@@ -19,9 +20,7 @@ type V1TopologySpreadConstraint struct {
 	// Pods that match this label selector are counted to determine the number of pods
 	// in their corresponding topology domain.
 	// +optional
-	LabelSelector struct {
-		V1LabelSelector
-	} `json:"labelSelector,omitempty"`
+	LabelSelector *V1LabelSelector `json:"labelSelector,omitempty"`
 
 	// MatchLabelKeys is a set of pod label keys to select the pods over which
 	// spreading will be calculated. The keys are used to lookup values from the
@@ -158,6 +157,21 @@ func (m *V1TopologySpreadConstraint) validateLabelSelector(formats strfmt.Regist
 		return nil
 	}
 
+	if m.LabelSelector != nil {
+		if err := m.LabelSelector.Validate(formats); err != nil {
+			ve := new(errors.Validation)
+			if stderrors.As(err, &ve) {
+				return ve.ValidateName("labelSelector")
+			}
+			ce := new(errors.CompositeError)
+			if stderrors.As(err, &ce) {
+				return ce.ValidateName("labelSelector")
+			}
+
+			return err
+		}
+	}
+
 	return nil
 }
 
@@ -176,6 +190,26 @@ func (m *V1TopologySpreadConstraint) ContextValidate(ctx context.Context, format
 }
 
 func (m *V1TopologySpreadConstraint) contextValidateLabelSelector(ctx context.Context, formats strfmt.Registry) error {
+
+	if m.LabelSelector != nil {
+
+		if swag.IsZero(m.LabelSelector) { // not required
+			return nil
+		}
+
+		if err := m.LabelSelector.ContextValidate(ctx, formats); err != nil {
+			ve := new(errors.Validation)
+			if stderrors.As(err, &ve) {
+				return ve.ValidateName("labelSelector")
+			}
+			ce := new(errors.CompositeError)
+			if stderrors.As(err, &ce) {
+				return ce.ValidateName("labelSelector")
+			}
+
+			return err
+		}
+	}
 
 	return nil
 }

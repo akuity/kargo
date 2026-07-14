@@ -4,6 +4,7 @@ package models
 
 import (
 	"context"
+	stderrors "errors"
 
 	"github.com/go-openapi/errors"
 	"github.com/go-openapi/strfmt"
@@ -31,9 +32,7 @@ type V1CSIVolumeSource struct {
 	// This field is optional, and  may be empty if no secret is required. If the
 	// secret object contains more than one secret, all secret references are passed.
 	// +optional
-	NodePublishSecretRef struct {
-		V1LocalObjectReference
-	} `json:"nodePublishSecretRef,omitempty"`
+	NodePublishSecretRef *V1LocalObjectReference `json:"nodePublishSecretRef,omitempty"`
 
 	// readOnly specifies a read-only configuration for the volume.
 	// Defaults to false (read/write).
@@ -65,6 +64,21 @@ func (m *V1CSIVolumeSource) validateNodePublishSecretRef(formats strfmt.Registry
 		return nil
 	}
 
+	if m.NodePublishSecretRef != nil {
+		if err := m.NodePublishSecretRef.Validate(formats); err != nil {
+			ve := new(errors.Validation)
+			if stderrors.As(err, &ve) {
+				return ve.ValidateName("nodePublishSecretRef")
+			}
+			ce := new(errors.CompositeError)
+			if stderrors.As(err, &ce) {
+				return ce.ValidateName("nodePublishSecretRef")
+			}
+
+			return err
+		}
+	}
+
 	return nil
 }
 
@@ -83,6 +97,26 @@ func (m *V1CSIVolumeSource) ContextValidate(ctx context.Context, formats strfmt.
 }
 
 func (m *V1CSIVolumeSource) contextValidateNodePublishSecretRef(ctx context.Context, formats strfmt.Registry) error {
+
+	if m.NodePublishSecretRef != nil {
+
+		if swag.IsZero(m.NodePublishSecretRef) { // not required
+			return nil
+		}
+
+		if err := m.NodePublishSecretRef.ContextValidate(ctx, formats); err != nil {
+			ve := new(errors.Validation)
+			if stderrors.As(err, &ve) {
+				return ve.ValidateName("nodePublishSecretRef")
+			}
+			ce := new(errors.CompositeError)
+			if stderrors.As(err, &ce) {
+				return ce.ValidateName("nodePublishSecretRef")
+			}
+
+			return err
+		}
+	}
 
 	return nil
 }

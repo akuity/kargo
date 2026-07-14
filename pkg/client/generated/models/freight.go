@@ -74,9 +74,7 @@ type Freight struct {
 	} `json:"origin"`
 
 	// Status describes the current status of this Freight.
-	Status struct {
-		FreightStatus
-	} `json:"status,omitempty"`
+	Status *FreightStatus `json:"status,omitempty"`
 }
 
 // Validate validates this freight
@@ -270,6 +268,21 @@ func (m *Freight) validateStatus(formats strfmt.Registry) error {
 		return nil
 	}
 
+	if m.Status != nil {
+		if err := m.Status.Validate(formats); err != nil {
+			ve := new(errors.Validation)
+			if stderrors.As(err, &ve) {
+				return ve.ValidateName("status")
+			}
+			ce := new(errors.CompositeError)
+			if stderrors.As(err, &ce) {
+				return ce.ValidateName("status")
+			}
+
+			return err
+		}
+	}
+
 	return nil
 }
 
@@ -458,6 +471,26 @@ func (m *Freight) contextValidateOrigin(ctx context.Context, formats strfmt.Regi
 }
 
 func (m *Freight) contextValidateStatus(ctx context.Context, formats strfmt.Registry) error {
+
+	if m.Status != nil {
+
+		if swag.IsZero(m.Status) { // not required
+			return nil
+		}
+
+		if err := m.Status.ContextValidate(ctx, formats); err != nil {
+			ve := new(errors.Validation)
+			if stderrors.As(err, &ve) {
+				return ve.ValidateName("status")
+			}
+			ce := new(errors.CompositeError)
+			if stderrors.As(err, &ce) {
+				return ce.ValidateName("status")
+			}
+
+			return err
+		}
+	}
 
 	return nil
 }

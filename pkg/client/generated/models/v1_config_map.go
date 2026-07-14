@@ -4,6 +4,7 @@ package models
 
 import (
 	"context"
+	stderrors "errors"
 
 	"github.com/go-openapi/errors"
 	"github.com/go-openapi/strfmt"
@@ -58,9 +59,7 @@ type V1ConfigMap struct {
 	// Standard object's metadata.
 	// More info: https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#metadata
 	// +optional
-	Metadata struct {
-		V1ObjectMeta
-	} `json:"metadata,omitempty"`
+	Metadata *V1ObjectMeta `json:"metadata,omitempty"`
 }
 
 // Validate validates this v1 config map
@@ -82,6 +81,21 @@ func (m *V1ConfigMap) validateMetadata(formats strfmt.Registry) error {
 		return nil
 	}
 
+	if m.Metadata != nil {
+		if err := m.Metadata.Validate(formats); err != nil {
+			ve := new(errors.Validation)
+			if stderrors.As(err, &ve) {
+				return ve.ValidateName("metadata")
+			}
+			ce := new(errors.CompositeError)
+			if stderrors.As(err, &ce) {
+				return ce.ValidateName("metadata")
+			}
+
+			return err
+		}
+	}
+
 	return nil
 }
 
@@ -100,6 +114,26 @@ func (m *V1ConfigMap) ContextValidate(ctx context.Context, formats strfmt.Regist
 }
 
 func (m *V1ConfigMap) contextValidateMetadata(ctx context.Context, formats strfmt.Registry) error {
+
+	if m.Metadata != nil {
+
+		if swag.IsZero(m.Metadata) { // not required
+			return nil
+		}
+
+		if err := m.Metadata.ContextValidate(ctx, formats); err != nil {
+			ve := new(errors.Validation)
+			if stderrors.As(err, &ve) {
+				return ve.ValidateName("metadata")
+			}
+			ce := new(errors.CompositeError)
+			if stderrors.As(err, &ce) {
+				return ce.ValidateName("metadata")
+			}
+
+			return err
+		}
+	}
 
 	return nil
 }

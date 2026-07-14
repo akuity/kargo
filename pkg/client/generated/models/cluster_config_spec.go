@@ -29,9 +29,7 @@ type ClusterConfigSpec struct {
 	// values take precedence over any configuration provided at install time
 	// via the Helm chart.
 	// +optional
-	GitClient struct {
-		GitClientConfig
-	} `json:"gitClient,omitempty"`
+	GitClient *GitClientConfig `json:"gitClient,omitempty"`
 
 	// StageLinks defines deep links shown when viewing any Stage resource
 	// across all projects in the cluster. Project-level StageLinks defined in
@@ -104,6 +102,21 @@ func (m *ClusterConfigSpec) validateFreightLinks(formats strfmt.Registry) error 
 func (m *ClusterConfigSpec) validateGitClient(formats strfmt.Registry) error {
 	if swag.IsZero(m.GitClient) { // not required
 		return nil
+	}
+
+	if m.GitClient != nil {
+		if err := m.GitClient.Validate(formats); err != nil {
+			ve := new(errors.Validation)
+			if stderrors.As(err, &ve) {
+				return ve.ValidateName("gitClient")
+			}
+			ce := new(errors.CompositeError)
+			if stderrors.As(err, &ce) {
+				return ce.ValidateName("gitClient")
+			}
+
+			return err
+		}
 	}
 
 	return nil
@@ -225,6 +238,26 @@ func (m *ClusterConfigSpec) contextValidateFreightLinks(ctx context.Context, for
 }
 
 func (m *ClusterConfigSpec) contextValidateGitClient(ctx context.Context, formats strfmt.Registry) error {
+
+	if m.GitClient != nil {
+
+		if swag.IsZero(m.GitClient) { // not required
+			return nil
+		}
+
+		if err := m.GitClient.ContextValidate(ctx, formats); err != nil {
+			ve := new(errors.Validation)
+			if stderrors.As(err, &ve) {
+				return ve.ValidateName("gitClient")
+			}
+			ce := new(errors.CompositeError)
+			if stderrors.As(err, &ce) {
+				return ce.ValidateName("gitClient")
+			}
+
+			return err
+		}
+	}
 
 	return nil
 }

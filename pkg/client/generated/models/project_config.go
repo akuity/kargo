@@ -35,14 +35,10 @@ type ProjectConfig struct {
 	Metadata *V1ObjectMeta `json:"metadata,omitempty"`
 
 	// Spec describes the configuration of a Project.
-	Spec struct {
-		ProjectConfigSpec
-	} `json:"spec,omitempty"`
+	Spec *ProjectConfigSpec `json:"spec,omitempty"`
 
 	// Status describes the current status of a ProjectConfig.
-	Status struct {
-		ProjectConfigStatus
-	} `json:"status,omitempty"`
+	Status *ProjectConfigStatus `json:"status,omitempty"`
 }
 
 // Validate validates this project config
@@ -95,12 +91,42 @@ func (m *ProjectConfig) validateSpec(formats strfmt.Registry) error {
 		return nil
 	}
 
+	if m.Spec != nil {
+		if err := m.Spec.Validate(formats); err != nil {
+			ve := new(errors.Validation)
+			if stderrors.As(err, &ve) {
+				return ve.ValidateName("spec")
+			}
+			ce := new(errors.CompositeError)
+			if stderrors.As(err, &ce) {
+				return ce.ValidateName("spec")
+			}
+
+			return err
+		}
+	}
+
 	return nil
 }
 
 func (m *ProjectConfig) validateStatus(formats strfmt.Registry) error {
 	if swag.IsZero(m.Status) { // not required
 		return nil
+	}
+
+	if m.Status != nil {
+		if err := m.Status.Validate(formats); err != nil {
+			ve := new(errors.Validation)
+			if stderrors.As(err, &ve) {
+				return ve.ValidateName("status")
+			}
+			ce := new(errors.CompositeError)
+			if stderrors.As(err, &ce) {
+				return ce.ValidateName("status")
+			}
+
+			return err
+		}
 	}
 
 	return nil
@@ -155,10 +181,50 @@ func (m *ProjectConfig) contextValidateMetadata(ctx context.Context, formats str
 
 func (m *ProjectConfig) contextValidateSpec(ctx context.Context, formats strfmt.Registry) error {
 
+	if m.Spec != nil {
+
+		if swag.IsZero(m.Spec) { // not required
+			return nil
+		}
+
+		if err := m.Spec.ContextValidate(ctx, formats); err != nil {
+			ve := new(errors.Validation)
+			if stderrors.As(err, &ve) {
+				return ve.ValidateName("spec")
+			}
+			ce := new(errors.CompositeError)
+			if stderrors.As(err, &ce) {
+				return ce.ValidateName("spec")
+			}
+
+			return err
+		}
+	}
+
 	return nil
 }
 
 func (m *ProjectConfig) contextValidateStatus(ctx context.Context, formats strfmt.Registry) error {
+
+	if m.Status != nil {
+
+		if swag.IsZero(m.Status) { // not required
+			return nil
+		}
+
+		if err := m.Status.ContextValidate(ctx, formats); err != nil {
+			ve := new(errors.Validation)
+			if stderrors.As(err, &ve) {
+				return ve.ValidateName("status")
+			}
+			ce := new(errors.CompositeError)
+			if stderrors.As(err, &ce) {
+				return ce.ValidateName("status")
+			}
+
+			return err
+		}
+	}
 
 	return nil
 }

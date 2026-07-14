@@ -4,6 +4,7 @@ package models
 
 import (
 	"context"
+	stderrors "errors"
 
 	"github.com/go-openapi/errors"
 	"github.com/go-openapi/strfmt"
@@ -17,9 +18,7 @@ type V1Probe struct {
 
 	// Exec specifies a command to execute in the container.
 	// +optional
-	Exec struct {
-		V1ExecAction
-	} `json:"exec,omitempty"`
+	Exec *V1ExecAction `json:"exec,omitempty"`
 
 	// Minimum consecutive failures for the probe to be considered failed after having succeeded.
 	// Defaults to 3. Minimum value is 1.
@@ -28,15 +27,11 @@ type V1Probe struct {
 
 	// GRPC specifies a GRPC HealthCheckRequest.
 	// +optional
-	Grpc struct {
-		V1GRPCAction
-	} `json:"grpc,omitempty"`
+	Grpc *V1GRPCAction `json:"grpc,omitempty"`
 
 	// HTTPGet specifies an HTTP GET request to perform.
 	// +optional
-	HTTPGet struct {
-		V1HTTPGetAction
-	} `json:"httpGet,omitempty"`
+	HTTPGet *V1HTTPGetAction `json:"httpGet,omitempty"`
 
 	// Number of seconds after the container has started before liveness probes are initiated.
 	// More info: https://kubernetes.io/docs/concepts/workloads/pods/pod-lifecycle#container-probes
@@ -55,9 +50,7 @@ type V1Probe struct {
 
 	// TCPSocket specifies a connection to a TCP port.
 	// +optional
-	TCPSocket struct {
-		V1TCPSocketAction
-	} `json:"tcpSocket,omitempty"`
+	TCPSocket *V1TCPSocketAction `json:"tcpSocket,omitempty"`
 
 	// Optional duration in seconds the pod needs to terminate gracefully upon probe failure.
 	// The grace period is the duration in seconds after the processes running in the pod are sent
@@ -110,12 +103,42 @@ func (m *V1Probe) validateExec(formats strfmt.Registry) error {
 		return nil
 	}
 
+	if m.Exec != nil {
+		if err := m.Exec.Validate(formats); err != nil {
+			ve := new(errors.Validation)
+			if stderrors.As(err, &ve) {
+				return ve.ValidateName("exec")
+			}
+			ce := new(errors.CompositeError)
+			if stderrors.As(err, &ce) {
+				return ce.ValidateName("exec")
+			}
+
+			return err
+		}
+	}
+
 	return nil
 }
 
 func (m *V1Probe) validateGrpc(formats strfmt.Registry) error {
 	if swag.IsZero(m.Grpc) { // not required
 		return nil
+	}
+
+	if m.Grpc != nil {
+		if err := m.Grpc.Validate(formats); err != nil {
+			ve := new(errors.Validation)
+			if stderrors.As(err, &ve) {
+				return ve.ValidateName("grpc")
+			}
+			ce := new(errors.CompositeError)
+			if stderrors.As(err, &ce) {
+				return ce.ValidateName("grpc")
+			}
+
+			return err
+		}
 	}
 
 	return nil
@@ -126,12 +149,42 @@ func (m *V1Probe) validateHTTPGet(formats strfmt.Registry) error {
 		return nil
 	}
 
+	if m.HTTPGet != nil {
+		if err := m.HTTPGet.Validate(formats); err != nil {
+			ve := new(errors.Validation)
+			if stderrors.As(err, &ve) {
+				return ve.ValidateName("httpGet")
+			}
+			ce := new(errors.CompositeError)
+			if stderrors.As(err, &ce) {
+				return ce.ValidateName("httpGet")
+			}
+
+			return err
+		}
+	}
+
 	return nil
 }
 
 func (m *V1Probe) validateTCPSocket(formats strfmt.Registry) error {
 	if swag.IsZero(m.TCPSocket) { // not required
 		return nil
+	}
+
+	if m.TCPSocket != nil {
+		if err := m.TCPSocket.Validate(formats); err != nil {
+			ve := new(errors.Validation)
+			if stderrors.As(err, &ve) {
+				return ve.ValidateName("tcpSocket")
+			}
+			ce := new(errors.CompositeError)
+			if stderrors.As(err, &ce) {
+				return ce.ValidateName("tcpSocket")
+			}
+
+			return err
+		}
 	}
 
 	return nil
@@ -165,20 +218,100 @@ func (m *V1Probe) ContextValidate(ctx context.Context, formats strfmt.Registry) 
 
 func (m *V1Probe) contextValidateExec(ctx context.Context, formats strfmt.Registry) error {
 
+	if m.Exec != nil {
+
+		if swag.IsZero(m.Exec) { // not required
+			return nil
+		}
+
+		if err := m.Exec.ContextValidate(ctx, formats); err != nil {
+			ve := new(errors.Validation)
+			if stderrors.As(err, &ve) {
+				return ve.ValidateName("exec")
+			}
+			ce := new(errors.CompositeError)
+			if stderrors.As(err, &ce) {
+				return ce.ValidateName("exec")
+			}
+
+			return err
+		}
+	}
+
 	return nil
 }
 
 func (m *V1Probe) contextValidateGrpc(ctx context.Context, formats strfmt.Registry) error {
+
+	if m.Grpc != nil {
+
+		if swag.IsZero(m.Grpc) { // not required
+			return nil
+		}
+
+		if err := m.Grpc.ContextValidate(ctx, formats); err != nil {
+			ve := new(errors.Validation)
+			if stderrors.As(err, &ve) {
+				return ve.ValidateName("grpc")
+			}
+			ce := new(errors.CompositeError)
+			if stderrors.As(err, &ce) {
+				return ce.ValidateName("grpc")
+			}
+
+			return err
+		}
+	}
 
 	return nil
 }
 
 func (m *V1Probe) contextValidateHTTPGet(ctx context.Context, formats strfmt.Registry) error {
 
+	if m.HTTPGet != nil {
+
+		if swag.IsZero(m.HTTPGet) { // not required
+			return nil
+		}
+
+		if err := m.HTTPGet.ContextValidate(ctx, formats); err != nil {
+			ve := new(errors.Validation)
+			if stderrors.As(err, &ve) {
+				return ve.ValidateName("httpGet")
+			}
+			ce := new(errors.CompositeError)
+			if stderrors.As(err, &ce) {
+				return ce.ValidateName("httpGet")
+			}
+
+			return err
+		}
+	}
+
 	return nil
 }
 
 func (m *V1Probe) contextValidateTCPSocket(ctx context.Context, formats strfmt.Registry) error {
+
+	if m.TCPSocket != nil {
+
+		if swag.IsZero(m.TCPSocket) { // not required
+			return nil
+		}
+
+		if err := m.TCPSocket.ContextValidate(ctx, formats); err != nil {
+			ve := new(errors.Validation)
+			if stderrors.As(err, &ve) {
+				return ve.ValidateName("tcpSocket")
+			}
+			ce := new(errors.CompositeError)
+			if stderrors.As(err, &ce) {
+				return ce.ValidateName("tcpSocket")
+			}
+
+			return err
+		}
+	}
 
 	return nil
 }

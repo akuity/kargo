@@ -30,15 +30,11 @@ type V1PodFailurePolicyRule struct {
 	//   counter towards the .backoffLimit is incremented.
 	// Additional values are considered to be added in the future. Clients should
 	// react to an unknown action by skipping the rule.
-	Action struct {
-		V1PodFailurePolicyAction
-	} `json:"action,omitempty"`
+	Action V1PodFailurePolicyAction `json:"action,omitempty"`
 
 	// Represents the requirement on the container exit codes.
 	// +optional
-	OnExitCodes struct {
-		V1PodFailurePolicyOnExitCodesRequirement
-	} `json:"onExitCodes,omitempty"`
+	OnExitCodes *V1PodFailurePolicyOnExitCodesRequirement `json:"onExitCodes,omitempty"`
 
 	// Represents the requirement on the pod conditions. The requirement is represented
 	// as a list of pod condition patterns. The requirement is satisfied if at
@@ -75,12 +71,40 @@ func (m *V1PodFailurePolicyRule) validateAction(formats strfmt.Registry) error {
 		return nil
 	}
 
+	if err := m.Action.Validate(formats); err != nil {
+		ve := new(errors.Validation)
+		if stderrors.As(err, &ve) {
+			return ve.ValidateName("action")
+		}
+		ce := new(errors.CompositeError)
+		if stderrors.As(err, &ce) {
+			return ce.ValidateName("action")
+		}
+
+		return err
+	}
+
 	return nil
 }
 
 func (m *V1PodFailurePolicyRule) validateOnExitCodes(formats strfmt.Registry) error {
 	if swag.IsZero(m.OnExitCodes) { // not required
 		return nil
+	}
+
+	if m.OnExitCodes != nil {
+		if err := m.OnExitCodes.Validate(formats); err != nil {
+			ve := new(errors.Validation)
+			if stderrors.As(err, &ve) {
+				return ve.ValidateName("onExitCodes")
+			}
+			ce := new(errors.CompositeError)
+			if stderrors.As(err, &ce) {
+				return ce.ValidateName("onExitCodes")
+			}
+
+			return err
+		}
 	}
 
 	return nil
@@ -140,10 +164,47 @@ func (m *V1PodFailurePolicyRule) ContextValidate(ctx context.Context, formats st
 
 func (m *V1PodFailurePolicyRule) contextValidateAction(ctx context.Context, formats strfmt.Registry) error {
 
+	if swag.IsZero(m.Action) { // not required
+		return nil
+	}
+
+	if err := m.Action.ContextValidate(ctx, formats); err != nil {
+		ve := new(errors.Validation)
+		if stderrors.As(err, &ve) {
+			return ve.ValidateName("action")
+		}
+		ce := new(errors.CompositeError)
+		if stderrors.As(err, &ce) {
+			return ce.ValidateName("action")
+		}
+
+		return err
+	}
+
 	return nil
 }
 
 func (m *V1PodFailurePolicyRule) contextValidateOnExitCodes(ctx context.Context, formats strfmt.Registry) error {
+
+	if m.OnExitCodes != nil {
+
+		if swag.IsZero(m.OnExitCodes) { // not required
+			return nil
+		}
+
+		if err := m.OnExitCodes.ContextValidate(ctx, formats); err != nil {
+			ve := new(errors.Validation)
+			if stderrors.As(err, &ve) {
+				return ve.ValidateName("onExitCodes")
+			}
+			ce := new(errors.CompositeError)
+			if stderrors.As(err, &ce) {
+				return ce.ValidateName("onExitCodes")
+			}
+
+			return err
+		}
+	}
 
 	return nil
 }

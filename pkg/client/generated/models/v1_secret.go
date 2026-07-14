@@ -4,6 +4,7 @@ package models
 
 import (
 	"context"
+	stderrors "errors"
 
 	"github.com/go-openapi/errors"
 	"github.com/go-openapi/strfmt"
@@ -47,9 +48,7 @@ type V1Secret struct {
 	// Standard object's metadata.
 	// More info: https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#metadata
 	// +optional
-	Metadata struct {
-		V1ObjectMeta
-	} `json:"metadata,omitempty"`
+	Metadata *V1ObjectMeta `json:"metadata,omitempty"`
 
 	// stringData allows specifying non-binary secret data in string form.
 	// It is provided as a write-only input field for convenience.
@@ -84,6 +83,21 @@ func (m *V1Secret) validateMetadata(formats strfmt.Registry) error {
 		return nil
 	}
 
+	if m.Metadata != nil {
+		if err := m.Metadata.Validate(formats); err != nil {
+			ve := new(errors.Validation)
+			if stderrors.As(err, &ve) {
+				return ve.ValidateName("metadata")
+			}
+			ce := new(errors.CompositeError)
+			if stderrors.As(err, &ce) {
+				return ce.ValidateName("metadata")
+			}
+
+			return err
+		}
+	}
+
 	return nil
 }
 
@@ -102,6 +116,26 @@ func (m *V1Secret) ContextValidate(ctx context.Context, formats strfmt.Registry)
 }
 
 func (m *V1Secret) contextValidateMetadata(ctx context.Context, formats strfmt.Registry) error {
+
+	if m.Metadata != nil {
+
+		if swag.IsZero(m.Metadata) { // not required
+			return nil
+		}
+
+		if err := m.Metadata.ContextValidate(ctx, formats); err != nil {
+			ve := new(errors.Validation)
+			if stderrors.As(err, &ve) {
+				return ve.ValidateName("metadata")
+			}
+			ce := new(errors.CompositeError)
+			if stderrors.As(err, &ce) {
+				return ce.ValidateName("metadata")
+			}
+
+			return err
+		}
+	}
 
 	return nil
 }

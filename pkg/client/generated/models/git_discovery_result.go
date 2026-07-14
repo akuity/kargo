@@ -35,9 +35,7 @@ type GitDiscoveryResult struct {
 	// a full clone and repopulates it.
 	//
 	// +optional
-	ObservedRefs struct {
-		GitDiscoveryRefs
-	} `json:"observedRefs,omitempty"`
+	ObservedRefs *GitDiscoveryRefs `json:"observedRefs,omitempty"`
 
 	// RepoURL is the repository URL of the GitSubscription.
 	//
@@ -102,6 +100,21 @@ func (m *GitDiscoveryResult) validateObservedRefs(formats strfmt.Registry) error
 		return nil
 	}
 
+	if m.ObservedRefs != nil {
+		if err := m.ObservedRefs.Validate(formats); err != nil {
+			ve := new(errors.Validation)
+			if stderrors.As(err, &ve) {
+				return ve.ValidateName("observedRefs")
+			}
+			ce := new(errors.CompositeError)
+			if stderrors.As(err, &ce) {
+				return ce.ValidateName("observedRefs")
+			}
+
+			return err
+		}
+	}
+
 	return nil
 }
 
@@ -153,6 +166,26 @@ func (m *GitDiscoveryResult) contextValidateCommits(ctx context.Context, formats
 }
 
 func (m *GitDiscoveryResult) contextValidateObservedRefs(ctx context.Context, formats strfmt.Registry) error {
+
+	if m.ObservedRefs != nil {
+
+		if swag.IsZero(m.ObservedRefs) { // not required
+			return nil
+		}
+
+		if err := m.ObservedRefs.ContextValidate(ctx, formats); err != nil {
+			ve := new(errors.Validation)
+			if stderrors.As(err, &ve) {
+				return ve.ValidateName("observedRefs")
+			}
+			ce := new(errors.CompositeError)
+			if stderrors.As(err, &ce) {
+				return ce.ValidateName("observedRefs")
+			}
+
+			return err
+		}
+	}
 
 	return nil
 }

@@ -4,6 +4,7 @@ package models
 
 import (
 	"context"
+	stderrors "errors"
 
 	"github.com/go-openapi/errors"
 	"github.com/go-openapi/strfmt"
@@ -20,9 +21,7 @@ type WarehouseSpec struct {
 	// field has no effect when the FreightCreationPolicy is `Manual`.
 	//
 	// +kubebuilder:validation:Optional
-	FreightCreationCriteria struct {
-		FreightCreationCriteria
-	} `json:"freightCreationCriteria,omitempty"`
+	FreightCreationCriteria *FreightCreationCriteria `json:"freightCreationCriteria,omitempty"`
 
 	// FreightCreationPolicy describes how Freight is created by this Warehouse.
 	// This field is optional. When left unspecified, the field is implicitly
@@ -85,6 +84,21 @@ func (m *WarehouseSpec) validateFreightCreationCriteria(formats strfmt.Registry)
 		return nil
 	}
 
+	if m.FreightCreationCriteria != nil {
+		if err := m.FreightCreationCriteria.Validate(formats); err != nil {
+			ve := new(errors.Validation)
+			if stderrors.As(err, &ve) {
+				return ve.ValidateName("freightCreationCriteria")
+			}
+			ce := new(errors.CompositeError)
+			if stderrors.As(err, &ce) {
+				return ce.ValidateName("freightCreationCriteria")
+			}
+
+			return err
+		}
+	}
+
 	return nil
 }
 
@@ -103,6 +117,26 @@ func (m *WarehouseSpec) ContextValidate(ctx context.Context, formats strfmt.Regi
 }
 
 func (m *WarehouseSpec) contextValidateFreightCreationCriteria(ctx context.Context, formats strfmt.Registry) error {
+
+	if m.FreightCreationCriteria != nil {
+
+		if swag.IsZero(m.FreightCreationCriteria) { // not required
+			return nil
+		}
+
+		if err := m.FreightCreationCriteria.ContextValidate(ctx, formats); err != nil {
+			ve := new(errors.Validation)
+			if stderrors.As(err, &ve) {
+				return ve.ValidateName("freightCreationCriteria")
+			}
+			ce := new(errors.CompositeError)
+			if stderrors.As(err, &ce) {
+				return ce.ValidateName("freightCreationCriteria")
+			}
+
+			return err
+		}
+	}
 
 	return nil
 }

@@ -4,6 +4,7 @@ package models
 
 import (
 	"context"
+	stderrors "errors"
 
 	"github.com/go-openapi/errors"
 	"github.com/go-openapi/strfmt"
@@ -19,9 +20,7 @@ type StageStats struct {
 	Count int64 `json:"count,omitempty"`
 
 	// Health contains a summary of the collective health of a Project's Stages.
-	Health struct {
-		HealthStats
-	} `json:"health,omitempty"`
+	Health *HealthStats `json:"health,omitempty"`
 }
 
 // Validate validates this stage stats
@@ -43,6 +42,21 @@ func (m *StageStats) validateHealth(formats strfmt.Registry) error {
 		return nil
 	}
 
+	if m.Health != nil {
+		if err := m.Health.Validate(formats); err != nil {
+			ve := new(errors.Validation)
+			if stderrors.As(err, &ve) {
+				return ve.ValidateName("health")
+			}
+			ce := new(errors.CompositeError)
+			if stderrors.As(err, &ce) {
+				return ce.ValidateName("health")
+			}
+
+			return err
+		}
+	}
+
 	return nil
 }
 
@@ -61,6 +75,26 @@ func (m *StageStats) ContextValidate(ctx context.Context, formats strfmt.Registr
 }
 
 func (m *StageStats) contextValidateHealth(ctx context.Context, formats strfmt.Registry) error {
+
+	if m.Health != nil {
+
+		if swag.IsZero(m.Health) { // not required
+			return nil
+		}
+
+		if err := m.Health.ContextValidate(ctx, formats); err != nil {
+			ve := new(errors.Validation)
+			if stderrors.As(err, &ve) {
+				return ve.ValidateName("health")
+			}
+			ce := new(errors.CompositeError)
+			if stderrors.As(err, &ce) {
+				return ce.ValidateName("health")
+			}
+
+			return err
+		}
+	}
 
 	return nil
 }

@@ -26,9 +26,7 @@ type WarehouseStatus struct {
 	Conditions []*V1Condition `json:"conditions"`
 
 	// DiscoveredArtifacts holds the artifacts discovered by the Warehouse.
-	DiscoveredArtifacts struct {
-		DiscoveredArtifacts
-	} `json:"discoveredArtifacts,omitempty"`
+	DiscoveredArtifacts *DiscoveredArtifacts `json:"discoveredArtifacts,omitempty"`
 
 	// LastFreightID is a reference to the system-assigned identifier (name) of
 	// the most recent Freight produced by the Warehouse.
@@ -98,6 +96,21 @@ func (m *WarehouseStatus) validateDiscoveredArtifacts(formats strfmt.Registry) e
 		return nil
 	}
 
+	if m.DiscoveredArtifacts != nil {
+		if err := m.DiscoveredArtifacts.Validate(formats); err != nil {
+			ve := new(errors.Validation)
+			if stderrors.As(err, &ve) {
+				return ve.ValidateName("discoveredArtifacts")
+			}
+			ce := new(errors.CompositeError)
+			if stderrors.As(err, &ce) {
+				return ce.ValidateName("discoveredArtifacts")
+			}
+
+			return err
+		}
+	}
+
 	return nil
 }
 
@@ -149,6 +162,26 @@ func (m *WarehouseStatus) contextValidateConditions(ctx context.Context, formats
 }
 
 func (m *WarehouseStatus) contextValidateDiscoveredArtifacts(ctx context.Context, formats strfmt.Registry) error {
+
+	if m.DiscoveredArtifacts != nil {
+
+		if swag.IsZero(m.DiscoveredArtifacts) { // not required
+			return nil
+		}
+
+		if err := m.DiscoveredArtifacts.ContextValidate(ctx, formats); err != nil {
+			ve := new(errors.Validation)
+			if stderrors.As(err, &ve) {
+				return ve.ValidateName("discoveredArtifacts")
+			}
+			ce := new(errors.CompositeError)
+			if stderrors.As(err, &ce) {
+				return ce.ValidateName("discoveredArtifacts")
+			}
+
+			return err
+		}
+	}
 
 	return nil
 }

@@ -4,6 +4,7 @@ package models
 
 import (
 	"context"
+	stderrors "errors"
 
 	"github.com/go-openapi/errors"
 	"github.com/go-openapi/strfmt"
@@ -20,17 +21,13 @@ type V1PersistentVolumeClaimTemplate struct {
 	// validation.
 	//
 	// +optional
-	Metadata struct {
-		V1ObjectMeta
-	} `json:"metadata,omitempty"`
+	Metadata *V1ObjectMeta `json:"metadata,omitempty"`
 
 	// The specification for the PersistentVolumeClaim. The entire content is
 	// copied unchanged into the PVC that gets created from this
 	// template. The same fields as in a PersistentVolumeClaim
 	// are also valid here.
-	Spec struct {
-		V1PersistentVolumeClaimSpec
-	} `json:"spec,omitempty"`
+	Spec *V1PersistentVolumeClaimSpec `json:"spec,omitempty"`
 }
 
 // Validate validates this v1 persistent volume claim template
@@ -56,12 +53,42 @@ func (m *V1PersistentVolumeClaimTemplate) validateMetadata(formats strfmt.Regist
 		return nil
 	}
 
+	if m.Metadata != nil {
+		if err := m.Metadata.Validate(formats); err != nil {
+			ve := new(errors.Validation)
+			if stderrors.As(err, &ve) {
+				return ve.ValidateName("metadata")
+			}
+			ce := new(errors.CompositeError)
+			if stderrors.As(err, &ce) {
+				return ce.ValidateName("metadata")
+			}
+
+			return err
+		}
+	}
+
 	return nil
 }
 
 func (m *V1PersistentVolumeClaimTemplate) validateSpec(formats strfmt.Registry) error {
 	if swag.IsZero(m.Spec) { // not required
 		return nil
+	}
+
+	if m.Spec != nil {
+		if err := m.Spec.Validate(formats); err != nil {
+			ve := new(errors.Validation)
+			if stderrors.As(err, &ve) {
+				return ve.ValidateName("spec")
+			}
+			ce := new(errors.CompositeError)
+			if stderrors.As(err, &ce) {
+				return ce.ValidateName("spec")
+			}
+
+			return err
+		}
 	}
 
 	return nil
@@ -87,10 +114,50 @@ func (m *V1PersistentVolumeClaimTemplate) ContextValidate(ctx context.Context, f
 
 func (m *V1PersistentVolumeClaimTemplate) contextValidateMetadata(ctx context.Context, formats strfmt.Registry) error {
 
+	if m.Metadata != nil {
+
+		if swag.IsZero(m.Metadata) { // not required
+			return nil
+		}
+
+		if err := m.Metadata.ContextValidate(ctx, formats); err != nil {
+			ve := new(errors.Validation)
+			if stderrors.As(err, &ve) {
+				return ve.ValidateName("metadata")
+			}
+			ce := new(errors.CompositeError)
+			if stderrors.As(err, &ce) {
+				return ce.ValidateName("metadata")
+			}
+
+			return err
+		}
+	}
+
 	return nil
 }
 
 func (m *V1PersistentVolumeClaimTemplate) contextValidateSpec(ctx context.Context, formats strfmt.Registry) error {
+
+	if m.Spec != nil {
+
+		if swag.IsZero(m.Spec) { // not required
+			return nil
+		}
+
+		if err := m.Spec.ContextValidate(ctx, formats); err != nil {
+			ve := new(errors.Validation)
+			if stderrors.As(err, &ve) {
+				return ve.ValidateName("spec")
+			}
+			ce := new(errors.CompositeError)
+			if stderrors.As(err, &ce) {
+				return ce.ValidateName("spec")
+			}
+
+			return err
+		}
+	}
 
 	return nil
 }

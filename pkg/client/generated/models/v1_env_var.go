@@ -4,6 +4,7 @@ package models
 
 import (
 	"context"
+	stderrors "errors"
 
 	"github.com/go-openapi/errors"
 	"github.com/go-openapi/strfmt"
@@ -33,9 +34,7 @@ type V1EnvVar struct {
 
 	// Source for the environment variable's value. Cannot be used if value is not empty.
 	// +optional
-	ValueFrom struct {
-		V1EnvVarSource
-	} `json:"valueFrom,omitempty"`
+	ValueFrom *V1EnvVarSource `json:"valueFrom,omitempty"`
 }
 
 // Validate validates this v1 env var
@@ -57,6 +56,21 @@ func (m *V1EnvVar) validateValueFrom(formats strfmt.Registry) error {
 		return nil
 	}
 
+	if m.ValueFrom != nil {
+		if err := m.ValueFrom.Validate(formats); err != nil {
+			ve := new(errors.Validation)
+			if stderrors.As(err, &ve) {
+				return ve.ValidateName("valueFrom")
+			}
+			ce := new(errors.CompositeError)
+			if stderrors.As(err, &ce) {
+				return ce.ValidateName("valueFrom")
+			}
+
+			return err
+		}
+	}
+
 	return nil
 }
 
@@ -75,6 +89,26 @@ func (m *V1EnvVar) ContextValidate(ctx context.Context, formats strfmt.Registry)
 }
 
 func (m *V1EnvVar) contextValidateValueFrom(ctx context.Context, formats strfmt.Registry) error {
+
+	if m.ValueFrom != nil {
+
+		if swag.IsZero(m.ValueFrom) { // not required
+			return nil
+		}
+
+		if err := m.ValueFrom.ContextValidate(ctx, formats); err != nil {
+			ve := new(errors.Validation)
+			if stderrors.As(err, &ve) {
+				return ve.ValidateName("valueFrom")
+			}
+			ce := new(errors.CompositeError)
+			if stderrors.As(err, &ce) {
+				return ce.ValidateName("valueFrom")
+			}
+
+			return err
+		}
+	}
 
 	return nil
 }

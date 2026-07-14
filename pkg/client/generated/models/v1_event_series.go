@@ -4,6 +4,7 @@ package models
 
 import (
 	"context"
+	stderrors "errors"
 
 	"github.com/go-openapi/errors"
 	"github.com/go-openapi/strfmt"
@@ -19,9 +20,7 @@ type V1EventSeries struct {
 	Count int64 `json:"count,omitempty"`
 
 	// Time of the last occurrence observed
-	LastObservedTime struct {
-		V1MicroTime
-	} `json:"lastObservedTime,omitempty"`
+	LastObservedTime *V1MicroTime `json:"lastObservedTime,omitempty"`
 }
 
 // Validate validates this v1 event series
@@ -43,6 +42,21 @@ func (m *V1EventSeries) validateLastObservedTime(formats strfmt.Registry) error 
 		return nil
 	}
 
+	if m.LastObservedTime != nil {
+		if err := m.LastObservedTime.Validate(formats); err != nil {
+			ve := new(errors.Validation)
+			if stderrors.As(err, &ve) {
+				return ve.ValidateName("lastObservedTime")
+			}
+			ce := new(errors.CompositeError)
+			if stderrors.As(err, &ce) {
+				return ce.ValidateName("lastObservedTime")
+			}
+
+			return err
+		}
+	}
+
 	return nil
 }
 
@@ -61,6 +75,26 @@ func (m *V1EventSeries) ContextValidate(ctx context.Context, formats strfmt.Regi
 }
 
 func (m *V1EventSeries) contextValidateLastObservedTime(ctx context.Context, formats strfmt.Registry) error {
+
+	if m.LastObservedTime != nil {
+
+		if swag.IsZero(m.LastObservedTime) { // not required
+			return nil
+		}
+
+		if err := m.LastObservedTime.ContextValidate(ctx, formats); err != nil {
+			ve := new(errors.Validation)
+			if stderrors.As(err, &ve) {
+				return ve.ValidateName("lastObservedTime")
+			}
+			ce := new(errors.CompositeError)
+			if stderrors.As(err, &ce) {
+				return ce.ValidateName("lastObservedTime")
+			}
+
+			return err
+		}
+	}
 
 	return nil
 }
