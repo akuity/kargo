@@ -78,9 +78,6 @@ type TargetOwnership struct {
 	// CurrentFreight is the name of the Freight from Origin most recently
 	// promoted to this Target by the governing Stage.
 	CurrentFreight string `json:"currentFreight,omitempty" protobuf:"bytes,3,opt,name=currentFreight"`
-	// Health is the Target's last observed health with respect to the Freight
-	// indicated by CurrentFreight.
-	Health HealthState `json:"health,omitempty" protobuf:"bytes,4,opt,name=health"`
 }
 
 // +kubebuilder:object:root=true

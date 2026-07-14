@@ -2517,7 +2517,6 @@ RawFormat specifies the format for raw resource representation.
 | stage | string |  Stage is the name of the governing Stage. |
 | origin | [FreightOrigin](#github-com-akuity-kargo-api-v1alpha1-FreightOrigin) |  Origin is the origin of the Freight that the governing Stage promotes to this Target. |
 | currentFreight | string |  CurrentFreight is the name of the Freight from Origin most recently promoted to this Target by the governing Stage. |
-| health | string |  Health is the Target's last observed health with respect to the Freight indicated by CurrentFreight. |
 
 
 ### TargetSpec {#github-com-akuity-kargo-api-v1alpha1-TargetSpec}

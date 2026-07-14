@@ -98,10 +98,6 @@
                 "description": "CurrentFreight is the name of the Freight from Origin most recently\npromoted to this Target by the governing Stage.",
                 "type": "string"
               },
-              "health": {
-                "description": "Health is the Target's last observed health with respect to the Freight\nindicated by CurrentFreight.",
-                "type": "string"
-              },
               "origin": {
                 "description": "Origin is the origin of the Freight that the governing Stage promotes to\nthis Target.",
                 "properties": {

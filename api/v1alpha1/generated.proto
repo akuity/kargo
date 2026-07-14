@@ -2130,10 +2130,6 @@ message TargetOwnership {
   // CurrentFreight is the name of the Freight from Origin most recently
   // promoted to this Target by the governing Stage.
   optional string currentFreight = 3;
-
-  // Health is the Target's last observed health with respect to the Freight
-  // indicated by CurrentFreight.
-  optional string health = 4;
 }
 
 // TargetSpec describes a Target.
