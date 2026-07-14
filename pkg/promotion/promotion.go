@@ -3,15 +3,53 @@ package promotion
 import (
 	"context"
 	"fmt"
+	"maps"
 	"slices"
 	"time"
 
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/utils/ptr"
 
 	kargoapi "github.com/akuity/kargo/api/v1alpha1"
 	"github.com/akuity/kargo/pkg/health"
 )
+
+// TargetContext carries a resolved Target's data for exposure to promotion step
+// expressions as the top-level `target` variable (target.params,
+// target.labels).
+//
+// It is nil for Promotions that promote to the Stage itself -- the classic,
+// target-less behavior. When nil, no `target` variable is added to the
+// expression environment, so any reference to `target.*` fails exactly as it
+// did before Targets existed. Only Promotions that promote to a specific Target
+// (a capability layered on top of Kargo) populate this field.
+type TargetContext struct {
+	// Params are the resolved Target's spec.params, decoded to plain values
+	// suitable for use in expressions. Exposed to expressions as target.params.
+	Params map[string]any
+	// Labels are the resolved Target's metadata labels. Exposed to expressions
+	// as target.labels.
+	Labels map[string]string
+}
+
+// DeepCopy returns a deep copy of the TargetContext, or nil if the receiver is
+// nil.
+func (t *TargetContext) DeepCopy() *TargetContext {
+	if t == nil {
+		return nil
+	}
+	newT := &TargetContext{}
+	if t.Params != nil {
+		// Params originate from the Target's spec.params (JSON), so a JSON deep
+		// copy is both sufficient and appropriate.
+		newT.Params = runtime.DeepCopyJSON(t.Params)
+	}
+	if t.Labels != nil {
+		newT.Labels = maps.Clone(t.Labels)
+	}
+	return newT
+}
 
 // StepRunner is an interface for components that implement the logic for
 // execution of an individual Step in a user-defined promotion process.
@@ -57,6 +95,12 @@ type Context struct {
 	// TargetFreightAlias is the human-friendly alias of the Freight that
 	// triggered this Promotion.
 	TargetFreightAlias string
+	// Target, when non-nil, carries the resolved Target that this Promotion
+	// promotes Freight to, for exposure to step expressions as target.params
+	// and target.labels. It is nil for Promotions that promote to the Stage
+	// itself (classic behavior). Note this is distinct from TargetFreightRef,
+	// which is the Freight being promoted, not the destination Target.
+	Target *TargetContext
 	// StartFromStep is the index of the step from which the promotion should
 	// begin execution.
 	StartFromStep int64
@@ -240,6 +284,7 @@ func (c *Context) DeepCopy() Context {
 		Promotion:             c.Promotion,
 		Freight:               *c.Freight.DeepCopy(),
 		TargetFreightRef:      *c.TargetFreightRef.DeepCopy(),
+		Target:                c.Target.DeepCopy(),
 		StartFromStep:         c.StartFromStep,
 		StepExecutionMetadata: c.StepExecutionMetadata.DeepCopy(),
 		State:                 c.State.DeepCopy(),
@@ -431,6 +476,11 @@ type StepContext struct {
 	// TargetFreightAlias is the human-friendly alias of the Freight that
 	// triggered this Promotion.
 	TargetFreightAlias string
+	// Target, when non-nil, carries the resolved Target that this Promotion
+	// promotes Freight to, for exposure to step expressions as target.params
+	// and target.labels. It is nil for Promotions that promote to the Stage
+	// itself (classic behavior).
+	Target *TargetContext
 }
 
 // StepResult represents the results of a single Step of a user-defined promotion
