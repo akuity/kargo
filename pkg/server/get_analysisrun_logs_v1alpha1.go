@@ -3,7 +3,6 @@ package server
 import (
 	"bufio"
 	"context"
-	"errors"
 	"fmt"
 	"io"
 	"net/http"
@@ -16,7 +15,6 @@ import (
 	"golang.org/x/text/transform"
 	"k8s.io/apimachinery/pkg/types"
 
-	svcv1alpha1 "github.com/akuity/kargo/api/service/v1alpha1"
 	rolloutsapi "github.com/akuity/kargo/api/stubs/rollouts/v1alpha1"
 	kargoapi "github.com/akuity/kargo/api/v1alpha1"
 	"github.com/akuity/kargo/pkg/api"
@@ -27,154 +25,6 @@ import (
 	"github.com/akuity/kargo/pkg/logging"
 	"github.com/akuity/kargo/pkg/server/user"
 )
-
-func (s *server) GetAnalysisRunLogs(
-	ctx context.Context,
-	req *connect.Request[svcv1alpha1.GetAnalysisRunLogsRequest],
-	stream *connect.ServerStream[svcv1alpha1.GetAnalysisRunLogsResponse],
-) error {
-	if !s.cfg.RolloutsIntegrationEnabled {
-		// nolint:staticcheck
-		return connect.NewError(
-			connect.CodeUnimplemented,
-			errors.New("Argo Rollouts integration is not enabled"),
-		)
-	}
-
-	if s.cfg.AnalysisRunLogURLTemplate == "" {
-		// nolint:staticcheck
-		return connect.NewError(
-			connect.CodeUnimplemented,
-			errors.New("AnalysisRun log streaming is not configured"),
-		)
-	}
-
-	namespace := req.Msg.GetNamespace()
-	if err := validateFieldNotEmpty("namespace", namespace); err != nil {
-		return err
-	}
-
-	name := req.Msg.GetName()
-	if err := validateFieldNotEmpty("name", name); err != nil {
-		return err
-	}
-
-	analysisRun, err := rollouts.GetAnalysisRun(
-		ctx,
-		s.client,
-		types.NamespacedName{
-			Namespace: namespace,
-			Name:      name,
-		},
-	)
-	if err != nil {
-		return fmt.Errorf(
-			"error getting AnalysisRun %q in namespace %q: %w",
-			name, namespace, err,
-		)
-	}
-	if analysisRun == nil {
-		return connect.NewError(
-			connect.CodeNotFound,
-			fmt.Errorf("AnalysisRun %q in namespace %q not found", name, namespace),
-		)
-	}
-
-	jobMetricName, jobMetric, err := s.getJobMetric(analysisRun, req.Msg.MetricName)
-	if err != nil {
-		return err
-	}
-
-	containerName, err := s.getContainerName(
-		analysisRun,
-		jobMetricName,
-		jobMetric,
-		req.Msg.ContainerName,
-	)
-	if err != nil {
-		return err
-	}
-
-	jobNamespace, jobName, err := s.getJobNamespaceAndName(analysisRun, jobMetricName)
-	if err != nil {
-		return err
-	}
-
-	stage, err := s.getStageFromAnalysisRun(ctx, analysisRun)
-	if err != nil {
-		return err
-	}
-
-	httpReq, err := s.buildRequest(
-		ctx,
-		stage,
-		analysisRun,
-		jobMetricName,
-		jobNamespace,
-		jobName,
-		containerName,
-	)
-	if err != nil {
-		return err
-	}
-
-	// #nosec G704 -- The risk of SSRF is mitigated by the fact of this URL being
-	// constructed using an operator-defined template. End users have no control
-	// over the URL.
-	httpResp, err := cleanhttp.DefaultClient().Do(httpReq)
-	if err != nil {
-		return fmt.Errorf(
-			"error performing GET request for log url %s: %w",
-			httpReq.URL.String(), err,
-		)
-	}
-	defer httpResp.Body.Close()
-
-	// Logs can be large, so we read them using a buffered reader.
-	reader := bufio.NewReader(httpResp.Body)
-
-	const bufferSize = 4096 // 4 KB
-
-	// just need to peek at the first two bytes to help detect encoding
-	peekedBytes, err := reader.Peek(2)
-	if err != nil && err != io.EOF {
-		return fmt.Errorf("error peeking at log stream: %w", err)
-	}
-
-	// Log data has a higher than average probability of being encoded with
-	// something other than UTF-8.
-	enc := libEncoding.DetectEncoding(httpResp.Header.Get("Content-Type"), peekedBytes)
-
-	logCh, err := streamLogs(ctx, reader, enc.NewDecoder(), bufferSize)
-	if err != nil {
-		return fmt.Errorf("error streaming logs: %w", err)
-	}
-
-	for {
-		select {
-		case chunk, ok := <-logCh:
-			if !ok {
-				// Channel closed
-				return nil
-			}
-
-			if chunk.Error != nil {
-				// Error reading log data
-				return fmt.Errorf("error streaming logs: %w", chunk.Error)
-			}
-
-			if err = stream.Send(&svcv1alpha1.GetAnalysisRunLogsResponse{
-				Chunk: chunk.Data,
-			}); err != nil {
-				return fmt.Errorf("error sending log chunk: %w", err)
-			}
-		case <-ctx.Done():
-			logger := logging.LoggerFromContext(ctx)
-			logger.Debug(ctx.Err().Error())
-			return nil
-		}
-	}
-}
 
 // getJobMetric confirms the existence of a JobMetric with the provided name or,
 // when the provided name is empty, attempts to infer one, which can only

@@ -1,56 +1,14 @@
 package server
 
 import (
-	"context"
 	"errors"
-	"fmt"
 	"net/http"
 
-	"connectrpc.com/connect"
 	"github.com/gin-gonic/gin"
 	corev1 "k8s.io/api/core/v1"
 
-	svcv1alpha1 "github.com/akuity/kargo/api/service/v1alpha1"
 	libhttp "github.com/akuity/kargo/pkg/http"
 )
-
-func (s *server) CreateAPIToken(
-	ctx context.Context,
-	req *connect.Request[svcv1alpha1.CreateAPITokenRequest],
-) (*connect.Response[svcv1alpha1.CreateAPITokenResponse], error) {
-	systemLevel := req.Msg.SystemLevel
-	project := req.Msg.Project
-	if err := s.validateSystemLevelOrProject(systemLevel, project); err != nil {
-		return nil, err
-	}
-
-	roleName := req.Msg.RoleName
-	if err := validateFieldNotEmpty("role_name", roleName); err != nil {
-		return nil, err
-	}
-
-	name := req.Msg.Name
-	if err := validateFieldNotEmpty("name", name); err != nil {
-		return nil, err
-	}
-
-	if !systemLevel {
-		if err := s.validateProjectExists(ctx, project); err != nil {
-			return nil, err
-		}
-	}
-
-	tokenSecret, err := s.rolesDB.CreateAPIToken(
-		ctx, systemLevel, project, roleName, name,
-	)
-	if err != nil {
-		return nil, fmt.Errorf("error creating new token Secret: %w", err)
-	}
-
-	return connect.NewResponse(
-		&svcv1alpha1.CreateAPITokenResponse{TokenSecret: tokenSecret},
-	), nil
-}
 
 // createAPITokenRequest is the request body for creating an API token.
 type createAPITokenRequest struct {

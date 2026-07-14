@@ -1,63 +1,13 @@
 package server
 
 import (
-	"context"
-	"errors"
-	"fmt"
 	"net/http"
 
-	"connectrpc.com/connect"
 	"github.com/gin-gonic/gin"
 
 	rbacapi "github.com/akuity/kargo/api/rbac/v1alpha1"
-	svcv1alpha1 "github.com/akuity/kargo/api/service/v1alpha1"
 	libhttp "github.com/akuity/kargo/pkg/http"
 )
-
-func (s *server) Revoke(
-	ctx context.Context,
-	req *connect.Request[svcv1alpha1.RevokeRequest],
-) (*connect.Response[svcv1alpha1.RevokeResponse], error) {
-	project := req.Msg.GetProject()
-	if err := validateFieldNotEmpty("project", project); err != nil {
-		return nil, err
-	}
-
-	if err := s.validateProjectExists(ctx, project); err != nil {
-		return nil, err
-	}
-
-	var role *rbacapi.Role
-	var err error
-	if userClaims := req.Msg.GetUserClaims(); userClaims != nil {
-		claims := make([]rbacapi.Claim, len(userClaims.Claims))
-		for i, claim := range userClaims.Claims {
-			claims[i] = *claim
-		}
-		if role, err = s.rolesDB.RevokeRoleFromUsers(
-			ctx, project, req.Msg.Role, claims,
-		); err != nil {
-			return nil, fmt.Errorf("error revoking Kargo Role from users: %w", err)
-		}
-	} else if resources := req.Msg.GetResourceDetails(); resources != nil {
-		if role, err = s.rolesDB.RevokePermissionsFromRole(
-			ctx, project, req.Msg.Role, resources,
-		); err != nil {
-			return nil, fmt.Errorf("error revoking permissions from Kargo Role: %w", err)
-		}
-	} else {
-		return nil, connect.NewError(
-			connect.CodeInvalidArgument,
-			errors.New("one of userClaims or resourceDetails must be provided"),
-		)
-	}
-
-	return connect.NewResponse(
-		&svcv1alpha1.RevokeResponse{
-			Role: role,
-		},
-	), nil
-}
 
 // revokeRequest represents the request body for the Revoke REST endpoint.
 type revokeRequest struct {

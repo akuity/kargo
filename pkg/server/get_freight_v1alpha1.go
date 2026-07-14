@@ -4,6 +4,8 @@ import (
 	"net/http"
 
 	"github.com/gin-gonic/gin"
+
+	kargoapi "github.com/akuity/kargo/api/v1alpha1"
 )
 
 // @id GetFreight
@@ -28,3 +30,9 @@ func (s *server) getFreight(c *gin.Context) {
 
 	c.JSON(http.StatusOK, freight)
 }
+
+// This keeps the kargoapi import above in scope for the @Success annotation
+// on getFreight, which documents the response type without constructing one
+// directly (the actual response is produced by the shared
+// getFreightByNameOrAliasForGin helper).
+var _ kargoapi.Freight

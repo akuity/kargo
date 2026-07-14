@@ -122,41 +122,6 @@ function main() {
   { msg "Returning to the project root..."; } 2> /dev/null
   cd "${proj_dir}"
 
-  { msg "Generating API docs"; } 2> /dev/null
-
-# Protoc-gen-doc plugin is used to generate API documentation.
-# Kube and Kargo API definitions are consolidated into a single directory
-# along with the template file. This temporary doc directory is
-# used as the basis for relative input paths for the proto compiler.
-# Final result is output in docs/docs/90-api-documenation.md.
-
-temp_doc_dir=$(mktemp -d)
-cp -R "${proj_dir}/api" $temp_doc_dir/api
-cp -R "${tmp_dir}/vendor/k8s.io" $temp_doc_dir/k8s.io
-cp "${proj_dir}/docs/api/docs.templ" $temp_doc_dir/docs.templ
-rm "${proj_dir}/docs/docs/90-api-documentation.md" || true
-
-protoc -I $temp_doc_dir \
-	--doc_out="${proj_dir}/docs/docs" \
-	--doc_opt=$temp_doc_dir/docs.templ,90-api-documentation.md:k8s.io,api/stubs/rollouts \
-    "api/service/v1alpha1/service.proto" \
-    "api/rbac/v1alpha1/generated.proto" \
-    "api/v1alpha1/generated.proto" \
-    "api/stubs/rollouts/v1alpha1/generated.proto" \
-    "k8s.io/api/core/v1/generated.proto" \
-    "k8s.io/api/batch/v1/generated.proto" \
-    "k8s.io/api/rbac/v1/generated.proto" \
-    "k8s.io/apiextensions-apiserver/pkg/apis/apiextensions/v1/generated.proto" \
-    "k8s.io/apimachinery/pkg/util/intstr/generated.proto" \
-    "k8s.io/apimachinery/pkg/api/resource/generated.proto" \
-    "k8s.io/apimachinery/pkg/runtime/schema/generated.proto" \
-    "k8s.io/apimachinery/pkg/runtime/generated.proto" \
-    "k8s.io/apimachinery/pkg/apis/meta/v1/generated.proto"
-
-  { msg "Cleaning up temporary API docs directory..."; } 2> /dev/null
-
-  rm -rf $temp_doc_dir
-
   # Next, we'll use buf to generate Go and TypeScript bindings from the .proto
   # files.
   #
@@ -184,9 +149,6 @@ protoc -I $temp_doc_dir \
   go run ./hack/codegen/prototag/main.go \
     -src-dir="${proj_dir}/tmp/api/rbac/v1alpha1" \
     -dst-dir="${proj_dir}/api/rbac/v1alpha1"
-
-  { msg "Generating .pb.go and .connect.go files from service.proto"; } 2> /dev/null
-  buf generate . --path api/service
 
   { msg "Generating TypeScript bindings for UI..."; } 2> /dev/null
   buf generate . --path api \
@@ -226,9 +188,9 @@ msg "Project root is ${proj_dir}"
 #   - go-to-protobuf runs with its working directory inside the temporary build
 #     directory (which has its own throwaway go.mod), where `go tool` cannot
 #     resolve the tool from this module.
-#   - protoc-gen-gogo, goimports, and protoc-gen-doc are invoked by name (as
-#     protoc plugins and by go-to-protobuf, respectively), so they must exist as
-#     real executables on PATH.
+#   - protoc-gen-gogo and goimports are invoked by name (as a protoc plugin
+#     and by go-to-protobuf, respectively), so they must exist as real
+#     executables on PATH.
 # Building here also avoids the "inconsistent vendoring" errors that a `go tool`
 # invocation would hit once a partial vendor/ tree exists at the project root.
 msg "Building Go tools from the main module..."
@@ -239,8 +201,7 @@ tools_bin=$(mktemp -d)
     k8s.io/code-generator/cmd/go-to-protobuf \
     k8s.io/code-generator/cmd/go-to-protobuf/protoc-gen-gogo \
     golang.org/x/tools/cmd/goimports \
-    github.com/bufbuild/buf/cmd/buf \
-    github.com/pseudomuto/protoc-gen-doc/cmd/protoc-gen-doc
+    github.com/bufbuild/buf/cmd/buf
 )
 
 # Include the freshly built tools and local binaries (protoc) in the PATH.

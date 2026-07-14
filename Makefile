@@ -7,7 +7,6 @@ ARGO_CD_CHART_VERSION		:= 9.4.3
 ARGO_ROLLOUTS_CHART_VERSION := 2.40.6
 CERT_MANAGER_CHART_VERSION 	:= 1.19.3
 
-BUF_LINT_ERROR_FORMAT	?= text
 GO_LINT_EXTRA_FLAGS 	?= --output.text.print-issued-lines --output.text.colors
 
 GO_TEST_ARGS ?=
@@ -71,7 +70,7 @@ KARGO_EXTERNAL_WEBHOOKS_SERVER_HOSTNAME ?=
 ################################################################################
 
 .PHONY: lint
-lint: lint-go lint-proto lint-charts lint-ui
+lint: lint-go lint-charts lint-ui
 
 .PHONY: format
 format: format-go format-ui
@@ -99,13 +98,6 @@ format-go:
 			cd - > /dev/null; \
 		done; \
 	}
-
-.PHONY: lint-proto
-lint-proto:
-	# Vendor go dependencies to build protobuf definitions
-	go mod vendor
-	@# Only lint hand-written .proto files
-	go tool buf lint . --path api/service --error-format=$(BUF_LINT_ERROR_FORMAT)
 
 .PHONY: lint-charts
 lint-charts: install-helm
@@ -370,10 +362,6 @@ hack-format: hack-build-dev-tools
 .PHONY: hack-lint-go
 hack-lint-go: hack-build-dev-tools
 	$(DOCKER_CMD) make lint-go
-
-.PHONY: hack-lint-proto
-hack-lint-proto: hack-build-dev-tools
-	$(DOCKER_CMD) make lint-proto
 
 .PHONY: hack-lint-charts
 hack-lint-charts: hack-build-dev-tools

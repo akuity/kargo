@@ -6,14 +6,12 @@ import (
 	"io"
 	"net/http"
 
-	"connectrpc.com/connect"
 	"github.com/gin-gonic/gin"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	sigyaml "sigs.k8s.io/yaml"
 
-	svcv1alpha1 "github.com/akuity/kargo/api/service/v1alpha1"
 	libhttp "github.com/akuity/kargo/pkg/http"
 )
 
@@ -28,55 +26,6 @@ type createOrUpdateResourceResult struct {
 	UpdatedResourceManifest map[string]any `json:"updatedResourceManifest,omitempty"`
 	Error                   string         `json:"error,omitempty"`
 } // @name CreateOrUpdateResourceResult
-
-func (s *server) UpdateResource(
-	ctx context.Context,
-	req *connect.Request[svcv1alpha1.UpdateResourceRequest],
-) (*connect.Response[svcv1alpha1.UpdateResourceResponse], error) {
-	projects, otherResources, err := splitYAML(req.Msg.GetManifest())
-	if err != nil {
-		return nil, connect.NewError(connect.CodeInvalidArgument, fmt.Errorf("parse manifest: %w", err))
-	}
-	resources := append(projects, otherResources...)
-	results := make([]*svcv1alpha1.UpdateResourceResult, 0, len(resources))
-	for _, r := range resources {
-		resource := r // Avoid implicit memory aliasing
-		result, err := s.updateResource(ctx, s.client, &resource, false)
-		if err != nil && len(resources) == 1 {
-			return nil, err
-		}
-		// Convert to protobuf result
-		var protoResult *svcv1alpha1.UpdateResourceResult
-		if result.Error != "" {
-			protoResult = &svcv1alpha1.UpdateResourceResult{
-				Result: &svcv1alpha1.UpdateResourceResult_Error{
-					Error: result.Error,
-				},
-			}
-		} else {
-			manifestBytes, marshalErr := sigyaml.Marshal(result.UpdatedResourceManifest)
-			if marshalErr != nil {
-				protoResult = &svcv1alpha1.UpdateResourceResult{
-					Result: &svcv1alpha1.UpdateResourceResult_Error{
-						Error: fmt.Errorf("marshal updated manifest: %w", marshalErr).Error(),
-					},
-				}
-			} else {
-				protoResult = &svcv1alpha1.UpdateResourceResult{
-					Result: &svcv1alpha1.UpdateResourceResult_UpdatedResourceManifest{
-						UpdatedResourceManifest: manifestBytes,
-					},
-				}
-			}
-		}
-		results = append(results, protoResult)
-	}
-	return &connect.Response[svcv1alpha1.UpdateResourceResponse]{
-		Msg: &svcv1alpha1.UpdateResourceResponse{
-			Results: results,
-		},
-	}, nil
-}
 
 // @id UpdateResource
 // @Summary Update resources
