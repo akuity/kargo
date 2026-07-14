@@ -272,13 +272,15 @@ codegen-openapi: install-jq
 	mv /tmp/swagger-build/swagger.json .
 	rm -rf /tmp/swagger-build
 	hack/codegen/fix-swagger-spec.sh swagger.json
+	hack/codegen/flatten-nullable-refs.sh swagger.json /tmp/swagger-go-client.json
 	mkdir -p pkg/client/generated
 	go tool swagger generate client \
-		-f swagger.json \
+		-f /tmp/swagger-go-client.json \
 		-t pkg \
 		--client-package client/generated \
 		--model-package client/generated/models \
 		--skip-validation
+	rm -f /tmp/swagger-go-client.json
 	pnpm --dir=ui install --dev
 	pnpm --dir=ui run generate:api
 
