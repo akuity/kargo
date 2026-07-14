@@ -3167,6 +3167,16 @@ func noKindMatchErr() error {
 	}
 }
 
+// noKindMatchErrForOtherKind builds a *meta.NoKindMatchError for a GroupKind
+// that is not the Argo CD Application kind, to prove the retry scoping only
+// applies to the Application kind and not to NoKindMatchError in general.
+func noKindMatchErrForOtherKind() error {
+	return &meta.NoKindMatchError{
+		GroupKind:        schema.GroupKind{Group: "example.io", Kind: "Widget"},
+		SearchedVersions: []string{"v1"},
+	}
+}
+
 func Test_isIncompleteDiscoveryError(t *testing.T) {
 	testCases := map[string]struct {
 		err      error
@@ -3184,8 +3194,16 @@ func Test_isIncompleteDiscoveryError(t *testing.T) {
 			err:      fmt.Errorf("error getting Application: %w", incompleteDiscoveryErr()),
 			expected: true,
 		},
-		"genuine no-kind-match error is not retriable": {
+		"no-kind-match error for the Argo CD Application kind is retriable": {
 			err:      noKindMatchErr(),
+			expected: true,
+		},
+		"wrapped no-kind-match error for the Argo CD Application kind is retriable": {
+			err:      fmt.Errorf("error getting Application: %w", noKindMatchErr()),
+			expected: true,
+		},
+		"no-kind-match error for an unrelated kind is not retriable": {
+			err:      noKindMatchErrForOtherKind(),
 			expected: false,
 		},
 		"genuine no-resource-match error is not retriable": {
@@ -3240,10 +3258,31 @@ func Test_argoCDUpdater_withDiscoveryRetry(t *testing.T) {
 			assertErr:     func(t *testing.T, err error) { assert.NoError(t, err) },
 			expectedCalls: 3,
 		},
-		"does not retry a genuine no-match error": {
+		"retries no-kind-match error for the Application kind then succeeds": {
+			fn: func(callCount *int) error {
+				*callCount++
+				if *callCount < 3 {
+					return noKindMatchErr()
+				}
+				return nil
+			},
+			assertErr:     func(t *testing.T, err error) { assert.NoError(t, err) },
+			expectedCalls: 3,
+		},
+		"gives up after exhausting attempts on a persistent Application no-kind-match error": {
 			fn: func(callCount *int) error {
 				*callCount++
 				return noKindMatchErr()
+			},
+			assertErr: func(t *testing.T, err error) {
+				assert.True(t, isIncompleteDiscoveryError(err))
+			},
+			expectedCalls: 5,
+		},
+		"does not retry a no-kind-match error for an unrelated kind": {
+			fn: func(callCount *int) error {
+				*callCount++
+				return noKindMatchErrForOtherKind()
 			},
 			assertErr: func(t *testing.T, err error) {
 				assert.True(t, meta.IsNoMatchError(err))
