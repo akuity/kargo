@@ -153,6 +153,13 @@ func (s *server) updateResource(
 		}, errSecretManagementDisabled
 	}
 
+	// Block RBAC privilege escalation via this generic path. Applies to both
+	// creating and replacing (e.g. rewriting a Role's rules), so it runs before
+	// the create/update decision below.
+	if err := s.verifyNoEscalation(ctx, obj); err != nil {
+		return createOrUpdateResourceResult{Error: err.Error()}, err
+	}
+
 	// Note: It would be tempting to blindly attempt creating the resource and
 	// then update it instead if it already exists, but many resource types have
 	// defaulting and/or validating webhooks and what we do not want is for some
@@ -174,6 +181,11 @@ func (s *server) updateResource(
 			return createOrUpdateResourceResult{
 				Error: "resource does not exist",
 			}, libhttp.ErrorStr("resource does not exist", http.StatusNotFound)
+		}
+		// Enforce authorization checks the authorizing client cannot perform
+		// implicitly (e.g. the "promote" verb required to create a Promotion).
+		if err := s.authorizeResourceCreate(ctx, obj); err != nil {
+			return createOrUpdateResourceResult{Error: err.Error()}, err
 		}
 		// If the object is a Project, annotate it with information about the user
 		// who created it.
