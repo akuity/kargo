@@ -240,6 +240,19 @@ type StageSpec struct {
 	// Verification describes how to verify a Stage's current Freight is fit for
 	// promotion downstream.
 	Verification *Verification `json:"verification,omitempty" protobuf:"bytes,3,opt,name=verification"`
+	// TargetSelectors select the Targets that this Stage governs and promotes
+	// Freight to, matching Targets by their labels within the Stage's own
+	// Project. A Target is selected when it matches any selector in this list.
+	// A Stage may govern any number of Targets this way.
+	//
+	// When this field is nil (the default), the Stage operates in classic mode:
+	// it governs a single implicit "stage-self" Target that the controller
+	// creates and maintains on the Stage's behalf. This preserves the behavior
+	// of Stages authored before Targets existed. An empty selector in a non-empty
+	// list selects all Targets in the Project.
+	//
+	// +optional
+	TargetSelectors []metav1.LabelSelector `json:"targetSelectors,omitempty" protobuf:"bytes,8,rep,name=targetSelectors"`
 }
 
 // FreightRequest expresses a Stage's need for Freight having originated from a

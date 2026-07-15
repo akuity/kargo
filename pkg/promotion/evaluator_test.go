@@ -61,6 +61,55 @@ func TestStepEvaluator_BuildExprEnv(t *testing.T) {
 			},
 		},
 		{
+			name: "with target context",
+			promoCtx: Context{
+				Project:             "test-project",
+				Stage:               "test-stage",
+				Promotion:           "test-promotion",
+				Actor:               "test-actor",
+				TargetFreightAlias:  "test-alias",
+				currentStepMetadata: &StepMetadata{Alias: "test-step"},
+				TargetFreightRef: kargoapi.FreightReference{
+					Name: "test-freight",
+					Origin: kargoapi.FreightOrigin{
+						Name: "test-warehouse",
+					},
+				},
+				Target: &TargetContext{
+					Params: map[string]any{"cluster": "east"},
+					Labels: map[string]string{"env": "prod"},
+				},
+			},
+			expected: map[string]any{
+				"ctx": map[string]any{
+					"uiBaseUrl": "",
+					"project":   "test-project",
+					"promotion": "test-promotion",
+					"stage":     "test-stage",
+					"targetFreight": map[string]any{
+						"name":  "test-freight",
+						"alias": "test-alias",
+						"origin": map[string]any{
+							"name": "test-warehouse",
+						},
+					},
+					"meta": map[string]any{
+						"promotion": map[string]any{
+							"actor":    "test-actor",
+							"rollback": false,
+						},
+						"step": map[string]any{
+							"alias": "test-step",
+						},
+					},
+				},
+				"target": map[string]any{
+					"params": map[string]any{"cluster": "east"},
+					"labels": map[string]string{"env": "prod"},
+				},
+			},
+		},
+		{
 			name: "with variables option",
 			promoCtx: Context{
 				Project:             "test-project",
@@ -552,6 +601,44 @@ func TestBuildCtxMap(t *testing.T) {
 							"alias": "",
 						},
 					},
+				},
+			},
+		},
+		{
+			name: "step context with target exposes target.params and target.labels",
+			stepCtx: StepContext{
+				Project: "test-project",
+				Target: &TargetContext{
+					Params: map[string]any{"cluster": "east", "region": "us"},
+					Labels: map[string]string{"env": "prod"},
+				},
+			},
+			expected: map[string]any{
+				"ctx": map[string]any{
+					"uiBaseUrl": "",
+					"project":   "test-project",
+					"promotion": "",
+					"stage":     "",
+					"targetFreight": map[string]any{
+						"name":  "",
+						"alias": "",
+						"origin": map[string]any{
+							"name": "",
+						},
+					},
+					"meta": map[string]any{
+						"promotion": map[string]any{
+							"actor":    "",
+							"rollback": false,
+						},
+						"step": map[string]any{
+							"alias": "",
+						},
+					},
+				},
+				"target": map[string]any{
+					"params": map[string]any{"cluster": "east", "region": "us"},
+					"labels": map[string]string{"env": "prod"},
 				},
 			},
 		},

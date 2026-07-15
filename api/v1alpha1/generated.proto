@@ -1639,6 +1639,23 @@ message PromotionSpec {
   // +kubebuilder:validation:Optional
   optional FreightOrigin origin = 14;
 
+  // Target optionally names the Target, within the Promotion's own Project
+  // (namespace), that this Promotion promotes Freight to. Targets allow a
+  // single Stage to govern -- and promote Freight to -- multiple destinations.
+  // When set, the named Target must be one that the referenced Stage governs,
+  // i.e. one selected by the Stage's targetSelectors.
+  //
+  // When empty (the default), the Promotion promotes to the Stage itself. This
+  // preserves the behavior of Promotions created before Targets existed:
+  // classic Stages -- those without targetSelectors -- govern no Targets, so
+  // their Promotions leave this field empty.
+  //
+  // +kubebuilder:validation:Optional
+  // +kubebuilder:validation:MaxLength=253
+  // +kubebuilder:validation:Pattern=`^[a-z0-9]([-a-z0-9]*[a-z0-9])?(\.[a-z0-9]([-a-z0-9]*[a-z0-9])?)*$`
+  // +akuity:test-kubebuilder-pattern=KubernetesName
+  optional string target = 5;
+
   // Vars is a list of variables that can be referenced by expressions in
   // promotion steps.
   repeated ExpressionVariable vars = 4;
@@ -1955,6 +1972,20 @@ message StageSpec {
   // Verification describes how to verify a Stage's current Freight is fit for
   // promotion downstream.
   optional Verification verification = 3;
+
+  // TargetSelectors select the Targets that this Stage governs and promotes
+  // Freight to, matching Targets by their labels within the Stage's own
+  // Project. A Target is selected when it matches any selector in this list.
+  // A Stage may govern any number of Targets this way.
+  //
+  // When this field is nil (the default), the Stage operates in classic mode:
+  // it governs a single implicit "stage-self" Target that the controller
+  // creates and maintains on the Stage's behalf. This preserves the behavior
+  // of Stages authored before Targets existed. An empty selector in a non-empty
+  // list selects all Targets in the Project.
+  //
+  // +optional
+  repeated .k8s.io.apimachinery.pkg.apis.meta.v1.LabelSelector targetSelectors = 8;
 }
 
 // StageStats contains a summary of the collective state of a Project's

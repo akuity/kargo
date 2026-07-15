@@ -187,6 +187,22 @@ type PromotionSpec struct {
 	//
 	// +kubebuilder:validation:Optional
 	Origin *FreightOrigin `json:"origin,omitempty" protobuf:"bytes,14,opt,name=origin"`
+	// Target optionally names the Target, within the Promotion's own Project
+	// (namespace), that this Promotion promotes Freight to. Targets allow a
+	// single Stage to govern -- and promote Freight to -- multiple destinations.
+	// When set, the named Target must be one that the referenced Stage governs,
+	// i.e. one selected by the Stage's targetSelectors.
+	//
+	// When empty (the default), the Promotion promotes to the Stage itself. This
+	// preserves the behavior of Promotions created before Targets existed:
+	// classic Stages -- those without targetSelectors -- govern no Targets, so
+	// their Promotions leave this field empty.
+	//
+	// +kubebuilder:validation:Optional
+	// +kubebuilder:validation:MaxLength=253
+	// +kubebuilder:validation:Pattern=`^[a-z0-9]([-a-z0-9]*[a-z0-9])?(\.[a-z0-9]([-a-z0-9]*[a-z0-9])?)*$`
+	// +akuity:test-kubebuilder-pattern=KubernetesName
+	Target string `json:"target,omitempty" protobuf:"bytes,5,opt,name=target"`
 	// Vars is a list of variables that can be referenced by expressions in
 	// promotion steps.
 	Vars []ExpressionVariable `json:"vars,omitempty" protobuf:"bytes,4,rep,name=vars"`
