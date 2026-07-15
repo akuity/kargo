@@ -1,6 +1,6 @@
-import { faUndo } from '@fortawesome/free-solid-svg-icons';
+import { faBackwardStep, faUndo } from '@fortawesome/free-solid-svg-icons';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
-import { Flex, Table, Tooltip } from 'antd';
+import { Button, Flex, Table, Tooltip, theme } from 'antd';
 import { ColumnsType } from 'antd/es/table';
 import { format } from 'date-fns';
 import React, { useState } from 'react';
@@ -26,7 +26,11 @@ import { Promotion as PromotionComponent } from '../project/pipelines/promotion/
 import { useGetFreightMap } from './tabs/freight-history/use-get-freight-map';
 import { hasAbortRequest, promotionCompareFn } from './utils/promotion';
 
+const rollbackAnnotationKey = 'kargo.akuity.io/rollback';
+
 export const Promotions = ({ argocdShard }: { argocdShard?: ArgoCDShard }) => {
+  const { token } = theme.useToken();
+
   const { name: projectName, stageName } = useParams();
 
   const listPromotionsQuery = useListPromotions(
@@ -60,12 +64,13 @@ export const Promotions = ({ argocdShard }: { argocdShard?: ArgoCDShard }) => {
   const columns: ColumnsType<Promotion> = [
     {
       title: '',
-      width: 24,
+      width: 40,
       render: (_, promotion) => {
         const promotionStatusPhase = getPromotionStatusPhase(promotion);
         const isAbortRequestPending =
           hasAbortRequest(promotion) && !isPromotionPhaseTerminal(promotionStatusPhase);
-        const canRetry = isPromotionRetryable(promotionStatusPhase);
+        const isRollbackPromotion =
+          promotion.metadata?.annotations?.[rollbackAnnotationKey] === 'true';
 
         // generally controller quickly Abort promotion
         // but incase if controller is off for some reason, this messaging ensures accurate information
@@ -80,12 +85,11 @@ export const Promotions = ({ argocdShard }: { argocdShard?: ArgoCDShard }) => {
               color={isAbortRequestPending ? 'red' : ''}
             />
 
-            {canRetry && (
-              <Tooltip title='Retry promotion'>
+            {isRollbackPromotion && (
+              <Tooltip title='Rollback promotion'>
                 <FontAwesomeIcon
-                  className='text-xs cursor-pointer'
-                  icon={faUndo}
-                  onClick={() => !promotionMutation.isPending && onRetryPromotion(promotion)}
+                  icon={faBackwardStep}
+                  style={{ color: token.colorTextTertiary }}
                 />
               </Tooltip>
             )}
@@ -134,8 +138,11 @@ export const Promotions = ({ argocdShard }: { argocdShard?: ArgoCDShard }) => {
     },
     {
       title: '',
+      align: 'right',
       render: (_, promotion, promotionIndex) => {
-        const filteredUiPlugins = uiPlugins
+        const canRetry = isPromotionRetryable(getPromotionStatusPhase(promotion));
+
+        const deepLinks = uiPlugins
           .filter((plugin) =>
             plugin.DeepLinkPlugin?.Promotion?.shouldRender({
               promotion,
@@ -144,25 +151,36 @@ export const Promotions = ({ argocdShard }: { argocdShard?: ArgoCDShard }) => {
           )
           .map((plugin) => plugin.DeepLinkPlugin?.Promotion?.render);
 
-        if (filteredUiPlugins?.length > 0) {
-          return (
-            <UiPluginHoles.DeepLinks.Promotion className='w-fit'>
-              {filteredUiPlugins.map(
-                (ApplyPlugin, idx) =>
-                  ApplyPlugin && (
-                    <ApplyPlugin
-                      key={idx}
-                      promotion={promotion}
-                      isLatestPromotion={promotionIndex === 0}
-                      unstable_argocdShardUrl={argocdShard?.url}
-                    />
-                  )
-              )}
-            </UiPluginHoles.DeepLinks.Promotion>
-          );
-        }
+        return (
+          <Flex gap={8} align='center' justify='flex-end'>
+            {deepLinks.length > 0 && (
+              <UiPluginHoles.DeepLinks.Promotion className='w-fit'>
+                {deepLinks.map(
+                  (ApplyPlugin, idx) =>
+                    ApplyPlugin && (
+                      <ApplyPlugin
+                        key={idx}
+                        promotion={promotion}
+                        isLatestPromotion={promotionIndex === 0}
+                        unstable_argocdShardUrl={argocdShard?.url}
+                      />
+                    )
+                )}
+              </UiPluginHoles.DeepLinks.Promotion>
+            )}
 
-        return '-';
+            {canRetry && (
+              <Button
+                size='small'
+                icon={<FontAwesomeIcon icon={faUndo} />}
+                loading={promotionMutation.isPending}
+                onClick={() => onRetryPromotion(promotion)}
+              >
+                Retry
+              </Button>
+            )}
+          </Flex>
+        );
       }
     }
   ];
