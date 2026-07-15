@@ -23,6 +23,8 @@ import type { V1EventList } from '.././models';
 import { customFetch } from '../../../../lib/api/custom-fetch';
 import type { ErrorType } from '../../../../lib/api/custom-fetch';
 
+type SecondParameter<T extends (...args: never) => unknown> = Parameters<T>[1];
+
 /**
  * List Kubernetes Events from a project's namespace. Returns a
 Kubernetes EventList resource.
@@ -63,14 +65,15 @@ export const getListProjectEventsQueryOptions = <
   project: string,
   options?: {
     query?: Partial<UseQueryOptions<Awaited<ReturnType<typeof listProjectEvents>>, TError, TData>>;
+    request?: SecondParameter<typeof customFetch>;
   }
 ) => {
-  const { query: queryOptions } = options ?? {};
+  const { query: queryOptions, request: requestOptions } = options ?? {};
 
   const queryKey = queryOptions?.queryKey ?? getListProjectEventsQueryKey(project);
 
   const queryFn: QueryFunction<Awaited<ReturnType<typeof listProjectEvents>>> = () =>
-    listProjectEvents(project);
+    listProjectEvents(project, requestOptions);
 
   return { queryKey, queryFn, enabled: !!project, ...queryOptions } as UseQueryOptions<
     Awaited<ReturnType<typeof listProjectEvents>>,
@@ -99,6 +102,7 @@ export function useListProjectEvents<
         >,
         'initialData'
       >;
+    request?: SecondParameter<typeof customFetch>;
   },
   queryClient?: QueryClient
 ): DefinedUseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> };
@@ -117,6 +121,7 @@ export function useListProjectEvents<
         >,
         'initialData'
       >;
+    request?: SecondParameter<typeof customFetch>;
   },
   queryClient?: QueryClient
 ): UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> };
@@ -127,6 +132,7 @@ export function useListProjectEvents<
   project: string,
   options?: {
     query?: Partial<UseQueryOptions<Awaited<ReturnType<typeof listProjectEvents>>, TError, TData>>;
+    request?: SecondParameter<typeof customFetch>;
   },
   queryClient?: QueryClient
 ): UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> };
@@ -141,6 +147,7 @@ export function useListProjectEvents<
   project: string,
   options?: {
     query?: Partial<UseQueryOptions<Awaited<ReturnType<typeof listProjectEvents>>, TError, TData>>;
+    request?: SecondParameter<typeof customFetch>;
   },
   queryClient?: QueryClient
 ): UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> } {
