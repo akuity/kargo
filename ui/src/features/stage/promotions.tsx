@@ -87,10 +87,7 @@ export const Promotions = ({ argocdShard }: { argocdShard?: ArgoCDShard }) => {
 
             {isRollbackPromotion && (
               <Tooltip title='Rollback promotion'>
-                <FontAwesomeIcon
-                  icon={faBackwardStep}
-                  style={{ color: token.colorTextTertiary }}
-                />
+                <FontAwesomeIcon icon={faBackwardStep} style={{ color: token.colorTextTertiary }} />
               </Tooltip>
             )}
           </Flex>
