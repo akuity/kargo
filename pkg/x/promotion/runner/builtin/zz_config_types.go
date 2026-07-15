@@ -680,15 +680,25 @@ type OCIPushConfig struct {
 	// 'manifest:' to scope them to the index or image manifest respectively. Unprefixed keys
 	// default to the image manifest. For single images, 'index:'-prefixed keys are ignored.
 	Annotations map[string]string `json:"annotations,omitempty"`
+	// ArtifactType declares the type of artifact being pushed via srcPath. It is applied as the
+	// manifest's config media type. Ignored when using srcRef.
+	ArtifactType string `json:"artifactType,omitempty"`
 	// DestRef is the destination reference including tag (e.g. 'registry/repo:tag' or
 	// 'oci://registry/repo:tag'). For retag-in-place, use the same repo as srcRef with the new
 	// tag.
 	DestRef string `json:"destRef"`
 	// Whether to skip TLS verification when communicating with registries. Defaults to false.
 	InsecureSkipTLSVerify bool `json:"insecureSkipTLSVerify,omitempty"`
+	// MediaType is the media type of the artifact layer when pushing a local file via srcPath.
+	// Defaults to 'application/vnd.oci.image.layer.v1.tar+gzip'. Ignored when using srcRef.
+	MediaType string `json:"mediaType,omitempty"`
+	// SrcPath is the path, relative to the workspace, of a local file to push as a single-layer
+	// OCI artifact (e.g. a tarball produced by an earlier step). Mutually exclusive with srcRef.
+	SrcPath string `json:"srcPath,omitempty"`
 	// SrcRef is the source OCI artifact reference with tag or digest (e.g. 'registry/repo:tag'
-	// or 'registry/repo@sha256:...'). Use 'oci://' prefix for Helm charts.
-	SrcRef string `json:"srcRef"`
+	// or 'registry/repo@sha256:...'). Use 'oci://' prefix for Helm charts. Mutually exclusive
+	// with srcPath.
+	SrcRef string `json:"srcRef,omitempty"`
 }
 
 type SetFreightAliasConfig struct {
