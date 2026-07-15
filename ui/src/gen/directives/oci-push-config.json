@@ -6,15 +6,30 @@
  "properties": {
   "srcRef": {
    "type": "string",
-   "description": "SrcRef is the source OCI artifact reference with tag or digest (e.g. 'registry/repo:tag' or 'registry/repo@sha256:...'). Use 'oci://' prefix for Helm charts.",
+   "description": "SrcRef is the source OCI artifact reference with tag or digest (e.g. 'registry/repo:tag' or 'registry/repo@sha256:...'). Use 'oci://' prefix for Helm charts. Mutually exclusive with srcPath.",
    "minLength": 1,
    "pattern": "^(oci://)?[a-zA-Z0-9._-]+(:\\d+)?(/[a-zA-Z0-9._-]+)*[@:][a-zA-Z0-9._:-]+$"
+  },
+  "srcPath": {
+   "type": "string",
+   "description": "SrcPath is the path, relative to the workspace, of a local file to push as a single-layer OCI artifact (e.g. a tarball produced by an earlier step). Mutually exclusive with srcRef.",
+   "minLength": 1
   },
   "destRef": {
    "type": "string",
    "description": "DestRef is the destination reference including tag (e.g. 'registry/repo:tag' or 'oci://registry/repo:tag'). For retag-in-place, use the same repo as srcRef with the new tag.",
    "minLength": 1,
    "pattern": "^(oci://)?[a-zA-Z0-9._-]+(:\\d+)?(/[a-zA-Z0-9._-]+)*[:][a-zA-Z0-9._-]+$"
+  },
+  "mediaType": {
+   "type": "string",
+   "description": "MediaType is the media type of the artifact layer when pushing a local file via srcPath. Defaults to 'application/vnd.oci.image.layer.v1.tar+gzip'. Ignored when using srcRef.",
+   "minLength": 1
+  },
+  "artifactType": {
+   "type": "string",
+   "description": "ArtifactType declares the type of artifact being pushed via srcPath. It is applied as the manifest's config media type. Ignored when using srcRef.",
+   "minLength": 1
   },
   "annotations": {
    "type": "object",
