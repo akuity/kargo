@@ -2094,6 +2094,71 @@ message Subscription {
   optional int32 discoveryLimit = 4;
 }
 
+// Target represents a single destination -- a cluster, for instance -- that
+// Stages promote Freight to. A Target is purely descriptive: it holds
+// target-specific values consumed by the promotion steps of Stages that
+// govern it and records which Stages those are. It defines no promotion
+// steps and no Freight sources of its own and therefore cannot effect any
+// promotion itself.
+message Target {
+  optional .k8s.io.apimachinery.pkg.apis.meta.v1.ObjectMeta metadata = 1;
+
+  // Spec describes the Target.
+  optional TargetSpec spec = 2;
+
+  // Status describes the current status of the Target.
+  optional TargetStatus status = 3;
+}
+
+// TargetList is a list of Target resources.
+message TargetList {
+  optional .k8s.io.apimachinery.pkg.apis.meta.v1.ListMeta metadata = 1;
+
+  repeated Target items = 2;
+}
+
+// TargetOwnership records one Stage's governance of a Target with respect to
+// Freight from a single origin.
+message TargetOwnership {
+  // Stage is the name of the governing Stage.
+  optional string stage = 1;
+
+  // Origin is the origin of the Freight that the governing Stage promotes to
+  // this Target.
+  optional FreightOrigin origin = 2;
+
+  // CurrentFreight is the name of the Freight from Origin most recently
+  // promoted to this Target by the governing Stage.
+  optional string currentFreight = 3;
+}
+
+// TargetSpec describes a Target.
+message TargetSpec {
+  // Params is a map of arbitrary, target-specific values. Values may be any
+  // valid JSON -- including nested objects and arrays -- so promotion steps
+  // can reference deeply nested data. Promotion steps of Stages that govern
+  // this Target may reference these values by key in their expressions (for
+  // example, target.params.branch or target.params.cluster.region).
+  //
+  // +optional
+  map<string, .k8s.io.apiextensions_apiserver.pkg.apis.apiextensions.v1.JSON> params = 1;
+}
+
+// TargetStatus describes the current status of a Target.
+message TargetStatus {
+  // Conditions contains the last observations of the Target's current state.
+  //
+  // +patchMergeKey=type
+  // +patchStrategy=merge
+  // +listType=map
+  // +listMapKey=type
+  repeated .k8s.io.apimachinery.pkg.apis.meta.v1.Condition conditions = 1;
+
+  // OwnedBy describes the Stages that currently govern this Target, with one
+  // entry per (Stage, Freight origin) pair.
+  repeated TargetOwnership ownedBy = 2;
+}
+
 // Verification describes how to verify that a Promotion has been successful
 // using Argo Rollouts AnalysisTemplates.
 message Verification {

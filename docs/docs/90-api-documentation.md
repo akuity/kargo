@@ -2493,6 +2493,55 @@ RawFormat specifies the format for raw resource representation.
 | discoveryLimit | int32 |  DiscoveryLimit is an optional limit on the number of artifacts that can be discovered for this subscription.     |
 
 
+### Target {#github-com-akuity-kargo-api-v1alpha1-Target}
+ Target represents a single destination -- a cluster, for instance -- that Stages promote Freight to. A Target is purely descriptive: it holds target-specific values consumed by the promotion steps of Stages that govern it and records which Stages those are. It defines no promotion steps and no Freight sources of its own and therefore cannot effect any promotion itself.
+| Field | Type | Description |
+| ----- | ---- | ----------- |
+| metadata | k8s.io.apimachinery.pkg.apis.meta.v1.ObjectMeta |   |
+| spec | [TargetSpec](#github-com-akuity-kargo-api-v1alpha1-TargetSpec) |  Spec describes the Target. |
+| status | [TargetStatus](#github-com-akuity-kargo-api-v1alpha1-TargetStatus) |  Status describes the current status of the Target. |
+
+
+### TargetList {#github-com-akuity-kargo-api-v1alpha1-TargetList}
+ TargetList is a list of Target resources.
+| Field | Type | Description |
+| ----- | ---- | ----------- |
+| metadata | k8s.io.apimachinery.pkg.apis.meta.v1.ListMeta |   |
+| items | [Target](#github-com-akuity-kargo-api-v1alpha1-Target) |   |
+
+
+### TargetOwnership {#github-com-akuity-kargo-api-v1alpha1-TargetOwnership}
+ TargetOwnership records one Stage's governance of a Target with respect to Freight from a single origin.
+| Field | Type | Description |
+| ----- | ---- | ----------- |
+| stage | string |  Stage is the name of the governing Stage. |
+| origin | [FreightOrigin](#github-com-akuity-kargo-api-v1alpha1-FreightOrigin) |  Origin is the origin of the Freight that the governing Stage promotes to this Target. |
+| currentFreight | string |  CurrentFreight is the name of the Freight from Origin most recently promoted to this Target by the governing Stage. |
+
+
+### TargetSpec {#github-com-akuity-kargo-api-v1alpha1-TargetSpec}
+ TargetSpec describes a Target.
+| Field | Type | Description |
+| ----- | ---- | ----------- |
+| params | [TargetSpec.ParamsEntry](#github-com-akuity-kargo-api-v1alpha1-TargetSpec-ParamsEntry) |  Params is a map of arbitrary, target-specific values. Values may be any valid JSON -- including nested objects and arrays -- so promotion steps can reference deeply nested data. Promotion steps of Stages that govern this Target may reference these values by key in their expressions (for example, target.params.branch or target.params.cluster.region).  +optional |
+
+
+### TargetSpec.ParamsEntry {#github-com-akuity-kargo-api-v1alpha1-TargetSpec-ParamsEntry}
+ 
+| Field | Type | Description |
+| ----- | ---- | ----------- |
+| key | string |   |
+| value | k8s.io.apiextensions_apiserver.pkg.apis.apiextensions.v1.JSON |   |
+
+
+### TargetStatus {#github-com-akuity-kargo-api-v1alpha1-TargetStatus}
+ TargetStatus describes the current status of a Target.
+| Field | Type | Description |
+| ----- | ---- | ----------- |
+| conditions | k8s.io.apimachinery.pkg.apis.meta.v1.Condition |  Conditions contains the last observations of the Target's current state.  +patchMergeKey=type +patchStrategy=merge +listType=map +listMapKey=type |
+| ownedBy | [TargetOwnership](#github-com-akuity-kargo-api-v1alpha1-TargetOwnership) |  OwnedBy describes the Stages that currently govern this Target, with one entry per (Stage, Freight origin) pair. |
+
+
 ### Verification {#github-com-akuity-kargo-api-v1alpha1-Verification}
  Verification describes how to verify that a Promotion has been successful using Argo Rollouts AnalysisTemplates.
 | Field | Type | Description |
