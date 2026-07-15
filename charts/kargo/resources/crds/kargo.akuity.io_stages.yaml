@@ -378,61 +378,68 @@ spec:
                   kargo.akuity.io/shard label with the value of this field. When this field
                   is empty, the webhook will ensure that label is absent.
                 type: string
-              targetSelector:
+              targetSelectors:
                 description: |-
-                  TargetSelector selects the Targets that this Stage governs and promotes
+                  TargetSelectors select the Targets that this Stage governs and promotes
                   Freight to, matching Targets by their labels within the Stage's own
-                  Project. A Stage may govern any number of Targets this way.
+                  Project. A Target is selected when it matches any selector in this list.
+                  A Stage may govern any number of Targets this way.
 
                   When this field is nil (the default), the Stage operates in classic mode:
                   it governs a single implicit "stage-self" Target that the controller
                   creates and maintains on the Stage's behalf. This preserves the behavior
-                  of Stages authored before Targets existed. A non-nil but empty selector
-                  is distinct from nil and selects all Targets in the Project.
-                properties:
-                  matchExpressions:
-                    description: matchExpressions is a list of label selector requirements.
-                      The requirements are ANDed.
-                    items:
-                      description: |-
-                        A label selector requirement is a selector that contains values, a key, and an operator that
-                        relates the key and values.
-                      properties:
-                        key:
-                          description: key is the label key that the selector applies
-                            to.
-                          type: string
-                        operator:
-                          description: |-
-                            operator represents a key's relationship to a set of values.
-                            Valid operators are In, NotIn, Exists and DoesNotExist.
-                          type: string
-                        values:
-                          description: |-
-                            values is an array of string values. If the operator is In or NotIn,
-                            the values array must be non-empty. If the operator is Exists or DoesNotExist,
-                            the values array must be empty. This array is replaced during a strategic
-                            merge patch.
-                          items:
+                  of Stages authored before Targets existed. An empty selector in a non-empty
+                  list selects all Targets in the Project.
+                items:
+                  description: |-
+                    A label selector is a label query over a set of resources. The result of matchLabels and
+                    matchExpressions are ANDed. An empty label selector matches all objects. A null
+                    label selector matches no objects.
+                  properties:
+                    matchExpressions:
+                      description: matchExpressions is a list of label selector requirements.
+                        The requirements are ANDed.
+                      items:
+                        description: |-
+                          A label selector requirement is a selector that contains values, a key, and an operator that
+                          relates the key and values.
+                        properties:
+                          key:
+                            description: key is the label key that the selector applies
+                              to.
                             type: string
-                          type: array
-                          x-kubernetes-list-type: atomic
-                      required:
-                      - key
-                      - operator
+                          operator:
+                            description: |-
+                              operator represents a key's relationship to a set of values.
+                              Valid operators are In, NotIn, Exists and DoesNotExist.
+                            type: string
+                          values:
+                            description: |-
+                              values is an array of string values. If the operator is In or NotIn,
+                              the values array must be non-empty. If the operator is Exists or DoesNotExist,
+                              the values array must be empty. This array is replaced during a strategic
+                              merge patch.
+                            items:
+                              type: string
+                            type: array
+                            x-kubernetes-list-type: atomic
+                        required:
+                        - key
+                        - operator
+                        type: object
+                      type: array
+                      x-kubernetes-list-type: atomic
+                    matchLabels:
+                      additionalProperties:
+                        type: string
+                      description: |-
+                        matchLabels is a map of {key,value} pairs. A single {key,value} in the matchLabels
+                        map is equivalent to an element of matchExpressions, whose key field is "key", the
+                        operator is "In", and the values array contains only "value". The requirements are ANDed.
                       type: object
-                    type: array
-                    x-kubernetes-list-type: atomic
-                  matchLabels:
-                    additionalProperties:
-                      type: string
-                    description: |-
-                      matchLabels is a map of {key,value} pairs. A single {key,value} in the matchLabels
-                      map is equivalent to an element of matchExpressions, whose key field is "key", the
-                      operator is "In", and the values array contains only "value". The requirements are ANDed.
-                    type: object
-                type: object
-                x-kubernetes-map-type: atomic
+                  type: object
+                  x-kubernetes-map-type: atomic
+                type: array
               vars:
                 description: |-
                   Vars is a list of variables that can be referenced anywhere in the

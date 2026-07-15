@@ -154,7 +154,7 @@
           "type": "array"
         },
         "target": {
-          "description": "Target optionally names the Target, within the Promotion's own Project\n(namespace), that this Promotion promotes Freight to. Targets allow a\nsingle Stage to govern -- and promote Freight to -- multiple destinations.\nWhen set, the named Target must be one that the referenced Stage governs,\ni.e. one selected by the Stage's targetSelector.\n\nWhen empty (the default), the Promotion promotes to the Stage itself. This\npreserves the behavior of Promotions created before Targets existed:\nclassic Stages -- those without a targetSelector -- govern no Targets, so\ntheir Promotions leave this field empty.",
+          "description": "Target optionally names the Target, within the Promotion's own Project\n(namespace), that this Promotion promotes Freight to. Targets allow a\nsingle Stage to govern -- and promote Freight to -- multiple destinations.\nWhen set, the named Target must be one that the referenced Stage governs,\ni.e. one selected by the Stage's targetSelectors.\n\nWhen empty (the default), the Promotion promotes to the Stage itself. This\npreserves the behavior of Promotions created before Targets existed:\nclassic Stages -- those without targetSelectors -- govern no Targets, so\ntheir Promotions leave this field empty.",
           "maxLength": 253,
           "pattern": "^[a-z0-9]([-a-z0-9]*[a-z0-9])?(\\.[a-z0-9]([-a-z0-9]*[a-z0-9])?)*$",
           "type": "string"

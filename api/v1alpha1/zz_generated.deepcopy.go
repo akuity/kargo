@@ -2232,10 +2232,12 @@ func (in *StageSpec) DeepCopyInto(out *StageSpec) {
 		*out = new(Verification)
 		(*in).DeepCopyInto(*out)
 	}
-	if in.TargetSelector != nil {
-		in, out := &in.TargetSelector, &out.TargetSelector
-		*out = new(metav1.LabelSelector)
-		(*in).DeepCopyInto(*out)
+	if in.TargetSelectors != nil {
+		in, out := &in.TargetSelectors, &out.TargetSelectors
+		*out = make([]metav1.LabelSelector, len(*in))
+		for i := range *in {
+			(*in)[i].DeepCopyInto(&(*out)[i])
+		}
 	}
 }
 

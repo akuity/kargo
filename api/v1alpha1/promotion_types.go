@@ -191,11 +191,11 @@ type PromotionSpec struct {
 	// (namespace), that this Promotion promotes Freight to. Targets allow a
 	// single Stage to govern -- and promote Freight to -- multiple destinations.
 	// When set, the named Target must be one that the referenced Stage governs,
-	// i.e. one selected by the Stage's targetSelector.
+	// i.e. one selected by the Stage's targetSelectors.
 	//
 	// When empty (the default), the Promotion promotes to the Stage itself. This
 	// preserves the behavior of Promotions created before Targets existed:
-	// classic Stages -- those without a targetSelector -- govern no Targets, so
+	// classic Stages -- those without targetSelectors -- govern no Targets, so
 	// their Promotions leave this field empty.
 	//
 	// +kubebuilder:validation:Optional
