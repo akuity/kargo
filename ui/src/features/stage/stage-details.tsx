@@ -1,9 +1,11 @@
 import {
   faBarsStaggered,
+  faBraille,
   faCircleCheck,
   faCircleUp,
   faGear,
-  faHistory
+  faHistory,
+  faShip
 } from '@fortawesome/free-solid-svg-icons';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
 import { Drawer, Flex, Skeleton, Tabs, Typography } from 'antd';
@@ -35,8 +37,10 @@ import { useGetFreightMap } from './tabs/freight-history/use-get-freight-map';
 import { StageSettings } from './tabs/settings/stage-settings';
 import { useImages } from './use-images';
 import { Verifications } from './verifications';
+import { Fleet } from './fleet';
 
 enum TabsTypes {
+  FLEET = 'Fleet',
   PROMOTION = 'Promotion',
   VERIFICATIONS = 'Verification',
   LIVE_MANIFEST = 'Live Manifest',
@@ -159,6 +163,12 @@ export const StageDetails = ({ stage }: { stage: Stage }) => {
                   label: 'Promotions',
                   icon: <FontAwesomeIcon icon={faCircleUp} />,
                   children: <Promotions argocdShard={argocdShard} />
+                },
+                {
+                  key: TabsTypes.FLEET,
+                  label: 'Fleet',
+                  icon: <FontAwesomeIcon icon={faBraille} />,
+                  children: <Fleet />
                 },
                 {
                   key: TabsTypes.VERIFICATIONS,
