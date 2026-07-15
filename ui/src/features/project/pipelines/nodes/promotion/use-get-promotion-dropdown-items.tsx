@@ -3,6 +3,7 @@ import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
 import { useMutation } from '@tanstack/react-query';
 import { Typography } from 'antd';
 import { ItemType } from 'antd/es/menu/interface';
+import { useState } from 'react';
 import { generatePath, useNavigate } from 'react-router-dom';
 
 import { paths } from '@ui/config/paths';
@@ -10,11 +11,15 @@ import { IAction, useActionContext } from '@ui/features/project/pipelines/contex
 import { useDictionaryContext } from '@ui/features/project/pipelines/context/dictionary-context';
 import { isStageControlFlow } from '@ui/features/project/pipelines/nodes/stage-meta-utils';
 import { useGetUpstreamFreight } from '@ui/features/project/pipelines/nodes/use-get-upstream-freight';
+import { stageHasAutoPromotionHold } from '@ui/features/project/pipelines/promotion/auto-promotion';
+import { ResumeAutoPromotionDrawer } from '@ui/features/project/pipelines/promotion/resume-auto-promotion-drawer';
 import { useManualApprovalModal } from '@ui/features/project/pipelines/promotion/use-manual-approval-modal';
 import { promoteToStage, queryFreightsRest } from '@ui/gen/api/v2/core/core';
 import { Stage } from '@ui/gen/api/v2/models';
 
 export const useGetPromotionDropdownItems = (stage: Stage) => {
+  const [resumeAutoPromotionOpen, setResumeAutoPromotionOpen] = useState(false);
+
   const projectName = stage?.metadata?.namespace || '';
   const stageName = stage?.metadata?.name || '';
 
@@ -26,6 +31,7 @@ export const useGetPromotionDropdownItems = (stage: Stage) => {
   const totalSubscribersToThisStage = dictionaryContext?.subscribersByStage?.[stageName]?.size || 0;
 
   const controlFlow = isStageControlFlow(stage);
+  const hasAutoPromotionHold = stageHasAutoPromotionHold(stage);
 
   const upstreamFreights = useGetUpstreamFreight(stage);
 
@@ -115,6 +121,14 @@ export const useGetPromotionDropdownItems = (stage: Stage) => {
       label: 'Promote',
       onClick: () => actionContext?.actPromote(IAction.PROMOTE, stage)
     });
+
+    if (hasAutoPromotionHold) {
+      dropdownItems.push({
+        key: 'resume-auto-promotion',
+        label: 'Resume auto-promotion',
+        onClick: () => setResumeAutoPromotionOpen(true)
+      });
+    }
   }
 
   if (controlFlow || totalSubscribersToThisStage > 1) {
@@ -182,5 +196,14 @@ export const useGetPromotionDropdownItems = (stage: Stage) => {
     });
   }
 
-  return dropdownItems;
+  return {
+    dropdownItems,
+    resumeAutoPromotionDrawer: (
+      <ResumeAutoPromotionDrawer
+        stage={stage}
+        open={resumeAutoPromotionOpen}
+        onClose={() => setResumeAutoPromotionOpen(false)}
+      />
+    )
+  };
 };
