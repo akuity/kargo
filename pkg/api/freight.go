@@ -35,9 +35,7 @@ func GenerateFreightID(f *kargoapi.Freight) string {
 	slices.Sort(hashParts)
 	return fmt.Sprintf(
 		"%x",
-		sha1.Sum([]byte( // nolint:gosec
-			fmt.Sprintf("%s:%s", f.Origin.String(), strings.Join(hashParts, "|")),
-		)),
+		sha1.Sum(fmt.Appendf(nil, "%s:%s", f.Origin.String(), strings.Join(hashParts, "|"))),
 	)
 }
 

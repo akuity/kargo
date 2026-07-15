@@ -38,6 +38,9 @@ const (
 	// for a specific collection of Freight has this label set to the ID of the
 	// collection.
 	LabelKeyFreightCollection = "kargo.akuity.io/freight-collection"
+	// LabelKeyPromotionBatch identifies all target-specific Promotions created
+	// together for one Stage promotion request.
+	LabelKeyPromotionBatch = "kargo.akuity.io/promotion-batch"
 	// LabelKeyProject can be used to mark a namespace as a Project namespace
 	// by setting the value to "true". This allows Kargo to adopt a namespace
 	// that was created before the creation of the Project.

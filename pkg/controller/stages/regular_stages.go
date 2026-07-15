@@ -33,6 +33,7 @@ import (
 	"github.com/akuity/kargo/pkg/conditions"
 	"github.com/akuity/kargo/pkg/controller"
 	argocdapi "github.com/akuity/kargo/pkg/controller/argocd/api/v1alpha1"
+	"github.com/akuity/kargo/pkg/controller/stages/internal/targetpromotion"
 	kargoEvent "github.com/akuity/kargo/pkg/event"
 	k8sevent "github.com/akuity/kargo/pkg/event/kubernetes"
 	exprfn "github.com/akuity/kargo/pkg/expressions/function"
@@ -235,6 +236,20 @@ func (r *RegularStageReconciler) SetupWithManager(
 		return fmt.Errorf("unable to watch Promotions: %w", err)
 	}
 
+	// Target label changes can add or remove a destination from a Stage's
+	// fan-out. Reconcile target-aware Stages so missing children are created.
+	if err = c.Watch(
+		source.Kind(
+			kargoMgr.GetCache(),
+			&kargoapi.Target{},
+			handler.TypedEnqueueRequestsFromMapFunc(
+				r.targetStageEnqueuer(kargoMgr.GetClient()),
+			),
+		),
+	); err != nil {
+		return fmt.Errorf("unable to watch Targets: %w", err)
+	}
+
 	// Watch for Freight that have been newly promoted to a Stage or newly marked
 	// as verified in a Stage and enqueue downstream Stages for reconciliation.
 	if err = c.Watch(
@@ -324,6 +339,35 @@ func (r *RegularStageReconciler) SetupWithManager(
 	)
 
 	return nil
+}
+
+// targetStageEnqueuer returns a handler that reconciles every target-aware
+// regular Stage in a Target's Project when that Target changes. Enqueuing all
+// target-aware Stages handles both additions to and removals from a selector's
+// match set.
+func (r *RegularStageReconciler) targetStageEnqueuer(
+	reader client.Reader,
+) handler.TypedMapFunc[*kargoapi.Target, ctrl.Request] {
+	return func(ctx context.Context, target *kargoapi.Target) []ctrl.Request {
+		stages := &kargoapi.StageList{}
+		if err := reader.List(ctx, stages, client.InNamespace(target.Namespace)); err != nil {
+			logging.LoggerFromContext(ctx).Error(err, "error listing Stages for Target change")
+			return nil
+		}
+		requests := make([]ctrl.Request, 0)
+		for _, stage := range stages.Items {
+			if stage.IsControlFlow() || stage.Spec.TargetSelectors == nil {
+				continue
+			}
+			requests = append(requests, ctrl.Request{
+				NamespacedName: types.NamespacedName{
+					Namespace: stage.Namespace,
+					Name:      stage.Name,
+				},
+			})
+		}
+		return requests
+	}
 }
 
 func (r *RegularStageReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Result, error) {
@@ -600,6 +644,10 @@ func (r *RegularStageReconciler) syncPromotions(
 		newStatus.AutoPromotionHolds = nil
 	}
 
+	if stage.Spec.TargetSelectors != nil {
+		return r.syncTargetPromotions(stage, promotions.Items)
+	}
+
 	// If there are no Promotions, then we are not promoting any Freight.
 	if len(promotions.Items) == 0 {
 		logger.Debug("no Promotions found for Stage")
@@ -816,6 +864,71 @@ func (r *RegularStageReconciler) syncPromotions(
 	// not promoting.
 	conditions.Delete(&newStatus, kargoapi.ConditionTypePromoting)
 	return newStatus, hasNonTerminalPromotions, nil
+}
+
+// syncTargetPromotions aggregates the target-specific Promotions in the newest
+// batch. Target-aware Stages deliberately do not use the singular current- and
+// last-Promotion status fields: a batch has multiple independent destinations.
+func (r *RegularStageReconciler) syncTargetPromotions(
+	stage *kargoapi.Stage,
+	promotions []kargoapi.Promotion,
+) (kargoapi.StageStatus, bool, error) {
+	newStatus := *stage.Status.DeepCopy()
+	newStatus.CurrentPromotion = nil
+	newStatus.LastPromotion = nil
+
+	batches := targetpromotion.Batches(promotions)
+	batch := targetpromotion.MostRecent(batches)
+	if batch == nil {
+		conditions.Delete(&newStatus, kargoapi.ConditionTypePromoting)
+		return newStatus, false, nil
+	}
+
+	switch batch.State() {
+	case targetpromotion.StateActive:
+		conditions.Set(&newStatus, &metav1.Condition{
+			Type:               kargoapi.ConditionTypePromoting,
+			Status:             metav1.ConditionTrue,
+			Reason:             "ActiveTargetPromotionBatch",
+			Message:            "Stage has a target promotion batch in progress",
+			ObservedGeneration: stage.Generation,
+		})
+		return newStatus, true, nil
+	case targetpromotion.StateFailed:
+		conditions.Set(&newStatus, &metav1.Condition{
+			Type:               kargoapi.ConditionTypePromoting,
+			Status:             metav1.ConditionFalse,
+			Reason:             "TargetPromotionBatchFailed",
+			Message:            "At least one Promotion in the target promotion batch failed",
+			ObservedGeneration: stage.Generation,
+		})
+		return newStatus, false, nil
+	}
+
+	conditions.Delete(&newStatus, kargoapi.ConditionTypePromoting)
+	freightCollection := batch.FreightCollection()
+	hasFreightCollection := freightCollection != nil
+	isFreightNewToStage := hasFreightCollection && 
+		!newStatus.FreightHistory.Current().Includes(batch.FreightName())
+
+	if isFreightNewToStage {
+		newStatus.FreightHistory.Record(freightCollection.DeepCopy())
+		conditions.Set(&newStatus, &metav1.Condition{
+			Type:               kargoapi.ConditionTypeHealthy,
+			Status:             metav1.ConditionUnknown,
+			Reason:             "WaitingForHealthCheck",
+			Message:            "Waiting for health check to be performed after successful promotion",
+			ObservedGeneration: stage.Generation,
+		})
+		conditions.Set(&newStatus, &metav1.Condition{
+			Type:               kargoapi.ConditionTypeVerified,
+			Status:             metav1.ConditionUnknown,
+			Reason:             "WaitingForVerification",
+			Message:            "Waiting for verification to be performed after successful promotion",
+			ObservedGeneration: stage.Generation,
+		})
+	}
+	return newStatus, false, nil
 }
 
 // assessHealth assesses the health of a Stage based on the health checks from
@@ -1780,6 +1893,10 @@ func (r *RegularStageReconciler) autoPromoteFreight(
 			stage.Name, err,
 		)
 	}
+	targets, err := api.ResolveStageTargets(ctx, r.client, stage)
+	if err != nil {
+		return newStatus, fmt.Errorf("error resolving targets for Stage %q: %w", stage.Name, err)
+	}
 	candidates := api.SelectAutoPromotionCandidates(ctx, stage, availableFreight)
 	// If the Stage has no current Freight, any candidate is new to it.
 	currentFreight := newStatus.FreightHistory.Current()
@@ -1825,6 +1942,17 @@ func (r *RegularStageReconciler) autoPromoteFreight(
 		}
 		if stageAwaitingFreightForOrigin(stage, origin, candidate.Name) {
 			freightLogger.Debug("Stage is already awaiting candidate Freight for origin")
+			continue
+		}
+
+		if targets != nil {
+			if len(targets) == 0 {
+				recordEmptyTargetBatch(&newStatus, candidate)
+				continue
+			}
+			if err = r.createTargetPromotions(ctx, stage, candidate.Name, targets); err != nil {
+				return newStatus, err
+			}
 			continue
 		}
 
@@ -1902,6 +2030,87 @@ func (r *RegularStageReconciler) autoPromoteFreight(
 	}
 
 	return newStatus, nil
+}
+
+// createTargetPromotions creates any missing child Promotions in a target
+// batch. If a previous reconciliation created only some children, it reuses
+// that batch and completes it instead of creating duplicate work.
+func (r *RegularStageReconciler) createTargetPromotions(
+	ctx context.Context,
+	stage *kargoapi.Stage,
+	freightName string,
+	targets []kargoapi.Target,
+) error {
+	promotions := &kargoapi.PromotionList{}
+	if err := r.client.List(
+		ctx,
+		promotions,
+		client.InNamespace(stage.Namespace),
+		client.MatchingFieldsSelector{
+			Selector: fields.OneTermEqualSelector(
+				indexer.PromotionsByStageAndFreightField,
+				indexer.StageAndFreightKey(stage.Name, freightName),
+			),
+		},
+	); err != nil {
+		return fmt.Errorf("list existing target Promotions: %w", err)
+	}
+
+	batchID := ""
+	if batch := targetpromotion.MostRecent(targetpromotion.Batches(promotions.Items)); batch != nil {
+		batchID = batch.ID()
+	}
+	if batchID == "" {
+		batchID = uuid.NewString()
+	}
+
+	existingTargets := map[string]struct{}{}
+	for _, promotion := range promotions.Items {
+		if promotion.Labels[kargoapi.LabelKeyPromotionBatch] == batchID {
+			existingTargets[promotion.Spec.Target] = struct{}{}
+		}
+	}
+	for _, target := range targets {
+		if _, found := existingTargets[target.Name]; found {
+			continue
+		}
+		promotion := api.NewMinimalPromotionForTarget(stage, freightName, target.Name, batchID)
+		if err := r.client.Create(ctx, promotion); err != nil {
+			return fmt.Errorf(
+				"create Promotion for Target %q and Freight %q: %w",
+				target.Name,
+				freightName,
+				err,
+			)
+		}
+	}
+	return nil
+}
+
+// recordEmptyTargetBatch immediately advances the Stage when it explicitly
+// governs Targets but none match. No Promotion is created because there is no
+// destination at which work could be performed.
+func recordEmptyTargetBatch(
+	status *kargoapi.StageStatus,
+	freight kargoapi.Freight,
+) {
+	current := status.FreightHistory.Current()
+	if freightCollectionHasFreight(current, freight.Origin.String(), freight.Name) {
+		return
+	}
+	collection := &kargoapi.FreightCollection{}
+	if current != nil {
+		collection = current.DeepCopy()
+	}
+	collection.UpdateOrPush(kargoapi.FreightReference{
+		Name:      freight.Name,
+		Origin:    freight.Origin,
+		Commits:   freight.Commits,
+		Images:    freight.Images,
+		Charts:    freight.Charts,
+		Artifacts: freight.Artifacts,
+	})
+	status.FreightHistory.Record(collection)
 }
 
 // stageAwaitingFreightForOrigin reports whether this reconcile pass has already

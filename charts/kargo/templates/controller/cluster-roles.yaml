@@ -78,6 +78,7 @@ rules:
   resources:
   - clusterpromotiontasks
   - promotiontasks
+  - targets
   - warehouses
   verbs:
   - get

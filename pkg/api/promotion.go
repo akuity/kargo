@@ -58,6 +58,23 @@ func NewMinimalPromotion(
 	}
 }
 
+// NewMinimalPromotionForTarget constructs the minimal Promotion needed to
+// promote Freight to one Target governed by a Stage. The defaulting webhook
+// fills the remaining fields from the Stage's PromotionTemplate.
+func NewMinimalPromotionForTarget(
+	stage *kargoapi.Stage,
+	freightName string,
+	targetName string,
+	batchID string,
+) *kargoapi.Promotion {
+	promotion := NewMinimalPromotion(stage, freightName)
+	promotion.Spec.Target = targetName
+	promotion.Labels = map[string]string{
+		kargoapi.LabelKeyPromotionBatch: batchID,
+	}
+	return promotion
+}
+
 // NewMinimalPromotionForOrigin constructs a Promotion that, unlike
 // NewMinimalPromotion which is explicit about the exact Freight to promote,
 // specifies only an origin. The mutating webhook resolves the origin to the
