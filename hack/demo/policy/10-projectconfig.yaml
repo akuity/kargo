@@ -1,0 +1,90 @@
+apiVersion: kargo.akuity.io/v1alpha1
+kind: ProjectConfig
+metadata:
+  name: policy-demo
+  namespace: policy-demo
+spec:
+  promotionPolicies:
+  - stageSelector:
+      name: test
+    autoPromotionEnabled: true
+  - stageSelector:
+      name: uat
+    autoPromotionEnabled: true
+  policy:
+    # Promotion windows: forward promotions to a governed Stage dispatch only
+    # while a window is open. Held Promotions stay Pending and dispatch on
+    # their own when the window opens.
+    promotionWindows:
+    - name: uat-evenings
+      stageSelector:
+        name: uat
+      recurrence: FREQ=WEEKLY;BYDAY=MO,TU,WE,TH,FR
+      start: "18:00"
+      end: "23:00"
+      location: America/Los_Angeles
+
+    # Rolling-window rate limit: at most maxPromotions automatic dispatches
+    # to a matching Stage within any trailing window.
+    rateLimits:
+    - stageSelector:
+        name: test
+      maxPromotions: 1
+      window: 2m
+
+    # A custom policy replaces the built-in default (which unions the
+    # windows, exclusions, and ratelimit library blocks). Uncomment to
+    # compose the same blocks a la carte and add project-specific rules:
+    # hotfixes (semver patch-only increments over what the Stage is running)
+    # bypass exclusions, and prerelease builds are never auto-promoted to
+    # prod.
+    #
+    # custom: |
+    #   package kargo.dispatch
+    #
+    #   import rego.v1
+    #
+    #   import data.kargo.lib.exclusions
+    #   import data.kargo.lib.helpers
+    #   import data.kargo.lib.ratelimit
+    #   import data.kargo.lib.windows
+    #
+    #   # Standard blocks -- except exclusions admit hotfixes.
+    #   violation contains v if some v in windows.violation
+    #
+    #   violation contains v if some v in ratelimit.violation
+    #
+    #   violation contains v if {
+    #   	some v in exclusions.violation
+    #   	not helpers.is_hotfix
+    #   }
+    #
+    #   # Project-specific: no prerelease builds are auto-promoted to prod.
+    #   violation contains v if {
+    #   	input.stage.name == "prod"
+    #   	input.promotion.class == "auto-forward"
+    #   	some img in input.freight.images
+    #   	contains(img.tag, "-")
+    #   	v := {
+    #   		"rule": "no-prerelease-prod",
+    #   		"msg": sprintf("prerelease %q is not auto-promoted to prod", [img.tag]),
+    #   	}
+    #   }
+    #
+    #   decision := {"allow": true, "message": "within policy", "requeue_after": 0} if {
+    #   	count(violation) == 0
+    #   }
+    #
+    #   decision := {
+    #   	"allow": false,
+    #   	"message": concat("; ", [v.msg | some v in violation]),
+    #   	"requeue_after": requeue,
+    #   } if {
+    #   	count(violation) > 0
+    #   }
+    #
+    #   requeues := [v.requeue | some v in violation; is_number(v.requeue)]
+    #
+    #   requeue := min(requeues) if count(requeues) > 0
+    #
+    #   requeue := 0 if count(requeues) == 0

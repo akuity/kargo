@@ -33,6 +33,14 @@ type ClusterConfigSpec struct {
 		GitClientConfig
 	} `json:"gitClient,omitempty"`
 
+	// PromotionExclusions describes system-wide periods of time during which
+	// promotion dispatch is restricted across all Projects. Promotions held
+	// by an exclusion remain Pending and are dispatched automatically once
+	// the exclusion ends.
+	//
+	// +optional
+	PromotionExclusions []*PromotionExclusion `json:"promotionExclusions"`
+
 	// StageLinks defines deep links shown when viewing any Stage resource
 	// across all projects in the cluster. Project-level StageLinks defined in
 	// ProjectConfig are shown in addition to these.
@@ -54,6 +62,10 @@ func (m *ClusterConfigSpec) Validate(formats strfmt.Registry) error {
 	}
 
 	if err := m.validateGitClient(formats); err != nil {
+		res = append(res, err)
+	}
+
+	if err := m.validatePromotionExclusions(formats); err != nil {
 		res = append(res, err)
 	}
 
@@ -104,6 +116,36 @@ func (m *ClusterConfigSpec) validateFreightLinks(formats strfmt.Registry) error 
 func (m *ClusterConfigSpec) validateGitClient(formats strfmt.Registry) error {
 	if swag.IsZero(m.GitClient) { // not required
 		return nil
+	}
+
+	return nil
+}
+
+func (m *ClusterConfigSpec) validatePromotionExclusions(formats strfmt.Registry) error {
+	if swag.IsZero(m.PromotionExclusions) { // not required
+		return nil
+	}
+
+	for i := 0; i < len(m.PromotionExclusions); i++ {
+		if swag.IsZero(m.PromotionExclusions[i]) { // not required
+			continue
+		}
+
+		if m.PromotionExclusions[i] != nil {
+			if err := m.PromotionExclusions[i].Validate(formats); err != nil {
+				ve := new(errors.Validation)
+				if stderrors.As(err, &ve) {
+					return ve.ValidateName("promotionExclusions" + "." + strconv.Itoa(i))
+				}
+				ce := new(errors.CompositeError)
+				if stderrors.As(err, &ce) {
+					return ce.ValidateName("promotionExclusions" + "." + strconv.Itoa(i))
+				}
+
+				return err
+			}
+		}
+
 	}
 
 	return nil
@@ -181,6 +223,10 @@ func (m *ClusterConfigSpec) ContextValidate(ctx context.Context, formats strfmt.
 		res = append(res, err)
 	}
 
+	if err := m.contextValidatePromotionExclusions(ctx, formats); err != nil {
+		res = append(res, err)
+	}
+
 	if err := m.contextValidateStageLinks(ctx, formats); err != nil {
 		res = append(res, err)
 	}
@@ -225,6 +271,35 @@ func (m *ClusterConfigSpec) contextValidateFreightLinks(ctx context.Context, for
 }
 
 func (m *ClusterConfigSpec) contextValidateGitClient(ctx context.Context, formats strfmt.Registry) error {
+
+	return nil
+}
+
+func (m *ClusterConfigSpec) contextValidatePromotionExclusions(ctx context.Context, formats strfmt.Registry) error {
+
+	for i := 0; i < len(m.PromotionExclusions); i++ {
+
+		if m.PromotionExclusions[i] != nil {
+
+			if swag.IsZero(m.PromotionExclusions[i]) { // not required
+				return nil
+			}
+
+			if err := m.PromotionExclusions[i].ContextValidate(ctx, formats); err != nil {
+				ve := new(errors.Validation)
+				if stderrors.As(err, &ve) {
+					return ve.ValidateName("promotionExclusions" + "." + strconv.Itoa(i))
+				}
+				ce := new(errors.CompositeError)
+				if stderrors.As(err, &ce) {
+					return ce.ValidateName("promotionExclusions" + "." + strconv.Itoa(i))
+				}
+
+				return err
+			}
+		}
+
+	}
 
 	return nil
 }

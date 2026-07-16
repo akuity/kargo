@@ -1716,6 +1716,7 @@ RawFormat specifies the format for raw resource representation.
 | gitClient | [GitClientConfig](#github-com-akuity-kargo-api-v1alpha1-GitClientConfig) |  GitClient describes cluster-level configuration for Kargo's Git client, including committer identity and an optional signing key. If set, these values take precedence over any configuration provided at install time via the Helm chart. +optional |
 | freightLinks | [DeepLink](#github-com-akuity-kargo-api-v1alpha1-DeepLink) |  FreightLinks defines deep links shown when viewing any Freight resource across all projects in the cluster. Project-level FreightLinks defined in ProjectConfig are shown in addition to these.  +optional |
 | stageLinks | [DeepLink](#github-com-akuity-kargo-api-v1alpha1-DeepLink) |  StageLinks defines deep links shown when viewing any Stage resource across all projects in the cluster. Project-level StageLinks defined in ProjectConfig are shown in addition to these.  +optional |
+| promotionExclusions | [PromotionExclusion](#github-com-akuity-kargo-api-v1alpha1-PromotionExclusion) |  PromotionExclusions describes system-wide periods of time during which promotion dispatch is restricted across all Projects. Promotions held by an exclusion remain Pending and are dispatched automatically once the exclusion ends.  +optional |
 
 
 ### ClusterConfigStatus {#github-com-akuity-kargo-api-v1alpha1-ClusterConfigStatus}
@@ -2206,6 +2207,7 @@ RawFormat specifies the format for raw resource representation.
 | webhookReceivers | [WebhookReceiverConfig](#github-com-akuity-kargo-api-v1alpha1-WebhookReceiverConfig) |  WebhookReceivers describes Project-specific webhook receivers used for processing events from various external platforms |
 | freightLinks | [DeepLink](#github-com-akuity-kargo-api-v1alpha1-DeepLink) |  FreightLinks defines deep links shown when viewing Freight resources within this project. These are shown in addition to any cluster-level FreightLinks defined in ClusterConfig.  +optional |
 | stageLinks | [DeepLink](#github-com-akuity-kargo-api-v1alpha1-DeepLink) |  StageLinks defines deep links shown when viewing Stage resources within this project. These are shown in addition to any cluster-level StageLinks defined in ClusterConfig.  +optional |
+| policy | [ProjectPolicy](#github-com-akuity-kargo-api-v1alpha1-ProjectPolicy) |  Policy configures policy-based promotion dispatch controls for this Project. Promotions held by policy remain Pending and are dispatched automatically once permitted.  +optional |
 
 
 ### ProjectConfigStatus {#github-com-akuity-kargo-api-v1alpha1-ProjectConfigStatus}
@@ -2224,6 +2226,15 @@ RawFormat specifies the format for raw resource representation.
 | ----- | ---- | ----------- |
 | metadata | k8s.io.apimachinery.pkg.apis.meta.v1.ListMeta |   |
 | items | [Project](#github-com-akuity-kargo-api-v1alpha1-Project) |   |
+
+
+### ProjectPolicy {#github-com-akuity-kargo-api-v1alpha1-ProjectPolicy}
+ ProjectPolicy describes policy-based promotion dispatch controls for a Project. The declarative elements (promotion windows, rate limits) are evaluated by a built-in default policy; Custom optionally replaces that default with a project-authored policy module.
+| Field | Type | Description |
+| ----- | ---- | ----------- |
+| custom | string |  Custom is an optional inline Rego module that replaces the built-in default dispatch policy. It must declare `package kargo.dispatch` and produce a `decision` document of the form `{"allow": bool, "message": string, "requeue_after": seconds}`. The module may fold standard behavior back in by importing the built-in library packages data.kargo.lib.windows, data.kargo.lib.exclusions, data.kargo.lib.ratelimit, and data.kargo.lib.helpers.  +optional |
+| promotionWindows | [PromotionWindow](#github-com-akuity-kargo-api-v1alpha1-PromotionWindow) |  PromotionWindows describes recurring windows of time during which forward promotions may be dispatched to matching Stages. When one or more windows govern a Stage, forward promotions to that Stage are dispatched only while a window is open.  +optional |
+| rateLimits | [PromotionRateLimit](#github-com-akuity-kargo-api-v1alpha1-PromotionRateLimit) |  RateLimits limits the frequency of automatic promotion dispatches to matching Stages.  +optional |
 
 
 ### ProjectStats {#github-com-akuity-kargo-api-v1alpha1-ProjectStats}
@@ -2251,6 +2262,17 @@ RawFormat specifies the format for raw resource representation.
 | status | [PromotionStatus](#github-com-akuity-kargo-api-v1alpha1-PromotionStatus) |  Status describes the current state of the transition represented by this Promotion. |
 
 
+### PromotionExclusion {#github-com-akuity-kargo-api-v1alpha1-PromotionExclusion}
+ PromotionExclusion describes an absolute period of time during which promotion dispatch is restricted.
+| Field | Type | Description |
+| ----- | ---- | ----------- |
+| name | string |  Name is a unique identifier for this exclusion.   |
+| start | k8s.io.apimachinery.pkg.apis.meta.v1.Time |  Start is the time at which the exclusion begins. |
+| end | k8s.io.apimachinery.pkg.apis.meta.v1.Time |  End is the time at which the exclusion ends. |
+| scope | string |  Scope names the set of promotion classes frozen by this exclusion:    - no-promotions: freezes all promotions.   - no-forward: freezes forward promotions (automatic and manual);     rollbacks are permitted.   - no-auto: freezes automatic promotions only.   |
+| argocdServers | string |  ArgoCDServers optionally narrows this exclusion to Stages whose referenced Argo CD Applications target one of these destination server URLs or names. When empty, the exclusion applies to all Stages. Note that if the Argo CD integration is disabled, no Stage references any Application and a server-scoped exclusion never applies.  +optional |
+
+
 ### PromotionList {#github-com-akuity-kargo-api-v1alpha1-PromotionList}
  PromotionList contains a list of Promotion
 | Field | Type | Description |
@@ -2275,6 +2297,15 @@ RawFormat specifies the format for raw resource representation.
 | ----- | ---- | ----------- |
 | name | string |  Name is the name of the resource to which this policy applies.  It can be an exact name, a regex pattern (with prefix "regex:"), or a glob pattern (with prefix "glob:").  When both Name and LabelSelector are specified, the Name is ANDed with the LabelSelector. I.e., the resource must match both the Name and LabelSelector to be selected by this policy.  NOTE: Using a specific exact name is the most secure option. Pattern matching via regex or glob can be exploited by users with permissions to match promotion policies that weren't intended to apply to their resources. For example, a user could create a resource with a name deliberately crafted to match the pattern, potentially bypassing intended promotion controls.  +optional |
 | labelSelector | k8s.io.apimachinery.pkg.apis.meta.v1.LabelSelector |  LabelSelector is a selector that matches the resource to which this policy applies.  When both Name and LabelSelector are specified, the Name is ANDed with the LabelSelector. I.e., the resource must match both the Name and LabelSelector to be selected by this policy.  NOTE: Using label selectors introduces security risks as users with appropriate permissions could create new resources with labels that match the selector, potentially enabling unauthorized auto-promotion. For sensitive environments, exact Name matching provides tighter control. |
+
+
+### PromotionRateLimit {#github-com-akuity-kargo-api-v1alpha1-PromotionRateLimit}
+ PromotionRateLimit limits the frequency of automatic promotion dispatches to matching Stages using a rolling window: at most MaxPromotions promotions are dispatched within any trailing Window.
+| Field | Type | Description |
+| ----- | ---- | ----------- |
+| stageSelector | [PromotionPolicySelector](#github-com-akuity-kargo-api-v1alpha1-PromotionPolicySelector) |  StageSelector selects the Stages governed by this rate limit. When nil, the rate limit governs all Stages in the Project.  +optional |
+| maxPromotions | int32 |  MaxPromotions is the maximum number of automatic promotion dispatches permitted within any trailing Window.   |
+| window | k8s.io.apimachinery.pkg.apis.meta.v1.Duration |  Window is the duration of the rolling window. |
 
 
 ### PromotionReference {#github-com-akuity-kargo-api-v1alpha1-PromotionReference}
@@ -2383,6 +2414,18 @@ RawFormat specifies the format for raw resource representation.
 | ----- | ---- | ----------- |
 | vars | [ExpressionVariable](#github-com-akuity-kargo-api-v1alpha1-ExpressionVariable) |  Vars is a list of variables that can be referenced by expressions in promotion steps. |
 | steps | [PromotionStep](#github-com-akuity-kargo-api-v1alpha1-PromotionStep) |  Steps specifies the directives to be executed as part of a Promotion. The order in which the directives are executed is the order in which they are listed in this field.      |
+
+
+### PromotionWindow {#github-com-akuity-kargo-api-v1alpha1-PromotionWindow}
+ PromotionWindow describes a recurring window of time during which forward promotions may be dispatched.
+| Field | Type | Description |
+| ----- | ---- | ----------- |
+| name | string |  Name is a unique identifier for this window.   |
+| stageSelector | [PromotionPolicySelector](#github-com-akuity-kargo-api-v1alpha1-PromotionPolicySelector) |  StageSelector selects the Stages governed by this window. When nil, the window governs all Stages in the Project.  +optional |
+| recurrence | string |  Recurrence is an RFC 5545 recurrence rule (RRULE) describing the days on which the window occurs (e.g. "FREQ=WEEKLY;BYDAY=MO,TU,WE,TH,FR").   |
+| start | string |  Start is the opening wall-clock time of each occurrence in "HH:MM" (24-hour) form.   |
+| end | string |  End is the closing wall-clock time of each occurrence in "HH:MM" (24-hour) form. An End at or before Start closes on the following day.   |
+| location | string |  Location is an IANA time zone name (e.g. "America/Los_Angeles") in which Start and End are interpreted. Defaults to UTC.  +optional |
 
 
 ### QuayWebhookReceiverConfig {#github-com-akuity-kargo-api-v1alpha1-QuayWebhookReceiverConfig}

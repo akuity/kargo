@@ -81,6 +81,53 @@
           ],
           "type": "object"
         },
+        "promotionExclusions": {
+          "description": "PromotionExclusions describes system-wide periods of time during which\npromotion dispatch is restricted across all Projects. Promotions held\nby an exclusion remain Pending and are dispatched automatically once\nthe exclusion ends.",
+          "items": {
+            "description": "PromotionExclusion describes an absolute period of time during which\npromotion dispatch is restricted.",
+            "properties": {
+              "argocdServers": {
+                "description": "ArgoCDServers optionally narrows this exclusion to Stages whose\nreferenced Argo CD Applications target one of these destination server\nURLs or names. When empty, the exclusion applies to all Stages. Note\nthat if the Argo CD integration is disabled, no Stage references any\nApplication and a server-scoped exclusion never applies.",
+                "items": {
+                  "type": "string"
+                },
+                "type": "array"
+              },
+              "end": {
+                "description": "End is the time at which the exclusion ends.",
+                "format": "date-time",
+                "type": "string"
+              },
+              "name": {
+                "description": "Name is a unique identifier for this exclusion.",
+                "minLength": 1,
+                "type": "string"
+              },
+              "scope": {
+                "description": "Scope names the set of promotion classes frozen by this exclusion:\n\n  - no-promotions: freezes all promotions.\n  - no-forward: freezes forward promotions (automatic and manual);\n    rollbacks are permitted.\n  - no-auto: freezes automatic promotions only.",
+                "enum": [
+                  "no-promotions",
+                  "no-forward",
+                  "no-auto"
+                ],
+                "type": "string"
+              },
+              "start": {
+                "description": "Start is the time at which the exclusion begins.",
+                "format": "date-time",
+                "type": "string"
+              }
+            },
+            "required": [
+              "end",
+              "name",
+              "scope",
+              "start"
+            ],
+            "type": "object"
+          },
+          "type": "array"
+        },
         "stageLinks": {
           "description": "StageLinks defines deep links shown when viewing any Stage resource\nacross all projects in the cluster. Project-level StageLinks defined in\nProjectConfig are shown in addition to these.",
           "items": {

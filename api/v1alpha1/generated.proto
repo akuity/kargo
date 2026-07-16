@@ -417,6 +417,14 @@ message ClusterConfigSpec {
   //
   // +optional
   repeated DeepLink stageLinks = 4;
+
+  // PromotionExclusions describes system-wide periods of time during which
+  // promotion dispatch is restricted across all Projects. Promotions held
+  // by an exclusion remain Pending and are dispatched automatically once
+  // the exclusion ends.
+  //
+  // +optional
+  repeated PromotionExclusion promotionExclusions = 5;
 }
 
 // ClusterConfigStatus describes the current status of a ClusterConfig.
@@ -1435,6 +1443,13 @@ message ProjectConfigSpec {
   //
   // +optional
   repeated DeepLink stageLinks = 4;
+
+  // Policy configures policy-based promotion dispatch controls for this
+  // Project. Promotions held by policy remain Pending and are dispatched
+  // automatically once permitted.
+  //
+  // +optional
+  optional ProjectPolicy policy = 5;
 }
 
 // ProjectConfigStatus describes the current status of a ProjectConfig.
@@ -1468,6 +1483,37 @@ message ProjectList {
   optional .k8s.io.apimachinery.pkg.apis.meta.v1.ListMeta metadata = 1;
 
   repeated Project items = 2;
+}
+
+// ProjectPolicy describes policy-based promotion dispatch controls for a
+// Project. The declarative elements (promotion windows, rate limits) are
+// evaluated by a built-in default policy; Custom optionally replaces that
+// default with a project-authored policy module.
+message ProjectPolicy {
+  // Custom is an optional inline Rego module that replaces the built-in
+  // default dispatch policy. It must declare `package kargo.dispatch` and
+  // produce a `decision` document of the form
+  // `{"allow": bool, "message": string, "requeue_after": seconds}`. The
+  // module may fold standard behavior back in by importing the built-in
+  // library packages data.kargo.lib.windows, data.kargo.lib.exclusions,
+  // data.kargo.lib.ratelimit, and data.kargo.lib.helpers.
+  //
+  // +optional
+  optional string custom = 1;
+
+  // PromotionWindows describes recurring windows of time during which
+  // forward promotions may be dispatched to matching Stages. When one or
+  // more windows govern a Stage, forward promotions to that Stage are
+  // dispatched only while a window is open.
+  //
+  // +optional
+  repeated PromotionWindow promotionWindows = 2;
+
+  // RateLimits limits the frequency of automatic promotion dispatches to
+  // matching Stages.
+  //
+  // +optional
+  repeated PromotionRateLimit rateLimits = 3;
 }
 
 // ProjectStats contains a summary of the collective state of a Project's
@@ -1510,6 +1556,40 @@ message Promotion {
   // Status describes the current state of the transition represented by this
   // Promotion.
   optional PromotionStatus status = 3;
+}
+
+// PromotionExclusion describes an absolute period of time during which
+// promotion dispatch is restricted.
+message PromotionExclusion {
+  // Name is a unique identifier for this exclusion.
+  //
+  // +kubebuilder:validation:MinLength=1
+  optional string name = 1;
+
+  // Start is the time at which the exclusion begins.
+  optional .k8s.io.apimachinery.pkg.apis.meta.v1.Time start = 2;
+
+  // End is the time at which the exclusion ends.
+  optional .k8s.io.apimachinery.pkg.apis.meta.v1.Time end = 3;
+
+  // Scope names the set of promotion classes frozen by this exclusion:
+  //
+  //   - no-promotions: freezes all promotions.
+  //   - no-forward: freezes forward promotions (automatic and manual);
+  //     rollbacks are permitted.
+  //   - no-auto: freezes automatic promotions only.
+  //
+  // +kubebuilder:validation:Enum=no-promotions;no-forward;no-auto
+  optional string scope = 4;
+
+  // ArgoCDServers optionally narrows this exclusion to Stages whose
+  // referenced Argo CD Applications target one of these destination server
+  // URLs or names. When empty, the exclusion applies to all Stages. Note
+  // that if the Argo CD integration is disabled, no Stage references any
+  // Application and a server-scoped exclusion never applies.
+  //
+  // +optional
+  repeated string argocdServers = 5;
 }
 
 // PromotionList contains a list of Promotion
@@ -1587,6 +1667,26 @@ message PromotionPolicySelector {
   // the selector, potentially enabling unauthorized auto-promotion.
   // For sensitive environments, exact Name matching provides tighter control.
   optional .k8s.io.apimachinery.pkg.apis.meta.v1.LabelSelector labelSelector = 2;
+}
+
+// PromotionRateLimit limits the frequency of automatic promotion dispatches
+// to matching Stages using a rolling window: at most MaxPromotions
+// promotions are dispatched within any trailing Window.
+message PromotionRateLimit {
+  // StageSelector selects the Stages governed by this rate limit. When
+  // nil, the rate limit governs all Stages in the Project.
+  //
+  // +optional
+  optional PromotionPolicySelector stageSelector = 1;
+
+  // MaxPromotions is the maximum number of automatic promotion dispatches
+  // permitted within any trailing Window.
+  //
+  // +kubebuilder:validation:Minimum=1
+  optional int32 maxPromotions = 2;
+
+  // Window is the duration of the rolling window.
+  optional .k8s.io.apimachinery.pkg.apis.meta.v1.Duration window = 3;
 }
 
 // PromotionReference contains the relevant information about a Promotion
@@ -1877,6 +1977,45 @@ message PromotionTemplateSpec {
   // +kubebuilder:validation:items:XValidation:message="PromotionTemplate step referencing a task cannot set continueOnError",rule="!has(self.task) || !has(self.continueOnError)"
   // +kubebuilder:validation:items:XValidation:message="PromotionTemplate step referencing a task cannot set retry",rule="!has(self.task) || !has(self.retry)"
   repeated PromotionStep steps = 1;
+}
+
+// PromotionWindow describes a recurring window of time during which
+// forward promotions may be dispatched.
+message PromotionWindow {
+  // Name is a unique identifier for this window.
+  //
+  // +kubebuilder:validation:MinLength=1
+  optional string name = 1;
+
+  // StageSelector selects the Stages governed by this window. When nil,
+  // the window governs all Stages in the Project.
+  //
+  // +optional
+  optional PromotionPolicySelector stageSelector = 2;
+
+  // Recurrence is an RFC 5545 recurrence rule (RRULE) describing the days
+  // on which the window occurs (e.g. "FREQ=WEEKLY;BYDAY=MO,TU,WE,TH,FR").
+  //
+  // +kubebuilder:validation:MinLength=1
+  optional string recurrence = 3;
+
+  // Start is the opening wall-clock time of each occurrence in "HH:MM"
+  // (24-hour) form.
+  //
+  // +kubebuilder:validation:Pattern=`^([01][0-9]|2[0-3]):[0-5][0-9]$`
+  optional string start = 4;
+
+  // End is the closing wall-clock time of each occurrence in "HH:MM"
+  // (24-hour) form. An End at or before Start closes on the following day.
+  //
+  // +kubebuilder:validation:Pattern=`^([01][0-9]|2[0-3]):[0-5][0-9]$`
+  optional string end = 5;
+
+  // Location is an IANA time zone name (e.g. "America/Los_Angeles") in
+  // which Start and End are interpreted. Defaults to UTC.
+  //
+  // +optional
+  optional string location = 6;
 }
 
 // QuayWebhookReceiverConfig describes a webhook receiver that is compatible

@@ -1,0 +1,299 @@
+package dispatch
+
+import (
+	"fmt"
+	"strings"
+	"time"
+
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/apimachinery/pkg/labels"
+
+	kargoapi "github.com/akuity/kargo/api/v1alpha1"
+	argocdapi "github.com/akuity/kargo/pkg/controller/argocd/api/v1alpha1"
+	"github.com/akuity/kargo/pkg/pattern"
+)
+
+// Promotion classes distinguished by dispatch policy.
+const (
+	// ClassAutoForward is a forward promotion created by the system (e.g.
+	// auto-promotion).
+	ClassAutoForward = "auto-forward"
+	// ClassManualForward is a forward promotion created by a user.
+	ClassManualForward = "manual-forward"
+	// ClassRollback is a promotion marked as a rollback.
+	ClassRollback = "rollback"
+)
+
+// Exclusion scopes and the promotion classes each freezes.
+var defaultScopes = map[string]any{
+	"no-promotions": []any{ClassAutoForward, ClassManualForward, ClassRollback},
+	"no-forward":    []any{ClassAutoForward, ClassManualForward},
+	"no-auto":       []any{ClassAutoForward},
+}
+
+// ClassOf infers a Promotion's class. The actor inference mirrors the
+// promotion webhook's intent inference: the Stage controller's
+// auto-promotions carry no create-actor annotation and other controllers
+// identify themselves with a "controller:" actor, while user-initiated
+// Promotions name the requesting user.
+func ClassOf(promo *kargoapi.Promotion) string {
+	if promo.Annotations[kargoapi.AnnotationKeyRollback] == kargoapi.AnnotationValueTrue {
+		return ClassRollback
+	}
+	actor := promo.Annotations[kargoapi.AnnotationKeyCreateActor]
+	if actor == "" || strings.HasPrefix(actor, kargoapi.EventActorControllerPrefix) {
+		return ClassAutoForward
+	}
+	return ClassManualForward
+}
+
+// BuildInput assembles the policy input document for one candidate
+// Promotion. freight and project may be nil; apps may be empty.
+func BuildInput(
+	promo *kargoapi.Promotion,
+	freight *kargoapi.Freight,
+	stage *kargoapi.Stage,
+	project *kargoapi.Project,
+	apps []argocdapi.Application,
+	now time.Time,
+) map[string]any {
+	input := map[string]any{
+		"promotion": map[string]any{
+			"name":        promo.Name,
+			"class":       ClassOf(promo),
+			"createdAt":   promo.CreationTimestamp.UTC().Format(time.RFC3339),
+			"actor":       promo.Annotations[kargoapi.AnnotationKeyCreateActor],
+			"labels":      stringMap(promo.Labels),
+			"annotations": stringMap(promo.Annotations),
+		},
+		"freight": freightDoc(freight),
+		"stage": map[string]any{
+			"name":          stage.Name,
+			"project":       stage.Namespace,
+			"labels":        stringMap(stage.Labels),
+			"annotations":   stringMap(stage.Annotations),
+			"lastPromotion": lastPromotionDoc(stage.Status.LastPromotion),
+		},
+		"project":      projectDoc(project),
+		"applications": applicationDocs(apps),
+		"now":          now.UTC().Format(time.RFC3339),
+	}
+	return input
+}
+
+// BuildData assembles the policy data document for one Stage. policy may be
+// nil. dispatches are the times at which the Stage's recent promotions were
+// dispatched (began Running), for rate limiting.
+func BuildData(
+	policy *kargoapi.ProjectPolicy,
+	exclusions []kargoapi.PromotionExclusion,
+	stage *kargoapi.Stage,
+	dispatches []time.Time,
+) (map[string]any, error) {
+	windows := []any{}
+	rateLimit := map[string]any{}
+	if policy != nil {
+		for _, w := range policy.PromotionWindows {
+			matches, err := selectorMatches(w.StageSelector, stage)
+			if err != nil {
+				return nil, fmt.Errorf("promotion window %q: %w", w.Name, err)
+			}
+			if !matches {
+				continue
+			}
+			windows = append(windows, map[string]any{
+				"name":       w.Name,
+				"recurrence": w.Recurrence,
+				"start":      w.Start,
+				"end":        w.End,
+				"location":   w.Location,
+			})
+		}
+		for _, rl := range policy.RateLimits {
+			matches, err := selectorMatches(rl.StageSelector, stage)
+			if err != nil {
+				return nil, fmt.Errorf("rate limit: %w", err)
+			}
+			if !matches {
+				continue
+			}
+			dispatchNS := make([]any, len(dispatches))
+			for i, d := range dispatches {
+				dispatchNS[i] = d.UnixNano()
+			}
+			rateLimit[stage.Name] = map[string]any{
+				"max":        int64(rl.MaxPromotions),
+				"window":     rl.Window.Nanoseconds(),
+				"dispatches": dispatchNS,
+			}
+			break // first matching rate limit wins
+		}
+	}
+	exclusionDocs := make([]any, len(exclusions))
+	for i, e := range exclusions {
+		servers := make([]any, len(e.ArgoCDServers))
+		for j, s := range e.ArgoCDServers {
+			servers[j] = s
+		}
+		exclusionDocs[i] = map[string]any{
+			"name":          e.Name,
+			"start":         e.Start.UTC().Format(time.RFC3339),
+			"end":           e.End.UTC().Format(time.RFC3339),
+			"scope":         e.Scope,
+			"argocdServers": servers,
+		}
+	}
+	return map[string]any{
+		"windows":    windows,
+		"exclusions": exclusionDocs,
+		"scopes":     defaultScopes,
+		"rateLimit":  rateLimit,
+	}, nil
+}
+
+// selectorMatches reports whether the selector matches the Stage, using the
+// same name-pattern and label-selector semantics as PromotionPolicies. A
+// nil selector matches every Stage.
+func selectorMatches(
+	selector *kargoapi.PromotionPolicySelector,
+	stage *kargoapi.Stage,
+) (bool, error) {
+	if selector == nil {
+		return true, nil
+	}
+	if selector.Name != "" {
+		m, err := pattern.ParseNamePattern(selector.Name)
+		if err != nil {
+			return false, fmt.Errorf("error parsing stage selector name pattern %q: %w", selector.Name, err)
+		}
+		if !m.Matches(stage.Name) {
+			return false, nil
+		}
+	}
+	if selector.LabelSelector != nil {
+		s, err := metav1.LabelSelectorAsSelector(selector.LabelSelector)
+		if err != nil {
+			return false, fmt.Errorf("error parsing stage label selector: %w", err)
+		}
+		if !s.Matches(labels.Set(stage.Labels)) {
+			return false, nil
+		}
+	}
+	return true, nil
+}
+
+func freightDoc(freight *kargoapi.Freight) map[string]any {
+	if freight == nil {
+		return map[string]any{}
+	}
+	return map[string]any{
+		"name":    freight.Name,
+		"alias":   freight.Alias,
+		"origin":  freight.Origin.String(),
+		"images":  imageDocs(freight.Images),
+		"commits": commitDocs(freight.Commits),
+		"charts":  chartDocs(freight.Charts),
+	}
+}
+
+func lastPromotionDoc(ref *kargoapi.PromotionReference) map[string]any {
+	if ref == nil {
+		return map[string]any{}
+	}
+	doc := map[string]any{"name": ref.Name}
+	if ref.Status != nil {
+		doc["phase"] = string(ref.Status.Phase)
+	}
+	if ref.FinishedAt != nil {
+		doc["finishedAt"] = ref.FinishedAt.UTC().Format(time.RFC3339)
+	}
+	if ref.Freight != nil {
+		doc["freight"] = map[string]any{
+			"name":    ref.Freight.Name,
+			"origin":  ref.Freight.Origin.String(),
+			"images":  imageDocs(ref.Freight.Images),
+			"commits": commitDocs(ref.Freight.Commits),
+			"charts":  chartDocs(ref.Freight.Charts),
+		}
+	}
+	return doc
+}
+
+func projectDoc(project *kargoapi.Project) map[string]any {
+	if project == nil {
+		return map[string]any{
+			"labels":      map[string]any{},
+			"annotations": map[string]any{},
+		}
+	}
+	return map[string]any{
+		"labels":      stringMap(project.Labels),
+		"annotations": stringMap(project.Annotations),
+	}
+}
+
+func applicationDocs(apps []argocdapi.Application) []any {
+	docs := make([]any, len(apps))
+	for i, app := range apps {
+		docs[i] = map[string]any{
+			"name":      app.Name,
+			"namespace": app.Namespace,
+			"destination": map[string]any{
+				"server":    app.Spec.Destination.Server,
+				"name":      app.Spec.Destination.Name,
+				"namespace": app.Spec.Destination.Namespace,
+			},
+			"health":      string(app.Status.Health.Status),
+			"sync":        string(app.Status.Sync.Status),
+			"labels":      stringMap(app.Labels),
+			"annotations": stringMap(app.Annotations),
+		}
+	}
+	return docs
+}
+
+func imageDocs(images []kargoapi.Image) []any {
+	docs := make([]any, len(images))
+	for i, img := range images {
+		docs[i] = map[string]any{
+			"repoURL": img.RepoURL,
+			"tag":     img.Tag,
+			"digest":  img.Digest,
+		}
+	}
+	return docs
+}
+
+func commitDocs(commits []kargoapi.GitCommit) []any {
+	docs := make([]any, len(commits))
+	for i, c := range commits {
+		docs[i] = map[string]any{
+			"repoURL": c.RepoURL,
+			"id":      c.ID,
+			"branch":  c.Branch,
+			"tag":     c.Tag,
+		}
+	}
+	return docs
+}
+
+func chartDocs(charts []kargoapi.Chart) []any {
+	docs := make([]any, len(charts))
+	for i, c := range charts {
+		docs[i] = map[string]any{
+			"repoURL": c.RepoURL,
+			"name":    c.Name,
+			"version": c.Version,
+		}
+	}
+	return docs
+}
+
+// stringMap converts a string map into a JSON-friendly document, never nil.
+func stringMap(m map[string]string) map[string]any {
+	doc := make(map[string]any, len(m))
+	for k, v := range m {
+		doc[k] = v
+	}
+	return doc
+}

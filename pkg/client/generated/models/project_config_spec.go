@@ -24,6 +24,15 @@ type ProjectConfigSpec struct {
 	// +optional
 	FreightLinks []*DeepLink `json:"freightLinks"`
 
+	// Policy configures policy-based promotion dispatch controls for this
+	// Project. Promotions held by policy remain Pending and are dispatched
+	// automatically once permitted.
+	//
+	// +optional
+	Policy struct {
+		ProjectPolicy
+	} `json:"policy,omitempty"`
+
 	// PromotionPolicies defines policies governing the promotion of Freight to
 	// specific Stages within the Project.
 	PromotionPolicies []*PromotionPolicy `json:"promotionPolicies"`
@@ -45,6 +54,10 @@ func (m *ProjectConfigSpec) Validate(formats strfmt.Registry) error {
 	var res []error
 
 	if err := m.validateFreightLinks(formats); err != nil {
+		res = append(res, err)
+	}
+
+	if err := m.validatePolicy(formats); err != nil {
 		res = append(res, err)
 	}
 
@@ -91,6 +104,14 @@ func (m *ProjectConfigSpec) validateFreightLinks(formats strfmt.Registry) error 
 			}
 		}
 
+	}
+
+	return nil
+}
+
+func (m *ProjectConfigSpec) validatePolicy(formats strfmt.Registry) error {
+	if swag.IsZero(m.Policy) { // not required
+		return nil
 	}
 
 	return nil
@@ -194,6 +215,10 @@ func (m *ProjectConfigSpec) ContextValidate(ctx context.Context, formats strfmt.
 		res = append(res, err)
 	}
 
+	if err := m.contextValidatePolicy(ctx, formats); err != nil {
+		res = append(res, err)
+	}
+
 	if err := m.contextValidatePromotionPolicies(ctx, formats); err != nil {
 		res = append(res, err)
 	}
@@ -237,6 +262,11 @@ func (m *ProjectConfigSpec) contextValidateFreightLinks(ctx context.Context, for
 		}
 
 	}
+
+	return nil
+}
+
+func (m *ProjectConfigSpec) contextValidatePolicy(ctx context.Context, formats strfmt.Registry) error {
 
 	return nil
 }

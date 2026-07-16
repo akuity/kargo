@@ -15,6 +15,7 @@ import (
 	rbacapi "github.com/akuity/kargo/api/rbac/v1alpha1"
 	kargoapi "github.com/akuity/kargo/api/v1alpha1"
 	libargocd "github.com/akuity/kargo/pkg/argocd"
+	argocdapi "github.com/akuity/kargo/pkg/controller/argocd/api/v1alpha1"
 	"github.com/akuity/kargo/pkg/expressions"
 	"github.com/akuity/kargo/pkg/logging"
 	"github.com/akuity/kargo/pkg/promotion"
@@ -41,6 +42,8 @@ const (
 	StagesByFreightField        = "freight"
 	StagesByUpstreamStagesField = "upstreamStages"
 	StagesByWarehouseField      = "warehouse"
+
+	ApplicationsByAuthorizedStageField = "authorizedStage"
 
 	ServiceAccountsByOIDCClaimsField = "claims"
 
@@ -554,6 +557,33 @@ func StagesByWarehouse(obj client.Object) []string {
 	}
 	slices.Sort(warehouses)
 	return warehouses
+}
+
+// ApplicationsByAuthorizedStage is a client.IndexerFunc that indexes Argo CD
+// Applications by each "<project>:<stage>" entry in their authorized-stage
+// annotation. The parsing mirrors api.AuthorizedStages (not imported here to
+// keep this package's dependencies minimal), silently skipping malformed
+// entries rather than failing the index.
+func ApplicationsByAuthorizedStage(obj client.Object) []string {
+	app, ok := obj.(*argocdapi.Application)
+	if !ok {
+		return nil
+	}
+	value, ok := app.Annotations[kargoapi.AnnotationKeyAuthorizedStage]
+	if !ok {
+		return nil
+	}
+	var keys []string
+	for _, entry := range strings.Split(value, ",") {
+		project, stage, ok := strings.Cut(entry, ":")
+		project, stage = strings.TrimSpace(project), strings.TrimSpace(stage)
+		if !ok || project == "" || stage == "" ||
+			strings.Contains(project, "*") || strings.Contains(stage, "*") {
+			continue
+		}
+		keys = append(keys, project+":"+stage)
+	}
+	return keys
 }
 
 // FormatClaim formats a claims name and values to be used by the

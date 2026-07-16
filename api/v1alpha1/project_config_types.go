@@ -47,6 +47,12 @@ type ProjectConfigSpec struct {
 	//
 	// +optional
 	StageLinks []DeepLink `json:"stageLinks,omitempty" protobuf:"bytes,4,rep,name=stageLinks"`
+	// Policy configures policy-based promotion dispatch controls for this
+	// Project. Promotions held by policy remain Pending and are dispatched
+	// automatically once permitted.
+	//
+	// +optional
+	Policy *ProjectPolicy `json:"policy,omitempty" protobuf:"bytes,5,opt,name=policy"`
 }
 
 // ProjectConfigStatus describes the current status of a ProjectConfig.
@@ -603,6 +609,87 @@ type PromotionPolicySelector struct {
 	// the selector, potentially enabling unauthorized auto-promotion.
 	// For sensitive environments, exact Name matching provides tighter control.
 	*metav1.LabelSelector `json:",inline" protobuf:"bytes,2,opt,name=labelSelector"`
+}
+
+// ProjectPolicy describes policy-based promotion dispatch controls for a
+// Project. The declarative elements (promotion windows, rate limits) are
+// evaluated by a built-in default policy; Custom optionally replaces that
+// default with a project-authored policy module.
+type ProjectPolicy struct {
+	// Custom is an optional inline Rego module that replaces the built-in
+	// default dispatch policy. It must declare `package kargo.dispatch` and
+	// produce a `decision` document of the form
+	// `{"allow": bool, "message": string, "requeue_after": seconds}`. The
+	// module may fold standard behavior back in by importing the built-in
+	// library packages data.kargo.lib.windows, data.kargo.lib.exclusions,
+	// data.kargo.lib.ratelimit, and data.kargo.lib.helpers.
+	//
+	// +optional
+	Custom string `json:"custom,omitempty" protobuf:"bytes,1,opt,name=custom"`
+	// PromotionWindows describes recurring windows of time during which
+	// forward promotions may be dispatched to matching Stages. When one or
+	// more windows govern a Stage, forward promotions to that Stage are
+	// dispatched only while a window is open.
+	//
+	// +optional
+	PromotionWindows []PromotionWindow `json:"promotionWindows,omitempty" protobuf:"bytes,2,rep,name=promotionWindows"`
+	// RateLimits limits the frequency of automatic promotion dispatches to
+	// matching Stages.
+	//
+	// +optional
+	RateLimits []PromotionRateLimit `json:"rateLimits,omitempty" protobuf:"bytes,3,rep,name=rateLimits"`
+}
+
+// PromotionWindow describes a recurring window of time during which
+// forward promotions may be dispatched.
+type PromotionWindow struct {
+	// Name is a unique identifier for this window.
+	//
+	// +kubebuilder:validation:MinLength=1
+	Name string `json:"name" protobuf:"bytes,1,opt,name=name"`
+	// StageSelector selects the Stages governed by this window. When nil,
+	// the window governs all Stages in the Project.
+	//
+	// +optional
+	StageSelector *PromotionPolicySelector `json:"stageSelector,omitempty" protobuf:"bytes,2,opt,name=stageSelector"`
+	// Recurrence is an RFC 5545 recurrence rule (RRULE) describing the days
+	// on which the window occurs (e.g. "FREQ=WEEKLY;BYDAY=MO,TU,WE,TH,FR").
+	//
+	// +kubebuilder:validation:MinLength=1
+	Recurrence string `json:"recurrence" protobuf:"bytes,3,opt,name=recurrence"`
+	// Start is the opening wall-clock time of each occurrence in "HH:MM"
+	// (24-hour) form.
+	//
+	// +kubebuilder:validation:Pattern=`^([01][0-9]|2[0-3]):[0-5][0-9]$`
+	Start string `json:"start" protobuf:"bytes,4,opt,name=start"`
+	// End is the closing wall-clock time of each occurrence in "HH:MM"
+	// (24-hour) form. An End at or before Start closes on the following day.
+	//
+	// +kubebuilder:validation:Pattern=`^([01][0-9]|2[0-3]):[0-5][0-9]$`
+	End string `json:"end" protobuf:"bytes,5,opt,name=end"`
+	// Location is an IANA time zone name (e.g. "America/Los_Angeles") in
+	// which Start and End are interpreted. Defaults to UTC.
+	//
+	// +optional
+	Location string `json:"location,omitempty" protobuf:"bytes,6,opt,name=location"`
+}
+
+// PromotionRateLimit limits the frequency of automatic promotion dispatches
+// to matching Stages using a rolling window: at most MaxPromotions
+// promotions are dispatched within any trailing Window.
+type PromotionRateLimit struct {
+	// StageSelector selects the Stages governed by this rate limit. When
+	// nil, the rate limit governs all Stages in the Project.
+	//
+	// +optional
+	StageSelector *PromotionPolicySelector `json:"stageSelector,omitempty" protobuf:"bytes,1,opt,name=stageSelector"`
+	// MaxPromotions is the maximum number of automatic promotion dispatches
+	// permitted within any trailing Window.
+	//
+	// +kubebuilder:validation:Minimum=1
+	MaxPromotions int32 `json:"maxPromotions" protobuf:"varint,2,opt,name=maxPromotions"`
+	// Window is the duration of the rolling window.
+	Window metav1.Duration `json:"window" protobuf:"bytes,3,opt,name=window"`
 }
 
 // +kubebuilder:object:root=true

@@ -1,0 +1,174 @@
+// Package dispatch decides whether a Pending Promotion may be dispatched
+// (acknowledged by its Stage and allowed to begin Running). The decision is
+// delegated to an OPA policy: a built-in default composed of standard,
+// data-driven library blocks (see policy/*.rego), optionally replaced by a
+// project-authored module (ProjectConfig spec.policy.custom).
+package dispatch
+
+import (
+	"context"
+	"crypto/sha256"
+	"encoding/hex"
+	"encoding/json"
+	"fmt"
+	"sync"
+	"time"
+
+	"github.com/open-policy-agent/opa/v1/rego"
+	"github.com/open-policy-agent/opa/v1/storage"
+	"github.com/open-policy-agent/opa/v1/storage/inmem"
+)
+
+// decisionQuery is the entry point every dispatch policy must produce.
+const decisionQuery = "data.kargo.dispatch.decision"
+
+// Decision is a dispatch policy verdict.
+type Decision struct {
+	// Allow indicates whether the Promotion may be dispatched.
+	Allow bool
+	// Message enumerates the reasons the Promotion is held. Empty or
+	// informational when Allow is true.
+	Message string
+	// RequeueAfter is the soonest time at which a denial may clear — the
+	// "when" that lets a held Promotion resume on its own. Zero when the
+	// policy offered none.
+	RequeueAfter time.Duration
+}
+
+// Engine evaluates dispatch policies, caching one prepared query per
+// distinct custom policy module (including compile failures, so a broken
+// policy is not recompiled on every reconcile).
+type Engine struct {
+	mu       sync.Mutex
+	prepared map[string]*preparedPolicy
+}
+
+// NewEngine returns a new Engine.
+func NewEngine() *Engine {
+	return &Engine{prepared: map[string]*preparedPolicy{}}
+}
+
+// Evaluate evaluates the dispatch policy against the given input and data
+// documents. custom is the project's policy module source; when empty, the
+// built-in default policy is used.
+func (e *Engine) Evaluate(
+	ctx context.Context,
+	custom string,
+	input map[string]any,
+	data map[string]any,
+) (*Decision, error) {
+	pp := e.policyFor(custom)
+	pp.once.Do(func() { pp.prepare(ctx, custom) })
+	if pp.err != nil {
+		return nil, fmt.Errorf("error preparing dispatch policy: %w", pp.err)
+	}
+	return pp.eval(ctx, input, data)
+}
+
+func (e *Engine) policyFor(custom string) *preparedPolicy {
+	sum := sha256.Sum256([]byte(custom))
+	key := hex.EncodeToString(sum[:])
+	e.mu.Lock()
+	defer e.mu.Unlock()
+	pp, ok := e.prepared[key]
+	if !ok {
+		pp = &preparedPolicy{}
+		e.prepared[key] = pp
+	}
+	return pp
+}
+
+// preparedPolicy is a compiled dispatch policy. The store is bound at
+// preparation time, so per-evaluation data is supplied through a write
+// transaction guarded by mu (the inmem store is single-writer).
+type preparedPolicy struct {
+	once  sync.Once
+	err   error
+	mu    sync.Mutex
+	query rego.PreparedEvalQuery
+	store storage.Store
+}
+
+func (p *preparedPolicy) prepare(ctx context.Context, custom string) {
+	mods, err := policyModules(custom)
+	if err != nil {
+		p.err = err
+		return
+	}
+	p.store = inmem.New()
+	opts := []func(*rego.Rego){
+		rego.Query(decisionQuery),
+		rego.Store(p.store),
+		rego.StrictBuiltinErrors(true),
+	}
+	for name, src := range mods {
+		opts = append(opts, rego.Module(name, src))
+	}
+	opts = append(opts, builtins()...)
+	p.query, p.err = rego.New(opts...).PrepareForEval(ctx)
+}
+
+func (p *preparedPolicy) eval(
+	ctx context.Context,
+	input map[string]any,
+	data map[string]any,
+) (*Decision, error) {
+	p.mu.Lock()
+	defer p.mu.Unlock()
+	txn, err := p.store.NewTransaction(ctx, storage.WriteParams)
+	if err != nil {
+		return nil, fmt.Errorf("error starting policy data transaction: %w", err)
+	}
+	defer p.store.Abort(ctx, txn)
+	if err = p.store.Write(ctx, txn, storage.AddOp, storage.Path{}, data); err != nil {
+		return nil, fmt.Errorf("error writing policy data: %w", err)
+	}
+	rs, err := p.query.Eval(ctx, rego.EvalInput(input), rego.EvalTransaction(txn))
+	if err != nil {
+		return nil, fmt.Errorf("error evaluating dispatch policy: %w", err)
+	}
+	if len(rs) == 0 || len(rs[0].Expressions) == 0 {
+		return nil, fmt.Errorf("dispatch policy did not produce a decision")
+	}
+	return decodeDecision(rs[0].Expressions[0].Value)
+}
+
+func decodeDecision(v any) (*Decision, error) {
+	m, ok := v.(map[string]any)
+	if !ok {
+		return nil, fmt.Errorf("decision is %T, expected an object", v)
+	}
+	allow, ok := m["allow"].(bool)
+	if !ok {
+		return nil, fmt.Errorf("decision has no boolean \"allow\" key")
+	}
+	decision := &Decision{Allow: allow}
+	if msg, ok := m["message"].(string); ok {
+		decision.Message = msg
+	}
+	if raw, ok := m["requeue_after"]; ok {
+		secs, err := toFloat(raw)
+		if err != nil {
+			return nil, fmt.Errorf("decision has invalid \"requeue_after\": %w", err)
+		}
+		if secs > 0 {
+			decision.RequeueAfter = time.Duration(secs * float64(time.Second))
+		}
+	}
+	return decision, nil
+}
+
+func toFloat(v any) (float64, error) {
+	switch n := v.(type) {
+	case json.Number:
+		return n.Float64()
+	case float64:
+		return n, nil
+	case int64:
+		return float64(n), nil
+	case int:
+		return float64(n), nil
+	default:
+		return 0, fmt.Errorf("value is %T, expected a number", v)
+	}
+}

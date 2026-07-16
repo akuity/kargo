@@ -18,6 +18,7 @@ import (
 	"k8s.io/apimachinery/pkg/types"
 	kerrors "k8s.io/apimachinery/pkg/util/errors"
 	"k8s.io/apimachinery/pkg/util/wait"
+	"k8s.io/client-go/tools/record"
 	"k8s.io/client-go/util/retry"
 	"k8s.io/utils/ptr"
 	ctrl "sigs.k8s.io/controller-runtime"
@@ -44,6 +45,7 @@ import (
 	libEvent "github.com/akuity/kargo/pkg/kubernetes/event"
 	"github.com/akuity/kargo/pkg/logging"
 	intpredicate "github.com/akuity/kargo/pkg/predicate"
+	"github.com/akuity/kargo/pkg/promotion/dispatch"
 	"github.com/akuity/kargo/pkg/rollouts"
 )
 
@@ -77,9 +79,12 @@ func ReconcilerConfigFromEnv() ReconcilerConfig {
 type RegularStageReconciler struct {
 	cfg            ReconcilerConfig
 	client         client.Client
+	argocdClient   client.Client
 	eventSender    kargoEvent.Sender
+	recorder       record.EventRecorder
 	healthChecker  health.AggregatingChecker
 	shardPredicate controller.ResponsibleFor[kargoapi.Stage]
+	dispatchEngine *dispatch.Engine
 
 	backoffCfg wait.Backoff
 }
@@ -90,8 +95,9 @@ func NewRegularStageReconciler(
 	healthChecker health.AggregatingChecker,
 ) *RegularStageReconciler {
 	return &RegularStageReconciler{
-		cfg:           cfg,
-		healthChecker: healthChecker,
+		cfg:            cfg,
+		healthChecker:  healthChecker,
+		dispatchEngine: dispatch.NewEngine(),
 		shardPredicate: controller.ResponsibleFor[kargoapi.Stage]{
 			IsDefaultController: cfg.IsDefaultController,
 			ShardName:           cfg.ShardName,
@@ -116,9 +122,8 @@ func (r *RegularStageReconciler) SetupWithManager(
 ) error {
 	// Configure client and event recorder using manager.
 	r.client = kargoMgr.GetClient()
-	r.eventSender = k8sevent.NewEventSender(
-		libEvent.NewRecorder(ctx, kargoMgr.GetScheme(), kargoMgr.GetClient(), r.cfg.Name()),
-	)
+	r.recorder = libEvent.NewRecorder(ctx, kargoMgr.GetScheme(), kargoMgr.GetClient(), r.cfg.Name())
+	r.eventSender = k8sevent.NewEventSender(r.recorder)
 
 	// This index is used to find all Promotions that are associated with a
 	// specific Stage.
@@ -280,6 +285,20 @@ func (r *RegularStageReconciler) SetupWithManager(
 	// If we have an ArgoCD manager, then we should watch for changes to
 	// ArgCD Applications and enqueue the related Stages for reconciliation.
 	if argocdMgr != nil {
+		r.argocdClient = argocdMgr.GetClient()
+
+		// This index is used by the dispatch gate to find the Applications a
+		// Stage is authorized to manage, so that server-scoped promotion
+		// exclusions can be matched against their destinations.
+		if err = argocdMgr.GetFieldIndexer().IndexField(
+			ctx,
+			&argocdapi.Application{},
+			indexer.ApplicationsByAuthorizedStageField,
+			indexer.ApplicationsByAuthorizedStage,
+		); err != nil {
+			return fmt.Errorf("error setting up index for Applications by authorized Stage: %w", err)
+		}
+
 		if err = c.Watch(
 			source.Kind(
 				argocdMgr.GetCache(),
@@ -291,6 +310,43 @@ func (r *RegularStageReconciler) SetupWithManager(
 		); err != nil {
 			return fmt.Errorf("unable to watch Applications: %w", err)
 		}
+	}
+
+	// Watch ProjectConfigs and enqueue the Stages in their Project: the
+	// dispatch policy (promotion windows, rate limits, custom policy) lives
+	// there and a change may unblock (or block) held Promotions.
+	if err = c.Watch(
+		source.Kind(
+			kargoMgr.GetCache(),
+			&kargoapi.ProjectConfig{},
+			handler.TypedEnqueueRequestsFromMapFunc(
+				func(ctx context.Context, projectCfg *kargoapi.ProjectConfig) []ctrl.Request {
+					return r.enqueueStagesForConfigChange(ctx, projectCfg.Namespace)
+				},
+			),
+			predicate.TypedGenerationChangedPredicate[*kargoapi.ProjectConfig]{},
+		),
+	); err != nil {
+		return fmt.Errorf("unable to watch ProjectConfigs: %w", err)
+	}
+
+	// Watch the ClusterConfig and enqueue all Stages on this shard: it
+	// carries system-wide promotion exclusions. Enqueuing every Stage is
+	// acceptable at demo scale; a production implementation would narrow
+	// this.
+	if err = c.Watch(
+		source.Kind(
+			kargoMgr.GetCache(),
+			&kargoapi.ClusterConfig{},
+			handler.TypedEnqueueRequestsFromMapFunc(
+				func(ctx context.Context, _ *kargoapi.ClusterConfig) []ctrl.Request {
+					return r.enqueueStagesForConfigChange(ctx, "")
+				},
+			),
+			predicate.TypedGenerationChangedPredicate[*kargoapi.ClusterConfig]{},
+		),
+	); err != nil {
+		return fmt.Errorf("unable to watch ClusterConfigs: %w", err)
 	}
 
 	// If the Argo Rollouts integration is enabled, then we should watch for
@@ -364,7 +420,7 @@ func (r *RegularStageReconciler) Reconcile(ctx context.Context, req ctrl.Request
 
 	// Reconcile the Stage.
 	logger.Debug("reconciling Stage")
-	newStatus, needsRequeue, reconcileErr := r.reconcile(ctx, stage, time.Now())
+	newStatus, requeueAfter, reconcileErr := r.reconcile(ctx, stage, time.Now())
 	logger.Debug("done reconciling Stage")
 
 	// Record the current refresh token as having been handled.
@@ -388,20 +444,25 @@ func (r *RegularStageReconciler) Reconcile(ctx context.Context, req ctrl.Request
 	if reconcileErr != nil {
 		return ctrl.Result{}, reconcileErr
 	}
-	// Immediate requeue if needed.
-	if needsRequeue {
-		return ctrl.Result{RequeueAfter: 100 * time.Millisecond}, nil
+	// Requeue at the interval the reconciliation requested (immediate, or
+	// the dispatch policy's "when"), if any.
+	if requeueAfter > 0 {
+		return ctrl.Result{RequeueAfter: requeueAfter}, nil
 	}
 	// Otherwise, requeue after a delay.
 	// TODO: Make the requeue delay configurable.
 	return ctrl.Result{RequeueAfter: 5 * time.Minute}, nil
 }
 
+// reconcile runs the sub-reconcilers in order and returns the updated status
+// along with a requested requeue interval: zero for the default resync
+// delay, 100ms for an immediate requeue, or the dispatch policy's suggested
+// wait when Promotions are held at the dispatch gate.
 func (r *RegularStageReconciler) reconcile(
 	ctx context.Context,
 	stage *kargoapi.Stage,
 	startTime time.Time,
-) (kargoapi.StageStatus, bool, error) {
+) (kargoapi.StageStatus, time.Duration, error) {
 	logger := logging.LoggerFromContext(ctx)
 
 	// working is the Stage the sub-reconcilers operate on. Its status is
@@ -428,6 +489,7 @@ func (r *RegularStageReconciler) reconcile(
 	})
 
 	var requestRequeue bool
+	var dispatchBlockedFor time.Duration
 	subReconcilers := []struct {
 		name      string
 		reconcile func() (kargoapi.StageStatus, error)
@@ -435,15 +497,21 @@ func (r *RegularStageReconciler) reconcile(
 		{
 			name: "syncing Promotions",
 			reconcile: func() (kargoapi.StageStatus, error) {
-				status, hasPendingPromotions, err := r.syncPromotions(ctx, working)
+				status, res, err := r.syncPromotions(ctx, working)
 				if err != nil {
 					err = fmt.Errorf("failed to sync Promotions: %w", err)
 				}
 				// If we have no current Promotion and there are pending Promotions,
 				// then we should request an immediate requeue to ensure that we
-				// process the next Promotion as soon as possible.
-				if status.CurrentPromotion == nil && hasPendingPromotions {
-					requestRequeue = true
+				// process the next Promotion as soon as possible -- UNLESS the
+				// dispatch policy held them, in which case we requeue at the
+				// policy's suggested interval instead of hot-looping against it.
+				if status.CurrentPromotion == nil && res.hasNonTerminalPromotions {
+					if res.dispatchBlockedFor > 0 {
+						dispatchBlockedFor = res.dispatchBlockedFor
+					} else {
+						requestRequeue = true
+					}
 				}
 				return status, err
 			},
@@ -521,7 +589,7 @@ func (r *RegularStageReconciler) reconcile(
 		// If an error occurred during the sub-reconciler, then we should
 		// return the error which will cause the Stage to be requeued.
 		if err != nil {
-			return newStatus, false, err
+			return newStatus, 0, err
 		}
 
 		// Patch the status of the Stage after each sub-reconciler to show progress.
@@ -538,12 +606,31 @@ func (r *RegularStageReconciler) reconcile(
 
 	// If an immediate requeue was not requested, then we can delete the
 	// Reconciling condition as we have finished reconciling the Stage
-	// and did not encounter any errors.
+	// and did not encounter any errors. A dispatch-blocked Stage counts as
+	// settled: the Promoting condition carries that story.
 	if !requestRequeue {
 		conditions.Delete(&newStatus, kargoapi.ConditionTypeReconciling)
 	}
 
-	return newStatus, requestRequeue, nil
+	requeueAfter := dispatchBlockedFor
+	if requestRequeue {
+		requeueAfter = 100 * time.Millisecond
+	}
+	return newStatus, requeueAfter, nil
+}
+
+// promoSyncResult conveys, alongside the updated status, what syncPromotions
+// learned about the Stage's Promotion queue.
+type promoSyncResult struct {
+	// hasNonTerminalPromotions indicates whether any Promotions are awaiting
+	// or undergoing execution.
+	hasNonTerminalPromotions bool
+	// dispatchBlockedFor, when non-zero, indicates the dispatch policy held
+	// every Pending Promotion and suggests when to re-evaluate. The caller
+	// must requeue at this interval INSTEAD of the immediate requeue it
+	// would otherwise request for pending Promotions, or it will hot-loop
+	// against the policy.
+	dispatchBlockedFor time.Duration
 }
 
 // syncPromotions synchronizes the Promotions for a Stage. It determines the
@@ -552,7 +639,7 @@ func (r *RegularStageReconciler) reconcile(
 func (r *RegularStageReconciler) syncPromotions(
 	ctx context.Context,
 	stage *kargoapi.Stage,
-) (kargoapi.StageStatus, bool, error) {
+) (kargoapi.StageStatus, promoSyncResult, error) {
 	logger := logging.LoggerFromContext(ctx)
 	newStatus := *stage.Status.DeepCopy()
 
@@ -579,7 +666,7 @@ func (r *RegularStageReconciler) syncPromotions(
 			ObservedGeneration: stage.Generation,
 		})
 
-		return newStatus, false, err
+		return newStatus, promoSyncResult{}, err
 	}
 
 	// Build a map of origin keys that are currently requested by this Stage,
@@ -609,7 +696,7 @@ func (r *RegularStageReconciler) syncPromotions(
 		conditions.Delete(&newStatus, kargoapi.ConditionTypePromoting)
 		newStatus.CurrentPromotion = nil
 
-		return newStatus, false, nil
+		return newStatus, promoSyncResult{}, nil
 	}
 
 	// Sort the Promotions by phase and creation time to determine the current
@@ -758,7 +845,7 @@ func (r *RegularStageReconciler) syncPromotions(
 		}
 
 		// Return at this point to allow the new Freight to be verified.
-		return newStatus, hasNonTerminalPromotions, nil
+		return newStatus, promoSyncResult{hasNonTerminalPromotions: hasNonTerminalPromotions}, nil
 	}
 
 	// If the current Freight exists and has a non-terminal verification, wait
@@ -771,7 +858,7 @@ func (r *RegularStageReconciler) syncPromotions(
 					"wait for it to complete before allowing new promotions to start",
 			)
 			conditions.Delete(&newStatus, kargoapi.ConditionTypePromoting)
-			return newStatus, hasNonTerminalPromotions, nil
+			return newStatus, promoSyncResult{hasNonTerminalPromotions: hasNonTerminalPromotions}, nil
 		}
 
 		// If we are in a healthy state, the current Freight needs to be verified
@@ -784,7 +871,7 @@ func (r *RegularStageReconciler) syncPromotions(
 			if curVI == nil || !curVI.Phase.IsTerminal() {
 				logger.Debug("current Freight needs to be verified before allowing new promotions to start")
 				conditions.Delete(&newStatus, kargoapi.ConditionTypePromoting)
-				return newStatus, hasNonTerminalPromotions, nil
+				return newStatus, promoSyncResult{hasNonTerminalPromotions: hasNonTerminalPromotions}, nil
 			}
 		}
 	}
@@ -792,30 +879,75 @@ func (r *RegularStageReconciler) syncPromotions(
 	// If the highest priority Promotion is not in a terminal phase, then we
 	// are promoting the Freight.
 	if !highestPrioPromo.Status.Phase.IsTerminal() {
+		candidate := &highestPrioPromo
+
+		// The dispatch gate: before acknowledging a new Promotion (the
+		// acknowledgement below is what permits it to begin Running), consult
+		// the dispatch policy. A Promotion that was already acknowledged, or
+		// is already Running, is never re-gated. The gate may select a
+		// permitted Promotion from deeper in the queue (e.g. a rollback
+		// behind a frozen forward promotion).
+		if currentPromo == nil && isPendingPhase(highestPrioPromo.Status.Phase) {
+			allowed, blockedFor, blockedMsg, err := r.gateDispatch(ctx, stage, promotions.Items)
+			if err != nil {
+				// Fail closed: dispatch remains blocked until the policy
+				// evaluates successfully.
+				conditions.Set(&newStatus, &metav1.Condition{
+					Type:               kargoapi.ConditionTypePromoting,
+					Status:             metav1.ConditionUnknown,
+					Reason:             "DispatchPolicyError",
+					Message:            err.Error(),
+					ObservedGeneration: stage.Generation,
+				})
+				return newStatus,
+					promoSyncResult{hasNonTerminalPromotions: hasNonTerminalPromotions},
+					fmt.Errorf("dispatch gate: %w", err)
+			}
+			if allowed == nil {
+				logger.Debug(
+					"dispatch policy held all pending Promotions",
+					"requeueAfter", blockedFor,
+				)
+				conditions.Set(&newStatus, &metav1.Condition{
+					Type:               kargoapi.ConditionTypePromoting,
+					Status:             metav1.ConditionFalse,
+					Reason:             conditionReasonDispatchBlocked,
+					Message:            blockedMsg,
+					ObservedGeneration: stage.Generation,
+				})
+				newStatus.CurrentPromotion = nil
+				return newStatus, promoSyncResult{
+					hasNonTerminalPromotions: hasNonTerminalPromotions,
+					dispatchBlockedFor:       blockedFor,
+				}, nil
+			}
+			candidate = allowed
+		}
+
 		conditions.Set(&newStatus, &metav1.Condition{
 			Type:   kargoapi.ConditionTypePromoting,
 			Status: metav1.ConditionTrue,
 			Reason: "ActivePromotion",
 			Message: fmt.Sprintf(
 				"Promotion %q is currently %s",
-				highestPrioPromo.Name, highestPrioPromo.Status.Phase,
+				candidate.Name, candidate.Status.Phase,
 			),
 			ObservedGeneration: stage.Generation,
 		})
 
 		newStatus.CurrentPromotion = &kargoapi.PromotionReference{
-			Name: highestPrioPromo.Name,
+			Name: candidate.Name,
 		}
-		if freight := highestPrioPromo.Status.Freight; freight != nil {
+		if freight := candidate.Status.Freight; freight != nil {
 			newStatus.CurrentPromotion.Freight = freight.DeepCopy()
 		}
-		return newStatus, hasNonTerminalPromotions, nil
+		return newStatus, promoSyncResult{hasNonTerminalPromotions: hasNonTerminalPromotions}, nil
 	}
 
 	// If the highest priority Promotion is in a terminal phase, then we are
 	// not promoting.
 	conditions.Delete(&newStatus, kargoapi.ConditionTypePromoting)
-	return newStatus, hasNonTerminalPromotions, nil
+	return newStatus, promoSyncResult{hasNonTerminalPromotions: hasNonTerminalPromotions}, nil
 }
 
 // assessHealth assesses the health of a Stage based on the health checks from

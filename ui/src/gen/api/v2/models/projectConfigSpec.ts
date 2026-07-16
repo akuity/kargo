@@ -6,6 +6,7 @@
  * OpenAPI spec version: v1alpha1
  */
 import type { DeepLink } from './deepLink';
+import type { ProjectPolicy } from './projectPolicy';
 import type { PromotionPolicy } from './promotionPolicy';
 import type { WebhookReceiverConfig } from './webhookReceiverConfig';
 
@@ -16,6 +17,12 @@ FreightLinks defined in ClusterConfig.
 
 +optional */
   freightLinks?: DeepLink[];
+  /** Policy configures policy-based promotion dispatch controls for this
+Project. Promotions held by policy remain Pending and are dispatched
+automatically once permitted.
+
++optional */
+  policy?: ProjectPolicy;
   /** PromotionPolicies defines policies governing the promotion of Freight to
 specific Stages within the Project. */
   promotionPolicies?: PromotionPolicy[];

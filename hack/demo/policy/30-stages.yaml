@@ -1,0 +1,63 @@
+apiVersion: kargo.akuity.io/v1alpha1
+kind: Stage
+metadata:
+  name: test
+  namespace: policy-demo
+spec:
+  requestedFreight:
+  - origin:
+      kind: Warehouse
+      name: nginx
+    sources:
+      direct: true
+  promotionTemplate:
+    spec:
+      steps:
+      # A side-effect-free step: promotions always succeed quickly and need
+      # no Git or registry credentials, keeping the focus on dispatch policy.
+      - uses: compose-output
+        as: note
+        config:
+          promoted: ${{ ctx.targetFreight.name }}
+---
+apiVersion: kargo.akuity.io/v1alpha1
+kind: Stage
+metadata:
+  name: uat
+  namespace: policy-demo
+spec:
+  requestedFreight:
+  - origin:
+      kind: Warehouse
+      name: nginx
+    sources:
+      stages:
+      - test
+  promotionTemplate:
+    spec:
+      steps:
+      - uses: compose-output
+        as: note
+        config:
+          promoted: ${{ ctx.targetFreight.name }}
+---
+apiVersion: kargo.akuity.io/v1alpha1
+kind: Stage
+metadata:
+  name: prod
+  namespace: policy-demo
+spec:
+  requestedFreight:
+  - origin:
+      kind: Warehouse
+      name: nginx
+    sources:
+      stages:
+      - uat
+  promotionTemplate:
+    spec:
+      steps:
+      - uses: compose-output
+        as: note
+        config:
+          promoted: ${{ ctx.targetFreight.name }}

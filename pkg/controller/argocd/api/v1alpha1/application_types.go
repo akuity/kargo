@@ -18,9 +18,16 @@ type Application struct {
 }
 
 type ApplicationSpec struct {
-	Source     *ApplicationSource `json:"source,omitempty"`
-	SyncPolicy *SyncPolicy        `json:"syncPolicy,omitempty"`
-	Sources    ApplicationSources `json:"sources,omitempty"`
+	Source      *ApplicationSource     `json:"source,omitempty"`
+	SyncPolicy  *SyncPolicy            `json:"syncPolicy,omitempty"`
+	Sources     ApplicationSources     `json:"sources,omitempty"`
+	Destination ApplicationDestination `json:"destination,omitempty"`
+}
+
+type ApplicationDestination struct {
+	Server    string `json:"server,omitempty"`
+	Name      string `json:"name,omitempty"`
+	Namespace string `json:"namespace,omitempty"`
 }
 
 type ApplicationSource struct {

@@ -87,6 +87,225 @@ spec:
                   - url
                   type: object
                 type: array
+              policy:
+                description: |-
+                  Policy configures policy-based promotion dispatch controls for this
+                  Project. Promotions held by policy remain Pending and are dispatched
+                  automatically once permitted.
+                properties:
+                  custom:
+                    description: |-
+                      Custom is an optional inline Rego module that replaces the built-in
+                      default dispatch policy. It must declare `package kargo.dispatch` and
+                      produce a `decision` document of the form
+                      `{"allow": bool, "message": string, "requeue_after": seconds}`. The
+                      module may fold standard behavior back in by importing the built-in
+                      library packages data.kargo.lib.windows, data.kargo.lib.exclusions,
+                      data.kargo.lib.ratelimit, and data.kargo.lib.helpers.
+                    type: string
+                  promotionWindows:
+                    description: |-
+                      PromotionWindows describes recurring windows of time during which
+                      forward promotions may be dispatched to matching Stages. When one or
+                      more windows govern a Stage, forward promotions to that Stage are
+                      dispatched only while a window is open.
+                    items:
+                      description: |-
+                        PromotionWindow describes a recurring window of time during which
+                        forward promotions may be dispatched.
+                      properties:
+                        end:
+                          description: |-
+                            End is the closing wall-clock time of each occurrence in "HH:MM"
+                            (24-hour) form. An End at or before Start closes on the following day.
+                          pattern: ^([01][0-9]|2[0-3]):[0-5][0-9]$
+                          type: string
+                        location:
+                          description: |-
+                            Location is an IANA time zone name (e.g. "America/Los_Angeles") in
+                            which Start and End are interpreted. Defaults to UTC.
+                          type: string
+                        name:
+                          description: Name is a unique identifier for this window.
+                          minLength: 1
+                          type: string
+                        recurrence:
+                          description: |-
+                            Recurrence is an RFC 5545 recurrence rule (RRULE) describing the days
+                            on which the window occurs (e.g. "FREQ=WEEKLY;BYDAY=MO,TU,WE,TH,FR").
+                          minLength: 1
+                          type: string
+                        stageSelector:
+                          description: |-
+                            StageSelector selects the Stages governed by this window. When nil,
+                            the window governs all Stages in the Project.
+                          properties:
+                            matchExpressions:
+                              description: matchExpressions is a list of label selector
+                                requirements. The requirements are ANDed.
+                              items:
+                                description: |-
+                                  A label selector requirement is a selector that contains values, a key, and an operator that
+                                  relates the key and values.
+                                properties:
+                                  key:
+                                    description: key is the label key that the selector
+                                      applies to.
+                                    type: string
+                                  operator:
+                                    description: |-
+                                      operator represents a key's relationship to a set of values.
+                                      Valid operators are In, NotIn, Exists and DoesNotExist.
+                                    type: string
+                                  values:
+                                    description: |-
+                                      values is an array of string values. If the operator is In or NotIn,
+                                      the values array must be non-empty. If the operator is Exists or DoesNotExist,
+                                      the values array must be empty. This array is replaced during a strategic
+                                      merge patch.
+                                    items:
+                                      type: string
+                                    type: array
+                                    x-kubernetes-list-type: atomic
+                                required:
+                                - key
+                                - operator
+                                type: object
+                              type: array
+                              x-kubernetes-list-type: atomic
+                            matchLabels:
+                              additionalProperties:
+                                type: string
+                              description: |-
+                                matchLabels is a map of {key,value} pairs. A single {key,value} in the matchLabels
+                                map is equivalent to an element of matchExpressions, whose key field is "key", the
+                                operator is "In", and the values array contains only "value". The requirements are ANDed.
+                              type: object
+                            name:
+                              description: |-
+                                Name is the name of the resource to which this policy applies.
+
+                                It can be an exact name, a regex pattern (with prefix "regex:"), or a
+                                glob pattern (with prefix "glob:").
+
+                                When both Name and LabelSelector are specified, the Name is ANDed with
+                                the LabelSelector. I.e., the resource must match both the Name and
+                                LabelSelector to be selected by this policy.
+
+                                NOTE: Using a specific exact name is the most secure option. Pattern
+                                matching via regex or glob can be exploited by users with permissions to
+                                match promotion policies that weren't intended to apply to their
+                                resources. For example, a user could create a resource with a name
+                                deliberately crafted to match the pattern, potentially bypassing intended
+                                promotion controls.
+                              type: string
+                          type: object
+                          x-kubernetes-map-type: atomic
+                        start:
+                          description: |-
+                            Start is the opening wall-clock time of each occurrence in "HH:MM"
+                            (24-hour) form.
+                          pattern: ^([01][0-9]|2[0-3]):[0-5][0-9]$
+                          type: string
+                      required:
+                      - end
+                      - name
+                      - recurrence
+                      - start
+                      type: object
+                    type: array
+                  rateLimits:
+                    description: |-
+                      RateLimits limits the frequency of automatic promotion dispatches to
+                      matching Stages.
+                    items:
+                      description: |-
+                        PromotionRateLimit limits the frequency of automatic promotion dispatches
+                        to matching Stages using a rolling window: at most MaxPromotions
+                        promotions are dispatched within any trailing Window.
+                      properties:
+                        maxPromotions:
+                          description: |-
+                            MaxPromotions is the maximum number of automatic promotion dispatches
+                            permitted within any trailing Window.
+                          format: int32
+                          minimum: 1
+                          type: integer
+                        stageSelector:
+                          description: |-
+                            StageSelector selects the Stages governed by this rate limit. When
+                            nil, the rate limit governs all Stages in the Project.
+                          properties:
+                            matchExpressions:
+                              description: matchExpressions is a list of label selector
+                                requirements. The requirements are ANDed.
+                              items:
+                                description: |-
+                                  A label selector requirement is a selector that contains values, a key, and an operator that
+                                  relates the key and values.
+                                properties:
+                                  key:
+                                    description: key is the label key that the selector
+                                      applies to.
+                                    type: string
+                                  operator:
+                                    description: |-
+                                      operator represents a key's relationship to a set of values.
+                                      Valid operators are In, NotIn, Exists and DoesNotExist.
+                                    type: string
+                                  values:
+                                    description: |-
+                                      values is an array of string values. If the operator is In or NotIn,
+                                      the values array must be non-empty. If the operator is Exists or DoesNotExist,
+                                      the values array must be empty. This array is replaced during a strategic
+                                      merge patch.
+                                    items:
+                                      type: string
+                                    type: array
+                                    x-kubernetes-list-type: atomic
+                                required:
+                                - key
+                                - operator
+                                type: object
+                              type: array
+                              x-kubernetes-list-type: atomic
+                            matchLabels:
+                              additionalProperties:
+                                type: string
+                              description: |-
+                                matchLabels is a map of {key,value} pairs. A single {key,value} in the matchLabels
+                                map is equivalent to an element of matchExpressions, whose key field is "key", the
+                                operator is "In", and the values array contains only "value". The requirements are ANDed.
+                              type: object
+                            name:
+                              description: |-
+                                Name is the name of the resource to which this policy applies.
+
+                                It can be an exact name, a regex pattern (with prefix "regex:"), or a
+                                glob pattern (with prefix "glob:").
+
+                                When both Name and LabelSelector are specified, the Name is ANDed with
+                                the LabelSelector. I.e., the resource must match both the Name and
+                                LabelSelector to be selected by this policy.
+
+                                NOTE: Using a specific exact name is the most secure option. Pattern
+                                matching via regex or glob can be exploited by users with permissions to
+                                match promotion policies that weren't intended to apply to their
+                                resources. For example, a user could create a resource with a name
+                                deliberately crafted to match the pattern, potentially bypassing intended
+                                promotion controls.
+                              type: string
+                          type: object
+                          x-kubernetes-map-type: atomic
+                        window:
+                          description: Window is the duration of the rolling window.
+                          type: string
+                      required:
+                      - maxPromotions
+                      - window
+                      type: object
+                    type: array
+                type: object
               promotionPolicies:
                 description: |-
                   PromotionPolicies defines policies governing the promotion of Freight to

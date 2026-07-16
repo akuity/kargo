@@ -7,6 +7,7 @@
  */
 import type { DeepLink } from './deepLink';
 import type { GitClientConfig } from './gitClientConfig';
+import type { PromotionExclusion } from './promotionExclusion';
 import type { WebhookReceiverConfig } from './webhookReceiverConfig';
 
 export interface ClusterConfigSpec {
@@ -22,6 +23,13 @@ values take precedence over any configuration provided at install time
 via the Helm chart.
 +optional */
   gitClient?: GitClientConfig;
+  /** PromotionExclusions describes system-wide periods of time during which
+promotion dispatch is restricted across all Projects. Promotions held
+by an exclusion remain Pending and are dispatched automatically once
+the exclusion ends.
+
++optional */
+  promotionExclusions?: PromotionExclusion[];
   /** StageLinks defines deep links shown when viewing any Stage resource
 across all projects in the cluster. Project-level StageLinks defined in
 ProjectConfig are shown in addition to these.

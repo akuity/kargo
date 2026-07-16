@@ -1,0 +1,16 @@
+# System-wide promotion exclusions live on the (singleton, cluster-scoped)
+# ClusterConfig. If the cluster already has one, PATCH the exclusions in
+# instead of applying this file -- see the README.
+#
+# The sample exclusion below is deliberately in the future (inert). The demo
+# activates a freeze by patching in an exclusion that spans "now".
+apiVersion: kargo.akuity.io/v1alpha1
+kind: ClusterConfig
+metadata:
+  name: cluster
+spec:
+  promotionExclusions:
+  - name: holiday-freeze
+    start: "2026-12-20T00:00:00Z"
+    end: "2027-01-02T00:00:00Z"
+    scope: no-forward

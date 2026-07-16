@@ -50,6 +50,43 @@ type ClusterConfigSpec struct {
 	//
 	// +optional
 	StageLinks []DeepLink `json:"stageLinks,omitempty" protobuf:"bytes,4,rep,name=stageLinks"`
+	// PromotionExclusions describes system-wide periods of time during which
+	// promotion dispatch is restricted across all Projects. Promotions held
+	// by an exclusion remain Pending and are dispatched automatically once
+	// the exclusion ends.
+	//
+	// +optional
+	PromotionExclusions []PromotionExclusion `json:"promotionExclusions,omitempty" protobuf:"bytes,5,rep,name=promotionExclusions"`
+}
+
+// PromotionExclusion describes an absolute period of time during which
+// promotion dispatch is restricted.
+type PromotionExclusion struct {
+	// Name is a unique identifier for this exclusion.
+	//
+	// +kubebuilder:validation:MinLength=1
+	Name string `json:"name" protobuf:"bytes,1,opt,name=name"`
+	// Start is the time at which the exclusion begins.
+	Start metav1.Time `json:"start" protobuf:"bytes,2,opt,name=start"`
+	// End is the time at which the exclusion ends.
+	End metav1.Time `json:"end" protobuf:"bytes,3,opt,name=end"`
+	// Scope names the set of promotion classes frozen by this exclusion:
+	//
+	//   - no-promotions: freezes all promotions.
+	//   - no-forward: freezes forward promotions (automatic and manual);
+	//     rollbacks are permitted.
+	//   - no-auto: freezes automatic promotions only.
+	//
+	// +kubebuilder:validation:Enum=no-promotions;no-forward;no-auto
+	Scope string `json:"scope" protobuf:"bytes,4,opt,name=scope"`
+	// ArgoCDServers optionally narrows this exclusion to Stages whose
+	// referenced Argo CD Applications target one of these destination server
+	// URLs or names. When empty, the exclusion applies to all Stages. Note
+	// that if the Argo CD integration is disabled, no Stage references any
+	// Application and a server-scoped exclusion never applies.
+	//
+	// +optional
+	ArgoCDServers []string `json:"argocdServers,omitempty" protobuf:"bytes,5,rep,name=argocdServers"`
 }
 
 // GitClientConfig describes cluster-level configuration for Kargo's Git
