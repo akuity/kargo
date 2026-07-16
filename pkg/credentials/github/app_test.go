@@ -1,10 +1,13 @@
 package github
 
 import (
+	"context"
 	"encoding/base64"
 	"errors"
 	"fmt"
 	"maps"
+	"net/http"
+	"net/http/httptest"
 	"testing"
 	"time"
 
@@ -22,7 +25,9 @@ func TestNewAppCredentialProvider(t *testing.T) {
 	assert.NotNil(t, provider)
 
 	assert.NotNil(t, provider.tokenCache)
+	assert.NotEmpty(t, provider.validationBackoff)
 	assert.NotNil(t, provider.getAccessTokenFn)
+	assert.NotNil(t, provider.validateAccessTokenFn)
 }
 
 func TestAppCredentialProvider_Supports(t *testing.T) {
@@ -343,6 +348,11 @@ func TestAppCredentialProvider_GetCredentials(t *testing.T) {
 	for _, testCase := range testCases {
 		t.Run(testCase.name, func(t *testing.T) {
 			provider := NewAppCredentialProvider().(*AppCredentialProvider) // nolint:forcetypeassert
+			provider.validateAccessTokenFn = func(
+				context.Context, string, string,
+			) (bool, error) {
+				return true, nil
+			}
 
 			if testCase.getAccessTokenFn != nil {
 				provider.getAccessTokenFn = testCase.getAccessTokenFn
@@ -463,6 +473,11 @@ func TestAppCredentialProvider_getUsernameAndPassword(t *testing.T) {
 	for _, testCase := range testCases {
 		t.Run(testCase.name, func(t *testing.T) {
 			provider := NewAppCredentialProvider().(*AppCredentialProvider) // nolint:forcetypeassert
+			provider.validateAccessTokenFn = func(
+				context.Context, string, string,
+			) (bool, error) {
+				return true, nil
+			}
 
 			if testCase.setupCache != nil {
 				testCase.setupCache(provider.tokenCache)
@@ -480,6 +495,189 @@ func TestAppCredentialProvider_getUsernameAndPassword(t *testing.T) {
 				fakeRepoURL,
 			)
 			testCase.assertions(t, provider.tokenCache, creds, err)
+		})
+	}
+}
+
+func TestAppCredentialProvider_waitForTokenUsable(t *testing.T) {
+	const fakeRepoURL = "https://github.com/example/repo"
+
+	// Keep waits between validation attempts negligible in all test cases.
+	testBackoff := []time.Duration{
+		time.Millisecond,
+		time.Millisecond,
+		time.Millisecond,
+	}
+
+	testCases := []struct {
+		name                  string
+		getCtx                func() context.Context
+		validateAccessTokenFn func(
+			attempt int,
+		) (bool, error)
+		assertions func(t *testing.T, attempts int, err error)
+	}{
+		{
+			name: "token is immediately valid",
+			validateAccessTokenFn: func(int) (bool, error) {
+				return true, nil
+			},
+			assertions: func(t *testing.T, attempts int, err error) {
+				require.NoError(t, err)
+				require.Equal(t, 1, attempts)
+			},
+		},
+		{
+			name: "token becomes valid after retries",
+			validateAccessTokenFn: func(attempt int) (bool, error) {
+				return attempt >= 3, nil
+			},
+			assertions: func(t *testing.T, attempts int, err error) {
+				require.NoError(t, err)
+				require.Equal(t, 3, attempts)
+			},
+		},
+		{
+			name: "validation errors are tolerated",
+			validateAccessTokenFn: func(attempt int) (bool, error) {
+				if attempt == 1 {
+					return false, errors.New("something went wrong")
+				}
+				return true, nil
+			},
+			assertions: func(t *testing.T, attempts int, err error) {
+				require.NoError(t, err)
+				require.Equal(t, 2, attempts)
+			},
+		},
+		{
+			name: "token never validates; presumed usable",
+			validateAccessTokenFn: func(int) (bool, error) {
+				return false, nil
+			},
+			assertions: func(t *testing.T, attempts int, err error) {
+				require.NoError(t, err)
+				// One attempt up front + one per element of the backoff
+				// schedule
+				require.Equal(t, len(testBackoff)+1, attempts)
+			},
+		},
+		{
+			name: "context canceled",
+			getCtx: func() context.Context {
+				ctx, cancel := context.WithCancel(context.Background())
+				cancel()
+				return ctx
+			},
+			validateAccessTokenFn: func(int) (bool, error) {
+				return false, nil
+			},
+			assertions: func(t *testing.T, _ int, err error) {
+				require.ErrorIs(t, err, context.Canceled)
+			},
+		},
+	}
+	for _, testCase := range testCases {
+		t.Run(testCase.name, func(t *testing.T) {
+			var attempts int
+			provider := &AppCredentialProvider{
+				validationBackoff: testBackoff,
+				validateAccessTokenFn: func(
+					context.Context, string, string,
+				) (bool, error) {
+					attempts++
+					return testCase.validateAccessTokenFn(attempts)
+				},
+			}
+			ctx := t.Context()
+			if testCase.getCtx != nil {
+				ctx = testCase.getCtx()
+			}
+			err := provider.waitForTokenUsable(ctx, "fake-token", fakeRepoURL)
+			testCase.assertions(t, attempts, err)
+		})
+	}
+}
+
+func TestAppCredentialProvider_validateAccessToken(t *testing.T) {
+	const fakeAccessToken = "fake-token"
+
+	testCases := []struct {
+		name       string
+		statusCode int
+		// getRepoURL optionally overrides the repo URL used in the test case.
+		// It receives the test server's URL.
+		getRepoURL func(srvURL string) string
+		assertions func(t *testing.T, valid bool, err error)
+	}{
+		{
+			name:       "token is usable",
+			statusCode: http.StatusOK,
+			assertions: func(t *testing.T, valid bool, err error) {
+				require.NoError(t, err)
+				require.True(t, valid)
+			},
+		},
+		{
+			name:       "authorization failure; token is not (yet) usable",
+			statusCode: http.StatusNotFound,
+			assertions: func(t *testing.T, valid bool, err error) {
+				require.NoError(t, err)
+				require.False(t, valid)
+			},
+		},
+		{
+			name:       "unexpected status is an error",
+			statusCode: http.StatusInternalServerError,
+			assertions: func(t *testing.T, valid bool, err error) {
+				require.ErrorContains(
+					t, err, "error validating installation access token",
+				)
+				require.False(t, valid)
+			},
+		},
+		{
+			name: "owner and repo name cannot be extracted",
+			getRepoURL: func(string) string {
+				return "https://github.com/example"
+			},
+			assertions: func(t *testing.T, valid bool, err error) {
+				require.ErrorContains(
+					t, err, "could not extract repository owner and name",
+				)
+				require.False(t, valid)
+			},
+		},
+	}
+	p := &AppCredentialProvider{}
+	for _, testCase := range testCases {
+		t.Run(testCase.name, func(t *testing.T) {
+			srv := httptest.NewServer(http.HandlerFunc(
+				func(w http.ResponseWriter, r *http.Request) {
+					require.Equal(
+						t, "/api/v3/repos/example/repo", r.URL.Path,
+					)
+					require.Equal(
+						t,
+						fmt.Sprintf("Bearer %s", fakeAccessToken),
+						r.Header.Get("Authorization"),
+					)
+					w.WriteHeader(testCase.statusCode)
+				},
+			))
+			t.Cleanup(srv.Close)
+			// By default, the test server plays the role of a GitHub
+			// Enterprise host
+			repoURL := fmt.Sprintf("%s/example/repo", srv.URL)
+			if testCase.getRepoURL != nil {
+				repoURL = testCase.getRepoURL(srv.URL)
+			}
+			valid, err := p.validateAccessToken(
+				t.Context(),
+				fakeAccessToken,
+				repoURL,
+			)
+			testCase.assertions(t, valid, err)
 		})
 	}
 }

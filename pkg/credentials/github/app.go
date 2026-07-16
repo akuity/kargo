@@ -7,6 +7,7 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"net/http"
 	"net/url"
 	"regexp"
 	"slices"
@@ -21,6 +22,7 @@ import (
 
 	kargoapi "github.com/akuity/kargo/api/v1alpha1"
 	"github.com/akuity/kargo/pkg/credentials"
+	ghutil "github.com/akuity/kargo/pkg/github"
 	"github.com/akuity/kargo/pkg/logging"
 )
 
@@ -35,6 +37,8 @@ const (
 	accessTokenUsername = "kargo"
 
 	tokenCacheExpiryMargin = 5 * time.Minute
+
+	tokenValidationRequestTimeout = 10 * time.Second
 )
 
 var base64Regex = regexp.MustCompile(`^[a-zA-Z0-9+/]*={0,2}$`)
@@ -53,12 +57,23 @@ func init() {
 type AppCredentialProvider struct {
 	tokenCache *cache.Cache
 
+	// validationBackoff is the schedule of waits between successive attempts to validate a newly
+	// minted installation access token. This is set as a field so that it can be overridden in
+	// tests to avoid long waits.
+	validationBackoff []time.Duration
+
 	getAccessTokenFn func(
 		appOrClientID string,
 		installationID int64,
 		encodedPrivateKey string,
 		repoURL string,
 	) (*oauth2.Token, error)
+
+	validateAccessTokenFn func(
+		ctx context.Context,
+		accessToken string,
+		repoURL string,
+	) (bool, error)
 }
 
 // NewAppCredentialProvider returns an implementation of credentials.Provider.
@@ -71,8 +86,17 @@ func NewAppCredentialProvider() credentials.Provider {
 			40*time.Minute, // Default ttl for each entry
 			time.Hour,      // Cleanup interval
 		),
+		// GitHub's own recommendation for retrying use of a newly minted token that has not yet
+		// replicated to all of their edge caches. See the Github support response in
+		// https://github.com/aws-amplify/amplify-hosting/issues/4080
+		validationBackoff: []time.Duration{
+			3 * time.Second,
+			10 * time.Second,
+			30 * time.Second,
+		},
 	}
 	p.getAccessTokenFn = p.getAccessToken
+	p.validateAccessTokenFn = p.validateAccessToken
 	return p
 }
 
@@ -159,6 +183,7 @@ func (p *AppCredentialProvider) getUsernameAndPassword(
 		"provider", "githubApp",
 		"repoURL", repoURL,
 	)
+	ctx = logging.ContextWithLogger(ctx, logger)
 
 	// Check the cache for the token
 	if entry, exists := p.tokenCache.Get(cacheKey); exists {
@@ -182,6 +207,17 @@ func (p *AppCredentialProvider) getUsernameAndPassword(
 	}
 	logger.Debug("obtained new installation access token")
 
+	// GitHub replicates newly minted tokens to its infrastructure
+	// asynchronously, so a token used immediately after being minted is
+	// sometimes rejected. Since GitHub masks authorization failures on private
+	// repositories as 404s, this manifested for a long time as intermittent,
+	// difficult-to-diagnose "repository not found" errors. Waiting until the
+	// token demonstrably works before releasing it to the caller prevents
+	// this.
+	if err = p.waitForTokenUsable(ctx, token.AccessToken, repoURL); err != nil {
+		return nil, err
+	}
+
 	ttl := credentials.CalculateCacheTTL(token.Expiry, tokenCacheExpiryMargin)
 	logger.Debug(
 		"caching installation access token",
@@ -194,6 +230,97 @@ func (p *AppCredentialProvider) getUsernameAndPassword(
 		Username: accessTokenUsername,
 		Password: token.AccessToken,
 	}, nil
+}
+
+// waitForTokenUsable checks that a newly minted installation access token is actually usable,
+// retrying on a fixed backoff schedule if it is not. A token that cannot be validated after
+// exhausting the schedule is presumed usable, since erring on that side leaves the caller no worse
+// off than if no validation had been attempted. A non-nil error is returned only if the provided
+// context is canceled. This is required due to how GitHub replicates newly minted tokens to its
+// edge caches. See https://github.com/aws-amplify/amplify-hosting/issues/4080 for more information
+func (p *AppCredentialProvider) waitForTokenUsable(
+	ctx context.Context,
+	accessToken string,
+	repoURL string,
+) error {
+	logger := logging.LoggerFromContext(ctx)
+	start := time.Now()
+	// We start at 1 here because this is mostly used for logging and we want the first attempt to
+	// be logged as "1" rather than "0". We subtract 1 in the single place we use it as an index
+	for attempt := 1; ; attempt++ {
+		valid, err := p.validateAccessTokenFn(ctx, accessToken, repoURL)
+		if err != nil {
+			if ctxErr := ctx.Err(); ctxErr != nil {
+				return ctxErr
+			}
+			logger.Debug(
+				"error validating installation access token",
+				"attempt", attempt,
+				"error", err.Error(),
+			)
+		}
+		if valid {
+			logger.Debug(
+				"installation access token validated",
+				"attempts", attempt,
+				"elapsed", time.Since(start),
+			)
+			return nil
+		}
+		if attempt > len(p.validationBackoff) {
+			logger.Info(
+				"proceeding with installation access token that could not be "+
+					"validated; it may not have finished replicating on GitHub's "+
+					"end and operations using it may fail",
+				"attempts", attempt,
+				"elapsed", time.Since(start),
+			)
+			return nil
+		}
+		timer := time.NewTimer(p.validationBackoff[attempt-1])
+		select {
+		case <-ctx.Done():
+			timer.Stop()
+			return ctx.Err()
+		case <-timer.C:
+		}
+	}
+}
+
+// validateAccessToken checks whether an installation access token is usable yet by making a
+// lightweight, authenticated request for metadata about the repository to which the token is
+// scoped. Installations implicitly have read access to the metadata of any repository they can
+// access, so any authorization failure (401, 403, or GitHub's masking of such failures as 404) is
+// interpreted as the token not (yet) being usable. Any other failure says nothing about the
+// token's validity and is surfaced as an error.
+func (p *AppCredentialProvider) validateAccessToken(
+	ctx context.Context,
+	accessToken string,
+	repoURL string,
+) (bool, error) {
+	_, _, owner, repoName, err := ghutil.ParseRepoURL(repoURL)
+	if err != nil {
+		return false, err
+	}
+	client, err := ghutil.NewClient(repoURL, &ghutil.ClientOptions{Token: accessToken})
+	if err != nil {
+		return false, fmt.Errorf("error creating GitHub client: %w", err)
+	}
+	ctx, cancel := context.WithTimeout(ctx, tokenValidationRequestTimeout)
+	defer cancel()
+	_, resp, err := client.Repositories.Get(ctx, owner, repoName)
+	if err == nil {
+		return true, nil
+	}
+	if resp != nil {
+		switch resp.StatusCode {
+		case http.StatusUnauthorized, http.StatusForbidden, http.StatusNotFound:
+			// These are the failures with the potential to resolve on their own
+			// once the token has finished replicating on GitHub's end.
+			return false, nil
+		}
+	}
+	return false, fmt.Errorf("error validating installation access token: %w", err)
 }
 
 // getAccessToken gets an installation access token for the given app/client ID,
@@ -258,11 +385,13 @@ func (p *AppCredentialProvider) tokenCacheKey(
 ) string {
 	return fmt.Sprintf(
 		"%x",
-		sha256.Sum256([]byte(
-			fmt.Sprintf(
-				"%s:%d:%s:%s",
-				appOrClientID, installationID, encodedPrivateKey, repoURL),
-		),
+		sha256.Sum256(
+			[]byte(
+				fmt.Sprintf(
+					"%s:%d:%s:%s",
+					appOrClientID, installationID, encodedPrivateKey, repoURL,
+				),
+			),
 		),
 	)
 }
