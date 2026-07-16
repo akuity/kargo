@@ -21,8 +21,13 @@ set -euo pipefail
 #    markers. swag copies these markers into description strings but does not
 #    translate them into the OpenAPI `required` array, causing generated
 #    TypeScript clients to treat all fields as optional.
+#
+# If a second argument is given, it's treated as an output path for a
+# Go-client-only derivative of the spec (see Pass 5 below) -- swagger.json
+# itself is left as produced by Passes 1-4 either way.
 
-SWAGGER_FILE="${1:?Usage: fix-swagger-spec.sh <swagger.json>}"
+SWAGGER_FILE="${1:?Usage: fix-swagger-spec.sh <swagger.json> [go-client-output-path]}"
+GO_CLIENT_FILE="${2:-}"
 
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 JQ="${SCRIPT_DIR}/../bin/jq"
@@ -144,3 +149,64 @@ echo "Added required arrays from kubebuilder validation markers."
 ' "$SWAGGER_FILE" > /dev/null
 
 echo "Swagger spec post-processing complete."
+
+# --- Pass 5: Produce a Go-client-only derivative with nullable refs ----------
+#
+# swag wraps any $ref'd property that has a doc comment in
+# `allOf: [{"$ref": ...}]`, because raw JSON Schema forbids sibling keywords
+# (like "description") next to "$ref". go-swagger renders allOf-wrapped
+# properties as value-typed embedded structs regardless of x-nullable, so
+# Go's encoding/json -- which never treats a non-pointer struct as "empty" --
+# always marshals these fields, producing phantom empty objects (e.g.
+# "status":{}) even when the field was never set.
+#
+# This flattens `{"allOf":[{"$ref":X}],"description":D}` down to
+# `{"$ref":X,"description":D}` for every property that is NOT in its
+# definition's `required` array. go-swagger then generates a pointer for
+# that property (its default behavior for a bare $ref), fixing the
+# phantom-empty-object bug for optional fields. Required fields are left
+# untouched, matching today's behavior.
+#
+# This derivative is used ONLY to generate the Go client. swagger.json
+# itself (produced by Passes 1-4 above) is left unmodified, since it also
+# feeds the UI's TypeScript client via orval, and orval -- unlike
+# go-swagger -- follows the strict OpenAPI rule that sibling keywords next
+# to "$ref" are ignored, so flattening it there would silently drop field
+# doc comments from the generated TypeScript models.
+
+if [[ -n "$GO_CLIENT_FILE" ]]; then
+    "$JQ" '
+      .definitions |= map_values(
+        (.required // []) as $req |
+        if has("properties") then
+          .properties |= with_entries(
+            (.key) as $k |
+            if (.value.allOf? != null) and
+               ((.value.allOf | length) == 1) and
+               ((.value.allOf[0] | keys) == ["$ref"]) and
+               ((.value | keys - ["allOf","description"]) == []) and
+               ($req | index($k) == null)
+            then .value = (
+              {"$ref": .value.allOf[0]["$ref"]} +
+              (if .value.description then {description: .value.description} else {} end)
+            )
+            else . end
+          )
+        else . end
+      )
+    ' "$SWAGGER_FILE" > "${GO_CLIENT_FILE}.tmp"
+
+    "$JQ" -e '
+      [.. | objects | select(has("$ref")) | .["$ref"] |
+       select(startswith("#/definitions/")) |
+       split("/") | last] as $refs |
+      (.definitions | keys) as $defs |
+      ($refs - $defs) | if length > 0 then
+        error("Broken $ref pointers found: \(join(", "))")
+      else true end
+    ' "${GO_CLIENT_FILE}.tmp" > /dev/null
+
+    mv "${GO_CLIENT_FILE}.tmp" "$GO_CLIENT_FILE"
+
+    echo "Wrote Go-client-only swagger spec (nullable optional refs flattened) to $GO_CLIENT_FILE"
+fi
