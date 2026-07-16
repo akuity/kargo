@@ -3,13 +3,7 @@ kind: Project
 metadata:
   name: policy-demo
   labels:
-    # Project metadata is projected into policy input (input.project.labels /
-    # input.project.annotations), giving custom policies a lightweight way to
-    # be data-driven, e.g.:
-    #
-    #   violation contains v if {
-    #     input.project.labels["compliance"] == "pci"
-    #     ...
-    #   }
+    # Projected into policy input as input.project.labels (annotations
+    # likewise), so custom policies can be data-driven.
     compliance: pci
     team: payments

@@ -33,23 +33,16 @@ spec:
     maxPromotions: 1
     window: 2m
 
-  # A custom policy contains only rules -- the package declaration
-  # (kargo.project) and the standard library imports are prepended
-  # automatically -- and composes into (never replaces) the built-in
-  # default policy. Two hooks are gathered by the default: `violation`
-  # (unioned with the standard blocks) and `exclusions_bypass(e)` (an
-  # exclusion the standard exclusions block should waive). Uncomment for a
-  # data-driven example: PCI-labeled projects require a change ticket on
-  # manual promotions. (See 40-clusterconfig.yaml for a cluster-level
-  # example: an operator-defined hotfix lane through freezes.)
+  # Rules only -- the kargo.project package and stdlib imports are
+  # prepended. See pkg/promotion/dispatch/policy/README.md.
   #
   # customPolicy: |
   #   violation contains v if {
-  #   	input.project.labels.compliance == "pci"
+  #   	input.stage.name == "prod"
   #   	input.promotion.class == "manual-forward"
-  #   	not input.promotion.annotations["change-ticket"]
+  #   	not input.promotion.annotations["approved-by"]
   #   	v := {
-  #   		"rule": "pci-change-ticket",
-  #   		"msg": "PCI projects require a change-ticket annotation on manual promotions",
+  #   		"rule": "prod-approval",
+  #   		"msg": "prod promotions require an approved-by annotation",
   #   	}
   #   }

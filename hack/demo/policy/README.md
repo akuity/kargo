@@ -161,22 +161,27 @@ target a particular destination server -- see Scenario 5.
 
 ## Scenario 3 -- custom policies: an operator hotfix lane through the freeze
 
-With the freeze from Scenario 2 still active, let the **operator** open a
-hotfix lane cluster-wide: uncomment the `customPolicy:` block in
+With the freeze from Scenario 2 still active, let the **operator** extend
+the policy cluster-wide: uncomment the `customPolicy:` block in
 `40-clusterconfig.yaml` and re-apply it (same command as Setup). The rules
 compose into every project's dispatch decision (the `kargo.cluster`
 package and standard imports are prepended automatically); nothing is
-replaced. The policy defines hotfix semantics *in the operator's own
-terms* -- every image shared with what the Stage last promoted is a semver
-patch-only increment (`helpers.is_semver_patch`) -- and overrides
-`exclusions_bypass(e)` with it. There is no hotfix concept in the standard
-library to fight with.
+replaced. It contributes two rules:
 
-The **project** can contribute its own rules independently: uncomment the
-`customPolicy:` block in `10-projectconfig.yaml` and re-apply. It adds a
-data-driven `violation`: because the Project is labeled `compliance: pci`
-(see `00-project.yaml`), manual promotions must carry a `change-ticket`
-annotation -- without one they park with the rule's message.
+- A **hotfix lane** through the freeze: hotfix semantics defined *in the
+  operator's own terms* -- every image shared with what the Stage last
+  promoted is a semver patch-only increment (`helpers.is_semver_patch`) --
+  overriding `exclusions_bypass(e)`. There is no hotfix concept in the
+  standard library to fight with.
+- A **compliance mandate**, data-driven off Project metadata: because the
+  Project is labeled `compliance: pci` (see `00-project.yaml`), manual
+  promotions must carry a `change-ticket` annotation -- without one they
+  park with the rule's message.
+
+A **project** can contribute its own rules independently: uncomment the
+`customPolicy:` block in `10-projectconfig.yaml` and re-apply. It requires
+an `approved-by` annotation on manual promotions to `prod` -- see it bite
+in Scenario 5.
 
 Now promote a **patch-only** bump of what `uat` is currently running (e.g.
 `1.29.1` over `1.29.0`), with a change ticket -- it dispatches through the
@@ -248,7 +253,10 @@ EOF
 
 A manual promotion to `prod` now parks (its Application targets the server
 under maintenance), while `test` and `uat` -- which have no Applications --
-promote normally. End the maintenance and the held promotion dispatches:
+promote normally. If the custom policies from Scenario 3 are still active,
+give the promotion the `change-ticket` and `approved-by` annotations so the
+maintenance exclusion is the only thing holding it. End the maintenance and
+the held promotion dispatches:
 
 ```shell
 kubectl apply --server-side --field-manager=cluster-maintenance -f - <<EOF

@@ -1,13 +1,8 @@
-# System-wide promotion exclusions live on the (singleton, cluster-scoped)
-# ClusterConfig. The promotionExclusions list has server-side-apply merge
-# semantics (listType=map keyed by name), so apply this with
-# `kubectl apply --server-side` and it merges into any existing
-# ClusterConfig entry-by-entry -- each field manager owns only the
-# exclusions it applied.
-#
-# The sample exclusion below is deliberately in the future (inert). The
-# demo activates freezes by applying exclusions that span "now" -- see the
-# README.
+# System-wide promotion exclusions on the (singleton) ClusterConfig.
+# promotionExclusions merges by entry under server-side apply (listType=map
+# keyed by name) -- apply with `kubectl apply --server-side` and each field
+# manager owns only its own entries. The sample exclusion is deliberately
+# in the future (inert); the demo activates freezes per the README.
 apiVersion: kargo.akuity.io/v1alpha1
 kind: ClusterConfig
 metadata:
@@ -19,14 +14,9 @@ spec:
     end: "2027-01-02T00:00:00Z"
     scope: no-forward
 
-  # The cluster may also contribute a custom policy, composed into every
-  # project's dispatch decision. Like the project-level customPolicy, it
-  # contains only rules (the kargo.cluster package and standard imports
-  # are prepended automatically). Uncomment for the canonical operator
-  # rule: a hotfix lane through every freeze. Hotfix semantics are defined
-  # here, in the operator's own terms -- every image shared with what the
-  # Stage last promoted is a semver patch-only increment
-  # (helpers.is_semver_patch) -- not by the standard library.
+  # Rules only, composed into every project's dispatch decision (the
+  # kargo.cluster package and stdlib imports are prepended): a hotfix lane
+  # through freezes, and a PCI change-ticket mandate.
   #
   # customPolicy: |
   #   exclusions_bypass(e) if is_hotfix
@@ -44,3 +34,13 @@ spec:
   #   	img.repoURL == last.repoURL
   #   	pair := {"old": last.tag, "new": img.tag}
   #   ]
+  #
+  #   violation contains v if {
+  #   	input.project.labels.compliance == "pci"
+  #   	input.promotion.class == "manual-forward"
+  #   	not input.promotion.annotations["change-ticket"]
+  #   	v := {
+  #   		"rule": "pci-change-ticket",
+  #   		"msg": "PCI projects require a change-ticket annotation on manual promotions",
+  #   	}
+  #   }
