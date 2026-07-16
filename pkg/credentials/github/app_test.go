@@ -8,6 +8,8 @@ import (
 	"maps"
 	"net/http"
 	"net/http/httptest"
+	"sync"
+	"sync/atomic"
 	"testing"
 	"time"
 
@@ -497,6 +499,174 @@ func TestAppCredentialProvider_getUsernameAndPassword(t *testing.T) {
 			testCase.assertions(t, provider.tokenCache, creds, err)
 		})
 	}
+}
+
+func TestAppCredentialProvider_getUsernameAndPassword_coalescing(
+	t *testing.T,
+) {
+	const (
+		fakeAppOrClientID  = "fake-id"
+		fakeInstallationID = int64(456)
+		fakePrivateKey     = "private-key"
+		fakeRepoURL        = "https://github.com/example/repo"
+		fakeAccessToken    = "test-token"
+
+		concurrency = 10
+	)
+
+	var mints atomic.Int32
+
+	provider := NewAppCredentialProvider().(*AppCredentialProvider) // nolint:forcetypeassert
+	provider.getAccessTokenFn = func(
+		string, int64, string, string,
+	) (*oauth2.Token, error) {
+		mints.Add(1)
+		// Hold the mint open long enough for the other goroutines to pile up
+		// behind it.
+		time.Sleep(50 * time.Millisecond)
+		return &oauth2.Token{
+			AccessToken: fakeAccessToken,
+			Expiry:      time.Now().Add(time.Hour),
+		}, nil
+	}
+	provider.validateAccessTokenFn = func(
+		context.Context, string, string,
+	) (bool, error) {
+		return true, nil
+	}
+
+	creds := make([]*credentials.Credentials, concurrency)
+	errs := make([]error, concurrency)
+	var wg sync.WaitGroup
+	for i := range concurrency {
+		wg.Go(func() {
+			creds[i], errs[i] = provider.getUsernameAndPassword(
+				t.Context(),
+				fakeAppOrClientID,
+				fakeInstallationID,
+				fakePrivateKey,
+				fakeRepoURL,
+			)
+		})
+	}
+	wg.Wait()
+
+	// However the goroutines were scheduled, exactly one token should have
+	// been minted. Callers that missed the in-flight mint entirely find the
+	// token already cached when their own flight begins.
+	require.Equal(t, int32(1), mints.Load())
+	for i := range concurrency {
+		require.NoError(t, errs[i])
+		require.NotNil(t, creds[i])
+		require.Equal(t, fakeAccessToken, creds[i].Password)
+	}
+}
+
+// This exercises the edge case where the context of the call that wins the
+// singleflight race is canceled mid-mint. The winner must fail with the
+// context error, while coalesced callers whose own contexts are still live
+// must recover rather than sharing the winner's fate -- and must do so via a
+// SINGLE shared replacement mint, not one mint each.
+func TestAppCredentialProvider_getUsernameAndPassword_winnerCanceled(
+	t *testing.T,
+) {
+	const (
+		fakeAppOrClientID  = "fake-id"
+		fakeInstallationID = int64(456)
+		fakePrivateKey     = "private-key"
+		fakeRepoURL        = "https://github.com/example/repo"
+		fakeAccessToken    = "test-token"
+	)
+
+	var mints atomic.Int32
+	mintStarted := make(chan struct{})
+	release := make(chan struct{})
+
+	provider := NewAppCredentialProvider().(*AppCredentialProvider) // nolint:forcetypeassert
+	provider.getAccessTokenFn = func(
+		string, int64, string, string,
+	) (*oauth2.Token, error) {
+		if mints.Add(1) == 1 {
+			close(mintStarted)
+		}
+		return &oauth2.Token{
+			AccessToken: fakeAccessToken,
+			Expiry:      time.Now().Add(time.Hour),
+		}, nil
+	}
+	// Block validation until the provided context is canceled or the test
+	// releases it. This holds the winner's flight open for as long as the
+	// test needs it to remain in progress.
+	provider.validateAccessTokenFn = func(
+		ctx context.Context, _, _ string,
+	) (bool, error) {
+		select {
+		case <-ctx.Done():
+			return false, ctx.Err()
+		case <-release:
+			return true, nil
+		}
+	}
+
+	winnerCtx, cancel := context.WithCancel(t.Context())
+	winnerErr := make(chan error, 1)
+	go func() {
+		_, err := provider.getUsernameAndPassword(
+			winnerCtx,
+			fakeAppOrClientID,
+			fakeInstallationID,
+			fakePrivateKey,
+			fakeRepoURL,
+		)
+		winnerErr <- err
+	}()
+	// The winner is now mid-mint with its flight held open
+	<-mintStarted
+
+	// Several coalesced waiters, all with live contexts, all of which should
+	// recover from the winner's cancellation.
+	const numWaiters = 3
+	type result struct {
+		creds *credentials.Credentials
+		err   error
+	}
+	waiterRes := make(chan result, numWaiters)
+	for range numWaiters {
+		go func() {
+			creds, err := provider.getUsernameAndPassword(
+				t.Context(),
+				fakeAppOrClientID,
+				fakeInstallationID,
+				fakePrivateKey,
+				fakeRepoURL,
+			)
+			waiterRes <- result{creds: creds, err: err}
+		}()
+	}
+
+	// Give the waiters a moment to join the in-flight mint, then cancel the
+	// winner's context.
+	time.Sleep(100 * time.Millisecond)
+	cancel()
+
+	// The winner's own context was canceled, so it must NOT have retried.
+	require.ErrorIs(t, <-winnerErr, context.Canceled)
+
+	// Allow the replacement mint to validate.
+	close(release)
+
+	for range numWaiters {
+		res := <-waiterRes
+		require.NoError(t, res.err)
+		require.NotNil(t, res.creds)
+		require.Equal(t, fakeAccessToken, res.creds.Password)
+	}
+
+	// The canceled mint plus exactly ONE shared replacement, no matter how the
+	// recovering waiters interleaved. When recovery used Forget + a retry on
+	// the primary key, each recovering waiter could orphan another's
+	// in-flight replacement mint and start its own.
+	require.Equal(t, int32(2), mints.Load())
 }
 
 func TestAppCredentialProvider_waitForTokenUsable(t *testing.T) {

@@ -19,6 +19,7 @@ import (
 	"github.com/jferrl/go-githubauth"
 	"github.com/patrickmn/go-cache"
 	"golang.org/x/oauth2"
+	"golang.org/x/sync/singleflight"
 
 	kargoapi "github.com/akuity/kargo/api/v1alpha1"
 	"github.com/akuity/kargo/pkg/credentials"
@@ -39,6 +40,11 @@ const (
 	tokenCacheExpiryMargin = 5 * time.Minute
 
 	tokenValidationRequestTimeout = 10 * time.Second
+
+	// retryKeySuffix is appended to a token's singleflight key when retrying a
+	// mint whose winner's context was canceled, so that all callers recovering
+	// from that shared failure coalesce again instead of racing.
+	retryKeySuffix = ":retry"
 )
 
 var base64Regex = regexp.MustCompile(`^[a-zA-Z0-9+/]*={0,2}$`)
@@ -56,6 +62,10 @@ func init() {
 
 type AppCredentialProvider struct {
 	tokenCache *cache.Cache
+
+	// mintGroup coalesces concurrent mints of the token for any given cache
+	// key into a single mint whose result is shared by all callers.
+	mintGroup singleflight.Group
 
 	// validationBackoff is the schedule of waits between successive attempts to validate a newly
 	// minted installation access token. This is set as a field so that it can be overridden in
@@ -195,7 +205,83 @@ func (p *AppCredentialProvider) getUsernameAndPassword(
 	}
 	logger.Debug("installation access token cache miss")
 
-	// Cache miss, get a new token
+	// Cache miss, get a new token. All consumers of any given repository share one cache entry, so
+	// they miss the cache in unison when that entry expires and, without coordination, would each
+	// mint their own token. Coalescing concurrent mints for the same cache key avoids that
+	// thundering herd.
+	accessToken, err, _ := p.mintGroup.Do(cacheKey, func() (any, error) {
+		return p.mintAndCacheToken(
+			ctx,
+			appOrClientID,
+			installationID,
+			encodedPrivateKey,
+			repoURL,
+			cacheKey,
+		)
+	})
+	// NOTE(thomastaylor312): This is to handle the edge case where the context of the first minting
+	// operation to fire is canceled or timed out, but this context is not. In that case, we immediately
+	// re-enqueue a request to mint a new token. Otherwise, if a whole bunch of running promotions
+	// use the same credentials and the first one to fire is canceled, all of the others will be
+	// canceled as well, which is not what we want. This is best effort to avoid the issue, but it
+	// isn't perfect. It only handles _one_ canceled operation, but is better than nothing for now.
+	//
+	// The retry deliberately runs under a suffixed key rather than Forget + reuse of the primary
+	// key. Forget detaches whatever call is currently registered for the key, so with several
+	// waiters recovering from the same canceled flight, each Forget could orphan a replacement
+	// flight another waiter had already started.
+	//
+	// Right now if there is a single error that isn't a context error, it will fail all of the
+	// other requests as well. This _could_ end up biting us if we have a transient error. If that
+	// ever becomes the case, we can add an OR to this that uses the `shared` return value from the
+	// singleflight `Do` call and then re-enqueue here as well, but for now we'll let real errors
+	// fall through to everyone.
+	if err != nil &&
+		(errors.Is(err, context.Canceled) || errors.Is(err, context.DeadlineExceeded)) &&
+		ctx.Err() == nil {
+		accessToken, err, _ = p.mintGroup.Do(cacheKey+retryKeySuffix, func() (any, error) {
+			return p.mintAndCacheToken(
+				ctx,
+				appOrClientID,
+				installationID,
+				encodedPrivateKey,
+				repoURL,
+				cacheKey,
+			)
+		})
+	}
+	// At this point if we're checking an error, we've now already retried
+	if err != nil {
+		return nil, err
+	}
+
+	return &credentials.Credentials{
+		Username: accessTokenUsername,
+		// We know the type is string so we're not checking the assertion here
+		Password: accessToken.(string), // nolint: forcetypeassert
+	}, nil
+}
+
+// mintAndCacheToken mints a new installation access token, waits for it to
+// become usable, caches it, and returns it. It is intended to be executed
+// within the provider's singleflight group.
+func (p *AppCredentialProvider) mintAndCacheToken(
+	ctx context.Context,
+	appOrClientID string,
+	installationID int64,
+	encodedPrivateKey string,
+	repoURL string,
+	cacheKey string,
+) (string, error) {
+	logger := logging.LoggerFromContext(ctx)
+
+	// A concurrent call may have minted and cached a token between this
+	// call's cache miss and its turn in the singleflight group.
+	if entry, exists := p.tokenCache.Get(cacheKey); exists {
+		logger.Debug("installation access token cached by concurrent call")
+		return entry.(string), nil // nolint: forcetypeassert
+	}
+
 	token, err := p.getAccessTokenFn(
 		appOrClientID,
 		installationID,
@@ -203,7 +289,7 @@ func (p *AppCredentialProvider) getUsernameAndPassword(
 		repoURL,
 	)
 	if err != nil {
-		return nil, fmt.Errorf("error getting installation access token: %w", err)
+		return "", fmt.Errorf("error getting installation access token: %w", err)
 	}
 	logger.Debug("obtained new installation access token")
 
@@ -215,7 +301,7 @@ func (p *AppCredentialProvider) getUsernameAndPassword(
 	// token demonstrably works before releasing it to the caller prevents
 	// this.
 	if err = p.waitForTokenUsable(ctx, token.AccessToken, repoURL); err != nil {
-		return nil, err
+		return "", err
 	}
 
 	ttl := credentials.CalculateCacheTTL(token.Expiry, tokenCacheExpiryMargin)
@@ -226,10 +312,7 @@ func (p *AppCredentialProvider) getUsernameAndPassword(
 	)
 	p.tokenCache.Set(cacheKey, token.AccessToken, ttl)
 
-	return &credentials.Credentials{
-		Username: accessTokenUsername,
-		Password: token.AccessToken,
-	}, nil
+	return token.AccessToken, nil
 }
 
 // waitForTokenUsable checks that a newly minted installation access token is actually usable,
