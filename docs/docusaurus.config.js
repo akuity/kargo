@@ -7,7 +7,7 @@ const tags = require('./tags');
 const lightCodeTheme = themes.github;
 const darkCodeTheme = themes.dracula;
 
-/** @type {import('@docusaurus/types').Config} */
+/** @type {string} */
 const siteDescription = 'Kargo is a Kubernetes-native continuous promotion platform that orchestrates the movement of artifacts through environments in GitOps workflows.';
 
 const softwareApplicationJsonLd = {

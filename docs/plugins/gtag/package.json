@@ -7,10 +7,7 @@
     "build": "tsc --build",
     "watch": "tsc --build --watch"
   },
-  "packageManager": "pnpm@9.0.3",
-  "pnpm": {
-    "overrides": {}
-  },
+  "packageManager": "pnpm@11.13.0",
   "dependencies": {
     "@docusaurus/core": "^3.10.1",
     "@docusaurus/types": "^3.10.1",

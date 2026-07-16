@@ -40,6 +40,20 @@ type StageSpec struct {
 	// is empty, the webhook will ensure that label is absent.
 	Shard string `json:"shard,omitempty"`
 
+	// TargetSelectors select the Targets that this Stage governs and promotes
+	// Freight to, matching Targets by their labels within the Stage's own
+	// Project. A Target is selected when it matches any selector in this list.
+	// A Stage may govern any number of Targets this way.
+	//
+	// When this field is nil (the default), the Stage operates in classic mode:
+	// it governs a single implicit "stage-self" Target that the controller
+	// creates and maintains on the Stage's behalf. This preserves the behavior
+	// of Stages authored before Targets existed. An empty selector in a non-empty
+	// list selects all Targets in the Project.
+	//
+	// +optional
+	TargetSelectors []*V1LabelSelector `json:"targetSelectors"`
+
 	// Vars is a list of variables that can be referenced anywhere in the
 	// StageSpec that supports expressions. For example, the PromotionTemplate
 	// and arguments of the Verification.
@@ -59,6 +73,10 @@ func (m *StageSpec) Validate(formats strfmt.Registry) error {
 	}
 
 	if err := m.validateRequestedFreight(formats); err != nil {
+		res = append(res, err)
+	}
+
+	if err := m.validateTargetSelectors(formats); err != nil {
 		res = append(res, err)
 	}
 
@@ -118,6 +136,36 @@ func (m *StageSpec) validateRequestedFreight(formats strfmt.Registry) error {
 				ce := new(errors.CompositeError)
 				if stderrors.As(err, &ce) {
 					return ce.ValidateName("requestedFreight" + "." + strconv.Itoa(i))
+				}
+
+				return err
+			}
+		}
+
+	}
+
+	return nil
+}
+
+func (m *StageSpec) validateTargetSelectors(formats strfmt.Registry) error {
+	if swag.IsZero(m.TargetSelectors) { // not required
+		return nil
+	}
+
+	for i := 0; i < len(m.TargetSelectors); i++ {
+		if swag.IsZero(m.TargetSelectors[i]) { // not required
+			continue
+		}
+
+		if m.TargetSelectors[i] != nil {
+			if err := m.TargetSelectors[i].Validate(formats); err != nil {
+				ve := new(errors.Validation)
+				if stderrors.As(err, &ve) {
+					return ve.ValidateName("targetSelectors" + "." + strconv.Itoa(i))
+				}
+				ce := new(errors.CompositeError)
+				if stderrors.As(err, &ce) {
+					return ce.ValidateName("targetSelectors" + "." + strconv.Itoa(i))
 				}
 
 				return err
@@ -194,6 +242,10 @@ func (m *StageSpec) ContextValidate(ctx context.Context, formats strfmt.Registry
 		res = append(res, err)
 	}
 
+	if err := m.contextValidateTargetSelectors(ctx, formats); err != nil {
+		res = append(res, err)
+	}
+
 	if err := m.contextValidateVars(ctx, formats); err != nil {
 		res = append(res, err)
 	}
@@ -251,6 +303,35 @@ func (m *StageSpec) contextValidateRequestedFreight(ctx context.Context, formats
 				ce := new(errors.CompositeError)
 				if stderrors.As(err, &ce) {
 					return ce.ValidateName("requestedFreight" + "." + strconv.Itoa(i))
+				}
+
+				return err
+			}
+		}
+
+	}
+
+	return nil
+}
+
+func (m *StageSpec) contextValidateTargetSelectors(ctx context.Context, formats strfmt.Registry) error {
+
+	for i := 0; i < len(m.TargetSelectors); i++ {
+
+		if m.TargetSelectors[i] != nil {
+
+			if swag.IsZero(m.TargetSelectors[i]) { // not required
+				return nil
+			}
+
+			if err := m.TargetSelectors[i].ContextValidate(ctx, formats); err != nil {
+				ve := new(errors.Validation)
+				if stderrors.As(err, &ve) {
+					return ve.ValidateName("targetSelectors" + "." + strconv.Itoa(i))
+				}
+				ce := new(errors.CompositeError)
+				if stderrors.As(err, &ce) {
+					return ce.ValidateName("targetSelectors" + "." + strconv.Itoa(i))
 				}
 
 				return err
