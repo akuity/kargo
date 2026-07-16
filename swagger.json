@@ -5365,6 +5365,14 @@
           "description": "Compiler indicates what Go compiler was used for the build.",
           "type": "string"
         },
+        "edition": {
+          "description": "Edition identifies the Kargo distribution serving the API.",
+          "allOf": [
+            {
+              "$ref": "#/definitions/github_com_akuity_kargo_pkg_x_edition.Edition"
+            }
+          ]
+        },
         "gitCommit": {
           "description": "GitCommit is the ID (sha) of the last commit to the application's source\ncode that is included in this build.",
           "type": "string"
@@ -8632,6 +8640,17 @@
           "type": "string"
         }
       }
+    },
+    "github_com_akuity_kargo_pkg_x_edition.Edition": {
+      "type": "string",
+      "enum": [
+        "community",
+        "enterprise"
+      ],
+      "x-enum-varnames": [
+        "Community",
+        "Enterprise"
+      ]
     },
     "IntOrString": {
       "type": "object",

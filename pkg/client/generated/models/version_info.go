@@ -5,6 +5,7 @@ package models
 import (
 	"context"
 
+	"github.com/go-openapi/errors"
 	"github.com/go-openapi/strfmt"
 	"github.com/go-openapi/swag"
 )
@@ -19,6 +20,11 @@ type VersionInfo struct {
 
 	// Compiler indicates what Go compiler was used for the build.
 	Compiler string `json:"compiler,omitempty"`
+
+	// Edition identifies the Kargo distribution serving the API.
+	Edition struct {
+		GithubComAkuityKargoPkgxEditionEdition
+	} `json:"edition,omitempty"`
 
 	// GitCommit is the ID (sha) of the last commit to the application's source
 	// code that is included in this build.
@@ -41,11 +47,42 @@ type VersionInfo struct {
 
 // Validate validates this version info
 func (m *VersionInfo) Validate(formats strfmt.Registry) error {
+	var res []error
+
+	if err := m.validateEdition(formats); err != nil {
+		res = append(res, err)
+	}
+
+	if len(res) > 0 {
+		return errors.CompositeValidationError(res...)
+	}
 	return nil
 }
 
-// ContextValidate validates this version info based on context it is used
+func (m *VersionInfo) validateEdition(formats strfmt.Registry) error {
+	if swag.IsZero(m.Edition) { // not required
+		return nil
+	}
+
+	return nil
+}
+
+// ContextValidate validate this version info based on the context it is used
 func (m *VersionInfo) ContextValidate(ctx context.Context, formats strfmt.Registry) error {
+	var res []error
+
+	if err := m.contextValidateEdition(ctx, formats); err != nil {
+		res = append(res, err)
+	}
+
+	if len(res) > 0 {
+		return errors.CompositeValidationError(res...)
+	}
+	return nil
+}
+
+func (m *VersionInfo) contextValidateEdition(ctx context.Context, formats strfmt.Registry) error {
+
 	return nil
 }
 

@@ -14,6 +14,7 @@ import (
 	"github.com/akuity/kargo/pkg/server/dex"
 	"github.com/akuity/kargo/pkg/server/oidc"
 	"github.com/akuity/kargo/pkg/types"
+	"github.com/akuity/kargo/pkg/x/edition"
 )
 
 type StandardConfig struct {
@@ -22,6 +23,9 @@ type StandardConfig struct {
 
 type ServerConfig struct {
 	StandardConfig
+	// Edition identifies the distribution that is serving the API. It is set
+	// by the distribution's API server bootstrap, rather than by an operator.
+	Edition edition.Edition
 	// BasePath is the URL path prefix the server is reachable at, normalized
 	// to begin with `/` and not end with one (e.g. `/kargo`). When non-empty,
 	// every HTTP route the server registers — REST API, ConnectRPC, dex
@@ -116,6 +120,15 @@ func ServerConfigFromEnv() ServerConfig {
 	cfg.DefaultControllerName = os.GetEnv("DEFAULT_CONTROLLER_NAME", "")
 	cfg.BasePath = NormalizeBasePath(os.GetEnv("API_BASE_PATH", ""))
 	return cfg
+}
+
+// EffectiveEdition returns the configured edition, defaulting to Community for
+// backwards compatibility with callers that construct ServerConfig directly.
+func (c ServerConfig) EffectiveEdition() edition.Edition {
+	if c.Edition == "" {
+		return edition.Community
+	}
+	return c.Edition
 }
 
 // NormalizeBasePath canonicalizes an operator-supplied basePath: empty stays

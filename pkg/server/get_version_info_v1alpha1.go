@@ -9,6 +9,7 @@ import (
 
 	svcv1alpha1 "github.com/akuity/kargo/api/service/v1alpha1"
 	"github.com/akuity/kargo/pkg/api"
+	"github.com/akuity/kargo/pkg/x/edition"
 	"github.com/akuity/kargo/pkg/x/version"
 )
 
@@ -25,12 +26,19 @@ func (s *server) GetVersionInfo(
 ) (*connect.Response[svcv1alpha1.GetVersionInfoResponse], error) {
 	return connect.NewResponse(
 		&svcv1alpha1.GetVersionInfoResponse{
-			VersionInfo: api.ToVersionProto(version.GetVersion()),
+			VersionInfo: api.ToVersionProto(
+				version.GetVersion(),
+				s.cfg.EffectiveEdition(),
+			),
 		},
 	), nil
 }
 
-type versionInfo version.Version // @name VersionInfo
+type versionInfo struct {
+	version.Version
+	// Edition identifies the Kargo distribution serving the API.
+	Edition edition.Edition `json:"edition"`
+} // @name VersionInfo
 
 // @id GetVersionInfo
 // @Summary Retrieve API Server version information
@@ -41,5 +49,8 @@ type versionInfo version.Version // @name VersionInfo
 // @Success 200 {object} versionInfo
 // @Router /v1beta1/system/server-version [get]
 func (s *server) getVersionInfo(c *gin.Context) {
-	c.JSON(http.StatusOK, versionInfo(version.GetVersion()))
+	c.JSON(http.StatusOK, versionInfo{
+		Version: version.GetVersion(),
+		Edition: s.cfg.EffectiveEdition(),
+	})
 }

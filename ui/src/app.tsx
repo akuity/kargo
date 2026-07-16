@@ -16,6 +16,7 @@ import { AuthContextProvider } from './features/auth/context/auth-context-provid
 import { ProtectedRoute } from './features/auth/protected-route';
 import { TokenRenew } from './features/auth/token-renew';
 import { MainLayout } from './features/common/layout/main-layout';
+import { ProductEditionContextProvider } from './features/common/product-edition/product-edition-context-provider';
 import { Events } from './features/project/events/events';
 import { ProjectSettings } from './features/project/settings/project-settings';
 import { AnalysisRunLogsPage } from './pages/analysis-run-logs';
@@ -32,52 +33,54 @@ export const App = () => (
   <QueryClientProvider client={queryClient}>
     <ConfigProvider theme={themeConfig}>
       <AuthContextProvider>
-        <BrowserRouter basename={basePath()}>
-          <Routes>
-            <Route element={<ProtectedRoute />}>
-              <Route element={<MainLayout />}>
-                <Route path={paths.projects} element={<Projects />} />
-                <Route path={paths.project} element={<Project />} />
-                <Route path={paths.projectEvents} element={<Events />} />
-                <Route path={paths.stage} element={<Project />} />
-                <Route path={paths.promotion} element={<Project />} />
-                <Route path={paths.promote} element={<Project />} />
-                <Route path={paths.freight} element={<Project />} />
-                <Route path={paths.warehouse} element={<Project />} />
-                <Route path={paths.downloads} element={<Downloads />} />
-                <Route path={paths.user} element={<User />} />
-                <Route
-                  path={paths.createStage}
-                  element={<Project tab='pipelines' creatingStage={true} />}
-                />
-                <Route
-                  path={paths.createWarehouse}
-                  element={<Project tab='pipelines' creatingWarehouse />}
-                />
-                <Route path={paths.promotionTasks} element={<Project tab='promotionTasks' />} />
-                <Route path={paths.projectSettings}>
-                  <Route index element={<ProjectSettings />} />
-                  <Route path='*' element={<ProjectSettings />} />
-                </Route>
-                <Route path={paths.projectExtensions}>
-                  <Route path='*' element={<ProjectExtensions />} />
-                </Route>
-                <Route path={paths.projectArgoCDExtension} element={<ArgoCDExtension />} />
+        <ProductEditionContextProvider>
+          <BrowserRouter basename={basePath()}>
+            <Routes>
+              <Route element={<ProtectedRoute />}>
+                <Route element={<MainLayout />}>
+                  <Route path={paths.projects} element={<Projects />} />
+                  <Route path={paths.project} element={<Project />} />
+                  <Route path={paths.projectEvents} element={<Events />} />
+                  <Route path={paths.stage} element={<Project />} />
+                  <Route path={paths.promotion} element={<Project />} />
+                  <Route path={paths.promote} element={<Project />} />
+                  <Route path={paths.freight} element={<Project />} />
+                  <Route path={paths.warehouse} element={<Project />} />
+                  <Route path={paths.downloads} element={<Downloads />} />
+                  <Route path={paths.user} element={<User />} />
+                  <Route
+                    path={paths.createStage}
+                    element={<Project tab='pipelines' creatingStage={true} />}
+                  />
+                  <Route
+                    path={paths.createWarehouse}
+                    element={<Project tab='pipelines' creatingWarehouse />}
+                  />
+                  <Route path={paths.promotionTasks} element={<Project tab='promotionTasks' />} />
+                  <Route path={paths.projectSettings}>
+                    <Route index element={<ProjectSettings />} />
+                    <Route path='*' element={<ProjectSettings />} />
+                  </Route>
+                  <Route path={paths.projectExtensions}>
+                    <Route path='*' element={<ProjectExtensions />} />
+                  </Route>
+                  <Route path={paths.projectArgoCDExtension} element={<ArgoCDExtension />} />
 
-                <Route path={paths.appExtensions}>
-                  <Route path='*' element={<AppExtensions />} />
+                  <Route path={paths.appExtensions}>
+                    <Route path='*' element={<AppExtensions />} />
+                  </Route>
+                  <Route path={paths.settings}>
+                    <Route index element={<Settings />} />
+                    <Route path='*' element={<Settings />} />
+                  </Route>
                 </Route>
-                <Route path={paths.settings}>
-                  <Route index element={<Settings />} />
-                  <Route path='*' element={<Settings />} />
-                </Route>
+                <Route path={paths.analysisRunLogs} element={<AnalysisRunLogsPage />} />
               </Route>
-              <Route path={paths.analysisRunLogs} element={<AnalysisRunLogsPage />} />
-            </Route>
-            <Route path={paths.login} element={<Login />} />
-            <Route path={paths.tokenRenew} element={<TokenRenew />} />
-          </Routes>
-        </BrowserRouter>
+              <Route path={paths.login} element={<Login />} />
+              <Route path={paths.tokenRenew} element={<TokenRenew />} />
+            </Routes>
+          </BrowserRouter>
+        </ProductEditionContextProvider>
       </AuthContextProvider>
     </ConfigProvider>
     <ReactQueryDevtools buttonPosition='bottom-left' />

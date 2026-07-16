@@ -5,12 +5,15 @@
  * REST API for Kargo
  * OpenAPI spec version: v1alpha1
  */
+import type { GithubComAkuityKargoPkgXEditionEdition } from './githubComAkuityKargoPkgXEditionEdition';
 
 export interface VersionInfo {
   /** BuildDate is the date/time on which the application was built. */
   buildDate?: string;
   /** Compiler indicates what Go compiler was used for the build. */
   compiler?: string;
+  /** Edition identifies the Kargo distribution serving the API. */
+  edition?: GithubComAkuityKargoPkgXEditionEdition;
   /** GitCommit is the ID (sha) of the last commit to the application's source
 code that is included in this build. */
   gitCommit?: string;

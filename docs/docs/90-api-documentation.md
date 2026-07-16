@@ -1342,6 +1342,7 @@ Stability is not guaranteed.
 | go_version | string |  go_version is the Go version used for the build. |
 | compiler | string |  compiler is the compiler used for the build. |
 | platform | string |  platform is the target platform for the build. |
+| edition | [ProductEdition](#akuity-io-kargo-service-v1alpha1-ProductEdition) |  edition identifies the Kargo distribution serving the API. |
 
 
 ### WatchClusterConfigRequest {#akuity-io-kargo-service-v1alpha1-WatchClusterConfigRequest}
@@ -1451,6 +1452,17 @@ Stability is not guaranteed.
 | type | string |  type indicates the type of change (ADDED, MODIFIED, DELETED). |
 
 <!-- end messages -->
+
+### ProductEdition {#akuity-io-kargo-service-v1alpha1-ProductEdition}
+ProductEdition identifies a Kargo distribution.
+
+| Name | Number | Description |
+| ---- | ------ | ----------- |
+| PRODUCT_EDITION_UNSPECIFIED | 0 |  |
+| PRODUCT_EDITION_COMMUNITY | 1 |  |
+| PRODUCT_EDITION_ENTERPRISE | 2 |  |
+
+
 
 ### RawFormat {#akuity-io-kargo-service-v1alpha1-RawFormat}
 RawFormat specifies the format for raw resource representation.

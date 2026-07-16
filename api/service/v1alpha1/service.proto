@@ -284,6 +284,15 @@ message VersionInfo {
   string compiler = 6;
   // platform is the target platform for the build.
   string platform = 7;
+  // edition identifies the Kargo distribution serving the API.
+  ProductEdition edition = 8;
+}
+
+// ProductEdition identifies a Kargo distribution.
+enum ProductEdition {
+  PRODUCT_EDITION_UNSPECIFIED = 0;
+  PRODUCT_EDITION_COMMUNITY = 1;
+  PRODUCT_EDITION_ENTERPRISE = 2;
 }
 
 // GetVersionInfoRequest is the request message for retrieving version information.

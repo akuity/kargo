@@ -96,6 +96,7 @@ export * from './gitDiscoveryResult';
 export * from './gitHubWebhookReceiverConfig';
 export * from './gitLabWebhookReceiverConfig';
 export * from './giteaWebhookReceiverConfig';
+export * from './githubComAkuityKargoPkgXEditionEdition';
 export * from './grantRequest';
 export * from './harborWebhookReceiverConfig';
 export * from './health';
