@@ -1,9 +1,13 @@
 # System-wide promotion exclusions live on the (singleton, cluster-scoped)
-# ClusterConfig. If the cluster already has one, PATCH the exclusions in
-# instead of applying this file -- see the README.
+# ClusterConfig. The promotionExclusions list has server-side-apply merge
+# semantics (listType=map keyed by name), so apply this with
+# `kubectl apply --server-side` and it merges into any existing
+# ClusterConfig entry-by-entry -- each field manager owns only the
+# exclusions it applied.
 #
-# The sample exclusion below is deliberately in the future (inert). The demo
-# activates a freeze by patching in an exclusion that spans "now".
+# The sample exclusion below is deliberately in the future (inert). The
+# demo activates freezes by applying exclusions that span "now" -- see the
+# README.
 apiVersion: kargo.akuity.io/v1alpha1
 kind: ClusterConfig
 metadata:
@@ -14,3 +18,12 @@ spec:
     start: "2026-12-20T00:00:00Z"
     end: "2027-01-02T00:00:00Z"
     scope: no-forward
+
+  # The cluster may also contribute a custom policy, composed into every
+  # project's dispatch decision. Like the project-level customPolicy, it
+  # contains only rules (the kargo.cluster package and standard imports
+  # are prepended automatically). E.g., an operator-wide rule that lets
+  # hotfixes through every freeze:
+  #
+  # customPolicy: |
+  #   exclusions_bypass(e) if helpers.is_hotfix

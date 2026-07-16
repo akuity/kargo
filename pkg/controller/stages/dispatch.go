@@ -94,15 +94,26 @@ func (r *RegularStageReconciler) gateDispatch(
 	if err != nil {
 		return nil, 0, "", err
 	}
-	var policy *kargoapi.ProjectPolicy
+	var projectSpec *kargoapi.ProjectConfigSpec
 	if projectCfg != nil {
-		policy = projectCfg.Spec.Policy
+		projectSpec = &projectCfg.Spec
 	}
 	var exclusions []kargoapi.PromotionExclusion
+	var clusterCustom string
 	if clusterCfg != nil {
 		exclusions = clusterCfg.Spec.PromotionExclusions
+		clusterCustom = clusterCfg.Spec.CustomPolicy
 	}
-	if policy == nil && len(exclusions) == 0 {
+	var projectCustom string
+	governed := len(exclusions) > 0 || clusterCustom != ""
+	if projectSpec != nil {
+		projectCustom = projectSpec.CustomPolicy
+		governed = governed ||
+			projectCustom != "" ||
+			len(projectSpec.PromotionWindows) > 0 ||
+			len(projectSpec.RateLimits) > 0
+	}
+	if !governed {
 		return head, 0, "", nil
 	}
 
@@ -118,7 +129,7 @@ func (r *RegularStageReconciler) gateDispatch(
 		}
 	}
 
-	data, err := dispatch.BuildData(policy, exclusions, stage, dispatches)
+	data, err := dispatch.BuildData(projectSpec, exclusions, stage, dispatches)
 	if err != nil {
 		return nil, 0, "", fmt.Errorf("error building dispatch policy data: %w", err)
 	}
@@ -144,11 +155,6 @@ func (r *RegularStageReconciler) gateDispatch(
 		apps = appList.Items
 	}
 
-	var custom string
-	if policy != nil {
-		custom = policy.Custom
-	}
-
 	var msgs []string
 	var minRequeue time.Duration
 	evaluated := 0
@@ -171,7 +177,7 @@ func (r *RegularStageReconciler) gateDispatch(
 		}
 
 		input := dispatch.BuildInput(promo, freight, stage, project, apps, now)
-		decision, err := r.dispatchEngine.Evaluate(ctx, custom, input, data)
+		decision, err := r.dispatchEngine.Evaluate(ctx, projectCustom, clusterCustom, input, data)
 		if err != nil {
 			r.recorder.Eventf(
 				promo, corev1.EventTypeWarning, eventReasonPromotionPolicyErr,

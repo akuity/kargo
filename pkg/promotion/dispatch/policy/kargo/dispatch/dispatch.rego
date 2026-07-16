@@ -3,8 +3,9 @@
 # description: |
 #   The promotion dispatch policy. Composes the standard library blocks by
 #   unioning their violations, gathers any violations contributed by the
-#   project's custom module (package kargo.custom, from ProjectConfig
-#   spec.policy.custom), and derives a single decision document from the
+#   project's custom module (kargo.project, from ProjectConfig
+#   spec.customPolicy) and the cluster's (kargo.cluster, from ClusterConfig
+#   spec.customPolicy), and derives a single decision document from the
 #   result.
 # schemas:
 #   - input: schema.input
@@ -23,10 +24,12 @@ violation contains v if some v in exclusions.violation
 
 violation contains v if some v in ratelimit.violation
 
-# Custom violations compose into the same set. Inert when the project has
-# no custom module. Each violation is an object {rule, msg, requeue?}; a
+# Custom violations compose into the same set — inert when no custom
+# policy defines any. Each violation is an object {rule, msg, requeue?}; a
 # numeric requeue (seconds) feeds requeue_after below.
-violation contains v if some v in data.kargo.custom.violation
+violation contains v if some v in data.kargo.project.violation
+
+violation contains v if some v in data.kargo.cluster.violation
 
 decision := {"allow": true, "message": "within policy", "requeue_after": 0} if {
 	count(violation) == 0

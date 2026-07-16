@@ -13,6 +13,10 @@ permitted within any trailing Window.
 
 +kubebuilder:validation:Minimum=1 */
   maxPromotions?: number;
+  /** Name is a unique identifier for this rate limit.
+
++kubebuilder:validation:MinLength=1 */
+  name?: string;
   /** StageSelector selects the Stages governed by this rate limit. When
 nil, the rate limit governs all Stages in the Project.
 

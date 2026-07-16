@@ -141,7 +141,7 @@ func TestBuildData(t *testing.T) {
 	stage := &kargoapi.Stage{
 		ObjectMeta: metav1.ObjectMeta{Name: "prod", Namespace: "demo"},
 	}
-	policy := &kargoapi.ProjectPolicy{
+	projectSpec := &kargoapi.ProjectConfigSpec{
 		PromotionWindows: []kargoapi.PromotionWindow{
 			{
 				Name:          "prod-window",
@@ -161,11 +161,13 @@ func TestBuildData(t *testing.T) {
 		},
 		RateLimits: []kargoapi.PromotionRateLimit{
 			{
+				Name:          "uat-throttle",
 				StageSelector: &kargoapi.PromotionPolicySelector{Name: "uat"},
 				MaxPromotions: 5,
 				Window:        metav1.Duration{Duration: time.Hour},
 			},
 			{
+				Name:          "default-throttle",
 				MaxPromotions: 2,
 				Window:        metav1.Duration{Duration: 30 * time.Minute},
 			},
@@ -180,7 +182,7 @@ func TestBuildData(t *testing.T) {
 	}}
 	dispatched := time.Date(2026, 7, 15, 14, 40, 0, 0, time.UTC)
 
-	data, err := BuildData(policy, exclusions, stage, []time.Time{dispatched})
+	data, err := BuildData(projectSpec, exclusions, stage, []time.Time{dispatched})
 	require.NoError(t, err)
 
 	// Only the window whose selector matches this Stage is projected.

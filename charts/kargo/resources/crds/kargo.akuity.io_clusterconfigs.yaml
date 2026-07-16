@@ -54,6 +54,21 @@ spec:
           spec:
             description: Spec describes the configuration of a cluster.
             properties:
+              customPolicy:
+                description: |-
+                  CustomPolicy is an optional inline Rego source that composes into --
+                  never replaces -- the built-in default dispatch policy, applied to
+                  every Project in the cluster. It contains only rules: the package
+                  declaration (kargo.cluster) and the standard library imports are
+                  prepended automatically. Two kinds of rules are gathered by the
+                  default policy:
+
+                    - `violation`: a set of `{"rule": ..., "msg": ..., "requeue": ...}`
+                      objects unioned with the standard blocks' violations. A numeric
+                      `requeue` (seconds) participates in the decision's requeue hint.
+                    - `exclusions_bypass(e)`: a predicate consulted for each exclusion
+                      that would otherwise hold a promotion; it defaults to false.
+                type: string
               freightLinks:
                 description: |-
                   FreightLinks defines deep links shown when viewing any Freight resource
@@ -181,6 +196,9 @@ spec:
                   - start
                   type: object
                 type: array
+                x-kubernetes-list-map-keys:
+                - name
+                x-kubernetes-list-type: map
               stageLinks:
                 description: |-
                   StageLinks defines deep links shown when viewing any Stage resource

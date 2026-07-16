@@ -56,7 +56,24 @@ type ClusterConfigSpec struct {
 	// the exclusion ends.
 	//
 	// +optional
+	// +listType=map
+	// +listMapKey=name
 	PromotionExclusions []PromotionExclusion `json:"promotionExclusions,omitempty" protobuf:"bytes,5,rep,name=promotionExclusions"`
+	// CustomPolicy is an optional inline Rego source that composes into --
+	// never replaces -- the built-in default dispatch policy, applied to
+	// every Project in the cluster. It contains only rules: the package
+	// declaration (kargo.cluster) and the standard library imports are
+	// prepended automatically. Two kinds of rules are gathered by the
+	// default policy:
+	//
+	//   - `violation`: a set of `{"rule": ..., "msg": ..., "requeue": ...}`
+	//     objects unioned with the standard blocks' violations. A numeric
+	//     `requeue` (seconds) participates in the decision's requeue hint.
+	//   - `exclusions_bypass(e)`: a predicate consulted for each exclusion
+	//     that would otherwise hold a promotion; it defaults to false.
+	//
+	// +optional
+	CustomPolicy string `json:"customPolicy,omitempty" protobuf:"bytes,6,opt,name=customPolicy"`
 }
 
 // PromotionExclusion describes an absolute period of time during which

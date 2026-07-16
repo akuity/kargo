@@ -16,6 +16,10 @@
     "spec": {
       "description": "Spec describes the configuration of a Project.",
       "properties": {
+        "customPolicy": {
+          "description": "CustomPolicy is an optional inline Rego source that composes into --\nnever replaces -- the built-in default dispatch policy. It contains\nonly rules: the package declaration (kargo.project) and the standard\nlibrary imports (data.kargo.lib.windows, data.kargo.lib.exclusions,\ndata.kargo.lib.ratelimit, data.kargo.lib.helpers) are prepended\nautomatically. Two kinds of rules are gathered by the default policy:\n\n  - `violation`: a set of `{\"rule\": ..., \"msg\": ..., \"requeue\": ...}`\n    objects unioned with the standard blocks' violations. A numeric\n    `requeue` (seconds) participates in the decision's requeue hint.\n  - `exclusions_bypass(e)`: a predicate consulted for each exclusion\n    that would otherwise hold a promotion; it defaults to false.",
+          "type": "string"
+        },
         "freightLinks": {
           "description": "FreightLinks defines deep links shown when viewing Freight resources\nwithin this project. These are shown in addition to any cluster-level\nFreightLinks defined in ClusterConfig.",
           "items": {
@@ -47,179 +51,6 @@
             "type": "object"
           },
           "type": "array"
-        },
-        "policy": {
-          "description": "Policy configures policy-based promotion dispatch controls for this\nProject. Promotions held by policy remain Pending and are dispatched\nautomatically once permitted.",
-          "properties": {
-            "custom": {
-              "description": "Custom is an optional inline Rego module that composes into -- never\nreplaces -- the built-in default dispatch policy. It must declare\n`package kargo.custom` and may contribute two kinds of rules, both\ngathered by the default policy:\n\n  - `violation`: a set of `{\"rule\": ..., \"msg\": ..., \"requeue\": ...}`\n    objects unioned with the standard blocks' violations. A numeric\n    `requeue` (seconds) participates in the decision's requeue hint.\n  - `exclusions_bypass`: a set of exclusion names for which the\n    standard exclusions block raises no violation.\n\nThe module may import the built-in library packages\ndata.kargo.lib.windows, data.kargo.lib.exclusions,\ndata.kargo.lib.ratelimit, and data.kargo.lib.helpers.",
-              "type": "string"
-            },
-            "promotionWindows": {
-              "description": "PromotionWindows describes recurring windows of time during which\nforward promotions may be dispatched to matching Stages. When one or\nmore windows govern a Stage, forward promotions to that Stage are\ndispatched only while a window is open.",
-              "items": {
-                "description": "PromotionWindow describes a recurring window of time during which\nforward promotions may be dispatched.",
-                "properties": {
-                  "end": {
-                    "description": "End is the closing wall-clock time of each occurrence in \"HH:MM\"\n(24-hour) form. An End at or before Start closes on the following day.",
-                    "pattern": "^([01][0-9]|2[0-3]):[0-5][0-9]$",
-                    "type": "string"
-                  },
-                  "location": {
-                    "description": "Location is an IANA time zone name (e.g. \"America/Los_Angeles\") in\nwhich Start and End are interpreted. Defaults to UTC.",
-                    "type": "string"
-                  },
-                  "name": {
-                    "description": "Name is a unique identifier for this window.",
-                    "minLength": 1,
-                    "type": "string"
-                  },
-                  "recurrence": {
-                    "description": "Recurrence is an RFC 5545 recurrence rule (RRULE) describing the days\non which the window occurs (e.g. \"FREQ=WEEKLY;BYDAY=MO,TU,WE,TH,FR\").",
-                    "minLength": 1,
-                    "type": "string"
-                  },
-                  "stageSelector": {
-                    "description": "StageSelector selects the Stages governed by this window. When nil,\nthe window governs all Stages in the Project.",
-                    "properties": {
-                      "matchExpressions": {
-                        "description": "matchExpressions is a list of label selector requirements. The requirements are ANDed.",
-                        "items": {
-                          "description": "A label selector requirement is a selector that contains values, a key, and an operator that\nrelates the key and values.",
-                          "properties": {
-                            "key": {
-                              "description": "key is the label key that the selector applies to.",
-                              "type": "string"
-                            },
-                            "operator": {
-                              "description": "operator represents a key's relationship to a set of values.\nValid operators are In, NotIn, Exists and DoesNotExist.",
-                              "type": "string"
-                            },
-                            "values": {
-                              "description": "values is an array of string values. If the operator is In or NotIn,\nthe values array must be non-empty. If the operator is Exists or DoesNotExist,\nthe values array must be empty. This array is replaced during a strategic\nmerge patch.",
-                              "items": {
-                                "type": "string"
-                              },
-                              "type": "array",
-                              "x-kubernetes-list-type": "atomic"
-                            }
-                          },
-                          "required": [
-                            "key",
-                            "operator"
-                          ],
-                          "type": "object"
-                        },
-                        "type": "array",
-                        "x-kubernetes-list-type": "atomic"
-                      },
-                      "matchLabels": {
-                        "additionalProperties": {
-                          "type": "string"
-                        },
-                        "description": "matchLabels is a map of {key,value} pairs. A single {key,value} in the matchLabels\nmap is equivalent to an element of matchExpressions, whose key field is \"key\", the\noperator is \"In\", and the values array contains only \"value\". The requirements are ANDed.",
-                        "type": "object"
-                      },
-                      "name": {
-                        "description": "Name is the name of the resource to which this policy applies.\n\nIt can be an exact name, a regex pattern (with prefix \"regex:\"), or a\nglob pattern (with prefix \"glob:\").\n\nWhen both Name and LabelSelector are specified, the Name is ANDed with\nthe LabelSelector. I.e., the resource must match both the Name and\nLabelSelector to be selected by this policy.\n\nNOTE: Using a specific exact name is the most secure option. Pattern\nmatching via regex or glob can be exploited by users with permissions to\nmatch promotion policies that weren't intended to apply to their\nresources. For example, a user could create a resource with a name\ndeliberately crafted to match the pattern, potentially bypassing intended\npromotion controls.",
-                        "type": "string"
-                      }
-                    },
-                    "type": "object",
-                    "x-kubernetes-map-type": "atomic"
-                  },
-                  "start": {
-                    "description": "Start is the opening wall-clock time of each occurrence in \"HH:MM\"\n(24-hour) form.",
-                    "pattern": "^([01][0-9]|2[0-3]):[0-5][0-9]$",
-                    "type": "string"
-                  }
-                },
-                "required": [
-                  "end",
-                  "name",
-                  "recurrence",
-                  "start"
-                ],
-                "type": "object"
-              },
-              "type": "array"
-            },
-            "rateLimits": {
-              "description": "RateLimits limits the frequency of automatic promotion dispatches to\nmatching Stages.",
-              "items": {
-                "description": "PromotionRateLimit limits the frequency of automatic promotion dispatches\nto matching Stages using a rolling window: at most MaxPromotions\npromotions are dispatched within any trailing Window.",
-                "properties": {
-                  "maxPromotions": {
-                    "description": "MaxPromotions is the maximum number of automatic promotion dispatches\npermitted within any trailing Window.",
-                    "format": "int32",
-                    "maximum": 2147483647,
-                    "minimum": 1,
-                    "type": "integer"
-                  },
-                  "stageSelector": {
-                    "description": "StageSelector selects the Stages governed by this rate limit. When\nnil, the rate limit governs all Stages in the Project.",
-                    "properties": {
-                      "matchExpressions": {
-                        "description": "matchExpressions is a list of label selector requirements. The requirements are ANDed.",
-                        "items": {
-                          "description": "A label selector requirement is a selector that contains values, a key, and an operator that\nrelates the key and values.",
-                          "properties": {
-                            "key": {
-                              "description": "key is the label key that the selector applies to.",
-                              "type": "string"
-                            },
-                            "operator": {
-                              "description": "operator represents a key's relationship to a set of values.\nValid operators are In, NotIn, Exists and DoesNotExist.",
-                              "type": "string"
-                            },
-                            "values": {
-                              "description": "values is an array of string values. If the operator is In or NotIn,\nthe values array must be non-empty. If the operator is Exists or DoesNotExist,\nthe values array must be empty. This array is replaced during a strategic\nmerge patch.",
-                              "items": {
-                                "type": "string"
-                              },
-                              "type": "array",
-                              "x-kubernetes-list-type": "atomic"
-                            }
-                          },
-                          "required": [
-                            "key",
-                            "operator"
-                          ],
-                          "type": "object"
-                        },
-                        "type": "array",
-                        "x-kubernetes-list-type": "atomic"
-                      },
-                      "matchLabels": {
-                        "additionalProperties": {
-                          "type": "string"
-                        },
-                        "description": "matchLabels is a map of {key,value} pairs. A single {key,value} in the matchLabels\nmap is equivalent to an element of matchExpressions, whose key field is \"key\", the\noperator is \"In\", and the values array contains only \"value\". The requirements are ANDed.",
-                        "type": "object"
-                      },
-                      "name": {
-                        "description": "Name is the name of the resource to which this policy applies.\n\nIt can be an exact name, a regex pattern (with prefix \"regex:\"), or a\nglob pattern (with prefix \"glob:\").\n\nWhen both Name and LabelSelector are specified, the Name is ANDed with\nthe LabelSelector. I.e., the resource must match both the Name and\nLabelSelector to be selected by this policy.\n\nNOTE: Using a specific exact name is the most secure option. Pattern\nmatching via regex or glob can be exploited by users with permissions to\nmatch promotion policies that weren't intended to apply to their\nresources. For example, a user could create a resource with a name\ndeliberately crafted to match the pattern, potentially bypassing intended\npromotion controls.",
-                        "type": "string"
-                      }
-                    },
-                    "type": "object",
-                    "x-kubernetes-map-type": "atomic"
-                  },
-                  "window": {
-                    "description": "Window is the duration of the rolling window.",
-                    "type": "string"
-                  }
-                },
-                "required": [
-                  "maxPromotions",
-                  "window"
-                ],
-                "type": "object"
-              },
-              "type": "array"
-            }
-          },
-          "type": "object"
         },
         "promotionPolicies": {
           "description": "PromotionPolicies defines policies governing the promotion of Freight to\nspecific Stages within the Project.",
@@ -339,6 +170,183 @@
             ]
           },
           "type": "array"
+        },
+        "promotionWindows": {
+          "description": "PromotionWindows describes recurring windows of time during which\nforward promotions may be dispatched to matching Stages. When one or\nmore windows govern a Stage, forward promotions to that Stage are\ndispatched only while a window is open. Promotions held by a window\nremain Pending and are dispatched automatically once one opens.",
+          "items": {
+            "description": "PromotionWindow describes a recurring window of time during which\nforward promotions may be dispatched.",
+            "properties": {
+              "end": {
+                "description": "End is the closing wall-clock time of each occurrence in \"HH:MM\"\n(24-hour) form. An End at or before Start closes on the following day.",
+                "pattern": "^([01][0-9]|2[0-3]):[0-5][0-9]$",
+                "type": "string"
+              },
+              "location": {
+                "description": "Location is an IANA time zone name (e.g. \"America/Los_Angeles\") in\nwhich Start and End are interpreted. Defaults to UTC.",
+                "type": "string"
+              },
+              "name": {
+                "description": "Name is a unique identifier for this window.",
+                "minLength": 1,
+                "type": "string"
+              },
+              "recurrence": {
+                "description": "Recurrence is an RFC 5545 recurrence rule (RRULE) describing the days\non which the window occurs (e.g. \"FREQ=WEEKLY;BYDAY=MO,TU,WE,TH,FR\").",
+                "minLength": 1,
+                "type": "string"
+              },
+              "stageSelector": {
+                "description": "StageSelector selects the Stages governed by this window. When nil,\nthe window governs all Stages in the Project.",
+                "properties": {
+                  "matchExpressions": {
+                    "description": "matchExpressions is a list of label selector requirements. The requirements are ANDed.",
+                    "items": {
+                      "description": "A label selector requirement is a selector that contains values, a key, and an operator that\nrelates the key and values.",
+                      "properties": {
+                        "key": {
+                          "description": "key is the label key that the selector applies to.",
+                          "type": "string"
+                        },
+                        "operator": {
+                          "description": "operator represents a key's relationship to a set of values.\nValid operators are In, NotIn, Exists and DoesNotExist.",
+                          "type": "string"
+                        },
+                        "values": {
+                          "description": "values is an array of string values. If the operator is In or NotIn,\nthe values array must be non-empty. If the operator is Exists or DoesNotExist,\nthe values array must be empty. This array is replaced during a strategic\nmerge patch.",
+                          "items": {
+                            "type": "string"
+                          },
+                          "type": "array",
+                          "x-kubernetes-list-type": "atomic"
+                        }
+                      },
+                      "required": [
+                        "key",
+                        "operator"
+                      ],
+                      "type": "object"
+                    },
+                    "type": "array",
+                    "x-kubernetes-list-type": "atomic"
+                  },
+                  "matchLabels": {
+                    "additionalProperties": {
+                      "type": "string"
+                    },
+                    "description": "matchLabels is a map of {key,value} pairs. A single {key,value} in the matchLabels\nmap is equivalent to an element of matchExpressions, whose key field is \"key\", the\noperator is \"In\", and the values array contains only \"value\". The requirements are ANDed.",
+                    "type": "object"
+                  },
+                  "name": {
+                    "description": "Name is the name of the resource to which this policy applies.\n\nIt can be an exact name, a regex pattern (with prefix \"regex:\"), or a\nglob pattern (with prefix \"glob:\").\n\nWhen both Name and LabelSelector are specified, the Name is ANDed with\nthe LabelSelector. I.e., the resource must match both the Name and\nLabelSelector to be selected by this policy.\n\nNOTE: Using a specific exact name is the most secure option. Pattern\nmatching via regex or glob can be exploited by users with permissions to\nmatch promotion policies that weren't intended to apply to their\nresources. For example, a user could create a resource with a name\ndeliberately crafted to match the pattern, potentially bypassing intended\npromotion controls.",
+                    "type": "string"
+                  }
+                },
+                "type": "object",
+                "x-kubernetes-map-type": "atomic"
+              },
+              "start": {
+                "description": "Start is the opening wall-clock time of each occurrence in \"HH:MM\"\n(24-hour) form.",
+                "pattern": "^([01][0-9]|2[0-3]):[0-5][0-9]$",
+                "type": "string"
+              }
+            },
+            "required": [
+              "end",
+              "name",
+              "recurrence",
+              "start"
+            ],
+            "type": "object"
+          },
+          "type": "array",
+          "x-kubernetes-list-map-keys": [
+            "name"
+          ],
+          "x-kubernetes-list-type": "map"
+        },
+        "rateLimits": {
+          "description": "RateLimits limits the frequency of automatic promotion dispatches to\nmatching Stages.",
+          "items": {
+            "description": "PromotionRateLimit limits the frequency of automatic promotion dispatches\nto matching Stages using a rolling window: at most MaxPromotions\npromotions are dispatched within any trailing Window.",
+            "properties": {
+              "maxPromotions": {
+                "description": "MaxPromotions is the maximum number of automatic promotion dispatches\npermitted within any trailing Window.",
+                "format": "int32",
+                "maximum": 2147483647,
+                "minimum": 1,
+                "type": "integer"
+              },
+              "name": {
+                "description": "Name is a unique identifier for this rate limit.",
+                "minLength": 1,
+                "type": "string"
+              },
+              "stageSelector": {
+                "description": "StageSelector selects the Stages governed by this rate limit. When\nnil, the rate limit governs all Stages in the Project.",
+                "properties": {
+                  "matchExpressions": {
+                    "description": "matchExpressions is a list of label selector requirements. The requirements are ANDed.",
+                    "items": {
+                      "description": "A label selector requirement is a selector that contains values, a key, and an operator that\nrelates the key and values.",
+                      "properties": {
+                        "key": {
+                          "description": "key is the label key that the selector applies to.",
+                          "type": "string"
+                        },
+                        "operator": {
+                          "description": "operator represents a key's relationship to a set of values.\nValid operators are In, NotIn, Exists and DoesNotExist.",
+                          "type": "string"
+                        },
+                        "values": {
+                          "description": "values is an array of string values. If the operator is In or NotIn,\nthe values array must be non-empty. If the operator is Exists or DoesNotExist,\nthe values array must be empty. This array is replaced during a strategic\nmerge patch.",
+                          "items": {
+                            "type": "string"
+                          },
+                          "type": "array",
+                          "x-kubernetes-list-type": "atomic"
+                        }
+                      },
+                      "required": [
+                        "key",
+                        "operator"
+                      ],
+                      "type": "object"
+                    },
+                    "type": "array",
+                    "x-kubernetes-list-type": "atomic"
+                  },
+                  "matchLabels": {
+                    "additionalProperties": {
+                      "type": "string"
+                    },
+                    "description": "matchLabels is a map of {key,value} pairs. A single {key,value} in the matchLabels\nmap is equivalent to an element of matchExpressions, whose key field is \"key\", the\noperator is \"In\", and the values array contains only \"value\". The requirements are ANDed.",
+                    "type": "object"
+                  },
+                  "name": {
+                    "description": "Name is the name of the resource to which this policy applies.\n\nIt can be an exact name, a regex pattern (with prefix \"regex:\"), or a\nglob pattern (with prefix \"glob:\").\n\nWhen both Name and LabelSelector are specified, the Name is ANDed with\nthe LabelSelector. I.e., the resource must match both the Name and\nLabelSelector to be selected by this policy.\n\nNOTE: Using a specific exact name is the most secure option. Pattern\nmatching via regex or glob can be exploited by users with permissions to\nmatch promotion policies that weren't intended to apply to their\nresources. For example, a user could create a resource with a name\ndeliberately crafted to match the pattern, potentially bypassing intended\npromotion controls.",
+                    "type": "string"
+                  }
+                },
+                "type": "object",
+                "x-kubernetes-map-type": "atomic"
+              },
+              "window": {
+                "description": "Window is the duration of the rolling window.",
+                "type": "string"
+              }
+            },
+            "required": [
+              "maxPromotions",
+              "name",
+              "window"
+            ],
+            "type": "object"
+          },
+          "type": "array",
+          "x-kubernetes-list-map-keys": [
+            "name"
+          ],
+          "x-kubernetes-list-type": "map"
         },
         "stageLinks": {
           "description": "StageLinks defines deep links shown when viewing Stage resources within\nthis project. These are shown in addition to any cluster-level\nStageLinks defined in ClusterConfig.",

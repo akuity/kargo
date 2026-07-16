@@ -424,7 +424,25 @@ message ClusterConfigSpec {
   // the exclusion ends.
   //
   // +optional
+  // +listType=map
+  // +listMapKey=name
   repeated PromotionExclusion promotionExclusions = 5;
+
+  // CustomPolicy is an optional inline Rego source that composes into --
+  // never replaces -- the built-in default dispatch policy, applied to
+  // every Project in the cluster. It contains only rules: the package
+  // declaration (kargo.cluster) and the standard library imports are
+  // prepended automatically. Two kinds of rules are gathered by the
+  // default policy:
+  //
+  //   - `violation`: a set of `{"rule": ..., "msg": ..., "requeue": ...}`
+  //     objects unioned with the standard blocks' violations. A numeric
+  //     `requeue` (seconds) participates in the decision's requeue hint.
+  //   - `exclusions_bypass(e)`: a predicate consulted for each exclusion
+  //     that would otherwise hold a promotion; it defaults to false.
+  //
+  // +optional
+  optional string customPolicy = 6;
 }
 
 // ClusterConfigStatus describes the current status of a ClusterConfig.
@@ -1444,12 +1462,40 @@ message ProjectConfigSpec {
   // +optional
   repeated DeepLink stageLinks = 4;
 
-  // Policy configures policy-based promotion dispatch controls for this
-  // Project. Promotions held by policy remain Pending and are dispatched
-  // automatically once permitted.
+  // CustomPolicy is an optional inline Rego source that composes into --
+  // never replaces -- the built-in default dispatch policy. It contains
+  // only rules: the package declaration (kargo.project) and the standard
+  // library imports (data.kargo.lib.windows, data.kargo.lib.exclusions,
+  // data.kargo.lib.ratelimit, data.kargo.lib.helpers) are prepended
+  // automatically. Two kinds of rules are gathered by the default policy:
+  //
+  //   - `violation`: a set of `{"rule": ..., "msg": ..., "requeue": ...}`
+  //     objects unioned with the standard blocks' violations. A numeric
+  //     `requeue` (seconds) participates in the decision's requeue hint.
+  //   - `exclusions_bypass(e)`: a predicate consulted for each exclusion
+  //     that would otherwise hold a promotion; it defaults to false.
   //
   // +optional
-  optional ProjectPolicy policy = 5;
+  optional string customPolicy = 5;
+
+  // PromotionWindows describes recurring windows of time during which
+  // forward promotions may be dispatched to matching Stages. When one or
+  // more windows govern a Stage, forward promotions to that Stage are
+  // dispatched only while a window is open. Promotions held by a window
+  // remain Pending and are dispatched automatically once one opens.
+  //
+  // +optional
+  // +listType=map
+  // +listMapKey=name
+  repeated PromotionWindow promotionWindows = 6;
+
+  // RateLimits limits the frequency of automatic promotion dispatches to
+  // matching Stages.
+  //
+  // +optional
+  // +listType=map
+  // +listMapKey=name
+  repeated PromotionRateLimit rateLimits = 7;
 }
 
 // ProjectConfigStatus describes the current status of a ProjectConfig.
@@ -1483,44 +1529,6 @@ message ProjectList {
   optional .k8s.io.apimachinery.pkg.apis.meta.v1.ListMeta metadata = 1;
 
   repeated Project items = 2;
-}
-
-// ProjectPolicy describes policy-based promotion dispatch controls for a
-// Project. The declarative elements (promotion windows, rate limits) are
-// evaluated by a built-in default policy; Custom optionally composes
-// additional project-authored rules into that default.
-message ProjectPolicy {
-  // Custom is an optional inline Rego module that composes into -- never
-  // replaces -- the built-in default dispatch policy. It must declare
-  // `package kargo.custom` and may contribute two kinds of rules, both
-  // gathered by the default policy:
-  //
-  //   - `violation`: a set of `{"rule": ..., "msg": ..., "requeue": ...}`
-  //     objects unioned with the standard blocks' violations. A numeric
-  //     `requeue` (seconds) participates in the decision's requeue hint.
-  //   - `exclusions_bypass`: a set of exclusion names for which the
-  //     standard exclusions block raises no violation.
-  //
-  // The module may import the built-in library packages
-  // data.kargo.lib.windows, data.kargo.lib.exclusions,
-  // data.kargo.lib.ratelimit, and data.kargo.lib.helpers.
-  //
-  // +optional
-  optional string custom = 1;
-
-  // PromotionWindows describes recurring windows of time during which
-  // forward promotions may be dispatched to matching Stages. When one or
-  // more windows govern a Stage, forward promotions to that Stage are
-  // dispatched only while a window is open.
-  //
-  // +optional
-  repeated PromotionWindow promotionWindows = 2;
-
-  // RateLimits limits the frequency of automatic promotion dispatches to
-  // matching Stages.
-  //
-  // +optional
-  repeated PromotionRateLimit rateLimits = 3;
 }
 
 // ProjectStats contains a summary of the collective state of a Project's
@@ -1680,20 +1688,25 @@ message PromotionPolicySelector {
 // to matching Stages using a rolling window: at most MaxPromotions
 // promotions are dispatched within any trailing Window.
 message PromotionRateLimit {
+  // Name is a unique identifier for this rate limit.
+  //
+  // +kubebuilder:validation:MinLength=1
+  optional string name = 1;
+
   // StageSelector selects the Stages governed by this rate limit. When
   // nil, the rate limit governs all Stages in the Project.
   //
   // +optional
-  optional PromotionPolicySelector stageSelector = 1;
+  optional PromotionPolicySelector stageSelector = 2;
 
   // MaxPromotions is the maximum number of automatic promotion dispatches
   // permitted within any trailing Window.
   //
   // +kubebuilder:validation:Minimum=1
-  optional int32 maxPromotions = 2;
+  optional int32 maxPromotions = 3;
 
   // Window is the duration of the rolling window.
-  optional .k8s.io.apimachinery.pkg.apis.meta.v1.Duration window = 3;
+  optional .k8s.io.apimachinery.pkg.apis.meta.v1.Duration window = 4;
 }
 
 // PromotionReference contains the relevant information about a Promotion

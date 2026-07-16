@@ -2092,17 +2092,15 @@ func TestRegularStageReconciler_syncPromotions(t *testing.T) {
 						Namespace: "fake-project",
 					},
 					Spec: kargoapi.ProjectConfigSpec{
-						Policy: &kargoapi.ProjectPolicy{
-							PromotionWindows: []kargoapi.PromotionWindow{{
-								Name: "other-stage-window",
-								StageSelector: &kargoapi.PromotionPolicySelector{
-									Name: "some-other-stage",
-								},
-								Recurrence: "FREQ=WEEKLY;BYDAY=SA,SU",
-								Start:      "09:00",
-								End:        "17:00",
-							}},
-						},
+						PromotionWindows: []kargoapi.PromotionWindow{{
+							Name: "other-stage-window",
+							StageSelector: &kargoapi.PromotionPolicySelector{
+								Name: "some-other-stage",
+							},
+							Recurrence: "FREQ=WEEKLY;BYDAY=SA,SU",
+							Start:      "09:00",
+							End:        "17:00",
+						}},
 					},
 				},
 			},
@@ -2142,9 +2140,7 @@ func TestRegularStageReconciler_syncPromotions(t *testing.T) {
 						Name:      "fake-project",
 						Namespace: "fake-project",
 					},
-					Spec: kargoapi.ProjectConfigSpec{
-						Policy: &kargoapi.ProjectPolicy{Custom: "this is not rego"},
-					},
+					Spec: kargoapi.ProjectConfigSpec{CustomPolicy: "this is not rego"},
 				},
 			},
 			assertions: func(t *testing.T, status kargoapi.StageStatus, _ promoSyncResult, err error) {

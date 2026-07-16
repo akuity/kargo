@@ -11,19 +11,21 @@ The default policy is composed from standard, data-driven Rego blocks:
 
 | Block | Data source | Behavior |
 |---|---|---|
-| `kargo.lib.windows` | `ProjectConfig` `spec.policy.promotionWindows` | Forward promotions to a governed Stage dispatch only inside a recurring (RRULE) window |
+| `kargo.lib.windows` | `ProjectConfig` `spec.promotionWindows` | Forward promotions to a governed Stage dispatch only inside a recurring (RRULE) window |
 | `kargo.lib.exclusions` | `ClusterConfig` `spec.promotionExclusions` | System-wide blackouts, scoped by promotion class (`no-promotions`, `no-forward`, `no-auto`) and optionally by Argo CD destination server |
-| `kargo.lib.ratelimit` | `ProjectConfig` `spec.policy.rateLimits` | Rolling window: at most N automatic dispatches per trailing window |
+| `kargo.lib.ratelimit` | `ProjectConfig` `spec.rateLimits` | Rolling window: at most N automatic dispatches per trailing window |
 | `kargo.lib.helpers` | -- | Building blocks for custom policies (e.g. `is_hotfix`) |
 
-A project may extend the default with its own module
-(`spec.policy.custom`, `package kargo.custom`) that **composes into** --
-never replaces -- the default policy. Paste a single rule and it just
-works: the default policy gathers any `violation` the custom module
-contributes, and the exclusions block waives any exclusion the custom
-module names in `exclusions_bypass`. See the commented example in
-`10-projectconfig.yaml` and the schema/authoring reference in
-`pkg/promotion/dispatch/policy/README.md`.
+A project (`ProjectConfig spec.customPolicy`) and the operator
+(`ClusterConfig spec.customPolicy`, applied to every project) may extend
+the default policy with custom rules that **compose into** -- never
+replace -- it. A custom policy contains *only rules*: the package
+declaration and the standard library imports are prepended automatically,
+so pasting a single rule just works. The default policy gathers any
+`violation` a custom policy contributes, and the exclusions block consults
+its `exclusions_bypass(e)` predicate. See the commented examples in
+`10-projectconfig.yaml` and `40-clusterconfig.yaml`, and the
+schema/authoring reference in `pkg/promotion/dispatch/policy/README.md`.
 
 Promotion classes are inferred per Promotion: `auto-forward` (created by the
 system), `manual-forward` (created by a user), and `rollback` (annotated
@@ -53,20 +55,14 @@ kubectl apply -f hack/demo/policy/20-warehouse.yaml
 kubectl apply -f hack/demo/policy/30-stages.yaml
 ```
 
-For the ClusterConfig: apply `40-clusterconfig.yaml` only if the cluster has
-no ClusterConfig yet; otherwise patch the exclusions in:
+The ClusterConfig lists have server-side-apply merge semantics (keyed by
+`name`), so every ClusterConfig change in this demo uses
+`kubectl apply --server-side` with a per-concern field manager -- entries
+merge into any existing ClusterConfig and each manager owns (and can
+remove) only its own:
 
 ```shell
-kubectl apply -f hack/demo/policy/40-clusterconfig.yaml   # if none exists
-# ...or...
-kubectl patch clusterconfig cluster --type merge -p '
-spec:
-  promotionExclusions:
-  - name: holiday-freeze
-    start: "2026-12-20T00:00:00Z"
-    end: "2027-01-02T00:00:00Z"
-    scope: no-forward
-'
+kubectl apply --server-side --field-manager=policy-demo -f hack/demo/policy/40-clusterconfig.yaml
 ```
 
 Watch the action from two terminals:
@@ -112,17 +108,22 @@ itself at the window boundary the policy reported.)
 
 ## Scenario 2 -- system-wide freeze; rollback passes through
 
-Activate a `no-forward` exclusion spanning now:
+Activate a `no-forward` exclusion spanning now (merged in alongside any
+other exclusions, under its own field manager):
 
 ```shell
-kubectl patch clusterconfig cluster --type merge -p '
+kubectl apply --server-side --field-manager=incident-freeze -f - <<EOF
+apiVersion: kargo.akuity.io/v1alpha1
+kind: ClusterConfig
+metadata:
+  name: cluster
 spec:
   promotionExclusions:
   - name: incident-freeze
     start: "2026-01-01T00:00:00Z"
     end: "2036-01-01T00:00:00Z"
     scope: no-forward
-'
+EOF
 ```
 
 Every forward promotion in every project now parks (auto and manual alike),
@@ -161,10 +162,11 @@ target a particular destination server -- see Scenario 5.
 ## Scenario 3 -- custom policy: hotfixes bypass the freeze
 
 With the freeze from Scenario 2 still active, enable the custom policy:
-uncomment the `custom:` block in `10-projectconfig.yaml` and re-apply. The
-custom module (`package kargo.custom`) composes into the default policy; it
-does not replace anything. Its `exclusions_bypass` rule names every
-exclusion bypassed whenever the candidate Freight is a hotfix
+uncomment the `customPolicy:` block in `10-projectconfig.yaml` and
+re-apply. The custom rules compose into the default policy (the
+`kargo.project` package and standard imports are prepended automatically);
+nothing is replaced. Its one-line `exclusions_bypass(e)` override waives
+every exclusion whenever the candidate Freight is a hotfix
 (`helpers.is_hotfix`: every shared image is a semver patch-only increment
 over what the Stage last promoted).
 
@@ -187,10 +189,16 @@ freeze even with a ticket:
 #       change-ticket: CHG-1234
 ```
 
-Lift the freeze when done:
+Lift the freeze when done -- re-apply as the same field manager with the
+entry omitted, and server-side apply removes what that manager owned:
 
 ```shell
-kubectl patch clusterconfig cluster --type json -p '[{"op": "remove", "path": "/spec/promotionExclusions"}]'
+kubectl apply --server-side --field-manager=incident-freeze -f - <<EOF
+apiVersion: kargo.akuity.io/v1alpha1
+kind: ClusterConfig
+metadata:
+  name: cluster
+EOF
 ```
 
 ## Scenario 4 -- rolling-window rate limit
@@ -219,7 +227,11 @@ kubectl apply -f hack/demo/policy/50-application.yaml
 Declare maintenance on that cluster:
 
 ```shell
-kubectl patch clusterconfig cluster --type merge -p '
+kubectl apply --server-side --field-manager=cluster-maintenance -f - <<EOF
+apiVersion: kargo.akuity.io/v1alpha1
+kind: ClusterConfig
+metadata:
+  name: cluster
 spec:
   promotionExclusions:
   - name: cluster-maintenance
@@ -228,7 +240,7 @@ spec:
     scope: no-promotions
     argocdServers:
     - https://kubernetes.default.svc
-'
+EOF
 ```
 
 A manual promotion to `prod` now parks (its Application targets the server
@@ -236,7 +248,12 @@ under maintenance), while `test` and `uat` -- which have no Applications --
 promote normally. End the maintenance and the held promotion dispatches:
 
 ```shell
-kubectl patch clusterconfig cluster --type json -p '[{"op": "remove", "path": "/spec/promotionExclusions"}]'
+kubectl apply --server-side --field-manager=cluster-maintenance -f - <<EOF
+apiVersion: kargo.akuity.io/v1alpha1
+kind: ClusterConfig
+metadata:
+  name: cluster
+EOF
 ```
 
 This scenario requires the controller's Argo CD integration (enabled by
@@ -245,11 +262,13 @@ server-scoped exclusions never match.
 
 ## Troubleshooting
 
-- A broken `spec.policy.custom` **fails closed**: nothing dispatches, the
-  Stage's `Promoting` condition reports `DispatchPolicyError`, and each held
-  Promotion gets a `PromotionPolicyError` event. Fix or remove the module.
-  A custom module declaring any package other than `kargo.custom` is
-  rejected the same way.
+- A broken `customPolicy` (project- or cluster-level) **fails closed**:
+  nothing dispatches, the Stage's `Promoting` condition reports
+  `DispatchPolicyError`, and each held Promotion gets a
+  `PromotionPolicyError` event. Fix or remove the rules. A source that
+  declares its own `package` is rejected the same way (custom policies
+  contain rules only). Compile-error line numbers are offset by the
+  prepended header.
 - The policy engine sees Argo CD Applications only when the controller's
   Argo CD integration is enabled; without it, server-scoped exclusions never
   match (unscoped exclusions still work).
@@ -261,5 +280,13 @@ server-scoped exclusions never match.
 ```shell
 kubectl delete -f hack/demo/policy/50-application.yaml --ignore-not-found
 kubectl delete -f hack/demo/policy/30-stages.yaml -f hack/demo/policy/20-warehouse.yaml -f hack/demo/policy/10-projectconfig.yaml -f hack/demo/policy/00-project.yaml
-kubectl patch clusterconfig cluster --type json -p '[{"op": "remove", "path": "/spec/promotionExclusions"}]'
+# Relinquish each demo field manager's ClusterConfig entries:
+for fm in policy-demo incident-freeze cluster-maintenance; do
+  kubectl apply --server-side --field-manager=$fm -f - <<EOF
+apiVersion: kargo.akuity.io/v1alpha1
+kind: ClusterConfig
+metadata:
+  name: cluster
+EOF
+done
 ```

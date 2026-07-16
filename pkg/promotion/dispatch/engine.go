@@ -2,8 +2,9 @@
 // (acknowledged by its Stage and allowed to begin Running). The decision is
 // delegated to an OPA policy: a built-in default composed of standard,
 // data-driven library blocks (see policy/), into which a project-authored
-// kargo.custom module (ProjectConfig spec.policy.custom) may compose
-// additional violations and exclusion bypasses.
+// custom policy (ProjectConfig spec.customPolicy) and an operator-authored
+// one (ClusterConfig spec.customPolicy) may compose additional violations
+// and exclusion bypasses.
 package dispatch
 
 import (
@@ -38,8 +39,8 @@ type Decision struct {
 }
 
 // Engine evaluates dispatch policies, caching one prepared query per
-// distinct custom policy module (including compile failures, so a broken
-// policy is not recompiled on every reconcile).
+// distinct pair of custom policy sources (including compile failures, so a
+// broken policy is not recompiled on every reconcile).
 type Engine struct {
 	mu       sync.Mutex
 	prepared map[string]*preparedPolicy
@@ -51,24 +52,27 @@ func NewEngine() *Engine {
 }
 
 // Evaluate evaluates the dispatch policy against the given input and data
-// documents. custom is the project's policy module source; when empty, the
-// built-in default policy is used.
+// documents. projectCustom and clusterCustom are rules-only custom policy
+// sources (ProjectConfig and ClusterConfig spec.customPolicy respectively);
+// either or both may be empty, in which case the built-in default policy
+// behavior applies.
 func (e *Engine) Evaluate(
 	ctx context.Context,
-	custom string,
+	projectCustom string,
+	clusterCustom string,
 	input map[string]any,
 	data map[string]any,
 ) (*Decision, error) {
-	pp := e.policyFor(custom)
-	pp.once.Do(func() { pp.prepare(ctx, custom) })
+	pp := e.policyFor(projectCustom, clusterCustom)
+	pp.once.Do(func() { pp.prepare(ctx, projectCustom, clusterCustom) })
 	if pp.err != nil {
 		return nil, fmt.Errorf("error preparing dispatch policy: %w", pp.err)
 	}
 	return pp.eval(ctx, input, data)
 }
 
-func (e *Engine) policyFor(custom string) *preparedPolicy {
-	sum := sha256.Sum256([]byte(custom))
+func (e *Engine) policyFor(projectCustom, clusterCustom string) *preparedPolicy {
+	sum := sha256.Sum256([]byte(projectCustom + "\x00" + clusterCustom))
 	key := hex.EncodeToString(sum[:])
 	e.mu.Lock()
 	defer e.mu.Unlock()
@@ -91,8 +95,8 @@ type preparedPolicy struct {
 	store storage.Store
 }
 
-func (p *preparedPolicy) prepare(ctx context.Context, custom string) {
-	mods, err := policyModules(custom)
+func (p *preparedPolicy) prepare(ctx context.Context, projectCustom, clusterCustom string) {
+	mods, err := policyModules(projectCustom, clusterCustom)
 	if err != nil {
 		p.err = err
 		return

@@ -12,18 +12,10 @@ import (
 // testNow is a Wednesday, 15:00 UTC (07:00 in America/Los_Angeles).
 const testNow = "2026-07-15T15:00:00Z"
 
-// hotfixBypassModule is the canonical custom-policy pattern: hotfixes
-// (semver patch-only increments) bypass every exclusion.
-const hotfixBypassModule = `package kargo.custom
-
-import rego.v1
-
-import data.kargo.lib.helpers
-
-exclusions_bypass contains e.name if {
-	some e in data.exclusions
-	helpers.is_hotfix
-}
+// hotfixBypassRules is the canonical custom-policy pattern: hotfixes
+// (semver patch-only increments) bypass every exclusion. Rules only -- the
+// engine prepends the package and imports.
+const hotfixBypassRules = `exclusions_bypass(e) if helpers.is_hotfix
 `
 
 func emptyData() map[string]any {
@@ -68,11 +60,12 @@ func TestEngineEvaluate(t *testing.T) {
 	t.Parallel()
 
 	testCases := []struct {
-		name   string
-		custom string
-		input  map[string]any
-		data   func() map[string]any
-		assert func(*testing.T, *Decision, error)
+		name          string
+		projectCustom string
+		clusterCustom string
+		input         map[string]any
+		data          func() map[string]any
+		assert        func(*testing.T, *Decision, error)
 	}{
 		{
 			name:  "default policy allows when no config matches",
@@ -400,12 +393,8 @@ func TestEngineEvaluate(t *testing.T) {
 			},
 		},
 		{
-			name: "custom violation composes into the default decision",
-			custom: `package kargo.custom
-
-import rego.v1
-
-violation contains {"rule": "no", "msg": "computer says no", "requeue": 60} if {
+			name: "project violation composes into the default decision",
+			projectCustom: `violation contains {"rule": "no", "msg": "computer says no", "requeue": 60} if {
 	input.promotion.class == "auto-forward"
 }
 `,
@@ -419,12 +408,41 @@ violation contains {"rule": "no", "msg": "computer says no", "requeue": 60} if {
 			},
 		},
 		{
-			name: "custom violation unions with the standard blocks",
-			custom: `package kargo.custom
-
-import rego.v1
-
-violation contains v if {
+			name: "cluster violation composes into the default decision",
+			clusterCustom: `violation contains {"rule": "ops", "msg": "cluster says no"} if {
+	input.promotion.class == "auto-forward"
+}
+`,
+			input: testInput(ClassAutoForward),
+			data:  emptyData,
+			assert: func(t *testing.T, d *Decision, err error) {
+				require.NoError(t, err)
+				require.False(t, d.Allow)
+				require.Equal(t, "cluster says no", d.Message)
+			},
+		},
+		{
+			name: "project and cluster violations both contribute",
+			projectCustom: `violation contains {"rule": "p", "msg": "project says no"} if {
+	input.promotion.class == "auto-forward"
+}
+`,
+			clusterCustom: `violation contains {"rule": "c", "msg": "cluster says no"} if {
+	input.promotion.class == "auto-forward"
+}
+`,
+			input: testInput(ClassAutoForward),
+			data:  emptyData,
+			assert: func(t *testing.T, d *Decision, err error) {
+				require.NoError(t, err)
+				require.False(t, d.Allow)
+				require.Contains(t, d.Message, "project says no")
+				require.Contains(t, d.Message, "cluster says no")
+			},
+		},
+		{
+			name: "project violation unions with the standard blocks",
+			projectCustom: `violation contains v if {
 	input.project.labels.compliance == "pci"
 	input.promotion.class == "manual-forward"
 	not input.promotion.annotations["change-ticket"]
@@ -461,8 +479,8 @@ violation contains v if {
 			},
 		},
 		{
-			name:   "exclusions_bypass admits a hotfix through an active exclusion",
-			custom: hotfixBypassModule,
+			name:          "exclusions_bypass admits a hotfix through an active exclusion",
+			projectCustom: hotfixBypassRules,
 			input: func() map[string]any {
 				input := testInput(ClassManualForward)
 				input["freight"] = map[string]any{
@@ -505,8 +523,8 @@ violation contains v if {
 			},
 		},
 		{
-			name:   "exclusions_bypass does not admit a minor version bump",
-			custom: hotfixBypassModule,
+			name:          "exclusions_bypass does not admit a minor version bump",
+			projectCustom: hotfixBypassRules,
 			input: func() map[string]any {
 				input := testInput(ClassManualForward)
 				input["freight"] = map[string]any{
@@ -549,10 +567,54 @@ violation contains v if {
 			},
 		},
 		{
-			name:   "invalid custom policy surfaces a compile error",
-			custom: "this is not rego",
-			input:  testInput(ClassAutoForward),
-			data:   emptyData,
+			name:          "cluster exclusions_bypass admits a hotfix",
+			clusterCustom: hotfixBypassRules,
+			input: func() map[string]any {
+				input := testInput(ClassManualForward)
+				input["freight"] = map[string]any{
+					"name": "test-freight",
+					"images": []any{
+						map[string]any{"repoURL": "example/nginx", "tag": "1.2.4", "digest": ""},
+					},
+				}
+				input["stage"] = map[string]any{
+					"name":        "prod",
+					"project":     "test-project",
+					"labels":      map[string]any{},
+					"annotations": map[string]any{},
+					"lastPromotion": map[string]any{
+						"name": "promo-prev",
+						"freight": map[string]any{
+							"name": "prev-freight",
+							"images": []any{
+								map[string]any{"repoURL": "example/nginx", "tag": "1.2.3", "digest": ""},
+							},
+						},
+					},
+				}
+				return input
+			}(),
+			data: func() map[string]any {
+				data := emptyData()
+				data["exclusions"] = []any{map[string]any{
+					"name":          "freeze",
+					"start":         "2026-07-15T00:00:00Z",
+					"end":           "2026-07-16T00:00:00Z",
+					"scope":         "no-promotions",
+					"argocdServers": []any{},
+				}}
+				return data
+			},
+			assert: func(t *testing.T, d *Decision, err error) {
+				require.NoError(t, err)
+				require.True(t, d.Allow)
+			},
+		},
+		{
+			name:          "invalid custom policy surfaces a compile error",
+			projectCustom: "this is not rego",
+			input:         testInput(ClassAutoForward),
+			data:          emptyData,
 			assert: func(t *testing.T, d *Decision, err error) {
 				require.Error(t, err)
 				require.Nil(t, d)
@@ -560,10 +622,8 @@ violation contains v if {
 			},
 		},
 		{
-			name: "custom module in the wrong package fails closed",
-			custom: `package kargo.dispatch
-
-import rego.v1
+			name: "custom source declaring its own package fails closed",
+			projectCustom: `package kargo.dispatch
 
 decision := {"allow": true, "message": "hijacked", "requeue_after": 0}
 `,
@@ -572,7 +632,7 @@ decision := {"allow": true, "message": "hijacked", "requeue_after": 0}
 			assert: func(t *testing.T, d *Decision, err error) {
 				require.Error(t, err)
 				require.Nil(t, d)
-				require.Contains(t, err.Error(), `must be "kargo.custom"`)
+				require.Contains(t, err.Error(), "contains only rules")
 			},
 		},
 	}
@@ -583,7 +643,8 @@ decision := {"allow": true, "message": "hijacked", "requeue_after": 0}
 			t.Parallel()
 			decision, err := engine.Evaluate(
 				context.Background(),
-				testCase.custom,
+				testCase.projectCustom,
+				testCase.clusterCustom,
 				testCase.input,
 				testCase.data(),
 			)
@@ -599,6 +660,7 @@ func TestEngineCachesCompileErrors(t *testing.T) {
 		_, err := engine.Evaluate(
 			context.Background(),
 			"not rego at all",
+			"",
 			testInput(ClassAutoForward),
 			emptyData(),
 		)
@@ -621,7 +683,7 @@ func mustParseNS(s string) int64 {
 // that references an undeclared field must fail to compile.
 func TestPolicySchemaEnforcement(t *testing.T) {
 	t.Parallel()
-	mods, err := policyModules("")
+	mods, err := policyModules("", "")
 	require.NoError(t, err)
 	schemas, err := policySchemas()
 	require.NoError(t, err)

@@ -11,6 +11,21 @@ import type { PromotionExclusion } from './promotionExclusion';
 import type { WebhookReceiverConfig } from './webhookReceiverConfig';
 
 export interface ClusterConfigSpec {
+  /** CustomPolicy is an optional inline Rego source that composes into --
+never replaces -- the built-in default dispatch policy, applied to
+every Project in the cluster. It contains only rules: the package
+declaration (kargo.cluster) and the standard library imports are
+prepended automatically. Two kinds of rules are gathered by the
+default policy:
+
+  - `violation`: a set of `{"rule": ..., "msg": ..., "requeue": ...}`
+    objects unioned with the standard blocks' violations. A numeric
+    `requeue` (seconds) participates in the decision's requeue hint.
+  - `exclusions_bypass(e)`: a predicate consulted for each exclusion
+    that would otherwise hold a promotion; it defaults to false.
+
++optional */
+  customPolicy?: string;
   /** FreightLinks defines deep links shown when viewing any Freight resource
 across all projects in the cluster. Project-level FreightLinks defined
 in ProjectConfig are shown in addition to these.
@@ -28,7 +43,9 @@ promotion dispatch is restricted across all Projects. Promotions held
 by an exclusion remain Pending and are dispatched automatically once
 the exclusion ends.
 
-+optional */
++optional
++listType=map
++listMapKey=name */
   promotionExclusions?: PromotionExclusion[];
   /** StageLinks defines deep links shown when viewing any Stage resource
 across all projects in the cluster. Project-level StageLinks defined in

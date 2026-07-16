@@ -17,6 +17,22 @@ import (
 // swagger:model ProjectConfigSpec
 type ProjectConfigSpec struct {
 
+	// CustomPolicy is an optional inline Rego source that composes into --
+	// never replaces -- the built-in default dispatch policy. It contains
+	// only rules: the package declaration (kargo.project) and the standard
+	// library imports (data.kargo.lib.windows, data.kargo.lib.exclusions,
+	// data.kargo.lib.ratelimit, data.kargo.lib.helpers) are prepended
+	// automatically. Two kinds of rules are gathered by the default policy:
+	//
+	//   - `violation`: a set of `{"rule": ..., "msg": ..., "requeue": ...}`
+	//     objects unioned with the standard blocks' violations. A numeric
+	//     `requeue` (seconds) participates in the decision's requeue hint.
+	//   - `exclusions_bypass(e)`: a predicate consulted for each exclusion
+	//     that would otherwise hold a promotion; it defaults to false.
+	//
+	// +optional
+	CustomPolicy string `json:"customPolicy,omitempty"`
+
 	// FreightLinks defines deep links shown when viewing Freight resources
 	// within this project. These are shown in addition to any cluster-level
 	// FreightLinks defined in ClusterConfig.
@@ -24,18 +40,28 @@ type ProjectConfigSpec struct {
 	// +optional
 	FreightLinks []*DeepLink `json:"freightLinks"`
 
-	// Policy configures policy-based promotion dispatch controls for this
-	// Project. Promotions held by policy remain Pending and are dispatched
-	// automatically once permitted.
-	//
-	// +optional
-	Policy struct {
-		ProjectPolicy
-	} `json:"policy,omitempty"`
-
 	// PromotionPolicies defines policies governing the promotion of Freight to
 	// specific Stages within the Project.
 	PromotionPolicies []*PromotionPolicy `json:"promotionPolicies"`
+
+	// PromotionWindows describes recurring windows of time during which
+	// forward promotions may be dispatched to matching Stages. When one or
+	// more windows govern a Stage, forward promotions to that Stage are
+	// dispatched only while a window is open. Promotions held by a window
+	// remain Pending and are dispatched automatically once one opens.
+	//
+	// +optional
+	// +listType=map
+	// +listMapKey=name
+	PromotionWindows []*PromotionWindow `json:"promotionWindows"`
+
+	// RateLimits limits the frequency of automatic promotion dispatches to
+	// matching Stages.
+	//
+	// +optional
+	// +listType=map
+	// +listMapKey=name
+	RateLimits []*PromotionRateLimit `json:"rateLimits"`
 
 	// StageLinks defines deep links shown when viewing Stage resources within
 	// this project. These are shown in addition to any cluster-level
@@ -57,11 +83,15 @@ func (m *ProjectConfigSpec) Validate(formats strfmt.Registry) error {
 		res = append(res, err)
 	}
 
-	if err := m.validatePolicy(formats); err != nil {
+	if err := m.validatePromotionPolicies(formats); err != nil {
 		res = append(res, err)
 	}
 
-	if err := m.validatePromotionPolicies(formats); err != nil {
+	if err := m.validatePromotionWindows(formats); err != nil {
+		res = append(res, err)
+	}
+
+	if err := m.validateRateLimits(formats); err != nil {
 		res = append(res, err)
 	}
 
@@ -109,14 +139,6 @@ func (m *ProjectConfigSpec) validateFreightLinks(formats strfmt.Registry) error 
 	return nil
 }
 
-func (m *ProjectConfigSpec) validatePolicy(formats strfmt.Registry) error {
-	if swag.IsZero(m.Policy) { // not required
-		return nil
-	}
-
-	return nil
-}
-
 func (m *ProjectConfigSpec) validatePromotionPolicies(formats strfmt.Registry) error {
 	if swag.IsZero(m.PromotionPolicies) { // not required
 		return nil
@@ -136,6 +158,66 @@ func (m *ProjectConfigSpec) validatePromotionPolicies(formats strfmt.Registry) e
 				ce := new(errors.CompositeError)
 				if stderrors.As(err, &ce) {
 					return ce.ValidateName("promotionPolicies" + "." + strconv.Itoa(i))
+				}
+
+				return err
+			}
+		}
+
+	}
+
+	return nil
+}
+
+func (m *ProjectConfigSpec) validatePromotionWindows(formats strfmt.Registry) error {
+	if swag.IsZero(m.PromotionWindows) { // not required
+		return nil
+	}
+
+	for i := 0; i < len(m.PromotionWindows); i++ {
+		if swag.IsZero(m.PromotionWindows[i]) { // not required
+			continue
+		}
+
+		if m.PromotionWindows[i] != nil {
+			if err := m.PromotionWindows[i].Validate(formats); err != nil {
+				ve := new(errors.Validation)
+				if stderrors.As(err, &ve) {
+					return ve.ValidateName("promotionWindows" + "." + strconv.Itoa(i))
+				}
+				ce := new(errors.CompositeError)
+				if stderrors.As(err, &ce) {
+					return ce.ValidateName("promotionWindows" + "." + strconv.Itoa(i))
+				}
+
+				return err
+			}
+		}
+
+	}
+
+	return nil
+}
+
+func (m *ProjectConfigSpec) validateRateLimits(formats strfmt.Registry) error {
+	if swag.IsZero(m.RateLimits) { // not required
+		return nil
+	}
+
+	for i := 0; i < len(m.RateLimits); i++ {
+		if swag.IsZero(m.RateLimits[i]) { // not required
+			continue
+		}
+
+		if m.RateLimits[i] != nil {
+			if err := m.RateLimits[i].Validate(formats); err != nil {
+				ve := new(errors.Validation)
+				if stderrors.As(err, &ve) {
+					return ve.ValidateName("rateLimits" + "." + strconv.Itoa(i))
+				}
+				ce := new(errors.CompositeError)
+				if stderrors.As(err, &ce) {
+					return ce.ValidateName("rateLimits" + "." + strconv.Itoa(i))
 				}
 
 				return err
@@ -215,11 +297,15 @@ func (m *ProjectConfigSpec) ContextValidate(ctx context.Context, formats strfmt.
 		res = append(res, err)
 	}
 
-	if err := m.contextValidatePolicy(ctx, formats); err != nil {
+	if err := m.contextValidatePromotionPolicies(ctx, formats); err != nil {
 		res = append(res, err)
 	}
 
-	if err := m.contextValidatePromotionPolicies(ctx, formats); err != nil {
+	if err := m.contextValidatePromotionWindows(ctx, formats); err != nil {
+		res = append(res, err)
+	}
+
+	if err := m.contextValidateRateLimits(ctx, formats); err != nil {
 		res = append(res, err)
 	}
 
@@ -266,11 +352,6 @@ func (m *ProjectConfigSpec) contextValidateFreightLinks(ctx context.Context, for
 	return nil
 }
 
-func (m *ProjectConfigSpec) contextValidatePolicy(ctx context.Context, formats strfmt.Registry) error {
-
-	return nil
-}
-
 func (m *ProjectConfigSpec) contextValidatePromotionPolicies(ctx context.Context, formats strfmt.Registry) error {
 
 	for i := 0; i < len(m.PromotionPolicies); i++ {
@@ -289,6 +370,64 @@ func (m *ProjectConfigSpec) contextValidatePromotionPolicies(ctx context.Context
 				ce := new(errors.CompositeError)
 				if stderrors.As(err, &ce) {
 					return ce.ValidateName("promotionPolicies" + "." + strconv.Itoa(i))
+				}
+
+				return err
+			}
+		}
+
+	}
+
+	return nil
+}
+
+func (m *ProjectConfigSpec) contextValidatePromotionWindows(ctx context.Context, formats strfmt.Registry) error {
+
+	for i := 0; i < len(m.PromotionWindows); i++ {
+
+		if m.PromotionWindows[i] != nil {
+
+			if swag.IsZero(m.PromotionWindows[i]) { // not required
+				return nil
+			}
+
+			if err := m.PromotionWindows[i].ContextValidate(ctx, formats); err != nil {
+				ve := new(errors.Validation)
+				if stderrors.As(err, &ve) {
+					return ve.ValidateName("promotionWindows" + "." + strconv.Itoa(i))
+				}
+				ce := new(errors.CompositeError)
+				if stderrors.As(err, &ce) {
+					return ce.ValidateName("promotionWindows" + "." + strconv.Itoa(i))
+				}
+
+				return err
+			}
+		}
+
+	}
+
+	return nil
+}
+
+func (m *ProjectConfigSpec) contextValidateRateLimits(ctx context.Context, formats strfmt.Registry) error {
+
+	for i := 0; i < len(m.RateLimits); i++ {
+
+		if m.RateLimits[i] != nil {
+
+			if swag.IsZero(m.RateLimits[i]) { // not required
+				return nil
+			}
+
+			if err := m.RateLimits[i].ContextValidate(ctx, formats); err != nil {
+				ve := new(errors.Validation)
+				if stderrors.As(err, &ve) {
+					return ve.ValidateName("rateLimits" + "." + strconv.Itoa(i))
+				}
+				ce := new(errors.CompositeError)
+				if stderrors.As(err, &ce) {
+					return ce.ValidateName("rateLimits" + "." + strconv.Itoa(i))
 				}
 
 				return err

@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"io/fs"
 	"path"
+	"regexp"
 	"strings"
 
 	"github.com/open-policy-agent/opa/v1/ast"
@@ -14,21 +15,40 @@ import (
 //go:embed policy
 var policyFS embed.FS
 
-// customModuleName names the module compiled from ProjectConfig
-// spec.policy.custom, for legibility of compile errors.
-const customModuleName = "projectconfig/spec/policy/custom.rego"
+// Module names for the custom policy sources, for legibility of compile
+// errors. Note that reported line numbers are offset by the prepended
+// header (see customHeader).
+const (
+	projectCustomModuleName = "projectconfig/spec/customPolicy.rego"
+	clusterCustomModuleName = "clusterconfig/spec/customPolicy.rego"
+)
 
-// customPackagePath is the package a custom policy module must declare. The
-// default kargo.dispatch module gathers data.kargo.custom.violation, and
-// kargo.lib.exclusions honors data.kargo.custom.exclusions_bypass; both are
-// inert when no custom module is present.
-const customPackagePath = "kargo.custom"
+// customHeader is prepended to every custom policy source: users write
+// rules only. The named package's shipped module (policy/kargo/<pkg>)
+// supplies inert defaults for the hook points, and the standard library
+// imports are provided for convenience (unused imports are fine; the
+// engine compiles non-strict).
+const customHeader = `package kargo.%s
+
+import rego.v1
+
+import data.kargo.lib.exclusions
+import data.kargo.lib.helpers
+import data.kargo.lib.ratelimit
+import data.kargo.lib.windows
+
+`
+
+// packageDeclPattern spots a package declaration at the start of a line,
+// which a rules-only custom source must not contain.
+var packageDeclPattern = regexp.MustCompile(`(?m)^\s*package\s`)
 
 // policyModules returns the Rego modules to compile: the embedded standard
-// library and default kargo.dispatch module, plus, when non-empty, the
-// project's custom kargo.custom module, which composes into (never
-// replaces) the default policy.
-func policyModules(custom string) (map[string]string, error) {
+// library and default kargo.dispatch module, plus the project's and the
+// cluster's custom sources (either may be empty), each prepended with the
+// standard header so they compose into -- never replace -- the default
+// policy.
+func policyModules(projectCustom, clusterCustom string) (map[string]string, error) {
 	mods := map[string]string{}
 	err := fs.WalkDir(
 		policyFS,
@@ -51,13 +71,33 @@ func policyModules(custom string) (map[string]string, error) {
 	if err != nil {
 		return nil, fmt.Errorf("error reading embedded policy modules: %w", err)
 	}
-	if custom != "" {
-		if err = validateCustomModule(custom); err != nil {
-			return nil, err
+	if projectCustom != "" {
+		src, err := buildCustomModule("project", projectCustom)
+		if err != nil {
+			return nil, fmt.Errorf("invalid ProjectConfig customPolicy: %w", err)
 		}
-		mods[customModuleName] = custom
+		mods[projectCustomModuleName] = src
+	}
+	if clusterCustom != "" {
+		src, err := buildCustomModule("cluster", clusterCustom)
+		if err != nil {
+			return nil, fmt.Errorf("invalid ClusterConfig customPolicy: %w", err)
+		}
+		mods[clusterCustomModuleName] = src
 	}
 	return mods, nil
+}
+
+// buildCustomModule prepends the standard header (package kargo.<pkg> and
+// the library imports) to a rules-only custom source.
+func buildCustomModule(pkg, custom string) (string, error) {
+	if packageDeclPattern.MatchString(custom) {
+		return "", fmt.Errorf(
+			"customPolicy contains only rules; the package declaration and " +
+				"standard imports are provided automatically",
+		)
+	}
+	return fmt.Sprintf(customHeader, pkg) + custom, nil
 }
 
 // policySchemas returns the embedded JSON Schemas describing the policy
@@ -87,21 +127,4 @@ func policySchemas() (*ast.SchemaSet, error) {
 		ss.Put(ref, doc)
 	}
 	return ss, nil
-}
-
-// validateCustomModule requires the custom module to declare the well-known
-// kargo.custom package. Any other package could silently shadow or conflict
-// with the default policy or the standard library.
-func validateCustomModule(custom string) error {
-	mod, err := ast.ParseModule(customModuleName, custom)
-	if err != nil {
-		return fmt.Errorf("error parsing custom policy module: %w", err)
-	}
-	if got := strings.TrimPrefix(mod.Package.Path.String(), "data."); got != customPackagePath {
-		return fmt.Errorf(
-			"custom policy module declares package %q; must be %q",
-			got, customPackagePath,
-		)
-	}
-	return nil
 }

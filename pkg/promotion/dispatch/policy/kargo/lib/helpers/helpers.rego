@@ -19,10 +19,7 @@ forward if input.promotion.class in {"auto-forward", "manual-forward"}
 # has the same major.minor and a strictly greater patch. Typically used by
 # custom policies to let hotfixes bypass exclusions:
 #
-#	exclusions_bypass contains e.name if {
-#		some e in data.exclusions
-#		helpers.is_hotfix
-#	}
+#	exclusions_bypass(e) if helpers.is_hotfix
 is_hotfix if {
 	count(shared_images) > 0
 	every pair in shared_images {

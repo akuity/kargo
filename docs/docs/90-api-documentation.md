@@ -1716,7 +1716,8 @@ RawFormat specifies the format for raw resource representation.
 | gitClient | [GitClientConfig](#github-com-akuity-kargo-api-v1alpha1-GitClientConfig) |  GitClient describes cluster-level configuration for Kargo's Git client, including committer identity and an optional signing key. If set, these values take precedence over any configuration provided at install time via the Helm chart. +optional |
 | freightLinks | [DeepLink](#github-com-akuity-kargo-api-v1alpha1-DeepLink) |  FreightLinks defines deep links shown when viewing any Freight resource across all projects in the cluster. Project-level FreightLinks defined in ProjectConfig are shown in addition to these.  +optional |
 | stageLinks | [DeepLink](#github-com-akuity-kargo-api-v1alpha1-DeepLink) |  StageLinks defines deep links shown when viewing any Stage resource across all projects in the cluster. Project-level StageLinks defined in ProjectConfig are shown in addition to these.  +optional |
-| promotionExclusions | [PromotionExclusion](#github-com-akuity-kargo-api-v1alpha1-PromotionExclusion) |  PromotionExclusions describes system-wide periods of time during which promotion dispatch is restricted across all Projects. Promotions held by an exclusion remain Pending and are dispatched automatically once the exclusion ends.  +optional |
+| promotionExclusions | [PromotionExclusion](#github-com-akuity-kargo-api-v1alpha1-PromotionExclusion) |  PromotionExclusions describes system-wide periods of time during which promotion dispatch is restricted across all Projects. Promotions held by an exclusion remain Pending and are dispatched automatically once the exclusion ends.  +optional +listType=map +listMapKey=name |
+| customPolicy | string |  CustomPolicy is an optional inline Rego source that composes into -- never replaces -- the built-in default dispatch policy, applied to every Project in the cluster. It contains only rules: the package declaration (kargo.cluster) and the standard library imports are prepended automatically. Two kinds of rules are gathered by the default policy:    - `violation`: a set of `{"rule": ..., "msg": ..., "requeue": ...}`     objects unioned with the standard blocks' violations. A numeric     `requeue` (seconds) participates in the decision's requeue hint.   - `exclusions_bypass(e)`: a predicate consulted for each exclusion     that would otherwise hold a promotion; it defaults to false.  +optional |
 
 
 ### ClusterConfigStatus {#github-com-akuity-kargo-api-v1alpha1-ClusterConfigStatus}
@@ -2207,7 +2208,9 @@ RawFormat specifies the format for raw resource representation.
 | webhookReceivers | [WebhookReceiverConfig](#github-com-akuity-kargo-api-v1alpha1-WebhookReceiverConfig) |  WebhookReceivers describes Project-specific webhook receivers used for processing events from various external platforms |
 | freightLinks | [DeepLink](#github-com-akuity-kargo-api-v1alpha1-DeepLink) |  FreightLinks defines deep links shown when viewing Freight resources within this project. These are shown in addition to any cluster-level FreightLinks defined in ClusterConfig.  +optional |
 | stageLinks | [DeepLink](#github-com-akuity-kargo-api-v1alpha1-DeepLink) |  StageLinks defines deep links shown when viewing Stage resources within this project. These are shown in addition to any cluster-level StageLinks defined in ClusterConfig.  +optional |
-| policy | [ProjectPolicy](#github-com-akuity-kargo-api-v1alpha1-ProjectPolicy) |  Policy configures policy-based promotion dispatch controls for this Project. Promotions held by policy remain Pending and are dispatched automatically once permitted.  +optional |
+| customPolicy | string |  CustomPolicy is an optional inline Rego source that composes into -- never replaces -- the built-in default dispatch policy. It contains only rules: the package declaration (kargo.project) and the standard library imports (data.kargo.lib.windows, data.kargo.lib.exclusions, data.kargo.lib.ratelimit, data.kargo.lib.helpers) are prepended automatically. Two kinds of rules are gathered by the default policy:    - `violation`: a set of `{"rule": ..., "msg": ..., "requeue": ...}`     objects unioned with the standard blocks' violations. A numeric     `requeue` (seconds) participates in the decision's requeue hint.   - `exclusions_bypass(e)`: a predicate consulted for each exclusion     that would otherwise hold a promotion; it defaults to false.  +optional |
+| promotionWindows | [PromotionWindow](#github-com-akuity-kargo-api-v1alpha1-PromotionWindow) |  PromotionWindows describes recurring windows of time during which forward promotions may be dispatched to matching Stages. When one or more windows govern a Stage, forward promotions to that Stage are dispatched only while a window is open. Promotions held by a window remain Pending and are dispatched automatically once one opens.  +optional +listType=map +listMapKey=name |
+| rateLimits | [PromotionRateLimit](#github-com-akuity-kargo-api-v1alpha1-PromotionRateLimit) |  RateLimits limits the frequency of automatic promotion dispatches to matching Stages.  +optional +listType=map +listMapKey=name |
 
 
 ### ProjectConfigStatus {#github-com-akuity-kargo-api-v1alpha1-ProjectConfigStatus}
@@ -2226,15 +2229,6 @@ RawFormat specifies the format for raw resource representation.
 | ----- | ---- | ----------- |
 | metadata | k8s.io.apimachinery.pkg.apis.meta.v1.ListMeta |   |
 | items | [Project](#github-com-akuity-kargo-api-v1alpha1-Project) |   |
-
-
-### ProjectPolicy {#github-com-akuity-kargo-api-v1alpha1-ProjectPolicy}
- ProjectPolicy describes policy-based promotion dispatch controls for a Project. The declarative elements (promotion windows, rate limits) are evaluated by a built-in default policy; Custom optionally composes additional project-authored rules into that default.
-| Field | Type | Description |
-| ----- | ---- | ----------- |
-| custom | string |  Custom is an optional inline Rego module that composes into -- never replaces -- the built-in default dispatch policy. It must declare `package kargo.custom` and may contribute two kinds of rules, both gathered by the default policy:    - `violation`: a set of `{"rule": ..., "msg": ..., "requeue": ...}`     objects unioned with the standard blocks' violations. A numeric     `requeue` (seconds) participates in the decision's requeue hint.   - `exclusions_bypass`: a set of exclusion names for which the     standard exclusions block raises no violation.  The module may import the built-in library packages data.kargo.lib.windows, data.kargo.lib.exclusions, data.kargo.lib.ratelimit, and data.kargo.lib.helpers.  +optional |
-| promotionWindows | [PromotionWindow](#github-com-akuity-kargo-api-v1alpha1-PromotionWindow) |  PromotionWindows describes recurring windows of time during which forward promotions may be dispatched to matching Stages. When one or more windows govern a Stage, forward promotions to that Stage are dispatched only while a window is open.  +optional |
-| rateLimits | [PromotionRateLimit](#github-com-akuity-kargo-api-v1alpha1-PromotionRateLimit) |  RateLimits limits the frequency of automatic promotion dispatches to matching Stages.  +optional |
 
 
 ### ProjectStats {#github-com-akuity-kargo-api-v1alpha1-ProjectStats}
@@ -2303,6 +2297,7 @@ RawFormat specifies the format for raw resource representation.
  PromotionRateLimit limits the frequency of automatic promotion dispatches to matching Stages using a rolling window: at most MaxPromotions promotions are dispatched within any trailing Window.
 | Field | Type | Description |
 | ----- | ---- | ----------- |
+| name | string |  Name is a unique identifier for this rate limit.   |
 | stageSelector | [PromotionPolicySelector](#github-com-akuity-kargo-api-v1alpha1-PromotionPolicySelector) |  StageSelector selects the Stages governed by this rate limit. When nil, the rate limit governs all Stages in the Project.  +optional |
 | maxPromotions | int32 |  MaxPromotions is the maximum number of automatic promotion dispatches permitted within any trailing Window.   |
 | window | k8s.io.apimachinery.pkg.apis.meta.v1.Duration |  Window is the duration of the rolling window. |

@@ -140,7 +140,6 @@ export * from './project';
 export * from './projectConfig';
 export * from './projectConfigSpec';
 export * from './projectConfigStatus';
-export * from './projectPolicy';
 export * from './projectStats';
 export * from './projectStatus';
 export * from './promoteDownstream201';

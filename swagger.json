@@ -6588,6 +6588,10 @@
     "ClusterConfigSpec": {
       "type": "object",
       "properties": {
+        "customPolicy": {
+          "description": "CustomPolicy is an optional inline Rego source that composes into --\nnever replaces -- the built-in default dispatch policy, applied to\nevery Project in the cluster. It contains only rules: the package\ndeclaration (kargo.cluster) and the standard library imports are\nprepended automatically. Two kinds of rules are gathered by the\ndefault policy:\n\n  - `violation`: a set of `{\"rule\": ..., \"msg\": ..., \"requeue\": ...}`\n    objects unioned with the standard blocks' violations. A numeric\n    `requeue` (seconds) participates in the decision's requeue hint.\n  - `exclusions_bypass(e)`: a predicate consulted for each exclusion\n    that would otherwise hold a promotion; it defaults to false.\n\n+optional",
+          "type": "string"
+        },
         "freightLinks": {
           "description": "FreightLinks defines deep links shown when viewing any Freight resource\nacross all projects in the cluster. Project-level FreightLinks defined\nin ProjectConfig are shown in addition to these.\n\n+optional",
           "type": "array",
@@ -6604,7 +6608,7 @@
           ]
         },
         "promotionExclusions": {
-          "description": "PromotionExclusions describes system-wide periods of time during which\npromotion dispatch is restricted across all Projects. Promotions held\nby an exclusion remain Pending and are dispatched automatically once\nthe exclusion ends.\n\n+optional",
+          "description": "PromotionExclusions describes system-wide periods of time during which\npromotion dispatch is restricted across all Projects. Promotions held\nby an exclusion remain Pending and are dispatched automatically once\nthe exclusion ends.\n\n+optional\n+listType=map\n+listMapKey=name",
           "type": "array",
           "items": {
             "$ref": "#/definitions/PromotionExclusion"
@@ -7557,6 +7561,10 @@
     "ProjectConfigSpec": {
       "type": "object",
       "properties": {
+        "customPolicy": {
+          "description": "CustomPolicy is an optional inline Rego source that composes into --\nnever replaces -- the built-in default dispatch policy. It contains\nonly rules: the package declaration (kargo.project) and the standard\nlibrary imports (data.kargo.lib.windows, data.kargo.lib.exclusions,\ndata.kargo.lib.ratelimit, data.kargo.lib.helpers) are prepended\nautomatically. Two kinds of rules are gathered by the default policy:\n\n  - `violation`: a set of `{\"rule\": ..., \"msg\": ..., \"requeue\": ...}`\n    objects unioned with the standard blocks' violations. A numeric\n    `requeue` (seconds) participates in the decision's requeue hint.\n  - `exclusions_bypass(e)`: a predicate consulted for each exclusion\n    that would otherwise hold a promotion; it defaults to false.\n\n+optional",
+          "type": "string"
+        },
         "freightLinks": {
           "description": "FreightLinks defines deep links shown when viewing Freight resources\nwithin this project. These are shown in addition to any cluster-level\nFreightLinks defined in ClusterConfig.\n\n+optional",
           "type": "array",
@@ -7564,19 +7572,25 @@
             "$ref": "#/definitions/DeepLink"
           }
         },
-        "policy": {
-          "description": "Policy configures policy-based promotion dispatch controls for this\nProject. Promotions held by policy remain Pending and are dispatched\nautomatically once permitted.\n\n+optional",
-          "allOf": [
-            {
-              "$ref": "#/definitions/ProjectPolicy"
-            }
-          ]
-        },
         "promotionPolicies": {
           "description": "PromotionPolicies defines policies governing the promotion of Freight to\nspecific Stages within the Project.",
           "type": "array",
           "items": {
             "$ref": "#/definitions/PromotionPolicy"
+          }
+        },
+        "promotionWindows": {
+          "description": "PromotionWindows describes recurring windows of time during which\nforward promotions may be dispatched to matching Stages. When one or\nmore windows govern a Stage, forward promotions to that Stage are\ndispatched only while a window is open. Promotions held by a window\nremain Pending and are dispatched automatically once one opens.\n\n+optional\n+listType=map\n+listMapKey=name",
+          "type": "array",
+          "items": {
+            "$ref": "#/definitions/PromotionWindow"
+          }
+        },
+        "rateLimits": {
+          "description": "RateLimits limits the frequency of automatic promotion dispatches to\nmatching Stages.\n\n+optional\n+listType=map\n+listMapKey=name",
+          "type": "array",
+          "items": {
+            "$ref": "#/definitions/PromotionRateLimit"
           }
         },
         "stageLinks": {
@@ -7618,29 +7632,6 @@
           "type": "array",
           "items": {
             "$ref": "#/definitions/WebhookReceiverDetails"
-          }
-        }
-      }
-    },
-    "ProjectPolicy": {
-      "type": "object",
-      "properties": {
-        "custom": {
-          "description": "Custom is an optional inline Rego module that composes into -- never\nreplaces -- the built-in default dispatch policy. It must declare\n`package kargo.custom` and may contribute two kinds of rules, both\ngathered by the default policy:\n\n  - `violation`: a set of `{\"rule\": ..., \"msg\": ..., \"requeue\": ...}`\n    objects unioned with the standard blocks' violations. A numeric\n    `requeue` (seconds) participates in the decision's requeue hint.\n  - `exclusions_bypass`: a set of exclusion names for which the\n    standard exclusions block raises no violation.\n\nThe module may import the built-in library packages\ndata.kargo.lib.windows, data.kargo.lib.exclusions,\ndata.kargo.lib.ratelimit, and data.kargo.lib.helpers.\n\n+optional",
-          "type": "string"
-        },
-        "promotionWindows": {
-          "description": "PromotionWindows describes recurring windows of time during which\nforward promotions may be dispatched to matching Stages. When one or\nmore windows govern a Stage, forward promotions to that Stage are\ndispatched only while a window is open.\n\n+optional",
-          "type": "array",
-          "items": {
-            "$ref": "#/definitions/PromotionWindow"
-          }
-        },
-        "rateLimits": {
-          "description": "RateLimits limits the frequency of automatic promotion dispatches to\nmatching Stages.\n\n+optional",
-          "type": "array",
-          "items": {
-            "$ref": "#/definitions/PromotionRateLimit"
           }
         }
       }
@@ -7829,6 +7820,10 @@
         "maxPromotions": {
           "description": "MaxPromotions is the maximum number of automatic promotion dispatches\npermitted within any trailing Window.\n\n+kubebuilder:validation:Minimum=1",
           "type": "integer"
+        },
+        "name": {
+          "description": "Name is a unique identifier for this rate limit.\n\n+kubebuilder:validation:MinLength=1",
+          "type": "string"
         },
         "stageSelector": {
           "description": "StageSelector selects the Stages governed by this rate limit. When\nnil, the rate limit governs all Stages in the Project.\n\n+optional",

@@ -6,26 +6,53 @@
  * OpenAPI spec version: v1alpha1
  */
 import type { DeepLink } from './deepLink';
-import type { ProjectPolicy } from './projectPolicy';
 import type { PromotionPolicy } from './promotionPolicy';
+import type { PromotionWindow } from './promotionWindow';
+import type { PromotionRateLimit } from './promotionRateLimit';
 import type { WebhookReceiverConfig } from './webhookReceiverConfig';
 
 export interface ProjectConfigSpec {
+  /** CustomPolicy is an optional inline Rego source that composes into --
+never replaces -- the built-in default dispatch policy. It contains
+only rules: the package declaration (kargo.project) and the standard
+library imports (data.kargo.lib.windows, data.kargo.lib.exclusions,
+data.kargo.lib.ratelimit, data.kargo.lib.helpers) are prepended
+automatically. Two kinds of rules are gathered by the default policy:
+
+  - `violation`: a set of `{"rule": ..., "msg": ..., "requeue": ...}`
+    objects unioned with the standard blocks' violations. A numeric
+    `requeue` (seconds) participates in the decision's requeue hint.
+  - `exclusions_bypass(e)`: a predicate consulted for each exclusion
+    that would otherwise hold a promotion; it defaults to false.
+
++optional */
+  customPolicy?: string;
   /** FreightLinks defines deep links shown when viewing Freight resources
 within this project. These are shown in addition to any cluster-level
 FreightLinks defined in ClusterConfig.
 
 +optional */
   freightLinks?: DeepLink[];
-  /** Policy configures policy-based promotion dispatch controls for this
-Project. Promotions held by policy remain Pending and are dispatched
-automatically once permitted.
-
-+optional */
-  policy?: ProjectPolicy;
   /** PromotionPolicies defines policies governing the promotion of Freight to
 specific Stages within the Project. */
   promotionPolicies?: PromotionPolicy[];
+  /** PromotionWindows describes recurring windows of time during which
+forward promotions may be dispatched to matching Stages. When one or
+more windows govern a Stage, forward promotions to that Stage are
+dispatched only while a window is open. Promotions held by a window
+remain Pending and are dispatched automatically once one opens.
+
++optional
++listType=map
++listMapKey=name */
+  promotionWindows?: PromotionWindow[];
+  /** RateLimits limits the frequency of automatic promotion dispatches to
+matching Stages.
+
++optional
++listType=map
++listMapKey=name */
+  rateLimits?: PromotionRateLimit[];
   /** StageLinks defines deep links shown when viewing Stage resources within
 this project. These are shown in addition to any cluster-level
 StageLinks defined in ClusterConfig.

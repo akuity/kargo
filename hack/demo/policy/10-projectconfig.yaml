@@ -11,54 +11,47 @@ spec:
   - stageSelector:
       name: uat
     autoPromotionEnabled: true
-  policy:
-    # Promotion windows: forward promotions to a governed Stage dispatch only
-    # while a window is open. Held Promotions stay Pending and dispatch on
-    # their own when the window opens.
-    promotionWindows:
-    - name: uat-evenings
-      stageSelector:
-        name: uat
-      recurrence: FREQ=WEEKLY;BYDAY=MO,TU,WE,TH,FR
-      start: "18:00"
-      end: "23:00"
-      location: America/Los_Angeles
 
-    # Rolling-window rate limit: at most maxPromotions automatic dispatches
-    # to a matching Stage within any trailing window.
-    rateLimits:
-    - stageSelector:
-        name: test
-      maxPromotions: 1
-      window: 2m
+  # Promotion windows: forward promotions to a governed Stage dispatch only
+  # while a window is open. Held Promotions stay Pending and dispatch on
+  # their own when the window opens.
+  promotionWindows:
+  - name: uat-evenings
+    stageSelector:
+      name: uat
+    recurrence: FREQ=WEEKLY;BYDAY=MO,TU,WE,TH,FR
+    start: "18:00"
+    end: "23:00"
+    location: America/Los_Angeles
 
-    # A custom module (package kargo.custom) composes into -- never
-    # replaces -- the built-in default policy. It can contribute
-    # `violation` rules (unioned with the standard blocks) and
-    # `exclusions_bypass` rules (exclusion names the standard exclusions
-    # block should waive). Uncomment for two examples: hotfixes (semver
-    # patch-only increments over what the Stage is running) bypass every
-    # exclusion, and PCI-labeled projects require a change ticket on manual
-    # promotions.
-    #
-    # custom: |
-    #   package kargo.custom
-    #
-    #   import rego.v1
-    #
-    #   import data.kargo.lib.helpers
-    #
-    #   exclusions_bypass contains e.name if {
-    #   	some e in data.exclusions
-    #   	helpers.is_hotfix
-    #   }
-    #
-    #   violation contains v if {
-    #   	input.project.labels.compliance == "pci"
-    #   	input.promotion.class == "manual-forward"
-    #   	not input.promotion.annotations["change-ticket"]
-    #   	v := {
-    #   		"rule": "pci-change-ticket",
-    #   		"msg": "PCI projects require a change-ticket annotation on manual promotions",
-    #   	}
-    #   }
+  # Rolling-window rate limit: at most maxPromotions automatic dispatches
+  # to a matching Stage within any trailing window.
+  rateLimits:
+  - name: test-throttle
+    stageSelector:
+      name: test
+    maxPromotions: 1
+    window: 2m
+
+  # A custom policy contains only rules -- the package declaration
+  # (kargo.project) and the standard library imports are prepended
+  # automatically -- and composes into (never replaces) the built-in
+  # default policy. Two hooks are gathered by the default: `violation`
+  # (unioned with the standard blocks) and `exclusions_bypass(e)` (an
+  # exclusion the standard exclusions block should waive). Uncomment for
+  # two examples: hotfixes (semver patch-only increments over what the
+  # Stage is running) bypass every exclusion, and PCI-labeled projects
+  # require a change ticket on manual promotions.
+  #
+  # customPolicy: |
+  #   exclusions_bypass(e) if helpers.is_hotfix
+  #
+  #   violation contains v if {
+  #   	input.project.labels.compliance == "pci"
+  #   	input.promotion.class == "manual-forward"
+  #   	not input.promotion.annotations["change-ticket"]
+  #   	v := {
+  #   		"rule": "pci-change-ticket",
+  #   		"msg": "PCI projects require a change-ticket annotation on manual promotions",
+  #   	}
+  #   }

@@ -81,19 +81,19 @@ func BuildInput(
 	return input
 }
 
-// BuildData assembles the policy data document for one Stage. policy may be
-// nil. dispatches are the times at which the Stage's recent promotions were
-// dispatched (began Running), for rate limiting.
+// BuildData assembles the policy data document for one Stage. projectSpec
+// may be nil. dispatches are the times at which the Stage's recent
+// promotions were dispatched (began Running), for rate limiting.
 func BuildData(
-	policy *kargoapi.ProjectPolicy,
+	projectSpec *kargoapi.ProjectConfigSpec,
 	exclusions []kargoapi.PromotionExclusion,
 	stage *kargoapi.Stage,
 	dispatches []time.Time,
 ) (map[string]any, error) {
 	windows := []any{}
 	rateLimit := map[string]any{}
-	if policy != nil {
-		for _, w := range policy.PromotionWindows {
+	if projectSpec != nil {
+		for _, w := range projectSpec.PromotionWindows {
 			matches, err := selectorMatches(w.StageSelector, stage)
 			if err != nil {
 				return nil, fmt.Errorf("promotion window %q: %w", w.Name, err)
@@ -109,10 +109,10 @@ func BuildData(
 				"location":   w.Location,
 			})
 		}
-		for _, rl := range policy.RateLimits {
+		for _, rl := range projectSpec.RateLimits {
 			matches, err := selectorMatches(rl.StageSelector, stage)
 			if err != nil {
-				return nil, fmt.Errorf("rate limit: %w", err)
+				return nil, fmt.Errorf("rate limit %q: %w", rl.Name, err)
 			}
 			if !matches {
 				continue

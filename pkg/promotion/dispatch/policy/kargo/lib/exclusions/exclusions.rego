@@ -5,13 +5,10 @@
 #   by promotion class and, optionally, by the Argo CD servers targeted by
 #   the Stage's referenced Applications.
 #
-#   A custom project policy (package kargo.custom) may bypass individual
-#   exclusions by contributing their names to an exclusions_bypass set:
+#   A custom policy (project- or cluster-scoped) may bypass exclusions by
+#   overriding the exclusions_bypass predicate, e.g.:
 #
-#     exclusions_bypass contains e.name if {
-#         some e in data.exclusions
-#         helpers.is_hotfix
-#     }
+#     exclusions_bypass(e) if helpers.is_hotfix
 # schemas:
 #   - input: schema.input
 #   - data.exclusions: schema.exclusions
@@ -54,6 +51,9 @@ applies_to_servers(e) if {
 	s in {app.destination.server, app.destination.name}
 }
 
-# An exclusion is bypassed when the project's custom module names it in
-# exclusions_bypass. Inert when the project has no custom module.
-bypassed(e) if e.name in data.kargo.custom.exclusions_bypass
+# An exclusion is bypassed when the project's or the cluster's custom
+# policy says so. Both predicates default to false (see kargo.project and
+# kargo.cluster), so this is inert without custom content.
+bypassed(e) if data.kargo.project.exclusions_bypass(e)
+
+bypassed(e) if data.kargo.cluster.exclusions_bypass(e)
