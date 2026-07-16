@@ -75,6 +75,13 @@ type BareCloneOptions struct {
 	// large repositories. The server must support partial clones; if it does
 	// not, the clone will fail.
 	Blobless bool
+	// Depth is the number of commits to fetch from the remote repository. If
+	// zero, all commits will be fetched (a full clone). A small positive value
+	// (a shallow clone) dramatically reduces clone time and size for repositories
+	// with large histories. Note: a shallow clone only contains recent commits,
+	// so operations that need an older commit (e.g. rebasing onto a branch that
+	// has advanced by more than Depth commits) may require deepening the history.
+	Depth uint
 }
 
 // CloneBare produces a local, bare clone of the remote Git repository at the
@@ -125,6 +132,9 @@ func (b *bareRepo) clone(opts *BareCloneOptions) error {
 	args := []string{"clone", "--bare"}
 	if opts.Blobless {
 		args = append(args, "--filter", "blob:none")
+	}
+	if opts.Depth > 0 {
+		args = append(args, "--depth", fmt.Sprint(opts.Depth))
 	}
 	args = append(args, b.accessURL, b.dir)
 	cmd := b.buildGitCommand(args...)

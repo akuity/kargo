@@ -4,7 +4,9 @@ import (
 	"fmt"
 	"net/url"
 	"os"
+	"os/exec"
 	"path/filepath"
+	"strings"
 	"testing"
 
 	"github.com/google/uuid"
@@ -498,4 +500,78 @@ func TestBareRepo_WithFilter(t *testing.T) {
 	content, err := os.ReadFile(filepath.Join(workTree.Dir(), "dir1", "file.txt"))
 	require.NoError(t, err)
 	require.Equal(t, "content in dir1", string(content))
+}
+
+func TestBareRepo_WithDepth(t *testing.T) {
+	// Build a local origin repo with several commits. A file:// remote uses a
+	// transport that fully supports shallow (--depth) clones, unlike the
+	// in-process gitkit HTTP server used elsewhere, which does not honor `deepen`.
+	originDir := t.TempDir()
+	runGit := func(args ...string) {
+		cmd := exec.Command("git", args...)
+		cmd.Dir = originDir
+		cmd.Env = append(
+			os.Environ(),
+			"GIT_AUTHOR_NAME=test", "GIT_AUTHOR_EMAIL=test@example.com",
+			"GIT_COMMITTER_NAME=test", "GIT_COMMITTER_EMAIL=test@example.com",
+		)
+		out, err := cmd.CombinedOutput()
+		require.NoError(t, err, "git %v: %s", args, string(out))
+	}
+	runGit("init", "-b", "main")
+	for i := 0; i < 3; i++ {
+		require.NoError(t, os.WriteFile(
+			filepath.Join(originDir, fmt.Sprintf("file%d.txt", i)),
+			[]byte(fmt.Sprintf("content %d", i)),
+			0600,
+		))
+		runGit("add", ".")
+		runGit("commit", "-m", fmt.Sprintf("commit %d", i))
+	}
+	originURL := "file://" + originDir
+
+	// countCommits returns the number of commits reachable from HEAD in a bare repo.
+	countCommits := func(t *testing.T, gitDir string) int {
+		cmd := exec.Command("git", "rev-list", "--count", "HEAD")
+		cmd.Dir = gitDir
+		out, err := cmd.CombinedOutput()
+		require.NoError(t, err, "rev-list: %s", string(out))
+		var n int
+		_, err = fmt.Sscanf(strings.TrimSpace(string(out)), "%d", &n)
+		require.NoError(t, err)
+		return n
+	}
+
+	t.Run("depth 1 produces a shallow clone with truncated history", func(t *testing.T) {
+		rep, err := CloneBare(originURL, nil, &BareCloneOptions{Depth: 1})
+		require.NoError(t, err)
+		require.NotNil(t, rep)
+		defer rep.Close()
+
+		// Git writes a "shallow" marker file for depth-limited clones.
+		_, err = os.Stat(filepath.Join(rep.Dir(), "shallow"))
+		require.NoError(t, err, "expected a shallow marker file for a depth-limited clone")
+		// Only the tip commit is present.
+		require.Equal(t, 1, countCommits(t, rep.Dir()))
+
+		// The clone is still functional: a worktree checks out the tip cleanly.
+		workingTreePath := filepath.Join(rep.HomeDir(), "worktree")
+		workTree, err := rep.AddWorkTree(workingTreePath, &AddWorkTreeOptions{Ref: "main"})
+		require.NoError(t, err)
+		defer workTree.Close()
+		content, err := os.ReadFile(filepath.Join(workTree.Dir(), "file2.txt"))
+		require.NoError(t, err)
+		require.Equal(t, "content 2", string(content))
+	})
+
+	t.Run("depth 0 keeps the full history", func(t *testing.T) {
+		rep, err := CloneBare(originURL, nil, &BareCloneOptions{Depth: 0})
+		require.NoError(t, err)
+		require.NotNil(t, rep)
+		defer rep.Close()
+
+		_, err = os.Stat(filepath.Join(rep.Dir(), "shallow"))
+		require.True(t, os.IsNotExist(err), "did not expect a shallow marker for a full clone")
+		require.Equal(t, 3, countCommits(t, rep.Dir()))
+	})
 }

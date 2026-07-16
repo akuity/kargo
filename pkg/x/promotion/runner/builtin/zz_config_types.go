@@ -194,6 +194,12 @@ type GitCloneConfig struct {
 	// The commits, branches, or tags to check out from the repository and the paths where they
 	// should be checked out. At least one must be specified.
 	Checkout []Checkout `json:"checkout"`
+	// The number of commits to fetch from the remote repository (a shallow clone). If zero or
+	// unset, the full history is fetched. A small positive value (e.g. 100) dramatically reduces
+	// clone time and size for repositories with large histories. Note: a shallow clone only
+	// contains recent commits, so choose a depth large enough to cover the target branch's
+	// expected divergence when the git-push step rebases.
+	Depth *int64 `json:"depth,omitempty"`
 	// Indicates whether to skip TLS verification when cloning the repository. Default is false.
 	InsecureSkipTLSVerify bool `json:"insecureSkipTLSVerify,omitempty"`
 	// Indicates whether to recursively clone submodules. Default is false. Note that any

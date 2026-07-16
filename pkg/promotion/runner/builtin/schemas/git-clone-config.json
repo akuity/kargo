@@ -17,6 +17,11 @@
       "type": "boolean",
       "description": "Indicates whether to perform a blobless (--filter=blob:none) clone. Default is false."
     },
+    "depth": {
+      "type": "integer",
+      "minimum": 0,
+      "description": "The number of commits to fetch from the remote repository (a shallow clone). If zero or unset, the full history is fetched. A small positive value (e.g. 100) dramatically reduces clone time and size for repositories with large histories. Note: a shallow clone only contains recent commits, so choose a depth large enough to cover the target branch's expected divergence when the git-push step rebases."
+    },
     "repoURL": {
       "type": "string",
       "description": "The URL of a remote Git repository to clone. Required. Deprecated: Support for SSH URLs (ssh:// and SCP-style git@host:path) is deprecated as of v1.10.0 and will be removed in v1.13.0. Use HTTPS URLs instead.",

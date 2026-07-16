@@ -139,6 +139,10 @@ func (g *gitCloner) run(
 		}
 	}
 
+	var depth uint
+	if cfg.Depth != nil && *cfg.Depth > 0 {
+		depth = uint(*cfg.Depth)
+	}
 	repo, err := git.CloneBare(
 		cfg.RepoURL,
 		&git.ClientOptions{
@@ -149,6 +153,7 @@ func (g *gitCloner) run(
 		&git.BareCloneOptions{
 			BaseDir:  stepCtx.WorkDir,
 			Blobless: cfg.Blobless,
+			Depth:    depth,
 		},
 	)
 	if err != nil {
