@@ -68,6 +68,17 @@ func TestBatchState(t *testing.T) {
 	}
 }
 
+func TestBatchHasTarget(t *testing.T) {
+	batch := MostRecent(Batches([]kargoapi.Promotion{
+		newPromotion("one", "batch", kargoapi.PromotionPhaseSucceeded, time.Time{}),
+		newPromotion("two", "batch", kargoapi.PromotionPhaseSucceeded, time.Time{}),
+	}))
+	require.NotNil(t, batch)
+
+	require.True(t, batch.HasTarget("one"))
+	require.False(t, batch.HasTarget("three"))
+}
+
 func newPromotion(
 	target string,
 	batch string,

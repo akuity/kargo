@@ -9,6 +9,7 @@ import (
 type Batch struct {
 	id         string
 	promotions []*kargoapi.Promotion
+	targets    map[string]struct{}
 }
 
 // State summarizes the state of every Promotion in a Batch.
@@ -23,6 +24,19 @@ const (
 	// StateSucceeded indicates that every child Promotion succeeded.
 	StateSucceeded State = "Succeeded"
 )
+
+func NewBatch(id string, targets []*kargoapi.Promotion) Batch {
+	b := Batch{
+		id:         id,
+		promotions: make([]*kargoapi.Promotion, 0, len(targets)),
+		targets:    make(map[string]struct{}, len(targets)),
+	}
+	for _, promotion := range targets {
+		b.promotions = append(b.promotions, promotion)
+		b.targets[promotion.Spec.Target] = struct{}{}
+	}
+	return b
+}
 
 // Batches groups target-specific Promotions by their batch label.
 func Batches(promotions []kargoapi.Promotion) []Batch {
@@ -39,7 +53,7 @@ func Batches(promotions []kargoapi.Promotion) []Batch {
 
 	batches := make([]Batch, 0, len(batchesByID))
 	for batchID, promotions := range batchesByID {
-		batches = append(batches, Batch{id: batchID, promotions: promotions})
+		batches = append(batches, NewBatch(batchID, promotions))
 	}
 	return batches
 }
@@ -47,6 +61,12 @@ func Batches(promotions []kargoapi.Promotion) []Batch {
 // ID returns the label identifying the Batch.
 func (b Batch) ID() string {
 	return b.id
+}
+
+// HasTarget reports whether the Batch contains a Promotion for the Target.
+func (b Batch) HasTarget(target string) bool {
+	_, ok := b.targets[target]
+	return ok
 }
 
 // MostRecent returns the Batch containing the most recently created Promotion.

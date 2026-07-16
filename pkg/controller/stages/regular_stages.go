@@ -908,7 +908,7 @@ func (r *RegularStageReconciler) syncTargetPromotions(
 	conditions.Delete(&newStatus, kargoapi.ConditionTypePromoting)
 	freightCollection := batch.FreightCollection()
 	hasFreightCollection := freightCollection != nil
-	isFreightNewToStage := hasFreightCollection && 
+	isFreightNewToStage := hasFreightCollection &&
 		!newStatus.FreightHistory.Current().Includes(batch.FreightName())
 
 	if isFreightNewToStage {
@@ -2056,22 +2056,14 @@ func (r *RegularStageReconciler) createTargetPromotions(
 		return fmt.Errorf("list existing target Promotions: %w", err)
 	}
 
-	batchID := ""
-	if batch := targetpromotion.MostRecent(targetpromotion.Batches(promotions.Items)); batch != nil {
+	batch := targetpromotion.MostRecent(targetpromotion.Batches(promotions.Items))
+	batchID := uuid.NewString()
+	if batch != nil {
 		batchID = batch.ID()
 	}
-	if batchID == "" {
-		batchID = uuid.NewString()
-	}
 
-	existingTargets := map[string]struct{}{}
-	for _, promotion := range promotions.Items {
-		if promotion.Labels[kargoapi.LabelKeyPromotionBatch] == batchID {
-			existingTargets[promotion.Spec.Target] = struct{}{}
-		}
-	}
 	for _, target := range targets {
-		if _, found := existingTargets[target.Name]; found {
+		if batch != nil && batch.HasTarget(target.Name) {
 			continue
 		}
 		promotion := api.NewMinimalPromotionForTarget(stage, freightName, target.Name, batchID)
