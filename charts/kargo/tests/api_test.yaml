@@ -50,23 +50,34 @@ tests:
       - hasDocuments:
           count: 0
 
-  - it: uses an exec health probe when TLS is enabled (default)
+  - it: uses an HTTPS health probe when TLS is enabled (default)
     template: templates/api/deployment.yaml
     asserts:
-      - exists:
-          path: spec.template.spec.containers[0].livenessProbe.exec
+      - equal:
+          path: spec.template.spec.containers[0].livenessProbe.httpsGet.path
+          value: /healthz
+      - equal:
+          path: spec.template.spec.containers[0].livenessProbe.httpsGet.port
+          value: 8080
+      - equal:
+          path: spec.template.spec.containers[0].livenessProbe.httpsGet.scheme
+          value: HTTPS
       - notExists:
-          path: spec.template.spec.containers[0].livenessProbe.grpc
+          path: spec.template.spec.containers[0].livenessProbe.httpGet
 
-  - it: uses a gRPC health probe when TLS is disabled
+  - it: uses an HTTP health probe when TLS is disabled
     template: templates/api/deployment.yaml
     set:
       api.tls.enabled: false
     asserts:
-      - exists:
-          path: spec.template.spec.containers[0].livenessProbe.grpc
+      - equal:
+          path: spec.template.spec.containers[0].livenessProbe.httpGet.path
+          value: /healthz
+      - equal:
+          path: spec.template.spec.containers[0].livenessProbe.httpGet.port
+          value: 8080
       - notExists:
-          path: spec.template.spec.containers[0].livenessProbe.exec
+          path: spec.template.spec.containers[0].livenessProbe.httpsGet
 
 ---
 suite: api/configmap.yaml

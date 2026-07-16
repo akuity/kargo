@@ -35,15 +35,14 @@ every submission.
 
 v1.11.0 advances Kargo's event-driven model and continues improving operator
 and end-user experience. Freight and Stage details aim to become richer with
-configurable links to external platforms.
+configurable links to external platforms. The deprecated ConnectRPC (gRPC) API
+is also being removed in this release in favor of the REST API.
 
 ## Upcoming
 
 ### v1.12.0
 
-The deprecated ConnectRPC (gRPC) API is being removed in v1.12.0 in favor of
-the REST API. The following additional deprecated features are also scheduled
-for **removal** in v1.12.0:
+The following deprecated features are scheduled for **removal** in v1.12.0:
 
 * The `createTargetBranch` option in the `git-open-pr` promotion step.
 * The `author` configuration block on the `git-commit` promotion step. Use
