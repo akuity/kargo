@@ -79,6 +79,7 @@ rules:
   - stages
   - warehouses
   - projectconfigs
+  - targets
   verbs:
   - "*"
 - apiGroups:
