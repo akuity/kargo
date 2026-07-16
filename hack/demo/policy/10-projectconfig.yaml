@@ -33,13 +33,14 @@ spec:
     maxPromotions: 1
     window: 2m
 
-  # Rules only -- the kargo.project package and stdlib imports are
-  # prepended. See pkg/promotion/dispatch/policy/README.md.
+  # A project can extend the built-in policy with its own rules. Uncomment
+  # to require an approved-by annotation on promotions to prod (rollbacks
+  # exempt). Authoring guide: pkg/promotion/dispatch/policy/README.md.
   #
   # customPolicy: |
   #   violation contains v if {
   #   	input.stage.name == "prod"
-  #   	input.promotion.class == "manual-forward"
+  #   	kargo.is_forward
   #   	not input.promotion.annotations["approved-by"]
   #   	v := {
   #   		"rule": "prod-approval",

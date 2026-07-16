@@ -3,7 +3,7 @@ kind: Project
 metadata:
   name: policy-demo
   labels:
-    # Projected into policy input as input.project.labels (annotations
-    # likewise), so custom policies can be data-driven.
+    # Custom policies can key off Project labels -- the operator's PCI rule
+    # (40-clusterconfig.yaml) matches this one.
     compliance: pci
     team: payments

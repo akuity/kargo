@@ -14,7 +14,7 @@ The default policy is composed from standard, data-driven Rego blocks:
 | `kargo.lib.windows` | `ProjectConfig` `spec.promotionWindows` | Forward promotions to a governed Stage dispatch only inside a recurring (RRULE) window |
 | `kargo.lib.exclusions` | `ClusterConfig` `spec.promotionExclusions` | System-wide blackouts, scoped by promotion class (`no-promotions`, `no-forward`, `no-auto`) and optionally by Argo CD destination server |
 | `kargo.lib.ratelimit` | `ProjectConfig` `spec.rateLimits` | Rolling window: at most N automatic dispatches per trailing window |
-| `kargo.lib.helpers` | -- | Building blocks for custom policies (e.g. `is_semver_patch`) |
+| `kargo.lib` | -- | Building blocks for custom policies (`kargo.is_forward`, `kargo.is_semver_patch`) |
 
 A project (`ProjectConfig spec.customPolicy`) and the operator
 (`ClusterConfig spec.customPolicy`, applied to every project) may extend
@@ -32,7 +32,11 @@ system), `manual-forward` (created by a user), and `rollback` (annotated
 `kargo.akuity.io/rollback: "true"`). There is no built-in hotfix concept at
 all -- what counts as a hotfix is defined by whoever writes the custom
 policy (typically the operator, cluster-wide), with the standard library
-supplying only the semver building block (`helpers.is_semver_patch`).
+supplying only the semver building block (`kargo.is_semver_patch`).
+
+The commented example blocks are kept working by `demo_test.go`, which
+extracts them and runs them against the real policy engine
+(`go test ./hack/demo/policy`).
 
 ## Prerequisites
 
@@ -159,20 +163,40 @@ humans retain control, use `scope: no-auto` and promote manually.
 An exclusion can also be narrowed to Stages whose Argo CD Applications
 target a particular destination server -- see Scenario 5.
 
-## Scenario 3 -- custom policies: an operator hotfix lane through the freeze
+Lift the freeze before moving on -- re-apply as the same field manager
+with the entry omitted, and server-side apply removes what that manager
+owned:
 
-With the freeze from Scenario 2 still active, let the **operator** extend
-the policy cluster-wide: uncomment the `customPolicy:` block in
-`40-clusterconfig.yaml` and re-apply it (same command as Setup). The rules
-compose into every project's dispatch decision (the `kargo.cluster`
-package and standard imports are prepended automatically); nothing is
-replaced. It contributes two rules:
+```shell
+kubectl apply --server-side --field-manager=incident-freeze -f - <<EOF
+apiVersion: kargo.akuity.io/v1alpha1
+kind: ClusterConfig
+metadata:
+  name: cluster
+EOF
+```
 
-- A **hotfix lane** through the freeze: hotfix semantics defined *in the
-  operator's own terms* -- every image shared with what the Stage last
-  promoted is a semver patch-only increment (`helpers.is_semver_patch`) --
-  overriding `exclusions_bypass(e)`. There is no hotfix concept in the
-  standard library to fight with.
+## Scenario 3 -- custom policies: a hotfix lane through the holiday freeze
+
+First, bring the holiday freeze into effect: edit `start`/`end` of the
+`holiday-freeze` exclusion in `40-clusterconfig.yaml` to bracket the
+present, and re-apply it (same command as Setup). Every forward promotion
+parks, as in Scenario 2.
+
+Now let the **operator** extend the policy cluster-wide: uncomment the
+`customPolicy:` block in `40-clusterconfig.yaml` and re-apply once more.
+The rules compose into every project's dispatch decision (the
+`kargo.cluster` package and standard imports are prepended automatically);
+nothing is replaced. It contributes two rules:
+
+- A **hotfix lane** through the holiday freeze: hotfix semantics defined
+  *in the operator's own terms* -- every image shared with what the Stage
+  last promoted is a semver patch-only increment
+  (`kargo.is_semver_patch`) -- overriding `exclusions_bypass(e)`. The
+  bypass names the `holiday-freeze` exclusion specifically: a *planned*
+  freeze admits hotfixes, while an incident freeze like Scenario 2's would
+  still hold everything. There is no hotfix concept in the standard
+  library to fight with.
 - A **compliance mandate**, data-driven off Project metadata: because the
   Project is labeled `compliance: pci` (see `00-project.yaml`), manual
   promotions must carry a `change-ticket` annotation -- without one they
@@ -180,8 +204,8 @@ replaced. It contributes two rules:
 
 A **project** can contribute its own rules independently: uncomment the
 `customPolicy:` block in `10-projectconfig.yaml` and re-apply. It requires
-an `approved-by` annotation on manual promotions to `prod` -- see it bite
-in Scenario 5.
+an `approved-by` annotation on any forward promotion to `prod` (rollbacks
+are exempt via `kargo.is_forward`) -- see it bite in Scenario 5.
 
 Now promote a **patch-only** bump of what `uat` is currently running (e.g.
 `1.29.1` over `1.29.0`), with a change ticket -- it dispatches through the
@@ -197,17 +221,9 @@ freeze even with a ticket:
 #       change-ticket: CHG-1234
 ```
 
-Lift the freeze when done -- re-apply as the same field manager with the
-entry omitted, and server-side apply removes what that manager owned:
-
-```shell
-kubectl apply --server-side --field-manager=incident-freeze -f - <<EOF
-apiVersion: kargo.akuity.io/v1alpha1
-kind: ClusterConfig
-metadata:
-  name: cluster
-EOF
-```
+When done, restore the holiday freeze's future dates in
+`40-clusterconfig.yaml` and re-apply (the `policy-demo` field manager owns
+the entry, so the dates simply revert; the freeze goes inert again).
 
 ## Scenario 4 -- rolling-window rate limit
 

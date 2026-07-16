@@ -13,7 +13,7 @@ import rego.v1
 # exclusions_bypass(e) is consulted by kargo.lib.exclusions for each
 # exclusion that would otherwise hold the promotion. A custom policy
 # overrides it, e.g. with a self-defined hotfix rule (see
-# kargo.lib.helpers.is_semver_patch):
+# kargo.is_semver_patch in ../lib/lib.rego):
 #
 #	exclusions_bypass(e) if is_hotfix
 default exclusions_bypass(_) := false

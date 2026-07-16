@@ -9,7 +9,7 @@ dispatched. Directory structure matches package layout:
 | `kargo/lib/windows/windows.rego` | `kargo.lib.windows` | Holds forward promotions outside promotion windows |
 | `kargo/lib/exclusions/exclusions.rego` | `kargo.lib.exclusions` | Holds promotions during system-wide exclusions |
 | `kargo/lib/ratelimit/ratelimit.rego` | `kargo.lib.ratelimit` | Rolling-window rate limit on automatic dispatch |
-| `kargo/lib/helpers/helpers.rego` | `kargo.lib.helpers` | Building blocks for custom policies (e.g. `is_semver_patch`) |
+| `kargo/lib/lib.rego` | `kargo.lib` | Building blocks for custom policies (`kargo.is_forward`, `kargo.is_semver_patch`) |
 | `kargo/project/project.rego` | `kargo.project` | Extension-point defaults for the project custom policy |
 | `kargo/cluster/cluster.rego` | `kargo.cluster` | Extension-point defaults for the cluster custom policy |
 
@@ -23,10 +23,7 @@ package kargo.project        # kargo.cluster for ClusterConfig
 
 import rego.v1
 
-import data.kargo.lib.exclusions
-import data.kargo.lib.helpers
-import data.kargo.lib.ratelimit
-import data.kargo.lib.windows
+import data.kargo.lib as kargo
 ```
 
 There are two custom sources, each composing into — never replacing — the
@@ -45,10 +42,13 @@ Both packages expose the same hook points, inert when unused:
   for each exclusion that would otherwise hold the promotion. The shipped
   modules default it to `false`; a custom policy overrides it.
 
+The aliased import puts the `kargo.lib` building blocks one qualifier
+away: `kargo.is_forward`, `kargo.is_semver_patch(old, new)`.
+
 The canonical example — an operator-defined hotfix lane through every
 exclusion, typically a **cluster** custom policy. Hotfix semantics live in
 the custom policy itself; the standard library supplies only the semver
-building block (`helpers.is_semver_patch`):
+building block (`kargo.is_semver_patch`):
 
 ```rego
 exclusions_bypass(e) if is_hotfix
@@ -56,7 +56,7 @@ exclusions_bypass(e) if is_hotfix
 is_hotfix if {
 	count(shared_images) > 0
 	every pair in shared_images {
-		helpers.is_semver_patch(pair.old, pair.new)
+		kargo.is_semver_patch(pair.old, pair.new)
 	}
 }
 

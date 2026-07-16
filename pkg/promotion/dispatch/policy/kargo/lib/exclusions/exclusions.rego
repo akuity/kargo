@@ -7,7 +7,7 @@
 #
 #   A custom policy (project- or cluster-scoped) may bypass exclusions by
 #   overriding the exclusions_bypass predicate, e.g. with a self-defined
-#   hotfix rule (see kargo.lib.helpers for the semver building block):
+#   hotfix rule (see kargo.is_semver_patch for the semver building block):
 #
 #     exclusions_bypass(e) if is_hotfix
 # schemas:

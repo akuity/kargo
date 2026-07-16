@@ -22,7 +22,7 @@ const hotfixBypassRules = `exclusions_bypass(e) if is_hotfix
 is_hotfix if {
 	count(shared_images) > 0
 	every pair in shared_images {
-		helpers.is_semver_patch(pair.old, pair.new)
+		kargo.is_semver_patch(pair.old, pair.new)
 	}
 }
 

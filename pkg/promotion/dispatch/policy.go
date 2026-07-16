@@ -25,17 +25,15 @@ const (
 
 // customHeader is prepended to every custom policy source: users write
 // rules only. The named package's shipped module (policy/kargo/<pkg>)
-// supplies inert defaults for the hook points, and the standard library
-// imports are provided for convenience (unused imports are fine; the
-// engine compiles non-strict).
+// supplies inert defaults for the hook points, and the aliased import
+// puts the building blocks (kargo.is_forward, kargo.is_semver_patch; see
+// policy/kargo/lib/lib.rego) one qualifier away (an unused import is
+// fine; the engine compiles non-strict).
 const customHeader = `package kargo.%s
 
 import rego.v1
 
-import data.kargo.lib.exclusions
-import data.kargo.lib.helpers
-import data.kargo.lib.ratelimit
-import data.kargo.lib.windows
+import data.kargo.lib as kargo
 
 `
 

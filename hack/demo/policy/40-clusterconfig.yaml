@@ -1,8 +1,3 @@
-# System-wide promotion exclusions on the (singleton) ClusterConfig.
-# promotionExclusions merges by entry under server-side apply (listType=map
-# keyed by name) -- apply with `kubectl apply --server-side` and each field
-# manager owns only its own entries. The sample exclusion is deliberately
-# in the future (inert); the demo activates freezes per the README.
 apiVersion: kargo.akuity.io/v1alpha1
 kind: ClusterConfig
 metadata:
@@ -14,17 +9,20 @@ spec:
     end: "2027-01-02T00:00:00Z"
     scope: no-forward
 
-  # Rules only, composed into every project's dispatch decision (the
-  # kargo.cluster package and stdlib imports are prepended): a hotfix lane
-  # through freezes, and a PCI change-ticket mandate.
+  # The administrator can add rules that apply to every project. Uncomment to:
+  # 1. allow hotfixes during the holiday freeze and
+  # 2. require a change ticket on manual promotions in PCI-labeled projects
   #
   # customPolicy: |
-  #   exclusions_bypass(e) if is_hotfix
+  #   exclusions_bypass(e) if {
+  #   	e.name == "holiday-freeze"
+  #   	is_hotfix
+  #   }
   #
   #   is_hotfix if {
   #   	count(shared_images) > 0
   #   	every pair in shared_images {
-  #   		helpers.is_semver_patch(pair.old, pair.new)
+  #   		kargo.is_semver_patch(pair.old, pair.new)
   #   	}
   #   }
   #
@@ -41,6 +39,6 @@ spec:
   #   	not input.promotion.annotations["change-ticket"]
   #   	v := {
   #   		"rule": "pci-change-ticket",
-  #   		"msg": "PCI projects require a change-ticket annotation on manual promotions",
+  #   		"msg": "PCI-compliant projects require a change-ticket annotation on manual promotions",
   #   	}
   #   }
