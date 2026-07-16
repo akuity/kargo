@@ -7,6 +7,7 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"net/http"
 	"net/url"
 	"regexp"
 	"slices"
@@ -18,9 +19,11 @@ import (
 	"github.com/jferrl/go-githubauth"
 	"github.com/patrickmn/go-cache"
 	"golang.org/x/oauth2"
+	"golang.org/x/sync/singleflight"
 
 	kargoapi "github.com/akuity/kargo/api/v1alpha1"
 	"github.com/akuity/kargo/pkg/credentials"
+	ghutil "github.com/akuity/kargo/pkg/github"
 	"github.com/akuity/kargo/pkg/logging"
 )
 
@@ -35,6 +38,8 @@ const (
 	accessTokenUsername = "kargo"
 
 	tokenCacheExpiryMargin = 5 * time.Minute
+
+	tokenValidationRequestTimeout = 10 * time.Second
 )
 
 var base64Regex = regexp.MustCompile(`^[a-zA-Z0-9+/]*={0,2}$`)
@@ -53,12 +58,33 @@ func init() {
 type AppCredentialProvider struct {
 	tokenCache *cache.Cache
 
+	// mintGroup coalesces concurrent mints of the token for any given cache
+	// key into a single mint whose result is shared by all callers.
+	mintGroup singleflight.Group
+
+	// validationBackoff is the schedule of waits between successive attempts to validate a newly
+	// minted installation access token. This is set as a field so that it can be overridden in
+	// tests to avoid long waits.
+	validationBackoff []time.Duration
+
+	// mintTimeoutBuffer is added to the sum of validationBackoff when computing the maximum time to
+	// wait for a token to be minted and validated. It accounts for network round-trips that are not
+	// captured by the backoff schedule. This is set as a field so that it can be overridden in tests
+	// to avoid long waits.
+	mintTimeoutBuffer time.Duration
+
 	getAccessTokenFn func(
 		appOrClientID string,
 		installationID int64,
 		encodedPrivateKey string,
 		repoURL string,
 	) (*oauth2.Token, error)
+
+	validateAccessTokenFn func(
+		ctx context.Context,
+		accessToken string,
+		repoURL string,
+	) (bool, error)
 }
 
 // NewAppCredentialProvider returns an implementation of credentials.Provider.
@@ -71,8 +97,21 @@ func NewAppCredentialProvider() credentials.Provider {
 			40*time.Minute, // Default ttl for each entry
 			time.Hour,      // Cleanup interval
 		),
+		// GitHub's own recommendation for retrying use of a newly minted token that has not yet
+		// replicated to all of their edge caches. See the Github support response in
+		// https://github.com/aws-amplify/amplify-hosting/issues/4080
+		validationBackoff: []time.Duration{
+			3 * time.Second,
+			10 * time.Second,
+			30 * time.Second,
+		},
+		// This is set to 10 seconds to account for the sum of the durations + accounting for any
+		// slow network round-trips. This is moderately generous because it is used only as a
+		// fail-safe
+		mintTimeoutBuffer: 10 * time.Second,
 	}
 	p.getAccessTokenFn = p.getAccessToken
+	p.validateAccessTokenFn = p.validateAccessToken
 	return p
 }
 
@@ -159,6 +198,7 @@ func (p *AppCredentialProvider) getUsernameAndPassword(
 		"provider", "githubApp",
 		"repoURL", repoURL,
 	)
+	ctx = logging.ContextWithLogger(ctx, logger)
 
 	// Check the cache for the token
 	if entry, exists := p.tokenCache.Get(cacheKey); exists {
@@ -170,7 +210,87 @@ func (p *AppCredentialProvider) getUsernameAndPassword(
 	}
 	logger.Debug("installation access token cache miss")
 
-	// Cache miss, get a new token
+	// Cache miss, get a new token. All consumers of any given repository share one cache entry, so
+	// they miss the cache in unison when that entry expires and, without coordination, would each
+	// mint their own token. Coalescing concurrent mints for the same cache key avoids that
+	// thundering herd.
+	var accessToken any
+	var err error
+
+	// maxWait bounds how long the mint may run. Because the mint executes under an orphaned context
+	// (see mintAndCacheToken) rather than any caller's context, this is the only thing bounding its
+	// duration. It is the sum of the validation backoff schedule plus a buffer for network
+	// round-trips.
+	maxWait := p.mintTimeoutBuffer
+	for _, d := range p.validationBackoff {
+		maxWait += d
+	}
+
+	// NOTE(thomastaylor312): Right now if there is a single error that isn't a context error, it
+	// will fail all of the other requests as well. This _could_ end up biting us if we have a
+	// transient error. If that ever becomes the case, we can add an OR to this that uses the
+	// `shared` return value from the singleflight `DoChan` channel and then re-enqueue here as
+	// well, but for now we'll let real errors fall through to everyone.
+	ch := p.mintGroup.DoChan(cacheKey, func() (any, error) {
+		return p.mintAndCacheToken(
+			ctx,
+			appOrClientID,
+			installationID,
+			encodedPrivateKey,
+			repoURL,
+			cacheKey,
+			maxWait,
+		)
+	})
+	select {
+	case <-ctx.Done():
+		// See the comment in mintAndCacheToken for why we don't cancel the minting process here.
+		return nil, fmt.Errorf(
+			"mint token process interrupted, cache refresh will continue in the background: %w",
+			ctx.Err(),
+		)
+	case result := <-ch:
+		accessToken, err = result.Val, result.Err
+	}
+
+	if err != nil {
+		return nil, fmt.Errorf("error minting installation access token: %w", err)
+	}
+
+	return &credentials.Credentials{
+		Username: accessTokenUsername,
+		// We know the type is string so we're not checking the assertion here
+		Password: accessToken.(string), // nolint: forcetypeassert
+	}, nil
+}
+
+// mintAndCacheToken mints a new installation access token, waits for it to
+// become usable, caches it, and returns it. It is intended to be executed
+// within the provider's singleflight group.
+func (p *AppCredentialProvider) mintAndCacheToken(
+	ctx context.Context,
+	appOrClientID string,
+	installationID int64,
+	encodedPrivateKey string,
+	repoURL string,
+	cacheKey string,
+	maxWait time.Duration,
+) (string, error) {
+	logger := logging.LoggerFromContext(ctx)
+
+	// NOTE(thomastaylor312): We use a separate, orphaned context for running this function so that
+	// we can control timeout for the entire operation here. This function is only called from
+	// within a singleflight group, and if we have the "winner" of the first goroutine to execute
+	// this function get canceled, it cancels it for everyone. Initially, I had plumbed through
+	// handling for this, but it was a bunch of logic that, ultimately, is unnecessary. Even if all
+	// callers cancel, (essentially orphaning the function from an "owning" goroutine entirely), we
+	// still want to finish the work of minting and caching the token so that future callers can get
+	// it from the cache. So, we just use a separate context here that is not tied to any caller's
+	// context. We _do_, reattach the current logger so we have all its current context (and also
+	// helps us trace back where it was called from if needed)
+	orphanedCtx, cancel := context.WithTimeout(logging.ContextWithLogger(context.Background(), logger), maxWait)
+	defer cancel()
+
 	token, err := p.getAccessTokenFn(
 		appOrClientID,
 		installationID,
@@ -178,9 +298,20 @@ func (p *AppCredentialProvider) getUsernameAndPassword(
 		repoURL,
 	)
 	if err != nil {
-		return nil, fmt.Errorf("error getting installation access token: %w", err)
+		return "", fmt.Errorf("error getting installation access token: %w", err)
 	}
 	logger.Debug("obtained new installation access token")
+
+	// GitHub replicates newly minted tokens to its infrastructure
+	// asynchronously, so a token used immediately after being minted is
+	// sometimes rejected. Since GitHub masks authorization failures on private
+	// repositories as 404s, this manifested for a long time as intermittent,
+	// difficult-to-diagnose "repository not found" errors. Waiting until the
+	// token demonstrably works before releasing it to the caller prevents
+	// this.
+	if err = p.waitForTokenUsable(orphanedCtx, token.AccessToken, repoURL); err != nil {
+		return "", err
+	}
 
 	ttl := credentials.CalculateCacheTTL(token.Expiry, tokenCacheExpiryMargin)
 	logger.Debug(
@@ -190,10 +321,98 @@ func (p *AppCredentialProvider) getUsernameAndPassword(
 	)
 	p.tokenCache.Set(cacheKey, token.AccessToken, ttl)
 
-	return &credentials.Credentials{
-		Username: accessTokenUsername,
-		Password: token.AccessToken,
-	}, nil
+	return token.AccessToken, nil
+}
+
+// waitForTokenUsable checks that a newly minted installation access token is actually usable,
+// retrying on a fixed backoff schedule if it is not. A token that cannot be validated after
+// exhausting the schedule is presumed usable, since erring on that side leaves the caller no worse
+// off than if no validation had been attempted. A non-nil error is returned only if the provided
+// context is canceled. This is required due to how GitHub replicates newly minted tokens to its
+// edge caches. See https://github.com/aws-amplify/amplify-hosting/issues/4080 for more information
+func (p *AppCredentialProvider) waitForTokenUsable(
+	ctx context.Context,
+	accessToken string,
+	repoURL string,
+) error {
+	logger := logging.LoggerFromContext(ctx)
+	start := time.Now()
+	// We start at 1 here because this is mostly used for logging and we want the first attempt to
+	// be logged as "1" rather than "0". We subtract 1 in the single place we use it as an index
+	for attempt := 1; ; attempt++ {
+		valid, err := p.validateAccessTokenFn(ctx, accessToken, repoURL)
+		if err != nil {
+			if ctxErr := ctx.Err(); ctxErr != nil {
+				return ctxErr
+			}
+			logger.Debug(
+				"error validating installation access token",
+				"attempt", attempt,
+				"error", err.Error(),
+			)
+		}
+		if valid {
+			logger.Debug(
+				"installation access token validated",
+				"attempts", attempt,
+				"elapsed", time.Since(start),
+			)
+			return nil
+		}
+		if attempt > len(p.validationBackoff) {
+			logger.Info(
+				"proceeding with installation access token that could not be "+
+					"validated; it may not have finished replicating on GitHub's "+
+					"end and operations using it may fail",
+				"attempts", attempt,
+				"elapsed", time.Since(start),
+			)
+			return nil
+		}
+		timer := time.NewTimer(p.validationBackoff[attempt-1])
+		select {
+		case <-ctx.Done():
+			timer.Stop()
+			return ctx.Err()
+		case <-timer.C:
+		}
+	}
+}
+
+// validateAccessToken checks whether an installation access token is usable yet by making a
+// lightweight, authenticated request for metadata about the repository to which the token is
+// scoped. Installations implicitly have read access to the metadata of any repository they can
+// access, so any authorization failure (401, 403, or GitHub's masking of such failures as 404) is
+// interpreted as the token not (yet) being usable. Any other failure says nothing about the
+// token's validity and is surfaced as an error.
+func (p *AppCredentialProvider) validateAccessToken(
+	ctx context.Context,
+	accessToken string,
+	repoURL string,
+) (bool, error) {
+	_, _, owner, repoName, err := ghutil.ParseRepoURL(repoURL)
+	if err != nil {
+		return false, err
+	}
+	client, err := ghutil.NewClient(repoURL, &ghutil.ClientOptions{Token: accessToken})
+	if err != nil {
+		return false, fmt.Errorf("error creating GitHub client: %w", err)
+	}
+	ctx, cancel := context.WithTimeout(ctx, tokenValidationRequestTimeout)
+	defer cancel()
+	_, resp, err := client.Repositories.Get(ctx, owner, repoName)
+	if err == nil {
+		return true, nil
+	}
+	if resp != nil {
+		switch resp.StatusCode {
+		case http.StatusUnauthorized, http.StatusForbidden, http.StatusNotFound:
+			// These are the failures with the potential to resolve on their own
+			// once the token has finished replicating on GitHub's end.
+			return false, nil
+		}
+	}
+	return false, fmt.Errorf("error validating installation access token: %w", err)
 }
 
 // getAccessToken gets an installation access token for the given app/client ID,
@@ -258,11 +477,12 @@ func (p *AppCredentialProvider) tokenCacheKey(
 ) string {
 	return fmt.Sprintf(
 		"%x",
-		sha256.Sum256([]byte(
-			fmt.Sprintf(
+		sha256.Sum256(
+			fmt.Appendf(
+				nil,
 				"%s:%d:%s:%s",
-				appOrClientID, installationID, encodedPrivateKey, repoURL),
-		),
+				appOrClientID, installationID, encodedPrivateKey, repoURL,
+			),
 		),
 	)
 }
