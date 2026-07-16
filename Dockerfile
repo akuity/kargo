@@ -72,10 +72,6 @@ ARG TARGETARCH
 
 WORKDIR /tools
 
-RUN GRPC_HEALTH_PROBE_VERSION=v0.4.52 && \
-    curl -fL -o /tools/grpc_health_probe https://github.com/grpc-ecosystem/grpc-health-probe/releases/download/${GRPC_HEALTH_PROBE_VERSION}/grpc_health_probe-${TARGETOS}-${TARGETARCH} && \
-    chmod +x /tools/grpc_health_probe
-
 # Helm is required by the kustomize-build promotion step's Helm plugin. We source
 # the binary directly from Helm's official releases (rather than a distro package)
 # so we always ship a current, CVE-patched build. This is intentionally ahead of
