@@ -38,14 +38,12 @@ spec:
   # automatically -- and composes into (never replaces) the built-in
   # default policy. Two hooks are gathered by the default: `violation`
   # (unioned with the standard blocks) and `exclusions_bypass(e)` (an
-  # exclusion the standard exclusions block should waive). Uncomment for
-  # two examples: hotfixes (semver patch-only increments over what the
-  # Stage is running) bypass every exclusion, and PCI-labeled projects
-  # require a change ticket on manual promotions.
+  # exclusion the standard exclusions block should waive). Uncomment for a
+  # data-driven example: PCI-labeled projects require a change ticket on
+  # manual promotions. (See 40-clusterconfig.yaml for a cluster-level
+  # example: an operator-defined hotfix lane through freezes.)
   #
   # customPolicy: |
-  #   exclusions_bypass(e) if helpers.is_hotfix
-  #
   #   violation contains v if {
   #   	input.project.labels.compliance == "pci"
   #   	input.promotion.class == "manual-forward"

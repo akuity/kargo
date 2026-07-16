@@ -9,7 +9,7 @@ dispatched. Directory structure matches package layout:
 | `kargo/lib/windows/windows.rego` | `kargo.lib.windows` | Holds forward promotions outside promotion windows |
 | `kargo/lib/exclusions/exclusions.rego` | `kargo.lib.exclusions` | Holds promotions during system-wide exclusions |
 | `kargo/lib/ratelimit/ratelimit.rego` | `kargo.lib.ratelimit` | Rolling-window rate limit on automatic dispatch |
-| `kargo/lib/helpers/helpers.rego` | `kargo.lib.helpers` | Building blocks for custom policies (e.g. `is_hotfix`) |
+| `kargo/lib/helpers/helpers.rego` | `kargo.lib.helpers` | Building blocks for custom policies (e.g. `is_semver_patch`) |
 | `kargo/project/project.rego` | `kargo.project` | Extension-point defaults for the project custom policy |
 | `kargo/cluster/cluster.rego` | `kargo.cluster` | Extension-point defaults for the cluster custom policy |
 
@@ -45,10 +45,27 @@ Both packages expose the same hook points, inert when unused:
   for each exclusion that would otherwise hold the promotion. The shipped
   modules default it to `false`; a custom policy overrides it.
 
-The canonical example — hotfixes bypass every exclusion — is one line:
+The canonical example — an operator-defined hotfix lane through every
+exclusion, typically a **cluster** custom policy. Hotfix semantics live in
+the custom policy itself; the standard library supplies only the semver
+building block (`helpers.is_semver_patch`):
 
 ```rego
-exclusions_bypass(e) if helpers.is_hotfix
+exclusions_bypass(e) if is_hotfix
+
+is_hotfix if {
+	count(shared_images) > 0
+	every pair in shared_images {
+		helpers.is_semver_patch(pair.old, pair.new)
+	}
+}
+
+shared_images := [pair |
+	some img in input.freight.images
+	some last in input.stage.lastPromotion.freight.images
+	img.repoURL == last.repoURL
+	pair := {"old": last.tag, "new": img.tag}
+]
 ```
 
 A source that declares its own `package` is rejected (fail closed). Note

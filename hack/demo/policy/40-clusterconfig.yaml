@@ -22,8 +22,25 @@ spec:
   # The cluster may also contribute a custom policy, composed into every
   # project's dispatch decision. Like the project-level customPolicy, it
   # contains only rules (the kargo.cluster package and standard imports
-  # are prepended automatically). E.g., an operator-wide rule that lets
-  # hotfixes through every freeze:
+  # are prepended automatically). Uncomment for the canonical operator
+  # rule: a hotfix lane through every freeze. Hotfix semantics are defined
+  # here, in the operator's own terms -- every image shared with what the
+  # Stage last promoted is a semver patch-only increment
+  # (helpers.is_semver_patch) -- not by the standard library.
   #
   # customPolicy: |
-  #   exclusions_bypass(e) if helpers.is_hotfix
+  #   exclusions_bypass(e) if is_hotfix
+  #
+  #   is_hotfix if {
+  #   	count(shared_images) > 0
+  #   	every pair in shared_images {
+  #   		helpers.is_semver_patch(pair.old, pair.new)
+  #   	}
+  #   }
+  #
+  #   shared_images := [pair |
+  #   	some img in input.freight.images
+  #   	some last in input.stage.lastPromotion.freight.images
+  #   	img.repoURL == last.repoURL
+  #   	pair := {"old": last.tag, "new": img.tag}
+  #   ]

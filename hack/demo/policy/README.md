@@ -14,7 +14,7 @@ The default policy is composed from standard, data-driven Rego blocks:
 | `kargo.lib.windows` | `ProjectConfig` `spec.promotionWindows` | Forward promotions to a governed Stage dispatch only inside a recurring (RRULE) window |
 | `kargo.lib.exclusions` | `ClusterConfig` `spec.promotionExclusions` | System-wide blackouts, scoped by promotion class (`no-promotions`, `no-forward`, `no-auto`) and optionally by Argo CD destination server |
 | `kargo.lib.ratelimit` | `ProjectConfig` `spec.rateLimits` | Rolling window: at most N automatic dispatches per trailing window |
-| `kargo.lib.helpers` | -- | Building blocks for custom policies (e.g. `is_hotfix`) |
+| `kargo.lib.helpers` | -- | Building blocks for custom policies (e.g. `is_semver_patch`) |
 
 A project (`ProjectConfig spec.customPolicy`) and the operator
 (`ClusterConfig spec.customPolicy`, applied to every project) may extend
@@ -29,10 +29,10 @@ schema/authoring reference in `pkg/promotion/dispatch/policy/README.md`.
 
 Promotion classes are inferred per Promotion: `auto-forward` (created by the
 system), `manual-forward` (created by a user), and `rollback` (annotated
-`kargo.akuity.io/rollback: "true"`). There is no built-in hotfix class --
-hotfix semantics are a custom-policy concern, built on `helpers.is_hotfix`
-(every shared image is a semver patch-only increment over what the Stage
-last promoted).
+`kargo.akuity.io/rollback: "true"`). There is no built-in hotfix concept at
+all -- what counts as a hotfix is defined by whoever writes the custom
+policy (typically the operator, cluster-wide), with the standard library
+supplying only the semver building block (`helpers.is_semver_patch`).
 
 ## Prerequisites
 
@@ -159,21 +159,24 @@ humans retain control, use `scope: no-auto` and promote manually.
 An exclusion can also be narrowed to Stages whose Argo CD Applications
 target a particular destination server -- see Scenario 5.
 
-## Scenario 3 -- custom policy: hotfixes bypass the freeze
+## Scenario 3 -- custom policies: an operator hotfix lane through the freeze
 
-With the freeze from Scenario 2 still active, enable the custom policy:
-uncomment the `customPolicy:` block in `10-projectconfig.yaml` and
-re-apply. The custom rules compose into the default policy (the
-`kargo.project` package and standard imports are prepended automatically);
-nothing is replaced. Its one-line `exclusions_bypass(e)` override waives
-every exclusion whenever the candidate Freight is a hotfix
-(`helpers.is_hotfix`: every shared image is a semver patch-only increment
-over what the Stage last promoted).
+With the freeze from Scenario 2 still active, let the **operator** open a
+hotfix lane cluster-wide: uncomment the `customPolicy:` block in
+`40-clusterconfig.yaml` and re-apply it (same command as Setup). The rules
+compose into every project's dispatch decision (the `kargo.cluster`
+package and standard imports are prepended automatically); nothing is
+replaced. The policy defines hotfix semantics *in the operator's own
+terms* -- every image shared with what the Stage last promoted is a semver
+patch-only increment (`helpers.is_semver_patch`) -- and overrides
+`exclusions_bypass(e)` with it. There is no hotfix concept in the standard
+library to fight with.
 
-The same custom module also contributes a data-driven `violation`: because
-the Project is labeled `compliance: pci` (see `00-project.yaml`), manual
-promotions must carry a `change-ticket` annotation -- without one they park
-with the rule's message.
+The **project** can contribute its own rules independently: uncomment the
+`customPolicy:` block in `10-projectconfig.yaml` and re-apply. It adds a
+data-driven `violation`: because the Project is labeled `compliance: pci`
+(see `00-project.yaml`), manual promotions must carry a `change-ticket`
+annotation -- without one they park with the rule's message.
 
 Now promote a **patch-only** bump of what `uat` is currently running (e.g.
 `1.29.1` over `1.29.0`), with a change ticket -- it dispatches through the

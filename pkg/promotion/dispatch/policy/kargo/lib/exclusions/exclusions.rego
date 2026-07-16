@@ -6,9 +6,10 @@
 #   the Stage's referenced Applications.
 #
 #   A custom policy (project- or cluster-scoped) may bypass exclusions by
-#   overriding the exclusions_bypass predicate, e.g.:
+#   overriding the exclusions_bypass predicate, e.g. with a self-defined
+#   hotfix rule (see kargo.lib.helpers for the semver building block):
 #
-#     exclusions_bypass(e) if helpers.is_hotfix
+#     exclusions_bypass(e) if is_hotfix
 # schemas:
 #   - input: schema.input
 #   - data.exclusions: schema.exclusions

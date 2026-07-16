@@ -12,10 +12,26 @@ import (
 // testNow is a Wednesday, 15:00 UTC (07:00 in America/Los_Angeles).
 const testNow = "2026-07-15T15:00:00Z"
 
-// hotfixBypassRules is the canonical custom-policy pattern: hotfixes
-// (semver patch-only increments) bypass every exclusion. Rules only -- the
-// engine prepends the package and imports.
-const hotfixBypassRules = `exclusions_bypass(e) if helpers.is_hotfix
+// hotfixBypassRules is the canonical custom-policy pattern, typically a
+// cluster (operator) policy: hotfixes bypass every exclusion. Hotfix
+// semantics are defined in the custom policy itself; the stdlib supplies
+// only the semver building block. Rules only -- the engine prepends the
+// package and imports.
+const hotfixBypassRules = `exclusions_bypass(e) if is_hotfix
+
+is_hotfix if {
+	count(shared_images) > 0
+	every pair in shared_images {
+		helpers.is_semver_patch(pair.old, pair.new)
+	}
+}
+
+shared_images := [pair |
+	some img in input.freight.images
+	some last in input.stage.lastPromotion.freight.images
+	img.repoURL == last.repoURL
+	pair := {"old": last.tag, "new": img.tag}
+]
 `
 
 func emptyData() map[string]any {
@@ -479,8 +495,8 @@ func TestEngineEvaluate(t *testing.T) {
 			},
 		},
 		{
-			name:          "exclusions_bypass admits a hotfix through an active exclusion",
-			projectCustom: hotfixBypassRules,
+			name:          "cluster exclusions_bypass admits a hotfix through an active exclusion",
+			clusterCustom: hotfixBypassRules,
 			input: func() map[string]any {
 				input := testInput(ClassManualForward)
 				input["freight"] = map[string]any{
@@ -523,8 +539,8 @@ func TestEngineEvaluate(t *testing.T) {
 			},
 		},
 		{
-			name:          "exclusions_bypass does not admit a minor version bump",
-			projectCustom: hotfixBypassRules,
+			name:          "cluster exclusions_bypass does not admit a minor version bump",
+			clusterCustom: hotfixBypassRules,
 			input: func() map[string]any {
 				input := testInput(ClassManualForward)
 				input["freight"] = map[string]any{
@@ -567,8 +583,8 @@ func TestEngineEvaluate(t *testing.T) {
 			},
 		},
 		{
-			name:          "cluster exclusions_bypass admits a hotfix",
-			clusterCustom: hotfixBypassRules,
+			name:          "project exclusions_bypass works the same way",
+			projectCustom: hotfixBypassRules,
 			input: func() map[string]any {
 				input := testInput(ClassManualForward)
 				input["freight"] = map[string]any{
