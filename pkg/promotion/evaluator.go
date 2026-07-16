@@ -100,7 +100,7 @@ func ExprEnvWithTaskOutputs(alias string, outputs State) ExprEnvOption {
 // ctx object documentation in
 // docs/docs/50-user-guide/60-reference-docs/40-expressions.md.
 func BuildCtxMap(stepCtx StepContext) map[string]any {
-	return map[string]any{
+	env := map[string]any{
 		"ctx": map[string]any{
 			"uiBaseUrl": stepCtx.UIBaseURL,
 			"project":   stepCtx.Project,
@@ -124,6 +124,20 @@ func BuildCtxMap(stepCtx StepContext) map[string]any {
 			},
 		},
 	}
+
+	// When the Promotion promotes to a specific Target, expose that Target's
+	// data to expressions as the top-level `target` variable. Promotions that
+	// promote to the Stage itself (classic behavior) carry no Target, so the
+	// variable is omitted entirely and any reference to `target.*` fails, just
+	// as it did before Targets existed.
+	if stepCtx.Target != nil {
+		env["target"] = map[string]any{
+			"params": stepCtx.Target.Params,
+			"labels": stepCtx.Target.Labels,
+		}
+	}
+
+	return env
 }
 
 // BuildExprEnv builds an environment map for evaluating expressions in
@@ -145,6 +159,7 @@ func BuildExprEnv(promoCtx Context, opts ...ExprEnvOption) map[string]any {
 		Stage:              promoCtx.Stage,
 		TargetFreightRef:   promoCtx.TargetFreightRef,
 		TargetFreightAlias: promoCtx.TargetFreightAlias,
+		Target:             promoCtx.Target,
 		PromotionActor:     promoCtx.Actor,
 		Rollback:           promoCtx.Rollback,
 		Alias:              stepAlias,
@@ -357,6 +372,7 @@ func (p *StepEvaluator) BuildStepContext(
 		Freight:            *promoCtx.Freight.DeepCopy(),
 		TargetFreightRef:   promoCtx.TargetFreightRef,
 		TargetFreightAlias: promoCtx.TargetFreightAlias,
+		Target:             promoCtx.Target.DeepCopy(),
 	}, nil
 }
 

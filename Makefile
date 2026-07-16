@@ -220,7 +220,7 @@ sign-and-notarize-cli: install-quill
 	$(QUILL) sign-and-notarize --p12 $(QUILL_SIGN_P12) $(KARGO_BIN_PATH)
 
 ################################################################################
-# Used for Nighty/Unstable builds                                              #
+# Used for Nightly/Unstable builds                                              #
 ################################################################################
 
 .PHONY: build-nightly-cli

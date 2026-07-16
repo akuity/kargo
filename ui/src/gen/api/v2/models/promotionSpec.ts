@@ -44,6 +44,22 @@ are listed in this field.
 +kubebuilder:validation:MinItems=1
 +kubebuilder:validation:items:XValidation:message="Promotion step must have uses set and must not reference a task",rule="has(self.uses) && !has(self.task)" */
   steps: PromotionStep[];
+  /** Target optionally names the Target, within the Promotion's own Project
+(namespace), that this Promotion promotes Freight to. Targets allow a
+single Stage to govern -- and promote Freight to -- multiple destinations.
+When set, the named Target must be one that the referenced Stage governs,
+i.e. one selected by the Stage's targetSelectors.
+
+When empty (the default), the Promotion promotes to the Stage itself. This
+preserves the behavior of Promotions created before Targets existed:
+classic Stages -- those without targetSelectors -- govern no Targets, so
+their Promotions leave this field empty.
+
++kubebuilder:validation:Optional
++kubebuilder:validation:MaxLength=253
++kubebuilder:validation:Pattern=`^[a-z0-9]([-a-z0-9]*[a-z0-9])?(\.[a-z0-9]([-a-z0-9]*[a-z0-9])?)*$`
++akuity:test-kubebuilder-pattern=KubernetesName */
+  target?: string;
   /** Vars is a list of variables that can be referenced by expressions in
 promotion steps. */
   vars?: ExpressionVariable[];
