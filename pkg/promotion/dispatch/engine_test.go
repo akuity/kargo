@@ -5,11 +5,26 @@ import (
 	"testing"
 	"time"
 
+	"github.com/open-policy-agent/opa/v1/rego"
 	"github.com/stretchr/testify/require"
 )
 
 // testNow is a Wednesday, 15:00 UTC (07:00 in America/Los_Angeles).
 const testNow = "2026-07-15T15:00:00Z"
+
+// hotfixBypassModule is the canonical custom-policy pattern: hotfixes
+// (semver patch-only increments) bypass every exclusion.
+const hotfixBypassModule = `package kargo.custom
+
+import rego.v1
+
+import data.kargo.lib.helpers
+
+exclusions_bypass contains e.name if {
+	some e in data.exclusions
+	helpers.is_hotfix
+}
+`
 
 func emptyData() map[string]any {
 	return map[string]any{
@@ -385,12 +400,14 @@ func TestEngineEvaluate(t *testing.T) {
 			},
 		},
 		{
-			name: "custom policy replaces the default",
-			custom: `package kargo.dispatch
+			name: "custom violation composes into the default decision",
+			custom: `package kargo.custom
 
 import rego.v1
 
-decision := {"allow": false, "message": "computer says no", "requeue_after": 60}
+violation contains {"rule": "no", "msg": "computer says no", "requeue": 60} if {
+	input.promotion.class == "auto-forward"
+}
 `,
 			input: testInput(ClassAutoForward),
 			data:  emptyData,
@@ -402,64 +419,50 @@ decision := {"allow": false, "message": "computer says no", "requeue_after": 60}
 			},
 		},
 		{
-			name: "custom policy composes lib blocks and adds its own rule",
-			custom: `package kargo.dispatch
+			name: "custom violation unions with the standard blocks",
+			custom: `package kargo.custom
 
 import rego.v1
 
-import data.kargo.lib.exclusions
-import data.kargo.lib.windows
-
-violation contains v if some v in windows.violation
-
-violation contains v if some v in exclusions.violation
-
 violation contains v if {
-	input.stage.name == "prod"
-	input.promotion.class == "auto-forward"
-	some img in input.freight.images
-	contains(img.tag, "-")
+	input.project.labels.compliance == "pci"
+	input.promotion.class == "manual-forward"
+	not input.promotion.annotations["change-ticket"]
 	v := {
-		"rule": "no-prerelease-prod",
-		"msg": sprintf("prerelease %q is not auto-promoted to prod", [img.tag]),
+		"rule": "pci-change-ticket",
+		"msg": "PCI projects require a change-ticket annotation on manual promotions",
 	}
 }
-
-decision := {"allow": count(violation) == 0, "message": concat("; ", [v.msg | some v in violation])}
 `,
 			input: func() map[string]any {
-				input := testInput(ClassAutoForward)
-				input["freight"] = map[string]any{
-					"name": "test-freight",
-					"images": []any{
-						map[string]any{"repoURL": "example/nginx", "tag": "1.4.0-rc.1", "digest": ""},
-					},
+				input := testInput(ClassManualForward)
+				input["project"] = map[string]any{
+					"labels":      map[string]any{"compliance": "pci"},
+					"annotations": map[string]any{},
 				}
 				return input
 			}(),
-			data: emptyData,
+			data: func() map[string]any {
+				data := emptyData()
+				data["exclusions"] = []any{map[string]any{
+					"name":          "freeze",
+					"start":         "2026-07-15T00:00:00Z",
+					"end":           "2026-07-16T00:00:00Z",
+					"scope":         "no-forward",
+					"argocdServers": []any{},
+				}}
+				return data
+			},
 			assert: func(t *testing.T, d *Decision, err error) {
 				require.NoError(t, err)
 				require.False(t, d.Allow)
-				require.Contains(t, d.Message, `prerelease "1.4.0-rc.1" is not auto-promoted to prod`)
+				require.Contains(t, d.Message, "change-ticket")
+				require.Contains(t, d.Message, `frozen by exclusion "freeze"`)
 			},
 		},
 		{
-			name: "custom policy bypasses exclusions for hotfixes via helpers",
-			custom: `package kargo.dispatch
-
-import rego.v1
-
-import data.kargo.lib.exclusions
-import data.kargo.lib.helpers
-
-violation contains v if {
-	some v in exclusions.violation
-	not helpers.is_hotfix
-}
-
-decision := {"allow": count(violation) == 0, "message": concat("; ", [v.msg | some v in violation])}
-`,
+			name:   "exclusions_bypass admits a hotfix through an active exclusion",
+			custom: hotfixBypassModule,
 			input: func() map[string]any {
 				input := testInput(ClassManualForward)
 				input["freight"] = map[string]any{
@@ -502,21 +505,8 @@ decision := {"allow": count(violation) == 0, "message": concat("; ", [v.msg | so
 			},
 		},
 		{
-			name: "hotfix bypass does not admit a minor version bump",
-			custom: `package kargo.dispatch
-
-import rego.v1
-
-import data.kargo.lib.exclusions
-import data.kargo.lib.helpers
-
-violation contains v if {
-	some v in exclusions.violation
-	not helpers.is_hotfix
-}
-
-decision := {"allow": count(violation) == 0, "message": concat("; ", [v.msg | some v in violation])}
-`,
+			name:   "exclusions_bypass does not admit a minor version bump",
+			custom: hotfixBypassModule,
 			input: func() map[string]any {
 				input := testInput(ClassManualForward)
 				input["freight"] = map[string]any{
@@ -570,19 +560,19 @@ decision := {"allow": count(violation) == 0, "message": concat("; ", [v.msg | so
 			},
 		},
 		{
-			name: "custom policy without a decision surfaces an error",
+			name: "custom module in the wrong package fails closed",
 			custom: `package kargo.dispatch
 
 import rego.v1
 
-some_other_rule := true
+decision := {"allow": true, "message": "hijacked", "requeue_after": 0}
 `,
 			input: testInput(ClassAutoForward),
 			data:  emptyData,
 			assert: func(t *testing.T, d *Decision, err error) {
 				require.Error(t, err)
 				require.Nil(t, d)
-				require.Contains(t, err.Error(), "did not produce a decision")
+				require.Contains(t, err.Error(), `must be "kargo.custom"`)
 			},
 		},
 	}
@@ -624,4 +614,37 @@ func mustParseNS(s string) int64 {
 		panic(err)
 	}
 	return parsed.UnixNano()
+}
+
+// TestPolicySchemaEnforcement proves annotated modules are type-checked
+// against the embedded JSON Schemas: a module annotated with schema.input
+// that references an undeclared field must fail to compile.
+func TestPolicySchemaEnforcement(t *testing.T) {
+	t.Parallel()
+	mods, err := policyModules("")
+	require.NoError(t, err)
+	schemas, err := policySchemas()
+	require.NoError(t, err)
+	mods["kargo/lib/bogus/bogus.rego"] = `# METADATA
+# scope: package
+# schemas:
+#   - input: schema.input
+package kargo.lib.bogus
+
+import rego.v1
+
+violation contains {"rule": "bogus", "msg": "x"} if input.promotion.clazz == "typo"
+`
+	modOpts, err := moduleOptions(mods)
+	require.NoError(t, err)
+	opts := []func(*rego.Rego){
+		rego.Query(decisionQuery),
+		rego.StrictBuiltinErrors(true),
+		rego.Schemas(schemas),
+	}
+	opts = append(opts, modOpts...)
+	opts = append(opts, builtins()...)
+	_, err = rego.New(opts...).PrepareForEval(context.Background())
+	require.Error(t, err)
+	require.Contains(t, err.Error(), "clazz")
 }

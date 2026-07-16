@@ -1,0 +1,161 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "title": "Dispatch policy input document",
+  "description": "The input document supplied to every dispatch policy evaluation, describing one candidate Promotion.",
+  "type": "object",
+  "properties": {
+    "promotion": {
+      "type": "object",
+      "description": "The candidate Promotion.",
+      "properties": {
+        "name": {"type": "string"},
+        "class": {
+          "type": "string",
+          "description": "One of auto-forward, manual-forward, rollback."
+        },
+        "createdAt": {"type": "string", "description": "RFC3339"},
+        "actor": {
+          "type": "string",
+          "description": "The create-actor annotation value; empty for system-created Promotions."
+        },
+        "labels": {"type": "object", "additionalProperties": {"type": "string"}},
+        "annotations": {"type": "object", "additionalProperties": {"type": "string"}}
+      }
+    },
+    "freight": {
+      "type": "object",
+      "description": "The Freight the Promotion would promote. Empty when unresolved.",
+      "properties": {
+        "name": {"type": "string"},
+        "alias": {"type": "string"},
+        "origin": {"type": "string"},
+        "images": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "properties": {
+              "repoURL": {"type": "string"},
+              "tag": {"type": "string"},
+              "digest": {"type": "string"}
+            }
+          }
+        },
+        "commits": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "properties": {
+              "repoURL": {"type": "string"},
+              "id": {"type": "string"},
+              "branch": {"type": "string"},
+              "tag": {"type": "string"}
+            }
+          }
+        },
+        "charts": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "properties": {
+              "repoURL": {"type": "string"},
+              "name": {"type": "string"},
+              "version": {"type": "string"}
+            }
+          }
+        }
+      }
+    },
+    "stage": {
+      "type": "object",
+      "description": "The Stage the Promotion targets.",
+      "properties": {
+        "name": {"type": "string"},
+        "project": {"type": "string"},
+        "labels": {"type": "object", "additionalProperties": {"type": "string"}},
+        "annotations": {"type": "object", "additionalProperties": {"type": "string"}},
+        "lastPromotion": {
+          "type": "object",
+          "description": "The Stage's most recent Promotion. Empty when the Stage has never been promoted.",
+          "properties": {
+            "name": {"type": "string"},
+            "phase": {"type": "string"},
+            "finishedAt": {"type": "string", "description": "RFC3339"},
+            "freight": {
+              "type": "object",
+              "properties": {
+                "name": {"type": "string"},
+                "origin": {"type": "string"},
+                "images": {
+                  "type": "array",
+                  "items": {
+                    "type": "object",
+                    "properties": {
+                      "repoURL": {"type": "string"},
+                      "tag": {"type": "string"},
+                      "digest": {"type": "string"}
+                    }
+                  }
+                },
+                "commits": {
+                  "type": "array",
+                  "items": {
+                    "type": "object",
+                    "properties": {
+                      "repoURL": {"type": "string"},
+                      "id": {"type": "string"},
+                      "branch": {"type": "string"},
+                      "tag": {"type": "string"}
+                    }
+                  }
+                },
+                "charts": {
+                  "type": "array",
+                  "items": {
+                    "type": "object",
+                    "properties": {
+                      "repoURL": {"type": "string"},
+                      "name": {"type": "string"},
+                      "version": {"type": "string"}
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "project": {
+      "type": "object",
+      "description": "Metadata of the Project the Stage belongs to.",
+      "properties": {
+        "labels": {"type": "object", "additionalProperties": {"type": "string"}},
+        "annotations": {"type": "object", "additionalProperties": {"type": "string"}}
+      }
+    },
+    "applications": {
+      "type": "array",
+      "description": "Argo CD Applications that reference the Stage (via the kargo.akuity.io/authorized-stage annotation). Empty when the Argo CD integration is disabled.",
+      "items": {
+        "type": "object",
+        "properties": {
+          "name": {"type": "string"},
+          "namespace": {"type": "string"},
+          "destination": {
+            "type": "object",
+            "properties": {
+              "server": {"type": "string"},
+              "name": {"type": "string"},
+              "namespace": {"type": "string"}
+            }
+          },
+          "health": {"type": "string"},
+          "sync": {"type": "string"},
+          "labels": {"type": "object", "additionalProperties": {"type": "string"}},
+          "annotations": {"type": "object", "additionalProperties": {"type": "string"}}
+        }
+      }
+    },
+    "now": {"type": "string", "description": "Evaluation time, RFC3339 (UTC)."}
+  }
+}

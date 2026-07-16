@@ -1,0 +1,18 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "title": "data.rateLimit",
+  "description": "Rolling-window rate limit for the Stage under evaluation, keyed by Stage name, from ProjectConfig spec.policy.rateLimits (first stage-selector match wins).",
+  "type": "object",
+  "additionalProperties": {
+    "type": "object",
+    "properties": {
+      "max": {"type": "number", "description": "Maximum dispatches per trailing window."},
+      "window": {"type": "number", "description": "Window length, nanoseconds."},
+      "dispatches": {
+        "type": "array",
+        "description": "Recent dispatch times, epoch nanoseconds.",
+        "items": {"type": "number"}
+      }
+    }
+  }
+}

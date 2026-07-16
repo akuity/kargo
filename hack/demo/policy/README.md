@@ -16,9 +16,14 @@ The default policy is composed from standard, data-driven Rego blocks:
 | `kargo.lib.ratelimit` | `ProjectConfig` `spec.policy.rateLimits` | Rolling window: at most N automatic dispatches per trailing window |
 | `kargo.lib.helpers` | -- | Building blocks for custom policies (e.g. `is_hotfix`) |
 
-A project may replace the default with its own module
-(`spec.policy.custom`), importing whichever blocks it wants and adding its
-own rules. See the commented example in `10-projectconfig.yaml`.
+A project may extend the default with its own module
+(`spec.policy.custom`, `package kargo.custom`) that **composes into** --
+never replaces -- the default policy. Paste a single rule and it just
+works: the default policy gathers any `violation` the custom module
+contributes, and the exclusions block waives any exclusion the custom
+module names in `exclusions_bypass`. See the commented example in
+`10-projectconfig.yaml` and the schema/authoring reference in
+`pkg/promotion/dispatch/policy/README.md`.
 
 Promotion classes are inferred per Promotion: `auto-forward` (created by the
 system), `manual-forward` (created by a user), and `rollback` (annotated
@@ -151,29 +156,36 @@ rollbacks), use `scope: no-promotions`. To pause only automation while
 humans retain control, use `scope: no-auto` and promote manually.
 
 An exclusion can also be narrowed to Stages whose Argo CD Applications
-target a particular destination (`argocdServers: ["https://prod.example.com"]`);
-Stage-to-Application linkage uses the `kargo.akuity.io/authorized-stage`
-annotation on the Application.
+target a particular destination server -- see Scenario 5.
 
 ## Scenario 3 -- custom policy: hotfixes bypass the freeze
 
 With the freeze from Scenario 2 still active, enable the custom policy:
 uncomment the `custom:` block in `10-projectconfig.yaml` and re-apply. The
-custom module replaces the default, composes the same library blocks, but
-filters exclusion violations through `helpers.is_hotfix`.
+custom module (`package kargo.custom`) composes into the default policy; it
+does not replace anything. Its `exclusions_bypass` rule names every
+exclusion bypassed whenever the candidate Freight is a hotfix
+(`helpers.is_hotfix`: every shared image is a semver patch-only increment
+over what the Stage last promoted).
+
+The same custom module also contributes a data-driven `violation`: because
+the Project is labeled `compliance: pci` (see `00-project.yaml`), manual
+promotions must carry a `change-ticket` annotation -- without one they park
+with the rule's message.
 
 Now promote a **patch-only** bump of what `uat` is currently running (e.g.
-`1.29.1` over `1.29.0`) -- it dispatches through the freeze. A minor bump
-(e.g. `1.29.x` over `1.28.x`) stays blocked:
+`1.29.1` over `1.29.0`), with a change ticket -- it dispatches through the
+freeze. A minor bump (e.g. `1.29.x` over `1.28.x`) stays blocked by the
+freeze even with a ticket:
 
 ```shell
 # Create a manual promotion for the patch-bump freight (see Scenario 2 for
-# the kubectl create pattern; no rollback annotation this time).
+# the kubectl create pattern; no rollback annotation this time). Include
+# the change-ticket annotation to satisfy the PCI rule:
+#   metadata:
+#     annotations:
+#       change-ticket: CHG-1234
 ```
-
-The same custom module also refuses to auto-promote prerelease image tags
-into `prod` -- a purely project-specific rule unioned into the same
-violation set.
 
 Lift the freeze when done:
 
@@ -190,11 +202,54 @@ the Warehouse). The first auto-promotion dispatches; the second parks with a
 rate-limit message and dispatches on its own when the first ages out of the
 2-minute window. Manual promotions and rollbacks are never rate-limited.
 
+## Scenario 5 -- cluster maintenance freezes only affected Stages
+
+An exclusion narrowed with `argocdServers` freezes only Stages whose
+referenced Argo CD Applications target one of the named destination servers
+(by URL or name) -- the "this cluster is under maintenance" use case. The
+linkage is the `kargo.akuity.io/authorized-stage` annotation on the
+Application.
+
+Create an Application for the `prod` Stage targeting the local cluster:
+
+```shell
+kubectl apply -f hack/demo/policy/50-application.yaml
+```
+
+Declare maintenance on that cluster:
+
+```shell
+kubectl patch clusterconfig cluster --type merge -p '
+spec:
+  promotionExclusions:
+  - name: cluster-maintenance
+    start: "2026-01-01T00:00:00Z"
+    end: "2036-01-01T00:00:00Z"
+    scope: no-promotions
+    argocdServers:
+    - https://kubernetes.default.svc
+'
+```
+
+A manual promotion to `prod` now parks (its Application targets the server
+under maintenance), while `test` and `uat` -- which have no Applications --
+promote normally. End the maintenance and the held promotion dispatches:
+
+```shell
+kubectl patch clusterconfig cluster --type json -p '[{"op": "remove", "path": "/spec/promotionExclusions"}]'
+```
+
+This scenario requires the controller's Argo CD integration (enabled by
+default under Tilt); without it, `input.applications` is always empty and
+server-scoped exclusions never match.
+
 ## Troubleshooting
 
 - A broken `spec.policy.custom` **fails closed**: nothing dispatches, the
   Stage's `Promoting` condition reports `DispatchPolicyError`, and each held
   Promotion gets a `PromotionPolicyError` event. Fix or remove the module.
+  A custom module declaring any package other than `kargo.custom` is
+  rejected the same way.
 - The policy engine sees Argo CD Applications only when the controller's
   Argo CD integration is enabled; without it, server-scoped exclusions never
   match (unscoped exclusions still work).
@@ -204,6 +259,7 @@ rate-limit message and dispatches on its own when the first ages out of the
 ## Cleanup
 
 ```shell
+kubectl delete -f hack/demo/policy/50-application.yaml --ignore-not-found
 kubectl delete -f hack/demo/policy/30-stages.yaml -f hack/demo/policy/20-warehouse.yaml -f hack/demo/policy/10-projectconfig.yaml -f hack/demo/policy/00-project.yaml
 kubectl patch clusterconfig cluster --type json -p '[{"op": "remove", "path": "/spec/promotionExclusions"}]'
 ```

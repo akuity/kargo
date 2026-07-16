@@ -17,12 +17,19 @@ import (
 // swagger:model ProjectPolicy
 type ProjectPolicy struct {
 
-	// Custom is an optional inline Rego module that replaces the built-in
-	// default dispatch policy. It must declare `package kargo.dispatch` and
-	// produce a `decision` document of the form
-	// `{"allow": bool, "message": string, "requeue_after": seconds}`. The
-	// module may fold standard behavior back in by importing the built-in
-	// library packages data.kargo.lib.windows, data.kargo.lib.exclusions,
+	// Custom is an optional inline Rego module that composes into -- never
+	// replaces -- the built-in default dispatch policy. It must declare
+	// `package kargo.custom` and may contribute two kinds of rules, both
+	// gathered by the default policy:
+	//
+	//   - `violation`: a set of `{"rule": ..., "msg": ..., "requeue": ...}`
+	//     objects unioned with the standard blocks' violations. A numeric
+	//     `requeue` (seconds) participates in the decision's requeue hint.
+	//   - `exclusions_bypass`: a set of exclusion names for which the
+	//     standard exclusions block raises no violation.
+	//
+	// The module may import the built-in library packages
+	// data.kargo.lib.windows, data.kargo.lib.exclusions,
 	// data.kargo.lib.ratelimit, and data.kargo.lib.helpers.
 	//
 	// +optional

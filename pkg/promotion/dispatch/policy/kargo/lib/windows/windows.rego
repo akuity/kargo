@@ -1,11 +1,13 @@
-# kargo.lib.windows holds forward promotions outside promotion windows.
-#
-# When one or more windows in data.windows govern the Stage, a forward
-# promotion (class auto-forward or manual-forward) may only be dispatched
-# while at least one window is open. Rollbacks are never held by windows.
-#
-# data.windows: [{name, recurrence (RRULE), start "HH:MM", end "HH:MM",
-# location (IANA tz)}]
+# METADATA
+# scope: package
+# description: |
+#   Holds forward promotions outside promotion windows. When one or more
+#   windows in data.windows govern the Stage, a forward promotion (class
+#   auto-forward or manual-forward) may only be dispatched while at least
+#   one window is open. Rollbacks are never held by windows.
+# schemas:
+#   - input: schema.input
+#   - data.windows: schema.windows
 package kargo.lib.windows
 
 import rego.v1

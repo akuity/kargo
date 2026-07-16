@@ -1,18 +1,21 @@
-# kargo.lib.exclusions holds promotions during system-wide exclusion
-# (blackout) periods, scoped by promotion class and, optionally, by the
-# Argo CD servers targeted by the Stage's referenced Applications.
+# METADATA
+# scope: package
+# description: |
+#   Holds promotions during system-wide exclusion (blackout) periods, scoped
+#   by promotion class and, optionally, by the Argo CD servers targeted by
+#   the Stage's referenced Applications.
 #
-# This block deliberately has no bypass logic. A custom project policy that
-# wants one (e.g. for hotfixes) filters this block's violations itself:
+#   A custom project policy (package kargo.custom) may bypass individual
+#   exclusions by contributing their names to an exclusions_bypass set:
 #
-#	violation contains v if {
-#		some v in exclusions.violation
-#		not helpers.is_hotfix
-#	}
-#
-# data.exclusions: [{name, start (RFC3339), end (RFC3339), scope,
-# argocdServers []}]
-# data.scopes: {scope: [frozen classes]}
+#     exclusions_bypass contains e.name if {
+#         some e in data.exclusions
+#         helpers.is_hotfix
+#     }
+# schemas:
+#   - input: schema.input
+#   - data.exclusions: schema.exclusions
+#   - data.scopes: schema.scopes
 package kargo.lib.exclusions
 
 import rego.v1
@@ -22,6 +25,7 @@ violation contains v if {
 	active(e)
 	input.promotion.class in data.scopes[e.scope]
 	applies_to_servers(e)
+	not bypassed(e)
 	v := {
 		"rule": "exclusions",
 		"msg": sprintf(
@@ -49,3 +53,7 @@ applies_to_servers(e) if {
 	some app in input.applications
 	s in {app.destination.server, app.destination.name}
 }
+
+# An exclusion is bypassed when the project's custom module names it in
+# exclusions_bypass. Inert when the project has no custom module.
+bypassed(e) if e.name in data.kargo.custom.exclusions_bypass

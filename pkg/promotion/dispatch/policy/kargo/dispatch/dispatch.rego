@@ -1,10 +1,14 @@
-# kargo.dispatch is the default promotion dispatch policy. It composes the
-# standard library blocks by unioning their violations and derives a single
-# decision document from the result.
-#
-# A project replaces this module with its own (ProjectConfig
-# spec.policy.custom), which must belong to the same package and produce the
-# same decision document. The standard blocks remain importable there.
+# METADATA
+# scope: package
+# description: |
+#   The promotion dispatch policy. Composes the standard library blocks by
+#   unioning their violations, gathers any violations contributed by the
+#   project's custom module (package kargo.custom, from ProjectConfig
+#   spec.policy.custom), and derives a single decision document from the
+#   result.
+# schemas:
+#   - input: schema.input
+# entrypoint: true
 package kargo.dispatch
 
 import rego.v1
@@ -18,6 +22,11 @@ violation contains v if some v in windows.violation
 violation contains v if some v in exclusions.violation
 
 violation contains v if some v in ratelimit.violation
+
+# Custom violations compose into the same set. Inert when the project has
+# no custom module. Each violation is an object {rule, msg, requeue?}; a
+# numeric requeue (seconds) feeds requeue_after below.
+violation contains v if some v in data.kargo.custom.violation
 
 decision := {"allow": true, "message": "within policy", "requeue_after": 0} if {
 	count(violation) == 0

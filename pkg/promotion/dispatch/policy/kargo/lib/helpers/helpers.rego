@@ -1,5 +1,10 @@
-# kargo.lib.helpers offers building blocks for custom project policies. It
-# contributes no violations of its own.
+# METADATA
+# scope: package
+# description: |
+#   Building blocks for custom project policies (package kargo.custom).
+#   Contributes no violations of its own.
+# schemas:
+#   - input: schema.input
 package kargo.lib.helpers
 
 import rego.v1
@@ -14,9 +19,9 @@ forward if input.promotion.class in {"auto-forward", "manual-forward"}
 # has the same major.minor and a strictly greater patch. Typically used by
 # custom policies to let hotfixes bypass exclusions:
 #
-#	violation contains v if {
-#		some v in exclusions.violation
-#		not helpers.is_hotfix
+#	exclusions_bypass contains e.name if {
+#		some e in data.exclusions
+#		helpers.is_hotfix
 #	}
 is_hotfix if {
 	count(shared_images) > 0
@@ -34,8 +39,8 @@ shared_images := [pair |
 
 patch_increment(old, new) if {
 	o := trim_prefix(old, "v")
-	n := trim_prefix(new, "v")
 	semver.is_valid(o)
+	n := trim_prefix(new, "v")
 	semver.is_valid(n)
 	semver.compare(n, o) == 1
 	split(o, ".")[0] == split(n, ".")[0]

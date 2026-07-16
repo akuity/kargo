@@ -1,0 +1,23 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "title": "data.exclusions",
+  "description": "System-wide promotion exclusions, from ClusterConfig spec.promotionExclusions.",
+  "type": "array",
+  "items": {
+    "type": "object",
+    "properties": {
+      "name": {"type": "string"},
+      "start": {"type": "string", "description": "RFC3339"},
+      "end": {"type": "string", "description": "RFC3339"},
+      "scope": {
+        "type": "string",
+        "description": "One of no-promotions, no-forward, no-auto; see data.scopes."
+      },
+      "argocdServers": {
+        "type": "array",
+        "description": "Argo CD destination servers (URL or name) the exclusion is narrowed to; empty applies everywhere.",
+        "items": {"type": "string"}
+      }
+    }
+  }
+}

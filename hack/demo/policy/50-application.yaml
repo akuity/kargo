@@ -1,0 +1,24 @@
+# An Argo CD Application linked to the prod Stage via the authorized-stage
+# annotation. The dispatch policy engine projects Applications referencing a
+# Stage into policy input (input.applications), including their destination;
+# a PromotionExclusion narrowed with argocdServers then freezes only Stages
+# whose Applications target one of the named destinations (by URL or name).
+#
+# The Application does not need to sync or be healthy for the demo -- only
+# its destination is read.
+apiVersion: argoproj.io/v1alpha1
+kind: Application
+metadata:
+  name: policy-demo-prod
+  namespace: argocd
+  annotations:
+    kargo.akuity.io/authorized-stage: policy-demo:prod
+spec:
+  project: default
+  source:
+    repoURL: https://github.com/akuity/kargo-demo.git
+    targetRevision: main
+    path: base
+  destination:
+    server: https://kubernetes.default.svc
+    namespace: policy-demo-prod

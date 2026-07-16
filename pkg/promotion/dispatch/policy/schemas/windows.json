@@ -1,0 +1,16 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "title": "data.windows",
+  "description": "Promotion windows governing the Stage under evaluation, from ProjectConfig spec.policy.promotionWindows (stage-selector matches already applied).",
+  "type": "array",
+  "items": {
+    "type": "object",
+    "properties": {
+      "name": {"type": "string"},
+      "recurrence": {"type": "string", "description": "RFC 5545 RRULE"},
+      "start": {"type": "string", "description": "HH:MM"},
+      "end": {"type": "string", "description": "HH:MM; end <= start crosses midnight"},
+      "location": {"type": "string", "description": "IANA time zone; empty means UTC"}
+    }
+  }
+}

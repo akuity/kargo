@@ -1,8 +1,12 @@
-# kargo.lib.ratelimit rate-limits automatic promotion dispatch using a
-# rolling window: at most `max` dispatches within any trailing `window`.
-# Manual promotions and rollbacks are never rate-limited.
-#
-# data.rateLimit: {<stage>: {max, window (ns), dispatches [epoch ns]}}
+# METADATA
+# scope: package
+# description: |
+#   Rate-limits automatic promotion dispatch using a rolling window: at
+#   most `max` dispatches within any trailing `window`. Manual promotions
+#   and rollbacks are never rate-limited.
+# schemas:
+#   - input: schema.input
+#   - data.rateLimit: schema.ratelimit
 package kargo.lib.ratelimit
 
 import rego.v1

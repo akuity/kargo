@@ -52,7 +52,7 @@
           "description": "Policy configures policy-based promotion dispatch controls for this\nProject. Promotions held by policy remain Pending and are dispatched\nautomatically once permitted.",
           "properties": {
             "custom": {
-              "description": "Custom is an optional inline Rego module that replaces the built-in\ndefault dispatch policy. It must declare `package kargo.dispatch` and\nproduce a `decision` document of the form\n`{\"allow\": bool, \"message\": string, \"requeue_after\": seconds}`. The\nmodule may fold standard behavior back in by importing the built-in\nlibrary packages data.kargo.lib.windows, data.kargo.lib.exclusions,\ndata.kargo.lib.ratelimit, and data.kargo.lib.helpers.",
+              "description": "Custom is an optional inline Rego module that composes into -- never\nreplaces -- the built-in default dispatch policy. It must declare\n`package kargo.custom` and may contribute two kinds of rules, both\ngathered by the default policy:\n\n  - `violation`: a set of `{\"rule\": ..., \"msg\": ..., \"requeue\": ...}`\n    objects unioned with the standard blocks' violations. A numeric\n    `requeue` (seconds) participates in the decision's requeue hint.\n  - `exclusions_bypass`: a set of exclusion names for which the\n    standard exclusions block raises no violation.\n\nThe module may import the built-in library packages\ndata.kargo.lib.windows, data.kargo.lib.exclusions,\ndata.kargo.lib.ratelimit, and data.kargo.lib.helpers.",
               "type": "string"
             },
             "promotionWindows": {

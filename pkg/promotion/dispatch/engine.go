@@ -1,8 +1,9 @@
 // Package dispatch decides whether a Pending Promotion may be dispatched
 // (acknowledged by its Stage and allowed to begin Running). The decision is
 // delegated to an OPA policy: a built-in default composed of standard,
-// data-driven library blocks (see policy/*.rego), optionally replaced by a
-// project-authored module (ProjectConfig spec.policy.custom).
+// data-driven library blocks (see policy/), into which a project-authored
+// kargo.custom module (ProjectConfig spec.policy.custom) may compose
+// additional violations and exclusion bypasses.
 package dispatch
 
 import (
@@ -14,6 +15,7 @@ import (
 	"sync"
 	"time"
 
+	"github.com/open-policy-agent/opa/v1/ast"
 	"github.com/open-policy-agent/opa/v1/rego"
 	"github.com/open-policy-agent/opa/v1/storage"
 	"github.com/open-policy-agent/opa/v1/storage/inmem"
@@ -95,17 +97,45 @@ func (p *preparedPolicy) prepare(ctx context.Context, custom string) {
 		p.err = err
 		return
 	}
+	schemas, err := policySchemas()
+	if err != nil {
+		p.err = err
+		return
+	}
+	modOpts, err := moduleOptions(mods)
+	if err != nil {
+		p.err = err
+		return
+	}
 	p.store = inmem.New()
 	opts := []func(*rego.Rego){
 		rego.Query(decisionQuery),
 		rego.Store(p.store),
 		rego.StrictBuiltinErrors(true),
+		rego.Schemas(schemas),
 	}
-	for name, src := range mods {
-		opts = append(opts, rego.Module(name, src))
-	}
+	opts = append(opts, modOpts...)
 	opts = append(opts, builtins()...)
 	p.query, p.err = rego.New(opts...).PrepareForEval(ctx)
+}
+
+// moduleOptions parses modules with annotation processing enabled — the
+// rego package's own parsing (rego.Module) skips annotations, which would
+// silently disable schema type checking — and returns them as rego options.
+func moduleOptions(mods map[string]string) ([]func(*rego.Rego), error) {
+	opts := make([]func(*rego.Rego), 0, len(mods))
+	for name, src := range mods {
+		mod, err := ast.ParseModuleWithOpts(
+			name,
+			src,
+			ast.ParserOptions{ProcessAnnotation: true},
+		)
+		if err != nil {
+			return nil, fmt.Errorf("error parsing policy module %q: %w", name, err)
+		}
+		opts = append(opts, rego.ParsedModule(mod))
+	}
+	return opts, nil
 }
 
 func (p *preparedPolicy) eval(
