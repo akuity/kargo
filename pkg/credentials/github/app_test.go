@@ -28,6 +28,7 @@ func TestNewAppCredentialProvider(t *testing.T) {
 
 	assert.NotNil(t, provider.tokenCache)
 	assert.NotEmpty(t, provider.validationBackoff)
+	assert.NotZero(t, provider.mintTimeoutBuffer)
 	assert.NotNil(t, provider.getAccessTokenFn)
 	assert.NotNil(t, provider.validateAccessTokenFn)
 }
@@ -562,11 +563,12 @@ func TestAppCredentialProvider_getUsernameAndPassword_coalescing(
 	}
 }
 
-// This exercises the edge case where the context of the call that wins the
-// singleflight race is canceled mid-mint. The winner must fail with the
-// context error, while coalesced callers whose own contexts are still live
-// must recover rather than sharing the winner's fate -- and must do so via a
-// SINGLE shared replacement mint, not one mint each.
+// This exercises the case where the context of the call that wins the
+// singleflight race is canceled mid-mint. Because the mint runs under an
+// orphaned context, the winner's cancellation must NOT cancel the shared mint.
+// The winner stops waiting and returns an "interrupted" error, but the single
+// mint runs to completion and the coalesced callers whose contexts are still
+// live receive the token from that SAME mint.
 func TestAppCredentialProvider_getUsernameAndPassword_winnerCanceled(
 	t *testing.T,
 ) {
@@ -649,10 +651,13 @@ func TestAppCredentialProvider_getUsernameAndPassword_winnerCanceled(
 	time.Sleep(100 * time.Millisecond)
 	cancel()
 
-	// The winner's own context was canceled, so it must NOT have retried.
-	require.ErrorIs(t, <-winnerErr, context.Canceled)
+	// The winner's own context was canceled, so it stops waiting and returns an
+	// interrupted error -- but it must NOT have canceled the shared mint.
+	winErr := <-winnerErr
+	require.ErrorIs(t, winErr, context.Canceled)
+	require.ErrorContains(t, winErr, "cache refresh will continue in the background")
 
-	// Allow the replacement mint to validate.
+	// Allow the orphaned mint to validate.
 	close(release)
 
 	for range numWaiters {
@@ -662,11 +667,104 @@ func TestAppCredentialProvider_getUsernameAndPassword_winnerCanceled(
 		require.Equal(t, fakeAccessToken, res.creds.Password)
 	}
 
-	// The canceled mint plus exactly ONE shared replacement, no matter how the
-	// recovering waiters interleaved. When recovery used Forget + a retry on
-	// the primary key, each recovering waiter could orphan another's
-	// in-flight replacement mint and start its own.
-	require.Equal(t, int32(2), mints.Load())
+	// Exactly one mint: the winner's cancellation did not spawn a replacement,
+	// and the single orphaned mint served every coalesced waiter.
+	require.Equal(t, int32(1), mints.Load())
+
+	// That orphaned mint also cached the token for future callers.
+	cacheKey := provider.tokenCacheKey(
+		fakeAppOrClientID,
+		fakeInstallationID,
+		fakePrivateKey,
+		fakeRepoURL,
+	)
+	cached, found := provider.tokenCache.Get(cacheKey)
+	require.True(t, found)
+	require.Equal(t, fakeAccessToken, cached)
+}
+
+// This exercises the fail-safe that bounds the mint. The mint runs under an
+// orphaned context whose deadline is maxWait, so validation that never succeeds
+// (e.g. GitHub never confirming the token) must be cut off with a context
+// deadline error rather than hanging forever.
+func TestAppCredentialProvider_getUsernameAndPassword_timeout(t *testing.T) {
+	const (
+		fakeAppOrClientID  = "fake-id"
+		fakeInstallationID = int64(456)
+		fakePrivateKey     = "private-key"
+		fakeRepoURL        = "https://github.com/example/repo"
+		fakeAccessToken    = "test-token"
+	)
+
+	provider := NewAppCredentialProvider().(*AppCredentialProvider) // nolint:forcetypeassert
+	// Keep the orphaned context's deadline short so the test does not linger.
+	provider.validationBackoff = nil
+	provider.mintTimeoutBuffer = 50 * time.Millisecond
+	provider.getAccessTokenFn = func(
+		string, int64, string, string,
+	) (*oauth2.Token, error) {
+		return &oauth2.Token{
+			AccessToken: fakeAccessToken,
+			Expiry:      time.Now().Add(time.Hour),
+		}, nil
+	}
+	// Validation never resolves on its own; it only returns once the mint's
+	// orphaned context hits its deadline.
+	provider.validateAccessTokenFn = func(
+		ctx context.Context, _, _ string,
+	) (bool, error) {
+		<-ctx.Done()
+		return false, ctx.Err()
+	}
+
+	creds, err := provider.getUsernameAndPassword(
+		t.Context(),
+		fakeAppOrClientID,
+		fakeInstallationID,
+		fakePrivateKey,
+		fakeRepoURL,
+	)
+	require.ErrorContains(t, err, "error minting installation access token")
+	require.ErrorIs(t, err, context.DeadlineExceeded)
+	require.Nil(t, creds)
+}
+
+// A real (non-context) error from the mint is delivered to the caller rather
+// than swallowed, and it triggers exactly one mint attempt.
+func TestAppCredentialProvider_getUsernameAndPassword_realError(t *testing.T) {
+	const (
+		fakeAppOrClientID  = "fake-id"
+		fakeInstallationID = int64(456)
+		fakePrivateKey     = "private-key"
+		fakeRepoURL        = "https://github.com/example/repo"
+	)
+
+	var mints atomic.Int32
+
+	provider := NewAppCredentialProvider().(*AppCredentialProvider) // nolint:forcetypeassert
+	provider.getAccessTokenFn = func(
+		string, int64, string, string,
+	) (*oauth2.Token, error) {
+		mints.Add(1)
+		return nil, errors.New("token error")
+	}
+	provider.validateAccessTokenFn = func(
+		context.Context, string, string,
+	) (bool, error) {
+		return true, nil
+	}
+
+	creds, err := provider.getUsernameAndPassword(
+		t.Context(),
+		fakeAppOrClientID,
+		fakeInstallationID,
+		fakePrivateKey,
+		fakeRepoURL,
+	)
+	require.ErrorContains(t, err, "token error")
+	require.Nil(t, creds)
+	// The error must not have triggered a retry.
+	require.Equal(t, int32(1), mints.Load())
 }
 
 func TestAppCredentialProvider_waitForTokenUsable(t *testing.T) {

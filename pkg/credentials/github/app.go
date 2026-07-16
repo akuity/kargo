@@ -40,11 +40,6 @@ const (
 	tokenCacheExpiryMargin = 5 * time.Minute
 
 	tokenValidationRequestTimeout = 10 * time.Second
-
-	// retryKeySuffix is appended to a token's singleflight key when retrying a
-	// mint whose winner's context was canceled, so that all callers recovering
-	// from that shared failure coalesce again instead of racing.
-	retryKeySuffix = ":retry"
 )
 
 var base64Regex = regexp.MustCompile(`^[a-zA-Z0-9+/]*={0,2}$`)
@@ -71,6 +66,12 @@ type AppCredentialProvider struct {
 	// minted installation access token. This is set as a field so that it can be overridden in
 	// tests to avoid long waits.
 	validationBackoff []time.Duration
+
+	// mintTimeoutBuffer is added to the sum of validationBackoff when computing the maximum time to
+	// wait for a token to be minted and validated. It accounts for network round-trips that are not
+	// captured by the backoff schedule. This is set as a field so that it can be overridden in tests
+	// to avoid long waits.
+	mintTimeoutBuffer time.Duration
 
 	getAccessTokenFn func(
 		appOrClientID string,
@@ -104,6 +105,10 @@ func NewAppCredentialProvider() credentials.Provider {
 			10 * time.Second,
 			30 * time.Second,
 		},
+		// This is set to 10 seconds to account for the sum of the durations + accounting for any
+		// slow network round-trips. This is moderately generous because it is used only as a
+		// fail-safe
+		mintTimeoutBuffer: 10 * time.Second,
 	}
 	p.getAccessTokenFn = p.getAccessToken
 	p.validateAccessTokenFn = p.validateAccessToken
@@ -209,7 +214,24 @@ func (p *AppCredentialProvider) getUsernameAndPassword(
 	// they miss the cache in unison when that entry expires and, without coordination, would each
 	// mint their own token. Coalescing concurrent mints for the same cache key avoids that
 	// thundering herd.
-	accessToken, err, _ := p.mintGroup.Do(cacheKey, func() (any, error) {
+	var accessToken any
+	var err error
+
+	// maxWait bounds how long the mint may run. Because the mint executes under an orphaned context
+	// (see mintAndCacheToken) rather than any caller's context, this is the only thing bounding its
+	// duration. It is the sum of the validation backoff schedule plus a buffer for network
+	// round-trips.
+	maxWait := p.mintTimeoutBuffer
+	for _, d := range p.validationBackoff {
+		maxWait += d
+	}
+
+	// NOTE(thomastaylor312): Right now if there is a single error that isn't a context error, it
+	// will fail all of the other requests as well. This _could_ end up biting us if we have a
+	// transient error. If that ever becomes the case, we can add an OR to this that uses the
+	// `shared` return value from the singleflight `DoChan` channel and then re-enqueue here as
+	// well, but for now we'll let real errors fall through to everyone.
+	ch := p.mintGroup.DoChan(cacheKey, func() (any, error) {
 		return p.mintAndCacheToken(
 			ctx,
 			appOrClientID,
@@ -217,42 +239,22 @@ func (p *AppCredentialProvider) getUsernameAndPassword(
 			encodedPrivateKey,
 			repoURL,
 			cacheKey,
+			maxWait,
 		)
 	})
-	// NOTE(thomastaylor312): This is to handle the edge case where the context of the first minting
-	// operation to fire is canceled or timed out, but this context is not. In that case, we immediately
-	// re-enqueue a request to mint a new token. Otherwise, if a whole bunch of running promotions
-	// use the same credentials and the first one to fire is canceled, all of the others will be
-	// canceled as well, which is not what we want. This is best effort to avoid the issue, but it
-	// isn't perfect. It only handles _one_ canceled operation, but is better than nothing for now.
-	//
-	// The retry deliberately runs under a suffixed key rather than Forget + reuse of the primary
-	// key. Forget detaches whatever call is currently registered for the key, so with several
-	// waiters recovering from the same canceled flight, each Forget could orphan a replacement
-	// flight another waiter had already started.
-	//
-	// Right now if there is a single error that isn't a context error, it will fail all of the
-	// other requests as well. This _could_ end up biting us if we have a transient error. If that
-	// ever becomes the case, we can add an OR to this that uses the `shared` return value from the
-	// singleflight `Do` call and then re-enqueue here as well, but for now we'll let real errors
-	// fall through to everyone.
-	if err != nil &&
-		(errors.Is(err, context.Canceled) || errors.Is(err, context.DeadlineExceeded)) &&
-		ctx.Err() == nil {
-		accessToken, err, _ = p.mintGroup.Do(cacheKey+retryKeySuffix, func() (any, error) {
-			return p.mintAndCacheToken(
-				ctx,
-				appOrClientID,
-				installationID,
-				encodedPrivateKey,
-				repoURL,
-				cacheKey,
-			)
-		})
+	select {
+	case <-ctx.Done():
+		// See the comment in mintAndCacheToken for why we don't cancel the minting process here.
+		return nil, fmt.Errorf(
+			"mint token process interrupted, cache refresh will continue in the background: %w",
+			ctx.Err(),
+		)
+	case result := <-ch:
+		accessToken, err = result.Val, result.Err
 	}
-	// At this point if we're checking an error, we've now already retried
+
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("error minting installation access token: %w", err)
 	}
 
 	return &credentials.Credentials{
@@ -272,15 +274,22 @@ func (p *AppCredentialProvider) mintAndCacheToken(
 	encodedPrivateKey string,
 	repoURL string,
 	cacheKey string,
+	maxWait time.Duration,
 ) (string, error) {
 	logger := logging.LoggerFromContext(ctx)
 
-	// A concurrent call may have minted and cached a token between this
-	// call's cache miss and its turn in the singleflight group.
-	if entry, exists := p.tokenCache.Get(cacheKey); exists {
-		logger.Debug("installation access token cached by concurrent call")
-		return entry.(string), nil // nolint: forcetypeassert
-	}
+	// NOTE(thomastaylor312): We use a separate, orphaned context for running this function so that
+	// we can control timeout for the entire operation here. This function is only called from
+	// within a singleflight group, and if we have the "winner" of the first goroutine to execute
+	// this function get canceled, it cancels it for everyone. Initially, I had plumbed through
+	// handling for this, but it was a bunch of logic that, ultimately, is unnecessary. Even if all
+	// callers cancel, (essentially orphaning the function from an "owning" goroutine entirely), we
+	// still want to finish the work of minting and caching the token so that future callers can get
+	// it from the cache. So, we just use a separate context here that is not tied to any caller's
+	// context. We _do_, reattach the current logger so we have all its current context (and also
+	// helps us trace back where it was called from if needed)
+	orphanedCtx, cancel := context.WithTimeout(logging.ContextWithLogger(context.Background(), logger), maxWait)
+	defer cancel()
 
 	token, err := p.getAccessTokenFn(
 		appOrClientID,
@@ -300,7 +309,7 @@ func (p *AppCredentialProvider) mintAndCacheToken(
 	// difficult-to-diagnose "repository not found" errors. Waiting until the
 	// token demonstrably works before releasing it to the caller prevents
 	// this.
-	if err = p.waitForTokenUsable(ctx, token.AccessToken, repoURL); err != nil {
+	if err = p.waitForTokenUsable(orphanedCtx, token.AccessToken, repoURL); err != nil {
 		return "", err
 	}
 
@@ -469,11 +478,10 @@ func (p *AppCredentialProvider) tokenCacheKey(
 	return fmt.Sprintf(
 		"%x",
 		sha256.Sum256(
-			[]byte(
-				fmt.Sprintf(
-					"%s:%d:%s:%s",
-					appOrClientID, installationID, encodedPrivateKey, repoURL,
-				),
+			fmt.Appendf(
+				nil,
+				"%s:%d:%s:%s",
+				appOrClientID, installationID, encodedPrivateKey, repoURL,
 			),
 		),
 	)
