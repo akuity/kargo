@@ -297,7 +297,7 @@ codegen-openapi-client-v2: install-jq
 		--git-user-id akuity --git-repo-id kargo \
 		--type-mappings 'object=interface{}' \
 		--additional-properties=packageName=generatedv2,withGoMod=false,generateInterfaces=false,enumClassPrefix=true \
-		--global-property apiTests=false,modelTests=false \
+		--global-property apiTests=false,modelTests=false,apiDocs=false,modelDocs=false \
 		--skip-validate-spec
 	rm -f swagger-v2-client-input.json
 	# -i.bak (rather than -i '') is portable across BSD sed (macOS) and GNU sed
