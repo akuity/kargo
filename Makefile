@@ -6,6 +6,7 @@ EXTENDED_PATH ?= $(CURDIR)/hack/bin:$(PATH)
 ARGO_CD_CHART_VERSION		:= 9.4.3
 ARGO_ROLLOUTS_CHART_VERSION := 2.40.6
 CERT_MANAGER_CHART_VERSION 	:= 1.19.3
+OPENAPI_GENERATOR_VERSION 	:= 7.14.0
 
 BUF_LINT_ERROR_FORMAT	?= text
 GO_LINT_EXTRA_FLAGS 	?= --output.text.print-issued-lines --output.text.colors
@@ -255,7 +256,7 @@ build-cli-with-ui: build-ui build-cli
 ################################################################################
 
 .PHONY: codegen
-codegen: codegen-openapi codegen-proto codegen-controller codegen-schema-to-go codegen-ui codegen-docs
+codegen: codegen-openapi codegen-openapi-client-v2 codegen-proto codegen-controller codegen-schema-to-go codegen-ui codegen-docs
 
 .PHONY: codegen-openapi
 codegen-openapi: install-jq
@@ -281,6 +282,30 @@ codegen-openapi: install-jq
 		--skip-validation
 	pnpm --dir=ui install --dev
 	pnpm --dir=ui run generate:api
+
+.PHONY: codegen-openapi-client-v2
+codegen-openapi-client-v2: install-jq
+	hack/codegen/preprocess-swagger-for-go-client-v2.sh swagger.json swagger-v2-client-input.json
+	find pkg/client/generatedv2 -mindepth 1 ! -name go.mod ! -name go.sum -exec rm -rf {} +
+	mkdir -p pkg/client/generatedv2
+	$(CONTAINER_RUNTIME) run --rm \
+		-v $(CURDIR):/local \
+		openapitools/openapi-generator-cli:v$(OPENAPI_GENERATOR_VERSION) generate \
+		-i /local/swagger-v2-client-input.json \
+		-g go \
+		-o /local/pkg/client/generatedv2 \
+		--git-user-id akuity --git-repo-id kargo \
+		--type-mappings 'object=interface{}' \
+		--additional-properties=packageName=generatedv2,withGoMod=false,generateInterfaces=false,enumClassPrefix=true \
+		--global-property apiTests=false,modelTests=false \
+		--skip-validate-spec
+	rm -f swagger-v2-client-input.json
+	# -i.bak (rather than -i '') is portable across BSD sed (macOS) and GNU sed
+	# (Linux, e.g. hack-codegen's container).
+	LC_ALL=C find pkg/client/generatedv2 -name 'model_*.go' \
+		-exec sed -i.bak 's/return interface{}{}, false/return nil, false/g' {} +
+	find pkg/client/generatedv2 -name 'model_*.go.bak' -delete
+	cd pkg/client/generatedv2 && go mod tidy && go build ./...
 
 .PHONY: codegen-proto
 codegen-proto: install-protoc

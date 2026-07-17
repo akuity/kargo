@@ -5,6 +5,7 @@ go 1.26.0
 replace (
 	github.com/akuity/kargo/api => ./api
 	github.com/akuity/kargo/pkg/client/generated => ./pkg/client/generated
+	github.com/akuity/kargo/pkg/client/generatedv2 => ./pkg/client/generatedv2
 
 	// Hard-pin the codegen Go tools (see the `tool` block below). A newer
 	// code-generator or controller-tools introduces a known breaking change in
