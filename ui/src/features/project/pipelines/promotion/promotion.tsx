@@ -1,7 +1,18 @@
 import { faRefresh, faStopCircle, faUndo } from '@fortawesome/free-solid-svg-icons';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
 import { useMutation } from '@tanstack/react-query';
-import { Button, Descriptions, DescriptionsProps, Drawer, Flex, message, Modal, Tabs } from 'antd';
+import {
+  Alert,
+  Button,
+  Descriptions,
+  DescriptionsProps,
+  Drawer,
+  Empty,
+  Flex,
+  message,
+  Modal,
+  Tabs
+} from 'antd';
 import { formatDistance } from 'date-fns';
 import { useMemo } from 'react';
 import { generatePath, useNavigate } from 'react-router-dom';
@@ -267,7 +278,7 @@ const Content = (props: { promotion: TPromotion; yaml: string }) => {
 };
 
 export const Promotion = (props: PromotionProps) => {
-  const getPromotionQuery = useGetPromotion(props.project, props.promotionId);
+  const getPromotionQuery = useGetPromotion(props.project, 'test');
 
   useWatchPromotion(props.project, props.promotionId);
 
@@ -285,9 +296,16 @@ export const Promotion = (props: PromotionProps) => {
       title={`Promotion - ${props.promotionId}`}
     >
       {getPromotionQuery.isLoading && <LoadingState />}
-      {!getPromotionQuery.isLoading && (
-        <Content promotion={getPromotionQuery.data?.data as TPromotion} yaml={rawPromotionYaml} />
+      {!getPromotionQuery.isLoading && getPromotionQuery.data?.data && (
+        <Content promotion={getPromotionQuery.data.data} yaml={rawPromotionYaml} />
       )}
+      {!getPromotionQuery.isLoading &&
+        !getPromotionQuery.data?.data &&
+        (getPromotionQuery.isError ? (
+          <Alert type='error' message='Failed to load promotion' />
+        ) : (
+          <Empty description='Promotion not found' />
+        ))}
     </Drawer>
   );
 };

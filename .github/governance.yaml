@@ -1,5 +1,6 @@
 # Users with these relationships to the events are counted as maintainers.
 maintainerAssociations:
+- COLLABORATOR
 - MEMBER
 - OWNER
 
