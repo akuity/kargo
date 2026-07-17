@@ -13,3 +13,4 @@ internal/server/ui/
 .DS_Store
 docs/static/swagger.json
 /swagger-v2-client-input.json
+docs/superpowers
