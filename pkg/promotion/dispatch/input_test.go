@@ -173,7 +173,7 @@ func TestBuildData(t *testing.T) {
 			},
 		},
 	}
-	exclusions := []kargoapi.PromotionExclusion{{
+	freezes := []kargoapi.PromotionFreeze{{
 		Name:          "holiday",
 		Start:         metav1.Date(2026, 12, 20, 0, 0, 0, 0, time.UTC),
 		End:           metav1.Date(2027, 1, 2, 0, 0, 0, 0, time.UTC),
@@ -182,7 +182,7 @@ func TestBuildData(t *testing.T) {
 	}}
 	dispatched := time.Date(2026, 7, 15, 14, 40, 0, 0, time.UTC)
 
-	data, err := BuildData(projectSpec, exclusions, stage, nil, []time.Time{dispatched})
+	data, err := BuildData(projectSpec, freezes, stage, nil, []time.Time{dispatched})
 	require.NoError(t, err)
 
 	// Only the window whose selector matches this Stage is projected.
@@ -207,7 +207,7 @@ func TestBuildData(t *testing.T) {
 		"end":           "2027-01-02T00:00:00Z",
 		"scope":         "no-forward",
 		"argocdServers": []any{"https://prod.example.com"},
-	}}, data["exclusions"])
+	}}, data["freezes"])
 
 	require.Equal(t, defaultScopes, data["scopes"])
 }
@@ -218,7 +218,7 @@ func TestBuildDataNilPolicy(t *testing.T) {
 	data, err := BuildData(nil, nil, stage, nil, nil)
 	require.NoError(t, err)
 	require.Empty(t, data["windows"])
-	require.Empty(t, data["exclusions"])
+	require.Empty(t, data["freezes"])
 	require.Empty(t, data["rateLimit"])
 }
 
@@ -233,8 +233,8 @@ func TestBuildDataProjectSelector(t *testing.T) {
 			Labels: map[string]string{"compliance": "pci", "env": "prod"},
 		},
 	}
-	exclusion := func(selector *metav1.LabelSelector) []kargoapi.PromotionExclusion {
-		return []kargoapi.PromotionExclusion{{
+	freeze := func(selector *metav1.LabelSelector) []kargoapi.PromotionFreeze {
+		return []kargoapi.PromotionFreeze{{
 			Name:            "freeze",
 			Start:           metav1.Date(2026, 12, 20, 0, 0, 0, 0, time.UTC),
 			End:             metav1.Date(2027, 1, 2, 0, 0, 0, 0, time.UTC),
@@ -242,10 +242,10 @@ func TestBuildDataProjectSelector(t *testing.T) {
 			ProjectSelector: selector,
 		}}
 	}
-	// names returns the "name" of each projected exclusion.
+	// names returns the "name" of each projected freeze.
 	names := func(t *testing.T, data map[string]any) []string {
 		t.Helper()
-		docs, ok := data["exclusions"].([]any)
+		docs, ok := data["freezes"].([]any)
 		require.True(t, ok)
 		out := make([]string, len(docs))
 		for i, d := range docs {
@@ -330,7 +330,7 @@ func TestBuildDataProjectSelector(t *testing.T) {
 	for _, testCase := range testCases {
 		t.Run(testCase.name, func(t *testing.T) {
 			t.Parallel()
-			data, err := BuildData(nil, exclusion(testCase.selector), stage, testCase.project, nil)
+			data, err := BuildData(nil, freeze(testCase.selector), stage, testCase.project, nil)
 			testCase.assert(t, data, err)
 		})
 	}

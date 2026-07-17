@@ -50,15 +50,15 @@ type ClusterConfigSpec struct {
 	//
 	// +optional
 	StageLinks []DeepLink `json:"stageLinks,omitempty" protobuf:"bytes,4,rep,name=stageLinks"`
-	// PromotionExclusions describes system-wide periods of time during which
+	// PromotionFreezes describes system-wide periods of time during which
 	// promotion dispatch is restricted across all Projects. Promotions held
-	// by an exclusion remain Pending and are dispatched automatically once
-	// the exclusion ends.
+	// by a freeze remain Pending and are dispatched automatically once
+	// the freeze ends.
 	//
 	// +optional
 	// +listType=map
 	// +listMapKey=name
-	PromotionExclusions []PromotionExclusion `json:"promotionExclusions,omitempty" protobuf:"bytes,5,rep,name=promotionExclusions"`
+	PromotionFreezes []PromotionFreeze `json:"promotionFreezes,omitempty" protobuf:"bytes,5,rep,name=promotionFreezes"`
 	// CustomPolicy is an optional inline Rego source that composes into --
 	// never replaces -- the built-in default dispatch policy, applied to
 	// every Project in the cluster. It contains only rules: the package
@@ -69,25 +69,25 @@ type ClusterConfigSpec struct {
 	//   - `violation`: a set of `{"rule": ..., "msg": ..., "requeue": ...}`
 	//     objects unioned with the standard blocks' violations. A numeric
 	//     `requeue` (seconds) participates in the decision's requeue hint.
-	//   - `exclusions_bypass(e)`: a predicate consulted for each exclusion
+	//   - `freeze_bypass(f)`: a predicate consulted for each freeze
 	//     that would otherwise hold a promotion; it defaults to false.
 	//
 	// +optional
 	CustomPolicy string `json:"customPolicy,omitempty" protobuf:"bytes,6,opt,name=customPolicy"`
 }
 
-// PromotionExclusion describes an absolute period of time during which
+// PromotionFreeze describes an absolute period of time during which
 // promotion dispatch is restricted.
-type PromotionExclusion struct {
-	// Name is a unique identifier for this exclusion.
+type PromotionFreeze struct {
+	// Name is a unique identifier for this freeze.
 	//
 	// +kubebuilder:validation:MinLength=1
 	Name string `json:"name" protobuf:"bytes,1,opt,name=name"`
-	// Start is the time at which the exclusion begins.
+	// Start is the time at which the freeze begins.
 	Start metav1.Time `json:"start" protobuf:"bytes,2,opt,name=start"`
-	// End is the time at which the exclusion ends.
+	// End is the time at which the freeze ends.
 	End metav1.Time `json:"end" protobuf:"bytes,3,opt,name=end"`
-	// Scope names the set of promotion classes frozen by this exclusion:
+	// Scope names the set of promotion classes frozen by this freeze:
 	//
 	//   - no-promotions: freezes all promotions.
 	//   - no-forward: freezes forward promotions (automatic and manual);
@@ -96,16 +96,16 @@ type PromotionExclusion struct {
 	//
 	// +kubebuilder:validation:Enum=no-promotions;no-forward;no-auto
 	Scope string `json:"scope" protobuf:"bytes,4,opt,name=scope"`
-	// ArgoCDServers optionally narrows this exclusion to Stages whose
+	// ArgoCDServers optionally narrows this freeze to Stages whose
 	// referenced Argo CD Applications target one of these destination server
-	// URLs or names. When empty, the exclusion applies to all Stages. Note
+	// URLs or names. When empty, the freeze applies to all Stages. Note
 	// that if the Argo CD integration is disabled, no Stage references any
-	// Application and a server-scoped exclusion never applies.
+	// Application and a server-scoped freeze never applies.
 	//
 	// +optional
 	ArgoCDServers []string `json:"argocdServers,omitempty" protobuf:"bytes,5,rep,name=argocdServers"`
-	// ProjectSelector optionally narrows this exclusion to Projects whose
-	// labels match the selector. When nil, the exclusion applies to all
+	// ProjectSelector optionally narrows this freeze to Projects whose
+	// labels match the selector. When nil, the freeze applies to all
 	// Projects.
 	//
 	// +optional

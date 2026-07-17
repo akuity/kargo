@@ -1952,7 +1952,7 @@ func TestRegularStageReconciler_syncPromotions(t *testing.T) {
 			},
 		},
 		{
-			name: "dispatch gate: active exclusion holds pending promotion",
+			name: "dispatch gate: active freeze holds pending promotion",
 			stage: &kargoapi.Stage{
 				ObjectMeta: metav1.ObjectMeta{
 					Namespace: "fake-project",
@@ -1976,7 +1976,7 @@ func TestRegularStageReconciler_syncPromotions(t *testing.T) {
 				&kargoapi.ClusterConfig{
 					ObjectMeta: metav1.ObjectMeta{Name: "cluster"},
 					Spec: kargoapi.ClusterConfigSpec{
-						PromotionExclusions: []kargoapi.PromotionExclusion{{
+						PromotionFreezes: []kargoapi.PromotionFreeze{{
 							Name:  "test-freeze",
 							Start: metav1.NewTime(time.Now().Add(-time.Hour)),
 							End:   metav1.NewTime(time.Now().Add(time.Hour)),
@@ -1999,7 +1999,7 @@ func TestRegularStageReconciler_syncPromotions(t *testing.T) {
 			},
 		},
 		{
-			name: "dispatch gate: rollback passes through no-forward exclusion",
+			name: "dispatch gate: rollback passes through no-forward freeze",
 			stage: &kargoapi.Stage{
 				ObjectMeta: metav1.ObjectMeta{
 					Namespace: "fake-project",
@@ -2042,7 +2042,7 @@ func TestRegularStageReconciler_syncPromotions(t *testing.T) {
 				&kargoapi.ClusterConfig{
 					ObjectMeta: metav1.ObjectMeta{Name: "cluster"},
 					Spec: kargoapi.ClusterConfigSpec{
-						PromotionExclusions: []kargoapi.PromotionExclusion{{
+						PromotionFreezes: []kargoapi.PromotionFreeze{{
 							Name:  "forward-freeze",
 							Start: metav1.NewTime(time.Now().Add(-time.Hour)),
 							End:   metav1.NewTime(time.Now().Add(time.Hour)),

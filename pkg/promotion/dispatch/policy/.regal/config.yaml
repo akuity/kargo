@@ -7,16 +7,16 @@ rules:
       # Extension-point predicates: OPA requires default-function arguments
       # to be wildcards, and the shipped modules define only the default
       # (custom policies supply the real bodies).
-      except-function-name-pattern: ^exclusions_bypass$
+      except-function-name-pattern: ^freeze_bypass$
   imports:
     unresolved-reference:
       # These documents are supplied at evaluation time: the data documents
       # by the engine (see ../schemas), the violation sets by optional
-      # custom policy modules (the exclusions_bypass functions, by
+      # custom policy modules (the freeze_bypass functions, by
       # contrast, have shipped defaults and resolve statically).
       except-paths:
       - data.windows
-      - data.exclusions
+      - data.freezes
       - data.scopes
       - data.rateLimit
       - data.kargo.project.violation
@@ -31,6 +31,7 @@ rules:
       - walk
       - kargo.rrule_active
       - kargo.rrule_next
+      - kargo.rrule_active_end
 capabilities:
   from:
     engine: opa
@@ -54,6 +55,17 @@ capabilities:
         args:
         - type: string # recurrence (RFC 5545 RRULE)
         - type: string # start "HH:MM"
+        - type: string # location (IANA time zone; "" = UTC)
+        - type: string # now (RFC3339)
+        result:
+          type: string
+    - name: kargo.rrule_active_end
+      decl:
+        type: function
+        args:
+        - type: string # recurrence (RFC 5545 RRULE)
+        - type: string # start "HH:MM"
+        - type: string # end "HH:MM"
         - type: string # location (IANA time zone; "" = UTC)
         - type: string # now (RFC3339)
         result:

@@ -20,7 +20,7 @@ is_forward if input.promotion.class in {"auto-forward", "manual-forward"}
 # tolerated. The building block for hotfix semantics, which are otherwise
 # a custom-policy concern -- e.g. a cluster policy might define:
 #
-#	exclusions_bypass(e) if is_hotfix
+#	freeze_bypass(f) if is_hotfix
 #
 #	is_hotfix if {
 #		count(shared_images) > 0

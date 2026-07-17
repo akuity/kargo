@@ -17,7 +17,7 @@
       "description": "Spec describes the configuration of a cluster.",
       "properties": {
         "customPolicy": {
-          "description": "CustomPolicy is an optional inline Rego source that composes into --\nnever replaces -- the built-in default dispatch policy, applied to\nevery Project in the cluster. It contains only rules: the package\ndeclaration (kargo.cluster) and the standard library imports are\nprepended automatically. Two kinds of rules are gathered by the\ndefault policy:\n\n  - `violation`: a set of `{\"rule\": ..., \"msg\": ..., \"requeue\": ...}`\n    objects unioned with the standard blocks' violations. A numeric\n    `requeue` (seconds) participates in the decision's requeue hint.\n  - `exclusions_bypass(e)`: a predicate consulted for each exclusion\n    that would otherwise hold a promotion; it defaults to false.",
+          "description": "CustomPolicy is an optional inline Rego source that composes into --\nnever replaces -- the built-in default dispatch policy, applied to\nevery Project in the cluster. It contains only rules: the package\ndeclaration (kargo.cluster) and the standard library imports are\nprepended automatically. Two kinds of rules are gathered by the\ndefault policy:\n\n  - `violation`: a set of `{\"rule\": ..., \"msg\": ..., \"requeue\": ...}`\n    objects unioned with the standard blocks' violations. A numeric\n    `requeue` (seconds) participates in the decision's requeue hint.\n  - `freeze_bypass(f)`: a predicate consulted for each freeze\n    that would otherwise hold a promotion; it defaults to false.",
           "type": "string"
         },
         "freightLinks": {
@@ -85,30 +85,30 @@
           ],
           "type": "object"
         },
-        "promotionExclusions": {
-          "description": "PromotionExclusions describes system-wide periods of time during which\npromotion dispatch is restricted across all Projects. Promotions held\nby an exclusion remain Pending and are dispatched automatically once\nthe exclusion ends.",
+        "promotionFreezes": {
+          "description": "PromotionFreezes describes system-wide periods of time during which\npromotion dispatch is restricted across all Projects. Promotions held\nby a freeze remain Pending and are dispatched automatically once\nthe freeze ends.",
           "items": {
-            "description": "PromotionExclusion describes an absolute period of time during which\npromotion dispatch is restricted.",
+            "description": "PromotionFreeze describes an absolute period of time during which\npromotion dispatch is restricted.",
             "properties": {
               "argocdServers": {
-                "description": "ArgoCDServers optionally narrows this exclusion to Stages whose\nreferenced Argo CD Applications target one of these destination server\nURLs or names. When empty, the exclusion applies to all Stages. Note\nthat if the Argo CD integration is disabled, no Stage references any\nApplication and a server-scoped exclusion never applies.",
+                "description": "ArgoCDServers optionally narrows this freeze to Stages whose\nreferenced Argo CD Applications target one of these destination server\nURLs or names. When empty, the freeze applies to all Stages. Note\nthat if the Argo CD integration is disabled, no Stage references any\nApplication and a server-scoped freeze never applies.",
                 "items": {
                   "type": "string"
                 },
                 "type": "array"
               },
               "end": {
-                "description": "End is the time at which the exclusion ends.",
+                "description": "End is the time at which the freeze ends.",
                 "format": "date-time",
                 "type": "string"
               },
               "name": {
-                "description": "Name is a unique identifier for this exclusion.",
+                "description": "Name is a unique identifier for this freeze.",
                 "minLength": 1,
                 "type": "string"
               },
               "projectSelector": {
-                "description": "ProjectSelector optionally narrows this exclusion to Projects whose\nlabels match the selector. When nil, the exclusion applies to all\nProjects.",
+                "description": "ProjectSelector optionally narrows this freeze to Projects whose\nlabels match the selector. When nil, the freeze applies to all\nProjects.",
                 "properties": {
                   "matchExpressions": {
                     "description": "matchExpressions is a list of label selector requirements. The requirements are ANDed.",
@@ -153,7 +153,7 @@
                 "x-kubernetes-map-type": "atomic"
               },
               "scope": {
-                "description": "Scope names the set of promotion classes frozen by this exclusion:\n\n  - no-promotions: freezes all promotions.\n  - no-forward: freezes forward promotions (automatic and manual);\n    rollbacks are permitted.\n  - no-auto: freezes automatic promotions only.",
+                "description": "Scope names the set of promotion classes frozen by this freeze:\n\n  - no-promotions: freezes all promotions.\n  - no-forward: freezes forward promotions (automatic and manual);\n    rollbacks are permitted.\n  - no-auto: freezes automatic promotions only.",
                 "enum": [
                   "no-promotions",
                   "no-forward",
@@ -162,7 +162,7 @@
                 "type": "string"
               },
               "start": {
-                "description": "Start is the time at which the exclusion begins.",
+                "description": "Start is the time at which the freeze begins.",
                 "format": "date-time",
                 "type": "string"
               }

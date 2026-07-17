@@ -98,14 +98,14 @@ func (r *RegularStageReconciler) gateDispatch(
 	if projectCfg != nil {
 		projectSpec = &projectCfg.Spec
 	}
-	var exclusions []kargoapi.PromotionExclusion
+	var freezes []kargoapi.PromotionFreeze
 	var clusterCustom string
 	if clusterCfg != nil {
-		exclusions = clusterCfg.Spec.PromotionExclusions
+		freezes = clusterCfg.Spec.PromotionFreezes
 		clusterCustom = clusterCfg.Spec.CustomPolicy
 	}
 	var projectCustom string
-	governed := len(exclusions) > 0 || clusterCustom != ""
+	governed := len(freezes) > 0 || clusterCustom != ""
 	if projectSpec != nil {
 		projectCustom = projectSpec.CustomPolicy
 		governed = governed ||
@@ -130,20 +130,20 @@ func (r *RegularStageReconciler) gateDispatch(
 	}
 
 	// Project metadata gives policies a lightweight way to be data-driven
-	// (including project-scoped exclusions); tolerate its absence.
+	// (including project-scoped freezes); tolerate its absence.
 	project, err := api.GetProject(ctx, r.client, stage.Namespace)
 	if err != nil {
 		logger.Error(err, "error getting Project for dispatch policy input")
 	}
 
-	data, err := dispatch.BuildData(projectSpec, exclusions, stage, project, dispatches)
+	data, err := dispatch.BuildData(projectSpec, freezes, stage, project, dispatches)
 	if err != nil {
 		return nil, 0, "", fmt.Errorf("error building dispatch policy data: %w", err)
 	}
 
 	// The Argo CD Applications this Stage is authorized to manage, for
-	// server-scoped exclusions. Empty when the Argo CD integration is
-	// disabled, in which case server-scoped exclusions never match.
+	// server-scoped freezes. Empty when the Argo CD integration is
+	// disabled, in which case server-scoped freezes never match.
 	var apps []argocdapi.Application
 	if r.argocdClient != nil {
 		appList := &argocdapi.ApplicationList{}

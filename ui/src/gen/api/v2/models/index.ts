@@ -146,7 +146,7 @@ export * from './promoteDownstream201';
 export * from './promoteDownstreamRequest';
 export * from './promoteToStageRequest';
 export * from './promotion';
-export * from './promotionExclusion';
+export * from './promotionFreeze';
 export * from './promotionList';
 export * from './promotionPolicy';
 export * from './promotionPolicySelector';

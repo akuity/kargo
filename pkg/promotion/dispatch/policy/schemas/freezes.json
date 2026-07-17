@@ -1,7 +1,7 @@
 {
   "$schema": "http://json-schema.org/draft-07/schema#",
-  "title": "data.exclusions",
-  "description": "System-wide promotion exclusions, from ClusterConfig spec.promotionExclusions.",
+  "title": "data.freezes",
+  "description": "System-wide promotion freezes, from ClusterConfig spec.promotionFreezes.",
   "type": "array",
   "items": {
     "type": "object",
@@ -15,7 +15,7 @@
       },
       "argocdServers": {
         "type": "array",
-        "description": "Argo CD destination servers (URL or name) the exclusion is narrowed to; empty applies everywhere.",
+        "description": "Argo CD destination servers (URL or name) the freeze is narrowed to; empty applies everywhere.",
         "items": {"type": "string"}
       }
     }

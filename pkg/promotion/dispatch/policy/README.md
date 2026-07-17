@@ -7,7 +7,7 @@ dispatched. Directory structure matches package layout:
 |---|---|---|
 | `kargo/dispatch/dispatch.rego` | `kargo.dispatch` | Unions all violations; derives the `decision` document the engine queries |
 | `kargo/lib/windows/windows.rego` | `kargo.lib.windows` | Holds forward promotions outside promotion windows |
-| `kargo/lib/exclusions/exclusions.rego` | `kargo.lib.exclusions` | Holds promotions during system-wide exclusions |
+| `kargo/lib/freezes/freezes.rego` | `kargo.lib.freezes` | Holds promotions during system-wide freezes |
 | `kargo/lib/ratelimit/ratelimit.rego` | `kargo.lib.ratelimit` | Rolling-window rate limit on automatic dispatch |
 | `kargo/lib/lib.rego` | `kargo.lib` | Building blocks for custom policies (`kargo.is_forward`, `kargo.is_semver_patch`) |
 | `kargo/project/project.rego` | `kargo.project` | Extension-point defaults for the project custom policy |
@@ -38,20 +38,20 @@ Both packages expose the same hook points, inert when unused:
 - `violation` — a set of `{rule, msg, requeue?}` objects, unioned with the
   standard blocks' violations. A numeric `requeue` (seconds) participates
   in the decision's requeue hint.
-- `exclusions_bypass(e)` — a predicate consulted by `kargo.lib.exclusions`
-  for each exclusion that would otherwise hold the promotion. The shipped
+- `freeze_bypass(f)` — a predicate consulted by `kargo.lib.freezes`
+  for each freeze that would otherwise hold the promotion. The shipped
   modules default it to `false`; a custom policy overrides it.
 
 The aliased import puts the `kargo.lib` building blocks one qualifier
 away: `kargo.is_forward`, `kargo.is_semver_patch(old, new)`.
 
 The canonical example — an operator-defined hotfix lane through every
-exclusion, typically a **cluster** custom policy. Hotfix semantics live in
+freeze, typically a **cluster** custom policy. Hotfix semantics live in
 the custom policy itself; the standard library supplies only the semver
 building block (`kargo.is_semver_patch`):
 
 ```rego
-exclusions_bypass(e) if is_hotfix
+freeze_bypass(f) if is_hotfix
 
 is_hotfix if {
 	count(shared_images) > 0
@@ -78,8 +78,8 @@ that compile-error line numbers are offset by the prepended header.
 - `input.json` — the per-Promotion input document (`input.promotion`,
   `input.freight`, `input.stage`, `input.project`, `input.applications`,
   `input.now`)
-- `windows.json`, `exclusions.json`, `scopes.json`, `ratelimit.json` — the
-  `data.windows`, `data.exclusions`, `data.scopes`, and `data.rateLimit`
+- `windows.json`, `freezes.json`, `scopes.json`, `ratelimit.json` — the
+  `data.windows`, `data.freezes`, `data.scopes`, and `data.rateLimit`
   documents
 
 Each schema is registered with the compiler as `schema.<basename>`. The
@@ -95,6 +95,7 @@ regal lint pkg/promotion/dispatch/policy
 ```
 
 `.regal/config.yaml` declares the custom built-ins (`kargo.rrule_active`,
-`kargo.rrule_next`). Note `opa check` requires a full capabilities file
+`kargo.rrule_next`, `kargo.rrule_active_end`). Note `opa check` requires a
+full capabilities file
 including these built-ins; the authoritative compile check is the engine
 itself (`go test ./pkg/promotion/dispatch/...`).

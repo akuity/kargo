@@ -12,7 +12,7 @@ The default policy is composed from standard, data-driven Rego blocks:
 | Block | Data source | Behavior |
 |---|---|---|
 | `kargo.lib.windows` | `ProjectConfig` `spec.promotionWindows` | Forward promotions to a governed Stage dispatch only inside a recurring (RRULE) window |
-| `kargo.lib.exclusions` | `ClusterConfig` `spec.promotionExclusions` | System-wide blackouts, scoped by promotion class (`no-promotions`, `no-forward`, `no-auto`) and optionally by Argo CD destination server |
+| `kargo.lib.freezes` | `ClusterConfig` `spec.promotionFreezes` | System-wide blackouts, scoped by promotion class (`no-promotions`, `no-forward`, `no-auto`) and optionally by Argo CD destination server |
 | `kargo.lib.ratelimit` | `ProjectConfig` `spec.rateLimits` | Rolling window: at most N automatic dispatches per trailing window |
 | `kargo.lib` | -- | Building blocks for custom policies (`kargo.is_forward`, `kargo.is_semver_patch`) |
 
@@ -22,8 +22,8 @@ the default policy with custom rules that **compose into** -- never
 replace -- it. A custom policy contains *only rules*: the package
 declaration and the standard library imports are prepended automatically,
 so pasting a single rule just works. The default policy gathers any
-`violation` a custom policy contributes, and the exclusions block consults
-its `exclusions_bypass(e)` predicate. See the schema/authoring reference in
+`violation` a custom policy contributes, and the freezes block consults
+its `freeze_bypass(f)` predicate. See the schema/authoring reference in
 `pkg/promotion/dispatch/policy/README.md`.
 
 This demo ships **one custom rule active from the start**: the operator's
@@ -144,7 +144,7 @@ PCI rule, composed into every project:
 apiVersion: kargo.akuity.io/v1alpha1
 kind: ClusterConfig
 spec:
-  promotionExclusions:               # inert until December
+  promotionFreezes:                  # inert until December
   - name: holiday-freeze
     start: "2026-12-20T00:00:00Z"
     end: "2027-01-02T00:00:00Z"
@@ -208,8 +208,8 @@ itself at the window boundary the policy reported.)
 
 ## Scenario 2 -- system-wide freeze; rollback passes through
 
-Activate a `no-forward` exclusion spanning now (merged in alongside any
-other exclusions, under its own field manager):
+Activate a `no-forward` freeze spanning now (merged in alongside any
+other freezes, under its own field manager):
 
 ```shell
 kubectl apply --server-side --field-manager=incident-freeze -f - <<EOF
@@ -218,7 +218,7 @@ kind: ClusterConfig
 metadata:
   name: cluster
 spec:
-  promotionExclusions:
+  promotionFreezes:
   - name: incident-freeze
     start: "2026-01-01T00:00:00Z"
     end: "2036-01-01T00:00:00Z"
@@ -256,7 +256,7 @@ To freeze *everything* (an incident-forensics freeze that even blocks
 rollbacks), use `scope: no-promotions`. To pause only automation while
 humans retain control, use `scope: no-auto` and promote manually.
 
-An exclusion can also be narrowed to Stages whose Argo CD Applications
+A freeze can also be narrowed to Stages whose Argo CD Applications
 target a particular destination server -- see Scenario 4.
 
 Lift the freeze before moving on -- re-apply as the same field manager
@@ -283,7 +283,7 @@ rate-limit message and dispatches on its own when the first ages out of the
 
 ## Scenario 4 -- cluster maintenance freezes only affected Stages
 
-An exclusion narrowed with `argocdServers` freezes only Stages whose
+A freeze narrowed with `argocdServers` freezes only Stages whose
 referenced Argo CD Applications target one of the named destination servers
 (by URL or name) -- the "this cluster is under maintenance" use case. The
 linkage is the `kargo.akuity.io/authorized-stage` annotation on the
@@ -304,7 +304,7 @@ kind: ClusterConfig
 metadata:
   name: cluster
 spec:
-  promotionExclusions:
+  promotionFreezes:
   - name: cluster-maintenance
     start: "2026-01-01T00:00:00Z"
     end: "2036-01-01T00:00:00Z"
@@ -318,7 +318,7 @@ A manual promotion to `prod` now parks (its Application targets the server
 under maintenance), while `test` and `uat` -- which have no Applications --
 promote normally. Because the manual promotion is `manual-forward`, the
 always-on PCI rule (Scenario 5) also applies, so give it a `change-ticket`
-annotation -- then the maintenance exclusion is the only thing left holding
+annotation -- then the maintenance freeze is the only thing left holding
 it. End the maintenance and the held promotion dispatches:
 
 ```shell
@@ -332,7 +332,7 @@ EOF
 
 This scenario requires the controller's Argo CD integration (enabled by
 default under Tilt); without it, `input.applications` is always empty and
-server-scoped exclusions never match.
+server-scoped freezes never match.
 
 ## Scenario 5 -- custom policy composition: the always-on PCI rule
 
@@ -409,7 +409,7 @@ done
 ```
 
 Now bring the holiday freeze into effect: edit `start`/`end` of the
-`holiday-freeze` exclusion in `40-clusterconfig.yaml` to bracket the
+`holiday-freeze` freeze in `40-clusterconfig.yaml` to bracket the
 present, and re-apply it (same command as Setup). Every forward promotion
 parks, as in Scenario 2.
 
@@ -421,8 +421,8 @@ more. It adds:
 - A **hotfix lane** through the holiday freeze: hotfix semantics defined
   *in the operator's own terms* -- every image shared with what the Stage
   last promoted is a semver patch-only increment
-  (`kargo.is_semver_patch`) -- overriding `exclusions_bypass(e)`. The
-  bypass names the `holiday-freeze` exclusion specifically: a *planned*
+  (`kargo.is_semver_patch`) -- overriding `freeze_bypass(f)`. The
+  bypass names the `holiday-freeze` freeze specifically: a *planned*
   freeze admits hotfixes, while an incident freeze like Scenario 2's would
   still hold everything. There is no hotfix concept in the standard
   library to fight with.
@@ -510,8 +510,8 @@ rule.
   contain rules only). Compile-error line numbers are offset by the
   prepended header.
 - The policy engine sees Argo CD Applications only when the controller's
-  Argo CD integration is enabled; without it, server-scoped exclusions never
-  match (unscoped exclusions still work).
+  Argo CD integration is enabled; without it, server-scoped freezes never
+  match (unscoped freezes still work).
 - `kubectl create`-ing a Promotion requires `spec.steps` inline (the webhook
   does not inflate them from the Stage's promotionTemplate).
 

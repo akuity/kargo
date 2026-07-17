@@ -7,7 +7,7 @@
  */
 import type { DeepLink } from './deepLink';
 import type { GitClientConfig } from './gitClientConfig';
-import type { PromotionExclusion } from './promotionExclusion';
+import type { PromotionFreeze } from './promotionFreeze';
 import type { WebhookReceiverConfig } from './webhookReceiverConfig';
 
 export interface ClusterConfigSpec {
@@ -21,7 +21,7 @@ default policy:
   - `violation`: a set of `{"rule": ..., "msg": ..., "requeue": ...}`
     objects unioned with the standard blocks' violations. A numeric
     `requeue` (seconds) participates in the decision's requeue hint.
-  - `exclusions_bypass(e)`: a predicate consulted for each exclusion
+  - `freeze_bypass(f)`: a predicate consulted for each freeze
     that would otherwise hold a promotion; it defaults to false.
 
 +optional */
@@ -38,15 +38,15 @@ values take precedence over any configuration provided at install time
 via the Helm chart.
 +optional */
   gitClient?: GitClientConfig;
-  /** PromotionExclusions describes system-wide periods of time during which
+  /** PromotionFreezes describes system-wide periods of time during which
 promotion dispatch is restricted across all Projects. Promotions held
-by an exclusion remain Pending and are dispatched automatically once
-the exclusion ends.
+by a freeze remain Pending and are dispatched automatically once
+the freeze ends.
 
 +optional
 +listType=map
 +listMapKey=name */
-  promotionExclusions?: PromotionExclusion[];
+  promotionFreezes?: PromotionFreeze[];
   /** StageLinks defines deep links shown when viewing any Stage resource
 across all projects in the cluster. Project-level StageLinks defined in
 ProjectConfig are shown in addition to these.

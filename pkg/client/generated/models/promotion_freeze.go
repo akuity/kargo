@@ -10,30 +10,30 @@ import (
 	"github.com/go-openapi/swag"
 )
 
-// PromotionExclusion promotion exclusion
+// PromotionFreeze promotion freeze
 //
-// swagger:model PromotionExclusion
-type PromotionExclusion struct {
+// swagger:model PromotionFreeze
+type PromotionFreeze struct {
 
-	// ArgoCDServers optionally narrows this exclusion to Stages whose
+	// ArgoCDServers optionally narrows this freeze to Stages whose
 	// referenced Argo CD Applications target one of these destination server
-	// URLs or names. When empty, the exclusion applies to all Stages. Note
+	// URLs or names. When empty, the freeze applies to all Stages. Note
 	// that if the Argo CD integration is disabled, no Stage references any
-	// Application and a server-scoped exclusion never applies.
+	// Application and a server-scoped freeze never applies.
 	//
 	// +optional
 	ArgocdServers []string `json:"argocdServers"`
 
-	// End is the time at which the exclusion ends.
+	// End is the time at which the freeze ends.
 	End string `json:"end,omitempty"`
 
-	// Name is a unique identifier for this exclusion.
+	// Name is a unique identifier for this freeze.
 	//
 	// +kubebuilder:validation:MinLength=1
 	Name string `json:"name,omitempty"`
 
-	// ProjectSelector optionally narrows this exclusion to Projects whose
-	// labels match the selector. When nil, the exclusion applies to all
+	// ProjectSelector optionally narrows this freeze to Projects whose
+	// labels match the selector. When nil, the freeze applies to all
 	// Projects.
 	//
 	// +optional
@@ -41,7 +41,7 @@ type PromotionExclusion struct {
 		V1LabelSelector
 	} `json:"projectSelector,omitempty"`
 
-	// Scope names the set of promotion classes frozen by this exclusion:
+	// Scope names the set of promotion classes frozen by this freeze:
 	//
 	//   - no-promotions: freezes all promotions.
 	//   - no-forward: freezes forward promotions (automatic and manual);
@@ -51,12 +51,12 @@ type PromotionExclusion struct {
 	// +kubebuilder:validation:Enum=no-promotions;no-forward;no-auto
 	Scope string `json:"scope,omitempty"`
 
-	// Start is the time at which the exclusion begins.
+	// Start is the time at which the freeze begins.
 	Start string `json:"start,omitempty"`
 }
 
-// Validate validates this promotion exclusion
-func (m *PromotionExclusion) Validate(formats strfmt.Registry) error {
+// Validate validates this promotion freeze
+func (m *PromotionFreeze) Validate(formats strfmt.Registry) error {
 	var res []error
 
 	if err := m.validateProjectSelector(formats); err != nil {
@@ -69,7 +69,7 @@ func (m *PromotionExclusion) Validate(formats strfmt.Registry) error {
 	return nil
 }
 
-func (m *PromotionExclusion) validateProjectSelector(formats strfmt.Registry) error {
+func (m *PromotionFreeze) validateProjectSelector(formats strfmt.Registry) error {
 	if swag.IsZero(m.ProjectSelector) { // not required
 		return nil
 	}
@@ -77,8 +77,8 @@ func (m *PromotionExclusion) validateProjectSelector(formats strfmt.Registry) er
 	return nil
 }
 
-// ContextValidate validate this promotion exclusion based on the context it is used
-func (m *PromotionExclusion) ContextValidate(ctx context.Context, formats strfmt.Registry) error {
+// ContextValidate validate this promotion freeze based on the context it is used
+func (m *PromotionFreeze) ContextValidate(ctx context.Context, formats strfmt.Registry) error {
 	var res []error
 
 	if err := m.contextValidateProjectSelector(ctx, formats); err != nil {
@@ -91,13 +91,13 @@ func (m *PromotionExclusion) ContextValidate(ctx context.Context, formats strfmt
 	return nil
 }
 
-func (m *PromotionExclusion) contextValidateProjectSelector(ctx context.Context, formats strfmt.Registry) error {
+func (m *PromotionFreeze) contextValidateProjectSelector(ctx context.Context, formats strfmt.Registry) error {
 
 	return nil
 }
 
 // MarshalBinary interface implementation
-func (m *PromotionExclusion) MarshalBinary() ([]byte, error) {
+func (m *PromotionFreeze) MarshalBinary() ([]byte, error) {
 	if m == nil {
 		return nil, nil
 	}
@@ -105,8 +105,8 @@ func (m *PromotionExclusion) MarshalBinary() ([]byte, error) {
 }
 
 // UnmarshalBinary interface implementation
-func (m *PromotionExclusion) UnmarshalBinary(b []byte) error {
-	var res PromotionExclusion
+func (m *PromotionFreeze) UnmarshalBinary(b []byte) error {
+	var res PromotionFreeze
 	if err := swag.ReadJSON(b, &res); err != nil {
 		return err
 	}

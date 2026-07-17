@@ -82,8 +82,8 @@ func TestDemoCustomPolicies(t *testing.T) {
 
 	now := time.Date(2026, 7, 15, 15, 0, 0, 0, time.UTC)
 
-	freeze := func(name string) []kargoapi.PromotionExclusion {
-		return []kargoapi.PromotionExclusion{{
+	freeze := func(name string) []kargoapi.PromotionFreeze {
+		return []kargoapi.PromotionFreeze{{
 			Name:  name,
 			Start: metav1.Time{Time: now.Add(-time.Hour)},
 			End:   metav1.Time{Time: now.Add(9 * time.Hour)},
@@ -145,7 +145,7 @@ func TestDemoCustomPolicies(t *testing.T) {
 		class         string
 		annotations   map[string]string
 		lastTag       string
-		exclusions    []kargoapi.PromotionExclusion
+		freezes       []kargoapi.PromotionFreeze
 		assert        func(*testing.T, *dispatch.Decision)
 	}{
 		// The always-on PCI rule (Scenario 5).
@@ -183,7 +183,7 @@ func TestDemoCustomPolicies(t *testing.T) {
 			class:         dispatch.ClassManualForward,
 			annotations:   ticketOnly,
 			lastTag:       "1.2.2",
-			exclusions:    freeze("holiday-freeze"),
+			freezes:       freeze("holiday-freeze"),
 			assert: func(t *testing.T, d *dispatch.Decision) {
 				require.True(t, d.Allow)
 			},
@@ -194,7 +194,7 @@ func TestDemoCustomPolicies(t *testing.T) {
 			class:         dispatch.ClassManualForward,
 			annotations:   ticketOnly,
 			lastTag:       "1.2.2",
-			exclusions:    freeze("incident-freeze"),
+			freezes:       freeze("incident-freeze"),
 			assert: func(t *testing.T, d *dispatch.Decision) {
 				require.False(t, d.Allow)
 				require.Contains(t, d.Message, "incident-freeze")
@@ -206,7 +206,7 @@ func TestDemoCustomPolicies(t *testing.T) {
 			class:         dispatch.ClassManualForward,
 			annotations:   ticketOnly,
 			lastTag:       "1.1.9",
-			exclusions:    freeze("holiday-freeze"),
+			freezes:       freeze("holiday-freeze"),
 			assert: func(t *testing.T, d *dispatch.Decision) {
 				require.False(t, d.Allow)
 				require.Contains(t, d.Message, "holiday-freeze")
@@ -248,7 +248,7 @@ func TestDemoCustomPolicies(t *testing.T) {
 				Name:      "prod",
 				Namespace: "policy-demo",
 			}}
-			data, err := dispatch.BuildData(nil, testCase.exclusions, stage, nil, nil)
+			data, err := dispatch.BuildData(nil, testCase.freezes, stage, nil, nil)
 			require.NoError(t, err)
 			decision, err := engine.Evaluate(
 				context.Background(),

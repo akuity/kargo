@@ -24,7 +24,7 @@ const (
 	ClassRollback = "rollback"
 )
 
-// Exclusion scopes and the promotion classes each freezes.
+// Freeze scopes and the promotion classes each freezes.
 var defaultScopes = map[string]any{
 	"no-promotions": []any{ClassAutoForward, ClassManualForward, ClassRollback},
 	"no-forward":    []any{ClassAutoForward, ClassManualForward},
@@ -84,10 +84,10 @@ func BuildInput(
 // BuildData assembles the policy data document for one Stage. projectSpec
 // and project may be nil. dispatches are the times at which the Stage's
 // recent promotions were dispatched (began Running), for rate limiting.
-// Exclusions whose ProjectSelector does not match the Project are omitted.
+// Freezes whose ProjectSelector does not match the Project are omitted.
 func BuildData(
 	projectSpec *kargoapi.ProjectConfigSpec,
-	exclusions []kargoapi.PromotionExclusion,
+	freezes []kargoapi.PromotionFreeze,
 	stage *kargoapi.Stage,
 	project *kargoapi.Project,
 	dispatches []time.Time,
@@ -131,32 +131,32 @@ func BuildData(
 			break // first matching rate limit wins
 		}
 	}
-	exclusionDocs := []any{}
-	for _, e := range exclusions {
-		matches, err := projectSelectorMatches(e.ProjectSelector, project)
+	freezeDocs := []any{}
+	for _, f := range freezes {
+		matches, err := projectSelectorMatches(f.ProjectSelector, project)
 		if err != nil {
-			return nil, fmt.Errorf("exclusion %q: %w", e.Name, err)
+			return nil, fmt.Errorf("freeze %q: %w", f.Name, err)
 		}
 		if !matches {
 			continue
 		}
-		servers := make([]any, len(e.ArgoCDServers))
-		for j, s := range e.ArgoCDServers {
+		servers := make([]any, len(f.ArgoCDServers))
+		for j, s := range f.ArgoCDServers {
 			servers[j] = s
 		}
-		exclusionDocs = append(exclusionDocs, map[string]any{
-			"name":          e.Name,
-			"start":         e.Start.UTC().Format(time.RFC3339),
-			"end":           e.End.UTC().Format(time.RFC3339),
-			"scope":         e.Scope,
+		freezeDocs = append(freezeDocs, map[string]any{
+			"name":          f.Name,
+			"start":         f.Start.UTC().Format(time.RFC3339),
+			"end":           f.End.UTC().Format(time.RFC3339),
+			"scope":         f.Scope,
 			"argocdServers": servers,
 		})
 	}
 	return map[string]any{
-		"windows":    windows,
-		"exclusions": exclusionDocs,
-		"scopes":     defaultScopes,
-		"rateLimit":  rateLimit,
+		"windows":   windows,
+		"freezes":   freezeDocs,
+		"scopes":    defaultScopes,
+		"rateLimit": rateLimit,
 	}, nil
 }
 

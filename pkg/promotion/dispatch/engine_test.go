@@ -13,11 +13,11 @@ import (
 const testNow = "2026-07-15T15:00:00Z"
 
 // hotfixBypassRules is the canonical custom-policy pattern, typically a
-// cluster (operator) policy: hotfixes bypass every exclusion. Hotfix
+// cluster (operator) policy: hotfixes bypass every freeze. Hotfix
 // semantics are defined in the custom policy itself; the stdlib supplies
 // only the semver building block. Rules only -- the engine prepends the
 // package and imports.
-const hotfixBypassRules = `exclusions_bypass(e) if is_hotfix
+const hotfixBypassRules = `freeze_bypass(f) if is_hotfix
 
 is_hotfix if {
 	count(shared_images) > 0
@@ -36,10 +36,10 @@ shared_images := [pair |
 
 func emptyData() map[string]any {
 	return map[string]any{
-		"windows":    []any{},
-		"exclusions": []any{},
-		"scopes":     defaultScopes,
-		"rateLimit":  map[string]any{},
+		"windows":   []any{},
+		"freezes":   []any{},
+		"scopes":    defaultScopes,
+		"rateLimit": map[string]any{},
 	}
 }
 
@@ -95,11 +95,11 @@ func TestEngineEvaluate(t *testing.T) {
 			},
 		},
 		{
-			name:  "active exclusion denies with requeue until its end",
+			name:  "active freeze denies with requeue until its end",
 			input: testInput(ClassAutoForward),
 			data: func() map[string]any {
 				data := emptyData()
-				data["exclusions"] = []any{map[string]any{
+				data["freezes"] = []any{map[string]any{
 					"name":          "holiday",
 					"start":         "2026-07-15T00:00:00Z",
 					"end":           "2026-07-16T00:00:00Z",
@@ -111,17 +111,17 @@ func TestEngineEvaluate(t *testing.T) {
 			assert: func(t *testing.T, d *Decision, err error) {
 				require.NoError(t, err)
 				require.False(t, d.Allow)
-				require.Contains(t, d.Message, `frozen by exclusion "holiday"`)
-				// 9 hours from testNow to the end of the exclusion.
+				require.Contains(t, d.Message, `frozen by freeze "holiday"`)
+				// 9 hours from testNow to the end of the freeze.
 				require.Equal(t, 9*time.Hour, d.RequeueAfter)
 			},
 		},
 		{
-			name:  "expired exclusion does not deny",
+			name:  "expired freeze does not deny",
 			input: testInput(ClassAutoForward),
 			data: func() map[string]any {
 				data := emptyData()
-				data["exclusions"] = []any{map[string]any{
+				data["freezes"] = []any{map[string]any{
 					"name":          "past",
 					"start":         "2026-07-01T00:00:00Z",
 					"end":           "2026-07-02T00:00:00Z",
@@ -136,11 +136,11 @@ func TestEngineEvaluate(t *testing.T) {
 			},
 		},
 		{
-			name:  "no-forward exclusion permits rollbacks",
+			name:  "no-forward freeze permits rollbacks",
 			input: testInput(ClassRollback),
 			data: func() map[string]any {
 				data := emptyData()
-				data["exclusions"] = []any{map[string]any{
+				data["freezes"] = []any{map[string]any{
 					"name":          "freeze",
 					"start":         "2026-07-15T00:00:00Z",
 					"end":           "2026-07-16T00:00:00Z",
@@ -155,11 +155,11 @@ func TestEngineEvaluate(t *testing.T) {
 			},
 		},
 		{
-			name:  "no-auto exclusion permits manual promotions",
+			name:  "no-auto freeze permits manual promotions",
 			input: testInput(ClassManualForward),
 			data: func() map[string]any {
 				data := emptyData()
-				data["exclusions"] = []any{map[string]any{
+				data["freezes"] = []any{map[string]any{
 					"name":          "auto-off",
 					"start":         "2026-07-15T00:00:00Z",
 					"end":           "2026-07-16T00:00:00Z",
@@ -174,7 +174,7 @@ func TestEngineEvaluate(t *testing.T) {
 			},
 		},
 		{
-			name: "server-scoped exclusion applies only to matching destinations",
+			name: "server-scoped freeze applies only to matching destinations",
 			input: func() map[string]any {
 				input := testInput(ClassAutoForward)
 				input["applications"] = []any{map[string]any{
@@ -189,7 +189,7 @@ func TestEngineEvaluate(t *testing.T) {
 			}(),
 			data: func() map[string]any {
 				data := emptyData()
-				data["exclusions"] = []any{map[string]any{
+				data["freezes"] = []any{map[string]any{
 					"name":          "server-freeze",
 					"start":         "2026-07-15T00:00:00Z",
 					"end":           "2026-07-16T00:00:00Z",
@@ -204,7 +204,7 @@ func TestEngineEvaluate(t *testing.T) {
 			},
 		},
 		{
-			name: "server-scoped exclusion denies matching destinations",
+			name: "server-scoped freeze denies matching destinations",
 			input: func() map[string]any {
 				input := testInput(ClassAutoForward)
 				input["applications"] = []any{map[string]any{
@@ -219,7 +219,7 @@ func TestEngineEvaluate(t *testing.T) {
 			}(),
 			data: func() map[string]any {
 				data := emptyData()
-				data["exclusions"] = []any{map[string]any{
+				data["freezes"] = []any{map[string]any{
 					"name":          "server-freeze",
 					"start":         "2026-07-15T00:00:00Z",
 					"end":           "2026-07-16T00:00:00Z",
@@ -382,7 +382,7 @@ func TestEngineEvaluate(t *testing.T) {
 			input: testInput(ClassAutoForward),
 			data: func() map[string]any {
 				data := emptyData()
-				data["exclusions"] = []any{map[string]any{
+				data["freezes"] = []any{map[string]any{
 					"name":          "holiday",
 					"start":         "2026-07-15T00:00:00Z",
 					"end":           "2026-07-16T00:00:00Z",
@@ -401,9 +401,9 @@ func TestEngineEvaluate(t *testing.T) {
 			assert: func(t *testing.T, d *Decision, err error) {
 				require.NoError(t, err)
 				require.False(t, d.Allow)
-				require.Contains(t, d.Message, "frozen by exclusion")
+				require.Contains(t, d.Message, "frozen by freeze")
 				require.Contains(t, d.Message, "outside all promotion windows")
-				// Window opens at 18:00 (3h), exclusion ends at 00:00 (9h);
+				// Window opens at 18:00 (3h), freeze ends at 00:00 (9h);
 				// the soonest boundary wins.
 				require.Equal(t, 3*time.Hour, d.RequeueAfter)
 			},
@@ -478,7 +478,7 @@ func TestEngineEvaluate(t *testing.T) {
 			}(),
 			data: func() map[string]any {
 				data := emptyData()
-				data["exclusions"] = []any{map[string]any{
+				data["freezes"] = []any{map[string]any{
 					"name":          "freeze",
 					"start":         "2026-07-15T00:00:00Z",
 					"end":           "2026-07-16T00:00:00Z",
@@ -491,11 +491,11 @@ func TestEngineEvaluate(t *testing.T) {
 				require.NoError(t, err)
 				require.False(t, d.Allow)
 				require.Contains(t, d.Message, "change-ticket")
-				require.Contains(t, d.Message, `frozen by exclusion "freeze"`)
+				require.Contains(t, d.Message, `frozen by freeze "freeze"`)
 			},
 		},
 		{
-			name:          "cluster exclusions_bypass admits a hotfix through an active exclusion",
+			name:          "cluster freeze_bypass admits a hotfix through an active freeze",
 			clusterCustom: hotfixBypassRules,
 			input: func() map[string]any {
 				input := testInput(ClassManualForward)
@@ -524,7 +524,7 @@ func TestEngineEvaluate(t *testing.T) {
 			}(),
 			data: func() map[string]any {
 				data := emptyData()
-				data["exclusions"] = []any{map[string]any{
+				data["freezes"] = []any{map[string]any{
 					"name":          "freeze",
 					"start":         "2026-07-15T00:00:00Z",
 					"end":           "2026-07-16T00:00:00Z",
@@ -539,7 +539,7 @@ func TestEngineEvaluate(t *testing.T) {
 			},
 		},
 		{
-			name:          "cluster exclusions_bypass does not admit a minor version bump",
+			name:          "cluster freeze_bypass does not admit a minor version bump",
 			clusterCustom: hotfixBypassRules,
 			input: func() map[string]any {
 				input := testInput(ClassManualForward)
@@ -568,7 +568,7 @@ func TestEngineEvaluate(t *testing.T) {
 			}(),
 			data: func() map[string]any {
 				data := emptyData()
-				data["exclusions"] = []any{map[string]any{
+				data["freezes"] = []any{map[string]any{
 					"name":          "freeze",
 					"start":         "2026-07-15T00:00:00Z",
 					"end":           "2026-07-16T00:00:00Z",
@@ -583,7 +583,7 @@ func TestEngineEvaluate(t *testing.T) {
 			},
 		},
 		{
-			name:          "project exclusions_bypass works the same way",
+			name:          "project freeze_bypass works the same way",
 			projectCustom: hotfixBypassRules,
 			input: func() map[string]any {
 				input := testInput(ClassManualForward)
@@ -612,7 +612,7 @@ func TestEngineEvaluate(t *testing.T) {
 			}(),
 			data: func() map[string]any {
 				data := emptyData()
-				data["exclusions"] = []any{map[string]any{
+				data["freezes"] = []any{map[string]any{
 					"name":          "freeze",
 					"start":         "2026-07-15T00:00:00Z",
 					"end":           "2026-07-16T00:00:00Z",

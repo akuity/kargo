@@ -418,15 +418,15 @@ message ClusterConfigSpec {
   // +optional
   repeated DeepLink stageLinks = 4;
 
-  // PromotionExclusions describes system-wide periods of time during which
+  // PromotionFreezes describes system-wide periods of time during which
   // promotion dispatch is restricted across all Projects. Promotions held
-  // by an exclusion remain Pending and are dispatched automatically once
-  // the exclusion ends.
+  // by a freeze remain Pending and are dispatched automatically once
+  // the freeze ends.
   //
   // +optional
   // +listType=map
   // +listMapKey=name
-  repeated PromotionExclusion promotionExclusions = 5;
+  repeated PromotionFreeze promotionFreezes = 5;
 
   // CustomPolicy is an optional inline Rego source that composes into --
   // never replaces -- the built-in default dispatch policy, applied to
@@ -438,7 +438,7 @@ message ClusterConfigSpec {
   //   - `violation`: a set of `{"rule": ..., "msg": ..., "requeue": ...}`
   //     objects unioned with the standard blocks' violations. A numeric
   //     `requeue` (seconds) participates in the decision's requeue hint.
-  //   - `exclusions_bypass(e)`: a predicate consulted for each exclusion
+  //   - `freeze_bypass(f)`: a predicate consulted for each freeze
   //     that would otherwise hold a promotion; it defaults to false.
   //
   // +optional
@@ -1465,14 +1465,14 @@ message ProjectConfigSpec {
   // CustomPolicy is an optional inline Rego source that composes into --
   // never replaces -- the built-in default dispatch policy. It contains
   // only rules: the package declaration (kargo.project) and the standard
-  // library imports (data.kargo.lib.windows, data.kargo.lib.exclusions,
+  // library imports (data.kargo.lib.windows, data.kargo.lib.freezes,
   // data.kargo.lib.ratelimit, data.kargo.lib.helpers) are prepended
   // automatically. Two kinds of rules are gathered by the default policy:
   //
   //   - `violation`: a set of `{"rule": ..., "msg": ..., "requeue": ...}`
   //     objects unioned with the standard blocks' violations. A numeric
   //     `requeue` (seconds) participates in the decision's requeue hint.
-  //   - `exclusions_bypass(e)`: a predicate consulted for each exclusion
+  //   - `freeze_bypass(f)`: a predicate consulted for each freeze
   //     that would otherwise hold a promotion; it defaults to false.
   //
   // +optional
@@ -1573,21 +1573,21 @@ message Promotion {
   optional PromotionStatus status = 3;
 }
 
-// PromotionExclusion describes an absolute period of time during which
+// PromotionFreeze describes an absolute period of time during which
 // promotion dispatch is restricted.
-message PromotionExclusion {
-  // Name is a unique identifier for this exclusion.
+message PromotionFreeze {
+  // Name is a unique identifier for this freeze.
   //
   // +kubebuilder:validation:MinLength=1
   optional string name = 1;
 
-  // Start is the time at which the exclusion begins.
+  // Start is the time at which the freeze begins.
   optional .k8s.io.apimachinery.pkg.apis.meta.v1.Time start = 2;
 
-  // End is the time at which the exclusion ends.
+  // End is the time at which the freeze ends.
   optional .k8s.io.apimachinery.pkg.apis.meta.v1.Time end = 3;
 
-  // Scope names the set of promotion classes frozen by this exclusion:
+  // Scope names the set of promotion classes frozen by this freeze:
   //
   //   - no-promotions: freezes all promotions.
   //   - no-forward: freezes forward promotions (automatic and manual);
@@ -1597,17 +1597,17 @@ message PromotionExclusion {
   // +kubebuilder:validation:Enum=no-promotions;no-forward;no-auto
   optional string scope = 4;
 
-  // ArgoCDServers optionally narrows this exclusion to Stages whose
+  // ArgoCDServers optionally narrows this freeze to Stages whose
   // referenced Argo CD Applications target one of these destination server
-  // URLs or names. When empty, the exclusion applies to all Stages. Note
+  // URLs or names. When empty, the freeze applies to all Stages. Note
   // that if the Argo CD integration is disabled, no Stage references any
-  // Application and a server-scoped exclusion never applies.
+  // Application and a server-scoped freeze never applies.
   //
   // +optional
   repeated string argocdServers = 5;
 
-  // ProjectSelector optionally narrows this exclusion to Projects whose
-  // labels match the selector. When nil, the exclusion applies to all
+  // ProjectSelector optionally narrows this freeze to Projects whose
+  // labels match the selector. When nil, the freeze applies to all
   // Projects.
   //
   // +optional

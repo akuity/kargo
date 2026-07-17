@@ -196,6 +196,80 @@ func TestRRuleNext(t *testing.T) {
 	}
 }
 
+func TestRRuleActiveEnd(t *testing.T) {
+	t.Parallel()
+
+	const weekdays = "FREQ=WEEKLY;BYDAY=MO,TU,WE,TH,FR"
+
+	testCases := []struct {
+		name   string
+		args   []string // recurrence, start, end, location, now
+		assert func(*testing.T, *ast.Term, error)
+	}{
+		{
+			name: "inside window returns its close",
+			// 2026-07-15 is a Wednesday; the 09:00-17:00 occurrence closes 17:00.
+			args: []string{weekdays, "09:00", "17:00", "UTC", "2026-07-15T15:00:00Z"},
+			assert: func(t *testing.T, term *ast.Term, err error) {
+				require.NoError(t, err)
+				require.Equal(t, ast.StringTerm("2026-07-15T17:00:00Z"), term)
+			},
+		},
+		{
+			name: "before window opens has no active occurrence",
+			args: []string{weekdays, "09:00", "17:00", "UTC", "2026-07-15T08:59:00Z"},
+			assert: func(t *testing.T, _ *ast.Term, err error) {
+				require.Error(t, err)
+				require.Contains(t, err.Error(), "no active occurrence")
+			},
+		},
+		{
+			name: "at window close has no active occurrence",
+			args: []string{weekdays, "09:00", "17:00", "UTC", "2026-07-15T17:00:00Z"},
+			assert: func(t *testing.T, _ *ast.Term, err error) {
+				require.Error(t, err)
+				require.Contains(t, err.Error(), "no active occurrence")
+			},
+		},
+		{
+			name: "midnight-crossing window closes the next day",
+			// Tuesday 22:00 - Wednesday 02:00; at Wednesday 01:00 the active
+			// occurrence closes Wednesday 02:00.
+			args: []string{weekdays, "22:00", "02:00", "UTC", "2026-07-15T01:00:00Z"},
+			assert: func(t *testing.T, term *ast.Term, err error) {
+				require.NoError(t, err)
+				require.Equal(t, ast.StringTerm("2026-07-15T02:00:00Z"), term)
+			},
+		},
+		{
+			name: "close is rendered in UTC for non-UTC locations",
+			// 16:00 UTC is 09:00 Los Angeles (PDT); the window closes 17:00 LA,
+			// which is 00:00 UTC the following day.
+			args: []string{weekdays, "09:00", "17:00", "America/Los_Angeles", "2026-07-15T16:00:00Z"},
+			assert: func(t *testing.T, term *ast.Term, err error) {
+				require.NoError(t, err)
+				require.Equal(t, ast.StringTerm("2026-07-16T00:00:00Z"), term)
+			},
+		},
+		{
+			name: "malformed recurrence errors",
+			args: []string{"FREQ=BOGUS", "09:00", "17:00", "UTC", "2026-07-15T15:00:00Z"},
+			assert: func(t *testing.T, _ *ast.Term, err error) {
+				require.Error(t, err)
+				require.Contains(t, err.Error(), "invalid recurrence")
+			},
+		},
+	}
+
+	for _, testCase := range testCases {
+		t.Run(testCase.name, func(t *testing.T) {
+			t.Parallel()
+			term, err := rruleActiveEnd(rego.BuiltinContext{}, strTerms(testCase.args...))
+			testCase.assert(t, term, err)
+		})
+	}
+}
+
 func TestParseClock(t *testing.T) {
 	t.Parallel()
 	testCases := []struct {

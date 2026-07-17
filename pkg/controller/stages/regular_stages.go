@@ -289,7 +289,7 @@ func (r *RegularStageReconciler) SetupWithManager(
 
 		// This index is used by the dispatch gate to find the Applications a
 		// Stage is authorized to manage, so that server-scoped promotion
-		// exclusions can be matched against their destinations.
+		// freezes can be matched against their destinations.
 		if err = argocdMgr.GetFieldIndexer().IndexField(
 			ctx,
 			&argocdapi.Application{},
@@ -331,7 +331,7 @@ func (r *RegularStageReconciler) SetupWithManager(
 	}
 
 	// Watch the ClusterConfig and enqueue all Stages on this shard: it
-	// carries system-wide promotion exclusions. Enqueuing every Stage is
+	// carries system-wide promotion freezes. Enqueuing every Stage is
 	// acceptable at demo scale; a production implementation would narrow
 	// this.
 	if err = c.Watch(

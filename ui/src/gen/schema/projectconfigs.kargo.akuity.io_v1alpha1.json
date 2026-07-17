@@ -17,7 +17,7 @@
       "description": "Spec describes the configuration of a Project.",
       "properties": {
         "customPolicy": {
-          "description": "CustomPolicy is an optional inline Rego source that composes into --\nnever replaces -- the built-in default dispatch policy. It contains\nonly rules: the package declaration (kargo.project) and the standard\nlibrary imports (data.kargo.lib.windows, data.kargo.lib.exclusions,\ndata.kargo.lib.ratelimit, data.kargo.lib.helpers) are prepended\nautomatically. Two kinds of rules are gathered by the default policy:\n\n  - `violation`: a set of `{\"rule\": ..., \"msg\": ..., \"requeue\": ...}`\n    objects unioned with the standard blocks' violations. A numeric\n    `requeue` (seconds) participates in the decision's requeue hint.\n  - `exclusions_bypass(e)`: a predicate consulted for each exclusion\n    that would otherwise hold a promotion; it defaults to false.",
+          "description": "CustomPolicy is an optional inline Rego source that composes into --\nnever replaces -- the built-in default dispatch policy. It contains\nonly rules: the package declaration (kargo.project) and the standard\nlibrary imports (data.kargo.lib.windows, data.kargo.lib.freezes,\ndata.kargo.lib.ratelimit, data.kargo.lib.helpers) are prepended\nautomatically. Two kinds of rules are gathered by the default policy:\n\n  - `violation`: a set of `{\"rule\": ..., \"msg\": ..., \"requeue\": ...}`\n    objects unioned with the standard blocks' violations. A numeric\n    `requeue` (seconds) participates in the decision's requeue hint.\n  - `freeze_bypass(f)`: a predicate consulted for each freeze\n    that would otherwise hold a promotion; it defaults to false.",
           "type": "string"
         },
         "freightLinks": {

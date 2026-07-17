@@ -4,7 +4,7 @@
 // data-driven library blocks (see policy/), into which a project-authored
 // custom policy (ProjectConfig spec.customPolicy) and an operator-authored
 // one (ClusterConfig spec.customPolicy) may compose additional violations
-// and exclusion bypasses.
+// and freeze bypasses.
 package dispatch
 
 import (

@@ -11,6 +11,6 @@ package kargo.cluster
 
 import rego.v1
 
-# exclusions_bypass(e) is consulted by kargo.lib.exclusions for each
-# exclusion that would otherwise hold the promotion; see kargo.project.
-default exclusions_bypass(_) := false
+# freeze_bypass(f) is consulted by kargo.lib.freezes for each
+# freeze that would otherwise hold the promotion; see kargo.project.
+default freeze_bypass(_) := false

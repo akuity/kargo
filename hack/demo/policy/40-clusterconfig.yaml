@@ -3,7 +3,7 @@ kind: ClusterConfig
 metadata:
   name: cluster
 spec:
-  promotionExclusions:
+  promotionFreezes:
   - name: holiday-freeze
     start: "2026-12-20T00:00:00Z"
     end: "2027-01-02T00:00:00Z"
@@ -30,8 +30,8 @@ spec:
   # baseline PCI rule above is retained alongside it.
   #
   # customPolicy: |
-  #   exclusions_bypass(e) if {
-  #   	e.name == "holiday-freeze"
+  #   freeze_bypass(f) if {
+  #   	f.name == "holiday-freeze"
   #   	is_hotfix
   #   }
   #

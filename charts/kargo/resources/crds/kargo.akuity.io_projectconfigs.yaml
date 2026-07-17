@@ -56,14 +56,14 @@ spec:
                   CustomPolicy is an optional inline Rego source that composes into --
                   never replaces -- the built-in default dispatch policy. It contains
                   only rules: the package declaration (kargo.project) and the standard
-                  library imports (data.kargo.lib.windows, data.kargo.lib.exclusions,
+                  library imports (data.kargo.lib.windows, data.kargo.lib.freezes,
                   data.kargo.lib.ratelimit, data.kargo.lib.helpers) are prepended
                   automatically. Two kinds of rules are gathered by the default policy:
 
                     - `violation`: a set of `{"rule": ..., "msg": ..., "requeue": ...}`
                       objects unioned with the standard blocks' violations. A numeric
                       `requeue` (seconds) participates in the decision's requeue hint.
-                    - `exclusions_bypass(e)`: a predicate consulted for each exclusion
+                    - `freeze_bypass(f)`: a predicate consulted for each freeze
                       that would otherwise hold a promotion; it defaults to false.
                 type: string
               freightLinks:

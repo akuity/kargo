@@ -66,7 +66,7 @@ spec:
                     - `violation`: a set of `{"rule": ..., "msg": ..., "requeue": ...}`
                       objects unioned with the standard blocks' violations. A numeric
                       `requeue` (seconds) participates in the decision's requeue hint.
-                    - `exclusions_bypass(e)`: a predicate consulted for each exclusion
+                    - `freeze_bypass(f)`: a predicate consulted for each freeze
                       that would otherwise hold a promotion; it defaults to false.
                 type: string
               freightLinks:
@@ -143,39 +143,39 @@ spec:
                 - email
                 - name
                 type: object
-              promotionExclusions:
+              promotionFreezes:
                 description: |-
-                  PromotionExclusions describes system-wide periods of time during which
+                  PromotionFreezes describes system-wide periods of time during which
                   promotion dispatch is restricted across all Projects. Promotions held
-                  by an exclusion remain Pending and are dispatched automatically once
-                  the exclusion ends.
+                  by a freeze remain Pending and are dispatched automatically once
+                  the freeze ends.
                 items:
                   description: |-
-                    PromotionExclusion describes an absolute period of time during which
+                    PromotionFreeze describes an absolute period of time during which
                     promotion dispatch is restricted.
                   properties:
                     argocdServers:
                       description: |-
-                        ArgoCDServers optionally narrows this exclusion to Stages whose
+                        ArgoCDServers optionally narrows this freeze to Stages whose
                         referenced Argo CD Applications target one of these destination server
-                        URLs or names. When empty, the exclusion applies to all Stages. Note
+                        URLs or names. When empty, the freeze applies to all Stages. Note
                         that if the Argo CD integration is disabled, no Stage references any
-                        Application and a server-scoped exclusion never applies.
+                        Application and a server-scoped freeze never applies.
                       items:
                         type: string
                       type: array
                     end:
-                      description: End is the time at which the exclusion ends.
+                      description: End is the time at which the freeze ends.
                       format: date-time
                       type: string
                     name:
-                      description: Name is a unique identifier for this exclusion.
+                      description: Name is a unique identifier for this freeze.
                       minLength: 1
                       type: string
                     projectSelector:
                       description: |-
-                        ProjectSelector optionally narrows this exclusion to Projects whose
-                        labels match the selector. When nil, the exclusion applies to all
+                        ProjectSelector optionally narrows this freeze to Projects whose
+                        labels match the selector. When nil, the freeze applies to all
                         Projects.
                       properties:
                         matchExpressions:
@@ -223,7 +223,7 @@ spec:
                       x-kubernetes-map-type: atomic
                     scope:
                       description: |-
-                        Scope names the set of promotion classes frozen by this exclusion:
+                        Scope names the set of promotion classes frozen by this freeze:
 
                           - no-promotions: freezes all promotions.
                           - no-forward: freezes forward promotions (automatic and manual);
@@ -235,7 +235,7 @@ spec:
                       - no-auto
                       type: string
                     start:
-                      description: Start is the time at which the exclusion begins.
+                      description: Start is the time at which the freeze begins.
                       format: date-time
                       type: string
                   required:

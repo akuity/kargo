@@ -7,28 +7,28 @@
  */
 import type { V1LabelSelector } from './v1LabelSelector';
 
-export interface PromotionExclusion {
-  /** ArgoCDServers optionally narrows this exclusion to Stages whose
+export interface PromotionFreeze {
+  /** ArgoCDServers optionally narrows this freeze to Stages whose
 referenced Argo CD Applications target one of these destination server
-URLs or names. When empty, the exclusion applies to all Stages. Note
+URLs or names. When empty, the freeze applies to all Stages. Note
 that if the Argo CD integration is disabled, no Stage references any
-Application and a server-scoped exclusion never applies.
+Application and a server-scoped freeze never applies.
 
 +optional */
   argocdServers?: string[];
-  /** End is the time at which the exclusion ends. */
+  /** End is the time at which the freeze ends. */
   end?: string;
-  /** Name is a unique identifier for this exclusion.
+  /** Name is a unique identifier for this freeze.
 
 +kubebuilder:validation:MinLength=1 */
   name?: string;
-  /** ProjectSelector optionally narrows this exclusion to Projects whose
-labels match the selector. When nil, the exclusion applies to all
+  /** ProjectSelector optionally narrows this freeze to Projects whose
+labels match the selector. When nil, the freeze applies to all
 Projects.
 
 +optional */
   projectSelector?: V1LabelSelector;
-  /** Scope names the set of promotion classes frozen by this exclusion:
+  /** Scope names the set of promotion classes frozen by this freeze:
 
   - no-promotions: freezes all promotions.
   - no-forward: freezes forward promotions (automatic and manual);
@@ -37,6 +37,6 @@ Projects.
 
 +kubebuilder:validation:Enum=no-promotions;no-forward;no-auto */
   scope?: string;
-  /** Start is the time at which the exclusion begins. */
+  /** Start is the time at which the freeze begins. */
   start?: string;
 }

@@ -38,6 +38,17 @@ func builtins() []func(*rego.Rego) {
 			},
 			rruleNext,
 		),
+		rego.FunctionDyn(
+			&rego.Function{
+				Name: "kargo.rrule_active_end",
+				Decl: types.NewFunction(
+					types.Args(types.S, types.S, types.S, types.S, types.S),
+					types.S,
+				),
+				Memoize: true,
+			},
+			rruleActiveEnd,
+		),
 	}
 }
 
@@ -80,6 +91,29 @@ func rruleNext(_ rego.BuiltinContext, a, b, c, d *ast.Term) (*ast.Term, error) {
 		)
 	}
 	return ast.StringTerm(next.UTC().Format(time.RFC3339)), nil
+}
+
+// rruleActiveEnd implements kargo.rrule_active_end(recurrence, start, end,
+// location, now): the RFC 3339 time at which the occurrence currently active
+// closes. It errors when now falls outside every occurrence, so callers guard
+// with kargo.rrule_active. An end at or before start closes on the following
+// day.
+func rruleActiveEnd(_ rego.BuiltinContext, operands []*ast.Term) (*ast.Term, error) {
+	args, err := stringOperands(operands, 5)
+	if err != nil {
+		return nil, fmt.Errorf("kargo.rrule_active_end: %w", err)
+	}
+	rule, now, duration, err := parseWindow(args[0], args[1], args[2], args[3], args[4])
+	if err != nil {
+		return nil, fmt.Errorf("kargo.rrule_active_end: %w", err)
+	}
+	opening := rule.Before(now, true)
+	if opening.IsZero() || !now.Before(opening.Add(duration)) {
+		return nil, fmt.Errorf(
+			"kargo.rrule_active_end: no active occurrence at %q", args[4],
+		)
+	}
+	return ast.StringTerm(opening.Add(duration).UTC().Format(time.RFC3339)), nil
 }
 
 // parseWindow builds an rrule whose occurrences open at the start wall-clock
