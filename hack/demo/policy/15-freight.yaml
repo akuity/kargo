@@ -1,0 +1,28 @@
+# Seeded Freight for the hotfix-lane scenario (Scenario 6). A live registry
+# only yields the newest in-range tag, so the semver-patch comparison the
+# hotfix rule makes needs a version seeded by hand. It shares the Warehouse
+# image repository so it is promotable to the demo Stages; the digest is a
+# placeholder (the compose-output step pulls nothing).
+#
+# Create it with `kubectl create -f` -- the mutating webhook assigns a
+# content-hash name, so look it up by tag, e.g.
+#   kubectl get freight -n policy-demo \
+#     -o jsonpath='{range .items[?(@.images[0].tag=="1.31.4")]}{.metadata.name}{end}'
+#
+# The tag is a patch (1.31.4) bump over the Warehouse's 1.31.3 baseline. If
+# discovery found a newer tag, adjust it so 1.31.4 remains a patch over what
+# prod last promoted. (demo_test.go uses its own fixed tags, so it is immune;
+# it is also where the "minor bump stays frozen" contrast is verified.)
+apiVersion: kargo.akuity.io/v1alpha1
+kind: Freight
+metadata:
+  name: seed-hotfix
+  namespace: policy-demo
+alias: hotfix-build
+origin:
+  kind: Warehouse
+  name: nginx
+images:
+- repoURL: public.ecr.aws/nginx/nginx
+  tag: 1.31.4
+  digest: sha256:0000000000000000000000000000000000000000000000000000000000000001

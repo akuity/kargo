@@ -9,9 +9,25 @@ spec:
     end: "2027-01-02T00:00:00Z"
     scope: no-forward
 
-  # The administrator can add rules that apply to every project. Uncomment to:
-  # 1. allow hotfixes during the holiday freeze and
-  # 2. require a change ticket on manual promotions in PCI-labeled projects
+  # The operator's cluster policy composes into every project. This baseline
+  # rule is an always-on compliance guardrail: manual promotions in
+  # PCI-labeled projects (see the compliance label in 00-project.yaml) must
+  # carry a change-ticket annotation.
+  customPolicy: |
+    violation contains v if {
+    	input.project.labels.compliance == "pci"
+    	input.promotion.class == "manual-forward"
+    	not input.promotion.annotations["change-ticket"]
+    	v := {
+    		"rule": "pci-change-ticket",
+    		"msg": "PCI-compliant projects require a change-ticket annotation on manual promotions",
+    	}
+    }
+
+  # Scenario 6 (the hotfix lane): re-apply with this expanded policy to add a
+  # bypass so a genuine hotfix -- every image a semver patch-only bump over
+  # what the Stage last promoted -- passes through the holiday freeze. The
+  # baseline PCI rule above is retained alongside it.
   #
   # customPolicy: |
   #   exclusions_bypass(e) if {

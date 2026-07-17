@@ -1,6 +1,7 @@
-// Package policy_test verifies the commented customPolicy example blocks
-// in the demo manifests against the real dispatch policy engine, end to
-// end through the exported input/data projections.
+// Package policy_test verifies the customPolicy example blocks in the demo
+// manifests -- both the always-on active rule and the commented blocks the
+// scenarios toggle on -- against the real dispatch policy engine, end to end
+// through the exported input/data projections.
 package policy_test
 
 import (
@@ -13,10 +14,28 @@ import (
 
 	"github.com/stretchr/testify/require"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"sigs.k8s.io/yaml"
 
 	kargoapi "github.com/akuity/kargo/api/v1alpha1"
 	"github.com/akuity/kargo/pkg/promotion/dispatch"
 )
+
+// activeCustomPolicy returns the live spec.customPolicy from a demo manifest
+// (the rule that ships active, e.g. the operator's PCI mandate). YAML comments
+// -- including the commented-out example blocks -- are ignored by the parser.
+func activeCustomPolicy(t *testing.T, path string) string {
+	t.Helper()
+	data, err := os.ReadFile(path)
+	require.NoError(t, err)
+	var doc struct {
+		Spec struct {
+			CustomPolicy string `json:"customPolicy"`
+		} `json:"spec"`
+	}
+	require.NoError(t, yaml.Unmarshal(data, &doc))
+	require.NotEmpty(t, doc.Spec.CustomPolicy, "no active customPolicy in %s", path)
+	return doc.Spec.CustomPolicy
+}
 
 // extractCustomPolicy returns the commented customPolicy block from a demo
 // manifest: the lines following "  # customPolicy: |", with the comment
@@ -54,8 +73,12 @@ func extractCustomPolicy(t *testing.T, path string) string {
 func TestDemoCustomPolicies(t *testing.T) {
 	t.Parallel()
 
-	projectCustom := extractCustomPolicy(t, "10-projectconfig.yaml")
-	clusterCustom := extractCustomPolicy(t, "40-clusterconfig.yaml")
+	// The operator's cluster policy in two forms: the always-on PCI rule
+	// (active) and the Scenario-6 expansion that adds the hotfix bypass
+	// alongside it (commented). The project's prod-approval rule (commented).
+	pciActive := activeCustomPolicy(t, "40-clusterconfig.yaml")
+	pciPlusHotfix := extractCustomPolicy(t, "40-clusterconfig.yaml")
+	prodApproval := extractCustomPolicy(t, "10-projectconfig.yaml")
 
 	now := time.Date(2026, 7, 15, 15, 0, 0, 0, time.UTC)
 
@@ -67,10 +90,7 @@ func TestDemoCustomPolicies(t *testing.T) {
 			Scope: "no-forward",
 		}}
 	}
-	bothAnnotations := map[string]string{
-		"change-ticket": "CHG-1234",
-		"approved-by":   "eron",
-	}
+	ticketOnly := map[string]string{"change-ticket": "CHG-1234"}
 	// makeInput assembles the input document for a candidate Promotion of
 	// the given class to the prod Stage of a PCI-labeled Project. When
 	// lastTag is set, the Stage's last promoted freight shares the image
@@ -119,25 +139,93 @@ func TestDemoCustomPolicies(t *testing.T) {
 	engine := dispatch.NewEngine()
 
 	testCases := []struct {
-		name        string
-		class       string
-		annotations map[string]string
-		lastTag     string
-		exclusions  []kargoapi.PromotionExclusion
-		assert      func(*testing.T, *dispatch.Decision)
+		name          string
+		clusterCustom string
+		projectCustom string
+		class         string
+		annotations   map[string]string
+		lastTag       string
+		exclusions    []kargoapi.PromotionExclusion
+		assert        func(*testing.T, *dispatch.Decision)
 	}{
+		// The always-on PCI rule (Scenario 5).
 		{
-			name:  "ticketless unapproved manual promotion trips both custom rules",
-			class: dispatch.ClassManualForward,
+			name:          "PCI: ticketless manual promotion is denied",
+			clusterCustom: pciActive,
+			class:         dispatch.ClassManualForward,
 			assert: func(t *testing.T, d *dispatch.Decision) {
 				require.False(t, d.Allow)
 				require.Contains(t, d.Message, "change-ticket")
-				require.Contains(t, d.Message, "approved-by")
 			},
 		},
 		{
-			name:  "unapproved auto promotion is held by the approval rule only",
-			class: dispatch.ClassAutoForward,
+			name:          "PCI: auto promotion is unaffected",
+			clusterCustom: pciActive,
+			class:         dispatch.ClassAutoForward,
+			assert: func(t *testing.T, d *dispatch.Decision) {
+				require.True(t, d.Allow)
+			},
+		},
+		{
+			name:          "PCI: manual promotion with a change-ticket is allowed",
+			clusterCustom: pciActive,
+			class:         dispatch.ClassManualForward,
+			annotations:   ticketOnly,
+			assert: func(t *testing.T, d *dispatch.Decision) {
+				require.True(t, d.Allow)
+			},
+		},
+		// The hotfix lane, added to the cluster policy (Scenario 6). The PCI
+		// rule is retained in this combined form.
+		{
+			name:          "hotfix: annotated patch-bump passes the holiday freeze",
+			clusterCustom: pciPlusHotfix,
+			class:         dispatch.ClassManualForward,
+			annotations:   ticketOnly,
+			lastTag:       "1.2.2",
+			exclusions:    freeze("holiday-freeze"),
+			assert: func(t *testing.T, d *dispatch.Decision) {
+				require.True(t, d.Allow)
+			},
+		},
+		{
+			name:          "hotfix: annotated patch-bump stays held by an incident freeze (bypass is name-scoped)",
+			clusterCustom: pciPlusHotfix,
+			class:         dispatch.ClassManualForward,
+			annotations:   ticketOnly,
+			lastTag:       "1.2.2",
+			exclusions:    freeze("incident-freeze"),
+			assert: func(t *testing.T, d *dispatch.Decision) {
+				require.False(t, d.Allow)
+				require.Contains(t, d.Message, "incident-freeze")
+			},
+		},
+		{
+			name:          "hotfix: annotated minor bump stays held by the holiday freeze",
+			clusterCustom: pciPlusHotfix,
+			class:         dispatch.ClassManualForward,
+			annotations:   ticketOnly,
+			lastTag:       "1.1.9",
+			exclusions:    freeze("holiday-freeze"),
+			assert: func(t *testing.T, d *dispatch.Decision) {
+				require.False(t, d.Allow)
+				require.Contains(t, d.Message, "holiday-freeze")
+			},
+		},
+		{
+			name:          "hotfix: the retained PCI rule still denies a ticketless manual promotion",
+			clusterCustom: pciPlusHotfix,
+			class:         dispatch.ClassManualForward,
+			assert: func(t *testing.T, d *dispatch.Decision) {
+				require.False(t, d.Allow)
+				require.Contains(t, d.Message, "change-ticket")
+			},
+		},
+		// The project's prod-approval rule (Scenario 7).
+		{
+			name:          "prod-approval: forward promotion without approved-by is denied",
+			projectCustom: prodApproval,
+			class:         dispatch.ClassManualForward,
 			assert: func(t *testing.T, d *dispatch.Decision) {
 				require.False(t, d.Allow)
 				require.Contains(t, d.Message, "approved-by")
@@ -145,48 +233,9 @@ func TestDemoCustomPolicies(t *testing.T) {
 			},
 		},
 		{
-			name:  "rollback needs no approval",
-			class: dispatch.ClassRollback,
-			assert: func(t *testing.T, d *dispatch.Decision) {
-				require.True(t, d.Allow)
-			},
-		},
-		{
-			name:        "annotated patch-bump passes the holiday freeze via the hotfix lane",
-			class:       dispatch.ClassManualForward,
-			annotations: bothAnnotations,
-			lastTag:     "1.2.2",
-			exclusions:  freeze("holiday-freeze"),
-			assert: func(t *testing.T, d *dispatch.Decision) {
-				require.True(t, d.Allow)
-			},
-		},
-		{
-			name:        "annotated patch-bump stays held by an incident freeze (bypass is name-scoped)",
-			class:       dispatch.ClassManualForward,
-			annotations: bothAnnotations,
-			lastTag:     "1.2.2",
-			exclusions:  freeze("incident-freeze"),
-			assert: func(t *testing.T, d *dispatch.Decision) {
-				require.False(t, d.Allow)
-				require.Contains(t, d.Message, "incident-freeze")
-			},
-		},
-		{
-			name:        "annotated minor bump stays held by the holiday freeze",
-			class:       dispatch.ClassManualForward,
-			annotations: bothAnnotations,
-			lastTag:     "1.1.9",
-			exclusions:  freeze("holiday-freeze"),
-			assert: func(t *testing.T, d *dispatch.Decision) {
-				require.False(t, d.Allow)
-				require.Contains(t, d.Message, "holiday-freeze")
-			},
-		},
-		{
-			name:        "annotated manual promotion is allowed with no freeze",
-			class:       dispatch.ClassManualForward,
-			annotations: bothAnnotations,
+			name:          "prod-approval: rollback is exempt",
+			projectCustom: prodApproval,
+			class:         dispatch.ClassRollback,
 			assert: func(t *testing.T, d *dispatch.Decision) {
 				require.True(t, d.Allow)
 			},
@@ -203,8 +252,8 @@ func TestDemoCustomPolicies(t *testing.T) {
 			require.NoError(t, err)
 			decision, err := engine.Evaluate(
 				context.Background(),
-				projectCustom,
-				clusterCustom,
+				testCase.projectCustom,
+				testCase.clusterCustom,
 				makeInput(testCase.class, testCase.annotations, testCase.lastTag),
 				data,
 			)
