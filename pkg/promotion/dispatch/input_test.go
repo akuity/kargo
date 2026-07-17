@@ -182,7 +182,7 @@ func TestBuildData(t *testing.T) {
 	}}
 	dispatched := time.Date(2026, 7, 15, 14, 40, 0, 0, time.UTC)
 
-	data, err := BuildData(projectSpec, exclusions, stage, []time.Time{dispatched})
+	data, err := BuildData(projectSpec, exclusions, stage, nil, []time.Time{dispatched})
 	require.NoError(t, err)
 
 	// Only the window whose selector matches this Stage is projected.
@@ -215,11 +215,125 @@ func TestBuildData(t *testing.T) {
 func TestBuildDataNilPolicy(t *testing.T) {
 	t.Parallel()
 	stage := &kargoapi.Stage{ObjectMeta: metav1.ObjectMeta{Name: "prod"}}
-	data, err := BuildData(nil, nil, stage, nil)
+	data, err := BuildData(nil, nil, stage, nil, nil)
 	require.NoError(t, err)
 	require.Empty(t, data["windows"])
 	require.Empty(t, data["exclusions"])
 	require.Empty(t, data["rateLimit"])
+}
+
+func TestBuildDataProjectSelector(t *testing.T) {
+	t.Parallel()
+	stage := &kargoapi.Stage{
+		ObjectMeta: metav1.ObjectMeta{Name: "prod", Namespace: "demo"},
+	}
+	pciProject := &kargoapi.Project{
+		ObjectMeta: metav1.ObjectMeta{
+			Name:   "demo",
+			Labels: map[string]string{"compliance": "pci", "env": "prod"},
+		},
+	}
+	exclusion := func(selector *metav1.LabelSelector) []kargoapi.PromotionExclusion {
+		return []kargoapi.PromotionExclusion{{
+			Name:            "freeze",
+			Start:           metav1.Date(2026, 12, 20, 0, 0, 0, 0, time.UTC),
+			End:             metav1.Date(2027, 1, 2, 0, 0, 0, 0, time.UTC),
+			Scope:           "no-forward",
+			ProjectSelector: selector,
+		}}
+	}
+	// names returns the "name" of each projected exclusion.
+	names := func(t *testing.T, data map[string]any) []string {
+		t.Helper()
+		docs, ok := data["exclusions"].([]any)
+		require.True(t, ok)
+		out := make([]string, len(docs))
+		for i, d := range docs {
+			m, ok := d.(map[string]any)
+			require.True(t, ok)
+			out[i], _ = m["name"].(string)
+		}
+		return out
+	}
+
+	testCases := []struct {
+		name     string
+		selector *metav1.LabelSelector
+		project  *kargoapi.Project
+		assert   func(*testing.T, map[string]any, error)
+	}{
+		{
+			name:     "nil selector applies to every Project",
+			selector: nil,
+			project:  pciProject,
+			assert: func(t *testing.T, data map[string]any, err error) {
+				require.NoError(t, err)
+				require.Equal(t, []string{"freeze"}, names(t, data))
+			},
+		},
+		{
+			name:     "matchLabels matching the Project is projected",
+			selector: &metav1.LabelSelector{MatchLabels: map[string]string{"compliance": "pci"}},
+			project:  pciProject,
+			assert: func(t *testing.T, data map[string]any, err error) {
+				require.NoError(t, err)
+				require.Equal(t, []string{"freeze"}, names(t, data))
+			},
+		},
+		{
+			name:     "matchLabels not matching the Project is filtered out",
+			selector: &metav1.LabelSelector{MatchLabels: map[string]string{"compliance": "pci"}},
+			project: &kargoapi.Project{ObjectMeta: metav1.ObjectMeta{
+				Name:   "demo",
+				Labels: map[string]string{"env": "prod"},
+			}},
+			assert: func(t *testing.T, data map[string]any, err error) {
+				require.NoError(t, err)
+				require.Empty(t, names(t, data))
+			},
+		},
+		{
+			name: "matchExpressions In matching the Project is projected",
+			selector: &metav1.LabelSelector{MatchExpressions: []metav1.LabelSelectorRequirement{{
+				Key:      "env",
+				Operator: metav1.LabelSelectorOpIn,
+				Values:   []string{"prod", "staging"},
+			}}},
+			project: pciProject,
+			assert: func(t *testing.T, data map[string]any, err error) {
+				require.NoError(t, err)
+				require.Equal(t, []string{"freeze"}, names(t, data))
+			},
+		},
+		{
+			name:     "nil Project with a matchLabels selector is filtered out",
+			selector: &metav1.LabelSelector{MatchLabels: map[string]string{"compliance": "pci"}},
+			project:  nil,
+			assert: func(t *testing.T, data map[string]any, err error) {
+				require.NoError(t, err)
+				require.Empty(t, names(t, data))
+			},
+		},
+		{
+			name: "invalid selector returns an error",
+			selector: &metav1.LabelSelector{MatchExpressions: []metav1.LabelSelectorRequirement{{
+				Key:      "env",
+				Operator: metav1.LabelSelectorOpIn, // In requires values; none given
+			}}},
+			project: pciProject,
+			assert: func(t *testing.T, _ map[string]any, err error) {
+				require.Error(t, err)
+				require.Contains(t, err.Error(), "freeze")
+			},
+		},
+	}
+	for _, testCase := range testCases {
+		t.Run(testCase.name, func(t *testing.T) {
+			t.Parallel()
+			data, err := BuildData(nil, exclusion(testCase.selector), stage, testCase.project, nil)
+			testCase.assert(t, data, err)
+		})
+	}
 }
 
 func TestBuildInput(t *testing.T) {

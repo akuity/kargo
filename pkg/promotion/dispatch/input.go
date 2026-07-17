@@ -82,12 +82,14 @@ func BuildInput(
 }
 
 // BuildData assembles the policy data document for one Stage. projectSpec
-// may be nil. dispatches are the times at which the Stage's recent
-// promotions were dispatched (began Running), for rate limiting.
+// and project may be nil. dispatches are the times at which the Stage's
+// recent promotions were dispatched (began Running), for rate limiting.
+// Exclusions whose ProjectSelector does not match the Project are omitted.
 func BuildData(
 	projectSpec *kargoapi.ProjectConfigSpec,
 	exclusions []kargoapi.PromotionExclusion,
 	stage *kargoapi.Stage,
+	project *kargoapi.Project,
 	dispatches []time.Time,
 ) (map[string]any, error) {
 	windows := []any{}
@@ -129,19 +131,26 @@ func BuildData(
 			break // first matching rate limit wins
 		}
 	}
-	exclusionDocs := make([]any, len(exclusions))
-	for i, e := range exclusions {
+	exclusionDocs := []any{}
+	for _, e := range exclusions {
+		matches, err := projectSelectorMatches(e.ProjectSelector, project)
+		if err != nil {
+			return nil, fmt.Errorf("exclusion %q: %w", e.Name, err)
+		}
+		if !matches {
+			continue
+		}
 		servers := make([]any, len(e.ArgoCDServers))
 		for j, s := range e.ArgoCDServers {
 			servers[j] = s
 		}
-		exclusionDocs[i] = map[string]any{
+		exclusionDocs = append(exclusionDocs, map[string]any{
 			"name":          e.Name,
 			"start":         e.Start.UTC().Format(time.RFC3339),
 			"end":           e.End.UTC().Format(time.RFC3339),
 			"scope":         e.Scope,
 			"argocdServers": servers,
-		}
+		})
 	}
 	return map[string]any{
 		"windows":    windows,
@@ -180,6 +189,28 @@ func selectorMatches(
 		}
 	}
 	return true, nil
+}
+
+// projectSelectorMatches reports whether the label selector matches the
+// Project's labels. A nil selector matches every Project; a nil Project is
+// treated as an empty label set (a non-nil matchLabels selector will not
+// match it).
+func projectSelectorMatches(
+	selector *metav1.LabelSelector,
+	project *kargoapi.Project,
+) (bool, error) {
+	if selector == nil {
+		return true, nil
+	}
+	s, err := metav1.LabelSelectorAsSelector(selector)
+	if err != nil {
+		return false, fmt.Errorf("error parsing project label selector: %w", err)
+	}
+	var projectLabels map[string]string
+	if project != nil {
+		projectLabels = project.Labels
+	}
+	return s.Matches(labels.Set(projectLabels)), nil
 }
 
 func freightDoc(freight *kargoapi.Freight) map[string]any {

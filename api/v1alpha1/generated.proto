@@ -1605,6 +1605,13 @@ message PromotionExclusion {
   //
   // +optional
   repeated string argocdServers = 5;
+
+  // ProjectSelector optionally narrows this exclusion to Projects whose
+  // labels match the selector. When nil, the exclusion applies to all
+  // Projects.
+  //
+  // +optional
+  optional .k8s.io.apimachinery.pkg.apis.meta.v1.LabelSelector projectSelector = 6;
 }
 
 // PromotionList contains a list of Promotion

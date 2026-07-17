@@ -104,6 +104,12 @@ type PromotionExclusion struct {
 	//
 	// +optional
 	ArgoCDServers []string `json:"argocdServers,omitempty" protobuf:"bytes,5,rep,name=argocdServers"`
+	// ProjectSelector optionally narrows this exclusion to Projects whose
+	// labels match the selector. When nil, the exclusion applies to all
+	// Projects.
+	//
+	// +optional
+	ProjectSelector *metav1.LabelSelector `json:"projectSelector,omitempty" protobuf:"bytes,6,opt,name=projectSelector"`
 }
 
 // GitClientConfig describes cluster-level configuration for Kargo's Git

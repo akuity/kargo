@@ -5,6 +5,7 @@ package models
 import (
 	"context"
 
+	"github.com/go-openapi/errors"
 	"github.com/go-openapi/strfmt"
 	"github.com/go-openapi/swag"
 )
@@ -31,6 +32,15 @@ type PromotionExclusion struct {
 	// +kubebuilder:validation:MinLength=1
 	Name string `json:"name,omitempty"`
 
+	// ProjectSelector optionally narrows this exclusion to Projects whose
+	// labels match the selector. When nil, the exclusion applies to all
+	// Projects.
+	//
+	// +optional
+	ProjectSelector struct {
+		V1LabelSelector
+	} `json:"projectSelector,omitempty"`
+
 	// Scope names the set of promotion classes frozen by this exclusion:
 	//
 	//   - no-promotions: freezes all promotions.
@@ -47,11 +57,42 @@ type PromotionExclusion struct {
 
 // Validate validates this promotion exclusion
 func (m *PromotionExclusion) Validate(formats strfmt.Registry) error {
+	var res []error
+
+	if err := m.validateProjectSelector(formats); err != nil {
+		res = append(res, err)
+	}
+
+	if len(res) > 0 {
+		return errors.CompositeValidationError(res...)
+	}
 	return nil
 }
 
-// ContextValidate validates this promotion exclusion based on context it is used
+func (m *PromotionExclusion) validateProjectSelector(formats strfmt.Registry) error {
+	if swag.IsZero(m.ProjectSelector) { // not required
+		return nil
+	}
+
+	return nil
+}
+
+// ContextValidate validate this promotion exclusion based on the context it is used
 func (m *PromotionExclusion) ContextValidate(ctx context.Context, formats strfmt.Registry) error {
+	var res []error
+
+	if err := m.contextValidateProjectSelector(ctx, formats); err != nil {
+		res = append(res, err)
+	}
+
+	if len(res) > 0 {
+		return errors.CompositeValidationError(res...)
+	}
+	return nil
+}
+
+func (m *PromotionExclusion) contextValidateProjectSelector(ctx context.Context, formats strfmt.Registry) error {
+
 	return nil
 }
 

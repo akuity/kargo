@@ -2265,6 +2265,7 @@ RawFormat specifies the format for raw resource representation.
 | end | k8s.io.apimachinery.pkg.apis.meta.v1.Time |  End is the time at which the exclusion ends. |
 | scope | string |  Scope names the set of promotion classes frozen by this exclusion:    - no-promotions: freezes all promotions.   - no-forward: freezes forward promotions (automatic and manual);     rollbacks are permitted.   - no-auto: freezes automatic promotions only.   |
 | argocdServers | string |  ArgoCDServers optionally narrows this exclusion to Stages whose referenced Argo CD Applications target one of these destination server URLs or names. When empty, the exclusion applies to all Stages. Note that if the Argo CD integration is disabled, no Stage references any Application and a server-scoped exclusion never applies.  +optional |
+| projectSelector | k8s.io.apimachinery.pkg.apis.meta.v1.LabelSelector |  ProjectSelector optionally narrows this exclusion to Projects whose labels match the selector. When nil, the exclusion applies to all Projects.  +optional |
 
 
 ### PromotionList {#github-com-akuity-kargo-api-v1alpha1-PromotionList}

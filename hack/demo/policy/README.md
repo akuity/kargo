@@ -88,6 +88,90 @@ kubectl get promotions -n policy-demo -w
 kubectl get events -n policy-demo --field-selector reason=PromotionBlocked -w
 ```
 
+## Initial configuration
+
+The starting policy state, straight from the setup manifests -- essential
+context for every scenario that follows.
+
+`00-project.yaml` -- custom policies key off these labels:
+
+```yaml
+apiVersion: kargo.akuity.io/v1alpha1
+kind: Project
+metadata:
+  labels:
+    compliance: pci
+    team: payments
+```
+
+`30-stages.yaml` -- pipeline `test` (direct from the Warehouse) -> `uat` ->
+`prod`; `prod` has no auto-promotion, so it advances only by manual promotion.
+
+`10-projectconfig.yaml` -- auto-promotion, a `uat` window, a `test` rate limit
+(the project custom policy stays commented out until Scenario 7):
+
+```yaml
+apiVersion: kargo.akuity.io/v1alpha1
+kind: ProjectConfig
+spec:
+  promotionPolicies:                 # auto-promote test and uat
+  - stageSelector:
+      name: test
+    autoPromotionEnabled: true
+  - stageSelector:
+      name: uat
+    autoPromotionEnabled: true
+  promotionWindows:                  # uat dispatches only weekday evenings PT
+  - name: uat-evenings
+    stageSelector:
+      name: uat
+    recurrence: FREQ=WEEKLY;BYDAY=MO,TU,WE,TH,FR
+    start: "18:00"
+    end: "23:00"
+    location: America/Los_Angeles
+  rateLimits:                        # at most 1 auto dispatch to test per 2m
+  - name: test-throttle
+    stageSelector:
+      name: test
+    maxPromotions: 1
+    window: 2m
+```
+
+`40-clusterconfig.yaml` -- an inert holiday freeze and the always-on operator
+PCI rule, composed into every project:
+
+```yaml
+apiVersion: kargo.akuity.io/v1alpha1
+kind: ClusterConfig
+spec:
+  promotionExclusions:               # inert until December
+  - name: holiday-freeze
+    start: "2026-12-20T00:00:00Z"
+    end: "2027-01-02T00:00:00Z"
+    scope: no-forward
+  customPolicy: |                    # PCI: manual promotions need a change-ticket
+    violation contains v if {
+    	input.project.labels.compliance == "pci"
+    	input.promotion.class == "manual-forward"
+    	not input.promotion.annotations["change-ticket"]
+    	v := {
+    		"rule": "pci-change-ticket",
+    		"msg": "PCI-compliant projects require a change-ticket annotation on manual promotions",
+    	}
+    }
+```
+
+Dump the live state at any time:
+
+```shell
+kubectl get projectconfig policy-demo -n policy-demo -o yaml
+kubectl get clusterconfig cluster -o yaml
+kubectl get stages,promotions,freight -n policy-demo
+```
+
+With the window closed, discovered freight auto-promotes into `test` and parks
+at `uat` -- where Scenario 1 begins.
+
 ## Scenario 1 -- promotion window holds an auto-promotion
 
 The Warehouse discovers nginx images; `test` auto-promotes freely (no window

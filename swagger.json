@@ -7730,6 +7730,14 @@
           "description": "Name is a unique identifier for this exclusion.\n\n+kubebuilder:validation:MinLength=1",
           "type": "string"
         },
+        "projectSelector": {
+          "description": "ProjectSelector optionally narrows this exclusion to Projects whose\nlabels match the selector. When nil, the exclusion applies to all\nProjects.\n\n+optional",
+          "allOf": [
+            {
+              "$ref": "#/definitions/V1LabelSelector"
+            }
+          ]
+        },
         "scope": {
           "description": "Scope names the set of promotion classes frozen by this exclusion:\n\n  - no-promotions: freezes all promotions.\n  - no-forward: freezes forward promotions (automatic and manual);\n    rollbacks are permitted.\n  - no-auto: freezes automatic promotions only.\n\n+kubebuilder:validation:Enum=no-promotions;no-forward;no-auto",
           "type": "string"

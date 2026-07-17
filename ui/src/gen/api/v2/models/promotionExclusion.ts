@@ -5,6 +5,7 @@
  * REST API for Kargo
  * OpenAPI spec version: v1alpha1
  */
+import type { V1LabelSelector } from './v1LabelSelector';
 
 export interface PromotionExclusion {
   /** ArgoCDServers optionally narrows this exclusion to Stages whose
@@ -21,6 +22,12 @@ Application and a server-scoped exclusion never applies.
 
 +kubebuilder:validation:MinLength=1 */
   name?: string;
+  /** ProjectSelector optionally narrows this exclusion to Projects whose
+labels match the selector. When nil, the exclusion applies to all
+Projects.
+
++optional */
+  projectSelector?: V1LabelSelector;
   /** Scope names the set of promotion classes frozen by this exclusion:
 
   - no-promotions: freezes all promotions.

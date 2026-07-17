@@ -129,16 +129,16 @@ func (r *RegularStageReconciler) gateDispatch(
 		}
 	}
 
-	data, err := dispatch.BuildData(projectSpec, exclusions, stage, dispatches)
-	if err != nil {
-		return nil, 0, "", fmt.Errorf("error building dispatch policy data: %w", err)
-	}
-
-	// Project metadata gives policies a lightweight way to be data-driven;
-	// tolerate its absence.
+	// Project metadata gives policies a lightweight way to be data-driven
+	// (including project-scoped exclusions); tolerate its absence.
 	project, err := api.GetProject(ctx, r.client, stage.Namespace)
 	if err != nil {
 		logger.Error(err, "error getting Project for dispatch policy input")
+	}
+
+	data, err := dispatch.BuildData(projectSpec, exclusions, stage, project, dispatches)
+	if err != nil {
+		return nil, 0, "", fmt.Errorf("error building dispatch policy data: %w", err)
 	}
 
 	// The Argo CD Applications this Stage is authorized to manage, for
