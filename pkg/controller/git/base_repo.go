@@ -32,6 +32,16 @@ const (
 	// (e.g. ssh or an askpass helper) inherited the pipes and holds them
 	// open, so a non-zero WaitDelay is required to guarantee Wait returns.
 	cmdWaitDelay = 10 * time.Second
+
+	// gitHTTPLowSpeedLimit and gitHTTPLowSpeedTime together configure git's stall
+	// detector for HTTP(S) transfers: git aborts any transfer whose throughput
+	// stays below gitHTTPLowSpeedLimit (bytes per second) for gitHTTPLowSpeedTime
+	// (seconds). This detects connections that have effectively stopped moving
+	// data -- e.g. a connection severed at the network layer with no RST/FIN
+	// delivered -- without imposing any bound on the total duration of a healthy
+	// transfer, however large or slow.
+	gitHTTPLowSpeedLimit = "1024"
+	gitHTTPLowSpeedTime  = "30"
 )
 
 // baseRepo implements the common underpinnings of a Git repository with a
@@ -465,6 +475,11 @@ func (b *baseRepo) buildGitCommand(
 	arg ...string,
 ) *exec.Cmd {
 	cmd := b.buildCommand(ctx, "git", arg...)
+	cmd.Env = append(
+		cmd.Env,
+		"GIT_HTTP_LOW_SPEED_LIMIT="+gitHTTPLowSpeedLimit,
+		"GIT_HTTP_LOW_SPEED_TIME="+gitHTTPLowSpeedTime,
+	)
 	// TODO(v1.13.0): Remove this line when SSH support is removed.
 	cmd.Env = append(cmd.Env, fmt.Sprintf("GIT_SSH_COMMAND=ssh -F %s/.ssh/config", b.homeDir))
 	if b.creds != nil && b.creds.Password != "" {
