@@ -1,11 +1,15 @@
 package git
 
 import (
+	"context"
 	"os"
 	"path/filepath"
 	"testing"
+	"time"
 
 	"github.com/stretchr/testify/require"
+
+	libExec "github.com/akuity/kargo/pkg/exec"
 )
 
 func TestSetupUser(t *testing.T) {
@@ -120,10 +124,33 @@ func TestSetupUser(t *testing.T) {
 				homeDir: repoHomeDir,
 			}
 
-			err := b.setupUser(homeDir, tc.author)
+			err := b.setupUser(t.Context(), homeDir, tc.author)
 			tc.assert(t, homeDir, repoHomeDir, err)
 		})
 	}
+}
+
+func TestBuildCommandCancellation(t *testing.T) {
+	t.Parallel()
+
+	b := &baseRepo{
+		dir:     t.TempDir(),
+		homeDir: t.TempDir(),
+	}
+
+	ctx, cancel := context.WithTimeout(t.Context(), 100*time.Millisecond)
+	defer cancel()
+
+	cmd := b.buildCommand(ctx, "sleep", "30")
+	start := time.Now()
+	_, err := libExec.Exec(cmd)
+	elapsed := time.Since(start)
+
+	require.Error(t, err)
+	// The command must be terminated promptly once the context expires rather
+	// than running to completion. The bound is generous to avoid flakes on
+	// slow machines, but far below the command's 30-second natural duration.
+	require.Less(t, elapsed, 10*time.Second)
 }
 
 // assertGitConfig verifies that a git config key has the expected value in

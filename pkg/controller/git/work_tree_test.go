@@ -32,6 +32,7 @@ func TestWorkTree(t *testing.T) {
 	defer testServer.Close()
 
 	rep, err := CloneBare(
+		t.Context(),
 		testRepoURL,
 		&ClientOptions{
 			Credentials: &testRepoCreds,
@@ -40,18 +41,20 @@ func TestWorkTree(t *testing.T) {
 	)
 	require.NoError(t, err)
 	require.NotNil(t, rep)
-	defer rep.Close()
+	defer rep.Close(t.Context())
 
 	workingTreePath := filepath.Join(rep.HomeDir(), "working-tree")
 	workTree, err := rep.AddWorkTree(
+		t.Context(),
 		workingTreePath,
 		&AddWorkTreeOptions{Ref: "main"},
 	)
 	require.NoError(t, err)
-	defer workTree.Close()
+	defer workTree.Close(t.Context())
 
 	t.Run("can load an existing working tree", func(t *testing.T) {
 		existingWorkTree, err := LoadWorkTree(
+			t.Context(),
 			workTree.Dir(),
 			&LoadWorkTreeOptions{
 				Credentials: &testRepoCreds,
@@ -62,7 +65,7 @@ func TestWorkTree(t *testing.T) {
 	})
 
 	t.Run("can close working tree", func(t *testing.T) {
-		require.NoError(t, workTree.Close())
+		require.NoError(t, workTree.Close(t.Context()))
 		_, err := os.Stat(workTree.Dir())
 		require.Error(t, err)
 		require.True(t, os.IsNotExist(err))
@@ -78,12 +81,13 @@ func Test_workTree_Pull(t *testing.T) {
 
 	t.Run("force pull resets to remote", func(t *testing.T) {
 		repo, err := Clone(
+			t.Context(),
 			testRepoURL,
 			&ClientOptions{Credentials: &testRepoCreds},
 			nil,
 		)
 		require.NoError(t, err)
-		defer repo.Close()
+		defer repo.Close(t.Context())
 
 		// Make a local commit that diverges from "ahead".
 		err = os.WriteFile(
@@ -92,17 +96,17 @@ func Test_workTree_Pull(t *testing.T) {
 			0o600,
 		)
 		require.NoError(t, err)
-		err = repo.AddAllAndCommit("local divergent commit", nil)
+		err = repo.AddAllAndCommit(t.Context(), "local divergent commit", nil)
 		require.NoError(t, err)
 
-		localCommit, err := repo.LastCommitID()
+		localCommit, err := repo.LastCommitID(t.Context())
 		require.NoError(t, err)
 
 		// Force pull from "ahead" should reset to the remote state.
-		err = repo.Pull(&PullOptions{Branch: "ahead", Force: true})
+		err = repo.Pull(t.Context(), &PullOptions{Branch: "ahead", Force: true})
 		require.NoError(t, err)
 
-		newCommit, err := repo.LastCommitID()
+		newCommit, err := repo.LastCommitID(t.Context())
 		require.NoError(t, err)
 		require.NotEqual(t, localCommit, newCommit)
 
@@ -121,12 +125,13 @@ func Test_workTree_Pull(t *testing.T) {
 
 	t.Run("non-force pull merges remote", func(t *testing.T) {
 		repo, err := Clone(
+			t.Context(),
 			testRepoURL,
 			&ClientOptions{Credentials: &testRepoCreds},
 			nil,
 		)
 		require.NoError(t, err)
-		defer repo.Close()
+		defer repo.Close(t.Context())
 
 		// Make a local commit on a different file to avoid conflicts.
 		err = os.WriteFile(
@@ -135,11 +140,11 @@ func Test_workTree_Pull(t *testing.T) {
 			0o600,
 		)
 		require.NoError(t, err)
-		err = repo.AddAllAndCommit("local non-conflicting commit", nil)
+		err = repo.AddAllAndCommit(t.Context(), "local non-conflicting commit", nil)
 		require.NoError(t, err)
 
 		// Non-force pull from "ahead" should merge.
-		err = repo.Pull(&PullOptions{Branch: "ahead"})
+		err = repo.Pull(t.Context(), &PullOptions{Branch: "ahead"})
 		require.NoError(t, err)
 
 		// Both files should be present after merge.
@@ -153,22 +158,23 @@ func Test_workTree_Pull(t *testing.T) {
 		require.NoError(t, err)
 
 		// Should have a merge commit.
-		msg, err := repo.CommitMessage("HEAD")
+		msg, err := repo.CommitMessage(t.Context(), "HEAD")
 		require.NoError(t, err)
 		require.Contains(t, msg, "Merge")
 	})
 
 	t.Run("nil opts defaults to current branch", func(t *testing.T) {
 		repo, err := Clone(
+			t.Context(),
 			testRepoURL,
 			&ClientOptions{Credentials: &testRepoCreds},
 			nil,
 		)
 		require.NoError(t, err)
-		defer repo.Close()
+		defer repo.Close(t.Context())
 
 		// Pull with nil opts should not error (fetches current branch).
-		err = repo.Pull(nil)
+		err = repo.Pull(t.Context(), nil)
 		require.NoError(t, err)
 	})
 }
@@ -237,13 +243,14 @@ func TestListCommits(t *testing.T) {
 	defer testServer.Close()
 
 	rep, err := Clone(
+		t.Context(),
 		testRepoURL,
 		&ClientOptions{Credentials: &testRepoCreds},
 		nil,
 	)
 	require.NoError(t, err)
 	require.NotNil(t, rep)
-	defer rep.Close()
+	defer rep.Close(t.Context())
 
 	wt := internalWorkTree(t, rep)
 
@@ -256,10 +263,13 @@ func TestListCommits(t *testing.T) {
 			0o600,
 		),
 	)
-	require.NoError(t, rep.AddAllAndCommit("main: initial commit", nil))
+	require.NoError(
+		t,
+		rep.AddAllAndCommit(t.Context(), "main: initial commit", nil),
+	)
 
 	// Create a feature branch from the initial commit
-	require.NoError(t, rep.CreateChildBranch("feature"))
+	require.NoError(t, rep.CreateChildBranch(t.Context(), "feature"))
 	require.NoError(
 		t,
 		os.WriteFile(
@@ -268,7 +278,7 @@ func TestListCommits(t *testing.T) {
 			0o600,
 		),
 	)
-	require.NoError(t, rep.AddAllAndCommit("feature: work 1", nil))
+	require.NoError(t, rep.AddAllAndCommit(t.Context(), "feature: work 1", nil))
 	require.NoError(
 		t,
 		os.WriteFile(
@@ -277,10 +287,10 @@ func TestListCommits(t *testing.T) {
 			0o600,
 		),
 	)
-	require.NoError(t, rep.AddAllAndCommit("feature: work 2", nil))
+	require.NoError(t, rep.AddAllAndCommit(t.Context(), "feature: work 2", nil))
 
 	// Back to main, add another commit
-	require.NoError(t, rep.Checkout("main"))
+	require.NoError(t, rep.Checkout(t.Context(), "main"))
 	require.NoError(
 		t,
 		os.WriteFile(
@@ -289,17 +299,20 @@ func TestListCommits(t *testing.T) {
 			0o600,
 		),
 	)
-	require.NoError(t, rep.AddAllAndCommit("main: second commit", nil))
+	require.NoError(
+		t,
+		rep.AddAllAndCommit(t.Context(), "main: second commit", nil),
+	)
 
 	// Merge the feature branch into main
 	_, err = libExec.Exec(wt.buildGitCommand(
-		"merge", "feature", "--no-ff", "-m", "main: merge feature",
+		t.Context(), "merge", "feature", "--no-ff", "-m", "main: merge feature",
 	))
 	require.NoError(t, err)
 
 	// ListCommits should only return first-parent commits (main line),
 	// not the individual feature branch commits.
-	commits, err := rep.ListCommits(nil)
+	commits, err := rep.ListCommits(t.Context(), nil)
 	require.NoError(t, err)
 
 	subjects := make([]string, len(commits))
@@ -322,13 +335,14 @@ func TestGetDiffPathsForMergeCommit(t *testing.T) {
 	defer testServer.Close()
 
 	rep, err := Clone(
+		t.Context(),
 		testRepoURL,
 		&ClientOptions{Credentials: &testRepoCreds},
 		nil,
 	)
 	require.NoError(t, err)
 	require.NotNil(t, rep)
-	defer rep.Close()
+	defer rep.Close(t.Context())
 
 	wt := internalWorkTree(t, rep)
 
@@ -350,10 +364,10 @@ func TestGetDiffPathsForMergeCommit(t *testing.T) {
 			0o600,
 		),
 	)
-	require.NoError(t, rep.AddAllAndCommit("initial commit", nil))
+	require.NoError(t, rep.AddAllAndCommit(t.Context(), "initial commit", nil))
 
 	// Create branch-a and modify file1
-	require.NoError(t, rep.CreateChildBranch("branch-a"))
+	require.NoError(t, rep.CreateChildBranch(t.Context(), "branch-a"))
 	require.NoError(
 		t,
 		os.WriteFile(
@@ -362,11 +376,14 @@ func TestGetDiffPathsForMergeCommit(t *testing.T) {
 			0o600,
 		),
 	)
-	require.NoError(t, rep.AddAllAndCommit("branch-a: modify file1", nil))
+	require.NoError(
+		t,
+		rep.AddAllAndCommit(t.Context(), "branch-a: modify file1", nil),
+	)
 
 	// Back to main, create branch-b, modify file2
-	require.NoError(t, rep.Checkout("main"))
-	require.NoError(t, rep.CreateChildBranch("branch-b"))
+	require.NoError(t, rep.Checkout(t.Context(), "main"))
+	require.NoError(t, rep.CreateChildBranch(t.Context(), "branch-b"))
 	require.NoError(
 		t,
 		os.WriteFile(
@@ -375,28 +392,31 @@ func TestGetDiffPathsForMergeCommit(t *testing.T) {
 			0o600,
 		),
 	)
-	require.NoError(t, rep.AddAllAndCommit("branch-b: modify file2", nil))
+	require.NoError(
+		t,
+		rep.AddAllAndCommit(t.Context(), "branch-b: modify file2", nil),
+	)
 
 	// Merge branch-b into main
-	require.NoError(t, rep.Checkout("main"))
+	require.NoError(t, rep.Checkout(t.Context(), "main"))
 	_, err = libExec.Exec(wt.buildGitCommand(
-		"merge", "branch-b", "--no-ff", "-m", "merge branch-b",
+		t.Context(), "merge", "branch-b", "--no-ff", "-m", "merge branch-b",
 	))
 	require.NoError(t, err)
 
 	// Merge branch-a into main
 	_, err = libExec.Exec(wt.buildGitCommand(
-		"merge", "branch-a", "--no-ff", "-m", "merge branch-a",
+		t.Context(), "merge", "branch-a", "--no-ff", "-m", "merge branch-a",
 	))
 	require.NoError(t, err)
 
-	mergeCommitID, err := rep.LastCommitID()
+	mergeCommitID, err := rep.LastCommitID(t.Context())
 	require.NoError(t, err)
 
 	// GetDiffPathsForCommitID on the merge commit should return only
 	// the file introduced by that merge (file1, from branch-a), not
 	// file2 which was already on main via the earlier merge of branch-b.
-	paths, err := rep.GetDiffPathsForCommitID(mergeCommitID)
+	paths, err := rep.GetDiffPathsForCommitID(t.Context(), mergeCommitID)
 	require.NoError(t, err)
 	require.Equal(t, []string{"foo/file1.txt"}, paths)
 }
@@ -406,13 +426,14 @@ func TestGetDiffPathsForMovedFile(t *testing.T) {
 	defer testServer.Close()
 
 	rep, err := Clone(
+		t.Context(),
 		testRepoURL,
 		&ClientOptions{Credentials: &testRepoCreds},
 		nil,
 	)
 	require.NoError(t, err)
 	require.NotNil(t, rep)
-	defer rep.Close()
+	defer rep.Close(t.Context())
 
 	wt := internalWorkTree(t, rep)
 
@@ -423,22 +444,25 @@ func TestGetDiffPathsForMovedFile(t *testing.T) {
 		[]byte("kind: Pod"),
 		0o600,
 	))
-	require.NoError(t, rep.AddAllAndCommit("initial commit", nil))
+	require.NoError(t, rep.AddAllAndCommit(t.Context(), "initial commit", nil))
 
 	// Move the file to a different directory
 	require.NoError(t, os.MkdirAll(fmt.Sprintf("%s/different-app", rep.Dir()), 0o755))
 	_, err = libExec.Exec(wt.buildGitCommand(
-		"mv", "app/pod.yaml", "different-app/pod.yaml",
+		t.Context(), "mv", "app/pod.yaml", "different-app/pod.yaml",
 	))
 	require.NoError(t, err)
-	require.NoError(t, rep.AddAllAndCommit("move pod.yaml to different-app/", nil))
+	require.NoError(
+		t,
+		rep.AddAllAndCommit(t.Context(), "move pod.yaml to different-app/", nil),
+	)
 
-	moveCommitID, err := rep.LastCommitID()
+	moveCommitID, err := rep.LastCommitID(t.Context())
 	require.NoError(t, err)
 
 	// GetDiffPathsForCommitID should return both the old and new paths so
 	// that a warehouse watching app/ detects the removal.
-	paths, err := rep.GetDiffPathsForCommitID(moveCommitID)
+	paths, err := rep.GetDiffPathsForCommitID(t.Context(), moveCommitID)
 	require.NoError(t, err)
 	require.ElementsMatch(t, []string{"app/pod.yaml", "different-app/pod.yaml"}, paths)
 }

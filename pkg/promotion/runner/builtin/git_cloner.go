@@ -140,6 +140,7 @@ func (g *gitCloner) run(
 	}
 
 	repo, err := git.CloneBare(
+		ctx,
 		cfg.RepoURL,
 		&git.ClientOptions{
 			User:                  &repoUser,
@@ -161,7 +162,7 @@ func (g *gitCloner) run(
 		switch {
 		case checkout.Branch != "":
 			ref = checkout.Branch
-			if err = ensureRemoteBranch(repo, ref, checkout.Create); err != nil {
+			if err = ensureRemoteBranch(ctx, repo, ref, checkout.Create); err != nil {
 				return promotion.StepResult{Status: kargoapi.PromotionStepStatusErrored},
 					fmt.Errorf("error ensuring existence of remote branch %s: %w", ref, err)
 			}
@@ -178,6 +179,7 @@ func (g *gitCloner) run(
 			)
 		}
 		worktree, err := repo.AddWorkTree(
+			ctx,
 			path,
 			&git.AddWorkTreeOptions{
 				Ref:    ref,
@@ -192,7 +194,7 @@ func (g *gitCloner) run(
 				)
 		}
 		if cfg.RecurseSubmodules {
-			if err = worktree.UpdateSubmodules(); err != nil {
+			if err = worktree.UpdateSubmodules(ctx); err != nil {
 				return promotion.StepResult{Status: kargoapi.PromotionStepStatusErrored},
 					fmt.Errorf("error updating submodules for worktree at %s: %w", path, err)
 			}
@@ -201,7 +203,7 @@ func (g *gitCloner) run(
 		if checkout.As != "" {
 			key = checkout.As
 		}
-		if commits[key], err = worktree.LastCommitID(); err != nil {
+		if commits[key], err = worktree.LastCommitID(ctx); err != nil {
 			return promotion.StepResult{Status: kargoapi.PromotionStepStatusErrored},
 				fmt.Errorf("error resolving HEAD for worktree at %s: %w", path, err)
 		}
@@ -220,8 +222,13 @@ func (g *gitCloner) run(
 // exist and create == true, an empty orphaned branch is created and pushed to
 // the remote. If the branch does not exist and create == false, an error is
 // returned.
-func ensureRemoteBranch(repo git.BareRepo, branch string, create bool) error {
-	exists, err := repo.RemoteBranchExists(branch)
+func ensureRemoteBranch(
+	ctx context.Context,
+	repo git.BareRepo,
+	branch string,
+	create bool,
+) error {
+	exists, err := repo.RemoteBranchExists(ctx, branch)
 	if err != nil {
 		return fmt.Errorf(
 			"error checking if remote branch %q of repo %s exists: %w",
@@ -244,24 +251,25 @@ func ensureRemoteBranch(repo git.BareRepo, branch string, create bool) error {
 	if err != nil {
 		return fmt.Errorf("error creating temporary directory: %w", err)
 	}
-	workTree, err := repo.AddWorkTree(tmpDir, &git.AddWorkTreeOptions{Orphan: true})
+	workTree, err := repo.AddWorkTree(ctx, tmpDir, &git.AddWorkTreeOptions{Orphan: true})
 	if err != nil {
 		return fmt.Errorf(
 			"error adding temporary working tree for branch %q of repo %s: %w",
 			branch, repo.URL(), err,
 		)
 	}
-	defer workTree.Close()
+	defer workTree.Close(ctx)
 	// `git worktree add --orphan some/path` (i.e. the preceding
 	// repo.AddWorkTree() call) creates a new orphaned branch named "path". We
 	// have no control over the branch name. It will always be equal to the last
 	// component of the path. So, we will immediately create _another_ orphaned
 	// branch with the name we really wanted before making an initial commit and
 	// pushing it to the remote.
-	if err = workTree.CreateOrphanedBranch(branch); err != nil {
+	if err = workTree.CreateOrphanedBranch(ctx, branch); err != nil {
 		return err
 	}
 	if err = workTree.Commit(
+		ctx,
 		"Initial commit",
 		&git.CommitOptions{AllowEmpty: true},
 	); err != nil {
@@ -270,7 +278,10 @@ func ensureRemoteBranch(repo git.BareRepo, branch string, create bool) error {
 			branch, repo.URL(), err,
 		)
 	}
-	if err = workTree.Push(&git.PushOptions{TargetBranch: branch}); err != nil {
+	if err = workTree.Push(
+		ctx,
+		&git.PushOptions{TargetBranch: branch},
+	); err != nil {
 		return fmt.Errorf(
 			"error pushing initial commit to new branch %q to repo %s: %w",
 			branch, repo.URL(), err,

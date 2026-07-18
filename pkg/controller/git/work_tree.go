@@ -20,42 +20,46 @@ import (
 // repository.
 type WorkTree interface {
 	// AddAll stages pending changes for commit.
-	AddAll() error
+	AddAll(ctx context.Context) error
 	// AddAllAndCommit is a convenience function that stages pending changes for
 	// commit to the current branch and then commits them using the provided
 	// commit message.
-	AddAllAndCommit(message string, commitOpts *CommitOptions) error
+	AddAllAndCommit(
+		ctx context.Context,
+		message string,
+		commitOpts *CommitOptions,
+	) error
 	// Clean cleans the working tree.
-	Clean() error
+	Clean(ctx context.Context) error
 	// Clear executes `git rm -rf .` to remove all files from the working tree.
-	Clear() error
+	Clear(ctx context.Context) error
 	// Close cleans up file system resources used by this working tree. This
 	// should always be called before a WorkTree goes out of scope.
-	Close() error
+	Close(ctx context.Context) error
 	// Checkout checks out the specified branch.
-	Checkout(branch string) error
+	Checkout(ctx context.Context, branch string) error
 	// Commit commits staged changes to the current branch.
-	Commit(message string, opts *CommitOptions) error
+	Commit(ctx context.Context, message string, opts *CommitOptions) error
 	// CreateChildBranch creates a new branch that is a child of the current
 	// branch.
-	CreateChildBranch(branch string) error
+	CreateChildBranch(ctx context.Context, branch string) error
 	// CreateOrphanedBranch creates a new branch that shares no commit history
 	// with any other branch.
-	CreateOrphanedBranch(branch string) error
+	CreateOrphanedBranch(ctx context.Context, branch string) error
 	// CreateTag creates a new annotated tag with the specified name and message.
-	CreateTag(name, msg string, opts *CreateTagOptions) error
+	CreateTag(ctx context.Context, name, msg string, opts *CreateTagOptions) error
 	// CurrentBranch returns the current branch
-	CurrentBranch() (string, error)
+	CurrentBranch(ctx context.Context) (string, error)
 	// DeleteBranch deletes the specified branch
-	DeleteBranch(branch string) error
+	DeleteBranch(ctx context.Context, branch string) error
 	// Dir returns an absolute path to the working tree.
 	Dir() string
 	// Fetch fetches updates from the remote repository.
-	Fetch(opts *FetchOptions) error
+	Fetch(ctx context.Context, opts *FetchOptions) error
 	// HasDiffs returns a bool indicating whether the working tree currently
 	// contains any differences from what's already at the head of the current
 	// branch.
-	HasDiffs() (bool, error)
+	HasDiffs(ctx context.Context) (bool, error)
 	// HomeDir returns an absolute path to the home directory of the system user
 	// who cloned the repo associated with this working tree.
 	HomeDir() string
@@ -64,51 +68,64 @@ type WorkTree interface {
 	// commit with the given ID. For renamed or moved files, both the old and
 	// new paths are included so that path-based filters can match on either
 	// side of the move.
-	GetDiffPathsForCommitID(commitID string) ([]string, error)
+	GetDiffPathsForCommitID(
+		ctx context.Context,
+		commitID string,
+	) ([]string, error)
 	// IsAncestor returns true if parent branch is an ancestor of child
-	IsAncestor(parent string, child string) (bool, error)
+	IsAncestor(ctx context.Context, parent string, child string) (bool, error)
 	// IsRebasing returns a bool indicating whether the working tree is currently
 	// in the middle of a rebase operation.
-	IsRebasing() (bool, error)
+	IsRebasing(ctx context.Context) (bool, error)
 	// LastCommitID returns the ID (sha) of the most recent commit to the current
 	// branch.
-	LastCommitID() (string, error)
+	LastCommitID(ctx context.Context) (string, error)
 	// ListTags returns a slice of tags in the repository with metadata such as
 	// commit ID, creator date, and subject.
-	ListTags() ([]TagMetadata, error)
+	ListTags(ctx context.Context) ([]TagMetadata, error)
 	// ListCommits returns a slice of commits in the current branch with
 	// metadata such as commit ID, commit date, and subject.
-	ListCommits(opts *ListCommitsOptions) ([]CommitMetadata, error)
+	ListCommits(
+		ctx context.Context,
+		opts *ListCommitsOptions,
+	) ([]CommitMetadata, error)
 	// CommitMessage returns the text of the most recent commit message associated
 	// with the specified commit ID.
-	CommitMessage(id string) (string, error)
+	CommitMessage(ctx context.Context, id string) (string, error)
 	// GetCommitSignatureInfo returns signature information for the specified
 	// commit, including whether it is signed by a trusted key and the
 	// identity of the signer. If opts provides a SigningKey, a temporary
 	// keyring is created with that key imported at ultimate trust and used
 	// for verification.
-	GetCommitSignatureInfo(commitID string) (*CommitSignatureInfo, error)
+	GetCommitSignatureInfo(
+		ctx context.Context,
+		commitID string,
+	) (*CommitSignatureInfo, error)
 	// IntegrateRemoteChanges integrates remote changes into the local branch
 	// before pushing. This fetches the target branch and applies the operator-
 	// configured integration policy (rebase, merge, or fail). It is a no-op
 	// if the remote branch does not exist or the policy is None.
-	IntegrateRemoteChanges(*IntegrationOptions) error
+	IntegrateRemoteChanges(context.Context, *IntegrationOptions) error
 	// Pull fetches and integrates changes from a remote branch
 	// into the current local branch.
-	Pull(*PullOptions) error
+	Pull(context.Context, *PullOptions) error
 	// Push pushes from the local repository to the remote repository.
-	Push(*PushOptions) error
+	Push(context.Context, *PushOptions) error
 	// RefsHaveDiffs returns whether there is a diff between two commits/branches
-	RefsHaveDiffs(commit1 string, commit2 string) (bool, error)
+	RefsHaveDiffs(
+		ctx context.Context,
+		commit1 string,
+		commit2 string,
+	) (bool, error)
 	// RemoteBranchExists returns a bool indicating if the specified branch exists
 	// in the remote repository.
-	RemoteBranchExists(branch string) (bool, error)
+	RemoteBranchExists(ctx context.Context, branch string) (bool, error)
 	// ResetHard performs a hard reset on the working tree.
-	ResetHard() error
+	ResetHard(ctx context.Context) error
 	// URL returns the remote URL of the repository.
 	URL() string
 	// UpdateSubmodules updates the submodules in the working tree.
-	UpdateSubmodules() error
+	UpdateSubmodules(ctx context.Context) error
 }
 
 // ListCommitsOptions contains options for listing commits.
@@ -132,7 +149,11 @@ type LoadWorkTreeOptions struct {
 	Credentials *RepoCredentials
 }
 
-func LoadWorkTree(path string, opts *LoadWorkTreeOptions) (WorkTree, error) {
+func LoadWorkTree(
+	ctx context.Context,
+	path string,
+	opts *LoadWorkTreeOptions,
+) (WorkTree, error) {
 	if opts == nil {
 		opts = &LoadWorkTreeOptions{}
 	}
@@ -142,25 +163,22 @@ func LoadWorkTree(path string, opts *LoadWorkTreeOptions) (WorkTree, error) {
 			dir:   path,
 		},
 	}
-	res, err := libExec.Exec(w.buildGitCommand(
-		"config",
-		repoDirConfigKey,
-	))
+	res, err := libExec.Exec(w.buildGitCommand(ctx, "config", repoDirConfigKey))
 	if err != nil {
 		return nil, fmt.Errorf("error reading repo dir from config: %w", err)
 	}
 	repoPath := strings.TrimSpace(string(res))
-	if err = w.loadHomeDir(); err != nil {
+	if err = w.loadHomeDir(ctx); err != nil {
 		return nil, fmt.Errorf("error reading repo home dir from config: %w", err)
 	}
-	if err = w.loadURLs(); err != nil {
+	if err = w.loadURLs(ctx); err != nil {
 		return nil,
 			fmt.Errorf(`error reading URL of remote "origin" from config: %w`, err)
 	}
 	if err = w.setupAuth(w.homeDir); err != nil {
 		return nil, fmt.Errorf("error configuring the credentials: %w", err)
 	}
-	br, err := LoadBareRepo(repoPath, &LoadBareRepoOptions{
+	br, err := LoadBareRepo(ctx, repoPath, &LoadBareRepoOptions{
 		Credentials: opts.Credentials,
 	})
 	if err != nil {
@@ -170,39 +188,45 @@ func LoadWorkTree(path string, opts *LoadWorkTreeOptions) (WorkTree, error) {
 	return w, nil
 }
 
-func (w *workTree) AddAll() error {
-	if _, err := libExec.Exec(w.buildGitCommand("add", ".")); err != nil {
+func (w *workTree) AddAll(ctx context.Context) error {
+	if _, err := libExec.Exec(w.buildGitCommand(ctx, "add", ".")); err != nil {
 		return fmt.Errorf("error staging changes for commit: %w", err)
 	}
 	return nil
 }
 
-func (w *workTree) AddAllAndCommit(message string, commitOpts *CommitOptions) error {
-	if err := w.AddAll(); err != nil {
+func (w *workTree) AddAllAndCommit(
+	ctx context.Context,
+	message string,
+	commitOpts *CommitOptions,
+) error {
+	if err := w.AddAll(ctx); err != nil {
 		return err
 	}
-	return w.Commit(message, commitOpts)
+	return w.Commit(ctx, message, commitOpts)
 }
 
-func (w *workTree) Clean() error {
-	if _, err := libExec.Exec(w.buildGitCommand("clean", "-fd")); err != nil {
+func (w *workTree) Clean(ctx context.Context) error {
+	if _, err := libExec.Exec(w.buildGitCommand(
+		ctx, "clean", "-fd",
+	)); err != nil {
 		return fmt.Errorf("error cleaning worktree: %w", err)
 	}
 	return nil
 }
 
-func (w *workTree) Clear() error {
-	if _, err := libExec.Exec(
-		w.buildGitCommand("rm", "-rf", "--ignore-unmatch", "."),
-	); err != nil {
+func (w *workTree) Clear(ctx context.Context) error {
+	if _, err := libExec.Exec(w.buildGitCommand(
+		ctx, "rm", "-rf", "--ignore-unmatch", ".",
+	)); err != nil {
 		return fmt.Errorf("error clearing worktree: %w", err)
 	}
 	return nil
 }
 
-func (w *workTree) Close() error {
+func (w *workTree) Close(ctx context.Context) error {
 	if w.bareRepo != nil {
-		return w.bareRepo.RemoveWorkTree(w.dir)
+		return w.bareRepo.RemoveWorkTree(ctx, w.dir)
 	}
 	if err := os.RemoveAll(w.dir); err != nil {
 		return fmt.Errorf("error removing working tree at %q: %w", w.dir, err)
@@ -210,8 +234,9 @@ func (w *workTree) Close() error {
 	return nil
 }
 
-func (w *workTree) Checkout(branch string) error {
+func (w *workTree) Checkout(ctx context.Context, branch string) error {
 	if _, err := libExec.Exec(w.buildGitCommand(
+		ctx,
 		"checkout",
 		branch,
 		// The next line makes it crystal clear to git that we're checking out
@@ -236,7 +261,11 @@ type CommitOptions struct {
 	Author *User
 }
 
-func (w *workTree) Commit(message string, opts *CommitOptions) error {
+func (w *workTree) Commit(
+	ctx context.Context,
+	message string,
+	opts *CommitOptions,
+) error {
 	if opts == nil {
 		opts = &CommitOptions{}
 	}
@@ -256,11 +285,11 @@ func (w *workTree) Commit(message string, opts *CommitOptions) error {
 		}
 		defer func() {
 			if cleanErr := os.RemoveAll(homeDir); cleanErr != nil {
-				logging.LoggerFromContext(context.TODO()).
+				logging.LoggerFromContext(ctx).
 					Error(cleanErr, "error removing virtual home directory", "path", homeDir)
 			}
 		}()
-		if err = w.setupUser(homeDir, opts.Author); err != nil {
+		if err = w.setupUser(ctx, homeDir, opts.Author); err != nil {
 			return fmt.Errorf(
 				"error setting up author + committer information for commit command: %w", err,
 			)
@@ -272,7 +301,7 @@ func (w *workTree) Commit(message string, opts *CommitOptions) error {
 		cmdTokens = append(cmdTokens, "--allow-empty")
 	}
 
-	cmd := w.buildGitCommand(cmdTokens...)
+	cmd := w.buildGitCommand(ctx, cmdTokens...)
 	if homeDir != "" {
 		// Override the home directory set by b.buildGitCommand().
 		w.setCmdHome(cmd, homeDir)
@@ -283,26 +312,29 @@ func (w *workTree) Commit(message string, opts *CommitOptions) error {
 	return nil
 }
 
-func (w *workTree) CommitMessage(id string) (string, error) {
-	msgBytes, err := libExec.Exec(
-		w.buildGitCommand(
-			"log",
-			"-n",
-			"1",
-			"--pretty=format:%B",
-			id,
-			// `--` clarifies that id is a branch name and not a file name
-			"--",
-		),
-	)
+func (w *workTree) CommitMessage(
+	ctx context.Context,
+	id string,
+) (string, error) {
+	msgBytes, err := libExec.Exec(w.buildGitCommand(
+		ctx,
+		"log",
+		"-n",
+		"1",
+		"--pretty=format:%B",
+		id,
+		// `--` clarifies that id is a branch name and not a file name
+		"--",
+	))
 	if err != nil {
 		return "", fmt.Errorf("error obtaining commit message for commit %q: %w", id, err)
 	}
 	return string(msgBytes), nil
 }
 
-func (w *workTree) CreateChildBranch(branch string) error {
+func (w *workTree) CreateChildBranch(ctx context.Context, branch string) error {
 	if _, err := libExec.Exec(w.buildGitCommand(
+		ctx,
 		"checkout",
 		"-b",
 		branch,
@@ -319,19 +351,16 @@ func (w *workTree) CreateChildBranch(branch string) error {
 	return nil
 }
 
-func (w *workTree) CreateOrphanedBranch(branch string) error {
+func (w *workTree) CreateOrphanedBranch(ctx context.Context, branch string) error {
 	if _, err := libExec.Exec(w.buildGitCommand(
-		"switch",
-		"--orphan",
-		branch,
-		"--discard-changes",
+		ctx, "switch", "--orphan", branch, "--discard-changes",
 	)); err != nil {
 		return fmt.Errorf(
 			"error creating orphaned branch %q for repo %q: %w",
 			branch, w.originalURL, err,
 		)
 	}
-	return w.Clean()
+	return w.Clean(ctx)
 }
 
 // CreateTagOptions represents options for creating a tag.
@@ -340,7 +369,11 @@ type CreateTagOptions struct {
 	Force bool
 }
 
-func (w *workTree) CreateTag(tag, msg string, opts *CreateTagOptions) error {
+func (w *workTree) CreateTag(
+	ctx context.Context,
+	tag, msg string,
+	opts *CreateTagOptions,
+) error {
 	if opts == nil {
 		opts = &CreateTagOptions{}
 	}
@@ -348,15 +381,15 @@ func (w *workTree) CreateTag(tag, msg string, opts *CreateTagOptions) error {
 	if opts.Force {
 		args = append(args, "--force")
 	}
-	cmd := w.buildGitCommand(args...)
+	cmd := w.buildGitCommand(ctx, args...)
 	if _, err := libExec.Exec(cmd); err != nil {
 		return fmt.Errorf("error creating annotated tag %q: %w", tag, err)
 	}
 	return nil
 }
 
-func (w *workTree) CurrentBranch() (string, error) {
-	res, err := libExec.Exec(w.buildGitCommand("branch", "--show-current"))
+func (w *workTree) CurrentBranch(ctx context.Context) (string, error) {
+	res, err := libExec.Exec(w.buildGitCommand(ctx, "branch", "--show-current"))
 	if err != nil {
 		return "", fmt.Errorf(
 			"error checking current branch for repo %q: %w",
@@ -366,12 +399,9 @@ func (w *workTree) CurrentBranch() (string, error) {
 	return strings.TrimSpace(string(res)), nil
 }
 
-func (w *workTree) DeleteBranch(branch string) error {
+func (w *workTree) DeleteBranch(ctx context.Context, branch string) error {
 	if _, err := libExec.Exec(w.buildGitCommand(
-		"branch",
-		"--delete",
-		"--force",
-		branch,
+		ctx, "branch", "--delete", "--force", branch,
 	)); err != nil {
 		return fmt.Errorf("error deleting branch %q for repo %q: %w", branch, w.accessURL, err)
 	}
@@ -388,7 +418,7 @@ type FetchOptions struct {
 	Depth uint
 }
 
-func (w *workTree) Fetch(opts *FetchOptions) error {
+func (w *workTree) Fetch(ctx context.Context, opts *FetchOptions) error {
 	if opts == nil {
 		opts = &FetchOptions{}
 	}
@@ -405,7 +435,7 @@ func (w *workTree) Fetch(opts *FetchOptions) error {
 	if opts.Depth > 0 {
 		args = append(args, "--depth", fmt.Sprintf("%d", opts.Depth))
 	}
-	if _, err := libExec.Exec(w.buildGitCommand(args...)); err != nil {
+	if _, err := libExec.Exec(w.buildGitCommand(ctx, args...)); err != nil {
 		return fmt.Errorf(
 			"error fetching from repo %q: %w", w.originalURL, err,
 		)
@@ -413,8 +443,13 @@ func (w *workTree) Fetch(opts *FetchOptions) error {
 	return nil
 }
 
-func (w *workTree) GetDiffPathsForCommitID(commitID string) ([]string, error) {
-	resBytes, err := libExec.Exec(w.buildGitCommand("show", "--pretty=", "--name-status", "--first-parent", commitID))
+func (w *workTree) GetDiffPathsForCommitID(
+	ctx context.Context,
+	commitID string,
+) ([]string, error) {
+	resBytes, err := libExec.Exec(w.buildGitCommand(
+		ctx, "show", "--pretty=", "--name-status", "--first-parent", commitID,
+	))
 	if err != nil {
 		return nil, fmt.Errorf("error getting diff paths for commit %q: %w", commitID, err)
 	}
@@ -448,16 +483,18 @@ func (w *workTree) GetDiffPathsForCommitID(commitID string) ([]string, error) {
 	return paths, nil
 }
 
-func (w *workTree) HasDiffs() (bool, error) {
-	resBytes, err := libExec.Exec(w.buildGitCommand("status", "-s"))
+func (w *workTree) HasDiffs(ctx context.Context) (bool, error) {
+	resBytes, err := libExec.Exec(w.buildGitCommand(ctx, "status", "-s"))
 	if err != nil {
 		return false, fmt.Errorf("error checking status of branch: %w", err)
 	}
 	return len(resBytes) > 0, nil
 }
 
-func (w *workTree) IsAncestor(parent string, child string) (bool, error) {
-	_, err := libExec.Exec(w.buildGitCommand("merge-base", "--is-ancestor", parent, child))
+func (w *workTree) IsAncestor(ctx context.Context, parent string, child string) (bool, error) {
+	_, err := libExec.Exec(w.buildGitCommand(
+		ctx, "merge-base", "--is-ancestor", parent, child,
+	))
 	if err == nil {
 		return true, nil
 	}
@@ -470,8 +507,10 @@ func (w *workTree) IsAncestor(parent string, child string) (bool, error) {
 	return false, fmt.Errorf("error testing ancestry of branches %q, %q: %w", parent, child, err)
 }
 
-func (w *workTree) IsRebasing() (bool, error) {
-	res, err := libExec.Exec(w.buildGitCommand("rev-parse", "--git-path", "rebase-merge"))
+func (w *workTree) IsRebasing(ctx context.Context) (bool, error) {
+	res, err := libExec.Exec(w.buildGitCommand(
+		ctx, "rev-parse", "--git-path", "rebase-merge",
+	))
 	if err != nil {
 		return false, fmt.Errorf("error determining rebase status: %w", err)
 	}
@@ -482,7 +521,9 @@ func (w *workTree) IsRebasing() (bool, error) {
 		}
 		return true, nil
 	}
-	if res, err = libExec.Exec(w.buildGitCommand("rev-parse", "--git-path", "rebase-apply")); err != nil {
+	if res, err = libExec.Exec(w.buildGitCommand(
+		ctx, "rev-parse", "--git-path", "rebase-apply",
+	)); err != nil {
 		return false, fmt.Errorf("error determining rebase status: %w", err)
 	}
 	rebaseApply := filepath.Join(w.dir, strings.TrimSpace(string(res)))
@@ -495,8 +536,8 @@ func (w *workTree) IsRebasing() (bool, error) {
 	return false, nil
 }
 
-func (w *workTree) LastCommitID() (string, error) {
-	shaBytes, err := libExec.Exec(w.buildGitCommand("rev-parse", "HEAD"))
+func (w *workTree) LastCommitID(ctx context.Context) (string, error) {
+	shaBytes, err := libExec.Exec(w.buildGitCommand(ctx, "rev-parse", "HEAD"))
 	if err != nil {
 		return "", fmt.Errorf("error obtaining ID of last commit: %w", err)
 	}
@@ -517,7 +558,10 @@ type CommitMetadata struct {
 	Subject string
 }
 
-func (w *workTree) ListCommits(opts *ListCommitsOptions) ([]CommitMetadata, error) {
+func (w *workTree) ListCommits(
+	ctx context.Context,
+	opts *ListCommitsOptions,
+) ([]CommitMetadata, error) {
 	if opts == nil {
 		opts = &ListCommitsOptions{}
 	}
@@ -544,7 +588,7 @@ func (w *workTree) ListCommits(opts *ListCommitsOptions) ([]CommitMetadata, erro
 		args = append(args, fmt.Sprintf("--since=%s", opts.Since.Format(time.RFC3339)))
 	}
 
-	b, err := libExec.Exec(w.buildGitCommand(args...))
+	b, err := libExec.Exec(w.buildGitCommand(ctx, args...))
 	if err != nil {
 		return nil, fmt.Errorf(
 			"error listing commits for repo %q: %w",
@@ -633,8 +677,10 @@ func parseTagMetadataLine(line []byte) (TagMetadata, error) {
 	return metadata, nil
 }
 
-func (w *workTree) ListTags() ([]TagMetadata, error) {
-	if _, err := libExec.Exec(w.buildGitCommand("fetch", "origin", "--tags")); err != nil {
+func (w *workTree) ListTags(ctx context.Context) ([]TagMetadata, error) {
+	if _, err := libExec.Exec(w.buildGitCommand(
+		ctx, "fetch", "origin", "--tags",
+	)); err != nil {
 		return nil, fmt.Errorf(
 			"error fetching tags from repo %q: %w",
 			w.originalURL, err,
@@ -668,6 +714,7 @@ func (w *workTree) ListTags() ([]TagMetadata, error) {
 	)
 
 	tagsBytes, err := libExec.Exec(w.buildGitCommand(
+		ctx,
 		"for-each-ref",
 		"--sort=-creatordate",
 		"--format="+tagFormat,
@@ -703,23 +750,23 @@ type PullOptions struct {
 	Force bool
 }
 
-func (w *workTree) Pull(opts *PullOptions) error {
+func (w *workTree) Pull(ctx context.Context, opts *PullOptions) error {
 	if opts == nil {
 		opts = &PullOptions{}
 	}
 	branch := opts.Branch
 	if branch == "" {
 		var err error
-		if branch, err = w.CurrentBranch(); err != nil {
+		if branch, err = w.CurrentBranch(ctx); err != nil {
 			return err
 		}
 	}
-	if err := w.Fetch(&FetchOptions{Branch: branch}); err != nil {
+	if err := w.Fetch(ctx, &FetchOptions{Branch: branch}); err != nil {
 		return fmt.Errorf("error fetching branch %q: %w", branch, err)
 	}
 	if opts.Force {
 		cmd := w.buildGitCommand(
-			"reset", "--hard", fmt.Sprintf("origin/%s", branch),
+			ctx, "reset", "--hard", fmt.Sprintf("origin/%s", branch),
 		)
 		if _, err := libExec.Exec(cmd); err != nil {
 			return fmt.Errorf(
@@ -728,7 +775,7 @@ func (w *workTree) Pull(opts *PullOptions) error {
 		}
 		return nil
 	}
-	cmd := w.buildGitCommand("merge", fmt.Sprintf("origin/%s", branch))
+	cmd := w.buildGitCommand(ctx, "merge", fmt.Sprintf("origin/%s", branch))
 	if _, err := libExec.Exec(cmd); err != nil {
 		return fmt.Errorf(
 			"error merging origin/%s: %w", branch, err,
@@ -763,7 +810,7 @@ type PushOptions struct {
 // nolint: lll
 var nonFastForwardRegex = regexp.MustCompile(`(?m)^\s*!\s+\[(?:remote )?rejected].+\((?:non-fast-forward|fetch first|cannot lock ref.*|incorrect old value provided)\)\s*$`)
 
-func (w *workTree) Push(opts *PushOptions) error {
+func (w *workTree) Push(ctx context.Context, opts *PushOptions) error {
 	if opts == nil {
 		opts = &PushOptions{}
 	}
@@ -774,7 +821,7 @@ func (w *workTree) Push(opts *PushOptions) error {
 	args := []string{"push", "origin"}
 	if opts.Tag != "" {
 		args = append(args, "tag", opts.Tag)
-		if _, err := libExec.Exec(w.buildGitCommand(args...)); err != nil {
+		if _, err := libExec.Exec(w.buildGitCommand(ctx, args...)); err != nil {
 			return fmt.Errorf("error pushing tag: %w", err)
 		}
 		return nil
@@ -783,13 +830,13 @@ func (w *workTree) Push(opts *PushOptions) error {
 	targetBranch := opts.TargetBranch
 	if targetBranch == "" {
 		var err error
-		if targetBranch, err = w.CurrentBranch(); err != nil {
+		if targetBranch, err = w.CurrentBranch(ctx); err != nil {
 			return err
 		}
 	}
 
 	args = append(args, fmt.Sprintf("HEAD:%s", targetBranch))
-	if err := w.IntegrateRemoteChanges(&IntegrationOptions{
+	if err := w.IntegrateRemoteChanges(ctx, &IntegrationOptions{
 		TargetBranch:      targetBranch,
 		IntegrationPolicy: opts.IntegrationPolicy,
 	}); err != nil {
@@ -800,7 +847,7 @@ func (w *workTree) Push(opts *PushOptions) error {
 		args = append(args, "--force")
 	}
 
-	if res, err := libExec.Exec(w.buildGitCommand(args...)); err != nil {
+	if res, err := libExec.Exec(w.buildGitCommand(ctx, args...)); err != nil {
 		if nonFastForwardRegex.MatchString(string(res)) {
 			return fmt.Errorf("error pushing branch: %w", ErrNonFastForward)
 		}
@@ -809,10 +856,15 @@ func (w *workTree) Push(opts *PushOptions) error {
 	return nil
 }
 
-func (w *workTree) RefsHaveDiffs(commit1 string, commit2 string) (bool, error) {
+func (w *workTree) RefsHaveDiffs(
+	ctx context.Context,
+	commit1 string,
+	commit2 string,
+) (bool, error) {
 	// `git diff --quiet` returns 0 if no diff, 1 if diff, and non-zero/one for any other error
 	_, err := libExec.Exec(w.buildGitCommand(
-		"diff", "--quiet", fmt.Sprintf("%s..%s", commit1, commit2), "--"))
+		ctx, "diff", "--quiet", fmt.Sprintf("%s..%s", commit1, commit2), "--",
+	))
 	if err == nil {
 		return false, nil
 	}
@@ -825,15 +877,19 @@ func (w *workTree) RefsHaveDiffs(commit1 string, commit2 string) (bool, error) {
 	return false, fmt.Errorf("error diffing commits %s..%s: %w", commit1, commit2, err)
 }
 
-func (w *workTree) ResetHard() error {
-	if _, err := libExec.Exec(w.buildGitCommand("reset", "--hard")); err != nil {
+func (w *workTree) ResetHard(ctx context.Context) error {
+	if _, err := libExec.Exec(w.buildGitCommand(
+		ctx, "reset", "--hard",
+	)); err != nil {
 		return fmt.Errorf("error resetting branch working tree: %w", err)
 	}
 	return nil
 }
 
-func (w *workTree) UpdateSubmodules() error {
-	if _, err := libExec.Exec(w.buildGitCommand("submodule", "update", "--init", "--recursive")); err != nil {
+func (w *workTree) UpdateSubmodules(ctx context.Context) error {
+	if _, err := libExec.Exec(w.buildGitCommand(
+		ctx, "submodule", "update", "--init", "--recursive",
+	)); err != nil {
 		return fmt.Errorf("error updating submodules: %w", err)
 	}
 	return nil
@@ -862,21 +918,24 @@ func validateSparsePatterns(patterns []string) error {
 
 // configureSparseCheckout configures sparse checkout in cone mode for the
 // working tree with the specified directory patterns.
-func (w *workTree) configureSparseCheckout(patterns []string) error {
+func (w *workTree) configureSparseCheckout(
+	ctx context.Context,
+	patterns []string,
+) error {
 	if err := validateSparsePatterns(patterns); err != nil {
 		return err
 	}
 
 	// Initialize sparse checkout in cone mode (fast, directory-based)
-	if _, err := libExec.Exec(
-		w.buildGitCommand("sparse-checkout", "init", "--cone"),
-	); err != nil {
+	if _, err := libExec.Exec(w.buildGitCommand(
+		ctx, "sparse-checkout", "init", "--cone",
+	)); err != nil {
 		return fmt.Errorf("error initializing sparse checkout: %w", err)
 	}
 
 	// Set the sparse checkout patterns
 	setArgs := append([]string{"sparse-checkout", "set"}, patterns...)
-	if _, err := libExec.Exec(w.buildGitCommand(setArgs...)); err != nil {
+	if _, err := libExec.Exec(w.buildGitCommand(ctx, setArgs...)); err != nil {
 		return fmt.Errorf("error setting sparse checkout patterns %v: %w", patterns, err)
 	}
 	return nil
