@@ -132,7 +132,7 @@ func (g *gitPushPusher) run(
 		)
 	}
 	loadOpts := &git.LoadWorkTreeOptions{}
-	workTree, err := git.LoadWorkTree(path, loadOpts)
+	workTree, err := git.LoadWorkTree(ctx, path, loadOpts)
 	if err != nil {
 		return promotion.StepResult{Status: kargoapi.PromotionStepStatusErrored},
 			fmt.Errorf("error loading working tree from %s: %w", cfg.Path, err)
@@ -154,7 +154,7 @@ func (g *gitPushPusher) run(
 			SSHPrivateKey: creds.SSHPrivateKey,
 		}
 	}
-	if workTree, err = git.LoadWorkTree(path, loadOpts); err != nil {
+	if workTree, err = git.LoadWorkTree(ctx, path, loadOpts); err != nil {
 		return promotion.StepResult{Status: kargoapi.PromotionStepStatusErrored},
 			fmt.Errorf("error loading working tree from %s: %w", cfg.Path, err)
 	}
@@ -196,7 +196,7 @@ func (g *gitPushPusher) run(
 		// If targetBranch is still empty, we want to set it to the current branch
 		// because we will want to return the branch that was pushed to, but we
 		// don't want to mess with the options any further.
-		if pushOpts.TargetBranch, err = workTree.CurrentBranch(); err != nil {
+		if pushOpts.TargetBranch, err = workTree.CurrentBranch(ctx); err != nil {
 			return promotion.StepResult{Status: kargoapi.PromotionStepStatusErrored},
 				fmt.Errorf("error getting current branch: %w", err)
 		}
@@ -232,7 +232,7 @@ func (g *gitPushPusher) run(
 			// using the GitHub API. This means retries should only ever be necessary
 			// when there are multiple sharded controllers concurrently executing
 			// Promotions that push to the same branch.
-			return g.push(workTree, pushOpts)
+			return g.push(ctx, workTree, pushOpts)
 		},
 	); err != nil {
 		if git.IsMergeConflict(err) {
@@ -251,7 +251,7 @@ func (g *gitPushPusher) run(
 			fmt.Errorf("error pushing commits to remote: %w", err)
 	}
 
-	commitID, err := workTree.LastCommitID()
+	commitID, err := workTree.LastCommitID(ctx)
 	if err != nil {
 		return promotion.StepResult{Status: kargoapi.PromotionStepStatusErrored},
 			fmt.Errorf("error getting last commit ID: %w", err)
@@ -289,7 +289,11 @@ func (g *gitPushPusher) run(
 // local branch and pushing the branch to the remote using the GitHub API. This
 // helps reduce the likelihood of conflicts when multiple Promotions that push
 // to the same branch are running concurrently.
-func (g *gitPushPusher) push(workTree git.WorkTree, pushOpts *git.PushOptions) error {
+func (g *gitPushPusher) push(
+	ctx context.Context,
+	workTree git.WorkTree,
+	pushOpts *git.PushOptions,
+) error {
 	branchKey := g.getBranchKey(workTree.URL(), pushOpts.TargetBranch)
 	if _, exists := g.branchMus[branchKey]; !exists {
 		g.masterMu.Lock()
@@ -302,7 +306,7 @@ func (g *gitPushPusher) push(workTree git.WorkTree, pushOpts *git.PushOptions) e
 	}
 	g.branchMus[branchKey].Lock()
 	defer g.branchMus[branchKey].Unlock()
-	return workTree.Push(pushOpts)
+	return workTree.Push(ctx, pushOpts)
 }
 
 func (g *gitPushPusher) getBranchKey(repoURL, branch string) string {

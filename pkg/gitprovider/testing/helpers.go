@@ -4,6 +4,7 @@
 package testing
 
 import (
+	"context"
 	"fmt"
 	"os"
 	"os/exec"
@@ -153,6 +154,7 @@ func RunPRTests(
 func ensureMainBranch(t *testing.T, cfg RepoConfig) {
 	t.Helper()
 	if _, err := git.Clone(
+		t.Context(),
 		cfg.RepoURL,
 		cfg.clientOpts(),
 		&git.CloneOptions{Branch: "main", SingleBranch: true},
@@ -193,21 +195,22 @@ func cloneAndPush(
 ) git.Repo {
 	t.Helper()
 	repo, err := git.Clone(
+		t.Context(),
 		cfg.RepoURL,
 		cfg.clientOpts(),
 		&git.CloneOptions{Branch: "main", SingleBranch: true},
 	)
 	require.NoError(t, err)
-	require.NoError(t, repo.CreateChildBranch(branchName))
+	require.NoError(t, repo.CreateChildBranch(t.Context(), branchName))
 	require.NoError(t, os.WriteFile(
 		filepath.Join(repo.Dir(), fmt.Sprintf("test-%s.txt", branchName)),
 		[]byte(fmt.Sprintf("test content %d", time.Now().UnixNano())),
 		0600,
 	))
 	require.NoError(t, repo.AddAllAndCommit(
-		fmt.Sprintf("test commit for %s", branchName), nil,
+		t.Context(), fmt.Sprintf("test commit for %s", branchName), nil,
 	))
-	require.NoError(t, repo.Push(nil))
+	require.NoError(t, repo.Push(t.Context(), nil))
 	return repo
 }
 
@@ -216,6 +219,7 @@ func cloneAndPush(
 func cloneMain(t *testing.T, cfg RepoConfig) git.Repo {
 	t.Helper()
 	repo, err := git.Clone(
+		t.Context(),
 		cfg.RepoURL,
 		cfg.clientOpts(),
 		&git.CloneOptions{Branch: "main", SingleBranch: true},
@@ -233,8 +237,8 @@ func commitFileAndPush(
 	require.NoError(t, os.WriteFile(
 		filepath.Join(repo.Dir(), name), []byte(content), 0600,
 	))
-	require.NoError(t, repo.AddAllAndCommit(message, nil))
-	require.NoError(t, repo.Push(nil))
+	require.NoError(t, repo.AddAllAndCommit(t.Context(), message, nil))
+	require.NoError(t, repo.Push(t.Context(), nil))
 }
 
 // openPR opens a pull request from headBranch into main and returns its number.
@@ -277,7 +281,7 @@ func deleteBranchAndClose(cfg RepoConfig, repo git.Repo, branchName string) {
 		"GIT_TERMINAL_PROMPT=0",
 	)
 	_ = cmd.Run()
-	repo.Close() // nolint: errcheck
+	repo.Close(context.Background()) // nolint: errcheck
 }
 
 // SetupCleanPR creates a PR with a single non-conflicting commit. It returns the
@@ -307,7 +311,7 @@ func SetupConflictingPR(
 
 	// Feature branch adds the file with one content.
 	featureRepo := cloneMain(t, cfg)
-	require.NoError(t, featureRepo.CreateChildBranch(branchName))
+	require.NoError(t, featureRepo.CreateChildBranch(t.Context(), branchName))
 	commitFileAndPush(
 		t, featureRepo, conflictFile, "feature content\n", "feature change",
 	)
@@ -315,7 +319,7 @@ func SetupConflictingPR(
 	// main adds the same file with different content, diverging from the feature
 	// branch.
 	mainRepo := cloneMain(t, cfg)
-	defer mainRepo.Close() // nolint: errcheck
+	defer mainRepo.Close(t.Context()) // nolint: errcheck
 	commitFileAndPush(
 		t, mainRepo, conflictFile, "main content\n", "conflicting main change",
 	)

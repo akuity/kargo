@@ -127,25 +127,30 @@ func Test_githubPusher_run(t *testing.T) {
 	// Set up a real working tree that LoadWorkTree can load.
 	workDir := t.TempDir()
 	repo, err := git.CloneBare(
+		t.Context(),
 		testRepoURL,
 		nil,
 		&git.BareCloneOptions{BaseDir: workDir},
 	)
 	require.NoError(t, err)
-	defer repo.Close()
+	defer repo.Close(t.Context())
 	workTreePath := filepath.Join(workDir, "main")
 	workTree, err := repo.AddWorkTree(
+		t.Context(),
 		workTreePath,
 		&git.AddWorkTreeOptions{Orphan: true},
 	)
 	require.NoError(t, err)
-	require.NoError(t, workTree.CreateOrphanedBranch("main"))
+	require.NoError(t, workTree.CreateOrphanedBranch(t.Context(), "main"))
 	require.NoError(t, os.WriteFile(
 		filepath.Join(workTree.Dir(), "test.txt"),
 		[]byte("foo"),
 		0o600,
 	))
-	require.NoError(t, workTree.AddAllAndCommit("initial commit", nil))
+	require.NoError(
+		t,
+		workTree.AddAllAndCommit(t.Context(), "initial commit", nil),
+	)
 
 	stepCtx := &promotion.StepContext{WorkDir: workDir}
 
@@ -307,7 +312,10 @@ func Test_githubPusher_push(t *testing.T) {
 				URLFn: func() string {
 					return testRepoURL
 				},
-				IntegrateRemoteChangesFn: func(*git.IntegrationOptions) error {
+				IntegrateRemoteChangesFn: func(
+					context.Context,
+					*git.IntegrationOptions,
+				) error {
 					return errors.New("something went wrong")
 				},
 			},
@@ -322,10 +330,13 @@ func Test_githubPusher_push(t *testing.T) {
 				URLFn: func() string {
 					return testRepoURL
 				},
-				IntegrateRemoteChangesFn: func(*git.IntegrationOptions) error {
+				IntegrateRemoteChangesFn: func(
+					context.Context,
+					*git.IntegrationOptions,
+				) error {
 					return nil
 				},
-				PushFn: func(*git.PushOptions) error {
+				PushFn: func(context.Context, *git.PushOptions) error {
 					return errors.New("something went wrong")
 				},
 			},
@@ -340,13 +351,16 @@ func Test_githubPusher_push(t *testing.T) {
 				URLFn: func() string {
 					return testRepoURL
 				},
-				IntegrateRemoteChangesFn: func(*git.IntegrationOptions) error {
+				IntegrateRemoteChangesFn: func(
+					context.Context,
+					*git.IntegrationOptions,
+				) error {
 					return nil
 				},
-				PushFn: func(*git.PushOptions) error {
+				PushFn: func(context.Context, *git.PushOptions) error {
 					return nil
 				},
-				LastCommitIDFn: func() (string, error) {
+				LastCommitIDFn: func(_ context.Context) (string, error) {
 					return "", errors.New("something went wrong")
 				},
 			},
@@ -361,16 +375,19 @@ func Test_githubPusher_push(t *testing.T) {
 				URLFn: func() string {
 					return testRepoURL
 				},
-				IntegrateRemoteChangesFn: func(*git.IntegrationOptions) error {
+				IntegrateRemoteChangesFn: func(
+					context.Context,
+					*git.IntegrationOptions,
+				) error {
 					return nil
 				},
-				PushFn: func(*git.PushOptions) error {
+				PushFn: func(context.Context, *git.PushOptions) error {
 					return nil
 				},
-				LastCommitIDFn: func() (string, error) {
+				LastCommitIDFn: func(_ context.Context) (string, error) {
 					return "fake-source-head", nil
 				},
-				RemoteBranchExistsFn: func(string) (bool, error) {
+				RemoteBranchExistsFn: func(context.Context, string) (bool, error) {
 					return false, errors.New("something went wrong")
 				},
 			},
@@ -385,19 +402,22 @@ func Test_githubPusher_push(t *testing.T) {
 				URLFn: func() string {
 					return testRepoURL
 				},
-				IntegrateRemoteChangesFn: func(*git.IntegrationOptions) error {
+				IntegrateRemoteChangesFn: func(
+					context.Context,
+					*git.IntegrationOptions,
+				) error {
 					return nil
 				},
-				PushFn: func(*git.PushOptions) error {
+				PushFn: func(context.Context, *git.PushOptions) error {
 					return nil
 				},
-				LastCommitIDFn: func() (string, error) {
+				LastCommitIDFn: func(_ context.Context) (string, error) {
 					return "fake-source-head", nil
 				},
-				RemoteBranchExistsFn: func(string) (bool, error) {
+				RemoteBranchExistsFn: func(context.Context, string) (bool, error) {
 					return false, nil
 				},
-				CurrentBranchFn: func() (string, error) {
+				CurrentBranchFn: func(_ context.Context) (string, error) {
 					return "", errors.New("something went wrong")
 				},
 			},
@@ -412,16 +432,19 @@ func Test_githubPusher_push(t *testing.T) {
 				URLFn: func() string {
 					return testRepoURL
 				},
-				IntegrateRemoteChangesFn: func(*git.IntegrationOptions) error {
+				IntegrateRemoteChangesFn: func(
+					context.Context,
+					*git.IntegrationOptions,
+				) error {
 					return nil
 				},
-				PushFn: func(*git.PushOptions) error {
+				PushFn: func(context.Context, *git.PushOptions) error {
 					return nil
 				},
-				LastCommitIDFn: func() (string, error) {
+				LastCommitIDFn: func(_ context.Context) (string, error) {
 					return "fake-source-head", nil
 				},
-				RemoteBranchExistsFn: func(string) (bool, error) {
+				RemoteBranchExistsFn: func(context.Context, string) (bool, error) {
 					return true, nil
 				},
 			},
@@ -446,16 +469,19 @@ func Test_githubPusher_push(t *testing.T) {
 				URLFn: func() string {
 					return testRepoURL
 				},
-				IntegrateRemoteChangesFn: func(*git.IntegrationOptions) error {
+				IntegrateRemoteChangesFn: func(
+					context.Context,
+					*git.IntegrationOptions,
+				) error {
 					return nil
 				},
-				PushFn: func(*git.PushOptions) error {
+				PushFn: func(context.Context, *git.PushOptions) error {
 					return nil
 				},
-				LastCommitIDFn: func() (string, error) {
+				LastCommitIDFn: func(_ context.Context) (string, error) {
 					return "fake-source-head", nil
 				},
-				RemoteBranchExistsFn: func(string) (bool, error) {
+				RemoteBranchExistsFn: func(context.Context, string) (bool, error) {
 					return true, nil
 				},
 			},
@@ -490,16 +516,19 @@ func Test_githubPusher_push(t *testing.T) {
 				URLFn: func() string {
 					return testRepoURL
 				},
-				IntegrateRemoteChangesFn: func(*git.IntegrationOptions) error {
+				IntegrateRemoteChangesFn: func(
+					context.Context,
+					*git.IntegrationOptions,
+				) error {
 					return nil
 				},
-				PushFn: func(*git.PushOptions) error {
+				PushFn: func(context.Context, *git.PushOptions) error {
 					return nil
 				},
-				LastCommitIDFn: func() (string, error) {
+				LastCommitIDFn: func(_ context.Context) (string, error) {
 					return "fake-source-head", nil
 				},
-				RemoteBranchExistsFn: func(string) (bool, error) {
+				RemoteBranchExistsFn: func(context.Context, string) (bool, error) {
 					return true, nil
 				},
 			},
@@ -533,16 +562,19 @@ func Test_githubPusher_push(t *testing.T) {
 				URLFn: func() string {
 					return testRepoURL
 				},
-				IntegrateRemoteChangesFn: func(*git.IntegrationOptions) error {
+				IntegrateRemoteChangesFn: func(
+					context.Context,
+					*git.IntegrationOptions,
+				) error {
 					return nil
 				},
-				PushFn: func(*git.PushOptions) error {
+				PushFn: func(context.Context, *git.PushOptions) error {
 					return nil
 				},
-				LastCommitIDFn: func() (string, error) {
+				LastCommitIDFn: func(_ context.Context) (string, error) {
 					return "fake-source-head", nil
 				},
-				RemoteBranchExistsFn: func(string) (bool, error) {
+				RemoteBranchExistsFn: func(context.Context, string) (bool, error) {
 					return true, nil
 				},
 			},
@@ -589,16 +621,19 @@ func Test_githubPusher_push(t *testing.T) {
 				URLFn: func() string {
 					return testRepoURL
 				},
-				IntegrateRemoteChangesFn: func(*git.IntegrationOptions) error {
+				IntegrateRemoteChangesFn: func(
+					context.Context,
+					*git.IntegrationOptions,
+				) error {
 					return nil
 				},
-				PushFn: func(*git.PushOptions) error {
+				PushFn: func(context.Context, *git.PushOptions) error {
 					return nil
 				},
-				LastCommitIDFn: func() (string, error) {
+				LastCommitIDFn: func(_ context.Context) (string, error) {
 					return "fake-source-head", nil
 				},
-				RemoteBranchExistsFn: func(string) (bool, error) {
+				RemoteBranchExistsFn: func(context.Context, string) (bool, error) {
 					return true, nil
 				},
 			},
@@ -642,16 +677,19 @@ func Test_githubPusher_push(t *testing.T) {
 				URLFn: func() string {
 					return testRepoURL
 				},
-				IntegrateRemoteChangesFn: func(*git.IntegrationOptions) error {
+				IntegrateRemoteChangesFn: func(
+					context.Context,
+					*git.IntegrationOptions,
+				) error {
 					return nil
 				},
-				PushFn: func(*git.PushOptions) error {
+				PushFn: func(context.Context, *git.PushOptions) error {
 					return nil
 				},
-				LastCommitIDFn: func() (string, error) {
+				LastCommitIDFn: func(_ context.Context) (string, error) {
 					return "fake-source-head", nil
 				},
-				RemoteBranchExistsFn: func(string) (bool, error) {
+				RemoteBranchExistsFn: func(context.Context, string) (bool, error) {
 					return true, nil
 				},
 			},
@@ -686,16 +724,19 @@ func Test_githubPusher_push(t *testing.T) {
 				URLFn: func() string {
 					return testRepoURL
 				},
-				IntegrateRemoteChangesFn: func(*git.IntegrationOptions) error {
+				IntegrateRemoteChangesFn: func(
+					context.Context,
+					*git.IntegrationOptions,
+				) error {
 					return nil
 				},
-				PushFn: func(*git.PushOptions) error {
+				PushFn: func(context.Context, *git.PushOptions) error {
 					return nil
 				},
-				LastCommitIDFn: func() (string, error) {
+				LastCommitIDFn: func(_ context.Context) (string, error) {
 					return "fake-source-head", nil
 				},
-				RemoteBranchExistsFn: func(string) (bool, error) {
+				RemoteBranchExistsFn: func(context.Context, string) (bool, error) {
 					return true, nil
 				},
 			},
@@ -729,16 +770,19 @@ func Test_githubPusher_push(t *testing.T) {
 				URLFn: func() string {
 					return testRepoURL
 				},
-				IntegrateRemoteChangesFn: func(*git.IntegrationOptions) error {
+				IntegrateRemoteChangesFn: func(
+					context.Context,
+					*git.IntegrationOptions,
+				) error {
 					return nil
 				},
-				PushFn: func(*git.PushOptions) error {
+				PushFn: func(context.Context, *git.PushOptions) error {
 					return nil
 				},
-				LastCommitIDFn: func() (string, error) {
+				LastCommitIDFn: func(_ context.Context) (string, error) {
 					return "fake-source-head", nil
 				},
-				RemoteBranchExistsFn: func(string) (bool, error) {
+				RemoteBranchExistsFn: func(context.Context, string) (bool, error) {
 					return true, nil
 				},
 			},
@@ -778,16 +822,19 @@ func Test_githubPusher_push(t *testing.T) {
 				URLFn: func() string {
 					return testRepoURL
 				},
-				IntegrateRemoteChangesFn: func(*git.IntegrationOptions) error {
+				IntegrateRemoteChangesFn: func(
+					context.Context,
+					*git.IntegrationOptions,
+				) error {
 					return nil
 				},
-				PushFn: func(*git.PushOptions) error {
+				PushFn: func(context.Context, *git.PushOptions) error {
 					return nil
 				},
-				LastCommitIDFn: func() (string, error) {
+				LastCommitIDFn: func(_ context.Context) (string, error) {
 					return "fake-source-head", nil
 				},
-				RemoteBranchExistsFn: func(string) (bool, error) {
+				RemoteBranchExistsFn: func(context.Context, string) (bool, error) {
 					return true, nil
 				},
 			},
@@ -828,19 +875,22 @@ func Test_githubPusher_push(t *testing.T) {
 				URLFn: func() string {
 					return testRepoURL
 				},
-				IntegrateRemoteChangesFn: func(*git.IntegrationOptions) error {
+				IntegrateRemoteChangesFn: func(
+					context.Context,
+					*git.IntegrationOptions,
+				) error {
 					return nil
 				},
-				PushFn: func(*git.PushOptions) error {
+				PushFn: func(context.Context, *git.PushOptions) error {
 					return nil
 				},
-				LastCommitIDFn: func() (string, error) {
+				LastCommitIDFn: func(_ context.Context) (string, error) {
 					return "fake-source-head", nil
 				},
-				RemoteBranchExistsFn: func(string) (bool, error) {
+				RemoteBranchExistsFn: func(context.Context, string) (bool, error) {
 					return true, nil
 				},
-				GetCommitSignatureInfoFn: func(string) (*git.CommitSignatureInfo, error) {
+				GetCommitSignatureInfoFn: func(context.Context, string) (*git.CommitSignatureInfo, error) {
 					return &git.CommitSignatureInfo{}, nil
 				},
 			},
@@ -901,19 +951,25 @@ func Test_githubPusher_push(t *testing.T) {
 				URLFn: func() string {
 					return testRepoURL
 				},
-				IntegrateRemoteChangesFn: func(*git.IntegrationOptions) error {
+				IntegrateRemoteChangesFn: func(
+					context.Context,
+					*git.IntegrationOptions,
+				) error {
 					return nil
 				},
-				PushFn: func(*git.PushOptions) error {
+				PushFn: func(context.Context, *git.PushOptions) error {
 					return nil
 				},
-				LastCommitIDFn: func() (string, error) {
+				LastCommitIDFn: func(_ context.Context) (string, error) {
 					return "fake-source-head", nil
 				},
-				RemoteBranchExistsFn: func(string) (bool, error) {
+				RemoteBranchExistsFn: func(context.Context, string) (bool, error) {
 					return true, nil
 				},
-				GetCommitSignatureInfoFn: func(string) (*git.CommitSignatureInfo, error) {
+				GetCommitSignatureInfoFn: func(
+					context.Context,
+					string,
+				) (*git.CommitSignatureInfo, error) {
 					return &git.CommitSignatureInfo{}, nil
 				},
 			},
@@ -1008,7 +1064,10 @@ func Test_githubPusher_replayCommits(t *testing.T) {
 		{
 			name: "error getting signature info",
 			workTree: &git.MockRepo{
-				GetCommitSignatureInfoFn: func(string) (*git.CommitSignatureInfo, error) {
+				GetCommitSignatureInfoFn: func(
+					context.Context,
+					string,
+				) (*git.CommitSignatureInfo, error) {
 					return nil, errors.New("something went wrong")
 				},
 			},
@@ -1027,7 +1086,10 @@ func Test_githubPusher_replayCommits(t *testing.T) {
 		{
 			name: "error creating commit via API",
 			workTree: &git.MockRepo{
-				GetCommitSignatureInfoFn: func(string) (*git.CommitSignatureInfo, error) {
+				GetCommitSignatureInfoFn: func(
+					context.Context,
+					string,
+				) (*git.CommitSignatureInfo, error) {
 					return &git.CommitSignatureInfo{Trusted: false}, nil
 				},
 			},
@@ -1059,7 +1121,10 @@ func Test_githubPusher_replayCommits(t *testing.T) {
 		{
 			name: "success; SHA map chains parents across commits",
 			workTree: &git.MockRepo{
-				GetCommitSignatureInfoFn: func(string) (*git.CommitSignatureInfo, error) {
+				GetCommitSignatureInfoFn: func(
+					context.Context,
+					string,
+				) (*git.CommitSignatureInfo, error) {
 					return &git.CommitSignatureInfo{Trusted: false}, nil
 				},
 			},

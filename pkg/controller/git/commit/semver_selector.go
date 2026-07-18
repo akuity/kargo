@@ -112,10 +112,10 @@ func (s *semverSelector) Select(ctx context.Context) (
 		return nil, err
 	}
 	defer func() {
-		_ = repo.Close()
+		_ = repo.Close(ctx)
 	}()
 
-	tags, err := repo.ListTags()
+	tags, err := repo.ListTags(ctx)
 	if err != nil {
 		return nil, err
 	}
@@ -130,7 +130,7 @@ func (s *semverSelector) Select(ctx context.Context) (
 
 	s.sort(tags)
 
-	if tags, err = s.filterTagsByDiffPathsFn(repo, tags); err != nil {
+	if tags, err = s.filterTagsByDiffPathsFn(ctx, repo, tags); err != nil {
 		return nil, fmt.Errorf("error filtering tags by paths: %w", err)
 	}
 

@@ -17,6 +17,7 @@ func TestBareRepo(t *testing.T) {
 	defer testServer.Close()
 
 	rep, err := CloneBare(
+		t.Context(),
 		testRepoURL,
 		&ClientOptions{
 			Credentials: &testRepoCreds,
@@ -25,7 +26,7 @@ func TestBareRepo(t *testing.T) {
 	)
 	require.NoError(t, err)
 	require.NotNil(t, rep)
-	defer rep.Close()
+	defer rep.Close(t.Context())
 	r, ok := rep.(*bareRepo)
 	require.True(t, ok)
 
@@ -61,12 +62,13 @@ func TestBareRepo(t *testing.T) {
 
 	workingTreePath := filepath.Join(rep.HomeDir(), "working-tree")
 	workTree, err := rep.AddWorkTree(
+		t.Context(),
 		workingTreePath,
 		&AddWorkTreeOptions{Ref: "main"},
 	)
 
 	require.NoError(t, err)
-	defer workTree.Close()
+	defer workTree.Close(t.Context())
 
 	t.Run("add a working tree", func(t *testing.T) {
 		require.NoError(t, err)
@@ -77,16 +79,16 @@ func TestBareRepo(t *testing.T) {
 
 	t.Run("can list working trees", func(t *testing.T) {
 		var workTrees []WorkTree
-		workTrees, err = rep.WorkTrees()
+		workTrees, err = rep.WorkTrees(t.Context())
 		require.NoError(t, err)
 		require.Len(t, workTrees, 1)
 		require.Equal(t, workTree, workTrees[0])
 	})
 
 	t.Run("can remove a working tree", func(t *testing.T) {
-		err = rep.RemoveWorkTree(workTree.Dir())
+		err = rep.RemoveWorkTree(t.Context(), workTree.Dir())
 		require.NoError(t, err)
-		trees, err := rep.WorkTrees()
+		trees, err := rep.WorkTrees(t.Context())
 		require.NoError(t, err)
 		require.Len(t, trees, 0)
 		_, err = os.Stat(workTree.Dir())
@@ -95,6 +97,7 @@ func TestBareRepo(t *testing.T) {
 
 	t.Run("can load an existing repo", func(t *testing.T) {
 		existingRepo, err := LoadBareRepo(
+			t.Context(),
 			rep.Dir(),
 			&LoadBareRepoOptions{
 				Credentials: &testRepoCreds,
@@ -105,7 +108,7 @@ func TestBareRepo(t *testing.T) {
 	})
 
 	t.Run("can close repo", func(t *testing.T) {
-		require.NoError(t, rep.Close())
+		require.NoError(t, rep.Close(t.Context()))
 		_, err := os.Stat(rep.HomeDir())
 		require.Error(t, err)
 		require.True(t, os.IsNotExist(err))
@@ -287,11 +290,12 @@ func TestBareRepo_SparseCheckout(t *testing.T) {
 				))
 			}
 			err := repo.AddAllAndCommit(
+				t.Context(),
 				fmt.Sprintf("add directories %s", uuid.NewString()),
 				nil,
 			)
 			require.NoError(t, err)
-			err = repo.Push(nil)
+			err = repo.Push(t.Context(), nil)
 			require.NoError(t, err)
 		},
 	)
@@ -299,6 +303,7 @@ func TestBareRepo_SparseCheckout(t *testing.T) {
 
 	// Clone as bare repo
 	rep, err := CloneBare(
+		t.Context(),
 		testRepoURL,
 		&ClientOptions{
 			Credentials: &testRepoCreds,
@@ -307,11 +312,12 @@ func TestBareRepo_SparseCheckout(t *testing.T) {
 	)
 	require.NoError(t, err)
 	require.NotNil(t, rep)
-	defer rep.Close()
+	defer rep.Close(t.Context())
 
 	t.Run("sparse checkout includes only specified directories", func(t *testing.T) {
 		workingTreePath := filepath.Join(rep.HomeDir(), "sparse-worktree")
 		workTree, err := rep.AddWorkTree(
+			t.Context(),
 			workingTreePath,
 			&AddWorkTreeOptions{
 				Ref:    "main",
@@ -319,7 +325,7 @@ func TestBareRepo_SparseCheckout(t *testing.T) {
 			},
 		)
 		require.NoError(t, err)
-		defer workTree.Close()
+		defer workTree.Close(t.Context())
 
 		// Verify dir1 and dir2 exist
 		_, err = os.Stat(filepath.Join(workTree.Dir(), "dir1", "file.txt"))
@@ -337,11 +343,12 @@ func TestBareRepo_SparseCheckout(t *testing.T) {
 	t.Run("worktree without sparse includes all directories", func(t *testing.T) {
 		workingTreePath := filepath.Join(rep.HomeDir(), "full-worktree")
 		workTree, err := rep.AddWorkTree(
+			t.Context(),
 			workingTreePath,
 			&AddWorkTreeOptions{Ref: "main"},
 		)
 		require.NoError(t, err)
-		defer workTree.Close()
+		defer workTree.Close(t.Context())
 
 		// Verify all directories exist
 		for _, dir := range []string{"dir1", "dir2", "dir3"} {
@@ -353,6 +360,7 @@ func TestBareRepo_SparseCheckout(t *testing.T) {
 	t.Run("pattern validation rejects absolute paths", func(t *testing.T) {
 		workingTreePath := filepath.Join(rep.HomeDir(), "invalid-abs-worktree")
 		_, err := rep.AddWorkTree(
+			t.Context(),
 			workingTreePath,
 			&AddWorkTreeOptions{
 				Ref:    "main",
@@ -365,6 +373,7 @@ func TestBareRepo_SparseCheckout(t *testing.T) {
 	t.Run("pattern validation rejects path traversal", func(t *testing.T) {
 		workingTreePath := filepath.Join(rep.HomeDir(), "invalid-traverse-worktree")
 		_, err := rep.AddWorkTree(
+			t.Context(),
 			workingTreePath,
 			&AddWorkTreeOptions{
 				Ref:    "main",
@@ -377,6 +386,7 @@ func TestBareRepo_SparseCheckout(t *testing.T) {
 	t.Run("glob patterns are rejected", func(t *testing.T) {
 		workingTreePath := filepath.Join(rep.HomeDir(), "glob-worktree")
 		_, err := rep.AddWorkTree(
+			t.Context(),
 			workingTreePath,
 			&AddWorkTreeOptions{
 				Ref:    "main",
@@ -460,19 +470,21 @@ func TestBareRepo_WithFilter(t *testing.T) {
 				))
 			}
 			err := repo.AddAllAndCommit(
+				t.Context(),
 				fmt.Sprintf("add directories %s", uuid.NewString()),
 				nil,
 			)
 			require.NoError(t, err)
-			err = repo.Push(nil)
+			err = repo.Push(t.Context(), nil)
 			require.NoError(t, err)
-			err = repo.Close()
+			err = repo.Close(t.Context())
 			require.NoError(t, err)
 		},
 	)
 	defer testServer.Close()
 
 	rep, err := CloneBare(
+		t.Context(),
 		testRepoURL,
 		&ClientOptions{
 			Credentials: &testRepoCreds,
@@ -483,16 +495,17 @@ func TestBareRepo_WithFilter(t *testing.T) {
 	)
 	require.NoError(t, err)
 	require.NotNil(t, rep)
-	defer rep.Close()
+	defer rep.Close(t.Context())
 
 	// Verify clone is functional by adding a worktree
 	workingTreePath := filepath.Join(rep.HomeDir(), "worktree")
 	workTree, err := rep.AddWorkTree(
+		t.Context(),
 		workingTreePath,
 		&AddWorkTreeOptions{Ref: "main"},
 	)
 	require.NoError(t, err)
-	defer workTree.Close()
+	defer workTree.Close(t.Context())
 
 	// Verify content can be checked out on-demand (blobs fetched lazily)
 	content, err := os.ReadFile(filepath.Join(workTree.Dir(), "dir1", "file.txt"))

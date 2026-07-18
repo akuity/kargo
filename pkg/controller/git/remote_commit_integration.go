@@ -20,7 +20,10 @@ type IntegrationOptions struct {
 	IntegrationPolicy PushIntegrationPolicy
 }
 
-func (w *workTree) IntegrateRemoteChanges(opts *IntegrationOptions) error {
+func (w *workTree) IntegrateRemoteChanges(
+	ctx context.Context,
+	opts *IntegrationOptions,
+) error {
 	if opts == nil {
 		opts = &IntegrationOptions{}
 	}
@@ -35,11 +38,11 @@ func (w *workTree) IntegrateRemoteChanges(opts *IntegrationOptions) error {
 	targetBranch := opts.TargetBranch
 	if targetBranch == "" {
 		var err error
-		if targetBranch, err = w.CurrentBranch(); err != nil {
+		if targetBranch, err = w.CurrentBranch(ctx); err != nil {
 			return err
 		}
 	}
-	exists, err := w.RemoteBranchExists(targetBranch)
+	exists, err := w.RemoteBranchExists(ctx, targetBranch)
 	if err != nil {
 		return err
 	}
@@ -47,7 +50,7 @@ func (w *workTree) IntegrateRemoteChanges(opts *IntegrationOptions) error {
 		return nil
 	}
 
-	logger := logging.LoggerFromContext(context.TODO()).WithValues(
+	logger := logging.LoggerFromContext(ctx).WithValues(
 		"remoteBranch", targetBranch,
 		"integrationPolicy", integrationPolicy,
 	)
@@ -55,18 +58,18 @@ func (w *workTree) IntegrateRemoteChanges(opts *IntegrationOptions) error {
 	switch integrationPolicy {
 	case PushIntegrationPolicyAlwaysRebase:
 		logger.Trace("integrating remote changes via rebase (always)")
-		return w.pullRebase(targetBranch)
+		return w.pullRebase(ctx, targetBranch)
 	case PushIntegrationPolicyAlwaysMerge:
 		logger.Trace("integrating remote changes via merge (always)")
-		return w.pullMerge(targetBranch)
+		return w.pullMerge(ctx, targetBranch)
 	case PushIntegrationPolicyRebaseOrMerge, PushIntegrationPolicyRebaseOrFail:
-		safe, err := w.canSafelyRebase(targetBranch)
+		safe, err := w.canSafelyRebase(ctx, targetBranch)
 		if err != nil {
 			return fmt.Errorf("error checking rebase safety: %w", err)
 		}
 		if safe {
 			logger.Trace("integrating remote changes via rebase")
-			return w.pullRebase(targetBranch)
+			return w.pullRebase(ctx, targetBranch)
 		}
 		if integrationPolicy == PushIntegrationPolicyRebaseOrFail {
 			logger.Trace(
@@ -75,17 +78,17 @@ func (w *workTree) IntegrateRemoteChanges(opts *IntegrationOptions) error {
 			return ErrRebaseUnsafe
 		}
 		logger.Trace("integrating remote changes via merge (rebase unsafe)")
-		return w.pullMerge(targetBranch)
+		return w.pullMerge(ctx, targetBranch)
 	default:
 		return fmt.Errorf("unknown push integration policy: %q", integrationPolicy)
 	}
 }
 
 // pullRebase performs a git pull --rebase against the specified remote branch.
-func (w *workTree) pullRebase(targetBranch string) error {
-	cmd := w.buildGitCommand("pull", "--rebase", "origin", targetBranch)
+func (w *workTree) pullRebase(ctx context.Context, targetBranch string) error {
+	cmd := w.buildGitCommand(ctx, "pull", "--rebase", "origin", targetBranch)
 	if _, err := libExec.Exec(cmd); err != nil {
-		if isRebasing, rbErr := w.IsRebasing(); rbErr == nil && isRebasing {
+		if isRebasing, rbErr := w.IsRebasing(ctx); rbErr == nil && isRebasing {
 			return ErrMergeConflict
 		}
 		return fmt.Errorf("error pulling and rebasing branch: %w", err)
@@ -94,13 +97,13 @@ func (w *workTree) pullRebase(targetBranch string) error {
 }
 
 // pullMerge performs a git pull (merge) against the specified remote branch.
-func (w *workTree) pullMerge(targetBranch string) error {
-	cmd := w.buildGitCommand("pull", "--no-rebase", "origin", targetBranch)
+func (w *workTree) pullMerge(ctx context.Context, targetBranch string) error {
+	cmd := w.buildGitCommand(ctx, "pull", "--no-rebase", "origin", targetBranch)
 	if _, err := libExec.Exec(cmd); err != nil {
 		// Check for merge conflicts — MERGE_HEAD exists when a merge is
 		// in progress and waiting for conflict resolution.
 		if _, statErr := libExec.Exec(w.buildGitCommand(
-			"rev-parse", "--verify", "MERGE_HEAD",
+			ctx, "rev-parse", "--verify", "MERGE_HEAD",
 		)); statErr == nil {
 			return ErrMergeConflict
 		}
@@ -119,8 +122,11 @@ func (w *workTree) pullMerge(targetBranch string) error {
 //   - Signed with untrusted key: always unsafe (Kargo can't vouch for it)
 //   - Unsigned + signing configured: unsafe (would fabricate a signature)
 //   - Unsigned + signing not configured: safe (stays unsigned)
-func (w *workTree) canSafelyRebase(targetBranch string) (bool, error) {
-	commits, err := w.commitsToReplay(targetBranch)
+func (w *workTree) canSafelyRebase(
+	ctx context.Context,
+	targetBranch string,
+) (bool, error) {
+	commits, err := w.commitsToReplay(ctx, targetBranch)
 	if err != nil {
 		return false, fmt.Errorf(
 			"error determining commits to replay: %w", err,
@@ -129,14 +135,14 @@ func (w *workTree) canSafelyRebase(targetBranch string) (bool, error) {
 	if len(commits) == 0 {
 		return true, nil
 	}
-	signing, err := w.isSigningConfigured()
+	signing, err := w.isSigningConfigured(ctx)
 	if err != nil {
 		return false, fmt.Errorf(
 			"error checking signing configuration: %w", err,
 		)
 	}
 	for _, commitID := range commits {
-		status, err := w.verifyCommitSignature(commitID)
+		status, err := w.verifyCommitSignature(ctx, commitID)
 		if err != nil {
 			return false, fmt.Errorf(
 				"error verifying signature of commit %s: %w",
@@ -153,17 +159,19 @@ func (w *workTree) canSafelyRebase(targetBranch string) (bool, error) {
 // commitsToReplay returns the SHAs of commits that would be replayed during
 // a rebase of the current branch on top of the specified remote branch.
 func (w *workTree) commitsToReplay(
+	ctx context.Context,
 	targetBranch string,
 ) ([]string, error) {
 	remoteRef := fmt.Sprintf("origin/%s", targetBranch)
 	// Always fetch the target branch to ensure the remote tracking ref
 	// exists and has full, up-to-date history for the git log range below.
-	if err := w.Fetch(&FetchOptions{Branch: targetBranch}); err != nil {
+	if err := w.Fetch(ctx, &FetchOptions{Branch: targetBranch}); err != nil {
 		return nil, fmt.Errorf(
 			"error fetching remote branch %q: %w", targetBranch, err,
 		)
 	}
 	res, err := libExec.Exec(w.buildGitCommand(
+		ctx,
 		"log",
 		"--format=%H",
 		fmt.Sprintf("%s..HEAD", remoteRef),

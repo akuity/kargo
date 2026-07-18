@@ -1,6 +1,7 @@
 package commit
 
 import (
+	"context"
 	"errors"
 	"testing"
 	"time"
@@ -138,13 +139,23 @@ func Test_newestFromBranchSelector_ListRefs(t *testing.T) {
 	testCases := []struct {
 		name       string
 		branch     string
-		lsRemoteFn func(string, *git.ClientOptions, ...string) ([]git.RemoteRef, error)
+		lsRemoteFn func(
+			ctx context.Context,
+			repoURL string,
+			clientOpts *git.ClientOptions,
+			patterns ...string,
+		) ([]git.RemoteRef, error)
 		assertions func(*testing.T, *kargoapi.GitDiscoveryRefs, error)
 	}{
 		{
 			name:   "error listing refs",
 			branch: "main",
-			lsRemoteFn: func(string, *git.ClientOptions, ...string) ([]git.RemoteRef, error) {
+			lsRemoteFn: func(
+				context.Context,
+				string,
+				*git.ClientOptions,
+				...string,
+			) ([]git.RemoteRef, error) {
 				return nil, errors.New("something went wrong")
 			},
 			assertions: func(t *testing.T, refs *kargoapi.GitDiscoveryRefs, err error) {
@@ -155,7 +166,12 @@ func Test_newestFromBranchSelector_ListRefs(t *testing.T) {
 		{
 			name:   "records branch head",
 			branch: "main",
-			lsRemoteFn: func(_ string, _ *git.ClientOptions, patterns ...string) ([]git.RemoteRef, error) {
+			lsRemoteFn: func(
+				_ context.Context,
+				_ string,
+				_ *git.ClientOptions,
+				patterns ...string,
+			) ([]git.RemoteRef, error) {
 				require.Equal(t, []string{"refs/heads/main"}, patterns)
 				return []git.RemoteRef{{Name: "refs/heads/main", ID: head}}, nil
 			},
@@ -170,7 +186,12 @@ func Test_newestFromBranchSelector_ListRefs(t *testing.T) {
 			// "develop", not just "main"/"master").
 			name:   "unspecified branch resolves HEAD",
 			branch: "",
-			lsRemoteFn: func(_ string, _ *git.ClientOptions, patterns ...string) ([]git.RemoteRef, error) {
+			lsRemoteFn: func(
+				_ context.Context,
+				_ string,
+				_ *git.ClientOptions,
+				patterns ...string,
+			) ([]git.RemoteRef, error) {
 				require.Equal(t, []string{"HEAD"}, patterns)
 				return []git.RemoteRef{{Name: "HEAD", ID: head}}, nil
 			},
@@ -182,7 +203,12 @@ func Test_newestFromBranchSelector_ListRefs(t *testing.T) {
 		{
 			name:   "missing configured branch yields nil observation",
 			branch: "main",
-			lsRemoteFn: func(string, *git.ClientOptions, ...string) ([]git.RemoteRef, error) {
+			lsRemoteFn: func(
+				context.Context,
+				string,
+				*git.ClientOptions,
+				...string,
+			) ([]git.RemoteRef, error) {
 				return nil, nil
 			},
 			assertions: func(t *testing.T, refs *kargoapi.GitDiscoveryRefs, err error) {
@@ -196,7 +222,12 @@ func Test_newestFromBranchSelector_ListRefs(t *testing.T) {
 			// short-circuiting on a repeated empty observation.
 			name:   "unspecified branch with no HEAD yields nil observation",
 			branch: "",
-			lsRemoteFn: func(string, *git.ClientOptions, ...string) ([]git.RemoteRef, error) {
+			lsRemoteFn: func(
+				context.Context,
+				string,
+				*git.ClientOptions,
+				...string,
+			) ([]git.RemoteRef, error) {
 				return nil, nil
 			},
 			assertions: func(t *testing.T, refs *kargoapi.GitDiscoveryRefs, err error) {
@@ -228,6 +259,7 @@ func Test_newestFromBranchSelector_Select(t *testing.T) {
 			selector: &newestFromBranchSelector{
 				baseSelector: &baseSelector{
 					gitCloneFn: func(
+						context.Context,
 						string,
 						*git.ClientOptions,
 						*git.CloneOptions,
@@ -245,6 +277,7 @@ func Test_newestFromBranchSelector_Select(t *testing.T) {
 			selector: &newestFromBranchSelector{
 				baseSelector: &baseSelector{
 					gitCloneFn: func(
+						context.Context,
 						string,
 						*git.ClientOptions,
 						*git.CloneOptions,
@@ -252,7 +285,10 @@ func Test_newestFromBranchSelector_Select(t *testing.T) {
 						return &git.MockRepo{}, nil
 					},
 				},
-				selectCommitsFn: func(git.Repo) ([]git.CommitMetadata, error) {
+				selectCommitsFn: func(
+					context.Context,
+					git.Repo,
+				) ([]git.CommitMetadata, error) {
 					return nil, errors.New("something went wrong")
 				},
 			},
@@ -265,6 +301,7 @@ func Test_newestFromBranchSelector_Select(t *testing.T) {
 			selector: &newestFromBranchSelector{
 				baseSelector: &baseSelector{
 					gitCloneFn: func(
+						context.Context,
 						string,
 						*git.ClientOptions,
 						*git.CloneOptions,
@@ -272,7 +309,10 @@ func Test_newestFromBranchSelector_Select(t *testing.T) {
 						return &git.MockRepo{}, nil
 					},
 				},
-				selectCommitsFn: func(git.Repo) ([]git.CommitMetadata, error) {
+				selectCommitsFn: func(
+					context.Context,
+					git.Repo,
+				) ([]git.CommitMetadata, error) {
 					return []git.CommitMetadata{{}, {}, {}, {}, {}}, nil
 				},
 			},
@@ -423,7 +463,11 @@ func Test_newestFromBranchSelector_selectCommits(t *testing.T) {
 			name: "error listing commits",
 			selector: &newestFromBranchSelector{
 				baseSelector: &baseSelector{},
-				listCommitsFn: func(git.Repo, *git.ListCommitsOptions) ([]git.CommitMetadata, error) {
+				listCommitsFn: func(
+					context.Context,
+					git.Repo,
+					*git.ListCommitsOptions,
+				) ([]git.CommitMetadata, error) {
 					return nil, errors.New("something went wrong")
 				},
 			},
@@ -437,7 +481,11 @@ func Test_newestFromBranchSelector_selectCommits(t *testing.T) {
 				baseSelector: &baseSelector{
 					discoveryLimit: 3,
 				},
-				listCommitsFn: func(git.Repo, *git.ListCommitsOptions) ([]git.CommitMetadata, error) {
+				listCommitsFn: func(
+					context.Context,
+					git.Repo,
+					*git.ListCommitsOptions,
+				) ([]git.CommitMetadata, error) {
 					return []git.CommitMetadata{{}, {}, {}, {}, {}}, nil
 				},
 			},
@@ -452,7 +500,11 @@ func Test_newestFromBranchSelector_selectCommits(t *testing.T) {
 				baseSelector: &baseSelector{
 					filterExpression: nonBoolExpression,
 				},
-				listCommitsFn: func(git.Repo, *git.ListCommitsOptions) ([]git.CommitMetadata, error) {
+				listCommitsFn: func(
+					context.Context,
+					git.Repo,
+					*git.ListCommitsOptions,
+				) ([]git.CommitMetadata, error) {
 					return []git.CommitMetadata{{}}, nil
 				},
 			},
@@ -466,10 +518,18 @@ func Test_newestFromBranchSelector_selectCommits(t *testing.T) {
 				baseSelector: &baseSelector{
 					includePaths: includePaths,
 				},
-				listCommitsFn: func(git.Repo, *git.ListCommitsOptions) ([]git.CommitMetadata, error) {
+				listCommitsFn: func(
+					context.Context,
+					git.Repo,
+					*git.ListCommitsOptions,
+				) ([]git.CommitMetadata, error) {
 					return []git.CommitMetadata{{}}, nil
 				},
-				getDiffPathsForCommitIDFn: func(git.Repo, string) ([]string, error) {
+				getDiffPathsForCommitIDFn: func(
+					context.Context,
+					git.Repo,
+					string,
+				) ([]string, error) {
 					return nil, errors.New("something went wrong")
 				},
 			},
@@ -484,7 +544,11 @@ func Test_newestFromBranchSelector_selectCommits(t *testing.T) {
 					filterExpression: idFilterExpression,
 					discoveryLimit:   3,
 				},
-				listCommitsFn: func(git.Repo, *git.ListCommitsOptions) ([]git.CommitMetadata, error) {
+				listCommitsFn: func(
+					context.Context,
+					git.Repo,
+					*git.ListCommitsOptions,
+				) ([]git.CommitMetadata, error) {
 					return []git.CommitMetadata{
 						{ID: "A"},
 						{ID: "B"},
@@ -510,7 +574,11 @@ func Test_newestFromBranchSelector_selectCommits(t *testing.T) {
 					includePaths:   includePaths,
 					discoveryLimit: 3,
 				},
-				listCommitsFn: func(git.Repo, *git.ListCommitsOptions) ([]git.CommitMetadata, error) {
+				listCommitsFn: func(
+					context.Context,
+					git.Repo,
+					*git.ListCommitsOptions,
+				) ([]git.CommitMetadata, error) {
 					return []git.CommitMetadata{
 						{ID: "A"},
 						{ID: "B"},
@@ -520,6 +588,7 @@ func Test_newestFromBranchSelector_selectCommits(t *testing.T) {
 					}, nil
 				},
 				getDiffPathsForCommitIDFn: func(
+					_ context.Context,
 					_ git.Repo,
 					commitID string,
 				) ([]string, error) {
@@ -545,7 +614,11 @@ func Test_newestFromBranchSelector_selectCommits(t *testing.T) {
 				return &newestFromBranchSelector{
 					baseSelector: &baseSelector{discoveryLimit: 5},
 					sinceDate:    &cutoff,
-					listCommitsFn: func(_ git.Repo, opts *git.ListCommitsOptions) ([]git.CommitMetadata, error) {
+					listCommitsFn: func(
+						_ context.Context,
+						_ git.Repo,
+						opts *git.ListCommitsOptions,
+					) ([]git.CommitMetadata, error) {
 						// Simulate git filtering by date -- only return commits after cutoff.
 						require.NotNil(t, opts)
 						require.NotNil(t, opts.Since)
@@ -573,7 +646,7 @@ func Test_newestFromBranchSelector_selectCommits(t *testing.T) {
 	}
 	for _, testCase := range testCases {
 		t.Run(testCase.name, func(t *testing.T) {
-			commits, err := testCase.selector.selectCommits(nil)
+			commits, err := testCase.selector.selectCommits(t.Context(), nil)
 			testCase.assertions(t, commits, err)
 		})
 	}
