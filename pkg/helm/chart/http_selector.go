@@ -7,6 +7,7 @@ import (
 	"io"
 	"net/http"
 	"strings"
+	"time"
 
 	"github.com/Masterminds/semver/v3"
 	"github.com/hashicorp/go-cleanhttp"
@@ -15,6 +16,13 @@ import (
 	kargoapi "github.com/akuity/kargo/api/v1alpha1"
 	"github.com/akuity/kargo/pkg/helm"
 )
+
+// responseHeaderTimeout bounds how long a request to a chart repository may
+// wait for response headers after the request is fully written. Repositories
+// answer in milliseconds; prolonged header silence means the connection is
+// effectively dead. This bounds only time-to-first-header per request and
+// imposes no limit on the total duration of a response transfer.
+const responseHeaderTimeout = 30 * time.Second
 
 // httpSelector is an implementation of Selector that interacts with classic
 // (http/s-based) Helm chart repositories.
@@ -45,8 +53,8 @@ func newHTTPSelector(
 }
 
 // Select implements Selector.
-func (h *httpSelector) Select(context.Context) ([]string, error) {
-	req, err := http.NewRequest(http.MethodGet, h.indexURL, nil)
+func (h *httpSelector) Select(ctx context.Context) ([]string, error) {
+	req, err := http.NewRequestWithContext(ctx, http.MethodGet, h.indexURL, nil)
 	if err != nil {
 		return nil,
 			fmt.Errorf("error preparing HTTP/S request to %q: %w", h.indexURL, err)
@@ -54,14 +62,14 @@ func (h *httpSelector) Select(context.Context) ([]string, error) {
 	if h.creds != nil {
 		req.SetBasicAuth(h.creds.Username, h.creds.Password)
 	}
-	httpClient := http.DefaultClient
+	httpTransport := cleanhttp.DefaultTransport()
+	httpTransport.ResponseHeaderTimeout = responseHeaderTimeout
 	if h.insecureSkipTLSVerify {
-		httpTransport := cleanhttp.DefaultTransport()
 		httpTransport.TLSClientConfig = &tls.Config{
 			InsecureSkipVerify: true, // #nosec G402 -- explicitly allowed by insecureSkipTLSVerify
 		}
-		httpClient = &http.Client{Transport: httpTransport}
 	}
+	httpClient := &http.Client{Transport: httpTransport}
 	res, err := httpClient.Do(req) // #nosec G704 -- SSRF mitigated: no method/header control, no response access
 	if err != nil {
 		return nil,
