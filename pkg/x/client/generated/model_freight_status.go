@@ -123,7 +123,7 @@ func (o *FreightStatus) GetMetadata() map[string]any {
 // and a boolean to check if the value has been set.
 func (o *FreightStatus) GetMetadataOk() (map[string]any, bool) {
 	if o == nil || IsNil(o.Metadata) {
-		return map[string]any{}, false
+		return nil, false
 	}
 	return o.Metadata, true
 }

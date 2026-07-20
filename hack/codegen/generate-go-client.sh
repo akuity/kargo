@@ -18,6 +18,7 @@ REPO_ROOT="$(cd "${SCRIPT_DIR}/../.." && pwd)"
 OUT_DIR="${REPO_ROOT}/pkg/x/client/generated"
 JQ="${SCRIPT_DIR}/../bin/jq"
 GENERATOR_JAR="${SCRIPT_DIR}/../bin/openapi-generator-cli.jar"
+TEMPLATE_DIR="${SCRIPT_DIR}/templates/go-client"
 
 if [[ ! -x "$JQ" ]]; then
     echo "Error: jq not found at $JQ -- run 'make install-jq' first" >&2
@@ -51,6 +52,23 @@ trap 'rm -rf "${WORK_DIR}"' EXIT
 # fields really carry in some cases (e.g. Health.output is an array on the
 # wire). The mapping forces `any`, which round-trips any JSON.
 #
+# --template-dir overrides two of the generator's stock templates (vendored,
+# with patches marked, under templates/go-client/): model_simple.mustache,
+# whose stock version renders the illegal zero value `any{}` for free-form
+# fields, and client.mustache, whose stock Debug logging dumps full request/
+# response bodies and the Authorization header -- both carry live credentials
+# on this API (request bodies for credential endpoints carry real secrets,
+# e.g. CreateRepoCredentialsRequest.Password; the Authorization header carries
+# the bearer credential, which during admin-login, per
+# pkg/cli/cmd/login/login.go, is the raw admin password). Patching the
+# templates means the generator emits correct code directly; there is no
+# post-editing of generated output (previously the two prior quirks here were
+# a find/sed/awk pipeline patching the generated client.go and model_*.go
+# after the fact -- fragile, since it depended on the exact generated text
+# matching a pattern rather than fixing the source of that text; a GNU/BSD
+# find `-exec ... {}` portability bug in that pipeline is exactly the kind of
+# failure this avoids entirely).
+#
 # apiTests/modelTests/apiDocs/modelDocs=false: suppress the generator's
 # standalone-repo scaffolding (per-operation test stubs, per-model/API
 # markdown docs) -- pure diff noise that duplicates the Go doc comments
@@ -62,102 +80,13 @@ java -jar "$GENERATOR_JAR" generate \
   -g go \
   -o "${OUT_DIR}" \
   --git-user-id akuity --git-repo-id "kargo/pkg/x/client/generated" \
+  --template-dir "${TEMPLATE_DIR}" \
   --type-mappings 'object=any' \
   --additional-properties=packageName=generated,withGoMod=false,generateInterfaces=false,enumClassPrefix=true \
   --global-property apiTests=false,modelTests=false,apiDocs=false,modelDocs=false \
   --skip-validate-spec
 
-# --- Step 3: fix a generator template bug -------------------------------------
-#
-# Quirk 3: templates render a type's zero value textually as `<type>{}`.
-# That is valid Go for maps and structs but not for `any`, so the
-# *Ok() getters of the fields mapped in step 2 come out uncompilable. The
-# zero value the template meant is nil.
-#
-# Piped through xargs, not `find -exec ... {}`: the sed pattern itself
-# contains the literal text `any{}` (that's the bug being fixed). Per POSIX,
-# `-exec` substitutes EVERY occurrence of the string `{}` in the command
-# arguments with the matched path, not just a designated trailing
-# placeholder -- so the incidental `{}` inside the sed script also gets
-# replaced, corrupting it. GNU find's `+` variant happens to detect this (a
-# hard error, "Only one instance of {} is supported with -exec ... +"), but
-# `\;` has no such check and just silently substitutes both occurrences,
-# producing a broken sed command that still exits 0 (verified: swapping `+`
-# for `\;` does NOT fix this, it only trades a loud failure for a silent
-# one). `xargs` (without `-I`) has no placeholder syntax at all -- it only
-# ever appends the piped paths as trailing arguments -- so it can't confuse
-# the sed script's own `{}` with a substitution target.
-LC_ALL=C find "${OUT_DIR}" -name 'model_*.go' -print0 \
-  | xargs -0 sed -i.bak 's/return any{}, false/return nil, false/g'
-find "${OUT_DIR}" -name 'model_*.go.bak' -delete
-
-# --- Step 3b: redact credentials from Debug-mode logging ---------------------
-#
-# Quirk 4 (security): the generator's callAPI template dumps the FULL raw
-# request and response -- headers AND body -- via log.Printf whenever
-# Configuration.Debug is true. Request bodies for credential endpoints carry
-# real secrets (CreateRepoCredentialsRequest.Password,
-# CreateGenericCredentialsRequest.Data, etc.) and SecretKeyRef-shaped model
-# fields, so enabling Debug would log them in cleartext -- flagged by CodeQL
-# on PR #6647. The Authorization header carries a second class of secret: the
-# admin-login flow (pkg/cli/cmd/login/login.go) submits the raw admin
-# password as a Bearer credential. Kargo doesn't currently expose a way to set
-# Debug=true, but this is a defect in the generator's own template that every
-# consumer using this generator inherits, and static analysis correctly flags
-# it regardless of current reachability.
-#
-# Fix combines two layers, matching GitHub's Copilot Autofix suggestions for
-# this alert (offered across two review passes):
-#  1. Exclude the body from both dumps (`false` instead of `true`). This is
-#     the load-bearing fix: Password/SecretKeyRef only ever appear in the
-#     body, so excluding it removes the tainted source data before it's ever
-#     captured into `dump`, which is what actually satisfies CodeQL's static
-#     analysis -- a regex-based sanitizer alone does not, because CodeQL
-#     can't verify what a ReplaceAllString call removes and keeps flagging
-#     the flow through it regardless.
-#  2. Still pass the (now header-only) dump through sanitizeHTTPDump, which
-#     regex-redacts any Authorization header line (the admin-login flow
-#     submits the raw admin password as a Bearer credential) and, as
-#     defense-in-depth, any "password"/"secretKeyRef" JSON field value in
-#     case a future header ever carries one.
-# awk (portable across BSD/GNU, unlike some sed extensions) inserts the two
-# new regexp vars and the sanitizeHTTPDump function; sed then flips the two
-# dump calls to exclude the body and wraps both log.Printf calls.
-awk '
-  /^var \($/ { in_var = 1; print; next }
-  in_var && /queryDescape[[:space:]]*= strings\.NewReplacer/ {
-    print $0
-    print ""
-    print "\tsensitiveJSONFieldRegex  = regexp.MustCompile(`(?i)\"(password|secretKeyRef)\"\\s*:\\s*(\"[^\"]*\"|\\{[^}]*\\}|null|[^,\\r\\n}]+)`)"
-    print "\tauthorizationHeaderRegex = regexp.MustCompile(`(?im)^(Authorization:\\s*)(.+)$`)"
-    next
-  }
-  in_var && /^\)$/ {
-    in_var = 0
-    print $0
-    print ""
-    print "// sanitizeHTTPDump redacts sensitive values (password/secretKeyRef JSON"
-    print "// fields, the Authorization header) from a raw HTTP request/response dump"
-    print "// before it is logged in Debug mode."
-    print "func sanitizeHTTPDump(dump string) string {"
-    print "\tredacted := sensitiveJSONFieldRegex.ReplaceAllString(dump, `\"$1\":\"[REDACTED]\"`)"
-    print "\tredacted = authorizationHeaderRegex.ReplaceAllString(redacted, `${1}[REDACTED]`)"
-    print "\treturn redacted"
-    print "}"
-    next
-  }
-  { print }
-' "${OUT_DIR}/client.go" > "${OUT_DIR}/client.go.tmp"
-mv "${OUT_DIR}/client.go.tmp" "${OUT_DIR}/client.go"
-
-sed -i.bak \
-  -e 's/httputil\.DumpRequestOut(request, true)/httputil.DumpRequestOut(request, false)/' \
-  -e 's/httputil\.DumpResponse(resp, true)/httputil.DumpResponse(resp, false)/' \
-  -e 's/log\.Printf("\\n%s\\n", string(dump))/log.Printf("\\n%s\\n", sanitizeHTTPDump(string(dump)))/g' \
-  "${OUT_DIR}/client.go"
-rm -f "${OUT_DIR}/client.go.bak"
-
-# --- Step 4: write our own go.mod (withGoMod=false above) and tidy -----------
+# --- Step 3: write our own go.mod (withGoMod=false above) and tidy -----------
 cat > "${OUT_DIR}/go.mod" <<'EOF'
 module github.com/akuity/kargo/pkg/x/client/generated
 

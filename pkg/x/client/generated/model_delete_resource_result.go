@@ -53,7 +53,7 @@ func (o *DeleteResourceResult) GetDeletedResourceManifest() map[string]any {
 // and a boolean to check if the value has been set.
 func (o *DeleteResourceResult) GetDeletedResourceManifestOk() (map[string]any, bool) {
 	if o == nil || IsNil(o.DeletedResourceManifest) {
-		return map[string]any{}, false
+		return nil, false
 	}
 	return o.DeletedResourceManifest, true
 }

@@ -53,7 +53,7 @@ func (o *CreateResourceResult) GetCreatedResourceManifest() map[string]any {
 // and a boolean to check if the value has been set.
 func (o *CreateResourceResult) GetCreatedResourceManifestOk() (map[string]any, bool) {
 	if o == nil || IsNil(o.CreatedResourceManifest) {
-		return map[string]any{}, false
+		return nil, false
 	}
 	return o.CreatedResourceManifest, true
 }
