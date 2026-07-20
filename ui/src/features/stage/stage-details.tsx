@@ -7,7 +7,7 @@ import {
   faPlay
 } from '@fortawesome/free-solid-svg-icons';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
-import { Button, Drawer, Flex, Skeleton, Tabs, Typography } from 'antd';
+import { Alert, Button, Drawer, Flex, Skeleton, Tabs, Typography } from 'antd';
 import moment from 'moment';
 import { useEffect, useMemo, useState } from 'react';
 import { generatePath, Link, useNavigate, useParams } from 'react-router-dom';
@@ -228,34 +228,35 @@ const AutoPromotionHolds = ({ stage }: { stage: Stage }) => {
     return null;
   }
   return (
-    <div className='rounded-md border border-solid border-orange-200 bg-orange-50 px-3 py-2'>
-      <Flex justify='space-between' align='center' gap={8}>
-        <div>
-          <Typography.Text strong>Auto-promotion paused</Typography.Text>
-          <div className='mt-1 flex flex-col gap-1'>
-            {holds.map(({ key, hold }) => (
-              <Typography.Text key={key} type='secondary' className='text-sm'>
-                {key}
-                {hold.freightName && `: ${hold.freightName}`}
-                {hold.promotionName && (
-                  <>
-                    {' via '}
-                    <Link
-                      to={generatePath(paths.promotion, {
-                        name: stage.metadata?.namespace || '',
-                        promotionId: hold.promotionName
-                      })}
-                    >
-                      {hold.promotionName}
-                    </Link>
-                  </>
-                )}
-                {hold.actor && ` by ${hold.actor}`}
-                {hold.createdAt && ` at ${moment(hold.createdAt).format('YYYY-MM-DD HH:mm')}`}
-              </Typography.Text>
-            ))}
-          </div>
+    <Alert
+      type='warning'
+      message='Auto-promotion paused'
+      description={
+        <div className='flex flex-col gap-1'>
+          {holds.map(({ key, hold }) => (
+            <Typography.Text key={key} type='secondary' className='text-sm'>
+              {key}
+              {hold.freightName && `: ${hold.freightName}`}
+              {hold.promotionName && (
+                <>
+                  {' via '}
+                  <Link
+                    to={generatePath(paths.promotion, {
+                      name: stage.metadata?.namespace || '',
+                      promotionId: hold.promotionName
+                    })}
+                  >
+                    {hold.promotionName}
+                  </Link>
+                </>
+              )}
+              {hold.actor && ` by ${hold.actor}`}
+              {hold.createdAt && ` at ${moment(hold.createdAt).format('YYYY-MM-DD HH:mm')}`}
+            </Typography.Text>
+          ))}
         </div>
+      }
+      action={
         <Button
           size='small'
           icon={<FontAwesomeIcon icon={faPlay} />}
@@ -267,8 +268,8 @@ const AutoPromotionHolds = ({ stage }: { stage: Stage }) => {
         >
           Resume
         </Button>
-      </Flex>
-    </div>
+      }
+    />
   );
 };
 
