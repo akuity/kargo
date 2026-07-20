@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"net/http"
 	"strings"
 
 	"github.com/spf13/cobra"
@@ -18,8 +19,7 @@ import (
 	"github.com/akuity/kargo/pkg/cli/kubernetes"
 	"github.com/akuity/kargo/pkg/cli/option"
 	"github.com/akuity/kargo/pkg/cli/templates"
-	credclient "github.com/akuity/kargo/pkg/client/generated/credentials"
-	"github.com/akuity/kargo/pkg/client/generated/models"
+	kargogen "github.com/akuity/kargo/pkg/x/client/generated"
 )
 
 type createGenericCredentialsOptions struct {
@@ -179,59 +179,47 @@ func (o *createGenericCredentialsOptions) validate() error {
 
 // run creates the generic credentials based on the options.
 func (o *createGenericCredentialsOptions) run(ctx context.Context) error {
-	apiClient, err := client.GetClientFromConfig(ctx, o.Config, o.ClientOptions)
+	apiClient, err := client.GetNewClientFromConfig(ctx, o.Config, o.ClientOptions)
 	if err != nil {
 		return fmt.Errorf("get client from config: %w", err)
 	}
 
-	var resJSON []byte
+	body := kargogen.CreateGenericCredentialsRequest{
+		Name:        &o.Name,
+		Description: &o.Description,
+		Data:        &o.Data,
+	}
+
+	var res *kargogen.V1Secret
+	var httpRes *http.Response
 	switch {
 	case o.System:
-		var res *credclient.CreateSystemGenericCredentialsCreated
-		if res, err = apiClient.Credentials.CreateSystemGenericCredentials(
-			credclient.NewCreateSystemGenericCredentialsParams().
-				WithBody(&models.CreateGenericCredentialsRequest{
-					Name:        o.Name,
-					Description: o.Description,
-					Data:        o.Data,
-				}),
-			nil,
-		); err != nil {
-			return fmt.Errorf("create system generic credentials: %w", err)
+		res, httpRes, err = apiClient.CredentialsAPI.CreateSystemGenericCredentials(ctx).Body(body).Execute()
+		if httpRes != nil {
+			_ = httpRes.Body.Close()
 		}
-		resJSON, err = json.Marshal(res.GetPayload())
+		if err != nil {
+			return fmt.Errorf("create system generic credentials: %w", client.NewClientAPIError(err))
+		}
 	case o.Shared:
-		var res *credclient.CreateSharedGenericCredentialsCreated
-		if res, err = apiClient.Credentials.CreateSharedGenericCredentials(
-			credclient.NewCreateSharedGenericCredentialsParams().
-				WithBody(&models.CreateGenericCredentialsRequest{
-					Name:        o.Name,
-					Description: o.Description,
-					Data:        o.Data,
-				}),
-			nil,
-		); err != nil {
-			return fmt.Errorf("create shared generic credentials: %w", err)
+		res, httpRes, err = apiClient.CredentialsAPI.CreateSharedGenericCredentials(ctx).Body(body).Execute()
+		if httpRes != nil {
+			_ = httpRes.Body.Close()
 		}
-		resJSON, err = json.Marshal(res.GetPayload())
+		if err != nil {
+			return fmt.Errorf("create shared generic credentials: %w", client.NewClientAPIError(err))
+		}
 	default:
-		var res *credclient.CreateProjectGenericCredentialsCreated
-		if res, err = apiClient.Credentials.CreateProjectGenericCredentials(
-			credclient.NewCreateProjectGenericCredentialsParams().
-				WithProject(o.Project).
-				WithBody(&models.CreateGenericCredentialsRequest{
-					Name:        o.Name,
-					Description: o.Description,
-					Data:        o.Data,
-				}),
-			nil,
-		); err != nil {
-			return fmt.Errorf("create project generic credentials: %w", err)
+		res, httpRes, err = apiClient.CredentialsAPI.CreateProjectGenericCredentials(ctx, o.Project).Body(body).Execute()
+		if httpRes != nil {
+			_ = httpRes.Body.Close()
 		}
-		resJSON, err = json.Marshal(res.GetPayload())
+		if err != nil {
+			return fmt.Errorf("create project generic credentials: %w", client.NewClientAPIError(err))
+		}
 	}
-	// All three cases above end with marshaling the response payload, so we
-	// can handle any of those potential errors here, in one place.
+
+	resJSON, err := json.Marshal(res)
 	if err != nil {
 		return fmt.Errorf("marshal response: %w", err)
 	}

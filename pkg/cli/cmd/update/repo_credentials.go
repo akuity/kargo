@@ -17,9 +17,8 @@ import (
 	"github.com/akuity/kargo/pkg/cli/kubernetes"
 	"github.com/akuity/kargo/pkg/cli/option"
 	"github.com/akuity/kargo/pkg/cli/templates"
-	credclient "github.com/akuity/kargo/pkg/client/generated/credentials"
-	"github.com/akuity/kargo/pkg/client/generated/models"
 	"github.com/akuity/kargo/pkg/credentials"
+	kargogen "github.com/akuity/kargo/pkg/x/client/generated"
 )
 
 type updateRepoCredentialsOptions struct {
@@ -185,7 +184,7 @@ func (o *updateRepoCredentialsOptions) validate() error {
 
 // run updates the credentials based on the options.
 func (o *updateRepoCredentialsOptions) run(ctx context.Context) error {
-	apiClient, err := client.GetClientFromConfig(ctx, o.Config, o.ClientOptions)
+	apiClient, err := client.GetNewClientFromConfig(ctx, o.Config, o.ClientOptions)
 	if err != nil {
 		return fmt.Errorf("get client from config: %w", err)
 	}
@@ -200,63 +199,102 @@ func (o *updateRepoCredentialsOptions) run(ctx context.Context) error {
 		credType = credentials.TypeImage.String()
 	}
 
-	// Build the patch request with only fields that need to change
-	patchReq := &models.PatchRepoCredentialsRequest{
-		Description:    o.Description,
-		Type:           credType,
-		RepoURL:        o.RepoURL,
-		RepoURLIsRegex: o.Regex,
-		Username:       o.Username,
-		Password:       o.Password,
+	// The server's patch handler (applyPatchRepoCredentialsRequestToK8sSecret in
+	// pkg/server/patch_repo_credentials_v1alpha1.go) unmarshals Type, RepoUrl,
+	// Username, and Password into plain (non-pointer) string fields and only
+	// applies each one when it is non-empty -- so, unlike Description below,
+	// sending an explicit empty string has the exact same effect on the server
+	// as omitting the field entirely; there is no "explicit clear" semantic to
+	// worry about for these four. We still only set the pointer when the CLI
+	// user actually supplied a non-empty value, purely to keep the request
+	// payload minimal and consistent with the old client's omitempty wire
+	// behavior -- not because omitting is required for correctness here.
+	var typeToSend *string
+	if credType != "" {
+		typeToSend = &credType
+	}
+	var repoURLToSend *string
+	if o.RepoURL != "" {
+		repoURLToSend = &o.RepoURL
+	}
+	var usernameToSend *string
+	if o.Username != "" {
+		usernameToSend = &o.Username
+	}
+	var passwordToSend *string
+	if o.Password != "" {
+		passwordToSend = &o.Password
+	}
+
+	// Description is different: the server checks Description != nil to decide
+	// whether to touch it at all (nil = leave alone, non-nil, even "", = set or
+	// clear). The --description flag has no way to signal "explicitly clear"
+	// today (no Changed()-based tracking, just a string defaulting to ""), so
+	// always sending a non-nil pointer here would silently wipe any existing
+	// description whenever the user updates repo credentials without also
+	// passing --description. Only send it when non-empty, matching the old
+	// client's plain-string+omitempty behavior and the same fix already applied
+	// in update/generic_credentials.go and update/configmaps.go.
+	var descriptionToSend *string
+	if o.Description != "" {
+		descriptionToSend = &o.Description
+	}
+
+	body := kargogen.PatchRepoCredentialsRequest{
+		Description:    descriptionToSend,
+		Type:           typeToSend,
+		RepoUrl:        repoURLToSend,
+		RepoUrlIsRegex: &o.Regex,
+		Username:       usernameToSend,
+		Password:       passwordToSend,
 	}
 
 	var payload any
 
 	switch {
 	case o.Shared:
-		_, err = apiClient.Credentials.PatchSharedRepoCredentials(
-			credclient.NewPatchSharedRepoCredentialsParams().
-				WithRepoCredentials(o.Name).
-				WithBody(patchReq),
-			nil,
-		)
-		if err != nil {
-			return fmt.Errorf("patch shared repo credentials: %w", err)
+		_, httpRes, patchErr := apiClient.CredentialsAPI.
+			PatchSharedRepoCredentials(ctx, o.Name).
+			Body(body).
+			Execute()
+		if httpRes != nil {
+			_ = httpRes.Body.Close()
+		}
+		if patchErr != nil {
+			return fmt.Errorf("patch shared repo credentials: %w", client.NewClientAPIError(patchErr))
 		}
 
 		// Get the updated credentials
-		var res *credclient.GetSharedRepoCredentialsOK
-		if res, err = apiClient.Credentials.GetSharedRepoCredentials(
-			credclient.NewGetSharedRepoCredentialsParams().WithRepoCredentials(o.Name),
-			nil,
-		); err != nil {
-			return fmt.Errorf("get shared repo credentials: %w", err)
+		res, getRes, getErr := apiClient.CredentialsAPI.GetSharedRepoCredentials(ctx, o.Name).Execute()
+		if getRes != nil {
+			_ = getRes.Body.Close()
 		}
-		payload = res.GetPayload()
+		if getErr != nil {
+			return fmt.Errorf("get shared repo credentials: %w", client.NewClientAPIError(getErr))
+		}
+		payload = res
 
 	default:
-		_, err = apiClient.Credentials.PatchProjectRepoCredentials(
-			credclient.NewPatchProjectRepoCredentialsParams().
-				WithProject(o.Project).
-				WithRepoCredentials(o.Name).
-				WithBody(patchReq),
-			nil,
-		)
-		if err != nil {
-			return fmt.Errorf("patch project repo credentials: %w", err)
+		_, httpRes, patchErr := apiClient.CredentialsAPI.
+			PatchProjectRepoCredentials(ctx, o.Project, o.Name).
+			Body(body).
+			Execute()
+		if httpRes != nil {
+			_ = httpRes.Body.Close()
+		}
+		if patchErr != nil {
+			return fmt.Errorf("patch project repo credentials: %w", client.NewClientAPIError(patchErr))
 		}
 
 		// Get the updated credentials
-		res, err := apiClient.Credentials.GetProjectRepoCredentials(
-			credclient.NewGetProjectRepoCredentialsParams().
-				WithProject(o.Project).
-				WithRepoCredentials(o.Name),
-			nil,
-		)
-		if err != nil {
-			return fmt.Errorf("get project repo credentials: %w", err)
+		res, getRes, getErr := apiClient.CredentialsAPI.GetProjectRepoCredentials(ctx, o.Project, o.Name).Execute()
+		if getRes != nil {
+			_ = getRes.Body.Close()
 		}
-		payload = res.GetPayload()
+		if getErr != nil {
+			return fmt.Errorf("get project repo credentials: %w", client.NewClientAPIError(getErr))
+		}
+		payload = res
 	}
 
 	return o.printCredentials(payload)
