@@ -13,6 +13,15 @@ export const enum StageConditionStatus {
   Unknown = 'Unknown'
 }
 
+// Ready=False reasons that describe a transient, self-resolving state (e.g. an
+// Argo CD Application still rolling out after a successful promotion) rather
+// than an actual failure. The controller copies the Healthy condition's reason
+// onto the Ready condition, so these mirror the non-terminal health states.
+const transientNotReadyReasons = ['Progressing', 'WaitingForHealthCheck'];
+
+export const isTransientNotReadyReason = (reason?: string) =>
+  !!reason && transientNotReadyReasons.includes(reason);
+
 export const hasCondition = (
   type: StageConditionType,
   status: StageConditionStatus,
@@ -67,9 +76,13 @@ export const getStagePhase = (stage: Stage, isControllerDead?: boolean) => {
 
   const ready = hasCondition(StageConditionType.Ready, StageConditionStatus.True, conditions);
 
-  const failed = ready.condition?.status === StageConditionStatus.False;
+  const notReady = ready.condition?.status === StageConditionStatus.False;
 
-  if (failed && ready.condition?.reason !== 'NoFreight') {
+  if (notReady && isTransientNotReadyReason(ready.condition?.reason)) {
+    return 'Progressing';
+  }
+
+  if (notReady && ready.condition?.reason !== 'NoFreight') {
     return 'Failed';
   }
 

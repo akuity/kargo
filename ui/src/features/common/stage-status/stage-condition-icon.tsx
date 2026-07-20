@@ -1,6 +1,7 @@
 import {
   faCircle,
   faCircleMinus,
+  faCircleNotch,
   faMagnifyingGlass,
   faTimesCircle,
   faSync,
@@ -11,7 +12,11 @@ import { Tooltip } from 'antd';
 import classNames from 'classnames';
 import { memo, useMemo } from 'react';
 
-import { StageConditionType, StageConditionStatus } from '@ui/features/common/stage-status/utils';
+import {
+  StageConditionType,
+  StageConditionStatus,
+  isTransientNotReadyReason
+} from '@ui/features/common/stage-status/utils';
 import { V1Condition } from '@ui/gen/api/v2/models';
 
 import styles from './styles.module.less';
@@ -19,6 +24,7 @@ import { TruckIcon } from './truck-icon/truck-icon';
 
 interface IconState {
   icon: IconDefinition;
+  iconSpin?: boolean;
   tooltipTitle: string;
   tooltipMessage: string;
   iconClass: string;
@@ -83,7 +89,12 @@ export const StageConditionIcon = memo(
         StageConditionStatus.True
       );
 
-      const isFailed = readyCondition?.status === StageConditionStatus.False;
+      const isNotReady = readyCondition?.status === StageConditionStatus.False;
+
+      // Not Ready for a transient reason (e.g. a rollout still in progress)
+      // is not a failure.
+      const isProgressing = isNotReady && isTransientNotReadyReason(readyCondition?.reason);
+      const isFailed = isNotReady && !isProgressing;
 
       const { condition: verifiedCondition, isActive: isVerifying } = hasCondition(
         StageConditionType.Verified,
@@ -98,7 +109,7 @@ export const StageConditionIcon = memo(
         iconClass: 'text-gray-400'
       };
 
-      // Priority: Promoting > Verifying > Reconciling > Failed > Ready
+      // Priority: Promoting > Verifying > Reconciling > Progressing > Failed > Ready
       if (isPromoting && promotingCondition?.reason !== 'NoFreight') {
         iconState = {
           icon: faCircleMinus,
@@ -119,6 +130,15 @@ export const StageConditionIcon = memo(
           tooltipTitle: 'Reconciling',
           tooltipMessage: reconcilingCondition?.message ?? '',
           iconClass: `text-yellow-500 ${styles.rotate}`
+        };
+      } else if (isProgressing) {
+        iconState = {
+          icon: faCircleNotch,
+          iconSpin: true,
+          tooltipTitle: 'Progressing',
+          tooltipMessage:
+            readyCondition?.message || 'Waiting for the Stage to reach a healthy state',
+          iconClass: 'text-blue-500'
         };
       } else if (isFailed && readyCondition.reason !== 'NoFreight') {
         iconState = {
@@ -158,6 +178,7 @@ export const StageConditionIcon = memo(
     ) : (
       <FontAwesomeIcon
         icon={iconState.icon}
+        spin={iconState.iconSpin}
         className={classNames(className, iconState.iconClass)}
       />
     );
