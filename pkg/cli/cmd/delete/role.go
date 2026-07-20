@@ -18,7 +18,6 @@ import (
 	"github.com/akuity/kargo/pkg/cli/kubernetes"
 	"github.com/akuity/kargo/pkg/cli/option"
 	"github.com/akuity/kargo/pkg/cli/templates"
-	"github.com/akuity/kargo/pkg/client/generated/rbac"
 )
 
 type deleteRoleOptions struct {
@@ -105,7 +104,7 @@ func (o *deleteRoleOptions) validate() error {
 
 // run removes the role(s) from the project based on the options.
 func (o *deleteRoleOptions) run(ctx context.Context) error {
-	apiClient, err := client.GetClientFromConfig(ctx, o.Config, o.ClientOptions)
+	apiClient, err := client.GetNewClientFromConfig(ctx, o.Config, o.ClientOptions)
 	if err != nil {
 		return fmt.Errorf("get client from config: %w", err)
 	}
@@ -117,13 +116,12 @@ func (o *deleteRoleOptions) run(ctx context.Context) error {
 
 	var errs []error
 	for _, name := range o.Names {
-		if _, err := apiClient.Rbac.DeleteProjectRole(
-			rbac.NewDeleteProjectRoleParams().
-				WithProject(o.Project).
-				WithRole(name),
-			nil,
-		); err != nil {
-			errs = append(errs, err)
+		httpRes, err := apiClient.RbacAPI.DeleteProjectRole(ctx, o.Project, name).Execute()
+		if httpRes != nil {
+			_ = httpRes.Body.Close()
+		}
+		if err != nil {
+			errs = append(errs, client.NewClientAPIError(err))
 			continue
 		}
 		_ = printer.PrintObj(

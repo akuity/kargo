@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"net/http"
 	"slices"
 	"time"
 
@@ -22,7 +23,7 @@ import (
 	"github.com/akuity/kargo/pkg/cli/kubernetes"
 	"github.com/akuity/kargo/pkg/cli/option"
 	"github.com/akuity/kargo/pkg/cli/templates"
-	"github.com/akuity/kargo/pkg/client/generated/rbac"
+	kargogen "github.com/akuity/kargo/pkg/x/client/generated"
 )
 
 type getTokensOptions struct {
@@ -142,33 +143,32 @@ func (o *getTokensOptions) validate() error {
 
 // run gets the tokens from the server and prints them to the console.
 func (o *getTokensOptions) run(ctx context.Context) error {
-	apiClient, err := client.GetClientFromConfig(ctx, o.Config, o.ClientOptions)
+	apiClient, err := client.GetNewClientFromConfig(ctx, o.Config, o.ClientOptions)
 	if err != nil {
 		return fmt.Errorf("get client from config: %w", err)
 	}
 
 	if len(o.Names) == 0 {
-		var payload any
+		var payload *kargogen.V1SecretList
+		var httpRes *http.Response
 		if o.SystemLevel {
-			params := rbac.NewListSystemAPITokensParams()
+			req := apiClient.RbacAPI.ListSystemAPITokens(ctx)
 			if o.RoleName != "" {
-				params = params.WithRole(&o.RoleName)
+				req = req.Role(o.RoleName)
 			}
-			var res *rbac.ListSystemAPITokensOK
-			if res, err = apiClient.Rbac.ListSystemAPITokens(params, nil); err != nil {
-				return fmt.Errorf("list API tokens: %w", err)
-			}
-			payload = res.GetPayload()
+			payload, httpRes, err = req.Execute()
 		} else {
-			params := rbac.NewListProjectAPITokensParams().WithProject(o.Project)
+			req := apiClient.RbacAPI.ListProjectAPITokens(ctx, o.Project)
 			if o.RoleName != "" {
-				params = params.WithRole(&o.RoleName)
+				req = req.Role(o.RoleName)
 			}
-			var res *rbac.ListProjectAPITokensOK
-			if res, err = apiClient.Rbac.ListProjectAPITokens(params, nil); err != nil {
-				return fmt.Errorf("list API tokens: %w", err)
-			}
-			payload = res.GetPayload()
+			payload, httpRes, err = req.Execute()
+		}
+		if httpRes != nil {
+			_ = httpRes.Body.Close()
+		}
+		if err != nil {
+			return fmt.Errorf("list API tokens: %w", client.NewClientAPIError(err))
 		}
 
 		var listJSON []byte
@@ -190,29 +190,19 @@ func (o *getTokensOptions) run(ctx context.Context) error {
 	res := make([]*corev1.Secret, 0, len(o.Names))
 	errs := make([]error, 0, len(o.Names))
 	for _, name := range o.Names {
-		var payload any
+		var payload *kargogen.V1Secret
+		var httpRes *http.Response
 		if o.SystemLevel {
-			var res *rbac.GetSystemAPITokenOK
-			if res, err = apiClient.Rbac.GetSystemAPIToken(
-				rbac.NewGetSystemAPITokenParams().WithApitoken(name),
-				nil,
-			); err != nil {
-				errs = append(errs, err)
-				continue
-			}
-			payload = res.GetPayload()
+			payload, httpRes, err = apiClient.RbacAPI.GetSystemAPIToken(ctx, name).Execute()
 		} else {
-			var res *rbac.GetProjectAPITokenOK
-			if res, err = apiClient.Rbac.GetProjectAPIToken(
-				rbac.NewGetProjectAPITokenParams().
-					WithProject(o.Project).
-					WithApitoken(name),
-				nil,
-			); err != nil {
-				errs = append(errs, err)
-				continue
-			}
-			payload = res.GetPayload()
+			payload, httpRes, err = apiClient.RbacAPI.GetProjectAPIToken(ctx, o.Project, name).Execute()
+		}
+		if httpRes != nil {
+			_ = httpRes.Body.Close()
+		}
+		if err != nil {
+			errs = append(errs, client.NewClientAPIError(err))
+			continue
 		}
 
 		var secretJSON []byte

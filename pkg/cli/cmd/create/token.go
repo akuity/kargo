@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"net/http"
 	"strings"
 
 	"github.com/spf13/cobra"
@@ -18,8 +19,7 @@ import (
 	"github.com/akuity/kargo/pkg/cli/kubernetes"
 	"github.com/akuity/kargo/pkg/cli/option"
 	"github.com/akuity/kargo/pkg/cli/templates"
-	"github.com/akuity/kargo/pkg/client/generated/models"
-	"github.com/akuity/kargo/pkg/client/generated/rbac"
+	kargogen "github.com/akuity/kargo/pkg/x/client/generated"
 )
 
 type createTokenOptions struct {
@@ -132,39 +132,34 @@ func (o *createTokenOptions) validate() error {
 
 // run creates an API token and prints it to the console.
 func (o *createTokenOptions) run(ctx context.Context) error {
-	apiClient, err := client.GetClientFromConfig(ctx, o.Config, o.ClientOptions)
+	apiClient, err := client.GetNewClientFromConfig(ctx, o.Config, o.ClientOptions)
 	if err != nil {
 		return fmt.Errorf("get client from config: %w", err)
 	}
 
-	var payload any
+	// Name is a required positional argument, so it is always meaningful to
+	// send -- there is no "leave unchanged" semantics to worry about here
+	// since this is a create operation, not a partial update.
+	body := kargogen.CreateAPITokenRequest{Name: &o.Name}
+
+	var payload *kargogen.V1Secret
+	var httpRes *http.Response
 	if o.SystemLevel {
-		var res *rbac.CreateSystemAPITokenCreated
-		if res, err = apiClient.Rbac.CreateSystemAPIToken(
-			rbac.NewCreateSystemAPITokenParams().
-				WithRole(o.RoleName).
-				WithBody(&models.CreateAPITokenRequest{
-					Name: o.Name,
-				}),
-			nil,
-		); err != nil {
-			return fmt.Errorf("create API token: %w", err)
-		}
-		payload = res.GetPayload()
+		payload, httpRes, err = apiClient.RbacAPI.
+			CreateSystemAPIToken(ctx, o.RoleName).
+			Body(body).
+			Execute()
 	} else {
-		var res *rbac.CreateProjectAPITokenCreated
-		if res, err = apiClient.Rbac.CreateProjectAPIToken(
-			rbac.NewCreateProjectAPITokenParams().
-				WithProject(o.Project).
-				WithRole(o.RoleName).
-				WithBody(&models.CreateAPITokenRequest{
-					Name: o.Name,
-				}),
-			nil,
-		); err != nil {
-			return fmt.Errorf("create API token: %w", err)
-		}
-		payload = res.GetPayload()
+		payload, httpRes, err = apiClient.RbacAPI.
+			CreateProjectAPIToken(ctx, o.Project, o.RoleName).
+			Body(body).
+			Execute()
+	}
+	if httpRes != nil {
+		_ = httpRes.Body.Close()
+	}
+	if err != nil {
+		return fmt.Errorf("create API token: %w", client.NewClientAPIError(err))
 	}
 
 	secretJSON, err := json.Marshal(payload)

@@ -18,8 +18,7 @@ import (
 	"github.com/akuity/kargo/pkg/cli/kubernetes"
 	"github.com/akuity/kargo/pkg/cli/option"
 	"github.com/akuity/kargo/pkg/cli/templates"
-	"github.com/akuity/kargo/pkg/client/generated/models"
-	"github.com/akuity/kargo/pkg/client/generated/rbac"
+	kargogen "github.com/akuity/kargo/pkg/x/client/generated"
 )
 
 type grantOptions struct {
@@ -134,52 +133,56 @@ func (o *grantOptions) validate() error {
 
 // run grants a role to users or grants permissions to a role.
 func (o *grantOptions) run(ctx context.Context) error {
-	apiClient, err := client.GetClientFromConfig(ctx, o.Config, o.ClientOptions)
+	apiClient, err := client.GetNewClientFromConfig(ctx, o.Config, o.ClientOptions)
 	if err != nil {
 		return fmt.Errorf("get client from config: %w", err)
 	}
 
-	req := &models.GrantRequest{
-		Role: o.Role,
-	}
+	// Role, ResourceType, and ResourceName are all part of a single, complete
+	// grant request rather than a partial update -- there is no "leave
+	// unchanged" semantics for the server to honor here, so it is safe to
+	// always send these pointers once we've decided to populate
+	// ResourceDetails at all.
+	req := kargogen.GrantRequest{Role: &o.Role}
 	if o.ResourceType != "" {
-		req.ResourceDetails = &models.ResourceDetails{
-			ResourceType: o.ResourceType,
-			ResourceName: o.ResourceName,
+		req.ResourceDetails = &kargogen.ResourceDetails{
+			ResourceType: &o.ResourceType,
+			ResourceName: &o.ResourceName,
 			Verbs:        o.Verbs,
 		}
 	} else {
-		claims := make([]*models.Claim, 0, len(o.Claims))
+		claims := make([]kargogen.Claim, 0, len(o.Claims))
 		for _, claimFlagValue := range o.Claims {
 			claimFlagNameAndValue := strings.Split(claimFlagValue, "=")
-			claims = append(claims, &models.Claim{
-				Name:   claimFlagNameAndValue[0],
+			claimName := claimFlagNameAndValue[0]
+			claims = append(claims, kargogen.Claim{
+				Name:   &claimName,
 				Values: []string{claimFlagNameAndValue[1]},
 			})
 		}
-		req.UserClaims = &models.UserClaims{
+		req.UserClaims = &kargogen.UserClaims{
 			Claims: claims,
 		}
 	}
 
-	_, err = apiClient.Rbac.Grant(
-		rbac.NewGrantParams().WithProject(o.Project).WithBody(req),
-		nil,
-	)
+	_, grantHTTPRes, err := apiClient.RbacAPI.Grant(ctx, o.Project).Body(req).Execute()
+	if grantHTTPRes != nil {
+		_ = grantHTTPRes.Body.Close()
+	}
 	if err != nil {
-		return fmt.Errorf("grant: %w", err)
+		return fmt.Errorf("grant: %w", client.NewClientAPIError(err))
 	}
 
 	// Get the updated role after granting
-	res, err := apiClient.Rbac.GetProjectRole(
-		rbac.NewGetProjectRoleParams().WithProject(o.Project).WithRole(o.Role),
-		nil,
-	)
+	res, getHTTPRes, err := apiClient.RbacAPI.GetProjectRole(ctx, o.Project, o.Role).Execute()
+	if getHTTPRes != nil {
+		_ = getHTTPRes.Body.Close()
+	}
 	if err != nil {
-		return fmt.Errorf("get role: %w", err)
+		return fmt.Errorf("get role: %w", client.NewClientAPIError(err))
 	}
 
-	roleJSON, err := json.Marshal(res.Payload)
+	roleJSON, err := json.Marshal(res)
 	if err != nil {
 		return fmt.Errorf("marshal role: %w", err)
 	}
