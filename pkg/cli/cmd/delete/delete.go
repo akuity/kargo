@@ -17,7 +17,6 @@ import (
 	"github.com/akuity/kargo/pkg/cli/kubernetes"
 	"github.com/akuity/kargo/pkg/cli/option"
 	"github.com/akuity/kargo/pkg/cli/templates"
-	"github.com/akuity/kargo/pkg/client/generated/resources"
 )
 
 type deleteOptions struct {
@@ -132,24 +131,26 @@ func (o *deleteOptions) run(ctx context.Context) error {
 		return fmt.Errorf("create printer: %w", err)
 	}
 
-	apiClient, err := client.GetClientFromConfig(ctx, o.Config, o.ClientOptions)
+	apiClient, err := client.GetNewClientFromConfig(ctx, o.Config, o.ClientOptions)
 	if err != nil {
 		return fmt.Errorf("get client from config: %w", err)
 	}
 
-	res, err := apiClient.Resources.DeleteResource(
-		resources.NewDeleteResourceParams().
-			WithManifest(string(manifest)),
-		nil,
-	)
+	res, httpRes, err := apiClient.ResourcesAPI.
+		DeleteResource(ctx).
+		Manifest(string(manifest)).
+		Execute()
+	if httpRes != nil {
+		defer httpRes.Body.Close()
+	}
 	if err != nil {
-		return fmt.Errorf("delete resource: %w", err)
+		return client.NewClientAPIError(fmt.Errorf("delete resource: %w", err))
 	}
 
-	deleteErrs := make([]error, 0, len(res.Payload.Results))
-	for _, r := range res.Payload.Results {
-		if r.Error != "" {
-			deleteErrs = append(deleteErrs, errors.New(r.Error))
+	deleteErrs := make([]error, 0, len(res.Results))
+	for _, r := range res.Results {
+		if r.Error != nil {
+			deleteErrs = append(deleteErrs, errors.New(*r.Error))
 			continue
 		}
 		if len(r.DeletedResourceManifest) > 0 {

@@ -20,7 +20,6 @@ import (
 	"github.com/akuity/kargo/pkg/cli/kubernetes"
 	"github.com/akuity/kargo/pkg/cli/option"
 	"github.com/akuity/kargo/pkg/cli/templates"
-	"github.com/akuity/kargo/pkg/client/generated/resources"
 )
 
 type createProjectOptions struct {
@@ -90,7 +89,7 @@ func (o *createProjectOptions) validate() error {
 
 // run creates a project using the provided options.
 func (o *createProjectOptions) run(ctx context.Context) error {
-	apiClient, err := client.GetClientFromConfig(ctx, o.Config, o.ClientOptions)
+	apiClient, err := client.GetNewClientFromConfig(ctx, o.Config, o.ClientOptions)
 	if err != nil {
 		return fmt.Errorf("get client from config: %w", err)
 	}
@@ -109,24 +108,26 @@ func (o *createProjectOptions) run(ctx context.Context) error {
 		return fmt.Errorf("marshal project: %w", err)
 	}
 
-	res, err := apiClient.Resources.CreateResource(
-		resources.NewCreateResourceParams().
-			WithManifest(string(projectBytes)),
-		nil,
-	)
+	res, httpRes, err := apiClient.ResourcesAPI.
+		CreateResource(ctx).
+		Manifest(string(projectBytes)).
+		Execute()
+	if httpRes != nil {
+		defer httpRes.Body.Close()
+	}
 	if err != nil {
-		return fmt.Errorf("create resource: %w", err)
+		return client.NewClientAPIError(fmt.Errorf("create resource: %w", err))
 	}
 
-	if len(res.Payload.Results) == 0 || res.Payload.Results[0].Error != "" {
-		if len(res.Payload.Results) > 0 {
-			return errors.New(res.Payload.Results[0].Error)
+	if len(res.Results) == 0 || res.Results[0].Error != nil {
+		if len(res.Results) > 0 {
+			return errors.New(*res.Results[0].Error)
 		}
 		return errors.New("no results returned")
 	}
 
 	// Convert map to JSON then unmarshal to Project
-	manifestJSON, err := json.Marshal(res.Payload.Results[0].CreatedResourceManifest)
+	manifestJSON, err := json.Marshal(res.Results[0].CreatedResourceManifest)
 	if err != nil {
 		return fmt.Errorf("marshal created manifest: %w", err)
 	}
