@@ -77,50 +77,61 @@ LC_ALL=C find "${OUT_DIR}" -name 'model_*.go' \
   -exec sed -i.bak 's/return any{}, false/return nil, false/g' {} +
 find "${OUT_DIR}" -name 'model_*.go.bak' -delete
 
-# --- Step 3b: strip credentials from Debug-mode logging -----------------------
+# --- Step 3b: redact credentials from Debug-mode logging ---------------------
 #
 # Quirk 4 (security): the generator's callAPI template dumps the FULL raw
 # request and response -- headers AND body -- via log.Printf whenever
 # Configuration.Debug is true. Request bodies for credential endpoints carry
 # real secrets (CreateRepoCredentialsRequest.Password,
-# CreateGenericCredentialsRequest.Data, etc.), so enabling Debug would log
-# them in cleartext -- flagged by CodeQL on PR #6647. The request's
-# Authorization header carries a second class of secret: the admin-login flow
-# (pkg/cli/cmd/login/login.go) submits the raw admin password as a Bearer
-# credential, so an undoctored header dump would leak it too, even though
-# CodeQL didn't flag that flow specifically. Kargo doesn't currently expose a
-# way to set Debug=true, but this is a defect in the generator's own template
-# that every consumer using this generator inherits, and static analysis
-# correctly flags it regardless of current reachability.
+# CreateGenericCredentialsRequest.Data, etc.) and SecretKeyRef-shaped model
+# fields, so enabling Debug would log them in cleartext -- flagged by CodeQL
+# on PR #6647. The Authorization header carries a second class of secret: the
+# admin-login flow (pkg/cli/cmd/login/login.go) submits the raw admin
+# password as a Bearer credential. Kargo doesn't currently expose a way to set
+# Debug=true, but this is a defect in the generator's own template that every
+# consumer using this generator inherits, and static analysis correctly flags
+# it regardless of current reachability.
 #
-# Fix: drop the body from both dumps (headers-only, via `false` instead of
-# `true`), and temporarily redact the Authorization header around the request
-# dump only -- restored immediately after so the real outbound request is
-# unaffected. Response dumps never carry Authorization, so only the request
-# path needs redaction. sed handles the two `true`->`false` swaps; the
-# Authorization redaction inserts new lines, which awk (portable across
-# BSD/GNU, unlike some sed extensions) handles more reliably than sed.
-sed -i.bak \
-  -e 's/httputil\.DumpRequestOut(request, true)/httputil.DumpRequestOut(request, false)/' \
-  -e 's/httputil\.DumpResponse(resp, true)/httputil.DumpResponse(resp, false)/' \
-  "${OUT_DIR}/client.go"
-rm -f "${OUT_DIR}/client.go.bak"
-
+# Fix (matching GitHub's Copilot Autofix suggestion for this alert): keep the
+# full body dump (still useful for debugging), but pass the dumped text
+# through sanitizeHTTPDump first, which regex-redacts any "password"/
+# "secretKeyRef" JSON field value and any Authorization header line before
+# logging. This is broader than a body/header allowlist -- it catches these
+# field names wherever they appear (request or response, any model), not just
+# in the specific request types known today. awk (portable across BSD/GNU,
+# unlike some sed extensions) inserts the two new regexp vars and the
+# sanitizeHTTPDump function; sed then wraps both log.Printf calls.
 awk '
-  /dump, err := httputil\.DumpRequestOut\(request, false\)/ {
-    print "\t\torigAuth := request.Header.Get(\"Authorization\")"
-    print "\t\tif origAuth != \"\" {"
-    print "\t\t\trequest.Header.Set(\"Authorization\", \"REDACTED\")"
-    print "\t\t}"
+  /^var \($/ { in_var = 1; print; next }
+  in_var && /queryDescape[[:space:]]*= strings\.NewReplacer/ {
     print $0
-    print "\t\tif origAuth != \"\" {"
-    print "\t\t\trequest.Header.Set(\"Authorization\", origAuth)"
-    print "\t\t}"
+    print ""
+    print "\tsensitiveJSONFieldRegex  = regexp.MustCompile(`(?i)\"(password|secretKeyRef)\"\\s*:\\s*(\"[^\"]*\"|\\{[^}]*\\}|null|[^,\\r\\n}]+)`)"
+    print "\tauthorizationHeaderRegex = regexp.MustCompile(`(?im)^(Authorization:\\s*)(.+)$`)"
+    next
+  }
+  in_var && /^\)$/ {
+    in_var = 0
+    print $0
+    print ""
+    print "// sanitizeHTTPDump redacts sensitive values (password/secretKeyRef JSON"
+    print "// fields, the Authorization header) from a raw HTTP request/response dump"
+    print "// before it is logged in Debug mode."
+    print "func sanitizeHTTPDump(dump string) string {"
+    print "\tredacted := sensitiveJSONFieldRegex.ReplaceAllString(dump, `\"$1\":\"[REDACTED]\"`)"
+    print "\tredacted = authorizationHeaderRegex.ReplaceAllString(redacted, `${1}[REDACTED]`)"
+    print "\treturn redacted"
+    print "}"
     next
   }
   { print }
 ' "${OUT_DIR}/client.go" > "${OUT_DIR}/client.go.tmp"
 mv "${OUT_DIR}/client.go.tmp" "${OUT_DIR}/client.go"
+
+sed -i.bak \
+  -e 's/log\.Printf("\\n%s\\n", string(dump))/log.Printf("\\n%s\\n", sanitizeHTTPDump(string(dump)))/g' \
+  "${OUT_DIR}/client.go"
+rm -f "${OUT_DIR}/client.go.bak"
 
 # --- Step 4: write our own go.mod (withGoMod=false above) and tidy -----------
 cat > "${OUT_DIR}/go.mod" <<'EOF'

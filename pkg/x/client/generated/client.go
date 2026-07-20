@@ -39,7 +39,19 @@ var (
 	XmlCheck        = regexp.MustCompile(`(?i:(?:application|text)/(?:[^;]+\+)?xml)`)
 	queryParamSplit = regexp.MustCompile(`(^|&)([^&]+)`)
 	queryDescape    = strings.NewReplacer( "%5B", "[", "%5D", "]" )
+
+	sensitiveJSONFieldRegex  = regexp.MustCompile(`(?i)"(password|secretKeyRef)"\s*:\s*("[^"]*"|\{[^}]*\}|null|[^,\r\n}]+)`)
+	authorizationHeaderRegex = regexp.MustCompile(`(?im)^(Authorization:\s*)(.+)$`)
 )
+
+// sanitizeHTTPDump redacts sensitive values (password/secretKeyRef JSON
+// fields, the Authorization header) from a raw HTTP request/response dump
+// before it is logged in Debug mode.
+func sanitizeHTTPDump(dump string) string {
+	redacted := sensitiveJSONFieldRegex.ReplaceAllString(dump, `"$1":"[REDACTED]"`)
+	redacted = authorizationHeaderRegex.ReplaceAllString(redacted, `${1}[REDACTED]`)
+	return redacted
+}
 
 // APIClient manages communication with the Kargo API API vv1alpha1
 // In most cases there should be only one, shared, APIClient.
@@ -265,18 +277,11 @@ func parameterToJson(obj interface{}) (string, error) {
 // callAPI do the request.
 func (c *APIClient) callAPI(request *http.Request) (*http.Response, error) {
 	if c.cfg.Debug {
-		origAuth := request.Header.Get("Authorization")
-		if origAuth != "" {
-			request.Header.Set("Authorization", "REDACTED")
-		}
-		dump, err := httputil.DumpRequestOut(request, false)
-		if origAuth != "" {
-			request.Header.Set("Authorization", origAuth)
-		}
+		dump, err := httputil.DumpRequestOut(request, true)
 		if err != nil {
 			return nil, err
 		}
-		log.Printf("\n%s\n", string(dump))
+		log.Printf("\n%s\n", sanitizeHTTPDump(string(dump)))
 	}
 
 	resp, err := c.cfg.HTTPClient.Do(request)
@@ -285,11 +290,11 @@ func (c *APIClient) callAPI(request *http.Request) (*http.Response, error) {
 	}
 
 	if c.cfg.Debug {
-		dump, err := httputil.DumpResponse(resp, false)
+		dump, err := httputil.DumpResponse(resp, true)
 		if err != nil {
 			return resp, err
 		}
-		log.Printf("\n%s\n", string(dump))
+		log.Printf("\n%s\n", sanitizeHTTPDump(string(dump)))
 	}
 	return resp, err
 }
