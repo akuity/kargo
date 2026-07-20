@@ -18,7 +18,6 @@ import (
 	"github.com/akuity/kargo/pkg/cli/io"
 	"github.com/akuity/kargo/pkg/cli/kubernetes"
 	"github.com/akuity/kargo/pkg/cli/templates"
-	"github.com/akuity/kargo/pkg/client/generated/system"
 )
 
 type getClusterConfigOptions struct {
@@ -75,21 +74,21 @@ func (o *getClusterConfigOptions) addFlags(cmd *cobra.Command) {
 
 // run gets the cluster config from the server and prints it to the console.
 func (o *getClusterConfigOptions) run(ctx context.Context) error {
-	apiClient, err := client.GetClientFromConfig(ctx, o.Config, o.ClientOptions)
+	apiClient, err := client.GetNewClientFromConfig(ctx, o.Config, o.ClientOptions)
 	if err != nil {
 		return fmt.Errorf("get client from config: %w", err)
 	}
 
-	res, err := apiClient.System.GetClusterConfig(
-		system.NewGetClusterConfigParams(),
-		nil,
-	)
-	if err != nil {
-		return fmt.Errorf("get cluster configuration: %w", err)
+	res, httpRes, err := apiClient.SystemAPI.GetClusterConfig(ctx).Execute()
+	if httpRes != nil {
+		_ = httpRes.Body.Close()
 	}
-	if res.Payload != nil {
+	if err != nil {
+		return fmt.Errorf("get cluster configuration: %w", client.NewClientAPIError(err))
+	}
+	if res != nil {
 		var configJSON []byte
-		if configJSON, err = json.Marshal(res.Payload); err != nil {
+		if configJSON, err = json.Marshal(res); err != nil {
 			return err
 		}
 		var cfg *kargoapi.ClusterConfig

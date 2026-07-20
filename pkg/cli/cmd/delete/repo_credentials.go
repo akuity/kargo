@@ -18,8 +18,6 @@ import (
 	"github.com/akuity/kargo/pkg/cli/kubernetes"
 	"github.com/akuity/kargo/pkg/cli/option"
 	"github.com/akuity/kargo/pkg/cli/templates"
-	"github.com/akuity/kargo/pkg/client/generated/credentials"
-	"github.com/akuity/kargo/pkg/client/generated/system"
 )
 
 type deleteRepoCredentialsOptions struct {
@@ -131,16 +129,18 @@ func (o *deleteRepoCredentialsOptions) validate() error {
 
 // run removes the credentials from the project based on the options.
 func (o *deleteRepoCredentialsOptions) run(ctx context.Context) error {
-	apiClient, err := client.GetClientFromConfig(ctx, o.Config, o.ClientOptions)
+	apiClient, err := client.GetNewClientFromConfig(ctx, o.Config, o.ClientOptions)
 	if err != nil {
 		return fmt.Errorf("get client from config: %w", err)
 	}
 
-	res, err := apiClient.System.GetConfig(system.NewGetConfigParams(), nil)
-	if err != nil {
-		return fmt.Errorf("get system config: %w", err)
+	systemConfig, httpRes, err := apiClient.SystemAPI.GetConfig(ctx).Execute()
+	if httpRes != nil {
+		_ = httpRes.Body.Close()
 	}
-	systemConfig := res.Payload
+	if err != nil {
+		return fmt.Errorf("get system config: %w", client.NewClientAPIError(err))
+	}
 
 	printer, err := o.ToPrinter()
 	if err != nil {
@@ -153,23 +153,22 @@ func (o *deleteRepoCredentialsOptions) run(ctx context.Context) error {
 
 		switch {
 		case o.Shared:
-			if _, err := apiClient.Credentials.DeleteSharedRepoCredentials(
-				credentials.NewDeleteSharedRepoCredentialsParams().
-					WithRepoCredentials(name),
-				nil,
-			); err != nil {
-				errs = append(errs, err)
+			delRes, delErr := apiClient.CredentialsAPI.DeleteSharedRepoCredentials(ctx, name).Execute()
+			if delRes != nil {
+				_ = delRes.Body.Close()
+			}
+			if delErr != nil {
+				errs = append(errs, client.NewClientAPIError(delErr))
 				continue
 			}
-			namespace = systemConfig.SharedResourcesNamespace
+			namespace = systemConfig.GetSharedResourcesNamespace()
 		default:
-			if _, err := apiClient.Credentials.DeleteProjectRepoCredentials(
-				credentials.NewDeleteProjectRepoCredentialsParams().
-					WithProject(o.Project).
-					WithRepoCredentials(name),
-				nil,
-			); err != nil {
-				errs = append(errs, err)
+			delRes, delErr := apiClient.CredentialsAPI.DeleteProjectRepoCredentials(ctx, o.Project, name).Execute()
+			if delRes != nil {
+				_ = delRes.Body.Close()
+			}
+			if delErr != nil {
+				errs = append(errs, client.NewClientAPIError(delErr))
 				continue
 			}
 			namespace = o.Project

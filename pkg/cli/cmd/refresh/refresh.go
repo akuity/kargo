@@ -12,8 +12,6 @@ import (
 	"github.com/akuity/kargo/pkg/cli/config"
 	"github.com/akuity/kargo/pkg/cli/option"
 	"github.com/akuity/kargo/pkg/cli/templates"
-	"github.com/akuity/kargo/pkg/client/generated/core"
-	"github.com/akuity/kargo/pkg/client/generated/system"
 	"github.com/akuity/kargo/pkg/server"
 )
 
@@ -96,7 +94,7 @@ func (o *refreshOptions) validate() error {
 
 // run performs the refresh operation based on the provided options.
 func (o *refreshOptions) run(ctx context.Context) error {
-	apiClient, err := client.GetClientFromConfig(ctx, o.Config, o.ClientOptions)
+	apiClient, err := client.GetNewClientFromConfig(ctx, o.Config, o.ClientOptions)
 	if err != nil {
 		return fmt.Errorf("get client from config: %w", err)
 	}
@@ -104,37 +102,36 @@ func (o *refreshOptions) run(ctx context.Context) error {
 	// Call the appropriate refresh endpoint based on resource type
 	switch o.ResourceType {
 	case server.RefreshResourceTypeClusterConfig:
-		if _, err = apiClient.System.RefreshClusterConfig(
-			system.NewRefreshClusterConfigParams(),
-			nil,
-		); err != nil {
-			return fmt.Errorf("refresh %s: %w", o.ResourceType, err)
+		httpRes, refreshErr := apiClient.SystemAPI.RefreshClusterConfig(ctx).Execute()
+		if httpRes != nil {
+			_ = httpRes.Body.Close()
+		}
+		if refreshErr != nil {
+			return fmt.Errorf("refresh %s: %w", o.ResourceType, client.NewClientAPIError(refreshErr))
 		}
 	case server.RefreshResourceTypeProjectConfig:
-		if _, err = apiClient.Core.RefreshProjectConfig(
-			core.NewRefreshProjectConfigParams().
-				WithProject(o.Project),
-			nil,
-		); err != nil {
-			return fmt.Errorf("refresh %s: %w", o.ResourceType, err)
+		httpRes, refreshErr := apiClient.CoreAPI.RefreshProjectConfig(ctx, o.Project).Execute()
+		if httpRes != nil {
+			_ = httpRes.Body.Close()
+		}
+		if refreshErr != nil {
+			return fmt.Errorf("refresh %s: %w", o.ResourceType, client.NewClientAPIError(refreshErr))
 		}
 	case server.RefreshResourceTypeStage:
-		if _, err = apiClient.Core.RefreshStage(
-			core.NewRefreshStageParams().
-				WithProject(o.Project).
-				WithStage(o.Name),
-			nil,
-		); err != nil {
-			return fmt.Errorf("refresh %s: %w", o.ResourceType, err)
+		httpRes, refreshErr := apiClient.CoreAPI.RefreshStage(ctx, o.Project, o.Name).Execute()
+		if httpRes != nil {
+			_ = httpRes.Body.Close()
+		}
+		if refreshErr != nil {
+			return fmt.Errorf("refresh %s: %w", o.ResourceType, client.NewClientAPIError(refreshErr))
 		}
 	case server.RefreshResourceTypeWarehouse:
-		if _, err = apiClient.Core.RefreshWarehouse(
-			core.NewRefreshWarehouseParams().
-				WithProject(o.Project).
-				WithWarehouse(o.Name),
-			nil,
-		); err != nil {
-			return fmt.Errorf("refresh %s: %w", o.ResourceType, err)
+		httpRes, refreshErr := apiClient.CoreAPI.RefreshWarehouse(ctx, o.Project, o.Name).Execute()
+		if httpRes != nil {
+			_ = httpRes.Body.Close()
+		}
+		if refreshErr != nil {
+			return fmt.Errorf("refresh %s: %w", o.ResourceType, client.NewClientAPIError(refreshErr))
 		}
 	default:
 		return fmt.Errorf("unsupported resource type: %s", o.ResourceType)

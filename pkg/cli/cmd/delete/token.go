@@ -18,8 +18,6 @@ import (
 	"github.com/akuity/kargo/pkg/cli/kubernetes"
 	"github.com/akuity/kargo/pkg/cli/option"
 	"github.com/akuity/kargo/pkg/cli/templates"
-	"github.com/akuity/kargo/pkg/client/generated/rbac"
-	"github.com/akuity/kargo/pkg/client/generated/system"
 )
 
 type deleteTokenOptions struct {
@@ -123,16 +121,18 @@ func (o *deleteTokenOptions) validate() error {
 
 // run removes the API token(s) from the project based on the options.
 func (o *deleteTokenOptions) run(ctx context.Context) error {
-	apiClient, err := client.GetClientFromConfig(ctx, o.Config, o.ClientOptions)
+	apiClient, err := client.GetNewClientFromConfig(ctx, o.Config, o.ClientOptions)
 	if err != nil {
 		return fmt.Errorf("get client from config: %w", err)
 	}
 
-	res, err := apiClient.System.GetConfig(system.NewGetConfigParams(), nil)
-	if err != nil {
-		return fmt.Errorf("get system config: %w", err)
+	systemConfig, httpRes, err := apiClient.SystemAPI.GetConfig(ctx).Execute()
+	if httpRes != nil {
+		_ = httpRes.Body.Close()
 	}
-	systemConfig := res.Payload
+	if err != nil {
+		return fmt.Errorf("get system config: %w", client.NewClientAPIError(err))
+	}
 
 	printer, err := o.ToPrinter()
 	if err != nil {
@@ -144,22 +144,22 @@ func (o *deleteTokenOptions) run(ctx context.Context) error {
 		var namespace string
 
 		if o.SystemLevel {
-			if _, err := apiClient.Rbac.DeleteSystemAPIToken(
-				rbac.NewDeleteSystemAPITokenParams().WithApitoken(name),
-				nil,
-			); err != nil {
-				errs = append(errs, err)
+			delRes, delErr := apiClient.RbacAPI.DeleteSystemAPIToken(ctx, name).Execute()
+			if delRes != nil {
+				_ = delRes.Body.Close()
+			}
+			if delErr != nil {
+				errs = append(errs, client.NewClientAPIError(delErr))
 				continue
 			}
-			namespace = systemConfig.SystemResourcesNamespace
+			namespace = systemConfig.GetSystemResourcesNamespace()
 		} else {
-			if _, err := apiClient.Rbac.DeleteProjectAPIToken(
-				rbac.NewDeleteProjectAPITokenParams().
-					WithProject(o.Project).
-					WithApitoken(name),
-				nil,
-			); err != nil {
-				errs = append(errs, err)
+			delRes, delErr := apiClient.RbacAPI.DeleteProjectAPIToken(ctx, o.Project, name).Execute()
+			if delRes != nil {
+				_ = delRes.Body.Close()
+			}
+			if delErr != nil {
+				errs = append(errs, client.NewClientAPIError(delErr))
 				continue
 			}
 			namespace = o.Project
