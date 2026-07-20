@@ -121,7 +121,7 @@ func (o *deleteTokenOptions) validate() error {
 
 // run removes the API token(s) from the project based on the options.
 func (o *deleteTokenOptions) run(ctx context.Context) error {
-	apiClient, err := client.GetNewClientFromConfig(ctx, o.Config, o.ClientOptions)
+	apiClient, err := client.GetClientFromConfig(ctx, o.Config, o.ClientOptions)
 	if err != nil {
 		return fmt.Errorf("get client from config: %w", err)
 	}
@@ -131,7 +131,7 @@ func (o *deleteTokenOptions) run(ctx context.Context) error {
 		_ = httpRes.Body.Close()
 	}
 	if err != nil {
-		return fmt.Errorf("get system config: %w", client.NewClientAPIError(err))
+		return fmt.Errorf("get system config: %w", client.APIError(err))
 	}
 
 	printer, err := o.ToPrinter()
@@ -149,7 +149,7 @@ func (o *deleteTokenOptions) run(ctx context.Context) error {
 				_ = delRes.Body.Close()
 			}
 			if delErr != nil {
-				errs = append(errs, client.NewClientAPIError(delErr))
+				errs = append(errs, client.APIError(delErr))
 				continue
 			}
 			namespace = systemConfig.GetSystemResourcesNamespace()
@@ -159,7 +159,7 @@ func (o *deleteTokenOptions) run(ctx context.Context) error {
 				_ = delRes.Body.Close()
 			}
 			if delErr != nil {
-				errs = append(errs, client.NewClientAPIError(delErr))
+				errs = append(errs, client.APIError(delErr))
 				continue
 			}
 			namespace = o.Project

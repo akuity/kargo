@@ -184,7 +184,7 @@ func (o *updateRepoCredentialsOptions) validate() error {
 
 // run updates the credentials based on the options.
 func (o *updateRepoCredentialsOptions) run(ctx context.Context) error {
-	apiClient, err := client.GetNewClientFromConfig(ctx, o.Config, o.ClientOptions)
+	apiClient, err := client.GetClientFromConfig(ctx, o.Config, o.ClientOptions)
 	if err != nil {
 		return fmt.Errorf("get client from config: %w", err)
 	}
@@ -261,7 +261,7 @@ func (o *updateRepoCredentialsOptions) run(ctx context.Context) error {
 			_ = httpRes.Body.Close()
 		}
 		if patchErr != nil {
-			return fmt.Errorf("patch shared repo credentials: %w", client.NewClientAPIError(patchErr))
+			return fmt.Errorf("patch shared repo credentials: %w", client.APIError(patchErr))
 		}
 
 		// Get the updated credentials
@@ -270,7 +270,7 @@ func (o *updateRepoCredentialsOptions) run(ctx context.Context) error {
 			_ = getRes.Body.Close()
 		}
 		if getErr != nil {
-			return fmt.Errorf("get shared repo credentials: %w", client.NewClientAPIError(getErr))
+			return fmt.Errorf("get shared repo credentials: %w", client.APIError(getErr))
 		}
 		payload = res
 
@@ -283,7 +283,7 @@ func (o *updateRepoCredentialsOptions) run(ctx context.Context) error {
 			_ = httpRes.Body.Close()
 		}
 		if patchErr != nil {
-			return fmt.Errorf("patch project repo credentials: %w", client.NewClientAPIError(patchErr))
+			return fmt.Errorf("patch project repo credentials: %w", client.APIError(patchErr))
 		}
 
 		// Get the updated credentials
@@ -292,7 +292,7 @@ func (o *updateRepoCredentialsOptions) run(ctx context.Context) error {
 			_ = getRes.Body.Close()
 		}
 		if getErr != nil {
-			return fmt.Errorf("get project repo credentials: %w", client.NewClientAPIError(getErr))
+			return fmt.Errorf("get project repo credentials: %w", client.APIError(getErr))
 		}
 		payload = res
 	}

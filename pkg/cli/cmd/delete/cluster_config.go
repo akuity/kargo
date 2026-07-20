@@ -71,7 +71,7 @@ func (o *deleteClusterConfigOptions) addFlags(cmd *cobra.Command) {
 
 // run removes the project config from the project.
 func (o *deleteClusterConfigOptions) run(ctx context.Context) error {
-	apiClient, err := client.GetNewClientFromConfig(ctx, o.Config, o.ClientOptions)
+	apiClient, err := client.GetClientFromConfig(ctx, o.Config, o.ClientOptions)
 	if err != nil {
 		return fmt.Errorf("get client from config: %w", err)
 	}
@@ -86,7 +86,7 @@ func (o *deleteClusterConfigOptions) run(ctx context.Context) error {
 		_ = httpRes.Body.Close()
 	}
 	if err != nil {
-		return fmt.Errorf("delete cluster configuration: %w", client.NewClientAPIError(err))
+		return fmt.Errorf("delete cluster configuration: %w", client.APIError(err))
 	}
 
 	if err = printer.PrintObj(

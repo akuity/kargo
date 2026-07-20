@@ -201,7 +201,7 @@ func (o *promotionOptions) validate() error {
 
 // run performs the promotion of the freight using the options.
 func (o *promotionOptions) run(ctx context.Context) error {
-	apiClient, err := client.GetNewClientFromConfig(ctx, o.Config, o.ClientOptions)
+	apiClient, err := client.GetClientFromConfig(ctx, o.Config, o.ClientOptions)
 	if err != nil {
 		return fmt.Errorf("get client from config: %w", err)
 	}
@@ -218,7 +218,7 @@ func (o *promotionOptions) run(ctx context.Context) error {
 			_ = httpRes.Body.Close()
 		}
 		if abortErr != nil {
-			return fmt.Errorf("abort promotion: %w", client.NewClientAPIError(abortErr))
+			return fmt.Errorf("abort promotion: %w", client.APIError(abortErr))
 		}
 		return nil
 	case o.Stage != "":
@@ -241,7 +241,7 @@ func (o *promotionOptions) run(ctx context.Context) error {
 			_ = httpRes.Body.Close()
 		}
 		if promoteErr != nil {
-			return client.NewClientAPIError(promoteErr)
+			return client.APIError(promoteErr)
 		}
 		promoJSON, err := json.Marshal(res)
 		if err != nil {
@@ -270,7 +270,7 @@ func (o *promotionOptions) run(ctx context.Context) error {
 			_ = httpRes.Body.Close()
 		}
 		if promoteErr != nil {
-			return client.NewClientAPIError(promoteErr)
+			return client.APIError(promoteErr)
 		}
 		promotionsJSON, err := json.Marshal(res)
 		if err != nil {

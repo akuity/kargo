@@ -74,7 +74,7 @@ func (o *getClusterConfigOptions) addFlags(cmd *cobra.Command) {
 
 // run gets the cluster config from the server and prints it to the console.
 func (o *getClusterConfigOptions) run(ctx context.Context) error {
-	apiClient, err := client.GetNewClientFromConfig(ctx, o.Config, o.ClientOptions)
+	apiClient, err := client.GetClientFromConfig(ctx, o.Config, o.ClientOptions)
 	if err != nil {
 		return fmt.Errorf("get client from config: %w", err)
 	}
@@ -84,7 +84,7 @@ func (o *getClusterConfigOptions) run(ctx context.Context) error {
 		_ = httpRes.Body.Close()
 	}
 	if err != nil {
-		return fmt.Errorf("get cluster configuration: %w", client.NewClientAPIError(err))
+		return fmt.Errorf("get cluster configuration: %w", client.APIError(err))
 	}
 	if res != nil {
 		var configJSON []byte

@@ -225,7 +225,7 @@ func (o *createRepoCredentialsOptions) run(ctx context.Context) error {
 		}
 	}
 
-	apiClient, err := client.GetNewClientFromConfig(ctx, o.Config, o.ClientOptions)
+	apiClient, err := client.GetClientFromConfig(ctx, o.Config, o.ClientOptions)
 	if err != nil {
 		return fmt.Errorf("get client from config: %w", err)
 	}
@@ -257,7 +257,7 @@ func (o *createRepoCredentialsOptions) run(ctx context.Context) error {
 			_ = httpRes.Body.Close()
 		}
 		if err != nil {
-			return fmt.Errorf("create shared credentials: %w", client.NewClientAPIError(err))
+			return fmt.Errorf("create shared credentials: %w", client.APIError(err))
 		}
 	default:
 		res, httpRes, err = apiClient.CredentialsAPI.CreateProjectRepoCredentials(ctx, o.Project).Body(body).Execute()
@@ -265,7 +265,7 @@ func (o *createRepoCredentialsOptions) run(ctx context.Context) error {
 			_ = httpRes.Body.Close()
 		}
 		if err != nil {
-			return fmt.Errorf("create project credentials: %w", client.NewClientAPIError(err))
+			return fmt.Errorf("create project credentials: %w", client.APIError(err))
 		}
 	}
 

@@ -121,7 +121,7 @@ func getServerVersion(
 		return nil, nil
 	}
 
-	apiClient, err := client.GetNewClientFromConfig(ctx, cfg, opts)
+	apiClient, err := client.GetClientFromConfig(ctx, cfg, opts)
 	if err != nil {
 		return nil, fmt.Errorf("get client from config: %w", err)
 	}
@@ -131,7 +131,7 @@ func getServerVersion(
 		defer httpRes.Body.Close()
 	}
 	if err != nil {
-		return nil, client.NewClientAPIError(fmt.Errorf("get version info from server: %w", err))
+		return nil, client.APIError(fmt.Errorf("get version info from server: %w", err))
 	}
 
 	return res, nil

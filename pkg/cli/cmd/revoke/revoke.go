@@ -133,7 +133,7 @@ func (o *revokeOptions) validate() error {
 
 // run revokes a role from users or revokes permissions from a role.
 func (o *revokeOptions) run(ctx context.Context) error {
-	apiClient, err := client.GetNewClientFromConfig(ctx, o.Config, o.ClientOptions)
+	apiClient, err := client.GetClientFromConfig(ctx, o.Config, o.ClientOptions)
 	if err != nil {
 		return fmt.Errorf("get client from config: %w", err)
 	}
@@ -170,7 +170,7 @@ func (o *revokeOptions) run(ctx context.Context) error {
 		_ = revokeHTTPRes.Body.Close()
 	}
 	if err != nil {
-		return fmt.Errorf("revoke: %w", client.NewClientAPIError(err))
+		return fmt.Errorf("revoke: %w", client.APIError(err))
 	}
 
 	// Get the updated role after revocation
@@ -179,7 +179,7 @@ func (o *revokeOptions) run(ctx context.Context) error {
 		_ = getHTTPRes.Body.Close()
 	}
 	if err != nil {
-		return fmt.Errorf("get role: %w", client.NewClientAPIError(err))
+		return fmt.Errorf("get role: %w", client.APIError(err))
 	}
 
 	roleJSON, err := json.Marshal(res)

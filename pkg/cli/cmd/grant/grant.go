@@ -133,7 +133,7 @@ func (o *grantOptions) validate() error {
 
 // run grants a role to users or grants permissions to a role.
 func (o *grantOptions) run(ctx context.Context) error {
-	apiClient, err := client.GetNewClientFromConfig(ctx, o.Config, o.ClientOptions)
+	apiClient, err := client.GetClientFromConfig(ctx, o.Config, o.ClientOptions)
 	if err != nil {
 		return fmt.Errorf("get client from config: %w", err)
 	}
@@ -170,7 +170,7 @@ func (o *grantOptions) run(ctx context.Context) error {
 		_ = grantHTTPRes.Body.Close()
 	}
 	if err != nil {
-		return fmt.Errorf("grant: %w", client.NewClientAPIError(err))
+		return fmt.Errorf("grant: %w", client.APIError(err))
 	}
 
 	// Get the updated role after granting
@@ -179,7 +179,7 @@ func (o *grantOptions) run(ctx context.Context) error {
 		_ = getHTTPRes.Body.Close()
 	}
 	if err != nil {
-		return fmt.Errorf("get role: %w", client.NewClientAPIError(err))
+		return fmt.Errorf("get role: %w", client.APIError(err))
 	}
 
 	roleJSON, err := json.Marshal(res)

@@ -118,7 +118,7 @@ func (o *getWarehousesOptions) validate() error {
 
 // run gets the warehouses from the server and prints them to the console.
 func (o *getWarehousesOptions) run(ctx context.Context) error {
-	apiClient, err := client.GetNewClientFromConfig(ctx, o.Config, o.ClientOptions)
+	apiClient, err := client.GetClientFromConfig(ctx, o.Config, o.ClientOptions)
 	if err != nil {
 		return fmt.Errorf("get client from config: %w", err)
 	}
@@ -129,7 +129,7 @@ func (o *getWarehousesOptions) run(ctx context.Context) error {
 			_ = httpRes.Body.Close()
 		}
 		if listErr != nil {
-			return fmt.Errorf("list warehouses: %w", client.NewClientAPIError(listErr))
+			return fmt.Errorf("list warehouses: %w", client.APIError(listErr))
 		}
 		var warehousesJSON []byte
 		if warehousesJSON, err = json.Marshal(res); err != nil {
@@ -152,7 +152,7 @@ func (o *getWarehousesOptions) run(ctx context.Context) error {
 			_ = httpRes.Body.Close()
 		}
 		if getErr != nil {
-			errs = append(errs, client.NewClientAPIError(getErr))
+			errs = append(errs, client.APIError(getErr))
 			continue
 		}
 		var warehouseJSON []byte

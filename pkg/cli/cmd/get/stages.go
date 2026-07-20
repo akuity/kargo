@@ -118,7 +118,7 @@ func (o *getStagesOptions) validate() error {
 
 // run gets the stages from the server and prints them to the console.
 func (o *getStagesOptions) run(ctx context.Context) error {
-	apiClient, err := client.GetNewClientFromConfig(ctx, o.Config, o.ClientOptions)
+	apiClient, err := client.GetClientFromConfig(ctx, o.Config, o.ClientOptions)
 	if err != nil {
 		return err
 	}
@@ -129,7 +129,7 @@ func (o *getStagesOptions) run(ctx context.Context) error {
 			_ = httpRes.Body.Close()
 		}
 		if listErr != nil {
-			return client.NewClientAPIError(listErr)
+			return client.APIError(listErr)
 		}
 		var stageJSON []byte
 		if stageJSON, err = json.Marshal(res); err != nil {
@@ -152,7 +152,7 @@ func (o *getStagesOptions) run(ctx context.Context) error {
 			_ = httpRes.Body.Close()
 		}
 		if getErr != nil {
-			errs = append(errs, client.NewClientAPIError(getErr))
+			errs = append(errs, client.APIError(getErr))
 			continue
 		}
 		var stageJSON []byte

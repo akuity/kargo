@@ -179,7 +179,7 @@ func (o *createGenericCredentialsOptions) validate() error {
 
 // run creates the generic credentials based on the options.
 func (o *createGenericCredentialsOptions) run(ctx context.Context) error {
-	apiClient, err := client.GetNewClientFromConfig(ctx, o.Config, o.ClientOptions)
+	apiClient, err := client.GetClientFromConfig(ctx, o.Config, o.ClientOptions)
 	if err != nil {
 		return fmt.Errorf("get client from config: %w", err)
 	}
@@ -199,7 +199,7 @@ func (o *createGenericCredentialsOptions) run(ctx context.Context) error {
 			_ = httpRes.Body.Close()
 		}
 		if err != nil {
-			return fmt.Errorf("create system generic credentials: %w", client.NewClientAPIError(err))
+			return fmt.Errorf("create system generic credentials: %w", client.APIError(err))
 		}
 	case o.Shared:
 		res, httpRes, err = apiClient.CredentialsAPI.CreateSharedGenericCredentials(ctx).Body(body).Execute()
@@ -207,7 +207,7 @@ func (o *createGenericCredentialsOptions) run(ctx context.Context) error {
 			_ = httpRes.Body.Close()
 		}
 		if err != nil {
-			return fmt.Errorf("create shared generic credentials: %w", client.NewClientAPIError(err))
+			return fmt.Errorf("create shared generic credentials: %w", client.APIError(err))
 		}
 	default:
 		res, httpRes, err = apiClient.CredentialsAPI.CreateProjectGenericCredentials(ctx, o.Project).Body(body).Execute()
@@ -215,7 +215,7 @@ func (o *createGenericCredentialsOptions) run(ctx context.Context) error {
 			_ = httpRes.Body.Close()
 		}
 		if err != nil {
-			return fmt.Errorf("create project generic credentials: %w", client.NewClientAPIError(err))
+			return fmt.Errorf("create project generic credentials: %w", client.APIError(err))
 		}
 	}
 

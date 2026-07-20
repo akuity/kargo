@@ -123,7 +123,7 @@ func (o *createRoleOptions) validate() error {
 
 // run creates a role using the provided options.
 func (o *createRoleOptions) run(ctx context.Context) error {
-	apiClient, err := client.GetNewClientFromConfig(ctx, o.Config, o.ClientOptions)
+	apiClient, err := client.GetClientFromConfig(ctx, o.Config, o.ClientOptions)
 	if err != nil {
 		return fmt.Errorf("get client from config: %w", err)
 	}
@@ -164,7 +164,7 @@ func (o *createRoleOptions) run(ctx context.Context) error {
 		_ = httpRes.Body.Close()
 	}
 	if err != nil {
-		return fmt.Errorf("create role: %w", client.NewClientAPIError(err))
+		return fmt.Errorf("create role: %w", client.APIError(err))
 	}
 
 	resJSON, err := json.Marshal(res)

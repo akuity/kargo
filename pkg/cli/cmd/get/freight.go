@@ -135,7 +135,7 @@ func (o *getFreightOptions) validate() error {
 
 // run gets the freight from the server and prints it to the console.
 func (o *getFreightOptions) run(ctx context.Context) error {
-	apiClient, err := client.GetNewClientFromConfig(ctx, o.Config, o.ClientOptions)
+	apiClient, err := client.GetClientFromConfig(ctx, o.Config, o.ClientOptions)
 	if err != nil {
 		return fmt.Errorf("get client from config: %w", err)
 	}
@@ -150,7 +150,7 @@ func (o *getFreightOptions) run(ctx context.Context) error {
 			_ = httpRes.Body.Close()
 		}
 		if queryErr != nil {
-			return fmt.Errorf("query freight: %w", client.NewClientAPIError(queryErr))
+			return fmt.Errorf("query freight: %w", client.APIError(queryErr))
 		}
 		var freightJSON []byte
 		if freightJSON, err = json.Marshal(res); err != nil {
@@ -183,7 +183,7 @@ func (o *getFreightOptions) run(ctx context.Context) error {
 			_ = httpRes.Body.Close()
 		}
 		if getErr != nil {
-			errs = append(errs, fmt.Errorf("get freight %s: %w", nameOrAlias, client.NewClientAPIError(getErr)))
+			errs = append(errs, fmt.Errorf("get freight %s: %w", nameOrAlias, client.APIError(getErr)))
 			continue
 		}
 		var freightJSON []byte

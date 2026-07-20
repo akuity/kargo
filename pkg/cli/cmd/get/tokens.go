@@ -143,7 +143,7 @@ func (o *getTokensOptions) validate() error {
 
 // run gets the tokens from the server and prints them to the console.
 func (o *getTokensOptions) run(ctx context.Context) error {
-	apiClient, err := client.GetNewClientFromConfig(ctx, o.Config, o.ClientOptions)
+	apiClient, err := client.GetClientFromConfig(ctx, o.Config, o.ClientOptions)
 	if err != nil {
 		return fmt.Errorf("get client from config: %w", err)
 	}
@@ -168,7 +168,7 @@ func (o *getTokensOptions) run(ctx context.Context) error {
 			_ = httpRes.Body.Close()
 		}
 		if err != nil {
-			return fmt.Errorf("list API tokens: %w", client.NewClientAPIError(err))
+			return fmt.Errorf("list API tokens: %w", client.APIError(err))
 		}
 
 		var listJSON []byte
@@ -201,7 +201,7 @@ func (o *getTokensOptions) run(ctx context.Context) error {
 			_ = httpRes.Body.Close()
 		}
 		if err != nil {
-			errs = append(errs, client.NewClientAPIError(err))
+			errs = append(errs, client.APIError(err))
 			continue
 		}
 

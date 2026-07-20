@@ -103,7 +103,7 @@ func (o *deleteFreightOptions) validate() error {
 
 // run removes the freight from the project based on the options.
 func (o *deleteFreightOptions) run(ctx context.Context) error {
-	apiClient, err := client.GetNewClientFromConfig(ctx, o.Config, o.ClientOptions)
+	apiClient, err := client.GetClientFromConfig(ctx, o.Config, o.ClientOptions)
 	if err != nil {
 		return fmt.Errorf("get client from config: %w", err)
 	}
@@ -120,7 +120,7 @@ func (o *deleteFreightOptions) run(ctx context.Context) error {
 			_ = httpRes.Body.Close()
 		}
 		if delErr != nil {
-			errs = append(errs, client.NewClientAPIError(delErr))
+			errs = append(errs, client.APIError(delErr))
 			continue
 		}
 		_ = printer.PrintObj(&kargoapi.Freight{

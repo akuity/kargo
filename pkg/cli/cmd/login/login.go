@@ -227,7 +227,7 @@ func adminLogin(
 	password string,
 	insecureTLS bool,
 ) (string, error) {
-	apiClient, err := client.GetNewClient(serverAddress, "", insecureTLS)
+	apiClient, err := client.GetClient(serverAddress, "", insecureTLS)
 	if err != nil {
 		return "", err
 	}
@@ -238,7 +238,7 @@ func adminLogin(
 	if err != nil {
 		return "", fmt.Errorf(
 			"error retrieving public configuration from server: %w",
-			client.NewClientAPIError(err),
+			client.APIError(err),
 		)
 	}
 
@@ -246,7 +246,7 @@ func adminLogin(
 		return "", errors.New("server does not support admin user login")
 	}
 
-	if apiClient, err = client.GetNewClient(
+	if apiClient, err = client.GetClient(
 		serverAddress,
 		password,
 		insecureTLS,
@@ -261,7 +261,7 @@ func adminLogin(
 	if err != nil {
 		return "", fmt.Errorf(
 			"error logging in as admin user: %w",
-			client.NewClientAPIError(err),
+			client.APIError(err),
 		)
 	}
 
@@ -293,7 +293,7 @@ func ssoLogin(
 	callbackPort int,
 	insecureTLS bool,
 ) (string, string, error) {
-	apiClient, err := client.GetNewClient(serverAddress, "", insecureTLS)
+	apiClient, err := client.GetClient(serverAddress, "", insecureTLS)
 	if err != nil {
 		return "", "", err
 	}
@@ -304,7 +304,7 @@ func ssoLogin(
 	if err != nil {
 		return "", "", fmt.Errorf(
 			"error retrieving public configuration from server: %w",
-			client.NewClientAPIError(err),
+			client.APIError(err),
 		)
 	}
 

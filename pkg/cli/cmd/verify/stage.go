@@ -100,7 +100,7 @@ func (o *verifyStageOptions) validate() error {
 
 // run requests a rerun of the stage verification.
 func (o *verifyStageOptions) run(ctx context.Context) error {
-	apiClient, err := client.GetNewClientFromConfig(ctx, o.Config, o.ClientOptions)
+	apiClient, err := client.GetClientFromConfig(ctx, o.Config, o.ClientOptions)
 	if err != nil {
 		return fmt.Errorf("get client from config: %w", err)
 	}
@@ -111,7 +111,7 @@ func (o *verifyStageOptions) run(ctx context.Context) error {
 			defer abortHTTPRes.Body.Close()
 		}
 		if abortErr != nil {
-			return client.NewClientAPIError(fmt.Errorf("abort verification: %w", abortErr))
+			return client.APIError(fmt.Errorf("abort verification: %w", abortErr))
 		}
 		return nil
 	}
@@ -121,7 +121,7 @@ func (o *verifyStageOptions) run(ctx context.Context) error {
 		defer httpRes.Body.Close()
 	}
 	if err != nil {
-		return client.NewClientAPIError(fmt.Errorf("reverify stage: %w", err))
+		return client.APIError(fmt.Errorf("reverify stage: %w", err))
 	}
 
 	return nil

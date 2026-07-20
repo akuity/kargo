@@ -89,7 +89,7 @@ func (o *createProjectOptions) validate() error {
 
 // run creates a project using the provided options.
 func (o *createProjectOptions) run(ctx context.Context) error {
-	apiClient, err := client.GetNewClientFromConfig(ctx, o.Config, o.ClientOptions)
+	apiClient, err := client.GetClientFromConfig(ctx, o.Config, o.ClientOptions)
 	if err != nil {
 		return fmt.Errorf("get client from config: %w", err)
 	}
@@ -116,7 +116,7 @@ func (o *createProjectOptions) run(ctx context.Context) error {
 		defer httpRes.Body.Close()
 	}
 	if err != nil {
-		return client.NewClientAPIError(fmt.Errorf("create resource: %w", err))
+		return client.APIError(fmt.Errorf("create resource: %w", err))
 	}
 
 	if len(res.Results) == 0 || res.Results[0].Error != nil {

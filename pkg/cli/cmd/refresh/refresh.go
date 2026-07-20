@@ -94,7 +94,7 @@ func (o *refreshOptions) validate() error {
 
 // run performs the refresh operation based on the provided options.
 func (o *refreshOptions) run(ctx context.Context) error {
-	apiClient, err := client.GetNewClientFromConfig(ctx, o.Config, o.ClientOptions)
+	apiClient, err := client.GetClientFromConfig(ctx, o.Config, o.ClientOptions)
 	if err != nil {
 		return fmt.Errorf("get client from config: %w", err)
 	}
@@ -107,7 +107,7 @@ func (o *refreshOptions) run(ctx context.Context) error {
 			_ = httpRes.Body.Close()
 		}
 		if refreshErr != nil {
-			return fmt.Errorf("refresh %s: %w", o.ResourceType, client.NewClientAPIError(refreshErr))
+			return fmt.Errorf("refresh %s: %w", o.ResourceType, client.APIError(refreshErr))
 		}
 	case server.RefreshResourceTypeProjectConfig:
 		httpRes, refreshErr := apiClient.CoreAPI.RefreshProjectConfig(ctx, o.Project).Execute()
@@ -115,7 +115,7 @@ func (o *refreshOptions) run(ctx context.Context) error {
 			_ = httpRes.Body.Close()
 		}
 		if refreshErr != nil {
-			return fmt.Errorf("refresh %s: %w", o.ResourceType, client.NewClientAPIError(refreshErr))
+			return fmt.Errorf("refresh %s: %w", o.ResourceType, client.APIError(refreshErr))
 		}
 	case server.RefreshResourceTypeStage:
 		httpRes, refreshErr := apiClient.CoreAPI.RefreshStage(ctx, o.Project, o.Name).Execute()
@@ -123,7 +123,7 @@ func (o *refreshOptions) run(ctx context.Context) error {
 			_ = httpRes.Body.Close()
 		}
 		if refreshErr != nil {
-			return fmt.Errorf("refresh %s: %w", o.ResourceType, client.NewClientAPIError(refreshErr))
+			return fmt.Errorf("refresh %s: %w", o.ResourceType, client.APIError(refreshErr))
 		}
 	case server.RefreshResourceTypeWarehouse:
 		httpRes, refreshErr := apiClient.CoreAPI.RefreshWarehouse(ctx, o.Project, o.Name).Execute()
@@ -131,7 +131,7 @@ func (o *refreshOptions) run(ctx context.Context) error {
 			_ = httpRes.Body.Close()
 		}
 		if refreshErr != nil {
-			return fmt.Errorf("refresh %s: %w", o.ResourceType, client.NewClientAPIError(refreshErr))
+			return fmt.Errorf("refresh %s: %w", o.ResourceType, client.APIError(refreshErr))
 		}
 	default:
 		return fmt.Errorf("unsupported resource type: %s", o.ResourceType)

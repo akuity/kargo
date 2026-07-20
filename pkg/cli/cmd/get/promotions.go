@@ -129,7 +129,7 @@ func (o *getPromotionsOptions) validate() error {
 
 // run gets the promotions from the server and prints them to the console.
 func (o *getPromotionsOptions) run(ctx context.Context) error {
-	apiClient, err := client.GetNewClientFromConfig(ctx, o.Config, o.ClientOptions)
+	apiClient, err := client.GetClientFromConfig(ctx, o.Config, o.ClientOptions)
 	if err != nil {
 		return fmt.Errorf("get client from config: %w", err)
 	}
@@ -143,7 +143,7 @@ func (o *getPromotionsOptions) run(ctx context.Context) error {
 			_ = httpRes.Body.Close()
 		}
 		if listErr != nil {
-			return fmt.Errorf("list promotions: %w", client.NewClientAPIError(listErr))
+			return fmt.Errorf("list promotions: %w", client.APIError(listErr))
 		}
 		var promosJSON []byte
 		if promosJSON, err = json.Marshal(res); err != nil {
@@ -166,7 +166,7 @@ func (o *getPromotionsOptions) run(ctx context.Context) error {
 			_ = httpRes.Body.Close()
 		}
 		if getErr != nil {
-			errs = append(errs, client.NewClientAPIError(getErr))
+			errs = append(errs, client.APIError(getErr))
 			continue
 		}
 		var promoJSON []byte

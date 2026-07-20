@@ -105,7 +105,7 @@ func (o *applyOptions) run(ctx context.Context) error {
 		return fmt.Errorf("read manifests: %w", err)
 	}
 
-	apiClient, err := client.GetNewClientFromConfig(ctx, o.Config, o.ClientOptions)
+	apiClient, err := client.GetClientFromConfig(ctx, o.Config, o.ClientOptions)
 	if err != nil {
 		return fmt.Errorf("get client from config: %w", err)
 	}
@@ -122,7 +122,7 @@ func (o *applyOptions) run(ctx context.Context) error {
 		defer httpRes.Body.Close()
 	}
 	if err != nil {
-		return client.NewClientAPIError(fmt.Errorf("apply resource: %w", err))
+		return client.APIError(fmt.Errorf("apply resource: %w", err))
 	}
 
 	// Separate results into created, updated, and errors

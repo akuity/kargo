@@ -260,7 +260,6 @@ codegen: codegen-openapi codegen-proto codegen-controller codegen-schema-to-go c
 .PHONY: codegen-openapi
 codegen-openapi: install-jq install-openapi-generator-cli
 	rm -f swagger.json
-	find pkg/client/generated -mindepth 1 ! -name go.mod ! -name go.sum -exec rm -rf {} +
 	rm -rf /tmp/swagger-build
 	mkdir -p /tmp/swagger-build
 	go tool swag init \
@@ -273,13 +272,6 @@ codegen-openapi: install-jq install-openapi-generator-cli
 	rm -rf /tmp/swagger-build
 	hack/codegen/fix-swagger-spec.sh swagger.json
 	./hack/codegen/generate-go-client.sh
-	mkdir -p pkg/client/generated
-	go tool swagger generate client \
-		-f swagger.json \
-		-t pkg \
-		--client-package client/generated \
-		--model-package client/generated/models \
-		--skip-validation
 	pnpm --dir=ui install --dev
 	pnpm --dir=ui run generate:api
 

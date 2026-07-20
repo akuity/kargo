@@ -104,7 +104,7 @@ func (o *deleteRoleOptions) validate() error {
 
 // run removes the role(s) from the project based on the options.
 func (o *deleteRoleOptions) run(ctx context.Context) error {
-	apiClient, err := client.GetNewClientFromConfig(ctx, o.Config, o.ClientOptions)
+	apiClient, err := client.GetClientFromConfig(ctx, o.Config, o.ClientOptions)
 	if err != nil {
 		return fmt.Errorf("get client from config: %w", err)
 	}
@@ -121,7 +121,7 @@ func (o *deleteRoleOptions) run(ctx context.Context) error {
 			_ = httpRes.Body.Close()
 		}
 		if err != nil {
-			errs = append(errs, client.NewClientAPIError(err))
+			errs = append(errs, client.APIError(err))
 			continue
 		}
 		_ = printer.PrintObj(

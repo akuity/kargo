@@ -132,7 +132,7 @@ func (o *createTokenOptions) validate() error {
 
 // run creates an API token and prints it to the console.
 func (o *createTokenOptions) run(ctx context.Context) error {
-	apiClient, err := client.GetNewClientFromConfig(ctx, o.Config, o.ClientOptions)
+	apiClient, err := client.GetClientFromConfig(ctx, o.Config, o.ClientOptions)
 	if err != nil {
 		return fmt.Errorf("get client from config: %w", err)
 	}
@@ -159,7 +159,7 @@ func (o *createTokenOptions) run(ctx context.Context) error {
 		_ = httpRes.Body.Close()
 	}
 	if err != nil {
-		return fmt.Errorf("create API token: %w", client.NewClientAPIError(err))
+		return fmt.Errorf("create API token: %w", client.APIError(err))
 	}
 
 	secretJSON, err := json.Marshal(payload)

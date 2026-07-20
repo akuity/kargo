@@ -141,7 +141,7 @@ func (o *getRepoCredentialsOptions) validate() error {
 
 // run gets the credentials from the server and prints them to the console.
 func (o *getRepoCredentialsOptions) run(ctx context.Context) error {
-	apiClient, err := client.GetNewClientFromConfig(ctx, o.Config, o.ClientOptions)
+	apiClient, err := client.GetClientFromConfig(ctx, o.Config, o.ClientOptions)
 	if err != nil {
 		return fmt.Errorf("get client from config: %w", err)
 	}
@@ -155,7 +155,7 @@ func (o *getRepoCredentialsOptions) run(ctx context.Context) error {
 				_ = httpRes.Body.Close()
 			}
 			if listErr != nil {
-				return fmt.Errorf("list shared credentials: %w", client.NewClientAPIError(listErr))
+				return fmt.Errorf("list shared credentials: %w", client.APIError(listErr))
 			}
 			payload = res
 		default:
@@ -164,7 +164,7 @@ func (o *getRepoCredentialsOptions) run(ctx context.Context) error {
 				_ = httpRes.Body.Close()
 			}
 			if listErr != nil {
-				return fmt.Errorf("list project credentials: %w", client.NewClientAPIError(listErr))
+				return fmt.Errorf("list project credentials: %w", client.APIError(listErr))
 			}
 			payload = res
 		}
@@ -192,7 +192,7 @@ func (o *getRepoCredentialsOptions) run(ctx context.Context) error {
 				_ = httpRes.Body.Close()
 			}
 			if getErr != nil {
-				errs = append(errs, client.NewClientAPIError(getErr))
+				errs = append(errs, client.APIError(getErr))
 				continue
 			}
 			payload = credRes
@@ -202,7 +202,7 @@ func (o *getRepoCredentialsOptions) run(ctx context.Context) error {
 				_ = httpRes.Body.Close()
 			}
 			if getErr != nil {
-				errs = append(errs, client.NewClientAPIError(getErr))
+				errs = append(errs, client.APIError(getErr))
 				continue
 			}
 			payload = credRes

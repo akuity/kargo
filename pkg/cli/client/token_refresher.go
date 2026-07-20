@@ -105,7 +105,7 @@ func redeemRefreshToken(
 	refreshToken string,
 	insecureTLS bool,
 ) (string, string, error) {
-	apiClient, err := GetNewClient(serverAddress, "", insecureTLS)
+	apiClient, err := GetClient(serverAddress, "", insecureTLS)
 	if err != nil {
 		return "", "", err
 	}
@@ -116,7 +116,7 @@ func redeemRefreshToken(
 	if err != nil {
 		return "", "", fmt.Errorf(
 			"error retrieving public configuration from server: %w",
-			NewClientAPIError(err),
+			APIError(err),
 		)
 	}
 
