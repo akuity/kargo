@@ -247,7 +247,7 @@ build-cli-with-ui: build-ui build-cli
 ################################################################################
 
 .PHONY: codegen
-codegen: codegen-openapi codegen-proto codegen-controller codegen-schema-to-go codegen-ui codegen-docs
+codegen: codegen-openapi codegen-controller codegen-schema-to-go codegen-ui codegen-docs
 
 .PHONY: codegen-openapi
 codegen-openapi: install-jq
@@ -273,10 +273,6 @@ codegen-openapi: install-jq
 		--skip-validation
 	pnpm --dir=ui install --dev
 	pnpm --dir=ui run generate:api
-
-.PHONY: codegen-proto
-codegen-proto: install-protoc
-	./hack/codegen/proto.sh
 
 .PHONY: codegen-controller
 codegen-controller:

@@ -141,15 +141,15 @@ func (s PromotionStepStatus) Compare(other PromotionStepStatus) int {
 // particular Freight.
 type Promotion struct {
 	metav1.TypeMeta   `json:",inline"`
-	metav1.ObjectMeta `json:"metadata,omitempty" protobuf:"bytes,1,opt,name=metadata"`
+	metav1.ObjectMeta `json:"metadata,omitempty"`
 	// Spec describes the desired transition of a specific Stage into a specific
 	// Freight.
 	//
 	// +kubebuilder:validation:Required
-	Spec PromotionSpec `json:"spec" protobuf:"bytes,2,opt,name=spec"`
+	Spec PromotionSpec `json:"spec"`
 	// Status describes the current state of the transition represented by this
 	// Promotion.
-	Status PromotionStatus `json:"status,omitempty" protobuf:"bytes,3,opt,name=status"`
+	Status PromotionStatus `json:"status,omitempty"`
 }
 
 func (p *Promotion) GetStatus() *PromotionStatus {
@@ -170,7 +170,7 @@ type PromotionSpec struct {
 	// +kubebuilder:validation:MaxLength=253
 	// +kubebuilder:validation:Pattern=`^[a-z0-9]([-a-z0-9]*[a-z0-9])?(\.[a-z0-9]([-a-z0-9]*[a-z0-9])?)*$`
 	// +akuity:test-kubebuilder-pattern=KubernetesName
-	Stage string `json:"stage" protobuf:"bytes,1,opt,name=stage"`
+	Stage string `json:"stage"`
 	// Freight specifies the piece of Freight to be promoted into the Stage.
 	// Exactly one of Freight or Origin must be set.
 	//
@@ -179,14 +179,14 @@ type PromotionSpec struct {
 	// +kubebuilder:validation:MaxLength=253
 	// +kubebuilder:validation:Pattern=`^[a-z0-9]([-a-z0-9]*[a-z0-9])?(\.[a-z0-9]([-a-z0-9]*[a-z0-9])?)*$`
 	// +akuity:test-kubebuilder-pattern=KubernetesName
-	Freight string `json:"freight,omitempty" protobuf:"bytes,2,opt,name=freight"`
+	Freight string `json:"freight,omitempty"`
 	// Origin, when set, identifies the FreightOrigin whose auto-promotion
 	// candidate should be promoted. The mutating webhook resolves this to the
 	// candidate Freight for that origin and fills Freight before the Promotion
 	// is persisted. Exactly one of Freight or Origin must be set.
 	//
 	// +kubebuilder:validation:Optional
-	Origin *FreightOrigin `json:"origin,omitempty" protobuf:"bytes,14,opt,name=origin"`
+	Origin *FreightOrigin `json:"origin,omitempty"`
 	// Target optionally names the Target, within the Promotion's own Project
 	// (namespace), that this Promotion promotes Freight to. Targets allow a
 	// single Stage to govern -- and promote Freight to -- multiple destinations.
@@ -202,10 +202,10 @@ type PromotionSpec struct {
 	// +kubebuilder:validation:MaxLength=253
 	// +kubebuilder:validation:Pattern=`^[a-z0-9]([-a-z0-9]*[a-z0-9])?(\.[a-z0-9]([-a-z0-9]*[a-z0-9])?)*$`
 	// +akuity:test-kubebuilder-pattern=KubernetesName
-	Target string `json:"target,omitempty" protobuf:"bytes,5,opt,name=target"`
+	Target string `json:"target,omitempty"`
 	// Vars is a list of variables that can be referenced by expressions in
 	// promotion steps.
-	Vars []ExpressionVariable `json:"vars,omitempty" protobuf:"bytes,4,rep,name=vars"`
+	Vars []ExpressionVariable `json:"vars,omitempty"`
 	// Steps specifies the directives to be executed as part of this Promotion.
 	// The order in which the directives are executed is the order in which they
 	// are listed in this field.
@@ -213,7 +213,7 @@ type PromotionSpec struct {
 	// +kubebuilder:validation:Required
 	// +kubebuilder:validation:MinItems=1
 	// +kubebuilder:validation:items:XValidation:message="Promotion step must have uses set and must not reference a task",rule="has(self.uses) && !has(self.task)"
-	Steps []PromotionStep `json:"steps" protobuf:"bytes,3,rep,name=steps"`
+	Steps []PromotionStep `json:"steps"`
 }
 
 // PromotionTaskReference describes a reference to a PromotionTask.
@@ -225,14 +225,14 @@ type PromotionTaskReference struct {
 	// +kubebuilder:validation:MaxLength=253
 	// +kubebuilder:validation:Pattern=`^[a-z0-9]([-a-z0-9]*[a-z0-9])?(\.[a-z0-9]([-a-z0-9]*[a-z0-9])?)*$`
 	// +akuity:test-kubebuilder-pattern=KubernetesName
-	Name string `json:"name" protobuf:"bytes,1,opt,name=name"`
+	Name string `json:"name"`
 
 	// Kind is the type of the PromotionTask. Can be either PromotionTask or
 	// ClusterPromotionTask, default is PromotionTask.
 	//
 	// +kubebuilder:validation:Optional
 	// +kubebuilder:validation:Enum=PromotionTask;ClusterPromotionTask
-	Kind string `json:"kind,omitempty" protobuf:"bytes,2,opt,name=kind"`
+	Kind string `json:"kind,omitempty"`
 }
 
 // PromotionStepRetry describes the retry policy for a PromotionStep.
@@ -251,7 +251,7 @@ type PromotionStepRetry struct {
 	//
 	// A value of 0 will cause the step to be retried indefinitely unless the
 	// ErrorThreshold is reached.
-	Timeout *metav1.Duration `json:"timeout,omitempty" protobuf:"bytes,1,opt,name=timeout"`
+	Timeout *metav1.Duration `json:"timeout,omitempty"`
 	// ErrorThreshold is the number of consecutive times the step must fail (for
 	// any reason) before retries are abandoned and the entire Promotion is marked
 	// as failed.
@@ -271,7 +271,7 @@ type PromotionStepRetry struct {
 	// planned that unrecoverable failures will not be subject to this threshold
 	// and will immediately cause the Promotion to be marked as failed without
 	// further condition.
-	ErrorThreshold uint32 `json:"errorThreshold,omitempty" protobuf:"varint,2,opt,name=errorThreshold"`
+	ErrorThreshold uint32 `json:"errorThreshold,omitempty"`
 }
 
 // GetTimeout returns the Timeout field with the given fallback value.
@@ -297,33 +297,33 @@ type PromotionStep struct {
 	//
 	// +kubebuilder:validation:Optional
 	// +kubebuilder:validation:MinLength=1
-	Uses string `json:"uses,omitempty" protobuf:"bytes,1,opt,name=uses"`
+	Uses string `json:"uses,omitempty"`
 	// Task is a reference to a PromotionTask that should be inflated into a
 	// Promotion when it is built from a PromotionTemplate.
-	Task *PromotionTaskReference `json:"task,omitempty" protobuf:"bytes,5,opt,name=task"`
+	Task *PromotionTaskReference `json:"task,omitempty"`
 	// As is the alias this step can be referred to as.
-	As string `json:"as,omitempty" protobuf:"bytes,2,opt,name=as"`
+	As string `json:"as,omitempty"`
 	// If is an optional expression that, if present, must evaluate to a boolean
 	// value. If the expression evaluates to false, the step will be skipped.
 	// If the expression does not evaluate to a boolean value, the step will be
 	// considered to have failed.
-	If string `json:"if,omitempty" protobuf:"bytes,7,opt,name=if"`
+	If string `json:"if,omitempty"`
 	// ContinueOnError is a boolean value that, if set to true, will cause the
 	// Promotion to continue executing the next step even if this step fails. It
 	// also will not permit this failure to impact the overall status of the
 	// Promotion.
-	ContinueOnError bool `json:"continueOnError,omitempty" protobuf:"varint,8,opt,name=continueOnError"`
+	ContinueOnError bool `json:"continueOnError,omitempty"`
 	// Retry is the retry policy for this step.
-	Retry *PromotionStepRetry `json:"retry,omitempty" protobuf:"bytes,4,opt,name=retry"`
+	Retry *PromotionStepRetry `json:"retry,omitempty"`
 	// Vars is a list of variables that can be referenced by expressions in
 	// the step's Config. The values override the values specified in the
 	// PromotionSpec.
-	Vars []ExpressionVariable `json:"vars,omitempty" protobuf:"bytes,6,rep,name=vars"`
+	Vars []ExpressionVariable `json:"vars,omitempty"`
 	// Config is opaque configuration for the PromotionStep that is understood
 	// only by each PromotionStep's implementation. It is legal to utilize
 	// expressions in defining values at any level of this block.
 	// See https://docs.kargo.io/user-guide/reference-docs/expressions for details.
-	Config *apiextensionsv1.JSON `json:"config,omitempty" protobuf:"bytes,3,opt,name=config"`
+	Config *apiextensionsv1.JSON `json:"config,omitempty"`
 }
 
 // GetAlias returns the As field, or a default value in the form of "step-<i>"
@@ -348,37 +348,37 @@ type PromotionStatus struct {
 	// annotation that was handled by the controller. This field can be used to
 	// determine whether the request to refresh the resource has been handled.
 	// +optional
-	LastHandledRefresh string `json:"lastHandledRefresh,omitempty" protobuf:"bytes,4,opt,name=lastHandledRefresh"`
+	LastHandledRefresh string `json:"lastHandledRefresh,omitempty"`
 	// Phase describes where the Promotion currently is in its lifecycle.
-	Phase PromotionPhase `json:"phase,omitempty" protobuf:"bytes,1,opt,name=phase"`
+	Phase PromotionPhase `json:"phase,omitempty"`
 	// Message is a display message about the promotion, including any errors
 	// preventing the Promotion controller from executing this Promotion.
 	// i.e. If the Phase field has a value of Failed, this field can be expected
 	// to explain why.
-	Message string `json:"message,omitempty" protobuf:"bytes,2,opt,name=message"`
+	Message string `json:"message,omitempty"`
 	// Freight is the detail of the piece of freight that was referenced by this promotion.
-	Freight *FreightReference `json:"freight,omitempty" protobuf:"bytes,5,opt,name=freight"`
+	Freight *FreightReference `json:"freight,omitempty"`
 	// FreightCollection contains the details of the piece of Freight referenced
 	// by this Promotion as well as any additional Freight that is carried over
 	// from the target Stage's current state.
-	FreightCollection *FreightCollection `json:"freightCollection,omitempty" protobuf:"bytes,7,opt,name=freightCollection"`
+	FreightCollection *FreightCollection `json:"freightCollection,omitempty"`
 	// HealthChecks contains the health check directives to be executed after
 	// the Promotion has completed.
-	HealthChecks []HealthCheckStep `json:"healthChecks,omitempty" protobuf:"bytes,8,rep,name=healthChecks"`
+	HealthChecks []HealthCheckStep `json:"healthChecks,omitempty"`
 	// StartedAt is the time when the promotion started.
-	StartedAt *metav1.Time `json:"startedAt,omitempty" protobuf:"bytes,12,opt,name=startedAt"`
+	StartedAt *metav1.Time `json:"startedAt,omitempty"`
 	// FinishedAt is the time when the promotion was completed.
-	FinishedAt *metav1.Time `json:"finishedAt,omitempty" protobuf:"bytes,6,opt,name=finishedAt"`
+	FinishedAt *metav1.Time `json:"finishedAt,omitempty"`
 	// CurrentStep is the index of the current promotion step being executed. This
 	// permits steps that have already run successfully to be skipped on
 	// subsequent reconciliations attempts.
-	CurrentStep int64 `json:"currentStep,omitempty" protobuf:"varint,9,opt,name=currentStep"`
+	CurrentStep int64 `json:"currentStep,omitempty"`
 	// StepExecutionMetadata tracks metadata pertaining to the execution
 	// of individual promotion steps.
-	StepExecutionMetadata StepExecutionMetadataList `json:"stepExecutionMetadata,omitempty" protobuf:"bytes,11,rep,name=stepExecutionMetadata"`
+	StepExecutionMetadata StepExecutionMetadataList `json:"stepExecutionMetadata,omitempty"`
 	// State stores the state of the promotion process between reconciliation
 	// attempts.
-	State *apiextensionsv1.JSON `json:"state,omitempty" protobuf:"bytes,10,opt,name=state"`
+	State *apiextensionsv1.JSON `json:"state,omitempty"`
 }
 
 // GetState returns the State field as unmarshalled YAML.
@@ -400,10 +400,10 @@ type HealthCheckStep struct {
 	// Uses identifies a runner that can execute this step.
 	//
 	// +kubebuilder:validation:MinLength=1
-	Uses string `json:"uses" protobuf:"bytes,1,opt,name=uses"`
+	Uses string `json:"uses"`
 
 	// Config is the configuration for the directive.
-	Config *apiextensionsv1.JSON `json:"config,omitempty" protobuf:"bytes,2,opt,name=config"`
+	Config *apiextensionsv1.JSON `json:"config,omitempty"`
 }
 
 // GetConfig returns the Config field as unmarshalled YAML.
@@ -431,8 +431,8 @@ func (s *PromotionStatus) WithPhase(phase PromotionPhase) *PromotionStatus {
 // PromotionList contains a list of Promotion
 type PromotionList struct {
 	metav1.TypeMeta `json:",inline"`
-	metav1.ListMeta `json:"metadata,omitempty" protobuf:"bytes,1,opt,name=metadata"`
-	Items           []Promotion `json:"items" protobuf:"bytes,2,rep,name=items"`
+	metav1.ListMeta `json:"metadata,omitempty"`
+	Items           []Promotion `json:"items"`
 }
 
 // StepExecutionMetadataList is a list of StepExecutionMetadata.
@@ -458,22 +458,22 @@ func (s StepExecutionMetadataList) HasFailures() bool {
 // a promotion step.
 type StepExecutionMetadata struct {
 	// Alias is the alias of the step.
-	Alias string `json:"alias,omitempty" protobuf:"bytes,1,opt,name=alias"`
+	Alias string `json:"alias,omitempty"`
 	// StartedAt is the time at which the first attempt to execute the step
 	// began.
-	StartedAt *metav1.Time `json:"startedAt,omitempty" protobuf:"bytes,2,opt,name=startedAt"`
+	StartedAt *metav1.Time `json:"startedAt,omitempty"`
 	// FinishedAt is the time at which the final attempt to execute the step
 	// completed.
-	FinishedAt *metav1.Time `json:"finishedAt,omitempty" protobuf:"bytes,3,opt,name=finishedAt"`
+	FinishedAt *metav1.Time `json:"finishedAt,omitempty"`
 	// ErrorCount tracks consecutive failed attempts to execute the step.
-	ErrorCount uint32 `json:"errorCount,omitempty" protobuf:"varint,4,opt,name=errorCount"`
+	ErrorCount uint32 `json:"errorCount,omitempty"`
 	// Status is the high-level outcome of the step.
-	Status PromotionStepStatus `json:"status,omitempty" protobuf:"bytes,5,opt,name=status"`
+	Status PromotionStepStatus `json:"status,omitempty"`
 	// Message is a display message about the step, including any errors.
-	Message string `json:"message,omitempty" protobuf:"bytes,6,opt,name=message"`
+	Message string `json:"message,omitempty"`
 	// ContinueOnError is a boolean value that, if set to true, will cause the
 	// Promotion to continue executing the next step even if this step fails. It
 	// also will not permit this failure to impact the overall status of the
 	// Promotion.
-	ContinueOnError bool `json:"continueOnError,omitempty" protobuf:"varint,7,opt,name=continueOnError"`
+	ContinueOnError bool `json:"continueOnError,omitempty"`
 }

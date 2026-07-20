@@ -18,13 +18,13 @@ import (
 // Warehouse is a source of Freight.
 type Warehouse struct {
 	metav1.TypeMeta   `json:",inline"`
-	metav1.ObjectMeta `json:"metadata,omitempty" protobuf:"bytes,1,opt,name=metadata"`
+	metav1.ObjectMeta `json:"metadata,omitempty"`
 	// Spec describes sources of artifacts.
 	//
 	// +kubebuilder:validation:Required
-	Spec WarehouseSpec `json:"spec" protobuf:"bytes,2,opt,name=spec"`
+	Spec WarehouseSpec `json:"spec"`
 	// Status describes the Warehouse's most recently observed state.
-	Status WarehouseStatus `json:"status,omitempty" protobuf:"bytes,3,opt,name=status"`
+	Status WarehouseStatus `json:"status,omitempty"`
 }
 
 // GetInterval calculates and returns interval time remaining until the next
@@ -63,7 +63,7 @@ type WarehouseSpec struct {
 	// the value of this field. If the shard label is present and this field is
 	// empty, the defaulting webhook will set the value of this field to the value
 	// of the shard label.
-	Shard string `json:"shard,omitempty" protobuf:"bytes,2,opt,name=shard"`
+	Shard string `json:"shard,omitempty"`
 	// Interval is the reconciliation interval for this Warehouse. On each
 	// reconciliation, the Warehouse will discover new artifacts and optionally
 	// produce new Freight. This field is optional. When left unspecified, the
@@ -73,7 +73,7 @@ type WarehouseSpec struct {
 	// +kubebuilder:validation:Pattern=`^([0-9]+(\.[0-9]+)?(s|m|h))+$`
 	// +kubebuilder:default="5m0s"
 	// +akuity:test-kubebuilder-pattern=Duration
-	Interval metav1.Duration `json:"interval" protobuf:"bytes,4,opt,name=interval"`
+	Interval metav1.Duration `json:"interval"`
 	// FreightCreationPolicy describes how Freight is created by this Warehouse.
 	// This field is optional. When left unspecified, the field is implicitly
 	// treated as if its value were "Automatic".
@@ -86,12 +86,12 @@ type WarehouseSpec struct {
 	//
 	// +kubebuilder:default=Automatic
 	// +kubebuilder:validation:Optional
-	FreightCreationPolicy FreightCreationPolicy `json:"freightCreationPolicy" protobuf:"bytes,3,opt,name=freightCreationPolicy"`
+	FreightCreationPolicy FreightCreationPolicy `json:"freightCreationPolicy"`
 	// Subscriptions describes sources of artifacts to be included in Freight
 	// produced by this Warehouse.
 	//
 	// +kubebuilder:validation:MinItems=1
-	Subscriptions []apiextensionsv1.JSON `json:"subscriptions" protobuf:"bytes,1,rep,name=subscriptions"`
+	Subscriptions []apiextensionsv1.JSON `json:"subscriptions"`
 	// InternalSubscriptions is an internal, typed representation of the
 	// Subscriptions field. When a WarehouseSpec is unmarshaled, this field is
 	// populated from the JSON in the Subscriptions field. When a WarehouseSpec is
@@ -105,13 +105,13 @@ type WarehouseSpec struct {
 	// FUTURE RELEASE.
 	//
 	// +kubebuilder:validation:Optional
-	InternalSubscriptions []RepoSubscription `json:"-" protobuf:"-"`
+	InternalSubscriptions []RepoSubscription `json:"-"`
 	// FreightCreationCriteria defines criteria that must be satisfied for Freight
 	// to be created automatically from new artifacts following discovery. This
 	// field has no effect when the FreightCreationPolicy is `Manual`.
 	//
 	// +kubebuilder:validation:Optional
-	FreightCreationCriteria *FreightCreationCriteria `json:"freightCreationCriteria,omitempty" protobuf:"bytes,5,opt,name=freightCreationCriteria"`
+	FreightCreationCriteria *FreightCreationCriteria `json:"freightCreationCriteria,omitempty"`
 }
 
 var legacySubscriptionTypes = []string{"chart", "git", "image"}
@@ -285,21 +285,21 @@ const (
 type FreightCreationCriteria struct {
 	// Expression is an expr-lang expression that must evaluate to true for
 	// Freight to be created automatically from new artifacts following discovery.
-	Expression string `json:"expression,omitempty" protobuf:"bytes,1,opt,name=expression"`
+	Expression string `json:"expression,omitempty"`
 }
 
 // RepoSubscription describes a subscription to ONE OF a Git repository, a
 // container image repository, a Helm chart repository, or something else.
 type RepoSubscription struct {
 	// Git describes a subscriptions to a Git repository.
-	Git *GitSubscription `json:"git,omitempty" protobuf:"bytes,1,opt,name=git"`
+	Git *GitSubscription `json:"git,omitempty"`
 	// Image describes a subscription to container image repository.
-	Image *ImageSubscription `json:"image,omitempty" protobuf:"bytes,2,opt,name=image"`
+	Image *ImageSubscription `json:"image,omitempty"`
 	// Chart describes a subscription to a Helm chart repository.
-	Chart *ChartSubscription `json:"chart,omitempty" protobuf:"bytes,3,opt,name=chart"`
+	Chart *ChartSubscription `json:"chart,omitempty"`
 	// Subscription describes a subscription to something that is not a Git, container
 	// image, or Helm chart repository.
-	Subscription *Subscription `json:"subscription,omitempty" protobuf:"bytes,4,opt,name=subscription"`
+	Subscription *Subscription `json:"subscription,omitempty"`
 }
 
 // Subscription represents a subscription to some kind of artifact repository.
@@ -307,26 +307,26 @@ type Subscription struct {
 	// SubscriptionType specifies the kind of subscription this is.
 	//
 	// +kubebuilder:validation:MinLength=1
-	SubscriptionType string `json:"subscriptionType" protobuf:"bytes,1,opt,name=subscriptionType"`
+	SubscriptionType string `json:"subscriptionType"`
 	// Name is a unique (with respect to a Warehouse) name used for identifying
 	// this subscription.
 	//
 	// +kubebuilder:validation:MinLength=1
-	Name string `json:"name" protobuf:"bytes,2,opt,name=name"`
+	Name string `json:"name"`
 	// Config is a JSON object containing opaque configuration for this
 	// subscription. (It must be an object. It may not be a list or a scalar
 	// value.) This is only understood by a corresponding Subscriber
 	// implementation for the ArtifactType.
 	//
 	// +optional
-	Config *apiextensionsv1.JSON `json:"config,omitempty" protobuf:"bytes,3,opt,name=config"`
+	Config *apiextensionsv1.JSON `json:"config,omitempty"`
 	// DiscoveryLimit is an optional limit on the number of artifacts that can
 	// be discovered for this subscription.
 	//
 	// +kubebuilder:validation:Minimum=1
 	// +kubebuilder:validation:Maximum=100
 	// +kubebuilder:default=20
-	DiscoveryLimit int32 `json:"discoveryLimit,omitempty" protobuf:"varint,4,opt,name=discoveryLimit"`
+	DiscoveryLimit int32 `json:"discoveryLimit,omitempty"`
 }
 
 // WarehouseStatus describes a Warehouse's most recently observed state.
@@ -337,20 +337,20 @@ type WarehouseStatus struct {
 	// +patchStrategy=merge
 	// +listType=map
 	// +listMapKey=type
-	Conditions []metav1.Condition `json:"conditions,omitempty" patchMergeKey:"type" patchStrategy:"merge" protobuf:"bytes,9,rep,name=conditions"`
+	Conditions []metav1.Condition `json:"conditions,omitempty" patchMergeKey:"type" patchStrategy:"merge"`
 	// LastHandledRefresh holds the value of the most recent AnnotationKeyRefresh
 	// annotation that was handled by the controller. This field can be used to
 	// determine whether the request to refresh the resource has been handled.
 	// +optional
-	LastHandledRefresh string `json:"lastHandledRefresh,omitempty" protobuf:"bytes,6,opt,name=lastHandledRefresh"`
+	LastHandledRefresh string `json:"lastHandledRefresh,omitempty"`
 	// ObservedGeneration represents the .metadata.generation that this Warehouse
 	// was reconciled against.
-	ObservedGeneration int64 `json:"observedGeneration,omitempty" protobuf:"varint,4,opt,name=observedGeneration"`
+	ObservedGeneration int64 `json:"observedGeneration,omitempty"`
 	// LastFreightID is a reference to the system-assigned identifier (name) of
 	// the most recent Freight produced by the Warehouse.
-	LastFreightID string `json:"lastFreightID,omitempty" protobuf:"bytes,8,opt,name=lastFreightID"`
+	LastFreightID string `json:"lastFreightID,omitempty"`
 	// DiscoveredArtifacts holds the artifacts discovered by the Warehouse.
-	DiscoveredArtifacts *DiscoveredArtifacts `json:"discoveredArtifacts,omitempty" protobuf:"bytes,7,opt,name=discoveredArtifacts"`
+	DiscoveredArtifacts *DiscoveredArtifacts `json:"discoveredArtifacts,omitempty"`
 }
 
 // GetConditions implements the conditions.Getter interface.
@@ -369,26 +369,26 @@ type DiscoveredArtifacts struct {
 	// DiscoveredAt is the time at which the Warehouse discovered the artifacts.
 	//
 	// +optional
-	DiscoveredAt metav1.Time `json:"discoveredAt" protobuf:"bytes,4,opt,name=discoveredAt"`
+	DiscoveredAt metav1.Time `json:"discoveredAt"`
 	// Git holds the commits discovered by the Warehouse for the Git
 	// subscriptions.
 	//
 	// +optional
-	Git []GitDiscoveryResult `json:"git,omitempty" protobuf:"bytes,1,rep,name=git"`
+	Git []GitDiscoveryResult `json:"git,omitempty"`
 	// Images holds the image references discovered by the Warehouse for the
 	// image subscriptions.
 	//
 	// +optional
-	Images []ImageDiscoveryResult `json:"images,omitempty" protobuf:"bytes,2,rep,name=images"`
+	Images []ImageDiscoveryResult `json:"images,omitempty"`
 	// Charts holds the charts discovered by the Warehouse for the chart
 	// subscriptions.
 	//
 	// +optional
-	Charts []ChartDiscoveryResult `json:"charts,omitempty" protobuf:"bytes,3,rep,name=charts"`
+	Charts []ChartDiscoveryResult `json:"charts,omitempty"`
 	// Results holds the artifact references discovered by the Warehouse.
 	//
 	// +optional
-	Results []DiscoveryResult `json:"results,omitempty" protobuf:"bytes,5,rep,name=results"`
+	Results []DiscoveryResult `json:"results,omitempty"`
 }
 
 // GitDiscoveryResult represents the result of a Git discovery operation for a
@@ -401,13 +401,13 @@ type GitDiscoveryResult struct {
 	// +kubebuilder:validation:MinLength=1
 	// +kubebuilder:validation:Pattern=`(?:^(ssh|https?)://(?:([\w-]+)(:(.+))?@)?([\w-]+(?:\.[\w-]+)*)(?::(\d{1,5}))?(/.*)$)|(?:^([\w-]+)@([\w+]+(?:\.[\w-]+)*):(/?.*))`
 	// +akuity:test-kubebuilder-pattern=GitRepoURLPattern
-	RepoURL string `json:"repoURL" protobuf:"bytes,1,opt,name=repoURL"`
+	RepoURL string `json:"repoURL"`
 	// Commits is a list of commits discovered by the Warehouse for the
 	// GitSubscription. An empty list indicates that the discovery operation was
 	// successful, but no commits matching the GitSubscription criteria were found.
 	//
 	// +optional
-	Commits []DiscoveredCommit `json:"commits" protobuf:"bytes,2,rep,name=commits"`
+	Commits []DiscoveredCommit `json:"commits"`
 	// ObservedRefs records the raw remote ref state observed at the most recent
 	// successful discovery, after name-based filtering but before path filtering
 	// or commit selection. The Warehouse uses it to short-circuit discovery: at
@@ -419,7 +419,7 @@ type GitDiscoveryResult struct {
 	// a full clone and repopulates it.
 	//
 	// +optional
-	ObservedRefs *GitDiscoveryRefs `json:"observedRefs,omitempty" protobuf:"bytes,3,opt,name=observedRefs"`
+	ObservedRefs *GitDiscoveryRefs `json:"observedRefs,omitempty"`
 }
 
 // GitDiscoveryRefs records the raw remote ref state relevant to a
@@ -433,7 +433,7 @@ type GitDiscoveryRefs struct {
 	// value guarantees the path-filtered selection cannot have changed either.
 	//
 	// +optional
-	BranchHead string `json:"branchHead,omitempty" protobuf:"bytes,1,opt,name=branchHead"`
+	BranchHead string `json:"branchHead,omitempty"`
 	// Tags is the set of tags that satisfied the GitSubscription's name-based
 	// filters (semver and/or regex), paired with the commit IDs they reference,
 	// sorted by tag name for a stable comparison. It is populated for tag-based
@@ -441,7 +441,7 @@ type GitDiscoveryRefs struct {
 	// applied later, during selection, and does not affect this set.
 	//
 	// +optional
-	Tags []DiscoveredRef `json:"tags,omitempty" protobuf:"bytes,2,rep,name=tags"`
+	Tags []DiscoveredRef `json:"tags,omitempty"`
 }
 
 // DiscoveredRef pairs a Git ref name with the ID of the object it resolves to.
@@ -450,7 +450,7 @@ type DiscoveredRef struct {
 	// without its "refs/tags/" or "refs/heads/" prefix.
 	//
 	// +kubebuilder:validation:MinLength=1
-	Name string `json:"name" protobuf:"bytes,1,opt,name=name"`
+	Name string `json:"name"`
 	// ID is the identifier of the object the ref points to, typically a SHA-1
 	// hash. For an annotated tag this is the tag object's ID, not the commit it
 	// dereferences to, because the value is obtained via git ls-remote --refs.
@@ -459,7 +459,7 @@ type DiscoveredRef struct {
 	// other values obtained the same way.
 	//
 	// +kubebuilder:validation:MinLength=1
-	ID string `json:"id" protobuf:"bytes,2,opt,name=id"`
+	ID string `json:"id"`
 }
 
 // DiscoveredCommit represents a commit discovered by a Warehouse for a
@@ -468,24 +468,24 @@ type DiscoveredCommit struct {
 	// ID is the identifier of the commit. This typically is a SHA-1 hash.
 	//
 	// +kubebuilder:validation:MinLength=1
-	ID string `json:"id,omitempty" protobuf:"bytes,1,opt,name=id"`
+	ID string `json:"id,omitempty"`
 	// Branch is the branch in which the commit was found. This field is
 	// optional, and populated based on the CommitSelectionStrategy of the
 	// GitSubscription.
-	Branch string `json:"branch,omitempty" protobuf:"bytes,2,opt,name=branch"`
+	Branch string `json:"branch,omitempty"`
 	// Tag is the tag that resolved to this commit. This field is optional, and
 	// populated based on the CommitSelectionStrategy of the GitSubscription.
-	Tag string `json:"tag,omitempty" protobuf:"bytes,3,opt,name=tag"`
+	Tag string `json:"tag,omitempty"`
 	// Subject is the subject of the commit (i.e. the first line of the commit
 	// message).
-	Subject string `json:"subject,omitempty" protobuf:"bytes,4,opt,name=subject"`
+	Subject string `json:"subject,omitempty"`
 	// Author is the author of the commit.
-	Author string `json:"author,omitempty" protobuf:"bytes,5,opt,name=author"`
+	Author string `json:"author,omitempty"`
 	// Committer is the person who committed the commit.
-	Committer string `json:"committer,omitempty" protobuf:"bytes,6,opt,name=committer"`
+	Committer string `json:"committer,omitempty"`
 	// CreatorDate is the commit creation date as specified by the commit, or
 	// the tagger date if the commit belongs to an annotated tag.
-	CreatorDate *metav1.Time `json:"creatorDate,omitempty" protobuf:"bytes,7,opt,name=creatorDate"`
+	CreatorDate *metav1.Time `json:"creatorDate,omitempty"`
 }
 
 // ImageDiscoveryResult represents the result of an image discovery operation
@@ -495,18 +495,18 @@ type ImageDiscoveryResult struct {
 	// ImageSubscription.
 	//
 	// +kubebuilder:validation:MinLength=1
-	RepoURL string `json:"repoURL" protobuf:"bytes,1,opt,name=repoURL"`
+	RepoURL string `json:"repoURL"`
 	// Platform is the target platform constraint of the ImageSubscription
 	// for which references were discovered. This field is optional, and
 	// only populated if the ImageSubscription specifies a Platform.
-	Platform string `json:"platform,omitempty" protobuf:"bytes,2,opt,name=platform"`
+	Platform string `json:"platform,omitempty"`
 	// References is a list of image references discovered by the Warehouse for
 	// the ImageSubscription. An empty list indicates that the discovery
 	// operation was successful, but no images matching the ImageSubscription
 	// criteria were found.
 	//
 	// +optional
-	References []DiscoveredImageReference `json:"references" protobuf:"bytes,3,rep,name=references"`
+	References []DiscoveredImageReference `json:"references"`
 }
 
 // DiscoveredImageReference represents an image reference discovered by a
@@ -518,19 +518,19 @@ type DiscoveredImageReference struct {
 	// +kubebuilder:validation:MaxLength=128
 	// +kubebuilder:validation:Pattern=`^[\w.\-\_]+$`
 	// +akuity:test-kubebuilder-pattern=Tag
-	Tag string `json:"tag" protobuf:"bytes,1,opt,name=tag"`
+	Tag string `json:"tag"`
 	// Digest is the digest of the image.
 	//
 	// +kubebuilder:validation:MinLength=1
 	// +kubebuilder:validation:Pattern=`^[a-z0-9]+:[a-f0-9]+$`
 	// +akuity:test-kubebuilder-pattern=Digest
-	Digest string `json:"digest" protobuf:"bytes,2,opt,name=digest"`
+	Digest string `json:"digest"`
 	// Annotations is a map of key-value pairs that provide additional
 	// information about the image.
-	Annotations map[string]string `json:"annotations,omitempty" protobuf:"bytes,5,rep,name=annotations" protobuf_key:"bytes,1,opt,name=key" protobuf_val:"bytes,2,opt,name=value"`
+	Annotations map[string]string `json:"annotations,omitempty"`
 	// CreatedAt is the time the image was created. This field is optional, and
 	// not populated for every ImageSelectionStrategy.
-	CreatedAt *metav1.Time `json:"createdAt,omitempty" protobuf:"bytes,4,opt,name=createdAt"`
+	CreatedAt *metav1.Time `json:"createdAt,omitempty"`
 }
 
 // ChartDiscoveryResult represents the result of a chart discovery operation for
@@ -540,20 +540,20 @@ type ChartDiscoveryResult struct {
 	// ChartSubscription.
 	//
 	// +kubebuilder:validation:MinLength=1
-	RepoURL string `json:"repoURL" protobuf:"bytes,1,opt,name=repoURL"`
+	RepoURL string `json:"repoURL"`
 	// Name is the name of the Helm chart, as specified in the ChartSubscription.
-	Name string `json:"name,omitempty" protobuf:"bytes,2,opt,name=name"`
+	Name string `json:"name,omitempty"`
 	// SemverConstraint is the constraint for which versions were discovered.
 	// This field is optional, and only populated if the ChartSubscription
 	// specifies a SemverConstraint.
-	SemverConstraint string `json:"semverConstraint,omitempty" protobuf:"bytes,3,opt,name=semverConstraint"`
+	SemverConstraint string `json:"semverConstraint,omitempty"`
 	// Versions is a list of versions discovered by the Warehouse for the
 	// ChartSubscription. An empty list indicates that the discovery operation was
 	// successful, but no versions matching the ChartSubscription criteria were
 	// found.
 	//
 	// +optional
-	Versions []string `json:"versions" protobuf:"bytes,4,rep,name=versions"`
+	Versions []string `json:"versions"`
 }
 
 // DiscoveryResult represents the result of an artifact discovery operation for
@@ -563,12 +563,12 @@ type DiscoveryResult struct {
 	// results.
 	//
 	// +kubebuilder:validation:MinLength=1
-	SubscriptionName string `json:"name" protobuf:"bytes,3,opt,name=name"`
+	SubscriptionName string `json:"name"`
 	// ArtifactReferences is a list of references to specific versions of an
 	// artifact.
 	//
 	// +optional
-	ArtifactReferences []ArtifactReference `json:"artifactReferences" protobuf:"bytes,2,rep,name=artifactReferences"`
+	ArtifactReferences []ArtifactReference `json:"artifactReferences"`
 }
 
 // ArtifactReference is a reference to a specific version of an artifact.
@@ -578,16 +578,16 @@ type ArtifactReference struct {
 	// ArtifactReference.
 	//
 	// +kubebuilder:validation:MinLength=1
-	ArtifactType string `json:"artifactType,omitempty" protobuf:"bytes,1,opt,name=artifactType"`
+	ArtifactType string `json:"artifactType,omitempty"`
 	// SubscriptionName is the name of the Subscription that discovered this
 	// artifact.
 	//
 	// +kubebuilder:validation:MinLength=1
-	SubscriptionName string `json:"subscriptionName" protobuf:"bytes,2,opt,name=subscriptionName"`
+	SubscriptionName string `json:"subscriptionName"`
 	// Version identifies a specific revision of this artifact.
 	//
 	// +kubebuilder:validation:MinLength=1
-	Version string `json:"version" protobuf:"bytes,3,opt,name=version"`
+	Version string `json:"version"`
 	// Metadata is a JSON object containing a mostly opaque collection of artifact
 	// attributes. (It must be an object. It may not be a list or a scalar value.)
 	// "Mostly" because Kargo may understand how to interpret some documented,
@@ -595,7 +595,7 @@ type ArtifactReference struct {
 	// by a corresponding Subscriber implementation that created it.
 	//
 	// +optional
-	Metadata *apiextensionsv1.JSON `json:"metadata,omitempty" protobuf:"bytes,4,opt,name=metadata"`
+	Metadata *apiextensionsv1.JSON `json:"metadata,omitempty"`
 }
 
 // DeepEquals returns a bool indicating whether the receiver deep-equals the
@@ -626,6 +626,6 @@ func (g *ArtifactReference) DeepEquals(
 // WarehouseList is a list of Warehouse resources.
 type WarehouseList struct {
 	metav1.TypeMeta `json:",inline"`
-	metav1.ListMeta `json:"metadata,omitempty" protobuf:"bytes,1,opt,name=metadata"`
-	Items           []Warehouse `json:"items" protobuf:"bytes,2,rep,name=items"`
+	metav1.ListMeta `json:"metadata,omitempty"`
+	Items           []Warehouse `json:"items"`
 }

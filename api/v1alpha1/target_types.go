@@ -20,11 +20,11 @@ import (
 // promotion itself.
 type Target struct {
 	metav1.TypeMeta   `json:",inline"`
-	metav1.ObjectMeta `json:"metadata,omitempty" protobuf:"bytes,1,opt,name=metadata"`
+	metav1.ObjectMeta `json:"metadata,omitempty"`
 	// Spec describes the Target.
-	Spec TargetSpec `json:"spec,omitempty" protobuf:"bytes,2,opt,name=spec"`
+	Spec TargetSpec `json:"spec,omitempty"`
 	// Status describes the current status of the Target.
-	Status TargetStatus `json:"status,omitempty" protobuf:"bytes,3,opt,name=status"`
+	Status TargetStatus `json:"status,omitempty"`
 }
 
 func (t *Target) GetStatus() *TargetStatus {
@@ -40,7 +40,7 @@ type TargetSpec struct {
 	// example, target.params.branch or target.params.cluster.region).
 	//
 	// +optional
-	Params map[string]apiextensionsv1.JSON `json:"params,omitempty" protobuf:"bytes,1,rep,name=params" protobuf_key:"bytes,1,opt,name=key" protobuf_val:"bytes,2,opt,name=value"`
+	Params map[string]apiextensionsv1.JSON `json:"params,omitempty"`
 }
 
 // TargetStatus describes the current status of a Target.
@@ -51,10 +51,10 @@ type TargetStatus struct {
 	// +patchStrategy=merge
 	// +listType=map
 	// +listMapKey=type
-	Conditions []metav1.Condition `json:"conditions,omitempty" patchMergeKey:"type" patchStrategy:"merge" protobuf:"bytes,1,rep,name=conditions"`
+	Conditions []metav1.Condition `json:"conditions,omitempty" patchMergeKey:"type" patchStrategy:"merge"`
 	// OwnedBy describes the Stages that currently govern this Target, with one
 	// entry per (Stage, Freight origin) pair.
-	OwnedBy []TargetOwnership `json:"ownedBy,omitempty" protobuf:"bytes,2,rep,name=ownedBy"`
+	OwnedBy []TargetOwnership `json:"ownedBy,omitempty"`
 }
 
 // GetConditions implements the conditions.Getter interface.
@@ -71,13 +71,13 @@ func (t *TargetStatus) SetConditions(conditions []metav1.Condition) {
 // Freight from a single origin.
 type TargetOwnership struct {
 	// Stage is the name of the governing Stage.
-	Stage string `json:"stage,omitempty" protobuf:"bytes,1,opt,name=stage"`
+	Stage string `json:"stage,omitempty"`
 	// Origin is the origin of the Freight that the governing Stage promotes to
 	// this Target.
-	Origin FreightOrigin `json:"origin,omitempty" protobuf:"bytes,2,opt,name=origin"`
+	Origin FreightOrigin `json:"origin,omitempty"`
 	// CurrentFreight is the name of the Freight from Origin most recently
 	// promoted to this Target by the governing Stage.
-	CurrentFreight string `json:"currentFreight,omitempty" protobuf:"bytes,3,opt,name=currentFreight"`
+	CurrentFreight string `json:"currentFreight,omitempty"`
 }
 
 // +kubebuilder:object:root=true
@@ -85,6 +85,6 @@ type TargetOwnership struct {
 // TargetList is a list of Target resources.
 type TargetList struct {
 	metav1.TypeMeta `json:",inline"`
-	metav1.ListMeta `json:"metadata,omitempty" protobuf:"bytes,1,opt,name=metadata"`
-	Items           []Target `json:"items" protobuf:"bytes,2,rep,name=items"`
+	metav1.ListMeta `json:"metadata,omitempty"`
+	Items           []Target `json:"items"`
 }
