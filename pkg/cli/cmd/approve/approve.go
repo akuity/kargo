@@ -11,7 +11,6 @@ import (
 	"github.com/akuity/kargo/pkg/cli/config"
 	"github.com/akuity/kargo/pkg/cli/option"
 	"github.com/akuity/kargo/pkg/cli/templates"
-	"github.com/akuity/kargo/pkg/client/generated/core"
 )
 
 type approvalOptions struct {
@@ -106,7 +105,7 @@ func (o *approvalOptions) validate() error {
 
 // run performs the approval of a freight based on the options.
 func (o *approvalOptions) run(ctx context.Context) error {
-	apiClient, err := client.GetClientFromConfig(ctx, o.Config, o.ClientOptions)
+	apiClient, err := client.GetNewClientFromConfig(ctx, o.Config, o.ClientOptions)
 	if err != nil {
 		return fmt.Errorf("get client from config: %w", err)
 	}
@@ -117,14 +116,15 @@ func (o *approvalOptions) run(ctx context.Context) error {
 		freightNameOrAlias = o.FreightAlias
 	}
 
-	if _, err = apiClient.Core.ApproveFreight(
-		core.NewApproveFreightParams().
-			WithProject(o.Project).
-			WithFreightNameOrAlias(freightNameOrAlias).
-			WithStage(o.Stage),
-		nil,
-	); err != nil {
-		return fmt.Errorf("approve freight: %w", err)
+	httpRes, err := apiClient.CoreAPI.
+		ApproveFreight(ctx, o.Project, freightNameOrAlias).
+		Stage(o.Stage).
+		Execute()
+	if httpRes != nil {
+		_ = httpRes.Body.Close()
+	}
+	if err != nil {
+		return fmt.Errorf("approve freight: %w", client.NewClientAPIError(err))
 	}
 	return nil
 }

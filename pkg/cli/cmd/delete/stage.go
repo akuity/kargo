@@ -18,7 +18,6 @@ import (
 	"github.com/akuity/kargo/pkg/cli/kubernetes"
 	"github.com/akuity/kargo/pkg/cli/option"
 	"github.com/akuity/kargo/pkg/cli/templates"
-	"github.com/akuity/kargo/pkg/client/generated/core"
 )
 
 type deleteStageOptions struct {
@@ -106,7 +105,7 @@ func (o *deleteStageOptions) validate() error {
 
 // run removes the stage(s) from the project based on the options.
 func (o *deleteStageOptions) run(ctx context.Context) error {
-	apiClient, err := client.GetClientFromConfig(ctx, o.Config, o.ClientOptions)
+	apiClient, err := client.GetNewClientFromConfig(ctx, o.Config, o.ClientOptions)
 	if err != nil {
 		return fmt.Errorf("get client from config: %w", err)
 	}
@@ -118,13 +117,12 @@ func (o *deleteStageOptions) run(ctx context.Context) error {
 
 	var errs []error
 	for _, name := range o.Names {
-		if _, err := apiClient.Core.DeleteStage(
-			core.NewDeleteStageParams().
-				WithProject(o.Project).
-				WithStage(name),
-			nil,
-		); err != nil {
-			errs = append(errs, err)
+		httpRes, delErr := apiClient.CoreAPI.DeleteStage(ctx, o.Project, name).Execute()
+		if httpRes != nil {
+			_ = httpRes.Body.Close()
+		}
+		if delErr != nil {
+			errs = append(errs, client.NewClientAPIError(delErr))
 			continue
 		}
 		_ = printer.PrintObj(&kargoapi.Stage{

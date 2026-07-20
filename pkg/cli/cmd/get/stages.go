@@ -21,7 +21,6 @@ import (
 	"github.com/akuity/kargo/pkg/cli/kubernetes"
 	"github.com/akuity/kargo/pkg/cli/option"
 	"github.com/akuity/kargo/pkg/cli/templates"
-	"github.com/akuity/kargo/pkg/client/generated/core"
 	"github.com/akuity/kargo/pkg/conditions"
 )
 
@@ -119,21 +118,21 @@ func (o *getStagesOptions) validate() error {
 
 // run gets the stages from the server and prints them to the console.
 func (o *getStagesOptions) run(ctx context.Context) error {
-	apiClient, err := client.GetClientFromConfig(ctx, o.Config, o.ClientOptions)
+	apiClient, err := client.GetNewClientFromConfig(ctx, o.Config, o.ClientOptions)
 	if err != nil {
 		return err
 	}
 
 	if len(o.Names) == 0 {
-		var res *core.ListStagesOK
-		if res, err = apiClient.Core.ListStages(
-			core.NewListStagesParams().WithProject(o.Project),
-			nil,
-		); err != nil {
-			return err
+		res, httpRes, listErr := apiClient.CoreAPI.ListStages(ctx, o.Project).Execute()
+		if httpRes != nil {
+			_ = httpRes.Body.Close()
+		}
+		if listErr != nil {
+			return client.NewClientAPIError(listErr)
 		}
 		var stageJSON []byte
-		if stageJSON, err = json.Marshal(res.Payload); err != nil {
+		if stageJSON, err = json.Marshal(res); err != nil {
 			return err
 		}
 		stageList := struct {
@@ -148,16 +147,16 @@ func (o *getStagesOptions) run(ctx context.Context) error {
 	stages := make([]*kargoapi.Stage, 0, len(o.Names))
 	errs := make([]error, 0, len(o.Names))
 	for _, name := range o.Names {
-		var res *core.GetStageOK
-		if res, err = apiClient.Core.GetStage(
-			core.NewGetStageParams().WithProject(o.Project).WithStage(name),
-			nil,
-		); err != nil {
-			errs = append(errs, err)
+		res, httpRes, getErr := apiClient.CoreAPI.GetStage(ctx, o.Project, name).Execute()
+		if httpRes != nil {
+			_ = httpRes.Body.Close()
+		}
+		if getErr != nil {
+			errs = append(errs, client.NewClientAPIError(getErr))
 			continue
 		}
 		var stageJSON []byte
-		if stageJSON, err = json.Marshal(res.Payload); err != nil {
+		if stageJSON, err = json.Marshal(res); err != nil {
 			errs = append(errs, err)
 			continue
 		}

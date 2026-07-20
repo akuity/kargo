@@ -21,7 +21,6 @@ import (
 	"github.com/akuity/kargo/pkg/cli/kubernetes"
 	"github.com/akuity/kargo/pkg/cli/option"
 	"github.com/akuity/kargo/pkg/cli/templates"
-	"github.com/akuity/kargo/pkg/client/generated/core"
 )
 
 type getConfigMapsOptions struct {
@@ -143,7 +142,7 @@ func (o *getConfigMapsOptions) validate() error {
 
 // run gets the ConfigMaps from the server and prints them to the console.
 func (o *getConfigMapsOptions) run(ctx context.Context) error {
-	apiClient, err := client.GetClientFromConfig(ctx, o.Config, o.ClientOptions)
+	apiClient, err := client.GetNewClientFromConfig(ctx, o.Config, o.ClientOptions)
 	if err != nil {
 		return fmt.Errorf("get client from config: %w", err)
 	}
@@ -153,32 +152,32 @@ func (o *getConfigMapsOptions) run(ctx context.Context) error {
 
 		switch {
 		case o.System:
-			var res *core.ListSystemConfigMapsOK
-			if res, err = apiClient.Core.ListSystemConfigMaps(
-				core.NewListSystemConfigMapsParams(),
-				nil,
-			); err != nil {
-				return fmt.Errorf("list system ConfigMaps: %w", err)
+			res, httpRes, listErr := apiClient.CoreAPI.ListSystemConfigMaps(ctx).Execute()
+			if httpRes != nil {
+				_ = httpRes.Body.Close()
 			}
-			payload = res.Payload
+			if listErr != nil {
+				return fmt.Errorf("list system ConfigMaps: %w", client.NewClientAPIError(listErr))
+			}
+			payload = res
 		case o.Shared:
-			var res *core.ListSharedConfigMapsOK
-			if res, err = apiClient.Core.ListSharedConfigMaps(
-				core.NewListSharedConfigMapsParams(),
-				nil,
-			); err != nil {
-				return fmt.Errorf("list shared ConfigMaps: %w", err)
+			res, httpRes, listErr := apiClient.CoreAPI.ListSharedConfigMaps(ctx).Execute()
+			if httpRes != nil {
+				_ = httpRes.Body.Close()
 			}
-			payload = res.Payload
+			if listErr != nil {
+				return fmt.Errorf("list shared ConfigMaps: %w", client.NewClientAPIError(listErr))
+			}
+			payload = res
 		default:
-			var res *core.ListProjectConfigMapsOK
-			if res, err = apiClient.Core.ListProjectConfigMaps(
-				core.NewListProjectConfigMapsParams().WithProject(o.Project),
-				nil,
-			); err != nil {
-				return fmt.Errorf("list project ConfigMaps: %w", err)
+			res, httpRes, listErr := apiClient.CoreAPI.ListProjectConfigMaps(ctx, o.Project).Execute()
+			if httpRes != nil {
+				_ = httpRes.Body.Close()
 			}
-			payload = res.Payload
+			if listErr != nil {
+				return fmt.Errorf("list project ConfigMaps: %w", client.NewClientAPIError(listErr))
+			}
+			payload = res
 		}
 
 		var configMapsJSON []byte
@@ -202,37 +201,35 @@ func (o *getConfigMapsOptions) run(ctx context.Context) error {
 
 		switch {
 		case o.System:
-			var res *core.GetSystemConfigMapOK
-			if res, err = apiClient.Core.GetSystemConfigMap(
-				core.NewGetSystemConfigMapParams().WithConfigmap(name),
-				nil,
-			); err != nil {
-				errs = append(errs, err)
+			res, httpRes, getErr := apiClient.CoreAPI.GetSystemConfigMap(ctx, name).Execute()
+			if httpRes != nil {
+				_ = httpRes.Body.Close()
+			}
+			if getErr != nil {
+				errs = append(errs, client.NewClientAPIError(getErr))
 				continue
 			}
-			payload = res.Payload
+			payload = res
 		case o.Shared:
-			var res *core.GetSharedConfigMapOK
-			if res, err = apiClient.Core.GetSharedConfigMap(
-				core.NewGetSharedConfigMapParams().WithConfigmap(name),
-				nil,
-			); err != nil {
-				errs = append(errs, err)
+			res, httpRes, getErr := apiClient.CoreAPI.GetSharedConfigMap(ctx, name).Execute()
+			if httpRes != nil {
+				_ = httpRes.Body.Close()
+			}
+			if getErr != nil {
+				errs = append(errs, client.NewClientAPIError(getErr))
 				continue
 			}
-			payload = res.Payload
+			payload = res
 		default:
-			var res *core.GetProjectConfigMapOK
-			if res, err = apiClient.Core.GetProjectConfigMap(
-				core.NewGetProjectConfigMapParams().
-					WithProject(o.Project).
-					WithConfigmap(name),
-				nil,
-			); err != nil {
-				errs = append(errs, err)
+			res, httpRes, getErr := apiClient.CoreAPI.GetProjectConfigMap(ctx, o.Project, name).Execute()
+			if httpRes != nil {
+				_ = httpRes.Body.Close()
+			}
+			if getErr != nil {
+				errs = append(errs, client.NewClientAPIError(getErr))
 				continue
 			}
-			payload = res.Payload
+			payload = res
 		}
 
 		var configMapJSON []byte

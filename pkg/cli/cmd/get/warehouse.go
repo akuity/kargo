@@ -21,7 +21,6 @@ import (
 	"github.com/akuity/kargo/pkg/cli/kubernetes"
 	"github.com/akuity/kargo/pkg/cli/option"
 	"github.com/akuity/kargo/pkg/cli/templates"
-	"github.com/akuity/kargo/pkg/client/generated/core"
 )
 
 type getWarehousesOptions struct {
@@ -119,21 +118,21 @@ func (o *getWarehousesOptions) validate() error {
 
 // run gets the warehouses from the server and prints them to the console.
 func (o *getWarehousesOptions) run(ctx context.Context) error {
-	apiClient, err := client.GetClientFromConfig(ctx, o.Config, o.ClientOptions)
+	apiClient, err := client.GetNewClientFromConfig(ctx, o.Config, o.ClientOptions)
 	if err != nil {
 		return fmt.Errorf("get client from config: %w", err)
 	}
 
 	if len(o.Names) == 0 {
-		var res *core.ListWarehousesOK
-		if res, err = apiClient.Core.ListWarehouses(
-			core.NewListWarehousesParams().WithProject(o.Project),
-			nil,
-		); err != nil {
-			return fmt.Errorf("list warehouses: %w", err)
+		res, httpRes, listErr := apiClient.CoreAPI.ListWarehouses(ctx, o.Project).Execute()
+		if httpRes != nil {
+			_ = httpRes.Body.Close()
+		}
+		if listErr != nil {
+			return fmt.Errorf("list warehouses: %w", client.NewClientAPIError(listErr))
 		}
 		var warehousesJSON []byte
-		if warehousesJSON, err = json.Marshal(res.Payload); err != nil {
+		if warehousesJSON, err = json.Marshal(res); err != nil {
 			return err
 		}
 		whList := struct {
@@ -148,16 +147,16 @@ func (o *getWarehousesOptions) run(ctx context.Context) error {
 	warehouses := make([]*kargoapi.Warehouse, 0, len(o.Names))
 	errs := make([]error, 0, len(o.Names))
 	for _, name := range o.Names {
-		var res *core.GetWarehouseOK
-		if res, err = apiClient.Core.GetWarehouse(
-			core.NewGetWarehouseParams().WithProject(o.Project).WithWarehouse(name),
-			nil,
-		); err != nil {
-			errs = append(errs, err)
+		res, httpRes, getErr := apiClient.CoreAPI.GetWarehouse(ctx, o.Project, name).Execute()
+		if httpRes != nil {
+			_ = httpRes.Body.Close()
+		}
+		if getErr != nil {
+			errs = append(errs, client.NewClientAPIError(getErr))
 			continue
 		}
 		var warehouseJSON []byte
-		if warehouseJSON, err = json.Marshal(res.Payload); err != nil {
+		if warehouseJSON, err = json.Marshal(res); err != nil {
 			errs = append(errs, err)
 			continue
 		}

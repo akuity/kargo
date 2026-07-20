@@ -19,7 +19,6 @@ import (
 	"github.com/akuity/kargo/pkg/cli/kubernetes"
 	"github.com/akuity/kargo/pkg/cli/option"
 	"github.com/akuity/kargo/pkg/cli/templates"
-	"github.com/akuity/kargo/pkg/client/generated/core"
 )
 
 type getProjectConfigOptions struct {
@@ -87,21 +86,21 @@ func (o *getProjectConfigOptions) addFlags(cmd *cobra.Command) {
 
 // run gets the project config from the server and prints it to the console.
 func (o *getProjectConfigOptions) run(ctx context.Context) error {
-	apiClient, err := client.GetClientFromConfig(ctx, o.Config, o.ClientOptions)
+	apiClient, err := client.GetNewClientFromConfig(ctx, o.Config, o.ClientOptions)
 	if err != nil {
 		return fmt.Errorf("get client from config: %w", err)
 	}
 
-	res, err := apiClient.Core.GetProjectConfig(
-		core.NewGetProjectConfigParams().WithProject(o.Project),
-		nil,
-	)
-	if err != nil {
-		return fmt.Errorf("get project configuration: %w", err)
+	res, httpRes, err := apiClient.CoreAPI.GetProjectConfig(ctx, o.Project).Execute()
+	if httpRes != nil {
+		_ = httpRes.Body.Close()
 	}
-	if res.Payload != nil {
+	if err != nil {
+		return fmt.Errorf("get project configuration: %w", client.NewClientAPIError(err))
+	}
+	if res != nil {
 		var configJSON []byte
-		if configJSON, err = json.Marshal(res.Payload); err != nil {
+		if configJSON, err = json.Marshal(res); err != nil {
 			return err
 		}
 		var cfg *kargoapi.ProjectConfig

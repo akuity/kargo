@@ -18,9 +18,8 @@ import (
 	"github.com/akuity/kargo/pkg/cli/kubernetes"
 	"github.com/akuity/kargo/pkg/cli/option"
 	"github.com/akuity/kargo/pkg/cli/templates"
-	"github.com/akuity/kargo/pkg/client/generated/core"
-	"github.com/akuity/kargo/pkg/client/generated/models"
 	"github.com/akuity/kargo/pkg/client/watch"
+	kargogen "github.com/akuity/kargo/pkg/x/client/generated"
 )
 
 type promotionOptions struct {
@@ -202,7 +201,7 @@ func (o *promotionOptions) validate() error {
 
 // run performs the promotion of the freight using the options.
 func (o *promotionOptions) run(ctx context.Context) error {
-	apiClient, err := client.GetClientFromConfig(ctx, o.Config, o.ClientOptions)
+	apiClient, err := client.GetNewClientFromConfig(ctx, o.Config, o.ClientOptions)
 	if err != nil {
 		return fmt.Errorf("get client from config: %w", err)
 	}
@@ -214,11 +213,12 @@ func (o *promotionOptions) run(ctx context.Context) error {
 
 	switch {
 	case o.Abort:
-		if _, err = apiClient.Core.AbortPromotion(
-			core.NewAbortPromotionParams().WithProject(o.Project).WithPromotion(o.Promotion),
-			nil,
-		); err != nil {
-			return fmt.Errorf("abort promotion: %w", err)
+		httpRes, abortErr := apiClient.CoreAPI.AbortPromotion(ctx, o.Project, o.Promotion).Execute()
+		if httpRes != nil {
+			_ = httpRes.Body.Close()
+		}
+		if abortErr != nil {
+			return fmt.Errorf("abort promotion: %w", client.NewClientAPIError(abortErr))
 		}
 		return nil
 	case o.Stage != "":
@@ -229,21 +229,21 @@ func (o *promotionOptions) run(ctx context.Context) error {
 				Name: o.Warehouse,
 			}).String()
 		}
-		var res *core.PromoteToStageCreated
-		if res, err = apiClient.Core.PromoteToStage(
-			core.NewPromoteToStageParams().
-				WithProject(o.Project).
-				WithStage(o.Stage).
-				WithBody(&models.PromoteToStageRequest{
-					Freight:      o.FreightName,
-					FreightAlias: o.FreightAlias,
-					Origin:       origin,
-				}),
-			nil,
-		); err != nil {
-			return err
+		res, httpRes, promoteErr := apiClient.CoreAPI.
+			PromoteToStage(ctx, o.Project, o.Stage).
+			Body(kargogen.PromoteToStageRequest{
+				Freight:      &o.FreightName,
+				FreightAlias: &o.FreightAlias,
+				Origin:       &origin,
+			}).
+			Execute()
+		if httpRes != nil {
+			_ = httpRes.Body.Close()
 		}
-		promoJSON, err := json.Marshal(res.Payload)
+		if promoteErr != nil {
+			return client.NewClientAPIError(promoteErr)
+		}
+		promoJSON, err := json.Marshal(res)
 		if err != nil {
 			return fmt.Errorf("marshal promotion: %w", err)
 		}
@@ -259,20 +259,20 @@ func (o *promotionOptions) run(ctx context.Context) error {
 		_ = printer.PrintObj(promo, o.Out)
 		return nil
 	case o.DownstreamFrom != "":
-		res, err := apiClient.Core.PromoteDownstream(
-			core.NewPromoteDownstreamParams().
-				WithProject(o.Project).
-				WithStage(o.DownstreamFrom).
-				WithBody(&models.PromoteDownstreamRequest{
-					Freight:      o.FreightName,
-					FreightAlias: o.FreightAlias,
-				}),
-			nil,
-		)
-		if err != nil {
-			return err
+		res, httpRes, promoteErr := apiClient.CoreAPI.
+			PromoteDownstream(ctx, o.Project, o.DownstreamFrom).
+			Body(kargogen.PromoteDownstreamRequest{
+				Freight:      &o.FreightName,
+				FreightAlias: &o.FreightAlias,
+			}).
+			Execute()
+		if httpRes != nil {
+			_ = httpRes.Body.Close()
 		}
-		promotionsJSON, err := json.Marshal(res.Payload)
+		if promoteErr != nil {
+			return client.NewClientAPIError(promoteErr)
+		}
+		promotionsJSON, err := json.Marshal(res)
 		if err != nil {
 			return fmt.Errorf("marshal promotions: %w", err)
 		}

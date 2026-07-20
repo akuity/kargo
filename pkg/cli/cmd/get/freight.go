@@ -20,7 +20,6 @@ import (
 	"github.com/akuity/kargo/pkg/cli/kubernetes"
 	"github.com/akuity/kargo/pkg/cli/option"
 	"github.com/akuity/kargo/pkg/cli/templates"
-	"github.com/akuity/kargo/pkg/client/generated/core"
 )
 
 type getFreightOptions struct {
@@ -136,23 +135,25 @@ func (o *getFreightOptions) validate() error {
 
 // run gets the freight from the server and prints it to the console.
 func (o *getFreightOptions) run(ctx context.Context) error {
-	apiClient, err := client.GetClientFromConfig(ctx, o.Config, o.ClientOptions)
+	apiClient, err := client.GetNewClientFromConfig(ctx, o.Config, o.ClientOptions)
 	if err != nil {
 		return fmt.Errorf("get client from config: %w", err)
 	}
 
 	if len(o.Names) == 0 && len(o.Aliases) == 0 {
-		params := core.NewQueryFreightsRestParams().
-			WithProject(o.Project)
+		req := apiClient.CoreAPI.QueryFreightsRest(ctx, o.Project)
 		if len(o.Warehouses) > 0 {
-			params = params.WithOrigins(o.Warehouses)
+			req = req.Origins(o.Warehouses)
 		}
-		var res *core.QueryFreightsRestOK
-		if res, err = apiClient.Core.QueryFreightsRest(params, nil); err != nil {
-			return fmt.Errorf("query freight: %w", err)
+		res, httpRes, queryErr := req.Execute()
+		if httpRes != nil {
+			_ = httpRes.Body.Close()
+		}
+		if queryErr != nil {
+			return fmt.Errorf("query freight: %w", client.NewClientAPIError(queryErr))
 		}
 		var freightJSON []byte
-		if freightJSON, err = json.Marshal(res.Payload); err != nil {
+		if freightJSON, err = json.Marshal(res); err != nil {
 			return fmt.Errorf("marshal freight: %w", err)
 		}
 		// The response is {"groups": {"": {"items": [...]}}}
@@ -177,18 +178,16 @@ func (o *getFreightOptions) run(ctx context.Context) error {
 	freight := make([]*kargoapi.Freight, 0, len(o.Names)+len(o.Aliases))
 	errs := make([]error, 0, len(o.Names)+len(o.Aliases))
 	for _, nameOrAlias := range append(o.Names, o.Aliases...) {
-		var res *core.GetFreightOK
-		if res, err = apiClient.Core.GetFreight(
-			core.NewGetFreightParams().
-				WithProject(o.Project).
-				WithFreightNameOrAlias(nameOrAlias),
-			nil,
-		); err != nil {
-			errs = append(errs, fmt.Errorf("get freight %s: %w", nameOrAlias, err))
+		res, httpRes, getErr := apiClient.CoreAPI.GetFreight(ctx, o.Project, nameOrAlias).Execute()
+		if httpRes != nil {
+			_ = httpRes.Body.Close()
+		}
+		if getErr != nil {
+			errs = append(errs, fmt.Errorf("get freight %s: %w", nameOrAlias, client.NewClientAPIError(getErr)))
 			continue
 		}
 		var freightJSON []byte
-		if freightJSON, err = json.Marshal(res.Payload); err != nil {
+		if freightJSON, err = json.Marshal(res); err != nil {
 			errs = append(errs, fmt.Errorf("marshal freight %s: %w", nameOrAlias, err))
 			continue
 		}

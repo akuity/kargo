@@ -18,7 +18,6 @@ import (
 	"github.com/akuity/kargo/pkg/cli/kubernetes"
 	"github.com/akuity/kargo/pkg/cli/option"
 	"github.com/akuity/kargo/pkg/cli/templates"
-	"github.com/akuity/kargo/pkg/client/generated/core"
 )
 
 type deleteProjectOptions struct {
@@ -92,7 +91,7 @@ func (o *deleteProjectOptions) validate() error {
 
 // run removes the project(s) based on the options.
 func (o *deleteProjectOptions) run(ctx context.Context) error {
-	apiClient, err := client.GetClientFromConfig(ctx, o.Config, o.ClientOptions)
+	apiClient, err := client.GetNewClientFromConfig(ctx, o.Config, o.ClientOptions)
 	if err != nil {
 		return fmt.Errorf("get client from config: %w", err)
 	}
@@ -104,12 +103,12 @@ func (o *deleteProjectOptions) run(ctx context.Context) error {
 
 	var errs []error
 	for _, name := range o.Names {
-		if _, err := apiClient.Core.DeleteProject(
-			core.NewDeleteProjectParams().
-				WithProject(name),
-			nil,
-		); err != nil {
-			errs = append(errs, err)
+		httpRes, delErr := apiClient.CoreAPI.DeleteProject(ctx, name).Execute()
+		if httpRes != nil {
+			_ = httpRes.Body.Close()
+		}
+		if delErr != nil {
+			errs = append(errs, client.NewClientAPIError(delErr))
 			continue
 		}
 		_ = printer.PrintObj(&kargoapi.Project{

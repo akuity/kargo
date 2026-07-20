@@ -21,7 +21,6 @@ import (
 	"github.com/akuity/kargo/pkg/cli/kubernetes"
 	"github.com/akuity/kargo/pkg/cli/option"
 	"github.com/akuity/kargo/pkg/cli/templates"
-	"github.com/akuity/kargo/pkg/client/generated/core"
 )
 
 type getPromotionsOptions struct {
@@ -130,23 +129,24 @@ func (o *getPromotionsOptions) validate() error {
 
 // run gets the promotions from the server and prints them to the console.
 func (o *getPromotionsOptions) run(ctx context.Context) error {
-	apiClient, err := client.GetClientFromConfig(ctx, o.Config, o.ClientOptions)
+	apiClient, err := client.GetNewClientFromConfig(ctx, o.Config, o.ClientOptions)
 	if err != nil {
 		return fmt.Errorf("get client from config: %w", err)
 	}
 
 	if len(o.Names) == 0 {
-		var res *core.ListPromotionsOK
-		if res, err = apiClient.Core.ListPromotions(
-			core.NewListPromotionsParams().
-				WithProject(o.Project).
-				WithStage(&o.Stage),
-			nil,
-		); err != nil {
-			return fmt.Errorf("list promotions: %w", err)
+		res, httpRes, listErr := apiClient.CoreAPI.
+			ListPromotions(ctx, o.Project).
+			Stage(o.Stage).
+			Execute()
+		if httpRes != nil {
+			_ = httpRes.Body.Close()
+		}
+		if listErr != nil {
+			return fmt.Errorf("list promotions: %w", client.NewClientAPIError(listErr))
 		}
 		var promosJSON []byte
-		if promosJSON, err = json.Marshal(res.Payload); err != nil {
+		if promosJSON, err = json.Marshal(res); err != nil {
 			return err
 		}
 		promos := struct {
@@ -161,18 +161,16 @@ func (o *getPromotionsOptions) run(ctx context.Context) error {
 	promos := make([]*kargoapi.Promotion, 0, len(o.Names))
 	errs := make([]error, 0, len(o.Names))
 	for _, name := range o.Names {
-		var res *core.GetPromotionOK
-		if res, err = apiClient.Core.GetPromotion(
-			core.NewGetPromotionParams().
-				WithProject(o.Project).
-				WithPromotion(name),
-			nil,
-		); err != nil {
-			errs = append(errs, err)
+		res, httpRes, getErr := apiClient.CoreAPI.GetPromotion(ctx, o.Project, name).Execute()
+		if httpRes != nil {
+			_ = httpRes.Body.Close()
+		}
+		if getErr != nil {
+			errs = append(errs, client.NewClientAPIError(getErr))
 			continue
 		}
 		var promoJSON []byte
-		if promoJSON, err = json.Marshal(res.Payload); err != nil {
+		if promoJSON, err = json.Marshal(res); err != nil {
 			errs = append(errs, err)
 			continue
 		}
