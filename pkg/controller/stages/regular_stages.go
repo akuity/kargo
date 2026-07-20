@@ -853,8 +853,10 @@ func (r *RegularStageReconciler) syncPromotions(
 		}
 	}
 
-	// If the highest priority Promotion is not in a terminal phase, then we
-	// are promoting the Freight.
+	// Non-terminal Promotions always sort ahead of terminal ones, so a
+	// non-terminal highest-priority Promotion means the Stage still has a
+	// Running or Pending Promotion to account for. Determine which Promotion
+	// should be the Stage's current one on this pass.
 	if !highestPrioPromo.Status.Phase.IsTerminal() {
 		// Decide which Promotion the Stage runs on this pass.
 		var selected *kargoapi.Promotion
