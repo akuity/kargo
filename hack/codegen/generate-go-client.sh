@@ -107,15 +107,16 @@ java -jar "$GENERATOR_JAR" generate \
   --global-property apiTests=false,modelTests=false,apiDocs=false,modelDocs=false \
   --skip-validate-spec
 
-# --- Step 3: restore go.mod/go.sum (or bootstrap them on a first-ever run) --
+# --- Step 3: restore go.mod/go.sum ---------------------------------------
+#
+# No fallback for a missing go.mod: that can only happen if a previous run
+# crashed after the `rm -rf` above but before this restore, since go.mod is
+# otherwise always committed. Fabricating a fresh one here would silently
+# reintroduce the blank-slate volatility Step 2's comment describes -- better
+# to fail loudly. `go mod tidy` below errors clearly on a missing go.mod; the
+# fix is `git checkout` the missing file and re-run.
 if [[ -f "${WORK_DIR}/go.mod" ]]; then
   cp "${WORK_DIR}/go.mod" "${OUT_DIR}/go.mod"
-else
-  cat > "${OUT_DIR}/go.mod" <<'EOF'
-module github.com/akuity/kargo/pkg/x/client/generated
-
-go 1.26.0
-EOF
 fi
 if [[ -f "${WORK_DIR}/go.sum" ]]; then
   cp "${WORK_DIR}/go.sum" "${OUT_DIR}/go.sum"
