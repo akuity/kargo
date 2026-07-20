@@ -278,7 +278,7 @@ const Content = (props: { promotion: TPromotion; yaml: string }) => {
 };
 
 export const Promotion = (props: PromotionProps) => {
-  const getPromotionQuery = useGetPromotion(props.project, 'test');
+  const getPromotionQuery = useGetPromotion(props.project, props.promotionId);
 
   useWatchPromotion(props.project, props.promotionId);
 
