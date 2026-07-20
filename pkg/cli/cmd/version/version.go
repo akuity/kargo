@@ -17,7 +17,8 @@ import (
 	"github.com/akuity/kargo/pkg/cli/kubernetes"
 	"github.com/akuity/kargo/pkg/cli/option"
 	"github.com/akuity/kargo/pkg/cli/templates"
-	generatedv2 "github.com/akuity/kargo/pkg/client/generatedv2"
+	"github.com/akuity/kargo/pkg/client/generated/models"
+	"github.com/akuity/kargo/pkg/client/generated/system"
 	"github.com/akuity/kargo/pkg/x/version"
 )
 
@@ -79,7 +80,7 @@ func (o *versionOptions) run(ctx context.Context) error {
 		_, _ = fmt.Fprintln(o.Out, "Client Version:", version.GetVersion().Version)
 	}
 
-	var serverVersion *generatedv2.VersionInfo
+	var serverVersion *models.VersionInfo
 	var serverErr error
 	if !o.ClientOnly {
 		serverVersion, serverErr = getServerVersion(ctx, o.Config, o.ClientOptions)
@@ -87,7 +88,7 @@ func (o *versionOptions) run(ctx context.Context) error {
 
 	if printToStdout {
 		if serverVersion != nil {
-			_, _ = fmt.Fprintln(o.Out, "Server Version:", serverVersion.GetVersion())
+			_, _ = fmt.Fprintln(o.Out, "Server Version:", serverVersion.Version)
 		}
 		return serverErr
 	}
@@ -115,31 +116,31 @@ func getServerVersion(
 	ctx context.Context,
 	cfg config.CLIConfig,
 	opts client.Options,
-) (*generatedv2.VersionInfo, error) {
+) (*models.VersionInfo, error) {
 	// Don't bother if definitely not authenticated to a specified server
 	if cfg.APIAddress == "" || cfg.BearerToken == "" {
 		return nil, nil
 	}
 
-	apiClient, err := client.GetClientV2FromConfig(ctx, cfg, opts)
+	apiClient, err := client.GetClientFromConfig(ctx, cfg, opts)
 	if err != nil {
 		return nil, fmt.Errorf("get client from config: %w", err)
 	}
 
-	res, httpRes, err := apiClient.SystemAPI.GetVersionInfo(ctx).Execute()
-	if httpRes != nil {
-		defer httpRes.Body.Close()
-	}
+	res, err := apiClient.System.GetVersionInfo(
+		system.NewGetVersionInfoParams(),
+		nil,
+	)
 	if err != nil {
-		return nil, client.V2APIError(fmt.Errorf("get version info from server: %w", err))
+		return nil, fmt.Errorf("get version info from server: %w", err)
 	}
 
-	return res, nil
+	return res.Payload, nil
 }
 
 func componentVersionsToRuntimeObject(
 	cliVersion version.Version,
-	serverVersion *generatedv2.VersionInfo,
+	serverVersion *models.VersionInfo,
 ) (runtime.Object, error) {
 	content := map[string]any{
 		"apiVersion": "kargo.akuity.io/v1alpha1",

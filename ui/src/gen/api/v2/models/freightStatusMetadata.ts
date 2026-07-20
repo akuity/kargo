@@ -11,4 +11,4 @@
 This is useful for storing additional information about the Freight
 or Promotion that can be shared across steps or stages.
  */
-export type FreightStatusMetadata = { [key: string]: { [key: string]: unknown } };
+export type FreightStatusMetadata = { [key: string]: unknown };

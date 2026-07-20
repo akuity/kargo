@@ -29,7 +29,7 @@ type RolloutsCloudWatchMetricDataQuery struct {
 	MetricStat *RolloutsCloudWatchMetricStat `json:"metricStat,omitempty"`
 
 	// period
-	Period *IntOrString `json:"period,omitempty"`
+	Period any `json:"period,omitempty"`
 
 	// return data
 	ReturnData bool `json:"returnData,omitempty"`
@@ -40,10 +40,6 @@ func (m *RolloutsCloudWatchMetricDataQuery) Validate(formats strfmt.Registry) er
 	var res []error
 
 	if err := m.validateMetricStat(formats); err != nil {
-		res = append(res, err)
-	}
-
-	if err := m.validatePeriod(formats); err != nil {
 		res = append(res, err)
 	}
 
@@ -76,38 +72,11 @@ func (m *RolloutsCloudWatchMetricDataQuery) validateMetricStat(formats strfmt.Re
 	return nil
 }
 
-func (m *RolloutsCloudWatchMetricDataQuery) validatePeriod(formats strfmt.Registry) error {
-	if swag.IsZero(m.Period) { // not required
-		return nil
-	}
-
-	if m.Period != nil {
-		if err := m.Period.Validate(formats); err != nil {
-			ve := new(errors.Validation)
-			if stderrors.As(err, &ve) {
-				return ve.ValidateName("period")
-			}
-			ce := new(errors.CompositeError)
-			if stderrors.As(err, &ce) {
-				return ce.ValidateName("period")
-			}
-
-			return err
-		}
-	}
-
-	return nil
-}
-
 // ContextValidate validate this rollouts cloud watch metric data query based on the context it is used
 func (m *RolloutsCloudWatchMetricDataQuery) ContextValidate(ctx context.Context, formats strfmt.Registry) error {
 	var res []error
 
 	if err := m.contextValidateMetricStat(ctx, formats); err != nil {
-		res = append(res, err)
-	}
-
-	if err := m.contextValidatePeriod(ctx, formats); err != nil {
 		res = append(res, err)
 	}
 
@@ -133,31 +102,6 @@ func (m *RolloutsCloudWatchMetricDataQuery) contextValidateMetricStat(ctx contex
 			ce := new(errors.CompositeError)
 			if stderrors.As(err, &ce) {
 				return ce.ValidateName("metricStat")
-			}
-
-			return err
-		}
-	}
-
-	return nil
-}
-
-func (m *RolloutsCloudWatchMetricDataQuery) contextValidatePeriod(ctx context.Context, formats strfmt.Registry) error {
-
-	if m.Period != nil {
-
-		if swag.IsZero(m.Period) { // not required
-			return nil
-		}
-
-		if err := m.Period.ContextValidate(ctx, formats); err != nil {
-			ve := new(errors.Validation)
-			if stderrors.As(err, &ve) {
-				return ve.ValidateName("period")
-			}
-			ce := new(errors.CompositeError)
-			if stderrors.As(err, &ce) {
-				return ce.ValidateName("period")
 			}
 
 			return err

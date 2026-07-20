@@ -5,7 +5,6 @@ package models
 import (
 	"context"
 
-	"github.com/go-openapi/errors"
 	"github.com/go-openapi/strfmt"
 	"github.com/go-openapi/swag"
 )
@@ -29,49 +28,16 @@ type V1EmptyDirVolumeSource struct {
 	// The default is nil which means that the limit is undefined.
 	// More info: https://kubernetes.io/docs/concepts/storage/volumes#emptydir
 	// +optional
-	SizeLimit struct {
-		Quantity
-	} `json:"sizeLimit,omitempty"`
+	SizeLimit string `json:"sizeLimit,omitempty"`
 }
 
 // Validate validates this v1 empty dir volume source
 func (m *V1EmptyDirVolumeSource) Validate(formats strfmt.Registry) error {
-	var res []error
-
-	if err := m.validateSizeLimit(formats); err != nil {
-		res = append(res, err)
-	}
-
-	if len(res) > 0 {
-		return errors.CompositeValidationError(res...)
-	}
 	return nil
 }
 
-func (m *V1EmptyDirVolumeSource) validateSizeLimit(formats strfmt.Registry) error {
-	if swag.IsZero(m.SizeLimit) { // not required
-		return nil
-	}
-
-	return nil
-}
-
-// ContextValidate validate this v1 empty dir volume source based on the context it is used
+// ContextValidate validates this v1 empty dir volume source based on context it is used
 func (m *V1EmptyDirVolumeSource) ContextValidate(ctx context.Context, formats strfmt.Registry) error {
-	var res []error
-
-	if err := m.contextValidateSizeLimit(ctx, formats); err != nil {
-		res = append(res, err)
-	}
-
-	if len(res) > 0 {
-		return errors.CompositeValidationError(res...)
-	}
-	return nil
-}
-
-func (m *V1EmptyDirVolumeSource) contextValidateSizeLimit(ctx context.Context, formats strfmt.Registry) error {
-
 	return nil
 }
 

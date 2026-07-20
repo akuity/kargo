@@ -17,7 +17,8 @@ import (
 	"github.com/akuity/kargo/pkg/cli/kubernetes"
 	"github.com/akuity/kargo/pkg/cli/option"
 	"github.com/akuity/kargo/pkg/cli/templates"
-	generatedv2 "github.com/akuity/kargo/pkg/client/generatedv2"
+	"github.com/akuity/kargo/pkg/client/generated/models"
+	"github.com/akuity/kargo/pkg/client/generated/resources"
 )
 
 type applyOptions struct {
@@ -105,7 +106,7 @@ func (o *applyOptions) run(ctx context.Context) error {
 		return fmt.Errorf("read manifests: %w", err)
 	}
 
-	apiClient, err := client.GetClientV2FromConfig(ctx, o.Config, o.ClientOptions)
+	apiClient, err := client.GetClientFromConfig(ctx, o.Config, o.ClientOptions)
 	if err != nil {
 		return fmt.Errorf("get client from config: %w", err)
 	}
@@ -113,29 +114,27 @@ func (o *applyOptions) run(ctx context.Context) error {
 	// TODO: Current implementation of apply is not the same as `kubectl` does.
 	// It actually "replaces" resource with the given file.
 	// We should provide the same implementation as `kubectl` does.
-	res, httpRes, err := apiClient.ResourcesAPI.
-		UpdateResource(ctx).
-		Manifest(string(manifest)).
-		Upsert(true).
-		Execute()
-	if httpRes != nil {
-		defer httpRes.Body.Close()
-	}
+	upsert := true
+	res, err := apiClient.Resources.UpdateResource(
+		resources.NewUpdateResourceParams().
+			WithManifest(string(manifest)).
+			WithUpsert(&upsert),
+		nil,
+	)
 	if err != nil {
-		return client.V2APIError(fmt.Errorf("apply resource: %w", err))
+		return fmt.Errorf("apply resource: %w", err)
 	}
 
 	// Separate results into created, updated, and errors
-	var createdRes, updatedRes []*generatedv2.CreateOrUpdateResourceResult
+	var createdRes, updatedRes []*models.CreateOrUpdateResourceResult
 	var errs []error
-	for _, r := range res.Results {
-		switch {
-		case r.Error != nil:
-			errs = append(errs, errors.New(*r.Error))
-		case r.CreatedResourceManifest != nil:
-			createdRes = append(createdRes, &r)
-		case r.UpdatedResourceManifest != nil:
-			updatedRes = append(updatedRes, &r)
+	for _, r := range res.Payload.Results {
+		if r.Error != "" {
+			errs = append(errs, errors.New(r.Error))
+		} else if r.CreatedResourceManifest != nil {
+			createdRes = append(createdRes, r)
+		} else if r.UpdatedResourceManifest != nil {
+			updatedRes = append(updatedRes, r)
 		}
 	}
 

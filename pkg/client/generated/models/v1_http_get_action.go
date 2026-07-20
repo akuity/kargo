@@ -34,9 +34,7 @@ type V1HTTPGetAction struct {
 	// Name or number of the port to access on the container.
 	// Number must be in the range 1 to 65535.
 	// Name must be an IANA_SVC_NAME.
-	Port struct {
-		IntOrString
-	} `json:"port,omitempty"`
+	Port any `json:"port,omitempty"`
 
 	// Scheme to use for connecting to the host.
 	// Defaults to HTTP.
@@ -49,10 +47,6 @@ func (m *V1HTTPGetAction) Validate(formats strfmt.Registry) error {
 	var res []error
 
 	if err := m.validateHTTPHeaders(formats); err != nil {
-		res = append(res, err)
-	}
-
-	if err := m.validatePort(formats); err != nil {
 		res = append(res, err)
 	}
 
@@ -92,23 +86,11 @@ func (m *V1HTTPGetAction) validateHTTPHeaders(formats strfmt.Registry) error {
 	return nil
 }
 
-func (m *V1HTTPGetAction) validatePort(formats strfmt.Registry) error {
-	if swag.IsZero(m.Port) { // not required
-		return nil
-	}
-
-	return nil
-}
-
 // ContextValidate validate this v1 HTTP get action based on the context it is used
 func (m *V1HTTPGetAction) ContextValidate(ctx context.Context, formats strfmt.Registry) error {
 	var res []error
 
 	if err := m.contextValidateHTTPHeaders(ctx, formats); err != nil {
-		res = append(res, err)
-	}
-
-	if err := m.contextValidatePort(ctx, formats); err != nil {
 		res = append(res, err)
 	}
 
@@ -143,11 +125,6 @@ func (m *V1HTTPGetAction) contextValidateHTTPHeaders(ctx context.Context, format
 		}
 
 	}
-
-	return nil
-}
-
-func (m *V1HTTPGetAction) contextValidatePort(ctx context.Context, formats strfmt.Registry) error {
 
 	return nil
 }

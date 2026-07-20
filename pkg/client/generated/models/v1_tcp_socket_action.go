@@ -5,7 +5,6 @@ package models
 import (
 	"context"
 
-	"github.com/go-openapi/errors"
 	"github.com/go-openapi/strfmt"
 	"github.com/go-openapi/swag"
 )
@@ -22,49 +21,16 @@ type V1TCPSocketAction struct {
 	// Number or name of the port to access on the container.
 	// Number must be in the range 1 to 65535.
 	// Name must be an IANA_SVC_NAME.
-	Port struct {
-		IntOrString
-	} `json:"port,omitempty"`
+	Port any `json:"port,omitempty"`
 }
 
 // Validate validates this v1 TCP socket action
 func (m *V1TCPSocketAction) Validate(formats strfmt.Registry) error {
-	var res []error
-
-	if err := m.validatePort(formats); err != nil {
-		res = append(res, err)
-	}
-
-	if len(res) > 0 {
-		return errors.CompositeValidationError(res...)
-	}
 	return nil
 }
 
-func (m *V1TCPSocketAction) validatePort(formats strfmt.Registry) error {
-	if swag.IsZero(m.Port) { // not required
-		return nil
-	}
-
-	return nil
-}
-
-// ContextValidate validate this v1 TCP socket action based on the context it is used
+// ContextValidate validates this v1 TCP socket action based on context it is used
 func (m *V1TCPSocketAction) ContextValidate(ctx context.Context, formats strfmt.Registry) error {
-	var res []error
-
-	if err := m.contextValidatePort(ctx, formats); err != nil {
-		res = append(res, err)
-	}
-
-	if len(res) > 0 {
-		return errors.CompositeValidationError(res...)
-	}
-	return nil
-}
-
-func (m *V1TCPSocketAction) contextValidatePort(ctx context.Context, formats strfmt.Registry) error {
-
 	return nil
 }
 

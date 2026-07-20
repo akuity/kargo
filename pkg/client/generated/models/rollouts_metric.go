@@ -17,22 +17,22 @@ import (
 type RolloutsMetric struct {
 
 	// consecutive error limit
-	ConsecutiveErrorLimit *IntOrString `json:"consecutiveErrorLimit,omitempty"`
+	ConsecutiveErrorLimit any `json:"consecutiveErrorLimit,omitempty"`
 
 	// consecutive success limit
-	ConsecutiveSuccessLimit *IntOrString `json:"consecutiveSuccessLimit,omitempty"`
+	ConsecutiveSuccessLimit any `json:"consecutiveSuccessLimit,omitempty"`
 
 	// count
-	Count *IntOrString `json:"count,omitempty"`
+	Count any `json:"count,omitempty"`
 
 	// failure condition
 	FailureCondition string `json:"failureCondition,omitempty"`
 
 	// failure limit
-	FailureLimit *IntOrString `json:"failureLimit,omitempty"`
+	FailureLimit any `json:"failureLimit,omitempty"`
 
 	// inconclusive limit
-	InconclusiveLimit *IntOrString `json:"inconclusiveLimit,omitempty"`
+	InconclusiveLimit any `json:"inconclusiveLimit,omitempty"`
 
 	// initial delay
 	InitialDelay string `json:"initialDelay,omitempty"`
@@ -54,26 +54,6 @@ type RolloutsMetric struct {
 func (m *RolloutsMetric) Validate(formats strfmt.Registry) error {
 	var res []error
 
-	if err := m.validateConsecutiveErrorLimit(formats); err != nil {
-		res = append(res, err)
-	}
-
-	if err := m.validateConsecutiveSuccessLimit(formats); err != nil {
-		res = append(res, err)
-	}
-
-	if err := m.validateCount(formats); err != nil {
-		res = append(res, err)
-	}
-
-	if err := m.validateFailureLimit(formats); err != nil {
-		res = append(res, err)
-	}
-
-	if err := m.validateInconclusiveLimit(formats); err != nil {
-		res = append(res, err)
-	}
-
 	if err := m.validateProvider(formats); err != nil {
 		res = append(res, err)
 	}
@@ -81,121 +61,6 @@ func (m *RolloutsMetric) Validate(formats strfmt.Registry) error {
 	if len(res) > 0 {
 		return errors.CompositeValidationError(res...)
 	}
-	return nil
-}
-
-func (m *RolloutsMetric) validateConsecutiveErrorLimit(formats strfmt.Registry) error {
-	if swag.IsZero(m.ConsecutiveErrorLimit) { // not required
-		return nil
-	}
-
-	if m.ConsecutiveErrorLimit != nil {
-		if err := m.ConsecutiveErrorLimit.Validate(formats); err != nil {
-			ve := new(errors.Validation)
-			if stderrors.As(err, &ve) {
-				return ve.ValidateName("consecutiveErrorLimit")
-			}
-			ce := new(errors.CompositeError)
-			if stderrors.As(err, &ce) {
-				return ce.ValidateName("consecutiveErrorLimit")
-			}
-
-			return err
-		}
-	}
-
-	return nil
-}
-
-func (m *RolloutsMetric) validateConsecutiveSuccessLimit(formats strfmt.Registry) error {
-	if swag.IsZero(m.ConsecutiveSuccessLimit) { // not required
-		return nil
-	}
-
-	if m.ConsecutiveSuccessLimit != nil {
-		if err := m.ConsecutiveSuccessLimit.Validate(formats); err != nil {
-			ve := new(errors.Validation)
-			if stderrors.As(err, &ve) {
-				return ve.ValidateName("consecutiveSuccessLimit")
-			}
-			ce := new(errors.CompositeError)
-			if stderrors.As(err, &ce) {
-				return ce.ValidateName("consecutiveSuccessLimit")
-			}
-
-			return err
-		}
-	}
-
-	return nil
-}
-
-func (m *RolloutsMetric) validateCount(formats strfmt.Registry) error {
-	if swag.IsZero(m.Count) { // not required
-		return nil
-	}
-
-	if m.Count != nil {
-		if err := m.Count.Validate(formats); err != nil {
-			ve := new(errors.Validation)
-			if stderrors.As(err, &ve) {
-				return ve.ValidateName("count")
-			}
-			ce := new(errors.CompositeError)
-			if stderrors.As(err, &ce) {
-				return ce.ValidateName("count")
-			}
-
-			return err
-		}
-	}
-
-	return nil
-}
-
-func (m *RolloutsMetric) validateFailureLimit(formats strfmt.Registry) error {
-	if swag.IsZero(m.FailureLimit) { // not required
-		return nil
-	}
-
-	if m.FailureLimit != nil {
-		if err := m.FailureLimit.Validate(formats); err != nil {
-			ve := new(errors.Validation)
-			if stderrors.As(err, &ve) {
-				return ve.ValidateName("failureLimit")
-			}
-			ce := new(errors.CompositeError)
-			if stderrors.As(err, &ce) {
-				return ce.ValidateName("failureLimit")
-			}
-
-			return err
-		}
-	}
-
-	return nil
-}
-
-func (m *RolloutsMetric) validateInconclusiveLimit(formats strfmt.Registry) error {
-	if swag.IsZero(m.InconclusiveLimit) { // not required
-		return nil
-	}
-
-	if m.InconclusiveLimit != nil {
-		if err := m.InconclusiveLimit.Validate(formats); err != nil {
-			ve := new(errors.Validation)
-			if stderrors.As(err, &ve) {
-				return ve.ValidateName("inconclusiveLimit")
-			}
-			ce := new(errors.CompositeError)
-			if stderrors.As(err, &ce) {
-				return ce.ValidateName("inconclusiveLimit")
-			}
-
-			return err
-		}
-	}
-
 	return nil
 }
 
@@ -226,26 +91,6 @@ func (m *RolloutsMetric) validateProvider(formats strfmt.Registry) error {
 func (m *RolloutsMetric) ContextValidate(ctx context.Context, formats strfmt.Registry) error {
 	var res []error
 
-	if err := m.contextValidateConsecutiveErrorLimit(ctx, formats); err != nil {
-		res = append(res, err)
-	}
-
-	if err := m.contextValidateConsecutiveSuccessLimit(ctx, formats); err != nil {
-		res = append(res, err)
-	}
-
-	if err := m.contextValidateCount(ctx, formats); err != nil {
-		res = append(res, err)
-	}
-
-	if err := m.contextValidateFailureLimit(ctx, formats); err != nil {
-		res = append(res, err)
-	}
-
-	if err := m.contextValidateInconclusiveLimit(ctx, formats); err != nil {
-		res = append(res, err)
-	}
-
 	if err := m.contextValidateProvider(ctx, formats); err != nil {
 		res = append(res, err)
 	}
@@ -253,131 +98,6 @@ func (m *RolloutsMetric) ContextValidate(ctx context.Context, formats strfmt.Reg
 	if len(res) > 0 {
 		return errors.CompositeValidationError(res...)
 	}
-	return nil
-}
-
-func (m *RolloutsMetric) contextValidateConsecutiveErrorLimit(ctx context.Context, formats strfmt.Registry) error {
-
-	if m.ConsecutiveErrorLimit != nil {
-
-		if swag.IsZero(m.ConsecutiveErrorLimit) { // not required
-			return nil
-		}
-
-		if err := m.ConsecutiveErrorLimit.ContextValidate(ctx, formats); err != nil {
-			ve := new(errors.Validation)
-			if stderrors.As(err, &ve) {
-				return ve.ValidateName("consecutiveErrorLimit")
-			}
-			ce := new(errors.CompositeError)
-			if stderrors.As(err, &ce) {
-				return ce.ValidateName("consecutiveErrorLimit")
-			}
-
-			return err
-		}
-	}
-
-	return nil
-}
-
-func (m *RolloutsMetric) contextValidateConsecutiveSuccessLimit(ctx context.Context, formats strfmt.Registry) error {
-
-	if m.ConsecutiveSuccessLimit != nil {
-
-		if swag.IsZero(m.ConsecutiveSuccessLimit) { // not required
-			return nil
-		}
-
-		if err := m.ConsecutiveSuccessLimit.ContextValidate(ctx, formats); err != nil {
-			ve := new(errors.Validation)
-			if stderrors.As(err, &ve) {
-				return ve.ValidateName("consecutiveSuccessLimit")
-			}
-			ce := new(errors.CompositeError)
-			if stderrors.As(err, &ce) {
-				return ce.ValidateName("consecutiveSuccessLimit")
-			}
-
-			return err
-		}
-	}
-
-	return nil
-}
-
-func (m *RolloutsMetric) contextValidateCount(ctx context.Context, formats strfmt.Registry) error {
-
-	if m.Count != nil {
-
-		if swag.IsZero(m.Count) { // not required
-			return nil
-		}
-
-		if err := m.Count.ContextValidate(ctx, formats); err != nil {
-			ve := new(errors.Validation)
-			if stderrors.As(err, &ve) {
-				return ve.ValidateName("count")
-			}
-			ce := new(errors.CompositeError)
-			if stderrors.As(err, &ce) {
-				return ce.ValidateName("count")
-			}
-
-			return err
-		}
-	}
-
-	return nil
-}
-
-func (m *RolloutsMetric) contextValidateFailureLimit(ctx context.Context, formats strfmt.Registry) error {
-
-	if m.FailureLimit != nil {
-
-		if swag.IsZero(m.FailureLimit) { // not required
-			return nil
-		}
-
-		if err := m.FailureLimit.ContextValidate(ctx, formats); err != nil {
-			ve := new(errors.Validation)
-			if stderrors.As(err, &ve) {
-				return ve.ValidateName("failureLimit")
-			}
-			ce := new(errors.CompositeError)
-			if stderrors.As(err, &ce) {
-				return ce.ValidateName("failureLimit")
-			}
-
-			return err
-		}
-	}
-
-	return nil
-}
-
-func (m *RolloutsMetric) contextValidateInconclusiveLimit(ctx context.Context, formats strfmt.Registry) error {
-
-	if m.InconclusiveLimit != nil {
-
-		if swag.IsZero(m.InconclusiveLimit) { // not required
-			return nil
-		}
-
-		if err := m.InconclusiveLimit.ContextValidate(ctx, formats); err != nil {
-			ve := new(errors.Validation)
-			if stderrors.As(err, &ve) {
-				return ve.ValidateName("inconclusiveLimit")
-			}
-			ce := new(errors.CompositeError)
-			if stderrors.As(err, &ce) {
-				return ce.ValidateName("inconclusiveLimit")
-			}
-
-			return err
-		}
-	}
-
 	return nil
 }
 

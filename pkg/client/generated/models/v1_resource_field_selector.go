@@ -5,7 +5,6 @@ package models
 import (
 	"context"
 
-	"github.com/go-openapi/errors"
 	"github.com/go-openapi/strfmt"
 	"github.com/go-openapi/swag"
 )
@@ -21,9 +20,7 @@ type V1ResourceFieldSelector struct {
 
 	// Specifies the output format of the exposed resources, defaults to "1"
 	// +optional
-	Divisor struct {
-		Quantity
-	} `json:"divisor,omitempty"`
+	Divisor string `json:"divisor,omitempty"`
 
 	// Required: resource to select
 	Resource string `json:"resource,omitempty"`
@@ -31,42 +28,11 @@ type V1ResourceFieldSelector struct {
 
 // Validate validates this v1 resource field selector
 func (m *V1ResourceFieldSelector) Validate(formats strfmt.Registry) error {
-	var res []error
-
-	if err := m.validateDivisor(formats); err != nil {
-		res = append(res, err)
-	}
-
-	if len(res) > 0 {
-		return errors.CompositeValidationError(res...)
-	}
 	return nil
 }
 
-func (m *V1ResourceFieldSelector) validateDivisor(formats strfmt.Registry) error {
-	if swag.IsZero(m.Divisor) { // not required
-		return nil
-	}
-
-	return nil
-}
-
-// ContextValidate validate this v1 resource field selector based on the context it is used
+// ContextValidate validates this v1 resource field selector based on context it is used
 func (m *V1ResourceFieldSelector) ContextValidate(ctx context.Context, formats strfmt.Registry) error {
-	var res []error
-
-	if err := m.contextValidateDivisor(ctx, formats); err != nil {
-		res = append(res, err)
-	}
-
-	if len(res) > 0 {
-		return errors.CompositeValidationError(res...)
-	}
-	return nil
-}
-
-func (m *V1ResourceFieldSelector) contextValidateDivisor(ctx context.Context, formats strfmt.Registry) error {
-
 	return nil
 }
 
