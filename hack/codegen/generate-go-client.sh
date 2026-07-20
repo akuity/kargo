@@ -73,8 +73,22 @@ java -jar "$GENERATOR_JAR" generate \
 # That is valid Go for maps and structs but not for `any`, so the
 # *Ok() getters of the fields mapped in step 2 come out uncompilable. The
 # zero value the template meant is nil.
-LC_ALL=C find "${OUT_DIR}" -name 'model_*.go' \
-  -exec sed -i.bak 's/return any{}, false/return nil, false/g' {} +
+#
+# Piped through xargs, not `find -exec ... {}`: the sed pattern itself
+# contains the literal text `any{}` (that's the bug being fixed). Per POSIX,
+# `-exec` substitutes EVERY occurrence of the string `{}` in the command
+# arguments with the matched path, not just a designated trailing
+# placeholder -- so the incidental `{}` inside the sed script also gets
+# replaced, corrupting it. GNU find's `+` variant happens to detect this (a
+# hard error, "Only one instance of {} is supported with -exec ... +"), but
+# `\;` has no such check and just silently substitutes both occurrences,
+# producing a broken sed command that still exits 0 (verified: swapping `+`
+# for `\;` does NOT fix this, it only trades a loud failure for a silent
+# one). `xargs` (without `-I`) has no placeholder syntax at all -- it only
+# ever appends the piped paths as trailing arguments -- so it can't confuse
+# the sed script's own `{}` with a substitution target.
+LC_ALL=C find "${OUT_DIR}" -name 'model_*.go' -print0 \
+  | xargs -0 sed -i.bak 's/return any{}, false/return nil, false/g'
 find "${OUT_DIR}" -name 'model_*.go.bak' -delete
 
 # --- Step 3b: redact credentials from Debug-mode logging ---------------------
