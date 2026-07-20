@@ -45,6 +45,14 @@ Both packages expose the same hook points, inert when unused:
 The aliased import puts the `kargo.lib` building blocks one qualifier
 away: `kargo.is_forward`, `kargo.is_semver_patch(old, new)`.
 
+Alongside the per-candidate `input`, a custom policy can read `data.queue`
+— the Stage's Promotions awaiting dispatch, in gate order, each `{name,
+class, createdAt}`. A policy locates the candidate under evaluation by
+`input.promotion.name` and reasons about the rest: yielding to a queued
+rollback, or growing conservative under a deep backlog. The queue reports
+true depth (it is not capped at the gate's evaluation limit); dispositions
+are re-derived by the policy, not fed back from prior evaluations.
+
 The canonical example — an operator-defined hotfix lane through every
 freeze, typically a **cluster** custom policy. Hotfix semantics live in
 the custom policy itself; the standard library supplies only the semver
@@ -78,9 +86,9 @@ that compile-error line numbers are offset by the prepended header.
 - `input.json` — the per-Promotion input document (`input.promotion`,
   `input.freight`, `input.stage`, `input.project`, `input.applications`,
   `input.now`)
-- `windows.json`, `freezes.json`, `scopes.json`, `ratelimit.json` — the
-  `data.windows`, `data.freezes`, `data.scopes`, and `data.rateLimit`
-  documents
+- `windows.json`, `freezes.json`, `scopes.json`, `ratelimit.json`,
+  `queue.json` — the `data.windows`, `data.freezes`, `data.scopes`,
+  `data.rateLimit`, and `data.queue` documents
 
 Each schema is registered with the compiler as `schema.<basename>`. The
 standard library declares what it consumes via `# METADATA ... schemas:`

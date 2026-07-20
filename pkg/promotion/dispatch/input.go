@@ -84,6 +84,9 @@ func BuildInput(
 // BuildData assembles the policy data document for one Stage. projectSpec
 // and project may be nil. dispatches are the times at which the Stage's
 // recent promotions were dispatched (began Running), for rate limiting.
+// queue is the Stage's Promotions awaiting dispatch, in the order the gate
+// considers them, so a policy can reason about the rest of the backlog (e.g.
+// yield to a queued rollback, or grow conservative under a deep backlog).
 // Freezes whose ProjectSelector does not match the Project are omitted.
 func BuildData(
 	projectSpec *kargoapi.ProjectConfigSpec,
@@ -91,6 +94,7 @@ func BuildData(
 	stage *kargoapi.Stage,
 	project *kargoapi.Project,
 	dispatches []time.Time,
+	queue []kargoapi.Promotion,
 ) (map[string]any, error) {
 	windows := []any{}
 	rateLimit := map[string]any{}
@@ -157,7 +161,26 @@ func BuildData(
 		"freezes":   freezeDocs,
 		"scopes":    defaultScopes,
 		"rateLimit": rateLimit,
+		"queue":     queueDocs(queue),
 	}, nil
+}
+
+// queueDocs projects the Promotions awaiting dispatch into policy documents,
+// preserving the gate's evaluation order. Each entry carries only identity,
+// class, and creation time -- enough for a policy to weigh the backlog
+// against the candidate it is evaluating (found by input.promotion.name)
+// without fetching Freight for every queued Promotion.
+func queueDocs(queue []kargoapi.Promotion) []any {
+	docs := make([]any, len(queue))
+	for i := range queue {
+		promo := &queue[i]
+		docs[i] = map[string]any{
+			"name":      promo.Name,
+			"class":     ClassOf(promo),
+			"createdAt": promo.CreationTimestamp.UTC().Format(time.RFC3339),
+		}
+	}
+	return docs
 }
 
 // selectorMatches reports whether the selector matches the Stage, using the

@@ -58,3 +58,36 @@ spec:
   #   		"msg": "PCI-compliant projects require a change-ticket annotation on manual promotions",
   #   	}
   #   }
+
+  # Scenario 8 (queue-aware ordering): re-apply with this policy to make the
+  # backlog itself an input. It reads data.queue -- the Stage's Pending
+  # Promotions in gate order -- to (a) yield any forward promotion while a
+  # rollback is queued, so recovery always preempts change, and (b) hold
+  # automatic promotions under a deep backlog so a human can catch up.
+  # Rollbacks and manual promotions are never held by backpressure. The gate
+  # evaluates Pending Promotions in queue order and dispatches the first the
+  # policy allows, so a forward that yields simply lets the queued rollback
+  # go first.
+  #
+  # customPolicy: |
+  #   violation contains v if {
+  #   	kargo.is_forward
+  #   	some q in data.queue
+  #   	q.class == "rollback"
+  #   	q.name != input.promotion.name
+  #   	v := {
+  #   		"rule": "yield-to-rollback",
+  #   		"msg": sprintf("yielding to queued rollback %q", [q.name]),
+  #   		"requeue": 5,
+  #   	}
+  #   }
+  #
+  #   violation contains v if {
+  #   	input.promotion.class == "auto-forward"
+  #   	count(data.queue) > 3
+  #   	v := {
+  #   		"rule": "backpressure",
+  #   		"msg": sprintf("holding auto promotion under a deep backlog (%d queued)", [count(data.queue)]),
+  #   		"requeue": 30,
+  #   	}
+  #   }

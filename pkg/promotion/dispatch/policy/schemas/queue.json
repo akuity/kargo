@@ -1,0 +1,14 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "title": "data.queue",
+  "description": "The Stage's Promotions awaiting dispatch, in the order the gate considers them, so a policy can weigh the backlog against the candidate under evaluation (found by input.promotion.name). Not capped at the gate's evaluation limit.",
+  "type": "array",
+  "items": {
+    "type": "object",
+    "properties": {
+      "name": {"type": "string"},
+      "class": {"type": "string", "description": "auto-forward, manual-forward, or rollback"},
+      "createdAt": {"type": "string", "description": "RFC 3339 creation time"}
+    }
+  }
+}

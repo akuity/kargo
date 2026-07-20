@@ -181,8 +181,16 @@ func TestBuildData(t *testing.T) {
 		ArgoCDServers: []string{"https://prod.example.com"},
 	}}
 	dispatched := time.Date(2026, 7, 15, 14, 40, 0, 0, time.UTC)
+	created := time.Date(2026, 7, 15, 14, 30, 0, 0, time.UTC)
+	queue := []kargoapi.Promotion{{
+		ObjectMeta: metav1.ObjectMeta{
+			Name:              "prod.01",
+			CreationTimestamp: metav1.NewTime(created),
+			Annotations:       map[string]string{kargoapi.AnnotationKeyRollback: kargoapi.AnnotationValueTrue},
+		},
+	}}
 
-	data, err := BuildData(projectSpec, freezes, stage, nil, []time.Time{dispatched})
+	data, err := BuildData(projectSpec, freezes, stage, nil, []time.Time{dispatched}, queue)
 	require.NoError(t, err)
 
 	// Only the window whose selector matches this Stage is projected.
@@ -210,16 +218,25 @@ func TestBuildData(t *testing.T) {
 	}}, data["freezes"])
 
 	require.Equal(t, defaultScopes, data["scopes"])
+
+	// The queue projects each awaiting Promotion's identity, class, and
+	// creation time, preserving the given order.
+	require.Equal(t, []any{map[string]any{
+		"name":      "prod.01",
+		"class":     ClassRollback,
+		"createdAt": "2026-07-15T14:30:00Z",
+	}}, data["queue"])
 }
 
 func TestBuildDataNilPolicy(t *testing.T) {
 	t.Parallel()
 	stage := &kargoapi.Stage{ObjectMeta: metav1.ObjectMeta{Name: "prod"}}
-	data, err := BuildData(nil, nil, stage, nil, nil)
+	data, err := BuildData(nil, nil, stage, nil, nil, nil)
 	require.NoError(t, err)
 	require.Empty(t, data["windows"])
 	require.Empty(t, data["freezes"])
 	require.Empty(t, data["rateLimit"])
+	require.Empty(t, data["queue"])
 }
 
 func TestBuildDataProjectSelector(t *testing.T) {
@@ -330,7 +347,7 @@ func TestBuildDataProjectSelector(t *testing.T) {
 	for _, testCase := range testCases {
 		t.Run(testCase.name, func(t *testing.T) {
 			t.Parallel()
-			data, err := BuildData(nil, freeze(testCase.selector), stage, testCase.project, nil)
+			data, err := BuildData(nil, freeze(testCase.selector), stage, testCase.project, nil, nil)
 			testCase.assert(t, data, err)
 		})
 	}

@@ -40,6 +40,7 @@ func emptyData() map[string]any {
 		"freezes":   []any{},
 		"scopes":    defaultScopes,
 		"rateLimit": map[string]any{},
+		"queue":     []any{},
 	}
 }
 
@@ -454,6 +455,58 @@ func TestEngineEvaluate(t *testing.T) {
 				require.False(t, d.Allow)
 				require.Contains(t, d.Message, "project says no")
 				require.Contains(t, d.Message, "cluster says no")
+			},
+		},
+		{
+			// A custom policy reads data.queue to yield when a rollback is
+			// waiting behind the candidate under evaluation. Exercises that
+			// the queue is threaded through and consumable.
+			name: "custom policy yields to a queued rollback via data.queue",
+			projectCustom: `violation contains {"rule": "yield", "msg": "yielding to queued rollback"} if {
+	input.promotion.class == "auto-forward"
+	some q in data.queue
+	q.name != input.promotion.name
+	q.class == "rollback"
+}
+`,
+			input: testInput(ClassAutoForward),
+			data: func() map[string]any {
+				data := emptyData()
+				data["queue"] = []any{
+					map[string]any{"name": "test-promo", "class": "auto-forward", "createdAt": testNow},
+					map[string]any{"name": "rb.01", "class": "rollback", "createdAt": testNow},
+				}
+				return data
+			},
+			assert: func(t *testing.T, d *Decision, err error) {
+				require.NoError(t, err)
+				require.False(t, d.Allow)
+				require.Equal(t, "yielding to queued rollback", d.Message)
+			},
+		},
+		{
+			// The same policy allows when the queue holds no rollback,
+			// confirming it is genuinely reading the queue contents.
+			name: "custom policy allows when data.queue holds no rollback",
+			projectCustom: `violation contains {"rule": "yield", "msg": "yielding to queued rollback"} if {
+	input.promotion.class == "auto-forward"
+	some q in data.queue
+	q.name != input.promotion.name
+	q.class == "rollback"
+}
+`,
+			input: testInput(ClassAutoForward),
+			data: func() map[string]any {
+				data := emptyData()
+				data["queue"] = []any{
+					map[string]any{"name": "test-promo", "class": "auto-forward", "createdAt": testNow},
+					map[string]any{"name": "fwd.01", "class": "auto-forward", "createdAt": testNow},
+				}
+				return data
+			},
+			assert: func(t *testing.T, d *Decision, err error) {
+				require.NoError(t, err)
+				require.True(t, d.Allow)
 			},
 		},
 		{

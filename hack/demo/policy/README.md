@@ -32,7 +32,7 @@ annotation on manual promotions in PCI-labeled projects. It is a standing
 compliance guardrail, so custom-policy composition is in force throughout;
 Scenario 5 shows it biting on its own. The commented example blocks in
 `10-projectconfig.yaml` and `40-clusterconfig.yaml` layer on further rules
-in Scenarios 6-7.
+in Scenarios 6-8.
 
 Promotion classes are inferred per Promotion: `auto-forward` (created by the
 system), `manual-forward` (created by a user), and `rollback` (annotated
@@ -499,6 +499,93 @@ kubectl describe stage prod -n policy-demo | grep -A2 'Type:.*Promoting'
 Add `approved-by: eron` alongside the change ticket and it dispatches. A
 rollback needs neither annotation -- `kargo.is_forward` excludes it from the
 rule.
+
+## Scenario 8 -- queue-aware ordering: yield to a rollback, backpressure
+
+The scenarios so far judge each Promotion in isolation. A custom policy can
+also read `data.queue` -- the Stage's `Pending` Promotions in the order the
+gate considers them, each `{name, class, createdAt}` -- and decide based on
+what *else* is waiting. The gate evaluates the queue in order and dispatches
+the first Promotion the policy allows, so a candidate that denies itself
+simply lets a later one go first.
+
+Swap in the operator's queue-ordering policy: replace the active
+`customPolicy:` in `40-clusterconfig.yaml` with the block commented beneath
+the Scenario 6 example (re-apply as in Setup). It adds two rules, both
+reading `data.queue`:
+
+- **Yield to a queued rollback** -- a forward promotion (auto or manual)
+  defers while any rollback is `Pending` for the Stage, so recovery always
+  preempts change.
+- **Backpressure** -- automatic promotions are held while the backlog is
+  deep (here, more than three queued), so a human can catch up. Manual
+  promotions and rollbacks are never held by backpressure.
+
+(This block stands alone to isolate the behavior; in a real cluster you would
+compose these rules alongside the PCI rule rather than replacing it.)
+
+**Yield in action.** With `prod` idle, create a forward promotion and a
+rollback for `prod` back to back so both sit in the queue at once:
+
+```shell
+NEW=$(kubectl get freight -n policy-demo --sort-by=.metadata.creationTimestamp -o jsonpath='{.items[-1].metadata.name}')
+OLD=$(kubectl get freight -n policy-demo --sort-by=.metadata.creationTimestamp -o jsonpath='{.items[0].metadata.name}')
+
+# A forward promotion of the newest freight...
+cat <<EOF | kubectl create -f -
+apiVersion: kargo.akuity.io/v1alpha1
+kind: Promotion
+metadata:
+  generateName: prod-forward-
+  namespace: policy-demo
+spec:
+  stage: prod
+  freight: ${NEW}
+  steps:
+  - uses: compose-output
+    as: note
+    config:
+      promoted: forward
+EOF
+
+# ...and, right behind it, a rollback to older freight.
+cat <<EOF | kubectl create -f -
+apiVersion: kargo.akuity.io/v1alpha1
+kind: Promotion
+metadata:
+  generateName: prod-rollback-
+  namespace: policy-demo
+  annotations:
+    kargo.akuity.io/rollback: "true"
+spec:
+  stage: prod
+  freight: ${OLD}
+  steps:
+  - uses: compose-output
+    as: note
+    config:
+      promoted: rollback
+EOF
+```
+
+The rollback dispatches first; the forward parks with a
+`yielding to queued rollback` event until the rollback finishes, then
+dispatches on its own:
+
+```shell
+kubectl get events -n policy-demo --field-selector reason=PromotionBlocked
+# ... Promotion "prod-forward-...": yielding to queued rollback "prod-rollback-..."
+```
+
+**Backpressure** targets a burst of *automatic* dispatch: when more than
+three Promotions are queued for a Stage, further auto-promotions park with a
+`deep backlog` message and resume as the queue drains (manual promotions and
+rollbacks flow throughout). `demo_test.go` verifies both rules -- yield,
+its non-firing when no rollback is queued, and backpressure holding auto
+while exempting manual -- against the real engine.
+
+When done, restore the baseline PCI `customPolicy:` in `40-clusterconfig.yaml`
+and re-apply.
 
 ## Troubleshooting
 

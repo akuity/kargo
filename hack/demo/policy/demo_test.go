@@ -37,36 +37,50 @@ func activeCustomPolicy(t *testing.T, path string) string {
 	return doc.Spec.CustomPolicy
 }
 
-// extractCustomPolicy returns the commented customPolicy block from a demo
+// extractCustomPolicy returns a commented customPolicy block from a demo
 // manifest: the lines following "  # customPolicy: |", with the comment
-// prefix stripped.
-func extractCustomPolicy(t *testing.T, path string) string {
+// prefix stripped. A file may carry several such blocks (alternative
+// policies a scenario swaps in); anchor selects one by a substring that
+// appears in a comment at or before its header (e.g. "Scenario 6"). An
+// empty anchor takes the first block.
+func extractCustomPolicy(t *testing.T, path, anchor string) string {
 	t.Helper()
 	f, err := os.Open(path)
 	require.NoError(t, err)
 	defer f.Close()
-	var (
-		b       strings.Builder
-		inBlock bool
-	)
+	var b strings.Builder
+	armed := anchor == ""
+	inBlock := false
 	scanner := bufio.NewScanner(f)
 	for scanner.Scan() {
 		line := scanner.Text()
+		if !armed {
+			if strings.Contains(line, anchor) {
+				armed = true
+			}
+			continue
+		}
 		switch {
 		case strings.TrimRight(line, " ") == "  # customPolicy: |":
 			inBlock = true
 		case !inBlock:
+			// Waiting for the block to start.
 		case line == "  #":
 			b.WriteString("\n")
 		case strings.HasPrefix(line, "  #   "):
 			b.WriteString(strings.TrimPrefix(line, "  #   "))
 			b.WriteString("\n")
 		default:
+			// A non-comment line ends the block.
+			if b.Len() > 0 {
+				require.NoError(t, scanner.Err())
+				return b.String()
+			}
 			inBlock = false
 		}
 	}
 	require.NoError(t, scanner.Err())
-	require.NotEmpty(t, b.String(), "no commented customPolicy block in %s", path)
+	require.NotEmpty(t, b.String(), "no commented customPolicy block after %q in %s", anchor, path)
 	return b.String()
 }
 
@@ -77,8 +91,9 @@ func TestDemoCustomPolicies(t *testing.T) {
 	// (active) and the Scenario-6 expansion that adds the hotfix bypass
 	// alongside it (commented). The project's prod-approval rule (commented).
 	pciActive := activeCustomPolicy(t, "40-clusterconfig.yaml")
-	pciPlusHotfix := extractCustomPolicy(t, "40-clusterconfig.yaml")
-	prodApproval := extractCustomPolicy(t, "10-projectconfig.yaml")
+	pciPlusHotfix := extractCustomPolicy(t, "40-clusterconfig.yaml", "Scenario 6")
+	queueOrdering := extractCustomPolicy(t, "40-clusterconfig.yaml", "Scenario 8")
+	prodApproval := extractCustomPolicy(t, "10-projectconfig.yaml", "approved-by")
 
 	now := time.Date(2026, 7, 15, 15, 0, 0, 0, time.UTC)
 
@@ -88,6 +103,23 @@ func TestDemoCustomPolicies(t *testing.T) {
 			Start: metav1.Time{Time: now.Add(-time.Hour)},
 			End:   metav1.Time{Time: now.Add(9 * time.Hour)},
 			Scope: "no-forward",
+		}}
+	}
+	// queuePromo builds a Pending Promotion of the given class for the
+	// data.queue projection: the class is inferred from annotations by
+	// ClassOf, exactly as the controller derives it.
+	queuePromo := func(name, class string) kargoapi.Promotion {
+		ann := map[string]string{}
+		switch class {
+		case dispatch.ClassManualForward:
+			ann[kargoapi.AnnotationKeyCreateActor] = "admin"
+		case dispatch.ClassRollback:
+			ann[kargoapi.AnnotationKeyRollback] = kargoapi.AnnotationValueTrue
+		}
+		return kargoapi.Promotion{ObjectMeta: metav1.ObjectMeta{
+			Name:              name,
+			CreationTimestamp: metav1.Time{Time: now},
+			Annotations:       ann,
 		}}
 	}
 	ticketOnly := map[string]string{"change-ticket": "CHG-1234"}
@@ -146,6 +178,7 @@ func TestDemoCustomPolicies(t *testing.T) {
 		annotations   map[string]string
 		lastTag       string
 		freezes       []kargoapi.PromotionFreeze
+		queue         []kargoapi.Promotion
 		assert        func(*testing.T, *dispatch.Decision)
 	}{
 		// The always-on PCI rule (Scenario 5).
@@ -240,6 +273,85 @@ func TestDemoCustomPolicies(t *testing.T) {
 				require.True(t, d.Allow)
 			},
 		},
+		// The queue-aware ordering policy (Scenario 8), reading data.queue.
+		{
+			name:          "queue: a forward yields to a queued rollback",
+			clusterCustom: queueOrdering,
+			class:         dispatch.ClassAutoForward,
+			queue: []kargoapi.Promotion{
+				queuePromo("prod.01-fresh", dispatch.ClassAutoForward),
+				queuePromo("rb.02", dispatch.ClassRollback),
+			},
+			assert: func(t *testing.T, d *dispatch.Decision) {
+				require.False(t, d.Allow)
+				require.Contains(t, d.Message, `yielding to queued rollback "rb.02"`)
+			},
+		},
+		{
+			name:          "queue: a manual forward also yields to a queued rollback",
+			clusterCustom: queueOrdering,
+			class:         dispatch.ClassManualForward,
+			queue: []kargoapi.Promotion{
+				queuePromo("prod.01-fresh", dispatch.ClassManualForward),
+				queuePromo("rb.02", dispatch.ClassRollback),
+			},
+			assert: func(t *testing.T, d *dispatch.Decision) {
+				require.False(t, d.Allow)
+				require.Contains(t, d.Message, "yielding to queued rollback")
+			},
+		},
+		{
+			name:          "queue: the rollback itself is not held",
+			clusterCustom: queueOrdering,
+			class:         dispatch.ClassRollback,
+			queue: []kargoapi.Promotion{
+				queuePromo("prod.01-fresh", dispatch.ClassRollback),
+			},
+			assert: func(t *testing.T, d *dispatch.Decision) {
+				require.True(t, d.Allow)
+			},
+		},
+		{
+			name:          "queue: a forward dispatches when no rollback is queued",
+			clusterCustom: queueOrdering,
+			class:         dispatch.ClassAutoForward,
+			queue: []kargoapi.Promotion{
+				queuePromo("prod.01-fresh", dispatch.ClassAutoForward),
+				queuePromo("fwd.02", dispatch.ClassAutoForward),
+			},
+			assert: func(t *testing.T, d *dispatch.Decision) {
+				require.True(t, d.Allow)
+			},
+		},
+		{
+			name:          "queue: a deep backlog holds an auto promotion (backpressure)",
+			clusterCustom: queueOrdering,
+			class:         dispatch.ClassAutoForward,
+			queue: []kargoapi.Promotion{
+				queuePromo("prod.01-fresh", dispatch.ClassAutoForward),
+				queuePromo("fwd.02", dispatch.ClassAutoForward),
+				queuePromo("fwd.03", dispatch.ClassAutoForward),
+				queuePromo("fwd.04", dispatch.ClassAutoForward),
+			},
+			assert: func(t *testing.T, d *dispatch.Decision) {
+				require.False(t, d.Allow)
+				require.Contains(t, d.Message, "deep backlog (4 queued)")
+			},
+		},
+		{
+			name:          "queue: backpressure does not hold a manual promotion",
+			clusterCustom: queueOrdering,
+			class:         dispatch.ClassManualForward,
+			queue: []kargoapi.Promotion{
+				queuePromo("prod.01-fresh", dispatch.ClassManualForward),
+				queuePromo("fwd.02", dispatch.ClassAutoForward),
+				queuePromo("fwd.03", dispatch.ClassAutoForward),
+				queuePromo("fwd.04", dispatch.ClassAutoForward),
+			},
+			assert: func(t *testing.T, d *dispatch.Decision) {
+				require.True(t, d.Allow)
+			},
+		},
 	}
 	for _, testCase := range testCases {
 		t.Run(testCase.name, func(t *testing.T) {
@@ -248,7 +360,7 @@ func TestDemoCustomPolicies(t *testing.T) {
 				Name:      "prod",
 				Namespace: "policy-demo",
 			}}
-			data, err := dispatch.BuildData(nil, testCase.freezes, stage, nil, nil)
+			data, err := dispatch.BuildData(nil, testCase.freezes, stage, nil, nil, testCase.queue)
 			require.NoError(t, err)
 			decision, err := engine.Evaluate(
 				context.Background(),

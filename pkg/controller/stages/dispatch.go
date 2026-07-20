@@ -120,12 +120,20 @@ func (r *RegularStageReconciler) gateDispatch(
 	now := time.Now()
 
 	// Times at which this Stage's Promotions were dispatched (began
-	// Running), for the rate-limit block's rolling window. Derived from the
-	// Promotions already listed by the caller; no extra state is kept.
+	// Running), for the rate-limit block's rolling window, and the queue of
+	// Promotions still awaiting dispatch, for policies that reason about the
+	// backlog. Both are derived from the Promotions already listed by the
+	// caller (in gate order); no extra state is kept. The queue is not capped
+	// at maxDispatchCandidates: the cap bounds evaluation, not visibility, so
+	// a policy can gauge true backlog depth.
 	var dispatches []time.Time
+	var queue []kargoapi.Promotion
 	for i := range promos {
 		if startedAt := promos[i].Status.StartedAt; startedAt != nil {
 			dispatches = append(dispatches, startedAt.Time)
+		}
+		if isPendingPhase(promos[i].Status.Phase) {
+			queue = append(queue, promos[i])
 		}
 	}
 
@@ -136,7 +144,7 @@ func (r *RegularStageReconciler) gateDispatch(
 		logger.Error(err, "error getting Project for dispatch policy input")
 	}
 
-	data, err := dispatch.BuildData(projectSpec, freezes, stage, project, dispatches)
+	data, err := dispatch.BuildData(projectSpec, freezes, stage, project, dispatches, queue)
 	if err != nil {
 		return nil, 0, "", fmt.Errorf("error building dispatch policy data: %w", err)
 	}
