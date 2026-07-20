@@ -6,10 +6,11 @@ replace (
 	github.com/akuity/kargo/api => ./api
 	github.com/akuity/kargo/pkg/client/generated => ./pkg/client/generated
 
-	// Hard-pin the codegen Go tools (see the `tool` block below). A newer
-	// code-generator or controller-tools introduces a known breaking change in
-	// our gRPC/protobuf and CRD codegen. A plain `require` can be bumped by MVS
-	// or `go get -u`, so a `replace` is used to keep them immovable.
+	// Hard-pin controller-tools (see the `tool` block below) and its
+	// transitive dependency code-generator. A newer version of either
+	// introduces a known breaking change in our CRD codegen. A plain
+	// `require` can be bumped by MVS or `go get -u`, so a `replace` is used
+	// to keep them immovable.
 	k8s.io/code-generator => k8s.io/code-generator v0.34.3
 	sigs.k8s.io/controller-tools => sigs.k8s.io/controller-tools v0.19.0
 
