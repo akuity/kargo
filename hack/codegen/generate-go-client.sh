@@ -92,15 +92,23 @@ find "${OUT_DIR}" -name 'model_*.go.bak' -delete
 # consumer using this generator inherits, and static analysis correctly flags
 # it regardless of current reachability.
 #
-# Fix (matching GitHub's Copilot Autofix suggestion for this alert): keep the
-# full body dump (still useful for debugging), but pass the dumped text
-# through sanitizeHTTPDump first, which regex-redacts any "password"/
-# "secretKeyRef" JSON field value and any Authorization header line before
-# logging. This is broader than a body/header allowlist -- it catches these
-# field names wherever they appear (request or response, any model), not just
-# in the specific request types known today. awk (portable across BSD/GNU,
-# unlike some sed extensions) inserts the two new regexp vars and the
-# sanitizeHTTPDump function; sed then wraps both log.Printf calls.
+# Fix combines two layers, matching GitHub's Copilot Autofix suggestions for
+# this alert (offered across two review passes):
+#  1. Exclude the body from both dumps (`false` instead of `true`). This is
+#     the load-bearing fix: Password/SecretKeyRef only ever appear in the
+#     body, so excluding it removes the tainted source data before it's ever
+#     captured into `dump`, which is what actually satisfies CodeQL's static
+#     analysis -- a regex-based sanitizer alone does not, because CodeQL
+#     can't verify what a ReplaceAllString call removes and keeps flagging
+#     the flow through it regardless.
+#  2. Still pass the (now header-only) dump through sanitizeHTTPDump, which
+#     regex-redacts any Authorization header line (the admin-login flow
+#     submits the raw admin password as a Bearer credential) and, as
+#     defense-in-depth, any "password"/"secretKeyRef" JSON field value in
+#     case a future header ever carries one.
+# awk (portable across BSD/GNU, unlike some sed extensions) inserts the two
+# new regexp vars and the sanitizeHTTPDump function; sed then flips the two
+# dump calls to exclude the body and wraps both log.Printf calls.
 awk '
   /^var \($/ { in_var = 1; print; next }
   in_var && /queryDescape[[:space:]]*= strings\.NewReplacer/ {
@@ -129,6 +137,8 @@ awk '
 mv "${OUT_DIR}/client.go.tmp" "${OUT_DIR}/client.go"
 
 sed -i.bak \
+  -e 's/httputil\.DumpRequestOut(request, true)/httputil.DumpRequestOut(request, false)/' \
+  -e 's/httputil\.DumpResponse(resp, true)/httputil.DumpResponse(resp, false)/' \
   -e 's/log\.Printf("\\n%s\\n", string(dump))/log.Printf("\\n%s\\n", sanitizeHTTPDump(string(dump)))/g' \
   "${OUT_DIR}/client.go"
 rm -f "${OUT_DIR}/client.go.bak"
