@@ -881,7 +881,7 @@ func (a *argocdUpdater) getAuthorizedApplications(
 
 // discoveryRetryBackoff bounds retries of Argo CD Application reads that fail
 // because the API server's discovery information was momentarily incomplete.
-// Five attempts over a capped exponential backoff (~15s total) comfortably fit
+// Five attempts over a capped exponential backoff (~50s total) comfortably fit
 // within the step's default 5m timeout while giving a flapping aggregated
 // discovery endpoint time to recover.
 var discoveryRetryBackoff = wait.Backoff{
@@ -889,7 +889,9 @@ var discoveryRetryBackoff = wait.Backoff{
 	Duration: time.Second,
 	Factor:   2,
 	Jitter:   0.1,
-	Cap:      15 * time.Second,
+	// We noticed that the discovery endpoint can be a bit slow to recover so this gives it ample
+	// time. Since we only match on the Argo Application kind, this kind of wait should be rare
+	Cap: 50 * time.Second,
 }
 
 // argoCDApplicationGroupKind identifies the Argo CD Application kind that this
