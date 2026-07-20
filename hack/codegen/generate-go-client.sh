@@ -77,6 +77,51 @@ LC_ALL=C find "${OUT_DIR}" -name 'model_*.go' \
   -exec sed -i.bak 's/return any{}, false/return nil, false/g' {} +
 find "${OUT_DIR}" -name 'model_*.go.bak' -delete
 
+# --- Step 3b: strip credentials from Debug-mode logging -----------------------
+#
+# Quirk 4 (security): the generator's callAPI template dumps the FULL raw
+# request and response -- headers AND body -- via log.Printf whenever
+# Configuration.Debug is true. Request bodies for credential endpoints carry
+# real secrets (CreateRepoCredentialsRequest.Password,
+# CreateGenericCredentialsRequest.Data, etc.), so enabling Debug would log
+# them in cleartext -- flagged by CodeQL on PR #6647. The request's
+# Authorization header carries a second class of secret: the admin-login flow
+# (pkg/cli/cmd/login/login.go) submits the raw admin password as a Bearer
+# credential, so an undoctored header dump would leak it too, even though
+# CodeQL didn't flag that flow specifically. Kargo doesn't currently expose a
+# way to set Debug=true, but this is a defect in the generator's own template
+# that every consumer using this generator inherits, and static analysis
+# correctly flags it regardless of current reachability.
+#
+# Fix: drop the body from both dumps (headers-only, via `false` instead of
+# `true`), and temporarily redact the Authorization header around the request
+# dump only -- restored immediately after so the real outbound request is
+# unaffected. Response dumps never carry Authorization, so only the request
+# path needs redaction. sed handles the two `true`->`false` swaps; the
+# Authorization redaction inserts new lines, which awk (portable across
+# BSD/GNU, unlike some sed extensions) handles more reliably than sed.
+sed -i.bak \
+  -e 's/httputil\.DumpRequestOut(request, true)/httputil.DumpRequestOut(request, false)/' \
+  -e 's/httputil\.DumpResponse(resp, true)/httputil.DumpResponse(resp, false)/' \
+  "${OUT_DIR}/client.go"
+rm -f "${OUT_DIR}/client.go.bak"
+
+awk '
+  /dump, err := httputil\.DumpRequestOut\(request, false\)/ {
+    print "\t\torigAuth := request.Header.Get(\"Authorization\")"
+    print "\t\tif origAuth != \"\" {"
+    print "\t\t\trequest.Header.Set(\"Authorization\", \"REDACTED\")"
+    print "\t\t}"
+    print $0
+    print "\t\tif origAuth != \"\" {"
+    print "\t\t\trequest.Header.Set(\"Authorization\", origAuth)"
+    print "\t\t}"
+    next
+  }
+  { print }
+' "${OUT_DIR}/client.go" > "${OUT_DIR}/client.go.tmp"
+mv "${OUT_DIR}/client.go.tmp" "${OUT_DIR}/client.go"
+
 # --- Step 4: write our own go.mod (withGoMod=false above) and tidy -----------
 cat > "${OUT_DIR}/go.mod" <<'EOF'
 module github.com/akuity/kargo/pkg/x/client/generated
