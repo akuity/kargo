@@ -10,7 +10,7 @@ import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
 import { Button, Drawer, Flex, Skeleton, Tabs, Typography } from 'antd';
 import moment from 'moment';
 import { useEffect, useMemo, useState } from 'react';
-import { generatePath, useNavigate, useParams } from 'react-router-dom';
+import { generatePath, Link, useNavigate, useParams } from 'react-router-dom';
 import { stringify } from 'yaml';
 
 import { SHARD_LABEL_KEY } from '@ui/config/labels';
@@ -237,7 +237,19 @@ const AutoPromotionHolds = ({ stage }: { stage: Stage }) => {
               <Typography.Text key={key} type='secondary' className='text-sm'>
                 {key}
                 {hold.freightName && `: ${hold.freightName}`}
-                {hold.promotionName && ` via ${hold.promotionName}`}
+                {hold.promotionName && (
+                  <>
+                    {' via '}
+                    <Link
+                      to={generatePath(paths.promotion, {
+                        name: stage.metadata?.namespace || '',
+                        promotionId: hold.promotionName
+                      })}
+                    >
+                      {hold.promotionName}
+                    </Link>
+                  </>
+                )}
                 {hold.actor && ` by ${hold.actor}`}
                 {hold.createdAt && ` at ${moment(hold.createdAt).format('YYYY-MM-DD HH:mm')}`}
               </Typography.Text>
