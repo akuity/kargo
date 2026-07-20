@@ -11,8 +11,7 @@ import (
 	"golang.org/x/oauth2"
 
 	"github.com/akuity/kargo/pkg/cli/config"
-	"github.com/akuity/kargo/pkg/client/generated/models"
-	"github.com/akuity/kargo/pkg/client/generated/system"
+	kargogen "github.com/akuity/kargo/pkg/x/client/generated"
 )
 
 // tokenRefresher is a component that helps to refresh tokens.
@@ -106,28 +105,33 @@ func redeemRefreshToken(
 	refreshToken string,
 	insecureTLS bool,
 ) (string, string, error) {
-	apiClient, err := GetClient(serverAddress, "", insecureTLS)
+	apiClient, err := GetNewClient(serverAddress, "", insecureTLS)
 	if err != nil {
 		return "", "", err
 	}
-	res, err := apiClient.System.GetPublicConfig(
-		system.NewGetPublicConfigParams(),
-	)
+	publicCfg, httpRes, err := apiClient.SystemAPI.GetPublicConfig(ctx).Execute()
+	if httpRes != nil {
+		defer httpRes.Body.Close()
+	}
 	if err != nil {
-		return "", "", fmt.Errorf("error retrieving public configuration from server: %w", err)
+		return "", "", fmt.Errorf(
+			"error retrieving public configuration from server: %w",
+			NewClientAPIError(err),
+		)
 	}
 
-	if res.Payload.OidcConfig == nil {
+	if !publicCfg.HasOidcConfig() {
 		return "", "", errors.New("server does not support OpenID Connect")
 	}
+	oidcCfg := publicCfg.GetOidcConfig()
 
-	provider, err := oidc.NewProvider(ctx, res.Payload.OidcConfig.IssuerURL)
+	provider, err := oidc.NewProvider(ctx, oidcCfg.GetIssuerUrl())
 	if err != nil {
 		return "", "", fmt.Errorf("error initializing OIDC provider: %w", err)
 	}
 
 	cfg := oauth2.Config{
-		ClientID: clientIDForRefresh(res.Payload.OidcConfig),
+		ClientID: clientIDForRefresh(&oidcCfg),
 		Endpoint: provider.Endpoint(),
 	}
 
@@ -152,9 +156,9 @@ func redeemRefreshToken(
 // that ID must be used, because the refresh token was issued to that client
 // during login (see ssoLogin). Otherwise, identity providers such as Dex reject
 // the refresh as an attempt to claim a token belonging to a different client.
-func clientIDForRefresh(cfg *models.OIDCConfig) string {
-	if cfg.CliClientID != "" {
-		return cfg.CliClientID
+func clientIDForRefresh(cfg *kargogen.OIDCConfig) string {
+	if cliClientID := cfg.GetCliClientId(); cliClientID != "" {
+		return cliClientID
 	}
-	return cfg.ClientID
+	return cfg.GetClientId()
 }
