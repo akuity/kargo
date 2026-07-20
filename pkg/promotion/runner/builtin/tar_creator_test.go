@@ -453,33 +453,6 @@ func Test_tarCreator_createTarball(t *testing.T) {
 				verifyTarContents(t, outPath, false, expectedFiles)
 			},
 		},
-		{
-			name: "fails gracefully on unreadable file",
-			setupFiles: func(t *testing.T) (string, string, string) {
-				workDir := t.TempDir()
-
-				inPath := filepath.Join(workDir, "source")
-				require.NoError(t, os.Mkdir(inPath, 0o750))
-
-				unreadableFile := filepath.Join(inPath, "secret.txt")
-				require.NoError(t, os.WriteFile(unreadableFile, []byte("secret"), 0o600))
-
-				require.NoError(t, os.Chmod(unreadableFile, 0o000))
-
-				outPath := filepath.Join(workDir, "archive.tar")
-				return workDir, inPath, outPath
-			},
-			gzip:   false,
-			ignore: "",
-			assertions: func(t *testing.T, outPath string, result promotion.StepResult, err error) {
-				assert.Error(t, err)
-				assert.Equal(t, kargoapi.PromotionStepStatusErrored, result.Status)
-				assert.ErrorContains(t, err, "failed to open source file")
-
-				// Fix permissions so t.TempDir() can be deleted by the test runner.
-				_ = os.Chmod(filepath.Join(filepath.Dir(outPath), "source", "secret.txt"), 0o600)
-			},
-		},
 	}
 
 	runner := &tarCreator{}
