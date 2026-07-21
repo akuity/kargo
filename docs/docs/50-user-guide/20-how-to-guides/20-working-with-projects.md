@@ -366,11 +366,6 @@ reliably reflect a problem with the `Freight` itself.
   spurious rollbacks from historical failures when auto-rollback is first
   enabled on a `Stage` that is not in a clean state.
 
-- **`MatchUpstream` stages:** Auto-rollback is not supported for `Stage`s that
-  use a `MatchUpstream` auto-promotion policy. Such `Stage`s are silently
-  skipped by the rollback controller. To recover a `MatchUpstream` `Stage`,
-  promote the appropriate upstream `Stage` back to the desired `Freight`.
-
 - **No rollbacks of rollbacks:** If a rollback `Promotion` itself fails, the
   controller does not create another rollback `Promotion`. This prevents
   infinite rollback loops.
