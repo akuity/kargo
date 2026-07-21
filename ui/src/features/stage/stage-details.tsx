@@ -3,13 +3,14 @@ import {
   faCircleCheck,
   faCircleUp,
   faGear,
-  faHistory
+  faHistory,
+  faPlay
 } from '@fortawesome/free-solid-svg-icons';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
-import { Drawer, Flex, Skeleton, Tabs, Typography } from 'antd';
+import { Alert, Button, Drawer, Flex, Skeleton, Tabs, Typography } from 'antd';
 import moment from 'moment';
 import { useEffect, useMemo, useState } from 'react';
-import { generatePath, useNavigate, useParams } from 'react-router-dom';
+import { generatePath, Link, useNavigate, useParams } from 'react-router-dom';
 import { stringify } from 'yaml';
 
 import { SHARD_LABEL_KEY } from '@ui/config/labels';
@@ -20,11 +21,13 @@ import { HealthStatusIcon } from '@ui/features/common/health-status/health-statu
 import { useStageControllerStatus } from '@ui/features/common/stage-status/use-stage-controller-status';
 import { getCurrentFreightByWarehouse } from '@ui/features/common/utils';
 import { getAutoPromotionHoldEntries } from '@ui/features/project/pipelines/promotion/auto-promotion';
+import { ResumeAutoPromotionDrawer } from '@ui/features/project/pipelines/promotion/resume-auto-promotion-drawer';
 import { useGetStage } from '@ui/gen/api/v2/core/core';
 import { Stage } from '@ui/gen/api/v2/models';
 import { useGetConfig } from '@ui/gen/api/v2/system/system';
 
 import YamlEditor from '../common/code-editor/yaml-editor-lazy';
+import { useModal } from '../common/modal/use-modal';
 import { StageConditionIcon } from '../common/stage-status/stage-condition-icon';
 
 import { Promotions } from './promotions';
@@ -219,24 +222,54 @@ export const StageDetails = ({ stage }: { stage: Stage }) => {
 
 const AutoPromotionHolds = ({ stage }: { stage: Stage }) => {
   const holds = getAutoPromotionHoldEntries(stage);
+  const { show } = useModal();
+
   if (holds.length === 0) {
     return null;
   }
   return (
-    <div className='rounded-md border border-solid border-orange-200 bg-orange-50 px-3 py-2'>
-      <Typography.Text strong>Auto-promotion paused</Typography.Text>
-      <div className='mt-1 flex flex-col gap-1'>
-        {holds.map(({ key, hold }) => (
-          <Typography.Text key={key} type='secondary' className='text-sm'>
-            {key}
-            {hold.freightName && `: ${hold.freightName}`}
-            {hold.promotionName && ` via ${hold.promotionName}`}
-            {hold.actor && ` by ${hold.actor}`}
-            {hold.createdAt && ` at ${moment(hold.createdAt).format('YYYY-MM-DD HH:mm')}`}
-          </Typography.Text>
-        ))}
-      </div>
-    </div>
+    <Alert
+      type='warning'
+      message='Auto-promotion paused'
+      description={
+        <div className='flex flex-col gap-1'>
+          {holds.map(({ key, hold }) => (
+            <Typography.Text key={key} type='secondary' className='text-sm'>
+              {key}
+              {hold.freightName && `: ${hold.freightName}`}
+              {hold.promotionName && (
+                <>
+                  {' via '}
+                  <Link
+                    to={generatePath(paths.promotion, {
+                      name: stage.metadata?.namespace || '',
+                      promotionId: hold.promotionName
+                    })}
+                  >
+                    {hold.promotionName}
+                  </Link>
+                </>
+              )}
+              {hold.actor && ` by ${hold.actor}`}
+              {hold.createdAt && ` at ${moment(hold.createdAt).format('YYYY-MM-DD HH:mm')}`}
+            </Typography.Text>
+          ))}
+        </div>
+      }
+      action={
+        <Button
+          size='small'
+          icon={<FontAwesomeIcon icon={faPlay} />}
+          onClick={() =>
+            show((p) => (
+              <ResumeAutoPromotionDrawer stage={stage} open={p.visible} onClose={p.hide} />
+            ))
+          }
+        >
+          Resume
+        </Button>
+      }
+    />
   );
 };
 
