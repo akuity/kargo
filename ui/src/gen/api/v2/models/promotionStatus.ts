@@ -8,7 +8,6 @@
 import type { FreightReference } from './freightReference';
 import type { FreightCollection } from './freightCollection';
 import type { HealthCheckStep } from './healthCheckStep';
-import type { PromotionStatusState } from './promotionStatusState';
 import type { StepExecutionMetadata } from './stepExecutionMetadata';
 
 export interface PromotionStatus {
@@ -43,7 +42,7 @@ to explain why. */
   startedAt?: string;
   /** State stores the state of the promotion process between reconciliation
 attempts. */
-  state?: PromotionStatusState;
+  state?: unknown;
   /** StepExecutionMetadata tracks metadata pertaining to the execution
 of individual promotion steps. */
   stepExecutionMetadata?: StepExecutionMetadata[];

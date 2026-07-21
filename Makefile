@@ -80,7 +80,7 @@ format: format-go format-ui
 lint-go: install-golangci-lint
 	{ \
 		set -e; \
-		for mod in $$(find . -maxdepth 4 -type f -name 'go.mod' | grep -v tools); do \
+		for mod in $$(find . -maxdepth 5 -type f -name 'go.mod' | grep -v tools); do \
 			echo "Linting $$(dirname $${mod}) ..."; \
 			cd $$(dirname $${mod}); \
 			$(GOLANGCI_LINT) run --config $(CURDIR)/.golangci.yaml $(GO_LINT_EXTRA_FLAGS); \
@@ -92,7 +92,7 @@ lint-go: install-golangci-lint
 format-go:
 	{ \
 		set -e; \
-		for mod in $$(find . -maxdepth 4 -type f -name 'go.mod' | grep -v tools); do \
+		for mod in $$(find . -maxdepth 5 -type f -name 'go.mod' | grep -v tools); do \
 			echo "Fixing $$(dirname $${mod}) ..."; \
 			cd $$(dirname $${mod}); \
 			$(GOLANGCI_LINT) run --fix --config $(CURDIR)/.golangci.yaml; \
@@ -150,7 +150,7 @@ format-ui:
 test-unit: install-helm
 	{ \
 		set -e; \
-		for mod in $$(find . -maxdepth 4 -type f -name 'go.mod' | grep -v tools); do \
+		for mod in $$(find . -maxdepth 5 -type f -name 'go.mod' | grep -v tools); do \
 			echo "Testing $$(dirname $${mod}) ..."; \
 			cd $$(dirname $${mod}); \
 			PATH=$(EXTENDED_PATH) go test \
@@ -258,9 +258,8 @@ build-cli-with-ui: build-ui build-cli
 codegen: codegen-openapi codegen-proto codegen-controller codegen-schema-to-go codegen-ui codegen-docs
 
 .PHONY: codegen-openapi
-codegen-openapi: install-jq
+codegen-openapi: install-jq install-openapi-generator-cli
 	rm -f swagger.json
-	find pkg/client/generated -mindepth 1 ! -name go.mod ! -name go.sum -exec rm -rf {} +
 	rm -rf /tmp/swagger-build
 	mkdir -p /tmp/swagger-build
 	go tool swag init \
@@ -272,13 +271,7 @@ codegen-openapi: install-jq
 	mv /tmp/swagger-build/swagger.json .
 	rm -rf /tmp/swagger-build
 	hack/codegen/fix-swagger-spec.sh swagger.json
-	mkdir -p pkg/client/generated
-	go tool swagger generate client \
-		-f swagger.json \
-		-t pkg \
-		--client-package client/generated \
-		--model-package client/generated/models \
-		--skip-validation
+	./hack/codegen/generate-go-client.sh
 	pnpm --dir=ui install --dev
 	pnpm --dir=ui run generate:api
 

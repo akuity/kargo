@@ -6,7 +6,6 @@
  * OpenAPI spec version: v1alpha1
  */
 import type { FreightCreationCriteria } from './freightCreationCriteria';
-import type { WarehouseSpecSubscriptionsItem } from './warehouseSpecSubscriptionsItem';
 
 export interface WarehouseSpec {
   /** FreightCreationCriteria defines criteria that must be satisfied for Freight
@@ -51,5 +50,5 @@ of the shard label. */
 produced by this Warehouse.
 
 +kubebuilder:validation:MinItems=1 */
-  subscriptions?: WarehouseSpecSubscriptionsItem[];
+  subscriptions?: unknown[];
 }

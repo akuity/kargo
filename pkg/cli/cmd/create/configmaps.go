@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"net/http"
 	"strings"
 
 	"github.com/spf13/cobra"
@@ -18,8 +19,7 @@ import (
 	"github.com/akuity/kargo/pkg/cli/kubernetes"
 	"github.com/akuity/kargo/pkg/cli/option"
 	"github.com/akuity/kargo/pkg/cli/templates"
-	"github.com/akuity/kargo/pkg/client/generated/core"
-	"github.com/akuity/kargo/pkg/client/generated/models"
+	kargogen "github.com/akuity/kargo/pkg/x/client/generated"
 )
 
 type createConfigMapOptions struct {
@@ -175,54 +175,42 @@ func (o *createConfigMapOptions) run(ctx context.Context) error {
 		return fmt.Errorf("get client from config: %w", err)
 	}
 
-	var resJSON []byte
+	body := kargogen.CreateConfigMapRequest{
+		Name:        &o.Name,
+		Description: &o.Description,
+		Data:        &o.Data,
+	}
+
+	var res *kargogen.V1ConfigMap
+	var httpRes *http.Response
 	switch {
 	case o.System:
-		var res *core.CreateSystemConfigMapCreated
-		if res, err = apiClient.Core.CreateSystemConfigMap(
-			core.NewCreateSystemConfigMapParams().
-				WithBody(&models.CreateConfigMapRequest{
-					Name:        o.Name,
-					Description: o.Description,
-					Data:        o.Data,
-				}),
-			nil,
-		); err != nil {
-			return fmt.Errorf("create system ConfigMap: %w", err)
+		res, httpRes, err = apiClient.CoreAPI.CreateSystemConfigMap(ctx).Body(body).Execute()
+		if httpRes != nil {
+			_ = httpRes.Body.Close()
 		}
-		resJSON, err = json.Marshal(res.GetPayload())
+		if err != nil {
+			return fmt.Errorf("create system ConfigMap: %w", client.APIError(err))
+		}
 	case o.Shared:
-		var res *core.CreateSharedConfigMapCreated
-		if res, err = apiClient.Core.CreateSharedConfigMap(
-			core.NewCreateSharedConfigMapParams().
-				WithBody(&models.CreateConfigMapRequest{
-					Name:        o.Name,
-					Description: o.Description,
-					Data:        o.Data,
-				}),
-			nil,
-		); err != nil {
-			return fmt.Errorf("create shared ConfigMap: %w", err)
+		res, httpRes, err = apiClient.CoreAPI.CreateSharedConfigMap(ctx).Body(body).Execute()
+		if httpRes != nil {
+			_ = httpRes.Body.Close()
 		}
-		resJSON, err = json.Marshal(res.GetPayload())
+		if err != nil {
+			return fmt.Errorf("create shared ConfigMap: %w", client.APIError(err))
+		}
 	default:
-		var res *core.CreateProjectConfigMapCreated
-		if res, err = apiClient.Core.CreateProjectConfigMap(
-			core.NewCreateProjectConfigMapParams().
-				WithProject(o.Project).
-				WithBody(&models.CreateConfigMapRequest{
-					Name:        o.Name,
-					Description: o.Description,
-					Data:        o.Data,
-				}),
-			nil,
-		); err != nil {
-			return fmt.Errorf("create project ConfigMap: %w", err)
+		res, httpRes, err = apiClient.CoreAPI.CreateProjectConfigMap(ctx, o.Project).Body(body).Execute()
+		if httpRes != nil {
+			_ = httpRes.Body.Close()
 		}
-		resJSON, err = json.Marshal(res.GetPayload())
+		if err != nil {
+			return fmt.Errorf("create project ConfigMap: %w", client.APIError(err))
+		}
 	}
-	// All three cases above end with marshaling the response payload, so we
-	// can handle any of those potential errors here, in one place.
+
+	resJSON, err := json.Marshal(res)
 	if err != nil {
 		return fmt.Errorf("marshal response: %w", err)
 	}

@@ -19,7 +19,6 @@ import (
 	"github.com/akuity/kargo/pkg/cli/kubernetes"
 	"github.com/akuity/kargo/pkg/cli/option"
 	"github.com/akuity/kargo/pkg/cli/templates"
-	"github.com/akuity/kargo/pkg/client/generated/rbac"
 )
 
 type createRoleOptions struct {
@@ -157,17 +156,18 @@ func (o *createRoleOptions) run(ctx context.Context) error {
 		return fmt.Errorf("unmarshal role to map: %w", err)
 	}
 
-	res, err := apiClient.Rbac.CreateProjectRole(
-		rbac.NewCreateProjectRoleParams().
-			WithProject(o.Project).
-			WithBody(roleMap),
-		nil,
-	)
+	res, httpRes, err := apiClient.RbacAPI.
+		CreateProjectRole(ctx, o.Project).
+		Body(roleMap).
+		Execute()
+	if httpRes != nil {
+		_ = httpRes.Body.Close()
+	}
 	if err != nil {
-		return fmt.Errorf("create role: %w", err)
+		return fmt.Errorf("create role: %w", client.APIError(err))
 	}
 
-	resJSON, err := json.Marshal(res.GetPayload())
+	resJSON, err := json.Marshal(res)
 	if err != nil {
 		return fmt.Errorf("marshal response: %w", err)
 	}
