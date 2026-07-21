@@ -21,7 +21,6 @@ import (
 	"github.com/akuity/kargo/pkg/cli/kubernetes"
 	"github.com/akuity/kargo/pkg/cli/option"
 	"github.com/akuity/kargo/pkg/cli/templates"
-	"github.com/akuity/kargo/pkg/client/generated/credentials"
 )
 
 type getGenericCredentialsOptions struct {
@@ -161,32 +160,32 @@ func (o *getGenericCredentialsOptions) run(ctx context.Context) error {
 		var payload any
 		switch {
 		case o.System:
-			var res *credentials.ListSystemGenericCredentialsOK
-			if res, err = apiClient.Credentials.ListSystemGenericCredentials(
-				credentials.NewListSystemGenericCredentialsParams(),
-				nil,
-			); err != nil {
-				return fmt.Errorf("list credentials: %w", err)
+			res, httpRes, listErr := apiClient.CredentialsAPI.ListSystemGenericCredentials(ctx).Execute()
+			if httpRes != nil {
+				_ = httpRes.Body.Close()
 			}
-			payload = res.Payload
+			if listErr != nil {
+				return fmt.Errorf("list credentials: %w", client.APIError(listErr))
+			}
+			payload = res
 		case o.Shared:
-			var res *credentials.ListSharedGenericCredentialsOK
-			if res, err = apiClient.Credentials.ListSharedGenericCredentials(
-				credentials.NewListSharedGenericCredentialsParams(),
-				nil,
-			); err != nil {
-				return fmt.Errorf("list credentials: %w", err)
+			res, httpRes, listErr := apiClient.CredentialsAPI.ListSharedGenericCredentials(ctx).Execute()
+			if httpRes != nil {
+				_ = httpRes.Body.Close()
 			}
-			payload = res.Payload
+			if listErr != nil {
+				return fmt.Errorf("list credentials: %w", client.APIError(listErr))
+			}
+			payload = res
 		default:
-			var res *credentials.ListProjectGenericCredentialsOK
-			if res, err = apiClient.Credentials.ListProjectGenericCredentials(
-				credentials.NewListProjectGenericCredentialsParams().WithProject(o.Project),
-				nil,
-			); err != nil {
-				return fmt.Errorf("list credentials: %w", err)
+			res, httpRes, listErr := apiClient.CredentialsAPI.ListProjectGenericCredentials(ctx, o.Project).Execute()
+			if httpRes != nil {
+				_ = httpRes.Body.Close()
 			}
-			payload = res.Payload
+			if listErr != nil {
+				return fmt.Errorf("list credentials: %w", client.APIError(listErr))
+			}
+			payload = res
 		}
 		var credsJSON []byte
 		if credsJSON, err = json.Marshal(payload); err != nil {
@@ -207,39 +206,35 @@ func (o *getGenericCredentialsOptions) run(ctx context.Context) error {
 		var payload any
 		switch {
 		case o.System:
-			var res *credentials.GetSystemGenericCredentialsOK
-			if res, err = apiClient.Credentials.GetSystemGenericCredentials(
-				credentials.NewGetSystemGenericCredentialsParams().
-					WithGenericCredentials(name),
-				nil,
-			); err != nil {
-				errs = append(errs, err)
+			res, httpRes, getErr := apiClient.CredentialsAPI.GetSystemGenericCredentials(ctx, name).Execute()
+			if httpRes != nil {
+				_ = httpRes.Body.Close()
+			}
+			if getErr != nil {
+				errs = append(errs, client.APIError(getErr))
 				continue
 			}
-			payload = res.Payload
+			payload = res
 		case o.Shared:
-			var res *credentials.GetSharedGenericCredentialsOK
-			if res, err = apiClient.Credentials.GetSharedGenericCredentials(
-				credentials.NewGetSharedGenericCredentialsParams().
-					WithGenericCredentials(name),
-				nil,
-			); err != nil {
-				errs = append(errs, err)
+			res, httpRes, getErr := apiClient.CredentialsAPI.GetSharedGenericCredentials(ctx, name).Execute()
+			if httpRes != nil {
+				_ = httpRes.Body.Close()
+			}
+			if getErr != nil {
+				errs = append(errs, client.APIError(getErr))
 				continue
 			}
-			payload = res.Payload
+			payload = res
 		default:
-			var res *credentials.GetProjectGenericCredentialsOK
-			if res, err = apiClient.Credentials.GetProjectGenericCredentials(
-				credentials.NewGetProjectGenericCredentialsParams().
-					WithProject(o.Project).
-					WithGenericCredentials(name),
-				nil,
-			); err != nil {
-				errs = append(errs, err)
+			res, httpRes, getErr := apiClient.CredentialsAPI.GetProjectGenericCredentials(ctx, o.Project, name).Execute()
+			if httpRes != nil {
+				_ = httpRes.Body.Close()
+			}
+			if getErr != nil {
+				errs = append(errs, client.APIError(getErr))
 				continue
 			}
-			payload = res.Payload
+			payload = res
 		}
 		var credJSON []byte
 		if credJSON, err = json.Marshal(payload); err != nil {

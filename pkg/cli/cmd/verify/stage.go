@@ -12,7 +12,6 @@ import (
 	"github.com/akuity/kargo/pkg/cli/config"
 	"github.com/akuity/kargo/pkg/cli/option"
 	"github.com/akuity/kargo/pkg/cli/templates"
-	"github.com/akuity/kargo/pkg/client/generated/verifications"
 )
 
 type verifyStageOptions struct {
@@ -107,24 +106,22 @@ func (o *verifyStageOptions) run(ctx context.Context) error {
 	}
 
 	if o.Abort {
-		if _, err := apiClient.Verifications.AbortVerification(
-			verifications.NewAbortVerificationParams().
-				WithProject(o.Project).
-				WithStage(o.Name),
-			nil,
-		); err != nil {
-			return fmt.Errorf("abort verification: %w", err)
+		abortHTTPRes, abortErr := apiClient.VerificationsAPI.AbortVerification(ctx, o.Project, o.Name).Execute()
+		if abortHTTPRes != nil {
+			defer abortHTTPRes.Body.Close()
+		}
+		if abortErr != nil {
+			return client.APIError(fmt.Errorf("abort verification: %w", abortErr))
 		}
 		return nil
 	}
 
-	if _, err := apiClient.Verifications.Reverify(
-		verifications.NewReverifyParams().
-			WithProject(o.Project).
-			WithStage(o.Name),
-		nil,
-	); err != nil {
-		return fmt.Errorf("reverify stage: %w", err)
+	httpRes, err := apiClient.VerificationsAPI.Reverify(ctx, o.Project, o.Name).Execute()
+	if httpRes != nil {
+		defer httpRes.Body.Close()
+	}
+	if err != nil {
+		return client.APIError(fmt.Errorf("reverify stage: %w", err))
 	}
 
 	return nil

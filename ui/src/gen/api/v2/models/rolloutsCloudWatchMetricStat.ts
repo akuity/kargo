@@ -6,11 +6,10 @@
  * OpenAPI spec version: v1alpha1
  */
 import type { RolloutsCloudWatchMetricStatMetric } from './rolloutsCloudWatchMetricStatMetric';
-import type { IntOrString } from './intOrString';
 
 export interface RolloutsCloudWatchMetricStat {
   metric?: RolloutsCloudWatchMetricStatMetric;
-  period?: IntOrString;
+  period?: unknown;
   stat?: string;
   unit?: string;
 }

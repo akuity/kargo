@@ -5,16 +5,15 @@
  * REST API for Kargo
  * OpenAPI spec version: v1alpha1
  */
-import type { IntOrString } from './intOrString';
 import type { RolloutsMetricProvider } from './rolloutsMetricProvider';
 
 export interface RolloutsMetric {
-  consecutiveErrorLimit?: IntOrString;
-  consecutiveSuccessLimit?: IntOrString;
-  count?: IntOrString;
+  consecutiveErrorLimit?: unknown;
+  consecutiveSuccessLimit?: unknown;
+  count?: unknown;
   failureCondition?: string;
-  failureLimit?: IntOrString;
-  inconclusiveLimit?: IntOrString;
+  failureLimit?: unknown;
+  inconclusiveLimit?: unknown;
   initialDelay?: string;
   interval?: string;
   name?: string;

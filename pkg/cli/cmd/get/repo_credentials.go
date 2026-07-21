@@ -22,7 +22,6 @@ import (
 	"github.com/akuity/kargo/pkg/cli/kubernetes"
 	"github.com/akuity/kargo/pkg/cli/option"
 	"github.com/akuity/kargo/pkg/cli/templates"
-	"github.com/akuity/kargo/pkg/client/generated/credentials"
 	libCreds "github.com/akuity/kargo/pkg/credentials"
 )
 
@@ -151,23 +150,23 @@ func (o *getRepoCredentialsOptions) run(ctx context.Context) error {
 		var payload any
 		switch {
 		case o.Shared:
-			var res *credentials.ListSharedRepoCredentialsOK
-			if res, err = apiClient.Credentials.ListSharedRepoCredentials(
-				credentials.NewListSharedRepoCredentialsParams(),
-				nil,
-			); err != nil {
-				return fmt.Errorf("list shared credentials: %w", err)
+			res, httpRes, listErr := apiClient.CredentialsAPI.ListSharedRepoCredentials(ctx).Execute()
+			if httpRes != nil {
+				_ = httpRes.Body.Close()
 			}
-			payload = res.Payload
+			if listErr != nil {
+				return fmt.Errorf("list shared credentials: %w", client.APIError(listErr))
+			}
+			payload = res
 		default:
-			var res *credentials.ListProjectRepoCredentialsOK
-			if res, err = apiClient.Credentials.ListProjectRepoCredentials(
-				credentials.NewListProjectRepoCredentialsParams().WithProject(o.Project),
-				nil,
-			); err != nil {
-				return fmt.Errorf("list project credentials: %w", err)
+			res, httpRes, listErr := apiClient.CredentialsAPI.ListProjectRepoCredentials(ctx, o.Project).Execute()
+			if httpRes != nil {
+				_ = httpRes.Body.Close()
 			}
-			payload = res.Payload
+			if listErr != nil {
+				return fmt.Errorf("list project credentials: %w", client.APIError(listErr))
+			}
+			payload = res
 		}
 		var credsJSON []byte
 		if credsJSON, err = json.Marshal(payload); err != nil {
@@ -188,28 +187,25 @@ func (o *getRepoCredentialsOptions) run(ctx context.Context) error {
 		var payload any
 		switch {
 		case o.Shared:
-			var res *credentials.GetSharedRepoCredentialsOK
-			if res, err = apiClient.Credentials.GetSharedRepoCredentials(
-				credentials.NewGetSharedRepoCredentialsParams().
-					WithRepoCredentials(name),
-				nil,
-			); err != nil {
-				errs = append(errs, err)
+			credRes, httpRes, getErr := apiClient.CredentialsAPI.GetSharedRepoCredentials(ctx, name).Execute()
+			if httpRes != nil {
+				_ = httpRes.Body.Close()
+			}
+			if getErr != nil {
+				errs = append(errs, client.APIError(getErr))
 				continue
 			}
-			payload = res.Payload
+			payload = credRes
 		default:
-			var res *credentials.GetProjectRepoCredentialsOK
-			if res, err = apiClient.Credentials.GetProjectRepoCredentials(
-				credentials.NewGetProjectRepoCredentialsParams().
-					WithProject(o.Project).
-					WithRepoCredentials(name),
-				nil,
-			); err != nil {
-				errs = append(errs, err)
+			credRes, httpRes, getErr := apiClient.CredentialsAPI.GetProjectRepoCredentials(ctx, o.Project, name).Execute()
+			if httpRes != nil {
+				_ = httpRes.Body.Close()
+			}
+			if getErr != nil {
+				errs = append(errs, client.APIError(getErr))
 				continue
 			}
-			payload = res.Payload
+			payload = credRes
 		}
 		var credJSON []byte
 		if credJSON, err = json.Marshal(payload); err != nil {
