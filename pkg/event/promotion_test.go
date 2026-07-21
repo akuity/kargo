@@ -482,6 +482,74 @@ func TestPromotionSucceeded_UnmarshalVerificationPending(t *testing.T) {
 	}
 }
 
+func TestNewPromotion_Rollback(t *testing.T) {
+	testCases := map[string]struct {
+		annotations map[string]string
+		expected    bool
+	}{
+		"rollback annotation true": {
+			annotations: map[string]string{
+				kargoapi.AnnotationKeyRollback: "true",
+			},
+			expected: true,
+		},
+		"rollback annotation false": {
+			annotations: map[string]string{
+				kargoapi.AnnotationKeyRollback: "false",
+			},
+			expected: false,
+		},
+		"rollback annotation absent": {
+			expected: false,
+		},
+	}
+
+	for name, tc := range testCases {
+		t.Run(name, func(t *testing.T) {
+			promotion := &kargoapi.Promotion{
+				ObjectMeta: metav1.ObjectMeta{
+					Name:        "test-promotion",
+					Namespace:   "test-project",
+					Annotations: tc.annotations,
+				},
+				Spec: kargoapi.PromotionSpec{
+					Stage: "test-stage",
+				},
+			}
+			evt := newPromotion(promotion, nil)
+			require.Equal(t, tc.expected, evt.Rollback)
+		})
+	}
+}
+
+func TestPromotionEventMarshalAnnotations_Rollback(t *testing.T) {
+	promotion := Promotion{
+		Name:      "test-promotion",
+		StageName: "test-stage",
+		Rollback:  true,
+	}
+	annotations := map[string]string{}
+	promotion.MarshalAnnotationsTo(annotations)
+	require.Equal(t, kargoapi.AnnotationValueTrue, annotations[kargoapi.AnnotationKeyEventRollback])
+
+	promotion.Rollback = false
+	annotations = map[string]string{}
+	promotion.MarshalAnnotationsTo(annotations)
+	require.NotContains(t, annotations, kargoapi.AnnotationKeyEventRollback)
+}
+
+func TestUnmarshalPromotionAnnotations_Rollback(t *testing.T) {
+	annotations := map[string]string{
+		kargoapi.AnnotationKeyEventPromotionName:       "test-promotion",
+		kargoapi.AnnotationKeyEventStageName:           "test-stage",
+		kargoapi.AnnotationKeyEventPromotionCreateTime: "2024-01-01T12:00:00Z",
+		kargoapi.AnnotationKeyEventRollback:            "true",
+	}
+	evt, err := UnmarshalPromotionAnnotations(annotations)
+	require.NoError(t, err)
+	require.True(t, evt.Rollback)
+}
+
 func TestCalculatePromotionVars(t *testing.T) {
 	testCases := map[string]struct {
 		promotion *kargoapi.Promotion
