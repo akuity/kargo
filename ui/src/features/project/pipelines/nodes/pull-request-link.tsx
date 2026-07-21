@@ -1,8 +1,4 @@
-import {
-  faCircleNotch,
-  faCodePullRequest,
-  faExternalLink
-} from '@fortawesome/free-solid-svg-icons';
+import { faCodePullRequest, faExternalLink } from '@fortawesome/free-solid-svg-icons';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
 import { Spin, Tag } from 'antd';
 import Link from 'antd/es/typography/Link';
@@ -40,7 +36,6 @@ export const PullRequestLink = (props: PullRequestLinkProps) => {
   if (isFetching) {
     return <Spin size='small' />;
   }
-
 
   // type safe
   if (!promotion || !promotion.spec || !promotion.spec.steps) {

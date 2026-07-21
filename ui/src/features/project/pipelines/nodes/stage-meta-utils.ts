@@ -31,17 +31,13 @@ export const getCurrentPromotion = (stage: Stage) => stage?.status?.currentPromo
 export const useCurrentPromotion = (stage: Stage) => {
   const currentPromotion = getCurrentPromotion(stage);
 
-  const query = useGetPromotion(
-    stage?.metadata?.namespace || '',
-    currentPromotion || '',
-    {
-      query: {
-        enabled: !!currentPromotion,
-        staleTime: 10 * 1000,
-        gcTime: 10 * 1000
-      }
+  const query = useGetPromotion(stage?.metadata?.namespace || '', currentPromotion || '', {
+    query: {
+      enabled: !!currentPromotion,
+      staleTime: 10 * 1000,
+      gcTime: 10 * 1000
     }
-  );
+  });
 
   return { promotion: query.data?.data, isFetching: query.isFetching };
 };

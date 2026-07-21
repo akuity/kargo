@@ -39,7 +39,7 @@ export const Step = ({
   const { registry } = usePromotionDirectivesRegistryContext();
 
   const { promotionStepExtensions } = useExtensionsContext();
-  
+
   const stepExtension = promotionStepExtensions.find((ext) => ext.identifier === step.uses);
 
   const meta = useMemo(() => {

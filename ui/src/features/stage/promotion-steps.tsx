@@ -61,20 +61,19 @@ export const PromotionSteps = (props: PromotionStepsProps) => {
     const result = getPromotionDirectiveStepStatus(i, props.promotion.status);
     const key = step.as || `step-${i}`;
 
-    if (
-      !runningKey &&
-      result === PromotionDirectiveStepStatus.RUNNING &&
-      hasExtension(step)
-    ) {
+    if (!runningKey && result === PromotionDirectiveStepStatus.RUNNING && hasExtension(step)) {
       runningKey = key;
     }
 
-    const item = { ...Step({
-      step,
-      result,
-      output: outputsByStepAlias[step.as || ''],
-      promotion: props.promotion
-    }), key };
+    const item = {
+      ...Step({
+        step,
+        result,
+        output: outputsByStepAlias[step.as || ''],
+        promotion: props.promotion
+      }),
+      key
+    };
 
     return isFailedStep(i, props.promotion.status)
       ? [{ ...item, className: `${item.className || ''} !border-none` }, errorItem]
