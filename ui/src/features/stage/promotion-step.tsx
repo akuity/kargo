@@ -12,11 +12,12 @@ import { SegmentedOptions } from 'antd/es/segmented';
 import classNames from 'classnames';
 import { useMemo, useState } from 'react';
 
+import { useExtensionsContext } from '@ui/extensions/extensions-context';
 import YamlEditor from '@ui/features/common/code-editor/yaml-editor-lazy';
 import { PromotionDirectiveStepStatus } from '@ui/features/common/promotion-directive-step-status/utils';
 import { usePromotionDirectivesRegistryContext } from '@ui/features/promotion-directives/registry/context/use-registry-context';
 import { Runner } from '@ui/features/promotion-directives/registry/types';
-import { PromotionStep } from '@ui/gen/api/v2/models';
+import { Promotion, PromotionStep } from '@ui/gen/api/v2/models';
 import uiPlugins from '@ui/plugins';
 import { UiPluginHoles } from '@ui/plugins/atoms/ui-plugin-hole/ui-plugin-holes';
 
@@ -25,15 +26,21 @@ import { objectToYAML } from './utils/promotion';
 export const Step = ({
   step,
   result,
-  output
+  output,
+  promotion
 }: {
   step: PromotionStep;
   result: PromotionDirectiveStepStatus;
   output?: object;
+  promotion?: Promotion;
 }) => {
   const [showDetails, setShowDetails] = useState(false);
 
   const { registry } = usePromotionDirectivesRegistryContext();
+
+  const { promotionStepExtensions } = useExtensionsContext();
+  
+  const stepExtension = promotionStepExtensions.find((ext) => ext.identifier === step.uses);
 
   const meta = useMemo(() => {
     const runnerMetadata: Runner = registry.runners.find((r) => r.identifier === step.uses) || {
@@ -145,7 +152,14 @@ export const Step = ({
         </Flex>
       </Flex>
     ),
-    children: (
+    children: stepExtension ? (
+      <stepExtension.component
+        step={step}
+        result={result}
+        output={output as Record<string, unknown>}
+        promotion={promotion}
+      />
+    ) : (
       <>
         {opts.length > 1 && (
           <Segmented
