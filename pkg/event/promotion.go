@@ -26,6 +26,7 @@ type Promotion struct {
 	StageName    string                 `json:"stageName"`
 	CreateTime   time.Time              `json:"createTime"`
 	Applications []types.NamespacedName `json:"applications,omitempty"`
+	Rollback     bool                   `json:"rollback,omitempty"`
 }
 
 func (p Promotion) GetName() string {
@@ -180,6 +181,9 @@ func (p *Promotion) MarshalAnnotationsTo(annotations map[string]string) {
 	if p.Freight != nil {
 		p.Freight.MarshalAnnotationsTo(annotations)
 	}
+	if p.Rollback {
+		annotations[kargoapi.AnnotationKeyEventRollback] = kargoapi.AnnotationValueTrue
+	}
 }
 
 func (p *PromotionSucceeded) MarshalAnnotations() map[string]string {
@@ -245,6 +249,7 @@ func UnmarshalPromotionAnnotations(annotations map[string]string) (Promotion, er
 		Name:       annotations[kargoapi.AnnotationKeyEventPromotionName],
 		StageName:  annotations[kargoapi.AnnotationKeyEventStageName],
 		CreateTime: createTime,
+		Rollback:   annotations[kargoapi.AnnotationKeyEventRollback] == kargoapi.AnnotationValueTrue,
 	}
 
 	if applications, ok := annotations[kargoapi.AnnotationKeyEventApplications]; ok {
@@ -370,6 +375,7 @@ func newPromotion(
 		Name:       promotion.GetName(),
 		StageName:  promotion.Spec.Stage,
 		CreateTime: promotion.GetCreationTimestamp().Time,
+		Rollback:   promotion.Annotations[kargoapi.AnnotationKeyRollback] == kargoapi.AnnotationValueTrue,
 	}
 
 	if freight != nil {
