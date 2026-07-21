@@ -6,4 +6,7 @@
  * OpenAPI spec version: v1alpha1
  */
 
-export type CreateProjectRoleBodyBody = { [key: string]: unknown };
+/**
+ * Role resource (github.com/akuity/kargo/api/rbac/v1alpha1.Role)
+ */
+export type CreateProjectRoleBodyBody = unknown;

@@ -5,7 +5,6 @@
  * REST API for Kargo
  * OpenAPI spec version: v1alpha1
  */
-import type { ArtifactReferenceMetadata } from './artifactReferenceMetadata';
 
 export interface ArtifactReference {
   /** ArtifactType specifies the type of artifact this is. Often, but not always,
@@ -21,7 +20,7 @@ well-known, top-level keys. Those aside, this metadata is only understood
 by a corresponding Subscriber implementation that created it.
 
 +optional */
-  metadata?: ArtifactReferenceMetadata;
+  metadata?: unknown;
   /** SubscriptionName is the name of the Subscription that discovered this
 artifact.
 

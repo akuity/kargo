@@ -18,8 +18,7 @@ import (
 	"github.com/akuity/kargo/pkg/cli/kubernetes"
 	"github.com/akuity/kargo/pkg/cli/option"
 	"github.com/akuity/kargo/pkg/cli/templates"
-	"github.com/akuity/kargo/pkg/client/generated/core"
-	"github.com/akuity/kargo/pkg/client/generated/models"
+	kargogen "github.com/akuity/kargo/pkg/x/client/generated"
 )
 
 type updateConfigMapOptions struct {
@@ -202,92 +201,98 @@ func (o *updateConfigMapOptions) run(ctx context.Context) error {
 	}
 
 	// Build the request body - only include data if we have values to set
-	var dataToSend map[string]string
+	var dataToSend *map[string]string
 	if len(o.Data) > 0 {
-		dataToSend = o.Data
+		dataToSend = &o.Data
+	}
+
+	// Only include description if one was actually provided - an always-non-nil
+	// pointer would cause the server to interpret an empty description as an
+	// explicit request to clear it.
+	var descriptionToSend *string
+	if o.Description != "" {
+		descriptionToSend = &o.Description
 	}
 
 	switch {
 	case o.System:
-		_, err = apiClient.Core.PatchSystemConfigMap(
-			core.NewPatchSystemConfigMapParams().
-				WithConfigmap(o.Name).
-				WithBody(&models.PatchConfigMapRequest{
-					Description: o.Description,
-					Data:        dataToSend,
-					RemoveKeys:  o.RemoveKeys,
-				}),
-			nil,
-		)
-		if err != nil {
-			return fmt.Errorf("patch system ConfigMap: %w", err)
+		_, httpRes, patchErr := apiClient.CoreAPI.
+			PatchSystemConfigMap(ctx, o.Name).
+			Body(kargogen.PatchConfigMapRequest{
+				Description: descriptionToSend,
+				Data:        dataToSend,
+				RemoveKeys:  o.RemoveKeys,
+			}).
+			Execute()
+		if httpRes != nil {
+			_ = httpRes.Body.Close()
+		}
+		if patchErr != nil {
+			return fmt.Errorf("patch system ConfigMap: %w", client.APIError(patchErr))
 		}
 
 		// Get the updated ConfigMap
-		var res *core.GetSystemConfigMapOK
-		if res, err = apiClient.Core.GetSystemConfigMap(
-			core.NewGetSystemConfigMapParams().
-				WithConfigmap(o.Name),
-			nil,
-		); err != nil {
-			return fmt.Errorf("get system ConfigMap: %w", err)
+		res, getRes, getErr := apiClient.CoreAPI.GetSystemConfigMap(ctx, o.Name).Execute()
+		if getRes != nil {
+			_ = getRes.Body.Close()
+		}
+		if getErr != nil {
+			return fmt.Errorf("get system ConfigMap: %w", client.APIError(getErr))
 		}
 
-		return o.printConfigMap(res.GetPayload())
+		return o.printConfigMap(res)
 	case o.Shared:
-		_, err = apiClient.Core.PatchSharedConfigMap(
-			core.NewPatchSharedConfigMapParams().
-				WithConfigmap(o.Name).
-				WithBody(&models.PatchConfigMapRequest{
-					Description: o.Description,
-					Data:        dataToSend,
-					RemoveKeys:  o.RemoveKeys,
-				}),
-			nil,
-		)
-		if err != nil {
-			return fmt.Errorf("patch shared ConfigMap: %w", err)
+		_, httpRes, patchErr := apiClient.CoreAPI.
+			PatchSharedConfigMap(ctx, o.Name).
+			Body(kargogen.PatchConfigMapRequest{
+				Description: descriptionToSend,
+				Data:        dataToSend,
+				RemoveKeys:  o.RemoveKeys,
+			}).
+			Execute()
+		if httpRes != nil {
+			_ = httpRes.Body.Close()
+		}
+		if patchErr != nil {
+			return fmt.Errorf("patch shared ConfigMap: %w", client.APIError(patchErr))
 		}
 
 		// Get the updated ConfigMap
-		var res *core.GetSharedConfigMapOK
-		if res, err = apiClient.Core.GetSharedConfigMap(
-			core.NewGetSharedConfigMapParams().
-				WithConfigmap(o.Name),
-			nil,
-		); err != nil {
-			return fmt.Errorf("get shared ConfigMap: %w", err)
+		res, getRes, getErr := apiClient.CoreAPI.GetSharedConfigMap(ctx, o.Name).Execute()
+		if getRes != nil {
+			_ = getRes.Body.Close()
+		}
+		if getErr != nil {
+			return fmt.Errorf("get shared ConfigMap: %w", client.APIError(getErr))
 		}
 
-		return o.printConfigMap(res.GetPayload())
+		return o.printConfigMap(res)
 	default:
-		_, err = apiClient.Core.PatchProjectConfigMap(
-			core.NewPatchProjectConfigMapParams().
-				WithProject(o.Project).
-				WithConfigmap(o.Name).
-				WithBody(&models.PatchConfigMapRequest{
-					Description: o.Description,
-					Data:        dataToSend,
-					RemoveKeys:  o.RemoveKeys,
-				}),
-			nil,
-		)
-		if err != nil {
-			return fmt.Errorf("patch project ConfigMap: %w", err)
+		_, httpRes, patchErr := apiClient.CoreAPI.
+			PatchProjectConfigMap(ctx, o.Project, o.Name).
+			Body(kargogen.PatchConfigMapRequest{
+				Description: descriptionToSend,
+				Data:        dataToSend,
+				RemoveKeys:  o.RemoveKeys,
+			}).
+			Execute()
+		if httpRes != nil {
+			_ = httpRes.Body.Close()
+		}
+		if patchErr != nil {
+			return fmt.Errorf("patch project ConfigMap: %w", client.APIError(patchErr))
 		}
 
 		// Get the updated ConfigMap
-		res, err := apiClient.Core.GetProjectConfigMap(
-			core.NewGetProjectConfigMapParams().
-				WithProject(o.Project).
-				WithConfigmap(o.Name),
-			nil,
-		)
-		if err != nil {
-			return fmt.Errorf("get project ConfigMap: %w", err)
+		res, getRes, getErr := apiClient.CoreAPI.GetProjectConfigMap(ctx, o.Project, o.Name).Execute()
+		if getRes != nil {
+			_ = getRes.Body.Close()
+		}
+		if getErr != nil {
+			return fmt.Errorf("get project ConfigMap: %w", client.APIError(getErr))
 		}
 
-		return o.printConfigMap(res.GetPayload())
+		return o.printConfigMap(res)
 	}
 }
 

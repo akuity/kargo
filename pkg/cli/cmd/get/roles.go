@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"net/http"
 	"slices"
 	"strings"
 	"time"
@@ -22,7 +23,6 @@ import (
 	"github.com/akuity/kargo/pkg/cli/kubernetes"
 	"github.com/akuity/kargo/pkg/cli/option"
 	"github.com/akuity/kargo/pkg/cli/templates"
-	"github.com/akuity/kargo/pkg/client/generated/rbac"
 )
 
 type getRolesOptions struct {
@@ -155,25 +155,18 @@ func (o *getRolesOptions) run(ctx context.Context) error {
 	var errs []error
 
 	if len(o.Names) == 0 {
-		var payload any
+		var payload *any
+		var httpRes *http.Response
 		if o.SystemLevel {
-			var res *rbac.ListSystemRolesOK
-			if res, err = apiClient.Rbac.ListSystemRoles(
-				rbac.NewListSystemRolesParams(),
-				nil,
-			); err != nil {
-				return fmt.Errorf("list roles: %w", err)
-			}
-			payload = res.Payload
+			payload, httpRes, err = apiClient.RbacAPI.ListSystemRoles(ctx).Execute()
 		} else {
-			var res *rbac.ListProjectRolesOK
-			if res, err = apiClient.Rbac.ListProjectRoles(
-				rbac.NewListProjectRolesParams().WithProject(o.Project),
-				nil,
-			); err != nil {
-				return fmt.Errorf("list roles: %w", err)
-			}
-			payload = res.Payload
+			payload, httpRes, err = apiClient.RbacAPI.ListProjectRoles(ctx, o.Project).Execute()
+		}
+		if httpRes != nil {
+			_ = httpRes.Body.Close()
+		}
+		if err != nil {
+			return fmt.Errorf("list roles: %w", client.APIError(err))
 		}
 
 		var listJSON []byte
@@ -188,29 +181,19 @@ func (o *getRolesOptions) run(ctx context.Context) error {
 		kargoRoleRes = make([]*rbacapi.Role, 0, len(o.Names))
 
 		for _, name := range o.Names {
-			var payload any
+			var payload *any
+			var httpRes *http.Response
 			if o.SystemLevel {
-				var res *rbac.GetSystemRoleOK
-				if res, err = apiClient.Rbac.GetSystemRole(
-					rbac.NewGetSystemRoleParams().WithRole(name),
-					nil,
-				); err != nil {
-					errs = append(errs, err)
-					continue
-				}
-				payload = res.Payload
+				payload, httpRes, err = apiClient.RbacAPI.GetSystemRole(ctx, name).Execute()
 			} else {
-				var res *rbac.GetProjectRoleOK
-				if res, err = apiClient.Rbac.GetProjectRole(
-					rbac.NewGetProjectRoleParams().
-						WithProject(o.Project).
-						WithRole(name),
-					nil,
-				); err != nil {
-					errs = append(errs, err)
-					continue
-				}
-				payload = res.Payload
+				payload, httpRes, err = apiClient.RbacAPI.GetProjectRole(ctx, o.Project, name).Execute()
+			}
+			if httpRes != nil {
+				_ = httpRes.Body.Close()
+			}
+			if err != nil {
+				errs = append(errs, client.APIError(err))
+				continue
 			}
 
 			var roleJSON []byte

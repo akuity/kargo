@@ -17,7 +17,6 @@ import (
 	"github.com/akuity/kargo/pkg/cli/kubernetes"
 	"github.com/akuity/kargo/pkg/cli/option"
 	"github.com/akuity/kargo/pkg/cli/templates"
-	"github.com/akuity/kargo/pkg/client/generated/core"
 )
 
 type deleteFreightOptions struct {
@@ -116,13 +115,12 @@ func (o *deleteFreightOptions) run(ctx context.Context) error {
 
 	var errs []error
 	for _, nameOrAlias := range append(o.Names, o.Aliases...) {
-		if _, err := apiClient.Core.DeleteFreight(
-			core.NewDeleteFreightParams().
-				WithProject(o.Project).
-				WithFreightNameOrAlias(nameOrAlias),
-			nil,
-		); err != nil {
-			errs = append(errs, err)
+		httpRes, delErr := apiClient.CoreAPI.DeleteFreight(ctx, o.Project, nameOrAlias).Execute()
+		if httpRes != nil {
+			_ = httpRes.Body.Close()
+		}
+		if delErr != nil {
+			errs = append(errs, client.APIError(delErr))
 			continue
 		}
 		_ = printer.PrintObj(&kargoapi.Freight{

@@ -8,6 +8,7 @@ import { generatePath, Link, useNavigate, useParams } from 'react-router-dom';
 
 import { paths } from '@ui/config/paths';
 import { ColorContext } from '@ui/context/colors';
+import { WarehouseExpanded } from '@ui/extend/types';
 import { LoadingState } from '@ui/features/common';
 import { mapToNames } from '@ui/features/common/utils';
 import FreightDetails from '@ui/features/freight/freight-details';
@@ -77,7 +78,7 @@ export const Pipelines = (props: { creatingStage?: boolean; creatingWarehouse?: 
 
   const listWarehousesQuery = useListWarehouses(projectName);
 
-  const warehouses = listWarehousesQuery?.data?.data?.items || [];
+  const warehouses = (listWarehousesQuery?.data?.data?.items || []) as WarehouseExpanded[];
 
   const [preferredFilter, setPreferredFilter] = useFreightTimelineControllerStore(projectName);
 

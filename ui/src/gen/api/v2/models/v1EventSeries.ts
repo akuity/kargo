@@ -5,11 +5,10 @@
  * REST API for Kargo
  * OpenAPI spec version: v1alpha1
  */
-import type { V1MicroTime } from './v1MicroTime';
 
 export interface V1EventSeries {
   /** Number of occurrences in this series up to the last heartbeat time */
   count?: number;
   /** Time of the last occurrence observed */
-  lastObservedTime?: V1MicroTime;
+  lastObservedTime?: string;
 }
