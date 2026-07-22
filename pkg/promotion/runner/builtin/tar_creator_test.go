@@ -216,6 +216,29 @@ func Test_tarCreator_run(t *testing.T) {
 				assert.True(t, os.IsNotExist(statErr))
 			},
 		},
+		{
+			name: "fails to create output directory when blocked by a file",
+			setupFiles: func(t *testing.T) string {
+				tmpDir := t.TempDir()
+
+				inDir := filepath.Join(tmpDir, "source")
+				require.NoError(t, os.Mkdir(inDir, 0o750))
+
+				require.NoError(t, os.WriteFile(filepath.Join(tmpDir, "nested"), []byte("blocking file"), 0o600))
+
+				return tmpDir
+			},
+			cfg: builtin.TarConfig{
+				InPath:  "source",
+				OutPath: filepath.Join("nested", "archive.tar"),
+				Gzip:    false,
+			},
+			assertions: func(t *testing.T, workDir string, result promotion.StepResult, err error) {
+				assert.Error(t, err)
+				assert.Equal(t, kargoapi.PromotionStepStatusErrored, result.Status)
+				assert.ErrorContains(t, err, "failed to create output directory")
+			},
+		},
 	}
 
 	runner := &tarCreator{}
@@ -450,6 +473,35 @@ func Test_tarCreator_createTarball(t *testing.T) {
 
 				// Tar should exist but have no file entries.
 				expectedFiles := map[string]string{}
+				verifyTarContents(t, outPath, false, expectedFiles)
+			},
+		},
+		{
+			name: "skips ignored directories",
+			setupFiles: func(t *testing.T) (string, string, string) {
+				workDir := t.TempDir()
+
+				inPath := filepath.Join(workDir, "source")
+				require.NoError(t, os.Mkdir(inPath, 0o750))
+
+				require.NoError(t, os.WriteFile(filepath.Join(inPath, "valid.txt"), []byte("valid"), 0o600))
+
+				ignoreDir := filepath.Join(inPath, "node_modules")
+				require.NoError(t, os.Mkdir(ignoreDir, 0o750))
+				require.NoError(t, os.WriteFile(filepath.Join(ignoreDir, "secret.txt"), []byte("secret"), 0o600))
+
+				outPath := filepath.Join(workDir, "archive.tar")
+				return workDir, inPath, outPath
+			},
+			gzip:   false,
+			ignore: "node_modules/",
+			assertions: func(t *testing.T, outPath string, result promotion.StepResult, err error) {
+				assert.NoError(t, err)
+				assert.Equal(t, kargoapi.PromotionStepStatusSucceeded, result.Status)
+
+				expectedFiles := map[string]string{
+					"valid.txt": "valid",
+				}
 				verifyTarContents(t, outPath, false, expectedFiles)
 			},
 		},
