@@ -41,10 +41,9 @@ configurable links to external platforms.
 
 ### v1.12.0
 
-The deprecated ConnectRPC (gRPC) API is being removed in v1.12.0 in favor of
-the REST API. The following additional deprecated features are also scheduled
-for **removal** in v1.12.0:
+The following deprecated features are scheduled for **removal** in v1.12.0:
 
+* The deprecated ConnectRPC (gRPC) API, in favor of the REST API.
 * The `createTargetBranch` option in the `git-open-pr` promotion step.
 * The `author` configuration block on the `git-commit` promotion step. Use
   `git-clone` instead.
