@@ -2,6 +2,7 @@ import { CSSProperties, useContext, useMemo } from 'react';
 
 import { ColorContext } from '@ui/context/colors';
 import { ColorMapHex, parseColorAnnotation } from '@ui/features/stage/utils';
+import { useGetPromotion } from '@ui/gen/api/v2/core/core';
 import { Stage } from '@ui/gen/api/v2/models';
 import { getContrastTextColor } from '@ui/utils/get-contrast-text-color';
 
@@ -26,6 +27,20 @@ export const getLastPromotionDate = (stage: Stage) =>
     : null;
 
 export const getCurrentPromotion = (stage: Stage) => stage?.status?.currentPromotion?.name;
+
+export const useCurrentPromotion = (stage: Stage) => {
+  const currentPromotion = getCurrentPromotion(stage);
+
+  const query = useGetPromotion(stage?.metadata?.namespace || '', currentPromotion || '', {
+    query: {
+      enabled: !!currentPromotion,
+      staleTime: 10 * 1000,
+      gcTime: 10 * 1000
+    }
+  });
+
+  return { promotion: query.data?.data, isFetching: query.isFetching };
+};
 
 export const useHideStageIfInPromotionMode = (stage: Stage) => {
   const actionContext = useActionContext();
