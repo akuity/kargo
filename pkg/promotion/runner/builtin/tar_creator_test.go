@@ -505,6 +505,25 @@ func Test_tarCreator_createTarball(t *testing.T) {
 				verifyTarContents(t, outPath, false, expectedFiles)
 			},
 		},
+		{
+			name: "fails to create temp file",
+			setupFiles: func(t *testing.T) (string, string, string) {
+				workDir := t.TempDir()
+				inPath := filepath.Join(workDir, "source")
+				require.NoError(t, os.Mkdir(inPath, 0o750))
+
+				outPath := filepath.Join(workDir, "non_existent_dir", "archive.tar")
+
+				return workDir, inPath, outPath
+			},
+			gzip:   false,
+			ignore: "",
+			assertions: func(t *testing.T, outPath string, result promotion.StepResult, err error) {
+				assert.Error(t, err)
+				assert.Equal(t, kargoapi.PromotionStepStatusErrored, result.Status)
+				assert.ErrorContains(t, err, "failed to create temporary file")
+			},
+		},
 	}
 
 	runner := &tarCreator{}
@@ -543,6 +562,7 @@ func Test_tarCreator_prepareInputPath(t *testing.T) {
 		{"valid dir path", "real_dir", ""},
 		{"non-existent path", "fake.txt", "does not exist"},
 		{"path traversal attempt", "../outside.txt", "does not exist"},
+		{"fails to secure join", string([]byte{0}), "failed to secure join input path"},
 	}
 
 	for _, tt := range tests {
@@ -577,6 +597,41 @@ func Test_tarCreator_prepareOutputPath(t *testing.T) {
 		dirInfo, statErr := os.Stat(filepath.Dir(absPath))
 		assert.NoError(t, statErr)
 		assert.True(t, dirInfo.IsDir())
+	})
+
+	t.Run("fails to secure join", func(t *testing.T) {
+		t.Parallel()
+		workDir := t.TempDir()
+
+		_, err := runner.prepareOutputPath(workDir, string([]byte{0}))
+		assert.ErrorContains(t, err, "failed to secure join output path")
+	})
+}
+
+func Test_tarCreator_createTempFile(t *testing.T) {
+	t.Parallel()
+	runner := &tarCreator{}
+
+	t.Run("succeeds to create temp file", func(t *testing.T) {
+		t.Parallel()
+		workDir := t.TempDir()
+
+		f, path, err := runner.createTempFile(filepath.Join(workDir, "out.tar"))
+		assert.NoError(t, err)
+		assert.NotNil(t, f)
+		assert.NotEmpty(t, path)
+
+		f.Close()
+	})
+
+	t.Run("fails to create temp file", func(t *testing.T) {
+		t.Parallel()
+		workDir := t.TempDir()
+
+		f, path, err := runner.createTempFile(filepath.Join(workDir, "non_existent_dir", "out.tar"))
+		assert.ErrorContains(t, err, "failed to create temporary file")
+		assert.Nil(t, f)
+		assert.Empty(t, path)
 	})
 }
 
