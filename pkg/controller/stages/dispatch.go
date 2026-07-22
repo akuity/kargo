@@ -250,35 +250,22 @@ func firstPending(promos []kargoapi.Promotion) *kargoapi.Promotion {
 	return nil
 }
 
-// resolveCurrentFreight resolves, per origin, the Stage's current Freight and
-// its discovery time, for the dispatch policy's data.currentFreight. The
-// FreightHistory carries only FreightReferences, which have no discovery time,
-// so each current Freight object is fetched. Origins whose Freight can no
-// longer be found (e.g. garbage-collected) are omitted, so the policy's
-// advances/regresses comparison for that origin is simply undefined.
+// resolveCurrentFreight projects the Stage's current Freight, per origin, into
+// the dispatch policy's data.currentFreight. The resolution (fetching each
+// current Freight to recover its discovery time, omitting garbage-collected
+// origins, failing closed on any other error) is shared with the Promotion
+// webhook via api.GetCurrentFreight, so the gate and the webhook agree on the
+// current Freight for an origin.
 func (r *RegularStageReconciler) resolveCurrentFreight(
 	ctx context.Context,
 	stage *kargoapi.Stage,
 ) (map[string]dispatch.CurrentFreight, error) {
-	current := stage.Status.FreightHistory.Current()
-	if current == nil {
-		return nil, nil
+	current, err := api.GetCurrentFreight(ctx, r.client, stage)
+	if err != nil {
+		return nil, err
 	}
-	resolved := make(map[string]dispatch.CurrentFreight, len(current.Freight))
-	for origin, ref := range current.Freight {
-		freight, err := api.GetFreight(ctx, r.client, types.NamespacedName{
-			Namespace: stage.Namespace,
-			Name:      ref.Name,
-		})
-		if err != nil {
-			return nil, fmt.Errorf(
-				"error getting current Freight %q for origin %q: %w",
-				ref.Name, origin, err,
-			)
-		}
-		if freight == nil {
-			continue
-		}
+	resolved := make(map[string]dispatch.CurrentFreight, len(current))
+	for origin, freight := range current {
 		resolved[origin] = dispatch.CurrentFreight{
 			Name:         freight.Name,
 			DiscoveredAt: freight.EffectiveDiscoveredAt(),

@@ -7,6 +7,7 @@ import (
 	"regexp"
 	"strings"
 	"testing"
+	"time"
 
 	"github.com/stretchr/testify/require"
 	admissionv1 "k8s.io/api/admission/v1"
@@ -48,9 +49,98 @@ func TestNewWebhook(t *testing.T) {
 	require.NotNil(t, w.isRequestFromKargoControlplaneFn)
 }
 
+// rollbackTestStageGetter returns a getStageFn yielding a minimal Stage with a
+// single promotion step, enough for the Create branch to reach
+// reclassifyRollback.
+func rollbackTestStageGetter() func(
+	context.Context,
+	client.Client,
+	types.NamespacedName,
+) (*kargoapi.Stage, error) {
+	return func(
+		context.Context,
+		client.Client,
+		types.NamespacedName,
+	) (*kargoapi.Stage, error) {
+		return &kargoapi.Stage{
+			Spec: kargoapi.StageSpec{
+				PromotionTemplate: &kargoapi.PromotionTemplate{
+					Spec: kargoapi.PromotionTemplateSpec{
+						Steps: []kargoapi.PromotionStep{{}},
+					},
+				},
+			},
+		}, nil
+	}
+}
+
+// freightGetter returns a getFreightFn that always yields f.
+func freightGetter(f *kargoapi.Freight) func(
+	context.Context,
+	client.Client,
+	types.NamespacedName,
+) (*kargoapi.Freight, error) {
+	return func(
+		context.Context,
+		client.Client,
+		types.NamespacedName,
+	) (*kargoapi.Freight, error) {
+		return f, nil
+	}
+}
+
+// currentFreightGetter returns a getCurrentFreightFn that always yields m.
+func currentFreightGetter(m map[string]*kargoapi.Freight) func(
+	context.Context,
+	client.Client,
+	*kargoapi.Stage,
+) (map[string]*kargoapi.Freight, error) {
+	return func(
+		context.Context,
+		client.Client,
+		*kargoapi.Stage,
+	) (map[string]*kargoapi.Freight, error) {
+		return m, nil
+	}
+}
+
 func Test_webhook_Default(t *testing.T) {
 	scheme := runtime.NewScheme()
 	require.NoError(t, kargoapi.AddToScheme(scheme))
+
+	rollbackOrigin := kargoapi.FreightOrigin{
+		Kind: kargoapi.FreightOriginKindWarehouse,
+		Name: "my-warehouse",
+	}
+	// A current Freight and an older / newer target, for the rollback
+	// reclassification cases.
+	currentTime := metav1.NewTime(time.Date(2026, 7, 15, 12, 0, 0, 0, time.UTC))
+	olderTime := metav1.NewTime(time.Date(2026, 7, 15, 6, 0, 0, 0, time.UTC))
+	newerTime := metav1.NewTime(time.Date(2026, 7, 15, 18, 0, 0, 0, time.UTC))
+	currentFreight := &kargoapi.Freight{
+		ObjectMeta:   metav1.ObjectMeta{Name: "current-freight"},
+		Origin:       rollbackOrigin,
+		DiscoveredAt: &currentTime,
+	}
+	olderFreight := &kargoapi.Freight{
+		ObjectMeta:   metav1.ObjectMeta{Name: "older-freight"},
+		Origin:       rollbackOrigin,
+		DiscoveredAt: &olderTime,
+	}
+	newerFreight := &kargoapi.Freight{
+		ObjectMeta:   metav1.ObjectMeta{Name: "newer-freight"},
+		Origin:       rollbackOrigin,
+		DiscoveredAt: &newerTime,
+	}
+	currentByOrigin := map[string]*kargoapi.Freight{
+		rollbackOrigin.String(): currentFreight,
+	}
+	userCreateReq := admission.Request{
+		AdmissionRequest: admissionv1.AdmissionRequest{
+			Operation: admissionv1.Create,
+			UserInfo:  authnv1.UserInfo{Username: "real-user"},
+		},
+	}
 
 	testCases := []struct {
 		name       string
@@ -1628,6 +1718,263 @@ func Test_webhook_Default(t *testing.T) {
 				require.NoError(t, err)
 				require.NotContains(t, promo.Annotations, kargoapi.AnnotationKeyAutoPromotionResume)
 				require.Contains(t, promo.Annotations, kargoapi.AnnotationKeyAutoPromotionHold)
+			},
+		},
+		{
+			// A manual promote of Freight older than the Stage's current
+			// Freight is a rollback, even when auto-promotion is disabled: the
+			// rollback class is independent of the auto-promotion setting.
+			name: "reclassifies manual promote of older Freight as rollback (auto-promotion disabled)",
+			webhook: &webhook{
+				admissionRequestFromContextFn:    admission.RequestFromContext,
+				isRequestFromKargoControlplaneFn: func(admission.Request) bool { return false },
+				getStageFn:                       rollbackTestStageGetter(),
+				getFreightFn:                     freightGetter(olderFreight),
+				getCurrentFreightFn:              currentFreightGetter(currentByOrigin),
+				isAutoPromotionEnabledFn: func(
+					context.Context,
+					client.Client,
+					metav1.ObjectMeta,
+				) (bool, error) {
+					return false, nil
+				},
+				listFreightAvailableToStageFn: func(
+					context.Context,
+					client.Client,
+					*kargoapi.Stage,
+				) ([]kargoapi.Freight, error) {
+					return nil, nil
+				},
+			},
+			req: userCreateReq,
+			promotion: &kargoapi.Promotion{
+				Spec: kargoapi.PromotionSpec{
+					Stage:   "fake-stage",
+					Freight: "older-freight",
+					Steps:   []kargoapi.PromotionStep{{}},
+				},
+			},
+			assertions: func(t *testing.T, promo *kargoapi.Promotion, err error) {
+				require.NoError(t, err)
+				require.Equal(
+					t,
+					kargoapi.AnnotationValueTrue,
+					promo.Annotations[kargoapi.AnnotationKeyRollback],
+				)
+			},
+		},
+		{
+			name: "reclassifies manual promote of older Freight as rollback (auto-promotion enabled)",
+			webhook: &webhook{
+				admissionRequestFromContextFn:    admission.RequestFromContext,
+				isRequestFromKargoControlplaneFn: func(admission.Request) bool { return false },
+				getStageFn:                       rollbackTestStageGetter(),
+				getFreightFn:                     freightGetter(olderFreight),
+				getCurrentFreightFn:              currentFreightGetter(currentByOrigin),
+				isAutoPromotionEnabledFn: func(
+					context.Context,
+					client.Client,
+					metav1.ObjectMeta,
+				) (bool, error) {
+					return true, nil
+				},
+				listFreightAvailableToStageFn: func(
+					context.Context,
+					client.Client,
+					*kargoapi.Stage,
+				) ([]kargoapi.Freight, error) {
+					return []kargoapi.Freight{*olderFreight}, nil
+				},
+			},
+			req: userCreateReq,
+			promotion: &kargoapi.Promotion{
+				Spec: kargoapi.PromotionSpec{
+					Stage:   "fake-stage",
+					Freight: "older-freight",
+					Steps:   []kargoapi.PromotionStep{{}},
+				},
+			},
+			assertions: func(t *testing.T, promo *kargoapi.Promotion, err error) {
+				require.NoError(t, err)
+				require.Equal(
+					t,
+					kargoapi.AnnotationValueTrue,
+					promo.Annotations[kargoapi.AnnotationKeyRollback],
+				)
+			},
+		},
+		{
+			name: "does not reclassify manual promote of newer Freight",
+			webhook: &webhook{
+				admissionRequestFromContextFn:    admission.RequestFromContext,
+				isRequestFromKargoControlplaneFn: func(admission.Request) bool { return false },
+				getStageFn:                       rollbackTestStageGetter(),
+				getFreightFn:                     freightGetter(newerFreight),
+				getCurrentFreightFn:              currentFreightGetter(currentByOrigin),
+			},
+			req: userCreateReq,
+			promotion: &kargoapi.Promotion{
+				Spec: kargoapi.PromotionSpec{
+					Stage:   "fake-stage",
+					Freight: "newer-freight",
+					Steps:   []kargoapi.PromotionStep{{}},
+				},
+			},
+			assertions: func(t *testing.T, promo *kargoapi.Promotion, err error) {
+				require.NoError(t, err)
+				require.NotContains(t, promo.Annotations, kargoapi.AnnotationKeyRollback)
+			},
+		},
+		{
+			// A re-promote of the current Freight (same Freight) neither
+			// advances nor regresses the Stage, so it is not a rollback.
+			name: "does not reclassify re-promote of current Freight",
+			webhook: &webhook{
+				admissionRequestFromContextFn:    admission.RequestFromContext,
+				isRequestFromKargoControlplaneFn: func(admission.Request) bool { return false },
+				getStageFn:                       rollbackTestStageGetter(),
+				getFreightFn:                     freightGetter(currentFreight),
+				getCurrentFreightFn:              currentFreightGetter(currentByOrigin),
+			},
+			req: userCreateReq,
+			promotion: &kargoapi.Promotion{
+				Spec: kargoapi.PromotionSpec{
+					Stage:   "fake-stage",
+					Freight: "current-freight",
+					Steps:   []kargoapi.PromotionStep{{}},
+				},
+			},
+			assertions: func(t *testing.T, promo *kargoapi.Promotion, err error) {
+				require.NoError(t, err)
+				require.NotContains(t, promo.Annotations, kargoapi.AnnotationKeyRollback)
+			},
+		},
+		{
+			// A fresh Stage (no current Freight for the origin) has nothing to
+			// regress below, so the promote stays a forward.
+			name: "does not reclassify when origin has no current Freight",
+			webhook: &webhook{
+				admissionRequestFromContextFn:    admission.RequestFromContext,
+				isRequestFromKargoControlplaneFn: func(admission.Request) bool { return false },
+				getStageFn:                       rollbackTestStageGetter(),
+				getFreightFn:                     freightGetter(olderFreight),
+				getCurrentFreightFn:              currentFreightGetter(map[string]*kargoapi.Freight{}),
+			},
+			req: userCreateReq,
+			promotion: &kargoapi.Promotion{
+				Spec: kargoapi.PromotionSpec{
+					Stage:   "fake-stage",
+					Freight: "older-freight",
+					Steps:   []kargoapi.PromotionStep{{}},
+				},
+			},
+			assertions: func(t *testing.T, promo *kargoapi.Promotion, err error) {
+				require.NoError(t, err)
+				require.NotContains(t, promo.Annotations, kargoapi.AnnotationKeyRollback)
+			},
+		},
+		{
+			// An explicit rollback annotation (the dedicated rollback action) is
+			// honored as-is; reclassification is additive and never strips it,
+			// even on a forward promote.
+			name: "preserves caller-set rollback annotation on forward promote",
+			webhook: &webhook{
+				admissionRequestFromContextFn:    admission.RequestFromContext,
+				isRequestFromKargoControlplaneFn: func(admission.Request) bool { return false },
+				getStageFn:                       rollbackTestStageGetter(),
+				getFreightFn:                     freightGetter(newerFreight),
+				getCurrentFreightFn:              currentFreightGetter(currentByOrigin),
+			},
+			req: userCreateReq,
+			promotion: &kargoapi.Promotion{
+				ObjectMeta: metav1.ObjectMeta{
+					Annotations: map[string]string{
+						kargoapi.AnnotationKeyRollback: kargoapi.AnnotationValueTrue,
+					},
+				},
+				Spec: kargoapi.PromotionSpec{
+					Stage:   "fake-stage",
+					Freight: "newer-freight",
+					Steps:   []kargoapi.PromotionStep{{}},
+				},
+			},
+			assertions: func(t *testing.T, promo *kargoapi.Promotion, err error) {
+				require.NoError(t, err)
+				require.Equal(
+					t,
+					kargoapi.AnnotationValueTrue,
+					promo.Annotations[kargoapi.AnnotationKeyRollback],
+				)
+			},
+		},
+		{
+			// System-generated Promotions (control-plane request, no user
+			// create-actor) carry no user intent and are left unclassified, even
+			// when the target is older than current.
+			name: "does not reclassify system-generated promote of older Freight",
+			webhook: &webhook{
+				admissionRequestFromContextFn:    admission.RequestFromContext,
+				isRequestFromKargoControlplaneFn: func(admission.Request) bool { return true },
+				getStageFn:                       rollbackTestStageGetter(),
+				getFreightFn:                     freightGetter(olderFreight),
+				getCurrentFreightFn:              currentFreightGetter(currentByOrigin),
+			},
+			req: admission.Request{
+				AdmissionRequest: admissionv1.AdmissionRequest{
+					Operation: admissionv1.Create,
+					UserInfo:  authnv1.UserInfo{Username: "system:serviceaccount:kargo:kargo-controller"},
+				},
+			},
+			promotion: &kargoapi.Promotion{
+				Spec: kargoapi.PromotionSpec{
+					Stage:   "fake-stage",
+					Freight: "older-freight",
+					Steps:   []kargoapi.PromotionStep{{}},
+				},
+			},
+			assertions: func(t *testing.T, promo *kargoapi.Promotion, err error) {
+				require.NoError(t, err)
+				require.NotContains(t, promo.Annotations, kargoapi.AnnotationKeyRollback)
+			},
+		},
+		{
+			name: "preserves rollback annotation on update",
+			webhook: &webhook{
+				admissionRequestFromContextFn:    admission.RequestFromContext,
+				isRequestFromKargoControlplaneFn: func(admission.Request) bool { return false },
+				getStageFn: func(
+					context.Context,
+					client.Client,
+					types.NamespacedName,
+				) (*kargoapi.Stage, error) {
+					return &kargoapi.Stage{}, nil
+				},
+			},
+			req: admission.Request{
+				AdmissionRequest: admissionv1.AdmissionRequest{
+					Operation: admissionv1.Update,
+					OldObject: runtime.RawExtension{
+						Object: &kargoapi.Promotion{
+							ObjectMeta: metav1.ObjectMeta{
+								Annotations: map[string]string{
+									kargoapi.AnnotationKeyRollback: kargoapi.AnnotationValueTrue,
+								},
+							},
+						},
+					},
+				},
+			},
+			promotion: &kargoapi.Promotion{
+				ObjectMeta: metav1.ObjectMeta{Annotations: map[string]string{}},
+				Spec:       kargoapi.PromotionSpec{Steps: []kargoapi.PromotionStep{{}}},
+			},
+			assertions: func(t *testing.T, promo *kargoapi.Promotion, err error) {
+				require.NoError(t, err)
+				require.Equal(
+					t,
+					kargoapi.AnnotationValueTrue,
+					promo.Annotations[kargoapi.AnnotationKeyRollback],
+				)
 			},
 		},
 	}

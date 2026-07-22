@@ -4,7 +4,6 @@ import (
 	"context"
 	"fmt"
 	"slices"
-	"strings"
 
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -129,15 +128,31 @@ func SelectAutoPromotionCandidates(
 		}
 
 		slices.SortFunc(freight, func(lhs, rhs kargoapi.Freight) int {
-			cmp := rhs.EffectiveDiscoveredAt().Compare(lhs.EffectiveDiscoveredAt())
-			if cmp != 0 {
-				return cmp
+			switch {
+			case FreightNewer(&lhs, &rhs):
+				return -1
+			case FreightNewer(&rhs, &lhs):
+				return 1
+			default:
+				return 0
 			}
-			return strings.Compare(rhs.Name, lhs.Name)
 		})
 		candidates[origin] = freight[0]
 	}
 	return candidates
+}
+
+// FreightNewer reports whether Freight a was discovered strictly after Freight
+// b. It uses the same total order as SelectAutoPromotionCandidates and the Rego
+// kargo.lib freight_newer helper: EffectiveDiscoveredAt first, then Name as a
+// deterministic tiebreak. Sharing one definition keeps the dispatch gate, the
+// Promotion webhook, and auto-promotion selection in agreement on "newer".
+func FreightNewer(a, b *kargoapi.Freight) bool {
+	ta, tb := a.EffectiveDiscoveredAt(), b.EffectiveDiscoveredAt()
+	if !ta.Equal(tb) {
+		return ta.After(tb)
+	}
+	return a.Name > b.Name
 }
 
 // SetAutoPromotionHoldAnnotation stamps promo with AnnotationKeyAutoPromotionHold

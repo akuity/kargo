@@ -54,6 +54,12 @@ type webhook struct {
 		types.NamespacedName,
 	) (*kargoapi.Freight, error)
 
+	getCurrentFreightFn func(
+		context.Context,
+		client.Client,
+		*kargoapi.Stage,
+	) (map[string]*kargoapi.Freight, error)
+
 	listFreightAvailableToStageFn func(
 		context.Context,
 		client.Client,
@@ -130,6 +136,7 @@ func newWebhook(
 		sender:  sender,
 	}
 	w.getFreightFn = api.GetFreight
+	w.getCurrentFreightFn = api.GetCurrentFreight
 	w.listFreightAvailableToStageFn = api.ListFreightAvailableToStage
 	w.getStageFn = api.GetStage
 	w.isAutoPromotionEnabledFn = api.IsAutoPromotionEnabled
@@ -270,6 +277,7 @@ func (w *webhook) Default(ctx context.Context, obj runtime.Object) error {
 			return apierrors.NewInternalError(err)
 		}
 
+		w.reclassifyRollback(ctx, req, promo, stage)
 		w.syncHoldAnnotations(ctx, req, promo, stage)
 	case admissionv1.Update:
 		// We need to decode the old object manually since controller-runtime
@@ -292,6 +300,10 @@ func (w *webhook) Default(ctx context.Context, obj runtime.Object) error {
 		preserveAnnotation(kargoapi.AnnotationKeyCreateActor)
 		preserveAnnotation(kargoapi.AnnotationKeyAutoPromotionHold)
 		preserveAnnotation(kargoapi.AnnotationKeyAutoPromotionResume)
+		// The rollback class is inferred at create (reclassifyRollback) or set
+		// by the explicit rollback action; either way it drives the dispatch
+		// class, so it must not be changed after admission.
+		preserveAnnotation(kargoapi.AnnotationKeyRollback)
 
 		// Enrich the annotation with the actor and control plane information.
 		w.setAbortAnnotationActor(req, oldPromo, promo)
@@ -349,6 +361,77 @@ func (w *webhook) resolveOriginToFreight(
 		)
 	}
 	return &candidate, nil
+}
+
+// reclassifyRollback infers the rollback class for a user-initiated manual
+// promote whose target Freight is older than the Stage's current Freight for
+// the same origin, stamping AnnotationKeyRollback so dispatch.ClassOf reports
+// rollback. That gives an operator's manual restore of older Freight the
+// rollback class's treatment (dispatch priority and freeze-exemption) instead
+// of being classed a forward and wrongly held by a no-forward freeze.
+//
+// Unlike syncHoldAnnotations, this runs regardless of whether auto-promotion is
+// enabled: the rollback class is a dispatch-gate concept independent of
+// auto-promotion. It is additive — an explicit rollback annotation set by the
+// caller (the dedicated rollback action) is honored as-is and never stripped,
+// and a forward promote is left unclassified. "Older" uses api.FreightNewer,
+// the same total order as auto-promotion selection and the Rego freight_newer
+// helper, so the webhook and the gate agree. Best-effort: a fetch error is
+// logged and leaves the Promotion unclassified rather than blocking creation.
+func (w *webhook) reclassifyRollback(
+	ctx context.Context,
+	req admission.Request,
+	promo *kargoapi.Promotion,
+	stage *kargoapi.Stage,
+) {
+	// System-generated Promotions carry no user intent; leave them untouched
+	// (auto-promotions always target the newest Freight, never older than
+	// current, so they would never qualify anyway). Same identity check as
+	// syncHoldAnnotations.
+	if w.isRequestFromKargoControlplaneFn(req) {
+		actor := promo.Annotations[kargoapi.AnnotationKeyCreateActor]
+		if actor == "" || strings.HasPrefix(actor, kargoapi.EventActorControllerPrefix) {
+			return
+		}
+	}
+	// Additive only: an explicit rollback annotation is honored as-is.
+	if promo.Annotations[kargoapi.AnnotationKeyRollback] == kargoapi.AnnotationValueTrue {
+		return
+	}
+	if w.getCurrentFreightFn == nil || w.getFreightFn == nil || promo.Spec.Freight == "" {
+		return
+	}
+	logger := logging.LoggerFromContext(ctx)
+	target, err := w.getFreightFn(ctx, w.client, types.NamespacedName{
+		Namespace: promo.Namespace,
+		Name:      promo.Spec.Freight,
+	})
+	if err != nil {
+		logger.Error(err, "skipping rollback reclassification")
+		return
+	}
+	if target == nil {
+		return
+	}
+	currentByOrigin, err := w.getCurrentFreightFn(ctx, w.client, stage)
+	if err != nil {
+		logger.Error(err, "skipping rollback reclassification")
+		return
+	}
+	current, ok := currentByOrigin[target.Origin.String()]
+	if !ok {
+		// No current Freight for this origin (fresh Stage, or the current
+		// Freight was garbage-collected): nothing to regress below.
+		return
+	}
+	if api.FreightNewer(current, target) {
+		// The target is strictly older than the current Freight: this promote
+		// moves the Stage backward, so it is a rollback.
+		if promo.Annotations == nil {
+			promo.Annotations = make(map[string]string, 1)
+		}
+		promo.Annotations[kargoapi.AnnotationKeyRollback] = kargoapi.AnnotationValueTrue
+	}
 }
 
 // syncHoldAnnotations stamps the correct hold/resume intent annotation on a

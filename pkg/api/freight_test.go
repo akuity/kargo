@@ -121,6 +121,105 @@ func TestGetFreight(t *testing.T) {
 	}
 }
 
+func TestGetCurrentFreight(t *testing.T) {
+	scheme := k8sruntime.NewScheme()
+	require.NoError(t, kargoapi.AddToScheme(scheme))
+
+	const testProject = "fake-project"
+	originA := kargoapi.FreightOrigin{Kind: kargoapi.FreightOriginKindWarehouse, Name: "warehouse-a"}
+	originB := kargoapi.FreightOrigin{Kind: kargoapi.FreightOriginKindWarehouse, Name: "warehouse-b"}
+
+	twoOriginStage := func() *kargoapi.Stage {
+		return &kargoapi.Stage{
+			ObjectMeta: metav1.ObjectMeta{Namespace: testProject, Name: "fake-stage"},
+			Status: kargoapi.StageStatus{
+				FreightHistory: kargoapi.FreightHistory{{
+					Freight: map[string]kargoapi.FreightReference{
+						originA.String(): {Name: "freight-a", Origin: originA},
+						originB.String(): {Name: "freight-b", Origin: originB},
+					},
+				}},
+			},
+		}
+	}
+
+	testCases := []struct {
+		name        string
+		stage       *kargoapi.Stage
+		objects     []client.Object
+		interceptor interceptor.Funcs
+		assertions  func(*testing.T, map[string]*kargoapi.Freight, error)
+	}{
+		{
+			name:  "resolves current Freight for each origin",
+			stage: twoOriginStage(),
+			objects: []client.Object{
+				&kargoapi.Freight{ObjectMeta: metav1.ObjectMeta{Namespace: testProject, Name: "freight-a"}},
+				&kargoapi.Freight{ObjectMeta: metav1.ObjectMeta{Namespace: testProject, Name: "freight-b"}},
+			},
+			assertions: func(t *testing.T, current map[string]*kargoapi.Freight, err error) {
+				require.NoError(t, err)
+				require.Len(t, current, 2)
+				require.Equal(t, "freight-a", current[originA.String()].Name)
+				require.Equal(t, "freight-b", current[originB.String()].Name)
+			},
+		},
+		{
+			name:  "omits origin whose Freight is gone",
+			stage: twoOriginStage(),
+			objects: []client.Object{
+				// freight-b is intentionally absent (garbage-collected).
+				&kargoapi.Freight{ObjectMeta: metav1.ObjectMeta{Namespace: testProject, Name: "freight-a"}},
+			},
+			assertions: func(t *testing.T, current map[string]*kargoapi.Freight, err error) {
+				require.NoError(t, err)
+				require.Len(t, current, 1)
+				require.Contains(t, current, originA.String())
+				require.NotContains(t, current, originB.String())
+			},
+		},
+		{
+			name:  "empty when no current Freight",
+			stage: &kargoapi.Stage{ObjectMeta: metav1.ObjectMeta{Namespace: testProject, Name: "fake-stage"}},
+			assertions: func(t *testing.T, current map[string]*kargoapi.Freight, err error) {
+				require.NoError(t, err)
+				require.Empty(t, current)
+			},
+		},
+		{
+			name:  "fetch error fails closed",
+			stage: twoOriginStage(),
+			interceptor: interceptor.Funcs{
+				Get: func(
+					context.Context,
+					client.WithWatch,
+					client.ObjectKey,
+					client.Object,
+					...client.GetOption,
+				) error {
+					return errors.New("something went wrong")
+				},
+			},
+			assertions: func(t *testing.T, current map[string]*kargoapi.Freight, err error) {
+				require.ErrorContains(t, err, "error getting current Freight")
+				require.ErrorContains(t, err, "something went wrong")
+				require.Nil(t, current)
+			},
+		},
+	}
+
+	for _, testCase := range testCases {
+		t.Run(testCase.name, func(t *testing.T) {
+			c := fake.NewClientBuilder().WithScheme(scheme).
+				WithObjects(testCase.objects...).
+				WithInterceptorFuncs(testCase.interceptor).
+				Build()
+			current, err := GetCurrentFreight(t.Context(), c, testCase.stage)
+			testCase.assertions(t, current, err)
+		})
+	}
+}
+
 func TestGetFreightByAlias(t *testing.T) {
 	scheme := k8sruntime.NewScheme()
 	require.NoError(t, kargoapi.SchemeBuilder.AddToScheme(scheme))

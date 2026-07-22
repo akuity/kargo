@@ -139,6 +139,42 @@ func GetFreight(
 	return &freight, nil
 }
 
+// GetCurrentFreight resolves the Stage's current Freight, per origin, to the
+// Freight objects. The FreightHistory carries only FreightReferences, which
+// have no discovery time, so each current Freight is fetched so callers can
+// read its EffectiveDiscoveredAt. The result is keyed by origin (the canonical
+// origin.String()). Origins whose Freight can no longer be found (e.g.
+// garbage-collected) are omitted; any other fetch error fails closed. Returns
+// an empty map when the Stage has no current Freight.
+func GetCurrentFreight(
+	ctx context.Context,
+	c client.Client,
+	stage *kargoapi.Stage,
+) (map[string]*kargoapi.Freight, error) {
+	current := stage.Status.FreightHistory.Current()
+	if current == nil {
+		return map[string]*kargoapi.Freight{}, nil
+	}
+	resolved := make(map[string]*kargoapi.Freight, len(current.Freight))
+	for origin, ref := range current.Freight {
+		freight, err := GetFreight(ctx, c, types.NamespacedName{
+			Namespace: stage.Namespace,
+			Name:      ref.Name,
+		})
+		if err != nil {
+			return nil, fmt.Errorf(
+				"error getting current Freight %q for origin %q: %w",
+				ref.Name, origin, err,
+			)
+		}
+		if freight == nil {
+			continue
+		}
+		resolved[origin] = freight
+	}
+	return resolved, nil
+}
+
 // GetFreightByAlias returns a pointer to the Freight resource specified by the
 // project and alias arguments. If no such resource is found, nil is returned
 // instead.

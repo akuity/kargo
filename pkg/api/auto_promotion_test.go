@@ -487,6 +487,60 @@ func TestSelectAutoPromotionCandidates(t *testing.T) {
 	}
 }
 
+func TestFreightNewer(t *testing.T) {
+	base := metav1.NewTime(time.Date(2026, 7, 15, 12, 0, 0, 0, time.UTC))
+	later := metav1.NewTime(time.Date(2026, 7, 15, 18, 0, 0, 0, time.UTC))
+
+	freight := func(name string, discoveredAt metav1.Time) *kargoapi.Freight {
+		return &kargoapi.Freight{
+			ObjectMeta:   metav1.ObjectMeta{Name: name},
+			DiscoveredAt: &discoveredAt,
+		}
+	}
+
+	testCases := []struct {
+		name     string
+		a, b     *kargoapi.Freight
+		expected bool
+	}{
+		{
+			name:     "a discovered later",
+			a:        freight("x", later),
+			b:        freight("y", base),
+			expected: true,
+		},
+		{
+			name:     "a discovered earlier",
+			a:        freight("x", base),
+			b:        freight("y", later),
+			expected: false,
+		},
+		{
+			name:     "equal time, a name greater",
+			a:        freight("b", base),
+			b:        freight("a", base),
+			expected: true,
+		},
+		{
+			name:     "equal time, a name lesser",
+			a:        freight("a", base),
+			b:        freight("b", base),
+			expected: false,
+		},
+		{
+			name:     "identical Freight",
+			a:        freight("a", base),
+			b:        freight("a", base),
+			expected: false,
+		},
+	}
+	for _, testCase := range testCases {
+		t.Run(testCase.name, func(t *testing.T) {
+			require.Equal(t, testCase.expected, FreightNewer(testCase.a, testCase.b))
+		})
+	}
+}
+
 func TestSetAutoPromotionHoldAnnotation(t *testing.T) {
 	origin := kargoapi.FreightOrigin{Kind: kargoapi.FreightOriginKindWarehouse, Name: "fake-warehouse"}
 	promo := &kargoapi.Promotion{
