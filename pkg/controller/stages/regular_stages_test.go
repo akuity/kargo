@@ -652,6 +652,55 @@ func releaseHoldAnnotations(origin kargoapi.FreightOrigin) map[string]string {
 	return promo.Annotations
 }
 
+func TestComparePromotionCompletion(t *testing.T) {
+	earlier := metav1.Now()
+	later := metav1.NewTime(earlier.Add(time.Hour))
+	tests := []struct {
+		name   string
+		aName  string
+		aFin   *metav1.Time
+		bName  string
+		bFin   *metav1.Time
+		assert func(*testing.T, int)
+	}{
+		{
+			name:  "earlier completion sorts before later",
+			aName: "z", aFin: &earlier,
+			bName: "a", bFin: &later,
+			assert: func(t *testing.T, r int) { assert.Negative(t, r) },
+		},
+		{
+			name:  "later completion sorts after earlier",
+			aName: "a", aFin: &later,
+			bName: "z", bFin: &earlier,
+			assert: func(t *testing.T, r int) { assert.Positive(t, r) },
+		},
+		{
+			name:  "equal completion falls back to name",
+			aName: "a", aFin: &earlier,
+			bName: "b", bFin: &earlier,
+			assert: func(t *testing.T, r int) { assert.Negative(t, r) },
+		},
+		{
+			name:  "nil completion falls back to name",
+			aName: "b", aFin: nil,
+			bName: "a", bFin: &earlier,
+			assert: func(t *testing.T, r int) { assert.Positive(t, r) },
+		},
+		{
+			name:  "both nil and equal names compare equal",
+			aName: "a", aFin: nil,
+			bName: "a", bFin: nil,
+			assert: func(t *testing.T, r int) { assert.Zero(t, r) },
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			tt.assert(t, comparePromotionCompletion(tt.aName, tt.aFin, tt.bName, tt.bFin))
+		})
+	}
+}
+
 func TestRegularStageReconciler_syncPromotions(t *testing.T) {
 	scheme := runtime.NewScheme()
 	require.NoError(t, kargoapi.AddToScheme(scheme))
@@ -1821,6 +1870,148 @@ func TestRegularStageReconciler_syncPromotions(t *testing.T) {
 
 				assert.Equal(t, "promotion-2", status.LastPromotion.Name)
 				assert.Empty(t, status.FreightHistory)
+			},
+		},
+		{
+			// AX9 / T1: the dispatch gate can run a higher-ULID Promotion
+			// (e.g. a rollback) before a lower-ULID one (a frozen forward),
+			// so the lower-ULID Promotion completes LATER. The watermark is
+			// advanced by completion time, not ULID, so the later-completing
+			// lower-ULID Promotion is still recorded rather than skipped.
+			name: "records out-of-order completion below the ULID watermark",
+			stage: &kargoapi.Stage{
+				ObjectMeta: metav1.ObjectMeta{
+					Namespace: "fake-project",
+					Name:      "test-stage",
+				},
+				Status: kargoapi.StageStatus{
+					// The higher-ULID Promotion ran and completed first
+					// (hourAgo), advancing the watermark.
+					CurrentPromotion: &kargoapi.PromotionReference{
+						Name: "test-stage.01",
+					},
+					LastPromotion: &kargoapi.PromotionReference{
+						Name:       "test-stage.02",
+						FinishedAt: &metav1.Time{Time: hourAgo},
+					},
+				},
+			},
+			objects: []client.Object{
+				// Lower-ULID forward that completed LATER than the watermark.
+				&kargoapi.Promotion{
+					ObjectMeta: metav1.ObjectMeta{
+						Name:      "test-stage.01",
+						Namespace: "fake-project",
+					},
+					Spec: kargoapi.PromotionSpec{Stage: "test-stage"},
+					Status: kargoapi.PromotionStatus{
+						Phase:      kargoapi.PromotionPhaseSucceeded,
+						FinishedAt: &metav1.Time{Time: now},
+						FreightCollection: &kargoapi.FreightCollection{
+							ID: "forward-collection",
+							Freight: map[string]kargoapi.FreightReference{
+								"warehouse-1": {Name: "forward-freight"},
+							},
+						},
+					},
+				},
+				// Higher-ULID Promotion already recorded (completion equals
+				// the watermark), so it must not be replayed again.
+				&kargoapi.Promotion{
+					ObjectMeta: metav1.ObjectMeta{
+						Name:      "test-stage.02",
+						Namespace: "fake-project",
+					},
+					Spec: kargoapi.PromotionSpec{Stage: "test-stage"},
+					Status: kargoapi.PromotionStatus{
+						Phase:      kargoapi.PromotionPhaseSucceeded,
+						FinishedAt: &metav1.Time{Time: hourAgo},
+						FreightCollection: &kargoapi.FreightCollection{
+							ID: "rollback-collection",
+							Freight: map[string]kargoapi.FreightReference{
+								"warehouse-1": {Name: "rollback-freight"},
+							},
+						},
+					},
+				},
+			},
+			assertions: func(t *testing.T, status kargoapi.StageStatus, res promoSyncResult, err error) {
+				require.NoError(t, err)
+				assert.False(t, res.hasNonTerminalPromotions)
+
+				// The later-completing, lower-ULID forward is recorded and the
+				// watermark advances to it. (The old ULID break dropped it.)
+				require.NotNil(t, status.LastPromotion)
+				assert.Equal(t, "test-stage.01", status.LastPromotion.Name)
+
+				// Only the forward is newly recorded; the already-recorded
+				// Promotion (completion equals watermark) is not replayed.
+				require.Len(t, status.FreightHistory, 1)
+				assert.Equal(t, "forward-collection", status.FreightHistory[0].ID)
+			},
+		},
+		{
+			// Timestamps are second-granular after a round-trip, so ties are
+			// possible; the watermark comparator falls back to ULID name to
+			// keep replay deterministic.
+			name: "same-second completions replay in ULID-name order",
+			stage: &kargoapi.Stage{
+				ObjectMeta: metav1.ObjectMeta{
+					Namespace: "fake-project",
+					Name:      "test-stage",
+				},
+				Status: kargoapi.StageStatus{
+					CurrentPromotion: &kargoapi.PromotionReference{
+						Name: "test-stage.bb",
+					},
+				},
+			},
+			objects: []client.Object{
+				&kargoapi.Promotion{
+					ObjectMeta: metav1.ObjectMeta{
+						Name:      "test-stage.aa",
+						Namespace: "fake-project",
+					},
+					Spec: kargoapi.PromotionSpec{Stage: "test-stage"},
+					Status: kargoapi.PromotionStatus{
+						Phase:      kargoapi.PromotionPhaseSucceeded,
+						FinishedAt: &metav1.Time{Time: now},
+						FreightCollection: &kargoapi.FreightCollection{
+							ID: "aa-collection",
+							Freight: map[string]kargoapi.FreightReference{
+								"warehouse-1": {Name: "aa-freight"},
+							},
+						},
+					},
+				},
+				&kargoapi.Promotion{
+					ObjectMeta: metav1.ObjectMeta{
+						Name:      "test-stage.bb",
+						Namespace: "fake-project",
+					},
+					Spec: kargoapi.PromotionSpec{Stage: "test-stage"},
+					Status: kargoapi.PromotionStatus{
+						Phase:      kargoapi.PromotionPhaseSucceeded,
+						FinishedAt: &metav1.Time{Time: now},
+						FreightCollection: &kargoapi.FreightCollection{
+							ID: "bb-collection",
+							Freight: map[string]kargoapi.FreightReference{
+								"warehouse-1": {Name: "bb-freight"},
+							},
+						},
+					},
+				},
+			},
+			assertions: func(t *testing.T, status kargoapi.StageStatus, _ promoSyncResult, err error) {
+				require.NoError(t, err)
+
+				// Both are recorded; "bb" sorts last by name, so it is the
+				// final watermark and (Record prepends) history[0].
+				require.Len(t, status.FreightHistory, 2)
+				assert.Equal(t, "bb-collection", status.FreightHistory[0].ID)
+				assert.Equal(t, "aa-collection", status.FreightHistory[1].ID)
+				require.NotNil(t, status.LastPromotion)
+				assert.Equal(t, "test-stage.bb", status.LastPromotion.Name)
 			},
 		},
 		{
@@ -8146,6 +8337,109 @@ func TestRegularStageReconciler_autoPromoteFreight(t *testing.T) {
 					}
 				}
 				assert.Equal(t, 1, created)
+			},
+		},
+		{
+			// AX9 consistency: out-of-order completion. A hold-intent
+			// Promotion has a LOWER ULID than the watermark but completed
+			// LATER, so syncPromotions has not recorded its outcome yet and
+			// auto-promotion must stand down. A ULID-name check would wrongly
+			// treat it as recorded (lower name) and supersede the Freight it
+			// just held -- the #3016 loop.
+			name: "skips promotion when a hold-intent Promotion completed after the watermark despite a lower ULID",
+			stage: &kargoapi.Stage{
+				ObjectMeta: metav1.ObjectMeta{
+					Namespace: "fake-project",
+					Name:      "test-stage",
+				},
+				Spec: kargoapi.StageSpec{
+					RequestedFreight: []kargoapi.FreightRequest{{
+						Origin: kargoapi.FreightOrigin{
+							Kind: kargoapi.FreightOriginKindWarehouse,
+							Name: "test-warehouse",
+						},
+						Sources: kargoapi.FreightSources{Direct: true},
+					}},
+					PromotionTemplate: &kargoapi.PromotionTemplate{
+						Spec: kargoapi.PromotionTemplateSpec{
+							Steps: []kargoapi.PromotionStep{{Uses: "fake-step"}},
+						},
+					},
+				},
+				Status: kargoapi.StageStatus{
+					// The watermark points at a higher-ULID Promotion that
+					// completed EARLIER (hourAgo). No hold is recorded yet.
+					LastPromotion: &kargoapi.PromotionReference{
+						Name:       "test-stage.2-forward-promo",
+						FinishedAt: &metav1.Time{Time: hourAgo},
+					},
+				},
+			},
+			objects: []client.Object{
+				&kargoapi.ProjectConfig{
+					ObjectMeta: metav1.ObjectMeta{
+						Name:      "fake-project",
+						Namespace: "fake-project",
+					},
+					Spec: kargoapi.ProjectConfigSpec{
+						PromotionPolicies: []kargoapi.PromotionPolicy{{
+							Stage:                "test-stage",
+							AutoPromotionEnabled: true,
+						}},
+					},
+				},
+				&kargoapi.Warehouse{
+					ObjectMeta: metav1.ObjectMeta{
+						Namespace: "fake-project",
+						Name:      "test-warehouse",
+					},
+				},
+				&kargoapi.Freight{
+					ObjectMeta: metav1.ObjectMeta{
+						Namespace:         "fake-project",
+						Name:              "test-freight-new",
+						CreationTimestamp: metav1.Time{Time: now},
+					},
+					Origin: kargoapi.FreightOrigin{
+						Kind: kargoapi.FreightOriginKindWarehouse,
+						Name: "test-warehouse",
+					},
+				},
+				&kargoapi.Promotion{
+					ObjectMeta: metav1.ObjectMeta{
+						Namespace: "fake-project",
+						Name:      "test-stage.1-hold-promo",
+						Annotations: map[string]string{
+							kargoapi.AnnotationKeyAutoPromotionHold: "Warehouse/test-warehouse",
+						},
+					},
+					Spec: kargoapi.PromotionSpec{
+						Stage:   "test-stage",
+						Freight: "test-freight-old",
+					},
+					Status: kargoapi.PromotionStatus{
+						Phase:      kargoapi.PromotionPhaseSucceeded,
+						FinishedAt: &metav1.Time{Time: now},
+					},
+				},
+			},
+			assertions: func(
+				t *testing.T,
+				_ *fakeevent.EventRecorder,
+				c client.Client,
+				status kargoapi.StageStatus,
+				err error,
+			) {
+				require.NoError(t, err)
+				assert.True(t, status.AutoPromotionEnabled)
+
+				// Auto-promotion stood down: no new Promotion was created.
+				promoList := &kargoapi.PromotionList{}
+				require.NoError(t, c.List(
+					t.Context(), promoList, client.InNamespace("fake-project"),
+				))
+				require.Len(t, promoList.Items, 1)
+				assert.Equal(t, "test-stage.1-hold-promo", promoList.Items[0].Name)
 			},
 		},
 		{
