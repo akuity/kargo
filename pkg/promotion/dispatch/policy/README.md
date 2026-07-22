@@ -9,7 +9,7 @@ dispatched. Directory structure matches package layout:
 | `kargo/lib/windows/windows.rego` | `kargo.lib.windows` | Holds forward promotions outside promotion windows |
 | `kargo/lib/freezes/freezes.rego` | `kargo.lib.freezes` | Holds promotions during system-wide freezes |
 | `kargo/lib/ratelimit/ratelimit.rego` | `kargo.lib.ratelimit` | Rolling-window rate limit on automatic dispatch |
-| `kargo/lib/lib.rego` | `kargo.lib` | Building blocks for custom policies (`kargo.is_forward`, `kargo.is_semver_patch`) |
+| `kargo/lib/lib.rego` | `kargo.lib` | Building blocks for custom policies (`kargo.is_forward`, `kargo.is_semver_patch`, `kargo.advances`/`kargo.regresses`) |
 | `kargo/project/project.rego` | `kargo.project` | Extension-point defaults for the project custom policy |
 | `kargo/cluster/cluster.rego` | `kargo.cluster` | Extension-point defaults for the cluster custom policy |
 
@@ -43,7 +43,8 @@ Both packages expose the same hook points, inert when unused:
   modules default it to `false`; a custom policy overrides it.
 
 The aliased import puts the `kargo.lib` building blocks one qualifier
-away: `kargo.is_forward`, `kargo.is_semver_patch(old, new)`.
+away: `kargo.is_forward`, `kargo.is_semver_patch(old, new)`, and the
+Freight-ordering helpers below.
 
 Alongside the per-candidate `input`, a custom policy can read `data.queue`
 — the Stage's Promotions awaiting dispatch, in gate order, each `{name,
@@ -52,6 +53,35 @@ class, createdAt}`. A policy locates the candidate under evaluation by
 rollback, or growing conservative under a deep backlog. The queue reports
 true depth (it is not capped at the gate's evaluation limit); dispositions
 are re-derived by the policy, not fed back from prior evaluations.
+
+### Freight ordering (does this advance or regress the Stage?)
+
+A promotion moves the Stage *forward* or *backward* by the discovery time
+of its Freight, per origin. The candidate's discovery time is
+`input.freight.discoveredAt`; the Stage's current Freight per origin is
+`data.currentFreight` (keyed by origin, each `{name, discoveredAt}`,
+resolved by the gate). `kargo.lib` turns these into ready predicates that
+mirror the controller's auto-promotion ordering key (`EffectiveDiscoveredAt`,
+then name as a tiebreak), so a policy and auto-selection never disagree on
+"newer":
+
+- `kargo.freight_newer(a, b)` — Freight `a` was discovered strictly after `b`.
+- `kargo.current_freight` — the current Freight for the candidate's origin;
+  undefined on a fresh origin (nothing deployed yet).
+- `kargo.advances` — the candidate is strictly newer than current (moves
+  forward).
+- `kargo.regresses` — the candidate is strictly older than current (moves
+  backward). A re-promote of the *current* Freight is neither.
+
+All are undefined (hence false) when there is no current Freight for the
+origin or a `discoveredAt` is absent, so a policy needs no presence guard —
+e.g. hold a promotion that would move the Stage backward:
+
+```rego
+violation contains {"rule": "no-regress", "msg": "would move the stage backward"} if {
+	kargo.regresses
+}
+```
 
 The canonical example — an operator-defined hotfix lane through every
 freeze, typically a **cluster** custom policy. Hotfix semantics live in
@@ -87,8 +117,9 @@ that compile-error line numbers are offset by the prepended header.
   `input.freight`, `input.stage`, `input.project`, `input.applications`,
   `input.now`)
 - `windows.json`, `freezes.json`, `scopes.json`, `ratelimit.json`,
-  `queue.json` — the `data.windows`, `data.freezes`, `data.scopes`,
-  `data.rateLimit`, and `data.queue` documents
+  `queue.json`, `currentFreight.json` — the `data.windows`, `data.freezes`,
+  `data.scopes`, `data.rateLimit`, `data.queue`, and `data.currentFreight`
+  documents
 
 Each schema is registered with the compiler as `schema.<basename>`. The
 standard library declares what it consumes via `# METADATA ... schemas:`

@@ -81,13 +81,25 @@ func BuildInput(
 	return input
 }
 
+// CurrentFreight is a Stage's current Freight for one origin, paired with its
+// discovery time. A FreightReference (all the FreightHistory carries) has no
+// discovery time, so the gate caller resolves the Freight object to obtain it
+// and passes the result to BuildData.
+type CurrentFreight struct {
+	Name         string
+	DiscoveredAt time.Time
+}
+
 // BuildData assembles the policy data document for one Stage. projectSpec
 // and project may be nil. dispatches are the times at which the Stage's
 // recent promotions were dispatched (began Running), for rate limiting.
 // queue is the Stage's Promotions awaiting dispatch, in the order the gate
 // considers them, so a policy can reason about the rest of the backlog (e.g.
 // yield to a queued rollback, or grow conservative under a deep backlog).
-// Freezes whose ProjectSelector does not match the Project are omitted.
+// currentFreight is the Stage's current Freight per origin, so a policy can
+// tell whether a candidate advances or regresses the Stage (data.currentFreight,
+// keyed by origin). Freezes whose ProjectSelector does not match the Project
+// are omitted.
 func BuildData(
 	projectSpec *kargoapi.ProjectConfigSpec,
 	freezes []kargoapi.PromotionFreeze,
@@ -95,6 +107,7 @@ func BuildData(
 	project *kargoapi.Project,
 	dispatches []time.Time,
 	queue []kargoapi.Promotion,
+	currentFreight map[string]CurrentFreight,
 ) (map[string]any, error) {
 	windows := []any{}
 	rateLimit := map[string]any{}
@@ -157,12 +170,30 @@ func BuildData(
 		})
 	}
 	return map[string]any{
-		"windows":   windows,
-		"freezes":   freezeDocs,
-		"scopes":    defaultScopes,
-		"rateLimit": rateLimit,
-		"queue":     queueDocs(queue),
+		"windows":        windows,
+		"freezes":        freezeDocs,
+		"scopes":         defaultScopes,
+		"rateLimit":      rateLimit,
+		"queue":          queueDocs(queue),
+		"currentFreight": currentFreightDocs(currentFreight),
 	}, nil
+}
+
+// currentFreightDocs projects the Stage's current Freight per origin into
+// policy documents, keyed by origin. Each entry carries the current Freight's
+// name and discovery time (RFC3339), so a policy can compare the candidate's
+// Freight clock against the origin it would replace (kargo.advances /
+// kargo.regresses). An origin with no resolvable current Freight is absent, so
+// the comparison for that origin is simply undefined (the policy fails open).
+func currentFreightDocs(currentFreight map[string]CurrentFreight) map[string]any {
+	docs := make(map[string]any, len(currentFreight))
+	for origin, cf := range currentFreight {
+		docs[origin] = map[string]any{
+			"name":         cf.Name,
+			"discoveredAt": cf.DiscoveredAt.UTC().Format(time.RFC3339),
+		}
+	}
+	return docs
 }
 
 // queueDocs projects the Promotions awaiting dispatch into policy documents,
@@ -241,12 +272,13 @@ func freightDoc(freight *kargoapi.Freight) map[string]any {
 		return map[string]any{}
 	}
 	return map[string]any{
-		"name":    freight.Name,
-		"alias":   freight.Alias,
-		"origin":  freight.Origin.String(),
-		"images":  imageDocs(freight.Images),
-		"commits": commitDocs(freight.Commits),
-		"charts":  chartDocs(freight.Charts),
+		"name":         freight.Name,
+		"alias":        freight.Alias,
+		"origin":       freight.Origin.String(),
+		"discoveredAt": freight.EffectiveDiscoveredAt().UTC().Format(time.RFC3339),
+		"images":       imageDocs(freight.Images),
+		"commits":      commitDocs(freight.Commits),
+		"charts":       chartDocs(freight.Charts),
 	}
 }
 

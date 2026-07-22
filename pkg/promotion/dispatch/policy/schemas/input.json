@@ -29,6 +29,7 @@
         "name": {"type": "string"},
         "alias": {"type": "string"},
         "origin": {"type": "string"},
+        "discoveredAt": {"type": "string", "description": "RFC3339; the Freight's EffectiveDiscoveredAt."},
         "images": {
           "type": "array",
           "items": {

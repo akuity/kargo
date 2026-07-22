@@ -190,7 +190,14 @@ func TestBuildData(t *testing.T) {
 		},
 	}}
 
-	data, err := BuildData(projectSpec, freezes, stage, nil, []time.Time{dispatched}, queue)
+	currentFreight := map[string]CurrentFreight{
+		"Warehouse/demo/nginx": {
+			Name:         "freight-cur",
+			DiscoveredAt: time.Date(2026, 7, 15, 14, 0, 0, 0, time.UTC),
+		},
+	}
+
+	data, err := BuildData(projectSpec, freezes, stage, nil, []time.Time{dispatched}, queue, currentFreight)
 	require.NoError(t, err)
 
 	// Only the window whose selector matches this Stage is projected.
@@ -226,17 +233,24 @@ func TestBuildData(t *testing.T) {
 		"class":     ClassRollback,
 		"createdAt": "2026-07-15T14:30:00Z",
 	}}, data["queue"])
+
+	// The current Freight projects per origin as {name, discoveredAt}.
+	require.Equal(t, map[string]any{"Warehouse/demo/nginx": map[string]any{
+		"name":         "freight-cur",
+		"discoveredAt": "2026-07-15T14:00:00Z",
+	}}, data["currentFreight"])
 }
 
 func TestBuildDataNilPolicy(t *testing.T) {
 	t.Parallel()
 	stage := &kargoapi.Stage{ObjectMeta: metav1.ObjectMeta{Name: "prod"}}
-	data, err := BuildData(nil, nil, stage, nil, nil, nil)
+	data, err := BuildData(nil, nil, stage, nil, nil, nil, nil)
 	require.NoError(t, err)
 	require.Empty(t, data["windows"])
 	require.Empty(t, data["freezes"])
 	require.Empty(t, data["rateLimit"])
 	require.Empty(t, data["queue"])
+	require.Empty(t, data["currentFreight"])
 }
 
 func TestBuildDataProjectSelector(t *testing.T) {
@@ -347,7 +361,7 @@ func TestBuildDataProjectSelector(t *testing.T) {
 	for _, testCase := range testCases {
 		t.Run(testCase.name, func(t *testing.T) {
 			t.Parallel()
-			data, err := BuildData(nil, freeze(testCase.selector), stage, testCase.project, nil, nil)
+			data, err := BuildData(nil, freeze(testCase.selector), stage, testCase.project, nil, nil, nil)
 			testCase.assert(t, data, err)
 		})
 	}
@@ -366,9 +380,10 @@ func TestBuildInput(t *testing.T) {
 		},
 	}
 	freight := &kargoapi.Freight{
-		ObjectMeta: metav1.ObjectMeta{Name: "freight-1"},
-		Alias:      "salty-pike",
-		Images:     []kargoapi.Image{{RepoURL: "example/nginx", Tag: "1.2.4"}},
+		ObjectMeta:   metav1.ObjectMeta{Name: "freight-1"},
+		Alias:        "salty-pike",
+		DiscoveredAt: &metav1.Time{Time: now.Add(-2 * time.Hour)},
+		Images:       []kargoapi.Image{{RepoURL: "example/nginx", Tag: "1.2.4"}},
 	}
 	stage := &kargoapi.Stage{
 		ObjectMeta: metav1.ObjectMeta{
@@ -405,6 +420,7 @@ func TestBuildInput(t *testing.T) {
 	require.True(t, ok)
 	require.Equal(t, "freight-1", freightDoc["name"])
 	require.Equal(t, "salty-pike", freightDoc["alias"])
+	require.Equal(t, "2026-07-15T13:00:00Z", freightDoc["discoveredAt"])
 	require.Equal(t,
 		[]any{map[string]any{"repoURL": "example/nginx", "tag": "1.2.4", "digest": ""}},
 		freightDoc["images"],
@@ -441,4 +457,71 @@ func TestBuildInputNilSafety(t *testing.T) {
 	stageDoc, ok := input["stage"].(map[string]any)
 	require.True(t, ok)
 	require.Equal(t, map[string]any{}, stageDoc["lastPromotion"])
+}
+
+func TestFreightDocDiscoveredAt(t *testing.T) {
+	t.Parallel()
+	created := time.Date(2026, 7, 15, 12, 0, 0, 0, time.UTC)
+	discovered := time.Date(2026, 7, 15, 14, 0, 0, 0, time.UTC)
+
+	t.Run("uses DiscoveredAt when set", func(t *testing.T) {
+		t.Parallel()
+		doc := freightDoc(&kargoapi.Freight{
+			ObjectMeta: metav1.ObjectMeta{
+				Name:              "freight-1",
+				CreationTimestamp: metav1.NewTime(created),
+			},
+			DiscoveredAt: &metav1.Time{Time: discovered},
+		})
+		require.Equal(t, "2026-07-15T14:00:00Z", doc["discoveredAt"])
+	})
+
+	t.Run("falls back to CreationTimestamp", func(t *testing.T) {
+		t.Parallel()
+		doc := freightDoc(&kargoapi.Freight{
+			ObjectMeta: metav1.ObjectMeta{
+				Name:              "freight-1",
+				CreationTimestamp: metav1.NewTime(created),
+			},
+		})
+		require.Equal(t, "2026-07-15T12:00:00Z", doc["discoveredAt"])
+	})
+
+	t.Run("nil freight has no discoveredAt", func(t *testing.T) {
+		t.Parallel()
+		require.NotContains(t, freightDoc(nil), "discoveredAt")
+	})
+}
+
+func TestCurrentFreightDocs(t *testing.T) {
+	t.Parallel()
+
+	t.Run("projects each origin as name and discoveredAt", func(t *testing.T) {
+		t.Parallel()
+		docs := currentFreightDocs(map[string]CurrentFreight{
+			"Warehouse/demo/nginx": {
+				Name:         "freight-a",
+				DiscoveredAt: time.Date(2026, 7, 15, 9, 0, 0, 0, time.UTC),
+			},
+			"Warehouse/demo/redis": {
+				Name:         "freight-b",
+				DiscoveredAt: time.Date(2026, 7, 15, 10, 30, 0, 0, time.UTC),
+			},
+		})
+		require.Equal(t, map[string]any{
+			"Warehouse/demo/nginx": map[string]any{
+				"name":         "freight-a",
+				"discoveredAt": "2026-07-15T09:00:00Z",
+			},
+			"Warehouse/demo/redis": map[string]any{
+				"name":         "freight-b",
+				"discoveredAt": "2026-07-15T10:30:00Z",
+			},
+		}, docs)
+	})
+
+	t.Run("empty map projects an empty object", func(t *testing.T) {
+		t.Parallel()
+		require.Equal(t, map[string]any{}, currentFreightDocs(nil))
+	})
 }

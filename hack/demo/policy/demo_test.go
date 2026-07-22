@@ -360,7 +360,7 @@ func TestDemoCustomPolicies(t *testing.T) {
 				Name:      "prod",
 				Namespace: "policy-demo",
 			}}
-			data, err := dispatch.BuildData(nil, testCase.freezes, stage, nil, nil, testCase.queue)
+			data, err := dispatch.BuildData(nil, testCase.freezes, stage, nil, nil, testCase.queue, nil)
 			require.NoError(t, err)
 			decision, err := engine.Evaluate(
 				context.Background(),

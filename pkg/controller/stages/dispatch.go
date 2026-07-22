@@ -144,7 +144,15 @@ func (r *RegularStageReconciler) gateDispatch(
 		logger.Error(err, "error getting Project for dispatch policy input")
 	}
 
-	data, err := dispatch.BuildData(projectSpec, freezes, stage, project, dispatches, queue)
+	// The Stage's current Freight per origin, so a policy can tell whether a
+	// candidate advances or regresses the Stage (data.currentFreight). A
+	// genuine fetch error fails closed, like the candidate Freight below.
+	currentFreight, err := r.resolveCurrentFreight(ctx, stage)
+	if err != nil {
+		return nil, 0, "", err
+	}
+
+	data, err := dispatch.BuildData(projectSpec, freezes, stage, project, dispatches, queue, currentFreight)
 	if err != nil {
 		return nil, 0, "", fmt.Errorf("error building dispatch policy data: %w", err)
 	}
@@ -240,6 +248,43 @@ func firstPending(promos []kargoapi.Promotion) *kargoapi.Promotion {
 		}
 	}
 	return nil
+}
+
+// resolveCurrentFreight resolves, per origin, the Stage's current Freight and
+// its discovery time, for the dispatch policy's data.currentFreight. The
+// FreightHistory carries only FreightReferences, which have no discovery time,
+// so each current Freight object is fetched. Origins whose Freight can no
+// longer be found (e.g. garbage-collected) are omitted, so the policy's
+// advances/regresses comparison for that origin is simply undefined.
+func (r *RegularStageReconciler) resolveCurrentFreight(
+	ctx context.Context,
+	stage *kargoapi.Stage,
+) (map[string]dispatch.CurrentFreight, error) {
+	current := stage.Status.FreightHistory.Current()
+	if current == nil {
+		return nil, nil
+	}
+	resolved := make(map[string]dispatch.CurrentFreight, len(current.Freight))
+	for origin, ref := range current.Freight {
+		freight, err := api.GetFreight(ctx, r.client, types.NamespacedName{
+			Namespace: stage.Namespace,
+			Name:      ref.Name,
+		})
+		if err != nil {
+			return nil, fmt.Errorf(
+				"error getting current Freight %q for origin %q: %w",
+				ref.Name, origin, err,
+			)
+		}
+		if freight == nil {
+			continue
+		}
+		resolved[origin] = dispatch.CurrentFreight{
+			Name:         freight.Name,
+			DiscoveredAt: freight.EffectiveDiscoveredAt(),
+		}
+	}
+	return resolved, nil
 }
 
 // enqueueStagesForConfigChange returns reconcile requests for every regular

@@ -36,11 +36,12 @@ shared_images := [pair |
 
 func emptyData() map[string]any {
 	return map[string]any{
-		"windows":   []any{},
-		"freezes":   []any{},
-		"scopes":    defaultScopes,
-		"rateLimit": map[string]any{},
-		"queue":     []any{},
+		"windows":        []any{},
+		"freezes":        []any{},
+		"scopes":         defaultScopes,
+		"rateLimit":      map[string]any{},
+		"queue":          []any{},
+		"currentFreight": map[string]any{},
 	}
 }
 
@@ -71,6 +72,42 @@ func testInput(class string) map[string]any {
 		"applications": []any{},
 		"now":          testNow,
 	}
+}
+
+// testOrigin is the Warehouse origin used by the Freight-ordering cases.
+const testOrigin = "Warehouse/demo/nginx"
+
+// orderingInput is a manual-forward candidate whose Freight carries an origin
+// and a discovery time, for exercising the kargo.lib Freight-ordering helpers
+// (advances / regresses) against data.currentFreight.
+func orderingInput(freightName, discoveredAt string) map[string]any {
+	in := testInput(ClassManualForward)
+	in["freight"] = map[string]any{
+		"name":         freightName,
+		"origin":       testOrigin,
+		"discoveredAt": discoveredAt,
+	}
+	return in
+}
+
+// The current Freight the ordering cases compare against: a candidate reusing
+// this name is a re-promote, an earlier discoveredAt regresses, a later one
+// advances.
+const (
+	testCurrentFreightName         = "freight-cur"
+	testCurrentFreightDiscoveredAt = "2026-07-15T12:00:00Z"
+)
+
+// orderingData sets data.currentFreight for the candidate's origin.
+func orderingData() map[string]any {
+	data := emptyData()
+	data["currentFreight"] = map[string]any{
+		testOrigin: map[string]any{
+			"name":         testCurrentFreightName,
+			"discoveredAt": testCurrentFreightDiscoveredAt,
+		},
+	}
+	return data
 }
 
 func TestEngineEvaluate(t *testing.T) {
@@ -507,6 +544,92 @@ func TestEngineEvaluate(t *testing.T) {
 			assert: func(t *testing.T, d *Decision, err error) {
 				require.NoError(t, err)
 				require.True(t, d.Allow)
+			},
+		},
+		{
+			// A custom policy uses kargo.regresses (Freight clock, per origin)
+			// to hold a candidate older than the origin's current Freight.
+			name: "custom policy denies a regressing candidate via kargo.regresses",
+			projectCustom: `violation contains {"rule": "regress", "msg": "would regress the stage"} if {
+	kargo.regresses
+}
+`,
+			input: orderingInput("freight-old", "2026-07-15T09:00:00Z"),
+			data: func() map[string]any {
+				return orderingData()
+			},
+			assert: func(t *testing.T, d *Decision, err error) {
+				require.NoError(t, err)
+				require.False(t, d.Allow)
+				require.Equal(t, "would regress the stage", d.Message)
+			},
+		},
+		{
+			// The same policy allows a candidate newer than current: it
+			// advances the Stage, so kargo.regresses is false.
+			name: "custom policy allows an advancing candidate",
+			projectCustom: `violation contains {"rule": "regress", "msg": "would regress the stage"} if {
+	kargo.regresses
+}
+`,
+			input: orderingInput("freight-new", "2026-07-15T14:00:00Z"),
+			data: func() map[string]any {
+				return orderingData()
+			},
+			assert: func(t *testing.T, d *Decision, err error) {
+				require.NoError(t, err)
+				require.True(t, d.Allow)
+			},
+		},
+		{
+			// A re-promote of the current Freight (equal discovery time, equal
+			// name) is neither advance nor regress: freight_newer is strict.
+			name: "custom policy allows a re-promote of the current Freight",
+			projectCustom: `violation contains {"rule": "regress", "msg": "would regress the stage"} if {
+	kargo.regresses
+}
+`,
+			input: orderingInput("freight-cur", "2026-07-15T12:00:00Z"),
+			data: func() map[string]any {
+				return orderingData()
+			},
+			assert: func(t *testing.T, d *Decision, err error) {
+				require.NoError(t, err)
+				require.True(t, d.Allow)
+			},
+		},
+		{
+			// On a fresh origin (no current Freight) kargo.regresses is
+			// undefined, so the candidate is allowed -- nothing to regress past.
+			name: "custom policy allows on a fresh origin",
+			projectCustom: `violation contains {"rule": "regress", "msg": "would regress the stage"} if {
+	kargo.regresses
+}
+`,
+			input: orderingInput("freight-1", "2026-07-15T09:00:00Z"),
+			data:  emptyData,
+			assert: func(t *testing.T, d *Decision, err error) {
+				require.NoError(t, err)
+				require.True(t, d.Allow)
+			},
+		},
+		{
+			// kargo.advances is the dual: a custom policy can require forward
+			// motion. Here an equal-name/older candidate does not advance.
+			name: "custom policy requires kargo.advances",
+			projectCustom: `violation contains {"rule": "stale", "msg": "does not advance the stage"} if {
+	kargo.current_freight
+	not kargo.advances
+}
+`,
+			input: orderingInput("freight-old", "2026-07-15T09:00:00Z"),
+			data: func() map[string]any {
+				return orderingData()
+			},
+			assert: func(t *testing.T, d *Decision, err error) {
+				require.NoError(t, err)
+				require.False(t, d.Allow)
+				require.Equal(t, "does not advance the stage", d.Message)
 			},
 		},
 		{

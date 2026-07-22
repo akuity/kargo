@@ -1,0 +1,13 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "title": "data.currentFreight",
+  "description": "The Stage's current Freight per origin, keyed by Warehouse origin. Each entry is the Freight the Stage currently has for that origin, so a policy can tell whether a candidate advances or regresses the Stage (kargo.advances / kargo.regresses). An origin with no resolvable current Freight is absent.",
+  "type": "object",
+  "additionalProperties": {
+    "type": "object",
+    "properties": {
+      "name": {"type": "string"},
+      "discoveredAt": {"type": "string", "description": "RFC3339; the current Freight's EffectiveDiscoveredAt."}
+    }
+  }
+}
