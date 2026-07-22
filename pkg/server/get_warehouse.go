@@ -1,7 +1,6 @@
 package server
 
 import (
-	"encoding/json"
 	"fmt"
 	"net/http"
 	"time"
@@ -12,22 +11,6 @@ import (
 	kargoapi "github.com/akuity/kargo/api/v1alpha1"
 	"github.com/akuity/kargo/pkg/logging"
 )
-
-// custom marshaling is not applied when serializing a Warehouse as part of
-// a protobuf message, so this helper can be used to compensate for that.
-func prepareOutboundWarehouse(w *kargoapi.Warehouse) error {
-	type specAlias kargoapi.WarehouseSpec
-	specJSON, err := json.Marshal(w.Spec)
-	if err != nil {
-		return err
-	}
-	newSpec := specAlias{}
-	if err = json.Unmarshal(specJSON, &newSpec); err != nil {
-		return err
-	}
-	w.Spec = kargoapi.WarehouseSpec(newSpec)
-	return nil
-}
 
 // @id GetWarehouse
 // @Summary Retrieve a Warehouse
