@@ -289,7 +289,7 @@ codegen-controller:
 		output:crd:artifacts:config=charts/kargo/resources/crds
 	go tool controller-gen \
 		object:headerFile=hack/boilerplate.go.txt \
-		paths=./...
+		paths="{./api/..., ./pkg/..., ./cmd/...}"
 
 .PHONY: codegen-bitbucket-client
 codegen-bitbucket-client:
