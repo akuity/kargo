@@ -19,7 +19,9 @@ rules:
       - data.freezes
       - data.scopes
       - data.rateLimit
+      - data.queue
       - data.currentFreight
+      - data.autoPromotionHolds
       - data.kargo.project.violation
       - data.kargo.cluster.violation
   style:

@@ -15,12 +15,15 @@ package kargo.dispatch
 import rego.v1
 
 import data.kargo.lib.freezes
+import data.kargo.lib.ordering
 import data.kargo.lib.ratelimit
 import data.kargo.lib.windows
 
 violation contains v if some v in windows.violation
 
 violation contains v if some v in freezes.violation
+
+violation contains v if some v in ordering.violation
 
 violation contains v if some v in ratelimit.violation
 

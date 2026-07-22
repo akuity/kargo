@@ -152,7 +152,14 @@ func (r *RegularStageReconciler) gateDispatch(
 		return nil, 0, "", err
 	}
 
-	data, err := dispatch.BuildData(projectSpec, freezes, stage, project, dispatches, queue, currentFreight)
+	// The Stage's committed auto-promotion holds per origin, so the gate can
+	// deny an auto-forward for a held origin (data.autoPromotionHolds) — the
+	// dispatch-side complement of the controller's creation-side hold check.
+	// Read directly off the in-memory Stage; no fetch needed.
+	data, err := dispatch.BuildData(
+		projectSpec, freezes, stage, project, dispatches, queue, currentFreight,
+		stage.Status.AutoPromotionHolds,
+	)
 	if err != nil {
 		return nil, 0, "", fmt.Errorf("error building dispatch policy data: %w", err)
 	}

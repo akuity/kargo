@@ -197,7 +197,20 @@ func TestBuildData(t *testing.T) {
 		},
 	}
 
-	data, err := BuildData(projectSpec, freezes, stage, nil, []time.Time{dispatched}, queue, currentFreight)
+	holdCreated := time.Date(2026, 7, 15, 13, 0, 0, 0, time.UTC)
+	autoPromotionHolds := map[string]kargoapi.AutoPromotionHold{
+		"Warehouse/demo/nginx": {
+			FreightName:   "freight-cur",
+			PromotionName: "prod.00",
+			Actor:         "alice",
+			CreatedAt:     &metav1.Time{Time: holdCreated},
+		},
+	}
+
+	data, err := BuildData(
+		projectSpec, freezes, stage, nil, []time.Time{dispatched}, queue, currentFreight,
+		autoPromotionHolds,
+	)
 	require.NoError(t, err)
 
 	// Only the window whose selector matches this Stage is projected.
@@ -239,18 +252,28 @@ func TestBuildData(t *testing.T) {
 		"name":         "freight-cur",
 		"discoveredAt": "2026-07-15T14:00:00Z",
 	}}, data["currentFreight"])
+
+	// The auto-promotion holds project per origin, carrying what established
+	// the hold.
+	require.Equal(t, map[string]any{"Warehouse/demo/nginx": map[string]any{
+		"freightName":   "freight-cur",
+		"promotionName": "prod.00",
+		"actor":         "alice",
+		"createdAt":     "2026-07-15T13:00:00Z",
+	}}, data["autoPromotionHolds"])
 }
 
 func TestBuildDataNilPolicy(t *testing.T) {
 	t.Parallel()
 	stage := &kargoapi.Stage{ObjectMeta: metav1.ObjectMeta{Name: "prod"}}
-	data, err := BuildData(nil, nil, stage, nil, nil, nil, nil)
+	data, err := BuildData(nil, nil, stage, nil, nil, nil, nil, nil)
 	require.NoError(t, err)
 	require.Empty(t, data["windows"])
 	require.Empty(t, data["freezes"])
 	require.Empty(t, data["rateLimit"])
 	require.Empty(t, data["queue"])
 	require.Empty(t, data["currentFreight"])
+	require.Empty(t, data["autoPromotionHolds"])
 }
 
 func TestBuildDataProjectSelector(t *testing.T) {
@@ -361,7 +384,7 @@ func TestBuildDataProjectSelector(t *testing.T) {
 	for _, testCase := range testCases {
 		t.Run(testCase.name, func(t *testing.T) {
 			t.Parallel()
-			data, err := BuildData(nil, freeze(testCase.selector), stage, testCase.project, nil, nil, nil)
+			data, err := BuildData(nil, freeze(testCase.selector), stage, testCase.project, nil, nil, nil, nil)
 			testCase.assert(t, data, err)
 		})
 	}
@@ -523,5 +546,43 @@ func TestCurrentFreightDocs(t *testing.T) {
 	t.Run("empty map projects an empty object", func(t *testing.T) {
 		t.Parallel()
 		require.Equal(t, map[string]any{}, currentFreightDocs(nil))
+	})
+}
+
+func TestAutoPromotionHoldsDocs(t *testing.T) {
+	t.Parallel()
+
+	t.Run("projects each held origin with what established the hold", func(t *testing.T) {
+		t.Parallel()
+		created := time.Date(2026, 7, 15, 13, 0, 0, 0, time.UTC)
+		docs := autoPromotionHoldsDocs(map[string]kargoapi.AutoPromotionHold{
+			"Warehouse/demo/nginx": {
+				FreightName:   "freight-a",
+				PromotionName: "prod.01",
+				Actor:         "alice",
+				CreatedAt:     &metav1.Time{Time: created},
+			},
+		})
+		require.Equal(t, map[string]any{
+			"Warehouse/demo/nginx": map[string]any{
+				"freightName":   "freight-a",
+				"promotionName": "prod.01",
+				"actor":         "alice",
+				"createdAt":     "2026-07-15T13:00:00Z",
+			},
+		}, docs)
+	})
+
+	t.Run("omits createdAt when the hold has none", func(t *testing.T) {
+		t.Parallel()
+		docs := autoPromotionHoldsDocs(map[string]kargoapi.AutoPromotionHold{
+			"Warehouse/demo/nginx": {FreightName: "freight-a", PromotionName: "prod.01"},
+		})
+		require.NotContains(t, docs["Warehouse/demo/nginx"], "createdAt")
+	})
+
+	t.Run("empty map projects an empty object", func(t *testing.T) {
+		t.Parallel()
+		require.Equal(t, map[string]any{}, autoPromotionHoldsDocs(nil))
 	})
 }

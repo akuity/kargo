@@ -1,0 +1,15 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "title": "data.autoPromotionHolds",
+  "description": "The Stage's committed auto-promotion holds, keyed by Warehouse origin. An entry means auto-promotion is paused for that origin (an operator promoted Freight other than the auto-promotion candidate), so the gate denies an auto-forward for it until the hold is released. Origins with no hold are absent.",
+  "type": "object",
+  "additionalProperties": {
+    "type": "object",
+    "properties": {
+      "freightName": {"type": "string", "description": "The Freight selected when the hold was created."},
+      "promotionName": {"type": "string", "description": "The Promotion that established the hold."},
+      "actor": {"type": "string", "description": "The user who triggered the hold."},
+      "createdAt": {"type": "string", "description": "RFC3339; creation time of the Promotion that established the hold."}
+    }
+  }
+}

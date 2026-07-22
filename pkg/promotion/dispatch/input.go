@@ -98,8 +98,10 @@ type CurrentFreight struct {
 // yield to a queued rollback, or grow conservative under a deep backlog).
 // currentFreight is the Stage's current Freight per origin, so a policy can
 // tell whether a candidate advances or regresses the Stage (data.currentFreight,
-// keyed by origin). Freezes whose ProjectSelector does not match the Project
-// are omitted.
+// keyed by origin). autoPromotionHolds is the Stage's committed auto-promotion
+// holds per origin, so the gate can deny an auto-forward for a held origin
+// (data.autoPromotionHolds, keyed by origin). Freezes whose ProjectSelector
+// does not match the Project are omitted.
 func BuildData(
 	projectSpec *kargoapi.ProjectConfigSpec,
 	freezes []kargoapi.PromotionFreeze,
@@ -108,6 +110,7 @@ func BuildData(
 	dispatches []time.Time,
 	queue []kargoapi.Promotion,
 	currentFreight map[string]CurrentFreight,
+	autoPromotionHolds map[string]kargoapi.AutoPromotionHold,
 ) (map[string]any, error) {
 	windows := []any{}
 	rateLimit := map[string]any{}
@@ -170,12 +173,13 @@ func BuildData(
 		})
 	}
 	return map[string]any{
-		"windows":        windows,
-		"freezes":        freezeDocs,
-		"scopes":         defaultScopes,
-		"rateLimit":      rateLimit,
-		"queue":          queueDocs(queue),
-		"currentFreight": currentFreightDocs(currentFreight),
+		"windows":            windows,
+		"freezes":            freezeDocs,
+		"scopes":             defaultScopes,
+		"rateLimit":          rateLimit,
+		"queue":              queueDocs(queue),
+		"currentFreight":     currentFreightDocs(currentFreight),
+		"autoPromotionHolds": autoPromotionHoldsDocs(autoPromotionHolds),
 	}, nil
 }
 
@@ -192,6 +196,28 @@ func currentFreightDocs(currentFreight map[string]CurrentFreight) map[string]any
 			"name":         cf.Name,
 			"discoveredAt": cf.DiscoveredAt.UTC().Format(time.RFC3339),
 		}
+	}
+	return docs
+}
+
+// autoPromotionHoldsDocs projects the Stage's committed auto-promotion holds
+// into policy documents, keyed by origin. The gate's auto-hold rule needs only
+// an origin's presence; the projected fields (freightName, promotionName,
+// actor, createdAt) let a policy or an operator see what established the hold.
+// An origin with no hold is absent, so the auto-hold check for it is simply
+// undefined.
+func autoPromotionHoldsDocs(holds map[string]kargoapi.AutoPromotionHold) map[string]any {
+	docs := make(map[string]any, len(holds))
+	for origin, hold := range holds {
+		doc := map[string]any{
+			"freightName":   hold.FreightName,
+			"promotionName": hold.PromotionName,
+			"actor":         hold.Actor,
+		}
+		if hold.CreatedAt != nil {
+			doc["createdAt"] = hold.CreatedAt.UTC().Format(time.RFC3339)
+		}
+		docs[origin] = doc
 	}
 	return docs
 }

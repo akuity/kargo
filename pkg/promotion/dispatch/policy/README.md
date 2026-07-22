@@ -9,9 +9,37 @@ dispatched. Directory structure matches package layout:
 | `kargo/lib/windows/windows.rego` | `kargo.lib.windows` | Holds forward promotions outside promotion windows |
 | `kargo/lib/freezes/freezes.rego` | `kargo.lib.freezes` | Holds promotions during system-wide freezes |
 | `kargo/lib/ratelimit/ratelimit.rego` | `kargo.lib.ratelimit` | Rolling-window rate limit on automatic dispatch |
+| `kargo/lib/ordering/ordering.rego` | `kargo.lib.ordering` | Class priority, Stage-monotonicity guards, auto-promotion holds, and per-Promotion scheduling |
 | `kargo/lib/lib.rego` | `kargo.lib` | Building blocks for custom policies (`kargo.is_forward`, `kargo.is_semver_patch`, `kargo.advances`/`kargo.regresses`) |
 | `kargo/project/project.rego` | `kargo.project` | Extension-point defaults for the project custom policy |
 | `kargo/cluster/cluster.rego` | `kargo.cluster` | Extension-point defaults for the cluster custom policy |
+
+## Ordering
+
+Because the gate may dispatch a permitted Promotion from deeper in the queue,
+`kargo.lib.ordering` enforces the invariants that keep out-of-order dispatch
+correct, composed into the built-in decision (not only available to custom
+policies):
+
+- **Class priority** (`rollback ≻ manual-forward ≻ auto-forward`) — a forward
+  candidate yields to a queued `rollback` (`yield-to-rollback`); an
+  auto-forward additionally yields to any queued `manual-forward`
+  (`yield-to-manual`). Both re-check shortly (a 5s requeue).
+- **Stage monotonicity** — an auto-forward that would not strictly advance the
+  Stage is stale (`regression`); a manual-forward whose Freight is strictly
+  older than the origin's current Freight is held to await an operator decision
+  (`would-regress` — re-issue as a rollback if the regression is intended). A
+  re-promote of the current Freight is neither.
+- **Auto-promotion holds** — an auto-forward for an origin with a committed
+  hold (`data.autoPromotionHolds`) is denied (`auto-hold`) until an operator
+  resumes. This rule is unconditional: a custom policy may read the holds but
+  cannot suppress the deny (violation sets only union).
+- **Scheduling** — a promotion carrying a `kargo.akuity.io/promote-after`
+  annotation is held until that time, then self-resumes (`scheduled`).
+
+Coalescing of shadowed auto-forwards is intentionally left to grooming, not
+done here: `data.queue` carries no origin, so a gate coalesce rule could not
+scope per-origin without risking multi-origin starvation.
 
 ## Custom policies
 
@@ -117,9 +145,9 @@ that compile-error line numbers are offset by the prepended header.
   `input.freight`, `input.stage`, `input.project`, `input.applications`,
   `input.now`)
 - `windows.json`, `freezes.json`, `scopes.json`, `ratelimit.json`,
-  `queue.json`, `currentFreight.json` — the `data.windows`, `data.freezes`,
-  `data.scopes`, `data.rateLimit`, `data.queue`, and `data.currentFreight`
-  documents
+  `queue.json`, `currentFreight.json`, `autopromotionholds.json` — the
+  `data.windows`, `data.freezes`, `data.scopes`, `data.rateLimit`,
+  `data.queue`, `data.currentFreight`, and `data.autoPromotionHolds` documents
 
 Each schema is registered with the compiler as `schema.<basename>`. The
 standard library declares what it consumes via `# METADATA ... schemas:`
