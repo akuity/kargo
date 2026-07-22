@@ -2052,9 +2052,7 @@
         "responses": {
           "200": {
             "description": "RoleList custom resource (rbacapi.RoleList) or underlying resources",
-            "schema": {
-              "type": "object"
-            }
+            "schema": {}
           }
         },
         "security": [
@@ -2090,9 +2088,7 @@
             "name": "body",
             "in": "body",
             "required": true,
-            "schema": {
-              "type": "object"
-            }
+            "schema": {}
           }
         ],
         "responses": {
@@ -2237,9 +2233,7 @@
         "responses": {
           "200": {
             "description": "Role resource (k8s.io/api/rbac/v1.Role) or its underlying Kubernetes resources",
-            "schema": {
-              "type": "object"
-            }
+            "schema": {}
           }
         },
         "security": [
@@ -2282,9 +2276,7 @@
             "name": "body",
             "in": "body",
             "required": true,
-            "schema": {
-              "type": "object"
-            }
+            "schema": {}
           }
         ],
         "responses": {
@@ -2658,9 +2650,7 @@
         "responses": {
           "201": {
             "description": "Promotions created",
-            "schema": {
-              "type": "object"
-            }
+            "schema": {}
           }
         },
         "security": [
@@ -4612,9 +4602,7 @@
         "responses": {
           "200": {
             "description": "RoleList custom resource (rbacapi.RoleList) or underlying resources",
-            "schema": {
-              "type": "object"
-            }
+            "schema": {}
           }
         },
         "security": [
@@ -4648,9 +4636,7 @@
         "responses": {
           "200": {
             "description": "Role resource (k8s.io/api/rbac/v1.Role) or its underlying Kubernetes resources",
-            "schema": {
-              "type": "object"
-            }
+            "schema": {}
           }
         },
         "security": [
@@ -5645,9 +5631,7 @@
         "metricStat": {
           "$ref": "#/definitions/RolloutsCloudWatchMetricStat"
         },
-        "period": {
-          "$ref": "#/definitions/IntOrString"
-        },
+        "period": {},
         "returnData": {
           "type": "boolean"
         }
@@ -5659,9 +5643,7 @@
         "metric": {
           "$ref": "#/definitions/RolloutsCloudWatchMetricStatMetric"
         },
-        "period": {
-          "$ref": "#/definitions/IntOrString"
-        },
+        "period": {},
         "stat": {
           "type": "string"
         },
@@ -5921,24 +5903,14 @@
     "RolloutsMetric": {
       "type": "object",
       "properties": {
-        "consecutiveErrorLimit": {
-          "$ref": "#/definitions/IntOrString"
-        },
-        "consecutiveSuccessLimit": {
-          "$ref": "#/definitions/IntOrString"
-        },
-        "count": {
-          "$ref": "#/definitions/IntOrString"
-        },
+        "consecutiveErrorLimit": {},
+        "consecutiveSuccessLimit": {},
+        "count": {},
         "failureCondition": {
           "type": "string"
         },
-        "failureLimit": {
-          "$ref": "#/definitions/IntOrString"
-        },
-        "inconclusiveLimit": {
-          "$ref": "#/definitions/IntOrString"
-        },
+        "failureLimit": {},
+        "inconclusiveLimit": {},
         "initialDelay": {
           "type": "string"
         },
@@ -6390,8 +6362,7 @@
           "type": "string"
         },
         "metadata": {
-          "description": "Metadata is a JSON object containing a mostly opaque collection of artifact\nattributes. (It must be an object. It may not be a list or a scalar value.)\n\"Mostly\" because Kargo may understand how to interpret some documented,\nwell-known, top-level keys. Those aside, this metadata is only understood\nby a corresponding Subscriber implementation that created it.\n\n+optional",
-          "type": "object"
+          "description": "Metadata is a JSON object containing a mostly opaque collection of artifact\nattributes. (It must be an object. It may not be a list or a scalar value.)\n\"Mostly\" because Kargo may understand how to interpret some documented,\nwell-known, top-level keys. Those aside, this metadata is only understood\nby a corresponding Subscriber implementation that created it.\n\n+optional"
         },
         "subscriptionName": {
           "description": "SubscriptionName is the name of the Subscription that discovered this\nartifact.\n\n+kubebuilder:validation:MinLength=1",
@@ -7118,9 +7089,7 @@
         "metadata": {
           "description": "Metadata is a map of arbitrary metadata associated with the Freight.\nThis is useful for storing additional information about the Freight\nor Promotion that can be shared across steps or stages.",
           "type": "object",
-          "additionalProperties": {
-            "type": "object"
-          }
+          "additionalProperties": {}
         },
         "verifiedIn": {
           "description": "VerifiedIn describes the Stages in which this Freight has been verified\nthrough promotion and subsequent health checks.",
@@ -7376,8 +7345,7 @@
       "type": "object",
       "properties": {
         "config": {
-          "description": "Config is the opaque configuration of all health checks performed on this\nStage.",
-          "type": "object"
+          "description": "Config is the opaque configuration of all health checks performed on this\nStage."
         },
         "issues": {
           "description": "Issues clarifies why a Stage in any state other than Healthy is in that\nstate. This field will always be the empty when a Stage is Healthy.",
@@ -7387,8 +7355,7 @@
           }
         },
         "output": {
-          "description": "Output is the opaque output of all health checks performed on this Stage.",
-          "type": "object"
+          "description": "Output is the opaque output of all health checks performed on this Stage."
         },
         "status": {
           "description": "Status describes the health of the Stage.",
@@ -7400,8 +7367,7 @@
       "type": "object",
       "properties": {
         "config": {
-          "description": "Config is the configuration for the directive.",
-          "type": "object"
+          "description": "Config is the configuration for the directive."
         },
         "uses": {
           "description": "Uses identifies a runner that can execute this step.\n\n+kubebuilder:validation:MinLength=1",
@@ -7880,8 +7846,7 @@
           "type": "string"
         },
         "state": {
-          "description": "State stores the state of the promotion process between reconciliation\nattempts.",
-          "type": "object"
+          "description": "State stores the state of the promotion process between reconciliation\nattempts."
         },
         "stepExecutionMetadata": {
           "description": "StepExecutionMetadata tracks metadata pertaining to the execution\nof individual promotion steps.",
@@ -7900,8 +7865,7 @@
           "type": "string"
         },
         "config": {
-          "description": "Config is opaque configuration for the PromotionStep that is understood\nonly by each PromotionStep's implementation. It is legal to utilize\nexpressions in defining values at any level of this block.\nSee https://docs.kargo.io/user-guide/reference-docs/expressions for details.",
-          "type": "object"
+          "description": "Config is opaque configuration for the PromotionStep that is understood\nonly by each PromotionStep's implementation. It is legal to utilize\nexpressions in defining values at any level of this block.\nSee https://docs.kargo.io/user-guide/reference-docs/expressions for details."
         },
         "continueOnError": {
           "description": "ContinueOnError is a boolean value that, if set to true, will cause the\nPromotion to continue executing the next step even if this step fails. It\nalso will not permit this failure to impact the overall status of the\nPromotion.",
@@ -8266,9 +8230,7 @@
         "metadata": {
           "description": "Metadata is a map of arbitrary metadata associated with the Stage.\nThis is useful for storing additional information about the Stage\nthat can be shared across promotions, verifications, or other processes.",
           "type": "object",
-          "additionalProperties": {
-            "type": "object"
-          }
+          "additionalProperties": {}
         },
         "observedGeneration": {
           "description": "ObservedGeneration represents the .metadata.generation that this Stage\nstatus was reconciled against.",
@@ -8469,9 +8431,7 @@
         "subscriptions": {
           "description": "Subscriptions describes sources of artifacts to be included in Freight\nproduced by this Warehouse.\n\n+kubebuilder:validation:MinItems=1",
           "type": "array",
-          "items": {
-            "type": "object"
-          }
+          "items": {}
         }
       }
     },
@@ -8633,20 +8593,6 @@
         }
       }
     },
-    "IntOrString": {
-      "type": "object",
-      "properties": {
-        "intVal": {
-          "type": "integer"
-        },
-        "strVal": {
-          "type": "string"
-        },
-        "type": {
-          "type": "integer"
-        }
-      }
-    },
     "V1Event": {
       "type": "object",
       "properties": {
@@ -8664,11 +8610,7 @@
         },
         "eventTime": {
           "description": "Time when this Event was first observed.\n+optional",
-          "allOf": [
-            {
-              "$ref": "#/definitions/V1MicroTime"
-            }
-          ]
+          "type": "string"
         },
         "firstTimestamp": {
           "description": "The time at which the event was first recorded. (Time of server receipt is in TypeMeta.)\n+optional",
@@ -8781,11 +8723,7 @@
         },
         "lastObservedTime": {
           "description": "Time of the last occurrence observed",
-          "allOf": [
-            {
-              "$ref": "#/definitions/V1MicroTime"
-            }
-          ]
+          "type": "string"
         }
       }
     },
@@ -8825,34 +8763,6 @@
         "resourceVersion": {
           "description": "ResourceVersion is the Kubernetes list resourceVersion clients use to\nseed a follow-up Freight watch so the API server does not replay every\nexisting Freight as an ADDED event. It is empty for the stage-scoped\nquery, whose result is assembled from multiple sources rather than a\nsingle watchable namespace list.",
           "type": "string"
-        }
-      }
-    },
-    "Quantity": {
-      "type": "object",
-      "properties": {
-        "Format": {
-          "type": "string",
-          "enum": [
-            "DecimalExponent",
-            "BinarySI",
-            "DecimalSI"
-          ],
-          "x-enum-comments": {
-            "BinarySI": "e.g., 12Mi (12 * 2^20)",
-            "DecimalExponent": "e.g., 12e6",
-            "DecimalSI": "e.g., 12M  (12 * 10^6)"
-          },
-          "x-enum-descriptions": [
-            "e.g., 12e6",
-            "e.g., 12Mi (12 * 2^20)",
-            "e.g., 12M  (12 * 10^6)"
-          ],
-          "x-enum-varnames": [
-            "DecimalExponent",
-            "BinarySI",
-            "DecimalSI"
-          ]
         }
       }
     },
@@ -9588,11 +9498,7 @@
         },
         "sizeLimit": {
           "description": "sizeLimit is the total amount of local storage required for this EmptyDir volume.\nThe size limit is also applicable for memory medium.\nThe maximum usage on memory medium EmptyDir would be the minimum value between\nthe SizeLimit specified here and the sum of memory limits of all containers in a pod.\nThe default is nil which means that the limit is undefined.\nMore info: https://kubernetes.io/docs/concepts/storage/volumes#emptydir\n+optional",
-          "allOf": [
-            {
-              "$ref": "#/definitions/Quantity"
-            }
-          ]
+          "type": "string"
         }
       }
     },
@@ -9916,9 +9822,7 @@
         }
       }
     },
-    "V1FieldsV1": {
-      "type": "object"
-    },
+    "V1FieldsV1": {},
     "V1FileKeySelector": {
       "type": "object",
       "properties": {
@@ -10072,12 +9976,7 @@
           "type": "string"
         },
         "port": {
-          "description": "Name or number of the port to access on the container.\nNumber must be in the range 1 to 65535.\nName must be an IANA_SVC_NAME.",
-          "allOf": [
-            {
-              "$ref": "#/definitions/IntOrString"
-            }
-          ]
+          "description": "Name or number of the port to access on the container.\nNumber must be in the range 1 to 65535.\nName must be an IANA_SVC_NAME."
         },
         "scheme": {
           "description": "Scheme to use for connecting to the host.\nDefaults to HTTP.\n+optional",
@@ -10470,14 +10369,6 @@
         },
         "time": {
           "description": "Time is the timestamp of when the ManagedFields entry was added. The\ntimestamp will also be updated if a field is added, the manager\nchanges any of the owned fields value or removes a field. The\ntimestamp does not update when a field is removed from the entry\nbecause another manager took it over.\n+optional",
-          "type": "string"
-        }
-      }
-    },
-    "V1MicroTime": {
-      "type": "object",
-      "properties": {
-        "time.Time": {
           "type": "string"
         }
       }
@@ -11704,11 +11595,7 @@
         },
         "divisor": {
           "description": "Specifies the output format of the exposed resources, defaults to \"1\"\n+optional",
-          "allOf": [
-            {
-              "$ref": "#/definitions/Quantity"
-            }
-          ]
+          "type": "string"
         },
         "resource": {
           "description": "Required: resource to select",
@@ -11719,7 +11606,7 @@
     "V1ResourceList": {
       "type": "object",
       "additionalProperties": {
-        "$ref": "#/definitions/Quantity"
+        "type": "string"
       }
     },
     "V1ResourceRequirements": {
@@ -12153,12 +12040,7 @@
           "type": "string"
         },
         "port": {
-          "description": "Number or name of the port to access on the container.\nNumber must be in the range 1 to 65535.\nName must be an IANA_SVC_NAME.",
-          "allOf": [
-            {
-              "$ref": "#/definitions/IntOrString"
-            }
-          ]
+          "description": "Number or name of the port to access on the container.\nNumber must be in the range 1 to 65535.\nName must be an IANA_SVC_NAME."
         }
       }
     },
