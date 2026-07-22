@@ -10,10 +10,8 @@ import (
 	"time"
 
 	kargoapi "github.com/akuity/kargo/api/v1alpha1"
-	"github.com/akuity/kargo/pkg/client/generated"
-	"github.com/akuity/kargo/pkg/client/generated/core"
-	"github.com/akuity/kargo/pkg/client/generated/models"
 	"github.com/akuity/kargo/pkg/client/watch"
+	"github.com/akuity/kargo/pkg/x/client/generated"
 )
 
 func PromoteAndWaitForPhase(
@@ -40,8 +38,8 @@ func RefreshStage(
 	_ *testing.T,
 	project, stage string,
 ) error {
-	kargoClient := ctx.Value(KargoCLIKey).(generated.KargoAPI)
-	_, err := kargoClient.Core.RefreshStage(&core.RefreshStageParams{Project: project, Stage: stage}, nil)
+	kargoClient := ctx.Value(KargoCLIKey).(generated.APIClient)
+	_, err := kargoClient.CoreAPI.RefreshStage(ctx, project, stage).Execute()
 	return err
 }
 
@@ -51,30 +49,35 @@ func PromoteAndWaitForCompletion(
 	project, stage, freightName string,
 	timeout time.Duration,
 ) (*kargoapi.Promotion, error) {
-	kargoClient := ctx.Value(KargoCLIKey).(generated.KargoAPI)
+	kargoClient := ctx.Value(KargoCLIKey).(generated.APIClient)
 
-	if _, err := kargoClient.Core.GetStage(
-		core.NewGetStageParams().WithProject(project).WithStage(stage),
-		nil,
-	); err != nil {
+	_, httpRes, err := kargoClient.CoreAPI.GetStage(ctx, project, stage).Execute()
+	if httpRes != nil {
+		_ = httpRes.Body.Close()
+	}
+	if err != nil {
 		t.Fatalf("error getting stage: %v", err)
 	}
 
-	promoteRes, err := kargoClient.Core.PromoteToStage(
-		core.NewPromoteToStageParams().
-			WithProject(project).
-			WithStage(stage).
-			WithBody(&models.PromoteToStageRequest{
-				Freight: freightName,
-			}),
-		nil,
-	)
-	if err != nil {
-		t.Fatalf("Error promoting %v, %v", err, promoteRes)
+	promoteRes, httpRes, promoteErr := kargoClient.CoreAPI.
+		PromoteToStage(ctx, project, stage).
+		Body(generated.PromoteToStageRequest{
+			Freight: &freightName,
+		}).
+		Execute()
+	if httpRes != nil {
+		_ = httpRes.Body.Close()
+	}
+	if promoteErr != nil {
+		t.Fatalf("Error promoting %v, %v", promoteErr, promoteRes)
 	}
 
-	promoName := promoteRes.Payload.Metadata.Name
-	promotion, err := WaitForPromotion(ctx, t, project, promoName, timeout)
+	promoName := promoteRes.Metadata.Name
+	if promoName == nil {
+		t.Log("Promotion", promoteRes)
+		t.Fatalf("Error promoting: promotion name is missing")
+	}
+	promotion, err := WaitForPromotion(ctx, t, project, *promoName, timeout)
 
 	if err != nil {
 		t.Fatalf("Error getting promotion %v", err)
@@ -184,30 +187,32 @@ func WaitForFreightToBeVerified(
 	return freight
 }
 
-func GetFreight(ctx context.Context, project, freightID string) (*models.Freight, error) {
-	kargoClient := ctx.Value(KargoCLIKey).(generated.KargoAPI)
-	freightOK, err := kargoClient.Core.GetFreight(
-		&core.GetFreightParams{FreightNameOrAlias: freightID, Project: project},
-		nil)
+func GetFreight(ctx context.Context, project, freightID string) (*generated.Freight, error) {
+	kargoClient := ctx.Value(KargoCLIKey).(generated.APIClient)
+
+	freightOK, httpRes, err := kargoClient.CoreAPI.GetFreight(ctx, project, freightID).Execute()
+	if httpRes != nil {
+		_ = httpRes.Body.Close()
+	}
 	if err != nil {
 		return nil, err
 	}
-	fmt.Printf("FREIGHT: %v", freightOK.Payload)
-	return freightOK.Payload, nil
+	fmt.Printf("FREIGHT: %v", freightOK)
+	return freightOK, nil
 }
 
-// func getAnyFreight(kargoClient generated.KargoAPI, project, origin string) (*kargoapi.Freight, error) {
+// func getAnyFreight(kargoClient generated.APIClient, project, origin string) (*kargoapi.Freight, error) {
 
 // 	params := core.NewQueryFreightsRestParams().WithProject(project).WithOrigins([]string{origin})
 
-// 	freightRes, err := kargoClient.Core.QueryFreightsRest(params, nil)
+// 	freightRes, err := kargoClient.CoreAPI.QueryFreightsRest(params, nil)
 // 	if err != nil {
 // 		return nil, fmt.Errorf("Error querying freight %v", err)
 // 	}
 
 // 	// FIXME: change that once we make freight response typed
 // 	var freightJSON []byte
-// 	if freightJSON, err = json.Marshal(freightRes.Payload); err != nil {
+// 	if freightJSON, err = json.Marshal(freightRes); err != nil {
 // 		return nil, fmt.Errorf("marshal freight: %w", err)
 // 	}
 // 	// The response is {"groups": {"": {"items": [...]}}}

@@ -19,9 +19,8 @@ import (
 	"github.com/akuity/kargo/hack/test/e2e/envfuncs"
 	"github.com/akuity/kargo/pkg/cli/client"
 	"github.com/akuity/kargo/pkg/cli/config"
-	"github.com/akuity/kargo/pkg/client/generated"
-	kargoresouces "github.com/akuity/kargo/pkg/client/generated/resources"
 	"github.com/akuity/kargo/pkg/client/watch"
+	"github.com/akuity/kargo/pkg/x/client/generated"
 )
 
 const groupKargo = "kargo"
@@ -34,7 +33,7 @@ func SetupKargoClients(ctx context.Context, t *testing.T, cfg *envconf.Config) c
 }
 
 func SetupKargoApiClient(ctx context.Context, t *testing.T, _ *envconf.Config) context.Context {
-	if _, ok := ctx.Value(KargoCLIKey).(generated.KargoAPI); ok {
+	if _, ok := ctx.Value(KargoCLIKey).(generated.APIClient); ok {
 		return ctx
 	}
 
@@ -175,7 +174,7 @@ func sortAsc(sorted []string) []string {
 
 func KargoCreateHandler() decoder.HandlerFunc {
 	return func(ctx context.Context, obj k8s.Object) error {
-		kargoClient, ok := ctx.Value(KargoCLIKey).(generated.KargoAPI)
+		kargoClient, ok := ctx.Value(KargoCLIKey).(generated.APIClient)
 		if !ok {
 			return fmt.Errorf("kargo_cli is required in context")
 		}
@@ -185,18 +184,22 @@ func KargoCreateHandler() decoder.HandlerFunc {
 		if err != nil {
 			return fmt.Errorf("error encoding kargo resource manifest: %w", err)
 		}
-		res, err := kargoClient.Resources.CreateResource(
-			kargoresouces.NewCreateResourceParams().
-				WithManifest(string(manifest)),
-			nil,
-		)
+
+		res, httpRes, err := kargoClient.ResourcesAPI.
+			CreateResource(ctx).
+			Manifest(string(manifest)).
+			Execute()
+		if httpRes != nil {
+			defer httpRes.Body.Close()
+		}
+
 		if err != nil {
 			return fmt.Errorf("error creating kargo resource: %w", err)
 		}
-		createErrs := make([]error, 0, len(res.Payload.Results))
-		for _, r := range res.Payload.Results {
-			if r.Error != "" {
-				createErrs = append(createErrs, errors.New(r.Error))
+		createErrs := make([]error, 0, len(res.Results))
+		for _, r := range res.Results {
+			if r.Error != nil {
+				createErrs = append(createErrs, errors.New(*r.Error))
 			}
 		}
 		if len(createErrs) > 0 {
@@ -208,7 +211,7 @@ func KargoCreateHandler() decoder.HandlerFunc {
 
 func KargoDeleteHandler() decoder.HandlerFunc {
 	return func(ctx context.Context, obj k8s.Object) error {
-		kargoClient, ok := ctx.Value(KargoCLIKey).(generated.KargoAPI)
+		kargoClient, ok := ctx.Value(KargoCLIKey).(generated.APIClient)
 		if !ok {
 			return fmt.Errorf("kargo_cli is required in context")
 		}
@@ -217,20 +220,23 @@ func KargoDeleteHandler() decoder.HandlerFunc {
 		if err != nil {
 			return fmt.Errorf("error encoding kargo resource manifest: %w", err)
 		}
-		res, err := kargoClient.Resources.DeleteResource(
-			kargoresouces.NewDeleteResourceParams().
-				WithManifest(string(manifest)),
-			nil,
-		)
+
+		res, httpRes, err := kargoClient.ResourcesAPI.
+			DeleteResource(ctx).
+			Manifest(string(manifest)).
+			Execute()
+		if httpRes != nil {
+			defer httpRes.Body.Close()
+		}
 		if err != nil {
 			// Don't fail decode sequence on error
 			fmt.Printf("error deleting kargo resource: %v", err)
 			return nil
 		}
-		createErrs := make([]error, 0, len(res.Payload.Results))
-		for _, r := range res.Payload.Results {
-			if r.Error != "" {
-				createErrs = append(createErrs, errors.New(r.Error))
+		createErrs := make([]error, 0, len(res.Results))
+		for _, r := range res.Results {
+			if r.Error != nil {
+				createErrs = append(createErrs, errors.New(*r.Error))
 			}
 		}
 		if len(createErrs) > 0 {

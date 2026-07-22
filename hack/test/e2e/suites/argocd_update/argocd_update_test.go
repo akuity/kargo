@@ -10,7 +10,7 @@ import (
 	"testing"
 	"time"
 
-	// "github.com/akuity/kargo/pkg/client/generated/core"
+	// "github.com/akuity/kargo/pkg/x/client/generated/core"
 	"sigs.k8s.io/e2e-framework/pkg/envconf"
 	"sigs.k8s.io/e2e-framework/pkg/features"
 
