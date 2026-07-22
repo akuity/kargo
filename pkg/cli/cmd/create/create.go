@@ -17,7 +17,6 @@ import (
 	"github.com/akuity/kargo/pkg/cli/kubernetes"
 	"github.com/akuity/kargo/pkg/cli/option"
 	"github.com/akuity/kargo/pkg/cli/templates"
-	"github.com/akuity/kargo/pkg/client/generated/resources"
 )
 
 type createOptions struct {
@@ -123,19 +122,21 @@ func (o *createOptions) run(ctx context.Context) error {
 		return fmt.Errorf("get client from config: %w", err)
 	}
 
-	res, err := apiClient.Resources.CreateResource(
-		resources.NewCreateResourceParams().
-			WithManifest(string(manifest)),
-		nil,
-	)
+	res, httpRes, err := apiClient.ResourcesAPI.
+		CreateResource(ctx).
+		Manifest(string(manifest)).
+		Execute()
+	if httpRes != nil {
+		defer httpRes.Body.Close()
+	}
 	if err != nil {
-		return fmt.Errorf("create resource: %w", err)
+		return client.APIError(fmt.Errorf("create resource: %w", err))
 	}
 
-	createErrs := make([]error, 0, len(res.Payload.Results))
-	for _, r := range res.Payload.Results {
-		if r.Error != "" {
-			createErrs = append(createErrs, errors.New(r.Error))
+	createErrs := make([]error, 0, len(res.Results))
+	for _, r := range res.Results {
+		if r.Error != nil {
+			createErrs = append(createErrs, errors.New(*r.Error))
 			continue
 		}
 		if len(r.CreatedResourceManifest) > 0 {

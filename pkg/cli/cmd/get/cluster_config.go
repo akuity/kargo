@@ -18,7 +18,6 @@ import (
 	"github.com/akuity/kargo/pkg/cli/io"
 	"github.com/akuity/kargo/pkg/cli/kubernetes"
 	"github.com/akuity/kargo/pkg/cli/templates"
-	"github.com/akuity/kargo/pkg/client/generated/system"
 )
 
 type getClusterConfigOptions struct {
@@ -80,16 +79,16 @@ func (o *getClusterConfigOptions) run(ctx context.Context) error {
 		return fmt.Errorf("get client from config: %w", err)
 	}
 
-	res, err := apiClient.System.GetClusterConfig(
-		system.NewGetClusterConfigParams(),
-		nil,
-	)
-	if err != nil {
-		return fmt.Errorf("get cluster configuration: %w", err)
+	res, httpRes, err := apiClient.SystemAPI.GetClusterConfig(ctx).Execute()
+	if httpRes != nil {
+		_ = httpRes.Body.Close()
 	}
-	if res.Payload != nil {
+	if err != nil {
+		return fmt.Errorf("get cluster configuration: %w", client.APIError(err))
+	}
+	if res != nil {
 		var configJSON []byte
-		if configJSON, err = json.Marshal(res.Payload); err != nil {
+		if configJSON, err = json.Marshal(res); err != nil {
 			return err
 		}
 		var cfg *kargoapi.ClusterConfig

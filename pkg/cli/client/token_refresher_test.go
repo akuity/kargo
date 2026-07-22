@@ -8,9 +8,10 @@ import (
 
 	"github.com/golang-jwt/jwt/v5"
 	"github.com/stretchr/testify/require"
+	"k8s.io/utils/ptr"
 
 	"github.com/akuity/kargo/pkg/cli/config"
-	"github.com/akuity/kargo/pkg/client/generated/models"
+	kargogen "github.com/akuity/kargo/pkg/x/client/generated"
 )
 
 func TestNewTokenRefresher(t *testing.T) {
@@ -203,25 +204,35 @@ func TestRefreshToken(t *testing.T) {
 func TestClientIDForRefresh(t *testing.T) {
 	testCases := []struct {
 		name     string
-		cfg      *models.OIDCConfig
+		cfg      *kargogen.OIDCConfig
 		expected string
 	}{
 		{
-			name:     "only client ID is set",
-			cfg:      &models.OIDCConfig{ClientID: "kargo"},
+			name: "only client ID is set",
+			cfg: &kargogen.OIDCConfig{
+				ClientId: ptr.To("kargo"),
+			},
 			expected: "kargo",
 		},
 		{
 			name: "CLI client ID is set; takes precedence",
-			cfg: &models.OIDCConfig{
-				ClientID:    "kargo",
-				CliClientID: "kargo-cli",
+			cfg: &kargogen.OIDCConfig{
+				ClientId:    ptr.To("kargo"),
+				CliClientId: ptr.To("kargo-cli"),
 			},
 			expected: "kargo-cli",
 		},
 		{
-			name:     "CLI client ID is empty; falls back to client ID",
-			cfg:      &models.OIDCConfig{ClientID: "kargo", CliClientID: ""},
+			name: "CLI client ID is empty; falls back to client ID",
+			cfg: &kargogen.OIDCConfig{
+				ClientId:    ptr.To("kargo"),
+				CliClientId: ptr.To(""),
+			},
+			expected: "kargo",
+		},
+		{
+			name:     "CLI client ID is unset; falls back to client ID",
+			cfg:      &kargogen.OIDCConfig{ClientId: ptr.To("kargo")},
 			expected: "kargo",
 		},
 	}

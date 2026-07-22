@@ -879,17 +879,26 @@ func (a *argocdUpdater) getAuthorizedApplications(
 	return authorizedApps, nil
 }
 
-// discoveryRetryBackoff bounds retries of Argo CD Application reads that fail
-// because the API server's discovery information was momentarily incomplete.
-// Five attempts over a capped exponential backoff (~15s total) comfortably fit
-// within the step's default 5m timeout while giving a flapping aggregated
-// discovery endpoint time to recover.
+// discoveryRetryBackoff bounds retries of Argo CD Application reads that fail because the API
+// server's discovery information was momentarily incomplete.
+//
+// retry.OnError sleeps *between* attempts and never sleeps after the last one, so the total
+// wall-clock budget is the sum of the inter-attempt delays, and Steps is the lever that controls
+// it. With Factor 2 the delays are 1s, 2s, 4s, 8s, 16s, 32s, etc. Cap only clamps an individual
+// delay once it would exceed the cap (at which point client-go's backoff also stops), so a Cap
+// larger than the biggest delay a given Steps can reach has no effect.
+//
+// Steps 7 yields six attempts over 1+2+4+8+16+32 ≈ 63s of retrying, which comfortably covers the
+// ~35s discovery-recovery window observed behind remote/managed Argo CD proxy layers while staying
+// well within the step's default 5m timeout. Since isIncompleteDiscoveryError only retries a
+// NoKindMatchError naming the Argo CD Application kind, a genuinely absent CRD or any other kind
+// still fails fast.
 var discoveryRetryBackoff = wait.Backoff{
-	Steps:    5,
+	Steps:    7,
 	Duration: time.Second,
 	Factor:   2,
 	Jitter:   0.1,
-	Cap:      15 * time.Second,
+	Cap:      50 * time.Second,
 }
 
 // argoCDApplicationGroupKind identifies the Argo CD Application kind that this

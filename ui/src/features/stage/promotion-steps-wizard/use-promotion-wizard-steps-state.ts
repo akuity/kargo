@@ -46,7 +46,7 @@ const APIPromotionStepsToLocalStateEquivalent = (
 
     runnerWithConfig.push({
       ...runnerMeta,
-      state: step.config,
+      state: step.config as Record<string, unknown>,
       as: step.as,
       continueOnError: step.continueOnError
     });
