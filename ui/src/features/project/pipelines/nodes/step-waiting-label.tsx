@@ -5,6 +5,7 @@ import classNames from 'classnames';
 import { generatePath, Link } from 'react-router-dom';
 
 import { paths } from '@ui/config/paths';
+import { PromotionStepStatusPhase } from '@ui/features/common/promotion-status/utils';
 import { Stage } from '@ui/gen/api/v2/models';
 
 import { useCurrentPromotion } from './stage-meta-utils';
@@ -34,7 +35,7 @@ export const StepWaitingLabel = (props: StepWaitingLabelProps) => {
   const isWaiting = promotion.spec.steps.some(
     (step: { uses?: string }, index: number) =>
       step?.uses === props.stepUses &&
-      promotion?.status?.stepExecutionMetadata?.[index]?.status === 'Running'
+      promotion?.status?.stepExecutionMetadata?.[index]?.status === PromotionStepStatusPhase.RUNNING
   );
 
   if (!isWaiting) {
