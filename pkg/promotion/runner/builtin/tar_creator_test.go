@@ -233,7 +233,7 @@ func Test_tarCreator_run(t *testing.T) {
 				OutPath: filepath.Join("nested", "archive.tar"),
 				Gzip:    false,
 			},
-			assertions: func(t *testing.T, workDir string, result promotion.StepResult, err error) {
+			assertions: func(t *testing.T, _ string, result promotion.StepResult, err error) {
 				assert.Error(t, err)
 				assert.Equal(t, kargoapi.PromotionStepStatusErrored, result.Status)
 				assert.ErrorContains(t, err, "failed to create output directory")
@@ -518,7 +518,7 @@ func Test_tarCreator_createTarball(t *testing.T) {
 			},
 			gzip:   false,
 			ignore: "",
-			assertions: func(t *testing.T, outPath string, result promotion.StepResult, err error) {
+			assertions: func(t *testing.T, _ string, result promotion.StepResult, err error) {
 				assert.Error(t, err)
 				assert.Equal(t, kargoapi.PromotionStepStatusErrored, result.Status)
 				assert.ErrorContains(t, err, "failed to create temporary file")
