@@ -6,14 +6,6 @@ replace (
 	github.com/akuity/kargo/api => ./api
 	github.com/akuity/kargo/pkg/client/generated => ./pkg/client/generated
 
-	// Hard-pin controller-tools (see the `tool` block below) and its
-	// transitive dependency code-generator. A newer version of either
-	// introduces a known breaking change in our CRD codegen. A plain
-	// `require` can be bumped by MVS or `go get -u`, so a `replace` is used
-	// to keep them immovable.
-	k8s.io/code-generator => k8s.io/code-generator v0.34.3
-	sigs.k8s.io/controller-tools => sigs.k8s.io/controller-tools v0.19.0
-
 	// NB(hidde): required because of https://github.com/kubernetes-sigs/kustomize/issues/6014
 	sigs.k8s.io/kustomize/api => sigs.k8s.io/kustomize/api v0.20.1
 	sigs.k8s.io/kustomize/kyaml => sigs.k8s.io/kustomize/kyaml v0.20.1
