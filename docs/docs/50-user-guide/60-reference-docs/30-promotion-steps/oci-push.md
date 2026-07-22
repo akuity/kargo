@@ -80,9 +80,10 @@ recorded via standard OCI annotations.
 
 :::note
 
-The `tar` step used below to produce the archive is planned but not yet
-available. Until then, produce the archive with another step (for example, by
-invoking `tar` from a script) and point `srcPath` at the result.
+The `tar` step used below to produce the archive is a companion contribution
+currently in review ([#6666](https://github.com/akuity/kargo/pull/6666)). Until
+it merges and ships, produce the archive another way (for example, by invoking
+`tar` from a script) and point `srcPath` at the result.
 
 :::
 
@@ -90,8 +91,9 @@ invoking `tar` from a script) and point `srcPath` at the result.
 steps:
 - uses: tar
   config:
-    path: ./manifests
+    inPath: ./manifests
     outPath: ./manifests.tar.gz
+    gzip: true
 - uses: oci-push
   config:
     srcPath: ./manifests.tar.gz
