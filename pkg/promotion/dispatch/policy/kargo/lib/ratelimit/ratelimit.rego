@@ -21,11 +21,16 @@ violation contains v if {
 			"dispatch rate limit for stage %q is in effect (max %d per %s)",
 			[input.stage.name, rl.max, format_ns(rl.window)],
 		),
+		"until": slot_free,
 		"requeue": requeue_seconds,
 	}
 }
 
 now_ns := time.parse_rfc3339_ns(input.now)
+
+# The RFC3339 time the next dispatch slot frees (the oldest in-window
+# dispatch aging out).
+slot_free := time.format([min(recent) + data.rateLimit[input.stage.name].window, "UTC"])
 
 # Dispatches still inside the rolling window. An array, not a set, so that
 # same-second dispatches are not collapsed.

@@ -42,6 +42,7 @@ decision := {
 	"allow": false,
 	"message": concat("; ", [v.msg | some v in violation]),
 	"requeue_after": requeue,
+	"reasons": [v | some v in violation],
 } if {
 	count(violation) > 0
 }

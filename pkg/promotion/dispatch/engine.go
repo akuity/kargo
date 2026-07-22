@@ -36,6 +36,29 @@ type Decision struct {
 	// "when" that lets a held Promotion resume on its own. Zero when the
 	// policy offered none.
 	RequeueAfter time.Duration
+	// Reasons is the structured form of Message: one entry per contributing
+	// violation, in the same order the Message concatenates them. Empty when
+	// Allow is true. Consumers that want the rule identity, what the
+	// Promotion is blocked behind, or when the hold self-clears should read
+	// this rather than parse Message.
+	Reasons []Reason
+}
+
+// Reason is a single structured reason a Promotion is held.
+type Reason struct {
+	// Rule is the identifier of the violation that produced this reason
+	// (e.g. "freezes", "yield-to-rollback", "scheduled").
+	Rule string
+	// Message is the human-readable explanation for this reason alone.
+	Message string
+	// BlockedBy names the queued Promotion this candidate is deferring to,
+	// when the reason is a yield. Empty otherwise.
+	BlockedBy string
+	// Until is the time this reason is expected to clear on its own (e.g. a
+	// window opening, a freeze ending, a scheduled time). Nil for reasons
+	// that clear only on operator action (regression, would-regress,
+	// auto-hold).
+	Until *time.Time
 }
 
 // Engine evaluates dispatch policies, caching one prepared query per
@@ -189,7 +212,42 @@ func decodeDecision(v any) (*Decision, error) {
 			decision.RequeueAfter = time.Duration(secs * float64(time.Second))
 		}
 	}
+	if raw, ok := m["reasons"].([]any); ok {
+		decision.Reasons = make([]Reason, 0, len(raw))
+		for _, r := range raw {
+			reason, err := decodeReason(r)
+			if err != nil {
+				return nil, err
+			}
+			decision.Reasons = append(decision.Reasons, reason)
+		}
+	}
 	return decision, nil
+}
+
+func decodeReason(v any) (Reason, error) {
+	m, ok := v.(map[string]any)
+	if !ok {
+		return Reason{}, fmt.Errorf("reason is %T, expected an object", v)
+	}
+	reason := Reason{}
+	if s, ok := m["rule"].(string); ok {
+		reason.Rule = s
+	}
+	if s, ok := m["msg"].(string); ok {
+		reason.Message = s
+	}
+	if s, ok := m["blocked_by"].(string); ok {
+		reason.BlockedBy = s
+	}
+	if s, ok := m["until"].(string); ok {
+		t, err := time.Parse(time.RFC3339, s)
+		if err != nil {
+			return Reason{}, fmt.Errorf("reason has invalid \"until\": %w", err)
+		}
+		reason.Until = &t
+	}
+	return reason, nil
 }
 
 func toFloat(v any) (float64, error) {

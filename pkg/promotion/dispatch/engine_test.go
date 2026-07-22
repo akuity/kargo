@@ -1119,6 +1119,146 @@ decision := {"allow": true, "message": "hijacked", "requeue_after": 0}
 	}
 }
 
+// reasonByRule returns the (first) reason with the given rule, or a zero
+// Reason and false when absent.
+func reasonByRule(reasons []Reason, rule string) (Reason, bool) {
+	for _, r := range reasons {
+		if r.Rule == rule {
+			return r, true
+		}
+	}
+	return Reason{}, false
+}
+
+// TestEngineEvaluateReasons covers the structured Decision.Reasons projection:
+// each held violation surfaces its rule, and — where it has them — the queued
+// Promotion it defers to (blocked_by) and the time it self-clears (until).
+func TestEngineEvaluateReasons(t *testing.T) {
+	t.Parallel()
+
+	testCases := []struct {
+		name   string
+		input  map[string]any
+		data   func() map[string]any
+		assert func(*testing.T, *Decision)
+	}{
+		{
+			name:  "freeze reason carries the rule and until",
+			input: testInput(ClassAutoForward),
+			data: func() map[string]any {
+				data := emptyData()
+				data["freezes"] = []any{map[string]any{
+					"name":          "holiday",
+					"start":         "2026-07-15T00:00:00Z",
+					"end":           "2026-07-16T00:00:00Z",
+					"scope":         "no-promotions",
+					"argocdServers": []any{},
+				}}
+				return data
+			},
+			assert: func(t *testing.T, d *Decision) {
+				require.Len(t, d.Reasons, 1)
+				r := d.Reasons[0]
+				require.Equal(t, "freezes", r.Rule)
+				require.Equal(t, d.Message, r.Message)
+				require.Empty(t, r.BlockedBy)
+				require.NotNil(t, r.Until)
+				require.Equal(t, "2026-07-16T00:00:00Z", r.Until.UTC().Format(time.RFC3339))
+			},
+		},
+		{
+			name:  "scheduled reason carries until",
+			input: scheduledInput("2026-07-15T18:00:00Z"),
+			data:  emptyData,
+			assert: func(t *testing.T, d *Decision) {
+				r, ok := reasonByRule(d.Reasons, "scheduled")
+				require.True(t, ok)
+				require.NotNil(t, r.Until)
+				require.Equal(t, "2026-07-15T18:00:00Z", r.Until.UTC().Format(time.RFC3339))
+				require.Empty(t, r.BlockedBy)
+			},
+		},
+		{
+			name:  "yield-to-rollback reason carries blocked_by and no until",
+			input: testInput(ClassAutoForward),
+			data: func() map[string]any {
+				data := emptyData()
+				data["queue"] = []any{
+					map[string]any{"name": "test-promo", "class": "auto-forward", "createdAt": testNow},
+					map[string]any{"name": "rb.01", "class": "rollback", "createdAt": testNow},
+				}
+				return data
+			},
+			assert: func(t *testing.T, d *Decision) {
+				r, ok := reasonByRule(d.Reasons, "yield-to-rollback")
+				require.True(t, ok)
+				require.Equal(t, "rb.01", r.BlockedBy)
+				require.Nil(t, r.Until)
+			},
+		},
+		{
+			name:  "would-regress reason has neither blocked_by nor until",
+			input: orderingInput("freight-old", "2026-07-15T10:00:00Z"),
+			data:  orderingData,
+			assert: func(t *testing.T, d *Decision) {
+				r, ok := reasonByRule(d.Reasons, "would-regress")
+				require.True(t, ok)
+				require.Empty(t, r.BlockedBy)
+				require.Nil(t, r.Until)
+			},
+		},
+		{
+			name:  "co-firing rules each contribute a reason",
+			input: orderingInput("freight-old", "2026-07-15T10:00:00Z"),
+			data: func() map[string]any {
+				data := orderingData()
+				data["freezes"] = []any{map[string]any{
+					"name":          "freeze",
+					"start":         "2026-07-15T00:00:00Z",
+					"end":           "2026-07-16T00:00:00Z",
+					"scope":         "no-forward",
+					"argocdServers": []any{},
+				}}
+				return data
+			},
+			assert: func(t *testing.T, d *Decision) {
+				require.Len(t, d.Reasons, 2)
+				freeze, ok := reasonByRule(d.Reasons, "freezes")
+				require.True(t, ok)
+				require.NotNil(t, freeze.Until)
+				regress, ok := reasonByRule(d.Reasons, "would-regress")
+				require.True(t, ok)
+				require.Nil(t, regress.Until)
+			},
+		},
+		{
+			name:  "allow produces no reasons",
+			input: testInput(ClassAutoForward),
+			data:  emptyData,
+			assert: func(t *testing.T, d *Decision) {
+				require.True(t, d.Allow)
+				require.Empty(t, d.Reasons)
+			},
+		},
+	}
+
+	engine := NewEngine()
+	for _, testCase := range testCases {
+		t.Run(testCase.name, func(t *testing.T) {
+			t.Parallel()
+			decision, err := engine.Evaluate(
+				context.Background(),
+				"",
+				"",
+				testCase.input,
+				testCase.data(),
+			)
+			require.NoError(t, err)
+			testCase.assert(t, decision)
+		})
+	}
+}
+
 func TestEngineCachesCompileErrors(t *testing.T) {
 	t.Parallel()
 	engine := NewEngine()

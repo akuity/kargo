@@ -30,6 +30,7 @@ violation contains v if {
 			"promotion class %q is frozen by freeze %q (scope %q) until %s",
 			[input.promotion.class, f.name, f.scope, f.end],
 		),
+		"until": f.end,
 		"requeue": (time.parse_rfc3339_ns(f.end) - time.parse_rfc3339_ns(input.now)) / 1000000000,
 	}
 }

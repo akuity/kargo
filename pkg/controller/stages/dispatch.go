@@ -43,6 +43,79 @@ const (
 	conditionReasonDispatchBlocked = "DispatchBlocked"
 )
 
+// Annotation keys carrying the structured dispatch hold reason on a
+// PromotionBlocked event, so consumers need not parse the free-text message.
+const (
+	annotationKeyDispatchRules     = "kargo.akuity.io/dispatch-rules"
+	annotationKeyDispatchBlockedBy = "kargo.akuity.io/dispatch-blocked-by"
+	annotationKeyDispatchUntil     = "kargo.akuity.io/dispatch-until"
+)
+
+// conditionReasonForRule maps a dispatch violation rule to a CamelCase Stage
+// condition Reason token. Unmapped rules (e.g. those from a custom policy)
+// yield no token, so the condition falls back to the generic
+// conditionReasonDispatchBlocked.
+var conditionReasonForRule = map[string]string{
+	"windows":           "OutsideWindow",
+	"freezes":           "Frozen",
+	"ratelimit":         "RateLimited",
+	"yield-to-rollback": "YieldToRollback",
+	"yield-to-manual":   "YieldToManual",
+	"regression":        "Regression",
+	"would-regress":     "WouldRegress",
+	"auto-hold":         "AutoHeld",
+	"scheduled":         "Scheduled",
+}
+
+// dispatchEventAnnotations projects a held decision's structured reasons into
+// event annotations: the distinct rules, any Promotions deferred to, and the
+// soonest self-clear time. Returns nil when there is nothing structured to add.
+func dispatchEventAnnotations(reasons []dispatch.Reason) map[string]string {
+	var rules, blockedBy []string
+	seen := map[string]bool{}
+	var until *time.Time
+	for _, r := range reasons {
+		if r.Rule != "" && !seen[r.Rule] {
+			seen[r.Rule] = true
+			rules = append(rules, r.Rule)
+		}
+		if r.BlockedBy != "" {
+			blockedBy = append(blockedBy, r.BlockedBy)
+		}
+		if r.Until != nil && (until == nil || r.Until.Before(*until)) {
+			until = r.Until
+		}
+	}
+	ann := map[string]string{}
+	if len(rules) > 0 {
+		ann[annotationKeyDispatchRules] = strings.Join(rules, ",")
+	}
+	if len(blockedBy) > 0 {
+		ann[annotationKeyDispatchBlockedBy] = strings.Join(blockedBy, ",")
+	}
+	if until != nil {
+		ann[annotationKeyDispatchUntil] = until.UTC().Format(time.RFC3339)
+	}
+	if len(ann) == 0 {
+		return nil
+	}
+	return ann
+}
+
+// conditionReasonForHeld derives the Stage Promoting-condition Reason from the
+// set of rules that held the evaluated candidates: the rule's token when a
+// single mapped rule is responsible, else the generic blocked reason.
+func conditionReasonForHeld(rules map[string]struct{}) string {
+	if len(rules) == 1 {
+		for rule := range rules {
+			if token := conditionReasonForRule[rule]; token != "" {
+				return token
+			}
+		}
+	}
+	return conditionReasonDispatchBlocked
+}
+
 // isPendingPhase returns whether the Promotion phase counts as awaiting
 // dispatch. A brand-new Promotion has an empty phase until the promotion
 // reconciler marks it Pending; both must be gated or a Promotion could slip
@@ -55,8 +128,8 @@ func isPendingPhase(phase kargoapi.PromotionPhase) bool {
 // (sorted by api.ComparePromotionByPhaseAndCreationTime), it evaluates the
 // dispatch policy against each Pending Promotion in queue order and returns
 // the first one the policy allows. When every candidate is held, it returns
-// a nil Promotion along with how long to wait before re-evaluating and a
-// human-readable reason.
+// a nil Promotion along with how long to wait before re-evaluating, a
+// human-readable message, and a Stage condition Reason token summarizing why.
 //
 // Policy errors fail closed: a Stage with a broken policy does not dispatch
 // until the policy is fixed. The error is surfaced on the Promotion as an
@@ -65,13 +138,13 @@ func (r *RegularStageReconciler) gateDispatch(
 	ctx context.Context,
 	stage *kargoapi.Stage,
 	promos []kargoapi.Promotion,
-) (*kargoapi.Promotion, time.Duration, string, error) {
+) (*kargoapi.Promotion, time.Duration, string, string, error) {
 	logger := logging.LoggerFromContext(ctx)
 
 	head := firstPending(promos)
 	if head == nil {
 		// Nothing awaiting dispatch; nothing to gate.
-		return nil, 0, "", nil
+		return nil, 0, "", "", nil
 	}
 
 	// Gather policy configuration. When there is none, the gate is a no-op
@@ -84,7 +157,7 @@ func (r *RegularStageReconciler) gateDispatch(
 		projectCfg,
 	); err != nil {
 		if !apierrors.IsNotFound(err) {
-			return nil, 0, "", fmt.Errorf(
+			return nil, 0, "", "", fmt.Errorf(
 				"error getting ProjectConfig for Project %q: %w", stage.Namespace, err,
 			)
 		}
@@ -92,7 +165,7 @@ func (r *RegularStageReconciler) gateDispatch(
 	}
 	clusterCfg, err := api.GetClusterConfig(ctx, r.client)
 	if err != nil {
-		return nil, 0, "", err
+		return nil, 0, "", "", err
 	}
 	var projectSpec *kargoapi.ProjectConfigSpec
 	if projectCfg != nil {
@@ -114,7 +187,7 @@ func (r *RegularStageReconciler) gateDispatch(
 			len(projectSpec.RateLimits) > 0
 	}
 	if !governed {
-		return head, 0, "", nil
+		return head, 0, "", "", nil
 	}
 
 	now := time.Now()
@@ -149,7 +222,7 @@ func (r *RegularStageReconciler) gateDispatch(
 	// genuine fetch error fails closed, like the candidate Freight below.
 	currentFreight, err := r.resolveCurrentFreight(ctx, stage)
 	if err != nil {
-		return nil, 0, "", err
+		return nil, 0, "", "", err
 	}
 
 	// The Stage's committed auto-promotion holds per origin, so the gate can
@@ -161,7 +234,7 @@ func (r *RegularStageReconciler) gateDispatch(
 		stage.Status.AutoPromotionHolds,
 	)
 	if err != nil {
-		return nil, 0, "", fmt.Errorf("error building dispatch policy data: %w", err)
+		return nil, 0, "", "", fmt.Errorf("error building dispatch policy data: %w", err)
 	}
 
 	// The Argo CD Applications this Stage is authorized to manage, for
@@ -173,13 +246,14 @@ func (r *RegularStageReconciler) gateDispatch(
 		if err = r.argocdClient.List(ctx, appList, client.MatchingFields{
 			indexer.ApplicationsByAuthorizedStageField: stage.Namespace + ":" + stage.Name,
 		}); err != nil {
-			return nil, 0, "", fmt.Errorf("error listing Argo CD Applications for Stage: %w", err)
+			return nil, 0, "", "", fmt.Errorf("error listing Argo CD Applications for Stage: %w", err)
 		}
 		apps = appList.Items
 	}
 
 	var msgs []string
 	var minRequeue time.Duration
+	heldRules := map[string]struct{}{}
 	evaluated := 0
 	for i := range promos {
 		promo := &promos[i]
@@ -193,7 +267,7 @@ func (r *RegularStageReconciler) gateDispatch(
 			Name:      promo.Spec.Freight,
 		})
 		if err != nil {
-			return nil, 0, "", fmt.Errorf(
+			return nil, 0, "", "", fmt.Errorf(
 				"error getting Freight %q for Promotion %q: %w",
 				promo.Spec.Freight, promo.Name, err,
 			)
@@ -207,7 +281,7 @@ func (r *RegularStageReconciler) gateDispatch(
 				"dispatch policy failed; promotion will not be dispatched until the policy is fixed: %s",
 				err.Error(),
 			)
-			return nil, 0, "", fmt.Errorf(
+			return nil, 0, "", "", fmt.Errorf(
 				"error evaluating dispatch policy for Promotion %q: %w", promo.Name, err,
 			)
 		}
@@ -217,7 +291,7 @@ func (r *RegularStageReconciler) gateDispatch(
 				"promotion", promo.Name,
 				"message", decision.Message,
 			)
-			return promo, 0, "", nil
+			return promo, 0, "", "", nil
 		}
 
 		logger.Debug(
@@ -227,11 +301,19 @@ func (r *RegularStageReconciler) gateDispatch(
 			"requeueAfter", decision.RequeueAfter,
 		)
 		// Deny messages are designed to be stable while the denial lasts, so
-		// the recorder aggregates repeats instead of spamming events.
-		r.recorder.Eventf(
-			promo, corev1.EventTypeNormal, eventReasonPromotionBlocked,
+		// the recorder aggregates repeats instead of spamming events. The
+		// structured reason rides along as event annotations so consumers need
+		// not parse the message.
+		r.recorder.AnnotatedEventf(
+			promo, dispatchEventAnnotations(decision.Reasons),
+			corev1.EventTypeNormal, eventReasonPromotionBlocked,
 			"%s", decision.Message,
 		)
+		for _, reason := range decision.Reasons {
+			if reason.Rule != "" {
+				heldRules[reason.Rule] = struct{}{}
+			}
+		}
 		msgs = append(msgs, fmt.Sprintf("Promotion %q: %s", promo.Name, decision.Message))
 		if decision.RequeueAfter > 0 &&
 			(minRequeue == 0 || decision.RequeueAfter < minRequeue) {
@@ -244,7 +326,7 @@ func (r *RegularStageReconciler) gateDispatch(
 		blockedFor = defaultDispatchRequeue
 	}
 	blockedFor = min(max(blockedFor, minDispatchRequeue), maxDispatchRequeue)
-	return nil, blockedFor, strings.Join(msgs, "; "), nil
+	return nil, blockedFor, strings.Join(msgs, "; "), conditionReasonForHeld(heldRules), nil
 }
 
 // firstPending returns the first Promotion awaiting dispatch, or nil.

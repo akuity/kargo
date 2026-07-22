@@ -2185,7 +2185,9 @@ func TestRegularStageReconciler_syncPromotions(t *testing.T) {
 				promotingCond := conditions.Get(&status, kargoapi.ConditionTypePromoting)
 				require.NotNil(t, promotingCond)
 				assert.Equal(t, metav1.ConditionFalse, promotingCond.Status)
-				assert.Equal(t, "DispatchBlocked", promotingCond.Reason)
+				// The gate surfaces the specific rule as the condition Reason
+				// when a single rule holds all candidates.
+				assert.Equal(t, "Frozen", promotingCond.Reason)
 				assert.Contains(t, promotingCond.Message, "test-freeze")
 			},
 		},

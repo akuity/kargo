@@ -51,6 +51,7 @@ violation contains v if {
 	v := {
 		"rule": "yield-to-rollback",
 		"msg": sprintf("yielding to queued rollback %q", [q.name]),
+		"blocked_by": q.name,
 		"requeue": 5,
 	}
 }
@@ -67,6 +68,7 @@ violation contains v if {
 	v := {
 		"rule": "yield-to-manual",
 		"msg": sprintf("yielding to queued manual promotion %q", [q.name]),
+		"blocked_by": q.name,
 		"requeue": 5,
 	}
 }
@@ -129,6 +131,7 @@ violation contains v if {
 	v := {
 		"rule": "scheduled",
 		"msg": sprintf("scheduled; held until %s", [not_before]),
+		"until": not_before,
 		"requeue": (time.parse_rfc3339_ns(not_before) - time.parse_rfc3339_ns(input.now)) / 1000000000,
 	}
 }

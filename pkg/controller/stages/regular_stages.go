@@ -915,7 +915,7 @@ func (r *RegularStageReconciler) syncPromotions(
 		// permitted Promotion from deeper in the queue (e.g. a rollback
 		// behind a frozen forward promotion).
 		if currentPromo == nil && isPendingPhase(highestPrioPromo.Status.Phase) {
-			allowed, blockedFor, blockedMsg, err := r.gateDispatch(ctx, stage, promotions.Items)
+			allowed, blockedFor, blockedMsg, blockedReason, err := r.gateDispatch(ctx, stage, promotions.Items)
 			if err != nil {
 				// Fail closed: dispatch remains blocked until the policy
 				// evaluates successfully.
@@ -938,7 +938,7 @@ func (r *RegularStageReconciler) syncPromotions(
 				conditions.Set(&newStatus, &metav1.Condition{
 					Type:               kargoapi.ConditionTypePromoting,
 					Status:             metav1.ConditionFalse,
-					Reason:             conditionReasonDispatchBlocked,
+					Reason:             blockedReason,
 					Message:            blockedMsg,
 					ObservedGeneration: stage.Generation,
 				})

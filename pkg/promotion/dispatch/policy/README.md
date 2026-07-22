@@ -63,9 +63,13 @@ default policy:
 
 Both packages expose the same hook points, inert when unused:
 
-- `violation` — a set of `{rule, msg, requeue?}` objects, unioned with the
-  standard blocks' violations. A numeric `requeue` (seconds) participates
-  in the decision's requeue hint.
+- `violation` — a set of `{rule, msg, requeue?, blocked_by?, until?}`
+  objects, unioned with the standard blocks' violations. A numeric `requeue`
+  (seconds) participates in the decision's requeue hint. The optional
+  `blocked_by` (a queued Promotion name) and `until` (an RFC3339 time the
+  hold self-clears) are surfaced verbatim in the decision's structured
+  `reasons` and, from there, as annotations on the held Promotion's
+  `PromotionBlocked` event — set them when your rule has that context.
 - `freeze_bypass(f)` — a predicate consulted by `kargo.lib.freezes`
   for each freeze that would otherwise hold the promotion. The shipped
   modules default it to `false`; a custom policy overrides it.

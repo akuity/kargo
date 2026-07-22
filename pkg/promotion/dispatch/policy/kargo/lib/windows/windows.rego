@@ -24,6 +24,7 @@ violation contains v if {
 			"outside all promotion windows; next window opens at %s",
 			[next_open],
 		),
+		"until": next_open,
 		"requeue": requeue_seconds,
 	}
 }

@@ -128,3 +128,97 @@ func assertCurrentFreight(
 	require.True(t, discoveredAt.Equal(cf.DiscoveredAt),
 		"discoveredAt: want %s, got %s", discoveredAt, cf.DiscoveredAt)
 }
+
+func TestDispatchEventAnnotations(t *testing.T) {
+	t.Parallel()
+
+	until := time.Date(2026, 7, 16, 0, 0, 0, 0, time.UTC)
+	earlier := time.Date(2026, 7, 15, 18, 0, 0, 0, time.UTC)
+
+	testCases := []struct {
+		name    string
+		reasons []dispatch.Reason
+		assert  func(*testing.T, map[string]string)
+	}{
+		{
+			name:    "no reasons yields nil",
+			reasons: nil,
+			assert: func(t *testing.T, ann map[string]string) {
+				require.Nil(t, ann)
+			},
+		},
+		{
+			name:    "rule with no structured fields yields only the rule",
+			reasons: []dispatch.Reason{{Rule: "would-regress", Message: "held"}},
+			assert: func(t *testing.T, ann map[string]string) {
+				require.Equal(t, map[string]string{
+					annotationKeyDispatchRules: "would-regress",
+				}, ann)
+			},
+		},
+		{
+			name: "distinct rules, blocked-by, and soonest until",
+			reasons: []dispatch.Reason{
+				{Rule: "freezes", Until: &until},
+				{Rule: "yield-to-rollback", BlockedBy: "rb.01", Until: &earlier},
+			},
+			assert: func(t *testing.T, ann map[string]string) {
+				require.Equal(t, "freezes,yield-to-rollback", ann[annotationKeyDispatchRules])
+				require.Equal(t, "rb.01", ann[annotationKeyDispatchBlockedBy])
+				// The soonest self-clear wins.
+				require.Equal(t, "2026-07-15T18:00:00Z", ann[annotationKeyDispatchUntil])
+			},
+		},
+		{
+			name: "duplicate rule collapses in the rules list",
+			reasons: []dispatch.Reason{
+				{Rule: "yield-to-rollback", BlockedBy: "rb.01"},
+				{Rule: "yield-to-rollback", BlockedBy: "rb.02"},
+			},
+			assert: func(t *testing.T, ann map[string]string) {
+				require.Equal(t, "yield-to-rollback", ann[annotationKeyDispatchRules])
+				require.Equal(t, "rb.01,rb.02", ann[annotationKeyDispatchBlockedBy])
+			},
+		},
+	}
+	for _, tc := range testCases {
+		t.Run(tc.name, func(t *testing.T) {
+			t.Parallel()
+			tc.assert(t, dispatchEventAnnotations(tc.reasons))
+		})
+	}
+}
+
+func TestConditionReasonForHeld(t *testing.T) {
+	t.Parallel()
+
+	testCases := []struct {
+		name  string
+		rules []string
+		want  string
+	}{
+		{name: "single mapped rule yields its token", rules: []string{"freezes"}, want: "Frozen"},
+		{name: "single yield rule", rules: []string{"yield-to-rollback"}, want: "YieldToRollback"},
+		{
+			name:  "multiple rules fall back",
+			rules: []string{"freezes", "would-regress"},
+			want:  conditionReasonDispatchBlocked,
+		},
+		{
+			name:  "unmapped custom rule falls back",
+			rules: []string{"pci-change-ticket"},
+			want:  conditionReasonDispatchBlocked,
+		},
+		{name: "no rules fall back", rules: nil, want: conditionReasonDispatchBlocked},
+	}
+	for _, tc := range testCases {
+		t.Run(tc.name, func(t *testing.T) {
+			t.Parallel()
+			set := map[string]struct{}{}
+			for _, r := range tc.rules {
+				set[r] = struct{}{}
+			}
+			require.Equal(t, tc.want, conditionReasonForHeld(set))
+		})
+	}
+}
