@@ -713,7 +713,8 @@ type Update struct {
 }
 
 type TarConfig struct {
-	// Gzip determines whether the archive should be compressed using gzip. Defaults to true.
+	// Gzip determines whether the archive should be compressed using gzip. Defaults to false
+	// (the archive is uncompressed unless this is set to true).
 	Gzip bool `json:"gzip,omitempty"`
 	// Ignore is a (multiline) string of glob patterns to ignore when adding files to the
 	// archive. It accepts the same syntax as .gitignore files.

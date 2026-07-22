@@ -22,8 +22,7 @@
     },
     "gzip": {
       "type": "boolean",
-      "description": "Gzip determines whether the archive should be compressed using gzip. Defaults to true.",
-      "default": true
+      "description": "Gzip determines whether the archive should be compressed using gzip. Defaults to false (the archive is uncompressed unless this is set to true)."
     }
   }
 }
