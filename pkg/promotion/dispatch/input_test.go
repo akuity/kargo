@@ -182,13 +182,29 @@ func TestBuildData(t *testing.T) {
 	}}
 	dispatched := time.Date(2026, 7, 15, 14, 40, 0, 0, time.UTC)
 	created := time.Date(2026, 7, 15, 14, 30, 0, 0, time.UTC)
-	queue := []kargoapi.Promotion{{
-		ObjectMeta: metav1.ObjectMeta{
-			Name:              "prod.01",
-			CreationTimestamp: metav1.NewTime(created),
-			Annotations:       map[string]string{kargoapi.AnnotationKeyRollback: kargoapi.AnnotationValueTrue},
+	queue := []kargoapi.Promotion{
+		{
+			ObjectMeta: metav1.ObjectMeta{
+				Name:              "prod.01",
+				CreationTimestamp: metav1.NewTime(created),
+				Annotations: map[string]string{
+					kargoapi.AnnotationKeyRollback: kargoapi.AnnotationValueTrue,
+					annotationKeyPromoteAfter:      "2026-07-15T16:00:00Z",
+				},
+			},
+			Spec: kargoapi.PromotionSpec{Freight: "freight-old"},
 		},
-	}}
+		{
+			// No resolvable origin (absent from queueOrigins) and no schedule:
+			// both fields are omitted from the projection.
+			ObjectMeta: metav1.ObjectMeta{
+				Name:              "prod.02",
+				CreationTimestamp: metav1.NewTime(created),
+			},
+			Spec: kargoapi.PromotionSpec{Freight: "freight-gone"},
+		},
+	}
+	queueOrigins := map[string]string{"freight-old": "Warehouse/demo/nginx"}
 
 	currentFreight := map[string]CurrentFreight{
 		"Warehouse/demo/nginx": {
@@ -208,8 +224,8 @@ func TestBuildData(t *testing.T) {
 	}
 
 	data, err := BuildData(
-		projectSpec, freezes, stage, nil, []time.Time{dispatched}, queue, currentFreight,
-		autoPromotionHolds,
+		projectSpec, freezes, stage, nil, []time.Time{dispatched}, queue, queueOrigins,
+		currentFreight, autoPromotionHolds,
 	)
 	require.NoError(t, err)
 
@@ -240,12 +256,22 @@ func TestBuildData(t *testing.T) {
 	require.Equal(t, defaultScopes, data["scopes"])
 
 	// The queue projects each awaiting Promotion's identity, class, and
-	// creation time, preserving the given order.
-	require.Equal(t, []any{map[string]any{
-		"name":      "prod.01",
-		"class":     ClassRollback,
-		"createdAt": "2026-07-15T14:30:00Z",
-	}}, data["queue"])
+	// creation time, preserving the given order, plus origin (when resolved)
+	// and notBefore (when scheduled) -- both omitted when unknown.
+	require.Equal(t, []any{
+		map[string]any{
+			"name":      "prod.01",
+			"class":     ClassRollback,
+			"createdAt": "2026-07-15T14:30:00Z",
+			"origin":    "Warehouse/demo/nginx",
+			"notBefore": "2026-07-15T16:00:00Z",
+		},
+		map[string]any{
+			"name":      "prod.02",
+			"class":     ClassAutoForward,
+			"createdAt": "2026-07-15T14:30:00Z",
+		},
+	}, data["queue"])
 
 	// The current Freight projects per origin as {name, discoveredAt}.
 	require.Equal(t, map[string]any{"Warehouse/demo/nginx": map[string]any{
@@ -266,7 +292,7 @@ func TestBuildData(t *testing.T) {
 func TestBuildDataNilPolicy(t *testing.T) {
 	t.Parallel()
 	stage := &kargoapi.Stage{ObjectMeta: metav1.ObjectMeta{Name: "prod"}}
-	data, err := BuildData(nil, nil, stage, nil, nil, nil, nil, nil)
+	data, err := BuildData(nil, nil, stage, nil, nil, nil, nil, nil, nil)
 	require.NoError(t, err)
 	require.Empty(t, data["windows"])
 	require.Empty(t, data["freezes"])
@@ -384,7 +410,7 @@ func TestBuildDataProjectSelector(t *testing.T) {
 	for _, testCase := range testCases {
 		t.Run(testCase.name, func(t *testing.T) {
 			t.Parallel()
-			data, err := BuildData(nil, freeze(testCase.selector), stage, testCase.project, nil, nil, nil, nil)
+			data, err := BuildData(nil, freeze(testCase.selector), stage, testCase.project, nil, nil, nil, nil, nil)
 			testCase.assert(t, data, err)
 		})
 	}

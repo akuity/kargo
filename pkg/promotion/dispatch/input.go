@@ -24,6 +24,11 @@ const (
 	ClassRollback = "rollback"
 )
 
+// annotationKeyPromoteAfter carries a Promotion's earliest dispatch time. It
+// mirrors promote_after_key in the kargo.lib.ordering module (the two must
+// agree); a first-class spec.notBefore field is a later upgrade.
+const annotationKeyPromoteAfter = "kargo.akuity.io/promote-after"
+
 // Freeze scopes and the promotion classes each freezes.
 var defaultScopes = map[string]any{
 	"no-promotions": []any{ClassAutoForward, ClassManualForward, ClassRollback},
@@ -95,7 +100,9 @@ type CurrentFreight struct {
 // recent promotions were dispatched (began Running), for rate limiting.
 // queue is the Stage's Promotions awaiting dispatch, in the order the gate
 // considers them, so a policy can reason about the rest of the backlog (e.g.
-// yield to a queued rollback, or grow conservative under a deep backlog).
+// yield to a queued rollback, or grow conservative under a deep backlog);
+// queueOrigins maps each queued Promotion's Freight name to that Freight's
+// origin (entries the caller could not resolve are simply absent).
 // currentFreight is the Stage's current Freight per origin, so a policy can
 // tell whether a candidate advances or regresses the Stage (data.currentFreight,
 // keyed by origin). autoPromotionHolds is the Stage's committed auto-promotion
@@ -109,6 +116,7 @@ func BuildData(
 	project *kargoapi.Project,
 	dispatches []time.Time,
 	queue []kargoapi.Promotion,
+	queueOrigins map[string]string,
 	currentFreight map[string]CurrentFreight,
 	autoPromotionHolds map[string]kargoapi.AutoPromotionHold,
 ) (map[string]any, error) {
@@ -177,7 +185,7 @@ func BuildData(
 		"freezes":            freezeDocs,
 		"scopes":             defaultScopes,
 		"rateLimit":          rateLimit,
-		"queue":              queueDocs(queue),
+		"queue":              queueDocs(queue, queueOrigins),
 		"currentFreight":     currentFreightDocs(currentFreight),
 		"autoPromotionHolds": autoPromotionHoldsDocs(autoPromotionHolds),
 	}, nil
@@ -223,19 +231,29 @@ func autoPromotionHoldsDocs(holds map[string]kargoapi.AutoPromotionHold) map[str
 }
 
 // queueDocs projects the Promotions awaiting dispatch into policy documents,
-// preserving the gate's evaluation order. Each entry carries only identity,
-// class, and creation time -- enough for a policy to weigh the backlog
-// against the candidate it is evaluating (found by input.promotion.name)
-// without fetching Freight for every queued Promotion.
-func queueDocs(queue []kargoapi.Promotion) []any {
+// preserving the gate's evaluation order. Each entry carries identity, class,
+// and creation time, plus -- when available -- the promoted Freight's origin
+// (from queueOrigins, keyed by Freight name) and the promotion's earliest
+// dispatch time (the promote-after annotation). Origin and notBefore let the
+// ordering rules scope a yield per origin and skip queued promotions that are
+// not yet due; both are omitted when unknown, and the rules treat absence
+// conservatively.
+func queueDocs(queue []kargoapi.Promotion, queueOrigins map[string]string) []any {
 	docs := make([]any, len(queue))
 	for i := range queue {
 		promo := &queue[i]
-		docs[i] = map[string]any{
+		doc := map[string]any{
 			"name":      promo.Name,
 			"class":     ClassOf(promo),
 			"createdAt": promo.CreationTimestamp.UTC().Format(time.RFC3339),
 		}
+		if origin := queueOrigins[promo.Spec.Freight]; origin != "" {
+			doc["origin"] = origin
+		}
+		if notBefore := promo.Annotations[annotationKeyPromoteAfter]; notBefore != "" {
+			doc["notBefore"] = notBefore
+		}
+		docs[i] = doc
 	}
 	return docs
 }

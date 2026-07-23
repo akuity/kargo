@@ -225,13 +225,21 @@ func (r *RegularStageReconciler) gateDispatch(
 		return nil, 0, "", "", err
 	}
 
+	// Each queued Promotion's Freight origin, so the ordering rules can scope
+	// a yield per origin (data.queue[_].origin). Cache-backed reads, one per
+	// distinct Freight name in the queue.
+	queueOrigins, err := r.resolveQueueOrigins(ctx, queue)
+	if err != nil {
+		return nil, 0, "", "", err
+	}
+
 	// The Stage's committed auto-promotion holds per origin, so the gate can
 	// deny an auto-forward for a held origin (data.autoPromotionHolds) — the
 	// dispatch-side complement of the controller's creation-side hold check.
 	// Read directly off the in-memory Stage; no fetch needed.
 	data, err := dispatch.BuildData(
-		projectSpec, freezes, stage, project, dispatches, queue, currentFreight,
-		stage.Status.AutoPromotionHolds,
+		projectSpec, freezes, stage, project, dispatches, queue, queueOrigins,
+		currentFreight, stage.Status.AutoPromotionHolds,
 	)
 	if err != nil {
 		return nil, 0, "", "", fmt.Errorf("error building dispatch policy data: %w", err)
@@ -361,6 +369,44 @@ func (r *RegularStageReconciler) resolveCurrentFreight(
 		}
 	}
 	return resolved, nil
+}
+
+// resolveQueueOrigins resolves each queued Promotion's Freight origin, keyed
+// by Freight name, so data.queue entries can carry origin for origin-scoped
+// ordering rules. An unresolvable Freight (e.g. garbage-collected) is simply
+// absent -- the ordering rules treat a missing origin conservatively -- while
+// a genuine fetch error fails closed, like every other Freight resolution on
+// this path.
+func (r *RegularStageReconciler) resolveQueueOrigins(
+	ctx context.Context,
+	queue []kargoapi.Promotion,
+) (map[string]string, error) {
+	origins := make(map[string]string, len(queue))
+	for i := range queue {
+		promo := &queue[i]
+		freightName := promo.Spec.Freight
+		if freightName == "" {
+			continue
+		}
+		if _, resolved := origins[freightName]; resolved {
+			continue
+		}
+		freight, err := api.GetFreight(ctx, r.client, types.NamespacedName{
+			Namespace: promo.Namespace,
+			Name:      freightName,
+		})
+		if err != nil {
+			return nil, fmt.Errorf(
+				"error getting Freight %q for queued Promotion %q: %w",
+				freightName, promo.Name, err,
+			)
+		}
+		if freight == nil {
+			continue
+		}
+		origins[freightName] = freight.Origin.String()
+	}
+	return origins, nil
 }
 
 // enqueueStagesForConfigChange returns reconcile requests for every regular

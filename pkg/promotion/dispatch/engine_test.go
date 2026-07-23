@@ -553,7 +553,7 @@ func TestEngineEvaluate(t *testing.T) {
 				data := emptyData()
 				data["queue"] = []any{
 					map[string]any{"name": "test-promo", "class": "auto-forward", "createdAt": testNow},
-					map[string]any{"name": "rb.01", "class": "rollback", "createdAt": testNow},
+					map[string]any{"name": "zz-rb.01", "class": "rollback", "createdAt": testNow},
 				}
 				return data
 			},
@@ -689,14 +689,14 @@ func TestEngineEvaluate(t *testing.T) {
 				data := emptyData()
 				data["queue"] = []any{
 					map[string]any{"name": "test-promo", "class": "auto-forward", "createdAt": testNow},
-					map[string]any{"name": "rb.01", "class": "rollback", "createdAt": testNow},
+					map[string]any{"name": "zz-rb.01", "class": "rollback", "createdAt": testNow},
 				}
 				return data
 			},
 			assert: func(t *testing.T, d *Decision, err error) {
 				require.NoError(t, err)
 				require.False(t, d.Allow)
-				require.Equal(t, `yielding to queued rollback "rb.01"`, d.Message)
+				require.Equal(t, `yielding to queued rollback "zz-rb.01"`, d.Message)
 				require.Equal(t, 5*time.Second, d.RequeueAfter)
 			},
 		},
@@ -708,14 +708,14 @@ func TestEngineEvaluate(t *testing.T) {
 				data := emptyData()
 				data["queue"] = []any{
 					map[string]any{"name": "test-promo", "class": "manual-forward", "createdAt": testNow},
-					map[string]any{"name": "rb.01", "class": "rollback", "createdAt": testNow},
+					map[string]any{"name": "zz-rb.01", "class": "rollback", "createdAt": testNow},
 				}
 				return data
 			},
 			assert: func(t *testing.T, d *Decision, err error) {
 				require.NoError(t, err)
 				require.False(t, d.Allow)
-				require.Contains(t, d.Message, `yielding to queued rollback "rb.01"`)
+				require.Contains(t, d.Message, `yielding to queued rollback "zz-rb.01"`)
 			},
 		},
 		{
@@ -745,14 +745,14 @@ func TestEngineEvaluate(t *testing.T) {
 				data := emptyData()
 				data["queue"] = []any{
 					map[string]any{"name": "test-promo", "class": "auto-forward", "createdAt": testNow},
-					map[string]any{"name": "m.01", "class": "manual-forward", "createdAt": testNow},
+					map[string]any{"name": "zz-m.01", "class": "manual-forward", "createdAt": testNow},
 				}
 				return data
 			},
 			assert: func(t *testing.T, d *Decision, err error) {
 				require.NoError(t, err)
 				require.False(t, d.Allow)
-				require.Equal(t, `yielding to queued manual promotion "m.01"`, d.Message)
+				require.Equal(t, `yielding to queued manual promotion "zz-m.01"`, d.Message)
 				require.Equal(t, 5*time.Second, d.RequeueAfter)
 			},
 		},
@@ -765,13 +765,157 @@ func TestEngineEvaluate(t *testing.T) {
 				data := emptyData()
 				data["queue"] = []any{
 					map[string]any{"name": "test-promo", "class": "manual-forward", "createdAt": testNow},
-					map[string]any{"name": "m.02", "class": "manual-forward", "createdAt": testNow},
+					map[string]any{"name": "zz-m.02", "class": "manual-forward", "createdAt": testNow},
 				}
 				return data
 			},
 			assert: func(t *testing.T, d *Decision, err error) {
 				require.NoError(t, err)
 				require.True(t, d.Allow)
+			},
+		},
+		{
+			// Behind-scoping: within a gate pass, candidates are evaluated in
+			// queue order, so a rollback AHEAD of the candidate (lower name)
+			// was already evaluated against the same snapshot and held --
+			// deferring to it would starve the candidate on a promotion that
+			// cannot itself run.
+			name:  "built-in yield-to-rollback ignores a rollback ahead of the candidate",
+			input: testInput(ClassAutoForward),
+			data: func() map[string]any {
+				data := emptyData()
+				data["queue"] = []any{
+					map[string]any{"name": "aa-rb.01", "class": "rollback", "createdAt": testNow},
+					map[string]any{"name": "test-promo", "class": "auto-forward", "createdAt": testNow},
+				}
+				return data
+			},
+			assert: func(t *testing.T, d *Decision, err error) {
+				require.NoError(t, err)
+				require.True(t, d.Allow)
+			},
+		},
+		{
+			// due(q): a queued rollback scheduled for the future cannot itself
+			// dispatch, so it must not embargo the queue until its time.
+			name:  "built-in yield-to-rollback ignores a scheduled rollback that is not yet due",
+			input: testInput(ClassAutoForward),
+			data: func() map[string]any {
+				data := emptyData()
+				data["queue"] = []any{
+					map[string]any{"name": "test-promo", "class": "auto-forward", "createdAt": testNow},
+					map[string]any{
+						"name": "zz-rb.01", "class": "rollback", "createdAt": testNow,
+						"notBefore": "2026-07-15T18:00:00Z",
+					},
+				}
+				return data
+			},
+			assert: func(t *testing.T, d *Decision, err error) {
+				require.NoError(t, err)
+				require.True(t, d.Allow)
+			},
+		},
+		{
+			// due(q): once the queued rollback's scheduled time has passed it
+			// is due, and the yield applies again.
+			name:  "built-in yield-to-rollback holds for a scheduled rollback that is due",
+			input: testInput(ClassAutoForward),
+			data: func() map[string]any {
+				data := emptyData()
+				data["queue"] = []any{
+					map[string]any{"name": "test-promo", "class": "auto-forward", "createdAt": testNow},
+					map[string]any{
+						"name": "zz-rb.01", "class": "rollback", "createdAt": testNow,
+						"notBefore": "2026-07-15T12:00:00Z",
+					},
+				}
+				return data
+			},
+			assert: func(t *testing.T, d *Decision, err error) {
+				require.NoError(t, err)
+				require.False(t, d.Allow)
+				require.Contains(t, d.Message, `yielding to queued rollback "zz-rb.01"`)
+			},
+		},
+		{
+			// Behind-scoping applies to yield-to-manual too.
+			name:  "built-in yield-to-manual ignores a manual ahead of the candidate",
+			input: testInput(ClassAutoForward),
+			data: func() map[string]any {
+				data := emptyData()
+				data["queue"] = []any{
+					map[string]any{"name": "aa-m.01", "class": "manual-forward", "createdAt": testNow},
+					map[string]any{"name": "test-promo", "class": "auto-forward", "createdAt": testNow},
+				}
+				return data
+			},
+			assert: func(t *testing.T, d *Decision, err error) {
+				require.NoError(t, err)
+				require.True(t, d.Allow)
+			},
+		},
+		{
+			// Origin scoping: a manual promote for one origin does not
+			// blanket-hold automation for an unrelated origin.
+			name:  "built-in yield-to-manual ignores a manual for another origin",
+			input: autoOrderingInput("freight-new", "2026-07-15T14:00:00Z"),
+			data: func() map[string]any {
+				data := emptyData()
+				data["queue"] = []any{
+					map[string]any{"name": "test-promo", "class": "auto-forward", "createdAt": testNow},
+					map[string]any{
+						"name": "zz-m.01", "class": "manual-forward", "createdAt": testNow,
+						"origin": "Warehouse/demo/other",
+					},
+				}
+				return data
+			},
+			assert: func(t *testing.T, d *Decision, err error) {
+				require.NoError(t, err)
+				require.True(t, d.Allow)
+			},
+		},
+		{
+			// Origin scoping: a manual for the candidate's own origin competes
+			// and the auto-forward defers.
+			name:  "built-in yield-to-manual holds for a manual sharing the origin",
+			input: autoOrderingInput("freight-new", "2026-07-15T14:00:00Z"),
+			data: func() map[string]any {
+				data := emptyData()
+				data["queue"] = []any{
+					map[string]any{"name": "test-promo", "class": "auto-forward", "createdAt": testNow},
+					map[string]any{
+						"name": "zz-m.01", "class": "manual-forward", "createdAt": testNow,
+						"origin": testOrigin,
+					},
+				}
+				return data
+			},
+			assert: func(t *testing.T, d *Decision, err error) {
+				require.NoError(t, err)
+				require.False(t, d.Allow)
+				require.Contains(t, d.Message, `yielding to queued manual promotion "zz-m.01"`)
+			},
+		},
+		{
+			// Origin scoping is conservative: a queued manual whose origin
+			// could not be resolved is treated as competing, so missing data
+			// can only over-yield, never miss a yield.
+			name:  "built-in yield-to-manual holds when the queued manual's origin is unknown",
+			input: autoOrderingInput("freight-new", "2026-07-15T14:00:00Z"),
+			data: func() map[string]any {
+				data := emptyData()
+				data["queue"] = []any{
+					map[string]any{"name": "test-promo", "class": "auto-forward", "createdAt": testNow},
+					map[string]any{"name": "zz-m.01", "class": "manual-forward", "createdAt": testNow},
+				}
+				return data
+			},
+			assert: func(t *testing.T, d *Decision, err error) {
+				require.NoError(t, err)
+				require.False(t, d.Allow)
+				require.Contains(t, d.Message, `yielding to queued manual promotion "zz-m.01"`)
 			},
 		},
 		{
@@ -1185,14 +1329,14 @@ func TestEngineEvaluateReasons(t *testing.T) {
 				data := emptyData()
 				data["queue"] = []any{
 					map[string]any{"name": "test-promo", "class": "auto-forward", "createdAt": testNow},
-					map[string]any{"name": "rb.01", "class": "rollback", "createdAt": testNow},
+					map[string]any{"name": "zz-rb.01", "class": "rollback", "createdAt": testNow},
 				}
 				return data
 			},
 			assert: func(t *testing.T, d *Decision) {
 				r, ok := reasonByRule(d.Reasons, "yield-to-rollback")
 				require.True(t, ok)
-				require.Equal(t, "rb.01", r.BlockedBy)
+				require.Equal(t, "zz-rb.01", r.BlockedBy)
 				require.Nil(t, r.Until)
 			},
 		},

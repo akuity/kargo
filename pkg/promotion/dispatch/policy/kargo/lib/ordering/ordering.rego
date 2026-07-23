@@ -4,21 +4,32 @@
 #   Ordering invariants for out-of-order dispatch, so the built-in decision
 #   honors promotion class priority and Stage monotonicity — not only custom
 #   policies. Forwards yield to a queued rollback; auto-forwards additionally
-#   yield to any queued manual-forward. An auto-forward that does not advance
-#   the Stage is stale; a manual-forward that would regress it is held. An
-#   auto-forward for an origin with a committed auto-promotion hold is denied
-#   (the dispatch-side complement of the controller's creation-side check).
-#   Per-Promotion scheduling (notBefore) holds a promotion until its time.
+#   yield to a queued manual-forward for the same origin. An auto-forward
+#   that does not advance the Stage is stale; a manual-forward that would
+#   regress it is held. An auto-forward for an origin with a committed
+#   auto-promotion hold is denied (the dispatch-side complement of the
+#   controller's creation-side check). Per-Promotion scheduling (notBefore)
+#   holds a promotion until its time.
 #
-#   Coalescing of shadowed auto-forwards is deliberately NOT done here:
-#   data.queue carries no origin, so a gate coalesce rule could not scope
-#   per-origin and would risk starving a multi-origin Stage. Coalescing is
-#   owned by grooming (Freight-aware, maintains one live auto-forward per
-#   origin); the regression rule below is the create-to-groom race-closer.
+#   The yield rules defer only to queued promotions that could actually run
+#   in the candidate's place: ones BEHIND the candidate (the gate evaluates
+#   candidates in queue order, so anything ahead was already evaluated
+#   against the same snapshot and held — deferring to it would starve the
+#   candidate on a promotion that cannot itself run) and ones that are DUE
+#   (a promote-after schedule in the future would otherwise embargo the
+#   queue until its time). The strictly-newer bound also makes the yield
+#   relation acyclic: no two promotions can ever wait on each other.
 #
-#   Reads data.queue (backlog in gate order), data.autoPromotionHolds
-#   (committed per-origin holds), the kargo.lib Freight-ordering helpers
-#   (advances / regresses / current_freight), and input.promotion / input.now.
+#   Coalescing of shadowed auto-forwards is deliberately NOT done here: a
+#   gate coalesce rule is a retirement decision, which is owned by grooming
+#   (Freight-aware, maintains one live auto-forward per origin); the
+#   regression rule below is the create-to-groom race-closer.
+#
+#   Reads data.queue (backlog in gate order, each entry carrying name, class,
+#   createdAt, and — when resolvable — origin and notBefore),
+#   data.autoPromotionHolds (committed per-origin holds), the kargo.lib
+#   Freight-ordering helpers (advances / regresses / current_freight), and
+#   input.promotion / input.now.
 # schemas:
 #   - input: schema.input
 #   - data.queue: schema.queue
@@ -42,12 +53,18 @@ forward_classes := {"auto-forward", "manual-forward"}
 promote_after_key := "kargo.akuity.io/promote-after"
 
 # AX5 — yield to a queued rollback. A forward candidate (auto or manual)
-# defers while any rollback is awaiting dispatch, so recovery preempts change.
+# defers while a newer, due rollback is awaiting dispatch, so recovery
+# preempts change. Promotion names encode creation order, so the strictly-
+# greater name comparison is the behind-scoping described in the package doc.
+# Deliberately NOT origin-scoped: a rollback is Stage-level recovery, so all
+# forward motion defers to it (queue entries carry origin should this ever
+# be revisited).
 violation contains v if {
 	input.promotion.class in forward_classes
 	some q in data.queue
 	q.class == "rollback"
-	q.name != input.promotion.name
+	q.name > input.promotion.name
+	due(q)
 	v := {
 		"rule": "yield-to-rollback",
 		"msg": sprintf("yielding to queued rollback %q", [q.name]),
@@ -56,15 +73,19 @@ violation contains v if {
 	}
 }
 
-# AX5 — auto yields to manual. An auto-forward candidate defers while any
-# manual-forward is queued, regardless of the manual promote's Freight age:
-# automation must not race ahead of an explicit human decision. Manual-forwards
-# are never subject to this rule.
+# AX5 — auto yields to manual. An auto-forward candidate defers while a
+# newer, due manual-forward for the same origin is queued, regardless of the
+# manual promote's Freight age: automation must not race ahead of an explicit
+# human decision. Origin-scoped so a manual promote for one origin does not
+# blanket-hold automation for unrelated origins. Manual-forwards are never
+# subject to this rule.
 violation contains v if {
 	input.promotion.class == "auto-forward"
 	some q in data.queue
 	q.class == "manual-forward"
-	q.name != input.promotion.name
+	q.name > input.promotion.name
+	due(q)
+	competes(q)
 	v := {
 		"rule": "yield-to-manual",
 		"msg": sprintf("yielding to queued manual promotion %q", [q.name]),
@@ -137,3 +158,22 @@ violation contains v if {
 }
 
 not_before := input.promotion.annotations[promote_after_key]
+
+# A queued promotion is due when it carries no promote-after schedule or its
+# scheduled time has arrived. Guards the yield rules: a candidate never
+# defers to a promotion that cannot itself dispatch yet — a scheduled
+# promotion would otherwise embargo the whole queue until its time.
+due(q) if not q.notBefore
+
+due(q) if time.parse_rfc3339_ns(input.now) >= time.parse_rfc3339_ns(q.notBefore)
+
+# A queued promotion competes with the candidate when it targets the same
+# origin. Either origin may be absent (a queued promotion's Freight can be
+# unresolvable; a candidate's Freight may be missing): the comparison then
+# fails toward competing, so missing data can only over-yield, never miss a
+# yield.
+competes(q) if q.origin == input.freight.origin
+
+competes(q) if not q.origin
+
+competes(q) if not input.freight.origin

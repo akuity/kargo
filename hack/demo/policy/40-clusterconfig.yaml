@@ -74,7 +74,7 @@ spec:
   #   	kargo.is_forward
   #   	some q in data.queue
   #   	q.class == "rollback"
-  #   	q.name != input.promotion.name
+  #   	q.name > input.promotion.name  # only a rollback BEHIND the candidate; anything ahead was already evaluated and held
   #   	v := {
   #   		"rule": "yield-to-rollback",
   #   		"msg": sprintf("yielding to queued rollback %q", [q.name]),

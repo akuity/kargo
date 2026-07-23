@@ -8,7 +8,9 @@
     "properties": {
       "name": {"type": "string"},
       "class": {"type": "string", "description": "auto-forward, manual-forward, or rollback"},
-      "createdAt": {"type": "string", "description": "RFC 3339 creation time"}
+      "createdAt": {"type": "string", "description": "RFC 3339 creation time"},
+      "origin": {"type": "string", "description": "the promoted Freight's origin (e.g. Warehouse/<name>); absent when the Freight is unresolvable"},
+      "notBefore": {"type": "string", "description": "RFC 3339 earliest dispatch time, from the promote-after annotation; absent when unscheduled"}
     }
   }
 }

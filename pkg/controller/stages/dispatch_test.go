@@ -112,6 +112,93 @@ func TestRegularStageReconciler_resolveCurrentFreight(t *testing.T) {
 	}
 }
 
+func TestRegularStageReconciler_resolveQueueOrigins(t *testing.T) {
+	t.Parallel()
+
+	nginxFreight := &kargoapi.Freight{
+		ObjectMeta: metav1.ObjectMeta{Name: "freight-nginx", Namespace: "demo"},
+		Origin: kargoapi.FreightOrigin{
+			Kind: kargoapi.FreightOriginKindWarehouse,
+			Name: "nginx",
+		},
+	}
+	redisFreight := &kargoapi.Freight{
+		ObjectMeta: metav1.ObjectMeta{Name: "freight-redis", Namespace: "demo"},
+		Origin: kargoapi.FreightOrigin{
+			Kind: kargoapi.FreightOriginKindWarehouse,
+			Name: "redis",
+		},
+	}
+	promo := func(name, freight string) kargoapi.Promotion {
+		return kargoapi.Promotion{
+			ObjectMeta: metav1.ObjectMeta{Name: name, Namespace: "demo"},
+			Spec:       kargoapi.PromotionSpec{Freight: freight},
+		}
+	}
+
+	testCases := []struct {
+		name    string
+		queue   []kargoapi.Promotion
+		objects []client.Object
+		assert  func(*testing.T, map[string]string, error)
+	}{
+		{
+			name: "resolves each queued Promotion's Freight origin once",
+			queue: []kargoapi.Promotion{
+				promo("prod.01", "freight-nginx"),
+				promo("prod.02", "freight-redis"),
+				// Same Freight as prod.01: resolved once, not re-fetched.
+				promo("prod.03", "freight-nginx"),
+			},
+			objects: []client.Object{nginxFreight, redisFreight},
+			assert: func(t *testing.T, got map[string]string, err error) {
+				require.NoError(t, err)
+				require.Equal(t, map[string]string{
+					"freight-nginx": "Warehouse/nginx",
+					"freight-redis": "Warehouse/redis",
+				}, got)
+			},
+		},
+		{
+			name: "omits an unresolvable Freight",
+			queue: []kargoapi.Promotion{
+				promo("prod.01", "freight-nginx"),
+				promo("prod.02", "freight-gone"),
+			},
+			objects: []client.Object{nginxFreight},
+			assert: func(t *testing.T, got map[string]string, err error) {
+				require.NoError(t, err)
+				require.Equal(t, map[string]string{
+					"freight-nginx": "Warehouse/nginx",
+				}, got)
+			},
+		},
+		{
+			name:  "empty queue resolves to an empty map",
+			queue: nil,
+			assert: func(t *testing.T, got map[string]string, err error) {
+				require.NoError(t, err)
+				require.Empty(t, got)
+			},
+		},
+	}
+	for _, testCase := range testCases {
+		t.Run(testCase.name, func(t *testing.T) {
+			t.Parallel()
+			scheme := runtime.NewScheme()
+			require.NoError(t, kargoapi.AddToScheme(scheme))
+			c := fake.NewClientBuilder().
+				WithScheme(scheme).
+				WithObjects(testCase.objects...).
+				Build()
+			r := &RegularStageReconciler{client: c}
+
+			got, err := r.resolveQueueOrigins(t.Context(), testCase.queue)
+			testCase.assert(t, got, err)
+		})
+	}
+}
+
 // assertCurrentFreight checks a resolved entry, comparing discovery times by
 // instant (time.Time.Equal) since a round-trip through the client can change
 // the time.Location without changing the instant.

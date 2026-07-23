@@ -23,8 +23,18 @@ policies):
 
 - **Class priority** (`rollback ≻ manual-forward ≻ auto-forward`) — a forward
   candidate yields to a queued `rollback` (`yield-to-rollback`); an
-  auto-forward additionally yields to any queued `manual-forward`
-  (`yield-to-manual`). Both re-check shortly (a 5s requeue).
+  auto-forward additionally yields to a queued `manual-forward` for the same
+  origin (`yield-to-manual`). Both re-check shortly (a 5s requeue), and both
+  defer only to queued promotions that could actually run in the candidate's
+  place: ones **behind** the candidate (the gate evaluates candidates in
+  queue order, so anything ahead was already evaluated against the same
+  snapshot and held) and ones that are **due** (not scheduled for a future
+  `promote-after` time). The strictly-newer bound keeps the yield relation
+  acyclic. `yield-to-rollback` is deliberately not origin-scoped — a rollback
+  is Stage-level recovery — while `yield-to-manual` is, so a manual promote
+  for one origin does not blanket-hold automation for unrelated origins
+  (a queued promotion with an unresolvable origin is conservatively treated
+  as competing).
 - **Stage monotonicity** — an auto-forward that would not strictly advance the
   Stage is stale (`regression`); a manual-forward whose Freight is strictly
   older than the origin's current Freight is held to await an operator decision
@@ -38,8 +48,8 @@ policies):
   annotation is held until that time, then self-resumes (`scheduled`).
 
 Coalescing of shadowed auto-forwards is intentionally left to grooming, not
-done here: `data.queue` carries no origin, so a gate coalesce rule could not
-scope per-origin without risking multi-origin starvation.
+done here: coalescing is a retirement decision, and grooming (Freight-aware,
+maintaining one live auto-forward per origin) owns retirement.
 
 ## Custom policies
 
@@ -80,11 +90,17 @@ Freight-ordering helpers below.
 
 Alongside the per-candidate `input`, a custom policy can read `data.queue`
 — the Stage's Promotions awaiting dispatch, in gate order, each `{name,
-class, createdAt}`. A policy locates the candidate under evaluation by
-`input.promotion.name` and reasons about the rest: yielding to a queued
-rollback, or growing conservative under a deep backlog. The queue reports
-true depth (it is not capped at the gate's evaluation limit); dispositions
-are re-derived by the policy, not fed back from prior evaluations.
+class, createdAt, origin?, notBefore?}` (`origin` is the promoted Freight's
+origin, absent when unresolvable; `notBefore` is the promotion's
+`promote-after` time, absent when unscheduled). A policy locates the
+candidate under evaluation by `input.promotion.name` and reasons about the
+rest: yielding to a queued rollback, or growing conservative under a deep
+backlog. A queue-deferral rule should copy the built-in yield rules'
+scoping — defer only to entries with a *greater* name (behind the
+candidate) that are due — or it can starve the queue on a promotion that
+cannot itself run. The queue reports true depth (it is not capped at the
+gate's evaluation limit); dispositions are re-derived by the policy, not
+fed back from prior evaluations.
 
 ### Freight ordering (does this advance or regress the Stage?)
 
