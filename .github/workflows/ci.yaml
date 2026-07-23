@@ -184,31 +184,6 @@ jobs:
           echo '```'
         } >> "$GITHUB_STEP_SUMMARY"
 
-  lint-proto:
-    permissions:
-      contents: read # Permissions to read the repository, required because we override the default permissions
-      checks: write # Used to create checks (linting comments) on PRs
-    runs-on: ubuntu-latest
-    container:
-      image: *golangImage
-    steps:
-    - name: Harden the runner (Audit all outbound calls)
-      uses: step-security/harden-runner@bf7454d06d71f1098171f2acdf0cd4708d7b5920 # v2.20.0
-      with:
-        egress-policy: audit
-
-    - name: Checkout code
-      uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7.0.0
-    - name: Cache Go modules
-      uses: actions/cache@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
-      with:
-        path: /go/pkg/mod
-        key: ${{ runner.os }}-go-${{ hashFiles('**/go.sum') }}
-    - name: Run linter
-      env:
-        BUF_LINT_ERROR_FORMAT: github-actions
-      run: make lint-proto
-
   check-codegen:
     runs-on: ubuntu-latest
     container:
@@ -264,7 +239,7 @@ jobs:
       run: git diff --exit-code -- .
 
   build-image:
-    needs: [test-unit, lint-go, lint-charts, lint-proto, lint-and-typecheck-ui, check-codegen]
+    needs: [test-unit, lint-go, lint-charts, lint-and-typecheck-ui, check-codegen]
     runs-on: ubuntu-latest
     services:
       registry:
@@ -321,7 +296,7 @@ jobs:
       run: ./hack/cve-scan.sh "registry:localhost:5000/kargo:scan"
 
   build-cli:
-    needs: [test-unit, lint-go, lint-charts, lint-proto, lint-and-typecheck-ui, check-codegen]
+    needs: [test-unit, lint-go, lint-charts, lint-and-typecheck-ui, check-codegen]
     runs-on: ubuntu-latest
     container:
       image: *golangImage

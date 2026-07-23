@@ -15,10 +15,10 @@ import (
 // and other TODO: TBD project-level resources.
 type Project struct {
 	metav1.TypeMeta   `json:",inline"`
-	metav1.ObjectMeta `json:"metadata,omitempty" protobuf:"bytes,1,opt,name=metadata"`
+	metav1.ObjectMeta `json:"metadata,omitempty"`
 
 	// Status describes the Project's current status.
-	Status ProjectStatus `json:"status,omitempty" protobuf:"bytes,3,opt,name=status"`
+	Status ProjectStatus `json:"status,omitempty"`
 }
 
 func (p *Project) GetStatus() *ProjectStatus {
@@ -33,10 +33,10 @@ type ProjectStatus struct {
 	// +patchStrategy=merge
 	// +listType=map
 	// +listMapKey=type
-	Conditions []metav1.Condition `json:"conditions,omitempty" patchMergeKey:"type" patchStrategy:"merge" protobuf:"bytes,3,rep,name=conditions"`
+	Conditions []metav1.Condition `json:"conditions,omitempty" patchMergeKey:"type" patchStrategy:"merge"`
 	// Stats contains a summary of the collective state of a Project's
 	// constituent resources.
-	Stats *ProjectStats `json:"stats,omitempty" protobuf:"bytes,4,opt,name=stats"`
+	Stats *ProjectStats `json:"stats,omitempty"`
 }
 
 // GetConditions implements the conditions.Getter interface.
@@ -54,35 +54,35 @@ func (w *ProjectStatus) SetConditions(conditions []metav1.Condition) {
 type ProjectStats struct {
 	// Warehouses contains a summary of the collective state of the Project's
 	// Warehouses.
-	Warehouses WarehouseStats `json:"warehouses,omitempty" protobuf:"bytes,1,opt,name=warehouses"`
+	Warehouses WarehouseStats `json:"warehouses,omitempty"`
 	// Stages contains a summary of the collective state of the Project's Stages.
-	Stages StageStats `json:"stages,omitempty" protobuf:"bytes,2,opt,name=stages"`
+	Stages StageStats `json:"stages,omitempty"`
 }
 
 // WarehouseStats contains a summary of the collective state of a Project's
 // Warehouses.
 type WarehouseStats struct {
 	// Count contains the total number of Warehouses in the Project.
-	Count int64 `json:"count,omitempty" protobuf:"varint,2,opt,name=count"`
+	Count int64 `json:"count,omitempty"`
 	// Health contains a summary of the collective health of a Project's
 	// Warehouses.
-	Health HealthStats `json:"health,omitempty" protobuf:"bytes,1,opt,name=health"`
+	Health HealthStats `json:"health,omitempty"`
 }
 
 // StageStats contains a summary of the collective state of a Project's
 // Stages.
 type StageStats struct {
 	// Count contains the total number of Stages in the Project.
-	Count int64 `json:"count,omitempty" protobuf:"varint,2,opt,name=count"`
+	Count int64 `json:"count,omitempty"`
 	// Health contains a summary of the collective health of a Project's Stages.
-	Health HealthStats `json:"health,omitempty" protobuf:"bytes,1,opt,name=health"`
+	Health HealthStats `json:"health,omitempty"`
 }
 
 // HealthStats contains a summary of the collective health of some resource
 // type.
 type HealthStats struct {
 	// Healthy contains the number of resources that are explicitly healthy.
-	Healthy int64 `json:"healthy,omitempty" protobuf:"varint,1,opt,name=healthy"`
+	Healthy int64 `json:"healthy,omitempty"`
 }
 
 // +kubebuilder:object:root=true
@@ -90,6 +90,6 @@ type HealthStats struct {
 // ProjectList is a list of Project resources.
 type ProjectList struct {
 	metav1.TypeMeta `json:",inline"`
-	metav1.ListMeta `json:"metadata,omitempty" protobuf:"bytes,1,opt,name=metadata"`
-	Items           []Project `json:"items" protobuf:"bytes,2,rep,name=items"`
+	metav1.ListMeta `json:"metadata,omitempty"`
+	Items           []Project `json:"items"`
 }

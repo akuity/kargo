@@ -20,7 +20,6 @@ import (
 	"k8s.io/apimachinery/pkg/types"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
-	"github.com/akuity/kargo/api/service/v1alpha1/svcv1alpha1connect"
 	rolloutsapi "github.com/akuity/kargo/api/stubs/rollouts/v1alpha1"
 	kargoapi "github.com/akuity/kargo/api/v1alpha1"
 	"github.com/akuity/kargo/pkg/api"
@@ -31,17 +30,12 @@ import (
 	"github.com/akuity/kargo/pkg/server/config"
 	"github.com/akuity/kargo/pkg/server/dex"
 	"github.com/akuity/kargo/pkg/server/kubernetes"
-	"github.com/akuity/kargo/pkg/server/option"
 	"github.com/akuity/kargo/pkg/server/rbac"
 	"github.com/akuity/kargo/pkg/server/validation"
 )
 
-var (
-	_ svcv1alpha1connect.KargoServiceHandler = &server{}
-
-	//go:embed all:ui
-	ui embed.FS
-)
+//go:embed all:ui
+var ui embed.FS
 
 type server struct {
 	cfg     config.ServerConfig
@@ -198,13 +192,7 @@ func (s *server) Serve(ctx context.Context, l net.Listener) error {
 	logger := logging.LoggerFromContext(ctx)
 	mux := http.NewServeMux()
 
-	opts, err := option.NewHandlerOption(ctx, s.cfg, s.client.InternalClient())
-	if err != nil {
-		return fmt.Errorf("error initializing handler options: %w", err)
-	}
 	mux.Handle("/healthz", newHealthHandler())
-	path, svcHandler := svcv1alpha1connect.NewKargoServiceHandler(s, opts)
-	mux.Handle(path, svcHandler)
 
 	for p, h := range s.cfg.AdditionalHandlers {
 		mux.Handle(p, h)
@@ -218,6 +206,7 @@ func (s *server) Serve(ctx context.Context, l net.Listener) error {
 	if s.cfg.DashboardFS != nil {
 		dashboardFS = s.cfg.DashboardFS
 	} else {
+		var err error
 		dashboardFS, err = fs.Sub(ui, "ui")
 		if err != nil {
 			return fmt.Errorf("error initializing UI file system: %w", err)

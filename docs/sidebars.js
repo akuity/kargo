@@ -24,11 +24,6 @@ const sidebars = {
           label: 'REST API',
           href: '/api-docs',
         },
-        {
-          type: 'doc',
-          id: 'api-documentation',
-          label: 'gRPC API (Deprecated)',
-        },
       ],
     },
   ],

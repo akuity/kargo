@@ -34,7 +34,7 @@ export const queryClient = new QueryClient({
   }),
   mutationCache: new MutationCache({
     onError: (error) => {
-      // ConnectRPC errors are handled by the transport interceptor (transport.ts)
+      // REST API errors surface here as ApiError and are shown via a notification
       if (error instanceof ApiError) {
         showErrorNotification(error);
       }

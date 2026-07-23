@@ -7,15 +7,14 @@ import (
 	"fmt"
 	"io"
 	"net/http"
+	"strings"
 
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/runtime/schema"
 	"k8s.io/apimachinery/pkg/util/yaml"
 	"sigs.k8s.io/controller-runtime/pkg/client"
-	sigyaml "sigs.k8s.io/yaml"
 
-	svcv1alpha1 "github.com/akuity/kargo/api/service/v1alpha1"
 	kargoapi "github.com/akuity/kargo/api/v1alpha1"
 	"github.com/akuity/kargo/pkg/api"
 	libhttp "github.com/akuity/kargo/pkg/http"
@@ -24,6 +23,38 @@ import (
 )
 
 const trueStr = "true"
+
+// RefreshResourceType represents the type of Kargo resource to refresh. It is
+// exported for use by the CLI, which uses it to identify the resource type
+// requested by the user and to determine how to build the corresponding
+// refresh request.
+type RefreshResourceType string
+
+// RefreshResourceType constants for supported resource types. They are
+// PascalCase representations of the Kargo resource kinds for compatibility
+// purposes with Kubernetes REST mappers.
+const (
+	RefreshResourceTypeClusterConfig RefreshResourceType = "ClusterConfig"
+	RefreshResourceTypeProjectConfig RefreshResourceType = "ProjectConfig"
+	RefreshResourceTypeStage         RefreshResourceType = "Stage"
+	RefreshResourceTypeWarehouse     RefreshResourceType = "Warehouse"
+)
+
+// String returns the string representation of the RefreshResourceType.
+func (t RefreshResourceType) String() string {
+	return string(t)
+}
+
+// IsNamespaced returns true if the resource type is namespaced.
+func (t RefreshResourceType) IsNamespaced() bool {
+	return !strings.EqualFold(string(t), string(RefreshResourceTypeClusterConfig))
+}
+
+// NameEqualsProject returns true if the name of the resource should be the same
+// as the project name. This is true for ProjectConfig resources.
+func (t RefreshResourceType) NameEqualsProject() bool {
+	return strings.EqualFold(string(t), string(RefreshResourceTypeProjectConfig))
+}
 
 var (
 	projectGVK = schema.GroupVersionKind{
@@ -134,57 +165,6 @@ func splitJSONArray(
 		}
 	}
 	return projects, otherResources, nil
-}
-
-// objectOrRaw takes structured or unstructured objects as input and depending
-// on requested format returns EITHER (but never both) the object serialized in
-// the requested format OR the object converted to the structured object type.
-func objectOrRaw[T client.Object](
-	c client.Client,
-	obj client.Object,
-	format svcv1alpha1.RawFormat,
-	t T,
-) (T, []byte, error) {
-	if _, ok := obj.(*unstructured.Unstructured); !ok {
-		// Structured objects are likely to be missing GVK information, so we add
-		// it in.
-		gvk, err := c.GroupVersionKindFor(t)
-		if err != nil {
-			return *new(T), nil,
-				fmt.Errorf("could not determine GVK for type: %w", err)
-		}
-		obj.GetObjectKind().SetGroupVersionKind(gvk)
-	}
-	switch format {
-	case svcv1alpha1.RawFormat_RAW_FORMAT_JSON:
-		raw, err := json.Marshal(obj)
-		if err != nil {
-			return *new(T), nil,
-				fmt.Errorf("object could not be marshaled to raw JSON: %w", err)
-		}
-		return *new(T), raw, nil
-	case svcv1alpha1.RawFormat_RAW_FORMAT_YAML:
-		raw, err := sigyaml.Marshal(obj)
-		if err != nil {
-			return *new(T), nil,
-				fmt.Errorf("object could not be marshaled to raw YAML: %w", err)
-		}
-		return *new(T), raw, nil
-	}
-	if uObj, ok := obj.(*unstructured.Unstructured); ok {
-		var newObj T
-		if err := runtime.DefaultUnstructuredConverter.FromUnstructured(uObj.Object, &newObj); err != nil {
-			return *new(T), nil, fmt.Errorf(
-				"error converting unstructured object to typed object: %w", err,
-			)
-		}
-		return newObj, nil, nil
-	}
-	if typed, ok := obj.(T); ok {
-		return typed, nil, nil
-	}
-	return *new(T), nil,
-		fmt.Errorf("type mismatch: cannot input to expected type")
 }
 
 // annotateResourceWithCreator annotates an unstructured object with information

@@ -75,7 +75,7 @@ func TestNewServer(t *testing.T) {
 
 func TestWrapWithBasePath(t *testing.T) {
 	// Inner mux registers handlers at root paths; the wrap moves them under
-	// basePath with the carve-out for the health check.
+	// basePath with the carve-out for the health check endpoint.
 	innerMux := http.NewServeMux()
 	innerMux.HandleFunc("/healthz", func(w http.ResponseWriter, _ *http.Request) {
 		w.WriteHeader(http.StatusOK)
