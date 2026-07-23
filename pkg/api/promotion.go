@@ -189,6 +189,46 @@ func AbortPromotion(
 	return patchAnnotation(ctx, c, promotion, kargoapi.AnnotationKeyAbort, ar.String())
 }
 
+// SupersedePromotion requests that the given Promotion be retired as
+// Superseded by setting the AnnotationKeySupersede annotation on the object,
+// causing the Promotion controller to finalize the transition. The supersededBy
+// argument names the newer Promotion that made this one redundant. It does
+// nothing if the Promotion is already in a terminal phase.
+func SupersedePromotion(
+	ctx context.Context,
+	c client.Client,
+	namespacedName types.NamespacedName,
+	supersededBy string,
+) error {
+	promotion, err := GetPromotion(ctx, c, namespacedName)
+	if err != nil || promotion == nil {
+		if promotion == nil {
+			// nolint:staticcheck
+			err = fmt.Errorf(
+				"Promotion %q in namespace %q not found",
+				namespacedName.Name,
+				namespacedName.Namespace,
+			)
+		}
+		return err
+	}
+
+	if promotion.Status.Phase.IsTerminal() {
+		// The Promotion is already in a terminal phase, so there is nothing to
+		// supersede.
+		return nil
+	}
+
+	sr := kargoapi.SupersedePromotionRequest{
+		SupersededBy: supersededBy,
+	}
+	// Put actor information to track on the controller side.
+	if u, ok := user.InfoFromContext(ctx); ok {
+		sr.Actor = FormatEventUserActor(u)
+	}
+	return patchAnnotation(ctx, c, promotion, kargoapi.AnnotationKeySupersede, sr.String())
+}
+
 // ComparePromotionByPhaseAndCreationTime compares two Promotions by their
 // phase and creation timestamp. It returns a negative value if Promotion `a`
 // should come before Promotion `b`, a positive value if Promotion `a` should

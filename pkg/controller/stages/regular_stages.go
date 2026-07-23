@@ -517,6 +517,16 @@ func (r *RegularStageReconciler) reconcile(
 			},
 		},
 		{
+			name: "grooming Promotions",
+			reconcile: func() (kargoapi.StageStatus, error) {
+				status, err := r.groomPromotions(ctx, working)
+				if err != nil {
+					err = fmt.Errorf("failed to groom Promotions: %w", err)
+				}
+				return status, err
+			},
+		},
+		{
 			name: "syncing Freight",
 			reconcile: func() (kargoapi.StageStatus, error) {
 				if err := r.syncFreight(ctx, working); err != nil {

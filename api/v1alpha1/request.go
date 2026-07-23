@@ -54,6 +54,55 @@ func (r *AbortPromotionRequest) String() string {
 	return string(b)
 }
 
+// SupersedePromotionRequest is a request payload which can be used to annotate
+// a Promotion using the AnnotationKeySupersede annotation. Grooming stamps it
+// on a Pending Promotion to request that the Promotion controller retire it as
+// Superseded; the SupersededBy field names the newer Promotion that made this
+// one redundant.
+//
+// +protobuf=false
+// +k8s:deepcopy-gen=false
+// +k8s:openapi-gen=false
+type SupersedePromotionRequest struct {
+	// SupersededBy is the name of the newer Promotion that made this one
+	// redundant.
+	SupersededBy string `json:"supersededBy,omitempty"`
+	// Actor is the identity that initiated the request.
+	Actor string `json:"actor,omitempty"`
+	// ControlPlane is a flag to indicate if the request has been initiated by
+	// a control plane.
+	ControlPlane bool `json:"controlPlane,omitempty"`
+}
+
+// Equals returns true if the SupersedePromotionRequest is equal to the other
+// SupersedePromotionRequest, false otherwise. Two SupersedePromotionRequests
+// are equal if their SupersededBy, Actor, and ControlPlane fields are equal.
+func (r *SupersedePromotionRequest) Equals(other *SupersedePromotionRequest) bool {
+	if r == nil && other == nil {
+		return true
+	}
+	if r == nil || other == nil {
+		return false
+	}
+	return r.SupersededBy == other.SupersededBy &&
+		r.Actor == other.Actor &&
+		r.ControlPlane == other.ControlPlane
+}
+
+// String returns the JSON string representation of the
+// SupersedePromotionRequest, or an empty string if the request is nil or has an
+// empty SupersededBy field.
+func (r *SupersedePromotionRequest) String() string {
+	if r == nil || r.SupersededBy == "" {
+		return ""
+	}
+	b, _ := json.Marshal(r)
+	if b == nil {
+		return ""
+	}
+	return string(b)
+}
+
 // VerificationRequest is a request payload with an optional actor field which
 // can be used to annotate a Stage using the AnnotationKeyReverify or
 // AnnotationKeyAbort annotations.

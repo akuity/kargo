@@ -92,6 +92,81 @@ func TestAbortPromotionRequest_String(t *testing.T) {
 	})
 }
 
+func TestSupersedePromotionRequest_Equals(t *testing.T) {
+	tests := []struct {
+		name     string
+		r1       *SupersedePromotionRequest
+		r2       *SupersedePromotionRequest
+		expected bool
+	}{
+		{
+			name:     "both nil",
+			expected: true,
+		},
+		{
+			name:     "one nil",
+			r1:       &SupersedePromotionRequest{SupersededBy: "newer"},
+			expected: false,
+		},
+		{
+			name:     "other nil",
+			r2:       &SupersedePromotionRequest{SupersededBy: "newer"},
+			expected: false,
+		},
+		{
+			name:     "different targets",
+			r1:       &SupersedePromotionRequest{SupersededBy: "newer"},
+			r2:       &SupersedePromotionRequest{SupersededBy: "newest"},
+			expected: false,
+		},
+		{
+			name:     "different actors",
+			r1:       &SupersedePromotionRequest{SupersededBy: "newer", Actor: "fake-actor"},
+			r2:       &SupersedePromotionRequest{SupersededBy: "newer", Actor: "other-actor"},
+			expected: false,
+		},
+		{
+			name:     "different control plane flags",
+			r1:       &SupersedePromotionRequest{SupersededBy: "newer", ControlPlane: true},
+			r2:       &SupersedePromotionRequest{SupersededBy: "newer", ControlPlane: false},
+			expected: false,
+		},
+		{
+			name:     "equal",
+			r1:       &SupersedePromotionRequest{SupersededBy: "newer", Actor: "fake-actor", ControlPlane: true},
+			r2:       &SupersedePromotionRequest{SupersededBy: "newer", Actor: "fake-actor", ControlPlane: true},
+			expected: true,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			require.Equal(t, tt.expected, tt.r1.Equals(tt.r2))
+		})
+	}
+}
+
+func TestSupersedePromotionRequest_String(t *testing.T) {
+	t.Run("supersede request is nil", func(t *testing.T) {
+		var r *SupersedePromotionRequest
+		require.Empty(t, r.String())
+	})
+
+	t.Run("supersede request has empty target", func(t *testing.T) {
+		r := &SupersedePromotionRequest{}
+		require.Empty(t, r.String())
+	})
+
+	t.Run("supersede request has data", func(t *testing.T) {
+		r := &SupersedePromotionRequest{
+			SupersededBy: "newer",
+			Actor:        "fake-actor",
+			ControlPlane: true,
+		}
+		require.Equal(t, `{"supersededBy":"newer","actor":"fake-actor","controlPlane":true}`, r.String())
+	})
+}
+
 func TestVerificationRequest_Equals(t *testing.T) {
 	tests := []struct {
 		name     string

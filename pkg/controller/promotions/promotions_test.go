@@ -670,6 +670,154 @@ func Test_reconciler_terminatePromotion(t *testing.T) {
 	}
 }
 
+func Test_reconciler_supersedePromotion(t *testing.T) {
+	scheme := k8sruntime.NewScheme()
+	require.NoError(t, kargoapi.SchemeBuilder.AddToScheme(scheme))
+
+	tests := []struct {
+		name        string
+		req         kargoapi.SupersedePromotionRequest
+		promo       *kargoapi.Promotion
+		freight     *kargoapi.Freight
+		interceptor interceptor.Funcs
+		assertions  func(*testing.T, *fakeevent.EventRecorder, *kargoapi.Promotion, error)
+	}{
+		{
+			name: "supersedes pending promotion",
+			req:  kargoapi.SupersedePromotionRequest{SupersededBy: "newer-promo"},
+			promo: newPromo(
+				"fake-namespace",
+				"fake-promo",
+				"fake-stage",
+				kargoapi.PromotionPhasePending,
+				now,
+			),
+			assertions: func(t *testing.T, recorder *fakeevent.EventRecorder, promo *kargoapi.Promotion, err error) {
+				require.NoError(t, err)
+				require.Equal(t, kargoapi.PromotionPhaseSuperseded, promo.Status.Phase)
+				require.Contains(t, promo.Status.Message, "superseded by newer-promo")
+				require.NotNil(t, promo.Status.FinishedAt)
+
+				require.Len(t, recorder.Events, 1)
+				event := <-recorder.Events
+				require.Equal(t, string(kargoapi.EventTypePromotionSuperseded), event.Reason)
+			},
+		},
+		{
+			name: "does not supersede a running promotion",
+			req:  kargoapi.SupersedePromotionRequest{SupersededBy: "newer-promo"},
+			promo: newPromo(
+				"fake-namespace",
+				"fake-promo",
+				"fake-stage",
+				kargoapi.PromotionPhaseRunning,
+				now,
+			),
+			assertions: func(t *testing.T, recorder *fakeevent.EventRecorder, promo *kargoapi.Promotion, err error) {
+				require.NoError(t, err)
+				require.Equal(t, kargoapi.PromotionPhaseRunning, promo.Status.Phase)
+				require.Len(t, recorder.Events, 0)
+			},
+		},
+		{
+			name: "promotion is already terminal",
+			req:  kargoapi.SupersedePromotionRequest{SupersededBy: "newer-promo"},
+			promo: func() *kargoapi.Promotion {
+				p := newPromo(
+					"fake-namespace",
+					"fake-promo",
+					"fake-stage",
+					kargoapi.PromotionPhaseSucceeded,
+					now,
+				)
+				p.Status.Message = "an existing message"
+				return p
+			}(),
+			assertions: func(t *testing.T, recorder *fakeevent.EventRecorder, promo *kargoapi.Promotion, err error) {
+				require.NoError(t, err)
+				require.Equal(t, kargoapi.PromotionPhaseSucceeded, promo.Status.Phase)
+				require.Equal(t, "an existing message", promo.Status.Message)
+				require.Len(t, recorder.Events, 0)
+			},
+		},
+		{
+			name: "emits event with actor",
+			req: kargoapi.SupersedePromotionRequest{
+				SupersededBy: "newer-promo",
+				Actor:        "fake-actor",
+			},
+			promo: newPromo(
+				"fake-namespace",
+				"fake-promo",
+				"fake-stage",
+				kargoapi.PromotionPhasePending,
+				now,
+			),
+			assertions: func(t *testing.T, recorder *fakeevent.EventRecorder, promo *kargoapi.Promotion, err error) {
+				require.NoError(t, err)
+				require.Equal(t, kargoapi.PromotionPhaseSuperseded, promo.Status.Phase)
+
+				require.Len(t, recorder.Events, 1)
+				event := <-recorder.Events
+				require.Equal(t, string(kargoapi.EventTypePromotionSuperseded), event.Reason)
+				require.Equal(t, "fake-actor", event.Annotations[kargoapi.AnnotationKeyEventActor])
+			},
+		},
+		{
+			name: "status patch error",
+			req:  kargoapi.SupersedePromotionRequest{SupersededBy: "newer-promo"},
+			promo: newPromo(
+				"fake-namespace",
+				"fake-promo",
+				"fake-stage",
+				kargoapi.PromotionPhasePending,
+				now,
+			),
+			interceptor: interceptor.Funcs{
+				SubResourcePatch: func(
+					context.Context,
+					client.Client,
+					string,
+					client.Object,
+					client.Patch,
+					...client.SubResourcePatchOption,
+				) error {
+					return errors.New("something went wrong")
+				},
+			},
+			assertions: func(t *testing.T, recorder *fakeevent.EventRecorder, promo *kargoapi.Promotion, err error) {
+				require.ErrorContains(t, err, "something went wrong")
+				require.Equal(t, kargoapi.PromotionPhasePending, promo.Status.Phase)
+				require.Len(t, recorder.Events, 0)
+			},
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			c := fake.NewClientBuilder().
+				WithScheme(scheme).
+				WithObjects(tt.promo).
+				WithStatusSubresource(&kargoapi.Promotion{}).
+				WithInterceptorFuncs(tt.interceptor).
+				Build()
+			recorder := fakeevent.NewEventRecorder(1)
+
+			r := &reconciler{
+				kargoClient: c,
+				apiReader:   c,
+				sender:      k8sevent.NewEventSender(recorder),
+				cleanupWorkDirFn: func(context.Context, types.UID) {
+					// no-op for tests
+				},
+			}
+
+			req := tt.req
+			err := r.supersedePromotion(t.Context(), &req, tt.promo, tt.freight)
+			tt.assertions(t, recorder, tt.promo, err)
+		})
+	}
+}
+
 func Test_reconciler_handleDeletion(t *testing.T) {
 	testCases := []struct {
 		name       string

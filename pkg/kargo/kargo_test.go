@@ -765,3 +765,77 @@ func TestPromotionAbortRequested_Update(t *testing.T) {
 		})
 	}
 }
+
+func TestPromotionSupersedeRequested_Update(t *testing.T) {
+	supersede := func(by string) map[string]string {
+		return map[string]string{
+			kargoapi.AnnotationKeySupersede: (&kargoapi.SupersedePromotionRequest{
+				SupersededBy: by,
+			}).String(),
+		}
+	}
+	promo := func(annotations map[string]string) *kargoapi.Promotion {
+		return &kargoapi.Promotion{ObjectMeta: metav1.ObjectMeta{Annotations: annotations}}
+	}
+
+	tests := []struct {
+		name      string
+		oldObject client.Object
+		newObject client.Object
+		want      bool
+	}{
+		{
+			name: "no old or new object",
+			want: false,
+		},
+		{
+			name:      "no old object",
+			newObject: promo(supersede("newer")),
+			want:      false,
+		},
+		{
+			name:      "no new object",
+			oldObject: promo(supersede("newer")),
+			want:      false,
+		},
+		{
+			name:      "no supersede annotation",
+			oldObject: promo(map[string]string{}),
+			newObject: promo(map[string]string{"other": "annotation"}),
+			want:      false,
+		},
+		{
+			name:      "supersede annotation set on new object",
+			oldObject: promo(map[string]string{}),
+			newObject: promo(supersede("newer")),
+			want:      true,
+		},
+		{
+			name:      "supersede annotation removed from new object",
+			oldObject: promo(supersede("newer")),
+			newObject: promo(map[string]string{}),
+			want:      false,
+		},
+		{
+			name:      "supersede target changed",
+			oldObject: promo(supersede("newer")),
+			newObject: promo(supersede("newest")),
+			want:      true,
+		},
+		{
+			name:      "supersede target unchanged",
+			oldObject: promo(supersede("newer")),
+			newObject: promo(supersede("newer")),
+			want:      false,
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			p := PromotionSupersedeRequested{}
+			require.Equal(t, tt.want, p.Update(event.UpdateEvent{
+				ObjectOld: tt.oldObject,
+				ObjectNew: tt.newObject,
+			}))
+		})
+	}
+}

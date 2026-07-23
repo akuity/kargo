@@ -262,6 +262,53 @@ func TestAbortPromotion(t *testing.T) {
 	})
 }
 
+func TestSupersedePromotion(t *testing.T) {
+	scheme := k8sruntime.NewScheme()
+	require.NoError(t, kargoapi.SchemeBuilder.AddToScheme(scheme))
+
+	key := types.NamespacedName{Namespace: "fake-namespace", Name: "fake-promotion"}
+
+	t.Run("not found", func(t *testing.T) {
+		c := fake.NewClientBuilder().WithScheme(scheme).Build()
+		err := SupersedePromotion(t.Context(), c, key, "newer-promo")
+		require.ErrorContains(t, err, "not found")
+	})
+
+	t.Run("already in a terminal phase", func(t *testing.T) {
+		c := fake.NewClientBuilder().WithScheme(scheme).WithObjects(
+			&kargoapi.Promotion{
+				ObjectMeta: metav1.ObjectMeta{Namespace: key.Namespace, Name: key.Name},
+				Status:     kargoapi.PromotionStatus{Phase: kargoapi.PromotionPhaseSucceeded},
+			},
+		).Build()
+
+		err := SupersedePromotion(t.Context(), c, key, "newer-promo")
+		require.NoError(t, err)
+
+		promotion, err := GetPromotion(t.Context(), c, key)
+		require.NoError(t, err)
+		_, ok := promotion.Annotations[kargoapi.AnnotationKeySupersede]
+		require.False(t, ok)
+	})
+
+	t.Run("success", func(t *testing.T) {
+		c := fake.NewClientBuilder().WithScheme(scheme).WithObjects(
+			&kargoapi.Promotion{
+				ObjectMeta: metav1.ObjectMeta{Namespace: key.Namespace, Name: key.Name},
+			},
+		).Build()
+
+		err := SupersedePromotion(t.Context(), c, key, "newer-promo")
+		require.NoError(t, err)
+
+		promotion, err := GetPromotion(t.Context(), c, key)
+		require.NoError(t, err)
+		require.Equal(t, (&kargoapi.SupersedePromotionRequest{
+			SupersededBy: "newer-promo",
+		}).String(), promotion.Annotations[kargoapi.AnnotationKeySupersede])
+	})
+}
+
 func Test_ComparePromotionByPhaseAndCreationTime(t *testing.T) {
 	now := time.Date(2024, time.April, 10, 0, 0, 0, 0, time.UTC)
 	ulidEarlier := ulid.MustNew(ulid.Timestamp(now.Add(-time.Hour)), nil)

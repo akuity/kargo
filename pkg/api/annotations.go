@@ -99,6 +99,27 @@ func AbortPromotionAnnotationValue(annotations map[string]string) (*kargoapi.Abo
 	return &req, ok
 }
 
+// SupersedePromotionAnnotationValue returns the value of the
+// AnnotationKeySupersede annotation, which grooming uses to request that a
+// Pending Promotion be retired as Superseded, and a boolean indicating whether
+// the annotation was present and valid.
+func SupersedePromotionAnnotationValue(
+	annotations map[string]string,
+) (*kargoapi.SupersedePromotionRequest, bool) {
+	requested, ok := annotations[kargoapi.AnnotationKeySupersede]
+	if !ok {
+		return nil, false
+	}
+	var req kargoapi.SupersedePromotionRequest
+	if err := json.Unmarshal([]byte(requested), &req); err != nil {
+		return nil, false
+	}
+	if req.SupersededBy == "" {
+		return nil, false
+	}
+	return &req, true
+}
+
 // HasMigrationAnnotationValue checks if the AnnotationKeyMigrated annotation
 // is present in the provided annotations map and if it contains the specified
 // migration type as a key with a value of true.

@@ -81,6 +81,16 @@ func (p *PromotionAborted) Type() kargoapi.EventType {
 	return kargoapi.EventTypePromotionAborted
 }
 
+// PromotionSuperseded is event data related to a Promotion retired by grooming.
+type PromotionSuperseded struct {
+	Common
+	Promotion
+}
+
+func (p *PromotionSuperseded) Type() kargoapi.EventType {
+	return kargoapi.EventTypePromotionSuperseded
+}
+
 // PromotionCreated is event data related to a created promotion.
 type PromotionCreated struct {
 	Common
@@ -155,6 +165,19 @@ func NewPromotionAborted(
 	}
 }
 
+// NewPromotionSuperseded creates a new PromotionSuperseded event from the given promotion and freight
+// data. The given actor will be used if it is not empty, but it will be overridden if the promotion
+// has an actor annotation.
+func NewPromotionSuperseded(
+	message, actor string, promotion *kargoapi.Promotion, freight *kargoapi.Freight,
+) *PromotionSuperseded {
+	common, promo := NewPromotionCommon(message, actor, promotion, freight)
+	return &PromotionSuperseded{
+		Common:    common,
+		Promotion: promo,
+	}
+}
+
 // NewPromotionCreated creates a new PromotionCreated event from the given promotion and freight data.
 // The given actor will be used if it is not empty, but it will be overridden if the promotion has
 // an actor annotation.
@@ -210,6 +233,14 @@ func (p *PromotionErrored) MarshalAnnotations() map[string]string {
 }
 
 func (p *PromotionAborted) MarshalAnnotations() map[string]string {
+	// Note that we skip message here, as it is not used in the annotations.
+	annotations := map[string]string{}
+	p.Common.MarshalAnnotationsTo(annotations)
+	p.Promotion.MarshalAnnotationsTo(annotations)
+	return annotations
+}
+
+func (p *PromotionSuperseded) MarshalAnnotations() map[string]string {
 	// Note that we skip message here, as it is not used in the annotations.
 	annotations := map[string]string{}
 	p.Common.MarshalAnnotationsTo(annotations)
@@ -336,6 +367,26 @@ func UnmarshalPromotionAbortedAnnotations(
 		return nil, err
 	}
 	evt := PromotionAborted{
+		Common:    common,
+		Promotion: promotion,
+	}
+	return &evt, nil
+}
+
+// UnmarshalPromotionSupersededAnnotations converts the given annotations into a PromotionSuperseded. This is used
+// by the main event handler to convert the data into a normal structured event, but is exposed for convenience.
+func UnmarshalPromotionSupersededAnnotations(
+	eventID string, annotations map[string]string,
+) (*PromotionSuperseded, error) {
+	common, err := UnmarshalCommonAnnotations(eventID, annotations)
+	if err != nil {
+		return nil, err
+	}
+	promotion, err := UnmarshalPromotionAnnotations(annotations)
+	if err != nil {
+		return nil, err
+	}
+	evt := PromotionSuperseded{
 		Common:    common,
 		Promotion: promotion,
 	}

@@ -33,6 +33,12 @@ const (
 	// PromotionPhaseAborted denotes a Promotion that has been aborted by a
 	// user.
 	PromotionPhaseAborted PromotionPhase = "Aborted"
+	// PromotionPhaseSuperseded denotes a Pending Promotion that was retired by
+	// grooming before it ran because a newer forward Promotion for the same
+	// Stage and origin made it redundant. It is terminal but distinct from
+	// Succeeded: it never executed, so it contributes no Freight history and no
+	// auto-promotion hold to the Stage.
+	PromotionPhaseSuperseded PromotionPhase = "Superseded"
 )
 
 // PromotionPhase is a high-level summary of the current state of a Promotion.
@@ -41,7 +47,11 @@ type PromotionPhase string
 // IsTerminal returns true if the PromotionPhase is a terminal one.
 func (p *PromotionPhase) IsTerminal() bool {
 	switch *p {
-	case PromotionPhaseSucceeded, PromotionPhaseFailed, PromotionPhaseErrored, PromotionPhaseAborted:
+	case PromotionPhaseSucceeded,
+		PromotionPhaseFailed,
+		PromotionPhaseErrored,
+		PromotionPhaseAborted,
+		PromotionPhaseSuperseded:
 		return true
 	default:
 		return false

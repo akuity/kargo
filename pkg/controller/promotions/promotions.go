@@ -90,6 +90,13 @@ type reconciler struct {
 		*kargoapi.Freight,
 	) error
 
+	supersedePromotionFn func(
+		context.Context,
+		*kargoapi.SupersedePromotionRequest,
+		*kargoapi.Promotion,
+		*kargoapi.Freight,
+	) error
+
 	cleanupWorkDirFn func(ctx context.Context, promoUID types.UID)
 }
 
@@ -154,6 +161,7 @@ func SetupReconcilerWithManager(
 			predicate.GenerationChangedPredicate{},
 			kargo.RefreshRequested{},
 			kargo.PromotionAbortRequested{},
+			kargo.PromotionSupersedeRequested{},
 		)).
 		WithOptions(controller.CommonOptions(cfg.MaxConcurrentReconciles)).
 		Build(reconciler)
@@ -249,6 +257,7 @@ func newReconciler(
 	r.getStageFn = api.GetStage
 	r.promoteFn = r.promote
 	r.terminatePromotionFn = r.terminatePromotion
+	r.supersedePromotionFn = r.supersedePromotion
 	r.cleanupWorkDirFn = r.cleanupWorkDir
 	return r
 }
@@ -329,6 +338,16 @@ func (r *reconciler) Reconcile(
 		promo.GetAnnotations(),
 	); ok && req.Action == kargoapi.AbortActionTerminate {
 		if err = r.terminatePromotionFn(ctx, req, promo, freight); err != nil {
+			return ctrl.Result{}, err
+		}
+		return ctrl.Result{}, nil
+	}
+
+	// Supersede the Promotion if requested by grooming.
+	if req, ok := api.SupersedePromotionAnnotationValue(
+		promo.GetAnnotations(),
+	); ok {
+		if err = r.supersedePromotionFn(ctx, req, promo, freight); err != nil {
 			return ctrl.Result{}, err
 		}
 		return ctrl.Result{}, nil
@@ -758,6 +777,64 @@ func (r *reconciler) terminatePromotion(
 
 	if err := r.sender.Send(ctx, evt); err != nil {
 		logger.Error(err, "error sending Promotion aborted event")
+	}
+
+	return nil
+}
+
+// supersedePromotion retires the given Promotion to the terminal Superseded
+// phase on grooming's request. It does nothing if the Promotion is already
+// terminal, or if it is no longer Pending — a Running head must be handled
+// through the abort/terminate path, never superseded.
+func (r *reconciler) supersedePromotion(
+	ctx context.Context,
+	req *kargoapi.SupersedePromotionRequest,
+	promo *kargoapi.Promotion,
+	freight *kargoapi.Freight,
+) error {
+	logger := logging.LoggerFromContext(ctx)
+
+	if promo.Status.Phase.IsTerminal() {
+		logger.Debug("can not supersede Promotion in terminal phase", "phase", promo.Status.Phase)
+		return nil
+	}
+
+	// Only a Pending (or brand-new) Promotion may be superseded. A Running
+	// Promotion has already been dispatched; retiring it is a termination, not
+	// a grooming decision, and must go through the abort path.
+	if promo.Status.Phase != kargoapi.PromotionPhasePending && promo.Status.Phase != "" {
+		logger.Debug("can not supersede Promotion that is not Pending", "phase", promo.Status.Phase)
+		return nil
+	}
+
+	logger.Info("superseding Promotion", "supersededBy", req.SupersededBy)
+
+	// The actor is the grooming controller, unless the request names a
+	// different initiator.
+	actor := api.FormatEventControllerActor(r.cfg.Name())
+	if req.Actor != "" {
+		actor = req.Actor
+	}
+
+	newStatus := promo.Status.DeepCopy()
+	now := &metav1.Time{Time: time.Now()}
+	newStatus.Phase = kargoapi.PromotionPhaseSuperseded
+	newStatus.Message = fmt.Sprintf("Promotion superseded by %s", req.SupersededBy)
+	newStatus.FinishedAt = now
+
+	if err := kubeclient.PatchStatus(ctx, r.kargoClient, promo, func(status *kargoapi.PromotionStatus) {
+		*status = *newStatus
+	}); err != nil {
+		return err
+	}
+
+	// Best-effort cleanup of working directory.
+	r.cleanupWorkDirFn(ctx, promo.UID)
+
+	evt := event.NewPromotionSuperseded(newStatus.Message, actor, promo, freight)
+
+	if err := r.sender.Send(ctx, evt); err != nil {
+		logger.Error(err, "error sending Promotion superseded event")
 	}
 
 	return nil

@@ -38,6 +38,13 @@ const (
 	// aborted.
 	AnnotationKeyAbort = "kargo.akuity.io/abort"
 
+	// AnnotationKeySupersede is an annotation key set by grooming on a Pending
+	// Promotion to request that the Promotion controller retire it as
+	// Superseded. The value is a JSON object with the structure of a
+	// SupersedePromotionRequest, naming the newer Promotion that made this one
+	// redundant.
+	AnnotationKeySupersede = "kargo.akuity.io/supersede"
+
 	// AnnotationKeyDescription is an annotation key that can be set on a
 	// resource to provide a description of it. The value of the annotation may
 	// be used by the Kargo UI to display additional information about the

@@ -130,6 +130,38 @@ func TestAbortPromotionAnnotationValue(t *testing.T) {
 	})
 }
 
+func TestSupersedePromotionAnnotationValue(t *testing.T) {
+	t.Run("has supersede annotation with valid JSON", func(t *testing.T) {
+		result, ok := SupersedePromotionAnnotationValue(map[string]string{
+			kargoapi.AnnotationKeySupersede: `{"supersededBy":"newer-promo"}`,
+		})
+		require.True(t, ok)
+		require.Equal(t, "newer-promo", result.SupersededBy)
+	})
+
+	t.Run("does not have supersede annotation", func(t *testing.T) {
+		result, ok := SupersedePromotionAnnotationValue(nil)
+		require.False(t, ok)
+		require.Nil(t, result)
+	})
+
+	t.Run("has supersede annotation with empty target", func(t *testing.T) {
+		result, ok := SupersedePromotionAnnotationValue(map[string]string{
+			kargoapi.AnnotationKeySupersede: `{"supersededBy":""}`,
+		})
+		require.False(t, ok)
+		require.Nil(t, result)
+	})
+
+	t.Run("has supersede annotation with invalid JSON", func(t *testing.T) {
+		result, ok := SupersedePromotionAnnotationValue(map[string]string{
+			kargoapi.AnnotationKeySupersede: "not-json",
+		})
+		require.False(t, ok)
+		require.Nil(t, result)
+	})
+}
+
 func TestHasMigrationAnnotationValue(t *testing.T) {
 	mockObj := &kargoapi.Project{}
 

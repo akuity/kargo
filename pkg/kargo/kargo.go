@@ -152,3 +152,27 @@ func (p PromotionAbortRequested) Update(e event.UpdateEvent) bool {
 	}
 	return false
 }
+
+// PromotionSupersedeRequested is a predicate that returns true if the supersede
+// annotation has been set on a resource, or the target of the request has
+// changed compared to the previous state.
+type PromotionSupersedeRequested struct {
+	predicate.Funcs
+}
+
+// Update returns true if the supersede annotation has been set on the new
+// object, or if the target of the request has changed compared to the old
+// object.
+func (p PromotionSupersedeRequested) Update(e event.UpdateEvent) bool {
+	if e.ObjectOld == nil || e.ObjectNew == nil {
+		return false
+	}
+
+	if newVal, newOk := api.SupersedePromotionAnnotationValue(e.ObjectNew.GetAnnotations()); newOk {
+		if oldVal, oldOk := api.SupersedePromotionAnnotationValue(e.ObjectOld.GetAnnotations()); oldOk {
+			return oldVal.SupersededBy != newVal.SupersededBy
+		}
+		return true
+	}
+	return false
+}
