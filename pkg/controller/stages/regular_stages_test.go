@@ -2015,6 +2015,76 @@ func TestRegularStageReconciler_syncPromotions(t *testing.T) {
 			},
 		},
 		{
+			// A Superseded Promotion never ran; even when its (grooming-stamped)
+			// completion time is the newest in the batch it must not become
+			// LastPromotion, which would force health to Unknown and sidestep
+			// the verification barrier.
+			name: "superseded promotion never becomes the last promotion",
+			stage: &kargoapi.Stage{
+				ObjectMeta: metav1.ObjectMeta{
+					Namespace: "fake-project",
+					Name:      "test-stage",
+				},
+				Status: kargoapi.StageStatus{
+					CurrentPromotion: &kargoapi.PromotionReference{
+						Name: "test-stage.01",
+					},
+				},
+			},
+			objects: []client.Object{
+				// The Promotion that actually ran and succeeded.
+				&kargoapi.Promotion{
+					ObjectMeta: metav1.ObjectMeta{
+						Name:      "test-stage.01",
+						Namespace: "fake-project",
+					},
+					Spec: kargoapi.PromotionSpec{Stage: "test-stage"},
+					Status: kargoapi.PromotionStatus{
+						Phase:      kargoapi.PromotionPhaseSucceeded,
+						FinishedAt: &metav1.Time{Time: hourAgo},
+						FreightCollection: &kargoapi.FreightCollection{
+							ID: "deployed-collection",
+							Freight: map[string]kargoapi.FreightReference{
+								"warehouse-1": {Name: "deployed-freight"},
+							},
+						},
+					},
+				},
+				// A tombstone groomed AFTER the success: latest completion
+				// time in the batch, but no recordable outcome.
+				&kargoapi.Promotion{
+					ObjectMeta: metav1.ObjectMeta{
+						Name:      "test-stage.02",
+						Namespace: "fake-project",
+					},
+					Spec: kargoapi.PromotionSpec{Stage: "test-stage"},
+					Status: kargoapi.PromotionStatus{
+						Phase:      kargoapi.PromotionPhaseSuperseded,
+						FinishedAt: &metav1.Time{Time: now},
+					},
+				},
+			},
+			assertions: func(t *testing.T, status kargoapi.StageStatus, res promoSyncResult, err error) {
+				require.NoError(t, err)
+				assert.False(t, res.hasNonTerminalPromotions)
+
+				// The Promotion that ran is the watermark, not the tombstone.
+				require.NotNil(t, status.LastPromotion)
+				assert.Equal(t, "test-stage.01", status.LastPromotion.Name)
+
+				// The success is recorded normally.
+				require.Len(t, status.FreightHistory, 1)
+				assert.Equal(t, "deployed-collection", status.FreightHistory[0].ID)
+
+				// Health assessment proceeds from the succeeded Promotion:
+				// the post-promotion "waiting" conditions are in place rather
+				// than a LastPromotionSuperseded degradation.
+				healthy := conditions.Get(&status, kargoapi.ConditionTypeHealthy)
+				require.NotNil(t, healthy)
+				assert.Equal(t, "WaitingForHealthCheck", healthy.Reason)
+			},
+		},
+		{
 			name: "processes failed promotions without updating freight",
 			stage: &kargoapi.Stage{
 				ObjectMeta: metav1.ObjectMeta{
@@ -6955,6 +7025,148 @@ func TestRegularStageReconciler_autoPromoteFreight(t *testing.T) {
 				require.NoError(t, c.List(t.Context(), promoList, client.InNamespace("fake-project")))
 				assert.Len(t, promoList.Items, 1)
 				assert.Equal(t, "existing-promotion", promoList.Items[0].Name)
+			},
+		},
+		{
+			name: "superseded promotion does not suppress auto-promotion",
+			stage: &kargoapi.Stage{
+				ObjectMeta: metav1.ObjectMeta{
+					Namespace: "fake-project",
+					Name:      "test-stage",
+				},
+				Spec: kargoapi.StageSpec{
+					RequestedFreight: []kargoapi.FreightRequest{
+						{
+							Origin: kargoapi.FreightOrigin{
+								Kind: kargoapi.FreightOriginKindWarehouse,
+								Name: "test-warehouse",
+							},
+							Sources: kargoapi.FreightSources{
+								Direct: true,
+							},
+						},
+					},
+				},
+			},
+			objects: []client.Object{
+				&kargoapi.ProjectConfig{
+					ObjectMeta: metav1.ObjectMeta{
+						Name:      "fake-project",
+						Namespace: "fake-project",
+					},
+					Spec: kargoapi.ProjectConfigSpec{
+						PromotionPolicies: []kargoapi.PromotionPolicy{
+							{
+								Stage:                "test-stage",
+								AutoPromotionEnabled: true,
+							},
+						},
+					},
+				},
+				&kargoapi.Warehouse{
+					ObjectMeta: metav1.ObjectMeta{
+						Namespace: "fake-project",
+						Name:      "test-warehouse",
+					},
+				},
+				&kargoapi.Freight{
+					ObjectMeta: metav1.ObjectMeta{
+						Namespace:         "fake-project",
+						Name:              "test-freight-1",
+						CreationTimestamp: metav1.Time{Time: now},
+					},
+					Origin: kargoapi.FreightOrigin{
+						Kind: kargoapi.FreightOriginKindWarehouse,
+						Name: "test-warehouse",
+					},
+				},
+				&kargoapi.Promotion{
+					ObjectMeta: metav1.ObjectMeta{
+						Namespace: "fake-project",
+						Name:      "superseded-promotion",
+						Labels: map[string]string{
+							kargoapi.LabelKeyStage: "test-stage",
+						},
+					},
+					Spec: kargoapi.PromotionSpec{
+						Stage:   "test-stage",
+						Freight: "test-freight-1",
+					},
+					Status: kargoapi.PromotionStatus{
+						Phase: kargoapi.PromotionPhaseSuperseded,
+					},
+				},
+			},
+			assertions: func(
+				t *testing.T,
+				_ *fakeevent.EventRecorder,
+				c client.Client,
+				status kargoapi.StageStatus,
+				err error,
+			) {
+				require.NoError(t, err)
+
+				assert.True(t, status.AutoPromotionEnabled)
+
+				// A Superseded Promotion was retired by grooming before it
+				// ever ran; it is not a failed attempt and must not trip the
+				// failure-loop guard.
+				promoList := &kargoapi.PromotionList{}
+				require.NoError(t, c.List(t.Context(), promoList, client.InNamespace("fake-project")))
+				require.Len(t, promoList.Items, 2)
+				var created int
+				for _, promo := range promoList.Items {
+					if promo.Name != "superseded-promotion" {
+						created++
+						assert.Equal(t, "test-freight-1", promo.Spec.Freight)
+					}
+				}
+				assert.Equal(t, 1, created)
+			},
+		},
+		{
+			name: "skips when a genuine failure hides behind a newer superseded promotion",
+			stage: &kargoapi.Stage{
+				ObjectMeta: metav1.ObjectMeta{
+					Namespace: "fake-project",
+					Name:      "test-stage",
+				},
+				Spec: kargoapi.StageSpec{
+					RequestedFreight: []kargoapi.FreightRequest{{
+						Origin: kargoapi.FreightOrigin{
+							Kind: kargoapi.FreightOriginKindWarehouse,
+							Name: "test-warehouse",
+						},
+						Sources: kargoapi.FreightSources{Direct: true},
+					}},
+					PromotionTemplate: &kargoapi.PromotionTemplate{
+						Spec: kargoapi.PromotionTemplateSpec{
+							Steps: []kargoapi.PromotionStep{{Uses: "fake-step"}},
+						},
+					},
+				},
+			},
+			objects: terminalPromotionOrderingObjects(
+				kargoapi.PromotionPhaseErrored,
+				kargoapi.PromotionPhaseSuperseded,
+			),
+			assertions: func(
+				t *testing.T,
+				_ *fakeevent.EventRecorder,
+				c client.Client,
+				status kargoapi.StageStatus,
+				err error,
+			) {
+				require.NoError(t, err)
+				assert.True(t, status.AutoPromotionEnabled)
+
+				// With the Superseded tombstone ignored, the newest terminal
+				// Promotion is the genuine failure, so the failure-loop guard
+				// still applies.
+				promoList := &kargoapi.PromotionList{}
+				require.NoError(t, c.List(t.Context(), promoList, client.InNamespace("fake-project")))
+				assert.Len(t, promoList.Items, 2,
+					"no new Promotion should be created when the newest non-superseded terminal failed")
 			},
 		},
 		{

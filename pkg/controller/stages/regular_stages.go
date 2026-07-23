@@ -778,6 +778,15 @@ func (r *RegularStageReconciler) syncPromotions(
 			if !promo.Status.Phase.IsTerminal() {
 				continue
 			}
+			// A Superseded Promotion never ran: grooming retired it before
+			// dispatch, so it carries no recordable outcome (no Freight
+			// history, no hold/resume intent, no health checks). Skip it
+			// entirely so a tombstone can never become status.lastPromotion,
+			// which would force health to Unknown and sidestep the
+			// verification barrier.
+			if promo.Status.Phase == kargoapi.PromotionPhaseSuperseded {
+				continue
+			}
 			// Record only Promotions that completed after the current watermark.
 			if lastPromo != nil && comparePromotionCompletion(
 				promo.Name, promo.Status.FinishedAt,
@@ -2216,6 +2225,15 @@ func (r *RegularStageReconciler) newestTerminalPromotionForStageFreight(
 	); err != nil {
 		return nil, err
 	}
+	// A Superseded Promotion was retired by grooming before it ever ran; it
+	// is not evidence the Freight was attempted, so it must not suppress
+	// auto-promotion. (An older genuine failure still does.)
+	promotions.Items = slices.DeleteFunc(
+		promotions.Items,
+		func(promo kargoapi.Promotion) bool {
+			return promo.Status.Phase == kargoapi.PromotionPhaseSuperseded
+		},
+	)
 	if len(promotions.Items) == 0 {
 		return nil, nil
 	}
