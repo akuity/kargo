@@ -651,6 +651,24 @@ func releaseHoldAnnotations(origin kargoapi.FreightOrigin) map[string]string {
 	return promo.Annotations
 }
 
+// fakePromotionDispatcher is a test PromotionDispatcher whose Select behavior is
+// supplied by a function field.
+type fakePromotionDispatcher struct {
+	selectFn func(
+		ctx context.Context,
+		stage *kargoapi.Stage,
+		pending []kargoapi.Promotion,
+	) (*kargoapi.Promotion, error)
+}
+
+func (f fakePromotionDispatcher) Select(
+	ctx context.Context,
+	stage *kargoapi.Stage,
+	pending []kargoapi.Promotion,
+) (*kargoapi.Promotion, error) {
+	return f.selectFn(ctx, stage, pending)
+}
+
 func TestRegularStageReconciler_syncPromotions(t *testing.T) {
 	scheme := runtime.NewScheme()
 	require.NoError(t, kargoapi.AddToScheme(scheme))
@@ -668,6 +686,7 @@ func TestRegularStageReconciler_syncPromotions(t *testing.T) {
 		stage       *kargoapi.Stage
 		objects     []client.Object
 		interceptor interceptor.Funcs
+		dispatcher  PromotionDispatcher
 		assertions  func(*testing.T, kargoapi.StageStatus, bool, error)
 	}{
 		{
@@ -1406,6 +1425,293 @@ func TestRegularStageReconciler_syncPromotions(t *testing.T) {
 			},
 		},
 		{
+			name: "default dispatcher selects oldest pending promotion",
+			stage: &kargoapi.Stage{
+				ObjectMeta: metav1.ObjectMeta{
+					Namespace: "fake-project",
+					Name:      "test-stage",
+				},
+			},
+			objects: []client.Object{
+				&kargoapi.Promotion{
+					ObjectMeta: metav1.ObjectMeta{
+						Name:      "promo-a",
+						Namespace: "fake-project",
+					},
+					Spec:   kargoapi.PromotionSpec{Stage: "test-stage"},
+					Status: kargoapi.PromotionStatus{Phase: kargoapi.PromotionPhasePending},
+				},
+				&kargoapi.Promotion{
+					ObjectMeta: metav1.ObjectMeta{
+						Name:      "promo-b",
+						Namespace: "fake-project",
+					},
+					Spec:   kargoapi.PromotionSpec{Stage: "test-stage"},
+					Status: kargoapi.PromotionStatus{Phase: kargoapi.PromotionPhasePending},
+				},
+			},
+			assertions: func(t *testing.T, status kargoapi.StageStatus, hasPendingPromotions bool, err error) {
+				require.NoError(t, err)
+				assert.True(t, hasPendingPromotions)
+				require.NotNil(t, status.CurrentPromotion)
+				assert.Equal(t, "promo-a", status.CurrentPromotion.Name)
+			},
+		},
+		{
+			name: "custom dispatcher selects a non-oldest pending promotion",
+			stage: &kargoapi.Stage{
+				ObjectMeta: metav1.ObjectMeta{
+					Namespace: "fake-project",
+					Name:      "test-stage",
+				},
+			},
+			objects: []client.Object{
+				&kargoapi.Promotion{
+					ObjectMeta: metav1.ObjectMeta{
+						Name:      "promo-a",
+						Namespace: "fake-project",
+					},
+					Spec:   kargoapi.PromotionSpec{Stage: "test-stage"},
+					Status: kargoapi.PromotionStatus{Phase: kargoapi.PromotionPhasePending},
+				},
+				&kargoapi.Promotion{
+					ObjectMeta: metav1.ObjectMeta{
+						Name:      "promo-b",
+						Namespace: "fake-project",
+					},
+					Spec: kargoapi.PromotionSpec{Stage: "test-stage"},
+					Status: kargoapi.PromotionStatus{
+						Phase:   kargoapi.PromotionPhasePending,
+						Freight: &kargoapi.FreightReference{Name: "freight-b"},
+					},
+				},
+			},
+			dispatcher: fakePromotionDispatcher{
+				selectFn: func(
+					_ context.Context,
+					_ *kargoapi.Stage,
+					pending []kargoapi.Promotion,
+				) (*kargoapi.Promotion, error) {
+					// Select the last (newest) pending Promotion instead of the
+					// default oldest-first choice.
+					return &pending[len(pending)-1], nil
+				},
+			},
+			assertions: func(t *testing.T, status kargoapi.StageStatus, hasPendingPromotions bool, err error) {
+				require.NoError(t, err)
+				assert.True(t, hasPendingPromotions)
+				require.NotNil(t, status.CurrentPromotion)
+				assert.Equal(t, "promo-b", status.CurrentPromotion.Name)
+				require.NotNil(t, status.CurrentPromotion.Freight)
+				assert.Equal(t, "freight-b", status.CurrentPromotion.Freight.Name)
+
+				promotingCond := conditions.Get(&status, kargoapi.ConditionTypePromoting)
+				require.NotNil(t, promotingCond)
+				assert.Equal(t, metav1.ConditionTrue, promotingCond.Status)
+			},
+		},
+		{
+			name: "dispatcher declines to start a promotion",
+			stage: &kargoapi.Stage{
+				ObjectMeta: metav1.ObjectMeta{
+					Namespace: "fake-project",
+					Name:      "test-stage",
+				},
+			},
+			objects: []client.Object{
+				&kargoapi.Promotion{
+					ObjectMeta: metav1.ObjectMeta{
+						Name:      "promo-a",
+						Namespace: "fake-project",
+					},
+					Spec:   kargoapi.PromotionSpec{Stage: "test-stage"},
+					Status: kargoapi.PromotionStatus{Phase: kargoapi.PromotionPhasePending},
+				},
+			},
+			dispatcher: fakePromotionDispatcher{
+				selectFn: func(
+					_ context.Context,
+					_ *kargoapi.Stage,
+					_ []kargoapi.Promotion,
+				) (*kargoapi.Promotion, error) {
+					return nil, nil
+				},
+			},
+			assertions: func(t *testing.T, status kargoapi.StageStatus, hasPendingPromotions bool, err error) {
+				require.NoError(t, err)
+				// A pending Promotion remains, so the Stage is requeued.
+				assert.True(t, hasPendingPromotions)
+				// No Promotion is selected to run.
+				assert.Nil(t, status.CurrentPromotion)
+				assert.Nil(t, conditions.Get(&status, kargoapi.ConditionTypePromoting))
+			},
+		},
+		{
+			name: "dispatcher never preempts a running promotion",
+			stage: &kargoapi.Stage{
+				ObjectMeta: metav1.ObjectMeta{
+					Namespace: "fake-project",
+					Name:      "test-stage",
+				},
+			},
+			objects: []client.Object{
+				&kargoapi.Promotion{
+					ObjectMeta: metav1.ObjectMeta{
+						Name:      "running-promo",
+						Namespace: "fake-project",
+					},
+					Spec:   kargoapi.PromotionSpec{Stage: "test-stage"},
+					Status: kargoapi.PromotionStatus{Phase: kargoapi.PromotionPhaseRunning},
+				},
+				&kargoapi.Promotion{
+					ObjectMeta: metav1.ObjectMeta{
+						Name:      "pending-promo",
+						Namespace: "fake-project",
+					},
+					Spec:   kargoapi.PromotionSpec{Stage: "test-stage"},
+					Status: kargoapi.PromotionStatus{Phase: kargoapi.PromotionPhasePending},
+				},
+			},
+			dispatcher: fakePromotionDispatcher{
+				selectFn: func(
+					_ context.Context,
+					_ *kargoapi.Stage,
+					pending []kargoapi.Promotion,
+				) (*kargoapi.Promotion, error) {
+					// If (incorrectly) consulted, this would preempt the running
+					// Promotion; the assertion below proves it is not consulted.
+					return &pending[len(pending)-1], nil
+				},
+			},
+			assertions: func(t *testing.T, status kargoapi.StageStatus, hasPendingPromotions bool, err error) {
+				require.NoError(t, err)
+				assert.True(t, hasPendingPromotions)
+				require.NotNil(t, status.CurrentPromotion)
+				assert.Equal(t, "running-promo", status.CurrentPromotion.Name)
+			},
+		},
+		{
+			name: "dispatcher error surfaces as promoting unknown",
+			stage: &kargoapi.Stage{
+				ObjectMeta: metav1.ObjectMeta{
+					Namespace: "fake-project",
+					Name:      "test-stage",
+				},
+			},
+			objects: []client.Object{
+				&kargoapi.Promotion{
+					ObjectMeta: metav1.ObjectMeta{
+						Name:      "promo-a",
+						Namespace: "fake-project",
+					},
+					Spec:   kargoapi.PromotionSpec{Stage: "test-stage"},
+					Status: kargoapi.PromotionStatus{Phase: kargoapi.PromotionPhasePending},
+				},
+			},
+			dispatcher: fakePromotionDispatcher{
+				selectFn: func(
+					_ context.Context,
+					_ *kargoapi.Stage,
+					_ []kargoapi.Promotion,
+				) (*kargoapi.Promotion, error) {
+					return nil, fmt.Errorf("boom")
+				},
+			},
+			assertions: func(t *testing.T, status kargoapi.StageStatus, _ bool, err error) {
+				require.ErrorContains(t, err, "failed to select next Promotion")
+				assert.Nil(t, status.CurrentPromotion)
+				promotingCond := conditions.Get(&status, kargoapi.ConditionTypePromoting)
+				require.NotNil(t, promotingCond)
+				assert.Equal(t, metav1.ConditionUnknown, promotingCond.Status)
+				assert.Equal(t, "PromotionDispatchFailed", promotingCond.Reason)
+			},
+		},
+		{
+			name: "keeps a non-oldest current selection sticky",
+			stage: &kargoapi.Stage{
+				ObjectMeta: metav1.ObjectMeta{
+					Namespace: "fake-project",
+					Name:      "test-stage",
+				},
+				Status: kargoapi.StageStatus{
+					CurrentPromotion: &kargoapi.PromotionReference{Name: "promo-b"},
+				},
+			},
+			objects: []client.Object{
+				&kargoapi.Promotion{
+					ObjectMeta: metav1.ObjectMeta{
+						Name:      "promo-a",
+						Namespace: "fake-project",
+					},
+					Spec:   kargoapi.PromotionSpec{Stage: "test-stage"},
+					Status: kargoapi.PromotionStatus{Phase: kargoapi.PromotionPhasePending},
+				},
+				&kargoapi.Promotion{
+					ObjectMeta: metav1.ObjectMeta{
+						Name:      "promo-b",
+						Namespace: "fake-project",
+					},
+					Spec:   kargoapi.PromotionSpec{Stage: "test-stage"},
+					Status: kargoapi.PromotionStatus{Phase: kargoapi.PromotionPhasePending},
+				},
+			},
+			dispatcher: fakePromotionDispatcher{
+				selectFn: func(
+					_ context.Context,
+					_ *kargoapi.Stage,
+					pending []kargoapi.Promotion,
+				) (*kargoapi.Promotion, error) {
+					// Would pick the oldest; the sticky current selection must
+					// win instead, so this must not be consulted.
+					return &pending[0], nil
+				},
+			},
+			assertions: func(t *testing.T, status kargoapi.StageStatus, hasPendingPromotions bool, err error) {
+				require.NoError(t, err)
+				assert.True(t, hasPendingPromotions)
+				require.NotNil(t, status.CurrentPromotion)
+				assert.Equal(t, "promo-b", status.CurrentPromotion.Name)
+			},
+		},
+		{
+			name: "frees slot when a non-oldest current selection is terminal",
+			stage: &kargoapi.Stage{
+				ObjectMeta: metav1.ObjectMeta{
+					Namespace: "fake-project",
+					Name:      "test-stage",
+				},
+				Status: kargoapi.StageStatus{
+					CurrentPromotion: &kargoapi.PromotionReference{Name: "promo-b"},
+				},
+			},
+			objects: []client.Object{
+				&kargoapi.Promotion{
+					ObjectMeta: metav1.ObjectMeta{
+						Name:      "promo-a",
+						Namespace: "fake-project",
+					},
+					Spec:   kargoapi.PromotionSpec{Stage: "test-stage"},
+					Status: kargoapi.PromotionStatus{Phase: kargoapi.PromotionPhasePending},
+				},
+				&kargoapi.Promotion{
+					ObjectMeta: metav1.ObjectMeta{
+						Name:      "promo-b",
+						Namespace: "fake-project",
+					},
+					Spec:   kargoapi.PromotionSpec{Stage: "test-stage"},
+					Status: kargoapi.PromotionStatus{Phase: kargoapi.PromotionPhaseFailed},
+				},
+			},
+			assertions: func(t *testing.T, status kargoapi.StageStatus, hasPendingPromotions bool, err error) {
+				require.NoError(t, err)
+				// promo-a is still pending, so the Stage is requeued.
+				assert.True(t, hasPendingPromotions)
+				// The finished current selection frees the slot; the next
+				// selection happens on a subsequent pass.
+				assert.Nil(t, status.CurrentPromotion)
+			},
+		},
+		{
 			name: "blocks new promotion when current freight has running verification",
 			stage: &kargoapi.Stage{
 				ObjectMeta: metav1.ObjectMeta{
@@ -1968,9 +2274,14 @@ func TestRegularStageReconciler_syncPromotions(t *testing.T) {
 				WithInterceptorFuncs(tt.interceptor).
 				Build()
 
+			dispatcher := tt.dispatcher
+			if dispatcher == nil {
+				dispatcher = defaultPromotionDispatcher{}
+			}
 			r := &RegularStageReconciler{
-				client:      c,
-				eventSender: k8sevent.NewEventSender(fakeevent.NewEventRecorder(10)),
+				client:              c,
+				eventSender:         k8sevent.NewEventSender(fakeevent.NewEventRecorder(10)),
+				promotionDispatcher: dispatcher,
 			}
 
 			status, requeue, err := r.syncPromotions(t.Context(), tt.stage)

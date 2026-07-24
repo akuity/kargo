@@ -75,23 +75,70 @@ func ReconcilerConfigFromEnv() ReconcilerConfig {
 }
 
 type RegularStageReconciler struct {
-	cfg            ReconcilerConfig
-	client         client.Client
-	eventSender    kargoEvent.Sender
-	healthChecker  health.AggregatingChecker
-	shardPredicate controller.ResponsibleFor[kargoapi.Stage]
+	cfg                 ReconcilerConfig
+	client              client.Client
+	eventSender         kargoEvent.Sender
+	healthChecker       health.AggregatingChecker
+	shardPredicate      controller.ResponsibleFor[kargoapi.Stage]
+	promotionDispatcher PromotionDispatcher
 
 	backoffCfg wait.Backoff
+}
+
+// PromotionDispatcher selects which Promotion, from the set of eligible pending
+// Promotions for a Stage, should become the Stage's current (running)
+// Promotion. It is consulted only when no Promotion is currently Running for the
+// Stage and at least one Pending Promotion has passed the controller's
+// eligibility gates (verification and health). Implementations therefore never
+// need to preserve the invariant that a Running Promotion is not preempted, and
+// may reason about conflicts across the full set of pending Promotions.
+type PromotionDispatcher interface {
+	// Select returns the Promotion to start next, or nil to start none on this
+	// pass (the Stage is requeued while pending Promotions remain). The pending
+	// slice is non-empty and sorted by ULID, oldest first.
+	Select(
+		ctx context.Context,
+		stage *kargoapi.Stage,
+		pending []kargoapi.Promotion,
+	) (*kargoapi.Promotion, error)
+}
+
+// defaultPromotionDispatcher preserves Kargo's historical first-in, first-out
+// behavior: the oldest (lowest-ULID) eligible pending Promotion is selected.
+type defaultPromotionDispatcher struct{}
+
+func (defaultPromotionDispatcher) Select(
+	_ context.Context,
+	_ *kargoapi.Stage,
+	pending []kargoapi.Promotion,
+) (*kargoapi.Promotion, error) {
+	return &pending[0], nil
+}
+
+// RegularStageReconcilerOption configures a RegularStageReconciler.
+type RegularStageReconcilerOption func(*RegularStageReconciler)
+
+// WithPromotionDispatcher overrides the PromotionDispatcher used to select which
+// pending Promotion a Stage should run next. A nil dispatcher is ignored. When
+// unset, a default first-in, first-out dispatcher is used.
+func WithPromotionDispatcher(d PromotionDispatcher) RegularStageReconcilerOption {
+	return func(r *RegularStageReconciler) {
+		if d != nil {
+			r.promotionDispatcher = d
+		}
+	}
 }
 
 // NewRegularStageReconciler creates a new Stages reconciler.
 func NewRegularStageReconciler(
 	cfg ReconcilerConfig,
 	healthChecker health.AggregatingChecker,
+	opts ...RegularStageReconcilerOption,
 ) *RegularStageReconciler {
-	return &RegularStageReconciler{
-		cfg:           cfg,
-		healthChecker: healthChecker,
+	r := &RegularStageReconciler{
+		cfg:                 cfg,
+		healthChecker:       healthChecker,
+		promotionDispatcher: defaultPromotionDispatcher{},
 		shardPredicate: controller.ResponsibleFor[kargoapi.Stage]{
 			IsDefaultController: cfg.IsDefaultController,
 			ShardName:           cfg.ShardName,
@@ -104,6 +151,10 @@ func NewRegularStageReconciler(
 			Jitter:   0.1,
 		},
 	}
+	for _, opt := range opts {
+		opt(r)
+	}
+	return r
 }
 
 // SetupWithManager sets up the Stage reconciler with the given controller
@@ -637,10 +688,23 @@ func (r *RegularStageReconciler) syncPromotions(
 		}
 	}
 
-	// If the current Promotion is not the highest priority Promotion, or the
-	// highest priority Promotion is in a terminal phase, then we must have
-	// finished promoting.
-	if currentPromo != nil && (currentPromo.Name != highestPrioPromo.Name || highestPrioPromo.Status.Phase.IsTerminal()) {
+	// Determine whether the Promotion currently recorded on the Stage has
+	// finished. It is finished when it has reached a terminal phase or is no
+	// longer present (e.g. garbage-collected). Basing this on the current
+	// Promotion's own phase — rather than on whether it is still the
+	// highest-priority Promotion — keeps the decision independent of the
+	// PromotionDispatcher's ordering policy, which may select a Promotion other
+	// than the oldest pending one.
+	currentPromoDone := currentPromo != nil
+	if currentPromo != nil {
+		if promo := findPromotion(promotions.Items, currentPromo.Name); promo != nil {
+			currentPromoDone = promo.Status.Phase.IsTerminal()
+		}
+	}
+
+	// If the current Promotion has finished, then we must have finished
+	// promoting and can free the slot for the next Promotion.
+	if currentPromo != nil && currentPromoDone {
 		// Update the conditions to reflect that we are no longer promoting.
 		conditions.Delete(&newStatus, kargoapi.ConditionTypePromoting)
 		newStatus.CurrentPromotion = nil
@@ -789,24 +853,81 @@ func (r *RegularStageReconciler) syncPromotions(
 		}
 	}
 
-	// If the highest priority Promotion is not in a terminal phase, then we
-	// are promoting the Freight.
+	// Non-terminal Promotions always sort ahead of terminal ones, so a
+	// non-terminal highest-priority Promotion means the Stage still has a
+	// Running or Pending Promotion to account for. Determine which Promotion
+	// should be the Stage's current one on this pass.
 	if !highestPrioPromo.Status.Phase.IsTerminal() {
+		// Decide which Promotion the Stage runs on this pass.
+		var selected *kargoapi.Promotion
+		switch {
+		case currentPromo != nil:
+			// A Promotion is already selected and, per the "finished promoting"
+			// check above, is still non-terminal. Keep it: a Running or
+			// already-dispatched Promotion is never preempted, and this also
+			// prevents the selection from flip-flopping when a custom dispatcher
+			// chooses a Promotion other than the oldest pending one.
+			selected = findPromotion(promotions.Items, currentPromo.Name)
+		case highestPrioPromo.Status.Phase == kargoapi.PromotionPhaseRunning:
+			// No current Promotion is recorded but one is Running (e.g. after a
+			// controller restart): adopt it. A Running Promotion always sorts
+			// first, preserving the invariant that it is never preempted.
+			selected = &highestPrioPromo
+		}
+
+		// With no Promotion running and the slot open, consult the
+		// PromotionDispatcher to decide which of the eligible pending Promotions
+		// should run next. This lets a custom policy reason about conflicts
+		// across the pending set. The default dispatcher reproduces the
+		// historical first-in, first-out selection.
+		if selected == nil {
+			pending := make([]kargoapi.Promotion, 0, len(promotions.Items))
+			for _, promo := range promotions.Items {
+				if !promo.Status.Phase.IsTerminal() {
+					pending = append(pending, promo)
+				}
+			}
+			sel, err := r.promotionDispatcher.Select(ctx, stage, pending)
+			if err != nil {
+				err = fmt.Errorf(
+					"failed to select next Promotion for Stage %q in namespace %q: %w",
+					stage.Name, stage.Namespace, err,
+				)
+				conditions.Set(&newStatus, &metav1.Condition{
+					Type:               kargoapi.ConditionTypePromoting,
+					Status:             metav1.ConditionUnknown,
+					Reason:             "PromotionDispatchFailed",
+					Message:            err.Error(),
+					ObservedGeneration: stage.Generation,
+				})
+				return newStatus, hasNonTerminalPromotions, err
+			}
+			if sel == nil {
+				// The dispatcher declined to start any Promotion on this pass.
+				// Leave the slot open; the Stage is requeued while pending
+				// Promotions remain.
+				conditions.Delete(&newStatus, kargoapi.ConditionTypePromoting)
+				newStatus.CurrentPromotion = nil
+				return newStatus, hasNonTerminalPromotions, nil
+			}
+			selected = sel
+		}
+
 		conditions.Set(&newStatus, &metav1.Condition{
 			Type:   kargoapi.ConditionTypePromoting,
 			Status: metav1.ConditionTrue,
 			Reason: "ActivePromotion",
 			Message: fmt.Sprintf(
 				"Promotion %q is currently %s",
-				highestPrioPromo.Name, highestPrioPromo.Status.Phase,
+				selected.Name, selected.Status.Phase,
 			),
 			ObservedGeneration: stage.Generation,
 		})
 
 		newStatus.CurrentPromotion = &kargoapi.PromotionReference{
-			Name: highestPrioPromo.Name,
+			Name: selected.Name,
 		}
-		if freight := highestPrioPromo.Status.Freight; freight != nil {
+		if freight := selected.Status.Freight; freight != nil {
 			newStatus.CurrentPromotion.Freight = freight.DeepCopy()
 		}
 		return newStatus, hasNonTerminalPromotions, nil
@@ -816,6 +937,17 @@ func (r *RegularStageReconciler) syncPromotions(
 	// not promoting.
 	conditions.Delete(&newStatus, kargoapi.ConditionTypePromoting)
 	return newStatus, hasNonTerminalPromotions, nil
+}
+
+// findPromotion returns a pointer to the Promotion in promos with the given
+// name, or nil if none matches.
+func findPromotion(promos []kargoapi.Promotion, name string) *kargoapi.Promotion {
+	for i := range promos {
+		if promos[i].Name == name {
+			return &promos[i]
+		}
+	}
+	return nil
 }
 
 // assessHealth assesses the health of a Stage based on the health checks from
