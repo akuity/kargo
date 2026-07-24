@@ -13,6 +13,7 @@ import {
   ALIAS_LABEL_KEY,
   getCurrentFreightByWarehouse,
   getCurrentFreightForComparison,
+  reconstructFreightFromHistory,
   getShortFreightLabel
 } from './utils';
 
@@ -159,5 +160,23 @@ describe('getShortFreightLabel', () => {
 
   it('returns an empty string when the name is missing', () => {
     expect(getShortFreightLabel()).toBe('');
+  });
+});
+
+describe('reconstructFreightFromHistory', () => {
+  it('preserves the historical freight contents when synthesizing a Freight', () => {
+    const reference = ref('warehouse-a', 'ghcr.io/acme/a');
+    const freight = reconstructFreightFromHistory(reference, 'test-project');
+
+    expect(freight).toMatchObject({
+      kind: 'Freight',
+      apiVersion: 'kargo.akuity.io/v1alpha1',
+      metadata: {
+        name: undefined,
+        namespace: 'test-project'
+      },
+      origin: { kind: 'Warehouse', name: 'warehouse-a' },
+      images: [{ repoURL: 'ghcr.io/acme/a' }]
+    });
   });
 });
