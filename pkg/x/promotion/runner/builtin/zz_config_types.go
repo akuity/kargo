@@ -712,6 +712,20 @@ type Update struct {
 	Values map[string]interface{} `json:"values"`
 }
 
+type TarConfig struct {
+	// Gzip determines whether the archive should be compressed using gzip. Defaults to false
+	// (the archive is uncompressed unless this is set to true).
+	Gzip bool `json:"gzip,omitempty"`
+	// Ignore is a (multiline) string of glob patterns to ignore when adding files to the
+	// archive. It accepts the same syntax as .gitignore files.
+	Ignore string `json:"ignore,omitempty"`
+	// InPath is the path to the source directory or file to be archived.
+	InPath string `json:"inPath"`
+	// OutPath is the path to the destination tar file to create. If the file already exists, it
+	// will be overwritten.
+	OutPath string `json:"outPath"`
+}
+
 type TOMLParseConfig struct {
 	// An array of outputs to extract from the TOML file.
 	Outputs []TomlParse `json:"outputs"`

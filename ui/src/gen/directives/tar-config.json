@@ -1,0 +1,27 @@
+{
+ "$schema": "https://json-schema.org/draft/2020-12/schema",
+ "title": "TarConfig",
+ "type": "object",
+ "additionalProperties": false,
+ "properties": {
+  "inPath": {
+   "type": "string",
+   "description": "InPath is the path to the source directory or file to be archived.",
+   "minLength": 1
+  },
+  "outPath": {
+   "type": "string",
+   "description": "OutPath is the path to the destination tar file to create. If the file already exists, it will be overwritten.",
+   "minLength": 1
+  },
+  "ignore": {
+   "type": "string",
+   "description": "Ignore is a (multiline) string of glob patterns to ignore when adding files to the archive. It accepts the same syntax as .gitignore files.",
+   "minLength": 1
+  },
+  "gzip": {
+   "type": "boolean",
+   "description": "Gzip determines whether the archive should be compressed using gzip. Defaults to false (the archive is uncompressed unless this is set to true)."
+  }
+ }
+}
