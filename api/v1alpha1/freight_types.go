@@ -168,16 +168,26 @@ func (f *Freight) IsApprovedFor(stage string) bool {
 // the current soak time is calculated and compared to the longest completed
 // soak time on record.
 func (f *Freight) GetLongestSoak(stage string) time.Duration {
-	if _, verified := f.Status.VerifiedIn[stage]; !verified {
+	record, verified := f.Status.VerifiedIn[stage]
+	if !verified {
 		return 0
 	}
 	var longestCompleted time.Duration
-	if record, isVerified := f.Status.VerifiedIn[stage]; isVerified && record.LongestCompletedSoak != nil {
+	if record.LongestCompletedSoak != nil {
 		longestCompleted = record.LongestCompletedSoak.Duration
 	}
 	var current time.Duration
-	if record, isCurrent := f.Status.CurrentlyIn[stage]; isCurrent {
-		current = time.Since(record.Since.Time)
+	if c, isCurrent := f.Status.CurrentlyIn[stage]; isCurrent && c.Since != nil {
+		current = time.Since(c.Since.Time)
+	}
+	// Control-flow Stages verify Freight without ever holding it: the Freight is
+	// never added to CurrentlyIn and no soak is ever completed. For such Stages,
+	// neither a current nor a completed soak is recorded, so measure the soak
+	// from the time the Freight was verified. A regular Stage always has either
+	// a current residency or a completed soak, so this branch does not affect
+	// it.
+	if longestCompleted == 0 && current == 0 && record.VerifiedAt != nil {
+		return time.Since(record.VerifiedAt.Time)
 	}
 	return time.Duration(max(longestCompleted.Nanoseconds(), current.Nanoseconds()))
 }
