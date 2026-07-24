@@ -92,7 +92,7 @@ func (h *httpRequester) run(
 	_ *promotion.StepContext,
 	cfg builtin.HTTPConfig,
 ) (promotion.StepResult, error) {
-	req, err := h.buildRequest(cfg)
+	req, err := h.buildRequest(ctx, cfg)
 	if err != nil {
 		return promotion.StepResult{Status: kargoapi.PromotionStepStatusErrored},
 			&promotion.TerminalError{Err: fmt.Errorf("error building HTTP request: %w", err)}
@@ -297,12 +297,12 @@ func (h *httpRequester) extractErrorMessageFromResponse(
 	return errorMessage, nil
 }
 
-func (h *httpRequester) buildRequest(cfg builtin.HTTPConfig) (*http.Request, error) {
+func (h *httpRequester) buildRequest(ctx context.Context, cfg builtin.HTTPConfig) (*http.Request, error) {
 	method := cfg.Method
 	if method == "" {
 		method = http.MethodGet
 	}
-	req, err := http.NewRequest(method, cfg.URL, bytes.NewBufferString(cfg.Body))
+	req, err := http.NewRequestWithContext(ctx, method, cfg.URL, bytes.NewBufferString(cfg.Body))
 	if err != nil {
 		return nil, fmt.Errorf("error creating HTTP request: %w", err)
 	}
