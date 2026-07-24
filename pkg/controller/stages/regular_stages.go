@@ -96,23 +96,31 @@ type PromotionDispatcher interface {
 	// Select returns the Promotion to start next, or nil to start none on this
 	// pass (the Stage is requeued while pending Promotions remain). The pending
 	// slice is non-empty and sorted by ULID, oldest first.
+	//
+	// retryAfter is meaningful only when the returned Promotion is nil (a
+	// decline): it hints how long until conditions may allow a Promotion to
+	// start, e.g. the time until the next relevant transition. The reconciler
+	// requeues the Stage after min(retryAfter, defaultRequeueDelay) and treats a
+	// non-positive value as "use the default cadence". It is ignored when a
+	// Promotion is selected or an error is returned.
 	Select(
 		ctx context.Context,
 		stage *kargoapi.Stage,
 		pending []kargoapi.Promotion,
-	) (*kargoapi.Promotion, error)
+	) (selection *kargoapi.Promotion, retryAfter time.Duration, err error)
 }
 
 // defaultPromotionDispatcher preserves Kargo's historical first-in, first-out
-// behavior: the oldest (lowest-ULID) eligible pending Promotion is selected.
+// behavior: the oldest (lowest-ULID) eligible pending Promotion is selected. It
+// never declines, so it never returns a retryAfter hint.
 type defaultPromotionDispatcher struct{}
 
 func (defaultPromotionDispatcher) Select(
 	_ context.Context,
 	_ *kargoapi.Stage,
 	pending []kargoapi.Promotion,
-) (*kargoapi.Promotion, error) {
-	return &pending[0], nil
+) (*kargoapi.Promotion, time.Duration, error) {
+	return &pending[0], 0, nil
 }
 
 // RegularStageReconcilerOption configures a RegularStageReconciler.
@@ -377,6 +385,19 @@ func (r *RegularStageReconciler) SetupWithManager(
 	return nil
 }
 
+const (
+	// immediateRequeueDelay is the requeue delay used when a Stage should be
+	// reconciled again as soon as possible (e.g. a pending Promotion is waiting
+	// for a free slot).
+	immediateRequeueDelay = 100 * time.Millisecond
+	// defaultRequeueDelay is the steady-state requeue cadence for a Stage with no
+	// more urgent reason to be reconciled. It also caps the PromotionDispatcher's
+	// decline hint, bounding staleness after external changes the Stage does not
+	// watch.
+	// TODO: Make the requeue delay configurable.
+	defaultRequeueDelay = 5 * time.Minute
+)
+
 func (r *RegularStageReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Result, error) {
 	logger := logging.LoggerFromContext(ctx).WithValues(
 		"namespace", req.Namespace,
@@ -410,12 +431,12 @@ func (r *RegularStageReconciler) Reconcile(ctx context.Context, req ctrl.Request
 	// The reason to requeue is to ensure that a possible deletion of the Stage
 	// directly after the finalizer was added is handled without delay.
 	if ok, err := api.EnsureFinalizer(ctx, r.client, stage); ok || err != nil {
-		return ctrl.Result{RequeueAfter: 100 * time.Millisecond}, err
+		return ctrl.Result{RequeueAfter: immediateRequeueDelay}, err
 	}
 
 	// Reconcile the Stage.
 	logger.Debug("reconciling Stage")
-	newStatus, needsRequeue, reconcileErr := r.reconcile(ctx, stage, time.Now())
+	newStatus, requeueAfter, reconcileErr := r.reconcile(ctx, stage, time.Now())
 	logger.Debug("done reconciling Stage")
 
 	// Record the current refresh token as having been handled.
@@ -439,20 +460,15 @@ func (r *RegularStageReconciler) Reconcile(ctx context.Context, req ctrl.Request
 	if reconcileErr != nil {
 		return ctrl.Result{}, reconcileErr
 	}
-	// Immediate requeue if needed.
-	if needsRequeue {
-		return ctrl.Result{RequeueAfter: 100 * time.Millisecond}, nil
-	}
-	// Otherwise, requeue after a delay.
-	// TODO: Make the requeue delay configurable.
-	return ctrl.Result{RequeueAfter: 5 * time.Minute}, nil
+	// reconcile chose when the Stage should next be seen.
+	return ctrl.Result{RequeueAfter: requeueAfter}, nil
 }
 
 func (r *RegularStageReconciler) reconcile(
 	ctx context.Context,
 	stage *kargoapi.Stage,
 	startTime time.Time,
-) (kargoapi.StageStatus, bool, error) {
+) (kargoapi.StageStatus, time.Duration, error) {
 	logger := logging.LoggerFromContext(ctx)
 
 	// working is the Stage the sub-reconcilers operate on. Its status is
@@ -479,6 +495,11 @@ func (r *RegularStageReconciler) reconcile(
 	})
 
 	var requestRequeue bool
+	// declineRequeueAfter is set when the PromotionDispatcher declined to start a
+	// Promotion this pass and hinted when the Stage should be revisited. It takes
+	// the place of the immediate requeue so a Stage waiting on external
+	// conditions does not busy-loop.
+	var declineRequeueAfter time.Duration
 	subReconcilers := []struct {
 		name      string
 		reconcile func() (kargoapi.StageStatus, error)
@@ -486,14 +507,18 @@ func (r *RegularStageReconciler) reconcile(
 		{
 			name: "syncing Promotions",
 			reconcile: func() (kargoapi.StageStatus, error) {
-				status, hasPendingPromotions, err := r.syncPromotions(ctx, working)
+				status, hasPendingPromotions, retryAfter, err := r.syncPromotions(ctx, working)
 				if err != nil {
 					err = fmt.Errorf("failed to sync Promotions: %w", err)
 				}
-				// If we have no current Promotion and there are pending Promotions,
-				// then we should request an immediate requeue to ensure that we
-				// process the next Promotion as soon as possible.
-				if status.CurrentPromotion == nil && hasPendingPromotions {
+				switch {
+				case retryAfter > 0:
+					// The dispatcher declined and asked to be retried later. Requeue
+					// at the (capped) hint rather than via the immediate path.
+					declineRequeueAfter = retryAfter
+				case status.CurrentPromotion == nil && hasPendingPromotions:
+					// No current Promotion but pending ones remain: requeue promptly
+					// so the next Promotion is processed as soon as possible.
 					requestRequeue = true
 				}
 				return status, err
@@ -572,7 +597,7 @@ func (r *RegularStageReconciler) reconcile(
 		// If an error occurred during the sub-reconciler, then we should
 		// return the error which will cause the Stage to be requeued.
 		if err != nil {
-			return newStatus, false, err
+			return newStatus, 0, err
 		}
 
 		// Patch the status of the Stage after each sub-reconciler to show progress.
@@ -594,7 +619,18 @@ func (r *RegularStageReconciler) reconcile(
 		conditions.Delete(&newStatus, kargoapi.ConditionTypeReconciling)
 	}
 
-	return newStatus, requestRequeue, nil
+	// Decide when the Stage should next be reconciled: promptly on an immediate
+	// requeue, at the dispatcher's (capped) hint on a decline, or at the default
+	// cadence otherwise.
+	requeueAfter := defaultRequeueDelay
+	switch {
+	case requestRequeue:
+		requeueAfter = immediateRequeueDelay
+	case declineRequeueAfter > 0 && declineRequeueAfter < requeueAfter:
+		requeueAfter = declineRequeueAfter
+	}
+
+	return newStatus, requeueAfter, nil
 }
 
 // syncPromotions synchronizes the Promotions for a Stage. It determines the
@@ -603,7 +639,7 @@ func (r *RegularStageReconciler) reconcile(
 func (r *RegularStageReconciler) syncPromotions(
 	ctx context.Context,
 	stage *kargoapi.Stage,
-) (kargoapi.StageStatus, bool, error) {
+) (kargoapi.StageStatus, bool, time.Duration, error) {
 	logger := logging.LoggerFromContext(ctx)
 	newStatus := *stage.Status.DeepCopy()
 
@@ -630,7 +666,7 @@ func (r *RegularStageReconciler) syncPromotions(
 			ObservedGeneration: stage.Generation,
 		})
 
-		return newStatus, false, err
+		return newStatus, false, 0, err
 	}
 
 	// Build a map of origin keys that are currently requested by this Stage,
@@ -660,7 +696,7 @@ func (r *RegularStageReconciler) syncPromotions(
 		conditions.Delete(&newStatus, kargoapi.ConditionTypePromoting)
 		newStatus.CurrentPromotion = nil
 
-		return newStatus, false, nil
+		return newStatus, false, 0, nil
 	}
 
 	// Sort the Promotions by phase and creation time to determine the current
@@ -822,7 +858,7 @@ func (r *RegularStageReconciler) syncPromotions(
 		}
 
 		// Return at this point to allow the new Freight to be verified.
-		return newStatus, hasNonTerminalPromotions, nil
+		return newStatus, hasNonTerminalPromotions, 0, nil
 	}
 
 	// If the current Freight exists and has a non-terminal verification, wait
@@ -835,7 +871,7 @@ func (r *RegularStageReconciler) syncPromotions(
 					"wait for it to complete before allowing new promotions to start",
 			)
 			conditions.Delete(&newStatus, kargoapi.ConditionTypePromoting)
-			return newStatus, hasNonTerminalPromotions, nil
+			return newStatus, hasNonTerminalPromotions, 0, nil
 		}
 
 		// If we are in a healthy state, the current Freight needs to be verified
@@ -848,7 +884,7 @@ func (r *RegularStageReconciler) syncPromotions(
 			if curVI == nil || !curVI.Phase.IsTerminal() {
 				logger.Debug("current Freight needs to be verified before allowing new promotions to start")
 				conditions.Delete(&newStatus, kargoapi.ConditionTypePromoting)
-				return newStatus, hasNonTerminalPromotions, nil
+				return newStatus, hasNonTerminalPromotions, 0, nil
 			}
 		}
 	}
@@ -887,7 +923,7 @@ func (r *RegularStageReconciler) syncPromotions(
 					pending = append(pending, promo)
 				}
 			}
-			sel, err := r.promotionDispatcher.Select(ctx, stage, pending)
+			sel, retryAfter, err := r.promotionDispatcher.Select(ctx, stage, pending)
 			if err != nil {
 				err = fmt.Errorf(
 					"failed to select next Promotion for Stage %q in namespace %q: %w",
@@ -900,15 +936,20 @@ func (r *RegularStageReconciler) syncPromotions(
 					Message:            err.Error(),
 					ObservedGeneration: stage.Generation,
 				})
-				return newStatus, hasNonTerminalPromotions, err
+				return newStatus, hasNonTerminalPromotions, 0, err
 			}
 			if sel == nil {
 				// The dispatcher declined to start any Promotion on this pass.
-				// Leave the slot open; the Stage is requeued while pending
-				// Promotions remain.
+				// Leave the slot open; the Stage is requeued at the dispatcher's
+				// hint (or the default cadence when it gives none) while pending
+				// Promotions remain. A positive value marks this return as a
+				// decline for the caller.
 				conditions.Delete(&newStatus, kargoapi.ConditionTypePromoting)
 				newStatus.CurrentPromotion = nil
-				return newStatus, hasNonTerminalPromotions, nil
+				if retryAfter <= 0 {
+					retryAfter = defaultRequeueDelay
+				}
+				return newStatus, hasNonTerminalPromotions, retryAfter, nil
 			}
 			selected = sel
 		}
@@ -930,13 +971,13 @@ func (r *RegularStageReconciler) syncPromotions(
 		if freight := selected.Status.Freight; freight != nil {
 			newStatus.CurrentPromotion.Freight = freight.DeepCopy()
 		}
-		return newStatus, hasNonTerminalPromotions, nil
+		return newStatus, hasNonTerminalPromotions, 0, nil
 	}
 
 	// If the highest priority Promotion is in a terminal phase, then we are
 	// not promoting.
 	conditions.Delete(&newStatus, kargoapi.ConditionTypePromoting)
-	return newStatus, hasNonTerminalPromotions, nil
+	return newStatus, hasNonTerminalPromotions, 0, nil
 }
 
 // findPromotion returns a pointer to the Promotion in promos with the given
