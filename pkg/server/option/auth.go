@@ -216,7 +216,6 @@ func getKeySet(ctx context.Context, cfg config.ServerConfig) (oidc.KeySet, error
 		KeysURL string `json:"jwks_uri"`
 	}{}
 	if err = json.Unmarshal(bodyBytes, &providerCfg); err != nil {
-		fmt.Println(string(bodyBytes))
 		return nil, fmt.Errorf("error unmarshaling discovery request response body: %w", err)
 	}
 

@@ -28,13 +28,12 @@ func (e *ExitError) Error() string {
 
 // Exec is a custom replacement for cmd.CombinedOutput(). It executes the
 // provided command and returns the command's combined output (stdout + stderr)
-// and an error. When the command completes successfully, with a non-zero exit
-// code, the error is nil. If the command's exit code is non-zero, the error is
-// of type ExitError. Other, unanticipated errors are wrapped and returned
-// as-is. The primary benefit to calling Exec() over calling
-// cmd.CombinedOutput() directly is that errors will automatically include
-// command output, which is likely to contain important information about the
-// cause of the error.
+// and an error. When the command completes successfully, the error is nil. If
+// the command's exit code is non-zero, the error is of type ExitError. Other,
+// unanticipated errors are wrapped and returned as-is. The primary benefit to
+// calling Exec() over calling cmd.CombinedOutput() directly is that errors
+// will automatically include command output, which is likely to contain
+// important information about the cause of the error.
 func Exec(cmd *exec.Cmd) ([]byte, error) {
 	res, err := cmd.CombinedOutput()
 	var exitErr *exec.ExitError
