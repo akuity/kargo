@@ -1,6 +1,7 @@
 package commit
 
 import (
+	"context"
 	"errors"
 	"regexp"
 	"strconv"
@@ -29,12 +30,22 @@ func Test_tagBasedSelector_ListRefs(t *testing.T) {
 	testCases := []struct {
 		name       string
 		selector   *tagBasedSelector
-		lsRemoteFn func(string, *git.ClientOptions, ...string) ([]git.RemoteRef, error)
+		lsRemoteFn func(
+			ctx context.Context,
+			repoURL string,
+			clientOpts *git.ClientOptions,
+			patterns ...string,
+		) ([]git.RemoteRef, error)
 		assertions func(*testing.T, *kargoapi.GitDiscoveryRefs, error)
 	}{
 		{
 			name: "error listing refs",
-			lsRemoteFn: func(string, *git.ClientOptions, ...string) ([]git.RemoteRef, error) {
+			lsRemoteFn: func(
+				context.Context,
+				string,
+				*git.ClientOptions,
+				...string,
+			) ([]git.RemoteRef, error) {
 				return nil, errors.New("something went wrong")
 			},
 			assertions: func(t *testing.T, refs *kargoapi.GitDiscoveryRefs, err error) {
@@ -47,7 +58,12 @@ func Test_tagBasedSelector_ListRefs(t *testing.T) {
 			selector: &tagBasedSelector{
 				allowTagsRegexes: []*regexp.Regexp{regexp.MustCompile(`^v1\.`)},
 			},
-			lsRemoteFn: func(_ string, _ *git.ClientOptions, patterns ...string) ([]git.RemoteRef, error) {
+			lsRemoteFn: func(
+				_ context.Context,
+				_ string,
+				_ *git.ClientOptions,
+				patterns ...string,
+			) ([]git.RemoteRef, error) {
 				require.Equal(t, []string{tagPrefix + "*"}, patterns)
 				return []git.RemoteRef{
 					{Name: tagPrefix + "v1.2.0", ID: "b"},
@@ -68,7 +84,12 @@ func Test_tagBasedSelector_ListRefs(t *testing.T) {
 		{
 			name:     "tag count over cap suppresses observation",
 			selector: &tagBasedSelector{},
-			lsRemoteFn: func(string, *git.ClientOptions, ...string) ([]git.RemoteRef, error) {
+			lsRemoteFn: func(
+				context.Context,
+				string,
+				*git.ClientOptions,
+				...string,
+			) ([]git.RemoteRef, error) {
 				return makeRefs(maxObservedTags + 1), nil
 			},
 			assertions: func(t *testing.T, refs *kargoapi.GitDiscoveryRefs, err error) {

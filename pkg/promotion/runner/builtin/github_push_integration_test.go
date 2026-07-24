@@ -612,14 +612,16 @@ func TestGitHubPush_Integration(t *testing.T) {
 				User: gitUser,
 			}
 			bareRepo, err := git.CloneBare(
+				t.Context(),
 				repoURL,
 				clientOpts,
 				&git.BareCloneOptions{BaseDir: workDir},
 			)
 			require.NoError(t, err)
-			defer bareRepo.Close()
+			defer bareRepo.Close(t.Context())
 
 			workTree, err := bareRepo.AddWorkTree(
+				t.Context(),
 				filepath.Join(workDir, "main"),
 				&git.AddWorkTreeOptions{Ref: "main"},
 			)
@@ -652,6 +654,7 @@ func TestGitHubPush_Integration(t *testing.T) {
 			require.NoError(
 				t,
 				workTree.AddAllAndCommit(
+					t.Context(),
 					"commit A by someone else",
 					&git.CommitOptions{
 						Author: &git.User{
@@ -669,7 +672,7 @@ func TestGitHubPush_Integration(t *testing.T) {
 				0o600,
 			))
 			require.NoError(t, workTree.AddAllAndCommit(
-				"commit B by Kargo", nil,
+				t.Context(), "commit B by Kargo", nil,
 			))
 
 			// Set up target branch state if needed.
@@ -807,23 +810,23 @@ func ensureMainBranch(
 	}
 	// If main already exists, nothing to do.
 	if repo, err := git.Clone(
-		repoURL, clientOpts,
+		t.Context(), repoURL, clientOpts,
 		&git.CloneOptions{Branch: "main", SingleBranch: true},
 	); err == nil {
-		repo.Close()
+		repo.Close(t.Context())
 		return
 	}
 	// Create main with an initial commit.
-	repo, err := git.Clone(repoURL, clientOpts, nil)
+	repo, err := git.Clone(t.Context(), repoURL, clientOpts, nil)
 	require.NoError(t, err)
-	defer repo.Close()
+	defer repo.Close(t.Context())
 	require.NoError(t, os.WriteFile(
 		filepath.Join(repo.Dir(), "README.md"),
 		[]byte("# integration test repo\n"),
 		0o600,
 	))
-	require.NoError(t, repo.AddAllAndCommit("initial commit", nil))
-	require.NoError(t, repo.Push(nil))
+	require.NoError(t, repo.AddAllAndCommit(t.Context(), "initial commit", nil))
+	require.NoError(t, repo.Push(t.Context(), nil))
 }
 
 func setupLocalBehindTarget(
@@ -835,14 +838,16 @@ func setupLocalBehindTarget(
 	t.Helper()
 	// Push the local branch (which has test commits A + B) to the target
 	// branch so that the target contains everything the local has.
-	require.NoError(t, workTree.CreateChildBranch(targetBranch))
+	require.NoError(t, workTree.CreateChildBranch(t.Context(), targetBranch))
 	require.NoError(t, workTree.Push(
+		t.Context(),
 		&git.PushOptions{TargetBranch: targetBranch},
 	))
 	// Switch back to main so the work tree is in the expected state.
-	require.NoError(t, workTree.Checkout("main"))
+	require.NoError(t, workTree.Checkout(t.Context(), "main"))
 	// Clone the target branch and add a commit so it's ahead of local.
 	repo, err := git.Clone(
+		t.Context(),
 		workTree.URL(),
 		&git.ClientOptions{
 			Credentials: &git.RepoCredentials{
@@ -854,15 +859,15 @@ func setupLocalBehindTarget(
 		&git.CloneOptions{Branch: targetBranch, SingleBranch: true},
 	)
 	require.NoError(t, err)
-	defer repo.Close()
+	defer repo.Close(t.Context())
 	require.NoError(t, os.WriteFile(
 		filepath.Join(repo.Dir(),
 			fmt.Sprintf("remote-%d.txt", time.Now().UnixNano())),
 		[]byte("remote commit"),
 		0o600,
 	))
-	require.NoError(t, repo.AddAllAndCommit("remote commit ahead", nil))
-	require.NoError(t, repo.Push(nil))
+	require.NoError(t, repo.AddAllAndCommit(t.Context(), "remote commit ahead", nil))
+	require.NoError(t, repo.Push(t.Context(), nil))
 }
 
 func setupLocalAheadOfTarget(
@@ -875,6 +880,7 @@ func setupLocalAheadOfTarget(
 	// Clone main from the remote. This gets us a repo at the remote's
 	// current HEAD — before our test commits, which only exist locally.
 	repo, err := git.Clone(
+		t.Context(),
 		workTree.URL(),
 		&git.ClientOptions{
 			Credentials: &git.RepoCredentials{
@@ -886,10 +892,11 @@ func setupLocalAheadOfTarget(
 		&git.CloneOptions{Branch: "main", SingleBranch: true},
 	)
 	require.NoError(t, err)
-	defer repo.Close()
+	defer repo.Close(t.Context())
 	// Create the target branch at this point and push it.
-	require.NoError(t, repo.CreateChildBranch(targetBranch))
+	require.NoError(t, repo.CreateChildBranch(t.Context(), targetBranch))
 	require.NoError(t, repo.Push(
+		t.Context(),
 		&git.PushOptions{TargetBranch: targetBranch},
 	))
 }
@@ -905,6 +912,7 @@ func setupLocalDivergedFromTarget(
 	setupLocalAheadOfTarget(t, workTree, targetBranch, token)
 	// Clone the target branch and add a commit.
 	repo, err := git.Clone(
+		t.Context(),
 		workTree.URL(),
 		&git.ClientOptions{
 			Credentials: &git.RepoCredentials{
@@ -916,15 +924,18 @@ func setupLocalDivergedFromTarget(
 		&git.CloneOptions{Branch: targetBranch, SingleBranch: true},
 	)
 	require.NoError(t, err)
-	defer repo.Close()
+	defer repo.Close(t.Context())
 	require.NoError(t, os.WriteFile(
 		filepath.Join(repo.Dir(),
 			fmt.Sprintf("remote-%d.txt", time.Now().UnixNano())),
 		[]byte("remote commit"),
 		0o600,
 	))
-	require.NoError(t, repo.AddAllAndCommit("remote commit ahead", nil))
-	require.NoError(t, repo.Push(nil))
+	require.NoError(
+		t,
+		repo.AddAllAndCommit(t.Context(), "remote commit ahead", nil),
+	)
+	require.NoError(t, repo.Push(t.Context(), nil))
 }
 
 func fetchCommitChain(

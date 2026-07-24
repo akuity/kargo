@@ -126,6 +126,7 @@ func Test_gitTagger_run(t *testing.T) {
 	// gitCloner might have so we can verify gitTagger's ability to reload the
 	// working tree from the file system.
 	repo, err := git.CloneBare(
+		t.Context(),
 		testRepoURL,
 		nil,
 		&git.BareCloneOptions{
@@ -133,12 +134,13 @@ func Test_gitTagger_run(t *testing.T) {
 		},
 	)
 	require.NoError(t, err)
-	defer repo.Close()
+	defer repo.Close(t.Context())
 
 	// "master" is still the default branch name for a new repository
 	// unless you configure it otherwise.
 	workTreePath := filepath.Join(workDir, "master")
 	workTree, err := repo.AddWorkTree(
+		t.Context(),
 		workTreePath,
 		&git.AddWorkTreeOptions{Orphan: true},
 	)
@@ -148,7 +150,7 @@ func Test_gitTagger_run(t *testing.T) {
 	// create an orphaned working tree, so we have to follow up with this to make
 	// the branch name look like what we wanted. gitCloner does this internally as
 	// well.
-	err = workTree.CreateOrphanedBranch("master")
+	err = workTree.CreateOrphanedBranch(t.Context(), "master")
 	require.NoError(t, err)
 
 	// Write a file. It will be gitTagger's job to tag the current commit.
@@ -159,9 +161,9 @@ func Test_gitTagger_run(t *testing.T) {
 	require.NoError(t, err)
 
 	// Commit the file
-	err = workTree.AddAll()
+	err = workTree.AddAll(t.Context())
 	require.NoError(t, err)
-	err = workTree.Commit("Initial commit", nil)
+	err = workTree.Commit(t.Context(), "Initial commit", nil)
 	require.NoError(t, err)
 
 	// Now we can proceed to test gitTagger...
@@ -181,8 +183,8 @@ func Test_gitTagger_run(t *testing.T) {
 	// Verify
 	require.NoError(t, err)
 	require.Equal(t, kargoapi.PromotionStepStatusSucceeded, res.Status)
-	require.NoError(t, workTree.Checkout("v1.0.0"))
-	expectedCommit, err := workTree.LastCommitID()
+	require.NoError(t, workTree.Checkout(t.Context(), "v1.0.0"))
+	expectedCommit, err := workTree.LastCommitID(t.Context())
 	require.NoError(t, err)
 	actualCommit, ok := res.Output[stateKeyCommit]
 	require.True(t, ok)
@@ -190,13 +192,13 @@ func Test_gitTagger_run(t *testing.T) {
 
 	// Switch back to the branch and add another commit so the tag would need to
 	// move to a different commit.
-	require.NoError(t, workTree.Checkout("master"))
+	require.NoError(t, workTree.Checkout(t.Context(), "master"))
 	require.NoError(t, os.WriteFile(
 		filepath.Join(workTree.Dir(), "test.txt"),
 		[]byte("bar"), 0600,
 	))
-	require.NoError(t, workTree.AddAll())
-	require.NoError(t, workTree.Commit("Second commit", nil))
+	require.NoError(t, workTree.AddAll(t.Context()))
+	require.NoError(t, workTree.Commit(t.Context(), "Second commit", nil))
 
 	// Re-tagging without force should fail because the tag already exists.
 	res, err = runner.run(
@@ -222,8 +224,8 @@ func Test_gitTagger_run(t *testing.T) {
 	)
 	require.NoError(t, err)
 	require.Equal(t, kargoapi.PromotionStepStatusSucceeded, res.Status)
-	require.NoError(t, workTree.Checkout("v1.0.0"))
-	expectedCommit, err = workTree.LastCommitID()
+	require.NoError(t, workTree.Checkout(t.Context(), "v1.0.0"))
+	expectedCommit, err = workTree.LastCommitID(t.Context())
 	require.NoError(t, err)
 	actualCommit, ok = res.Output[stateKeyCommit]
 	require.True(t, ok)

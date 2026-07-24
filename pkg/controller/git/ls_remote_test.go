@@ -13,8 +13,11 @@ func Test_LsRemote(t *testing.T) {
 		func(t *testing.T, rep WorkTree) {
 			// Create and push an annotated tag so we can verify that its peeled
 			// "^{}" entry is dropped and only the tag object is reported.
-			require.NoError(t, rep.CreateTag("v1.0.0", "release v1.0.0", nil))
-			require.NoError(t, rep.Push(&PushOptions{Tag: "v1.0.0"}))
+			require.NoError(
+				t,
+				rep.CreateTag(t.Context(), "v1.0.0", "release v1.0.0", nil),
+			)
+			require.NoError(t, rep.Push(t.Context(), &PushOptions{Tag: "v1.0.0"}))
 		},
 	)
 	defer testServer.Close()
@@ -29,14 +32,16 @@ func Test_LsRemote(t *testing.T) {
 	// what these tests cover.
 
 	t.Run("branch ref is listed", func(t *testing.T) {
-		refs, err := LsRemote(testRepoURL, clientOpts, "refs/heads/main")
+		refs, err := LsRemote(
+			t.Context(), testRepoURL, clientOpts, "refs/heads/main",
+		)
 		require.NoError(t, err)
 		require.Len(t, refs, 1)
 		require.Equal(t, "refs/heads/main", refs[0].Name)
 	})
 
 	t.Run("annotated tag collapses to a single entry", func(t *testing.T) {
-		refs, err := LsRemote(testRepoURL, clientOpts, "refs/tags/*")
+		refs, err := LsRemote(t.Context(), testRepoURL, clientOpts, "refs/tags/*")
 		require.NoError(t, err)
 		// Despite the annotated tag's peeled entry on the wire, exactly one ref
 		// is reported for the tag.
@@ -45,7 +50,9 @@ func Test_LsRemote(t *testing.T) {
 	})
 
 	t.Run("absent ref yields no entries", func(t *testing.T) {
-		refs, err := LsRemote(testRepoURL, clientOpts, "refs/heads/nonexistent")
+		refs, err := LsRemote(
+			t.Context(), testRepoURL, clientOpts, "refs/heads/nonexistent",
+		)
 		require.NoError(t, err)
 		require.Empty(t, refs)
 	})

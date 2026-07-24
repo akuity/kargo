@@ -3,6 +3,7 @@ package git
 import (
 	"bufio"
 	"bytes"
+	"context"
 	"fmt"
 	"os"
 	"path/filepath"
@@ -15,10 +16,14 @@ import (
 // BareRepo is an interface for interacting with a bare Git repository.
 type BareRepo interface {
 	// AddWorkTree adds a working tree to the repository.
-	AddWorkTree(path string, opts *AddWorkTreeOptions) (WorkTree, error)
+	AddWorkTree(
+		ctx context.Context,
+		path string,
+		opts *AddWorkTreeOptions,
+	) (WorkTree, error)
 	// Close cleans up file system resources used by this repository. This should
 	// always be called before a repository goes out of scope.
-	Close() error
+	Close(ctx context.Context) error
 	// Dir returns an absolute path to the repository.
 	Dir() string
 	// HomeDir returns an absolute path to the home directory of the system user
@@ -26,14 +31,14 @@ type BareRepo interface {
 	HomeDir() string
 	// RemoteBranchExists returns a bool indicating if the specified branch exists
 	// in the remote repository.
-	RemoteBranchExists(branch string) (bool, error)
+	RemoteBranchExists(ctx context.Context, branch string) (bool, error)
 	// RemoveWorkTree removes a working tree from the repository. The working tree
 	// will be removed from the file system.
-	RemoveWorkTree(path string) error
+	RemoveWorkTree(ctx context.Context, path string) error
 	// URL returns the remote URL of the repository.
 	URL() string
 	// WorkTrees returns a list of working trees associated with the repository.
-	WorkTrees() ([]WorkTree, error)
+	WorkTrees(ctx context.Context) ([]WorkTree, error)
 }
 
 // bareRepo is an implementation of the BareRepo interface for interacting with
@@ -83,6 +88,7 @@ type BareCloneOptions struct {
 // will also perform any setup that is required for successfully authenticating
 // to the remote repository.
 func CloneBare(
+	ctx context.Context,
 	repoURL string,
 	clientOpts *ClientOptions,
 	cloneOpts *BareCloneOptions,
@@ -100,25 +106,25 @@ func CloneBare(
 			accessURL:   repoURL,
 		},
 	}
-	if err := b.setupDirs(cloneOpts.BaseDir); err != nil {
+	if err := b.setupDirs(ctx, cloneOpts.BaseDir); err != nil {
 		return nil, err
 	}
-	if err := b.setupClient(clientOpts); err != nil {
+	if err := b.setupClient(ctx, clientOpts); err != nil {
 		return nil, err
 	}
-	if err := b.clone(cloneOpts); err != nil {
+	if err := b.clone(ctx, cloneOpts); err != nil {
 		return nil, err
 	}
-	if err := b.saveDirs(); err != nil {
+	if err := b.saveDirs(ctx); err != nil {
 		return nil, err
 	}
-	if err := b.saveOriginalURL(); err != nil {
+	if err := b.saveOriginalURL(ctx); err != nil {
 		return nil, err
 	}
 	return b, nil
 }
 
-func (b *bareRepo) clone(opts *BareCloneOptions) error {
+func (b *bareRepo) clone(ctx context.Context, opts *BareCloneOptions) error {
 	if opts == nil {
 		opts = &BareCloneOptions{}
 	}
@@ -127,7 +133,7 @@ func (b *bareRepo) clone(opts *BareCloneOptions) error {
 		args = append(args, "--filter", "blob:none")
 	}
 	args = append(args, b.accessURL, b.dir)
-	cmd := b.buildGitCommand(args...)
+	cmd := b.buildGitCommand(ctx, args...)
 	cmd.Dir = b.homeDir // Override the cmd.Dir that's set by r.buildGitCommand()
 	if _, err := libExec.Exec(cmd); err != nil {
 		return fmt.Errorf("error cloning repo %q into %q: %w", b.originalURL, b.dir, err)
@@ -139,7 +145,11 @@ type LoadBareRepoOptions struct {
 	Credentials *RepoCredentials
 }
 
-func LoadBareRepo(path string, opts *LoadBareRepoOptions) (BareRepo, error) {
+func LoadBareRepo(
+	ctx context.Context,
+	path string,
+	opts *LoadBareRepoOptions,
+) (BareRepo, error) {
 	if opts == nil {
 		opts = &LoadBareRepoOptions{}
 	}
@@ -149,10 +159,10 @@ func LoadBareRepo(path string, opts *LoadBareRepoOptions) (BareRepo, error) {
 			dir:   path,
 		},
 	}
-	if err := b.loadHomeDir(); err != nil {
+	if err := b.loadHomeDir(ctx); err != nil {
 		return nil, fmt.Errorf("error reading repo home dir from config: %w", err)
 	}
-	if err := b.loadURLs(); err != nil {
+	if err := b.loadURLs(ctx); err != nil {
 		return nil,
 			fmt.Errorf(`error reading URL of remote "origin" from config: %w`, err)
 	}
@@ -178,7 +188,11 @@ type AddWorkTreeOptions struct {
 	Sparse []string
 }
 
-func (b *bareRepo) AddWorkTree(path string, opts *AddWorkTreeOptions) (WorkTree, error) {
+func (b *bareRepo) AddWorkTree(
+	ctx context.Context,
+	path string,
+	opts *AddWorkTreeOptions,
+) (WorkTree, error) {
 	if opts == nil {
 		opts = &AddWorkTreeOptions{}
 	}
@@ -186,7 +200,7 @@ func (b *bareRepo) AddWorkTree(path string, opts *AddWorkTreeOptions) (WorkTree,
 	if err != nil {
 		return nil, fmt.Errorf("error resolving absolute path for %s: %w", path, err)
 	}
-	workTreePaths, err := b.workTrees()
+	workTreePaths, err := b.workTrees(ctx)
 	if err != nil {
 		return nil, err
 	}
@@ -199,7 +213,7 @@ func (b *bareRepo) AddWorkTree(path string, opts *AddWorkTreeOptions) (WorkTree,
 	} else {
 		args = append(args, opts.Ref)
 	}
-	if _, err = libExec.Exec(b.buildGitCommand(args...)); err != nil {
+	if _, err = libExec.Exec(b.buildGitCommand(ctx, args...)); err != nil {
 		return nil, fmt.Errorf("error adding working tree at %q: %w", path, err)
 	}
 	if path, err = filepath.EvalSymlinks(path); err != nil {
@@ -217,30 +231,30 @@ func (b *bareRepo) AddWorkTree(path string, opts *AddWorkTreeOptions) (WorkTree,
 	}
 	// Configure sparse checkout if patterns are specified
 	if len(opts.Sparse) > 0 {
-		if err = wt.configureSparseCheckout(opts.Sparse); err != nil {
+		if err = wt.configureSparseCheckout(ctx, opts.Sparse); err != nil {
 			// Clean up the worktree on failure
-			_ = b.RemoveWorkTree(path)
+			_ = b.RemoveWorkTree(ctx, path)
 			return nil, fmt.Errorf("error configuring sparse checkout for %q: %w", path, err)
 		}
 	}
 	return wt, nil
 }
 
-func (b *bareRepo) Close() error {
-	workTreePaths, err := b.workTrees()
+func (b *bareRepo) Close(ctx context.Context) error {
+	workTreePaths, err := b.workTrees(ctx)
 	if err != nil {
 		return err
 	}
 	for _, workTreePath := range workTreePaths {
-		if err := b.RemoveWorkTree(workTreePath); err != nil {
+		if err := b.RemoveWorkTree(ctx, workTreePath); err != nil {
 			return err
 		}
 	}
 	return os.RemoveAll(b.homeDir)
 }
 
-func (b *bareRepo) RemoveWorkTree(path string) error {
-	workTreePaths, err := b.workTrees()
+func (b *bareRepo) RemoveWorkTree(ctx context.Context, path string) error {
+	workTreePaths, err := b.workTrees(ctx)
 	if err != nil {
 		return err
 	}
@@ -248,7 +262,7 @@ func (b *bareRepo) RemoveWorkTree(path string) error {
 		return fmt.Errorf("no working tree exists at %q", path)
 	}
 	if _, err := libExec.Exec(
-		b.buildGitCommand("worktree", "remove", path),
+		b.buildGitCommand(ctx, "worktree", "remove", path),
 	); err != nil {
 		return fmt.Errorf("error removing working tree at %q: %w", path, err)
 	}
@@ -258,8 +272,8 @@ func (b *bareRepo) RemoveWorkTree(path string) error {
 	return nil
 }
 
-func (b *bareRepo) WorkTrees() ([]WorkTree, error) {
-	workTreePaths, err := b.workTrees()
+func (b *bareRepo) WorkTrees(ctx context.Context) ([]WorkTree, error) {
+	workTreePaths, err := b.workTrees(ctx)
 	if err != nil {
 		return nil, err
 	}
@@ -279,8 +293,10 @@ func (b *bareRepo) WorkTrees() ([]WorkTree, error) {
 	return workTrees, err
 }
 
-func (b *bareRepo) workTrees() ([]string, error) {
-	res, err := libExec.Exec(b.buildGitCommand("worktree", "list", "--porcelain"))
+func (b *bareRepo) workTrees(ctx context.Context) ([]string, error) {
+	res, err := libExec.Exec(b.buildGitCommand(
+		ctx, "worktree", "list", "--porcelain",
+	))
 	if err != nil {
 		return nil, fmt.Errorf("error listing working trees: %w", err)
 	}

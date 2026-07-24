@@ -62,7 +62,7 @@ func (g *gitCommitter) convert(cfg promotion.Config) (builtin.GitCommitConfig, e
 }
 
 func (g *gitCommitter) run(
-	_ context.Context,
+	ctx context.Context,
 	stepCtx *promotion.StepContext,
 	cfg builtin.GitCommitConfig,
 ) (promotion.StepResult, error) {
@@ -73,16 +73,16 @@ func (g *gitCommitter) run(
 			cfg.Path, stepCtx.WorkDir, err,
 		)
 	}
-	workTree, err := git.LoadWorkTree(path, nil)
+	workTree, err := git.LoadWorkTree(ctx, path, nil)
 	if err != nil {
 		return promotion.StepResult{Status: kargoapi.PromotionStepStatusErrored},
 			fmt.Errorf("error loading working tree from %s: %w", cfg.Path, err)
 	}
-	if err = workTree.AddAll(); err != nil {
+	if err = workTree.AddAll(ctx); err != nil {
 		return promotion.StepResult{Status: kargoapi.PromotionStepStatusErrored},
 			fmt.Errorf("error adding all changes to working tree: %w", err)
 	}
-	hasDiffs, err := workTree.HasDiffs()
+	hasDiffs, err := workTree.HasDiffs(ctx)
 	if err != nil {
 		return promotion.StepResult{Status: kargoapi.PromotionStepStatusErrored},
 			fmt.Errorf("error checking for diffs in working tree: %w", err)
@@ -98,13 +98,13 @@ func (g *gitCommitter) run(
 				SigningKey: cfg.Author.SigningKey,
 			}
 		}
-		if err = workTree.Commit(cfg.Message, commitOpts); err != nil {
+		if err = workTree.Commit(ctx, cfg.Message, commitOpts); err != nil {
 			return promotion.StepResult{Status: kargoapi.PromotionStepStatusErrored},
 				fmt.Errorf("error committing to working tree: %w", err)
 		}
 	}
 
-	commitID, err := workTree.LastCommitID()
+	commitID, err := workTree.LastCommitID(ctx)
 	if err != nil {
 		return promotion.StepResult{Status: kargoapi.PromotionStepStatusErrored},
 			fmt.Errorf("error getting last commit ID: %w", err)

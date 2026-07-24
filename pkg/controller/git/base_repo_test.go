@@ -1,11 +1,18 @@
 package git
 
 import (
+	"context"
+	"net/http"
+	"net/http/httptest"
 	"os"
 	"path/filepath"
+	"strings"
 	"testing"
+	"time"
 
 	"github.com/stretchr/testify/require"
+
+	libExec "github.com/akuity/kargo/pkg/exec"
 )
 
 func TestSetupUser(t *testing.T) {
@@ -120,10 +127,95 @@ func TestSetupUser(t *testing.T) {
 				homeDir: repoHomeDir,
 			}
 
-			err := b.setupUser(homeDir, tc.author)
+			err := b.setupUser(t.Context(), homeDir, tc.author)
 			tc.assert(t, homeDir, repoHomeDir, err)
 		})
 	}
+}
+
+func TestBuildGitCommandStallDetection(t *testing.T) {
+	t.Parallel()
+
+	b := &baseRepo{
+		dir:     t.TempDir(),
+		homeDir: t.TempDir(),
+	}
+
+	cmd := b.buildGitCommand(t.Context(), "status")
+	require.Contains(t, cmd.Env, "GIT_HTTP_LOW_SPEED_LIMIT="+gitHTTPLowSpeedLimit)
+	require.Contains(t, cmd.Env, "GIT_HTTP_LOW_SPEED_TIME="+gitHTTPLowSpeedTime)
+}
+
+func TestGitAbortsStalledTransfer(t *testing.T) {
+	t.Parallel()
+
+	// A server that accepts git's initial request (GET .../info/refs) and then
+	// never sends a byte -- the same shape as a connection black-holed at the
+	// network layer.
+	blocked := make(chan struct{})
+	testServer := httptest.NewServer(
+		http.HandlerFunc(func(http.ResponseWriter, *http.Request) {
+			<-blocked
+		}),
+	)
+	t.Cleanup(func() {
+		close(blocked)
+		testServer.Close()
+	})
+
+	b := &baseRepo{
+		dir:     t.TempDir(),
+		homeDir: t.TempDir(),
+	}
+
+	cmd := b.buildGitCommand(
+		t.Context(),
+		"clone",
+		testServer.URL+"/repo.git",
+		filepath.Join(t.TempDir(), "repo"),
+	)
+	// Shrink the stall window so the test proves the mechanism -- git aborting
+	// a transfer that is moving no data -- without waiting out the full
+	// production window.
+	for i, v := range cmd.Env {
+		if strings.HasPrefix(v, "GIT_HTTP_LOW_SPEED_TIME=") {
+			cmd.Env[i] = "GIT_HTTP_LOW_SPEED_TIME=2"
+		}
+	}
+
+	start := time.Now()
+	_, err := libExec.Exec(cmd)
+	elapsed := time.Since(start)
+
+	// Without stall detection, the clone would block on the silent server
+	// indefinitely. With it, git aborts once throughput has stayed below the
+	// floor for the configured window.
+	require.Error(t, err)
+	require.Contains(t, strings.ToLower(err.Error()), "too slow")
+	require.Less(t, elapsed, 30*time.Second)
+}
+
+func TestBuildCommandCancellation(t *testing.T) {
+	t.Parallel()
+
+	b := &baseRepo{
+		dir:     t.TempDir(),
+		homeDir: t.TempDir(),
+	}
+
+	ctx, cancel := context.WithTimeout(t.Context(), 100*time.Millisecond)
+	defer cancel()
+
+	cmd := b.buildCommand(ctx, "sleep", "30")
+	start := time.Now()
+	_, err := libExec.Exec(cmd)
+	elapsed := time.Since(start)
+
+	require.Error(t, err)
+	// The command must be terminated promptly once the context expires rather
+	// than running to completion. The bound is generous to avoid flakes on
+	// slow machines, but far below the command's 30-second natural duration.
+	require.Less(t, elapsed, 10*time.Second)
 }
 
 // assertGitConfig verifies that a git config key has the expected value in

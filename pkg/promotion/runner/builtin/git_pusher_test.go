@@ -191,6 +191,7 @@ func Test_gitPusher_run(t *testing.T) {
 	// gitCloner might have so we can verify gitPusher's ability to reload the
 	// working tree from the file system.
 	repo, err := git.CloneBare(
+		t.Context(),
 		testRepoURL,
 		nil,
 		&git.BareCloneOptions{
@@ -198,11 +199,12 @@ func Test_gitPusher_run(t *testing.T) {
 		},
 	)
 	require.NoError(t, err)
-	defer repo.Close()
+	defer repo.Close(t.Context())
 	// "master" is still the default branch name for a new repository
 	// unless you configure it otherwise.
 	workTreePath := filepath.Join(workDir, "master")
 	workTree, err := repo.AddWorkTree(
+		t.Context(),
 		workTreePath,
 		&git.AddWorkTreeOptions{Orphan: true},
 	)
@@ -211,7 +213,7 @@ func Test_gitPusher_run(t *testing.T) {
 	// create an orphaned working tree, so we have to follow up with this to make
 	// the branch name look like what we wanted. gitCloner does this internally as
 	// well.
-	err = workTree.CreateOrphanedBranch("master")
+	err = workTree.CreateOrphanedBranch(t.Context(), "master")
 	require.NoError(t, err)
 
 	// Write a file.
@@ -220,11 +222,11 @@ func Test_gitPusher_run(t *testing.T) {
 
 	// Commit the changes similarly to how gitCommitter would
 	// have. It will be gitPushStepRunner's job to push this commit.
-	err = workTree.AddAllAndCommit("Initial commit", nil)
+	err = workTree.AddAllAndCommit(t.Context(), "Initial commit", nil)
 	require.NoError(t, err)
 
 	// Tag the commit so we can also test pushing tags later.
-	require.NoError(t, workTree.CreateTag("v1.0.0", "hello", nil))
+	require.NoError(t, workTree.CreateTag(t.Context(), "v1.0.0", "hello", nil))
 
 	// Set up a fake git provider
 	// Cannot register multiple providers with the same name, so this takes
@@ -280,7 +282,7 @@ func Test_gitPusher_run(t *testing.T) {
 		branchName, ok := res.Output[stateKeyBranch]
 		require.True(t, ok)
 		require.Equal(t, "kargo/promotion/fake-promotion", branchName)
-		expectedCommit, err := workTree.LastCommitID()
+		expectedCommit, err := workTree.LastCommitID(t.Context())
 		require.NoError(t, err)
 		actualCommit, ok := res.Output[stateKeyCommit]
 		require.True(t, ok)
@@ -304,8 +306,8 @@ func Test_gitPusher_run(t *testing.T) {
 			},
 		)
 		require.NoError(t, err)
-		require.NoError(t, workTree.Checkout("v1.0.0"))
-		expectedCommit, err := workTree.LastCommitID()
+		require.NoError(t, workTree.Checkout(t.Context(), "v1.0.0"))
+		expectedCommit, err := workTree.LastCommitID(t.Context())
 		require.NoError(t, err)
 		actualCommit, ok := res.Output[stateKeyCommit]
 		require.True(t, ok)

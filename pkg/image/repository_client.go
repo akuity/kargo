@@ -39,6 +39,13 @@ const (
 	// legacyBuildDateAnnotation is the legacy Label Schema annotation for build date.
 	// See: http://label-schema.org/rc1/
 	legacyBuildDateAnnotation = "org.label-schema.build-date"
+
+	// responseHeaderTimeout bounds how long a request to a registry may wait for
+	// response headers after the request is fully written. Registries answer in
+	// milliseconds; prolonged header silence means the connection is effectively
+	// dead. This bounds only time-to-first-header per request and imposes no
+	// limit on the total duration of a response transfer.
+	responseHeaderTimeout = 30 * time.Second
 )
 
 var metaSem = semaphore.NewWeighted(maxMetadataConcurrency)
@@ -100,6 +107,7 @@ func newRepositoryClient(
 	reg := getRegistry(repoRef.Context().RegistryStr())
 
 	httpTransport := cleanhttp.DefaultTransport()
+	httpTransport.ResponseHeaderTimeout = responseHeaderTimeout
 	if insecureSkipTLSVerify {
 		httpTransport.TLSClientConfig = &tls.Config{
 			InsecureSkipVerify: insecureSkipTLSVerify, // nolint: gosec
