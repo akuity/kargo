@@ -457,6 +457,7 @@ func (o *controllerOptions) setupReconcilers(
 
 	if err := stages.NewRegularStageReconciler(
 		stagesReconcilerCfg,
+		credentialsDB,
 		health.NewAggregatingChecker(),
 	).SetupWithManager(
 		ctx,

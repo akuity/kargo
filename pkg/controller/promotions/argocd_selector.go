@@ -62,7 +62,7 @@ func promotionSelectorsMatchApp(
 	}
 
 	promoCtx := promotion.NewContext(promo, stage)
-	evaluator := promotion.NewStepEvaluator(cl, nil)
+	evaluator := promotion.NewStepEvaluator(cl, nil, nil)
 
 	for i, step := range promo.Spec.Steps {
 		if int64(i) > promo.Status.CurrentStep {
