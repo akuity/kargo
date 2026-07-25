@@ -675,9 +675,12 @@ func (r *RegularStageReconciler) syncPromotions(
 		// release correctly supersedes an earlier hold and vice versa. Holds
 		// persist in status even after their establishing Promotion is GC'd.
 		for _, promo := range newPromos {
-			// Hold/resume intent only takes effect when the Promotion succeeded.
-			// A failed Promotion carries no meaningful signal about user intent.
-			if promo.Status.Phase == kargoapi.PromotionPhaseSucceeded {
+			// A Promotion's hold/resume intent is fixed at creation and is not
+			// changed by an involuntary failure, so any terminal Promotion
+			// applies its intent. The exception is an Aborted Promotion: the
+			// user deliberately canceled it, withdrawing the intent along with
+			// it. (newPromos contains only terminal Promotions.)
+			if promo.Status.Phase != kargoapi.PromotionPhaseAborted {
 				if originKey := promo.Annotations[kargoapi.AnnotationKeyAutoPromotionHold]; originKey != "" {
 					if _, requested := requestedOrigins[originKey]; requested {
 						if origin, err := kargoapi.ParseFreightOrigin(originKey); err == nil {
@@ -1925,18 +1928,18 @@ func stageAwaitingFreightForOrigin(
 
 // unprocessedHoldIntentPromotionExistsForOrigin reports whether a hold-intent
 // Promotion for this origin exists whose outcome syncPromotions has not yet
-// recorded: one that is still non-terminal, or one that SUCCEEDED after this
-// reconciliation's hold state was computed (i.e., is newer than
-// status.lastPromotion). autoPromoteFreight stands down for the origin in
-// either case. The second case matters because a Promotion can succeed in
-// the interval between syncPromotions computing hold state and
-// autoPromoteFreight acting on it; without it, auto-promotion could supersede
-// older Freight the user just deliberately promoted, moments before the hold
-// that protects it is recorded. Promotions that reached any other terminal
-// phase never establish holds, so they never block -- deliberately: an
-// unsuccessful Promotion may go unrecorded for a long time (e.g. one aborted
-// before it was ever acknowledged), and blocking on it would pause
-// auto-promotion for no benefit.
+// recorded: one that is still non-terminal, or one that reached a terminal
+// phase other than Aborted after this reconciliation's hold state was computed
+// (i.e., is newer than status.lastPromotion). autoPromoteFreight stands down
+// for the origin in either case. The second case matters because a Promotion
+// can terminate in the interval between syncPromotions computing hold state
+// and autoPromoteFreight acting on it; without it, auto-promotion could
+// supersede older Freight the user just deliberately promoted, moments before
+// the hold that protects it is recorded. Aborted Promotions are excluded: the
+// user withdrew the intent, so they never establish a hold, and an aborted
+// Promotion may go unrecorded for a long time (e.g. one aborted before it was
+// ever acknowledged), so blocking on it would pause auto-promotion for no
+// benefit.
 func (r *RegularStageReconciler) unprocessedHoldIntentPromotionExistsForOrigin(
 	ctx context.Context,
 	stage *kargoapi.Stage,
@@ -1960,7 +1963,7 @@ func (r *RegularStageReconciler) unprocessedHoldIntentPromotionExistsForOrigin(
 			continue
 		}
 		if !promo.Status.Phase.IsTerminal() ||
-			(promo.Status.Phase == kargoapi.PromotionPhaseSucceeded &&
+			(promo.Status.Phase != kargoapi.PromotionPhaseAborted &&
 				(lastPromo == nil || strings.Compare(promo.Name, lastPromo.Name) > 0)) {
 			return true, nil
 		}
