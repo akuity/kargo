@@ -8,6 +8,7 @@
 import type { StageStatusAutoPromotionHolds } from './stageStatusAutoPromotionHolds';
 import type { V1Condition } from './v1Condition';
 import type { PromotionReference } from './promotionReference';
+import type { StageStatusEffectiveAutoPromotionHolds } from './stageStatusEffectiveAutoPromotionHolds';
 import type { FreightCollection } from './freightCollection';
 import type { Health } from './health';
 import type { StageStatusMetadata } from './stageStatusMetadata';
@@ -33,6 +34,11 @@ state.
   conditions?: V1Condition[];
   /** CurrentPromotion is a reference to the currently Running promotion. */
   currentPromotion?: PromotionReference;
+  /** EffectiveAutoPromotionHolds is the set of auto-promotion holds in effect
+right now. It is recomputed every reconciliation from AutoPromotionHolds
+plus the newest in-flight Promotions, and unlike AutoPromotionHolds is not
+durable. Clients should read this map to reflect current hold state. */
+  effectiveAutoPromotionHolds?: StageStatusEffectiveAutoPromotionHolds;
   /** FreightHistory is a list of recent Freight selections that were deployed
 to the Stage. By default, the last ten Freight selections are stored.
 The first item in the list is the most recent Freight selection and

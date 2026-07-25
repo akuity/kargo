@@ -27,6 +27,8 @@ type StageStatus struct {
 	Conditions []V1Condition `json:"conditions,omitempty"`
 	// CurrentPromotion is a reference to the currently Running promotion.
 	CurrentPromotion *PromotionReference `json:"currentPromotion,omitempty"`
+	// EffectiveAutoPromotionHolds is the set of auto-promotion holds in effect right now. It is recomputed every reconciliation from AutoPromotionHolds plus the newest in-flight Promotions, and unlike AutoPromotionHolds is not durable. Clients should read this map to reflect current hold state.
+	EffectiveAutoPromotionHolds *map[string]AutoPromotionHold `json:"effectiveAutoPromotionHolds,omitempty"`
 	// FreightHistory is a list of recent Freight selections that were deployed to the Stage. By default, the last ten Freight selections are stored. The first item in the list is the most recent Freight selection and currently deployed to the Stage, subsequent items are older selections.
 	FreightHistory []FreightCollection `json:"freightHistory,omitempty"`
 	// FreightSummary is human-readable text maintained by the controller that summarizes what Freight is currently deployed to the Stage. For Stages that request a single piece of Freight AND the request has been fulfilled, this field will simply contain the name of the Freight. For Stages that request a single piece of Freight AND the request has NOT been fulfilled, or for Stages that request multiple pieces of Freight, this field will contain a summary of fulfilled/requested Freight. The existence of this field is a workaround for kubectl limitations so that this complex but valuable information can be displayed in a column in response to `kubectl get stages`.
@@ -186,6 +188,38 @@ func (o *StageStatus) HasCurrentPromotion() bool {
 // SetCurrentPromotion gets a reference to the given PromotionReference and assigns it to the CurrentPromotion field.
 func (o *StageStatus) SetCurrentPromotion(v PromotionReference) {
 	o.CurrentPromotion = &v
+}
+
+// GetEffectiveAutoPromotionHolds returns the EffectiveAutoPromotionHolds field value if set, zero value otherwise.
+func (o *StageStatus) GetEffectiveAutoPromotionHolds() map[string]AutoPromotionHold {
+	if o == nil || IsNil(o.EffectiveAutoPromotionHolds) {
+		var ret map[string]AutoPromotionHold
+		return ret
+	}
+	return *o.EffectiveAutoPromotionHolds
+}
+
+// GetEffectiveAutoPromotionHoldsOk returns a tuple with the EffectiveAutoPromotionHolds field value if set, nil otherwise
+// and a boolean to check if the value has been set.
+func (o *StageStatus) GetEffectiveAutoPromotionHoldsOk() (*map[string]AutoPromotionHold, bool) {
+	if o == nil || IsNil(o.EffectiveAutoPromotionHolds) {
+		return nil, false
+	}
+	return o.EffectiveAutoPromotionHolds, true
+}
+
+// HasEffectiveAutoPromotionHolds returns a boolean if a field has been set.
+func (o *StageStatus) HasEffectiveAutoPromotionHolds() bool {
+	if o != nil && !IsNil(o.EffectiveAutoPromotionHolds) {
+		return true
+	}
+
+	return false
+}
+
+// SetEffectiveAutoPromotionHolds gets a reference to the given map[string]AutoPromotionHold and assigns it to the EffectiveAutoPromotionHolds field.
+func (o *StageStatus) SetEffectiveAutoPromotionHolds(v map[string]AutoPromotionHold) {
+	o.EffectiveAutoPromotionHolds = &v
 }
 
 // GetFreightHistory returns the FreightHistory field value if set, zero value otherwise.
@@ -433,6 +467,9 @@ func (o StageStatus) ToMap() (map[string]interface{}, error) {
 	}
 	if !IsNil(o.CurrentPromotion) {
 		toSerialize["currentPromotion"] = o.CurrentPromotion
+	}
+	if !IsNil(o.EffectiveAutoPromotionHolds) {
+		toSerialize["effectiveAutoPromotionHolds"] = o.EffectiveAutoPromotionHolds
 	}
 	if !IsNil(o.FreightHistory) {
 		toSerialize["freightHistory"] = o.FreightHistory
