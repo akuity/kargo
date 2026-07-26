@@ -1738,6 +1738,107 @@ func (r *RegularStageReconciler) findExistingAnalysisRun(
 	return &analysisRuns.Items[0], nil
 }
 
+// newAutoPromotionHold builds an AutoPromotionHold for origin from the
+// hold-intent Promotion promo.
+func newAutoPromotionHold(
+	promo *kargoapi.Promotion,
+	origin kargoapi.FreightOrigin,
+) kargoapi.AutoPromotionHold {
+	hold := kargoapi.AutoPromotionHold{
+		FreightName:   promo.Spec.Freight,
+		Origin:        origin,
+		PromotionName: promo.Name,
+	}
+	if actor := promo.Annotations[kargoapi.AnnotationKeyCreateActor]; actor != "" {
+		hold.Actor = actor
+	}
+	if !promo.CreationTimestamp.IsZero() {
+		t := promo.CreationTimestamp
+		hold.CreatedAt = &t
+	}
+	return hold
+}
+
+// computeEffectiveAutoPromotionHolds returns the set of auto-promotion holds in
+// effect for the Stage right now. It starts from the durable holds in
+// Status.AutoPromotionHolds -- preserving a hold whose establishing Promotion
+// has been garbage-collected -- and overlays the newest non-aborted intent for
+// each requested origin: a hold-intent Promotion holds the origin, a
+// release-intent Promotion clears it, and the newest of the two wins. It
+// returns an empty map while auto-promotion is disabled, when holds are
+// meaningless. It does not mutate stage.
+func (r *RegularStageReconciler) computeEffectiveAutoPromotionHolds(
+	ctx context.Context,
+	stage *kargoapi.Stage,
+) (map[string]kargoapi.AutoPromotionHold, error) {
+	enabled, err := api.IsAutoPromotionEnabled(ctx, r.client, stage.ObjectMeta)
+	if err != nil {
+		return nil, fmt.Errorf(
+			"error checking auto-promotion policy for Stage %q: %w", stage.Name, err,
+		)
+	}
+	if !enabled {
+		return nil, nil
+	}
+
+	effective := make(map[string]kargoapi.AutoPromotionHold, len(stage.Status.AutoPromotionHolds))
+	for key, hold := range stage.Status.AutoPromotionHolds {
+		effective[key] = hold
+	}
+
+	promotions := &kargoapi.PromotionList{}
+	if err := r.client.List(
+		ctx,
+		promotions,
+		client.InNamespace(stage.Namespace),
+		client.MatchingFieldsSelector{
+			Selector: fields.OneTermEqualSelector(indexer.PromotionsByStageField, stage.Name),
+		},
+	); err != nil {
+		return nil, fmt.Errorf(
+			"failed to list Promotions for Stage %q in namespace %q: %w",
+			stage.Name, stage.Namespace, err,
+		)
+	}
+
+	lastPromo := stage.Status.LastPromotion
+	for _, req := range stage.Spec.RequestedFreight {
+		originKey := req.Origin.String()
+		var newest *kargoapi.Promotion
+		var newestIsHold bool
+		for i := range promotions.Items {
+			promo := &promotions.Items[i]
+			if promo.Status.Phase == kargoapi.PromotionPhaseAborted {
+				continue
+			}
+			// Only Promotions newer than the last one syncPromotions recorded can
+			// change the durable state. Older ones are already reflected in it, and
+			// the Promotion that superseded them may since have been deleted.
+			if lastPromo != nil && strings.Compare(promo.Name, lastPromo.Name) <= 0 {
+				continue
+			}
+			isHold := promo.Annotations[kargoapi.AnnotationKeyAutoPromotionHold] == originKey
+			isRelease := promo.Annotations[kargoapi.AnnotationKeyAutoPromotionResume] == originKey
+			if !isHold && !isRelease {
+				continue
+			}
+			if newest == nil || strings.Compare(promo.Name, newest.Name) > 0 {
+				newest = promo
+				newestIsHold = isHold
+			}
+		}
+		switch {
+		case newest == nil:
+			// No in-flight intent for this origin; leave the durable state as-is.
+		case newestIsHold:
+			effective[originKey] = newAutoPromotionHold(newest, req.Origin)
+		default:
+			delete(effective, originKey)
+		}
+	}
+	return effective, nil
+}
+
 // autoPromoteFreight automatically promotes the candidate Freight for each
 // requested origin if auto-promotion is enabled for the Stage
 // (see api.IsAutoPromotionEnabled).

@@ -5764,6 +5764,194 @@ func TestRegularStageReconciler_findExistingAnalysisRun(t *testing.T) {
 	}
 }
 
+func TestRegularStageReconciler_computeEffectiveAutoPromotionHolds(t *testing.T) {
+	scheme := runtime.NewScheme()
+	require.NoError(t, kargoapi.AddToScheme(scheme))
+
+	origin := kargoapi.FreightOrigin{
+		Kind: kargoapi.FreightOriginKindWarehouse,
+		Name: "test-warehouse",
+	}
+	originKey := origin.String()
+
+	projectConfig := func(enabled bool) *kargoapi.ProjectConfig {
+		return &kargoapi.ProjectConfig{
+			ObjectMeta: metav1.ObjectMeta{Name: "fake-project", Namespace: "fake-project"},
+			Spec: kargoapi.ProjectConfigSpec{
+				PromotionPolicies: []kargoapi.PromotionPolicy{{
+					Stage:                "test-stage",
+					AutoPromotionEnabled: enabled,
+				}},
+			},
+		}
+	}
+	stage := func(durable map[string]kargoapi.AutoPromotionHold) *kargoapi.Stage {
+		return &kargoapi.Stage{
+			ObjectMeta: metav1.ObjectMeta{Namespace: "fake-project", Name: "test-stage"},
+			Spec: kargoapi.StageSpec{
+				RequestedFreight: []kargoapi.FreightRequest{{Origin: origin}},
+			},
+			Status: kargoapi.StageStatus{AutoPromotionHolds: durable},
+		}
+	}
+	durableHold := map[string]kargoapi.AutoPromotionHold{
+		originKey: {FreightName: "held-freight", Origin: origin},
+	}
+	holdPromo := func(name string, phase kargoapi.PromotionPhase) *kargoapi.Promotion {
+		return &kargoapi.Promotion{
+			ObjectMeta: metav1.ObjectMeta{
+				Namespace:   "fake-project",
+				Name:        name,
+				Annotations: map[string]string{kargoapi.AnnotationKeyAutoPromotionHold: originKey},
+			},
+			Spec:   kargoapi.PromotionSpec{Stage: "test-stage", Freight: "pinned-freight"},
+			Status: kargoapi.PromotionStatus{Phase: phase},
+		}
+	}
+	releasePromo := func(name string, phase kargoapi.PromotionPhase) *kargoapi.Promotion {
+		return &kargoapi.Promotion{
+			ObjectMeta: metav1.ObjectMeta{
+				Namespace:   "fake-project",
+				Name:        name,
+				Annotations: map[string]string{kargoapi.AnnotationKeyAutoPromotionResume: originKey},
+			},
+			Spec:   kargoapi.PromotionSpec{Stage: "test-stage", Freight: "candidate-freight"},
+			Status: kargoapi.PromotionStatus{Phase: phase},
+		}
+	}
+
+	tests := []struct {
+		name    string
+		stage   *kargoapi.Stage
+		objects []client.Object
+		assert  func(*testing.T, map[string]kargoapi.AutoPromotionHold, error)
+	}{
+		{
+			name:    "empty when auto-promotion is disabled",
+			stage:   stage(durableHold),
+			objects: []client.Object{projectConfig(false)},
+			assert: func(t *testing.T, holds map[string]kargoapi.AutoPromotionHold, err error) {
+				require.NoError(t, err)
+				assert.Empty(t, holds)
+			},
+		},
+		{
+			name:    "durable hold with no Promotions is preserved",
+			stage:   stage(durableHold),
+			objects: []client.Object{projectConfig(true)},
+			assert: func(t *testing.T, holds map[string]kargoapi.AutoPromotionHold, err error) {
+				require.NoError(t, err)
+				require.Contains(t, holds, originKey)
+				assert.Equal(t, "held-freight", holds[originKey].FreightName)
+			},
+		},
+		{
+			name:  "running hold-intent Promotion holds the origin",
+			stage: stage(nil),
+			objects: []client.Object{
+				projectConfig(true),
+				holdPromo("promo-01", kargoapi.PromotionPhaseRunning),
+			},
+			assert: func(t *testing.T, holds map[string]kargoapi.AutoPromotionHold, err error) {
+				require.NoError(t, err)
+				require.Contains(t, holds, originKey)
+				assert.Equal(t, "pinned-freight", holds[originKey].FreightName)
+				assert.Equal(t, "promo-01", holds[originKey].PromotionName)
+			},
+		},
+		{
+			name:  "running release-intent Promotion clears the origin",
+			stage: stage(durableHold),
+			objects: []client.Object{
+				projectConfig(true),
+				releasePromo("promo-01", kargoapi.PromotionPhaseRunning),
+			},
+			assert: func(t *testing.T, holds map[string]kargoapi.AutoPromotionHold, err error) {
+				require.NoError(t, err)
+				assert.NotContains(t, holds, originKey)
+			},
+		},
+		{
+			name:  "newer release supersedes an older hold",
+			stage: stage(nil),
+			objects: []client.Object{
+				projectConfig(true),
+				holdPromo("promo-01", kargoapi.PromotionPhaseRunning),
+				releasePromo("promo-02", kargoapi.PromotionPhaseRunning),
+			},
+			assert: func(t *testing.T, holds map[string]kargoapi.AutoPromotionHold, err error) {
+				require.NoError(t, err)
+				assert.NotContains(t, holds, originKey)
+			},
+		},
+		{
+			name:  "newer hold supersedes an older release",
+			stage: stage(nil),
+			objects: []client.Object{
+				projectConfig(true),
+				releasePromo("promo-01", kargoapi.PromotionPhaseRunning),
+				holdPromo("promo-02", kargoapi.PromotionPhaseRunning),
+			},
+			assert: func(t *testing.T, holds map[string]kargoapi.AutoPromotionHold, err error) {
+				require.NoError(t, err)
+				require.Contains(t, holds, originKey)
+				assert.Equal(t, "promo-02", holds[originKey].PromotionName)
+			},
+		},
+		{
+			// The Promotion that established the durable hold was newer than the
+			// surviving release Promotion but has since been GC'd or deleted.
+			// The stale older release must not clear the durable hold.
+			name: "older surviving release does not clear a durable hold from a deleted newer Promotion",
+			stage: func() *kargoapi.Stage {
+				s := stage(durableHold)
+				s.Status.LastPromotion = &kargoapi.PromotionReference{Name: "promo-05"}
+				return s
+			}(),
+			objects: []client.Object{
+				projectConfig(true),
+				releasePromo("promo-03", kargoapi.PromotionPhaseSucceeded),
+			},
+			assert: func(t *testing.T, holds map[string]kargoapi.AutoPromotionHold, err error) {
+				require.NoError(t, err)
+				require.Contains(t, holds, originKey)
+				assert.Equal(t, "held-freight", holds[originKey].FreightName)
+			},
+		},
+		{
+			name:  "aborted newest Promotion is ignored",
+			stage: stage(nil),
+			objects: []client.Object{
+				projectConfig(true),
+				holdPromo("promo-01", kargoapi.PromotionPhaseSucceeded),
+				releasePromo("promo-02", kargoapi.PromotionPhaseAborted),
+			},
+			assert: func(t *testing.T, holds map[string]kargoapi.AutoPromotionHold, err error) {
+				require.NoError(t, err)
+				require.Contains(t, holds, originKey)
+				assert.Equal(t, "promo-01", holds[originKey].PromotionName)
+			},
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			c := fake.NewClientBuilder().
+				WithScheme(scheme).
+				WithObjects(tt.objects...).
+				WithIndex(
+					&kargoapi.Promotion{},
+					indexer.PromotionsByStageField,
+					indexer.PromotionsByStage,
+				).
+				Build()
+			r := &RegularStageReconciler{client: c}
+			holds, err := r.computeEffectiveAutoPromotionHolds(t.Context(), tt.stage)
+			tt.assert(t, holds, err)
+		})
+	}
+}
+
 func TestRegularStageReconciler_autoPromoteFreight(t *testing.T) {
 	scheme := runtime.NewScheme()
 	require.NoError(t, kargoapi.AddToScheme(scheme))
