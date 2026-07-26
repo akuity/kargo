@@ -427,6 +427,21 @@ func (r *RegularStageReconciler) reconcile(
 		ObservedGeneration: working.Generation,
 	})
 
+	// Determine once whether auto-promotion is enabled for the Stage, so every
+	// sub-reconciler that depends on it sees a single, consistent answer for this
+	// reconciliation. Reading it more than once risks different answers at
+	// different points as the underlying ProjectConfig changes.
+	autoPromotionEnabled, err := api.IsAutoPromotionEnabled(
+		ctx,
+		r.client,
+		stage.ObjectMeta,
+	)
+	if err != nil {
+		return newStatus, false, fmt.Errorf(
+			"error checking auto-promotion policy for Stage %q: %w", stage.Name, err,
+		)
+	}
+
 	var requestRequeue bool
 	subReconcilers := []struct {
 		name      string
@@ -435,7 +450,11 @@ func (r *RegularStageReconciler) reconcile(
 		{
 			name: "syncing Promotions",
 			reconcile: func() (kargoapi.StageStatus, error) {
-				status, hasPendingPromotions, err := r.syncPromotions(ctx, working)
+				status, hasPendingPromotions, err := r.syncPromotions(
+					ctx,
+					working,
+					autoPromotionEnabled,
+				)
 				if err != nil {
 					err = fmt.Errorf("failed to sync Promotions: %w", err)
 				}
@@ -497,9 +516,32 @@ func (r *RegularStageReconciler) reconcile(
 			},
 		},
 		{
+			// This step must run immediately before "auto-promoting Freight":
+			// it computes the effective hold state from the live Promotions at
+			// the moment of the auto-promotion decision, which that next step
+			// reads. Inserting a step between the two would let the effective
+			// holds go stale relative to the decision.
+			name: "computing effective auto-promotion holds",
+			reconcile: func() (kargoapi.StageStatus, error) {
+				status := *working.Status.DeepCopy()
+				holds, err := r.computeEffectiveAutoPromotionHolds(
+					ctx,
+					working,
+					autoPromotionEnabled,
+				)
+				if err != nil {
+					return status, fmt.Errorf(
+						"failed to compute effective auto-promotion holds: %w", err,
+					)
+				}
+				status.EffectiveAutoPromotionHolds = holds
+				return status, nil
+			},
+		},
+		{
 			name: "auto-promoting Freight",
 			reconcile: func() (kargoapi.StageStatus, error) {
-				status, err := r.autoPromoteFreight(ctx, working)
+				status, err := r.autoPromoteFreight(ctx, working, autoPromotionEnabled)
 				if err != nil {
 					err = fmt.Errorf("failed to auto-promote Freight: %w", err)
 				}
@@ -552,6 +594,7 @@ func (r *RegularStageReconciler) reconcile(
 func (r *RegularStageReconciler) syncPromotions(
 	ctx context.Context,
 	stage *kargoapi.Stage,
+	autoPromotionEnabled bool,
 ) (kargoapi.StageStatus, bool, error) {
 	logger := logging.LoggerFromContext(ctx)
 	newStatus := *stage.Status.DeepCopy()
@@ -589,15 +632,26 @@ func (r *RegularStageReconciler) syncPromotions(
 		requestedOrigins[req.Origin.String()] = struct{}{}
 	}
 
-	// Drop holds for origins that are no longer requested. This runs before
-	// the early-exit below so it takes effect even when there are no Promotions.
-	for key := range newStatus.AutoPromotionHolds {
-		if _, ok := requestedOrigins[key]; !ok {
-			delete(newStatus.AutoPromotionHolds, key)
-		}
-	}
-	if len(newStatus.AutoPromotionHolds) == 0 {
+	// While auto-promotion is disabled, holds are meaningless: the Stage's
+	// current Freight is held in place by auto-promotion being disabled, not by
+	// the holds. Clear them so that re-enabling auto-promotion is a uniform fresh
+	// start, consistent with the fact that promoting non-candidate Freight while
+	// auto-promotion is disabled never establishes a hold. (Hold establishment in
+	// the replay below is gated on autoPromotionEnabled too.)
+	if !autoPromotionEnabled {
 		newStatus.AutoPromotionHolds = nil
+	} else {
+		// Drop holds for origins that are no longer requested. This runs before
+		// the early-exit below so it takes effect even when there are no
+		// Promotions.
+		for key := range newStatus.AutoPromotionHolds {
+			if _, ok := requestedOrigins[key]; !ok {
+				delete(newStatus.AutoPromotionHolds, key)
+			}
+		}
+		if len(newStatus.AutoPromotionHolds) == 0 {
+			newStatus.AutoPromotionHolds = nil
+		}
 	}
 
 	// If there are no Promotions, then we are not promoting any Freight.
@@ -679,8 +733,10 @@ func (r *RegularStageReconciler) syncPromotions(
 			// changed by an involuntary failure, so any terminal Promotion
 			// applies its intent. The exception is an Aborted Promotion: the
 			// user deliberately canceled it, withdrawing the intent along with
-			// it. (newPromos contains only terminal Promotions.)
-			if promo.Status.Phase != kargoapi.PromotionPhaseAborted {
+			// it. (newPromos contains only terminal Promotions.) Holds are only
+			// maintained while auto-promotion is enabled; when disabled they are
+			// cleared above and not re-established here.
+			if autoPromotionEnabled && promo.Status.Phase != kargoapi.PromotionPhaseAborted {
 				if originKey := promo.Annotations[kargoapi.AnnotationKeyAutoPromotionHold]; originKey != "" {
 					if _, requested := requestedOrigins[originKey]; requested {
 						if origin, err := kargoapi.ParseFreightOrigin(originKey); err == nil {
@@ -1770,14 +1826,9 @@ func newAutoPromotionHold(
 func (r *RegularStageReconciler) computeEffectiveAutoPromotionHolds(
 	ctx context.Context,
 	stage *kargoapi.Stage,
+	autoPromotionEnabled bool,
 ) (map[string]kargoapi.AutoPromotionHold, error) {
-	enabled, err := api.IsAutoPromotionEnabled(ctx, r.client, stage.ObjectMeta)
-	if err != nil {
-		return nil, fmt.Errorf(
-			"error checking auto-promotion policy for Stage %q: %w", stage.Name, err,
-		)
-	}
-	if !enabled {
+	if !autoPromotionEnabled {
 		return nil, nil
 	}
 
@@ -1840,14 +1891,16 @@ func (r *RegularStageReconciler) computeEffectiveAutoPromotionHolds(
 }
 
 // autoPromoteFreight automatically promotes the candidate Freight for each
-// requested origin if auto-promotion is enabled for the Stage
-// (see api.IsAutoPromotionEnabled).
+// requested origin, unless auto-promotion is disabled or the origin has an
+// effective auto-promotion hold.
 func (r *RegularStageReconciler) autoPromoteFreight(
 	ctx context.Context,
 	stage *kargoapi.Stage,
+	autoPromotionEnabled bool,
 ) (kargoapi.StageStatus, error) {
 	logger := logging.LoggerFromContext(ctx)
 	newStatus := *stage.Status.DeepCopy()
+	newStatus.AutoPromotionEnabled = autoPromotionEnabled
 
 	// If the Stage has no requested Freight, then there is nothing to promote.
 	// NB: This should not happen in practice, as a Stage cannot exist without
@@ -1856,26 +1909,13 @@ func (r *RegularStageReconciler) autoPromoteFreight(
 		return newStatus, nil
 	}
 
-	// Confirm that auto-promotion is allowed for the Stage.
-	autoPromotionEnabled, err := api.IsAutoPromotionEnabled(ctx, r.client, stage.ObjectMeta)
-	if err != nil {
-		newStatus.AutoPromotionEnabled = false
-		return newStatus, err
-	}
 	logger.Debug("checked auto-promotion policy for Stage", "enabled", autoPromotionEnabled)
 	if !autoPromotionEnabled {
-		newStatus.AutoPromotionEnabled = false
-		// Auto-promotion holds only modify auto-promotion behavior, so they are
-		// meaningless while auto-promotion is disabled: the Stage's current
-		// Freight is held in place by auto-promotion being disabled, not by the
-		// holds. Clear them so that re-enabling auto-promotion is a uniform
-		// fresh start -- consistent with the fact that promoting non-candidate
-		// Freight while auto-promotion is disabled never establishes a hold to
-		// begin with.
-		newStatus.AutoPromotionHolds = nil
+		// Nothing to promote. The durable and effective hold maps are cleared by
+		// syncPromotions and computeEffectiveAutoPromotionHolds respectively when
+		// auto-promotion is disabled, not here.
 		return newStatus, nil
 	}
-	newStatus.AutoPromotionEnabled = true
 
 	availableFreight, err := api.ListFreightAvailableToStage(ctx, r.client, stage)
 	if err != nil {
@@ -1891,26 +1931,9 @@ func (r *RegularStageReconciler) autoPromoteFreight(
 	// Check if there is any new Freight which can be auto-promoted.
 	for _, req := range stage.Spec.RequestedFreight {
 		origin := req.Origin.String()
-		// Never create an auto-promotion for an origin with an active hold.
-		if _, held := stage.Status.AutoPromotionHolds[origin]; held {
+		// Never create an auto-promotion for an origin with an effective hold.
+		if _, held := stage.Status.EffectiveAutoPromotionHolds[origin]; held {
 			logger.Debug("auto-promotion is blocked by an auto-promotion hold", "origin", origin)
-			continue
-		}
-
-		// A hold only reaches Stage status after syncPromotions records a
-		// succeeded hold-intent Promotion. Skip this origin while any
-		// hold-intent Promotion exists whose outcome has not been recorded
-		// yet -- whether still running or terminal since this reconciliation's
-		// hold state was computed.
-		holdPending, holdErr := r.unprocessedHoldIntentPromotionExistsForOrigin(ctx, stage, origin)
-		if holdErr != nil {
-			return newStatus, fmt.Errorf(
-				"error checking for unprocessed hold-intent Promotions for origin %q: %w",
-				origin, holdErr,
-			)
-		}
-		if holdPending {
-			logger.Debug("auto-promotion is blocked by an unprocessed hold-intent Promotion", "origin", origin)
 			continue
 		}
 
@@ -2025,51 +2048,6 @@ func stageAwaitingFreightForOrigin(
 	// sub-reconciler, so this sees Promotions observed earlier in this pass.
 	return stage.Status.CurrentPromotion.Freight.Name == name &&
 		stage.Status.CurrentPromotion.Freight.Origin.String() == origin
-}
-
-// unprocessedHoldIntentPromotionExistsForOrigin reports whether a hold-intent
-// Promotion for this origin exists whose outcome syncPromotions has not yet
-// recorded: one that is still non-terminal, or one that reached a terminal
-// phase other than Aborted after this reconciliation's hold state was computed
-// (i.e., is newer than status.lastPromotion). autoPromoteFreight stands down
-// for the origin in either case. The second case matters because a Promotion
-// can terminate in the interval between syncPromotions computing hold state
-// and autoPromoteFreight acting on it; without it, auto-promotion could
-// supersede older Freight the user just deliberately promoted, moments before
-// the hold that protects it is recorded. Aborted Promotions are excluded: the
-// user withdrew the intent, so they never establish a hold, and an aborted
-// Promotion may go unrecorded for a long time (e.g. one aborted before it was
-// ever acknowledged), so blocking on it would pause auto-promotion for no
-// benefit.
-func (r *RegularStageReconciler) unprocessedHoldIntentPromotionExistsForOrigin(
-	ctx context.Context,
-	stage *kargoapi.Stage,
-	origin string,
-) (bool, error) {
-	promos := &kargoapi.PromotionList{}
-	if err := r.client.List(
-		ctx,
-		promos,
-		client.InNamespace(stage.Namespace),
-		client.MatchingFieldsSelector{
-			Selector: fields.OneTermEqualSelector(indexer.PromotionsByStageField, stage.Name),
-		},
-	); err != nil {
-		return false, err
-	}
-	lastPromo := stage.Status.LastPromotion
-	for i := range promos.Items {
-		promo := &promos.Items[i]
-		if promo.Annotations[kargoapi.AnnotationKeyAutoPromotionHold] != origin {
-			continue
-		}
-		if !promo.Status.Phase.IsTerminal() ||
-			(promo.Status.Phase != kargoapi.PromotionPhaseAborted &&
-				(lastPromo == nil || strings.Compare(promo.Name, lastPromo.Name) > 0)) {
-			return true, nil
-		}
-	}
-	return false, nil
 }
 
 // unprocessedPromotionExistsForStageFreight reports whether a Promotion for
