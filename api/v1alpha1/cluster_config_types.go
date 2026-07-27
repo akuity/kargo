@@ -50,6 +50,17 @@ type ClusterConfigSpec struct {
 	//
 	// +optional
 	StageLinks []DeepLink `json:"stageLinks,omitempty"`
+	// PromotionWindows defines time windows that gate promotions across the
+	// cluster. Each window may narrow its scope with a projectSelector and/or
+	// stageSelector. A Stage's effective schedule is the union of matching
+	// windows defined here and any project-level windows in ProjectConfig.
+	//
+	// Kargo Enterprise only: This field is ignored in Kargo OSS.
+	//
+	// +optional
+	// +listType=map
+	// +listMapKey=name
+	PromotionWindows []PromotionWindow `json:"promotionWindows,omitempty"`
 }
 
 // GitClientConfig describes cluster-level configuration for Kargo's Git

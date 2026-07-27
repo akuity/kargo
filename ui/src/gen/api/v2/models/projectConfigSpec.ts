@@ -7,6 +7,7 @@
  */
 import type { DeepLink } from './deepLink';
 import type { PromotionPolicy } from './promotionPolicy';
+import type { PromotionWindow } from './promotionWindow';
 import type { WebhookReceiverConfig } from './webhookReceiverConfig';
 
 export interface ProjectConfigSpec {
@@ -19,6 +20,16 @@ FreightLinks defined in ClusterConfig.
   /** PromotionPolicies defines policies governing the promotion of Freight to
 specific Stages within the Project. */
   promotionPolicies?: PromotionPolicy[];
+  /** PromotionWindows defines time windows that gate promotions for Stages in
+this Project. A Stage's effective schedule is the union of matching windows
+defined here and any cluster-level windows in ClusterConfig.
+
+Kargo Enterprise only: This field is ignored in Kargo OSS.
+
++optional
++listType=map
++listMapKey=name */
+  promotionWindows?: PromotionWindow[];
   /** StageLinks defines deep links shown when viewing Stage resources within
 this project. These are shown in addition to any cluster-level
 StageLinks defined in ClusterConfig.

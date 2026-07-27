@@ -299,6 +299,8 @@ Class | Method | HTTP request | Description
  - [PromotionTaskSpec](docs/PromotionTaskSpec.md)
  - [PromotionTemplate](docs/PromotionTemplate.md)
  - [PromotionTemplateSpec](docs/PromotionTemplateSpec.md)
+ - [PromotionWindow](docs/PromotionWindow.md)
+ - [PromotionWindowKind](docs/PromotionWindowKind.md)
  - [PublicConfig](docs/PublicConfig.md)
  - [QuayWebhookReceiverConfig](docs/QuayWebhookReceiverConfig.md)
  - [RbacRole](docs/RbacRole.md)
