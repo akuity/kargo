@@ -13987,6 +13987,15 @@ components:
           - $ref: "#/components/schemas/PromotionReference"
           description: CurrentPromotion is a reference to the currently Running promotion.
           type: object
+        effectiveAutoPromotionHolds:
+          additionalProperties:
+            $ref: "#/components/schemas/AutoPromotionHold"
+          description: |-
+            EffectiveAutoPromotionHolds is the set of auto-promotion holds in effect
+            right now. It is recomputed every reconciliation from AutoPromotionHolds
+            plus the newest in-flight Promotions, and unlike AutoPromotionHolds is not
+            durable. Clients should read this map to reflect current hold state.
+          type: object
         freightHistory:
           description: |-
             FreightHistory is a list of recent Freight selections that were deployed
