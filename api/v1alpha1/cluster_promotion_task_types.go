@@ -8,13 +8,13 @@ import metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 
 type ClusterPromotionTask struct {
 	metav1.TypeMeta   `json:",inline"`
-	metav1.ObjectMeta `json:"metadata,omitempty" protobuf:"bytes,1,opt,name=metadata"`
+	metav1.ObjectMeta `json:"metadata,omitempty"`
 
 	// Spec describes the desired transition of a specific Stage into a specific
 	// Freight.
 	//
 	// +kubebuilder:validation:Required
-	Spec PromotionTaskSpec `json:"spec" protobuf:"bytes,2,opt,name=spec"`
+	Spec PromotionTaskSpec `json:"spec"`
 }
 
 // +kubebuilder:object:root=true
@@ -22,6 +22,6 @@ type ClusterPromotionTask struct {
 // ClusterPromotionTaskList contains a list of PromotionTasks.
 type ClusterPromotionTaskList struct {
 	metav1.TypeMeta `json:",inline"`
-	metav1.ListMeta `json:"metadata,omitempty" protobuf:"bytes,1,opt,name=metadata"`
-	Items           []ClusterPromotionTask `json:"items" protobuf:"bytes,2,rep,name=items"`
+	metav1.ListMeta `json:"metadata,omitempty"`
+	Items           []ClusterPromotionTask `json:"items"`
 }

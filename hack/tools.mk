@@ -2,11 +2,10 @@
 # The tools are installed in a local bin directory, making it easy to manage
 # project-specific tool versions without affecting the system-wide installation.
 #
-# NOTE: Go-based tools (controller-gen, goimports, go-to-protobuf,
-# protoc-gen-gogo, protoc-gen-doc, buf, swag, go-swagger, oapi-codegen, ctlptl,
-# kind) are no longer installed here. They are declared as `tool` directives in
-# the main go.mod and invoked via `go tool <name>`. Only tools distributed as
-# prebuilt binaries remain below.
+# NOTE: Go-based tools (controller-gen, goimports, swag, go-swagger,
+# oapi-codegen, ctlptl, kind) are no longer installed here. They are declared
+# as `tool` directives in the main go.mod and invoked via `go tool <name>`.
+# Only tools distributed as prebuilt binaries remain below.
 
 ################################################################################
 # Directory and file path variables                                            #
@@ -15,7 +14,6 @@
 HACK_DIR        ?= $(shell dirname $(abspath $(lastword $(MAKEFILE_LIST))))
 GO_MOD_FILE     := $(HACK_DIR)/../go.mod
 BIN_DIR			?= $(HACK_DIR)/bin
-INCLUDE_DIR		?= $(HACK_DIR)/include
 
 # Detect OS and architecture
 OS		:= $(shell uname -s | tr A-Z a-z)
@@ -33,7 +31,6 @@ GOLANGCI_LINT_VERSION	?= v2.10.1
 # Helm is distributed as a prebuilt binary, but we keep its version in sync with
 # the helm.sh/helm/v3 module pinned in the main go.mod.
 HELM_VERSION            ?= $(shell grep -m 1 -E '^[[:space:]]+helm.sh/helm/v3 v' $(GO_MOD_FILE) | awk '{print $$2}')
-PROTOC_VERSION			?= v25.3
 QUILL_VERSION			?= v0.5.1
 TILT_VERSION			?= v0.36.3
 K3D_VERSION				?= v5.8.3
@@ -46,7 +43,6 @@ OPENAPI_GENERATOR_CLI_VERSION	?= 7.23.0
 
 GOLANGCI_LINT	:= $(BIN_DIR)/golangci-lint-$(OS)-$(ARCH)-$(GOLANGCI_LINT_VERSION)
 HELM            := $(BIN_DIR)/helm-$(OS)-$(ARCH)-$(HELM_VERSION)
-PROTOC          := $(BIN_DIR)/protoc-$(OS)-$(ARCH)-$(PROTOC_VERSION)
 QUILL		   	:= $(BIN_DIR)/quill-$(OS)-$(ARCH)-$(QUILL_VERSION)
 TILT            := $(BIN_DIR)/tilt-$(OS)-$(ARCH)-$(TILT_VERSION)
 K3D             := $(BIN_DIR)/k3d-$(OS)-$(ARCH)-$(K3D_VERSION)
@@ -58,9 +54,6 @@ $(GOLANGCI_LINT):
 
 $(HELM):
 	$(call install-helm,$@,$(HELM_VERSION))
-
-$(PROTOC):
-	$(call install-protoc,$@,$(PROTOC_VERSION),$(HACK_DIR)/include)
 
 $(QUILL):
 	$(call install-quill,$@,$(QUILL_VERSION))
@@ -83,7 +76,6 @@ $(OPENAPI_GENERATOR_CLI):
 
 GOLANGCI_LINT_LINK 	:= $(BIN_DIR)/golangci-lint
 HELM_LINK 			:= $(BIN_DIR)/helm
-PROTOC_LINK			:= $(BIN_DIR)/protoc
 QUILL_LINK			:= $(BIN_DIR)/quill
 TILT_LINK			:= $(BIN_DIR)/tilt
 K3D_LINK			:= $(BIN_DIR)/k3d
@@ -97,10 +89,6 @@ $(GOLANGCI_LINT_LINK): $(GOLANGCI_LINT)
 .PHONY: $(HELM_LINK)
 $(HELM_LINK): $(HELM)
 	$(call create-symlink,$(HELM),$(HELM_LINK))
-
-.PHONY: $(PROTOC_LINK)
-$(PROTOC_LINK): $(PROTOC)
-	$(call create-symlink,$(PROTOC),$(PROTOC_LINK))
 
 .PHONY: $(QUILL_LINK)
 $(QUILL_LINK): $(QUILL)
@@ -126,7 +114,7 @@ $(OPENAPI_GENERATOR_CLI_LINK): $(OPENAPI_GENERATOR_CLI)
 # Alias targets                                                                #
 ################################################################################
 
-TOOLS := install-golangci-lint install-helm install-protoc install-quill install-tilt install-k3d install-jq install-openapi-generator-cli
+TOOLS := install-golangci-lint install-helm install-quill install-tilt install-k3d install-jq install-openapi-generator-cli
 
 .PHONY: install-tools
 install-tools: $(TOOLS)
@@ -136,9 +124,6 @@ install-golangci-lint: $(GOLANGCI_LINT) $(GOLANGCI_LINT_LINK)
 
 .PHONY: install-helm
 install-helm: $(HELM) $(HELM_LINK)
-
-.PHONY: install-protoc
-install-protoc: $(PROTOC) $(PROTOC_LINK)
 
 .PHONY: install-quill
 install-quill: $(QUILL) $(QUILL_LINK)
@@ -163,7 +148,6 @@ install-openapi-generator-cli: $(OPENAPI_GENERATOR_CLI) $(OPENAPI_GENERATOR_CLI_
 .PHONY: clean-tools
 clean-tools:
 	rm -rf $(BIN_DIR)/*
-	rm -rf $(INCLUDE_DIR)/*
 
 # Update all tools
 .PHONY: update-tools
@@ -227,42 +211,6 @@ define install-quill
 	./install.sh -b $$TMP_DIR $(2) ;\
 	mkdir -p $(dir $(1)) ;\
 	mv $$TMP_DIR/quill $(1) ;\
-	rm -rf $$TMP_DIR ;\
-	}
-endef
-
-# PROTOC_OS and PROTOC_ARCH are used to determine the platform-specific zip file
-# to download for protoc.
-PROTOC_OS ?= $(shell uname -s | tr '[:upper:]' '[:lower:]')
-ifeq ($(PROTOC_OS),darwin)
-	PROTOC_OS := osx
-endif
-
-PROTOC_ARCH ?= $(shell uname -m)
-ifeq ($(PROTOC_ARCH),amd64)
-	override PROTOC_ARCH = x86_64
-else ifeq ($(PROTOC_ARCH),aarch64)
-	override PROTOC_ARCH = aarch_64
-else ifeq ($(PROTOC_ARCH),arm64)
-	override PROTOC_ARCH = aarch_64
-endif
-
-# install-protoc installs protoc.
-#
-# $(1) binary path
-# $(2) version
-# $(3) include path
-define install-protoc
-	@[ -f $(1) ] || { \
-	set -e ;\
-	TMP_DIR=$$(mktemp -d) ;\
-	cd $$TMP_DIR ;\
-	curl -fsSL -o protoc.zip https://github.com/protocolbuffers/protobuf/releases/download/$(2)/protoc-$(patsubst v%,%,$(2))-$(PROTOC_OS)-$(PROTOC_ARCH).zip ;\
-	unzip -q protoc.zip ;\
-	rm -rf $(3) ;\
-	mkdir -p $(dir $(1)) $(3) ;\
-	mv $$TMP_DIR/bin/protoc $(1) ;\
-	mv -f $$TMP_DIR/include/* $(3) ;\
 	rm -rf $$TMP_DIR ;\
 	}
 endef

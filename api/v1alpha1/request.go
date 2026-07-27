@@ -15,17 +15,16 @@ const (
 // AbortPromotionRequest is a request payload with an optional actor field which
 // can be used to annotate a Promotion using the AnnotationKeyAbort annotation.
 //
-// +protobuf=false
 // +k8s:deepcopy-gen=false
 // +k8s:openapi-gen=false
 type AbortPromotionRequest struct {
 	// Action is the action to take on the Promotion to abort it.
-	Action AbortAction `json:"action,omitempty" protobuf:"bytes,1,opt,name=action"`
+	Action AbortAction `json:"action,omitempty"`
 	// Actor is the user who initiated the request.
-	Actor string `json:"actor,omitempty" protobuf:"bytes,2,opt,name=actor"`
+	Actor string `json:"actor,omitempty"`
 	// ControlPlane is a flag to indicate if the request has been initiated by
 	// a control plane.
-	ControlPlane bool `json:"controlPlane,omitempty" protobuf:"varint,3,opt,name=controlPlane"`
+	ControlPlane bool `json:"controlPlane,omitempty"`
 }
 
 // Equals returns true if the AbortPromotionRequest is equal to the other
@@ -64,7 +63,6 @@ func (r *AbortPromotionRequest) String() string {
 // re-verification or abort request. The ControlPlane field is optional and
 // indicates if the request was initiated by a control plane.
 //
-// +protobuf=false
 // +k8s:deepcopy-gen=false
 // +k8s:openapi-gen=false
 type VerificationRequest struct {

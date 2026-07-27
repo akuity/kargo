@@ -12,10 +12,10 @@ domain is needed.
 
 | Path | Description |
 |------|-------------|
-| `api/v1alpha1/` | CRD types (Warehouse, Freight, Stage, Promotion, Project, etc.) and protobuf specs. Separate Go module |
+| `api/v1alpha1/` | CRD types (Warehouse, Freight, Stage, Promotion, Project, etc.). Separate Go module |
 | `cmd/controlplane/` | Back end entry point -- single binary with subcommands: `api`, `controller`, `management-controller`, `kubernetes-webhooks`, `external-webhooks`, `garbage-collector` |
 | `cmd/cli/` | CLI entry point |
-| `pkg/server/` | API server handlers. Two coexisting APIs: **ConnectRPC** (DEPRECATED, removal in v1.12.0; still used by UI -- avoid investing in fixes or enhancements) and **REST API** (the replacement; used by CLI; UI has not yet migrated) |
+| `pkg/server/` | API server handlers, exposing Kargo's REST API (used by both the CLI and UI). |
 | `pkg/cli/` | CLI -- Cobra-based, subcommands in `pkg/cli/cmd/`, REST API client in `pkg/cli/client/` |
 | `pkg/controller/` | Kubernetes controllers for Kargo resources |
 | `pkg/promotion/` | Promotion engine and step runner |
@@ -34,13 +34,12 @@ domain is needed.
 Make, Go, Node.js, pnpm, and Docker are the primary prerequisites. Most other
 tools fall into two buckets:
 
-- **Go-based tools** (buf, controller-gen, go-to-protobuf, protoc-gen-gogo,
-  protoc-gen-doc, goimports, swag, go-swagger, oapi-codegen, ctlptl, kind) are
-  declared as `tool` directives in the root `go.mod` and invoked via
-  `go tool <name>`. No install step is needed -- `go tool` builds them on demand
-  from the module.
-- **Prebuilt-binary tools** (golangci-lint, helm, protoc, quill, tilt, k3d, jq)
-  are installed automatically into `hack/bin/` by Make targets (see
+- **Go-based tools** (controller-gen, goimports, swag, go-swagger,
+  oapi-codegen, ctlptl, kind) are declared as `tool` directives in the root
+  `go.mod` and invoked via `go tool <name>`. No install step is needed --
+  `go tool` builds them on demand from the module.
+- **Prebuilt-binary tools** (golangci-lint, helm, quill, tilt, k3d, jq) are
+  installed automatically into `hack/bin/` by Make targets (see
   `hack/tools.mk`). golangci-lint stays a prebuilt binary rather than a
   `go tool` because building it from source is slow and can drift from the
   release binary's lint results; its version is pinned in `hack/tools.mk`.
@@ -49,7 +48,7 @@ tools fall into two buckets:
 
 ```bash
 make lint-go              # Lint Go code (golangci-lint)
-make lint                 # Lint everything (Go, proto, charts, UI)
+make lint                 # Lint everything (Go, charts, UI)
 make format-go            # Auto-format Go code
 make test-unit            # Run unit tests (with -race)
 make build-cli            # Build CLI binary
@@ -102,12 +101,11 @@ installing prerequisites (cert-manager, Argo CD, Argo Rollouts) idempotently.
 Run `make codegen` (or `make hack-codegen`) after modifying:
 
 - API types in `api/v1alpha1/`
-- Protobuf definitions
 - Swagger annotations in `pkg/server/`
 - JSON schemas for promotion step configs
 
-This generates: protobuf bindings, CRDs, deepcopy methods, OpenAPI specs,
-TypeScript API clients, and Go client code.
+This generates: CRDs, deepcopy methods, OpenAPI specs, TypeScript API clients,
+and Go client code.
 
 ## Code Conventions
 
@@ -135,9 +133,9 @@ TypeScript API clients, and Go client code.
 - **Variable shadowing**: forbidden (enforced by govet)
 - **Import order** (enforced by gci): stdlib, third-party,
   `github.com/akuity`, dot, blank
-- **var-naming**: linter rule disabled due to protobuf naming conflicts, but
-  still follow Go conventions (`ID`, `URL`, `HTTP`) except where
-  protobuf-generated code makes this impossible
+- **var-naming**: linter rule disabled because vendored upstream stub types
+  (e.g. `api/stubs/rollouts/v1alpha1`) use non-Go-idiomatic names like `Id`.
+  Still follow Go conventions (`ID`, `URL`, `HTTP`) in our own code
 - **Constants over literals**: extract repeated literals into named constants.
   In tests, inline literals are fine when extracting them hurts readability
 - **Generated files**: `*_types.go` and `groupversion_info.go` are excluded

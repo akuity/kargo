@@ -33,7 +33,7 @@ every submission.
 
 The following deprecated features are scheduled for **removal** in v1.12.0:
 
-* The deprecated ConnectRPC (gRPC) API in favor of the new REST API.
+* The deprecated ConnectRPC (gRPC) API, in favor of the REST API.
 * The `createTargetBranch` option in the `git-open-pr` promotion step.
 * The `author` configuration block on the `git-commit` promotion step. Use
   `git-clone` instead.

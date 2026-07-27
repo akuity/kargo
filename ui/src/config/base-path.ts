@@ -5,7 +5,7 @@
  * When it is, the served index.html carries a window.__KARGO_BASE_PATH__
  * global populated by the server at serve time. The functions here read
  * that global and use it to compose URLs the UI hands to the browser
- * (ConnectRPC/REST baseUrl, fetch URLs, React Router basename, and the
+ * (REST baseUrl, fetch URLs, React Router basename, and the
  * window.location.replace() destinations used by auth flows).
  *
  * When the server is deployed at the root (no basePath), the global is
