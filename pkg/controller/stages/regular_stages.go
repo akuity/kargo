@@ -633,6 +633,27 @@ func (r *RegularStageReconciler) reconcile(
 	return newStatus, requeueAfter, nil
 }
 
+// comparePromotionCompletion orders two Promotions by the time they COMPLETED
+// (Status.FinishedAt), falling back to ULID name when either timestamp is
+// absent or the two are equal. Stage status advances in completion order, not
+// creation (ULID) order: because a PromotionDispatcher may select a non-oldest
+// pending Promotion, Promotions can finish out of ULID order, and an
+// out-of-order completion must not skip a Promotion's outcome during replay.
+func comparePromotionCompletion(
+	aName string, aFinishedAt *metav1.Time,
+	bName string, bFinishedAt *metav1.Time,
+) int {
+	if aFinishedAt != nil && bFinishedAt != nil {
+		switch {
+		case aFinishedAt.Before(bFinishedAt):
+			return -1
+		case bFinishedAt.Before(aFinishedAt):
+			return 1
+		}
+	}
+	return strings.Compare(aName, bName)
+}
+
 // syncPromotions synchronizes the Promotions for a Stage. It determines the
 // current state of the Stage based on the Promotions that are running or have
 // completed.
@@ -745,29 +766,35 @@ func (r *RegularStageReconciler) syncPromotions(
 		conditions.Delete(&newStatus, kargoapi.ConditionTypePromoting)
 		newStatus.CurrentPromotion = nil
 
-		// Gather terminal Promotions newer than the last processed one, sorted
-		// oldest-to-newest so holds are applied in chronological order and
-		// Freight history entries are appended oldest-first (GC removes oldest
-		// first).
+		// Gather terminal Promotions newer than the last recorded one BY
+		// COMPLETION TIME, sorted oldest-to-newest so holds are applied in
+		// chronological order and Freight history entries are appended
+		// oldest-first (GC removes oldest first). Completion order is not the
+		// list's ULID sort order, so we cannot early-break as we could when the
+		// watermark was ULID-based; we scan the whole (GC-bounded) terminal set
+		// instead. This is what lets an out-of-order dispatch (a higher-ULID
+		// Promotion finishing before a lower-ULID one) record both outcomes
+		// rather than dropping the later-completing, lower-ULID Promotion.
 		var newPromos []*kargoapi.Promotion
 		for i := range promotions.Items {
 			promo := &promotions.Items[i]
-			if lastPromo != nil {
-				// We can break here since we know that all subsequent Promotions
-				// will be older than the last Promotion we saw.
-				// NB: This makes use of the fact that Promotion names are
-				// generated, and contain a timestamp component which will ensure
-				// that they can be sorted in a consistent order.
-				if strings.Compare(promo.Name, lastPromo.Name) <= 0 {
-					break
-				}
+			if !promo.Status.Phase.IsTerminal() {
+				continue
 			}
-			if promo.Status.Phase.IsTerminal() {
-				newPromos = append(newPromos, promo)
+			// Record only Promotions that completed after the current watermark.
+			if lastPromo != nil && comparePromotionCompletion(
+				promo.Name, promo.Status.FinishedAt,
+				lastPromo.Name, lastPromo.FinishedAt,
+			) <= 0 {
+				continue
 			}
+			newPromos = append(newPromos, promo)
 		}
 		slices.SortFunc(newPromos, func(a, b *kargoapi.Promotion) int {
-			return strings.Compare(a.Name, b.Name)
+			return comparePromotionCompletion(
+				a.Name, a.Status.FinishedAt,
+				b.Name, b.Status.FinishedAt,
+			)
 		})
 
 		// Replay new Promotions in chronological order to update hold state and
@@ -2134,7 +2161,10 @@ func (r *RegularStageReconciler) unprocessedHoldIntentPromotionExistsForOrigin(
 		}
 		if !promo.Status.Phase.IsTerminal() ||
 			(promo.Status.Phase == kargoapi.PromotionPhaseSucceeded &&
-				(lastPromo == nil || strings.Compare(promo.Name, lastPromo.Name) > 0)) {
+				(lastPromo == nil || comparePromotionCompletion(
+					promo.Name, promo.Status.FinishedAt,
+					lastPromo.Name, lastPromo.FinishedAt,
+				) > 0)) {
 			return true, nil
 		}
 	}
@@ -2179,7 +2209,10 @@ func (r *RegularStageReconciler) unprocessedPromotionExistsForStageFreight(
 		promo := &promotions.Items[i]
 		if !promo.Status.Phase.IsTerminal() ||
 			(promo.Status.Phase == kargoapi.PromotionPhaseSucceeded &&
-				(lastPromo == nil || strings.Compare(promo.Name, lastPromo.Name) > 0)) {
+				(lastPromo == nil || comparePromotionCompletion(
+					promo.Name, promo.Status.FinishedAt,
+					lastPromo.Name, lastPromo.FinishedAt,
+				) > 0)) {
 			return true, nil
 		}
 	}
