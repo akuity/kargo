@@ -2452,9 +2452,18 @@ RawFormat specifies the format for raw resource representation.
 | autoPromotionEnabled | bool |  AutoPromotionEnabled indicates whether automatic promotion is enabled for the Stage based on the ProjectConfig. |
 | metadata | [StageStatus.MetadataEntry](#github-com-akuity-kargo-api-v1alpha1-StageStatus-MetadataEntry) |  Metadata is a map of arbitrary metadata associated with the Stage. This is useful for storing additional information about the Stage that can be shared across promotions, verifications, or other processes. |
 | autoPromotionHolds | [StageStatus.AutoPromotionHoldsEntry](#github-com-akuity-kargo-api-v1alpha1-StageStatus-AutoPromotionHoldsEntry) |  AutoPromotionHolds records active auto-promotion holds for this Stage. A hold is established when a Promotion selects Freight other than the auto-promotion candidate for that origin, pausing auto-promotion for that origin until explicitly released. Auto-promotions themselves never establish holds. Keys are string representations of FreightOrigins (e.g. "Warehouse/my-warehouse"); values describe the Promotion that established the hold. |
+| effectiveAutoPromotionHolds | [StageStatus.EffectiveAutoPromotionHoldsEntry](#github-com-akuity-kargo-api-v1alpha1-StageStatus-EffectiveAutoPromotionHoldsEntry) |  EffectiveAutoPromotionHolds is the set of auto-promotion holds in effect right now. It is recomputed every reconciliation from AutoPromotionHolds plus the newest in-flight Promotions, and unlike AutoPromotionHolds is not durable. Clients should read this map to reflect current hold state. |
 
 
 ### StageStatus.AutoPromotionHoldsEntry {#github-com-akuity-kargo-api-v1alpha1-StageStatus-AutoPromotionHoldsEntry}
+ 
+| Field | Type | Description |
+| ----- | ---- | ----------- |
+| key | string |   |
+| value | [AutoPromotionHold](#github-com-akuity-kargo-api-v1alpha1-AutoPromotionHold) |   |
+
+
+### StageStatus.EffectiveAutoPromotionHoldsEntry {#github-com-akuity-kargo-api-v1alpha1-StageStatus-EffectiveAutoPromotionHoldsEntry}
  
 | Field | Type | Description |
 | ----- | ---- | ----------- |
