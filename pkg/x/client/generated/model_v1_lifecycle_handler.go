@@ -23,7 +23,7 @@ type V1LifecycleHandler struct {
 	Exec *V1ExecAction `json:"exec,omitempty"`
 	// HTTPGet specifies an HTTP GET request to perform. +optional
 	HttpGet *V1HTTPGetAction `json:"httpGet,omitempty"`
-	// Sleep represents a duration that the container should sleep. +featureGate=PodLifecycleSleepAction +optional
+	// Sleep represents a duration that the container should sleep. +optional
 	Sleep *V1SleepAction `json:"sleep,omitempty"`
 	// Deprecated. TCPSocket is NOT supported as a LifecycleHandler and kept for backward compatibility. There is no validation of this field and lifecycle hooks will fail at runtime when it is specified. +optional
 	TcpSocket *V1TCPSocketAction `json:"tcpSocket,omitempty"`

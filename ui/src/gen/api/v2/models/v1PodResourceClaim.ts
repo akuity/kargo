@@ -25,6 +25,16 @@ will also be deleted. The pod name and resource name, along with a
 generated component, will be used to form a unique name for the
 ResourceClaim, which will be recorded in pod.status.resourceClaimStatuses.
 
+When the DRAWorkloadResourceClaims feature gate is enabled and the pod
+belongs to a PodGroup that defines a PodGroupResourceClaim with the same
+Name and ResourceClaimTemplateName, this PodResourceClaim resolves to the
+ResourceClaim generated for the PodGroup. All pods in the group that
+define an equivalent PodResourceClaim matching the
+PodGroupResourceClaim's Name and ResourceClaimTemplateName share the same
+generated ResourceClaim. ResourceClaims generated for a PodGroup are
+owned by the PodGroup and their lifecycles are tied to the PodGroup
+instead of any individual pod.
+
 This field is immutable and no changes will be made to the
 corresponding ResourceClaim by the control plane after creating the
 ResourceClaim.

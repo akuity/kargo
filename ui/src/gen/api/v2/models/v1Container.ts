@@ -105,6 +105,7 @@ More info: https://kubernetes.io/docs/concepts/workloads/pods/pod-lifecycle#cont
 +optional */
   readinessProbe?: V1Probe;
   /** Resources resize policy for the container.
+This field cannot be set on ephemeral containers.
 +featureGate=InPlacePodVerticalScaling
 +optional
 +listType=atomic */
@@ -129,7 +130,6 @@ for the container to complete before proceeding to the next init
 container. Instead, the next init container starts immediately after this
 init container is started, or after any startupProbe has successfully
 completed.
-+featureGate=SidecarContainers
 +optional */
   restartPolicy?: string;
   /** Represents a list of rules to be checked to determine if the

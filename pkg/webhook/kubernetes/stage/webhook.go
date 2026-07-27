@@ -7,7 +7,6 @@ import (
 
 	admissionv1 "k8s.io/api/admission/v1"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
-	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/runtime/schema"
 	"k8s.io/apimachinery/pkg/util/validation/field"
 	ctrl "sigs.k8s.io/controller-runtime"
@@ -58,8 +57,7 @@ func SetupWebhookWithManager(
 		mgr.GetClient(),
 		admission.NewDecoder(mgr.GetScheme()),
 	)
-	return ctrl.NewWebhookManagedBy(mgr).
-		For(&kargoapi.Stage{}).
+	return ctrl.NewWebhookManagedBy(mgr, &kargoapi.Stage{}).
 		WithDefaulter(w).
 		WithValidator(w).
 		Complete()
@@ -83,9 +81,7 @@ func newWebhook(
 	return w
 }
 
-func (w *webhook) Default(ctx context.Context, obj runtime.Object) error {
-	stage := obj.(*kargoapi.Stage) // nolint: forcetypeassert
-
+func (w *webhook) Default(ctx context.Context, stage *kargoapi.Stage) error {
 	// Sync the shard label to the convenience shard field
 	if stage.Spec.Shard != "" {
 		if stage.Labels == nil {
@@ -154,9 +150,8 @@ func (w *webhook) Default(ctx context.Context, obj runtime.Object) error {
 
 func (w *webhook) ValidateCreate(
 	ctx context.Context,
-	obj runtime.Object,
+	stage *kargoapi.Stage,
 ) (admission.Warnings, error) {
-	stage := obj.(*kargoapi.Stage) // nolint: forcetypeassert
 	var errs field.ErrorList
 	if err := w.validateProjectFn(ctx, w.client, stage); err != nil {
 		var statusErr *apierrors.StatusError
@@ -180,10 +175,9 @@ func (w *webhook) ValidateCreate(
 
 func (w *webhook) ValidateUpdate(
 	_ context.Context,
-	_ runtime.Object,
-	newObj runtime.Object,
+	_ *kargoapi.Stage,
+	stage *kargoapi.Stage,
 ) (admission.Warnings, error) {
-	stage := newObj.(*kargoapi.Stage) // nolint: forcetypeassert
 	if errs := w.validateSpecFn(field.NewPath("spec"), stage.Spec); len(errs) > 0 {
 		return nil, apierrors.NewInvalid(stageGroupKind, stage.Name, errs)
 	}
@@ -192,7 +186,7 @@ func (w *webhook) ValidateUpdate(
 
 func (w *webhook) ValidateDelete(
 	context.Context,
-	runtime.Object,
+	*kargoapi.Stage,
 ) (admission.Warnings, error) {
 	// No-op
 	return nil, nil

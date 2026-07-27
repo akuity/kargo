@@ -18,7 +18,6 @@ export interface V1LifecycleHandler {
 +optional */
   httpGet?: V1HTTPGetAction;
   /** Sleep represents a duration that the container should sleep.
-+featureGate=PodLifecycleSleepAction
 +optional */
   sleep?: V1SleepAction;
   /** Deprecated. TCPSocket is NOT supported as a LifecycleHandler and kept

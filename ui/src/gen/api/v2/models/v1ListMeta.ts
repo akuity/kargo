@@ -5,6 +5,7 @@
  * REST API for Kargo
  * OpenAPI spec version: v1alpha1
  */
+import type { V1ShardInfo } from './v1ShardInfo';
 
 export interface V1ListMeta {
   /** continue may be set if the user set a limit on the number of items returned, and indicates that
@@ -37,4 +38,14 @@ More info: https://git.k8s.io/community/contributors/devel/sig-architecture/api-
   /** Deprecated: selfLink is a legacy read-only field that is no longer populated by the system.
 +optional */
   selfLink?: string;
+  /** shardInfo is set when the list is a filtered subset of the full collection,
+as selected by a shard selector on the request. It echoes back the selector
+so clients can verify which shard they received and merge sharded responses.
+Clients should not cache sharded list responses as a full representation
+of the collection.
+
+This is an alpha field and requires enabling the ShardedListAndWatch feature gate.
++featureGate=ShardedListAndWatch
++optional */
+  shardInfo?: V1ShardInfo;
 }

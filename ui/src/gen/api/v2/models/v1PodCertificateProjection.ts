@@ -5,6 +5,7 @@
  * REST API for Kargo
  * OpenAPI spec version: v1alpha1
  */
+import type { V1PodCertificateProjectionUserAnnotations } from './v1PodCertificateProjectionUserAnnotations';
 
 export interface V1PodCertificateProjection {
   /** Write the certificate chain at this path in the projected volume.
@@ -70,4 +71,18 @@ longer than 24 hours.
 
 +required */
   signerName?: string;
+  /** userAnnotations allow pod authors to pass additional information to
+the signer implementation.  Kubernetes does not restrict or validate this
+metadata in any way.
+
+These values are copied verbatim into the `spec.unverifiedUserAnnotations` field of
+the PodCertificateRequest objects that Kubelet creates.
+
+Entries are subject to the same validation as object metadata annotations,
+with the addition that all keys must be domain-prefixed. No restrictions
+are placed on values, except an overall size limitation on the entire field.
+
+Signers should document the keys and values they support. Signers should
+deny requests that contain keys they do not recognize. */
+  userAnnotations?: V1PodCertificateProjectionUserAnnotations;
 }

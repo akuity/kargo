@@ -71,7 +71,8 @@ The named signer controls chooses the format of the certificate it
 issues; consult the signer implementation's documentation to learn how to
 use the certificates it issues.
 
-+featureGate=PodCertificateProjection +optional */
++featureGate=PodCertificateProjection
++optional */
   podCertificate?: V1PodCertificateProjection;
   /** secret information about the secret data to project
 +optional */

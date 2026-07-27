@@ -99,7 +99,6 @@ already allocated to the pod.
   /** Restart policy for the container to manage the restart behavior of each
 container within a pod.
 You cannot set this field on ephemeral containers.
-+featureGate=SidecarContainers
 +optional */
   restartPolicy?: string;
   /** Represents a list of rules to be checked to determine if the

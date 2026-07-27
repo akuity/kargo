@@ -18,6 +18,7 @@ import type { V1PodReadinessGate } from './v1PodReadinessGate';
 import type { V1PodResourceClaim } from './v1PodResourceClaim';
 import type { V1ResourceRequirements } from './v1ResourceRequirements';
 import type { V1PodSchedulingGate } from './v1PodSchedulingGate';
+import type { V1PodSchedulingGroup } from './v1PodSchedulingGroup';
 import type { V1PodSecurityContext } from './v1PodSecurityContext';
 import type { V1Toleration } from './v1Toleration';
 import type { V1TopologySpreadConstraint } from './v1TopologySpreadConstraint';
@@ -106,7 +107,6 @@ loading a kernel module with CAP_SYS_MODULE.
 When set to false, a new userns is created for the pod. Setting false is useful for
 mitigating container breakout vulnerabilities even allowing users to run their
 containers as root without actually having root privileges on the host.
-This field is alpha-level and is only honored by servers that enable the UserNamespacesSupport feature.
 +k8s:conversion-gen=false
 +optional */
   hostUsers?: boolean;
@@ -243,8 +243,8 @@ and reserved before the Pod is allowed to start. The resources
 will be made available to those containers which consume them
 by name.
 
-This is an alpha field and requires enabling the
-DynamicResourceAllocation feature gate.
+This is a stable field but requires that the
+DynamicResourceAllocation feature gate is enabled.
 
 This field is immutable.
 
@@ -298,6 +298,22 @@ SchedulingGates can only be set at pod creation time, and be removed only afterw
 +listMapKey=name
 +optional */
   schedulingGates?: V1PodSchedulingGate[];
+  /** SchedulingGroup provides a reference to the immediate scheduling runtime
+grouping object that this Pod belongs to.
+This field is used by the scheduler to identify the group and apply the
+correct group scheduling policies. The association with a group also
+impacts other lifecycle aspects of a Pod that are relevant in a wider context
+of scheduling like preemption, resource attachment, etc. If not specified,
+the Pod is treated as a single unit in all of these aspects.
+The group object referenced by this field may not exist at the time the
+Pod is created.
+This field is immutable, but a group object with the same name may be
+recreated with different policies. Doing this during pod scheduling
+may result in the placement not conforming to the expected policies.
+
++featureGate=GenericWorkload
++optional */
+  schedulingGroup?: V1PodSchedulingGroup;
   /** SecurityContext holds pod-level security attributes and common container settings.
 Optional: Defaults to empty.  See type description for default values of each field.
 +optional */

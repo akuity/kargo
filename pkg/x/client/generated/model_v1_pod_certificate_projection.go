@@ -31,6 +31,8 @@ type V1PodCertificateProjection struct {
 	MaxExpirationSeconds *int32 `json:"maxExpirationSeconds,omitempty"`
 	// Kubelet's generated CSRs will be addressed to this signer.  +required
 	SignerName *string `json:"signerName,omitempty"`
+	// userAnnotations allow pod authors to pass additional information to the signer implementation.  Kubernetes does not restrict or validate this metadata in any way.  These values are copied verbatim into the `spec.unverifiedUserAnnotations` field of the PodCertificateRequest objects that Kubelet creates.  Entries are subject to the same validation as object metadata annotations, with the addition that all keys must be domain-prefixed. No restrictions are placed on values, except an overall size limitation on the entire field.  Signers should document the keys and values they support. Signers should deny requests that contain keys they do not recognize.
+	UserAnnotations *map[string]string `json:"userAnnotations,omitempty"`
 }
 
 // NewV1PodCertificateProjection instantiates a new V1PodCertificateProjection object
@@ -242,6 +244,38 @@ func (o *V1PodCertificateProjection) SetSignerName(v string) {
 	o.SignerName = &v
 }
 
+// GetUserAnnotations returns the UserAnnotations field value if set, zero value otherwise.
+func (o *V1PodCertificateProjection) GetUserAnnotations() map[string]string {
+	if o == nil || IsNil(o.UserAnnotations) {
+		var ret map[string]string
+		return ret
+	}
+	return *o.UserAnnotations
+}
+
+// GetUserAnnotationsOk returns a tuple with the UserAnnotations field value if set, nil otherwise
+// and a boolean to check if the value has been set.
+func (o *V1PodCertificateProjection) GetUserAnnotationsOk() (*map[string]string, bool) {
+	if o == nil || IsNil(o.UserAnnotations) {
+		return nil, false
+	}
+	return o.UserAnnotations, true
+}
+
+// HasUserAnnotations returns a boolean if a field has been set.
+func (o *V1PodCertificateProjection) HasUserAnnotations() bool {
+	if o != nil && !IsNil(o.UserAnnotations) {
+		return true
+	}
+
+	return false
+}
+
+// SetUserAnnotations gets a reference to the given map[string]string and assigns it to the UserAnnotations field.
+func (o *V1PodCertificateProjection) SetUserAnnotations(v map[string]string) {
+	o.UserAnnotations = &v
+}
+
 func (o V1PodCertificateProjection) MarshalJSON() ([]byte, error) {
 	toSerialize,err := o.ToMap()
 	if err != nil {
@@ -269,6 +303,9 @@ func (o V1PodCertificateProjection) ToMap() (map[string]interface{}, error) {
 	}
 	if !IsNil(o.SignerName) {
 		toSerialize["signerName"] = o.SignerName
+	}
+	if !IsNil(o.UserAnnotations) {
+		toSerialize["userAnnotations"] = o.UserAnnotations
 	}
 	return toSerialize, nil
 }
