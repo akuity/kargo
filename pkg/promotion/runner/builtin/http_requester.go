@@ -297,12 +297,20 @@ func (h *httpRequester) extractErrorMessageFromResponse(
 	return errorMessage, nil
 }
 
-func (h *httpRequester) buildRequest(ctx context.Context, cfg builtin.HTTPConfig) (*http.Request, error) {
+func (h *httpRequester) buildRequest(
+	ctx context.Context,
+	cfg builtin.HTTPConfig,
+) (*http.Request, error) {
 	method := cfg.Method
 	if method == "" {
 		method = http.MethodGet
 	}
-	req, err := http.NewRequestWithContext(ctx, method, cfg.URL, bytes.NewBufferString(cfg.Body))
+	req, err := http.NewRequestWithContext(
+		ctx,
+		method,
+		cfg.URL,
+		bytes.NewBufferString(cfg.Body),
+	)
 	if err != nil {
 		return nil, fmt.Errorf("error creating HTTP request: %w", err)
 	}
