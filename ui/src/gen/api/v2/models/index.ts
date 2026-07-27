@@ -214,6 +214,7 @@ export * from './stageSpec';
 export * from './stageStats';
 export * from './stageStatus';
 export * from './stageStatusAutoPromotionHolds';
+export * from './stageStatusEffectiveAutoPromotionHolds';
 export * from './stageStatusMetadata';
 export * from './stepExecutionMetadata';
 export * from './tagMap';

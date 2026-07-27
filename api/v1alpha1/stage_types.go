@@ -477,6 +477,11 @@ type StageStatus struct {
 	// "Warehouse/my-warehouse"); values describe the Promotion that established
 	// the hold.
 	AutoPromotionHolds map[string]AutoPromotionHold `json:"autoPromotionHolds,omitempty"`
+	// EffectiveAutoPromotionHolds is the set of auto-promotion holds in effect
+	// right now. It is recomputed every reconciliation from AutoPromotionHolds
+	// plus the newest in-flight Promotions, and unlike AutoPromotionHolds is not
+	// durable. Clients should read this map to reflect current hold state.
+	EffectiveAutoPromotionHolds map[string]AutoPromotionHold `json:"effectiveAutoPromotionHolds,omitempty"`
 }
 
 // AutoPromotionHold is a value in the AutoPromotionHolds map. It records the
