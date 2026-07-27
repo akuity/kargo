@@ -466,6 +466,11 @@ type StageStatus struct {
 	// "Warehouse/my-warehouse"); values describe the Promotion that established
 	// the hold.
 	AutoPromotionHolds map[string]AutoPromotionHold `json:"autoPromotionHolds,omitempty" protobuf:"bytes,16,rep,name=autoPromotionHolds" protobuf_key:"bytes,1,opt,name=key" protobuf_val:"bytes,2,opt,name=value"`
+	// EffectiveAutoPromotionHolds is the set of auto-promotion holds in effect
+	// right now. It is recomputed every reconciliation from AutoPromotionHolds
+	// plus the newest in-flight Promotions, and unlike AutoPromotionHolds is not
+	// durable. Clients should read this map to reflect current hold state.
+	EffectiveAutoPromotionHolds map[string]AutoPromotionHold `json:"effectiveAutoPromotionHolds,omitempty" protobuf:"bytes,17,rep,name=effectiveAutoPromotionHolds" protobuf_key:"bytes,1,opt,name=key" protobuf_val:"bytes,2,opt,name=value"`
 }
 
 // AutoPromotionHold is a value in the AutoPromotionHolds map. It records the

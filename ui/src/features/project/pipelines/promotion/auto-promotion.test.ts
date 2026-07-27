@@ -11,7 +11,7 @@ import {
 
 const stageWithHolds = (holds: Record<string, AutoPromotionHold>): Stage =>
   ({
-    status: { autoPromotionHolds: holds }
+    status: { effectiveAutoPromotionHolds: holds }
   }) as Stage;
 
 describe('auto-promotion helpers', () => {
