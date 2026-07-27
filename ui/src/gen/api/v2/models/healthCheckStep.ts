@@ -5,11 +5,10 @@
  * REST API for Kargo
  * OpenAPI spec version: v1alpha1
  */
-import type { HealthCheckStepConfig } from './healthCheckStepConfig';
 
 export interface HealthCheckStep {
   /** Config is the configuration for the directive. */
-  config?: HealthCheckStepConfig;
+  config?: unknown;
   /** Uses identifies a runner that can execute this step.
 
 +kubebuilder:validation:MinLength=1 */

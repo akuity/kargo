@@ -38,6 +38,7 @@ QUILL_VERSION			?= v0.5.1
 TILT_VERSION			?= v0.36.3
 K3D_VERSION				?= v5.8.3
 JQ_VERSION				?= 1.8.1
+OPENAPI_GENERATOR_CLI_VERSION	?= 7.23.0
 
 ################################################################################
 # Tool targets                                                                 #
@@ -50,6 +51,7 @@ QUILL		   	:= $(BIN_DIR)/quill-$(OS)-$(ARCH)-$(QUILL_VERSION)
 TILT            := $(BIN_DIR)/tilt-$(OS)-$(ARCH)-$(TILT_VERSION)
 K3D             := $(BIN_DIR)/k3d-$(OS)-$(ARCH)-$(K3D_VERSION)
 JQ              := $(BIN_DIR)/jq-$(OS)-$(ARCH)-$(JQ_VERSION)
+OPENAPI_GENERATOR_CLI := $(BIN_DIR)/openapi-generator-cli-$(OPENAPI_GENERATOR_CLI_VERSION).jar
 
 $(GOLANGCI_LINT):
 	$(call install-golangci-lint,$@,$(GOLANGCI_LINT_VERSION))
@@ -72,6 +74,9 @@ $(K3D):
 $(JQ):
 	$(call install-jq,$@,$(JQ_VERSION))
 
+$(OPENAPI_GENERATOR_CLI):
+	$(call install-openapi-generator-cli,$@,$(OPENAPI_GENERATOR_CLI_VERSION))
+
 ################################################################################
 # Symlink targets                                                              #
 ################################################################################
@@ -83,6 +88,7 @@ QUILL_LINK			:= $(BIN_DIR)/quill
 TILT_LINK			:= $(BIN_DIR)/tilt
 K3D_LINK			:= $(BIN_DIR)/k3d
 JQ_LINK				:= $(BIN_DIR)/jq
+OPENAPI_GENERATOR_CLI_LINK	:= $(BIN_DIR)/openapi-generator-cli.jar
 
 .PHONY: $(GOLANGCI_LINT_LINK)
 $(GOLANGCI_LINT_LINK): $(GOLANGCI_LINT)
@@ -112,11 +118,15 @@ $(K3D_LINK): $(K3D)
 $(JQ_LINK): $(JQ)
 	$(call create-symlink,$(JQ),$(JQ_LINK))
 
+.PHONY: $(OPENAPI_GENERATOR_CLI_LINK)
+$(OPENAPI_GENERATOR_CLI_LINK): $(OPENAPI_GENERATOR_CLI)
+	$(call create-symlink,$(OPENAPI_GENERATOR_CLI),$(OPENAPI_GENERATOR_CLI_LINK))
+
 ################################################################################
 # Alias targets                                                                #
 ################################################################################
 
-TOOLS := install-golangci-lint install-helm install-protoc install-quill install-tilt install-k3d install-jq
+TOOLS := install-golangci-lint install-helm install-protoc install-quill install-tilt install-k3d install-jq install-openapi-generator-cli
 
 .PHONY: install-tools
 install-tools: $(TOOLS)
@@ -141,6 +151,9 @@ install-k3d: $(K3D) $(K3D_LINK)
 
 .PHONY: install-jq
 install-jq: $(JQ) $(JQ_LINK)
+
+.PHONY: install-openapi-generator-cli
+install-openapi-generator-cli: $(OPENAPI_GENERATOR_CLI) $(OPENAPI_GENERATOR_CLI_LINK)
 
 ################################################################################
 # Clean up targets                                                             #
@@ -331,6 +344,22 @@ define install-jq
 	mkdir -p $(dir $(1)) ;\
 	curl -fsSL -o $(1) https://github.com/jqlang/jq/releases/download/jq-$(2)/jq-$(JQ_OS)-$(JQ_ARCH) ;\
 	chmod 0755 $(1) ;\
+	}
+endef
+
+# install-openapi-generator-cli installs the openapi-generator-cli JAR. It is
+# a dependency-free, platform-independent executable JAR (invoked via `java
+# -jar`), so unlike the other tools above there is no OS/ARCH-specific asset
+# to select and no executable bit to set.
+#
+# $(1) jar path
+# $(2) version
+define install-openapi-generator-cli
+	@[ -f $(1) ] || { \
+	set -e ;\
+	echo "Installing openapi-generator-cli $(2) to $(1)" ;\
+	mkdir -p $(dir $(1)) ;\
+	curl -fsSL -o $(1) https://repo1.maven.org/maven2/org/openapitools/openapi-generator-cli/$(2)/openapi-generator-cli-$(2).jar ;\
 	}
 endef
 

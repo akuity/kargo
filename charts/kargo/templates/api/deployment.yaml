@@ -104,44 +104,32 @@ spec:
           protocol: TCP
         {{- if .Values.api.probes.enabled }}
         startupProbe:
-          {{- if .Values.api.tls.enabled }}
-          httpsGet:
-            path: /healthz
-            port: 8080
-            scheme: HTTPS
-          {{- else }}
           httpGet:
             path: /healthz
             port: 8080
-          {{- end }}
+            {{- if .Values.api.tls.enabled }}
+            scheme: HTTPS
+            {{- end }}
           {{- with .Values.api.probes.startupProbe }}
           {{- toYaml . | nindent 10 }}
           {{- end }}
         livenessProbe:
-          {{- if .Values.api.tls.enabled }}
-          httpsGet:
-            path: /healthz
-            port: 8080
-            scheme: HTTPS
-          {{- else }}
           httpGet:
             path: /healthz
             port: 8080
-          {{- end }}
+            {{- if .Values.api.tls.enabled }}
+            scheme: HTTPS
+            {{- end }}
           {{- with .Values.api.probes.livenessProbe }}
           {{- toYaml . | nindent 10 }}
           {{- end }}
         readinessProbe:
-          {{- if .Values.api.tls.enabled }}
-          httpsGet:
-            path: /healthz
-            port: 8080
-            scheme: HTTPS
-          {{- else }}
           httpGet:
             path: /healthz
             port: 8080
-          {{- end }}
+            {{- if .Values.api.tls.enabled }}
+            scheme: HTTPS
+            {{- end }}
           {{- with .Values.api.probes.readinessProbe }}
           {{- toYaml . | nindent 10 }}
           {{- end }}

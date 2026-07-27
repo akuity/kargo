@@ -54,16 +54,16 @@ tests:
     template: templates/api/deployment.yaml
     asserts:
       - equal:
-          path: spec.template.spec.containers[0].livenessProbe.httpsGet.path
+          path: spec.template.spec.containers[0].livenessProbe.httpGet.path
           value: /healthz
       - equal:
-          path: spec.template.spec.containers[0].livenessProbe.httpsGet.port
+          path: spec.template.spec.containers[0].livenessProbe.httpGet.port
           value: 8080
       - equal:
-          path: spec.template.spec.containers[0].livenessProbe.httpsGet.scheme
+          path: spec.template.spec.containers[0].livenessProbe.httpGet.scheme
           value: HTTPS
       - notExists:
-          path: spec.template.spec.containers[0].livenessProbe.httpGet
+          path: spec.template.spec.containers[0].livenessProbe.httpsGet
 
   - it: uses an HTTP health probe when TLS is disabled
     template: templates/api/deployment.yaml
@@ -76,6 +76,8 @@ tests:
       - equal:
           path: spec.template.spec.containers[0].livenessProbe.httpGet.port
           value: 8080
+      - notExists:
+          path: spec.template.spec.containers[0].livenessProbe.httpGet.scheme
       - notExists:
           path: spec.template.spec.containers[0].livenessProbe.httpsGet
 

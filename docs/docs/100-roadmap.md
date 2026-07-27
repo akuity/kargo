@@ -29,17 +29,6 @@ every submission.
 
 ## In Progress
 
-### v1.11.0
-
-**Expected:** Mid-June, 2026
-
-v1.11.0 advances Kargo's event-driven model and continues improving operator
-and end-user experience. The release also advances the ongoing UI migration 
-from the deprecated ConnectRPC API to the REST API. Freight and Stage details
-aim to become richer with configurable links to external platforms.
-
-## Upcoming
-
 ### v1.12.0
 
 The following deprecated features are scheduled for **removal** in v1.12.0:
@@ -52,7 +41,23 @@ The following deprecated features are scheduled for **removal** in v1.12.0:
   `RebaseOrMerge`. Set the policy explicitly if you rely on unconditional
   rebase behavior.
 
+## Upcoming
+
+### v1.13.0
+
+Details TBA
+
 ## Completed
+
+### v1.11.0
+
+Introduced auto-promotion holds, letting Kargo respect a deliberate promotion
+of older Freight instead of immediately re-promoting the latest. Also delivered
+major gains in promotion responsiveness, lighter-weight Git discovery, and
+completed the UI's migration from the deprecated ConnectRPC API to the REST
+API.
+
+See [release notes](./80-release-notes/88-v1.11.0.md) for full details.
 
 ### v1.10.0
 

@@ -5,7 +5,6 @@
  * REST API for Kargo
  * OpenAPI spec version: v1alpha1
  */
-import type { Quantity } from './quantity';
 
 export interface V1EmptyDirVolumeSource {
   /** medium represents what type of storage medium should back this directory.
@@ -21,5 +20,5 @@ the SizeLimit specified here and the sum of memory limits of all containers in a
 The default is nil which means that the limit is undefined.
 More info: https://kubernetes.io/docs/concepts/storage/volumes#emptydir
 +optional */
-  sizeLimit?: Quantity;
+  sizeLimit?: string;
 }

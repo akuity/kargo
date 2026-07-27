@@ -112,6 +112,7 @@ Promotion payloads describe a promotion resource and the freight it targets.
 | `stageName`    | String                                                | Stage targeted by the promotion.                      | No               |
 | `createTime`   | String (RFC3339)                                      | Creation timestamp of the promotion resource.         | No               |
 | `applications` | Array\<[NamespacedName](#applications-entry-fields)\> | Argo CD applications resolved for the promotion step. | Yes              |
+| `rollback`     | Boolean                                               | Indicates whether the promotion is a rollback.        | Yes              |
 
 #### Applications Entry Fields
 

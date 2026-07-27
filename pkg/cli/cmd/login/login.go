@@ -29,7 +29,6 @@ import (
 	libConfig "github.com/akuity/kargo/pkg/cli/config"
 	"github.com/akuity/kargo/pkg/cli/option"
 	"github.com/akuity/kargo/pkg/cli/templates"
-	"github.com/akuity/kargo/pkg/client/generated/system"
 	"github.com/akuity/kargo/pkg/kubeclient"
 )
 
@@ -177,7 +176,7 @@ func (o *loginOptions) run(ctx context.Context) error {
 				return err
 			}
 		}
-		if bearerToken, err = adminLogin(o.ServerAddress, o.Password, o.InsecureTLS); err != nil {
+		if bearerToken, err = adminLogin(ctx, o.ServerAddress, o.Password, o.InsecureTLS); err != nil {
 			return err
 		}
 	case o.UseKubeconfig:
@@ -223,6 +222,7 @@ func (o *loginOptions) run(ctx context.Context) error {
 }
 
 func adminLogin(
+	ctx context.Context,
 	serverAddress string,
 	password string,
 	insecureTLS bool,
@@ -231,14 +231,18 @@ func adminLogin(
 	if err != nil {
 		return "", err
 	}
-	res, err := apiClient.System.GetPublicConfig(
-		system.NewGetPublicConfigParams(),
-	)
+	cfg, httpRes, err := apiClient.SystemAPI.GetPublicConfig(ctx).Execute()
+	if httpRes != nil {
+		defer httpRes.Body.Close()
+	}
 	if err != nil {
-		return "", fmt.Errorf("error retrieving public configuration from server: %w", err)
+		return "", fmt.Errorf(
+			"error retrieving public configuration from server: %w",
+			client.APIError(err),
+		)
 	}
 
-	if !res.Payload.AdminAccountEnabled {
+	if !cfg.GetAdminAccountEnabled() {
 		return "", errors.New("server does not support admin user login")
 	}
 
@@ -250,12 +254,18 @@ func adminLogin(
 		return "", err
 	}
 
-	loginRes, err := apiClient.System.AdminLogin(system.NewAdminLoginParams(), nil)
+	loginRes, httpRes, err := apiClient.SystemAPI.AdminLogin(ctx).Execute()
+	if httpRes != nil {
+		defer httpRes.Body.Close()
+	}
 	if err != nil {
-		return "", fmt.Errorf("error logging in as admin user: %w", err)
+		return "", fmt.Errorf(
+			"error logging in as admin user: %w",
+			client.APIError(err),
+		)
 	}
 
-	return loginRes.Payload.IDToken, nil
+	return loginRes.GetIdToken(), nil
 }
 
 // kubeconfigLogin gleans a bearer token from the local kubeconfig's current
@@ -287,20 +297,23 @@ func ssoLogin(
 	if err != nil {
 		return "", "", err
 	}
-	res, err := apiClient.System.GetPublicConfig(
-		system.NewGetPublicConfigParams(),
-	)
+	cfg, httpRes, err := apiClient.SystemAPI.GetPublicConfig(ctx).Execute()
+	if httpRes != nil {
+		defer httpRes.Body.Close()
+	}
 	if err != nil {
-		return "", "", fmt.Errorf("error retrieving public configuration from server: %w", err)
+		return "", "", fmt.Errorf(
+			"error retrieving public configuration from server: %w",
+			client.APIError(err),
+		)
 	}
 
-	svrCfg := res.Payload
-
-	if svrCfg.OidcConfig == nil {
+	if !cfg.HasOidcConfig() {
 		return "", "", errors.New("server does not support OpenID Connect")
 	}
+	svrCfg := cfg.GetOidcConfig()
 
-	scopes := svrCfg.OidcConfig.Scopes
+	scopes := svrCfg.GetScopes()
 
 	httpClient := cleanhttp.DefaultClient()
 	if insecureTLS {
@@ -312,7 +325,7 @@ func ssoLogin(
 	}
 	ctx = oidc.ClientContext(ctx, httpClient)
 
-	provider, err := oidc.NewProvider(ctx, svrCfg.OidcConfig.IssuerURL)
+	provider, err := oidc.NewProvider(ctx, svrCfg.GetIssuerUrl())
 	if err != nil {
 		return "", "", fmt.Errorf("error initializing OIDC provider: %w", err)
 	}
@@ -339,7 +352,7 @@ func ssoLogin(
 	}
 
 	oauthCfg := oauth2.Config{
-		ClientID: svrCfg.OidcConfig.ClientID,
+		ClientID: svrCfg.GetClientId(),
 		Endpoint: provider.Endpoint(),
 		Scopes:   scopes,
 		RedirectURL: fmt.Sprintf(
@@ -347,9 +360,9 @@ func ssoLogin(
 			strings.Split(listener.Addr().String(), ":")[1],
 		),
 	}
-	if svrCfg.OidcConfig.CliClientID != "" {
+	if svrCfg.GetCliClientId() != "" {
 		// There is an OIDC client ID specifically meant for CLI use
-		oauthCfg.ClientID = svrCfg.OidcConfig.CliClientID
+		oauthCfg.ClientID = svrCfg.GetCliClientId()
 	}
 
 	// Per the spec, this must be guessable with probability <= 2^(-128). The
