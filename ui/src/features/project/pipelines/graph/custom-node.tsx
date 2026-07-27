@@ -2,7 +2,7 @@ import { Handle, Position } from '@xyflow/react';
 import { Skeleton } from 'antd';
 
 import { RepoSubscription, WarehouseExpanded } from '@ui/extend/types';
-import { Stage, Warehouse } from '@ui/gen/api/v2/models';
+import { Stage } from '@ui/gen/api/v2/models';
 
 import { useGraphContext } from '../context/graph-context';
 import { StageNode } from '../nodes/stage-node';
@@ -20,7 +20,7 @@ export const CustomWarehouseNode = (props: {
   data: {
     label: string;
     value: WarehouseExpanded;
-    subscriptionParent?: Warehouse;
+    subscriptionParent?: WarehouseExpanded;
     warehouseY?: Record<string, number>;
   };
   id?: string;
@@ -85,7 +85,7 @@ export const CustomRepoSubscriptionNode = (props: {
   data: {
     label: string;
     value: RepoSubscription;
-    subscriptionParent: Warehouse;
+    subscriptionParent: WarehouseExpanded;
   };
   id?: string;
 }) => {

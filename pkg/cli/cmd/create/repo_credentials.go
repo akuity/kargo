@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"net/http"
 
 	"github.com/AlecAivazis/survey/v2"
 	"github.com/spf13/cobra"
@@ -18,9 +19,8 @@ import (
 	"github.com/akuity/kargo/pkg/cli/kubernetes"
 	"github.com/akuity/kargo/pkg/cli/option"
 	"github.com/akuity/kargo/pkg/cli/templates"
-	credclient "github.com/akuity/kargo/pkg/client/generated/credentials"
-	"github.com/akuity/kargo/pkg/client/generated/models"
 	"github.com/akuity/kargo/pkg/credentials"
+	kargogen "github.com/akuity/kargo/pkg/x/client/generated"
 )
 
 type createRepoCredentialsOptions struct {
@@ -238,42 +238,38 @@ func (o *createRepoCredentialsOptions) run(ctx context.Context) error {
 		o.Type = credentials.TypeImage.String()
 	}
 
-	createReq := &models.CreateRepoCredentialsRequest{
-		Description:    o.Description,
-		Name:           o.Name,
-		Password:       o.Password,
-		RepoURL:        o.RepoURL,
-		RepoURLIsRegex: o.Regex,
-		Type:           o.Type,
-		Username:       o.Username,
+	body := kargogen.CreateRepoCredentialsRequest{
+		Description:    &o.Description,
+		Name:           &o.Name,
+		Password:       &o.Password,
+		RepoUrl:        &o.RepoURL,
+		RepoUrlIsRegex: &o.Regex,
+		Type:           &o.Type,
+		Username:       &o.Username,
 	}
 
-	var payload any
+	var res *kargogen.V1Secret
+	var httpRes *http.Response
 	switch {
 	case o.Shared:
-		var res *credclient.CreateSharedRepoCredentialsCreated
-		if res, err = apiClient.Credentials.CreateSharedRepoCredentials(
-			credclient.NewCreateSharedRepoCredentialsParams().
-				WithBody(createReq),
-			nil,
-		); err != nil {
-			return fmt.Errorf("create shared credentials: %w", err)
+		res, httpRes, err = apiClient.CredentialsAPI.CreateSharedRepoCredentials(ctx).Body(body).Execute()
+		if httpRes != nil {
+			_ = httpRes.Body.Close()
 		}
-		payload = res.GetPayload()
+		if err != nil {
+			return fmt.Errorf("create shared credentials: %w", client.APIError(err))
+		}
 	default:
-		var res *credclient.CreateProjectRepoCredentialsCreated
-		if res, err = apiClient.Credentials.CreateProjectRepoCredentials(
-			credclient.NewCreateProjectRepoCredentialsParams().
-				WithProject(o.Project).
-				WithBody(createReq),
-			nil,
-		); err != nil {
-			return fmt.Errorf("create project credentials: %w", err)
+		res, httpRes, err = apiClient.CredentialsAPI.CreateProjectRepoCredentials(ctx, o.Project).Body(body).Execute()
+		if httpRes != nil {
+			_ = httpRes.Body.Close()
 		}
-		payload = res.GetPayload()
+		if err != nil {
+			return fmt.Errorf("create project credentials: %w", client.APIError(err))
+		}
 	}
 
-	resJSON, err := json.Marshal(payload)
+	resJSON, err := json.Marshal(res)
 	if err != nil {
 		return fmt.Errorf("marshal response: %w", err)
 	}

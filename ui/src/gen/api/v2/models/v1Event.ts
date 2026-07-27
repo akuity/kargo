@@ -5,7 +5,6 @@
  * REST API for Kargo
  * OpenAPI spec version: v1alpha1
  */
-import type { V1MicroTime } from './v1MicroTime';
 import type { V1ObjectReference } from './v1ObjectReference';
 import type { V1ObjectMeta } from './v1ObjectMeta';
 import type { V1EventSeries } from './v1EventSeries';
@@ -26,7 +25,7 @@ More info: https://git.k8s.io/community/contributors/devel/sig-architecture/api-
   count?: number;
   /** Time when this Event was first observed.
 +optional */
-  eventTime?: V1MicroTime;
+  eventTime?: string;
   /** The time at which the event was first recorded. (Time of server receipt is in TypeMeta.)
 +optional */
   firstTimestamp?: string;

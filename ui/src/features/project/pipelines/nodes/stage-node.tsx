@@ -81,7 +81,7 @@ export const StageNode = (props: { stage: Stage }) => {
     }
   });
 
-  const dropdownItems = useGetPromotionDropdownItems(props.stage);
+  const { dropdownItems, resumeAutoPromotionDrawer } = useGetPromotionDropdownItems(props.stage);
 
   let descriptionItems: ReactNode;
 
@@ -245,6 +245,8 @@ export const StageNode = (props: { stage: Stage }) => {
           </Link>
         )}
       </Card>
+
+      {resumeAutoPromotionDrawer}
 
       {!graphContext?.stackedNodesParents?.includes(stageNodeIndex) &&
         totalSubscribersToThisStage > 0 && (

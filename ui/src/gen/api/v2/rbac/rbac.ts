@@ -24,13 +24,9 @@ import type {
 import type {
   CreateAPITokenRequestBody,
   CreateProjectRoleBodyBody,
-  GetProjectRole200,
-  GetSystemRole200,
   GrantRequest,
   ListProjectAPITokensParams,
-  ListProjectRoles200,
   ListSystemAPITokensParams,
-  ListSystemRoles200,
   RbacRole,
   RevokeRequest,
   V1Secret,
@@ -465,7 +461,7 @@ RoleList resource.
  * @summary List project-level Kargo Role virtual resources
  */
 export type listProjectRolesResponse200 = {
-  data: ListProjectRoles200;
+  data: unknown;
   status: 200;
 };
 
@@ -889,7 +885,7 @@ Kubernetes resources.
  * @summary Retrieve a project-level Kargo Role virtual resource
  */
 export type getProjectRoleResponse200 = {
-  data: GetProjectRole200;
+  data: unknown;
   status: 200;
 };
 
@@ -1717,7 +1713,7 @@ RoleList resource.
  * @summary List system-level Kargo Role virtual resources
  */
 export type listSystemRolesResponse200 = {
-  data: ListSystemRoles200;
+  data: unknown;
   status: 200;
 };
 
@@ -1843,7 +1839,7 @@ Kubernetes resources.
  * @summary Retrieve a system-level Kargo Role virtual resource
  */
 export type getSystemRoleResponse200 = {
-  data: GetSystemRole200;
+  data: unknown;
   status: 200;
 };
 

@@ -39,7 +39,6 @@ import type {
   PkgServerQueryFreightsResponse,
   Project,
   ProjectConfig,
-  PromoteDownstream201,
   PromoteDownstreamRequest,
   PromoteToStageRequest,
   Promotion,
@@ -3795,7 +3794,7 @@ downstream Stages.
  * @summary Promote downstream
  */
 export type promoteDownstreamResponse201 = {
-  data: PromoteDownstream201;
+  data: unknown;
   status: 201;
 };
 

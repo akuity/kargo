@@ -31,7 +31,7 @@ ARG CGO_ENABLED=0
 
 WORKDIR /kargo
 COPY ["api/go.mod", "api/go.sum", "api/"]
-COPY ["pkg/client/generated/go.mod", "pkg/client/generated/go.sum", "pkg/client/generated/"]
+COPY ["pkg/x/client/generated/go.mod", "pkg/x/client/generated/"]
 COPY ["go.mod", "go.sum", "./"]
 RUN --mount=type=cache,target=/go/pkg/mod --mount=type=cache,target=/root/.cache/go-build go mod download
 COPY api/ api/
@@ -71,10 +71,6 @@ ARG TARGETOS
 ARG TARGETARCH
 
 WORKDIR /tools
-
-RUN GRPC_HEALTH_PROBE_VERSION=v0.4.52 && \
-    curl -fL -o /tools/grpc_health_probe https://github.com/grpc-ecosystem/grpc-health-probe/releases/download/${GRPC_HEALTH_PROBE_VERSION}/grpc_health_probe-${TARGETOS}-${TARGETARCH} && \
-    chmod +x /tools/grpc_health_probe
 
 # Helm is required by the kustomize-build promotion step's Helm plugin. We source
 # the binary directly from Helm's official releases (rather than a distro package)

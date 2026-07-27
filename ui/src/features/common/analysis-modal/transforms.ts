@@ -1,6 +1,5 @@
 // eslint-disable-file @typescript-eslint/ban-ts-comment
 import {
-  IntOrString,
   RolloutsAnalysisRunSpec,
   RolloutsAnalysisRunStatus,
   RolloutsArgument,
@@ -23,20 +22,21 @@ import {
   TransformedValueObject
 } from './types';
 
-export const isFiniteNumber = (value?: IntOrString | number | string) => {
+// Legacy object form of intstr.IntOrString; over REST it serializes as a
+// raw number or string, but tolerate the object form too.
+type IntOrString = { intVal?: number; strVal?: string };
+
+export const isFiniteNumber = (value?: unknown) => {
   if (!value) {
     return false;
   }
   if (Number.isFinite((value as IntOrString).intVal)) {
     return Number.isFinite((value as IntOrString).intVal);
   }
-  return Number.isFinite(Number(value.toString()));
+  return Number.isFinite(Number(String(value)));
 };
 
-export const getFiniteNumber = (
-  value?: IntOrString | number | string,
-  fallback?: number
-): number => {
+export const getFiniteNumber = (value?: unknown, fallback?: number): number => {
   if (!value || !isFiniteNumber(value)) {
     return fallback ? fallback : 0;
   }

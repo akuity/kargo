@@ -21,6 +21,12 @@ set -euo pipefail
 #    markers. swag copies these markers into description strings but does not
 #    translate them into the OpenAPI `required` array, causing generated
 #    TypeScript clients to treat all fields as optional.
+#
+# 4. Convert bare object schemas to typeless (any-value) schemas. Fields whose
+#    values may be ANY JSON (apiextensions.JSON, intstr.IntOrString) can only
+#    be expressed to swag as "object" (see .swaggo), but their wire values may
+#    be arrays or scalars. A typeless schema is the correct representation and
+#    prevents generated clients from mistyping or rejecting such values.
 
 SWAGGER_FILE="${1:?Usage: fix-swagger-spec.sh <swagger.json>}"
 
@@ -131,7 +137,26 @@ echo "Renamed swagger definitions to short names."
 
 echo "Added required arrays from kubebuilder validation markers."
 
-# --- Pass 4: Validate no broken $ref pointers remain -------------------------
+# --- Pass 4: Convert bare object schemas to typeless (any-value) schemas -----
+#
+# A schema of exactly {"type": "object"} (no properties, no
+# additionalProperties) is how swag renders values that may be ANY JSON.
+# Dropping the "type" makes the schema truly untyped, which is what those
+# values actually are.
+
+"$JQ" '
+  walk(
+    if (type == "object" and .type? == "object"
+        and (has("properties") | not)
+        and (has("additionalProperties") | not))
+    then del(.type)
+    else . end
+  )
+' "$SWAGGER_FILE" > "${SWAGGER_FILE}.tmp" && mv "${SWAGGER_FILE}.tmp" "$SWAGGER_FILE"
+
+echo "Converted bare object schemas to typeless schemas."
+
+# --- Pass 5: Validate no broken $ref pointers remain -------------------------
 
 "$JQ" -e '
   [.. | objects | select(has("$ref")) | .["$ref"] |

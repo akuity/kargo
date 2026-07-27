@@ -5,7 +5,7 @@ type OriginLike = {
   name?: string;
 };
 
-type AutoPromotionHoldEntry = {
+export type AutoPromotionHoldEntry = {
   key: string;
   hold: AutoPromotionHold;
   origin?: OriginLike;

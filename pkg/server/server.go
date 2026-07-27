@@ -14,7 +14,6 @@ import (
 	"strings"
 	"time"
 
-	"connectrpc.com/grpchealth"
 	"github.com/klauspost/compress/gzhttp"
 	"github.com/rs/cors"
 	"k8s.io/apimachinery/pkg/runtime/schema"
@@ -203,7 +202,7 @@ func (s *server) Serve(ctx context.Context, l net.Listener) error {
 	if err != nil {
 		return fmt.Errorf("error initializing handler options: %w", err)
 	}
-	mux.Handle(grpchealth.NewHandler(NewHealthChecker(), opts))
+	mux.Handle("/healthz", newHealthHandler())
 	path, svcHandler := svcv1alpha1connect.NewKargoServiceHandler(s, opts)
 	mux.Handle(path, svcHandler)
 
@@ -302,22 +301,17 @@ func (s *server) Serve(ctx context.Context, l net.Listener) error {
 // StripPrefix layer removes the basePath from each incoming URL before
 // dispatching.
 //
-// The gRPC health endpoint stays addressable at the root in parallel with
+// The health check endpoint stays addressable at the root in parallel with
 // the basePath-wrapped routes, so liveness / readiness probes that hit the
 // Pod directly (never traversing the ingress that would otherwise prepend
-// the basePath) keep working without basePath awareness. The k8s native
-// gRPC probe and grpc_health_probe both send requests to the well-known
-// `/grpc.health.v1.Health/...` path with no path-prefixing support, so the
-// only way to make probes work transparently under any deployed basePath
-// is to leave their well-known endpoint reachable at root.
+// the basePath) keep working without basePath awareness.
 func wrapWithBasePath(inner http.Handler, basePath string) http.Handler {
 	if basePath == "" {
 		return inner
 	}
-	const grpcHealthPathPrefix = "/grpc.health.v1.Health/"
 	stripped := http.StripPrefix(basePath, inner)
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		if strings.HasPrefix(r.URL.Path, grpcHealthPathPrefix) {
+		if r.URL.Path == "/healthz" {
 			inner.ServeHTTP(w, r)
 			return
 		}

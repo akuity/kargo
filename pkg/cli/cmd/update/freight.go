@@ -11,7 +11,6 @@ import (
 	"github.com/akuity/kargo/pkg/cli/config"
 	"github.com/akuity/kargo/pkg/cli/option"
 	"github.com/akuity/kargo/pkg/cli/templates"
-	"github.com/akuity/kargo/pkg/client/generated/core"
 )
 
 type updateFreightAliasOptions struct {
@@ -118,14 +117,15 @@ func (o *updateFreightAliasOptions) run(ctx context.Context) error {
 		freightNameOrAlias = o.OldAlias
 	}
 
-	if _, err = apiClient.Core.PatchFreightAlias(
-		core.NewPatchFreightAliasParams().
-			WithProject(o.Project).
-			WithFreightNameOrAlias(freightNameOrAlias).
-			WithNewAlias(o.NewAlias),
-		nil,
-	); err != nil {
-		return fmt.Errorf("patch freight alias: %w", err)
+	httpRes, err := apiClient.CoreAPI.
+		PatchFreightAlias(ctx, o.Project, freightNameOrAlias).
+		NewAlias(o.NewAlias).
+		Execute()
+	if httpRes != nil {
+		_ = httpRes.Body.Close()
+	}
+	if err != nil {
+		return fmt.Errorf("patch freight alias: %w", client.APIError(err))
 	}
 	return nil
 }

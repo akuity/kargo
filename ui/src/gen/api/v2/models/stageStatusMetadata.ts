@@ -11,4 +11,4 @@
 This is useful for storing additional information about the Stage
 that can be shared across promotions, verifications, or other processes.
  */
-export type StageStatusMetadata = { [key: string]: { [key: string]: unknown } };
+export type StageStatusMetadata = { [key: string]: unknown };

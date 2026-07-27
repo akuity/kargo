@@ -39,12 +39,12 @@ func GetCredential(ctx context.Context, cfg *rest.Config) (string, error) {
 	// #nosec G704 -- This code executes client-side and does not, therefore,
 	// represent a vector for SSRF attacks.
 	res, err := rc.Do(req)
-	defer func() {
-		_ = res.Body.Close()
-	}()
 	if err != nil {
 		return "", err
 	}
+	defer func() {
+		_ = res.Body.Close()
+	}()
 	return strings.TrimPrefix(
 		res.Header.Get(xKargoUserCredentialHeader),
 		"Bearer ",

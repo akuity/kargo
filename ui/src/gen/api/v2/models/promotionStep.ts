@@ -5,7 +5,6 @@
  * REST API for Kargo
  * OpenAPI spec version: v1alpha1
  */
-import type { PromotionStepConfig } from './promotionStepConfig';
 import type { PromotionStepRetry } from './promotionStepRetry';
 import type { PromotionTaskReference } from './promotionTaskReference';
 import type { ExpressionVariable } from './expressionVariable';
@@ -17,7 +16,7 @@ export interface PromotionStep {
 only by each PromotionStep's implementation. It is legal to utilize
 expressions in defining values at any level of this block.
 See https://docs.kargo.io/user-guide/reference-docs/expressions for details. */
-  config?: PromotionStepConfig;
+  config?: unknown;
   /** ContinueOnError is a boolean value that, if set to true, will cause the
 Promotion to continue executing the next step even if this step fails. It
 also will not permit this failure to impact the overall status of the
