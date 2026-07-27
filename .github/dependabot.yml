@@ -44,15 +44,6 @@ updates:
       day: "sunday"
     commit-message:
       prefix: "chore(deps):"
-    # k8s.io/grpc upgrades are blocked by a dependency conflict; bump these
-    # manually once that's resolved instead of bundling them into a group.
-    ignore:
-      - dependency-name: "k8s.io/*"
-      - dependency-name: "sigs.k8s.io/controller-runtime"
-      - dependency-name: "sigs.k8s.io/controller-tools"
-      - dependency-name: "sigs.k8s.io/cli-utils"
-      - dependency-name: "sigs.k8s.io/kustomize/*"
-      - dependency-name: "google.golang.org/grpc*"
     groups:
       go-patch:
         update-types:
@@ -71,15 +62,6 @@ updates:
       day: "sunday"
     commit-message:
       prefix: "chore(deps/api):"
-    # k8s.io/grpc upgrades are blocked by a dependency conflict; bump these
-    # manually once that's resolved instead of bundling them into a group.
-    ignore:
-      - dependency-name: "k8s.io/*"
-      - dependency-name: "sigs.k8s.io/controller-runtime"
-      - dependency-name: "sigs.k8s.io/controller-tools"
-      - dependency-name: "sigs.k8s.io/cli-utils"
-      - dependency-name: "sigs.k8s.io/kustomize/*"
-      - dependency-name: "google.golang.org/grpc*"
     groups:
       go-patch:
         update-types:
@@ -92,21 +74,14 @@ updates:
         - "major"
 
   - package-ecosystem: "gomod"
-    directory: "/pkg"
+    directories:
+    - "/pkg/x/client/fidelity"
+    - "/pkg/x/client/generated"
     schedule:
       interval: "weekly"
       day: "sunday"
     commit-message:
-      prefix: "chore(deps/pkg):"
-    # k8s.io/grpc upgrades are blocked by a dependency conflict; bump these
-    # manually once that's resolved instead of bundling them into a group.
-    ignore:
-      - dependency-name: "k8s.io/*"
-      - dependency-name: "sigs.k8s.io/controller-runtime"
-      - dependency-name: "sigs.k8s.io/controller-tools"
-      - dependency-name: "sigs.k8s.io/cli-utils"
-      - dependency-name: "sigs.k8s.io/kustomize/*"
-      - dependency-name: "google.golang.org/grpc*"
+      prefix: "chore(deps/client):"
     groups:
       go-patch:
         update-types:
