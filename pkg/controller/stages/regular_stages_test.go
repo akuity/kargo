@@ -7678,7 +7678,7 @@ func TestRegularStageReconciler_autoPromoteFreight(t *testing.T) {
 				t *testing.T,
 				_ *fakeevent.EventRecorder,
 				c client.Client,
-				status kargoapi.StageStatus,
+				_ kargoapi.StageStatus,
 				err error,
 			) {
 				require.NoError(t, err)
