@@ -18,6 +18,14 @@ input through a form in the Kargo UI. You describe the fields to collect with a
 JSON schema; the UI renders a form from it, validates the submission against it,
 and exposes the submitted values as step outputs for later steps to use.
 
+:::warning
+Do not reference secrets in this step's config. Kargo renders the config
+(evaluating expressions, including `secret()`) before the step runs, and the
+rendered result is stored on the step's record and shown in the Kargo UI. Any
+secret pulled into the config this way may be exposed to anyone who can view the
+Promotion.
+:::
+
 ## Responders
 
 The `responders` field lists the rules that decide who may submit input. The
@@ -38,7 +46,7 @@ A rule sets either `claim` and `value`, or `role` — not both.
 
 | Name           | Type       | Required | Description                                                                                                                                                                                                       |
 | -------------- | ---------- | -------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `schema`       | `object`   | Y        | A complete JSON schema describing the values to collect. The UI renders a form from it and validates the submission against it. Declare optional fields by leaving them out of the schema's own `required` list. |
+| `schema`       | `object`   | Y        | A complete [JSON Schema](https://json-schema.org/) (draft-04, draft-06, or draft-07) describing the values to collect. The UI renders a form from it and validates the submission against it. Declare optional fields by leaving them out of the schema's own `required` list. |
 | `responders`   | `[]object` | N        | Rules identifying who may submit input. See [Responders](#responders). When empty, any authenticated user who can see the Promotion may respond.                                                                 |
 | `display`      | `string`   | N        | An optional description shown alongside the input form in the UI.                                                                                                                                                |
 | `pollInterval` | `string`   | N        | How often to re-check for input as a fallback (the step also wakes immediately when input arrives). A Go duration string. Defaults to `30s`.                                                                     |

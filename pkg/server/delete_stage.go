@@ -1,0 +1,41 @@
+package server
+
+import (
+	"net/http"
+
+	"github.com/gin-gonic/gin"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+
+	kargoapi "github.com/akuity/kargo/api/v1alpha1"
+)
+
+// @id DeleteStage
+// @Summary Delete a Stage
+// @Description Delete a Stage resource from a project's namespace.
+// @Tags Core, Project-Level
+// @Security BearerAuth
+// @Param project path string true "Project name"
+// @Param stage path string true "Stage name"
+// @Success 204 "Deleted successfully"
+// @Router /v1beta1/projects/{project}/stages/{stage} [delete]
+func (s *server) deleteStage(c *gin.Context) {
+	ctx := c.Request.Context()
+
+	project := c.Param("project")
+	name := c.Param("stage")
+
+	if err := s.client.Delete(
+		ctx,
+		&kargoapi.Stage{
+			ObjectMeta: metav1.ObjectMeta{
+				Namespace: project,
+				Name:      name,
+			},
+		},
+	); err != nil {
+		_ = c.Error(err)
+		return
+	}
+
+	c.Status(http.StatusNoContent)
+}

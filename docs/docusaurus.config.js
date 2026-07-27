@@ -91,11 +91,7 @@ const config = {
                 return item;
               });
             }
-            // sidebars.js already lists the deprecated gRPC API documentation 
-            // page, so we need to filter it out here to avoid listing it twice.
-            return addBadges(sidebarItems.filter(
-              (item) => /** @type {any} */ (item).id !== 'api-documentation')
-            );
+            return addBadges(sidebarItems);
           },
         },
         blog: false,
@@ -145,9 +141,6 @@ const config = {
         description: 'Kargo is a Kubernetes-native continuous promotion platform for GitOps workflows.',
         excludeImports: true,
         removeDuplicateHeadings: true,
-        ignoreFiles: [
-          'api-documentation*',
-        ],
       },
     ],
   ],

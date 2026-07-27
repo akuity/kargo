@@ -19,7 +19,7 @@ import (
 // Freight represents a collection of versioned artifacts.
 type Freight struct {
 	metav1.TypeMeta   `json:",inline"`
-	metav1.ObjectMeta `json:"metadata,omitempty" protobuf:"bytes,1,opt,name=metadata"`
+	metav1.ObjectMeta `json:"metadata,omitempty"`
 	// Alias is a human-friendly alias for a piece of Freight. This is an optional
 	// field. A defaulting webhook will sync this field with the value of the
 	// kargo.akuity.io/alias label. When the alias label is not present or differs
@@ -29,27 +29,27 @@ type Freight struct {
 	// of the alias label. If this field is empty and the alias label is not
 	// present, the defaulting webhook will choose an available alias and assign
 	// it to both the field and label.
-	Alias string `json:"alias,omitempty" protobuf:"bytes,7,opt,name=alias"`
+	Alias string `json:"alias,omitempty"`
 	// DiscoveredAt is the time at which this Freight was discovered/created.
 	// A defaulting webhook initializes this to the creation time of the Freight.
 	//
 	// +optional
-	DiscoveredAt *metav1.Time `json:"discoveredAt,omitempty" protobuf:"bytes,11,opt,name=discoveredAt"`
+	DiscoveredAt *metav1.Time `json:"discoveredAt,omitempty"`
 	// Origin describes a kind of Freight in terms of its origin.
 	//
 	// +kubebuilder:validation:Required
-	Origin FreightOrigin `json:"origin,omitempty" protobuf:"bytes,9,opt,name=origin"`
+	Origin FreightOrigin `json:"origin,omitempty"`
 	// Commits describes specific Git repository commits.
-	Commits []GitCommit `json:"commits,omitempty" protobuf:"bytes,3,rep,name=commits"`
+	Commits []GitCommit `json:"commits,omitempty"`
 	// Images describes specific versions of specific container images.
-	Images []Image `json:"images,omitempty" protobuf:"bytes,4,rep,name=images"`
+	Images []Image `json:"images,omitempty"`
 	// Charts describes specific versions of specific Helm charts.
-	Charts []Chart `json:"charts,omitempty" protobuf:"bytes,5,rep,name=charts"`
+	Charts []Chart `json:"charts,omitempty"`
 	// Artifacts describes specific versions of artifacts other
 	// than Git repository commits, container images, and Helm charts.
-	Artifacts []ArtifactReference `json:"artifacts,omitempty" protobuf:"bytes,10,rep,name=artifacts"`
+	Artifacts []ArtifactReference `json:"artifacts,omitempty"`
 	// Status describes the current status of this Freight.
-	Status FreightStatus `json:"status,omitempty" protobuf:"bytes,6,opt,name=status"`
+	Status FreightStatus `json:"status,omitempty"`
 }
 
 func (f *Freight) GetStatus() *FreightStatus {
@@ -69,22 +69,22 @@ func (f *Freight) EffectiveDiscoveredAt() time.Time {
 // GitCommit describes a specific commit from a specific Git repository.
 type GitCommit struct {
 	// RepoURL is the URL of a Git repository.
-	RepoURL string `json:"repoURL,omitempty" protobuf:"bytes,1,opt,name=repoURL"`
+	RepoURL string `json:"repoURL,omitempty"`
 	// ID is the ID of a specific commit in the Git repository specified by
 	// RepoURL.
-	ID string `json:"id,omitempty" protobuf:"bytes,2,opt,name=id"`
+	ID string `json:"id,omitempty"`
 	// Branch denotes the branch of the repository where this commit was found.
-	Branch string `json:"branch,omitempty" protobuf:"bytes,3,opt,name=branch"`
+	Branch string `json:"branch,omitempty"`
 	// Tag denotes a tag in the repository that matched selection criteria and
 	// resolved to this commit.
-	Tag string `json:"tag,omitempty" protobuf:"bytes,4,opt,name=tag"`
+	Tag string `json:"tag,omitempty"`
 	// Message is the message associated with the commit. At present, this only
 	// contains the first line (subject) of the commit message.
-	Message string `json:"message,omitempty" protobuf:"bytes,6,opt,name=message"`
+	Message string `json:"message,omitempty"`
 	// Author is the author of the commit.
-	Author string `json:"author,omitempty" protobuf:"bytes,7,opt,name=author"`
+	Author string `json:"author,omitempty"`
 	// Committer is the person who committed the commit.
-	Committer string `json:"committer,omitempty" protobuf:"bytes,8,opt,name=committer"`
+	Committer string `json:"committer,omitempty"`
 }
 
 // DeepEquals returns a bool indicating whether the receiver deep-equals the
@@ -120,19 +120,19 @@ func (g *GitCommit) Equals(rhs *GitCommit) bool {
 // FreightStatus describes a piece of Freight's most recently observed state.
 type FreightStatus struct {
 	// CurrentlyIn describes the Stages in which this Freight is currently in use.
-	CurrentlyIn map[string]CurrentStage `json:"currentlyIn,omitempty" protobuf:"bytes,3,rep,name=currentlyIn" protobuf_key:"bytes,1,opt,name=key" protobuf_val:"bytes,2,opt,name=value"`
+	CurrentlyIn map[string]CurrentStage `json:"currentlyIn,omitempty"`
 	// VerifiedIn describes the Stages in which this Freight has been verified
 	// through promotion and subsequent health checks.
-	VerifiedIn map[string]VerifiedStage `json:"verifiedIn,omitempty" protobuf:"bytes,1,rep,name=verifiedIn" protobuf_key:"bytes,1,opt,name=key" protobuf_val:"bytes,2,opt,name=value"`
+	VerifiedIn map[string]VerifiedStage `json:"verifiedIn,omitempty"`
 	// ApprovedFor describes the Stages for which this Freight has been approved
 	// preemptively/manually by a user. This is useful for hotfixes, where one
 	// might wish to promote a piece of Freight to a given Stage without
 	// transiting the entire pipeline.
-	ApprovedFor map[string]ApprovedStage `json:"approvedFor,omitempty" protobuf:"bytes,2,rep,name=approvedFor" protobuf_key:"bytes,1,opt,name=key" protobuf_val:"bytes,2,opt,name=value"`
+	ApprovedFor map[string]ApprovedStage `json:"approvedFor,omitempty"`
 	// Metadata is a map of arbitrary metadata associated with the Freight.
 	// This is useful for storing additional information about the Freight
 	// or Promotion that can be shared across steps or stages.
-	Metadata map[string]apiextensionsv1.JSON `json:"metadata,omitempty" protobuf:"bytes,4,rep,name=metadata" protobuf_key:"bytes,1,opt,name=key" protobuf_val:"bytes,2,opt,name=value"`
+	Metadata map[string]apiextensionsv1.JSON `json:"metadata,omitempty"`
 }
 
 // IsCurrentlyIn returns whether the Freight is currently in the specified
@@ -290,26 +290,26 @@ type CurrentStage struct {
 	// Since is the time at which the Stage most recently started using the
 	// Freight. This can be used to calculate how long the Freight has been in use
 	// by the Stage.
-	Since *metav1.Time `json:"since,omitempty" protobuf:"bytes,1,opt,name=since"`
+	Since *metav1.Time `json:"since,omitempty"`
 }
 
 // VerifiedStage describes a Stage in which Freight has been verified.
 type VerifiedStage struct {
 	// VerifiedAt is the time at which the Freight was verified in the Stage.
-	VerifiedAt *metav1.Time `json:"verifiedAt,omitempty" protobuf:"bytes,1,opt,name=verifiedAt"`
+	VerifiedAt *metav1.Time `json:"verifiedAt,omitempty"`
 	// LongestCompletedSoak represents the longest definite time interval wherein
 	// the Freight was in CONTINUOUS use by the Stage. This value is updated as
 	// Freight EXITS the Stage. If the Freight is currently in use by the Stage,
 	// the time elapsed since the Freight ENTERED the Stage is its current soak
 	// time, which may exceed the value of this field.
-	LongestCompletedSoak *metav1.Duration `json:"longestSoak,omitempty" protobuf:"bytes,2,opt,name=longestSoak"`
+	LongestCompletedSoak *metav1.Duration `json:"longestSoak,omitempty"`
 }
 
 // ApprovedStage describes a Stage for which Freight has been (manually)
 // approved.
 type ApprovedStage struct {
 	// ApprovedAt is the time at which the Freight was approved for the Stage.
-	ApprovedAt *metav1.Time `json:"approvedAt,omitempty" protobuf:"bytes,1,opt,name=approvedAt"`
+	ApprovedAt *metav1.Time `json:"approvedAt,omitempty"`
 }
 
 // +kubebuilder:object:root=true
@@ -317,6 +317,6 @@ type ApprovedStage struct {
 // FreightList is a list of Freight resources.
 type FreightList struct {
 	metav1.TypeMeta `json:",inline"`
-	metav1.ListMeta `json:"metadata,omitempty" protobuf:"bytes,1,opt,name=metadata"`
-	Items           []Freight `json:"items" protobuf:"bytes,2,rep,name=items"`
+	metav1.ListMeta `json:"metadata,omitempty"`
+	Items           []Freight `json:"items"`
 }
