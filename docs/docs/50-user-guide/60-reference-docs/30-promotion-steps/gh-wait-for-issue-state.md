@@ -1,6 +1,6 @@
 ---
 sidebar_label: gh-wait-for-issue-state
-description: Blocks a promotion stage until a GitHub issue reaches a specified state or has a specific label applied.
+description: Blocks a promotion stage until an expression evaluated against a GitHub issue succeeds, or fails the step immediately if a failure expression matches.
 ---
 
 # `gh-wait-for-issue-state`
@@ -14,12 +14,12 @@ This promotion step is only available in Kargo on the
 :::
 
 The `gh-wait-for-issue-state` step polls a GitHub issue and holds the
-promotion until the issue meets a specified condition: a target state
-(`open` or `closed`) and/or the presence of a named label. At least one of
-`state` or `label` must be provided.
+promotion until a `successExpression` evaluates to `true`. An optional
+`failureExpression`, checked on every poll before `successExpression`, fails
+the step immediately instead of continuing to wait.
 
 This is useful for human-in-the-loop approval workflows where a reviewer
-signals readiness by closing an issue or applying a label.
+signals readiness — or rejection — by applying a label or closing the issue.
 
 GitHub Issues integration for Kargo is a group of promotion steps:
 
@@ -42,6 +42,25 @@ the `repoURL`, no additional setup is required.
 The GitHub token must have **Issues: Read** access for the repository (or the
 `repo` scope for a classic personal access token).
 
+## The `issue` variable
+
+Both `successExpression` and `failureExpression` are evaluated with the issue
+available as `issue`, with the following fields:
+
+| Field       | Type       | Description                                    |
+| ----------- | ---------- | ----------------------------------------------- |
+| `number`    | `integer`  | The issue number.                              |
+| `title`     | `string`   | The issue title.                               |
+| `body`      | `string`   | The issue body.                                |
+| `state`     | `string`   | `open` or `closed`.                            |
+| `labels`    | `[]string` | Label names currently applied to the issue.    |
+| `assignees` | `[]string` | Login names of assigned users.                 |
+| `url`       | `string`   | The issue's HTML URL.                          |
+
+`labels` and `assignees` are arrays of plain strings, not objects — check for
+a label with the `in` operator (`"approved" in issue.labels`), not by
+filtering on a `.name` field.
+
 ## Configuration
 
 | Name                    | Type      | Required | Description                                                                                                                                                                         |
@@ -49,8 +68,8 @@ The GitHub token must have **Issues: Read** access for the repository (or the
 | `repoURL`               | `string`  | Y        | The URL of the GitHub repository (e.g. `https://github.com/owner/repo`).                                                                                                           |
 | `insecureSkipTLSVerify` | `boolean` | N        | If `true`, TLS verification of the GitHub server certificate is skipped. Use only for GitHub Enterprise Server instances with self-signed certificates.                             |
 | `issueNumber`           | `integer` | Y        | The number of the issue to watch.                                                                                                                                                   |
-| `state`                 | `string`  | N        | Wait until the issue is in this state. Must be `open` or `closed`. At least one of `state` or `label` is required.                                                                 |
-| `label`                 | `string`  | N        | Wait until the issue has this label. At least one of `state` or `label` is required.                                                                                               |
+| `successExpression`     | `string`  | Y        | An expression evaluated against `issue` on every poll. The step succeeds once this evaluates to `true`.                                                                            |
+| `failureExpression`     | `string`  | N        | An expression evaluated against `issue` on every poll, before `successExpression`. If it evaluates to `true`, the step fails immediately instead of continuing to poll.            |
 | `pollInterval`          | `string`  | N        | How often to check the issue state, specified as a [Go duration string](https://pkg.go.dev/time#ParseDuration) (e.g., `30s`, `5m`, `1.5h`). Overrides the default controller reconciliation interval when set. |
 
 ## Output
@@ -70,7 +89,7 @@ steps:
   config:
     repoURL: https://github.com/myorg/myrepo
     issueNumber: ${{ freightMetadata(ctx.targetFreight.name)['github-issue-number'] }}
-    label: approved
+    successExpression: '"approved" in issue.labels'
     pollInterval: 2m
 
 # Promotion continues once the label is present
@@ -91,12 +110,12 @@ steps:
   config:
     repoURL: https://github.com/myorg/myrepo
     issueNumber: ${{ freightMetadata(ctx.targetFreight.name)['github-issue-number'] }}
-    state: closed
+    successExpression: 'issue.state == "closed"'
 ```
 
 ### Wait for both label and closed state
 
-Both conditions must be true simultaneously:
+Combine conditions with `and`:
 
 ```yaml
 steps:
@@ -104,6 +123,36 @@ steps:
   config:
     repoURL: https://github.com/myorg/myrepo
     issueNumber: ${{ freightMetadata(ctx.targetFreight.name)['github-issue-number'] }}
-    state: closed
-    label: approved
+    successExpression: 'issue.state == "closed" and "approved" in issue.labels'
+```
+
+### Fail fast on rejection
+
+Use `failureExpression` so a reviewer can reject immediately instead of the
+promotion waiting for `pollInterval`/timeout to elapse:
+
+```yaml
+steps:
+- uses: gh-wait-for-issue-state
+  config:
+    repoURL: https://github.com/myorg/myrepo
+    issueNumber: ${{ freightMetadata(ctx.targetFreight.name)['github-issue-number'] }}
+    successExpression: '"approved" in issue.labels'
+    failureExpression: '"rejected" in issue.labels'
+    pollInterval: 30s
+```
+
+### Match against multiple labels
+
+`successExpression`/`failureExpression` accept any expr-lang expression, so
+matching against more than one label doesn't require a different shape:
+
+```yaml
+steps:
+- uses: gh-wait-for-issue-state
+  config:
+    repoURL: https://github.com/myorg/myrepo
+    issueNumber: ${{ freightMetadata(ctx.targetFreight.name)['github-issue-number'] }}
+    successExpression: 'any(issue.labels, {# in ["approved", "lgtm"]})'
+    failureExpression: 'any(issue.labels, {# in ["rejected", "blocked"]})'
 ```

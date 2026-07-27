@@ -1,8 +1,4 @@
-import {
-  faCircleNotch,
-  faCodePullRequest,
-  faExternalLink
-} from '@fortawesome/free-solid-svg-icons';
+import { faCodePullRequest, faExternalLink } from '@fortawesome/free-solid-svg-icons';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
 import { Spin, Tag } from 'antd';
 import Link from 'antd/es/typography/Link';
@@ -11,11 +7,10 @@ import { useMemo } from 'react';
 
 import { isPromotionStepStatusTerminal } from '@ui/features/common/promotion-status/utils';
 import { getPromotionOutputsByStepAlias } from '@ui/features/stage/utils/promotion';
-import { useGetPromotion } from '@ui/gen/api/v2/core/core';
 import { Stage } from '@ui/gen/api/v2/models';
 import { getPromotionStepAlias } from '@ui/plugins/atoms/plugin-helper';
 
-import { getCurrentPromotion } from './stage-meta-utils';
+import { useCurrentPromotion } from './stage-meta-utils';
 
 type PullRequestLinkProps = {
   stage: Stage;
@@ -23,17 +18,7 @@ type PullRequestLinkProps = {
 };
 
 export const PullRequestLink = (props: PullRequestLinkProps) => {
-  const currentPromotion = getCurrentPromotion(props.stage);
-
-  const getPromotionQuery = useGetPromotion(
-    props.stage?.metadata?.namespace || '',
-    currentPromotion || '',
-    {
-      query: { enabled: !!currentPromotion }
-    }
-  );
-
-  const promotion = getPromotionQuery.data?.data;
+  const { promotion, isFetching } = useCurrentPromotion(props.stage);
 
   const outputsByStepAlias: Record<string, object> = useMemo(
     () => getPromotionOutputsByStepAlias(promotion),
@@ -48,7 +33,7 @@ export const PullRequestLink = (props: PullRequestLinkProps) => {
       (step: { uses?: string }) => step?.uses === 'git-wait-for-pr'
     ) ?? -1;
 
-  if (getPromotionQuery.isFetching) {
+  if (isFetching) {
     return <Spin size='small' />;
   }
 
@@ -86,8 +71,7 @@ export const PullRequestLink = (props: PullRequestLinkProps) => {
     <Link href={pullRequestLink} target='_blank' className={classNames(props.className)}>
       <Tag color='green' bordered={false}>
         <span className='text-[8px]'>
-          Waiting for Approval <FontAwesomeIcon className='ml-1' icon={faCodePullRequest} />
-          <FontAwesomeIcon icon={faCircleNotch} spin className='ml-1' />
+          Waiting for PR Approval <FontAwesomeIcon className='ml-1' icon={faCodePullRequest} />
           <FontAwesomeIcon icon={faExternalLink} className='ml-1' />
         </span>
       </Tag>

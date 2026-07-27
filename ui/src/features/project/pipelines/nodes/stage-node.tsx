@@ -14,6 +14,7 @@ import { ReactNode, useMemo } from 'react';
 import { generatePath, Link, useNavigate } from 'react-router-dom';
 
 import { paths } from '@ui/config/paths';
+import { useExtensionsContext } from '@ui/extensions/extensions-context';
 import { HealthStatusIcon } from '@ui/features/common/health-status/health-status-icon';
 import { IAction, useActionContext } from '@ui/features/project/pipelines/context/action-context';
 import { ArgoCDLink } from '@ui/features/project/pipelines/nodes/argocd-link';
@@ -39,6 +40,7 @@ import {
   useStageHeaderStyle
 } from './stage-meta-utils';
 import { StageNodePhase } from './stage-node-phase';
+import { StepWaitingLabel } from './step-waiting-label';
 
 import './stage-node.less';
 
@@ -46,6 +48,7 @@ export const StageNode = (props: { stage: Stage }) => {
   const stageName = props.stage?.metadata?.name || '';
 
   const navigate = useNavigate();
+  const { promotionStepExtensions } = useExtensionsContext();
   const dictionaryContext = useDictionaryContext();
   const graphContext = useGraphContext();
   const actionContext = useActionContext();
@@ -102,6 +105,18 @@ export const StageNode = (props: { stage: Stage }) => {
 
         <center>
           <PullRequestLink stage={props.stage} />
+
+          {promotionStepExtensions
+            .filter((ext) => ext.waitingLabel)
+            .map((ext) => (
+              <StepWaitingLabel
+                key={ext.identifier}
+                stage={props.stage}
+                stepUses={ext.identifier}
+                label={ext.waitingLabel!.label}
+                icon={ext.waitingLabel!.icon}
+              />
+            ))}
 
           {dictionaryContext?.hasAnalysisRunLogsUrlTemplate && (
             <AnalysisRunLogsLink stage={props.stage} />
