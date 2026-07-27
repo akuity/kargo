@@ -11,7 +11,6 @@ import (
 	authzv1 "k8s.io/api/authorization/v1"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/runtime/schema"
 	"k8s.io/apimachinery/pkg/types"
 	"k8s.io/apimachinery/pkg/util/validation/field"
@@ -111,8 +110,7 @@ func SetupWebhookWithManager(
 		admission.NewDecoder(mgr.GetScheme()),
 		k8sevent.NewEventSender(libEvent.NewRecorder(ctx, mgr.GetScheme(), mgr.GetClient(), "promotion-webhook")),
 	)
-	return ctrl.NewWebhookManagedBy(mgr).
-		For(&kargoapi.Promotion{}).
+	return ctrl.NewWebhookManagedBy(mgr, &kargoapi.Promotion{}).
 		WithDefaulter(w).
 		WithValidator(w).
 		Complete()
@@ -142,15 +140,13 @@ func newWebhook(
 	return w
 }
 
-func (w *webhook) Default(ctx context.Context, obj runtime.Object) error {
+func (w *webhook) Default(ctx context.Context, promo *kargoapi.Promotion) error {
 	req, err := w.admissionRequestFromContextFn(ctx)
 	if err != nil {
 		return apierrors.NewInternalError(
 			fmt.Errorf("get admission request from context: %w", err),
 		)
 	}
-
-	promo := obj.(*kargoapi.Promotion) // nolint: forcetypeassert
 
 	if promo.Annotations == nil {
 		promo.Annotations = make(map[string]string, 2)
@@ -473,10 +469,8 @@ func (w *webhook) syncHoldAnnotations(
 
 func (w *webhook) ValidateCreate(
 	ctx context.Context,
-	obj runtime.Object,
+	promo *kargoapi.Promotion,
 ) (admission.Warnings, error) {
-	promo := obj.(*kargoapi.Promotion) // nolint: forcetypeassert
-
 	if err := w.validateProjectFn(ctx, w.client, promo); err != nil {
 		var statusErr *apierrors.StatusError
 		if ok := errors.As(err, &statusErr); ok {
@@ -558,11 +552,9 @@ func (w *webhook) ValidateCreate(
 
 func (w *webhook) ValidateUpdate(
 	ctx context.Context,
-	oldObj runtime.Object,
-	newObj runtime.Object,
+	oldPromo *kargoapi.Promotion,
+	promo *kargoapi.Promotion,
 ) (admission.Warnings, error) {
-	promo := newObj.(*kargoapi.Promotion)    // nolint: forcetypeassert
-	oldPromo := oldObj.(*kargoapi.Promotion) // nolint: forcetypeassert
 	if err := w.authorizeFn(ctx, promo, "update"); err != nil {
 		return nil, apierrors.NewInternalError(err)
 	}
@@ -587,9 +579,8 @@ func (w *webhook) ValidateUpdate(
 
 func (w *webhook) ValidateDelete(
 	ctx context.Context,
-	obj runtime.Object,
+	promo *kargoapi.Promotion,
 ) (admission.Warnings, error) {
-	promo := obj.(*kargoapi.Promotion) // nolint: forcetypeassert
 	return nil, w.authorizeFn(ctx, promo, "delete")
 }
 

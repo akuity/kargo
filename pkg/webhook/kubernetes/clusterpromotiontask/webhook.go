@@ -4,7 +4,6 @@ import (
 	"context"
 
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
-	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/runtime/schema"
 	"k8s.io/apimachinery/pkg/util/validation/field"
 	ctrl "sigs.k8s.io/controller-runtime"
@@ -22,17 +21,15 @@ var clusterPromotionTaskGroupKind = schema.GroupKind{
 type webhook struct{}
 
 func SetupWebhookWithManager(mgr ctrl.Manager) error {
-	return ctrl.NewWebhookManagedBy(mgr).
-		For(&kargoapi.ClusterPromotionTask{}).
+	return ctrl.NewWebhookManagedBy(mgr, &kargoapi.ClusterPromotionTask{}).
 		WithValidator(&webhook{}).
 		Complete()
 }
 
 func (w *webhook) ValidateCreate(
 	_ context.Context,
-	obj runtime.Object,
+	task *kargoapi.ClusterPromotionTask,
 ) (admission.Warnings, error) {
-	task := obj.(*kargoapi.ClusterPromotionTask) // nolint: forcetypeassert
 	if errs := w.validateSpec(field.NewPath("spec"), task.Spec); len(errs) > 0 {
 		return nil, apierrors.NewInvalid(
 			clusterPromotionTaskGroupKind,
@@ -45,10 +42,9 @@ func (w *webhook) ValidateCreate(
 
 func (w *webhook) ValidateUpdate(
 	_ context.Context,
-	_ runtime.Object,
-	newObj runtime.Object,
+	_ *kargoapi.ClusterPromotionTask,
+	task *kargoapi.ClusterPromotionTask,
 ) (admission.Warnings, error) {
-	task := newObj.(*kargoapi.ClusterPromotionTask) // nolint: forcetypeassert
 	if errs := w.validateSpec(field.NewPath("spec"), task.Spec); len(errs) > 0 {
 		return nil, apierrors.NewInvalid(
 			clusterPromotionTaskGroupKind,
@@ -61,7 +57,7 @@ func (w *webhook) ValidateUpdate(
 
 func (w *webhook) ValidateDelete(
 	context.Context,
-	runtime.Object,
+	*kargoapi.ClusterPromotionTask,
 ) (admission.Warnings, error) {
 	// No-op
 	return nil, nil

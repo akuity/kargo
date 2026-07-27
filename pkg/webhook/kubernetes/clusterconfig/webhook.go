@@ -6,7 +6,6 @@ import (
 
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/runtime/schema"
 	"k8s.io/apimachinery/pkg/util/validation/field"
 	ctrl "sigs.k8s.io/controller-runtime"
@@ -25,17 +24,15 @@ var clusterConfigGroupKind = schema.GroupKind{
 type webhook struct{}
 
 func SetupWebhookWithManager(mgr ctrl.Manager) error {
-	return ctrl.NewWebhookManagedBy(mgr).
-		For(&kargoapi.ClusterConfig{}).
+	return ctrl.NewWebhookManagedBy(mgr, &kargoapi.ClusterConfig{}).
 		WithValidator(&webhook{}).
 		Complete()
 }
 
 func (w *webhook) ValidateCreate(
 	_ context.Context,
-	obj runtime.Object,
+	clusterCfg *kargoapi.ClusterConfig,
 ) (admission.Warnings, error) {
-	clusterCfg := obj.(*kargoapi.ClusterConfig) // nolint: forcetypeassert
 	errs := w.validateObjectMeta(field.NewPath("metadata"), clusterCfg.ObjectMeta)
 	if errs = append(
 		errs,
@@ -49,10 +46,9 @@ func (w *webhook) ValidateCreate(
 
 func (w *webhook) ValidateUpdate(
 	_ context.Context,
-	_ runtime.Object,
-	newObj runtime.Object,
+	_ *kargoapi.ClusterConfig,
+	clusterCfg *kargoapi.ClusterConfig,
 ) (admission.Warnings, error) {
-	clusterCfg := newObj.(*kargoapi.ClusterConfig) // nolint: forcetypeassert
 	if errs := w.validateSpec(
 		field.NewPath("spec"),
 		clusterCfg.Spec,
@@ -65,7 +61,7 @@ func (w *webhook) ValidateUpdate(
 
 func (w *webhook) ValidateDelete(
 	context.Context,
-	runtime.Object,
+	*kargoapi.ClusterConfig,
 ) (admission.Warnings, error) {
 	return nil, nil
 }

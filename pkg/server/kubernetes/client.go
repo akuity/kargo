@@ -696,6 +696,14 @@ func (a *authorizingSubResourceClient) Patch(
 	return client.SubResource(a.subResourceType).Patch(ctx, obj, patch, opts...)
 }
 
+func (a *authorizingSubResourceClient) Apply(
+	_ context.Context,
+	_ runtime.ApplyConfiguration,
+	_ ...libClient.SubResourceApplyOption,
+) error {
+	return errors.New("apply is not supported by the authorizing client")
+}
+
 func (c *client) Authorize(
 	ctx context.Context,
 	verb string,
