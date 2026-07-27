@@ -45,7 +45,7 @@ type V1EphemeralContainer struct {
 	ResizePolicy []V1ContainerResizePolicy `json:"resizePolicy,omitempty"`
 	// Resources are not allowed for ephemeral containers. Ephemeral containers use spare resources already allocated to the pod. +optional
 	Resources *V1ResourceRequirements `json:"resources,omitempty"`
-	// Restart policy for the container to manage the restart behavior of each container within a pod. You cannot set this field on ephemeral containers. +featureGate=SidecarContainers +optional
+	// Restart policy for the container to manage the restart behavior of each container within a pod. You cannot set this field on ephemeral containers. +optional
 	RestartPolicy *string `json:"restartPolicy,omitempty"`
 	// Represents a list of rules to be checked to determine if the container should be restarted on exit. You cannot set this field on ephemeral containers. +featureGate=ContainerRestartRules +optional +listType=atomic
 	RestartPolicyRules []V1ContainerRestartRule `json:"restartPolicyRules,omitempty"`

@@ -27,7 +27,7 @@ type V1PolicyRule struct {
 	ResourceNames []string `json:"resourceNames,omitempty"`
 	// Resources is a list of resources this rule applies to. '*' represents all resources. +optional +listType=atomic
 	Resources []string `json:"resources,omitempty"`
-	// Verbs is a list of Verbs that apply to ALL the ResourceKinds contained in this rule. '*' represents all verbs. +listType=atomic
+	// Verbs is a list of Verbs that apply to ALL the ResourceKinds contained in this rule. '*' represents all verbs. +listType=atomic +required +k8s:alpha(since: \"1.36\")=+k8s:required
 	Verbs []string `json:"verbs,omitempty"`
 }
 

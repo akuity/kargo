@@ -271,6 +271,7 @@ model_v1_pod_readiness_gate.go
 model_v1_pod_replacement_policy.go
 model_v1_pod_resource_claim.go
 model_v1_pod_scheduling_gate.go
+model_v1_pod_scheduling_group.go
 model_v1_pod_security_context.go
 model_v1_pod_spec.go
 model_v1_pod_template_spec.go
@@ -295,6 +296,7 @@ model_v1_secret_projection.go
 model_v1_secret_volume_source.go
 model_v1_security_context.go
 model_v1_service_account_token_projection.go
+model_v1_shard_info.go
 model_v1_sleep_action.go
 model_v1_storage_os_volume_source.go
 model_v1_success_policy.go

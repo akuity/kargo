@@ -9280,7 +9280,7 @@
           ]
         },
         "resizePolicy": {
-          "description": "Resources resize policy for the container.\n+featureGate=InPlacePodVerticalScaling\n+optional\n+listType=atomic",
+          "description": "Resources resize policy for the container.\nThis field cannot be set on ephemeral containers.\n+featureGate=InPlacePodVerticalScaling\n+optional\n+listType=atomic",
           "type": "array",
           "items": {
             "$ref": "#/definitions/V1ContainerResizePolicy"
@@ -9295,7 +9295,7 @@
           ]
         },
         "restartPolicy": {
-          "description": "RestartPolicy defines the restart behavior of individual containers in a pod.\nThis overrides the pod-level restart policy. When this field is not specified,\nthe restart behavior is defined by the Pod's restart policy and the container type.\nAdditionally, setting the RestartPolicy as \"Always\" for the init container will\nhave the following effect:\nthis init container will be continually restarted on\nexit until all regular containers have terminated. Once all regular\ncontainers have completed, all init containers with restartPolicy \"Always\"\nwill be shut down. This lifecycle differs from normal init containers and\nis often referred to as a \"sidecar\" container. Although this init\ncontainer still starts in the init container sequence, it does not wait\nfor the container to complete before proceeding to the next init\ncontainer. Instead, the next init container starts immediately after this\ninit container is started, or after any startupProbe has successfully\ncompleted.\n+featureGate=SidecarContainers\n+optional",
+          "description": "RestartPolicy defines the restart behavior of individual containers in a pod.\nThis overrides the pod-level restart policy. When this field is not specified,\nthe restart behavior is defined by the Pod's restart policy and the container type.\nAdditionally, setting the RestartPolicy as \"Always\" for the init container will\nhave the following effect:\nthis init container will be continually restarted on\nexit until all regular containers have terminated. Once all regular\ncontainers have completed, all init containers with restartPolicy \"Always\"\nwill be shut down. This lifecycle differs from normal init containers and\nis often referred to as a \"sidecar\" container. Although this init\ncontainer still starts in the init container sequence, it does not wait\nfor the container to complete before proceeding to the next init\ncontainer. Instead, the next init container starts immediately after this\ninit container is started, or after any startupProbe has successfully\ncompleted.\n+optional",
           "type": "string"
         },
         "restartPolicyRules": {
@@ -9683,7 +9683,7 @@
           ]
         },
         "restartPolicy": {
-          "description": "Restart policy for the container to manage the restart behavior of each\ncontainer within a pod.\nYou cannot set this field on ephemeral containers.\n+featureGate=SidecarContainers\n+optional",
+          "description": "Restart policy for the container to manage the restart behavior of each\ncontainer within a pod.\nYou cannot set this field on ephemeral containers.\n+optional",
           "type": "string"
         },
         "restartPolicyRules": {
@@ -10123,7 +10123,7 @@
           "type": "integer"
         },
         "managedBy": {
-          "description": "ManagedBy field indicates the controller that manages a Job. The k8s Job\ncontroller reconciles jobs which don't have this field at all or the field\nvalue is the reserved string `kubernetes.io/job-controller`, but skips\nreconciling Jobs with a custom value for this field.\nThe value must be a valid domain-prefixed path (e.g. acme.io/foo) -\nall characters before the first \"/\" must be a valid subdomain as defined\nby RFC 1123. All characters trailing the first \"/\" must be valid HTTP Path\ncharacters as defined by RFC 3986. The value cannot exceed 63 characters.\nThis field is immutable.\n\nThis field is beta-level. The job controller accepts setting the field\nwhen the feature gate JobManagedBy is enabled (enabled by default).\n+optional",
+          "description": "ManagedBy field indicates the controller that manages a Job. The k8s Job\ncontroller reconciles jobs which don't have this field at all or the field\nvalue is the reserved string `kubernetes.io/job-controller`, but skips\nreconciling Jobs with a custom value for this field.\nThe value must be a valid domain-prefixed path (e.g. acme.io/foo) -\nall characters before the first \"/\" must be a valid subdomain as defined\nby RFC 1123. All characters trailing the first \"/\" must be valid HTTP Path\ncharacters as defined by RFC 3986. The value cannot exceed 63 characters.\nThis field is immutable.\n+optional",
           "type": "string"
         },
         "manualSelector": {
@@ -10289,7 +10289,7 @@
           ]
         },
         "sleep": {
-          "description": "Sleep represents a duration that the container should sleep.\n+featureGate=PodLifecycleSleepAction\n+optional",
+          "description": "Sleep represents a duration that the container should sleep.\n+optional",
           "allOf": [
             {
               "$ref": "#/definitions/V1SleepAction"
@@ -10324,6 +10324,14 @@
         "selfLink": {
           "description": "Deprecated: selfLink is a legacy read-only field that is no longer populated by the system.\n+optional",
           "type": "string"
+        },
+        "shardInfo": {
+          "description": "shardInfo is set when the list is a filtered subset of the full collection,\nas selected by a shard selector on the request. It echoes back the selector\nso clients can verify which shard they received and merge sharded responses.\nClients should not cache sharded list responses as a full representation\nof the collection.\n\nThis is an alpha field and requires enabling the ShardedListAndWatch feature gate.\n+featureGate=ShardedListAndWatch\n+optional",
+          "allOf": [
+            {
+              "$ref": "#/definitions/V1ShardInfo"
+            }
+          ]
         }
       }
     },
@@ -10643,7 +10651,7 @@
           ]
         },
         "resources": {
-          "description": "resources represents the minimum resources the volume should have.\nIf RecoverVolumeExpansionFailure feature is enabled users are allowed to specify resource requirements\nthat are lower than previous value but must still be higher than capacity recorded in the\nstatus field of the claim.\nMore info: https://kubernetes.io/docs/concepts/storage/persistent-volumes#resources\n+optional",
+          "description": "resources represents the minimum resources the volume should have.\nUsers are allowed to specify resource requirements\nthat are lower than previous value but must still be higher than capacity recorded in the\nstatus field of the claim.\nMore info: https://kubernetes.io/docs/concepts/storage/persistent-volumes#resources\n+optional",
           "allOf": [
             {
               "$ref": "#/definitions/V1VolumeResourceRequirements"
@@ -10833,6 +10841,13 @@
         "signerName": {
           "description": "Kubelet's generated CSRs will be addressed to this signer.\n\n+required",
           "type": "string"
+        },
+        "userAnnotations": {
+          "description": "userAnnotations allow pod authors to pass additional information to\nthe signer implementation.  Kubernetes does not restrict or validate this\nmetadata in any way.\n\nThese values are copied verbatim into the `spec.unverifiedUserAnnotations` field of\nthe PodCertificateRequest objects that Kubelet creates.\n\nEntries are subject to the same validation as object metadata annotations,\nwith the addition that all keys must be domain-prefixed. No restrictions\nare placed on values, except an overall size limitation on the entire field.\n\nSigners should document the keys and values they support. Signers should\ndeny requests that contain keys they do not recognize.",
+          "type": "object",
+          "additionalProperties": {
+            "type": "string"
+          }
         }
       }
     },
@@ -10941,7 +10956,7 @@
       "type": "object",
       "properties": {
         "status": {
-          "description": "Specifies the required Pod condition status. To match a pod condition\nit is required that the specified status equals the pod condition status.\nDefaults to True.",
+          "description": "Specifies the required Pod condition status. To match a pod condition\nit is required that the specified status equals the pod condition status.\nDefaults to True.\n+optional",
           "type": "string"
         },
         "type": {
@@ -11019,7 +11034,7 @@
           "type": "string"
         },
         "resourceClaimTemplateName": {
-          "description": "ResourceClaimTemplateName is the name of a ResourceClaimTemplate\nobject in the same namespace as this pod.\n\nThe template will be used to create a new ResourceClaim, which will\nbe bound to this pod. When this pod is deleted, the ResourceClaim\nwill also be deleted. The pod name and resource name, along with a\ngenerated component, will be used to form a unique name for the\nResourceClaim, which will be recorded in pod.status.resourceClaimStatuses.\n\nThis field is immutable and no changes will be made to the\ncorresponding ResourceClaim by the control plane after creating the\nResourceClaim.\n\nExactly one of ResourceClaimName and ResourceClaimTemplateName must\nbe set.",
+          "description": "ResourceClaimTemplateName is the name of a ResourceClaimTemplate\nobject in the same namespace as this pod.\n\nThe template will be used to create a new ResourceClaim, which will\nbe bound to this pod. When this pod is deleted, the ResourceClaim\nwill also be deleted. The pod name and resource name, along with a\ngenerated component, will be used to form a unique name for the\nResourceClaim, which will be recorded in pod.status.resourceClaimStatuses.\n\nWhen the DRAWorkloadResourceClaims feature gate is enabled and the pod\nbelongs to a PodGroup that defines a PodGroupResourceClaim with the same\nName and ResourceClaimTemplateName, this PodResourceClaim resolves to the\nResourceClaim generated for the PodGroup. All pods in the group that\ndefine an equivalent PodResourceClaim matching the\nPodGroupResourceClaim's Name and ResourceClaimTemplateName share the same\ngenerated ResourceClaim. ResourceClaims generated for a PodGroup are\nowned by the PodGroup and their lifecycles are tied to the PodGroup\ninstead of any individual pod.\n\nThis field is immutable and no changes will be made to the\ncorresponding ResourceClaim by the control plane after creating the\nResourceClaim.\n\nExactly one of ResourceClaimName and ResourceClaimTemplateName must\nbe set.",
           "type": "string"
         }
       }
@@ -11029,6 +11044,15 @@
       "properties": {
         "name": {
           "description": "Name of the scheduling gate.\nEach scheduling gate must have a unique name field.",
+          "type": "string"
+        }
+      }
+    },
+    "V1PodSchedulingGroup": {
+      "type": "object",
+      "properties": {
+        "podGroupName": {
+          "description": "PodGroupName specifies the name of the standalone PodGroup object\nthat represents the runtime instance of this group.\nMust be a DNS subdomain.\n\n+optional\n+oneOf=GroupSelection",
           "type": "string"
         }
       }
@@ -11181,7 +11205,7 @@
           "type": "boolean"
         },
         "hostUsers": {
-          "description": "Use the host's user namespace.\nOptional: Default to true.\nIf set to true or not present, the pod will be run in the host user namespace, useful\nfor when the pod needs a feature only available to the host user namespace, such as\nloading a kernel module with CAP_SYS_MODULE.\nWhen set to false, a new userns is created for the pod. Setting false is useful for\nmitigating container breakout vulnerabilities even allowing users to run their\ncontainers as root without actually having root privileges on the host.\nThis field is alpha-level and is only honored by servers that enable the UserNamespacesSupport feature.\n+k8s:conversion-gen=false\n+optional",
+          "description": "Use the host's user namespace.\nOptional: Default to true.\nIf set to true or not present, the pod will be run in the host user namespace, useful\nfor when the pod needs a feature only available to the host user namespace, such as\nloading a kernel module with CAP_SYS_MODULE.\nWhen set to false, a new userns is created for the pod. Setting false is useful for\nmitigating container breakout vulnerabilities even allowing users to run their\ncontainers as root without actually having root privileges on the host.\n+k8s:conversion-gen=false\n+optional",
           "type": "boolean"
         },
         "hostname": {
@@ -11253,7 +11277,7 @@
           }
         },
         "resourceClaims": {
-          "description": "ResourceClaims defines which ResourceClaims must be allocated\nand reserved before the Pod is allowed to start. The resources\nwill be made available to those containers which consume them\nby name.\n\nThis is an alpha field and requires enabling the\nDynamicResourceAllocation feature gate.\n\nThis field is immutable.\n\n+patchMergeKey=name\n+patchStrategy=merge,retainKeys\n+listType=map\n+listMapKey=name\n+featureGate=DynamicResourceAllocation\n+optional",
+          "description": "ResourceClaims defines which ResourceClaims must be allocated\nand reserved before the Pod is allowed to start. The resources\nwill be made available to those containers which consume them\nby name.\n\nThis is a stable field but requires that the\nDynamicResourceAllocation feature gate is enabled.\n\nThis field is immutable.\n\n+patchMergeKey=name\n+patchStrategy=merge,retainKeys\n+listType=map\n+listMapKey=name\n+featureGate=DynamicResourceAllocation\n+optional",
           "type": "array",
           "items": {
             "$ref": "#/definitions/V1PodResourceClaim"
@@ -11285,6 +11309,14 @@
           "items": {
             "$ref": "#/definitions/V1PodSchedulingGate"
           }
+        },
+        "schedulingGroup": {
+          "description": "SchedulingGroup provides a reference to the immediate scheduling runtime\ngrouping object that this Pod belongs to.\nThis field is used by the scheduler to identify the group and apply the\ncorrect group scheduling policies. The association with a group also\nimpacts other lifecycle aspects of a Pod that are relevant in a wider context\nof scheduling like preemption, resource attachment, etc. If not specified,\nthe Pod is treated as a single unit in all of these aspects.\nThe group object referenced by this field may not exist at the time the\nPod is created.\nThis field is immutable, but a group object with the same name may be\nrecreated with different policies. Doing this during pod scheduling\nmay result in the placement not conforming to the expected policies.\n\n+featureGate=GenericWorkload\n+optional",
+          "allOf": [
+            {
+              "$ref": "#/definitions/V1PodSchedulingGroup"
+            }
+          ]
         },
         "securityContext": {
           "description": "SecurityContext holds pod-level security attributes and common container settings.\nOptional: Defaults to empty.  See type description for default values of each field.\n+optional",
@@ -11394,7 +11426,7 @@
           }
         },
         "verbs": {
-          "description": "Verbs is a list of Verbs that apply to ALL the ResourceKinds contained in this rule. '*' represents all verbs.\n+listType=atomic",
+          "description": "Verbs is a list of Verbs that apply to ALL the ResourceKinds contained in this rule. '*' represents all verbs.\n+listType=atomic\n+required\n+k8s:alpha(since: \"1.36\")=+k8s:required",
           "type": "array",
           "items": {
             "type": "string"
@@ -11894,7 +11926,7 @@
           "type": "boolean"
         },
         "procMount": {
-          "description": "procMount denotes the type of proc mount to use for the containers.\nThe default value is Default which uses the container runtime defaults for\nreadonly paths and masked paths.\nThis requires the ProcMountType feature flag to be enabled.\nNote that this field cannot be set when spec.os.name is windows.\n+optional",
+          "description": "procMount denotes the type of proc mount to use for the containers.\nThe default value is Default which uses the container runtime defaults for\nreadonly paths and masked paths.\nNote that this field cannot be set when spec.os.name is windows.\n+optional",
           "type": "string"
         },
         "readOnlyRootFilesystem": {
@@ -11952,6 +11984,15 @@
         },
         "path": {
           "description": "path is the path relative to the mount point of the file to project the\ntoken into.",
+          "type": "string"
+        }
+      }
+    },
+    "V1ShardInfo": {
+      "type": "object",
+      "properties": {
+        "selector": {
+          "description": "selector is the shard selector string from the request, echoed back so clients\ncan verify which shard they received and merge responses from multiple shards.\n+required",
           "type": "string"
         }
       }
@@ -12056,7 +12097,7 @@
           "type": "string"
         },
         "operator": {
-          "description": "Operator represents a key's relationship to the value.\nValid operators are Exists and Equal. Defaults to Equal.\nExists is equivalent to wildcard for value, so that a pod can\ntolerate all taints of a particular category.\n+optional",
+          "description": "Operator represents a key's relationship to the value.\nValid operators are Exists, Equal, Lt, and Gt. Defaults to Equal.\nExists is equivalent to wildcard for value, so that a pod can\ntolerate all taints of a particular category.\nLt and Gt perform numeric comparisons (requires feature gate TaintTolerationComparisonOperators).\n+optional",
           "type": "string"
         },
         "tolerationSeconds": {
@@ -12291,7 +12332,7 @@
           ]
         },
         "image": {
-          "description": "image represents an OCI object (a container image or artifact) pulled and mounted on the kubelet's host machine.\nThe volume is resolved at pod startup depending on which PullPolicy value is provided:\n\n- Always: the kubelet always attempts to pull the reference. Container creation will fail If the pull fails.\n- Never: the kubelet never pulls the reference and only uses a local image or artifact. Container creation will fail if the reference isn't present.\n- IfNotPresent: the kubelet pulls if the reference isn't already present on disk. Container creation will fail if the reference isn't present and the pull fails.\n\nThe volume gets re-resolved if the pod gets deleted and recreated, which means that new remote content will become available on pod recreation.\nA failure to resolve or pull the image during pod startup will block containers from starting and may add significant latency. Failures will be retried using normal volume backoff and will be reported on the pod reason and message.\nThe types of objects that may be mounted by this volume are defined by the container runtime implementation on a host machine and at minimum must include all valid types supported by the container image field.\nThe OCI object gets mounted in a single directory (spec.containers[*].volumeMounts.mountPath) by merging the manifest layers in the same way as for container images.\nThe volume will be mounted read-only (ro) and non-executable files (noexec).\nSub path mounts for containers are not supported (spec.containers[*].volumeMounts.subpath) before 1.33.\nThe field spec.securityContext.fsGroupChangePolicy has no effect on this volume type.\n+featureGate=ImageVolume\n+optional",
+          "description": "image represents an OCI object (a container image or artifact) pulled and mounted on the kubelet's host machine.\nThe volume is resolved at pod startup depending on which PullPolicy value is provided:\n\n- Always: the kubelet always attempts to pull the reference. Container creation will fail If the pull fails.\n- Never: the kubelet never pulls the reference and only uses a local image or artifact. Container creation will fail if the reference isn't present.\n- IfNotPresent: the kubelet pulls if the reference isn't already present on disk. Container creation will fail if the reference isn't present and the pull fails.\n\nThe volume gets re-resolved if the pod gets deleted and recreated, which means that new remote content will become available on pod recreation.\nA failure to resolve or pull the image during pod startup will block containers from starting and may add significant latency. Failures will be retried using normal volume backoff and will be reported on the pod reason and message.\nThe types of objects that may be mounted by this volume are defined by the container runtime implementation on a host machine and at minimum must include all valid types supported by the container image field.\nThe OCI object gets mounted in a single directory (spec.containers[*].volumeMounts.mountPath) by merging the manifest layers in the same way as for container images.\nThe volume will be mounted read-only (ro).\nSub path mounts for containers are not supported (spec.containers[*].volumeMounts.subpath) before 1.33.\nThe field spec.securityContext.fsGroupChangePolicy has no effect on this volume type.\n+optional",
           "allOf": [
             {
               "$ref": "#/definitions/V1ImageVolumeSource"
@@ -12335,7 +12376,7 @@
           ]
         },
         "portworxVolume": {
-          "description": "portworxVolume represents a portworx volume attached and mounted on kubelets host machine.\nDeprecated: PortworxVolume is deprecated. All operations for the in-tree portworxVolume type\nare redirected to the pxd.portworx.com CSI driver when the CSIMigrationPortworx feature-gate\nis on.\n+optional",
+          "description": "portworxVolume represents a portworx volume attached and mounted on kubelets host machine.\nDeprecated: PortworxVolume is deprecated. All operations for the in-tree portworxVolume type\nare redirected to the pxd.portworx.com CSI driver.\n+optional",
           "allOf": [
             {
               "$ref": "#/definitions/V1PortworxVolumeSource"
@@ -12433,7 +12474,7 @@
           "type": "boolean"
         },
         "recursiveReadOnly": {
-          "description": "RecursiveReadOnly specifies whether read-only mounts should be handled\nrecursively.\n\nIf ReadOnly is false, this field has no meaning and must be unspecified.\n\nIf ReadOnly is true, and this field is set to Disabled, the mount is not made\nrecursively read-only.  If this field is set to IfPossible, the mount is made\nrecursively read-only, if it is supported by the container runtime.  If this\nfield is set to Enabled, the mount is made recursively read-only if it is\nsupported by the container runtime, otherwise the pod will not be started and\nan error will be generated to indicate the reason.\n\nIf this field is set to IfPossible or Enabled, MountPropagation must be set to\nNone (or be unspecified, which defaults to None).\n\nIf this field is not specified, it is treated as an equivalent of Disabled.\n\n+featureGate=RecursiveReadOnlyMounts\n+optional",
+          "description": "RecursiveReadOnly specifies whether read-only mounts should be handled\nrecursively.\n\nIf ReadOnly is false, this field has no meaning and must be unspecified.\n\nIf ReadOnly is true, and this field is set to Disabled, the mount is not made\nrecursively read-only.  If this field is set to IfPossible, the mount is made\nrecursively read-only, if it is supported by the container runtime.  If this\nfield is set to Enabled, the mount is made recursively read-only if it is\nsupported by the container runtime, otherwise the pod will not be started and\nan error will be generated to indicate the reason.\n\nIf this field is set to IfPossible or Enabled, MountPropagation must be set to\nNone (or be unspecified, which defaults to None).\n\nIf this field is not specified, it is treated as an equivalent of Disabled.\n+optional",
           "type": "string"
         },
         "subPath": {
@@ -12474,7 +12515,7 @@
           ]
         },
         "podCertificate": {
-          "description": "Projects an auto-rotating credential bundle (private key and certificate\nchain) that the pod can use either as a TLS client or server.\n\nKubelet generates a private key and uses it to send a\nPodCertificateRequest to the named signer.  Once the signer approves the\nrequest and issues a certificate chain, Kubelet writes the key and\ncertificate chain to the pod filesystem.  The pod does not start until\ncertificates have been issued for each podCertificate projected volume\nsource in its spec.\n\nKubelet will begin trying to rotate the certificate at the time indicated\nby the signer using the PodCertificateRequest.Status.BeginRefreshAt\ntimestamp.\n\nKubelet can write a single file, indicated by the credentialBundlePath\nfield, or separate files, indicated by the keyPath and\ncertificateChainPath fields.\n\nThe credential bundle is a single file in PEM format.  The first PEM\nentry is the private key (in PKCS#8 format), and the remaining PEM\nentries are the certificate chain issued by the signer (typically,\nsigners will return their certificate chain in leaf-to-root order).\n\nPrefer using the credential bundle format, since your application code\ncan read it atomically.  If you use keyPath and certificateChainPath,\nyour application must make two separate file reads. If these coincide\nwith a certificate rotation, it is possible that the private key and leaf\ncertificate you read may not correspond to each other.  Your application\nwill need to check for this condition, and re-read until they are\nconsistent.\n\nThe named signer controls chooses the format of the certificate it\nissues; consult the signer implementation's documentation to learn how to\nuse the certificates it issues.\n\n+featureGate=PodCertificateProjection +optional",
+          "description": "Projects an auto-rotating credential bundle (private key and certificate\nchain) that the pod can use either as a TLS client or server.\n\nKubelet generates a private key and uses it to send a\nPodCertificateRequest to the named signer.  Once the signer approves the\nrequest and issues a certificate chain, Kubelet writes the key and\ncertificate chain to the pod filesystem.  The pod does not start until\ncertificates have been issued for each podCertificate projected volume\nsource in its spec.\n\nKubelet will begin trying to rotate the certificate at the time indicated\nby the signer using the PodCertificateRequest.Status.BeginRefreshAt\ntimestamp.\n\nKubelet can write a single file, indicated by the credentialBundlePath\nfield, or separate files, indicated by the keyPath and\ncertificateChainPath fields.\n\nThe credential bundle is a single file in PEM format.  The first PEM\nentry is the private key (in PKCS#8 format), and the remaining PEM\nentries are the certificate chain issued by the signer (typically,\nsigners will return their certificate chain in leaf-to-root order).\n\nPrefer using the credential bundle format, since your application code\ncan read it atomically.  If you use keyPath and certificateChainPath,\nyour application must make two separate file reads. If these coincide\nwith a certificate rotation, it is possible that the private key and leaf\ncertificate you read may not correspond to each other.  Your application\nwill need to check for this condition, and re-read until they are\nconsistent.\n\nThe named signer controls chooses the format of the certificate it\nissues; consult the signer implementation's documentation to learn how to\nuse the certificates it issues.\n\n+featureGate=PodCertificateProjection\n+optional",
           "allOf": [
             {
               "$ref": "#/definitions/V1PodCertificateProjection"

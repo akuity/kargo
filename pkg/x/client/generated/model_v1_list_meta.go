@@ -27,6 +27,8 @@ type V1ListMeta struct {
 	ResourceVersion *string `json:"resourceVersion,omitempty"`
 	// Deprecated: selfLink is a legacy read-only field that is no longer populated by the system. +optional
 	SelfLink *string `json:"selfLink,omitempty"`
+	// shardInfo is set when the list is a filtered subset of the full collection, as selected by a shard selector on the request. It echoes back the selector so clients can verify which shard they received and merge sharded responses. Clients should not cache sharded list responses as a full representation of the collection.  This is an alpha field and requires enabling the ShardedListAndWatch feature gate. +featureGate=ShardedListAndWatch +optional
+	ShardInfo *V1ShardInfo `json:"shardInfo,omitempty"`
 }
 
 // NewV1ListMeta instantiates a new V1ListMeta object
@@ -174,6 +176,38 @@ func (o *V1ListMeta) SetSelfLink(v string) {
 	o.SelfLink = &v
 }
 
+// GetShardInfo returns the ShardInfo field value if set, zero value otherwise.
+func (o *V1ListMeta) GetShardInfo() V1ShardInfo {
+	if o == nil || IsNil(o.ShardInfo) {
+		var ret V1ShardInfo
+		return ret
+	}
+	return *o.ShardInfo
+}
+
+// GetShardInfoOk returns a tuple with the ShardInfo field value if set, nil otherwise
+// and a boolean to check if the value has been set.
+func (o *V1ListMeta) GetShardInfoOk() (*V1ShardInfo, bool) {
+	if o == nil || IsNil(o.ShardInfo) {
+		return nil, false
+	}
+	return o.ShardInfo, true
+}
+
+// HasShardInfo returns a boolean if a field has been set.
+func (o *V1ListMeta) HasShardInfo() bool {
+	if o != nil && !IsNil(o.ShardInfo) {
+		return true
+	}
+
+	return false
+}
+
+// SetShardInfo gets a reference to the given V1ShardInfo and assigns it to the ShardInfo field.
+func (o *V1ListMeta) SetShardInfo(v V1ShardInfo) {
+	o.ShardInfo = &v
+}
+
 func (o V1ListMeta) MarshalJSON() ([]byte, error) {
 	toSerialize,err := o.ToMap()
 	if err != nil {
@@ -195,6 +229,9 @@ func (o V1ListMeta) ToMap() (map[string]interface{}, error) {
 	}
 	if !IsNil(o.SelfLink) {
 		toSerialize["selfLink"] = o.SelfLink
+	}
+	if !IsNil(o.ShardInfo) {
+		toSerialize["shardInfo"] = o.ShardInfo
 	}
 	return toSerialize, nil
 }

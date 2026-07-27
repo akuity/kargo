@@ -74,9 +74,6 @@ all characters before the first "/" must be a valid subdomain as defined
 by RFC 1123. All characters trailing the first "/" must be valid HTTP Path
 characters as defined by RFC 3986. The value cannot exceed 63 characters.
 This field is immutable.
-
-This field is beta-level. The job controller accepts setting the field
-when the feature gate JobManagedBy is enabled (enabled by default).
 +optional */
   managedBy?: string;
   /** manualSelector controls generation of pod labels and pod selectors.

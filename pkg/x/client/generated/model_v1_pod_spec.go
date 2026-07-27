@@ -43,7 +43,7 @@ type V1PodSpec struct {
 	HostNetwork *bool `json:"hostNetwork,omitempty"`
 	// Use the host's pid namespace. Optional: Default to false. +k8s:conversion-gen=false +optional
 	HostPID *bool `json:"hostPID,omitempty"`
-	// Use the host's user namespace. Optional: Default to true. If set to true or not present, the pod will be run in the host user namespace, useful for when the pod needs a feature only available to the host user namespace, such as loading a kernel module with CAP_SYS_MODULE. When set to false, a new userns is created for the pod. Setting false is useful for mitigating container breakout vulnerabilities even allowing users to run their containers as root without actually having root privileges on the host. This field is alpha-level and is only honored by servers that enable the UserNamespacesSupport feature. +k8s:conversion-gen=false +optional
+	// Use the host's user namespace. Optional: Default to true. If set to true or not present, the pod will be run in the host user namespace, useful for when the pod needs a feature only available to the host user namespace, such as loading a kernel module with CAP_SYS_MODULE. When set to false, a new userns is created for the pod. Setting false is useful for mitigating container breakout vulnerabilities even allowing users to run their containers as root without actually having root privileges on the host. +k8s:conversion-gen=false +optional
 	HostUsers *bool `json:"hostUsers,omitempty"`
 	// Specifies the hostname of the Pod If not specified, the pod's hostname will be set to a system-defined value. +optional
 	Hostname *string `json:"hostname,omitempty"`
@@ -69,7 +69,7 @@ type V1PodSpec struct {
 	PriorityClassName *string `json:"priorityClassName,omitempty"`
 	// If specified, all readiness gates will be evaluated for pod readiness. A pod is ready when all its containers are ready AND all conditions specified in the readiness gates have status equal to \"True\" More info: https://git.k8s.io/enhancements/keps/sig-network/580-pod-readiness-gates +optional +listType=atomic
 	ReadinessGates []V1PodReadinessGate `json:"readinessGates,omitempty"`
-	// ResourceClaims defines which ResourceClaims must be allocated and reserved before the Pod is allowed to start. The resources will be made available to those containers which consume them by name.  This is an alpha field and requires enabling the DynamicResourceAllocation feature gate.  This field is immutable.  +patchMergeKey=name +patchStrategy=merge,retainKeys +listType=map +listMapKey=name +featureGate=DynamicResourceAllocation +optional
+	// ResourceClaims defines which ResourceClaims must be allocated and reserved before the Pod is allowed to start. The resources will be made available to those containers which consume them by name.  This is a stable field but requires that the DynamicResourceAllocation feature gate is enabled.  This field is immutable.  +patchMergeKey=name +patchStrategy=merge,retainKeys +listType=map +listMapKey=name +featureGate=DynamicResourceAllocation +optional
 	ResourceClaims []V1PodResourceClaim `json:"resourceClaims,omitempty"`
 	// Resources is the total amount of CPU and Memory resources required by all containers in the pod. It supports specifying Requests and Limits for \"cpu\", \"memory\" and \"hugepages-\" resource names only. ResourceClaims are not supported.  This field enables fine-grained control over resource allocation for the entire pod, allowing resource sharing among containers in a pod. TODO: For beta graduation, expand this comment with a detailed explanation.  This is an alpha field and requires enabling the PodLevelResources feature gate.  +featureGate=PodLevelResources +optional
 	Resources *V1ResourceRequirements `json:"resources,omitempty"`
@@ -81,6 +81,8 @@ type V1PodSpec struct {
 	SchedulerName *string `json:"schedulerName,omitempty"`
 	// SchedulingGates is an opaque list of values that if specified will block scheduling the pod. If schedulingGates is not empty, the pod will stay in the SchedulingGated state and the scheduler will not attempt to schedule the pod.  SchedulingGates can only be set at pod creation time, and be removed only afterwards.  +patchMergeKey=name +patchStrategy=merge +listType=map +listMapKey=name +optional
 	SchedulingGates []V1PodSchedulingGate `json:"schedulingGates,omitempty"`
+	// SchedulingGroup provides a reference to the immediate scheduling runtime grouping object that this Pod belongs to. This field is used by the scheduler to identify the group and apply the correct group scheduling policies. The association with a group also impacts other lifecycle aspects of a Pod that are relevant in a wider context of scheduling like preemption, resource attachment, etc. If not specified, the Pod is treated as a single unit in all of these aspects. The group object referenced by this field may not exist at the time the Pod is created. This field is immutable, but a group object with the same name may be recreated with different policies. Doing this during pod scheduling may result in the placement not conforming to the expected policies.  +featureGate=GenericWorkload +optional
+	SchedulingGroup *V1PodSchedulingGroup `json:"schedulingGroup,omitempty"`
 	// SecurityContext holds pod-level security attributes and common container settings. Optional: Defaults to empty.  See type description for default values of each field. +optional
 	SecurityContext *V1PodSecurityContext `json:"securityContext,omitempty"`
 	// DeprecatedServiceAccount is a deprecated alias for ServiceAccountName. Deprecated: Use serviceAccountName instead. +k8s:conversion-gen=false +optional
@@ -1112,6 +1114,38 @@ func (o *V1PodSpec) SetSchedulingGates(v []V1PodSchedulingGate) {
 	o.SchedulingGates = v
 }
 
+// GetSchedulingGroup returns the SchedulingGroup field value if set, zero value otherwise.
+func (o *V1PodSpec) GetSchedulingGroup() V1PodSchedulingGroup {
+	if o == nil || IsNil(o.SchedulingGroup) {
+		var ret V1PodSchedulingGroup
+		return ret
+	}
+	return *o.SchedulingGroup
+}
+
+// GetSchedulingGroupOk returns a tuple with the SchedulingGroup field value if set, nil otherwise
+// and a boolean to check if the value has been set.
+func (o *V1PodSpec) GetSchedulingGroupOk() (*V1PodSchedulingGroup, bool) {
+	if o == nil || IsNil(o.SchedulingGroup) {
+		return nil, false
+	}
+	return o.SchedulingGroup, true
+}
+
+// HasSchedulingGroup returns a boolean if a field has been set.
+func (o *V1PodSpec) HasSchedulingGroup() bool {
+	if o != nil && !IsNil(o.SchedulingGroup) {
+		return true
+	}
+
+	return false
+}
+
+// SetSchedulingGroup gets a reference to the given V1PodSchedulingGroup and assigns it to the SchedulingGroup field.
+func (o *V1PodSpec) SetSchedulingGroup(v V1PodSchedulingGroup) {
+	o.SchedulingGroup = &v
+}
+
 // GetSecurityContext returns the SecurityContext field value if set, zero value otherwise.
 func (o *V1PodSpec) GetSecurityContext() V1PodSecurityContext {
 	if o == nil || IsNil(o.SecurityContext) {
@@ -1534,6 +1568,9 @@ func (o V1PodSpec) ToMap() (map[string]interface{}, error) {
 	}
 	if !IsNil(o.SchedulingGates) {
 		toSerialize["schedulingGates"] = o.SchedulingGates
+	}
+	if !IsNil(o.SchedulingGroup) {
+		toSerialize["schedulingGroup"] = o.SchedulingGroup
 	}
 	if !IsNil(o.SecurityContext) {
 		toSerialize["securityContext"] = o.SecurityContext
