@@ -20,6 +20,14 @@ eligible user rejects. A rejection fails the step (and the promotion). Both the
 approvals and the rejection are recorded, so the full decision trail is
 available to later steps.
 
+:::warning
+Do not reference secrets in this step's config. Kargo renders the config
+(evaluating expressions, including `secret()`) before the step runs, and the
+rendered result is stored on the step's record and shown in the Kargo UI. Any
+secret pulled into the config this way may be exposed to anyone who can view the
+Promotion.
+:::
+
 ## Approvers
 
 The `approvers` field lists the rules that decide who may approve or reject.
