@@ -66,23 +66,30 @@ reviewed and merged before proceeding with subsequent steps in your promotion
 process, such as [updating Argo CD applications](argocd-update.md).
 
 ```yaml
-steps:
-# Clone, prepare the contents of ./out, commit, etc...
-- uses: git-push
-  as: push
-  config:
-    path: ./out
-    generateTargetBranch: true
-- uses: git-open-pr
-  as: open-pr
-  config:
-    repoURL: https://github.com/example/repo.git
-    createTargetBranch: true
-    sourceBranch: ${{ outputs.push.branch }}
-    targetBranch: stage/${{ ctx.stage }}
-- uses: git-wait-for-pr
-  as: wait-for-pr
-  config:
-    repoURL: https://github.com/example/repo.git
-    prNumber: ${{ outputs['open-pr'].pr.id }}
+apiVersion: kargo.akuity.io/v1alpha1
+kind: Stage
+# ...
+spec:
+  # ...
+  promotionTemplate:
+    spec:
+      steps:
+      # Clone, prepare the contents of ./out, commit, etc...
+      - uses: git-push
+        as: push
+        config:
+          path: ./out
+          generateTargetBranch: true
+      - uses: git-open-pr
+        as: open-pr
+        config:
+          repoURL: https://github.com/example/repo.git
+          createTargetBranch: true
+          sourceBranch: ${{ outputs.push.branch }} # Or task.outputs in a (Cluster)PromotionTask
+          targetBranch: stage/${{ ctx.stage }}
+      - uses: git-wait-for-pr
+        as: wait-for-pr
+        config:
+          repoURL: https://github.com/example/repo.git
+          prNumber: ${{ outputs['open-pr'].pr.id }}
 ```

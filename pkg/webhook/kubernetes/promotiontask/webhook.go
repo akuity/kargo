@@ -5,7 +5,6 @@ import (
 	"errors"
 
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
-	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/runtime/schema"
 	"k8s.io/apimachinery/pkg/util/validation/field"
 	ctrl "sigs.k8s.io/controller-runtime"
@@ -29,17 +28,15 @@ func SetupWebhookWithManager(mgr ctrl.Manager) error {
 	w := &webhook{
 		client: mgr.GetClient(),
 	}
-	return ctrl.NewWebhookManagedBy(mgr).
-		For(&kargoapi.PromotionTask{}).
+	return ctrl.NewWebhookManagedBy(mgr, &kargoapi.PromotionTask{}).
 		WithValidator(w).
 		Complete()
 }
 
 func (w *webhook) ValidateCreate(
 	ctx context.Context,
-	obj runtime.Object,
+	task *kargoapi.PromotionTask,
 ) (admission.Warnings, error) {
-	task := obj.(*kargoapi.PromotionTask) // nolint: forcetypeassert
 	var errs field.ErrorList
 	if err := libWebhook.ValidateProject(ctx, w.client, task); err != nil {
 		var statusErr *apierrors.StatusError
@@ -63,10 +60,9 @@ func (w *webhook) ValidateCreate(
 
 func (w *webhook) ValidateUpdate(
 	_ context.Context,
-	_ runtime.Object,
-	newObj runtime.Object,
+	_ *kargoapi.PromotionTask,
+	task *kargoapi.PromotionTask,
 ) (admission.Warnings, error) {
-	task := newObj.(*kargoapi.PromotionTask) // nolint: forcetypeassert
 	if errs := w.validateSpec(field.NewPath("spec"), task.Spec); len(errs) > 0 {
 		return nil, apierrors.NewInvalid(promotionTaskGroupKind, task.Name, errs)
 	}
@@ -75,7 +71,7 @@ func (w *webhook) ValidateUpdate(
 
 func (w *webhook) ValidateDelete(
 	context.Context,
-	runtime.Object,
+	*kargoapi.PromotionTask,
 ) (admission.Warnings, error) {
 	// No-op
 	return nil, nil

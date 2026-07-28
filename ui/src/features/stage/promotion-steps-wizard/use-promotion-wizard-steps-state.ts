@@ -46,7 +46,7 @@ const APIPromotionStepsToLocalStateEquivalent = (
 
     runnerWithConfig.push({
       ...runnerMeta,
-      state: step.config,
+      state: step.config as Record<string, unknown>,
       as: step.as,
       continueOnError: step.continueOnError
     });
@@ -76,7 +76,8 @@ const stateToYAML = (state: RunnerWithConfiguration[]): string => {
   for (const step of state) {
     promotionSteps.push({
       uses: step.identifier,
-      // this will be object but its hard to convey in types after migration of connectrpc to v2
+      // config is an arbitrary, step-defined object -- too dynamic to express
+      // precisely in the generated PromotionStep type.
       config: step.state,
       as: step.as || '',
       continueOnError: step.continueOnError || false,

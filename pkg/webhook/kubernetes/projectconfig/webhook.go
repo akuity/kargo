@@ -9,7 +9,6 @@ import (
 	corev1 "k8s.io/api/core/v1"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/runtime/schema"
 	"k8s.io/apimachinery/pkg/types"
 	"k8s.io/apimachinery/pkg/util/validation/field"
@@ -41,18 +40,15 @@ func SetupWebhookWithManager(mgr ctrl.Manager) error {
 	w := &webhook{
 		client: mgr.GetClient(),
 	}
-	return ctrl.NewWebhookManagedBy(mgr).
-		For(&kargoapi.ProjectConfig{}).
+	return ctrl.NewWebhookManagedBy(mgr, &kargoapi.ProjectConfig{}).
 		WithValidator(w).
 		Complete()
 }
 
 func (w *webhook) ValidateCreate(
 	ctx context.Context,
-	obj runtime.Object,
+	projectCfg *kargoapi.ProjectConfig,
 ) (admission.Warnings, error) {
-	projectCfg := obj.(*kargoapi.ProjectConfig) // nolint: forcetypeassert
-
 	errs := w.validateObjectMeta(field.NewPath("metadata"), projectCfg.ObjectMeta)
 	if errs = append(
 		errs,
@@ -89,10 +85,9 @@ func (w *webhook) ValidateCreate(
 
 func (w *webhook) ValidateUpdate(
 	_ context.Context,
-	_ runtime.Object,
-	newObj runtime.Object,
+	_ *kargoapi.ProjectConfig,
+	projectCfg *kargoapi.ProjectConfig,
 ) (admission.Warnings, error) {
-	projectCfg := newObj.(*kargoapi.ProjectConfig) // nolint: forcetypeassert
 	if errs := w.validateSpec(field.NewPath("spec"), projectCfg.Spec); len(errs) > 0 {
 		return nil,
 			apierrors.NewInvalid(projectConfigGroupKind, projectCfg.Name, errs)
@@ -102,7 +97,7 @@ func (w *webhook) ValidateUpdate(
 
 func (w *webhook) ValidateDelete(
 	context.Context,
-	runtime.Object,
+	*kargoapi.ProjectConfig,
 ) (admission.Warnings, error) {
 	return nil, nil
 }

@@ -39,4 +39,4 @@ sed -i.bak '/^import /d' ${out_file}
 
 rm ${out_file}.bak
 
-hack/bin/goimports -w ${out_file}
+go tool goimports -w ${out_file}

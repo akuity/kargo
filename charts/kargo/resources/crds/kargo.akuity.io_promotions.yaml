@@ -64,12 +64,35 @@ spec:
             properties:
               freight:
                 description: |-
-                  Freight specifies the piece of Freight to be promoted into the Stage
-                  referenced by the Stage field.
+                  Freight specifies the piece of Freight to be promoted into the Stage.
+                  Exactly one of Freight or Origin must be set.
                 maxLength: 253
                 minLength: 1
                 pattern: ^[a-z0-9]([-a-z0-9]*[a-z0-9])?(\.[a-z0-9]([-a-z0-9]*[a-z0-9])?)*$
                 type: string
+              origin:
+                description: |-
+                  Origin, when set, identifies the FreightOrigin whose auto-promotion
+                  candidate should be promoted. The mutating webhook resolves this to the
+                  candidate Freight for that origin and fills Freight before the Promotion
+                  is persisted. Exactly one of Freight or Origin must be set.
+                properties:
+                  kind:
+                    description: |-
+                      Kind is the kind of resource from which Freight may have originated. At
+                      present, this can only be "Warehouse".
+                    enum:
+                    - Warehouse
+                    type: string
+                  name:
+                    description: |-
+                      Name is the name of the resource of the kind indicated by the Kind field
+                      from which Freight may originate.
+                    type: string
+                required:
+                - kind
+                - name
+                type: object
               stage:
                 description: |-
                   Stage specifies the name of the Stage to which this Promotion
@@ -219,6 +242,21 @@ spec:
                     rule: has(self.uses) && !has(self.task)
                 minItems: 1
                 type: array
+              target:
+                description: |-
+                  Target optionally names the Target, within the Promotion's own Project
+                  (namespace), that this Promotion promotes Freight to. Targets allow a
+                  single Stage to govern -- and promote Freight to -- multiple destinations.
+                  When set, the named Target must be one that the referenced Stage governs,
+                  i.e. one selected by the Stage's targetSelectors.
+
+                  When empty (the default), the Promotion promotes to the Stage itself. This
+                  preserves the behavior of Promotions created before Targets existed:
+                  classic Stages -- those without targetSelectors -- govern no Targets, so
+                  their Promotions leave this field empty.
+                maxLength: 253
+                pattern: ^[a-z0-9]([-a-z0-9]*[a-z0-9])?(\.[a-z0-9]([-a-z0-9]*[a-z0-9])?)*$
+                type: string
               vars:
                 description: |-
                   Vars is a list of variables that can be referenced by expressions in
@@ -248,10 +286,12 @@ spec:
                   type: object
                 type: array
             required:
-            - freight
             - stage
             - steps
             type: object
+            x-kubernetes-validations:
+            - message: exactly one of freight or origin must be set
+              rule: has(self.freight) != has(self.origin)
           status:
             description: |-
               Status describes the current state of the transition represented by this

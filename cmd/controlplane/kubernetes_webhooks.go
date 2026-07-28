@@ -11,6 +11,7 @@ import (
 	rbacv1 "k8s.io/api/rbac/v1"
 	"k8s.io/apimachinery/pkg/runtime"
 	ctrl "sigs.k8s.io/controller-runtime"
+	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/metrics/server"
 	"sigs.k8s.io/controller-runtime/pkg/webhook"
 
@@ -133,6 +134,28 @@ func (o *kubernetesWebhooksServerOptions) run(ctx context.Context) error {
 	)
 	if err != nil {
 		return fmt.Errorf("new manager: %w", err)
+	}
+
+	// The Promotion webhook may receive spec.origin without spec.freight. To
+	// resolve that origin, it lists the same available Freight the Stage
+	// controller considers for auto-promotion, so it needs those Freight indexes.
+	for _, freightIndex := range []struct {
+		field string
+		fn    client.IndexerFunc
+	}{
+		{field: indexer.FreightByWarehouseField, fn: indexer.FreightByWarehouse},
+		{field: indexer.FreightByCurrentStagesField, fn: indexer.FreightByCurrentStages},
+		{field: indexer.FreightByVerifiedStagesField, fn: indexer.FreightByVerifiedStages},
+		{field: indexer.FreightApprovedForStagesField, fn: indexer.FreightApprovedForStages},
+	} {
+		if err = mgr.GetFieldIndexer().IndexField(
+			ctx,
+			&kargoapi.Freight{},
+			freightIndex.field,
+			freightIndex.fn,
+		); err != nil {
+			return fmt.Errorf("index Freight by %s: %w", freightIndex.field, err)
+		}
 	}
 
 	// Index Stages by Freight

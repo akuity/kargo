@@ -193,25 +193,32 @@ It leverages the `set-metadata` step to store and retrieve the thread timestamp 
 freight. This allows messages related to the same freight to be grouped together in a single thread.
 
 ```yaml
-steps:
-- uses: send-message
-  as: send-slack
-  config:
-    channel:
-      kind: MessageChannel
-      name: slack
-    message: "Kargo has kicked off promotion to stage: ${{ ctx.stage }}."
-    slack:
-      # NOTE: Make sure to wrap this in quotes with `quote` otherwise it will get rendered as
-      # a number
-      threadTS: "${{ quote(freightMetadata(ctx.targetFreight.name)?.slackThreadTS ?? '') }}"
-- uses: set-metadata
-  config:
-    updates:
-      - kind: Freight
-        name: ${{ ctx.targetFreight.name }}
-        values:
-          # NOTE: Make sure to wrap this in quotes with `quote` otherwise it will get rendered
-          # as a number
-          slackThreadTS: "${{ quote(outputs['send-slack']?.slack?.threadTS ?? '') }}"
+apiVersion: kargo.akuity.io/v1alpha1
+kind: Stage
+# ...
+spec:
+  # ...
+  promotionTemplate:
+    spec:
+      steps:
+      - uses: send-message
+        as: send-slack
+        config:
+          channel:
+            kind: MessageChannel
+            name: slack
+          message: "Kargo has kicked off promotion to stage: ${{ ctx.stage }}."
+          slack:
+            # NOTE: Make sure to wrap this in quotes with `quote` otherwise it will get rendered as
+            # a number
+            threadTS: "${{ quote(freightMetadata(ctx.targetFreight.name)?.slackThreadTS ?? '') }}"
+      - uses: set-metadata
+        config:
+          updates:
+            - kind: Freight
+              name: ${{ ctx.targetFreight.name }}
+              values:
+                # NOTE: Make sure to wrap this in quotes with `quote` otherwise it will get rendered
+                # as a number
+                slackThreadTS: "${{ quote(outputs['send-slack']?.slack?.threadTS ?? '') }}" # Or task.outputs in a (Cluster)PromotionTask
 ```

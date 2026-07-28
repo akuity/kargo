@@ -7,7 +7,6 @@ import (
 	"strings"
 
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
-	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/runtime/schema"
 	"k8s.io/apimachinery/pkg/util/validation/field"
 	ctrl "sigs.k8s.io/controller-runtime"
@@ -36,8 +35,7 @@ func SetupWebhookWithManager(mgr ctrl.Manager) error {
 		mgr.GetClient(),
 		subscription.DefaultSubscriberRegistry,
 	)
-	return ctrl.NewWebhookManagedBy(mgr).
-		For(&kargoapi.Warehouse{}).
+	return ctrl.NewWebhookManagedBy(mgr, &kargoapi.Warehouse{}).
 		WithDefaulter(w).
 		WithValidator(w).
 		Complete()
@@ -55,9 +53,7 @@ func newWebhook(
 
 const defaultDiscoveryLimit = int32(20)
 
-func (w *webhook) Default(ctx context.Context, obj runtime.Object) error {
-	warehouse := obj.(*kargoapi.Warehouse) // nolint: forcetypeassert
-
+func (w *webhook) Default(ctx context.Context, warehouse *kargoapi.Warehouse) error {
 	// Sync the shard label to the convenience shard field
 	if warehouse.Spec.Shard != "" {
 		if warehouse.Labels == nil {
@@ -97,9 +93,8 @@ func (w *webhook) Default(ctx context.Context, obj runtime.Object) error {
 
 func (w *webhook) ValidateCreate(
 	ctx context.Context,
-	obj runtime.Object,
+	warehouse *kargoapi.Warehouse,
 ) (admission.Warnings, error) {
-	warehouse := obj.(*kargoapi.Warehouse) // nolint: forcetypeassert
 	var errs field.ErrorList
 	if err := libWebhook.ValidateProject(
 		ctx,
@@ -127,10 +122,9 @@ func (w *webhook) ValidateCreate(
 
 func (w *webhook) ValidateUpdate(
 	ctx context.Context,
-	_ runtime.Object,
-	newObj runtime.Object,
+	_ *kargoapi.Warehouse,
+	warehouse *kargoapi.Warehouse,
 ) (admission.Warnings, error) {
-	warehouse := newObj.(*kargoapi.Warehouse) // nolint: forcetypeassert
 	if errs := w.validateSpec(ctx, field.NewPath("spec"), &warehouse.Spec); len(errs) > 0 {
 		return nil, apierrors.NewInvalid(warehouseGroupKind, warehouse.Name, errs)
 	}
@@ -139,7 +133,7 @@ func (w *webhook) ValidateUpdate(
 
 func (w *webhook) ValidateDelete(
 	context.Context,
-	runtime.Object,
+	*kargoapi.Warehouse,
 ) (admission.Warnings, error) {
 	// No-op
 	return nil, nil

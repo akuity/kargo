@@ -8,10 +8,14 @@ import (
 
 	"github.com/xeipuuv/gojsonschema"
 	corev1 "k8s.io/api/core/v1"
+	"k8s.io/apimachinery/pkg/api/meta"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 	"k8s.io/apimachinery/pkg/labels"
+	"k8s.io/apimachinery/pkg/util/wait"
+	"k8s.io/client-go/util/retry"
 	"sigs.k8s.io/controller-runtime/pkg/client"
+	"sigs.k8s.io/controller-runtime/pkg/client/apiutil"
 
 	kargoapi "github.com/akuity/kargo/api/v1alpha1"
 	"github.com/akuity/kargo/pkg/api"
@@ -802,7 +806,9 @@ func (a *argocdUpdater) getAuthorizedApplications(
 			client.MatchingLabelsSelector{Selector: labelSelector},
 		}
 
-		if err = a.argocdClient.List(ctx, appList, listOpts...); err != nil {
+		if err = a.withDiscoveryRetry(ctx, func(ctx context.Context) error {
+			return a.argocdClient.List(ctx, appList, listOpts...)
+		}); err != nil {
 			return nil, fmt.Errorf("error listing Argo CD Applications matching selector: %w", err)
 		}
 
@@ -812,8 +818,12 @@ func (a *argocdUpdater) getAuthorizedApplications(
 		}
 	} else {
 		// Get single Application by name
-		app, err := argocd.GetApplication(ctx, a.argocdClient, namespace, update.Name)
-		if err != nil {
+		var app *argocd.Application
+		if err := a.withDiscoveryRetry(ctx, func(ctx context.Context) error {
+			var getErr error
+			app, getErr = argocd.GetApplication(ctx, a.argocdClient, namespace, update.Name)
+			return getErr
+		}); err != nil {
 			return nil, fmt.Errorf(
 				"error finding Argo CD Application %q in namespace %q: %w",
 				update.Name, namespace, err,
@@ -867,6 +877,90 @@ func (a *argocdUpdater) getAuthorizedApplications(
 	}
 
 	return authorizedApps, nil
+}
+
+// discoveryRetryBackoff bounds retries of Argo CD Application reads that fail because the API
+// server's discovery information was momentarily incomplete.
+//
+// retry.OnError sleeps *between* attempts and never sleeps after the last one, so the total
+// wall-clock budget is the sum of the inter-attempt delays, and Steps is the lever that controls
+// it. With Factor 2 the delays are 1s, 2s, 4s, 8s, 16s, 32s, etc. Cap only clamps an individual
+// delay once it would exceed the cap (at which point client-go's backoff also stops), so a Cap
+// larger than the biggest delay a given Steps can reach has no effect.
+//
+// Steps 7 yields six attempts over 1+2+4+8+16+32 ≈ 63s of retrying, which comfortably covers the
+// ~35s discovery-recovery window observed behind remote/managed Argo CD proxy layers while staying
+// well within the step's default 5m timeout. Since isIncompleteDiscoveryError only retries a
+// NoKindMatchError naming the Argo CD Application kind, a genuinely absent CRD or any other kind
+// still fails fast.
+var discoveryRetryBackoff = wait.Backoff{
+	Steps:    7,
+	Duration: time.Second,
+	Factor:   2,
+	Jitter:   0.1,
+	Cap:      50 * time.Second,
+}
+
+// argoCDApplicationGroupKind identifies the Argo CD Application kind that this
+// file discovers. isIncompleteDiscoveryError only treats a bare
+// *meta.NoKindMatchError as retryable when it names this exact GroupKind, so a
+// NoKindMatchError for some unrelated kind is never mistaken for a transient
+// Application discovery hiccup.
+var argoCDApplicationGroupKind = argocd.GroupVersion.WithKind("Application").GroupKind()
+
+// withDiscoveryRetry runs fn, retrying it with backoff for as long as it fails
+// because the discovery-backed RESTMapper could not map the Argo CD Application
+// kind due to incomplete or temporarily unavailable API discovery. It does NOT
+// retry a *meta.NoKindMatchError naming any kind other than the Argo CD
+// Application kind, so a real misconfiguration involving some other kind still
+// fails fast instead of blocking for the full backoff.
+//
+// The passed function requires a context to help cancel any inflight work rather
+// than waiting for the retry period
+func (a *argocdUpdater) withDiscoveryRetry(ctx context.Context, fn func(ctx context.Context) error) error {
+	logger := logging.LoggerFromContext(ctx)
+	return retry.OnError(discoveryRetryBackoff, isIncompleteDiscoveryError, func() error {
+		err := fn(ctx)
+		if isIncompleteDiscoveryError(err) {
+			logger.Debug(
+				"could not map Argo CD Application kind because API discovery was "+
+					"incomplete; retrying",
+				"error", err.Error(),
+			)
+		}
+		return err
+	})
+}
+
+// isIncompleteDiscoveryError reports whether err indicates that the
+// discovery-backed RESTMapper could not map a kind because a discovery call
+// failed or returned incomplete results -- as opposed to the kind genuinely not
+// being served by the cluster.
+//
+// controller-runtime's RESTMapper returns an *apiutil.ErrResourceDiscoveryFailed
+// when discovery for a GroupVersion fails or comes back incomplete. This is
+// transient and worth retrying: on the next attempt the mapper performs a
+// targeted discovery of just that group-version, which typically succeeds.
+//
+// When the kind is genuinely absent, that targeted discovery returns NotFound
+// and the mapper instead returns a bare *meta.NoKindMatchError. Behind a flaky
+// proxy or HA API server, that same bare error can also surface when the
+// Application kind IS served but the targeted discovery request itself failed
+// in flight (e.g. a dropped connection), making it indistinguishable from a
+// genuine absence at the error-type level alone. Because this file only ever
+// discovers the Argo CD Application kind, a *meta.NoKindMatchError naming that
+// exact GroupKind (argoCDApplicationGroupKind) is treated as retryable too; a
+// NoKindMatchError naming any other GroupKind still fails fast.
+func isIncompleteDiscoveryError(err error) bool {
+	if err == nil {
+		return false
+	}
+	var discoveryErr *apiutil.ErrResourceDiscoveryFailed
+	if errors.As(err, &discoveryErr) {
+		return true
+	}
+	var noKindMatchErr *meta.NoKindMatchError
+	return errors.As(err, &noKindMatchErr) && noKindMatchErr.GroupKind == argoCDApplicationGroupKind
 }
 
 // authorizeArgoCDAppUpdate returns an error if the Argo CD Application

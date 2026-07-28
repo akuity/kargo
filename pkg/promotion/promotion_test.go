@@ -842,3 +842,36 @@ func TestContext_DeepCopy(t *testing.T) {
 		})
 	}
 }
+
+func TestTargetContext_DeepCopy(t *testing.T) {
+	t.Run("nil receiver returns nil", func(t *testing.T) {
+		var tc *TargetContext
+		assert.Nil(t, tc.DeepCopy())
+	})
+
+	t.Run("nil maps stay nil", func(t *testing.T) {
+		cp := (&TargetContext{}).DeepCopy()
+		assert.NotNil(t, cp)
+		assert.Nil(t, cp.Params)
+		assert.Nil(t, cp.Labels)
+	})
+
+	t.Run("copies params and labels independently", func(t *testing.T) {
+		original := &TargetContext{
+			Params: map[string]any{"cluster": "east", "region": "us"},
+			Labels: map[string]string{"env": "prod"},
+		}
+
+		cp := original.DeepCopy()
+		assert.NotSame(t, original, cp)
+		assert.Equal(t, original.Params, cp.Params)
+		assert.Equal(t, original.Labels, cp.Labels)
+
+		// Mutating the copy must not affect the original.
+		cp.Params["cluster"] = "west"
+		cp.Labels["env"] = "dev"
+
+		assert.Equal(t, "east", original.Params["cluster"])
+		assert.Equal(t, "prod", original.Labels["env"])
+	})
+}

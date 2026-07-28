@@ -9,7 +9,6 @@ import (
 	rbacv1 "k8s.io/api/rbac/v1"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/runtime/schema"
 	"k8s.io/apimachinery/pkg/types"
 	ctrl "sigs.k8s.io/controller-runtime"
@@ -37,18 +36,15 @@ func SetupWebhookWithManager(mgr ctrl.Manager, cfg libWebhook.Config) error {
 		cfg:    cfg,
 		client: mgr.GetClient(),
 	}
-	return ctrl.NewWebhookManagedBy(mgr).
-		For(&kargoapi.Project{}).
+	return ctrl.NewWebhookManagedBy(mgr, &kargoapi.Project{}).
 		WithValidator(w).
 		Complete()
 }
 
 func (w *webhook) ValidateCreate(
 	ctx context.Context,
-	obj runtime.Object,
+	project *kargoapi.Project,
 ) (admission.Warnings, error) {
-	project := obj.(*kargoapi.Project) // nolint: forcetypeassert
-
 	req, err := admission.RequestFromContext(ctx)
 	if err != nil {
 		return nil, apierrors.NewInternalError(
@@ -86,15 +82,15 @@ func (w *webhook) ValidateCreate(
 
 func (w *webhook) ValidateUpdate(
 	context.Context,
-	runtime.Object,
-	runtime.Object,
+	*kargoapi.Project,
+	*kargoapi.Project,
 ) (admission.Warnings, error) {
 	return nil, nil
 }
 
 func (w *webhook) ValidateDelete(
 	context.Context,
-	runtime.Object,
+	*kargoapi.Project,
 ) (admission.Warnings, error) {
 	return nil, nil
 }

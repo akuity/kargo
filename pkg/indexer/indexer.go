@@ -254,7 +254,7 @@ func RunningPromotionsByArgoCDApplications(
 					for _, app := range appsList {
 						if app, ok := app.(map[string]any); ok {
 							if nameTemplate, ok := app["name"].(string); ok {
-								env := evaluator.BuildExprEnv(
+								env := promotion.BuildExprEnv(
 									promoCtx,
 									promotion.ExprEnvWithOutputs(promoCtx.State),
 									promotion.ExprEnvWithTaskOutputs(dirStep.Alias, promoCtx.State),

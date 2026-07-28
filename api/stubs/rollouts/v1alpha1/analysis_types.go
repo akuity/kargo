@@ -13,45 +13,45 @@ import (
 
 type AnalysisTemplate struct {
 	metav1.TypeMeta   `json:",inline"`
-	metav1.ObjectMeta `json:"metadata,omitempty" protobuf:"bytes,1,opt,name=metadata"`
-	Spec              AnalysisTemplateSpec `json:"spec" protobuf:"bytes,2,opt,name=spec"`
+	metav1.ObjectMeta `json:"metadata,omitempty"`
+	Spec              AnalysisTemplateSpec `json:"spec"`
 }
 
 //+kubebuilder:object:root=true
 
 type AnalysisTemplateList struct {
 	metav1.TypeMeta `json:",inline"`
-	metav1.ListMeta `json:"metadata" protobuf:"bytes,1,opt,name=metadata"`
-	Items           []AnalysisTemplate `json:"items" protobuf:"bytes,2,rep,name=items"`
+	metav1.ListMeta `json:"metadata"`
+	Items           []AnalysisTemplate `json:"items"`
 }
 
 //+kubebuilder:object:root=true
 
 type ClusterAnalysisTemplate struct {
 	metav1.TypeMeta   `json:",inline"`
-	metav1.ObjectMeta `json:"metadata,omitempty" protobuf:"bytes,1,opt,name=metadata"`
-	Spec              AnalysisTemplateSpec `json:"spec" protobuf:"bytes,2,opt,name=spec"`
+	metav1.ObjectMeta `json:"metadata,omitempty"`
+	Spec              AnalysisTemplateSpec `json:"spec"`
 }
 
 //+kubebuilder:object:root=true
 
 type ClusterAnalysisTemplateList struct {
 	metav1.TypeMeta `json:",inline"`
-	metav1.ListMeta `json:"metadata" protobuf:"bytes,1,opt,name=metadata"`
-	Items           []ClusterAnalysisTemplate `json:"items" protobuf:"bytes,2,rep,name=items"`
+	metav1.ListMeta `json:"metadata"`
+	Items           []ClusterAnalysisTemplate `json:"items"`
 }
 
 type AnalysisTemplateSpec struct {
-	Metrics              []Metric               `json:"metrics" protobuf:"bytes,1,rep,name=metrics"`
-	Args                 []Argument             `json:"args,omitempty" protobuf:"bytes,2,rep,name=args"`
-	DryRun               []DryRun               `json:"dryRun,omitempty" protobuf:"bytes,3,rep,name=dryRun"`
-	MeasurementRetention []MeasurementRetention `json:"measurementRetention,omitempty" protobuf:"bytes,4,rep,name=measurementRetention"`
-	Templates            []AnalysisTemplateRef  `json:"templates,omitempty" protobuf:"bytes,5,rep,name=templates"`
+	Metrics              []Metric               `json:"metrics"`
+	Args                 []Argument             `json:"args,omitempty"`
+	DryRun               []DryRun               `json:"dryRun,omitempty"`
+	MeasurementRetention []MeasurementRetention `json:"measurementRetention,omitempty"`
+	Templates            []AnalysisTemplateRef  `json:"templates,omitempty"`
 }
 
 type AnalysisTemplateRef struct {
-	TemplateName string `json:"templateName" protobuf:"bytes,1,opt,name=templateName"`
-	ClusterScope *bool  `json:"clusterScope,omitempty" protobuf:"varint,2,opt,name=clusterScope"`
+	TemplateName string `json:"templateName"`
+	ClusterScope *bool  `json:"clusterScope,omitempty"`
 }
 
 type DurationString string
@@ -61,41 +61,41 @@ func (d DurationString) Duration() (time.Duration, error) {
 }
 
 type Metric struct {
-	Name                    string                  `json:"name" protobuf:"bytes,1,opt,name=name"`
-	Interval                DurationString          `json:"interval,omitempty" protobuf:"bytes,2,opt,name=interval,casttype=DurationString"`
-	InitialDelay            DurationString          `json:"initialDelay,omitempty" protobuf:"bytes,3,opt,name=initialDelay,casttype=DurationString"`
-	Count                   *intstrutil.IntOrString `json:"count,omitempty" protobuf:"bytes,4,opt,name=count"`
-	SuccessCondition        string                  `json:"successCondition,omitempty" protobuf:"bytes,5,opt,name=successCondition"`
-	FailureCondition        string                  `json:"failureCondition,omitempty" protobuf:"bytes,6,opt,name=failureCondition"`
-	FailureLimit            *intstrutil.IntOrString `json:"failureLimit,omitempty" protobuf:"bytes,7,opt,name=failureLimit"`
-	InconclusiveLimit       *intstrutil.IntOrString `json:"inconclusiveLimit,omitempty" protobuf:"bytes,8,opt,name=inconclusiveLimit"`
-	ConsecutiveErrorLimit   *intstrutil.IntOrString `json:"consecutiveErrorLimit,omitempty" protobuf:"bytes,9,opt,name=consecutiveErrorLimit"`
-	Provider                MetricProvider          `json:"provider" protobuf:"bytes,10,opt,name=provider"`
-	ConsecutiveSuccessLimit *intstrutil.IntOrString `json:"consecutiveSuccessLimit,omitempty" protobuf:"bytes,11,opt,name=consecutiveSuccessLimit"`
+	Name                    string                  `json:"name"`
+	Interval                DurationString          `json:"interval,omitempty"`
+	InitialDelay            DurationString          `json:"initialDelay,omitempty"`
+	Count                   *intstrutil.IntOrString `json:"count,omitempty"`
+	SuccessCondition        string                  `json:"successCondition,omitempty"`
+	FailureCondition        string                  `json:"failureCondition,omitempty"`
+	FailureLimit            *intstrutil.IntOrString `json:"failureLimit,omitempty"`
+	InconclusiveLimit       *intstrutil.IntOrString `json:"inconclusiveLimit,omitempty"`
+	ConsecutiveErrorLimit   *intstrutil.IntOrString `json:"consecutiveErrorLimit,omitempty"`
+	Provider                MetricProvider          `json:"provider"`
+	ConsecutiveSuccessLimit *intstrutil.IntOrString `json:"consecutiveSuccessLimit,omitempty"`
 }
 
 type DryRun struct {
-	MetricName string `json:"metricName" protobuf:"bytes,1,opt,name=metricName"`
+	MetricName string `json:"metricName"`
 }
 
 type MeasurementRetention struct {
-	MetricName string `json:"metricName" protobuf:"bytes,1,opt,name=metricName"`
-	Limit      int32  `json:"limit" protobuf:"varint,2,opt,name=limit"`
+	MetricName string `json:"metricName"`
+	Limit      int32  `json:"limit"`
 }
 
 type MetricProvider struct {
-	Prometheus *PrometheusMetric          `json:"prometheus,omitempty" protobuf:"bytes,1,opt,name=prometheus"`
-	Kayenta    *KayentaMetric             `json:"kayenta,omitempty" protobuf:"bytes,2,opt,name=kayenta"`
-	Web        *WebMetric                 `json:"web,omitempty" protobuf:"bytes,3,opt,name=web"`
-	Datadog    *DatadogMetric             `json:"datadog,omitempty" protobuf:"bytes,4,opt,name=datadog"`
-	Wavefront  *WavefrontMetric           `json:"wavefront,omitempty" protobuf:"bytes,5,opt,name=wavefront"`
-	NewRelic   *NewRelicMetric            `json:"newRelic,omitempty" protobuf:"bytes,6,opt,name=newRelic"`
-	Job        *JobMetric                 `json:"job,omitempty" protobuf:"bytes,7,opt,name=job"`
-	CloudWatch *CloudWatchMetric          `json:"cloudWatch,omitempty" protobuf:"bytes,8,opt,name=cloudWatch"`
-	Graphite   *GraphiteMetric            `json:"graphite,omitempty" protobuf:"bytes,9,opt,name=graphite"`
-	Influxdb   *InfluxdbMetric            `json:"influxdb,omitempty" protobuf:"bytes,10,opt,name=influxdb"`
-	SkyWalking *SkyWalkingMetric          `json:"skywalking,omitempty" protobuf:"bytes,11,opt,name=skywalking"`
-	Plugin     map[string]json.RawMessage `json:"plugin,omitempty" protobuf:"bytes,12,rep,name=plugin,castvalue=encoding/json.RawMessage"`
+	Prometheus *PrometheusMetric          `json:"prometheus,omitempty"`
+	Kayenta    *KayentaMetric             `json:"kayenta,omitempty"`
+	Web        *WebMetric                 `json:"web,omitempty"`
+	Datadog    *DatadogMetric             `json:"datadog,omitempty"`
+	Wavefront  *WavefrontMetric           `json:"wavefront,omitempty"`
+	NewRelic   *NewRelicMetric            `json:"newRelic,omitempty"`
+	Job        *JobMetric                 `json:"job,omitempty"`
+	CloudWatch *CloudWatchMetric          `json:"cloudWatch,omitempty"`
+	Graphite   *GraphiteMetric            `json:"graphite,omitempty"`
+	Influxdb   *InfluxdbMetric            `json:"influxdb,omitempty"`
+	SkyWalking *SkyWalkingMetric          `json:"skywalking,omitempty"`
+	Plugin     map[string]json.RawMessage `json:"plugin,omitempty"`
 }
 
 type AnalysisPhase string
@@ -119,95 +119,95 @@ func (as AnalysisPhase) Completed() bool {
 }
 
 type PrometheusMetric struct {
-	Address        string                    `json:"address,omitempty" protobuf:"bytes,1,opt,name=address"`
-	Query          string                    `json:"query,omitempty" protobuf:"bytes,2,opt,name=query"`
-	Authentication Authentication            `json:"authentication,omitempty" protobuf:"bytes,3,opt,name=authentication"`
-	Timeout        *int64                    `json:"timeout,omitempty" protobuf:"varint,4,opt,name=timeout"`
-	Insecure       bool                      `json:"insecure,omitempty" protobuf:"varint,5,opt,name=insecure"`
-	Headers        []WebMetricHeader         `json:"headers,omitempty" protobuf:"bytes,6,rep,name=headers"`
-	RangeQuery     *PrometheusRangeQueryArgs `json:"rangeQuery,omitempty" protobuf:"bytes,7,opt,name=rangeQuery"`
+	Address        string                    `json:"address,omitempty"`
+	Query          string                    `json:"query,omitempty"`
+	Authentication Authentication            `json:"authentication,omitempty"`
+	Timeout        *int64                    `json:"timeout,omitempty"`
+	Insecure       bool                      `json:"insecure,omitempty"`
+	Headers        []WebMetricHeader         `json:"headers,omitempty"`
+	RangeQuery     *PrometheusRangeQueryArgs `json:"rangeQuery,omitempty"`
 }
 
 type PrometheusRangeQueryArgs struct {
-	Start string         `json:"start,omitempty" protobuf:"bytes,1,opt,name=start"`
-	End   string         `json:"end,omitempty" protobuf:"bytes,2,opt,name=end"`
-	Step  DurationString `json:"step,omitempty" protobuf:"bytes,3,opt,name=step,casttype=DurationString"`
+	Start string         `json:"start,omitempty"`
+	End   string         `json:"end,omitempty"`
+	Step  DurationString `json:"step,omitempty"`
 }
 
 type Authentication struct {
-	Sigv4  Sigv4Config  `json:"sigv4,omitempty" protobuf:"bytes,1,opt,name=sigv4"`
-	OAuth2 OAuth2Config `json:"oauth2,omitempty" protobuf:"bytes,2,opt,name=oauth2"`
+	Sigv4  Sigv4Config  `json:"sigv4,omitempty"`
+	OAuth2 OAuth2Config `json:"oauth2,omitempty"`
 }
 
 type OAuth2Config struct {
-	TokenURL     string   `json:"tokenUrl,omitempty" protobuf:"bytes,1,opt,name=tokenUrl"`
-	ClientID     string   `json:"clientId,omitempty" protobuf:"bytes,2,opt,name=clientId"`
-	ClientSecret string   `json:"clientSecret,omitempty" protobuf:"bytes,3,opt,name=clientSecret"`
-	Scopes       []string `json:"scopes,omitempty" protobuf:"bytes,4,rep,name=scopes"`
+	TokenURL     string   `json:"tokenUrl,omitempty"`
+	ClientID     string   `json:"clientId,omitempty"`
+	ClientSecret string   `json:"clientSecret,omitempty"`
+	Scopes       []string `json:"scopes,omitempty"`
 }
 
 type Sigv4Config struct {
-	Region  string `json:"region,omitempty" protobuf:"bytes,1,opt,name=region"`
-	Profile string `json:"profile,omitempty" protobuf:"bytes,2,opt,name=profile"`
-	RoleARN string `json:"roleArn,omitempty" protobuf:"bytes,3,opt,name=roleArn"`
+	Region  string `json:"region,omitempty"`
+	Profile string `json:"profile,omitempty"`
+	RoleARN string `json:"roleArn,omitempty"`
 }
 
 type WavefrontMetric struct {
-	Address string `json:"address,omitempty" protobuf:"bytes,1,opt,name=address"`
-	Query   string `json:"query,omitempty" protobuf:"bytes,2,opt,name=query"`
+	Address string `json:"address,omitempty"`
+	Query   string `json:"query,omitempty"`
 }
 
 type NewRelicMetric struct {
-	Profile string `json:"profile,omitempty" protobuf:"bytes,1,opt,name=profile"`
-	Query   string `json:"query" protobuf:"bytes,2,opt,name=query"`
-	Timeout *int64 `json:"timeout,omitempty" protobuf:"varint,3,opt,name=timeout"`
+	Profile string `json:"profile,omitempty"`
+	Query   string `json:"query"`
+	Timeout *int64 `json:"timeout,omitempty"`
 }
 
 type JobMetric struct {
-	Metadata metav1.ObjectMeta `json:"metadata,omitempty" protobuf:"bytes,1,opt,name=metadata"`
-	Spec     batchv1.JobSpec   `json:"spec" protobuf:"bytes,2,opt,name=spec"`
+	Metadata metav1.ObjectMeta `json:"metadata,omitempty"`
+	Spec     batchv1.JobSpec   `json:"spec"`
 }
 
 type GraphiteMetric struct {
-	Address string `json:"address,omitempty" protobuf:"bytes,1,opt,name=address"`
-	Query   string `json:"query,omitempty" protobuf:"bytes,2,opt,name=query"`
+	Address string `json:"address,omitempty"`
+	Query   string `json:"query,omitempty"`
 }
 
 type InfluxdbMetric struct {
-	Profile string `json:"profile,omitempty" protobuf:"bytes,1,opt,name=profile"`
-	Query   string `json:"query,omitempty" protobuf:"bytes,2,opt,name=query"`
+	Profile string `json:"profile,omitempty"`
+	Query   string `json:"query,omitempty"`
 }
 
 type CloudWatchMetric struct {
-	Interval          DurationString              `json:"interval,omitempty" protobuf:"bytes,1,opt,name=interval,casttype=DurationString"`
-	MetricDataQueries []CloudWatchMetricDataQuery `json:"metricDataQueries" protobuf:"bytes,2,rep,name=metricDataQueries"`
+	Interval          DurationString              `json:"interval,omitempty"`
+	MetricDataQueries []CloudWatchMetricDataQuery `json:"metricDataQueries"`
 }
 
 type CloudWatchMetricDataQuery struct {
-	Id         string                  `json:"id,omitempty" protobuf:"bytes,1,opt,name=id"`
-	Expression *string                 `json:"expression,omitempty" protobuf:"bytes,2,opt,name=expression"`
-	Label      *string                 `json:"label,omitempty" protobuf:"bytes,3,opt,name=label"`
-	MetricStat *CloudWatchMetricStat   `json:"metricStat,omitempty" protobuf:"bytes,4,opt,name=metricStat"`
-	Period     *intstrutil.IntOrString `json:"period,omitempty" protobuf:"bytes,5,opt,name=period"`
-	ReturnData *bool                   `json:"returnData,omitempty" protobuf:"varint,6,opt,name=returnData"`
+	Id         string                  `json:"id,omitempty"`
+	Expression *string                 `json:"expression,omitempty"`
+	Label      *string                 `json:"label,omitempty"`
+	MetricStat *CloudWatchMetricStat   `json:"metricStat,omitempty"`
+	Period     *intstrutil.IntOrString `json:"period,omitempty"`
+	ReturnData *bool                   `json:"returnData,omitempty"`
 }
 
 type CloudWatchMetricStat struct {
-	Metric CloudWatchMetricStatMetric `json:"metric,omitempty" protobuf:"bytes,1,opt,name=metric"`
-	Period intstrutil.IntOrString     `json:"period,omitempty" protobuf:"bytes,2,opt,name=period"`
-	Stat   string                     `json:"stat,omitempty" protobuf:"bytes,3,opt,name=stat"`
-	Unit   string                     `json:"unit,omitempty" protobuf:"bytes,4,opt,name=unit"`
+	Metric CloudWatchMetricStatMetric `json:"metric,omitempty"`
+	Period intstrutil.IntOrString     `json:"period,omitempty"`
+	Stat   string                     `json:"stat,omitempty"`
+	Unit   string                     `json:"unit,omitempty"`
 }
 
 type CloudWatchMetricStatMetric struct {
-	Dimensions []CloudWatchMetricStatMetricDimension `json:"dimensions,omitempty" protobuf:"bytes,1,rep,name=dimensions"`
-	MetricName string                                `json:"metricName,omitempty" protobuf:"bytes,2,opt,name=metricName"`
-	Namespace  *string                               `json:"namespace,omitempty" protobuf:"bytes,3,opt,name=namespace"`
+	Dimensions []CloudWatchMetricStatMetricDimension `json:"dimensions,omitempty"`
+	MetricName string                                `json:"metricName,omitempty"`
+	Namespace  *string                               `json:"namespace,omitempty"`
 }
 
 type CloudWatchMetricStatMetricDimension struct {
-	Name  string `json:"name,omitempty" protobuf:"bytes,1,opt,name=name"`
-	Value string `json:"value,omitempty" protobuf:"bytes,2,opt,name=value"`
+	Name  string `json:"name,omitempty"`
+	Value string `json:"value,omitempty"`
 }
 
 //+kubebuilder:object:root=true
@@ -215,162 +215,162 @@ type CloudWatchMetricStatMetricDimension struct {
 
 type AnalysisRun struct {
 	metav1.TypeMeta   `json:",inline"`
-	metav1.ObjectMeta `json:"metadata,omitempty" protobuf:"bytes,1,opt,name=metadata"`
-	Spec              AnalysisRunSpec   `json:"spec" protobuf:"bytes,2,opt,name=spec"`
-	Status            AnalysisRunStatus `json:"status,omitempty" protobuf:"bytes,3,opt,name=status"`
+	metav1.ObjectMeta `json:"metadata,omitempty"`
+	Spec              AnalysisRunSpec   `json:"spec"`
+	Status            AnalysisRunStatus `json:"status,omitempty"`
 }
 
 //+kubebuilder:object:root=true
 
 type AnalysisRunList struct {
 	metav1.TypeMeta `json:",inline"`
-	metav1.ListMeta `json:"metadata" protobuf:"bytes,1,opt,name=metadata"`
-	Items           []AnalysisRun `json:"items" protobuf:"bytes,2,rep,name=items"`
+	metav1.ListMeta `json:"metadata"`
+	Items           []AnalysisRun `json:"items"`
 }
 
 type SkyWalkingMetric struct {
-	Address  string         `json:"address,omitempty" protobuf:"bytes,1,opt,name=address"`
-	Query    string         `json:"query,omitempty" protobuf:"bytes,2,opt,name=query"`
-	Interval DurationString `json:"interval,omitempty" protobuf:"bytes,3,opt,name=interval,casttype=DurationString"`
+	Address  string         `json:"address,omitempty"`
+	Query    string         `json:"query,omitempty"`
+	Interval DurationString `json:"interval,omitempty"`
 }
 
 type AnalysisRunSpec struct {
-	Metrics              []Metric               `json:"metrics" protobuf:"bytes,1,rep,name=metrics"`
-	Args                 []Argument             `json:"args,omitempty" protobuf:"bytes,2,rep,name=args"`
-	Terminate            bool                   `json:"terminate,omitempty" protobuf:"varint,3,opt,name=terminate"`
-	DryRun               []DryRun               `json:"dryRun,omitempty" protobuf:"bytes,4,rep,name=dryRun"`
-	MeasurementRetention []MeasurementRetention `json:"measurementRetention,omitempty" protobuf:"bytes,5,rep,name=measurementRetention"`
-	TTLStrategy          *TTLStrategy           `json:"ttlStrategy,omitempty" protobuf:"bytes,6,opt,name=ttlStrategy"`
+	Metrics              []Metric               `json:"metrics"`
+	Args                 []Argument             `json:"args,omitempty"`
+	Terminate            bool                   `json:"terminate,omitempty"`
+	DryRun               []DryRun               `json:"dryRun,omitempty"`
+	MeasurementRetention []MeasurementRetention `json:"measurementRetention,omitempty"`
+	TTLStrategy          *TTLStrategy           `json:"ttlStrategy,omitempty"`
 }
 
 type TTLStrategy struct {
-	SecondsAfterCompletion *int32 `json:"secondsAfterCompletion,omitempty" protobuf:"varint,1,opt,name=secondsAfterCompletion"`
-	SecondsAfterFailure    *int32 `json:"secondsAfterFailure,omitempty" protobuf:"varint,2,opt,name=secondsAfterFailure"`
-	SecondsAfterSuccess    *int32 `json:"secondsAfterSuccess,omitempty" protobuf:"varint,3,opt,name=secondsAfterSuccess"`
+	SecondsAfterCompletion *int32 `json:"secondsAfterCompletion,omitempty"`
+	SecondsAfterFailure    *int32 `json:"secondsAfterFailure,omitempty"`
+	SecondsAfterSuccess    *int32 `json:"secondsAfterSuccess,omitempty"`
 }
 
 type Argument struct {
-	Name      string     `json:"name" protobuf:"bytes,1,opt,name=name"`
-	Value     *string    `json:"value,omitempty" protobuf:"bytes,2,opt,name=value"`
-	ValueFrom *ValueFrom `json:"valueFrom,omitempty" protobuf:"bytes,3,opt,name=valueFrom"`
+	Name      string     `json:"name"`
+	Value     *string    `json:"value,omitempty"`
+	ValueFrom *ValueFrom `json:"valueFrom,omitempty"`
 }
 
 type ValueFrom struct {
-	SecretKeyRef *SecretKeyRef `json:"secretKeyRef,omitempty" protobuf:"bytes,1,opt,name=secretKeyRef"`
-	FieldRef     *FieldRef     `json:"fieldRef,omitempty" protobuf:"bytes,2,opt,name=fieldRef"`
+	SecretKeyRef *SecretKeyRef `json:"secretKeyRef,omitempty"`
+	FieldRef     *FieldRef     `json:"fieldRef,omitempty"`
 }
 
 type SecretKeyRef struct {
-	Name string `json:"name" protobuf:"bytes,1,opt,name=name"`
-	Key  string `json:"key" protobuf:"bytes,2,opt,name=key"`
+	Name string `json:"name"`
+	Key  string `json:"key"`
 }
 
 type AnalysisRunStatus struct {
-	Phase         AnalysisPhase  `json:"phase" protobuf:"bytes,1,opt,name=phase,casttype=AnalysisPhase"`
-	Message       string         `json:"message,omitempty" protobuf:"bytes,2,opt,name=message"`
-	MetricResults []MetricResult `json:"metricResults,omitempty" protobuf:"bytes,3,rep,name=metricResults"`
-	StartedAt     *metav1.Time   `json:"startedAt,omitempty" protobuf:"bytes,4,opt,name=startedAt"`
-	RunSummary    RunSummary     `json:"runSummary,omitempty" protobuf:"bytes,5,opt,name=runSummary"`
-	DryRunSummary *RunSummary    `json:"dryRunSummary,omitempty" protobuf:"bytes,6,opt,name=dryRunSummary"`
-	CompletedAt   *metav1.Time   `json:"completedAt,omitempty" protobuf:"bytes,7,opt,name=completedAt"`
+	Phase         AnalysisPhase  `json:"phase"`
+	Message       string         `json:"message,omitempty"`
+	MetricResults []MetricResult `json:"metricResults,omitempty"`
+	StartedAt     *metav1.Time   `json:"startedAt,omitempty"`
+	RunSummary    RunSummary     `json:"runSummary,omitempty"`
+	DryRunSummary *RunSummary    `json:"dryRunSummary,omitempty"`
+	CompletedAt   *metav1.Time   `json:"completedAt,omitempty"`
 }
 
 type RunSummary struct {
-	Count        int32 `json:"count,omitempty" protobuf:"varint,1,opt,name=count"`
-	Successful   int32 `json:"successful,omitempty" protobuf:"varint,2,opt,name=successful"`
-	Failed       int32 `json:"failed,omitempty" protobuf:"varint,3,opt,name=failed"`
-	Inconclusive int32 `json:"inconclusive,omitempty" protobuf:"varint,4,opt,name=inconclusive"`
-	Error        int32 `json:"error,omitempty" protobuf:"varint,5,opt,name=error"`
+	Count        int32 `json:"count,omitempty"`
+	Successful   int32 `json:"successful,omitempty"`
+	Failed       int32 `json:"failed,omitempty"`
+	Inconclusive int32 `json:"inconclusive,omitempty"`
+	Error        int32 `json:"error,omitempty"`
 }
 
 type MetricResult struct {
-	Name               string            `json:"name" protobuf:"bytes,1,opt,name=name"`
-	Phase              AnalysisPhase     `json:"phase" protobuf:"bytes,2,opt,name=phase,casttype=AnalysisPhase"`
-	Measurements       []Measurement     `json:"measurements,omitempty" protobuf:"bytes,3,rep,name=measurements"`
-	Message            string            `json:"message,omitempty" protobuf:"bytes,4,opt,name=message"`
-	Count              int32             `json:"count,omitempty" protobuf:"varint,5,opt,name=count"`
-	Successful         int32             `json:"successful,omitempty" protobuf:"varint,6,opt,name=successful"`
-	Failed             int32             `json:"failed,omitempty" protobuf:"varint,7,opt,name=failed"`
-	Inconclusive       int32             `json:"inconclusive,omitempty" protobuf:"varint,8,opt,name=inconclusive"`
-	Error              int32             `json:"error,omitempty" protobuf:"varint,9,opt,name=error"`
-	ConsecutiveError   int32             `json:"consecutiveError,omitempty" protobuf:"varint,10,opt,name=consecutiveError"`
-	DryRun             bool              `json:"dryRun,omitempty" protobuf:"varint,11,opt,name=dryRun"`
-	Metadata           map[string]string `json:"metadata,omitempty" protobuf:"bytes,12,rep,name=metadata"`
-	ConsecutiveSuccess int32             `json:"consecutiveSuccess,omitempty" protobuf:"varint,13,opt,name=consecutiveSuccess"`
+	Name               string            `json:"name"`
+	Phase              AnalysisPhase     `json:"phase"`
+	Measurements       []Measurement     `json:"measurements,omitempty"`
+	Message            string            `json:"message,omitempty"`
+	Count              int32             `json:"count,omitempty"`
+	Successful         int32             `json:"successful,omitempty"`
+	Failed             int32             `json:"failed,omitempty"`
+	Inconclusive       int32             `json:"inconclusive,omitempty"`
+	Error              int32             `json:"error,omitempty"`
+	ConsecutiveError   int32             `json:"consecutiveError,omitempty"`
+	DryRun             bool              `json:"dryRun,omitempty"`
+	Metadata           map[string]string `json:"metadata,omitempty"`
+	ConsecutiveSuccess int32             `json:"consecutiveSuccess,omitempty"`
 }
 
 type Measurement struct {
-	Phase      AnalysisPhase     `json:"phase" protobuf:"bytes,1,opt,name=phase,casttype=AnalysisPhase"`
-	Message    string            `json:"message,omitempty" protobuf:"bytes,2,opt,name=message"`
-	StartedAt  *metav1.Time      `json:"startedAt,omitempty" protobuf:"bytes,3,opt,name=startedAt"`
-	FinishedAt *metav1.Time      `json:"finishedAt,omitempty" protobuf:"bytes,4,opt,name=finishedAt"`
-	Value      string            `json:"value,omitempty" protobuf:"bytes,5,opt,name=value"`
-	Metadata   map[string]string `json:"metadata,omitempty" protobuf:"bytes,6,rep,name=metadata"`
-	ResumeAt   *metav1.Time      `json:"resumeAt,omitempty" protobuf:"bytes,7,opt,name=resumeAt"`
+	Phase      AnalysisPhase     `json:"phase"`
+	Message    string            `json:"message,omitempty"`
+	StartedAt  *metav1.Time      `json:"startedAt,omitempty"`
+	FinishedAt *metav1.Time      `json:"finishedAt,omitempty"`
+	Value      string            `json:"value,omitempty"`
+	Metadata   map[string]string `json:"metadata,omitempty"`
+	ResumeAt   *metav1.Time      `json:"resumeAt,omitempty"`
 }
 
 type KayentaMetric struct {
-	Address                  string           `json:"address" protobuf:"bytes,1,opt,name=address"`
-	Application              string           `json:"application" protobuf:"bytes,2,opt,name=application"`
-	CanaryConfigName         string           `json:"canaryConfigName" protobuf:"bytes,3,opt,name=canaryConfigName"`
-	MetricsAccountName       string           `json:"metricsAccountName" protobuf:"bytes,4,opt,name=metricsAccountName"`
-	ConfigurationAccountName string           `json:"configurationAccountName" protobuf:"bytes,5,opt,name=configurationAccountName"`
-	StorageAccountName       string           `json:"storageAccountName" protobuf:"bytes,6,opt,name=storageAccountName"`
-	Threshold                KayentaThreshold `json:"threshold" protobuf:"bytes,7,opt,name=threshold"`
-	Scopes                   []KayentaScope   `json:"scopes" protobuf:"bytes,8,rep,name=scopes"`
-	Lookback                 bool             `json:"lookback,omitempty" protobuf:"varint,9,opt,name=lookback"`
+	Address                  string           `json:"address"`
+	Application              string           `json:"application"`
+	CanaryConfigName         string           `json:"canaryConfigName"`
+	MetricsAccountName       string           `json:"metricsAccountName"`
+	ConfigurationAccountName string           `json:"configurationAccountName"`
+	StorageAccountName       string           `json:"storageAccountName"`
+	Threshold                KayentaThreshold `json:"threshold"`
+	Scopes                   []KayentaScope   `json:"scopes"`
+	Lookback                 bool             `json:"lookback,omitempty"`
 }
 
 type KayentaThreshold struct {
-	Pass     int64 `json:"pass" protobuf:"varint,1,opt,name=pass"`
-	Marginal int64 `json:"marginal" protobuf:"varint,2,opt,name=marginal"`
+	Pass     int64 `json:"pass"`
+	Marginal int64 `json:"marginal"`
 }
 
 type KayentaScope struct {
-	Name            string      `json:"name" protobuf:"bytes,1,opt,name=name"`
-	ControlScope    ScopeDetail `json:"controlScope" protobuf:"bytes,2,opt,name=controlScope"`
-	ExperimentScope ScopeDetail `json:"experimentScope" protobuf:"bytes,3,opt,name=experimentScope"`
+	Name            string      `json:"name"`
+	ControlScope    ScopeDetail `json:"controlScope"`
+	ExperimentScope ScopeDetail `json:"experimentScope"`
 }
 
 type ScopeDetail struct {
-	Scope  string `json:"scope" protobuf:"bytes,1,opt,name=scope"`
-	Region string `json:"region" protobuf:"bytes,2,opt,name=region"`
-	Step   int64  `json:"step" protobuf:"varint,3,opt,name=step"`
-	Start  string `json:"start,omitempty" protobuf:"bytes,4,opt,name=start"`
-	End    string `json:"end,omitempty" protobuf:"bytes,5,opt,name=end"`
+	Scope  string `json:"scope"`
+	Region string `json:"region"`
+	Step   int64  `json:"step"`
+	Start  string `json:"start,omitempty"`
+	End    string `json:"end,omitempty"`
 }
 
 type WebMetric struct {
-	Method WebMetricMethod `json:"method,omitempty" protobuf:"bytes,1,opt,name=method,casttype=WebMetricMethod"`
+	Method WebMetricMethod `json:"method,omitempty"`
 	// URL is the address of the web metric
-	URL            string            `json:"url" protobuf:"bytes,2,opt,name=url"`
-	Headers        []WebMetricHeader `json:"headers,omitempty" protobuf:"bytes,3,rep,name=headers"`
-	Body           string            `json:"body,omitempty" protobuf:"bytes,4,opt,name=body"`
-	TimeoutSeconds int64             `json:"timeoutSeconds,omitempty" protobuf:"varint,5,opt,name=timeoutSeconds"`
-	JSONPath       string            `json:"jsonPath,omitempty" protobuf:"bytes,6,opt,name=jsonPath"`
-	Insecure       bool              `json:"insecure,omitempty" protobuf:"varint,7,opt,name=insecure"`
-	JSONBody       json.RawMessage   `json:"jsonBody,omitempty" protobuf:"bytes,8,opt,name=jsonBody,casttype=encoding/json.RawMessage"`
-	Authentication Authentication    `json:"authentication,omitempty" protobuf:"bytes,9,opt,name=authentication"`
+	URL            string            `json:"url"`
+	Headers        []WebMetricHeader `json:"headers,omitempty"`
+	Body           string            `json:"body,omitempty"`
+	TimeoutSeconds int64             `json:"timeoutSeconds,omitempty"`
+	JSONPath       string            `json:"jsonPath,omitempty"`
+	Insecure       bool              `json:"insecure,omitempty"`
+	JSONBody       json.RawMessage   `json:"jsonBody,omitempty"`
+	Authentication Authentication    `json:"authentication,omitempty"`
 }
 
 type WebMetricMethod string
 
 type WebMetricHeader struct {
-	Key   string `json:"key" protobuf:"bytes,1,opt,name=key"`
-	Value string `json:"value" protobuf:"bytes,2,opt,name=value"`
+	Key   string `json:"key"`
+	Value string `json:"value"`
 }
 
 type DatadogMetric struct {
-	Interval   DurationString    `json:"interval,omitempty" protobuf:"bytes,1,opt,name=interval,casttype=DurationString"`
-	Query      string            `json:"query,omitempty" protobuf:"bytes,2,opt,name=query"`
-	Queries    map[string]string `json:"queries,omitempty" protobuf:"bytes,3,rep,name=queries"`
-	Formula    string            `json:"formula,omitempty" protobuf:"bytes,4,opt,name=formula"`
-	ApiVersion string            `json:"apiVersion,omitempty" protobuf:"bytes,5,opt,name=apiVersion"`
-	Aggregator string            `json:"aggregator,omitempty" protobuf:"bytes,6,opt,name=aggregator"`
-	SecretRef  SecretRef         `json:"secretRef,omitempty" protobuf:"bytes,7,opt,name=secretRef"`
+	Interval   DurationString    `json:"interval,omitempty"`
+	Query      string            `json:"query,omitempty"`
+	Queries    map[string]string `json:"queries,omitempty"`
+	Formula    string            `json:"formula,omitempty"`
+	ApiVersion string            `json:"apiVersion,omitempty"`
+	Aggregator string            `json:"aggregator,omitempty"`
+	SecretRef  SecretRef         `json:"secretRef,omitempty"`
 }
 
 type SecretRef struct {
-	Name       string `json:"name,omitempty" protobuf:"bytes,1,opt,name=name"`
-	Namespaced bool   `json:"namespaced,omitempty" protobuf:"varint,2,opt,name=namespaced"`
+	Name       string `json:"name,omitempty"`
+	Namespaced bool   `json:"namespaced,omitempty"`
 }

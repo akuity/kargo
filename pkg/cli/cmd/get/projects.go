@@ -20,7 +20,6 @@ import (
 	"github.com/akuity/kargo/pkg/cli/io"
 	"github.com/akuity/kargo/pkg/cli/kubernetes"
 	"github.com/akuity/kargo/pkg/cli/templates"
-	"github.com/akuity/kargo/pkg/client/generated/core"
 	"github.com/akuity/kargo/pkg/conditions"
 )
 
@@ -97,15 +96,15 @@ func (o *getProjectsOptions) run(ctx context.Context) error {
 	}
 
 	if len(o.Names) == 0 {
-		var res *core.ListProjectsOK
-		if res, err = apiClient.Core.ListProjects(
-			core.NewListProjectsParams(),
-			nil,
-		); err != nil {
-			return fmt.Errorf("list projects: %w", err)
+		res, httpRes, listErr := apiClient.CoreAPI.ListProjects(ctx).Execute()
+		if httpRes != nil {
+			_ = httpRes.Body.Close()
+		}
+		if listErr != nil {
+			return fmt.Errorf("list projects: %w", client.APIError(listErr))
 		}
 		var projectsJSON []byte
-		if projectsJSON, err = json.Marshal(res.Payload); err != nil {
+		if projectsJSON, err = json.Marshal(res); err != nil {
 			return err
 		}
 		projectsList := struct {
@@ -120,16 +119,16 @@ func (o *getProjectsOptions) run(ctx context.Context) error {
 	projects := make([]*kargoapi.Project, 0, len(o.Names))
 	errs := make([]error, 0, len(o.Names))
 	for _, name := range o.Names {
-		var res *core.GetProjectOK
-		if res, err = apiClient.Core.GetProject(
-			core.NewGetProjectParams().WithProject(name),
-			nil,
-		); err != nil {
-			errs = append(errs, err)
+		res, httpRes, getErr := apiClient.CoreAPI.GetProject(ctx, name).Execute()
+		if httpRes != nil {
+			_ = httpRes.Body.Close()
+		}
+		if getErr != nil {
+			errs = append(errs, client.APIError(getErr))
 			continue
 		}
 		var projectJSON []byte
-		if projectJSON, err = json.Marshal(res.Payload); err != nil {
+		if projectJSON, err = json.Marshal(res); err != nil {
 			errs = append(errs, err)
 			continue
 		}

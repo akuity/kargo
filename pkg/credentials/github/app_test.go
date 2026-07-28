@@ -1,10 +1,15 @@
 package github
 
 import (
+	"context"
 	"encoding/base64"
 	"errors"
 	"fmt"
 	"maps"
+	"net/http"
+	"net/http/httptest"
+	"sync"
+	"sync/atomic"
 	"testing"
 	"time"
 
@@ -22,7 +27,10 @@ func TestNewAppCredentialProvider(t *testing.T) {
 	assert.NotNil(t, provider)
 
 	assert.NotNil(t, provider.tokenCache)
+	assert.NotEmpty(t, provider.validationBackoff)
+	assert.NotZero(t, provider.mintTimeoutBuffer)
 	assert.NotNil(t, provider.getAccessTokenFn)
+	assert.NotNil(t, provider.validateAccessTokenFn)
 }
 
 func TestAppCredentialProvider_Supports(t *testing.T) {
@@ -343,6 +351,11 @@ func TestAppCredentialProvider_GetCredentials(t *testing.T) {
 	for _, testCase := range testCases {
 		t.Run(testCase.name, func(t *testing.T) {
 			provider := NewAppCredentialProvider().(*AppCredentialProvider) // nolint:forcetypeassert
+			provider.validateAccessTokenFn = func(
+				context.Context, string, string,
+			) (bool, error) {
+				return true, nil
+			}
 
 			if testCase.getAccessTokenFn != nil {
 				provider.getAccessTokenFn = testCase.getAccessTokenFn
@@ -463,6 +476,11 @@ func TestAppCredentialProvider_getUsernameAndPassword(t *testing.T) {
 	for _, testCase := range testCases {
 		t.Run(testCase.name, func(t *testing.T) {
 			provider := NewAppCredentialProvider().(*AppCredentialProvider) // nolint:forcetypeassert
+			provider.validateAccessTokenFn = func(
+				context.Context, string, string,
+			) (bool, error) {
+				return true, nil
+			}
 
 			if testCase.setupCache != nil {
 				testCase.setupCache(provider.tokenCache)
@@ -480,6 +498,454 @@ func TestAppCredentialProvider_getUsernameAndPassword(t *testing.T) {
 				fakeRepoURL,
 			)
 			testCase.assertions(t, provider.tokenCache, creds, err)
+		})
+	}
+}
+
+func TestAppCredentialProvider_getUsernameAndPassword_coalescing(
+	t *testing.T,
+) {
+	const (
+		fakeAppOrClientID  = "fake-id"
+		fakeInstallationID = int64(456)
+		fakePrivateKey     = "private-key"
+		fakeRepoURL        = "https://github.com/example/repo"
+		fakeAccessToken    = "test-token"
+
+		concurrency = 10
+	)
+
+	var mints atomic.Int32
+
+	provider := NewAppCredentialProvider().(*AppCredentialProvider) // nolint:forcetypeassert
+	provider.getAccessTokenFn = func(
+		string, int64, string, string,
+	) (*oauth2.Token, error) {
+		mints.Add(1)
+		// Hold the mint open long enough for the other goroutines to pile up
+		// behind it.
+		time.Sleep(50 * time.Millisecond)
+		return &oauth2.Token{
+			AccessToken: fakeAccessToken,
+			Expiry:      time.Now().Add(time.Hour),
+		}, nil
+	}
+	provider.validateAccessTokenFn = func(
+		context.Context, string, string,
+	) (bool, error) {
+		return true, nil
+	}
+
+	creds := make([]*credentials.Credentials, concurrency)
+	errs := make([]error, concurrency)
+	var wg sync.WaitGroup
+	for i := range concurrency {
+		wg.Go(func() {
+			creds[i], errs[i] = provider.getUsernameAndPassword(
+				t.Context(),
+				fakeAppOrClientID,
+				fakeInstallationID,
+				fakePrivateKey,
+				fakeRepoURL,
+			)
+		})
+	}
+	wg.Wait()
+
+	// However the goroutines were scheduled, exactly one token should have
+	// been minted. Callers that missed the in-flight mint entirely find the
+	// token already cached when their own flight begins.
+	require.Equal(t, int32(1), mints.Load())
+	for i := range concurrency {
+		require.NoError(t, errs[i])
+		require.NotNil(t, creds[i])
+		require.Equal(t, fakeAccessToken, creds[i].Password)
+	}
+}
+
+// This exercises the case where the context of the call that wins the
+// singleflight race is canceled mid-mint. Because the mint runs under an
+// orphaned context, the winner's cancellation must NOT cancel the shared mint.
+// The winner stops waiting and returns an "interrupted" error, but the single
+// mint runs to completion and the coalesced callers whose contexts are still
+// live receive the token from that SAME mint.
+func TestAppCredentialProvider_getUsernameAndPassword_winnerCanceled(
+	t *testing.T,
+) {
+	const (
+		fakeAppOrClientID  = "fake-id"
+		fakeInstallationID = int64(456)
+		fakePrivateKey     = "private-key"
+		fakeRepoURL        = "https://github.com/example/repo"
+		fakeAccessToken    = "test-token"
+	)
+
+	var mints atomic.Int32
+	mintStarted := make(chan struct{})
+	release := make(chan struct{})
+
+	provider := NewAppCredentialProvider().(*AppCredentialProvider) // nolint:forcetypeassert
+	provider.getAccessTokenFn = func(
+		string, int64, string, string,
+	) (*oauth2.Token, error) {
+		if mints.Add(1) == 1 {
+			close(mintStarted)
+		}
+		return &oauth2.Token{
+			AccessToken: fakeAccessToken,
+			Expiry:      time.Now().Add(time.Hour),
+		}, nil
+	}
+	// Block validation until the provided context is canceled or the test
+	// releases it. This holds the winner's flight open for as long as the
+	// test needs it to remain in progress.
+	provider.validateAccessTokenFn = func(
+		ctx context.Context, _, _ string,
+	) (bool, error) {
+		select {
+		case <-ctx.Done():
+			return false, ctx.Err()
+		case <-release:
+			return true, nil
+		}
+	}
+
+	winnerCtx, cancel := context.WithCancel(t.Context())
+	winnerErr := make(chan error, 1)
+	go func() {
+		_, err := provider.getUsernameAndPassword(
+			winnerCtx,
+			fakeAppOrClientID,
+			fakeInstallationID,
+			fakePrivateKey,
+			fakeRepoURL,
+		)
+		winnerErr <- err
+	}()
+	// The winner is now mid-mint with its flight held open
+	<-mintStarted
+
+	// Several coalesced waiters, all with live contexts, all of which should
+	// recover from the winner's cancellation.
+	const numWaiters = 3
+	type result struct {
+		creds *credentials.Credentials
+		err   error
+	}
+	waiterRes := make(chan result, numWaiters)
+	for range numWaiters {
+		go func() {
+			creds, err := provider.getUsernameAndPassword(
+				t.Context(),
+				fakeAppOrClientID,
+				fakeInstallationID,
+				fakePrivateKey,
+				fakeRepoURL,
+			)
+			waiterRes <- result{creds: creds, err: err}
+		}()
+	}
+
+	// Give the waiters a moment to join the in-flight mint, then cancel the
+	// winner's context.
+	time.Sleep(100 * time.Millisecond)
+	cancel()
+
+	// The winner's own context was canceled, so it stops waiting and returns an
+	// interrupted error -- but it must NOT have canceled the shared mint.
+	winErr := <-winnerErr
+	require.ErrorIs(t, winErr, context.Canceled)
+	require.ErrorContains(t, winErr, "cache refresh will continue in the background")
+
+	// Allow the orphaned mint to validate.
+	close(release)
+
+	for range numWaiters {
+		res := <-waiterRes
+		require.NoError(t, res.err)
+		require.NotNil(t, res.creds)
+		require.Equal(t, fakeAccessToken, res.creds.Password)
+	}
+
+	// Exactly one mint: the winner's cancellation did not spawn a replacement,
+	// and the single orphaned mint served every coalesced waiter.
+	require.Equal(t, int32(1), mints.Load())
+
+	// That orphaned mint also cached the token for future callers.
+	cacheKey := provider.tokenCacheKey(
+		fakeAppOrClientID,
+		fakeInstallationID,
+		fakePrivateKey,
+		fakeRepoURL,
+	)
+	cached, found := provider.tokenCache.Get(cacheKey)
+	require.True(t, found)
+	require.Equal(t, fakeAccessToken, cached)
+}
+
+// This exercises the fail-safe that bounds the mint. The mint runs under an
+// orphaned context whose deadline is maxWait, so validation that never succeeds
+// (e.g. GitHub never confirming the token) must be cut off with a context
+// deadline error rather than hanging forever.
+func TestAppCredentialProvider_getUsernameAndPassword_timeout(t *testing.T) {
+	const (
+		fakeAppOrClientID  = "fake-id"
+		fakeInstallationID = int64(456)
+		fakePrivateKey     = "private-key"
+		fakeRepoURL        = "https://github.com/example/repo"
+		fakeAccessToken    = "test-token"
+	)
+
+	provider := NewAppCredentialProvider().(*AppCredentialProvider) // nolint:forcetypeassert
+	// Keep the orphaned context's deadline short so the test does not linger.
+	provider.validationBackoff = nil
+	provider.mintTimeoutBuffer = 50 * time.Millisecond
+	provider.getAccessTokenFn = func(
+		string, int64, string, string,
+	) (*oauth2.Token, error) {
+		return &oauth2.Token{
+			AccessToken: fakeAccessToken,
+			Expiry:      time.Now().Add(time.Hour),
+		}, nil
+	}
+	// Validation never resolves on its own; it only returns once the mint's
+	// orphaned context hits its deadline.
+	provider.validateAccessTokenFn = func(
+		ctx context.Context, _, _ string,
+	) (bool, error) {
+		<-ctx.Done()
+		return false, ctx.Err()
+	}
+
+	creds, err := provider.getUsernameAndPassword(
+		t.Context(),
+		fakeAppOrClientID,
+		fakeInstallationID,
+		fakePrivateKey,
+		fakeRepoURL,
+	)
+	require.ErrorContains(t, err, "error minting installation access token")
+	require.ErrorIs(t, err, context.DeadlineExceeded)
+	require.Nil(t, creds)
+}
+
+// A real (non-context) error from the mint is delivered to the caller rather
+// than swallowed, and it triggers exactly one mint attempt.
+func TestAppCredentialProvider_getUsernameAndPassword_realError(t *testing.T) {
+	const (
+		fakeAppOrClientID  = "fake-id"
+		fakeInstallationID = int64(456)
+		fakePrivateKey     = "private-key"
+		fakeRepoURL        = "https://github.com/example/repo"
+	)
+
+	var mints atomic.Int32
+
+	provider := NewAppCredentialProvider().(*AppCredentialProvider) // nolint:forcetypeassert
+	provider.getAccessTokenFn = func(
+		string, int64, string, string,
+	) (*oauth2.Token, error) {
+		mints.Add(1)
+		return nil, errors.New("token error")
+	}
+	provider.validateAccessTokenFn = func(
+		context.Context, string, string,
+	) (bool, error) {
+		return true, nil
+	}
+
+	creds, err := provider.getUsernameAndPassword(
+		t.Context(),
+		fakeAppOrClientID,
+		fakeInstallationID,
+		fakePrivateKey,
+		fakeRepoURL,
+	)
+	require.ErrorContains(t, err, "token error")
+	require.Nil(t, creds)
+	// The error must not have triggered a retry.
+	require.Equal(t, int32(1), mints.Load())
+}
+
+func TestAppCredentialProvider_waitForTokenUsable(t *testing.T) {
+	const fakeRepoURL = "https://github.com/example/repo"
+
+	// Keep waits between validation attempts negligible in all test cases.
+	testBackoff := []time.Duration{
+		time.Millisecond,
+		time.Millisecond,
+		time.Millisecond,
+	}
+
+	testCases := []struct {
+		name                  string
+		getCtx                func() context.Context
+		validateAccessTokenFn func(
+			attempt int,
+		) (bool, error)
+		assertions func(t *testing.T, attempts int, err error)
+	}{
+		{
+			name: "token is immediately valid",
+			validateAccessTokenFn: func(int) (bool, error) {
+				return true, nil
+			},
+			assertions: func(t *testing.T, attempts int, err error) {
+				require.NoError(t, err)
+				require.Equal(t, 1, attempts)
+			},
+		},
+		{
+			name: "token becomes valid after retries",
+			validateAccessTokenFn: func(attempt int) (bool, error) {
+				return attempt >= 3, nil
+			},
+			assertions: func(t *testing.T, attempts int, err error) {
+				require.NoError(t, err)
+				require.Equal(t, 3, attempts)
+			},
+		},
+		{
+			name: "validation errors are tolerated",
+			validateAccessTokenFn: func(attempt int) (bool, error) {
+				if attempt == 1 {
+					return false, errors.New("something went wrong")
+				}
+				return true, nil
+			},
+			assertions: func(t *testing.T, attempts int, err error) {
+				require.NoError(t, err)
+				require.Equal(t, 2, attempts)
+			},
+		},
+		{
+			name: "token never validates; presumed usable",
+			validateAccessTokenFn: func(int) (bool, error) {
+				return false, nil
+			},
+			assertions: func(t *testing.T, attempts int, err error) {
+				require.NoError(t, err)
+				// One attempt up front + one per element of the backoff
+				// schedule
+				require.Equal(t, len(testBackoff)+1, attempts)
+			},
+		},
+		{
+			name: "context canceled",
+			getCtx: func() context.Context {
+				ctx, cancel := context.WithCancel(context.Background())
+				cancel()
+				return ctx
+			},
+			validateAccessTokenFn: func(int) (bool, error) {
+				return false, nil
+			},
+			assertions: func(t *testing.T, _ int, err error) {
+				require.ErrorIs(t, err, context.Canceled)
+			},
+		},
+	}
+	for _, testCase := range testCases {
+		t.Run(testCase.name, func(t *testing.T) {
+			var attempts int
+			provider := &AppCredentialProvider{
+				validationBackoff: testBackoff,
+				validateAccessTokenFn: func(
+					context.Context, string, string,
+				) (bool, error) {
+					attempts++
+					return testCase.validateAccessTokenFn(attempts)
+				},
+			}
+			ctx := t.Context()
+			if testCase.getCtx != nil {
+				ctx = testCase.getCtx()
+			}
+			err := provider.waitForTokenUsable(ctx, "fake-token", fakeRepoURL)
+			testCase.assertions(t, attempts, err)
+		})
+	}
+}
+
+func TestAppCredentialProvider_validateAccessToken(t *testing.T) {
+	const fakeAccessToken = "fake-token"
+
+	testCases := []struct {
+		name       string
+		statusCode int
+		// getRepoURL optionally overrides the repo URL used in the test case.
+		// It receives the test server's URL.
+		getRepoURL func(srvURL string) string
+		assertions func(t *testing.T, valid bool, err error)
+	}{
+		{
+			name:       "token is usable",
+			statusCode: http.StatusOK,
+			assertions: func(t *testing.T, valid bool, err error) {
+				require.NoError(t, err)
+				require.True(t, valid)
+			},
+		},
+		{
+			name:       "authorization failure; token is not (yet) usable",
+			statusCode: http.StatusNotFound,
+			assertions: func(t *testing.T, valid bool, err error) {
+				require.NoError(t, err)
+				require.False(t, valid)
+			},
+		},
+		{
+			name:       "unexpected status is an error",
+			statusCode: http.StatusInternalServerError,
+			assertions: func(t *testing.T, valid bool, err error) {
+				require.ErrorContains(
+					t, err, "error validating installation access token",
+				)
+				require.False(t, valid)
+			},
+		},
+		{
+			name: "owner and repo name cannot be extracted",
+			getRepoURL: func(string) string {
+				return "https://github.com/example"
+			},
+			assertions: func(t *testing.T, valid bool, err error) {
+				require.ErrorContains(
+					t, err, "could not extract repository owner and name",
+				)
+				require.False(t, valid)
+			},
+		},
+	}
+	p := &AppCredentialProvider{}
+	for _, testCase := range testCases {
+		t.Run(testCase.name, func(t *testing.T) {
+			srv := httptest.NewServer(http.HandlerFunc(
+				func(w http.ResponseWriter, r *http.Request) {
+					require.Equal(
+						t, "/api/v3/repos/example/repo", r.URL.Path,
+					)
+					require.Equal(
+						t,
+						fmt.Sprintf("Bearer %s", fakeAccessToken),
+						r.Header.Get("Authorization"),
+					)
+					w.WriteHeader(testCase.statusCode)
+				},
+			))
+			t.Cleanup(srv.Close)
+			// By default, the test server plays the role of a GitHub
+			// Enterprise host
+			repoURL := fmt.Sprintf("%s/example/repo", srv.URL)
+			if testCase.getRepoURL != nil {
+				repoURL = testCase.getRepoURL(srv.URL)
+			}
+			valid, err := p.validateAccessToken(
+				t.Context(),
+				fakeAccessToken,
+				repoURL,
+			)
+			testCase.assertions(t, valid, err)
 		})
 	}
 }

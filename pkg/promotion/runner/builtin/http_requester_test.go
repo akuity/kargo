@@ -746,7 +746,8 @@ func Test_httpRequester_run(t *testing.T) {
 }
 
 func Test_httpRequester_buildRequest(t *testing.T) {
-	req, err := (&httpRequester{}).buildRequest(builtin.HTTPConfig{
+	ctx := t.Context()
+	req, err := (&httpRequester{}).buildRequest(ctx, builtin.HTTPConfig{
 		Method: "GET",
 		URL:    "http://example.com",
 		Headers: []builtin.HTTPConfigHeader{{
@@ -759,6 +760,7 @@ func Test_httpRequester_buildRequest(t *testing.T) {
 		}},
 	})
 	require.NoError(t, err)
+	require.Equal(t, ctx, req.Context())
 	require.Equal(t, "GET", req.Method)
 	require.Equal(t, "http://example.com?param=some+value", req.URL.String())
 	require.Equal(t, "application/json", req.Header.Get("Content-Type"))

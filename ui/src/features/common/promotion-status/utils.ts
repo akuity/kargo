@@ -26,6 +26,32 @@ export const isPromotionPhaseTerminal = (promotionPhase: PromotionStatusPhase) =
   return false;
 };
 
+// PromotionStepStatusPhase mirrors the PromotionStepStatus constants in
+// promotion_types.go. Unlike a Promotion's overall phase, an individual step's
+// only non-terminal status is "Running".
+export enum PromotionStepStatusPhase {
+  RUNNING = 'Running',
+  SUCCEEDED = 'Succeeded',
+  FAILED = 'Failed',
+  ERRORED = 'Errored',
+  ABORTED = 'Aborted',
+  SKIPPED = 'Skipped'
+}
+
+// backend equivalent logic - read in promotion_types.go
+export const isPromotionStepStatusTerminal = (stepStatus?: string) => {
+  switch (stepStatus) {
+    case PromotionStepStatusPhase.SUCCEEDED:
+    case PromotionStepStatusPhase.FAILED:
+    case PromotionStepStatusPhase.ERRORED:
+    case PromotionStepStatusPhase.ABORTED:
+    case PromotionStepStatusPhase.SKIPPED:
+      return true;
+  }
+
+  return false;
+};
+
 export const isPromotionRetryable = (phase: PromotionStatusPhase) => {
   switch (phase) {
     case PromotionStatusPhase.FAILED:

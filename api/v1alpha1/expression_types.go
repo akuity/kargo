@@ -11,9 +11,9 @@ type ExpressionVariable struct {
 	//
 	// +kubebuilder:validation:MinLength=1
 	// +kubebuilder:validation:Pattern=^[a-zA-Z_]\w*$
-	Name string `json:"name" protobuf:"bytes,1,opt,name=name"`
+	Name string `json:"name"`
 	// Value is the value of the variable. It is allowed to utilize expressions
 	// in the value.
 	// See https://docs.kargo.io/user-guide/reference-docs/expressions for details.
-	Value string `json:"value,omitempty" protobuf:"bytes,2,opt,name=value"`
+	Value string `json:"value,omitempty"`
 }

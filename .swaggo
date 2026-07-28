@@ -63,3 +63,7 @@ replace github.com/akuity/kargo/api/v1alpha1.PromotionPhase string
 replace github.com/akuity/kargo/api/v1alpha1.PromotionStepStatus string
 replace github.com/akuity/kargo/api/v1alpha1.VerificationPhase string
 replace github.com/akuity/kargo/api/stubs/rollouts/v1alpha1.AnalysisPhase string
+
+replace k8s.io/apimachinery/pkg/api/resource.Quantity string
+replace k8s.io/apimachinery/pkg/apis/meta/v1.MicroTime string
+replace k8s.io/apimachinery/pkg/util/intstr.IntOrString object

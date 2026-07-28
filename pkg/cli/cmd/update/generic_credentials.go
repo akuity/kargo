@@ -18,8 +18,7 @@ import (
 	"github.com/akuity/kargo/pkg/cli/kubernetes"
 	"github.com/akuity/kargo/pkg/cli/option"
 	"github.com/akuity/kargo/pkg/cli/templates"
-	credclient "github.com/akuity/kargo/pkg/client/generated/credentials"
-	"github.com/akuity/kargo/pkg/client/generated/models"
+	kargogen "github.com/akuity/kargo/pkg/x/client/generated"
 )
 
 type updateGenericCredentialsOptions struct {
@@ -210,94 +209,113 @@ func (o *updateGenericCredentialsOptions) run(ctx context.Context) error {
 		return fmt.Errorf("get client from config: %w", err)
 	}
 
-	// Build the request body - only include data if we have values to set
-	var dataToSend map[string]string
+	// Build the request body - only include data if we have values to set.
+	// A non-nil-but-empty map would still be serialized by the generated
+	// client, and the server treats "data" as keys to merge in -- an empty
+	// map is a no-op either way, but omitting it when there's nothing to
+	// send keeps the request minimal and matches the old client's omitempty
+	// behavior.
+	var dataToSend *map[string]string
 	if len(o.Data) > 0 {
-		dataToSend = o.Data
+		dataToSend = &o.Data
+	}
+
+	// Only include description if one was actually provided. The server's
+	// patch handler (applyGenericCredentialsPatchToK8sSecret in
+	// pkg/server/patch_generic_credentials_v1alpha1.go) treats a nil
+	// Description as "don't change" and a non-nil Description (even an empty
+	// string) as an explicit set-or-clear. Since the CLI's --description flag
+	// can't currently express "explicitly clear the description" (it has no
+	// Changed()-based signal, only a plain string default of ""), sending a
+	// non-nil pointer whenever o.Description == "" would silently wipe an
+	// existing description any time the user updates other fields without
+	// also passing --description. Only send it when non-empty, matching the
+	// old client's plain-string+omitempty behavior.
+	var descriptionToSend *string
+	if o.Description != "" {
+		descriptionToSend = &o.Description
 	}
 
 	var payload any
 
 	switch {
 	case o.System:
-		_, err = apiClient.Credentials.PatchSystemGenericCredentials(
-			credclient.NewPatchSystemGenericCredentialsParams().
-				WithGenericCredentials(o.Name).
-				WithBody(&models.PatchGenericCredentialsRequest{
-					Description: o.Description,
-					Data:        dataToSend,
-					RemoveKeys:  o.RemoveKeys,
-				}),
-			nil,
-		)
-		if err != nil {
-			return fmt.Errorf("patch system generic credentials: %w", err)
+		_, httpRes, patchErr := apiClient.CredentialsAPI.
+			PatchSystemGenericCredentials(ctx, o.Name).
+			Body(kargogen.PatchGenericCredentialsRequest{
+				Description: descriptionToSend,
+				Data:        dataToSend,
+				RemoveKeys:  o.RemoveKeys,
+			}).
+			Execute()
+		if httpRes != nil {
+			_ = httpRes.Body.Close()
+		}
+		if patchErr != nil {
+			return fmt.Errorf("patch system generic credentials: %w", client.APIError(patchErr))
 		}
 
 		// Get the updated credentials
-		var res *credclient.GetSystemGenericCredentialsOK
-		if res, err = apiClient.Credentials.GetSystemGenericCredentials(
-			credclient.NewGetSystemGenericCredentialsParams().
-				WithGenericCredentials(o.Name),
-			nil,
-		); err != nil {
-			return fmt.Errorf("get system generic credentials: %w", err)
+		res, getRes, getErr := apiClient.CredentialsAPI.GetSystemGenericCredentials(ctx, o.Name).Execute()
+		if getRes != nil {
+			_ = getRes.Body.Close()
 		}
-		payload = res.GetPayload()
+		if getErr != nil {
+			return fmt.Errorf("get system generic credentials: %w", client.APIError(getErr))
+		}
+		payload = res
 
 	case o.Shared:
-		_, err = apiClient.Credentials.PatchSharedGenericCredentials(
-			credclient.NewPatchSharedGenericCredentialsParams().
-				WithGenericCredentials(o.Name).
-				WithBody(&models.PatchGenericCredentialsRequest{
-					Description: o.Description,
-					Data:        dataToSend,
-					RemoveKeys:  o.RemoveKeys,
-				}),
-			nil,
-		)
-		if err != nil {
-			return fmt.Errorf("patch shared generic credentials: %w", err)
+		_, httpRes, patchErr := apiClient.CredentialsAPI.
+			PatchSharedGenericCredentials(ctx, o.Name).
+			Body(kargogen.PatchGenericCredentialsRequest{
+				Description: descriptionToSend,
+				Data:        dataToSend,
+				RemoveKeys:  o.RemoveKeys,
+			}).
+			Execute()
+		if httpRes != nil {
+			_ = httpRes.Body.Close()
+		}
+		if patchErr != nil {
+			return fmt.Errorf("patch shared generic credentials: %w", client.APIError(patchErr))
 		}
 
 		// Get the updated credentials
-		var res *credclient.GetSharedGenericCredentialsOK
-		if res, err = apiClient.Credentials.GetSharedGenericCredentials(
-			credclient.NewGetSharedGenericCredentialsParams().
-				WithGenericCredentials(o.Name),
-			nil,
-		); err != nil {
-			return fmt.Errorf("get shared generic credentials: %w", err)
+		res, getRes, getErr := apiClient.CredentialsAPI.GetSharedGenericCredentials(ctx, o.Name).Execute()
+		if getRes != nil {
+			_ = getRes.Body.Close()
 		}
-		payload = res.GetPayload()
+		if getErr != nil {
+			return fmt.Errorf("get shared generic credentials: %w", client.APIError(getErr))
+		}
+		payload = res
 
 	default:
-		_, err = apiClient.Credentials.PatchProjectGenericCredentials(
-			credclient.NewPatchProjectGenericCredentialsParams().
-				WithProject(o.Project).
-				WithGenericCredentials(o.Name).
-				WithBody(&models.PatchGenericCredentialsRequest{
-					Description: o.Description,
-					Data:        dataToSend,
-					RemoveKeys:  o.RemoveKeys,
-				}),
-			nil,
-		)
-		if err != nil {
-			return fmt.Errorf("patch project generic credentials: %w", err)
+		_, httpRes, patchErr := apiClient.CredentialsAPI.
+			PatchProjectGenericCredentials(ctx, o.Project, o.Name).
+			Body(kargogen.PatchGenericCredentialsRequest{
+				Description: descriptionToSend,
+				Data:        dataToSend,
+				RemoveKeys:  o.RemoveKeys,
+			}).
+			Execute()
+		if httpRes != nil {
+			_ = httpRes.Body.Close()
+		}
+		if patchErr != nil {
+			return fmt.Errorf("patch project generic credentials: %w", client.APIError(patchErr))
 		}
 
 		// Get the updated credentials
-		res, err := apiClient.Credentials.GetProjectGenericCredentials(
-			credclient.NewGetProjectGenericCredentialsParams().
-				WithProject(o.Project).
-				WithGenericCredentials(o.Name),
-			nil,
-		)
-		if err != nil {
-			return fmt.Errorf("get project generic credentials: %w", err)
+		res, getRes, getErr := apiClient.CredentialsAPI.GetProjectGenericCredentials(ctx, o.Project, o.Name).Execute()
+		if getRes != nil {
+			_ = getRes.Body.Close()
 		}
-		payload = res.GetPayload()
+		if getErr != nil {
+			return fmt.Errorf("get project generic credentials: %w", client.APIError(getErr))
+		}
+		payload = res
 	}
 
 	return o.printCredentials(payload)

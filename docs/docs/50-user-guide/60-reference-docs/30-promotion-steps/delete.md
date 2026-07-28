@@ -5,7 +5,7 @@ description: Deletes a file or directory.
 
 # `delete`
 
-`delete` deletes a file or directory.
+`delete` deletes one or more files or directories.
 
 :::note
 
@@ -16,10 +16,12 @@ the [`git-clear` step](git-clear.md) instead.
 
 ## Configuration
 
-| Name      | Type | Required | Description                              |
-|-----------|------|----------|------------------------------------------|
-| `path` | `string` | Y | Path to the file or directory to delete. |
-| `strict` | `bool` | N | Strict will cause the directive to fail if the path does not exist. Defaults to `false`. |
+| Name | Type | Required | Description |
+|------|------|----------|-------------|
+| `path` | `string` | N | Path to the file or directory to delete. Mutually exclusive with `paths`. Exactly one of `path` or `paths` must be specified. |
+| `paths` | `string[]` | N | List of paths to files or directories to delete. Mutually exclusive with `path`. |
+| `pathsAreGlobs` | `bool` | N | Treats `path` or `paths` as glob patterns (instead of literal paths). Defaults to `false`. |
+| `strict` | `bool` | N | Causes the directive to fail if a path does not exist or a glob pattern matches nothing. Defaults to `false`. |
 
 ## Examples
 
@@ -54,3 +56,32 @@ steps:
   config:
     path: ./out
 ```
+
+### Deleting Multiple Paths
+
+Use `paths` to delete several files or directories in a single step.
+
+```yaml
+- uses: delete
+  config:
+    paths:
+    - ./out/unwanted/file
+    - ./out/tmp
+    - ./out/build.log
+```
+
+### Deleting With Glob Patterns
+
+Set `pathsAreGlobs: true` to expand `path` or `paths` as glob patterns.
+
+```yaml
+- uses: delete
+  config:
+    paths:
+    - ./out/**/*.tmp
+    - ./out/build/
+    pathsAreGlobs: true
+    strict: true
+```
+
+This will delete all `*.tmp` files in the `./out` directory (and recursively in subdirectories) and the `./out/build` directory.

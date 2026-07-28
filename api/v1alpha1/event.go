@@ -20,6 +20,7 @@ const (
 	AnnotationKeyEventVerificationStartTime  = AnnotationKeyEventPrefix + "verification-start-time"
 	AnnotationKeyEventVerificationFinishTime = AnnotationKeyEventPrefix + "verification-finish-time"
 	AnnotationKeyEventApplications           = AnnotationKeyEventPrefix + "applications"
+	AnnotationKeyEventRollback               = AnnotationKeyEventPrefix + "rollback"
 )
 
 const (

@@ -16,11 +16,11 @@ import (
 // configuration.
 type ClusterConfig struct {
 	metav1.TypeMeta   `json:",inline"`
-	metav1.ObjectMeta `json:"metadata,omitempty" protobuf:"bytes,1,opt,name=metadata"`
+	metav1.ObjectMeta `json:"metadata,omitempty"`
 	// Spec describes the configuration of a cluster.
-	Spec ClusterConfigSpec `json:"spec,omitempty" protobuf:"bytes,2,opt,name=spec"`
+	Spec ClusterConfigSpec `json:"spec,omitempty"`
 	// Status describes the current status of a ClusterConfig.
-	Status ClusterConfigStatus `json:"status,omitempty" protobuf:"bytes,3,opt,name=status"`
+	Status ClusterConfigStatus `json:"status,omitempty"`
 }
 
 func (c *ClusterConfig) GetStatus() *ClusterConfigStatus {
@@ -31,25 +31,25 @@ func (c *ClusterConfig) GetStatus() *ClusterConfigStatus {
 type ClusterConfigSpec struct {
 	// WebhookReceivers describes cluster-scoped webhook receivers used for
 	// processing events from various external platforms
-	WebhookReceivers []WebhookReceiverConfig `json:"webhookReceivers,omitempty" protobuf:"bytes,1,rep,name=webhookReceivers"`
+	WebhookReceivers []WebhookReceiverConfig `json:"webhookReceivers,omitempty"`
 	// GitClient describes cluster-level configuration for Kargo's Git client,
 	// including committer identity and an optional signing key. If set, these
 	// values take precedence over any configuration provided at install time
 	// via the Helm chart.
 	// +optional
-	GitClient *GitClientConfig `json:"gitClient,omitempty" protobuf:"bytes,2,opt,name=gitClient"`
+	GitClient *GitClientConfig `json:"gitClient,omitempty"`
 	// FreightLinks defines deep links shown when viewing any Freight resource
 	// across all projects in the cluster. Project-level FreightLinks defined
 	// in ProjectConfig are shown in addition to these.
 	//
 	// +optional
-	FreightLinks []DeepLink `json:"freightLinks,omitempty" protobuf:"bytes,3,rep,name=freightLinks"`
+	FreightLinks []DeepLink `json:"freightLinks,omitempty"`
 	// StageLinks defines deep links shown when viewing any Stage resource
 	// across all projects in the cluster. Project-level StageLinks defined in
 	// ProjectConfig are shown in addition to these.
 	//
 	// +optional
-	StageLinks []DeepLink `json:"stageLinks,omitempty" protobuf:"bytes,4,rep,name=stageLinks"`
+	StageLinks []DeepLink `json:"stageLinks,omitempty"`
 }
 
 // GitClientConfig describes cluster-level configuration for Kargo's Git
@@ -58,17 +58,17 @@ type GitClientConfig struct {
 	// Name is the name used for Git commits made by Kargo.
 	// +kubebuilder:validation:Required
 	// +kubebuilder:validation:MinLength=1
-	Name string `json:"name" protobuf:"bytes,1,opt,name=name"`
+	Name string `json:"name"`
 	// Email is the email address used for Git commits made by Kargo.
 	// +kubebuilder:validation:Required
 	// +kubebuilder:validation:MinLength=1
 	// +kubebuilder:validation:Format="email"
-	Email string `json:"email" protobuf:"bytes,2,opt,name=email"`
+	Email string `json:"email"`
 	// SigningKeySecret references a Secret in the system namespace containing
 	// a GPG signing key for commit signing. The Secret must contain a data
 	// key named "signingKey" with the GPG private key material.
 	// +optional
-	SigningKeySecret *corev1.LocalObjectReference `json:"signingKeySecret,omitempty" protobuf:"bytes,3,opt,name=signingKeySecret"`
+	SigningKeySecret *corev1.LocalObjectReference `json:"signingKeySecret,omitempty"`
 }
 
 // ClusterConfigStatus describes the current status of a ClusterConfig.
@@ -80,17 +80,17 @@ type ClusterConfigStatus struct {
 	// +patchStrategy=merge
 	// +listType=map
 	// +listMapKey=type
-	Conditions []metav1.Condition `json:"conditions,omitempty" patchMergeKey:"type" patchStrategy:"merge" protobuf:"bytes,1,rep,name=conditions"`
+	Conditions []metav1.Condition `json:"conditions,omitempty" patchMergeKey:"type" patchStrategy:"merge"`
 	// ObservedGeneration represents the .metadata.generation that this
 	// ClusterConfig was reconciled against.
-	ObservedGeneration int64 `json:"observedGeneration,omitempty" protobuf:"varint,3,opt,name=observedGeneration"`
+	ObservedGeneration int64 `json:"observedGeneration,omitempty"`
 	// LastHandledRefresh holds the value of the most recent AnnotationKeyRefresh
 	// annotation that was handled by the controller. This field can be used to
 	// determine whether the request to refresh the resource has been handled.
 	// +optional
-	LastHandledRefresh string `json:"lastHandledRefresh,omitempty" protobuf:"bytes,4,opt,name=lastHandledRefresh"`
+	LastHandledRefresh string `json:"lastHandledRefresh,omitempty"`
 	// WebhookReceivers describes the status of cluster-scoped webhook receivers.
-	WebhookReceivers []WebhookReceiverDetails `json:"webhookReceivers,omitempty" protobuf:"bytes,2,rep,name=webhookReceivers"`
+	WebhookReceivers []WebhookReceiverDetails `json:"webhookReceivers,omitempty"`
 }
 
 // GetConditions implements the conditions.Getter interface.
@@ -108,6 +108,6 @@ func (c *ClusterConfigStatus) SetConditions(conditions []metav1.Condition) {
 // ClusterConfigList contains a list of ClusterConfigs.
 type ClusterConfigList struct {
 	metav1.TypeMeta `json:",inline"`
-	metav1.ListMeta `json:"metadata,omitempty" protobuf:"bytes,1,opt,name=metadata"`
-	Items           []ClusterConfig `json:"items" protobuf:"bytes,2,rep,name=items"`
+	metav1.ListMeta `json:"metadata,omitempty"`
+	Items           []ClusterConfig `json:"items"`
 }

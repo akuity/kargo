@@ -1,0 +1,35 @@
+apiVersion: argoproj.io/v1alpha1
+kind: ApplicationSet
+metadata:
+  name: kargo-argocd-update
+  namespace: argocd
+spec:
+  generators:
+  - list:
+      elements:
+      - stage: test
+      - stage: uat
+      - stage: prod
+  template:
+    metadata:
+      name: kargo-argocd-update-{{stage}}
+      annotations:
+        kargo.akuity.io/authorized-stage: kargo-argocd-update:{{stage}}
+    spec:
+      project: default
+      source:
+        repoURL: https://github.com/hairyhum/kargo-demo-gitops.git
+        targetRevision: placeholder
+        path: stages/{{stage}}
+        kustomize:
+          images:
+          - public.ecr.aws/nginx/nginx=public.ecr.aws/nginx/nginx:1.24.0
+      destination:
+        server: https://kubernetes.default.svc
+        namespace: kargo-argocd-update-{{stage}}
+      syncPolicy:
+        syncOptions:
+        - CreateNamespace=true
+  ignoreApplicationDifferences:
+  - jqPathExpressions:
+    - .spec.source.targetRevision

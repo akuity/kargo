@@ -5,11 +5,11 @@ ARG BASE_IMAGE=kargo-base
 ####################################################################################################
 FROM --platform=$BUILDPLATFORM docker.io/library/node:26.4.0 AS ui-builder
 
-ARG PNPM_VERSION=9.0.3
+ARG PNPM_VERSION=11.13.0
 RUN npm install --global pnpm@${PNPM_VERSION}
 
 WORKDIR /ui
-COPY ["ui/package.json", "ui/pnpm-lock.yaml", "./"]
+COPY ["ui/package.json", "ui/pnpm-lock.yaml", "ui/pnpm-workspace.yaml", "./"]
 
 RUN --mount=type=cache,target=/root/.local/share/pnpm/store pnpm install
 COPY ["ui/", "."]
@@ -20,7 +20,7 @@ RUN --mount=type=cache,target=/root/.local/share/pnpm/store NODE_ENV='production
 ####################################################################################################
 # back-end-builder
 ####################################################################################################
-FROM --platform=$BUILDPLATFORM golang:1.26.4-trixie AS back-end-builder
+FROM --platform=$BUILDPLATFORM golang:1.26.5-trixie AS back-end-builder
 
 ARG TARGETOS
 ARG TARGETARCH
@@ -31,7 +31,7 @@ ARG CGO_ENABLED=0
 
 WORKDIR /kargo
 COPY ["api/go.mod", "api/go.sum", "api/"]
-COPY ["pkg/client/generated/go.mod", "pkg/client/generated/go.sum", "pkg/client/generated/"]
+COPY ["pkg/x/client/generated/go.mod", "pkg/x/client/generated/"]
 COPY ["go.mod", "go.sum", "./"]
 RUN --mount=type=cache,target=/go/pkg/mod --mount=type=cache,target=/root/.cache/go-build go mod download
 COPY api/ api/
@@ -72,16 +72,12 @@ ARG TARGETARCH
 
 WORKDIR /tools
 
-RUN GRPC_HEALTH_PROBE_VERSION=v0.4.50 && \
-    curl -fL -o /tools/grpc_health_probe https://github.com/grpc-ecosystem/grpc-health-probe/releases/download/${GRPC_HEALTH_PROBE_VERSION}/grpc_health_probe-${TARGETOS}-${TARGETARCH} && \
-    chmod +x /tools/grpc_health_probe
-
 # Helm is required by the kustomize-build promotion step's Helm plugin. We source
 # the binary directly from Helm's official releases (rather than a distro package)
 # so we always ship a current, CVE-patched build. This is intentionally ahead of
 # the helm.sh/helm/v3 library in go.mod: the standalone binary carries no k8s
 # dependency cascade, so we track the latest Helm 3 minor for CVE coverage.
-ARG HELM_VERSION=v3.21.0
+ARG HELM_VERSION=v3.21.2
 RUN curl -fL -o /tmp/helm.tar.gz https://get.helm.sh/helm-${HELM_VERSION}-${TARGETOS}-${TARGETARCH}.tar.gz && \
     curl -fL -o /tmp/helm.tar.gz.sha256sum https://get.helm.sh/helm-${HELM_VERSION}-${TARGETOS}-${TARGETARCH}.tar.gz.sha256sum && \
     echo "$(awk '{print $1}' /tmp/helm.tar.gz.sha256sum)  /tmp/helm.tar.gz" | sha256sum -c - && \
@@ -122,10 +118,10 @@ CMD ["/usr/local/bin/kargo"]
 ####################################################################################################
 FROM --platform=$BUILDPLATFORM docker.io/library/node:26.4.0 AS ui-dev
 
-ARG PNPM_VERSION=9.0.3
+ARG PNPM_VERSION=11.13.0
 RUN npm install --global pnpm@${PNPM_VERSION}
 WORKDIR /ui
-COPY ["ui/package.json", "ui/pnpm-lock.yaml", "./"]
+COPY ["ui/package.json", "ui/pnpm-lock.yaml", "ui/pnpm-workspace.yaml", "./"]
 
 RUN --mount=type=cache,target=/root/.local/share/pnpm/store pnpm install
 

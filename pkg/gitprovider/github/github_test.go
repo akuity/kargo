@@ -3,6 +3,7 @@ package github
 import (
 	"context"
 	"errors"
+	"net/http"
 	"testing"
 	"time"
 
@@ -453,6 +454,93 @@ func TestMergePullRequest(t *testing.T) {
 			},
 		},
 		{
+			name:     "mergeable_state clean proceeds to merge",
+			prNumber: 201,
+			setupMock: func(m *mockGithubClient) {
+				m.On("GetPullRequests", mock.Anything, testRepoOwner, testRepoName, int(201)).
+					Return(&github.PullRequest{
+						Number:         github.Ptr(201),
+						State:          github.Ptr("open"),
+						Merged:         github.Ptr(false),
+						Mergeable:      github.Ptr(true),
+						MergeableState: github.Ptr("clean"),
+						Head:           &github.PullRequestBranch{SHA: github.Ptr("head_sha")},
+						HTMLURL:        github.Ptr("https://github.com/akuity/kargo/pull/201"),
+					}, &github.Response{}, nil).Once()
+
+				m.On("MergePullRequest", mock.Anything, testRepoOwner, testRepoName, int(201), "",
+					mock.AnythingOfType("*github.PullRequestOptions")).
+					Return(&github.PullRequestMergeResult{
+						SHA:    github.Ptr("merge_sha"),
+						Merged: github.Ptr(true),
+					}, &github.Response{}, nil)
+
+				m.On("GetPullRequests", mock.Anything, testRepoOwner, testRepoName, int(201)).
+					Return(&github.PullRequest{
+						Number:         github.Ptr(201),
+						State:          github.Ptr("closed"),
+						Merged:         github.Ptr(true),
+						MergeCommitSHA: github.Ptr("merge_sha"),
+						Head:           &github.PullRequestBranch{SHA: github.Ptr("head_sha")},
+						HTMLURL:        github.Ptr("https://github.com/akuity/kargo/pull/201"),
+						MergedAt:       &github.Timestamp{Time: time.Now()},
+					}, &github.Response{}, nil).Once()
+			},
+			expectedMerged: true,
+		},
+		{
+			name:     "mergeable_state unknown is not ready",
+			prNumber: 202,
+			setupMock: func(m *mockGithubClient) {
+				m.On("GetPullRequests", mock.Anything, testRepoOwner, testRepoName, int(202)).
+					Return(&github.PullRequest{
+						Number:         github.Ptr(202),
+						State:          github.Ptr("open"),
+						Merged:         github.Ptr(false),
+						Mergeable:      nil,
+						MergeableState: github.Ptr("unknown"),
+						Head:           &github.PullRequestBranch{SHA: github.Ptr("head_sha")},
+						HTMLURL:        github.Ptr("https://github.com/akuity/kargo/pull/202"),
+					}, &github.Response{}, nil)
+			},
+			expectError: false,
+		},
+		{
+			name:     "mergeable_state behind is not ready",
+			prNumber: 203,
+			setupMock: func(m *mockGithubClient) {
+				m.On("GetPullRequests", mock.Anything, testRepoOwner, testRepoName, int(203)).
+					Return(&github.PullRequest{
+						Number:         github.Ptr(203),
+						State:          github.Ptr("open"),
+						Merged:         github.Ptr(false),
+						Mergeable:      github.Ptr(true),
+						MergeableState: github.Ptr("behind"),
+						Head:           &github.PullRequestBranch{SHA: github.Ptr("head_sha")},
+						HTMLURL:        github.Ptr("https://github.com/akuity/kargo/pull/203"),
+					}, &github.Response{}, nil)
+			},
+			expectError: false,
+		},
+		{
+			name:     "mergeable_state dirty fails with conflict",
+			prNumber: 204,
+			setupMock: func(m *mockGithubClient) {
+				m.On("GetPullRequests", mock.Anything, testRepoOwner, testRepoName, int(204)).
+					Return(&github.PullRequest{
+						Number:         github.Ptr(204),
+						State:          github.Ptr("open"),
+						Merged:         github.Ptr(false),
+						Mergeable:      github.Ptr(false),
+						MergeableState: github.Ptr("dirty"),
+						Head:           &github.PullRequestBranch{SHA: github.Ptr("head_sha")},
+						HTMLURL:        github.Ptr("https://github.com/akuity/kargo/pull/204"),
+					}, &github.Response{}, nil)
+			},
+			expectError:   true,
+			errorContains: "has conflicts and cannot be merged",
+		},
+		{
 			name:     "merge call fails",
 			prNumber: 555,
 			setupMock: func(m *mockGithubClient) {
@@ -474,6 +562,63 @@ func TestMergePullRequest(t *testing.T) {
 			},
 			expectError:   true,
 			errorContains: "error merging pull request",
+		},
+		{
+			name:     "merge call returns 405 base branch modified is not ready",
+			prNumber: 405,
+			setupMock: func(m *mockGithubClient) {
+				m.On("GetPullRequests", mock.Anything, testRepoOwner, testRepoName, int(405)).
+					Return(&github.PullRequest{
+						Number:    github.Ptr(405),
+						State:     github.Ptr("open"),
+						Merged:    github.Ptr(false),
+						Mergeable: github.Ptr(true),
+						Head:      &github.PullRequestBranch{SHA: github.Ptr("head_sha")},
+						HTMLURL:   github.Ptr("https://github.com/akuity/kargo/pull/405"),
+					}, &github.Response{}, nil).Once()
+
+				// The base branch moved between the mergeability check and this
+				// merge call; GitHub returns a 405. The provider treats it as
+				// not-ready (no error, not merged) so the caller retries.
+				m.On("MergePullRequest", mock.Anything, testRepoOwner, testRepoName, int(405), "",
+					mock.AnythingOfType("*github.PullRequestOptions")).
+					Return(nil, nil, &github.ErrorResponse{
+						Response: &http.Response{StatusCode: http.StatusMethodNotAllowed},
+						Message:  "Base branch was modified. Review and try the merge again.",
+					})
+			},
+			expectedMerged: false,
+		},
+		{
+			name:     "merge call returns 405 for disabled merge method is terminal",
+			prNumber: 406,
+			setupMock: func(m *mockGithubClient) {
+				m.On("GetPullRequests", mock.Anything, testRepoOwner, testRepoName, int(406)).
+					Return(&github.PullRequest{
+						Number:    github.Ptr(406),
+						State:     github.Ptr("open"),
+						Merged:    github.Ptr(false),
+						Mergeable: github.Ptr(true),
+						Head:      &github.PullRequestBranch{SHA: github.Ptr("head_sha")},
+						HTMLURL:   github.Ptr("https://github.com/akuity/kargo/pull/406"),
+					}, &github.Response{}, nil).Once()
+
+				// The PR is mergeable, but the configured merge method is disabled
+				// on the repo. GitHub returns a 405 with a different message. This
+				// is permanent: the provider must surface it as an error rather
+				// than treating it as not-ready (which would loop forever under
+				// wait=true).
+				m.On("MergePullRequest", mock.Anything, testRepoOwner, testRepoName, int(406), "",
+					mock.AnythingOfType("*github.PullRequestOptions")).
+					Return(nil, nil, &github.ErrorResponse{
+						Response: &http.Response{StatusCode: http.StatusMethodNotAllowed},
+						// Real message observed from GitHub when the configured
+						// merge method is disabled on the repo.
+						Message: "Squash merges are not allowed on this repository.",
+					})
+			},
+			expectError:   true,
+			errorContains: "Squash merges are not allowed",
 		},
 		{
 			name:     "nil merge result",

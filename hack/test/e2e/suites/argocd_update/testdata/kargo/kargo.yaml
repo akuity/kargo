@@ -1,0 +1,112 @@
+---
+apiVersion: kargo.akuity.io/v1alpha1
+kind: Project
+metadata:
+  name: kargo-argocd-update
+---
+apiVersion: kargo.akuity.io/v1alpha1
+kind: Warehouse
+metadata:
+  name: kargo-demo
+  namespace: kargo-argocd-update
+spec:
+  subscriptions:
+  - git:
+      repoURL: https://github.com/<github-username>/kargo-demo-gitops.git
+      branch: kustomize
+      discoveryLimit: 3
+---
+apiVersion: kargo.akuity.io/v1alpha1
+kind: PromotionTask
+metadata:
+  name: promo-process
+  namespace: kargo-argocd-update
+spec:
+  vars:
+  - name: gitRepo
+    value: https://github.com/<github-username>/kargo-demo-gitops.git
+  steps:
+  - uses: set-metadata
+    config:
+      updates:
+      - kind: Stage
+        name: ${{ ctx.stage }}
+        values:
+          lastPromotedAt: ${{ now() }}
+  - uses: set-metadata
+    config:
+      updates:
+      - kind: Freight
+        name: ${{ ctx.targetFreight.name }}
+        values:
+          lastPromoted:
+            at: ${{ stageMetadata(ctx.stage).lastPromotedAt }}
+            to: ${{ ctx.stage }}
+  - uses: argocd-update
+    config:
+      apps:
+      - name: ${{ ctx.project }}-${{ ctx.stage }}
+        sources:
+        - repoURL: ${{ vars.gitRepo }}
+          desiredRevision: ${{ commitFrom(vars.gitRepo).ID }}
+          updateTargetRevision: true
+  - uses: compose-output
+    as: output
+    config:
+      desiredRevision: ${{ commitFrom(vars.gitRepo).ID }}
+---
+apiVersion: kargo.akuity.io/v1alpha1
+kind: Stage
+metadata:
+  name: test
+  namespace: kargo-argocd-update
+spec:
+  requestedFreight:
+  - origin:
+      kind: Warehouse
+      name: kargo-demo
+    sources:
+      direct: true
+  promotionTemplate:
+    spec:
+      steps:
+      - task:
+          name: promo-process
+---
+apiVersion: kargo.akuity.io/v1alpha1
+kind: Stage
+metadata:
+  name: uat
+  namespace: kargo-argocd-update
+spec:
+  requestedFreight:
+  - origin:
+      kind: Warehouse
+      name: kargo-demo
+    sources:
+      stages:
+      - test
+  promotionTemplate:
+    spec:
+      steps:
+      - task:
+          name: promo-process
+---
+apiVersion: kargo.akuity.io/v1alpha1
+kind: Stage
+metadata:
+  name: prod
+  namespace: kargo-argocd-update
+spec:
+  requestedFreight:
+  - origin:
+      kind: Warehouse
+      name: kargo-demo
+    sources:
+      stages:
+      - uat
+  promotionTemplate:
+    spec:
+      steps:
+      - task:
+          name: promo-process

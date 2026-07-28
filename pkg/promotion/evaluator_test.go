@@ -13,8 +13,6 @@ import (
 )
 
 func TestStepEvaluator_BuildExprEnv(t *testing.T) {
-	testClient := fake.NewClientBuilder().Build()
-
 	tests := []struct {
 		name     string
 		promoCtx Context
@@ -24,10 +22,12 @@ func TestStepEvaluator_BuildExprEnv(t *testing.T) {
 		{
 			name: "basic context environment",
 			promoCtx: Context{
-				Project:   "test-project",
-				Stage:     "test-stage",
-				Promotion: "test-promotion",
-				Actor:     "test-actor",
+				Project:             "test-project",
+				Stage:               "test-stage",
+				Promotion:           "test-promotion",
+				Actor:               "test-actor",
+				TargetFreightAlias:  "test-alias",
+				currentStepMetadata: &StepMetadata{Alias: "test-step"},
 				TargetFreightRef: kargoapi.FreightReference{
 					Name: "test-freight",
 					Origin: kargoapi.FreightOrigin{
@@ -37,11 +37,13 @@ func TestStepEvaluator_BuildExprEnv(t *testing.T) {
 			},
 			expected: map[string]any{
 				"ctx": map[string]any{
+					"uiBaseUrl": "",
 					"project":   "test-project",
 					"promotion": "test-promotion",
 					"stage":     "test-stage",
 					"targetFreight": map[string]any{
-						"name": "test-freight",
+						"name":  "test-freight",
+						"alias": "test-alias",
 						"origin": map[string]any{
 							"name": "test-warehouse",
 						},
@@ -51,17 +53,71 @@ func TestStepEvaluator_BuildExprEnv(t *testing.T) {
 							"actor":    "test-actor",
 							"rollback": false,
 						},
+						"step": map[string]any{
+							"alias": "test-step",
+						},
 					},
+				},
+			},
+		},
+		{
+			name: "with target context",
+			promoCtx: Context{
+				Project:             "test-project",
+				Stage:               "test-stage",
+				Promotion:           "test-promotion",
+				Actor:               "test-actor",
+				TargetFreightAlias:  "test-alias",
+				currentStepMetadata: &StepMetadata{Alias: "test-step"},
+				TargetFreightRef: kargoapi.FreightReference{
+					Name: "test-freight",
+					Origin: kargoapi.FreightOrigin{
+						Name: "test-warehouse",
+					},
+				},
+				Target: &TargetContext{
+					Params: map[string]any{"cluster": "east"},
+					Labels: map[string]string{"env": "prod"},
+				},
+			},
+			expected: map[string]any{
+				"ctx": map[string]any{
+					"uiBaseUrl": "",
+					"project":   "test-project",
+					"promotion": "test-promotion",
+					"stage":     "test-stage",
+					"targetFreight": map[string]any{
+						"name":  "test-freight",
+						"alias": "test-alias",
+						"origin": map[string]any{
+							"name": "test-warehouse",
+						},
+					},
+					"meta": map[string]any{
+						"promotion": map[string]any{
+							"actor":    "test-actor",
+							"rollback": false,
+						},
+						"step": map[string]any{
+							"alias": "test-step",
+						},
+					},
+				},
+				"target": map[string]any{
+					"params": map[string]any{"cluster": "east"},
+					"labels": map[string]string{"env": "prod"},
 				},
 			},
 		},
 		{
 			name: "with variables option",
 			promoCtx: Context{
-				Project:   "test-project",
-				Stage:     "test-stage",
-				Promotion: "test-promotion",
-				Actor:     "test-actor",
+				Project:             "test-project",
+				Stage:               "test-stage",
+				Promotion:           "test-promotion",
+				Actor:               "test-actor",
+				TargetFreightAlias:  "test-alias",
+				currentStepMetadata: &StepMetadata{Alias: "test-step"},
 				TargetFreightRef: kargoapi.FreightReference{
 					Name: "test-freight",
 					Origin: kargoapi.FreightOrigin{
@@ -78,11 +134,13 @@ func TestStepEvaluator_BuildExprEnv(t *testing.T) {
 			},
 			expected: map[string]any{
 				"ctx": map[string]any{
+					"uiBaseUrl": "",
 					"project":   "test-project",
 					"promotion": "test-promotion",
 					"stage":     "test-stage",
 					"targetFreight": map[string]any{
-						"name": "test-freight",
+						"name":  "test-freight",
+						"alias": "test-alias",
 						"origin": map[string]any{
 							"name": "test-warehouse",
 						},
@@ -91,6 +149,9 @@ func TestStepEvaluator_BuildExprEnv(t *testing.T) {
 						"promotion": map[string]any{
 							"actor":    "test-actor",
 							"rollback": false,
+						},
+						"step": map[string]any{
+							"alias": "test-step",
 						},
 					},
 				},
@@ -104,10 +165,12 @@ func TestStepEvaluator_BuildExprEnv(t *testing.T) {
 		{
 			name: "with step metas option",
 			promoCtx: Context{
-				Project:   "test-project",
-				Stage:     "test-stage",
-				Promotion: "test-promotion",
-				Actor:     "test-actor",
+				Project:             "test-project",
+				Stage:               "test-stage",
+				Promotion:           "test-promotion",
+				Actor:               "test-actor",
+				TargetFreightAlias:  "test-alias",
+				currentStepMetadata: &StepMetadata{Alias: "test-step"},
 				TargetFreightRef: kargoapi.FreightReference{
 					Name: "test-freight",
 					Origin: kargoapi.FreightOrigin{
@@ -141,11 +204,13 @@ func TestStepEvaluator_BuildExprEnv(t *testing.T) {
 			},
 			expected: map[string]any{
 				"ctx": map[string]any{
+					"uiBaseUrl": "",
 					"project":   "test-project",
 					"promotion": "test-promotion",
 					"stage":     "test-stage",
 					"targetFreight": map[string]any{
-						"name": "test-freight",
+						"name":  "test-freight",
+						"alias": "test-alias",
 						"origin": map[string]any{
 							"name": "test-warehouse",
 						},
@@ -154,6 +219,9 @@ func TestStepEvaluator_BuildExprEnv(t *testing.T) {
 						"promotion": map[string]any{
 							"actor":    "test-actor",
 							"rollback": false,
+						},
+						"step": map[string]any{
+							"alias": "test-step",
 						},
 					},
 				},
@@ -172,10 +240,12 @@ func TestStepEvaluator_BuildExprEnv(t *testing.T) {
 		{
 			name: "with outputs option",
 			promoCtx: Context{
-				Project:   "test-project",
-				Stage:     "test-stage",
-				Promotion: "test-promotion",
-				Actor:     "test-actor",
+				Project:             "test-project",
+				Stage:               "test-stage",
+				Promotion:           "test-promotion",
+				Actor:               "test-actor",
+				TargetFreightAlias:  "test-alias",
+				currentStepMetadata: &StepMetadata{Alias: "test-step"},
 				TargetFreightRef: kargoapi.FreightReference{
 					Name: "test-freight",
 					Origin: kargoapi.FreightOrigin{
@@ -193,11 +263,13 @@ func TestStepEvaluator_BuildExprEnv(t *testing.T) {
 			},
 			expected: map[string]any{
 				"ctx": map[string]any{
+					"uiBaseUrl": "",
 					"project":   "test-project",
 					"promotion": "test-promotion",
 					"stage":     "test-stage",
 					"targetFreight": map[string]any{
-						"name": "test-freight",
+						"name":  "test-freight",
+						"alias": "test-alias",
 						"origin": map[string]any{
 							"name": "test-warehouse",
 						},
@@ -206,6 +278,9 @@ func TestStepEvaluator_BuildExprEnv(t *testing.T) {
 						"promotion": map[string]any{
 							"actor":    "test-actor",
 							"rollback": false,
+						},
+						"step": map[string]any{
+							"alias": "test-step",
 						},
 					},
 				},
@@ -220,10 +295,12 @@ func TestStepEvaluator_BuildExprEnv(t *testing.T) {
 		{
 			name: "with task outputs option - has task outputs",
 			promoCtx: Context{
-				Project:   "test-project",
-				Stage:     "test-stage",
-				Promotion: "test-promotion",
-				Actor:     "test-actor",
+				Project:             "test-project",
+				Stage:               "test-stage",
+				Promotion:           "test-promotion",
+				Actor:               "test-actor",
+				TargetFreightAlias:  "test-alias",
+				currentStepMetadata: &StepMetadata{Alias: "test-step"},
 				TargetFreightRef: kargoapi.FreightReference{
 					Name: "test-freight",
 					Origin: kargoapi.FreightOrigin{
@@ -244,11 +321,13 @@ func TestStepEvaluator_BuildExprEnv(t *testing.T) {
 			},
 			expected: map[string]any{
 				"ctx": map[string]any{
+					"uiBaseUrl": "",
 					"project":   "test-project",
 					"promotion": "test-promotion",
 					"stage":     "test-stage",
 					"targetFreight": map[string]any{
-						"name": "test-freight",
+						"name":  "test-freight",
+						"alias": "test-alias",
 						"origin": map[string]any{
 							"name": "test-warehouse",
 						},
@@ -257,6 +336,9 @@ func TestStepEvaluator_BuildExprEnv(t *testing.T) {
 						"promotion": map[string]any{
 							"actor":    "test-actor",
 							"rollback": false,
+						},
+						"step": map[string]any{
+							"alias": "test-step",
 						},
 					},
 				},
@@ -275,10 +357,12 @@ func TestStepEvaluator_BuildExprEnv(t *testing.T) {
 		{
 			name: "with task outputs option - no task outputs",
 			promoCtx: Context{
-				Project:   "test-project",
-				Stage:     "test-stage",
-				Promotion: "test-promotion",
-				Actor:     "test-actor",
+				Project:             "test-project",
+				Stage:               "test-stage",
+				Promotion:           "test-promotion",
+				Actor:               "test-actor",
+				TargetFreightAlias:  "test-alias",
+				currentStepMetadata: &StepMetadata{Alias: "test-step"},
 				TargetFreightRef: kargoapi.FreightReference{
 					Name: "test-freight",
 					Origin: kargoapi.FreightOrigin{
@@ -293,11 +377,13 @@ func TestStepEvaluator_BuildExprEnv(t *testing.T) {
 			},
 			expected: map[string]any{
 				"ctx": map[string]any{
+					"uiBaseUrl": "",
 					"project":   "test-project",
 					"promotion": "test-promotion",
 					"stage":     "test-stage",
 					"targetFreight": map[string]any{
-						"name": "test-freight",
+						"name":  "test-freight",
+						"alias": "test-alias",
 						"origin": map[string]any{
 							"name": "test-warehouse",
 						},
@@ -307,6 +393,9 @@ func TestStepEvaluator_BuildExprEnv(t *testing.T) {
 							"actor":    "test-actor",
 							"rollback": false,
 						},
+						"step": map[string]any{
+							"alias": "test-step",
+						},
 					},
 				},
 			},
@@ -314,10 +403,12 @@ func TestStepEvaluator_BuildExprEnv(t *testing.T) {
 		{
 			name: "with multiple options",
 			promoCtx: Context{
-				Project:   "test-project",
-				Stage:     "test-stage",
-				Promotion: "test-promotion",
-				Actor:     "test-actor",
+				Project:             "test-project",
+				Stage:               "test-stage",
+				Promotion:           "test-promotion",
+				Actor:               "test-actor",
+				TargetFreightAlias:  "test-alias",
+				currentStepMetadata: &StepMetadata{Alias: "test-step"},
 				TargetFreightRef: kargoapi.FreightReference{
 					Name: "test-freight",
 					Origin: kargoapi.FreightOrigin{
@@ -354,11 +445,13 @@ func TestStepEvaluator_BuildExprEnv(t *testing.T) {
 			},
 			expected: map[string]any{
 				"ctx": map[string]any{
+					"uiBaseUrl": "",
 					"project":   "test-project",
 					"promotion": "test-promotion",
 					"stage":     "test-stage",
 					"targetFreight": map[string]any{
-						"name": "test-freight",
+						"name":  "test-freight",
+						"alias": "test-alias",
 						"origin": map[string]any{
 							"name": "test-warehouse",
 						},
@@ -367,6 +460,9 @@ func TestStepEvaluator_BuildExprEnv(t *testing.T) {
 						"promotion": map[string]any{
 							"actor":    "test-actor",
 							"rollback": false,
+						},
+						"step": map[string]any{
+							"alias": "test-step",
 						},
 					},
 				},
@@ -398,11 +494,13 @@ func TestStepEvaluator_BuildExprEnv(t *testing.T) {
 			},
 			expected: map[string]any{
 				"ctx": map[string]any{
+					"uiBaseUrl": "",
 					"project":   "",
 					"promotion": "",
 					"stage":     "",
 					"targetFreight": map[string]any{
-						"name": "",
+						"name":  "",
+						"alias": "",
 						"origin": map[string]any{
 							"name": "",
 						},
@@ -412,6 +510,9 @@ func TestStepEvaluator_BuildExprEnv(t *testing.T) {
 							"actor":    "",
 							"rollback": false,
 						},
+						"step": map[string]any{
+							"alias": "",
+						},
 					},
 				},
 			},
@@ -420,8 +521,132 @@ func TestStepEvaluator_BuildExprEnv(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			evaluator := NewStepEvaluator(testClient, nil)
-			result := evaluator.BuildExprEnv(tt.promoCtx, tt.opts...)
+			result := BuildExprEnv(tt.promoCtx, tt.opts...)
+			assert.Equal(t, tt.expected, result)
+		})
+	}
+}
+
+func TestBuildCtxMap(t *testing.T) {
+	tests := []struct {
+		name     string
+		stepCtx  StepContext
+		expected map[string]any
+	}{
+		{
+			name: "full step context",
+			stepCtx: StepContext{
+				UIBaseURL:          "https://kargo.example.com",
+				Project:            "test-project",
+				Promotion:          "test-promotion",
+				Stage:              "test-stage",
+				Alias:              "my-step",
+				PromotionActor:     "test-actor",
+				Rollback:           true,
+				TargetFreightAlias: "test-alias",
+				TargetFreightRef: kargoapi.FreightReference{
+					Name: "test-freight",
+					Origin: kargoapi.FreightOrigin{
+						Name: "test-warehouse",
+					},
+				},
+			},
+			expected: map[string]any{
+				"ctx": map[string]any{
+					"uiBaseUrl": "https://kargo.example.com",
+					"project":   "test-project",
+					"promotion": "test-promotion",
+					"stage":     "test-stage",
+					"targetFreight": map[string]any{
+						"name":  "test-freight",
+						"alias": "test-alias",
+						"origin": map[string]any{
+							"name": "test-warehouse",
+						},
+					},
+					"meta": map[string]any{
+						"promotion": map[string]any{
+							"actor":    "test-actor",
+							"rollback": true,
+						},
+						"step": map[string]any{
+							"alias": "my-step",
+						},
+					},
+				},
+			},
+		},
+		{
+			name:    "empty step context",
+			stepCtx: StepContext{},
+			expected: map[string]any{
+				"ctx": map[string]any{
+					"uiBaseUrl": "",
+					"project":   "",
+					"promotion": "",
+					"stage":     "",
+					"targetFreight": map[string]any{
+						"name":  "",
+						"alias": "",
+						"origin": map[string]any{
+							"name": "",
+						},
+					},
+					"meta": map[string]any{
+						"promotion": map[string]any{
+							"actor":    "",
+							"rollback": false,
+						},
+						"step": map[string]any{
+							"alias": "",
+						},
+					},
+				},
+			},
+		},
+		{
+			name: "step context with target exposes target.params and target.labels",
+			stepCtx: StepContext{
+				Project: "test-project",
+				Target: &TargetContext{
+					Params: map[string]any{"cluster": "east", "region": "us"},
+					Labels: map[string]string{"env": "prod"},
+				},
+			},
+			expected: map[string]any{
+				"ctx": map[string]any{
+					"uiBaseUrl": "",
+					"project":   "test-project",
+					"promotion": "",
+					"stage":     "",
+					"targetFreight": map[string]any{
+						"name":  "",
+						"alias": "",
+						"origin": map[string]any{
+							"name": "",
+						},
+					},
+					"meta": map[string]any{
+						"promotion": map[string]any{
+							"actor":    "",
+							"rollback": false,
+						},
+						"step": map[string]any{
+							"alias": "",
+						},
+					},
+				},
+				"target": map[string]any{
+					"params": map[string]any{"cluster": "east", "region": "us"},
+					"labels": map[string]string{"env": "prod"},
+				},
+			},
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			result := BuildCtxMap(tt.stepCtx)
 			assert.Equal(t, tt.expected, result)
 		})
 	}
@@ -1560,12 +1785,13 @@ func TestStepEvaluator_BuildStepContext(t *testing.T) {
 		{
 			name: "builds step context with all fields",
 			promoCtx: Context{
-				UIBaseURL: "https://kargo.example.com",
-				WorkDir:   "/tmp/workdir",
-				Project:   "test-project",
-				Stage:     "test-stage",
-				Promotion: "test-promotion",
-				Actor:     "test-actor",
+				UIBaseURL:          "https://kargo.example.com",
+				WorkDir:            "/tmp/workdir",
+				Project:            "test-project",
+				Stage:              "test-stage",
+				Promotion:          "test-promotion",
+				Actor:              "test-actor",
+				TargetFreightAlias: "test-alias",
 				State: State{
 					"key": "value",
 				},
@@ -1608,6 +1834,7 @@ func TestStepEvaluator_BuildStepContext(t *testing.T) {
 				assert.Equal(t, "test-actor", stepCtx.PromotionActor)
 				assert.Equal(t, "target-freight", stepCtx.TargetFreightRef.Name)
 				assert.Equal(t, "target-warehouse", stepCtx.TargetFreightRef.Origin.Name)
+				assert.Equal(t, "test-alias", stepCtx.TargetFreightAlias)
 
 				// Verify state is deep copied
 				assert.Equal(t, State{"key": "value"}, stepCtx.SharedState)

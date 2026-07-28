@@ -1,0 +1,11 @@
+description: "Testing kargo API using config from home directory created by `kargo login` and `argocd login`"
+kargo_cli:
+  ## Using system-local kargo config created by `kargo login`
+  config_file:  ~/.config/kargo/config
+
+argocd_cli:
+  ## Using system-local argocd config created by `argocd login`
+  config_file: ~/.config/argocd/config
+
+context:
+  kargo_demo_gitops_repo: "https://github.com/hairyhum/kargo-demo-gitops.git"

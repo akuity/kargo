@@ -17,9 +17,9 @@ import (
 	"github.com/akuity/kargo/pkg/logging"
 )
 
-// setSSEHeaders configures the standard headers for Server-Sent Events (SSE)
+// SetSSEHeaders configures the standard headers for Server-Sent Events (SSE)
 // streaming on a gin context.
-func setSSEHeaders(c *gin.Context) {
+func SetSSEHeaders(c *gin.Context) {
 	c.Header("Content-Type", "text/event-stream")
 	c.Header("Cache-Control", "no-cache")
 	c.Header("Connection", "keep-alive")
@@ -34,11 +34,11 @@ type WatchEvent[T any] struct {
 	Object T      `json:"object"`
 }
 
-// convertWatchEventObject converts a watch event's object to the target type.
+// ConvertWatchEventObject converts a watch event's object to the target type.
 // It handles both unstructured objects (from real clients) and typed objects
 // (from fake clients in tests). Returns the converted object and true if
 // successful, or the zero value and false if conversion failed.
-func convertWatchEventObject[T any](c *gin.Context, e watch.Event, _ T) (T, bool) {
+func ConvertWatchEventObject[T any](c *gin.Context, e watch.Event, _ T) (T, bool) {
 	logger := logging.LoggerFromContext(c.Request.Context())
 
 	var obj T
@@ -64,9 +64,9 @@ func convertWatchEventObject[T any](c *gin.Context, e watch.Event, _ T) (T, bool
 	return obj, true
 }
 
-// errorFromWatchEvent maps Kubernetes watch.Error events into client-visible
+// ErrorFromWatchEvent maps Kubernetes watch.Error events into client-visible
 // errors that watch handlers can return or stream.
-func errorFromWatchEvent(e watch.Event) error {
+func ErrorFromWatchEvent(e watch.Event) error {
 	if e.Type != watch.Error {
 		return nil
 	}
@@ -110,15 +110,14 @@ func errorFromWatchStartError(err error) error {
 	)
 }
 
-// sendSSEWatchError sends a watch error as an SSE error event. Watch endpoints
+// SendSSEWatchError sends a watch error as an SSE error event. Watch endpoints
 // may have already sent response headers, so HTTP status codes are no longer a
 // reliable way to report expired resource versions after streaming begins.
-func sendSSEWatchError(c *gin.Context, err error) {
+func SendSSEWatchError(c *gin.Context, err error) {
 	logger := logging.LoggerFromContext(c.Request.Context())
 
 	message := err.Error()
-	var connectErr *connect.Error
-	if errors.As(err, &connectErr) {
+	if connectErr, ok := errors.AsType[*connect.Error](err); ok {
 		message = connectErr.Message()
 	}
 
@@ -141,36 +140,36 @@ func sendSSEWatchError(c *gin.Context, err error) {
 	c.Writer.Flush()
 }
 
-// sendSSEWatchStartError sends startup watch errors that are part of the watch
+// SendSSEWatchStartError sends startup watch errors that are part of the watch
 // protocol as SSE error events. It returns true when the error was handled.
-func sendSSEWatchStartError(c *gin.Context, err error) bool {
+func SendSSEWatchStartError(c *gin.Context, err error) bool {
 	watchErr := errorFromWatchStartError(err)
 	if connect.CodeOf(watchErr) != connect.CodeOutOfRange {
 		return false
 	}
-	setSSEHeaders(c)
-	sendSSEWatchError(c, watchErr)
+	SetSSEHeaders(c)
+	SendSSEWatchError(c, watchErr)
 	return true
 }
 
-// convertAndSendWatchEvent converts a watch event's object to the target type
+// ConvertAndSendWatchEvent converts a watch event's object to the target type
 // and sends it as an SSE event. It handles both unstructured objects (from real
 // clients) and typed objects (from fake clients in tests). Returns true if the
 // caller should continue processing (including on conversion errors), false if
 // the watch should be terminated (write failure or a watch.Error event).
-func convertAndSendWatchEvent[T any](c *gin.Context, e watch.Event, target T) bool {
-	if err := errorFromWatchEvent(e); err != nil {
-		sendSSEWatchError(c, err)
+func ConvertAndSendWatchEvent[T any](c *gin.Context, e watch.Event, target T) bool {
+	if err := ErrorFromWatchEvent(e); err != nil {
+		SendSSEWatchError(c, err)
 		return false
 	}
-	obj, ok := convertWatchEventObject(c, e, target)
+	obj, ok := ConvertWatchEventObject(c, e, target)
 	if !ok {
 		return true // continue processing, don't terminate watch
 	}
-	return sendSSEWatchEvent(c, e.Type, obj)
+	return SendSSEWatchEvent(c, e.Type, obj)
 }
 
-// filteredWatchEventType returns the event type to send for a client-side
+// FilteredWatchEventType returns the event type to send for a client-side
 // filtered watch event. Kubernetes server-side selectors send a DELETED event
 // when a previously matching object is modified so it no longer matches; this
 // helper mirrors that behavior for filters we must evaluate in-process.
@@ -182,7 +181,7 @@ func convertAndSendWatchEvent[T any](c *gin.Context, e watch.Event, target T) bo
 // server-side selector, but a DELETE for an object the client is not tracking
 // is a harmless no-op. Achieving exact fidelity would require tracking sent
 // object identities per client, which is not worth the complexity here.
-func filteredWatchEventType(eventType watch.EventType, matches bool) (watch.EventType, bool) {
+func FilteredWatchEventType(eventType watch.EventType, matches bool) (watch.EventType, bool) {
 	if matches {
 		return eventType, true
 	}
@@ -192,10 +191,10 @@ func filteredWatchEventType(eventType watch.EventType, matches bool) (watch.Even
 	return "", false
 }
 
-// sendSSEWatchEvent sends an object as an SSE watch event. Returns true if
+// SendSSEWatchEvent sends an object as an SSE watch event. Returns true if
 // the caller should continue processing, false if the watch should be
 // terminated (write failure).
-func sendSSEWatchEvent[T any](c *gin.Context, eventType watch.EventType, obj T) bool {
+func SendSSEWatchEvent[T any](c *gin.Context, eventType watch.EventType, obj T) bool {
 	logger := logging.LoggerFromContext(c.Request.Context())
 
 	event := WatchEvent[T]{
@@ -219,9 +218,9 @@ func sendSSEWatchEvent[T any](c *gin.Context, eventType watch.EventType, obj T) 
 	return true // continue processing
 }
 
-// writeSSEKeepalive writes a keepalive comment to keep the SSE connection
+// WriteSSEKeepalive writes a keepalive comment to keep the SSE connection
 // alive. Returns true if successful, false if the write failed.
-func writeSSEKeepalive(c *gin.Context) bool {
+func WriteSSEKeepalive(c *gin.Context) bool {
 	if _, err := c.Writer.Write([]byte(": keepalive\n\n")); err != nil {
 		logger := logging.LoggerFromContext(c.Request.Context())
 		logger.Debug("failed to write keepalive", "error", err)

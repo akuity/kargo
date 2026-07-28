@@ -17,11 +17,32 @@
       "description": "Spec describes the desired transition of a specific Stage into a specific\nFreight.",
       "properties": {
         "freight": {
-          "description": "Freight specifies the piece of Freight to be promoted into the Stage\nreferenced by the Stage field.",
+          "description": "Freight specifies the piece of Freight to be promoted into the Stage.\nExactly one of Freight or Origin must be set.",
           "maxLength": 253,
           "minLength": 1,
           "pattern": "^[a-z0-9]([-a-z0-9]*[a-z0-9])?(\\.[a-z0-9]([-a-z0-9]*[a-z0-9])?)*$",
           "type": "string"
+        },
+        "origin": {
+          "description": "Origin, when set, identifies the FreightOrigin whose auto-promotion\ncandidate should be promoted. The mutating webhook resolves this to the\ncandidate Freight for that origin and fills Freight before the Promotion\nis persisted. Exactly one of Freight or Origin must be set.",
+          "properties": {
+            "kind": {
+              "description": "Kind is the kind of resource from which Freight may have originated. At\npresent, this can only be \"Warehouse\".",
+              "enum": [
+                "Warehouse"
+              ],
+              "type": "string"
+            },
+            "name": {
+              "description": "Name is the name of the resource of the kind indicated by the Kind field\nfrom which Freight may originate.",
+              "type": "string"
+            }
+          },
+          "required": [
+            "kind",
+            "name"
+          ],
+          "type": "object"
         },
         "stage": {
           "description": "Stage specifies the name of the Stage to which this Promotion\napplies. The Stage referenced by this field MUST be in the same\nnamespace as the Promotion.",
@@ -132,6 +153,12 @@
           "minItems": 1,
           "type": "array"
         },
+        "target": {
+          "description": "Target optionally names the Target, within the Promotion's own Project\n(namespace), that this Promotion promotes Freight to. Targets allow a\nsingle Stage to govern -- and promote Freight to -- multiple destinations.\nWhen set, the named Target must be one that the referenced Stage governs,\ni.e. one selected by the Stage's targetSelectors.\n\nWhen empty (the default), the Promotion promotes to the Stage itself. This\npreserves the behavior of Promotions created before Targets existed:\nclassic Stages -- those without targetSelectors -- govern no Targets, so\ntheir Promotions leave this field empty.",
+          "maxLength": 253,
+          "pattern": "^[a-z0-9]([-a-z0-9]*[a-z0-9])?(\\.[a-z0-9]([-a-z0-9]*[a-z0-9])?)*$",
+          "type": "string"
+        },
         "vars": {
           "description": "Vars is a list of variables that can be referenced by expressions in\npromotion steps.",
           "items": {
@@ -157,11 +184,16 @@
         }
       },
       "required": [
-        "freight",
         "stage",
         "steps"
       ],
-      "type": "object"
+      "type": "object",
+      "x-kubernetes-validations": [
+        {
+          "message": "exactly one of freight or origin must be set",
+          "rule": "has(self.freight) != has(self.origin)"
+        }
+      ]
     },
     "status": {
       "description": "Status describes the current state of the transition represented by this\nPromotion.",

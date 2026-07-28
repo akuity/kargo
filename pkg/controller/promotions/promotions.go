@@ -477,7 +477,7 @@ func (r *reconciler) Reconcile(
 			},
 		)
 		if getStageErr != nil {
-			return ctrl.Result{}, fmt.Errorf("get stage: %w", err)
+			return ctrl.Result{}, fmt.Errorf("get stage: %w", getStageErr)
 		}
 		if stage == nil {
 			return ctrl.Result{}, fmt.Errorf(
@@ -601,6 +601,7 @@ func (r *reconciler) promote(
 		workingPromo,
 		stage,
 		promotion.WithActor(api.CreateActorAnnotationValue(&promo)),
+		promotion.WithTargetFreightAlias(targetFreight.Alias),
 		promotion.WithUIBaseURL(r.cfg.APIServerBaseURL),
 		promotion.WithWorkDir(promotionWorkDir(workingPromo.UID)),
 	)

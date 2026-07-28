@@ -16,11 +16,11 @@ import (
 // Project.
 type ProjectConfig struct {
 	metav1.TypeMeta   `json:",inline"`
-	metav1.ObjectMeta `json:"metadata,omitempty" protobuf:"bytes,1,opt,name=metadata"`
+	metav1.ObjectMeta `json:"metadata,omitempty"`
 	// Spec describes the configuration of a Project.
-	Spec ProjectConfigSpec `json:"spec,omitempty" protobuf:"bytes,2,opt,name=spec"`
+	Spec ProjectConfigSpec `json:"spec,omitempty"`
 	// Status describes the current status of a ProjectConfig.
-	Status ProjectConfigStatus `json:"status,omitempty" protobuf:"bytes,3,opt,name=status"`
+	Status ProjectConfigStatus `json:"status,omitempty"`
 }
 
 func (p *ProjectConfig) GetStatus() *ProjectConfigStatus {
@@ -31,22 +31,22 @@ func (p *ProjectConfig) GetStatus() *ProjectConfigStatus {
 type ProjectConfigSpec struct {
 	// PromotionPolicies defines policies governing the promotion of Freight to
 	// specific Stages within the Project.
-	PromotionPolicies []PromotionPolicy `json:"promotionPolicies,omitempty" protobuf:"bytes,1,rep,name=promotionPolicies"`
+	PromotionPolicies []PromotionPolicy `json:"promotionPolicies,omitempty"`
 	// WebhookReceivers describes Project-specific webhook receivers used for
 	// processing events from various external platforms
-	WebhookReceivers []WebhookReceiverConfig `json:"webhookReceivers,omitempty" protobuf:"bytes,2,rep,name=webhookReceivers"`
+	WebhookReceivers []WebhookReceiverConfig `json:"webhookReceivers,omitempty"`
 	// FreightLinks defines deep links shown when viewing Freight resources
 	// within this project. These are shown in addition to any cluster-level
 	// FreightLinks defined in ClusterConfig.
 	//
 	// +optional
-	FreightLinks []DeepLink `json:"freightLinks,omitempty" protobuf:"bytes,3,rep,name=freightLinks"`
+	FreightLinks []DeepLink `json:"freightLinks,omitempty"`
 	// StageLinks defines deep links shown when viewing Stage resources within
 	// this project. These are shown in addition to any cluster-level
 	// StageLinks defined in ClusterConfig.
 	//
 	// +optional
-	StageLinks []DeepLink `json:"stageLinks,omitempty" protobuf:"bytes,4,rep,name=stageLinks"`
+	StageLinks []DeepLink `json:"stageLinks,omitempty"`
 }
 
 // ProjectConfigStatus describes the current status of a ProjectConfig.
@@ -58,18 +58,18 @@ type ProjectConfigStatus struct {
 	// +patchStrategy=merge
 	// +listType=map
 	// +listMapKey=type
-	Conditions []metav1.Condition `json:"conditions,omitempty" patchMergeKey:"type" patchStrategy:"merge" protobuf:"bytes,1,rep,name=conditions"`
+	Conditions []metav1.Condition `json:"conditions,omitempty" patchMergeKey:"type" patchStrategy:"merge"`
 	// ObservedGeneration represents the .metadata.generation that this
 	// ProjectConfig was reconciled against.
-	ObservedGeneration int64 `json:"observedGeneration,omitempty" protobuf:"varint,3,opt,name=observedGeneration"`
+	ObservedGeneration int64 `json:"observedGeneration,omitempty"`
 	// LastHandledRefresh holds the value of the most recent AnnotationKeyRefresh
 	// annotation that was handled by the controller. This field can be used to
 	// determine whether the request to refresh the resource has been handled.
 	// +optional
-	LastHandledRefresh string `json:"lastHandledRefresh,omitempty" protobuf:"bytes,4,opt,name=lastHandledRefresh"`
+	LastHandledRefresh string `json:"lastHandledRefresh,omitempty"`
 	// WebhookReceivers describes the status of Project-specific webhook
 	// receivers.
-	WebhookReceivers []WebhookReceiverDetails `json:"webhookReceivers,omitempty" protobuf:"bytes,2,rep,name=webhookReceivers"`
+	WebhookReceivers []WebhookReceiverDetails `json:"webhookReceivers,omitempty"`
 }
 
 // GetConditions implements the conditions.Getter interface.
@@ -90,21 +90,21 @@ type DeepLink struct {
 	// Title is the display label for the link.
 	//
 	// +kubebuilder:validation:MinLength=1
-	Title string `json:"title" protobuf:"bytes,1,opt,name=title"`
+	Title string `json:"title"`
 	// URL is an expression that resolves to the link's href.
 	//
 	// +kubebuilder:validation:MinLength=1
-	URL string `json:"url" protobuf:"bytes,2,opt,name=url"`
+	URL string `json:"url"`
 	// Description is an optional human-readable summary shown alongside the
 	// link.
 	//
 	// +optional
-	Description string `json:"description,omitempty" protobuf:"bytes,3,opt,name=description"`
+	Description string `json:"description,omitempty"`
 	// If is an optional expression condition. When set, the link is only shown
 	// when the expression evaluates to true.
 	//
 	// +optional
-	If string `json:"if,omitempty" protobuf:"bytes,4,opt,name=if"`
+	If string `json:"if,omitempty"`
 }
 
 // AutoRollbackConfig describes the conditions under which a Stage should
@@ -122,7 +122,7 @@ type AutoRollbackConfig struct {
 	// +kubebuilder:validation:MaxItems=2
 	// +kubebuilder:validation:XValidation:message="onPromotion[0] must be Failed or Errored",rule="self.size() == 0 || self[0] == 'Failed' || self[0] == 'Errored'"
 	// +kubebuilder:validation:XValidation:message="onPromotion[1] must be Failed or Errored",rule="self.size() <= 1 || self[1] == 'Failed' || self[1] == 'Errored'"
-	OnPromotion []PromotionPhase `json:"onPromotion,omitempty" protobuf:"bytes,1,rep,name=onPromotion"`
+	OnPromotion []PromotionPhase `json:"onPromotion,omitempty"`
 	// OnVerification is the list of terminal verification phases that should
 	// trigger an automated rollback. Only Failed and Error are accepted (note:
 	// "Error", not "Errored" as in onPromotion). When absent or empty,
@@ -133,7 +133,7 @@ type AutoRollbackConfig struct {
 	// +kubebuilder:validation:MaxItems=2
 	// +kubebuilder:validation:XValidation:message="onVerification[0] must be Failed or Error",rule="self.size() == 0 || self[0] == 'Failed' || self[0] == 'Error'"
 	// +kubebuilder:validation:XValidation:message="onVerification[1] must be Failed or Error",rule="self.size() <= 1 || self[1] == 'Failed' || self[1] == 'Error'"
-	OnVerification []VerificationPhase `json:"onVerification,omitempty" protobuf:"bytes,2,rep,name=onVerification"`
+	OnVerification []VerificationPhase `json:"onVerification,omitempty"`
 }
 
 // PromotionPolicy defines policies governing the promotion of Freight to a
@@ -146,10 +146,10 @@ type PromotionPolicy struct {
 	// Deprecated: Use StageSelector instead.
 	//
 	// +kubebuilder:validation:Pattern=^[a-z0-9]([-a-z0-9]*[a-z0-9])?(\.[a-z0-9]([-a-z0-9]*[a-z0-9])?)*$
-	Stage string `json:"stage,omitempty" protobuf:"bytes,1,opt,name=stage"`
+	Stage string `json:"stage,omitempty"`
 	// StageSelector is a selector that matches the Stage resource to which
 	// this policy applies.
-	StageSelector *PromotionPolicySelector `json:"stageSelector,omitempty" protobuf:"bytes,3,opt,name=stageSelector"`
+	StageSelector *PromotionPolicySelector `json:"stageSelector,omitempty"`
 	// AutoPromotionEnabled indicates whether new Freight can automatically be
 	// promoted into the Stage referenced by the Stage field. Note: There are may
 	// be other conditions also required for an auto-promotion to occur. This
@@ -157,13 +157,13 @@ type PromotionPolicy struct {
 	// subscribe to Warehouses instead of other, upstream Stages. This allows
 	// users to define Stages that are automatically updated as soon as new
 	// artifacts are detected.
-	AutoPromotionEnabled bool `json:"autoPromotionEnabled,omitempty" protobuf:"varint,2,opt,name=autoPromotionEnabled"`
+	AutoPromotionEnabled bool `json:"autoPromotionEnabled,omitempty"`
 	// AutoRollback describes the conditions under which this Stage should
 	// automatically roll back to the last known-good (verified) Freight. When
 	// nil, auto-rollback is disabled.
 	//
 	// Kargo Enterprise only: This field is ignored in Kargo OSS.
-	AutoRollback *AutoRollbackConfig `json:"autoRollback,omitempty" protobuf:"bytes,4,opt,name=autoRollback"`
+	AutoRollback *AutoRollbackConfig `json:"autoRollback,omitempty"`
 }
 
 // WebhookReceiverConfig describes the configuration for a single webhook
@@ -176,36 +176,36 @@ type WebhookReceiverConfig struct {
 	// +kubebuilder:validation:MaxLength=253
 	// +kubebuilder:validation:Pattern=`^[a-z0-9]([-a-z0-9]*[a-z0-9])?(\.[a-z0-9]([-a-z0-9]*[a-z0-9])?)*$`
 	// +akuity:test-kubebuilder-pattern=KubernetesName
-	Name string `json:"name" protobuf:"bytes,1,opt,name=name"`
+	Name string `json:"name"`
 	// Bitbucket contains the configuration for a webhook receiver that is
 	// compatible with Bitbucket payloads.
-	Bitbucket *BitbucketWebhookReceiverConfig `json:"bitbucket,omitempty" protobuf:"bytes,5,opt,name=bitbucket"`
+	Bitbucket *BitbucketWebhookReceiverConfig `json:"bitbucket,omitempty"`
 	// DockerHub contains the configuration for a webhook receiver that is
 	// compatible with DockerHub payloads.
-	DockerHub *DockerHubWebhookReceiverConfig `json:"dockerhub,omitempty" protobuf:"bytes,6,opt,name=dockerhub"`
+	DockerHub *DockerHubWebhookReceiverConfig `json:"dockerhub,omitempty"`
 	// GitHub contains the configuration for a webhook receiver that is compatible
 	// with GitHub payloads.
-	GitHub *GitHubWebhookReceiverConfig `json:"github,omitempty" protobuf:"bytes,2,opt,name=github"`
+	GitHub *GitHubWebhookReceiverConfig `json:"github,omitempty"`
 	// GitLab contains the configuration for a webhook receiver that is compatible
 	// with GitLab payloads.
-	GitLab *GitLabWebhookReceiverConfig `json:"gitlab,omitempty" protobuf:"bytes,3,opt,name=gitlab"`
+	GitLab *GitLabWebhookReceiverConfig `json:"gitlab,omitempty"`
 	// Harbor contains the configuration for a webhook receiver that is compatible
 	// with Harbor payloads.
-	Harbor *HarborWebhookReceiverConfig `json:"harbor,omitempty" protobuf:"bytes,10,opt,name=harbor"`
+	Harbor *HarborWebhookReceiverConfig `json:"harbor,omitempty"`
 	// Quay contains the configuration for a webhook receiver that is compatible
 	// with Quay payloads.
-	Quay *QuayWebhookReceiverConfig `json:"quay,omitempty" protobuf:"bytes,4,opt,name=quay"`
+	Quay *QuayWebhookReceiverConfig `json:"quay,omitempty"`
 	// Artifactory contains the configuration for a webhook receiver that is
 	// compatible with JFrog Artifactory payloads.
-	Artifactory *ArtifactoryWebhookReceiverConfig `json:"artifactory,omitempty" protobuf:"bytes,9,opt,name=artifactory"`
+	Artifactory *ArtifactoryWebhookReceiverConfig `json:"artifactory,omitempty"`
 	// Azure contains the configuration for a webhook receiver that is compatible
 	// with Azure Container Registry (ACR) and Azure DevOps payloads.
-	Azure *AzureWebhookReceiverConfig `json:"azure,omitempty" protobuf:"bytes,8,opt,name=azure"`
+	Azure *AzureWebhookReceiverConfig `json:"azure,omitempty"`
 	// Gitea contains the configuration for a webhook receiver that is compatible
 	// with Gitea payloads.
-	Gitea *GiteaWebhookReceiverConfig `json:"gitea,omitempty" protobuf:"bytes,7,opt,name=gitea"`
+	Gitea *GiteaWebhookReceiverConfig `json:"gitea,omitempty"`
 	// Generic contains the configuration for a generic webhook receiver.
-	Generic *GenericWebhookReceiverConfig `json:"generic,omitempty" protobuf:"bytes,11,opt,name=generic"`
+	Generic *GenericWebhookReceiverConfig `json:"generic,omitempty"`
 }
 
 // GiteaWebhookReceiverConfig describes a webhook receiver that is compatible
@@ -224,7 +224,7 @@ type GiteaWebhookReceiverConfig struct {
 	//   https://docs.gitea.io/en-us/webhooks/
 	//
 	// +kubebuilder:validation:Required
-	SecretRef corev1.LocalObjectReference `json:"secretRef" protobuf:"bytes,1,opt,name=secretRef"`
+	SecretRef corev1.LocalObjectReference `json:"secretRef"`
 }
 
 // BitbucketWebhookReceiverConfig describes a webhook receiver that is
@@ -244,7 +244,7 @@ type BitbucketWebhookReceiverConfig struct {
 	//   https://support.atlassian.com/bitbucket-cloud/docs/manage-webhooks/
 	//
 	// +kubebuilder:validation:Required
-	SecretRef corev1.LocalObjectReference `json:"secretRef" protobuf:"bytes,1,opt,name=secretRef"`
+	SecretRef corev1.LocalObjectReference `json:"secretRef"`
 }
 
 // DockerHubWebhookReceiverConfig describes a webhook receiver that is
@@ -262,7 +262,7 @@ type DockerHubWebhookReceiverConfig struct {
 	//   https://docs.docker.com/docker-hub/webhooks/
 	//
 	// +kubebuilder:validation:Required
-	SecretRef corev1.LocalObjectReference `json:"secretRef" protobuf:"bytes,1,opt,name=secretRef"`
+	SecretRef corev1.LocalObjectReference `json:"secretRef"`
 }
 
 // GitHubWebhookReceiverConfig describes a webhook receiver that is compatible
@@ -281,7 +281,7 @@ type GitHubWebhookReceiverConfig struct {
 	//   https://docs.github.com/en/webhooks/using-webhooks/validating-webhook-deliveries
 	//
 	// +kubebuilder:validation:Required
-	SecretRef corev1.LocalObjectReference `json:"secretRef" protobuf:"bytes,1,opt,name=secretRef"`
+	SecretRef corev1.LocalObjectReference `json:"secretRef"`
 }
 
 // GitLabWebhookReceiverConfig describes a webhook receiver that is compatible
@@ -300,7 +300,7 @@ type GitLabWebhookReceiverConfig struct {
 	//   https://docs.gitlab.com/user/project/integrations/webhooks/
 	//
 	// +kubebuilder:validation:Required
-	SecretRef corev1.LocalObjectReference `json:"secretRef" protobuf:"bytes,1,opt,name=secretRef"`
+	SecretRef corev1.LocalObjectReference `json:"secretRef"`
 }
 
 // HarborWebhookReceiverConfig describes a webhook receiver that is compatible
@@ -319,7 +319,7 @@ type HarborWebhookReceiverConfig struct {
 	//   https://goharbor.io/docs/main/working-with-projects/project-configuration/configure-webhooks/
 	//
 	// +kubebuilder:validation:Required
-	SecretRef corev1.LocalObjectReference `json:"secretRef" protobuf:"bytes,1,opt,name=secretRef"`
+	SecretRef corev1.LocalObjectReference `json:"secretRef"`
 }
 
 // QuayWebhookReceiverConfig describes a webhook receiver that is compatible
@@ -340,7 +340,7 @@ type QuayWebhookReceiverConfig struct {
 	//   https://docs.quay.io/guides/notifications.html
 	//
 	// +kubebuilder:validation:Required
-	SecretRef corev1.LocalObjectReference `json:"secretRef" protobuf:"bytes,1,opt,name=secretRef"`
+	SecretRef corev1.LocalObjectReference `json:"secretRef"`
 }
 
 // ArtifactoryWebhookReceiverConfig describes a webhook receiver that is
@@ -360,7 +360,7 @@ type ArtifactoryWebhookReceiverConfig struct {
 	//   https://jfrog.com/help/r/jfrog-platform-administration-documentation/webhooks
 	//
 	// +kubebuilder:validation:Required
-	SecretRef corev1.LocalObjectReference `json:"secretRef" protobuf:"bytes,1,opt,name=secretRef"`
+	SecretRef corev1.LocalObjectReference `json:"secretRef"`
 	// VirtualRepoName is the name of an Artifactory virtual repository.
 	//
 	// When unspecified, the Artifactory webhook receiver depends on the value of
@@ -387,7 +387,7 @@ type ArtifactoryWebhookReceiverConfig struct {
 	// `example.frog.io/proj-virtual/<path>/image`.
 	//
 	// +optional
-	VirtualRepoName string `json:"virtualRepoName,omitempty" protobuf:"bytes,2,opt,name=virtualRepoName"`
+	VirtualRepoName string `json:"virtualRepoName,omitempty"`
 }
 
 // AzureWebhookReceiverConfig describes a webhook receiver that is compatible
@@ -413,7 +413,7 @@ type AzureWebhookReceiverConfig struct {
 	//	http://learn.microsoft.com/en-us/azure/devops/service-hooks/services/webhooks?view=azure-devops
 	//
 	// +kubebuilder:validation:Required
-	SecretRef corev1.LocalObjectReference `json:"secretRef" protobuf:"bytes,1,opt,name=secretRef"`
+	SecretRef corev1.LocalObjectReference `json:"secretRef"`
 }
 
 // GenericWebhookReceiverConfig describes a generic webhook receiver that can be
@@ -439,12 +439,12 @@ type GenericWebhookReceiverConfig struct {
 	// shared secret.
 	//
 	// +kubebuilder:validation:Required
-	SecretRef corev1.LocalObjectReference `json:"secretRef" protobuf:"bytes,1,opt,name=secretRef"`
+	SecretRef corev1.LocalObjectReference `json:"secretRef"`
 
 	// Actions is a list of actions to be performed when a webhook event is received.
 	//
 	// +kubebuilder:validation:MinItems=1
-	Actions []GenericWebhookAction `json:"actions,omitempty" protobuf:"bytes,2,rep,name=actions"`
+	Actions []GenericWebhookAction `json:"actions,omitempty"`
 }
 
 // GenericWebhookAction describes an action to be performed on a resource
@@ -454,25 +454,25 @@ type GenericWebhookAction struct {
 	// only currently supported action.
 	//
 	// +kubebuilder:validation:Enum=Refresh;
-	ActionType GenericWebhookActionType `json:"action" protobuf:"bytes,1,opt,name=action"`
+	ActionType GenericWebhookActionType `json:"action"`
 
 	// WhenExpression defines criteria that a request must meet to run this
 	// action.
 	//
 	// +optional
-	WhenExpression string `json:"whenExpression,omitempty" protobuf:"bytes,2,opt,name=whenExpression"`
+	WhenExpression string `json:"whenExpression,omitempty"`
 
 	// Parameters contains additional, action-specific parameters. Values may be
 	// static or extracted from the request using expressions.
 	//
 	// +optional
-	Parameters map[string]string `json:"parameters,omitempty" protobuf:"bytes,3,rep,name=parameters" protobuf_key:"bytes,1,opt,name=key" protobuf_val:"bytes,2,opt,name=value"`
+	Parameters map[string]string `json:"parameters,omitempty"`
 
 	// TargetSelectionCriteria is a list of selection criteria for the resources on which the
 	// action should be performed.
 	//
 	// +kubebuilder:validation:MinItems=1
-	TargetSelectionCriteria []GenericWebhookTargetSelectionCriteria `json:"targetSelectionCriteria,omitempty" protobuf:"bytes,4,rep,name=targets"`
+	TargetSelectionCriteria []GenericWebhookTargetSelectionCriteria `json:"targetSelectionCriteria,omitempty"`
 }
 
 // GenericWebhookActionType represents the type of action to be performed on a resource.
@@ -491,25 +491,25 @@ type GenericWebhookTargetSelectionCriteria struct {
 	// Kind is the kind of the target resource.
 	//
 	// +kubebuilder:validation:Enum=Warehouse;
-	Kind GenericWebhookTargetKind `json:"kind" protobuf:"bytes,1,opt,name=kind"`
+	Kind GenericWebhookTargetKind `json:"kind"`
 
 	// Name is the name of the target resource. If LabelSelector and/or IndexSelectors
 	// are also specified, the results are the combined (logical AND) of the criteria.
 	//
 	// +optional
-	Name string `json:"name,omitempty" protobuf:"bytes,2,opt,name=name"`
+	Name string `json:"name,omitempty"`
 
 	// LabelSelector is a label selector to identify the target resources.
 	// If used with IndexSelector and/or Name, the results are the combined (logical AND) of all the criteria.
 	//
 	// +optional
-	LabelSelector metav1.LabelSelector `json:"labelSelector,omitempty" protobuf:"bytes,3,opt,name=labelSelector"`
+	LabelSelector metav1.LabelSelector `json:"labelSelector,omitempty"`
 
 	// IndexSelector is a selector used to identify cached target resources by cache key.
 	// If used with LabelSelector and/or Name, the results are the combined (logical AND) of all the criteria.
 	//
 	// +optional
-	IndexSelector IndexSelector `json:"indexSelector,omitempty" protobuf:"bytes,4,opt,name=indexSelector"`
+	IndexSelector IndexSelector `json:"indexSelector,omitempty"`
 }
 
 // GenericWebhookTargetKind represents the kind of a target resource.
@@ -526,7 +526,7 @@ type IndexSelector struct {
 	// MatchIndices is a list of index selector requirements.
 	//
 	// +kubebuilder:validation:MinItems=1
-	MatchIndices []IndexSelectorRequirement `json:"matchIndices,omitempty" protobuf:"bytes,1,rep,name=matchIndices"`
+	MatchIndices []IndexSelectorRequirement `json:"matchIndices,omitempty"`
 }
 
 // IndexSelectorRequirement encapsulates a requirement used to select indexes
@@ -535,18 +535,18 @@ type IndexSelectorRequirement struct {
 	// Key is the key of the index.
 	//
 	// +kubebuilder:validation:Enum=subscribedURLs;receiverPaths
-	Key string `json:"key" protobuf:"bytes,1,opt,name=key"`
+	Key string `json:"key"`
 
 	// Operator indicates the operation that should be used to evaluate
 	// whether the selection requirement is satisfied.
 	//
 	// kubebuilder:validation:Enum=Equal;NotEqual;
-	Operator IndexSelectorOperator `json:"operator" protobuf:"bytes,2,opt,name=operator"`
+	Operator IndexSelectorOperator `json:"operator"`
 
 	// Value can be a static string or an expression that will be evaluated.
 	//
 	// kubebuilder:validation:Required
-	Value string `json:"value" protobuf:"bytes,3,opt,name=value"`
+	Value string `json:"value"`
 }
 
 // IndexSelectorOperator represents a set of operators that can be
@@ -561,11 +561,11 @@ const (
 // WebhookReceiverDetails encapsulates the details of a webhook receiver.
 type WebhookReceiverDetails struct {
 	// Name is the name of the webhook receiver.
-	Name string `json:"name,omitempty" protobuf:"bytes,1,opt,name=name"`
+	Name string `json:"name,omitempty"`
 	// Path is the path to the receiver's webhook endpoint.
-	Path string `json:"path,omitempty" protobuf:"bytes,3,opt,name=path"`
+	Path string `json:"path,omitempty"`
 	// URL includes the full address of the receiver's webhook endpoint.
-	URL string `json:"url,omitempty" protobuf:"bytes,4,opt,name=url"`
+	URL string `json:"url,omitempty"`
 }
 
 // PromotionPolicySelector is a selector that matches the resource to which
@@ -589,7 +589,7 @@ type PromotionPolicySelector struct {
 	// promotion controls.
 	//
 	// +optional
-	Name string `json:"name,omitempty" protobuf:"bytes,1,opt,name=name"`
+	Name string `json:"name,omitempty"`
 
 	// LabelSelector is a selector that matches the resource to which this policy
 	// applies.
@@ -602,7 +602,7 @@ type PromotionPolicySelector struct {
 	// appropriate permissions could create new resources with labels that match
 	// the selector, potentially enabling unauthorized auto-promotion.
 	// For sensitive environments, exact Name matching provides tighter control.
-	*metav1.LabelSelector `json:",inline" protobuf:"bytes,2,opt,name=labelSelector"`
+	*metav1.LabelSelector `json:",inline"`
 }
 
 // +kubebuilder:object:root=true
@@ -610,6 +610,6 @@ type PromotionPolicySelector struct {
 // ProjectConfigList is a list of ProjectConfig resources.
 type ProjectConfigList struct {
 	metav1.TypeMeta `json:",inline"`
-	metav1.ListMeta `json:"metadata,omitempty" protobuf:"bytes,1,opt,name=metadata"`
-	Items           []ProjectConfig `json:"items" protobuf:"bytes,2,rep,name=items"`
+	metav1.ListMeta `json:"metadata,omitempty"`
+	Items           []ProjectConfig `json:"items"`
 }

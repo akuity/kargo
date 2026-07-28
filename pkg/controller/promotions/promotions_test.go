@@ -79,8 +79,10 @@ func TestReconcile(t *testing.T) {
 		) (*kargoapi.PromotionStatus, *time.Duration, error)
 		terminateFn             func(context.Context, *kargoapi.Promotion) error
 		promoToReconcile        *types.NamespacedName // if nil, uses the first of the promos
+		configure               func(*testing.T, *reconciler)
 		expectPromoteFnCalled   bool
 		expectTerminateFnCalled bool
+		expectedErr             string
 		expectedPhase           kargoapi.PromotionPhase
 		expectedEventRecorded   bool
 		expectedEventType       kargoapi.EventType
@@ -230,6 +232,51 @@ func TestReconcile(t *testing.T) {
 					},
 				},
 				newPromo("fake-namespace", "fake-promo", "fake-stage", kargoapi.PromotionPhasePending, now),
+			},
+		},
+		{
+			name:                  "terminal promotion event stage lookup returns real error",
+			expectPromoteFnCalled: true,
+			promoToReconcile:      &types.NamespacedName{Namespace: "fake-namespace", Name: "fake-promo"},
+			expectedErr:           "get stage: expected stage lookup error",
+			expectedPhase:         kargoapi.PromotionPhaseSucceeded,
+			promos: []client.Object{
+				&kargoapi.Stage{
+					ObjectMeta: metav1.ObjectMeta{
+						Name:      "fake-stage",
+						Namespace: "fake-namespace",
+					},
+					Status: kargoapi.StageStatus{
+						CurrentPromotion: &kargoapi.PromotionReference{
+							Name: "fake-promo",
+						},
+					},
+				},
+				newPromo("fake-namespace", "fake-promo", "fake-stage", kargoapi.PromotionPhasePending, now),
+			},
+			configure: func(_ *testing.T, r *reconciler) {
+				calls := 0
+				r.getStageFn = func(
+					context.Context,
+					client.Client,
+					types.NamespacedName,
+				) (*kargoapi.Stage, error) {
+					calls++
+					if calls > 1 {
+						return nil, errors.New("expected stage lookup error")
+					}
+					return &kargoapi.Stage{
+						ObjectMeta: metav1.ObjectMeta{
+							Name:      "fake-stage",
+							Namespace: "fake-namespace",
+						},
+						Status: kargoapi.StageStatus{
+							CurrentPromotion: &kargoapi.PromotionReference{
+								Name: "fake-promo",
+							},
+						},
+					}, nil
+				}
 			},
 		},
 		{
@@ -384,6 +431,9 @@ func TestReconcile(t *testing.T) {
 			if tc.apiReader != nil {
 				r.apiReader = tc.apiReader
 			}
+			if tc.configure != nil {
+				tc.configure(t, r)
+			}
 
 			promoteWasCalled := false
 			r.promoteFn = func(
@@ -429,7 +479,11 @@ func TestReconcile(t *testing.T) {
 			}
 
 			_, err := r.Reconcile(ctx, req)
-			require.NoError(t, err)
+			if tc.expectedErr != "" {
+				require.ErrorContains(t, err, tc.expectedErr)
+			} else {
+				require.NoError(t, err)
+			}
 			require.Equal(t, tc.expectPromoteFnCalled, promoteWasCalled,
 				"promoteFn called: %t, expected %t", promoteWasCalled, tc.expectPromoteFnCalled)
 			require.Equal(t, tc.expectTerminateFnCalled, terminateWasCalled,
@@ -445,6 +499,7 @@ func TestReconcile(t *testing.T) {
 					event := <-recorder.Events
 					require.Equal(t, tc.expectedEventType, kargoapi.EventType(event.Reason))
 				}
+				require.Empty(t, recorder.Events)
 			}
 		})
 	}
@@ -601,6 +656,7 @@ func Test_reconciler_terminatePromotion(t *testing.T) {
 
 			r := &reconciler{
 				kargoClient: c,
+				apiReader:   c,
 				sender:      k8sevent.NewEventSender(recorder),
 				cleanupWorkDirFn: func(context.Context, types.UID) {
 					// no-op for tests
@@ -735,6 +791,7 @@ func Test_reconciler_terminatePromotion_cleansUpWorkDir(t *testing.T) {
 	cleanupCalled := false
 	r := &reconciler{
 		kargoClient: c,
+		apiReader:   c,
 		sender:      k8sevent.NewEventSender(recorder),
 		cleanupWorkDirFn: func(context.Context, types.UID) {
 			cleanupCalled = true

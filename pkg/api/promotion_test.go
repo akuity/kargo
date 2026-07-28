@@ -38,6 +38,30 @@ func TestNewMinimalPromotion(t *testing.T) {
 	require.Empty(t, promo.Spec.Vars)
 }
 
+func TestNewMinimalPromotionForOrigin(t *testing.T) {
+	stage := &kargoapi.Stage{
+		ObjectMeta: metav1.ObjectMeta{
+			Name:      "test-stage",
+			Namespace: "test-project",
+		},
+	}
+	origin := kargoapi.FreightOrigin{
+		Kind: kargoapi.FreightOriginKindWarehouse,
+		Name: "test-warehouse",
+	}
+	promo := NewMinimalPromotionForOrigin(stage, origin)
+	require.NotNil(t, promo)
+	require.Equal(t, "test-project", promo.Namespace)
+	require.Equal(t, "promo-", promo.GenerateName)
+	require.Empty(t, promo.Name)
+	require.Equal(t, "test-stage", promo.Spec.Stage)
+	require.Empty(t, promo.Spec.Freight)
+	require.NotNil(t, promo.Spec.Origin)
+	require.Equal(t, origin, *promo.Spec.Origin)
+	require.Empty(t, promo.Spec.Steps)
+	require.Empty(t, promo.Spec.Vars)
+}
+
 func TestGeneratePromotionName(t *testing.T) {
 	tests := []struct {
 		name       string

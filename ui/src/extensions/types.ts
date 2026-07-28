@@ -2,7 +2,8 @@ import { IconProp } from '@fortawesome/fontawesome-svg-core';
 import { IconDefinition } from '@fortawesome/free-solid-svg-icons';
 import React from 'react';
 
-import { Freight, Stage } from '@ui/gen/api/v2/models';
+import { PromotionDirectiveStepStatus } from '@ui/features/common/promotion-directive-step-status/utils';
+import { Freight, Promotion, PromotionStep, Stage } from '@ui/gen/api/v2/models';
 
 type Subpage = {
   label: string;
@@ -88,6 +89,24 @@ export type ArgoCDExtension = {
   component: (props: ArgoCDExtensionComponentProps) => React.ReactNode;
 };
 
+export type PromotionStepComponentProps = {
+  step: PromotionStep;
+  result: PromotionDirectiveStepStatus;
+  output?: Record<string, unknown>;
+  promotion?: Promotion;
+};
+
+export type PromotionStepExtension = {
+  type: 'promotionStep';
+  identifier: string;
+  component: (props: PromotionStepComponentProps) => React.ReactNode;
+  // When set, the pipeline renders a waiting label for this step kind.
+  waitingLabel?: {
+    label: string;
+    icon: IconDefinition;
+  };
+};
+
 export type Extension =
   | StageTab
   | FreightTab
@@ -97,4 +116,5 @@ export type Extension =
   | PromoteTab
   | SettingsExtension
   | ProjectSettingsExtension
-  | ArgoCDExtension;
+  | ArgoCDExtension
+  | PromotionStepExtension;

@@ -63,6 +63,14 @@ tests:
           path: data.CONTROLPLANE_USER_REGEX
           pattern: "kargo-controller"
 
+  - it: includes suffixed controller service account in default control-plane regex
+    set:
+      controller.id: alpha
+    asserts:
+      - matchRegex:
+          path: data.CONTROLPLANE_USER_REGEX
+          pattern: "kargo-controller-alpha"
+
   - it: honors an explicit control-plane user regex
     set:
       webhooksServer.controlplaneUserRegex: "^my-custom-regex$"

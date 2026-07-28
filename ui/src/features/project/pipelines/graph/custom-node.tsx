@@ -2,7 +2,7 @@ import { Handle, Position } from '@xyflow/react';
 import { Skeleton } from 'antd';
 
 import { RepoSubscription, WarehouseExpanded } from '@ui/extend/types';
-import { Stage, Warehouse } from '@ui/gen/api/v2/models';
+import { Stage } from '@ui/gen/api/v2/models';
 
 import { useGraphContext } from '../context/graph-context';
 import { StageNode } from '../nodes/stage-node';
@@ -20,7 +20,7 @@ export const CustomWarehouseNode = (props: {
   data: {
     label: string;
     value: WarehouseExpanded;
-    subscriptionParent?: Warehouse;
+    subscriptionParent?: WarehouseExpanded;
     warehouseY?: Record<string, number>;
   };
   id?: string;
@@ -51,10 +51,18 @@ export const CustomWarehouseNode = (props: {
           backgroundColor: 'transparent',
           stroke: 'none',
           border: 'none',
-          left: 2
+          left: 3
         }}
       />
-      <div id={props.id} className='nodrag cursor-default flex items-center' style={{ height }}>
+      <div
+        id={props.id}
+        className='nodrag cursor-default flex items-center'
+        style={{ height }}
+        onMouseEnter={() =>
+          graphContext?.setHoveredWarehouseName(props.data.value?.metadata?.name || '')
+        }
+        onMouseLeave={() => graphContext?.setHoveredWarehouseName(null)}
+      >
         {WarehouseNodeBox}
       </div>
       <Handle
@@ -77,7 +85,7 @@ export const CustomRepoSubscriptionNode = (props: {
   data: {
     label: string;
     value: RepoSubscription;
-    subscriptionParent: Warehouse;
+    subscriptionParent: WarehouseExpanded;
   };
   id?: string;
 }) => {
@@ -178,7 +186,7 @@ export const CustomStageNode = (props: {
             top: handleTop(idx),
             backgroundColor: 'transparent',
             border: 'none',
-            left: 1
+            left: 2
           }}
         />
       ))}

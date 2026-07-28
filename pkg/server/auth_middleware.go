@@ -8,6 +8,7 @@ import (
 	"errors"
 	"fmt"
 	"io"
+	"maps"
 	"net/http"
 	"net/url"
 	"os"
@@ -42,6 +43,10 @@ var exemptPaths = map[string]struct{}{
 type authMiddleware struct {
 	cfg            config.ServerConfig
 	internalClient libClient.Client
+	// A set of paths that are exempt from authentication. This is used to allow certain
+	// endpoints to be accessed without a token, such as the public server config
+	// endpoint.
+	exemptPaths map[string]struct{}
 
 	parseUnverifiedJWTFn func(
 		rawToken string,
@@ -66,15 +71,31 @@ type goOIDCIDTokenVerifyFn func(ctx context.Context, rawIDToken string) (*oidc.I
 
 type claims map[string]any
 
-// newAuthMiddleware returns an initialized Gin middleware handler for authentication
-func newAuthMiddleware(
+// AuthMiddlewareOpt is a functional option for configuring the auth middleware returned by
+// NewAuthMiddleware.
+type AuthMiddlewareOpt func(*authMiddleware)
+
+// WithExemptPaths adds additional exempt paths for the auth middleware. These are added to the
+// default exempt paths, which are /v1beta1/system/public-server-config and /v1beta1/login.
+func WithExemptPaths(paths []string) AuthMiddlewareOpt {
+	return func(a *authMiddleware) {
+		for _, path := range paths {
+			a.exemptPaths[path] = struct{}{}
+		}
+	}
+}
+
+// NewAuthMiddleware returns an initialized Gin middleware handler for authentication.
+func NewAuthMiddleware(
 	ctx context.Context,
 	cfg config.ServerConfig,
 	client libClient.Client,
+	opts ...AuthMiddlewareOpt,
 ) gin.HandlerFunc {
 	a := &authMiddleware{
 		cfg:            cfg,
 		internalClient: client,
+		exemptPaths:    maps.Clone(exemptPaths),
 	}
 	if cfg.OIDCConfig != nil {
 		a.oidcTokenVerifyFn = newMultiClientVerifier(ctx, cfg)
@@ -85,6 +106,10 @@ func newAuthMiddleware(
 	a.verifyKubernetesTokenFn = a.verifyKubernetesToken
 	a.oidcExtractClaimsFn = oidcExtractClaims
 	a.listServiceAccountsFn = a.listServiceAccounts
+
+	for _, opt := range opts {
+		opt(a)
+	}
 
 	return a.Handler
 }
@@ -125,7 +150,7 @@ func (a *authMiddleware) authenticate(
 	logger := logging.LoggerFromContext(ctx).WithValues("path", path)
 
 	// Check if this path is exempt from authentication
-	if _, ok := exemptPaths[path]; ok {
+	if _, ok := a.exemptPaths[path]; ok {
 		logger.Debug("skipping authentication for exempt path")
 		return ctx, nil
 	}
