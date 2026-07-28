@@ -466,3 +466,56 @@ func TestGetDiffPathsForMovedFile(t *testing.T) {
 	require.NoError(t, err)
 	require.ElementsMatch(t, []string{"app/pod.yaml", "different-app/pod.yaml"}, paths)
 }
+
+func TestGetDiffPathsForCommitWithManyModifiedRenames(t *testing.T) {
+	testServer, testRepoURL, testRepoCreds := setupRemoteRepo(t)
+	defer testServer.Close()
+
+	ctx := t.Context()
+
+	rep, err := Clone(
+		ctx,
+		testRepoURL,
+		&ClientOptions{Credentials: &testRepoCreds},
+		nil,
+	)
+	require.NoError(t, err)
+	require.NotNil(t, rep)
+	defer rep.Close(ctx)
+
+	const fileCount = 2000
+
+	require.NoError(t, os.MkdirAll(fmt.Sprintf("%s/old", rep.Dir()), 0o755))
+	for i := range fileCount {
+		require.NoError(t, os.WriteFile(
+			fmt.Sprintf("%s/old/file%d.txt", rep.Dir(), i),
+			[]byte(fmt.Sprintf("content %d", i)),
+			0o600,
+		))
+	}
+	require.NoError(t, rep.AddAllAndCommit(ctx, "initial commit", nil))
+
+	// Move every file to a new directory and slightly modify its content, so
+	// git can't pair renames using a cheap exact-content match and instead
+	// falls back to similarity-based rename detection. Once a commit changes
+	// enough files at once, git skips that detection and prints a warning to
+	// stderr rather than failing -- GetDiffPathsForCommitID must not treat
+	// that warning as a fatal error.
+	require.NoError(t, os.MkdirAll(fmt.Sprintf("%s/new", rep.Dir()), 0o755))
+	for i := range fileCount {
+		require.NoError(t, os.Remove(fmt.Sprintf("%s/old/file%d.txt", rep.Dir(), i)))
+		require.NoError(t, os.WriteFile(
+			fmt.Sprintf("%s/new/file%d.txt", rep.Dir(), i),
+			[]byte(fmt.Sprintf("content %d, modified", i)),
+			0o600,
+		))
+	}
+	require.NoError(t, rep.AddAllAndCommit(ctx, "move and modify many files", nil))
+
+	commitID, err := rep.LastCommitID(ctx)
+	require.NoError(t, err)
+
+	paths, err := rep.GetDiffPathsForCommitID(ctx, commitID)
+	require.NoError(t, err)
+	require.Len(t, paths, fileCount*2)
+}
