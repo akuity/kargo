@@ -11036,6 +11036,7 @@ components:
       example:
         name: name
         repoURL: repoURL
+        subscriptionName: subscriptionName
         version: version
       properties:
         name:
@@ -11049,6 +11050,12 @@ components:
             the chart within the repository. In the case of a repository within an OCI
             registry, the URL implicitly points to a specific chart and the Name field
             will be empty.
+          type: string
+        subscriptionName:
+          description: |-
+            SubscriptionName is the name of the subscription that discovered this
+            chart. This field is only populated if the subscription was assigned
+            a name.
           type: string
         version:
           description: Version specifies a particular version of the chart.
@@ -11071,6 +11078,13 @@ components:
             SemverConstraint is the constraint for which versions were discovered.
             This field is optional, and only populated if the ChartSubscription
             specifies a SemverConstraint.
+          type: string
+        subscriptionName:
+          description: |-
+            SubscriptionName is the optional human-readable name of the subscription
+            that produced this discovery result.
+
+            +optional
           type: string
         versions:
           description: |-
@@ -11701,9 +11715,11 @@ components:
         charts:
         - name: name
           repoURL: repoURL
+          subscriptionName: subscriptionName
           version: version
         - name: name
           repoURL: repoURL
+          subscriptionName: subscriptionName
           version: version
         commits:
         - author: author
@@ -11712,6 +11728,7 @@ components:
           id: id
           message: message
           repoURL: repoURL
+          subscriptionName: subscriptionName
           tag: tag
         - author: author
           branch: branch
@@ -11719,6 +11736,7 @@ components:
           id: id
           message: message
           repoURL: repoURL
+          subscriptionName: subscriptionName
           tag: tag
         discoveredAt: discoveredAt
         images:
@@ -11726,11 +11744,13 @@ components:
             key: annotations
           digest: digest
           repoURL: repoURL
+          subscriptionName: subscriptionName
           tag: tag
         - annotations:
             key: annotations
           digest: digest
           repoURL: repoURL
+          subscriptionName: subscriptionName
           tag: tag
         kind: kind
         metadata:
@@ -12192,6 +12212,7 @@ components:
         id: id
         message: message
         repoURL: repoURL
+        subscriptionName: subscriptionName
         tag: tag
       properties:
         author:
@@ -12216,6 +12237,12 @@ components:
           type: string
         repoURL:
           description: RepoURL is the URL of a Git repository.
+          type: string
+        subscriptionName:
+          description: |-
+            SubscriptionName is the name of the subscription that discovered this
+            commit. This field is only populated if the subscription was assigned
+            a name.
           type: string
         tag:
           description: |-
@@ -12284,6 +12311,13 @@ components:
             +kubebuilder:validation:MinLength=1
             +kubebuilder:validation:Pattern=`(?:^(ssh|https?)://(?:([\w-]+)(:(.+))?@)?([\w-]+(?:\.[\w-]+)*)(?::(\d{1,5}))?(/.*)$)|(?:^([\w-]+)@([\w+]+(?:\.[\w-]+)*):(/?.*))`
             +akuity:test-kubebuilder-pattern=GitRepoURLPattern
+          type: string
+        subscriptionName:
+          description: |-
+            SubscriptionName is the optional human-readable name of the subscription
+            that produced this discovery result.
+
+            +optional
           type: string
       type: object
     GitHubWebhookReceiverConfig:
@@ -12425,6 +12459,7 @@ components:
           key: annotations
         digest: digest
         repoURL: repoURL
+        subscriptionName: subscriptionName
         tag: tag
       properties:
         annotations:
@@ -12440,6 +12475,12 @@ components:
         repoURL:
           description: RepoURL describes the repository in which the image can be
             found.
+          type: string
+        subscriptionName:
+          description: |-
+            SubscriptionName is the name of the subscription that discovered this
+            image. This field is only populated if the subscription was assigned
+            a name.
           type: string
         tag:
           description: |-
@@ -12472,6 +12513,13 @@ components:
             ImageSubscription.
 
             +kubebuilder:validation:MinLength=1
+          type: string
+        subscriptionName:
+          description: |-
+            SubscriptionName is the optional human-readable name of the subscription
+            that produced this discovery result.
+
+            +optional
           type: string
       type: object
     IndexSelector:
@@ -14832,9 +14880,11 @@ components:
           charts:
           - name: name
             repoURL: repoURL
+            subscriptionName: subscriptionName
             version: version
           - name: name
             repoURL: repoURL
+            subscriptionName: subscriptionName
             version: version
           commits:
           - author: author
@@ -14843,6 +14893,7 @@ components:
             id: id
             message: message
             repoURL: repoURL
+            subscriptionName: subscriptionName
             tag: tag
           - author: author
             branch: branch
@@ -14850,6 +14901,7 @@ components:
             id: id
             message: message
             repoURL: repoURL
+            subscriptionName: subscriptionName
             tag: tag
           discoveredAt: discoveredAt
           images:
@@ -14857,11 +14909,13 @@ components:
               key: annotations
             digest: digest
             repoURL: repoURL
+            subscriptionName: subscriptionName
             tag: tag
           - annotations:
               key: annotations
             digest: digest
             repoURL: repoURL
+            subscriptionName: subscriptionName
             tag: tag
           kind: kind
           metadata:
@@ -14926,9 +14980,11 @@ components:
           charts:
           - name: name
             repoURL: repoURL
+            subscriptionName: subscriptionName
             version: version
           - name: name
             repoURL: repoURL
+            subscriptionName: subscriptionName
             version: version
           commits:
           - author: author
@@ -14937,6 +14993,7 @@ components:
             id: id
             message: message
             repoURL: repoURL
+            subscriptionName: subscriptionName
             tag: tag
           - author: author
             branch: branch
@@ -14944,6 +15001,7 @@ components:
             id: id
             message: message
             repoURL: repoURL
+            subscriptionName: subscriptionName
             tag: tag
           discoveredAt: discoveredAt
           images:
@@ -14951,11 +15009,13 @@ components:
               key: annotations
             digest: digest
             repoURL: repoURL
+            subscriptionName: subscriptionName
             tag: tag
           - annotations:
               key: annotations
             digest: digest
             repoURL: repoURL
+            subscriptionName: subscriptionName
             tag: tag
           kind: kind
           metadata:
@@ -15031,9 +15091,11 @@ components:
               charts:
               - name: name
                 repoURL: repoURL
+                subscriptionName: subscriptionName
                 version: version
               - name: name
                 repoURL: repoURL
+                subscriptionName: subscriptionName
                 version: version
               commits:
               - author: author
@@ -15042,6 +15104,7 @@ components:
                 id: id
                 message: message
                 repoURL: repoURL
+                subscriptionName: subscriptionName
                 tag: tag
               - author: author
                 branch: branch
@@ -15049,6 +15112,7 @@ components:
                 id: id
                 message: message
                 repoURL: repoURL
+                subscriptionName: subscriptionName
                 tag: tag
               discoveredAt: discoveredAt
               images:
@@ -15056,11 +15120,13 @@ components:
                   key: annotations
                 digest: digest
                 repoURL: repoURL
+                subscriptionName: subscriptionName
                 tag: tag
               - annotations:
                   key: annotations
                 digest: digest
                 repoURL: repoURL
+                subscriptionName: subscriptionName
                 tag: tag
               kind: kind
               metadata:
@@ -15125,9 +15191,11 @@ components:
               charts:
               - name: name
                 repoURL: repoURL
+                subscriptionName: subscriptionName
                 version: version
               - name: name
                 repoURL: repoURL
+                subscriptionName: subscriptionName
                 version: version
               commits:
               - author: author
@@ -15136,6 +15204,7 @@ components:
                 id: id
                 message: message
                 repoURL: repoURL
+                subscriptionName: subscriptionName
                 tag: tag
               - author: author
                 branch: branch
@@ -15143,6 +15212,7 @@ components:
                 id: id
                 message: message
                 repoURL: repoURL
+                subscriptionName: subscriptionName
                 tag: tag
               discoveredAt: discoveredAt
               images:
@@ -15150,11 +15220,13 @@ components:
                   key: annotations
                 digest: digest
                 repoURL: repoURL
+                subscriptionName: subscriptionName
                 tag: tag
               - annotations:
                   key: annotations
                 digest: digest
                 repoURL: repoURL
+                subscriptionName: subscriptionName
                 tag: tag
               kind: kind
               metadata:

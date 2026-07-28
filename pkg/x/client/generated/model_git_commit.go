@@ -31,6 +31,8 @@ type GitCommit struct {
 	Message *string `json:"message,omitempty"`
 	// RepoURL is the URL of a Git repository.
 	RepoURL *string `json:"repoURL,omitempty"`
+	// SubscriptionName is the name of the subscription that discovered this commit. This field is only populated if the subscription was assigned a name.
+	SubscriptionName *string `json:"subscriptionName,omitempty"`
 	// Tag denotes a tag in the repository that matched selection criteria and resolved to this commit.
 	Tag *string `json:"tag,omitempty"`
 }
@@ -244,6 +246,38 @@ func (o *GitCommit) SetRepoURL(v string) {
 	o.RepoURL = &v
 }
 
+// GetSubscriptionName returns the SubscriptionName field value if set, zero value otherwise.
+func (o *GitCommit) GetSubscriptionName() string {
+	if o == nil || IsNil(o.SubscriptionName) {
+		var ret string
+		return ret
+	}
+	return *o.SubscriptionName
+}
+
+// GetSubscriptionNameOk returns a tuple with the SubscriptionName field value if set, nil otherwise
+// and a boolean to check if the value has been set.
+func (o *GitCommit) GetSubscriptionNameOk() (*string, bool) {
+	if o == nil || IsNil(o.SubscriptionName) {
+		return nil, false
+	}
+	return o.SubscriptionName, true
+}
+
+// HasSubscriptionName returns a boolean if a field has been set.
+func (o *GitCommit) HasSubscriptionName() bool {
+	if o != nil && !IsNil(o.SubscriptionName) {
+		return true
+	}
+
+	return false
+}
+
+// SetSubscriptionName gets a reference to the given string and assigns it to the SubscriptionName field.
+func (o *GitCommit) SetSubscriptionName(v string) {
+	o.SubscriptionName = &v
+}
+
 // GetTag returns the Tag field value if set, zero value otherwise.
 func (o *GitCommit) GetTag() string {
 	if o == nil || IsNil(o.Tag) {
@@ -303,6 +337,9 @@ func (o GitCommit) ToMap() (map[string]interface{}, error) {
 	}
 	if !IsNil(o.RepoURL) {
 		toSerialize["repoURL"] = o.RepoURL
+	}
+	if !IsNil(o.SubscriptionName) {
+		toSerialize["subscriptionName"] = o.SubscriptionName
 	}
 	if !IsNil(o.Tag) {
 		toSerialize["tag"] = o.Tag

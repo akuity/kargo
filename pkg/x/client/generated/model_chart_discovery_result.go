@@ -25,6 +25,8 @@ type ChartDiscoveryResult struct {
 	RepoURL *string `json:"repoURL,omitempty"`
 	// SemverConstraint is the constraint for which versions were discovered. This field is optional, and only populated if the ChartSubscription specifies a SemverConstraint.
 	SemverConstraint *string `json:"semverConstraint,omitempty"`
+	// SubscriptionName is the optional human-readable name of the subscription that produced this discovery result.  +optional
+	SubscriptionName *string `json:"subscriptionName,omitempty"`
 	// Versions is a list of versions discovered by the Warehouse for the ChartSubscription. An empty list indicates that the discovery operation was successful, but no versions matching the ChartSubscription criteria were found.  +optional
 	Versions []string `json:"versions,omitempty"`
 }
@@ -142,6 +144,38 @@ func (o *ChartDiscoveryResult) SetSemverConstraint(v string) {
 	o.SemverConstraint = &v
 }
 
+// GetSubscriptionName returns the SubscriptionName field value if set, zero value otherwise.
+func (o *ChartDiscoveryResult) GetSubscriptionName() string {
+	if o == nil || IsNil(o.SubscriptionName) {
+		var ret string
+		return ret
+	}
+	return *o.SubscriptionName
+}
+
+// GetSubscriptionNameOk returns a tuple with the SubscriptionName field value if set, nil otherwise
+// and a boolean to check if the value has been set.
+func (o *ChartDiscoveryResult) GetSubscriptionNameOk() (*string, bool) {
+	if o == nil || IsNil(o.SubscriptionName) {
+		return nil, false
+	}
+	return o.SubscriptionName, true
+}
+
+// HasSubscriptionName returns a boolean if a field has been set.
+func (o *ChartDiscoveryResult) HasSubscriptionName() bool {
+	if o != nil && !IsNil(o.SubscriptionName) {
+		return true
+	}
+
+	return false
+}
+
+// SetSubscriptionName gets a reference to the given string and assigns it to the SubscriptionName field.
+func (o *ChartDiscoveryResult) SetSubscriptionName(v string) {
+	o.SubscriptionName = &v
+}
+
 // GetVersions returns the Versions field value if set, zero value otherwise.
 func (o *ChartDiscoveryResult) GetVersions() []string {
 	if o == nil || IsNil(o.Versions) {
@@ -192,6 +226,9 @@ func (o ChartDiscoveryResult) ToMap() (map[string]interface{}, error) {
 	}
 	if !IsNil(o.SemverConstraint) {
 		toSerialize["semverConstraint"] = o.SemverConstraint
+	}
+	if !IsNil(o.SubscriptionName) {
+		toSerialize["subscriptionName"] = o.SubscriptionName
 	}
 	if !IsNil(o.Versions) {
 		toSerialize["versions"] = o.Versions
