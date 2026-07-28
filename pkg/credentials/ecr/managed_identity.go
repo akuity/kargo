@@ -45,6 +45,13 @@ type ManagedIdentityProvider struct {
 		accountID string,
 		project string,
 	) (string, time.Time, error)
+
+	getAuthTokenAsFn func(
+		ctx context.Context,
+		cfg aws.Config,
+		region string,
+		identity authIdentity,
+	) (string, time.Time, error)
 }
 
 func NewManagedIdentityProvider(ctx context.Context) credentials.Provider {
@@ -94,6 +101,7 @@ func NewManagedIdentityProvider(ctx context.Context) credentials.Provider {
 		accountID: awsAccountID,
 	}
 	p.getAuthTokenFn = p.getAuthToken
+	p.getAuthTokenAsFn = getAuthTokenAs
 	return p
 }
 
@@ -164,21 +172,22 @@ func (p *ManagedIdentityProvider) GetCredentials(
 	return decodeAuthToken(encodedToken)
 }
 
-// getAuthToken returns an ECR authorization token. It attempts the following
-// in order, stopping at the first success:
-//
-//  1. Assume kargo-project-<project> in the registry's AWS account and use
-//     those credentials to obtain an ECR auth token. When the registry is in
-//     the same account as the controller this is a same-account assumption;
-//     when it is in a different account this is a cross-account assumption.
-//  2. Fall back to using the controller's IAM role directly.
+// getAuthToken loads the controller's AWS configuration and delegates to
+// getAuthTokenWithConfig(). An empty token and nil error are returned if the
+// configuration cannot be loaded.
 func (p *ManagedIdentityProvider) getAuthToken(
 	ctx context.Context,
 	region string,
 	accountID string,
 	project string,
 ) (string, time.Time, error) {
-	logger := logging.LoggerFromContext(ctx)
+	logger := logging.LoggerFromContext(ctx).WithValues(
+		"registryAWSAccountID", accountID,
+		"controllerAWSAccountID", p.accountID,
+		"awsRegion", region,
+		"project", project,
+	)
+	ctx = logging.ContextWithLogger(ctx, logger)
 
 	cfg, err := config.LoadDefaultConfig(ctx)
 	if err != nil {
@@ -187,87 +196,115 @@ func (p *ManagedIdentityProvider) getAuthToken(
 	}
 	cfg.HTTPClient = cleanhttp.DefaultClient()
 
-	stsSvc := sts.NewFromConfig(cfg)
-
-	logger = logger.WithValues(
-		"controllerAccountID", p.accountID,
-		"accountID", accountID,
-		"awsRegion", region,
-		"project", project,
-	)
-
-	if accountID != p.accountID {
-		logger.Debug(
-			"ECR registry is in a different account than the controller; " +
-				"attempting to assume project-specific role in registry account",
-		)
-	}
-	token, expiry, err := p.getAuthTokenWithRole(
-		ctx,
-		fmt.Sprintf(roleARNFormat, accountID, project),
-		region,
-		stsSvc,
-	)
-	if err == nil && token != "" {
-		return token, expiry, nil
-	}
-
-	// Fall back to the controller's IAM role directly.
-	logger.Debug(
-		"Falling back to using controller's IAM role directly.",
-	)
-	cfg.Region = region
-	ecrSvc := ecr.NewFromConfig(cfg)
-	output, err := ecrSvc.GetAuthorizationToken(ctx, &ecr.GetAuthorizationTokenInput{})
-	if err != nil {
-		var re *awshttp.ResponseError
-		if errors.As(err, &re) && (re.HTTPStatusCode() == http.StatusForbidden || re.HTTPStatusCode() == http.StatusBadRequest) {
-			logger.Debug(
-				"Controller's IAM role is not authorized to obtain an ECR auth token. " +
-					"Treating this as no credentials found.",
-			)
-			return "", time.Time{}, nil
-		}
-		return "", time.Time{}, err
-	}
-
-	var expiry2 time.Time
-	if output.AuthorizationData[0].ExpiresAt != nil {
-		expiry2 = *output.AuthorizationData[0].ExpiresAt
-	}
-	logger.Debug("got ECR authorization token via controller role")
-	return *output.AuthorizationData[0].AuthorizationToken, expiry2, nil
+	return p.getAuthTokenWithConfig(ctx, cfg, region, accountID, project)
 }
 
-// getAuthTokenWithRole attempts to obtain an ECR auth token by assuming the
-// given IAM role. Returns an empty token (and nil error) if the role cannot be
-// assumed or does not have ECR permissions, so the caller can try alternatives.
-func (p *ManagedIdentityProvider) getAuthTokenWithRole(
+// getAuthTokenWithConfig returns a short-lived ECR authorization token,
+// obtained using the given AWS configuration and the first of the identities
+// returned by authIdentities() that both exists and is authorized to obtain
+// that token. An empty token and nil error are returned if none of them are.
+func (p *ManagedIdentityProvider) getAuthTokenWithConfig(
 	ctx context.Context,
-	roleARN string,
+	cfg aws.Config,
 	region string,
-	stsSvc *sts.Client,
+	accountID string,
+	project string,
 ) (string, time.Time, error) {
 	logger := logging.LoggerFromContext(ctx)
-	ecrSvc := ecr.NewFromConfig(aws.Config{
-		HTTPClient: cleanhttp.DefaultClient(),
-		Region:     region,
-		Credentials: stscreds.NewAssumeRoleProvider(
-			stsSvc,
-			roleARN,
-		),
-	})
 
-	output, err := ecrSvc.GetAuthorizationToken(ctx, &ecr.GetAuthorizationTokenInput{})
-	if err != nil {
-		var re *awshttp.ResponseError
-		if errors.As(err, &re) && (re.HTTPStatusCode() == http.StatusForbidden || re.HTTPStatusCode() == http.StatusBadRequest) {
+	for _, identity := range p.authIdentities(accountID, project) {
+		token, expiry, err := p.getAuthTokenAsFn(ctx, cfg, region, identity)
+		if err == nil {
 			logger.Debug(
-				"not authorized to assume role or role lacks ECR permissions",
-				"roleARN", roleARN,
+				"got ECR authorization token",
+				"identity", identity.description,
 			)
-			return "", time.Time{}, nil
+			return token, expiry, nil
 		}
+		// Only a denial is grounds for trying the next identity. Anything else
+		// is a genuine failure and must not be mistaken for one.
+		var re *awshttp.ResponseError
+		if !errors.As(err, &re) || re.HTTPStatusCode() != http.StatusForbidden {
+			return "", time.Time{}, err
+		}
+		logger.Debug(
+			"not authorized to obtain an ECR authorization token",
+			"identity", identity.description,
+		)
+	}
+
+	// Every identity was denied. We're making a choice to consider this the will
+	// of the AWS admins and not a controller error, so we treat it as no
+	// credentials found.
+	logger.Debug("no identity is authorized to obtain an ECR authorization token")
+	return "", time.Time{}, nil
+}
+
+// authIdentity describes an AWS identity the controller MAY be able to use to
+// obtain an ECR authorization token. An empty roleARN denotes the controller's
+// own identity, which requires no role assumption.
+type authIdentity struct {
+	description string
+	roleARN     string
+}
+
+// authIdentities returns the AWS identities the controller MAY be able to use
+// to obtain an ECR authorization token on behalf of the specified Project for a
+// registry in the specified account. There is no guarantee that any of these
+// exist or that they are authorized to obtain the token. They are simply the
+// identities that the controller will try, in order, until one succeeds or all
+// fail.
+func (p *ManagedIdentityProvider) authIdentities(
+	accountID string,
+	project string,
+) []authIdentity {
+	// A Project-specific role in the registry's own account.
+	identities := []authIdentity{{
+		description: "Project-specific role in the registry's AWS account",
+		roleARN:     fmt.Sprintf(roleARNFormat, accountID, project),
+	}}
+
+	// A Project-specific role in the controller's own account IF the registry and
+	// controller are in different accounts.
+	if accountID != p.accountID {
+		identities = append(identities, authIdentity{
+			description: "Project-specific role in the controller's AWS account",
+			roleARN:     fmt.Sprintf(roleARNFormat, p.accountID, project),
+		})
+	}
+
+	// The controller's own role. This forgoes Project-level isolation, so it is
+	// the last resort.
+	return append(identities, authIdentity{
+		description: "controller's own role",
+	})
+}
+
+// getAuthTokenAs attempts to obtain an ECR authorization token for the given
+// region as the given identity. Errors are returned unexamined; interpreting
+// them is the caller's responsibility.
+func getAuthTokenAs(
+	ctx context.Context,
+	cfg aws.Config,
+	region string,
+	identity authIdentity,
+) (string, time.Time, error) {
+	if identity.roleARN != "" {
+		// The STS client is deliberately built before cfg is retargeted at the
+		// registry's region, so that role assumption continues to use whichever
+		// region the controller's own configuration resolved to.
+		cfg.Credentials = stscreds.NewAssumeRoleProvider(
+			sts.NewFromConfig(cfg),
+			identity.roleARN,
+		)
+	}
+	cfg.Region = region
+
+	output, err := ecr.NewFromConfig(cfg).GetAuthorizationToken(
+		ctx,
+		&ecr.GetAuthorizationTokenInput{},
+	)
+	if err != nil {
 		return "", time.Time{}, err
 	}
 
@@ -275,6 +312,5 @@ func (p *ManagedIdentityProvider) getAuthTokenWithRole(
 	if output.AuthorizationData[0].ExpiresAt != nil {
 		expiry = *output.AuthorizationData[0].ExpiresAt
 	}
-	logger.Debug("got ECR authorization token", "roleARN", roleARN)
 	return *output.AuthorizationData[0].AuthorizationToken, expiry, nil
 }

@@ -3,9 +3,14 @@ package ecr
 import (
 	"context"
 	"errors"
+	"fmt"
+	"net/http"
 	"testing"
 	"time"
 
+	"github.com/aws/aws-sdk-go-v2/aws"
+	awshttp "github.com/aws/aws-sdk-go-v2/aws/transport/http"
+	smithyhttp "github.com/aws/smithy-go/transport/http"
 	"github.com/patrickmn/go-cache"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
@@ -84,6 +89,7 @@ func TestManagedIdentityProvider_Supports(t *testing.T) {
 
 	for _, testCase := range testCases {
 		t.Run(testCase.name, func(t *testing.T) {
+			t.Parallel()
 			supports, err := testCase.provider.Supports(
 				t.Context(),
 				credentials.Request{
@@ -245,6 +251,7 @@ func TestManagedIdentityProvider_GetCredentials(t *testing.T) {
 
 	for _, testCase := range testCases {
 		t.Run(testCase.name, func(t *testing.T) {
+			t.Parallel()
 			if testCase.setupCache != nil {
 				testCase.setupCache(testCase.provider.tokenCache)
 			}
@@ -258,5 +265,215 @@ func TestManagedIdentityProvider_GetCredentials(t *testing.T) {
 			)
 			testCase.assertions(t, testCase.provider.tokenCache, creds, err)
 		})
+	}
+}
+
+func TestManagedIdentityProvider_authIdentities(t *testing.T) {
+	const (
+		fakeControllerAccountID = "123456789012"
+		fakeRegistryAccountID   = "210987654321"
+		fakeProject             = "fake-project"
+	)
+
+	testCases := []struct {
+		name      string
+		accountID string
+		expected  []authIdentity
+	}{
+		{
+			name:      "registry in the controller's own account",
+			accountID: fakeControllerAccountID,
+			expected: []authIdentity{
+				{
+					description: "Project-specific role in the registry's AWS account",
+					roleARN:     "arn:aws:iam::123456789012:role/kargo-project-fake-project",
+				},
+				{
+					description: "controller's own role",
+				},
+			},
+		},
+		{
+			name:      "registry in a different account",
+			accountID: fakeRegistryAccountID,
+			expected: []authIdentity{
+				{
+					description: "Project-specific role in the registry's AWS account",
+					roleARN:     "arn:aws:iam::210987654321:role/kargo-project-fake-project",
+				},
+				{
+					description: "Project-specific role in the controller's AWS account",
+					roleARN:     "arn:aws:iam::123456789012:role/kargo-project-fake-project",
+				},
+				{
+					description: "controller's own role",
+				},
+			},
+		},
+	}
+
+	for _, testCase := range testCases {
+		t.Run(testCase.name, func(t *testing.T) {
+			t.Parallel()
+			p := &ManagedIdentityProvider{accountID: fakeControllerAccountID}
+			assert.Equal(
+				t,
+				testCase.expected,
+				p.authIdentities(testCase.accountID, fakeProject),
+			)
+		})
+	}
+}
+
+func TestManagedIdentityProvider_getAuthTokenWithConfig(t *testing.T) {
+	const (
+		fakeControllerAccountID = "123456789012"
+		fakeRegistryAccountID   = "210987654321"
+		fakeProject             = "fake-project"
+		fakeRegion              = "us-west-2"
+		fakeToken               = "fake-token"
+	)
+	fakeExpiry := time.Now().Add(12 * time.Hour)
+
+	testCases := []struct {
+		name string
+		// accountID of the registry. Defaults to the controller's own.
+		accountID string
+		// outcomes are returned by successive calls to getAuthTokenAsFn.
+		outcomes   []error
+		assertions func(
+			t *testing.T,
+			usedIdentities []authIdentity,
+			token string,
+			expiry time.Time,
+			err error,
+		)
+	}{
+		{
+			name:     "first identity is authorized",
+			outcomes: []error{nil},
+			assertions: func(
+				t *testing.T,
+				usedIdentities []authIdentity,
+				token string,
+				expiry time.Time,
+				err error,
+			) {
+				require.NoError(t, err)
+				assert.Equal(t, fakeToken, token)
+				assert.Equal(t, fakeExpiry, expiry)
+				assert.Len(t, usedIdentities, 1)
+			},
+		},
+		{
+			name:      "denied identities are skipped",
+			accountID: fakeRegistryAccountID,
+			outcomes:  []error{forbiddenErr(), nil},
+			assertions: func(
+				t *testing.T,
+				usedIdentities []authIdentity,
+				token string,
+				_ time.Time,
+				err error,
+			) {
+				require.NoError(t, err)
+				assert.Equal(t, fakeToken, token)
+				require.Len(t, usedIdentities, 2)
+				// The Project-specific role in the controller's own account is
+				// tried before falling back to the controller's own role.
+				assert.Equal(
+					t,
+					fmt.Sprintf(roleARNFormat, fakeControllerAccountID, fakeProject),
+					usedIdentities[1].roleARN,
+				)
+			},
+		},
+		{
+			name:      "all identities denied",
+			accountID: fakeRegistryAccountID,
+			outcomes:  []error{forbiddenErr(), forbiddenErr(), forbiddenErr()},
+			assertions: func(
+				t *testing.T,
+				usedIdentities []authIdentity,
+				token string,
+				_ time.Time,
+				err error,
+			) {
+				// Treated as no credentials found rather than an error.
+				require.NoError(t, err)
+				assert.Empty(t, token)
+				assert.Len(t, usedIdentities, 3)
+			},
+		},
+		{
+			name:      "error that is not a denial halts the chain",
+			accountID: fakeRegistryAccountID,
+			outcomes:  []error{errors.New("something went wrong"), nil},
+			assertions: func(
+				t *testing.T,
+				usedIdentities []authIdentity,
+				token string,
+				_ time.Time,
+				err error,
+			) {
+				require.ErrorContains(t, err, "something went wrong")
+				assert.Empty(t, token)
+				// No weaker identity is substituted for one whose authorization
+				// was never actually established.
+				assert.Len(t, usedIdentities, 1)
+			},
+		},
+	}
+
+	for _, testCase := range testCases {
+		t.Run(testCase.name, func(t *testing.T) {
+			t.Parallel()
+			accountID := testCase.accountID
+			if accountID == "" {
+				accountID = fakeControllerAccountID
+			}
+			var usedIdentities []authIdentity
+			p := &ManagedIdentityProvider{accountID: fakeControllerAccountID}
+			p.getAuthTokenAsFn = func(
+				_ context.Context,
+				_ aws.Config,
+				region string,
+				identity authIdentity,
+			) (string, time.Time, error) {
+				assert.Equal(t, fakeRegion, region)
+				usedIdentities = append(usedIdentities, identity)
+				require.LessOrEqual(
+					t,
+					len(usedIdentities),
+					len(testCase.outcomes),
+					"tried more identities than this test case anticipated",
+				)
+				if err := testCase.outcomes[len(usedIdentities)-1]; err != nil {
+					return "", time.Time{}, err
+				}
+				return fakeToken, fakeExpiry, nil
+			}
+			token, expiry, err := p.getAuthTokenWithConfig(
+				t.Context(),
+				aws.Config{},
+				fakeRegion,
+				accountID,
+				fakeProject,
+			)
+			testCase.assertions(t, usedIdentities, token, expiry, err)
+		})
+	}
+}
+
+// forbiddenErr returns an error indistinguishable, to getAuthToken, from AWS
+// denying a request.
+func forbiddenErr() error {
+	return &awshttp.ResponseError{
+		ResponseError: &smithyhttp.ResponseError{
+			Response: &smithyhttp.Response{
+				Response: &http.Response{StatusCode: http.StatusForbidden},
+			},
+			Err: errors.New("access denied"),
+		},
 	}
 }

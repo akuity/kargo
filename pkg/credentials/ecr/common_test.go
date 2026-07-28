@@ -4,6 +4,7 @@ import (
 	"testing"
 
 	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 )
 
 func Test_ecrURLRegex(t *testing.T) {
@@ -59,6 +60,7 @@ func Test_ecrURLRegex(t *testing.T) {
 
 	for _, testCase := range testCases {
 		t.Run(testCase.name, func(t *testing.T) {
+			t.Parallel()
 			matches := ecrURLRegex.FindStringSubmatch(testCase.repoURL)
 			if !testCase.wantMatch {
 				assert.Nil(t, matches)
@@ -66,7 +68,7 @@ func Test_ecrURLRegex(t *testing.T) {
 			}
 			// A successful match yields the full match plus two capture
 			// groups: account ID (group 1) and region (group 2).
-			assert.Len(t, matches, 3)
+			require.Len(t, matches, 3)
 			assert.Equal(t, testCase.wantAccountID, matches[1])
 			assert.Equal(t, testCase.wantRegion, matches[2])
 		})
@@ -98,7 +100,8 @@ func Test_tokenCacheKey(t *testing.T) {
 
 	for _, testCase := range testCases {
 		t.Run(testCase.name, func(t *testing.T) {
-			for i := 0; i < 100000; i++ {
+			t.Parallel()
+			for range 100000 {
 				result := tokenCacheKey(testCase.parts...)
 				assert.Equal(t, testCase.want, result)
 			}

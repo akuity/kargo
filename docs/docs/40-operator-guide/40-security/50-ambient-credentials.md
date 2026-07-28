@@ -41,12 +41,12 @@ the controller's IAM role as the value of the `controller.serviceAccount.iamRole
 At this point, an IAM role will be associated with the Kargo _controller_,
 however, that controller acts on behalf of multiple Kargo Projects, each of
 which may require access to _different_ ECR repositories. To account for this,
-when Kargo attempts to access an ECR repository on behalf of a specific Project,
-it will first attempt to
+when Kargo accesses an ECR repository on behalf of a specific Project, it
+attempts to
 [assume an IAM role](https://docs.aws.amazon.com/STS/latest/APIReference/API_AssumeRole.html)
-specific to that Project. The name of the role it attempts to assume will
-_always_ be of the form `kargo-project-<project name>`. It is this role that
-should be granted read-only access to applicable ECR repositories.
+specific to that Project. The name of such a role is _always_ of the form
+`kargo-project-<project name>`, and it is this role that should be granted
+read-only access to applicable ECR repositories.
 
 :::info
 
@@ -55,6 +55,25 @@ configurable to prevent Project admins from attempting to coerce Kargo into
 assuming arbitrary IAM roles.
 
 :::
+
+An ECR authorization token identifies the IAM role that obtained it rather than
+any particular registry, so a Project-specific role in one AWS account can
+access a registry in another. Kargo therefore tries the following, in order, and
+uses the first that succeeds:
+
+1. `kargo-project-<project name>` in the AWS account that owns the registry.
+   This role must trust the controller's IAM role.
+
+1. `kargo-project-<project name>` in the controller's own AWS account, if it
+   differs from the registry's. Such a role can reach the registry if a
+   [repository policy](https://docs.aws.amazon.com/AmazonECR/latest/userguide/repository-policies.html)
+   in the registry's account grants it read-only access.
+
+1. The controller's own IAM role.
+
+The first of these is generally preferable, because access to the registry is
+described once, in the account that owns it, instead of repository by
+repository.
 
 :::caution
 
@@ -67,30 +86,11 @@ should be limited only to read-only access to applicable ECR repositories.
 
 :::info
 
-**Cross-account ECR registries**
-
-If the ECR registry URL belongs to a different AWS account than the one in which
-the Kargo controller is running, Kargo will automatically attempt to assume
-`kargo-project-<project name>` in the **registry's** AWS account rather than
-the controller's own account. This requires:
-
-- The controller's IAM role must be permitted to `sts:AssumeRole` on
-  `arn:aws:iam::<registry-account>:role/kargo-project-<project>`.
-- That cross-account role must trust the controller's IAM role and have
-  read-only ECR permissions in the registry account.
-
-If role assumption fails (same-account or cross-account), Kargo falls back to
-the controller's own IAM role directly.
-
-:::
-
-:::info
-
-If the Kargo controller is unable to assume a Project-specific IAM role, it will
-fall back to using its own IAM role directly. For organizations without strict
-tenancy requirements, this can eliminate the need to manage a large number of
-Project-specific IAM roles. While useful, this approach is not strictly
-recommended.
+The last of the options above forgoes Project-level isolation. For organizations
+without strict tenancy requirements, granting the controller's own IAM role
+read-only access to ECR repositories can eliminate the need to manage a large
+number of Project-specific IAM roles. While useful, this approach is not
+strictly recommended.
 
 :::
 
