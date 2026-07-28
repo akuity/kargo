@@ -489,7 +489,8 @@ func isPromotionEvent(eventType kargoapi.EventType) bool {
 		kargoapi.EventTypePromotionSucceeded,
 		kargoapi.EventTypePromotionFailed,
 		kargoapi.EventTypePromotionErrored,
-		kargoapi.EventTypePromotionAborted:
+		kargoapi.EventTypePromotionAborted,
+		kargoapi.EventTypePromotionDiscarded:
 		return true
 	default:
 		return false
