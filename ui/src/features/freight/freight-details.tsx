@@ -1,15 +1,13 @@
-import { toJson } from '@bufbuild/protobuf';
 import { faFile, faInfoCircle, faPencil } from '@fortawesome/free-solid-svg-icons';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
-import { Button, Drawer, Space, Tabs, Typography } from 'antd';
-import classNames from 'classnames';
+import { Button, Descriptions, Drawer, Space, Tabs, Typography } from 'antd';
 import { useEffect, useState } from 'react';
-import { generatePath, useNavigate, useParams } from 'react-router-dom';
+import { Link, generatePath, useNavigate, useParams } from 'react-router-dom';
 
 import { paths } from '@ui/config/paths';
 import { useExtensionsContext } from '@ui/extensions/extensions-context';
-import { Freight, FreightSchema } from '@ui/gen/api/v1alpha1/generated_pb';
 import { useGetFreightLinks } from '@ui/gen/api/v2/core/core';
+import { Freight } from '@ui/gen/api/v2/models';
 
 import { DeepLinks } from '../common/deep-links';
 import { Description } from '../common/description';
@@ -22,12 +20,6 @@ import { FreightMetadata } from './freight-metadata';
 import { FreightStatusList } from './freight-status-list';
 import { UpdateFreightAliasModal } from './update-freight-alias-modal';
 
-const CopyValue = (props: { value: string; label: string; className?: string }) => (
-  <div className={classNames('flex items-center text-gray-500 font-mono', props.className)}>
-    <span className='text-gray-400 mr-2 text-xs'>{props.label}</span>
-    <Typography.Text copyable>{props.value}</Typography.Text>
-  </div>
-);
 export const FreightDetails = ({
   freight,
   refetchFreight
@@ -41,7 +33,7 @@ export const FreightDetails = ({
 
   useEffect(() => {
     if (freight) {
-      setAlias(getAlias(freight as Freight));
+      setAlias(getAlias(freight));
     }
   }, [freight]);
 
@@ -108,12 +100,45 @@ export const FreightDetails = ({
                   children: (
                     <>
                       <div className='mb-8'>
-                        {alias && freight?.metadata?.name && (
-                          <CopyValue label='NAME:' value={freight.metadata?.name} />
-                        )}
-                        {freight?.metadata?.uid && (
-                          <CopyValue label='UID:' value={freight?.metadata?.uid} />
-                        )}
+                        <Descriptions
+                          className='mb-5 max-w-4xl'
+                          column={1}
+                          bordered
+                          size='small'
+                          items={[
+                            ...(alias && freight?.metadata?.name
+                              ? [
+                                  {
+                                    key: 'name',
+                                    label: 'Name',
+                                    children: (
+                                      <Typography.Text copyable>
+                                        {freight.metadata.name}
+                                      </Typography.Text>
+                                    )
+                                  }
+                                ]
+                              : []),
+                            ...(freight?.origin?.name
+                              ? [
+                                  {
+                                    key: 'origin',
+                                    label: 'Origin',
+                                    children: (
+                                      <Link
+                                        to={generatePath(paths.warehouse, {
+                                          name: projectName,
+                                          warehouseName: freight.origin.name
+                                        })}
+                                      >
+                                        {freight.origin.name}
+                                      </Link>
+                                    )
+                                  }
+                                ]
+                              : [])
+                          ]}
+                        />
                         <br />
                         <FreightMetadata freight={freight} className='mb-5' />
                         <FreightTable freight={freight} />
@@ -127,9 +152,7 @@ export const FreightDetails = ({
                   label: 'Live Manifest',
                   icon: <FontAwesomeIcon icon={faFile} />,
                   className: 'h-full pb-2',
-                  children: (
-                    <ManifestPreview object={toJson(FreightSchema, freight)} height='900px' />
-                  )
+                  children: <ManifestPreview object={freight} height='900px' />
                 },
                 ...freightTabs.map((data, index) => ({
                   children: (

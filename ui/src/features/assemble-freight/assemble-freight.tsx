@@ -1,28 +1,26 @@
-import { ConnectError } from '@connectrpc/connect';
-import { useMutation } from '@connectrpc/connect-query';
 import { faDocker, faGitAlt } from '@fortawesome/free-brands-svg-icons';
 import { faAnchor } from '@fortawesome/free-solid-svg-icons';
-import { Button, message, notification } from 'antd';
+import { Button, notification } from 'antd';
 import { useMemo, useState } from 'react';
 import { useParams } from 'react-router-dom';
 import yaml from 'yaml';
 
-import { newErrorHandler, newTransportWithAuth } from '@ui/config/transport';
 import { WarehouseExpanded } from '@ui/extend/types';
-import { createResource } from '@ui/gen/api/service/v1alpha1/service-KargoService_connectquery';
 import {
+  ArtifactReference,
   Chart,
   ChartDiscoveryResult,
   DiscoveredCommit,
   DiscoveredImageReference,
   Freight,
-  ArtifactReference,
-  DiscoveryResult as GenericDiscoveryResult,
   GitCommit,
   GitDiscoveryResult,
   Image,
-  ImageDiscoveryResult
-} from '@ui/gen/api/v1alpha1/generated_pb';
+  ImageDiscoveryResult,
+  DiscoveryResult as GenericDiscoveryResult
+} from '@ui/gen/api/v2/models';
+import { useCreateResource } from '@ui/gen/api/v2/resources/resources';
+import { ApiError } from '@ui/lib/api/custom-fetch';
 
 import { FreightContents } from '../freight-timeline/freight-contents';
 
@@ -64,14 +62,14 @@ const constructFreight = (
       if (!imageRef) {
         continue;
       }
-      freight.images.push({
+      freight.images?.push({
         repoURL: artifact.repoURL,
         tag: imageRef.tag,
         digest: imageRef.digest,
         annotations: imageRef.annotations
       } as Image);
     } else if ('versions' in artifact) {
-      freight.charts.push({
+      freight.charts?.push({
         repoURL: artifact.repoURL,
         name: artifact.name,
         version: info as string
@@ -83,7 +81,7 @@ const constructFreight = (
         continue;
       }
 
-      freight.commits.push({
+      freight.commits?.push({
         repoURL: artifact.repoURL,
         id: commitRef.id,
         message: commitRef.subject,
@@ -93,7 +91,7 @@ const constructFreight = (
         committer: commitRef.committer
       } as GitCommit);
     } else if ('artifactReferences' in artifact) {
-      freight.artifacts.push(info as ArtifactReference);
+      freight.artifacts?.push(info as ArtifactReference);
     }
   }
 
@@ -111,33 +109,30 @@ export const AssembleFreight = ({
 }) => {
   const { name: project } = useParams();
 
-  const errorHandler = newErrorHandler((err) => {
-    const errorMessage = err instanceof ConnectError ? err.rawMessage : 'Unexpected API error';
-    if (!errorMessage.includes('already exists')) {
-      notification.error({ message: errorMessage, placement: 'bottomRight' });
-    } else {
-      notification.warning({
-        message: 'Oops! Freight with these contents already exists.',
-        placement: 'bottomRight'
-      });
-    }
-  });
-
-  const { mutate } = useMutation(createResource, {
-    transport: newTransportWithAuth(errorHandler),
-    onSuccess: () => {
-      message.success('Freight created successfully.');
-      onSuccess();
+  const { mutate } = useCreateResource({
+    mutation: {
+      onError: (err) => {
+        const errorMessage = err instanceof ApiError ? err.message : 'Unexpected API error';
+        if (!errorMessage.includes('already exists')) {
+          notification.error({ message: errorMessage, placement: 'bottomRight' });
+        } else {
+          notification.warning({
+            message: 'Oops! Freight with these contents already exists.',
+            placement: 'bottomRight'
+          });
+        }
+      },
+      onSuccess
     }
   });
 
   // a map of artifact identifiers to freight info
   // contains freight info for all artifacts selected to be included in the new freight
   const [images, charts, git, other] = useMemo(() => {
-    const images: ImageDiscoveryResult[] = warehouse?.status?.discoveredArtifacts?.images || [];
-    const charts: ChartDiscoveryResult[] = warehouse?.status?.discoveredArtifacts?.charts || [];
-    const git: GitDiscoveryResult[] = warehouse?.status?.discoveredArtifacts?.git || [];
-    const other: GenericDiscoveryResult[] = warehouse?.status?.discoveredArtifacts?.results || [];
+    const images = warehouse?.status?.discoveredArtifacts?.images || [];
+    const charts = warehouse?.status?.discoveredArtifacts?.charts || [];
+    const git = warehouse?.status?.discoveredArtifacts?.git || [];
+    const other = warehouse?.status?.discoveredArtifacts?.results || [];
 
     return [images, charts, git, other];
   }, [warehouse]);
@@ -173,28 +168,28 @@ export const AssembleFreight = ({
     for (const image of discoveredArtifacts?.images || []) {
       items[getSubscriptionKey(image)] = {
         artifact: image,
-        info: image.references[0]
+        info: image.references?.[0] || {}
       };
     }
 
     for (const chart of discoveredArtifacts?.charts || []) {
       items[getSubscriptionKey(chart)] = {
         artifact: chart,
-        info: chart.versions[0]
+        info: chart.versions?.[0] || {}
       };
     }
 
     for (const commit of discoveredArtifacts?.git || []) {
       items[getSubscriptionKey(commit)] = {
         artifact: commit,
-        info: commit.commits[0]
+        info: commit.commits?.[0] || {}
       };
     }
 
     for (const other of discoveredArtifacts?.results || []) {
       items[getSubscriptionKey(other)] = {
         artifact: other,
-        info: other.artifactReferences[0]
+        info: other.artifactReferences?.[0] || {}
       };
     }
 
@@ -253,18 +248,15 @@ export const AssembleFreight = ({
             <Button
               className='ml-auto'
               onClick={() => {
-                const textEncoder = new TextEncoder();
                 const freight = constructFreight(chosenItems, warehouse?.metadata?.name || '');
 
                 mutate({
-                  manifest: textEncoder.encode(
-                    yaml.stringify({
-                      kind: 'Freight',
-                      apiVersion: 'kargo.akuity.io/v1alpha1',
-                      metadata: { name: 'freight', namespace: project },
-                      ...freight
-                    })
-                  )
+                  data: yaml.stringify({
+                    kind: 'Freight',
+                    apiVersion: 'kargo.akuity.io/v1alpha1',
+                    metadata: { name: 'freight', namespace: project },
+                    ...freight
+                  })
                 });
               }}
             >

@@ -24,13 +24,12 @@ import { useModal } from '@ui/features/common/modal/use-modal';
 import { useActionContext } from '@ui/features/project/pipelines/context/action-context';
 import { FreightTimelineControllerContextType } from '@ui/features/project/pipelines/context/freight-timeline-controller-context';
 import { ColorMap } from '@ui/features/stage/utils';
-import { Freight, Stage } from '@ui/gen/api/v1alpha1/generated_pb';
-import { timestampDate } from '@ui/utils/connectrpc-utils';
+import { Freight, Stage } from '@ui/gen/api/v2/models';
 
 import { useManualApprovalModal } from '../promotion/use-manual-approval-modal';
 
 import { DeleteFreightModal } from './delete-freight-modal';
-import { FreightArtifact } from './freight-artifact';
+import { FreightArtifactList } from './freight-artifact-list';
 import { useSoakTimeCounter } from './use-soak-time-counter';
 
 type FreightCardProps = {
@@ -58,11 +57,11 @@ export const FreightCard = (props: FreightCardProps) => {
   const deleteFreightModal = useModal();
 
   const creation = useMemo(() => {
-    const creationDate = timestampDate(props.freight?.metadata?.creationTimestamp);
-
-    if (!creationDate) {
-      return { relative: '', abs: creationDate };
+    if (!props.freight?.metadata?.creationTimestamp) {
+      return { relative: '', abs: null };
     }
+
+    const creationDate = new Date(props.freight?.metadata?.creationTimestamp);
 
     return {
       relative: formatDistance(creationDate, new Date(), { addSuffix: false })?.replace(
@@ -81,7 +80,7 @@ export const FreightCard = (props: FreightCardProps) => {
     props.viewingFreight?.metadata?.name === props.freight?.metadata?.name ||
     actionContext?.action?.freight?.metadata?.name === props.freight?.metadata?.name;
 
-  const soakTime = useSoakTimeCounter(props.soakTime);
+  const soakTime = useSoakTimeCounter(props.soakTime, props.freight?.metadata?.namespace);
 
   const frozenInitialSoakTime = useRef(props.soakTime);
 
@@ -287,34 +286,7 @@ export const FreightCard = (props: FreightCardProps) => {
           )}
 
           <div className='flex flex-col gap-1 justify-center items-center min-w-0 max-w-full [&_.ant-tag]:block [&_.ant-tag]:max-w-full [&_.ant-tag]:truncate'>
-            {props.freight?.commits?.slice(0, 2).map((commit) => (
-              <FreightArtifact key={commit?.repoURL} artifact={commit} />
-            ))}
-
-            {props.freight?.charts?.slice(0, 2).map((chart) => (
-              <FreightArtifact key={chart?.repoURL} artifact={chart} />
-            ))}
-
-            {props.freight?.images?.slice(0, 2).map((image) => (
-              <FreightArtifact key={image?.repoURL} artifact={image} />
-            ))}
-
-            {props.freight?.artifacts?.slice(0, 2).map((other) => (
-              <FreightArtifact key={other?.version} artifact={other} />
-            ))}
-
-            {noOfGitCommits + noOfHelmReleases + noOfContainerImages > 6 && (
-              <Typography.Text type='secondary' className='text-[10px]'>
-                +
-                {noOfGitCommits +
-                  noOfHelmReleases +
-                  noOfContainerImages -
-                  (props.freight?.charts?.slice(0, 2)?.length +
-                    props.freight?.commits?.slice(0, 2)?.length +
-                    props.freight?.images?.slice(0, 2)?.length)}{' '}
-                more
-              </Typography.Text>
-            )}
+            <FreightArtifactList freight={props.freight} />
           </div>
 
           <div className='flex flex-col mx-auto w-full gap-0.5 items-center justify-center text-nowrap py-1 mt-auto'>

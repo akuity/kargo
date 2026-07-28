@@ -10,11 +10,6 @@
   "paths": {
     "/v1beta1/login": {
       "post": {
-        "security": [
-          {
-            "BearerAuth": []
-          }
-        ],
         "description": "Authenticate as the admin user if enabled.",
         "produces": [
           "application/json"
@@ -31,16 +26,16 @@
               "$ref": "#/definitions/AdminLoginResponse"
             }
           }
-        }
-      }
-    },
-    "/v1beta1/projects": {
-      "get": {
+        },
         "security": [
           {
             "BearerAuth": []
           }
-        ],
+        ]
+      }
+    },
+    "/v1beta1/projects": {
+      "get": {
         "description": "List all Projects resources. Supports server-side filtering by\nname substring, by UID, and by namespaces mapped to the\nauthenticated user's ServiceAccounts, plus offset-based\npagination.",
         "produces": [
           "application/json"
@@ -94,16 +89,16 @@
               "$ref": "#/definitions/ListProjectsResponse"
             }
           }
-        }
-      }
-    },
-    "/v1beta1/projects/{project}": {
-      "get": {
+        },
         "security": [
           {
             "BearerAuth": []
           }
-        ],
+        ]
+      }
+    },
+    "/v1beta1/projects/{project}": {
+      "get": {
         "description": "Retrieve a Project resource.",
         "produces": [
           "application/json"
@@ -130,14 +125,14 @@
               "$ref": "#/definitions/Project"
             }
           }
-        }
-      },
-      "delete": {
+        },
         "security": [
           {
             "BearerAuth": []
           }
-        ],
+        ]
+      },
+      "delete": {
         "description": "Delete a Project resource and its associated namespace.",
         "tags": [
           "Core",
@@ -158,16 +153,16 @@
           "204": {
             "description": "Deleted successfully"
           }
-        }
-      }
-    },
-    "/v1beta1/projects/{project}/analysis-runs/{analysis-run}": {
-      "get": {
+        },
         "security": [
           {
             "BearerAuth": []
           }
-        ],
+        ]
+      }
+    },
+    "/v1beta1/projects/{project}/analysis-runs/{analysis-run}": {
+      "get": {
         "description": "Retrieve an AnalysisRun resource from a project's namespace.",
         "produces": [
           "application/json"
@@ -201,16 +196,16 @@
               "$ref": "#/definitions/RolloutsAnalysisRun"
             }
           }
-        }
-      }
-    },
-    "/v1beta1/projects/{project}/analysis-runs/{analysis-run}/logs": {
-      "get": {
+        },
         "security": [
           {
             "BearerAuth": []
           }
-        ],
+        ]
+      }
+    },
+    "/v1beta1/projects/{project}/analysis-runs/{analysis-run}/logs": {
+      "get": {
         "description": "Stream logs from an AnalysisRun job as Server-Sent Events (SSE).",
         "produces": [
           "text/event-stream"
@@ -256,16 +251,16 @@
               "type": "string"
             }
           }
-        }
-      }
-    },
-    "/v1beta1/projects/{project}/analysis-templates": {
-      "get": {
+        },
         "security": [
           {
             "BearerAuth": []
           }
-        ],
+        ]
+      }
+    },
+    "/v1beta1/projects/{project}/analysis-templates": {
+      "get": {
         "description": "List AnalysisTemplate resources from a project's namespace.",
         "produces": [
           "application/json"
@@ -292,16 +287,16 @@
               "$ref": "#/definitions/RolloutsAnalysisTemplateList"
             }
           }
-        }
-      }
-    },
-    "/v1beta1/projects/{project}/analysis-templates/{analysis-template}": {
-      "get": {
+        },
         "security": [
           {
             "BearerAuth": []
           }
-        ],
+        ]
+      }
+    },
+    "/v1beta1/projects/{project}/analysis-templates/{analysis-template}": {
+      "get": {
         "description": "Retrieve an AnalysisTemplate resource from a project's\nnamespace.",
         "produces": [
           "application/json"
@@ -335,14 +330,14 @@
               "$ref": "#/definitions/RolloutsAnalysisTemplate"
             }
           }
-        }
-      },
-      "delete": {
+        },
         "security": [
           {
             "BearerAuth": []
           }
-        ],
+        ]
+      },
+      "delete": {
         "description": "Delete an AnalysisTemplate resource from a project's namespace.",
         "tags": [
           "Verifications",
@@ -370,16 +365,16 @@
           "204": {
             "description": "Deleted successfully"
           }
-        }
-      }
-    },
-    "/v1beta1/projects/{project}/api-tokens": {
-      "get": {
+        },
         "security": [
           {
             "BearerAuth": []
           }
-        ],
+        ]
+      }
+    },
+    "/v1beta1/projects/{project}/api-tokens": {
+      "get": {
         "description": "List project-level API tokens. Returns a Kubernetes SecretList\nresource containing heavily redacted Secrets.",
         "produces": [
           "application/json"
@@ -413,16 +408,16 @@
               "$ref": "#/definitions/V1SecretList"
             }
           }
-        }
-      }
-    },
-    "/v1beta1/projects/{project}/api-tokens/{apitoken}": {
-      "get": {
+        },
         "security": [
           {
             "BearerAuth": []
           }
-        ],
+        ]
+      }
+    },
+    "/v1beta1/projects/{project}/api-tokens/{apitoken}": {
+      "get": {
         "description": "Retrieve a project-level API token by name. Returns a heavily\nredacted Kubernetes Secret resource.",
         "produces": [
           "application/json"
@@ -457,14 +452,14 @@
               "$ref": "#/definitions/V1Secret"
             }
           }
-        }
-      },
-      "delete": {
+        },
         "security": [
           {
             "BearerAuth": []
           }
-        ],
+        ]
+      },
+      "delete": {
         "description": "Delete a project-level API token from a project's namespace.",
         "tags": [
           "Rbac",
@@ -493,16 +488,16 @@
           "204": {
             "description": "Deleted successfully"
           }
-        }
-      }
-    },
-    "/v1beta1/projects/{project}/config": {
-      "get": {
+        },
         "security": [
           {
             "BearerAuth": []
           }
-        ],
+        ]
+      }
+    },
+    "/v1beta1/projects/{project}/config": {
+      "get": {
         "description": "Retrieve the single ProjectConfig resource from a project's\nnamespace.",
         "produces": [
           "application/json"
@@ -531,14 +526,14 @@
               "$ref": "#/definitions/ProjectConfig"
             }
           }
-        }
-      },
-      "delete": {
+        },
         "security": [
           {
             "BearerAuth": []
           }
-        ],
+        ]
+      },
+      "delete": {
         "description": "Delete the single ProjectConfig resource from a project's\nnamespace.",
         "tags": [
           "Core",
@@ -561,16 +556,16 @@
           "204": {
             "description": "Deleted successfully"
           }
-        }
-      }
-    },
-    "/v1beta1/projects/{project}/config/refresh": {
-      "post": {
+        },
         "security": [
           {
             "BearerAuth": []
           }
-        ],
+        ]
+      }
+    },
+    "/v1beta1/projects/{project}/config/refresh": {
+      "post": {
         "description": "Refresh the single ProjectConfig resource in a project's\nnamespace. Refreshing enqueues the resource for reconciliation\nby its corresponding controller.",
         "produces": [
           "application/json"
@@ -596,16 +591,16 @@
           "200": {
             "description": "Success"
           }
-        }
-      }
-    },
-    "/v1beta1/projects/{project}/configmaps": {
-      "get": {
+        },
         "security": [
           {
             "BearerAuth": []
           }
-        ],
+        ]
+      }
+    },
+    "/v1beta1/projects/{project}/configmaps": {
+      "get": {
         "description": "List ConfigMap resources from a project's namespace. Returns a\nKubernetes ConfigMapList resource.",
         "produces": [
           "application/json"
@@ -633,14 +628,14 @@
               "$ref": "#/definitions/V1ConfigMapList"
             }
           }
-        }
-      },
-      "post": {
+        },
         "security": [
           {
             "BearerAuth": []
           }
-        ],
+        ]
+      },
+      "post": {
         "description": "Create a ConfigMap in a project's namespace. Returns the created\nKubernetes ConfigMap resource.",
         "consumes": [
           "application/json"
@@ -680,16 +675,16 @@
               "$ref": "#/definitions/V1ConfigMap"
             }
           }
-        }
-      }
-    },
-    "/v1beta1/projects/{project}/configmaps/{configmap}": {
-      "get": {
+        },
         "security": [
           {
             "BearerAuth": []
           }
-        ],
+        ]
+      }
+    },
+    "/v1beta1/projects/{project}/configmaps/{configmap}": {
+      "get": {
         "description": "Retrieve a ConfigMap by name from a project's namespace.",
         "produces": [
           "application/json"
@@ -724,14 +719,14 @@
               "$ref": "#/definitions/V1ConfigMap"
             }
           }
-        }
-      },
-      "put": {
+        },
         "security": [
           {
             "BearerAuth": []
           }
-        ],
+        ]
+      },
+      "put": {
         "description": "Replace a ConfigMap in a project's namespace. All existing data\nis replaced. Returns the updated Kubernetes ConfigMap resource.",
         "consumes": [
           "application/json"
@@ -778,14 +773,14 @@
               "$ref": "#/definitions/V1ConfigMap"
             }
           }
-        }
-      },
-      "delete": {
+        },
         "security": [
           {
             "BearerAuth": []
           }
-        ],
+        ]
+      },
+      "delete": {
         "description": "Delete a ConfigMap from a project's namespace.",
         "tags": [
           "Core",
@@ -814,14 +809,14 @@
           "204": {
             "description": "Deleted successfully"
           }
-        }
-      },
-      "patch": {
+        },
         "security": [
           {
             "BearerAuth": []
           }
-        ],
+        ]
+      },
+      "patch": {
         "description": "Patch a ConfigMap in a project's namespace. Merges provided data\nwith existing data. Use removeKeys to delete specific keys.\nReturns the updated Kubernetes ConfigMap resource.",
         "consumes": [
           "application/json"
@@ -868,16 +863,16 @@
               "$ref": "#/definitions/V1ConfigMap"
             }
           }
-        }
-      }
-    },
-    "/v1beta1/projects/{project}/events": {
-      "get": {
+        },
         "security": [
           {
             "BearerAuth": []
           }
-        ],
+        ]
+      }
+    },
+    "/v1beta1/projects/{project}/events": {
+      "get": {
         "description": "List Kubernetes Events from a project's namespace. Returns a\nKubernetes EventList resource.",
         "produces": [
           "application/json"
@@ -904,16 +899,16 @@
               "$ref": "#/definitions/V1EventList"
             }
           }
-        }
-      }
-    },
-    "/v1beta1/projects/{project}/freight": {
-      "get": {
+        },
         "security": [
           {
             "BearerAuth": []
           }
-        ],
+        ]
+      }
+    },
+    "/v1beta1/projects/{project}/freight": {
+      "get": {
         "description": "Query and filter Freight resources from a project's namespace.",
         "produces": [
           "application/json"
@@ -975,21 +970,21 @@
         ],
         "responses": {
           "200": {
-            "description": "Map of freight groups",
+            "description": "OK",
             "schema": {
-              "type": "object"
+              "$ref": "#/definitions/pkg_server.queryFreightsResponse"
             }
           }
-        }
-      }
-    },
-    "/v1beta1/projects/{project}/freight/{freight-name-or-alias}": {
-      "get": {
+        },
         "security": [
           {
             "BearerAuth": []
           }
-        ],
+        ]
+      }
+    },
+    "/v1beta1/projects/{project}/freight/{freight-name-or-alias}": {
+      "get": {
         "description": "Retrieve a Freight resource from a project's namespace by name\nor alias.",
         "produces": [
           "application/json"
@@ -1023,14 +1018,14 @@
               "$ref": "#/definitions/Freight"
             }
           }
-        }
-      },
-      "delete": {
+        },
         "security": [
           {
             "BearerAuth": []
           }
-        ],
+        ]
+      },
+      "delete": {
         "description": "Delete a Freight resource from a project's namespace by name or\nalias.",
         "tags": [
           "Core",
@@ -1058,16 +1053,16 @@
           "204": {
             "description": "Deleted successfully"
           }
-        }
-      }
-    },
-    "/v1beta1/projects/{project}/freight/{freight-name-or-alias}/alias": {
-      "patch": {
+        },
         "security": [
           {
             "BearerAuth": []
           }
-        ],
+        ]
+      }
+    },
+    "/v1beta1/projects/{project}/freight/{freight-name-or-alias}/alias": {
+      "patch": {
         "description": "Patch a Freight resource's human-friendly alias.",
         "consumes": [
           "application/json"
@@ -1108,16 +1103,16 @@
           "200": {
             "description": "Success"
           }
-        }
-      }
-    },
-    "/v1beta1/projects/{project}/freight/{freight-name-or-alias}/approve": {
-      "post": {
+        },
         "security": [
           {
             "BearerAuth": []
           }
-        ],
+        ]
+      }
+    },
+    "/v1beta1/projects/{project}/freight/{freight-name-or-alias}/approve": {
+      "post": {
         "description": "Approve Freight for promotion to a Stage.",
         "produces": [
           "application/json"
@@ -1155,16 +1150,16 @@
           "200": {
             "description": "Success"
           }
-        }
-      }
-    },
-    "/v1beta1/projects/{project}/freight/{freight-name-or-alias}/links": {
-      "get": {
+        },
         "security": [
           {
             "BearerAuth": []
           }
-        ],
+        ]
+      }
+    },
+    "/v1beta1/projects/{project}/freight/{freight-name-or-alias}/links": {
+      "get": {
         "description": "Retrieve evaluated deep links for a Freight resource, combining\ncluster-level links from ClusterConfig and project-level links\nfrom ProjectConfig.",
         "produces": [
           "application/json"
@@ -1198,16 +1193,16 @@
               "$ref": "#/definitions/GetFreightLinksResponse"
             }
           }
-        }
-      }
-    },
-    "/v1beta1/projects/{project}/generic-credentials": {
-      "get": {
+        },
         "security": [
           {
             "BearerAuth": []
           }
-        ],
+        ]
+      }
+    },
+    "/v1beta1/projects/{project}/generic-credentials": {
+      "get": {
         "description": "List project-level generic credentials. Returns a Kubernetes\nSecretList resource containing heavily redacted Secrets.",
         "produces": [
           "application/json"
@@ -1235,14 +1230,14 @@
               "$ref": "#/definitions/V1SecretList"
             }
           }
-        }
-      },
-      "post": {
+        },
         "security": [
           {
             "BearerAuth": []
           }
-        ],
+        ]
+      },
+      "post": {
         "description": "Create project-level generic credentials. Returns a heavily\nredacted Kubernetes Secret resource.",
         "consumes": [
           "application/json"
@@ -1282,16 +1277,16 @@
               "$ref": "#/definitions/V1Secret"
             }
           }
-        }
-      }
-    },
-    "/v1beta1/projects/{project}/generic-credentials/{generic-credentials}": {
-      "get": {
+        },
         "security": [
           {
             "BearerAuth": []
           }
-        ],
+        ]
+      }
+    },
+    "/v1beta1/projects/{project}/generic-credentials/{generic-credentials}": {
+      "get": {
         "description": "Retrieve project-level generic credentials by name. Returns a\nheavily redacted Kubernetes Secret resource.",
         "produces": [
           "application/json"
@@ -1326,14 +1321,14 @@
               "$ref": "#/definitions/V1Secret"
             }
           }
-        }
-      },
-      "put": {
+        },
         "security": [
           {
             "BearerAuth": []
           }
-        ],
+        ]
+      },
+      "put": {
         "description": "Replace project-level generic credentials. All existing data is\nreplaced. Returns a heavily redacted Kubernetes Secret resource.",
         "consumes": [
           "application/json"
@@ -1380,14 +1375,14 @@
               "$ref": "#/definitions/V1Secret"
             }
           }
-        }
-      },
-      "delete": {
+        },
         "security": [
           {
             "BearerAuth": []
           }
-        ],
+        ]
+      },
+      "delete": {
         "description": "Delete generic credentials from a project's namespace.",
         "tags": [
           "Credentials",
@@ -1416,14 +1411,14 @@
           "204": {
             "description": "Deleted successfully"
           }
-        }
-      },
-      "patch": {
+        },
         "security": [
           {
             "BearerAuth": []
           }
-        ],
+        ]
+      },
+      "patch": {
         "description": "Patch project-level generic credentials. Merges provided data\nwith existing data. Use removeKeys to delete specific keys.\nReturns a heavily redacted Kubernetes Secret resource.",
         "consumes": [
           "application/json"
@@ -1470,16 +1465,16 @@
               "$ref": "#/definitions/V1Secret"
             }
           }
-        }
-      }
-    },
-    "/v1beta1/projects/{project}/images": {
-      "get": {
+        },
         "security": [
           {
             "BearerAuth": []
           }
-        ],
+        ]
+      }
+    },
+    "/v1beta1/projects/{project}/images": {
+      "get": {
         "description": "List container images referenced by Freight resources in a\nproject's namespace.",
         "produces": [
           "application/json"
@@ -1509,16 +1504,16 @@
               }
             }
           }
-        }
-      }
-    },
-    "/v1beta1/projects/{project}/promotion-tasks": {
-      "get": {
+        },
         "security": [
           {
             "BearerAuth": []
           }
-        ],
+        ]
+      }
+    },
+    "/v1beta1/projects/{project}/promotion-tasks": {
+      "get": {
         "description": "List PromotionTask resources from a project's namespace. Returns\na PromotionTaskList resource.",
         "produces": [
           "application/json"
@@ -1545,16 +1540,16 @@
               "$ref": "#/definitions/PromotionTaskList"
             }
           }
-        }
-      }
-    },
-    "/v1beta1/projects/{project}/promotion-tasks/{promotion-task}": {
-      "get": {
+        },
         "security": [
           {
             "BearerAuth": []
           }
-        ],
+        ]
+      }
+    },
+    "/v1beta1/projects/{project}/promotion-tasks/{promotion-task}": {
+      "get": {
         "description": "Retrieve a PromotionTask resource from a project's namespace.",
         "produces": [
           "application/json"
@@ -1588,16 +1583,16 @@
               "$ref": "#/definitions/PromotionTask"
             }
           }
-        }
-      }
-    },
-    "/v1beta1/projects/{project}/promotions": {
-      "get": {
+        },
         "security": [
           {
             "BearerAuth": []
           }
-        ],
+        ]
+      }
+    },
+    "/v1beta1/projects/{project}/promotions": {
+      "get": {
         "description": "List Promotion resources from a project's namespace. Returns a\nPromotionList resource.",
         "produces": [
           "application/json"
@@ -1630,16 +1625,16 @@
               "$ref": "#/definitions/PromotionList"
             }
           }
-        }
-      }
-    },
-    "/v1beta1/projects/{project}/promotions/{promotion}": {
-      "get": {
+        },
         "security": [
           {
             "BearerAuth": []
           }
-        ],
+        ]
+      }
+    },
+    "/v1beta1/projects/{project}/promotions/{promotion}": {
+      "get": {
         "description": "Retrieve a Promotion resource from a project's namespace.",
         "produces": [
           "application/json"
@@ -1673,16 +1668,16 @@
               "$ref": "#/definitions/Promotion"
             }
           }
-        }
-      }
-    },
-    "/v1beta1/projects/{project}/promotions/{promotion}/abort": {
-      "post": {
+        },
         "security": [
           {
             "BearerAuth": []
           }
-        ],
+        ]
+      }
+    },
+    "/v1beta1/projects/{project}/promotions/{promotion}/abort": {
+      "post": {
         "description": "Abort a running Promotion.",
         "produces": [
           "application/json"
@@ -1713,16 +1708,16 @@
           "200": {
             "description": "Success"
           }
-        }
-      }
-    },
-    "/v1beta1/projects/{project}/promotions/{promotion}/refresh": {
-      "post": {
+        },
         "security": [
           {
             "BearerAuth": []
           }
-        ],
+        ]
+      }
+    },
+    "/v1beta1/projects/{project}/promotions/{promotion}/refresh": {
+      "post": {
         "description": "Refresh a Promotion resource in a project's namespace.\nRefreshing enqueues the resource for reconciliation by its\ncorresponding controller.",
         "produces": [
           "application/json"
@@ -1753,16 +1748,16 @@
           "200": {
             "description": "Success"
           }
-        }
-      }
-    },
-    "/v1beta1/projects/{project}/repo-credentials": {
-      "get": {
+        },
         "security": [
           {
             "BearerAuth": []
           }
-        ],
+        ]
+      }
+    },
+    "/v1beta1/projects/{project}/repo-credentials": {
+      "get": {
         "description": "List project-level repository credentials. Returns a SecretList\nresource containing heavily redacted Secrets.",
         "produces": [
           "application/json"
@@ -1790,14 +1785,14 @@
               "$ref": "#/definitions/V1SecretList"
             }
           }
-        }
-      },
-      "post": {
+        },
         "security": [
           {
             "BearerAuth": []
           }
-        ],
+        ]
+      },
+      "post": {
         "description": "Create project-level repository credentials. Returns a heavily\nredacted Kubernetes Secret resource.",
         "consumes": [
           "application/json"
@@ -1837,16 +1832,16 @@
               "$ref": "#/definitions/V1Secret"
             }
           }
-        }
-      }
-    },
-    "/v1beta1/projects/{project}/repo-credentials/{repo-credentials}": {
-      "get": {
+        },
         "security": [
           {
             "BearerAuth": []
           }
-        ],
+        ]
+      }
+    },
+    "/v1beta1/projects/{project}/repo-credentials/{repo-credentials}": {
+      "get": {
         "description": "Retrieve project-level repository credentials by name. Returns a\nheavily redacted Kubernetes Secret resource.",
         "produces": [
           "application/json"
@@ -1881,14 +1876,14 @@
               "$ref": "#/definitions/V1Secret"
             }
           }
-        }
-      },
-      "put": {
+        },
         "security": [
           {
             "BearerAuth": []
           }
-        ],
+        ]
+      },
+      "put": {
         "description": "Replace project-level repository credentials. All fields are replaced.\nReturns a heavily redacted Kubernetes Secret resource.",
         "consumes": [
           "application/json"
@@ -1935,14 +1930,14 @@
               "$ref": "#/definitions/V1Secret"
             }
           }
-        }
-      },
-      "delete": {
+        },
         "security": [
           {
             "BearerAuth": []
           }
-        ],
+        ]
+      },
+      "delete": {
         "description": "Delete repository credentials from a project's namespace.",
         "tags": [
           "Credentials",
@@ -1971,14 +1966,14 @@
           "204": {
             "description": "Deleted successfully"
           }
-        }
-      },
-      "patch": {
+        },
         "security": [
           {
             "BearerAuth": []
           }
-        ],
+        ]
+      },
+      "patch": {
         "description": "Patch project-level repository credentials. Only provided fields\nare updated. Returns a heavily redacted Kubernetes Secret resource.",
         "consumes": [
           "application/json"
@@ -2025,16 +2020,16 @@
               "$ref": "#/definitions/V1Secret"
             }
           }
-        }
-      }
-    },
-    "/v1beta1/projects/{project}/roles": {
-      "get": {
+        },
         "security": [
           {
             "BearerAuth": []
           }
-        ],
+        ]
+      }
+    },
+    "/v1beta1/projects/{project}/roles": {
+      "get": {
         "description": "List project-level Kargo Role virtual resources. Returns a\nRoleList resource.",
         "produces": [
           "application/json"
@@ -2057,18 +2052,16 @@
         "responses": {
           "200": {
             "description": "RoleList custom resource (rbacapi.RoleList) or underlying resources",
-            "schema": {
-              "type": "object"
-            }
+            "schema": {}
           }
-        }
-      },
-      "post": {
+        },
         "security": [
           {
             "BearerAuth": []
           }
-        ],
+        ]
+      },
+      "post": {
         "description": "Create a project-level Kargo Role virtual resource by creating\nthe underlying Kubernetes ServiceAccount, Role, and RoleBinding\nresources.",
         "consumes": [
           "application/json"
@@ -2095,9 +2088,7 @@
             "name": "body",
             "in": "body",
             "required": true,
-            "schema": {
-              "type": "object"
-            }
+            "schema": {}
           }
         ],
         "responses": {
@@ -2107,16 +2098,16 @@
               "$ref": "#/definitions/RbacRole"
             }
           }
-        }
-      }
-    },
-    "/v1beta1/projects/{project}/roles/grants": {
-      "post": {
+        },
         "security": [
           {
             "BearerAuth": []
           }
-        ],
+        ]
+      }
+    },
+    "/v1beta1/projects/{project}/roles/grants": {
+      "post": {
         "description": "Grant a project-level Kargo Role to users or grant permissions\nto a project-level Kargo Role.",
         "consumes": [
           "application/json"
@@ -2155,16 +2146,16 @@
               "$ref": "#/definitions/RbacRole"
             }
           }
-        }
-      }
-    },
-    "/v1beta1/projects/{project}/roles/revocations": {
-      "post": {
+        },
         "security": [
           {
             "BearerAuth": []
           }
-        ],
+        ]
+      }
+    },
+    "/v1beta1/projects/{project}/roles/revocations": {
+      "post": {
         "description": "Revoke a project-level Kargo Role from users or revoke\npermissions from a project-level Kargo Role.",
         "consumes": [
           "application/json"
@@ -2203,16 +2194,16 @@
               "$ref": "#/definitions/RbacRole"
             }
           }
-        }
-      }
-    },
-    "/v1beta1/projects/{project}/roles/{role}": {
-      "get": {
+        },
         "security": [
           {
             "BearerAuth": []
           }
-        ],
+        ]
+      }
+    },
+    "/v1beta1/projects/{project}/roles/{role}": {
+      "get": {
         "description": "Retrieve a project-level Kargo Role virtual resource by name.\nReturns a Kargo Role virtual resource or its underlying\nKubernetes resources.",
         "produces": [
           "application/json"
@@ -2242,18 +2233,16 @@
         "responses": {
           "200": {
             "description": "Role resource (k8s.io/api/rbac/v1.Role) or its underlying Kubernetes resources",
-            "schema": {
-              "type": "object"
-            }
+            "schema": {}
           }
-        }
-      },
-      "put": {
+        },
         "security": [
           {
             "BearerAuth": []
           }
-        ],
+        ]
+      },
+      "put": {
         "description": "Update a project-level Kargo Role virtual resource by updating\nthe underlying Kubernetes ServiceAccount, Role, and RoleBinding\nresources.",
         "consumes": [
           "application/json"
@@ -2287,9 +2276,7 @@
             "name": "body",
             "in": "body",
             "required": true,
-            "schema": {
-              "type": "object"
-            }
+            "schema": {}
           }
         ],
         "responses": {
@@ -2299,14 +2286,14 @@
               "$ref": "#/definitions/RbacRole"
             }
           }
-        }
-      },
-      "delete": {
+        },
         "security": [
           {
             "BearerAuth": []
           }
-        ],
+        ]
+      },
+      "delete": {
         "description": "Delete a project-level Kargo Role virtual resource by deleting\nthe underlying Kubernetes ServiceAccount, Role, and RoleBinding\nresources from the project's namespace.",
         "tags": [
           "Rbac",
@@ -2334,16 +2321,16 @@
           "204": {
             "description": "Deleted successfully"
           }
-        }
-      }
-    },
-    "/v1beta1/projects/{project}/roles/{role}/api-tokens": {
-      "post": {
+        },
         "security": [
           {
             "BearerAuth": []
           }
-        ],
+        ]
+      }
+    },
+    "/v1beta1/projects/{project}/roles/{role}/api-tokens": {
+      "post": {
         "description": "Create a project-level API token associated with a Kargo Role\nvirtual resource. Returns a Kubernetes Secret resource\nrepresenting the token. Store it securely. The token is not\nretrievable via the Kargo API after creation except in a\nredacted form.",
         "consumes": [
           "application/json"
@@ -2390,16 +2377,16 @@
               "$ref": "#/definitions/V1Secret"
             }
           }
-        }
-      }
-    },
-    "/v1beta1/projects/{project}/stages": {
-      "get": {
+        },
         "security": [
           {
             "BearerAuth": []
           }
-        ],
+        ]
+      }
+    },
+    "/v1beta1/projects/{project}/stages": {
+      "get": {
         "description": "List Stage resources from a project's namespace. Returns a\nStageList resource.",
         "produces": [
           "application/json"
@@ -2436,16 +2423,16 @@
               "$ref": "#/definitions/StageList"
             }
           }
-        }
-      }
-    },
-    "/v1beta1/projects/{project}/stages/{stage}": {
-      "get": {
+        },
         "security": [
           {
             "BearerAuth": []
           }
-        ],
+        ]
+      }
+    },
+    "/v1beta1/projects/{project}/stages/{stage}": {
+      "get": {
         "description": "Retrieve a Stage resource from a project's namespace.",
         "produces": [
           "application/json"
@@ -2479,14 +2466,14 @@
               "$ref": "#/definitions/Stage"
             }
           }
-        }
-      },
-      "delete": {
+        },
         "security": [
           {
             "BearerAuth": []
           }
-        ],
+        ]
+      },
+      "delete": {
         "description": "Delete a Stage resource from a project's namespace.",
         "tags": [
           "Core",
@@ -2514,16 +2501,16 @@
           "204": {
             "description": "Deleted successfully"
           }
-        }
-      }
-    },
-    "/v1beta1/projects/{project}/stages/{stage}/links": {
-      "get": {
+        },
         "security": [
           {
             "BearerAuth": []
           }
-        ],
+        ]
+      }
+    },
+    "/v1beta1/projects/{project}/stages/{stage}/links": {
+      "get": {
         "description": "Retrieve evaluated deep links for a Stage resource, combining\ncluster-level links from ClusterConfig and project-level links\nfrom ProjectConfig.",
         "produces": [
           "application/json"
@@ -2557,16 +2544,16 @@
               "$ref": "#/definitions/GetStageLinksResponse"
             }
           }
-        }
-      }
-    },
-    "/v1beta1/projects/{project}/stages/{stage}/promotions": {
-      "post": {
+        },
         "security": [
           {
             "BearerAuth": []
           }
-        ],
+        ]
+      }
+    },
+    "/v1beta1/projects/{project}/stages/{stage}/promotions": {
+      "post": {
         "description": "Create a Promotion resource to transition a specified Stage into\nthe state represented by the specified Freight.",
         "consumes": [
           "application/json"
@@ -2612,16 +2599,16 @@
               "$ref": "#/definitions/Promotion"
             }
           }
-        }
-      }
-    },
-    "/v1beta1/projects/{project}/stages/{stage}/promotions/downstream": {
-      "post": {
+        },
         "security": [
           {
             "BearerAuth": []
           }
-        ],
+        ]
+      }
+    },
+    "/v1beta1/projects/{project}/stages/{stage}/promotions/downstream": {
+      "post": {
         "description": "Creates a Promotion resource for each of a Stage's immediately\ndownstream Stages.",
         "consumes": [
           "application/json"
@@ -2663,20 +2650,18 @@
         "responses": {
           "201": {
             "description": "Promotions created",
-            "schema": {
-              "type": "object"
-            }
+            "schema": {}
           }
-        }
-      }
-    },
-    "/v1beta1/projects/{project}/stages/{stage}/refresh": {
-      "post": {
+        },
         "security": [
           {
             "BearerAuth": []
           }
-        ],
+        ]
+      }
+    },
+    "/v1beta1/projects/{project}/stages/{stage}/refresh": {
+      "post": {
         "description": "Refresh a Stage resource in a project's namespace. Refreshing\nenqueues the resource for reconciliation by its corresponding\ncontroller.",
         "produces": [
           "application/json"
@@ -2707,16 +2692,16 @@
           "200": {
             "description": "Success"
           }
-        }
-      }
-    },
-    "/v1beta1/projects/{project}/stages/{stage}/verification": {
-      "post": {
+        },
         "security": [
           {
             "BearerAuth": []
           }
-        ],
+        ]
+      }
+    },
+    "/v1beta1/projects/{project}/stages/{stage}/verification": {
+      "post": {
         "description": "Trigger re-verification of the Freight currently in use by a\nStage.",
         "produces": [
           "application/json"
@@ -2747,16 +2732,16 @@
           "200": {
             "description": "Success"
           }
-        }
-      }
-    },
-    "/v1beta1/projects/{project}/stages/{stage}/verification/abort": {
-      "post": {
+        },
         "security": [
           {
             "BearerAuth": []
           }
-        ],
+        ]
+      }
+    },
+    "/v1beta1/projects/{project}/stages/{stage}/verification/abort": {
+      "post": {
         "description": "Abort a running Verification process.",
         "produces": [
           "application/json"
@@ -2787,16 +2772,16 @@
           "200": {
             "description": "Success"
           }
-        }
-      }
-    },
-    "/v1beta1/projects/{project}/warehouses": {
-      "get": {
+        },
         "security": [
           {
             "BearerAuth": []
           }
-        ],
+        ]
+      }
+    },
+    "/v1beta1/projects/{project}/warehouses": {
+      "get": {
         "description": "List Warehouse resources from a project's namespace. Returns a\nWarehouseList resource.",
         "produces": [
           "application/json"
@@ -2823,16 +2808,16 @@
               "$ref": "#/definitions/WarehouseList"
             }
           }
-        }
-      }
-    },
-    "/v1beta1/projects/{project}/warehouses/{warehouse}": {
-      "get": {
+        },
         "security": [
           {
             "BearerAuth": []
           }
-        ],
+        ]
+      }
+    },
+    "/v1beta1/projects/{project}/warehouses/{warehouse}": {
+      "get": {
         "description": "Retrieve a Warehouse resource from a project's namespace.",
         "produces": [
           "application/json"
@@ -2866,14 +2851,14 @@
               "$ref": "#/definitions/Warehouse"
             }
           }
-        }
-      },
-      "delete": {
+        },
         "security": [
           {
             "BearerAuth": []
           }
-        ],
+        ]
+      },
+      "delete": {
         "description": "Delete a Warehouse resource from a project's namespace.",
         "tags": [
           "Core",
@@ -2901,16 +2886,16 @@
           "204": {
             "description": "Deleted successfully"
           }
-        }
-      }
-    },
-    "/v1beta1/projects/{project}/warehouses/{warehouse}/refresh": {
-      "post": {
+        },
         "security": [
           {
             "BearerAuth": []
           }
-        ],
+        ]
+      }
+    },
+    "/v1beta1/projects/{project}/warehouses/{warehouse}/refresh": {
+      "post": {
         "description": "Refresh a Warehouse resource in a project's namespace.\nRefreshing enqueues the resource for reconciliation by its\ncorresponding controller.",
         "produces": [
           "application/json"
@@ -2941,16 +2926,16 @@
           "200": {
             "description": "Success"
           }
-        }
-      }
-    },
-    "/v1beta1/resources": {
-      "put": {
+        },
         "security": [
           {
             "BearerAuth": []
           }
-        ],
+        ]
+      }
+    },
+    "/v1beta1/resources": {
+      "put": {
         "description": "Update (or optionally, upsert) one or more Kargo resources from",
         "consumes": [
           "text/plain"
@@ -2987,14 +2972,14 @@
               "$ref": "#/definitions/CreateOrUpdateResourceResponse"
             }
           }
-        }
-      },
-      "post": {
+        },
         "security": [
           {
             "BearerAuth": []
           }
-        ],
+        ]
+      },
+      "post": {
         "description": "Create one or more Kargo resources from YAML or JSON manifests.",
         "consumes": [
           "text/plain"
@@ -3031,14 +3016,14 @@
               "$ref": "#/definitions/ResourceErrorResponse"
             }
           }
-        }
-      },
-      "delete": {
+        },
         "security": [
           {
             "BearerAuth": []
           }
-        ],
+        ]
+      },
+      "delete": {
         "description": "Delete one or more Kargo resources using namespaces and names\nobtained from YAML or JSON manifests.",
         "consumes": [
           "text/plain"
@@ -3069,16 +3054,16 @@
               "$ref": "#/definitions/DeleteResourceResponse"
             }
           }
-        }
-      }
-    },
-    "/v1beta1/shared/cluster-analysis-templates": {
-      "get": {
+        },
         "security": [
           {
             "BearerAuth": []
           }
-        ],
+        ]
+      }
+    },
+    "/v1beta1/shared/cluster-analysis-templates": {
+      "get": {
         "description": "List ClusterAnalysisTemplate resources. Returns a\nClusterAnalysisTemplateList resource.",
         "produces": [
           "application/json"
@@ -3097,16 +3082,16 @@
               "$ref": "#/definitions/RolloutsClusterAnalysisTemplateList"
             }
           }
-        }
-      }
-    },
-    "/v1beta1/shared/cluster-analysis-templates/{cluster-analysis-template}": {
-      "get": {
+        },
         "security": [
           {
             "BearerAuth": []
           }
-        ],
+        ]
+      }
+    },
+    "/v1beta1/shared/cluster-analysis-templates/{cluster-analysis-template}": {
+      "get": {
         "description": "Retrieve a ClusterAnalysisTemplate by name.",
         "produces": [
           "application/json"
@@ -3134,14 +3119,14 @@
               "$ref": "#/definitions/RolloutsClusterAnalysisTemplate"
             }
           }
-        }
-      },
-      "delete": {
+        },
         "security": [
           {
             "BearerAuth": []
           }
-        ],
+        ]
+      },
+      "delete": {
         "description": "Delete a ClusterAnalysisTemplate resource.",
         "tags": [
           "Verifications",
@@ -3163,16 +3148,16 @@
           "204": {
             "description": "Deleted successfully"
           }
-        }
-      }
-    },
-    "/v1beta1/shared/cluster-promotion-tasks": {
-      "get": {
+        },
         "security": [
           {
             "BearerAuth": []
           }
-        ],
+        ]
+      }
+    },
+    "/v1beta1/shared/cluster-promotion-tasks": {
+      "get": {
         "description": "List ClusterPromotionTask resources. Returns a\nClusterPromotionTaskList resource.",
         "produces": [
           "application/json"
@@ -3191,16 +3176,16 @@
               "$ref": "#/definitions/ClusterPromotionTaskList"
             }
           }
-        }
-      }
-    },
-    "/v1beta1/shared/cluster-promotion-tasks/{cluster-promotion-task}": {
-      "get": {
+        },
         "security": [
           {
             "BearerAuth": []
           }
-        ],
+        ]
+      }
+    },
+    "/v1beta1/shared/cluster-promotion-tasks/{cluster-promotion-task}": {
+      "get": {
         "description": "Retrieve a ClusterPromotionTask by name.",
         "produces": [
           "application/json"
@@ -3228,16 +3213,16 @@
               "$ref": "#/definitions/ClusterPromotionTask"
             }
           }
-        }
-      }
-    },
-    "/v1beta1/shared/configmaps": {
-      "get": {
+        },
         "security": [
           {
             "BearerAuth": []
           }
-        ],
+        ]
+      }
+    },
+    "/v1beta1/shared/configmaps": {
+      "get": {
         "description": "List shared ConfigMap resources referenceable by all projects.\nReturns a Kubernetes ConfigMapList resource.",
         "produces": [
           "application/json"
@@ -3256,14 +3241,14 @@
               "$ref": "#/definitions/V1ConfigMapList"
             }
           }
-        }
-      },
-      "post": {
+        },
         "security": [
           {
             "BearerAuth": []
           }
-        ],
+        ]
+      },
+      "post": {
         "description": "Create a shared ConfigMap referenceable by all projects. Returns\nthe created Kubernetes ConfigMap resource.",
         "consumes": [
           "application/json"
@@ -3296,16 +3281,16 @@
               "$ref": "#/definitions/V1ConfigMap"
             }
           }
-        }
-      }
-    },
-    "/v1beta1/shared/configmaps/{configmap}": {
-      "get": {
+        },
         "security": [
           {
             "BearerAuth": []
           }
-        ],
+        ]
+      }
+    },
+    "/v1beta1/shared/configmaps/{configmap}": {
+      "get": {
         "description": "Retrieve a shared ConfigMap by name.",
         "produces": [
           "application/json"
@@ -3333,14 +3318,14 @@
               "$ref": "#/definitions/V1ConfigMap"
             }
           }
-        }
-      },
-      "put": {
+        },
         "security": [
           {
             "BearerAuth": []
           }
-        ],
+        ]
+      },
+      "put": {
         "description": "Replace a shared ConfigMap. All existing data is replaced.\nReturns the updated Kubernetes ConfigMap resource.",
         "consumes": [
           "application/json"
@@ -3380,14 +3365,14 @@
               "$ref": "#/definitions/V1ConfigMap"
             }
           }
-        }
-      },
-      "delete": {
+        },
         "security": [
           {
             "BearerAuth": []
           }
-        ],
+        ]
+      },
+      "delete": {
         "description": "Delete a shared ConfigMap.",
         "tags": [
           "Core",
@@ -3409,14 +3394,14 @@
           "204": {
             "description": "Deleted successfully"
           }
-        }
-      },
-      "patch": {
+        },
         "security": [
           {
             "BearerAuth": []
           }
-        ],
+        ]
+      },
+      "patch": {
         "description": "Patch a shared ConfigMap. Merges provided data\nwith existing data. Use removeKeys to delete specific keys.\nReturns the updated Kubernetes ConfigMap resource.",
         "consumes": [
           "application/json"
@@ -3456,16 +3441,16 @@
               "$ref": "#/definitions/V1ConfigMap"
             }
           }
-        }
-      }
-    },
-    "/v1beta1/shared/generic-credentials": {
-      "get": {
+        },
         "security": [
           {
             "BearerAuth": []
           }
-        ],
+        ]
+      }
+    },
+    "/v1beta1/shared/generic-credentials": {
+      "get": {
         "description": "List shared generic credentials. Returns a Kubernetes SecretList\nresource containing heavily redacted Secrets.",
         "produces": [
           "application/json"
@@ -3484,14 +3469,14 @@
               "$ref": "#/definitions/V1SecretList"
             }
           }
-        }
-      },
-      "post": {
+        },
         "security": [
           {
             "BearerAuth": []
           }
-        ],
+        ]
+      },
+      "post": {
         "description": "Create shared generic credentials referenceable by all\nprojects. Returns a heavily redacted Kubernetes Secret resource.",
         "consumes": [
           "application/json"
@@ -3524,16 +3509,16 @@
               "$ref": "#/definitions/V1Secret"
             }
           }
-        }
-      }
-    },
-    "/v1beta1/shared/generic-credentials/{generic-credentials}": {
-      "get": {
+        },
         "security": [
           {
             "BearerAuth": []
           }
-        ],
+        ]
+      }
+    },
+    "/v1beta1/shared/generic-credentials/{generic-credentials}": {
+      "get": {
         "description": "Retrieve shared generic credentials by name. Returns a\nheavily redacted Kubernetes Secret resource.",
         "produces": [
           "application/json"
@@ -3561,14 +3546,14 @@
               "$ref": "#/definitions/V1Secret"
             }
           }
-        }
-      },
-      "put": {
+        },
         "security": [
           {
             "BearerAuth": []
           }
-        ],
+        ]
+      },
+      "put": {
         "description": "Replace shared generic credentials. All existing data is replaced.\nReturns a heavily redacted Kubernetes Secret resource.",
         "consumes": [
           "application/json"
@@ -3608,14 +3593,14 @@
               "$ref": "#/definitions/V1Secret"
             }
           }
-        }
-      },
-      "delete": {
+        },
         "security": [
           {
             "BearerAuth": []
           }
-        ],
+        ]
+      },
+      "delete": {
         "description": "Delete shared generic credentials.",
         "tags": [
           "Credentials",
@@ -3637,14 +3622,14 @@
           "204": {
             "description": "Deleted successfully"
           }
-        }
-      },
-      "patch": {
+        },
         "security": [
           {
             "BearerAuth": []
           }
-        ],
+        ]
+      },
+      "patch": {
         "description": "Patch shared generic credentials. Merges provided data\nwith existing data. Use removeKeys to delete specific keys.\nReturns a heavily redacted Kubernetes Secret resource.",
         "consumes": [
           "application/json"
@@ -3684,16 +3669,16 @@
               "$ref": "#/definitions/V1Secret"
             }
           }
-        }
-      }
-    },
-    "/v1beta1/shared/repo-credentials": {
-      "get": {
+        },
         "security": [
           {
             "BearerAuth": []
           }
-        ],
+        ]
+      }
+    },
+    "/v1beta1/shared/repo-credentials": {
+      "get": {
         "description": "List shared repository credentials. Returns a SecretList\nresource containing heavily redacted Secrets.",
         "produces": [
           "application/json"
@@ -3712,14 +3697,14 @@
               "$ref": "#/definitions/V1SecretList"
             }
           }
-        }
-      },
-      "post": {
+        },
         "security": [
           {
             "BearerAuth": []
           }
-        ],
+        ]
+      },
+      "post": {
         "description": "Create shared repository credentials. Returns a heavily\nredacted Kubernetes Secret resource.",
         "consumes": [
           "application/json"
@@ -3752,16 +3737,16 @@
               "$ref": "#/definitions/V1Secret"
             }
           }
-        }
-      }
-    },
-    "/v1beta1/shared/repo-credentials/{repo-credentials}": {
-      "get": {
+        },
         "security": [
           {
             "BearerAuth": []
           }
-        ],
+        ]
+      }
+    },
+    "/v1beta1/shared/repo-credentials/{repo-credentials}": {
+      "get": {
         "description": "Retrieve shared repository credentials by name. Returns a\nheavily redacted Kubernetes Secret resource.",
         "produces": [
           "application/json"
@@ -3789,14 +3774,14 @@
               "$ref": "#/definitions/V1Secret"
             }
           }
-        }
-      },
-      "put": {
+        },
         "security": [
           {
             "BearerAuth": []
           }
-        ],
+        ]
+      },
+      "put": {
         "description": "Replace shared repository credentials. All fields are replaced.\nReturns a heavily redacted Kubernetes Secret resource.",
         "consumes": [
           "application/json"
@@ -3836,14 +3821,14 @@
               "$ref": "#/definitions/V1Secret"
             }
           }
-        }
-      },
-      "delete": {
+        },
         "security": [
           {
             "BearerAuth": []
           }
-        ],
+        ]
+      },
+      "delete": {
         "description": "Delete shared repository credentials.",
         "tags": [
           "Credentials",
@@ -3865,14 +3850,14 @@
           "204": {
             "description": "Deleted successfully"
           }
-        }
-      },
-      "patch": {
+        },
         "security": [
           {
             "BearerAuth": []
           }
-        ],
+        ]
+      },
+      "patch": {
         "description": "Patch shared repository credentials. Only provided fields\nare updated. Returns a heavily redacted Kubernetes Secret resource.",
         "consumes": [
           "application/json"
@@ -3912,16 +3897,16 @@
               "$ref": "#/definitions/V1Secret"
             }
           }
-        }
-      }
-    },
-    "/v1beta1/system/api-tokens": {
-      "get": {
+        },
         "security": [
           {
             "BearerAuth": []
           }
-        ],
+        ]
+      }
+    },
+    "/v1beta1/system/api-tokens": {
+      "get": {
         "description": "List system-level API tokens. Returns a Kubernetes SecretList\nresource containing heavily redacted Secrets.",
         "produces": [
           "application/json"
@@ -3948,16 +3933,16 @@
               "$ref": "#/definitions/V1SecretList"
             }
           }
-        }
-      }
-    },
-    "/v1beta1/system/api-tokens/{apitoken}": {
-      "get": {
+        },
         "security": [
           {
             "BearerAuth": []
           }
-        ],
+        ]
+      }
+    },
+    "/v1beta1/system/api-tokens/{apitoken}": {
+      "get": {
         "description": "Retrieve a system-level API token by name. Returns a heavily\nredacted Kubernetes Secret resource.",
         "produces": [
           "application/json"
@@ -3985,14 +3970,14 @@
               "$ref": "#/definitions/V1Secret"
             }
           }
-        }
-      },
-      "delete": {
+        },
         "security": [
           {
             "BearerAuth": []
           }
-        ],
+        ]
+      },
+      "delete": {
         "description": "Delete a system-level API token.",
         "tags": [
           "Rbac",
@@ -4014,16 +3999,16 @@
           "204": {
             "description": "Deleted successfully"
           }
-        }
-      }
-    },
-    "/v1beta1/system/cluster-config": {
-      "get": {
+        },
         "security": [
           {
             "BearerAuth": []
           }
-        ],
+        ]
+      }
+    },
+    "/v1beta1/system/cluster-config": {
+      "get": {
         "description": "Retrieve the single ClusterConfig resource.",
         "produces": [
           "application/json"
@@ -4043,14 +4028,14 @@
               "$ref": "#/definitions/ClusterConfig"
             }
           }
-        }
-      },
-      "delete": {
+        },
         "security": [
           {
             "BearerAuth": []
           }
-        ],
+        ]
+      },
+      "delete": {
         "description": "Deletes the single ClusterConfig resource.",
         "tags": [
           "System",
@@ -4064,16 +4049,16 @@
           "204": {
             "description": "Deleted successfully"
           }
-        }
-      }
-    },
-    "/v1beta1/system/cluster-config/refresh": {
-      "post": {
+        },
         "security": [
           {
             "BearerAuth": []
           }
-        ],
+        ]
+      }
+    },
+    "/v1beta1/system/cluster-config/refresh": {
+      "post": {
         "description": "Refresh the single ClusterConfig resource. Refreshing enqueues\nthe resource for reconciliation by its corresponding controller.",
         "produces": [
           "application/json"
@@ -4090,16 +4075,16 @@
           "200": {
             "description": "Success"
           }
-        }
-      }
-    },
-    "/v1beta1/system/configmaps": {
-      "get": {
+        },
         "security": [
           {
             "BearerAuth": []
           }
-        ],
+        ]
+      }
+    },
+    "/v1beta1/system/configmaps": {
+      "get": {
         "description": "List system-level ConfigMap resources. Returns a Kubernetes\nConfigMapList resource.",
         "produces": [
           "application/json"
@@ -4118,14 +4103,14 @@
               "$ref": "#/definitions/V1ConfigMapList"
             }
           }
-        }
-      },
-      "post": {
+        },
         "security": [
           {
             "BearerAuth": []
           }
-        ],
+        ]
+      },
+      "post": {
         "description": "Create a system-level ConfigMap. Returns the created Kubernetes\nConfigMap resource.",
         "consumes": [
           "application/json"
@@ -4158,16 +4143,16 @@
               "$ref": "#/definitions/V1ConfigMap"
             }
           }
-        }
-      }
-    },
-    "/v1beta1/system/configmaps/{configmap}": {
-      "get": {
+        },
         "security": [
           {
             "BearerAuth": []
           }
-        ],
+        ]
+      }
+    },
+    "/v1beta1/system/configmaps/{configmap}": {
+      "get": {
         "description": "Retrieve a system-level ConfigMap by name.",
         "produces": [
           "application/json"
@@ -4195,14 +4180,14 @@
               "$ref": "#/definitions/V1ConfigMap"
             }
           }
-        }
-      },
-      "put": {
+        },
         "security": [
           {
             "BearerAuth": []
           }
-        ],
+        ]
+      },
+      "put": {
         "description": "Replace a system-level ConfigMap. All existing data is replaced.\nReturns the updated Kubernetes ConfigMap resource.",
         "consumes": [
           "application/json"
@@ -4242,14 +4227,14 @@
               "$ref": "#/definitions/V1ConfigMap"
             }
           }
-        }
-      },
-      "delete": {
+        },
         "security": [
           {
             "BearerAuth": []
           }
-        ],
+        ]
+      },
+      "delete": {
         "description": "Delete a system-level ConfigMap.",
         "tags": [
           "Core",
@@ -4271,14 +4256,14 @@
           "204": {
             "description": "Deleted successfully"
           }
-        }
-      },
-      "patch": {
+        },
         "security": [
           {
             "BearerAuth": []
           }
-        ],
+        ]
+      },
+      "patch": {
         "description": "Patch a system-level ConfigMap. Merges provided data\nwith existing data. Use removeKeys to delete specific keys.\nReturns the updated Kubernetes ConfigMap resource.",
         "consumes": [
           "application/json"
@@ -4318,16 +4303,16 @@
               "$ref": "#/definitions/V1ConfigMap"
             }
           }
-        }
-      }
-    },
-    "/v1beta1/system/controller-heartbeats": {
-      "get": {
+        },
         "security": [
           {
             "BearerAuth": []
           }
-        ],
+        ]
+      }
+    },
+    "/v1beta1/system/controller-heartbeats": {
+      "get": {
         "description": "Get the most recent heartbeat from every controller that has\nreported in. Any controller not represented in the response has\nnever reported a heartbeat and can therefore be assumed by the\ncaller to be dead or nonexistent.",
         "produces": [
           "application/json"
@@ -4344,16 +4329,16 @@
               "$ref": "#/definitions/GetControllerHeartbeatsResponse"
             }
           }
-        }
-      }
-    },
-    "/v1beta1/system/generic-credentials": {
-      "get": {
+        },
         "security": [
           {
             "BearerAuth": []
           }
-        ],
+        ]
+      }
+    },
+    "/v1beta1/system/generic-credentials": {
+      "get": {
         "description": "List system-level generic credentials. Returns a Kubernetes\nSecretList resource containing heavily redacted Secrets.",
         "produces": [
           "application/json"
@@ -4372,14 +4357,14 @@
               "$ref": "#/definitions/V1SecretList"
             }
           }
-        }
-      },
-      "post": {
+        },
         "security": [
           {
             "BearerAuth": []
           }
-        ],
+        ]
+      },
+      "post": {
         "description": "Create system-level generic credentials. Returns a heavily\nredacted Kubernetes Secret resource.",
         "consumes": [
           "application/json"
@@ -4412,16 +4397,16 @@
               "$ref": "#/definitions/V1Secret"
             }
           }
-        }
-      }
-    },
-    "/v1beta1/system/generic-credentials/{generic-credentials}": {
-      "get": {
+        },
         "security": [
           {
             "BearerAuth": []
           }
-        ],
+        ]
+      }
+    },
+    "/v1beta1/system/generic-credentials/{generic-credentials}": {
+      "get": {
         "description": "Retrieve system-level generic credentials by name. Returns a\nheavily redacted Kubernetes Secret resource.",
         "produces": [
           "application/json"
@@ -4449,14 +4434,14 @@
               "$ref": "#/definitions/V1Secret"
             }
           }
-        }
-      },
-      "put": {
+        },
         "security": [
           {
             "BearerAuth": []
           }
-        ],
+        ]
+      },
+      "put": {
         "description": "Replace system-level generic credentials. All existing data is\nreplaced. Returns a heavily redacted Kubernetes Secret resource.",
         "consumes": [
           "application/json"
@@ -4496,14 +4481,14 @@
               "$ref": "#/definitions/V1Secret"
             }
           }
-        }
-      },
-      "delete": {
+        },
         "security": [
           {
             "BearerAuth": []
           }
-        ],
+        ]
+      },
+      "delete": {
         "description": "Delete system-level generic credentials.",
         "tags": [
           "Credentials",
@@ -4525,14 +4510,14 @@
           "204": {
             "description": "Deleted successfully"
           }
-        }
-      },
-      "patch": {
+        },
         "security": [
           {
             "BearerAuth": []
           }
-        ],
+        ]
+      },
+      "patch": {
         "description": "Patch system-level generic credentials. Merges provided data\nwith existing data. Use removeKeys to delete specific keys.\nReturns a heavily redacted Kubernetes Secret resource.",
         "consumes": [
           "application/json"
@@ -4572,7 +4557,12 @@
               "$ref": "#/definitions/V1Secret"
             }
           }
-        }
+        },
+        "security": [
+          {
+            "BearerAuth": []
+          }
+        ]
       }
     },
     "/v1beta1/system/public-server-config": {
@@ -4599,11 +4589,6 @@
     },
     "/v1beta1/system/roles": {
       "get": {
-        "security": [
-          {
-            "BearerAuth": []
-          }
-        ],
         "description": "List system-level Kargo Role virtual resources. Returns a\nRoleList resource.",
         "produces": [
           "application/json"
@@ -4617,20 +4602,18 @@
         "responses": {
           "200": {
             "description": "RoleList custom resource (rbacapi.RoleList) or underlying resources",
-            "schema": {
-              "type": "object"
-            }
+            "schema": {}
           }
-        }
-      }
-    },
-    "/v1beta1/system/roles/{role}": {
-      "get": {
+        },
         "security": [
           {
             "BearerAuth": []
           }
-        ],
+        ]
+      }
+    },
+    "/v1beta1/system/roles/{role}": {
+      "get": {
         "description": "Retrieve a system-level Kargo Role virtual resource by name.\nReturns a Kargo Role virtual resource or its underlying\nKubernetes resources.",
         "produces": [
           "application/json"
@@ -4653,20 +4636,18 @@
         "responses": {
           "200": {
             "description": "Role resource (k8s.io/api/rbac/v1.Role) or its underlying Kubernetes resources",
-            "schema": {
-              "type": "object"
-            }
+            "schema": {}
           }
-        }
-      }
-    },
-    "/v1beta1/system/roles/{role}/api-tokens": {
-      "post": {
+        },
         "security": [
           {
             "BearerAuth": []
           }
-        ],
+        ]
+      }
+    },
+    "/v1beta1/system/roles/{role}/api-tokens": {
+      "post": {
         "description": "Create a system-level API token associated with a system-level\nKargo Role virtual resource. Returns a Kubernetes Secret\nresource representing the token. Store it securely. The token\nis not retrievable via the Kargo API after creation except in\na redacted form.",
         "consumes": [
           "application/json"
@@ -4706,16 +4687,16 @@
               "$ref": "#/definitions/V1Secret"
             }
           }
-        }
-      }
-    },
-    "/v1beta1/system/server-config": {
-      "get": {
+        },
         "security": [
           {
             "BearerAuth": []
           }
-        ],
+        ]
+      }
+    },
+    "/v1beta1/system/server-config": {
+      "get": {
         "description": "Retrieve information a client may need to know about how the\nKargo API server is configured.",
         "produces": [
           "application/json"
@@ -4733,16 +4714,16 @@
               "$ref": "#/definitions/GetConfigResponse"
             }
           }
-        }
-      }
-    },
-    "/v1beta1/system/server-version": {
-      "get": {
+        },
         "security": [
           {
             "BearerAuth": []
           }
-        ],
+        ]
+      }
+    },
+    "/v1beta1/system/server-version": {
+      "get": {
         "description": "Retrieve API Server version information.",
         "produces": [
           "application/json"
@@ -4759,7 +4740,12 @@
               "$ref": "#/definitions/VersionInfo"
             }
           }
-        }
+        },
+        "security": [
+          {
+            "BearerAuth": []
+          }
+        ]
       }
     }
   },
@@ -4842,6 +4828,10 @@
         },
         "replicate": {
           "type": "boolean"
+        },
+        "type": {
+          "description": "Type is the Kubernetes Secret type (e.g. \"Opaque\" or\n\"kubernetes.io/dockerconfigjson\"). It is immutable, so it may only be set\nat creation time. When empty, Kubernetes defaults it to \"Opaque\".",
+          "type": "string"
         }
       }
     },
@@ -5196,6 +5186,10 @@
         },
         "freightAlias": {
           "type": "string"
+        },
+        "origin": {
+          "description": "Origin is the canonical Freight origin key (e.g. \"Warehouse/foo\"). When\nset, the promotion webhook resolves it to the current auto-promotion\ncandidate. Exactly one of Freight, FreightAlias, or Origin must be set.",
+          "type": "string"
         }
       }
     },
@@ -5461,12 +5455,18 @@
         },
         "terminate": {
           "type": "boolean"
+        },
+        "ttlStrategy": {
+          "$ref": "#/definitions/RolloutsTTLStrategy"
         }
       }
     },
     "RolloutsAnalysisRunStatus": {
       "type": "object",
       "properties": {
+        "completedAt": {
+          "type": "string"
+        },
         "dryRunSummary": {
           "$ref": "#/definitions/RolloutsRunSummary"
         },
@@ -5531,6 +5531,17 @@
         }
       }
     },
+    "RolloutsAnalysisTemplateRef": {
+      "type": "object",
+      "properties": {
+        "clusterScope": {
+          "type": "boolean"
+        },
+        "templateName": {
+          "type": "string"
+        }
+      }
+    },
     "RolloutsAnalysisTemplateSpec": {
       "type": "object",
       "properties": {
@@ -5556,6 +5567,12 @@
           "type": "array",
           "items": {
             "$ref": "#/definitions/RolloutsMetric"
+          }
+        },
+        "templates": {
+          "type": "array",
+          "items": {
+            "$ref": "#/definitions/RolloutsAnalysisTemplateRef"
           }
         }
       }
@@ -5614,9 +5631,7 @@
         "metricStat": {
           "$ref": "#/definitions/RolloutsCloudWatchMetricStat"
         },
-        "period": {
-          "$ref": "#/definitions/IntOrString"
-        },
+        "period": {},
         "returnData": {
           "type": "boolean"
         }
@@ -5628,9 +5643,7 @@
         "metric": {
           "$ref": "#/definitions/RolloutsCloudWatchMetricStatMetric"
         },
-        "period": {
-          "$ref": "#/definitions/IntOrString"
-        },
+        "period": {},
         "stat": {
           "type": "string"
         },
@@ -5731,6 +5744,9 @@
         },
         "query": {
           "type": "string"
+        },
+        "secretRef": {
+          "$ref": "#/definitions/RolloutsSecretRef"
         }
       }
     },
@@ -5798,6 +5814,9 @@
         },
         "configurationAccountName": {
           "type": "string"
+        },
+        "lookback": {
+          "type": "boolean"
         },
         "metricsAccountName": {
           "type": "string"
@@ -5884,24 +5903,14 @@
     "RolloutsMetric": {
       "type": "object",
       "properties": {
-        "consecutiveErrorLimit": {
-          "$ref": "#/definitions/IntOrString"
-        },
-        "consecutiveSuccessLimit": {
-          "$ref": "#/definitions/IntOrString"
-        },
-        "count": {
-          "$ref": "#/definitions/IntOrString"
-        },
+        "consecutiveErrorLimit": {},
+        "consecutiveSuccessLimit": {},
+        "count": {},
         "failureCondition": {
           "type": "string"
         },
-        "failureLimit": {
-          "$ref": "#/definitions/IntOrString"
-        },
-        "inconclusiveLimit": {
-          "$ref": "#/definitions/IntOrString"
-        },
+        "failureLimit": {},
+        "inconclusiveLimit": {},
         "initialDelay": {
           "type": "string"
         },
@@ -5970,6 +5979,9 @@
         "consecutiveError": {
           "type": "integer"
         },
+        "consecutiveSuccess": {
+          "type": "integer"
+        },
         "count": {
           "type": "integer"
         },
@@ -6019,6 +6031,9 @@
         },
         "query": {
           "type": "string"
+        },
+        "timeout": {
+          "type": "integer"
         }
       }
     },
@@ -6063,8 +6078,25 @@
         "query": {
           "type": "string"
         },
+        "rangeQuery": {
+          "$ref": "#/definitions/RolloutsPrometheusRangeQueryArgs"
+        },
         "timeout": {
           "type": "integer"
+        }
+      }
+    },
+    "RolloutsPrometheusRangeQueryArgs": {
+      "type": "object",
+      "properties": {
+        "end": {
+          "type": "string"
+        },
+        "start": {
+          "type": "string"
+        },
+        "step": {
+          "type": "string"
         }
       }
     },
@@ -6119,6 +6151,17 @@
         }
       }
     },
+    "RolloutsSecretRef": {
+      "type": "object",
+      "properties": {
+        "name": {
+          "type": "string"
+        },
+        "namespaced": {
+          "type": "boolean"
+        }
+      }
+    },
     "RolloutsSigv4Config": {
       "type": "object",
       "properties": {
@@ -6144,6 +6187,20 @@
         },
         "query": {
           "type": "string"
+        }
+      }
+    },
+    "RolloutsTTLStrategy": {
+      "type": "object",
+      "properties": {
+        "secondsAfterCompletion": {
+          "type": "integer"
+        },
+        "secondsAfterFailure": {
+          "type": "integer"
+        },
+        "secondsAfterSuccess": {
+          "type": "integer"
         }
       }
     },
@@ -6305,8 +6362,7 @@
           "type": "string"
         },
         "metadata": {
-          "description": "Metadata is a JSON object containing a mostly opaque collection of artifact\nattributes. (It must be an object. It may not be a list or a scalar value.)\n\"Mostly\" because Kargo may understand how to interpret some documented,\nwell-known, top-level keys. Those aside, this metadata is only understood\nby a corresponding Subscriber implementation that created it.\n\n+optional",
-          "type": "object"
+          "description": "Metadata is a JSON object containing a mostly opaque collection of artifact\nattributes. (It must be an object. It may not be a list or a scalar value.)\n\"Mostly\" because Kargo may understand how to interpret some documented,\nwell-known, top-level keys. Those aside, this metadata is only understood\nby a corresponding Subscriber implementation that created it.\n\n+optional"
         },
         "subscriptionName": {
           "description": "SubscriptionName is the name of the Subscription that discovered this\nartifact.\n\n+kubebuilder:validation:MinLength=1",
@@ -6338,6 +6394,35 @@
         "secretRef"
       ]
     },
+    "AutoPromotionHold": {
+      "type": "object",
+      "properties": {
+        "actor": {
+          "description": "Actor identifies the user who triggered the hold.",
+          "type": "string"
+        },
+        "createdAt": {
+          "description": "CreatedAt is the creation timestamp of the Promotion that established this\nhold.",
+          "type": "string"
+        },
+        "freightName": {
+          "description": "FreightName is the name of the Freight selected when the hold was created.",
+          "type": "string"
+        },
+        "origin": {
+          "description": "Origin describes the FreightOrigin pinned by this hold. It matches the\nenclosing map key.",
+          "allOf": [
+            {
+              "$ref": "#/definitions/FreightOrigin"
+            }
+          ]
+        },
+        "promotionName": {
+          "description": "PromotionName is the name of the Promotion that established this hold.\nStored here as a paper trail that survives Promotion garbage collection.",
+          "type": "string"
+        }
+      }
+    },
     "AutoPromotionOptions": {
       "type": "object",
       "properties": {
@@ -6350,9 +6435,19 @@
     "AutoRollbackConfig": {
       "type": "object",
       "properties": {
-        "onFailedPromotions": {
-          "description": "OnFailedPromotions indicates whether a rollback should be triggered\nwhen a promotion to the Stage fails. Failed promotions (as opposed\nto failed verifications) does not necessarily indicate a problem the\nFreight, since promotions might fail due to transient issues with the\nStage itself (network, credential expirations, etc...). This defaults\nto false.",
-          "type": "boolean"
+        "onPromotion": {
+          "description": "OnPromotion is the list of terminal Promotion phases that should trigger\nan automated rollback. Only Failed and Errored are accepted. Note that\nunsuccessful promotions (as opposed to unsuccessful verifications) may not\nnecessarily indicate a problem with the Freight, since promotions might fail\ndue to transient issues with the deployment itself (network, credential\nexpirations, etc...). Defaults to [].\n\n+optional\n+listType=set\n+kubebuilder:validation:MaxItems=2\n+kubebuilder:validation:XValidation:message=\"onPromotion[0] must be Failed or Errored\",rule=\"self.size() == 0 || self[0] == 'Failed' || self[0] == 'Errored'\"\n+kubebuilder:validation:XValidation:message=\"onPromotion[1] must be Failed or Errored\",rule=\"self.size() <= 1 || self[1] == 'Failed' || self[1] == 'Errored'\"",
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        },
+        "onVerification": {
+          "description": "OnVerification is the list of terminal verification phases that should\ntrigger an automated rollback. Only Failed and Error are accepted (note:\n\"Error\", not \"Errored\" as in onPromotion). When absent or empty,\ndefaults to [Failed].\n\n+optional\n+listType=set\n+kubebuilder:validation:MaxItems=2\n+kubebuilder:validation:XValidation:message=\"onVerification[0] must be Failed or Error\",rule=\"self.size() == 0 || self[0] == 'Failed' || self[0] == 'Error'\"\n+kubebuilder:validation:XValidation:message=\"onVerification[1] must be Failed or Error\",rule=\"self.size() <= 1 || self[1] == 'Failed' || self[1] == 'Error'\"",
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
         }
       }
     },
@@ -6793,6 +6888,10 @@
             "$ref": "#/definitions/GitCommit"
           }
         },
+        "discoveredAt": {
+          "description": "DiscoveredAt is the time at which this Freight was discovered/created.\nA defaulting webhook initializes this to the creation time of the Freight.\n\n+optional",
+          "type": "string"
+        },
         "images": {
           "description": "Images describes specific versions of specific container images.",
           "type": "array",
@@ -6998,9 +7097,7 @@
         "metadata": {
           "description": "Metadata is a map of arbitrary metadata associated with the Freight.\nThis is useful for storing additional information about the Freight\nor Promotion that can be shared across steps or stages.",
           "type": "object",
-          "additionalProperties": {
-            "type": "object"
-          }
+          "additionalProperties": {}
         },
         "verifiedIn": {
           "description": "VerifiedIn describes the Stages in which this Freight has been verified\nthrough promotion and subsequent health checks.",
@@ -7264,8 +7361,7 @@
       "type": "object",
       "properties": {
         "config": {
-          "description": "Config is the opaque configuration of all health checks performed on this\nStage.",
-          "type": "object"
+          "description": "Config is the opaque configuration of all health checks performed on this\nStage."
         },
         "issues": {
           "description": "Issues clarifies why a Stage in any state other than Healthy is in that\nstate. This field will always be the empty when a Stage is Healthy.",
@@ -7275,8 +7371,7 @@
           }
         },
         "output": {
-          "description": "Output is the opaque output of all health checks performed on this Stage.",
-          "type": "object"
+          "description": "Output is the opaque output of all health checks performed on this Stage."
         },
         "status": {
           "description": "Status describes the health of the Stage.",
@@ -7288,8 +7383,7 @@
       "type": "object",
       "properties": {
         "config": {
-          "description": "Config is the configuration for the directive.",
-          "type": "object"
+          "description": "Config is the configuration for the directive."
         },
         "uses": {
           "description": "Uses identifies a runner that can execute this step.\n\n+kubebuilder:validation:MinLength=1",
@@ -7686,8 +7780,16 @@
       "type": "object",
       "properties": {
         "freight": {
-          "description": "Freight specifies the piece of Freight to be promoted into the Stage\nreferenced by the Stage field.\n\n+kubebuilder:validation:Required\n+kubebuilder:validation:MinLength=1\n+kubebuilder:validation:MaxLength=253\n+kubebuilder:validation:Pattern=`^[a-z0-9]([-a-z0-9]*[a-z0-9])?(\\.[a-z0-9]([-a-z0-9]*[a-z0-9])?)*$`\n+akuity:test-kubebuilder-pattern=KubernetesName",
+          "description": "Freight specifies the piece of Freight to be promoted into the Stage.\nExactly one of Freight or Origin must be set.\n\n+kubebuilder:validation:Optional\n+kubebuilder:validation:MinLength=1\n+kubebuilder:validation:MaxLength=253\n+kubebuilder:validation:Pattern=`^[a-z0-9]([-a-z0-9]*[a-z0-9])?(\\.[a-z0-9]([-a-z0-9]*[a-z0-9])?)*$`\n+akuity:test-kubebuilder-pattern=KubernetesName",
           "type": "string"
+        },
+        "origin": {
+          "description": "Origin, when set, identifies the FreightOrigin whose auto-promotion\ncandidate should be promoted. The mutating webhook resolves this to the\ncandidate Freight for that origin and fills Freight before the Promotion\nis persisted. Exactly one of Freight or Origin must be set.\n\n+kubebuilder:validation:Optional",
+          "allOf": [
+            {
+              "$ref": "#/definitions/FreightOrigin"
+            }
+          ]
         },
         "stage": {
           "description": "Stage specifies the name of the Stage to which this Promotion\napplies. The Stage referenced by this field MUST be in the same\nnamespace as the Promotion.\n\n+kubebuilder:validation:Required\n+kubebuilder:validation:MinLength=1\n+kubebuilder:validation:MaxLength=253\n+kubebuilder:validation:Pattern=`^[a-z0-9]([-a-z0-9]*[a-z0-9])?(\\.[a-z0-9]([-a-z0-9]*[a-z0-9])?)*$`\n+akuity:test-kubebuilder-pattern=KubernetesName",
@@ -7700,6 +7802,10 @@
             "$ref": "#/definitions/PromotionStep"
           }
         },
+        "target": {
+          "description": "Target optionally names the Target, within the Promotion's own Project\n(namespace), that this Promotion promotes Freight to. Targets allow a\nsingle Stage to govern -- and promote Freight to -- multiple destinations.\nWhen set, the named Target must be one that the referenced Stage governs,\ni.e. one selected by the Stage's targetSelectors.\n\nWhen empty (the default), the Promotion promotes to the Stage itself. This\npreserves the behavior of Promotions created before Targets existed:\nclassic Stages -- those without targetSelectors -- govern no Targets, so\ntheir Promotions leave this field empty.\n\n+kubebuilder:validation:Optional\n+kubebuilder:validation:MaxLength=253\n+kubebuilder:validation:Pattern=`^[a-z0-9]([-a-z0-9]*[a-z0-9])?(\\.[a-z0-9]([-a-z0-9]*[a-z0-9])?)*$`\n+akuity:test-kubebuilder-pattern=KubernetesName",
+          "type": "string"
+        },
         "vars": {
           "description": "Vars is a list of variables that can be referenced by expressions in\npromotion steps.",
           "type": "array",
@@ -7709,7 +7815,6 @@
         }
       },
       "required": [
-        "freight",
         "stage",
         "steps"
       ]
@@ -7765,8 +7870,7 @@
           "type": "string"
         },
         "state": {
-          "description": "State stores the state of the promotion process between reconciliation\nattempts.",
-          "type": "object"
+          "description": "State stores the state of the promotion process between reconciliation\nattempts."
         },
         "stepExecutionMetadata": {
           "description": "StepExecutionMetadata tracks metadata pertaining to the execution\nof individual promotion steps.",
@@ -7785,8 +7889,7 @@
           "type": "string"
         },
         "config": {
-          "description": "Config is opaque configuration for the PromotionStep that is understood\nonly by each PromotionStep's implementation. It is legal to utilize\nexpressions in defining values at any level of this block.\nSee https://docs.kargo.io/user-guide/reference-docs/expressions for details.",
-          "type": "object"
+          "description": "Config is opaque configuration for the PromotionStep that is understood\nonly by each PromotionStep's implementation. It is legal to utilize\nexpressions in defining values at any level of this block.\nSee https://docs.kargo.io/user-guide/reference-docs/expressions for details."
         },
         "continueOnError": {
           "description": "ContinueOnError is a boolean value that, if set to true, will cause the\nPromotion to continue executing the next step even if this step fails. It\nalso will not permit this failure to impact the overall status of the\nPromotion.",
@@ -8047,6 +8150,13 @@
           "description": "Shard is the name of the shard that this Stage belongs to. This is an\noptional field. If not specified, the Stage will belong to the default\nshard. A defaulting webhook will sync the value of the\nkargo.akuity.io/shard label with the value of this field. When this field\nis empty, the webhook will ensure that label is absent.",
           "type": "string"
         },
+        "targetSelectors": {
+          "description": "TargetSelectors select the Targets that this Stage governs and promotes\nFreight to, matching Targets by their labels within the Stage's own\nProject. A Target is selected when it matches any selector in this list.\nA Stage may govern any number of Targets this way.\n\nWhen this field is nil (the default), the Stage operates in classic mode:\nit governs a single implicit \"stage-self\" Target that the controller\ncreates and maintains on the Stage's behalf. This preserves the behavior\nof Stages authored before Targets existed. An empty selector in a non-empty\nlist selects all Targets in the Project.\n\n+optional",
+          "type": "array",
+          "items": {
+            "$ref": "#/definitions/V1LabelSelector"
+          }
+        },
         "vars": {
           "description": "Vars is a list of variables that can be referenced anywhere in the\nStageSpec that supports expressions. For example, the PromotionTemplate\nand arguments of the Verification.",
           "type": "array",
@@ -8088,6 +8198,13 @@
           "description": "AutoPromotionEnabled indicates whether automatic promotion is enabled\nfor the Stage based on the ProjectConfig.",
           "type": "boolean"
         },
+        "autoPromotionHolds": {
+          "description": "AutoPromotionHolds records active auto-promotion holds for this Stage. A\nhold is established when a Promotion selects Freight other than the\nauto-promotion candidate for that origin, pausing auto-promotion for that\norigin until explicitly released. Auto-promotions themselves never\nestablish holds. Keys are string representations of FreightOrigins (e.g.\n\"Warehouse/my-warehouse\"); values describe the Promotion that established\nthe hold.",
+          "type": "object",
+          "additionalProperties": {
+            "$ref": "#/definitions/AutoPromotionHold"
+          }
+        },
         "conditions": {
           "description": "Conditions contains the last observations of the Stage's current\nstate.\n+patchMergeKey=type\n+patchStrategy=merge\n+listType=map\n+listMapKey=type",
           "type": "array",
@@ -8102,6 +8219,13 @@
               "$ref": "#/definitions/PromotionReference"
             }
           ]
+        },
+        "effectiveAutoPromotionHolds": {
+          "description": "EffectiveAutoPromotionHolds is the set of auto-promotion holds in effect\nright now. It is recomputed every reconciliation from AutoPromotionHolds\nplus the newest in-flight Promotions, and unlike AutoPromotionHolds is not\ndurable. Clients should read this map to reflect current hold state.",
+          "type": "object",
+          "additionalProperties": {
+            "$ref": "#/definitions/AutoPromotionHold"
+          }
         },
         "freightHistory": {
           "description": "FreightHistory is a list of recent Freight selections that were deployed\nto the Stage. By default, the last ten Freight selections are stored.\nThe first item in the list is the most recent Freight selection and\ncurrently deployed to the Stage, subsequent items are older selections.",
@@ -8137,9 +8261,7 @@
         "metadata": {
           "description": "Metadata is a map of arbitrary metadata associated with the Stage.\nThis is useful for storing additional information about the Stage\nthat can be shared across promotions, verifications, or other processes.",
           "type": "object",
-          "additionalProperties": {
-            "type": "object"
-          }
+          "additionalProperties": {}
         },
         "observedGeneration": {
           "description": "ObservedGeneration represents the .metadata.generation that this Stage\nstatus was reconciled against.",
@@ -8340,9 +8462,7 @@
         "subscriptions": {
           "description": "Subscriptions describes sources of artifacts to be included in Freight\nproduced by this Warehouse.\n\n+kubebuilder:validation:MinItems=1",
           "type": "array",
-          "items": {
-            "type": "object"
-          }
+          "items": {}
         }
       }
     },
@@ -8504,20 +8624,6 @@
         }
       }
     },
-    "IntOrString": {
-      "type": "object",
-      "properties": {
-        "intVal": {
-          "type": "integer"
-        },
-        "strVal": {
-          "type": "string"
-        },
-        "type": {
-          "type": "integer"
-        }
-      }
-    },
     "V1Event": {
       "type": "object",
       "properties": {
@@ -8535,11 +8641,7 @@
         },
         "eventTime": {
           "description": "Time when this Event was first observed.\n+optional",
-          "allOf": [
-            {
-              "$ref": "#/definitions/V1MicroTime"
-            }
-          ]
+          "type": "string"
         },
         "firstTimestamp": {
           "description": "The time at which the event was first recorded. (Time of server receipt is in TypeMeta.)\n+optional",
@@ -8652,11 +8754,7 @@
         },
         "lastObservedTime": {
           "description": "Time of the last occurrence observed",
-          "allOf": [
-            {
-              "$ref": "#/definitions/V1MicroTime"
-            }
-          ]
+          "type": "string"
         }
       }
     },
@@ -8673,31 +8771,29 @@
         }
       }
     },
-    "Quantity": {
+    "pkg_server.freightGroupList": {
       "type": "object",
       "properties": {
-        "Format": {
-          "type": "string",
-          "enum": [
-            "DecimalExponent",
-            "BinarySI",
-            "DecimalSI"
-          ],
-          "x-enum-comments": {
-            "BinarySI": "e.g., 12Mi (12 * 2^20)",
-            "DecimalExponent": "e.g., 12e6",
-            "DecimalSI": "e.g., 12M  (12 * 10^6)"
-          },
-          "x-enum-descriptions": [
-            "e.g., 12e6",
-            "e.g., 12Mi (12 * 2^20)",
-            "e.g., 12M  (12 * 10^6)"
-          ],
-          "x-enum-varnames": [
-            "DecimalExponent",
-            "BinarySI",
-            "DecimalSI"
-          ]
+        "items": {
+          "type": "array",
+          "items": {
+            "$ref": "#/definitions/Freight"
+          }
+        }
+      }
+    },
+    "pkg_server.queryFreightsResponse": {
+      "type": "object",
+      "properties": {
+        "groups": {
+          "type": "object",
+          "additionalProperties": {
+            "$ref": "#/definitions/pkg_server.freightGroupList"
+          }
+        },
+        "resourceVersion": {
+          "description": "ResourceVersion is the Kubernetes list resourceVersion clients use to\nseed a follow-up Freight watch so the API server does not replay every\nexisting Freight as an ADDED event. It is empty for the stage-scoped\nquery, whose result is assembled from multiple sources rather than a\nsingle watchable namespace list.",
+          "type": "string"
         }
       }
     },
@@ -9215,7 +9311,7 @@
           ]
         },
         "resizePolicy": {
-          "description": "Resources resize policy for the container.\n+featureGate=InPlacePodVerticalScaling\n+optional\n+listType=atomic",
+          "description": "Resources resize policy for the container.\nThis field cannot be set on ephemeral containers.\n+featureGate=InPlacePodVerticalScaling\n+optional\n+listType=atomic",
           "type": "array",
           "items": {
             "$ref": "#/definitions/V1ContainerResizePolicy"
@@ -9230,7 +9326,7 @@
           ]
         },
         "restartPolicy": {
-          "description": "RestartPolicy defines the restart behavior of individual containers in a pod.\nThis overrides the pod-level restart policy. When this field is not specified,\nthe restart behavior is defined by the Pod's restart policy and the container type.\nAdditionally, setting the RestartPolicy as \"Always\" for the init container will\nhave the following effect:\nthis init container will be continually restarted on\nexit until all regular containers have terminated. Once all regular\ncontainers have completed, all init containers with restartPolicy \"Always\"\nwill be shut down. This lifecycle differs from normal init containers and\nis often referred to as a \"sidecar\" container. Although this init\ncontainer still starts in the init container sequence, it does not wait\nfor the container to complete before proceeding to the next init\ncontainer. Instead, the next init container starts immediately after this\ninit container is started, or after any startupProbe has successfully\ncompleted.\n+featureGate=SidecarContainers\n+optional",
+          "description": "RestartPolicy defines the restart behavior of individual containers in a pod.\nThis overrides the pod-level restart policy. When this field is not specified,\nthe restart behavior is defined by the Pod's restart policy and the container type.\nAdditionally, setting the RestartPolicy as \"Always\" for the init container will\nhave the following effect:\nthis init container will be continually restarted on\nexit until all regular containers have terminated. Once all regular\ncontainers have completed, all init containers with restartPolicy \"Always\"\nwill be shut down. This lifecycle differs from normal init containers and\nis often referred to as a \"sidecar\" container. Although this init\ncontainer still starts in the init container sequence, it does not wait\nfor the container to complete before proceeding to the next init\ncontainer. Instead, the next init container starts immediately after this\ninit container is started, or after any startupProbe has successfully\ncompleted.\n+optional",
           "type": "string"
         },
         "restartPolicyRules": {
@@ -9433,11 +9529,7 @@
         },
         "sizeLimit": {
           "description": "sizeLimit is the total amount of local storage required for this EmptyDir volume.\nThe size limit is also applicable for memory medium.\nThe maximum usage on memory medium EmptyDir would be the minimum value between\nthe SizeLimit specified here and the sum of memory limits of all containers in a pod.\nThe default is nil which means that the limit is undefined.\nMore info: https://kubernetes.io/docs/concepts/storage/volumes#emptydir\n+optional",
-          "allOf": [
-            {
-              "$ref": "#/definitions/Quantity"
-            }
-          ]
+          "type": "string"
         }
       }
     },
@@ -9622,7 +9714,7 @@
           ]
         },
         "restartPolicy": {
-          "description": "Restart policy for the container to manage the restart behavior of each\ncontainer within a pod.\nYou cannot set this field on ephemeral containers.\n+featureGate=SidecarContainers\n+optional",
+          "description": "Restart policy for the container to manage the restart behavior of each\ncontainer within a pod.\nYou cannot set this field on ephemeral containers.\n+optional",
           "type": "string"
         },
         "restartPolicyRules": {
@@ -9761,9 +9853,7 @@
         }
       }
     },
-    "V1FieldsV1": {
-      "type": "object"
-    },
+    "V1FieldsV1": {},
     "V1FileKeySelector": {
       "type": "object",
       "properties": {
@@ -9917,12 +10007,7 @@
           "type": "string"
         },
         "port": {
-          "description": "Name or number of the port to access on the container.\nNumber must be in the range 1 to 65535.\nName must be an IANA_SVC_NAME.",
-          "allOf": [
-            {
-              "$ref": "#/definitions/IntOrString"
-            }
-          ]
+          "description": "Name or number of the port to access on the container.\nNumber must be in the range 1 to 65535.\nName must be an IANA_SVC_NAME."
         },
         "scheme": {
           "description": "Scheme to use for connecting to the host.\nDefaults to HTTP.\n+optional",
@@ -10069,7 +10154,7 @@
           "type": "integer"
         },
         "managedBy": {
-          "description": "ManagedBy field indicates the controller that manages a Job. The k8s Job\ncontroller reconciles jobs which don't have this field at all or the field\nvalue is the reserved string `kubernetes.io/job-controller`, but skips\nreconciling Jobs with a custom value for this field.\nThe value must be a valid domain-prefixed path (e.g. acme.io/foo) -\nall characters before the first \"/\" must be a valid subdomain as defined\nby RFC 1123. All characters trailing the first \"/\" must be valid HTTP Path\ncharacters as defined by RFC 3986. The value cannot exceed 63 characters.\nThis field is immutable.\n\nThis field is beta-level. The job controller accepts setting the field\nwhen the feature gate JobManagedBy is enabled (enabled by default).\n+optional",
+          "description": "ManagedBy field indicates the controller that manages a Job. The k8s Job\ncontroller reconciles jobs which don't have this field at all or the field\nvalue is the reserved string `kubernetes.io/job-controller`, but skips\nreconciling Jobs with a custom value for this field.\nThe value must be a valid domain-prefixed path (e.g. acme.io/foo) -\nall characters before the first \"/\" must be a valid subdomain as defined\nby RFC 1123. All characters trailing the first \"/\" must be valid HTTP Path\ncharacters as defined by RFC 3986. The value cannot exceed 63 characters.\nThis field is immutable.\n+optional",
           "type": "string"
         },
         "manualSelector": {
@@ -10235,7 +10320,7 @@
           ]
         },
         "sleep": {
-          "description": "Sleep represents a duration that the container should sleep.\n+featureGate=PodLifecycleSleepAction\n+optional",
+          "description": "Sleep represents a duration that the container should sleep.\n+optional",
           "allOf": [
             {
               "$ref": "#/definitions/V1SleepAction"
@@ -10270,6 +10355,14 @@
         "selfLink": {
           "description": "Deprecated: selfLink is a legacy read-only field that is no longer populated by the system.\n+optional",
           "type": "string"
+        },
+        "shardInfo": {
+          "description": "shardInfo is set when the list is a filtered subset of the full collection,\nas selected by a shard selector on the request. It echoes back the selector\nso clients can verify which shard they received and merge sharded responses.\nClients should not cache sharded list responses as a full representation\nof the collection.\n\nThis is an alpha field and requires enabling the ShardedListAndWatch feature gate.\n+featureGate=ShardedListAndWatch\n+optional",
+          "allOf": [
+            {
+              "$ref": "#/definitions/V1ShardInfo"
+            }
+          ]
         }
       }
     },
@@ -10315,14 +10408,6 @@
         },
         "time": {
           "description": "Time is the timestamp of when the ManagedFields entry was added. The\ntimestamp will also be updated if a field is added, the manager\nchanges any of the owned fields value or removes a field. The\ntimestamp does not update when a field is removed from the entry\nbecause another manager took it over.\n+optional",
-          "type": "string"
-        }
-      }
-    },
-    "V1MicroTime": {
-      "type": "object",
-      "properties": {
-        "time.Time": {
           "type": "string"
         }
       }
@@ -10597,7 +10682,7 @@
           ]
         },
         "resources": {
-          "description": "resources represents the minimum resources the volume should have.\nIf RecoverVolumeExpansionFailure feature is enabled users are allowed to specify resource requirements\nthat are lower than previous value but must still be higher than capacity recorded in the\nstatus field of the claim.\nMore info: https://kubernetes.io/docs/concepts/storage/persistent-volumes#resources\n+optional",
+          "description": "resources represents the minimum resources the volume should have.\nUsers are allowed to specify resource requirements\nthat are lower than previous value but must still be higher than capacity recorded in the\nstatus field of the claim.\nMore info: https://kubernetes.io/docs/concepts/storage/persistent-volumes#resources\n+optional",
           "allOf": [
             {
               "$ref": "#/definitions/V1VolumeResourceRequirements"
@@ -10787,6 +10872,13 @@
         "signerName": {
           "description": "Kubelet's generated CSRs will be addressed to this signer.\n\n+required",
           "type": "string"
+        },
+        "userAnnotations": {
+          "description": "userAnnotations allow pod authors to pass additional information to\nthe signer implementation.  Kubernetes does not restrict or validate this\nmetadata in any way.\n\nThese values are copied verbatim into the `spec.unverifiedUserAnnotations` field of\nthe PodCertificateRequest objects that Kubelet creates.\n\nEntries are subject to the same validation as object metadata annotations,\nwith the addition that all keys must be domain-prefixed. No restrictions\nare placed on values, except an overall size limitation on the entire field.\n\nSigners should document the keys and values they support. Signers should\ndeny requests that contain keys they do not recognize.",
+          "type": "object",
+          "additionalProperties": {
+            "type": "string"
+          }
         }
       }
     },
@@ -10895,7 +10987,7 @@
       "type": "object",
       "properties": {
         "status": {
-          "description": "Specifies the required Pod condition status. To match a pod condition\nit is required that the specified status equals the pod condition status.\nDefaults to True.",
+          "description": "Specifies the required Pod condition status. To match a pod condition\nit is required that the specified status equals the pod condition status.\nDefaults to True.\n+optional",
           "type": "string"
         },
         "type": {
@@ -10973,7 +11065,7 @@
           "type": "string"
         },
         "resourceClaimTemplateName": {
-          "description": "ResourceClaimTemplateName is the name of a ResourceClaimTemplate\nobject in the same namespace as this pod.\n\nThe template will be used to create a new ResourceClaim, which will\nbe bound to this pod. When this pod is deleted, the ResourceClaim\nwill also be deleted. The pod name and resource name, along with a\ngenerated component, will be used to form a unique name for the\nResourceClaim, which will be recorded in pod.status.resourceClaimStatuses.\n\nThis field is immutable and no changes will be made to the\ncorresponding ResourceClaim by the control plane after creating the\nResourceClaim.\n\nExactly one of ResourceClaimName and ResourceClaimTemplateName must\nbe set.",
+          "description": "ResourceClaimTemplateName is the name of a ResourceClaimTemplate\nobject in the same namespace as this pod.\n\nThe template will be used to create a new ResourceClaim, which will\nbe bound to this pod. When this pod is deleted, the ResourceClaim\nwill also be deleted. The pod name and resource name, along with a\ngenerated component, will be used to form a unique name for the\nResourceClaim, which will be recorded in pod.status.resourceClaimStatuses.\n\nWhen the DRAWorkloadResourceClaims feature gate is enabled and the pod\nbelongs to a PodGroup that defines a PodGroupResourceClaim with the same\nName and ResourceClaimTemplateName, this PodResourceClaim resolves to the\nResourceClaim generated for the PodGroup. All pods in the group that\ndefine an equivalent PodResourceClaim matching the\nPodGroupResourceClaim's Name and ResourceClaimTemplateName share the same\ngenerated ResourceClaim. ResourceClaims generated for a PodGroup are\nowned by the PodGroup and their lifecycles are tied to the PodGroup\ninstead of any individual pod.\n\nThis field is immutable and no changes will be made to the\ncorresponding ResourceClaim by the control plane after creating the\nResourceClaim.\n\nExactly one of ResourceClaimName and ResourceClaimTemplateName must\nbe set.",
           "type": "string"
         }
       }
@@ -10983,6 +11075,15 @@
       "properties": {
         "name": {
           "description": "Name of the scheduling gate.\nEach scheduling gate must have a unique name field.",
+          "type": "string"
+        }
+      }
+    },
+    "V1PodSchedulingGroup": {
+      "type": "object",
+      "properties": {
+        "podGroupName": {
+          "description": "PodGroupName specifies the name of the standalone PodGroup object\nthat represents the runtime instance of this group.\nMust be a DNS subdomain.\n\n+optional\n+oneOf=GroupSelection",
           "type": "string"
         }
       }
@@ -11135,7 +11236,7 @@
           "type": "boolean"
         },
         "hostUsers": {
-          "description": "Use the host's user namespace.\nOptional: Default to true.\nIf set to true or not present, the pod will be run in the host user namespace, useful\nfor when the pod needs a feature only available to the host user namespace, such as\nloading a kernel module with CAP_SYS_MODULE.\nWhen set to false, a new userns is created for the pod. Setting false is useful for\nmitigating container breakout vulnerabilities even allowing users to run their\ncontainers as root without actually having root privileges on the host.\nThis field is alpha-level and is only honored by servers that enable the UserNamespacesSupport feature.\n+k8s:conversion-gen=false\n+optional",
+          "description": "Use the host's user namespace.\nOptional: Default to true.\nIf set to true or not present, the pod will be run in the host user namespace, useful\nfor when the pod needs a feature only available to the host user namespace, such as\nloading a kernel module with CAP_SYS_MODULE.\nWhen set to false, a new userns is created for the pod. Setting false is useful for\nmitigating container breakout vulnerabilities even allowing users to run their\ncontainers as root without actually having root privileges on the host.\n+k8s:conversion-gen=false\n+optional",
           "type": "boolean"
         },
         "hostname": {
@@ -11207,7 +11308,7 @@
           }
         },
         "resourceClaims": {
-          "description": "ResourceClaims defines which ResourceClaims must be allocated\nand reserved before the Pod is allowed to start. The resources\nwill be made available to those containers which consume them\nby name.\n\nThis is an alpha field and requires enabling the\nDynamicResourceAllocation feature gate.\n\nThis field is immutable.\n\n+patchMergeKey=name\n+patchStrategy=merge,retainKeys\n+listType=map\n+listMapKey=name\n+featureGate=DynamicResourceAllocation\n+optional",
+          "description": "ResourceClaims defines which ResourceClaims must be allocated\nand reserved before the Pod is allowed to start. The resources\nwill be made available to those containers which consume them\nby name.\n\nThis is a stable field but requires that the\nDynamicResourceAllocation feature gate is enabled.\n\nThis field is immutable.\n\n+patchMergeKey=name\n+patchStrategy=merge,retainKeys\n+listType=map\n+listMapKey=name\n+featureGate=DynamicResourceAllocation\n+optional",
           "type": "array",
           "items": {
             "$ref": "#/definitions/V1PodResourceClaim"
@@ -11239,6 +11340,14 @@
           "items": {
             "$ref": "#/definitions/V1PodSchedulingGate"
           }
+        },
+        "schedulingGroup": {
+          "description": "SchedulingGroup provides a reference to the immediate scheduling runtime\ngrouping object that this Pod belongs to.\nThis field is used by the scheduler to identify the group and apply the\ncorrect group scheduling policies. The association with a group also\nimpacts other lifecycle aspects of a Pod that are relevant in a wider context\nof scheduling like preemption, resource attachment, etc. If not specified,\nthe Pod is treated as a single unit in all of these aspects.\nThe group object referenced by this field may not exist at the time the\nPod is created.\nThis field is immutable, but a group object with the same name may be\nrecreated with different policies. Doing this during pod scheduling\nmay result in the placement not conforming to the expected policies.\n\n+featureGate=GenericWorkload\n+optional",
+          "allOf": [
+            {
+              "$ref": "#/definitions/V1PodSchedulingGroup"
+            }
+          ]
         },
         "securityContext": {
           "description": "SecurityContext holds pod-level security attributes and common container settings.\nOptional: Defaults to empty.  See type description for default values of each field.\n+optional",
@@ -11348,7 +11457,7 @@
           }
         },
         "verbs": {
-          "description": "Verbs is a list of Verbs that apply to ALL the ResourceKinds contained in this rule. '*' represents all verbs.\n+listType=atomic",
+          "description": "Verbs is a list of Verbs that apply to ALL the ResourceKinds contained in this rule. '*' represents all verbs.\n+listType=atomic\n+required\n+k8s:alpha(since: \"1.36\")=+k8s:required",
           "type": "array",
           "items": {
             "type": "string"
@@ -11549,11 +11658,7 @@
         },
         "divisor": {
           "description": "Specifies the output format of the exposed resources, defaults to \"1\"\n+optional",
-          "allOf": [
-            {
-              "$ref": "#/definitions/Quantity"
-            }
-          ]
+          "type": "string"
         },
         "resource": {
           "description": "Required: resource to select",
@@ -11564,7 +11669,7 @@
     "V1ResourceList": {
       "type": "object",
       "additionalProperties": {
-        "$ref": "#/definitions/Quantity"
+        "type": "string"
       }
     },
     "V1ResourceRequirements": {
@@ -11852,7 +11957,7 @@
           "type": "boolean"
         },
         "procMount": {
-          "description": "procMount denotes the type of proc mount to use for the containers.\nThe default value is Default which uses the container runtime defaults for\nreadonly paths and masked paths.\nThis requires the ProcMountType feature flag to be enabled.\nNote that this field cannot be set when spec.os.name is windows.\n+optional",
+          "description": "procMount denotes the type of proc mount to use for the containers.\nThe default value is Default which uses the container runtime defaults for\nreadonly paths and masked paths.\nNote that this field cannot be set when spec.os.name is windows.\n+optional",
           "type": "string"
         },
         "readOnlyRootFilesystem": {
@@ -11910,6 +12015,15 @@
         },
         "path": {
           "description": "path is the path relative to the mount point of the file to project the\ntoken into.",
+          "type": "string"
+        }
+      }
+    },
+    "V1ShardInfo": {
+      "type": "object",
+      "properties": {
+        "selector": {
+          "description": "selector is the shard selector string from the request, echoed back so clients\ncan verify which shard they received and merge responses from multiple shards.\n+required",
           "type": "string"
         }
       }
@@ -11998,12 +12112,7 @@
           "type": "string"
         },
         "port": {
-          "description": "Number or name of the port to access on the container.\nNumber must be in the range 1 to 65535.\nName must be an IANA_SVC_NAME.",
-          "allOf": [
-            {
-              "$ref": "#/definitions/IntOrString"
-            }
-          ]
+          "description": "Number or name of the port to access on the container.\nNumber must be in the range 1 to 65535.\nName must be an IANA_SVC_NAME."
         }
       }
     },
@@ -12019,7 +12128,7 @@
           "type": "string"
         },
         "operator": {
-          "description": "Operator represents a key's relationship to the value.\nValid operators are Exists and Equal. Defaults to Equal.\nExists is equivalent to wildcard for value, so that a pod can\ntolerate all taints of a particular category.\n+optional",
+          "description": "Operator represents a key's relationship to the value.\nValid operators are Exists, Equal, Lt, and Gt. Defaults to Equal.\nExists is equivalent to wildcard for value, so that a pod can\ntolerate all taints of a particular category.\nLt and Gt perform numeric comparisons (requires feature gate TaintTolerationComparisonOperators).\n+optional",
           "type": "string"
         },
         "tolerationSeconds": {
@@ -12254,7 +12363,7 @@
           ]
         },
         "image": {
-          "description": "image represents an OCI object (a container image or artifact) pulled and mounted on the kubelet's host machine.\nThe volume is resolved at pod startup depending on which PullPolicy value is provided:\n\n- Always: the kubelet always attempts to pull the reference. Container creation will fail If the pull fails.\n- Never: the kubelet never pulls the reference and only uses a local image or artifact. Container creation will fail if the reference isn't present.\n- IfNotPresent: the kubelet pulls if the reference isn't already present on disk. Container creation will fail if the reference isn't present and the pull fails.\n\nThe volume gets re-resolved if the pod gets deleted and recreated, which means that new remote content will become available on pod recreation.\nA failure to resolve or pull the image during pod startup will block containers from starting and may add significant latency. Failures will be retried using normal volume backoff and will be reported on the pod reason and message.\nThe types of objects that may be mounted by this volume are defined by the container runtime implementation on a host machine and at minimum must include all valid types supported by the container image field.\nThe OCI object gets mounted in a single directory (spec.containers[*].volumeMounts.mountPath) by merging the manifest layers in the same way as for container images.\nThe volume will be mounted read-only (ro) and non-executable files (noexec).\nSub path mounts for containers are not supported (spec.containers[*].volumeMounts.subpath) before 1.33.\nThe field spec.securityContext.fsGroupChangePolicy has no effect on this volume type.\n+featureGate=ImageVolume\n+optional",
+          "description": "image represents an OCI object (a container image or artifact) pulled and mounted on the kubelet's host machine.\nThe volume is resolved at pod startup depending on which PullPolicy value is provided:\n\n- Always: the kubelet always attempts to pull the reference. Container creation will fail If the pull fails.\n- Never: the kubelet never pulls the reference and only uses a local image or artifact. Container creation will fail if the reference isn't present.\n- IfNotPresent: the kubelet pulls if the reference isn't already present on disk. Container creation will fail if the reference isn't present and the pull fails.\n\nThe volume gets re-resolved if the pod gets deleted and recreated, which means that new remote content will become available on pod recreation.\nA failure to resolve or pull the image during pod startup will block containers from starting and may add significant latency. Failures will be retried using normal volume backoff and will be reported on the pod reason and message.\nThe types of objects that may be mounted by this volume are defined by the container runtime implementation on a host machine and at minimum must include all valid types supported by the container image field.\nThe OCI object gets mounted in a single directory (spec.containers[*].volumeMounts.mountPath) by merging the manifest layers in the same way as for container images.\nThe volume will be mounted read-only (ro).\nSub path mounts for containers are not supported (spec.containers[*].volumeMounts.subpath) before 1.33.\nThe field spec.securityContext.fsGroupChangePolicy has no effect on this volume type.\n+optional",
           "allOf": [
             {
               "$ref": "#/definitions/V1ImageVolumeSource"
@@ -12298,7 +12407,7 @@
           ]
         },
         "portworxVolume": {
-          "description": "portworxVolume represents a portworx volume attached and mounted on kubelets host machine.\nDeprecated: PortworxVolume is deprecated. All operations for the in-tree portworxVolume type\nare redirected to the pxd.portworx.com CSI driver when the CSIMigrationPortworx feature-gate\nis on.\n+optional",
+          "description": "portworxVolume represents a portworx volume attached and mounted on kubelets host machine.\nDeprecated: PortworxVolume is deprecated. All operations for the in-tree portworxVolume type\nare redirected to the pxd.portworx.com CSI driver.\n+optional",
           "allOf": [
             {
               "$ref": "#/definitions/V1PortworxVolumeSource"
@@ -12396,7 +12505,7 @@
           "type": "boolean"
         },
         "recursiveReadOnly": {
-          "description": "RecursiveReadOnly specifies whether read-only mounts should be handled\nrecursively.\n\nIf ReadOnly is false, this field has no meaning and must be unspecified.\n\nIf ReadOnly is true, and this field is set to Disabled, the mount is not made\nrecursively read-only.  If this field is set to IfPossible, the mount is made\nrecursively read-only, if it is supported by the container runtime.  If this\nfield is set to Enabled, the mount is made recursively read-only if it is\nsupported by the container runtime, otherwise the pod will not be started and\nan error will be generated to indicate the reason.\n\nIf this field is set to IfPossible or Enabled, MountPropagation must be set to\nNone (or be unspecified, which defaults to None).\n\nIf this field is not specified, it is treated as an equivalent of Disabled.\n\n+featureGate=RecursiveReadOnlyMounts\n+optional",
+          "description": "RecursiveReadOnly specifies whether read-only mounts should be handled\nrecursively.\n\nIf ReadOnly is false, this field has no meaning and must be unspecified.\n\nIf ReadOnly is true, and this field is set to Disabled, the mount is not made\nrecursively read-only.  If this field is set to IfPossible, the mount is made\nrecursively read-only, if it is supported by the container runtime.  If this\nfield is set to Enabled, the mount is made recursively read-only if it is\nsupported by the container runtime, otherwise the pod will not be started and\nan error will be generated to indicate the reason.\n\nIf this field is set to IfPossible or Enabled, MountPropagation must be set to\nNone (or be unspecified, which defaults to None).\n\nIf this field is not specified, it is treated as an equivalent of Disabled.\n+optional",
           "type": "string"
         },
         "subPath": {
@@ -12437,7 +12546,7 @@
           ]
         },
         "podCertificate": {
-          "description": "Projects an auto-rotating credential bundle (private key and certificate\nchain) that the pod can use either as a TLS client or server.\n\nKubelet generates a private key and uses it to send a\nPodCertificateRequest to the named signer.  Once the signer approves the\nrequest and issues a certificate chain, Kubelet writes the key and\ncertificate chain to the pod filesystem.  The pod does not start until\ncertificates have been issued for each podCertificate projected volume\nsource in its spec.\n\nKubelet will begin trying to rotate the certificate at the time indicated\nby the signer using the PodCertificateRequest.Status.BeginRefreshAt\ntimestamp.\n\nKubelet can write a single file, indicated by the credentialBundlePath\nfield, or separate files, indicated by the keyPath and\ncertificateChainPath fields.\n\nThe credential bundle is a single file in PEM format.  The first PEM\nentry is the private key (in PKCS#8 format), and the remaining PEM\nentries are the certificate chain issued by the signer (typically,\nsigners will return their certificate chain in leaf-to-root order).\n\nPrefer using the credential bundle format, since your application code\ncan read it atomically.  If you use keyPath and certificateChainPath,\nyour application must make two separate file reads. If these coincide\nwith a certificate rotation, it is possible that the private key and leaf\ncertificate you read may not correspond to each other.  Your application\nwill need to check for this condition, and re-read until they are\nconsistent.\n\nThe named signer controls chooses the format of the certificate it\nissues; consult the signer implementation's documentation to learn how to\nuse the certificates it issues.\n\n+featureGate=PodCertificateProjection +optional",
+          "description": "Projects an auto-rotating credential bundle (private key and certificate\nchain) that the pod can use either as a TLS client or server.\n\nKubelet generates a private key and uses it to send a\nPodCertificateRequest to the named signer.  Once the signer approves the\nrequest and issues a certificate chain, Kubelet writes the key and\ncertificate chain to the pod filesystem.  The pod does not start until\ncertificates have been issued for each podCertificate projected volume\nsource in its spec.\n\nKubelet will begin trying to rotate the certificate at the time indicated\nby the signer using the PodCertificateRequest.Status.BeginRefreshAt\ntimestamp.\n\nKubelet can write a single file, indicated by the credentialBundlePath\nfield, or separate files, indicated by the keyPath and\ncertificateChainPath fields.\n\nThe credential bundle is a single file in PEM format.  The first PEM\nentry is the private key (in PKCS#8 format), and the remaining PEM\nentries are the certificate chain issued by the signer (typically,\nsigners will return their certificate chain in leaf-to-root order).\n\nPrefer using the credential bundle format, since your application code\ncan read it atomically.  If you use keyPath and certificateChainPath,\nyour application must make two separate file reads. If these coincide\nwith a certificate rotation, it is possible that the private key and leaf\ncertificate you read may not correspond to each other.  Your application\nwill need to check for this condition, and re-read until they are\nconsistent.\n\nThe named signer controls chooses the format of the certificate it\nissues; consult the signer implementation's documentation to learn how to\nuse the certificates it issues.\n\n+featureGate=PodCertificateProjection\n+optional",
           "allOf": [
             {
               "$ref": "#/definitions/V1PodCertificateProjection"

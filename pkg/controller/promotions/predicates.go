@@ -1,6 +1,8 @@
 package promotions
 
 import (
+	"maps"
+
 	"sigs.k8s.io/controller-runtime/pkg/event"
 
 	argocd "github.com/akuity/kargo/pkg/controller/argocd/api/v1alpha1"
@@ -172,5 +174,62 @@ func (p ArgoCDAppReconciledAfterOperation[T]) Delete(event.TypedDeleteEvent[T]) 
 }
 
 func (p ArgoCDAppReconciledAfterOperation[T]) Generic(event.TypedGenericEvent[T]) bool {
+	return false
+}
+
+// ArgoCDAppLabelsChanged is a predicate that fires when an ArgoCD Application's
+// labels change. A label selector's match set depends on Application labels, so
+// a relabeling can move an Application into or out of a selector-based
+// Promotion's target set. This enables the Promotion reconciler to react
+// promptly to such membership changes instead of waiting for a polling
+// interval.
+type ArgoCDAppLabelsChanged[T any] struct {
+	logger *logging.Logger
+}
+
+func (p ArgoCDAppLabelsChanged[T]) Create(event.TypedCreateEvent[T]) bool {
+	return false
+}
+
+func (p ArgoCDAppLabelsChanged[T]) Update(e event.TypedUpdateEvent[T]) bool {
+	oldApp := any(e.ObjectOld).(*argocd.Application) // nolint: forcetypeassert
+	newApp := any(e.ObjectNew).(*argocd.Application) // nolint: forcetypeassert
+	if oldApp == nil || newApp == nil {
+		p.logger.Error(
+			nil, "Update event has no new or old object",
+			"event", e,
+		)
+		return false
+	}
+	return !maps.Equal(oldApp.Labels, newApp.Labels)
+}
+
+func (p ArgoCDAppLabelsChanged[T]) Delete(event.TypedDeleteEvent[T]) bool {
+	return false
+}
+
+func (p ArgoCDAppLabelsChanged[T]) Generic(event.TypedGenericEvent[T]) bool {
+	return false
+}
+
+// ArgoCDAppCreatedOrDeleted is a predicate that fires when an ArgoCD
+// Application is created or deleted. Either event can change the match set of a
+// label selector, so it enables the Promotion reconciler to react promptly when
+// an Application that a selector-based Promotion targets appears or disappears.
+type ArgoCDAppCreatedOrDeleted[T any] struct{}
+
+func (p ArgoCDAppCreatedOrDeleted[T]) Create(event.TypedCreateEvent[T]) bool {
+	return true
+}
+
+func (p ArgoCDAppCreatedOrDeleted[T]) Update(event.TypedUpdateEvent[T]) bool {
+	return false
+}
+
+func (p ArgoCDAppCreatedOrDeleted[T]) Delete(event.TypedDeleteEvent[T]) bool {
+	return true
+}
+
+func (p ArgoCDAppCreatedOrDeleted[T]) Generic(event.TypedGenericEvent[T]) bool {
 	return false
 }

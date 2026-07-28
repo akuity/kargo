@@ -24,6 +24,8 @@ export const useExtensionsContext = () => {
     projectSettingsExtensions:
       ctx?.extensions.filter((extension) => extension.type === 'projectSettings') || [],
     argoCDExtension:
-      ctx?.extensions.filter((extension) => extension.type === 'argocdExtension')[0] || null
+      ctx?.extensions.filter((extension) => extension.type === 'argocdExtension')[0] || null,
+    promotionStepExtensions:
+      ctx?.extensions.filter((extension) => extension.type === 'promotionStep') || []
   };
 };

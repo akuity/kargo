@@ -6,7 +6,6 @@ import (
 	"errors"
 	"io"
 	"net/http"
-	"sync"
 
 	"github.com/hashicorp/go-cleanhttp"
 	"helm.sh/helm/v3/pkg/registry"
@@ -24,13 +23,19 @@ import (
 // requests to the registry, and the client is configured to write logs to
 // io.Discard, meaning that it will not output any logs to the console or
 // standard output.
-func NewRegistryClient(authorizer auth.Client) (*registry.Client, error) {
+//
+// When plainHTTP is true, the client communicates with the registry over plain
+// HTTP instead of HTTPS.
+func NewRegistryClient(authorizer auth.Client, plainHTTP bool) (*registry.Client, error) {
 	opts := []registry.ClientOption{
 		registry.ClientOptWriter(io.Discard),
 		registry.ClientOptAuthorizer(authorizer),
 		// NB: Options like ClientOptCache and ClientOptHTTPClient do not have
 		// an effect on the registry client when using the authorizer, as they
 		// are only set when NewClient constructs a new authorizer internally.
+	}
+	if plainHTTP {
+		opts = append(opts, registry.ClientOptPlainHTTP())
 	}
 	return registry.NewClient(opts...)
 }
@@ -43,6 +48,10 @@ func NewRegistryClient(authorizer auth.Client) (*registry.Client, error) {
 type EphemeralAuthorizer struct {
 	auth.Client
 	credentials.Store
+
+	// insecure records whether TLS verification is skipped, so scheme probing
+	// during Login uses the same TLS posture as the authorizer's real requests.
+	insecure bool
 }
 
 // NewEphemeralAuthorizer creates a new EphemeralAuthorizer with an in-memory
@@ -51,14 +60,8 @@ type EphemeralAuthorizer struct {
 // credentials permanently. When insecure is true, TLS certificate verification
 // errors are ignored. This should be enabled only with great caution.
 func NewEphemeralAuthorizer(insecure bool) *EphemeralAuthorizer {
-	transport := cleanhttp.DefaultTransport()
-	if insecure {
-		transport.TLSClientConfig = &tls.Config{
-			InsecureSkipVerify: true, // #nosec G402 -- explicitly allowed by insecureSkipTLSVerify
-		}
-	}
 	httpClient := &http.Client{
-		Transport: retry.NewTransport(newTransport(transport)),
+		Transport: retry.NewTransport(newRegistryTransport(insecure)),
 	}
 
 	store := credentials.NewMemoryStore()
@@ -71,8 +74,9 @@ func NewEphemeralAuthorizer(insecure bool) *EphemeralAuthorizer {
 	client.SetUserAgent("Kargo/" + version.GetVersion().Version)
 
 	return &EphemeralAuthorizer{
-		Client: client,
-		Store:  store,
+		Client:   client,
+		Store:    store,
+		insecure: insecure,
 	}
 }
 
@@ -86,6 +90,7 @@ func (a *EphemeralAuthorizer) Login(ctx context.Context, host, username, passwor
 	if err != nil {
 		return err
 	}
+	reg.PlainHTTP = IsPlainHTTP(ctx, host, a.insecure)
 	// NB: We set the authorizer on the registry client to ensure that the
 	// HTTP transport is used by the login operation below.
 	reg.Client = &a.Client
@@ -96,50 +101,54 @@ func (a *EphemeralAuthorizer) Login(ctx context.Context, host, username, passwor
 	})
 }
 
-// fallbackTransport is a custom HTTP transport that allows for retrying
-// requests that fail with a TLS RecordHeaderError by switching from HTTPS to
-// HTTP.
-//
-// This was the default behavior for ORAS v1, but was removed in v2. We keep
-// this transport to maintain compatibility with existing workflows that
-// expect this behavior.
-type fallbackTransport struct {
-	Base      http.RoundTripper
-	httpHosts sync.Map
-}
-
-// newTransport creates a new fallbackTransport with the provided base
-// round tripper. It initializes the transport with a sync.Map to track hosts
-// that should be retried with HTTP instead of HTTPS.
-func newTransport(base http.RoundTripper) *fallbackTransport {
-	return &fallbackTransport{
-		Base: base,
-	}
-}
-
-// RoundTrip wraps base round trip with conditional insecure retry.
-func (t *fallbackTransport) RoundTrip(req *http.Request) (*http.Response, error) {
-	const (
-		httpScheme  = "http"
-		httpsScheme = "https"
-	)
-
-	host := req.URL.Host
-	if forceHTTP, ok := t.httpHosts.Load(host); ok && forceHTTP.(bool) { // nolint:forcetypeassert
-		req.URL.Scheme = httpScheme
-		return t.Base.RoundTrip(req)
-	}
-
-	resp, err := t.Base.RoundTrip(req)
-	if err != nil && req.URL.Scheme == httpsScheme {
-		var tlsErr tls.RecordHeaderError
-		if errors.As(err, &tlsErr) {
-			if string(tlsErr.RecordHeader[:]) == "HTTP/" {
-				t.httpHosts.Store(host, true)
-				req.URL.Scheme = httpScheme
-				return t.Base.RoundTrip(req)
-			}
+// newRegistryTransport returns an HTTP transport for talking to a registry.
+// When insecure is true, TLS certificate verification is skipped.
+func newRegistryTransport(insecure bool) *http.Transport {
+	transport := cleanhttp.DefaultTransport()
+	if insecure {
+		transport.TLSClientConfig = &tls.Config{
+			InsecureSkipVerify: true, // #nosec G402 -- explicitly allowed by insecureSkipTLSVerify
 		}
 	}
-	return resp, err
+	return transport
+}
+
+// IsPlainHTTP reports whether the OCI registry at host serves plain HTTP rather
+// than HTTPS. It probes https://<host>/v2/ and treats evidence that the server
+// spoke HTTP to an HTTPS request -- http.ErrSchemeMismatch, or a TLS
+// record-header error whose first bytes spell "HTTP/" -- as conclusive.
+// insecure must match the TLS posture of real registry traffic so the probe
+// behaves identically.
+//
+// On an inconclusive result (for example, an unreachable host) it returns
+// false, so callers default to HTTPS and surface the real error on the actual
+// request.
+//
+// Detecting the scheme up front is necessary because oras-go, since v2.6.1,
+// refuses to silently downgrade HTTPS to HTTP: it compares the scheme of the
+// request it builds against the registry's responses, so the scheme must be
+// chosen before the request is built.
+func IsPlainHTTP(ctx context.Context, host string, insecure bool) bool {
+	req, err := http.NewRequestWithContext(
+		ctx,
+		http.MethodGet,
+		"https://"+host+"/v2/",
+		nil,
+	)
+	if err != nil {
+		return false
+	}
+
+	client := &http.Client{Transport: newRegistryTransport(insecure)}
+	// #nosec G704 -- host identifies the operator-configured registry the caller
+	// is already about to contact; this probe only determines its scheme and
+	// introduces no new SSRF surface.
+	resp, err := client.Do(req)
+	if err != nil {
+		var tlsErr tls.RecordHeaderError
+		return errors.Is(err, http.ErrSchemeMismatch) ||
+			(errors.As(err, &tlsErr) && string(tlsErr.RecordHeader[:]) == "HTTP/")
+	}
+	_ = resp.Body.Close()
+	return false
 }

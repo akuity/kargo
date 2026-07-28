@@ -8,7 +8,7 @@ import { useRefreshProjectConfig } from '@ui/gen/api/v2/core/core';
 export const Refresh = (props: { project: string }) => {
   const refreshProjectConfigMutation = useRefreshProjectConfig({
     mutation: {
-      onSuccess: () => queryCache.projectConfig.refetch()
+      onSuccess: () => queryCache.projectConfig.refetch(props.project)
     }
   });
 

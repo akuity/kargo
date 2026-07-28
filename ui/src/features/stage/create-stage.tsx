@@ -1,4 +1,3 @@
-import { useMutation } from '@connectrpc/connect-query';
 import { faCode, faListCheck, faTimes } from '@fortawesome/free-solid-svg-icons';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
 import { zodResolver } from '@hookform/resolvers/zod';
@@ -13,11 +12,9 @@ import { z } from 'zod';
 import { paths } from '@ui/config/paths';
 import { YamlEditor } from '@ui/features/common/code-editor/yaml-editor';
 import { FieldContainer } from '@ui/features/common/form/field-container';
-import { createResource } from '@ui/gen/api/service/v1alpha1/service-KargoService_connectquery';
-import { PromotionStep, Stage } from '@ui/gen/api/v1alpha1/generated_pb';
-import { JSON } from '@ui/gen/k8s.io/apiextensions-apiserver/pkg/apis/apiextensions/v1/generated_pb';
+import { PromotionStep, Stage } from '@ui/gen/api/v2/models';
+import { useCreateResource } from '@ui/gen/api/v2/resources/resources';
 import schema from '@ui/gen/schema/stages.kargo.akuity.io_v1alpha1.json';
-import { PlainMessage } from '@ui/utils/connectrpc-utils';
 import { cleanEmptyObjectValues } from '@ui/utils/helpers';
 import { zodValidators } from '@ui/utils/validators';
 
@@ -44,7 +41,7 @@ const wizardSchema = z.object({
 const stageFormToYAML = (
   data: z.infer<typeof wizardSchema>,
   namespace: string,
-  promotionTemplateSteps: PlainMessage<PromotionStep>[]
+  promotionTemplateSteps: PromotionStep[]
 ) => {
   return yaml.stringify({
     kind: 'Stage',
@@ -82,11 +79,7 @@ export const CreateStage = ({
   const close = () => navigate(generatePath(paths.project, { name: project }));
   const [tab, setTab] = useState('wizard');
 
-  const { mutateAsync, isPending } = useMutation(createResource, {
-    onSuccess: () => {
-      close();
-    }
-  });
+  const { mutateAsync, isPending } = useCreateResource({ mutation: { onSuccess: () => close() } });
 
   const { control, handleSubmit, setValue, getValues } = useForm({
     defaultValues: {
@@ -121,16 +114,15 @@ export const CreateStage = ({
           as: step?.as || '',
           if: '',
           continueOnError: step.continueOnError || false,
-          config: step?.state as JSON, // step.state is type 'object' and it is safe to fake JSON type because it doesn't matter for stageFormToYAML function
+          config: step?.state, // step.state is type 'object' and it is safe to fake JSON type because it doesn't matter for stageFormToYAML function
           vars: []
         }))
       );
       setValue('value', unmarshalled);
       value = unmarshalled;
     }
-    const textEncoder = new TextEncoder();
     await mutateAsync({
-      manifest: textEncoder.encode(value)
+      data: value
     });
   });
 
@@ -173,7 +165,7 @@ export const CreateStage = ({
                   as: step?.as || '',
                   if: '',
                   continueOnError: step?.continueOnError || false,
-                  config: step?.state as JSON, // step.state is type 'object' and it is safe to fake JSON type because it doesn't matter for stageFormToYAML function
+                  config: step?.state, // step.state is type 'object' and it is safe to fake JSON type because it doesn't matter for stageFormToYAML function
                   vars: []
                 }))
               )

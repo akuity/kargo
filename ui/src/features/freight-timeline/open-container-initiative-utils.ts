@@ -40,6 +40,8 @@ export const getGitCommitURL = (url: string, revision: string) => {
       return `${baseUrl}/-/commit/${revision}`;
     } else if (resource.includes('bitbucket')) {
       return `${baseUrl}/commits/${revision}`;
+    } else if (resource.includes('dev.azure.com')) {
+      return `${url}/commit/${revision}`;
     }
   } catch {
     // fall through to return original url

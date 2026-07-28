@@ -7,8 +7,7 @@ import {
   getLastPromotionDate,
   isStageControlFlow
 } from '@ui/features/project/pipelines/nodes/stage-meta-utils';
-import { Stage } from '@ui/gen/api/v1alpha1/generated_pb';
-import { timestampDate } from '@ui/utils/connectrpc-utils';
+import { Stage } from '@ui/gen/api/v2/models';
 
 export const lastPromotionColumn = (): ColumnType<Stage> => ({
   title: 'Last Promotion',
@@ -24,7 +23,7 @@ export const lastPromotionColumn = (): ColumnType<Stage> => ({
       return '-';
     }
 
-    const date = timestampDate(lastPromotion) as Date;
+    const date = lastPromotion;
 
     return (
       <Link
@@ -49,8 +48,13 @@ export const lastPromotionColumn = (): ColumnType<Stage> => ({
     const stage1LastPromotionDate = getLastPromotionDate(stage1);
     const stage2LastPromotionDate = getLastPromotionDate(stage2);
 
-    return Number(stage2LastPromotionDate?.seconds) > Number(stage1LastPromotionDate?.seconds)
-      ? 1
-      : -1;
+    if (!stage1LastPromotionDate) {
+      return 1;
+    }
+    if (!stage2LastPromotionDate) {
+      return -1;
+    }
+
+    return stage2LastPromotionDate > stage1LastPromotionDate ? 1 : -1;
   }
 });

@@ -1,21 +1,16 @@
-import { useQuery } from '@connectrpc/connect-query';
-import {
-  faCircleNotch,
-  faCodePullRequest,
-  faExternalLink
-} from '@fortawesome/free-solid-svg-icons';
+import { faCodePullRequest, faExternalLink } from '@fortawesome/free-solid-svg-icons';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
 import { Spin, Tag } from 'antd';
 import Link from 'antd/es/typography/Link';
 import classNames from 'classnames';
 import { useMemo } from 'react';
 
+import { isPromotionStepStatusTerminal } from '@ui/features/common/promotion-status/utils';
 import { getPromotionOutputsByStepAlias } from '@ui/features/stage/utils/promotion';
-import { getPromotion } from '@ui/gen/api/service/v1alpha1/service-KargoService_connectquery';
-import { Promotion, Stage } from '@ui/gen/api/v1alpha1/generated_pb';
+import { Stage } from '@ui/gen/api/v2/models';
 import { getPromotionStepAlias } from '@ui/plugins/atoms/plugin-helper';
 
-import { getCurrentPromotion } from './stage-meta-utils';
+import { useCurrentPromotion } from './stage-meta-utils';
 
 type PullRequestLinkProps = {
   stage: Stage;
@@ -23,28 +18,22 @@ type PullRequestLinkProps = {
 };
 
 export const PullRequestLink = (props: PullRequestLinkProps) => {
-  const currentPromotion = getCurrentPromotion(props.stage);
-
-  const getPromotionQuery = useQuery(
-    getPromotion,
-    { project: props.stage?.metadata?.namespace, name: currentPromotion },
-    {
-      enabled: !!currentPromotion
-    }
-  );
-
-  const promotion = getPromotionQuery.data?.result?.value as Promotion;
+  const { promotion, isFetching } = useCurrentPromotion(props.stage);
 
   const outputsByStepAlias: Record<string, object> = useMemo(
     () => getPromotionOutputsByStepAlias(promotion),
     [promotion]
   );
 
-  const indexOfPullRequest = promotion?.spec?.steps?.findIndex(
-    (step: { uses?: string }) => step?.uses === 'git-open-pr' || step?.uses === 'git-wait-for-pr'
-  );
+  // "Waiting for Approval" tracks the git-wait-for-pr step, which is the only
+  // step that actually waits on a pull request. git-open-pr succeeds as soon as
+  // the PR is opened and never represents a waiting state.
+  const indexOfPullRequest =
+    promotion?.spec?.steps?.findIndex(
+      (step: { uses?: string }) => step?.uses === 'git-wait-for-pr'
+    ) ?? -1;
 
-  if (getPromotionQuery.isFetching) {
+  if (isFetching) {
     return <Spin size='small' />;
   }
 
@@ -58,7 +47,6 @@ export const PullRequestLink = (props: PullRequestLinkProps) => {
   }
 
   const step = promotion.spec.steps[indexOfPullRequest];
-  const stepType = step?.uses;
   const stepMetadata = promotion?.status?.stepExecutionMetadata?.[indexOfPullRequest];
   const stepStatus = stepMetadata?.status;
 
@@ -72,18 +60,10 @@ export const PullRequestLink = (props: PullRequestLinkProps) => {
     return null;
   }
 
-  // For git-open-pr: only show when succeeded
-  // For git-wait-for-pr: show when running (has PR URL) or succeeded
-  const isGitWaitForPr = stepType === 'git-wait-for-pr';
-  const isGitOpenPr = stepType === 'git-open-pr';
-  const hasPullRequestStepSucceeded = stepStatus === 'Succeeded';
-  const hasPullRequestStepRunning = stepStatus === 'Running';
-
-  const isStatusAcceptable =
-    (isGitOpenPr && hasPullRequestStepSucceeded) ||
-    (isGitWaitForPr && (hasPullRequestStepSucceeded || hasPullRequestStepRunning));
-
-  if (!isStatusAcceptable) {
+  // Only surface "Waiting for Approval" while the pull request step has not yet
+  // terminated. Once it reaches a terminal status (e.g. the PR is merged or the
+  // step fails), the Promotion is no longer waiting on approval.
+  if (isPromotionStepStatusTerminal(stepStatus)) {
     return null;
   }
 
@@ -91,8 +71,7 @@ export const PullRequestLink = (props: PullRequestLinkProps) => {
     <Link href={pullRequestLink} target='_blank' className={classNames(props.className)}>
       <Tag color='green' bordered={false}>
         <span className='text-[8px]'>
-          Waiting for Approval <FontAwesomeIcon className='ml-1' icon={faCodePullRequest} />
-          <FontAwesomeIcon icon={faCircleNotch} spin className='ml-1' />
+          Waiting for PR Approval <FontAwesomeIcon className='ml-1' icon={faCodePullRequest} />
           <FontAwesomeIcon icon={faExternalLink} className='ml-1' />
         </span>
       </Tag>

@@ -2,7 +2,7 @@ import { faAsterisk, faCode, faExternalLink } from '@fortawesome/free-solid-svg-
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { useMutation } from '@tanstack/react-query';
-import { Checkbox, Input, Modal, Segmented, Typography } from 'antd';
+import { AutoComplete, Checkbox, Input, Modal, Segmented, Typography } from 'antd';
 import { Controller, useForm } from 'react-hook-form';
 
 import { FieldContainer } from '@ui/features/common/form/field-container';
@@ -20,7 +20,7 @@ import {
 } from '@ui/gen/api/v2/credentials/credentials';
 import { V1Secret } from '@ui/gen/api/v2/models';
 
-import { createFormSchema } from './schema-validator';
+import { createFormSchema, SecretFormValues } from './schema-validator';
 import { SecretEditor } from './secret-editor';
 import { CredentialsType } from './types';
 import { constructDefaults, labelForKey, typeLabel } from './utils';
@@ -51,6 +51,19 @@ const genericCredentialPlaceholders = {
   description: placeholders.description
 };
 
+// Common Kubernetes Secret types offered as suggestions. The field is free-form,
+// so any valid Secret type may be entered. Secret type is immutable and can only
+// be set at creation time.
+const k8sSecretTypeOptions = [
+  'Opaque',
+  'kubernetes.io/dockerconfigjson',
+  'kubernetes.io/dockercfg',
+  'kubernetes.io/basic-auth',
+  'kubernetes.io/ssh-auth',
+  'kubernetes.io/tls',
+  'kubernetes.io/service-account-token'
+].map((value) => ({ value }));
+
 const repoUrlPatternPlaceholder = '(?:https?://)?(?:www.)?github.com/[w.-]+/[w.-]+(?:.git)?';
 
 type Props = ModalComponentProps & {
@@ -62,8 +75,8 @@ type Props = ModalComponentProps & {
 };
 
 export const CreateCredentialsModal = ({ project, onSuccess, editing, init, ...props }: Props) => {
-  const { control, handleSubmit, watch } = useForm({
-    defaultValues: { ...constructDefaults(init, props.type === 'generic' ? props.type : 'git') },
+  const { control, handleSubmit, watch } = useForm<SecretFormValues>({
+    defaultValues: constructDefaults(init, props.type === 'generic' ? props.type : 'git'),
     resolver: zodResolver(createFormSchema(props.type === 'generic', editing))
   });
 
@@ -114,6 +127,7 @@ export const CreateCredentialsModal = ({ project, onSuccess, editing, init, ...p
       data: Record<string, string>;
       description?: string;
       replicate?: boolean;
+      type?: string;
     }) =>
       project
         ? createProjectGenericCredentials(project, payload)
@@ -143,16 +157,11 @@ export const CreateCredentialsModal = ({ project, onSuccess, editing, init, ...p
     if (credentialType === 'generic') {
       const data: Record<string, string> = {};
 
-      // @ts-expect-error zod infer problem
-      if (values?.data?.length > 0) {
-        // @ts-expect-error zod infer problem
-        for (const [k, v] of values.data) {
-          data[k] = v;
-        }
+      for (const [k, v] of values.data ?? []) {
+        data[k] = v;
       }
 
-      // @ts-expect-error zod infer problem
-      const replicate = values.replicate as boolean | undefined;
+      const replicate = values.replicate;
 
       if (editing) {
         return updateGenericMutation.mutate({ data, description: values.description, replicate });
@@ -162,15 +171,16 @@ export const CreateCredentialsModal = ({ project, onSuccess, editing, init, ...p
         name: values.name,
         data,
         description: values.description,
-        replicate
+        replicate,
+        type: values.secretType
       });
     }
 
     if (editing) {
-      return updateRepoMutation.mutate(values as ReturnType<typeof constructDefaults>);
+      return updateRepoMutation.mutate(values);
     }
 
-    return createRepoMutation.mutate(values as ReturnType<typeof constructDefaults>);
+    return createRepoMutation.mutate(values);
   });
 
   const isPending =
@@ -271,9 +281,33 @@ export const CreateCredentialsModal = ({ project, onSuccess, editing, init, ...p
           </div>
         )
       )}
+      {credentialType === 'generic' && (
+        <div className='mb-4'>
+          <label className='block mb-2'>Type</label>
+          <Controller
+            name='secretType'
+            control={control}
+            render={({ field }) => (
+              <AutoComplete
+                className='w-full'
+                options={k8sSecretTypeOptions}
+                placeholder='Opaque'
+                disabled={editing}
+                filterOption={(inputValue, option) =>
+                  (option?.value ?? '').toLowerCase().includes(inputValue.toLowerCase())
+                }
+                value={field.value}
+                onChange={(value) => field.onChange(value)}
+              />
+            )}
+          />
+          <Typography.Text type='secondary' className='text-xs'>
+            The Kubernetes Secret type
+          </Typography.Text>
+        </div>
+      )}
       {credentialType === 'generic' && !project && (
         <Controller
-          // @ts-expect-error zod infer problem
           name='replicate'
           control={control}
           render={({ field }) => (
@@ -293,12 +327,8 @@ export const CreateCredentialsModal = ({ project, onSuccess, editing, init, ...p
         />
       )}
       {credentialType === 'generic' && (
-        // @ts-expect-error expected type is there
         <FieldContainer control={control} name='data' label='Data'>
-          {({ field }) => (
-            // @ts-expect-error expected type is there
-            <SecretEditor secret={field.value as [string, string][]} onChange={field.onChange} />
-          )}
+          {({ field }) => <SecretEditor secret={field.value ?? []} onChange={field.onChange} />}
         </FieldContainer>
       )}
     </Modal>

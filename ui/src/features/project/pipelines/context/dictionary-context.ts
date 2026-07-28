@@ -1,8 +1,6 @@
 import { createContext, useContext } from 'react';
 
-import { ArgoCDShard } from '@ui/gen/api/service/v1alpha1/service_pb';
-import { Freight, Stage } from '@ui/gen/api/v1alpha1/generated_pb';
-import { Heartbeat } from '@ui/gen/api/v2/models';
+import { ArgoCDShard, Freight, Heartbeat, Stage } from '@ui/gen/api/v2/models';
 
 export type DictionaryContextType = {
   freightInStages: Record<string, Stage[]>;

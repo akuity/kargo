@@ -7,7 +7,7 @@ import {
   FreightTimelineControllerContextType,
   useFreightTimelineControllerContext
 } from '@ui/features/project/pipelines/context/freight-timeline-controller-context';
-import { Freight } from '@ui/gen/api/v1alpha1/generated_pb';
+import { Freight } from '@ui/gen/api/v2/models';
 
 import { FreightTimelineFilters } from './freight-timeline-filters';
 

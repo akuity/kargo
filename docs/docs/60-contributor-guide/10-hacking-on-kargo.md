@@ -226,9 +226,11 @@ this.
 
     :::info
 
-    The `hack-kind-up` target will ensure the installation of suitable versions
-    of `kind` and [ctlptl](https://github.com/tilt-dev/ctlptl#how-do-i-install-it)
-    (used for declarative kind configuration) into `hack/bin/`.
+    The `hack-kind-up` target will ensure suitable versions of `kind` and
+    [ctlptl](https://github.com/tilt-dev/ctlptl#how-do-i-install-it) (used for
+    declarative kind configuration) are available. Both are pinned as `go tool`
+    dependencies in the root `go.mod` and built on demand -- no manual
+    installation is needed.
 
     :::
 
@@ -258,10 +260,11 @@ this.
 
     :::info
 
-    The `hack-k3d-up` target will ensure the installation of suitable versions
-    of `k3d` and
+    The `hack-k3d-up` target will ensure suitable versions of `k3d` and
     [ctlptl](https://github.com/tilt-dev/ctlptl#how-do-i-install-it) (used for
-    declarative k3d configuration) into `hack/bin/`.
+    declarative k3d configuration) are available. `k3d` is installed into
+    `hack/bin/`, while `ctlptl` is pinned as a `go tool` dependency in the root
+    `go.mod` and built on demand.
 
     :::
 

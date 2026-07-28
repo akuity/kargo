@@ -135,18 +135,25 @@ This step does not produce any output.
 This example deletes evidence when a promotion fails, using the evidence name from a previous step.
 
 ```yaml
-steps:
-- uses: jfrog-evidence
-  as: cleanup-failed-evidence
-  if: ${{ failure() && status('create-test-evidence') == 'Succeeded' }}
-  config:
-    credentials:
-      secretName: jfrog-credentials
-    delete:
-      packageRepo: ${{ vars.packageRepo }}
-      packageName: ${{ vars.packageName }}
-      packageVersion: ${{ imageFrom(vars.packageRegistry+"/"+vars.packageRepo+"/"+vars.packageName).Tag }}
-      evidenceName: ${{ outputs['create-test-evidence'].name }}
+apiVersion: kargo.akuity.io/v1alpha1
+kind: Stage
+# ...
+spec:
+  # ...
+  promotionTemplate:
+    spec:
+      steps:
+      - uses: jfrog-evidence
+        as: cleanup-failed-evidence
+        if: ${{ failure() && status('create-test-evidence') == 'Succeeded' }}
+        config:
+          credentials:
+            secretName: jfrog-credentials
+          delete:
+            packageRepo: ${{ vars.packageRepo }}
+            packageName: ${{ vars.packageName }}
+            packageVersion: ${{ imageFrom(vars.packageRegistry+"/"+vars.packageRepo+"/"+vars.packageName).Tag }}
+            evidenceName: ${{ outputs['create-test-evidence'].name }} # Or task.outputs in a (Cluster)PromotionTask
 ```
 
 ### Process Evidence (Query and Verify)
@@ -195,53 +202,60 @@ The outputs are dynamic based on the `process.outputs` configuration. Each outpu
 This example verifies test evidence and extracts relevant information for subsequent steps.
 
 ```yaml
-steps:
-- uses: jfrog-evidence
-  as: verify-test-evidence
-  config:
-    credentials:
-      secretName: jfrog-credentials
-    process:
-      query:
-        packageRepo: ${{ vars.packageRepo }}
-        packageName: ${{ vars.packageName }}
-        packageVersion: ${{ imageFrom(vars.packageRegistry+"/"+vars.packageRepo+"/"+vars.packageName).Tag }}
-        predicateType: "https://in-toto.io/attestation/test-result/v0.1"
-        evidenceNameRegex: ".*-test-result-.*"
-      verify:
-        localKeys:
-          - ${{ secret("jfrog-credentials").privateKey }}
-        useArtifactoryKeys: true
-        verifyExpression: |
-          evidence.predicate.result == "pass" && 
-          evidence.predicate.coverage >= 80
-      outputs:
-        - name: testResult
-          expression: evidence.predicate.result
-        - name: coverage
-          expression: evidence.predicate.coverage
-        - name: createdAt
-          expression: evidence.createdAt
-        - name: environment
-          expression: evidence.predicate.metadata.env
+apiVersion: kargo.akuity.io/v1alpha1
+kind: Stage
+# ...
+spec:
+  # ...
+  promotionTemplate:
+    spec:
+      steps:
+      - uses: jfrog-evidence
+        as: verify-test-evidence
+        config:
+          credentials:
+            secretName: jfrog-credentials
+          process:
+            query:
+              packageRepo: ${{ vars.packageRepo }}
+              packageName: ${{ vars.packageName }}
+              packageVersion: ${{ imageFrom(vars.packageRegistry+"/"+vars.packageRepo+"/"+vars.packageName).Tag }}
+              predicateType: "https://in-toto.io/attestation/test-result/v0.1"
+              evidenceNameRegex: ".*-test-result-.*"
+            verify:
+              localKeys:
+                - ${{ secret("jfrog-credentials").privateKey }}
+              useArtifactoryKeys: true
+              verifyExpression: |
+                evidence.predicate.result == "pass" &&
+                evidence.predicate.coverage >= 80
+            outputs:
+              - name: testResult
+                expression: evidence.predicate.result
+              - name: coverage
+                expression: evidence.predicate.coverage
+              - name: createdAt
+                expression: evidence.createdAt
+              - name: environment
+                expression: evidence.predicate.metadata.env
 
-# Use the extracted values in subsequent steps
-- uses: http
-  config:
-    method: POST
-    url: https://api.slack.com/api/chat.postMessage
-    headers:
-    - name: Authorization
-      value: "Bearer ${{ secret('slack-token').token }}"
-    - name: Content-Type
-      value: application/json
-    body: |
-      ${{ quote({
-        "channel": "#deployments",
-        "text": "Test evidence verified! Result: " + outputs['verify-test-evidence'].testResult + 
-                ", Coverage: " + string(outputs['verify-test-evidence'].coverage) + "%" +
-                ", Environment: " + outputs['verify-test-evidence'].environment
-      }) }}
+      # Use the extracted values in subsequent steps
+      - uses: http
+        config:
+          method: POST
+          url: https://api.slack.com/api/chat.postMessage
+          headers:
+          - name: Authorization
+            value: "Bearer ${{ secret('slack-token').token }}"
+          - name: Content-Type
+            value: application/json
+          body: |
+            ${{ quote({
+              "channel": "#deployments",
+              "text": "Test evidence verified! Result: " + outputs['verify-test-evidence'].testResult +
+                      ", Coverage: " + string(outputs['verify-test-evidence'].coverage) + "%" +
+                      ", Environment: " + outputs['verify-test-evidence'].environment
+            }) }}
 ```
 
 #### Trusted Release Evidence Verification

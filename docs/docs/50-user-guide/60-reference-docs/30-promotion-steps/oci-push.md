@@ -78,19 +78,26 @@ garbage collection policies that limit images per repository). The step output
 is then used by `kustomize-set-image` to update the deployment manifest.
 
 ```yaml
-steps:
-- uses: oci-push
-  as: push-to-stage
-  config:
-    srcRef: registry.example.com/widget-service@${{ imageFrom("registry.example.com/widget-service").digest }}
-    destRef: registry.example.com/widget-service/${{ ctx.stage }}:${{ imageFrom("registry.example.com/widget-service").tag }}
-- uses: kustomize-set-image
-  config:
-    path: ./out
-    images:
-    - image: registry.example.com/widget-service
-      newName: registry.example.com/widget-service/${{ ctx.stage }}
-      digest: ${{ outputs["push-to-stage"].digest }}
+apiVersion: kargo.akuity.io/v1alpha1
+kind: Stage
+# ...
+spec:
+  # ...
+  promotionTemplate:
+    spec:
+      steps:
+      - uses: oci-push
+        as: push-to-stage
+        config:
+          srcRef: registry.example.com/widget-service@${{ imageFrom("registry.example.com/widget-service").digest }}
+          destRef: registry.example.com/widget-service/${{ ctx.stage }}:${{ imageFrom("registry.example.com/widget-service").tag }}
+      - uses: kustomize-set-image
+        config:
+          path: ./out
+          images:
+          - image: registry.example.com/widget-service
+            newName: registry.example.com/widget-service/${{ ctx.stage }}
+            digest: ${{ outputs["push-to-stage"].digest }} # Or task.outputs in a (Cluster)PromotionTask
 ```
 
 ### Promoting an OCI Helm Chart

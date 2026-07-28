@@ -38,6 +38,7 @@ system to access the git repos.
 | `provider` | `string` | N | The name of the Git provider to use. Currently `azure`, `bitbucket`, `gitea`, `github`, and `gitlab` are supported. Kargo will try to infer the provider if it is not explicitly specified. |
 | `insecureSkipTLSVerify` | `boolean` | N | Indicates whether to bypass TLS certificate verification when interfacing with the Git provider. Setting this to `true` is highly discouraged in production. |
 | `prNumber` | `integer` | Y | The pull request number to wait for. |
+| `pollInterval` | `string` | N | The suggested interval at which to poll the PR's status while waiting (e.g. `30s`, `2m`). This is only a suggestion: Kargo enforces a lower bound of 10 seconds and may reconcile sooner in response to other events, such as the PR-closed webhooks described above. Defaults to `30s`. |
 
 ## Output
 
@@ -65,23 +66,30 @@ reviewed and merged before proceeding with subsequent steps in your promotion
 process, such as [updating Argo CD applications](argocd-update.md).
 
 ```yaml
-steps:
-# Clone, prepare the contents of ./out, commit, etc...
-- uses: git-push
-  as: push
-  config:
-    path: ./out
-    generateTargetBranch: true
-- uses: git-open-pr
-  as: open-pr
-  config:
-    repoURL: https://github.com/example/repo.git
-    createTargetBranch: true
-    sourceBranch: ${{ outputs.push.branch }}
-    targetBranch: stage/${{ ctx.stage }}
-- uses: git-wait-for-pr
-  as: wait-for-pr
-  config:
-    repoURL: https://github.com/example/repo.git
-    prNumber: ${{ outputs['open-pr'].pr.id }}
+apiVersion: kargo.akuity.io/v1alpha1
+kind: Stage
+# ...
+spec:
+  # ...
+  promotionTemplate:
+    spec:
+      steps:
+      # Clone, prepare the contents of ./out, commit, etc...
+      - uses: git-push
+        as: push
+        config:
+          path: ./out
+          generateTargetBranch: true
+      - uses: git-open-pr
+        as: open-pr
+        config:
+          repoURL: https://github.com/example/repo.git
+          createTargetBranch: true
+          sourceBranch: ${{ outputs.push.branch }} # Or task.outputs in a (Cluster)PromotionTask
+          targetBranch: stage/${{ ctx.stage }}
+      - uses: git-wait-for-pr
+        as: wait-for-pr
+        config:
+          repoURL: https://github.com/example/repo.git
+          prNumber: ${{ outputs['open-pr'].pr.id }}
 ```

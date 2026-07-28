@@ -17,14 +17,14 @@ jobs:
   test-unit:
     runs-on: ubuntu-latest
     container:
-      image: &golangImage golang:1.26.3-trixie
+      image: &golangImage golang:1.26.5-trixie
     steps:
     # Install Git from "trixie" repository to get a more recent version than
     # the one available in "stable". This can be removed once the version in
     # "stable" is updated to >= 2.42.0 (which supports `--orphan` for `git
     # worktree add`).
     - name: Harden the runner (Audit all outbound calls)
-      uses: step-security/harden-runner@9af89fc71515a100421586dfdb3dc9c984fbf411 # v2.19.4
+      uses: step-security/harden-runner@bf7454d06d71f1098171f2acdf0cd4708d7b5920 # v2.20.0
       with:
         egress-policy: audit
 
@@ -33,8 +33,8 @@ jobs:
         echo "deb http://deb.debian.org/debian trixie main" > /etc/apt/sources.list.d/trixie.list
         apt update && apt install -y -t trixie git
     - name: Checkout code
-      uses: actions/checkout@df4cb1c069e1874edd31b4311f1884172cec0e10 # v6.0.3
-    - uses: actions/cache@27d5ce7f107fe9357f9df03efb73ab90386fccae # v5.0.5
+      uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+    - uses: actions/cache@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
       with:
         path: /go/pkg/mod
         key: ${{ runner.os }}-go-${{ hashFiles('**/go.sum') }}
@@ -46,7 +46,7 @@ jobs:
       run: |
         for report in $(find . -maxdepth 4 -type f -name 'coverage.txt'); do
           tmp_file=$(dirname $report)/coverage.tmp
-          grep -v .pb.go $report | grep -v zz_ | grep -v .connect.go | grep -v 'pkg/client/generated/' > $tmp_file
+          grep -v .pb.go $report | grep -v zz_ | grep -v .connect.go | grep -v 'pkg/x/client/generated/' > $tmp_file
           mv $tmp_file $report
         done
     - name: Upload coverage reports
@@ -58,13 +58,13 @@ jobs:
     runs-on: ubuntu-latest
     steps:
     - name: Harden the runner (Audit all outbound calls)
-      uses: step-security/harden-runner@9af89fc71515a100421586dfdb3dc9c984fbf411 # v2.19.4
+      uses: step-security/harden-runner@bf7454d06d71f1098171f2acdf0cd4708d7b5920 # v2.20.0
       with:
         egress-policy: audit
 
     - name: Checkout code
-      uses: actions/checkout@df4cb1c069e1874edd31b4311f1884172cec0e10 # v6.0.3
-    - uses: actions/cache@27d5ce7f107fe9357f9df03efb73ab90386fccae # v5.0.5
+      uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+    - uses: actions/cache@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
       with:
         path: ~/.pnpm-store
         key: ${{ runner.os }}-pnpm-${{ hashFiles('**/pnpm-lock.yaml') }}
@@ -75,7 +75,7 @@ jobs:
       with:
         package_json_file: ui/package.json
     - name: Install nodejs
-      uses: actions/setup-node@48b55a011bda9f5d6aeb4c2d9c7362e8dae4041e # v6.4.0
+      uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7.0.0
       with:
         node-version: "24.15.0"
         cache: "pnpm"
@@ -84,6 +84,8 @@ jobs:
       run: make typecheck-ui
     - name: Run linter
       run: make lint-ui
+    - name: Run unit tests
+      run: make test-unit-ui
 
   lint-go:
     permissions:
@@ -94,20 +96,20 @@ jobs:
       image: *golangImage
     steps:
     - name: Harden the runner (Audit all outbound calls)
-      uses: step-security/harden-runner@9af89fc71515a100421586dfdb3dc9c984fbf411 # v2.19.4
+      uses: step-security/harden-runner@bf7454d06d71f1098171f2acdf0cd4708d7b5920 # v2.20.0
       with:
         egress-policy: audit
 
     - name: Checkout code
-      uses: actions/checkout@df4cb1c069e1874edd31b4311f1884172cec0e10 # v6.0.3
+      uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
     - name: Cache golangci-lint
       id: cache-golangci-lint
-      uses: actions/cache@27d5ce7f107fe9357f9df03efb73ab90386fccae # v5.0.5
+      uses: actions/cache@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
       with:
         path: |
           hack/bin/golangci-lint
           hack/bin/golangci-lint-*
-        key: ${{ runner.os }}-golangci-lint-${{ hashFiles('hack/tools/go.mod') }}
+        key: ${{ runner.os }}-golangci-lint-${{ hashFiles('hack/tools.mk') }}
     - name: Install golangci-lint
       if: steps.cache-golangci-lint.outputs.cache-hit != 'true'
       run: make install-golangci-lint
@@ -122,57 +124,65 @@ jobs:
       image: *golangImage
     steps:
     - name: Harden the runner (Audit all outbound calls)
-      uses: step-security/harden-runner@9af89fc71515a100421586dfdb3dc9c984fbf411 # v2.19.4
+      uses: step-security/harden-runner@bf7454d06d71f1098171f2acdf0cd4708d7b5920 # v2.20.0
       with:
         egress-policy: audit
 
     - name: Checkout code
-      uses: actions/checkout@df4cb1c069e1874edd31b4311f1884172cec0e10 # v6.0.3
+      uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
     - name: Cache helm
       id: cache-helm
-      uses: actions/cache@27d5ce7f107fe9357f9df03efb73ab90386fccae # v5.0.5
+      uses: actions/cache@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
       with:
         path: |
           hack/bin/helm
           hack/bin/helm-*
         key:
-          ${{ runner.os }}-helm-${{ hashFiles('hack/tools/go.mod') }}
+          ${{ runner.os }}-helm-${{ hashFiles('go.mod', 'hack/tools.mk') }}
     - name: Install helm
       if: steps.cache-helm.outputs.cache-hit != 'true'
       run: make install-helm
     - name: Run linter
       run: make lint-charts
 
-  lint-proto:
-    permissions:
-      contents: read # Permissions to read the repository, required because we override the default permissions
-      checks: write # Used to create checks (linting comments) on PRs
+  test-chart:
     runs-on: ubuntu-latest
     container:
       image: *golangImage
     steps:
     - name: Harden the runner (Audit all outbound calls)
-      uses: step-security/harden-runner@9af89fc71515a100421586dfdb3dc9c984fbf411 # v2.19.4
+      uses: step-security/harden-runner@bf7454d06d71f1098171f2acdf0cd4708d7b5920 # v2.20.0
       with:
         egress-policy: audit
 
     - name: Checkout code
-      uses: actions/checkout@df4cb1c069e1874edd31b4311f1884172cec0e10 # v6.0.3
-    - name: Cache buf
-      id: cache-buf
-      uses: actions/cache@27d5ce7f107fe9357f9df03efb73ab90386fccae # v5.0.5
+      uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+    - name: Cache helm
+      id: cache-helm
+      uses: actions/cache@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
       with:
         path: |
-          hack/bin/buf
-          hack/bin/buf-*
-        key: ${{ runner.os }}-buf-${{ hashFiles('hack/tools/go.mod') }}
-    - name: Install buf
-      if: steps.cache-buf.outputs.cache-hit != 'true'
-      run: make install-buf
-    - name: Run linter
-      env:
-        BUF_LINT_ERROR_FORMAT: github-actions
-      run: make lint-proto
+          hack/bin/helm
+          hack/bin/helm-*
+        key:
+          ${{ runner.os }}-helm-${{ hashFiles('go.mod', 'hack/tools.mk') }}
+    - name: Install helm
+      if: steps.cache-helm.outputs.cache-hit != 'true'
+      run: make install-helm
+    - name: Run chart unit tests
+      run: |
+        set -o pipefail
+        make test-chart 2>&1 | tee /tmp/chart-tests.log
+    - name: Publish chart test summary
+      if: always()
+      run: |
+        [ -f /tmp/chart-tests.log ] || exit 0
+        {
+          echo '## Chart unit tests'
+          echo '```'
+          sed -n '/^### Chart/,$p' /tmp/chart-tests.log
+          echo '```'
+        } >> "$GITHUB_STEP_SUMMARY"
 
   check-codegen:
     runs-on: ubuntu-latest
@@ -180,20 +190,26 @@ jobs:
       image: *golangImage
     steps:
     - name: Harden the runner (Audit all outbound calls)
-      uses: step-security/harden-runner@9af89fc71515a100421586dfdb3dc9c984fbf411 # v2.19.4
+      uses: step-security/harden-runner@bf7454d06d71f1098171f2acdf0cd4708d7b5920 # v2.20.0
       with:
         egress-policy: audit
 
     - name: Checkout code
-      uses: actions/checkout@df4cb1c069e1874edd31b4311f1884172cec0e10 # v6.0.3
+      uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
     - name: Install tools
-      run: apt update && apt install unzip
+      run: apt update && apt install -y unzip
+    - name: Install java
+      uses: actions/setup-java@03ad4de0992f5dab5e18fcb136590ce7c4a0ac95 # v5.6.0
+      with:
+        distribution: temurin
+        java-version: "21"
+        java-package: jre
     - name: Install pnpm
       uses: pnpm/action-setup@fc06bc1257f339d1d5d8b3a19a8cae5388b55320 # v4.4.0
       with:
         package_json_file: ui/package.json
     - name: Install nodejs
-      uses: actions/setup-node@48b55a011bda9f5d6aeb4c2d9c7362e8dae4041e # v6.4.0
+      uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7.0.0
       with:
         node-version: "24.15.0"
         cache: "pnpm"
@@ -202,17 +218,17 @@ jobs:
       run: pnpm install --dev
       working-directory: ./ui
     - name: Cache Go modules
-      uses: actions/cache@27d5ce7f107fe9357f9df03efb73ab90386fccae # v5.0.5
+      uses: actions/cache@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
       with:
         path: /go/pkg/mod
         key: ${{ runner.os }}-go-${{ hashFiles('**/go.sum') }}
     - name: Cache tools
-      uses: actions/cache@27d5ce7f107fe9357f9df03efb73ab90386fccae # v5.0.5
+      uses: actions/cache@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
       with:
         path: |
           hack/bin
           hack/include
-        key: ${{ runner.os }}-tools-${{ hashFiles('hack/tools/go.mod', 'hack/tools.mk') }}
+        key: ${{ runner.os }}-tools-${{ hashFiles('hack/tools.mk') }}
     - name: Git stuff
       # As of go 1.20, this seems to be necessary for invoking git commands
       # within the container
@@ -223,7 +239,7 @@ jobs:
       run: git diff --exit-code -- .
 
   build-image:
-    needs: [test-unit, lint-go, lint-charts, lint-proto, lint-and-typecheck-ui, check-codegen]
+    needs: [test-unit, lint-go, lint-charts, lint-and-typecheck-ui, check-codegen]
     runs-on: ubuntu-latest
     services:
       registry:
@@ -232,25 +248,25 @@ jobs:
         - 5000:5000
     steps:
     - name: Harden the runner (Audit all outbound calls)
-      uses: step-security/harden-runner@9af89fc71515a100421586dfdb3dc9c984fbf411 # v2.19.4
+      uses: step-security/harden-runner@bf7454d06d71f1098171f2acdf0cd4708d7b5920 # v2.20.0
       with:
         egress-policy: audit
 
     - name: Set up QEMU
-      uses: docker/setup-qemu-action@06116385d9baf250c9f4dcb4858b16962ea869c3 # v4.1.0
+      uses: docker/setup-qemu-action@96fe6ef7f33517b61c61be40b68a1882f3264fb8 # v4.2.0
     - name: Set up Docker Buildx
-      uses: docker/setup-buildx-action@d7f5e7f509e45cec5c76c4d5afdd7de93d0b3df5 # v4.1.0
+      uses: docker/setup-buildx-action@bb05f3f5519dd87d3ba754cc423b652a5edd6d2c # v4.2.0
       with:
         driver-opts: network=host
     - name: Checkout code
-      uses: actions/checkout@df4cb1c069e1874edd31b4311f1884172cec0e10 # v6.0.3
+      uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
     - name: Build base image
       run: |
         BASE_IMAGE=localhost:5000/kargo-base make build-base-image
         docker push localhost:5000/kargo-base:latest-arm64
         docker push localhost:5000/kargo-base:latest-amd64
     - name: Build final image
-      uses: docker/build-push-action@f9f3042f7e2789586610d6e8b85c8f03e5195baf # v7.2.0
+      uses: docker/build-push-action@53b7df96c91f9c12dcc8a07bcb9ccacbed38856a # v7.3.0
       with:
         platforms: linux/amd64,linux/arm64
         build-args: |
@@ -269,30 +285,30 @@ jobs:
     # cve-scan.sh re-stamps the VEX product @id to the scanned digest, which it
     # resolves from the job-local registry tag via crane.
     - name: Install Crane
-      uses: imjasonh/setup-crane@31b88efe9de28ae0ffa220711af4b60be9435f6e # v0.4
+      uses: imjasonh/setup-crane@feee3b6bb0d4c68370f256a4502498c9227e5c6b # v0.7
     - name: Scan image for CVEs
       env:
         GRYPE_CMD: ${{ steps.grype.outputs.cmd }}
         GRYPE_REGISTRY_INSECURE_USE_HTTP: "true" # job-local registry service
         CRANE_INSECURE: "true" # job-local registry is plain HTTP
+        VEX_IMAGE: kargo-oss # monitored image name for the VEX lookup
         FAIL_ON: "" # report-only; set to "high" to enforce
-      # VEX lookups use the canonical published repo path.
-      run: ./hack/cve-scan.sh "registry:localhost:5000/kargo:scan" "ghcr.io/akuity/kargo"
+      run: ./hack/cve-scan.sh "registry:localhost:5000/kargo:scan"
 
   build-cli:
-    needs: [test-unit, lint-go, lint-charts, lint-proto, lint-and-typecheck-ui, check-codegen]
+    needs: [test-unit, lint-go, lint-charts, lint-and-typecheck-ui, check-codegen]
     runs-on: ubuntu-latest
     container:
       image: *golangImage
     steps:
     - name: Harden the runner (Audit all outbound calls)
-      uses: step-security/harden-runner@9af89fc71515a100421586dfdb3dc9c984fbf411 # v2.19.4
+      uses: step-security/harden-runner@bf7454d06d71f1098171f2acdf0cd4708d7b5920 # v2.20.0
       with:
         egress-policy: audit
 
     - name: Checkout code
-      uses: actions/checkout@df4cb1c069e1874edd31b4311f1884172cec0e10 # v6.0.3
-    - uses: actions/cache@27d5ce7f107fe9357f9df03efb73ab90386fccae # v5.0.5
+      uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+    - uses: actions/cache@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
       with:
         path: /go/pkg/mod
         key: ${{ runner.os }}-go-${{ hashFiles('**/go.sum') }}

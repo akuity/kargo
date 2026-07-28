@@ -1,8 +1,6 @@
-import { add, intervalToDuration, isBefore } from 'date-fns';
+import { addSeconds, intervalToDuration, isBefore } from 'date-fns';
 
-import { Freight, Stage } from '@ui/gen/api/v1alpha1/generated_pb';
-import { Duration } from '@ui/gen/k8s.io/apimachinery/pkg/apis/meta/v1/generated_pb';
-import { timestampDate } from '@ui/utils/connectrpc-utils';
+import { Freight, Stage } from '@ui/gen/api/v2/models';
 
 // freight is in stage since X
 // required soak time is Y duration
@@ -16,8 +14,8 @@ export const getSoakTime = (payload: {
   // in normal promotion stage-A -> stage-B, soak time for stage-B is decide upon how much time stage-A contains that freight
   // stage-B -> stage-C, stage-D, stage-E, soak time for stage-C, stage-D, stage-E is decide upon how much time stage-B contains that freight
   freightInStage: Stage;
-  // time duration - 1h, 1h2m, 10m
-  requiredSoakTime: Duration;
+  // time duration string e.g. 1h, 1h2m, 10m, 30s
+  requiredSoakTime: string;
 }) => {
   if (!payload.requiredSoakTime) {
     return '';
@@ -25,17 +23,16 @@ export const getSoakTime = (payload: {
 
   const sourceStageName = payload.freightInStage?.metadata?.name || '';
 
-  const inSourceStageSince = timestampDate(
-    payload.freight?.status?.currentlyIn?.[sourceStageName].since
-  );
+  const inSourceStageSince = payload.freight?.status?.currentlyIn?.[sourceStageName]?.since;
 
   if (!inSourceStageSince) {
     return '';
   }
 
-  const requiredSoakTime = durationToHMS(payload.requiredSoakTime);
-
-  const calculateSoakTimeSinceInFreight = add(inSourceStageSince, requiredSoakTime);
+  const calculateSoakTimeSinceInFreight = addSeconds(
+    inSourceStageSince,
+    parseDurationSeconds(payload.requiredSoakTime)
+  );
 
   const now = new Date();
 
@@ -46,12 +43,23 @@ export const getSoakTime = (payload: {
   return null;
 };
 
-const durationToHMS = (duration: Duration) => {
-  const totalSeconds = Number(duration.duration / 1_000_000_000n); // Convert to seconds
-
-  const hours = Math.floor(totalSeconds / 3600);
-  const minutes = Math.floor((totalSeconds % 3600) / 60);
-  const seconds = totalSeconds % 60;
-
-  return { hours, minutes, seconds };
+const parseDurationSeconds = (duration: string): number => {
+  let totalSeconds = 0;
+  const re = /([0-9]+(?:\.[0-9]+)?)(h|m|s)/g;
+  let match;
+  while ((match = re.exec(duration)) !== null) {
+    const value = parseFloat(match[1]);
+    switch (match[2]) {
+      case 'h':
+        totalSeconds += value * 3600;
+        break;
+      case 'm':
+        totalSeconds += value * 60;
+        break;
+      case 's':
+        totalSeconds += value;
+        break;
+    }
+  }
+  return totalSeconds;
 };

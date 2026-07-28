@@ -1,4 +1,3 @@
-import { useQuery } from '@connectrpc/connect-query';
 import {
   faArrowDownShortWide,
   faBuilding,
@@ -11,19 +10,14 @@ import { Drawer, Flex, Skeleton, Tabs, Typography } from 'antd';
 import Alert from 'antd/es/alert/Alert';
 import { useMemo } from 'react';
 import { generatePath, useNavigate, useParams, useSearchParams } from 'react-router-dom';
+import { stringify } from 'yaml';
 
 import { paths } from '@ui/config/paths';
 import { WarehouseExpanded } from '@ui/extend/types';
 import { AssembleFreight } from '@ui/features/assemble-freight/assemble-freight';
 import { useWarehouseWithClonedFreight } from '@ui/features/assemble-freight/use-warehouse-with-cloned-freight';
 import YamlEditor from '@ui/features/common/code-editor/yaml-editor-lazy';
-import {
-  getFreight,
-  getWarehouse
-} from '@ui/gen/api/service/v1alpha1/service-KargoService_connectquery';
-import { RawFormat } from '@ui/gen/api/service/v1alpha1/service_pb';
-import { Freight } from '@ui/gen/api/v1alpha1/generated_pb';
-import { decodeRawData } from '@ui/utils/decode-raw-data';
+import { useGetFreight, useGetWarehouse } from '@ui/gen/api/v2/core/core';
 
 import { RepoSubscriptions } from './repo-subscriptions';
 import { WarehouseSettings } from './tabs/settings/warehouse-settings';
@@ -47,29 +41,18 @@ export const WarehouseDetails = ({
 
   const warehouseErrorMessage = useMemo(() => getWarehouseError(warehouse), [warehouse]);
 
-  const rawWarehouseYamlQuery = useQuery(getWarehouse, {
-    project: projectName,
-    name: warehouseName,
-    format: RawFormat.YAML
-  });
+  const getWarehouseQuery = useGetWarehouse(projectName || '', warehouseName || '');
 
   const rawWarehouseYaml = useMemo(
-    () => decodeRawData(rawWarehouseYamlQuery.data),
-    [rawWarehouseYamlQuery.data]
+    () => stringify(getWarehouseQuery.data?.data || {}),
+    [getWarehouseQuery.data?.data]
   );
 
-  const freightQuery = useQuery(
-    getFreight,
-    {
-      project: projectName,
-      alias: cloneFreight || ''
-    },
-    {
-      enabled: !!cloneFreight && tab === 'create-freight'
-    }
-  );
+  const freightQuery = useGetFreight(projectName || '', cloneFreight || '', {
+    query: { enabled: !!cloneFreight && tab === 'create-freight' }
+  });
 
-  const cloneFreightData = freightQuery.data?.result.value as Freight | undefined;
+  const cloneFreightData = freightQuery.data?.data;
 
   const warehouseWithClonedFreight = useWarehouseWithClonedFreight(warehouse, cloneFreightData);
 
@@ -146,7 +129,7 @@ export const WarehouseDetails = ({
               tab='Live Manifest'
               icon={<FontAwesomeIcon icon={faFileLines} />}
               children={
-                rawWarehouseYamlQuery.isLoading ? (
+                getWarehouseQuery.isLoading ? (
                   <Skeleton />
                 ) : (
                   <YamlEditor value={rawWarehouseYaml} height='700px' disabled />

@@ -42,8 +42,8 @@ type WorkTree interface {
 	// CreateOrphanedBranch creates a new branch that shares no commit history
 	// with any other branch.
 	CreateOrphanedBranch(branch string) error
-	// CreateTag creates a new tag with the specified name.
-	CreateTag(name, msg string) error
+	// CreateTag creates a new annotated tag with the specified name and message.
+	CreateTag(name, msg string, opts *CreateTagOptions) error
 	// CurrentBranch returns the current branch
 	CurrentBranch() (string, error)
 	// DeleteBranch deletes the specified branch
@@ -334,8 +334,21 @@ func (w *workTree) CreateOrphanedBranch(branch string) error {
 	return w.Clean()
 }
 
-func (w *workTree) CreateTag(tag, msg string) error {
-	cmd := w.buildGitCommand("tag", "-a", tag, "-m", msg)
+// CreateTagOptions represents options for creating a tag.
+type CreateTagOptions struct {
+	// Force indicates whether to overwrite an existing tag of the same name.
+	Force bool
+}
+
+func (w *workTree) CreateTag(tag, msg string, opts *CreateTagOptions) error {
+	if opts == nil {
+		opts = &CreateTagOptions{}
+	}
+	args := []string{"tag", "-a", tag, "-m", msg}
+	if opts.Force {
+		args = append(args, "--force")
+	}
+	cmd := w.buildGitCommand(args...)
 	if _, err := libExec.Exec(cmd); err != nil {
 		return fmt.Errorf("error creating annotated tag %q: %w", tag, err)
 	}
@@ -401,7 +414,9 @@ func (w *workTree) Fetch(opts *FetchOptions) error {
 }
 
 func (w *workTree) GetDiffPathsForCommitID(commitID string) ([]string, error) {
-	resBytes, err := libExec.Exec(w.buildGitCommand("show", "--pretty=", "--name-status", "--first-parent", commitID))
+	resBytes, err := libExec.Exec(w.buildGitCommand(
+		"show", "--pretty=", "--name-status", "--no-renames", "--first-parent", commitID,
+	))
 	if err != nil {
 		return nil, fmt.Errorf("error getting diff paths for commit %q: %w", commitID, err)
 	}
@@ -412,25 +427,20 @@ func (w *workTree) GetDiffPathsForCommitID(commitID string) ([]string, error) {
 		if line == "" {
 			continue
 		}
-		// --name-status output is tab-separated: <status>\t<path> for most
-		// changes, or <status>\t<old-path>\t<new-path> for renames and copies.
-		// The status field for renames and copies includes a similarity score
-		// (e.g. R100, C85), so we use HasPrefix rather than exact equality.
-		parts := strings.SplitN(line, "\t", 3)
-		if len(parts) < 2 {
+		// With --no-renames, a moved file is reported as a delete of the old
+		// path and an add of the new path rather than a single rename record,
+		// so --name-status output is always tab-separated as <status>\t<path>.
+		// This naturally surfaces both sides of a move without invoking git's
+		// rename detection, which can warn and fail on commits that change too
+		// many files at once.
+		parts := strings.SplitN(line, "\t", 2)
+		if len(parts) != 2 {
 			return nil, fmt.Errorf(
 				"unexpected output from git show for commit %q: %q",
 				commitID, line,
 			)
 		}
-		// For renames (R), include both old and new paths so that a path filter
-		// matching the source directory detects the removal. Copies (C) leave
-		// the source unchanged, so only the destination path is relevant.
-		if len(parts) == 3 && strings.HasPrefix(parts[0], "R") {
-			paths = append(paths, parts[1], parts[2])
-		} else {
-			paths = append(paths, parts[1])
-		}
+		paths = append(paths, parts[1])
 	}
 	return paths, nil
 }

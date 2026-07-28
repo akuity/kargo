@@ -1,4 +1,4 @@
-import { GitCommit } from '@ui/gen/api/v1alpha1/generated_pb';
+import { GitCommit } from '@ui/gen/api/v2/models';
 
 export const CommitInfo = ({ commit }: { commit: GitCommit }) => (
   <div className='grid grid-cols-2'>

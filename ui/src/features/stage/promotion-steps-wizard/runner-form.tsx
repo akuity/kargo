@@ -11,7 +11,10 @@ import { RunnerWithConfiguration } from './types';
 export type RunnerFormType = {
   runner: RunnerWithConfiguration;
   onSubmit(
-    runnerConfig: object /* this is dynamic config that we should not care about and pass to YAML as it is */
+    runnerConfig: Record<
+      string,
+      unknown
+    > /* this is dynamic config that we should not care about and pass to YAML as it is */
   ): void;
 };
 

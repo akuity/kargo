@@ -18,7 +18,6 @@ import (
 	"github.com/akuity/kargo/pkg/cli/kubernetes"
 	"github.com/akuity/kargo/pkg/cli/option"
 	"github.com/akuity/kargo/pkg/cli/templates"
-	"github.com/akuity/kargo/pkg/client/generated/rbac"
 )
 
 type deleteRoleOptions struct {
@@ -117,13 +116,12 @@ func (o *deleteRoleOptions) run(ctx context.Context) error {
 
 	var errs []error
 	for _, name := range o.Names {
-		if _, err := apiClient.Rbac.DeleteProjectRole(
-			rbac.NewDeleteProjectRoleParams().
-				WithProject(o.Project).
-				WithRole(name),
-			nil,
-		); err != nil {
-			errs = append(errs, err)
+		httpRes, err := apiClient.RbacAPI.DeleteProjectRole(ctx, o.Project, name).Execute()
+		if httpRes != nil {
+			_ = httpRes.Body.Close()
+		}
+		if err != nil {
+			errs = append(errs, client.APIError(err))
 			continue
 		}
 		_ = printer.PrintObj(

@@ -46,6 +46,7 @@ system to access the git repos.
 | `prNumber`              | `integer` | Y        | The pull request number to merge.                                                                                                                                                                              |
 | `mergeMethod`           | `string`  | N        | The merge method to use when merging the pull request. The supported methods are provider-specific; refer to the [Merge Method](#merge-method) section. |
 | `wait`                  | `boolean` | N        | If `true`, the step will return a running status instead of failing when the PR is not yet mergeable. The merge will be retried on the next reconciliation until it succeeds or times out. Default is `false`. |
+| `pollInterval`          | `string`  | N        | When `wait` is `true`, the suggested interval at which to re-attempt the merge while the PR is not yet mergeable (e.g. `10s`, `1m`). This is only a suggestion: Kargo enforces a lower bound of 10 seconds and may reconcile sooner in response to other events. Defaults to `10s`. |
 
 :::warning
 

@@ -56,6 +56,12 @@ describe('getGitCommitURL', () => {
       url: 'git@bitbucket.org:akuity/kargo.git',
       expected: 'https://bitbucket.org/akuity/kargo/commits/abc1234'
     },
+    // Azure DevOps
+    {
+      name: 'azure devops HTTPS',
+      url: 'https://dev.azure.com/akuity/kargo-project/_git/kargo',
+      expected: 'https://dev.azure.com/akuity/kargo-project/_git/kargo/commit/abc1234'
+    },
     // Unknown provider — fall back to original url
     {
       name: 'unknown provider returns original url',

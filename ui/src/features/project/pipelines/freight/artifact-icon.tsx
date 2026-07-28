@@ -1,28 +1,27 @@
 import { faDocker, faGit } from '@fortawesome/free-brands-svg-icons';
-import { faAnchor, IconDefinition } from '@fortawesome/free-solid-svg-icons';
+import { faAnchor, faBox, IconDefinition } from '@fortawesome/free-solid-svg-icons';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
 import classNames from 'classnames';
 
-import { Chart, GitCommit, Image } from '@ui/gen/api/v1alpha1/generated_pb';
+import {
+  isArtifactChart,
+  isArtifactGitCommit,
+  isArtifactImage
+} from '@ui/features/assemble-freight/artifact-type-guards';
+import { ArtifactReference, Chart, GitCommit, Image } from '@ui/gen/api/v2/models';
 
 export const ArtifactIcon = (props: {
-  artifactType: GitCommit['$typeName'] | Chart['$typeName'] | Image['$typeName'];
+  artifact: GitCommit | Chart | Image | ArtifactReference;
   className?: string;
 }) => {
-  let icon: IconDefinition;
+  let icon: IconDefinition = faBox;
 
-  switch (props.artifactType) {
-    case 'github.com.akuity.kargo.api.v1alpha1.GitCommit':
-      icon = faGit;
-      break;
-
-    case 'github.com.akuity.kargo.api.v1alpha1.Chart':
-      icon = faAnchor;
-      break;
-
-    case 'github.com.akuity.kargo.api.v1alpha1.Image':
-      icon = faDocker;
-      break;
+  if (isArtifactImage(props.artifact)) {
+    icon = faDocker;
+  } else if (isArtifactGitCommit(props.artifact)) {
+    icon = faGit;
+  } else if (isArtifactChart(props.artifact)) {
+    icon = faAnchor;
   }
 
   return <FontAwesomeIcon icon={icon} className={classNames(props.className, 'text-[11px]')} />;

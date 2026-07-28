@@ -4,6 +4,7 @@ import (
 	"context"
 	"errors"
 	"testing"
+	"time"
 
 	"github.com/google/uuid"
 	"github.com/stretchr/testify/require"
@@ -94,6 +95,26 @@ func Test_gitPRMerger_convert(t *testing.T) {
 				"mergeMethod": "squash",
 			},
 		},
+		{
+			name: "pollInterval is not a valid duration",
+			config: promotion.Config{
+				"prNumber":     42,
+				"repoURL":      "https://github.com/example/repo.git",
+				"pollInterval": "soon",
+			},
+			expectedProblems: []string{
+				"pollInterval: Does not match pattern",
+			},
+		},
+		{
+			name: "valid with pollInterval",
+			config: promotion.Config{
+				"prNumber":     42,
+				"repoURL":      "https://github.com/example/repo.git",
+				"wait":         true,
+				"pollInterval": "30s",
+			},
+		},
 	}
 
 	r := newGitPRMerger(promotion.StepRunnerCapabilities{
@@ -152,6 +173,32 @@ func Test_gitPRMerger_run(t *testing.T) {
 				require.NoError(t, err)
 				require.Equal(t, kargoapi.PromotionStepStatusRunning, res.Status)
 				require.Nil(t, res.Output)
+				// Suggests the default poll interval.
+				require.NotNil(t, res.RetryAfter)
+				require.Equal(t, gitMergePRPollIntervalDefault, *res.RetryAfter)
+			},
+		},
+		{
+			name: "PR not ready to merge with wait and explicit pollInterval",
+			provider: &gitprovider.Fake{
+				MergePullRequestFn: func(
+					context.Context,
+					int64,
+					*gitprovider.MergePullRequestOpts,
+				) (*gitprovider.PullRequest, bool, error) {
+					return nil, false, nil
+				},
+			},
+			config: builtin.GitMergePRConfig{
+				PRNumber:     42,
+				Wait:         true,
+				PollInterval: "45s",
+			},
+			assertions: func(t *testing.T, res promotion.StepResult, err error) {
+				require.NoError(t, err)
+				require.Equal(t, kargoapi.PromotionStepStatusRunning, res.Status)
+				require.NotNil(t, res.RetryAfter)
+				require.Equal(t, 45*time.Second, *res.RetryAfter)
 			},
 		},
 		{

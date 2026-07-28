@@ -3,7 +3,7 @@ import { useEffect, useMemo, useState } from 'react';
 
 import { queryCache } from '@ui/features/utils/cache';
 
-export const useSoakTimeCounter = (soakTime?: Duration) => {
+export const useSoakTimeCounter = (soakTime?: Duration, project?: string) => {
   const [counter, setCounter] = useState(soakTime);
 
   useEffect(() => {
@@ -36,7 +36,7 @@ export const useSoakTimeCounter = (soakTime?: Duration) => {
 
         if ((prev?.seconds || 0) === 0 && (prev?.minutes || 0) === 0 && (prev?.hours || 0) === 0) {
           clearInterval(interval);
-          queryCache.freight.refetchQueryFreight();
+          queryCache.freight.refetchQueryFreight(project || '');
           return undefined;
         }
 

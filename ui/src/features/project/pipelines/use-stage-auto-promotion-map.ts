@@ -1,6 +1,6 @@
 import { useMemo } from 'react';
 
-import { Stage } from '@ui/gen/api/v1alpha1/generated_pb';
+import { Stage } from '@ui/gen/api/v2/models';
 
 export const useStageAutoPromotionMap = (stages: Stage[]): Record<string, boolean> =>
   useMemo(() => {

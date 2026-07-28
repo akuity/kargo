@@ -286,7 +286,7 @@ func shouldRefresh(
 				return true, nil
 			}
 		case s.Chart != nil && urls.NormalizeChart(s.Chart.RepoURL) == repoURL:
-			selector, err := chart.NewSelector(*s.Chart, nil)
+			selector, err := chart.NewSelector(ctx, *s.Chart, nil)
 			if err != nil {
 				return false, fmt.Errorf("error creating chart selector for Chart subscription %q: %w",
 					s.Chart.RepoURL, err,

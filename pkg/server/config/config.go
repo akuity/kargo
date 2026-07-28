@@ -24,8 +24,8 @@ type ServerConfig struct {
 	StandardConfig
 	// BasePath is the URL path prefix the server is reachable at, normalized
 	// to begin with `/` and not end with one (e.g. `/kargo`). When non-empty,
-	// every HTTP route the server registers — REST API, ConnectRPC, dex
-	// proxy, dashboard SPA — lives under this prefix; the ingress controller
+	// every HTTP route the server registers — REST API, dex proxy, dashboard
+	// SPA — lives under this prefix; the ingress controller
 	// in front of the server MUST preserve the prefix (i.e. must NOT strip
 	// it). Empty value means the server serves at the root.
 	BasePath                    string

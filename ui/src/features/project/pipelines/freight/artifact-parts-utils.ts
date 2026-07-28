@@ -1,8 +1,22 @@
-export const humanComprehendableArtifact = (repoURL: string) => {
-  const parts = repoURL.split('/');
-  const lastPart = parts[parts.length - 1];
+import { ArtifactReference, Chart, GitCommit, Image } from '@ui/gen/api/v2/models';
 
-  return lastPart;
+export const humanComprehendableArtifact = (
+  artifact: GitCommit | Chart | Image | ArtifactReference
+) => {
+  if ('repoURL' in artifact) {
+    const repoURL = artifact.repoURL;
+
+    const parts = repoURL?.split('/') || [];
+    const lastPart = parts[parts.length - 1];
+
+    return lastPart;
+  }
+
+  if ('version' in artifact) {
+    return artifact.version;
+  }
+
+  return '';
 };
 
 export const artifactBase = (repoURL: string) => {

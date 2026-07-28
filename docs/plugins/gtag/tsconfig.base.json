@@ -44,8 +44,6 @@
     /* Module Resolution */
     "moduleResolution": "NodeNext",
     "resolveJsonModule": true,
-    "allowSyntheticDefaultImports": true,
-    "esModuleInterop": true,
     "forceConsistentCasingInFileNames": true,
     "isolatedModules": true,
     "allowJs": true,

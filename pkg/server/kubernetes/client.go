@@ -93,9 +93,6 @@ func setOptionsDefaults(opts ClientOptions) (ClientOptions, error) {
 			return opts, fmt.Errorf("error adding Kargo API to scheme: %w", err)
 		}
 	}
-	if opts.NewInternalClient == nil {
-		opts.NewInternalClient = newDefaultInternalClient
-	}
 	if opts.KargoNamespace == "" {
 		opts.KargoNamespace = "kargo"
 	}
@@ -104,11 +101,17 @@ func setOptionsDefaults(opts ClientOptions) (ClientOptions, error) {
 
 type AuthorizingClient struct{}
 
-// The Client interface combines the familiar controller-runtime WithWatch
-// interface with a helpful Authorized() method.
-type Client interface {
-	libClient.WithWatch
-
+// Authorizer authorizes a single (verb, resource) operation for the user bound
+// to the context. The API server's authorizing Kubernetes client satisfies this
+// interface; it returns a forbidden error when the user is not permitted.
+//
+// This mirrors the subset of kubernetes.Client used to prevent privilege
+// escalation when editing Kargo Roles: because the API server performs Role
+// writes with its own (broadly privileged) ServiceAccount, Kubernetes' own
+// escalation check runs against the server, not the user. We therefore verify --
+// as the user -- that the caller already holds every permission they are trying
+// to grant.
+type Authorizer interface {
 	// Authorize attempts to authorize the user to perform the desired operation
 	// on the specified resource. If the user is not authorized, an error is
 	// returned.
@@ -119,16 +122,33 @@ type Client interface {
 		subresource string,
 		key libClient.ObjectKey,
 	) error
+}
+
+// The Client interface combines the familiar controller-runtime WithWatch
+// interface with a helpful Authorized() method.
+type Client interface {
+	libClient.WithWatch
+
+	Authorizer
 
 	// InternalClient returns the internal controller-runtime client used by this
 	// client. This is useful for cases where the API server needs to bypass
 	// the extra authorization checks performed by this client.
 	InternalClient() libClient.WithWatch
+
+	// APIReader returns an uncached reader that reads straight from the
+	// Kubernetes API server, bypassing the internal client's cache. It is the
+	// same reader the cache delegates to (the cluster's GetAPIReader), and is
+	// useful where a cache-served list ResourceVersion would be too old to seed
+	// a follow-up watch. Like InternalClient, it does NOT enforce Kargo's RBAC,
+	// so callers must authorize the user before using it.
+	APIReader() libClient.Reader
 }
 
 // client implements Client.
 type client struct {
 	internalClient libClient.WithWatch
+	apiReader      libClient.Reader
 	opts           ClientOptions
 
 	getAuthorizedClientFn func(
@@ -162,17 +182,44 @@ func NewClient(
 	if opts, err = setOptionsDefaults(opts); err != nil {
 		return nil, fmt.Errorf("error setting client options defaults: %w", err)
 	}
-	internalClient, err := opts.NewInternalClient(
-		ctx,
-		restCfg,
-		opts.Scheme,
-		opts.KargoNamespace,
+	var (
+		internalClient libClient.WithWatch
+		apiReader      libClient.Reader
 	)
-	if err != nil {
-		return nil, fmt.Errorf("error building internal client: %w", err)
+	if opts.NewInternalClient != nil {
+		// A custom internal client (typically a fake in tests) has no separate
+		// cache to bypass, so it doubles as the uncached API reader.
+		if internalClient, err = opts.NewInternalClient(
+			ctx,
+			restCfg,
+			opts.Scheme,
+			opts.KargoNamespace,
+		); err != nil {
+			return nil, fmt.Errorf("error building internal client: %w", err)
+		}
+		apiReader = internalClient
+	} else {
+		// The cluster provides both the cache-backed client and the uncached
+		// reader the cache delegates to (GetAPIReader) -- the same direct-read
+		// pattern the controllers and external webhooks server use.
+		var cluster libCluster.Cluster
+		if cluster, err = newDefaultCluster(
+			ctx,
+			restCfg,
+			opts.Scheme,
+			opts.KargoNamespace,
+		); err != nil {
+			return nil, fmt.Errorf("error building internal cluster: %w", err)
+		}
+		var ok bool
+		if internalClient, ok = cluster.GetClient().(libClient.WithWatch); !ok {
+			return nil, errors.New("internal client does not implement WithWatch")
+		}
+		apiReader = cluster.GetAPIReader()
 	}
 	c := &client{
 		internalClient: internalClient,
+		apiReader:      apiReader,
 		opts:           opts,
 	}
 	if opts.SkipAuthorization {
@@ -195,12 +242,12 @@ func NewClient(
 	return c, nil
 }
 
-func newDefaultInternalClient(
+func newDefaultCluster(
 	ctx context.Context,
 	restCfg *rest.Config,
 	scheme *runtime.Scheme,
 	kargoNamespace string,
-) (libClient.WithWatch, error) {
+) (libCluster.Cluster, error) {
 	cluster, err := libCluster.New(
 		restCfg,
 		func(clusterOptions *libCluster.Options) {
@@ -306,11 +353,7 @@ func newDefaultInternalClient(
 		return nil, fmt.Errorf("error starting cluster: %w", err)
 	}
 
-	cl, ok := cluster.GetClient().(libClient.WithWatch)
-	if !ok {
-		return nil, errors.New("internal client does not implement WithWatch")
-	}
-	return cl, nil
+	return cluster, nil
 }
 
 func (c *client) Get(
@@ -653,6 +696,14 @@ func (a *authorizingSubResourceClient) Patch(
 	return client.SubResource(a.subResourceType).Patch(ctx, obj, patch, opts...)
 }
 
+func (a *authorizingSubResourceClient) Apply(
+	_ context.Context,
+	_ runtime.ApplyConfiguration,
+	_ ...libClient.SubResourceApplyOption,
+) error {
+	return errors.New("apply is not supported by the authorizing client")
+}
+
 func (c *client) Authorize(
 	ctx context.Context,
 	verb string,
@@ -675,6 +726,10 @@ func (c *client) Authorize(
 
 func (c *client) InternalClient() libClient.WithWatch {
 	return c.internalClient
+}
+
+func (c *client) APIReader() libClient.Reader {
+	return c.apiReader
 }
 
 func (c *client) Watch(

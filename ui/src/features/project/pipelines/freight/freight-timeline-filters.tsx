@@ -6,7 +6,7 @@ import classNames from 'classnames';
 import { useMemo } from 'react';
 
 import { FreightTimelineControllerContextType } from '@ui/features/project/pipelines/context/freight-timeline-controller-context';
-import { Freight } from '@ui/gen/api/v1alpha1/generated_pb';
+import { Freight } from '@ui/gen/api/v2/models';
 
 import { humanComprehendableArtifact } from './artifact-parts-utils';
 import { timerangeOrderedOptions, timerangeToLabel } from './filter-timerange-utils';
@@ -63,7 +63,7 @@ export const FreightTimelineFilters = (props: FreightTimelineFiltersProps) => {
           onChange={(sources) =>
             props.onPreferredFilterChange({ ...props.preferredFilter, sources })
           }
-          labelRender={(props) => humanComprehendableArtifact(props.value.toString())}
+          labelRender={(props) => humanComprehendableArtifact({ repoURL: props.value.toString() })}
           placeholder='All'
           options={sourcesDropdownOptions}
           maxTagCount={1}

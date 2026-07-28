@@ -43,6 +43,8 @@ func addKnownTypes(scheme *runtime.Scheme) error {
 		&PromotionList{},
 		&PromotionTask{},
 		&PromotionTaskList{},
+		&Target{},
+		&TargetList{},
 		&Warehouse{},
 		&WarehouseList{},
 	)

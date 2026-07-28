@@ -374,3 +374,94 @@ func TestArgoCDAppReconciledAfterOperation_Update(t *testing.T) {
 		})
 	}
 }
+
+func TestArgoCDAppLabelsChanged_Update(t *testing.T) {
+	testCases := []struct {
+		name string
+		e    event.TypedUpdateEvent[*argocd.Application]
+		want bool
+	}{
+		{
+			name: "ObjectOld is nil",
+			e: event.TypedUpdateEvent[*argocd.Application]{
+				ObjectNew: &argocd.Application{},
+			},
+			want: false,
+		},
+		{
+			name: "ObjectNew is nil",
+			e: event.TypedUpdateEvent[*argocd.Application]{
+				ObjectOld: &argocd.Application{},
+			},
+			want: false,
+		},
+		{
+			name: "labels unchanged",
+			e: event.TypedUpdateEvent[*argocd.Application]{
+				ObjectOld: &argocd.Application{
+					ObjectMeta: metav1.ObjectMeta{Labels: map[string]string{"env": "prod"}},
+				},
+				ObjectNew: &argocd.Application{
+					ObjectMeta: metav1.ObjectMeta{Labels: map[string]string{"env": "prod"}},
+				},
+			},
+			want: false,
+		},
+		{
+			name: "both nil labels unchanged",
+			e: event.TypedUpdateEvent[*argocd.Application]{
+				ObjectOld: &argocd.Application{},
+				ObjectNew: &argocd.Application{},
+			},
+			want: false,
+		},
+		{
+			name: "label value changed",
+			e: event.TypedUpdateEvent[*argocd.Application]{
+				ObjectOld: &argocd.Application{
+					ObjectMeta: metav1.ObjectMeta{Labels: map[string]string{"env": "prod"}},
+				},
+				ObjectNew: &argocd.Application{
+					ObjectMeta: metav1.ObjectMeta{Labels: map[string]string{"env": "dev"}},
+				},
+			},
+			want: true,
+		},
+		{
+			name: "label added",
+			e: event.TypedUpdateEvent[*argocd.Application]{
+				ObjectOld: &argocd.Application{},
+				ObjectNew: &argocd.Application{
+					ObjectMeta: metav1.ObjectMeta{Labels: map[string]string{"env": "prod"}},
+				},
+			},
+			want: true,
+		},
+		{
+			name: "label removed",
+			e: event.TypedUpdateEvent[*argocd.Application]{
+				ObjectOld: &argocd.Application{
+					ObjectMeta: metav1.ObjectMeta{Labels: map[string]string{"env": "prod"}},
+				},
+				ObjectNew: &argocd.Application{},
+			},
+			want: true,
+		},
+	}
+	for _, testCase := range testCases {
+		t.Run(testCase.name, func(t *testing.T) {
+			p := ArgoCDAppLabelsChanged[*argocd.Application]{
+				logger: logging.NewDiscardLoggerOrDie(),
+			}
+			require.Equal(t, testCase.want, p.Update(testCase.e))
+		})
+	}
+}
+
+func TestArgoCDAppCreatedOrDeleted(t *testing.T) {
+	p := ArgoCDAppCreatedOrDeleted[*argocd.Application]{}
+	require.True(t, p.Create(event.TypedCreateEvent[*argocd.Application]{}))
+	require.True(t, p.Delete(event.TypedDeleteEvent[*argocd.Application]{}))
+	require.False(t, p.Update(event.TypedUpdateEvent[*argocd.Application]{}))
+	require.False(t, p.Generic(event.TypedGenericEvent[*argocd.Application]{}))
+}

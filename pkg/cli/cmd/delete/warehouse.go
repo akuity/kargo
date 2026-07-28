@@ -17,7 +17,6 @@ import (
 	"github.com/akuity/kargo/pkg/cli/config"
 	"github.com/akuity/kargo/pkg/cli/option"
 	"github.com/akuity/kargo/pkg/cli/templates"
-	"github.com/akuity/kargo/pkg/client/generated/core"
 )
 
 type deleteWarehouseOptions struct {
@@ -115,13 +114,12 @@ func (o *deleteWarehouseOptions) run(ctx context.Context) error {
 
 	var errs []error
 	for _, name := range o.Names {
-		if _, err := apiClient.Core.DeleteWarehouse(
-			core.NewDeleteWarehouseParams().
-				WithProject(o.Project).
-				WithWarehouse(name),
-			nil,
-		); err != nil {
-			errs = append(errs, err)
+		httpRes, delErr := apiClient.CoreAPI.DeleteWarehouse(ctx, o.Project, name).Execute()
+		if httpRes != nil {
+			_ = httpRes.Body.Close()
+		}
+		if delErr != nil {
+			errs = append(errs, client.APIError(delErr))
 			continue
 		}
 		_ = printer.PrintObj(&kargoapi.Warehouse{

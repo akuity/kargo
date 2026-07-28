@@ -1,14 +1,9 @@
-import { createConnectQueryKey } from '@connectrpc/connect-query';
-
 import { queryClient } from '@ui/config/query-client';
-import { getProjectConfig } from '@ui/gen/api/service/v1alpha1/service-KargoService_connectquery';
+import { getGetProjectConfigQueryKey } from '@ui/gen/api/v2/core/core';
 
 export default {
-  refetch: () =>
+  refetch: (project: string) =>
     queryClient.refetchQueries({
-      queryKey: createConnectQueryKey({
-        schema: getProjectConfig,
-        cardinality: 'finite'
-      })
+      queryKey: getGetProjectConfigQueryKey(project)
     })
 };

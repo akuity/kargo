@@ -18,8 +18,6 @@ import (
 	"github.com/akuity/kargo/pkg/cli/kubernetes"
 	"github.com/akuity/kargo/pkg/cli/option"
 	"github.com/akuity/kargo/pkg/cli/templates"
-	"github.com/akuity/kargo/pkg/client/generated/credentials"
-	"github.com/akuity/kargo/pkg/client/generated/system"
 )
 
 type deleteGenericCredentialsOptions struct {
@@ -145,11 +143,13 @@ func (o *deleteGenericCredentialsOptions) run(ctx context.Context) error {
 		return fmt.Errorf("get client from config: %w", err)
 	}
 
-	res, err := apiClient.System.GetConfig(system.NewGetConfigParams(), nil)
-	if err != nil {
-		return fmt.Errorf("get system config: %w", err)
+	systemConfig, httpRes, err := apiClient.SystemAPI.GetConfig(ctx).Execute()
+	if httpRes != nil {
+		_ = httpRes.Body.Close()
 	}
-	systemConfig := res.Payload
+	if err != nil {
+		return fmt.Errorf("get system config: %w", client.APIError(err))
+	}
 
 	printer, err := o.ToPrinter()
 	if err != nil {
@@ -162,33 +162,32 @@ func (o *deleteGenericCredentialsOptions) run(ctx context.Context) error {
 
 		switch {
 		case o.System:
-			if _, err := apiClient.Credentials.DeleteSystemGenericCredentials(
-				credentials.NewDeleteSystemGenericCredentialsParams().
-					WithGenericCredentials(name),
-				nil,
-			); err != nil {
-				errs = append(errs, err)
+			delRes, delErr := apiClient.CredentialsAPI.DeleteSystemGenericCredentials(ctx, name).Execute()
+			if delRes != nil {
+				_ = delRes.Body.Close()
+			}
+			if delErr != nil {
+				errs = append(errs, client.APIError(delErr))
 				continue
 			}
-			namespace = systemConfig.SystemResourcesNamespace
+			namespace = systemConfig.GetSystemResourcesNamespace()
 		case o.Shared:
-			if _, err := apiClient.Credentials.DeleteSharedGenericCredentials(
-				credentials.NewDeleteSharedGenericCredentialsParams().
-					WithGenericCredentials(name),
-				nil,
-			); err != nil {
-				errs = append(errs, err)
+			delRes, delErr := apiClient.CredentialsAPI.DeleteSharedGenericCredentials(ctx, name).Execute()
+			if delRes != nil {
+				_ = delRes.Body.Close()
+			}
+			if delErr != nil {
+				errs = append(errs, client.APIError(delErr))
 				continue
 			}
-			namespace = systemConfig.SharedResourcesNamespace
+			namespace = systemConfig.GetSharedResourcesNamespace()
 		default:
-			if _, err := apiClient.Credentials.DeleteProjectGenericCredentials(
-				credentials.NewDeleteProjectGenericCredentialsParams().
-					WithProject(o.Project).
-					WithGenericCredentials(name),
-				nil,
-			); err != nil {
-				errs = append(errs, err)
+			delRes, delErr := apiClient.CredentialsAPI.DeleteProjectGenericCredentials(ctx, o.Project, name).Execute()
+			if delRes != nil {
+				_ = delRes.Body.Close()
+			}
+			if delErr != nil {
+				errs = append(errs, client.APIError(delErr))
 				continue
 			}
 			namespace = o.Project

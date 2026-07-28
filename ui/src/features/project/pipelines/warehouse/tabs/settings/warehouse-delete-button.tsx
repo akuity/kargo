@@ -1,4 +1,3 @@
-import { createConnectQueryKey, useMutation } from '@connectrpc/connect-query';
 import { faTrash } from '@fortawesome/free-solid-svg-icons';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
 import { useQueryClient } from '@tanstack/react-query';
@@ -7,10 +6,7 @@ import { generatePath, useNavigate, useParams } from 'react-router-dom';
 
 import { paths } from '@ui/config/paths';
 import { useConfirmModal } from '@ui/features/common/confirm-modal/use-confirm-modal';
-import {
-  deleteWarehouse,
-  listWarehouses
-} from '@ui/gen/api/service/v1alpha1/service-KargoService_connectquery';
+import { getListWarehousesQueryKey, useDeleteWarehouse } from '@ui/gen/api/v2/core/core';
 
 export const WarehouseDeleteButton = () => {
   const { name: projectName, warehouseName } = useParams();
@@ -18,19 +14,21 @@ export const WarehouseDeleteButton = () => {
   const confirm = useConfirmModal();
   const queryClient = useQueryClient();
 
-  const { mutate, isPending: isLoadingDelete } = useMutation(deleteWarehouse, {
-    onSuccess: () => {
-      navigate(generatePath(paths.project, { name: projectName }));
+  const { mutate, isPending: isLoadingDelete } = useDeleteWarehouse({
+    mutation: {
+      onSuccess: () => {
+        navigate(generatePath(paths.project, { name: projectName }));
 
-      queryClient.invalidateQueries({
-        queryKey: createConnectQueryKey({ schema: listWarehouses, cardinality: 'finite' })
-      });
+        queryClient.invalidateQueries({
+          queryKey: getListWarehousesQueryKey(projectName)
+        });
+      }
     }
   });
 
   const onDelete = () => {
     confirm({
-      onOk: () => mutate({ name: warehouseName, project: projectName }),
+      onOk: () => mutate({ warehouse: warehouseName || '', project: projectName || '' }),
       title: 'Are you sure you want to delete Warehouse?'
     });
   };

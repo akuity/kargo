@@ -9,6 +9,7 @@ import {
 } from '@ui/features/common/utils';
 import { V1Secret } from '@ui/gen/api/v2/models';
 
+import { SecretFormValues } from './schema-validator';
 import { CredentialTypeLabelKey, CredentialsDataKey, CredentialsType } from './types';
 
 export const typeLabel = (type: CredentialsType) => (
@@ -38,7 +39,7 @@ export const labelForKey = (s: string) =>
     .replace(/^./, (str) => str.toUpperCase())
     .replace('Url', 'URL');
 
-export const constructDefaults = (init?: V1Secret, type?: string) => {
+export const constructDefaults = (init?: V1Secret, type?: string): SecretFormValues => {
   if (!init) {
     return {
       name: '',
@@ -49,7 +50,8 @@ export const constructDefaults = (init?: V1Secret, type?: string) => {
       username: '',
       password: '',
       data: [],
-      replicate: false
+      replicate: false,
+      secretType: 'Opaque'
     };
   }
 
@@ -66,7 +68,8 @@ export const constructDefaults = (init?: V1Secret, type?: string) => {
     username: stringData[CredentialsDataKey.Username],
     password: '',
     data: redactSecretStringData(init),
-    replicate: annotations[REPLICATE_TO_ANNOTATION_KEY] === REPLICATE_TO_ALL_VALUE
+    replicate: annotations[REPLICATE_TO_ANNOTATION_KEY] === REPLICATE_TO_ALL_VALUE,
+    secretType: init?.type || 'Opaque'
   };
 };
 

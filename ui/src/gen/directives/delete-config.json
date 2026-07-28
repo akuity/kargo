@@ -6,12 +6,25 @@
  "properties": {
   "path": {
    "type": "string",
-   "description": "Path is the path to the file or directory to delete.",
+   "description": "Path is the path to the file or directory to delete. It is mutually exclusive with paths. When pathsAreGlobs is true, it is interpreted as a glob pattern.",
    "minLength": 1
+  },
+  "paths": {
+   "type": "array",
+   "description": "Paths is a list of paths to files or directories to delete. It is mutually exclusive with path. When pathsAreGlobs is true, each entry is interpreted as a glob pattern.",
+   "items": {
+    "type": "string",
+    "minLength": 1
+   }
+  },
+  "pathsAreGlobs": {
+   "type": "boolean",
+   "description": "PathsAreGlobs causes path and paths to be treated as glob patterns instead of literal paths. Defaults to false.",
+   "default": false
   },
   "strict": {
    "type": "boolean",
-   "description": "Strict will cause the directive to fail if the path does not exist.",
+   "description": "Strict will cause the directive to fail if a path does not exist or a glob pattern matches nothing.",
    "default": false
   }
  }

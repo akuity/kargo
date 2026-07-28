@@ -379,7 +379,7 @@ func getArgoCDApplications(
 	}
 
 	if selector != nil {
-		labelSelector, err := buildArgoCDAppLabelSelector(selector)
+		labelSelector, err := BuildArgoCDAppLabelSelector(selector)
 		if err != nil {
 			return nil, fmt.Errorf("error building label selector: %w", err)
 		}

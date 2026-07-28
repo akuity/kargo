@@ -8,7 +8,7 @@ import {
   Freight,
   GitDiscoveryResult,
   ImageDiscoveryResult
-} from '@ui/gen/api/v1alpha1/generated_pb';
+} from '@ui/gen/api/v2/models';
 
 import { getSubscriptionKey, getSubscriptionKeyFreight } from './unique-subscription-key';
 
@@ -45,9 +45,9 @@ export const useWarehouseWithClonedFreight = (
     }
 
     const discoveredArtifacts = structuredClone(warehouse.status?.discoveredArtifacts);
-    const images: ImageDiscoveryResult[] = discoveredArtifacts?.images || [];
-    const charts: ChartDiscoveryResult[] = discoveredArtifacts?.charts || [];
-    const git: GitDiscoveryResult[] = discoveredArtifacts?.git || [];
+    const images = discoveredArtifacts?.images || [];
+    const charts = discoveredArtifacts?.charts || [];
+    const git = discoveredArtifacts?.git || [];
 
     for (const image of cloneFreightData.images || []) {
       let subscription = images.find(
@@ -57,12 +57,12 @@ export const useWarehouseWithClonedFreight = (
         subscription = {
           repoURL: image.repoURL,
           references: []
-        } as unknown as ImageDiscoveryResult;
+        } as ImageDiscoveryResult;
         images.push(subscription);
       }
 
-      if (!subscription?.references.find((r) => r.tag === image.tag)) {
-        subscription?.references.unshift({
+      if (!subscription?.references?.find((r) => r.tag === image.tag)) {
+        subscription?.references?.unshift({
           tag: image.tag,
           digest: image.digest,
           annotations: image.annotations
@@ -80,12 +80,12 @@ export const useWarehouseWithClonedFreight = (
           repoURL: chart.repoURL,
           name: chart.name,
           versions: []
-        } as unknown as ChartDiscoveryResult;
+        } as ChartDiscoveryResult;
         charts.push(subscription);
       }
 
-      if (!subscription?.versions.find((v) => v === chart.version)) {
-        subscription?.versions.unshift(chart.version);
+      if (!subscription?.versions?.find((v) => v === chart.version)) {
+        subscription?.versions?.unshift(chart.version || '');
       }
     }
 
@@ -97,12 +97,12 @@ export const useWarehouseWithClonedFreight = (
         subscription = {
           repoURL: commit.repoURL,
           commits: []
-        } as unknown as GitDiscoveryResult;
+        } as GitDiscoveryResult;
         git.push(subscription);
       }
 
-      if (!subscription?.commits.find((c) => c.id === commit.id && c.tag === commit.tag)) {
-        subscription?.commits.unshift({
+      if (!subscription?.commits?.find((c) => c.id === commit.id && c.tag === commit.tag)) {
+        subscription?.commits?.unshift({
           id: commit.id,
           branch: commit.branch,
           tag: commit.tag,

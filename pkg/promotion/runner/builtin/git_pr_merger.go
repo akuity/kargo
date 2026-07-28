@@ -23,6 +23,13 @@ import (
 
 const stepKindGitMergePR = "git-merge-pr"
 
+// gitMergePRPollIntervalDefault is the suggested interval at which the
+// git-merge-pr step re-attempts the merge while the pull request is not yet
+// mergeable (and wait is enabled), absent an explicitly configured pollInterval.
+// PRs are typically ready to merge within seconds of being opened, so this
+// defaults to the controller's lower bound.
+const gitMergePRPollIntervalDefault = 10 * time.Second
+
 func init() {
 	promotion.DefaultStepRunnerRegistry.MustRegister(
 		promotion.StepRunnerRegistration{
@@ -112,41 +119,38 @@ func (g *gitPRMerger) run(
 			fmt.Errorf("error creating git provider service: %w", err)
 	}
 
-	// Try to merge the PR using a primitive retry loop. PRs are often ready to
-	// merge moments after being opened, but not quite immediately. Accounting
-	// for this internally avoids the scenario where a Promotion needs to wait
-	// for its next regularly scheduled reconciliation to merge a PR that could
-	// have been merged already if we were patient for just a few seconds.
-	var mergedPR *gitprovider.PullRequest
-	var merged bool
-	const maxMergeAttempts = 3
-
-	for i := range maxMergeAttempts {
-		if mergedPR, merged, err = gitProv.MergePullRequest(
-			ctx,
-			cfg.PRNumber,
-			&gitprovider.MergePullRequestOpts{MergeMethod: cfg.MergeMethod},
-		); err != nil {
-			// Only actual errors (auth, network, invalid PR, closed but not merged,
-			// etc.) reach here
-			return promotion.StepResult{Status: kargoapi.PromotionStepStatusFailed},
-				&promotion.TerminalError{
-					Err: fmt.Errorf("error merging pull request %d: %w", cfg.PRNumber, err),
-				}
-		}
-		if merged {
-			break
-		}
-		if i < maxMergeAttempts {
-			time.Sleep(time.Second * 5)
-		}
+	// Attempt the merge once per reconciliation. PRs are often ready to merge
+	// moments after being opened, but not quite immediately. Rather than block a
+	// reconciliation worker in a sleep loop, when wait is enabled we report
+	// RUNNING with a suggested poll interval so the Promotion is re-attempted
+	// soon (subject to the controller's lower bound) without starving other
+	// Promotions.
+	mergedPR, merged, err := gitProv.MergePullRequest(
+		ctx,
+		cfg.PRNumber,
+		&gitprovider.MergePullRequestOpts{MergeMethod: cfg.MergeMethod},
+	)
+	if err != nil {
+		// Only actual errors (auth, network, invalid PR, closed but not merged,
+		// etc.) reach here
+		return promotion.StepResult{Status: kargoapi.PromotionStepStatusFailed},
+			&promotion.TerminalError{
+				Err: fmt.Errorf("error merging pull request %d: %w", cfg.PRNumber, err),
+			}
 	}
 
 	if !merged {
 		// PR is not ready to merge yet (checks pending, conflicts, etc.)
 		if cfg.Wait {
-			// Return RUNNING to retry later
-			return promotion.StepResult{Status: kargoapi.PromotionStepStatusRunning}, nil
+			// Return RUNNING to re-attempt later.
+			pollInterval, err := resolvePollInterval(cfg.PollInterval, gitMergePRPollIntervalDefault)
+			if err != nil {
+				return promotion.StepResult{Status: kargoapi.PromotionStepStatusErrored}, err
+			}
+			return promotion.StepResult{
+				Status:     kargoapi.PromotionStepStatusRunning,
+				RetryAfter: &pollInterval,
+			}, nil
 		}
 		// If not waiting, treat as a failure
 		return promotion.StepResult{Status: kargoapi.PromotionStepStatusFailed},

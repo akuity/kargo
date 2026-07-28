@@ -73,7 +73,7 @@ export const MetricTable = ({
         key='time'
         title='Time'
         render={(measurement: TransformedMeasurement) => (
-          <span>{moment.unix(Number(measurement?.startedAt?.seconds)).format()}</span>
+          <span>{moment(measurement?.startedAt).format()}</span>
         )}
       />
     </Table>

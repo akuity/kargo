@@ -5,8 +5,9 @@ import {
   DiscoveredImageReference,
   GitCommit,
   Image
-} from '@ui/gen/api/v1alpha1/generated_pb';
+} from '@ui/gen/api/v2/models';
 
+import { isArtifactChart, isArtifactGitCommit, isArtifactImage } from './artifact-type-guards';
 import { getSubscriptionKey, getSubscriptionKeyFreight } from './unique-subscription-key';
 
 export const findImageReference = (artifact: Image, refs: DiscoveredImageReference[]) => {
@@ -25,27 +26,27 @@ export const artifactInDiscoveredResults = (
   artifact: Image | Chart | GitCommit,
   discoveredResults?: DiscoveredArtifacts
 ) => {
-  if (artifact?.$typeName === 'github.com.akuity.kargo.api.v1alpha1.Image') {
+  if (isArtifactImage(artifact)) {
     return discoveredResults?.images?.find(
       (img) =>
         getSubscriptionKey(img) === getSubscriptionKeyFreight(artifact) &&
-        findImageReference(artifact, img.references)
+        findImageReference(artifact, img.references ?? [])
     );
   }
 
-  if (artifact?.$typeName === 'github.com.akuity.kargo.api.v1alpha1.Chart') {
+  if (isArtifactChart(artifact)) {
     return discoveredResults?.charts?.find(
       (chart) =>
         getSubscriptionKey(chart) === getSubscriptionKeyFreight(artifact) &&
-        findChartReference(artifact, chart.versions)
+        findChartReference(artifact, chart.versions ?? [])
     );
   }
 
-  if (artifact.$typeName === 'github.com.akuity.kargo.api.v1alpha1.GitCommit') {
+  if (isArtifactGitCommit(artifact)) {
     return discoveredResults?.git?.find(
       (git) =>
         getSubscriptionKey(git) === getSubscriptionKeyFreight(artifact) &&
-        findCommitReference(artifact, git.commits)
+        findCommitReference(artifact, git.commits ?? [])
     );
   }
 

@@ -30,6 +30,8 @@ type authRegistryHandler struct {
 // newAuthRegistryServer creates a new httptest.Server that wraps a registry
 // handler and requires clients to exchange a username and password for a Bearer
 // token to access the underlying handler.
+//
+// nolint:unparam
 func newAuthRegistryServer(username, password string, opts ...registry.Option) *httptest.Server {
 	return httptest.NewUnstartedServer(
 		newAuthRegistryHandler(

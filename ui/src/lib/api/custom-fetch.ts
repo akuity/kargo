@@ -15,7 +15,7 @@ import { basePath, withBasePath } from '@ui/config/base-path';
 import { paths } from '@ui/config/paths';
 import { parseJwtPayload } from '@ui/utils/jwt-payload';
 
-const getBaseUrl = (): string => {
+export const getBaseUrl = (): string => {
   if (import.meta.env.VITE_API_URL) {
     return import.meta.env.VITE_API_URL;
   }
@@ -169,5 +169,8 @@ export class ApiError extends Error {
     return this.status === 404;
   }
 }
+
+// eslint-disable-next-line @typescript-eslint/no-unused-vars
+export type ErrorType<Error> = ApiError;
 
 export default customFetch;

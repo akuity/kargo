@@ -1,6 +1,8 @@
 import { useEffect, useState } from 'react';
 
-import { DiscoveredCommit, DiscoveredImageReference } from '@ui/gen/api/v1alpha1/generated_pb';
+import { DiscoveredCommit, DiscoveredImageReference } from '@ui/gen/api/v2/models';
+
+import { isDiscoveredCommit, isDiscoveredImage } from './artifact-type-guards';
 
 export const useDetectPage = (
   items: DiscoveredImageReference[] | DiscoveredCommit[] | string[],
@@ -20,12 +22,12 @@ export const useDetectPage = (
         return item === selected;
       }
 
-      if (item.$typeName === 'github.com.akuity.kargo.api.v1alpha1.DiscoveredCommit') {
+      if (isDiscoveredCommit(item)) {
         const _selected = selected as DiscoveredCommit;
         return item?.id === _selected?.id && item?.tag === _selected?.tag;
       }
 
-      if (item.$typeName === 'github.com.akuity.kargo.api.v1alpha1.DiscoveredImageReference') {
+      if (isDiscoveredImage(item)) {
         const _selected = selected as DiscoveredImageReference;
         return item?.tag === _selected?.tag;
       }

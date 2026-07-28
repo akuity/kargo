@@ -78,30 +78,37 @@ This example creates a new Jira issue to track a promotion, assigns it to a team
 member, and adds relevant labels.
 
 ```yaml
-steps:
-- uses: jira
-  as: create-promotion-issue
-  config:
-    credentials:
-      secretName: jira-credentials
-    createIssue:
-      projectKey: PROMOTE
-      summary: "Promote ${{ imageFrom(vars.imageRepo).Tag }} to ${{ ctx.stage }}"
-      description: "Promoteing ${{ imageFrom(vars.imageRepo).RepoURL }}:${{ imageFrom(vars.imageRepo).Tag }} to ${{ ctx.stage }} environment. Promotion ID: ${{ ctx.promotion }}. Freight: ${{ ctx.targetFreight.name }}."
-      issueType: Task
-      assigneeEmail: devops@company.com
-      labels:
-      - promotion
-      - "${{ ctx.stage }}"
-      - "release-${{ imageFrom(vars.imageRepo).Tag }}"
-# Use the created issue key in subsequent steps
-- uses: jira
-  config:
-    credentials:
-      secretName: jira-credentials
-    updateIssue:
-      issueKey: "${{ outputs['create-promotion-issue'].key }}"
-      status: "IN PROGRESS"
+apiVersion: kargo.akuity.io/v1alpha1
+kind: Stage
+# ...
+spec:
+  # ...
+  promotionTemplate:
+    spec:
+      steps:
+      - uses: jira
+        as: create-promotion-issue
+        config:
+          credentials:
+            secretName: jira-credentials
+          createIssue:
+            projectKey: PROMOTE
+            summary: "Promote ${{ imageFrom(vars.imageRepo).Tag }} to ${{ ctx.stage }}"
+            description: "Promoting ${{ imageFrom(vars.imageRepo).RepoURL }}:${{ imageFrom(vars.imageRepo).Tag }} to ${{ ctx.stage }} environment. Promotion ID: ${{ ctx.promotion }}. Freight: ${{ ctx.targetFreight.name }}."
+            issueType: Task
+            assigneeEmail: devops@company.com
+            labels:
+            - promotion
+            - "${{ ctx.stage }}"
+            - "release-${{ imageFrom(vars.imageRepo).Tag }}"
+      # Use the created issue key in subsequent steps
+      - uses: jira
+        config:
+          credentials:
+            secretName: jira-credentials
+          updateIssue:
+            issueKey: "${{ outputs['create-promotion-issue'].key }}" # Or task.outputs in a (Cluster)PromotionTask
+            status: "IN PROGRESS"
 ```
 
 ### Update Issue
@@ -211,38 +218,45 @@ Searches for Jira issues using JQL
 This example searches for open promotion issues in a specific project and expects multiple results.
 
 ```yaml
-steps:
-- uses: jira
-  as: find-open-promotions
-  config:
-    credentials:
-      secretName: jira-credentials
-    searchIssue:
-      jql: 'project = PROMOTE AND status != "Done" AND labels = "${{ ctx.stage }}-promotion" AND created >= -7d'
-      expectMultiple: true
-      fields:
-      - summary
-      - status
-      - assignee
-      - created
-      expands:
-      - changelog
-# Use search results in subsequent steps to notify team
-# Note: This is just an example of using search outputs and may not be syntactically valid
-- uses: http
-  config:
-    method: POST
-    url: https://slack.com/api/chat.postMessage
-    headers:
-    - name: Authorization
-      value: "Bearer ${{ secret('slack-credentials').token }}"
-    - name: Content-Type
-      value: application/json
-    body: |
-      ${{ quote({
-        "channel": "#promotions",
-        "text": "Found issue" + outputs['find-open-promotions'].issue.key + " for " + ctx.stage + " environment"
-      }) }}
+apiVersion: kargo.akuity.io/v1alpha1
+kind: Stage
+# ...
+spec:
+  # ...
+  promotionTemplate:
+    spec:
+      steps:
+      - uses: jira
+        as: find-open-promotions
+        config:
+          credentials:
+            secretName: jira-credentials
+          searchIssue:
+            jql: 'project = PROMOTE AND status != "Done" AND labels = "${{ ctx.stage }}-promotion" AND created >= -7d'
+            expectMultiple: true
+            fields:
+            - summary
+            - status
+            - assignee
+            - created
+            expands:
+            - changelog
+      # Use search results in subsequent steps to notify team
+      # Note: This is just an example of using search outputs and may not be syntactically valid
+      - uses: http
+        config:
+          method: POST
+          url: https://slack.com/api/chat.postMessage
+          headers:
+          - name: Authorization
+            value: "Bearer ${{ secret('slack-credentials').token }}"
+          - name: Content-Type
+            value: application/json
+          body: |
+            ${{ quote({
+              "channel": "#promotions",
+              "text": "Found issue" + outputs['find-open-promotions'].issue.key + " for " + ctx.stage + " environment"
+            }) }}
 ```
 
 ## Comment Management
@@ -270,23 +284,30 @@ Adds a comment to an existing Jira issue.
 This example adds a comment to a Jira issue with promotion progress information.
 
 ```yaml
-steps:
-- uses: jira
-  as: add-progress-comment
-  config:
-    credentials:
-      secretName: jira-credentials
-    commentOnIssue:
-      issueKey: "${{ freightMetadata(ctx.targetFreight.name)['jira-issue-key'] }}"
-      body: "Promotion started. Environment: ${{ ctx.stage }}. Image: ${{ imageFrom(vars.imageRepo).RepoURL }}:${{ imageFrom(vars.imageRepo).Tag }}. Promotion: ${{ ctx.promotion }}. Status: Promoting to ${{ ctx.stage }} environment..."
-# Later use the comment ID if needed
-- uses: jira
-  config:
-    credentials:
-      secretName: jira-credentials
-    deleteComment:
-      issueKey: "${{ freightMetadata(ctx.targetFreight.name)['jira-issue-key'] }}"
-      commentID: "${{ quote(outputs['add-progress-comment'].commentID) }}"
+apiVersion: kargo.akuity.io/v1alpha1
+kind: Stage
+# ...
+spec:
+  # ...
+  promotionTemplate:
+    spec:
+      steps:
+      - uses: jira
+        as: add-progress-comment
+        config:
+          credentials:
+            secretName: jira-credentials
+          commentOnIssue:
+            issueKey: "${{ freightMetadata(ctx.targetFreight.name)['jira-issue-key'] }}"
+            body: "Promotion started. Environment: ${{ ctx.stage }}. Image: ${{ imageFrom(vars.imageRepo).RepoURL }}:${{ imageFrom(vars.imageRepo).Tag }}. Promotion: ${{ ctx.promotion }}. Status: Promoting to ${{ ctx.stage }} environment..."
+      # Later use the comment ID if needed
+      - uses: jira
+        config:
+          credentials:
+            secretName: jira-credentials
+          deleteComment:
+            issueKey: "${{ freightMetadata(ctx.targetFreight.name)['jira-issue-key'] }}"
+            commentID: "${{ quote(outputs['add-progress-comment'].commentID) }}" # Or task.outputs in a (Cluster)PromotionTask
 ```
 
 ### Delete Comment
@@ -309,14 +330,21 @@ This step does not produce any output.
 This example deletes a specific comment from a Jira issue.
 
 ```yaml
-steps:
-- uses: jira
-  config:
-    credentials:
-      secretName: jira-credentials
-    deleteComment:
-      issueKey: "${{ freightMetadata(ctx.targetFreight.name)['jira-issue-key'] }}"
-      commentID: "${{ outputs['previous-comment-step'].commentID }}"
+apiVersion: kargo.akuity.io/v1alpha1
+kind: Stage
+# ...
+spec:
+  # ...
+  promotionTemplate:
+    spec:
+      steps:
+      - uses: jira
+        config:
+          credentials:
+            secretName: jira-credentials
+          deleteComment:
+            issueKey: "${{ freightMetadata(ctx.targetFreight.name)['jira-issue-key'] }}"
+            commentID: "${{ outputs['previous-comment-step'].commentID }}" # Or task.outputs in a (Cluster)PromotionTask
 ```
 
 ## Status Tracking
@@ -495,7 +523,7 @@ spec:
           credentials:
             secretName: jira
           commentOnIssue:
-            issueKey: ${{ outputs['create-promotion-issue'].key }}
+            issueKey: ${{ outputs['create-promotion-issue'].key }} # Or task.outputs in a (Cluster)PromotionTask
             body: "Release ${{ imageFrom(vars.imageRepo).Tag }} has been promoted to ${{ ctx.stage }} environment. Freight: ${{ ctx.targetFreight.name }}. Ready for testing."
 
       # Cleanup on failure
@@ -586,7 +614,7 @@ spec:
             secretName: jira
           deleteComment:
             issueKey: ${{ freightMetadata(ctx.targetFreight.name)['jira-issue-key'] }}
-            commentID: ${{ quote(outputs['comment-on-issue'].commentID) }}
+            commentID: ${{ quote(outputs['comment-on-issue'].commentID) }} # Or task.outputs in a (Cluster)PromotionTask
 
 ---
 apiVersion: kargo.akuity.io/v1alpha1
@@ -627,7 +655,7 @@ spec:
           credentials:
             secretName: jira
           waitForStatus:
-            issueKey: ${{ outputs['search-issue'].key }}
+            issueKey: ${{ outputs['search-issue'].key }} # Or task.outputs in a (Cluster)PromotionTask
             expectedStatus: RELEASED
 
       # Update the Argo CD Application directly. Not ideal for practical purposes.

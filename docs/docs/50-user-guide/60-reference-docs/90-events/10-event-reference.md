@@ -112,6 +112,7 @@ Promotion payloads describe a promotion resource and the freight it targets.
 | `stageName`    | String                                                | Stage targeted by the promotion.                      | No               |
 | `createTime`   | String (RFC3339)                                      | Creation timestamp of the promotion resource.         | No               |
 | `applications` | Array\<[NamespacedName](#applications-entry-fields)\> | Argo CD applications resolved for the promotion step. | Yes              |
+| `rollback`     | Boolean                                               | Indicates whether the promotion is a rollback.        | Yes              |
 
 #### Applications Entry Fields
 
@@ -131,6 +132,7 @@ The complete list of built-in Kargo event types is provided below:
 - `PromotionFailed`
 - `PromotionErrored`
 - `PromotionAborted`
+- `FreightCreated`
 - `FreightApproved`
 - `FreightVerificationSucceeded`
 - `FreightVerificationFailed`
@@ -193,6 +195,15 @@ This event is emitted when a promotion run is aborted before completion.
 
 - [Common event fields](#common-event-fields)
 - [Promotion fields](#promotion-fields)
+
+### `FreightCreated`
+
+This event is emitted when a new piece of freight is created by a warehouse or the API server.
+
+**Payload Includes**
+
+- [Common event fields](#common-event-fields)
+- [Freight fields](#freight-fields)
 
 ### `FreightApproved`
 

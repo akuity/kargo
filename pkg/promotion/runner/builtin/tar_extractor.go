@@ -358,7 +358,7 @@ func (t *tarExtractor) extractToDir(
 			// Limit copying to the declared size
 			written, err := io.CopyN(outFile, tarReader, header.Size)
 			if closeErr := outFile.Close(); closeErr != nil {
-				logger.Error(err, fmt.Sprintf("failed to close file %s", targetPath))
+				logger.Error(closeErr, fmt.Sprintf("failed to close file %s", targetPath))
 			}
 			if err != nil && err != io.EOF {
 				return promotion.StepResult{Status: kargoapi.PromotionStepStatusErrored},

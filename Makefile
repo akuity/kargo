@@ -7,7 +7,6 @@ ARGO_CD_CHART_VERSION		:= 9.4.3
 ARGO_ROLLOUTS_CHART_VERSION := 2.40.6
 CERT_MANAGER_CHART_VERSION 	:= 1.19.3
 
-BUF_LINT_ERROR_FORMAT	?= text
 GO_LINT_EXTRA_FLAGS 	?= --output.text.print-issued-lines --output.text.colors
 
 GO_TEST_ARGS ?=
@@ -71,7 +70,7 @@ KARGO_EXTERNAL_WEBHOOKS_SERVER_HOSTNAME ?=
 ################################################################################
 
 .PHONY: lint
-lint: lint-go lint-proto lint-charts lint-ui
+lint: lint-go lint-charts lint-ui
 
 .PHONY: format
 format: format-go format-ui
@@ -80,7 +79,7 @@ format: format-go format-ui
 lint-go: install-golangci-lint
 	{ \
 		set -e; \
-		for mod in $$(find . -maxdepth 4 -type f -name 'go.mod' | grep -v tools); do \
+		for mod in $$(find . -maxdepth 5 -type f -name 'go.mod' | grep -v tools); do \
 			echo "Linting $$(dirname $${mod}) ..."; \
 			cd $$(dirname $${mod}); \
 			$(GOLANGCI_LINT) run --config $(CURDIR)/.golangci.yaml $(GO_LINT_EXTRA_FLAGS); \
@@ -92,7 +91,7 @@ lint-go: install-golangci-lint
 format-go:
 	{ \
 		set -e; \
-		for mod in $$(find . -maxdepth 4 -type f -name 'go.mod' | grep -v tools); do \
+		for mod in $$(find . -maxdepth 5 -type f -name 'go.mod' | grep -v tools); do \
 			echo "Fixing $$(dirname $${mod}) ..."; \
 			cd $$(dirname $${mod}); \
 			$(GOLANGCI_LINT) run --fix --config $(CURDIR)/.golangci.yaml; \
@@ -100,18 +99,24 @@ format-go:
 		done; \
 	}
 
-.PHONY: lint-proto
-lint-proto: install-buf
-	# Vendor go dependencies to build protobuf definitions
-	go mod vendor
-	@# Only lint hand-written .proto files
-	$(BUF) lint . --path api/service --error-format=$(BUF_LINT_ERROR_FORMAT)
-
 .PHONY: lint-charts
 lint-charts: install-helm
 	cd charts/kargo && \
 	$(HELM) dep up && \
 	$(HELM) lint .
+
+# helm-unittest plugin version used by `make test-chart`.
+HELM_UNITTEST_VERSION ?= v1.1.0
+
+.PHONY: test-chart
+test-chart: install-helm
+	@# stdout of the install is redirected to silence the plugin's usage
+	@# banner; errors still surface on stderr.
+	$(HELM) plugin list | grep -q unittest || \
+		$(HELM) plugin install --version $(HELM_UNITTEST_VERSION) https://github.com/helm-unittest/helm-unittest >/dev/null
+	cd charts/kargo && \
+	$(HELM) dep up && \
+	$(HELM) unittest .
 
 .PHONY: lint-ui
 lint-ui:
@@ -123,6 +128,11 @@ typecheck-ui:
 	pnpm --dir=ui install
 	pnpm --dir=ui run typecheck
 
+.PHONY: test-unit-ui
+test-unit-ui:
+	pnpm --dir=ui install
+	pnpm --dir=ui exec vitest run
+
 .PHONY: format-ui
 format-ui:
 	pnpm --dir=ui install --dev
@@ -132,7 +142,7 @@ format-ui:
 test-unit: install-helm
 	{ \
 		set -e; \
-		for mod in $$(find . -maxdepth 4 -type f -name 'go.mod' | grep -v tools); do \
+		for mod in $$(find . -maxdepth 5 -type f -name 'go.mod' | grep -v tools); do \
 			echo "Testing $$(dirname $${mod}) ..."; \
 			cd $$(dirname $${mod}); \
 			PATH=$(EXTENDED_PATH) go test \
@@ -210,7 +220,7 @@ sign-and-notarize-cli: install-quill
 	$(QUILL) sign-and-notarize --p12 $(QUILL_SIGN_P12) $(KARGO_BIN_PATH)
 
 ################################################################################
-# Used for Nighty/Unstable builds                                              #
+# Used for Nightly/Unstable builds                                              #
 ################################################################################
 
 .PHONY: build-nightly-cli
@@ -237,15 +247,14 @@ build-cli-with-ui: build-ui build-cli
 ################################################################################
 
 .PHONY: codegen
-codegen: codegen-openapi codegen-proto codegen-controller codegen-schema-to-go codegen-ui codegen-docs
+codegen: codegen-openapi codegen-controller codegen-schema-to-go codegen-ui codegen-docs
 
 .PHONY: codegen-openapi
-codegen-openapi: install-swag install-go-swagger install-jq
+codegen-openapi: install-jq install-openapi-generator-cli
 	rm -f swagger.json
-	find pkg/client/generated -mindepth 1 ! -name go.mod ! -name go.sum -exec rm -rf {} +
 	rm -rf /tmp/swagger-build
 	mkdir -p /tmp/swagger-build
-	$(SWAG_LINK) init \
+	go tool swag init \
 		--generalInfo pkg/server/rest_router.go \
 		--output /tmp/swagger-build \
 		--parseDependency \
@@ -254,38 +263,28 @@ codegen-openapi: install-swag install-go-swagger install-jq
 	mv /tmp/swagger-build/swagger.json .
 	rm -rf /tmp/swagger-build
 	hack/codegen/fix-swagger-spec.sh swagger.json
-	mkdir -p pkg/client/generated
-	$(GO_SWAGGER_LINK) generate client \
-		-f swagger.json \
-		-t pkg \
-		--client-package client/generated \
-		--model-package client/generated/models \
-		--skip-validation
+	./hack/codegen/generate-go-client.sh
 	pnpm --dir=ui install --dev
 	pnpm --dir=ui run generate:api
 
-.PHONY: codegen-proto
-codegen-proto: install-protoc install-go-to-protobuf install-protoc-gen-gogo install-goimports install-buf install-protoc-gen-doc
-	./hack/codegen/proto.sh
-
 .PHONY: codegen-controller
-codegen-controller: install-controller-gen
-	$(CONTROLLER_GEN) \
+codegen-controller:
+	go tool controller-gen \
 		rbac:roleName=manager-role \
 		crd \
 		webhook \
 		paths=./api/v1alpha1/... \
 		output:crd:artifacts:config=charts/kargo/resources/crds
-	$(CONTROLLER_GEN) \
+	go tool controller-gen \
 		object:headerFile=hack/boilerplate.go.txt \
-		paths=./...
+		paths="{./api/..., ./pkg/..., ./cmd/...}"
 
 .PHONY: codegen-bitbucket-client
-codegen-bitbucket-client: install-oapi-codegen
-	cd pkg/gitprovider/bitbucket/cloud && $(OAPI_CODEGEN_LINK) --config spec/oapi-codegen.yaml spec/bitbucket.gen.json
+codegen-bitbucket-client:
+	cd pkg/gitprovider/bitbucket/cloud && go tool oapi-codegen --config spec/oapi-codegen.yaml spec/bitbucket.gen.json
 
 .PHONY: codegen-schema-to-go
-codegen-schema-to-go: install-goimports
+codegen-schema-to-go:
 	npm install -g quicktype@23.0.176
 	./hack/codegen/promotion-step-configs.sh
 	./hack/codegen/subscriptions.sh
@@ -353,13 +352,13 @@ hack-format: hack-build-dev-tools
 hack-lint-go: hack-build-dev-tools
 	$(DOCKER_CMD) make lint-go
 
-.PHONY: hack-lint-proto
-hack-lint-proto: hack-build-dev-tools
-	$(DOCKER_CMD) make lint-proto
-
 .PHONY: hack-lint-charts
 hack-lint-charts: hack-build-dev-tools
 	$(DOCKER_CMD) make lint-charts
+
+.PHONY: hack-test-chart
+hack-test-chart: hack-build-dev-tools
+	$(DOCKER_CMD) make test-chart
 
 .PHONY: hack-lint-ui
 hack-lint-ui: hack-build-dev-tools
@@ -411,12 +410,15 @@ hack-build-governance-bot: hack-build-dev-tools
 	$(DOCKER_CMD) sh -c 'GOOS=$(GOOS) GOARCH=$(GOARCH) make build-governance-bot'
 
 .PHONY: hack-kind-up
-hack-kind-up: install-ctlptl install-kind
-	PATH=$(EXTENDED_PATH) $(CTLPTL) apply -f hack/kind/cluster.yaml
+hack-kind-up:
+	# ctlptl shells out to the `kind` binary, so build it (pinned via go.mod)
+	# onto PATH before invoking ctlptl.
+	go build -o hack/bin/kind sigs.k8s.io/kind
+	PATH=$(EXTENDED_PATH) go tool ctlptl apply -f hack/kind/cluster.yaml
 
 .PHONY: hack-k3d-up
-hack-k3d-up: install-ctlptl install-k3d
-	PATH=$(EXTENDED_PATH) $(CTLPTL) apply -f hack/k3d/cluster.yaml
+hack-k3d-up: install-k3d
+	PATH=$(EXTENDED_PATH) go tool ctlptl apply -f hack/k3d/cluster.yaml
 
 .PHONY: hack-tilt-up
 hack-tilt-up: install-tilt install-helm
@@ -427,12 +429,15 @@ hack-tilt-down: install-tilt
 	PATH=$(EXTENDED_PATH) $(TILT) down
 
 .PHONY: hack-kind-down
-hack-kind-down: install-ctlptl install-kind
-	PATH=$(EXTENDED_PATH) $(CTLPTL) delete -f hack/kind/cluster.yaml
+hack-kind-down:
+	# ctlptl shells out to the `kind` binary, so build it (pinned via go.mod)
+	# onto PATH before invoking ctlptl.
+	go build -o hack/bin/kind sigs.k8s.io/kind
+	PATH=$(EXTENDED_PATH) go tool ctlptl delete -f hack/kind/cluster.yaml
 
 .PHONY: hack-k3d-down
-hack-k3d-down: install-ctlptl install-k3d
-	PATH=$(EXTENDED_PATH) $(CTLPTL) delete -f hack/k3d/cluster.yaml
+hack-k3d-down: install-k3d
+	PATH=$(EXTENDED_PATH) go tool ctlptl delete -f hack/k3d/cluster.yaml
 
 .PHONY: hack-install-prereqs
 hack-install-prereqs: hack-install-cert-manager hack-install-argocd hack-install-argo-rollouts

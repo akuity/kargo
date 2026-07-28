@@ -1,4 +1,3 @@
-import { useQuery } from '@connectrpc/connect-query';
 import {
   faCheckCircle,
   faExclamationCircle,
@@ -13,10 +12,8 @@ import { useParams } from 'react-router-dom';
 
 import { useDocumentTitle } from '@ui/features/common/document-title/use-document-title';
 import { BaseHeader } from '@ui/features/common/layout/base-header';
-import { listProjectEvents } from '@ui/gen/api/service/v1alpha1/service-KargoService_connectquery';
-import { Event } from '@ui/gen/k8s.io/api/core/v1/generated_pb';
-import { Time } from '@ui/gen/k8s.io/apimachinery/pkg/apis/meta/v1/generated_pb';
-import { timestampDate } from '@ui/utils/connectrpc-utils';
+import { useListProjectEvents } from '@ui/gen/api/v2/events/events';
+import { V1Event } from '@ui/gen/api/v2/models';
 
 import { useProjectBreadcrumbs } from '../project-utils';
 
@@ -48,7 +45,7 @@ const CircleValue = ({
   );
 };
 
-const EventStatus = ({ event, className }: { event: Event; className?: string }) => {
+const EventStatus = ({ event, className }: { event: V1Event; className?: string }) => {
   let color = 'bg-gray-500';
   let icon = faQuestionCircle;
 
@@ -74,12 +71,12 @@ const EventStatus = ({ event, className }: { event: Event; className?: string })
   );
 };
 
-const HumanReadableTimestamp = ({ timestamp }: { timestamp?: Time }) => {
+const HumanReadableTimestamp = ({ timestamp }: { timestamp?: string }) => {
   if (!timestamp) {
     return <>Unknown</>;
   }
 
-  const date = timestampDate(timestamp);
+  const date = new Date(timestamp);
   const fullTimestamp = format(date || '', 'MMM do yyyy HH:mm:ss');
   const fromNow = moment(date).fromNow();
 
@@ -90,7 +87,7 @@ const HumanReadableTimestamp = ({ timestamp }: { timestamp?: Time }) => {
   );
 };
 
-const EventRow = ({ event }: { event: Event }) => {
+const EventRow = ({ event }: { event: V1Event }) => {
   return (
     <div className='mb-1 flex flex-col'>
       <div className='uppercase text-xs text-gray-400 ml-auto mr-1 mb-1 font-mono'>
@@ -124,9 +121,12 @@ const EventRow = ({ event }: { event: Event }) => {
 
 export const Events = () => {
   const { name } = useParams();
-  const { data } = useQuery(listProjectEvents, { project: name });
+
+  const listProjectEventsQuery = useListProjectEvents(name || '');
   const projectBreadcrumbs = useProjectBreadcrumbs();
   useDocumentTitle(['Events', name]);
+
+  const events = listProjectEventsQuery.data?.data?.items || [];
 
   return (
     <Flex vertical className='min-h-full'>
@@ -142,8 +142,8 @@ export const Events = () => {
         />
       </BaseHeader>
       <div className='px-4 pt-3 pb-10 flex flex-col flex-1'>
-        {(data?.events || []).length > 0 ? (
-          data?.events.map((event) => <EventRow key={event.metadata?.name} event={event} />)
+        {events.length > 0 ? (
+          events.map((event) => <EventRow key={event.metadata?.name} event={event} />)
         ) : (
           <Empty description='No events' className='my-auto pb-20' />
         )}

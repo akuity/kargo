@@ -177,23 +177,30 @@ or by a `Promotion` which failed to complete successfully.
 ### Common Usage
 
 ```yaml
-steps:
-# Clone, render manifests, commit, push, etc...
-- uses: git-commit
-  as: commit
-  config:
-    path: ./out
-    message: ${{ outputs['update-image'].commitMessage }}
-- uses: git-push
-  config:
-    path: ./out
-- uses: argocd-update
-  config:
-    apps:
-    - name: my-app
-      sources:
-      - repoURL: https://github.com/example/repo.git
-        desiredRevision: ${{ outputs.commit.commit }}
+apiVersion: kargo.akuity.io/v1alpha1
+kind: Stage
+# ...
+spec:
+  # ...
+  promotionTemplate:
+    spec:
+      steps:
+      # Clone, render manifests, commit, push, etc...
+      - uses: git-commit
+        as: commit
+        config:
+          path: ./out
+          message: ${{ outputs['update-image'].commitMessage }} # Or task.outputs in a (Cluster)PromotionTask
+      - uses: git-push
+        config:
+          path: ./out
+      - uses: argocd-update
+        config:
+          apps:
+          - name: my-app
+            sources:
+            - repoURL: https://github.com/example/repo.git
+              desiredRevision: ${{ outputs.commit.commit }}
 ```
 
 ### Updating a Target Revision
@@ -295,17 +302,25 @@ simple key-value label matching. All specified labels must match for an
 application to be selected.
 
 ```yaml
-steps:
-- uses: argocd-update
-  config:
-    apps:
-    - selector:
-        matchLabels:
-          environment: production
-          team: platform
-      sources:
-      - repoURL: https://github.com/example/repo.git
-        desiredRevision: ${{ outputs.commit.commit }}
+apiVersion: kargo.akuity.io/v1alpha1
+kind: Stage
+# ...
+spec:
+  # ...
+  promotionTemplate:
+    spec:
+      steps:
+      # Clone, render manifests, commit, push, etc...
+      - uses: argocd-update
+        config:
+          apps:
+          - selector:
+              matchLabels:
+                environment: production
+                team: platform
+            sources:
+            - repoURL: https://github.com/example/repo.git
+              desiredRevision: ${{ outputs.commit.commit }} # Or task.outputs in a (Cluster)PromotionTask
 ```
 
 This configuration will select all Argo CD `Application` resources in the
@@ -318,20 +333,28 @@ This example demonstrates using `matchExpressions` with the `In` operator to
 select `Application`s that match one of several possible values for a label.
 
 ```yaml
-steps:
-- uses: argocd-update
-  config:
-    apps:
-    - selector:
-        matchExpressions:
-        - key: environment
-          operator: In
-          values:
-          - staging
-          - production
-      sources:
-      - repoURL: https://github.com/example/repo.git
-        desiredRevision: ${{ outputs.commit.commit }}
+apiVersion: kargo.akuity.io/v1alpha1
+kind: Stage
+# ...
+spec:
+  # ...
+  promotionTemplate:
+    spec:
+      steps:
+      # Clone, render manifests, commit, push, etc...
+      - uses: argocd-update
+        config:
+          apps:
+          - selector:
+              matchExpressions:
+              - key: environment
+                operator: In
+                values:
+                - staging
+                - production
+            sources:
+            - repoURL: https://github.com/example/repo.git
+              desiredRevision: ${{ outputs.commit.commit }} # Or task.outputs in a (Cluster)PromotionTask
 ```
 
 This configuration will select all Argo CD `Application` resources that have
@@ -344,26 +367,34 @@ more precise selection criteria. All criteria must be satisfied for an
 application to be selected.
 
 ```yaml
-steps:
-- uses: argocd-update
-  config:
-    apps:
-    - selector:
-        matchLabels:
-          team: platform
-        matchExpressions:
-        - key: environment
-          operator: In
-          values:
-          - staging
-          - production
-        - key: managed-by
-          operator: NotIn
-          values:
-          - legacy-system
-      sources:
-      - repoURL: https://github.com/example/repo.git
-        desiredRevision: ${{ outputs.commit.commit }}
+apiVersion: kargo.akuity.io/v1alpha1
+kind: Stage
+# ...
+spec:
+  # ...
+  promotionTemplate:
+    spec:
+      steps:
+      # Clone, render manifests, commit, push, etc...
+      - uses: argocd-update
+        config:
+          apps:
+          - selector:
+              matchLabels:
+                team: platform
+              matchExpressions:
+              - key: environment
+                operator: In
+                values:
+                - staging
+                - production
+              - key: managed-by
+                operator: NotIn
+                values:
+                - legacy-system
+            sources:
+            - repoURL: https://github.com/example/repo.git
+              desiredRevision: ${{ outputs.commit.commit }} # Or task.outputs in a (Cluster)PromotionTask
 ```
 
 This configuration will select all Argo CD `Application` resources that:
@@ -402,29 +433,36 @@ environments in a single step. This is useful for rolling out changes to
 multiple stages simultaneously, such as in a blue/green deployment scenario.
 
 ```yaml
-vars:
-- name: gitRepo
-  value: https://github.com/example/repo.git
-steps:
-# Clone, render manifests, commit, push, etc...
-- uses: git-commit
-  as: commit
-  config:
-    path: ./out
-    message: Update to new version
-- uses: git-push
-  config:
-    path: ./out
-- uses: argocd-update
-  config:
-    apps:
-    - selector:
-        matchLabels:
-          app: my-microservice
-          deployment-group: blue
-      sources:
-      - repoURL: ${{ vars.gitRepo }}
-        desiredRevision: ${{ outputs.commit.commit }}
+apiVersion: kargo.akuity.io/v1alpha1
+kind: Stage
+# ...
+spec:
+  # ...
+  promotionTemplate:
+    spec:
+      vars:
+      - name: gitRepo
+        value: https://github.com/example/repo.git
+      steps:
+      # Clone, render manifests, commit, push, etc...
+      - uses: git-commit
+        as: commit
+        config:
+          path: ./out
+          message: Update to new version
+      - uses: git-push
+        config:
+          path: ./out
+      - uses: argocd-update
+        config:
+          apps:
+          - selector:
+              matchLabels:
+                app: my-microservice
+                deployment-group: blue
+            sources:
+            - repoURL: ${{ vars.gitRepo }}
+              desiredRevision: ${{ outputs.commit.commit }} # Or task.outputs in a (Cluster)PromotionTask
 ```
 
 This configuration will update all Argo CD `Application` resources that have

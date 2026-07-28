@@ -1,7 +1,6 @@
 import { isAfter } from 'date-fns';
 
-import { Freight } from '@ui/gen/api/v1alpha1/generated_pb';
-import { timestampDate } from '@ui/utils/connectrpc-utils';
+import { Freight } from '@ui/gen/api/v2/models';
 
 export const catalogueFreights = (freights: Freight[]) => {
   const catalogue = {
@@ -13,19 +12,19 @@ export const catalogueFreights = (freights: Freight[]) => {
   for (const freight of freights) {
     if (freight?.images?.length) {
       for (const image of freight.images) {
-        catalogue.images.add(image.repoURL);
+        catalogue.images.add(image.repoURL || '');
       }
     }
 
     if (freight?.commits?.length) {
       for (const commit of freight.commits) {
-        catalogue.commits.add(commit.repoURL);
+        catalogue.commits.add(commit.repoURL || '');
       }
     }
 
     if (freight?.charts?.length) {
       for (const chart of freight.charts) {
-        catalogue.charts.add(chart.repoURL);
+        catalogue.charts.add(chart.repoURL || '');
       }
     }
   }
@@ -43,19 +42,19 @@ export const catalogueFreightVersions = (freights: Freight[]) => {
   for (const freight of freights) {
     if (freight?.images?.length) {
       for (const image of freight.images) {
-        catalogue.images.add(image.tag);
+        catalogue.images.add(image.tag || '');
       }
     }
 
     if (freight?.commits?.length) {
       for (const commit of freight.commits) {
-        catalogue.commits.add(commit.id);
+        catalogue.commits.add(commit.id || '');
       }
     }
 
     if (freight?.charts?.length) {
       for (const chart of freight.charts) {
-        catalogue.charts.add(chart.version);
+        catalogue.charts.add(chart.version || '');
       }
     }
   }
@@ -70,11 +69,11 @@ export const filterFreightByVersion = (versions: string[]) => (_freight: Freight
     return freight;
   }
 
-  freight.images = freight.images?.filter((image) => versions.includes(image.tag));
-  freight.commits = freight.commits?.filter((commit) => versions.includes(commit.tag));
-  freight.charts = freight.charts?.filter((chart) => versions.includes(chart.version));
+  freight.images = freight.images?.filter((image) => versions.includes(image.tag || ''));
+  freight.commits = freight.commits?.filter((commit) => versions.includes(commit.tag || ''));
+  freight.charts = freight.charts?.filter((chart) => versions.includes(chart.version || ''));
 
-  if (!freight.images.length && !freight.charts.length && !freight.commits.length) {
+  if (!freight.images?.length && !freight.charts?.length && !freight.commits?.length) {
     return null;
   }
 
@@ -89,13 +88,13 @@ export const filterFreightBySource = (repoURLs: string[]) => (_freight: Freight)
     return freight;
   }
 
-  freight.images = freight.images?.filter((image) => repoURLs.includes(image.repoURL));
+  freight.images = freight.images?.filter((image) => repoURLs.includes(image.repoURL || ''));
 
-  freight.commits = freight.commits?.filter((commit) => repoURLs.includes(commit.repoURL));
+  freight.commits = freight.commits?.filter((commit) => repoURLs.includes(commit.repoURL || ''));
 
-  freight.charts = freight.charts?.filter((chart) => repoURLs.includes(chart.repoURL));
+  freight.charts = freight.charts?.filter((chart) => repoURLs.includes(chart.repoURL || ''));
 
-  if (!freight.images.length && !freight.charts.length && !freight.commits.length) {
+  if (!freight.images?.length && !freight.charts?.length && !freight.commits?.length) {
     return null;
   }
 
@@ -103,14 +102,14 @@ export const filterFreightBySource = (repoURLs: string[]) => (_freight: Freight)
 };
 
 export const filterFreightByAlias = (alias: string[]) => (freight: Freight) =>
-  alias?.includes(freight?.alias);
+  alias?.includes(freight?.alias || '');
 
 export const filterFreightByTimerange = (till: Date) => (freight: Freight) => {
-  const creationTimestamp = timestampDate(freight.metadata?.creationTimestamp);
-
-  if (!creationTimestamp) {
+  if (!freight?.metadata?.creationTimestamp) {
     return false;
   }
+
+  const creationTimestamp = new Date(freight.metadata?.creationTimestamp);
 
   return isAfter(creationTimestamp, till);
 };

@@ -5,7 +5,7 @@ import { Typography } from 'antd';
 import classNames from 'classnames';
 
 import { isStageControlFlow } from '@ui/features/project/pipelines/nodes/stage-meta-utils';
-import { Stage } from '@ui/gen/api/v1alpha1/generated_pb';
+import { Stage } from '@ui/gen/api/v2/models';
 
 import styles from './drop-overlay.module.less';
 
@@ -20,7 +20,7 @@ export const DropOverlay = ({ isOver, stage }: Props) => {
     Boolean(dndContext.active) &&
     // make sure that the freight can be promoted to this stage by checking the origin
     Boolean(
-      stage.spec?.requestedFreight.find(
+      stage.spec?.requestedFreight?.find(
         (f) => f.origin?.name === dndContext.active?.data.current?.originName
       )
     );

@@ -1,4 +1,3 @@
-import { useMutation } from '@connectrpc/connect-query';
 import { faCode, faListCheck } from '@fortawesome/free-solid-svg-icons';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
 import { Button, Drawer, Tabs, Typography } from 'antd';
@@ -10,7 +9,7 @@ import { paths } from '@ui/config/paths';
 import { YamlEditor } from '@ui/features/common/code-editor/yaml-editor';
 import { ModalComponentProps } from '@ui/features/common/modal/modal-context';
 import { warehouseManifestsGen } from '@ui/features/utils/manifest-generator';
-import { createResource } from '@ui/gen/api/service/v1alpha1/service-KargoService_connectquery';
+import { useCreateResource } from '@ui/gen/api/v2/resources/resources';
 import warehouseSchema from '@ui/gen/schema/warehouses.kargo.akuity.io_v1alpha1.json';
 
 import { CreateWarehouseWizard } from './create-warehouse-wizard';
@@ -23,9 +22,11 @@ const Body = () => {
     throw new Error(`Expected project name in URL`);
   }
 
-  const createResourceMutation = useMutation(createResource, {
-    onSuccess: () => {
-      navigate(generatePath(paths.project, { name: projectName }));
+  const createResourceMutation = useCreateResource({
+    mutation: {
+      onSuccess: () => {
+        navigate(generatePath(paths.project, { name: projectName }));
+      }
     }
   });
 
@@ -59,7 +60,7 @@ const Body = () => {
   const onSubmit = useCallback(
     () =>
       createResourceMutation.mutate({
-        manifest: new TextEncoder().encode(tab === 'yaml' ? yaml : getWarehouseManifest())
+        data: tab === 'yaml' ? yaml : getWarehouseManifest()
       }),
     [getWarehouseManifest, createResourceMutation.mutate, tab, yaml]
   );

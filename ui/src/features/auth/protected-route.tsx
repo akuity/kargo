@@ -1,10 +1,8 @@
-import { TransportProvider } from '@connectrpc/connect-query';
 import { useEffect, useRef, useState } from 'react';
 import { Navigate, Outlet } from 'react-router-dom';
 
 import { redirectToQueryParam } from '@ui/config/auth';
 import { paths } from '@ui/config/paths';
-import { transport, transportWithAuth } from '@ui/config/transport';
 import { ModalContextProvider } from '@ui/features/common/modal/modal-context-provider';
 import { PromotionDirectivesRegistryContextProvider } from '@ui/features/promotion-directives/registry/context/registry-context-provider';
 import { useGetPublicConfig } from '@ui/gen/api/v2/system/system';
@@ -32,21 +30,17 @@ export const ProtectedRoute = () => {
   }
 
   return (
-    <TransportProvider transport={data?.skipAuth ? transport : transportWithAuth}>
-      {/*
-        When we will have external runners, we should have dedicated page that shows available runners in registry
-        Its either use this context only where needed and use query caching (not a concern for now) OR just keep this available all the time without invalidation
-        Not a concern as of now but something to keep in mind
-      */}
-      <PromotionDirectivesRegistryContextProvider>
-        <div ref={modalRef}>
-          {modalRoot && (
-            <ModalContextProvider container={modalRoot}>
-              <Outlet />
-            </ModalContextProvider>
-          )}
-        </div>
-      </PromotionDirectivesRegistryContextProvider>
-    </TransportProvider>
+    // When we will have external runners, we should have dedicated page that shows available runners in registry
+    // Its either use this context only where needed and use query caching (not a concern for now) OR just keep this available all the time without invalidation
+    // Not a concern as of now but something to keep in mind
+    <PromotionDirectivesRegistryContextProvider>
+      <div ref={modalRef}>
+        {modalRoot && (
+          <ModalContextProvider container={modalRoot}>
+            <Outlet />
+          </ModalContextProvider>
+        )}
+      </div>
+    </PromotionDirectivesRegistryContextProvider>
   );
 };

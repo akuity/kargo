@@ -52,10 +52,35 @@ func TestStage_IsFreightAvailable(t *testing.T) {
 			expected: false,
 		},
 		{
-			name:  "freight is approved for stage",
+			name:  "freight is approved for stage but stage does not request freight from its origin",
 			stage: &Stage{ObjectMeta: testStageMeta},
 			freight: &Freight{
 				ObjectMeta: testFreightMeta,
+				Origin:     testOrigin,
+				Status: FreightStatus{
+					ApprovedFor: map[string]ApprovedStage{
+						testStage: {},
+					},
+				},
+			},
+			expected: false,
+		},
+		{
+			name: "freight is approved for stage and stage requests freight from its origin",
+			stage: &Stage{
+				ObjectMeta: testStageMeta,
+				Spec: StageSpec{
+					RequestedFreight: []FreightRequest{{
+						Origin: testOrigin,
+						Sources: FreightSources{
+							Stages: []string{"upstream-stage"},
+						},
+					}},
+				},
+			},
+			freight: &Freight{
+				ObjectMeta: testFreightMeta,
+				Origin:     testOrigin,
 				Status: FreightStatus{
 					ApprovedFor: map[string]ApprovedStage{
 						testStage: {},
@@ -279,6 +304,74 @@ func TestStage_IsFreightAvailable(t *testing.T) {
 				t,
 				testCase.expected,
 				testCase.stage.IsFreightAvailable(testCase.freight),
+			)
+		})
+	}
+}
+
+func TestStage_RequestsFreightFromOrigin(t *testing.T) {
+	testOrigin := FreightOrigin{
+		Kind: FreightOriginKindWarehouse,
+		Name: "fake-warehouse",
+	}
+
+	testCases := []struct {
+		name     string
+		stage    *Stage
+		origin   FreightOrigin
+		expected bool
+	}{
+		{
+			name:     "stage is nil",
+			origin:   testOrigin,
+			expected: false,
+		},
+		{
+			name:     "stage requests no freight",
+			stage:    &Stage{},
+			origin:   testOrigin,
+			expected: false,
+		},
+		{
+			name: "no request names the origin",
+			stage: &Stage{
+				Spec: StageSpec{
+					RequestedFreight: []FreightRequest{{
+						Origin: FreightOrigin{
+							Kind: FreightOriginKindWarehouse,
+							Name: "other-warehouse",
+						},
+					}},
+				},
+			},
+			origin:   testOrigin,
+			expected: false,
+		},
+		{
+			name: "a request names the origin",
+			stage: &Stage{
+				Spec: StageSpec{
+					RequestedFreight: []FreightRequest{
+						{
+							Origin: FreightOrigin{
+								Kind: FreightOriginKindWarehouse,
+								Name: "other-warehouse",
+							},
+						},
+						{Origin: testOrigin},
+					},
+				},
+			},
+			origin:   testOrigin,
+			expected: true,
+		},
+	}
+	for _, testCase := range testCases {
+		t.Run(testCase.name, func(t *testing.T) {
+			require.Equal(
+				t,
+				testCase.expected,
+				testCase.stage.RequestsFreightFromOrigin(testCase.origin),
 			)
 		})
 	}
@@ -1030,6 +1123,71 @@ func TestChartDeepEquals(t *testing.T) {
 		t.Run(testCase.name, func(t *testing.T) {
 			require.Equal(t, testCase.expectedResult, testCase.a.DeepEquals(testCase.b))
 			require.Equal(t, testCase.expectedResult, testCase.b.DeepEquals(testCase.a))
+		})
+	}
+}
+
+func TestFreightOrigin_String(t *testing.T) {
+	origin := &FreightOrigin{
+		Kind: FreightOriginKindWarehouse,
+		Name: "fake-warehouse",
+	}
+
+	require.Equal(t, "Warehouse/fake-warehouse", origin.String())
+	require.Empty(t, (*FreightOrigin)(nil).String())
+}
+
+func TestParseFreightOrigin(t *testing.T) {
+	testCases := []struct {
+		name           string
+		str            string
+		expectedOrigin FreightOrigin
+		expectErr      bool
+	}{
+		{
+			name: "valid warehouse origin",
+			str:  "Warehouse/fake-warehouse",
+			expectedOrigin: FreightOrigin{
+				Kind: FreightOriginKindWarehouse,
+				Name: "fake-warehouse",
+			},
+		},
+		{
+			name:      "missing slash",
+			str:       "Warehouse",
+			expectErr: true,
+		},
+		{
+			name:      "missing kind",
+			str:       "/fake-warehouse",
+			expectErr: true,
+		},
+		{
+			name:      "missing name",
+			str:       "Warehouse/",
+			expectErr: true,
+		},
+		{
+			name:      "too many parts",
+			str:       "Warehouse/fake-warehouse/extra",
+			expectErr: true,
+		},
+		{
+			name:      "unknown kind",
+			str:       "Stage/fake-stage",
+			expectErr: true,
+		},
+	}
+
+	for _, testCase := range testCases {
+		t.Run(testCase.name, func(t *testing.T) {
+			origin, err := ParseFreightOrigin(testCase.str)
+			if testCase.expectErr {
+				require.Error(t, err)
+				return
+			}
+			require.NoError(t, err)
+			require.Equal(t, testCase.expectedOrigin, origin)
 		})
 	}
 }

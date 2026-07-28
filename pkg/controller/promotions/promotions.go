@@ -117,6 +117,22 @@ func SetupReconcilerWithManager(
 		return fmt.Errorf("index running Promotions by Argo CD Applications: %w", err)
 	}
 
+	// Index running Promotions that target Argo CD Applications by label
+	// selector. This coarsely narrows the candidate set when an Application
+	// changes, so the watch handler can evaluate each selector forward against
+	// the changed Application rather than scanning every running Promotion.
+	if err := kargoMgr.GetFieldIndexer().IndexField(
+		ctx,
+		&kargoapi.Promotion{},
+		indexer.RunningPromotionsByArgoCDSelectorsField,
+		indexer.RunningPromotionsByArgoCDSelectors(
+			cfg.ShardName,
+			cfg.IsDefaultController,
+		),
+	); err != nil {
+		return fmt.Errorf("index running Promotions by Argo CD selectors: %w", err)
+	}
+
 	reconciler := newReconciler(
 		kargoMgr.GetClient(),
 		kargoMgr.GetAPIReader(),
@@ -193,6 +209,10 @@ func SetupReconcilerWithManager(
 					ArgoCDAppReconciledAfterOperation[*argocd.Application]{
 						logger: logger,
 					},
+					ArgoCDAppLabelsChanged[*argocd.Application]{
+						logger: logger,
+					},
+					ArgoCDAppCreatedOrDeleted[*argocd.Application]{},
 				),
 			),
 		); err != nil {
@@ -457,7 +477,7 @@ func (r *reconciler) Reconcile(
 			},
 		)
 		if getStageErr != nil {
-			return ctrl.Result{}, fmt.Errorf("get stage: %w", err)
+			return ctrl.Result{}, fmt.Errorf("get stage: %w", getStageErr)
 		}
 		if stage == nil {
 			return ctrl.Result{}, fmt.Errorf(
@@ -581,6 +601,7 @@ func (r *reconciler) promote(
 		workingPromo,
 		stage,
 		promotion.WithActor(api.CreateActorAnnotationValue(&promo)),
+		promotion.WithTargetFreightAlias(targetFreight.Alias),
 		promotion.WithUIBaseURL(r.cfg.APIServerBaseURL),
 		promotion.WithWorkDir(promotionWorkDir(workingPromo.UID)),
 	)
@@ -819,6 +840,13 @@ func (r *reconciler) cleanupWorkDir(ctx context.Context, promoUID types.UID) {
 
 var defaultRequeueInterval = 5 * time.Minute
 
+// minSuggestedRequeueInterval is the lower bound enforced on a poll interval
+// suggested by a step (via StepResult.RetryAfter). Reconciling a Promotion too
+// frequently raises CPU usage sharply and, with enough concurrent Promotions,
+// reduces overall throughput. Enforcing the floor centrally guarantees no step
+// -- now or in the future -- can drive a pathologically short interval.
+var minSuggestedRequeueInterval = 10 * time.Second
+
 func calculateRequeueInterval(
 	ctx context.Context,
 	p *kargoapi.Promotion,
@@ -827,6 +855,15 @@ func calculateRequeueInterval(
 	requeueInterval := defaultRequeueInterval
 	if suggestedRequeueInterval != nil {
 		requeueInterval = *suggestedRequeueInterval
+		// A step's suggested interval is only a suggestion; clamp it to the floor.
+		if requeueInterval < minSuggestedRequeueInterval {
+			logging.LoggerFromContext(ctx).Debug(
+				"clamping suggested requeue interval to minimum",
+				"suggested", requeueInterval.String(),
+				"minimum", minSuggestedRequeueInterval.String(),
+			)
+			requeueInterval = minSuggestedRequeueInterval
+		}
 	}
 
 	// Ensure we have a step for the current step index.

@@ -1,7 +1,7 @@
 import { Table } from 'antd';
 import Radio from 'antd/es/radio/radio';
 
-import { ArtifactReference } from '@ui/gen/api/v1alpha1/generated_pb';
+import { ArtifactReference } from '@ui/gen/api/v2/models';
 
 type GenericArtifactTableProps = {
   show?: boolean;

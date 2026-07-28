@@ -35,4 +35,7 @@ data:
   MAX_CONCURRENT_PROJECT_RECONCILES: {{ .Values.managementController.reconcilers.projects.maxConcurrentReconciles | default .Values.managementController.reconcilers.maxConcurrentReconciles | quote }}
   MAX_CONCURRENT_PROJECT_CONFIG_RECONCILES: {{ .Values.managementController.reconcilers.projectConfigs.maxConcurrentReconciles | default .Values.managementController.reconcilers.maxConcurrentReconciles | quote }}
   MAX_CONCURRENT_SERVICE_ACCOUNT_RECONCILES: {{ .Values.managementController.reconcilers.serviceAccounts.maxConcurrentReconciles | default .Values.managementController.reconcilers.maxConcurrentReconciles | quote }}
+  {{- if .Values.managementController.metrics.enabled }}
+  METRICS_BIND_ADDRESS: ":{{ .Values.managementController.metrics.service.servicePort }}"
+  {{- end }}
 {{- end }}

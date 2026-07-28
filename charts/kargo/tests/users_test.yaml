@@ -1,0 +1,99 @@
+suite: users/service-accounts.yaml
+values:
+  - ../test/values-unittest.yaml
+templates:
+  - templates/users/service-accounts.yaml
+tests:
+  - it: renders the four system role service accounts by default
+    asserts:
+      - hasDocuments:
+          count: 4
+      - documentSelector:
+          path: metadata.name
+          value: kargo-admin
+        equal:
+          path: metadata.labels["rbac.kargo.akuity.io/system-role"]
+          value: "true"
+
+  - it: does not annotate service accounts with claims by default
+    asserts:
+      - documentSelector:
+          path: metadata.name
+          value: kargo-admin
+        notExists:
+          path: metadata.annotations["rbac.kargo.akuity.io/claims"]
+
+  - it: annotates the admin service account with OIDC claims when configured
+    set:
+      api.oidc.admins.claims:
+        groups:
+          - kargo-admins
+    asserts:
+      - documentSelector:
+          path: metadata.name
+          value: kargo-admin
+        isNotEmpty:
+          path: metadata.annotations["rbac.kargo.akuity.io/claims"]
+
+  - it: is not rendered when the API is disabled
+    set:
+      api.enabled: false
+    asserts:
+      - hasDocuments:
+          count: 0
+
+---
+suite: users/cluster-roles.yaml
+values:
+  - ../test/values-unittest.yaml
+templates:
+  - templates/users/cluster-roles.yaml
+tests:
+  - it: renders the four system cluster roles by default
+    asserts:
+      - documentSelector:
+          path: metadata.name
+          value: kargo-admin
+        isKind:
+          of: ClusterRole
+      - documentSelector:
+          path: metadata.name
+          value: kargo-viewer
+        isKind:
+          of: ClusterRole
+
+  - it: is not rendered when cluster roles are disabled
+    set:
+      rbac.installClusterRoles: false
+    asserts:
+      - hasDocuments:
+          count: 0
+
+  - it: is not rendered when the API is disabled
+    set:
+      api.enabled: false
+    asserts:
+      - hasDocuments:
+          count: 0
+
+---
+suite: users/cluster-role-bindings.yaml
+values:
+  - ../test/values-unittest.yaml
+templates:
+  - templates/users/cluster-role-bindings.yaml
+tests:
+  - it: binds the system cluster roles to their service accounts by default
+    asserts:
+      - documentSelector:
+          path: metadata.name
+          value: kargo-admin
+        isKind:
+          of: ClusterRoleBinding
+
+  - it: is not rendered when cluster role bindings are disabled
+    set:
+      rbac.installClusterRoleBindings: false
+    asserts:
+      - hasDocuments:
+          count: 0

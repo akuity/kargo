@@ -17,21 +17,17 @@ import {
 } from 'recharts';
 import { NameType, ValueType } from 'recharts/types/component/DefaultTooltipContent';
 
-import { timestampDate } from '@ui/utils/connectrpc-utils';
-
 import { StatusIndicator } from '../status-indicator/status-indicator';
 import { AnalysisStatus, TransformedMeasurement } from '../types';
 import { chartDotColors } from '../utils';
 
 import styles from './metric-chart.module.less';
+import { defaultValueFormatter } from './utils';
 
 const { Text } = Typography;
 
 const CHART_HEIGHT = 254;
 const X_AXIS_HEIGHT = 45;
-
-const defaultValueFormatter = (value: number | string | null) =>
-  value === null ? '' : value.toString();
 
 const timeTickFormatter = (axisData?: string) => {
   if (axisData === undefined) {
@@ -59,7 +55,7 @@ const MeasurementDot = ({ cx, cy, payload }: MeasurementDotProps) => (
 
 type TooltipContentProps = TooltipProps<ValueType, NameType> & {
   conditionKeys: string[];
-  valueFormatter: (value: number | string | null) => string;
+  valueFormatter: (value?: number | string | null) => string;
 };
 
 const TooltipContent = ({
@@ -80,8 +76,8 @@ const TooltipContent = ({
   } else if (conditionKeys.length > 0) {
     const sublabels = conditionKeys.map((cKey: string) =>
       conditionKeys.length > 1
-        ? `${valueFormatter(data.chartValue[cKey])} (${cKey})`
-        : valueFormatter(data.chartValue[cKey])
+        ? `${valueFormatter(data.chartValue?.[cKey])} (${cKey})`
+        : valueFormatter(data.chartValue?.[cKey])
     );
     label = sublabels.join(' , ');
   } else {
@@ -91,7 +87,7 @@ const TooltipContent = ({
   return (
     <div className={styles['metric-chart-tooltip']}>
       <Text className='ml-4' type='secondary' style={{ fontSize: 12 }}>
-        {moment(timestampDate(data.startedAt)).format('LTS')}
+        {moment(data.startedAt).format('LTS')}
       </Text>
       <div className={styles['metric-chart-tooltip-status']}>
         <StatusIndicator size='small' status={data.phase} />
@@ -109,7 +105,7 @@ interface MetricChartProps {
   max?: number;
   min?: number;
   successThresholds: number[];
-  valueFormatter?: (value: number | string | null) => string;
+  valueFormatter?: (value?: number | string | null) => string;
   yAxisFormatter?: (value: number | string, index: number) => string;
   yAxisLabel?: string;
 }
@@ -127,8 +123,10 @@ export const MetricChart = ({
   yAxisLabel
 }: MetricChartProps) => {
   // show ticks at boundaries of analysis
-  const startingTick = timestampDate(data[0]?.startedAt)?.toLocaleTimeString() ?? '';
-  const endingTick = timestampDate(data[data.length - 1]?.finishedAt)?.toLocaleTimeString() ?? '';
+  const startedAt = data[0]?.startedAt;
+  const finishedAt = data[data.length - 1]?.finishedAt;
+  const startingTick = startedAt ? new Date(startedAt).toLocaleTimeString() : '';
+  const endingTick = finishedAt ? new Date(finishedAt).toLocaleTimeString() : '';
   const timeTicks: (string | number)[] = [startingTick, endingTick];
 
   return (

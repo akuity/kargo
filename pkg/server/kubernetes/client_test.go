@@ -22,7 +22,9 @@ import (
 func TestSetOptionsDefaults(t *testing.T) {
 	opts, err := setOptionsDefaults(ClientOptions{})
 	require.NoError(t, err)
-	require.NotNil(t, opts.NewInternalClient)
+	// NewInternalClient is intentionally left nil; NewClient builds a real
+	// cluster on the default path and only calls this hook when a test sets it.
+	require.Nil(t, opts.NewInternalClient)
 	require.NotNil(t, opts.Scheme)
 }
 

@@ -1,7 +1,9 @@
 package server
 
 import (
+	"context"
 	"encoding/json"
+	"errors"
 	"strings"
 	"testing"
 
@@ -10,12 +12,12 @@ import (
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
-	"k8s.io/apimachinery/pkg/runtime"
-	"sigs.k8s.io/controller-runtime/pkg/client/fake"
+	"k8s.io/apimachinery/pkg/runtime/schema"
+	"k8s.io/apimachinery/pkg/types"
 	sigyaml "sigs.k8s.io/yaml"
 
-	svcv1alpha1 "github.com/akuity/kargo/api/service/v1alpha1"
 	kargoapi "github.com/akuity/kargo/api/v1alpha1"
+	"github.com/akuity/kargo/pkg/server/user"
 )
 
 func Test_splitYAML(t *testing.T) {
@@ -292,160 +294,227 @@ func mustJSONArray(objs ...any) []byte {
 	return b
 }
 
-func TestObjectOrRaw(t *testing.T) {
-	scheme := runtime.NewScheme()
-	err := kargoapi.AddToScheme(scheme)
-	require.NoError(t, err)
-
-	client := fake.NewClientBuilder().WithScheme(scheme).Build()
-
-	testStageName := "test-stage"
-	testStage := &kargoapi.Stage{
-		ObjectMeta: metav1.ObjectMeta{
-			Name:      testStageName,
-			Namespace: "test-project",
-		},
+func Test_annotateResourceWithCreator(t *testing.T) {
+	newObj := func(kind string, annotations map[string]any) *unstructured.Unstructured {
+		metadata := map[string]any{"name": "fake-resource"}
+		if annotations != nil {
+			metadata["annotations"] = annotations
+		}
+		return &unstructured.Unstructured{
+			Object: map[string]any{
+				"apiVersion": kargoapi.GroupVersion.String(),
+				"kind":       kind,
+				"metadata":   metadata,
+			},
+		}
 	}
-
-	testUnstructuredData := map[string]any{
-		"apiVersion": kargoapi.GroupVersion.String(),
-		"kind":       "Stage",
-		"metadata": map[string]any{
-			"name":      testStageName,
-			"namespace": "test-project",
-		},
-	}
-	testUnstructured := &unstructured.Unstructured{Object: testUnstructuredData}
-
-	testJSON, err := json.Marshal(testUnstructuredData)
-	require.NoError(t, err)
 
 	testCases := []struct {
-		name string
-		test func(*testing.T)
+		name     string
+		obj      *unstructured.Unstructured
+		userInfo *user.Info
+		assert   func(*testing.T, *unstructured.Unstructured)
 	}{
 		{
-			name: "unstructured to JSON",
-			test: func(*testing.T) {
-				stage, raw, err := objectOrRaw(
-					client,
-					testUnstructured,
-					svcv1alpha1.RawFormat_RAW_FORMAT_JSON,
-					&kargoapi.Stage{},
-				)
-				require.NoError(t, err)
-				require.Nil(t, stage)
-				require.JSONEq(t, string(testJSON), string(raw))
-			},
+			name: "nil object does not panic",
 		},
 		{
-			name: "unstructured to YAML",
-			test: func(*testing.T) {
-				stage, raw, err := objectOrRaw(
-					client,
-					testUnstructured,
-					svcv1alpha1.RawFormat_RAW_FORMAT_YAML,
-					&kargoapi.Stage{},
-				)
-				require.NoError(t, err)
-				require.Nil(t, stage)
-				require.YAMLEq(
+			name:     "Project is annotated",
+			obj:      newObj("Project", nil),
+			userInfo: &user.Info{IsAdmin: true},
+			assert: func(t *testing.T, obj *unstructured.Unstructured) {
+				require.Equal(
 					t,
-					string(testJSON), // Valid JSON is also valid YAML
-					string(raw),
+					kargoapi.EventActorAdmin,
+					obj.GetAnnotations()[kargoapi.AnnotationKeyCreateActor],
 				)
 			},
 		},
 		{
-			name: "unstructured to structured",
-			test: func(*testing.T) {
-				stage, raw, err := objectOrRaw(
-					client,
-					testUnstructured,
-					svcv1alpha1.RawFormat_RAW_FORMAT_UNSPECIFIED,
-					&kargoapi.Stage{},
+			name:     "Promotion is annotated",
+			obj:      newObj("Promotion", nil),
+			userInfo: &user.Info{IsAdmin: true},
+			assert: func(t *testing.T, obj *unstructured.Unstructured) {
+				require.Equal(
+					t,
+					kargoapi.EventActorAdmin,
+					obj.GetAnnotations()[kargoapi.AnnotationKeyCreateActor],
 				)
-				require.NoError(t, err)
-				require.Nil(t, raw)
-				require.Equal(t, testStageName, stage.GetName())
 			},
 		},
 		{
-			name: "structured to JSON",
-			test: func(*testing.T) {
-				stage, raw, err := objectOrRaw(
-					client,
-					testStage,
-					svcv1alpha1.RawFormat_RAW_FORMAT_JSON,
-					&kargoapi.Stage{},
+			name: "caller-supplied actor on a Promotion is overwritten",
+			obj: newObj("Promotion", map[string]any{
+				kargoapi.AnnotationKeyCreateActor: "controller:forged",
+			}),
+			userInfo: &user.Info{IsAdmin: true},
+			assert: func(t *testing.T, obj *unstructured.Unstructured) {
+				require.Equal(
+					t,
+					kargoapi.EventActorAdmin,
+					obj.GetAnnotations()[kargoapi.AnnotationKeyCreateActor],
 				)
-				require.NoError(t, err)
-				require.Nil(t, stage)
-				obj := map[string]any{}
-				err = json.Unmarshal(raw, &obj)
-				require.NoError(t, err)
-				// Ensure GVK was not lost
-				require.Equal(t, kargoapi.GroupVersion.String(), obj["apiVersion"])
-				require.Equal(t, "Stage", obj["kind"])
-				// Ensure metadata was not lost
-				metadata, ok := obj["metadata"].(map[string]any)
-				require.True(t, ok)
-				require.Equal(t, testStageName, metadata["name"])
 			},
 		},
 		{
-			name: "structured to YAML",
-			test: func(*testing.T) {
-				stage, raw, err := objectOrRaw(
-					client,
-					testStage,
-					svcv1alpha1.RawFormat_RAW_FORMAT_YAML,
-					&kargoapi.Stage{},
+			name:     "other kinds are not annotated",
+			obj:      newObj("Stage", nil),
+			userInfo: &user.Info{IsAdmin: true},
+			assert: func(t *testing.T, obj *unstructured.Unstructured) {
+				require.NotContains(
+					t,
+					obj.GetAnnotations(),
+					kargoapi.AnnotationKeyCreateActor,
 				)
-				require.NoError(t, err)
-				require.Nil(t, stage)
-				obj := map[string]any{}
-				err = sigyaml.Unmarshal(raw, &obj)
-				require.NoError(t, err)
-
-				// Ensure GVK was not lost
-				require.Equal(t, kargoapi.GroupVersion.String(), obj["apiVersion"])
-				require.Equal(t, "Stage", obj["kind"])
-				// Ensure metadata was not lost
-				metadata, ok := obj["metadata"].(map[string]any)
-				require.True(t, ok)
-				require.Equal(t, testStageName, metadata["name"])
 			},
 		},
 		{
-			name: "structured to structured",
-			test: func(*testing.T) {
-				stage, raw, err := objectOrRaw(
-					client,
-					testStage,
-					svcv1alpha1.RawFormat_RAW_FORMAT_UNSPECIFIED,
-					&kargoapi.Stage{},
+			name: "no user info in context leaves object untouched",
+			obj:  newObj("Promotion", nil),
+			assert: func(t *testing.T, obj *unstructured.Unstructured) {
+				require.NotContains(
+					t,
+					obj.GetAnnotations(),
+					kargoapi.AnnotationKeyCreateActor,
 				)
-				require.NoError(t, err)
-				require.Nil(t, raw)
-				require.Same(t, testStage, stage)
-			},
-		},
-		{
-			name: "structured to structured with type mismatch",
-			test: func(*testing.T) {
-				_, _, err := objectOrRaw(
-					client,
-					testStage,
-					svcv1alpha1.RawFormat_RAW_FORMAT_UNSPECIFIED,
-					&kargoapi.Project{},
-				)
-				require.Error(t, err)
-				require.Contains(t, err.Error(), "type mismatch")
 			},
 		},
 	}
 	for _, testCase := range testCases {
-		t.Run(testCase.name, testCase.test)
+		t.Run(testCase.name, func(t *testing.T) {
+			ctx := context.Background()
+			if testCase.userInfo != nil {
+				ctx = user.ContextWithInfo(ctx, *testCase.userInfo)
+			}
+			annotateResourceWithCreator(ctx, testCase.obj)
+			if testCase.assert != nil {
+				testCase.assert(t, testCase.obj)
+			}
+		})
+	}
+}
+
+func Test_server_authorizeResourceCreate(t *testing.T) {
+	const project = "fake-project"
+	const stage = "fake-stage"
+
+	promotion := func() *unstructured.Unstructured {
+		return &unstructured.Unstructured{
+			Object: map[string]any{
+				"apiVersion": kargoapi.GroupVersion.String(),
+				"kind":       "Promotion",
+				"metadata": map[string]any{
+					"name":      "fake-promotion",
+					"namespace": project,
+				},
+				"spec": map[string]any{
+					"stage":   stage,
+					"freight": "fake-freight",
+				},
+			},
+		}
+	}
+
+	testCases := []struct {
+		name        string
+		obj         *unstructured.Unstructured
+		authorizeFn func(
+			context.Context,
+			string,
+			schema.GroupVersionResource,
+			string,
+			types.NamespacedName,
+		) error
+		assert func(*testing.T, error, bool)
+	}{
+		{
+			name: "non-Promotion resource is not subject to the promote check",
+			obj: &unstructured.Unstructured{
+				Object: map[string]any{
+					"apiVersion": kargoapi.GroupVersion.String(),
+					"kind":       "Stage",
+					"metadata":   map[string]any{"name": stage, "namespace": project},
+				},
+			},
+			assert: func(t *testing.T, err error, called bool) {
+				require.NoError(t, err)
+				require.False(t, called, "authorizeFn must not be called for non-Promotions")
+			},
+		},
+		{
+			name: "Promotion without a target Stage is left to validation",
+			obj: &unstructured.Unstructured{
+				Object: map[string]any{
+					"apiVersion": kargoapi.GroupVersion.String(),
+					"kind":       "Promotion",
+					"metadata":   map[string]any{"name": "fake-promotion", "namespace": project},
+					"spec":       map[string]any{"freight": "fake-freight"},
+				},
+			},
+			assert: func(t *testing.T, err error, called bool) {
+				require.NoError(t, err)
+				require.False(t, called, "authorizeFn must not be called without a target Stage")
+			},
+		},
+		{
+			name: "Promotion checks the promote verb on the target Stage",
+			obj:  promotion(),
+			authorizeFn: func(
+				_ context.Context,
+				verb string,
+				gvr schema.GroupVersionResource,
+				_ string,
+				key types.NamespacedName,
+			) error {
+				require.Equal(t, "promote", verb)
+				require.Equal(t, kargoapi.GroupVersion.WithResource("stages"), gvr)
+				require.Equal(t, project, key.Namespace)
+				require.Equal(t, stage, key.Name)
+				return nil
+			},
+			assert: func(t *testing.T, err error, called bool) {
+				require.NoError(t, err)
+				require.True(t, called)
+			},
+		},
+		{
+			name: "denied promote authorization is surfaced",
+			obj:  promotion(),
+			authorizeFn: func(
+				context.Context,
+				string,
+				schema.GroupVersionResource,
+				string,
+				types.NamespacedName,
+			) error {
+				return errors.New("not permitted to promote")
+			},
+			assert: func(t *testing.T, err error, called bool) {
+				require.ErrorContains(t, err, "not permitted to promote")
+				require.True(t, called)
+			},
+		},
+	}
+	for _, testCase := range testCases {
+		t.Run(testCase.name, func(t *testing.T) {
+			var called bool
+			s := &server{
+				authorizeFn: func(
+					ctx context.Context,
+					verb string,
+					gvr schema.GroupVersionResource,
+					subresource string,
+					key types.NamespacedName,
+				) error {
+					called = true
+					if testCase.authorizeFn != nil {
+						return testCase.authorizeFn(ctx, verb, gvr, subresource, key)
+					}
+					return nil
+				},
+			}
+			err := s.authorizeResourceCreate(context.Background(), testCase.obj)
+			testCase.assert(t, err, called)
+		})
 	}
 }

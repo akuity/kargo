@@ -50,7 +50,7 @@ c1e3
 
 func TestNewAuthMiddleware(t *testing.T) {
 	a := &authMiddleware{}
-	middleware := newAuthMiddleware(t.Context(), config.ServerConfig{}, nil)
+	middleware := NewAuthMiddleware(t.Context(), config.ServerConfig{}, nil)
 	require.NotNil(t, middleware)
 	// Call the middleware to get the initialized authMiddleware
 	// We can't directly inspect it, but we can verify it doesn't panic
@@ -60,6 +60,60 @@ func TestNewAuthMiddleware(t *testing.T) {
 		router.Use(middleware)
 	})
 	_ = a // Use the variable to avoid unused error
+}
+
+func TestWithExemptPaths(t *testing.T) {
+	gin.SetMode(gin.TestMode)
+
+	const (
+		testExemptPath = "/a/fake/path"
+		loginPath      = "/v1beta1/login"
+		protectedPath  = "/v1beta1/protected"
+	)
+
+	middleware := NewAuthMiddleware(
+		t.Context(),
+		config.ServerConfig{},
+		nil,
+		WithExemptPaths([]string{testExemptPath}),
+	)
+
+	router := gin.New()
+	router.Use(middleware)
+	ok := func(c *gin.Context) { c.Status(http.StatusOK) }
+	router.GET(testExemptPath, ok)
+	router.GET(loginPath, ok)
+	router.GET(protectedPath, ok)
+
+	testCases := []struct {
+		name           string
+		path           string
+		expectedStatus int
+	}{
+		{
+			name:           "custom exempt path skips authentication",
+			path:           testExemptPath,
+			expectedStatus: http.StatusOK,
+		},
+		{
+			name:           "default exempt paths are preserved",
+			path:           loginPath,
+			expectedStatus: http.StatusOK,
+		},
+		{
+			name:           "other paths still require authentication",
+			path:           protectedPath,
+			expectedStatus: http.StatusUnauthorized,
+		},
+	}
+	for _, testCase := range testCases {
+		t.Run(testCase.name, func(t *testing.T) {
+			w := httptest.NewRecorder()
+			req := httptest.NewRequest(http.MethodGet, testCase.path, nil)
+			router.ServeHTTP(w, req)
+			require.Equal(t, testCase.expectedStatus, w.Code)
+		})
+	}
 }
 
 func TestGetKeySet(t *testing.T) {
@@ -169,8 +223,7 @@ func TestGetKeySet(t *testing.T) {
 						IssuerURL: issuerURL,
 					},
 				}
-				err :=
-					os.WriteFile(cfg.DexProxyConfig.CACertPath, dummyCACertBytes, 0600)
+				err := os.WriteFile(cfg.DexProxyConfig.CACertPath, dummyCACertBytes, 0o600)
 				require.NoError(t, err)
 				return srv, cfg
 			},
@@ -203,8 +256,10 @@ func TestAuthenticate(t *testing.T) {
 		assertions     func(ctx context.Context, err error)
 	}{
 		"exempt path": {
-			path:           "/v1beta1/system/public-server-config",
-			authMiddleware: &authMiddleware{},
+			path: "/v1beta1/system/public-server-config",
+			authMiddleware: &authMiddleware{
+				exemptPaths: exemptPaths,
+			},
 			// The path is exempt from authentication, so no user information
 			// should be bound to the context.
 			assertions: func(ctx context.Context, err error) {
@@ -664,9 +719,11 @@ func TestAuthMiddlewareHandler(t *testing.T) {
 		expectUserInfo bool
 	}{
 		{
-			name:           "exempt path - no auth required",
-			path:           "/v1beta1/system/public-server-config",
-			authMiddleware: &authMiddleware{},
+			name: "exempt path - no auth required",
+			path: "/v1beta1/system/public-server-config",
+			authMiddleware: &authMiddleware{
+				exemptPaths: exemptPaths,
+			},
 			expectedStatus: http.StatusOK,
 			expectUserInfo: false,
 		},

@@ -7,9 +7,8 @@ import (
 
 	rbacv1 "k8s.io/api/rbac/v1"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
-
-	rolloutsapi "github.com/akuity/kargo/api/stubs/rollouts/v1alpha1"
-	kargoapi "github.com/akuity/kargo/api/v1alpha1"
+	"k8s.io/apimachinery/pkg/api/meta"
+	"k8s.io/apimachinery/pkg/runtime/schema"
 )
 
 var (
@@ -77,23 +76,32 @@ func BuildNormalizedPolicyRulesMap(
 ) (map[string]rbacv1.PolicyRule, error) {
 	rulesMap := make(map[string]rbacv1.PolicyRule)
 	for _, rule := range rules {
+		// Preserve the group(s) the rule specifies rather than overwriting them;
+		// an absent group means the core ("") group. (Previously the group was
+		// replaced using a hardcoded table, which could not account for resource
+		// types from Kargo's enterprise APIs or other CRDs. Callers that start from
+		// a group-less request resolve the group up front -- see groupResolver.)
+		groups := rule.APIGroups
+		if len(groups) == 0 {
+			groups = []string{""}
+		}
+		names := rule.ResourceNames
+		if len(names) == 0 {
+			names = []string{""}
+		}
 		for _, resource := range rule.Resources {
 			if err := validateResourceTypeName(resource); err != nil {
 				return nil, err
 			}
-			// We ignore the group in the rule and use what we know to be the correct
-			// group for the resource type.
-			group := getGroupName(resource)
-			if len(rule.ResourceNames) == 0 {
-				rule.ResourceNames = append(rule.ResourceNames, "")
-			}
-			for _, resourceName := range rule.ResourceNames {
-				verbs := rule.Verbs
-				key := RuleKey(group, resource, resourceName)
-				if existingRule, ok := rulesMap[key]; ok {
-					verbs = append(existingRule.Verbs, verbs...)
+			for _, group := range groups {
+				for _, resourceName := range names {
+					verbs := rule.Verbs
+					key := RuleKey(group, resource, resourceName)
+					if existingRule, ok := rulesMap[key]; ok {
+						verbs = append(existingRule.Verbs, verbs...)
+					}
+					rulesMap[key] = buildRule(group, resource, resourceName, verbs, opts)
 				}
-				rulesMap[key] = buildRule(group, resource, resourceName, verbs, opts)
 			}
 		}
 	}
@@ -177,43 +185,113 @@ func buildRule(
 	return rule
 }
 
-// nolint: goconst
+// validateResourceTypeName performs a best-effort check that resource is the plural form of a
+// resource type. It deliberately does not validate against a fixed set of known types because
+// otherwise we have to maintain a hardcoded table of all known resource types. Kubernetes resource
+// names are conventionally the lowercase plural of a Kind and therefore end in "s"; an input that
+// does not is almost certainly a singular fat-finger (e.g. "stage" instead of "stages"), so we
+// reject it with a suggestion rather than silently creating a rule that matches nothing.
 func validateResourceTypeName(resource string) error {
-	switch resource {
-	case "analysisruns", "analysistemplates", "configmaps", "events", "freights",
-		"freights/status", "projectconfigs", "promotions", "rolebindings", "roles",
-		"secrets", "serviceaccounts", "stages", "warehouses", "promotiontasks":
+	// Subresources (e.g. "freights/status") are validated on their resource part.
+	base, subresource, hasSubresource := strings.Cut(resource, "/")
+	if base == "" {
+		return apierrors.NewBadRequest(fmt.Sprintf("unrecognized resource type %q", resource))
+	}
+	if strings.HasSuffix(base, "s") {
 		return nil
-	case "analysisrun", "analysistemplate", "configmap", "event", "freight",
-		"projectconfig", "promotion", "role", "rolebinding", "secret",
-		"serviceaccount", "stage", "warehouse":
-		return apierrors.NewBadRequest(
-			fmt.Sprintf(`unrecognized resource type %q; did you mean "%ss"?`, resource, resource),
-		)
-	case "freight/status":
-		return apierrors.NewBadRequest(
-			`unrecognized resource type "freight/status"; did you mean "freights/status"?`,
-		)
-	default:
-		return apierrors.NewBadRequest(fmt.Sprintf(`unrecognized resource type %q`, resource))
+	}
+	// Looks singular; suggest the plural form using Kubernetes' own guess.
+	plural, _ := meta.UnsafeGuessKindToResource(schema.GroupVersionKind{Kind: base})
+	suggestion := plural.Resource
+	if hasSubresource {
+		suggestion += "/" + subresource
+	}
+	return apierrors.NewBadRequest(fmt.Sprintf(
+		"unrecognized resource type %q; did you mean %q?", resource, suggestion,
+	))
+}
+
+// groupResolver resolves the API group that serves a (plural) resource type. It
+// is consulted only when a request carries no explicit group -- the Grant/Revoke
+// ResourceDetails flow, and group-less rules submitted via Create/Update (see
+// resolveRuleGroups).
+type groupResolver func(resource string) (group string, err error)
+
+// newRESTMapperGroupResolver returns a groupResolver backed by a RESTMapper. The
+// API server's RESTMapper is discovery-backed, so this resolves the group for
+// any resource type the cluster actually serves -- core, CRDs, and Kargo's
+// enterprise APIs alike -- without a hardcoded table or configuration. Known
+// resources are served from the mapper's in-memory cache; it returns a
+// bad-request error for an unknown or ambiguous resource type.
+func newRESTMapperGroupResolver(mapper meta.RESTMapper) groupResolver {
+	return func(resource string) (string, error) {
+		// The group is a property of the resource, not the subresource.
+		res, _, _ := strings.Cut(resource, "/")
+		gvrs, err := mapper.ResourcesFor(schema.GroupVersionResource{Resource: res})
+		if err != nil {
+			if meta.IsNoMatchError(err) {
+				return "", apierrors.NewBadRequest(fmt.Sprintf("unrecognized resource type %q", resource))
+			}
+			return "", fmt.Errorf("error resolving API group for resource type %q: %w", resource, err)
+		}
+		groups := make(map[string]struct{}, len(gvrs))
+		for _, gvr := range gvrs {
+			groups[gvr.Group] = struct{}{}
+		}
+		switch len(groups) {
+		case 1:
+			var group string
+			// NOTE(thomastaylor312): I know this looks weird, but it's the only way to get the
+			// single key out of a map in Go.
+			for g := range groups {
+				group = g
+			}
+			return group, nil
+		case 0:
+			return "", apierrors.NewBadRequest(fmt.Sprintf("unrecognized resource type %q", resource))
+		default:
+			return "", apierrors.NewBadRequest(fmt.Sprintf(
+				"ambiguous resource type %q; it is served by multiple API groups", resource,
+			))
+		}
 	}
 }
 
-// nolint: goconst
-func getGroupName(resourceType string) string {
-	// resourceType must already be validated
-	switch resourceType {
-	case "events", "secrets", "serviceaccounts":
-		return ""
-	case "rolebindings", "roles":
-		return rbacv1.SchemeGroupVersion.Group
-	case "freights", "freights/status", "promotions", "stages", "warehouses":
-		return kargoapi.GroupVersion.Group
-	case "analysisruns", "analysistemplates":
-		return rolloutsapi.GroupVersion.Group
-	default:
-		return "" // If the resourceType was validated, this will never happen
+// resolveRuleGroups fills in the API group of any rule that does not specify
+// one, by resolving it from the rule's resource type(s). Rules that already
+// specify a group are returned unchanged. A group-less rule that lists multiple
+// resources is split so each resource is paired with its own resolved group,
+// since different resources may live in different groups. A nil resolver leaves
+// rules unchanged.
+//
+// This is the entry point for group-less rules submitted through Create/Update
+// (notably the UI, which omits apiGroups and relies on the server to resolve
+// them); NormalizePolicyRules itself only preserves groups, never resolves them.
+func resolveRuleGroups(
+	rules []rbacv1.PolicyRule,
+	resolve groupResolver,
+) ([]rbacv1.PolicyRule, error) {
+	if resolve == nil {
+		return rules, nil
 	}
+	resolved := make([]rbacv1.PolicyRule, 0, len(rules))
+	for _, rule := range rules {
+		if len(rule.APIGroups) > 0 || len(rule.Resources) == 0 {
+			resolved = append(resolved, rule)
+			continue
+		}
+		for _, resource := range rule.Resources {
+			group, err := resolve(resource)
+			if err != nil {
+				return nil, err
+			}
+			r := *rule.DeepCopy()
+			r.APIGroups = []string{group}
+			r.Resources = []string{resource}
+			resolved = append(resolved, r)
+		}
+	}
+	return resolved, nil
 }
 
 func allVerbsFor(resourceType string, includeCustom bool) []string {

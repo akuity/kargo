@@ -7,7 +7,7 @@ import { paths } from '@ui/config/paths';
 import { StageConditionIcon } from '@ui/features/common/stage-status/stage-condition-icon';
 import { useStageControllerStatus } from '@ui/features/common/stage-status/use-stage-controller-status';
 import { getStagePhase } from '@ui/features/common/stage-status/utils';
-import { Stage } from '@ui/gen/api/v1alpha1/generated_pb';
+import { Stage } from '@ui/gen/api/v2/models';
 
 export const StageNodePhase = (props: { stage: Stage }) => {
   const projectName = props.stage?.metadata?.namespace || '';

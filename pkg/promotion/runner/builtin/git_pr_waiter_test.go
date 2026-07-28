@@ -4,6 +4,7 @@ import (
 	"context"
 	"errors"
 	"testing"
+	"time"
 
 	"github.com/google/uuid"
 	"github.com/stretchr/testify/require"
@@ -76,6 +77,25 @@ func Test_gitPRWaiter_convert(t *testing.T) {
 				"repoURL":  "https://github.com/example/repo.git",
 			},
 		},
+		{
+			name: "pollInterval is not a valid duration",
+			config: promotion.Config{
+				"prNumber":     42,
+				"repoURL":      "https://github.com/example/repo.git",
+				"pollInterval": "soon",
+			},
+			expectedProblems: []string{
+				"pollInterval: Does not match pattern",
+			},
+		},
+		{
+			name: "valid with pollInterval",
+			config: promotion.Config{
+				"prNumber":     42,
+				"repoURL":      "https://github.com/example/repo.git",
+				"pollInterval": "1m",
+			},
+		},
 	}
 
 	r := newGitPRWaiter(promotion.StepRunnerCapabilities{})
@@ -89,6 +109,7 @@ func Test_gitPRWaiter_run(t *testing.T) {
 	testCases := []struct {
 		name       string
 		provider   gitprovider.Interface
+		config     builtin.GitWaitForPRConfig
 		assertions func(*testing.T, promotion.StepResult, error)
 	}{
 		{
@@ -136,6 +157,31 @@ func Test_gitPRWaiter_run(t *testing.T) {
 				// commit should not be present when PR is open
 				_, hasCommit := res.Output["commit"]
 				require.False(t, hasCommit)
+				// Suggests the default poll interval while the PR remains open.
+				require.NotNil(t, res.RetryAfter)
+				require.Equal(t, gitWaitForPRPollIntervalDefault, *res.RetryAfter)
+			},
+		},
+		{
+			name: "PR is open with explicit pollInterval",
+			provider: &gitprovider.Fake{
+				GetPullRequestFn: func(
+					context.Context,
+					int64,
+				) (*gitprovider.PullRequest, error) {
+					return &gitprovider.PullRequest{
+						Number: 42,
+						Open:   true,
+						Merged: false,
+					}, nil
+				},
+			},
+			config: builtin.GitWaitForPRConfig{PollInterval: "90s"},
+			assertions: func(t *testing.T, res promotion.StepResult, err error) {
+				require.NoError(t, err)
+				require.Equal(t, kargoapi.PromotionStepStatusRunning, res.Status)
+				require.NotNil(t, res.RetryAfter)
+				require.Equal(t, 90*time.Second, *res.RetryAfter)
 			},
 		},
 		{
@@ -224,12 +270,13 @@ func Test_gitPRWaiter_run(t *testing.T) {
 				},
 			)
 
+			cfg := testCase.config
+			cfg.Provider = ptr.To(builtin.Provider(testGitProviderName))
+
 			res, err := runner.run(
 				t.Context(),
 				&promotion.StepContext{},
-				builtin.GitWaitForPRConfig{
-					Provider: ptr.To(builtin.Provider(testGitProviderName)),
-				},
+				cfg,
 			)
 			testCase.assertions(t, res, err)
 		})
