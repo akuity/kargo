@@ -67,6 +67,7 @@ func (h *httpSelector) Select(context.Context) ([]string, error) {
 		return nil,
 			fmt.Errorf("error querying repository index at %q: %w", h.indexURL, err)
 	}
+	defer res.Body.Close()
 	if res.StatusCode != http.StatusOK {
 		return nil, fmt.Errorf(
 			"received unexpected HTTP %d when querying repository index at %q",
@@ -74,7 +75,6 @@ func (h *httpSelector) Select(context.Context) ([]string, error) {
 			h.indexURL,
 		)
 	}
-	defer res.Body.Close()
 	resBodyBytes, err := io.ReadAll(res.Body)
 	if err != nil {
 		return nil,
