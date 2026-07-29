@@ -1,4 +1,5 @@
 import { DndContext } from '@dnd-kit/core';
+import { notification } from 'antd';
 import React, { useEffect, useState } from 'react';
 import { generatePath, useNavigate } from 'react-router-dom';
 
@@ -73,13 +74,29 @@ export const DndPromotionContext = ({ children, projectName }: Props) => {
     <DndContext
       autoScroll={false}
       onDragEnd={({ active, over }) => {
-        if (
-          // make sure that the freight can be promoted to this stage by checking the origin
-          over?.data?.current?.requestedFreightNames.includes(active?.data?.current?.originName)
-        ) {
-          setStage(over.id as string);
-          setFreight(active.id as string);
+        // dropped outside of any stage -- nothing to do
+        if (!over) {
+          return;
         }
+
+        const stageName = over.id as string;
+        const originName = active?.data?.current?.originName;
+        const requestedFreightNames: string[] = over.data?.current?.requestedFreightNames || [];
+
+        // make sure that the freight can be promoted to this stage by checking the origin
+        if (requestedFreightNames.includes(originName)) {
+          setStage(stageName);
+          setFreight(active.id as string);
+          return;
+        }
+
+        notification.error({
+          message: `Can't promote to Stage "${stageName}"`,
+          description:
+            `This Stage isn't connected to the "${originName}" Warehouse. ` +
+            'Freight can only be promoted to Stages that request Freight from its Warehouse.',
+          placement: 'bottomRight'
+        });
       }}
     >
       {children}
