@@ -47,6 +47,16 @@ type ProjectConfigSpec struct {
 	//
 	// +optional
 	StageLinks []DeepLink `json:"stageLinks,omitempty"`
+	// PromotionWindows defines time windows that gate promotions for Stages in
+	// this Project. A Stage's effective schedule is the union of matching windows
+	// defined here and any cluster-level windows in ClusterConfig.
+	//
+	// Kargo Enterprise only: This field is ignored in Kargo OSS.
+	//
+	// +optional
+	// +listType=map
+	// +listMapKey=name
+	PromotionWindows []PromotionWindow `json:"promotionWindows,omitempty"`
 }
 
 // ProjectConfigStatus describes the current status of a ProjectConfig.
