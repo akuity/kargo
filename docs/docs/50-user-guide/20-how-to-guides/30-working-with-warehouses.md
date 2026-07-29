@@ -53,9 +53,7 @@ subscription types.
 
 ### Naming Subscriptions
 
-A subscription may be given a name. Where a name is available, Kargo uses it in
-place of a repository URL to identify the subscription and the artifacts it has
-discovered:
+A subscription may be given a name:
 
 ```yaml
 spec:
@@ -77,12 +75,29 @@ valid [RFC 1123](https://datatracker.ietf.org/doc/html/rfc1123) label: no more
 than 63 lowercase alphanumeric characters or `-`, beginning and ending with an
 alphanumeric character.
 
+:::info
+
+Naming a subscription is optional, but recommended for new repository
+subscriptions. At present, apart from the name being plumbed through to
+discovery results and artifact references in `Freight` resources, nothing in
+Kargo uses subscription names.
+
+They are expected to take on greater significance in the future, particularly
+for purposes of disambiguation when `Warehouse`s are eventually permitted
+multiple subscriptions to the same repository.
+
+UI improvements that make use of subscription names, which are more
+human-friendly than lengthy repository URLs, are also planned.
+
+:::
+
 :::note
 
-Naming a subscription changes the identity of the artifacts it discovers, so
-naming an existing subscription results in new `Freight` being created the next
-time that `Warehouse` discovers artifacts -- once -- even if nothing has changed
-in the repository. Subscriptions left unnamed are unaffected.
+Because subscription names influence computation of artifact and `Freight`
+fingerprints, adding one to an existing, unnamed subscription in a `Warehouse`
+that has already produced `Freight` may result in the one-time production of new
+`Freight` resembling the existing, most recent `Freight` but with a _new_ unique
+name.
 
 :::
 

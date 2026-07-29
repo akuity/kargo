@@ -317,10 +317,13 @@ type FreightCreationCriteria struct {
 type RepoSubscription struct {
 	// Name identifies this subscription. It must be unique with respect to all
 	// other subscriptions of the same Warehouse. It is required for subscriptions
-	// that are neither Git, container image, nor Helm chart subscriptions, as
-	// those have no repository URL to identify them by. Where available, a name
-	// is used in place of a repository URL to identify a subscription and the
-	// artifacts it discovers.
+	// that are neither Git, container image, nor Helm chart subscriptions. Those
+	// three subscription types can be identified by their repository URLs, but it
+	// is not taken for granted that future subscription types built on a generic
+	// foundation will all possess such intrinsic identifiers. The name field
+	// introduces a uniform way of working around that. A name, when specified,
+	// even optionally on a Git, container image, or chart subscription, is
+	// recorded on the results of artifact discovery.
 	Name string `json:"name,omitempty"`
 	// Git describes a subscriptions to a Git repository.
 	Git *GitSubscription `json:"git,omitempty"`
