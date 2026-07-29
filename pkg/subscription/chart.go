@@ -32,6 +32,14 @@ func init() {
 // discovers Helm chart versions from a Helm chart repository.
 type chartSubscriber struct {
 	credentialsDB credentials.Database
+
+	// newSelectorFn constructs the chart Selector for a subscription. It is a
+	// field so tests can substitute a fake Selector for the real one.
+	newSelectorFn func(
+		ctx context.Context,
+		sub kargoapi.ChartSubscription,
+		creds *helm.Credentials,
+	) (chart.Selector, error)
 }
 
 // newChartSubscriber returns an implementation of the Subscriber interface that
@@ -40,7 +48,10 @@ func newChartSubscriber(
 	_ context.Context,
 	credentialsDB credentials.Database,
 ) (Subscriber, error) {
-	return &chartSubscriber{credentialsDB: credentialsDB}, nil
+	return &chartSubscriber{
+		credentialsDB: credentialsDB,
+		newSelectorFn: chart.NewSelector,
+	}, nil
 }
 
 // ApplySubscriptionDefaults implements Subscriber.
@@ -166,7 +177,7 @@ func (c *chartSubscriber) DiscoverArtifacts(
 		logger.Debug("found no credentials for chart repo")
 	}
 
-	selector, err := chart.NewSelector(ctx, *chartSub, helmCreds)
+	selector, err := c.newSelectorFn(ctx, *chartSub, helmCreds)
 	if err != nil {
 		return nil, fmt.Errorf(
 			"error obtaining selector for chart versions from helm chart repo %q: %w",
