@@ -520,6 +520,36 @@ features.
 
 :::
 
+### `freightStatus(freightName)`
+
+The `freightStatus()` function retrieves the entire `status` object of a
+`Freight` resource, including `currentlyIn`, `verifiedIn`, `approvedFor`, and
+`metadata`. This is a superset of what `freightMetadata()` exposes, and is
+useful when a promotion step needs to make decisions based on fields other
+than metadata e.g. checking whether a `Freight` was manually
+approved for a `Stage`. It has one required argument:
+
+- `freightName` (Required): The name of the `Freight` resource
+
+Example:
+
+```yaml
+config:
+  # Check whether the Freight has been manually approved for the "prod" Stage
+  wasManuallyApproved: ${{ freightStatus(ctx.targetFreight.name).approvedFor?.prod?.approvedAt != nil }}
+
+  # Check whether the Freight is currently verified in the "staging" Stage
+  isVerifiedInStaging: ${{ freightStatus(ctx.targetFreight.name).verifiedIn?.staging != nil }}
+```
+:::info
+
+You can handle `nil` values gracefully in Expr using its
+[nil coalescing](https://expr-lang.org/docs/language-definition#nil-coalescing) and
+[optional chaining](https://expr-lang.org/docs/language-definition#optional-chaining)
+features.
+
+:::
+
 ### `stageMetadata(stageName)`
 
 The `stageMetadata()` function retrieves metadata stored in a `Stage` resource. It
