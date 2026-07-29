@@ -534,12 +534,30 @@ approved for a `Stage`. It has one required argument:
 Example:
 
 ```yaml
-config:
-  # Check whether the Freight has been manually approved for the "prod" Stage
-  wasManuallyApproved: ${{ freightStatus(ctx.targetFreight.name).approvedFor?.prod?.approvedAt != nil }}
+  promotionTemplate:
+    spec:
+      steps:
+        - uses: compose-output
+          as: freight-status
+          config:
+            all: ${{ freightStatus(ctx.targetFreight.name) }}
+            currentlyIn: ${{ freightStatus(ctx.targetFreight.name).currentlyIn }}
+            verifiedIn: ${{ freightStatus(ctx.targetFreight.name).verifiedIn }}
+            approvedFor: ${{ freightStatus(ctx.targetFreight.name).approvedFor }}
+            metadata: ${{ freightStatus(ctx.targetFreight.name).metadata }}
+            wasBypassed: ${{ freightStatus(ctx.targetFreight.name).approvedFor?.prod?.approvedAt != nil }}
 
-  # Check whether the Freight is currently verified in the "staging" Stage
-  isVerifiedInStaging: ${{ freightStatus(ctx.targetFreight.name).verifiedIn?.staging != nil }}
+        # Automation flows freely when this promotion resulted from normal 
+        # verification, but an additional human gate is required when it resulted from a
+        # manual "Approve" bypass of this Stage.
+        - uses: fail
+          if: ${{ freightStatus(ctx.targetFreight.name).approvedFor?.prod?.approvedAt != nil }}
+          config:
+            message: >-
+              Freight ${{ ctx.targetFreight.name }} was promoted to prod via a
+              manual approval bypass (approvedFor.prod.approvedAt =
+              ${{ freightStatus(ctx.targetFreight.name).approvedFor?.prod?.approvedAt }}).
+              This requires additional human review before proceeding.
 ```
 :::info
 
