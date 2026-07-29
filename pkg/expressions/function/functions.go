@@ -416,16 +416,16 @@ func getFreightForExpr(
 		}
 		return nil, fmt.Errorf("failed to get freight %s: %w", freightRefName, err)
 	}
-	freight := &kargoapi.Freight{}
+	f := &kargoapi.Freight{}
 	if err := runtime.DefaultUnstructuredConverter.FromUnstructured(
 		u.Object,
-		freight,
+		f,
 	); err != nil {
 		return nil, fmt.Errorf(
 			"error converting unstructured object to Freight: %w", err,
 		)
 	}
-	return freight, nil
+	return f, nil
 }
 
 // StageMetadata returns an expr.Option that provides a `stageMetadata()` function
