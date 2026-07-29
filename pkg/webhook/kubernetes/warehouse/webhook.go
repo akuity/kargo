@@ -8,6 +8,7 @@ import (
 
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/apimachinery/pkg/runtime/schema"
+	k8sValidation "k8s.io/apimachinery/pkg/util/validation"
 	"k8s.io/apimachinery/pkg/util/validation/field"
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"
@@ -163,26 +164,29 @@ func (w *webhook) validateSubs(
 	seenNames := make(map[string]*field.Path, len(subs))
 	for i, sub := range subs {
 		errs = append(errs, w.validateSub(ctx, f.Index(i), sub, seen)...)
+		namePath := f.Index(i).Child("name")
 		// Generic subscriptions are identified by name alone, so, unlike the
 		// original three subscription types, a name is required.
-		if sub.Subscription != nil && sub.Name == "" {
-			errs = append(errs, field.Required(
-				f.Index(i).Child("name"),
-				"a name is required for subscriptions of this type",
-			))
-		}
-		if sub.Name != "" {
-			nk := strings.TrimSpace(strings.ToLower(sub.Name))
-			subNamePath := f.Index(i).Child("name")
-			if prev, exists := seenNames[nk]; exists {
-				errs = append(errs, field.Invalid(
-					subNamePath,
-					sub.Name,
-					fmt.Sprintf("subscription name %q already used at %q", sub.Name, prev),
+		if sub.Name == "" {
+			if sub.Subscription != nil {
+				errs = append(errs, field.Required(
+					namePath,
+					"a name is required for subscriptions of this type",
 				))
-			} else {
-				seenNames[nk] = subNamePath
 			}
+			continue
+		}
+		for _, msg := range k8sValidation.IsDNS1123Label(sub.Name) {
+			errs = append(errs, field.Invalid(namePath, sub.Name, msg))
+		}
+		if prev, exists := seenNames[sub.Name]; exists {
+			errs = append(errs, field.Invalid(
+				namePath,
+				sub.Name,
+				fmt.Sprintf("subscription name %q already used at %q", sub.Name, prev),
+			))
+		} else {
+			seenNames[sub.Name] = namePath
 		}
 	}
 	return errs

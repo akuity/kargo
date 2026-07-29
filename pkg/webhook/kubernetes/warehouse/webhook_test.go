@@ -3,6 +3,7 @@ package warehouse
 import (
 	"context"
 	"errors"
+	"strings"
 	"testing"
 
 	"github.com/stretchr/testify/require"
@@ -286,7 +287,7 @@ func Test_webhook_ValidateCreate(t *testing.T) {
 			},
 		},
 		{
-			name: "subscription name uniqueness is case-insensitive",
+			name: "subscription name is not a valid DNS label",
 			webhook: &webhook{
 				client: fake.NewClientBuilder().WithScheme(testScheme).WithObjects(
 					&corev1.Namespace{
@@ -302,29 +303,20 @@ func Test_webhook_ValidateCreate(t *testing.T) {
 			warehouse: &kargoapi.Warehouse{
 				ObjectMeta: metav1.ObjectMeta{Namespace: testProject},
 				Spec: kargoapi.WarehouseSpec{
-					InternalSubscriptions: []kargoapi.RepoSubscription{
-						{
-							Name: "Alpha",
-							Image: &kargoapi.ImageSubscription{
-								RepoURL: "fake-url-1",
-							},
-						},
-						{
-							Name: "ALPHA",
-							Image: &kargoapi.ImageSubscription{
-								RepoURL: "fake-url-2",
-							},
-						},
-					},
+					InternalSubscriptions: []kargoapi.RepoSubscription{{
+						Name:  "Not A Valid Name",
+						Image: &kargoapi.ImageSubscription{RepoURL: "fake-url"},
+					}},
 				},
 			},
 			assertions: func(t *testing.T, err error) {
 				require.Error(t, err)
-				require.Contains(t, err.Error(), "spec.subscriptions[1].name")
+				require.Contains(t, err.Error(), "spec.subscriptions[0].name")
+				require.Contains(t, err.Error(), "must consist of lower case alphanumeric characters")
 			},
 		},
 		{
-			name: "subscription name uniqueness ignores leading/trailing whitespace",
+			name: "subscription name is too long",
 			webhook: &webhook{
 				client: fake.NewClientBuilder().WithScheme(testScheme).WithObjects(
 					&corev1.Namespace{
@@ -340,25 +332,47 @@ func Test_webhook_ValidateCreate(t *testing.T) {
 			warehouse: &kargoapi.Warehouse{
 				ObjectMeta: metav1.ObjectMeta{Namespace: testProject},
 				Spec: kargoapi.WarehouseSpec{
-					InternalSubscriptions: []kargoapi.RepoSubscription{
-						{
-							Name: "foo",
-							Image: &kargoapi.ImageSubscription{
-								RepoURL: "fake-url-1",
-							},
-						},
-						{
-							Name: "foo ",
-							Image: &kargoapi.ImageSubscription{
-								RepoURL: "fake-url-2",
-							},
-						},
-					},
+					InternalSubscriptions: []kargoapi.RepoSubscription{{
+						Name:  strings.Repeat("a", 64),
+						Image: &kargoapi.ImageSubscription{RepoURL: "fake-url"},
+					}},
 				},
 			},
 			assertions: func(t *testing.T, err error) {
 				require.Error(t, err)
-				require.Contains(t, err.Error(), "spec.subscriptions[1].name")
+				require.Contains(t, err.Error(), "spec.subscriptions[0].name")
+				require.Contains(t, err.Error(), "must be no more than 63 characters")
+			},
+		},
+		{
+			name: "generic subscription without a name",
+			webhook: &webhook{
+				client: fake.NewClientBuilder().WithScheme(testScheme).WithObjects(
+					&corev1.Namespace{
+						ObjectMeta: metav1.ObjectMeta{
+							Name: testProject,
+							Labels: map[string]string{
+								kargoapi.LabelKeyProject: kargoapi.LabelValueTrue,
+							},
+						},
+					},
+				).Build(),
+			},
+			warehouse: &kargoapi.Warehouse{
+				ObjectMeta: metav1.ObjectMeta{Namespace: testProject},
+				Spec: kargoapi.WarehouseSpec{
+					InternalSubscriptions: []kargoapi.RepoSubscription{{
+						Subscription: &kargoapi.Subscription{
+							SubscriptionType: "fake-type",
+							DiscoveryLimit:   20,
+						},
+					}},
+				},
+			},
+			assertions: func(t *testing.T, err error) {
+				require.Error(t, err)
+				require.Contains(t, err.Error(), "spec.subscriptions[0].name")
+				require.Contains(t, err.Error(), "Required value")
 			},
 		},
 	}
