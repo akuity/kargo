@@ -30,14 +30,17 @@ export const getAutoPromotionHold = (stage: Stage | undefined, origin?: OriginLi
   if (!key) {
     return undefined;
   }
-  return stage?.status?.autoPromotionHolds?.[key];
+  return stage?.status?.effectiveAutoPromotionHolds?.[key];
 };
 
 export const stageHasAutoPromotionHold = (stage: Stage | undefined): boolean =>
-  Object.keys(stage?.status?.autoPromotionHolds || {}).length > 0;
+  Object.keys(stage?.status?.effectiveAutoPromotionHolds || {}).length > 0;
 
 export const getAutoPromotionHoldEntries = (stage: Stage | undefined): AutoPromotionHoldEntry[] => {
-  const holds = (stage?.status?.autoPromotionHolds ?? {}) as Record<string, AutoPromotionHold>;
+  const holds = (stage?.status?.effectiveAutoPromotionHolds ?? {}) as Record<
+    string,
+    AutoPromotionHold
+  >;
   return Object.entries(holds)
     .map(([key, hold]) => ({ key, hold, origin: hold.origin }))
     .sort((lhs, rhs) => lhs.key.localeCompare(rhs.key));
