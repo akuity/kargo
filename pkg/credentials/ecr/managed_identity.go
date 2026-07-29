@@ -80,7 +80,14 @@ func NewManagedIdentityProvider(ctx context.Context) credentials.Provider {
 		)
 		return nil
 	}
-	cfg.HTTPClient = cleanhttp.DefaultClient()
+	// This configuration lives as long as the provider, which is what makes
+	// pooled connections safe to hold onto. They also earn their keep: role
+	// assumption on behalf of every Project targets the STS endpoint in the
+	// controller's own region, so given enough Projects, requests reach it
+	// frequently enough to reuse connections instead of repeatedly negotiating
+	// TLS. That is most pronounced at startup, when no authorization tokens are
+	// cached yet and every Project needs one.
+	cfg.HTTPClient = cleanhttp.DefaultPooledClient()
 
 	stsSvc := sts.NewFromConfig(cfg)
 	res, err := stsSvc.GetCallerIdentity(ctx, &sts.GetCallerIdentityInput{})
