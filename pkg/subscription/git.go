@@ -244,17 +244,23 @@ func (g *gitSubscriber) DiscoverArtifacts(
 	} else if prev, ok := last.(kargoapi.GitDiscoveryResult); ok &&
 		prev.RepoURL == gitSub.RepoURL && observedRefs != nil &&
 		gitRefsEqual(prev.ObservedRefs, observedRefs) {
-		// The RepoURL check makes this short-circuit self-defending: the caller
-		// pairs prior results to subscriptions positionally, and this ensures a
-		// mispaired prior (a different repo's result) can never be reused.
+		// TODO(krancour): The prev.RepoURL == gitSub.RepoURL above safeguards
+		// against the fragility of the caller's choice to correlate prior discovery
+		// results with subscriptions positionally. That should be revisited
+		// regardless, but is deferred until Warehouses are permitted multiple
+		// subscriptions to the same repository as that will require further changes
+		// to the same mechanism.
+		//
+		// See https://github.com/akuity/kargo/issues/6724.
 		logger.Debug(
 			"remote refs unchanged since last discovery; skipping clone",
 			"commits", len(prev.Commits),
 		)
 		return kargoapi.GitDiscoveryResult{
-			RepoURL:      gitSub.RepoURL,
-			Commits:      prev.Commits,
-			ObservedRefs: observedRefs,
+			RepoURL:          gitSub.RepoURL,
+			Commits:          prev.Commits,
+			SubscriptionName: sub.Name,
+			ObservedRefs:     observedRefs,
 		}, nil
 	}
 
@@ -272,9 +278,10 @@ func (g *gitSubscriber) DiscoverArtifacts(
 	}
 
 	return kargoapi.GitDiscoveryResult{
-		RepoURL:      gitSub.RepoURL,
-		Commits:      commits,
-		ObservedRefs: observedRefs,
+		RepoURL:          gitSub.RepoURL,
+		Commits:          commits,
+		SubscriptionName: sub.Name,
+		ObservedRefs:     observedRefs,
 	}, nil
 }
 

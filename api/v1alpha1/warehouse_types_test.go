@@ -372,10 +372,8 @@ func TestWarehouseSpecMarshalUnmarshal(t *testing.T) {
 			spec: &WarehouseSpec{
 				InternalSubscriptions: []RepoSubscription{
 					{
-						Subscription: &Subscription{
-							SubscriptionType: "s3",
-							Name:             "my-bucket",
-						},
+						Name:         "my-bucket",
+						Subscription: &Subscription{SubscriptionType: "s3"},
 					},
 				},
 			},
@@ -393,8 +391,8 @@ func TestWarehouseSpecMarshalUnmarshal(t *testing.T) {
 				)
 				require.Equal(
 					t,
-					original.InternalSubscriptions[0].Subscription.Name,
-					roundtripped.InternalSubscriptions[0].Subscription.Name,
+					original.InternalSubscriptions[0].Name,
+					roundtripped.InternalSubscriptions[0].Name,
 				)
 			},
 		},
@@ -419,10 +417,8 @@ func TestWarehouseSpecMarshalUnmarshal(t *testing.T) {
 						},
 					},
 					{
-						Subscription: &Subscription{
-							SubscriptionType: "custom",
-							Name:             "custom-sub",
-						},
+						Name:         "custom-sub",
+						Subscription: &Subscription{SubscriptionType: "custom"},
 					},
 				},
 			},
@@ -443,9 +439,9 @@ func TestWarehouseSpecMarshalUnmarshal(t *testing.T) {
 			spec: &WarehouseSpec{
 				InternalSubscriptions: []RepoSubscription{
 					{
+						Name: "api-endpoint",
 						Subscription: &Subscription{
 							SubscriptionType: "http",
-							Name:             "api-endpoint",
 							Config: &apiextensionsv1.JSON{
 								Raw: []byte(`{"url":"https://api.example.com","interval":"1h"}`),
 							},
@@ -468,6 +464,47 @@ func TestWarehouseSpecMarshalUnmarshal(t *testing.T) {
 				require.NotNil(
 					t,
 					roundtripped.InternalSubscriptions[0].Subscription.Config,
+				)
+			},
+		},
+		{
+			name: "named Git subscription",
+			spec: &WarehouseSpec{
+				InternalSubscriptions: []RepoSubscription{{
+					Name: "fake-sub",
+					Git:  &GitSubscription{RepoURL: "https://github.com/example/repo.git"},
+				}},
+			},
+			assertion: func(
+				t *testing.T,
+				_ *WarehouseSpec,
+				roundtripped *WarehouseSpec,
+			) {
+				require.Len(t, roundtripped.InternalSubscriptions, 1)
+				require.Equal(t, "fake-sub", roundtripped.InternalSubscriptions[0].Name)
+				require.NotNil(t, roundtripped.InternalSubscriptions[0].Git)
+			},
+		},
+		{
+			name: "named generic subscription",
+			spec: &WarehouseSpec{
+				InternalSubscriptions: []RepoSubscription{{
+					Name:         "fake-sub",
+					Subscription: &Subscription{SubscriptionType: "s3"},
+				}},
+			},
+			assertion: func(
+				t *testing.T,
+				_ *WarehouseSpec,
+				roundtripped *WarehouseSpec,
+			) {
+				require.Len(t, roundtripped.InternalSubscriptions, 1)
+				require.Equal(t, "fake-sub", roundtripped.InternalSubscriptions[0].Name)
+				require.NotNil(t, roundtripped.InternalSubscriptions[0].Subscription)
+				require.Equal(
+					t,
+					"s3",
+					roundtripped.InternalSubscriptions[0].Subscription.SubscriptionType,
 				)
 			},
 		},
@@ -538,17 +575,40 @@ func TestWarehouseSpecUnmarshalValidation(t *testing.T) {
 			expectError: false,
 		},
 		{
+			name:        "valid named Git subscription",
+			jsonData:    `{"subscriptions":[{"name":"fake-sub","git":{"repoURL":"https://github.com/example/repo.git"}}]}`,
+			expectError: false,
+		},
+		{
+			name:        "valid named generic subscription",
+			jsonData:    `{"subscriptions":[{"name":"fake-sub","s3":{"config":{"bucket":"fake-bucket"}}}]}`,
+			expectError: false,
+		},
+		{
 			name:        "invalid subscription with no fields",
 			jsonData:    `{"subscriptions":[{}]}`,
 			expectError: true,
-			errorMsg:    "must be an object with exactly one top-level field",
+			errorMsg:    "must have exactly one top-level field naming its type",
+		},
+		{
+			name:        "invalid subscription with name only",
+			jsonData:    `{"subscriptions":[{"name":"fake-sub"}]}`,
+			expectError: true,
+			errorMsg:    "must have exactly one top-level field naming its type",
 		},
 		{
 			name: "invalid subscription with multiple fields",
 			// nolint: lll
 			jsonData:    `{"subscriptions":[{"git":{"repoURL":"https://github.com/example/repo.git"},"image":{"repoURL":"nginx"}}]}`,
 			expectError: true,
-			errorMsg:    "must be an object with exactly one top-level field",
+			errorMsg:    "must have exactly one top-level field naming its type",
+		},
+		{
+			name: "invalid named subscription with multiple fields",
+			// nolint: lll
+			jsonData:    `{"subscriptions":[{"name":"fake-sub","git":{"repoURL":"https://github.com/example/repo.git"},"image":{"repoURL":"nginx"}}]}`,
+			expectError: true,
+			errorMsg:    "must have exactly one top-level field naming its type",
 		},
 		{
 			name:        "invalid subscription as scalar",
@@ -630,10 +690,8 @@ func TestWarehouseSpecMarshalValidationErrors(t *testing.T) {
 			spec: &WarehouseSpec{
 				InternalSubscriptions: []RepoSubscription{
 					{
-						Subscription: &Subscription{
-							SubscriptionType: "s3",
-							Name:             "my-bucket",
-						},
+						Name:         "my-bucket",
+						Subscription: &Subscription{SubscriptionType: "s3"},
 					},
 				},
 			},
@@ -671,9 +729,8 @@ func TestWarehouseSpecMarshalValidationErrors(t *testing.T) {
 			spec: &WarehouseSpec{
 				InternalSubscriptions: []RepoSubscription{
 					{
-						Subscription: &Subscription{
-							Name: "my-bucket",
-						},
+						Name:         "my-bucket",
+						Subscription: &Subscription{},
 					},
 				},
 			},

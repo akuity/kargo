@@ -23,6 +23,8 @@ type Chart struct {
 	Name *string `json:"name,omitempty"`
 	// RepoURL specifies the URL of a Helm chart repository. Classic chart repositories (using HTTP/S) can contain differently named charts. When this field points to such a repository, the Name field will specify the name of the chart within the repository. In the case of a repository within an OCI registry, the URL implicitly points to a specific chart and the Name field will be empty.
 	RepoURL *string `json:"repoURL,omitempty"`
+	// SubscriptionName is the name of the subscription that discovered this chart. This field is only populated if the subscription was assigned a name.
+	SubscriptionName *string `json:"subscriptionName,omitempty"`
 	// Version specifies a particular version of the chart.
 	Version *string `json:"version,omitempty"`
 }
@@ -108,6 +110,38 @@ func (o *Chart) SetRepoURL(v string) {
 	o.RepoURL = &v
 }
 
+// GetSubscriptionName returns the SubscriptionName field value if set, zero value otherwise.
+func (o *Chart) GetSubscriptionName() string {
+	if o == nil || IsNil(o.SubscriptionName) {
+		var ret string
+		return ret
+	}
+	return *o.SubscriptionName
+}
+
+// GetSubscriptionNameOk returns a tuple with the SubscriptionName field value if set, nil otherwise
+// and a boolean to check if the value has been set.
+func (o *Chart) GetSubscriptionNameOk() (*string, bool) {
+	if o == nil || IsNil(o.SubscriptionName) {
+		return nil, false
+	}
+	return o.SubscriptionName, true
+}
+
+// HasSubscriptionName returns a boolean if a field has been set.
+func (o *Chart) HasSubscriptionName() bool {
+	if o != nil && !IsNil(o.SubscriptionName) {
+		return true
+	}
+
+	return false
+}
+
+// SetSubscriptionName gets a reference to the given string and assigns it to the SubscriptionName field.
+func (o *Chart) SetSubscriptionName(v string) {
+	o.SubscriptionName = &v
+}
+
 // GetVersion returns the Version field value if set, zero value otherwise.
 func (o *Chart) GetVersion() string {
 	if o == nil || IsNil(o.Version) {
@@ -155,6 +189,9 @@ func (o Chart) ToMap() (map[string]interface{}, error) {
 	}
 	if !IsNil(o.RepoURL) {
 		toSerialize["repoURL"] = o.RepoURL
+	}
+	if !IsNil(o.SubscriptionName) {
+		toSerialize["subscriptionName"] = o.SubscriptionName
 	}
 	if !IsNil(o.Version) {
 		toSerialize["version"] = o.Version

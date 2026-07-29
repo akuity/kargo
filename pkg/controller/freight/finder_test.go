@@ -992,10 +992,8 @@ func TestFindArtifact(t *testing.T) {
 						},
 						Spec: kargoapi.WarehouseSpec{
 							InternalSubscriptions: []kargoapi.RepoSubscription{{
-								Subscription: &kargoapi.Subscription{
-									SubscriptionType: testSubType,
-									Name:             testSubName,
-								},
+								Name:         testSubName,
+								Subscription: &kargoapi.Subscription{SubscriptionType: testSubType},
 							}},
 						},
 					},
@@ -1006,10 +1004,8 @@ func TestFindArtifact(t *testing.T) {
 						},
 						Spec: kargoapi.WarehouseSpec{
 							InternalSubscriptions: []kargoapi.RepoSubscription{{
-								Subscription: &kargoapi.Subscription{
-									SubscriptionType: testSubType,
-									Name:             testSubName,
-								},
+								Name:         testSubName,
+								Subscription: &kargoapi.Subscription{SubscriptionType: testSubType},
 							}},
 						},
 					},
@@ -1051,10 +1047,8 @@ func TestFindArtifact(t *testing.T) {
 						},
 						Spec: kargoapi.WarehouseSpec{
 							InternalSubscriptions: []kargoapi.RepoSubscription{{
-								Subscription: &kargoapi.Subscription{
-									SubscriptionType: testSubType,
-									Name:             testSubName,
-								},
+								Name:         testSubName,
+								Subscription: &kargoapi.Subscription{SubscriptionType: testSubType},
 							}},
 						},
 					},

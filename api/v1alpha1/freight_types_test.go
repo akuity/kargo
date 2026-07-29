@@ -144,6 +144,34 @@ func TestGitCommitDeepEquals(t *testing.T) {
 			},
 			expectedResult: true,
 		},
+		{
+			name: "subscription names differ",
+			a: &GitCommit{
+				RepoURL:          "fake-url",
+				ID:               "fake-commit-id",
+				SubscriptionName: "sub-a",
+			},
+			b: &GitCommit{
+				RepoURL:          "fake-url",
+				ID:               "fake-commit-id",
+				SubscriptionName: "sub-b",
+			},
+			expectedResult: false,
+		},
+		{
+			name: "perfect match with subscription name",
+			a: &GitCommit{
+				RepoURL:          "fake-url",
+				ID:               "fake-commit-id",
+				SubscriptionName: "my-sub",
+			},
+			b: &GitCommit{
+				RepoURL:          "fake-url",
+				ID:               "fake-commit-id",
+				SubscriptionName: "my-sub",
+			},
+			expectedResult: true,
+		},
 	}
 
 	for _, testCase := range testCases {

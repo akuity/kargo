@@ -8,6 +8,7 @@ import (
 
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/apimachinery/pkg/runtime/schema"
+	k8sValidation "k8s.io/apimachinery/pkg/util/validation"
 	"k8s.io/apimachinery/pkg/util/validation/field"
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"
@@ -160,8 +161,33 @@ func (w *webhook) validateSubs(
 	}
 	var errs field.ErrorList
 	seen := make(uniqueSubSet, len(subs))
+	seenNames := make(map[string]*field.Path, len(subs))
 	for i, sub := range subs {
 		errs = append(errs, w.validateSub(ctx, f.Index(i), sub, seen)...)
+		namePath := f.Index(i).Child("name")
+		// Generic subscriptions are identified by name alone, so, unlike the
+		// original three subscription types, a name is required.
+		if sub.Name == "" {
+			if sub.Subscription != nil {
+				errs = append(errs, field.Required(
+					namePath,
+					"a name is required for subscriptions of this type",
+				))
+			}
+			continue
+		}
+		for _, msg := range k8sValidation.IsDNS1123Label(sub.Name) {
+			errs = append(errs, field.Invalid(namePath, sub.Name, msg))
+		}
+		if prev, exists := seenNames[sub.Name]; exists {
+			errs = append(errs, field.Invalid(
+				namePath,
+				sub.Name,
+				fmt.Sprintf("subscription name %q already used at %q", sub.Name, prev),
+			))
+		} else {
+			seenNames[sub.Name] = namePath
+		}
 	}
 	return errs
 }
@@ -237,11 +263,6 @@ func (w *webhook) validateGenericSub(
 		errs = append(errs, err)
 	}
 
-	// Validate Name: MinLength=1
-	if err := validation.MinLength(f.Child("name"), sub.Name, 1); err != nil {
-		errs = append(errs, err)
-	}
-
 	// Validate DiscoveryLimit: Minimum=1, Maximum=100
 	if sub.DiscoveryLimit < 1 {
 		errs = append(errs, field.Invalid(
@@ -267,6 +288,10 @@ type subscriptionKey struct {
 
 type uniqueSubSet map[subscriptionKey]*field.Path
 
+// TODO(krancour): This method will require substantial refactoring when we
+// eventually move toward permitting Warehouses to have multiple subscriptions
+// to the same repository, as long as they are qualified with different names.
+// See https://github.com/akuity/kargo/issues/6724.
 func (s uniqueSubSet) addSub(
 	f *field.Path,
 	sub kargoapi.RepoSubscription,
@@ -298,6 +323,7 @@ func (s uniqueSubSet) addSub(
 			}
 			return field.Invalid(f.Child("chart"), sub.Chart.RepoURL, errMsg)
 		}
+		s[k] = f
 	case sub.Git != nil:
 		k := subscriptionKey{
 			kind: "git",
@@ -310,6 +336,7 @@ func (s uniqueSubSet) addSub(
 				fmt.Sprintf("subscription for Git repository already exists at %q", s[k]),
 			)
 		}
+		s[k] = f
 	case sub.Image != nil:
 		k := subscriptionKey{
 			kind: "image",
@@ -322,18 +349,10 @@ func (s uniqueSubSet) addSub(
 				fmt.Sprintf("subscription for image repository already exists at %q", s[k]),
 			)
 		}
-	case sub.Subscription != nil:
-		k := subscriptionKey{
-			kind: "sub",
-			id:   strings.TrimSpace(strings.ToLower(sub.Subscription.Name)),
-		}
-		if _, exists := s[k]; exists {
-			return field.Invalid(
-				f.Child("subscription"),
-				sub.Subscription.Name,
-				fmt.Sprintf("subscription with name %q already exists at %q", sub.Subscription.Name, s[k]),
-			)
-		}
+		s[k] = f
 	}
+	// Generic subscriptions have no repository URL to be deduplicated by. They
+	// are distinguished from one another by name alone, which validateSubs
+	// requires and verifies to be unique.
 	return nil
 }

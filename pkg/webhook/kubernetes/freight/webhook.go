@@ -385,6 +385,12 @@ type artifactSubscription struct {
 //   - An artifact in the Freight is not subscribed to by the Warehouse.
 //   - An artifact for a subscription of the Warehouse is not found in the Freight.
 //   - Multiple artifacts in the Freight correspond to the same subscription.
+//
+// TODO(krancour): A subscription is identified here by repository URL and type.
+// Subscription name will need to be part of that key when Warehouses are
+// permitted multiple subscriptions to the same repository.
+//
+// See https://github.com/akuity/kargo/issues/6724.
 func validateFreightArtifacts(
 	freight *kargoapi.Freight,
 	warehouse *kargoapi.Warehouse,

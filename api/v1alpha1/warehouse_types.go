@@ -116,11 +116,17 @@ type WarehouseSpec struct {
 
 var legacySubscriptionTypes = []string{"chart", "git", "image"}
 
+// subscriptionNameKey is the one top-level key of a subscription that does not
+// name a subscription type. It qualifies the subscription instead. No
+// subscription type may use this name.
+const subscriptionNameKey = "name"
+
 // UnmarshalJSON unmarshals the JSON data into WarehouseSpec, converting the
 // JSON from the Subscriptions field into typed RepoSubscription objects in
-// InternalSubscriptions. Any JSON object with a top-level key other than "git",
-// "image", or "chart" is unpacked into a (generic) Subscription with the key as
-// the ArtifactType.
+// InternalSubscriptions. Apart from an optional "name" field, each subscription
+// has exactly one top-level field, whose key names the subscription's type. Any
+// key other than "git", "image", or "chart" is unpacked into a (generic)
+// Subscription with the key as the ArtifactType.
 func (w *WarehouseSpec) UnmarshalJSON(data []byte) error {
 	type warehouseSpecAlias WarehouseSpec
 	aux := &struct {
@@ -147,26 +153,27 @@ func (w *WarehouseSpec) UnmarshalJSON(data []byte) error {
 				return err
 			}
 
-			// Validate that the subscription is an object with exactly one top-level
-			// key
-			if len(rawMap) != 1 {
+			// Validate that the subscription has exactly one key naming its type.
+			// Only the reserved name key may accompany it.
+			typeKeys := make([]string, 0, len(rawMap))
+			for k := range rawMap {
+				if k != subscriptionNameKey {
+					typeKeys = append(typeKeys, k)
+				}
+			}
+			if len(typeKeys) != 1 {
 				return fmt.Errorf(
-					"subscription at index %d must be an object with exactly one "+
-						"top-level field, but has %d fields",
-					i, len(rawMap),
+					"subscription at index %d must have exactly one top-level field "+
+						"naming its type, apart from an optional %q field, but has %d",
+					i, subscriptionNameKey, len(typeKeys),
 				)
 			}
-
-			// Get the single key
-			var key string
-			for k := range rawMap {
-				key = k
-				break // This unnecessary, but it makes it clear what we're doing
-			}
+			key := typeKeys[0]
 
 			// Check for known keys (git, image, chart)
 			if slices.Contains(legacySubscriptionTypes, key) {
-				// Known subscription type - unmarshal normally
+				// Known subscription type - unmarshal normally. The reserved name key
+				// maps to a field of RepoSubscription, so it comes along.
 				if err := json.Unmarshal(
 					aux.Subscriptions[i].Raw,
 					&w.InternalSubscriptions[i],
@@ -181,6 +188,14 @@ func (w *WarehouseSpec) UnmarshalJSON(data []byte) error {
 				}
 				sub.SubscriptionType = key
 				w.InternalSubscriptions[i].Subscription = &sub
+				if rawName, ok := rawMap[subscriptionNameKey]; ok {
+					if err := json.Unmarshal(
+						rawName,
+						&w.InternalSubscriptions[i].Name,
+					); err != nil {
+						return err
+					}
+				}
 			}
 		}
 		w.Subscriptions = nil // Clear to avoid confusion
@@ -247,6 +262,15 @@ func (w WarehouseSpec) MarshalJSON() ([]byte, error) {
 				wrapper := map[string]json.RawMessage{
 					kind: json.RawMessage(genericJSON),
 				}
+				// The subscription's name is a sibling of the type key, not part of
+				// the type-specific object.
+				if sub.Name != "" {
+					nameJSON, err := json.Marshal(sub.Name)
+					if err != nil {
+						return nil, err
+					}
+					wrapper[subscriptionNameKey] = json.RawMessage(nameJSON)
+				}
 				jsonData, err := json.Marshal(wrapper)
 				if err != nil {
 					return nil, err
@@ -291,6 +315,16 @@ type FreightCreationCriteria struct {
 // RepoSubscription describes a subscription to ONE OF a Git repository, a
 // container image repository, a Helm chart repository, or something else.
 type RepoSubscription struct {
+	// Name identifies this subscription. It must be unique with respect to all
+	// other subscriptions of the same Warehouse. It is required for subscriptions
+	// that are neither Git, container image, nor Helm chart subscriptions. Those
+	// three subscription types can be identified by their repository URLs, but it
+	// is not taken for granted that future subscription types built on a generic
+	// foundation will all possess such intrinsic identifiers. The name field
+	// introduces a uniform way of working around that. A name, when specified,
+	// even optionally on a Git, container image, or chart subscription, is
+	// recorded on the results of artifact discovery.
+	Name string `json:"name,omitempty"`
 	// Git describes a subscriptions to a Git repository.
 	Git *GitSubscription `json:"git,omitempty"`
 	// Image describes a subscription to container image repository.
@@ -308,11 +342,6 @@ type Subscription struct {
 	//
 	// +kubebuilder:validation:MinLength=1
 	SubscriptionType string `json:"subscriptionType"`
-	// Name is a unique (with respect to a Warehouse) name used for identifying
-	// this subscription.
-	//
-	// +kubebuilder:validation:MinLength=1
-	Name string `json:"name"`
 	// Config is a JSON object containing opaque configuration for this
 	// subscription. (It must be an object. It may not be a list or a scalar
 	// value.) This is only understood by a corresponding Subscriber
@@ -408,6 +437,11 @@ type GitDiscoveryResult struct {
 	//
 	// +optional
 	Commits []DiscoveredCommit `json:"commits"`
+	// SubscriptionName is the optional human-readable name of the subscription
+	// that produced this discovery result.
+	//
+	// +optional
+	SubscriptionName string `json:"subscriptionName,omitempty"`
 	// ObservedRefs records the raw remote ref state observed at the most recent
 	// successful discovery, after name-based filtering but before path filtering
 	// or commit selection. The Warehouse uses it to short-circuit discovery: at
@@ -507,6 +541,11 @@ type ImageDiscoveryResult struct {
 	//
 	// +optional
 	References []DiscoveredImageReference `json:"references"`
+	// SubscriptionName is the optional human-readable name of the subscription
+	// that produced this discovery result.
+	//
+	// +optional
+	SubscriptionName string `json:"subscriptionName,omitempty"`
 }
 
 // DiscoveredImageReference represents an image reference discovered by a
@@ -554,6 +593,11 @@ type ChartDiscoveryResult struct {
 	//
 	// +optional
 	Versions []string `json:"versions"`
+	// SubscriptionName is the optional human-readable name of the subscription
+	// that produced this discovery result.
+	//
+	// +optional
+	SubscriptionName string `json:"subscriptionName,omitempty"`
 }
 
 // DiscoveryResult represents the result of an artifact discovery operation for

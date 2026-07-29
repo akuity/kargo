@@ -1234,18 +1234,33 @@ func TestBuildFreightFromLatestArtifacts(t *testing.T) {
 			},
 		},
 		{
+			// The first result of each type is from a named subscription and the
+			// second is not, so this also covers propagation of subscription names
+			// to the artifacts they discovered.
 			name: "success",
 			artifacts: &kargoapi.DiscoveredArtifacts{
 				Git: []kargoapi.GitDiscoveryResult{
-					{RepoURL: "fake-repo", Commits: []kargoapi.DiscoveredCommit{{ID: "fake-commit"}}},
+					{
+						RepoURL:          "fake-repo",
+						Commits:          []kargoapi.DiscoveredCommit{{ID: "fake-commit"}},
+						SubscriptionName: "fake-git-sub",
+					},
 					{RepoURL: "fake-repo", Commits: []kargoapi.DiscoveredCommit{{ID: "fake-commit"}}},
 				},
 				Images: []kargoapi.ImageDiscoveryResult{
-					{RepoURL: "fake-repo", References: []kargoapi.DiscoveredImageReference{{Tag: "fake-tag"}}},
+					{
+						RepoURL:          "fake-repo",
+						References:       []kargoapi.DiscoveredImageReference{{Tag: "fake-tag"}},
+						SubscriptionName: "fake-image-sub",
+					},
 					{RepoURL: "fake-repo", References: []kargoapi.DiscoveredImageReference{{Tag: "fake-tag"}}},
 				},
 				Charts: []kargoapi.ChartDiscoveryResult{
-					{RepoURL: "fake-repo", Versions: []string{"fake-version"}},
+					{
+						RepoURL:          "fake-repo",
+						Versions:         []string{"fake-version"},
+						SubscriptionName: "fake-chart-sub",
+					},
 					{RepoURL: "fake-repo", Versions: []string{"fake-version"}},
 				},
 				Results: []kargoapi.DiscoveryResult{
@@ -1269,8 +1284,14 @@ func TestBuildFreightFromLatestArtifacts(t *testing.T) {
 				require.NoError(t, err)
 				require.NotNil(t, freight)
 				require.Len(t, freight.Commits, 2)
+				require.Equal(t, "fake-git-sub", freight.Commits[0].SubscriptionName)
+				require.Empty(t, freight.Commits[1].SubscriptionName)
 				require.Len(t, freight.Images, 2)
+				require.Equal(t, "fake-image-sub", freight.Images[0].SubscriptionName)
+				require.Empty(t, freight.Images[1].SubscriptionName)
 				require.Len(t, freight.Charts, 2)
+				require.Equal(t, "fake-chart-sub", freight.Charts[0].SubscriptionName)
+				require.Empty(t, freight.Charts[1].SubscriptionName)
 				require.Len(t, freight.Artifacts, 2)
 			},
 		},

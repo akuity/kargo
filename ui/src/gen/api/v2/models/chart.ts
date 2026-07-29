@@ -16,6 +16,10 @@ the chart within the repository. In the case of a repository within an OCI
 registry, the URL implicitly points to a specific chart and the Name field
 will be empty. */
   repoURL?: string;
+  /** SubscriptionName is the name of the subscription that discovered this
+chart. This field is only populated if the subscription was assigned
+a name. */
+  subscriptionName?: string;
   /** Version specifies a particular version of the chart. */
   version?: string;
 }

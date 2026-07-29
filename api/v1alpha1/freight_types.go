@@ -85,6 +85,10 @@ type GitCommit struct {
 	Author string `json:"author,omitempty"`
 	// Committer is the person who committed the commit.
 	Committer string `json:"committer,omitempty"`
+	// SubscriptionName is the name of the subscription that discovered this
+	// commit. This field is only populated if the subscription was assigned
+	// a name.
+	SubscriptionName string `json:"subscriptionName,omitempty"`
 }
 
 // DeepEquals returns a bool indicating whether the receiver deep-equals the
@@ -102,7 +106,8 @@ func (g *GitCommit) DeepEquals(other *GitCommit) bool {
 		g.Tag == other.Tag &&
 		g.Message == other.Message &&
 		g.Author == other.Author &&
-		g.Committer == other.Committer
+		g.Committer == other.Committer &&
+		g.SubscriptionName == other.SubscriptionName
 }
 
 // Equals returns a bool indicating whether two GitCommits are equivalent.

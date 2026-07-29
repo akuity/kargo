@@ -18,6 +18,11 @@ ChartSubscription.
 This field is optional, and only populated if the ChartSubscription
 specifies a SemverConstraint. */
   semverConstraint?: string;
+  /** SubscriptionName is the optional human-readable name of the subscription
+that produced this discovery result.
+
++optional */
+  subscriptionName?: string;
   /** Versions is a list of versions discovered by the Warehouse for the
 ChartSubscription. An empty list indicates that the discovery operation was
 successful, but no versions matching the ChartSubscription criteria were
