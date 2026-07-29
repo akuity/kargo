@@ -61,9 +61,17 @@ func chartHashPart(chart kargoapi.Chart) string {
 func commitHashPart(commit kargoapi.GitCommit) string {
 	var base string
 	if commit.Tag != "" {
-		// Incorporate the tag so commits with multiple tags produce
-		// distinct Freight even when the commit SHA is the same.
-		base = fmt.Sprintf("%s:%s:%s", urls.NormalizeGit(commit.RepoURL), commit.Tag, commit.ID)
+		// If we have a tag, incorporate it into the canonical representation of a
+		// commit used when calculating Freight ID. This is necessary because one
+		// commit could have multiple tags. Suppose we have already detected a
+		// commit with a tag v1.0.0-rc.1 and produced the corresponding Freight.
+		// Later, that same commit is tagged as v1.0.0. If we don't incorporate
+		// the tag into the ID, we will never produce a new/distinct piece of
+		// Freight for the new tag.
+		base = fmt.Sprintf(
+			"%s:%s:%s",
+			urls.NormalizeGit(commit.RepoURL), commit.Tag, commit.ID,
+		)
 	} else {
 		base = fmt.Sprintf("%s:%s", urls.NormalizeGit(commit.RepoURL), commit.ID)
 	}
