@@ -372,10 +372,8 @@ func TestWarehouseSpecMarshalUnmarshal(t *testing.T) {
 			spec: &WarehouseSpec{
 				InternalSubscriptions: []RepoSubscription{
 					{
-						Subscription: &Subscription{
-							SubscriptionType: "s3",
-							Name:             "my-bucket",
-						},
+						Name:         "my-bucket",
+						Subscription: &Subscription{SubscriptionType: "s3"},
 					},
 				},
 			},
@@ -393,8 +391,8 @@ func TestWarehouseSpecMarshalUnmarshal(t *testing.T) {
 				)
 				require.Equal(
 					t,
-					original.InternalSubscriptions[0].Subscription.Name,
-					roundtripped.InternalSubscriptions[0].Subscription.Name,
+					original.InternalSubscriptions[0].Name,
+					roundtripped.InternalSubscriptions[0].Name,
 				)
 			},
 		},
@@ -419,10 +417,8 @@ func TestWarehouseSpecMarshalUnmarshal(t *testing.T) {
 						},
 					},
 					{
-						Subscription: &Subscription{
-							SubscriptionType: "custom",
-							Name:             "custom-sub",
-						},
+						Name:         "custom-sub",
+						Subscription: &Subscription{SubscriptionType: "custom"},
 					},
 				},
 			},
@@ -443,9 +439,9 @@ func TestWarehouseSpecMarshalUnmarshal(t *testing.T) {
 			spec: &WarehouseSpec{
 				InternalSubscriptions: []RepoSubscription{
 					{
+						Name: "api-endpoint",
 						Subscription: &Subscription{
 							SubscriptionType: "http",
-							Name:             "api-endpoint",
 							Config: &apiextensionsv1.JSON{
 								Raw: []byte(`{"url":"https://api.example.com","interval":"1h"}`),
 							},
@@ -694,10 +690,8 @@ func TestWarehouseSpecMarshalValidationErrors(t *testing.T) {
 			spec: &WarehouseSpec{
 				InternalSubscriptions: []RepoSubscription{
 					{
-						Subscription: &Subscription{
-							SubscriptionType: "s3",
-							Name:             "my-bucket",
-						},
+						Name:         "my-bucket",
+						Subscription: &Subscription{SubscriptionType: "s3"},
 					},
 				},
 			},
@@ -735,9 +729,8 @@ func TestWarehouseSpecMarshalValidationErrors(t *testing.T) {
 			spec: &WarehouseSpec{
 				InternalSubscriptions: []RepoSubscription{
 					{
-						Subscription: &Subscription{
-							Name: "my-bucket",
-						},
+						Name:         "my-bucket",
+						Subscription: &Subscription{},
 					},
 				},
 			},

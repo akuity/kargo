@@ -345,11 +345,6 @@ type Subscription struct {
 	//
 	// +kubebuilder:validation:MinLength=1
 	SubscriptionType string `json:"subscriptionType"`
-	// Name is a unique (with respect to a Warehouse) name used for identifying
-	// this subscription.
-	//
-	// +kubebuilder:validation:MinLength=1
-	Name string `json:"name"`
 	// Config is a JSON object containing opaque configuration for this
 	// subscription. (It must be an object. It may not be a list or a scalar
 	// value.) This is only understood by a corresponding Subscriber

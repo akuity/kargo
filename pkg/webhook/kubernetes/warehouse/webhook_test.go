@@ -48,10 +48,10 @@ func init() {
 						// our tests because it will interfere with testing that common
 						// elements of generic subscriptions are defaulted properly. So,
 						// even though this is a nonsensical thing to do, we'll make a
-						// predictable change to the name field instead, because it will
-						// give us a way to verify that subscriber-specific defaulting logic
-						// works for generic subscriptions.
-						sub.Subscription.Name = "fake"
+						// predictable change to the subscription's name instead, because it
+						// will give us a way to verify that subscriber-specific defaulting
+						// logic works for generic subscriptions.
+						sub.Name = "fake"
 					}
 					return nil
 				},
@@ -139,7 +139,7 @@ func Test_webhook_Default(t *testing.T) {
 		require.Equal(t, testDiscoveryLimit, warehouse.Spec.InternalSubscriptions[0].Git.DiscoveryLimit)
 		require.Equal(t, testDiscoveryLimit, warehouse.Spec.InternalSubscriptions[1].Image.DiscoveryLimit)
 		require.Equal(t, testDiscoveryLimit, warehouse.Spec.InternalSubscriptions[2].Chart.DiscoveryLimit)
-		require.Equal(t, "fake", warehouse.Spec.InternalSubscriptions[3].Subscription.Name)
+		require.Equal(t, "fake", warehouse.Spec.InternalSubscriptions[3].Name)
 	})
 
 	t.Run("common elements of generic subscriptions are defaulted", func(t *testing.T) {
@@ -523,11 +523,13 @@ func TestValidateSpec(t *testing.T) {
 					{Git: &kargoapi.GitSubscription{}},
 					{Image: &kargoapi.ImageSubscription{}},
 					{Chart: &kargoapi.ChartSubscription{}},
-					{Subscription: &kargoapi.Subscription{
-						SubscriptionType: "fake",
-						Name:             "fake-sub",
-						DiscoveryLimit:   20,
-					}},
+					{
+						Name: "fake-sub",
+						Subscription: &kargoapi.Subscription{
+							SubscriptionType: "fake",
+							DiscoveryLimit:   20,
+						},
+					},
 				},
 			},
 			assertions: func(t *testing.T, _ *kargoapi.WarehouseSpec, errs field.ErrorList) {
@@ -554,10 +556,8 @@ func TestValidateSpec(t *testing.T) {
 			spec: kargoapi.WarehouseSpec{
 				InternalSubscriptions: []kargoapi.RepoSubscription{
 					{
-						Subscription: &kargoapi.Subscription{
-							// Name is empty and discovery limit is zero
-							SubscriptionType: "fake",
-						},
+						// Name is empty and discovery limit is zero
+						Subscription: &kargoapi.Subscription{SubscriptionType: "fake"},
 					},
 					{
 						Subscription: &kargoapi.Subscription{
@@ -573,7 +573,7 @@ func TestValidateSpec(t *testing.T) {
 				for i, err := range errs {
 					fields[i] = err.Field
 				}
-				require.Contains(t, fields, "spec.subscriptions[0].fake.name")
+				require.Contains(t, fields, "spec.subscriptions[0].name")
 				require.Contains(t, fields, "spec.subscriptions[0].fake.discoveryLimit")
 				require.Contains(t, fields, "spec.subscriptions[1].fake.discoveryLimit")
 			},

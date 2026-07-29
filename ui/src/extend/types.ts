@@ -42,12 +42,12 @@ export type ChartSubscription = {
 
 export type Subscription = {
   subscriptionType: string;
-  name: string;
   config?: unknown;
   discoveryLimit?: number;
 };
 
 export type RepoSubscription = {
+  name?: string;
   git?: GitSubscription;
   image?: ImageSubscription;
   chart?: ChartSubscription;

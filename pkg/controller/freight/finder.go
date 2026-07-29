@@ -323,7 +323,7 @@ func FindArtifact(
 				)
 			}
 			for _, sub := range warehouse.Spec.InternalSubscriptions {
-				if sub.Subscription != nil && sub.Subscription.Name == subName {
+				if sub.Subscription != nil && sub.Name == subName {
 					if desiredOrigin != nil {
 						return nil, fmt.Errorf(
 							"multiple requested Freight could potentially provide a "+

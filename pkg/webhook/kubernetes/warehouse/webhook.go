@@ -163,6 +163,14 @@ func (w *webhook) validateSubs(
 	seenNames := make(map[string]*field.Path, len(subs))
 	for i, sub := range subs {
 		errs = append(errs, w.validateSub(ctx, f.Index(i), sub, seen)...)
+		// Generic subscriptions are identified by name alone, so, unlike the
+		// original three subscription types, a name is required.
+		if sub.Subscription != nil && sub.Name == "" {
+			errs = append(errs, field.Required(
+				f.Index(i).Child("name"),
+				"a name is required for subscriptions of this type",
+			))
+		}
 		if sub.Name != "" {
 			nk := strings.TrimSpace(strings.ToLower(sub.Name))
 			subNamePath := f.Index(i).Child("name")
@@ -248,11 +256,6 @@ func (w *webhook) validateGenericSub(
 		sub.SubscriptionType,
 		1,
 	); err != nil {
-		errs = append(errs, err)
-	}
-
-	// Validate Name: MinLength=1
-	if err := validation.MinLength(f.Child("name"), sub.Name, 1); err != nil {
 		errs = append(errs, err)
 	}
 
@@ -342,22 +345,9 @@ func (s uniqueSubSet) addSub(
 			)
 		}
 		s[k] = f
-	case sub.Subscription != nil:
-		k := subscriptionKey{
-			kind: "sub",
-			id:   strings.TrimSpace(strings.ToLower(sub.Subscription.Name)),
-		}
-		if _, exists := s[k]; exists {
-			return field.Invalid(
-				f.Child("subscription"),
-				sub.Subscription.Name,
-				fmt.Sprintf("subscription with name %q already exists at %q", sub.Subscription.Name, s[k]),
-			)
-		}
-		s[k] = f
 	}
-	// Validate uniqueness of the optional human-readable Name across all
-	// subscription types. Two subscriptions in the same Warehouse may not share
-	// a non-empty Name.
+	// Generic subscriptions have no repository URL to be deduplicated by. They
+	// are distinguished from one another by name alone, which validateSubs
+	// requires and verifies to be unique.
 	return nil
 }

@@ -18,7 +18,7 @@ export const repoSubscriptionIndexer = {
       subscription?.image?.repoURL ||
       subscription?.git?.repoURL ||
       subscription?.chart?.repoURL ||
-      `${subscription?.subscription?.name}${subscription?.subscription?.subscriptionType}` ||
+      `${subscription?.name}${subscription?.subscription?.subscriptionType}` ||
       'unknown';
 
     return `subscription/${warehouseIndex}/${subscriptionRepoURL}`;
