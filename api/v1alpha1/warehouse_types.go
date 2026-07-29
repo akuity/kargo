@@ -116,11 +116,17 @@ type WarehouseSpec struct {
 
 var legacySubscriptionTypes = []string{"chart", "git", "image"}
 
+// subscriptionNameKey is the one top-level key of a subscription that does not
+// name a subscription type. It qualifies the subscription instead. No
+// subscription type may use this name.
+const subscriptionNameKey = "name"
+
 // UnmarshalJSON unmarshals the JSON data into WarehouseSpec, converting the
 // JSON from the Subscriptions field into typed RepoSubscription objects in
-// InternalSubscriptions. Any JSON object with a top-level key other than "git",
-// "image", or "chart" is unpacked into a (generic) Subscription with the key as
-// the ArtifactType.
+// InternalSubscriptions. Apart from an optional "name" field, each subscription
+// has exactly one top-level field, whose key names the subscription's type. Any
+// key other than "git", "image", or "chart" is unpacked into a (generic)
+// Subscription with the key as the ArtifactType.
 func (w *WarehouseSpec) UnmarshalJSON(data []byte) error {
 	type warehouseSpecAlias WarehouseSpec
 	aux := &struct {
@@ -147,26 +153,27 @@ func (w *WarehouseSpec) UnmarshalJSON(data []byte) error {
 				return err
 			}
 
-			// Validate that the subscription is an object with exactly one top-level
-			// key
-			if len(rawMap) != 1 {
+			// Validate that the subscription has exactly one key naming its type.
+			// Only the reserved name key may accompany it.
+			typeKeys := make([]string, 0, len(rawMap))
+			for k := range rawMap {
+				if k != subscriptionNameKey {
+					typeKeys = append(typeKeys, k)
+				}
+			}
+			if len(typeKeys) != 1 {
 				return fmt.Errorf(
-					"subscription at index %d must be an object with exactly one "+
-						"top-level field, but has %d fields",
-					i, len(rawMap),
+					"subscription at index %d must have exactly one top-level field "+
+						"naming its type, apart from an optional %q field, but has %d",
+					i, subscriptionNameKey, len(typeKeys),
 				)
 			}
-
-			// Get the single key
-			var key string
-			for k := range rawMap {
-				key = k
-				break // This unnecessary, but it makes it clear what we're doing
-			}
+			key := typeKeys[0]
 
 			// Check for known keys (git, image, chart)
 			if slices.Contains(legacySubscriptionTypes, key) {
-				// Known subscription type - unmarshal normally
+				// Known subscription type - unmarshal normally. The reserved name key
+				// maps to a field of RepoSubscription, so it comes along.
 				if err := json.Unmarshal(
 					aux.Subscriptions[i].Raw,
 					&w.InternalSubscriptions[i],
@@ -181,6 +188,14 @@ func (w *WarehouseSpec) UnmarshalJSON(data []byte) error {
 				}
 				sub.SubscriptionType = key
 				w.InternalSubscriptions[i].Subscription = &sub
+				if rawName, ok := rawMap[subscriptionNameKey]; ok {
+					if err := json.Unmarshal(
+						rawName,
+						&w.InternalSubscriptions[i].Name,
+					); err != nil {
+						return err
+					}
+				}
 			}
 		}
 		w.Subscriptions = nil // Clear to avoid confusion
@@ -246,6 +261,15 @@ func (w WarehouseSpec) MarshalJSON() ([]byte, error) {
 				// Wrap in an object with the Kind as the key
 				wrapper := map[string]json.RawMessage{
 					kind: json.RawMessage(genericJSON),
+				}
+				// The subscription's name is a sibling of the type key, not part of
+				// the type-specific object.
+				if sub.Name != "" {
+					nameJSON, err := json.Marshal(sub.Name)
+					if err != nil {
+						return nil, err
+					}
+					wrapper[subscriptionNameKey] = json.RawMessage(nameJSON)
 				}
 				jsonData, err := json.Marshal(wrapper)
 				if err != nil {
