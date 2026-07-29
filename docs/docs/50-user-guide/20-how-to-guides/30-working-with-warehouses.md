@@ -53,32 +53,36 @@ subscription types.
 
 ### Naming Subscriptions
 
-Each entry in `spec.subscriptions` may optionally include a `name` field. When
-provided, this human-readable identifier makes it easier to distinguish between
-subscriptions of the same type in logs, events, and the Kargo UI — particularly
-when a `Warehouse` subscribes to multiple repositories of the same kind.
+A subscription may be given a name. Where a name is available, Kargo uses it in
+place of a repository URL to identify the subscription and the artifacts it has
+discovered:
 
 ```yaml
 spec:
   subscriptions:
-  - name: frontend-images
+  - name: frontend
     image:
       repoURL: public.ecr.aws/nginx/nginx
       constraint: ^1.26.0
-  - name: backend-images
+  - name: backend
     image:
       repoURL: public.ecr.aws/myorg/backend
 ```
 
-Subscription names, when provided, must be unique within a `Warehouse` (the
-check is case-insensitive and ignores leading/trailing whitespace). Names are
-limited to 63 characters and must match the pattern
-`^[a-zA-Z0-9]([a-zA-Z0-9._-]*[a-zA-Z0-9])?$`.
+The `name` field is a sibling of the field identifying the subscription's type
+-- `image` in the example above -- and not a field within it.
+
+A name must be unique among all of a `Warehouse`'s subscriptions and must be a
+valid [RFC 1123](https://datatracker.ietf.org/doc/html/rfc1123) label: no more
+than 63 lowercase alphanumeric characters or `-`, beginning and ending with an
+alphanumeric character.
 
 :::note
 
-The `name` field on a `RepoSubscription` is optional. Existing subscriptions
-without a name continue to work exactly as before.
+Naming a subscription changes the identity of the artifacts it discovers, so
+naming an existing subscription results in new `Freight` being created the next
+time that `Warehouse` discovers artifacts -- once -- even if nothing has changed
+in the repository. Subscriptions left unnamed are unaffected.
 
 :::
 
