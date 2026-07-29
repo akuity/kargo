@@ -39,6 +39,11 @@ type ManagedIdentityProvider struct {
 
 	accountID string
 
+	// cfg is the controller's own AWS configuration. Retaining and reusing it is
+	// safe because the credentials it carries are wrapped in a cache that
+	// refreshes them as they approach expiry.
+	cfg aws.Config
+
 	getAuthTokenFn func(
 		ctx context.Context,
 		region string,
@@ -48,7 +53,6 @@ type ManagedIdentityProvider struct {
 
 	getAuthTokenAsFn func(
 		ctx context.Context,
-		cfg aws.Config,
 		region string,
 		identity authIdentity,
 	) (string, time.Time, error)
@@ -99,9 +103,10 @@ func NewManagedIdentityProvider(ctx context.Context) credentials.Provider {
 			time.Hour,    // Cleanup interval
 		),
 		accountID: awsAccountID,
+		cfg:       cfg,
 	}
 	p.getAuthTokenFn = p.getAuthToken
-	p.getAuthTokenAsFn = getAuthTokenAs
+	p.getAuthTokenAsFn = p.getAuthTokenAs
 	return p
 }
 
@@ -172,9 +177,10 @@ func (p *ManagedIdentityProvider) GetCredentials(
 	return decodeAuthToken(encodedToken)
 }
 
-// getAuthToken loads the controller's AWS configuration and delegates to
-// getAuthTokenWithConfig(). An empty token and nil error are returned if the
-// configuration cannot be loaded.
+// getAuthToken returns a short-lived ECR authorization token, obtained as the
+// first of the identities returned by authIdentities() that both exists and is
+// authorized to obtain that token. An empty token and nil error are returned if
+// none of them are.
 func (p *ManagedIdentityProvider) getAuthToken(
 	ctx context.Context,
 	region string,
@@ -187,33 +193,9 @@ func (p *ManagedIdentityProvider) getAuthToken(
 		"awsRegion", region,
 		"project", project,
 	)
-	ctx = logging.ContextWithLogger(ctx, logger)
-
-	cfg, err := config.LoadDefaultConfig(ctx)
-	if err != nil {
-		logger.Error(err, "error loading AWS config")
-		return "", time.Time{}, nil
-	}
-	cfg.HTTPClient = cleanhttp.DefaultClient()
-
-	return p.getAuthTokenWithConfig(ctx, cfg, region, accountID, project)
-}
-
-// getAuthTokenWithConfig returns a short-lived ECR authorization token,
-// obtained using the given AWS configuration and the first of the identities
-// returned by authIdentities() that both exists and is authorized to obtain
-// that token. An empty token and nil error are returned if none of them are.
-func (p *ManagedIdentityProvider) getAuthTokenWithConfig(
-	ctx context.Context,
-	cfg aws.Config,
-	region string,
-	accountID string,
-	project string,
-) (string, time.Time, error) {
-	logger := logging.LoggerFromContext(ctx)
 
 	for _, identity := range p.authIdentities(accountID, project) {
-		token, expiry, err := p.getAuthTokenAsFn(ctx, cfg, region, identity)
+		token, expiry, err := p.getAuthTokenAsFn(ctx, region, identity)
 		if err == nil {
 			logger.Debug(
 				"got ECR authorization token",
@@ -283,24 +265,22 @@ func (p *ManagedIdentityProvider) authIdentities(
 // getAuthTokenAs attempts to obtain an ECR authorization token for the given
 // region as the given identity. Errors are returned unexamined; interpreting
 // them is the caller's responsibility.
-func getAuthTokenAs(
+func (p *ManagedIdentityProvider) getAuthTokenAs(
 	ctx context.Context,
-	cfg aws.Config,
 	region string,
 	identity authIdentity,
 ) (string, time.Time, error) {
-	if identity.roleARN != "" {
-		// The STS client is deliberately built before cfg is retargeted at the
-		// registry's region, so that role assumption continues to use whichever
-		// region the controller's own configuration resolved to.
-		cfg.Credentials = stscreds.NewAssumeRoleProvider(
-			sts.NewFromConfig(cfg),
-			identity.roleARN,
-		)
-	}
-	cfg.Region = region
+	// The region override applies only to the ECR client. Role assumption uses
+	// whichever region the controller's own configuration resolved to.
+	stsSvc := sts.NewFromConfig(p.cfg)
+	ecrSvc := ecr.NewFromConfig(p.cfg, func(o *ecr.Options) {
+		o.Region = region
+		if identity.roleARN != "" {
+			o.Credentials = stscreds.NewAssumeRoleProvider(stsSvc, identity.roleARN)
+		}
+	})
 
-	output, err := ecr.NewFromConfig(cfg).GetAuthorizationToken(
+	output, err := ecrSvc.GetAuthorizationToken(
 		ctx,
 		&ecr.GetAuthorizationTokenInput{},
 	)

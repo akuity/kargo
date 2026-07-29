@@ -8,7 +8,6 @@ import (
 	"testing"
 	"time"
 
-	"github.com/aws/aws-sdk-go-v2/aws"
 	awshttp "github.com/aws/aws-sdk-go-v2/aws/transport/http"
 	smithyhttp "github.com/aws/smithy-go/transport/http"
 	"github.com/patrickmn/go-cache"
@@ -325,7 +324,7 @@ func TestManagedIdentityProvider_authIdentities(t *testing.T) {
 	}
 }
 
-func TestManagedIdentityProvider_getAuthTokenWithConfig(t *testing.T) {
+func TestManagedIdentityProvider_getAuthToken(t *testing.T) {
 	const (
 		fakeControllerAccountID = "123456789012"
 		fakeRegistryAccountID   = "210987654321"
@@ -436,7 +435,6 @@ func TestManagedIdentityProvider_getAuthTokenWithConfig(t *testing.T) {
 			p := &ManagedIdentityProvider{accountID: fakeControllerAccountID}
 			p.getAuthTokenAsFn = func(
 				_ context.Context,
-				_ aws.Config,
 				region string,
 				identity authIdentity,
 			) (string, time.Time, error) {
@@ -453,9 +451,8 @@ func TestManagedIdentityProvider_getAuthTokenWithConfig(t *testing.T) {
 				}
 				return fakeToken, fakeExpiry, nil
 			}
-			token, expiry, err := p.getAuthTokenWithConfig(
+			token, expiry, err := p.getAuthToken(
 				t.Context(),
-				aws.Config{},
 				fakeRegion,
 				accountID,
 				fakeProject,
