@@ -25,6 +25,8 @@ type ImageDiscoveryResult struct {
 	References []DiscoveredImageReference `json:"references,omitempty"`
 	// RepoURL is the repository URL of the image, as specified in the ImageSubscription.  +kubebuilder:validation:MinLength=1
 	RepoURL *string `json:"repoURL,omitempty"`
+	// SubscriptionName is the optional human-readable name of the subscription that produced this discovery result.  +optional
+	SubscriptionName *string `json:"subscriptionName,omitempty"`
 }
 
 // NewImageDiscoveryResult instantiates a new ImageDiscoveryResult object
@@ -140,6 +142,38 @@ func (o *ImageDiscoveryResult) SetRepoURL(v string) {
 	o.RepoURL = &v
 }
 
+// GetSubscriptionName returns the SubscriptionName field value if set, zero value otherwise.
+func (o *ImageDiscoveryResult) GetSubscriptionName() string {
+	if o == nil || IsNil(o.SubscriptionName) {
+		var ret string
+		return ret
+	}
+	return *o.SubscriptionName
+}
+
+// GetSubscriptionNameOk returns a tuple with the SubscriptionName field value if set, nil otherwise
+// and a boolean to check if the value has been set.
+func (o *ImageDiscoveryResult) GetSubscriptionNameOk() (*string, bool) {
+	if o == nil || IsNil(o.SubscriptionName) {
+		return nil, false
+	}
+	return o.SubscriptionName, true
+}
+
+// HasSubscriptionName returns a boolean if a field has been set.
+func (o *ImageDiscoveryResult) HasSubscriptionName() bool {
+	if o != nil && !IsNil(o.SubscriptionName) {
+		return true
+	}
+
+	return false
+}
+
+// SetSubscriptionName gets a reference to the given string and assigns it to the SubscriptionName field.
+func (o *ImageDiscoveryResult) SetSubscriptionName(v string) {
+	o.SubscriptionName = &v
+}
+
 func (o ImageDiscoveryResult) MarshalJSON() ([]byte, error) {
 	toSerialize,err := o.ToMap()
 	if err != nil {
@@ -158,6 +192,9 @@ func (o ImageDiscoveryResult) ToMap() (map[string]interface{}, error) {
 	}
 	if !IsNil(o.RepoURL) {
 		toSerialize["repoURL"] = o.RepoURL
+	}
+	if !IsNil(o.SubscriptionName) {
+		toSerialize["subscriptionName"] = o.SubscriptionName
 	}
 	return toSerialize, nil
 }

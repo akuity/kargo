@@ -154,7 +154,7 @@ export const RepoSubscriptions = ({ subscriptions }: Props) => {
               column={1}
               style={{ width: '40%', minWidth: 500 }}
             >
-              <Descriptions.Item label='Name'>{subscription.subscription.name}</Descriptions.Item>
+              <Descriptions.Item label='Name'>{subscription.name}</Descriptions.Item>
               <Descriptions.Item label='Type'>
                 {subscription.subscription.subscriptionType}
               </Descriptions.Item>

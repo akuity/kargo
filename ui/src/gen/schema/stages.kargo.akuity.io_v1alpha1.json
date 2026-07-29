@@ -576,6 +576,10 @@
                         "description": "RepoURL specifies the URL of a Helm chart repository. Classic chart\nrepositories (using HTTP/S) can contain differently named charts. When this\nfield points to such a repository, the Name field will specify the name of\nthe chart within the repository. In the case of a repository within an OCI\nregistry, the URL implicitly points to a specific chart and the Name field\nwill be empty.",
                         "type": "string"
                       },
+                      "subscriptionName": {
+                        "description": "SubscriptionName is the name of the subscription that discovered this\nchart. This field is only populated if the subscription was assigned\na name.",
+                        "type": "string"
+                      },
                       "version": {
                         "description": "Version specifies a particular version of the chart.",
                         "type": "string"
@@ -614,6 +618,10 @@
                         "description": "RepoURL is the URL of a Git repository.",
                         "type": "string"
                       },
+                      "subscriptionName": {
+                        "description": "SubscriptionName is the name of the subscription that discovered this\ncommit. This field is only populated if the subscription was assigned\na name.",
+                        "type": "string"
+                      },
                       "tag": {
                         "description": "Tag denotes a tag in the repository that matched selection criteria and\nresolved to this commit.",
                         "type": "string"
@@ -641,6 +649,10 @@
                       },
                       "repoURL": {
                         "description": "RepoURL describes the repository in which the image can be found.",
+                        "type": "string"
+                      },
+                      "subscriptionName": {
+                        "description": "SubscriptionName is the name of the subscription that discovered this\nimage. This field is only populated if the subscription was assigned\na name.",
                         "type": "string"
                       },
                       "tag": {
@@ -748,6 +760,10 @@
                             "description": "RepoURL specifies the URL of a Helm chart repository. Classic chart\nrepositories (using HTTP/S) can contain differently named charts. When this\nfield points to such a repository, the Name field will specify the name of\nthe chart within the repository. In the case of a repository within an OCI\nregistry, the URL implicitly points to a specific chart and the Name field\nwill be empty.",
                             "type": "string"
                           },
+                          "subscriptionName": {
+                            "description": "SubscriptionName is the name of the subscription that discovered this\nchart. This field is only populated if the subscription was assigned\na name.",
+                            "type": "string"
+                          },
                           "version": {
                             "description": "Version specifies a particular version of the chart.",
                             "type": "string"
@@ -786,6 +802,10 @@
                             "description": "RepoURL is the URL of a Git repository.",
                             "type": "string"
                           },
+                          "subscriptionName": {
+                            "description": "SubscriptionName is the name of the subscription that discovered this\ncommit. This field is only populated if the subscription was assigned\na name.",
+                            "type": "string"
+                          },
                           "tag": {
                             "description": "Tag denotes a tag in the repository that matched selection criteria and\nresolved to this commit.",
                             "type": "string"
@@ -813,6 +833,10 @@
                           },
                           "repoURL": {
                             "description": "RepoURL describes the repository in which the image can be found.",
+                            "type": "string"
+                          },
+                          "subscriptionName": {
+                            "description": "SubscriptionName is the name of the subscription that discovered this\nimage. This field is only populated if the subscription was assigned\na name.",
                             "type": "string"
                           },
                           "tag": {
@@ -909,6 +933,10 @@
                                   "description": "RepoURL specifies the URL of a Helm chart repository. Classic chart\nrepositories (using HTTP/S) can contain differently named charts. When this\nfield points to such a repository, the Name field will specify the name of\nthe chart within the repository. In the case of a repository within an OCI\nregistry, the URL implicitly points to a specific chart and the Name field\nwill be empty.",
                                   "type": "string"
                                 },
+                                "subscriptionName": {
+                                  "description": "SubscriptionName is the name of the subscription that discovered this\nchart. This field is only populated if the subscription was assigned\na name.",
+                                  "type": "string"
+                                },
                                 "version": {
                                   "description": "Version specifies a particular version of the chart.",
                                   "type": "string"
@@ -947,6 +975,10 @@
                                   "description": "RepoURL is the URL of a Git repository.",
                                   "type": "string"
                                 },
+                                "subscriptionName": {
+                                  "description": "SubscriptionName is the name of the subscription that discovered this\ncommit. This field is only populated if the subscription was assigned\na name.",
+                                  "type": "string"
+                                },
                                 "tag": {
                                   "description": "Tag denotes a tag in the repository that matched selection criteria and\nresolved to this commit.",
                                   "type": "string"
@@ -974,6 +1006,10 @@
                                 },
                                 "repoURL": {
                                   "description": "RepoURL describes the repository in which the image can be found.",
+                                  "type": "string"
+                                },
+                                "subscriptionName": {
+                                  "description": "SubscriptionName is the name of the subscription that discovered this\nimage. This field is only populated if the subscription was assigned\na name.",
                                   "type": "string"
                                 },
                                 "tag": {
@@ -1287,6 +1323,10 @@
                             "description": "RepoURL specifies the URL of a Helm chart repository. Classic chart\nrepositories (using HTTP/S) can contain differently named charts. When this\nfield points to such a repository, the Name field will specify the name of\nthe chart within the repository. In the case of a repository within an OCI\nregistry, the URL implicitly points to a specific chart and the Name field\nwill be empty.",
                             "type": "string"
                           },
+                          "subscriptionName": {
+                            "description": "SubscriptionName is the name of the subscription that discovered this\nchart. This field is only populated if the subscription was assigned\na name.",
+                            "type": "string"
+                          },
                           "version": {
                             "description": "Version specifies a particular version of the chart.",
                             "type": "string"
@@ -1325,6 +1365,10 @@
                             "description": "RepoURL is the URL of a Git repository.",
                             "type": "string"
                           },
+                          "subscriptionName": {
+                            "description": "SubscriptionName is the name of the subscription that discovered this\ncommit. This field is only populated if the subscription was assigned\na name.",
+                            "type": "string"
+                          },
                           "tag": {
                             "description": "Tag denotes a tag in the repository that matched selection criteria and\nresolved to this commit.",
                             "type": "string"
@@ -1352,6 +1396,10 @@
                           },
                           "repoURL": {
                             "description": "RepoURL describes the repository in which the image can be found.",
+                            "type": "string"
+                          },
+                          "subscriptionName": {
+                            "description": "SubscriptionName is the name of the subscription that discovered this\nimage. This field is only populated if the subscription was assigned\na name.",
                             "type": "string"
                           },
                           "tag": {
@@ -1551,6 +1599,10 @@
                         "description": "RepoURL specifies the URL of a Helm chart repository. Classic chart\nrepositories (using HTTP/S) can contain differently named charts. When this\nfield points to such a repository, the Name field will specify the name of\nthe chart within the repository. In the case of a repository within an OCI\nregistry, the URL implicitly points to a specific chart and the Name field\nwill be empty.",
                         "type": "string"
                       },
+                      "subscriptionName": {
+                        "description": "SubscriptionName is the name of the subscription that discovered this\nchart. This field is only populated if the subscription was assigned\na name.",
+                        "type": "string"
+                      },
                       "version": {
                         "description": "Version specifies a particular version of the chart.",
                         "type": "string"
@@ -1589,6 +1641,10 @@
                         "description": "RepoURL is the URL of a Git repository.",
                         "type": "string"
                       },
+                      "subscriptionName": {
+                        "description": "SubscriptionName is the name of the subscription that discovered this\ncommit. This field is only populated if the subscription was assigned\na name.",
+                        "type": "string"
+                      },
                       "tag": {
                         "description": "Tag denotes a tag in the repository that matched selection criteria and\nresolved to this commit.",
                         "type": "string"
@@ -1616,6 +1672,10 @@
                       },
                       "repoURL": {
                         "description": "RepoURL describes the repository in which the image can be found.",
+                        "type": "string"
+                      },
+                      "subscriptionName": {
+                        "description": "SubscriptionName is the name of the subscription that discovered this\nimage. This field is only populated if the subscription was assigned\na name.",
                         "type": "string"
                       },
                       "tag": {
@@ -1723,6 +1783,10 @@
                             "description": "RepoURL specifies the URL of a Helm chart repository. Classic chart\nrepositories (using HTTP/S) can contain differently named charts. When this\nfield points to such a repository, the Name field will specify the name of\nthe chart within the repository. In the case of a repository within an OCI\nregistry, the URL implicitly points to a specific chart and the Name field\nwill be empty.",
                             "type": "string"
                           },
+                          "subscriptionName": {
+                            "description": "SubscriptionName is the name of the subscription that discovered this\nchart. This field is only populated if the subscription was assigned\na name.",
+                            "type": "string"
+                          },
                           "version": {
                             "description": "Version specifies a particular version of the chart.",
                             "type": "string"
@@ -1761,6 +1825,10 @@
                             "description": "RepoURL is the URL of a Git repository.",
                             "type": "string"
                           },
+                          "subscriptionName": {
+                            "description": "SubscriptionName is the name of the subscription that discovered this\ncommit. This field is only populated if the subscription was assigned\na name.",
+                            "type": "string"
+                          },
                           "tag": {
                             "description": "Tag denotes a tag in the repository that matched selection criteria and\nresolved to this commit.",
                             "type": "string"
@@ -1788,6 +1856,10 @@
                           },
                           "repoURL": {
                             "description": "RepoURL describes the repository in which the image can be found.",
+                            "type": "string"
+                          },
+                          "subscriptionName": {
+                            "description": "SubscriptionName is the name of the subscription that discovered this\nimage. This field is only populated if the subscription was assigned\na name.",
                             "type": "string"
                           },
                           "tag": {
@@ -1884,6 +1956,10 @@
                                   "description": "RepoURL specifies the URL of a Helm chart repository. Classic chart\nrepositories (using HTTP/S) can contain differently named charts. When this\nfield points to such a repository, the Name field will specify the name of\nthe chart within the repository. In the case of a repository within an OCI\nregistry, the URL implicitly points to a specific chart and the Name field\nwill be empty.",
                                   "type": "string"
                                 },
+                                "subscriptionName": {
+                                  "description": "SubscriptionName is the name of the subscription that discovered this\nchart. This field is only populated if the subscription was assigned\na name.",
+                                  "type": "string"
+                                },
                                 "version": {
                                   "description": "Version specifies a particular version of the chart.",
                                   "type": "string"
@@ -1922,6 +1998,10 @@
                                   "description": "RepoURL is the URL of a Git repository.",
                                   "type": "string"
                                 },
+                                "subscriptionName": {
+                                  "description": "SubscriptionName is the name of the subscription that discovered this\ncommit. This field is only populated if the subscription was assigned\na name.",
+                                  "type": "string"
+                                },
                                 "tag": {
                                   "description": "Tag denotes a tag in the repository that matched selection criteria and\nresolved to this commit.",
                                   "type": "string"
@@ -1949,6 +2029,10 @@
                                 },
                                 "repoURL": {
                                   "description": "RepoURL describes the repository in which the image can be found.",
+                                  "type": "string"
+                                },
+                                "subscriptionName": {
+                                  "description": "SubscriptionName is the name of the subscription that discovered this\nimage. This field is only populated if the subscription was assigned\na name.",
                                   "type": "string"
                                 },
                                 "tag": {

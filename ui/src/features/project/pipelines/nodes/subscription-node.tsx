@@ -23,7 +23,7 @@ export const SubscriptionNode = (props: { subscription: RepoSubscription }) => {
       props.subscription?.chart?.repoURL ||
       props.subscription?.image?.repoURL ||
       '';
-    const title = humanComprehendableArtifact({ repoURL }) || props.subscription.subscription?.name;
+    const title = humanComprehendableArtifact({ repoURL }) || props.subscription.name;
     const base = artifactBase(repoURL) || repoURL;
     const link = artifactURL(repoURL);
 

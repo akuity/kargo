@@ -59,6 +59,14 @@ func init() {
 type imageSubscriber struct {
 	credentialsDB    credentials.Database
 	cacheByTagPolicy CacheByTagPolicy
+
+	// newSelectorFn constructs the image Selector for a subscription. It is a
+	// field so tests can substitute a fake Selector for the real one.
+	newSelectorFn func(
+		ctx context.Context,
+		sub kargoapi.ImageSubscription,
+		creds *image.Credentials,
+	) (image.Selector, error)
 }
 
 // newImageSubscriber returns an implementation of the Subscriber interface that
@@ -75,6 +83,7 @@ func newImageSubscriber(
 				string(CacheByTagPolicyAllow),
 			),
 		),
+		newSelectorFn: image.NewSelector,
 	}, nil
 }
 
@@ -281,7 +290,7 @@ func (i *imageSubscriber) DiscoverArtifacts(
 		imgSub.CacheByTag = true
 	}
 
-	selector, err := image.NewSelector(ctx, *imgSub, regCreds)
+	selector, err := i.newSelectorFn(ctx, *imgSub, regCreds)
 	if err != nil {
 		return nil, fmt.Errorf(
 			"error obtaining selector for image %q: %w",
@@ -302,8 +311,9 @@ func (i *imageSubscriber) DiscoverArtifacts(
 	}
 
 	return kargoapi.ImageDiscoveryResult{
-		RepoURL:    imgSub.RepoURL,
-		Platform:   imgSub.Platform,
-		References: images,
+		RepoURL:          imgSub.RepoURL,
+		Platform:         imgSub.Platform,
+		References:       images,
+		SubscriptionName: sub.Name,
 	}, nil
 }
