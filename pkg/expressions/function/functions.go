@@ -47,6 +47,7 @@ func FreightOperations(
 		ChartFromFreight(ctx, c, project, freightRequests, freightRefs),
 		ArtifactFromFreight(ctx, c, project, freightRequests, freightRefs),
 		FreightMetadata(ctx, c, project),
+		FreightStatus(ctx, c, project),
 	}
 }
 
@@ -82,6 +83,7 @@ func DataOperations(ctx context.Context, c client.Client, cache *gocache.Cache, 
 		Secret(ctx, c, cache, project),
 		SharedSecret(ctx, c, cache),
 		FreightMetadata(ctx, c, project),
+		FreightStatus(ctx, c, project),
 		StageMetadata(ctx, c, project),
 	}
 }
@@ -309,33 +311,12 @@ func freightMetadata(
 			return nil, fmt.Errorf("freight ref name must not be empty")
 		}
 
-		// Retrieve the Freight object as unstructured because it bypasses the
-		// client's cache. This is essential for cases where Freight metadata is
-		// being accessed very shortly after having been updated.
-		u := &unstructured.Unstructured{}
-		u.SetGroupVersionKind(schema.GroupVersionKind{
-			Group:   kargoapi.GroupVersion.Group,
-			Version: kargoapi.GroupVersion.Version,
-			Kind:    "Freight",
-		})
-		if err := c.Get(
-			ctx,
-			client.ObjectKey{Namespace: project, Name: freightRefName},
-			u,
-		); err != nil {
-			if apierrors.IsNotFound(err) {
-				return nil, nil
-			}
-			return nil, fmt.Errorf("failed to get freight %s: %w", freightRefName, err)
+		freight, err := getFreightForExpr(ctx, c, project, freightRefName)
+		if err != nil {
+			return nil, err
 		}
-		freight := &kargoapi.Freight{}
-		if err := runtime.DefaultUnstructuredConverter.FromUnstructured(
-			u.Object,
-			freight,
-		); err != nil {
-			return nil, fmt.Errorf(
-				"error converting unstructured object to Freight: %w", err,
-			)
+		if freight == nil {
+			return nil, nil
 		}
 
 		if freight.Status.Metadata == nil {
@@ -352,6 +333,99 @@ func freightMetadata(
 		}
 		return decoded, nil
 	}
+}
+
+// FreightStatus returns an expr.Option that provides a `freightStatus()`
+// function for use in expressions; returning the entire status object of the
+// Freight.
+func FreightStatus(
+	ctx context.Context,
+	c client.Client,
+	project string,
+) expr.Option {
+	return expr.Function(
+		"freightStatus",
+		freightStatus(ctx, c, project),
+		new(func(freightRefName string) map[string]any),
+	)
+}
+
+func freightStatus(
+	ctx context.Context,
+	c client.Client,
+	project string,
+) exprFn {
+	return func(a ...any) (any, error) {
+		if len(a) != 1 {
+			return nil, fmt.Errorf("expected 1 argument, got %d", len(a))
+		}
+
+		freightRefName, ok := a[0].(string)
+		if !ok {
+			return nil, fmt.Errorf("first argument must be string, got %T", a[0])
+		}
+		if freightRefName == "" {
+			return nil, fmt.Errorf("freight ref name must not be empty")
+		}
+		freight, err := getFreightForExpr(ctx, c, project, freightRefName)
+		if err != nil {
+			return nil, err
+		}
+		if freight == nil {
+			return nil, nil
+		}
+
+		raw, err := json.Marshal(freight.Status)
+		if err != nil {
+			return nil, fmt.Errorf("error marshaling freight status: %w", err)
+		}
+		var decoded map[string]any
+		if err := json.Unmarshal(raw, &decoded); err != nil {
+			return nil, fmt.Errorf("error unmarshaling freight status: %w", err)
+		}
+		return decoded, nil
+	}
+}
+
+// getFreightForExpr retrieves the named Freight resource within the given
+// project for use by expression functions. It returns a nil Freight and nil
+// error if the Freight does not exist.
+//
+// The Freight is retrieved as unstructured because it bypasses the client's
+// cache. This is essential for cases where Freight status is being accessed
+// very shortly after having been updated.
+func getFreightForExpr(
+	ctx context.Context,
+	c client.Client,
+	project string,
+	freightRefName string,
+) (*kargoapi.Freight, error) {
+	u := &unstructured.Unstructured{}
+	u.SetGroupVersionKind(schema.GroupVersionKind{
+		Group:   kargoapi.GroupVersion.Group,
+		Version: kargoapi.GroupVersion.Version,
+		Kind:    "Freight",
+	})
+	if err := c.Get(
+		ctx,
+		client.ObjectKey{Namespace: project, Name: freightRefName},
+		u,
+	); err != nil {
+		if apierrors.IsNotFound(err) {
+			return nil, nil
+		}
+		return nil, fmt.Errorf("failed to get freight %s: %w", freightRefName, err)
+	}
+	freight := &kargoapi.Freight{}
+	if err := runtime.DefaultUnstructuredConverter.FromUnstructured(
+		u.Object,
+		freight,
+	); err != nil {
+		return nil, fmt.Errorf(
+			"error converting unstructured object to Freight: %w", err,
+		)
+	}
+	return freight, nil
 }
 
 // StageMetadata returns an expr.Option that provides a `stageMetadata()` function
