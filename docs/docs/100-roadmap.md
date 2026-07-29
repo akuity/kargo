@@ -1,6 +1,6 @@
 ---
 sidebar_label: Roadmap
-Description: See what's on the roadmap of Kargo and find out more about the latest releases
+description: See what's on the roadmap of Kargo and find out more about the latest releases
 ---
 
 # Kargo Roadmap
