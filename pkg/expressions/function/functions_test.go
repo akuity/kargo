@@ -1779,6 +1779,139 @@ func Test_freightMetadata(t *testing.T) {
 	}
 }
 
+func Test_freightStatus(t *testing.T) {
+	const testProject = "fake-project"
+	const testFreightName = "fake-freight"
+
+	scheme := runtime.NewScheme()
+	assert.NoError(t, kargoapi.AddToScheme(scheme))
+
+	approvedAt := metav1.NewTime(time.Date(2026, 7, 24, 23, 11, 1, 0, time.UTC))
+	since := metav1.NewTime(time.Date(2026, 5, 13, 14, 42, 47, 0, time.UTC))
+
+	testFreight := &kargoapi.Freight{
+		ObjectMeta: metav1.ObjectMeta{
+			Name:      testFreightName,
+			Namespace: testProject,
+		},
+		Status: kargoapi.FreightStatus{
+			CurrentlyIn: map[string]kargoapi.CurrentStage{
+				"staging": {Since: &since},
+			},
+			ApprovedFor: map[string]kargoapi.ApprovedStage{
+				"prod": {ApprovedAt: &approvedAt},
+			},
+			Metadata: map[string]apiextensionsv1.JSON{
+				"snow-id": {Raw: []byte(`"c2d4dd08833503d4b6207e95eeaad316"`)},
+			},
+		},
+	}
+
+	expectedStatus := map[string]any{
+		"currentlyIn": map[string]any{
+			"staging": map[string]any{
+				"since": since.Format(time.RFC3339),
+			},
+		},
+		"approvedFor": map[string]any{
+			"prod": map[string]any{
+				"approvedAt": approvedAt.Format(time.RFC3339),
+			},
+		},
+		"metadata": map[string]any{
+			"snow-id": "c2d4dd08833503d4b6207e95eeaad316",
+		},
+	}
+
+	tests := []struct {
+		name       string
+		objects    []client.Object
+		args       []any
+		assertions func(t *testing.T, result any, err error)
+	}{
+		{
+			name: "no arguments",
+			args: []any{},
+			assertions: func(t *testing.T, result any, err error) {
+				assert.ErrorContains(t, err, "expected 1 argument")
+				assert.Nil(t, result)
+			},
+		},
+		{
+			name: "too many arguments",
+			args: []any{testFreightName, "extra"},
+			assertions: func(t *testing.T, result any, err error) {
+				assert.ErrorContains(t, err, "expected 1 argument")
+				assert.Nil(t, result)
+			},
+		},
+		{
+			name: "invalid argument type",
+			args: []any{123},
+			assertions: func(t *testing.T, result any, err error) {
+				assert.ErrorContains(t, err, "argument must be string")
+				assert.Nil(t, result)
+			},
+		},
+		{
+			name: "empty freight ref name",
+			args: []any{""},
+			assertions: func(t *testing.T, result any, err error) {
+				assert.ErrorContains(t, err, "freight ref name must not be empty")
+				assert.Nil(t, result)
+			},
+		},
+		{
+			name:    "freight not found",
+			objects: []client.Object{}, // No freight objects
+			args:    []any{testFreightName},
+			assertions: func(t *testing.T, result any, err error) {
+				assert.NoError(t, err)
+				assert.Nil(t, result)
+			},
+		},
+		{
+			name: "freight exists with empty status",
+			objects: []client.Object{
+				&kargoapi.Freight{
+					ObjectMeta: metav1.ObjectMeta{
+						Name:      testFreightName,
+						Namespace: testProject,
+					},
+					Status: kargoapi.FreightStatus{},
+				},
+			},
+			args: []any{testFreightName},
+			assertions: func(t *testing.T, result any, err error) {
+				assert.NoError(t, err)
+				assert.Equal(t, map[string]any{}, result)
+			},
+		},
+		{
+			name:    "successful status retrieval",
+			objects: []client.Object{testFreight},
+			args:    []any{testFreightName},
+			assertions: func(t *testing.T, result any, err error) {
+				assert.NoError(t, err)
+				assert.Equal(t, expectedStatus, result)
+			},
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			c := fake.NewClientBuilder().
+				WithScheme(scheme).
+				WithObjects(tt.objects...).
+				Build()
+
+			fn := freightStatus(t.Context(), c, testProject)
+			result, err := fn(tt.args...)
+			tt.assertions(t, result, err)
+		})
+	}
+}
+
 func Test_stageMetadata(t *testing.T) {
 	const testProject = "fake-project"
 	const testStageName = "fake-stage"
