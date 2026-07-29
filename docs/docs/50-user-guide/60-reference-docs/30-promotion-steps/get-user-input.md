@@ -46,7 +46,7 @@ A rule sets either `claim` and `value`, or `role` — not both.
 
 | Name           | Type       | Required | Description                                                                                                                                                                                                       |
 | -------------- | ---------- | -------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `schema`       | `object`   | Y        | A complete [JSON Schema](https://json-schema.org/) (draft-04, draft-06, or draft-07) describing the values to collect. The UI renders a form from it and validates the submission against it. Declare optional fields by leaving them out of the schema's own `required` list. |
+| `schema`       | `object`   | Y        | A complete [JSON Schema](https://json-schema.org/) (draft-04, draft-06, or draft-07) describing the values to collect. The root must be an object (`type: object`), since a submission is always a set of named fields; a root schema of any other type (e.g. `type: string`) is rejected. The UI renders a form from it and validates the submission against it. Declare optional fields by leaving them out of the schema's own `required` list. |
 | `responders`   | `[]object` | N        | Rules identifying who may submit input. See [Responders](#responders). When empty, any authenticated user who can see the Promotion may respond.                                                                 |
 | `display`      | `string`   | N        | An optional description shown alongside the input form in the UI.                                                                                                                                                |
 | `pollInterval` | `string`   | N        | How often to re-check for input as a fallback (the step also wakes immediately when input arrives). A Go duration string. Defaults to `30s`.                                                                     |
@@ -60,6 +60,25 @@ A rule sets either `claim` and `value`, or `role` — not both.
 | `respondedAt` | `string` | When the input was submitted, as an RFC 3339 timestamp.          |
 
 ## Example
+
+### Minimal Configuration
+
+Only `schema` is required, and its root must be an object. This collects a
+single free-text `note` from any authenticated user who can see the Promotion:
+
+```yaml
+steps:
+- uses: get-user-input
+  as: collect
+  config:
+    schema:
+      type: object # the root of the schema must be an object
+      properties:
+        note:
+          type: string
+```
+
+### Collecting Structured Input
 
 Collect a release version and summary before continuing, restricted to the
 project's `release-manager` role, then reference the values in a later step:
