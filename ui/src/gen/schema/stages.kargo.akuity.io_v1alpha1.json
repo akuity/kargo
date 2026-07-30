@@ -2248,6 +2248,30 @@
           "maximum": 9223372036854776000,
           "minimum": -9223372036854776000,
           "type": "integer"
+        },
+        "promotionSchedule": {
+          "description": "PromotionSchedule reports whether promotion windows currently permit\npromotion of this Stage, and when that is next expected to change. It is\nabsent when no window gates the Stage.\n\nKargo Enterprise only: This field is ignored in Kargo OSS.",
+          "properties": {
+            "closed": {
+              "description": "Closed indicates that the schedule currently forbids promotion of this\nStage.",
+              "type": "boolean"
+            },
+            "nextClose": {
+              "description": "NextClose is when promotion is next expected to become forbidden, and is\nmeaningful only while Closed is false. It allows a client to give warning of\nan approaching freeze, which Reason names. Like NextOpen it is optional, and\nabsent when no such boundary is known -- a schedule that will never forbid\npromotion again has none.",
+              "format": "date-time",
+              "type": "string"
+            },
+            "nextOpen": {
+              "description": "NextOpen is when the schedule is next expected to permit promotions.\n\nIt is optional even while Closed is true, and its absence means only that\nno reopening is known: the schedule may have none (a one-shot Allow window\nthat has already elapsed), determining one may be impractical, or the\nclosure may be indefinite by design. Clients must therefore render Reason\nand treat a missing NextOpen as \"frozen, with no known end\" rather than\nassuming a value is present.",
+              "format": "date-time",
+              "type": "string"
+            },
+            "reason": {
+              "description": "Reason explains in human-readable terms why promotion is, or is about to be,\nforbidden, naming the freeze responsible where there is one. Closed is what\nsays which of the two it describes, so one field serves both: while Closed\nis true it explains the freeze in effect, and while NextClose is set it\nexplains the freeze that is coming.\n\nIt is set whenever either of those is -- always alongside Closed being true,\nwhere it is the only field guaranteed to explain the freeze because NextOpen\nmay be absent, and always alongside NextClose. When Closed is true it\ncarries the same explanation as the corresponding admission rejection.",
+              "type": "string"
+            }
+          },
+          "type": "object"
         }
       },
       "type": "object"

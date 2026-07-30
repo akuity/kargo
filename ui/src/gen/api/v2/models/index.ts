@@ -141,6 +141,7 @@ export * from './promotionPolicy';
 export * from './promotionPolicySelector';
 export * from './promotionPolicySelectorMatchLabels';
 export * from './promotionReference';
+export * from './promotionScheduleStatus';
 export * from './promotionSpec';
 export * from './promotionStatus';
 export * from './promotionStep';

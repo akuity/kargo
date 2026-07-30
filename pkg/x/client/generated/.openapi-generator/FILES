@@ -108,6 +108,7 @@ model_promotion_list.go
 model_promotion_policy.go
 model_promotion_policy_selector.go
 model_promotion_reference.go
+model_promotion_schedule_status.go
 model_promotion_spec.go
 model_promotion_status.go
 model_promotion_step.go
