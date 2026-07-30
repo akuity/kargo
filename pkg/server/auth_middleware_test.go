@@ -841,7 +841,7 @@ func TestVerifyKubernetesToken(t *testing.T) {
 				require.NoError(t, err)
 				require.NotNil(t, u)
 				require.Equal(t, "system:serviceaccount:kargo-demo:ci-bot", u.Username)
-				require.Equal(t, "abc-123", string(u.UID))
+				require.Equal(t, "abc-123", u.UID)
 			},
 		},
 	}
