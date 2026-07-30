@@ -2538,6 +2538,54 @@ spec:
                   status was reconciled against.
                 format: int64
                 type: integer
+              promotionSchedule:
+                description: |-
+                  PromotionSchedule reports whether promotion windows currently permit
+                  promotion of this Stage, and when that is next expected to change. It is
+                  absent when no window gates the Stage.
+
+                  Kargo Enterprise only: This field is ignored in Kargo OSS.
+                properties:
+                  closed:
+                    description: |-
+                      Closed indicates that the schedule currently forbids promotion of this
+                      Stage.
+                    type: boolean
+                  nextClose:
+                    description: |-
+                      NextClose is when promotion is next expected to become forbidden, and is
+                      meaningful only while Closed is false. It allows a client to give warning of
+                      an approaching freeze, which Reason names. Like NextOpen it is optional, and
+                      absent when no such boundary is known -- a schedule that will never forbid
+                      promotion again has none.
+                    format: date-time
+                    type: string
+                  nextOpen:
+                    description: |-
+                      NextOpen is when the schedule is next expected to permit promotions.
+
+                      It is optional even while Closed is true, and its absence means only that
+                      no reopening is known: the schedule may have none (a one-shot Allow window
+                      that has already elapsed), determining one may be impractical, or the
+                      closure may be indefinite by design. Clients must therefore render Reason
+                      and treat a missing NextOpen as "frozen, with no known end" rather than
+                      assuming a value is present.
+                    format: date-time
+                    type: string
+                  reason:
+                    description: |-
+                      Reason explains in human-readable terms why promotion is, or is about to be,
+                      forbidden, naming the freeze responsible where there is one. Closed is what
+                      says which of the two it describes, so one field serves both: while Closed
+                      is true it explains the freeze in effect, and while NextClose is set it
+                      explains the freeze that is coming.
+
+                      It is set whenever either of those is -- always alongside Closed being true,
+                      where it is the only field guaranteed to explain the freeze because NextOpen
+                      may be absent, and always alongside NextClose. When Closed is true it
+                      carries the same explanation as the corresponding admission rejection.
+                    type: string
+                type: object
             type: object
         required:
         - spec

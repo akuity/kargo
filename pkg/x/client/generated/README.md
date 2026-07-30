@@ -289,6 +289,7 @@ Class | Method | HTTP request | Description
  - [PromotionPolicy](docs/PromotionPolicy.md)
  - [PromotionPolicySelector](docs/PromotionPolicySelector.md)
  - [PromotionReference](docs/PromotionReference.md)
+ - [PromotionScheduleStatus](docs/PromotionScheduleStatus.md)
  - [PromotionSpec](docs/PromotionSpec.md)
  - [PromotionStatus](docs/PromotionStatus.md)
  - [PromotionStep](docs/PromotionStep.md)
