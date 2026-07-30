@@ -111,9 +111,14 @@ export const Promotions = ({ argocdShard }: { argocdShard?: ArgoCDShard }) => {
       title: 'Created By',
       render: (_, promotion) => {
         const annotation = promotion.metadata?.annotations?.['kargo.akuity.io/create-actor'];
-        const email = annotation ? annotation.split(':')[1] : 'N/A';
 
-        return email || annotation;
+        if (!annotation) {
+          return 'N/A';
+        }
+
+        const separatorIndex = annotation.indexOf(':');
+
+        return separatorIndex === -1 ? annotation : annotation.slice(separatorIndex + 1);
       }
     },
     {
