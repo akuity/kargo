@@ -23,6 +23,9 @@ import (
 
 const roleARNFormat = "arn:aws:iam::%s:role/kargo-project-%s"
 
+// externalIDMinLength is the shortest external ID AWS will accept.
+const externalIDMinLength = 2
+
 func init() {
 	if provider := NewManagedIdentityProvider(context.Background()); provider != nil {
 		credentials.DefaultProviderRegistry.MustRegister(
@@ -235,6 +238,22 @@ func (p *ManagedIdentityProvider) getAuthToken(
 type authIdentity struct {
 	description string
 	roleARN     string
+	// externalID is presented when assuming roleARN to head off the confused
+	// deputy problem described at
+	// https://docs.aws.amazon.com/IAM/latest/UserGuide/confused-deputy.html.
+	// Kargo is not susceptible to it today: a single controller identity acts on
+	// behalf of many Projects, but the role it assumes is computed as a pure
+	// function of the name of the Project on whose behalf it is acting. No
+	// Project can ask Kargo to assume a role of its own choosing. The scenario
+	// the AWS docs describe does not manifest.
+	//
+	// Sending an external ID regardless is proactive. Were Kargo ever to, in the
+	// future, accept a role ARN supplied by a Project, the situation would then
+	// match the scenario AWS describes exactly. At that point an external ID that
+	// Kargo derives from a Project, without user influence, would be the only
+	// thing mitigating the confused deputy scenario, and forward-thinking trust
+	// policies written today would already require it.
+	externalID string
 }
 
 // authIdentities returns the AWS identities the controller MAY be able to use
@@ -247,10 +266,32 @@ func (p *ManagedIdentityProvider) authIdentities(
 	accountID string,
 	project string,
 ) []authIdentity {
+	// AWS rejects an external ID shorter than two characters, so external IDs are
+	// simply unsupported for Projects whose names are a single character. Their
+	// roles are assumed without one, which succeeds unless the trust policy
+	// requires an external ID, so an organization that requires one cannot use
+	// single-character Project names at all. That limitation is knowingly
+	// accepted. Such names are vanishingly rare, so implicitly foreclosing them
+	// is a minimal inconvenience.
+	//
+	// Other options considered and rejected:
+	//
+	// - Imposing a formal minimum Project name length of two would be possible
+	//   using a validating admission webhook, but would be a breaking change.
+	//
+	// - An external ID derived from the Project's name and guaranteed to be at
+	//   least two characters is a minor complication in something we really wish
+	//   for AWS admins to get correct with minimal friction.
+	var externalID string
+	if len(project) >= externalIDMinLength {
+		externalID = project
+	}
+
 	// A Project-specific role in the registry's own account.
 	identities := []authIdentity{{
 		description: "Project-specific role in the registry's AWS account",
 		roleARN:     fmt.Sprintf(roleARNFormat, accountID, project),
+		externalID:  externalID,
 	}}
 
 	// A Project-specific role in the controller's own account IF the registry and
@@ -259,6 +300,7 @@ func (p *ManagedIdentityProvider) authIdentities(
 		identities = append(identities, authIdentity{
 			description: "Project-specific role in the controller's AWS account",
 			roleARN:     fmt.Sprintf(roleARNFormat, p.accountID, project),
+			externalID:  externalID,
 		})
 	}
 
@@ -283,7 +325,19 @@ func (p *ManagedIdentityProvider) getAuthTokenAs(
 	ecrSvc := ecr.NewFromConfig(p.cfg, func(o *ecr.Options) {
 		o.Region = region
 		if identity.roleARN != "" {
-			o.Credentials = stscreds.NewAssumeRoleProvider(stsSvc, identity.roleARN)
+			o.Credentials = stscreds.NewAssumeRoleProvider(
+				stsSvc,
+				identity.roleARN,
+				func(aro *stscreds.AssumeRoleOptions) {
+					// An empty string is not a valid external ID, so aro.ExternalID
+					// is left nil when identity.externalID is empty.
+					if identity.externalID != "" {
+						// IMPORTANT: See the comment on authIdentity.externalID for why
+						// this is done.
+						aro.ExternalID = aws.String(identity.externalID)
+					}
+				},
+			)
 		}
 	})
 

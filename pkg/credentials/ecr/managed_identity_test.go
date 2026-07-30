@@ -277,6 +277,7 @@ func TestManagedIdentityProvider_authIdentities(t *testing.T) {
 	testCases := []struct {
 		name      string
 		accountID string
+		project   string
 		expected  []authIdentity
 	}{
 		{
@@ -286,8 +287,11 @@ func TestManagedIdentityProvider_authIdentities(t *testing.T) {
 				{
 					description: "Project-specific role in the registry's AWS account",
 					roleARN:     "arn:aws:iam::123456789012:role/kargo-project-fake-project",
+					externalID:  fakeProject,
 				},
 				{
+					// The controller's own role is used directly, so there is no role
+					// assumption to present an external ID to.
 					description: "controller's own role",
 				},
 			},
@@ -299,10 +303,27 @@ func TestManagedIdentityProvider_authIdentities(t *testing.T) {
 				{
 					description: "Project-specific role in the registry's AWS account",
 					roleARN:     "arn:aws:iam::210987654321:role/kargo-project-fake-project",
+					externalID:  fakeProject,
 				},
 				{
 					description: "Project-specific role in the controller's AWS account",
 					roleARN:     "arn:aws:iam::123456789012:role/kargo-project-fake-project",
+					externalID:  fakeProject,
+				},
+				{
+					description: "controller's own role",
+				},
+			},
+		},
+		{
+			// AWS rejects an external ID shorter than two characters.
+			name:      "Project name too short to be an external ID",
+			accountID: fakeControllerAccountID,
+			project:   "a",
+			expected: []authIdentity{
+				{
+					description: "Project-specific role in the registry's AWS account",
+					roleARN:     "arn:aws:iam::123456789012:role/kargo-project-a",
 				},
 				{
 					description: "controller's own role",
@@ -314,11 +335,15 @@ func TestManagedIdentityProvider_authIdentities(t *testing.T) {
 	for _, testCase := range testCases {
 		t.Run(testCase.name, func(t *testing.T) {
 			t.Parallel()
+			project := testCase.project
+			if project == "" {
+				project = fakeProject
+			}
 			p := &ManagedIdentityProvider{accountID: fakeControllerAccountID}
 			assert.Equal(
 				t,
 				testCase.expected,
-				p.authIdentities(testCase.accountID, fakeProject),
+				p.authIdentities(testCase.accountID, project),
 			)
 		})
 	}
