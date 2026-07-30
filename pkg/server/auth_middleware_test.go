@@ -14,8 +14,12 @@ import (
 	"github.com/gin-gonic/gin"
 	"github.com/golang-jwt/jwt/v5"
 	"github.com/stretchr/testify/require"
+	authnv1 "k8s.io/api/authentication/v1"
+	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/types"
-	"k8s.io/client-go/rest"
+	libClient "sigs.k8s.io/controller-runtime/pkg/client"
+	"sigs.k8s.io/controller-runtime/pkg/client/fake"
+	"sigs.k8s.io/controller-runtime/pkg/client/interceptor"
 
 	"github.com/akuity/kargo/pkg/server/config"
 	"github.com/akuity/kargo/pkg/server/dex"
@@ -449,19 +453,23 @@ func TestAuthenticate(t *testing.T) {
 					rc.Issuer = "unrecognized-issuer"
 					return nil, nil, nil
 				},
-				verifyKubernetesTokenFn: func(context.Context, string) error {
-					return nil // Token is recognized by Kubernetes
+				verifyKubernetesTokenFn: func(context.Context, string) (*authnv1.UserInfo, error) {
+					return &authnv1.UserInfo{
+						Username: "system:serviceaccount:kargo-demo:ci-bot",
+					}, nil
 				},
 			},
 			token: testToken,
 			// We can't verify this token, so we check if Kubernetes recognizes it.
 			// In this case it does, so we expect user info containing the raw token
-			// to be bound to the context.
+			// and the Kubernetes-verified identity to be bound to the context.
 			assertions: func(ctx context.Context, err error) {
 				require.NoError(t, err)
 				u, ok := user.InfoFromContext(ctx)
 				require.True(t, ok)
 				require.Equal(t, testToken, u.BearerToken)
+				require.NotNil(t, u.KubernetesUserInfo)
+				require.Equal(t, "system:serviceaccount:kargo-demo:ci-bot", u.KubernetesUserInfo.Username)
 			},
 		},
 		"unrecognized JWT not recognized by Kubernetes": {
@@ -473,8 +481,8 @@ func TestAuthenticate(t *testing.T) {
 					rc.Issuer = "unrecognized-issuer"
 					return nil, nil, nil
 				},
-				verifyKubernetesTokenFn: func(context.Context, string) error {
-					return errors.New("token not recognized")
+				verifyKubernetesTokenFn: func(context.Context, string) (*authnv1.UserInfo, error) {
+					return nil, errors.New("token not recognized")
 				},
 			},
 			token: testToken,
@@ -785,43 +793,86 @@ func TestAuthMiddlewareHandler(t *testing.T) {
 func TestVerifyKubernetesToken(t *testing.T) {
 	const testToken = "test-bearer-token"
 	testCases := []struct {
-		name              string
-		mockK8sAPIHandler http.HandlerFunc
-		assertions        func(t *testing.T, err error)
+		name         string
+		createFn     func(t *testing.T) error
+		reviewStatus authnv1.TokenReviewStatus
+		createErr    error
+		assertions   func(t *testing.T, u *authnv1.UserInfo, err error)
 	}{
 		{
-			name: "Kubernetes API returns 200",
-			mockK8sAPIHandler: func(w http.ResponseWriter, r *http.Request) {
-				// Verify the token was passed correctly
-				require.Equal(t, "/api", r.URL.Path)
-				require.Equal(t, "Bearer "+testToken, r.Header.Get("Authorization"))
-				w.WriteHeader(http.StatusOK)
-			},
-			assertions: func(t *testing.T, err error) {
-				require.NoError(t, err)
+			name:      "TokenReview call fails",
+			createErr: errors.New("connection refused"),
+			assertions: func(t *testing.T, u *authnv1.UserInfo, err error) {
+				require.ErrorContains(t, err, "submit TokenReview")
+				require.ErrorContains(t, err, "connection refused")
+				require.Nil(t, u)
 			},
 		},
 		{
-			name: "Kubernetes API returns non-200",
-			mockK8sAPIHandler: func(w http.ResponseWriter, _ *http.Request) {
-				w.WriteHeader(http.StatusUnauthorized)
+			name: "Kubernetes reports the token as invalid",
+			reviewStatus: authnv1.TokenReviewStatus{
+				Authenticated: false,
 			},
-			assertions: func(t *testing.T, err error) {
-				require.ErrorContains(
-					t, err, "unexpected response from Kubernetes API server",
-				)
+			assertions: func(t *testing.T, u *authnv1.UserInfo, err error) {
+				require.ErrorContains(t, err, "not authenticated")
+				require.Nil(t, u)
+			},
+		},
+		{
+			name: "Kubernetes reports an error verifying the token",
+			reviewStatus: authnv1.TokenReviewStatus{
+				Error: "some verification error",
+			},
+			assertions: func(t *testing.T, u *authnv1.UserInfo, err error) {
+				require.ErrorContains(t, err, "some verification error")
+				require.Nil(t, u)
+			},
+		},
+		{
+			name: "Kubernetes authenticates the token",
+			reviewStatus: authnv1.TokenReviewStatus{
+				Authenticated: true,
+				User: authnv1.UserInfo{
+					Username: "system:serviceaccount:kargo-demo:ci-bot",
+					UID:      "abc-123",
+				},
+			},
+			assertions: func(t *testing.T, u *authnv1.UserInfo, err error) {
+				require.NoError(t, err)
+				require.NotNil(t, u)
+				require.Equal(t, "system:serviceaccount:kargo-demo:ci-bot", u.Username)
+				require.Equal(t, "abc-123", string(u.UID))
 			},
 		},
 	}
 	for _, testCase := range testCases {
 		t.Run(testCase.name, func(t *testing.T) {
-			srv := httptest.NewServer(testCase.mockK8sAPIHandler)
-			t.Cleanup(srv.Close)
-			authenticator := &authMiddleware{
-				cfg: config.ServerConfig{RestConfig: &rest.Config{Host: srv.URL}},
-			}
-			err := authenticator.verifyKubernetesToken(t.Context(), testToken)
-			testCase.assertions(t, err)
+			scheme := runtime.NewScheme()
+			require.NoError(t, authnv1.AddToScheme(scheme))
+
+			testCase := testCase
+			fakeClient := fake.NewClientBuilder().WithScheme(scheme).WithInterceptorFuncs(
+				interceptor.Funcs{
+					Create: func(
+						_ context.Context,
+						_ libClient.WithWatch,
+						obj libClient.Object,
+						_ ...libClient.CreateOption,
+					) error {
+						if testCase.createErr != nil {
+							return testCase.createErr
+						}
+						review, ok := obj.(*authnv1.TokenReview)
+						require.True(t, ok)
+						review.Status = testCase.reviewStatus
+						return nil
+					},
+				},
+			).Build()
+
+			authenticator := &authMiddleware{internalClient: fakeClient}
+			u, err := authenticator.verifyKubernetesToken(t.Context(), testToken)
+			testCase.assertions(t, u, err)
 		})
 	}
 }

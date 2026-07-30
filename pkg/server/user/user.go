@@ -3,6 +3,7 @@ package user
 import (
 	"context"
 
+	authnv1 "k8s.io/api/authentication/v1"
 	"k8s.io/apimachinery/pkg/types"
 )
 
@@ -41,6 +42,14 @@ type Info struct {
 	// Username is the username of the user. This is often the email address
 	// of the user, but may be different depending on configuration.
 	Username string
+	// KubernetesUserInfo holds the identity of a bearer token holder as
+	// determined by the Kubernetes API server itself via a TokenReview. It is
+	// populated only when the presented token was not issued by Kargo's own
+	// admin token issuer and was not issued by Kargo's configured OpenID
+	// Connect provider, but was nonetheless authenticated by the Kubernetes
+	// cluster -- for example, a Kargo API token, which is backed by a
+	// ServiceAccount token Secret.
+	KubernetesUserInfo *authnv1.UserInfo
 }
 
 // ContextWithInfo returns a context.Context that has been augmented with
