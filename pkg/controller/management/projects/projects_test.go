@@ -2007,9 +2007,10 @@ func TestReconciler_ensureDefaultUserRoles(t *testing.T) {
 	require.NoError(t, rbacv1.AddToScheme(scheme))
 
 	testCases := []struct {
-		name       string
-		reconciler *reconciler
-		assertions func(*testing.T, error)
+		name        string
+		createActor string
+		reconciler  *reconciler
+		assertions  func(*testing.T, error)
 	}{
 		{
 			name: "error getting ServiceAccount",
@@ -2508,7 +2509,8 @@ func TestReconciler_ensureDefaultUserRoles(t *testing.T) {
 			},
 		},
 		{
-			name: "success creating ServiceAccount",
+			name:        "success creating ServiceAccount",
+			createActor: "email:tony@stark.io",
 			reconciler: &reconciler{
 				client: fake.NewClientBuilder().WithScheme(scheme).Build(),
 				createServiceAccountFn: func(
@@ -2558,13 +2560,71 @@ func TestReconciler_ensureDefaultUserRoles(t *testing.T) {
 				require.NoError(t, err)
 			},
 		},
+		{
+			// A Project created via a Kubernetes-verified identity (e.g. a Kargo
+			// API token) must NOT have its "create-actor" annotation mapped into
+			// the OIDC-claims annotation: "kubernetes" is not a real OIDC claim
+			// name, and the Kubernetes username that follows it is not something
+			// a real identity provider would ever emit under such a claim.
+			name:        "success creating ServiceAccount with kubernetes-verified creator",
+			createActor: "kubernetes:system:serviceaccount:kargo-demo:ci-bot",
+			reconciler: &reconciler{
+				client: fake.NewClientBuilder().WithScheme(scheme).Build(),
+				createServiceAccountFn: func(
+					_ context.Context,
+					obj client.Object,
+					_ ...client.CreateOption,
+				) error {
+					sa, ok := obj.(*corev1.ServiceAccount)
+					require.True(t, ok)
+					_, ok = sa.Annotations[rbacapi.AnnotationKeyOIDCClaims]
+					require.False(t, ok)
+					return nil
+				},
+				createRoleFn: func(
+					context.Context,
+					client.Object,
+					...client.CreateOption,
+				) error {
+					return nil
+				},
+				createRoleBindingFn: func(
+					context.Context,
+					client.Object,
+					...client.CreateOption,
+				) error {
+					return nil
+				},
+				createClusterRoleFn: func(
+					context.Context,
+					client.Object,
+					...client.CreateOption,
+				) error {
+					return nil
+				},
+				createClusterRoleBindingFn: func(
+					context.Context,
+					client.Object,
+					...client.CreateOption,
+				) error {
+					return nil
+				},
+			},
+			assertions: func(t *testing.T, err error) {
+				require.NoError(t, err)
+			},
+		},
 	}
 	for _, testCase := range testCases {
 		t.Run(testCase.name, func(t *testing.T) {
+			createActor := testCase.createActor
+			if createActor == "" {
+				createActor = "email:tony@stark.io"
+			}
 			p := &kargoapi.Project{
 				ObjectMeta: metav1.ObjectMeta{
 					Annotations: map[string]string{
-						kargoapi.AnnotationKeyCreateActor: "email:tony@stark.io",
+						kargoapi.AnnotationKeyCreateActor: createActor,
 					},
 				},
 			}

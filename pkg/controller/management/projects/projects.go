@@ -829,7 +829,8 @@ func (r *reconciler) ensureDefaultUserRoles(
 	saAnnotations := map[string]string{
 		rbacapi.AnnotationKeyManaged: rbacapi.AnnotationValueTrue,
 	}
-	if creator, ok := project.Annotations[kargoapi.AnnotationKeyCreateActor]; ok {
+	if creator, ok := project.Annotations[kargoapi.AnnotationKeyCreateActor]; ok &&
+		!strings.HasPrefix(creator, kargoapi.EventActorKubernetesUserPrefix) {
 		if parts := strings.SplitN(creator, ":", 2); len(parts) == 2 {
 			saAnnotations[rbacapi.AnnotationKeyOIDCClaims] = fmt.Sprintf("{%q:[%q]}", parts[0], parts[1])
 		}

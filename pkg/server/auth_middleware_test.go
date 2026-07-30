@@ -794,7 +794,6 @@ func TestVerifyKubernetesToken(t *testing.T) {
 	const testToken = "test-bearer-token"
 	testCases := []struct {
 		name         string
-		createFn     func(t *testing.T) error
 		reviewStatus authnv1.TokenReviewStatus
 		createErr    error
 		assertions   func(t *testing.T, u *authnv1.UserInfo, err error)
@@ -803,7 +802,8 @@ func TestVerifyKubernetesToken(t *testing.T) {
 			name:      "TokenReview call fails",
 			createErr: errors.New("connection refused"),
 			assertions: func(t *testing.T, u *authnv1.UserInfo, err error) {
-				require.ErrorContains(t, err, "submit TokenReview")
+				require.ErrorIs(t, err, errKubernetesTokenReviewFailed)
+				require.ErrorContains(t, err, "kubernetes token review failed")
 				require.ErrorContains(t, err, "connection refused")
 				require.Nil(t, u)
 			},
@@ -850,7 +850,6 @@ func TestVerifyKubernetesToken(t *testing.T) {
 			scheme := runtime.NewScheme()
 			require.NoError(t, authnv1.AddToScheme(scheme))
 
-			testCase := testCase
 			fakeClient := fake.NewClientBuilder().WithScheme(scheme).WithInterceptorFuncs(
 				interceptor.Funcs{
 					Create: func(
@@ -864,6 +863,7 @@ func TestVerifyKubernetesToken(t *testing.T) {
 						}
 						review, ok := obj.(*authnv1.TokenReview)
 						require.True(t, ok)
+						require.Equal(t, testToken, review.Spec.Token)
 						review.Status = testCase.reviewStatus
 						return nil
 					},

@@ -33,6 +33,14 @@ import (
 
 const authHeaderKey = "Authorization"
 
+// errKubernetesTokenReviewFailed indicates the TokenReview call itself could
+// not be completed -- e.g. due to a networking problem or the Kargo API
+// server's own ServiceAccount lacking permission to create TokenReviews.
+// This is distinct from Kubernetes successfully evaluating the token and
+// rejecting it, which is a routine, expected outcome for malformed or
+// foreign tokens.
+var errKubernetesTokenReviewFailed = errors.New("kubernetes token review failed")
+
 // exemptPaths are REST paths that don't require authentication
 var exemptPaths = map[string]struct{}{
 	"/v1beta1/system/public-server-config": {},
@@ -250,7 +258,11 @@ func (a *authMiddleware) authenticate(
 	logger.Debug("could not verify token; checking if Kubernetes recognizes it")
 	k8sUserInfo, err := a.verifyKubernetesTokenFn(ctx, rawToken)
 	if err != nil {
-		logger.Debug("token not recognized by Kubernetes", "error", err)
+		if errors.Is(err, errKubernetesTokenReviewFailed) {
+			logger.Error(err, "failed to submit TokenReview to Kubernetes")
+		} else {
+			logger.Debug("token not recognized by Kubernetes", "error", err)
+		}
 		return ctx, errors.New("invalid token")
 	}
 	logger.Debug("token recognized by Kubernetes", "username", k8sUserInfo.Username)
@@ -404,7 +416,7 @@ func (a *authMiddleware) verifyKubernetesToken(
 		},
 	}
 	if err := a.internalClient.Create(ctx, review); err != nil {
-		return nil, fmt.Errorf("submit TokenReview: %w", err)
+		return nil, fmt.Errorf("%w: %w", errKubernetesTokenReviewFailed, err)
 	}
 	if review.Status.Error != "" {
 		return nil, fmt.Errorf("token rejected by kubernetes: %s", review.Status.Error)
