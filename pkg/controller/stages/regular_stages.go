@@ -1994,6 +1994,25 @@ func (r *RegularStageReconciler) autoPromoteFreight(
 		// PromotionTemplate.
 		promotion := api.NewMinimalPromotion(stage, candidate.Name)
 		if err = r.client.Create(ctx, promotion); err != nil {
+			// An admission webhook may deny the create. Tolerate this as a
+			// non-error: nothing is persisted, so this reconcile moves on, and a
+			// later one re-derives and re-attempts the auto-promotion once the
+			// denying policy no longer applies. Any other error is still fatal to
+			// the reconcile.
+			//
+			// Deliberately not recorded as an event. A policy that holds keeps
+			// denying, so this branch is taken on every reconcile for as long as
+			// it does; an event per occurrence would report one unchanging
+			// condition thousands of times and bury the Project's event feed. A
+			// condition belongs in status, and Kargo Enterprise reports the one
+			// it knows about in Stage.status.promotionSchedule.
+			if apierrors.IsForbidden(err) {
+				freightLogger.Debug(
+					"auto-promotion was denied by an admission webhook",
+					"error", err.Error(),
+				)
+				continue
+			}
 			return newStatus, fmt.Errorf(
 				"error creating Promotion for Freight %q in namespace %q: %w",
 				candidate.Name, stage.Namespace, err,

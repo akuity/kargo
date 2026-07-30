@@ -7546,6 +7546,93 @@ func TestRegularStageReconciler_autoPromoteFreight(t *testing.T) {
 			},
 		},
 		{
+			// A Forbidden error from an admission webhook must not fail the
+			// reconcile: nothing is persisted and the pass continues, so a later
+			// reconcile can re-attempt once the denying policy no longer applies.
+			name:                 "tolerates a forbidden Promotion create",
+			autoPromotionEnabled: true,
+			stage: &kargoapi.Stage{
+				ObjectMeta: metav1.ObjectMeta{
+					Namespace: "fake-project",
+					Name:      "test-stage",
+				},
+				Spec: kargoapi.StageSpec{
+					RequestedFreight: []kargoapi.FreightRequest{
+						{
+							Origin: kargoapi.FreightOrigin{
+								Kind: kargoapi.FreightOriginKindWarehouse,
+								Name: "test-warehouse",
+							},
+							Sources: kargoapi.FreightSources{
+								Direct: true,
+							},
+						},
+					},
+					PromotionTemplate: &kargoapi.PromotionTemplate{
+						Spec: kargoapi.PromotionTemplateSpec{
+							Steps: []kargoapi.PromotionStep{
+								{
+									Uses: "fake-step",
+								},
+							},
+						},
+					},
+				},
+			},
+			objects: []client.Object{
+				&kargoapi.Warehouse{
+					ObjectMeta: metav1.ObjectMeta{
+						Namespace: "fake-project",
+						Name:      "test-warehouse",
+					},
+				},
+				&kargoapi.Freight{
+					ObjectMeta: metav1.ObjectMeta{
+						Namespace:         "fake-project",
+						Name:              "test-freight",
+						CreationTimestamp: metav1.Time{Time: now},
+					},
+					Origin: kargoapi.FreightOrigin{
+						Kind: kargoapi.FreightOriginKindWarehouse,
+						Name: "test-warehouse",
+					},
+				},
+			},
+			interceptor: interceptor.Funcs{
+				Create: func(context.Context, client.WithWatch, client.Object, ...client.CreateOption) error {
+					return &apierrors.StatusError{ErrStatus: metav1.Status{
+						Status: metav1.StatusFailure,
+						Reason: metav1.StatusReasonForbidden,
+						// Shaped like a real denial: the API server's wrapper around
+						// what a webhook returned via apierrors.NewForbidden, naming
+						// the Promotion the mutating webhook had just generated.
+						Message: `admission webhook "fake-webhook" denied the request: ` +
+							`promotions.kargo.akuity.io "test-stage.01jzzz.abc1234" is forbidden: ` +
+							`promotion of Stage "test-stage" is not permitted at this time`,
+					}}
+				},
+			},
+			assertions: func(
+				t *testing.T,
+				recorder *fakeevent.EventRecorder,
+				c client.Client,
+				_ kargoapi.StageStatus,
+				err error,
+			) {
+				require.NoError(t, err)
+
+				// No Promotion is persisted when the create is denied.
+				promoList := &kargoapi.PromotionList{}
+				require.NoError(t, c.List(t.Context(), promoList, client.InNamespace("fake-project")))
+				assert.Empty(t, promoList.Items)
+
+				// Nor is anything recorded. A denial is a condition that persists
+				// across reconciles, not an occurrence, so an event per attempt
+				// would report the same thing indefinitely.
+				assert.Empty(t, recorder.Events)
+			},
+		},
+		{
 			name:                 "skips promotion when origin is in the effective hold map",
 			autoPromotionEnabled: true,
 			stage: &kargoapi.Stage{
