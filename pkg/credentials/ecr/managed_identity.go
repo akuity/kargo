@@ -15,8 +15,8 @@ import (
 	"github.com/aws/aws-sdk-go-v2/service/ecr"
 	"github.com/aws/aws-sdk-go-v2/service/sts"
 	"github.com/hashicorp/go-cleanhttp"
-	"github.com/patrickmn/go-cache"
 
+	"github.com/akuity/kargo/pkg/cache/coalescing"
 	"github.com/akuity/kargo/pkg/credentials"
 	"github.com/akuity/kargo/pkg/logging"
 )
@@ -34,8 +34,18 @@ func init() {
 	}
 }
 
+// managedIdentityInput identifies the token a load should obtain. The cache key
+// is a hash of these values, so they cannot be recovered from it.
+type managedIdentityInput struct {
+	region  string
+	project string
+}
+
 type ManagedIdentityProvider struct {
-	tokenCache *cache.Cache
+	// tokenCache holds authorization tokens keyed by a hash of the region and
+	// Kargo Project they were obtained for. It fills its own misses, coalescing
+	// concurrent loads for any given key.
+	tokenCache coalescing.Cache[managedIdentityInput, string]
 
 	accountID string
 
@@ -79,20 +89,37 @@ func NewManagedIdentityProvider(ctx context.Context) credentials.Provider {
 		return nil
 	}
 
+	// A response carrying no account would be a surprise, but this runs at
+	// startup, where a panic takes the whole process with it.
+	if res.Account == nil {
+		logger.Error(
+			nil, "no account ID returned; AWS credentials integration will be disabled",
+		)
+		return nil
+	}
 	logger.Debug("got AWS account ID", "account", *res.Account)
 	awsAccountID = *res.Account
 
-	p := &ManagedIdentityProvider{
-		tokenCache: cache.New(
+	p := &ManagedIdentityProvider{accountID: awsAccountID}
+	p.getAuthTokenFn = p.getAuthToken
+	tokenCache, err := coalescing.NewCache(
+		p.loadAuthToken,
+		&coalescing.CacheOptions{
+			LoadTimeout: new(tokenAcquisitionTimeout),
 			// Tokens live for 12 hours. We'll hang on to them for 10 by default.
 			// When the actual token expiry is available, it is used (minus a
 			// safety margin) instead of this default.
-			10*time.Hour, // Default ttl for each entry
-			time.Hour,    // Cleanup interval
-		),
-		accountID: awsAccountID,
+			DefaultTTL:      new(10 * time.Hour),
+			CleanupInterval: new(time.Hour),
+		},
+	)
+	if err != nil {
+		logger.Error(
+			err, "error creating token cache; AWS credentials integration will be disabled",
+		)
+		return nil
 	}
-	p.getAuthTokenFn = p.getAuthToken
+	p.tokenCache = tokenCache
 	return p
 }
 
@@ -126,40 +153,59 @@ func (p *ManagedIdentityProvider) GetCredentials(
 		"provider", "ecrManagedIdentity",
 		"repoURL", req.RepoURL,
 	)
+	ctx = logging.ContextWithLogger(ctx, logger)
 
-	// Check the cache for the token
-	if entry, exists := p.tokenCache.Get(cacheKey); exists {
-		logger.Debug("auth token cache hit")
-		return decodeAuthToken(entry.(string)) // nolint: forcetypeassert
-	}
-	logger.Debug("auth token cache miss")
-
-	// Cache miss, get a new token
-	encodedToken, expiry, err := p.getAuthTokenFn(ctx, region, req.Project)
+	encodedToken, err := p.tokenCache.Get(
+		ctx,
+		cacheKey,
+		managedIdentityInput{region: region, project: req.Project},
+	)
 	if err != nil {
-		// This might mean the controller's IAM role isn't authorized to assume the
-		// project-specific IAM role, or that the project-specific IAM role doesn't
-		// have the necessary permissions to get an ECR auth token. We're making
-		// a choice to consider this the will of the AWS admins and not a controller
-		// error. We'll just log it and move on as if we found no credentials.
-		return nil, fmt.Errorf("error getting ECR auth token: %w", err)
+		return nil, err
 	}
 
 	// If we didn't get a token, we'll treat this as no credentials found
 	if encodedToken == "" {
 		return nil, nil
 	}
+
+	return decodeAuthToken(encodedToken)
+}
+
+// loadAuthToken obtains a new ECR authorization token for the given region and
+// Kargo Project. It is the Loader for this provider's token cache.
+func (p *ManagedIdentityProvider) loadAuthToken(
+	ctx context.Context,
+	input managedIdentityInput,
+) (string, *time.Duration, error) {
+	logger := logging.LoggerFromContext(ctx)
+
+	encodedToken, expiry, err := p.getAuthTokenFn(ctx, input.region, input.project)
+	if err != nil {
+		// An IAM role not authorized to assume the project-specific role, or a
+		// project-specific role not authorized to obtain an ECR auth token, is
+		// taken to be the will of the AWS admins rather than an error, and reaches
+		// here as an empty token rather than as this error. See getAuthToken.
+		return "", nil, fmt.Errorf("error getting ECR auth token: %w", err)
+	}
+
+	// If we didn't get a token, we'll treat this as no credentials found
+	if encodedToken == "" {
+		return "", nil, nil
+	}
 	logger.Debug("obtained new auth token")
 
 	ttl := credentials.CalculateCacheTTL(expiry, tokenCacheExpiryMargin)
+	if ttl == nil {
+		logger.Debug("token expires too soon to be worth caching", "expiry", expiry)
+		return encodedToken, nil, nil
+	}
 	logger.Debug(
 		"caching auth token",
 		"expiry", expiry,
-		"ttl", ttl,
+		"ttl", *ttl,
 	)
-	p.tokenCache.Set(cacheKey, encodedToken, ttl)
-
-	return decodeAuthToken(encodedToken)
+	return encodedToken, ttl, nil
 }
 
 // getAuthToken returns an ECR authorization token obtained by assuming a
@@ -224,9 +270,21 @@ func (p *ManagedIdentityProvider) getAuthToken(
 		}
 	}
 
+	// A response carrying no authorization data would be a surprise, but indexing
+	// into it regardless is not worth the consequence: the cache this runs under
+	// would report the panic to every caller waiting on this key as an error
+	// saying nothing about what actually went wrong.
+	if output == nil || len(output.AuthorizationData) == 0 {
+		return "", time.Time{}, errors.New("no authorization data returned")
+	}
+
 	var expiry time.Time
 	if output.AuthorizationData[0].ExpiresAt != nil {
 		expiry = *output.AuthorizationData[0].ExpiresAt
+	}
+
+	if output.AuthorizationData[0].AuthorizationToken == nil {
+		return "", time.Time{}, errors.New("no authorization token returned")
 	}
 
 	logger.Debug("got ECR authorization token")

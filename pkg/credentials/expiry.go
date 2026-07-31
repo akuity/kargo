@@ -1,22 +1,21 @@
 package credentials
 
-import (
-	"time"
+import "time"
 
-	"github.com/patrickmn/go-cache"
-)
-
-// CalculateCacheTTL calculates the time-to-live for a cached credential based
-// on the credential's expiry time and a safety margin. If the expiry time is
-// zero (unknown) or the remaining time after subtracting the margin is not
-// positive, it returns cache.DefaultExpiration, deferring to the cache's own
-// default TTL.
-func CalculateCacheTTL(expiry time.Time, margin time.Duration) time.Duration {
-	ttl := cache.DefaultExpiration
-	if !expiry.IsZero() {
-		if remaining := time.Until(expiry) - margin; remaining > 0 {
-			ttl = remaining
-		}
+// CalculateCacheTTL calculates how long a credential may be cached for, given
+// the credential's own expiry time and a safety margin. It returns nil when the
+// credential expires within that margin, caching one that is spent, or nearly
+// so, being how a caller comes to be handed a credential that has stopped
+// working. A zero expiry time means the credential's lifetime is unknown, for
+// which it returns a zero duration, deferring to whatever default TTL the cache
+// was configured with.
+func CalculateCacheTTL(expiry time.Time, margin time.Duration) *time.Duration {
+	if expiry.IsZero() {
+		return new(time.Duration)
 	}
-	return ttl
+	remaining := time.Until(expiry) - margin
+	if remaining <= 0 {
+		return nil
+	}
+	return &remaining
 }

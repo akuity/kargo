@@ -2,6 +2,7 @@ package acr
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"regexp"
 	"time"
@@ -10,22 +11,30 @@ import (
 	"github.com/Azure/azure-sdk-for-go/sdk/azcore/policy"
 	"github.com/Azure/azure-sdk-for-go/sdk/azidentity"
 	"github.com/Azure/azure-sdk-for-go/sdk/containers/azcontainerregistry"
-	"github.com/patrickmn/go-cache"
 
+	"github.com/akuity/kargo/pkg/cache/coalescing"
 	"github.com/akuity/kargo/pkg/credentials"
 	"github.com/akuity/kargo/pkg/logging"
 )
 
 const (
-	// cacheTTLMinutes is how long we cache ACR tokens before refreshing them.
-	// Set to 2.5 hours to ensure we refresh before the 3-hour token expiry.
-	cacheTTLMinutes = 150
-	// cleanupIntervalMinutes is how often the cache cleanup runs
-	cleanupIntervalMinutes = 30
+	// cacheTTL is how long an ACR token is cached for. ACR refresh tokens expire
+	// after three hours and the exchange API does not report a token's actual
+	// expiry, so no TTL can be derived from one and this is used for all of them.
+	cacheTTL = 150 * time.Minute
+	// cleanupInterval is how often expired tokens are evicted from the cache.
+	cleanupInterval = 30 * time.Minute
 	// acrTokenUsername is the fixed username used for ACR token authentication
 	acrTokenUsername = "00000000-0000-0000-0000-000000000000"
 	// acrScope is the Azure AD scope required for ACR authentication
 	acrScope = "https://containerregistry.azure.net/.default"
+	// tokenAcquisitionTimeout bounds a single token acquisition. Because an
+	// acquisition executes under a context detached from any caller's, this is
+	// the only thing bounding its duration. It is generous because it serves only
+	// as a fail-safe: exceeding it fails every caller waiting on that
+	// acquisition, and no fresh acquisition for the same registry can begin until
+	// it returns.
+	tokenAcquisitionTimeout = 30 * time.Second
 )
 
 // acrURLRegex matches Azure Container Registry URLs.
@@ -47,8 +56,10 @@ func init() {
 // Registry Workload Identity.
 type WorkloadIdentityProvider struct {
 	// tokenCache is an in-memory cache of ACR registry access tokens keyed by
-	// registry name.
-	tokenCache *cache.Cache
+	// registry name. It fills its own misses, coalescing concurrent loads for any
+	// given registry.
+	tokenCache coalescing.Cache[string, string]
+
 	credential azcore.TokenCredential
 
 	getAccessTokenFn func(ctx context.Context, registryName string) (string, error)
@@ -68,17 +79,23 @@ func NewWorkloadIdentityProvider(ctx context.Context) credentials.Provider {
 
 	logger.Info("Azure workload identity credential provider initialized")
 
-	p := &WorkloadIdentityProvider{
-		tokenCache: cache.New(
-			// ACR refresh tokens expire in 3 hours. We'll hang on to them for
-			// 2.5 hours. The ACR refresh token exchange API does not expose
-			// actual token expiry, so a dynamic TTL is not possible here.
-			cacheTTLMinutes*time.Minute,        // Default ttl for each entry
-			cleanupIntervalMinutes*time.Minute, // Cleanup interval
-		),
-		credential: credential,
-	}
+	p := &WorkloadIdentityProvider{credential: credential}
 	p.getAccessTokenFn = p.getAccessToken
+	tokenCache, err := coalescing.NewCache(
+		p.loadAccessToken,
+		&coalescing.CacheOptions{
+			LoadTimeout:     new(tokenAcquisitionTimeout),
+			DefaultTTL:      new(cacheTTL),
+			CleanupInterval: new(cleanupInterval),
+		},
+	)
+	if err != nil {
+		logger.Error(
+			err, "error creating token cache; ACR credentials integration will be disabled",
+		)
+		return nil
+	}
+	p.tokenCache = tokenCache
 	return p
 }
 
@@ -108,41 +125,52 @@ func (p *WorkloadIdentityProvider) GetCredentials(
 		"provider", "acrWorkloadIdentity",
 		"repoURL", req.RepoURL,
 	)
+	ctx = logging.ContextWithLogger(ctx, logger)
 
-	// Check the cache for the token
-	if entry, exists := p.tokenCache.Get(registryName); exists {
-		logger.Debug("access token cache hit")
-		return &credentials.Credentials{
-			Username: acrTokenUsername,
-			Password: entry.(string), // nolint: forcetypeassert
-		}, nil
-	}
-	logger.Debug("access token cache miss")
-
-	// Cache miss, get a new token
-	accessToken, err := p.getAccessTokenFn(ctx, registryName)
+	accessToken, err := p.tokenCache.Get(ctx, registryName, registryName)
 	if err != nil {
-		return nil, fmt.Errorf("error getting ACR access token: %w", err)
+		return nil, err
 	}
 
 	// If we didn't get a token, we'll treat this as no credentials found
 	if accessToken == "" {
 		return nil, nil
 	}
-	logger.Debug("obtained new access token")
-
-	// Cache the token using the default TTL. The ACR refresh token exchange API
-	// does not expose token expiry, so a dynamic TTL is not possible here.
-	logger.Debug(
-		"caching access token",
-		"ttl", cache.DefaultExpiration,
-	)
-	p.tokenCache.Set(registryName, accessToken, cache.DefaultExpiration)
 
 	return &credentials.Credentials{
 		Username: acrTokenUsername,
 		Password: accessToken,
 	}, nil
+}
+
+// loadAccessToken obtains an ACR access token for the given registry. It is the
+// Loader for this provider's token cache.
+func (p *WorkloadIdentityProvider) loadAccessToken(
+	ctx context.Context,
+	registryName string,
+) (string, *time.Duration, error) {
+	logger := logging.LoggerFromContext(ctx)
+
+	accessToken, err := p.getAccessTokenFn(ctx, registryName)
+	if err != nil {
+		return "", nil, fmt.Errorf("error getting ACR access token: %w", err)
+	}
+
+	// If we didn't get a token, we'll treat this as no credentials found
+	if accessToken == "" {
+		return "", nil, nil
+	}
+	logger.Debug("obtained new access token")
+
+	// The ACR refresh token exchange API does not expose token expiry, so no TTL
+	// of the token's own can be computed. A TTL of zero defers to the cache's
+	// default.
+	var ttl time.Duration
+	logger.Debug(
+		"caching access token",
+		"ttl", cacheTTL,
+	)
+	return accessToken, &ttl, nil
 }
 
 // getAccessToken returns an ACR refresh token using Azure workload identity.
@@ -185,7 +213,7 @@ func (p *WorkloadIdentityProvider) getAccessToken(
 	}
 
 	if refreshTokenResp.RefreshToken == nil {
-		return "", fmt.Errorf("received empty ACR refresh token")
+		return "", errors.New("received empty ACR refresh token")
 	}
 
 	return *refreshTokenResp.RefreshToken, nil
