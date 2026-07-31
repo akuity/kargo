@@ -23,8 +23,13 @@ import (
 
 const roleARNFormat = "arn:aws:iam::%s:role/kargo-project-%s"
 
-// externalIDMinLength is the shortest external ID AWS will accept.
-const externalIDMinLength = 2
+// externalIDFormat produces the external ID presented when assuming a
+// Project-specific role. It repeats the "kargo-project-" prefix of
+// roleARNFormat instead of sharing it, and deliberately so: the external ID
+// must go on being derived from the Project alone even if the role name ever
+// ceases to be. Collapsing the two into one expression would couple them back
+// together.
+const externalIDFormat = "kargo-project-%s"
 
 func init() {
 	if provider := NewManagedIdentityProvider(context.Background()); provider != nil {
@@ -238,8 +243,9 @@ func (p *ManagedIdentityProvider) getAuthToken(
 type authIdentity struct {
 	description string
 	roleARN     string
-	// externalID is presented when assuming roleARN to head off the confused
-	// deputy problem described at
+	// externalID is presented when assuming roleARN and is always of the form
+	// kargo-project-<project name>. It is set whenever roleARN is. It exists to
+	// head off the confused deputy problem described at
 	// https://docs.aws.amazon.com/IAM/latest/UserGuide/confused-deputy.html.
 	// Kargo is not susceptible to it today: a single controller identity acts on
 	// behalf of many Projects, but the role it assumes is computed as a pure
@@ -266,26 +272,7 @@ func (p *ManagedIdentityProvider) authIdentities(
 	accountID string,
 	project string,
 ) []authIdentity {
-	// AWS rejects an external ID shorter than two characters, so external IDs are
-	// simply unsupported for Projects whose names are a single character. Their
-	// roles are assumed without one, which succeeds unless the trust policy
-	// requires an external ID, so an organization that requires one cannot use
-	// single-character Project names at all. That limitation is knowingly
-	// accepted. Such names are vanishingly rare, so implicitly foreclosing them
-	// is a minimal inconvenience.
-	//
-	// Other options considered and rejected:
-	//
-	// - Imposing a formal minimum Project name length of two would be possible
-	//   using a validating admission webhook, but would be a breaking change.
-	//
-	// - An external ID derived from the Project's name and guaranteed to be at
-	//   least two characters is a minor complication in something we really wish
-	//   for AWS admins to get correct with minimal friction.
-	var externalID string
-	if len(project) >= externalIDMinLength {
-		externalID = project
-	}
+	externalID := fmt.Sprintf(externalIDFormat, project)
 
 	// A Project-specific role in the registry's own account.
 	identities := []authIdentity{{
@@ -329,13 +316,9 @@ func (p *ManagedIdentityProvider) getAuthTokenAs(
 				stsSvc,
 				identity.roleARN,
 				func(aro *stscreds.AssumeRoleOptions) {
-					// An empty string is not a valid external ID, so aro.ExternalID
-					// is left nil when identity.externalID is empty.
-					if identity.externalID != "" {
-						// IMPORTANT: See the comment on authIdentity.externalID for why
-						// this is done.
-						aro.ExternalID = aws.String(identity.externalID)
-					}
+					// IMPORTANT: See the comment on authIdentity.externalID for why this
+					// is done.
+					aro.ExternalID = aws.String(identity.externalID)
 				},
 			)
 		}

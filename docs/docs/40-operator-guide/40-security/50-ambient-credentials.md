@@ -126,13 +126,9 @@ problem. Trust policies should not, however, be written with an assumption that
 this remains true forever.
 
 To safeguard against future changes, it is recommended that trust policies
-require an external ID equal to the Project's name.
-
-AWS requires an external ID to be at least two characters long, so Kargo
-presents none at all on behalf of a Project whose name is only one character.
-Such a Project cannot make use of a trust policy that requires an external ID.
-This is a known and accepted limitation, so single-character Project names
-should be avoided.
+require an external ID of the form `kargo-project-<project name>` -- the same
+form as the role's own name. Kargo will always present this external ID when
+attempting to assume a Project-specific role.
 
 :::
 
@@ -151,7 +147,7 @@ policy of a Project-specific role should be configured as follows:
       "Action": "sts:AssumeRole",
       "Condition": {
         "StringEquals": {
-          "sts:ExternalId": "<project name>"
+          "sts:ExternalId": "kargo-project-<project name>"
         }
       }
     }
