@@ -1,0 +1,31 @@
+apiVersion: argoproj.io/v1alpha1
+kind: ApplicationSet
+metadata:
+  name: kargo-git-helm-image
+  namespace: argocd
+spec:
+  generators:
+  - list:
+      elements:
+      - stage: test
+      - stage: uat
+      - stage: prod
+  template:
+    metadata:
+      name: kargo-git-helm-image-{{stage}}
+      annotations:
+        kargo.akuity.io/authorized-stage: kargo-git-helm-image:{{stage}}
+    spec:
+      project: default
+      source:
+        # repoURL is substituted at runtime from the test env.
+        repoURL: https://github.com/<github-username>/kargo-demo-gitops.git
+        # Kargo will update this branch to move new images into this stage
+        targetRevision: helm-image/stage/{{stage}}
+        path: ./kargo-demo/templates
+      destination:
+        server: https://kubernetes.default.svc
+        namespace: kargo-git-helm-image-{{stage}}
+      syncPolicy:
+        syncOptions:
+        - CreateNamespace=true

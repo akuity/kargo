@@ -210,3 +210,67 @@ func ArgoCDDeleteHandler() decoder.HandlerFunc {
 		return argoCDClient.Delete(kind, obj.GetName())
 	}
 }
+
+// SetupArgoCDFixturesWithRepoURL returns a features.Func that sets up the Argo
+// CD fixtures with the named ApplicationSet's source repoURL substituted for
+// the demo GitOps repository URL configured in the test environment. This
+// mirrors the repo substitution applied to Kargo fixtures.
+func SetupArgoCDFixturesWithRepoURL(appSetName string) features.Func {
+	return func(ctx context.Context, t *testing.T, cfg *envconf.Config) context.Context {
+		return NewSetupArgoCDFixtures(
+			UpdateApplicationSetRepoURL(appSetName, requireKargoDemoRepo(ctx, t)),
+		)(ctx, t, cfg)
+	}
+}
+
+// requireKargoDemoRepo returns the demo GitOps repository URL configured in the
+// test environment, failing the test if it is missing or malformed.
+func requireKargoDemoRepo(ctx context.Context, t *testing.T) string {
+	repoVal, err := envfuncs.GetEnv(ctx, []string{"context", "kargo_demo_gitops_repo"})
+	if err != nil {
+		t.Fatalf("cannot get kargo_demo_gitops_repo %v", err)
+	}
+	repo, ok := repoVal.(string)
+	if !ok {
+		t.Fatalf("kargo_demo_gitops_repo is not a string: %v", repoVal)
+	}
+	return repo
+}
+
+// UpdateApplicationSetRepoURL returns a DecodeOption that rewrites the repoURL
+// of the source(s) in the named ApplicationSet's Application template. This
+// lets tests point Argo CD Applications at a fork of the demo GitOps
+// repository, mirroring the repo substitution applied to Kargo fixtures via
+// UpdateWarehouseGitRepoURL.
+func UpdateApplicationSetRepoURL(name, repoURL string) decoder.DecodeOption {
+	return MutateAsUnstructuredOptionFor("ApplicationSet", name, func(unstr runtime.Unstructured) error {
+		data := unstr.UnstructuredContent()
+		spec, ok := data["spec"].(map[string]any)
+		if !ok {
+			return errors.New("ApplicationSet spec is not a map")
+		}
+		template, ok := spec["template"].(map[string]any)
+		if !ok {
+			return errors.New("ApplicationSet spec.template is not a map")
+		}
+		templateSpec, ok := template["spec"].(map[string]any)
+		if !ok {
+			return errors.New("ApplicationSet spec.template.spec is not a map")
+		}
+
+		// Applications may use either a single "source" or a list of "sources".
+		if source, ok := templateSpec["source"].(map[string]any); ok {
+			source["repoURL"] = repoURL
+		}
+		if sources, ok := templateSpec["sources"].([]any); ok {
+			for _, src := range sources {
+				if srcMap, ok := src.(map[string]any); ok {
+					srcMap["repoURL"] = repoURL
+				}
+			}
+		}
+
+		unstr.SetUnstructuredContent(data)
+		return nil
+	})
+}

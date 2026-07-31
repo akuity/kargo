@@ -1,0 +1,193 @@
+apiVersion: kargo.akuity.io/v1alpha1
+kind: Project
+metadata:
+  name: kargo-git-commit-only
+---
+apiVersion: v1
+kind: Secret
+type: Opaque
+metadata:
+  name: manifests
+  namespace: kargo-git-commit-only
+  labels:
+    kargo.akuity.io/cred-type: git
+stringData:
+  # repoURL, username and password are substituted at runtime from the test env.
+  repoURL: https://github.com/<github-username>/kargo-demo-gitops.git
+  username: <github-username>
+  password: <github-pat>
+---
+apiVersion: kargo.akuity.io/v1alpha1
+kind: PromotionTask
+metadata:
+  name: base-promo-process
+  namespace: kargo-git-commit-only
+spec:
+  vars:
+  - name: gitRepo
+  - name: targetBranch
+  - name: outPath
+  steps:
+  - uses: git-clone
+    config:
+      repoURL: ${{ vars.gitRepo }}
+      checkout:
+      - commit: ${{ commitFrom(vars.gitRepo).ID }}
+        path: ./src
+      - branch: ${{ vars.targetBranch }}
+        create: true
+        path: ${{ vars.outPath }}
+  - uses: git-clear
+    config:
+      path: ${{ vars.outPath }}
+  - uses: copy
+    config:
+      inPath: ./src/base
+      outPath: ${{ vars.outPath }}/base
+  - uses: copy
+    config:
+      inPath: ./src/stages/${{ ctx.stage }}
+      outPath: ${{ vars.outPath }}/stages/${{ ctx.stage }}
+  - uses: git-commit
+    as: commit
+    config:
+      path: ${{ vars.outPath }}
+      message: updated manifests copied from main
+  - uses: compose-output
+    config:
+      commit: ${{ task.outputs.commit.commit }}
+---
+apiVersion: kargo.akuity.io/v1alpha1
+kind: Warehouse
+metadata:
+  name: kargo-demo
+  namespace: kargo-git-commit-only
+spec:
+  subscriptions:
+  - git:
+      repoURL: https://github.com/<github-username>/kargo-demo-gitops.git
+      # Watch this branch instead of main. This is the "trunk" for this example.
+      branch: kustomize
+---
+apiVersion: kargo.akuity.io/v1alpha1
+kind: Stage
+metadata:
+  name: test
+  namespace: kargo-git-commit-only
+spec:
+  requestedFreight:
+  - origin:
+      kind: Warehouse
+      name: kargo-demo
+    sources:
+      direct: true
+  promotionTemplate:
+    spec:
+      vars:
+      - name: gitRepo
+        value: https://github.com/<github-username>/kargo-demo-gitops.git
+      - name: targetBranch
+        value: commit-only/stage/${{ ctx.stage }}
+      - name: outPath
+        value: ./out
+      steps:
+      - task:
+          name: base-promo-process
+        as: base
+      - uses: git-push
+        config:
+          path: ${{ vars.outPath }}
+      - uses: argocd-update
+        config:
+          apps:
+          - name: ${{ ctx.project }}-${{ ctx.stage }}
+            sources:
+            - repoURL: ${{ vars.gitRepo }}
+              desiredRevision: ${{ outputs.base.commit }}
+---
+apiVersion: kargo.akuity.io/v1alpha1
+kind: Stage
+metadata:
+  name: uat
+  namespace: kargo-git-commit-only
+spec:
+  requestedFreight:
+  - origin:
+      kind: Warehouse
+      name: kargo-demo
+    sources:
+      stages:
+      - test
+  promotionTemplate:
+    spec:
+      vars:
+      - name: gitRepo
+        value: https://github.com/<github-username>/kargo-demo-gitops.git
+      - name: targetBranch
+        value: commit-only/stage/${{ ctx.stage }}
+      - name: outPath
+        value: ./out
+      steps:
+      - task:
+          name: base-promo-process
+        as: base
+      - uses: git-push
+        config:
+          path: ${{ vars.outPath }}
+      - uses: argocd-update
+        config:
+          apps:
+          - name: ${{ ctx.project }}-${{ ctx.stage }}
+            sources:
+            - repoURL: ${{ vars.gitRepo }}
+              desiredRevision: ${{ outputs.base.commit }}
+---
+apiVersion: kargo.akuity.io/v1alpha1
+kind: Stage
+metadata:
+  name: prod
+  namespace: kargo-git-commit-only
+spec:
+  requestedFreight:
+  - origin:
+      kind: Warehouse
+      name: kargo-demo
+    sources:
+      stages:
+      - uat
+  promotionTemplate:
+    spec:
+      vars:
+      - name: gitRepo
+        value: https://github.com/<github-username>/kargo-demo-gitops.git
+      - name: targetBranch
+        value: commit-only/stage/${{ ctx.stage }}
+      - name: outPath
+        value: ./out
+      steps:
+      - task:
+          name: base-promo-process
+      - uses: git-push
+        as: push
+        config:
+          path: ${{ vars.outPath }}
+          generateTargetBranch: true
+      - uses: git-open-pr
+        as: open-pr
+        config:
+          repoURL: ${{ vars.gitRepo }}
+          createTargetBranch: true
+          sourceBranch: ${{ outputs.push.branch }}
+          targetBranch: ${{ vars.targetBranch }}
+      - uses: git-wait-for-pr
+        as: wait-for-pr
+        config:
+          repoURL: ${{ vars.gitRepo }}
+          prNumber: ${{ outputs['open-pr'].pr.id }}
+      - uses: argocd-update
+        config:
+          apps:
+          - name: ${{ ctx.project }}-${{ ctx.stage }}
+            sources:
+            - repoURL: ${{ vars.gitRepo }}
+              desiredRevision: ${{ outputs['wait-for-pr'].commit }}

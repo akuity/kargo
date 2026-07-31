@@ -14,6 +14,9 @@ import (
 	"github.com/akuity/kargo/pkg/x/client/generated"
 )
 
+// PromoteAndWaitForPhase starts a promotion of freightName to stage and waits
+// until the promotion reaches phase, which may be a running or a terminal
+// phase. It asserts the observed phase equals phase.
 func PromoteAndWaitForPhase(
 	ctx context.Context,
 	t *testing.T,
@@ -21,34 +24,53 @@ func PromoteAndWaitForPhase(
 	phase kargoapi.PromotionPhase,
 	timeout time.Duration,
 ) (*kargoapi.Promotion, error) {
-	promotion, err := PromoteAndWaitForCompletion(ctx, t, project, stage, freightName, timeout)
-	if err != nil {
-		return nil, err
-	}
-	if promotion.Status.Phase != phase {
-		t.Fatalf(
-			"Promotion '%v' did not finish with phase '%v', actual phase: '%v'",
-			promotion.Name, phase, promotion.Status.Phase)
-	}
-	return promotion, err
+	name := StartPromotion(ctx, t, project, stage, freightName)
+	return WaitForPromotionPhase(ctx, t, project, name, phase, timeout)
 }
 
-func RefreshStage(
-	ctx context.Context,
-	_ *testing.T,
-	project, stage string,
-) error {
-	kargoClient := ctx.Value(KargoCLIKey).(generated.APIClient)
-	_, err := kargoClient.CoreAPI.RefreshStage(ctx, project, stage).Execute()
-	return err
-}
-
-func PromoteAndWaitForCompletion(
+// PromoteWithPRMerge promotes freightName to a stage whose promotion opens a
+// pull request and blocks on git-wait-for-pr. It waits for the promotion to be
+// Running, reads the pull request number recorded by the git-open-pr step
+// (identified by prStepAlias), merges that pull request via the GitHub API
+// using token, then waits for the promotion to succeed.
+func PromoteWithPRMerge(
 	ctx context.Context,
 	t *testing.T,
 	project, stage, freightName string,
+	repoURL, token, prStepAlias string,
 	timeout time.Duration,
 ) (*kargoapi.Promotion, error) {
+	running, err := PromoteAndWaitForPhase(
+		ctx, t,
+		project, stage, freightName,
+		kargoapi.PromotionPhaseRunning,
+		timeout,
+	)
+	if err != nil {
+		return nil, err
+	}
+
+	prNumber := WaitForPullRequestID(ctx, t, project, running.Name, prStepAlias, timeout)
+
+	if err := MergePullRequest(ctx, repoURL, token, prNumber, timeout); err != nil {
+		t.Fatalf("error merging pull request %d: %v", prNumber, err)
+	}
+
+	return WaitForPromotionPhase(
+		ctx, t,
+		project, running.Name,
+		kargoapi.PromotionPhaseSucceeded,
+		timeout,
+	)
+}
+
+// StartPromotion issues a promote request for freightName to stage and returns
+// the name of the created Promotion.
+func StartPromotion(
+	ctx context.Context,
+	t *testing.T,
+	project, stage, freightName string,
+) string {
 	kargoClient := ctx.Value(KargoCLIKey).(generated.APIClient)
 
 	_, httpRes, err := kargoClient.CoreAPI.GetStage(ctx, project, stage).Execute()
@@ -69,27 +91,44 @@ func PromoteAndWaitForCompletion(
 		_ = httpRes.Body.Close()
 	}
 	if promoteErr != nil {
-		t.Fatalf("Error promoting %v, %v", promoteErr, promoteRes)
+		t.Fatalf("Error promoting: %v (response: %v)", promoteErr, promoteRes)
 	}
 
-	promoName := promoteRes.Metadata.Name
-	if promoName == nil {
+	if promoteRes.Metadata.Name == nil {
 		t.Log("Promotion", promoteRes)
 		t.Fatalf("Error promoting: promotion name is missing")
 	}
-	promotion, err := WaitForPromotion(ctx, t, project, *promoName, timeout)
-
-	if err != nil {
-		t.Fatalf("Error getting promotion %v", err)
-	}
-	return promotion, nil
-
+	return *promoteRes.Metadata.Name
 }
 
-func WaitForPromotion(
+// WaitForPromotionPhase watches the named promotion until it reaches phase or
+// any terminal phase, whichever comes first, then asserts the observed phase
+// equals phase. Passing a terminal phase makes it wait for completion.
+func WaitForPromotionPhase(
 	ctx context.Context,
-	_ *testing.T,
+	t *testing.T,
 	project, name string,
+	phase kargoapi.PromotionPhase,
+	timeout time.Duration,
+) (*kargoapi.Promotion, error) {
+	promotion, err := watchPromotionForPhase(ctx, project, name, phase, timeout)
+	if err != nil {
+		t.Fatalf("Error waiting for promotion %q: %v", name, err)
+	}
+	if promotion.Status.Phase != phase {
+		t.Fatalf(
+			"Promotion '%v' did not reach phase '%v', actual phase: '%v'",
+			promotion.Name, phase, promotion.Status.Phase)
+	}
+	return promotion, nil
+}
+
+// watchPromotionForPhase returns the promotion once its phase equals phase or
+// is terminal.
+func watchPromotionForPhase(
+	ctx context.Context,
+	project, name string,
+	phase kargoapi.PromotionPhase,
 	timeout time.Duration,
 ) (*kargoapi.Promotion, error) {
 	timedCtx, cancel := context.WithTimeout(ctx, timeout)
@@ -100,11 +139,10 @@ func WaitForPromotion(
 		select {
 		case event := <-watchChan:
 			if event.Object != nil {
-				phase := event.Object.Status.Phase
-				if phase == "" || phase == kargoapi.PromotionPhaseRunning || phase == kargoapi.PromotionPhasePending {
-					continue
+				current := event.Object.Status.Phase
+				if current == phase || current.IsTerminal() {
+					return event.Object, nil
 				}
-				return event.Object, nil
 			}
 		case err := <-errorChan:
 			if strings.Contains(err.Error(), "unexpected status 404") {
@@ -117,6 +155,78 @@ func WaitForPromotion(
 			return nil, errors.New("context canceled")
 		}
 	}
+}
+
+// WaitForPullRequestID watches the named promotion until the git-open-pr step
+// with the given alias records a pull request id (its pr.id output), returning
+// it. It fails the test if the promotion reaches a terminal phase first or the
+// timeout elapses.
+func WaitForPullRequestID(
+	ctx context.Context,
+	t *testing.T,
+	project, name, stepAlias string,
+	timeout time.Duration,
+) int {
+	timedCtx, cancel := context.WithTimeout(ctx, timeout)
+	defer cancel()
+	watchClient := ctx.Value(KargoCLIWatchKey).(watch.Client)
+	watchChan, errorChan := watchClient.WatchPromotion(timedCtx, project, name)
+	for {
+		select {
+		case event := <-watchChan:
+			if event.Object != nil {
+				if id, ok := pullRequestIDFromState(event.Object, stepAlias); ok {
+					return id
+				}
+				if event.Object.Status.Phase.IsTerminal() {
+					t.Fatalf(
+						"promotion %q reached terminal phase %q before recording a pull request id",
+						name, event.Object.Status.Phase)
+				}
+			}
+		case err := <-errorChan:
+			if strings.Contains(err.Error(), "unexpected status 404") {
+				watchChan, errorChan = watchClient.WatchPromotion(timedCtx, project, name)
+			} else {
+				t.Fatalf("error watching promotion %q: %v", name, err)
+			}
+		case <-timedCtx.Done():
+			t.Fatalf("timed out waiting for pull request id from promotion %q", name)
+		}
+	}
+}
+
+// pullRequestIDFromState extracts the pull request id recorded by the
+// git-open-pr step, stored in the promotion state under stepAlias -> pr -> id.
+func pullRequestIDFromState(promotion *kargoapi.Promotion, stepAlias string) (int, bool) {
+	stepOutput, ok := promotion.Status.GetState()[stepAlias].(map[string]any)
+	if !ok {
+		return 0, false
+	}
+	pr, ok := stepOutput["pr"].(map[string]any)
+	if !ok {
+		return 0, false
+	}
+	switch id := pr["id"].(type) {
+	case float64:
+		return int(id), true
+	case int64:
+		return int(id), true
+	case int:
+		return id, true
+	default:
+		return 0, false
+	}
+}
+
+func RefreshStage(
+	ctx context.Context,
+	_ *testing.T,
+	project, stage string,
+) error {
+	kargoClient := ctx.Value(KargoCLIKey).(generated.APIClient)
+	_, err := kargoClient.CoreAPI.RefreshStage(ctx, project, stage).Execute()
+	return err
 }
 
 func WaitForLatestFreight(ctx context.Context, project, origin string, timeout time.Duration) (string, error) {
