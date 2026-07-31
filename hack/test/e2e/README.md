@@ -82,3 +82,10 @@ This folder contains the main e2e test module `github.com/akuity/kargo/hack/test
 
 The purpose of that is to be able to override `envs` and `funcsloader` in dependent `e2e` test modules to provide different environment configuration and setup/teardown functions to test in more environments than this package provides.
 
+
+
+## TODO
+
+- Allow disabling teardown on errors.
+- Allow separate context values file from init congigurations
+- Surface errors better
