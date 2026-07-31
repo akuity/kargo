@@ -1,6 +1,7 @@
 package commit
 
 import (
+	"context"
 	"fmt"
 
 	"github.com/expr-lang/expr"
@@ -25,12 +26,14 @@ type baseSelector struct {
 	discoveryLimit        int
 
 	gitCloneFn func(
+		ctx context.Context,
 		repoURL string,
 		clientOpts *git.ClientOptions,
 		cloneOpts *git.CloneOptions,
 	) (git.Repo, error)
 
 	lsRemoteFn func(
+		ctx context.Context,
 		repoURL string,
 		clientOpts *git.ClientOptions,
 		patterns ...string,

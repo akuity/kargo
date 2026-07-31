@@ -19,12 +19,13 @@ func Test_workTree_GetCommitSignatureInfo(t *testing.T) {
 
 	t.Run("unsigned commit is not trusted", func(t *testing.T) {
 		repo, err := Clone(
+			t.Context(),
 			testRepoURL,
 			&ClientOptions{Credentials: &testRepoCreds},
 			nil,
 		)
 		require.NoError(t, err)
-		defer repo.Close()
+		defer repo.Close(t.Context())
 
 		err = os.WriteFile(
 			fmt.Sprintf("%s/test.txt", repo.Dir()),
@@ -32,13 +33,13 @@ func Test_workTree_GetCommitSignatureInfo(t *testing.T) {
 			0o600,
 		)
 		require.NoError(t, err)
-		err = repo.AddAllAndCommit("unsigned commit", nil)
+		err = repo.AddAllAndCommit(t.Context(), "unsigned commit", nil)
 		require.NoError(t, err)
 
-		commitID, err := repo.LastCommitID()
+		commitID, err := repo.LastCommitID(t.Context())
 		require.NoError(t, err)
 
-		info, err := repo.GetCommitSignatureInfo(commitID)
+		info, err := repo.GetCommitSignatureInfo(t.Context(), commitID)
 		require.NoError(t, err)
 		require.False(t, info.Trusted)
 		require.Empty(t, info.SignerName)
@@ -47,12 +48,13 @@ func Test_workTree_GetCommitSignatureInfo(t *testing.T) {
 
 	t.Run("commit signed by trusted key", func(t *testing.T) {
 		repo, err := Clone(
+			t.Context(),
 			testRepoURL,
 			&ClientOptions{Credentials: &testRepoCreds},
 			nil,
 		)
 		require.NoError(t, err)
-		defer repo.Close()
+		defer repo.Close(t.Context())
 
 		wt := internalWorkTree(t, repo)
 		enableFakeCommitSigning(t, wt, true)
@@ -63,13 +65,13 @@ func Test_workTree_GetCommitSignatureInfo(t *testing.T) {
 			0o600,
 		)
 		require.NoError(t, err)
-		err = repo.AddAllAndCommit("trusted commit", nil)
+		err = repo.AddAllAndCommit(t.Context(), "trusted commit", nil)
 		require.NoError(t, err)
 
-		commitID, err := repo.LastCommitID()
+		commitID, err := repo.LastCommitID(t.Context())
 		require.NoError(t, err)
 
-		info, err := repo.GetCommitSignatureInfo(commitID)
+		info, err := repo.GetCommitSignatureInfo(t.Context(), commitID)
 		require.NoError(t, err)
 		require.True(t, info.Trusted)
 		// Note: the fake GPG script used by enableFakeCommitSigning does
@@ -80,12 +82,13 @@ func Test_workTree_GetCommitSignatureInfo(t *testing.T) {
 
 	t.Run("commit signed by untrusted key is not trusted", func(t *testing.T) {
 		repo, err := Clone(
+			t.Context(),
 			testRepoURL,
 			&ClientOptions{Credentials: &testRepoCreds},
 			nil,
 		)
 		require.NoError(t, err)
-		defer repo.Close()
+		defer repo.Close(t.Context())
 
 		wt := internalWorkTree(t, repo)
 		enableFakeCommitSigning(t, wt, false)
@@ -96,13 +99,13 @@ func Test_workTree_GetCommitSignatureInfo(t *testing.T) {
 			0o600,
 		)
 		require.NoError(t, err)
-		err = repo.AddAllAndCommit("untrusted commit", nil)
+		err = repo.AddAllAndCommit(t.Context(), "untrusted commit", nil)
 		require.NoError(t, err)
 
-		commitID, err := repo.LastCommitID()
+		commitID, err := repo.LastCommitID(t.Context())
 		require.NoError(t, err)
 
-		info, err := repo.GetCommitSignatureInfo(commitID)
+		info, err := repo.GetCommitSignatureInfo(t.Context(), commitID)
 		require.NoError(t, err)
 		require.False(t, info.Trusted)
 	})
@@ -116,30 +119,32 @@ func Test_workTree_verifyCommitSignature(t *testing.T) {
 
 	t.Run("unsigned commit", func(t *testing.T) {
 		repo, err := Clone(
+			t.Context(),
 			testRepoURL,
 			&ClientOptions{Credentials: &testRepoCreds},
 			nil,
 		)
 		require.NoError(t, err)
-		defer repo.Close()
+		defer repo.Close(t.Context())
 
-		commitID, err := repo.LastCommitID()
+		commitID, err := repo.LastCommitID(t.Context())
 		require.NoError(t, err)
 
 		wt := internalWorkTree(t, repo)
-		status, err := wt.verifyCommitSignature(commitID)
+		status, err := wt.verifyCommitSignature(t.Context(), commitID)
 		require.NoError(t, err)
 		require.Equal(t, signatureUnsigned, status)
 	})
 
 	t.Run("trusted signature", func(t *testing.T) {
 		repo, err := Clone(
+			t.Context(),
 			testRepoURL,
 			&ClientOptions{Credentials: &testRepoCreds},
 			nil,
 		)
 		require.NoError(t, err)
-		defer repo.Close()
+		defer repo.Close(t.Context())
 
 		wt := internalWorkTree(t, repo)
 		enableFakeCommitSigning(t, wt, true)
@@ -150,25 +155,26 @@ func Test_workTree_verifyCommitSignature(t *testing.T) {
 			0o600,
 		)
 		require.NoError(t, err)
-		err = repo.AddAllAndCommit("signed commit", nil)
+		err = repo.AddAllAndCommit(t.Context(), "signed commit", nil)
 		require.NoError(t, err)
 
-		commitID, err := repo.LastCommitID()
+		commitID, err := repo.LastCommitID(t.Context())
 		require.NoError(t, err)
 
-		status, err := wt.verifyCommitSignature(commitID)
+		status, err := wt.verifyCommitSignature(t.Context(), commitID)
 		require.NoError(t, err)
 		require.Equal(t, signatureTrusted, status)
 	})
 
 	t.Run("untrusted signature", func(t *testing.T) {
 		repo, err := Clone(
+			t.Context(),
 			testRepoURL,
 			&ClientOptions{Credentials: &testRepoCreds},
 			nil,
 		)
 		require.NoError(t, err)
-		defer repo.Close()
+		defer repo.Close(t.Context())
 
 		wt := internalWorkTree(t, repo)
 		enableFakeCommitSigning(t, wt, false)
@@ -179,13 +185,13 @@ func Test_workTree_verifyCommitSignature(t *testing.T) {
 			0o600,
 		)
 		require.NoError(t, err)
-		err = repo.AddAllAndCommit("signed commit", nil)
+		err = repo.AddAllAndCommit(t.Context(), "signed commit", nil)
 		require.NoError(t, err)
 
-		commitID, err := repo.LastCommitID()
+		commitID, err := repo.LastCommitID(t.Context())
 		require.NoError(t, err)
 
-		status, err := wt.verifyCommitSignature(commitID)
+		status, err := wt.verifyCommitSignature(t.Context(), commitID)
 		require.NoError(t, err)
 		require.Equal(t, signatureUntrusted, status)
 	})
@@ -199,34 +205,36 @@ func Test_workTree_isSigningConfigured(t *testing.T) {
 
 	t.Run("not configured", func(t *testing.T) {
 		repo, err := Clone(
+			t.Context(),
 			testRepoURL,
 			&ClientOptions{Credentials: &testRepoCreds},
 			nil,
 		)
 		require.NoError(t, err)
-		defer repo.Close()
+		defer repo.Close(t.Context())
 
-		configured, err := internalWorkTree(t, repo).isSigningConfigured()
+		configured, err := internalWorkTree(t, repo).isSigningConfigured(t.Context())
 		require.NoError(t, err)
 		require.False(t, configured)
 	})
 
 	t.Run("configured", func(t *testing.T) {
 		repo, err := Clone(
+			t.Context(),
 			testRepoURL,
 			&ClientOptions{Credentials: &testRepoCreds},
 			nil,
 		)
 		require.NoError(t, err)
-		defer repo.Close()
+		defer repo.Close(t.Context())
 
 		wt := internalWorkTree(t, repo)
 		_, err = libExec.Exec(wt.buildGitCommand(
-			"config", "--global", "commit.gpgSign", "true",
+			t.Context(), "config", "--global", "commit.gpgSign", "true",
 		))
 		require.NoError(t, err)
 
-		configured, err := wt.isSigningConfigured()
+		configured, err := wt.isSigningConfigured(t.Context())
 		require.NoError(t, err)
 		require.True(t, configured)
 	})

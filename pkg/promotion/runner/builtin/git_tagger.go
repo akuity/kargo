@@ -57,7 +57,7 @@ func (g *gitTagTagger) convert(cfg promotion.Config) (builtin.GitTagConfig, erro
 }
 
 func (g *gitTagTagger) run(
-	_ context.Context,
+	ctx context.Context,
 	stepCtx *promotion.StepContext,
 	cfg builtin.GitTagConfig,
 ) (promotion.StepResult, error) {
@@ -68,12 +68,13 @@ func (g *gitTagTagger) run(
 			cfg.Path, stepCtx.WorkDir, err,
 		)
 	}
-	workTree, err := git.LoadWorkTree(path, nil)
+	workTree, err := git.LoadWorkTree(ctx, path, nil)
 	if err != nil {
 		return promotion.StepResult{Status: kargoapi.PromotionStepStatusErrored},
 			fmt.Errorf("error loading working tree from %s: %w", cfg.Path, err)
 	}
 	if err = workTree.CreateTag(
+		ctx,
 		cfg.Tag,
 		cfg.Message,
 		&git.CreateTagOptions{Force: cfg.Force},
@@ -81,7 +82,7 @@ func (g *gitTagTagger) run(
 		return promotion.StepResult{Status: kargoapi.PromotionStepStatusErrored},
 			fmt.Errorf("error creating tag %s: %w", cfg.Tag, err)
 	}
-	commitID, err := workTree.LastCommitID()
+	commitID, err := workTree.LastCommitID(ctx)
 	if err != nil {
 		return promotion.StepResult{Status: kargoapi.PromotionStepStatusErrored},
 			fmt.Errorf("error getting last commit ID: %w", err)

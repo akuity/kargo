@@ -6,6 +6,7 @@ import (
 	"errors"
 	"io"
 	"net/http"
+	"time"
 
 	"github.com/hashicorp/go-cleanhttp"
 	"helm.sh/helm/v3/pkg/registry"
@@ -16,6 +17,13 @@ import (
 
 	"github.com/akuity/kargo/pkg/x/version"
 )
+
+// responseHeaderTimeout bounds how long a request to a registry may wait for
+// response headers after the request is fully written. Registries answer in
+// milliseconds; prolonged header silence means the connection is effectively
+// dead. This bounds only time-to-first-header per request and imposes no
+// limit on the total duration of a response transfer.
+const responseHeaderTimeout = 30 * time.Second
 
 // NewRegistryClient creates a new registry client using the provided authorizer.
 // This can be combined with an EphemeralAuthorizer to create a client that
@@ -105,6 +113,7 @@ func (a *EphemeralAuthorizer) Login(ctx context.Context, host, username, passwor
 // When insecure is true, TLS certificate verification is skipped.
 func newRegistryTransport(insecure bool) *http.Transport {
 	transport := cleanhttp.DefaultTransport()
+	transport.ResponseHeaderTimeout = responseHeaderTimeout
 	if insecure {
 		transport.TLSClientConfig = &tls.Config{
 			InsecureSkipVerify: true, // #nosec G402 -- explicitly allowed by insecureSkipTLSVerify
