@@ -35,6 +35,7 @@ type tagBasedSelector struct {
 	ignoreTagsRegexes []*regexp.Regexp
 
 	filterTagsByDiffPathsFn func(
+		context.Context,
 		git.Repo,
 		[]git.TagMetadata,
 	) ([]git.TagMetadata, error)
@@ -119,7 +120,7 @@ func (t *tagBasedSelector) listTagRefs(
 	ctx context.Context,
 	matches func(tag string) bool,
 ) (*kargoapi.GitDiscoveryRefs, error) {
-	refs, err := t.lsRemoteFn(t.repoURL, t.clientOptions(), tagPrefix+"*")
+	refs, err := t.lsRemoteFn(ctx, t.repoURL, t.clientOptions(), tagPrefix+"*")
 	if err != nil {
 		return nil, fmt.Errorf(
 			"error listing tag refs in git repo %q: %w", t.repoURL, err,
@@ -197,6 +198,7 @@ func (t *tagBasedSelector) clone(ctx context.Context) (git.Repo, error) {
 		Blobless:     t.blobless,
 	}
 	repo, err := t.gitCloneFn(
+		ctx,
 		t.repoURL,
 		&git.ClientOptions{
 			Credentials:           t.creds,
@@ -275,6 +277,7 @@ func (t *tagBasedSelector) filterTagsByExpression(
 // those paths against user-defined path-selection criteria. Only tags pointing
 // to commits that satisfy those criteria are returned.
 func (t *tagBasedSelector) filterTagsByDiffPaths(
+	ctx context.Context,
 	repo git.Repo,
 	tags []git.TagMetadata,
 ) ([]git.TagMetadata, error) {
@@ -283,7 +286,7 @@ func (t *tagBasedSelector) filterTagsByDiffPaths(
 	}
 	filteredTags := make([]git.TagMetadata, 0, t.discoveryLimit)
 	for _, tag := range tags {
-		diffPaths, err := repo.GetDiffPathsForCommitID(tag.CommitID)
+		diffPaths, err := repo.GetDiffPathsForCommitID(ctx, tag.CommitID)
 		if err != nil {
 			return nil, fmt.Errorf(
 				"error getting diff paths for tag %q in git repo %q: %w",

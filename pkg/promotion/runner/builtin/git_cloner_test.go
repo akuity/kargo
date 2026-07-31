@@ -323,17 +323,17 @@ func Test_gitCloner_run(t *testing.T) {
 	testRepoURL := fmt.Sprintf("%s/test.git", server.URL)
 
 	// Create some content and push it to the remote repository's default branch
-	repo, err := git.Clone(testRepoURL, nil, nil)
+	repo, err := git.Clone(t.Context(), testRepoURL, nil, nil)
 	require.NoError(t, err)
-	defer repo.Close()
+	defer repo.Close(t.Context())
 	err = os.WriteFile(filepath.Join(repo.Dir(), "test.txt"), []byte("foo"), 0600)
 	require.NoError(t, err)
-	err = repo.AddAllAndCommit("Initial commit", nil)
+	err = repo.AddAllAndCommit(t.Context(), "Initial commit", nil)
 	require.NoError(t, err)
-	err = repo.Push(nil)
+	err = repo.Push(t.Context(), nil)
 	require.NoError(t, err)
 
-	srcBranchCommitID, err := repo.LastCommitID()
+	srcBranchCommitID, err := repo.LastCommitID(t.Context())
 	require.NoError(t, err)
 
 	// Now we can proceed to test gitCloner...
@@ -382,9 +382,13 @@ func Test_gitCloner_run(t *testing.T) {
 	require.FileExists(t, filepath.Join(stepCtx.WorkDir, "out", ".git"))
 
 	// Assert output map contains the expected commit hashes for each checkout
-	outTree, err := git.LoadWorkTree(filepath.Join(stepCtx.WorkDir, "out"), nil)
+	outTree, err := git.LoadWorkTree(
+		t.Context(),
+		filepath.Join(stepCtx.WorkDir, "out"),
+		nil,
+	)
 	require.NoError(t, err)
-	outBranchCommitID, err := outTree.LastCommitID()
+	outBranchCommitID, err := outTree.LastCommitID(t.Context())
 	require.NoError(t, err)
 	require.Equal(
 		t,
@@ -410,24 +414,24 @@ func Test_gitCloner_run_with_submodules(t *testing.T) {
 
 	// Create submodule remote repo and push a file
 	subRepoURL := fmt.Sprintf("%s/sub.git", server.URL)
-	subRepo, err := git.Clone(subRepoURL, nil, nil)
+	subRepo, err := git.Clone(t.Context(), subRepoURL, nil, nil)
 	require.NoError(t, err)
 	t.Cleanup(func() {
-		_ = subRepo.Close()
+		_ = subRepo.Close(t.Context())
 	})
 	err = os.WriteFile(filepath.Join(subRepo.Dir(), "sub.txt"), []byte("sub"), 0o600)
 	require.NoError(t, err)
-	err = subRepo.AddAllAndCommit("Initial commit sub", nil)
+	err = subRepo.AddAllAndCommit(t.Context(), "Initial commit sub", nil)
 	require.NoError(t, err)
-	err = subRepo.Push(nil)
+	err = subRepo.Push(t.Context(), nil)
 	require.NoError(t, err)
 
 	// Create main repo and add the submodule
 	mainRepoURL := fmt.Sprintf("%s/main.git", server.URL)
-	mainRepo, err := git.Clone(mainRepoURL, nil, nil)
+	mainRepo, err := git.Clone(t.Context(), mainRepoURL, nil, nil)
 	require.NoError(t, err)
 	t.Cleanup(func() {
-		_ = mainRepo.Close()
+		_ = mainRepo.Close(t.Context())
 	})
 
 	// Use git submodule add to create proper submodule metadata
@@ -437,12 +441,12 @@ func Test_gitCloner_run_with_submodules(t *testing.T) {
 	require.NoErrorf(t, err, "git submodule add failed: %s", string(out))
 
 	// Commit and push the submodule addition
-	err = mainRepo.AddAllAndCommit("Add submodule", nil)
+	err = mainRepo.AddAllAndCommit(t.Context(), "Add submodule", nil)
 	require.NoError(t, err)
-	err = mainRepo.Push(nil)
+	err = mainRepo.Push(t.Context(), nil)
 	require.NoError(t, err)
 
-	mainCommitID, err := mainRepo.LastCommitID()
+	mainCommitID, err := mainRepo.LastCommitID(t.Context())
 	require.NoError(t, err)
 
 	// Run git-cloner with recurseSubmodules = true

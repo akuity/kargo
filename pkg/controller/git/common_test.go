@@ -50,10 +50,15 @@ func setupRemoteRepo(
 
 	testRepoURL := fmt.Sprintf("%s/test.git", server.URL)
 
-	repo, err := Clone(testRepoURL, &ClientOptions{Credentials: &creds}, nil)
+	repo, err := Clone(
+		t.Context(),
+		testRepoURL,
+		&ClientOptions{Credentials: &creds},
+		nil,
+	)
 	require.NoError(t, err)
 	require.NotNil(t, repo)
-	defer repo.Close()
+	defer repo.Close(t.Context())
 
 	for _, initFn := range initFns {
 		initFn(t, repo)
@@ -69,9 +74,13 @@ func initialMainCommit(t *testing.T, rep WorkTree) {
 		0600,
 	)
 	require.NoError(t, err)
-	err = rep.AddAllAndCommit(fmt.Sprintf("initial commit %s", uuid.NewString()), nil)
+	err = rep.AddAllAndCommit(
+		t.Context(),
+		fmt.Sprintf("initial commit %s", uuid.NewString()),
+		nil,
+	)
 	require.NoError(t, err)
-	err = rep.Push(nil)
+	err = rep.Push(t.Context(), nil)
 	require.NoError(t, err)
 }
 
@@ -82,9 +91,9 @@ func commitAhead(t *testing.T, rep WorkTree) {
 		0o600,
 	)
 	require.NoError(t, err)
-	err = rep.AddAllAndCommit("remote commit", nil)
+	err = rep.AddAllAndCommit(t.Context(), "remote commit", nil)
 	require.NoError(t, err)
-	err = rep.Push(&PushOptions{TargetBranch: "ahead"})
+	err = rep.Push(t.Context(), &PushOptions{TargetBranch: "ahead"})
 	require.NoError(t, err)
 }
 
@@ -137,11 +146,11 @@ func enableFakeCommitSigning(t *testing.T, wt *workTree, trusted bool) {
 	err := os.WriteFile(fakeGPG, []byte(script), 0o755)
 	require.NoError(t, err)
 	_, err = libExec.Exec(wt.buildGitCommand(
-		"config", "--global", "gpg.program", fakeGPG,
+		t.Context(), "config", "--global", "gpg.program", fakeGPG,
 	))
 	require.NoError(t, err)
 	_, err = libExec.Exec(wt.buildGitCommand(
-		"config", "--global", "commit.gpgSign", "true",
+		t.Context(), "config", "--global", "commit.gpgSign", "true",
 	))
 	require.NoError(t, err)
 }
@@ -151,11 +160,11 @@ func enableFakeCommitSigning(t *testing.T, wt *workTree, trusted bool) {
 func disableFakeCommitSigning(t *testing.T, wt *workTree) {
 	t.Helper()
 	_, err := libExec.Exec(wt.buildGitCommand(
-		"config", "--unset", "--global", "commit.gpgSign",
+		t.Context(), "config", "--unset", "--global", "commit.gpgSign",
 	))
 	require.NoError(t, err)
 	_, err = libExec.Exec(wt.buildGitCommand(
-		"config", "--global", "commit.gpgSign", "false",
+		t.Context(), "config", "--global", "commit.gpgSign", "false",
 	))
 	require.NoError(t, err)
 }

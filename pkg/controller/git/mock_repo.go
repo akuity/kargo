@@ -1,107 +1,145 @@
 package git
 
+import "context"
+
 type MockRepo struct {
-	AddAllFn          func() error
+	AddAllFn          func(ctx context.Context) error
 	AddAllAndCommitFn func(
+		ctx context.Context,
 		message string,
 		commitOpts *CommitOptions,
 	) error
-	CleanFn                   func() error
-	ClearFn                   func() error
-	CloseFn                   func() error
-	CheckoutFn                func(branch string) error
-	CommitFn                  func(message string, opts *CommitOptions) error
-	CreateChildBranchFn       func(branch string) error
-	CreateOrphanedBranchFn    func(branch string) error
-	CreateTagFn               func(tag, msg string, opts *CreateTagOptions) error
-	CurrentBranchFn           func() (string, error)
-	DeleteBranchFn            func(branch string) error
+	CleanFn    func(ctx context.Context) error
+	ClearFn    func(ctx context.Context) error
+	CloseFn    func(ctx context.Context) error
+	CheckoutFn func(ctx context.Context, branch string) error
+	CommitFn   func(
+		ctx context.Context,
+		message string,
+		opts *CommitOptions,
+	) error
+	CreateChildBranchFn    func(ctx context.Context, branch string) error
+	CreateOrphanedBranchFn func(ctx context.Context, branch string) error
+	CreateTagFn            func(
+		ctx context.Context,
+		tag string,
+		msg string,
+		opts *CreateTagOptions,
+	) error
+	CurrentBranchFn           func(ctx context.Context) (string, error)
+	DeleteBranchFn            func(ctx context.Context, branch string) error
 	DirFn                     func() string
-	FetchFn                   func(opts *FetchOptions) error
-	HasDiffsFn                func() (bool, error)
+	FetchFn                   func(ctx context.Context, opts *FetchOptions) error
+	HasDiffsFn                func(ctx context.Context) (bool, error)
 	HomeDirFn                 func() string
-	GetDiffPathsForCommitIDFn func(commitID string) ([]string, error)
-	IsAncestorFn              func(parent string, child string) (bool, error)
-	IsRebasingFn              func() (bool, error)
-	LastCommitIDFn            func() (string, error)
-	ListTagsFn                func() ([]TagMetadata, error)
-	ListCommitsFn             func(opts *ListCommitsOptions) ([]CommitMetadata, error)
-	CommitMessageFn           func(id string) (string, error)
-	GetCommitSignatureInfoFn  func(string) (*CommitSignatureInfo, error)
-	IntegrateRemoteChangesFn  func(*IntegrationOptions) error
-	PullFn                    func(*PullOptions) error
-	PushFn                    func(*PushOptions) error
-	RefsHaveDiffsFn           func(commit1 string, commit2 string) (bool, error)
-	RemoteBranchExistsFn      func(branch string) (bool, error)
-	ResetHardFn               func() error
-	URLFn                     func() string
-	UpdateSubmodulesFn        func() error
+	GetDiffPathsForCommitIDFn func(
+		ctx context.Context,
+		commitID string,
+	) ([]string, error)
+	IsAncestorFn func(
+		ctx context.Context,
+		parent string,
+		child string,
+	) (bool, error)
+	IsRebasingFn   func(ctx context.Context) (bool, error)
+	LastCommitIDFn func(ctx context.Context) (string, error)
+	ListTagsFn     func(ctx context.Context) ([]TagMetadata, error)
+	ListCommitsFn  func(
+		ctx context.Context,
+		opts *ListCommitsOptions,
+	) ([]CommitMetadata, error)
+	CommitMessageFn          func(ctx context.Context, id string) (string, error)
+	GetCommitSignatureInfoFn func(
+		ctx context.Context,
+		commitID string,
+	) (*CommitSignatureInfo, error)
+	IntegrateRemoteChangesFn func(context.Context, *IntegrationOptions) error
+	PullFn                   func(context.Context, *PullOptions) error
+	PushFn                   func(context.Context, *PushOptions) error
+	RefsHaveDiffsFn          func(
+		ctx context.Context,
+		commit1 string,
+		commit2 string,
+	) (bool, error)
+	RemoteBranchExistsFn func(ctx context.Context, branch string) (bool, error)
+	ResetHardFn          func(ctx context.Context) error
+	URLFn                func() string
+	UpdateSubmodulesFn   func(ctx context.Context) error
 }
 
-func (m *MockRepo) AddAll() error {
-	return m.AddAllFn()
+func (m *MockRepo) AddAll(ctx context.Context) error {
+	return m.AddAllFn(ctx)
 }
 
 func (m *MockRepo) AddAllAndCommit(
+	ctx context.Context,
 	message string,
 	commitOpts *CommitOptions,
 ) error {
-	return m.AddAllAndCommitFn(message, commitOpts)
+	return m.AddAllAndCommitFn(ctx, message, commitOpts)
 }
 
-func (m *MockRepo) Clean() error {
-	return m.CleanFn()
+func (m *MockRepo) Clean(ctx context.Context) error {
+	return m.CleanFn(ctx)
 }
 
-func (m *MockRepo) Clear() error {
-	return m.ClearFn()
+func (m *MockRepo) Clear(ctx context.Context) error {
+	return m.ClearFn(ctx)
 }
 
-func (m *MockRepo) Close() error {
+func (m *MockRepo) Close(ctx context.Context) error {
 	if m.CloseFn == nil {
 		return nil
 	}
-	return m.CloseFn()
+	return m.CloseFn(ctx)
 }
 
-func (m *MockRepo) Checkout(branch string) error {
-	return m.CheckoutFn(branch)
+func (m *MockRepo) Checkout(ctx context.Context, branch string) error {
+	return m.CheckoutFn(ctx, branch)
 }
 
-func (m *MockRepo) Commit(message string, opts *CommitOptions) error {
-	return m.CommitFn(message, opts)
+func (m *MockRepo) Commit(
+	ctx context.Context,
+	message string,
+	opts *CommitOptions,
+) error {
+	return m.CommitFn(ctx, message, opts)
 }
 
-func (m *MockRepo) CreateChildBranch(branch string) error {
-	return m.CreateChildBranchFn(branch)
+func (m *MockRepo) CreateChildBranch(ctx context.Context, branch string) error {
+	return m.CreateChildBranchFn(ctx, branch)
 }
 
-func (m *MockRepo) CreateOrphanedBranch(branch string) error {
-	return m.CreateOrphanedBranchFn(branch)
+func (m *MockRepo) CreateOrphanedBranch(ctx context.Context, branch string) error {
+	return m.CreateOrphanedBranchFn(ctx, branch)
 }
 
-func (m *MockRepo) CreateTag(tag, msg string, opts *CreateTagOptions) error {
-	return m.CreateTagFn(tag, msg, opts)
+func (m *MockRepo) CreateTag(
+	ctx context.Context,
+	tag, msg string,
+	opts *CreateTagOptions,
+) error {
+	return m.CreateTagFn(ctx, tag, msg, opts)
 }
 
-func (m *MockRepo) CurrentBranch() (string, error) {
-	return m.CurrentBranchFn()
+func (m *MockRepo) CurrentBranch(ctx context.Context) (string, error) {
+	return m.CurrentBranchFn(ctx)
 }
 
-func (m *MockRepo) DeleteBranch(branch string) error {
-	return m.DeleteBranchFn(branch)
+func (m *MockRepo) DeleteBranch(ctx context.Context, branch string) error {
+	return m.DeleteBranchFn(ctx, branch)
 }
 
 func (m *MockRepo) Dir() string {
 	return m.DirFn()
 }
 
-func (m *MockRepo) Fetch(opts *FetchOptions) error {
-	return m.FetchFn(opts)
+func (m *MockRepo) Fetch(ctx context.Context, opts *FetchOptions) error {
+	return m.FetchFn(ctx, opts)
 }
 
-func (m *MockRepo) HasDiffs() (bool, error) {
-	return m.HasDiffsFn()
+func (m *MockRepo) HasDiffs(ctx context.Context) (bool, error) {
+	return m.HasDiffsFn(ctx)
 }
 
 func (m *MockRepo) HomeDir() string {
@@ -109,74 +147,91 @@ func (m *MockRepo) HomeDir() string {
 }
 
 func (m *MockRepo) GetDiffPathsForCommitID(
+	ctx context.Context,
 	commitID string,
 ) ([]string, error) {
-	return m.GetDiffPathsForCommitIDFn(commitID)
+	return m.GetDiffPathsForCommitIDFn(ctx, commitID)
 }
 
-func (m *MockRepo) IsAncestor(parent string, child string) (bool, error) {
-	return m.IsAncestorFn(parent, child)
+func (m *MockRepo) IsAncestor(
+	ctx context.Context,
+	parent string,
+	child string,
+) (bool, error) {
+	return m.IsAncestorFn(ctx, parent, child)
 }
 
-func (m *MockRepo) IsRebasing() (bool, error) {
-	return m.IsRebasingFn()
+func (m *MockRepo) IsRebasing(ctx context.Context) (bool, error) {
+	return m.IsRebasingFn(ctx)
 }
 
-func (m *MockRepo) LastCommitID() (string, error) {
-	return m.LastCommitIDFn()
+func (m *MockRepo) LastCommitID(ctx context.Context) (string, error) {
+	return m.LastCommitIDFn(ctx)
 }
 
-func (m *MockRepo) ListTags() ([]TagMetadata, error) {
-	return m.ListTagsFn()
+func (m *MockRepo) ListTags(ctx context.Context) ([]TagMetadata, error) {
+	return m.ListTagsFn(ctx)
 }
 
-func (m *MockRepo) ListCommits(opts *ListCommitsOptions) ([]CommitMetadata, error) {
-	return m.ListCommitsFn(opts)
+func (m *MockRepo) ListCommits(
+	ctx context.Context,
+	opts *ListCommitsOptions,
+) ([]CommitMetadata, error) {
+	return m.ListCommitsFn(ctx, opts)
 }
 
-func (m *MockRepo) CommitMessage(id string) (string, error) {
-	return m.CommitMessageFn(id)
+func (m *MockRepo) CommitMessage(
+	ctx context.Context,
+	id string,
+) (string, error) {
+	return m.CommitMessageFn(ctx, id)
 }
 
 func (m *MockRepo) GetCommitSignatureInfo(
+	ctx context.Context,
 	commitID string,
 ) (*CommitSignatureInfo, error) {
-	return m.GetCommitSignatureInfoFn(commitID)
+	return m.GetCommitSignatureInfoFn(ctx, commitID)
 }
 
 func (m *MockRepo) IntegrateRemoteChanges(
+	ctx context.Context,
 	opts *IntegrationOptions,
 ) error {
-	return m.IntegrateRemoteChangesFn(opts)
+	return m.IntegrateRemoteChangesFn(ctx, opts)
 }
 
-func (m *MockRepo) Pull(opts *PullOptions) error {
-	return m.PullFn(opts)
+func (m *MockRepo) Pull(ctx context.Context, opts *PullOptions) error {
+	return m.PullFn(ctx, opts)
 }
 
-func (m *MockRepo) Push(opts *PushOptions) error {
-	return m.PushFn(opts)
+func (m *MockRepo) Push(ctx context.Context, opts *PushOptions) error {
+	return m.PushFn(ctx, opts)
 }
 
 func (m *MockRepo) RefsHaveDiffs(
+	ctx context.Context,
 	commit1 string,
 	commit2 string,
 ) (bool, error) {
-	return m.RefsHaveDiffsFn(commit1, commit2)
+	return m.RefsHaveDiffsFn(ctx, commit1, commit2)
 }
 
-func (m *MockRepo) RemoteBranchExists(branch string) (bool, error) {
-	return m.RemoteBranchExistsFn(branch)
+func (m *MockRepo) RemoteBranchExists(
+	ctx context.Context,
+	branch string,
+) (bool, error) {
+	return m.RemoteBranchExistsFn(ctx, branch)
 }
 
-func (m *MockRepo) ResetHard() error {
-	return m.ResetHardFn()
+func (m *MockRepo) ResetHard(ctx context.Context) error {
+	return m.ResetHardFn(ctx)
 }
 
 func (m *MockRepo) URL() string {
 	return m.URLFn()
 }
 
-func (m *MockRepo) UpdateSubmodules() error {
-	return m.UpdateSubmodulesFn()
+func (m *MockRepo) UpdateSubmodules(ctx context.Context) error {
+	return m.UpdateSubmodulesFn(ctx)
 }
