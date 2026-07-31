@@ -21,15 +21,26 @@ import (
 	"github.com/akuity/kargo/pkg/logging"
 )
 
-const roleARNFormat = "arn:aws:iam::%s:role/kargo-project-%s"
+const (
+	// roleARNFormat produces the ARN of a Project-specific role in a given AWS
+	// account.
+	roleARNFormat = "arn:aws:iam::%s:role/kargo-project-%s"
 
-// externalIDFormat produces the external ID presented when assuming a
-// Project-specific role. It repeats the "kargo-project-" prefix of
-// roleARNFormat instead of sharing it, and deliberately so: the external ID
-// must go on being derived from the Project alone even if the role name ever
-// ceases to be. Collapsing the two into one expression would couple them back
-// together.
-const externalIDFormat = "kargo-project-%s"
+	// externalIDFormat produces the external ID presented when assuming a
+	// Project-specific role. It repeats the "kargo-project-" prefix of
+	// roleARNFormat instead of sharing it, and deliberately so: the external ID
+	// must go on being derived from the Project alone even if the role name ever
+	// ceases to be. Collapsing the two into one expression would couple them back
+	// together.
+	externalIDFormat = "kargo-project-%s"
+
+	// roleSessionNameBase identifies Kargo as the assumer of a Project-specific
+	// role. It appears in CloudTrail logs and in the ARN of the resulting
+	// session.
+	roleSessionNameBase = "kargo-controller"
+	// roleSessionNameMaxLength is the longest role session name AWS will accept.
+	roleSessionNameMaxLength = 64
+)
 
 func init() {
 	if provider := NewManagedIdentityProvider(context.Background()); provider != nil {
@@ -51,6 +62,10 @@ type ManagedIdentityProvider struct {
 	// safe because the credentials it carries are wrapped in a cache that
 	// refreshes them as they approach expiry.
 	cfg aws.Config
+
+	// roleSessionName is presented when assuming a Project-specific role. See
+	// roleSessionNameFor().
+	roleSessionName string
 
 	getAuthTokenFn func(
 		ctx context.Context,
@@ -119,6 +134,8 @@ func NewManagedIdentityProvider(ctx context.Context) credentials.Provider {
 		),
 		accountID: awsAccountID,
 		cfg:       cfg,
+		// SHARD_NAME carries the controller's own name, when it has one.
+		roleSessionName: roleSessionNameFor(os.Getenv("SHARD_NAME")),
 	}
 	p.getAuthTokenFn = p.getAuthToken
 	p.getAuthTokenAsFn = p.getAuthTokenAs
@@ -316,6 +333,7 @@ func (p *ManagedIdentityProvider) getAuthTokenAs(
 				stsSvc,
 				identity.roleARN,
 				func(aro *stscreds.AssumeRoleOptions) {
+					aro.RoleSessionName = p.roleSessionName
 					// IMPORTANT: See the comment on authIdentity.externalID for why this
 					// is done.
 					aro.ExternalID = aws.String(identity.externalID)
@@ -337,4 +355,19 @@ func (p *ManagedIdentityProvider) getAuthTokenAs(
 		expiry = *output.AuthorizationData[0].ExpiresAt
 	}
 	return *output.AuthorizationData[0].AuthorizationToken, expiry, nil
+}
+
+// roleSessionNameFor returns the session name to present when assuming a
+// Project-specific role. The controller's own name, if it has one, is appended,
+// so that installations running more than one controller can tell them apart. A
+// name long enough to breach AWS's limit is truncated.
+func roleSessionNameFor(controllerName string) string {
+	if controllerName == "" {
+		return roleSessionNameBase
+	}
+	name := fmt.Sprintf("%s-%s", roleSessionNameBase, controllerName)
+	if len(name) > roleSessionNameMaxLength {
+		return name[:roleSessionNameMaxLength]
+	}
+	return name
 }

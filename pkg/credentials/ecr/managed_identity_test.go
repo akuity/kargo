@@ -5,6 +5,7 @@ import (
 	"errors"
 	"fmt"
 	"net/http"
+	"strings"
 	"testing"
 	"time"
 
@@ -263,6 +264,46 @@ func TestManagedIdentityProvider_GetCredentials(t *testing.T) {
 				},
 			)
 			testCase.assertions(t, testCase.provider.tokenCache, creds, err)
+		})
+	}
+}
+
+func TestRoleSessionNameFor(t *testing.T) {
+	testCases := []struct {
+		name           string
+		controllerName string
+		expected       string
+	}{
+		{
+			name:     "controller has no name",
+			expected: "kargo-controller",
+		},
+		{
+			name:           "controller has a name",
+			controllerName: "shard-1",
+			expected:       "kargo-controller-shard-1",
+		},
+		{
+			// A name this long pushes the session name past the 64 characters AWS
+			// permits, so the excess is truncated away.
+			name:           "controller name too long",
+			controllerName: strings.Repeat("a", 40) + strings.Repeat("b", 20),
+			expected:       "kargo-controller-" + strings.Repeat("a", 40) + strings.Repeat("b", 7),
+		},
+		{
+			// One character shorter than the case above, so it just fits.
+			name:           "longest controller name that still fits",
+			controllerName: strings.Repeat("a", 47),
+			expected:       "kargo-controller-" + strings.Repeat("a", 47),
+		},
+	}
+
+	for _, testCase := range testCases {
+		t.Run(testCase.name, func(t *testing.T) {
+			t.Parallel()
+			actual := roleSessionNameFor(testCase.controllerName)
+			assert.Equal(t, testCase.expected, actual)
+			assert.LessOrEqual(t, len(actual), roleSessionNameMaxLength)
 		})
 	}
 }

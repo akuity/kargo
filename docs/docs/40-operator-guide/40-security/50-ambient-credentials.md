@@ -157,6 +157,16 @@ policy of a Project-specific role should be configured as follows:
 
 :::info
 
+Kargo also names each role session it establishes, which identifies it in
+[AWS CloudTrail](https://docs.aws.amazon.com/awscloudtrail/latest/userguide/cloudtrail-user-guide.html)
+logs and in the ARN of the resulting session. The name is `kargo-controller`, or
+`kargo-controller-<name>` for a controller that has a name of its own, as in the
+case of a sharded topology.
+
+:::
+
+:::info
+
 Tokens Kargo obtains for accessing any specific ECR registry on behalf of any
 specific Kargo Project are valid for 12 hours and cached until shortly before
 they expire. A controller restart clears the cache.
