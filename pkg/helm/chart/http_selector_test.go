@@ -1,6 +1,7 @@
 package chart
 
 import (
+	"context"
 	"fmt"
 	"net/http"
 	"net/http/httptest"
@@ -204,4 +205,29 @@ func Test_httpSelector_Select(t *testing.T) {
 			testCase.assertions(t, versions, err)
 		})
 	}
+}
+
+func Test_httpSelector_Select_honorsContext(t *testing.T) {
+	// A server that never responds within the test's lifetime.
+	blocked := make(chan struct{})
+	testServer := httptest.NewServer(
+		http.HandlerFunc(func(http.ResponseWriter, *http.Request) {
+			<-blocked
+		}),
+	)
+	t.Cleanup(func() {
+		close(blocked)
+		testServer.Close()
+	})
+
+	ctx, cancel := context.WithCancel(t.Context())
+	cancel()
+
+	s := &httpSelector{
+		baseSelector: &baseSelector{repoURL: testServer.URL},
+		indexURL:     fmt.Sprintf("%s/index.yaml", testServer.URL),
+		chartName:    "fake-chart",
+	}
+	_, err := s.Select(ctx)
+	require.ErrorIs(t, err, context.Canceled)
 }

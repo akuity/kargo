@@ -54,10 +54,10 @@ func (n *newestTagSelector) Select(ctx context.Context) (
 		return nil, err
 	}
 	defer func() {
-		_ = repo.Close()
+		_ = repo.Close(ctx)
 	}()
 
-	tags, err := repo.ListTags()
+	tags, err := repo.ListTags(ctx)
 	if err != nil {
 		return nil, err
 	}
@@ -71,7 +71,7 @@ func (n *newestTagSelector) Select(ctx context.Context) (
 	// Note: Tags are already sorted in descending order by creation date when
 	// retrieved. No further sorting is required.
 
-	if tags, err = n.filterTagsByDiffPathsFn(repo, tags); err != nil {
+	if tags, err = n.filterTagsByDiffPathsFn(ctx, repo, tags); err != nil {
 		return nil, fmt.Errorf("error filtering tags by paths: %w", err)
 	}
 

@@ -3,6 +3,7 @@ package git
 import (
 	"bufio"
 	"bytes"
+	"context"
 	"fmt"
 	"os"
 	"strings"
@@ -34,6 +35,7 @@ type RemoteRef struct {
 // the tag is re-pointed, and results are only ever compared against other
 // LsRemote output produced the same way.
 func LsRemote(
+	ctx context.Context,
 	repoURL string,
 	clientOpts *ClientOptions,
 	patterns ...string,
@@ -50,13 +52,13 @@ func LsRemote(
 	// client configuration (and any SSH key material) needed to authenticate.
 	// There is no working tree or clone -- only the home directory -- so cleanup
 	// is a single RemoveAll.
-	if err := b.setupDirs(""); err != nil {
+	if err := b.setupDirs(ctx, ""); err != nil {
 		return nil, err
 	}
 	defer func() {
 		_ = os.RemoveAll(b.homeDir)
 	}()
-	if err := b.setupClient(clientOpts); err != nil {
+	if err := b.setupClient(ctx, clientOpts); err != nil {
 		return nil, err
 	}
 
@@ -65,7 +67,7 @@ func LsRemote(
 	// branch. Annotated tags' peeled entries are instead dropped in
 	// parseLsRemoteOutput.
 	args := append([]string{"ls-remote", b.accessURL}, patterns...)
-	cmd := b.buildGitCommand(args...)
+	cmd := b.buildGitCommand(ctx, args...)
 	// Override the cmd.Dir that's set by buildGitCommand(). It's normally the
 	// repository's path, which does not exist here because nothing was cloned.
 	cmd.Dir = b.homeDir

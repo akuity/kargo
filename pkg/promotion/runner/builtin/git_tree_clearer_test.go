@@ -64,6 +64,7 @@ func Test_gitTreeOverwriter_run(t *testing.T) {
 	// gitCloner might have so we can verify gitPusher's ability to reload the
 	// working tree from the file system.
 	repo, err := git.CloneBare(
+		t.Context(),
 		testRepoURL,
 		nil,
 		&git.BareCloneOptions{
@@ -72,12 +73,13 @@ func Test_gitTreeOverwriter_run(t *testing.T) {
 	)
 	require.NoError(t, err)
 	t.Cleanup(func() {
-		_ = repo.Close()
+		_ = repo.Close(t.Context())
 	})
 	// "master" is still the default branch name for a new repository
 	// unless you configure it otherwise.
 	workTreePath := filepath.Join(workDir, "master")
 	workTree, err := repo.AddWorkTree(
+		t.Context(),
 		workTreePath,
 		&git.AddWorkTreeOptions{Orphan: true},
 	)

@@ -121,6 +121,7 @@ func (g *gitPROpener) run(
 	}
 
 	repo, err := git.Clone(
+		ctx,
 		cfg.RepoURL,
 		&git.ClientOptions{
 			Credentials:           repoCreds,
@@ -135,7 +136,7 @@ func (g *gitPROpener) run(
 		return promotion.StepResult{Status: kargoapi.PromotionStepStatusErrored},
 			fmt.Errorf("error cloning %s: %w", cfg.RepoURL, err)
 	}
-	defer repo.Close()
+	defer repo.Close(ctx)
 
 	gpOpts := &gitprovider.Options{
 		InsecureSkipTLSVerify: cfg.InsecureSkipTLSVerify,
@@ -182,7 +183,7 @@ func (g *gitPROpener) run(
 	// we're free to create a new one.
 
 	// Get the title from the commit message of the head of the source branch
-	commitMsg, err := repo.CommitMessage(sourceBranch)
+	commitMsg, err := repo.CommitMessage(ctx, sourceBranch)
 	if err != nil {
 		return promotion.StepResult{Status: kargoapi.PromotionStepStatusErrored}, fmt.Errorf(
 			"error getting commit message from head of branch %s: %w",
@@ -190,7 +191,7 @@ func (g *gitPROpener) run(
 		)
 	}
 
-	exists, err := repo.RemoteBranchExists(cfg.TargetBranch)
+	exists, err := repo.RemoteBranchExists(ctx, cfg.TargetBranch)
 	if err != nil {
 		return promotion.StepResult{Status: kargoapi.PromotionStepStatusErrored}, fmt.Errorf(
 			"error checking if remote branch %q of repo %s exists: %w",
@@ -205,6 +206,7 @@ func (g *gitPROpener) run(
 
 	// Ensure we have the latest commits from the remote before checking for diffs.
 	err = repo.Fetch(
+		ctx,
 		&git.FetchOptions{
 			Branch: cfg.TargetBranch,
 			Depth:  1,
@@ -216,7 +218,7 @@ func (g *gitPROpener) run(
 
 	remoteSrc := fmt.Sprintf("origin/%s", sourceBranch)
 	remoteTarget := fmt.Sprintf("origin/%s", cfg.TargetBranch)
-	hasChanges, err := repo.RefsHaveDiffs(remoteSrc, remoteTarget)
+	hasChanges, err := repo.RefsHaveDiffs(ctx, remoteSrc, remoteTarget)
 	if err != nil {
 		return promotion.StepResult{Status: kargoapi.PromotionStepStatusErrored}, fmt.Errorf(
 			"failed to check for changes between remote branches %s and %s: %w",
@@ -336,11 +338,11 @@ func (g *gitPROpener) getExistingPR(
 	gitProv gitprovider.Interface,
 	targetBranch string,
 ) (*gitprovider.PullRequest, error) {
-	commitID, err := repo.LastCommitID()
+	commitID, err := repo.LastCommitID(ctx)
 	if err != nil {
 		return nil, fmt.Errorf("error getting last commit ID: %w", err)
 	}
-	sourceBranch, err := repo.CurrentBranch()
+	sourceBranch, err := repo.CurrentBranch(ctx)
 	if err != nil {
 		return nil, fmt.Errorf("error getting current branch: %w", err)
 	}

@@ -181,7 +181,7 @@ func (g *githubPusher) run(
 		)
 	}
 	loadOpts := &git.LoadWorkTreeOptions{}
-	workTree, err := git.LoadWorkTree(path, loadOpts)
+	workTree, err := git.LoadWorkTree(ctx, path, loadOpts)
 	if err != nil {
 		return promotion.StepResult{Status: kargoapi.PromotionStepStatusErrored},
 			fmt.Errorf("error loading working tree from %s: %w", cfg.Path, err)
@@ -228,7 +228,7 @@ func (g *githubPusher) run(
 				"credentials for %s are missing a password/token", workTree.URL(),
 			)}
 	}
-	if workTree, err = git.LoadWorkTree(path, loadOpts); err != nil {
+	if workTree, err = git.LoadWorkTree(ctx, path, loadOpts); err != nil {
 		return promotion.StepResult{Status: kargoapi.PromotionStepStatusErrored},
 			fmt.Errorf("error loading working tree from %s: %w", cfg.Path, err)
 	}
@@ -274,7 +274,7 @@ func (g *githubPusher) run(
 		// If targetBranch is still empty, we want to set it to the current branch
 		// because we will want to return the branch that was pushed to, but we
 		// don't want to mess with the options any further.
-		if pushCfg.targetBranch, err = workTree.CurrentBranch(); err != nil {
+		if pushCfg.targetBranch, err = workTree.CurrentBranch(ctx); err != nil {
 			return promotion.StepResult{Status: kargoapi.PromotionStepStatusErrored},
 				fmt.Errorf("error getting current branch: %w", err)
 		}
@@ -357,7 +357,7 @@ func (g *githubPusher) run(
 
 	// Sync the local branch with the remote after API replay, since the
 	// replayed commits have new SHAs.
-	if err = workTree.Pull(&git.PullOptions{
+	if err = workTree.Pull(ctx, &git.PullOptions{
 		Branch: pushCfg.targetBranch,
 		Force:  true,
 	}); err != nil {
@@ -365,7 +365,7 @@ func (g *githubPusher) run(
 			fmt.Errorf("error syncing local branch after push: %w", err)
 	}
 
-	commitID, err := workTree.LastCommitID()
+	commitID, err := workTree.LastCommitID(ctx)
 	if err != nil {
 		return promotion.StepResult{Status: kargoapi.PromotionStepStatusErrored},
 			fmt.Errorf("error getting last commit ID: %w", err)
@@ -423,6 +423,7 @@ func (g *githubPusher) push(
 	// diverged from it. Start by integrating any remote changes we don't have
 	// locally.
 	if err := workTree.IntegrateRemoteChanges(
+		ctx,
 		&git.IntegrationOptions{
 			TargetBranch:      opts.targetBranch,
 			IntegrationPolicy: opts.integrationPolicy,
@@ -437,7 +438,7 @@ func (g *githubPusher) push(
 
 	// Force push the local branch to a staging ref. This gets all objects onto
 	// GitHub without creating a visible branch.
-	if err := workTree.Push(&git.PushOptions{
+	if err := workTree.Push(ctx, &git.PushOptions{
 		TargetBranch: opts.stagingRef,
 		Force:        true,
 	}); err != nil {
@@ -448,7 +449,7 @@ func (g *githubPusher) push(
 	// to be the same commit, so we can use the ID of the commit at the head of
 	// the local branch as the source commit for the upcoming comparison to the
 	// target branch.
-	sourceHead, err := workTree.LastCommitID()
+	sourceHead, err := workTree.LastCommitID(ctx)
 	if err != nil {
 		return fmt.Errorf("error getting source HEAD: %w", err)
 	}
@@ -459,7 +460,7 @@ func (g *githubPusher) push(
 	)
 
 	// We need to know if the remote target branch exists.
-	targetBranchExists, err := workTree.RemoteBranchExists(opts.targetBranch)
+	targetBranchExists, err := workTree.RemoteBranchExists(ctx, opts.targetBranch)
 	if err != nil {
 		return fmt.Errorf(
 			"error checking if remote branch %s exists: %w",
@@ -476,7 +477,7 @@ func (g *githubPusher) push(
 	baseRefStr := "heads/" + opts.targetBranch
 	if !targetBranchExists {
 		var currentBranch string
-		if currentBranch, err = workTree.CurrentBranch(); err != nil {
+		if currentBranch, err = workTree.CurrentBranch(ctx); err != nil {
 			return fmt.Errorf("error getting current branch name: %w", err)
 		}
 		baseRefStr = "heads/" + currentBranch
@@ -615,7 +616,7 @@ func (g *githubPusher) replayCommits(
 		}
 
 		// Get signature info for trust evaluation.
-		sigInfo, err := workTree.GetCommitSignatureInfo(repoCommit.GetSHA())
+		sigInfo, err := workTree.GetCommitSignatureInfo(ctx, repoCommit.GetSHA())
 		if err != nil {
 			return "", fmt.Errorf(
 				"error getting signature info for commit %s: %w",

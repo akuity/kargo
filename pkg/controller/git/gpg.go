@@ -1,6 +1,7 @@
 package git
 
 import (
+	"context"
 	"errors"
 	"fmt"
 	"strings"
@@ -38,11 +39,14 @@ type CommitSignatureInfo struct {
 // commit, including whether it is signed by a trusted key and the identity
 // of the signer.
 func (w *workTree) GetCommitSignatureInfo(
+	ctx context.Context,
 	commitID string,
 ) (*CommitSignatureInfo, error) {
 	// A single git log call retrieves trust status (%G?) and the signer
 	// identity (%GS, formatted as "Name <email>") separated by a tab.
-	cmd := w.buildGitCommand("log", "-1", "--format=%G?\t%GS", commitID, "--")
+	cmd := w.buildGitCommand(
+		ctx, "log", "-1", "--format=%G?\t%GS", commitID, "--",
+	)
 	res, err := libExec.Exec(cmd)
 	if err != nil {
 		return nil, fmt.Errorf(
@@ -86,9 +90,10 @@ func parseSignerIdentity(signer string) (string, string) {
 //   - E: signature cannot be checked (missing key)
 //   - N: no signature
 func (w *workTree) verifyCommitSignature(
+	ctx context.Context,
 	commitID string,
 ) (signatureStatus, error) {
-	cmd := w.buildGitCommand("log", "-1", "--format=%G?", commitID, "--")
+	cmd := w.buildGitCommand(ctx, "log", "-1", "--format=%G?", commitID, "--")
 	res, err := libExec.Exec(cmd)
 	if err != nil {
 		return signatureUnsigned, fmt.Errorf(
@@ -109,8 +114,8 @@ func (w *workTree) verifyCommitSignature(
 
 // isSigningConfigured returns true if GPG commit signing is enabled in the
 // git configuration for this repository.
-func (w *workTree) isSigningConfigured() (bool, error) {
-	cmd := w.buildGitCommand("config", "--get", "commit.gpgSign")
+func (w *workTree) isSigningConfigured(ctx context.Context) (bool, error) {
+	cmd := w.buildGitCommand(ctx, "config", "--get", "commit.gpgSign")
 	res, err := libExec.Exec(cmd)
 	if err != nil {
 		var exitErr *libExec.ExitError
