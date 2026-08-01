@@ -24,10 +24,12 @@ const (
 	cacheTTL = 150 * time.Minute
 	// cleanupInterval is how often expired tokens are evicted from the cache.
 	cleanupInterval = 30 * time.Minute
+
 	// acrTokenUsername is the fixed username used for ACR token authentication
 	acrTokenUsername = "00000000-0000-0000-0000-000000000000"
 	// acrScope is the Azure AD scope required for ACR authentication
 	acrScope = "https://containerregistry.azure.net/.default"
+
 	// tokenAcquisitionTimeout bounds a single token acquisition. Because an
 	// acquisition executes under a context detached from any caller's, this is
 	// the only thing bounding its duration. It is generous because it serves only
@@ -165,12 +167,13 @@ func (p *WorkloadIdentityProvider) loadAccessToken(
 	// The ACR refresh token exchange API does not expose token expiry, so no TTL
 	// of the token's own can be computed. A TTL of zero defers to the cache's
 	// default.
-	var ttl time.Duration
 	logger.Debug(
 		"caching access token",
-		"ttl", cacheTTL,
+		"ttl", cacheTTL, // This is the default TTL the cache is actually using
 	)
-	return accessToken, &ttl, nil
+	return accessToken,
+		new(time.Duration), // zero TTL defers to the cache's default TTL
+		nil
 }
 
 // getAccessToken returns an ACR refresh token using Azure workload identity.
