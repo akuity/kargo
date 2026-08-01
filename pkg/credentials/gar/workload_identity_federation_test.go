@@ -6,7 +6,6 @@ import (
 	"testing"
 	"time"
 
-	"github.com/patrickmn/go-cache"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 	"golang.org/x/oauth2"
@@ -124,53 +123,21 @@ func TestWorkloadIdentityFederationProvider_GetCredentials(t *testing.T) {
 	)
 
 	testCases := []struct {
-		name                  string
-		provider              *WorkloadIdentityFederationProvider
-		setupTokenSourceCache func(c *cache.Cache)
-		project               string
-		credType              credentials.Type
-		repoURL               string
-		assertions            func(
+		name       string
+		provider   *WorkloadIdentityFederationProvider
+		project    string
+		credType   credentials.Type
+		repoURL    string
+		assertions func(
 			t *testing.T,
-			tokenSourceCache *cache.Cache,
 			creds *credentials.Credentials,
 			err error,
 		)
 	}{
 		{
-			name: "token source cache hit",
-			provider: &WorkloadIdentityFederationProvider{
-				projectID:        fakeProjectID,
-				tokenSourceCache: cache.New(10*time.Hour, time.Hour),
-				// A token distinct from the cached token source's, so that skipping
-				// the token source cache and acquiring one instead is detectable.
-				getAccessTokenFn: func(context.Context, string) (string, time.Time, error) {
-					return "token-from-an-acquisition", time.Now().Add(time.Hour), nil
-				},
-			},
-			setupTokenSourceCache: func(c *cache.Cache) {
-				c.Set(tokenCacheKey(fakeProject), newFakeTokenSource(fakeToken), cache.DefaultExpiration)
-			},
-			project:  fakeProject,
-			credType: credentials.TypeImage,
-			repoURL:  fakeGCRRepoURL,
-			assertions: func(
-				t *testing.T,
-				_ *cache.Cache,
-				creds *credentials.Credentials,
-				err error,
-			) {
-				assert.NoError(t, err)
-				assert.NotNil(t, creds)
-				assert.Equal(t, accessTokenUsername, creds.Username)
-				assert.Equal(t, fakeToken, creds.Password)
-			},
-		},
-		{
 			name: "token obtained",
 			provider: &WorkloadIdentityFederationProvider{
-				projectID:        fakeProjectID,
-				tokenSourceCache: cache.New(10*time.Hour, time.Hour),
+				projectID: fakeProjectID,
 				getAccessTokenFn: func(context.Context, string) (string, time.Time, error) {
 					return fakeToken, time.Now().Add(time.Hour), nil
 				},
@@ -180,7 +147,6 @@ func TestWorkloadIdentityFederationProvider_GetCredentials(t *testing.T) {
 			repoURL:  fakeGCRRepoURL,
 			assertions: func(
 				t *testing.T,
-				_ *cache.Cache,
 				creds *credentials.Credentials,
 				err error,
 			) {
@@ -193,8 +159,7 @@ func TestWorkloadIdentityFederationProvider_GetCredentials(t *testing.T) {
 		{
 			name: "token obtained, but too near expiry to cache",
 			provider: &WorkloadIdentityFederationProvider{
-				projectID:        fakeProjectID,
-				tokenSourceCache: cache.New(10*time.Hour, time.Hour),
+				projectID: fakeProjectID,
 				getAccessTokenFn: func(context.Context, string) (string, time.Time, error) {
 					return fakeToken, time.Now().Add(-time.Hour), nil
 				},
@@ -204,7 +169,6 @@ func TestWorkloadIdentityFederationProvider_GetCredentials(t *testing.T) {
 			repoURL:  fakeGCRRepoURL,
 			assertions: func(
 				t *testing.T,
-				_ *cache.Cache,
 				creds *credentials.Credentials,
 				err error,
 			) {
@@ -216,8 +180,7 @@ func TestWorkloadIdentityFederationProvider_GetCredentials(t *testing.T) {
 		{
 			name: "error in getAccessToken",
 			provider: &WorkloadIdentityFederationProvider{
-				projectID:        fakeProjectID,
-				tokenSourceCache: cache.New(10*time.Hour, time.Hour),
+				projectID: fakeProjectID,
 				getAccessTokenFn: func(context.Context, string) (string, time.Time, error) {
 					return "", time.Time{}, fmt.Errorf("token fetch error")
 				},
@@ -227,7 +190,6 @@ func TestWorkloadIdentityFederationProvider_GetCredentials(t *testing.T) {
 			repoURL:  fakeGCRRepoURL,
 			assertions: func(
 				t *testing.T,
-				_ *cache.Cache,
 				creds *credentials.Credentials,
 				err error,
 			) {
@@ -239,8 +201,7 @@ func TestWorkloadIdentityFederationProvider_GetCredentials(t *testing.T) {
 		{
 			name: "empty token from getAccessToken falls back to default token source",
 			provider: &WorkloadIdentityFederationProvider{
-				projectID:        fakeProjectID,
-				tokenSourceCache: cache.New(10*time.Hour, time.Hour),
+				projectID: fakeProjectID,
 				getAccessTokenFn: func(context.Context, string) (string, time.Time, error) {
 					return "", time.Time{}, nil
 				},
@@ -251,7 +212,6 @@ func TestWorkloadIdentityFederationProvider_GetCredentials(t *testing.T) {
 			repoURL:  fakeGCRRepoURL,
 			assertions: func(
 				t *testing.T,
-				tokenSourceCache *cache.Cache,
 				creds *credentials.Credentials,
 				err error,
 			) {
@@ -259,15 +219,28 @@ func TestWorkloadIdentityFederationProvider_GetCredentials(t *testing.T) {
 				assert.NotNil(t, creds)
 				assert.Equal(t, accessTokenUsername, creds.Username)
 				assert.Equal(t, fakeToken, creds.Password)
-
-				// Verify the token source was cached
-				tokenSource, found := tokenSourceCache.Get(tokenCacheKey(fakeProject))
-				assert.True(t, found)
-				ts, ok := tokenSource.(oauth2.TokenSource)
-				assert.True(t, ok)
-				token, err := ts.Token()
-				assert.NoError(t, err)
-				assert.Equal(t, fakeToken, token.AccessToken)
+			},
+		},
+		{
+			name: "error from default token source",
+			provider: &WorkloadIdentityFederationProvider{
+				projectID: fakeProjectID,
+				getAccessTokenFn: func(context.Context, string) (string, time.Time, error) {
+					return "", time.Time{}, nil
+				},
+				tokenSource: newFailingTokenSource(fmt.Errorf("token source error")),
+			},
+			project:  fakeProject,
+			credType: credentials.TypeImage,
+			repoURL:  fakeGCRRepoURL,
+			assertions: func(
+				t *testing.T,
+				creds *credentials.Credentials,
+				err error,
+			) {
+				assert.ErrorContains(t, err, "error getting GCP access token")
+				assert.ErrorContains(t, err, "token source error")
+				assert.Nil(t, creds)
 			},
 		},
 	}
@@ -279,8 +252,7 @@ func TestWorkloadIdentityFederationProvider_GetCredentials(t *testing.T) {
 			// A cache that caches nothing leaves loading as the only way a caller
 			// can obtain a token, so every case exercises the load. Whether a hit is
 			// served from the cache instead is the cache's concern, not this
-			// provider's. The token source cache is this provider's own, and stays
-			// real.
+			// provider's.
 			tokenCache, err := coalescing.NewCache(
 				testCase.provider.loadAccessToken,
 				&coalescing.CacheOptions{
@@ -291,9 +263,6 @@ func TestWorkloadIdentityFederationProvider_GetCredentials(t *testing.T) {
 			require.NoError(t, err)
 			testCase.provider.tokenCache = tokenCache
 
-			if testCase.setupTokenSourceCache != nil {
-				testCase.setupTokenSourceCache(testCase.provider.tokenSourceCache)
-			}
 			creds, err := testCase.provider.GetCredentials(
 				t.Context(),
 				credentials.Request{
@@ -302,26 +271,54 @@ func TestWorkloadIdentityFederationProvider_GetCredentials(t *testing.T) {
 					RepoURL: testCase.repoURL,
 				},
 			)
-			testCase.assertions(
-				t,
-				testCase.provider.tokenSourceCache,
-				creds,
-				err,
-			)
+			testCase.assertions(t, creds, err)
 		})
 	}
 }
 
-type fakeTokenSource struct {
-	token string
-}
+func TestWorkloadIdentityFederationProvider_GetCredentials_noProjectToken(t *testing.T) {
+	t.Parallel()
 
-func newFakeTokenSource(token string) oauth2.TokenSource {
-	return &fakeTokenSource{token: token}
-}
+	// A Project with no service account of its own has that fact cached in place
+	// of a token, so the lookup that established it is not repeated. The token
+	// itself cannot be cached in its stead, the controller's own token source
+	// being what refreshes it.
 
-func (f *fakeTokenSource) Token() (*oauth2.Token, error) {
-	return &oauth2.Token{AccessToken: f.token}, nil
+	const fakeRepoURL = "us-central1-docker.pkg.dev/my-project/my-repo"
+
+	var lookups int
+	provider := &WorkloadIdentityFederationProvider{
+		tokenSource: newFakeTokenSource("token-from-default-source"),
+		getAccessTokenFn: func(context.Context, string) (string, time.Time, error) {
+			lookups++
+			return "", time.Time{}, nil
+		},
+	}
+	tokenCache, err := coalescing.NewCache(
+		provider.loadAccessToken,
+		&coalescing.CacheOptions{
+			LoadTimeout:     new(tokenAcquisitionTimeout),
+			CleanupInterval: new(time.Hour),
+		},
+	)
+	require.NoError(t, err)
+	provider.tokenCache = tokenCache
+
+	for range 2 {
+		creds, credsErr := provider.GetCredentials(
+			t.Context(),
+			credentials.Request{
+				Type:    credentials.TypeImage,
+				Project: "project-without-a-service-account",
+				RepoURL: fakeRepoURL,
+			},
+		)
+		require.NoError(t, credsErr)
+		require.NotNil(t, creds)
+		require.Equal(t, accessTokenUsername, creds.Username)
+		require.Equal(t, "token-from-default-source", creds.Password)
+	}
+	require.Equal(t, 1, lookups)
 }
 
 func TestWorkloadIdentityFederationProvider_GetCredentials_perProject(t *testing.T) {
@@ -336,7 +333,6 @@ func TestWorkloadIdentityFederationProvider_GetCredentials_perProject(t *testing
 	const fakeRepoURL = "us-central1-docker.pkg.dev/my-project/my-repo"
 
 	provider := &WorkloadIdentityFederationProvider{
-		tokenSourceCache: cache.New(time.Hour, 0),
 		getAccessTokenFn: func(
 			_ context.Context,
 			project string,
@@ -369,4 +365,28 @@ func TestWorkloadIdentityFederationProvider_GetCredentials_perProject(t *testing
 		require.Equal(t, accessTokenUsername, creds.Username)
 		require.Equal(t, "token-for-"+project, creds.Password)
 	}
+}
+
+type fakeTokenSource struct {
+	token string
+}
+
+func newFakeTokenSource(token string) oauth2.TokenSource {
+	return &fakeTokenSource{token: token}
+}
+
+func (f *fakeTokenSource) Token() (*oauth2.Token, error) {
+	return &oauth2.Token{AccessToken: f.token}, nil
+}
+
+type failingTokenSource struct {
+	err error
+}
+
+func newFailingTokenSource(err error) oauth2.TokenSource {
+	return &failingTokenSource{err: err}
+}
+
+func (f *failingTokenSource) Token() (*oauth2.Token, error) {
+	return nil, f.err
 }
