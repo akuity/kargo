@@ -91,6 +91,11 @@
       "type": "string",
       "description": "The body of the HTTP request."
     },
+    "bodyFromFile": {
+      "type": "string",
+      "minLength": 1,
+      "description": "A path relative to the promotion work directory whose contents are used as the HTTP request body. Mutually exclusive with body."
+    },
     "insecureSkipTLSVerify": {
       "type": "boolean",
       "description": "Whether to skip TLS verification when making the request. (Not recommended.)"

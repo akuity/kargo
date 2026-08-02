@@ -9,9 +9,11 @@ import (
 	"mime"
 	"net/http"
 	"net/url"
+	"os"
 	"strings"
 	"time"
 
+	securejoin "github.com/cyphar/filepath-securejoin"
 	"github.com/expr-lang/expr"
 	"github.com/hashicorp/go-cleanhttp"
 	"github.com/xeipuuv/gojsonschema"
@@ -84,15 +86,24 @@ func (h *httpRequester) Run(
 // convert validates httpRequester configuration against a JSON schema and
 // converts it into a builtin.HTTPConfig struct.
 func (h *httpRequester) convert(cfg promotion.Config) (builtin.HTTPConfig, error) {
-	return validateAndConvert[builtin.HTTPConfig](h.schemaLoader, cfg, stepKindHTTP)
+	_, hasBody := cfg["body"]
+	_, hasBodyFromFile := cfg["bodyFromFile"]
+	if hasBody && hasBodyFromFile {
+		return builtin.HTTPConfig{}, fmt.Errorf("body and bodyFromFile cannot be set together")
+	}
+	converted, err := validateAndConvert[builtin.HTTPConfig](h.schemaLoader, cfg, stepKindHTTP)
+	if err != nil {
+		return builtin.HTTPConfig{}, err
+	}
+	return converted, nil
 }
 
 func (h *httpRequester) run(
 	ctx context.Context,
-	_ *promotion.StepContext,
+	stepCtx *promotion.StepContext,
 	cfg builtin.HTTPConfig,
 ) (promotion.StepResult, error) {
-	req, err := h.buildRequest(ctx, cfg)
+	req, err := h.buildRequest(ctx, stepCtx, cfg)
 	if err != nil {
 		return promotion.StepResult{Status: kargoapi.PromotionStepStatusErrored},
 			&promotion.TerminalError{Err: fmt.Errorf("error building HTTP request: %w", err)}
@@ -299,17 +310,33 @@ func (h *httpRequester) extractErrorMessageFromResponse(
 
 func (h *httpRequester) buildRequest(
 	ctx context.Context,
+	stepCtx *promotion.StepContext,
 	cfg builtin.HTTPConfig,
 ) (*http.Request, error) {
 	method := cfg.Method
 	if method == "" {
 		method = http.MethodGet
 	}
+	body := cfg.Body
+	if cfg.BodyFromFile != "" {
+		if stepCtx == nil {
+			return nil, fmt.Errorf("cannot read bodyFromFile %q without a step context", cfg.BodyFromFile)
+		}
+		bodyPath, err := securejoin.SecureJoin(stepCtx.WorkDir, cfg.BodyFromFile)
+		if err != nil {
+			return nil, fmt.Errorf("could not secure join bodyFromFile %q: %w", cfg.BodyFromFile, err)
+		}
+		bodyBytes, err := os.ReadFile(bodyPath)
+		if err != nil {
+			return nil, fmt.Errorf("could not read bodyFromFile %q: %w", cfg.BodyFromFile, err)
+		}
+		body = string(bodyBytes)
+	}
 	req, err := http.NewRequestWithContext(
 		ctx,
 		method,
 		cfg.URL,
-		bytes.NewBufferString(cfg.Body),
+		bytes.NewBufferString(body),
 	)
 	if err != nil {
 		return nil, fmt.Errorf("error creating HTTP request: %w", err)

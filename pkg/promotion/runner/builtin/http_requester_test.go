@@ -5,6 +5,8 @@ import (
 	"maps"
 	"net/http"
 	"net/http/httptest"
+	"os"
+	"path/filepath"
 	"strings"
 	"testing"
 	"time"
@@ -197,6 +199,16 @@ func Test_httpRequester_convert(t *testing.T) {
 			},
 			expectedProblems: []string{
 				"proxy: Does not match pattern",
+			},
+		},
+		{
+			name: "body and bodyFromFile are mutually exclusive",
+			config: promotion.Config{
+				"body":         "",
+				"bodyFromFile": "payload.json",
+			},
+			expectedProblems: []string{
+				"body and bodyFromFile cannot be set together",
 			},
 		},
 		{
@@ -747,7 +759,7 @@ func Test_httpRequester_run(t *testing.T) {
 
 func Test_httpRequester_buildRequest(t *testing.T) {
 	ctx := t.Context()
-	req, err := (&httpRequester{}).buildRequest(ctx, builtin.HTTPConfig{
+	req, err := (&httpRequester{}).buildRequest(ctx, nil, builtin.HTTPConfig{
 		Method: "GET",
 		URL:    "http://example.com",
 		Headers: []builtin.HTTPConfigHeader{{
@@ -764,6 +776,42 @@ func Test_httpRequester_buildRequest(t *testing.T) {
 	require.Equal(t, "GET", req.Method)
 	require.Equal(t, "http://example.com?param=some+value", req.URL.String())
 	require.Equal(t, "application/json", req.Header.Get("Content-Type"))
+}
+
+func Test_httpRequester_buildRequest_bodyFromFile(t *testing.T) {
+	workDir := t.TempDir()
+	testFilePath := filepath.Join(workDir, "payload.json")
+	require.NoError(t, os.WriteFile(
+		testFilePath,
+		[]byte(`{"from":"file"}`),
+		0600,
+	))
+
+	req, err := (&httpRequester{}).buildRequest(
+		t.Context(),
+		&promotion.StepContext{WorkDir: workDir},
+		builtin.HTTPConfig{
+			Method:       "POST",
+			URL:          "http://example.com",
+			BodyFromFile: "payload.json",
+		},
+	)
+	require.NoError(t, err)
+	body, err := io.ReadAll(req.Body)
+	require.NoError(t, err)
+	require.Equal(t, `{"from":"file"}`, string(body))
+}
+
+func Test_httpRequester_buildRequest_bodyFromFile_rejectsTraversal(t *testing.T) {
+	_, err := (&httpRequester{}).buildRequest(
+		t.Context(),
+		&promotion.StepContext{WorkDir: t.TempDir()},
+		builtin.HTTPConfig{
+			URL:          "http://example.com",
+			BodyFromFile: "../payload.json",
+		},
+	)
+	require.ErrorContains(t, err, "could not secure join bodyFromFile")
 }
 
 func Test_httpRequester_getClient(t *testing.T) {
