@@ -23,8 +23,12 @@ Merging is performed as follows:
   key, the sequence from the second document replaces the first (no merging).
 - **Keys present only in one document:** Keys that exist in only one document
   are included as-is in the result.
-- **Null values:** If a key is set to `null` in the second document, it removes
-  or overrides the value from the first document.
+- **Null values:** If a key is set to `null` in the second document, the
+  result has that key set to `null` as well -- it is not removed. `null` is
+  treated like any other scalar value.
+- **Anchors, aliases, and merge keys:** YAML anchors (`&name`), aliases
+  (`*name`), and the `<<` merge key are preserved as-is. They are never
+  resolved or expanded by this step.
 
 :::
 
