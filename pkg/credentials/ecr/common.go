@@ -7,7 +7,17 @@ import (
 	"time"
 )
 
-const tokenCacheExpiryMargin = 5 * time.Minute
+const (
+	tokenCacheExpiryMargin = 5 * time.Minute
+
+	// tokenAcquisitionTimeout bounds a single token acquisition. Because an
+	// acquisition executes under a context detached from any caller's, this is
+	// the only thing bounding its duration. It is generous because it serves only
+	// as a fail-safe: exceeding it fails every caller waiting on that
+	// acquisition, and no fresh acquisition for the same key can begin until it
+	// returns.
+	tokenAcquisitionTimeout = 30 * time.Second
+)
 
 // ecrURLRegex is a regex that matches ECR URLs and captures the account ID (group 1)
 // and region (group 2).
