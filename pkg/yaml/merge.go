@@ -18,7 +18,7 @@ import (
 // scalars (including explicit nulls) from a later file fully replace the
 // corresponding value from an earlier file; and keys present in only one
 // file are carried through unchanged. Anchors, aliases, and merge keys are
-// never resolved or expanded -- they are copied through as-is.
+// never resolved or expanded. They are copied through as-is.
 func MergeFiles(inputPaths []string, outputPath string) error {
 	if outputPath == "" {
 		return fmt.Errorf("output path must not be empty")
@@ -70,8 +70,8 @@ func MergeFiles(inputPaths []string, outputPath string) error {
 // mappings, they are merged recursively, key by key. In every other case
 // (including a kind mismatch, e.g. a sequence overriding a mapping) src is
 // returned as-is: scalars and sequences fully replace the value from dst,
-// and node kinds this function doesn't specifically interpret -- notably
-// yaml.AliasNode, which backs both aliases and the `<<` merge key -- are
+// and any node kind this function doesn't specifically interpret (notably
+// yaml.AliasNode, which backs both aliases and the `<<` merge key) is
 // preserved rather than silently dropped.
 func mergeNodes(dst, src *yaml.Node) *yaml.Node {
 	if dst == nil || dst.Kind != yaml.MappingNode || src.Kind != yaml.MappingNode {
