@@ -10,6 +10,8 @@ import (
 	"os/exec"
 	"path/filepath"
 	"strings"
+	"syscall"
+	"time"
 
 	libExec "github.com/akuity/kargo/pkg/exec"
 	"github.com/akuity/kargo/pkg/logging"
@@ -22,6 +24,24 @@ const (
 	repoDirConfigKey         = "kargo.repoDir"
 	repoHomeDirConfigKey     = "kargo.repoHomeDir"
 	repoOriginalURLConfigKey = "kargo.repoOriginalURL"
+
+	// cmdWaitDelay is the grace period between context cancellation and
+	// forcible termination of a command. It also bounds how long Wait can
+	// remain blocked on the command's output pipes after cancellation:
+	// killing the command does not unblock Wait if a grandchild process
+	// (e.g. ssh or an askpass helper) inherited the pipes and holds them
+	// open, so a non-zero WaitDelay is required to guarantee Wait returns.
+	cmdWaitDelay = 10 * time.Second
+
+	// gitHTTPLowSpeedLimit and gitHTTPLowSpeedTime together configure git's stall
+	// detector for HTTP(S) transfers: git aborts any transfer whose throughput
+	// stays below gitHTTPLowSpeedLimit (bytes per second) for gitHTTPLowSpeedTime
+	// (seconds). This detects connections that have effectively stopped moving
+	// data -- e.g. a connection severed at the network layer with no RST/FIN
+	// delivered -- without imposing any bound on the total duration of a healthy
+	// transfer, however large or slow.
+	gitHTTPLowSpeedLimit = "1024"
+	gitHTTPLowSpeedTime  = "30"
 )
 
 // baseRepo implements the common underpinnings of a Git repository with a
@@ -51,7 +71,7 @@ type ClientOptions struct {
 	InsecureSkipTLSVerify bool
 }
 
-func (b *baseRepo) setupDirs(baseDir string) error {
+func (b *baseRepo) setupDirs(ctx context.Context, baseDir string) error {
 	var err error
 	if b.homeDir, err = os.MkdirTemp(baseDir, "repo-"); err != nil {
 		return fmt.Errorf(
@@ -63,7 +83,9 @@ func (b *baseRepo) setupDirs(baseDir string) error {
 		return fmt.Errorf("error resolving symlinks in path %s: %w", b.homeDir, err)
 	}
 	b.dir = filepath.Join(b.homeDir, "repo")
-	cmd := b.buildGitCommand("config", "--global", "init.defaultBranch", "main")
+	cmd := b.buildGitCommand(
+		ctx, "config", "--global", "init.defaultBranch", "main",
+	)
 	// Override the cmd.Dir that's set by b.buildGitCommand(). It's normally the
 	// repository's path, but if this method was called as part of the cloning
 	// process, that path may not exist yet.
@@ -76,12 +98,12 @@ func (b *baseRepo) setupDirs(baseDir string) error {
 
 // setupClient sets up "global" git configuration with author and authentication
 // details in the specified virtual home directory.
-func (b *baseRepo) setupClient(opts *ClientOptions) error {
+func (b *baseRepo) setupClient(ctx context.Context, opts *ClientOptions) error {
 	if opts == nil {
 		opts = &ClientOptions{}
 	}
 
-	if err := b.setupUser(b.homeDir, opts.User); err != nil {
+	if err := b.setupUser(ctx, b.homeDir, opts.User); err != nil {
 		return fmt.Errorf("error configuring the author: %w", err)
 	}
 
@@ -90,7 +112,9 @@ func (b *baseRepo) setupClient(opts *ClientOptions) error {
 	}
 
 	if opts.InsecureSkipTLSVerify {
-		cmd := b.buildGitCommand("config", "--global", "http.sslVerify", "false")
+		cmd := b.buildGitCommand(
+			ctx, "config", "--global", "http.sslVerify", "false",
+		)
 		// Override the cmd.Dir that's set by b.buildGitCommand(). It's normally the
 		// repository's path, but if this method was called as part of the cloning
 		// process, that path may not exist yet.
@@ -124,7 +148,11 @@ type User struct {
 // signing, the name and email must match the GPG key identity. The directory
 // specified by homeDir is used as a virtual home directory for all commands
 // executed by this method.
-func (b *baseRepo) setupUser(homeDir string, user *User) error {
+func (b *baseRepo) setupUser(
+	ctx context.Context,
+	homeDir string,
+	user *User,
+) error {
 	if user == nil {
 		user = &User{}
 	}
@@ -133,7 +161,7 @@ func (b *baseRepo) setupUser(homeDir string, user *User) error {
 		user.Name = defaultUsername
 	}
 
-	cmd := b.buildGitCommand("config", "--global", "user.name", user.Name)
+	cmd := b.buildGitCommand(ctx, "config", "--global", "user.name", user.Name)
 	// Override cmd.Dir set by buildGitCommand(). The repo path may not exist
 	// yet if called during clone. homeDir is safe since we're only writing
 	// "global" git config for a synthetic user.
@@ -149,7 +177,7 @@ func (b *baseRepo) setupUser(homeDir string, user *User) error {
 		user.Email = defaultEmail
 	}
 
-	cmd = b.buildGitCommand("config", "--global", "user.email", user.Email)
+	cmd = b.buildGitCommand(ctx, "config", "--global", "user.email", user.Email)
 	// See justification for both of these overrides above.
 	cmd.Dir = homeDir
 	b.setCmdHome(cmd, homeDir)
@@ -172,7 +200,7 @@ func (b *baseRepo) setupUser(homeDir string, user *User) error {
 			}
 			defer func() {
 				if err := os.Remove(user.SigningKeyPath); err != nil {
-					logging.LoggerFromContext(context.TODO()).Error(
+					logging.LoggerFromContext(ctx).Error(
 						err,
 						"error removing file",
 						"file", user.SigningKeyPath,
@@ -182,7 +210,9 @@ func (b *baseRepo) setupUser(homeDir string, user *User) error {
 		}
 
 		if user.SigningKeyPath != "" {
-			cmd = b.buildGitCommand("config", "--global", "commit.gpgSign", "true")
+			cmd = b.buildGitCommand(
+				ctx, "config", "--global", "commit.gpgSign", "true",
+			)
 			// See justification for both of these overrides above.
 			cmd.Dir = homeDir
 			b.setCmdHome(cmd, homeDir)
@@ -191,14 +221,14 @@ func (b *baseRepo) setupUser(homeDir string, user *User) error {
 			}
 
 			// Enable signing for tags as well.
-			cmd = b.buildGitCommand("config", "--global", "tag.gpgSign", "true")
+			cmd = b.buildGitCommand(ctx, "config", "--global", "tag.gpgSign", "true")
 			cmd.Dir = homeDir
 			b.setCmdHome(cmd, homeDir)
 			if _, err := libExec.Exec(cmd); err != nil {
 				return fmt.Errorf("error configuring tag gpg signing: %w", err)
 			}
 
-			cmd = b.buildCommand("gpg", "--import", user.SigningKeyPath)
+			cmd = b.buildCommand(ctx, "gpg", "--import", user.SigningKeyPath)
 			// See justification for both of these overrides above.
 			cmd.Dir = homeDir
 			b.setCmdHome(cmd, homeDir)
@@ -209,7 +239,7 @@ func (b *baseRepo) setupUser(homeDir string, user *User) error {
 			// Set ultimate trust on the imported key so that commits signed
 			// by this key are considered trusted during signature
 			// verification (e.g. when deciding whether a rebase is safe).
-			if err := b.setUltimateTrust(homeDir, user.SigningKeyPath); err != nil {
+			if err := b.setUltimateTrust(ctx, homeDir, user.SigningKeyPath); err != nil {
 				return fmt.Errorf("error setting trust on gpg key: %w", err)
 			}
 		}
@@ -274,18 +304,14 @@ func (b *baseRepo) setupAuth(homeDir string) error {
 // repository's configuration. This is useful for reliably determining this
 // information later if an existing repository or working tree is loaded from
 // the file system.
-func (b *baseRepo) saveDirs() error {
+func (b *baseRepo) saveDirs(ctx context.Context) error {
 	if _, err := libExec.Exec(b.buildGitCommand(
-		"config",
-		repoDirConfigKey,
-		b.dir,
+		ctx, "config", repoDirConfigKey, b.dir,
 	)); err != nil {
 		return fmt.Errorf("error saving repo dir as config: %w", err)
 	}
 	if _, err := libExec.Exec(b.buildGitCommand(
-		"config",
-		repoHomeDirConfigKey,
-		b.homeDir,
+		ctx, "config", repoHomeDirConfigKey, b.homeDir,
 	)); err != nil {
 		return fmt.Errorf("error saving repo home dir as config: %w", err)
 	}
@@ -295,11 +321,9 @@ func (b *baseRepo) saveDirs() error {
 // saveOriginalURL saves the original URL of the repository to the repository's
 // configuration. This is useful for reliably determining this information when
 // an existing repository or working tree is loaded from the file system.
-func (b *baseRepo) saveOriginalURL() error {
+func (b *baseRepo) saveOriginalURL(ctx context.Context) error {
 	if _, err := libExec.Exec(b.buildGitCommand(
-		"config",
-		repoOriginalURLConfigKey,
-		b.originalURL,
+		ctx, "config", repoOriginalURLConfigKey, b.originalURL,
 	)); err != nil {
 		return fmt.Errorf("error saving original URL as config: %w", err)
 	}
@@ -312,16 +336,15 @@ func (b *baseRepo) saveOriginalURL() error {
 // also reconciles any residual GnuPG state in that home directory that may
 // have been left behind by a process in a different container sharing the
 // same underlying filesystem.
-func (b *baseRepo) loadHomeDir() error {
+func (b *baseRepo) loadHomeDir(ctx context.Context) error {
 	res, err := libExec.Exec(b.buildGitCommand(
-		"config",
-		repoHomeDirConfigKey,
+		ctx, "config", repoHomeDirConfigKey,
 	))
 	if err != nil {
 		return fmt.Errorf("error reading repo home dir from config: %w", err)
 	}
 	b.homeDir = strings.TrimSpace(string(res))
-	b.reconcileGPGState()
+	b.reconcileGPGState(ctx)
 	return nil
 }
 
@@ -361,7 +384,7 @@ func (b *baseRepo) loadHomeDir() error {
 // Safe to call when no GnuPG state exists (no-op) and in traditional
 // single-process deployments where no cross-container state sharing occurs
 // (also effectively a no-op).
-func (b *baseRepo) reconcileGPGState() {
+func (b *baseRepo) reconcileGPGState(ctx context.Context) {
 	if b.homeDir == "" {
 		return
 	}
@@ -371,9 +394,9 @@ func (b *baseRepo) reconcileGPGState() {
 	}
 	// Must run before removing sockets: gpgconf finds the agent via its
 	// sockets and tells it to shut down cleanly.
-	_, _ = libExec.Exec(b.buildCommand("gpgconf", "--kill", "gpg-agent"))
+	_, _ = libExec.Exec(b.buildCommand(ctx, "gpgconf", "--kill", "gpg-agent"))
 
-	logger := logging.LoggerFromContext(context.TODO())
+	logger := logging.LoggerFromContext(ctx)
 	remove := func(path string) {
 		if err := os.Remove(path); err != nil && !os.IsNotExist(err) {
 			logger.Error(
@@ -407,15 +430,16 @@ func (b *baseRepo) reconcileGPGState() {
 // repository's configuration. This is useful for reliably determining this
 // information when an existing repository or working tree is loaded from the
 // file system.
-func (b *baseRepo) loadURLs() error {
-	res, err := libExec.Exec(b.buildGitCommand("config", repoOriginalURLConfigKey))
+func (b *baseRepo) loadURLs(ctx context.Context) error {
+	res, err := libExec.Exec(b.buildGitCommand(
+		ctx, "config", repoOriginalURLConfigKey,
+	))
 	if err != nil {
 		return fmt.Errorf(`error getting original URL of remote "origin": %w`, err)
 	}
 	b.originalURL = strings.TrimSpace(string(res))
 	if res, err = libExec.Exec(b.buildGitCommand(
-		"config",
-		"remote.origin.url",
+		ctx, "config", "remote.origin.url",
 	)); err != nil {
 		return fmt.Errorf(`error getting URL of remote "origin": %w`, err)
 	}
@@ -423,8 +447,19 @@ func (b *baseRepo) loadURLs() error {
 	return nil
 }
 
-func (b *baseRepo) buildCommand(command string, arg ...string) *exec.Cmd {
-	cmd := exec.Command(command, arg...)
+func (b *baseRepo) buildCommand(
+	ctx context.Context,
+	command string,
+	arg ...string,
+) *exec.Cmd {
+	cmd := exec.CommandContext(ctx, command, arg...)
+	// On cancellation, send SIGTERM rather than the default SIGKILL so the
+	// command has a chance to clean up after itself (e.g. git removing lock
+	// files).
+	cmd.Cancel = func() error {
+		return cmd.Process.Signal(syscall.SIGTERM)
+	}
+	cmd.WaitDelay = cmdWaitDelay
 	homeEnvVar := fmt.Sprintf("HOME=%s", b.homeDir)
 	if cmd.Env == nil {
 		cmd.Env = []string{homeEnvVar}
@@ -435,8 +470,16 @@ func (b *baseRepo) buildCommand(command string, arg ...string) *exec.Cmd {
 	return cmd
 }
 
-func (b *baseRepo) buildGitCommand(arg ...string) *exec.Cmd {
-	cmd := b.buildCommand("git", arg...)
+func (b *baseRepo) buildGitCommand(
+	ctx context.Context,
+	arg ...string,
+) *exec.Cmd {
+	cmd := b.buildCommand(ctx, "git", arg...)
+	cmd.Env = append(
+		cmd.Env,
+		"GIT_HTTP_LOW_SPEED_LIMIT="+gitHTTPLowSpeedLimit,
+		"GIT_HTTP_LOW_SPEED_TIME="+gitHTTPLowSpeedTime,
+	)
 	// TODO(v1.13.0): Remove this line when SSH support is removed.
 	cmd.Env = append(cmd.Env, fmt.Sprintf("GIT_SSH_COMMAND=ssh -F %s/.ssh/config", b.homeDir))
 	if b.creds != nil && b.creds.Password != "" {
@@ -466,8 +509,12 @@ func (b *baseRepo) HomeDir() string {
 	return b.homeDir
 }
 
-func (b *baseRepo) RemoteBranchExists(branch string) (bool, error) {
+func (b *baseRepo) RemoteBranchExists(
+	ctx context.Context,
+	branch string,
+) (bool, error) {
 	_, err := libExec.Exec(b.buildGitCommand(
+		ctx,
 		"ls-remote",
 		"--heads",
 		"--exit-code", // Return 2 if not found
@@ -496,9 +543,14 @@ func (b *baseRepo) URL() string {
 
 // setUltimateTrust sets ultimate trust (level 6) on a GPG key so that
 // signatures made by this key are considered fully trusted during verification.
-func (b *baseRepo) setUltimateTrust(homeDir, keyPath string) error {
+func (b *baseRepo) setUltimateTrust(
+	ctx context.Context,
+	homeDir string,
+	keyPath string,
+) error {
 	// Get the fingerprint of the key.
 	cmd := b.buildCommand(
+		ctx,
 		"gpg",
 		"--with-colons",
 		"--fingerprint",
@@ -530,7 +582,7 @@ func (b *baseRepo) setUltimateTrust(homeDir, keyPath string) error {
 		return fmt.Errorf("could not determine fingerprint of gpg key %q", keyPath)
 	}
 	// Import owner trust: level 6 = ultimate trust.
-	cmd = b.buildCommand("gpg", "--import-ownertrust")
+	cmd = b.buildCommand(ctx, "gpg", "--import-ownertrust")
 	cmd.Dir = homeDir
 	b.setCmdHome(cmd, homeDir)
 	cmd.Stdin = strings.NewReader(fmt.Sprintf("%s:6:\n", fingerprint))
