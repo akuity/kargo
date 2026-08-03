@@ -302,6 +302,11 @@ func (s *server) setupRESTRouter(ctx context.Context) *gin.Engine {
 	return router
 }
 
+// errorResponse is the body of every error response the REST API sends.
+type errorResponse struct {
+	Error string `json:"error"`
+}
+
 func (s *server) handleError(c *gin.Context) {
 	c.Next()
 	if len(c.Errors) > 0 {
@@ -310,7 +315,7 @@ func (s *server) handleError(c *gin.Context) {
 		// Check for MaxBytesError (body too large)
 		var maxBytesErr *http.MaxBytesError
 		if errors.As(err, &maxBytesErr) {
-			c.JSON(http.StatusRequestEntityTooLarge, resourceErrorResponse{Error: "request body too large"})
+			c.JSON(http.StatusRequestEntityTooLarge, errorResponse{Error: "request body too large"})
 			return
 		}
 
@@ -320,12 +325,12 @@ func (s *server) handleError(c *gin.Context) {
 				s.respondInternalServerError(c, err)
 				return
 			}
-			c.JSON(httpErr.Code(), resourceErrorResponse{Error: httpErr.Error()})
+			c.JSON(httpErr.Code(), errorResponse{Error: httpErr.Error()})
 			return
 		}
 		var statusErr *apierrors.StatusError
 		if ok := errors.As(err, &statusErr); ok {
-			c.JSON(int(statusErr.Status().Code), resourceErrorResponse{Error: err.Error()})
+			c.JSON(int(statusErr.Status().Code), errorResponse{Error: err.Error()})
 			return
 		}
 		// An error of no recognized type is, by definition, one we did not
@@ -341,6 +346,6 @@ func (s *server) respondInternalServerError(c *gin.Context, err error) {
 		Error(err, "internal server error")
 	c.JSON(
 		http.StatusInternalServerError,
-		resourceErrorResponse{Error: "internal server error"},
+		errorResponse{Error: "internal server error"},
 	)
 }
