@@ -135,6 +135,7 @@ func TestAccessKeyProvider_Supports(t *testing.T) {
 
 	for _, testCase := range testCases {
 		t.Run(testCase.name, func(t *testing.T) {
+			t.Parallel()
 			supports, err := p.Supports(
 				t.Context(),
 				credentials.Request{
@@ -299,6 +300,7 @@ func TestAccessKeyProvider_GetCredentials(t *testing.T) {
 
 	for _, testCase := range testCases {
 		t.Run(testCase.name, func(t *testing.T) {
+			t.Parallel()
 			provider := NewAccessKeyProvider().(*AccessKeyProvider) // nolint:forcetypeassert
 			provider.getAuthTokenFn = testCase.getAuthTokenFn
 
@@ -355,6 +357,7 @@ func Test_decodeAuthToken(t *testing.T) {
 
 	for _, testCase := range testCases {
 		t.Run(testCase.name, func(t *testing.T) {
+			t.Parallel()
 			creds, err := decodeAuthToken(testCase.token)
 			testCase.assertions(t, creds, err)
 		})
