@@ -460,9 +460,8 @@ func TestAuthenticate(t *testing.T) {
 				},
 			},
 			token: testToken,
-			// We can't verify this token, so we check if Kubernetes recognizes it.
-			// In this case it does, so we expect user info containing the raw token
-			// and the Kubernetes-verified identity to be bound to the context.
+			// Kubernetes recognizes the token, so we expect the raw token and the
+			// Kubernetes-verified identity to be bound to the context.
 			assertions: func(ctx context.Context, err error) {
 				require.NoError(t, err)
 				u, ok := user.InfoFromContext(ctx)

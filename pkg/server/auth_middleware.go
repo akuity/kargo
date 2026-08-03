@@ -33,12 +33,9 @@ import (
 
 const authHeaderKey = "Authorization"
 
-// errKubernetesTokenReviewFailed indicates the TokenReview call itself could
-// not be completed -- e.g. due to a networking problem or the Kargo API
-// server's own ServiceAccount lacking permission to create TokenReviews.
-// This is distinct from Kubernetes successfully evaluating the token and
-// rejecting it, which is a routine, expected outcome for malformed or
-// foreign tokens.
+// errKubernetesTokenReviewFailed indicates the TokenReview call itself
+// failed (e.g. a network error or missing RBAC), distinct from Kubernetes
+// evaluating the token and rejecting it, which is routine and expected.
 var errKubernetesTokenReviewFailed = errors.New("kubernetes token review failed")
 
 // exemptPaths are REST paths that don't require authentication
@@ -253,8 +250,7 @@ func (a *authMiddleware) authenticate(
 	// Case 3 or 4: We don't know how to verify this token. It's possibly a token
 	// issued by the Kubernetes cluster's identity provider.
 
-	// Test whether Kubernetes recognizes this token, and if so, capture the
-	// identity Kubernetes itself assigns to it.
+	// Check whether Kubernetes recognizes the token and capture its identity.
 	logger.Debug("could not verify token; checking if Kubernetes recognizes it")
 	k8sUserInfo, err := a.verifyKubernetesTokenFn(ctx, rawToken)
 	if err != nil {
@@ -401,11 +397,9 @@ func (a *authMiddleware) verifyKargoIssuedToken(rawToken string) bool {
 	return err == nil
 }
 
-// verifyKubernetesToken submits the provided token to the Kubernetes API
-// server via a TokenReview. If Kubernetes authenticates the token, the
-// API-server-verified identity of the token holder is returned. This
-// requires that the Kargo API server's own ServiceAccount be granted
-// permission to create TokenReviews (see the kargo-api ClusterRole).
+// verifyKubernetesToken submits the token to Kubernetes via a TokenReview
+// and returns the verified identity. Requires the kargo-api ClusterRole to
+// grant permission to create TokenReviews.
 func (a *authMiddleware) verifyKubernetesToken(
 	ctx context.Context,
 	rawToken string,

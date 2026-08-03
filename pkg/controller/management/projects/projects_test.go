@@ -2561,11 +2561,9 @@ func TestReconciler_ensureDefaultUserRoles(t *testing.T) {
 			},
 		},
 		{
-			// A Project created via a Kubernetes-verified identity (e.g. a Kargo
-			// API token) must NOT have its "create-actor" annotation mapped into
-			// the OIDC-claims annotation: "kubernetes" is not a real OIDC claim
-			// name, and the Kubernetes username that follows it is not something
-			// a real identity provider would ever emit under such a claim.
+			// Kubernetes-verified actors (e.g. a Kargo API token) must not be
+			// mapped into the OIDC-claims annotation. "kubernetes" isn't a real
+			// claim name, and the value isn't one a real IDP would emit.
 			name:        "success creating ServiceAccount with kubernetes-verified creator",
 			createActor: "kubernetes:system:serviceaccount:kargo-demo:ci-bot",
 			reconciler: &reconciler{

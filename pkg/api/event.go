@@ -17,10 +17,9 @@ func FormatEventControllerActor(name string) string {
 // that can be used as a value of AnnotationKeyEventActor.
 //
 //  1. If the user is admin, it returns EventActorAdmin since other information is not available.
-//  2. If the user's identity was verified by Kubernetes directly (e.g. a Kargo API
-//     token, which is backed by a ServiceAccount token Secret), it returns that
-//     identity in the same "kubernetes:<username>" format used for actions taken
-//     directly against the Kubernetes API (see FormatEventKubernetesUserActor).
+//  2. If the user was authenticated by Kubernetes directly (e.g. a Kargo API token),
+//     it returns that identity in "kubernetes:<username>" format (see
+//     FormatEventKubernetesUserActor).
 //  3. If the email is available, it returns email in "email:<email>" format.
 //  4. If the subject is available, it returns subject in "subject:<subject>" format.
 //  5. Otherwise, it returns EventActorUnknown.
