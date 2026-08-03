@@ -25,6 +25,7 @@ import (
 	libClient "sigs.k8s.io/controller-runtime/pkg/client"
 
 	kargoapi "github.com/akuity/kargo/api/v1alpha1"
+	libhttp "github.com/akuity/kargo/pkg/http"
 	"github.com/akuity/kargo/pkg/indexer"
 	"github.com/akuity/kargo/pkg/logging"
 	"github.com/akuity/kargo/pkg/server/config"
@@ -32,6 +33,21 @@ import (
 )
 
 const authHeaderKey = "Authorization"
+
+// errNoToken and errInvalidToken are the only authentication failures reported
+// to clients. Both carry a 401 and disclose nothing about which check rejected
+// the credential. Where the underlying reason is useful, sites wrap
+// errInvalidToken with it so that the detail reaches the logs while the
+// client's response remains opaque.
+//
+// Any other failure, such as an unreachable API server or a misconfigured
+// identity provider, is returned without a status code, which the
+// error-handling middleware reports as an internal error. A client must not be
+// able to mistake a broken control plane for a rejected token.
+var (
+	errNoToken      = libhttp.ErrorStr("no token provided", http.StatusUnauthorized)
+	errInvalidToken = libhttp.ErrorStr("invalid token", http.StatusUnauthorized)
+)
 
 // exemptPaths are REST paths that don't require authentication
 var exemptPaths = map[string]struct{}{
@@ -129,8 +145,10 @@ func (a *authMiddleware) Handler(c *gin.Context) {
 	newCtx, err := a.authenticate(ctx, path, rawToken)
 	if err != nil {
 		logger.Debug("authentication failed", "error", err.Error())
+		// Leave the status code and response body to the error-handling
+		// middleware, which honors the code carried by the error.
 		_ = c.Error(err)
-		c.AbortWithStatus(http.StatusUnauthorized)
+		c.Abort()
 		return
 	}
 
@@ -156,7 +174,7 @@ func (a *authMiddleware) authenticate(
 	}
 
 	if rawToken == "" {
-		return ctx, errors.New("no token provided")
+		return ctx, errNoToken
 	}
 
 	// Are we dealing with a JWT?
@@ -170,7 +188,7 @@ func (a *authMiddleware) authenticate(
 	// as to HOW we might be able to verify the token further.
 	untrustedClaims := jwt.RegisteredClaims{}
 	if _, _, err := a.parseUnverifiedJWTFn(rawToken, &untrustedClaims); err != nil {
-		return ctx, errors.New("invalid token")
+		return ctx, errInvalidToken
 	}
 	logger.Debug("found untrusted claims in token", "claims", untrustedClaims)
 
@@ -195,7 +213,7 @@ func (a *authMiddleware) authenticate(
 				},
 			), nil
 		}
-		return ctx, errors.New("invalid token")
+		return ctx, errInvalidToken
 	}
 
 	if a.cfg.OIDCConfig != nil &&
@@ -214,11 +232,20 @@ func (a *authMiddleware) authenticate(
 		)
 		sa, err := a.listServiceAccountsFn(ctx, c)
 		if err != nil {
-			return ctx, fmt.Errorf("list service accounts for user: %w", err)
+			// Stated explicitly because the underlying Kubernetes error carries a
+			// status code of its own, which the error-handling middleware would
+			// otherwise report to the client as if it described their request.
+			return ctx, libhttp.Error(
+				fmt.Errorf("list service accounts for user: %w", err),
+				http.StatusInternalServerError,
+			)
 		}
 		var username string
 		if un, ok := c[a.cfg.OIDCConfig.UsernameClaim]; ok {
 			if username, ok = un.(string); !ok {
+				// The token verified, so this is a mismatch between the identity
+				// provider and this server's configuration, not a bad credential.
+				// Left untyped so it is reported as an internal error.
 				return ctx, fmt.Errorf(
 					"claim %q must be a string; got %T",
 					a.cfg.OIDCConfig.UsernameClaim,
@@ -245,8 +272,7 @@ func (a *authMiddleware) authenticate(
 	// Test whether Kubernetes recognizes this token by making a request to /api
 	logger.Debug("could not verify token; checking if Kubernetes recognizes it")
 	if err := a.verifyKubernetesTokenFn(ctx, rawToken); err != nil {
-		logger.Debug("token not recognized by Kubernetes", "error", err)
-		return ctx, errors.New("invalid token")
+		return ctx, err
 	}
 	logger.Debug("token recognized by Kubernetes")
 
@@ -362,9 +388,15 @@ func (a *authMiddleware) verifyIDPIssuedToken(
 	}
 	token, err := a.oidcTokenVerifyFn(ctx, rawToken)
 	if err != nil {
-		return c, err
+		return c, fmt.Errorf("%w: %w", errInvalidToken, err)
 	}
-	return a.oidcExtractClaimsFn(token)
+	c, err = a.oidcExtractClaimsFn(token)
+	if err != nil {
+		// The token verified, so failing to read its claims is our problem, not
+		// the client's. Left untyped so it is reported as an internal error.
+		return c, fmt.Errorf("extract claims from verified token: %w", err)
+	}
+	return c, nil
 }
 
 // verifyKargoIssuedToken attempts to verify that the provided raw token was
@@ -414,9 +446,18 @@ func (a *authMiddleware) verifyKubernetesToken(
 	}
 	defer resp.Body.Close()
 
+	// Only Kubernetes declining to recognize the token says anything about the
+	// token. Every other failure above is ours, and is left untyped so that it is
+	// reported as an internal error rather than as a rejected credential.
+	//
+	// TODO(krancour/fuskovic): This isn't perfect, but the strategy of verifying
+	// that Kubernetes recognized the token is already set to change in
+	// https://github.com/akuity/kargo/pull/6754 so we will not obsess over this
+	// for now.
 	if resp.StatusCode != http.StatusOK {
 		return fmt.Errorf(
-			"unexpected response from Kubernetes API server: %d",
+			"%w: unexpected response from Kubernetes API server: %d",
+			errInvalidToken,
 			resp.StatusCode,
 		)
 	}
