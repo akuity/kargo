@@ -19,9 +19,9 @@ import (
 	"github.com/gin-gonic/gin"
 	"github.com/golang-jwt/jwt/v5"
 	"github.com/hashicorp/go-cleanhttp"
+	authnv1 "k8s.io/api/authentication/v1"
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/types"
-	"k8s.io/client-go/rest"
 	libClient "sigs.k8s.io/controller-runtime/pkg/client"
 
 	kargoapi "github.com/akuity/kargo/api/v1alpha1"
@@ -73,10 +73,13 @@ type authMiddleware struct {
 		ctx context.Context,
 		rawToken string,
 	) (claims, error)
-	verifyKubernetesTokenFn func(ctx context.Context, rawToken string) error
-	oidcTokenVerifyFn       goOIDCIDTokenVerifyFn
-	oidcExtractClaimsFn     func(*oidc.IDToken) (claims, error)
-	listServiceAccountsFn   func(
+	verifyKubernetesTokenFn func(
+		ctx context.Context,
+		rawToken string,
+	) (*authnv1.UserInfo, error)
+	oidcTokenVerifyFn     goOIDCIDTokenVerifyFn
+	oidcExtractClaimsFn   func(*oidc.IDToken) (claims, error)
+	listServiceAccountsFn func(
 		ctx context.Context,
 		c claims,
 	) (map[string]map[types.NamespacedName]struct{}, error)
@@ -269,17 +272,19 @@ func (a *authMiddleware) authenticate(
 	// Case 3 or 4: We don't know how to verify this token. It's possibly a token
 	// issued by the Kubernetes cluster's identity provider.
 
-	// Test whether Kubernetes recognizes this token by making a request to /api
+	// Check whether Kubernetes recognizes the token and capture its identity.
 	logger.Debug("could not verify token; checking if Kubernetes recognizes it")
-	if err := a.verifyKubernetesTokenFn(ctx, rawToken); err != nil {
+	k8sUserInfo, err := a.verifyKubernetesTokenFn(ctx, rawToken)
+	if err != nil {
 		return ctx, err
 	}
-	logger.Debug("token recognized by Kubernetes")
+	logger.Debug("token recognized by Kubernetes", "username", k8sUserInfo.Username)
 
 	return user.ContextWithInfo(
 		ctx,
 		user.Info{
-			BearerToken: rawToken,
+			BearerToken:        rawToken,
+			KubernetesUserInfo: k8sUserInfo,
 		},
 	), nil
 }
@@ -415,54 +420,30 @@ func (a *authMiddleware) verifyKargoIssuedToken(rawToken string) bool {
 	return err == nil
 }
 
-// verifyKubernetesToken tests whether the Kubernetes API server recognizes the
-// provided token by making a GET request to the /api endpoint. This is a
-// lightweight check that doesn't require any specific permissions.
+// verifyKubernetesToken submits the token to Kubernetes via a TokenReview
+// and returns the verified identity. Requires the kargo-api ClusterRole to
+// grant permission to create TokenReviews.
 func (a *authMiddleware) verifyKubernetesToken(
 	ctx context.Context,
 	rawToken string,
-) error {
-	if a.cfg.RestConfig == nil { // This shouldn't happen, but just in case...
-		return errors.New("Kubernetes REST config is not available") // nolint: staticcheck
+) (*authnv1.UserInfo, error) {
+	review := &authnv1.TokenReview{
+		Spec: authnv1.TokenReviewSpec{
+			Token: rawToken,
+		},
 	}
-
-	transport, err := rest.TransportFor(a.cfg.RestConfig)
-	if err != nil {
-		return fmt.Errorf("create transport: %w", err)
+	if err := a.internalClient.Create(ctx, review); err != nil {
+		// This says nothing about the token, so it's left untyped to be
+		// reported as an internal error rather than a rejected credential.
+		return nil, fmt.Errorf("submit TokenReview: %w", err)
 	}
-
-	apiURL := strings.TrimSuffix(a.cfg.RestConfig.Host, "/") + "/api"
-	req, err := http.NewRequestWithContext(ctx, http.MethodGet, apiURL, nil)
-	if err != nil {
-		return fmt.Errorf("create request: %w", err)
+	if review.Status.Error != "" {
+		return nil, fmt.Errorf("%w: %s", errInvalidToken, review.Status.Error)
 	}
-	req.Header.Set("Authorization", "Bearer "+rawToken)
-
-	// #nosec G704 -- This request is not for a user-specified URL, so there is
-	// virtually no risk of SSRF here.
-	resp, err := (&http.Client{Transport: transport}).Do(req)
-	if err != nil {
-		return fmt.Errorf("execute request: %w", err)
+	if !review.Status.Authenticated {
+		return nil, errInvalidToken
 	}
-	defer resp.Body.Close()
-
-	// Only Kubernetes declining to recognize the token says anything about the
-	// token. Every other failure above is ours, and is left untyped so that it is
-	// reported as an internal error rather than as a rejected credential.
-	//
-	// TODO(krancour/fuskovic): This isn't perfect, but the strategy of verifying
-	// that Kubernetes recognized the token is already set to change in
-	// https://github.com/akuity/kargo/pull/6754 so we will not obsess over this
-	// for now.
-	if resp.StatusCode != http.StatusOK {
-		return fmt.Errorf(
-			"%w: unexpected response from Kubernetes API server: %d",
-			errInvalidToken,
-			resp.StatusCode,
-		)
-	}
-
-	return nil
+	return &review.Status.User, nil
 }
 
 func oidcExtractClaims(token *oidc.IDToken) (claims, error) {

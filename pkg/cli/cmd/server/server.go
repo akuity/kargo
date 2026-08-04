@@ -104,7 +104,6 @@ func (o *serverOptions) run(ctx context.Context) error {
 
 	srv := server.NewServer(
 		apiconfig.ServerConfig{
-			RestConfig:     restCfg,
 			LocalMode:      true,
 			KargoNamespace: o.kargoNamespace,
 		},
