@@ -35,10 +35,13 @@ type createResourceResult struct {
 	Error                   string         `json:"error,omitempty"`
 } // @name CreateResourceResult
 
-// resourceErrorResponse is the response body for resource API errors
-type resourceErrorResponse struct {
-	Error string `json:"error"`
-} // @name ResourceErrorResponse
+// resourceErrorResponse is the name errorResponse was first published under,
+// and the name the spec has to keep: renaming the schema would rename the
+// corresponding type in every generated client. This operation is the only one
+// that documents an error body, and it refers to this alias rather than to
+// errorResponse, which is what makes swag honor the name below.
+// nolint: unused
+type resourceErrorResponse = errorResponse // @name ResourceErrorResponse
 
 // @id CreateResource
 // @Summary Create resources

@@ -17,11 +17,10 @@ import (
 
 	"github.com/hashicorp/go-cleanhttp"
 	"github.com/jferrl/go-githubauth"
-	"github.com/patrickmn/go-cache"
 	"golang.org/x/oauth2"
-	"golang.org/x/sync/singleflight"
 
 	kargoapi "github.com/akuity/kargo/api/v1alpha1"
+	"github.com/akuity/kargo/pkg/cache/coalescing"
 	"github.com/akuity/kargo/pkg/credentials"
 	ghutil "github.com/akuity/kargo/pkg/github"
 	"github.com/akuity/kargo/pkg/logging"
@@ -55,25 +54,34 @@ func init() {
 	}
 }
 
-type AppCredentialProvider struct {
-	tokenCache *cache.Cache
+// appInput identifies the installation access token a load should mint. The
+// cache key is a hash of these values, so they cannot be recovered from it.
+type appInput struct {
+	appOrClientID     string
+	installationID    int64
+	encodedPrivateKey string
+	repoURL           string
+}
 
-	// mintGroup coalesces concurrent mints of the token for any given cache
-	// key into a single mint whose result is shared by all callers.
-	mintGroup singleflight.Group
+type AppCredentialProvider struct {
+	// tokenCache holds installation access tokens keyed by a hash of the App and
+	// repository they were minted for. It fills its own misses, coalescing
+	// concurrent mints for any given key.
+	tokenCache coalescing.Cache[appInput, string]
 
 	// validationBackoff is the schedule of waits between successive attempts to validate a newly
 	// minted installation access token. This is set as a field so that it can be overridden in
 	// tests to avoid long waits.
 	validationBackoff []time.Duration
 
-	// mintTimeoutBuffer is added to the sum of validationBackoff when computing the maximum time to
-	// wait for a token to be minted and validated. It accounts for network round-trips that are not
-	// captured by the backoff schedule. This is set as a field so that it can be overridden in tests
-	// to avoid long waits.
+	// mintTimeoutBuffer is added to the waits and validation requests accounted
+	// for in mintTimeout(). It covers the request that mints the token, which has
+	// no timeout of its own. This is set as a field so that it can be overridden
+	// in tests to avoid long waits.
 	mintTimeoutBuffer time.Duration
 
 	getAccessTokenFn func(
+		ctx context.Context,
 		appOrClientID string,
 		installationID int64,
 		encodedPrivateKey string,
@@ -90,13 +98,6 @@ type AppCredentialProvider struct {
 // NewAppCredentialProvider returns an implementation of credentials.Provider.
 func NewAppCredentialProvider() credentials.Provider {
 	p := &AppCredentialProvider{
-		tokenCache: cache.New(
-			// Access tokens live for one hour. We'll hang on to them for 40
-			// minutes by default. When the actual token expiry is available, it
-			// is used (minus a safety margin) instead of this default.
-			40*time.Minute, // Default ttl for each entry
-			time.Hour,      // Cleanup interval
-		),
 		// GitHub's own recommendation for retrying use of a newly minted token that has not yet
 		// replicated to all of their edge caches. See the Github support response in
 		// https://github.com/aws-amplify/amplify-hosting/issues/4080
@@ -112,6 +113,24 @@ func NewAppCredentialProvider() credentials.Provider {
 	}
 	p.getAccessTokenFn = p.getAccessToken
 	p.validateAccessTokenFn = p.validateAccessToken
+	tokenCache, err := coalescing.NewCache(
+		p.loadAccessToken,
+		&coalescing.CacheOptions{
+			LoadTimeout: new(p.mintTimeout()),
+			// Access tokens live for one hour. We'll hang on to them for 40
+			// minutes by default. When the actual token expiry is available, it
+			// is used (minus a safety margin) instead of this default.
+			DefaultTTL:      new(40 * time.Minute),
+			CleanupInterval: new(time.Hour),
+		},
+	)
+	if err != nil {
+		logging.LoggerFromContext(context.Background()).Error(
+			err, "error creating token cache; this provider will not be registered",
+		)
+		return nil
+	}
+	p.tokenCache = tokenCache
 	return p
 }
 
@@ -200,105 +219,61 @@ func (p *AppCredentialProvider) getUsernameAndPassword(
 	)
 	ctx = logging.ContextWithLogger(ctx, logger)
 
-	// Check the cache for the token
-	if entry, exists := p.tokenCache.Get(cacheKey); exists {
-		logger.Debug("installation access token cache hit")
-		return &credentials.Credentials{
-			Username: accessTokenUsername,
-			Password: entry.(string), // nolint: forcetypeassert
-		}, nil
-	}
-	logger.Debug("installation access token cache miss")
-
-	// Cache miss, get a new token. All consumers of any given repository share one cache entry, so
-	// they miss the cache in unison when that entry expires and, without coordination, would each
-	// mint their own token. Coalescing concurrent mints for the same cache key avoids that
-	// thundering herd.
-	var accessToken any
-	var err error
-
-	// maxWait bounds how long the mint may run. Because the mint executes under an orphaned context
-	// (see mintAndCacheToken) rather than any caller's context, this is the only thing bounding its
-	// duration. It is the sum of the validation backoff schedule plus a buffer for network
-	// round-trips.
-	maxWait := p.mintTimeoutBuffer
-	for _, d := range p.validationBackoff {
-		maxWait += d
-	}
-
-	// NOTE(thomastaylor312): Right now if there is a single error that isn't a context error, it
-	// will fail all of the other requests as well. This _could_ end up biting us if we have a
-	// transient error. If that ever becomes the case, we can add an OR to this that uses the
-	// `shared` return value from the singleflight `DoChan` channel and then re-enqueue here as
-	// well, but for now we'll let real errors fall through to everyone.
-	ch := p.mintGroup.DoChan(cacheKey, func() (any, error) {
-		return p.mintAndCacheToken(
-			ctx,
-			appOrClientID,
-			installationID,
-			encodedPrivateKey,
-			repoURL,
-			cacheKey,
-			maxWait,
-		)
+	accessToken, err := p.tokenCache.Get(ctx, cacheKey, appInput{
+		appOrClientID:     appOrClientID,
+		installationID:    installationID,
+		encodedPrivateKey: encodedPrivateKey,
+		repoURL:           repoURL,
 	})
-	select {
-	case <-ctx.Done():
-		// See the comment in mintAndCacheToken for why we don't cancel the minting process here.
-		return nil, fmt.Errorf(
-			"mint token process interrupted, cache refresh will continue in the background: %w",
-			ctx.Err(),
-		)
-	case result := <-ch:
-		accessToken, err = result.Val, result.Err
-	}
-
 	if err != nil {
-		return nil, fmt.Errorf("error minting installation access token: %w", err)
+		return nil, err
 	}
 
 	return &credentials.Credentials{
 		Username: accessTokenUsername,
-		// We know the type is string so we're not checking the assertion here
-		Password: accessToken.(string), // nolint: forcetypeassert
+		Password: accessToken,
 	}, nil
 }
 
-// mintAndCacheToken mints a new installation access token, waits for it to
-// become usable, caches it, and returns it. It is intended to be executed
-// within the provider's singleflight group.
-func (p *AppCredentialProvider) mintAndCacheToken(
+// mintTimeout bounds how long a mint may run. Because a mint executes under a
+// context detached from any caller's, this is the only thing bounding its
+// duration, and exceeding it discards a token that was successfully minted. It
+// therefore has to cover everything a mint does: the request that mints the
+// token, every wait in the validation backoff schedule, and a validation
+// request after each of those waits as well as before the first.
+func (p *AppCredentialProvider) mintTimeout() time.Duration {
+	// One validation attempt precedes the first wait, so there is always one more
+	// attempt than there are waits.
+	maxWait := p.mintTimeoutBuffer +
+		time.Duration(len(p.validationBackoff)+1)*tokenValidationRequestTimeout
+	for _, d := range p.validationBackoff {
+		maxWait += d
+	}
+	return maxWait
+}
+
+// loadAccessToken mints a new installation access token, waits for it to become
+// usable, and returns it. It is the Loader for this provider's token cache.
+func (p *AppCredentialProvider) loadAccessToken(
 	ctx context.Context,
-	appOrClientID string,
-	installationID int64,
-	encodedPrivateKey string,
-	repoURL string,
-	cacheKey string,
-	maxWait time.Duration,
-) (string, error) {
+	input appInput,
+) (string, *time.Duration, error) {
 	logger := logging.LoggerFromContext(ctx)
 
-	// NOTE(thomastaylor312): We use a separate, orphaned context for running this function so that
-	// we can control timeout for the entire operation here. This function is only called from
-	// within a singleflight group, and if we have the "winner" of the first goroutine to execute
-	// this function get canceled, it cancels it for everyone. Initially, I had plumbed through
-	// handling for this, but it was a bunch of logic that, ultimately, is unnecessary. Even if all
-	// callers cancel, (essentially orphaning the function from an "owning" goroutine entirely), we
-	// still want to finish the work of minting and caching the token so that future callers can get
-	// it from the cache. So, we just use a separate context here that is not tied to any caller's
-	// context. We _do_, reattach the current logger so we have all its current context (and also
-	// helps us trace back where it was called from if needed)
-	orphanedCtx, cancel := context.WithTimeout(logging.ContextWithLogger(context.Background(), logger), maxWait)
-	defer cancel()
-
 	token, err := p.getAccessTokenFn(
-		appOrClientID,
-		installationID,
-		encodedPrivateKey,
-		repoURL,
+		ctx,
+		input.appOrClientID,
+		input.installationID,
+		input.encodedPrivateKey,
+		input.repoURL,
 	)
 	if err != nil {
-		return "", fmt.Errorf("error getting installation access token: %w", err)
+		return "", nil,
+			fmt.Errorf("error minting installation access token: %w", err)
+	}
+	// If we didn't get a token, we'll treat this as no credentials found
+	if token == nil || token.AccessToken == "" {
+		return "", nil, nil
 	}
 	logger.Debug("obtained new installation access token")
 
@@ -309,19 +284,24 @@ func (p *AppCredentialProvider) mintAndCacheToken(
 	// difficult-to-diagnose "repository not found" errors. Waiting until the
 	// token demonstrably works before releasing it to the caller prevents
 	// this.
-	if err = p.waitForTokenUsable(orphanedCtx, token.AccessToken, repoURL); err != nil {
-		return "", err
+	if err = p.waitForTokenUsable(ctx, token.AccessToken, input.repoURL); err != nil {
+		return "", nil,
+			fmt.Errorf("error minting installation access token: %w", err)
 	}
 
 	ttl := credentials.CalculateCacheTTL(token.Expiry, tokenCacheExpiryMargin)
+	if ttl == nil {
+		logger.Debug(
+			"token expires too soon to be worth caching", "expiry", token.Expiry,
+		)
+		return token.AccessToken, nil, nil
+	}
 	logger.Debug(
 		"caching installation access token",
 		"expiry", token.Expiry,
-		"ttl", ttl,
+		"ttl", *ttl,
 	)
-	p.tokenCache.Set(cacheKey, token.AccessToken, ttl)
-
-	return token.AccessToken, nil
+	return token.AccessToken, ttl, nil
 }
 
 // waitForTokenUsable checks that a newly minted installation access token is actually usable,
@@ -418,6 +398,7 @@ func (p *AppCredentialProvider) validateAccessToken(
 // getAccessToken gets an installation access token for the given app/client ID,
 // installation ID, PEM-encoded GitHub App private key, and repo URL.
 func (p *AppCredentialProvider) getAccessToken(
+	ctx context.Context,
 	appOrClientID string,
 	installationID int64,
 	encodedPrivateKey string,
@@ -435,6 +416,11 @@ func (p *AppCredentialProvider) getAccessToken(
 
 	installationOpts := []githubauth.InstallationTokenSourceOpt{
 		githubauth.WithHTTPClient(cleanhttp.DefaultClient()),
+		// Without this the token source falls back to context.Background(), which
+		// would leave the request unbounded. Minting is coalesced, so a request
+		// GitHub never answers would keep the singleflight key occupied and fail
+		// every later caller for this repository.
+		githubauth.WithContext(ctx),
 		// In all cases, the access token is scoped only to the repo specified by
 		// repoURL.
 		githubauth.WithInstallationTokenOptions(

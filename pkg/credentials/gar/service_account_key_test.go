@@ -6,11 +6,11 @@ import (
 	"testing"
 	"time"
 
-	"github.com/patrickmn/go-cache"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 	"golang.org/x/oauth2"
 
+	"github.com/akuity/kargo/pkg/cache/coalescing"
 	"github.com/akuity/kargo/pkg/credentials"
 )
 
@@ -157,29 +157,10 @@ func TestServiceAccountKeyProvider_GetCredentials(t *testing.T) {
 			ctx context.Context,
 			encodedServiceAccountKey string,
 		) (*oauth2.Token, error)
-		setupCache func(c *cache.Cache)
-		assertions func(t *testing.T, c *cache.Cache, creds *credentials.Credentials, err error)
+		assertions func(t *testing.T, creds *credentials.Credentials, err error)
 	}{
 		{
-			name:     "cache hit",
-			credType: credentials.TypeImage,
-			repoURL:  fakeGARRepoURL,
-			data: map[string][]byte{
-				serviceAccountKeyKey: []byte(fakeServiceAccountKey),
-			},
-			setupCache: func(c *cache.Cache) {
-				cacheKey := tokenCacheKey(fakeServiceAccountKey)
-				c.Set(cacheKey, fakeAccessToken, cache.DefaultExpiration)
-			},
-			assertions: func(t *testing.T, _ *cache.Cache, creds *credentials.Credentials, err error) {
-				assert.NoError(t, err)
-				assert.NotNil(t, creds)
-				assert.Equal(t, accessTokenUsername, creds.Username)
-				assert.Equal(t, fakeAccessToken, creds.Password)
-			},
-		},
-		{
-			name:     "cache miss, successful token fetch",
+			name:     "token obtained",
 			credType: credentials.TypeImage,
 			repoURL:  fakeGARRepoURL,
 			data: map[string][]byte{
@@ -191,20 +172,30 @@ func TestServiceAccountKeyProvider_GetCredentials(t *testing.T) {
 					Expiry:      time.Now().Add(time.Hour),
 				}, nil
 			},
-			assertions: func(t *testing.T, c *cache.Cache, creds *credentials.Credentials, err error) {
+			assertions: func(t *testing.T, creds *credentials.Credentials, err error) {
 				assert.NoError(t, err)
 				assert.NotNil(t, creds)
 				assert.Equal(t, accessTokenUsername, creds.Username)
 				assert.Equal(t, fakeAccessToken, creds.Password)
-
-				// Verify the token was cached with a TTL based on the
-				// token's actual expiry
-				items := c.Items()
-				item, found := items[tokenCacheKey(fakeServiceAccountKey)]
-				assert.True(t, found)
-				expectedTTL := 55 * time.Minute // 1h expiry - 5m margin
-				actualTTL := time.Until(time.Unix(0, item.Expiration))
-				assert.InDelta(t, expectedTTL.Seconds(), actualTTL.Seconds(), 5)
+			},
+		},
+		{
+			name:     "token obtained, but too near expiry to cache",
+			credType: credentials.TypeImage,
+			repoURL:  fakeGARRepoURL,
+			data: map[string][]byte{
+				serviceAccountKeyKey: []byte(fakeServiceAccountKey),
+			},
+			getAccessTokenFn: func(context.Context, string) (*oauth2.Token, error) {
+				return &oauth2.Token{
+					AccessToken: fakeAccessToken,
+					Expiry:      time.Now().Add(-time.Hour),
+				}, nil
+			},
+			assertions: func(t *testing.T, creds *credentials.Credentials, err error) {
+				assert.NoError(t, err)
+				assert.NotNil(t, creds)
+				assert.Equal(t, fakeAccessToken, creds.Password)
 			},
 		},
 		{
@@ -217,7 +208,7 @@ func TestServiceAccountKeyProvider_GetCredentials(t *testing.T) {
 			getAccessTokenFn: func(context.Context, string) (*oauth2.Token, error) {
 				return nil, errors.New("access token error")
 			},
-			assertions: func(t *testing.T, _ *cache.Cache, creds *credentials.Credentials, err error) {
+			assertions: func(t *testing.T, creds *credentials.Credentials, err error) {
 				assert.ErrorContains(t, err, "error getting GCP access token")
 				assert.Nil(t, creds)
 			},
@@ -232,7 +223,7 @@ func TestServiceAccountKeyProvider_GetCredentials(t *testing.T) {
 			getAccessTokenFn: func(context.Context, string) (*oauth2.Token, error) {
 				return nil, nil
 			},
-			assertions: func(t *testing.T, _ *cache.Cache, creds *credentials.Credentials, err error) {
+			assertions: func(t *testing.T, creds *credentials.Credentials, err error) {
 				assert.Nil(t, creds)
 				assert.NoError(t, err)
 			},
@@ -244,9 +235,19 @@ func TestServiceAccountKeyProvider_GetCredentials(t *testing.T) {
 			provider := NewServiceAccountKeyProvider().(*ServiceAccountKeyProvider) // nolint:forcetypeassert
 			provider.getAccessTokenFn = testCase.getAccessTokenFn
 
-			if testCase.setupCache != nil {
-				testCase.setupCache(provider.tokenCache)
-			}
+			// A cache that caches nothing leaves loading as the only way a caller
+			// can obtain a token, so every case exercises the load. Whether a hit is
+			// served from the cache instead is the cache's concern, not this
+			// provider's.
+			tokenCache, err := coalescing.NewCache(
+				provider.loadAccessToken,
+				&coalescing.CacheOptions{
+					LoadTimeout:  new(tokenAcquisitionTimeout),
+					CacheNothing: true,
+				},
+			)
+			require.NoError(t, err)
+			provider.tokenCache = tokenCache
 
 			creds, err := provider.GetCredentials(
 				t.Context(),
@@ -256,7 +257,56 @@ func TestServiceAccountKeyProvider_GetCredentials(t *testing.T) {
 					Data:    testCase.data,
 				},
 			)
-			testCase.assertions(t, provider.tokenCache, creds, err)
+			testCase.assertions(t, creds, err)
 		})
+	}
+}
+
+func TestServiceAccountKeyProvider_GetCredentials_perKey(t *testing.T) {
+	t.Parallel()
+
+	// Coalescing, cancellation, and the load deadline all belong to the cache this
+	// provider delegates to, and are covered by that package's tests. What remains
+	// this provider's own responsibility is that the key it caches under and the
+	// input it loads from describe the same service account key, so that no set of
+	// credentials is ever served another's token.
+
+	const fakeRepoURL = "us-central1-docker.pkg.dev/my-project/my-repo"
+
+	provider := &ServiceAccountKeyProvider{
+		getAccessTokenFn: func(
+			_ context.Context,
+			encodedServiceAccountKey string,
+		) (*oauth2.Token, error) {
+			// The token identifies the key it was obtained with.
+			return &oauth2.Token{
+				AccessToken: "token-for-" + encodedServiceAccountKey,
+				Expiry:      time.Now().Add(time.Hour),
+			}, nil
+		},
+	}
+	tokenCache, err := coalescing.NewCache(
+		provider.loadAccessToken,
+		&coalescing.CacheOptions{
+			LoadTimeout: new(tokenAcquisitionTimeout),
+			DefaultTTL:  new(time.Hour),
+		},
+	)
+	require.NoError(t, err)
+	provider.tokenCache = tokenCache
+
+	for _, key := range []string{"key-a", "key-b", "key-a"} {
+		creds, err := provider.GetCredentials(
+			t.Context(),
+			credentials.Request{
+				Type:    credentials.TypeImage,
+				RepoURL: fakeRepoURL,
+				Data:    map[string][]byte{serviceAccountKeyKey: []byte(key)},
+			},
+		)
+		require.NoError(t, err)
+		require.NotNil(t, creds)
+		require.Equal(t, accessTokenUsername, creds.Username)
+		require.Equal(t, "token-for-"+key, creds.Password)
 	}
 }

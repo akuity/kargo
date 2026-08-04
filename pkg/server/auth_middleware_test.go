@@ -21,6 +21,7 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/client/fake"
 	"sigs.k8s.io/controller-runtime/pkg/client/interceptor"
 
+	libhttp "github.com/akuity/kargo/pkg/http"
 	"github.com/akuity/kargo/pkg/server/config"
 	"github.com/akuity/kargo/pkg/server/dex"
 	libOIDC "github.com/akuity/kargo/pkg/server/oidc"
@@ -83,6 +84,8 @@ func TestWithExemptPaths(t *testing.T) {
 	)
 
 	router := gin.New()
+	srv := &server{}
+	router.Use(srv.handleError)
 	router.Use(middleware)
 	ok := func(c *gin.Context) { c.Status(http.StatusOK) }
 	router.GET(testExemptPath, ok)
@@ -481,7 +484,7 @@ func TestAuthenticate(t *testing.T) {
 					return nil, nil, nil
 				},
 				verifyKubernetesTokenFn: func(context.Context, string) (*authnv1.UserInfo, error) {
-					return nil, errors.New("token not recognized")
+					return nil, errInvalidToken
 				},
 			},
 			token: testToken,
@@ -489,6 +492,7 @@ func TestAuthenticate(t *testing.T) {
 			// This should result in an authentication error.
 			assertions: func(ctx context.Context, err error) {
 				require.Error(t, err)
+				requireErrorStatus(t, err, http.StatusUnauthorized)
 				require.Equal(t, "invalid token", err.Error())
 				_, ok := user.InfoFromContext(ctx)
 				require.False(t, ok)
@@ -723,6 +727,7 @@ func TestAuthMiddlewareHandler(t *testing.T) {
 		token          string
 		authMiddleware *authMiddleware
 		expectedStatus int
+		expectedBody   string
 		expectUserInfo bool
 	}{
 		{
@@ -739,6 +744,41 @@ func TestAuthMiddlewareHandler(t *testing.T) {
 			path:           "/v1beta1/projects",
 			authMiddleware: &authMiddleware{},
 			expectedStatus: http.StatusUnauthorized,
+			expectedBody:   `{"error":"no token provided"}`,
+			expectUserInfo: false,
+		},
+		{
+			name: "token rejected",
+			path: "/v1beta1/projects",
+			authMiddleware: &authMiddleware{
+				parseUnverifiedJWTFn: func(string, jwt.Claims) (*jwt.Token, []string, error) {
+					return nil, nil, errors.New("not a JWT")
+				},
+			},
+			token:          "not-a-jwt",
+			expectedStatus: http.StatusUnauthorized,
+			expectedBody:   `{"error":"invalid token"}`,
+			expectUserInfo: false,
+		},
+		{
+			// A failure to verify the token, as opposed to a failed verification,
+			// must not be reported to the client as a rejected credential.
+			name: "token verification fails",
+			path: "/v1beta1/projects",
+			authMiddleware: &authMiddleware{
+				parseUnverifiedJWTFn: func(_ string, claims jwt.Claims) (*jwt.Token, []string, error) {
+					rc, ok := claims.(*jwt.RegisteredClaims)
+					require.True(t, ok)
+					rc.Issuer = "unrecognized-issuer"
+					return nil, nil, nil
+				},
+				verifyKubernetesTokenFn: func(context.Context, string) (*authnv1.UserInfo, error) {
+					return nil, errors.New("create transport: no credentials")
+				},
+			},
+			token:          "some-token",
+			expectedStatus: http.StatusInternalServerError,
+			expectedBody:   `{"error":"internal server error"}`,
 			expectUserInfo: false,
 		},
 		{
@@ -769,6 +809,11 @@ func TestAuthMiddlewareHandler(t *testing.T) {
 	for _, tc := range testCases {
 		t.Run(tc.name, func(t *testing.T) {
 			router := gin.New()
+			// The auth middleware delegates status codes and response bodies to
+			// the error-handling middleware, so both are needed to observe what
+			// a client actually receives.
+			srv := &server{}
+			router.Use(srv.handleError)
 			router.Use(tc.authMiddleware.Handler)
 			router.GET("/v1beta1/*path", func(c *gin.Context) {
 				_, hasUser := user.InfoFromContext(c.Request.Context())
@@ -785,8 +830,20 @@ func TestAuthMiddlewareHandler(t *testing.T) {
 			router.ServeHTTP(w, req)
 
 			require.Equal(t, tc.expectedStatus, w.Code)
+			if tc.expectedBody != "" {
+				require.JSONEq(t, tc.expectedBody, w.Body.String())
+			}
 		})
 	}
+}
+
+// requireErrorStatus asserts that err carries the expected HTTP status code for
+// the error-handling middleware to act on.
+func requireErrorStatus(t *testing.T, err error, code int) {
+	t.Helper()
+	var httpErr *libhttp.HTTPError
+	require.ErrorAs(t, err, &httpErr)
+	require.Equal(t, code, httpErr.Code())
 }
 
 func TestVerifyKubernetesToken(t *testing.T) {
@@ -798,12 +855,16 @@ func TestVerifyKubernetesToken(t *testing.T) {
 		assertions   func(t *testing.T, u *authnv1.UserInfo, err error)
 	}{
 		{
+			// The check could not be carried out, which says nothing about the
+			// token, so the error must carry no status code for the
+			// error-handling middleware to report to the client.
 			name:      "TokenReview call fails",
 			createErr: errors.New("connection refused"),
 			assertions: func(t *testing.T, u *authnv1.UserInfo, err error) {
-				require.ErrorIs(t, err, errKubernetesTokenReviewFailed)
-				require.ErrorContains(t, err, "kubernetes token review failed")
+				require.ErrorContains(t, err, "submit TokenReview")
 				require.ErrorContains(t, err, "connection refused")
+				var httpErr *libhttp.HTTPError
+				require.False(t, errors.As(err, &httpErr))
 				require.Nil(t, u)
 			},
 		},
@@ -813,7 +874,8 @@ func TestVerifyKubernetesToken(t *testing.T) {
 				Authenticated: false,
 			},
 			assertions: func(t *testing.T, u *authnv1.UserInfo, err error) {
-				require.ErrorContains(t, err, "not authenticated")
+				requireErrorStatus(t, err, http.StatusUnauthorized)
+				require.ErrorIs(t, err, errInvalidToken)
 				require.Nil(t, u)
 			},
 		},
@@ -823,6 +885,7 @@ func TestVerifyKubernetesToken(t *testing.T) {
 				Error: "some verification error",
 			},
 			assertions: func(t *testing.T, u *authnv1.UserInfo, err error) {
+				requireErrorStatus(t, err, http.StatusUnauthorized)
 				require.ErrorContains(t, err, "some verification error")
 				require.Nil(t, u)
 			},

@@ -2,14 +2,15 @@ package ecr
 
 import (
 	"context"
+	"encoding/base64"
 	"errors"
 	"testing"
 	"time"
 
-	"github.com/patrickmn/go-cache"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 
+	"github.com/akuity/kargo/pkg/cache/coalescing"
 	"github.com/akuity/kargo/pkg/credentials"
 )
 
@@ -135,6 +136,7 @@ func TestAccessKeyProvider_Supports(t *testing.T) {
 
 	for _, testCase := range testCases {
 		t.Run(testCase.name, func(t *testing.T) {
+			t.Parallel()
 			supports, err := p.Supports(
 				t.Context(),
 				credentials.Request{
@@ -170,8 +172,7 @@ func TestAccessKeyProvider_GetCredentials(t *testing.T) {
 			accessKeyID string,
 			secretAccessKey string,
 		) (string, time.Time, error)
-		setupCache func(cache *cache.Cache)
-		assertions func(t *testing.T, c *cache.Cache, creds *credentials.Credentials, err error)
+		assertions func(t *testing.T, creds *credentials.Credentials, err error)
 	}{
 		{
 			name:     "unsupported credentials",
@@ -186,36 +187,13 @@ func TestAccessKeyProvider_GetCredentials(t *testing.T) {
 			) (string, time.Time, error) {
 				return "", time.Time{}, nil
 			},
-			assertions: func(t *testing.T, _ *cache.Cache, creds *credentials.Credentials, err error) {
+			assertions: func(t *testing.T, creds *credentials.Credentials, err error) {
 				assert.Nil(t, creds)
 				assert.NoError(t, err)
 			},
 		},
 		{
-			name:     "cache hit",
-			credType: credentials.TypeImage,
-			repoURL:  fakeRepoURL,
-			data: map[string][]byte{
-				regionKey: []byte(fakeRegion),
-				idKey:     []byte(fakeID),
-				secretKey: []byte(fakeSecret),
-			},
-			setupCache: func(c *cache.Cache) {
-				c.Set(
-					tokenCacheKey(fakeRegion, fakeID, fakeSecret),
-					fakeToken, // base64 of "AWS:password"
-					cache.DefaultExpiration,
-				)
-			},
-			assertions: func(t *testing.T, _ *cache.Cache, creds *credentials.Credentials, err error) {
-				assert.NoError(t, err)
-				assert.NotNil(t, creds)
-				assert.Equal(t, "AWS", creds.Username)
-				assert.Equal(t, "password", creds.Password)
-			},
-		},
-		{
-			name:     "cache miss, successful token fetch",
+			name:     "token obtained",
 			credType: credentials.TypeImage,
 			repoURL:  fakeRepoURL,
 			data: map[string][]byte{
@@ -231,20 +209,34 @@ func TestAccessKeyProvider_GetCredentials(t *testing.T) {
 			) (string, time.Time, error) {
 				return fakeToken, time.Now().Add(12 * time.Hour), nil
 			},
-			assertions: func(t *testing.T, c *cache.Cache, creds *credentials.Credentials, err error) {
+			assertions: func(t *testing.T, creds *credentials.Credentials, err error) {
 				assert.NoError(t, err)
 				assert.NotNil(t, creds)
 				assert.Equal(t, "AWS", creds.Username)
 				assert.Equal(t, "password", creds.Password)
-
-				// Verify the token was cached with a TTL based on the
-				// token's actual expiry
-				items := c.Items()
-				item, found := items[tokenCacheKey(fakeRegion, fakeID, fakeSecret)]
-				assert.True(t, found)
-				expectedTTL := 12*time.Hour - 5*time.Minute // 12h expiry - 5m margin
-				actualTTL := time.Until(time.Unix(0, item.Expiration))
-				assert.InDelta(t, expectedTTL.Seconds(), actualTTL.Seconds(), 5)
+			},
+		},
+		{
+			name:     "token obtained, but too near expiry to cache",
+			credType: credentials.TypeImage,
+			repoURL:  fakeRepoURL,
+			data: map[string][]byte{
+				regionKey: []byte(fakeRegion),
+				idKey:     []byte(fakeID),
+				secretKey: []byte(fakeSecret),
+			},
+			getAuthTokenFn: func(
+				context.Context,
+				string,
+				string,
+				string,
+			) (string, time.Time, error) {
+				return fakeToken, time.Now().Add(-time.Hour), nil
+			},
+			assertions: func(t *testing.T, creds *credentials.Credentials, err error) {
+				assert.NoError(t, err)
+				assert.NotNil(t, creds)
+				assert.Equal(t, "password", creds.Password)
 			},
 		},
 		{
@@ -264,7 +256,7 @@ func TestAccessKeyProvider_GetCredentials(t *testing.T) {
 			) (string, time.Time, error) {
 				return "", time.Time{}, errors.New("auth token error")
 			},
-			assertions: func(t *testing.T, _ *cache.Cache, creds *credentials.Credentials, err error) {
+			assertions: func(t *testing.T, creds *credentials.Credentials, err error) {
 				assert.ErrorContains(t, err, "error getting ECR auth token")
 				assert.Nil(t, creds)
 			},
@@ -286,25 +278,32 @@ func TestAccessKeyProvider_GetCredentials(t *testing.T) {
 			) (string, time.Time, error) {
 				return "", time.Time{}, nil
 			},
-			assertions: func(t *testing.T, c *cache.Cache, creds *credentials.Credentials, err error) {
+			assertions: func(t *testing.T, creds *credentials.Credentials, err error) {
 				assert.Nil(t, creds)
 				assert.NoError(t, err)
-
-				// Verify the token was not cached
-				_, found := c.Get(tokenCacheKey(fakeRegion, fakeID, fakeSecret))
-				assert.False(t, found)
 			},
 		},
 	}
 
 	for _, testCase := range testCases {
 		t.Run(testCase.name, func(t *testing.T) {
+			t.Parallel()
 			provider := NewAccessKeyProvider().(*AccessKeyProvider) // nolint:forcetypeassert
 			provider.getAuthTokenFn = testCase.getAuthTokenFn
 
-			if testCase.setupCache != nil {
-				testCase.setupCache(provider.tokenCache)
-			}
+			// A cache that caches nothing leaves loading as the only way a caller
+			// can obtain a token, so every case exercises the load. Whether a hit is
+			// served from the cache instead is the cache's concern, not this
+			// provider's.
+			tokenCache, err := coalescing.NewCache(
+				provider.loadAuthToken,
+				&coalescing.CacheOptions{
+					LoadTimeout:  new(tokenAcquisitionTimeout),
+					CacheNothing: true,
+				},
+			)
+			require.NoError(t, err)
+			provider.tokenCache = tokenCache
 
 			creds, err := provider.GetCredentials(
 				t.Context(),
@@ -314,7 +313,7 @@ func TestAccessKeyProvider_GetCredentials(t *testing.T) {
 					Data:    testCase.data,
 				},
 			)
-			testCase.assertions(t, provider.tokenCache, creds, err)
+			testCase.assertions(t, creds, err)
 		})
 	}
 }
@@ -355,8 +354,80 @@ func Test_decodeAuthToken(t *testing.T) {
 
 	for _, testCase := range testCases {
 		t.Run(testCase.name, func(t *testing.T) {
+			t.Parallel()
 			creds, err := decodeAuthToken(testCase.token)
 			testCase.assertions(t, creds, err)
 		})
+	}
+}
+
+func TestAccessKeyProvider_GetCredentials_perCredentials(t *testing.T) {
+	t.Parallel()
+
+	// Coalescing, cancellation, and the load deadline all belong to the cache this
+	// provider delegates to, and are covered by that package's tests. What remains
+	// this provider's own responsibility is that the key it caches under and the
+	// input it loads from describe the same credentials, so that no set of
+	// credentials is ever served another's token.
+
+	const (
+		fakeRepoURL = "123456789012.dkr.ecr.us-west-2.amazonaws.com/my-repo"
+		fakeRegion  = "us-west-2"
+		fakeID      = "AKIAIOSFODNN7EXAMPLE"                     // nolint:gosec
+		fakeOtherID = "AKIAI44QH8DHBEXAMPLE"                     // nolint:gosec
+		fakeSecret  = "wJalrXUtnFEMI/K7MDENG/bPxRfiCYEXAMPLEKEY" // nolint:gosec
+		fakeRotated = "je7MtGbClwBF/2Zp9Utk/h3yCo8nvbEXAMPLEKEY" // nolint:gosec
+	)
+
+	provider := &AccessKeyProvider{
+		getAuthTokenFn: func(
+			_ context.Context,
+			_ string,
+			accessKeyID string,
+			secretAccessKey string,
+		) (string, time.Time, error) {
+			// The token identifies the credentials it was obtained with.
+			return base64.StdEncoding.EncodeToString(
+				[]byte("AWS:" + accessKeyID + "|" + secretAccessKey),
+			), time.Now().Add(12 * time.Hour), nil
+		},
+	}
+	tokenCache, err := coalescing.NewCache(
+		provider.loadAuthToken,
+		&coalescing.CacheOptions{
+			LoadTimeout: new(tokenAcquisitionTimeout),
+			DefaultTTL:  new(time.Hour),
+		},
+	)
+	require.NoError(t, err)
+	provider.tokenCache = tokenCache
+
+	// Each dimension of the credentials varies in turn, and the first pair
+	// repeats at the end to confirm it is still served its own token.
+	for _, creds := range []struct {
+		id     string
+		secret string
+	}{
+		{fakeID, fakeSecret},
+		{fakeOtherID, fakeSecret},
+		{fakeID, fakeRotated},
+		{fakeID, fakeSecret},
+	} {
+		got, err := provider.GetCredentials(
+			t.Context(),
+			credentials.Request{
+				Type:    credentials.TypeImage,
+				RepoURL: fakeRepoURL,
+				Data: map[string][]byte{
+					regionKey: []byte(fakeRegion),
+					idKey:     []byte(creds.id),
+					secretKey: []byte(creds.secret),
+				},
+			},
+		)
+		require.NoError(t, err)
+		require.NotNil(t, got)
+		require.Equal(t, "AWS", got.Username)
+		require.Equal(t, creds.id+"|"+creds.secret, got.Password)
 	}
 }

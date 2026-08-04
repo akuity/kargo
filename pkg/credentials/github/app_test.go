@@ -8,17 +8,16 @@ import (
 	"maps"
 	"net/http"
 	"net/http/httptest"
-	"sync"
 	"sync/atomic"
 	"testing"
 	"time"
 
-	"github.com/patrickmn/go-cache"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 	"golang.org/x/oauth2"
 
 	kargoapi "github.com/akuity/kargo/api/v1alpha1"
+	"github.com/akuity/kargo/pkg/cache/coalescing"
 	"github.com/akuity/kargo/pkg/credentials"
 )
 
@@ -222,6 +221,7 @@ func TestAppCredentialProvider_GetCredentials(t *testing.T) {
 		data             map[string][]byte
 		metadata         map[string]string
 		getAccessTokenFn func(
+			ctx context.Context,
 			appOrClientID string,
 			installationID int64,
 			encodedPrivateKey string,
@@ -319,12 +319,15 @@ func TestAppCredentialProvider_GetCredentials(t *testing.T) {
 			credType: credentials.TypeGit,
 			repoURL:  testRepoURL,
 			data:     testData,
-			getAccessTokenFn: func(string, int64, string, string) (*oauth2.Token, error) {
+			getAccessTokenFn: func(
+				context.Context, string, int64, string, string,
+			) (*oauth2.Token, error) {
 				return nil, errors.New("token error")
 			},
 			assertions: func(t *testing.T, creds *credentials.Credentials, err error) {
 				assert.Nil(t, creds)
 				assert.Error(t, err)
+				assert.ErrorContains(t, err, "error minting installation access token")
 				assert.ErrorContains(t, err, "token error")
 			},
 		},
@@ -333,7 +336,9 @@ func TestAppCredentialProvider_GetCredentials(t *testing.T) {
 			credType: credentials.TypeGit,
 			repoURL:  testRepoURL,
 			data:     testData,
-			getAccessTokenFn: func(string, int64, string, string) (*oauth2.Token, error) {
+			getAccessTokenFn: func(
+				context.Context, string, int64, string, string,
+			) (*oauth2.Token, error) {
 				return &oauth2.Token{
 					AccessToken: "test-token",
 					Expiry:      time.Now().Add(time.Hour),
@@ -386,89 +391,61 @@ func TestAppCredentialProvider_getUsernameAndPassword(t *testing.T) {
 		fakeAccessToken    = "test-token"
 	)
 
-	p := &AppCredentialProvider{}
-
-	testTokenCacheKey := p.tokenCacheKey(
-		fakeAppOrClientID,
-		fakeInstallationID,
-		fakePrivateKey,
-		fakeRepoURL,
-	)
-
 	testCases := []struct {
 		name             string
-		setupCache       func(c *cache.Cache)
 		getAccessTokenFn func(
+			ctx context.Context,
 			appOrClientID string,
 			installationID int64,
 			encodedPrivateKey string,
 			repoURL string,
 		) (*oauth2.Token, error)
-		assertions func(*testing.T, *cache.Cache, *credentials.Credentials, error)
+		assertions func(*testing.T, *credentials.Credentials, error)
 	}{
 		{
-			name: "cache hit",
-			setupCache: func(c *cache.Cache) {
-				c.Set(testTokenCacheKey, fakeAccessToken, cache.DefaultExpiration)
-			},
-			assertions: func(
-				t *testing.T,
-				_ *cache.Cache,
-				creds *credentials.Credentials,
-				err error,
-			) {
-				assert.NoError(t, err)
-				assert.NotNil(t, creds)
-				assert.Equal(t, accessTokenUsername, creds.Username)
-				assert.Equal(t, fakeAccessToken, creds.Password)
-			},
-		},
-		{
-			name: "cache miss, successful token fetch",
-			getAccessTokenFn: func(string, int64, string, string) (*oauth2.Token, error) {
+			name: "token obtained",
+			getAccessTokenFn: func(
+				context.Context, string, int64, string, string,
+			) (*oauth2.Token, error) {
 				return &oauth2.Token{
 					AccessToken: fakeAccessToken,
 					Expiry:      time.Now().Add(time.Hour),
 				}, nil
 			},
-			assertions: func(
-				t *testing.T,
-				c *cache.Cache,
-				creds *credentials.Credentials,
-				err error,
-			) {
+			assertions: func(t *testing.T, creds *credentials.Credentials, err error) {
 				assert.NoError(t, err)
 				assert.NotNil(t, creds)
 				assert.Equal(t, accessTokenUsername, creds.Username)
 				assert.Equal(t, fakeAccessToken, creds.Password)
-
-				// Verify the token was cached with a TTL based on the
-				// token's actual expiry
-				items := c.Items()
-				item, found := items[testTokenCacheKey]
-				assert.True(t, found)
-				expectedTTL := 55 * time.Minute // 1h expiry - 5m margin
-				actualTTL := time.Until(time.Unix(0, item.Expiration))
-				assert.InDelta(t, expectedTTL.Seconds(), actualTTL.Seconds(), 5)
+			},
+		},
+		{
+			name: "token obtained, but too near expiry to cache",
+			getAccessTokenFn: func(
+				context.Context, string, int64, string, string,
+			) (*oauth2.Token, error) {
+				return &oauth2.Token{
+					AccessToken: fakeAccessToken,
+					Expiry:      time.Now().Add(-time.Hour),
+				}, nil
+			},
+			assertions: func(t *testing.T, creds *credentials.Credentials, err error) {
+				assert.NoError(t, err)
+				assert.NotNil(t, creds)
+				assert.Equal(t, fakeAccessToken, creds.Password)
 			},
 		},
 		{
 			name: "error in getAccessToken",
-			getAccessTokenFn: func(string, int64, string, string) (*oauth2.Token, error) {
+			getAccessTokenFn: func(
+				context.Context, string, int64, string, string,
+			) (*oauth2.Token, error) {
 				return nil, errors.New("token error")
 			},
-			assertions: func(
-				t *testing.T,
-				c *cache.Cache,
-				creds *credentials.Credentials,
-				err error,
-			) {
+			assertions: func(t *testing.T, creds *credentials.Credentials, err error) {
+				assert.ErrorContains(t, err, "error minting installation access token")
 				assert.ErrorContains(t, err, "token error")
 				assert.Nil(t, creds)
-
-				// Verify the token was not cached
-				_, found := c.Get(testTokenCacheKey)
-				assert.False(t, found)
 			},
 		},
 	}
@@ -482,9 +459,19 @@ func TestAppCredentialProvider_getUsernameAndPassword(t *testing.T) {
 				return true, nil
 			}
 
-			if testCase.setupCache != nil {
-				testCase.setupCache(provider.tokenCache)
-			}
+			// A cache that caches nothing leaves loading as the only way a caller
+			// can obtain a token, so every case exercises the load. Whether a hit is
+			// served from the cache instead is the cache's concern, not this
+			// provider's.
+			tokenCache, err := coalescing.NewCache(
+				provider.loadAccessToken,
+				&coalescing.CacheOptions{
+					LoadTimeout:  new(provider.mintTimeout()),
+					CacheNothing: true,
+				},
+			)
+			require.NoError(t, err)
+			provider.tokenCache = tokenCache
 
 			if testCase.getAccessTokenFn != nil {
 				provider.getAccessTokenFn = testCase.getAccessTokenFn
@@ -497,81 +484,51 @@ func TestAppCredentialProvider_getUsernameAndPassword(t *testing.T) {
 				fakePrivateKey,
 				fakeRepoURL,
 			)
-			testCase.assertions(t, provider.tokenCache, creds, err)
+			testCase.assertions(t, creds, err)
 		})
 	}
 }
 
-func TestAppCredentialProvider_getUsernameAndPassword_coalescing(
-	t *testing.T,
-) {
-	const (
-		fakeAppOrClientID  = "fake-id"
-		fakeInstallationID = int64(456)
-		fakePrivateKey     = "private-key"
-		fakeRepoURL        = "https://github.com/example/repo"
-		fakeAccessToken    = "test-token"
+func TestAppCredentialProvider_mintTimeout(t *testing.T) {
+	t.Parallel()
 
-		concurrency = 10
-	)
-
-	var mints atomic.Int32
-
-	provider := NewAppCredentialProvider().(*AppCredentialProvider) // nolint:forcetypeassert
-	provider.getAccessTokenFn = func(
-		string, int64, string, string,
-	) (*oauth2.Token, error) {
-		mints.Add(1)
-		// Hold the mint open long enough for the other goroutines to pile up
-		// behind it.
-		time.Sleep(50 * time.Millisecond)
-		return &oauth2.Token{
-			AccessToken: fakeAccessToken,
-			Expiry:      time.Now().Add(time.Hour),
-		}, nil
+	// A mint's bound has to cover every validation attempt this provider will
+	// make, waiting out the whole backoff schedule, plus the round-trips those
+	// attempts take.
+	testCases := []struct {
+		name     string
+		buffer   time.Duration
+		backoff  []time.Duration
+		expected time.Duration
+	}{
+		{
+			name:     "no waits, so one validation attempt",
+			buffer:   10 * time.Second,
+			expected: 10*time.Second + tokenValidationRequestTimeout,
+		},
+		{
+			name:    "one validation attempt more than there are waits",
+			buffer:  10 * time.Second,
+			backoff: []time.Duration{time.Second, 2 * time.Second, 4 * time.Second},
+			expected: 10*time.Second + 7*time.Second +
+				4*tokenValidationRequestTimeout,
+		},
 	}
-	provider.validateAccessTokenFn = func(
-		context.Context, string, string,
-	) (bool, error) {
-		return true, nil
-	}
-
-	creds := make([]*credentials.Credentials, concurrency)
-	errs := make([]error, concurrency)
-	var wg sync.WaitGroup
-	for i := range concurrency {
-		wg.Go(func() {
-			creds[i], errs[i] = provider.getUsernameAndPassword(
-				t.Context(),
-				fakeAppOrClientID,
-				fakeInstallationID,
-				fakePrivateKey,
-				fakeRepoURL,
-			)
+	for _, testCase := range testCases {
+		t.Run(testCase.name, func(t *testing.T) {
+			t.Parallel()
+			provider := &AppCredentialProvider{
+				validationBackoff: testCase.backoff,
+				mintTimeoutBuffer: testCase.buffer,
+			}
+			require.Equal(t, testCase.expected, provider.mintTimeout())
 		})
 	}
-	wg.Wait()
-
-	// However the goroutines were scheduled, exactly one token should have
-	// been minted. Callers that missed the in-flight mint entirely find the
-	// token already cached when their own flight begins.
-	require.Equal(t, int32(1), mints.Load())
-	for i := range concurrency {
-		require.NoError(t, errs[i])
-		require.NotNil(t, creds[i])
-		require.Equal(t, fakeAccessToken, creds[i].Password)
-	}
 }
 
-// This exercises the case where the context of the call that wins the
-// singleflight race is canceled mid-mint. Because the mint runs under an
-// orphaned context, the winner's cancellation must NOT cancel the shared mint.
-// The winner stops waiting and returns an "interrupted" error, but the single
-// mint runs to completion and the coalesced callers whose contexts are still
-// live receive the token from that SAME mint.
-func TestAppCredentialProvider_getUsernameAndPassword_winnerCanceled(
-	t *testing.T,
-) {
+func TestAppCredentialProvider_loadAccessToken_tokenNeverUsable(t *testing.T) {
+	t.Parallel()
+
 	const (
 		fakeAppOrClientID  = "fake-id"
 		fakeInstallationID = int64(456)
@@ -580,153 +537,42 @@ func TestAppCredentialProvider_getUsernameAndPassword_winnerCanceled(
 		fakeAccessToken    = "test-token"
 	)
 
-	var mints atomic.Int32
-	mintStarted := make(chan struct{})
-	release := make(chan struct{})
-
+	// Running out of time to show that a token works is reported as a failure to
+	// mint, rather than the token being handed over unvalidated. Exhausting the
+	// backoff schedule is not the same thing and does hand it over -- see
+	// waitForTokenUsable and its own test. How long the attempt may go on for is
+	// bounded by the cache this Loader function is given to, and belongs to that
+	// cache's own tests.
 	provider := NewAppCredentialProvider().(*AppCredentialProvider) // nolint:forcetypeassert
 	provider.getAccessTokenFn = func(
-		string, int64, string, string,
-	) (*oauth2.Token, error) {
-		if mints.Add(1) == 1 {
-			close(mintStarted)
-		}
-		return &oauth2.Token{
-			AccessToken: fakeAccessToken,
-			Expiry:      time.Now().Add(time.Hour),
-		}, nil
-	}
-	// Block validation until the provided context is canceled or the test
-	// releases it. This holds the winner's flight open for as long as the
-	// test needs it to remain in progress.
-	provider.validateAccessTokenFn = func(
-		ctx context.Context, _, _ string,
-	) (bool, error) {
-		select {
-		case <-ctx.Done():
-			return false, ctx.Err()
-		case <-release:
-			return true, nil
-		}
-	}
-
-	winnerCtx, cancel := context.WithCancel(t.Context())
-	winnerErr := make(chan error, 1)
-	go func() {
-		_, err := provider.getUsernameAndPassword(
-			winnerCtx,
-			fakeAppOrClientID,
-			fakeInstallationID,
-			fakePrivateKey,
-			fakeRepoURL,
-		)
-		winnerErr <- err
-	}()
-	// The winner is now mid-mint with its flight held open
-	<-mintStarted
-
-	// Several coalesced waiters, all with live contexts, all of which should
-	// recover from the winner's cancellation.
-	const numWaiters = 3
-	type result struct {
-		creds *credentials.Credentials
-		err   error
-	}
-	waiterRes := make(chan result, numWaiters)
-	for range numWaiters {
-		go func() {
-			creds, err := provider.getUsernameAndPassword(
-				t.Context(),
-				fakeAppOrClientID,
-				fakeInstallationID,
-				fakePrivateKey,
-				fakeRepoURL,
-			)
-			waiterRes <- result{creds: creds, err: err}
-		}()
-	}
-
-	// Give the waiters a moment to join the in-flight mint, then cancel the
-	// winner's context.
-	time.Sleep(100 * time.Millisecond)
-	cancel()
-
-	// The winner's own context was canceled, so it stops waiting and returns an
-	// interrupted error -- but it must NOT have canceled the shared mint.
-	winErr := <-winnerErr
-	require.ErrorIs(t, winErr, context.Canceled)
-	require.ErrorContains(t, winErr, "cache refresh will continue in the background")
-
-	// Allow the orphaned mint to validate.
-	close(release)
-
-	for range numWaiters {
-		res := <-waiterRes
-		require.NoError(t, res.err)
-		require.NotNil(t, res.creds)
-		require.Equal(t, fakeAccessToken, res.creds.Password)
-	}
-
-	// Exactly one mint: the winner's cancellation did not spawn a replacement,
-	// and the single orphaned mint served every coalesced waiter.
-	require.Equal(t, int32(1), mints.Load())
-
-	// That orphaned mint also cached the token for future callers.
-	cacheKey := provider.tokenCacheKey(
-		fakeAppOrClientID,
-		fakeInstallationID,
-		fakePrivateKey,
-		fakeRepoURL,
-	)
-	cached, found := provider.tokenCache.Get(cacheKey)
-	require.True(t, found)
-	require.Equal(t, fakeAccessToken, cached)
-}
-
-// This exercises the fail-safe that bounds the mint. The mint runs under an
-// orphaned context whose deadline is maxWait, so validation that never succeeds
-// (e.g. GitHub never confirming the token) must be cut off with a context
-// deadline error rather than hanging forever.
-func TestAppCredentialProvider_getUsernameAndPassword_timeout(t *testing.T) {
-	const (
-		fakeAppOrClientID  = "fake-id"
-		fakeInstallationID = int64(456)
-		fakePrivateKey     = "private-key"
-		fakeRepoURL        = "https://github.com/example/repo"
-		fakeAccessToken    = "test-token"
-	)
-
-	provider := NewAppCredentialProvider().(*AppCredentialProvider) // nolint:forcetypeassert
-	// Keep the orphaned context's deadline short so the test does not linger.
-	provider.validationBackoff = nil
-	provider.mintTimeoutBuffer = 50 * time.Millisecond
-	provider.getAccessTokenFn = func(
-		string, int64, string, string,
+		context.Context, string, int64, string, string,
 	) (*oauth2.Token, error) {
 		return &oauth2.Token{
 			AccessToken: fakeAccessToken,
 			Expiry:      time.Now().Add(time.Hour),
 		}, nil
 	}
-	// Validation never resolves on its own; it only returns once the mint's
-	// orphaned context hits its deadline.
 	provider.validateAccessTokenFn = func(
 		ctx context.Context, _, _ string,
 	) (bool, error) {
-		<-ctx.Done()
 		return false, ctx.Err()
 	}
 
-	creds, err := provider.getUsernameAndPassword(
-		t.Context(),
-		fakeAppOrClientID,
-		fakeInstallationID,
-		fakePrivateKey,
-		fakeRepoURL,
-	)
+	// A context already ended stands in for one whose deadline has passed.
+	ctx, cancel := context.WithCancel(t.Context())
+	cancel()
+
+	token, ttl, err := provider.loadAccessToken(ctx, appInput{
+		appOrClientID:     fakeAppOrClientID,
+		installationID:    fakeInstallationID,
+		encodedPrivateKey: fakePrivateKey,
+		repoURL:           fakeRepoURL,
+	})
+
 	require.ErrorContains(t, err, "error minting installation access token")
-	require.ErrorIs(t, err, context.DeadlineExceeded)
-	require.Nil(t, creds)
+	require.ErrorIs(t, err, context.Canceled)
+	require.Empty(t, token)
+	require.Nil(t, ttl)
 }
 
 // A real (non-context) error from the mint is delivered to the caller rather
@@ -743,7 +589,7 @@ func TestAppCredentialProvider_getUsernameAndPassword_realError(t *testing.T) {
 
 	provider := NewAppCredentialProvider().(*AppCredentialProvider) // nolint:forcetypeassert
 	provider.getAccessTokenFn = func(
-		string, int64, string, string,
+		context.Context, string, int64, string, string,
 	) (*oauth2.Token, error) {
 		mints.Add(1)
 		return nil, errors.New("token error")
@@ -761,6 +607,7 @@ func TestAppCredentialProvider_getUsernameAndPassword_realError(t *testing.T) {
 		fakePrivateKey,
 		fakeRepoURL,
 	)
+	require.ErrorContains(t, err, "error minting installation access token")
 	require.ErrorContains(t, err, "token error")
 	require.Nil(t, creds)
 	// The error must not have triggered a retry.
@@ -1069,5 +916,67 @@ func TestAppCredentialProvider_extractBaseURL(t *testing.T) {
 			baseURL, err := p.extractBaseURL(testCase.repoURL)
 			testCase.assertions(t, baseURL, err)
 		})
+	}
+}
+
+func TestAppCredentialProvider_getUsernameAndPassword_perRepo(t *testing.T) {
+	t.Parallel()
+
+	// Coalescing, cancellation, and the mint's deadline all belong to the cache
+	// this provider delegates to, and are covered by that package's tests. What
+	// remains this provider's own responsibility is that the key it caches under
+	// and the input it mints from describe the same repository, since a token is
+	// scoped to one repository and no repository may be served another's.
+
+	const (
+		fakeAppOrClientID  = "fake-id"
+		fakeInstallationID = int64(456)
+		fakePrivateKey     = "private-key"
+		fakeRotatedKey     = "rotated-private-key"
+		fakeRepoA          = "https://github.com/example/repo-a"
+		fakeRepoB          = "https://github.com/example/repo-b"
+	)
+
+	provider := NewAppCredentialProvider().(*AppCredentialProvider) // nolint:forcetypeassert
+	provider.getAccessTokenFn = func(
+		_ context.Context, _ string, _ int64, privateKey string, repoURL string,
+	) (*oauth2.Token, error) {
+		// The token identifies the key it was minted with and the repository it
+		// was minted for.
+		return &oauth2.Token{
+			AccessToken: "token-for-" + privateKey + "@" + repoURL,
+			Expiry:      time.Now().Add(time.Hour),
+		}, nil
+	}
+	provider.validateAccessTokenFn = func(
+		context.Context, string, string,
+	) (bool, error) {
+		return true, nil
+	}
+
+	// Each dimension of the key varies in turn, and the first pair repeats at the
+	// end to confirm it is still served its own token.
+	for _, request := range []struct {
+		privateKey string
+		repoURL    string
+	}{
+		{fakePrivateKey, fakeRepoA},
+		{fakePrivateKey, fakeRepoB},
+		{fakeRotatedKey, fakeRepoA},
+		{fakePrivateKey, fakeRepoA},
+	} {
+		creds, err := provider.getUsernameAndPassword(
+			t.Context(),
+			fakeAppOrClientID,
+			fakeInstallationID,
+			request.privateKey,
+			request.repoURL,
+		)
+		require.NoError(t, err)
+		require.NotNil(t, creds)
+		require.Equal(t, accessTokenUsername, creds.Username)
+		require.Equal(
+			t, "token-for-"+request.privateKey+"@"+request.repoURL, creds.Password,
+		)
 	}
 }
