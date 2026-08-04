@@ -62,6 +62,13 @@
   "type": "object",
   "additionalProperties": false,
   "required": ["url"],
+  "allOf": [
+    {
+      "not": {
+        "required": ["body", "bodyFromFile"]
+      }
+    }
+  ],
   "properties": {
     "method": {
       "type": "string",

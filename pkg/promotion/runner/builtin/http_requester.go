@@ -6,6 +6,7 @@ import (
 	"crypto/tls"
 	"encoding/json"
 	"fmt"
+	stdio "io"
 	"mime"
 	"net/http"
 	"net/url"
@@ -20,7 +21,7 @@ import (
 	"sigs.k8s.io/yaml"
 
 	kargoapi "github.com/akuity/kargo/api/v1alpha1"
-	"github.com/akuity/kargo/pkg/io"
+	kargoio "github.com/akuity/kargo/pkg/io"
 	"github.com/akuity/kargo/pkg/logging"
 	kargonet "github.com/akuity/kargo/pkg/net"
 	"github.com/akuity/kargo/pkg/promotion"
@@ -317,7 +318,7 @@ func (h *httpRequester) buildRequest(
 	if method == "" {
 		method = http.MethodGet
 	}
-	body := cfg.Body
+	var bodyReader stdio.Reader = strings.NewReader(cfg.Body)
 	if cfg.BodyFromFile != "" {
 		if stepCtx == nil {
 			return nil, fmt.Errorf("cannot read bodyFromFile %q without a step context", cfg.BodyFromFile)
@@ -330,13 +331,13 @@ func (h *httpRequester) buildRequest(
 		if err != nil {
 			return nil, fmt.Errorf("could not read bodyFromFile %q: %w", cfg.BodyFromFile, err)
 		}
-		body = string(bodyBytes)
+		bodyReader = bytes.NewReader(bodyBytes)
 	}
 	req, err := http.NewRequestWithContext(
 		ctx,
 		method,
 		cfg.URL,
-		bytes.NewBufferString(body),
+		bodyReader,
 	)
 	if err != nil {
 		return nil, fmt.Errorf("error creating HTTP request: %w", err)
@@ -393,7 +394,7 @@ func (h *httpRequester) buildExprEnv(
 	}
 
 	// Read the response body up to the maximum allowed size
-	bodyBytes, err := io.LimitRead(resp.Body, maxResponseBytes)
+	bodyBytes, err := kargoio.LimitRead(resp.Body, maxResponseBytes)
 	if err != nil {
 		return nil, fmt.Errorf("reading response body: %w", err)
 	}

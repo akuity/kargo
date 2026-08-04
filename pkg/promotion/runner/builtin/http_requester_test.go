@@ -783,7 +783,7 @@ func Test_httpRequester_buildRequest_bodyFromFile(t *testing.T) {
 	testFilePath := filepath.Join(workDir, "payload.json")
 	require.NoError(t, os.WriteFile(
 		testFilePath,
-		[]byte(`{"from":"file"}`),
+		[]byte{0x00, 0xff, 0x01, 0x7f},
 		0600,
 	))
 
@@ -799,7 +799,7 @@ func Test_httpRequester_buildRequest_bodyFromFile(t *testing.T) {
 	require.NoError(t, err)
 	body, err := io.ReadAll(req.Body)
 	require.NoError(t, err)
-	require.Equal(t, `{"from":"file"}`, string(body))
+	require.Equal(t, []byte{0x00, 0xff, 0x01, 0x7f}, body)
 }
 
 func Test_httpRequester_buildRequest_bodyFromFile_rejectsTraversal(t *testing.T) {
