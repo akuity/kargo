@@ -638,7 +638,6 @@ func TestServer_buildRequest(t *testing.T) {
 				},
 			}
 			req, err := s.buildRequest(
-				t.Context(),
 				&kargoapi.Stage{
 					ObjectMeta: metav1.ObjectMeta{Namespace: testNamespace},
 				},

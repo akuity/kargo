@@ -23,7 +23,6 @@ import (
 	"github.com/akuity/kargo/pkg/expressions"
 	libhttp "github.com/akuity/kargo/pkg/http"
 	"github.com/akuity/kargo/pkg/logging"
-	"github.com/akuity/kargo/pkg/server/user"
 )
 
 // getJobMetric confirms the existence of a JobMetric with the provided name or,
@@ -238,7 +237,6 @@ func (s *server) getStageFromAnalysisRun(
 // are themselves, used in evaluation of a URL template. The request is
 // returned. If it is not successfully constructed, an error is returned.
 func (s *server) buildRequest(
-	ctx context.Context,
 	stage *kargoapi.Stage,
 	run *rolloutsapi.AnalysisRun,
 	jobMetricName, jobNamespace, jobName, containerName string,
@@ -276,8 +274,6 @@ func (s *server) buildRequest(
 	}
 	if s.cfg.AnalysisRunLogToken != "" {
 		env["token"] = s.cfg.AnalysisRunLogToken
-	} else if userInfo, ok := user.InfoFromContext(ctx); ok {
-		env["token"] = userInfo.BearerToken
 	}
 	for key, valTemplate := range s.cfg.AnalysisRunLogHTTPHeaders {
 		valTemplateAny, err := expressions.EvaluateTemplate(valTemplate, env)
@@ -445,7 +441,6 @@ func (s *server) getAnalysisRunLogs(c *gin.Context) {
 	}
 
 	httpReq, err := s.buildRequest(
-		ctx,
 		stage,
 		analysisRun,
 		jobMetricName,
