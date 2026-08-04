@@ -8,7 +8,6 @@ import (
 	"time"
 
 	"github.com/kelseyhightower/envconfig"
-	"k8s.io/client-go/rest"
 
 	"github.com/akuity/kargo/pkg/os"
 	"github.com/akuity/kargo/pkg/server/dex"
@@ -50,7 +49,6 @@ type ServerConfig struct {
 	// know which controller's liveness to associate with such Stages. The default
 	// controller is often unnamed, so an empty string is a valid value.
 	DefaultControllerName string
-	RestConfig            *rest.Config
 
 	// AdditionalHandlers is a map of path patterns to HTTP handlers that will
 	// be registered on the server's HTTP mux alongside its own handlers. This
