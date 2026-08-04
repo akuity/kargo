@@ -24,7 +24,8 @@ import {
   metricStatusLabel,
   metricSubstatus,
   printableCloudWatchQuery,
-  printableDatadogQuery
+  printableDatadogQuery,
+  transformMeasurements
 } from './transforms';
 import { AnalysisStatus, FunctionalStatus } from './types';
 
@@ -558,5 +559,23 @@ describe('analysis modal transforms', () => {
       chartValue: { latency: null, cpuUsage: null },
       tableValue: { latency: null, cpuUsage: null }
     });
+  });
+});
+
+describe('transformMeasurements()', () => {
+  test('plain-text measurement value (e.g. web provider returning "PASS") does not throw', () => {
+    expect(() =>
+      transformMeasurements([], [{ value: 'PASS', phase: 'Successful' }])
+    ).not.toThrow();
+  });
+
+  test('plain-text measurement value is surfaced as tableValue', () => {
+    const result = transformMeasurements([], [{ value: 'PASS', phase: 'Successful' }]);
+    expect(result.measurements[0].tableValue).toBe('PASS');
+  });
+
+  test('plain-text measurement value is not chartable', () => {
+    const result = transformMeasurements([], [{ value: 'PASS', phase: 'Successful' }]);
+    expect(result.chartable).toBe(false);
   });
 });
