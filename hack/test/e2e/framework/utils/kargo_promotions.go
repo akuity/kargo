@@ -5,6 +5,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"net/http"
 	"strings"
 	"testing"
 	"time"
@@ -24,7 +25,7 @@ func PromoteAndWaitForPhase(
 	phase kargoapi.PromotionPhase,
 	timeout time.Duration,
 ) (*kargoapi.Promotion, error) {
-	name := StartPromotion(ctx, t, project, stage, freightName)
+	name := StartPromotion(ctx, t, project, stage, freightName, timeout)
 	return WaitForPromotionPhase(ctx, t, project, name, phase, timeout)
 }
 
@@ -66,10 +67,16 @@ func PromoteWithPRMerge(
 
 // StartPromotion issues a promote request for freightName to stage and returns
 // the name of the created Promotion.
+//
+// A Stage transiently rejects a promotion with 400 Bad Request while the
+// freight is still being qualified in an upstream stage, so the request is
+// retried on 400 until it is accepted or timeout elapses. Any other error is
+// fatal immediately.
 func StartPromotion(
 	ctx context.Context,
 	t *testing.T,
 	project, stage, freightName string,
+	timeout time.Duration,
 ) string {
 	kargoClient := ctx.Value(KargoCLIKey).(generated.APIClient)
 
@@ -81,24 +88,45 @@ func StartPromotion(
 		t.Fatalf("error getting stage: %v", err)
 	}
 
-	promoteRes, httpRes, promoteErr := kargoClient.CoreAPI.
-		PromoteToStage(ctx, project, stage).
-		Body(generated.PromoteToStageRequest{
-			Freight: &freightName,
-		}).
-		Execute()
-	if httpRes != nil {
-		_ = httpRes.Body.Close()
-	}
-	if promoteErr != nil {
-		t.Fatalf("Error promoting: %v (response: %v)", promoteErr, promoteRes)
-	}
+	timedCtx, cancel := context.WithTimeout(ctx, timeout)
+	defer cancel()
+	ticker := time.NewTicker(200 * time.Millisecond)
+	defer ticker.Stop()
 
-	if promoteRes.Metadata.Name == nil {
-		t.Log("Promotion", promoteRes)
-		t.Fatalf("Error promoting: promotion name is missing")
+	for {
+		promoteRes, httpRes, promoteErr := kargoClient.CoreAPI.
+			PromoteToStage(timedCtx, project, stage).
+			Body(generated.PromoteToStageRequest{
+				Freight: &freightName,
+			}).
+			Execute()
+		statusCode := 0
+		if httpRes != nil {
+			statusCode = httpRes.StatusCode
+			_ = httpRes.Body.Close()
+		}
+
+		if promoteErr == nil {
+			if promoteRes.Metadata.Name == nil {
+				t.Log("Promotion", promoteRes)
+				t.Fatalf("Error promoting: promotion name is missing")
+			}
+			return *promoteRes.Metadata.Name
+		}
+
+		// Only the transient "stage not ready for this freight yet" case is
+		// retried; every other failure is reported immediately.
+		if statusCode != http.StatusBadRequest {
+			t.Fatalf("Error promoting: %v (response: %v, http: %v)", promoteErr, promoteRes, httpRes)
+		}
+
+		t.Logf("Stage %q not ready to accept freight yet (400), retrying promotion", stage)
+		select {
+		case <-timedCtx.Done():
+			t.Fatalf("Error promoting after retrying for %v: %v", timeout, promoteErr)
+		case <-ticker.C:
+		}
 	}
-	return *promoteRes.Metadata.Name
 }
 
 // WaitForPromotionPhase watches the named promotion until it reaches phase or
@@ -180,8 +208,8 @@ func WaitForPullRequestID(
 				}
 				if event.Object.Status.Phase.IsTerminal() {
 					t.Fatalf(
-						"promotion %q reached terminal phase %q before recording a pull request id",
-						name, event.Object.Status.Phase)
+						"promotion %q reached terminal phase %q before recording a pull request id. Full status: %v",
+						name, event.Object.Status.Phase, event.Object.Status)
 				}
 			}
 		case err := <-errorChan:
