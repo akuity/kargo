@@ -20,9 +20,11 @@ func FormatEventControllerActor(name string) string {
 //  2. If the user was authenticated by Kubernetes directly (e.g. a Kargo API token),
 //     it returns that identity in "kubernetes:<username>" format (see
 //     FormatEventKubernetesUserActor).
-//  3. If the email is available, it returns email in "email:<email>" format.
-//  4. If the subject is available, it returns subject in "subject:<subject>" format.
-//  5. Otherwise, it returns EventActorUnknown.
+//  3. If the username is known, it returns username in "<claim>:<username>" format
+//     (see formatOIDCUsername).
+//  4. If the email is available, it returns email in "email:<email>" format.
+//  5. If the subject is available, it returns subject in "subject:<subject>" format.
+//  6. Otherwise, it returns EventActorUnknown.
 func FormatEventUserActor(u user.Info) string {
 	if u.IsAdmin {
 		return kargoapi.EventActorAdmin
@@ -33,11 +35,17 @@ func FormatEventUserActor(u user.Info) string {
 	if u.Username != "" {
 		return formatOIDCUsername(u)
 	}
+	// Reaching here means the verified token didn't include the claim Kargo is
+	// configured to treat as "username." Possible, but unlikely.
 	if emailClaim, ok := u.Claims["email"]; ok {
 		if email, ok := emailClaim.(string); ok {
 			return kargoapi.EventActorEmailPrefix + email
 		}
 	}
+	// Reaching here means the verified token also lacked an "email" claim,
+	// even though Kargo always requests the email scope. IdPs aren't
+	// guaranteed to send every claim tied to a requested scope. "sub" is
+	// always present, so it's the final backstop.
 	if subClaim, ok := u.Claims["sub"]; ok {
 		if sub, ok := subClaim.(string); ok {
 			return kargoapi.EventActorSubjectPrefix + sub
