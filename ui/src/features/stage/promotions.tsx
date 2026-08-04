@@ -14,6 +14,7 @@ import {
   isPromotionRetryable
 } from '@ui/features/common/promotion-status/utils';
 import { getAlias, getShortFreightLabel } from '@ui/features/common/utils';
+import { getPromotionActor } from '@ui/features/project/pipelines/promotion/get-promotion-actor';
 import { useWatchPromotions } from '@ui/features/project/pipelines/promotion/use-watch-promotions';
 import { useListPromotions, usePromoteToStage } from '@ui/gen/api/v2/core/core';
 import { ArgoCDShard, Promotion } from '@ui/gen/api/v2/models';
@@ -109,17 +110,7 @@ export const Promotions = ({ argocdShard }: { argocdShard?: ArgoCDShard }) => {
     },
     {
       title: 'Created By',
-      render: (_, promotion) => {
-        const annotation = promotion.metadata?.annotations?.['kargo.akuity.io/create-actor'];
-
-        if (!annotation) {
-          return 'N/A';
-        }
-
-        const separatorIndex = annotation.indexOf(':');
-
-        return separatorIndex === -1 ? annotation : annotation.slice(separatorIndex + 1);
-      }
+      render: (_, promotion) => getPromotionActor(promotion)
     },
     {
       title: 'Freight',
