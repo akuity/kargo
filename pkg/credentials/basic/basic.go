@@ -12,6 +12,9 @@ const (
 )
 
 func init() {
+	if !credentials.ProvidersEnabled() {
+		return
+	}
 	provider := &CredentialProvider{}
 	credentials.DefaultProviderRegistry.MustRegister(
 		credentials.ProviderRegistration{

@@ -44,6 +44,9 @@ const (
 var acrURLRegex = regexp.MustCompile(`^([a-zA-Z0-9-]+)\.azurecr\.io/`)
 
 func init() {
+	if !credentials.ProvidersEnabled() {
+		return
+	}
 	if provider := NewWorkloadIdentityProvider(context.Background()); provider != nil {
 		credentials.DefaultProviderRegistry.MustRegister(
 			credentials.ProviderRegistration{

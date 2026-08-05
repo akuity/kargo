@@ -44,6 +44,9 @@ const (
 var base64Regex = regexp.MustCompile(`^[a-zA-Z0-9+/]*={0,2}$`)
 
 func init() {
+	if !credentials.ProvidersEnabled() {
+		return
+	}
 	if provider := NewAppCredentialProvider(); provider != nil {
 		credentials.DefaultProviderRegistry.MustRegister(
 			credentials.ProviderRegistration{
