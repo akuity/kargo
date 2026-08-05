@@ -184,6 +184,20 @@ func TestLogger_WithValues(t *testing.T) {
 	require.Equal(t, []zapcore.Field{zap.Any("component", "test")}, entry.Context)
 }
 
+func TestLogger_WithoutStackTraces(t *testing.T) {
+	core, logs := observer.New(zapcore.ErrorLevel)
+	// A logger built with AddStacktrace records one for an error; the same logger
+	// with stack traces removed does not.
+	logger := Wrap(zap.New(core, zap.AddStacktrace(zapcore.ErrorLevel)))
+
+	logger.Error(errors.New("something went wrong"), "an error occurred")
+	logger.WithoutStackTraces().Error(errors.New("something went wrong"), "an error occurred")
+
+	require.Len(t, logs.All(), 2)
+	require.NotEmpty(t, logs.All()[0].Stack)
+	require.Empty(t, logs.All()[1].Stack)
+}
+
 func TestLogger_Error(t *testing.T) {
 	core, logs := observer.New(zapcore.ErrorLevel)
 	// Wrap() has its own tests, so here we assume it works.
