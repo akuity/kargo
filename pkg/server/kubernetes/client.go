@@ -4,9 +4,9 @@ import (
 	"context"
 	"errors"
 	"fmt"
-	"os"
 	"strings"
 
+	authnv1 "k8s.io/api/authentication/v1"
 	authv1 "k8s.io/api/authorization/v1"
 	coordinationv1 "k8s.io/api/coordination/v1"
 	corev1 "k8s.io/api/core/v1"
@@ -911,9 +911,9 @@ func getAuthorizedClient(globalServiceAccountNamespaces []string) func(
 				for serviceAccountToCheck := range serviceAccountsToCheck {
 					err := reviewSubjectAccess(
 						ctx,
-						internalClient.Scheme(),
+						internalClient,
 						ra,
-						withServiceAccount(serviceAccountToCheck),
+						serviceAccountSubject(serviceAccountToCheck),
 					)
 					if err == nil {
 						return internalClient, nil
@@ -926,13 +926,17 @@ func getAuthorizedClient(globalServiceAccountNamespaces []string) func(
 			return nil, newForbiddenError(ra)
 		}
 
-		// If we get to here, we're dealing with a user who "authenticated" by just
-		// passing their bearer token for the Kubernetes API server.
+		if userInfo.KubernetesUserInfo == nil {
+			return nil, errors.New("not allowed")
+		}
+
+		// If we get to here, we're dealing with a user whose token was recognized
+		// by the Kubernetes API server, which told us who they are.
 		if err := reviewSubjectAccess(
 			ctx,
-			internalClient.Scheme(),
+			internalClient,
 			ra,
-			withBearerToken(userInfo.BearerToken),
+			kubernetesUserSubject(*userInfo.KubernetesUserInfo),
 		); err != nil {
 			return nil, fmt.Errorf("review subject access: %w", err)
 		}
@@ -940,93 +944,59 @@ func getAuthorizedClient(globalServiceAccountNamespaces []string) func(
 	}
 }
 
-type subjectOption func(*userClientOptions)
-
-func withBearerToken(bearerToken string) subjectOption {
-	return func(opts *userClientOptions) {
-		opts.bearerToken = bearerToken
-	}
+// reviewSubject is the identity whose access is reviewed by
+// reviewSubjectAccess.
+type reviewSubject struct {
+	username string
+	uid      string
+	groups   []string
+	extra    map[string]authv1.ExtraValue
 }
 
-func withServiceAccount(name types.NamespacedName) subjectOption {
-	return func(opts *userClientOptions) {
-		opts.subject = &userClientSubject{
-			username: fmt.Sprintf("system:serviceaccount:%s:%s", name.Namespace, name.Name),
+// kubernetesUserSubject is the user the Kubernetes API server resolved a bearer
+// token to. Groups, UID and extras are all carried across, because omitting them
+// would ask a different question: whether the user is permitted on the strength
+// of their username alone.
+func kubernetesUserSubject(u authnv1.UserInfo) reviewSubject {
+	subject := reviewSubject{
+		username: u.Username,
+		uid:      u.UID,
+		groups:   u.Groups,
+	}
+	if len(u.Extra) > 0 {
+		subject.extra = make(map[string]authv1.ExtraValue, len(u.Extra))
+		for k, v := range u.Extra {
+			subject.extra[k] = authv1.ExtraValue(v)
 		}
 	}
+	return subject
 }
 
-type userClientSubject struct {
-	username string
+func serviceAccountSubject(name types.NamespacedName) reviewSubject {
+	return reviewSubject{
+		username: fmt.Sprintf("system:serviceaccount:%s:%s", name.Namespace, name.Name),
+	}
 }
 
-type userClientOptions struct {
-	bearerToken string
-	subject     *userClientSubject
-}
-
-// reviewSubjectAccess submits a (Self)SubjectAccessReview to determine
-// whether the subject that configured with subjectOption is allowed to
-// do the desired operation.
+// reviewSubjectAccess submits a SubjectAccessReview to determine whether the
+// provided subject is allowed to do the desired operation.
 func reviewSubjectAccess(
 	ctx context.Context,
-	scheme *runtime.Scheme,
+	cl libClient.Client,
 	ra authv1.ResourceAttributes,
-	opts ...subjectOption,
+	subject reviewSubject,
 ) error {
-	cfg, err := GetRestConfig(ctx, os.Getenv("KUBECONFIG"))
-	if err != nil {
-		return fmt.Errorf("get REST config: %w", err)
-	}
-
-	var opt userClientOptions
-	for _, apply := range opts {
-		apply(&opt)
-	}
-
-	if opt.bearerToken != "" {
-		cfg.BearerToken = opt.bearerToken
-		// These MUST be blanked out because they all seem to take precedence over the
-		// cfg.BearerToken field.
-		// TODO: Are there more things to blank out here?
-		cfg.BearerTokenFile = ""
-		cfg.CertData = nil
-		cfg.CertFile = ""
-	}
-
-	userClient, err := libClient.New(
-		cfg,
-		libClient.Options{
-			Scheme: scheme,
-		},
-	)
-	if err != nil {
-		return fmt.Errorf("create user-specific Kubernetes client: %w", err)
-	}
-
-	if opt.subject != nil {
-		review := &authv1.SubjectAccessReview{
-			Spec: authv1.SubjectAccessReviewSpec{
-				ResourceAttributes: &ra,
-				User:               opt.subject.username,
-			},
-		}
-		if err := userClient.Create(ctx, review); err != nil {
-			return fmt.Errorf("submit SubjectAccessReview: %w", err)
-		}
-		if review.Status.Allowed {
-			return nil
-		}
-		return newForbiddenError(ra)
-	}
-
-	review := &authv1.SelfSubjectAccessReview{
-		Spec: authv1.SelfSubjectAccessReviewSpec{
+	review := &authv1.SubjectAccessReview{
+		Spec: authv1.SubjectAccessReviewSpec{
 			ResourceAttributes: &ra,
+			User:               subject.username,
+			UID:                subject.uid,
+			Groups:             subject.groups,
+			Extra:              subject.extra,
 		},
 	}
-	if err := userClient.Create(ctx, review); err != nil {
-		return fmt.Errorf("submit SelfSubjectAccessReview: %w", err)
+	if err := cl.Create(ctx, review); err != nil {
+		return fmt.Errorf("submit SubjectAccessReview: %w", err)
 	}
 	if review.Status.Allowed {
 		return nil

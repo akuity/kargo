@@ -6,6 +6,8 @@ import (
 	"testing"
 
 	"github.com/stretchr/testify/require"
+	authnv1 "k8s.io/api/authentication/v1"
+	authv1 "k8s.io/api/authorization/v1"
 	corev1 "k8s.io/api/core/v1"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -15,6 +17,7 @@ import (
 	"k8s.io/client-go/rest"
 	libClient "sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/client/fake"
+	"sigs.k8s.io/controller-runtime/pkg/client/interceptor"
 
 	"github.com/akuity/kargo/pkg/server/user"
 )
@@ -400,10 +403,50 @@ func TestAllClientOperations(t *testing.T) {
 
 func TestGetAuthorizedClient(t *testing.T) {
 	testInternalClient := fake.NewClientBuilder().Build()
+
+	testKubernetesUser := authnv1.UserInfo{
+		Username: "system:serviceaccount:kargo-demo:ci-bot",
+		UID:      "abc-123",
+		Groups:   []string{"system:serviceaccounts", "system:authenticated"},
+		Extra:    map[string]authnv1.ExtraValue{"authentication.kubernetes.io/pod-name": {"fake-pod"}},
+	}
+
+	// reviewingClient returns a client that asserts the SubjectAccessReview it is
+	// asked to create describes testKubernetesUser, and answers with allowed.
+	reviewingClient := func(t *testing.T, allowed bool) libClient.WithWatch {
+		scheme := runtime.NewScheme()
+		require.NoError(t, authv1.AddToScheme(scheme))
+		return fake.NewClientBuilder().WithScheme(scheme).WithInterceptorFuncs(
+			interceptor.Funcs{
+				Create: func(
+					_ context.Context,
+					_ libClient.WithWatch,
+					obj libClient.Object,
+					_ ...libClient.CreateOption,
+				) error {
+					review, ok := obj.(*authv1.SubjectAccessReview)
+					require.True(t, ok)
+					require.Equal(t, testKubernetesUser.Username, review.Spec.User)
+					require.Equal(t, testKubernetesUser.UID, review.Spec.UID)
+					require.Equal(t, testKubernetesUser.Groups, review.Spec.Groups)
+					require.Equal(
+						t,
+						authv1.ExtraValue{"fake-pod"},
+						review.Spec.Extra["authentication.kubernetes.io/pod-name"],
+					)
+					review.Status.Allowed = allowed
+					return nil
+				},
+			},
+		).Build()
+	}
+
 	testCases := []struct {
-		name     string
-		userInfo *user.Info
-		assert   func(*testing.T, libClient.Client, error)
+		name string
+		// internalClient, when nil, defaults to testInternalClient.
+		internalClient libClient.WithWatch
+		userInfo       *user.Info
+		assert         func(*testing.T, libClient.Client, error)
 	}{
 		{
 			name: "no context-bound user.Info",
@@ -431,21 +474,55 @@ func TestGetAuthorizedClient(t *testing.T) {
 				require.True(t, apierrors.IsForbidden(err))
 			},
 		},
+		{
+			// A token Kubernetes recognized, whose identity Kubernetes also
+			// authorizes.
+			name:           "Kubernetes-verified user, permitted",
+			internalClient: reviewingClient(t, true),
+			userInfo:       &user.Info{KubernetesUserInfo: &testKubernetesUser},
+			assert: func(t *testing.T, client libClient.Client, err error) {
+				require.NoError(t, err)
+				require.NotNil(t, client)
+			},
+		},
+		{
+			name:           "Kubernetes-verified user, not permitted",
+			internalClient: reviewingClient(t, false),
+			userInfo:       &user.Info{KubernetesUserInfo: &testKubernetesUser},
+			assert: func(t *testing.T, _ libClient.Client, err error) {
+				require.True(t, apierrors.IsForbidden(err))
+			},
+		},
+		{
+			// Neither an admin, nor mapped to any ServiceAccount, nor bearing an
+			// identity from Kubernetes. There is no subject to authorize.
+			name:     "user with no identity at all",
+			userInfo: &user.Info{},
+			assert: func(t *testing.T, _ libClient.Client, err error) {
+				require.Error(t, err)
+				require.Equal(t, "not allowed", err.Error())
+			},
+		},
 	}
 	for _, testCase := range testCases {
 		t.Run(testCase.name, func(t *testing.T) {
+			ctx := t.Context()
 			if testCase.userInfo != nil {
-				ctx := user.ContextWithInfo(t.Context(), *testCase.userInfo)
-				client, err := getAuthorizedClient(nil)(
-					ctx,
-					testInternalClient,
-					"", // Verb doesn't matter for these tests
-					schema.GroupVersionResource{},
-					"",                    // Subresource doesn't matter for these tests
-					libClient.ObjectKey{}, // Object key doesn't matter for these tests
-				)
-				testCase.assert(t, client, err)
+				ctx = user.ContextWithInfo(ctx, *testCase.userInfo)
 			}
+			internalClient := testCase.internalClient
+			if internalClient == nil {
+				internalClient = testInternalClient
+			}
+			client, err := getAuthorizedClient(nil)(
+				ctx,
+				internalClient,
+				"", // Verb doesn't matter for these tests
+				schema.GroupVersionResource{},
+				"",                    // Subresource doesn't matter for these tests
+				libClient.ObjectKey{}, // Object key doesn't matter for these tests
+			)
+			testCase.assert(t, client, err)
 		})
 	}
 }
