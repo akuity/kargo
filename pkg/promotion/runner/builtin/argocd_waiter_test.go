@@ -14,6 +14,7 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/client/fake"
 
 	kargoapi "github.com/akuity/kargo/api/v1alpha1"
+	"github.com/akuity/kargo/pkg/api"
 	argocd "github.com/akuity/kargo/pkg/controller/argocd/api/v1alpha1"
 	"github.com/akuity/kargo/pkg/promotion"
 	"github.com/akuity/kargo/pkg/x/promotion/runner/builtin"
@@ -173,8 +174,10 @@ func Test_argocdWaiter_run(t *testing.T) {
 		{
 			name: "checkAppReadiness terminal error stops loop",
 			runner: &argocdWaiter{
-				argocdClient:      fake.NewFakeClient(),
-				getApplicationsFn: appsFn(&argocd.Application{}),
+				argocdClient: fake.NewFakeClient(),
+				getApplicationsFn: appsFn(&argocd.Application{
+					ObjectMeta: metav1.ObjectMeta{Name: "my-app", Namespace: "argocd"},
+				}),
 				checkAppReadinessFn: func(
 					context.Context, *argocd.Application,
 					[]builtin.WaitFor, string,
@@ -192,6 +195,14 @@ func Test_argocdWaiter_run(t *testing.T) {
 				assert.Equal(t, kargoapi.PromotionStepStatusErrored, res.Status)
 				require.True(t, promotion.IsTerminal(err))
 				require.ErrorContains(t, err, "bad condition")
+				// Applications resolved before bailing are still reported.
+				assert.Equal(
+					t,
+					api.ArgoCDAppRefsToOutput(
+						[]api.ArgoCDAppRef{{Name: "my-app", Namespace: "argocd"}},
+					),
+					res.Output[api.ArgoCDAppsOutputKey],
+				)
 			},
 		},
 		{
@@ -245,13 +256,23 @@ func Test_argocdWaiter_run(t *testing.T) {
 				require.NoError(t, err)
 				assert.Equal(t, kargoapi.PromotionStepStatusRunning, res.Status)
 				assert.Nil(t, res.RetryAfter)
+				assert.Equal(
+					t,
+					api.ArgoCDAppRefsToOutput([]api.ArgoCDAppRef{
+						{Name: "app-a", Namespace: "argocd"},
+						{Name: "app-b", Namespace: "argocd"},
+					}),
+					res.Output[api.ArgoCDAppsOutputKey],
+				)
 			},
 		},
 		{
 			name: "all apps ready returns Succeeded",
 			runner: &argocdWaiter{
-				argocdClient:      fake.NewFakeClient(),
-				getApplicationsFn: appsFn(&argocd.Application{}),
+				argocdClient: fake.NewFakeClient(),
+				getApplicationsFn: appsFn(&argocd.Application{
+					ObjectMeta: metav1.ObjectMeta{Name: "my-app", Namespace: "argocd"},
+				}),
 				checkAppReadinessFn: func(
 					context.Context, *argocd.Application,
 					[]builtin.WaitFor, string,
@@ -266,6 +287,13 @@ func Test_argocdWaiter_run(t *testing.T) {
 			assertions: func(t *testing.T, res promotion.StepResult, err error) {
 				require.NoError(t, err)
 				assert.Equal(t, kargoapi.PromotionStepStatusSucceeded, res.Status)
+				assert.Equal(
+					t,
+					api.ArgoCDAppRefsToOutput(
+						[]api.ArgoCDAppRef{{Name: "my-app", Namespace: "argocd"}},
+					),
+					res.Output[api.ArgoCDAppsOutputKey],
+				)
 			},
 		},
 		{
@@ -305,9 +333,21 @@ func Test_argocdWaiter_run(t *testing.T) {
 	for _, tc := range testCases {
 		t.Run(tc.name, func(t *testing.T) {
 			res, err := tc.runner.run(context.Background(), tc.stepCtx, tc.stepCfg)
+			requireJSONNativeOutput(t, res)
 			tc.assertions(t, res, err)
 		})
 	}
+}
+
+// requireJSONNativeOutput asserts that a step's output can serve as shared
+// state. The engine deep-copies shared state with runtime.DeepCopyJSON before
+// every subsequent step, which panics on any value that is not one of the
+// types JSON decodes to -- taking the Promotion controller down with it.
+func requireJSONNativeOutput(t *testing.T, res promotion.StepResult) {
+	t.Helper()
+	require.NotPanics(t, func() {
+		runtime.DeepCopyJSON(map[string]any{"output": res.Output})
+	})
 }
 
 func Test_argocdWaiter_checkAppReadiness(t *testing.T) {
