@@ -36,6 +36,13 @@ const renewToken = () => {
   );
 };
 
+// The endpoints the UI calls that require no authentication. Their requests
+// must not be blocked by the token expiry check, or the renewal and login
+// pages could never fetch the public config they depend on. Every entry here
+// must be on the server's exempt list (exemptPaths in
+// pkg/server/auth_middleware.go).
+const authExemptPaths = new Set(['/v1beta1/system/public-server-config', '/v1beta1/login']);
+
 /**
  * Custom fetch function used by all generated API hooks.
  *
@@ -50,7 +57,8 @@ export const customFetch = async <T>(url: string, options?: RequestInit): Promis
   const baseUrl = getBaseUrl();
   const fullUrl = `${baseUrl}${url}`;
 
-  const token = localStorage.getItem(authTokenKey);
+  const requiresAuth = !authExemptPaths.has(url.split('?')[0]);
+  const token = requiresAuth ? localStorage.getItem(authTokenKey) : null;
   const refreshToken = localStorage.getItem(refreshTokenKey);
 
   if (token) {
@@ -103,7 +111,7 @@ export const customFetch = async <T>(url: string, options?: RequestInit): Promis
     headers
   });
 
-  if (response.status === 401) {
+  if (requiresAuth && response.status === 401) {
     logout();
   }
 
