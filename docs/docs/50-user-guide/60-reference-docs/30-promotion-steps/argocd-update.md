@@ -149,6 +149,21 @@ refresh groups of `Application`s with heterogeneous configurations.
 | `apps[].sources[].helm.images[].key` | `string` | Y | The key to update within the target `ApplicationSource`'s `helm.parameters` map. See Helm documentation on the [format and limitations](https://helm.sh/docs/intro/using_helm/#the-format-and-limitations-of---set) of the notation used in this field. |
 | `apps[].sources[].helm.images[].value` | `string` | Y | Specifies the new value for the key. Typically, a value from [`chartFrom()`](../40-expressions.md#chartfrom) is used here. |
 
+## Output
+
+| Name | Type | Description |
+|------|------|-------------|
+| `apps` | `[]object` | The Argo CD `Application` resources the step resolved and updated. Kargo uses this to link the target `Stage` to those `Application`s in the UI. |
+| `apps[].name` | `string` | The name of the Argo CD `Application`. |
+| `apps[].namespace` | `string` | The namespace of the Argo CD `Application`. |
+
+:::note
+
+When `apps` are selected by label selector, this output is the concrete list of
+`Application`s the selector matched.
+
+:::
+
 ## Health Checks
 
 The `argocd-update` step is unique among all other built-in promotion steps in
