@@ -21,7 +21,7 @@ spec:
         repoURL: https://github.com/<github-username>/kargo-demo-gitops.git
         # Kargo will update this branch to move new commits from the helm branch
         # and/or new images into this stage
-        targetRevision: helm-commit-image/stage/{{stage}}
+        targetRevision: placeholder
         path: ./kargo-demo/templates
       destination:
         server: https://kubernetes.default.svc
@@ -29,3 +29,6 @@ spec:
       syncPolicy:
         syncOptions:
         - CreateNamespace=true
+  ignoreApplicationDifferences:
+  - jqPathExpressions:
+    - .spec.source.targetRevision

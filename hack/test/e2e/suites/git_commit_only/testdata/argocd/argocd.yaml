@@ -21,7 +21,7 @@ spec:
         # repoURL is substituted at runtime from the test env.
         repoURL: https://github.com/<github-username>/kargo-demo-gitops.git
         # Kargo pushes each stage's manifests to this branch.
-        targetRevision: commit-only/stage/{{stage}}
+        targetRevision: placeholder
         path: stages/{{stage}}
         kustomize:
           images:
@@ -32,3 +32,6 @@ spec:
       syncPolicy:
         syncOptions:
         - CreateNamespace=true
+  ignoreApplicationDifferences:
+  - jqPathExpressions:
+    - .spec.source.targetRevision

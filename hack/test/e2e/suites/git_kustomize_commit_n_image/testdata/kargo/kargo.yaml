@@ -71,8 +71,7 @@ spec:
     as: commit
     config:
       path: ${{ vars.outPath }}
-      messageFromSteps:
-      - update-image
+      message: ${{ task.outputs['update-image'].commitMessage }}
   - uses: compose-output
     config:
       commit: ${{ task.outputs.commit.commit }}
@@ -95,7 +94,7 @@ spec:
       - name: gitRepo
         value: https://github.com/<github-username>/kargo-demo-gitops.git
       - name: targetBranch
-        value: kustomize-commit-image/stage/${{ ctx.stage }}
+        value: kustomize-commit-image/promotion/${{ ctx.promotion }}
       - name: outPath
         value: ./out
       steps:
@@ -113,6 +112,7 @@ spec:
             sources:
             - repoURL: ${{ vars.gitRepo }}
               desiredRevision: ${{ outputs.base.commit }}
+              updateTargetRevision: true
 ---
 apiVersion: kargo.akuity.io/v1alpha1
 kind: Stage
@@ -133,7 +133,7 @@ spec:
       - name: gitRepo
         value: https://github.com/<github-username>/kargo-demo-gitops.git
       - name: targetBranch
-        value: kustomize-commit-image/stage/${{ ctx.stage }}
+        value: kustomize-commit-image/promotion/${{ ctx.promotion }}
       - name: outPath
         value: ./out
       steps:
@@ -151,6 +151,7 @@ spec:
             sources:
             - repoURL: ${{ vars.gitRepo }}
               desiredRevision: ${{ outputs.base.commit }}
+              updateTargetRevision: true
 ---
 apiVersion: kargo.akuity.io/v1alpha1
 kind: Stage
@@ -171,7 +172,7 @@ spec:
       - name: gitRepo
         value: https://github.com/<github-username>/kargo-demo-gitops.git
       - name: targetBranch
-        value: kustomize-commit-image/stage/${{ ctx.stage }}
+        value: kustomize-commit-image/promotion/${{ ctx.promotion }}
       - name: outPath
         value: ./out
       steps:
@@ -201,3 +202,4 @@ spec:
             sources:
             - repoURL: ${{ vars.gitRepo }}
               desiredRevision: ${{ outputs['wait-for-pr'].commit }}
+              updateTargetRevision: true
