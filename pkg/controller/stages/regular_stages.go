@@ -789,12 +789,12 @@ func (r *RegularStageReconciler) syncPromotions(
 				// ArgoCD Applications. This is used to provide deep links to the
 				// ArgoCD UI for the Stage in the Kargo UI.
 				//
-				// NB: If the health checks do not include ArgoCD Applications,
+				// NB: If the Promotion did not involve any ArgoCD Applications,
 				// then the annotation will be removed.
 				if err := api.AnnotateStageWithArgoCDContext(
 					ctx,
 					r.client,
-					promo.Status.HealthChecks,
+					promo,
 					client.ObjectKeyFromObject(stage),
 				); err != nil {
 					// Let the error be logged, but do not return it as it is not
