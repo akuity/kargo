@@ -32,7 +32,7 @@ func TestArgocdUpdate(t *testing.T) {
 
 	feature.Setup(utils.SetupArgocdClient)
 	feature.Setup(utils.SetupArgoCDFixtures)
-	// feature.Teardown(utils.TeardownArgoCDFixtures)
+	feature.Teardown(utils.TeardownArgoCDFixtures)
 
 	feature.Setup(utils.SetupKargoClients)
 
@@ -50,7 +50,7 @@ func TestArgocdUpdate(t *testing.T) {
 			utils.UpdateWarehouseGitRepoURL("kargo-demo", kargoDemoRepo),
 		)(ctx, t, cfg)
 	})
-	// feature.Teardown(utils.TeardownKargoFixtures)
+	feature.Teardown(utils.TeardownKargoFixtures)
 
 	feature.Assess("require freight", func(ctx context.Context, t *testing.T, _ *envconf.Config) context.Context {
 		origin := "kargo-demo"

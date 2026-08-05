@@ -20,7 +20,7 @@ spec:
       source:
         repoURL: https://github.com/<github-username>/kargo-demo-gitops.git
         # Kargo will updates this branch to move new images into this stage
-        targetRevision: kustomize-image/stage/{{stage}}
+        targetRevision: placeholder
         path: .
       destination:
         server: https://kubernetes.default.svc
@@ -28,3 +28,6 @@ spec:
       syncPolicy:
         syncOptions:
         - CreateNamespace=true
+  ignoreApplicationDifferences:
+  - jqPathExpressions:
+    - .spec.source.targetRevision
