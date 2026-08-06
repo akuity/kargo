@@ -6,20 +6,22 @@
  * OpenAPI spec version: v1alpha1
  */
 
-export interface PromotionScheduleStatus {
+export interface PromotionWindowStatus {
   /** Closed indicates that the schedule currently forbids promotion of this
-Stage.
-
-+optional */
+Stage. */
   closed?: boolean;
   /** NextClose is when promotion is next expected to become forbidden, and is
 meaningful only while Closed is false. It allows a client to give warning of
-an approaching freeze, which Reason names. Like NextOpen it is optional, and
+an approaching freeze, which NextCloseReason names. Like NextOpen it is optional, and
 absent when no such boundary is known -- a schedule that will never forbid
 promotion again has none.
 
 +optional */
   nextClose?: string;
+  /** NextCloseReason explains in human-readable terms why promotion will be forbidden
+at NextClose, naming the freeze responsible where there is one.
+It is set whenever NextClose is set. */
+  nextCloseReason?: string;
   /** NextOpen is when the schedule is next expected to permit promotions.
 
 It is optional even while Closed is true, and its absence means only that
@@ -31,16 +33,12 @@ assuming a value is present.
 
 +optional */
   nextOpen?: string;
-  /** Reason explains in human-readable terms why promotion is, or is about to be,
-forbidden, naming the freeze responsible where there is one. Closed is what
-says which of the two it describes, so one field serves both: while Closed
-is true it explains the freeze in effect, and while NextClose is set it
-explains the freeze that is coming.
+  /** Reason explains in human-readable terms why promotion is forbidden,
+naming the freeze responsible where there is one.
 
-It is set whenever either of those is -- always alongside Closed being true,
-where it is the only field guaranteed to explain the freeze because NextOpen
-may be absent, and always alongside NextClose. When Closed is true it
-carries the same explanation as the corresponding admission rejection.
+It is set whenever Closed is true, where it is the only field guaranteed
+to explain the freeze because NextOpen may be absent.
+It carries the same explanation as the corresponding admission rejection.
 
 +optional */
   reason?: string;

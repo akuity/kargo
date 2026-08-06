@@ -12,7 +12,7 @@ import type { StageStatusEffectiveAutoPromotionHolds } from './stageStatusEffect
 import type { FreightCollection } from './freightCollection';
 import type { Health } from './health';
 import type { StageStatusMetadata } from './stageStatusMetadata';
-import type { PromotionScheduleStatus } from './promotionScheduleStatus';
+import type { PromotionWindowStatus } from './promotionWindowStatus';
 
 export interface StageStatus {
   /** AutoPromotionEnabled indicates whether automatic promotion is enabled
@@ -72,12 +72,12 @@ that can be shared across promotions, verifications, or other processes. */
   /** ObservedGeneration represents the .metadata.generation that this Stage
 status was reconciled against. */
   observedGeneration?: number;
-  /** PromotionSchedule reports whether promotion windows currently permit
+  /** PromotionWindowStatus reports whether promotion windows currently permit
 promotion of this Stage, and when that is next expected to change. It is
 absent when no window gates the Stage.
 
 Kargo Enterprise only: This field is ignored in Kargo OSS.
 
 +optional */
-  promotionSchedule?: PromotionScheduleStatus;
+  promotionWindowStatus?: PromotionWindowStatus;
 }

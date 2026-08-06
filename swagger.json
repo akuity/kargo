@@ -7790,27 +7790,6 @@
         }
       }
     },
-    "PromotionScheduleStatus": {
-      "type": "object",
-      "properties": {
-        "closed": {
-          "description": "Closed indicates that the schedule currently forbids promotion of this\nStage.\n\n+optional",
-          "type": "boolean"
-        },
-        "nextClose": {
-          "description": "NextClose is when promotion is next expected to become forbidden, and is\nmeaningful only while Closed is false. It allows a client to give warning of\nan approaching freeze, which Reason names. Like NextOpen it is optional, and\nabsent when no such boundary is known -- a schedule that will never forbid\npromotion again has none.\n\n+optional",
-          "type": "string"
-        },
-        "nextOpen": {
-          "description": "NextOpen is when the schedule is next expected to permit promotions.\n\nIt is optional even while Closed is true, and its absence means only that\nno reopening is known: the schedule may have none (a one-shot Allow window\nthat has already elapsed), determining one may be impractical, or the\nclosure may be indefinite by design. Clients must therefore render Reason\nand treat a missing NextOpen as \"frozen, with no known end\" rather than\nassuming a value is present.\n\n+optional",
-          "type": "string"
-        },
-        "reason": {
-          "description": "Reason explains in human-readable terms why promotion is, or is about to be,\nforbidden, naming the freeze responsible where there is one. Closed is what\nsays which of the two it describes, so one field serves both: while Closed\nis true it explains the freeze in effect, and while NextClose is set it\nexplains the freeze that is coming.\n\nIt is set whenever either of those is -- always alongside Closed being true,\nwhere it is the only field guaranteed to explain the freeze because NextOpen\nmay be absent, and always alongside NextClose. When Closed is true it\ncarries the same explanation as the corresponding admission rejection.\n\n+optional",
-          "type": "string"
-        }
-      }
-    },
     "PromotionSpec": {
       "type": "object",
       "properties": {
@@ -8150,6 +8129,31 @@
         "PromotionWindowKindDeny"
       ]
     },
+    "PromotionWindowStatus": {
+      "type": "object",
+      "properties": {
+        "closed": {
+          "description": "Closed indicates that the schedule currently forbids promotion of this\nStage.",
+          "type": "boolean"
+        },
+        "nextClose": {
+          "description": "NextClose is when promotion is next expected to become forbidden, and is\nmeaningful only while Closed is false. It allows a client to give warning of\nan approaching freeze, which NextCloseReason names. Like NextOpen it is optional, and\nabsent when no such boundary is known -- a schedule that will never forbid\npromotion again has none.\n\n+optional",
+          "type": "string"
+        },
+        "nextCloseReason": {
+          "description": "NextCloseReason explains in human-readable terms why promotion will be forbidden\nat NextClose, naming the freeze responsible where there is one.\nIt is set whenever NextClose is set.",
+          "type": "string"
+        },
+        "nextOpen": {
+          "description": "NextOpen is when the schedule is next expected to permit promotions.\n\nIt is optional even while Closed is true, and its absence means only that\nno reopening is known: the schedule may have none (a one-shot Allow window\nthat has already elapsed), determining one may be impractical, or the\nclosure may be indefinite by design. Clients must therefore render Reason\nand treat a missing NextOpen as \"frozen, with no known end\" rather than\nassuming a value is present.\n\n+optional",
+          "type": "string"
+        },
+        "reason": {
+          "description": "Reason explains in human-readable terms why promotion is forbidden,\nnaming the freeze responsible where there is one.\n\nIt is set whenever Closed is true, where it is the only field guaranteed\nto explain the freeze because NextOpen may be absent.\nIt carries the same explanation as the corresponding admission rejection.\n\n+optional",
+          "type": "string"
+        }
+      }
+    },
     "QuayWebhookReceiverConfig": {
       "type": "object",
       "properties": {
@@ -8362,11 +8366,11 @@
           "description": "ObservedGeneration represents the .metadata.generation that this Stage\nstatus was reconciled against.",
           "type": "integer"
         },
-        "promotionSchedule": {
-          "description": "PromotionSchedule reports whether promotion windows currently permit\npromotion of this Stage, and when that is next expected to change. It is\nabsent when no window gates the Stage.\n\nKargo Enterprise only: This field is ignored in Kargo OSS.\n\n+optional",
+        "promotionWindowStatus": {
+          "description": "PromotionWindowStatus reports whether promotion windows currently permit\npromotion of this Stage, and when that is next expected to change. It is\nabsent when no window gates the Stage.\n\nKargo Enterprise only: This field is ignored in Kargo OSS.\n\n+optional",
           "allOf": [
             {
-              "$ref": "#/definitions/PromotionScheduleStatus"
+              "$ref": "#/definitions/PromotionWindowStatus"
             }
           ]
         }

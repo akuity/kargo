@@ -43,8 +43,8 @@ type StageStatus struct {
 	Metadata map[string]any `json:"metadata,omitempty"`
 	// ObservedGeneration represents the .metadata.generation that this Stage status was reconciled against.
 	ObservedGeneration *int32 `json:"observedGeneration,omitempty"`
-	// PromotionSchedule reports whether promotion windows currently permit promotion of this Stage, and when that is next expected to change. It is absent when no window gates the Stage.  Kargo Enterprise only: This field is ignored in Kargo OSS.  +optional
-	PromotionSchedule *PromotionScheduleStatus `json:"promotionSchedule,omitempty"`
+	// PromotionWindowStatus reports whether promotion windows currently permit promotion of this Stage, and when that is next expected to change. It is absent when no window gates the Stage.  Kargo Enterprise only: This field is ignored in Kargo OSS.  +optional
+	PromotionWindowStatus *PromotionWindowStatus `json:"promotionWindowStatus,omitempty"`
 }
 
 // NewStageStatus instantiates a new StageStatus object
@@ -448,36 +448,36 @@ func (o *StageStatus) SetObservedGeneration(v int32) {
 	o.ObservedGeneration = &v
 }
 
-// GetPromotionSchedule returns the PromotionSchedule field value if set, zero value otherwise.
-func (o *StageStatus) GetPromotionSchedule() PromotionScheduleStatus {
-	if o == nil || IsNil(o.PromotionSchedule) {
-		var ret PromotionScheduleStatus
+// GetPromotionWindowStatus returns the PromotionWindowStatus field value if set, zero value otherwise.
+func (o *StageStatus) GetPromotionWindowStatus() PromotionWindowStatus {
+	if o == nil || IsNil(o.PromotionWindowStatus) {
+		var ret PromotionWindowStatus
 		return ret
 	}
-	return *o.PromotionSchedule
+	return *o.PromotionWindowStatus
 }
 
-// GetPromotionScheduleOk returns a tuple with the PromotionSchedule field value if set, nil otherwise
+// GetPromotionWindowStatusOk returns a tuple with the PromotionWindowStatus field value if set, nil otherwise
 // and a boolean to check if the value has been set.
-func (o *StageStatus) GetPromotionScheduleOk() (*PromotionScheduleStatus, bool) {
-	if o == nil || IsNil(o.PromotionSchedule) {
+func (o *StageStatus) GetPromotionWindowStatusOk() (*PromotionWindowStatus, bool) {
+	if o == nil || IsNil(o.PromotionWindowStatus) {
 		return nil, false
 	}
-	return o.PromotionSchedule, true
+	return o.PromotionWindowStatus, true
 }
 
-// HasPromotionSchedule returns a boolean if a field has been set.
-func (o *StageStatus) HasPromotionSchedule() bool {
-	if o != nil && !IsNil(o.PromotionSchedule) {
+// HasPromotionWindowStatus returns a boolean if a field has been set.
+func (o *StageStatus) HasPromotionWindowStatus() bool {
+	if o != nil && !IsNil(o.PromotionWindowStatus) {
 		return true
 	}
 
 	return false
 }
 
-// SetPromotionSchedule gets a reference to the given PromotionScheduleStatus and assigns it to the PromotionSchedule field.
-func (o *StageStatus) SetPromotionSchedule(v PromotionScheduleStatus) {
-	o.PromotionSchedule = &v
+// SetPromotionWindowStatus gets a reference to the given PromotionWindowStatus and assigns it to the PromotionWindowStatus field.
+func (o *StageStatus) SetPromotionWindowStatus(v PromotionWindowStatus) {
+	o.PromotionWindowStatus = &v
 }
 
 func (o StageStatus) MarshalJSON() ([]byte, error) {
@@ -526,8 +526,8 @@ func (o StageStatus) ToMap() (map[string]interface{}, error) {
 	if !IsNil(o.ObservedGeneration) {
 		toSerialize["observedGeneration"] = o.ObservedGeneration
 	}
-	if !IsNil(o.PromotionSchedule) {
-		toSerialize["promotionSchedule"] = o.PromotionSchedule
+	if !IsNil(o.PromotionWindowStatus) {
+		toSerialize["promotionWindowStatus"] = o.PromotionWindowStatus
 	}
 	return toSerialize, nil
 }

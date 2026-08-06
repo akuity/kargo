@@ -13176,54 +13176,6 @@ components:
           description: Status is the (optional) status of the Promotion.
           type: object
       type: object
-    PromotionScheduleStatus:
-      properties:
-        closed:
-          description: |-
-            Closed indicates that the schedule currently forbids promotion of this
-            Stage.
-
-            +optional
-          type: boolean
-        nextClose:
-          description: |-
-            NextClose is when promotion is next expected to become forbidden, and is
-            meaningful only while Closed is false. It allows a client to give warning of
-            an approaching freeze, which Reason names. Like NextOpen it is optional, and
-            absent when no such boundary is known -- a schedule that will never forbid
-            promotion again has none.
-
-            +optional
-          type: string
-        nextOpen:
-          description: |-
-            NextOpen is when the schedule is next expected to permit promotions.
-
-            It is optional even while Closed is true, and its absence means only that
-            no reopening is known: the schedule may have none (a one-shot Allow window
-            that has already elapsed), determining one may be impractical, or the
-            closure may be indefinite by design. Clients must therefore render Reason
-            and treat a missing NextOpen as "frozen, with no known end" rather than
-            assuming a value is present.
-
-            +optional
-          type: string
-        reason:
-          description: |-
-            Reason explains in human-readable terms why promotion is, or is about to be,
-            forbidden, naming the freeze responsible where there is one. Closed is what
-            says which of the two it describes, so one field serves both: while Closed
-            is true it explains the freeze in effect, and while NextClose is set it
-            explains the freeze that is coming.
-
-            It is set whenever either of those is -- always alongside Closed being true,
-            where it is the only field guaranteed to explain the freeze because NextOpen
-            may be absent, and always alongside NextClose. When Closed is true it
-            carries the same explanation as the corresponding admission rejection.
-
-            +optional
-          type: string
-      type: object
     PromotionSpec:
       properties:
         freight:
@@ -13839,6 +13791,54 @@ components:
       x-enum-varnames:
       - PromotionWindowKindAllow
       - PromotionWindowKindDeny
+    PromotionWindowStatus:
+      properties:
+        closed:
+          description: |-
+            Closed indicates that the schedule currently forbids promotion of this
+            Stage.
+          type: boolean
+        nextClose:
+          description: |-
+            NextClose is when promotion is next expected to become forbidden, and is
+            meaningful only while Closed is false. It allows a client to give warning of
+            an approaching freeze, which NextCloseReason names. Like NextOpen it is optional, and
+            absent when no such boundary is known -- a schedule that will never forbid
+            promotion again has none.
+
+            +optional
+          type: string
+        nextCloseReason:
+          description: |-
+            NextCloseReason explains in human-readable terms why promotion will be forbidden
+            at NextClose, naming the freeze responsible where there is one.
+            It is set whenever NextClose is set.
+          type: string
+        nextOpen:
+          description: |-
+            NextOpen is when the schedule is next expected to permit promotions.
+
+            It is optional even while Closed is true, and its absence means only that
+            no reopening is known: the schedule may have none (a one-shot Allow window
+            that has already elapsed), determining one may be impractical, or the
+            closure may be indefinite by design. Clients must therefore render Reason
+            and treat a missing NextOpen as "frozen, with no known end" rather than
+            assuming a value is present.
+
+            +optional
+          type: string
+        reason:
+          description: |-
+            Reason explains in human-readable terms why promotion is forbidden,
+            naming the freeze responsible where there is one.
+
+            It is set whenever Closed is true, where it is the only field guaranteed
+            to explain the freeze because NextOpen may be absent.
+            It carries the same explanation as the corresponding admission rejection.
+
+            +optional
+          type: string
+      type: object
     QuayWebhookReceiverConfig:
       properties:
         secretRef:
@@ -14263,11 +14263,11 @@ components:
             ObservedGeneration represents the .metadata.generation that this Stage
             status was reconciled against.
           type: integer
-        promotionSchedule:
+        promotionWindowStatus:
           allOf:
-          - $ref: "#/components/schemas/PromotionScheduleStatus"
+          - $ref: "#/components/schemas/PromotionWindowStatus"
           description: |-
-            PromotionSchedule reports whether promotion windows currently permit
+            PromotionWindowStatus reports whether promotion windows currently permit
             promotion of this Stage, and when that is next expected to change. It is
             absent when no window gates the Stage.
 

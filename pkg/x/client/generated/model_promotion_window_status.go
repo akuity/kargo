@@ -14,40 +14,42 @@ import (
 	"encoding/json"
 )
 
-// checks if the PromotionScheduleStatus type satisfies the MappedNullable interface at compile time
-var _ MappedNullable = &PromotionScheduleStatus{}
+// checks if the PromotionWindowStatus type satisfies the MappedNullable interface at compile time
+var _ MappedNullable = &PromotionWindowStatus{}
 
-// PromotionScheduleStatus struct for PromotionScheduleStatus
-type PromotionScheduleStatus struct {
-	// Closed indicates that the schedule currently forbids promotion of this Stage.  +optional
+// PromotionWindowStatus struct for PromotionWindowStatus
+type PromotionWindowStatus struct {
+	// Closed indicates that the schedule currently forbids promotion of this Stage.
 	Closed *bool `json:"closed,omitempty"`
-	// NextClose is when promotion is next expected to become forbidden, and is meaningful only while Closed is false. It allows a client to give warning of an approaching freeze, which Reason names. Like NextOpen it is optional, and absent when no such boundary is known -- a schedule that will never forbid promotion again has none.  +optional
+	// NextClose is when promotion is next expected to become forbidden, and is meaningful only while Closed is false. It allows a client to give warning of an approaching freeze, which NextCloseReason names. Like NextOpen it is optional, and absent when no such boundary is known -- a schedule that will never forbid promotion again has none.  +optional
 	NextClose *string `json:"nextClose,omitempty"`
+	// NextCloseReason explains in human-readable terms why promotion will be forbidden at NextClose, naming the freeze responsible where there is one. It is set whenever NextClose is set.
+	NextCloseReason *string `json:"nextCloseReason,omitempty"`
 	// NextOpen is when the schedule is next expected to permit promotions.  It is optional even while Closed is true, and its absence means only that no reopening is known: the schedule may have none (a one-shot Allow window that has already elapsed), determining one may be impractical, or the closure may be indefinite by design. Clients must therefore render Reason and treat a missing NextOpen as \"frozen, with no known end\" rather than assuming a value is present.  +optional
 	NextOpen *string `json:"nextOpen,omitempty"`
-	// Reason explains in human-readable terms why promotion is, or is about to be, forbidden, naming the freeze responsible where there is one. Closed is what says which of the two it describes, so one field serves both: while Closed is true it explains the freeze in effect, and while NextClose is set it explains the freeze that is coming.  It is set whenever either of those is -- always alongside Closed being true, where it is the only field guaranteed to explain the freeze because NextOpen may be absent, and always alongside NextClose. When Closed is true it carries the same explanation as the corresponding admission rejection.  +optional
+	// Reason explains in human-readable terms why promotion is forbidden, naming the freeze responsible where there is one.  It is set whenever Closed is true, where it is the only field guaranteed to explain the freeze because NextOpen may be absent. It carries the same explanation as the corresponding admission rejection.  +optional
 	Reason *string `json:"reason,omitempty"`
 }
 
-// NewPromotionScheduleStatus instantiates a new PromotionScheduleStatus object
+// NewPromotionWindowStatus instantiates a new PromotionWindowStatus object
 // This constructor will assign default values to properties that have it defined,
 // and makes sure properties required by API are set, but the set of arguments
 // will change when the set of required properties is changed
-func NewPromotionScheduleStatus() *PromotionScheduleStatus {
-	this := PromotionScheduleStatus{}
+func NewPromotionWindowStatus() *PromotionWindowStatus {
+	this := PromotionWindowStatus{}
 	return &this
 }
 
-// NewPromotionScheduleStatusWithDefaults instantiates a new PromotionScheduleStatus object
+// NewPromotionWindowStatusWithDefaults instantiates a new PromotionWindowStatus object
 // This constructor will only assign default values to properties that have it defined,
 // but it doesn't guarantee that properties required by API are set
-func NewPromotionScheduleStatusWithDefaults() *PromotionScheduleStatus {
-	this := PromotionScheduleStatus{}
+func NewPromotionWindowStatusWithDefaults() *PromotionWindowStatus {
+	this := PromotionWindowStatus{}
 	return &this
 }
 
 // GetClosed returns the Closed field value if set, zero value otherwise.
-func (o *PromotionScheduleStatus) GetClosed() bool {
+func (o *PromotionWindowStatus) GetClosed() bool {
 	if o == nil || IsNil(o.Closed) {
 		var ret bool
 		return ret
@@ -57,7 +59,7 @@ func (o *PromotionScheduleStatus) GetClosed() bool {
 
 // GetClosedOk returns a tuple with the Closed field value if set, nil otherwise
 // and a boolean to check if the value has been set.
-func (o *PromotionScheduleStatus) GetClosedOk() (*bool, bool) {
+func (o *PromotionWindowStatus) GetClosedOk() (*bool, bool) {
 	if o == nil || IsNil(o.Closed) {
 		return nil, false
 	}
@@ -65,7 +67,7 @@ func (o *PromotionScheduleStatus) GetClosedOk() (*bool, bool) {
 }
 
 // HasClosed returns a boolean if a field has been set.
-func (o *PromotionScheduleStatus) HasClosed() bool {
+func (o *PromotionWindowStatus) HasClosed() bool {
 	if o != nil && !IsNil(o.Closed) {
 		return true
 	}
@@ -74,12 +76,12 @@ func (o *PromotionScheduleStatus) HasClosed() bool {
 }
 
 // SetClosed gets a reference to the given bool and assigns it to the Closed field.
-func (o *PromotionScheduleStatus) SetClosed(v bool) {
+func (o *PromotionWindowStatus) SetClosed(v bool) {
 	o.Closed = &v
 }
 
 // GetNextClose returns the NextClose field value if set, zero value otherwise.
-func (o *PromotionScheduleStatus) GetNextClose() string {
+func (o *PromotionWindowStatus) GetNextClose() string {
 	if o == nil || IsNil(o.NextClose) {
 		var ret string
 		return ret
@@ -89,7 +91,7 @@ func (o *PromotionScheduleStatus) GetNextClose() string {
 
 // GetNextCloseOk returns a tuple with the NextClose field value if set, nil otherwise
 // and a boolean to check if the value has been set.
-func (o *PromotionScheduleStatus) GetNextCloseOk() (*string, bool) {
+func (o *PromotionWindowStatus) GetNextCloseOk() (*string, bool) {
 	if o == nil || IsNil(o.NextClose) {
 		return nil, false
 	}
@@ -97,7 +99,7 @@ func (o *PromotionScheduleStatus) GetNextCloseOk() (*string, bool) {
 }
 
 // HasNextClose returns a boolean if a field has been set.
-func (o *PromotionScheduleStatus) HasNextClose() bool {
+func (o *PromotionWindowStatus) HasNextClose() bool {
 	if o != nil && !IsNil(o.NextClose) {
 		return true
 	}
@@ -106,12 +108,44 @@ func (o *PromotionScheduleStatus) HasNextClose() bool {
 }
 
 // SetNextClose gets a reference to the given string and assigns it to the NextClose field.
-func (o *PromotionScheduleStatus) SetNextClose(v string) {
+func (o *PromotionWindowStatus) SetNextClose(v string) {
 	o.NextClose = &v
 }
 
+// GetNextCloseReason returns the NextCloseReason field value if set, zero value otherwise.
+func (o *PromotionWindowStatus) GetNextCloseReason() string {
+	if o == nil || IsNil(o.NextCloseReason) {
+		var ret string
+		return ret
+	}
+	return *o.NextCloseReason
+}
+
+// GetNextCloseReasonOk returns a tuple with the NextCloseReason field value if set, nil otherwise
+// and a boolean to check if the value has been set.
+func (o *PromotionWindowStatus) GetNextCloseReasonOk() (*string, bool) {
+	if o == nil || IsNil(o.NextCloseReason) {
+		return nil, false
+	}
+	return o.NextCloseReason, true
+}
+
+// HasNextCloseReason returns a boolean if a field has been set.
+func (o *PromotionWindowStatus) HasNextCloseReason() bool {
+	if o != nil && !IsNil(o.NextCloseReason) {
+		return true
+	}
+
+	return false
+}
+
+// SetNextCloseReason gets a reference to the given string and assigns it to the NextCloseReason field.
+func (o *PromotionWindowStatus) SetNextCloseReason(v string) {
+	o.NextCloseReason = &v
+}
+
 // GetNextOpen returns the NextOpen field value if set, zero value otherwise.
-func (o *PromotionScheduleStatus) GetNextOpen() string {
+func (o *PromotionWindowStatus) GetNextOpen() string {
 	if o == nil || IsNil(o.NextOpen) {
 		var ret string
 		return ret
@@ -121,7 +155,7 @@ func (o *PromotionScheduleStatus) GetNextOpen() string {
 
 // GetNextOpenOk returns a tuple with the NextOpen field value if set, nil otherwise
 // and a boolean to check if the value has been set.
-func (o *PromotionScheduleStatus) GetNextOpenOk() (*string, bool) {
+func (o *PromotionWindowStatus) GetNextOpenOk() (*string, bool) {
 	if o == nil || IsNil(o.NextOpen) {
 		return nil, false
 	}
@@ -129,7 +163,7 @@ func (o *PromotionScheduleStatus) GetNextOpenOk() (*string, bool) {
 }
 
 // HasNextOpen returns a boolean if a field has been set.
-func (o *PromotionScheduleStatus) HasNextOpen() bool {
+func (o *PromotionWindowStatus) HasNextOpen() bool {
 	if o != nil && !IsNil(o.NextOpen) {
 		return true
 	}
@@ -138,12 +172,12 @@ func (o *PromotionScheduleStatus) HasNextOpen() bool {
 }
 
 // SetNextOpen gets a reference to the given string and assigns it to the NextOpen field.
-func (o *PromotionScheduleStatus) SetNextOpen(v string) {
+func (o *PromotionWindowStatus) SetNextOpen(v string) {
 	o.NextOpen = &v
 }
 
 // GetReason returns the Reason field value if set, zero value otherwise.
-func (o *PromotionScheduleStatus) GetReason() string {
+func (o *PromotionWindowStatus) GetReason() string {
 	if o == nil || IsNil(o.Reason) {
 		var ret string
 		return ret
@@ -153,7 +187,7 @@ func (o *PromotionScheduleStatus) GetReason() string {
 
 // GetReasonOk returns a tuple with the Reason field value if set, nil otherwise
 // and a boolean to check if the value has been set.
-func (o *PromotionScheduleStatus) GetReasonOk() (*string, bool) {
+func (o *PromotionWindowStatus) GetReasonOk() (*string, bool) {
 	if o == nil || IsNil(o.Reason) {
 		return nil, false
 	}
@@ -161,7 +195,7 @@ func (o *PromotionScheduleStatus) GetReasonOk() (*string, bool) {
 }
 
 // HasReason returns a boolean if a field has been set.
-func (o *PromotionScheduleStatus) HasReason() bool {
+func (o *PromotionWindowStatus) HasReason() bool {
 	if o != nil && !IsNil(o.Reason) {
 		return true
 	}
@@ -170,11 +204,11 @@ func (o *PromotionScheduleStatus) HasReason() bool {
 }
 
 // SetReason gets a reference to the given string and assigns it to the Reason field.
-func (o *PromotionScheduleStatus) SetReason(v string) {
+func (o *PromotionWindowStatus) SetReason(v string) {
 	o.Reason = &v
 }
 
-func (o PromotionScheduleStatus) MarshalJSON() ([]byte, error) {
+func (o PromotionWindowStatus) MarshalJSON() ([]byte, error) {
 	toSerialize,err := o.ToMap()
 	if err != nil {
 		return []byte{}, err
@@ -182,13 +216,16 @@ func (o PromotionScheduleStatus) MarshalJSON() ([]byte, error) {
 	return json.Marshal(toSerialize)
 }
 
-func (o PromotionScheduleStatus) ToMap() (map[string]interface{}, error) {
+func (o PromotionWindowStatus) ToMap() (map[string]interface{}, error) {
 	toSerialize := map[string]interface{}{}
 	if !IsNil(o.Closed) {
 		toSerialize["closed"] = o.Closed
 	}
 	if !IsNil(o.NextClose) {
 		toSerialize["nextClose"] = o.NextClose
+	}
+	if !IsNil(o.NextCloseReason) {
+		toSerialize["nextCloseReason"] = o.NextCloseReason
 	}
 	if !IsNil(o.NextOpen) {
 		toSerialize["nextOpen"] = o.NextOpen
@@ -199,38 +236,38 @@ func (o PromotionScheduleStatus) ToMap() (map[string]interface{}, error) {
 	return toSerialize, nil
 }
 
-type NullablePromotionScheduleStatus struct {
-	value *PromotionScheduleStatus
+type NullablePromotionWindowStatus struct {
+	value *PromotionWindowStatus
 	isSet bool
 }
 
-func (v NullablePromotionScheduleStatus) Get() *PromotionScheduleStatus {
+func (v NullablePromotionWindowStatus) Get() *PromotionWindowStatus {
 	return v.value
 }
 
-func (v *NullablePromotionScheduleStatus) Set(val *PromotionScheduleStatus) {
+func (v *NullablePromotionWindowStatus) Set(val *PromotionWindowStatus) {
 	v.value = val
 	v.isSet = true
 }
 
-func (v NullablePromotionScheduleStatus) IsSet() bool {
+func (v NullablePromotionWindowStatus) IsSet() bool {
 	return v.isSet
 }
 
-func (v *NullablePromotionScheduleStatus) Unset() {
+func (v *NullablePromotionWindowStatus) Unset() {
 	v.value = nil
 	v.isSet = false
 }
 
-func NewNullablePromotionScheduleStatus(val *PromotionScheduleStatus) *NullablePromotionScheduleStatus {
-	return &NullablePromotionScheduleStatus{value: val, isSet: true}
+func NewNullablePromotionWindowStatus(val *PromotionWindowStatus) *NullablePromotionWindowStatus {
+	return &NullablePromotionWindowStatus{value: val, isSet: true}
 }
 
-func (v NullablePromotionScheduleStatus) MarshalJSON() ([]byte, error) {
+func (v NullablePromotionWindowStatus) MarshalJSON() ([]byte, error) {
 	return json.Marshal(v.value)
 }
 
-func (v *NullablePromotionScheduleStatus) UnmarshalJSON(src []byte) error {
+func (v *NullablePromotionWindowStatus) UnmarshalJSON(src []byte) error {
 	v.isSet = true
 	return json.Unmarshal(src, &v.value)
 }

@@ -2538,9 +2538,9 @@ spec:
                   status was reconciled against.
                 format: int64
                 type: integer
-              promotionSchedule:
+              promotionWindowStatus:
                 description: |-
-                  PromotionSchedule reports whether promotion windows currently permit
+                  PromotionWindowStatus reports whether promotion windows currently permit
                   promotion of this Stage, and when that is next expected to change. It is
                   absent when no window gates the Stage.
 
@@ -2555,10 +2555,16 @@ spec:
                     description: |-
                       NextClose is when promotion is next expected to become forbidden, and is
                       meaningful only while Closed is false. It allows a client to give warning of
-                      an approaching freeze, which Reason names. Like NextOpen it is optional, and
+                      an approaching freeze, which NextCloseReason names. Like NextOpen it is optional, and
                       absent when no such boundary is known -- a schedule that will never forbid
                       promotion again has none.
                     format: date-time
+                    type: string
+                  nextCloseReason:
+                    description: |-
+                      NextCloseReason explains in human-readable terms why promotion will be forbidden
+                      at NextClose, naming the freeze responsible where there is one.
+                      It is set whenever NextClose is set.
                     type: string
                   nextOpen:
                     description: |-
@@ -2574,17 +2580,15 @@ spec:
                     type: string
                   reason:
                     description: |-
-                      Reason explains in human-readable terms why promotion is, or is about to be,
-                      forbidden, naming the freeze responsible where there is one. Closed is what
-                      says which of the two it describes, so one field serves both: while Closed
-                      is true it explains the freeze in effect, and while NextClose is set it
-                      explains the freeze that is coming.
+                      Reason explains in human-readable terms why promotion is forbidden,
+                      naming the freeze responsible where there is one.
 
-                      It is set whenever either of those is -- always alongside Closed being true,
-                      where it is the only field guaranteed to explain the freeze because NextOpen
-                      may be absent, and always alongside NextClose. When Closed is true it
-                      carries the same explanation as the corresponding admission rejection.
+                      It is set whenever Closed is true, where it is the only field guaranteed
+                      to explain the freeze because NextOpen may be absent.
+                      It carries the same explanation as the corresponding admission rejection.
                     type: string
+                required:
+                - closed
                 type: object
             type: object
         required:
