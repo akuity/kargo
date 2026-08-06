@@ -465,14 +465,14 @@ type StageStatus struct {
 	// AutoPromotionEnabled indicates whether automatic promotion is enabled
 	// for the Stage based on the ProjectConfig.
 	AutoPromotionEnabled bool `json:"autoPromotionEnabled,omitempty"`
-	// PromotionSchedule reports whether promotion windows currently permit
+	// PromotionWindowStatus reports whether promotion windows currently permit
 	// promotion of this Stage, and when that is next expected to change. It is
 	// absent when no window gates the Stage.
 	//
 	// Kargo Enterprise only: This field is ignored in Kargo OSS.
 	//
 	// +optional
-	PromotionSchedule *PromotionScheduleStatus `json:"promotionSchedule,omitempty"`
+	PromotionWindowStatus *PromotionWindowStatus `json:"promotionWindowStatus,omitempty"`
 	// Metadata is a map of arbitrary metadata associated with the Stage.
 	// This is useful for storing additional information about the Stage
 	// that can be shared across promotions, verifications, or other processes.
