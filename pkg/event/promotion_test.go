@@ -33,6 +33,11 @@ func TestPromotionAborted(t *testing.T) {
 	require.Equal(t, kargoapi.EventTypePromotionAborted, evt.Type())
 }
 
+func TestPromotionDiscarded(t *testing.T) {
+	evt := &PromotionDiscarded{}
+	require.Equal(t, kargoapi.EventTypePromotionDiscarded, evt.Type())
+}
+
 func TestPromotionCreated(t *testing.T) {
 	evt := &PromotionCreated{}
 	require.Equal(t, kargoapi.EventTypePromotionCreated, evt.Type())
@@ -176,6 +181,12 @@ func TestPromotionConstructors(t *testing.T) {
 				return NewPromotionAborted("Aborted message", "test-actor", promotion, freight)
 			},
 			expectedType: kargoapi.EventTypePromotionAborted,
+		},
+		"discarded": {
+			constructor: func() Meta {
+				return NewPromotionDiscarded("Discarded message", "test-actor", promotion, freight)
+			},
+			expectedType: kargoapi.EventTypePromotionDiscarded,
 		},
 		"created": {
 			constructor: func() Meta {
@@ -375,6 +386,28 @@ func TestPromotionEventUnmarshalAnnotations(t *testing.T) {
 				return UnmarshalPromotionAbortedAnnotations("event-id", annotations)
 			},
 			expectedType: &PromotionAborted{
+				Common: Common{
+					Project: "test-project",
+					ID:      "event-id",
+				},
+				Promotion: Promotion{
+					Name:       "test-promotion",
+					StageName:  "test-stage",
+					CreateTime: time.Date(2024, 1, 1, 12, 0, 0, 0, time.UTC),
+				},
+			},
+		},
+		"promotion discarded": {
+			annotations: map[string]string{
+				kargoapi.AnnotationKeyEventProject:             "test-project",
+				kargoapi.AnnotationKeyEventPromotionName:       "test-promotion",
+				kargoapi.AnnotationKeyEventStageName:           "test-stage",
+				kargoapi.AnnotationKeyEventPromotionCreateTime: "2024-01-01T12:00:00Z",
+			},
+			unmarshalFunc: func(annotations map[string]string) (Meta, error) {
+				return UnmarshalPromotionDiscardedAnnotations("event-id", annotations)
+			},
+			expectedType: &PromotionDiscarded{
 				Common: Common{
 					Project: "test-project",
 					ID:      "event-id",
