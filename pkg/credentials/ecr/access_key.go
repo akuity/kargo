@@ -24,6 +24,9 @@ const (
 )
 
 func init() {
+	if !credentials.ProvidersEnabled() {
+		return
+	}
 	if provider := NewAccessKeyProvider(); provider != nil {
 		credentials.DefaultProviderRegistry.MustRegister(
 			credentials.ProviderRegistration{

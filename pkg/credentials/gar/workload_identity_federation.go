@@ -35,6 +35,9 @@ const (
 )
 
 func init() {
+	if !credentials.ProvidersEnabled() {
+		return
+	}
 	if p := NewWorkloadIdentityFederationProvider(context.Background()); p != nil {
 		credentials.DefaultProviderRegistry.MustRegister(
 			credentials.ProviderRegistration{

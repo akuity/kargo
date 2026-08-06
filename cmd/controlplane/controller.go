@@ -2,6 +2,7 @@ package main
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	stdruntime "runtime"
 	"sync"
@@ -124,6 +125,22 @@ func (o *controllerOptions) complete() {
 }
 
 func (o *controllerOptions) run(ctx context.Context) error {
+	// The controller is the only component that resolves credentials. Since all
+	// credential providers automatically register themselves at startup through
+	// bare imports and all control plane components are part of the same binary,
+	// the only way to prevent providers from self-registering where they are not
+	// needed is to rely on an environment variable that is only set on the
+	// controller.
+	//
+	// If we see here that the env var is not set, we will know that the
+	// credential providers have already NOT registered themselves. We need them
+	// to, so we're loud about it.
+	if !credentials.ProvidersEnabled() {
+		return errors.New(
+			"credential providers are not enabled; set CREDENTIAL_PROVIDERS_ENABLED=true",
+		)
+	}
+
 	kargoMgr, localClusterClient, stagesReconcilerCfg, err := o.setupKargoManager(
 		ctx,
 		stages.ReconcilerConfigFromEnv(),
