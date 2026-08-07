@@ -16,53 +16,49 @@ the Operator Guide.
 
 :::
 
-To install on macOS, use [Homebrew](https://brew.sh/):
+To install:
+
+<Tabs groupId="os">
+<TabItem value="macos" label="macOS" default>
 
 ```shell
 brew install kargo
 ```
 
-For other platforms, or if you prefer a manual installation:
+</TabItem>
+<TabItem value="linux-wsl" label="Linux or WSL">
 
-1. Download the CLI binary.
+```shell
+arch=$(uname -m)
+[ "$arch" = "x86_64" ] && arch=amd64
+curl -L -o kargo https://github.com/akuity/kargo/releases/latest/download/kargo-"$(uname -s | tr '[:upper:]' '[:lower:]')-${arch}"
+chmod +x kargo
+```
 
-    The easiest method of downloading the binary is by selecting the
-    <Hlt>CLI</Hlt> tab from the left navbar of the UI. There, you can select
-    the appropriate binary for your operating system and CPU architecture.
+</TabItem>
+<TabItem value="windows" label="Windows PowerShell">
 
-    CLI downloads offered at this location will automatically match the version
-    of your Kargo API server for optimum compatibility.
+```shell
+Invoke-WebRequest -URI https://github.com/akuity/kargo/releases/latest/download/kargo-windows-amd64.exe -OutFile kargo.exe
+```
 
-    Your downloaded binary will be suffixed with your OS and CPU architecture
-    (e.g. `kargo-darwin-arm64`), so be sure to rename it to simply `kargo` (or
-    `kargo.exe` for Windows).
+</TabItem>
+</Tabs>
 
-    ![CLI Tab in Kargo UI](../05-installing-the-cli/img/cli-installation.png)
+To download the CLI binary manually instead:
 
-    If you prefer, the following commands will download the latest version of
-    the CLI for your specific OS and CPU architecture and will also rename the
-    binary to `kargo` (or `kargo.exe` on Windows.)
+1. Select the <Hlt>CLI</Hlt> tab from the left navbar of the UI. There, you can
+   select the appropriate binary for your operating system and CPU architecture.
 
-    <Tabs groupId="os">
-    <TabItem value="mac-linux-wsl" label="Mac, Linux, or WSL" default>
+   CLI downloads offered at this location will automatically match the version
+   of your Kargo API server for optimum compatibility.
 
-    ```shell
-    arch=$(uname -m)
-    [ "$arch" = "x86_64" ] && arch=amd64
-    curl -L -o kargo https://github.com/akuity/kargo/releases/latest/download/kargo-"$(uname -s | tr '[:upper:]' '[:lower:]')-${arch}"
-    chmod +x kargo
-    ```
+   Your downloaded binary will be suffixed with your OS and CPU architecture
+   (e.g. `kargo-darwin-arm64`), so be sure to rename it to simply `kargo` (or
+   `kargo.exe` for Windows).
 
-    </TabItem>
-    <TabItem value="windows" label="Windows Powershell">
+   ![CLI Tab in Kargo UI](../05-installing-the-cli/img/cli-installation.png)
 
-    ```shell
-    Invoke-WebRequest -URI https://github.com/akuity/kargo/releases/latest/download/kargo-windows-amd64.exe -OutFile kargo.exe
-    ```
-
-    </TabItem>
-    </Tabs>
-
-1. Complete a manual installation by moving the binary to a location in your
+1. Complete the manual installation by moving the binary to a location in your
    file system that is included in the value of your `PATH` environment
    variable.
