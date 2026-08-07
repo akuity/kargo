@@ -62,8 +62,7 @@ type ServerConfig struct {
 	DashboardFS fs.FS
 }
 
-func 
-ServerConfigFromEnv() ServerConfig {
+func ServerConfigFromEnv() ServerConfig {
 	cfg := ServerConfig{}
 	envconfig.MustProcess("", &cfg.StandardConfig)
 	cfg.SecretManagementEnabled = types.MustParseBool(os.GetEnv("SECRET_MANAGEMENT_ENABLED", "false"))
