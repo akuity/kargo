@@ -35,7 +35,7 @@ describe('customFetch', () => {
     replaceMock = vi.fn();
     vi.stubGlobal('window', {
       __KARGO_BASE_PATH__: '',
-      location: { pathname, replace: replaceMock }
+      location: { origin: 'http://localhost:3333', pathname, replace: replaceMock }
     });
   };
 
@@ -70,14 +70,32 @@ describe('customFetch', () => {
     expect(replaceMock).not.toHaveBeenCalled();
   });
 
-  test('ignores the query string when matching exempt endpoints', async () => {
+  test.for([
+    ['a query string', '/v1beta1/system/public-server-config?ts=1'],
+    ['a fragment', '/v1beta1/system/public-server-config#section'],
+    ['a fragment ahead of a query string', '/v1beta1/system/public-server-config#a?ts=1'],
+    ['a trailing slash', '/v1beta1/system/public-server-config/'],
+    ['upper case', '/V1BETA1/SYSTEM/PUBLIC-SERVER-CONFIG'],
+    ['a trailing slash and a query string', '/v1beta1/system/public-server-config/?ts=1'],
+    ['dot segments', '/v1beta1/projects/../system/./public-server-config']
+  ])('matches an exempt endpoint written with %s', async ([, url]) => {
     localStorage.setItem(authTokenKey, jwt(-60));
     localStorage.setItem(refreshTokenKey, 'refresh-1');
 
-    await customFetch('/v1beta1/system/public-server-config?ts=1');
+    await customFetch(url);
 
     expect(fetchMock).toHaveBeenCalledTimes(1);
+    expect(fetchMock.mock.calls[0][1].headers).not.toHaveProperty('Authorization');
     expect(replaceMock).not.toHaveBeenCalled();
+  });
+
+  test('does not treat a non-exempt endpoint as exempt because of a shared prefix', async () => {
+    localStorage.setItem(authTokenKey, jwt(-60));
+    localStorage.setItem(refreshTokenKey, 'refresh-1');
+
+    await expect(customFetch('/v1beta1/login/extra')).rejects.toMatchObject({ status: 401 });
+    expect(replaceMock).toHaveBeenCalledWith('/token-renew?redirectTo=/');
+    expect(fetchMock).not.toHaveBeenCalled();
   });
 
   test('does not end the session on a 401 from an exempt endpoint', async () => {

@@ -36,12 +36,31 @@ const renewToken = () => {
   );
 };
 
+// Reduces a request URL to just its lowercased path, so that neither a query
+// string, a fragment, a dot segment, nor casing can silently defeat an
+// exemption. Resolving against the current origin is what the browser does
+// with these paths anyway, so the result is the path the server receives.
+const normalizePath = (url: string): string => {
+  try {
+    return new URL(url, window.location.origin).pathname.toLowerCase();
+  } catch {
+    // Unparseable, so it cannot match a known path. Returning the input
+    // unchanged fails closed: the caller treats it as requiring auth.
+    return url;
+  }
+};
+
 // The endpoints the UI calls that require no authentication. Their requests
 // must not be blocked by the token expiry check, or the renewal and login
 // pages could never fetch the public config they depend on. Every entry here
 // must be on the server's exempt list (exemptPaths in
-// pkg/server/auth_middleware.go).
-const authExemptPaths = new Set(['/v1beta1/system/public-server-config', '/v1beta1/login']);
+// pkg/server/auth_middleware.go). Each is registered both bare and with a
+// trailing slash, the two forms a caller could reasonably write. Entries are
+// written pre-normalized because normalizePath reads window, which is not
+// available when this module is first evaluated.
+const authExemptPaths = new Set(
+  ['/v1beta1/system/public-server-config', '/v1beta1/login'].flatMap((path) => [path, `${path}/`])
+);
 
 /**
  * Custom fetch function used by all generated API hooks.
@@ -57,7 +76,7 @@ export const customFetch = async <T>(url: string, options?: RequestInit): Promis
   const baseUrl = getBaseUrl();
   const fullUrl = `${baseUrl}${url}`;
 
-  const requiresAuth = !authExemptPaths.has(url.split('?')[0]);
+  const requiresAuth = !authExemptPaths.has(normalizePath(url));
   const token = requiresAuth ? localStorage.getItem(authTokenKey) : null;
   const refreshToken = localStorage.getItem(refreshTokenKey);
 
