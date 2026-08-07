@@ -134,5 +134,7 @@ type PromotionWindowStatus struct {
 	// NextCloseReason explains in human-readable terms why promotion will be forbidden
 	// at NextClose, naming the freeze responsible where there is one.
 	// It is set whenever NextClose is set.
+	//
+	// +optional
 	NextCloseReason string `json:"nextCloseReason,omitempty"`
 }
