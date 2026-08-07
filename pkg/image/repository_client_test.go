@@ -531,6 +531,111 @@ func Test_repositoryClient_getImageFromV1ImageIndex(t *testing.T) {
 				require.Equal(t, "Test Vendor", img.Annotations["org.opencontainers.image.vendor"])
 			},
 		},
+		{
+			name: "creation time is taken from the index's own annotations",
+			idx: &mockImageIndex{
+				indexManifest: &v1.IndexManifest{
+					Manifests: []v1.Descriptor{{
+						Platform: &v1.Platform{
+							OS:           "linux",
+							Architecture: "amd64",
+						},
+					}},
+					Annotations: map[string]string{
+						ociCreatedAnnotation: "2023-03-01T00:00:00Z",
+					},
+				},
+			},
+			client: &repositoryClient{
+				getImageByDigestFn: func(context.Context, string) (*image, error) {
+					return &image{
+						Digest:    testDigest,
+						CreatedAt: ptr.To(time.Date(2023, 1, 1, 0, 0, 0, 0, time.UTC)),
+					}, nil
+				},
+			},
+			assertions: func(t *testing.T, img *image, err error) {
+				require.NoError(t, err)
+				require.NotNil(t, img)
+				expectedTime, err := time.Parse(time.RFC3339, "2023-03-01T00:00:00Z")
+				require.NoError(t, err)
+				require.Equal(t, expectedTime, *img.CreatedAt)
+			},
+		},
+		{
+			name: "creation time is taken from a reference's annotations",
+			idx: &mockImageIndex{
+				indexManifest: &v1.IndexManifest{
+					Manifests: []v1.Descriptor{{
+						Platform: &v1.Platform{
+							OS:           "linux",
+							Architecture: "amd64",
+						},
+						Annotations: map[string]string{
+							ociCreatedAnnotation: "2023-02-01T00:00:00Z",
+						},
+					}},
+				},
+			},
+			client: &repositoryClient{
+				getImageByDigestFn: func(context.Context, string) (*image, error) {
+					return &image{
+						Digest:    testDigest,
+						CreatedAt: ptr.To(time.Date(2023, 1, 1, 0, 0, 0, 0, time.UTC)),
+					}, nil
+				},
+			},
+			assertions: func(t *testing.T, img *image, err error) {
+				require.NoError(t, err)
+				require.NotNil(t, img)
+				expectedTime, err := time.Parse(time.RFC3339, "2023-02-01T00:00:00Z")
+				require.NoError(t, err)
+				require.Equal(t, expectedTime, *img.CreatedAt)
+				require.Len(t, img.Platforms, 1)
+				require.Equal(t, expectedTime, *img.Platforms[0].CreatedAt)
+			},
+		},
+		{
+			name: "creation time falls back to the newest referenced image",
+			idx: &mockImageIndex{
+				indexManifest: &v1.IndexManifest{
+					Manifests: []v1.Descriptor{
+						{
+							Digest: v1.Hash{Algorithm: "sha256", Hex: "aa"},
+							Platform: &v1.Platform{
+								OS:           "linux",
+								Architecture: "amd64",
+							},
+						},
+						{
+							Digest: v1.Hash{Algorithm: "sha256", Hex: "bb"},
+							Platform: &v1.Platform{
+								OS:           "linux",
+								Architecture: "arm64",
+							},
+						},
+					},
+				},
+			},
+			client: &repositoryClient{
+				getImageByDigestFn: func(_ context.Context, digest string) (*image, error) {
+					createdAt := time.Date(2023, 1, 1, 0, 0, 0, 0, time.UTC)
+					if digest == "sha256:bb" {
+						createdAt = time.Date(2023, 4, 1, 0, 0, 0, 0, time.UTC)
+					}
+					return &image{
+						Digest:    digest,
+						CreatedAt: &createdAt,
+					}, nil
+				},
+			},
+			assertions: func(t *testing.T, img *image, err error) {
+				require.NoError(t, err)
+				require.NotNil(t, img)
+				expectedTime := time.Date(2023, 4, 1, 0, 0, 0, 0, time.UTC)
+				require.Equal(t, expectedTime, *img.CreatedAt)
+			},
+		},
 	}
 	for _, testCase := range testCases {
 		t.Run(testCase.name, func(t *testing.T) {
@@ -781,6 +886,77 @@ func Test_repositoryClient_getImageFromV1Image(t *testing.T) {
 				require.NoError(t, err)
 				require.NotNil(t, img)
 				expectedTime := time.Date(2023, 12, 1, 0, 0, 0, 0, time.UTC)
+				require.Equal(t, expectedTime, *img.CreatedAt)
+			},
+		},
+		{
+			// A label inherited from a base image describes the base image, which
+			// cannot have been created any later than the image built from it.
+			name: "config.Created is used when it is later than the OCI label",
+			img: &mockImage{
+				configFile: &v1.ConfigFile{
+					Created: v1.Time{Time: time.Date(2023, 12, 1, 0, 0, 0, 0, time.UTC)},
+					Config: v1.Config{
+						Labels: map[string]string{
+							ociCreatedAnnotation: "2023-01-01T00:00:00Z",
+						},
+					},
+					OS:           "linux",
+					Architecture: "amd64",
+				},
+				manifest: &v1.Manifest{},
+			},
+			assertions: func(t *testing.T, img *image, err error) {
+				require.NoError(t, err)
+				require.NotNil(t, img)
+				expectedTime := time.Date(2023, 12, 1, 0, 0, 0, 0, time.UTC)
+				require.Equal(t, expectedTime, *img.CreatedAt)
+			},
+		},
+		{
+			// Some build tools write a fixed timestamp to the config so that
+			// identical inputs produce an identical digest.
+			name: "OCI label is used when it is later than config.Created",
+			img: &mockImage{
+				configFile: &v1.ConfigFile{
+					Created: v1.Time{},
+					Config: v1.Config{
+						Labels: map[string]string{
+							ociCreatedAnnotation: "2023-05-01T00:00:00Z",
+						},
+					},
+					OS:           "linux",
+					Architecture: "amd64",
+				},
+				manifest: &v1.Manifest{},
+			},
+			assertions: func(t *testing.T, img *image, err error) {
+				require.NoError(t, err)
+				require.NotNil(t, img)
+				expectedTime, err := time.Parse(time.RFC3339, "2023-05-01T00:00:00Z")
+				require.NoError(t, err)
+				require.Equal(t, expectedTime, *img.CreatedAt)
+			},
+		},
+		{
+			name: "annotation is used even when config.Created is later",
+			img: &mockImage{
+				configFile: &v1.ConfigFile{
+					Created:      v1.Time{Time: time.Date(2023, 12, 1, 0, 0, 0, 0, time.UTC)},
+					OS:           "linux",
+					Architecture: "amd64",
+				},
+				manifest: &v1.Manifest{
+					Annotations: map[string]string{
+						ociCreatedAnnotation: "2023-01-01T00:00:00Z",
+					},
+				},
+			},
+			assertions: func(t *testing.T, img *image, err error) {
+				require.NoError(t, err)
+				require.NotNil(t, img)
+				expectedTime, err := time.Parse(time.RFC3339, "2023-01-01T00:00:00Z")
+				require.NoError(t, err)
 				require.Equal(t, expectedTime, *img.CreatedAt)
 			},
 		},
