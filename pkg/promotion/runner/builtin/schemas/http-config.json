@@ -62,10 +62,25 @@
   "type": "object",
   "additionalProperties": false,
   "required": ["url"],
-  "allOf": [
+  "oneOf": [
+    {
+      "required": ["body"],
+      "not": {
+        "required": ["bodyFromFile"]
+      }
+    },
+    {
+      "required": ["bodyFromFile"],
+      "not": {
+        "required": ["body"]
+      }
+    },
     {
       "not": {
-        "required": ["body", "bodyFromFile"]
+        "anyOf": [
+          {"required": ["body"]},
+          {"required": ["bodyFromFile"]}
+        ]
       }
     }
   ],

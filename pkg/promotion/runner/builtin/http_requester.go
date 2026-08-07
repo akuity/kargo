@@ -6,7 +6,7 @@ import (
 	"crypto/tls"
 	"encoding/json"
 	"fmt"
-	stdio "io"
+	"io"
 	"mime"
 	"net/http"
 	"net/url"
@@ -87,16 +87,7 @@ func (h *httpRequester) Run(
 // convert validates httpRequester configuration against a JSON schema and
 // converts it into a builtin.HTTPConfig struct.
 func (h *httpRequester) convert(cfg promotion.Config) (builtin.HTTPConfig, error) {
-	_, hasBody := cfg["body"]
-	_, hasBodyFromFile := cfg["bodyFromFile"]
-	if hasBody && hasBodyFromFile {
-		return builtin.HTTPConfig{}, fmt.Errorf("body and bodyFromFile cannot be set together")
-	}
-	converted, err := validateAndConvert[builtin.HTTPConfig](h.schemaLoader, cfg, stepKindHTTP)
-	if err != nil {
-		return builtin.HTTPConfig{}, err
-	}
-	return converted, nil
+	return validateAndConvert[builtin.HTTPConfig](h.schemaLoader, cfg, stepKindHTTP)
 }
 
 func (h *httpRequester) run(
@@ -318,7 +309,7 @@ func (h *httpRequester) buildRequest(
 	if method == "" {
 		method = http.MethodGet
 	}
-	var bodyReader stdio.Reader = strings.NewReader(cfg.Body)
+	var bodyReader io.Reader = strings.NewReader(cfg.Body)
 	if cfg.BodyFromFile != "" {
 		if stepCtx == nil {
 			return nil, fmt.Errorf("cannot read bodyFromFile %q without a step context", cfg.BodyFromFile)
@@ -327,7 +318,11 @@ func (h *httpRequester) buildRequest(
 		if err != nil {
 			return nil, fmt.Errorf("could not secure join bodyFromFile %q: %w", cfg.BodyFromFile, err)
 		}
-		bodyBytes, err := os.ReadFile(bodyPath)
+		bodyFile, err := os.Open(bodyPath)
+		if err != nil {
+			return nil, fmt.Errorf("could not read bodyFromFile %q: %w", cfg.BodyFromFile, err)
+		}
+		bodyBytes, err := kargoio.LimitRead(bodyFile, maxResponseBytes)
 		if err != nil {
 			return nil, fmt.Errorf("could not read bodyFromFile %q: %w", cfg.BodyFromFile, err)
 		}

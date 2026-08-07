@@ -1,6 +1,7 @@
 package builtin
 
 import (
+	"bytes"
 	"io"
 	"maps"
 	"net/http"
@@ -208,7 +209,7 @@ func Test_httpRequester_convert(t *testing.T) {
 				"bodyFromFile": "payload.json",
 			},
 			expectedProblems: []string{
-				"body and bodyFromFile cannot be set together",
+				"Must validate one and only one schema (oneOf)",
 			},
 		},
 		{
@@ -800,6 +801,27 @@ func Test_httpRequester_buildRequest_bodyFromFile(t *testing.T) {
 	body, err := io.ReadAll(req.Body)
 	require.NoError(t, err)
 	require.Equal(t, []byte{0x00, 0xff, 0x01, 0x7f}, body)
+}
+
+func Test_httpRequester_buildRequest_bodyFromFile_rejectsOversize(t *testing.T) {
+	workDir := t.TempDir()
+	testFilePath := filepath.Join(workDir, "payload.bin")
+	require.NoError(t, os.WriteFile(
+		testFilePath,
+		bytes.Repeat([]byte{0x01}, maxResponseBytes+1),
+		0600,
+	))
+
+	_, err := (&httpRequester{}).buildRequest(
+		t.Context(),
+		&promotion.StepContext{WorkDir: workDir},
+		builtin.HTTPConfig{
+			Method:       "POST",
+			URL:          "http://example.com",
+			BodyFromFile: "payload.bin",
+		},
+	)
+	require.ErrorContains(t, err, "content exceeds limit")
 }
 
 func Test_httpRequester_buildRequest_bodyFromFile_rejectsTraversal(t *testing.T) {
