@@ -153,6 +153,7 @@ export * from './promotionTemplate';
 export * from './promotionTemplateSpec';
 export * from './promotionWindow';
 export * from './promotionWindowKind';
+export * from './promotionWindowStatus';
 export * from './publicConfig';
 export * from './quayWebhookReceiverConfig';
 export * from './queryFreightsRestParams';

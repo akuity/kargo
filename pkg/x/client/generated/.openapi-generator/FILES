@@ -120,6 +120,7 @@ model_promotion_template.go
 model_promotion_template_spec.go
 model_promotion_window.go
 model_promotion_window_kind.go
+model_promotion_window_status.go
 model_public_config.go
 model_quay_webhook_receiver_config.go
 model_rbac_role.go
