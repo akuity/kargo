@@ -824,16 +824,25 @@ func Test_httpRequester_buildRequest_bodyFromFile_rejectsOversize(t *testing.T) 
 	require.ErrorContains(t, err, "content exceeds limit")
 }
 
-func Test_httpRequester_buildRequest_bodyFromFile_rejectsTraversal(t *testing.T) {
+func Test_httpRequester_buildRequest_bodyFromFile_keepsTraversalInsideWorkDir(t *testing.T) {
+	parentDir := t.TempDir()
+	workDir := filepath.Join(parentDir, "work")
+	require.NoError(t, os.Mkdir(workDir, 0700))
+	require.NoError(t, os.WriteFile(
+		filepath.Join(parentDir, "payload.json"),
+		[]byte("outside work directory"),
+		0600,
+	))
+
 	_, err := (&httpRequester{}).buildRequest(
 		t.Context(),
-		&promotion.StepContext{WorkDir: t.TempDir()},
+		&promotion.StepContext{WorkDir: workDir},
 		builtin.HTTPConfig{
 			URL:          "http://example.com",
 			BodyFromFile: "../payload.json",
 		},
 	)
-	require.ErrorContains(t, err, "could not secure join bodyFromFile")
+	require.ErrorContains(t, err, "could not read bodyFromFile")
 }
 
 func Test_httpRequester_getClient(t *testing.T) {
