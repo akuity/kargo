@@ -16,7 +16,13 @@ the Operator Guide.
 
 :::
 
-To install:
+To install on macOS, use [Homebrew](https://brew.sh/):
+
+```shell
+brew install kargo
+```
+
+For other platforms, or if you prefer a manual installation:
 
 1. Download the CLI binary.
 
@@ -57,6 +63,6 @@ To install:
     </TabItem>
     </Tabs>
 
-1. Regardless of your chosen download method, complete the installation by
-   moving the binary to a location in your file system that is included in the
-   value of your `PATH` environment variable.
+1. Complete a manual installation by moving the binary to a location in your
+   file system that is included in the value of your `PATH` environment
+   variable.
