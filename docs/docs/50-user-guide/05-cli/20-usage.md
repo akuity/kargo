@@ -1,5 +1,5 @@
 ---
-sidebar_label: Using the CLI
+sidebar_label: Usage
 description: Learn how to use the Kargo command line interface
 ---
 
@@ -8,7 +8,7 @@ description: Learn how to use the Kargo command line interface
 The Kargo command line interface (CLI) lets you manage Kargo resources and
 promote Freight from a terminal.
 
-Before using the CLI, [install it](./index.md) and
+Before using the CLI, [install it](./10-installation.md) and
 [log in](../20-how-to-guides/10-logging-in/index.md).
 
 ## Getting help
@@ -28,7 +28,7 @@ Many commands operate on a `Project`. Specify one for an individual command
 with the `--project` option:
 
 ```shell
-kargo get stages --project=my-project
+kargo get stages --project my-project
 ```
 
 To avoid repeating the option, set a default project:
@@ -51,16 +51,16 @@ Use `kargo get` to list resources or retrieve a resource by name:
 kargo get projects
 
 # List Stages in a Project
-kargo get stages --project=my-project
+kargo get stages --project my-project
 
 # Get a Stage by name
-kargo get stages --project=my-project test
+kargo get stages --project my-project test
 
 # List Freight produced by a Warehouse
-kargo get freight --project=my-project --warehouse=my-warehouse
+kargo get freight --project my-project --warehouse my-warehouse
 
 # List Promotions for a Stage
-kargo get promotions --project=my-project --stage=test
+kargo get promotions --project my-project --stage test
 ```
 
 Run `kargo get --help` to see every resource type that can be retrieved.
@@ -72,10 +72,10 @@ select the current auto-promotion candidate from a Warehouse:
 
 ```shell
 # Promote Freight by name
-kargo promote --project=my-project --freight=abc123 --stage=test
+kargo promote --project my-project --freight abc123 --stage test
 
 # Promote Freight selected from a Warehouse
-kargo promote --project=my-project --warehouse=my-warehouse --stage=test
+kargo promote --project my-project --warehouse my-warehouse --stage test
 ```
 
 The `--warehouse` option accepts a Warehouse name, not an origin in
@@ -87,14 +87,14 @@ including selecting Freight by alias and promoting to downstream Stages.
 Use `kargo refresh` to make Kargo reconcile a resource immediately:
 
 ```shell
-kargo refresh warehouse --project=my-project my-warehouse
-kargo refresh stage --project=my-project test
+kargo refresh warehouse --project my-project my-warehouse
+kargo refresh stage --project my-project test
 ```
 
 To (re)run verification for a Stage's current Freight, use:
 
 ```shell
-kargo verify stage --project=my-project test
+kargo verify stage --project my-project test
 ```
 
 ## Apply resource definitions

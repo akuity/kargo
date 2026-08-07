@@ -5,7 +5,7 @@ description: Learn how to log in to Kargo
 # Logging In
 
 Whether you wish to interact with Kargo through its web-based UI or through
-its [CLI](../../05-installing-the-cli/index.md), you will need to log in first.
+its [CLI](../../05-cli/10-installation.md), you will need to log in first.
 
 1. Obtain the address of your Kargo API server.
 

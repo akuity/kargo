@@ -1,5 +1,5 @@
 ---
-sidebar_label: Installing the CLI
+sidebar_label: Installation
 ---
 
 # Installing the Kargo CLI
@@ -31,7 +31,7 @@ To install:
     (e.g. `kargo-darwin-arm64`), so be sure to rename it to simply `kargo` (or
     `kargo.exe` for Windows).
 
-    ![CLI Tab in Kargo UI](./img/cli-installation.png)
+    ![CLI Tab in Kargo UI](../05-installing-the-cli/img/cli-installation.png)
 
     If you prefer, the following commands will download the latest version of
     the CLI for your specific OS and CPU architecture and will also rename the
