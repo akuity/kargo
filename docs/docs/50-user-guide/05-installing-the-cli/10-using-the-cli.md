@@ -8,8 +8,8 @@ description: Learn how to use the Kargo command line interface
 The Kargo command line interface (CLI) lets you manage Kargo resources and
 promote Freight from a terminal.
 
-Before using the CLI, [install it](./05-installing-the-cli/index.md) and
-[log in](./20-how-to-guides/10-logging-in/index.md).
+Before using the CLI, [install it](./index.md) and
+[log in](../20-how-to-guides/10-logging-in/index.md).
 
 ## Getting help
 
