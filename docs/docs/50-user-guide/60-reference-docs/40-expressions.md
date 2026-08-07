@@ -520,6 +520,54 @@ features.
 
 :::
 
+### `freightStatus(freightName)`
+
+The `freightStatus()` function retrieves the entire `status` object of a
+`Freight` resource, including `currentlyIn`, `verifiedIn`, `approvedFor`, and
+`metadata`. This is a superset of what `freightMetadata()` exposes, and is
+useful when a promotion step needs to make decisions based on fields other
+than metadata e.g. checking whether a `Freight` was manually
+approved for a `Stage`. It has one required argument:
+
+- `freightName` (Required): The name of the `Freight` resource
+
+Example:
+
+```yaml
+  promotionTemplate:
+    spec:
+      steps:
+        - uses: compose-output
+          as: freight-status
+          config:
+            all: ${{ freightStatus(ctx.targetFreight.name) }}
+            currentlyIn: ${{ freightStatus(ctx.targetFreight.name).currentlyIn }}
+            verifiedIn: ${{ freightStatus(ctx.targetFreight.name).verifiedIn }}
+            approvedFor: ${{ freightStatus(ctx.targetFreight.name).approvedFor }}
+            metadata: ${{ freightStatus(ctx.targetFreight.name).metadata }}
+            wasBypassed: ${{ freightStatus(ctx.targetFreight.name).approvedFor?.prod?.approvedAt != nil }}
+
+        # Automation flows freely when this promotion resulted from normal 
+        # verification, but an additional human gate is required when it resulted from a
+        # manual "Approve" bypass of this Stage.
+        - uses: fail
+          if: ${{ freightStatus(ctx.targetFreight.name).approvedFor?.prod?.approvedAt != nil }}
+          config:
+            message: >-
+              Freight ${{ ctx.targetFreight.name }} was promoted to prod via a
+              manual approval bypass (approvedFor.prod.approvedAt =
+              ${{ freightStatus(ctx.targetFreight.name).approvedFor?.prod?.approvedAt }}).
+              This requires additional human review before proceeding.
+```
+:::info
+
+You can handle `nil` values gracefully in Expr using its
+[nil coalescing](https://expr-lang.org/docs/language-definition#nil-coalescing) and
+[optional chaining](https://expr-lang.org/docs/language-definition#optional-chaining)
+features.
+
+:::
+
 ### `stageMetadata(stageName)`
 
 The `stageMetadata()` function retrieves metadata stored in a `Stage` resource. It
