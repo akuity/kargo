@@ -49,7 +49,10 @@ var (
 	errInvalidToken = libhttp.ErrorStr("invalid token", http.StatusUnauthorized)
 )
 
-// exemptPaths are REST paths that don't require authentication
+// exemptPaths are REST paths that don't require authentication. The UI's fetch
+// wrapper keeps its own copy of the entries the UI calls (authExemptPaths in
+// ui/src/lib/api/custom-fetch.ts); a path added here that the UI calls should
+// be added there as well.
 var exemptPaths = map[string]struct{}{
 	"/v1beta1/system/public-server-config": {},
 	"/v1beta1/login":                       {},
