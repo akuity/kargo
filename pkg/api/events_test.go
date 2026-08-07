@@ -4,6 +4,7 @@ import (
 	"testing"
 
 	"github.com/stretchr/testify/require"
+	authnv1 "k8s.io/api/authentication/v1"
 
 	kargoapi "github.com/akuity/kargo/api/v1alpha1"
 	"github.com/akuity/kargo/pkg/server/user"
@@ -19,6 +20,15 @@ func TestFormatEventUserActor(t *testing.T) {
 			name:     "admin",
 			user:     user.Info{IsAdmin: true},
 			expected: kargoapi.EventActorAdmin,
+		},
+		{
+			name: "kubernetes service account",
+			user: user.Info{
+				KubernetesUserInfo: &authnv1.UserInfo{
+					Username: "system:serviceaccount:kargo-demo:ci-bot",
+				},
+			},
+			expected: kargoapi.EventActorKubernetesUserPrefix + "system:serviceaccount:kargo-demo:ci-bot",
 		},
 		{
 			name: "sub",

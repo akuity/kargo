@@ -1,12 +1,13 @@
-{{- if and .Values.dataPlane.install .Values.controller.enabled }}
+{{- if and .Values.dataPlane.controller.install .Values.controller.enabled }}
 apiVersion: rbac.authorization.k8s.io/v1
 kind: RoleBinding
 metadata:
-  name: kargo-controller
+  name: {{ include "kargo.controller.fullname" . }}
   namespace: {{ .Release.Namespace }}
   labels:
     {{- include "kargo.labels" . | nindent 4 }}
     {{- include "kargo.controller.labels" . | nindent 4 }}
+    {{- include "kargo.controller.idLabel" . | nindent 4 }}
   {{- include "kargo.annotations" (dict "root" . "annotations" .Values.controller.annotations) | nindent 2 }}
 roleRef:
   apiGroup: rbac.authorization.k8s.io
@@ -15,5 +16,5 @@ roleRef:
 subjects:
 - kind: ServiceAccount
   namespace: {{ .Release.Namespace }}
-  name: kargo-controller
+  name: {{ include "kargo.controller.fullname" . }}
 {{- end }}

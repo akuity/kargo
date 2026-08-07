@@ -20,7 +20,6 @@ import (
 	"github.com/akuity/kargo/pkg/cli/kubernetes"
 	"github.com/akuity/kargo/pkg/cli/option"
 	"github.com/akuity/kargo/pkg/cli/templates"
-	"github.com/akuity/kargo/pkg/client/generated/core"
 )
 
 type getFreightOptions struct {
@@ -32,10 +31,10 @@ type getFreightOptions struct {
 	Config        config.CLIConfig
 	ClientOptions client.Options
 
-	Project string
-	Names   []string
-	Aliases []string
-	Origins []string
+	Project    string
+	Names      []string
+	Aliases    []string
+	Warehouses []string
 }
 
 func newGetFreightCommand(
@@ -60,7 +59,7 @@ func newGetFreightCommand(
 kargo get freight --project=my-project
 
 # List all freight in my-project for a specific warehouse
-kargo get freight --project=my-project --origin=warehouse-1
+kargo get freight --project=my-project --warehouse=warehouse-1
 
 # List all freight in my-project in JSON output format
 kargo get freight --project=my-project -o json
@@ -112,9 +111,13 @@ func (o *getFreightOptions) addFlags(cmd *cobra.Command) {
 	)
 	option.Names(cmd.Flags(), &o.Names, "The name of a piece of freight to get.")
 	option.Aliases(cmd.Flags(), &o.Aliases, "The alias of a piece of freight to get.")
-	option.Origins(cmd.Flags(), &o.Origins, "The origin of the freight to get.")
+	option.Warehouses(cmd.Flags(), &o.Warehouses, "Filter by Warehouse name.")
+	option.Origins(cmd.Flags(), &o.Warehouses, "Filter by Warehouse name. Deprecated: use --warehouse.")
+	_ = cmd.Flags().MarkDeprecated(option.OriginFlag, "use --warehouse instead")
 
-	// Origin and name/alias are mutually exclusive
+	cmd.MarkFlagsMutuallyExclusive(option.WarehouseFlag, option.OriginFlag)
+	cmd.MarkFlagsMutuallyExclusive(option.NameFlag, option.WarehouseFlag)
+	cmd.MarkFlagsMutuallyExclusive(option.AliasFlag, option.WarehouseFlag)
 	cmd.MarkFlagsMutuallyExclusive(option.NameFlag, option.OriginFlag)
 	cmd.MarkFlagsMutuallyExclusive(option.AliasFlag, option.OriginFlag)
 }
@@ -138,17 +141,19 @@ func (o *getFreightOptions) run(ctx context.Context) error {
 	}
 
 	if len(o.Names) == 0 && len(o.Aliases) == 0 {
-		params := core.NewQueryFreightsRestParams().
-			WithProject(o.Project)
-		if len(o.Origins) > 0 {
-			params = params.WithOrigins(o.Origins)
+		req := apiClient.CoreAPI.QueryFreightsRest(ctx, o.Project)
+		if len(o.Warehouses) > 0 {
+			req = req.Origins(o.Warehouses)
 		}
-		var res *core.QueryFreightsRestOK
-		if res, err = apiClient.Core.QueryFreightsRest(params, nil); err != nil {
-			return fmt.Errorf("query freight: %w", err)
+		res, httpRes, queryErr := req.Execute()
+		if httpRes != nil {
+			_ = httpRes.Body.Close()
+		}
+		if queryErr != nil {
+			return fmt.Errorf("query freight: %w", client.APIError(queryErr))
 		}
 		var freightJSON []byte
-		if freightJSON, err = json.Marshal(res.Payload); err != nil {
+		if freightJSON, err = json.Marshal(res); err != nil {
 			return fmt.Errorf("marshal freight: %w", err)
 		}
 		// The response is {"groups": {"": {"items": [...]}}}
@@ -173,18 +178,16 @@ func (o *getFreightOptions) run(ctx context.Context) error {
 	freight := make([]*kargoapi.Freight, 0, len(o.Names)+len(o.Aliases))
 	errs := make([]error, 0, len(o.Names)+len(o.Aliases))
 	for _, nameOrAlias := range append(o.Names, o.Aliases...) {
-		var res *core.GetFreightOK
-		if res, err = apiClient.Core.GetFreight(
-			core.NewGetFreightParams().
-				WithProject(o.Project).
-				WithFreightNameOrAlias(nameOrAlias),
-			nil,
-		); err != nil {
-			errs = append(errs, fmt.Errorf("get freight %s: %w", nameOrAlias, err))
+		res, httpRes, getErr := apiClient.CoreAPI.GetFreight(ctx, o.Project, nameOrAlias).Execute()
+		if httpRes != nil {
+			_ = httpRes.Body.Close()
+		}
+		if getErr != nil {
+			errs = append(errs, fmt.Errorf("get freight %s: %w", nameOrAlias, client.APIError(getErr)))
 			continue
 		}
 		var freightJSON []byte
-		if freightJSON, err = json.Marshal(res.Payload); err != nil {
+		if freightJSON, err = json.Marshal(res); err != nil {
 			errs = append(errs, fmt.Errorf("marshal freight %s: %w", nameOrAlias, err))
 			continue
 		}
@@ -215,7 +218,7 @@ func newFreightTable(list *metav1.List) *metav1.Table {
 				frt.Name,
 				alias,
 				frt.Origin.String(),
-				duration.HumanDuration(time.Since(frt.CreationTimestamp.Time)),
+				duration.HumanDuration(time.Since(frt.EffectiveDiscoveredAt())),
 			},
 			Object: list.Items[i],
 		}

@@ -9,7 +9,6 @@ import (
 	rbacv1 "k8s.io/api/rbac/v1"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/runtime/schema"
 	"k8s.io/apimachinery/pkg/types"
 	ctrl "sigs.k8s.io/controller-runtime"
@@ -37,18 +36,15 @@ func SetupWebhookWithManager(mgr ctrl.Manager, cfg libWebhook.Config) error {
 		cfg:    cfg,
 		client: mgr.GetClient(),
 	}
-	return ctrl.NewWebhookManagedBy(mgr).
-		For(&kargoapi.Project{}).
+	return ctrl.NewWebhookManagedBy(mgr, &kargoapi.Project{}).
 		WithValidator(w).
 		Complete()
 }
 
 func (w *webhook) ValidateCreate(
 	ctx context.Context,
-	obj runtime.Object,
+	project *kargoapi.Project,
 ) (admission.Warnings, error) {
-	project := obj.(*kargoapi.Project) // nolint: forcetypeassert
-
 	req, err := admission.RequestFromContext(ctx)
 	if err != nil {
 		return nil, apierrors.NewInternalError(
@@ -86,15 +82,15 @@ func (w *webhook) ValidateCreate(
 
 func (w *webhook) ValidateUpdate(
 	context.Context,
-	runtime.Object,
-	runtime.Object,
+	*kargoapi.Project,
+	*kargoapi.Project,
 ) (admission.Warnings, error) {
 	return nil, nil
 }
 
 func (w *webhook) ValidateDelete(
 	context.Context,
-	runtime.Object,
+	*kargoapi.Project,
 ) (admission.Warnings, error) {
 	return nil, nil
 }
@@ -128,6 +124,23 @@ func (w *webhook) ensureNamespace(
 				fmt.Errorf(
 					"failed to initialize Project %q because namespace %q already "+
 						"exists and is not labeled as a Project namespace",
+					project.Name,
+					project.Name,
+				),
+			)
+		}
+		// The namespace is a Project namespace but is still being terminated from
+		// a previous deletion. Attempting to create resources in a terminating
+		// namespace will fail with a confusing 500 error, so surface a clear 409
+		// Conflict here instead and tell the user to retry.
+		if ns.DeletionTimestamp != nil {
+			return apierrors.NewConflict(
+				projectGroupResource,
+				project.Name,
+				fmt.Errorf(
+					"failed to initialize Project %q because namespace %q is still "+
+						"being terminated; please try again after the namespace has "+
+						"been fully deleted",
 					project.Name,
 					project.Name,
 				),

@@ -11,27 +11,56 @@
  */
 
 import { authTokenKey, redirectToQueryParam, refreshTokenKey } from '@ui/config/auth';
+import { basePath, withBasePath } from '@ui/config/base-path';
 import { paths } from '@ui/config/paths';
 import { parseJwtPayload } from '@ui/utils/jwt-payload';
 
-const getBaseUrl = (): string => {
+export const getBaseUrl = (): string => {
   if (import.meta.env.VITE_API_URL) {
     return import.meta.env.VITE_API_URL;
   }
-  return '';
+  return basePath();
 };
 
 const logout = () => {
   localStorage.removeItem(authTokenKey);
   localStorage.removeItem(refreshTokenKey);
-  window.location.replace(`${paths.login}?${redirectToQueryParam}=${window.location.pathname}`);
+  window.location.replace(
+    `${withBasePath(paths.login)}?${redirectToQueryParam}=${window.location.pathname}`
+  );
 };
 
 const renewToken = () => {
   window.location.replace(
-    `${paths.tokenRenew}?${redirectToQueryParam}=${window.location.pathname}`
+    `${withBasePath(paths.tokenRenew)}?${redirectToQueryParam}=${window.location.pathname}`
   );
 };
+
+// Reduces a request URL to just its lowercased path, so that neither a query
+// string, a fragment, a dot segment, nor casing can silently defeat an
+// exemption. Resolving against the current origin is what the browser does
+// with these paths anyway, so the result is the path the server receives.
+const normalizePath = (url: string): string => {
+  try {
+    return new URL(url, window.location.origin).pathname.toLowerCase();
+  } catch {
+    // Unparseable, so it cannot match a known path. Returning the input
+    // unchanged fails closed: the caller treats it as requiring auth.
+    return url;
+  }
+};
+
+// The endpoints the UI calls that require no authentication. Their requests
+// must not be blocked by the token expiry check, or the renewal and login
+// pages could never fetch the public config they depend on. Every entry here
+// must be on the server's exempt list (exemptPaths in
+// pkg/server/auth_middleware.go). Each is registered both bare and with a
+// trailing slash, the two forms a caller could reasonably write. Entries are
+// written pre-normalized because normalizePath reads window, which is not
+// available when this module is first evaluated.
+const authExemptPaths = new Set(
+  ['/v1beta1/system/public-server-config', '/v1beta1/login'].flatMap((path) => [path, `${path}/`])
+);
 
 /**
  * Custom fetch function used by all generated API hooks.
@@ -47,7 +76,8 @@ export const customFetch = async <T>(url: string, options?: RequestInit): Promis
   const baseUrl = getBaseUrl();
   const fullUrl = `${baseUrl}${url}`;
 
-  const token = localStorage.getItem(authTokenKey);
+  const requiresAuth = !authExemptPaths.has(normalizePath(url));
+  const token = requiresAuth ? localStorage.getItem(authTokenKey) : null;
   const refreshToken = localStorage.getItem(refreshTokenKey);
 
   if (token) {
@@ -100,7 +130,7 @@ export const customFetch = async <T>(url: string, options?: RequestInit): Promis
     headers
   });
 
-  if (response.status === 401) {
+  if (requiresAuth && response.status === 401) {
     logout();
   }
 
@@ -166,5 +196,8 @@ export class ApiError extends Error {
     return this.status === 404;
   }
 }
+
+// eslint-disable-next-line @typescript-eslint/no-unused-vars
+export type ErrorType<Error> = ApiError;
 
 export default customFetch;

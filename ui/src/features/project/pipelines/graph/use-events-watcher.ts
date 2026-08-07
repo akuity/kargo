@@ -1,40 +1,29 @@
-import { useQueryClient } from '@tanstack/react-query';
-import { useEffect } from 'react';
-
-import { Watcher } from '@ui/features/project/pipelines/watcher';
 import { queryCache } from '@ui/features/utils/cache';
-import { Stage, Warehouse } from '@ui/gen/api/v1alpha1/generated_pb';
+import { Stage, Warehouse } from '@ui/gen/api/v2/models';
 import { useDocumentEvent } from '@ui/utils/document';
+
+import { useWatchStages } from '../use-watch-stages';
+import { useWatchWarehouses } from '../use-watch-warehouses';
 
 export const useEventsWatcher = (
   project: string,
   act?: {
-    onStage: (stage: Stage) => void;
-    onWarehouse: (warehouse: Warehouse) => void;
+    onStages: (stages: Stage[]) => void;
+    onWarehouses: (warehouses: Warehouse[]) => void;
   },
   warehouses?: string[]
 ) => {
-  const client = useQueryClient();
   const isWindowVisible = useDocumentEvent(
     'visibilitychange',
     () => document.visibilityState === 'visible'
   );
 
-  useEffect(() => {
-    if (!isWindowVisible || !project) {
-      return;
-    }
+  // Pass empty string when not visible — each hook's guard handles it
+  const activeProject = isWindowVisible ? project : '';
 
-    const watcher = new Watcher(project, client);
-
-    watcher.watchStages(act?.onStage, warehouses);
-    watcher.watchWarehouses({
-      onWarehouseEvent: act?.onWarehouse,
-      refreshHook: queryCache.freight.refetchQueryFreight
-    });
-
-    return () => {
-      watcher.cancelWatch();
-    };
-  }, [isWindowVisible, project, (warehouses || []).join(',')]);
+  useWatchStages(activeProject, act?.onStages, warehouses);
+  useWatchWarehouses(activeProject, {
+    refreshHook: () => queryCache.freight.refetchQueryFreight(project),
+    onWarehousesEvent: act?.onWarehouses
+  });
 };

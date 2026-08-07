@@ -1,10 +1,4 @@
-import {
-  Chart,
-  DiscoveredArtifacts,
-  Freight,
-  GitCommit,
-  Image
-} from '@ui/gen/api/v1alpha1/generated_pb';
+import { Chart, DiscoveredArtifacts, Freight, GitCommit, Image } from '@ui/gen/api/v2/models';
 
 import { artifactInDiscoveredResults } from './artifact-in-discovered-results';
 

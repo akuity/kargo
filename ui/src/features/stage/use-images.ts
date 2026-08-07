@@ -2,7 +2,7 @@ import { useContext, useMemo } from 'react';
 
 import { ColorContext } from '@ui/context/colors';
 import { getCurrentFreight } from '@ui/features/common/utils';
-import { Stage } from '@ui/gen/api/v1alpha1/generated_pb';
+import { Stage } from '@ui/gen/api/v2/models';
 
 import { StageStyleMap } from './types';
 
@@ -14,7 +14,7 @@ export const useImages = (stages: Stage[]) => {
     stages.forEach((stage) => {
       const len = stage.status?.freightHistory?.length || 0;
       stage.status?.freightHistory?.forEach((freight, i) => {
-        for (const warehouseValue of Object.values(freight?.items)) {
+        for (const warehouseValue of Object.values(freight?.items || {})) {
           warehouseValue.images?.forEach((image) => {
             let repo = image.repoURL ? images.get(image.repoURL) : undefined;
             if (!repo) {

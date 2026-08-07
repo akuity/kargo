@@ -1,0 +1,4 @@
+description: "Testing kargo API using copy of kargo config"
+kargo_cli:
+  ## Dir-local setup
+  config_file: kargo_config.yaml

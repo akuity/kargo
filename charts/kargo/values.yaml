@@ -21,18 +21,32 @@ global:
   clusterSecretsNamespace: kargo-cluster-secrets
   ## @param global.createClusterSecretsNamespace **Deprecated, as it is directly related to `clusterSecretsNamespace`, which also is deprecated. See docs for `clusterSecretsNamespace` for more details.** Indicates whether the namespace specified by `clusterSecretsNamespace` should be created when installing the chart.
   createClusterSecretsNamespace: true
+  ## @param global.createClusterSecretsRBAC **Deprecated, as it is directly related to `clusterSecretsNamespace`, which also is deprecated. See docs for `clusterSecretsNamespace` for more details.** Indicates whether the Roles/RoleBindings in the namespace specified by `clusterSecretsNamespace` should be created when installing the chart.
+  createClusterSecretsRBAC: true
 
   systemResources:
     ## @param global.systemResources.namespace Designates a namespace to contain resources associated with cluster-scoped resources and for which no cluster-scoped analog exists. For example, ClusterConfig is a cluster-scoped resource. Cluster-scoped webhook receivers, defined as part of that resource, each must reference a Secret, however, no such thing as a cluster-scoped Secret exists within Kubernetes. To work around that, all Secrets referenced by a ClusterConfig resource must be located in a designated namespace. NOTE: The namespace designated for this purpose is NOT the place to put resources that you want to share across all Projects. This namespace is strictly for namespaced resources that must be referenced by other, cluster-scoped resources.
     namespace: kargo-system-resources
     ## @param global.systemResources.createNamespace Indicates whether the namespace specified by `global.systemResources.namespace` should be created when installing the chart.
     createNamespace: true
+    ## @param global.systemResources.createRBAC Indicates whether the Roles/RoleBindings in the namespace specified by `global.systemResources.namespace` should be created when installing the chart.
+    createRBAC: true
+    ## @param global.systemResources.extraNamespaceAnnotations Additional annotations to be added to the namespace specified by `global.systemResources.namespace`.
+    extraNamespaceAnnotations: {}
+    ## @param global.systemResources.extraNamespaceLabels Additional labels to be added to the namespace specified by `global.systemResources.namespace`.
+    extraNamespaceLabels: {}
 
   sharedResources:
     ## @param global.sharedResources.namespace designates a namespace where shared resources can be located.
     namespace: kargo-shared-resources
     ## @param global.sharedResources.createNamespace Indicates whether the namespace specified by `global.sharedResources.namespace` should be created when installing the chart.
     createNamespace: true
+    ## @param global.sharedResources.createRBAC Indicates whether the Roles/RoleBindings in the namespace specified by `global.sharedResources.namespace` should be created when installing the chart.
+    createRBAC: true
+    ## @param global.sharedResources.extraNamespaceAnnotations Additional annotations to be added to the namespace specified by `global.sharedResources.namespace`.
+    extraNamespaceAnnotations: {}
+    ## @param global.sharedResources.extraNamespaceLabels Additional labels to be added to the namespace specified by `global.sharedResources.namespace`.
+    extraNamespaceLabels: {}
 
   ## @param global.labels Labels to add to all resources.
   labels: {}
@@ -84,11 +98,19 @@ dataPlane:
   ## @param dataPlane.install Coarse switch that, when `false`, suppresses every data-plane resource — even where finer-grained flags (`crds.install`, `rbac.installClusterRoles`, `rbac.installClusterRoleBindings`, `webhooks.register`, `global.createClusterSecretsNamespace`, `global.sharedResources.createNamespace`, `global.systemResources.createNamespace`) would otherwise install them. Note: Argo CD data-plane RBAC is governed separately by `argocd.dataPlane.install`.
   install: true
 
+  controller:
+    ## @param dataPlane.controller.install Coarse switch governing whether per-controller data-plane resources are rendered.
+    install: true
+
 ## @section Argo CD Data Plane
 argocd:
   ## @param argocd.dataPlane.install Coarse switch governing Argo CD data-plane resources — the RBAC granting the controller access to Argo CD `Application` resources. Separate from `dataPlane.install` because Argo CD may reside in a different cluster than Kargo's own data plane.
   dataPlane:
     install: true
+
+    kargoController:
+      ## @param argocd.dataPlane.kargoController.install Coarse switch governing whether per-Kargo-controller Argo CD data-plane resources are rendered.
+      install: true
 
 ## @section CRDs
 crds:
@@ -154,6 +176,9 @@ api:
 
   ## @param api.host The domain name where Kargo's API server will be accessible. When applicable, this is used for generation of an Ingress resource, certificates, and the OpenID Connect issuer and callback URLs. Note: The value in this field MAY include a port number and MUST NOT specify the protocol (http vs https), which is automatically inferred from other configuration options.
   host: localhost
+
+  ## @param api.basePath URL path prefix at which the API server is reachable. When non-empty, MUST begin with a slash and MUST NOT end with one (e.g. `/kargo`). Used as the path on any chart-generated Ingress rule for the API server, and included in chart-generated URLs (`API_SERVER_BASE_URL`, `ADMIN_ACCOUNT_TOKEN_ISSUER`, `OIDC_ISSUER_URL`, etc.). The API server binary itself always serves at the root, so when this is set, the user is responsible for configuring their Ingress controller to strip the prefix before forwarding (e.g. via Traefik's `stripPrefix` middleware, NGINX's `rewrite`, etc.).
+  basePath: ""
 
   ## @param api.logLevel The log level for the API server. Valid options are ERROR, INFO, DEBUG, and TRACE (case insensitive). Note that INFO level messages are written during startup regardless of the selected level.
   logLevel: INFO
@@ -274,6 +299,15 @@ api:
     dex:
       ## @param api.oidc.dex.enabled Whether to enable Dex as the identity provider. When set to true, the Kargo installation will include a Dex server and the Kargo API server will be configured to make the /dex endpoint a reverse proxy for the Dex server.
       enabled: false
+
+      ## All settings related to using an externally-managed Dex server (one not installed by this chart). When `byo.enabled` is `true`, the chart will NOT install a Dex server but the Kargo API server will still proxy `/dex` to the externally-managed Dex server. Configure `api.oidc.issuerURL`, `api.oidc.clientID`, etc. just as you would for any other OIDC identity provider. Mutually exclusive with `api.oidc.dex.enabled`.
+      byo:
+        ## @param api.oidc.dex.byo.enabled Whether to enable proxying to an externally-managed Dex server.
+        enabled: false
+        ## @param api.oidc.dex.byo.serverAddress Address (scheme + host + optional port) at which the Kargo API server should reach the externally-managed Dex server. This is used for in-cluster traffic from the API server pod to Dex, not for what end-user clients see (clients see `api.oidc.issuerURL`). Defaults to `https://kargo-dex-server.<release.namespace>.svc` — matching the chart's convention for a Dex Service named `kargo-dex-server` in the release namespace.
+        serverAddress: ""
+        ## @param api.oidc.dex.byo.caCertPath Path inside the Kargo API server container at which a CA certificate trusted by Dex is mounted. Optional. When set, the API server will use this certificate when making outbound TLS connections to the externally-managed Dex server. The cert itself must be made available via `api.containers` / `api.volumes` / `api.volumeMounts` (or another out-of-band mechanism).
+        caCertPath: ""
 
       ## @param api.oidc.dex.revisionHistoryLimit Number of old ReplicaSets the Dex server Deployment retains for rollback.
       revisionHistoryLimit: 10
@@ -600,6 +634,9 @@ controller:
   ## @param controller.enabled Whether the controller is enabled.
   enabled: true
 
+  ## @param controller.id [nullable] When set per-controller data plane resources will be suffixed with this value. This allows for the installation of multiple controllers into a single cluster or even a single namespace (each as its own, separate Helm release) without name collisions.
+  # id:
+
   ## @param controller.revisionHistoryLimit Number of old ReplicaSets the controller Deployment retains for rollback. The controller uses a `Recreate` rollout strategy (singleton), so `rollingUpdate.*` knobs do not apply.
   revisionHistoryLimit: 10
 
@@ -773,6 +810,41 @@ controller:
     ## @param controller.cabundle.secretName Specifies the name of an optional Secret containing CA certs that is managed "out of band." Values in the Secret named here should each contain a single PEM-encoded CA cert. If defined, the value of this field takes precedence over any in configMapName.
     secretName: ""
 
+  ## All settings relating to exposing the controller's Prometheus metrics.
+  metrics:
+    ## @param controller.metrics.enabled Whether to expose the controller's Prometheus metrics. When enabled, the controller binds its metrics server (via `METRICS_BIND_ADDRESS`), declares a metrics container port, and a metrics `Service` is created. Metrics are served over plain HTTP.
+    enabled: false
+    service:
+      ## @param controller.metrics.service.type The type of the metrics `Service`.
+      type: ClusterIP
+      ## @param controller.metrics.service.clusterIP The cluster IP of the metrics `Service`. Set to `None` for a headless `Service`, which resolves directly to individual pod IPs -- useful for scrapers that perform their own endpoint discovery.
+      clusterIP: ""
+      ## @param controller.metrics.service.annotations Annotations to add to the metrics `Service`.
+      annotations: {}
+      ## @param controller.metrics.service.labels Additional labels to add to the metrics `Service`.
+      labels: {}
+      ## @param controller.metrics.service.servicePort The port exposed by the metrics `Service`. Also used as the container port and the address the metrics server binds to.
+      servicePort: 9090
+      ## @param controller.metrics.service.portName The name of the metrics port. Referenced by the `ServiceMonitor` endpoint.
+      portName: http-metrics
+    serviceMonitor:
+      ## @param controller.metrics.serviceMonitor.enabled Whether to create a Prometheus Operator `ServiceMonitor` for the controller's metrics. Requires `controller.metrics.enabled` to be `true` and the Prometheus Operator CRDs (`monitoring.coreos.com/v1`) to be present in the cluster; otherwise it is silently skipped.
+      enabled: false
+      ## @param controller.metrics.serviceMonitor.interval The scrape interval for the `ServiceMonitor`.
+      interval: 30s
+      ## @param controller.metrics.serviceMonitor.scheme The scheme to use when scraping. Defaults to `http` (metrics are served over plain HTTP).
+      scheme: ""
+      ## @param controller.metrics.serviceMonitor.tlsConfig TLS configuration for the `ServiceMonitor` endpoint. Rendered as literal YAML.
+      tlsConfig: {}
+      ## @param controller.metrics.serviceMonitor.relabelings Relabeling rules applied to samples before scraping. Rendered as literal YAML.
+      relabelings: []
+      ## @param controller.metrics.serviceMonitor.metricRelabelings Relabeling rules applied to samples before ingestion. Rendered as literal YAML.
+      metricRelabelings: []
+      ## @param controller.metrics.serviceMonitor.additionalLabels Additional labels to add to the `ServiceMonitor`. Often required to match the label selector of your Prometheus Operator instance.
+      additionalLabels: {}
+      ## @param controller.metrics.serviceMonitor.namespace The namespace in which to create the `ServiceMonitor`. Defaults to the release namespace.
+      namespace: ""
+
 ## @section Garbage Collector
 garbageCollector:
   ## @param garbageCollector.enabled Whether the garbage collector is enabled.
@@ -790,6 +862,16 @@ garbageCollector:
 
   ## @param garbageCollector.schedule When to run the garbage collector.
   schedule: "0 * * * *"
+
+  ## @param garbageCollector.suspend Whether to suspend the garbage collector CronJob. When `true`, the CronJob remains in place but stops launching new Jobs.
+  suspend: false
+  ## @param garbageCollector.successfulJobsHistoryLimit Number of successful Job records to retain. Defaults to the Kubernetes CronJob default of `3`.
+  successfulJobsHistoryLimit: 3
+  ## @param garbageCollector.failedJobsHistoryLimit Number of failed Job records to retain. Defaults to the Kubernetes CronJob default of `1`.
+  failedJobsHistoryLimit: 1
+  ## @param garbageCollector.ttlSecondsAfterFinished Optional automatic cleanup delay (in seconds) for completed garbage collector Jobs. Each Job will be eligible for deletion this many seconds after it finishes. Leave empty/unset to retain Jobs indefinitely (subject to the `*JobsHistoryLimit` knobs).
+  ttlSecondsAfterFinished:
+
   ## @param garbageCollector.workers The number of concurrent workers to run. Tuning this too low will result in slow garbage collection. Tuning this too high will result in too many API calls and may result in throttling.
   workers: 3
   ## @param garbageCollector.maxRetainedPromotions The ideal maximum number of Promotions OLDER than the oldest Promotion in a non-terminal phase (for each Stage) that may be spared by the garbage collector. The ACTUAL number of older Promotions spared may exceed this ideal if some Promotions that would otherwise be deleted do not meet the minimum age criterion.
@@ -882,6 +964,9 @@ externalWebhooksServer:
 
   ## @param externalWebhooksServer.host The domain name where Kargo's external webhooks server will be accessible. When applicable, this is used for generation of an Ingress resource and certificates. Note: The value in this field MAY include a port number and MUST NOT specify the protocol (http vs https), which is automatically inferred from other configuration options.
   host: localhost
+
+  ## @param externalWebhooksServer.basePath URL path prefix at which the external webhooks server is reachable. When non-empty, MUST begin with a slash and MUST NOT end with one (e.g. `/webhook`). Used as the path on any chart-generated Ingress rule for the external webhooks server, and included in `EXTERNAL_WEBHOOK_SERVER_BASE_URL`. When the external webhooks server has no Ingress of its own and instead piggybacks on the API server's Ingress, this defaults to `<api.basePath>/webhooks`. The external webhooks server binary itself always serves at the root, so when this is set, the user is responsible for configuring their Ingress controller to strip the prefix before forwarding (e.g. via Traefik's `stripPrefix` middleware, NGINX's `rewrite`, etc.).
+  basePath: ""
 
   ## @param externalWebhooksServer.logLevel The log level for the external webhooks server. Valid options are ERROR, INFO, DEBUG, and TRACE (case insensitive). Note that INFO level messages are written during startup regardless of the selected level.
   logLevel: INFO
@@ -1119,6 +1204,41 @@ managementController:
   ## @param managementController.securityContext Security context for management controller pods. Defaults to `global.securityContext`.
   securityContext: {}
 
+  ## All settings relating to exposing the management controller's Prometheus metrics.
+  metrics:
+    ## @param managementController.metrics.enabled Whether to expose the management controller's Prometheus metrics. When enabled, the management controller binds its metrics server (via `METRICS_BIND_ADDRESS`), declares a metrics container port, and a metrics `Service` is created. Metrics are served over plain HTTP.
+    enabled: false
+    service:
+      ## @param managementController.metrics.service.type The type of the metrics `Service`.
+      type: ClusterIP
+      ## @param managementController.metrics.service.clusterIP The cluster IP of the metrics `Service`. Set to `None` for a headless `Service`, which resolves directly to individual pod IPs -- useful for scrapers that perform their own endpoint discovery.
+      clusterIP: ""
+      ## @param managementController.metrics.service.annotations Annotations to add to the metrics `Service`.
+      annotations: {}
+      ## @param managementController.metrics.service.labels Additional labels to add to the metrics `Service`.
+      labels: {}
+      ## @param managementController.metrics.service.servicePort The port exposed by the metrics `Service`. Also used as the container port and the address the metrics server binds to.
+      servicePort: 9090
+      ## @param managementController.metrics.service.portName The name of the metrics port. Referenced by the `ServiceMonitor` endpoint.
+      portName: http-metrics
+    serviceMonitor:
+      ## @param managementController.metrics.serviceMonitor.enabled Whether to create a Prometheus Operator `ServiceMonitor` for the management controller's metrics. Requires `managementController.metrics.enabled` to be `true` and the Prometheus Operator CRDs (`monitoring.coreos.com/v1`) to be present in the cluster; otherwise it is silently skipped.
+      enabled: false
+      ## @param managementController.metrics.serviceMonitor.interval The scrape interval for the `ServiceMonitor`.
+      interval: 30s
+      ## @param managementController.metrics.serviceMonitor.scheme The scheme to use when scraping. Defaults to `http` (metrics are served over plain HTTP).
+      scheme: ""
+      ## @param managementController.metrics.serviceMonitor.tlsConfig TLS configuration for the `ServiceMonitor` endpoint. Rendered as literal YAML.
+      tlsConfig: {}
+      ## @param managementController.metrics.serviceMonitor.relabelings Relabeling rules applied to samples before scraping. Rendered as literal YAML.
+      relabelings: []
+      ## @param managementController.metrics.serviceMonitor.metricRelabelings Relabeling rules applied to samples before ingestion. Rendered as literal YAML.
+      metricRelabelings: []
+      ## @param managementController.metrics.serviceMonitor.additionalLabels Additional labels to add to the `ServiceMonitor`. Often required to match the label selector of your Prometheus Operator instance.
+      additionalLabels: {}
+      ## @param managementController.metrics.serviceMonitor.namespace The namespace in which to create the `ServiceMonitor`. Defaults to the release namespace.
+      namespace: ""
+
 ## @section Webhooks Server
 webhooksServer:
   ## @param webhooksServer.enabled Whether the webhooks server is enabled.
@@ -1215,6 +1335,41 @@ webhooksServer:
   # priorityClassName:
   ## @param webhooksServer.securityContext Security context for webhooks server pods. Defaults to `global.securityContext`.
   securityContext: {}
+
+  ## All settings relating to exposing the webhooks server's Prometheus metrics.
+  metrics:
+    ## @param webhooksServer.metrics.enabled Whether to expose the webhooks server's Prometheus metrics. When enabled, the webhooks server binds its metrics server (via `METRICS_BIND_ADDRESS`), declares a metrics container port, and a metrics `Service` is created. Metrics are served over plain HTTP.
+    enabled: false
+    service:
+      ## @param webhooksServer.metrics.service.type The type of the metrics `Service`.
+      type: ClusterIP
+      ## @param webhooksServer.metrics.service.clusterIP The cluster IP of the metrics `Service`. Set to `None` for a headless `Service`, which resolves directly to individual pod IPs -- useful for scrapers that perform their own endpoint discovery.
+      clusterIP: ""
+      ## @param webhooksServer.metrics.service.annotations Annotations to add to the metrics `Service`.
+      annotations: {}
+      ## @param webhooksServer.metrics.service.labels Additional labels to add to the metrics `Service`.
+      labels: {}
+      ## @param webhooksServer.metrics.service.servicePort The port exposed by the metrics `Service`. Also used as the container port and the address the metrics server binds to.
+      servicePort: 9090
+      ## @param webhooksServer.metrics.service.portName The name of the metrics port. Referenced by the `ServiceMonitor` endpoint.
+      portName: http-metrics
+    serviceMonitor:
+      ## @param webhooksServer.metrics.serviceMonitor.enabled Whether to create a Prometheus Operator `ServiceMonitor` for the webhooks server's metrics. Requires `webhooksServer.metrics.enabled` to be `true` and the Prometheus Operator CRDs (`monitoring.coreos.com/v1`) to be present in the cluster; otherwise it is silently skipped.
+      enabled: false
+      ## @param webhooksServer.metrics.serviceMonitor.interval The scrape interval for the `ServiceMonitor`.
+      interval: 30s
+      ## @param webhooksServer.metrics.serviceMonitor.scheme The scheme to use when scraping. Defaults to `http` (metrics are served over plain HTTP).
+      scheme: ""
+      ## @param webhooksServer.metrics.serviceMonitor.tlsConfig TLS configuration for the `ServiceMonitor` endpoint. Rendered as literal YAML.
+      tlsConfig: {}
+      ## @param webhooksServer.metrics.serviceMonitor.relabelings Relabeling rules applied to samples before scraping. Rendered as literal YAML.
+      relabelings: []
+      ## @param webhooksServer.metrics.serviceMonitor.metricRelabelings Relabeling rules applied to samples before ingestion. Rendered as literal YAML.
+      metricRelabelings: []
+      ## @param webhooksServer.metrics.serviceMonitor.additionalLabels Additional labels to add to the `ServiceMonitor`. Often required to match the label selector of your Prometheus Operator instance.
+      additionalLabels: {}
+      ## @param webhooksServer.metrics.serviceMonitor.namespace The namespace in which to create the `ServiceMonitor`. Defaults to the release namespace.
+      namespace: ""
 
   podDisruptionBudget:
     ## @param webhooksServer.podDisruptionBudget.enabled Whether to create a PodDisruptionBudget for the webhooks server.

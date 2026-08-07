@@ -26,6 +26,7 @@ type Promotion struct {
 	StageName    string                 `json:"stageName"`
 	CreateTime   time.Time              `json:"createTime"`
 	Applications []types.NamespacedName `json:"applications,omitempty"`
+	Rollback     bool                   `json:"rollback,omitempty"`
 }
 
 func (p Promotion) GetName() string {
@@ -79,6 +80,29 @@ type PromotionAborted struct {
 
 func (p *PromotionAborted) Type() kargoapi.EventType {
 	return kargoapi.EventTypePromotionAborted
+}
+
+// PromotionDiscarded is event data recorded when the control plane removes a
+// Promotion that never ran. Every other way a Promotion can end reports an
+// outcome of its own; this covers the case where the removal *is* the outcome,
+// and the message is the only surviving record of why.
+//
+// Discarding is narrower than deleting. The garbage collector's retention
+// deletes stay silent, because those Promotions already reached a terminal
+// phase and already reported what happened.
+//
+// Nothing in OSS discards a Promotion today. Kargo Enterprise does, when a
+// promotion window closes while a Promotion is still Pending. The type is
+// registered here because registration is what gives the event an
+// involvedObject apiVersion, without which it never reaches the project event
+// stream or the UI.
+type PromotionDiscarded struct {
+	Common
+	Promotion
+}
+
+func (p *PromotionDiscarded) Type() kargoapi.EventType {
+	return kargoapi.EventTypePromotionDiscarded
 }
 
 // PromotionCreated is event data related to a created promotion.
@@ -155,6 +179,20 @@ func NewPromotionAborted(
 	}
 }
 
+// NewPromotionDiscarded creates a new PromotionDiscarded event from the given promotion and freight
+// data. The message should say why the Promotion was discarded, since that is the only record left
+// of it. The given actor will be used if it is not empty, but it will be overridden if the
+// promotion has an actor annotation.
+func NewPromotionDiscarded(
+	message, actor string, promotion *kargoapi.Promotion, freight *kargoapi.Freight,
+) *PromotionDiscarded {
+	common, promo := NewPromotionCommon(message, actor, promotion, freight)
+	return &PromotionDiscarded{
+		Common:    common,
+		Promotion: promo,
+	}
+}
+
 // NewPromotionCreated creates a new PromotionCreated event from the given promotion and freight data.
 // The given actor will be used if it is not empty, but it will be overridden if the promotion has
 // an actor annotation.
@@ -179,6 +217,9 @@ func (p *Promotion) MarshalAnnotationsTo(annotations map[string]string) {
 	}
 	if p.Freight != nil {
 		p.Freight.MarshalAnnotationsTo(annotations)
+	}
+	if p.Rollback {
+		annotations[kargoapi.AnnotationKeyEventRollback] = kargoapi.AnnotationValueTrue
 	}
 }
 
@@ -217,6 +258,14 @@ func (p *PromotionAborted) MarshalAnnotations() map[string]string {
 	return annotations
 }
 
+func (p *PromotionDiscarded) MarshalAnnotations() map[string]string {
+	// Note that we skip message here, as it is not used in the annotations.
+	annotations := map[string]string{}
+	p.Common.MarshalAnnotationsTo(annotations)
+	p.Promotion.MarshalAnnotationsTo(annotations)
+	return annotations
+}
+
 func (p *PromotionCreated) MarshalAnnotations() map[string]string {
 	// Note that we skip message here, as it is not used in the annotations.
 	annotations := map[string]string{}
@@ -245,6 +294,7 @@ func UnmarshalPromotionAnnotations(annotations map[string]string) (Promotion, er
 		Name:       annotations[kargoapi.AnnotationKeyEventPromotionName],
 		StageName:  annotations[kargoapi.AnnotationKeyEventStageName],
 		CreateTime: createTime,
+		Rollback:   annotations[kargoapi.AnnotationKeyEventRollback] == kargoapi.AnnotationValueTrue,
 	}
 
 	if applications, ok := annotations[kargoapi.AnnotationKeyEventApplications]; ok {
@@ -342,6 +392,26 @@ func UnmarshalPromotionAbortedAnnotations(
 	return &evt, nil
 }
 
+// UnmarshalPromotionDiscardedAnnotations converts the given annotations into a PromotionDiscarded. This is used by the
+// main event handler to convert the data into a normal structured event, but is exposed for convenience.
+func UnmarshalPromotionDiscardedAnnotations(
+	eventID string, annotations map[string]string,
+) (*PromotionDiscarded, error) {
+	common, err := UnmarshalCommonAnnotations(eventID, annotations)
+	if err != nil {
+		return nil, err
+	}
+	promotion, err := UnmarshalPromotionAnnotations(annotations)
+	if err != nil {
+		return nil, err
+	}
+	evt := PromotionDiscarded{
+		Common:    common,
+		Promotion: promotion,
+	}
+	return &evt, nil
+}
+
 // UnmarshalPromotionCreatedAnnotations converts the given annotations into a PromotionCreated. This is used by the
 // main event handler to convert the data into a normal structured event, but is exposed for convenience.
 func UnmarshalPromotionCreatedAnnotations(
@@ -370,6 +440,7 @@ func newPromotion(
 		Name:       promotion.GetName(),
 		StageName:  promotion.Spec.Stage,
 		CreateTime: promotion.GetCreationTimestamp().Time,
+		Rollback:   promotion.Annotations[kargoapi.AnnotationKeyRollback] == kargoapi.AnnotationValueTrue,
 	}
 
 	if freight != nil {

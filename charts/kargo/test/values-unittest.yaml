@@ -1,0 +1,12 @@
+# Minimal values required for templates to render during tests.
+# Does NOT set any feature flags or functional preconditions — those
+# belong as explicit set: blocks in individual test cases.
+#
+# The only values here are the ones the chart hard-requires (via `fail`) to
+# render at all: the API admin account password hash and token signing key,
+# which the API Secret/Deployment demand whenever api.adminAccount.enabled is
+# true (the default) and api.secret.name is unset.
+api:
+  adminAccount:
+    passwordHash: "$2a$10$unittestunittestunittestunittestunittestunittestun"
+    tokenSigningKey: unittest-token-signing-key

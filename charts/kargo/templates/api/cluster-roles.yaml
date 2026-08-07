@@ -52,6 +52,12 @@ rules:
   verbs:
   - create
 - apiGroups:
+  - authentication.k8s.io
+  resources:
+  - tokenreviews
+  verbs:
+  - create
+- apiGroups:
   - kargo.akuity.io
   resources:
   - freights

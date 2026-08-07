@@ -70,6 +70,7 @@ type reconciler struct {
 		ctx context.Context,
 		project string,
 		subs []kargoapi.RepoSubscription,
+		last *kargoapi.DiscoveredArtifacts,
 	) (*kargoapi.DiscoveredArtifacts, error)
 
 	buildFreightFromLatestArtifactsFn func(string, *kargoapi.DiscoveredArtifacts) (*kargoapi.Freight, error)
@@ -266,11 +267,19 @@ func (r *reconciler) syncWarehouse(
 			logger.Error(err, "error updating Warehouse status")
 		}
 
-		// Discover the latest artifacts.
+		// Pass the previously discovered artifacts so subscribers can
+		// short-circuit expensive work (e.g. via git ls-remote) when nothing
+		// relevant has changed. Only do so when the spec is unchanged since that
+		// discovery; otherwise a spec change (e.g. includePaths) would be ignored.
+		var lastArtifacts *kargoapi.DiscoveredArtifacts
+		if warehouse.Status.ObservedGeneration == warehouse.GetGeneration() {
+			lastArtifacts = warehouse.Status.DiscoveredArtifacts
+		}
 		discoveredArtifacts, err := r.discoverArtifactsFn(
 			ctx,
 			warehouse.Namespace,
 			warehouse.Spec.InternalSubscriptions,
+			lastArtifacts,
 		)
 		if err != nil {
 			// Mark the Warehouse as unhealthy and not ready if we failed to
@@ -548,6 +557,7 @@ func (r *reconciler) discoverArtifacts(
 	ctx context.Context,
 	project string,
 	subs []kargoapi.RepoSubscription,
+	last *kargoapi.DiscoveredArtifacts,
 ) (*kargoapi.DiscoveredArtifacts, error) {
 	discovered := &kargoapi.DiscoveredArtifacts{
 		Charts:  []kargoapi.ChartDiscoveryResult{},
@@ -555,6 +565,16 @@ func (r *reconciler) discoverArtifacts(
 		Images:  []kargoapi.ImageDiscoveryResult{},
 		Results: []kargoapi.DiscoveryResult{},
 	}
+	// Pair each subscription with its prior result positionally within a type:
+	// the Nth Git subscription pairs with the Nth prior GitDiscoveryResult. This
+	// assumes subs and last are from the same generation, which the caller
+	// guarantees. The range index can't serve as the position because subs mixes
+	// subscription types while prevGit holds only Git results.
+	var prevGit []kargoapi.GitDiscoveryResult
+	if last != nil {
+		prevGit = last.Git
+	}
+	var gitIdx int
 	for _, sub := range subs {
 		subReg, err := r.subscriberRegistry.Get(ctx, sub)
 		if err != nil {
@@ -566,7 +586,23 @@ func (r *reconciler) discoverArtifacts(
 		if err != nil {
 			return nil, fmt.Errorf("error instantiating subscriber: %w", err)
 		}
-		res, err := subscriber.DiscoverArtifacts(ctx, project, sub)
+		// Pair the subscription with its prior result, if any. Only Git
+		// subscriptions currently make use of it.
+		var lastResult any
+		if sub.Git != nil {
+			if gitIdx < len(prevGit) {
+				lastResult = prevGit[gitIdx]
+			}
+			gitIdx++
+		}
+		// TODO(krancour): Discovery relies on stall detection in the underlying
+		// implementations (git's low-speed abort; ResponseHeaderTimeout on
+		// registry/repository HTTP transports) to keep a dead connection from
+		// hanging a reconcile indefinitely. Those measures bound "no progress," not
+		// total duration, so a healthy-but-slow transfer is never cut off. If they
+		// should ever prove insufficient, setting a per-subscription deadline from
+		// ctx here is the natural next step.
+		res, err := subscriber.DiscoverArtifacts(ctx, project, sub, lastResult)
 		if err != nil {
 			return nil, fmt.Errorf("error discovering artifacts: %w", err)
 		}
@@ -609,13 +645,14 @@ func (r *reconciler) buildFreightFromLatestArtifacts(
 		}
 		latestCommit := result.Commits[0]
 		freight.Commits = append(freight.Commits, kargoapi.GitCommit{
-			RepoURL:   result.RepoURL,
-			ID:        latestCommit.ID,
-			Branch:    latestCommit.Branch,
-			Tag:       latestCommit.Tag,
-			Message:   latestCommit.Subject,
-			Author:    latestCommit.Author,
-			Committer: latestCommit.Committer,
+			RepoURL:          result.RepoURL,
+			ID:               latestCommit.ID,
+			Branch:           latestCommit.Branch,
+			Tag:              latestCommit.Tag,
+			Message:          latestCommit.Subject,
+			Author:           latestCommit.Author,
+			Committer:        latestCommit.Committer,
+			SubscriptionName: result.SubscriptionName,
 		})
 	}
 
@@ -625,10 +662,11 @@ func (r *reconciler) buildFreightFromLatestArtifacts(
 		}
 		latestImage := result.References[0]
 		freight.Images = append(freight.Images, kargoapi.Image{
-			RepoURL:     result.RepoURL,
-			Tag:         latestImage.Tag,
-			Digest:      latestImage.Digest,
-			Annotations: latestImage.Annotations,
+			RepoURL:          result.RepoURL,
+			Tag:              latestImage.Tag,
+			Digest:           latestImage.Digest,
+			Annotations:      latestImage.Annotations,
+			SubscriptionName: result.SubscriptionName,
 		})
 	}
 
@@ -642,9 +680,10 @@ func (r *reconciler) buildFreightFromLatestArtifacts(
 		}
 		latestChart := result.Versions[0]
 		freight.Charts = append(freight.Charts, kargoapi.Chart{
-			RepoURL: result.RepoURL,
-			Name:    result.Name,
-			Version: latestChart,
+			RepoURL:          result.RepoURL,
+			Name:             result.Name,
+			Version:          latestChart,
+			SubscriptionName: result.SubscriptionName,
 		})
 	}
 

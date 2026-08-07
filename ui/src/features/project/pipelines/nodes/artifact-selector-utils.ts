@@ -1,14 +1,15 @@
+import { isArtifactGeneric } from '@ui/features/assemble-freight/artifact-type-guards';
 import {
+  ArtifactReference,
   Chart,
   FreightReference,
-  ArtifactReference as GenericArtifactReference,
   GitCommit,
   Image
-} from '@ui/gen/api/v1alpha1/generated_pb';
+} from '@ui/gen/api/v2/models';
 
 import { selectFirstArtifact as _selectFirstArtifact } from '../freight/artifact-selector-utils';
 
-export type ArtifactTypes = Image | Chart | GitCommit | GenericArtifactReference;
+export type ArtifactTypes = Image | Chart | GitCommit | ArtifactReference;
 
 export const normalizeFreight = (freight: FreightReference) => {
   const artifacts: ArtifactTypes[] = [];
@@ -35,17 +36,11 @@ export const normalizeFreight = (freight: FreightReference) => {
 export const selectFirstArtifact = _selectFirstArtifact;
 
 const isSameArtifact = (a: ArtifactTypes, b: ArtifactTypes) => {
-  if (
-    a.$typeName === 'github.com.akuity.kargo.api.v1alpha1.ArtifactReference' &&
-    b.$typeName === 'github.com.akuity.kargo.api.v1alpha1.ArtifactReference'
-  ) {
+  if (isArtifactGeneric(a) && isArtifactGeneric(b)) {
     return a.subscriptionName === b.subscriptionName;
   }
 
-  if (
-    a.$typeName !== 'github.com.akuity.kargo.api.v1alpha1.ArtifactReference' &&
-    b.$typeName !== 'github.com.akuity.kargo.api.v1alpha1.ArtifactReference'
-  ) {
+  if (!isArtifactGeneric(a) && !isArtifactGeneric(b)) {
     return a.repoURL === b.repoURL;
   }
 

@@ -1,8 +1,4 @@
-import {
-  Measurement,
-  Metric,
-  MetricResult
-} from '@ui/gen/api/stubs/rollouts/v1alpha1/generated_pb';
+import { RolloutsMeasurement, RolloutsMetric, RolloutsMetricResult } from '@ui/gen/api/v2/models';
 
 export enum AnalysisStatus {
   Successful = 'Successful',
@@ -22,7 +18,7 @@ export enum FunctionalStatus {
   WARNING = 'WARNING'
 }
 
-export type TransformedMetricStatus = MetricResult & {
+export type TransformedMetricStatus = RolloutsMetricResult & {
   adjustedPhase: AnalysisStatus;
   chartable: boolean;
   chartMax?: number;
@@ -32,7 +28,7 @@ export type TransformedMetricStatus = MetricResult & {
   transformedMeasurements: TransformedMeasurement[];
 };
 
-export type TransformedMetricSpec = Metric & {
+export type TransformedMetricSpec = RolloutsMetric & {
   failConditionLabel?: string;
   failThresholds?: number[];
   queries?: string[];
@@ -51,7 +47,7 @@ export type TransformedValueObject = {
   [key: string]: number | string | null;
 };
 
-export type TransformedMeasurement = Measurement & {
+export type TransformedMeasurement = RolloutsMeasurement & {
   chartValue?: TransformedValueObject | number | string | null;
   tableValue: TransformedValueObject | number | string | null;
 };

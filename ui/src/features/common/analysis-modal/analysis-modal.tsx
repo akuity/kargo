@@ -1,15 +1,12 @@
-import { useQuery } from '@connectrpc/connect-query';
 import { faChartLine, faFileLines, faHistory } from '@fortawesome/free-solid-svg-icons';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
 import { Modal, Tabs } from 'antd';
 import classNames from 'classnames';
 import { useMemo, useState } from 'react';
 import { useParams } from 'react-router-dom';
+import { stringify } from 'yaml';
 
-import { getAnalysisRun } from '@ui/gen/api/service/v1alpha1/service-KargoService_connectquery';
-import { RawFormat } from '@ui/gen/api/service/v1alpha1/service_pb';
-import { AnalysisRun } from '@ui/gen/api/stubs/rollouts/v1alpha1/generated_pb';
-import { decodeRawData } from '@ui/utils/decode-raw-data';
+import { useGetAnalysisRun } from '@ui/gen/api/v2/verifications/verifications';
 
 import { AnalysisRunLogs } from '../analysis-run-logs/analysis-run-logs';
 import YamlEditor from '../code-editor/yaml-editor-lazy';
@@ -41,14 +38,14 @@ export const AnalysisModal = ({
 }: AnalysisModalProps & ModalProps) => {
   const [curTab, setCurTab] = useState('details');
   const { name: namespace } = useParams();
-  const { data: analysisRunData, isLoading } = useQuery(getAnalysisRun, {
-    namespace,
-    name: analysisName,
-    format: curTab === 'yaml' ? RawFormat.YAML : undefined
-  });
+
+  const { data: analysisRunData, isLoading } = useGetAnalysisRun(
+    namespace || '',
+    analysisName || ''
+  );
 
   const [analysis, transformedMetrics] = useMemo(() => {
-    const analysis = analysisRunData?.result.value as AnalysisRun;
+    const analysis = analysisRunData?.data;
     const transformedMetrics = transformMetrics(analysis?.spec, analysis?.status);
 
     return [analysis, transformedMetrics];
@@ -71,7 +68,11 @@ export const AnalysisModal = ({
           substatus={analysisSubstatus(analysis?.status)}
           images={images}
           message={analysis?.status?.message}
-          startTime={Number(analysis?.metadata?.creationTimestamp?.seconds) || 0}
+          startTime={
+            analysis?.metadata?.creationTimestamp
+              ? new Date(analysis.metadata.creationTimestamp).getTime() / 1000
+              : 0
+          }
           endTime={analysisEndTime(analysis?.status?.metricResults ?? [])}
         />
       )
@@ -114,7 +115,7 @@ export const AnalysisModal = ({
 
         <Tabs.TabPane key='yaml' tab='YAML' icon={<FontAwesomeIcon icon={faFileLines} />}>
           <YamlEditor
-            value={decodeRawData(analysisRunData)}
+            value={stringify(analysisRunData?.data)}
             height='500px'
             isLoading={isLoading}
             disabled
@@ -122,10 +123,7 @@ export const AnalysisModal = ({
         </Tabs.TabPane>
 
         <Tabs.TabPane key='logs' tab='Logs' icon={<FontAwesomeIcon icon={faHistory} />}>
-          <AnalysisRunLogs
-            linkFullScreen
-            analysisRun={analysisRunData?.result?.value as AnalysisRun}
-          />
+          <AnalysisRunLogs linkFullScreen analysisRun={analysisRunData?.data} />
         </Tabs.TabPane>
       </Tabs>
     </Modal>

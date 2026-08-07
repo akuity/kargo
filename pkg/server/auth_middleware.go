@@ -8,6 +8,7 @@ import (
 	"errors"
 	"fmt"
 	"io"
+	"maps"
 	"net/http"
 	"net/url"
 	"os"
@@ -18,12 +19,13 @@ import (
 	"github.com/gin-gonic/gin"
 	"github.com/golang-jwt/jwt/v5"
 	"github.com/hashicorp/go-cleanhttp"
+	authnv1 "k8s.io/api/authentication/v1"
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/types"
-	"k8s.io/client-go/rest"
 	libClient "sigs.k8s.io/controller-runtime/pkg/client"
 
 	kargoapi "github.com/akuity/kargo/api/v1alpha1"
+	libhttp "github.com/akuity/kargo/pkg/http"
 	"github.com/akuity/kargo/pkg/indexer"
 	"github.com/akuity/kargo/pkg/logging"
 	"github.com/akuity/kargo/pkg/server/config"
@@ -32,7 +34,25 @@ import (
 
 const authHeaderKey = "Authorization"
 
-// exemptPaths are REST paths that don't require authentication
+// errNoToken and errInvalidToken are the only authentication failures reported
+// to clients. Both carry a 401 and disclose nothing about which check rejected
+// the credential. Where the underlying reason is useful, sites wrap
+// errInvalidToken with it so that the detail reaches the logs while the
+// client's response remains opaque.
+//
+// Any other failure, such as an unreachable API server or a misconfigured
+// identity provider, is returned without a status code, which the
+// error-handling middleware reports as an internal error. A client must not be
+// able to mistake a broken control plane for a rejected token.
+var (
+	errNoToken      = libhttp.ErrorStr("no token provided", http.StatusUnauthorized)
+	errInvalidToken = libhttp.ErrorStr("invalid token", http.StatusUnauthorized)
+)
+
+// exemptPaths are REST paths that don't require authentication. The UI's fetch
+// wrapper keeps its own copy of the entries the UI calls (authExemptPaths in
+// ui/src/lib/api/custom-fetch.ts); a path added here that the UI calls should
+// be added there as well.
 var exemptPaths = map[string]struct{}{
 	"/v1beta1/system/public-server-config": {},
 	"/v1beta1/login":                       {},
@@ -42,6 +62,10 @@ var exemptPaths = map[string]struct{}{
 type authMiddleware struct {
 	cfg            config.ServerConfig
 	internalClient libClient.Client
+	// A set of paths that are exempt from authentication. This is used to allow certain
+	// endpoints to be accessed without a token, such as the public server config
+	// endpoint.
+	exemptPaths map[string]struct{}
 
 	parseUnverifiedJWTFn func(
 		rawToken string,
@@ -52,10 +76,13 @@ type authMiddleware struct {
 		ctx context.Context,
 		rawToken string,
 	) (claims, error)
-	verifyKubernetesTokenFn func(ctx context.Context, rawToken string) error
-	oidcTokenVerifyFn       goOIDCIDTokenVerifyFn
-	oidcExtractClaimsFn     func(*oidc.IDToken) (claims, error)
-	listServiceAccountsFn   func(
+	verifyKubernetesTokenFn func(
+		ctx context.Context,
+		rawToken string,
+	) (*authnv1.UserInfo, error)
+	oidcTokenVerifyFn     goOIDCIDTokenVerifyFn
+	oidcExtractClaimsFn   func(*oidc.IDToken) (claims, error)
+	listServiceAccountsFn func(
 		ctx context.Context,
 		c claims,
 	) (map[string]map[types.NamespacedName]struct{}, error)
@@ -66,15 +93,31 @@ type goOIDCIDTokenVerifyFn func(ctx context.Context, rawIDToken string) (*oidc.I
 
 type claims map[string]any
 
-// newAuthMiddleware returns an initialized Gin middleware handler for authentication
-func newAuthMiddleware(
+// AuthMiddlewareOpt is a functional option for configuring the auth middleware returned by
+// NewAuthMiddleware.
+type AuthMiddlewareOpt func(*authMiddleware)
+
+// WithExemptPaths adds additional exempt paths for the auth middleware. These are added to the
+// default exempt paths, which are /v1beta1/system/public-server-config and /v1beta1/login.
+func WithExemptPaths(paths []string) AuthMiddlewareOpt {
+	return func(a *authMiddleware) {
+		for _, path := range paths {
+			a.exemptPaths[path] = struct{}{}
+		}
+	}
+}
+
+// NewAuthMiddleware returns an initialized Gin middleware handler for authentication.
+func NewAuthMiddleware(
 	ctx context.Context,
 	cfg config.ServerConfig,
 	client libClient.Client,
+	opts ...AuthMiddlewareOpt,
 ) gin.HandlerFunc {
 	a := &authMiddleware{
 		cfg:            cfg,
 		internalClient: client,
+		exemptPaths:    maps.Clone(exemptPaths),
 	}
 	if cfg.OIDCConfig != nil {
 		a.oidcTokenVerifyFn = newMultiClientVerifier(ctx, cfg)
@@ -85,6 +128,10 @@ func newAuthMiddleware(
 	a.verifyKubernetesTokenFn = a.verifyKubernetesToken
 	a.oidcExtractClaimsFn = oidcExtractClaims
 	a.listServiceAccountsFn = a.listServiceAccounts
+
+	for _, opt := range opts {
+		opt(a)
+	}
 
 	return a.Handler
 }
@@ -104,8 +151,10 @@ func (a *authMiddleware) Handler(c *gin.Context) {
 	newCtx, err := a.authenticate(ctx, path, rawToken)
 	if err != nil {
 		logger.Debug("authentication failed", "error", err.Error())
+		// Leave the status code and response body to the error-handling
+		// middleware, which honors the code carried by the error.
 		_ = c.Error(err)
-		c.AbortWithStatus(http.StatusUnauthorized)
+		c.Abort()
 		return
 	}
 
@@ -125,13 +174,13 @@ func (a *authMiddleware) authenticate(
 	logger := logging.LoggerFromContext(ctx).WithValues("path", path)
 
 	// Check if this path is exempt from authentication
-	if _, ok := exemptPaths[path]; ok {
+	if _, ok := a.exemptPaths[path]; ok {
 		logger.Debug("skipping authentication for exempt path")
 		return ctx, nil
 	}
 
 	if rawToken == "" {
-		return ctx, errors.New("no token provided")
+		return ctx, errNoToken
 	}
 
 	// Are we dealing with a JWT?
@@ -145,7 +194,7 @@ func (a *authMiddleware) authenticate(
 	// as to HOW we might be able to verify the token further.
 	untrustedClaims := jwt.RegisteredClaims{}
 	if _, _, err := a.parseUnverifiedJWTFn(rawToken, &untrustedClaims); err != nil {
-		return ctx, errors.New("invalid token")
+		return ctx, errInvalidToken
 	}
 	logger.Debug("found untrusted claims in token", "claims", untrustedClaims)
 
@@ -164,13 +213,10 @@ func (a *authMiddleware) authenticate(
 			logger.Debug("admin token verified as issued by Kargo API server")
 			return user.ContextWithInfo(
 				ctx,
-				user.Info{
-					IsAdmin:     true,
-					BearerToken: rawToken,
-				},
+				user.Info{IsAdmin: true},
 			), nil
 		}
-		return ctx, errors.New("invalid token")
+		return ctx, errInvalidToken
 	}
 
 	if a.cfg.OIDCConfig != nil &&
@@ -189,11 +235,20 @@ func (a *authMiddleware) authenticate(
 		)
 		sa, err := a.listServiceAccountsFn(ctx, c)
 		if err != nil {
-			return ctx, fmt.Errorf("list service accounts for user: %w", err)
+			// Stated explicitly because the underlying Kubernetes error carries a
+			// status code of its own, which the error-handling middleware would
+			// otherwise report to the client as if it described their request.
+			return ctx, libhttp.Error(
+				fmt.Errorf("list service accounts for user: %w", err),
+				http.StatusInternalServerError,
+			)
 		}
 		var username string
 		if un, ok := c[a.cfg.OIDCConfig.UsernameClaim]; ok {
 			if username, ok = un.(string); !ok {
+				// The token verified, so this is a mismatch between the identity
+				// provider and this server's configuration, not a bad credential.
+				// Left untyped so it is reported as an internal error.
 				return ctx, fmt.Errorf(
 					"claim %q must be a string; got %T",
 					a.cfg.OIDCConfig.UsernameClaim,
@@ -206,7 +261,6 @@ func (a *authMiddleware) authenticate(
 			user.Info{
 				Claims:                     c,
 				ServiceAccountsByNamespace: sa,
-				BearerToken:                rawToken,
 				UsernameClaim:              a.cfg.OIDCConfig.UsernameClaim,
 				Username:                   username,
 			},
@@ -217,19 +271,17 @@ func (a *authMiddleware) authenticate(
 	// Case 3 or 4: We don't know how to verify this token. It's possibly a token
 	// issued by the Kubernetes cluster's identity provider.
 
-	// Test whether Kubernetes recognizes this token by making a request to /api
+	// Check whether Kubernetes recognizes the token and capture its identity.
 	logger.Debug("could not verify token; checking if Kubernetes recognizes it")
-	if err := a.verifyKubernetesTokenFn(ctx, rawToken); err != nil {
-		logger.Debug("token not recognized by Kubernetes", "error", err)
-		return ctx, errors.New("invalid token")
+	k8sUserInfo, err := a.verifyKubernetesTokenFn(ctx, rawToken)
+	if err != nil {
+		return ctx, err
 	}
-	logger.Debug("token recognized by Kubernetes")
+	logger.Debug("token recognized by Kubernetes", "username", k8sUserInfo.Username)
 
 	return user.ContextWithInfo(
 		ctx,
-		user.Info{
-			BearerToken: rawToken,
-		},
+		user.Info{KubernetesUserInfo: k8sUserInfo},
 	), nil
 }
 
@@ -337,9 +389,15 @@ func (a *authMiddleware) verifyIDPIssuedToken(
 	}
 	token, err := a.oidcTokenVerifyFn(ctx, rawToken)
 	if err != nil {
-		return c, err
+		return c, fmt.Errorf("%w: %w", errInvalidToken, err)
 	}
-	return a.oidcExtractClaimsFn(token)
+	c, err = a.oidcExtractClaimsFn(token)
+	if err != nil {
+		// The token verified, so failing to read its claims is our problem, not
+		// the client's. Left untyped so it is reported as an internal error.
+		return c, fmt.Errorf("extract claims from verified token: %w", err)
+	}
+	return c, nil
 }
 
 // verifyKargoIssuedToken attempts to verify that the provided raw token was
@@ -358,45 +416,30 @@ func (a *authMiddleware) verifyKargoIssuedToken(rawToken string) bool {
 	return err == nil
 }
 
-// verifyKubernetesToken tests whether the Kubernetes API server recognizes the
-// provided token by making a GET request to the /api endpoint. This is a
-// lightweight check that doesn't require any specific permissions.
+// verifyKubernetesToken submits the token to Kubernetes via a TokenReview
+// and returns the verified identity. Requires the kargo-api ClusterRole to
+// grant permission to create TokenReviews.
 func (a *authMiddleware) verifyKubernetesToken(
 	ctx context.Context,
 	rawToken string,
-) error {
-	if a.cfg.RestConfig == nil { // This shouldn't happen, but just in case...
-		return errors.New("Kubernetes REST config is not available") // nolint: staticcheck
+) (*authnv1.UserInfo, error) {
+	review := &authnv1.TokenReview{
+		Spec: authnv1.TokenReviewSpec{
+			Token: rawToken,
+		},
 	}
-
-	transport, err := rest.TransportFor(a.cfg.RestConfig)
-	if err != nil {
-		return fmt.Errorf("create transport: %w", err)
+	if err := a.internalClient.Create(ctx, review); err != nil {
+		// This says nothing about the token, so it's left untyped to be
+		// reported as an internal error rather than a rejected credential.
+		return nil, fmt.Errorf("submit TokenReview: %w", err)
 	}
-
-	apiURL := strings.TrimSuffix(a.cfg.RestConfig.Host, "/") + "/api"
-	req, err := http.NewRequestWithContext(ctx, http.MethodGet, apiURL, nil)
-	if err != nil {
-		return fmt.Errorf("create request: %w", err)
+	if review.Status.Error != "" {
+		return nil, fmt.Errorf("%w: %s", errInvalidToken, review.Status.Error)
 	}
-	req.Header.Set("Authorization", "Bearer "+rawToken)
-
-	// #nosec G704 -- This request is not for a user-specified URL, so there is
-	// virtually no risk of SSRF here.
-	resp, err := (&http.Client{Transport: transport}).Do(req)
-	if err != nil {
-		return fmt.Errorf("execute request: %w", err)
+	if !review.Status.Authenticated {
+		return nil, errInvalidToken
 	}
-	defer resp.Body.Close()
-
-	if resp.StatusCode != http.StatusOK {
-		return fmt.Errorf(
-			"unexpected response from Kubernetes API server: %d",
-			resp.StatusCode,
-		)
-	}
-
-	return nil
+	return &review.Status.User, nil
 }
 
 func oidcExtractClaims(token *oidc.IDToken) (claims, error) {
@@ -465,6 +508,10 @@ func getKeySet(ctx context.Context, cfg config.ServerConfig) (oidc.KeySet, error
 	httpClient := cleanhttp.DefaultClient()
 
 	var discoURL string
+	// dexBaseAddr is the in-cluster URL of Dex, with the path component Dex
+	// serves its endpoints under (derived from its configured issuer URL).
+	// Only set when DexProxyConfig is non-nil.
+	var dexBaseAddr string
 	var err error
 	if cfg.DexProxyConfig == nil {
 		if discoURL, err = url.JoinPath(
@@ -479,9 +526,20 @@ func getKeySet(ctx context.Context, cfg config.ServerConfig) (oidc.KeySet, error
 			)
 		}
 	} else {
+		var issuerURL *url.URL
+		if issuerURL, err = url.Parse(cfg.OIDCConfig.IssuerURL); err != nil {
+			return nil, fmt.Errorf(
+				"error parsing OIDC issuer URL %q: %w",
+				cfg.OIDCConfig.IssuerURL,
+				err,
+			)
+		}
+		// Dex routes its endpoints based on the path of its configured issuer
+		// URL, which includes the API server's basePath when one is set. Use
+		// that same path with the in-cluster Dex address so paths line up.
+		dexBaseAddr = cfg.DexProxyConfig.ServerAddr + issuerURL.Path
 		if discoURL, err = url.JoinPath(
-			cfg.DexProxyConfig.ServerAddr,
-			"dex",
+			dexBaseAddr,
 			".well-known",
 			"openid-configuration",
 		); err != nil {
@@ -537,7 +595,7 @@ func getKeySet(ctx context.Context, cfg config.ServerConfig) (oidc.KeySet, error
 		keysURL = strings.Replace(
 			keysURL,
 			cfg.OIDCConfig.IssuerURL,
-			fmt.Sprintf("%s/dex", cfg.DexProxyConfig.ServerAddr),
+			dexBaseAddr,
 			1,
 		)
 	}

@@ -138,7 +138,7 @@ export const MetricPanel = ({
           consecutiveErrors={metricResults.consecutiveError ?? 0}
           failures={metricResults.failed ?? 0}
           inconclusives={metricResults.inconclusive ?? 0}
-          showIcons={metricResults.measurements?.length > 0}
+          showIcons={(metricResults.measurements?.length ?? 0) > 0}
         />
       </div>
       {Array.isArray(metricSpec?.queries) && (metricSpec?.queries || []).length > 0 && (

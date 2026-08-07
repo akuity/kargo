@@ -79,6 +79,32 @@ spec:
   # Application Specifications
 ```
 
+To authorize more than one `Stage` to manage the same `Application`,
+specify a comma-separated list of `<project>:<stage>` entries. This is
+useful when, for example, several `Stage`s each manage a distinct artifact
+within a single `Application`:
+
+```yaml
+apiVersion: argoproj.io/v1alpha1
+kind: Application
+metadata:
+  name: kargo-demo-test
+  namespace: argocd
+  annotations:
+    kargo.akuity.io/authorized-stage: kargo-demo:test-frontend,kargo-demo:test-backend
+spec:
+  # Application Specifications
+```
+
+:::note
+
+When multiple `Stage`s manage the same `Application`, take care that they do
+not disagree about its desired state. If two `Stage`s sync the `Application` to
+conflicting revisions, at least one of them will perpetually observe the
+`Application` as out of sync.
+
+:::
+
 ## Health Checks
 
 When a `Promotion` uses an `argocd-update` step to update an `Application`, a

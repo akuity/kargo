@@ -1,6 +1,7 @@
 package commit
 
 import (
+	"context"
 	"errors"
 	"regexp"
 	"testing"
@@ -12,6 +13,42 @@ import (
 	kargoapi "github.com/akuity/kargo/api/v1alpha1"
 	"github.com/akuity/kargo/pkg/controller/git"
 )
+
+func Test_semverSelector_ListRefs(t *testing.T) {
+	constraint, err := semver.NewConstraint(">=1.2.0")
+	require.NoError(t, err)
+	s := &semverSelector{
+		tagBasedSelector: &tagBasedSelector{
+			baseSelector: &baseSelector{
+				lsRemoteFn: func(
+					context.Context,
+					string,
+					*git.ClientOptions,
+					...string,
+				) ([]git.RemoteRef, error) {
+					return []git.RemoteRef{
+						{Name: tagPrefix + "v1.2.4", ID: "d"},
+						{Name: tagPrefix + "v1.1.0", ID: "a"},     // below constraint
+						{Name: tagPrefix + "not-semver", ID: "x"}, // not a semver
+						{Name: tagPrefix + "v1.2.3", ID: "c"},
+					}, nil
+				},
+			},
+		},
+		constraint:    constraint,
+		strictSemvers: true,
+	}
+	refs, err := s.ListRefs(t.Context())
+	require.NoError(t, err)
+	// Only tags that parse as semvers AND satisfy the constraint are retained,
+	// sorted by name.
+	require.Equal(t, &kargoapi.GitDiscoveryRefs{
+		Tags: []kargoapi.DiscoveredRef{
+			{Name: "v1.2.3", ID: "c"},
+			{Name: "v1.2.4", ID: "d"},
+		},
+	}, refs)
+}
 
 func TestNewSemverSelectorTest(t *testing.T) {
 	testCases := []struct {
@@ -169,6 +206,7 @@ func Test_semverSelector_Select(t *testing.T) {
 				tagBasedSelector: &tagBasedSelector{
 					baseSelector: &baseSelector{
 						gitCloneFn: func(
+							context.Context,
 							string,
 							*git.ClientOptions,
 							*git.CloneOptions,
@@ -188,12 +226,13 @@ func Test_semverSelector_Select(t *testing.T) {
 				tagBasedSelector: &tagBasedSelector{
 					baseSelector: &baseSelector{
 						gitCloneFn: func(
+							context.Context,
 							string,
 							*git.ClientOptions,
 							*git.CloneOptions,
 						) (git.Repo, error) {
 							return &git.MockRepo{
-								ListTagsFn: func() ([]git.TagMetadata, error) {
+								ListTagsFn: func(context.Context) ([]git.TagMetadata, error) {
 									return nil, errors.New("something went wrong")
 								},
 							}, nil
@@ -211,12 +250,13 @@ func Test_semverSelector_Select(t *testing.T) {
 				tagBasedSelector: &tagBasedSelector{
 					baseSelector: &baseSelector{
 						gitCloneFn: func(
+							context.Context,
 							string,
 							*git.ClientOptions,
 							*git.CloneOptions,
 						) (git.Repo, error) {
 							return &git.MockRepo{
-								ListTagsFn: func() ([]git.TagMetadata, error) {
+								ListTagsFn: func(context.Context) ([]git.TagMetadata, error) {
 									return []git.TagMetadata{{Tag: "v1.0.0"}}, nil
 								},
 							}, nil
@@ -235,18 +275,20 @@ func Test_semverSelector_Select(t *testing.T) {
 				tagBasedSelector: &tagBasedSelector{
 					baseSelector: &baseSelector{
 						gitCloneFn: func(
+							context.Context,
 							string,
 							*git.ClientOptions,
 							*git.CloneOptions,
 						) (git.Repo, error) {
 							return &git.MockRepo{
-								ListTagsFn: func() ([]git.TagMetadata, error) {
+								ListTagsFn: func(context.Context) ([]git.TagMetadata, error) {
 									return []git.TagMetadata{{}}, nil
 								},
 							}, nil
 						},
 					},
 					filterTagsByDiffPathsFn: func(
+						context.Context,
 						git.Repo,
 						[]git.TagMetadata,
 					) ([]git.TagMetadata, error) {
@@ -264,12 +306,13 @@ func Test_semverSelector_Select(t *testing.T) {
 				tagBasedSelector: &tagBasedSelector{
 					baseSelector: &baseSelector{
 						gitCloneFn: func(
+							context.Context,
 							string,
 							*git.ClientOptions,
 							*git.CloneOptions,
 						) (git.Repo, error) {
 							return &git.MockRepo{
-								ListTagsFn: func() ([]git.TagMetadata, error) {
+								ListTagsFn: func(context.Context) ([]git.TagMetadata, error) {
 									return []git.TagMetadata{
 										{Tag: "foo"},
 										{Tag: "v1.2.3"},
@@ -280,6 +323,7 @@ func Test_semverSelector_Select(t *testing.T) {
 						},
 					},
 					filterTagsByDiffPathsFn: func(
+						_ context.Context,
 						_ git.Repo,
 						tags []git.TagMetadata,
 					) ([]git.TagMetadata, error) {
@@ -303,12 +347,13 @@ func Test_semverSelector_Select(t *testing.T) {
 				tagBasedSelector: &tagBasedSelector{
 					baseSelector: &baseSelector{
 						gitCloneFn: func(
+							context.Context,
 							string,
 							*git.ClientOptions,
 							*git.CloneOptions,
 						) (git.Repo, error) {
 							return &git.MockRepo{
-								ListTagsFn: func() ([]git.TagMetadata, error) {
+								ListTagsFn: func(context.Context) ([]git.TagMetadata, error) {
 									return []git.TagMetadata{
 										{Tag: "v1.0.0"},
 										{Tag: "v2.0.0"},
@@ -320,6 +365,7 @@ func Test_semverSelector_Select(t *testing.T) {
 					},
 					allowTagsRegexes: []*regexp.Regexp{allowMajorV1},
 					filterTagsByDiffPathsFn: func(
+						_ context.Context,
 						_ git.Repo,
 						tags []git.TagMetadata,
 					) ([]git.TagMetadata, error) {
@@ -343,12 +389,13 @@ func Test_semverSelector_Select(t *testing.T) {
 				tagBasedSelector: &tagBasedSelector{
 					baseSelector: &baseSelector{
 						gitCloneFn: func(
+							context.Context,
 							string,
 							*git.ClientOptions,
 							*git.CloneOptions,
 						) (git.Repo, error) {
 							return &git.MockRepo{
-								ListTagsFn: func() ([]git.TagMetadata, error) {
+								ListTagsFn: func(context.Context) ([]git.TagMetadata, error) {
 									return []git.TagMetadata{
 										{Tag: "v1.0.0"},
 										{Tag: "v1.1.0"},
@@ -359,6 +406,7 @@ func Test_semverSelector_Select(t *testing.T) {
 					},
 					ignoreTagsRegexes: []*regexp.Regexp{regexp.MustCompile(`^v1\.0\.0$`)},
 					filterTagsByDiffPathsFn: func(
+						_ context.Context,
 						_ git.Repo,
 						tags []git.TagMetadata,
 					) ([]git.TagMetadata, error) {
@@ -382,12 +430,13 @@ func Test_semverSelector_Select(t *testing.T) {
 				tagBasedSelector: &tagBasedSelector{
 					baseSelector: &baseSelector{
 						gitCloneFn: func(
+							context.Context,
 							string,
 							*git.ClientOptions,
 							*git.CloneOptions,
 						) (git.Repo, error) {
 							return &git.MockRepo{
-								ListTagsFn: func() ([]git.TagMetadata, error) {
+								ListTagsFn: func(context.Context) ([]git.TagMetadata, error) {
 									return []git.TagMetadata{
 										{Tag: "v1.1.0"},
 										{Tag: "v1.0.0"},
@@ -399,6 +448,7 @@ func Test_semverSelector_Select(t *testing.T) {
 					allowTagsRegexes:  []*regexp.Regexp{allowMajorV1},
 					ignoreTagsRegexes: []*regexp.Regexp{regexp.MustCompile(`^v1\.0\.0$`)},
 					filterTagsByDiffPathsFn: func(
+						_ context.Context,
 						_ git.Repo,
 						tags []git.TagMetadata,
 					) ([]git.TagMetadata, error) {
@@ -422,12 +472,13 @@ func Test_semverSelector_Select(t *testing.T) {
 				tagBasedSelector: &tagBasedSelector{
 					baseSelector: &baseSelector{
 						gitCloneFn: func(
+							context.Context,
 							string,
 							*git.ClientOptions,
 							*git.CloneOptions,
 						) (git.Repo, error) {
 							return &git.MockRepo{
-								ListTagsFn: func() ([]git.TagMetadata, error) {
+								ListTagsFn: func(context.Context) ([]git.TagMetadata, error) {
 									return []git.TagMetadata{
 										{Tag: "v3.0.0"},
 										{Tag: "v5.0.0"},
@@ -440,6 +491,7 @@ func Test_semverSelector_Select(t *testing.T) {
 						},
 					},
 					filterTagsByDiffPathsFn: func(
+						_ context.Context,
 						_ git.Repo,
 						tags []git.TagMetadata,
 					) ([]git.TagMetadata, error) {
@@ -470,12 +522,13 @@ func Test_semverSelector_Select(t *testing.T) {
 				tagBasedSelector: &tagBasedSelector{
 					baseSelector: &baseSelector{
 						gitCloneFn: func(
+							context.Context,
 							string,
 							*git.ClientOptions,
 							*git.CloneOptions,
 						) (git.Repo, error) {
 							return &git.MockRepo{
-								ListTagsFn: func() ([]git.TagMetadata, error) {
+								ListTagsFn: func(context.Context) ([]git.TagMetadata, error) {
 									return []git.TagMetadata{
 										{Tag: "v3.0.0"},
 										{Tag: "v5.0.0"},
@@ -489,6 +542,7 @@ func Test_semverSelector_Select(t *testing.T) {
 						discoveryLimit: 3,
 					},
 					filterTagsByDiffPathsFn: func(
+						_ context.Context,
 						_ git.Repo,
 						tags []git.TagMetadata,
 					) ([]git.TagMetadata, error) {

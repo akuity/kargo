@@ -10,7 +10,7 @@ import (
 	"github.com/technosophos/moniker"
 	admissionv1 "k8s.io/api/admission/v1"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
-	"k8s.io/apimachinery/pkg/runtime"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime/schema"
 	"k8s.io/apimachinery/pkg/types"
 	"k8s.io/apimachinery/pkg/util/validation/field"
@@ -86,8 +86,7 @@ func SetupWebhookWithManager(
 		mgr.GetClient(),
 		k8sevent.NewEventSender(libEvent.NewRecorder(ctx, mgr.GetScheme(), mgr.GetClient(), "freight-webhook")),
 	)
-	return ctrl.NewWebhookManagedBy(mgr).
-		For(&kargoapi.Freight{}).
+	return ctrl.NewWebhookManagedBy(mgr, &kargoapi.Freight{}).
 		WithValidator(w).
 		WithDefaulter(w).
 		Complete()
@@ -114,9 +113,7 @@ func newWebhook(
 	return w
 }
 
-func (w *webhook) Default(ctx context.Context, obj runtime.Object) error {
-	freight := obj.(*kargoapi.Freight) // nolint: forcetypeassert
-
+func (w *webhook) Default(ctx context.Context, freight *kargoapi.Freight) error {
 	req, err := admission.RequestFromContext(ctx)
 	if err != nil {
 		return apierrors.NewInternalError(
@@ -127,6 +124,16 @@ func (w *webhook) Default(ctx context.Context, obj runtime.Object) error {
 		// Re-calculate ID in case it wasn't set correctly to begin with -- possible
 		// when users create their own Freight.
 		freight.Name = api.GenerateFreightID(freight)
+	}
+
+	// Initialize discoveredAt when unset, regardless of whether this is a create
+	// or update. For updates this backfills the field on pre-existing Freight.
+	if freight.DiscoveredAt == nil {
+		if !freight.CreationTimestamp.IsZero() {
+			freight.DiscoveredAt = &freight.CreationTimestamp
+		} else {
+			freight.DiscoveredAt = new(metav1.Now())
+		}
 	}
 
 	// Sync the convenience alias field with the alias label
@@ -155,10 +162,8 @@ func (w *webhook) Default(ctx context.Context, obj runtime.Object) error {
 
 func (w *webhook) ValidateCreate(
 	ctx context.Context,
-	obj runtime.Object,
+	freight *kargoapi.Freight,
 ) (admission.Warnings, error) {
-	freight := obj.(*kargoapi.Freight) // nolint: forcetypeassert
-
 	var errs field.ErrorList
 
 	if err := w.validateProjectFn(ctx, w.client, freight); err != nil {
@@ -243,12 +248,9 @@ func (w *webhook) ValidateCreate(
 
 func (w *webhook) ValidateUpdate(
 	ctx context.Context,
-	oldObj runtime.Object,
-	newObj runtime.Object,
+	oldFreight *kargoapi.Freight,
+	newFreight *kargoapi.Freight,
 ) (admission.Warnings, error) {
-	oldFreight := oldObj.(*kargoapi.Freight) // nolint: forcetypeassert
-	newFreight := newObj.(*kargoapi.Freight) // nolint: forcetypeassert
-
 	freightList := kargoapi.FreightList{}
 	if err := w.listFreightFn(
 		ctx,
@@ -306,10 +308,8 @@ func (w *webhook) ValidateUpdate(
 
 func (w *webhook) ValidateDelete(
 	ctx context.Context,
-	obj runtime.Object,
+	freight *kargoapi.Freight,
 ) (admission.Warnings, error) {
-	freight := obj.(*kargoapi.Freight) // nolint: forcetypeassert
-
 	// Check if the given freight is used by any stages.
 	var list kargoapi.StageList
 	if err := w.listStagesFn(
@@ -385,6 +385,12 @@ type artifactSubscription struct {
 //   - An artifact in the Freight is not subscribed to by the Warehouse.
 //   - An artifact for a subscription of the Warehouse is not found in the Freight.
 //   - Multiple artifacts in the Freight correspond to the same subscription.
+//
+// TODO(krancour): A subscription is identified here by repository URL and type.
+// Subscription name will need to be part of that key when Warehouses are
+// permitted multiple subscriptions to the same repository.
+//
+// See https://github.com/akuity/kargo/issues/6724.
 func validateFreightArtifacts(
 	freight *kargoapi.Freight,
 	warehouse *kargoapi.Warehouse,

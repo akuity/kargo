@@ -1,21 +1,17 @@
-import { useMutation, useQuery } from '@connectrpc/connect-query';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { Button, Flex, message } from 'antd';
 import type { JSONSchema4 } from 'json-schema';
 import { useForm } from 'react-hook-form';
 import { useParams } from 'react-router-dom';
+import { stringify } from 'yaml';
 import { z } from 'zod';
 
 import { YamlEditor } from '@ui/features/common/code-editor/yaml-editor';
 import { FieldContainer } from '@ui/features/common/form/field-container';
 import { getStageYAMLExample } from '@ui/features/stage/get-stage-yaml-example';
-import {
-  getWarehouse,
-  updateResource
-} from '@ui/gen/api/service/v1alpha1/service-KargoService_connectquery';
-import { RawFormat } from '@ui/gen/api/service/v1alpha1/service_pb';
+import { useGetWarehouse } from '@ui/gen/api/v2/core/core';
+import { useUpdateResource } from '@ui/gen/api/v2/resources/resources';
 import schema from '@ui/gen/schema/stages.kargo.akuity.io_v1alpha1.json';
-import { decodeRawData } from '@ui/utils/decode-raw-data';
 import { zodValidators } from '@ui/utils/validators';
 
 const formSchema = z.object({
@@ -24,27 +20,25 @@ const formSchema = z.object({
 
 export const WarehouseEditForm = () => {
   const { name: projectName, warehouseName } = useParams();
-  const { data, isLoading } = useQuery(getWarehouse, {
-    project: projectName,
-    name: warehouseName,
-    format: RawFormat.YAML
-  });
 
-  const { mutateAsync, isPending } = useMutation(updateResource, {
-    onSuccess: () => message.success('Warehouse has been updated')
+  const { data, isLoading } = useGetWarehouse(projectName || '', warehouseName || '');
+
+  const { mutateAsync, isPending } = useUpdateResource({
+    mutation: {
+      onSuccess: () => message.success('Warehouse has been updated')
+    }
   });
 
   const { control, handleSubmit } = useForm({
     values: {
-      value: decodeRawData(data)
+      value: stringify(data?.data)
     },
     resolver: zodResolver(formSchema)
   });
 
   const onSubmit = handleSubmit(async (data) => {
-    const textEncoder = new TextEncoder();
     await mutateAsync({
-      manifest: textEncoder.encode(data.value)
+      data: data.value
     });
   });
 

@@ -1,0 +1,56 @@
+suite: common/cluster-roles.yaml
+values:
+  - ../test/values-unittest.yaml
+templates:
+  - templates/common/cluster-roles.yaml
+tests:
+  - it: renders the shared project-scoped cluster roles by default
+    asserts:
+      - hasDocuments:
+          count: 2
+      - documentSelector:
+          path: metadata.name
+          value: kargo-project-admin
+        isKind:
+          of: ClusterRole
+      - documentSelector:
+          path: metadata.name
+          value: kargo-project-secrets-reader
+        isKind:
+          of: ClusterRole
+
+  - it: grants the project admin access to secrets when secret management is enabled
+    set:
+      api.secretManagementEnabled: true
+    asserts:
+      - documentSelector:
+          path: metadata.name
+          value: kargo-project-admin
+        contains:
+          path: rules[0].resources
+          content: secrets
+
+  - it: omits secret access for the project admin when secret management is disabled
+    set:
+      api.secretManagementEnabled: false
+    asserts:
+      - documentSelector:
+          path: metadata.name
+          value: kargo-project-admin
+        notContains:
+          path: rules[0].resources
+          content: secrets
+
+  - it: is not rendered when cluster roles are disabled
+    set:
+      rbac.installClusterRoles: false
+    asserts:
+      - hasDocuments:
+          count: 0
+
+  - it: is not rendered when the data plane is not installed
+    set:
+      dataPlane.install: false
+    asserts:
+      - hasDocuments:
+          count: 0

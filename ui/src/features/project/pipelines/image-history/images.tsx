@@ -5,8 +5,7 @@ import { memo, useContext, useMemo, useState, useEffect } from 'react';
 
 import { ColorContext } from '@ui/context/colors';
 import { WarehouseExpanded } from '@ui/extend/types';
-import { TagMap } from '@ui/gen/api/service/v1alpha1/service_pb';
-import { Stage } from '@ui/gen/api/v1alpha1/generated_pb';
+import { Stage, TagMap } from '@ui/gen/api/v2/models';
 import { useLocalStorage } from '@ui/utils/use-local-storage';
 
 import { shortVersion } from '../freight/short-version-utils';

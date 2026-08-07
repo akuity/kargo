@@ -8,7 +8,7 @@ import (
 	"github.com/akuity/kargo/pkg/x/promotion/runner/builtin"
 )
 
-func Test_buildArgoCDAppLabelSelector(t *testing.T) {
+func Test_BuildArgoCDAppLabelSelector(t *testing.T) {
 	testCases := []struct {
 		name      string
 		selector  *builtin.ArgoCDAppSelector
@@ -48,7 +48,7 @@ func Test_buildArgoCDAppLabelSelector(t *testing.T) {
 	for _, tc := range testCases {
 		t.Run(tc.name, func(t *testing.T) {
 			t.Parallel()
-			sel, err := buildArgoCDAppLabelSelector(tc.selector)
+			sel, err := BuildArgoCDAppLabelSelector(tc.selector)
 			if tc.expectErr {
 				require.Error(t, err)
 			} else {

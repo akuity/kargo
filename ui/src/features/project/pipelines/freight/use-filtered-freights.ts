@@ -3,8 +3,7 @@ import { useMemo } from 'react';
 import { IAction, useActionContext } from '@ui/features/project/pipelines/context/action-context';
 import { useDictionaryContext } from '@ui/features/project/pipelines/context/dictionary-context';
 import { FreightTimelineControllerContextType } from '@ui/features/project/pipelines/context/freight-timeline-controller-context';
-import { Freight } from '@ui/gen/api/v1alpha1/generated_pb';
-import { timestampDate } from '@ui/utils/connectrpc-utils';
+import { Freight } from '@ui/gen/api/v2/models';
 
 import { timerangeToDate } from './filter-timerange-utils';
 import { filterFreightBySource, filterFreightByTimerange } from './source-catalogue-utils';
@@ -24,8 +23,8 @@ export const useFilteredFreights = (
 
   return useMemo(() => {
     let filtered = [...(freights || [])].sort((a, b) => {
-      const t1 = timestampDate(a?.metadata?.creationTimestamp);
-      const t2 = timestampDate(b?.metadata?.creationTimestamp);
+      const t1 = new Date(a?.metadata?.creationTimestamp || '');
+      const t2 = new Date(b?.metadata?.creationTimestamp || '');
       return (t2?.getTime() || 0) - (t1?.getTime() || 0);
     });
 

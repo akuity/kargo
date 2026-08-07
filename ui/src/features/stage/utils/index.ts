@@ -1,9 +1,9 @@
-import { ObjectMeta } from '@ui/gen/k8s.io/apimachinery/pkg/apis/meta/v1/generated_pb';
+import { V1ObjectMeta } from '@ui/gen/api/v2/models';
 
 const COLOR_ANNOTATION = 'kargo.akuity.io/color';
 
 interface HasMetadata {
-  metadata?: ObjectMeta;
+  metadata?: V1ObjectMeta;
 }
 
 export function parseColorAnnotation<T extends HasMetadata>(object: T): string | null {

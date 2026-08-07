@@ -57,7 +57,7 @@ func (g *gitTreeClearer) convert(cfg promotion.Config) (builtin.GitClearConfig, 
 }
 
 func (g *gitTreeClearer) run(
-	_ context.Context,
+	ctx context.Context,
 	stepCtx *promotion.StepContext,
 	cfg builtin.GitClearConfig,
 ) (promotion.StepResult, error) {
@@ -68,7 +68,7 @@ func (g *gitTreeClearer) run(
 			cfg.Path, stepCtx.WorkDir, err,
 		)
 	}
-	workTree, err := git.LoadWorkTree(p, nil)
+	workTree, err := git.LoadWorkTree(ctx, p, nil)
 	if err != nil {
 		return promotion.StepResult{Status: kargoapi.PromotionStepStatusErrored},
 			fmt.Errorf("error loading working tree from %s: %w", cfg.Path, err)
@@ -76,11 +76,11 @@ func (g *gitTreeClearer) run(
 	// workTree.Clear() won't remove any files that aren't indexed. This is a bit
 	// of a hack to ensure that we don't have any untracked files in the working
 	// tree so that workTree.Clear() will remove everything.
-	if err = workTree.AddAll(); err != nil {
+	if err = workTree.AddAll(ctx); err != nil {
 		return promotion.StepResult{Status: kargoapi.PromotionStepStatusErrored},
 			fmt.Errorf("error adding all files to working tree at %s: %w", cfg.Path, err)
 	}
-	if err = workTree.Clear(); err != nil {
+	if err = workTree.Clear(ctx); err != nil {
 		return promotion.StepResult{Status: kargoapi.PromotionStepStatusErrored},
 			fmt.Errorf("error clearing working tree at %s: %w", cfg.Path, err)
 	}

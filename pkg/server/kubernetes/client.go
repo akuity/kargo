@@ -4,9 +4,9 @@ import (
 	"context"
 	"errors"
 	"fmt"
-	"os"
 	"strings"
 
+	authnv1 "k8s.io/api/authentication/v1"
 	authv1 "k8s.io/api/authorization/v1"
 	coordinationv1 "k8s.io/api/coordination/v1"
 	corev1 "k8s.io/api/core/v1"
@@ -93,9 +93,6 @@ func setOptionsDefaults(opts ClientOptions) (ClientOptions, error) {
 			return opts, fmt.Errorf("error adding Kargo API to scheme: %w", err)
 		}
 	}
-	if opts.NewInternalClient == nil {
-		opts.NewInternalClient = newDefaultInternalClient
-	}
 	if opts.KargoNamespace == "" {
 		opts.KargoNamespace = "kargo"
 	}
@@ -104,11 +101,17 @@ func setOptionsDefaults(opts ClientOptions) (ClientOptions, error) {
 
 type AuthorizingClient struct{}
 
-// The Client interface combines the familiar controller-runtime WithWatch
-// interface with a helpful Authorized() method.
-type Client interface {
-	libClient.WithWatch
-
+// Authorizer authorizes a single (verb, resource) operation for the user bound
+// to the context. The API server's authorizing Kubernetes client satisfies this
+// interface; it returns a forbidden error when the user is not permitted.
+//
+// This mirrors the subset of kubernetes.Client used to prevent privilege
+// escalation when editing Kargo Roles: because the API server performs Role
+// writes with its own (broadly privileged) ServiceAccount, Kubernetes' own
+// escalation check runs against the server, not the user. We therefore verify --
+// as the user -- that the caller already holds every permission they are trying
+// to grant.
+type Authorizer interface {
 	// Authorize attempts to authorize the user to perform the desired operation
 	// on the specified resource. If the user is not authorized, an error is
 	// returned.
@@ -119,16 +122,33 @@ type Client interface {
 		subresource string,
 		key libClient.ObjectKey,
 	) error
+}
+
+// The Client interface combines the familiar controller-runtime WithWatch
+// interface with a helpful Authorized() method.
+type Client interface {
+	libClient.WithWatch
+
+	Authorizer
 
 	// InternalClient returns the internal controller-runtime client used by this
 	// client. This is useful for cases where the API server needs to bypass
 	// the extra authorization checks performed by this client.
 	InternalClient() libClient.WithWatch
+
+	// APIReader returns an uncached reader that reads straight from the
+	// Kubernetes API server, bypassing the internal client's cache. It is the
+	// same reader the cache delegates to (the cluster's GetAPIReader), and is
+	// useful where a cache-served list ResourceVersion would be too old to seed
+	// a follow-up watch. Like InternalClient, it does NOT enforce Kargo's RBAC,
+	// so callers must authorize the user before using it.
+	APIReader() libClient.Reader
 }
 
 // client implements Client.
 type client struct {
 	internalClient libClient.WithWatch
+	apiReader      libClient.Reader
 	opts           ClientOptions
 
 	getAuthorizedClientFn func(
@@ -162,17 +182,44 @@ func NewClient(
 	if opts, err = setOptionsDefaults(opts); err != nil {
 		return nil, fmt.Errorf("error setting client options defaults: %w", err)
 	}
-	internalClient, err := opts.NewInternalClient(
-		ctx,
-		restCfg,
-		opts.Scheme,
-		opts.KargoNamespace,
+	var (
+		internalClient libClient.WithWatch
+		apiReader      libClient.Reader
 	)
-	if err != nil {
-		return nil, fmt.Errorf("error building internal client: %w", err)
+	if opts.NewInternalClient != nil {
+		// A custom internal client (typically a fake in tests) has no separate
+		// cache to bypass, so it doubles as the uncached API reader.
+		if internalClient, err = opts.NewInternalClient(
+			ctx,
+			restCfg,
+			opts.Scheme,
+			opts.KargoNamespace,
+		); err != nil {
+			return nil, fmt.Errorf("error building internal client: %w", err)
+		}
+		apiReader = internalClient
+	} else {
+		// The cluster provides both the cache-backed client and the uncached
+		// reader the cache delegates to (GetAPIReader) -- the same direct-read
+		// pattern the controllers and external webhooks server use.
+		var cluster libCluster.Cluster
+		if cluster, err = newDefaultCluster(
+			ctx,
+			restCfg,
+			opts.Scheme,
+			opts.KargoNamespace,
+		); err != nil {
+			return nil, fmt.Errorf("error building internal cluster: %w", err)
+		}
+		var ok bool
+		if internalClient, ok = cluster.GetClient().(libClient.WithWatch); !ok {
+			return nil, errors.New("internal client does not implement WithWatch")
+		}
+		apiReader = cluster.GetAPIReader()
 	}
 	c := &client{
 		internalClient: internalClient,
+		apiReader:      apiReader,
 		opts:           opts,
 	}
 	if opts.SkipAuthorization {
@@ -195,12 +242,12 @@ func NewClient(
 	return c, nil
 }
 
-func newDefaultInternalClient(
+func newDefaultCluster(
 	ctx context.Context,
 	restCfg *rest.Config,
 	scheme *runtime.Scheme,
 	kargoNamespace string,
-) (libClient.WithWatch, error) {
+) (libCluster.Cluster, error) {
 	cluster, err := libCluster.New(
 		restCfg,
 		func(clusterOptions *libCluster.Options) {
@@ -306,11 +353,7 @@ func newDefaultInternalClient(
 		return nil, fmt.Errorf("error starting cluster: %w", err)
 	}
 
-	cl, ok := cluster.GetClient().(libClient.WithWatch)
-	if !ok {
-		return nil, errors.New("internal client does not implement WithWatch")
-	}
-	return cl, nil
+	return cluster, nil
 }
 
 func (c *client) Get(
@@ -653,6 +696,14 @@ func (a *authorizingSubResourceClient) Patch(
 	return client.SubResource(a.subResourceType).Patch(ctx, obj, patch, opts...)
 }
 
+func (a *authorizingSubResourceClient) Apply(
+	_ context.Context,
+	_ runtime.ApplyConfiguration,
+	_ ...libClient.SubResourceApplyOption,
+) error {
+	return errors.New("apply is not supported by the authorizing client")
+}
+
 func (c *client) Authorize(
 	ctx context.Context,
 	verb string,
@@ -675,6 +726,10 @@ func (c *client) Authorize(
 
 func (c *client) InternalClient() libClient.WithWatch {
 	return c.internalClient
+}
+
+func (c *client) APIReader() libClient.Reader {
+	return c.apiReader
 }
 
 func (c *client) Watch(
@@ -856,9 +911,9 @@ func getAuthorizedClient(globalServiceAccountNamespaces []string) func(
 				for serviceAccountToCheck := range serviceAccountsToCheck {
 					err := reviewSubjectAccess(
 						ctx,
-						internalClient.Scheme(),
+						internalClient,
 						ra,
-						withServiceAccount(serviceAccountToCheck),
+						serviceAccountSubject(serviceAccountToCheck),
 					)
 					if err == nil {
 						return internalClient, nil
@@ -871,13 +926,17 @@ func getAuthorizedClient(globalServiceAccountNamespaces []string) func(
 			return nil, newForbiddenError(ra)
 		}
 
-		// If we get to here, we're dealing with a user who "authenticated" by just
-		// passing their bearer token for the Kubernetes API server.
+		if userInfo.KubernetesUserInfo == nil {
+			return nil, errors.New("not allowed")
+		}
+
+		// If we get to here, we're dealing with a user whose token was recognized
+		// by the Kubernetes API server, which told us who they are.
 		if err := reviewSubjectAccess(
 			ctx,
-			internalClient.Scheme(),
+			internalClient,
 			ra,
-			withBearerToken(userInfo.BearerToken),
+			kubernetesUserSubject(*userInfo.KubernetesUserInfo),
 		); err != nil {
 			return nil, fmt.Errorf("review subject access: %w", err)
 		}
@@ -885,93 +944,59 @@ func getAuthorizedClient(globalServiceAccountNamespaces []string) func(
 	}
 }
 
-type subjectOption func(*userClientOptions)
-
-func withBearerToken(bearerToken string) subjectOption {
-	return func(opts *userClientOptions) {
-		opts.bearerToken = bearerToken
-	}
+// reviewSubject is the identity whose access is reviewed by
+// reviewSubjectAccess.
+type reviewSubject struct {
+	username string
+	uid      string
+	groups   []string
+	extra    map[string]authv1.ExtraValue
 }
 
-func withServiceAccount(name types.NamespacedName) subjectOption {
-	return func(opts *userClientOptions) {
-		opts.subject = &userClientSubject{
-			username: fmt.Sprintf("system:serviceaccount:%s:%s", name.Namespace, name.Name),
+// kubernetesUserSubject is the user the Kubernetes API server resolved a bearer
+// token to. Groups, UID and extras are all carried across, because omitting them
+// would ask a different question: whether the user is permitted on the strength
+// of their username alone.
+func kubernetesUserSubject(u authnv1.UserInfo) reviewSubject {
+	subject := reviewSubject{
+		username: u.Username,
+		uid:      u.UID,
+		groups:   u.Groups,
+	}
+	if len(u.Extra) > 0 {
+		subject.extra = make(map[string]authv1.ExtraValue, len(u.Extra))
+		for k, v := range u.Extra {
+			subject.extra[k] = authv1.ExtraValue(v)
 		}
 	}
+	return subject
 }
 
-type userClientSubject struct {
-	username string
+func serviceAccountSubject(name types.NamespacedName) reviewSubject {
+	return reviewSubject{
+		username: fmt.Sprintf("system:serviceaccount:%s:%s", name.Namespace, name.Name),
+	}
 }
 
-type userClientOptions struct {
-	bearerToken string
-	subject     *userClientSubject
-}
-
-// reviewSubjectAccess submits a (Self)SubjectAccessReview to determine
-// whether the subject that configured with subjectOption is allowed to
-// do the desired operation.
+// reviewSubjectAccess submits a SubjectAccessReview to determine whether the
+// provided subject is allowed to do the desired operation.
 func reviewSubjectAccess(
 	ctx context.Context,
-	scheme *runtime.Scheme,
+	cl libClient.Client,
 	ra authv1.ResourceAttributes,
-	opts ...subjectOption,
+	subject reviewSubject,
 ) error {
-	cfg, err := GetRestConfig(ctx, os.Getenv("KUBECONFIG"))
-	if err != nil {
-		return fmt.Errorf("get REST config: %w", err)
-	}
-
-	var opt userClientOptions
-	for _, apply := range opts {
-		apply(&opt)
-	}
-
-	if opt.bearerToken != "" {
-		cfg.BearerToken = opt.bearerToken
-		// These MUST be blanked out because they all seem to take precedence over the
-		// cfg.BearerToken field.
-		// TODO: Are there more things to blank out here?
-		cfg.BearerTokenFile = ""
-		cfg.CertData = nil
-		cfg.CertFile = ""
-	}
-
-	userClient, err := libClient.New(
-		cfg,
-		libClient.Options{
-			Scheme: scheme,
-		},
-	)
-	if err != nil {
-		return fmt.Errorf("create user-specific Kubernetes client: %w", err)
-	}
-
-	if opt.subject != nil {
-		review := &authv1.SubjectAccessReview{
-			Spec: authv1.SubjectAccessReviewSpec{
-				ResourceAttributes: &ra,
-				User:               opt.subject.username,
-			},
-		}
-		if err := userClient.Create(ctx, review); err != nil {
-			return fmt.Errorf("submit SubjectAccessReview: %w", err)
-		}
-		if review.Status.Allowed {
-			return nil
-		}
-		return newForbiddenError(ra)
-	}
-
-	review := &authv1.SelfSubjectAccessReview{
-		Spec: authv1.SelfSubjectAccessReviewSpec{
+	review := &authv1.SubjectAccessReview{
+		Spec: authv1.SubjectAccessReviewSpec{
 			ResourceAttributes: &ra,
+			User:               subject.username,
+			UID:                subject.uid,
+			Groups:             subject.groups,
+			Extra:              subject.extra,
 		},
 	}
-	if err := userClient.Create(ctx, review); err != nil {
-		return fmt.Errorf("submit SelfSubjectAccessReview: %w", err)
+	if err := cl.Create(ctx, review); err != nil {
+		return fmt.Errorf("submit SubjectAccessReview: %w", err)
 	}
 	if review.Status.Allowed {
 		return nil

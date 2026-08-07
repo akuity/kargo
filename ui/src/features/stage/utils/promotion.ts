@@ -1,12 +1,13 @@
 // action, reaction and behaviour of everything related to promotion
 
+import yaml from 'yaml';
+
 import {
   getPromotionStatusPhase,
   isPromotionPhaseTerminal
 } from '@ui/features/common/promotion-status/utils';
-import { Promotion } from '@ui/gen/api/v1alpha1/generated_pb';
-import { timestampDate } from '@ui/utils/connectrpc-utils';
-import { decodeRawData } from '@ui/utils/decode-raw-data';
+import { Promotion } from '@ui/gen/api/v2/models';
+import { parseDate } from '@ui/utils/dates';
 
 export const canAbortPromotion = (promotion: Promotion) =>
   !isPromotionPhaseTerminal(getPromotionStatusPhase(promotion));
@@ -14,7 +15,7 @@ export const canAbortPromotion = (promotion: Promotion) =>
 // API annotates promotion metadata to let controller abort promotion
 export const hasAbortRequest = (promotion: Promotion) => {
   const abortAnnotation =
-    promotion.metadata?.annotations[
+    promotion.metadata?.annotations?.[
       // as this hard-coded annotation/labels increase, put it all at one place
       'kargo.akuity.io/abort'
     ];
@@ -26,8 +27,8 @@ export const promotionCompareFn = (
   promotion1: Partial<Promotion>,
   promotion2: Partial<Promotion>
 ) => {
-  const promo1Date = timestampDate(promotion1.metadata?.creationTimestamp);
-  const promo2Date = timestampDate(promotion2.metadata?.creationTimestamp);
+  const promo1Date = parseDate(promotion1.metadata?.creationTimestamp);
+  const promo2Date = parseDate(promotion2.metadata?.creationTimestamp);
 
   if (promo1Date && promo2Date) {
     // latest promotion should have lower index in array
@@ -45,22 +46,13 @@ export const promotionCompareFn = (
   return (promotion1?.metadata?.name || 0) < (promotion2?.metadata?.name || 0) ? -1 : 1;
 };
 
-export const getPromotionOutputsByStepAlias = (promotion: Promotion) => {
-  if (promotion?.status?.state?.raw) {
-    try {
-      const raw = decodeRawData({
-        result: {
-          case: 'raw',
-          value: promotion.status?.state?.raw
-        }
-      });
-
-      return JSON.parse(raw);
-    } catch (e) {
-      // eslint-disable-next-line no-console
-      console.error(e);
-    }
-  }
-
-  return {};
+export const getPromotionOutputsByStepAlias = (promotion?: Promotion) => {
+  return (promotion?.status?.state || {}) as Record<string, object>;
 };
+
+// Renders a value (a promotion step's output or config) as YAML so that
+// multi-line string values (e.g. Terraform plan output) are displayed with real
+// line breaks instead of a single escaped JSON line. lineWidth: 0 disables line
+// folding so long lines are preserved verbatim.
+export const objectToYAML = (value?: object): string =>
+  value ? yaml.stringify(value, { lineWidth: 0 }) : '';

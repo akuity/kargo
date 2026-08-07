@@ -7,28 +7,66 @@ import (
 	"fmt"
 	"io"
 	"net/http"
+	"strings"
 
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/runtime/schema"
 	"k8s.io/apimachinery/pkg/util/yaml"
 	"sigs.k8s.io/controller-runtime/pkg/client"
-	sigyaml "sigs.k8s.io/yaml"
 
-	svcv1alpha1 "github.com/akuity/kargo/api/service/v1alpha1"
 	kargoapi "github.com/akuity/kargo/api/v1alpha1"
 	"github.com/akuity/kargo/pkg/api"
 	libhttp "github.com/akuity/kargo/pkg/http"
+	"github.com/akuity/kargo/pkg/server/rbac"
 	"github.com/akuity/kargo/pkg/server/user"
 )
 
 const trueStr = "true"
+
+// RefreshResourceType represents the type of Kargo resource to refresh. It is
+// exported for use by the CLI, which uses it to identify the resource type
+// requested by the user and to determine how to build the corresponding
+// refresh request.
+type RefreshResourceType string
+
+// RefreshResourceType constants for supported resource types. They are
+// PascalCase representations of the Kargo resource kinds for compatibility
+// purposes with Kubernetes REST mappers.
+const (
+	RefreshResourceTypeClusterConfig RefreshResourceType = "ClusterConfig"
+	RefreshResourceTypeProjectConfig RefreshResourceType = "ProjectConfig"
+	RefreshResourceTypeStage         RefreshResourceType = "Stage"
+	RefreshResourceTypeWarehouse     RefreshResourceType = "Warehouse"
+)
+
+// String returns the string representation of the RefreshResourceType.
+func (t RefreshResourceType) String() string {
+	return string(t)
+}
+
+// IsNamespaced returns true if the resource type is namespaced.
+func (t RefreshResourceType) IsNamespaced() bool {
+	return !strings.EqualFold(string(t), string(RefreshResourceTypeClusterConfig))
+}
+
+// NameEqualsProject returns true if the name of the resource should be the same
+// as the project name. This is true for ProjectConfig resources.
+func (t RefreshResourceType) NameEqualsProject() bool {
+	return strings.EqualFold(string(t), string(RefreshResourceTypeProjectConfig))
+}
 
 var (
 	projectGVK = schema.GroupVersionKind{
 		Group:   kargoapi.GroupVersion.Group,
 		Version: kargoapi.GroupVersion.Version,
 		Kind:    "Project",
+	}
+
+	promotionGVK = schema.GroupVersionKind{
+		Group:   kargoapi.GroupVersion.Group,
+		Version: kargoapi.GroupVersion.Version,
+		Kind:    "Promotion",
 	}
 
 	secretGVK = schema.GroupVersionKind{
@@ -129,65 +167,23 @@ func splitJSONArray(
 	return projects, otherResources, nil
 }
 
-// objectOrRaw takes structured or unstructured objects as input and depending
-// on requested format returns EITHER (but never both) the object serialized in
-// the requested format OR the object converted to the structured object type.
-func objectOrRaw[T client.Object](
-	c client.Client,
-	obj client.Object,
-	format svcv1alpha1.RawFormat,
-	t T,
-) (T, []byte, error) {
-	if _, ok := obj.(*unstructured.Unstructured); !ok {
-		// Structured objects are likely to be missing GVK information, so we add
-		// it in.
-		gvk, err := c.GroupVersionKindFor(t)
-		if err != nil {
-			return *new(T), nil,
-				fmt.Errorf("could not determine GVK for type: %w", err)
-		}
-		obj.GetObjectKind().SetGroupVersionKind(gvk)
-	}
-	switch format {
-	case svcv1alpha1.RawFormat_RAW_FORMAT_JSON:
-		raw, err := json.Marshal(obj)
-		if err != nil {
-			return *new(T), nil,
-				fmt.Errorf("object could not be marshaled to raw JSON: %w", err)
-		}
-		return *new(T), raw, nil
-	case svcv1alpha1.RawFormat_RAW_FORMAT_YAML:
-		raw, err := sigyaml.Marshal(obj)
-		if err != nil {
-			return *new(T), nil,
-				fmt.Errorf("object could not be marshaled to raw YAML: %w", err)
-		}
-		return *new(T), raw, nil
-	}
-	if uObj, ok := obj.(*unstructured.Unstructured); ok {
-		var newObj T
-		if err := runtime.DefaultUnstructuredConverter.FromUnstructured(uObj.Object, &newObj); err != nil {
-			return *new(T), nil, fmt.Errorf(
-				"error converting unstructured object to typed object: %w", err,
-			)
-		}
-		return newObj, nil, nil
-	}
-	if typed, ok := obj.(T); ok {
-		return typed, nil, nil
-	}
-	return *new(T), nil,
-		fmt.Errorf("type mismatch: cannot input to expected type")
-}
-
-// annotateProjectWithCreator annotates an unstructured object with information
-// about the user who is creating the object only if that unstructured object
-// represents a Project.
-func annotateProjectWithCreator(
+// annotateResourceWithCreator annotates an unstructured object with information
+// about the user who is creating the object, but only for resource types where
+// that annotation is load-bearing -- i.e. where system behavior keys off of it.
+// The API server creates resources using its own (control-plane) service
+// account, so for those types, this annotation is the only record of the user
+// on whose behalf it acted. The value set here overwrites anything in the
+// caller's manifest, which also prevents callers from spoofing another
+// identity. Types for which the annotation is purely informational are
+// deliberately left untouched to avoid mutating user manifests unnecessarily.
+func annotateResourceWithCreator(
 	ctx context.Context,
 	obj *unstructured.Unstructured,
 ) {
-	if obj == nil || obj.GroupVersionKind() != projectGVK {
+	if obj == nil {
+		return
+	}
+	if gvk := obj.GroupVersionKind(); gvk != projectGVK && gvk != promotionGVK {
 		return
 	}
 	if userInfo, found := user.InfoFromContext(ctx); found {
@@ -198,4 +194,56 @@ func annotateProjectWithCreator(
 		annotations[kargoapi.AnnotationKeyCreateActor] = api.FormatEventUserActor(userInfo)
 		obj.SetAnnotations(annotations)
 	}
+}
+
+// authorizeResourceCreate enforces authorization checks that Kargo's authorizing
+// client cannot perform implicitly. That client authorizes only standard
+// Kubernetes verbs, but creating a Promotion additionally requires the custom
+// "promote" verb on the target Stage. Without this explicit check, a user
+// permitted to create Promotion resources could create one targeting any Stage
+// in a Project -- bypassing the per-Stage authorization the "promote" verb
+// exists to enforce -- because the Promotion mutating webhook's own "promote"
+// check evaluates the API server's identity, not the requesting user's, when
+// the API server creates the resource on the user's behalf.
+func (s *server) authorizeResourceCreate(
+	ctx context.Context,
+	obj *unstructured.Unstructured,
+) error {
+	if obj == nil || obj.GroupVersionKind() != promotionGVK {
+		return nil
+	}
+	stage, _, err := unstructured.NestedString(obj.Object, "spec", "stage")
+	if err != nil || stage == "" {
+		// A Promotion with no target Stage cannot promote anywhere; leave
+		// rejection of the malformed resource to normal validation.
+		return nil
+	}
+	return s.authorizeFn(
+		ctx,
+		"promote",
+		kargoapi.GroupVersion.WithResource("stages"),
+		"",
+		client.ObjectKey{Namespace: obj.GetNamespace(), Name: stage},
+	)
+}
+
+// verifyNoEscalation blocks a generic resource create or update from conferring
+// RBAC permissions the requester does not already hold. It supplies the
+// configured global ServiceAccount namespaces and delegates to
+// rbac.VerifyResourceNotEscalating.
+func (s *server) verifyNoEscalation(
+	ctx context.Context,
+	obj *unstructured.Unstructured,
+) error {
+	var globalNamespaces []string
+	if s.cfg.OIDCConfig != nil {
+		globalNamespaces = s.cfg.OIDCConfig.GlobalServiceAccountNamespaces
+	}
+	return rbac.VerifyResourceNotEscalating(
+		ctx,
+		s.client,
+		s.client.InternalClient(),
+		globalNamespaces,
+		obj,
+	)
 }

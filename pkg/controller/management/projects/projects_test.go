@@ -397,6 +397,57 @@ func TestReconciler_reconcile(t *testing.T) {
 				require.NotNil(t, status.Stats)
 			},
 		},
+		{
+			// Stats collection is gated on the Ready condition. It must see the
+			// readiness computed by syncProject in this same pass even when
+			// intermediate status updates fail.
+			name: "stats reflect readiness computed this pass even when status updates fail",
+			reconciler: &reconciler{
+				ensureNamespaceFn: func(context.Context, *kargoapi.Project) error {
+					return nil
+				},
+				ensureSystemPermissionsFn: func(context.Context, *kargoapi.Project) error {
+					return nil
+				},
+				ensureDefaultUserRolesFn: func(context.Context, *kargoapi.Project) error {
+					return nil
+				},
+			},
+			// Requires no phase --> conditions migration.
+			// Requires no spec --> ProjectConfig migration.
+			// Is NOT yet ready; becomes ready during this pass.
+			project: &kargoapi.Project{
+				ObjectMeta: metav1.ObjectMeta{Name: testProject},
+			},
+			interceptor: interceptor.Funcs{
+				SubResourcePatch: func(
+					context.Context,
+					client.Client,
+					string,
+					client.Object,
+					client.Patch,
+					...client.SubResourcePatchOption,
+				) error {
+					return fmt.Errorf("status update error")
+				},
+			},
+			assertions: func(
+				t *testing.T,
+				status kargoapi.ProjectStatus,
+				_ client.Client,
+				err error,
+			) {
+				// Status update failures between sub-reconcilers are non-fatal.
+				require.NoError(t, err)
+
+				readyCondition := conditions.Get(&status, kargoapi.ConditionTypeReady)
+				require.NotNil(t, readyCondition)
+				require.Equal(t, metav1.ConditionTrue, readyCondition.Status)
+
+				// Status has stats
+				require.NotNil(t, status.Stats)
+			},
+		},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
@@ -1956,9 +2007,10 @@ func TestReconciler_ensureDefaultUserRoles(t *testing.T) {
 	require.NoError(t, rbacv1.AddToScheme(scheme))
 
 	testCases := []struct {
-		name       string
-		reconciler *reconciler
-		assertions func(*testing.T, error)
+		name        string
+		createActor string
+		reconciler  *reconciler
+		assertions  func(*testing.T, error)
 	}{
 		{
 			name: "error getting ServiceAccount",
@@ -2457,7 +2509,8 @@ func TestReconciler_ensureDefaultUserRoles(t *testing.T) {
 			},
 		},
 		{
-			name: "success creating ServiceAccount",
+			name:        "success creating ServiceAccount",
+			createActor: "email:tony@stark.io",
 			reconciler: &reconciler{
 				client: fake.NewClientBuilder().WithScheme(scheme).Build(),
 				createServiceAccountFn: func(
@@ -2507,13 +2560,69 @@ func TestReconciler_ensureDefaultUserRoles(t *testing.T) {
 				require.NoError(t, err)
 			},
 		},
+		{
+			// Kubernetes-verified actors (e.g. a Kargo API token) must not be
+			// mapped into the OIDC-claims annotation. "kubernetes" isn't a real
+			// claim name, and the value isn't one a real IDP would emit.
+			name:        "success creating ServiceAccount with kubernetes-verified creator",
+			createActor: "kubernetes:system:serviceaccount:kargo-demo:ci-bot",
+			reconciler: &reconciler{
+				client: fake.NewClientBuilder().WithScheme(scheme).Build(),
+				createServiceAccountFn: func(
+					_ context.Context,
+					obj client.Object,
+					_ ...client.CreateOption,
+				) error {
+					sa, ok := obj.(*corev1.ServiceAccount)
+					require.True(t, ok)
+					_, ok = sa.Annotations[rbacapi.AnnotationKeyOIDCClaims]
+					require.False(t, ok)
+					return nil
+				},
+				createRoleFn: func(
+					context.Context,
+					client.Object,
+					...client.CreateOption,
+				) error {
+					return nil
+				},
+				createRoleBindingFn: func(
+					context.Context,
+					client.Object,
+					...client.CreateOption,
+				) error {
+					return nil
+				},
+				createClusterRoleFn: func(
+					context.Context,
+					client.Object,
+					...client.CreateOption,
+				) error {
+					return nil
+				},
+				createClusterRoleBindingFn: func(
+					context.Context,
+					client.Object,
+					...client.CreateOption,
+				) error {
+					return nil
+				},
+			},
+			assertions: func(t *testing.T, err error) {
+				require.NoError(t, err)
+			},
+		},
 	}
 	for _, testCase := range testCases {
 		t.Run(testCase.name, func(t *testing.T) {
+			createActor := testCase.createActor
+			if createActor == "" {
+				createActor = "email:tony@stark.io"
+			}
 			p := &kargoapi.Project{
 				ObjectMeta: metav1.ObjectMeta{
 					Annotations: map[string]string{
-						kargoapi.AnnotationKeyCreateActor: "email:tony@stark.io",
+						kargoapi.AnnotationKeyCreateActor: createActor,
 					},
 				},
 			}

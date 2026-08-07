@@ -140,17 +140,26 @@ func AddMigrationAnnotationValue(obj client.Object, migrationType string) {
 	obj.SetAnnotations(annotations)
 }
 
+// SetCreateActorAnnotation stamps promo with AnnotationKeyCreateActor set to
+// actor. It initializes the annotations map if necessary.
+func SetCreateActorAnnotation(promo *kargoapi.Promotion, actor string) {
+	if promo.Annotations == nil {
+		promo.Annotations = make(map[string]string)
+	}
+	promo.Annotations[kargoapi.AnnotationKeyCreateActor] = actor
+}
+
 // CreateActorAnnotationValue extracts the v1alpha1.AnnotationKeyCreateActor
 // value from the Promotion's annotations and returns it. If the value contains
-// a colon, it is split and the second part is returned. Otherwise, the entire
-// value or an empty string is returned.
+// a colon, everything after the first colon is returned. Otherwise, the
+// entire value or an empty string is returned.
 func CreateActorAnnotationValue(promo *kargoapi.Promotion) string {
 	var creator string
 	if v, ok := promo.Annotations[kargoapi.AnnotationKeyCreateActor]; ok {
 		if v != kargoapi.EventActorUnknown {
 			creator = v
 		}
-		if parts := strings.Split(v, ":"); len(parts) == 2 {
+		if parts := strings.SplitN(v, ":", 2); len(parts) == 2 {
 			creator = parts[1]
 		}
 	}

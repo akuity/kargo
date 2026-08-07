@@ -329,6 +329,20 @@ func TestCreateActorAnnotationValue(t *testing.T) {
 			},
 			want: "",
 		},
+		{
+			name: "kubernetes-verified actor with multiple colons",
+			promo: &kargoapi.Promotion{
+				ObjectMeta: metav1.ObjectMeta{
+					Name:      "fake-promo",
+					Namespace: "fake-namespace",
+					Annotations: map[string]string{
+						kargoapi.AnnotationKeyCreateActor: kargoapi.EventActorKubernetesUserPrefix +
+							"system:serviceaccount:kargo-demo:ci-bot",
+					},
+				},
+			},
+			want: "system:serviceaccount:kargo-demo:ci-bot",
+		},
 	}
 
 	for _, tt := range tests {

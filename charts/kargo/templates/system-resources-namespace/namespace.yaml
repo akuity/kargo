@@ -5,5 +5,10 @@ metadata:
   name: {{ quote .Values.global.systemResources.namespace }}
   labels:
     {{- include "kargo.labels" . | nindent 4 }}
-  {{- include "kargo.annotations" (dict "root" .) | nindent 2 }}
+  {{- with (mergeOverwrite (deepCopy .Values.global.labels) .Values.global.systemResources.extraNamespaceLabels) }}
+    {{- range $key, $value := . }}
+    {{ $key }}: {{ $value | quote }}
+    {{- end }}
+  {{- end }}
+  {{- include "kargo.annotations" (dict "root" . "annotations" .Values.global.systemResources.extraNamespaceAnnotations) | nindent 2 }}
 {{- end }}

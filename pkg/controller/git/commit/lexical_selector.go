@@ -56,10 +56,10 @@ func (l *lexicalSelector) Select(ctx context.Context) (
 		return nil, err
 	}
 	defer func() {
-		_ = repo.Close()
+		_ = repo.Close(ctx)
 	}()
 
-	tags, err := repo.ListTags()
+	tags, err := repo.ListTags(ctx)
 	if err != nil {
 		return nil, err
 	}
@@ -75,7 +75,7 @@ func (l *lexicalSelector) Select(ctx context.Context) (
 		return strings.Compare(j.Tag, i.Tag)
 	})
 
-	if tags, err = l.filterTagsByDiffPathsFn(repo, tags); err != nil {
+	if tags, err = l.filterTagsByDiffPathsFn(ctx, repo, tags); err != nil {
 		return nil, fmt.Errorf("error filtering tags by paths: %w", err)
 	}
 

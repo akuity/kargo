@@ -44,36 +44,43 @@ with a message from the [`kustomize-set-image` step](kustomize-set-image.md) tha
 updated the `kustomization.yaml` file, summarizing the changes made.
 
 ```yaml
-vars:
-- name: gitRepo
-  value: https://github.com/example/repo.git
-steps:
-- uses: git-clone
-  config:
-    repoURL: ${{ vars.gitRepo }}
-    checkout:
-    - commit: ${{ commitFrom(vars.gitRepo).ID }}
-      path: ./src
-    - branch: stage/${{ ctx.stage }}
-      create: true
-      path: ./out
-- uses: git-clear
-  config:
-    path: ./out
-- uses: kustomize-set-image
-  as: update-image
-  config:
-    images:
-    - image: my/image
-- uses: kustomize-build
-  config:
-    path: ./src/stages/${{ ctx.stage }}
-    outPath: ./out
-- uses: git-commit
-  config:
-    path: ./out
-    message: ${{ outputs['update-image'].commitMessage }}
-# Push, etc...
+apiVersion: kargo.akuity.io/v1alpha1
+kind: Stage
+# ...
+spec:
+  # ...
+  promotionTemplate:
+    spec:
+      vars:
+      - name: gitRepo
+        value: https://github.com/example/repo.git
+      steps:
+      - uses: git-clone
+        config:
+          repoURL: ${{ vars.gitRepo }}
+          checkout:
+          - commit: ${{ commitFrom(vars.gitRepo).ID }}
+            path: ./src
+          - branch: stage/${{ ctx.stage }}
+            create: true
+            path: ./out
+      - uses: git-clear
+        config:
+          path: ./out
+      - uses: kustomize-set-image
+        as: update-image
+        config:
+          images:
+          - image: my/image
+      - uses: kustomize-build
+        config:
+          path: ./src/stages/${{ ctx.stage }}
+          outPath: ./out
+      - uses: git-commit
+        config:
+          path: ./out
+          message: ${{ outputs['update-image'].commitMessage }} # Or task.outputs in a (Cluster)PromotionTask
+      # Push, etc...
 ```
 
 ### Composed Commit Message
@@ -94,11 +101,18 @@ commit messages when several changes are being committed together.
 :::
 
 ```yaml
-steps:
-# Update Kustomize manifests, etc...
-- uses: git-commit
-  config:
-    path: ./out
-    message: |
-      ${{ ctx.stage }}: ${{ outputs['update-image'].commitMessage }}
+apiVersion: kargo.akuity.io/v1alpha1
+kind: Stage
+# ...
+spec:
+  # ...
+  promotionTemplate:
+    spec:
+      steps:
+      # Update Kustomize manifests, etc...
+      - uses: git-commit
+        config:
+          path: ./out
+          message: |
+            ${{ ctx.stage }}: ${{ outputs['update-image'].commitMessage }} # Or task.outputs in a (Cluster)PromotionTask
 ```

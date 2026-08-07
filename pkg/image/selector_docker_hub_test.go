@@ -235,7 +235,7 @@ func TestSelectImageDockerHub(t *testing.T) {
 				kargoapi.ImageSubscription{
 					RepoURL:                debianRepo,
 					ImageSelectionStrategy: kargoapi.ImageSelectionStrategyNewestBuild,
-					AllowTags:              "nothing-matches-this",
+					AllowTagsRegexes:       []string{"nothing-matches-this"},
 					DiscoveryLimit:         1,
 					CacheByTag:             true,
 				},
@@ -254,7 +254,7 @@ func TestSelectImageDockerHub(t *testing.T) {
 				kargoapi.ImageSubscription{
 					RepoURL:                debianRepo,
 					ImageSelectionStrategy: kargoapi.ImageSelectionStrategyNewestBuild,
-					AllowTags:              `^bookworm-202310\d\d$`,
+					AllowTagsRegexes:       []string{`^bookworm-202310\d\d$`},
 					DiscoveryLimit:         1,
 					CacheByTag:             true,
 				},
@@ -278,7 +278,7 @@ func TestSelectImageDockerHub(t *testing.T) {
 				kargoapi.ImageSubscription{
 					RepoURL:                debianRepo,
 					ImageSelectionStrategy: kargoapi.ImageSelectionStrategyNewestBuild,
-					AllowTags:              `^bookworm-202310\d\d$`,
+					AllowTagsRegexes:       []string{`^bookworm-202310\d\d$`},
 					Platform:               "linux/made-up-arch",
 					DiscoveryLimit:         1,
 					CacheByTag:             true,
@@ -298,7 +298,7 @@ func TestSelectImageDockerHub(t *testing.T) {
 				kargoapi.ImageSubscription{
 					RepoURL:                debianRepo,
 					ImageSelectionStrategy: kargoapi.ImageSelectionStrategyNewestBuild,
-					AllowTags:              `^bookworm-202310\d\d$`,
+					AllowTagsRegexes:       []string{`^bookworm-202310\d\d$`},
 					Platform:               platform,
 					DiscoveryLimit:         1,
 					CacheByTag:             true,

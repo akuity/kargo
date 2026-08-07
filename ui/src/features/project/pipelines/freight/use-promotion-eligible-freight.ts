@@ -1,7 +1,5 @@
-import { useQuery } from '@connectrpc/connect-query';
-
 import { IAction, useActionContext } from '@ui/features/project/pipelines/context/action-context';
-import { queryFreight } from '@ui/gen/api/service/v1alpha1/service-KargoService_connectquery';
+import { useQueryFreightsRest } from '@ui/gen/api/v2/core/core';
 
 export const usePromotionEligibleFreight = (project: string) => {
   const actionContext = useActionContext();
@@ -10,19 +8,16 @@ export const usePromotionEligibleFreight = (project: string) => {
     actionContext?.action?.type === IAction.PROMOTE ||
     actionContext?.action?.type === IAction.PROMOTE_DOWNSTREAM;
 
-  const getPromotionEligibleFreightQuery = useQuery(
-    queryFreight,
+  const getPromotionEligibleFreightQuery = useQueryFreightsRest(
+    project,
     {
-      project,
       stage: actionContext?.action?.stage?.metadata?.name
     },
-    {
-      enabled: isPromotionMode
-    }
+    { query: { enabled: isPromotionMode } }
   );
 
   let promotionEligibleFreight =
-    getPromotionEligibleFreightQuery?.data?.groups?.['']?.freight || [];
+    getPromotionEligibleFreightQuery?.data?.data?.groups?.['']?.items || [];
 
   if (actionContext?.action?.type === IAction.PROMOTE_DOWNSTREAM) {
     promotionEligibleFreight = promotionEligibleFreight.filter(

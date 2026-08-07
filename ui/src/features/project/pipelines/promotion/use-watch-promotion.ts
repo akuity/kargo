@@ -1,68 +1,40 @@
-import { createClient } from '@connectrpc/connect';
-import { createConnectQueryKey } from '@connectrpc/connect-query';
 import { useQueryClient } from '@tanstack/react-query';
 import { useEffect } from 'react';
 
-import { transportWithAuth } from '@ui/config/transport';
-import { getPromotion } from '@ui/gen/api/service/v1alpha1/service-KargoService_connectquery';
-import { KargoService, RawFormat } from '@ui/gen/api/service/v1alpha1/service_pb';
+import { getGetPromotionQueryKey, getPromotionResponse } from '@ui/gen/api/v2/core/core';
+import { Promotion } from '@ui/gen/api/v2/models';
+
+import { readSSEStream } from '../watch-utils';
 
 export const useWatchPromotion = (project: string, promotion: string) => {
   const client = useQueryClient();
 
   useEffect(() => {
-    const cancel = new AbortController();
+    if (!project || !promotion) {
+      return;
+    }
 
-    const watchPromotion = async () => {
-      const promiseClient = createClient(KargoService, transportWithAuth);
-      const stream = promiseClient.watchPromotion(
-        {
-          project,
-          name: promotion
-        },
-        { signal: cancel.signal }
-      );
+    const abort = new AbortController();
+    const url = `/v1beta1/projects/${encodeURIComponent(project)}/promotions/${encodeURIComponent(promotion)}?watch=true`;
+    const promotionKey = getGetPromotionQueryKey(project, promotion);
 
-      for await (const e of stream) {
-        const updatedPromotion = e.promotion;
+    (async () => {
+      for await (const event of readSSEStream<Promotion>(url, abort.signal)) {
+        if ('error' in event) {
+          continue;
+        }
+        const p = event.object;
 
-        if (promotion && updatedPromotion) {
-          const promotionQueryKey = createConnectQueryKey({
-            cardinality: 'finite',
-            schema: getPromotion,
-            input: {
-              project,
-              name: promotion
-            },
-            transport: transportWithAuth
-          });
-
-          client.setQueryData(promotionQueryKey, {
-            result: {
-              value: updatedPromotion,
-              case: 'promotion'
-            },
-            $typeName: 'akuity.io.kargo.service.v1alpha1.GetPromotionResponse'
-          });
-
-          client.refetchQueries({
-            queryKey: createConnectQueryKey({
-              cardinality: 'finite',
-              schema: getPromotion,
-              input: {
-                project,
-                name: promotion,
-                format: RawFormat.YAML
-              },
-              transport: transportWithAuth
-            })
-          });
+        if (event.type === 'DELETED') {
+          client.removeQueries({ queryKey: promotionKey });
+        } else {
+          client.setQueryData(promotionKey, (old: getPromotionResponse | undefined) =>
+            old ? { ...old, data: p } : old
+          );
         }
       }
-    };
+    })();
 
-    watchPromotion();
-
-    return () => cancel.abort();
-  }, [project, promotion]);
+    return () => abort.abort();
+  }, [project, promotion, client]);
 };

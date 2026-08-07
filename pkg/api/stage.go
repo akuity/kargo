@@ -86,6 +86,48 @@ func StageMatchesAnyWarehouse(stage *kargoapi.Stage, warehouses []string) bool {
 	return false
 }
 
+// AuthorizedStages parses the value of an AnnotationKeyAuthorizedStage
+// annotation into the set of Stages authorized to manage the annotated
+// resource (typically an Argo CD Application).
+//
+// The value is a comma-separated list of "<project>:<stage>" entries,
+// permitting more than one Stage to be authorized. A single "<project>:<stage>"
+// value (the historical format) parses to a single-element list. The returned
+// NamespacedNames use the project as the Namespace and the Stage name as the
+// Name.
+//
+// Whitespace around entries and around the project and Stage of each entry is
+// ignored. Deprecated glob expressions (entries containing "*") are rejected
+// with an error, as are malformed or empty entries.
+func AuthorizedStages(value string) ([]types.NamespacedName, error) {
+	var stages []types.NamespacedName
+	for _, entry := range strings.Split(value, ",") {
+		entry = strings.TrimSpace(entry)
+		if entry == "" {
+			continue
+		}
+		project, stage, ok := strings.Cut(entry, ":")
+		project, stage = strings.TrimSpace(project), strings.TrimSpace(stage)
+		if !ok || project == "" || stage == "" {
+			return nil, fmt.Errorf(
+				"invalid authorized Stage %q: expected format %q",
+				entry, "<project>:<stage>",
+			)
+		}
+		if strings.Contains(project, "*") || strings.Contains(stage, "*") {
+			return nil, fmt.Errorf(
+				"invalid authorized Stage %q: deprecated glob expressions are no longer supported",
+				entry,
+			)
+		}
+		stages = append(stages, types.NamespacedName{Namespace: project, Name: stage})
+	}
+	if len(stages) == 0 {
+		return nil, fmt.Errorf("no authorized Stages found in %q", value)
+	}
+	return stages, nil
+}
+
 // ListFreightAvailableToStage lists all Freight available to the Stage for any
 // reason. This includes:
 //
@@ -186,11 +228,16 @@ func RefreshStage(
 // the latest Promotion.
 //
 // If no ArgoCD apps are found, the annotation is removed.
+//
+// This deliberately takes the Stage's identity rather than a caller's working
+// Stage object. This is to avoid the patchAnnotation() call in this method
+// overwriting pending status changes to the working Stage object with live
+// status, which may be stale in comparison.
 func AnnotateStageWithArgoCDContext(
 	ctx context.Context,
 	c client.Client,
 	healthChecks []kargoapi.HealthCheckStep,
-	stage *kargoapi.Stage,
+	stage types.NamespacedName,
 ) error {
 	var argoCDApps []map[string]any
 	for _, healthCheck := range healthChecks {
@@ -213,9 +260,16 @@ func AnnotateStageWithArgoCDContext(
 		}
 	}
 
+	target := &kargoapi.Stage{
+		ObjectMeta: metav1.ObjectMeta{
+			Namespace: stage.Namespace,
+			Name:      stage.Name,
+		},
+	}
+
 	// If we did not find any ArgoCD apps, we should remove the annotation.
 	if len(argoCDApps) == 0 {
-		return deleteAnnotation(ctx, c, stage, kargoapi.AnnotationKeyArgoCDContext)
+		return deleteAnnotation(ctx, c, target, kargoapi.AnnotationKeyArgoCDContext)
 	}
 
 	// Marshal the ArgoCD context to JSON and set the annotation on the Stage.
@@ -223,7 +277,7 @@ func AnnotateStageWithArgoCDContext(
 	if err != nil {
 		return fmt.Errorf("failed to marshal ArgoCD context: %w", err)
 	}
-	return patchAnnotation(ctx, c, stage, kargoapi.AnnotationKeyArgoCDContext, string(argoCDAppsJSON))
+	return patchAnnotation(ctx, c, target, kargoapi.AnnotationKeyArgoCDContext, string(argoCDAppsJSON))
 }
 
 // ReverifyStageFreight forces reconfirmation of the verification of the

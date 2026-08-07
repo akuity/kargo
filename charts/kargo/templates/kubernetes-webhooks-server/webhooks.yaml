@@ -5,7 +5,7 @@ metadata:
   name: kargo
   labels:
     {{- include "kargo.labels" . | nindent 4 }}
-    {{- include "kargo.controller.labels" . | nindent 4 }}
+    {{- include "kargo.kubernetesWebhooksServer.labels" . | nindent 4 }}
   annotations:
     cert-manager.io/inject-ca-from: {{ .Release.Namespace }}/kargo-webhooks-server
   {{- with (mergeOverwrite (deepCopy .Values.global.annotations) .Values.webhooksServer.annotations) }}
@@ -93,7 +93,7 @@ metadata:
   name: kargo
   labels:
     {{- include "kargo.labels" . | nindent 4 }}
-    {{- include "kargo.controller.labels" . | nindent 4 }}
+    {{- include "kargo.kubernetesWebhooksServer.labels" . | nindent 4 }}
   annotations:
     cert-manager.io/inject-ca-from: {{ .Release.Namespace }}/kargo-webhooks-server
   {{- with (mergeOverwrite (deepCopy .Values.global.annotations) .Values.webhooksServer.annotations) }}

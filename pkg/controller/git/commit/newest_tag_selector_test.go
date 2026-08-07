@@ -1,6 +1,7 @@
 package commit
 
 import (
+	"context"
 	"errors"
 	"regexp"
 	"testing"
@@ -64,6 +65,7 @@ func Test_newestTagSelector_Select(t *testing.T) {
 				tagBasedSelector: &tagBasedSelector{
 					baseSelector: &baseSelector{
 						gitCloneFn: func(
+							context.Context,
 							string,
 							*git.ClientOptions,
 							*git.CloneOptions,
@@ -83,12 +85,13 @@ func Test_newestTagSelector_Select(t *testing.T) {
 				tagBasedSelector: &tagBasedSelector{
 					baseSelector: &baseSelector{
 						gitCloneFn: func(
+							context.Context,
 							string,
 							*git.ClientOptions,
 							*git.CloneOptions,
 						) (git.Repo, error) {
 							return &git.MockRepo{
-								ListTagsFn: func() ([]git.TagMetadata, error) {
+								ListTagsFn: func(context.Context) ([]git.TagMetadata, error) {
 									return nil, errors.New("something went wrong")
 								},
 							}, nil
@@ -106,12 +109,13 @@ func Test_newestTagSelector_Select(t *testing.T) {
 				tagBasedSelector: &tagBasedSelector{
 					baseSelector: &baseSelector{
 						gitCloneFn: func(
+							context.Context,
 							string,
 							*git.ClientOptions,
 							*git.CloneOptions,
 						) (git.Repo, error) {
 							return &git.MockRepo{
-								ListTagsFn: func() ([]git.TagMetadata, error) {
+								ListTagsFn: func(context.Context) ([]git.TagMetadata, error) {
 									return []git.TagMetadata{{}}, nil
 								},
 							}, nil
@@ -130,18 +134,20 @@ func Test_newestTagSelector_Select(t *testing.T) {
 				tagBasedSelector: &tagBasedSelector{
 					baseSelector: &baseSelector{
 						gitCloneFn: func(
+							context.Context,
 							string,
 							*git.ClientOptions,
 							*git.CloneOptions,
 						) (git.Repo, error) {
 							return &git.MockRepo{
-								ListTagsFn: func() ([]git.TagMetadata, error) {
+								ListTagsFn: func(context.Context) ([]git.TagMetadata, error) {
 									return []git.TagMetadata{{}}, nil
 								},
 							}, nil
 						},
 					},
 					filterTagsByDiffPathsFn: func(
+						context.Context,
 						git.Repo,
 						[]git.TagMetadata,
 					) ([]git.TagMetadata, error) {
@@ -159,12 +165,13 @@ func Test_newestTagSelector_Select(t *testing.T) {
 				tagBasedSelector: &tagBasedSelector{
 					baseSelector: &baseSelector{
 						gitCloneFn: func(
+							context.Context,
 							string,
 							*git.ClientOptions,
 							*git.CloneOptions,
 						) (git.Repo, error) {
 							return &git.MockRepo{
-								ListTagsFn: func() ([]git.TagMetadata, error) {
+								ListTagsFn: func(context.Context) ([]git.TagMetadata, error) {
 									return []git.TagMetadata{
 										{Tag: "123"},
 										{Tag: "abc"},
@@ -175,6 +182,7 @@ func Test_newestTagSelector_Select(t *testing.T) {
 					},
 					allowTagsRegexes: []*regexp.Regexp{allowAlphas},
 					filterTagsByDiffPathsFn: func(
+						_ context.Context,
 						_ git.Repo,
 						tags []git.TagMetadata,
 					) ([]git.TagMetadata, error) {
@@ -198,12 +206,13 @@ func Test_newestTagSelector_Select(t *testing.T) {
 				tagBasedSelector: &tagBasedSelector{
 					baseSelector: &baseSelector{
 						gitCloneFn: func(
+							context.Context,
 							string,
 							*git.ClientOptions,
 							*git.CloneOptions,
 						) (git.Repo, error) {
 							return &git.MockRepo{
-								ListTagsFn: func() ([]git.TagMetadata, error) {
+								ListTagsFn: func(context.Context) ([]git.TagMetadata, error) {
 									return []git.TagMetadata{
 										{Tag: "123"},
 										{Tag: "abc"},
@@ -214,6 +223,7 @@ func Test_newestTagSelector_Select(t *testing.T) {
 					},
 					ignoreTagsRegexes: []*regexp.Regexp{regexp.MustCompile("^123$")},
 					filterTagsByDiffPathsFn: func(
+						_ context.Context,
 						_ git.Repo,
 						tags []git.TagMetadata,
 					) ([]git.TagMetadata, error) {
@@ -237,12 +247,13 @@ func Test_newestTagSelector_Select(t *testing.T) {
 				tagBasedSelector: &tagBasedSelector{
 					baseSelector: &baseSelector{
 						gitCloneFn: func(
+							context.Context,
 							string,
 							*git.ClientOptions,
 							*git.CloneOptions,
 						) (git.Repo, error) {
 							return &git.MockRepo{
-								ListTagsFn: func() ([]git.TagMetadata, error) {
+								ListTagsFn: func(context.Context) ([]git.TagMetadata, error) {
 									return []git.TagMetadata{
 										{Tag: "ABC"},
 										{Tag: "abc"},
@@ -254,6 +265,7 @@ func Test_newestTagSelector_Select(t *testing.T) {
 					allowTagsRegexes:  []*regexp.Regexp{allowAlphas},
 					ignoreTagsRegexes: []*regexp.Regexp{regexp.MustCompile("^ABC$")},
 					filterTagsByDiffPathsFn: func(
+						_ context.Context,
 						_ git.Repo,
 						tags []git.TagMetadata,
 					) ([]git.TagMetadata, error) {
@@ -277,12 +289,13 @@ func Test_newestTagSelector_Select(t *testing.T) {
 				tagBasedSelector: &tagBasedSelector{
 					baseSelector: &baseSelector{
 						gitCloneFn: func(
+							context.Context,
 							string,
 							*git.ClientOptions,
 							*git.CloneOptions,
 						) (git.Repo, error) {
 							return &git.MockRepo{
-								ListTagsFn: func() ([]git.TagMetadata, error) {
+								ListTagsFn: func(context.Context) ([]git.TagMetadata, error) {
 									return []git.TagMetadata{{}, {}, {}, {}, {}}, nil
 								},
 							}, nil
@@ -290,6 +303,7 @@ func Test_newestTagSelector_Select(t *testing.T) {
 						discoveryLimit: 3,
 					},
 					filterTagsByDiffPathsFn: func(
+						_ context.Context,
 						_ git.Repo,
 						tags []git.TagMetadata,
 					) ([]git.TagMetadata, error) {

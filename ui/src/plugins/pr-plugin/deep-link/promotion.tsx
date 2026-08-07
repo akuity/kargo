@@ -24,7 +24,7 @@ const plugin: DeepLinkPluginsInstallation['Promotion'] = {
         const alias = getPromotionStepAlias(step, idx);
 
         try {
-          const deepLink = getPullRequestLink(promotionState[alias]);
+          const deepLink = getPullRequestLink(promotionState[alias] as Record<string, unknown>);
 
           if (typeof deepLink === 'string' && deepLink !== '') {
             deepLinks.push([alias, deepLink]);

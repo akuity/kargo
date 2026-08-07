@@ -2,6 +2,7 @@ package commit
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"regexp"
 	"slices"
@@ -19,6 +20,12 @@ import (
 
 const tagPrefix = "refs/tags/"
 
+// maxObservedTags bounds the number of tags recorded in a Warehouse's
+// observedRefs. Above it, the observation is stored as nil rather than
+// truncated -- truncation would be a correctness bug -- and the subscription
+// degrades to cloning on every reconcile until its tag filter is tightened.
+const maxObservedTags = 1000
+
 // tagBasedSelector is a base implementation of Selector that provides common
 // functionality for all Selector implementations that select commits on the
 // basis of tag names or metadata. It is not intended to be used directly.
@@ -28,6 +35,7 @@ type tagBasedSelector struct {
 	ignoreTagsRegexes []*regexp.Regexp
 
 	filterTagsByDiffPathsFn func(
+		context.Context,
 		git.Repo,
 		[]git.TagMetadata,
 	) ([]git.TagMetadata, error)
@@ -64,35 +72,22 @@ func newTagBasedSelector(
 		return nil, err
 	}
 
-	// TODO(v1.11.0): Return an error if sub.AllowTags is non-empty.
-	// TODO(v1.13.0): Remove this block after the AllowTags field is removed.
+	// TODO(v1.13.0): Remove this check after the AllowTags field is removed.
 	if sub.AllowTags != "" { // nolint: staticcheck
-		var allowTagsRegex *regexp.Regexp
-		if allowTagsRegex, err = regexp.Compile(sub.AllowTags); err != nil { // nolint: staticcheck
-			return nil, fmt.Errorf(
-				"error compiling regular expression %q: %w",
-				sub.AllowTags, err, // nolint: staticcheck
-			)
-		}
-		s.allowTagsRegexes = append(s.allowTagsRegexes, allowTagsRegex)
+		return nil, errors.New(
+			"AllowTags is deprecated and unsupported as of v1.11.0; use AllowTagsRegexes instead",
+		)
 	}
 
 	if s.ignoreTagsRegexes, err = compileRegexes(sub.IgnoreTagsRegexes); err != nil {
 		return nil, err
 	}
 
-	// TODO(v1.11.0): Return an error if sub.IgnoreTags is non-empty.
-	// TODO(v1.13.0): Remove this block after the IgnoreTags field is removed.
+	// TODO(v1.13.0): Remove this check after the IgnoreTags field is removed.
 	if len(sub.IgnoreTags) > 0 { // nolint: staticcheck
-		ignoreTagsRegexStrs := make([]string, len(sub.IgnoreTags)) // nolint: staticcheck
-		for i, ignoreTag := range sub.IgnoreTags {                 // nolint: staticcheck
-			ignoreTagsRegexStrs[i] = fmt.Sprintf("^%s$", regexp.QuoteMeta(ignoreTag))
-		}
-		ignoreTagsRegexes, err := compileRegexes(ignoreTagsRegexStrs)
-		if err != nil {
-			return nil, err
-		}
-		s.ignoreTagsRegexes = append(s.ignoreTagsRegexes, ignoreTagsRegexes...)
+		return nil, errors.New(
+			"IgnoreTags is deprecated and unsupported as of v1.11.0; use IgnoreTagsRegexes instead",
+		)
 	}
 
 	s.filterTagsByDiffPathsFn = s.filterTagsByDiffPaths
@@ -105,6 +100,53 @@ func (t *tagBasedSelector) MatchesRef(ref string) bool {
 		return false
 	}
 	return t.matchesTag(ref)
+}
+
+// ListRefs implements Selector.
+func (t *tagBasedSelector) ListRefs(
+	ctx context.Context,
+) (*kargoapi.GitDiscoveryRefs, error) {
+	return t.listTagRefs(ctx, t.matchesTag)
+}
+
+// listTagRefs lists the remote tag refs via a single ls-remote round-trip,
+// retains those whose name satisfies the provided matcher, and returns them
+// paired with the commit IDs they reference, sorted by name for a stable
+// comparison. The matcher is supplied by the concrete selector so that
+// strategy-specific name filtering (e.g. semver) is honored. If the retained
+// set exceeds maxObservedTags, it returns (nil, nil) to signal that the
+// short-circuit must be skipped for this subscription.
+func (t *tagBasedSelector) listTagRefs(
+	ctx context.Context,
+	matches func(tag string) bool,
+) (*kargoapi.GitDiscoveryRefs, error) {
+	refs, err := t.lsRemoteFn(ctx, t.repoURL, t.clientOptions(), tagPrefix+"*")
+	if err != nil {
+		return nil, fmt.Errorf(
+			"error listing tag refs in git repo %q: %w", t.repoURL, err,
+		)
+	}
+	tags := make([]kargoapi.DiscoveredRef, 0, len(refs))
+	for _, ref := range refs {
+		name := strings.TrimPrefix(ref.Name, tagPrefix)
+		if !matches(name) {
+			continue
+		}
+		tags = append(tags, kargoapi.DiscoveredRef{Name: name, ID: ref.ID})
+	}
+	if len(tags) > maxObservedTags {
+		logging.LoggerFromContext(ctx).Info(
+			"observed tag count exceeds cap; ref short-circuit disabled for subscription",
+			"repo", t.repoURL,
+			"count", len(tags),
+			"cap", maxObservedTags,
+		)
+		return nil, nil
+	}
+	slices.SortFunc(tags, func(a, b kargoapi.DiscoveredRef) int {
+		return strings.Compare(a.Name, b.Name)
+	})
+	return &kargoapi.GitDiscoveryRefs{Tags: tags}, nil
 }
 
 // getLoggerContext returns key/value pairs that can be used by any selector
@@ -156,6 +198,7 @@ func (t *tagBasedSelector) clone(ctx context.Context) (git.Repo, error) {
 		Blobless:     t.blobless,
 	}
 	repo, err := t.gitCloneFn(
+		ctx,
 		t.repoURL,
 		&git.ClientOptions{
 			Credentials:           t.creds,
@@ -234,6 +277,7 @@ func (t *tagBasedSelector) filterTagsByExpression(
 // those paths against user-defined path-selection criteria. Only tags pointing
 // to commits that satisfy those criteria are returned.
 func (t *tagBasedSelector) filterTagsByDiffPaths(
+	ctx context.Context,
 	repo git.Repo,
 	tags []git.TagMetadata,
 ) ([]git.TagMetadata, error) {
@@ -242,7 +286,7 @@ func (t *tagBasedSelector) filterTagsByDiffPaths(
 	}
 	filteredTags := make([]git.TagMetadata, 0, t.discoveryLimit)
 	for _, tag := range tags {
-		diffPaths, err := repo.GetDiffPathsForCommitID(tag.CommitID)
+		diffPaths, err := repo.GetDiffPathsForCommitID(ctx, tag.CommitID)
 		if err != nil {
 			return nil, fmt.Errorf(
 				"error getting diff paths for tag %q in git repo %q: %w",

@@ -1,4 +1,4 @@
-import { Stage } from '@ui/gen/api/v1alpha1/generated_pb';
+import { Stage } from '@ui/gen/api/v2/models';
 
 export const useSubscribersByStage = (stages: Stage[]): Record<string, Set<string>> => {
   const subscribersByStage: Record<string, Set<string>> = {};

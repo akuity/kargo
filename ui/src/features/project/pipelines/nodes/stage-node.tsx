@@ -1,13 +1,12 @@
-import { useMutation } from '@connectrpc/connect-query';
 import { useDroppable } from '@dnd-kit/core';
 import {
   faBarsStaggered,
-  faBolt,
   faExternalLink,
   faMinus,
   faTruckArrowRight
 } from '@fortawesome/free-solid-svg-icons';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
+import { useMutation } from '@tanstack/react-query';
 import { Button, Card, Dropdown, Flex, message, Space, Typography } from 'antd';
 import classNames from 'classnames';
 import { formatDistance } from 'date-fns';
@@ -15,19 +14,17 @@ import { ReactNode, useMemo } from 'react';
 import { generatePath, Link, useNavigate } from 'react-router-dom';
 
 import { paths } from '@ui/config/paths';
+import { useExtensionsContext } from '@ui/extensions/extensions-context';
 import { HealthStatusIcon } from '@ui/features/common/health-status/health-status-icon';
 import { IAction, useActionContext } from '@ui/features/project/pipelines/context/action-context';
 import { ArgoCDLink } from '@ui/features/project/pipelines/nodes/argocd-link';
-import {
-  approveFreight,
-  queryFreight
-} from '@ui/gen/api/service/v1alpha1/service-KargoService_connectquery';
-import { Stage } from '@ui/gen/api/v1alpha1/generated_pb';
-import { timestampDate } from '@ui/utils/connectrpc-utils';
+import { queryFreightsRest, useApproveFreight } from '@ui/gen/api/v2/core/core';
+import { Stage } from '@ui/gen/api/v2/models';
 
 import { useDictionaryContext } from '../context/dictionary-context';
 import { useGraphContext } from '../context/graph-context';
 import { stageIndexer } from '../graph/node-indexer';
+import { AutoPromotionStatusIcon } from '../promotion/auto-promotion-status-icon';
 import { DropOverlay } from '../promotion/drag-and-drop/drop-overlay';
 
 import { AnalysisRunLogsLink } from './analysis-run-logs-link';
@@ -43,6 +40,7 @@ import {
   useStageHeaderStyle
 } from './stage-meta-utils';
 import { StageNodePhase } from './stage-node-phase';
+import { StepWaitingLabel } from './step-waiting-label';
 
 import './stage-node.less';
 
@@ -50,6 +48,7 @@ export const StageNode = (props: { stage: Stage }) => {
   const stageName = props.stage?.metadata?.name || '';
 
   const navigate = useNavigate();
+  const { promotionStepExtensions } = useExtensionsContext();
   const dictionaryContext = useDictionaryContext();
   const graphContext = useGraphContext();
   const actionContext = useActionContext();
@@ -66,26 +65,30 @@ export const StageNode = (props: { stage: Stage }) => {
 
   const hideStage = useHideStageIfInPromotionMode(props.stage);
 
-  const queryFreightMutation = useMutation(queryFreight);
+  const queryFreightMutation = useMutation({
+    mutationFn: (payload: { project: string; stage: string }) =>
+      queryFreightsRest(payload.project, { stage: payload.stage })
+  });
 
   const totalSubscribersToThisStage = dictionaryContext?.subscribersByStage?.[stageName]?.size || 0;
 
-  const manualApproveActionMutation = useMutation(approveFreight, {
-    onSuccess: (_, vars) => {
-      message.success(
-        `Freight ${actionContext?.action?.freight?.alias} has been manually approved for stage ${vars.stage}`
-      );
+  const manualApproveActionMutation = useApproveFreight({
+    mutation: {
+      onSuccess: (_, vars) => {
+        message.success(
+          `Freight ${actionContext?.action?.freight?.alias} has been manually approved for stage ${vars.params.stage}`
+        );
 
-      actionContext?.cancel();
+        actionContext?.cancel();
+      }
     }
   });
 
-  const dropdownItems = useGetPromotionDropdownItems(props.stage);
+  const { dropdownItems, resumeAutoPromotionDrawer } = useGetPromotionDropdownItems(props.stage);
 
   let descriptionItems: ReactNode;
 
   const lastPromotion = getLastPromotionDate(props.stage);
-  const date = timestampDate(lastPromotion) as Date;
 
   if (!controlFlow) {
     descriptionItems = (
@@ -103,6 +106,18 @@ export const StageNode = (props: { stage: Stage }) => {
         <center>
           <PullRequestLink stage={props.stage} />
 
+          {promotionStepExtensions
+            .filter((ext) => ext.waitingLabel)
+            .map((ext) => (
+              <StepWaitingLabel
+                key={ext.identifier}
+                stage={props.stage}
+                stepUses={ext.identifier}
+                label={ext.waitingLabel!.label}
+                icon={ext.waitingLabel!.icon}
+              />
+            ))}
+
           {dictionaryContext?.hasAnalysisRunLogsUrlTemplate && (
             <AnalysisRunLogsLink stage={props.stage} />
           )}
@@ -114,7 +129,7 @@ export const StageNode = (props: { stage: Stage }) => {
   const { isOver, setNodeRef } = useDroppable({
     id: props.stage.metadata?.name || 'stage-node',
     data: {
-      requestedFreightNames: props.stage.spec?.requestedFreight.map((f) => f.origin?.name) || []
+      requestedFreightNames: props.stage.spec?.requestedFreight?.map((f) => f.origin?.name) || []
     }
   });
 
@@ -140,9 +155,10 @@ export const StageNode = (props: { stage: Stage }) => {
         }}
         title={
           <>
-            {autoPromotionMode && (
-              <FontAwesomeIcon title='Auto Promotion' icon={faBolt} className='text-[10px] mr-1' />
-            )}
+            <AutoPromotionStatusIcon
+              stage={props.stage}
+              autoPromotionEnabled={Boolean(autoPromotionMode)}
+            />
             <span className='text-xs text-wrap mr-auto'>{props.stage.metadata?.name}</span>
           </>
         }
@@ -212,9 +228,11 @@ export const StageNode = (props: { stage: Stage }) => {
               loading={manualApproveActionMutation.isPending}
               onClick={() => {
                 manualApproveActionMutation.mutate({
-                  stage: props.stage?.metadata?.name || '',
-                  project: props.stage?.metadata?.namespace,
-                  name: actionContext?.action?.freight?.metadata?.name
+                  params: {
+                    stage: props.stage?.metadata?.name || ''
+                  },
+                  project: props.stage?.metadata?.namespace || '',
+                  freightNameOrAlias: actionContext?.action?.freight?.metadata?.name || ''
                 });
               }}
             >
@@ -234,14 +252,16 @@ export const StageNode = (props: { stage: Stage }) => {
           >
             <Flex gap={4} align='center' justify='center' className='text-[10px]'>
               <span>Last Promotion: </span>
-              <span title={date?.toString()}>
-                {formatDistance(date, new Date(), { addSuffix: true })}
+              <span title={lastPromotion?.toString()}>
+                {formatDistance(lastPromotion, new Date(), { addSuffix: true })}
               </span>
               <FontAwesomeIcon icon={faExternalLink} className='text-[6px]' />
             </Flex>
           </Link>
         )}
       </Card>
+
+      {resumeAutoPromotionDrawer}
 
       {!graphContext?.stackedNodesParents?.includes(stageNodeIndex) &&
         totalSubscribersToThisStage > 0 && (

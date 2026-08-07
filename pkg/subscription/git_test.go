@@ -1,6 +1,8 @@
 package subscription
 
 import (
+	"context"
+	"errors"
 	"strings"
 	"testing"
 
@@ -8,7 +10,334 @@ import (
 	"k8s.io/apimachinery/pkg/util/validation/field"
 
 	kargoapi "github.com/akuity/kargo/api/v1alpha1"
+	"github.com/akuity/kargo/pkg/controller/git"
+	"github.com/akuity/kargo/pkg/controller/git/commit"
+	"github.com/akuity/kargo/pkg/credentials"
 )
+
+// fakeSelector is a manual fake implementation of commit.Selector for testing
+// the gitSubscriber's discovery orchestration.
+type fakeSelector struct {
+	listRefsFn func(context.Context) (*kargoapi.GitDiscoveryRefs, error)
+	selectFn   func(context.Context) ([]kargoapi.DiscoveredCommit, error)
+}
+
+func (f *fakeSelector) MatchesRef(string) bool     { return false }
+func (f *fakeSelector) MatchesPaths([]string) bool { return false }
+
+func (f *fakeSelector) ListRefs(
+	ctx context.Context,
+) (*kargoapi.GitDiscoveryRefs, error) {
+	return f.listRefsFn(ctx)
+}
+
+func (f *fakeSelector) Select(
+	ctx context.Context,
+) ([]kargoapi.DiscoveredCommit, error) {
+	return f.selectFn(ctx)
+}
+
+func Test_gitSubscriber_DiscoverArtifacts(t *testing.T) {
+	const (
+		repoURL  = "https://example.com/repo"
+		otherURL = "https://example.com/other"
+	)
+	prevCommits := []kargoapi.DiscoveredCommit{{ID: "old"}}
+	freshCommits := []kargoapi.DiscoveredCommit{{ID: "new"}}
+	observed := &kargoapi.GitDiscoveryRefs{BranchHead: "abc"}
+
+	testCases := []struct {
+		name       string
+		subscriber *gitSubscriber
+		last       any
+		assertions func(*testing.T, any, error)
+	}{
+		{
+			name: "refs unchanged skips clone and reuses prior commits",
+			subscriber: &gitSubscriber{
+				credentialsDB: &credentials.FakeDB{},
+				newSelectorFn: func(
+					context.Context,
+					kargoapi.GitSubscription,
+					*git.RepoCredentials,
+				) (commit.Selector, error) {
+					return &fakeSelector{
+						listRefsFn: func(context.Context) (*kargoapi.GitDiscoveryRefs, error) {
+							return &kargoapi.GitDiscoveryRefs{BranchHead: "abc"}, nil
+						},
+						selectFn: func(context.Context) ([]kargoapi.DiscoveredCommit, error) {
+							require.Fail(t, "Select must not run when refs are unchanged")
+							return nil, nil
+						},
+					}, nil
+				},
+			},
+			last: kargoapi.GitDiscoveryResult{
+				RepoURL:      repoURL,
+				Commits:      prevCommits,
+				ObservedRefs: observed,
+			},
+			assertions: func(t *testing.T, res any, err error) {
+				require.NoError(t, err)
+				result, ok := res.(kargoapi.GitDiscoveryResult)
+				require.True(t, ok)
+				require.Equal(t, repoURL, result.RepoURL)
+				require.Equal(t, prevCommits, result.Commits)
+				require.Equal(t, observed, result.ObservedRefs)
+				// Even the path that short-circuits the clone must stamp the
+				// subscription's name on the result.
+				require.Equal(t, "fake-sub", result.SubscriptionName)
+			},
+		},
+		{
+			name: "refs changed falls through to selection",
+			subscriber: &gitSubscriber{
+				credentialsDB: &credentials.FakeDB{},
+				newSelectorFn: func(
+					context.Context,
+					kargoapi.GitSubscription,
+					*git.RepoCredentials,
+				) (commit.Selector, error) {
+					return &fakeSelector{
+						listRefsFn: func(context.Context) (*kargoapi.GitDiscoveryRefs, error) {
+							return &kargoapi.GitDiscoveryRefs{BranchHead: "def"}, nil
+						},
+						selectFn: func(context.Context) ([]kargoapi.DiscoveredCommit, error) {
+							return freshCommits, nil
+						},
+					}, nil
+				},
+			},
+			last: kargoapi.GitDiscoveryResult{
+				RepoURL:      repoURL,
+				Commits:      prevCommits,
+				ObservedRefs: observed,
+			},
+			assertions: func(t *testing.T, res any, err error) {
+				require.NoError(t, err)
+				result, ok := res.(kargoapi.GitDiscoveryResult)
+				require.True(t, ok)
+				require.Equal(t, repoURL, result.RepoURL)
+				require.Equal(t, freshCommits, result.Commits)
+				require.Equal(t, &kargoapi.GitDiscoveryRefs{BranchHead: "def"}, result.ObservedRefs)
+				require.Equal(t, "fake-sub", result.SubscriptionName)
+			},
+		},
+		{
+			// A prior result for a different repo (e.g. were pairing ever wrong)
+			// must never be reused, even if its observed refs happen to match.
+			name: "mismatched prior RepoURL falls through to selection",
+			subscriber: &gitSubscriber{
+				credentialsDB: &credentials.FakeDB{},
+				newSelectorFn: func(
+					context.Context,
+					kargoapi.GitSubscription,
+					*git.RepoCredentials,
+				) (commit.Selector, error) {
+					return &fakeSelector{
+						listRefsFn: func(context.Context) (*kargoapi.GitDiscoveryRefs, error) {
+							return &kargoapi.GitDiscoveryRefs{BranchHead: "abc"}, nil
+						},
+						selectFn: func(context.Context) ([]kargoapi.DiscoveredCommit, error) {
+							return freshCommits, nil
+						},
+					}, nil
+				},
+			},
+			last: kargoapi.GitDiscoveryResult{
+				RepoURL:      otherURL,
+				Commits:      prevCommits,
+				ObservedRefs: observed,
+			},
+			assertions: func(t *testing.T, res any, err error) {
+				require.NoError(t, err)
+				result, ok := res.(kargoapi.GitDiscoveryResult)
+				require.True(t, ok)
+				require.Equal(t, repoURL, result.RepoURL)
+				require.Equal(t, freshCommits, result.Commits)
+				require.Equal(t, "fake-sub", result.SubscriptionName)
+			},
+		},
+		{
+			name: "no prior result falls through to selection",
+			subscriber: &gitSubscriber{
+				credentialsDB: &credentials.FakeDB{},
+				newSelectorFn: func(
+					context.Context,
+					kargoapi.GitSubscription,
+					*git.RepoCredentials,
+				) (commit.Selector, error) {
+					return &fakeSelector{
+						listRefsFn: func(context.Context) (*kargoapi.GitDiscoveryRefs, error) {
+							return observed, nil
+						},
+						selectFn: func(context.Context) ([]kargoapi.DiscoveredCommit, error) {
+							return freshCommits, nil
+						},
+					}, nil
+				},
+			},
+			assertions: func(t *testing.T, res any, err error) {
+				require.NoError(t, err)
+				result, ok := res.(kargoapi.GitDiscoveryResult)
+				require.True(t, ok)
+				require.Equal(t, repoURL, result.RepoURL)
+				require.Equal(t, freshCommits, result.Commits)
+				require.Equal(t, "fake-sub", result.SubscriptionName)
+			},
+		},
+		{
+			name: "nil observation falls through even with prior result",
+			subscriber: &gitSubscriber{
+				credentialsDB: &credentials.FakeDB{},
+				newSelectorFn: func(
+					context.Context,
+					kargoapi.GitSubscription,
+					*git.RepoCredentials,
+				) (commit.Selector, error) {
+					return &fakeSelector{
+						listRefsFn: func(context.Context) (*kargoapi.GitDiscoveryRefs, error) {
+							return nil, nil
+						},
+						selectFn: func(context.Context) ([]kargoapi.DiscoveredCommit, error) {
+							return freshCommits, nil
+						},
+					}, nil
+				},
+			},
+			last: kargoapi.GitDiscoveryResult{
+				RepoURL:      repoURL,
+				Commits:      prevCommits,
+				ObservedRefs: observed,
+			},
+			assertions: func(t *testing.T, res any, err error) {
+				require.NoError(t, err)
+				result, ok := res.(kargoapi.GitDiscoveryResult)
+				require.True(t, ok)
+				require.Equal(t, repoURL, result.RepoURL)
+				require.Equal(t, freshCommits, result.Commits)
+				require.Nil(t, result.ObservedRefs)
+				require.Equal(t, "fake-sub", result.SubscriptionName)
+			},
+		},
+		{
+			name: "ls-remote error falls through to selection",
+			subscriber: &gitSubscriber{
+				credentialsDB: &credentials.FakeDB{},
+				newSelectorFn: func(
+					context.Context,
+					kargoapi.GitSubscription,
+					*git.RepoCredentials,
+				) (commit.Selector, error) {
+					return &fakeSelector{
+						listRefsFn: func(context.Context) (*kargoapi.GitDiscoveryRefs, error) {
+							return nil, errors.New("network down")
+						},
+						selectFn: func(context.Context) ([]kargoapi.DiscoveredCommit, error) {
+							return freshCommits, nil
+						},
+					}, nil
+				},
+			},
+			last: kargoapi.GitDiscoveryResult{
+				RepoURL:      repoURL,
+				Commits:      prevCommits,
+				ObservedRefs: observed,
+			},
+			assertions: func(t *testing.T, res any, err error) {
+				require.NoError(t, err)
+				result, ok := res.(kargoapi.GitDiscoveryResult)
+				require.True(t, ok)
+				require.Equal(t, repoURL, result.RepoURL)
+				require.Equal(t, freshCommits, result.Commits)
+				require.Equal(t, "fake-sub", result.SubscriptionName)
+			},
+		},
+	}
+	for _, testCase := range testCases {
+		t.Run(testCase.name, func(t *testing.T) {
+			res, err := testCase.subscriber.DiscoverArtifacts(
+				t.Context(),
+				"fake-project",
+				kargoapi.RepoSubscription{
+					Name: "fake-sub",
+					Git:  &kargoapi.GitSubscription{RepoURL: repoURL},
+				},
+				testCase.last,
+			)
+			testCase.assertions(t, res, err)
+		})
+	}
+}
+
+func Test_gitRefsEqual(t *testing.T) {
+	testCases := []struct {
+		name  string
+		a     *kargoapi.GitDiscoveryRefs
+		b     *kargoapi.GitDiscoveryRefs
+		equal bool
+	}{
+		{
+			name:  "both nil",
+			equal: false, // a nil observation never short-circuits
+		},
+		{
+			name:  "one nil",
+			a:     &kargoapi.GitDiscoveryRefs{BranchHead: "abc"},
+			equal: false,
+		},
+		{
+			name:  "equal branch heads",
+			a:     &kargoapi.GitDiscoveryRefs{BranchHead: "abc"},
+			b:     &kargoapi.GitDiscoveryRefs{BranchHead: "abc"},
+			equal: true,
+		},
+		{
+			name:  "different branch heads",
+			a:     &kargoapi.GitDiscoveryRefs{BranchHead: "abc"},
+			b:     &kargoapi.GitDiscoveryRefs{BranchHead: "def"},
+			equal: false,
+		},
+		{
+			name: "equal tag sets",
+			a: &kargoapi.GitDiscoveryRefs{Tags: []kargoapi.DiscoveredRef{
+				{Name: "v1.0.0", ID: "a"},
+				{Name: "v1.1.0", ID: "b"},
+			}},
+			b: &kargoapi.GitDiscoveryRefs{Tags: []kargoapi.DiscoveredRef{
+				{Name: "v1.0.0", ID: "a"},
+				{Name: "v1.1.0", ID: "b"},
+			}},
+			equal: true,
+		},
+		{
+			name: "tag repointed to a different commit",
+			a: &kargoapi.GitDiscoveryRefs{Tags: []kargoapi.DiscoveredRef{
+				{Name: "v1.0.0", ID: "a"},
+			}},
+			b: &kargoapi.GitDiscoveryRefs{Tags: []kargoapi.DiscoveredRef{
+				{Name: "v1.0.0", ID: "z"},
+			}},
+			equal: false,
+		},
+		{
+			name: "added tag",
+			a: &kargoapi.GitDiscoveryRefs{Tags: []kargoapi.DiscoveredRef{
+				{Name: "v1.0.0", ID: "a"},
+			}},
+			b: &kargoapi.GitDiscoveryRefs{Tags: []kargoapi.DiscoveredRef{
+				{Name: "v1.0.0", ID: "a"},
+				{Name: "v1.1.0", ID: "b"},
+			}},
+			equal: false,
+		},
+	}
+	for _, testCase := range testCases {
+		t.Run(testCase.name, func(t *testing.T) {
+			require.Equal(t, testCase.equal, gitRefsEqual(testCase.a, testCase.b))
+		})
+	}
+}
 
 func Test_gitSubscriber_ApplySubscriptionDefaults(t *testing.T) {
 	s := &gitSubscriber{}

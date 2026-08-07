@@ -22,6 +22,7 @@ type MockSubscriber struct {
 		ctx context.Context,
 		project string,
 		sub kargoapi.RepoSubscription,
+		last any,
 	) (any, error)
 }
 
@@ -44,9 +45,10 @@ func (m *MockSubscriber) DiscoverArtifacts(
 	ctx context.Context,
 	project string,
 	sub kargoapi.RepoSubscription,
+	last any,
 ) (any, error) {
 	if m.DiscoverArtifactsFn != nil {
-		return m.DiscoverArtifactsFn(ctx, project, sub)
+		return m.DiscoverArtifactsFn(ctx, project, sub, last)
 	}
 	return nil, nil
 }

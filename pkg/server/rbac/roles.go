@@ -17,6 +17,7 @@ import (
 
 	rbacapi "github.com/akuity/kargo/api/rbac/v1alpha1"
 	kargoapi "github.com/akuity/kargo/api/v1alpha1"
+	"github.com/akuity/kargo/pkg/server/kubernetes"
 )
 
 type RolesDatabaseConfig struct {
@@ -163,7 +164,15 @@ type Resources struct {
 type rolesDatabase struct {
 	client         client.Client
 	internalClient client.Client
-	cfg            RolesDatabaseConfig
+	// NOTE(thomastaylor312): this just ends up being the same client as `client`, but we have it as
+	// a separate field so testing is easier because we can nil this out or mock what we need
+	authorizer kubernetes.Authorizer
+	// resolveGroup resolves the API group for a (plural) resource type when a
+	// request does not specify one (the Grant/Revoke ResourceDetails flow). It is
+	// derived from the client's discovery-backed RESTMapper in the constructor;
+	// tests may override it.
+	resolveGroup groupResolver
+	cfg          RolesDatabaseConfig
 }
 
 // NewKubernetesRolesDatabase returns an implementation of the RolesDatabase
@@ -175,11 +184,27 @@ func NewKubernetesRolesDatabase(
 	internalClient client.Client,
 	cfg RolesDatabaseConfig,
 ) RolesDatabase {
-	return &rolesDatabase{
+	db := &rolesDatabase{
 		client:         c,
 		internalClient: internalClient,
 		cfg:            cfg,
 	}
+	// The API server passes its authorizing client here. We use it to verify --
+	// as the requesting user -- that a Role edit does not grant permissions the
+	// user does not already hold. This is necessary because Role writes are
+	// performed with the API server's own broadly-privileged ServiceAccount, so
+	// Kubernetes' built-in escalation prevention runs against the server rather
+	// than the user. Clients that do not implement Authorizer (test fakes, or the
+	// non-authorizing local-mode client whose writes are already constrained by
+	// the user's own credentials) leave this nil, disabling the check.
+	if authz, ok := c.(kubernetes.Authorizer); ok {
+		db.authorizer = authz
+	}
+	// Resolve API groups for group-less requests via the client's discovery-backed
+	// RESTMapper, so any served resource type (core, CRDs, enterprise APIs) is
+	// covered without a hardcoded table.
+	db.resolveGroup = newRESTMapperGroupResolver(c.RESTMapper())
+	return db
 }
 
 // CreateRole implements the RolesDatabase interface.
@@ -243,9 +268,27 @@ func (c *rolesDatabase) Create(
 	// If we get to here, we may proceed with creating the
 	// ServiceAccount/Role/RoleBinding trio
 
-	sa, role, rb, err := RoleToResources(kargoRole)
+	// Fill in the API group of any rule that omits it (the UI sends group-less
+	// rules and relies on the server to resolve them from the resource type).
+	resolvedRules, err := resolveRuleGroups(kargoRole.Rules, c.resolveGroup)
+	if err != nil {
+		return nil, err
+	}
+	kargoRole.Rules = resolvedRules
+
+	// NOTE(thomastaylor312): This normalizes the rules and then the verify step does it again. This
+	// is probably fine for now, but calling it out here in case there is a problem in the future
+	sa, role, rb, err = RoleToResources(kargoRole)
 	if err != nil {
 		return nil, fmt.Errorf("error converting Kargo Role to resources: %w", err)
+	}
+
+	// Reject the create unless the requester already holds every permission in
+	// the new Role's rule set (prevents privilege escalation via Role creation).
+	if _, err = verifyRulesNotEscalating(
+		ctx, c.authorizer, kargoRole.Namespace, role.Rules,
+	); err != nil {
+		return nil, err
 	}
 
 	// Append the description annotation to the Role if it exists
@@ -468,17 +511,9 @@ func (c *rolesDatabase) GrantPermissionsToRole(
 		return nil, err
 	}
 
-	group := getGroupName(resourceDetails.ResourceType)
-
-	// Deal with wildcard verb
-	for _, verb := range resourceDetails.Verbs {
-		if strings.TrimSpace(verb) == "*" {
-			resourceDetails.Verbs = append(
-				resourceDetails.Verbs,
-				allVerbsFor(resourceDetails.ResourceType, true)...,
-			)
-			break
-		}
+	group, err := c.resolveGroup(resourceDetails.ResourceType)
+	if err != nil {
+		return nil, err
 	}
 
 	newRole := role
@@ -493,7 +528,22 @@ func (c *rolesDatabase) GrantPermissionsToRole(
 	if resourceDetails.ResourceName != "" {
 		newRule.ResourceNames = []string{resourceDetails.ResourceName}
 	}
-	if newRole.Rules, err = NormalizePolicyRules(append(newRole.Rules, newRule), nil); err != nil {
+
+	// Reject the grant unless the requester already holds every permission they
+	// are attempting to confer (prevents privilege escalation via Role editing).
+	// Only the new rule is checked; pre-existing rules were vetted when added.
+	// The normalized form is discarded here because storage needs the new rule
+	// merged with the role's existing rules, not the delta on its own.
+	if _, err = verifyRulesNotEscalating(
+		ctx, c.authorizer, project, []rbacv1.PolicyRule{newRule},
+	); err != nil {
+		return nil, err
+	}
+
+	if newRole.Rules, err = NormalizePolicyRules(
+		append(newRole.Rules, newRule),
+		&PolicyRuleNormalizationOptions{IncludeCustomVerbsInExpansion: true},
+	); err != nil {
 		return nil, fmt.Errorf("error normalizing RBAC policy rules: %w", err)
 	}
 
@@ -531,6 +581,13 @@ func (c *rolesDatabase) GrantRoleToUsers(
 	// This will return an error if these resources are not manageable for any
 	// reason.
 	if _, _, err = manageableResources(resources); err != nil {
+		return nil, err
+	}
+	// Binding a user to a Kargo Role maps their identity onto its ServiceAccount,
+	// conferring the Role's permissions. Reject unless the requester already holds
+	// those permissions (prevents privilege escalation by binding a user --
+	// possibly the requester themselves -- to a more powerful Role).
+	if err = verifyBindingNotEscalating(ctx, c.authorizer, project, resources); err != nil {
 		return nil, err
 	}
 	if err = amendClaimAnnotations(
@@ -581,7 +638,6 @@ func (c *rolesDatabase) List(
 			namespace,
 			saList.Items[i].Name,
 		)
-
 		if err != nil {
 			return nil, fmt.Errorf(
 				"error getting underlying resources for Kargo Role %q from namespace %q: %w",
@@ -683,7 +739,10 @@ func (c *rolesDatabase) RevokePermissionsFromRole(
 		return nil, err
 	}
 
-	group := getGroupName(resourceDetails.ResourceType)
+	group, err := c.resolveGroup(resourceDetails.ResourceType)
+	if err != nil {
+		return nil, err
+	}
 
 	filteredRules := make([]rbacv1.PolicyRule, 0, len(role.Rules))
 	for _, rule := range role.Rules {
@@ -787,22 +846,33 @@ func (c *rolesDatabase) Update(
 		)
 	}
 
+	newRole := role
+	if newRole == nil {
+		newRole = buildNewRole(kargoRole.Namespace, kargoRole.Name)
+	}
+	// Fill in the API group of any rule that omits it (the UI sends group-less
+	// rules and relies on the server to resolve them from the resource type).
+	resolvedRules, err := resolveRuleGroups(kargoRole.Rules, c.resolveGroup)
+	if err != nil {
+		return nil, err
+	}
+	// Reject the update unless the requester already holds every permission in
+	// the resulting rule set (prevents privilege escalation via Role editing).
+	// The check runs before anything is persisted, so a denied update has no
+	// side effects.
+	normalized, err := verifyRulesNotEscalating(
+		ctx, c.authorizer, kargoRole.Namespace, resolvedRules,
+	)
+	if err != nil {
+		return nil, err
+	}
+	newRole.Rules = normalized
+
 	if err = c.client.Update(ctx, resources.ServiceAccount); err != nil {
 		return nil, fmt.Errorf(
 			"error updating ServiceAccount %q in namespace %q: %w",
 			kargoRole.Name, kargoRole.Namespace, err,
 		)
-	}
-
-	newRole := role
-	if newRole == nil {
-		newRole = buildNewRole(kargoRole.Namespace, kargoRole.Name)
-	}
-	if newRole.Rules, err = NormalizePolicyRules(
-		kargoRole.Rules,
-		&PolicyRuleNormalizationOptions{IncludeCustomVerbsInExpansion: true},
-	); err != nil {
-		return nil, fmt.Errorf("error normalizing RBAC policy rules: %w", err)
 	}
 	if role == nil {
 		if err := c.client.Create(ctx, newRole); err != nil {
@@ -860,7 +930,8 @@ func ResourcesToRole(resources Resources) (*rbacapi.Role, error) {
 	}
 
 	for name, values := range claims {
-		kargoRole.Claims = append(kargoRole.Claims,
+		kargoRole.Claims = append(
+			kargoRole.Claims,
 			rbacapi.Claim{
 				Name:   name,
 				Values: values,

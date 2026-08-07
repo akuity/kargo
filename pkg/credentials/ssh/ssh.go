@@ -10,6 +10,9 @@ import (
 const sshPrivateKey = "sshPrivateKey"
 
 func init() {
+	if !credentials.ProvidersEnabled() {
+		return
+	}
 	provider := &CredentialProvider{}
 	credentials.DefaultProviderRegistry.MustRegister(
 		credentials.ProviderRegistration{

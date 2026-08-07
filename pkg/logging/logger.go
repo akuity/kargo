@@ -207,6 +207,19 @@ func (l *Logger) WithValues(keysAndValues ...any) *Logger {
 	}
 }
 
+// WithoutStackTraces returns a copy of a logger that does not attach a stack
+// trace to the records it writes. A stack trace describes the path to the
+// logging call, not the path to whatever went wrong, so it is worth having only
+// where an error is logged near where it arose. Callers that log errors on
+// behalf of code far below them should use this.
+func (l *Logger) WithoutStackTraces() *Logger {
+	return &Logger{
+		// Stack traces are attached at or above a level, so requiring a level
+		// above the highest one this package offers disables them.
+		logger: l.logger.WithOptions(zap.AddStacktrace(zapcore.FatalLevel)),
+	}
+}
+
 // Error logs a message at the error level.
 func (l *Logger) Error(err error, msg string, keysAndValues ...any) {
 	l.logger.Errorw(fmt.Sprintf("%s: %v", msg, err), keysAndValues...,

@@ -1,6 +1,6 @@
 import { Tooltip } from 'antd';
 
-import { Stage } from '@ui/gen/api/v1alpha1/generated_pb';
+import { Stage } from '@ui/gen/api/v2/models';
 
 import { StagePopover } from '../project/list/project-item/stage-popover';
 import { ColorMap } from '../stage/utils';

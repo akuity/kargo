@@ -8,7 +8,7 @@ import (
 	"time"
 
 	"cloud.google.com/go/compute/metadata"
-	"github.com/patrickmn/go-cache"
+	"github.com/hashicorp/go-cleanhttp"
 	"golang.org/x/oauth2"
 	"golang.org/x/oauth2/google"
 	"google.golang.org/api/googleapi"
@@ -16,6 +16,7 @@ import (
 	"k8s.io/apimachinery/pkg/util/wait"
 	"k8s.io/client-go/util/retry"
 
+	"github.com/akuity/kargo/pkg/cache/coalescing"
 	"github.com/akuity/kargo/pkg/credentials"
 	"github.com/akuity/kargo/pkg/logging"
 )
@@ -23,9 +24,20 @@ import (
 const (
 	initMaxAttempts   = 5
 	initRetryInterval = time.Second
+
+	// noProjectTokenTTL is how long the absence of a Project-specific service
+	// account is remembered. Nothing about that determination expires, so it is
+	// held for a good while: a shorter TTL would buy only a sooner discovery of a
+	// service account created after the fact, at the cost of repeating the lookup
+	// for every Project that will never have one. It is bounded at all only so
+	// that Projects that have come and gone do not accumulate.
+	noProjectTokenTTL = 12 * time.Hour
 )
 
 func init() {
+	if !credentials.ProvidersEnabled() {
+		return
+	}
 	if p := NewWorkloadIdentityFederationProvider(context.Background()); p != nil {
 		credentials.DefaultProviderRegistry.MustRegister(
 			credentials.ProviderRegistration{
@@ -34,6 +46,14 @@ func init() {
 			},
 		)
 	}
+}
+
+// projectToken is what this provider's token cache holds: either an access
+// token scoped to a Kargo Project, or a signal that the Project has no service
+// account of its own and the controller's identity is to be used instead.
+type projectToken struct {
+	accessToken string
+	useDefault  bool
 }
 
 // NewWorkloadIdentityFederationProvider returns a fully initialized
@@ -46,6 +66,20 @@ func NewWorkloadIdentityFederationProvider(ctx context.Context) *WorkloadIdentit
 		logger.Info("not running on GCP; skipping initialization of GCP Workload Identity Federation provider")
 		return nil
 	}
+
+	// The token source built below refreshes itself by issuing an HTTP request,
+	// and depending on which credentials Application Default Credentials
+	// resolves to, nothing may bound that request: a service account key routes
+	// through oauth2's JWT source, which takes its client from this context but
+	// issues the request without it. Since a refresh can occur inside a
+	// singleflight group, an unanswered request would occupy that group's key for
+	// the life of the process. Worse, a token source serializes refreshes behind
+	// a mutex, so every caller sharing this one would block, not merely those
+	// waiting on the key. A client timeout is the only bound available here.
+	ctx = context.WithValue(ctx, oauth2.HTTPClient, &http.Client{
+		Transport: cleanhttp.DefaultTransport(),
+		Timeout:   tokenRequestTimeout,
+	})
 
 	var projectID string
 	var tokenSource oauth2.TokenSource
@@ -79,29 +113,44 @@ func NewWorkloadIdentityFederationProvider(ctx context.Context) *WorkloadIdentit
 	p := &WorkloadIdentityFederationProvider{
 		projectID:   projectID,
 		tokenSource: tokenSource,
-		tokenCache: cache.New(
+	}
+	p.getAccessTokenFn = p.getAccessToken
+	tokenCache, err := coalescing.NewCache(
+		p.loadAccessToken,
+		&coalescing.CacheOptions{
+			LoadTimeout: new(tokenAcquisitionTimeout),
 			// Access tokens live for one hour. We'll hang on to them for 40
 			// minutes by default. When the actual token expiry is available, it
 			// is used (minus a safety margin) instead of this default.
-			40*time.Minute, // Default ttl for each entry
-			time.Hour,      // Cleanup interval
-		),
-		tokenSourceCache: cache.New(
-			// Token sources are long-lived. We could hang on to them indefinitely,
-			// but we'll cap it at 12 hours to prevent memory leaks.
-			12*time.Hour, // Default ttl for each entry
-			time.Hour,    // Cleanup interval
-		),
+			DefaultTTL:      new(40 * time.Minute),
+			CleanupInterval: new(time.Hour),
+		},
+	)
+	if err != nil {
+		logger.Error(
+			err,
+			"error creating token cache; GCP Workload Identity Federation "+
+				"provider could not be initialized",
+		)
+		return nil
 	}
-	p.getAccessTokenFn = p.getAccessToken
+	p.tokenCache = tokenCache
 	return p
 }
 
 type WorkloadIdentityFederationProvider struct {
-	tokenCache       *cache.Cache // For short-lived Project-specific tokens
-	tokenSourceCache *cache.Cache // For long-lived token sources
+	// tokenCache holds what is known about each Kargo Project's access to
+	// Artifact Registry. It fills its own misses, coalescing concurrent loads for
+	// any given Project.
+	tokenCache coalescing.Cache[string, projectToken]
 
-	projectID   string
+	projectID string
+
+	// tokenSource is the controller's own identity, used on behalf of Projects
+	// having no service account of their own. It is a cache in its own right,
+	// holding the token it last obtained and refreshing it as expiry nears, so
+	// what it yields is never cached here. What is worth remembering about such a
+	// Project is only that it has nothing better than this.
 	tokenSource oauth2.TokenSource
 
 	getAccessTokenFn func(
@@ -124,70 +173,75 @@ func (p *WorkloadIdentityFederationProvider) GetCredentials(
 	ctx context.Context,
 	req credentials.Request,
 ) (*credentials.Credentials, error) {
-	cacheKey := tokenCacheKey(req.Project)
-
 	logger := logging.LoggerFromContext(ctx).WithValues(
 		"provider", "garWorkloadIdentityFederation",
 		"repoURL", req.RepoURL,
 	)
+	ctx = logging.ContextWithLogger(ctx, logger)
 
-	// Check the token cache for a Project-specific token
-	if entry, exists := p.tokenCache.Get(cacheKey); exists {
-		logger.Debug("access token cache hit")
-		return &credentials.Credentials{
-			Username: accessTokenUsername,
-			Password: entry.(string), // nolint: forcetypeassert
-		}, nil
+	cachedToken, err := p.tokenCache.Get(
+		ctx,
+		tokenCacheKey(req.Project),
+		req.Project,
+	)
+	if err != nil {
+		return nil, err
 	}
 
-	// Check the token source cache for a long-lived token source
-	if entry, exists := p.tokenSourceCache.Get(cacheKey); exists {
-		logger.Debug("token source cache hit")
-		tokenSource := entry.(oauth2.TokenSource) // nolint: forcetypeassert
-		token, err := tokenSource.Token()
-		if err != nil {
+	accessToken := cachedToken.accessToken
+	if cachedToken.useDefault {
+		// Obtained anew on every call, for the reason given where tokenSource is
+		// declared.
+		var defaultToken *oauth2.Token
+		if defaultToken, err = p.tokenSource.Token(); err != nil {
 			return nil, fmt.Errorf("error getting GCP access token: %w", err)
 		}
-		return &credentials.Credentials{
-			Username: accessTokenUsername,
-			Password: token.AccessToken,
-		}, nil
-	}
-	logger.Debug("access token cache miss")
-
-	// We had a miss in both caches, so we'll try to get a new Project-specific
-	// token.
-	accessToken, expiry, err := p.getAccessTokenFn(ctx, req.Project)
-	if err != nil {
-		return nil, fmt.Errorf("error getting GCP access token: %w", err)
-	}
-	if accessToken != "" {
-		logger.Debug("obtained new access token")
-		ttl := credentials.CalculateCacheTTL(expiry, tokenCacheExpiryMargin)
-		logger.Debug(
-			"caching access token",
-			"expiry", expiry,
-			"ttl", ttl,
-		)
-		p.tokenCache.Set(cacheKey, accessToken, ttl)
-		return &credentials.Credentials{
-			Username: accessTokenUsername,
-			Password: accessToken,
-		}, nil
+		accessToken = defaultToken.AccessToken
 	}
 
-	// If we get to here, we found no Project-specific token and we'll cache the
-	// token source instead.
-	logger.Debug("no project-specific token found; caching default token source")
-	p.tokenSourceCache.Set(cacheKey, p.tokenSource, cache.DefaultExpiration)
-	token, err := p.tokenSource.Token()
-	if err != nil {
-		return nil, fmt.Errorf("error getting GCP access token: %w", err)
+	// If we didn't get a token, we'll treat this as no credentials found
+	if accessToken == "" {
+		return nil, nil
 	}
+
 	return &credentials.Credentials{
 		Username: accessTokenUsername,
-		Password: token.AccessToken,
+		Password: accessToken,
 	}, nil
+}
+
+// loadAccessToken obtains a GCP access token scoped to the given Kargo Project.
+// If the Project has no service account of its own, what is returned says so
+// instead of carrying a token. It is the Loader for this provider's token
+// cache.
+func (p *WorkloadIdentityFederationProvider) loadAccessToken(
+	ctx context.Context,
+	project string,
+) (projectToken, *time.Duration, error) {
+	logger := logging.LoggerFromContext(ctx)
+
+	accessToken, expiry, err := p.getAccessTokenFn(ctx, project)
+	if err != nil {
+		return projectToken{}, nil, fmt.Errorf("error getting GCP access token: %w", err)
+	}
+
+	if accessToken == "" {
+		logger.Debug("no Project-specific token found; will use default token source")
+		return projectToken{useDefault: true}, new(noProjectTokenTTL), nil
+	}
+	logger.Debug("obtained new access token")
+
+	ttl := credentials.CalculateCacheTTL(expiry, tokenCacheExpiryMargin)
+	if ttl == nil {
+		logger.Debug("token expires too soon to be worth caching", "expiry", expiry)
+		return projectToken{accessToken: accessToken}, nil, nil
+	}
+	logger.Debug(
+		"caching access token",
+		"expiry", expiry,
+		"ttl", *ttl,
+	)
+	return projectToken{accessToken: accessToken}, ttl, nil
 }
 
 // getAccessToken attempts to get a GCP access token scoped to the given Kargo
@@ -219,7 +273,7 @@ func (p *WorkloadIdentityFederationProvider) getAccessToken(
 				iamcredentials.CloudPlatformScope,
 			},
 		},
-	).Do()
+	).Context(ctx).Do()
 	if err != nil {
 		var googleErr *googleapi.Error
 		if errors.As(err, &googleErr) && googleErr.Code == http.StatusNotFound {
@@ -227,6 +281,18 @@ func (p *WorkloadIdentityFederationProvider) getAccessToken(
 			return "", time.Time{}, nil
 		}
 		logger.Error(err, "error generating access token")
+		return "", time.Time{}, nil
+	}
+
+	// A nil response alongside a nil error would be a surprise, but it is
+	// reachable: the generated client decodes into a pointer to the response
+	// pointer, so a success carrying a JSON null body nils the response and
+	// reports no error. Dereferencing it regardless is not worth the
+	// consequence: the cache this runs under would report the panic to every
+	// caller waiting on this key as an error saying nothing about what actually
+	// went wrong.
+	if resp == nil {
+		logger.Error(nil, "no response generating access token")
 		return "", time.Time{}, nil
 	}
 

@@ -3,6 +3,7 @@ package user
 import (
 	"context"
 
+	authnv1 "k8s.io/api/authentication/v1"
 	"k8s.io/apimachinery/pkg/types"
 )
 
@@ -21,17 +22,6 @@ type Info struct {
 	// non-admin user whose credentials have
 	// been successfully verified by the server's authentication middleware.
 	Claims map[string]any
-	// BearerToken is the raw bearer token presented in the Authorization header
-	// of any request requiring authentication.
-	//
-	// #nosec G117 -- This struct is an internal, context-bound representation of
-	// a user. This field, if set, contains the token the user presented to
-	// authenticate themselves, which we subsequently determined to be a valid
-	// token for the Kargo control plane's underlying Kubernetes cluster. This
-	// token is ultimately used for no purpose other than self-service subject
-	// access review (SSAR) calls to the Kubernetes API server. Importantly, it is
-	// never transmitted to anywhere else.
-	BearerToken string
 	// ServiceAccountsByNamespace is the mapping of namespace names to sets of
 	// ServiceAccounts that a user has been mapped to.
 	ServiceAccountsByNamespace map[string]map[types.NamespacedName]struct{}
@@ -41,6 +31,11 @@ type Info struct {
 	// Username is the username of the user. This is often the email address
 	// of the user, but may be different depending on configuration.
 	Username string
+	// KubernetesUserInfo holds the identity of a bearer token holder as
+	// verified by the Kubernetes API server via a TokenReview. Populated only
+	// when Kubernetes authenticated the token directly (e.g. a Kargo API
+	// token), rather than Kargo's own token issuer or OIDC provider.
+	KubernetesUserInfo *authnv1.UserInfo
 }
 
 // ContextWithInfo returns a context.Context that has been augmented with

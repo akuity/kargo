@@ -1,0 +1,4 @@
+# Patterns to ignore when building Helm packages.
+# Chart unit-test fixtures are not part of the released chart.
+tests/
+test/

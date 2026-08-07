@@ -18,8 +18,7 @@ import (
 	"github.com/akuity/kargo/pkg/cli/kubernetes"
 	"github.com/akuity/kargo/pkg/cli/option"
 	"github.com/akuity/kargo/pkg/cli/templates"
-	"github.com/akuity/kargo/pkg/client/generated/models"
-	"github.com/akuity/kargo/pkg/client/generated/rbac"
+	kargogen "github.com/akuity/kargo/pkg/x/client/generated"
 )
 
 type revokeOptions struct {
@@ -139,47 +138,51 @@ func (o *revokeOptions) run(ctx context.Context) error {
 		return fmt.Errorf("get client from config: %w", err)
 	}
 
-	req := &models.RevokeRequest{
-		Role: o.Role,
-	}
+	// Role, ResourceType, and ResourceName are all part of a single, complete
+	// revoke request rather than a partial update -- there is no "leave
+	// unchanged" semantics for the server to honor here, so it is safe to
+	// always send these pointers once we've decided to populate
+	// ResourceDetails at all.
+	req := kargogen.RevokeRequest{Role: &o.Role}
 	if o.ResourceType != "" {
-		req.ResourceDetails = &models.ResourceDetails{
-			ResourceType: o.ResourceType,
-			ResourceName: o.ResourceName,
+		req.ResourceDetails = &kargogen.ResourceDetails{
+			ResourceType: &o.ResourceType,
+			ResourceName: &o.ResourceName,
 			Verbs:        o.Verbs,
 		}
 	} else {
-		claims := make([]*models.Claim, 0, len(o.Claims))
+		claims := make([]kargogen.Claim, 0, len(o.Claims))
 		for _, claimFlagValue := range o.Claims {
 			claimFlagNameAndValue := strings.Split(claimFlagValue, "=")
-			claims = append(claims, &models.Claim{
-				Name:   claimFlagNameAndValue[0],
+			claimName := claimFlagNameAndValue[0]
+			claims = append(claims, kargogen.Claim{
+				Name:   &claimName,
 				Values: []string{claimFlagNameAndValue[1]},
 			})
 		}
-		req.UserClaims = &models.UserClaims{
+		req.UserClaims = &kargogen.UserClaims{
 			Claims: claims,
 		}
 	}
 
-	_, err = apiClient.Rbac.Revoke(
-		rbac.NewRevokeParams().WithProject(o.Project).WithBody(req),
-		nil,
-	)
+	_, revokeHTTPRes, err := apiClient.RbacAPI.Revoke(ctx, o.Project).Body(req).Execute()
+	if revokeHTTPRes != nil {
+		_ = revokeHTTPRes.Body.Close()
+	}
 	if err != nil {
-		return fmt.Errorf("revoke: %w", err)
+		return fmt.Errorf("revoke: %w", client.APIError(err))
 	}
 
 	// Get the updated role after revocation
-	res, err := apiClient.Rbac.GetProjectRole(
-		rbac.NewGetProjectRoleParams().WithProject(o.Project).WithRole(o.Role),
-		nil,
-	)
+	res, getHTTPRes, err := apiClient.RbacAPI.GetProjectRole(ctx, o.Project, o.Role).Execute()
+	if getHTTPRes != nil {
+		_ = getHTTPRes.Body.Close()
+	}
 	if err != nil {
-		return fmt.Errorf("get role: %w", err)
+		return fmt.Errorf("get role: %w", client.APIError(err))
 	}
 
-	roleJSON, err := json.Marshal(res.Payload)
+	roleJSON, err := json.Marshal(res)
 	if err != nil {
 		return fmt.Errorf("marshal role: %w", err)
 	}

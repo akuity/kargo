@@ -81,7 +81,7 @@ spec:
               divisor: "1"
               resource: {{ include "kargo.selectCpuResourceField" (dict "resources" .Values.api.resources) }}
         {{- with (concat .Values.global.env .Values.api.env) }}
-        {{- toYaml . | nindent 8 }}
+        {{- tpl (toYaml .) $ | nindent 8 }}
         {{- end }}
         {{- if and .Values.api.rollouts.integrationEnabled .Values.api.rollouts.logs.enabled .Values.api.rollouts.logs.tokenSecret.name .Values.api.rollouts.logs.tokenSecret.key }}
         - name: ANALYSIS_RUN_LOG_TOKEN
@@ -96,7 +96,7 @@ spec:
         - secretRef:
             name: {{ .Values.api.secret.name | default "kargo-api" }}
         {{- with (concat .Values.global.envFrom .Values.api.envFrom) }}
-        {{- toYaml . | nindent 8 }}
+        {{- tpl (toYaml .) $ | nindent 8 }}
         {{- end }}
         ports:
         - name: h2c
@@ -104,47 +104,32 @@ spec:
           protocol: TCP
         {{- if .Values.api.probes.enabled }}
         startupProbe:
-          {{- if .Values.api.tls.enabled }}
-          exec:
-            command:
-            - /usr/local/bin/grpc_health_probe
-            - -addr=:8080
-            - -tls
-            - -tls-no-verify
-          {{- else }}
-          grpc:
+          httpGet:
+            path: /healthz
             port: 8080
-          {{- end }}
+            {{- if .Values.api.tls.enabled }}
+            scheme: HTTPS
+            {{- end }}
           {{- with .Values.api.probes.startupProbe }}
           {{- toYaml . | nindent 10 }}
           {{- end }}
         livenessProbe:
-          {{- if .Values.api.tls.enabled }}
-          exec:
-            command:
-            - /usr/local/bin/grpc_health_probe
-            - -addr=:8080
-            - -tls
-            - -tls-no-verify
-          {{- else }}
-          grpc:
+          httpGet:
+            path: /healthz
             port: 8080
-          {{- end }}
+            {{- if .Values.api.tls.enabled }}
+            scheme: HTTPS
+            {{- end }}
           {{- with .Values.api.probes.livenessProbe }}
           {{- toYaml . | nindent 10 }}
           {{- end }}
         readinessProbe:
-          {{- if .Values.api.tls.enabled }}
-          exec:
-            command:
-            - /usr/local/bin/grpc_health_probe
-            - -addr=:8080
-            - -tls
-            - -tls-no-verify
-          {{- else }}
-          grpc:
+          httpGet:
+            path: /healthz
             port: 8080
-          {{- end }}
+            {{- if .Values.api.tls.enabled }}
+            scheme: HTTPS
+            {{- end }}
           {{- with .Values.api.probes.readinessProbe }}
           {{- toYaml . | nindent 10 }}
           {{- end }}

@@ -9,10 +9,10 @@ import (
 
 	"github.com/Azure/azure-sdk-for-go/sdk/azcore"
 	"github.com/Azure/azure-sdk-for-go/sdk/azcore/policy"
-	"github.com/patrickmn/go-cache"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 
+	"github.com/akuity/kargo/pkg/cache/coalescing"
 	"github.com/akuity/kargo/pkg/credentials"
 )
 
@@ -103,7 +103,6 @@ func TestWorkloadIdentityProvider_Supports(t *testing.T) {
 
 func TestWorkloadIdentityProvider_GetCredentials(t *testing.T) {
 	const testRepoURL = "myregistry.azurecr.io/repo"
-	const testRegistryName = "myregistry"
 	const testToken = "fake-access-token"
 
 	testCases := []struct {
@@ -111,20 +110,14 @@ func TestWorkloadIdentityProvider_GetCredentials(t *testing.T) {
 		provider   *WorkloadIdentityProvider
 		credType   credentials.Type
 		repoURL    string
-		setupCache func(cache *cache.Cache)
-		assertions func(*testing.T, *cache.Cache, *credentials.Credentials, error)
+		assertions func(*testing.T, *credentials.Credentials, error)
 	}{
 		{
 			name:     "not supported",
 			provider: &WorkloadIdentityProvider{},
 			credType: credentials.TypeGit,
 			repoURL:  "git://repo",
-			assertions: func(
-				t *testing.T,
-				_ *cache.Cache,
-				creds *credentials.Credentials,
-				err error,
-			) {
+			assertions: func(t *testing.T, creds *credentials.Credentials, err error) {
 				assert.NoError(t, err)
 				assert.Nil(t, creds)
 			},
@@ -134,38 +127,13 @@ func TestWorkloadIdentityProvider_GetCredentials(t *testing.T) {
 			provider: &WorkloadIdentityProvider{},
 			credType: credentials.TypeImage,
 			repoURL:  "not-an-acr-url",
-			assertions: func(
-				t *testing.T,
-				_ *cache.Cache,
-				creds *credentials.Credentials,
-				err error,
-			) {
+			assertions: func(t *testing.T, creds *credentials.Credentials, err error) {
 				assert.NoError(t, err)
 				assert.Nil(t, creds)
 			},
 		},
 		{
-			name:     "cache hit",
-			provider: &WorkloadIdentityProvider{},
-			credType: credentials.TypeImage,
-			repoURL:  testRepoURL,
-			setupCache: func(c *cache.Cache) {
-				c.Set(testRegistryName, testToken, cache.DefaultExpiration)
-			},
-			assertions: func(
-				t *testing.T,
-				_ *cache.Cache,
-				creds *credentials.Credentials,
-				err error,
-			) {
-				assert.NoError(t, err)
-				assert.NotNil(t, creds)
-				assert.Equal(t, acrTokenUsername, creds.Username)
-				assert.Equal(t, testToken, creds.Password)
-			},
-		},
-		{
-			name: "cache miss, successful token fetch",
+			name: "token obtained",
 			provider: &WorkloadIdentityProvider{
 				getAccessTokenFn: func(_ context.Context, _ string) (string, error) {
 					return testToken, nil
@@ -173,21 +141,11 @@ func TestWorkloadIdentityProvider_GetCredentials(t *testing.T) {
 			},
 			credType: credentials.TypeImage,
 			repoURL:  testRepoURL,
-			assertions: func(
-				t *testing.T,
-				c *cache.Cache,
-				creds *credentials.Credentials,
-				err error,
-			) {
+			assertions: func(t *testing.T, creds *credentials.Credentials, err error) {
 				assert.NoError(t, err)
 				assert.NotNil(t, creds)
 				assert.Equal(t, acrTokenUsername, creds.Username)
 				assert.Equal(t, testToken, creds.Password)
-
-				// Verify the token was cached
-				cachedToken, found := c.Get(testRegistryName)
-				assert.True(t, found)
-				assert.Equal(t, testToken, cachedToken)
 			},
 		},
 		{
@@ -199,12 +157,7 @@ func TestWorkloadIdentityProvider_GetCredentials(t *testing.T) {
 			},
 			credType: credentials.TypeImage,
 			repoURL:  testRepoURL,
-			assertions: func(
-				t *testing.T,
-				_ *cache.Cache,
-				creds *credentials.Credentials,
-				err error,
-			) {
+			assertions: func(t *testing.T, creds *credentials.Credentials, err error) {
 				assert.ErrorContains(t, err, "error getting ACR access token")
 				assert.Nil(t, creds)
 			},
@@ -218,7 +171,7 @@ func TestWorkloadIdentityProvider_GetCredentials(t *testing.T) {
 			},
 			credType: credentials.TypeImage,
 			repoURL:  testRepoURL,
-			assertions: func(t *testing.T, _ *cache.Cache, creds *credentials.Credentials, err error) {
+			assertions: func(t *testing.T, creds *credentials.Credentials, err error) {
 				assert.NoError(t, err)
 				assert.Nil(t, creds)
 			},
@@ -227,10 +180,19 @@ func TestWorkloadIdentityProvider_GetCredentials(t *testing.T) {
 	for _, testCase := range testCases {
 		t.Run(testCase.name, func(t *testing.T) {
 			testCase.provider.credential = &mockCredential{}
-			testCase.provider.tokenCache = cache.New(10*time.Hour, time.Hour)
-			if testCase.setupCache != nil {
-				testCase.setupCache(testCase.provider.tokenCache)
-			}
+			// A cache that caches nothing leaves loading as the only way a caller
+			// can obtain a token, so every case exercises the load. Whether a hit is
+			// served from the cache instead is the cache's concern, not this
+			// provider's.
+			tokenCache, err := coalescing.NewCache(
+				testCase.provider.loadAccessToken,
+				&coalescing.CacheOptions{
+					LoadTimeout:  new(tokenAcquisitionTimeout),
+					CacheNothing: true,
+				},
+			)
+			require.NoError(t, err)
+			testCase.provider.tokenCache = tokenCache
 			creds, err := testCase.provider.GetCredentials(
 				t.Context(),
 				credentials.Request{
@@ -238,7 +200,7 @@ func TestWorkloadIdentityProvider_GetCredentials(t *testing.T) {
 					RepoURL: testCase.repoURL,
 				},
 			)
-			testCase.assertions(t, testCase.provider.tokenCache, creds, err)
+			testCase.assertions(t, creds, err)
 		})
 	}
 }
@@ -301,4 +263,48 @@ func (m *mockCredential) GetToken(_ context.Context, _ policy.TokenRequestOption
 		Token:     "mock-access-token",
 		ExpiresOn: time.Now().Add(time.Hour),
 	}, nil
+}
+
+func TestWorkloadIdentityProvider_GetCredentials_perRegistry(t *testing.T) {
+	t.Parallel()
+
+	// Coalescing, cancellation, and the load deadline all belong to the cache this
+	// provider delegates to, and are covered by that package's tests. What remains
+	// this provider's own responsibility is that the key it caches under and the
+	// input it loads from describe the same registry, so that no registry is ever
+	// served another's token.
+
+	provider := &WorkloadIdentityProvider{
+		credential: &mockCredential{},
+		getAccessTokenFn: func(
+			_ context.Context,
+			registryName string,
+		) (string, error) {
+			// The token identifies the registry it was obtained for.
+			return "token-for-" + registryName, nil
+		},
+	}
+	tokenCache, err := coalescing.NewCache(
+		provider.loadAccessToken,
+		&coalescing.CacheOptions{
+			LoadTimeout: new(tokenAcquisitionTimeout),
+			DefaultTTL:  new(time.Hour),
+		},
+	)
+	require.NoError(t, err)
+	provider.tokenCache = tokenCache
+
+	for _, registry := range []string{"registry-a", "registry-b", "registry-a"} {
+		creds, err := provider.GetCredentials(
+			t.Context(),
+			credentials.Request{
+				Type:    credentials.TypeImage,
+				RepoURL: registry + ".azurecr.io/repo",
+			},
+		)
+		require.NoError(t, err)
+		require.NotNil(t, creds)
+		require.Equal(t, acrTokenUsername, creds.Username)
+		require.Equal(t, "token-for-"+registry, creds.Password)
+	}
 }

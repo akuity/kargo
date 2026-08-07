@@ -1,7 +1,8 @@
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 
-import { fixupPluginRules, includeIgnoreFile } from '@eslint/compat';
+import { fixupPluginRules } from '@eslint/compat';
+import { includeIgnoreFile } from '@eslint/config-helpers';
 import { FlatCompat } from '@eslint/eslintrc';
 import js from '@eslint/js';
 import typescriptEslint from '@typescript-eslint/eslint-plugin';

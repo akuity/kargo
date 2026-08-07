@@ -8,7 +8,6 @@ import (
 	"time"
 
 	"github.com/kelseyhightower/envconfig"
-	"k8s.io/client-go/rest"
 
 	"github.com/akuity/kargo/pkg/os"
 	"github.com/akuity/kargo/pkg/server/dex"
@@ -22,6 +21,13 @@ type StandardConfig struct {
 
 type ServerConfig struct {
 	StandardConfig
+	// BasePath is the URL path prefix the server is reachable at, normalized
+	// to begin with `/` and not end with one (e.g. `/kargo`). When non-empty,
+	// every HTTP route the server registers — REST API, dex proxy, dashboard
+	// SPA — lives under this prefix; the ingress controller
+	// in front of the server MUST preserve the prefix (i.e. must NOT strip
+	// it). Empty value means the server serves at the root.
+	BasePath                    string
 	SecretManagementEnabled     bool
 	LocalMode                   bool // LocalMode is true if the server is running as a non-containerized process
 	TLSConfig                   *TLSConfig
@@ -43,7 +49,6 @@ type ServerConfig struct {
 	// know which controller's liveness to associate with such Stages. The default
 	// controller is often unnamed, so an empty string is a valid value.
 	DefaultControllerName string
-	RestConfig            *rest.Config
 
 	// AdditionalHandlers is a map of path patterns to HTTP handlers that will
 	// be registered on the server's HTTP mux alongside its own handlers. This
@@ -57,7 +62,8 @@ type ServerConfig struct {
 	DashboardFS fs.FS
 }
 
-func ServerConfigFromEnv() ServerConfig {
+func 
+ServerConfigFromEnv() ServerConfig {
 	cfg := ServerConfig{}
 	envconfig.MustProcess("", &cfg.StandardConfig)
 	cfg.SecretManagementEnabled = types.MustParseBool(os.GetEnv("SECRET_MANAGEMENT_ENABLED", "false"))
@@ -107,7 +113,23 @@ func ServerConfigFromEnv() ServerConfig {
 	)
 	cfg.KargoNamespace = os.GetEnv("KARGO_NAMESPACE", "kargo")
 	cfg.DefaultControllerName = os.GetEnv("DEFAULT_CONTROLLER_NAME", "")
+	cfg.BasePath = NormalizeBasePath(os.GetEnv("API_BASE_PATH", ""))
 	return cfg
+}
+
+// NormalizeBasePath canonicalizes an operator-supplied basePath: empty stays
+// empty; non-empty values are forced to begin with `/` and not end with one.
+// Used by both server bootstrap and tests so the normalization is a single
+// shared definition.
+func NormalizeBasePath(p string) string {
+	p = strings.TrimSpace(p)
+	if p == "" {
+		return ""
+	}
+	if !strings.HasPrefix(p, "/") {
+		p = "/" + p
+	}
+	return strings.TrimRight(p, "/")
 }
 
 type TLSConfig struct {

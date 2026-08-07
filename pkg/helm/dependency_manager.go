@@ -19,6 +19,7 @@ import (
 	"helm.sh/helm/v3/pkg/getter"
 	"helm.sh/helm/v3/pkg/repo"
 	kerrors "k8s.io/apimachinery/pkg/util/errors"
+	"oras.land/oras-go/v2/registry"
 
 	"github.com/akuity/kargo/pkg/credentials"
 	"github.com/akuity/kargo/pkg/io/fs"
@@ -120,7 +121,7 @@ func (em *EphemeralDependencyManager) Update(
 		return nil, fmt.Errorf("setup repositories: %w", err)
 	}
 
-	return em.update(absChartPath)
+	return em.update(ctx, absChartPath, dependencies)
 }
 
 // Build builds the chart dependencies for the given chart path. It reads the
@@ -153,7 +154,7 @@ func (em *EphemeralDependencyManager) Build(ctx context.Context, chartPath strin
 		return fmt.Errorf("setup repositories: %w", err)
 	}
 
-	return em.build(absChartPath)
+	return em.build(ctx, absChartPath, dependencies)
 }
 
 // update performs the actual update of the chart dependencies. It reads the
@@ -170,7 +171,11 @@ func (em *EphemeralDependencyManager) Build(ctx context.Context, chartPath strin
 // will be an empty string. If a dependency was updated, the value will be a
 // string indicating the old and new versions in the format
 // "oldVersion -> newVersion".
-func (em *EphemeralDependencyManager) update(chartPath string) (_ map[string]string, err error) {
+func (em *EphemeralDependencyManager) update(
+	ctx context.Context,
+	chartPath string,
+	dependencies []ChartDependency,
+) (_ map[string]string, err error) {
 	// Download the repository indexes. This is necessary to ensure that the
 	// cache is properly populated, as otherwise the download manager will
 	// attempt to download the repository indexes to the default cache path
@@ -199,7 +204,10 @@ func (em *EphemeralDependencyManager) update(chartPath string) (_ map[string]str
 		}
 	}()
 
-	regClient, err := NewRegistryClient(em.authorizer.Client)
+	regClient, err := NewRegistryClient(
+		em.authorizer.Client,
+		em.usePlainHTTP(ctx, dependencies),
+	)
 	if err != nil {
 		return nil, fmt.Errorf("create registry client: %w", err)
 	}
@@ -258,7 +266,11 @@ func (em *EphemeralDependencyManager) update(chartPath string) (_ map[string]str
 // dependencies cannot be built for any reason, such as if the repository
 // indexes cannot be fetched or if the downloader manager fails to build the
 // dependencies.
-func (em *EphemeralDependencyManager) build(chartPath string) error {
+func (em *EphemeralDependencyManager) build(
+	ctx context.Context,
+	chartPath string,
+	dependencies []ChartDependency,
+) error {
 	// Download the repository indexes. This is necessary to ensure that the
 	// cache is properly populated, as otherwise the download manager will
 	// attempt to download the repository indexes to the default cache path
@@ -267,7 +279,10 @@ func (em *EphemeralDependencyManager) build(chartPath string) error {
 		return fmt.Errorf("fetch repository indexes: %w", err)
 	}
 
-	regClient, err := NewRegistryClient(em.authorizer.Client)
+	regClient, err := NewRegistryClient(
+		em.authorizer.Client,
+		em.usePlainHTTP(ctx, dependencies),
+	)
 	if err != nil {
 		return fmt.Errorf("create registry client: %w", err)
 	}
@@ -381,6 +396,63 @@ func (em *EphemeralDependencyManager) processDependencyUpdates(
 	return nil
 }
 
+// usePlainHTTP reports whether the Helm registry client should communicate with
+// OCI dependencies over plain HTTP. Helm's registry client applies a single,
+// client-wide scheme, so this returns true only when there is at least one OCI
+// dependency and every distinct OCI host is detected as serving plain HTTP. A
+// chart mixing plain-HTTP and HTTPS OCI hosts cannot be served by a single
+// client; in that case this returns false and the plain-HTTP host(s) will fail.
+func (em *EphemeralDependencyManager) usePlainHTTP(
+	ctx context.Context,
+	dependencies []ChartDependency,
+) bool {
+	var sawOCI bool
+	probed := map[string]bool{} // host -> plain HTTP; avoids re-probing a host
+	for _, dep := range dependencies {
+		if !strings.HasPrefix(dep.Repository, "oci://") {
+			continue
+		}
+		host, err := ociHost(dep.Repository, dep.Name)
+		if err != nil {
+			// Can't determine the host; fall back to HTTPS and let the actual
+			// operation surface the error.
+			return false
+		}
+		sawOCI = true
+
+		plainHTTP, ok := probed[host]
+		if !ok {
+			plainHTTP = IsPlainHTTP(ctx, host, em.authorizer.insecure)
+			probed[host] = plainHTTP
+		}
+		if !plainHTTP {
+			return false
+		}
+	}
+	return sawOCI
+}
+
+// ociHost returns the registry host that Helm (via oras) contacts for an OCI
+// chart dependency. It mirrors Helm's own resolution exactly: Helm forms the
+// chart reference as "<repository>/<name>:<version>" (see
+// downloader.Manager.findChartURL) and hands it to oras, so the authoritative
+// host is whatever oras parses out of that reference. Reference.Host() applies
+// oras's docker.io -> registry-1.docker.io rewrite, matching the endpoint
+// actually dialed.
+func ociHost(repository, name string) (string, error) {
+	ref, err := registry.ParseReference(
+		strings.TrimPrefix(repository, "oci://") + "/" + name,
+	)
+	if err != nil {
+		return "", fmt.Errorf(
+			"parse OCI reference for repository %q: %w",
+			repository,
+			err,
+		)
+	}
+	return ref.Host(), nil
+}
+
 // setupRepositories sets up the Helm repositories for the given dependencies
 // by writing them to the Helm repository configuration file or by logging in
 // to the OCI registry if the dependency is an OCI chart.
@@ -418,15 +490,20 @@ func (em *EphemeralDependencyManager) setupRepositories(ctx context.Context, dep
 
 			repoFile.Update(entry)
 		case strings.HasPrefix(dep.Repository, "oci://"):
-			repository := urls.NormalizeChart(dep.Repository)
-			host := hostForRepositoryURL(repository)
+			// The host (used to dial the registry) is resolved the same way
+			// Helm does; the credential lookup key below uses urls.NormalizeChart
+			// for identity/comparison.
+			host, err := ociHost(dep.Repository, dep.Name)
+			if err != nil {
+				return fmt.Errorf("determine host for repository %q: %w", dep.Repository, err)
+			}
 
 			if _, exists := hosts[host]; exists {
 				// We already logged in to this host, skip it
 				continue
 			}
 
-			credURL := "oci://" + path.Join(repository, dep.Name)
+			credURL := "oci://" + path.Join(urls.NormalizeChart(dep.Repository), dep.Name)
 			creds, err := em.credsDB.Get(ctx, em.project, credentials.TypeHelm, credURL)
 			if err != nil {
 				return fmt.Errorf("obtain credentials for repository %q: %w", dep.Repository, err)

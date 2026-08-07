@@ -16,7 +16,6 @@ import (
 	"github.com/akuity/kargo/pkg/cli/kubernetes"
 	"github.com/akuity/kargo/pkg/cli/option"
 	"github.com/akuity/kargo/pkg/cli/templates"
-	"github.com/akuity/kargo/pkg/client/generated/system"
 )
 
 type deleteClusterConfigOptions struct {
@@ -82,11 +81,12 @@ func (o *deleteClusterConfigOptions) run(ctx context.Context) error {
 		return fmt.Errorf("create printer: %w", err)
 	}
 
-	if _, err = apiClient.System.DeleteClusterConfig(
-		system.NewDeleteClusterConfigParams(),
-		nil,
-	); err != nil {
-		return fmt.Errorf("delete cluster configuration: %w", err)
+	httpRes, err := apiClient.SystemAPI.DeleteClusterConfig(ctx).Execute()
+	if httpRes != nil {
+		_ = httpRes.Body.Close()
+	}
+	if err != nil {
+		return fmt.Errorf("delete cluster configuration: %w", client.APIError(err))
 	}
 
 	if err = printer.PrintObj(

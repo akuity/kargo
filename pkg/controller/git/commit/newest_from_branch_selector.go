@@ -15,7 +15,13 @@ import (
 	"github.com/akuity/kargo/pkg/logging"
 )
 
-const branchPrefix = "refs/heads/"
+const (
+	branchPrefix = "refs/heads/"
+	// headRef is the symbolic ref that points at a repository's default branch.
+	// Querying it with ls-remote yields the default branch tip without needing
+	// to know the branch's name.
+	headRef = "HEAD"
+)
 
 func init() {
 	defaultSelectorRegistry.MustRegister(
@@ -36,12 +42,14 @@ type newestFromBranchSelector struct {
 	branch    string
 	sinceDate *time.Time
 
-	selectCommitsFn func(git.Repo) ([]git.CommitMetadata, error)
+	selectCommitsFn func(context.Context, git.Repo) ([]git.CommitMetadata, error)
 	listCommitsFn   func(
-		repo git.Repo,
-		opts *git.ListCommitsOptions,
+		context.Context,
+		git.Repo,
+		*git.ListCommitsOptions,
 	) ([]git.CommitMetadata, error)
 	getDiffPathsForCommitIDFn func(
+		ctx context.Context,
 		repo git.Repo,
 		commitID string,
 	) ([]string, error)
@@ -87,6 +95,41 @@ func (n *newestFromBranchSelector) MatchesRef(ref string) bool {
 	return n.branch == branch
 }
 
+// ListRefs implements Selector. It records the unfiltered tip of the subscribed
+// branch, which is sufficient to detect any change relevant to selection: if the
+// tip has not moved, no new commit (path-filtered or not) can have appeared.
+//
+// When the subscription names no branch, it implicitly targets the repository's
+// default branch. Rather than guess that branch's name, this resolves the
+// remote's HEAD, whose commit is the default branch tip whatever it is called --
+// the same branch Select clones via an empty CloneOptions.Branch.
+func (n *newestFromBranchSelector) ListRefs(
+	ctx context.Context,
+) (*kargoapi.GitDiscoveryRefs, error) {
+	ref := headRef
+	if n.branch != "" {
+		ref = branchPrefix + n.branch
+	}
+	refs, err := n.lsRemoteFn(ctx, n.repoURL, n.clientOptions(), ref)
+	if err != nil {
+		return nil, fmt.Errorf(
+			"error listing branch refs in git repo %q: %w", n.repoURL, err,
+		)
+	}
+	for _, r := range refs {
+		if r.Name == ref {
+			return &kargoapi.GitDiscoveryRefs{BranchHead: r.ID}, nil
+		}
+	}
+	// The ref was not observed -- an explicitly configured branch is absent, or
+	// the repository has no commits yet. Returning a nil (rather than empty)
+	// observation ensures gitRefsEqual never matches, so discovery falls through
+	// to a clone that surfaces a missing branch as it does today. An empty
+	// observation would compare equal to a subsequent empty one and wrongly
+	// short-circuit.
+	return nil, nil
+}
+
 // Select implements the Selector interface.
 func (n *newestFromBranchSelector) Select(ctx context.Context) (
 	[]kargoapi.DiscoveredCommit,
@@ -102,6 +145,7 @@ func (n *newestFromBranchSelector) Select(ctx context.Context) (
 
 	logger.Debug("cloning repository")
 	repo, err := n.gitCloneFn(
+		ctx,
 		n.repoURL,
 		&git.ClientOptions{
 			Credentials:           n.creds,
@@ -117,10 +161,10 @@ func (n *newestFromBranchSelector) Select(ctx context.Context) (
 		return nil, fmt.Errorf("error cloning git repo %q: %w", n.repoURL, err)
 	}
 	defer func() {
-		_ = repo.Close()
+		_ = repo.Close(ctx)
 	}()
 
-	commits, err := n.selectCommitsFn(repo)
+	commits, err := n.selectCommitsFn(ctx, repo)
 	if err != nil {
 		return nil,
 			fmt.Errorf("error selecting relevant commits from branch: %w", err)
@@ -130,6 +174,7 @@ func (n *newestFromBranchSelector) Select(ctx context.Context) (
 }
 
 func (n *newestFromBranchSelector) selectCommits(
+	ctx context.Context,
 	repo git.Repo,
 ) ([]git.CommitMetadata, error) {
 	opts := &git.ListCommitsOptions{Since: n.sinceDate}
@@ -137,7 +182,7 @@ func (n *newestFromBranchSelector) selectCommits(
 	for skip, batch := uint(0), uint(n.discoveryLimit); ; skip, batch = skip+batch, min(batch*2, 1000) { // nolint: gosec
 		opts.Limit = batch // nolint: gosec
 		opts.Skip = skip   // nolint: gosec
-		commits, err := n.listCommitsFn(repo, opts)
+		commits, err := n.listCommitsFn(ctx, repo, opts)
 		if err != nil {
 			return nil,
 				fmt.Errorf("error listing commits from git repo %q: %w", n.repoURL, err)
@@ -164,7 +209,7 @@ func (n *newestFromBranchSelector) selectCommits(
 
 			// If include or exclude path selectors are specified, filter the commits.
 			if n.includePaths != nil || n.excludePaths != nil {
-				diffPaths, err := n.getDiffPathsForCommitIDFn(repo, commit.ID)
+				diffPaths, err := n.getDiffPathsForCommitIDFn(ctx, repo, commit.ID)
 				if err != nil {
 					return nil, fmt.Errorf(
 						"error getting diff paths for commit %q in git repo %q: %w",
@@ -191,17 +236,19 @@ func (n *newestFromBranchSelector) selectCommits(
 }
 
 func (n *newestFromBranchSelector) listCommits(
+	ctx context.Context,
 	repo git.Repo,
 	opts *git.ListCommitsOptions,
 ) ([]git.CommitMetadata, error) {
-	return repo.ListCommits(opts)
+	return repo.ListCommits(ctx, opts)
 }
 
 func (n *newestFromBranchSelector) getDiffPathsForCommitID(
+	ctx context.Context,
 	repo git.Repo,
 	commitID string,
 ) ([]string, error) {
-	return repo.GetDiffPathsForCommitID(commitID)
+	return repo.GetDiffPathsForCommitID(ctx, commitID)
 }
 
 // evaluateCommitExpression evaluates the given commit expression against

@@ -4,7 +4,6 @@ import (
 	"context"
 	"fmt"
 	"slices"
-	"strings"
 
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 	"k8s.io/apimachinery/pkg/fields"
@@ -17,6 +16,7 @@ import (
 
 	rollouts "github.com/akuity/kargo/api/stubs/rollouts/v1alpha1"
 	kargoapi "github.com/akuity/kargo/api/v1alpha1"
+	"github.com/akuity/kargo/pkg/api"
 	argocd "github.com/akuity/kargo/pkg/controller/argocd/api/v1alpha1"
 	"github.com/akuity/kargo/pkg/indexer"
 	"github.com/akuity/kargo/pkg/logging"
@@ -381,53 +381,54 @@ func (u *stageEnqueuerForArgoCDChanges[T]) Update(
 	if !ok {
 		return
 	}
-	parts := strings.SplitN(stageRef, ":", 2)
-	if len(parts) != 2 {
-		return
-	}
-	projectName, stageName := parts[0], parts[1]
 
 	logger := logging.LoggerFromContext(ctx)
-	stage := &kargoapi.Stage{}
-	if err := u.kargoClient.Get(
-		ctx,
-		types.NamespacedName{
-			Namespace: projectName,
-			Name:      stageName,
-		},
-		stage,
-	); err != nil {
-		if client.IgnoreNotFound(err) != nil {
-			logger.Error(
-				err,
-				"error getting Stage for Application",
-				"namespace", projectName,
-				"stage", stageName,
-				"app", newApp.Name,
-			)
+	authorizedStages, err := api.AuthorizedStages(stageRef)
+	if err != nil {
+		logger.Error(
+			err,
+			"error parsing authorized Stages for Application",
+			"app", newApp.Name,
+			"namespace", newApp.Namespace,
+		)
+		return
+	}
+
+	for _, ref := range authorizedStages {
+		stage := &kargoapi.Stage{}
+		if err := u.kargoClient.Get(ctx, ref, stage); err != nil {
+			if client.IgnoreNotFound(err) != nil {
+				logger.Error(
+					err,
+					"error getting Stage for Application",
+					"namespace", ref.Namespace,
+					"stage", ref.Name,
+					"app", newApp.Name,
+				)
+			}
+			continue
 		}
-		return
-	}
 
-	// If the Stage is a control flow Stage, there is no need to reconcile it.
-	if stage.IsControlFlow() {
-		return
-	}
+		// If the Stage is a control flow Stage, there is no need to reconcile it.
+		if stage.IsControlFlow() {
+			continue
+		}
 
-	wq.Add(
-		reconcile.Request{
-			NamespacedName: types.NamespacedName{
-				Namespace: stage.Namespace,
-				Name:      stage.Name,
+		wq.Add(
+			reconcile.Request{
+				NamespacedName: types.NamespacedName{
+					Namespace: stage.Namespace,
+					Name:      stage.Name,
+				},
 			},
-		},
-	)
-	logger.Debug(
-		"enqueued Stage for reconciliation",
-		"namespace", stage.Namespace,
-		"stage", stage.Name,
-		"app", newApp.Name,
-	)
+		)
+		logger.Debug(
+			"enqueued Stage for reconciliation",
+			"namespace", stage.Namespace,
+			"stage", stage.Name,
+			"app", newApp.Name,
+		)
+	}
 }
 
 func appHealthOrSyncStatusChanged[T any](ctx context.Context, e event.TypedUpdateEvent[T]) bool {

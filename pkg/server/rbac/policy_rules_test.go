@@ -1,6 +1,7 @@
 package rbac
 
 import (
+	"errors"
 	"testing"
 
 	"github.com/stretchr/testify/require"
@@ -163,11 +164,32 @@ func TestNormalizePolicyRules(t *testing.T) {
 		)
 	})
 
-	t.Run("correct groups are determined automatically", func(t *testing.T) {
+	t.Run("groups are preserved", func(t *testing.T) {
 		rules, err := NormalizePolicyRules(
 			[]rbacv1.PolicyRule{{
-				APIGroups: []string{"", "foo", "bar"},
+				APIGroups: []string{kargoapi.GroupVersion.Group},
 				Resources: []string{"stages"},
+				Verbs:     []string{"get"},
+			}},
+			nil,
+		)
+		require.NoError(t, err)
+		require.Equal(
+			t,
+			[]rbacv1.PolicyRule{{
+				APIGroups: []string{kargoapi.GroupVersion.Group},
+				Resources: []string{"stages"},
+				Verbs:     []string{"get"},
+			}},
+			rules,
+		)
+	})
+
+	t.Run("multiple groups expand", func(t *testing.T) {
+		rules, err := NormalizePolicyRules(
+			[]rbacv1.PolicyRule{{
+				APIGroups: []string{"foo", "bar"},
+				Resources: []string{"widgets"},
 				Verbs:     []string{"get"},
 			}},
 			nil,
@@ -177,8 +199,13 @@ func TestNormalizePolicyRules(t *testing.T) {
 			t,
 			[]rbacv1.PolicyRule{
 				{
-					APIGroups: []string{kargoapi.GroupVersion.Group},
-					Resources: []string{"stages"},
+					APIGroups: []string{"bar"},
+					Resources: []string{"widgets"},
+					Verbs:     []string{"get"},
+				},
+				{
+					APIGroups: []string{"foo"},
+					Resources: []string{"widgets"},
 					Verbs:     []string{"get"},
 				},
 			},
@@ -189,15 +216,20 @@ func TestNormalizePolicyRules(t *testing.T) {
 	t.Run("kitchen sink", func(t *testing.T) {
 		rules, err := NormalizePolicyRules(
 			[]rbacv1.PolicyRule{
-				{ // Never mind that this doesn't make sense. It should all get fixed
+				{ // group "" is preserved as core (not inferred); splits per resource
 					APIGroups: []string{""},
 					Resources: []string{"serviceaccounts", "stages"},
 					Verbs:     []string{"*"},
 				},
-				{ // These should get de-duped
+				{ // merges with the get-only kargo stages rule below
 					APIGroups: []string{kargoapi.GroupVersion.Group},
 					Resources: []string{"stages"},
 					Verbs:     []string{"*"},
+				},
+				{ // merged with the stages rule above (same group + resource)
+					APIGroups: []string{kargoapi.GroupVersion.Group},
+					Resources: []string{"stages"},
+					Verbs:     []string{"get"},
 				},
 				{
 					APIGroups:     []string{kargoapi.GroupVersion.Group},
@@ -216,6 +248,16 @@ func TestNormalizePolicyRules(t *testing.T) {
 					APIGroups: []string{""},
 					Resources: []string{"serviceaccounts"},
 					Verbs:     allVerbs,
+				},
+				{
+					// The group "" stages rule is preserved as core -- it is NOT
+					// inferred to kargo.akuity.io and so does NOT merge with the
+					// kargo.akuity.io stages rule below. (Group inference for
+					// group-less input happens at the Create/Update layer via
+					// resolveRuleGroups, not in NormalizePolicyRules.)
+					APIGroups: []string{""},
+					Resources: []string{"stages"},
+					Verbs:     allStagesVerbs,
 				},
 				{
 					APIGroups: []string{kargoapi.GroupVersion.Group},
@@ -238,5 +280,80 @@ func TestNormalizePolicyRules(t *testing.T) {
 			rules,
 		)
 	})
+}
 
+func TestResolveRuleGroups(t *testing.T) {
+	resolve := func(resource string) (string, error) {
+		switch resource {
+		case "stages":
+			return kargoapi.GroupVersion.Group, nil
+		case "secrets":
+			return "", nil
+		default:
+			return "", errors.New("unrecognized resource type")
+		}
+	}
+
+	t.Run("nil resolver leaves rules unchanged", func(t *testing.T) {
+		in := []rbacv1.PolicyRule{{Resources: []string{"stages"}, Verbs: []string{"get"}}}
+		out, err := resolveRuleGroups(in, nil)
+		require.NoError(t, err)
+		require.Equal(t, in, out)
+	})
+
+	t.Run("explicit group is preserved", func(t *testing.T) {
+		in := []rbacv1.PolicyRule{{
+			APIGroups: []string{"already.set"},
+			Resources: []string{"stages"},
+			Verbs:     []string{"get"},
+		}}
+		out, err := resolveRuleGroups(in, resolve)
+		require.NoError(t, err)
+		require.Equal(t, in, out)
+	})
+
+	t.Run("empty group is resolved from the resource", func(t *testing.T) {
+		out, err := resolveRuleGroups([]rbacv1.PolicyRule{{
+			Resources: []string{"stages"},
+			Verbs:     []string{"get"},
+		}}, resolve)
+		require.NoError(t, err)
+		require.Equal(t, []rbacv1.PolicyRule{{
+			APIGroups: []string{kargoapi.GroupVersion.Group},
+			Resources: []string{"stages"},
+			Verbs:     []string{"get"},
+		}}, out)
+	})
+
+	t.Run("group-less multi-resource rule splits per resource", func(t *testing.T) {
+		out, err := resolveRuleGroups([]rbacv1.PolicyRule{{
+			Resources: []string{"stages", "secrets"},
+			Verbs:     []string{"get"},
+		}}, resolve)
+		require.NoError(t, err)
+		require.Equal(
+			t,
+			[]rbacv1.PolicyRule{
+				{
+					APIGroups: []string{kargoapi.GroupVersion.Group},
+					Resources: []string{"stages"},
+					Verbs:     []string{"get"},
+				},
+				{
+					APIGroups: []string{""},
+					Resources: []string{"secrets"},
+					Verbs:     []string{"get"},
+				},
+			},
+			out,
+		)
+	})
+
+	t.Run("resolver error is propagated", func(t *testing.T) {
+		_, err := resolveRuleGroups([]rbacv1.PolicyRule{{
+			Resources: []string{"unknown"},
+			Verbs:     []string{"get"},
+		}}, resolve)
+		require.Error(t, err)
+	})
 }

@@ -74,32 +74,14 @@ updates:
         - "major"
 
   - package-ecosystem: "gomod"
-    directory: "/hack/tools"
+    directories:
+    - "/pkg/x/client/fidelity"
+    - "/pkg/x/client/generated"
     schedule:
       interval: "weekly"
       day: "sunday"
     commit-message:
-      prefix: "chore(deps/tools):"
-    allow:
-      - dependency-type: "direct"
-    groups:
-      go-patch:
-        update-types:
-          - "patch"
-      go-minor:
-        update-types:
-          - "minor"
-      go-major:
-        update-types:
-          - "major"
-
-  - package-ecosystem: "gomod"
-    directory: "/pkg"
-    schedule:
-      interval: "weekly"
-      day: "sunday"
-    commit-message:
-      prefix: "chore(deps/pkg):"
+      prefix: "chore(deps/client):"
     groups:
       go-patch:
         update-types:

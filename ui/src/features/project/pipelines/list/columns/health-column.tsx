@@ -2,7 +2,7 @@ import { Flex } from 'antd';
 import { ColumnType } from 'antd/es/table';
 
 import { HealthStatusIcon } from '@ui/features/common/health-status/health-status-icon';
-import { Stage } from '@ui/gen/api/v1alpha1/generated_pb';
+import { Stage } from '@ui/gen/api/v2/models';
 
 export const healthColumn = (): ColumnType<Stage> => ({
   title: 'Health',

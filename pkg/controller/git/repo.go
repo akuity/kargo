@@ -1,6 +1,7 @@
 package git
 
 import (
+	"context"
 	"fmt"
 	"os"
 
@@ -12,7 +13,7 @@ import (
 type Repo interface {
 	// Close cleans up file system resources used by this repository. This should
 	// always be called before a repository goes out of scope.
-	Close() error
+	Close(ctx context.Context) error
 	// Dir returns an absolute path to the repository.
 	Dir() string
 	// HomeDir returns an absolute path to the home directory of the system user
@@ -62,6 +63,7 @@ type CloneOptions struct {
 // perform any setup that is required for successfully authenticating to the
 // remote repository.
 func Clone(
+	ctx context.Context,
 	repoURL string,
 	clientOpts *ClientOptions,
 	cloneOpts *CloneOptions,
@@ -83,25 +85,25 @@ func Clone(
 			baseRepo: baseRepo,
 		},
 	}
-	if err := r.setupDirs(cloneOpts.BaseDir); err != nil {
+	if err := r.setupDirs(ctx, cloneOpts.BaseDir); err != nil {
 		return nil, err
 	}
-	if err := r.setupClient(clientOpts); err != nil {
+	if err := r.setupClient(ctx, clientOpts); err != nil {
 		return nil, err
 	}
-	if err := r.clone(cloneOpts); err != nil {
+	if err := r.clone(ctx, cloneOpts); err != nil {
 		return nil, err
 	}
-	if err := r.saveDirs(); err != nil {
+	if err := r.saveDirs(ctx); err != nil {
 		return nil, err
 	}
-	if err := r.saveOriginalURL(); err != nil {
+	if err := r.saveOriginalURL(ctx); err != nil {
 		return nil, err
 	}
 	return r, nil
 }
 
-func (r *repo) clone(opts *CloneOptions) error {
+func (r *repo) clone(ctx context.Context, opts *CloneOptions) error {
 	if opts == nil {
 		opts = &CloneOptions{}
 	}
@@ -119,7 +121,7 @@ func (r *repo) clone(opts *CloneOptions) error {
 		args = append(args, "--filter", "blob:none")
 	}
 	args = append(args, r.accessURL, r.dir)
-	cmd := r.buildGitCommand(args...)
+	cmd := r.buildGitCommand(ctx, args...)
 	cmd.Dir = r.homeDir // Override the cmd.Dir that's set by r.buildGitCommand()
 	if _, err := libExec.Exec(cmd); err != nil {
 		return fmt.Errorf("error cloning repo %q into %q: %w", r.originalURL, r.dir, err)
@@ -131,7 +133,11 @@ type LoadRepoOptions struct {
 	Credentials *RepoCredentials
 }
 
-func LoadRepo(path string, opts *LoadRepoOptions) (Repo, error) {
+func LoadRepo(
+	ctx context.Context,
+	path string,
+	opts *LoadRepoOptions,
+) (Repo, error) {
 	if opts == nil {
 		opts = &LoadRepoOptions{}
 	}
@@ -145,10 +151,10 @@ func LoadRepo(path string, opts *LoadRepoOptions) (Repo, error) {
 			baseRepo: baseRepo,
 		},
 	}
-	if err := r.loadHomeDir(); err != nil {
+	if err := r.loadHomeDir(ctx); err != nil {
 		return nil, fmt.Errorf("error reading repo home dir from config: %w", err)
 	}
-	if err := r.loadURLs(); err != nil {
+	if err := r.loadURLs(ctx); err != nil {
 		return nil,
 			fmt.Errorf(`error reading URL of remote "origin" from config: %w`, err)
 	}
@@ -158,6 +164,6 @@ func LoadRepo(path string, opts *LoadRepoOptions) (Repo, error) {
 	return r, nil
 }
 
-func (r *repo) Close() error {
+func (r *repo) Close(context.Context) error {
 	return os.RemoveAll(r.homeDir)
 }

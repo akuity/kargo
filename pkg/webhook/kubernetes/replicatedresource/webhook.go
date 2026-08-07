@@ -3,6 +3,7 @@ package replicatedresource
 import (
 	"context"
 
+	admissionv1 "k8s.io/api/admission/v1"
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/webhook/admission"
 
@@ -37,6 +38,15 @@ func (w *webhook) Handle(
 ) admission.Response {
 	if req.UserInfo.Username == w.cfg.ManagementControllerUsername {
 		return admission.Allowed("request from Kargo management controller")
+	}
+	// Namespace and GC controller are allowed to delete replicated resources
+	if req.Operation == admissionv1.Delete &&
+		libWebhook.IsRequestFromKubernetesGarbageCollector(req) {
+		return admission.Allowed("request from Kubernetes system controller")
+	}
+	// Cluster administrators are allowed to perform any operation
+	if libWebhook.IsRequestFromClusterAdmin(req) {
+		return admission.Allowed("request from cluster administrator")
 	}
 	return admission.Denied(
 		"replicated resources are managed by Kargo" +

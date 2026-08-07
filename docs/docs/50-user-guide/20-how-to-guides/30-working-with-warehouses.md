@@ -51,6 +51,56 @@ spec:
 The remainder of this section focuses on the configuration of the individual
 subscription types.
 
+### Naming Subscriptions
+
+A subscription may be given a name:
+
+```yaml
+spec:
+  subscriptions:
+  - name: frontend
+    image:
+      repoURL: public.ecr.aws/nginx/nginx
+      constraint: ^1.26.0
+  - name: backend
+    image:
+      repoURL: public.ecr.aws/myorg/backend
+```
+
+The `name` field is a sibling of the field identifying the subscription's type
+-- `image` in the example above -- and not a field within it.
+
+A name must be unique among all of a `Warehouse`'s subscriptions and must be a
+valid [RFC 1123](https://datatracker.ietf.org/doc/html/rfc1123) label: no more
+than 63 lowercase alphanumeric characters or `-`, beginning and ending with an
+alphanumeric character.
+
+:::info
+
+Naming a subscription is optional, but recommended for new repository
+subscriptions. At present, apart from the name being plumbed through to
+discovery results and artifact references in `Freight` resources, nothing in
+Kargo uses subscription names.
+
+They are expected to take on greater significance in the future, particularly
+for purposes of disambiguation when `Warehouse`s are eventually permitted
+multiple subscriptions to the same repository.
+
+UI improvements that make use of subscription names, which are more
+human-friendly than lengthy repository URLs, are also planned.
+
+:::
+
+:::note
+
+Because subscription names influence computation of artifact and `Freight`
+fingerprints, adding one to an existing, unnamed subscription in a `Warehouse`
+that has already produced `Freight` may result in the one-time production of new
+`Freight` resembling the existing, most recent `Freight` but with a _new_ unique
+name.
+
+:::
+
 ### Container Image Subscriptions
 
 Container image repository subscriptions can be defined using the following

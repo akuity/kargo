@@ -2,7 +2,7 @@ import { Tooltip } from 'antd';
 import { useContext } from 'react';
 
 import { ColorContext } from '@ui/context/colors';
-import { Stage } from '@ui/gen/api/v1alpha1/generated_pb';
+import { Stage } from '@ui/gen/api/v2/models';
 
 const StageIndicator = ({
   stage,

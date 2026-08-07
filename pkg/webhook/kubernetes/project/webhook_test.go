@@ -27,6 +27,7 @@ func Test_webhook_ValidateCreate(t *testing.T) {
 	require.NoError(t, kargoapi.AddToScheme(scheme))
 
 	testProjectName := "test-project"
+	deletionTimestamp := metav1.Now()
 	testNs := &corev1.Namespace{
 		ObjectMeta: metav1.ObjectMeta{
 			Name: testProjectName,
@@ -38,6 +39,16 @@ func Test_webhook_ValidateCreate(t *testing.T) {
 	testNsNoLabel := &corev1.Namespace{
 		ObjectMeta: metav1.ObjectMeta{
 			Name: testProjectName,
+		},
+	}
+	testNsTerminating := &corev1.Namespace{
+		ObjectMeta: metav1.ObjectMeta{
+			Name: testProjectName,
+			Labels: map[string]string{
+				kargoapi.LabelKeyProject: kargoapi.LabelValueTrue,
+			},
+			DeletionTimestamp: &deletionTimestamp,
+			Finalizers:        []string{"kubernetes"},
 		},
 	}
 
@@ -90,6 +101,25 @@ func Test_webhook_ValidateCreate(t *testing.T) {
 
 				assert.Equal(t, metav1.StatusReasonConflict, statusErr.ErrStatus.Reason)
 				assert.Contains(t, statusErr.ErrStatus.Message, "not labeled as a Project namespace")
+			},
+		},
+		{
+			name: "namespace is terminating",
+			project: &kargoapi.Project{
+				ObjectMeta: metav1.ObjectMeta{
+					Name: testProjectName,
+				},
+			},
+			objects: []client.Object{testNsTerminating},
+			assertions: func(t *testing.T, warnings admission.Warnings, err error) {
+				assert.Empty(t, warnings)
+				require.Error(t, err)
+
+				var statusErr *apierrors.StatusError
+				require.True(t, errors.As(err, &statusErr))
+
+				assert.Equal(t, metav1.StatusReasonConflict, statusErr.ErrStatus.Reason)
+				assert.Contains(t, statusErr.ErrStatus.Message, "being terminated")
 			},
 		},
 		{
@@ -165,6 +195,7 @@ func Test_webhook_ensureNamespace(t *testing.T) {
 	require.NoError(t, kargoapi.AddToScheme(scheme))
 
 	testProjectName := "test-project"
+	deletionTimestamp := metav1.Now()
 	testNs := &corev1.Namespace{
 		ObjectMeta: metav1.ObjectMeta{
 			Name: testProjectName,
@@ -176,6 +207,16 @@ func Test_webhook_ensureNamespace(t *testing.T) {
 	testNsNoLabel := &corev1.Namespace{
 		ObjectMeta: metav1.ObjectMeta{
 			Name: testProjectName,
+		},
+	}
+	testNsTerminating := &corev1.Namespace{
+		ObjectMeta: metav1.ObjectMeta{
+			Name: testProjectName,
+			Labels: map[string]string{
+				kargoapi.LabelKeyProject: kargoapi.LabelValueTrue,
+			},
+			DeletionTimestamp: &deletionTimestamp,
+			Finalizers:        []string{"kubernetes"},
 		},
 	}
 
@@ -223,6 +264,22 @@ func Test_webhook_ensureNamespace(t *testing.T) {
 				require.True(t, errors.As(err, &statusErr))
 				assert.Equal(t, metav1.StatusReasonConflict, statusErr.ErrStatus.Reason)
 				assert.Contains(t, statusErr.ErrStatus.Message, "not labeled as a Project namespace")
+			},
+		},
+		{
+			name: "namespace is terminating",
+			project: &kargoapi.Project{
+				ObjectMeta: metav1.ObjectMeta{
+					Name: testProjectName,
+				},
+			},
+			objects: []client.Object{testNsTerminating},
+			assertions: func(t *testing.T, err error) {
+				require.Error(t, err)
+				var statusErr *apierrors.StatusError
+				require.True(t, errors.As(err, &statusErr))
+				assert.Equal(t, metav1.StatusReasonConflict, statusErr.ErrStatus.Reason)
+				assert.Contains(t, statusErr.ErrStatus.Message, "being terminated")
 			},
 		},
 	}

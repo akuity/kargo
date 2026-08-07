@@ -124,27 +124,41 @@ Valid values for `expectedConclusion`:
 This example waits for a previously dispatched workflow to complete successfully using the new configuration format.
 
 ```yaml
-steps:
-- uses: gha-wait-for-workflow
-  config:
-    repoURL: https://github.com/myorg/my-app
-    runID: "${{ outputs['dispatch-deployment'].runID }}"
-    expectedConclusion: success
-    insecureSkipTLSVerify: false
+apiVersion: kargo.akuity.io/v1alpha1
+kind: Stage
+# ...
+spec:
+  # ...
+  promotionTemplate:
+    spec:
+      steps:
+      - uses: gha-wait-for-workflow
+        config:
+          repoURL: https://github.com/myorg/my-app
+          runID: "${{ outputs['dispatch-deployment'].runID }}" # Or task.outputs in a (Cluster)PromotionTask
+          expectedConclusion: success
+          insecureSkipTLSVerify: false
 ```
 
 ### v1.8 (Deprecated)
 
 ```yaml
-steps:
-- uses: gha-wait-for-workflow
-  config:
-    credentials:
-      secretName: github-credentials
-    owner: myorg
-    repo: my-app
-    runID: "${{ outputs['dispatch-deployment'].runID }}"
-    expectedConclusion: success
+apiVersion: kargo.akuity.io/v1alpha1
+kind: Stage
+# ...
+spec:
+  # ...
+  promotionTemplate:
+    spec:
+      steps:
+      - uses: gha-wait-for-workflow
+        config:
+          credentials:
+            secretName: github-credentials
+          owner: myorg
+          repo: my-app
+          runID: "${{ outputs['dispatch-deployment'].runID }}" # Or task.outputs in a (Cluster)PromotionTask
+          expectedConclusion: success
 ```
 
 ## Multi-Step Workflow Example
@@ -152,26 +166,33 @@ steps:
 This example shows how to combine `gha-dispatch-workflow` and `gha-wait-for-workflow` steps using the new configuration format:
 
 ```yaml
-steps:
-# Dispatch the workflow
-- uses: gha-dispatch-workflow
-  as: dispatch-deployment
-  config:
-    repoURL: https://github.com/example/test
-    workflowFile: test.yaml
-    ref: master
-    inputs:
-      greeting: "hola"
-    timeout: 120
+apiVersion: kargo.akuity.io/v1alpha1
+kind: Stage
+# ...
+spec:
+  # ...
+  promotionTemplate:
+    spec:
+      steps:
+      # Dispatch the workflow
+      - uses: gha-dispatch-workflow
+        as: dispatch-deployment
+        config:
+          repoURL: https://github.com/example/test
+          workflowFile: test.yaml
+          ref: master
+          inputs:
+            greeting: "hola"
+          timeout: 120
 
-# Wait for the workflow to complete
-- uses: gha-wait-for-workflow
-  config:
-    repoURL: https://github.com/example/test
-    runID: "${{ outputs['dispatch-deployment'].runID }}"
-    expectedConclusion: success
+      # Wait for the workflow to complete
+      - uses: gha-wait-for-workflow
+        config:
+          repoURL: https://github.com/example/test
+          runID: "${{ outputs['dispatch-deployment'].runID }}" # Or task.outputs in a (Cluster)PromotionTask
+          expectedConclusion: success
 
-# Continue with other promotion steps after workflow completes...
+      # Continue with other promotion steps after workflow completes...
 ```
 
 ## Migration from v1.8 to v1.9

@@ -77,54 +77,56 @@ state after applying configuration. This example retrieves the function URL
 from an AWS Lambda deployment for use in subsequent steps.
 
 ```yaml
-vars:
-- name: repoURL
-  value: https://github.com/example/infra.git
-- name: image
-  value: 123456789.dkr.ecr.us-west-2.amazonaws.com/my-app
-steps:
-- uses: git-clone
-  config:
-    repoURL: ${{ vars.repoURL }}
-    checkout:
-    - branch: main
-      path: ./src
-- uses: hcl-update
-  config:
-    path: ./src/opentofu/${{ ctx.stage }}/env.auto.tfvars
-    updates:
-    - key: image_uri
-      value: ${{ vars.image }}:${{ imageFrom(vars.image).Tag }}
-- uses: tf-apply
-  config:
-    dir: ./src/opentofu/${{ ctx.stage }}
-    env:
-    - name: AWS_REGION
-      value: us-west-2
-    - name: AWS_ACCESS_KEY_ID
-      value: ${{ secret('aws-creds').awsAccessKeyID }}
-    - name: AWS_SECRET_ACCESS_KEY
-      value: ${{ secret('aws-creds').awsSecretAccessKey }}
-- uses: tf-output
-  as: infra
-  config:
-    dir: ./src/opentofu/${{ ctx.stage }}
-    env:
-    - name: AWS_REGION
-      value: us-west-2
-    - name: AWS_ACCESS_KEY_ID
-      value: ${{ secret('aws-creds').awsAccessKeyID }}
-    - name: AWS_SECRET_ACCESS_KEY
-      value: ${{ secret('aws-creds').awsSecretAccessKey }}
-# Commit and push state changes...
-```
-
-The outputs can then be referenced in subsequent steps:
-
-```yaml
-- uses: http
-  config:
-    url: ${{ outputs.infra.function_url.value }}
+apiVersion: kargo.akuity.io/v1alpha1
+kind: Stage
+# ...
+spec:
+  # ...
+  promotionTemplate:
+    spec:
+      vars:
+      - name: repoURL
+        value: https://github.com/example/infra.git
+      - name: image
+        value: 123456789.dkr.ecr.us-west-2.amazonaws.com/my-app
+      steps:
+      - uses: git-clone
+        config:
+          repoURL: ${{ vars.repoURL }}
+          checkout:
+          - branch: main
+            path: ./src
+      - uses: hcl-update
+        config:
+          path: ./src/opentofu/${{ ctx.stage }}/env.auto.tfvars
+          updates:
+          - key: image_uri
+            value: ${{ vars.image }}:${{ imageFrom(vars.image).Tag }}
+      - uses: tf-apply
+        config:
+          dir: ./src/opentofu/${{ ctx.stage }}
+          env:
+          - name: AWS_REGION
+            value: us-west-2
+          - name: AWS_ACCESS_KEY_ID
+            value: ${{ secret('aws-creds').awsAccessKeyID }}
+          - name: AWS_SECRET_ACCESS_KEY
+            value: ${{ secret('aws-creds').awsSecretAccessKey }}
+      - uses: tf-output
+        as: infra
+        config:
+          dir: ./src/opentofu/${{ ctx.stage }}
+          env:
+          - name: AWS_REGION
+            value: us-west-2
+          - name: AWS_ACCESS_KEY_ID
+            value: ${{ secret('aws-creds').awsAccessKeyID }}
+          - name: AWS_SECRET_ACCESS_KEY
+            value: ${{ secret('aws-creds').awsSecretAccessKey }}
+      # Commit and push state changes...
+      - uses: http
+        config:
+          url: ${{ outputs.infra.function_url.value }} # Or task.outputs in a (Cluster)PromotionTask
 ```
 
 ### Retrieving a Specific Output
@@ -134,28 +136,30 @@ step returns only the value without the metadata wrapper, making it easier to
 use in subsequent steps.
 
 ```yaml
-steps:
-# Clone, plan, apply, etc...
-- uses: tf-output
-  as: endpoint
-  config:
-    dir: ./src/opentofu/${{ ctx.stage }}
-    name: function_url
-    env:
-    - name: AWS_REGION
-      value: us-west-2
-    - name: AWS_ACCESS_KEY_ID
-      value: ${{ secret('aws-creds').awsAccessKeyID }}
-    - name: AWS_SECRET_ACCESS_KEY
-      value: ${{ secret('aws-creds').awsSecretAccessKey }}
-```
-
-The output value can be referenced directly:
-
-```yaml
-- uses: http
-  config:
-    url: ${{ outputs.endpoint.function_url }}
+apiVersion: kargo.akuity.io/v1alpha1
+kind: Stage
+# ...
+spec:
+  # ...
+  promotionTemplate:
+    spec:
+      steps:
+      # Clone, plan, apply, etc...
+      - uses: tf-output
+        as: endpoint
+        config:
+          dir: ./src/opentofu/${{ ctx.stage }}
+          name: function_url
+          env:
+          - name: AWS_REGION
+            value: us-west-2
+          - name: AWS_ACCESS_KEY_ID
+            value: ${{ secret('aws-creds').awsAccessKeyID }}
+          - name: AWS_SECRET_ACCESS_KEY
+            value: ${{ secret('aws-creds').awsSecretAccessKey }}
+      - uses: http
+        config:
+          url: ${{ outputs.endpoint.function_url }} # Or task.outputs in a (Cluster)PromotionTask
 ```
 
 ### Writing Outputs to a File

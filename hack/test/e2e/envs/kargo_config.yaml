@@ -1,0 +1,5 @@
+## Example local kargo config.
+## For real testing it may be created by running `cp ~/.config/kargo/config` after `kargo login`
+authMethod: admin
+apiAddress: <FIXME>
+bearerToken: <FIXME>

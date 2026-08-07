@@ -1,0 +1,75 @@
+suite: garbage-collector/cron-job.yaml
+values:
+  - ../test/values-unittest.yaml
+templates:
+  - templates/garbage-collector/cron-job.yaml
+  - templates/garbage-collector/configmap.yaml
+tests:
+  - it: renders the garbage collector CronJob by default
+    template: templates/garbage-collector/cron-job.yaml
+    asserts:
+      - hasDocuments:
+          count: 1
+      - isKind:
+          of: CronJob
+      - equal:
+          path: metadata.name
+          value: kargo-garbage-collector
+      - equal:
+          path: spec.schedule
+          value: "0 * * * *"
+      - equal:
+          path: spec.concurrencyPolicy
+          value: Forbid
+      - equal:
+          path: spec.jobTemplate.spec.template.spec.serviceAccountName
+          value: kargo-garbage-collector
+      - contains:
+          path: spec.jobTemplate.spec.template.spec.containers[0].args
+          content: garbage-collector
+
+  - it: honors a custom schedule
+    template: templates/garbage-collector/cron-job.yaml
+    set:
+      garbageCollector.schedule: "*/30 * * * *"
+    asserts:
+      - equal:
+          path: spec.schedule
+          value: "*/30 * * * *"
+
+  - it: is not rendered when the garbage collector is disabled
+    template: templates/garbage-collector/cron-job.yaml
+    set:
+      garbageCollector.enabled: false
+    asserts:
+      - hasDocuments:
+          count: 0
+
+---
+suite: garbage-collector/configmap.yaml
+values:
+  - ../test/values-unittest.yaml
+templates:
+  - templates/garbage-collector/configmap.yaml
+tests:
+  - it: renders retention configuration with defaults
+    asserts:
+      - isKind:
+          of: ConfigMap
+      - equal:
+          path: data.LOG_LEVEL
+          value: INFO
+      - isNotEmpty:
+          path: data.NUM_WORKERS
+      - isNotEmpty:
+          path: data.MAX_RETAINED_PROMOTIONS
+      - isNotEmpty:
+          path: data.MAX_RETAINED_FREIGHT
+
+  - it: reflects an overridden worker count
+    set:
+      garbageCollector.workers: 8
+    asserts:
+      - equal:
+          path: data.NUM_WORKERS
+          value: "8"

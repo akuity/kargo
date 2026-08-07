@@ -17,7 +17,7 @@ spec:
     http:
       paths:
       - pathType: {{ .Values.externalWebhooksServer.ingress.pathType | default "ImplementationSpecific" }}
-        path: /
+        path: {{ .Values.externalWebhooksServer.basePath | default "/" }}
         backend:
           service:
             name: kargo-external-webhooks-server

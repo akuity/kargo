@@ -76,6 +76,92 @@ func TestHandle(t *testing.T) {
 			},
 		},
 		{
+			name: "namespace-controller DELETE is allowed",
+			req: admission.Request{
+				AdmissionRequest: admissionv1.AdmissionRequest{
+					Operation: admissionv1.Delete,
+					UserInfo: authnv1.UserInfo{
+						Username: "system:serviceaccount:kube-system:namespace-controller",
+					},
+				},
+			},
+			assert: func(t *testing.T, resp admission.Response) {
+				require.True(t, resp.Allowed)
+			},
+		},
+		{
+			name: "generic-garbage-collector DELETE is allowed",
+			req: admission.Request{
+				AdmissionRequest: admissionv1.AdmissionRequest{
+					Operation: admissionv1.Delete,
+					UserInfo: authnv1.UserInfo{
+						Username: "system:serviceaccount:kube-system:generic-garbage-collector",
+					},
+				},
+			},
+			assert: func(t *testing.T, resp admission.Response) {
+				require.True(t, resp.Allowed)
+			},
+		},
+		{
+			name: "kube-controller-manager DELETE is allowed",
+			req: admission.Request{
+				AdmissionRequest: admissionv1.AdmissionRequest{
+					Operation: admissionv1.Delete,
+					UserInfo: authnv1.UserInfo{
+						Username: "system:kube-controller-manager",
+					},
+				},
+			},
+			assert: func(t *testing.T, resp admission.Response) {
+				require.True(t, resp.Allowed)
+			},
+		},
+		{
+			name: "system:masters group member DELETE is allowed",
+			req: admission.Request{
+				AdmissionRequest: admissionv1.AdmissionRequest{
+					Operation: admissionv1.Delete,
+					UserInfo: authnv1.UserInfo{
+						Username: "cluster-admin",
+						Groups:   []string{"system:masters"},
+					},
+				},
+			},
+			assert: func(t *testing.T, resp admission.Response) {
+				require.True(t, resp.Allowed)
+			},
+		},
+		{
+			name: "system:masters group member UPDATE is allowed",
+			req: admission.Request{
+				AdmissionRequest: admissionv1.AdmissionRequest{
+					Operation: admissionv1.Update,
+					UserInfo: authnv1.UserInfo{
+						Username: "cluster-admin",
+						Groups:   []string{"system:masters"},
+					},
+				},
+			},
+			assert: func(t *testing.T, resp admission.Response) {
+				require.True(t, resp.Allowed)
+			},
+		},
+		{
+			name: "garbage collector non-DELETE is denied",
+			req: admission.Request{
+				AdmissionRequest: admissionv1.AdmissionRequest{
+					Operation: admissionv1.Update,
+					UserInfo: authnv1.UserInfo{
+						Username: "system:serviceaccount:kube-system:namespace-controller",
+					},
+				},
+			},
+			assert: func(t *testing.T, resp admission.Response) {
+				require.False(t, resp.Allowed)
+			},
+		},
+		{
 			name: "other controlplane component is denied",
 			req: admission.Request{
 				AdmissionRequest: admissionv1.AdmissionRequest{

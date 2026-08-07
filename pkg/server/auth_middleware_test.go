@@ -14,9 +14,14 @@ import (
 	"github.com/gin-gonic/gin"
 	"github.com/golang-jwt/jwt/v5"
 	"github.com/stretchr/testify/require"
+	authnv1 "k8s.io/api/authentication/v1"
+	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/types"
-	"k8s.io/client-go/rest"
+	libClient "sigs.k8s.io/controller-runtime/pkg/client"
+	"sigs.k8s.io/controller-runtime/pkg/client/fake"
+	"sigs.k8s.io/controller-runtime/pkg/client/interceptor"
 
+	libhttp "github.com/akuity/kargo/pkg/http"
 	"github.com/akuity/kargo/pkg/server/config"
 	"github.com/akuity/kargo/pkg/server/dex"
 	libOIDC "github.com/akuity/kargo/pkg/server/oidc"
@@ -50,7 +55,7 @@ c1e3
 
 func TestNewAuthMiddleware(t *testing.T) {
 	a := &authMiddleware{}
-	middleware := newAuthMiddleware(t.Context(), config.ServerConfig{}, nil)
+	middleware := NewAuthMiddleware(t.Context(), config.ServerConfig{}, nil)
 	require.NotNil(t, middleware)
 	// Call the middleware to get the initialized authMiddleware
 	// We can't directly inspect it, but we can verify it doesn't panic
@@ -60,6 +65,62 @@ func TestNewAuthMiddleware(t *testing.T) {
 		router.Use(middleware)
 	})
 	_ = a // Use the variable to avoid unused error
+}
+
+func TestWithExemptPaths(t *testing.T) {
+	gin.SetMode(gin.TestMode)
+
+	const (
+		testExemptPath = "/a/fake/path"
+		loginPath      = "/v1beta1/login"
+		protectedPath  = "/v1beta1/protected"
+	)
+
+	middleware := NewAuthMiddleware(
+		t.Context(),
+		config.ServerConfig{},
+		nil,
+		WithExemptPaths([]string{testExemptPath}),
+	)
+
+	router := gin.New()
+	srv := &server{}
+	router.Use(srv.handleError)
+	router.Use(middleware)
+	ok := func(c *gin.Context) { c.Status(http.StatusOK) }
+	router.GET(testExemptPath, ok)
+	router.GET(loginPath, ok)
+	router.GET(protectedPath, ok)
+
+	testCases := []struct {
+		name           string
+		path           string
+		expectedStatus int
+	}{
+		{
+			name:           "custom exempt path skips authentication",
+			path:           testExemptPath,
+			expectedStatus: http.StatusOK,
+		},
+		{
+			name:           "default exempt paths are preserved",
+			path:           loginPath,
+			expectedStatus: http.StatusOK,
+		},
+		{
+			name:           "other paths still require authentication",
+			path:           protectedPath,
+			expectedStatus: http.StatusUnauthorized,
+		},
+	}
+	for _, testCase := range testCases {
+		t.Run(testCase.name, func(t *testing.T) {
+			w := httptest.NewRecorder()
+			req := httptest.NewRequest(http.MethodGet, testCase.path, nil)
+			router.ServeHTTP(w, req)
+			require.Equal(t, testCase.expectedStatus, w.Code)
+		})
+	}
 }
 
 func TestGetKeySet(t *testing.T) {
@@ -95,12 +156,13 @@ func TestGetKeySet(t *testing.T) {
 				mux := http.NewServeMux()
 				srv := httptest.NewServer(mux)
 				t.Cleanup(srv.Close)
+				issuerURL := srv.URL + "/dex"
 				mux.HandleFunc(
 					dexDiscoPath,
 					func(w http.ResponseWriter, _ *http.Request) {
 						_, err := w.Write([]byte(`{
-						"issuer": "` + srv.URL + `",
-						"jwks_uri": "` + srv.URL + `/keys"
+						"issuer": "` + issuerURL + `",
+						"jwks_uri": "` + issuerURL + `/keys"
 					}`))
 						require.NoError(t, err)
 					},
@@ -110,7 +172,34 @@ func TestGetKeySet(t *testing.T) {
 						ServerAddr: srv.URL,
 					},
 					OIDCConfig: &libOIDC.Config{
-						IssuerURL: srv.URL,
+						IssuerURL: issuerURL,
+					},
+				}
+			},
+		},
+		{
+			name: "with Dex proxy under basePath",
+			setup: func() (*httptest.Server, config.ServerConfig) {
+				mux := http.NewServeMux()
+				srv := httptest.NewServer(mux)
+				t.Cleanup(srv.Close)
+				issuerURL := srv.URL + "/kargo/dex"
+				mux.HandleFunc(
+					"/kargo/dex/.well-known/openid-configuration",
+					func(w http.ResponseWriter, _ *http.Request) {
+						_, err := w.Write([]byte(`{
+						"issuer": "` + issuerURL + `",
+						"jwks_uri": "` + issuerURL + `/keys"
+					}`))
+						require.NoError(t, err)
+					},
+				)
+				return srv, config.ServerConfig{
+					DexProxyConfig: &dex.ProxyConfig{
+						ServerAddr: srv.URL,
+					},
+					OIDCConfig: &libOIDC.Config{
+						IssuerURL: issuerURL,
 					},
 				}
 			},
@@ -121,12 +210,13 @@ func TestGetKeySet(t *testing.T) {
 				mux := http.NewServeMux()
 				srv := httptest.NewServer(mux)
 				t.Cleanup(srv.Close)
+				issuerURL := srv.URL + "/dex"
 				mux.HandleFunc(
 					dexDiscoPath,
 					func(w http.ResponseWriter, _ *http.Request) {
 						_, err := w.Write([]byte(`{
-						"issuer": "` + srv.URL + `",
-						"jwks_uri": "` + srv.URL + `/keys"
+						"issuer": "` + issuerURL + `",
+						"jwks_uri": "` + issuerURL + `/keys"
 					}`))
 						require.NoError(t, err)
 					},
@@ -137,11 +227,10 @@ func TestGetKeySet(t *testing.T) {
 						CACertPath: filepath.Join(t.TempDir(), "ca.crt"),
 					},
 					OIDCConfig: &libOIDC.Config{
-						IssuerURL: srv.URL,
+						IssuerURL: issuerURL,
 					},
 				}
-				err :=
-					os.WriteFile(cfg.DexProxyConfig.CACertPath, dummyCACertBytes, 0600)
+				err := os.WriteFile(cfg.DexProxyConfig.CACertPath, dummyCACertBytes, 0o600)
 				require.NoError(t, err)
 				return srv, cfg
 			},
@@ -174,8 +263,10 @@ func TestAuthenticate(t *testing.T) {
 		assertions     func(ctx context.Context, err error)
 	}{
 		"exempt path": {
-			path:           "/v1beta1/system/public-server-config",
-			authMiddleware: &authMiddleware{},
+			path: "/v1beta1/system/public-server-config",
+			authMiddleware: &authMiddleware{
+				exemptPaths: exemptPaths,
+			},
 			// The path is exempt from authentication, so no user information
 			// should be bound to the context.
 			assertions: func(ctx context.Context, err error) {
@@ -269,7 +360,6 @@ func TestAuthenticate(t *testing.T) {
 				require.True(t, u.IsAdmin)
 				require.Empty(t, u.Claims["sub"])
 				require.Empty(t, u.Claims["groups"])
-				require.Equal(t, testToken, u.BearerToken)
 			},
 		},
 		"failure verifying IDP-issued token": {
@@ -353,7 +443,6 @@ func TestAuthenticate(t *testing.T) {
 				require.Equal(t, "ironman", u.Claims["sub"])
 				require.Equal(t, "tony@starkindustries.com", u.Claims["email"])
 				require.Equal(t, []string{"avengers", "shield"}, u.Claims["groups"])
-				require.Equal(t, testToken, u.BearerToken)
 			},
 		},
 		"unrecognized JWT recognized by Kubernetes": {
@@ -365,19 +454,21 @@ func TestAuthenticate(t *testing.T) {
 					rc.Issuer = "unrecognized-issuer"
 					return nil, nil, nil
 				},
-				verifyKubernetesTokenFn: func(context.Context, string) error {
-					return nil // Token is recognized by Kubernetes
+				verifyKubernetesTokenFn: func(context.Context, string) (*authnv1.UserInfo, error) {
+					return &authnv1.UserInfo{
+						Username: "system:serviceaccount:kargo-demo:ci-bot",
+					}, nil
 				},
 			},
 			token: testToken,
-			// We can't verify this token, so we check if Kubernetes recognizes it.
-			// In this case it does, so we expect user info containing the raw token
-			// to be bound to the context.
+			// Kubernetes recognizes the token, so we expect the raw token and the
+			// Kubernetes-verified identity to be bound to the context.
 			assertions: func(ctx context.Context, err error) {
 				require.NoError(t, err)
 				u, ok := user.InfoFromContext(ctx)
 				require.True(t, ok)
-				require.Equal(t, testToken, u.BearerToken)
+				require.NotNil(t, u.KubernetesUserInfo)
+				require.Equal(t, "system:serviceaccount:kargo-demo:ci-bot", u.KubernetesUserInfo.Username)
 			},
 		},
 		"unrecognized JWT not recognized by Kubernetes": {
@@ -389,8 +480,8 @@ func TestAuthenticate(t *testing.T) {
 					rc.Issuer = "unrecognized-issuer"
 					return nil, nil, nil
 				},
-				verifyKubernetesTokenFn: func(context.Context, string) error {
-					return errors.New("token not recognized")
+				verifyKubernetesTokenFn: func(context.Context, string) (*authnv1.UserInfo, error) {
+					return nil, errInvalidToken
 				},
 			},
 			token: testToken,
@@ -398,6 +489,7 @@ func TestAuthenticate(t *testing.T) {
 			// This should result in an authentication error.
 			assertions: func(ctx context.Context, err error) {
 				require.Error(t, err)
+				requireErrorStatus(t, err, http.StatusUnauthorized)
 				require.Equal(t, "invalid token", err.Error())
 				_, ok := user.InfoFromContext(ctx)
 				require.False(t, ok)
@@ -632,12 +724,15 @@ func TestAuthMiddlewareHandler(t *testing.T) {
 		token          string
 		authMiddleware *authMiddleware
 		expectedStatus int
+		expectedBody   string
 		expectUserInfo bool
 	}{
 		{
-			name:           "exempt path - no auth required",
-			path:           "/v1beta1/system/public-server-config",
-			authMiddleware: &authMiddleware{},
+			name: "exempt path - no auth required",
+			path: "/v1beta1/system/public-server-config",
+			authMiddleware: &authMiddleware{
+				exemptPaths: exemptPaths,
+			},
 			expectedStatus: http.StatusOK,
 			expectUserInfo: false,
 		},
@@ -646,6 +741,41 @@ func TestAuthMiddlewareHandler(t *testing.T) {
 			path:           "/v1beta1/projects",
 			authMiddleware: &authMiddleware{},
 			expectedStatus: http.StatusUnauthorized,
+			expectedBody:   `{"error":"no token provided"}`,
+			expectUserInfo: false,
+		},
+		{
+			name: "token rejected",
+			path: "/v1beta1/projects",
+			authMiddleware: &authMiddleware{
+				parseUnverifiedJWTFn: func(string, jwt.Claims) (*jwt.Token, []string, error) {
+					return nil, nil, errors.New("not a JWT")
+				},
+			},
+			token:          "not-a-jwt",
+			expectedStatus: http.StatusUnauthorized,
+			expectedBody:   `{"error":"invalid token"}`,
+			expectUserInfo: false,
+		},
+		{
+			// A failure to verify the token, as opposed to a failed verification,
+			// must not be reported to the client as a rejected credential.
+			name: "token verification fails",
+			path: "/v1beta1/projects",
+			authMiddleware: &authMiddleware{
+				parseUnverifiedJWTFn: func(_ string, claims jwt.Claims) (*jwt.Token, []string, error) {
+					rc, ok := claims.(*jwt.RegisteredClaims)
+					require.True(t, ok)
+					rc.Issuer = "unrecognized-issuer"
+					return nil, nil, nil
+				},
+				verifyKubernetesTokenFn: func(context.Context, string) (*authnv1.UserInfo, error) {
+					return nil, errors.New("create transport: no credentials")
+				},
+			},
+			token:          "some-token",
+			expectedStatus: http.StatusInternalServerError,
+			expectedBody:   `{"error":"internal server error"}`,
 			expectUserInfo: false,
 		},
 		{
@@ -676,6 +806,11 @@ func TestAuthMiddlewareHandler(t *testing.T) {
 	for _, tc := range testCases {
 		t.Run(tc.name, func(t *testing.T) {
 			router := gin.New()
+			// The auth middleware delegates status codes and response bodies to
+			// the error-handling middleware, so both are needed to observe what
+			// a client actually receives.
+			srv := &server{}
+			router.Use(srv.handleError)
 			router.Use(tc.authMiddleware.Handler)
 			router.GET("/v1beta1/*path", func(c *gin.Context) {
 				_, hasUser := user.InfoFromContext(c.Request.Context())
@@ -692,50 +827,111 @@ func TestAuthMiddlewareHandler(t *testing.T) {
 			router.ServeHTTP(w, req)
 
 			require.Equal(t, tc.expectedStatus, w.Code)
+			if tc.expectedBody != "" {
+				require.JSONEq(t, tc.expectedBody, w.Body.String())
+			}
 		})
 	}
+}
+
+// requireErrorStatus asserts that err carries the expected HTTP status code for
+// the error-handling middleware to act on.
+func requireErrorStatus(t *testing.T, err error, code int) {
+	t.Helper()
+	var httpErr *libhttp.HTTPError
+	require.ErrorAs(t, err, &httpErr)
+	require.Equal(t, code, httpErr.Code())
 }
 
 func TestVerifyKubernetesToken(t *testing.T) {
 	const testToken = "test-bearer-token"
 	testCases := []struct {
-		name              string
-		mockK8sAPIHandler http.HandlerFunc
-		assertions        func(t *testing.T, err error)
+		name         string
+		reviewStatus authnv1.TokenReviewStatus
+		createErr    error
+		assertions   func(t *testing.T, u *authnv1.UserInfo, err error)
 	}{
 		{
-			name: "Kubernetes API returns 200",
-			mockK8sAPIHandler: func(w http.ResponseWriter, r *http.Request) {
-				// Verify the token was passed correctly
-				require.Equal(t, "/api", r.URL.Path)
-				require.Equal(t, "Bearer "+testToken, r.Header.Get("Authorization"))
-				w.WriteHeader(http.StatusOK)
-			},
-			assertions: func(t *testing.T, err error) {
-				require.NoError(t, err)
+			// The check could not be carried out, which says nothing about the
+			// token, so the error must carry no status code for the
+			// error-handling middleware to report to the client.
+			name:      "TokenReview call fails",
+			createErr: errors.New("connection refused"),
+			assertions: func(t *testing.T, u *authnv1.UserInfo, err error) {
+				require.ErrorContains(t, err, "submit TokenReview")
+				require.ErrorContains(t, err, "connection refused")
+				var httpErr *libhttp.HTTPError
+				require.False(t, errors.As(err, &httpErr))
+				require.Nil(t, u)
 			},
 		},
 		{
-			name: "Kubernetes API returns non-200",
-			mockK8sAPIHandler: func(w http.ResponseWriter, _ *http.Request) {
-				w.WriteHeader(http.StatusUnauthorized)
+			name: "Kubernetes reports the token as invalid",
+			reviewStatus: authnv1.TokenReviewStatus{
+				Authenticated: false,
 			},
-			assertions: func(t *testing.T, err error) {
-				require.ErrorContains(
-					t, err, "unexpected response from Kubernetes API server",
-				)
+			assertions: func(t *testing.T, u *authnv1.UserInfo, err error) {
+				requireErrorStatus(t, err, http.StatusUnauthorized)
+				require.ErrorIs(t, err, errInvalidToken)
+				require.Nil(t, u)
+			},
+		},
+		{
+			name: "Kubernetes reports an error verifying the token",
+			reviewStatus: authnv1.TokenReviewStatus{
+				Error: "some verification error",
+			},
+			assertions: func(t *testing.T, u *authnv1.UserInfo, err error) {
+				requireErrorStatus(t, err, http.StatusUnauthorized)
+				require.ErrorContains(t, err, "some verification error")
+				require.Nil(t, u)
+			},
+		},
+		{
+			name: "Kubernetes authenticates the token",
+			reviewStatus: authnv1.TokenReviewStatus{
+				Authenticated: true,
+				User: authnv1.UserInfo{
+					Username: "system:serviceaccount:kargo-demo:ci-bot",
+					UID:      "abc-123",
+				},
+			},
+			assertions: func(t *testing.T, u *authnv1.UserInfo, err error) {
+				require.NoError(t, err)
+				require.NotNil(t, u)
+				require.Equal(t, "system:serviceaccount:kargo-demo:ci-bot", u.Username)
+				require.Equal(t, "abc-123", u.UID)
 			},
 		},
 	}
 	for _, testCase := range testCases {
 		t.Run(testCase.name, func(t *testing.T) {
-			srv := httptest.NewServer(testCase.mockK8sAPIHandler)
-			t.Cleanup(srv.Close)
-			authenticator := &authMiddleware{
-				cfg: config.ServerConfig{RestConfig: &rest.Config{Host: srv.URL}},
-			}
-			err := authenticator.verifyKubernetesToken(t.Context(), testToken)
-			testCase.assertions(t, err)
+			scheme := runtime.NewScheme()
+			require.NoError(t, authnv1.AddToScheme(scheme))
+
+			fakeClient := fake.NewClientBuilder().WithScheme(scheme).WithInterceptorFuncs(
+				interceptor.Funcs{
+					Create: func(
+						_ context.Context,
+						_ libClient.WithWatch,
+						obj libClient.Object,
+						_ ...libClient.CreateOption,
+					) error {
+						if testCase.createErr != nil {
+							return testCase.createErr
+						}
+						review, ok := obj.(*authnv1.TokenReview)
+						require.True(t, ok)
+						require.Equal(t, testToken, review.Spec.Token)
+						review.Status = testCase.reviewStatus
+						return nil
+					},
+				},
+			).Build()
+
+			authenticator := &authMiddleware{internalClient: fakeClient}
+			u, err := authenticator.verifyKubernetesToken(t.Context(), testToken)
+			testCase.assertions(t, u, err)
 		})
 	}
 }

@@ -9,13 +9,12 @@ import classNames from 'classnames';
 import { JSONSchema7 } from 'json-schema';
 import { useState } from 'react';
 
+import { RepoSubscription } from '@ui/extend/types';
 import { DescriptionFieldTemplate } from '@ui/features/common/form/rjsf/description-field-template';
 import { FieldTemplate } from '@ui/features/common/form/rjsf/field-template';
 import { ObjectFieldTemplate } from '@ui/features/common/form/rjsf/object-field-template';
 import { IconSetByKargoTerminology } from '@ui/features/common/icons';
 import { ObjectDescription } from '@ui/features/common/object-description';
-import { RepoSubscription } from '@ui/gen/api/v1alpha1/generated_pb';
-import { PlainMessage } from '@ui/utils/connectrpc-utils';
 
 import { warehouseCreateFormJSONSchema } from './schema';
 
@@ -26,7 +25,7 @@ const subscriptionTypes = Object.keys(
 
 export const SubscriptionWizard = (props: {
   subscriptions: RepoSubscription[];
-  onChange(subscriptions: PlainMessage<RepoSubscription>[]): void;
+  onChange(subscriptions: RepoSubscription[]): void;
 }) => {
   const [selectedNewSubscription, setSelectedNewSubscription] = useState(
     subscriptionTypes[2] /* image as default and common subscription */
@@ -118,8 +117,7 @@ SubscriptionWizard.Subscription = (props: {
 
   // one of git, image or chart
   const subscriptionType = (Object.keys(props.subscription)[0] || '') as
-    | keyof RepoSubscription
-    | '';
+    keyof RepoSubscription | '';
 
   if (subscriptionType === '') {
     return <Tag color='red'>Corrupt Subscription! Please Check YAML</Tag>;

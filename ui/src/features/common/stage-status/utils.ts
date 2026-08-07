@@ -1,5 +1,4 @@
-import { Stage } from '@ui/gen/api/v1alpha1/generated_pb';
-import { Condition } from '@ui/gen/k8s.io/apimachinery/pkg/apis/meta/v1/generated_pb';
+import { Stage, V1Condition } from '@ui/gen/api/v2/models';
 
 export const enum StageConditionType {
   Promoting = 'Promoting',
@@ -17,8 +16,8 @@ export const enum StageConditionStatus {
 export const hasCondition = (
   type: StageConditionType,
   status: StageConditionStatus,
-  conditions: Condition[]
-): { condition: Condition | undefined; isActive: boolean } => {
+  conditions: V1Condition[]
+): { condition: V1Condition | undefined; isActive: boolean } => {
   const condition = conditions.find((c) => c.type === type);
   return {
     condition,

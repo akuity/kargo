@@ -33,6 +33,11 @@ func TestPromotionAborted(t *testing.T) {
 	require.Equal(t, kargoapi.EventTypePromotionAborted, evt.Type())
 }
 
+func TestPromotionDiscarded(t *testing.T) {
+	evt := &PromotionDiscarded{}
+	require.Equal(t, kargoapi.EventTypePromotionDiscarded, evt.Type())
+}
+
 func TestPromotionCreated(t *testing.T) {
 	evt := &PromotionCreated{}
 	require.Equal(t, kargoapi.EventTypePromotionCreated, evt.Type())
@@ -176,6 +181,12 @@ func TestPromotionConstructors(t *testing.T) {
 				return NewPromotionAborted("Aborted message", "test-actor", promotion, freight)
 			},
 			expectedType: kargoapi.EventTypePromotionAborted,
+		},
+		"discarded": {
+			constructor: func() Meta {
+				return NewPromotionDiscarded("Discarded message", "test-actor", promotion, freight)
+			},
+			expectedType: kargoapi.EventTypePromotionDiscarded,
 		},
 		"created": {
 			constructor: func() Meta {
@@ -386,6 +397,28 @@ func TestPromotionEventUnmarshalAnnotations(t *testing.T) {
 				},
 			},
 		},
+		"promotion discarded": {
+			annotations: map[string]string{
+				kargoapi.AnnotationKeyEventProject:             "test-project",
+				kargoapi.AnnotationKeyEventPromotionName:       "test-promotion",
+				kargoapi.AnnotationKeyEventStageName:           "test-stage",
+				kargoapi.AnnotationKeyEventPromotionCreateTime: "2024-01-01T12:00:00Z",
+			},
+			unmarshalFunc: func(annotations map[string]string) (Meta, error) {
+				return UnmarshalPromotionDiscardedAnnotations("event-id", annotations)
+			},
+			expectedType: &PromotionDiscarded{
+				Common: Common{
+					Project: "test-project",
+					ID:      "event-id",
+				},
+				Promotion: Promotion{
+					Name:       "test-promotion",
+					StageName:  "test-stage",
+					CreateTime: time.Date(2024, 1, 1, 12, 0, 0, 0, time.UTC),
+				},
+			},
+		},
 		"promotion created": {
 			annotations: map[string]string{
 				kargoapi.AnnotationKeyEventProject:             "test-project",
@@ -480,6 +513,74 @@ func TestPromotionSucceeded_UnmarshalVerificationPending(t *testing.T) {
 			require.Equal(t, tc.expected, result.VerificationPending)
 		})
 	}
+}
+
+func TestNewPromotion_Rollback(t *testing.T) {
+	testCases := map[string]struct {
+		annotations map[string]string
+		expected    bool
+	}{
+		"rollback annotation true": {
+			annotations: map[string]string{
+				kargoapi.AnnotationKeyRollback: "true",
+			},
+			expected: true,
+		},
+		"rollback annotation false": {
+			annotations: map[string]string{
+				kargoapi.AnnotationKeyRollback: "false",
+			},
+			expected: false,
+		},
+		"rollback annotation absent": {
+			expected: false,
+		},
+	}
+
+	for name, tc := range testCases {
+		t.Run(name, func(t *testing.T) {
+			promotion := &kargoapi.Promotion{
+				ObjectMeta: metav1.ObjectMeta{
+					Name:        "test-promotion",
+					Namespace:   "test-project",
+					Annotations: tc.annotations,
+				},
+				Spec: kargoapi.PromotionSpec{
+					Stage: "test-stage",
+				},
+			}
+			evt := newPromotion(promotion, nil)
+			require.Equal(t, tc.expected, evt.Rollback)
+		})
+	}
+}
+
+func TestPromotionEventMarshalAnnotations_Rollback(t *testing.T) {
+	promotion := Promotion{
+		Name:      "test-promotion",
+		StageName: "test-stage",
+		Rollback:  true,
+	}
+	annotations := map[string]string{}
+	promotion.MarshalAnnotationsTo(annotations)
+	require.Equal(t, kargoapi.AnnotationValueTrue, annotations[kargoapi.AnnotationKeyEventRollback])
+
+	promotion.Rollback = false
+	annotations = map[string]string{}
+	promotion.MarshalAnnotationsTo(annotations)
+	require.NotContains(t, annotations, kargoapi.AnnotationKeyEventRollback)
+}
+
+func TestUnmarshalPromotionAnnotations_Rollback(t *testing.T) {
+	annotations := map[string]string{
+		kargoapi.AnnotationKeyEventPromotionName:       "test-promotion",
+		kargoapi.AnnotationKeyEventStageName:           "test-stage",
+		kargoapi.AnnotationKeyEventPromotionCreateTime: "2024-01-01T12:00:00Z",
+		kargoapi.AnnotationKeyEventRollback:            "true",
+	}
+	evt, err := UnmarshalPromotionAnnotations(annotations)
+	require.NoError(t, err)
+	require.True(t, evt.Rollback)
 }
 
 func TestCalculatePromotionVars(t *testing.T) {

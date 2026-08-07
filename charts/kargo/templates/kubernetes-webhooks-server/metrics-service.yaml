@@ -1,0 +1,28 @@
+{{- if and .Values.workloads.install .Values.webhooksServer.enabled .Values.webhooksServer.metrics.enabled }}
+{{- $svc := .Values.webhooksServer.metrics.service }}
+apiVersion: v1
+kind: Service
+metadata:
+  name: kargo-webhooks-server-metrics
+  namespace: {{ .Release.Namespace }}
+  labels:
+    {{- include "kargo.labels" . | nindent 4 }}
+    {{- include "kargo.kubernetesWebhooksServer.labels" . | nindent 4 }}
+  {{- range $key, $value := $svc.labels }}
+    {{ $key }}: {{ $value | quote }}
+  {{- end }}
+  {{- include "kargo.annotations" (dict "root" . "annotations" $svc.annotations) | nindent 2 }}
+spec:
+  type: {{ $svc.type }}
+  {{- with $svc.clusterIP }}
+  clusterIP: {{ . }}
+  {{- end }}
+  ports:
+  - port: {{ $svc.servicePort }}
+    targetPort: {{ $svc.servicePort }}
+    protocol: TCP
+    name: {{ $svc.portName }}
+  selector:
+    {{- include "kargo.selectorLabels" . | nindent 4 }}
+    {{- include "kargo.kubernetesWebhooksServer.labels" . | nindent 4 }}
+{{- end }}

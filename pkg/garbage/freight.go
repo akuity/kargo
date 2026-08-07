@@ -87,9 +87,9 @@ func (c *collector) cleanWarehouseFreight(
 		return nil // Done
 	}
 
-	// Sort by creation timestamp descending
+	// Sort by discovery/creation timestamp descending
 	slices.SortFunc(freight.Items, func(lhs, rhs kargoapi.Freight) int {
-		return rhs.CreationTimestamp.Compare(lhs.CreationTimestamp.Time)
+		return rhs.EffectiveDiscoveredAt().Compare(lhs.EffectiveDiscoveredAt())
 	})
 
 	// Step through all Freight and find the oldest that is still in use
@@ -128,7 +128,7 @@ func (c *collector) cleanWarehouseFreight(
 	var deleteErrCount int
 	for i := firstToDeleteIndex; i < len(freight.Items); i++ {
 		f := freight.Items[i]
-		if time.Since(f.CreationTimestamp.Time) < c.cfg.MinFreightDeletionAge {
+		if time.Since(f.EffectiveDiscoveredAt()) < c.cfg.MinFreightDeletionAge {
 			continue // Not old enough
 		}
 		freightLogger := logger.WithValues("freight", f.Name)

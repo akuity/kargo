@@ -9,7 +9,6 @@ import (
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 
 	libhttp "github.com/akuity/kargo/pkg/http"
-	"github.com/akuity/kargo/pkg/logging"
 )
 
 // nolint: lll
@@ -54,14 +53,46 @@ import (
 // @name Authorization
 // @description Bearer token authentication. Obtain token via OIDC/PKCE flow with your identity provider.
 func (s *server) setupRESTRouter(ctx context.Context) *gin.Engine {
-	router := gin.Default()
+	// Unconditionally set Gin to "release mode" (as opposed to the default of
+	// "debug mode"). This suppresses Gin-related log noise that we don't want,
+	// even at development time.
+	//
+	// Note: The mode is package-level state, so the following statements reaches
+	// beyond this function. This is tolerable because the engine built below is
+	// the only one the server ever builds. Were we ever to build more, we would,
+	// in all likelihood, want them all to be in release mode as well.
+	gin.SetMode(gin.ReleaseMode)
 
-	// Error handling middleware
+	router := gin.New()
+
+	// Middleware nests, with each layer registered here wrapping the ones
+	// registered after it. Each of the layers below does its work on the way back
+	// out, so the order determines what each one is able to see:
+	//
+	//	logging            ─┐ request
+	//	  error handling    │
+	//	    panic recovery  │
+	//	      authn         │
+	//	        handler    ─┤
+	//	      authn         │
+	//	    panic recovery  │
+	//	  error handling    │
+	//	logging            ─┘ response
+	//
+	// Logging is outermost so that it records the status the client actually
+	// received, which is not settled until everything within has finished
+	// writing. Error handling comes next because it is the only thing that writes
+	// an error response. Panic recovery goes inside it, so that a recovered panic
+	// is reported as an error and answered on the way out like any other; were it
+	// outside, a panic would bypass error handling entirely and recovery would
+	// have to write its own response. Authentication is innermost of the four so
+	// that its rejections are answered by the error handling middleware, and so
+	// that a panic within it is recovered too.
+	router.Use(loggingMiddleware())
 	router.Use(s.handleError)
-
-	// Authentication middleware (only if auth is configured)
+	router.Use(recoveryMiddleware())
 	if s.cfg.AdminConfig != nil || s.cfg.OIDCConfig != nil {
-		router.Use(newAuthMiddleware(ctx, s.cfg, s.client.InternalClient()))
+		router.Use(NewAuthMiddleware(ctx, s.cfg, s.client.InternalClient()))
 	}
 
 	v1beta1 := router.Group("/v1beta1")
@@ -302,6 +333,11 @@ func (s *server) setupRESTRouter(ctx context.Context) *gin.Engine {
 	return router
 }
 
+// errorResponse is the body of every error response the REST API sends.
+type errorResponse struct {
+	Error string `json:"error"`
+}
+
 func (s *server) handleError(c *gin.Context) {
 	c.Next()
 	if len(c.Errors) > 0 {
@@ -310,31 +346,37 @@ func (s *server) handleError(c *gin.Context) {
 		// Check for MaxBytesError (body too large)
 		var maxBytesErr *http.MaxBytesError
 		if errors.As(err, &maxBytesErr) {
-			c.JSON(http.StatusRequestEntityTooLarge, gin.H{"error": "request body too large"})
+			c.JSON(http.StatusRequestEntityTooLarge, errorResponse{Error: "request body too large"})
 			return
 		}
 
 		var httpErr *libhttp.HTTPError
 		if ok := errors.As(err, &httpErr); ok {
 			if code := httpErr.Code(); code == http.StatusInternalServerError {
-				logging.LoggerFromContext(c.Request.Context()).
-					Error(err, "internal server error")
-				c.JSON(
-					http.StatusInternalServerError,
-					gin.H{"error": "internal server error"},
-				)
+				s.respondInternalServerError(c)
+				return
 			}
-			c.JSON(httpErr.Code(), gin.H{"error": httpErr.Error()})
+			c.JSON(httpErr.Code(), errorResponse{Error: httpErr.Error()})
 			return
 		}
 		var statusErr *apierrors.StatusError
 		if ok := errors.As(err, &statusErr); ok {
-			c.JSON(int(statusErr.Status().Code), gin.H{"error": err.Error()})
+			c.JSON(int(statusErr.Status().Code), errorResponse{Error: err.Error()})
 			return
 		}
-		_ = c.Error(libhttp.Error(
-			errors.New("internal server error"),
-			http.StatusInternalServerError,
-		))
+		// An error of no recognized type is, by definition, one we did not
+		// anticipate. Report it as such rather than leaving the response empty.
+		s.respondInternalServerError(c)
 	}
+}
+
+// respondInternalServerError responds with a 500 whose body discloses nothing
+// about the underlying failure. The error itself is recorded by the request
+// logging middleware, which knows what was requested as well as what went
+// wrong.
+func (s *server) respondInternalServerError(c *gin.Context) {
+	c.JSON(
+		http.StatusInternalServerError,
+		errorResponse{Error: "internal server error"},
+	)
 }

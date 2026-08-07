@@ -54,7 +54,6 @@ const YamlEditor: FC<YamlEditorProps> = (props) => {
       completion: true,
       validate: true,
       isKubernetes: true,
-      format: true,
       // @ts-expect-error correct schema
       schemas: schema && [
         {
@@ -103,7 +102,12 @@ const YamlEditor: FC<YamlEditorProps> = (props) => {
       </Flex>
       <div
         style={{ border: '1px solid #d9d9d9', height, overflow: 'hidden' }}
-        className={className}
+        // `nokey` opts this subtree out of React Flow's global key handling.
+        // When the editor is rendered over a pipeline graph (e.g. the Stage /
+        // Warehouse detail drawer), React Flow's default space-to-pan would
+        // otherwise swallow the space key, since Monaco's EditContext input is
+        // a plain <div> that React Flow doesn't recognize as a text field.
+        className={['nokey', className].filter(Boolean).join(' ')}
       >
         <Editor
           options={{

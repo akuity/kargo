@@ -29,7 +29,7 @@ jobs:
       unstable-version: ${{ steps.unstable-version.outputs.unstable-version }}
     steps:
     - name: Harden the runner (Audit all outbound calls)
-      uses: step-security/harden-runner@9af89fc71515a100421586dfdb3dc9c984fbf411 # v2.19.4
+      uses: step-security/harden-runner@bf7454d06d71f1098171f2acdf0cd4708d7b5920 # v2.20.0
       with:
         egress-policy: audit
 
@@ -44,9 +44,9 @@ jobs:
         echo "Repository is set to: $REPO"
         echo "repo=$REPO" >> $GITHUB_OUTPUT
     - name: Checkout
-      uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
+      uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
     - name: Setup Go
-      uses: actions/setup-go@4a3601121dd01d1626a1e23e37211e3254c1c06c # v6.4.0
+      uses: actions/setup-go@b7ad1dad31e06c5925ef5d2fc7ad053ef454303e # v7.0.0
       with:
         go-version-file: go.mod
     - name: Set version for unstable builds
@@ -58,9 +58,9 @@ jobs:
         NEW_VERSION=$(awk 'BEGIN {FS=OFS="."} {$2++; print}' <<< "${LATEST_VERSION}")
         echo "unstable-version=${NEW_VERSION}-unstable-$(date +'%Y%m%d')" >> $GITHUB_OUTPUT
     - name: Set up QEMU
-      uses: docker/setup-qemu-action@ce360397dd3f832beb865e1373c09c0e9f86d70a # v4.0.0
+      uses: docker/setup-qemu-action@96fe6ef7f33517b61c61be40b68a1882f3264fb8 # v4.2.0
     - name: Set up Docker Buildx
-      uses: docker/setup-buildx-action@d7f5e7f509e45cec5c76c4d5afdd7de93d0b3df5 # v4.1.0
+      uses: docker/setup-buildx-action@bb05f3f5519dd87d3ba754cc423b652a5edd6d2c # v4.2.0
       with:
         driver-opts: network=host
     - name: Install Cosign
@@ -68,19 +68,19 @@ jobs:
       with:
         cosign-release: 'v2.2.1' # optional
     - name: Login to GHCR
-      uses: docker/login-action@650006c6eb7dba73a995cc03b0b2d7f5ca915bee # v4.2.0
+      uses: docker/login-action@dbcb813823bdd20940b903addbd779551569679f # v4.6.0
       with:
         registry: ghcr.io
         username: ${{ github.actor }}
         password: ${{ secrets.GITHUB_TOKEN }}
     - name: Docker meta
       id: meta
-      uses: docker/metadata-action@030e881283bb7a6894de51c315a6bfe6a94e05cf # v6.0.0
+      uses: docker/metadata-action@dc802804100637a589fabce1cb79ff13a1411302 # v6.2.0
       with:
         images: ${{ steps.repo.outputs.repo }}
         flavor: latest=false
         tags: |
-          type=semver,pattern={{raw}}
+          type=raw,value=${{ github.event.release.tag_name }},enable=${{ github.event_name == 'release' }}
           type=raw,value=${{ steps.unstable-version.outputs.unstable-version }},enable=${{ github.event_name != 'release'}}
     - name: Build base image
       run: |
@@ -89,12 +89,12 @@ jobs:
         docker push localhost:5000/kargo-base:latest-amd64
     - name: Build and push final image
       id: image
-      uses: docker/build-push-action@bcafcacb16a39f128d818304e6c9c0c18556b85f # v7.1.0
+      uses: docker/build-push-action@53b7df96c91f9c12dcc8a07bcb9ccacbed38856a # v7.3.0
       with:
         platforms: linux/amd64,linux/arm64
         build-args: |
           BASE_IMAGE=localhost:5000/kargo-base
-          VERSION=${{ github.ref_name }}
+          VERSION=${{ github.event.release.tag_name || github.ref_name }}
           GIT_COMMIT=${{ github.sha }}
           GIT_TREE_STATE=clean
         tags: ${{ steps.meta.outputs.tags }}
@@ -111,6 +111,18 @@ jobs:
           -a "sha=${{ github.sha }}" \
           --yes \
           ${{ steps.repo.outputs.repo}}@${{ steps.image.outputs.digest}}
+    - name: Install Grype
+      id: grype
+      uses: anchore/scan-action/download-grype@e1165082ffb1fe366ebaf02d8526e7c4989ea9d2 # v7.4.0
+      with:
+        cache-db: true
+    - name: Scan image for CVEs
+      env:
+        GRYPE_CMD: ${{ steps.grype.outputs.cmd }}
+        VEX_IMAGE: kargo-oss # monitored image name for the VEX lookup
+        FAIL_ON: "" # report-only; set to "high" to enforce
+      # Scan the just-pushed digest.
+      run: ./hack/cve-scan.sh "registry:${{ steps.repo.outputs.repo }}@${{ steps.image.outputs.digest }}"
     - name: Publish SBOM
       if: github.event_name == 'release'
       uses: anchore/sbom-action@e22c389904149dbc22b58101806040fa8d37a610 # v0.24.0
@@ -141,7 +153,7 @@ jobs:
     runs-on: ubuntu-latest
     steps:
     - name: Harden the runner (Audit all outbound calls)
-      uses: step-security/harden-runner@9af89fc71515a100421586dfdb3dc9c984fbf411 # v2.19.4
+      uses: step-security/harden-runner@bf7454d06d71f1098171f2acdf0cd4708d7b5920 # v2.20.0
       with:
         egress-policy: audit
 
@@ -158,7 +170,7 @@ jobs:
     - name: Determine Version
       id: version
       run: |
-        VERSION=${{ github.ref_name }}
+        VERSION=${{ github.event.release.tag_name }}
         if ${{ github.event_name != 'release' }}
         then
         VERSION=${{ needs.publish-image.outputs.unstable-version }}
@@ -166,17 +178,17 @@ jobs:
         echo "VERSION is set to: $VERSION"
         echo "version=$VERSION" >> $GITHUB_OUTPUT
     - name: Set up Helm
-      uses: azure/setup-helm@dda3372f752e03dde6b3237bc9431cdc2f7a02a2 # v5.0.0
+      uses: azure/setup-helm@9bc31f4ebc9c6b171d7bfbaa5d006ae7abdb4310 # v5.0.1
       with:
         version: '3.19.4'
     - name: Login to GHCR
-      uses: docker/login-action@650006c6eb7dba73a995cc03b0b2d7f5ca915bee # v4.2.0
+      uses: docker/login-action@dbcb813823bdd20940b903addbd779551569679f # v4.6.0
       with:
         registry: ghcr.io
         username: ${{ github.actor }}
         password: ${{ secrets.GITHUB_TOKEN }}
     - name: Checkout code
-      uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
+      uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
     - name: Publish chart
       env:
         HELM_EXPERIMENTAL_OCI: '1'
@@ -193,25 +205,25 @@ jobs:
     runs-on: ubuntu-latest
     steps:
     - name: Harden the runner (Audit all outbound calls)
-      uses: step-security/harden-runner@9af89fc71515a100421586dfdb3dc9c984fbf411 # v2.19.4
+      uses: step-security/harden-runner@bf7454d06d71f1098171f2acdf0cd4708d7b5920 # v2.20.0
       with:
         egress-policy: audit
 
     - name: Checkout code
-      uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
+      uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
     - name: Install pnpm
       uses: pnpm/action-setup@fc06bc1257f339d1d5d8b3a19a8cae5388b55320 # v4.4.0
       with:
         package_json_file: ui/package.json
     - name: Install nodejs
-      uses: actions/setup-node@48b55a011bda9f5d6aeb4c2d9c7362e8dae4041e # v6.4.0
+      uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7.0.0
       with:
         node-version: "24.15.0"
         cache: "pnpm"
         cache-dependency-path: "**/pnpm-lock.yaml"
     - name: Build UI
       env:
-        VERSION: ${{ github.ref_name }}
+        VERSION: ${{ github.event.release.tag_name || github.ref_name }}
       working-directory: ./ui
       run: |
         pnpm install
@@ -231,7 +243,7 @@ jobs:
       contents: write
     runs-on: ubuntu-latest
     container:
-      image: &golangImage golang:1.26.3-trixie
+      image: &golangImage golang:1.26.5-trixie
     strategy:
       matrix:
         os: [linux, darwin, windows]
@@ -245,13 +257,13 @@ jobs:
       hash-windows-arm64: ${{ steps.hash.outputs.hash-windows-arm64 }}
     steps:
     - name: Harden the runner (Audit all outbound calls)
-      uses: step-security/harden-runner@9af89fc71515a100421586dfdb3dc9c984fbf411 # v2.19.4
+      uses: step-security/harden-runner@bf7454d06d71f1098171f2acdf0cd4708d7b5920 # v2.20.0
       with:
         egress-policy: audit
 
     - name: Checkout code
-      uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
-    - uses: actions/cache@27d5ce7f107fe9357f9df03efb73ab90386fccae # v5.0.5
+      uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+    - uses: actions/cache@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
       with:
         path: /go/pkg/mod
         key: ${{ runner.os }}-go-${{ hashFiles('**/go.sum') }}
@@ -267,7 +279,7 @@ jobs:
         GOFLAGS: -buildvcs=false
         GOOS: ${{ matrix.os }}
         GOARCH: ${{ matrix.arch }}
-        VERSION: ${{ github.ref_name }}
+        VERSION: ${{ github.event.release.tag_name }}
         GIT_COMMIT: ${{ github.sha }}
         GIT_TREE_STATE: clean
       run: make build-cli
@@ -287,6 +299,7 @@ jobs:
       with:
         file: bin/*
         file_glob: true
+        tag: ${{ github.event.release.tag_name }}
         repo_token: ${{ secrets.GITHUB_TOKEN }}
     - name: Generate subject
       id: hash
@@ -308,13 +321,13 @@ jobs:
         arch: [amd64, arm64]
     steps:
     - name: Harden the runner (Audit all outbound calls)
-      uses: step-security/harden-runner@9af89fc71515a100421586dfdb3dc9c984fbf411 # v2.19.4
+      uses: step-security/harden-runner@bf7454d06d71f1098171f2acdf0cd4708d7b5920 # v2.20.0
       with:
         egress-policy: audit
 
     - name: Checkout code
-      uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
-    - uses: actions/cache@27d5ce7f107fe9357f9df03efb73ab90386fccae # v5.0.5
+      uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+    - uses: actions/cache@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
       with:
         path: /go/pkg/mod
         key: ${{ runner.os }}-go-${{ hashFiles('**/go.sum') }}
@@ -349,7 +362,7 @@ jobs:
       run: |
         apt update && apt install awscli -y
     - name: Configure AWS credentials
-      uses: aws-actions/configure-aws-credentials@d979d5b3a71173a29b74b5b88418bfda9437d885 # v6.1.1
+      uses: aws-actions/configure-aws-credentials@e6de054238d6b7531b4efff3b6587d9aade6a06c # v6.2.3
       with:
         role-to-assume: ${{ secrets.AWS_ROLE }}
         aws-region: us-west-2
@@ -375,7 +388,7 @@ jobs:
       HASHES: ${{ toJSON(needs.publish-cli.outputs) }}
     steps:
     - name: Harden the runner (Audit all outbound calls)
-      uses: step-security/harden-runner@9af89fc71515a100421586dfdb3dc9c984fbf411 # v2.19.4
+      uses: step-security/harden-runner@bf7454d06d71f1098171f2acdf0cd4708d7b5920 # v2.20.0
       with:
         egress-policy: audit
 
@@ -413,12 +426,12 @@ jobs:
       image: *golangImage
     steps:
     - name: Harden the runner (Audit all outbound calls)
-      uses: step-security/harden-runner@9af89fc71515a100421586dfdb3dc9c984fbf411 # v2.19.4
+      uses: step-security/harden-runner@bf7454d06d71f1098171f2acdf0cd4708d7b5920 # v2.20.0
       with:
         egress-policy: audit
 
     - name: Checkout code
-      uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
+      uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
     - name: Generate best releases JSON
       run: |
         mkdir _site

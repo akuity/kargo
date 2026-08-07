@@ -1,0 +1,280 @@
+suite: controller/deployment.yaml
+values:
+  - ../test/values-unittest.yaml
+templates:
+  - templates/controller/deployment.yaml
+  - templates/controller/configmap.yaml
+tests:
+  - it: renders the controller Deployment by default
+    template: templates/controller/deployment.yaml
+    asserts:
+      - hasDocuments:
+          count: 1
+      - isKind:
+          of: Deployment
+      - equal:
+          path: metadata.name
+          value: kargo-controller
+      - equal:
+          path: spec.strategy.type
+          value: Recreate
+      - equal:
+          path: spec.template.spec.serviceAccountName
+          value: kargo-controller
+      - equal:
+          path: spec.template.spec.containers[0].envFrom[0].configMapRef.name
+          value: kargo-controller
+
+  - it: is not rendered when the controller is disabled
+    template: templates/controller/deployment.yaml
+    set:
+      controller.enabled: false
+    asserts:
+      - hasDocuments:
+          count: 0
+
+  - it: declares no metrics container port by default
+    template: templates/controller/deployment.yaml
+    asserts:
+      - notExists:
+          path: spec.template.spec.containers[0].ports
+
+  - it: declares the metrics container port when metrics are enabled
+    template: templates/controller/deployment.yaml
+    set:
+      controller.metrics.enabled: true
+    asserts:
+      - contains:
+          path: spec.template.spec.containers[0].ports
+          content:
+            containerPort: 9090
+            name: http-metrics
+            protocol: TCP
+
+---
+suite: controller/configmap.yaml
+values:
+  - ../test/values-unittest.yaml
+templates:
+  - templates/controller/configmap.yaml
+tests:
+  - it: marks the controller as default when no shard name is set
+    asserts:
+      - isKind:
+          of: ConfigMap
+      - equal:
+          path: data.IS_DEFAULT_CONTROLLER
+          value: "true"
+      - notExists:
+          path: data.SHARD_NAME
+
+  - it: sets the shard name and is not default when a shard is named
+    set:
+      controller.shardName: shard-a
+    asserts:
+      - equal:
+          path: data.SHARD_NAME
+          value: shard-a
+      - notExists:
+          path: data.IS_DEFAULT_CONTROLLER
+
+  - it: is both sharded and default when isDefault is set with a shard name
+    set:
+      controller.shardName: shard-a
+      controller.isDefault: true
+    asserts:
+      - equal:
+          path: data.SHARD_NAME
+          value: shard-a
+      - equal:
+          path: data.IS_DEFAULT_CONTROLLER
+          value: "true"
+
+  - it: includes the API server base URL when the API is enabled
+    asserts:
+      - equal:
+          path: data.API_SERVER_BASE_URL
+          value: https://localhost
+
+  - it: omits the API server base URL when the API is disabled
+    set:
+      api.enabled: false
+    asserts:
+      - notExists:
+          path: data.API_SERVER_BASE_URL
+
+  - it: omits METRICS_BIND_ADDRESS by default
+    asserts:
+      - notExists:
+          path: data.METRICS_BIND_ADDRESS
+
+  - it: sets METRICS_BIND_ADDRESS when metrics are enabled
+    set:
+      controller.metrics.enabled: true
+      controller.metrics.service.servicePort: 9095
+    asserts:
+      - equal:
+          path: data.METRICS_BIND_ADDRESS
+          value: ":9095"
+
+---
+suite: controller/cluster-role-bindings.yaml
+values:
+  - ../test/values-unittest.yaml
+templates:
+  - templates/controller/cluster-role-bindings.yaml
+tests:
+  - it: binds the controller and its integration roles by default
+    asserts:
+      - documentSelector:
+          path: metadata.name
+          value: kargo-controller
+        equal:
+          path: roleRef.name
+          value: kargo-controller
+      - documentSelector:
+          path: metadata.name
+          value: kargo-controller-rollouts
+        isKind:
+          of: ClusterRoleBinding
+
+  - it: drops the rollouts binding when rollouts integration is disabled
+    set:
+      controller.rollouts.integrationEnabled: false
+      controller.argocd.integrationEnabled: false
+    asserts:
+      - hasDocuments:
+          count: 1
+      - equal:
+          path: metadata.name
+          value: kargo-controller
+
+  - it: is not rendered when cluster role bindings are disabled
+    set:
+      rbac.installClusterRoleBindings: false
+      argocd.dataPlane.install: false
+    asserts:
+      - hasDocuments:
+          count: 0
+
+---
+suite: controller/metrics-service.yaml
+values:
+  - ../test/values-unittest.yaml
+templates:
+  - templates/controller/metrics-service.yaml
+tests:
+  - it: is not rendered by default
+    asserts:
+      - hasDocuments:
+          count: 0
+
+  - it: renders the metrics Service when metrics are enabled
+    set:
+      controller.metrics.enabled: true
+    asserts:
+      - hasDocuments:
+          count: 1
+      - isKind:
+          of: Service
+      - equal:
+          path: metadata.name
+          value: kargo-controller-metrics
+      - equal:
+          path: spec.type
+          value: ClusterIP
+      - equal:
+          path: spec.ports[0].port
+          value: 9090
+      - equal:
+          path: spec.ports[0].targetPort
+          value: 9090
+      - equal:
+          path: spec.ports[0].name
+          value: http-metrics
+      - equal:
+          path: spec.selector["app.kubernetes.io/component"]
+          value: controller
+      - notExists:
+          path: spec.clusterIP
+
+  - it: supports a headless Service and custom port
+    set:
+      controller.metrics.enabled: true
+      controller.metrics.service.clusterIP: None
+      controller.metrics.service.servicePort: 9095
+      controller.metrics.service.portName: telemetry
+    asserts:
+      - equal:
+          path: spec.clusterIP
+          value: None
+      - equal:
+          path: spec.ports[0].port
+          value: 9095
+      - equal:
+          path: spec.ports[0].name
+          value: telemetry
+
+---
+suite: controller/metrics-service-monitor.yaml
+values:
+  - ../test/values-unittest.yaml
+templates:
+  - templates/controller/metrics-service-monitor.yaml
+tests:
+  - it: is not rendered by default
+    capabilities:
+      apiVersions:
+        - monitoring.coreos.com/v1
+    asserts:
+      - hasDocuments:
+          count: 0
+
+  - it: is not rendered when only metrics are enabled
+    set:
+      controller.metrics.enabled: true
+    capabilities:
+      apiVersions:
+        - monitoring.coreos.com/v1
+    asserts:
+      - hasDocuments:
+          count: 0
+
+  - it: is not rendered when the Prometheus Operator CRDs are absent
+    set:
+      controller.metrics.enabled: true
+      controller.metrics.serviceMonitor.enabled: true
+    asserts:
+      - hasDocuments:
+          count: 0
+
+  - it: renders the ServiceMonitor when enabled and the CRDs are present
+    set:
+      controller.metrics.enabled: true
+      controller.metrics.serviceMonitor.enabled: true
+      controller.metrics.serviceMonitor.interval: 15s
+      controller.metrics.serviceMonitor.additionalLabels:
+        release: prometheus
+    capabilities:
+      apiVersions:
+        - monitoring.coreos.com/v1
+    asserts:
+      - hasDocuments:
+          count: 1
+      - isKind:
+          of: ServiceMonitor
+      - equal:
+          path: metadata.name
+          value: kargo-controller-metrics
+      - equal:
+          path: metadata.labels.release
+          value: prometheus
+      - equal:
+          path: spec.endpoints[0].port
+          value: http-metrics
+      - equal:
+          path: spec.endpoints[0].interval
+          value: 15s
+      - equal:
+          path: spec.selector.matchLabels["app.kubernetes.io/component"]
+          value: controller

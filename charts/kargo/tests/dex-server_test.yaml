@@ -1,0 +1,82 @@
+suite: dex-server/service.yaml
+values:
+  - ../test/values-unittest.yaml
+templates:
+  - templates/dex-server/service.yaml
+tests:
+  - it: is not rendered when Dex is disabled (default)
+    asserts:
+      - hasDocuments:
+          count: 0
+
+  - it: renders the Dex Service when OIDC + Dex are enabled
+    set:
+      api.oidc.enabled: true
+      api.oidc.dex.enabled: true
+    asserts:
+      - hasDocuments:
+          count: 1
+      - isKind:
+          of: Service
+      - equal:
+          path: metadata.name
+          value: kargo-dex-server
+      - equal:
+          path: spec.ports[0].port
+          value: 443
+      - equal:
+          path: spec.ports[0].targetPort
+          value: 5556
+
+---
+suite: dex-server/deployment.yaml
+values:
+  - ../test/values-unittest.yaml
+templates:
+  - templates/dex-server/deployment.yaml
+  - templates/dex-server/secret.yaml
+tests:
+  - it: is not rendered when Dex is disabled (default)
+    template: templates/dex-server/deployment.yaml
+    asserts:
+      - hasDocuments:
+          count: 0
+
+  - it: renders the Dex Deployment when OIDC + Dex are enabled
+    template: templates/dex-server/deployment.yaml
+    set:
+      api.oidc.enabled: true
+      api.oidc.dex.enabled: true
+    asserts:
+      - hasDocuments:
+          count: 1
+      - isKind:
+          of: Deployment
+      - equal:
+          path: metadata.name
+          value: kargo-dex-server
+
+---
+suite: dex-server/secret.yaml
+values:
+  - ../test/values-unittest.yaml
+templates:
+  - templates/dex-server/secret.yaml
+tests:
+  - it: is not rendered when Dex is disabled (default)
+    asserts:
+      - hasDocuments:
+          count: 0
+
+  - it: renders the Dex config Secret when OIDC + Dex are enabled
+    set:
+      api.oidc.enabled: true
+      api.oidc.dex.enabled: true
+    asserts:
+      - hasDocuments:
+          count: 1
+      - isKind:
+          of: Secret
+      - equal:
+          path: metadata.name
+          value: kargo-dex-server

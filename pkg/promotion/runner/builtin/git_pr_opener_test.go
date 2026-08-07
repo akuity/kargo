@@ -166,22 +166,22 @@ func Test_gitPROpener_run(t *testing.T) {
 
 	workDir := t.TempDir()
 
-	repo, err := git.Clone(testRepoURL, nil, nil)
+	repo, err := git.Clone(t.Context(), testRepoURL, nil, nil)
 	require.NoError(t, err)
-	defer repo.Close()
-	err = repo.CreateOrphanedBranch(testSourceBranch)
+	defer repo.Close(t.Context())
+	err = repo.CreateOrphanedBranch(t.Context(), testSourceBranch)
 	require.NoError(t, err)
 
 	// Make a file with the same name as the branch
 	err = os.WriteFile(filepath.Join(repo.Dir(), testSourceBranch), []byte("foo"), 0600)
 	require.NoError(t, err)
 
-	err = repo.AddAll()
+	err = repo.AddAll(t.Context())
 	require.NoError(t, err)
 
-	err = repo.Commit("Initial commit", &git.CommitOptions{AllowEmpty: true})
+	err = repo.Commit(t.Context(), "Initial commit", &git.CommitOptions{AllowEmpty: true})
 	require.NoError(t, err)
-	err = repo.Push(nil)
+	err = repo.Push(t.Context(), nil)
 	require.NoError(t, err)
 
 	// Set up a fake git provider
@@ -248,8 +248,8 @@ func Test_gitPROpener_run(t *testing.T) {
 
 	t.Run("skip when target branch exists but has no changes", func(t *testing.T) {
 		// push the target branch with no changes compared to the source branch
-		require.NoError(t, repo.CreateChildBranch(testTargetBranch))
-		require.NoError(t, repo.Push(nil))
+		require.NoError(t, repo.CreateChildBranch(t.Context(), testTargetBranch))
+		require.NoError(t, repo.Push(t.Context(), nil))
 
 		r := newGitPROpener(promotion.StepRunnerCapabilities{
 			CredsDB: &credentials.FakeDB{},
@@ -277,10 +277,10 @@ func Test_gitPROpener_run(t *testing.T) {
 
 	t.Run("successfully opens PR when target branch exists and has changes", func(t *testing.T) {
 		// ensure there is a change compared to the source branch by pushing a commit to the target branch
-		require.NoError(t, repo.Checkout(testTargetBranch))
+		require.NoError(t, repo.Checkout(t.Context(), testTargetBranch))
 		require.NoError(t, os.WriteFile(fmt.Sprintf("%s/some-file.txt", repo.Dir()), []byte("some changes"), 0600))
-		require.NoError(t, repo.AddAllAndCommit("my commit msg", nil))
-		require.NoError(t, repo.Push(nil))
+		require.NoError(t, repo.AddAllAndCommit(t.Context(), "my commit msg", nil))
+		require.NoError(t, repo.Push(t.Context(), nil))
 
 		r := newGitPROpener(promotion.StepRunnerCapabilities{
 			CredsDB: &credentials.FakeDB{},

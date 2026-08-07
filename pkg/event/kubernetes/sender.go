@@ -96,7 +96,14 @@ func (s *EventSender) Send(_ context.Context, evt event.Meta) error {
 		APIVersion: apiVersion,
 	}
 	// Use the recorder to send the event
-	s.recorder.AnnotatedEventf(&reference, annotations, corev1.EventTypeNormal, string(evt.Type()), message)
+	s.recorder.AnnotatedEventf(
+		&reference,
+		annotations,
+		corev1.EventTypeNormal,
+		string(evt.Type()),
+		"%s",
+		message,
+	)
 
 	return nil
 }

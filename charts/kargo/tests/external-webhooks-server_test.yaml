@@ -1,0 +1,79 @@
+suite: external-webhooks-server/deployment.yaml
+values:
+  - ../test/values-unittest.yaml
+templates:
+  - templates/external-webhooks-server/deployment.yaml
+  - templates/external-webhooks-server/configmap.yaml
+tests:
+  - it: renders the external webhooks server Deployment by default
+    template: templates/external-webhooks-server/deployment.yaml
+    asserts:
+      - hasDocuments:
+          count: 1
+      - isKind:
+          of: Deployment
+      - equal:
+          path: metadata.name
+          value: kargo-external-webhooks-server
+      - equal:
+          path: spec.template.spec.serviceAccountName
+          value: kargo-external-webhooks-server
+
+  - it: is not rendered when the external webhooks server is disabled
+    template: templates/external-webhooks-server/deployment.yaml
+    set:
+      externalWebhooksServer.enabled: false
+    asserts:
+      - hasDocuments:
+          count: 0
+
+---
+suite: external-webhooks-server/configmap.yaml
+values:
+  - ../test/values-unittest.yaml
+templates:
+  - templates/external-webhooks-server/configmap.yaml
+tests:
+  - it: renders configuration with defaults
+    asserts:
+      - isKind:
+          of: ConfigMap
+      - equal:
+          path: data.LOG_LEVEL
+          value: INFO
+      - equal:
+          path: data.SYSTEM_RESOURCES_NAMESPACE
+          value: kargo-system-resources
+      - equal:
+          path: data.TLS_ENABLED
+          value: "true"
+
+  - it: derives the external webhooks server base URL (https by default)
+    asserts:
+      - equal:
+          path: data.EXTERNAL_WEBHOOK_SERVER_BASE_URL
+          value: https://localhost
+
+  - it: omits TLS env when direct TLS is disabled
+    set:
+      externalWebhooksServer.tls.enabled: false
+    asserts:
+      - notExists:
+          path: data.TLS_ENABLED
+
+---
+suite: external-webhooks-server/service.yaml
+values:
+  - ../test/values-unittest.yaml
+templates:
+  - templates/external-webhooks-server/service.yaml
+tests:
+  - it: renders the external webhooks Service
+    asserts:
+      - hasDocuments:
+          count: 1
+      - isKind:
+          of: Service
+      - equal:
+          path: metadata.name
+          value: kargo-external-webhooks-server

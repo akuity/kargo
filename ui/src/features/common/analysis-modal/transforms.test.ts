@@ -10,7 +10,6 @@ import {
 
 import {
   analysisEndTime,
-  analysisStartTime,
   argValue,
   chartMax,
   conditionDetails,
@@ -21,7 +20,6 @@ import {
   formattedValue,
   interpolateQuery,
   isChartable,
-  isValidDate,
   metricProvider,
   metricStatusLabel,
   metricSubstatus,
@@ -217,34 +215,16 @@ describe('analysis modal transforms', () => {
   beforeAll(() => {});
   afterAll(() => {});
 
-  test('isValidDate() for undefined', () => {
-    expect(isValidDate()).toBe(false);
-  });
-  test('isValidDate() for a non-date recognized string', () => {
-    expect(isValidDate('abcd')).toBe(false);
-  });
-  test('isValidDate() for a date recognized string', () => {
-    expect(isValidDate('2023-11-16T00:25:23Z')).toBe(true);
-  });
-
-  test('analysisStartTime() for undefined', () => {
-    expect(analysisStartTime()).toBeNull();
-  });
-  test('analysisStartTime() for a non-date recognized string', () => {
-    expect(analysisStartTime('abcd')).toBeNull();
-  });
-  test('analysisStartTime() for a date recognized string', () => {
-    expect(analysisStartTime('2023-11-16T00:25:23Z')).toBe(1700094323000);
-  });
-
+  // analysisEndTime returns a UNIX timestamp in seconds (consumed by
+  // moment.unix), and 0 when there are no measurement finishedAt times.
   test('analysisEndTime() for no metric results', () => {
-    expect(analysisEndTime([])).toBe(null);
+    expect(analysisEndTime([])).toBe(0);
   });
   test('analysisEndTime() for analysis with metrics but no measurements', () => {
-    expect(analysisEndTime(MOCK_METRICS_WITHOUT_END_TIMES)).toBe(null);
+    expect(analysisEndTime(MOCK_METRICS_WITHOUT_END_TIMES)).toBe(0);
   });
   test('analysisEndTime() for measurements with finishedAt times', () => {
-    expect(analysisEndTime(MOCK_METRICS_WITH_END_TIMES)).toBe(1700094503000);
+    expect(analysisEndTime(MOCK_METRICS_WITH_END_TIMES)).toBe(1700094503);
   });
 
   test('argValue() for empty args', () => {

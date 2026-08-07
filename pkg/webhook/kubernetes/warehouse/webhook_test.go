@@ -3,6 +3,7 @@ package warehouse
 import (
 	"context"
 	"errors"
+	"strings"
 	"testing"
 
 	"github.com/stretchr/testify/require"
@@ -48,10 +49,10 @@ func init() {
 						// our tests because it will interfere with testing that common
 						// elements of generic subscriptions are defaulted properly. So,
 						// even though this is a nonsensical thing to do, we'll make a
-						// predictable change to the name field instead, because it will
-						// give us a way to verify that subscriber-specific defaulting logic
-						// works for generic subscriptions.
-						sub.Subscription.Name = "fake"
+						// predictable change to the subscription's name instead, because it
+						// will give us a way to verify that subscriber-specific defaulting
+						// logic works for generic subscriptions.
+						sub.Name = "fake"
 					}
 					return nil
 				},
@@ -139,7 +140,7 @@ func Test_webhook_Default(t *testing.T) {
 		require.Equal(t, testDiscoveryLimit, warehouse.Spec.InternalSubscriptions[0].Git.DiscoveryLimit)
 		require.Equal(t, testDiscoveryLimit, warehouse.Spec.InternalSubscriptions[1].Image.DiscoveryLimit)
 		require.Equal(t, testDiscoveryLimit, warehouse.Spec.InternalSubscriptions[2].Chart.DiscoveryLimit)
-		require.Equal(t, "fake", warehouse.Spec.InternalSubscriptions[3].Subscription.Name)
+		require.Equal(t, "fake", warehouse.Spec.InternalSubscriptions[3].Name)
 	})
 
 	t.Run("common elements of generic subscriptions are defaulted", func(t *testing.T) {
@@ -246,6 +247,134 @@ func Test_webhook_ValidateCreate(t *testing.T) {
 				require.NoError(t, err)
 			},
 		},
+		{
+			name: "subscription names must be unique",
+			webhook: &webhook{
+				client: fake.NewClientBuilder().WithScheme(testScheme).WithObjects(
+					&corev1.Namespace{
+						ObjectMeta: metav1.ObjectMeta{
+							Name: testProject,
+							Labels: map[string]string{
+								kargoapi.LabelKeyProject: kargoapi.LabelValueTrue,
+							},
+						},
+					},
+				).Build(),
+			},
+			warehouse: &kargoapi.Warehouse{
+				ObjectMeta: metav1.ObjectMeta{Namespace: testProject},
+				Spec: kargoapi.WarehouseSpec{
+					InternalSubscriptions: []kargoapi.RepoSubscription{
+						{
+							Name: "alpha",
+							Image: &kargoapi.ImageSubscription{
+								RepoURL: "fake-url-1",
+							},
+						},
+						{
+							Name: "alpha",
+							Image: &kargoapi.ImageSubscription{
+								RepoURL: "fake-url-2",
+							},
+						},
+					},
+				},
+			},
+			assertions: func(t *testing.T, err error) {
+				require.Error(t, err)
+				require.Contains(t, err.Error(), "spec.subscriptions[1].name")
+				require.NotContains(t, err.Error(), ".image.name")
+			},
+		},
+		{
+			name: "subscription name is not a valid DNS label",
+			webhook: &webhook{
+				client: fake.NewClientBuilder().WithScheme(testScheme).WithObjects(
+					&corev1.Namespace{
+						ObjectMeta: metav1.ObjectMeta{
+							Name: testProject,
+							Labels: map[string]string{
+								kargoapi.LabelKeyProject: kargoapi.LabelValueTrue,
+							},
+						},
+					},
+				).Build(),
+			},
+			warehouse: &kargoapi.Warehouse{
+				ObjectMeta: metav1.ObjectMeta{Namespace: testProject},
+				Spec: kargoapi.WarehouseSpec{
+					InternalSubscriptions: []kargoapi.RepoSubscription{{
+						Name:  "Not A Valid Name",
+						Image: &kargoapi.ImageSubscription{RepoURL: "fake-url"},
+					}},
+				},
+			},
+			assertions: func(t *testing.T, err error) {
+				require.Error(t, err)
+				require.Contains(t, err.Error(), "spec.subscriptions[0].name")
+				require.Contains(t, err.Error(), "must consist of lower case alphanumeric characters")
+			},
+		},
+		{
+			name: "subscription name is too long",
+			webhook: &webhook{
+				client: fake.NewClientBuilder().WithScheme(testScheme).WithObjects(
+					&corev1.Namespace{
+						ObjectMeta: metav1.ObjectMeta{
+							Name: testProject,
+							Labels: map[string]string{
+								kargoapi.LabelKeyProject: kargoapi.LabelValueTrue,
+							},
+						},
+					},
+				).Build(),
+			},
+			warehouse: &kargoapi.Warehouse{
+				ObjectMeta: metav1.ObjectMeta{Namespace: testProject},
+				Spec: kargoapi.WarehouseSpec{
+					InternalSubscriptions: []kargoapi.RepoSubscription{{
+						Name:  strings.Repeat("a", 64),
+						Image: &kargoapi.ImageSubscription{RepoURL: "fake-url"},
+					}},
+				},
+			},
+			assertions: func(t *testing.T, err error) {
+				require.Error(t, err)
+				require.Contains(t, err.Error(), "spec.subscriptions[0].name")
+				require.Contains(t, err.Error(), "must be no more than 63 characters")
+			},
+		},
+		{
+			name: "generic subscription without a name",
+			webhook: &webhook{
+				client: fake.NewClientBuilder().WithScheme(testScheme).WithObjects(
+					&corev1.Namespace{
+						ObjectMeta: metav1.ObjectMeta{
+							Name: testProject,
+							Labels: map[string]string{
+								kargoapi.LabelKeyProject: kargoapi.LabelValueTrue,
+							},
+						},
+					},
+				).Build(),
+			},
+			warehouse: &kargoapi.Warehouse{
+				ObjectMeta: metav1.ObjectMeta{Namespace: testProject},
+				Spec: kargoapi.WarehouseSpec{
+					InternalSubscriptions: []kargoapi.RepoSubscription{{
+						Subscription: &kargoapi.Subscription{
+							SubscriptionType: "fake-type",
+							DiscoveryLimit:   20,
+						},
+					}},
+				},
+			},
+			assertions: func(t *testing.T, err error) {
+				require.Error(t, err)
+				require.Contains(t, err.Error(), "spec.subscriptions[0].name")
+				require.Contains(t, err.Error(), "Required value")
+			},
+		},
 	}
 	for _, testCase := range testCases {
 		t.Run(testCase.name, func(t *testing.T) {
@@ -328,6 +457,45 @@ func Test_webhook_ValidateUpdate(t *testing.T) {
 				require.NoError(t, err)
 			},
 		},
+		{
+			name: "subscription names must be unique",
+			webhook: &webhook{
+				client: fake.NewClientBuilder().WithScheme(testScheme).WithObjects(
+					&corev1.Namespace{
+						ObjectMeta: metav1.ObjectMeta{
+							Name: testProject,
+							Labels: map[string]string{
+								kargoapi.LabelKeyProject: kargoapi.LabelValueTrue,
+							},
+						},
+					},
+				).Build(),
+			},
+			warehouse: &kargoapi.Warehouse{
+				ObjectMeta: metav1.ObjectMeta{Namespace: testProject},
+				Spec: kargoapi.WarehouseSpec{
+					InternalSubscriptions: []kargoapi.RepoSubscription{
+						{
+							Name: "alpha",
+							Image: &kargoapi.ImageSubscription{
+								RepoURL: "fake-url-1",
+							},
+						},
+						{
+							Name: "alpha",
+							Image: &kargoapi.ImageSubscription{
+								RepoURL: "fake-url-2",
+							},
+						},
+					},
+				},
+			},
+			assertions: func(t *testing.T, err error) {
+				require.Error(t, err)
+				require.Contains(t, err.Error(), "spec.subscriptions[1].name")
+				require.NotContains(t, err.Error(), ".image.name")
+			},
+		},
 	}
 	for _, testCase := range testCases {
 		t.Run(testCase.name, func(t *testing.T) {
@@ -369,11 +537,13 @@ func TestValidateSpec(t *testing.T) {
 					{Git: &kargoapi.GitSubscription{}},
 					{Image: &kargoapi.ImageSubscription{}},
 					{Chart: &kargoapi.ChartSubscription{}},
-					{Subscription: &kargoapi.Subscription{
-						SubscriptionType: "fake",
-						Name:             "fake-sub",
-						DiscoveryLimit:   20,
-					}},
+					{
+						Name: "fake-sub",
+						Subscription: &kargoapi.Subscription{
+							SubscriptionType: "fake",
+							DiscoveryLimit:   20,
+						},
+					},
 				},
 			},
 			assertions: func(t *testing.T, _ *kargoapi.WarehouseSpec, errs field.ErrorList) {
@@ -400,10 +570,8 @@ func TestValidateSpec(t *testing.T) {
 			spec: kargoapi.WarehouseSpec{
 				InternalSubscriptions: []kargoapi.RepoSubscription{
 					{
-						Subscription: &kargoapi.Subscription{
-							// Name is empty and discovery limit is zero
-							SubscriptionType: "fake",
-						},
+						// Name is empty and discovery limit is zero
+						Subscription: &kargoapi.Subscription{SubscriptionType: "fake"},
 					},
 					{
 						Subscription: &kargoapi.Subscription{
@@ -419,7 +587,7 @@ func TestValidateSpec(t *testing.T) {
 				for i, err := range errs {
 					fields[i] = err.Field
 				}
-				require.Contains(t, fields, "spec.subscriptions[0].fake.name")
+				require.Contains(t, fields, "spec.subscriptions[0].name")
 				require.Contains(t, fields, "spec.subscriptions[0].fake.discoveryLimit")
 				require.Contains(t, fields, "spec.subscriptions[1].fake.discoveryLimit")
 			},

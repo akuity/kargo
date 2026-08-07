@@ -4,12 +4,14 @@ import (
 	"context"
 	"encoding/base64"
 	"fmt"
+	"net/http"
 	"time"
 
-	"github.com/patrickmn/go-cache"
+	"github.com/hashicorp/go-cleanhttp"
 	"golang.org/x/oauth2"
 	"golang.org/x/oauth2/google"
 
+	"github.com/akuity/kargo/pkg/cache/coalescing"
 	"github.com/akuity/kargo/pkg/credentials"
 	"github.com/akuity/kargo/pkg/logging"
 )
@@ -20,6 +22,9 @@ const (
 )
 
 func init() {
+	if !credentials.ProvidersEnabled() {
+		return
+	}
 	if provider := NewServiceAccountKeyProvider(); provider != nil {
 		credentials.DefaultProviderRegistry.MustRegister(
 			credentials.ProviderRegistration{
@@ -31,7 +36,10 @@ func init() {
 }
 
 type ServiceAccountKeyProvider struct {
-	tokenCache *cache.Cache
+	// tokenCache holds access tokens keyed by a hash of the service account key
+	// they were obtained with. It fills its own misses, coalescing concurrent
+	// loads for any given service account key.
+	tokenCache coalescing.Cache[string, string]
 
 	getAccessTokenFn func(
 		ctx context.Context,
@@ -40,16 +48,26 @@ type ServiceAccountKeyProvider struct {
 }
 
 func NewServiceAccountKeyProvider() credentials.Provider {
-	p := &ServiceAccountKeyProvider{
-		tokenCache: cache.New(
+	p := &ServiceAccountKeyProvider{}
+	p.getAccessTokenFn = p.getAccessToken
+	tokenCache, err := coalescing.NewCache(
+		p.loadAccessToken,
+		&coalescing.CacheOptions{
+			LoadTimeout: new(tokenAcquisitionTimeout),
 			// Access tokens live for one hour. We'll hang on to them for 40
 			// minutes by default. When the actual token expiry is available, it
 			// is used (minus a safety margin) instead of this default.
-			40*time.Minute, // Default ttl for each entry
-			time.Hour,      // Cleanup interval
-		),
+			DefaultTTL:      new(40 * time.Minute),
+			CleanupInterval: new(time.Hour),
+		},
+	)
+	if err != nil {
+		logging.LoggerFromContext(context.Background()).Error(
+			err, "error creating token cache; this provider will not be registered",
+		)
+		return nil
 	}
-	p.getAccessTokenFn = p.getAccessToken
+	p.tokenCache = tokenCache
 	return p
 }
 
@@ -80,41 +98,56 @@ func (p *ServiceAccountKeyProvider) GetCredentials(
 		"provider", "garServiceAccountKey",
 		"repoURL", req.RepoURL,
 	)
+	ctx = logging.ContextWithLogger(ctx, logger)
 
-	// Check the cache for the token
-	if entry, exists := p.tokenCache.Get(cacheKey); exists {
-		logger.Debug("access token cache hit")
-		return &credentials.Credentials{
-			Username: accessTokenUsername,
-			Password: entry.(string), // nolint: forcetypeassert
-		}, nil
+	accessToken, err := p.tokenCache.Get(ctx, cacheKey, encodedServiceAccountKey)
+	if err != nil {
+		return nil, err
 	}
-	logger.Debug("access token cache miss")
 
-	// Cache miss, get a new token
+	// If we didn't get a token, we'll treat this as no credentials found
+	if accessToken == "" {
+		return nil, nil
+	}
+
+	return &credentials.Credentials{
+		Username: accessTokenUsername,
+		Password: accessToken,
+	}, nil
+}
+
+// loadAccessToken obtains a GCP access token using the given base64 encoded
+// service account key. It is the Loader for this provider's token cache.
+func (p *ServiceAccountKeyProvider) loadAccessToken(
+	ctx context.Context,
+	encodedServiceAccountKey string,
+) (string, *time.Duration, error) {
+	logger := logging.LoggerFromContext(ctx)
+
 	token, err := p.getAccessTokenFn(ctx, encodedServiceAccountKey)
 	if err != nil {
-		return nil, fmt.Errorf("error getting GCP access token: %w", err)
+		return "", nil, fmt.Errorf("error getting GCP access token: %w", err)
 	}
 
 	// If we didn't get a token, we'll treat this as no credentials found
 	if token == nil || token.AccessToken == "" {
-		return nil, nil
+		return "", nil, nil
 	}
 	logger.Debug("obtained new access token")
 
 	ttl := credentials.CalculateCacheTTL(token.Expiry, tokenCacheExpiryMargin)
+	if ttl == nil {
+		logger.Debug(
+			"token expires too soon to be worth caching", "expiry", token.Expiry,
+		)
+		return token.AccessToken, nil, nil
+	}
 	logger.Debug(
 		"caching access token",
 		"expiry", token.Expiry,
-		"ttl", ttl,
+		"ttl", *ttl,
 	)
-	p.tokenCache.Set(cacheKey, token.AccessToken, ttl)
-
-	return &credentials.Credentials{
-		Username: accessTokenUsername,
-		Password: token.AccessToken,
-	}, nil
+	return token.AccessToken, ttl, nil
 }
 
 // getAccessToken returns a GCP access token retrieved using the provided base64
@@ -132,6 +165,13 @@ func (p *ServiceAccountKeyProvider) getAccessToken(
 	if err != nil {
 		return nil, fmt.Errorf("error parsing service account key: %w", err)
 	}
+
+	// oauth2 takes its HTTP client from the context but issues the token request
+	// without the context, so a client timeout is the only available bound.
+	ctx = context.WithValue(ctx, oauth2.HTTPClient, &http.Client{
+		Transport: cleanhttp.DefaultTransport(),
+		Timeout:   tokenRequestTimeout,
+	})
 
 	tokenSource := config.TokenSource(ctx)
 	token, err := tokenSource.Token()

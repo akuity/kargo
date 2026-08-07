@@ -7,6 +7,7 @@ import (
 	"strings"
 
 	"github.com/expr-lang/expr"
+	"go.yaml.in/yaml/v3"
 )
 
 type supportedDelimiterSet struct {
@@ -43,10 +44,14 @@ var supportedDelimiters = []supportedDelimiterSet{
 // result in a string.
 // This behavior should be intuitive to anyone familiar with YAML.
 func EvaluateJSONTemplate(jsonBytes []byte, env map[string]any, exprOpts ...expr.Option) ([]byte, error) {
-	if _, ok := env["quote"]; ok {
-		return nil, fmt.Errorf(
-			`"quote" is a forbidden key in the environment map; it is reserved for internal use`,
-		)
+	// TODO: Consider reserving "unsafeQuote" in this list after confirming it's safe to do so
+	for _, fn := range []string{"quote", "asYAML", "asJSON"} {
+		if _, ok := env[fn]; ok {
+			return nil, fmt.Errorf(
+				`%q is a forbidden key in the environment map; it is reserved for internal use`,
+				fn,
+			)
+		}
 	}
 	var parsed map[string]any
 	if err := json.Unmarshal(jsonBytes, &parsed); err != nil {
@@ -125,7 +130,7 @@ func EvaluateTemplate(template string, env map[string]any, exprOpts ...expr.Opti
 	}
 
 	if exprOpts == nil {
-		exprOpts = make([]expr.Option, 0, 2)
+		exprOpts = make([]expr.Option, 0, 4)
 	}
 	exprOpts = append(
 		exprOpts,
@@ -137,6 +142,16 @@ func EvaluateTemplate(template string, env map[string]any, exprOpts ...expr.Opti
 		expr.Function(
 			"unsafeQuote",
 			unsafeQuoteFunc,
+			new(func(any) string),
+		),
+		expr.Function(
+			"asYAML",
+			asYAMLFunc,
+			new(func(any) string),
+		),
+		expr.Function(
+			"asJSON",
+			asJSONFunc,
 			new(func(any) string),
 		),
 	)
@@ -306,4 +321,20 @@ func unsafeQuoteFunc(a ...any) (any, error) {
 		return nil, fmt.Errorf("error applying quote() function: %w", err)
 	}
 	return fmt.Sprintf(`"%s"`, jsonBytes), nil
+}
+
+func asYAMLFunc(a ...any) (any, error) {
+	yamlBytes, err := yaml.Marshal(a[0])
+	if err != nil {
+		return nil, fmt.Errorf("error applying asYAML() function: %w", err)
+	}
+	return fmt.Sprintf("\"%s\"", yamlBytes), nil
+}
+
+func asJSONFunc(a ...any) (any, error) {
+	jsonBytes, err := json.MarshalIndent(a[0], "", "  ")
+	if err != nil {
+		return nil, fmt.Errorf("error applying asJSON() function: %w", err)
+	}
+	return fmt.Sprintf("\"%s\n\"", jsonBytes), nil
 }

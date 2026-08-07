@@ -6,7 +6,7 @@ import { StageConditionIcon } from '@ui/features/common/stage-status/stage-condi
 import { useStageControllerStatus } from '@ui/features/common/stage-status/use-stage-controller-status';
 import { getStagePhase } from '@ui/features/common/stage-status/utils';
 import { getCurrentFreight } from '@ui/features/common/utils';
-import { Stage } from '@ui/gen/api/v1alpha1/generated_pb';
+import { Stage } from '@ui/gen/api/v2/models';
 
 export const PhaseCell = ({ stage }: { stage: Stage }) => {
   const { controllerName, isControllerDead } = useStageControllerStatus(stage);

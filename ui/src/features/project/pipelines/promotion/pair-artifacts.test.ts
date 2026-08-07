@@ -1,6 +1,6 @@
 import { describe, expect, test } from 'vitest';
 
-import { Freight } from '@ui/gen/api/v1alpha1/generated_pb';
+import { Freight } from '@ui/gen/api/v2/models';
 
 import { pairArtifacts } from './pair-artifacts';
 

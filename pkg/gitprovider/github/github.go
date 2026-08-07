@@ -2,7 +2,9 @@ package github
 
 import (
 	"context"
+	"errors"
 	"fmt"
+	"net/http"
 	"net/url"
 	"strings"
 
@@ -21,6 +23,41 @@ const (
 	prStateClosed = "closed"
 	prStateOpen   = "open"
 )
+
+// GitHub pull request mergeable states. GitHub computes mergeability
+// asynchronously and reports the outcome via the PR's mergeable_state field.
+// These values are not formally documented but are stable in practice.
+const (
+	// mergeableStateClean indicates the PR is mergeable and all required checks
+	// have passed.
+	mergeableStateClean = "clean"
+	// mergeableStateUnstable indicates the PR is mergeable, but some
+	// non-required checks are failing.
+	mergeableStateUnstable = "unstable"
+	// mergeableStateHasHooks indicates the PR is mergeable and pre-receive hooks
+	// are configured.
+	mergeableStateHasHooks = "has_hooks"
+	// mergeableStateBlocked indicates the merge is blocked by required reviews or
+	// checks that have not yet been satisfied.
+	mergeableStateBlocked = "blocked"
+	// mergeableStateBehind indicates the head branch is behind the base branch,
+	// typically because the base branch moved forward.
+	mergeableStateBehind = "behind"
+	// mergeableStateDraft indicates the PR is a draft and cannot be merged.
+	mergeableStateDraft = "draft"
+	// mergeableStateDirty indicates the PR has merge conflicts.
+	mergeableStateDirty = "dirty"
+	// mergeableStateUnknown indicates GitHub has not finished computing
+	// mergeability.
+	mergeableStateUnknown = "unknown"
+)
+
+// mergeBaseModifiedMsg is the substring GitHub includes in the message of a 405
+// merge error when the base branch moved between the mergeability check and the
+// merge call. This is the one transient 405 (it clears on retry); all other 405s
+// from the merge endpoint are permanent. Full message: "Base branch was
+// modified. Review and try the merge again."
+const mergeBaseModifiedMsg = "Base branch was modified"
 
 var registration = gitprovider.Registration{
 	Predicate: func(repoURL string) bool {
@@ -296,16 +333,36 @@ func (p *provider) MergePullRequest(
 		return nil, false, fmt.Errorf("pull request %d not found", id)
 	}
 
-	switch {
-	case ghPR.MergedAt != nil:
+	if ghPR.MergedAt != nil {
 		pr := convertGithubPR(*ghPR)
 		return &pr, true, nil
-
-	case ptr.Deref(ghPR.State, prStateClosed) != prStateOpen:
+	}
+	if ptr.Deref(ghPR.State, prStateClosed) != prStateOpen {
 		return nil, false, fmt.Errorf("pull request %d is closed but not merged", id)
+	}
 
-	case ptr.Deref(ghPR.Draft, false) || !ptr.Deref(ghPR.Mergeable, false):
+	// Decide whether to attempt the merge based on GitHub's mergeable_state. This
+	// is richer than the Mergeable boolean: it lets us distinguish a permanent
+	// conflict (which will never resolve on its own) from transient conditions
+	// such as pending checks, a base branch that has moved forward, or
+	// mergeability that GitHub is still computing -- all of which a caller should
+	// retry rather than fail on.
+	switch ghPR.GetMergeableState() {
+	case mergeableStateClean, mergeableStateUnstable, mergeableStateHasHooks:
+		// Mergeable now; fall through to the merge attempt below.
+	case mergeableStateDirty:
+		// A genuine merge conflict will not clear without human intervention.
+		return nil, false, fmt.Errorf("pull request %d has conflicts and cannot be merged", id)
+	case mergeableStateBlocked, mergeableStateBehind, mergeableStateDraft, mergeableStateUnknown:
+		// Not ready to merge yet, but the condition may clear; signal "not ready"
+		// so the caller can retry on a subsequent reconciliation.
 		return nil, false, nil
+	default:
+		// mergeable_state is unset or unrecognized; fall back to the Mergeable
+		// boolean and the draft flag.
+		if ptr.Deref(ghPR.Draft, false) || !ptr.Deref(ghPR.Mergeable, false) {
+			return nil, false, nil
+		}
 	}
 
 	// Merge the PR
@@ -318,6 +375,27 @@ func (p *provider) MergePullRequest(
 		&github.PullRequestOptions{MergeMethod: opts.MergeMethod},
 	)
 	if err != nil {
+		// GitHub returns 405 ("Method Not Allowed") whenever the merge cannot be
+		// performed, which spans both transient and permanent conditions. The one
+		// transient case is "Base branch was modified": the base tip moved between
+		// the mergeability check above and this merge call (a TOCTOU race that
+		// fires when concurrent merges land on the same base). It is the only 405
+		// we retry -- report "not ready" so the caller tries again on the next
+		// reconciliation.
+		//
+		// Other 405s are permanent and must not be retried, or the step would loop
+		// forever under wait=true. The most common is a configured merge method
+		// that is disabled on the repo (e.g. mergeMethod: squash with squash
+		// merges turned off): the gate sees the PR as mergeable, so every retry
+		// would re-attempt and re-fail. We fall through and surface GitHub's
+		// message (carried by the wrapped error) so the misconfiguration is
+		// visible instead of silently looping.
+		var ghErr *github.ErrorResponse
+		if errors.As(err, &ghErr) && ghErr.Response != nil &&
+			ghErr.Response.StatusCode == http.StatusMethodNotAllowed &&
+			strings.Contains(ghErr.Message, mergeBaseModifiedMsg) {
+			return nil, false, nil
+		}
 		return nil, false, fmt.Errorf("error merging pull request %d: %w", id, err)
 	}
 	if mergeResult == nil {

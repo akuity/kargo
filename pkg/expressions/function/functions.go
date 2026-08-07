@@ -19,8 +19,8 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
 	kargoapi "github.com/akuity/kargo/api/v1alpha1"
+	"github.com/akuity/kargo/pkg/api"
 	"github.com/akuity/kargo/pkg/controller/freight"
-	"github.com/akuity/kargo/pkg/kargo"
 	"github.com/akuity/kargo/pkg/urls"
 )
 
@@ -1074,7 +1074,7 @@ func getStatus(
 	stepExecMetas kargoapi.StepExecutionMetadataList,
 ) exprFn {
 	var currentStepNamespace string
-	if parts := strings.Split(currentStepAlias, kargo.PromotionAliasSeparator); len(parts) == 2 {
+	if parts := strings.Split(currentStepAlias, api.PromotionAliasSeparator); len(parts) == 2 {
 		currentStepNamespace = parts[0]
 	}
 	return func(a ...any) (any, error) {
@@ -1094,7 +1094,7 @@ func getStatus(
 		for _, stepExecMeta := range stepExecMetas {
 			stepShortAlias := stepExecMeta.Alias
 			var stepNamespace string
-			if parts := strings.Split(stepExecMeta.Alias, kargo.PromotionAliasSeparator); len(parts) == 2 {
+			if parts := strings.Split(stepExecMeta.Alias, api.PromotionAliasSeparator); len(parts) == 2 {
 				stepNamespace = parts[0]
 				stepShortAlias = parts[1]
 			}

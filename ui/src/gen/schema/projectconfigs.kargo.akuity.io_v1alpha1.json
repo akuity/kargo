@@ -60,9 +60,44 @@
               "autoRollback": {
                 "description": "AutoRollback describes the conditions under which this Stage should\nautomatically roll back to the last known-good (verified) Freight. When\nnil, auto-rollback is disabled.\n\nKargo Enterprise only: This field is ignored in Kargo OSS.",
                 "properties": {
-                  "onFailedPromotions": {
-                    "description": "OnFailedPromotions indicates whether a rollback should be triggered\nwhen a promotion to the Stage fails. Failed promotions (as opposed\nto failed verifications) does not necessarily indicate a problem the\nFreight, since promotions might fail due to transient issues with the\nStage itself (network, credential expirations, etc...). This defaults\nto false.",
-                    "type": "boolean"
+                  "onPromotion": {
+                    "description": "OnPromotion is the list of terminal Promotion phases that should trigger\nan automated rollback. Only Failed and Errored are accepted. Note that\nunsuccessful promotions (as opposed to unsuccessful verifications) may not\nnecessarily indicate a problem with the Freight, since promotions might fail\ndue to transient issues with the deployment itself (network, credential\nexpirations, etc...). Defaults to [].",
+                    "items": {
+                      "description": "PromotionPhase is a high-level summary of the current state of a Promotion.",
+                      "type": "string"
+                    },
+                    "maxItems": 2,
+                    "type": "array",
+                    "x-kubernetes-list-type": "set",
+                    "x-kubernetes-validations": [
+                      {
+                        "message": "onPromotion[0] must be Failed or Errored",
+                        "rule": "self.size() == 0 || self[0] == 'Failed' || self[0] == 'Errored'"
+                      },
+                      {
+                        "message": "onPromotion[1] must be Failed or Errored",
+                        "rule": "self.size() <= 1 || self[1] == 'Failed' || self[1] == 'Errored'"
+                      }
+                    ]
+                  },
+                  "onVerification": {
+                    "description": "OnVerification is the list of terminal verification phases that should\ntrigger an automated rollback. Only Failed and Error are accepted (note:\n\"Error\", not \"Errored\" as in onPromotion). When absent or empty,\ndefaults to [Failed].",
+                    "items": {
+                      "type": "string"
+                    },
+                    "maxItems": 2,
+                    "type": "array",
+                    "x-kubernetes-list-type": "set",
+                    "x-kubernetes-validations": [
+                      {
+                        "message": "onVerification[0] must be Failed or Error",
+                        "rule": "self.size() == 0 || self[0] == 'Failed' || self[0] == 'Error'"
+                      },
+                      {
+                        "message": "onVerification[1] must be Failed or Error",
+                        "rule": "self.size() <= 1 || self[1] == 'Failed' || self[1] == 'Error'"
+                      }
+                    ]
                   }
                 },
                 "type": "object"
@@ -131,6 +166,149 @@
             ]
           },
           "type": "array"
+        },
+        "promotionWindows": {
+          "description": "PromotionWindows defines time windows that gate promotions for Stages in\nthis Project. A Stage's effective schedule is the union of matching windows\ndefined here and any cluster-level windows in ClusterConfig.\n\nKargo Enterprise only: This field is ignored in Kargo OSS.",
+          "items": {
+            "description": "PromotionWindow describes a recurring or one-shot time window that gates\npromotions for the Stages it matches. Windows may appear on both\nProjectConfig and ClusterConfig; a Stage's effective schedule is the union of\nall matching windows from both. A schedule is open at a given time when no\nmatching Deny window is active and, if any Allow windows match the Stage, at\nleast one of them is active. Windows gate all promotions uniformly (auto,\nmanual, and rollback).\n\nKargo Enterprise only: This type is ignored in Kargo OSS. The schedule is\nevaluated and enforced only by Kargo Enterprise; OSS carries the API for\ncompatibility, as it does for other Enterprise-only fields.",
+            "properties": {
+              "dtend": {
+                "description": "DTEnd is the window's end in the same format as DTStart. When combined with\nRRule, DTEnd - DTStart defines the duration of each occurrence. The value\nis parsed and validated by Kargo Enterprise.",
+                "type": "string"
+              },
+              "dtstart": {
+                "description": "DTStart is the window's start as an iCal date-time, with an optional\n\"TZID=\" prefix carrying the time zone (e.g.\n\"TZID=America/New_York:20260101T090000\"). The value is parsed and validated\nby Kargo Enterprise.",
+                "type": "string"
+              },
+              "kind": {
+                "description": "Kind indicates whether this window allows or denies promotions while it is\nactive.",
+                "enum": [
+                  "Allow",
+                  "Deny"
+                ],
+                "type": "string"
+              },
+              "name": {
+                "description": "Name is a symbolic name for the window, unique within its list. It is used\nto identify the window in denial messages and events.",
+                "maxLength": 253,
+                "minLength": 1,
+                "pattern": "^[a-z0-9]([-a-z0-9]*[a-z0-9])?(\\.[a-z0-9]([-a-z0-9]*[a-z0-9])?)*$",
+                "type": "string"
+              },
+              "projectSelector": {
+                "description": "ProjectSelector selects the Projects this window applies to. It is only\nmeaningful on ClusterConfig windows; on ProjectConfig windows the Project\nis implicit and this field is rejected. When omitted on a ClusterConfig\nwindow, the window applies to all Projects. It reuses\nPromotionPolicySelector, matching Projects by exact name, glob/regex\npattern, or label selector.",
+                "properties": {
+                  "matchExpressions": {
+                    "description": "matchExpressions is a list of label selector requirements. The requirements are ANDed.",
+                    "items": {
+                      "description": "A label selector requirement is a selector that contains values, a key, and an operator that\nrelates the key and values.",
+                      "properties": {
+                        "key": {
+                          "description": "key is the label key that the selector applies to.",
+                          "type": "string"
+                        },
+                        "operator": {
+                          "description": "operator represents a key's relationship to a set of values.\nValid operators are In, NotIn, Exists and DoesNotExist.",
+                          "type": "string"
+                        },
+                        "values": {
+                          "description": "values is an array of string values. If the operator is In or NotIn,\nthe values array must be non-empty. If the operator is Exists or DoesNotExist,\nthe values array must be empty. This array is replaced during a strategic\nmerge patch.",
+                          "items": {
+                            "type": "string"
+                          },
+                          "type": "array",
+                          "x-kubernetes-list-type": "atomic"
+                        }
+                      },
+                      "required": [
+                        "key",
+                        "operator"
+                      ],
+                      "type": "object"
+                    },
+                    "type": "array",
+                    "x-kubernetes-list-type": "atomic"
+                  },
+                  "matchLabels": {
+                    "additionalProperties": {
+                      "type": "string"
+                    },
+                    "description": "matchLabels is a map of {key,value} pairs. A single {key,value} in the matchLabels\nmap is equivalent to an element of matchExpressions, whose key field is \"key\", the\noperator is \"In\", and the values array contains only \"value\". The requirements are ANDed.",
+                    "type": "object"
+                  },
+                  "name": {
+                    "description": "Name is the name of the resource to which this policy applies.\n\nIt can be an exact name, a regex pattern (with prefix \"regex:\"), or a\nglob pattern (with prefix \"glob:\").\n\nWhen both Name and LabelSelector are specified, the Name is ANDed with\nthe LabelSelector. I.e., the resource must match both the Name and\nLabelSelector to be selected by this policy.\n\nNOTE: Using a specific exact name is the most secure option. Pattern\nmatching via regex or glob can be exploited by users with permissions to\nmatch promotion policies that weren't intended to apply to their\nresources. For example, a user could create a resource with a name\ndeliberately crafted to match the pattern, potentially bypassing intended\npromotion controls.",
+                    "type": "string"
+                  }
+                },
+                "type": "object",
+                "x-kubernetes-map-type": "atomic"
+              },
+              "rrule": {
+                "description": "RRule is an optional RFC 5545 recurrence rule (e.g. \"FREQ=DAILY\") that\nmakes the window recurring. When omitted, the window is a one-shot interval\ndefined by DTStart and DTEnd. The full value is parsed and validated by\nKargo Enterprise.",
+                "type": "string"
+              },
+              "stageSelector": {
+                "description": "StageSelector selects the Stages this window applies to. When omitted, the\nwindow applies to all Stages in scope (project-wide on ProjectConfig,\ncluster-wide on ClusterConfig). It reuses PromotionPolicySelector, so it\ncan match by exact name, glob/regex pattern, or label selector.",
+                "properties": {
+                  "matchExpressions": {
+                    "description": "matchExpressions is a list of label selector requirements. The requirements are ANDed.",
+                    "items": {
+                      "description": "A label selector requirement is a selector that contains values, a key, and an operator that\nrelates the key and values.",
+                      "properties": {
+                        "key": {
+                          "description": "key is the label key that the selector applies to.",
+                          "type": "string"
+                        },
+                        "operator": {
+                          "description": "operator represents a key's relationship to a set of values.\nValid operators are In, NotIn, Exists and DoesNotExist.",
+                          "type": "string"
+                        },
+                        "values": {
+                          "description": "values is an array of string values. If the operator is In or NotIn,\nthe values array must be non-empty. If the operator is Exists or DoesNotExist,\nthe values array must be empty. This array is replaced during a strategic\nmerge patch.",
+                          "items": {
+                            "type": "string"
+                          },
+                          "type": "array",
+                          "x-kubernetes-list-type": "atomic"
+                        }
+                      },
+                      "required": [
+                        "key",
+                        "operator"
+                      ],
+                      "type": "object"
+                    },
+                    "type": "array",
+                    "x-kubernetes-list-type": "atomic"
+                  },
+                  "matchLabels": {
+                    "additionalProperties": {
+                      "type": "string"
+                    },
+                    "description": "matchLabels is a map of {key,value} pairs. A single {key,value} in the matchLabels\nmap is equivalent to an element of matchExpressions, whose key field is \"key\", the\noperator is \"In\", and the values array contains only \"value\". The requirements are ANDed.",
+                    "type": "object"
+                  },
+                  "name": {
+                    "description": "Name is the name of the resource to which this policy applies.\n\nIt can be an exact name, a regex pattern (with prefix \"regex:\"), or a\nglob pattern (with prefix \"glob:\").\n\nWhen both Name and LabelSelector are specified, the Name is ANDed with\nthe LabelSelector. I.e., the resource must match both the Name and\nLabelSelector to be selected by this policy.\n\nNOTE: Using a specific exact name is the most secure option. Pattern\nmatching via regex or glob can be exploited by users with permissions to\nmatch promotion policies that weren't intended to apply to their\nresources. For example, a user could create a resource with a name\ndeliberately crafted to match the pattern, potentially bypassing intended\npromotion controls.",
+                    "type": "string"
+                  }
+                },
+                "type": "object",
+                "x-kubernetes-map-type": "atomic"
+              }
+            },
+            "required": [
+              "kind",
+              "name"
+            ],
+            "type": "object"
+          },
+          "type": "array",
+          "x-kubernetes-list-map-keys": [
+            "name"
+          ],
+          "x-kubernetes-list-type": "map"
         },
         "stageLinks": {
           "description": "StageLinks defines deep links shown when viewing Stage resources within\nthis project. These are shown in addition to any cluster-level\nStageLinks defined in ClusterConfig.",

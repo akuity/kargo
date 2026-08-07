@@ -1,4 +1,4 @@
-import { Promotion } from '@ui/gen/api/v1alpha1/generated_pb';
+import { Promotion } from '@ui/gen/api/v2/models';
 
 // TODO: can we map this to promotion_types.go?
 export enum PromotionStatusPhase {
@@ -20,6 +20,32 @@ export const isPromotionPhaseTerminal = (promotionPhase: PromotionStatusPhase) =
     case PromotionStatusPhase.FAILED:
     case PromotionStatusPhase.ERRORED:
     case PromotionStatusPhase.ABORTED:
+      return true;
+  }
+
+  return false;
+};
+
+// PromotionStepStatusPhase mirrors the PromotionStepStatus constants in
+// promotion_types.go. Unlike a Promotion's overall phase, an individual step's
+// only non-terminal status is "Running".
+export enum PromotionStepStatusPhase {
+  RUNNING = 'Running',
+  SUCCEEDED = 'Succeeded',
+  FAILED = 'Failed',
+  ERRORED = 'Errored',
+  ABORTED = 'Aborted',
+  SKIPPED = 'Skipped'
+}
+
+// backend equivalent logic - read in promotion_types.go
+export const isPromotionStepStatusTerminal = (stepStatus?: string) => {
+  switch (stepStatus) {
+    case PromotionStepStatusPhase.SUCCEEDED:
+    case PromotionStepStatusPhase.FAILED:
+    case PromotionStepStatusPhase.ERRORED:
+    case PromotionStepStatusPhase.ABORTED:
+    case PromotionStepStatusPhase.SKIPPED:
       return true;
   }
 

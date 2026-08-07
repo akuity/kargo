@@ -1,16 +1,17 @@
-import { useQuery } from '@connectrpc/connect-query';
 import {
   faBarsStaggered,
   faCircleCheck,
   faCircleUp,
   faGear,
-  faHistory
+  faHistory,
+  faPlay
 } from '@fortawesome/free-solid-svg-icons';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
-import { Drawer, Flex, Skeleton, Tabs, Typography } from 'antd';
+import { Alert, Button, Drawer, Flex, Skeleton, Tabs, Typography } from 'antd';
 import moment from 'moment';
 import { useEffect, useMemo, useState } from 'react';
-import { generatePath, useNavigate, useParams } from 'react-router-dom';
+import { generatePath, Link, useNavigate, useParams } from 'react-router-dom';
+import { stringify } from 'yaml';
 
 import { SHARD_LABEL_KEY } from '@ui/config/labels';
 import { paths } from '@ui/config/paths';
@@ -18,22 +19,22 @@ import { useExtensionsContext } from '@ui/extensions/extensions-context';
 import { Description } from '@ui/features/common/description';
 import { HealthStatusIcon } from '@ui/features/common/health-status/health-status-icon';
 import { useStageControllerStatus } from '@ui/features/common/stage-status/use-stage-controller-status';
-import {
-  getConfig,
-  getStage
-} from '@ui/gen/api/service/v1alpha1/service-KargoService_connectquery';
-import { RawFormat } from '@ui/gen/api/service/v1alpha1/service_pb';
-import { Stage } from '@ui/gen/api/v1alpha1/generated_pb';
-import { timestampDate } from '@ui/utils/connectrpc-utils';
-import { decodeRawData } from '@ui/utils/decode-raw-data';
+import { getCurrentFreightByWarehouse } from '@ui/features/common/utils';
+import { getAutoPromotionHoldEntries } from '@ui/features/project/pipelines/promotion/auto-promotion';
+import { ResumeAutoPromotionDrawer } from '@ui/features/project/pipelines/promotion/resume-auto-promotion-drawer';
+import { useGetStage } from '@ui/gen/api/v2/core/core';
+import { Stage } from '@ui/gen/api/v2/models';
+import { useGetConfig } from '@ui/gen/api/v2/system/system';
 
 import YamlEditor from '../common/code-editor/yaml-editor-lazy';
+import { useModal } from '../common/modal/use-modal';
 import { StageConditionIcon } from '../common/stage-status/stage-condition-icon';
 
 import { Promotions } from './promotions';
 import { RequestedFreight } from './requested-freight';
 import { StageActions } from './stage-actions';
 import { FreightHistory } from './tabs/freight-history/freight-history';
+import { useGetFreightMap } from './tabs/freight-history/use-get-freight-map';
 import { StageSettings } from './tabs/settings/stage-settings';
 import { useImages } from './use-images';
 import { Verifications } from './verifications';
@@ -52,49 +53,49 @@ export const StageDetails = ({ stage }: { stage: Stage }) => {
 
   const images = useImages([stage]);
 
+  const freightMap = useGetFreightMap(projectName || '');
+  const currentFreight = useMemo(
+    () => getCurrentFreightByWarehouse(stage, freightMap),
+    [stage, freightMap]
+  );
+
   const onClose = () => navigate(generatePath(paths.project, { name: projectName }));
   const [isVerificationRunning, setIsVerificationRunning] = useState(false);
 
   const verifications = useMemo(() => {
     setIsVerificationRunning(false);
     return (stage.status?.freightHistory || [])
-      .flatMap((freight) =>
-        freight.verificationHistory.map((verification) => {
-          if (verification.phase === 'Running' || verification.phase === 'Pending') {
-            setIsVerificationRunning(true);
-          }
-          return {
-            ...verification,
-            freight
-          };
-        })
+      .flatMap(
+        (freight) =>
+          freight.verificationHistory?.map((verification) => {
+            if (verification.phase === 'Running' || verification.phase === 'Pending') {
+              setIsVerificationRunning(true);
+            }
+            return {
+              ...verification,
+              freight
+            };
+          }) || []
       )
-      .sort((a, b) => moment(timestampDate(b.startTime)).diff(moment(timestampDate(a.startTime))));
+      .sort((a, b) => moment(b?.startTime).diff(moment(a?.startTime)));
   }, [stage]);
 
-  const rawStageYamlQuery = useQuery(getStage, {
-    project: projectName,
-    name: stage?.metadata?.name,
-    format: RawFormat.YAML
-  });
+  const stageQuery = useGetStage(projectName || '', stage?.metadata?.name || '');
 
   const [activeTab, setActiveTab] = useState(TabsTypes.PROMOTION);
 
   useEffect(() => {
     if (activeTab === TabsTypes.LIVE_MANIFEST) {
-      rawStageYamlQuery.refetch();
+      stageQuery.refetch();
     }
   }, [stage, activeTab]);
 
-  const rawStageYaml = useMemo(
-    () => decodeRawData(rawStageYamlQuery.data),
-    [rawStageYamlQuery.data]
-  );
+  const rawStageYaml = useMemo(() => stringify(stageQuery.data?.data), [stageQuery.data?.data]);
 
-  const getConfigQuery = useQuery(getConfig);
-  const config = getConfigQuery.data;
+  const getConfigQuery = useGetConfig();
+  const config = getConfigQuery.data?.data;
 
-  const shardKey = stage?.metadata?.labels[SHARD_LABEL_KEY] || '';
+  const shardKey = stage?.metadata?.labels?.[SHARD_LABEL_KEY] || '';
   const argocdShard = config?.argocdShards?.[shardKey];
 
   const { stageTabs } = useExtensionsContext();
@@ -144,9 +145,11 @@ export const StageDetails = ({ stage }: { stage: Stage }) => {
             <RequestedFreight
               requestedFreight={stage?.spec?.requestedFreight || []}
               projectName={projectName}
-              itemStyle={{ width: '250px' }}
+              itemStyle={{ minWidth: '250px', maxWidth: '480px' }}
               className='space-y-5'
+              currentFreight={currentFreight}
             />
+            <AutoPromotionHolds stage={stage} />
             <Tabs
               className='flex-1'
               defaultActiveKey='1'
@@ -176,7 +179,7 @@ export const StageDetails = ({ stage }: { stage: Stage }) => {
                   label: 'Live Manifest',
                   icon: <FontAwesomeIcon icon={faBarsStaggered} />,
                   className: 'h-full pb-2',
-                  children: rawStageYamlQuery.isLoading ? (
+                  children: stageQuery.isLoading ? (
                     <Skeleton />
                   ) : (
                     <YamlEditor value={rawStageYaml} height='700px' disabled />
@@ -214,6 +217,59 @@ export const StageDetails = ({ stage }: { stage: Stage }) => {
         </div>
       )}
     </Drawer>
+  );
+};
+
+const AutoPromotionHolds = ({ stage }: { stage: Stage }) => {
+  const holds = getAutoPromotionHoldEntries(stage);
+  const { show } = useModal();
+
+  if (holds.length === 0) {
+    return null;
+  }
+  return (
+    <Alert
+      type='warning'
+      message='Auto-promotion paused'
+      description={
+        <div className='flex flex-col gap-1'>
+          {holds.map(({ key, hold }) => (
+            <Typography.Text key={key} type='secondary' className='text-sm'>
+              {key}
+              {hold.freightName && `: ${hold.freightName}`}
+              {hold.promotionName && (
+                <>
+                  {' via '}
+                  <Link
+                    to={generatePath(paths.promotion, {
+                      name: stage.metadata?.namespace || '',
+                      promotionId: hold.promotionName
+                    })}
+                  >
+                    {hold.promotionName}
+                  </Link>
+                </>
+              )}
+              {hold.actor && ` by ${hold.actor}`}
+              {hold.createdAt && ` at ${moment(hold.createdAt).format('YYYY-MM-DD HH:mm')}`}
+            </Typography.Text>
+          ))}
+        </div>
+      }
+      action={
+        <Button
+          size='small'
+          icon={<FontAwesomeIcon icon={faPlay} />}
+          onClick={() =>
+            show((p) => (
+              <ResumeAutoPromotionDrawer stage={stage} open={p.visible} onClose={p.hide} />
+            ))
+          }
+        >
+          Resume
+        </Button>
+      }
+    />
   );
 };
 

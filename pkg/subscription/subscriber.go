@@ -31,9 +31,16 @@ type Subscriber interface {
 	// - kargoapi.GitDiscoveryResult
 	// - kargoapi.ImageDiscoveryResult
 	// - kargoapi.DiscoveryResult
+	//
+	// last is the result this same subscription produced at the previous
+	// successful discovery (of the same concrete type), or nil if there is none.
+	// Implementations may use it to short-circuit expensive work when a cheap
+	// check shows nothing relevant has changed; those that cannot simply ignore
+	// it and return a freshly discovered result.
 	DiscoverArtifacts(
 		ctx context.Context,
 		project string,
 		sub kargoapi.RepoSubscription,
+		last any,
 	) (any, error)
 }

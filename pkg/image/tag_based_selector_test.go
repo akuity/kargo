@@ -24,13 +24,24 @@ func TestNewTagBasedSelector(t *testing.T) {
 		},
 		{
 			// TODO(v1.13.0): Remove this test once AllowTags is removed.
-			name: "error compiling AllowedTags regex",
+			name: "error using deprecated AllowTags",
 			sub: kargoapi.ImageSubscription{
 				RepoURL:   "example/image",
-				AllowTags: "[", // Invalid regex
+				AllowTags: `^v1\.`,
 			},
 			assertions: func(t *testing.T, _ *tagBasedSelector, err error) {
-				require.ErrorContains(t, err, "error compiling regular expression")
+				require.ErrorContains(t, err, "AllowTags is deprecated")
+			},
+		},
+		{
+			// TODO(v1.13.0): Remove this test once IgnoreTags is removed.
+			name: "error using deprecated IgnoreTags",
+			sub: kargoapi.ImageSubscription{
+				RepoURL:    "example/image",
+				IgnoreTags: []string{"v1.0.0"},
+			},
+			assertions: func(t *testing.T, _ *tagBasedSelector, err error) {
+				require.ErrorContains(t, err, "IgnoreTags is deprecated")
 			},
 		},
 		{
@@ -54,25 +65,19 @@ func TestNewTagBasedSelector(t *testing.T) {
 			},
 		},
 		{
-			// TODO(v1.13.0): Update this test once AllowTags and IgnoreTags are
-			// removed.
 			name: "success",
 			sub: kargoapi.ImageSubscription{
 				RepoURL:           "example/image",
-				AllowTags:         `^v1\.`,
 				AllowTagsRegexes:  []string{`^v2\.`},
-				IgnoreTags:        []string{`v1.0.0`},
 				IgnoreTagsRegexes: []string{`^v1\.0\..*`},
 			},
 			assertions: func(t *testing.T, s *tagBasedSelector, err error) {
 				require.NoError(t, err)
 				require.NotNil(t, s.baseSelector)
-				require.Len(t, s.allowTagsRegexes, 2)
+				require.Len(t, s.allowTagsRegexes, 1)
 				require.Equal(t, `^v2\.`, s.allowTagsRegexes[0].String())
-				require.Equal(t, `^v1\.`, s.allowTagsRegexes[1].String())
-				require.Len(t, s.ignoreTagsRegexes, 2)
+				require.Len(t, s.ignoreTagsRegexes, 1)
 				require.Equal(t, `^v1\.0\..*`, s.ignoreTagsRegexes[0].String())
-				require.Equal(t, `^v1\.0\.0$`, s.ignoreTagsRegexes[1].String())
 			},
 		},
 	}

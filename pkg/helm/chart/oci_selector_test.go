@@ -62,7 +62,7 @@ func TestNewOCISelector(t *testing.T) {
 	}
 	for _, testCase := range testCases {
 		t.Run(testCase.name, func(t *testing.T) {
-			s, err := newOCISelector(testCase.sub, nil)
+			s, err := newOCISelector(t.Context(), testCase.sub, nil)
 			testCase.assertions(t, s, err)
 		})
 	}
@@ -72,6 +72,7 @@ func Test_ociSelector_Select(t *testing.T) {
 	// Instead of mocking out an OCI registry, it's more expedient to use Kargo's
 	// own chart repo on ghcr.io to test this.
 	s, err := newOCISelector(
+		t.Context(),
 		kargoapi.ChartSubscription{
 			RepoURL: "oci://ghcr.io/akuity/kargo-charts/kargo",
 		},

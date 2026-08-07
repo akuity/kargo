@@ -1,7 +1,10 @@
 package commit
 
 import (
+	"context"
+	"errors"
 	"regexp"
+	"strconv"
 	"testing"
 	"time"
 
@@ -12,6 +15,101 @@ import (
 	kargoapi "github.com/akuity/kargo/api/v1alpha1"
 	"github.com/akuity/kargo/pkg/controller/git"
 )
+
+func Test_tagBasedSelector_ListRefs(t *testing.T) {
+	makeRefs := func(n int) []git.RemoteRef {
+		refs := make([]git.RemoteRef, n)
+		for i := range refs {
+			refs[i] = git.RemoteRef{
+				Name: tagPrefix + "v0." + strconv.Itoa(i),
+				ID:   strconv.Itoa(i),
+			}
+		}
+		return refs
+	}
+	testCases := []struct {
+		name       string
+		selector   *tagBasedSelector
+		lsRemoteFn func(
+			ctx context.Context,
+			repoURL string,
+			clientOpts *git.ClientOptions,
+			patterns ...string,
+		) ([]git.RemoteRef, error)
+		assertions func(*testing.T, *kargoapi.GitDiscoveryRefs, error)
+	}{
+		{
+			name: "error listing refs",
+			lsRemoteFn: func(
+				context.Context,
+				string,
+				*git.ClientOptions,
+				...string,
+			) ([]git.RemoteRef, error) {
+				return nil, errors.New("something went wrong")
+			},
+			assertions: func(t *testing.T, refs *kargoapi.GitDiscoveryRefs, err error) {
+				require.ErrorContains(t, err, "something went wrong")
+				require.Nil(t, refs)
+			},
+		},
+		{
+			name: "filters by name and sorts",
+			selector: &tagBasedSelector{
+				allowTagsRegexes: []*regexp.Regexp{regexp.MustCompile(`^v1\.`)},
+			},
+			lsRemoteFn: func(
+				_ context.Context,
+				_ string,
+				_ *git.ClientOptions,
+				patterns ...string,
+			) ([]git.RemoteRef, error) {
+				require.Equal(t, []string{tagPrefix + "*"}, patterns)
+				return []git.RemoteRef{
+					{Name: tagPrefix + "v1.2.0", ID: "b"},
+					{Name: tagPrefix + "v0.9.0", ID: "z"}, // filtered out
+					{Name: tagPrefix + "v1.1.0", ID: "a"},
+				}, nil
+			},
+			assertions: func(t *testing.T, refs *kargoapi.GitDiscoveryRefs, err error) {
+				require.NoError(t, err)
+				require.Equal(t, &kargoapi.GitDiscoveryRefs{
+					Tags: []kargoapi.DiscoveredRef{
+						{Name: "v1.1.0", ID: "a"},
+						{Name: "v1.2.0", ID: "b"},
+					},
+				}, refs)
+			},
+		},
+		{
+			name:     "tag count over cap suppresses observation",
+			selector: &tagBasedSelector{},
+			lsRemoteFn: func(
+				context.Context,
+				string,
+				*git.ClientOptions,
+				...string,
+			) ([]git.RemoteRef, error) {
+				return makeRefs(maxObservedTags + 1), nil
+			},
+			assertions: func(t *testing.T, refs *kargoapi.GitDiscoveryRefs, err error) {
+				require.NoError(t, err)
+				require.Nil(t, refs)
+			},
+		},
+	}
+	for _, testCase := range testCases {
+		t.Run(testCase.name, func(t *testing.T) {
+			s := testCase.selector
+			if s == nil {
+				s = &tagBasedSelector{}
+			}
+			s.baseSelector = &baseSelector{lsRemoteFn: testCase.lsRemoteFn}
+			refs, err := s.ListRefs(t.Context())
+			testCase.assertions(t, refs, err)
+		})
+	}
+}
 
 func TestNewTagBasedSelector(t *testing.T) {
 	testCases := []struct {
@@ -30,12 +128,22 @@ func TestNewTagBasedSelector(t *testing.T) {
 		},
 		{
 			// TODO(v1.13.0): Remove this test once AllowTags is removed.
-			name: "error compiling AllowTags regex",
+			name: "error using deprecated AllowTags",
 			sub: kargoapi.GitSubscription{
-				AllowTags: "[", // Invalid regex
+				AllowTags: `^v1\.`,
 			},
 			assertions: func(t *testing.T, _ *tagBasedSelector, err error) {
-				require.ErrorContains(t, err, "error compiling regular expression")
+				require.ErrorContains(t, err, "AllowTags is deprecated")
+			},
+		},
+		{
+			// TODO(v1.13.0): Remove this test once IgnoreTags is removed.
+			name: "error using deprecated IgnoreTags",
+			sub: kargoapi.GitSubscription{
+				IgnoreTags: []string{"v1.0.0"},
+			},
+			assertions: func(t *testing.T, _ *tagBasedSelector, err error) {
+				require.ErrorContains(t, err, "IgnoreTags is deprecated")
 			},
 		},
 		{
@@ -59,25 +167,19 @@ func TestNewTagBasedSelector(t *testing.T) {
 			},
 		},
 		{
-			// TODO(v1.13.0): Update this test once AllowTags and IgnoreTags are
-			// removed.
 			name: "success",
 			sub: kargoapi.GitSubscription{
 				RepoURL:           "https://github.com/foo/bar",
-				AllowTags:         `^v1\.`,
 				AllowTagsRegexes:  []string{`^v2\.`},
-				IgnoreTags:        []string{"v1.0.0"},
 				IgnoreTagsRegexes: []string{`^v1\.0\..*`},
 			},
 			assertions: func(t *testing.T, s *tagBasedSelector, err error) {
 				require.NoError(t, err)
 				require.NotNil(t, s.baseSelector)
-				require.Len(t, s.allowTagsRegexes, 2)
+				require.Len(t, s.allowTagsRegexes, 1)
 				require.Equal(t, `^v2\.`, s.allowTagsRegexes[0].String())
-				require.Equal(t, `^v1\.`, s.allowTagsRegexes[1].String())
-				require.Len(t, s.ignoreTagsRegexes, 2)
+				require.Len(t, s.ignoreTagsRegexes, 1)
 				require.Equal(t, `^v1\.0\..*`, s.ignoreTagsRegexes[0].String())
-				require.Equal(t, `^v1\.0\.0$`, s.ignoreTagsRegexes[1].String())
 			},
 		},
 	}

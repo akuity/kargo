@@ -16,7 +16,6 @@ import (
 	"github.com/akuity/kargo/pkg/cli/kubernetes"
 	"github.com/akuity/kargo/pkg/cli/option"
 	"github.com/akuity/kargo/pkg/cli/templates"
-	"github.com/akuity/kargo/pkg/client/generated/core"
 )
 
 type deleteProjectConfigOptions struct {
@@ -89,12 +88,12 @@ func (o *deleteProjectConfigOptions) run(ctx context.Context) error {
 		return fmt.Errorf("create printer: %w", err)
 	}
 
-	if _, err = apiClient.Core.DeleteProjectConfig(
-		core.NewDeleteProjectConfigParams().
-			WithProject(o.Project),
-		nil,
-	); err != nil {
-		return fmt.Errorf("delete project configuration: %w", err)
+	httpRes, err := apiClient.CoreAPI.DeleteProjectConfig(ctx, o.Project).Execute()
+	if httpRes != nil {
+		_ = httpRes.Body.Close()
+	}
+	if err != nil {
+		return fmt.Errorf("delete project configuration: %w", client.APIError(err))
 	}
 
 	if err = printer.PrintObj(

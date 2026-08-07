@@ -11,7 +11,7 @@ import { BaseHeader } from '@ui/features/common/layout/base-header';
 import { IAction, useActionContext } from '@ui/features/project/pipelines/context/action-context';
 import { useDictionaryContext } from '@ui/features/project/pipelines/context/dictionary-context';
 import { useFreightTimelineControllerContext } from '@ui/features/project/pipelines/context/freight-timeline-controller-context';
-import { Freight } from '@ui/gen/api/v1alpha1/generated_pb';
+import { Freight } from '@ui/gen/api/v2/models';
 
 import { FreightCard } from './freight-card';
 import { FreightExpandTile } from './freight-expand-tile';

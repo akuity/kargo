@@ -1,9 +1,10 @@
 import { useEffect } from 'react';
 
 import { queryCache } from '@ui/features/utils/cache';
-import { Freight, Stage } from '@ui/gen/api/v1alpha1/generated_pb';
+import { Freight, Stage } from '@ui/gen/api/v2/models';
 
 export const useSyncFreight = (payload: {
+  project: string;
   freights?: Record<string, Freight>;
   freightInStages?: Record<string, Stage[]>;
 }) => {
@@ -14,7 +15,7 @@ export const useSyncFreight = (payload: {
 
       for (const freightInStage of freightInStages) {
         if (!freights.find((f) => f === freightInStage)) {
-          queryCache.freight.refetchQueryFreight();
+          queryCache.freight.refetchQueryFreight(payload.project);
           return;
         }
       }
