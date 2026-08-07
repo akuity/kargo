@@ -18,37 +18,11 @@ the Operator Guide.
 
 To install:
 
-<Tabs groupId="os">
-<TabItem value="macos" label="macOS" default>
+1. Download the CLI binary.
 
-```shell
-brew install kargo
-```
-
-</TabItem>
-<TabItem value="linux-wsl" label="Linux or WSL">
-
-```shell
-arch=$(uname -m)
-[ "$arch" = "x86_64" ] && arch=amd64
-curl -L -o kargo https://github.com/akuity/kargo/releases/latest/download/kargo-"$(uname -s | tr '[:upper:]' '[:lower:]')-${arch}"
-chmod +x kargo
-```
-
-</TabItem>
-<TabItem value="windows" label="Windows PowerShell">
-
-```shell
-Invoke-WebRequest -URI https://github.com/akuity/kargo/releases/latest/download/kargo-windows-amd64.exe -OutFile kargo.exe
-```
-
-</TabItem>
-</Tabs>
-
-To download the CLI binary manually instead:
-
-1. Select the <Hlt>CLI</Hlt> tab from the left navbar of the UI. There, you can
-   select the appropriate binary for your operating system and CPU architecture.
+   The easiest method of downloading the binary is by selecting the
+   <Hlt>CLI</Hlt> tab from the left navbar of the UI. There, you can select
+   the appropriate binary for your operating system and CPU architecture.
 
    CLI downloads offered at this location will automatically match the version
    of your Kargo API server for optimum compatibility.
@@ -59,6 +33,35 @@ To download the CLI binary manually instead:
 
    ![CLI Tab in Kargo UI](../05-installing-the-cli/img/cli-installation.png)
 
-1. Complete the manual installation by moving the binary to a location in your
-   file system that is included in the value of your `PATH` environment
-   variable.
+   If you prefer, use one of the following commands to install the CLI:
+
+   <Tabs groupId="os">
+   <TabItem value="macos" label="macOS" default>
+
+   ```shell
+   brew install kargo
+   ```
+
+   </TabItem>
+   <TabItem value="linux-wsl" label="Linux or WSL">
+
+   ```shell
+   arch=$(uname -m)
+   [ "$arch" = "x86_64" ] && arch=amd64
+   curl -L -o kargo https://github.com/akuity/kargo/releases/latest/download/kargo-"$(uname -s | tr '[:upper:]' '[:lower:]')-${arch}"
+   chmod +x kargo
+   ```
+
+   </TabItem>
+   <TabItem value="windows" label="Windows PowerShell">
+
+   ```shell
+   Invoke-WebRequest -URI https://github.com/akuity/kargo/releases/latest/download/kargo-windows-amd64.exe -OutFile kargo.exe
+   ```
+
+   </TabItem>
+   </Tabs>
+
+1. If you downloaded the binary manually, complete the installation by moving
+   it to a location in your file system that is included in the value of your
+   `PATH` environment variable.
