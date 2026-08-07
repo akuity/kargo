@@ -21,6 +21,7 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/client/interceptor"
 
 	kargoapi "github.com/akuity/kargo/api/v1alpha1"
+	"github.com/akuity/kargo/pkg/api"
 	argocd "github.com/akuity/kargo/pkg/controller/argocd/api/v1alpha1"
 	"github.com/akuity/kargo/pkg/kubeclient"
 	"github.com/akuity/kargo/pkg/promotion"
@@ -950,6 +951,16 @@ func Test_argoCDUpdater_run(t *testing.T) {
 				apps, ok := res.HealthCheck.Input["apps"]
 				assert.True(t, ok)
 				assert.Len(t, apps, 3)
+				// The same apps are reported as step output.
+				assert.Equal(
+					t,
+					api.ArgoCDAppRefsToOutput([]api.ArgoCDAppRef{
+						{Name: "app1", Namespace: "argocd"},
+						{Name: "app2", Namespace: "argocd"},
+						{Name: "app3", Namespace: "argocd"},
+					}),
+					res.Output[api.ArgoCDAppsOutputKey],
+				)
 			},
 		},
 		{
@@ -1279,6 +1290,7 @@ func Test_argoCDUpdater_run(t *testing.T) {
 				&promotion.StepContext{},
 				testCase.stepCfg,
 			)
+			requireJSONNativeOutput(t, res)
 			testCase.assertions(t, res, err)
 		})
 	}

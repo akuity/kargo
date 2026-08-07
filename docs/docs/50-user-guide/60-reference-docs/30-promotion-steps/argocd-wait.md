@@ -81,6 +81,25 @@ during the wait.
 | `apps[].selector.matchExpressions[].values` | `[]string` | N | An array of string values. Required when `operator` is `In` or `NotIn`. Must be empty when `operator` is `Exists` or `DoesNotExist`. |
 | `apps[].waitFor` | `[]string` | N | Conditions to wait for. Valid values: `health`, `sync`, `operation`, `suspended`, `degraded`. Defaults to `[health, sync, operation]` when omitted. |
 
+## Output
+
+| Name | Type | Description |
+|------|------|-------------|
+| `apps` | `[]object` | The Argo CD `Application` resources the step resolved and waited for. Kargo uses this to link the target `Stage` to those `Application`s in the UI. |
+| `apps[].name` | `string` | The name of the Argo CD `Application`. |
+| `apps[].namespace` | `string` | The namespace of the Argo CD `Application`. |
+
+:::note
+
+Unlike [`argocd-update`](argocd-update.md), this step registers no health checks
+for the target `Stage`; it assesses `Application` health only while the
+`Promotion` is running. This output is therefore how a `Stage` promoted with
+`argocd-wait` alone — for instance, when syncs are triggered by Argo CD
+auto-sync rather than by Kargo — is still linked to its `Application`s in the
+UI.
+
+:::
+
 ## Examples
 
 ### Common Usage
