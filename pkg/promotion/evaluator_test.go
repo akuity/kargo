@@ -1755,7 +1755,7 @@ func TestStepEvaluator_Config(t *testing.T) {
 			step: Step{
 				Config: nil,
 			},
-			expectedCfg: nil,
+			expectedCfg: Config{},
 		},
 	}
 
@@ -1889,7 +1889,7 @@ func TestStepEvaluator_BuildStepContext(t *testing.T) {
 			assertions: func(t *testing.T, stepCtx *StepContext, err error) {
 				require.NoError(t, err)
 				require.NotNil(t, stepCtx)
-				assert.Nil(t, stepCtx.Config)
+				assert.Equal(t, Config{}, stepCtx.Config)
 			},
 		},
 	}

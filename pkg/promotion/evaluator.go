@@ -292,7 +292,11 @@ func (p *StepEvaluator) ShouldSkip(ctx context.Context, promoCtx Context, step S
 // based on the current state of the Promotion.
 func (p *StepEvaluator) Config(ctx context.Context, promoCtx Context, step Step) (Config, error) {
 	if step.Config == nil {
-		return nil, nil
+		// Return an empty (non-nil) Config rather than nil so that it marshals
+		// to a JSON object ("{}") rather than JSON null. Steps whose schemas
+		// require no config should not be forced to declare an explicit
+		// config: {} to pass schema validation.
+		return Config{}, nil
 	}
 
 	vars, err := p.Vars(ctx, promoCtx, step)
