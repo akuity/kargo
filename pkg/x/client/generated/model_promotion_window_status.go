@@ -23,7 +23,7 @@ type PromotionWindowStatus struct {
 	Closed *bool `json:"closed,omitempty"`
 	// NextClose is when promotion is next expected to become forbidden, and is meaningful only while Closed is false. It allows a client to give warning of an approaching freeze, which NextCloseReason names. Like NextOpen it is optional, and absent when no such boundary is known -- a schedule that will never forbid promotion again has none.  +optional
 	NextClose *string `json:"nextClose,omitempty"`
-	// NextCloseReason explains in human-readable terms why promotion will be forbidden at NextClose, naming the freeze responsible where there is one. It is set whenever NextClose is set.
+	// NextCloseReason explains in human-readable terms why promotion will be forbidden at NextClose, naming the freeze responsible where there is one. It is set whenever NextClose is set.  +optional
 	NextCloseReason *string `json:"nextCloseReason,omitempty"`
 	// NextOpen is when the schedule is next expected to permit promotions.  It is optional even while Closed is true, and its absence means only that no reopening is known: the schedule may have none (a one-shot Allow window that has already elapsed), determining one may be impractical, or the closure may be indefinite by design. Clients must therefore render Reason and treat a missing NextOpen as \"frozen, with no known end\" rather than assuming a value is present.  +optional
 	NextOpen *string `json:"nextOpen,omitempty"`

@@ -8141,7 +8141,7 @@
           "type": "string"
         },
         "nextCloseReason": {
-          "description": "NextCloseReason explains in human-readable terms why promotion will be forbidden\nat NextClose, naming the freeze responsible where there is one.\nIt is set whenever NextClose is set.",
+          "description": "NextCloseReason explains in human-readable terms why promotion will be forbidden\nat NextClose, naming the freeze responsible where there is one.\nIt is set whenever NextClose is set.\n\n+optional",
           "type": "string"
         },
         "nextOpen": {

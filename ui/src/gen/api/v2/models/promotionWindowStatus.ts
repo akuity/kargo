@@ -20,7 +20,9 @@ promotion again has none.
   nextClose?: string;
   /** NextCloseReason explains in human-readable terms why promotion will be forbidden
 at NextClose, naming the freeze responsible where there is one.
-It is set whenever NextClose is set. */
+It is set whenever NextClose is set.
+
++optional */
   nextCloseReason?: string;
   /** NextOpen is when the schedule is next expected to permit promotions.
 
