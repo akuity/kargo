@@ -1,9 +1,15 @@
 package builtin
 
 import (
+	"archive/tar"
+	"bytes"
+	"compress/gzip"
 	"context"
 	"fmt"
+	"io"
 	"net/http/httptest"
+	"os"
+	"path/filepath"
 	"testing"
 
 	"github.com/google/go-containerregistry/pkg/name"
@@ -27,10 +33,23 @@ import (
 func Test_ociPusher_validate(t *testing.T) {
 	tests := []validationTestCase{
 		{
-			name:   "srcRef is not specified",
-			config: promotion.Config{},
+			name: "no source specified",
+			config: promotion.Config{
+				"destRef": "registry.example.com/image:newtag",
+			},
 			expectedProblems: []string{
-				"(root): srcRef is required",
+				"(root): Must validate one and only one schema (oneOf)",
+			},
+		},
+		{
+			name: "both srcRef and srcPath specified",
+			config: promotion.Config{
+				"srcRef":  "registry.example.com/image:tag",
+				"srcPath": "./artifact.tar.gz",
+				"destRef": "registry.example.com/image:newtag",
+			},
+			expectedProblems: []string{
+				"(root): Must validate one and only one schema (oneOf)",
 			},
 		},
 		{
@@ -38,6 +57,22 @@ func Test_ociPusher_validate(t *testing.T) {
 			config: promotion.Config{},
 			expectedProblems: []string{
 				"(root): destRef is required",
+			},
+		},
+		{
+			name: "valid config with srcPath",
+			config: promotion.Config{
+				"srcPath": "./artifact.tar.gz",
+				"destRef": "registry.example.com/image:newtag",
+			},
+		},
+		{
+			name: "valid config with srcPath and media types",
+			config: promotion.Config{
+				"srcPath":      "./artifact.tar.gz",
+				"destRef":      "registry.example.com/image:newtag",
+				"mediaType":    "application/vnd.cncf.flux.content.v1.tar+gzip",
+				"artifactType": "application/vnd.cncf.flux.config.v1+json",
 			},
 		},
 		{
@@ -478,6 +513,232 @@ func Test_ociPusher_run_noAnnotationsMutation(t *testing.T) {
 	manifest, err := dstImg.Manifest()
 	require.NoError(t, err)
 	assert.Equal(t, "annotation", manifest.Annotations["existing"])
+}
+
+// makeTarGz builds an in-memory gzip-compressed tar archive containing a single
+// file, for use as a local artifact in tests.
+func makeTarGz(t *testing.T, fileName, content string) []byte {
+	t.Helper()
+	var buf bytes.Buffer
+	gz := gzip.NewWriter(&buf)
+	tw := tar.NewWriter(gz)
+	require.NoError(t, tw.WriteHeader(&tar.Header{
+		Name: fileName,
+		Mode: 0o644,
+		Size: int64(len(content)),
+	}))
+	_, err := tw.Write([]byte(content))
+	require.NoError(t, err)
+	require.NoError(t, tw.Close())
+	require.NoError(t, gz.Close())
+	return buf.Bytes()
+}
+
+// Test that a local archive is pushed as a single-layer OCI artifact with the
+// configured media types and scoped annotations.
+func Test_ociPusher_run_localFile(t *testing.T) {
+	regHandler := registry.New()
+	srv := httptest.NewServer(regHandler)
+	t.Cleanup(srv.Close)
+	regHost := srv.Listener.Addr().String()
+
+	const (
+		layerMediaType = "application/vnd.cncf.flux.content.v1.tar+gzip"
+		artifactType   = "application/vnd.cncf.flux.config.v1+json"
+	)
+
+	workDir := t.TempDir()
+	tarball := makeTarGz(t, "manifests.yaml", "kind: ConfigMap\n")
+	require.NoError(t, os.WriteFile(filepath.Join(workDir, "artifact.tar.gz"), tarball, 0o644))
+
+	runner := &ociPusher{
+		credsDB:         &credentials.FakeDB{},
+		schemaLoader:    getConfigSchemaLoader(stepKindOCIPush),
+		maxArtifactSize: int64(1 << 30),
+	}
+
+	destRef := fmt.Sprintf("%s/test/local:v1", regHost)
+	result, err := runner.run(context.Background(), &promotion.StepContext{
+		Project: "fake-project",
+		WorkDir: workDir,
+	}, builtin.OCIPushConfig{
+		SrcPath:      "artifact.tar.gz",
+		DestRef:      destRef,
+		MediaType:    layerMediaType,
+		ArtifactType: artifactType,
+		Annotations: map[string]string{
+			"org.opencontainers.image.source":               "https://github.com/example/repo",
+			"manifest:org.opencontainers.image.description": "example manifests",
+			"index:org.opencontainers.image.revision":       "abc123",
+		},
+	})
+	require.NoError(t, err)
+	assert.Equal(t, string(kargoapi.PromotionStepStatusSucceeded), string(result.Status))
+	assert.Equal(t, destRef, result.Output["image"])
+	assert.Equal(t, "v1", result.Output["tag"])
+	digestOut, ok := result.Output["digest"].(string)
+	require.True(t, ok)
+	assert.NotEmpty(t, digestOut)
+
+	// Read the artifact back and verify its structure.
+	dstRef, err := name.ParseReference(destRef)
+	require.NoError(t, err)
+	dstImg, err := remote.Image(dstRef)
+	require.NoError(t, err)
+
+	manifest, err := dstImg.Manifest()
+	require.NoError(t, err)
+
+	// An OCI image manifest, not a Docker one.
+	assert.Equal(t, types.OCIManifestSchema1, manifest.MediaType)
+	// The artifact type is carried via the config media type.
+	assert.Equal(t, types.MediaType(artifactType), manifest.Config.MediaType)
+
+	// A single layer with the configured media type and the exact archive bytes.
+	require.Len(t, manifest.Layers, 1)
+	assert.Equal(t, types.MediaType(layerMediaType), manifest.Layers[0].MediaType)
+
+	layers, err := dstImg.Layers()
+	require.NoError(t, err)
+	require.Len(t, layers, 1)
+	rc, err := layers[0].Compressed()
+	require.NoError(t, err)
+	defer rc.Close()
+	gotBytes, err := io.ReadAll(rc)
+	require.NoError(t, err)
+	assert.Equal(t, tarball, gotBytes)
+
+	// Manifest-scoped and unprefixed annotations are applied; index-scoped keys
+	// are dropped for a single image manifest.
+	assert.Equal(t, "https://github.com/example/repo", manifest.Annotations["org.opencontainers.image.source"])
+	assert.Equal(t, "example manifests", manifest.Annotations["org.opencontainers.image.description"])
+	assert.NotContains(t, manifest.Annotations, "org.opencontainers.image.revision")
+
+	// The reported digest matches the pushed manifest.
+	gotDigest, err := dstImg.Digest()
+	require.NoError(t, err)
+	assert.Equal(t, gotDigest.String(), digestOut)
+}
+
+// Test that the layer media type defaults to the OCI tar+gzip layer type when
+// none is configured.
+func Test_ociPusher_run_localFile_defaultMediaType(t *testing.T) {
+	regHandler := registry.New()
+	srv := httptest.NewServer(regHandler)
+	t.Cleanup(srv.Close)
+	regHost := srv.Listener.Addr().String()
+
+	workDir := t.TempDir()
+	tarball := makeTarGz(t, "manifests.yaml", "kind: ConfigMap\n")
+	require.NoError(t, os.WriteFile(filepath.Join(workDir, "artifact.tar.gz"), tarball, 0o644))
+
+	runner := &ociPusher{
+		credsDB:         &credentials.FakeDB{},
+		schemaLoader:    getConfigSchemaLoader(stepKindOCIPush),
+		maxArtifactSize: int64(1 << 30),
+	}
+
+	destRef := fmt.Sprintf("%s/test/local:default", regHost)
+	result, err := runner.run(context.Background(), &promotion.StepContext{
+		Project: "fake-project",
+		WorkDir: workDir,
+	}, builtin.OCIPushConfig{
+		SrcPath: "artifact.tar.gz",
+		DestRef: destRef,
+	})
+	require.NoError(t, err)
+	assert.Equal(t, string(kargoapi.PromotionStepStatusSucceeded), string(result.Status))
+
+	dstRef, err := name.ParseReference(destRef)
+	require.NoError(t, err)
+	dstImg, err := remote.Image(dstRef)
+	require.NoError(t, err)
+	manifest, err := dstImg.Manifest()
+	require.NoError(t, err)
+	require.Len(t, manifest.Layers, 1)
+	assert.Equal(t, types.OCILayer, manifest.Layers[0].MediaType)
+}
+
+// Test error handling for local-file pushes.
+func Test_ociPusher_run_localFile_errors(t *testing.T) {
+	tests := []struct {
+		name            string
+		maxArtifactSize int64
+		// setup writes any needed files into workDir and returns the srcPath to
+		// configure (relative to workDir).
+		setup      func(t *testing.T, workDir string) string
+		wantStatus kargoapi.PromotionStepStatus
+		errMsg     string
+	}{
+		{
+			name: "source path is a directory",
+			setup: func(t *testing.T, workDir string) string {
+				require.NoError(t, os.Mkdir(filepath.Join(workDir, "adir"), 0o755))
+				return "adir"
+			},
+			wantStatus: kargoapi.PromotionStepStatusFailed,
+			errMsg:     "is a directory",
+		},
+		{
+			name: "source path does not exist",
+			setup: func(_ *testing.T, _ string) string {
+				return "missing.tar.gz"
+			},
+			wantStatus: kargoapi.PromotionStepStatusFailed,
+			errMsg:     "failed to stat source path",
+		},
+		{
+			name: "path traversal is contained",
+			setup: func(_ *testing.T, _ string) string {
+				// SecureJoin clamps the escape to within workDir, where no such
+				// file exists, so it surfaces as a stat failure.
+				return "../../etc/passwd"
+			},
+			wantStatus: kargoapi.PromotionStepStatusFailed,
+			errMsg:     "failed to stat source path",
+		},
+		{
+			name:            "artifact exceeds size limit",
+			maxArtifactSize: 8,
+			setup: func(t *testing.T, workDir string) string {
+				tarball := makeTarGz(t, "manifests.yaml", "kind: ConfigMap\n")
+				require.NoError(t, os.WriteFile(filepath.Join(workDir, "big.tar.gz"), tarball, 0o644))
+				return "big.tar.gz"
+			},
+			wantStatus: kargoapi.PromotionStepStatusErrored,
+			errMsg:     "exceeds maximum allowed size of",
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			workDir := t.TempDir()
+			srcPath := tt.setup(t, workDir)
+
+			maxSize := tt.maxArtifactSize
+			if maxSize == 0 {
+				maxSize = int64(1 << 30)
+			}
+			runner := &ociPusher{
+				credsDB:         &credentials.FakeDB{},
+				schemaLoader:    getConfigSchemaLoader(stepKindOCIPush),
+				maxArtifactSize: maxSize,
+			}
+
+			result, err := runner.run(context.Background(), &promotion.StepContext{
+				Project: "fake-project",
+				WorkDir: workDir,
+			}, builtin.OCIPushConfig{
+				SrcPath: srcPath,
+				DestRef: "registry.example.com/test/local:v1",
+			})
+			require.Error(t, err)
+			assert.ErrorContains(t, err, tt.errMsg)
+			assert.Equal(t, string(tt.wantStatus), string(result.Status))
+			var termErr *promotion.TerminalError
+			assert.ErrorAs(t, err, &termErr)
+		})
+	}
 }
 
 func Test_parseAnnotationScopes(t *testing.T) {

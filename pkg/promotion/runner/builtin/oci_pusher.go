@@ -3,11 +3,17 @@ package builtin
 import (
 	"context"
 	"fmt"
+	"os"
 	"strings"
 
+	securejoin "github.com/cyphar/filepath-securejoin"
 	"github.com/google/go-containerregistry/pkg/name"
 	v1 "github.com/google/go-containerregistry/pkg/v1"
+	"github.com/google/go-containerregistry/pkg/v1/empty"
+	ggcrmutate "github.com/google/go-containerregistry/pkg/v1/mutate"
 	"github.com/google/go-containerregistry/pkg/v1/remote"
+	"github.com/google/go-containerregistry/pkg/v1/static"
+	"github.com/google/go-containerregistry/pkg/v1/types"
 	"github.com/kelseyhightower/envconfig"
 	"github.com/xeipuuv/gojsonschema"
 
@@ -48,8 +54,9 @@ func init() {
 }
 
 // ociPusher is an implementation of the promotion.StepRunner interface that
-// copies/retags OCI artifacts (container images and Helm charts) between
-// registries.
+// pushes OCI artifacts to a registry. It can copy/retag artifacts (container
+// images and Helm charts) between registries, or push a local file from the
+// workspace as a single-layer OCI artifact.
 type ociPusher struct {
 	schemaLoader    gojsonschema.JSONLoader
 	credsDB         credentials.Database
@@ -96,27 +103,12 @@ func (p *ociPusher) run(
 	stepCtx *promotion.StepContext,
 	cfg builtin.OCIPushConfig,
 ) (promotion.StepResult, error) {
-	srcRef, srcCredType, err := parseOCIReference(cfg.SrcRef)
-	if err != nil {
-		return promotion.StepResult{Status: kargoapi.PromotionStepStatusFailed},
-			&promotion.TerminalError{
-				Err: fmt.Errorf("failed to parse source reference %q: %w", cfg.SrcRef, err),
-			}
-	}
-
 	dstRef, dstCredType, err := parseOCIReference(cfg.DestRef)
 	if err != nil {
 		return promotion.StepResult{Status: kargoapi.PromotionStepStatusFailed},
 			&promotion.TerminalError{
 				Err: fmt.Errorf("failed to parse destination reference %q: %w", cfg.DestRef, err),
 			}
-	}
-
-	srcOpts, err := buildOCIRemoteOptions(
-		ctx, p.credsDB, stepCtx.Project, srcRef, srcCredType, cfg.InsecureSkipTLSVerify,
-	)
-	if err != nil {
-		return promotion.StepResult{Status: kargoapi.PromotionStepStatusErrored}, err
 	}
 
 	dstOpts, err := buildOCIRemoteOptions(
@@ -126,15 +118,17 @@ func (p *ociPusher) run(
 		return promotion.StepResult{Status: kargoapi.PromotionStepStatusErrored}, err
 	}
 
-	desc, err := remote.Get(srcRef, srcOpts...)
-	if err != nil {
-		return promotion.StepResult{Status: kargoapi.PromotionStepStatusErrored},
-			fmt.Errorf("failed to get source artifact %q: %w", cfg.SrcRef, err)
+	var (
+		digest v1.Hash
+		status kargoapi.PromotionStepStatus
+	)
+	if cfg.SrcPath != "" {
+		digest, status, err = p.pushLocalFile(stepCtx, cfg, dstRef, dstOpts)
+	} else {
+		digest, status, err = p.pushRemoteArtifact(ctx, stepCtx, cfg, dstRef, dstOpts)
 	}
-
-	digest, err := p.push(desc, srcRef, dstRef, cfg.Annotations, dstOpts)
 	if err != nil {
-		return promotion.StepResult{Status: kargoapi.PromotionStepStatusErrored}, err
+		return promotion.StepResult{Status: status}, err
 	}
 
 	// Extract tag from destination reference if available.
@@ -151,6 +145,139 @@ func (p *ociPusher) run(
 			"tag":    tag,
 		},
 	}, nil
+}
+
+// pushRemoteArtifact copies/retags the artifact identified by cfg.SrcRef to the
+// destination reference. It returns the digest of the pushed artifact and, on
+// failure, the promotion step status to report alongside the error.
+func (p *ociPusher) pushRemoteArtifact(
+	ctx context.Context,
+	stepCtx *promotion.StepContext,
+	cfg builtin.OCIPushConfig,
+	dstRef name.Reference,
+	dstOpts []remote.Option,
+) (v1.Hash, kargoapi.PromotionStepStatus, error) {
+	srcRef, srcCredType, err := parseOCIReference(cfg.SrcRef)
+	if err != nil {
+		return v1.Hash{}, kargoapi.PromotionStepStatusFailed, &promotion.TerminalError{
+			Err: fmt.Errorf("failed to parse source reference %q: %w", cfg.SrcRef, err),
+		}
+	}
+
+	srcOpts, err := buildOCIRemoteOptions(
+		ctx, p.credsDB, stepCtx.Project, srcRef, srcCredType, cfg.InsecureSkipTLSVerify,
+	)
+	if err != nil {
+		return v1.Hash{}, kargoapi.PromotionStepStatusErrored, err
+	}
+
+	desc, err := remote.Get(srcRef, srcOpts...)
+	if err != nil {
+		return v1.Hash{}, kargoapi.PromotionStepStatusErrored,
+			fmt.Errorf("failed to get source artifact %q: %w", cfg.SrcRef, err)
+	}
+
+	digest, err := p.push(desc, srcRef, dstRef, cfg.Annotations, dstOpts)
+	if err != nil {
+		return v1.Hash{}, kargoapi.PromotionStepStatusErrored, err
+	}
+	return digest, kargoapi.PromotionStepStatusSucceeded, nil
+}
+
+// defaultLayerMediaType is the media type applied to the artifact layer when
+// pushing a local file via srcPath and no media type is configured.
+const defaultLayerMediaType = types.OCILayer
+
+// pushLocalFile pushes a local file from the workspace to the destination
+// reference as a single-layer OCI artifact. The layer media type and artifact
+// type (carried as the manifest config media type) are taken from the
+// configuration, and scoped annotations are applied to the manifest. It returns
+// the digest of the pushed artifact and, on failure, the promotion step status
+// to report alongside the error.
+func (p *ociPusher) pushLocalFile(
+	stepCtx *promotion.StepContext,
+	cfg builtin.OCIPushConfig,
+	dstRef name.Reference,
+	dstOpts []remote.Option,
+) (v1.Hash, kargoapi.PromotionStepStatus, error) {
+	absPath, err := securejoin.SecureJoin(stepCtx.WorkDir, cfg.SrcPath)
+	if err != nil {
+		return v1.Hash{}, kargoapi.PromotionStepStatusFailed, &promotion.TerminalError{
+			Err: fmt.Errorf("failed to resolve source path %q: %w", cfg.SrcPath, err),
+		}
+	}
+
+	info, err := os.Stat(absPath)
+	if err != nil {
+		return v1.Hash{}, kargoapi.PromotionStepStatusFailed, &promotion.TerminalError{
+			Err: fmt.Errorf("failed to stat source path %q: %w", cfg.SrcPath, err),
+		}
+	}
+	if info.IsDir() {
+		return v1.Hash{}, kargoapi.PromotionStepStatusFailed, &promotion.TerminalError{
+			Err: fmt.Errorf("source path %q is a directory; expected a file", cfg.SrcPath),
+		}
+	}
+
+	// A local push always transfers the blob, so enforce the size limit
+	// unconditionally. A negative maxArtifactSize disables the check. This
+	// mirrors the cross-repository size check on the retag path.
+	if p.maxArtifactSize >= 0 && info.Size() > p.maxArtifactSize {
+		return v1.Hash{}, kargoapi.PromotionStepStatusErrored, &promotion.TerminalError{
+			Err: fmt.Errorf(
+				"artifact size %s exceeds maximum allowed size of %s",
+				libfmt.FormatByteCount(info.Size()), libfmt.FormatByteCount(p.maxArtifactSize),
+			),
+		}
+	}
+
+	data, err := os.ReadFile(absPath)
+	if err != nil {
+		return v1.Hash{}, kargoapi.PromotionStepStatusErrored,
+			fmt.Errorf("failed to read source path %q: %w", cfg.SrcPath, err)
+	}
+
+	layerMediaType := defaultLayerMediaType
+	if cfg.MediaType != "" {
+		layerMediaType = types.MediaType(cfg.MediaType)
+	}
+
+	layer := static.NewLayer(data, layerMediaType)
+	img, err := ggcrmutate.AppendLayers(empty.Image, layer)
+	if err != nil {
+		return v1.Hash{}, kargoapi.PromotionStepStatusErrored,
+			fmt.Errorf("failed to build artifact: %w", err)
+	}
+	// empty.Image is a Docker manifest by default; emit an OCI manifest instead.
+	img = ggcrmutate.MediaType(img, types.OCIManifestSchema1)
+	if cfg.ArtifactType != "" {
+		// This ggcr version has no top-level manifest artifactType, so carry the
+		// artifact type via the config media type per the OCI/Helm/Flux/ORAS
+		// convention.
+		img = ggcrmutate.ConfigMediaType(img, types.MediaType(cfg.ArtifactType))
+	}
+
+	// Apply manifest-scoped annotations. This is a single image manifest, so
+	// index-scoped keys are ignored, matching the retag path's behavior for
+	// single images.
+	scopes := p.parseAnnotationScopes(cfg.Annotations)
+	annotated, err := mutate.Annotations(img, nil, scopes.manifest)
+	if err != nil {
+		return v1.Hash{}, kargoapi.PromotionStepStatusErrored,
+			fmt.Errorf("failed to annotate artifact: %w", err)
+	}
+	img = annotated.(v1.Image) //nolint:forcetypeassert
+
+	if err = remote.Write(dstRef, img, dstOpts...); err != nil {
+		return v1.Hash{}, kargoapi.PromotionStepStatusErrored,
+			fmt.Errorf("failed to push artifact to %q: %w", dstRef.String(), err)
+	}
+	digest, err := img.Digest()
+	if err != nil {
+		return v1.Hash{}, kargoapi.PromotionStepStatusErrored,
+			fmt.Errorf("failed to compute artifact digest: %w", err)
+	}
+	return digest, kargoapi.PromotionStepStatusSucceeded, nil
 }
 
 // annotationScopes holds annotations separated by their target scope.
