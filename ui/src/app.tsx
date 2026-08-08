@@ -18,6 +18,7 @@ import { TokenRenew } from './features/auth/token-renew';
 import { MainLayout } from './features/common/layout/main-layout';
 import { Events } from './features/project/events/events';
 import { ProjectSettings } from './features/project/settings/project-settings';
+import { ProjectWizard } from './features/project-wizard/project-wizard';
 import { AnalysisRunLogsPage } from './pages/analysis-run-logs';
 import { Downloads } from './pages/downloads/downloads';
 import { Login } from './pages/login/login';
@@ -37,6 +38,7 @@ export const App = () => (
             <Route element={<ProtectedRoute />}>
               <Route element={<MainLayout />}>
                 <Route path={paths.projects} element={<Projects />} />
+                <Route path={paths.createProjectGuided} element={<ProjectWizard />} />
                 <Route path={paths.project} element={<Project />} />
                 <Route path={paths.projectEvents} element={<Events />} />
                 <Route path={paths.stage} element={<Project />} />
