@@ -6,19 +6,22 @@ import (
 	"crypto/tls"
 	"encoding/json"
 	"fmt"
+	"io"
 	"mime"
 	"net/http"
 	"net/url"
+	"os"
 	"strings"
 	"time"
 
+	securejoin "github.com/cyphar/filepath-securejoin"
 	"github.com/expr-lang/expr"
 	"github.com/hashicorp/go-cleanhttp"
 	"github.com/xeipuuv/gojsonschema"
 	"sigs.k8s.io/yaml"
 
 	kargoapi "github.com/akuity/kargo/api/v1alpha1"
-	"github.com/akuity/kargo/pkg/io"
+	kargoio "github.com/akuity/kargo/pkg/io"
 	"github.com/akuity/kargo/pkg/logging"
 	kargonet "github.com/akuity/kargo/pkg/net"
 	"github.com/akuity/kargo/pkg/promotion"
@@ -89,10 +92,10 @@ func (h *httpRequester) convert(cfg promotion.Config) (builtin.HTTPConfig, error
 
 func (h *httpRequester) run(
 	ctx context.Context,
-	_ *promotion.StepContext,
+	stepCtx *promotion.StepContext,
 	cfg builtin.HTTPConfig,
 ) (promotion.StepResult, error) {
-	req, err := h.buildRequest(ctx, cfg)
+	req, err := h.buildRequest(ctx, stepCtx, cfg)
 	if err != nil {
 		return promotion.StepResult{Status: kargoapi.PromotionStepStatusErrored},
 			&promotion.TerminalError{Err: fmt.Errorf("error building HTTP request: %w", err)}
@@ -299,17 +302,37 @@ func (h *httpRequester) extractErrorMessageFromResponse(
 
 func (h *httpRequester) buildRequest(
 	ctx context.Context,
+	stepCtx *promotion.StepContext,
 	cfg builtin.HTTPConfig,
 ) (*http.Request, error) {
 	method := cfg.Method
 	if method == "" {
 		method = http.MethodGet
 	}
+	var bodyReader io.Reader = strings.NewReader(cfg.Body)
+	if cfg.BodyFromFile != "" {
+		if stepCtx == nil {
+			return nil, fmt.Errorf("cannot read bodyFromFile %q without a step context", cfg.BodyFromFile)
+		}
+		bodyPath, err := securejoin.SecureJoin(stepCtx.WorkDir, cfg.BodyFromFile)
+		if err != nil {
+			return nil, fmt.Errorf("could not secure join bodyFromFile %q: %w", cfg.BodyFromFile, err)
+		}
+		bodyFile, err := os.Open(bodyPath)
+		if err != nil {
+			return nil, fmt.Errorf("could not read bodyFromFile %q: %w", cfg.BodyFromFile, err)
+		}
+		bodyBytes, err := kargoio.LimitRead(bodyFile, maxResponseBytes)
+		if err != nil {
+			return nil, fmt.Errorf("could not read bodyFromFile %q: %w", cfg.BodyFromFile, err)
+		}
+		bodyReader = bytes.NewReader(bodyBytes)
+	}
 	req, err := http.NewRequestWithContext(
 		ctx,
 		method,
 		cfg.URL,
-		bytes.NewBufferString(cfg.Body),
+		bodyReader,
 	)
 	if err != nil {
 		return nil, fmt.Errorf("error creating HTTP request: %w", err)
@@ -366,7 +389,7 @@ func (h *httpRequester) buildExprEnv(
 	}
 
 	// Read the response body up to the maximum allowed size
-	bodyBytes, err := io.LimitRead(resp.Body, maxResponseBytes)
+	bodyBytes, err := kargoio.LimitRead(resp.Body, maxResponseBytes)
 	if err != nil {
 		return nil, fmt.Errorf("reading response body: %w", err)
 	}

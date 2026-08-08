@@ -1,10 +1,13 @@
 package builtin
 
 import (
+	"bytes"
 	"io"
 	"maps"
 	"net/http"
 	"net/http/httptest"
+	"os"
+	"path/filepath"
 	"strings"
 	"testing"
 	"time"
@@ -197,6 +200,16 @@ func Test_httpRequester_convert(t *testing.T) {
 			},
 			expectedProblems: []string{
 				"proxy: Does not match pattern",
+			},
+		},
+		{
+			name: "body and bodyFromFile are mutually exclusive",
+			config: promotion.Config{
+				"body":         "",
+				"bodyFromFile": "payload.json",
+			},
+			expectedProblems: []string{
+				"Must validate one and only one schema (oneOf)",
 			},
 		},
 		{
@@ -747,7 +760,7 @@ func Test_httpRequester_run(t *testing.T) {
 
 func Test_httpRequester_buildRequest(t *testing.T) {
 	ctx := t.Context()
-	req, err := (&httpRequester{}).buildRequest(ctx, builtin.HTTPConfig{
+	req, err := (&httpRequester{}).buildRequest(ctx, nil, builtin.HTTPConfig{
 		Method: "GET",
 		URL:    "http://example.com",
 		Headers: []builtin.HTTPConfigHeader{{
@@ -764,6 +777,72 @@ func Test_httpRequester_buildRequest(t *testing.T) {
 	require.Equal(t, "GET", req.Method)
 	require.Equal(t, "http://example.com?param=some+value", req.URL.String())
 	require.Equal(t, "application/json", req.Header.Get("Content-Type"))
+}
+
+func Test_httpRequester_buildRequest_bodyFromFile(t *testing.T) {
+	workDir := t.TempDir()
+	testFilePath := filepath.Join(workDir, "payload.json")
+	require.NoError(t, os.WriteFile(
+		testFilePath,
+		[]byte{0x00, 0xff, 0x01, 0x7f},
+		0600,
+	))
+
+	req, err := (&httpRequester{}).buildRequest(
+		t.Context(),
+		&promotion.StepContext{WorkDir: workDir},
+		builtin.HTTPConfig{
+			Method:       "POST",
+			URL:          "http://example.com",
+			BodyFromFile: "payload.json",
+		},
+	)
+	require.NoError(t, err)
+	body, err := io.ReadAll(req.Body)
+	require.NoError(t, err)
+	require.Equal(t, []byte{0x00, 0xff, 0x01, 0x7f}, body)
+}
+
+func Test_httpRequester_buildRequest_bodyFromFile_rejectsOversize(t *testing.T) {
+	workDir := t.TempDir()
+	testFilePath := filepath.Join(workDir, "payload.bin")
+	require.NoError(t, os.WriteFile(
+		testFilePath,
+		bytes.Repeat([]byte{0x01}, maxResponseBytes+1),
+		0600,
+	))
+
+	_, err := (&httpRequester{}).buildRequest(
+		t.Context(),
+		&promotion.StepContext{WorkDir: workDir},
+		builtin.HTTPConfig{
+			Method:       "POST",
+			URL:          "http://example.com",
+			BodyFromFile: "payload.bin",
+		},
+	)
+	require.ErrorContains(t, err, "content exceeds limit")
+}
+
+func Test_httpRequester_buildRequest_bodyFromFile_keepsTraversalInsideWorkDir(t *testing.T) {
+	parentDir := t.TempDir()
+	workDir := filepath.Join(parentDir, "work")
+	require.NoError(t, os.Mkdir(workDir, 0700))
+	require.NoError(t, os.WriteFile(
+		filepath.Join(parentDir, "payload.json"),
+		[]byte("outside work directory"),
+		0600,
+	))
+
+	_, err := (&httpRequester{}).buildRequest(
+		t.Context(),
+		&promotion.StepContext{WorkDir: workDir},
+		builtin.HTTPConfig{
+			URL:          "http://example.com",
+			BodyFromFile: "../payload.json",
+		},
+	)
+	require.ErrorContains(t, err, "could not read bodyFromFile")
 }
 
 func Test_httpRequester_getClient(t *testing.T) {

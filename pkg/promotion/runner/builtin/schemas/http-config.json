@@ -62,6 +62,28 @@
   "type": "object",
   "additionalProperties": false,
   "required": ["url"],
+  "oneOf": [
+    {
+      "required": ["body"],
+      "not": {
+        "required": ["bodyFromFile"]
+      }
+    },
+    {
+      "required": ["bodyFromFile"],
+      "not": {
+        "required": ["body"]
+      }
+    },
+    {
+      "not": {
+        "anyOf": [
+          {"required": ["body"]},
+          {"required": ["bodyFromFile"]}
+        ]
+      }
+    }
+  ],
   "properties": {
     "method": {
       "type": "string",
@@ -90,6 +112,11 @@
     "body": {
       "type": "string",
       "description": "The body of the HTTP request."
+    },
+    "bodyFromFile": {
+      "type": "string",
+      "minLength": 1,
+      "description": "A path relative to the promotion work directory whose contents are used as the HTTP request body. Mutually exclusive with body."
     },
     "insecureSkipTLSVerify": {
       "type": "boolean",

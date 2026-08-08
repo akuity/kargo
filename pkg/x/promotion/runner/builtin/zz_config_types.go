@@ -487,6 +487,9 @@ type Chart struct {
 type HTTPConfig struct {
 	// The body of the HTTP request.
 	Body string `json:"body,omitempty"`
+	// A path relative to the promotion work directory whose contents are used as the HTTP
+	// request body. Mutually exclusive with body.
+	BodyFromFile string `json:"bodyFromFile,omitempty"`
 	// An expression to evaluate to extract an error message from the HTTP response.
 	ErrorExpression string `json:"errorExpression,omitempty"`
 	// An expression to evaluate to determine if the request failed.
