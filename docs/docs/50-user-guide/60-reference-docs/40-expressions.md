@@ -463,6 +463,65 @@ config:
 
 :::
 
+### `repoCredentials(repoURL, type)`
+
+The `repoCredentials()` function resolves repository credentials by repository
+URL and credential type, returning them as an object whose fields are accessed
+by name. It takes two required arguments:
+
+- `repoURL` (Required): A string representing the URL of the repository whose
+  credentials should be resolved.
+
+- `type` (Required): A string representing the credential type. Must be one of
+  `git`, `helm`, or `image`. The type is required because credentials are
+  indexed by type, and the same URL may resolve to different credentials
+  depending on it.
+
+Unlike `secret()`, which returns the raw `Data` of a `Secret` selected by
+_name_, `repoCredentials()` performs a lookup by repository URL through the same
+credentials database used by built-in promotion steps like `git-clone`. It
+returns the **resolved** credentials — not the raw contents of the underlying
+`Secret`. This means it transparently handles credential schemes that yield
+narrowly-scoped, short-lived credentials — such as GitHub App installation
+tokens or a cloud provider's ambient (Pod identity) credentials — instead of
+returning the raw material (e.g. an app ID and private key) from which those
+credentials are derived.
+
+Because the result is normalized, the set of available fields is **fixed** and
+does not vary by credential type or provider. The returned object always exposes
+all of the following fields:
+
+| Field | Description |
+|-------|-------------|
+| `Username` | The username identifying the principal. For token-based credentials this is often an inconsequential placeholder. |
+| `Password` | The password or token used to authenticate. **API keys and personal access tokens are surfaced here.** |
+| `SSHPrivateKey` | The SSH private key, when applicable. **Deprecated as of v1.10.0** and slated for removal in v1.13.0. |
+
+If no matching credentials are found, an object with all fields empty is
+returned.
+
+For details on how each field is populated for a given credential type or
+provider (e.g. GitHub App, ECR, or basic username/password), see the
+[Managing Secrets](../50-security/30-managing-secrets.md#repository-credentials)
+page.
+
+Examples:
+
+```yaml
+config:
+  headers:
+  - name: Authorization
+    value: Bearer ${{ repoCredentials('https://github.com/example/repo.git', 'git').Password }}
+```
+
+:::note
+
+`repoCredentials()` is available wherever Kargo's credentials database is wired:
+within `Promotion` step expressions and within a `Stage`'s verification argument
+expressions.
+
+:::
+
 ### `warehouse(name)`
 
 The `warehouse()` function returns a `FreightOrigin` object representing a
