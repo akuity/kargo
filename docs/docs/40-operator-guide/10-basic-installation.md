@@ -18,7 +18,7 @@ for steps, and
 for guidance on configuring Kargo to address common operational concerns.
 
 If you're a developer looking for instructions for installing the Kargo CLI, see
-[Installing the CLI](../50-user-guide/05-installing-the-cli/index.md).
+[Installing the CLI](../50-user-guide/05-cli/10-installation.md).
 
 :::
 
