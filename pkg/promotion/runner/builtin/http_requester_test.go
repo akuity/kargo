@@ -2,6 +2,7 @@ package builtin
 
 import (
 	"bytes"
+	"context"
 	"io"
 	"maps"
 	"net/http"
@@ -759,90 +760,106 @@ func Test_httpRequester_run(t *testing.T) {
 }
 
 func Test_httpRequester_buildRequest(t *testing.T) {
-	ctx := t.Context()
-	req, err := (&httpRequester{}).buildRequest(ctx, nil, builtin.HTTPConfig{
-		Method: "GET",
-		URL:    "http://example.com",
-		Headers: []builtin.HTTPConfigHeader{{
-			Name:  "Content-Type",
-			Value: "application/json",
-		}},
-		QueryParams: []builtin.HTTPConfigQueryParam{{
-			Name:  "param",
-			Value: "some value", // We want to be sure this gets url-encoded
-		}},
-	})
-	require.NoError(t, err)
-	require.Equal(t, ctx, req.Context())
-	require.Equal(t, "GET", req.Method)
-	require.Equal(t, "http://example.com?param=some+value", req.URL.String())
-	require.Equal(t, "application/json", req.Header.Get("Content-Type"))
-}
-
-func Test_httpRequester_buildRequest_bodyFromFile(t *testing.T) {
-	workDir := t.TempDir()
-	testFilePath := filepath.Join(workDir, "payload.json")
-	require.NoError(t, os.WriteFile(
-		testFilePath,
-		[]byte{0x00, 0xff, 0x01, 0x7f},
-		0600,
-	))
-
-	req, err := (&httpRequester{}).buildRequest(
-		t.Context(),
-		&promotion.StepContext{WorkDir: workDir},
-		builtin.HTTPConfig{
-			Method:       "POST",
-			URL:          "http://example.com",
-			BodyFromFile: "payload.json",
+	testCases := []struct {
+		name       string
+		setup      func(*testing.T) (*promotion.StepContext, builtin.HTTPConfig)
+		assertions func(*testing.T, context.Context, *http.Request, error)
+	}{
+		{
+			name: "request options",
+			setup: func(t *testing.T) (*promotion.StepContext, builtin.HTTPConfig) {
+				return nil, builtin.HTTPConfig{
+					Method: "GET",
+					URL:    "http://example.com",
+					Headers: []builtin.HTTPConfigHeader{{
+						Name:  "Content-Type",
+						Value: "application/json",
+					}},
+					QueryParams: []builtin.HTTPConfigQueryParam{{
+						Name:  "param",
+						Value: "some value", // We want to be sure this gets url-encoded
+					}},
+				}
+			},
+			assertions: func(t *testing.T, ctx context.Context, req *http.Request, err error) {
+				require.NoError(t, err)
+				require.Equal(t, ctx, req.Context())
+				require.Equal(t, "GET", req.Method)
+				require.Equal(t, "http://example.com?param=some+value", req.URL.String())
+				require.Equal(t, "application/json", req.Header.Get("Content-Type"))
+			},
 		},
-	)
-	require.NoError(t, err)
-	body, err := io.ReadAll(req.Body)
-	require.NoError(t, err)
-	require.Equal(t, []byte{0x00, 0xff, 0x01, 0x7f}, body)
-}
-
-func Test_httpRequester_buildRequest_bodyFromFile_rejectsOversize(t *testing.T) {
-	workDir := t.TempDir()
-	testFilePath := filepath.Join(workDir, "payload.bin")
-	require.NoError(t, os.WriteFile(
-		testFilePath,
-		bytes.Repeat([]byte{0x01}, maxResponseBytes+1),
-		0600,
-	))
-
-	_, err := (&httpRequester{}).buildRequest(
-		t.Context(),
-		&promotion.StepContext{WorkDir: workDir},
-		builtin.HTTPConfig{
-			Method:       "POST",
-			URL:          "http://example.com",
-			BodyFromFile: "payload.bin",
+		{
+			name: "body from file",
+			setup: func(t *testing.T) (*promotion.StepContext, builtin.HTTPConfig) {
+				workDir := t.TempDir()
+				require.NoError(t, os.WriteFile(
+					filepath.Join(workDir, "payload.json"),
+					[]byte{0x00, 0xff, 0x01, 0x7f},
+					0600,
+				))
+				return &promotion.StepContext{WorkDir: workDir}, builtin.HTTPConfig{
+					Method:       "POST",
+					URL:          "http://example.com",
+					BodyFromFile: "payload.json",
+				}
+			},
+			assertions: func(t *testing.T, _ context.Context, req *http.Request, err error) {
+				require.NoError(t, err)
+				body, readErr := io.ReadAll(req.Body)
+				require.NoError(t, readErr)
+				require.Equal(t, []byte{0x00, 0xff, 0x01, 0x7f}, body)
+			},
 		},
-	)
-	require.ErrorContains(t, err, "content exceeds limit")
-}
-
-func Test_httpRequester_buildRequest_bodyFromFile_keepsTraversalInsideWorkDir(t *testing.T) {
-	parentDir := t.TempDir()
-	workDir := filepath.Join(parentDir, "work")
-	require.NoError(t, os.Mkdir(workDir, 0700))
-	require.NoError(t, os.WriteFile(
-		filepath.Join(parentDir, "payload.json"),
-		[]byte("outside work directory"),
-		0600,
-	))
-
-	_, err := (&httpRequester{}).buildRequest(
-		t.Context(),
-		&promotion.StepContext{WorkDir: workDir},
-		builtin.HTTPConfig{
-			URL:          "http://example.com",
-			BodyFromFile: "../payload.json",
+		{
+			name: "body from file rejects oversize",
+			setup: func(t *testing.T) (*promotion.StepContext, builtin.HTTPConfig) {
+				workDir := t.TempDir()
+				require.NoError(t, os.WriteFile(
+					filepath.Join(workDir, "payload.bin"),
+					bytes.Repeat([]byte{0x01}, maxResponseBytes+1),
+					0600,
+				))
+				return &promotion.StepContext{WorkDir: workDir}, builtin.HTTPConfig{
+					Method:       "POST",
+					URL:          "http://example.com",
+					BodyFromFile: "payload.bin",
+				}
+			},
+			assertions: func(t *testing.T, _ context.Context, _ *http.Request, err error) {
+				require.ErrorContains(t, err, "content exceeds limit")
+			},
 		},
-	)
-	require.ErrorContains(t, err, "could not read bodyFromFile")
+		{
+			name: "body from file stays inside work directory",
+			setup: func(t *testing.T) (*promotion.StepContext, builtin.HTTPConfig) {
+				parentDir := t.TempDir()
+				workDir := filepath.Join(parentDir, "work")
+				require.NoError(t, os.Mkdir(workDir, 0700))
+				require.NoError(t, os.WriteFile(
+					filepath.Join(parentDir, "payload.json"),
+					[]byte("outside work directory"),
+					0600,
+				))
+				return &promotion.StepContext{WorkDir: workDir}, builtin.HTTPConfig{
+					URL:          "http://example.com",
+					BodyFromFile: "../payload.json",
+				}
+			},
+			assertions: func(t *testing.T, _ context.Context, _ *http.Request, err error) {
+				require.ErrorContains(t, err, "could not read bodyFromFile")
+			},
+		},
+	}
+
+	for _, testCase := range testCases {
+		t.Run(testCase.name, func(t *testing.T) {
+			stepCtx, cfg := testCase.setup(t)
+			ctx := t.Context()
+			req, err := (&httpRequester{}).buildRequest(ctx, stepCtx, cfg)
+			testCase.assertions(t, ctx, req, err)
+		})
+	}
 }
 
 func Test_httpRequester_getClient(t *testing.T) {
