@@ -357,12 +357,15 @@ func (r *repositoryClient) getImageFromV1ImageIndex(
 		)
 	}
 
-	// NB: Indices do not have their own creation date, but like all other objects
-	// in a registry, are immutable, therefore an index cannot have been created
-	// any earlier than the newest of the images it references. We'll find the
-	// latest creation time among all referenced images and use that as the
-	// creation time of the index.
-	var createdAt *time.Time
+	// NB: An index carries no creation date of its own the way an image config
+	// does. It may, however, claim one in its own annotations, and each of its
+	// references may claim one for the image that reference points to. Both are
+	// recorded when the index is authored, and are preferred in that order.
+	//
+	// Failing both, an index, like all other objects in a registry, is immutable,
+	// therefore it cannot have been created any earlier than the newest of the
+	// images it references. That is the closest remaining approximation.
+	var newestRefCreatedAt *time.Time
 	platforms := make([]platform, 0, len(idxManifest.Manifests))
 	for _, ref := range idxManifest.Manifests {
 		if ref.Platform == nil ||
@@ -382,19 +385,30 @@ func (r *repositoryClient) getImageFromV1ImageIndex(
 			// This really shouldn't happen.
 			return nil, fmt.Errorf("found no image with digest %s", ref.Digest)
 		}
-		if createdAt == nil || img.CreatedAt.After(*createdAt) {
-			createdAt = img.CreatedAt
+		refCreatedAt := creationTimeFromMetadata(ref.Annotations)
+		if refCreatedAt == nil {
+			refCreatedAt = img.CreatedAt
+		}
+		if newestRefCreatedAt == nil || refCreatedAt.After(*newestRefCreatedAt) {
+			newestRefCreatedAt = refCreatedAt
 		}
 		platforms = append(platforms, platform{
 			OS:          ref.Platform.OS,
 			Arch:        ref.Platform.Architecture,
 			Variant:     ref.Platform.Variant,
-			CreatedAt:   img.CreatedAt,
+			CreatedAt:   refCreatedAt,
 			Annotations: ref.Annotations,
 		})
 	}
 	if len(platforms) == 0 {
 		return nil, errors.New("empty V2 manifest list or OCI index is not supported")
+	}
+
+	// The index's own annotations are recorded when the index is authored, so
+	// they describe the index more reliably than anything it references.
+	createdAt := creationTimeFromMetadata(idxManifest.Annotations)
+	if createdAt == nil {
+		createdAt = newestRefCreatedAt
 	}
 
 	return &image{
@@ -430,33 +444,56 @@ func (r *repositoryClient) getImageFromV1Image(
 	return &image{
 		Digest: digest,
 		CreatedAt: getCreationTime(
-			[]map[string]string{
-				manifest.Annotations,
-				cfg.Config.Labels,
-			},
-			&cfg.Created.Time,
+			manifest.Annotations,
+			cfg.Config.Labels,
+			cfg.Created.Time,
 		),
 		Annotations: manifest.Annotations,
 	}, nil
 }
 
-func getCreationTime(sources []map[string]string, fallback *time.Time) *time.Time {
-	keys := []string{ociCreatedAnnotation, legacyBuildDateAnnotation}
+// getCreationTime determines an image's creation time from the metadata
+// available for it.
+//
+// Annotations are recorded in a manifest when that manifest is authored and are
+// never copied from a base image, so a creation time claimed by an annotation
+// is used as-is.
+//
+// Labels, by contrast, are copied from the base image unless a build explicitly
+// overwrites them, so a label may describe the base image rather than the image
+// carrying it. Every way a creation time can be understated -- a label
+// describing the base image, a timestamp carried over with a reused layer, a
+// fixed timestamp chosen to make builds reproducible -- makes it earlier than
+// the truth, and none makes it later. Whichever of the label and the config's
+// own creation time is later is therefore the nearer of the two to the truth.
+func getCreationTime(
+	annotations map[string]string,
+	labels map[string]string,
+	configCreatedAt time.Time,
+) *time.Time {
+	if createdAt := creationTimeFromMetadata(annotations); createdAt != nil {
+		return createdAt
+	}
+	createdAt := configCreatedAt
+	if labelCreatedAt := creationTimeFromMetadata(labels); labelCreatedAt != nil &&
+		labelCreatedAt.After(createdAt) {
+		createdAt = *labelCreatedAt
+	}
+	return &createdAt
+}
 
-	for _, source := range sources {
-		if source == nil {
-			continue
-		}
-		for _, key := range keys {
-			if createdStr, ok := source[key]; ok {
-				if created, err := time.Parse(time.RFC3339, createdStr); err == nil {
-					return &created
-				}
+// creationTimeFromMetadata returns the creation time claimed by the first
+// recognized key in the provided annotations or labels to have a parsable
+// value. It returns nil if there is none.
+func creationTimeFromMetadata(metadata map[string]string) *time.Time {
+	for _, key := range []string{ociCreatedAnnotation, legacyBuildDateAnnotation} {
+		if createdStr, ok := metadata[key]; ok {
+			if created, err := time.Parse(time.RFC3339, createdStr); err == nil {
+				return &created
 			}
 		}
 	}
-
-	return fallback
+	return nil
 }
 
 // rateLimitedRoundTripper is a rate limited implementation of
