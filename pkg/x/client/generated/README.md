@@ -301,6 +301,7 @@ Class | Method | HTTP request | Description
  - [PromotionTemplateSpec](docs/PromotionTemplateSpec.md)
  - [PromotionWindow](docs/PromotionWindow.md)
  - [PromotionWindowKind](docs/PromotionWindowKind.md)
+ - [PromotionWindowStatus](docs/PromotionWindowStatus.md)
  - [PublicConfig](docs/PublicConfig.md)
  - [QuayWebhookReceiverConfig](docs/QuayWebhookReceiverConfig.md)
  - [RbacRole](docs/RbacRole.md)
