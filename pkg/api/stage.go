@@ -224,10 +224,14 @@ func RefreshStage(
 // necessary for the frontend to display ArgoCD information for the Stage.
 //
 // The annotation value is a JSON-encoded list of ArgoCD apps that are
-// associated with the Stage, constructed from the HealthCheckSteps from
-// the latest Promotion.
+// associated with the Stage, constructed from the given Promotion. Two sources
+// contribute: the Applications that Argo CD-aware steps reported as step
+// output, and the Applications named by the health check criteria those steps
+// registered. The latter is what Promotions from before Argo CD-aware steps
+// began reporting step output rely on.
 //
-// If no ArgoCD apps are found, the annotation is removed.
+// If the Promotion is nil, or no ArgoCD apps are found, the annotation is
+// removed.
 //
 // This deliberately takes the Stage's identity rather than a caller's working
 // Stage object. This is to avoid the patchAnnotation() call in this method
@@ -236,28 +240,20 @@ func RefreshStage(
 func AnnotateStageWithArgoCDContext(
 	ctx context.Context,
 	c client.Client,
-	healthChecks []kargoapi.HealthCheckStep,
+	promo *kargoapi.Promotion,
 	stage types.NamespacedName,
 ) error {
-	var argoCDApps []map[string]any
-	for _, healthCheck := range healthChecks {
-		healthCheckConfig := healthCheck.GetConfig()
-
-		appsList, ok := healthCheckConfig["apps"].([]any)
-		if !ok {
-			continue
-		}
-
-		for _, rawApp := range appsList {
-			appConfig, ok := rawApp.(map[string]any)
-			if !ok {
-				continue
-			}
-			argoCDApps = append(argoCDApps, map[string]any{
-				"name":      appConfig["name"],
-				"namespace": appConfig["namespace"],
-			})
-		}
+	var argoCDApps []ArgoCDAppRef
+	if promo != nil {
+		argoCDApps = append(
+			argoCDApps,
+			argoCDAppRefsFromStepOutputs(promo.Spec.Steps, promo.Status.GetState())...,
+		)
+		argoCDApps = append(
+			argoCDApps,
+			argoCDAppRefsFromHealthChecks(promo.Status.HealthChecks)...,
+		)
+		argoCDApps = dedupeArgoCDAppRefs(argoCDApps)
 	}
 
 	target := &kargoapi.Stage{

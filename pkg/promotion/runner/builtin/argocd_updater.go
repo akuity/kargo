@@ -166,6 +166,9 @@ func (a *argocdUpdater) run(
 
 	updateResults := make([]argocd.OperationPhase, 0, len(stepCfg.Apps))
 	var appHealthChecks []checkers.ArgoCDAppHealthCheck
+	// Applications resolved by this step, reported as output so the Stage
+	// controller can annotate the Stage with Argo CD context.
+	var resolvedApps []api.ArgoCDAppRef
 	for i := range stepCfg.Apps {
 		update := &stepCfg.Apps[i]
 
@@ -205,6 +208,10 @@ func (a *argocdUpdater) run(
 				Namespace:        app.Namespace,
 				DesiredRevisions: desiredRevisions,
 			})
+			resolvedApps = append(resolvedApps, api.ArgoCDAppRef{
+				Name:      app.Name,
+				Namespace: app.Namespace,
+			})
 
 			// Process the application and get its phase.
 			phase, err := a.processApplication(ctx, stepCtx, update, app)
@@ -239,6 +246,9 @@ func (a *argocdUpdater) run(
 
 	return promotion.StepResult{
 		Status: aggregatedStatus,
+		Output: map[string]any{
+			api.ArgoCDAppsOutputKey: api.ArgoCDAppRefsToOutput(resolvedApps),
+		},
 		HealthCheck: &health.Criteria{
 			Kind: stepKindArgoCDUpdate,
 			Input: health.Input{
