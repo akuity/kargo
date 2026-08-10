@@ -783,7 +783,17 @@ const transformMeasurementValue = (
     };
   }
 
-  const parsedValue = JSON.parse(value);
+  let parsedValue;
+  try {
+    parsedValue = JSON.parse(value);
+  } catch {
+    // providers such as web can return a plain, non-JSON string (e.g. "ok") --
+    // display it as-is rather than failing to render the measurement
+    return {
+      canChart: false,
+      tableValue: value
+    };
+  }
 
   // single number measurement value
   if (isFiniteNumber(parsedValue)) {
