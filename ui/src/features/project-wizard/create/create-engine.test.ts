@@ -3,7 +3,6 @@ import { expect, test } from 'vitest';
 import {
   ProgressItem,
   errorMessage,
-  isNamespaceNotReady,
   mergeForRetry,
   runCreate,
   toProgressItems
@@ -77,30 +76,15 @@ test('runCreate marks the failed item errored and the rest halted', async () => 
   expect(final[2].message).toBe('Halted by prior failure');
 });
 
-test('runCreate retries a retryable (namespace-not-ready) error then succeeds', async () => {
+// A failed create is applied once and halts the run. Transient-failure handling
+// belongs on the mutation, not in a hand-rolled loop here.
+test('runCreate applies a failing create exactly once', async () => {
   let attempts = 0;
   const ok = await runCreate(
     toProgressItems([{ kind: 'Secret', name: 's', yaml: 'b' }]),
     async () => {
       attempts++;
-      if (attempts < 3) {
-        throw apiError(404, 'Not Found', 'namespace "p" not found');
-      }
-    },
-    () => {},
-    { sleep: noSleep }
-  );
-  expect(ok).toBe(true);
-  expect(attempts).toBe(3);
-});
-
-test('runCreate does not retry non-retryable errors', async () => {
-  let attempts = 0;
-  const ok = await runCreate(
-    toProgressItems([{ kind: 'Secret', name: 's', yaml: 'b' }]),
-    async () => {
-      attempts++;
-      throw apiError(422, 'Unprocessable', 'invalid');
+      throw apiError(503, 'Service Unavailable', 'try again');
     },
     () => {},
     { sleep: noSleep }
@@ -189,10 +173,93 @@ test('a created resource is not re-applied on retry even after editing it', asyn
   expect(applied).toEqual(['c2']);
 });
 
-test('isNamespaceNotReady only matches namespace-not-found ApiErrors', () => {
-  expect(isNamespaceNotReady(apiError(404, 'x', 'namespace "p" not found'))).toBe(true);
-  expect(isNamespaceNotReady(apiError(422, 'x', 'invalid field'))).toBe(false);
-  expect(isNamespaceNotReady(new Error('namespace not found'))).toBe(false);
+test('runCreate gates the next item on awaitReady', async () => {
+  const events: string[] = [];
+  let releaseProject: () => void = () => {};
+  const projectReady = new Promise<void>((resolve) => {
+    releaseProject = resolve;
+  });
+
+  const run = runCreate(
+    items(),
+    async (y) => {
+      events.push(`create:${y}`);
+    },
+    () => {},
+    {
+      sleep: noSleep,
+      awaitReady: (item) => {
+        if (item.kind !== 'Project') {
+          return undefined;
+        }
+        events.push('gate:start');
+        return projectReady.then(() => {
+          events.push('gate:done');
+        });
+      }
+    }
+  );
+
+  // A macrotask flushes every pending microtask, so the engine is parked on the
+  // gate by now -- nothing past the Project can have run.
+  await new Promise((resolve) => setTimeout(resolve, 0));
+  expect(events).toEqual(['create:a', 'gate:start']);
+
+  releaseProject();
+  expect(await run).toBe(true);
+  expect(events).toEqual(['create:a', 'gate:start', 'gate:done', 'create:b', 'create:c']);
+});
+
+test('runCreate halts when a readiness gate fails, without re-creating on retry', async () => {
+  const applied: string[] = [];
+  let captured: ProgressItem[] = [];
+
+  const ok = await runCreate(
+    items(),
+    async (y) => {
+      applied.push(y);
+    },
+    (p) => {
+      captured = p;
+    },
+    {
+      sleep: noSleep,
+      awaitReady: (item) =>
+        item.kind === 'Project' ? Promise.reject(new Error('not ready in time')) : undefined
+    }
+  );
+
+  expect(ok).toBe(false);
+  expect(applied).toEqual(['a']);
+  expect(captured[0].state).toBe('error');
+  expect(captured[0].message).toBe('not ready in time');
+  // Created, so a retry must not re-apply it -- only re-run its gate.
+  expect(captured[0].created).toBe(true);
+  expect(captured[1].message).toBe('Halted by prior failure');
+
+  applied.length = 0;
+  const retried = await runCreate(
+    mergeForRetry(captured, items()),
+    async (y) => {
+      applied.push(y);
+    },
+    () => {},
+    { sleep: noSleep, awaitReady: () => undefined }
+  );
+  expect(retried).toBe(true);
+  expect(applied).toEqual(['b', 'c']);
+});
+
+test('mergeForRetry carries `created` forward for items that never became ready', () => {
+  const previous: ProgressItem[] = [
+    { kind: 'Project', name: 'p', yaml: 'a', state: 'error', message: 'not ready', created: true }
+  ];
+  const merged = mergeForRetry(
+    previous,
+    toProgressItems([{ kind: 'Project', name: 'p', yaml: 'a' }])
+  );
+  expect(merged[0].state).toBe('pending');
+  expect(merged[0].created).toBe(true);
 });
 
 test('errorMessage extracts a readable message', () => {

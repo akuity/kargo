@@ -55,7 +55,7 @@ export const ProjectWizard = () => {
   // reset()-induced re-render (which empties the name) can't redirect twice.
   const redirected = useRef(false);
   useEffect(() => {
-    if (create.status === 'done' && !redirected.current) {
+    if (create.status === 'success' && !redirected.current) {
       redirected.current = true;
       const name = state.basics.name;
       reset();
@@ -103,7 +103,7 @@ export const ProjectWizard = () => {
       reason: 'Every policy needs a target Stage, pattern, or label'
     },
     review: {
-      valid: reviewHasResources && create.status !== 'running',
+      valid: reviewHasResources && create.status !== 'pending',
       reason: reviewHasResources
         ? undefined
         : 'Give your project a name in the first step to create it'
@@ -245,8 +245,8 @@ export const ProjectWizard = () => {
             canContinue={canContinue}
             continueDisabledReason={continueDisabledReason}
             continueLabel={current === 'review' && create.status === 'error' ? 'Retry' : undefined}
-            continueLoading={current === 'review' && create.status === 'running'}
-            backDisabled={create.status === 'running'}
+            continueLoading={current === 'review' && create.status === 'pending'}
+            backDisabled={create.status === 'pending'}
             onBack={back}
             onContinue={
               current === 'review'
