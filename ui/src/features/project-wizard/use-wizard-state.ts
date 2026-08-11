@@ -1,4 +1,4 @@
-import { useCallback, useMemo } from 'react';
+import { useCallback, useMemo, useState } from 'react';
 import { useSearchParams } from 'react-router-dom';
 
 import { useLocalStorage } from '@ui/utils/use-local-storage';
@@ -11,7 +11,8 @@ import {
   normalizeCredential,
   normalizePolicy,
   normalizeStage,
-  normalizeWarehouse
+  normalizeWarehouse,
+  stripCredentialSecrets
 } from './types';
 
 const draftKey = 'kargo.project-wizard.draft.v1';
@@ -22,38 +23,43 @@ type WizardDraft = {
 
 const isStepId = (id: string | null): id is StepId => !!id && STEP_META.some((s) => s.id === id);
 
+// Merge a persisted draft over the initial shape so drafts written by an older
+// version of the wizard don't leave slices undefined. Persisted drafts never
+// contain secret material (see stripCredentialSecrets), so a resumed draft's
+// credential secret fields are blank.
+const hydrate = (draft: WizardDraft | undefined): WizardState => {
+  const initial = initialWizardState();
+  return {
+    ...initial,
+    ...draft?.state,
+    basics: { ...initial.basics, ...draft?.state?.basics },
+    credentials: (draft?.state?.credentials ?? []).map(normalizeCredential),
+    warehouses: (draft?.state?.warehouses ?? []).map(normalizeWarehouse),
+    stages: (draft?.state?.stages ?? []).map(normalizeStage),
+    policies: (draft?.state?.policies ?? []).map(normalizePolicy)
+  };
+};
+
+const draftHasRealData = (state: WizardState | undefined): boolean =>
+  !!state &&
+  (!!state.basics?.name ||
+    (state.credentials?.length ?? 0) > 0 ||
+    (state.warehouses?.length ?? 0) > 0 ||
+    (state.stages?.length ?? 0) > 0 ||
+    (state.policies?.length ?? 0) > 0);
+
 export const useWizardState = () => {
   const [searchParams, setSearchParams] = useSearchParams();
   const [draft, setDraft] = useLocalStorage<WizardDraft | undefined>(draftKey);
 
-  // Merge the persisted draft over the initial shape so drafts written by an
-  // older version of the wizard don't leave slices undefined.
-  const state = useMemo<WizardState>(() => {
-    const initial = initialWizardState();
-    return {
-      ...initial,
-      ...draft?.state,
-      basics: { ...initial.basics, ...draft?.state?.basics },
-      credentials: (draft?.state?.credentials ?? []).map(normalizeCredential),
-      warehouses: (draft?.state?.warehouses ?? []).map(normalizeWarehouse),
-      stages: (draft?.state?.stages ?? []).map(normalizeStage),
-      policies: (draft?.state?.policies ?? []).map(normalizePolicy)
-    };
-  }, [draft]);
+  // The working state lives in memory, hydrated once from the persisted draft.
+  // Credential secrets are never persisted (patchState strips them before
+  // writing), so they exist only here for the lifetime of the session.
+  const [state, setState] = useState<WizardState>(() => hydrate(draft));
 
   // Whether a persisted draft holds real data (used to offer resume vs. start
   // fresh on entry). Recomputes with the draft; callers snapshot it at mount.
-  const hasSavedDraft = useMemo(() => {
-    const d = draft?.state;
-    return (
-      !!d &&
-      (!!d.basics?.name ||
-        (d.credentials?.length ?? 0) > 0 ||
-        (d.warehouses?.length ?? 0) > 0 ||
-        (d.stages?.length ?? 0) > 0 ||
-        (d.policies?.length ?? 0) > 0)
-    );
-  }, [draft]);
+  const hasSavedDraft = useMemo(() => draftHasRealData(draft?.state), [draft]);
 
   const stepParam = searchParams.get('step');
   const current: StepId = isStepId(stepParam) ? stepParam : 'basics';
@@ -76,7 +82,12 @@ export const useWizardState = () => {
   );
 
   const patchState = useCallback(
-    (patch: Partial<WizardState>) => setDraft({ state: { ...state, ...patch } }),
+    (patch: Partial<WizardState>) => {
+      const next = { ...state, ...patch };
+      setState(next);
+      // Persist a copy with secrets removed — localStorage must never hold them.
+      setDraft({ state: stripCredentialSecrets(next) });
+    },
     [setDraft, state]
   );
 
@@ -91,7 +102,10 @@ export const useWizardState = () => {
     navigate(prev.id);
   }, [current, navigate]);
 
-  const reset = useCallback(() => setDraft(undefined), [setDraft]);
+  const reset = useCallback(() => {
+    setDraft(undefined);
+    setState(initialWizardState());
+  }, [setDraft]);
 
   return {
     state,

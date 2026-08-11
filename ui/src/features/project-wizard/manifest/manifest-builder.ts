@@ -12,6 +12,7 @@ import {
   StepId,
   WarehouseDraft,
   WizardState,
+  credentialSecretFields,
   initialCredential,
   isValidProjectName
 } from '../types';
@@ -47,6 +48,27 @@ const tryDecodeBase64Utf8 = (value: string) => {
   } catch (_) {
     return value;
   }
+};
+
+// Placeholder shown in the YAML preview in place of real secret values. On
+// round-trip (editing the credentials YAML) it means "keep the existing value".
+export const MASKED_SECRET = '<hidden>';
+
+const secretDataKeys = new Set<string>(credentialSecretFields);
+
+// Masks secret values in a Secret manifest's stringData, for the YAML preview
+// only — never applied on the creation path, so the API still receives the real
+// secrets. Empty values stay empty, so it's clear when nothing is set.
+const maskSecretManifest = (m: Manifest): Manifest => {
+  if (m.kind !== 'Secret' || !m.stringData) {
+    return m;
+  }
+  const stringData = Object.fromEntries(
+    Object.entries(m.stringData).map(([key, value]) =>
+      secretDataKeys.has(key) && value ? [key, MASKED_SECRET] : [key, value]
+    )
+  );
+  return { ...m, stringData };
 };
 
 const credTypes: readonly CredentialType[] = ['git', 'image', 'helm'];
@@ -308,6 +330,21 @@ const credentialFromSecret = (doc: Record<string, unknown>): CredentialData => {
   return cred;
 };
 
+// When the (masked) credentials preview is edited, secret fields still holding
+// the MASKED_SECRET placeholder are restored from the matching previous
+// credential (by name), so masking never overwrites a real secret. An unmatched
+// masked field is left blank rather than persisting the placeholder.
+const restoreMaskedSecrets = (cred: CredentialData, prev: CredentialData[]): CredentialData => {
+  const previous = prev.find((c) => c.name === cred.name);
+  const restored = { ...cred };
+  for (const field of credentialSecretFields) {
+    if (restored[field] === MASKED_SECRET) {
+      restored[field] = previous?.[field] ?? '';
+    }
+  }
+  return restored;
+};
+
 // Inverse of the credentials preview: maps edited Secret manifests (multi-doc)
 // back onto the credentials slice. Ambient credentials have no manifest, so
 // they carry over from the previous state untouched.
@@ -333,7 +370,10 @@ export const credentialsFromYaml = (text: string, prev: CredentialData[]): Crede
     return credentialFromSecret(record);
   });
 
-  return [...parsed, ...prev.filter((c) => c.auth === 'ambient')];
+  return [
+    ...parsed.map((c) => restoreMaskedSecrets(c, prev)),
+    ...prev.filter((c) => c.auth === 'ambient')
+  ];
 };
 
 // Inverse of the warehouses preview: maps edited Warehouse manifests back onto
@@ -390,7 +430,7 @@ export const yamlForStep = (state: WizardState, step: StepId): string => {
           'Credential Secrets you add will appear as YAML.'
         ]);
       }
-      const docs = manifests.map((m) => yaml.stringify(m)).join('---\n');
+      const docs = manifests.map((m) => yaml.stringify(maskSecretManifest(m))).join('---\n');
       const ambientNote =
         ambient.length > 0
           ? placeholderComment(
@@ -436,7 +476,7 @@ export const yamlForStep = (state: WizardState, step: StepId): string => {
       if (manifests.length === 0) {
         return placeholderComment(['Nothing to create yet.']);
       }
-      return manifests.map((m) => yaml.stringify(m)).join('---\n');
+      return manifests.map((m) => yaml.stringify(maskSecretManifest(m))).join('---\n');
     }
     default:
       return placeholderComment([

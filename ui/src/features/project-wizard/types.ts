@@ -68,6 +68,44 @@ export const initialCredential = (type: CredentialType = 'git'): CredentialData 
   gcpServiceAccountKey: ''
 });
 
+// Classifies every CredentialData field: `true` marks secret material that must
+// never be written to localStorage or shown in the YAML preview. Because this is
+// checked against Record<keyof CredentialData, boolean>, adding a new field to
+// CredentialData will NOT compile until it is classified here — so a new secret
+// can never silently bypass stripping/masking. `as const` keeps the literal
+// true/false values so the secret list can be derived from them.
+const credentialFieldIsSecret = {
+  name: false,
+  description: false,
+  type: false,
+  repoURL: false,
+  repoURLIsRegex: false,
+  auth: false,
+  username: false,
+  password: true,
+  sshPrivateKey: true,
+  githubAppClientID: false,
+  githubAppID: false,
+  githubAppInstallationID: false,
+  githubAppPrivateKey: true,
+  awsRegion: false,
+  awsAccessKeyID: false,
+  awsSecretAccessKey: true,
+  gcpServiceAccountKey: true
+} as const satisfies Record<keyof CredentialData, boolean>;
+
+// The secret field names (both CredentialData fields and, by the same names,
+// Secret stringData keys), derived from the classification above.
+export type CredentialSecretField = {
+  [K in keyof typeof credentialFieldIsSecret]: (typeof credentialFieldIsSecret)[K] extends true
+    ? K
+    : never;
+}[keyof typeof credentialFieldIsSecret];
+
+export const credentialSecretFields = (
+  Object.keys(credentialFieldIsSecret) as (keyof typeof credentialFieldIsSecret)[]
+).filter((field): field is CredentialSecretField => credentialFieldIsSecret[field]);
+
 // A warehouse draft is exactly the controlled form state of the app's
 // CreateWarehouseWizard: a name plus the dynamic (RJSF) Warehouse spec.
 export type WarehouseDraft = {
@@ -190,6 +228,20 @@ export const initialWizardState = (): WizardState => ({
   warehouses: [],
   stages: [],
   policies: []
+});
+
+// Returns a copy of the state with all credential secret material blanked, for
+// safe persistence to localStorage. Secrets are kept in memory for the session
+// only; a resumed draft's secret fields are empty and must be re-entered.
+export const stripCredentialSecrets = (state: WizardState): WizardState => ({
+  ...state,
+  credentials: state.credentials.map((cred) => {
+    const stripped = { ...cred };
+    for (const field of credentialSecretFields) {
+      stripped[field] = '';
+    }
+    return stripped;
+  })
 });
 
 // Backfills fields added after a draft was persisted, and coerces credentials

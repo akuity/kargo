@@ -200,6 +200,7 @@ export const ProjectWizard = () => {
     <div className='flex flex-col h-full bg-gray-50'>
       <ResumeDraftModal
         open={resumePromptOpen}
+        hasCredentials={state.credentials.some((c) => c.auth !== 'ambient')}
         onResume={() => setResumePromptOpen(false)}
         onStartFresh={startFresh}
       />

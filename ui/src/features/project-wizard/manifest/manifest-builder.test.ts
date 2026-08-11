@@ -12,7 +12,9 @@ import {
 } from '../types';
 
 import {
+  MASKED_SECRET,
   basicsFromYaml,
+  creationManifests,
   credentialSecretManifest,
   credentialsFromYaml,
   orderedManifests,
@@ -240,6 +242,55 @@ test('yamlForStep for credentials renders multi-doc with ambient note', () => {
   expect(text).toContain('ecr-ambient: ambient');
   const docs = yaml.parseAllDocuments(text);
   expect(docs).toHaveLength(2); // Secret + trailing comment doc
+});
+
+test('yamlForStep masks credential secrets in the preview but not in creation', () => {
+  const state = initialWizardState();
+  state.basics.name = 'my-project';
+  state.credentials = [
+    {
+      ...initialCredential('git'),
+      name: 'gh',
+      repoURL: 'https://github.com/acme/repo',
+      username: 'bot',
+      password: 'super-secret'
+    }
+  ];
+  const preview = yamlForStep(state, 'credentials');
+  expect(preview).not.toContain('super-secret');
+  expect(preview).toContain(MASKED_SECRET);
+  // non-secret data stays visible
+  expect(preview).toContain('bot');
+  expect(preview).toContain('https://github.com/acme/repo');
+  // the creation manifest still carries the real secret
+  expect(creationManifests(state)[1].yaml).toContain('super-secret');
+});
+
+test('credentialsFromYaml preserves a masked secret from the previous state', () => {
+  const prev = [
+    {
+      ...initialCredential('git'),
+      name: 'gh',
+      repoURL: 'https://github.com/acme/repo',
+      username: 'bot',
+      password: 'real-secret'
+    }
+  ];
+  const state = {
+    ...initialWizardState(),
+    basics: { name: 'my-project', description: '' },
+    credentials: prev
+  };
+  // The masked preview the user sees, with a non-secret field edited and the
+  // masked password left in place.
+  const edited = yamlForStep(state, 'credentials').replace(
+    'https://github.com/acme/repo',
+    'https://github.com/acme/other'
+  );
+  const result = credentialsFromYaml(edited, prev);
+  expect(result[0].repoURL).toBe('https://github.com/acme/other');
+  // the masked placeholder is restored to the real secret, never persisted as-is
+  expect(result[0].password).toBe('real-secret');
 });
 
 test('warehouseManifest wraps the form spec and cleans empties', () => {
