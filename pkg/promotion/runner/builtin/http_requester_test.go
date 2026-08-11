@@ -767,7 +767,7 @@ func Test_httpRequester_buildRequest(t *testing.T) {
 	}{
 		{
 			name: "request options",
-			setup: func(t *testing.T) (*promotion.StepContext, builtin.HTTPConfig) {
+			setup: func(_ *testing.T) (*promotion.StepContext, builtin.HTTPConfig) {
 				return nil, builtin.HTTPConfig{
 					Method: "GET",
 					URL:    "http://example.com",
