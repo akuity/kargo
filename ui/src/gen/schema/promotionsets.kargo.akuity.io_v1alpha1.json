@@ -47,16 +47,24 @@
                 "type": "string"
               }
             },
-            "required": ["name"],
+            "required": [
+              "name"
+            ],
             "type": "object"
           },
           "minItems": 1,
           "type": "array",
-          "x-kubernetes-list-map-keys": ["name"],
+          "x-kubernetes-list-map-keys": [
+            "name"
+          ],
           "x-kubernetes-list-type": "map"
         }
       },
-      "required": ["freight", "stage", "targets"],
+      "required": [
+        "freight",
+        "stage",
+        "targets"
+      ],
       "type": "object"
     },
     "status": {
@@ -100,7 +108,11 @@
               },
               "status": {
                 "description": "status of the condition, one of True, False, Unknown.",
-                "enum": ["True", "False", "Unknown"],
+                "enum": [
+                  "True",
+                  "False",
+                  "Unknown"
+                ],
                 "type": "string"
               },
               "type": {
@@ -110,11 +122,19 @@
                 "type": "string"
               }
             },
-            "required": ["lastTransitionTime", "message", "reason", "status", "type"],
+            "required": [
+              "lastTransitionTime",
+              "message",
+              "reason",
+              "status",
+              "type"
+            ],
             "type": "object"
           },
           "type": "array",
-          "x-kubernetes-list-map-keys": ["type"],
+          "x-kubernetes-list-map-keys": [
+            "type"
+          ],
           "x-kubernetes-list-type": "map"
         },
         "erroredTargetCount": {
@@ -177,6 +197,8 @@
       "type": "object"
     }
   },
-  "required": ["spec"],
+  "required": [
+    "spec"
+  ],
   "type": "object"
 }
