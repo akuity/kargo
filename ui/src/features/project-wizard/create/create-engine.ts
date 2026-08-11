@@ -1,16 +1,6 @@
+import { apiErrorBodyMessage, isApiErrorLike } from '@ui/lib/api/error-message';
+
 import { CreationManifest } from '../manifest/manifest-builder';
-
-// Structural shape of the REST client's ApiError (pkg lib/api/custom-fetch),
-// duck-typed so the engine stays decoupled from the HTTP client.
-type ApiErrorLike = {
-  status?: number;
-  statusText?: string;
-  body?: unknown;
-  message?: string;
-};
-
-const isApiErrorLike = (error: unknown): error is ApiErrorLike =>
-  typeof error === 'object' && error !== null && typeof (error as ApiErrorLike).status === 'number';
 
 export type ItemState = 'pending' | 'running' | 'done' | 'error';
 
@@ -49,21 +39,13 @@ export const mergeForRetry = (previous: ProgressItem[], fresh: ProgressItem[]): 
   );
 };
 
+// Progress rows are already labelled with the resource they belong to, so the
+// bare statusText reads better here than ApiError's "API Error: 404 Not Found".
 export const errorMessage = (error: unknown): string => {
   if (isApiErrorLike(error)) {
-    const { body } = error;
-    if (typeof body === 'string' && body) {
-      return body;
-    }
-    if (body && typeof body === 'object') {
-      const message =
-        (body as { message?: unknown; error?: unknown }).message ??
-        (body as { error?: unknown }).error;
-      if (typeof message === 'string' && message) {
-        return message;
-      }
-    }
-    return error.statusText || error.message || `HTTP ${error.status}`;
+    return (
+      apiErrorBodyMessage(error.body) || error.statusText || error.message || `HTTP ${error.status}`
+    );
   }
   return error instanceof Error ? error.message : String(error);
 };
@@ -72,8 +54,7 @@ export const errorMessage = (error: unknown): string => {
 // the next resource create can briefly fail with "namespace not found". Only
 // those transient errors are worth retrying.
 export const isNamespaceNotReady = (error: unknown): boolean =>
-  isApiErrorLike(error) &&
-  /namespace.*not found|not found.*namespace/i.test(`${errorMessage(error)}`);
+  isApiErrorLike(error) && /namespace.*not found|not found.*namespace/i.test(errorMessage(error));
 
 // Sequentially applies each pending item via createFn, emitting progress after
 // every state change. On failure it marks the item errored, flags the rest as
