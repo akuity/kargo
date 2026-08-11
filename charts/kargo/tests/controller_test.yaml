@@ -286,3 +286,30 @@ tests:
       - equal:
           path: spec.selector.matchLabels["app.kubernetes.io/component"]
           value: controller
+
+---
+suite: controller/cluster-roles.yaml
+values:
+  - ../test/values-unittest.yaml
+templates:
+  - templates/controller/cluster-roles.yaml
+tests:
+  - it: grants read-only PromotionSet access
+    documentSelector:
+      path: metadata.name
+      value: kargo-controller
+    asserts:
+      - contains:
+          path: rules
+          content:
+            apiGroups:
+              - kargo.akuity.io
+            resources:
+              - clusterconfigs
+              - projects
+              - projectconfigs
+              - promotionsets
+            verbs:
+              - get
+              - list
+              - watch

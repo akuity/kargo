@@ -62,6 +62,62 @@ tests:
         isKind:
           of: ClusterRole
 
+  - it: grants admins full PromotionSet access
+    documentSelector:
+      path: metadata.name
+      value: kargo-admin
+    asserts:
+      - contains:
+          path: rules
+          content:
+            apiGroups:
+              - kargo.akuity.io
+            resources:
+              - clusterconfigs
+              - clusterpromotiontasks
+              - freights
+              - projects
+              - projectconfigs
+              - promotionsets
+              - promotiontasks
+              - stages
+              - warehouses
+            verbs:
+              - create
+              - delete
+              - deletecollection
+              - get
+              - list
+              - patch
+              - update
+              - watch
+
+  - it: grants viewers read-only PromotionSet access
+    documentSelector:
+      path: metadata.name
+      value: kargo-viewer
+    asserts:
+      - contains:
+          path: rules
+          content:
+            apiGroups:
+              - kargo.akuity.io
+            resources:
+              - clusterconfigs
+              - clusterpromotiontasks
+              - freights
+              - projects
+              - projectconfigs
+              - promotions
+              - promotionsets
+              - promotiontasks
+              - stages
+              - warehouses
+            verbs:
+              - get
+              - list
+              - watch
+
   - it: is not rendered when cluster roles are disabled
     set:
       rbac.installClusterRoles: false
