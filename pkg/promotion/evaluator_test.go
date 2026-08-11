@@ -1906,3 +1906,73 @@ func TestStepEvaluator_BuildStepContext(t *testing.T) {
 		})
 	}
 }
+
+func TestStepEvaluator_Config_target(t *testing.T) {
+	testScheme := runtime.NewScheme()
+	require.NoError(t, kargoapi.AddToScheme(testScheme))
+	testClient := fake.NewClientBuilder().WithScheme(testScheme).Build()
+
+	targetCtx := &TargetContext{
+		Params: map[string]any{
+			"branch":   "env/prod-use1",
+			"replicas": float64(5),
+			"ingress":  map[string]any{"host": "use1.example.com"},
+		},
+		Labels: map[string]string{"region": "us-east-1"},
+	}
+
+	tests := []struct {
+		name     string
+		promoCtx Context
+		step     Step
+		assert   func(*testing.T, Config, error)
+	}{
+		{
+			name:     "target params and labels resolve",
+			promoCtx: Context{Project: "fake-project", Target: targetCtx},
+			step: Step{
+				Config: []byte(`{
+					"branch": "${{ target.params.branch }}",
+					"replicas": "${{ target.params.replicas }}",
+					"host": "${{ target.params.ingress.host }}",
+					"region": "${{ target.labels.region }}"
+				}`),
+			},
+			assert: func(t *testing.T, cfg Config, err error) {
+				require.NoError(t, err)
+				require.Equal(
+					t,
+					Config{
+						"branch": "env/prod-use1",
+						// Numeric params reach a step as int, not the float64
+						// they are decoded to, because step config is
+						// round-tripped through YAML.
+						"replicas": 5,
+						"host":     "use1.example.com",
+						"region":   "us-east-1",
+					},
+					cfg,
+				)
+			},
+		},
+		{
+			name:     "target reference fails without a Target",
+			promoCtx: Context{Project: "fake-project"},
+			step: Step{
+				Config: []byte(`{"branch": "${{ target.params.branch }}"}`),
+			},
+			assert: func(t *testing.T, cfg Config, err error) {
+				require.Error(t, err)
+				require.Nil(t, cfg)
+			},
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			t.Parallel()
+			evaluator := NewStepEvaluator(testClient, nil)
+			cfg, err := evaluator.Config(t.Context(), tt.promoCtx, tt.step)
+			tt.assert(t, cfg, err)
+		})
+	}
+}
