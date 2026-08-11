@@ -7,7 +7,12 @@ tests:
   - it: installs all CRDs by default
     asserts:
       - hasDocuments:
-          count: 10
+          count: 11
+      - documentSelector:
+          path: metadata.name
+          value: promotionsets.kargo.akuity.io
+        isKind:
+          of: CustomResourceDefinition
       - documentSelector:
           path: metadata.name
           value: stages.kargo.akuity.io

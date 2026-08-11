@@ -117,6 +117,14 @@ tests:
           path: data.METRICS_BIND_ADDRESS
           value: ":9095"
 
+  - it: configures PromotionSet reconciliation concurrency
+    set:
+      controller.reconcilers.promotionSets.maxConcurrentReconciles: 7
+    asserts:
+      - equal:
+          path: data.MAX_CONCURRENT_PROMOTION_SET_RECONCILES
+          value: "7"
+
 ---
 suite: controller/cluster-role-bindings.yaml
 values:

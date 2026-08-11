@@ -39,6 +39,7 @@ rules:
   - clusterconfigs
   - projects
   - projectconfigs
+  - promotionsets
   verbs:
   - get
   - list

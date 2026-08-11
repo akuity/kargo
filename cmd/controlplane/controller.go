@@ -26,6 +26,7 @@ import (
 	"github.com/akuity/kargo/pkg/controller"
 	argocd "github.com/akuity/kargo/pkg/controller/argocd/api/v1alpha1"
 	"github.com/akuity/kargo/pkg/controller/promotions"
+	"github.com/akuity/kargo/pkg/controller/promotionsets"
 	"github.com/akuity/kargo/pkg/controller/stages"
 	"github.com/akuity/kargo/pkg/controller/warehouses"
 	"github.com/akuity/kargo/pkg/credentials"
@@ -470,6 +471,14 @@ func (o *controllerOptions) setupReconcilers(
 		promotions.ReconcilerConfigFromEnv(),
 	); err != nil {
 		return fmt.Errorf("error setting up Promotions reconciler: %w", err)
+	}
+
+	if err := promotionsets.SetupReconcilerWithManager(
+		ctx,
+		kargoMgr,
+		promotionsets.ReconcilerConfigFromEnv(),
+	); err != nil {
+		return fmt.Errorf("error setting up PromotionSets reconciler: %w", err)
 	}
 
 	if err := stages.NewRegularStageReconciler(

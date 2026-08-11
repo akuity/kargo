@@ -676,6 +676,9 @@ controller:
     promotions:
       ## @param controller.reconcilers.promotions.maxConcurrentReconciles optionally overrides the maximum number of Promotion resources the controller can reconcile concurrently.
       maxConcurrentReconciles:
+    promotionSets:
+      ## @param controller.reconcilers.promotionSets.maxConcurrentReconciles optionally overrides the maximum number of PromotionSet resources the controller can reconcile concurrently.
+      maxConcurrentReconciles:
     stages:
       ## @param controller.reconcilers.stages.maxConcurrentReconciles optionally overrides the maximum number of (non-control flow) Stage resources the controller can reconcile concurrently.
       maxConcurrentReconciles:
