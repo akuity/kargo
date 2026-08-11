@@ -25,7 +25,30 @@ const (
 
 // ReconcilerConfig represents configuration for the PromotionSet reconciler.
 type ReconcilerConfig struct {
-	MaxConcurrentReconciles int `envconfig:"MAX_CONCURRENT_PROMOTION_SET_RECONCILES" default:"4"`
+	IsDefaultController     bool   `envconfig:"IS_DEFAULT_CONTROLLER"`
+	ShardName               string `envconfig:"SHARD_NAME"`
+	MaxConcurrentReconciles int    `envconfig:"MAX_CONCURRENT_PROMOTION_SET_RECONCILES" default:"4"`
+}
+
+// Name returns the name of the PromotionSet controller, qualified by shard name
+// when this controller is responsible for a specific shard.
+func (c ReconcilerConfig) Name() string {
+	const name = "promotion-set-controller"
+	if c.ShardName != "" {
+		return name + "-" + c.ShardName
+	}
+	return name
+}
+
+// shardPredicate returns a predicate that narrows this reconciler's watch to
+// the PromotionSets its shard is responsible for. A PromotionSet is labeled
+// with the shard of the Stage that created it, so an unlabeled PromotionSet
+// belongs to the default controller.
+func (c ReconcilerConfig) shardPredicate() controller.ResponsibleFor[client.Object] {
+	return controller.ResponsibleFor[client.Object]{
+		IsDefaultController: c.IsDefaultController,
+		ShardName:           c.ShardName,
+	}
 }
 
 // ReconcilerConfigFromEnv returns a ReconcilerConfig populated from
@@ -46,8 +69,11 @@ func SetupReconcilerWithManager(
 ) error {
 	if err := ctrl.NewControllerManagedBy(mgr).
 		For(&kargoapi.PromotionSet{}).
+		// Without this, every controller in a sharded installation would
+		// reconcile every PromotionSet.
+		WithEventFilter(cfg.shardPredicate()).
 		WithOptions(controller.CommonOptions(cfg.MaxConcurrentReconciles)).
-		Named("promotion-set-controller").
+		Named(cfg.Name()).
 		Complete(&reconciler{
 			client:      mgr.GetClient(),
 			reconcileFn: reconcileFn,
@@ -58,6 +84,8 @@ func SetupReconcilerWithManager(
 	logging.LoggerFromContext(ctx).Info(
 		"Initialized PromotionSet reconciler",
 		"maxConcurrentReconciles", cfg.MaxConcurrentReconciles,
+		"shard", cfg.ShardName,
+		"isDefaultController", cfg.IsDefaultController,
 	)
 	return nil
 }

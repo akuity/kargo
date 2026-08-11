@@ -15,6 +15,91 @@ import (
 	"github.com/akuity/kargo/pkg/conditions"
 )
 
+func TestReconcilerConfigName(t *testing.T) {
+	t.Parallel()
+
+	testCases := []struct {
+		name     string
+		cfg      ReconcilerConfig
+		expected string
+	}{
+		{
+			name:     "no shard name",
+			cfg:      ReconcilerConfig{},
+			expected: "promotion-set-controller",
+		},
+		{
+			name:     "with shard name",
+			cfg:      ReconcilerConfig{ShardName: "my-shard"},
+			expected: "promotion-set-controller-my-shard",
+		},
+	}
+	for _, testCase := range testCases {
+		t.Run(testCase.name, func(t *testing.T) {
+			t.Parallel()
+			require.Equal(t, testCase.expected, testCase.cfg.Name())
+		})
+	}
+}
+
+func TestReconcilerConfigShardPredicate(t *testing.T) {
+	t.Parallel()
+
+	testCases := []struct {
+		name        string
+		cfg         ReconcilerConfig
+		shardLabel  string
+		responsible bool
+	}{
+		{
+			name:        "default controller claims unlabeled PromotionSet",
+			cfg:         ReconcilerConfig{IsDefaultController: true},
+			responsible: true,
+		},
+		{
+			name:        "default controller ignores PromotionSet of another shard",
+			cfg:         ReconcilerConfig{IsDefaultController: true},
+			shardLabel:  "my-shard",
+			responsible: false,
+		},
+		{
+			name:        "sharded controller claims PromotionSet of its own shard",
+			cfg:         ReconcilerConfig{ShardName: "my-shard"},
+			shardLabel:  "my-shard",
+			responsible: true,
+		},
+		{
+			name:        "sharded controller ignores PromotionSet of another shard",
+			cfg:         ReconcilerConfig{ShardName: "my-shard"},
+			shardLabel:  "other-shard",
+			responsible: false,
+		},
+		{
+			name:        "sharded controller ignores unlabeled PromotionSet",
+			cfg:         ReconcilerConfig{ShardName: "my-shard"},
+			responsible: false,
+		},
+	}
+	for _, testCase := range testCases {
+		t.Run(testCase.name, func(t *testing.T) {
+			t.Parallel()
+
+			promotionSet := &kargoapi.PromotionSet{}
+			if testCase.shardLabel != "" {
+				promotionSet.Labels = map[string]string{
+					kargoapi.LabelKeyShard: testCase.shardLabel,
+				}
+			}
+
+			require.Equal(
+				t,
+				testCase.responsible,
+				testCase.cfg.shardPredicate().IsResponsible(promotionSet),
+			)
+		})
+	}
+}
+
 func TestReconcile(t *testing.T) {
 	t.Parallel()
 
