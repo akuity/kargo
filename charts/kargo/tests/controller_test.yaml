@@ -309,7 +309,28 @@ tests:
               - projects
               - projectconfigs
               - promotionsets
+              - targets
             verbs:
               - get
               - list
               - watch
+
+  - it: grants PromotionSet status patch access
+    documentSelector:
+      path: metadata.name
+      value: kargo-controller
+    asserts:
+      - contains:
+          path: rules
+          content:
+            apiGroups:
+              - kargo.akuity.io
+            resources:
+              - freights/status
+              - promotions/status
+              - promotionsets/status
+              - stages/status
+              - warehouses/finalizers
+              - warehouses/status
+            verbs:
+              - patch

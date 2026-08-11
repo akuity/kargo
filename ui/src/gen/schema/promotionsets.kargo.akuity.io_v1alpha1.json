@@ -21,18 +21,24 @@
           "maxLength": 253,
           "minLength": 1,
           "pattern": "^[a-z0-9]([-a-z0-9]*[a-z0-9])?(\\.[a-z0-9]([-a-z0-9]*[a-z0-9])?)*$",
-          "type": "string"
+          "type": "string",
+          "x-kubernetes-validations": [
+            {
+              "rule": "self == oldSelf"
+            }
+          ]
         },
         "stage": {
           "description": "Stage specifies the name of the Stage that promotes the Freight.\nThe Stage MUST be in the same namespace as the PromotionSet.",
           "maxLength": 253,
           "minLength": 1,
           "pattern": "^[a-z0-9]([-a-z0-9]*[a-z0-9])?(\\.[a-z0-9]([-a-z0-9]*[a-z0-9])?)*$",
-          "type": "string"
-        },
-        "suspended": {
-          "description": "Suspended prevents this PromotionSet from creating Promotions for newly\nspecified Targets. Existing Promotions are not affected.",
-          "type": "boolean"
+          "type": "string",
+          "x-kubernetes-validations": [
+            {
+              "rule": "self == oldSelf"
+            }
+          ]
         },
         "targets": {
           "description": "Targets specifies the Targets to which this PromotionSet promotes Freight.\nEach Target MUST be in the same namespace as the PromotionSet.",
@@ -57,7 +63,12 @@
           "x-kubernetes-list-map-keys": [
             "name"
           ],
-          "x-kubernetes-list-type": "map"
+          "x-kubernetes-list-type": "map",
+          "x-kubernetes-validations": [
+            {
+              "rule": "self == oldSelf"
+            }
+          ]
         }
       },
       "required": [
@@ -70,13 +81,6 @@
     "status": {
       "description": "Status describes the current aggregate state of the PromotionSet's\nPromotions.",
       "properties": {
-        "abortedTargetCount": {
-          "description": "AbortedTargetCount is the number of Targets whose latest Promotion attempt\nis in the Aborted phase.",
-          "format": "int32",
-          "maximum": 2147483647,
-          "minimum": -2147483648,
-          "type": "integer"
-        },
         "conditions": {
           "description": "Conditions contains the last observations of the PromotionSet's current\nstate.",
           "items": {
@@ -137,19 +141,10 @@
           ],
           "x-kubernetes-list-type": "map"
         },
-        "erroredTargetCount": {
-          "description": "ErroredTargetCount is the number of Targets whose latest Promotion attempt\nis in the Errored phase.",
-          "format": "int32",
-          "maximum": 2147483647,
-          "minimum": -2147483648,
-          "type": "integer"
-        },
-        "failedTargetCount": {
-          "description": "FailedTargetCount is the number of Targets whose latest Promotion attempt\nis in the Failed phase.",
-          "format": "int32",
-          "maximum": 2147483647,
-          "minimum": -2147483648,
-          "type": "integer"
+        "finishedAt": {
+          "description": "FinishedAt is the time at which the PromotionSet completed.",
+          "format": "date-time",
+          "type": "string"
         },
         "observedGeneration": {
           "description": "ObservedGeneration is the generation of the spec last reconciled.",
@@ -158,40 +153,62 @@
           "minimum": -9223372036854776000,
           "type": "integer"
         },
-        "pendingTargetCount": {
-          "description": "PendingTargetCount is the number of Targets whose latest Promotion\nattempt is in the Pending phase.",
-          "format": "int32",
-          "maximum": 2147483647,
-          "minimum": -2147483648,
-          "type": "integer"
+        "phase": {
+          "description": "Phase is a high-level summary of the PromotionSet's lifecycle.",
+          "type": "string"
         },
-        "runningTargetCount": {
-          "description": "RunningTargetCount is the number of Targets whose latest Promotion\nattempt is in the Running phase.",
-          "format": "int32",
-          "maximum": 2147483647,
-          "minimum": -2147483648,
-          "type": "integer"
+        "startedAt": {
+          "description": "StartedAt is the time at which the PromotionSet started.",
+          "format": "date-time",
+          "type": "string"
         },
-        "succeededTargetCount": {
-          "description": "SucceededTargetCount is the number of Targets whose latest Promotion\nattempt is in the Succeeded phase.",
-          "format": "int32",
-          "maximum": 2147483647,
-          "minimum": -2147483648,
-          "type": "integer"
-        },
-        "targetCount": {
-          "description": "TargetCount is the number of Targets selected by the PromotionSet.",
-          "format": "int32",
-          "maximum": 2147483647,
-          "minimum": -2147483648,
-          "type": "integer"
-        },
-        "unknownTargetCount": {
-          "description": "UnknownTargetCount is the number of Targets whose latest Promotion attempt\nhas an empty or unrecognized phase.",
-          "format": "int32",
-          "maximum": 2147483647,
-          "minimum": -2147483648,
-          "type": "integer"
+        "summary": {
+          "description": "Summary aggregates the phases of this PromotionSet's child Promotions.",
+          "properties": {
+            "aborted": {
+              "description": "Aborted is the number of child Promotions in the Aborted phase.",
+              "format": "int32",
+              "maximum": 2147483647,
+              "minimum": -2147483648,
+              "type": "integer"
+            },
+            "errored": {
+              "description": "Errored is the number of child Promotions in the Errored phase.",
+              "format": "int32",
+              "maximum": 2147483647,
+              "minimum": -2147483648,
+              "type": "integer"
+            },
+            "failed": {
+              "description": "Failed is the number of child Promotions in the Failed phase.",
+              "format": "int32",
+              "maximum": 2147483647,
+              "minimum": -2147483648,
+              "type": "integer"
+            },
+            "pending": {
+              "description": "Pending is the number of child Promotions in the Pending phase.",
+              "format": "int32",
+              "maximum": 2147483647,
+              "minimum": -2147483648,
+              "type": "integer"
+            },
+            "running": {
+              "description": "Running is the number of child Promotions in the Running phase.",
+              "format": "int32",
+              "maximum": 2147483647,
+              "minimum": -2147483648,
+              "type": "integer"
+            },
+            "succeeded": {
+              "description": "Succeeded is the number of child Promotions in the Succeeded phase.",
+              "format": "int32",
+              "maximum": 2147483647,
+              "minimum": -2147483648,
+              "type": "integer"
+            }
+          },
+          "type": "object"
         }
       },
       "type": "object"

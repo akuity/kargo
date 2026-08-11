@@ -18,18 +18,15 @@ spec:
   scope: Namespaced
   versions:
   - additionalPrinterColumns:
-    - jsonPath: .status.targetCount
-      name: Targets
-      type: integer
-    - jsonPath: .status.succeededTargetCount
-      name: Succeeded
-      type: integer
-    - jsonPath: .status.failedTargetCount
-      name: Failed
-      type: integer
-    - jsonPath: .status.erroredTargetCount
-      name: Errored
-      type: integer
+    - jsonPath: .spec.stage
+      name: Stage
+      type: string
+    - jsonPath: .spec.freight
+      name: Freight
+      type: string
+    - jsonPath: .status.phase
+      name: Phase
+      type: string
     - jsonPath: .metadata.creationTimestamp
       name: Age
       type: date
@@ -69,6 +66,8 @@ spec:
                 minLength: 1
                 pattern: ^[a-z0-9]([-a-z0-9]*[a-z0-9])?(\.[a-z0-9]([-a-z0-9]*[a-z0-9])?)*$
                 type: string
+                x-kubernetes-validations:
+                - rule: self == oldSelf
               stage:
                 description: |-
                   Stage specifies the name of the Stage that promotes the Freight.
@@ -77,11 +76,8 @@ spec:
                 minLength: 1
                 pattern: ^[a-z0-9]([-a-z0-9]*[a-z0-9])?(\.[a-z0-9]([-a-z0-9]*[a-z0-9])?)*$
                 type: string
-              suspended:
-                description: |-
-                  Suspended prevents this PromotionSet from creating Promotions for newly
-                  specified Targets. Existing Promotions are not affected.
-                type: boolean
+                x-kubernetes-validations:
+                - rule: self == oldSelf
               targets:
                 description: |-
                   Targets specifies the Targets to which this PromotionSet promotes Freight.
@@ -104,6 +100,8 @@ spec:
                 x-kubernetes-list-map-keys:
                 - name
                 x-kubernetes-list-type: map
+                x-kubernetes-validations:
+                - rule: self == oldSelf
             required:
             - freight
             - stage
@@ -114,12 +112,6 @@ spec:
               Status describes the current aggregate state of the PromotionSet's
               Promotions.
             properties:
-              abortedTargetCount:
-                description: |-
-                  AbortedTargetCount is the number of Targets whose latest Promotion attempt
-                  is in the Aborted phase.
-                format: int32
-                type: integer
               conditions:
                 description: |-
                   Conditions contains the last observations of the PromotionSet's current
@@ -182,52 +174,57 @@ spec:
                 x-kubernetes-list-map-keys:
                 - type
                 x-kubernetes-list-type: map
-              erroredTargetCount:
-                description: |-
-                  ErroredTargetCount is the number of Targets whose latest Promotion attempt
-                  is in the Errored phase.
-                format: int32
-                type: integer
-              failedTargetCount:
-                description: |-
-                  FailedTargetCount is the number of Targets whose latest Promotion attempt
-                  is in the Failed phase.
-                format: int32
-                type: integer
+              finishedAt:
+                description: FinishedAt is the time at which the PromotionSet completed.
+                format: date-time
+                type: string
               observedGeneration:
                 description: ObservedGeneration is the generation of the spec last
                   reconciled.
                 format: int64
                 type: integer
-              pendingTargetCount:
-                description: |-
-                  PendingTargetCount is the number of Targets whose latest Promotion
-                  attempt is in the Pending phase.
-                format: int32
-                type: integer
-              runningTargetCount:
-                description: |-
-                  RunningTargetCount is the number of Targets whose latest Promotion
-                  attempt is in the Running phase.
-                format: int32
-                type: integer
-              succeededTargetCount:
-                description: |-
-                  SucceededTargetCount is the number of Targets whose latest Promotion
-                  attempt is in the Succeeded phase.
-                format: int32
-                type: integer
-              targetCount:
-                description: TargetCount is the number of Targets selected by the
-                  PromotionSet.
-                format: int32
-                type: integer
-              unknownTargetCount:
-                description: |-
-                  UnknownTargetCount is the number of Targets whose latest Promotion attempt
-                  has an empty or unrecognized phase.
-                format: int32
-                type: integer
+              phase:
+                description: Phase is a high-level summary of the PromotionSet's lifecycle.
+                type: string
+              startedAt:
+                description: StartedAt is the time at which the PromotionSet started.
+                format: date-time
+                type: string
+              summary:
+                description: Summary aggregates the phases of this PromotionSet's
+                  child Promotions.
+                properties:
+                  aborted:
+                    description: Aborted is the number of child Promotions in the
+                      Aborted phase.
+                    format: int32
+                    type: integer
+                  errored:
+                    description: Errored is the number of child Promotions in the
+                      Errored phase.
+                    format: int32
+                    type: integer
+                  failed:
+                    description: Failed is the number of child Promotions in the Failed
+                      phase.
+                    format: int32
+                    type: integer
+                  pending:
+                    description: Pending is the number of child Promotions in the
+                      Pending phase.
+                    format: int32
+                    type: integer
+                  running:
+                    description: Running is the number of child Promotions in the
+                      Running phase.
+                    format: int32
+                    type: integer
+                  succeeded:
+                    description: Succeeded is the number of child Promotions in the
+                      Succeeded phase.
+                    format: int32
+                    type: integer
+                type: object
             type: object
         required:
         - spec

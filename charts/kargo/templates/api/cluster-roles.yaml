@@ -86,6 +86,7 @@ rules:
   - warehouses
   - projectconfigs
   - promotionsets
+  - targets
   verbs:
   - "*"
 - apiGroups:

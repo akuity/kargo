@@ -266,5 +266,6 @@ tests:
               - warehouses
               - projectconfigs
               - promotionsets
+              - targets
             verbs:
               - "*"

@@ -40,6 +40,7 @@ rules:
   - projects
   - projectconfigs
   - promotionsets
+  - targets
   verbs:
   - get
   - list
@@ -89,6 +90,7 @@ rules:
   resources:
   - freights/status
   - promotions/status
+  - promotionsets/status
   - stages/status
   - warehouses/finalizers
   - warehouses/status

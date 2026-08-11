@@ -2692,30 +2692,43 @@ func TestReconciler_ensureDefaultUserRoles_PromotionSetPermissions(t *testing.T)
 
 	testCases := []struct {
 		roleName string
+		resource string
 		verbs    []string
 	}{
 		{
 			roleName: "kargo-admin",
+			resource: "promotionsets",
 			verbs:    []string{"*"},
 		},
 		{
 			roleName: "kargo-viewer",
+			resource: "promotionsets",
+			verbs:    []string{"get", "list", "watch"},
+		},
+		{
+			roleName: "kargo-admin",
+			resource: "targets",
+			verbs:    []string{"*"},
+		},
+		{
+			roleName: "kargo-viewer",
+			resource: "targets",
 			verbs:    []string{"get", "list", "watch"},
 		},
 	}
 	for _, testCase := range testCases {
-		t.Run(testCase.roleName, func(t *testing.T) {
+		t.Run(testCase.roleName+"/"+testCase.resource, func(t *testing.T) {
 			role := createdRoles[testCase.roleName]
 			require.NotNil(t, role)
 			for _, rule := range role.Rules {
 				for _, resource := range rule.Resources {
-					if resource == "promotionsets" {
+					if resource == testCase.resource {
 						require.ElementsMatch(t, testCase.verbs, rule.Verbs)
 						return
 					}
 				}
 			}
-			require.Fail(t, "PromotionSet permissions not found")
+			require.Fail(t, testCase.resource+" permissions not found")
 		})
 	}
 	t.Run("kargo-promoter", func(t *testing.T) {
@@ -2723,6 +2736,7 @@ func TestReconciler_ensureDefaultUserRoles_PromotionSetPermissions(t *testing.T)
 		require.NotNil(t, role)
 		for _, rule := range role.Rules {
 			require.NotContains(t, rule.Resources, "promotionsets")
+			require.NotContains(t, rule.Resources, "targets")
 		}
 	})
 }

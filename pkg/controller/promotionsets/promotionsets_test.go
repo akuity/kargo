@@ -1,6 +1,7 @@
 package promotionsets
 
 import (
+	"context"
 	"testing"
 
 	"github.com/stretchr/testify/require"
@@ -11,6 +12,7 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/client/fake"
 
 	kargoapi "github.com/akuity/kargo/api/v1alpha1"
+	"github.com/akuity/kargo/pkg/conditions"
 )
 
 func TestReconcile(t *testing.T) {
@@ -24,49 +26,110 @@ func TestReconcile(t *testing.T) {
 	scheme := runtime.NewScheme()
 	require.NoError(t, kargoapi.AddToScheme(scheme))
 
-	testCases := []struct {
-		name string
-		objs []client.Object
-	}{
-		{
-			name: "existing PromotionSet",
-			objs: []client.Object{&kargoapi.PromotionSet{
-				ObjectMeta: metav1.ObjectMeta{
-					Namespace: namespace,
-					Name:      name,
-				},
-				Spec: kargoapi.PromotionSetSpec{
-					Stage:   "fake-stage",
-					Freight: "fake-freight",
-					Targets: []kargoapi.PromotionSetTarget{{
-						Name: "fake-target",
-					}},
-				},
-			}},
-		},
-		{
-			name: "PromotionSet not found",
-		},
-	}
+	t.Run("existing PromotionSet", func(t *testing.T) {
+		promotionSet := &kargoapi.PromotionSet{
+			ObjectMeta: metav1.ObjectMeta{
+				Namespace:  namespace,
+				Name:       name,
+				Generation: 1,
+			},
+			Spec: kargoapi.PromotionSetSpec{
+				Stage:   "fake-stage",
+				Freight: "fake-freight",
+				Targets: []kargoapi.PromotionSetTarget{{
+					Name: "fake-target",
+				}},
+			},
+		}
+		c := fake.NewClientBuilder().
+			WithScheme(scheme).
+			WithObjects(promotionSet).
+			WithStatusSubresource(&kargoapi.PromotionSet{}).
+			Build()
+		r := &reconciler{
+			client:      c,
+			reconcileFn: DefaultReconcile,
+		}
+		req := ctrl.Request{NamespacedName: client.ObjectKey{
+			Namespace: namespace,
+			Name:      name,
+		}}
 
-	for _, testCase := range testCases {
-		t.Run(testCase.name, func(t *testing.T) {
-			r := &reconciler{
-				client: fake.NewClientBuilder().
-					WithScheme(scheme).
-					WithObjects(testCase.objs...).
-					Build(),
-			}
+		result, err := r.Reconcile(t.Context(), req)
+		require.NoError(t, err)
+		require.Empty(t, result)
 
-			result, err := r.Reconcile(t.Context(), ctrl.Request{
-				NamespacedName: client.ObjectKey{
-					Namespace: namespace,
-					Name:      name,
-				},
-			})
+		actual := &kargoapi.PromotionSet{}
+		require.NoError(t, c.Get(t.Context(), req.NamespacedName, actual))
+		require.Equal(t, int64(1), actual.Status.ObservedGeneration)
+		require.Equal(t, kargoapi.PromotionSetPhaseErrored, actual.Status.Phase)
+		require.NotNil(t, actual.Status.FinishedAt)
+		readyCondition := conditions.Get(&actual.Status, kargoapi.ConditionTypeReady)
+		require.NotNil(t, readyCondition)
+		require.Equal(t, metav1.ConditionFalse, readyCondition.Status)
+		require.Equal(t, unsupportedReason, readyCondition.Reason)
+		require.Equal(t, unsupportedMessage, readyCondition.Message)
+		require.Equal(t, int64(1), readyCondition.ObservedGeneration)
+		require.False(t, readyCondition.LastTransitionTime.IsZero())
 
-			require.NoError(t, err)
-			require.Empty(t, result)
+		firstStatus := actual.Status.DeepCopy()
+		result, err = r.Reconcile(t.Context(), req)
+		require.NoError(t, err)
+		require.Empty(t, result)
+
+		require.NoError(t, c.Get(t.Context(), req.NamespacedName, actual))
+		require.Equal(t, firstStatus, &actual.Status)
+	})
+
+	t.Run("delegates to configured reconcile function", func(t *testing.T) {
+		promotionSet := &kargoapi.PromotionSet{
+			ObjectMeta: metav1.ObjectMeta{
+				Namespace: namespace,
+				Name:      name,
+			},
+		}
+		c := fake.NewClientBuilder().
+			WithScheme(scheme).
+			WithObjects(promotionSet).
+			Build()
+		r := &reconciler{
+			client: c,
+			reconcileFn: func(
+				_ context.Context,
+				kubeClient client.Client,
+				actual *kargoapi.PromotionSet,
+			) (ctrl.Result, error) {
+				require.Same(t, c, kubeClient)
+				require.Equal(t, promotionSet.Name, actual.Name)
+				return ctrl.Result{Requeue: true}, nil
+			},
+		}
+
+		result, err := r.Reconcile(t.Context(), ctrl.Request{
+			NamespacedName: client.ObjectKey{
+				Namespace: namespace,
+				Name:      name,
+			},
 		})
-	}
+
+		require.NoError(t, err)
+		require.Equal(t, ctrl.Result{Requeue: true}, result)
+	})
+
+	t.Run("PromotionSet not found", func(t *testing.T) {
+		r := &reconciler{
+			client:      fake.NewClientBuilder().WithScheme(scheme).Build(),
+			reconcileFn: DefaultReconcile,
+		}
+
+		result, err := r.Reconcile(t.Context(), ctrl.Request{
+			NamespacedName: client.ObjectKey{
+				Namespace: namespace,
+				Name:      name,
+			},
+		})
+
+		require.NoError(t, err)
+		require.Empty(t, result)
+	})
 }

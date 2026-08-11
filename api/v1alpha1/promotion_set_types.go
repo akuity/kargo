@@ -4,15 +4,47 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
 
+const (
+	// PromotionSetPhasePending denotes a PromotionSet that has not started
+	// creating Promotions.
+	PromotionSetPhasePending PromotionSetPhase = "Pending"
+	// PromotionSetPhaseRunning denotes a PromotionSet that is creating or
+	// monitoring Promotions.
+	PromotionSetPhaseRunning PromotionSetPhase = "Running"
+	// PromotionSetPhaseSucceeded denotes a PromotionSet whose Promotions all
+	// completed successfully.
+	PromotionSetPhaseSucceeded PromotionSetPhase = "Succeeded"
+	// PromotionSetPhaseFailed denotes a PromotionSet with Promotions that failed
+	// for non-technical reasons.
+	PromotionSetPhaseFailed PromotionSetPhase = "Failed"
+	// PromotionSetPhaseErrored denotes a PromotionSet with Promotions that
+	// encountered technical errors.
+	PromotionSetPhaseErrored PromotionSetPhase = "Errored"
+)
+
+// PromotionSetPhase is a high-level summary of a PromotionSet's lifecycle.
+type PromotionSetPhase string
+
+// IsTerminal returns true if the PromotionSetPhase is a terminal one.
+func (p *PromotionSetPhase) IsTerminal() bool {
+	switch *p {
+	case PromotionSetPhaseSucceeded,
+		PromotionSetPhaseFailed,
+		PromotionSetPhaseErrored:
+		return true
+	default:
+		return false
+	}
+}
+
 // PromotionSet groups the Promotions that fan out a Stage's selected Freight
 // to its selected Targets.
 //
 // +kubebuilder:resource:scope=Namespaced,shortName={promotionset,promotionsets}
 // +kubebuilder:object:root=true
-// +kubebuilder:printcolumn:name="Targets",type="integer",JSONPath=".status.targetCount"
-// +kubebuilder:printcolumn:name="Succeeded",type="integer",JSONPath=".status.succeededTargetCount"
-// +kubebuilder:printcolumn:name="Failed",type="integer",JSONPath=".status.failedTargetCount"
-// +kubebuilder:printcolumn:name="Errored",type="integer",JSONPath=".status.erroredTargetCount"
+// +kubebuilder:printcolumn:name=Stage,type=string,JSONPath=`.spec.stage`
+// +kubebuilder:printcolumn:name=Freight,type=string,JSONPath=`.spec.freight`
+// +kubebuilder:printcolumn:name=Phase,type=string,JSONPath=`.status.phase`
 // +kubebuilder:printcolumn:name=Age,type=date,JSONPath=`.metadata.creationTimestamp`
 // +kubebuilder:subresource:status
 type PromotionSet struct {
@@ -36,16 +68,6 @@ func (p *PromotionSet) GetStatus() *PromotionSetStatus {
 	return &p.Status
 }
 
-// GetConditions returns the PromotionSet's conditions.
-func (p *PromotionSet) GetConditions() []metav1.Condition {
-	return p.Status.Conditions
-}
-
-// SetConditions sets the PromotionSet's conditions.
-func (p *PromotionSet) SetConditions(conditions []metav1.Condition) {
-	p.Status.Conditions = conditions
-}
-
 // PromotionSetSpec describes the Stage and Freight associated with a
 // PromotionSet.
 type PromotionSetSpec struct {
@@ -57,6 +79,7 @@ type PromotionSetSpec struct {
 	// +kubebuilder:validation:MaxLength=253
 	// +kubebuilder:validation:Pattern=`^[a-z0-9]([-a-z0-9]*[a-z0-9])?(\.[a-z0-9]([-a-z0-9]*[a-z0-9])?)*$`
 	// +akuity:test-kubebuilder-pattern=KubernetesName
+	// +kubebuilder:validation:XValidation:rule="self == oldSelf"
 	Stage string `json:"stage"`
 
 	// Freight specifies the piece of Freight promoted by the Stage.
@@ -67,6 +90,7 @@ type PromotionSetSpec struct {
 	// +kubebuilder:validation:MaxLength=253
 	// +kubebuilder:validation:Pattern=`^[a-z0-9]([-a-z0-9]*[a-z0-9])?(\.[a-z0-9]([-a-z0-9]*[a-z0-9])?)*$`
 	// +akuity:test-kubebuilder-pattern=KubernetesName
+	// +kubebuilder:validation:XValidation:rule="self == oldSelf"
 	Freight string `json:"freight"`
 
 	// Targets specifies the Targets to which this PromotionSet promotes Freight.
@@ -76,13 +100,8 @@ type PromotionSetSpec struct {
 	// +listMapKey=name
 	// +kubebuilder:validation:Required
 	// +kubebuilder:validation:MinItems=1
+	// +kubebuilder:validation:XValidation:rule="self == oldSelf"
 	Targets []PromotionSetTarget `json:"targets"`
-
-	// Suspended prevents this PromotionSet from creating Promotions for newly
-	// specified Targets. Existing Promotions are not affected.
-	//
-	// +kubebuilder:validation:Optional
-	Suspended bool `json:"suspended,omitempty"`
 }
 
 // PromotionSetTarget identifies a Target selected by a PromotionSet.
@@ -100,11 +119,6 @@ type PromotionSetTarget struct {
 // PromotionSetStatus describes the observed aggregate state of a
 // PromotionSet's Promotions.
 type PromotionSetStatus struct {
-	// ObservedGeneration is the generation of the spec last reconciled.
-	//
-	// +kubebuilder:validation:Optional
-	ObservedGeneration int64 `json:"observedGeneration,omitempty"`
-
 	// Conditions contains the last observations of the PromotionSet's current
 	// state.
 	//
@@ -114,52 +128,45 @@ type PromotionSetStatus struct {
 	// +listMapKey=type
 	Conditions []metav1.Condition `json:"conditions,omitempty" patchMergeKey:"type" patchStrategy:"merge"`
 
-	// TargetCount is the number of Targets selected by the PromotionSet.
+	// Phase is a high-level summary of the PromotionSet's lifecycle.
 	//
 	// +kubebuilder:validation:Optional
-	TargetCount int32 `json:"targetCount,omitempty"`
+	Phase PromotionSetPhase `json:"phase,omitempty"`
 
-	// PendingTargetCount is the number of Targets whose latest Promotion
-	// attempt is in the Pending phase.
+	// Summary aggregates the phases of this PromotionSet's child Promotions.
 	//
 	// +kubebuilder:validation:Optional
-	PendingTargetCount int32 `json:"pendingTargetCount,omitempty"`
+	Summary *PromotionSetSummary `json:"summary,omitempty"`
 
-	// RunningTargetCount is the number of Targets whose latest Promotion
-	// attempt is in the Running phase.
+	// ObservedGeneration is the generation of the spec last reconciled.
 	//
 	// +kubebuilder:validation:Optional
-	RunningTargetCount int32 `json:"runningTargetCount,omitempty"`
+	ObservedGeneration int64 `json:"observedGeneration,omitempty"`
 
-	// SucceededTargetCount is the number of Targets whose latest Promotion
-	// attempt is in the Succeeded phase.
+	// StartedAt is the time at which the PromotionSet started.
 	//
 	// +kubebuilder:validation:Optional
-	SucceededTargetCount int32 `json:"succeededTargetCount,omitempty"`
+	StartedAt *metav1.Time `json:"startedAt,omitempty"`
 
-	// FailedTargetCount is the number of Targets whose latest Promotion attempt
-	// is in the Failed phase.
-	//
-	// +kubebuilder:validation:Optional
-	FailedTargetCount int32 `json:"failedTargetCount,omitempty"`
+	// FinishedAt is the time at which the PromotionSet completed.
+	FinishedAt *metav1.Time `json:"finishedAt,omitempty"`
+}
 
-	// ErroredTargetCount is the number of Targets whose latest Promotion attempt
-	// is in the Errored phase.
-	//
-	// +kubebuilder:validation:Optional
-	ErroredTargetCount int32 `json:"erroredTargetCount,omitempty"`
-
-	// AbortedTargetCount is the number of Targets whose latest Promotion attempt
-	// is in the Aborted phase.
-	//
-	// +kubebuilder:validation:Optional
-	AbortedTargetCount int32 `json:"abortedTargetCount,omitempty"`
-
-	// UnknownTargetCount is the number of Targets whose latest Promotion attempt
-	// has an empty or unrecognized phase.
-	//
-	// +kubebuilder:validation:Optional
-	UnknownTargetCount int32 `json:"unknownTargetCount,omitempty"`
+// PromotionSetSummary aggregates the phases of a PromotionSet's child
+// Promotions.
+type PromotionSetSummary struct {
+	// Pending is the number of child Promotions in the Pending phase.
+	Pending int32 `json:"pending,omitempty"`
+	// Running is the number of child Promotions in the Running phase.
+	Running int32 `json:"running,omitempty"`
+	// Succeeded is the number of child Promotions in the Succeeded phase.
+	Succeeded int32 `json:"succeeded,omitempty"`
+	// Failed is the number of child Promotions in the Failed phase.
+	Failed int32 `json:"failed,omitempty"`
+	// Errored is the number of child Promotions in the Errored phase.
+	Errored int32 `json:"errored,omitempty"`
+	// Aborted is the number of child Promotions in the Aborted phase.
+	Aborted int32 `json:"aborted,omitempty"`
 }
 
 // GetConditions returns the PromotionSet status conditions.

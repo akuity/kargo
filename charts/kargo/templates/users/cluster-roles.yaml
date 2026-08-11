@@ -38,6 +38,7 @@ rules:
   - promotionsets
   - promotiontasks
   - stages
+  - targets
   - warehouses
   verbs:
   - create
@@ -225,6 +226,7 @@ rules:
   - promotionsets
   - promotiontasks
   - stages
+  - targets
   - warehouses
   verbs:
   - get
