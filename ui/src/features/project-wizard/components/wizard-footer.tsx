@@ -28,36 +28,29 @@ export const WizardFooter = ({
   const isFirst = current === 'basics';
   const isLast = current === 'review';
 
-  const continueButton = (
-    <Button
-      type='primary'
-      size='large'
-      disabled={!canContinue}
-      loading={continueLoading}
-      onClick={onContinue}
-    >
-      {continueLabel ?? (isLast ? 'Create project' : 'Save & continue')}
-      <FontAwesomeIcon icon={faChevronRight} size='sm' />
-    </Button>
-  );
-
   return (
     <div
       // Border spans the full width (incl. under the sidebar); the buttons are
       // inset so Back aligns with the content's left edge, tracking the
       // responsive sidebar: 16.5rem below 2xl (w-60), 19.5rem at 2xl+ (w-72).
-      className='sticky bottom-0 flex items-center justify-between bg-white py-4 pr-6 pl-[16.5rem] 2xl:pl-[19.5rem]'
-      style={{ borderTop: '2px solid rgba(0,0,0,.05)' }}
+      className='sticky bottom-0 flex items-center justify-between border-0 border-t-2 border-t-black/5 border-solid bg-white py-4 pr-6 pl-[16.5rem] 2xl:pl-[19.5rem]'
     >
       <Button disabled={isFirst || backDisabled} onClick={onBack}>
         <FontAwesomeIcon icon={faChevronLeft} size='sm' />
         Back
       </Button>
-      {!canContinue && continueDisabledReason ? (
-        <Tooltip title={continueDisabledReason}>{continueButton}</Tooltip>
-      ) : (
-        continueButton
-      )}
+      <Tooltip title={canContinue ? undefined : continueDisabledReason}>
+        <Button
+          type='primary'
+          size='large'
+          disabled={!canContinue}
+          loading={continueLoading}
+          onClick={onContinue}
+        >
+          {continueLabel ?? (isLast ? 'Create project' : 'Save & continue')}
+          <FontAwesomeIcon icon={faChevronRight} size='sm' />
+        </Button>
+      </Tooltip>
     </div>
   );
 };
