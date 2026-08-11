@@ -41,7 +41,7 @@
           ]
         },
         "targets": {
-          "description": "Targets specifies the Targets to which this PromotionSet promotes Freight.\nEach Target MUST be in the same namespace as the PromotionSet.",
+          "description": "Targets specifies the Targets to which this PromotionSet promotes Freight.\nEach Target MUST be in the same namespace as the PromotionSet. The list\nmay be empty, which records that the governing Stage's target selectors\nmatched no Targets at the time the PromotionSet was created.",
           "items": {
             "description": "PromotionSetTarget identifies a Target selected by a PromotionSet.",
             "properties": {
@@ -58,7 +58,6 @@
             ],
             "type": "object"
           },
-          "minItems": 1,
           "type": "array",
           "x-kubernetes-list-map-keys": [
             "name"

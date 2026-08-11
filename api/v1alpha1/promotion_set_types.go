@@ -94,12 +94,13 @@ type PromotionSetSpec struct {
 	Freight string `json:"freight"`
 
 	// Targets specifies the Targets to which this PromotionSet promotes Freight.
-	// Each Target MUST be in the same namespace as the PromotionSet.
+	// Each Target MUST be in the same namespace as the PromotionSet. The list
+	// may be empty, which records that the governing Stage's target selectors
+	// matched no Targets at the time the PromotionSet was created.
 	//
 	// +listType=map
 	// +listMapKey=name
 	// +kubebuilder:validation:Required
-	// +kubebuilder:validation:MinItems=1
 	// +kubebuilder:validation:XValidation:rule="self == oldSelf"
 	Targets []PromotionSetTarget `json:"targets"`
 }

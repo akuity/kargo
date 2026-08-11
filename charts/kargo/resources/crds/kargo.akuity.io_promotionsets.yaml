@@ -81,7 +81,9 @@ spec:
               targets:
                 description: |-
                   Targets specifies the Targets to which this PromotionSet promotes Freight.
-                  Each Target MUST be in the same namespace as the PromotionSet.
+                  Each Target MUST be in the same namespace as the PromotionSet. The list
+                  may be empty, which records that the governing Stage's target selectors
+                  matched no Targets at the time the PromotionSet was created.
                 items:
                   description: PromotionSetTarget identifies a Target selected by
                     a PromotionSet.
@@ -95,7 +97,6 @@ spec:
                   required:
                   - name
                   type: object
-                minItems: 1
                 type: array
                 x-kubernetes-list-map-keys:
                 - name
