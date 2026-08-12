@@ -25,7 +25,7 @@ func Test_loginOptions_complete(t *testing.T) {
 		assert func(*testing.T, *loginOptions)
 	}{
 		{
-			name: "no stored config and no port specified",
+			name: "server specified with no stored config",
 			args: []string{"kargo.example.com"},
 			assert: func(t *testing.T, o *loginOptions) {
 				require.Equal(t, "https://kargo.example.com", o.ServerAddress)
@@ -33,7 +33,7 @@ func Test_loginOptions_complete(t *testing.T) {
 			},
 		},
 		{
-			name: "stored server address, auth method, and port are reused",
+			name: "stored options are inherited when no server is specified",
 			config: libConfig.CLIConfig{
 				APIAddress:   "https://kargo.example.com",
 				AuthMethod:   authMethodSSO,
@@ -42,17 +42,6 @@ func Test_loginOptions_complete(t *testing.T) {
 			assert: func(t *testing.T, o *loginOptions) {
 				require.Equal(t, "https://kargo.example.com", o.ServerAddress)
 				require.True(t, o.UseSSO)
-				require.Equal(t, 8085, o.CallbackPort)
-			},
-		},
-		{
-			name: "stored port is reused when the same server is specified",
-			config: libConfig.CLIConfig{
-				APIAddress:   "https://kargo.example.com",
-				CallbackPort: 8085,
-			},
-			args: []string{"https://kargo.example.com"},
-			assert: func(t *testing.T, o *loginOptions) {
 				require.Equal(t, 8085, o.CallbackPort)
 			},
 		},
@@ -68,13 +57,31 @@ func Test_loginOptions_complete(t *testing.T) {
 			},
 		},
 		{
-			name: "stored port is not reused for a different server",
+			name: "stored options are not inherited when a server is specified",
 			config: libConfig.CLIConfig{
 				APIAddress:   "https://kargo.example.com",
+				AuthMethod:   authMethodSSO,
 				CallbackPort: 8085,
 			},
-			args: []string{"https://kargo.other.com"},
+			args: []string{"https://kargo.example.org"},
 			assert: func(t *testing.T, o *loginOptions) {
+				require.Equal(t, "https://kargo.example.org", o.ServerAddress)
+				require.False(t, o.UseSSO)
+				require.Zero(t, o.CallbackPort)
+			},
+		},
+		{
+			name: "stored options are not inherited even when the specified " +
+				"server matches the stored one",
+			config: libConfig.CLIConfig{
+				APIAddress:   "https://kargo.example.com",
+				AuthMethod:   authMethodSSO,
+				CallbackPort: 8085,
+			},
+			args: []string{"https://kargo.example.com"},
+			assert: func(t *testing.T, o *loginOptions) {
+				require.Equal(t, "https://kargo.example.com", o.ServerAddress)
+				require.False(t, o.UseSSO)
 				require.Zero(t, o.CallbackPort)
 			},
 		},

@@ -83,6 +83,14 @@ kargo login https://kargo.example.com --kubeconfig
 # Log in using the local kubeconfig and ignore cert warnings
 kargo login https://kargo.example.com --kubeconfig --insecure-skip-tls-verify
 `),
+		PreRunE: func(cmd *cobra.Command, args []string) error {
+			// A login method must be specified unless we're falling back on a stored
+			// one, which only happens when no server address is specified.
+			if len(args) == 1 || cmdOpts.Config.AuthMethod == "" {
+				cmd.MarkFlagsOneRequired("admin", "kubeconfig", "sso")
+			}
+			return nil
+		},
 		RunE: func(cmd *cobra.Command, args []string) error {
 			cmdOpts.complete(args)
 
@@ -118,40 +126,35 @@ func (o *loginOptions) addFlags(cmd *cobra.Command) {
 		"Port to use for the callback URL; 0 selects any available, unprivileged port. "+
 			"Only used when --sso is specified.")
 
-	// If we do not have a saved configuration, we require the user to specify a
-	// login method. If we do have a saved configuration, we allow the user to
-	// omit the login method and use the last used method.
-	if o.Config.AuthMethod == "" {
-		cmd.MarkFlagsOneRequired("admin", "kubeconfig", "sso")
-	}
-
 	cmd.MarkFlagsMutuallyExclusive("admin", "kubeconfig", "sso")
 }
 
 // complete sets the options from the command arguments.
 func (o *loginOptions) complete(args []string) {
-	// Use the API address in config as a default address
-	o.ServerAddress = o.Config.APIAddress
 	if len(args) == 1 {
 		o.ServerAddress = normalizeURL(args[0])
 	}
-
-	// If no port was specified, reuse any port stored in the configuration,
-	// provided we're logging in to the same server it was stored for.
-	if o.CallbackPort == 0 && o.ServerAddress == o.Config.APIAddress {
-		o.CallbackPort = o.Config.CallbackPort
-	}
-
-	// If no auth method flag was explicitly set, use the stored method
-	if !o.UseAdmin && !o.UseKubeconfig && !o.UseSSO && o.Config.AuthMethod != "" {
-		switch o.Config.AuthMethod {
-		case authMethodAdmin:
-			o.UseAdmin = true
-		case authMethodKubeconfig:
-			o.UseKubeconfig = true
-		case authMethodSSO:
-			o.UseSSO = true
+	// If a server address was not specified, but one is stored in the
+	// configuration, inherit it from the configuration. Only if doing so, also
+	// inherit other login options from the configuration.
+	if o.ServerAddress == "" && o.Config.APIAddress != "" {
+		o.ServerAddress = o.Config.APIAddress
+		if !o.UseAdmin && !o.UseKubeconfig && !o.UseSSO && o.Config.AuthMethod != "" {
+			switch o.Config.AuthMethod {
+			case authMethodAdmin:
+				o.UseAdmin = true
+			case authMethodKubeconfig:
+				o.UseKubeconfig = true
+			case authMethodSSO:
+				o.UseSSO = true
+			}
 		}
+		if o.CallbackPort == 0 {
+			o.CallbackPort = o.Config.CallbackPort
+		}
+		// Note: We deliberately do NOT inherit o.InsecureTLS from the stored config
+		// because we want to force the user to re-assess that choice each time they
+		// log in.
 	}
 }
 
