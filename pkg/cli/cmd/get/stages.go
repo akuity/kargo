@@ -33,8 +33,10 @@ type getStagesOptions struct {
 	Config        config.CLIConfig
 	ClientOptions client.Options
 
-	Project string
-	Names   []string
+	Project    string
+	Names      []string
+	Export     bool
+	OutputFile string
 }
 
 func newGetStagesCommand(
@@ -70,6 +72,9 @@ kargo get stages
 # Get a the QA stage in the default project
 kargo config set-project my-project
 kargo get stage qa
+
+# Export all stages in my-project as git-friendly manifests
+kargo get stages --project=my-project --export --out stages.yaml
 `),
 		RunE: func(cmd *cobra.Command, args []string) error {
 			cmdOpts.complete(args)
@@ -99,6 +104,14 @@ func (o *getStagesOptions) addFlags(cmd *cobra.Command) {
 	option.Project(
 		cmd.Flags(), &o.Project, o.Config.Project,
 		"The project for which to list stages. If not set, the default project will be used.",
+	)
+	option.Export(
+		cmd.Flags(), &o.Export,
+		"Export stages as git-friendly manifests, stripping status and non-applyable metadata fields.",
+	)
+	option.OutputFile(
+		cmd.Flags(), &o.OutputFile,
+		"Write output to the given file instead of stdout.",
 	)
 }
 
@@ -141,7 +154,9 @@ func (o *getStagesOptions) run(ctx context.Context) error {
 		if err = json.Unmarshal(stageJSON, &stageList); err != nil {
 			return err
 		}
-		return PrintObjects(stageList.Items, o.PrintFlags, o.IOStreams, o.NoHeaders)
+		return PrintExportableObjects(
+			stageList.Items, o.PrintFlags, o.IOStreams, o.NoHeaders, o.Export, o.OutputFile,
+		)
 	}
 
 	stages := make([]*kargoapi.Stage, 0, len(o.Names))
@@ -168,7 +183,9 @@ func (o *getStagesOptions) run(ctx context.Context) error {
 		stages = append(stages, stage)
 	}
 
-	if err = PrintObjects(stages, o.PrintFlags, o.IOStreams, o.NoHeaders); err != nil {
+	if err = PrintExportableObjects(
+		stages, o.PrintFlags, o.IOStreams, o.NoHeaders, o.Export, o.OutputFile,
+	); err != nil {
 		return fmt.Errorf("print stages: %w", err)
 	}
 	return errors.Join(errs...)
