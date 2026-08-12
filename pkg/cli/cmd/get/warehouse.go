@@ -32,8 +32,10 @@ type getWarehousesOptions struct {
 	Config        config.CLIConfig
 	ClientOptions client.Options
 
-	Project string
-	Names   []string
+	Project    string
+	Names      []string
+	Export     bool
+	OutputFile string
 }
 
 func newGetWarehousesCommand(
@@ -69,6 +71,9 @@ kargo get warehouses
 # Get a specific warehouse in the default project
 kargo config set-project my-project
 kargo get warehouse my-warehouse
+
+# Export all warehouses in my-project as git-friendly manifests
+kargo get warehouses --project=my-project --export --out warehouses.yaml
 `),
 		RunE: func(cmd *cobra.Command, args []string) error {
 			cmdOpts.complete(args)
@@ -99,6 +104,14 @@ func (o *getWarehousesOptions) addFlags(cmd *cobra.Command) {
 	option.Project(
 		cmd.Flags(), &o.Project, o.Config.Project,
 		"The project for which to list Warehouses. If not set, the default project will be used.",
+	)
+	option.Export(
+		cmd.Flags(), &o.Export,
+		"Export Warehouses as git-friendly manifests, stripping status and non-applyable metadata fields.",
+	)
+	option.OutputFile(
+		cmd.Flags(), &o.OutputFile,
+		"Write output to the given file instead of stdout.",
 	)
 }
 
@@ -141,7 +154,9 @@ func (o *getWarehousesOptions) run(ctx context.Context) error {
 		if err = json.Unmarshal(warehousesJSON, &whList); err != nil {
 			return err
 		}
-		return PrintObjects(whList.Items, o.PrintFlags, o.IOStreams, o.NoHeaders)
+		return PrintExportableObjects(
+			whList.Items, o.PrintFlags, o.IOStreams, o.NoHeaders, o.Export, o.OutputFile,
+		)
 	}
 
 	warehouses := make([]*kargoapi.Warehouse, 0, len(o.Names))
@@ -168,7 +183,9 @@ func (o *getWarehousesOptions) run(ctx context.Context) error {
 		warehouses = append(warehouses, warehouse)
 	}
 
-	if err = PrintObjects(warehouses, o.PrintFlags, o.IOStreams, o.NoHeaders); err != nil {
+	if err = PrintExportableObjects(
+		warehouses, o.PrintFlags, o.IOStreams, o.NoHeaders, o.Export, o.OutputFile,
+	); err != nil {
 		return fmt.Errorf("print warehouses: %w", err)
 	}
 	return errors.Join(errs...)
