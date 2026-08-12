@@ -206,7 +206,7 @@ func Test_httpRequester_convert(t *testing.T) {
 		{
 			name: "body and bodyFromFile are mutually exclusive",
 			config: promotion.Config{
-				"body":         "",
+				"body":         "{}",
 				"bodyFromFile": "payload.json",
 			},
 			expectedProblems: []string{

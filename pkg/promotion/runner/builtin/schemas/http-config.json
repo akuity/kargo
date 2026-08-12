@@ -64,23 +64,37 @@
   "required": ["url"],
   "oneOf": [
     {
-      "required": ["body"],
-      "not": {
-        "required": ["bodyFromFile"]
-      }
+      "properties": {
+        "body": {
+          "type": "string",
+          "minLength": 1
+        },
+        "bodyFromFile": {
+          "enum": ["", null]
+        }
+      },
+      "required": ["body"]
     },
     {
-      "required": ["bodyFromFile"],
-      "not": {
-        "required": ["body"]
-      }
+      "properties": {
+        "body": {
+          "enum": ["", null]
+        },
+        "bodyFromFile": {
+          "type": "string",
+          "minLength": 1
+        }
+      },
+      "required": ["bodyFromFile"]
     },
     {
-      "not": {
-        "anyOf": [
-          {"required": ["body"]},
-          {"required": ["bodyFromFile"]}
-        ]
+      "properties": {
+        "body": {
+          "enum": ["", null]
+        },
+        "bodyFromFile": {
+          "enum": ["", null]
+        }
       }
     }
   ],
