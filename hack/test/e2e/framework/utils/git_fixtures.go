@@ -1,10 +1,13 @@
+// nolint:gosec
 package utils
 
 import (
 	"context"
 	"errors"
 	"fmt"
+	"strings"
 	"testing"
+	"time"
 
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/runtime"
@@ -12,6 +15,13 @@ import (
 	"sigs.k8s.io/e2e-framework/klient/k8s"
 
 	"github.com/akuity/kargo/hack/test/e2e/envfuncs"
+	"github.com/akuity/kargo/pkg/gitprovider"
+
+	_ "github.com/akuity/kargo/pkg/gitprovider/azure"           // Azure provider registration
+	_ "github.com/akuity/kargo/pkg/gitprovider/bitbucket/cloud" // Bitbucket Cloud provider registration
+	_ "github.com/akuity/kargo/pkg/gitprovider/gitea"           // Gitea provider registration
+	_ "github.com/akuity/kargo/pkg/gitprovider/github"          // GitHub provider registration
+	_ "github.com/akuity/kargo/pkg/gitprovider/gitlab"          // GitLab provider registration
 )
 
 // GitCreds holds the git credentials substituted into git-driven suite
@@ -77,15 +87,15 @@ func UpdateStagePromotionVar(stageName, key, val string) decoder.DecodeOption {
 		data := unstr.UnstructuredContent()
 		spec, ok := data["spec"].(map[string]any)
 		if !ok {
-			return errors.New("Stage spec is not a map")
+			return errors.New("stage spec is not a map")
 		}
 		promoTmpl, ok := spec["promotionTemplate"].(map[string]any)
 		if !ok {
-			return errors.New("Stage spec.promotionTemplate is not a map")
+			return errors.New("stage spec.promotionTemplate is not a map")
 		}
 		promoSpec, ok := promoTmpl["spec"].(map[string]any)
 		if !ok {
-			return errors.New("Stage spec.promotionTemplate.spec is not a map")
+			return errors.New("stage spec.promotionTemplate.spec is not a map")
 		}
 		vars, ok := promoSpec["vars"].([]any)
 		if !ok {
@@ -101,4 +111,59 @@ func UpdateStagePromotionVar(stageName, key, val string) decoder.DecodeOption {
 		unstr.SetUnstructuredContent(data)
 		return nil
 	})
+}
+
+// MergePullRequest merges the numbered pull request in the given GitHub
+// repository using token for authentication. It retries while the provider
+// reports the pull request as not yet mergeable (mergeability still computing or
+// a transient head change), up to timeout. It is intended to unblock
+// git-wait-for-pr promotion steps, which otherwise never complete in an
+// unattended run.
+func MergePullRequest(
+	ctx context.Context,
+	repoURL, token string,
+	prNumber int,
+	timeout time.Duration,
+) error {
+	gitProv, err := gitprovider.New(repoURL, &gitprovider.Options{Token: token})
+	if err != nil {
+		return fmt.Errorf("error creating git provider service: %w", err)
+	}
+
+	timedCtx, cancel := context.WithTimeout(ctx, timeout)
+	defer cancel()
+
+	ticker := time.NewTicker(5 * time.Second)
+	defer ticker.Stop()
+	var lastErr error
+	for {
+		_, merged, err := gitProv.MergePullRequest(
+			timedCtx,
+			int64(prNumber),
+			&gitprovider.MergePullRequestOpts{MergeMethod: "merge"},
+		)
+		if err != nil {
+			return fmt.Errorf("error merging pull request %d: %w", prNumber, err)
+		}
+		if merged {
+			return nil
+		}
+		lastErr = fmt.Errorf("pull request %d is not ready to merge yet", prNumber)
+		select {
+		case <-timedCtx.Done():
+			return fmt.Errorf("timed out merging pull request %d: %w: %w", prNumber, timedCtx.Err(), lastErr)
+		case <-ticker.C:
+		}
+	}
+}
+
+// gitHubOwnerRepo parses the owner and repository name from a GitHub HTTPS URL,
+// e.g. https://github.com/octocat/repo.git -> ("octocat", "repo").
+func gitHubOwnerRepo(repoURL string) (string, string, error) {
+	trimmed := strings.TrimSuffix(strings.TrimSuffix(repoURL, ".git"), "/")
+	parts := strings.Split(trimmed, "/")
+	if len(parts) < 2 || parts[len(parts)-2] == "" || parts[len(parts)-1] == "" {
+		return "", "", fmt.Errorf("cannot parse owner/repo from %q", repoURL)
+	}
+	return parts[len(parts)-2], parts[len(parts)-1], nil
 }

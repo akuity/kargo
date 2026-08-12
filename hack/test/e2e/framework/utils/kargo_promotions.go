@@ -253,7 +253,10 @@ func RefreshStage(
 	project, stage string,
 ) error {
 	kargoClient := ctx.Value(KargoCLIKey).(generated.APIClient)
-	_, err := kargoClient.CoreAPI.RefreshStage(ctx, project, stage).Execute()
+	httpRes, err := kargoClient.CoreAPI.RefreshStage(ctx, project, stage).Execute()
+	if httpRes != nil {
+		_ = httpRes.Body.Close()
+	}
 	return err
 }
 

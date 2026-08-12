@@ -4,6 +4,10 @@ import (
 	"context"
 	"flag"
 	"fmt"
+	"math/rand"
+	"os"
+	"path/filepath"
+	"strconv"
 
 	env "envs"
 
@@ -14,6 +18,7 @@ import (
 type ContextKey string
 
 const EnvKey ContextKey = "env"
+const TmpDirKey ContextKey = "tmpdir"
 
 var envFileName string
 
@@ -58,4 +63,34 @@ func GetEnvMap(ctx context.Context, path []string) (map[string]any, error) {
 		return nil, fmt.Errorf("cannot convert env to map %v", env)
 	} 
 	return nil, err
+}
+
+func GetValueOrEnv(ctx context.Context, valueKey ContextKey, path []string) (any, error) {
+	if value := ctx.Value(valueKey); value != nil {
+		return value, nil
+	}
+	return GetEnv(ctx, path)
+}
+
+func SetupTempDir(ctx context.Context, cfg *envconf.Config) (context.Context, error) {
+	rand := strconv.Itoa(rand.Int())
+	tmp := os.TempDir()
+	tempDir := filepath.Join(tmp, rand)
+	err := os.Mkdir(tempDir, 755)
+	if err != nil {
+		return ctx, err
+	}
+	return context.WithValue(ctx, TmpDirKey, tempDir), nil
+}
+
+
+func TeardownTempDir(ctx context.Context, cfg *envconf.Config) (context.Context, error) {
+	tempDir := ctx.Value(TmpDirKey)
+	if tempDir != nil {
+		err := os.RemoveAll(tempDir.(string))
+		if err != nil {
+			return ctx, err
+		}
+	}
+	return ctx, nil
 }
