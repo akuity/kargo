@@ -294,7 +294,28 @@ values:
 templates:
   - templates/controller/cluster-roles.yaml
 tests:
-  - it: grants read-only PromotionSet access
+  # The Stage controller is the only thing that creates PromotionSets, so the
+  # controller needs create alongside the read verbs.
+  - it: grants PromotionSet create access
+    documentSelector:
+      path: metadata.name
+      value: kargo-controller
+    asserts:
+      - contains:
+          path: rules
+          content:
+            apiGroups:
+              - kargo.akuity.io
+            resources:
+              - promotions
+              - promotionsets
+            verbs:
+              - create
+              - get
+              - list
+              - watch
+
+  - it: grants read-only Target access
     documentSelector:
       path: metadata.name
       value: kargo-controller
@@ -308,7 +329,6 @@ tests:
               - clusterconfigs
               - projects
               - projectconfigs
-              - promotionsets
               - targets
             verbs:
               - get

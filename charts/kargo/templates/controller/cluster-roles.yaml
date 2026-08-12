@@ -39,7 +39,6 @@ rules:
   - clusterconfigs
   - projects
   - projectconfigs
-  - promotionsets
   - targets
   verbs:
   - get
@@ -49,6 +48,7 @@ rules:
   - kargo.akuity.io
   resources:
   - promotions
+  - promotionsets
   verbs:
   - create
   - get

@@ -2697,16 +2697,6 @@ func TestReconciler_ensureDefaultUserRoles_PromotionSetPermissions(t *testing.T)
 	}{
 		{
 			roleName: "kargo-admin",
-			resource: "promotionsets",
-			verbs:    []string{"*"},
-		},
-		{
-			roleName: "kargo-viewer",
-			resource: "promotionsets",
-			verbs:    []string{"get", "list", "watch"},
-		},
-		{
-			roleName: "kargo-admin",
 			resource: "targets",
 			verbs:    []string{"*"},
 		},
@@ -2731,11 +2721,24 @@ func TestReconciler_ensureDefaultUserRoles_PromotionSetPermissions(t *testing.T)
 			require.Fail(t, testCase.resource+" permissions not found")
 		})
 	}
-	t.Run("kargo-promoter", func(t *testing.T) {
+	// No default role grants any access to PromotionSets. Only the Stage
+	// controller creates them, so no user needs to write one, and withholding
+	// read access keeps them inert in editions that do not reconcile them.
+	// Editions that do grant these permissions via
+	// RegisterRoleRulesContributor.
+	for _, roleName := range []string{"kargo-admin", "kargo-viewer", "kargo-promoter"} {
+		t.Run(roleName+"/no promotionsets", func(t *testing.T) {
+			role := createdRoles[roleName]
+			require.NotNil(t, role)
+			for _, rule := range role.Rules {
+				require.NotContains(t, rule.Resources, "promotionsets")
+			}
+		})
+	}
+	t.Run("kargo-promoter/no targets", func(t *testing.T) {
 		role := createdRoles["kargo-promoter"]
 		require.NotNil(t, role)
 		for _, rule := range role.Rules {
-			require.NotContains(t, rule.Resources, "promotionsets")
 			require.NotContains(t, rule.Resources, "targets")
 		}
 	})
