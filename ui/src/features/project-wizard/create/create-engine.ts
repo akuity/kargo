@@ -49,6 +49,13 @@ export const mergeForRetry = (previous: ProgressItem[], fresh: ProgressItem[]): 
   });
 };
 
+// The Project a run created -- what a caller redirects to on success. Read from
+// the submitted items rather than from wizard state, which a caller may reset on
+// success. Undefined when no Project was submitted, so callers don't build a
+// route around a missing name.
+export const createdProjectName = (items: ProgressItem[]): string | undefined =>
+  items.find((i) => i.kind === 'Project')?.name || undefined;
+
 // Progress rows are already labelled with the resource they belong to, so the
 // bare statusText reads better here than ApiError's "API Error: 404 Not Found".
 export const errorMessage = (error: unknown): string => {

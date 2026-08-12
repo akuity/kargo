@@ -2,6 +2,7 @@ import { expect, test } from 'vitest';
 
 import {
   ProgressItem,
+  createdProjectName,
   errorMessage,
   mergeForRetry,
   runCreate,
@@ -260,6 +261,22 @@ test('mergeForRetry carries `created` forward for items that never became ready'
   );
   expect(merged[0].state).toBe('pending');
   expect(merged[0].created).toBe(true);
+});
+
+test('createdProjectName reads the Project name from the submitted items', () => {
+  expect(createdProjectName(items())).toBe('p');
+});
+
+// Callers redirect to this name, so a missing or blank one must be reported as
+// absent rather than as an empty name that would build a broken route.
+test('createdProjectName is undefined when no named Project was submitted', () => {
+  expect(
+    createdProjectName(toProgressItems([{ kind: 'Warehouse', name: 'w', yaml: 'c' }]))
+  ).toBeUndefined();
+  expect(
+    createdProjectName(toProgressItems([{ kind: 'Project', name: '', yaml: 'a' }]))
+  ).toBeUndefined();
+  expect(createdProjectName([])).toBeUndefined();
 });
 
 test('errorMessage extracts a readable message', () => {

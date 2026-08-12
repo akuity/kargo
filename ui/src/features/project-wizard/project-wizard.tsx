@@ -1,7 +1,7 @@
 import { faBoxes, faTableColumns } from '@fortawesome/free-solid-svg-icons';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
 import { Breadcrumb, Button, Space } from 'antd';
-import { useEffect, useRef, useState } from 'react';
+import { useState } from 'react';
 import { generatePath, Link, useNavigate } from 'react-router-dom';
 
 import { paths } from '@ui/config/paths';
@@ -47,21 +47,14 @@ export const ProjectWizard = () => {
   const navigate = useNavigate();
   const { state, hasSavedDraft, current, goTo, patchState, advance, back, reset } =
     useWizardState();
-  const create = useCreateProject(state);
+  // On successful creation, clear the draft and go straight to the new
+  // project's pipeline instead of showing a success screen.
+  const create = useCreateProject(state, (name) => {
+    reset();
+    navigate(generatePath(paths.project, { name }));
+  });
   const [yamlRailOpen, setYamlRailOpen] = useState(true);
 
-  // On successful creation, clear the draft and go straight to the new
-  // project's pipeline instead of showing a success screen. Guarded so the
-  // reset()-induced re-render (which empties the name) can't redirect twice.
-  const redirected = useRef(false);
-  useEffect(() => {
-    if (create.status === 'success' && !redirected.current) {
-      redirected.current = true;
-      const name = state.basics.name;
-      reset();
-      navigate(generatePath(paths.project, { name }));
-    }
-  }, [create.status, navigate, reset, state.basics.name]);
   // Snapshot the draft presence at mount so the resume prompt shows once.
   const [resumePromptOpen, setResumePromptOpen] = useState(hasSavedDraft);
   // Bumped when a YAML edit syncs into state, to remount the form with fresh

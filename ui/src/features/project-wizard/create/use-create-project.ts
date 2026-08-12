@@ -13,7 +13,13 @@ import { createResource } from '@ui/gen/api/v2/resources/resources';
 import { creationManifests } from '../manifest/manifest-builder';
 import { WizardState } from '../types';
 
-import { ProgressItem, mergeForRetry, runCreate, toProgressItems } from './create-engine';
+import {
+  ProgressItem,
+  createdProjectName,
+  mergeForRetry,
+  runCreate,
+  toProgressItems
+} from './create-engine';
 
 export type CreateStatus = MutationStatus;
 
@@ -54,7 +60,10 @@ const awaitProjectReady = (item: ProgressItem): Promise<void> | undefined => {
   })();
 };
 
-export const useCreateProject = (state: WizardState) => {
+// onCreated runs once per successful run, with the name of the Project that was
+// created. It is taken from the submitted manifests rather than from `state` so
+// it can't drift with a caller that resets that state on success.
+export const useCreateProject = (state: WizardState, onCreated?: (name: string) => void) => {
   const queryClient = useQueryClient();
   const [items, setItems] = useState<ProgressItem[]>([]);
 
@@ -68,8 +77,17 @@ export const useCreateProject = (state: WizardState) => {
       if (!ok) {
         throw new Error('creation halted');
       }
+      return createdProjectName(progressItems);
     },
-    onSuccess: () => queryClient.invalidateQueries({ queryKey: getListProjectsQueryKey() })
+    // Awaited, so the mutation only reports success once the projects list has
+    // been invalidated -- a caller that redirects from onCreated then lands on a
+    // list that already knows about the new Project.
+    onSuccess: async (name) => {
+      await queryClient.invalidateQueries({ queryKey: getListProjectsQueryKey() });
+      if (name) {
+        onCreated?.(name);
+      }
+    }
   });
 
   return {
