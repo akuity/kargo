@@ -1,9 +1,7 @@
+import { imageNameRegex } from '@ui/features/common/settings/secrets/schema-validator';
 import { dnsRegex } from '@ui/features/common/utils';
 
 import { CredentialData } from '../types';
-
-const imageNameRegex =
-  /^(?![a-zA-Z][a-zA-Z0-9+.-]*:\/\/)(\w+([.-]\w+)*(:\d+)?\/)?(\w+([.-]\w+)*)(\/\w+([.-]\w+)*)*$/;
 
 // Mirrors the per-type refinements in the settings modal's schema-validator
 export const repoUrlError = (cred: CredentialData): string | undefined => {

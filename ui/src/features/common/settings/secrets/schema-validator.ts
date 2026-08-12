@@ -3,7 +3,7 @@ import { z } from 'zod';
 import { dnsRegex } from '@ui/features/common/utils';
 import { zodValidators } from '@ui/utils/validators';
 
-const imageNameRegex =
+export const imageNameRegex =
   /^(?![a-zA-Z][a-zA-Z0-9+.-]*:\/\/)(\w+([.-]\w+)*(:\d+)?\/)?(\w+([.-]\w+)*)(\/\w+([.-]\w+)*)*$/;
 
 // secretFormSchema is the unified shape backing both the repo credentials form
