@@ -30,7 +30,9 @@ type getProjectConfigOptions struct {
 	Config        config.CLIConfig
 	ClientOptions client.Options
 
-	Project string
+	Project    string
+	Export     bool
+	OutputFile string
 }
 
 func newGetProjectConfigCommand(
@@ -57,6 +59,9 @@ kargo get projectconfig --project=my-project
 # Get project configuration for the default project
 kargo config set-project my-project
 kargo get projectconfig
+
+# Export project configuration for my-project as a git-friendly manifest
+kargo get projectconfig --project=my-project --export --out projectconfig.yaml
 `),
 		RunE: func(cmd *cobra.Command, _ []string) error {
 			return cmdOpts.run(cmd.Context())
@@ -81,6 +86,15 @@ func (o *getProjectConfigOptions) addFlags(cmd *cobra.Command) {
 	option.Project(
 		cmd.Flags(), &o.Project, o.Config.Project,
 		"The project for which to get the configuration. If not set, the default project will be used.",
+	)
+	option.Export(
+		cmd.Flags(), &o.Export,
+		"Export the project configuration as a git-friendly manifest, stripping status "+
+			"and non-applyable metadata fields.",
+	)
+	option.OutputFile(
+		cmd.Flags(), &o.OutputFile,
+		"Write output to the given file instead of stdout.",
 	)
 }
 
@@ -107,11 +121,13 @@ func (o *getProjectConfigOptions) run(ctx context.Context) error {
 		if err = json.Unmarshal(configJSON, &cfg); err != nil {
 			return err
 		}
-		if err = PrintObjects(
+		if err = PrintExportableObjects(
 			[]*kargoapi.ProjectConfig{cfg},
 			o.PrintFlags,
 			o.IOStreams,
 			o.NoHeaders,
+			o.Export,
+			o.OutputFile,
 		); err != nil {
 			return fmt.Errorf("print project configuration: %w", err)
 		}
