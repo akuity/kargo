@@ -1,7 +1,37 @@
+import { z } from 'zod';
+
 import type { RunnerWithConfiguration } from '@ui/features/stage/promotion-steps-wizard/types';
 import type { FreightRequest } from '@ui/gen/api/v2/models';
 
 export type StepId = 'basics' | 'credentials' | 'warehouses' | 'stages' | 'policies' | 'review';
+
+// --- Lenient schemas for untrusted input ------------------------------------
+// Two paths take input the wizard did not produce: hand-edited YAML in the
+// preview rail (see manifest-builder) and drafts restored from localStorage
+// (see the normalize* functions below). Both must degrade rather than reject --
+// the rail commits while the user is still typing, and a draft may have been
+// written by an older version of the wizard. These are the shared pieces.
+
+// A string, or '' for anything that isn't one.
+export const stringOrEmpty = z.string().catch('');
+
+// Kubernetes label and annotation values are always strings, so scalars are
+// coerced. Anything that isn't a mapping yields {}.
+export const stringRecordSchema = z.record(z.string(), z.coerce.string()).catch({});
+
+// A Warehouse spec is handed onward as written, so only its mapping-ness is
+// enforced. Sequences and scalars fall back to an empty subscription list.
+export const warehouseSpecSchema = z.record(z.string(), z.unknown()).catch({ subscriptions: [] });
+
+// An array whose items are trusted as-is. Item types come from generated models
+// (FreightRequest) or the promotion-steps registry (RunnerWithConfiguration);
+// re-describing them here would duplicate the generator, so only array-ness is
+// checked -- exactly what the hand-written checks did.
+const looseArray = <T>() =>
+  z
+    .array(z.unknown())
+    .catch([])
+    .transform((items) => items as T[]);
 
 export type BasicsState = {
   name: string;
@@ -12,7 +42,12 @@ export type BasicsState = {
 // git, image, and Helm chart repos, matching what Warehouses need to pull
 // artifacts. Generic secrets (accessed via secret() in promotion steps) are
 // out of scope for guided setup; they can be added later from project settings.
-export type CredentialType = 'git' | 'image' | 'helm';
+const credentialTypeEnum = z.enum(['git', 'image', 'helm']);
+
+export type CredentialType = z.infer<typeof credentialTypeEnum>;
+
+// The runtime counterpart of the union above, for membership checks.
+export const credentialTypes = credentialTypeEnum.options;
 
 // Auth methods map to the secret data keys understood by pkg/credentials/*.
 // 'ambient' stores no Secret at all (IRSA / workload identity on the
@@ -192,7 +227,11 @@ export const exampleStages = (warehouseName = 'guestbook'): StageDraft[] => [
 // label selector) and toggles auto-promotion. It maps to a ProjectConfig
 // spec.promotionPolicies entry using stageSelector (the modern field; the
 // deprecated top-level `stage` field is intentionally not used).
-export type PolicySelectorType = 'exact' | 'regex' | 'glob' | 'labels';
+// The schema is the single source of the four selector kinds: the type is
+// derived from it, and normalizePolicy reuses it to validate persisted drafts.
+const policySelectorEnum = z.enum(['exact', 'regex', 'glob', 'labels']);
+
+export type PolicySelectorType = z.infer<typeof policySelectorEnum>;
 
 export type PolicyDraft = {
   selectorType: PolicySelectorType;
@@ -221,6 +260,14 @@ export const initialBasicsState = (): BasicsState => ({
   name: '',
   description: ''
 });
+
+// Coerces a persisted draft to the BasicsState shape, so every slice of a
+// restored draft is checked rather than spread in unvalidated.
+const basicsDraftSchema = z
+  .object({ name: stringOrEmpty, description: stringOrEmpty })
+  .catch({ name: '', description: '' });
+
+export const normalizeBasics = (raw: unknown): BasicsState => basicsDraftSchema.parse(raw);
 
 export const initialWizardState = (): WizardState => ({
   basics: initialBasicsState(),
@@ -260,42 +307,37 @@ export const normalizeCredential = (raw: unknown): CredentialData => {
 
 // Coerces a persisted draft to the WarehouseDraft shape (older drafts from
 // when this slice was an unimplemented placeholder may hold arbitrary data).
-export const normalizeWarehouse = (raw: unknown): WarehouseDraft => {
-  const draft = (raw ?? {}) as Partial<WarehouseDraft>;
-  return {
-    name: typeof draft.name === 'string' ? draft.name : '',
-    spec: draft.spec && typeof draft.spec === 'object' ? draft.spec : { subscriptions: [] }
-  };
-};
+const warehouseDraftSchema = z
+  .object({ name: stringOrEmpty, spec: warehouseSpecSchema })
+  .catch({ name: '', spec: { subscriptions: [] } });
+
+export const normalizeWarehouse = (raw: unknown): WarehouseDraft => warehouseDraftSchema.parse(raw);
 
 // Coerces a persisted draft to the StageDraft shape (defensive, like the others).
-export const normalizeStage = (raw: unknown): StageDraft => {
-  const draft = (raw ?? {}) as Partial<StageDraft>;
-  return {
-    name: typeof draft.name === 'string' ? draft.name : '',
-    color: typeof draft.color === 'string' ? draft.color : undefined,
-    requestedFreight: Array.isArray(draft.requestedFreight) ? draft.requestedFreight : [],
-    steps: Array.isArray(draft.steps) ? draft.steps : []
-  };
-};
+const stageDraftSchema = z
+  .object({
+    name: stringOrEmpty,
+    color: z.string().optional().catch(undefined),
+    requestedFreight: looseArray<FreightRequest>(),
+    steps: looseArray<RunnerWithConfiguration>()
+  })
+  .catch({ name: '', color: undefined, requestedFreight: [], steps: [] });
 
-// Coerces a persisted draft to the PolicyDraft shape.
-export const normalizePolicy = (raw: unknown): PolicyDraft => {
-  const draft = (raw ?? {}) as Partial<PolicyDraft>;
-  const selectorType: PolicySelectorType =
-    draft.selectorType === 'regex' ||
-    draft.selectorType === 'glob' ||
-    draft.selectorType === 'labels'
-      ? draft.selectorType
-      : 'exact';
-  return {
-    selectorType,
-    value: typeof draft.value === 'string' ? draft.value : '',
-    matchLabels:
-      draft.matchLabels && typeof draft.matchLabels === 'object' ? draft.matchLabels : {},
-    autoPromotionEnabled: !!draft.autoPromotionEnabled
-  };
-};
+export const normalizeStage = (raw: unknown): StageDraft => stageDraftSchema.parse(raw);
+
+// Coerces a persisted draft to the PolicyDraft shape. autoPromotionEnabled is
+// coerced rather than type-checked, preserving the truthiness the hand-written
+// version applied (`!!draft.autoPromotionEnabled`).
+const policyDraftSchema = z
+  .object({
+    selectorType: policySelectorEnum.catch('exact'),
+    value: stringOrEmpty,
+    matchLabels: stringRecordSchema,
+    autoPromotionEnabled: z.coerce.boolean().catch(false)
+  })
+  .catch({ selectorType: 'exact', value: '', matchLabels: {}, autoPromotionEnabled: false });
+
+export const normalizePolicy = (raw: unknown): PolicyDraft => policyDraftSchema.parse(raw);
 
 // RFC 1123 label: the Project name doubles as the Namespace name.
 export const projectNameRegex = /^[a-z0-9]([-a-z0-9]*[a-z0-9])?$/;

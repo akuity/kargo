@@ -24,8 +24,12 @@ import {
   WarehouseDraft,
   WizardState,
   credentialSecretFields,
+  credentialTypes,
   initialCredential,
-  isValidProjectName
+  isValidProjectName,
+  stringOrEmpty,
+  stringRecordSchema,
+  warehouseSpecSchema
 } from '../types';
 
 export type ResourceRef = {
@@ -74,8 +78,6 @@ const maskSecretManifest = (m: AnyManifest): AnyManifest => {
   );
   return { ...m, stringData };
 };
-
-const credTypes: readonly CredentialType[] = ['git', 'image', 'helm'];
 
 export const projectManifest = (basics: BasicsState): Manifest<Project> => {
   const annotations: Record<string, string> = {};
@@ -258,14 +260,12 @@ const placeholderComment = (lines: string[]) => lines.map((l) => `# ${l}`).join(
 
 // --- Parsing hand-edited YAML back into wizard state ------------------------
 // The input is whatever the user typed in the preview rail, so it is parsed,
-// not cast: fields degrade via `.catch`, and the rail shows a throw verbatim.
-
-// Label and annotation values are always strings, so scalars are coerced.
-const stringRecordSchema = z.record(z.string(), z.coerce.string()).catch({});
+// not cast: fields degrade via the lenient schemas shared with the persisted-
+// draft parsers in ../types, and the rail shows a throw verbatim.
 
 const metadataSchema = z
   .object({
-    name: z.string().catch(''),
+    name: stringOrEmpty,
     labels: stringRecordSchema,
     annotations: stringRecordSchema
   })
@@ -288,10 +288,9 @@ const secretDocSchema = manifestDocSchema('Secret').extend({
   stringData: stringRecordSchema
 });
 
-// Only required to be a mapping: the spec reaches the API as written. Its
-// contents are validated by the RJSF form, which this path bypasses.
+// The spec's contents are validated by the RJSF form, which this path bypasses.
 const warehouseDocSchema = manifestDocSchema('Warehouse').extend({
-  spec: z.record(z.string(), z.unknown()).catch({ subscriptions: [] })
+  spec: warehouseSpecSchema
 });
 
 type SecretDoc = z.infer<typeof secretDocSchema>;
@@ -336,7 +335,7 @@ export const basicsFromYaml = (text: string, prev: BasicsState): BasicsState => 
 // wins -- mirroring how pkg/credentials reads a Secret.
 const credentialFromSecret = ({ metadata, stringData: data }: SecretDoc): CredentialData => {
   const type = metadata.labels[CredentialTypeLabelKey] as CredentialType | undefined;
-  if (!type || !credTypes.includes(type)) {
+  if (!type || !credentialTypes.includes(type)) {
     throw new Error(
       `Secret ${metadata.name || '(unnamed)'} needs label ` +
         `${CredentialTypeLabelKey}: git | image | helm`

@@ -8,6 +8,7 @@ import {
   StepId,
   WizardState,
   initialWizardState,
+  normalizeBasics,
   normalizeCredential,
   normalizePolicy,
   normalizeStage,
@@ -32,7 +33,7 @@ const hydrate = (draft: WizardDraft | undefined): WizardState => {
   return {
     ...initial,
     ...draft?.state,
-    basics: { ...initial.basics, ...draft?.state?.basics },
+    basics: normalizeBasics(draft?.state?.basics),
     credentials: (draft?.state?.credentials ?? []).map(normalizeCredential),
     warehouses: (draft?.state?.warehouses ?? []).map(normalizeWarehouse),
     stages: (draft?.state?.stages ?? []).map(normalizeStage),
