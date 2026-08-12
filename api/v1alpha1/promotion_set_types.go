@@ -98,8 +98,12 @@ type PromotionSetSpec struct {
 	// may be empty, which records that the governing Stage's target selectors
 	// matched no Targets at the time the PromotionSet was created.
 	//
-	// +listType=map
-	// +listMapKey=name
+	// Target names MUST be unique. This is enforced by the PromotionSet
+	// validating webhook rather than by the schema: the list is immutable, so
+	// per-item ownership tracking would only inflate the object's managedFields
+	// without ever being used to merge anything into it.
+	//
+	// +listType=atomic
 	// +kubebuilder:validation:Required
 	// +kubebuilder:validation:XValidation:rule="self == oldSelf"
 	Targets []PromotionSetTarget `json:"targets"`

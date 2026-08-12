@@ -84,6 +84,11 @@ spec:
                   Each Target MUST be in the same namespace as the PromotionSet. The list
                   may be empty, which records that the governing Stage's target selectors
                   matched no Targets at the time the PromotionSet was created.
+
+                  Target names MUST be unique. This is enforced by the PromotionSet
+                  validating webhook rather than by the schema: the list is immutable, so
+                  per-item ownership tracking would only inflate the object's managedFields
+                  without ever being used to merge anything into it.
                 items:
                   description: PromotionSetTarget identifies a Target selected by
                     a PromotionSet.
@@ -98,9 +103,7 @@ spec:
                   - name
                   type: object
                 type: array
-                x-kubernetes-list-map-keys:
-                - name
-                x-kubernetes-list-type: map
+                x-kubernetes-list-type: atomic
                 x-kubernetes-validations:
                 - rule: self == oldSelf
             required:
