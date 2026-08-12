@@ -6,27 +6,22 @@ import type { FreightRequest } from '@ui/gen/api/v2/models';
 export type StepId = 'basics' | 'credentials' | 'warehouses' | 'stages' | 'policies' | 'review';
 
 // --- Lenient schemas for untrusted input ------------------------------------
-// Two paths take input the wizard did not produce: hand-edited YAML in the
-// preview rail (see manifest-builder) and drafts restored from localStorage
-// (see the normalize* functions below). Both must degrade rather than reject --
-// the rail commits while the user is still typing, and a draft may have been
-// written by an older version of the wizard. These are the shared pieces.
+// Shared by the two paths taking input the wizard did not produce: YAML
+// hand-edited in the preview rail, and drafts restored from localStorage. Both
+// degrade rather than reject -- the rail commits mid-typing, and a draft may
+// predate the current shape.
 
-// A string, or '' for anything that isn't one.
+// A string, or '' for anything else.
 export const stringOrEmpty = z.string().catch('');
 
-// Kubernetes label and annotation values are always strings, so scalars are
-// coerced. Anything that isn't a mapping yields {}.
+// Label and annotation values are always strings, so scalars are coerced.
 export const stringRecordSchema = z.record(z.string(), z.coerce.string()).catch({});
 
-// A Warehouse spec is handed onward as written, so only its mapping-ness is
-// enforced. Sequences and scalars fall back to an empty subscription list.
+// The spec is handed onward as written; only its mapping-ness is enforced.
 export const warehouseSpecSchema = z.record(z.string(), z.unknown()).catch({ subscriptions: [] });
 
-// An array whose items are trusted as-is. Item types come from generated models
-// (FreightRequest) or the promotion-steps registry (RunnerWithConfiguration);
-// re-describing them here would duplicate the generator, so only array-ness is
-// checked -- exactly what the hand-written checks did.
+// Items are trusted as-is: their types come from generated models, so only
+// array-ness is checked -- exactly what the hand-written checks did.
 const looseArray = <T>() =>
   z
     .array(z.unknown())
@@ -227,8 +222,7 @@ export const exampleStages = (warehouseName = 'guestbook'): StageDraft[] => [
 // label selector) and toggles auto-promotion. It maps to a ProjectConfig
 // spec.promotionPolicies entry using stageSelector (the modern field; the
 // deprecated top-level `stage` field is intentionally not used).
-// The schema is the single source of the four selector kinds: the type is
-// derived from it, and normalizePolicy reuses it to validate persisted drafts.
+// Single source of the four selector kinds: the type is derived from it.
 const policySelectorEnum = z.enum(['exact', 'regex', 'glob', 'labels']);
 
 export type PolicySelectorType = z.infer<typeof policySelectorEnum>;
@@ -261,8 +255,7 @@ export const initialBasicsState = (): BasicsState => ({
   description: ''
 });
 
-// Coerces a persisted draft to the BasicsState shape, so every slice of a
-// restored draft is checked rather than spread in unvalidated.
+// Checked like the other slices, rather than spread in unvalidated.
 const basicsDraftSchema = z
   .object({ name: stringOrEmpty, description: stringOrEmpty })
   .catch({ name: '', description: '' });
@@ -325,9 +318,8 @@ const stageDraftSchema = z
 
 export const normalizeStage = (raw: unknown): StageDraft => stageDraftSchema.parse(raw);
 
-// Coerces a persisted draft to the PolicyDraft shape. autoPromotionEnabled is
-// coerced rather than type-checked, preserving the truthiness the hand-written
-// version applied (`!!draft.autoPromotionEnabled`).
+// autoPromotionEnabled is coerced, not type-checked, preserving the truthiness
+// of the old `!!draft.autoPromotionEnabled`.
 const policyDraftSchema = z
   .object({
     selectorType: policySelectorEnum.catch('exact'),

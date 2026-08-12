@@ -37,6 +37,10 @@ export type ResourceRef = {
   name: string;
 };
 
+// Kind and name together, since a Stage and a Warehouse may share a name. Map
+// builders and their lookups must agree, so the key lives in one place.
+export const resourceKey = (ref: ResourceRef) => `${ref.kind}/${ref.name}`;
+
 // The generated models describe these resources as read from the API, where
 // every field is optional. The wizard writes them, so require what it always
 // sets: kind and metadata.name key every resource through creation and retry.

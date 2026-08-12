@@ -4,7 +4,7 @@ import { Alert, Card, theme } from 'antd';
 
 import { ItemState, ProgressItem } from '../create/create-engine';
 import { CreateStatus } from '../create/use-create-project';
-import { resourceList } from '../manifest/manifest-builder';
+import { resourceKey, resourceList } from '../manifest/manifest-builder';
 import { WizardState } from '../types';
 
 type StepReviewProps = {
@@ -25,7 +25,7 @@ export const StepReview = ({ state, status, items }: StepReviewProps) => {
   // The list is always derived from the current wizard state; run progress (if
   // any) is overlaid per resource by kind/name — never the source of the list.
   const resources = resourceList(state);
-  const progressByKey = new Map(items.map((i) => [`${i.kind}/${i.name}`, i]));
+  const progressByKey = new Map(items.map((i) => [resourceKey(i), i]));
 
   return (
     <div className='flex flex-col gap-4'>
@@ -44,13 +44,10 @@ export const StepReview = ({ state, status, items }: StepReviewProps) => {
           </div>
         ) : (
           resources.map((r) => {
-            const progress = progressByKey.get(`${r.kind}/${r.name}`);
+            const progress = progressByKey.get(resourceKey(r));
             const icon = progress && stateIcon[progress.state];
             return (
-              <div
-                key={`${r.kind}/${r.name}`}
-                className='flex items-center gap-2 py-1.5 text-[13px]'
-              >
+              <div key={resourceKey(r)} className='flex items-center gap-2 py-1.5 text-[13px]'>
                 {icon ? (
                   <FontAwesomeIcon
                     icon={icon.icon}

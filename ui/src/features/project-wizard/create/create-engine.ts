@@ -1,6 +1,6 @@
 import { apiErrorBodyMessage, isApiErrorLike } from '@ui/lib/api/error-message';
 
-import { CreationManifest } from '../manifest/manifest-builder';
+import { CreationManifest, resourceKey } from '../manifest/manifest-builder';
 
 export type ItemState = 'pending' | 'running' | 'done' | 'error';
 
@@ -39,10 +39,9 @@ export const toProgressItems = (manifests: CreationManifest[]): ProgressItem[] =
 // passed its readiness gate carries `created` forward instead, so the retry
 // re-runs only the gate.
 export const mergeForRetry = (previous: ProgressItem[], fresh: ProgressItem[]): ProgressItem[] => {
-  const nameKey = (i: CreationManifest) => `${i.kind}/${i.name}`;
-  const priorByKey = new Map(previous.map((i) => [nameKey(i), i]));
+  const priorByKey = new Map(previous.map((i) => [resourceKey(i), i]));
   return fresh.map((i) => {
-    const prior = priorByKey.get(nameKey(i));
+    const prior = priorByKey.get(resourceKey(i));
     if (prior?.state === 'done') {
       return { ...i, state: 'done' as const, message: 'Created', created: true };
     }

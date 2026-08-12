@@ -5,7 +5,7 @@ import { useEffect, useRef, useState } from 'react';
 
 import { YamlEditor } from '@ui/features/common/code-editor/yaml-editor';
 
-import { ResourceRef } from '../manifest/manifest-builder';
+import { ResourceRef, resourceKey } from '../manifest/manifest-builder';
 
 type YamlRailProps = {
   yaml: string;
@@ -123,7 +123,7 @@ export const YamlRail = ({ yaml, stepTitle, resources, onLiveEdit }: YamlRailPro
         <div className='flex flex-wrap gap-1.5'>
           {resources.map((r) => (
             <span
-              key={`${r.kind}/${r.name}`}
+              key={resourceKey(r)}
               className='inline-flex items-center gap-1.5 rounded-full bg-white/10 px-2.5 py-0.5 font-mono text-[11px]'
             >
               <span
