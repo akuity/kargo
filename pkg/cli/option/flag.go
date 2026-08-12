@@ -37,6 +37,9 @@ const (
 	// DownstreamFromFlag is the flag name for the downstream-from flag.
 	DownstreamFromFlag = "downstream-from"
 
+	// ExportFlag is the flag name for the export flag.
+	ExportFlag = "export"
+
 	// FilenameFlag is the flag name for the filename flag.
 	FilenameFlag = "filename"
 	// FilenameShortFlag is the short flag name for the filename flag.
@@ -83,6 +86,9 @@ const (
 
 	// OriginFlag is the flag name for the origin flag.
 	OriginFlag = "origin"
+
+	// OutputFileFlag is the flag name for the out flag.
+	OutputFileFlag = "out"
 
 	// PasswordFlag is the flag name for the password flag.
 	PasswordFlag = "password"
@@ -188,6 +194,11 @@ func DownstreamFrom(fs *pflag.FlagSet, downstreamFrom *string, usage string) {
 	fs.StringVar(downstreamFrom, DownstreamFromFlag, "", usage)
 }
 
+// Export adds the ExportFlag to the provided flag set.
+func Export(fs *pflag.FlagSet, export *bool, usage string) {
+	fs.BoolVar(export, ExportFlag, false, usage)
+}
+
 // Filenames adds the FilenameFlag and FilenameShortFlag to the provided flag set.
 func Filenames(fs *pflag.FlagSet, filenames *[]string, usage string) {
 	fs.StringSliceVarP(filenames, FilenameFlag, FilenameShortFlag, nil, usage)
@@ -271,6 +282,11 @@ func OldAlias(fs *pflag.FlagSet, stage *string, usage string) {
 // Origins adds the OriginsFlag to the provided flag set.
 func Origins(fs *pflag.FlagSet, origin *[]string, usage string) {
 	fs.StringArrayVar(origin, OriginFlag, nil, usage)
+}
+
+// OutputFile adds the OutputFileFlag to the provided flag set.
+func OutputFile(fs *pflag.FlagSet, outputFile *string, usage string) {
+	fs.StringVar(outputFile, OutputFileFlag, "", usage)
 }
 
 // Warehouse adds the WarehouseFlag to the provided flag set.
