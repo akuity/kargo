@@ -19,6 +19,7 @@ import (
 	"github.com/akuity/kargo/pkg/cli/config"
 	"github.com/akuity/kargo/pkg/cli/io"
 	"github.com/akuity/kargo/pkg/cli/kubernetes"
+	"github.com/akuity/kargo/pkg/cli/option"
 	"github.com/akuity/kargo/pkg/cli/templates"
 	"github.com/akuity/kargo/pkg/conditions"
 )
@@ -32,7 +33,9 @@ type getProjectsOptions struct {
 	Config        config.CLIConfig
 	ClientOptions client.Options
 
-	Names []string
+	Names      []string
+	Export     bool
+	OutputFile string
 }
 
 func newGetProjectsCommand(
@@ -60,6 +63,9 @@ kargo get projects -o json
 
 # Get a single project by name
 kargo get project my-project
+
+# Export all projects as git-friendly manifests
+kargo get projects --export --out projects.yaml
 `),
 		RunE: func(cmd *cobra.Command, args []string) error {
 			cmdOpts.complete(args)
@@ -81,6 +87,15 @@ kargo get project my-project
 func (o *getProjectsOptions) addFlags(cmd *cobra.Command) {
 	o.ClientOptions.AddFlags(cmd.PersistentFlags())
 	o.AddFlags(cmd)
+
+	option.Export(
+		cmd.Flags(), &o.Export,
+		"Export projects as git-friendly manifests, stripping status and non-applyable metadata fields.",
+	)
+	option.OutputFile(
+		cmd.Flags(), &o.OutputFile,
+		"Write output to the given file instead of stdout.",
+	)
 }
 
 // complete sets the options from the command arguments.
@@ -113,7 +128,9 @@ func (o *getProjectsOptions) run(ctx context.Context) error {
 		if err = json.Unmarshal(projectsJSON, &projectsList); err != nil {
 			return err
 		}
-		return PrintObjects(projectsList.Items, o.PrintFlags, o.IOStreams, o.NoHeaders)
+		return PrintExportableObjects(
+			projectsList.Items, o.PrintFlags, o.IOStreams, o.NoHeaders, o.Export, o.OutputFile,
+		)
 	}
 
 	projects := make([]*kargoapi.Project, 0, len(o.Names))
@@ -140,7 +157,9 @@ func (o *getProjectsOptions) run(ctx context.Context) error {
 		projects = append(projects, project)
 	}
 
-	if err = PrintObjects(projects, o.PrintFlags, o.IOStreams, o.NoHeaders); err != nil {
+	if err = PrintExportableObjects(
+		projects, o.PrintFlags, o.IOStreams, o.NoHeaders, o.Export, o.OutputFile,
+	); err != nil {
 		return fmt.Errorf("print projects: %w", err)
 	}
 	return errors.Join(errs...)
