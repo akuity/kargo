@@ -280,7 +280,7 @@ test('createdProjectName is undefined when no named Project was submitted', () =
 });
 
 test('errorMessage extracts a readable message', () => {
-  expect(errorMessage(apiError(422, 'Unprocessable', { message: 'nope' }))).toBe('nope');
+  expect(errorMessage(apiError(422, 'Unprocessable', { error: 'nope' }))).toBe('nope');
   expect(errorMessage(apiError(500, 'Server Error', ''))).toBe('Server Error');
   expect(errorMessage(new Error('plain'))).toBe('plain');
 });
