@@ -783,7 +783,19 @@ const transformMeasurementValue = (
     };
   }
 
-  const parsedValue = JSON.parse(value);
+  let parsedValue;
+  try {
+    parsedValue = JSON.parse(value);
+  } catch {
+    // Providers are not obliged to return JSON. The web provider, for one,
+    // passes a plain text response through untouched. Such a value cannot be
+    // charted, but it is still worth surfacing in the table as-is.
+    return {
+      canChart: false,
+      chartValue: null,
+      tableValue: value
+    };
+  }
 
   // single number measurement value
   if (isFiniteNumber(parsedValue)) {

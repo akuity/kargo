@@ -24,7 +24,8 @@ import {
   metricStatusLabel,
   metricSubstatus,
   printableCloudWatchQuery,
-  printableDatadogQuery
+  printableDatadogQuery,
+  transformMeasurements
 } from './transforms';
 import { AnalysisStatus, FunctionalStatus } from './types';
 
@@ -557,6 +558,45 @@ describe('analysis modal transforms', () => {
       canChart: false,
       chartValue: { latency: null, cpuUsage: null },
       tableValue: { latency: null, cpuUsage: null }
+    });
+  });
+
+  // Regression: a provider that returns plain text (the web provider passes a
+  // text/plain body through unchanged) used to throw a SyntaxError out of
+  // JSON.parse and take the whole analysis modal down with it.
+  test('transformMeasurements() with a plain text measurement value', () => {
+    expect(transformMeasurements([], [{ value: 'PASS' }])).toEqual({
+      chartable: false,
+      min: 0,
+      max: null,
+      measurements: [{ value: 'PASS', chartValue: null, tableValue: 'PASS' }]
+    });
+  });
+  test('transformMeasurements() with a malformed JSON measurement value', () => {
+    expect(transformMeasurements([], [{ value: '{"cpuUsage":' }])).toEqual({
+      chartable: false,
+      min: 0,
+      max: null,
+      measurements: [{ value: '{"cpuUsage":', chartValue: null, tableValue: '{"cpuUsage":' }]
+    });
+  });
+  test('transformMeasurements() still parses a valid JSON measurement value', () => {
+    expect(transformMeasurements([], [{ value: '500' }])).toEqual({
+      chartable: true,
+      min: 0,
+      max: 500,
+      measurements: [{ value: '500', chartValue: 500, tableValue: 500 }]
+    });
+  });
+  test('transformMeasurements() with both parseable and unparseable values', () => {
+    expect(transformMeasurements([], [{ value: '500' }, { value: 'PASS' }])).toEqual({
+      chartable: false,
+      min: 0,
+      max: 500,
+      measurements: [
+        { value: '500', chartValue: 500, tableValue: 500 },
+        { value: 'PASS', chartValue: null, tableValue: 'PASS' }
+      ]
     });
   });
 });
