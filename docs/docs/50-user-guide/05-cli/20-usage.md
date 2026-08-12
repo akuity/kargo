@@ -61,9 +61,19 @@ kargo get freight --project my-project --warehouse my-warehouse
 
 # List Promotions for a Stage
 kargo get promotions --project my-project --stage test
+
+# Export Stages as git-friendly manifests, e.g. after tweaking them in the UI
+kargo get stages --project my-project --export --out stages.yaml
 ```
 
 Run `kargo get --help` to see every resource type that can be retrieved.
+
+:::note
+`--export` is available on resource types that represent desired state
+(Projects, Stages, Warehouses, ProjectConfigs, and ConfigMaps). It strips
+`.status` and other non-applyable metadata fields, producing manifests
+suitable for committing to git and reapplying with `kargo apply`.
+:::
 
 ### Promote Freight
 
