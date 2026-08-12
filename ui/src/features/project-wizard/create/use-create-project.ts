@@ -1,6 +1,11 @@
 import { MutationStatus, useMutation, useQueryClient } from '@tanstack/react-query';
 import { useState } from 'react';
 
+import {
+  StageConditionStatus,
+  StageConditionType,
+  hasCondition
+} from '@ui/features/common/stage-status/utils';
 import { getListProjectsQueryKey, getProject } from '@ui/gen/api/v2/core/core';
 import { V1Condition } from '@ui/gen/api/v2/models';
 import { createResource } from '@ui/gen/api/v2/resources/resources';
@@ -14,13 +19,11 @@ export type CreateStatus = MutationStatus;
 
 const createFn = (manifestYaml: string) => createResource(manifestYaml).then(() => undefined);
 
-// ConditionTypeReady in api/v1alpha1.
-const READY_CONDITION_TYPE = 'Ready';
 const READY_TIMEOUT_MS = 30_000;
 const READY_POLL_INTERVAL_MS = 1_000;
 
 const isReady = (conditions: V1Condition[] = []) =>
-  conditions.some((c) => c.type === READY_CONDITION_TYPE && c.status === 'True');
+  hasCondition(StageConditionType.Ready, StageConditionStatus.True, conditions).isActive;
 
 // Everything after the Project lands in the Namespace the Project provisions
 // asynchronously, so gate on the Project reporting Ready.

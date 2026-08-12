@@ -1,6 +1,16 @@
 import yaml from 'yaml';
 
+import { CredentialTypeLabelKey } from '@ui/features/common/settings/secrets/types';
 import { DESCRIPTION_ANNOTATION_KEY } from '@ui/features/common/utils';
+import {
+  Project,
+  ProjectConfig,
+  PromotionPolicy,
+  Stage,
+  V1ObjectMeta,
+  V1Secret,
+  Warehouse
+} from '@ui/gen/api/v2/models';
 import { cleanEmptyObjectValues } from '@ui/utils/helpers';
 
 import {
@@ -17,28 +27,21 @@ import {
   isValidProjectName
 } from '../types';
 
-// Annotation/label keys mirror api/v1alpha1/{annotations,labels}.go
-const annotationKeyDescription = DESCRIPTION_ANNOTATION_KEY;
-const labelKeyCredentialType = 'kargo.akuity.io/cred-type';
-
 export type ResourceRef = {
   kind: string;
   name: string;
 };
 
-type Manifest = {
+// The generated models describe these resources as read from the API, where
+// every field is optional. The wizard writes them, so require what it always
+// sets: kind and metadata.name key every resource through creation and retry.
+type Manifest<T> = T & {
   apiVersion: string;
   kind: string;
-  metadata: {
-    name: string;
-    namespace?: string;
-    labels?: Record<string, string>;
-    annotations?: Record<string, string>;
-  };
-  type?: string;
-  stringData?: Record<string, string>;
-  spec?: Record<string, unknown>;
+  metadata: V1ObjectMeta & { name: string };
 };
+
+type AnyManifest = Manifest<Project | V1Secret | Warehouse | Stage | ProjectConfig>;
 
 const base64Utf8 = (value: string) => btoa(String.fromCharCode(...new TextEncoder().encode(value)));
 
@@ -59,8 +62,8 @@ const secretDataKeys = new Set<string>(credentialSecretFields);
 // Masks secret values in a Secret manifest's stringData, for the YAML preview
 // only — never applied on the creation path, so the API still receives the real
 // secrets. Empty values stay empty, so it's clear when nothing is set.
-const maskSecretManifest = (m: Manifest): Manifest => {
-  if (m.kind !== 'Secret' || !m.stringData) {
+const maskSecretManifest = (m: AnyManifest): AnyManifest => {
+  if (!('stringData' in m) || !m.stringData) {
     return m;
   }
   const stringData = Object.fromEntries(
@@ -73,10 +76,10 @@ const maskSecretManifest = (m: Manifest): Manifest => {
 
 const credTypes: readonly CredentialType[] = ['git', 'image', 'helm'];
 
-export const projectManifest = (basics: BasicsState): Manifest => {
+export const projectManifest = (basics: BasicsState): Manifest<Project> => {
   const annotations: Record<string, string> = {};
   if (basics.description) {
-    annotations[annotationKeyDescription] = basics.description;
+    annotations[DESCRIPTION_ANNOTATION_KEY] = basics.description;
   }
   return {
     apiVersion: 'kargo.akuity.io/v1alpha1',
@@ -131,7 +134,7 @@ const credentialStringData = (cred: CredentialData): Record<string, string> => {
 export const credentialSecretManifest = (
   cred: CredentialData,
   project: string
-): Manifest | null => {
+): Manifest<V1Secret> | null => {
   if (cred.auth === 'ambient') {
     return null;
   }
@@ -141,9 +144,9 @@ export const credentialSecretManifest = (
     metadata: {
       name: cred.name,
       namespace: project,
-      labels: { [labelKeyCredentialType]: cred.type },
+      labels: { [CredentialTypeLabelKey]: cred.type },
       ...(cred.description && {
-        annotations: { [annotationKeyDescription]: cred.description }
+        annotations: { [DESCRIPTION_ANNOTATION_KEY]: cred.description }
       })
     },
     stringData: credentialStringData(cred)
@@ -152,7 +155,7 @@ export const credentialSecretManifest = (
 
 // Mirrors warehouseManifestsGen in features/utils/manifest-generator. Clones
 // the spec so cleanEmptyObjectValues (which mutates) never touches wizard state.
-export const warehouseManifest = (draft: WarehouseDraft, project: string): Manifest => ({
+export const warehouseManifest = (draft: WarehouseDraft, project: string): Manifest<Warehouse> => ({
   apiVersion: 'kargo.akuity.io/v1alpha1',
   kind: 'Warehouse',
   metadata: { name: draft.name, namespace: project },
@@ -161,7 +164,7 @@ export const warehouseManifest = (draft: WarehouseDraft, project: string): Manif
 
 // Mirrors stageFormToYAML in features/stage/create-stage. Steps map from the
 // reused PromotionStepsWizard's RunnerWithConfiguration to Stage promotion steps.
-export const stageManifest = (draft: StageDraft, project: string): Manifest => {
+export const stageManifest = (draft: StageDraft, project: string): Manifest<Stage> => {
   const steps = draft.steps.map((s) => ({
     uses: s.identifier,
     as: s.as || '',
@@ -188,7 +191,7 @@ export const stageManifest = (draft: StageDraft, project: string): Manifest => {
   };
 };
 
-const promotionPolicySpec = (p: PolicyDraft): Record<string, unknown> => {
+const promotionPolicySpec = (p: PolicyDraft): PromotionPolicy => {
   const base = { autoPromotionEnabled: p.autoPromotionEnabled };
   switch (p.selectorType) {
     case 'regex':
@@ -206,7 +209,7 @@ const promotionPolicySpec = (p: PolicyDraft): Record<string, unknown> => {
 // A ProjectConfig holds project-scoped configuration: promotion policies (and,
 // later, webhook receivers). Named after the project, like the Project itself.
 // Returns null when there is nothing to configure.
-export const projectConfigManifest = (state: WizardState): Manifest | null => {
+export const projectConfigManifest = (state: WizardState): Manifest<ProjectConfig> | null => {
   if (state.policies.length === 0) {
     return null;
   }
@@ -220,7 +223,7 @@ export const projectConfigManifest = (state: WizardState): Manifest | null => {
 
 // All manifests the wizard will create, in creation order. Grows as more
 // steps are implemented.
-export const orderedManifests = (state: WizardState): Manifest[] => {
+export const orderedManifests = (state: WizardState): AnyManifest[] => {
   if (!isValidProjectName(state.basics.name)) {
     return [];
   }
@@ -229,7 +232,7 @@ export const orderedManifests = (state: WizardState): Manifest[] => {
     projectManifest(state.basics),
     ...state.credentials
       .map((c) => credentialSecretManifest(c, state.basics.name))
-      .filter((m): m is Manifest => m !== null),
+      .filter((m): m is Manifest<V1Secret> => m !== null),
     ...state.warehouses.map((w) => warehouseManifest(w, state.basics.name)),
     ...state.stages.map((s) => stageManifest(s, state.basics.name)),
     ...(projectConfig ? [projectConfig] : [])
@@ -276,7 +279,7 @@ export const basicsFromYaml = (text: string, prev: BasicsState): BasicsState => 
   return {
     ...prev,
     name: typeof metadata.name === 'string' ? metadata.name : '',
-    description: annotations[annotationKeyDescription] ?? ''
+    description: annotations[DESCRIPTION_ANNOTATION_KEY] ?? ''
   };
 };
 
@@ -286,17 +289,17 @@ const credentialFromSecret = (doc: Record<string, unknown>): CredentialData => {
   const annotations = toStringRecord(metadata.annotations);
   const data = toStringRecord(doc.stringData);
 
-  const type = labels[labelKeyCredentialType] as CredentialType | undefined;
+  const type = labels[CredentialTypeLabelKey] as CredentialType | undefined;
   if (!type || !credTypes.includes(type)) {
     throw new Error(
       `Secret ${metadata.name ?? '(unnamed)'} needs label ` +
-        `${labelKeyCredentialType}: git | image | helm`
+        `${CredentialTypeLabelKey}: git | image | helm`
     );
   }
 
   const cred = initialCredential(type);
   cred.name = typeof metadata.name === 'string' ? metadata.name : '';
-  cred.description = annotations[annotationKeyDescription] ?? '';
+  cred.description = annotations[DESCRIPTION_ANNOTATION_KEY] ?? '';
 
   cred.repoURL = data.repoURL ?? '';
   cred.repoURLIsRegex = data.repoURLIsRegex === 'true';
@@ -422,7 +425,7 @@ export const yamlForStep = (state: WizardState, step: StepId): string => {
     case 'credentials': {
       const manifests = state.credentials
         .map((c) => credentialSecretManifest(c, state.basics.name))
-        .filter((m): m is Manifest => m !== null);
+        .filter((m): m is Manifest<V1Secret> => m !== null);
       const ambient = state.credentials.filter((c) => c.auth === 'ambient');
       if (manifests.length === 0 && ambient.length === 0) {
         return placeholderComment([
