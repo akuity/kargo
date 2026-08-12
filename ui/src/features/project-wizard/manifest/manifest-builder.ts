@@ -1,4 +1,5 @@
 import yaml from 'yaml';
+import { z } from 'zod';
 
 import { CredentialTypeLabelKey } from '@ui/features/common/settings/secrets/types';
 import { DESCRIPTION_ANNOTATION_KEY } from '@ui/features/common/utils';
@@ -255,51 +256,96 @@ export const creationManifests = (state: WizardState): CreationManifest[] =>
 
 const placeholderComment = (lines: string[]) => lines.map((l) => `# ${l}`).join('\n') + '\n';
 
-const toStringRecord = (value: unknown): Record<string, string> => {
-  if (!value || typeof value !== 'object' || Array.isArray(value)) {
-    return {};
-  }
-  return Object.fromEntries(
-    Object.entries(value as Record<string, unknown>).map(([k, v]) => [k, String(v)])
+// --- Parsing hand-edited YAML back into wizard state ------------------------
+// The input is whatever the user typed in the preview rail, so it is parsed,
+// not cast: fields degrade via `.catch`, and the rail shows a throw verbatim.
+
+// Label and annotation values are always strings, so scalars are coerced.
+const stringRecordSchema = z.record(z.string(), z.coerce.string()).catch({});
+
+const metadataSchema = z
+  .object({
+    name: z.string().catch(''),
+    labels: stringRecordSchema,
+    annotations: stringRecordSchema
+  })
+  .catch({ name: '', labels: {}, annotations: {} });
+
+// The schema-level error covers input that isn't a mapping at all -- an empty
+// or comment-only document parses to null.
+const manifestDocSchema = <K extends string>(kind: K) =>
+  z.object(
+    {
+      kind: z.literal(kind, { error: `Expected kind: ${kind}` }),
+      metadata: metadataSchema
+    },
+    { error: `Expected a YAML mapping describing a ${kind}` }
   );
+
+const projectDocSchema = manifestDocSchema('Project');
+
+const secretDocSchema = manifestDocSchema('Secret').extend({
+  stringData: stringRecordSchema
+});
+
+// Only required to be a mapping: the spec reaches the API as written. Its
+// contents are validated by the RJSF form, which this path bypasses.
+const warehouseDocSchema = manifestDocSchema('Warehouse').extend({
+  spec: z.record(z.string(), z.unknown()).catch({ subscriptions: [] })
+});
+
+type SecretDoc = z.infer<typeof secretDocSchema>;
+
+// A ZodError's own `message` is a JSON dump of its issues. No field paths:
+// every field above falls back, so only `kind` and the document itself can
+// error, and both already name themselves.
+const parseDoc = <S extends z.ZodType>(schema: S, doc: unknown): z.output<S> => {
+  const result = schema.safeParse(doc);
+  if (result.success) {
+    return result.data;
+  }
+  throw new Error(result.error.issues.map((issue) => issue.message).join('; '));
 };
+
+// Surfaces YAML syntax errors and drops the empty documents a stray `---`
+// leaves behind.
+const parseDocs = <S extends z.ZodType>(schema: S, text: string): z.output<S>[] =>
+  yaml
+    .parseAllDocuments(text)
+    .map((d) => {
+      if (d.errors.length > 0) {
+        throw new Error(d.errors[0].message);
+      }
+      return d.toJS() as unknown;
+    })
+    .filter((d) => d !== null && d !== undefined)
+    .map((doc) => parseDoc(schema, doc));
 
 // Inverse of projectManifest: maps an edited Project manifest back onto the
 // basics slice. Throws with a user-facing message when the YAML is unusable.
 export const basicsFromYaml = (text: string, prev: BasicsState): BasicsState => {
-  const doc = yaml.parse(text);
-  if (!doc || typeof doc !== 'object' || Array.isArray(doc)) {
-    throw new Error('Expected a YAML mapping describing a Project');
-  }
-  if (doc.kind !== 'Project') {
-    throw new Error('Expected kind: Project');
-  }
-  const metadata = (doc.metadata ?? {}) as Record<string, unknown>;
-  const annotations = toStringRecord(metadata.annotations);
+  const { metadata } = parseDoc(projectDocSchema, yaml.parse(text));
   return {
     ...prev,
-    name: typeof metadata.name === 'string' ? metadata.name : '',
-    description: annotations[DESCRIPTION_ANNOTATION_KEY] ?? ''
+    name: metadata.name,
+    description: metadata.annotations[DESCRIPTION_ANNOTATION_KEY] ?? ''
   };
 };
 
-const credentialFromSecret = (doc: Record<string, unknown>): CredentialData => {
-  const metadata = (doc.metadata ?? {}) as Record<string, unknown>;
-  const labels = toStringRecord(metadata.labels);
-  const annotations = toStringRecord(metadata.annotations);
-  const data = toStringRecord(doc.stringData);
-
-  const type = labels[CredentialTypeLabelKey] as CredentialType | undefined;
+// Auth is inferred from which keys are present, not declared, so first match
+// wins -- mirroring how pkg/credentials reads a Secret.
+const credentialFromSecret = ({ metadata, stringData: data }: SecretDoc): CredentialData => {
+  const type = metadata.labels[CredentialTypeLabelKey] as CredentialType | undefined;
   if (!type || !credTypes.includes(type)) {
     throw new Error(
-      `Secret ${metadata.name ?? '(unnamed)'} needs label ` +
+      `Secret ${metadata.name || '(unnamed)'} needs label ` +
         `${CredentialTypeLabelKey}: git | image | helm`
     );
   }
 
   const cred = initialCredential(type);
-  cred.name = typeof metadata.name === 'string' ? metadata.name : '';
-  cred.description = annotations[DESCRIPTION_ANNOTATION_KEY] ?? '';
+  cred.name = metadata.name;
+  cred.description = metadata.annotations[DESCRIPTION_ANNOTATION_KEY] ?? '';
 
   cred.repoURL = data.repoURL ?? '';
   cred.repoURLIsRegex = data.repoURLIsRegex === 'true';
@@ -352,26 +398,7 @@ const restoreMaskedSecrets = (cred: CredentialData, prev: CredentialData[]): Cre
 // back onto the credentials slice. Ambient credentials have no manifest, so
 // they carry over from the previous state untouched.
 export const credentialsFromYaml = (text: string, prev: CredentialData[]): CredentialData[] => {
-  const docs = yaml
-    .parseAllDocuments(text)
-    .map((d) => {
-      if (d.errors.length > 0) {
-        throw new Error(d.errors[0].message);
-      }
-      return d.toJS() as unknown;
-    })
-    .filter((d) => d !== null && d !== undefined);
-
-  const parsed = docs.map((doc) => {
-    if (!doc || typeof doc !== 'object' || Array.isArray(doc)) {
-      throw new Error('Expected YAML mappings describing Secrets');
-    }
-    const record = doc as Record<string, unknown>;
-    if (record.kind !== 'Secret') {
-      throw new Error('Expected kind: Secret');
-    }
-    return credentialFromSecret(record);
-  });
+  const parsed = parseDocs(secretDocSchema, text).map(credentialFromSecret);
 
   return [
     ...parsed.map((c) => restoreMaskedSecrets(c, prev)),
@@ -381,33 +408,11 @@ export const credentialsFromYaml = (text: string, prev: CredentialData[]): Crede
 
 // Inverse of the warehouses preview: maps edited Warehouse manifests back onto
 // the warehouses slice. Throws with a user-facing message on unusable input.
-export const warehousesFromYaml = (text: string): WarehouseDraft[] => {
-  const docs = yaml
-    .parseAllDocuments(text)
-    .map((d) => {
-      if (d.errors.length > 0) {
-        throw new Error(d.errors[0].message);
-      }
-      return d.toJS() as unknown;
-    })
-    .filter((d) => d !== null && d !== undefined);
-
-  return docs.map((doc) => {
-    if (!doc || typeof doc !== 'object' || Array.isArray(doc)) {
-      throw new Error('Expected YAML mappings describing Warehouses');
-    }
-    const record = doc as Record<string, unknown>;
-    if (record.kind !== 'Warehouse') {
-      throw new Error('Expected kind: Warehouse');
-    }
-    const metadata = (record.metadata ?? {}) as Record<string, unknown>;
-    const spec =
-      record.spec && typeof record.spec === 'object'
-        ? (record.spec as Record<string, unknown>)
-        : { subscriptions: [] };
-    return { name: typeof metadata.name === 'string' ? metadata.name : '', spec };
-  });
-};
+export const warehousesFromYaml = (text: string): WarehouseDraft[] =>
+  parseDocs(warehouseDocSchema, text).map(({ metadata, spec }) => ({
+    name: metadata.name,
+    spec
+  }));
 
 // YAML shown in the live preview rail for a step.
 export const yamlForStep = (state: WizardState, step: StepId): string => {

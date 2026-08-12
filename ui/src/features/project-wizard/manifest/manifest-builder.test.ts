@@ -108,6 +108,43 @@ test('basicsFromYaml rejects unusable input', () => {
     'Expected kind: Project'
   );
   expect(() => basicsFromYaml('{invalid', prev)).toThrow();
+  // A top-level sequence is a mapping error, not a kind error.
+  expect(() => basicsFromYaml('- kind: Project', prev)).toThrow('Expected a YAML mapping');
+});
+
+test('basicsFromYaml degrades unusable fields instead of failing the document', () => {
+  const prev = { ...initialBasicsState(), name: 'old-name', description: 'old' };
+
+  // Absent metadata, a non-string name, and annotations that are not a mapping
+  // all fall back rather than throwing -- the rail commits while the user is
+  // still typing, so a half-written document must map to a partial draft.
+  expect(basicsFromYaml('kind: Project', prev)).toEqual({ ...prev, name: '', description: '' });
+  expect(basicsFromYaml('kind: Project\nmetadata:\n  name: 42', prev).name).toBe('');
+  expect(
+    basicsFromYaml('kind: Project\nmetadata:\n  name: x\n  annotations: nope', prev).description
+  ).toBe('');
+
+  // Annotation values are coerced to strings, as Kubernetes requires.
+  expect(
+    basicsFromYaml(
+      [
+        'kind: Project',
+        'metadata:',
+        '  name: x',
+        '  annotations:',
+        '    kargo.akuity.io/description: 7'
+      ].join('\n'),
+      prev
+    ).description
+  ).toBe('7');
+});
+
+test('a parse failure throws only its message, not a serialized error', () => {
+  // The rail shows the thrown message verbatim, so it has to stay readable --
+  // a raw ZodError stringifies to a JSON dump of its issues.
+  expect(() => basicsFromYaml('kind: Stage', initialBasicsState())).toThrow(
+    /^Expected kind: Project$/
+  );
 });
 
 test('credentialSecretManifest builds a labeled Secret per auth method', () => {
@@ -362,6 +399,21 @@ test('warehousesFromYaml rejects non-Warehouse input', () => {
   expect(() => warehousesFromYaml('kind: Secret\nmetadata: {name: x}')).toThrow(
     'Expected kind: Warehouse'
   );
+});
+
+test('warehousesFromYaml falls back to an empty spec when the spec is not a mapping', () => {
+  const empty = { subscriptions: [] };
+  expect(warehousesFromYaml('kind: Warehouse\nmetadata: {name: wh}')).toEqual([
+    { name: 'wh', spec: empty }
+  ]);
+  expect(warehousesFromYaml('kind: Warehouse\nmetadata: {name: wh}\nspec: nope')).toEqual([
+    { name: 'wh', spec: empty }
+  ]);
+  // A sequence is not a valid spec either. Kubernetes would reject it, so it
+  // degrades here rather than reaching creation.
+  expect(warehousesFromYaml('kind: Warehouse\nmetadata: {name: wh}\nspec:\n- a')).toEqual([
+    { name: 'wh', spec: empty }
+  ]);
 });
 
 test('yamlForStep renders warehouses or a placeholder', () => {
