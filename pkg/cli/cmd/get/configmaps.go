@@ -32,10 +32,12 @@ type getConfigMapsOptions struct {
 	Config        config.CLIConfig
 	ClientOptions client.Options
 
-	Project string
-	Shared  bool
-	System  bool
-	Names   []string
+	Project    string
+	Shared     bool
+	System     bool
+	Names      []string
+	Export     bool
+	OutputFile string
 }
 
 func newGetConfigMapsCommand(
@@ -80,6 +82,9 @@ kargo get configmaps --system
 
 # Get a specific system ConfigMap
 kargo get configmaps --system my-configmap
+
+# Export all ConfigMaps in my-project as git-friendly manifests
+kargo get configmaps --project=my-project --export --out configmaps.yaml
 `),
 		RunE: func(cmd *cobra.Command, args []string) error {
 			cmdOpts.complete(args)
@@ -120,6 +125,15 @@ func (o *getConfigMapsOptions) addFlags(cmd *cobra.Command) {
 	)
 	// project, shared, and system flags are mutually exclusive
 	cmd.MarkFlagsMutuallyExclusive(option.ProjectFlag, option.SharedFlag, option.SystemFlag)
+
+	option.Export(
+		cmd.Flags(), &o.Export,
+		"Export ConfigMaps as git-friendly manifests, stripping status and non-applyable metadata fields.",
+	)
+	option.OutputFile(
+		cmd.Flags(), &o.OutputFile,
+		"Write output to the given file instead of stdout.",
+	)
 }
 
 // complete sets the options from the command arguments.
@@ -190,7 +204,7 @@ func (o *getConfigMapsOptions) run(ctx context.Context) error {
 		if err = json.Unmarshal(configMapsJSON, &configMaps); err != nil {
 			return err
 		}
-		return PrintConfigMaps(configMaps.Items, o.PrintFlags, o.IOStreams, o.NoHeaders)
+		return PrintConfigMaps(configMaps.Items, o.PrintFlags, o.IOStreams, o.NoHeaders, o.Export, o.OutputFile)
 	}
 
 	res := make([]*corev1.ConfigMap, 0, len(o.Names))
@@ -245,7 +259,7 @@ func (o *getConfigMapsOptions) run(ctx context.Context) error {
 		res = append(res, configMap)
 	}
 
-	if err = PrintConfigMaps(res, o.PrintFlags, o.IOStreams, o.NoHeaders); err != nil {
+	if err = PrintConfigMaps(res, o.PrintFlags, o.IOStreams, o.NoHeaders, o.Export, o.OutputFile); err != nil {
 		return fmt.Errorf("print ConfigMaps: %w", err)
 	}
 	return errors.Join(errs...)
@@ -257,8 +271,10 @@ func PrintConfigMaps(
 	flags *genericclioptions.PrintFlags,
 	streams genericiooptions.IOStreams,
 	noHeaders bool,
+	export bool,
+	outputFile string,
 ) error {
-	return PrintObjects(configMaps, flags, streams, noHeaders)
+	return PrintExportableObjects(configMaps, flags, streams, noHeaders, export, outputFile)
 }
 
 func newConfigMapsTable(list *metav1.List) *metav1.Table {
