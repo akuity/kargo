@@ -35,11 +35,21 @@ import {
 export type ResourceRef = {
   kind: string;
   name: string;
+  // Which occurrence of an otherwise identical kind/name this is. Absent for
+  // the first — which is every resource in a draft that holds no duplicates.
+  ordinal?: number;
 };
 
-// Kind and name together, since a Stage and a Warehouse may share a name. Map
-// builders and their lookups must agree, so the key lives in one place.
-export const resourceKey = (ref: ResourceRef) => `${ref.kind}/${ref.name}`;
+// Kind and name together, since a Stage and a Warehouse may share a name, plus
+// an occurrence ordinal, since a draft may hold two resources sharing *both*.
+// Only one of those can exist, so the second is bound to fail — but progress is
+// tracked in Maps keyed on this, and a Map silently keeps only the last entry
+// per key. Without the ordinal the resource that was created reports the failed
+// one's status, and a retry re-applies it into an "already exists" it can never
+// get past. Map builders and their lookups must agree, so the key lives in one
+// place.
+export const resourceKey = (ref: ResourceRef) =>
+  `${ref.kind}/${ref.name}${ref.ordinal ? `#${ref.ordinal}` : ''}`;
 
 // The generated models describe these resources as read from the API, where
 // every field is optional. The wizard writes them, so require what it always
@@ -246,19 +256,35 @@ export const orderedManifests = (state: WizardState): AnyManifest[] => {
   ];
 };
 
+// Numbers repeated kind/name pairs in list order. Counting per identity rather
+// than taking the list index keeps a resource's key stable when an unrelated one
+// is added or removed ahead of it — which a retry depends on, since it matches
+// a fresh list against the previous run's.
+const withOrdinals = <T extends ResourceRef>(refs: T[]): T[] => {
+  const seen = new Map<string, number>();
+  return refs.map((ref) => {
+    const id = `${ref.kind}/${ref.name}`;
+    const ordinal = seen.get(id) ?? 0;
+    seen.set(id, ordinal + 1);
+    return ordinal === 0 ? ref : { ...ref, ordinal };
+  });
+};
+
 export const resourceList = (state: WizardState): ResourceRef[] =>
-  orderedManifests(state).map((m) => ({ kind: m.kind, name: m.metadata.name }));
+  withOrdinals(orderedManifests(state).map((m) => ({ kind: m.kind, name: m.metadata.name })));
 
 export type CreationManifest = ResourceRef & { yaml: string };
 
 // Per-resource manifests (with individual YAML bodies) in creation order —
 // what the Step 6 creation engine applies one at a time.
 export const creationManifests = (state: WizardState): CreationManifest[] =>
-  orderedManifests(state).map((m) => ({
-    kind: m.kind,
-    name: m.metadata.name,
-    yaml: yaml.stringify(m)
-  }));
+  withOrdinals(
+    orderedManifests(state).map((m) => ({
+      kind: m.kind,
+      name: m.metadata.name,
+      yaml: yaml.stringify(m)
+    }))
+  );
 
 const placeholderComment = (lines: string[]) => lines.map((l) => `# ${l}`).join('\n') + '\n';
 

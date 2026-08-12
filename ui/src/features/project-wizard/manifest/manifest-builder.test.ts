@@ -20,6 +20,7 @@ import {
   orderedManifests,
   projectConfigManifest,
   projectManifest,
+  resourceKey,
   resourceList,
   stageManifest,
   warehouseManifest,
@@ -66,6 +67,42 @@ test('resourceList is empty until the project name is valid', () => {
   expect(resourceList(state)).toEqual([]);
   state.basics.name = 'good-name';
   expect(resourceList(state)).toEqual([{ kind: 'Project', name: 'good-name' }]);
+});
+
+// Progress is overlaid on the resource list through Maps keyed on resourceKey,
+// in the review step and in the retry merge. A Map silently keeps only the last
+// entry per key, so duplicates in a draft must still key distinctly — otherwise
+// the resource that was created reports the duplicate's failure.
+test('resourceList keys stay unique when two resources share a name', () => {
+  const state = initialWizardState();
+  state.basics.name = 'my-project';
+  state.stages = [
+    { name: 'dev', requestedFreight: [], steps: [] },
+    { name: 'dev', requestedFreight: [], steps: [] }
+  ];
+  const keys = resourceList(state).map(resourceKey);
+  expect(keys).toEqual(['Project/my-project', 'Stage/dev', 'Stage/dev#1']);
+  expect(new Set(keys).size).toBe(keys.length);
+  // The engine keys off the same refs, so they carry the ordinal too.
+  expect(creationManifests(state).map(resourceKey)).toEqual(keys);
+});
+
+// The ordinal counts occurrences of a kind/name, not list position: a retry
+// matches a freshly generated list against the previous run's, and a resource
+// must keep its key when an unrelated one appears ahead of it.
+test('resourceKey survives an unrelated resource being inserted ahead of it', () => {
+  const state = initialWizardState();
+  state.basics.name = 'my-project';
+  state.stages = [{ name: 'dev', requestedFreight: [], steps: [] }];
+  expect(resourceList(state).map(resourceKey)).toEqual(['Project/my-project', 'Stage/dev']);
+
+  state.warehouses = [{ name: 'wh', spec: { subscriptions: [] } }];
+  expect(resourceList(state).map(resourceKey)).toEqual([
+    'Project/my-project',
+    'Warehouse/wh',
+    // Moved from index 1 to index 2; the key is unchanged.
+    'Stage/dev'
+  ]);
 });
 
 test('yamlForStep renders the project manifest for basics and review', () => {

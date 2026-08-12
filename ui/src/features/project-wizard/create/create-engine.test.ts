@@ -251,6 +251,48 @@ test('runCreate halts when a readiness gate fails, without re-creating on retry'
   expect(applied).toEqual(['b', 'c']);
 });
 
+// Two Stages named "dev": the first is created, the second can only ever fail.
+// The created one must keep its own status rather than inheriting the failure,
+// and renaming the duplicate must not re-apply it into an "already exists" that
+// no further retry can get past.
+test('a duplicate name does not poison the resource it duplicates', async () => {
+  const previous: ProgressItem[] = [
+    { kind: 'Stage', name: 'dev', yaml: 'a', state: 'done', message: 'Created', created: true },
+    {
+      kind: 'Stage',
+      name: 'dev',
+      ordinal: 1,
+      yaml: 'b',
+      state: 'error',
+      message: 'stages.kargo.akuity.io "dev" already exists'
+    }
+  ];
+  // The user renames the duplicate to "staging" and hits Retry.
+  const fresh = toProgressItems([
+    { kind: 'Stage', name: 'dev', yaml: 'a' },
+    { kind: 'Stage', name: 'staging', yaml: 'b2' }
+  ]);
+
+  const merged = mergeForRetry(previous, fresh);
+  expect(merged.map((i) => [i.name, i.state])).toEqual([
+    ['dev', 'done'],
+    ['staging', 'pending']
+  ]);
+
+  const applied: string[] = [];
+  const ok = await runCreate(
+    merged,
+    async (y) => {
+      applied.push(y);
+    },
+    () => {},
+    { sleep: noSleep }
+  );
+  expect(ok).toBe(true);
+  // Only the renamed Stage is applied; the created one is left alone.
+  expect(applied).toEqual(['b2']);
+});
+
 test('mergeForRetry carries `created` forward for items that never became ready', () => {
   const previous: ProgressItem[] = [
     { kind: 'Project', name: 'p', yaml: 'a', state: 'error', message: 'not ready', created: true }
