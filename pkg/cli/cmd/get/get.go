@@ -2,18 +2,22 @@ package get
 
 import (
 	"fmt"
+	"os"
 
 	"github.com/spf13/cobra"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/cli-runtime/pkg/genericclioptions"
 	"k8s.io/cli-runtime/pkg/genericiooptions"
 	"k8s.io/cli-runtime/pkg/printers"
+	sigyaml "sigs.k8s.io/yaml"
 
 	rbacapi "github.com/akuity/kargo/api/rbac/v1alpha1"
 	kargoapi "github.com/akuity/kargo/api/v1alpha1"
 	"github.com/akuity/kargo/pkg/cli/config"
+	"github.com/akuity/kargo/pkg/cli/kubernetes"
 	"github.com/akuity/kargo/pkg/cli/option"
 	"github.com/akuity/kargo/pkg/cli/templates"
 )
@@ -141,4 +145,93 @@ func PrintObjects[T runtime.Object](
 			},
 		).
 		PrintObj(printObj, streams.Out)
+}
+
+// exportMetadataFields are ObjectMeta fields that are either server-managed
+// or otherwise unsuitable to include in a manifest intended to be committed
+// to git and reapplied with `kargo apply`.
+var exportMetadataFields = []string{
+	"creationTimestamp",
+	"deletionGracePeriodSeconds",
+	"deletionTimestamp",
+	"generation",
+	"managedFields",
+	"resourceVersion",
+	"selfLink",
+	"uid",
+}
+
+// PrintExportableObjects behaves like PrintObjects, but additionally supports
+// exporting objects as git-friendly manifests. When export is true, each
+// object is sanitized (see sanitizeForExport) and printed as YAML regardless
+// of any output format flag. If outputFile is non-empty, output is written
+// there instead of streams.Out.
+func PrintExportableObjects[T runtime.Object](
+	objects []T,
+	flags *genericclioptions.PrintFlags,
+	streams genericiooptions.IOStreams,
+	noHeaders bool,
+	export bool,
+	outputFile string,
+) error {
+	if !export {
+		return PrintObjects(objects, flags, streams, noHeaders)
+	}
+
+	w := streams.Out
+	if outputFile != "" {
+		f, err := os.Create(outputFile)
+		if err != nil {
+			return fmt.Errorf("open output file: %w", err)
+		}
+		defer func() {
+			_ = f.Close()
+		}()
+		w = f
+	}
+
+	printer := &printers.YAMLPrinter{}
+	for _, obj := range objects {
+		sanitized, err := sanitizeForExport(obj)
+		if err != nil {
+			return fmt.Errorf("sanitize object for export: %w", err)
+		}
+		if err := printer.PrintObj(sanitized, w); err != nil {
+			return fmt.Errorf("print object: %w", err)
+		}
+	}
+	return nil
+}
+
+// sanitizeForExport returns obj as an Unstructured object with its .status
+// and non-applyable ObjectMeta fields (see exportMetadataFields) stripped, so
+// that it is suitable for committing to git and reapplying with
+// `kargo apply`.
+func sanitizeForExport(obj runtime.Object) (*unstructured.Unstructured, error) {
+	obj = obj.DeepCopyObject()
+	if obj.GetObjectKind().GroupVersionKind().Empty() {
+		gvks, _, err := kubernetes.GetScheme().ObjectKinds(obj)
+		if err != nil {
+			return nil, fmt.Errorf("look up group version kind: %w", err)
+		}
+		obj.GetObjectKind().SetGroupVersionKind(gvks[0])
+	}
+
+	data, err := sigyaml.Marshal(obj)
+	if err != nil {
+		return nil, fmt.Errorf("marshal object: %w", err)
+	}
+	m := map[string]any{}
+	if err := sigyaml.Unmarshal(data, &m); err != nil {
+		return nil, fmt.Errorf("unmarshal object: %w", err)
+	}
+
+	delete(m, "status")
+	if metadata, ok := m["metadata"].(map[string]any); ok {
+		for _, field := range exportMetadataFields {
+			delete(metadata, field)
+		}
+	}
+
+	return &unstructured.Unstructured{Object: m}, nil
 }
