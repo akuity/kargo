@@ -1,37 +1,12 @@
-import { imageNameRegex } from '@ui/features/common/settings/secrets/schema-validator';
+import { repoUrlError as repoUrlShapeError } from '@ui/features/common/settings/secrets/schema-validator';
 import { dnsRegex } from '@ui/features/common/utils';
 
 import { CredentialData } from '../types';
 
-// Mirrors the per-type refinements in the settings modal's schema-validator
-export const repoUrlError = (cred: CredentialData): string | undefined => {
-  if (cred.repoURLIsRegex || !cred.repoURL) {
-    return undefined;
-  }
-  switch (cred.type) {
-    case 'git':
-      try {
-        new URL(cred.repoURL);
-      } catch {
-        return 'Repo URL must be a valid git URL.';
-      }
-      return undefined;
-    case 'helm':
-      try {
-        const url = new URL(cred.repoURL);
-        if (url.protocol !== 'http:' && url.protocol !== 'https:' && url.protocol !== 'oci:') {
-          return 'Repo URL must be a valid Helm chart repository.';
-        }
-      } catch {
-        return 'Repo URL must be a valid Helm chart repository.';
-      }
-      return undefined;
-    case 'image':
-      return imageNameRegex.test(cred.repoURL)
-        ? undefined
-        : 'Repo URL must be a valid container registry.';
-  }
-};
+// The same per-type repo URL rules the settings modal's schema enforces, in
+// terms of the wizard's field names.
+export const repoUrlError = (cred: CredentialData): string | undefined =>
+  repoUrlShapeError(cred.type, cred.repoURL, cred.repoURLIsRegex);
 
 // Required fields per auth method, mirroring the settings modal's refinements
 // (repoUrl/username/password required) and pkg/credentials' expectations for
