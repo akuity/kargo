@@ -12,7 +12,85 @@ import (
 
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
+
+	libConfig "github.com/akuity/kargo/pkg/cli/config"
 )
+
+func Test_loginOptions_complete(t *testing.T) {
+	testCases := []struct {
+		name   string
+		config libConfig.CLIConfig
+		args   []string
+		port   int
+		assert func(*testing.T, *loginOptions)
+	}{
+		{
+			name: "no stored config and no port specified",
+			args: []string{"kargo.example.com"},
+			assert: func(t *testing.T, o *loginOptions) {
+				require.Equal(t, "https://kargo.example.com", o.ServerAddress)
+				require.Zero(t, o.CallbackPort)
+			},
+		},
+		{
+			name: "stored server address, auth method, and port are reused",
+			config: libConfig.CLIConfig{
+				APIAddress:   "https://kargo.example.com",
+				AuthMethod:   authMethodSSO,
+				CallbackPort: 8085,
+			},
+			assert: func(t *testing.T, o *loginOptions) {
+				require.Equal(t, "https://kargo.example.com", o.ServerAddress)
+				require.True(t, o.UseSSO)
+				require.Equal(t, 8085, o.CallbackPort)
+			},
+		},
+		{
+			name: "stored port is reused when the same server is specified",
+			config: libConfig.CLIConfig{
+				APIAddress:   "https://kargo.example.com",
+				CallbackPort: 8085,
+			},
+			args: []string{"https://kargo.example.com"},
+			assert: func(t *testing.T, o *loginOptions) {
+				require.Equal(t, 8085, o.CallbackPort)
+			},
+		},
+		{
+			name: "specified port overrides stored port",
+			config: libConfig.CLIConfig{
+				APIAddress:   "https://kargo.example.com",
+				CallbackPort: 8085,
+			},
+			port: 9090,
+			assert: func(t *testing.T, o *loginOptions) {
+				require.Equal(t, 9090, o.CallbackPort)
+			},
+		},
+		{
+			name: "stored port is not reused for a different server",
+			config: libConfig.CLIConfig{
+				APIAddress:   "https://kargo.example.com",
+				CallbackPort: 8085,
+			},
+			args: []string{"https://kargo.other.com"},
+			assert: func(t *testing.T, o *loginOptions) {
+				require.Zero(t, o.CallbackPort)
+			},
+		},
+	}
+	for _, testCase := range testCases {
+		t.Run(testCase.name, func(t *testing.T) {
+			t.Parallel()
+			o := &loginOptions{
+				Config:       testCase.config,
+				CallbackPort: testCase.port,
+			}
+			o.complete(testCase.args)
+			testCase.assert(t, o)
+		})
+	}
+}
 
 func TestReceiveAuthCode(t *testing.T) {
 	const (

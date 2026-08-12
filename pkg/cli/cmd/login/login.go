@@ -136,6 +136,12 @@ func (o *loginOptions) complete(args []string) {
 		o.ServerAddress = normalizeURL(args[0])
 	}
 
+	// If no port was specified, reuse any port stored in the configuration,
+	// provided we're logging in to the same server it was stored for.
+	if o.CallbackPort == 0 && o.ServerAddress == o.Config.APIAddress {
+		o.CallbackPort = o.Config.CallbackPort
+	}
+
 	// If no auth method flag was explicitly set, use the stored method
 	if !o.UseAdmin && !o.UseKubeconfig && !o.UseSSO && o.Config.AuthMethod != "" {
 		switch o.Config.AuthMethod {
@@ -214,6 +220,7 @@ func (o *loginOptions) run(ctx context.Context) error {
 	o.Config.BearerToken = bearerToken
 	o.Config.RefreshToken = refreshToken
 	o.Config.InsecureSkipTLSVerify = o.InsecureTLS
+	o.Config.CallbackPort = o.CallbackPort
 
 	if err = libConfig.SaveCLIConfig(o.Config); err != nil {
 		return fmt.Errorf("error persisting configuration: %w", err)
