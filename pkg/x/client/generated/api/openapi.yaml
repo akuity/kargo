@@ -1127,6 +1127,65 @@ paths:
       summary: List container images
       tags:
       - Core
+  /v1beta1/projects/{project}/promotion-requests:
+    get:
+      description: |-
+        List PromotionRequest resources from a project's namespace.
+        Returns a PromotionRequestList resource.
+      operationId: ListPromotionRequests
+      parameters:
+      - description: Project name
+        in: path
+        name: project
+        required: true
+        schema:
+          type: string
+      - description: Stage filter
+        in: query
+        name: stage
+        schema:
+          type: string
+      responses:
+        "200":
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/PromotionRequestList"
+          description: PromotionRequestList custom resource
+      security:
+      - BearerAuth: []
+      summary: List PromotionRequests
+      tags:
+      - Core
+  /v1beta1/projects/{project}/promotion-requests/{promotion-request}:
+    get:
+      description: Retrieve a PromotionRequest resource from a project's namespace.
+      operationId: GetPromotionRequest
+      parameters:
+      - description: Project name
+        in: path
+        name: project
+        required: true
+        schema:
+          type: string
+      - description: PromotionRequest name
+        in: path
+        name: promotion-request
+        required: true
+        schema:
+          type: string
+      responses:
+        "200":
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/PromotionRequest"
+          description: PromotionRequest custom resource
+      security:
+      - BearerAuth: []
+      summary: Retrieve a PromotionRequest
+      tags:
+      - Core
   /v1beta1/projects/{project}/promotion-tasks:
     get:
       description: |-
@@ -13179,6 +13238,411 @@ components:
           - $ref: "#/components/schemas/PromotionStatus"
           description: Status is the (optional) status of the Promotion.
           type: object
+      type: object
+    PromotionRequest:
+      example:
+        apiVersion: apiVersion
+        kind: kind
+        metadata:
+          annotations:
+            key: annotations
+          creationTimestamp: creationTimestamp
+          deletionGracePeriodSeconds: 0
+          deletionTimestamp: deletionTimestamp
+          finalizers:
+          - finalizers
+          - finalizers
+          generateName: generateName
+          generation: 6
+          labels:
+            key: labels
+          managedFields:
+          - apiVersion: apiVersion
+            fieldsType: fieldsType
+            fieldsV1: "{}"
+            manager: manager
+            operation: operation
+            subresource: subresource
+            time: time
+          - apiVersion: apiVersion
+            fieldsType: fieldsType
+            fieldsV1: "{}"
+            manager: manager
+            operation: operation
+            subresource: subresource
+            time: time
+          name: name
+          namespace: namespace
+          ownerReferences:
+          - apiVersion: apiVersion
+            blockOwnerDeletion: true
+            controller: true
+            kind: kind
+            name: name
+            uid: uid
+          - apiVersion: apiVersion
+            blockOwnerDeletion: true
+            controller: true
+            kind: kind
+            name: name
+            uid: uid
+          resourceVersion: resourceVersion
+          selfLink: selfLink
+          uid: uid
+        spec: "{}"
+        status: "{}"
+      properties:
+        apiVersion:
+          description: |-
+            APIVersion defines the versioned schema of this representation of an object.
+            Servers should convert recognized schemas to the latest internal value, and
+            may reject unrecognized values.
+            More info: https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#resources
+            +optional
+          type: string
+        kind:
+          description: |-
+            Kind is a string value representing the REST resource this object represents.
+            Servers may infer this from the endpoint the client submits requests to.
+            Cannot be updated.
+            In CamelCase.
+            More info: https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#types-kinds
+            +optional
+          type: string
+        metadata:
+          $ref: "#/components/schemas/V1ObjectMeta"
+        spec:
+          allOf:
+          - $ref: "#/components/schemas/PromotionRequestSpec"
+          description: |-
+            Spec describes the Stage, the Freight, and the target selectors of the
+            PromotionRequest.
+
+            +kubebuilder:validation:Required
+          type: object
+        status:
+          allOf:
+          - $ref: "#/components/schemas/PromotionRequestStatus"
+          description: |-
+            Status describes the current resolution of the target selectors and the
+            aggregate state of the PromotionRequest's Promotions.
+
+            +kubebuilder:validation:Optional
+          type: object
+      required:
+      - spec
+      type: object
+    PromotionRequestList:
+      example:
+        apiVersion: apiVersion
+        items:
+        - apiVersion: apiVersion
+          kind: kind
+          metadata:
+            annotations:
+              key: annotations
+            creationTimestamp: creationTimestamp
+            deletionGracePeriodSeconds: 0
+            deletionTimestamp: deletionTimestamp
+            finalizers:
+            - finalizers
+            - finalizers
+            generateName: generateName
+            generation: 6
+            labels:
+              key: labels
+            managedFields:
+            - apiVersion: apiVersion
+              fieldsType: fieldsType
+              fieldsV1: "{}"
+              manager: manager
+              operation: operation
+              subresource: subresource
+              time: time
+            - apiVersion: apiVersion
+              fieldsType: fieldsType
+              fieldsV1: "{}"
+              manager: manager
+              operation: operation
+              subresource: subresource
+              time: time
+            name: name
+            namespace: namespace
+            ownerReferences:
+            - apiVersion: apiVersion
+              blockOwnerDeletion: true
+              controller: true
+              kind: kind
+              name: name
+              uid: uid
+            - apiVersion: apiVersion
+              blockOwnerDeletion: true
+              controller: true
+              kind: kind
+              name: name
+              uid: uid
+            resourceVersion: resourceVersion
+            selfLink: selfLink
+            uid: uid
+          spec: "{}"
+          status: "{}"
+        - apiVersion: apiVersion
+          kind: kind
+          metadata:
+            annotations:
+              key: annotations
+            creationTimestamp: creationTimestamp
+            deletionGracePeriodSeconds: 0
+            deletionTimestamp: deletionTimestamp
+            finalizers:
+            - finalizers
+            - finalizers
+            generateName: generateName
+            generation: 6
+            labels:
+              key: labels
+            managedFields:
+            - apiVersion: apiVersion
+              fieldsType: fieldsType
+              fieldsV1: "{}"
+              manager: manager
+              operation: operation
+              subresource: subresource
+              time: time
+            - apiVersion: apiVersion
+              fieldsType: fieldsType
+              fieldsV1: "{}"
+              manager: manager
+              operation: operation
+              subresource: subresource
+              time: time
+            name: name
+            namespace: namespace
+            ownerReferences:
+            - apiVersion: apiVersion
+              blockOwnerDeletion: true
+              controller: true
+              kind: kind
+              name: name
+              uid: uid
+            - apiVersion: apiVersion
+              blockOwnerDeletion: true
+              controller: true
+              kind: kind
+              name: name
+              uid: uid
+            resourceVersion: resourceVersion
+            selfLink: selfLink
+            uid: uid
+          spec: "{}"
+          status: "{}"
+        kind: kind
+        metadata:
+          continue: continue
+          remainingItemCount: 0
+          resourceVersion: resourceVersion
+          selfLink: selfLink
+          shardInfo: "{}"
+      properties:
+        apiVersion:
+          description: |-
+            APIVersion defines the versioned schema of this representation of an object.
+            Servers should convert recognized schemas to the latest internal value, and
+            may reject unrecognized values.
+            More info: https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#resources
+            +optional
+          type: string
+        items:
+          items:
+            $ref: "#/components/schemas/PromotionRequest"
+          type: array
+        kind:
+          description: |-
+            Kind is a string value representing the REST resource this object represents.
+            Servers may infer this from the endpoint the client submits requests to.
+            Cannot be updated.
+            In CamelCase.
+            More info: https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#types-kinds
+            +optional
+          type: string
+        metadata:
+          $ref: "#/components/schemas/V1ListMeta"
+      type: object
+    PromotionRequestPhase:
+      enum:
+      - Pending
+      - Running
+      - Succeeded
+      - Failed
+      - Errored
+      type: string
+      x-enum-varnames:
+      - PromotionRequestPhasePending
+      - PromotionRequestPhaseRunning
+      - PromotionRequestPhaseSucceeded
+      - PromotionRequestPhaseFailed
+      - PromotionRequestPhaseErrored
+    PromotionRequestSpec:
+      properties:
+        freight:
+          description: |-
+            Freight specifies the piece of Freight promoted by the Stage.
+            The Freight MUST be in the same namespace as the PromotionRequest.
+
+            +kubebuilder:validation:Required
+            +kubebuilder:validation:MinLength=1
+            +kubebuilder:validation:MaxLength=253
+            +kubebuilder:validation:Pattern=`^[a-z0-9]([-a-z0-9]*[a-z0-9])?(\.[a-z0-9]([-a-z0-9]*[a-z0-9])?)*$`
+            +akuity:test-kubebuilder-pattern=KubernetesName
+            +kubebuilder:validation:XValidation:rule="self == oldSelf"
+          type: string
+        stage:
+          description: |-
+            Stage specifies the name of the Stage that promotes the Freight.
+            The Stage MUST be in the same namespace as the PromotionRequest.
+
+            +kubebuilder:validation:Required
+            +kubebuilder:validation:MinLength=1
+            +kubebuilder:validation:MaxLength=253
+            +kubebuilder:validation:Pattern=`^[a-z0-9]([-a-z0-9]*[a-z0-9])?(\.[a-z0-9]([-a-z0-9]*[a-z0-9])?)*$`
+            +akuity:test-kubebuilder-pattern=KubernetesName
+            +kubebuilder:validation:XValidation:rule="self == oldSelf"
+          type: string
+        targetSelectors:
+          description: |-
+            TargetSelectors select the Targets to which this PromotionRequest promotes
+            Freight, matching Targets by their labels within the PromotionRequest's
+            own Project. A Target is selected when it matches any selector in this
+            list. An empty selector in a non-empty list selects all Targets in the
+            Project; a list that matches nothing leaves the PromotionRequest with
+            nothing to do.
+
+            The governing Stage owns this field: the selectors are copied from the
+            Stage's own at creation and kept in sync when they change. Unlike Stage
+            and Freight, this field is expected to change over the PromotionRequest's
+            lifetime; the reconciler responds by creating Promotions for newly
+            selected Targets and recording resolution in status.
+
+            +optional
+          items:
+            $ref: "#/components/schemas/V1LabelSelector"
+          type: array
+      required:
+      - freight
+      - stage
+      type: object
+    PromotionRequestStatus:
+      properties:
+        conditions:
+          description: |-
+            Conditions contains the last observations of the PromotionRequest's current
+            state.
+
+            +patchMergeKey=type
+            +patchStrategy=merge
+            +listType=map
+            +listMapKey=type
+          items:
+            $ref: "#/components/schemas/V1Condition"
+          type: array
+        finishedAt:
+          description: FinishedAt is the time at which the PromotionRequest completed.
+          type: string
+        observedGeneration:
+          description: |-
+            ObservedGeneration is the generation of the spec last reconciled.
+
+            +kubebuilder:validation:Optional
+          type: integer
+        phase:
+          allOf:
+          - $ref: "#/components/schemas/PromotionRequestPhase"
+          description: |-
+            Phase is a high-level summary of the PromotionRequest's lifecycle.
+
+            +kubebuilder:validation:Optional
+          type: object
+        startedAt:
+          description: |-
+            StartedAt is the time at which the PromotionRequest started.
+
+            +kubebuilder:validation:Optional
+          type: string
+        summary:
+          allOf:
+          - $ref: "#/components/schemas/PromotionRequestSummary"
+          description: |-
+            Summary aggregates the phases of this PromotionRequest's child Promotions.
+
+            +kubebuilder:validation:Optional
+          type: object
+        targets:
+          description: |-
+            Targets records the current resolution of the target selectors: one entry
+            per selected Target, with the child Promotion promoting to it and that
+            Promotion's phase. Entries come and go as the selectors and the Project's
+            Targets change.
+
+            The list is atomic rather than a map keyed by name: the reconciler is its
+            only writer, so per-item ownership tracking in managedFields would only
+            inflate the object -- roughly doubling the storage cost of each entry --
+            without ever being used to merge.
+
+            +kubebuilder:validation:Optional
+            +listType=atomic
+          items:
+            $ref: "#/components/schemas/PromotionRequestTargetStatus"
+          type: array
+      type: object
+    PromotionRequestSummary:
+      properties:
+        aborted:
+          description: Aborted is the number of child Promotions in the Aborted phase.
+          type: integer
+        errored:
+          description: Errored is the number of child Promotions in the Errored phase.
+          type: integer
+        failed:
+          description: Failed is the number of child Promotions in the Failed phase.
+          type: integer
+        pending:
+          description: Pending is the number of child Promotions in the Pending phase.
+          type: integer
+        running:
+          description: Running is the number of child Promotions in the Running phase.
+          type: integer
+        succeeded:
+          description: Succeeded is the number of child Promotions in the Succeeded
+            phase.
+          type: integer
+      type: object
+    PromotionRequestTargetStatus:
+      properties:
+        name:
+          description: |-
+            Name is the name of the Target.
+
+            +kubebuilder:validation:Required
+            +kubebuilder:validation:MinLength=1
+            +kubebuilder:validation:MaxLength=253
+            +kubebuilder:validation:Pattern=`^[a-z0-9]([-a-z0-9]*[a-z0-9])?(\.[a-z0-9]([-a-z0-9]*[a-z0-9])?)*$`
+            +akuity:test-kubebuilder-pattern=KubernetesName
+          type: string
+        phase:
+          description: |-
+            Phase is the phase of that Promotion.
+
+            +kubebuilder:validation:Optional
+          type: string
+        promotion:
+          description: |-
+            Promotion is the name of the child Promotion currently promoting the
+            Freight to this Target. Empty if none has been created yet.
+
+            +kubebuilder:validation:Optional
+          type: string
+      required:
+      - name
       type: object
     PromotionSpec:
       properties:
