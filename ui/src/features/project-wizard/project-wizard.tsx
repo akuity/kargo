@@ -22,24 +22,14 @@ import {
   yamlForStep
 } from './manifest/manifest-builder';
 import { isStepLocked, stepMetaById } from './step-meta';
-import { isValidCredential } from './steps/credential-validation';
-import { isValidPolicy } from './steps/policy-validation';
-import { isValidStage } from './steps/stage-validation';
 import { StepBasics } from './steps/step-basics';
 import { StepCredentials } from './steps/step-credentials';
 import { StepPolicies } from './steps/step-policies';
 import { StepReview } from './steps/step-review';
 import { StepStages } from './steps/step-stages';
+import { firstIncompleteStep, stepDataValidity } from './steps/step-validity';
 import { StepWarehouses } from './steps/step-warehouses';
-import { isValidWarehouse } from './steps/warehouse-validation';
-import {
-  BasicsState,
-  CredentialData,
-  PolicyDraft,
-  StageDraft,
-  WarehouseDraft,
-  isValidProjectName
-} from './types';
+import { BasicsState, CredentialData, PolicyDraft, StageDraft, WarehouseDraft } from './types';
 import { useWizardState } from './use-wizard-state';
 
 export const ProjectWizard = () => {
@@ -64,42 +54,26 @@ export const ProjectWizard = () => {
   const meta = stepMetaById(current);
   const locked = isStepLocked(meta, state);
 
-  const credentialsValid = state.credentials.every(isValidCredential);
-  const warehousesValid = state.warehouses.every(isValidWarehouse);
-  const stagesValid = state.stages.every(isValidStage);
-  const policiesValid = state.policies.every(isValidPolicy);
-
   const reviewHasResources = resourceList(state).length > 0;
+  // Review's gate re-checks every step rather than trusting they were visited:
+  // the sidebar jumps straight here, so passing through each step's own gate is
+  // not something creation can assume.
+  const incompleteStep = firstIncompleteStep(state);
 
   // Per-step gate for the Continue button: whether it's enabled, and the reason
   // shown (as a tooltip) when it isn't. Keyed by step so both derive from one
   // place; the non-partial Record forces every step to declare a gate.
   const stepGates: Record<typeof current, { valid: boolean; reason?: string }> = {
-    basics: {
-      valid: isValidProjectName(state.basics.name),
-      reason: 'Provide a valid project name to continue'
-    },
-    credentials: {
-      valid: credentialsValid,
-      reason: 'Every credential needs a valid name, repository URL, and complete auth fields'
-    },
-    warehouses: {
-      valid: warehousesValid,
-      reason: 'Every warehouse needs a valid name'
-    },
-    stages: {
-      valid: stagesValid,
-      reason: 'Every stage needs a valid name and at least one requested Freight'
-    },
-    policies: {
-      valid: policiesValid,
-      reason: 'Every policy needs a target Stage, pattern, or label'
-    },
+    ...stepDataValidity(state),
     review: {
-      valid: reviewHasResources && create.status !== 'pending',
-      reason: reviewHasResources
-        ? undefined
-        : 'Give your project a name in the first step to create it'
+      valid: reviewHasResources && !incompleteStep && create.status !== 'pending',
+      reason: !reviewHasResources
+        ? 'Give your project a name in the first step to create it'
+        : incompleteStep
+          ? // Names the step to go back to: the requirement alone doesn't say
+            // which step holds the item that fails it.
+            `Finish the ${stepMetaById(incompleteStep.id).title} step: ${incompleteStep.reason}`
+          : undefined
     }
   };
 
