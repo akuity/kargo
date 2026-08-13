@@ -168,6 +168,7 @@ export const ProjectWizard = () => {
       <ResumeDraftModal
         open={resumePromptOpen}
         hasCredentials={state.credentials.some((c) => c.auth !== 'ambient')}
+        projectName={state.basics.name}
         onResume={() => setResumePromptOpen(false)}
         onStartFresh={startFresh}
       />
