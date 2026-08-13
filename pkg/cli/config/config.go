@@ -69,6 +69,11 @@ type CLIConfig struct {
 	// re-authenticates. When true, refresh tokens will not be used, thereby
 	// forcing users to periodically re-assess this choice.
 	InsecureSkipTLSVerify bool `json:"insecureSkipTLSVerify,omitempty"`
+	// CallbackPort is the port to use for the callback URL during SSO login.
+	// This is only set when the user explicitly specified a port during login
+	// and is reused by subsequent SSO logins to the same server unless
+	// overridden.
+	CallbackPort int `json:"callbackPort,omitempty"`
 	// Project is the default Project for the command.
 	Project string `json:"project,omitempty"`
 }
@@ -159,6 +164,7 @@ func MaskedConfig(config CLIConfig) CLIConfig {
 		BearerToken:           dataMask,
 		RefreshToken:          dataMask,
 		InsecureSkipTLSVerify: config.InsecureSkipTLSVerify,
+		CallbackPort:          config.CallbackPort,
 		Project:               config.Project,
 	}
 }
