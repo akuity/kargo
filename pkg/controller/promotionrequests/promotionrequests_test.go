@@ -152,8 +152,8 @@ func TestReconcile(t *testing.T) {
 		readyCondition := conditions.Get(&actual.Status, kargoapi.ConditionTypeReady)
 		require.NotNil(t, readyCondition)
 		require.Equal(t, metav1.ConditionFalse, readyCondition.Status)
-		require.Equal(t, unsupportedReason, readyCondition.Reason)
-		require.Equal(t, unsupportedMessage, readyCondition.Message)
+		require.Equal(t, enterpriseOnlyReason, readyCondition.Reason)
+		require.Equal(t, enterpriseOnlyMessage, readyCondition.Message)
 		require.Equal(t, int64(1), readyCondition.ObservedGeneration)
 		require.False(t, readyCondition.LastTransitionTime.IsZero())
 

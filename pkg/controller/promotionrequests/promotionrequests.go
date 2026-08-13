@@ -1,4 +1,4 @@
-// Package promotionrequests contains the Community Edition PromotionRequest reconciler.
+// Package promotionrequests contains the PromotionRequest reconciler.
 package promotionrequests
 
 import (
@@ -19,8 +19,8 @@ import (
 )
 
 const (
-	unsupportedReason  = "UnsupportedInCommunityEdition"
-	unsupportedMessage = "PromotionRequests are not supported in Community Edition"
+	enterpriseOnlyReason  = "EnterpriseOnlyFeature"
+	enterpriseOnlyMessage = "PromotionRequests are a Kargo Enterprise-only feature"
 )
 
 // ReconcilerConfig represents configuration for the PromotionRequest reconciler.
@@ -59,8 +59,9 @@ func ReconcilerConfigFromEnv() ReconcilerConfig {
 	return cfg
 }
 
-// SetupReconcilerWithManager initializes the Community Edition PromotionRequest
-// reconciler and registers it with the provided Manager.
+// SetupReconcilerWithManager initializes the PromotionRequest reconciler and
+// registers it with the provided Manager. The behavior that fans a
+// PromotionRequest out into Promotions is supplied by reconcileFn.
 func SetupReconcilerWithManager(
 	ctx context.Context,
 	mgr manager.Manager,
@@ -115,8 +116,10 @@ func (r *reconciler) Reconcile(
 	return r.reconcileFn(ctx, r.client, promotionRequest)
 }
 
-// DefaultReconcile reports that PromotionRequests are unsupported in Community
-// Edition.
+// DefaultReconcile is the ReconcileFn used when no fan-out implementation has
+// been supplied. It reports on the PromotionRequest itself that fanning Freight
+// out to Targets is a Kargo Enterprise-only feature, so that a user whose Stage
+// has stopped promoting can find out why from the object it produced.
 func DefaultReconcile(
 	ctx context.Context,
 	kubeClient client.Client,
@@ -132,14 +135,16 @@ func DefaultReconcile(
 		conditions.Set(status, &metav1.Condition{
 			Type:               kargoapi.ConditionTypeReady,
 			Status:             metav1.ConditionFalse,
-			Reason:             unsupportedReason,
-			Message:            unsupportedMessage,
+			Reason:             enterpriseOnlyReason,
+			Message:            enterpriseOnlyMessage,
 			ObservedGeneration: promotionRequest.Generation,
 		})
 	}); err != nil {
 		return ctrl.Result{}, fmt.Errorf("error updating PromotionRequest status: %w", err)
 	}
 
-	logging.LoggerFromContext(ctx).Debug("reported unsupported PromotionRequest")
+	logging.LoggerFromContext(ctx).Debug(
+		"reported PromotionRequest as an enterprise-only feature",
+	)
 	return ctrl.Result{}, nil
 }
