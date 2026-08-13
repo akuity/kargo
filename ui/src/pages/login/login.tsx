@@ -26,7 +26,9 @@ export const Login = () => {
     return <Navigate to={paths.home} replace />;
   }
 
-  if (isLoggedIn) {
+  const isOIDCCallback = params.has('code') && params.has('state');
+
+  if (isLoggedIn && !isOIDCCallback) {
     return <Navigate to={safeRedirectTo ? generatePath(safeRedirectTo) : paths.home} replace />;
   }
 
