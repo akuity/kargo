@@ -34,8 +34,11 @@ spec:
     schema:
       openAPIV3Schema:
         description: |-
-          PromotionRequest groups the Promotions that fan out a Stage's selected Freight
-          to its selected Targets.
+          PromotionRequest expresses the intent to promote a piece of Freight to the
+          Targets its Stage governs. It is a living object: the governing Stage owns
+          its target selectors and keeps them in sync with the Stage's own, and its
+          status reflects the current per-Target promotion state as Targets come and
+          go -- closer to a ReplicaSet than to a Job.
         properties:
           apiVersion:
             description: |-
@@ -55,7 +58,8 @@ spec:
           metadata:
             type: object
           spec:
-            description: Spec describes the Stage and Freight associated with the
+            description: |-
+              Spec describes the Stage, the Freight, and the target selectors of the
               PromotionRequest.
             properties:
               freight:
@@ -78,43 +82,78 @@ spec:
                 type: string
                 x-kubernetes-validations:
                 - rule: self == oldSelf
-              targets:
+              targetSelectors:
                 description: |-
-                  Targets specifies the Targets to which this PromotionRequest promotes Freight.
-                  Each Target MUST be in the same namespace as the PromotionRequest. The list
-                  may be empty, which records that the governing Stage's target selectors
-                  matched no Targets at the time the PromotionRequest was created.
+                  TargetSelectors select the Targets to which this PromotionRequest promotes
+                  Freight, matching Targets by their labels within the PromotionRequest's
+                  own Project. A Target is selected when it matches any selector in this
+                  list. An empty selector in a non-empty list selects all Targets in the
+                  Project; a list that matches nothing leaves the PromotionRequest with
+                  nothing to do.
 
-                  Target names MUST be unique. This is enforced by the PromotionRequest
-                  validating webhook rather than by the schema: the list is immutable, so
-                  per-item ownership tracking would only inflate the object's managedFields
-                  without ever being used to merge anything into it.
+                  The governing Stage owns this field: the selectors are copied from the
+                  Stage's own at creation and kept in sync when they change. Unlike Stage
+                  and Freight, this field is expected to change over the PromotionRequest's
+                  lifetime; the reconciler responds by creating Promotions for newly
+                  selected Targets and recording resolution in status.
                 items:
-                  description: PromotionRequestTarget identifies a Target selected
-                    by a PromotionRequest.
+                  description: |-
+                    A label selector is a label query over a set of resources. The result of matchLabels and
+                    matchExpressions are ANDed. An empty label selector matches all objects. A null
+                    label selector matches no objects.
                   properties:
-                    name:
-                      description: Name is the name of the Target.
-                      maxLength: 253
-                      minLength: 1
-                      pattern: ^[a-z0-9]([-a-z0-9]*[a-z0-9])?(\.[a-z0-9]([-a-z0-9]*[a-z0-9])?)*$
-                      type: string
-                  required:
-                  - name
+                    matchExpressions:
+                      description: matchExpressions is a list of label selector requirements.
+                        The requirements are ANDed.
+                      items:
+                        description: |-
+                          A label selector requirement is a selector that contains values, a key, and an operator that
+                          relates the key and values.
+                        properties:
+                          key:
+                            description: key is the label key that the selector applies
+                              to.
+                            type: string
+                          operator:
+                            description: |-
+                              operator represents a key's relationship to a set of values.
+                              Valid operators are In, NotIn, Exists and DoesNotExist.
+                            type: string
+                          values:
+                            description: |-
+                              values is an array of string values. If the operator is In or NotIn,
+                              the values array must be non-empty. If the operator is Exists or DoesNotExist,
+                              the values array must be empty. This array is replaced during a strategic
+                              merge patch.
+                            items:
+                              type: string
+                            type: array
+                            x-kubernetes-list-type: atomic
+                        required:
+                        - key
+                        - operator
+                        type: object
+                      type: array
+                      x-kubernetes-list-type: atomic
+                    matchLabels:
+                      additionalProperties:
+                        type: string
+                      description: |-
+                        matchLabels is a map of {key,value} pairs. A single {key,value} in the matchLabels
+                        map is equivalent to an element of matchExpressions, whose key field is "key", the
+                        operator is "In", and the values array contains only "value". The requirements are ANDed.
+                      type: object
                   type: object
+                  x-kubernetes-map-type: atomic
                 type: array
-                x-kubernetes-list-type: atomic
-                x-kubernetes-validations:
-                - rule: self == oldSelf
             required:
             - freight
             - stage
-            - targets
             type: object
           status:
             description: |-
-              Status describes the current aggregate state of the PromotionRequest's
-              Promotions.
+              Status describes the current resolution of the target selectors and the
+              aggregate state of the PromotionRequest's Promotions.
             properties:
               conditions:
                 description: |-
@@ -231,6 +270,41 @@ spec:
                     format: int32
                     type: integer
                 type: object
+              targets:
+                description: |-
+                  Targets records the current resolution of the target selectors: one entry
+                  per selected Target, with the child Promotion promoting to it and that
+                  Promotion's phase. Entries come and go as the selectors and the Project's
+                  Targets change.
+
+                  The list is atomic rather than a map keyed by name: the reconciler is its
+                  only writer, so per-item ownership tracking in managedFields would only
+                  inflate the object -- roughly doubling the storage cost of each entry --
+                  without ever being used to merge.
+                items:
+                  description: |-
+                    PromotionRequestTargetStatus records the state of a single Target selected
+                    by a PromotionRequest.
+                  properties:
+                    name:
+                      description: Name is the name of the Target.
+                      maxLength: 253
+                      minLength: 1
+                      pattern: ^[a-z0-9]([-a-z0-9]*[a-z0-9])?(\.[a-z0-9]([-a-z0-9]*[a-z0-9])?)*$
+                      type: string
+                    phase:
+                      description: Phase is the phase of that Promotion.
+                      type: string
+                    promotion:
+                      description: |-
+                        Promotion is the name of the child Promotion currently promoting the
+                        Freight to this Target. Empty if none has been created yet.
+                      type: string
+                  required:
+                  - name
+                  type: object
+                type: array
+                x-kubernetes-list-type: atomic
             type: object
         required:
         - spec

@@ -1,6 +1,6 @@
 {
   "$schema": "http://json-schema.org/draft-04/schema#",
-  "description": "PromotionRequest groups the Promotions that fan out a Stage's selected Freight\nto its selected Targets.",
+  "description": "PromotionRequest expresses the intent to promote a piece of Freight to the\nTargets its Stage governs. It is a living object: the governing Stage owns\nits target selectors and keeps them in sync with the Stage's own, and its\nstatus reflects the current per-Target promotion state as Targets come and\ngo -- closer to a ReplicaSet than to a Job.",
   "properties": {
     "apiVersion": {
       "description": "APIVersion defines the versioned schema of this representation of an object.\nServers should convert recognized schemas to the latest internal value, and\nmay reject unrecognized values.\nMore info: https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#resources",
@@ -14,7 +14,7 @@
       "type": "object"
     },
     "spec": {
-      "description": "Spec describes the Stage and Freight associated with the PromotionRequest.",
+      "description": "Spec describes the Stage, the Freight, and the target selectors of the\nPromotionRequest.",
       "properties": {
         "freight": {
           "description": "Freight specifies the piece of Freight promoted by the Stage.\nThe Freight MUST be in the same namespace as the PromotionRequest.",
@@ -40,42 +40,64 @@
             }
           ]
         },
-        "targets": {
-          "description": "Targets specifies the Targets to which this PromotionRequest promotes Freight.\nEach Target MUST be in the same namespace as the PromotionRequest. The list\nmay be empty, which records that the governing Stage's target selectors\nmatched no Targets at the time the PromotionRequest was created.\n\nTarget names MUST be unique. This is enforced by the PromotionRequest\nvalidating webhook rather than by the schema: the list is immutable, so\nper-item ownership tracking would only inflate the object's managedFields\nwithout ever being used to merge anything into it.",
+        "targetSelectors": {
+          "description": "TargetSelectors select the Targets to which this PromotionRequest promotes\nFreight, matching Targets by their labels within the PromotionRequest's\nown Project. A Target is selected when it matches any selector in this\nlist. An empty selector in a non-empty list selects all Targets in the\nProject; a list that matches nothing leaves the PromotionRequest with\nnothing to do.\n\nThe governing Stage owns this field: the selectors are copied from the\nStage's own at creation and kept in sync when they change. Unlike Stage\nand Freight, this field is expected to change over the PromotionRequest's\nlifetime; the reconciler responds by creating Promotions for newly\nselected Targets and recording resolution in status.",
           "items": {
-            "description": "PromotionRequestTarget identifies a Target selected by a PromotionRequest.",
+            "description": "A label selector is a label query over a set of resources. The result of matchLabels and\nmatchExpressions are ANDed. An empty label selector matches all objects. A null\nlabel selector matches no objects.",
             "properties": {
-              "name": {
-                "description": "Name is the name of the Target.",
-                "maxLength": 253,
-                "minLength": 1,
-                "pattern": "^[a-z0-9]([-a-z0-9]*[a-z0-9])?(\\.[a-z0-9]([-a-z0-9]*[a-z0-9])?)*$",
-                "type": "string"
+              "matchExpressions": {
+                "description": "matchExpressions is a list of label selector requirements. The requirements are ANDed.",
+                "items": {
+                  "description": "A label selector requirement is a selector that contains values, a key, and an operator that\nrelates the key and values.",
+                  "properties": {
+                    "key": {
+                      "description": "key is the label key that the selector applies to.",
+                      "type": "string"
+                    },
+                    "operator": {
+                      "description": "operator represents a key's relationship to a set of values.\nValid operators are In, NotIn, Exists and DoesNotExist.",
+                      "type": "string"
+                    },
+                    "values": {
+                      "description": "values is an array of string values. If the operator is In or NotIn,\nthe values array must be non-empty. If the operator is Exists or DoesNotExist,\nthe values array must be empty. This array is replaced during a strategic\nmerge patch.",
+                      "items": {
+                        "type": "string"
+                      },
+                      "type": "array",
+                      "x-kubernetes-list-type": "atomic"
+                    }
+                  },
+                  "required": [
+                    "key",
+                    "operator"
+                  ],
+                  "type": "object"
+                },
+                "type": "array",
+                "x-kubernetes-list-type": "atomic"
+              },
+              "matchLabels": {
+                "additionalProperties": {
+                  "type": "string"
+                },
+                "description": "matchLabels is a map of {key,value} pairs. A single {key,value} in the matchLabels\nmap is equivalent to an element of matchExpressions, whose key field is \"key\", the\noperator is \"In\", and the values array contains only \"value\". The requirements are ANDed.",
+                "type": "object"
               }
             },
-            "required": [
-              "name"
-            ],
-            "type": "object"
+            "type": "object",
+            "x-kubernetes-map-type": "atomic"
           },
-          "type": "array",
-          "x-kubernetes-list-type": "atomic",
-          "x-kubernetes-validations": [
-            {
-              "rule": "self == oldSelf"
-            }
-          ]
+          "type": "array"
         }
       },
       "required": [
         "freight",
-        "stage",
-        "targets"
+        "stage"
       ],
       "type": "object"
     },
     "status": {
-      "description": "Status describes the current aggregate state of the PromotionRequest's\nPromotions.",
+      "description": "Status describes the current resolution of the target selectors and the\naggregate state of the PromotionRequest's Promotions.",
       "properties": {
         "conditions": {
           "description": "Conditions contains the last observations of the PromotionRequest's current\nstate.",
@@ -205,6 +227,35 @@
             }
           },
           "type": "object"
+        },
+        "targets": {
+          "description": "Targets records the current resolution of the target selectors: one entry\nper selected Target, with the child Promotion promoting to it and that\nPromotion's phase. Entries come and go as the selectors and the Project's\nTargets change.\n\nThe list is atomic rather than a map keyed by name: the reconciler is its\nonly writer, so per-item ownership tracking in managedFields would only\ninflate the object -- roughly doubling the storage cost of each entry --\nwithout ever being used to merge.",
+          "items": {
+            "description": "PromotionRequestTargetStatus records the state of a single Target selected\nby a PromotionRequest.",
+            "properties": {
+              "name": {
+                "description": "Name is the name of the Target.",
+                "maxLength": 253,
+                "minLength": 1,
+                "pattern": "^[a-z0-9]([-a-z0-9]*[a-z0-9])?(\\.[a-z0-9]([-a-z0-9]*[a-z0-9])?)*$",
+                "type": "string"
+              },
+              "phase": {
+                "description": "Phase is the phase of that Promotion.",
+                "type": "string"
+              },
+              "promotion": {
+                "description": "Promotion is the name of the child Promotion currently promoting the\nFreight to this Target. Empty if none has been created yet.",
+                "type": "string"
+              }
+            },
+            "required": [
+              "name"
+            ],
+            "type": "object"
+          },
+          "type": "array",
+          "x-kubernetes-list-type": "atomic"
         }
       },
       "type": "object"

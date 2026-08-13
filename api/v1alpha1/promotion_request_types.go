@@ -37,8 +37,11 @@ func (p *PromotionRequestPhase) IsTerminal() bool {
 	}
 }
 
-// PromotionRequest groups the Promotions that fan out a Stage's selected Freight
-// to its selected Targets.
+// PromotionRequest expresses the intent to promote a piece of Freight to the
+// Targets its Stage governs. It is a living object: the governing Stage owns
+// its target selectors and keeps them in sync with the Stage's own, and its
+// status reflects the current per-Target promotion state as Targets come and
+// go -- closer to a ReplicaSet than to a Job.
 //
 // +kubebuilder:resource:scope=Namespaced,shortName={promotionrequest,promotionrequests}
 // +kubebuilder:object:root=true
@@ -51,13 +54,14 @@ type PromotionRequest struct {
 	metav1.TypeMeta   `json:",inline"`
 	metav1.ObjectMeta `json:"metadata,omitempty"`
 
-	// Spec describes the Stage and Freight associated with the PromotionRequest.
+	// Spec describes the Stage, the Freight, and the target selectors of the
+	// PromotionRequest.
 	//
 	// +kubebuilder:validation:Required
 	Spec PromotionRequestSpec `json:"spec"`
 
-	// Status describes the current aggregate state of the PromotionRequest's
-	// Promotions.
+	// Status describes the current resolution of the target selectors and the
+	// aggregate state of the PromotionRequest's Promotions.
 	//
 	// +kubebuilder:validation:Optional
 	Status PromotionRequestStatus `json:"status,omitempty"`
@@ -68,8 +72,8 @@ func (p *PromotionRequest) GetStatus() *PromotionRequestStatus {
 	return &p.Status
 }
 
-// PromotionRequestSpec describes the Stage and Freight associated with a
-// PromotionRequest.
+// PromotionRequestSpec describes the Stage, the Freight, and the target
+// selectors of a PromotionRequest.
 type PromotionRequestSpec struct {
 	// Stage specifies the name of the Stage that promotes the Freight.
 	// The Stage MUST be in the same namespace as the PromotionRequest.
@@ -93,32 +97,21 @@ type PromotionRequestSpec struct {
 	// +kubebuilder:validation:XValidation:rule="self == oldSelf"
 	Freight string `json:"freight"`
 
-	// Targets specifies the Targets to which this PromotionRequest promotes Freight.
-	// Each Target MUST be in the same namespace as the PromotionRequest. The list
-	// may be empty, which records that the governing Stage's target selectors
-	// matched no Targets at the time the PromotionRequest was created.
+	// TargetSelectors select the Targets to which this PromotionRequest promotes
+	// Freight, matching Targets by their labels within the PromotionRequest's
+	// own Project. A Target is selected when it matches any selector in this
+	// list. An empty selector in a non-empty list selects all Targets in the
+	// Project; a list that matches nothing leaves the PromotionRequest with
+	// nothing to do.
 	//
-	// Target names MUST be unique. This is enforced by the PromotionRequest
-	// validating webhook rather than by the schema: the list is immutable, so
-	// per-item ownership tracking would only inflate the object's managedFields
-	// without ever being used to merge anything into it.
+	// The governing Stage owns this field: the selectors are copied from the
+	// Stage's own at creation and kept in sync when they change. Unlike Stage
+	// and Freight, this field is expected to change over the PromotionRequest's
+	// lifetime; the reconciler responds by creating Promotions for newly
+	// selected Targets and recording resolution in status.
 	//
-	// +listType=atomic
-	// +kubebuilder:validation:Required
-	// +kubebuilder:validation:XValidation:rule="self == oldSelf"
-	Targets []PromotionRequestTarget `json:"targets"`
-}
-
-// PromotionRequestTarget identifies a Target selected by a PromotionRequest.
-type PromotionRequestTarget struct {
-	// Name is the name of the Target.
-	//
-	// +kubebuilder:validation:Required
-	// +kubebuilder:validation:MinLength=1
-	// +kubebuilder:validation:MaxLength=253
-	// +kubebuilder:validation:Pattern=`^[a-z0-9]([-a-z0-9]*[a-z0-9])?(\.[a-z0-9]([-a-z0-9]*[a-z0-9])?)*$`
-	// +akuity:test-kubebuilder-pattern=KubernetesName
-	Name string `json:"name"`
+	// +optional
+	TargetSelectors []metav1.LabelSelector `json:"targetSelectors,omitempty"`
 }
 
 // PromotionRequestStatus describes the observed aggregate state of a
@@ -138,6 +131,20 @@ type PromotionRequestStatus struct {
 	// +kubebuilder:validation:Optional
 	Phase PromotionRequestPhase `json:"phase,omitempty"`
 
+	// Targets records the current resolution of the target selectors: one entry
+	// per selected Target, with the child Promotion promoting to it and that
+	// Promotion's phase. Entries come and go as the selectors and the Project's
+	// Targets change.
+	//
+	// The list is atomic rather than a map keyed by name: the reconciler is its
+	// only writer, so per-item ownership tracking in managedFields would only
+	// inflate the object -- roughly doubling the storage cost of each entry --
+	// without ever being used to merge.
+	//
+	// +kubebuilder:validation:Optional
+	// +listType=atomic
+	Targets []PromotionRequestTargetStatus `json:"targets,omitempty"`
+
 	// Summary aggregates the phases of this PromotionRequest's child Promotions.
 	//
 	// +kubebuilder:validation:Optional
@@ -155,6 +162,30 @@ type PromotionRequestStatus struct {
 
 	// FinishedAt is the time at which the PromotionRequest completed.
 	FinishedAt *metav1.Time `json:"finishedAt,omitempty"`
+}
+
+// PromotionRequestTargetStatus records the state of a single Target selected
+// by a PromotionRequest.
+type PromotionRequestTargetStatus struct {
+	// Name is the name of the Target.
+	//
+	// +kubebuilder:validation:Required
+	// +kubebuilder:validation:MinLength=1
+	// +kubebuilder:validation:MaxLength=253
+	// +kubebuilder:validation:Pattern=`^[a-z0-9]([-a-z0-9]*[a-z0-9])?(\.[a-z0-9]([-a-z0-9]*[a-z0-9])?)*$`
+	// +akuity:test-kubebuilder-pattern=KubernetesName
+	Name string `json:"name"`
+
+	// Promotion is the name of the child Promotion currently promoting the
+	// Freight to this Target. Empty if none has been created yet.
+	//
+	// +kubebuilder:validation:Optional
+	Promotion string `json:"promotion,omitempty"`
+
+	// Phase is the phase of that Promotion.
+	//
+	// +kubebuilder:validation:Optional
+	Phase PromotionPhase `json:"phase,omitempty"`
 }
 
 // PromotionRequestSummary aggregates the phases of a PromotionRequest's child

@@ -121,8 +121,8 @@ func TestReconcile(t *testing.T) {
 			Spec: kargoapi.PromotionRequestSpec{
 				Stage:   "fake-stage",
 				Freight: "fake-freight",
-				Targets: []kargoapi.PromotionRequestTarget{{
-					Name: "fake-target",
+				TargetSelectors: []metav1.LabelSelector{{
+					MatchLabels: map[string]string{"region": "us"},
 				}},
 			},
 		}

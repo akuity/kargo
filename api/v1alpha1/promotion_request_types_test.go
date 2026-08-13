@@ -92,7 +92,9 @@ func TestPromotionRequest_DeepCopy(t *testing.T) {
 		Spec: PromotionRequestSpec{
 			Stage:   "fake-stage",
 			Freight: "fake-freight",
-			Targets: []PromotionRequestTarget{{Name: "fake-target"}},
+			TargetSelectors: []metav1.LabelSelector{{
+				MatchLabels: map[string]string{"region": "us"},
+			}},
 		},
 		Status: PromotionRequestStatus{
 			Conditions: []metav1.Condition{{
@@ -100,6 +102,11 @@ func TestPromotionRequest_DeepCopy(t *testing.T) {
 				Status: metav1.ConditionTrue,
 			}},
 			Phase: PromotionRequestPhaseRunning,
+			Targets: []PromotionRequestTargetStatus{{
+				Name:      "fake-target",
+				Promotion: "fake-stage.fake-target.fake-promotion",
+				Phase:     PromotionPhaseRunning,
+			}},
 			Summary: &PromotionRequestSummary{
 				Running: 1,
 			},
@@ -110,13 +117,15 @@ func TestPromotionRequest_DeepCopy(t *testing.T) {
 	promotionRequestCopy := promotionRequest.DeepCopy()
 	require.Equal(t, promotionRequest, promotionRequestCopy)
 
-	promotionRequestCopy.Spec.Targets[0].Name = "different-target"
+	promotionRequestCopy.Spec.TargetSelectors[0].MatchLabels["region"] = "eu"
 	promotionRequestCopy.Status.Conditions[0].Status = metav1.ConditionFalse
+	promotionRequestCopy.Status.Targets[0].Phase = PromotionPhaseSucceeded
 	promotionRequestCopy.Status.Summary.Running = 2
 	promotionRequestCopy.Status.StartedAt = nil
 
-	require.Equal(t, "fake-target", promotionRequest.Spec.Targets[0].Name)
+	require.Equal(t, "us", promotionRequest.Spec.TargetSelectors[0].MatchLabels["region"])
 	require.Equal(t, metav1.ConditionTrue, promotionRequest.Status.Conditions[0].Status)
+	require.Equal(t, PromotionPhaseRunning, promotionRequest.Status.Targets[0].Phase)
 	require.EqualValues(t, 1, promotionRequest.Status.Summary.Running)
 	require.Equal(t, &now, promotionRequest.Status.StartedAt)
 }
