@@ -108,9 +108,16 @@ model_promotion_list.go
 model_promotion_policy.go
 model_promotion_policy_selector.go
 model_promotion_reference.go
+model_promotion_request.go
 model_promotion_request_freight_reference.go
+model_promotion_request_list.go
 model_promotion_request_phase.go
 model_promotion_request_reference.go
+model_promotion_request_spec.go
+model_promotion_request_status.go
+model_promotion_request_summary.go
+model_promotion_request_target.go
+model_promotion_request_target_status.go
 model_promotion_spec.go
 model_promotion_status.go
 model_promotion_step.go
