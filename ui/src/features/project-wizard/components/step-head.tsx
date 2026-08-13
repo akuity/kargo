@@ -1,4 +1,6 @@
-import { Tag } from 'antd';
+import { faExternalLink } from '@fortawesome/free-solid-svg-icons';
+import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
+import { Tag, Typography } from 'antd';
 
 import { STEP_META, StepMeta } from '../step-meta';
 
@@ -25,6 +27,17 @@ export const StepHead = ({ meta, locked }: StepHeadProps) => (
       )}
     </div>
     <h1 className='text-2xl font-bold text-gray-900 mt-2 mb-0'>{meta.title}</h1>
-    <p className='text-sm text-gray-500 mt-1.5 mb-0 max-w-2xl'>{meta.intro}</p>
+    <p className='text-sm text-gray-500 mt-1.5 mb-0 max-w-2xl'>
+      {meta.intro}
+      {meta.docs && (
+        <>
+          {' '}
+          <Typography.Link href={meta.docs} target='_blank' className='text-sm whitespace-nowrap'>
+            Learn more
+            <FontAwesomeIcon icon={faExternalLink} className='ml-1' size='xs' />
+          </Typography.Link>
+        </>
+      )}
+    </p>
   </div>
 );

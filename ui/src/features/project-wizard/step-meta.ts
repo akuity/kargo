@@ -7,9 +7,13 @@ export type StepMeta = {
   required: boolean;
   hint: string;
   intro: string;
+  // Optional link to the docs page covering this step's concepts.
+  docs?: string;
   // Step is locked (not clickable) until this state slice is non-empty.
   needs?: 'stages';
 };
+
+const DOCS_BASE = 'https://docs.kargo.io';
 
 export const STEP_META: StepMeta[] = [
   {
@@ -19,7 +23,8 @@ export const STEP_META: StepMeta[] = [
     required: true,
     hint: 'Name & namespace',
     intro:
-      "A Kargo Project maps 1:1 to a Kubernetes Namespace. It's the boundary for all the resources you'll create in the next steps."
+      "A Kargo Project maps 1:1 to a Kubernetes Namespace. It's the boundary for all the resources you'll create in the next steps.",
+    docs: `${DOCS_BASE}/user-guide/how-to-guides/working-with-projects`
   },
   {
     id: 'credentials',
@@ -28,7 +33,8 @@ export const STEP_META: StepMeta[] = [
     required: false,
     hint: 'Git / image / Helm',
     intro:
-      'Store repository credentials as Secrets in the project namespace so warehouses and promotion steps can authenticate.'
+      'Store repository credentials as Secrets in the project namespace so warehouses and promotion steps can authenticate.',
+    docs: `${DOCS_BASE}/operator-guide/security/managing-secrets`
   },
   {
     id: 'warehouses',
@@ -37,7 +43,8 @@ export const STEP_META: StepMeta[] = [
     required: false,
     hint: 'Freight sources',
     intro:
-      'Warehouses subscribe to container image, Git, and Helm chart repositories and assemble new artifacts into Freight.'
+      'Warehouses subscribe to container image, Git, and Helm chart repositories and assemble new artifacts into Freight.',
+    docs: `${DOCS_BASE}/user-guide/how-to-guides/working-with-warehouses`
   },
   {
     id: 'stages',
@@ -46,7 +53,8 @@ export const STEP_META: StepMeta[] = [
     required: false,
     hint: 'Promotion graph',
     intro:
-      'Stages define where Freight can be promoted, and the ordered promotion steps that run on each promotion.'
+      'Stages define where Freight can be promoted, and the ordered promotion steps that run on each promotion.',
+    docs: `${DOCS_BASE}/user-guide/how-to-guides/working-with-stages`
   },
   {
     id: 'policies',
@@ -55,6 +63,7 @@ export const STEP_META: StepMeta[] = [
     required: false,
     hint: 'Auto-promotion rules',
     intro: 'Enable automatic promotion of new Freight into selected stages.',
+    docs: `${DOCS_BASE}/user-guide/how-to-guides/working-with-projects#promotion-policies`,
     needs: 'stages'
   },
   {
