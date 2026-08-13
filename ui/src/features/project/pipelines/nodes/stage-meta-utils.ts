@@ -13,6 +13,14 @@ import { useFreightTimelineControllerContext } from '../context/freight-timeline
 export const isStageControlFlow = (stage: Stage) =>
   (stage?.spec?.promotionTemplate?.spec?.steps?.length || 0) <= 0;
 
+// isStageTargetAware reports whether a Stage governs Targets, and therefore
+// promotes Freight via a PromotionRequest rather than a Promotion.
+//
+// This mirrors api.IsTargetAware on the back end: the targets block being
+// present is the test, not what its selectors match. A Stage whose selectors
+// currently match nothing is still target-aware.
+export const isStageTargetAware = (stage?: Stage) => stage?.spec?.targets !== undefined;
+
 export const getStageHealth = (stage: Stage) => stage?.status?.health;
 
 export const useIsColorsUsed = () => {

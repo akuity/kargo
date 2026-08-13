@@ -14,7 +14,7 @@ import { usePromoteDownstream, usePromoteToStage } from '@ui/gen/api/v2/core/cor
 import { Freight, Stage } from '@ui/gen/api/v2/models';
 
 import { useDictionaryContext } from '../context/dictionary-context';
-import { isStageControlFlow } from '../nodes/stage-meta-utils';
+import { isStageControlFlow, isStageTargetAware } from '../nodes/stage-meta-utils';
 
 import { FreightDetails } from './freight-details';
 import styles from './promote.module.less';
@@ -46,6 +46,22 @@ export const Promote = (props: PromoteProps) => {
   const promoteActionMutation = usePromoteToStage({
     mutation: {
       onSuccess: (response) => {
+        // A target-aware Stage promotes through a PromotionRequest, so the
+        // response is a PromotionRequest and there is no Promotion to open.
+        // Send the user to the Stage's Promotions tab, where the request and
+        // whatever it reports are listed.
+        if (isStageTargetAware(props.stage)) {
+          navigate(
+            generatePath(paths.stage, {
+              name: projectName,
+              stageName
+            })
+          );
+
+          actionContext?.cancel();
+          return;
+        }
+
         // navigate
         navigate(
           generatePath(paths.promotion, {
