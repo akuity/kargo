@@ -239,3 +239,33 @@ tests:
       - equal:
           path: spec.rules[0].http.paths[1].backend.service.name
           value: kargo-external-webhooks-server
+
+---
+suite: api/cluster-roles.yaml
+values:
+  - ../test/values-unittest.yaml
+templates:
+  - templates/api/cluster-roles.yaml
+tests:
+  - it: grants full PromotionRequest access
+    documentSelector:
+      path: metadata.name
+      value: kargo-api
+    asserts:
+      - contains:
+          path: rules
+          content:
+            apiGroups:
+              - kargo.akuity.io
+            resources:
+              - clusterconfigs
+              - clusterpromotiontasks
+              - projects
+              - promotiontasks
+              - stages
+              - warehouses
+              - projectconfigs
+              - promotionrequests
+              - targets
+            verbs:
+              - "*"

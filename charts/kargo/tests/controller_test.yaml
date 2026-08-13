@@ -117,6 +117,14 @@ tests:
           path: data.METRICS_BIND_ADDRESS
           value: ":9095"
 
+  - it: configures PromotionRequest reconciliation concurrency
+    set:
+      controller.reconcilers.promotionRequests.maxConcurrentReconciles: 7
+    asserts:
+      - equal:
+          path: data.MAX_CONCURRENT_PROMOTION_REQUEST_RECONCILES
+          value: "7"
+
 ---
 suite: controller/cluster-role-bindings.yaml
 values:
@@ -278,3 +286,71 @@ tests:
       - equal:
           path: spec.selector.matchLabels["app.kubernetes.io/component"]
           value: controller
+
+---
+suite: controller/cluster-roles.yaml
+values:
+  - ../test/values-unittest.yaml
+templates:
+  - templates/controller/cluster-roles.yaml
+tests:
+  # The Stage controller is the only thing that creates PromotionRequests, so the
+  # controller needs create alongside the read verbs.
+  - it: grants PromotionRequest create access
+    documentSelector:
+      path: metadata.name
+      value: kargo-controller
+    asserts:
+      - contains:
+          path: rules
+          content:
+            apiGroups:
+              - kargo.akuity.io
+            resources:
+              - promotions
+              - promotionrequests
+            verbs:
+              - create
+              - get
+              - list
+              - watch
+
+  - it: grants read-only Target access
+    documentSelector:
+      path: metadata.name
+      value: kargo-controller
+    asserts:
+      - contains:
+          path: rules
+          content:
+            apiGroups:
+              - kargo.akuity.io
+            resources:
+              - clusterconfigs
+              - projects
+              - projectconfigs
+              - targets
+            verbs:
+              - get
+              - list
+              - watch
+
+  - it: grants PromotionRequest status patch access
+    documentSelector:
+      path: metadata.name
+      value: kargo-controller
+    asserts:
+      - contains:
+          path: rules
+          content:
+            apiGroups:
+              - kargo.akuity.io
+            resources:
+              - freights/status
+              - promotions/status
+              - promotionrequests/status
+              - stages/status
+              - warehouses/finalizers
+              - warehouses/status
+            verbs:
+              - patch

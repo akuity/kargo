@@ -894,9 +894,21 @@ func (r *reconciler) ensureDefaultUserRoles(
 					Verbs:     []string{"*"},
 				},
 				{ // Full access to all mutable Kargo resource types
+					// PromotionRequests are deliberately absent: only the Stage
+					// controller creates them, so no user needs write access, and
+					// withholding read access leaves them inert here. Editions
+					// that reconcile PromotionRequests grant these permissions
+					// themselves via RegisterRoleRulesContributor.
 					APIGroups: []string{kargoapi.GroupVersion.Group},
-					Resources: []string{"freights", "projectconfigs", "promotiontasks", "stages", "warehouses"},
-					Verbs:     []string{"*"},
+					Resources: []string{
+						"freights",
+						"projectconfigs",
+						"promotiontasks",
+						"stages",
+						"targets",
+						"warehouses",
+					},
+					Verbs: []string{"*"},
 				},
 				{ // Promote permission on all stages
 					APIGroups: []string{kargoapi.GroupVersion.Group},
@@ -946,9 +958,18 @@ func (r *reconciler) ensureDefaultUserRoles(
 					Verbs:     []string{"get", "list", "watch"},
 				},
 				{
+					// PromotionRequests are deliberately absent here too. See the
+					// corresponding rule on the admin Role above.
 					APIGroups: []string{kargoapi.GroupVersion.Group},
-					Resources: []string{"freights", "promotions", "stages", "warehouses", "projectconfigs"},
-					Verbs:     []string{"get", "list", "watch"},
+					Resources: []string{
+						"freights",
+						"projectconfigs",
+						"promotions",
+						"stages",
+						"targets",
+						"warehouses",
+					},
+					Verbs: []string{"get", "list", "watch"},
 				},
 				{
 					APIGroups: []string{rolloutsapi.GroupVersion.Group},
