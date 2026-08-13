@@ -247,7 +247,7 @@ values:
 templates:
   - templates/api/cluster-roles.yaml
 tests:
-  - it: grants full PromotionSet access
+  - it: grants full PromotionRequest access
     documentSelector:
       path: metadata.name
       value: kargo-api
@@ -265,7 +265,7 @@ tests:
               - stages
               - warehouses
               - projectconfigs
-              - promotionsets
+              - promotionrequests
               - targets
             verbs:
               - "*"

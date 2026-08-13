@@ -1,6 +1,6 @@
 {
   "$schema": "http://json-schema.org/draft-04/schema#",
-  "description": "PromotionSet groups the Promotions that fan out a Stage's selected Freight\nto its selected Targets.",
+  "description": "PromotionRequest groups the Promotions that fan out a Stage's selected Freight\nto its selected Targets.",
   "properties": {
     "apiVersion": {
       "description": "APIVersion defines the versioned schema of this representation of an object.\nServers should convert recognized schemas to the latest internal value, and\nmay reject unrecognized values.\nMore info: https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#resources",
@@ -14,10 +14,10 @@
       "type": "object"
     },
     "spec": {
-      "description": "Spec describes the Stage and Freight associated with the PromotionSet.",
+      "description": "Spec describes the Stage and Freight associated with the PromotionRequest.",
       "properties": {
         "freight": {
-          "description": "Freight specifies the piece of Freight promoted by the Stage.\nThe Freight MUST be in the same namespace as the PromotionSet.",
+          "description": "Freight specifies the piece of Freight promoted by the Stage.\nThe Freight MUST be in the same namespace as the PromotionRequest.",
           "maxLength": 253,
           "minLength": 1,
           "pattern": "^[a-z0-9]([-a-z0-9]*[a-z0-9])?(\\.[a-z0-9]([-a-z0-9]*[a-z0-9])?)*$",
@@ -29,7 +29,7 @@
           ]
         },
         "stage": {
-          "description": "Stage specifies the name of the Stage that promotes the Freight.\nThe Stage MUST be in the same namespace as the PromotionSet.",
+          "description": "Stage specifies the name of the Stage that promotes the Freight.\nThe Stage MUST be in the same namespace as the PromotionRequest.",
           "maxLength": 253,
           "minLength": 1,
           "pattern": "^[a-z0-9]([-a-z0-9]*[a-z0-9])?(\\.[a-z0-9]([-a-z0-9]*[a-z0-9])?)*$",
@@ -41,9 +41,9 @@
           ]
         },
         "targets": {
-          "description": "Targets specifies the Targets to which this PromotionSet promotes Freight.\nEach Target MUST be in the same namespace as the PromotionSet. The list\nmay be empty, which records that the governing Stage's target selectors\nmatched no Targets at the time the PromotionSet was created.\n\nTarget names MUST be unique. This is enforced by the PromotionSet\nvalidating webhook rather than by the schema: the list is immutable, so\nper-item ownership tracking would only inflate the object's managedFields\nwithout ever being used to merge anything into it.",
+          "description": "Targets specifies the Targets to which this PromotionRequest promotes Freight.\nEach Target MUST be in the same namespace as the PromotionRequest. The list\nmay be empty, which records that the governing Stage's target selectors\nmatched no Targets at the time the PromotionRequest was created.\n\nTarget names MUST be unique. This is enforced by the PromotionRequest\nvalidating webhook rather than by the schema: the list is immutable, so\nper-item ownership tracking would only inflate the object's managedFields\nwithout ever being used to merge anything into it.",
           "items": {
-            "description": "PromotionSetTarget identifies a Target selected by a PromotionSet.",
+            "description": "PromotionRequestTarget identifies a Target selected by a PromotionRequest.",
             "properties": {
               "name": {
                 "description": "Name is the name of the Target.",
@@ -75,10 +75,10 @@
       "type": "object"
     },
     "status": {
-      "description": "Status describes the current aggregate state of the PromotionSet's\nPromotions.",
+      "description": "Status describes the current aggregate state of the PromotionRequest's\nPromotions.",
       "properties": {
         "conditions": {
-          "description": "Conditions contains the last observations of the PromotionSet's current\nstate.",
+          "description": "Conditions contains the last observations of the PromotionRequest's current\nstate.",
           "items": {
             "description": "Condition contains details for one aspect of the current state of this API Resource.",
             "properties": {
@@ -138,7 +138,7 @@
           "x-kubernetes-list-type": "map"
         },
         "finishedAt": {
-          "description": "FinishedAt is the time at which the PromotionSet completed.",
+          "description": "FinishedAt is the time at which the PromotionRequest completed.",
           "format": "date-time",
           "type": "string"
         },
@@ -150,16 +150,16 @@
           "type": "integer"
         },
         "phase": {
-          "description": "Phase is a high-level summary of the PromotionSet's lifecycle.",
+          "description": "Phase is a high-level summary of the PromotionRequest's lifecycle.",
           "type": "string"
         },
         "startedAt": {
-          "description": "StartedAt is the time at which the PromotionSet started.",
+          "description": "StartedAt is the time at which the PromotionRequest started.",
           "format": "date-time",
           "type": "string"
         },
         "summary": {
-          "description": "Summary aggregates the phases of this PromotionSet's child Promotions.",
+          "description": "Summary aggregates the phases of this PromotionRequest's child Promotions.",
           "properties": {
             "aborted": {
               "description": "Aborted is the number of child Promotions in the Aborted phase.",

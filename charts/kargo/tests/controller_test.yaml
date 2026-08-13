@@ -117,12 +117,12 @@ tests:
           path: data.METRICS_BIND_ADDRESS
           value: ":9095"
 
-  - it: configures PromotionSet reconciliation concurrency
+  - it: configures PromotionRequest reconciliation concurrency
     set:
-      controller.reconcilers.promotionSets.maxConcurrentReconciles: 7
+      controller.reconcilers.promotionRequests.maxConcurrentReconciles: 7
     asserts:
       - equal:
-          path: data.MAX_CONCURRENT_PROMOTION_SET_RECONCILES
+          path: data.MAX_CONCURRENT_PROMOTION_REQUEST_RECONCILES
           value: "7"
 
 ---
@@ -294,9 +294,9 @@ values:
 templates:
   - templates/controller/cluster-roles.yaml
 tests:
-  # The Stage controller is the only thing that creates PromotionSets, so the
+  # The Stage controller is the only thing that creates PromotionRequests, so the
   # controller needs create alongside the read verbs.
-  - it: grants PromotionSet create access
+  - it: grants PromotionRequest create access
     documentSelector:
       path: metadata.name
       value: kargo-controller
@@ -308,7 +308,7 @@ tests:
               - kargo.akuity.io
             resources:
               - promotions
-              - promotionsets
+              - promotionrequests
             verbs:
               - create
               - get
@@ -335,7 +335,7 @@ tests:
               - list
               - watch
 
-  - it: grants PromotionSet status patch access
+  - it: grants PromotionRequest status patch access
     documentSelector:
       path: metadata.name
       value: kargo-controller
@@ -348,7 +348,7 @@ tests:
             resources:
               - freights/status
               - promotions/status
-              - promotionsets/status
+              - promotionrequests/status
               - stages/status
               - warehouses/finalizers
               - warehouses/status

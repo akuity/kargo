@@ -4,17 +4,17 @@ kind: CustomResourceDefinition
 metadata:
   annotations:
     controller-gen.kubebuilder.io/version: v0.19.0
-  name: promotionsets.kargo.akuity.io
+  name: promotionrequests.kargo.akuity.io
 spec:
   group: kargo.akuity.io
   names:
-    kind: PromotionSet
-    listKind: PromotionSetList
-    plural: promotionsets
+    kind: PromotionRequest
+    listKind: PromotionRequestList
+    plural: promotionrequests
     shortNames:
-    - promotionset
-    - promotionsets
-    singular: promotionset
+    - promotionrequest
+    - promotionrequests
+    singular: promotionrequest
   scope: Namespaced
   versions:
   - additionalPrinterColumns:
@@ -34,7 +34,7 @@ spec:
     schema:
       openAPIV3Schema:
         description: |-
-          PromotionSet groups the Promotions that fan out a Stage's selected Freight
+          PromotionRequest groups the Promotions that fan out a Stage's selected Freight
           to its selected Targets.
         properties:
           apiVersion:
@@ -56,12 +56,12 @@ spec:
             type: object
           spec:
             description: Spec describes the Stage and Freight associated with the
-              PromotionSet.
+              PromotionRequest.
             properties:
               freight:
                 description: |-
                   Freight specifies the piece of Freight promoted by the Stage.
-                  The Freight MUST be in the same namespace as the PromotionSet.
+                  The Freight MUST be in the same namespace as the PromotionRequest.
                 maxLength: 253
                 minLength: 1
                 pattern: ^[a-z0-9]([-a-z0-9]*[a-z0-9])?(\.[a-z0-9]([-a-z0-9]*[a-z0-9])?)*$
@@ -71,7 +71,7 @@ spec:
               stage:
                 description: |-
                   Stage specifies the name of the Stage that promotes the Freight.
-                  The Stage MUST be in the same namespace as the PromotionSet.
+                  The Stage MUST be in the same namespace as the PromotionRequest.
                 maxLength: 253
                 minLength: 1
                 pattern: ^[a-z0-9]([-a-z0-9]*[a-z0-9])?(\.[a-z0-9]([-a-z0-9]*[a-z0-9])?)*$
@@ -80,18 +80,18 @@ spec:
                 - rule: self == oldSelf
               targets:
                 description: |-
-                  Targets specifies the Targets to which this PromotionSet promotes Freight.
-                  Each Target MUST be in the same namespace as the PromotionSet. The list
+                  Targets specifies the Targets to which this PromotionRequest promotes Freight.
+                  Each Target MUST be in the same namespace as the PromotionRequest. The list
                   may be empty, which records that the governing Stage's target selectors
-                  matched no Targets at the time the PromotionSet was created.
+                  matched no Targets at the time the PromotionRequest was created.
 
-                  Target names MUST be unique. This is enforced by the PromotionSet
+                  Target names MUST be unique. This is enforced by the PromotionRequest
                   validating webhook rather than by the schema: the list is immutable, so
                   per-item ownership tracking would only inflate the object's managedFields
                   without ever being used to merge anything into it.
                 items:
-                  description: PromotionSetTarget identifies a Target selected by
-                    a PromotionSet.
+                  description: PromotionRequestTarget identifies a Target selected
+                    by a PromotionRequest.
                   properties:
                     name:
                       description: Name is the name of the Target.
@@ -113,12 +113,12 @@ spec:
             type: object
           status:
             description: |-
-              Status describes the current aggregate state of the PromotionSet's
+              Status describes the current aggregate state of the PromotionRequest's
               Promotions.
             properties:
               conditions:
                 description: |-
-                  Conditions contains the last observations of the PromotionSet's current
+                  Conditions contains the last observations of the PromotionRequest's current
                   state.
                 items:
                   description: Condition contains details for one aspect of the current
@@ -179,7 +179,8 @@ spec:
                 - type
                 x-kubernetes-list-type: map
               finishedAt:
-                description: FinishedAt is the time at which the PromotionSet completed.
+                description: FinishedAt is the time at which the PromotionRequest
+                  completed.
                 format: date-time
                 type: string
               observedGeneration:
@@ -188,14 +189,15 @@ spec:
                 format: int64
                 type: integer
               phase:
-                description: Phase is a high-level summary of the PromotionSet's lifecycle.
+                description: Phase is a high-level summary of the PromotionRequest's
+                  lifecycle.
                 type: string
               startedAt:
-                description: StartedAt is the time at which the PromotionSet started.
+                description: StartedAt is the time at which the PromotionRequest started.
                 format: date-time
                 type: string
               summary:
-                description: Summary aggregates the phases of this PromotionSet's
+                description: Summary aggregates the phases of this PromotionRequest's
                   child Promotions.
                 properties:
                   aborted:

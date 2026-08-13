@@ -85,7 +85,7 @@ rules:
   - stages
   - warehouses
   - projectconfigs
-  - promotionsets
+  - promotionrequests
   - targets
   verbs:
   - "*"

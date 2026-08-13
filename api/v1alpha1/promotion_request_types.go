@@ -5,74 +5,74 @@ import (
 )
 
 const (
-	// PromotionSetPhasePending denotes a PromotionSet that has not started
+	// PromotionRequestPhasePending denotes a PromotionRequest that has not started
 	// creating Promotions.
-	PromotionSetPhasePending PromotionSetPhase = "Pending"
-	// PromotionSetPhaseRunning denotes a PromotionSet that is creating or
+	PromotionRequestPhasePending PromotionRequestPhase = "Pending"
+	// PromotionRequestPhaseRunning denotes a PromotionRequest that is creating or
 	// monitoring Promotions.
-	PromotionSetPhaseRunning PromotionSetPhase = "Running"
-	// PromotionSetPhaseSucceeded denotes a PromotionSet whose Promotions all
+	PromotionRequestPhaseRunning PromotionRequestPhase = "Running"
+	// PromotionRequestPhaseSucceeded denotes a PromotionRequest whose Promotions all
 	// completed successfully.
-	PromotionSetPhaseSucceeded PromotionSetPhase = "Succeeded"
-	// PromotionSetPhaseFailed denotes a PromotionSet with Promotions that failed
+	PromotionRequestPhaseSucceeded PromotionRequestPhase = "Succeeded"
+	// PromotionRequestPhaseFailed denotes a PromotionRequest with Promotions that failed
 	// for non-technical reasons.
-	PromotionSetPhaseFailed PromotionSetPhase = "Failed"
-	// PromotionSetPhaseErrored denotes a PromotionSet with Promotions that
+	PromotionRequestPhaseFailed PromotionRequestPhase = "Failed"
+	// PromotionRequestPhaseErrored denotes a PromotionRequest with Promotions that
 	// encountered technical errors.
-	PromotionSetPhaseErrored PromotionSetPhase = "Errored"
+	PromotionRequestPhaseErrored PromotionRequestPhase = "Errored"
 )
 
-// PromotionSetPhase is a high-level summary of a PromotionSet's lifecycle.
-type PromotionSetPhase string
+// PromotionRequestPhase is a high-level summary of a PromotionRequest's lifecycle.
+type PromotionRequestPhase string
 
-// IsTerminal returns true if the PromotionSetPhase is a terminal one.
-func (p *PromotionSetPhase) IsTerminal() bool {
+// IsTerminal returns true if the PromotionRequestPhase is a terminal one.
+func (p *PromotionRequestPhase) IsTerminal() bool {
 	switch *p {
-	case PromotionSetPhaseSucceeded,
-		PromotionSetPhaseFailed,
-		PromotionSetPhaseErrored:
+	case PromotionRequestPhaseSucceeded,
+		PromotionRequestPhaseFailed,
+		PromotionRequestPhaseErrored:
 		return true
 	default:
 		return false
 	}
 }
 
-// PromotionSet groups the Promotions that fan out a Stage's selected Freight
+// PromotionRequest groups the Promotions that fan out a Stage's selected Freight
 // to its selected Targets.
 //
-// +kubebuilder:resource:scope=Namespaced,shortName={promotionset,promotionsets}
+// +kubebuilder:resource:scope=Namespaced,shortName={promotionrequest,promotionrequests}
 // +kubebuilder:object:root=true
 // +kubebuilder:printcolumn:name=Stage,type=string,JSONPath=`.spec.stage`
 // +kubebuilder:printcolumn:name=Freight,type=string,JSONPath=`.spec.freight`
 // +kubebuilder:printcolumn:name=Phase,type=string,JSONPath=`.status.phase`
 // +kubebuilder:printcolumn:name=Age,type=date,JSONPath=`.metadata.creationTimestamp`
 // +kubebuilder:subresource:status
-type PromotionSet struct {
+type PromotionRequest struct {
 	metav1.TypeMeta   `json:",inline"`
 	metav1.ObjectMeta `json:"metadata,omitempty"`
 
-	// Spec describes the Stage and Freight associated with the PromotionSet.
+	// Spec describes the Stage and Freight associated with the PromotionRequest.
 	//
 	// +kubebuilder:validation:Required
-	Spec PromotionSetSpec `json:"spec"`
+	Spec PromotionRequestSpec `json:"spec"`
 
-	// Status describes the current aggregate state of the PromotionSet's
+	// Status describes the current aggregate state of the PromotionRequest's
 	// Promotions.
 	//
 	// +kubebuilder:validation:Optional
-	Status PromotionSetStatus `json:"status,omitempty"`
+	Status PromotionRequestStatus `json:"status,omitempty"`
 }
 
-// GetStatus returns the PromotionSet's status.
-func (p *PromotionSet) GetStatus() *PromotionSetStatus {
+// GetStatus returns the PromotionRequest's status.
+func (p *PromotionRequest) GetStatus() *PromotionRequestStatus {
 	return &p.Status
 }
 
-// PromotionSetSpec describes the Stage and Freight associated with a
-// PromotionSet.
-type PromotionSetSpec struct {
+// PromotionRequestSpec describes the Stage and Freight associated with a
+// PromotionRequest.
+type PromotionRequestSpec struct {
 	// Stage specifies the name of the Stage that promotes the Freight.
-	// The Stage MUST be in the same namespace as the PromotionSet.
+	// The Stage MUST be in the same namespace as the PromotionRequest.
 	//
 	// +kubebuilder:validation:Required
 	// +kubebuilder:validation:MinLength=1
@@ -83,7 +83,7 @@ type PromotionSetSpec struct {
 	Stage string `json:"stage"`
 
 	// Freight specifies the piece of Freight promoted by the Stage.
-	// The Freight MUST be in the same namespace as the PromotionSet.
+	// The Freight MUST be in the same namespace as the PromotionRequest.
 	//
 	// +kubebuilder:validation:Required
 	// +kubebuilder:validation:MinLength=1
@@ -93,12 +93,12 @@ type PromotionSetSpec struct {
 	// +kubebuilder:validation:XValidation:rule="self == oldSelf"
 	Freight string `json:"freight"`
 
-	// Targets specifies the Targets to which this PromotionSet promotes Freight.
-	// Each Target MUST be in the same namespace as the PromotionSet. The list
+	// Targets specifies the Targets to which this PromotionRequest promotes Freight.
+	// Each Target MUST be in the same namespace as the PromotionRequest. The list
 	// may be empty, which records that the governing Stage's target selectors
-	// matched no Targets at the time the PromotionSet was created.
+	// matched no Targets at the time the PromotionRequest was created.
 	//
-	// Target names MUST be unique. This is enforced by the PromotionSet
+	// Target names MUST be unique. This is enforced by the PromotionRequest
 	// validating webhook rather than by the schema: the list is immutable, so
 	// per-item ownership tracking would only inflate the object's managedFields
 	// without ever being used to merge anything into it.
@@ -106,11 +106,11 @@ type PromotionSetSpec struct {
 	// +listType=atomic
 	// +kubebuilder:validation:Required
 	// +kubebuilder:validation:XValidation:rule="self == oldSelf"
-	Targets []PromotionSetTarget `json:"targets"`
+	Targets []PromotionRequestTarget `json:"targets"`
 }
 
-// PromotionSetTarget identifies a Target selected by a PromotionSet.
-type PromotionSetTarget struct {
+// PromotionRequestTarget identifies a Target selected by a PromotionRequest.
+type PromotionRequestTarget struct {
 	// Name is the name of the Target.
 	//
 	// +kubebuilder:validation:Required
@@ -121,10 +121,10 @@ type PromotionSetTarget struct {
 	Name string `json:"name"`
 }
 
-// PromotionSetStatus describes the observed aggregate state of a
-// PromotionSet's Promotions.
-type PromotionSetStatus struct {
-	// Conditions contains the last observations of the PromotionSet's current
+// PromotionRequestStatus describes the observed aggregate state of a
+// PromotionRequest's Promotions.
+type PromotionRequestStatus struct {
+	// Conditions contains the last observations of the PromotionRequest's current
 	// state.
 	//
 	// +patchMergeKey=type
@@ -133,33 +133,33 @@ type PromotionSetStatus struct {
 	// +listMapKey=type
 	Conditions []metav1.Condition `json:"conditions,omitempty" patchMergeKey:"type" patchStrategy:"merge"`
 
-	// Phase is a high-level summary of the PromotionSet's lifecycle.
+	// Phase is a high-level summary of the PromotionRequest's lifecycle.
 	//
 	// +kubebuilder:validation:Optional
-	Phase PromotionSetPhase `json:"phase,omitempty"`
+	Phase PromotionRequestPhase `json:"phase,omitempty"`
 
-	// Summary aggregates the phases of this PromotionSet's child Promotions.
+	// Summary aggregates the phases of this PromotionRequest's child Promotions.
 	//
 	// +kubebuilder:validation:Optional
-	Summary *PromotionSetSummary `json:"summary,omitempty"`
+	Summary *PromotionRequestSummary `json:"summary,omitempty"`
 
 	// ObservedGeneration is the generation of the spec last reconciled.
 	//
 	// +kubebuilder:validation:Optional
 	ObservedGeneration int64 `json:"observedGeneration,omitempty"`
 
-	// StartedAt is the time at which the PromotionSet started.
+	// StartedAt is the time at which the PromotionRequest started.
 	//
 	// +kubebuilder:validation:Optional
 	StartedAt *metav1.Time `json:"startedAt,omitempty"`
 
-	// FinishedAt is the time at which the PromotionSet completed.
+	// FinishedAt is the time at which the PromotionRequest completed.
 	FinishedAt *metav1.Time `json:"finishedAt,omitempty"`
 }
 
-// PromotionSetSummary aggregates the phases of a PromotionSet's child
+// PromotionRequestSummary aggregates the phases of a PromotionRequest's child
 // Promotions.
-type PromotionSetSummary struct {
+type PromotionRequestSummary struct {
 	// Pending is the number of child Promotions in the Pending phase.
 	Pending int32 `json:"pending,omitempty"`
 	// Running is the number of child Promotions in the Running phase.
@@ -174,21 +174,21 @@ type PromotionSetSummary struct {
 	Aborted int32 `json:"aborted,omitempty"`
 }
 
-// GetConditions returns the PromotionSet status conditions.
-func (s *PromotionSetStatus) GetConditions() []metav1.Condition {
+// GetConditions returns the PromotionRequest status conditions.
+func (s *PromotionRequestStatus) GetConditions() []metav1.Condition {
 	return s.Conditions
 }
 
-// SetConditions sets the PromotionSet status conditions.
-func (s *PromotionSetStatus) SetConditions(conditions []metav1.Condition) {
+// SetConditions sets the PromotionRequest status conditions.
+func (s *PromotionRequestStatus) SetConditions(conditions []metav1.Condition) {
 	s.Conditions = conditions
 }
 
 // +kubebuilder:object:root=true
 
-// PromotionSetList contains a list of PromotionSets.
-type PromotionSetList struct {
+// PromotionRequestList contains a list of PromotionRequests.
+type PromotionRequestList struct {
 	metav1.TypeMeta `json:",inline"`
 	metav1.ListMeta `json:"metadata,omitempty"`
-	Items           []PromotionSet `json:"items"`
+	Items           []PromotionRequest `json:"items"`
 }

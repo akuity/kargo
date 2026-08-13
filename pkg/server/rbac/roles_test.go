@@ -42,7 +42,8 @@ func fakeGroupResolver(resource string) (string, error) {
 		return "", nil
 	case "roles", "rolebindings":
 		return rbacv1.SchemeGroupVersion.Group, nil
-	case "stages", "warehouses", "promotions", "promotionsets", "freights", "projectconfigs", "promotiontasks", "targets":
+	case "stages", "warehouses", "promotions", "promotionrequests",
+		"freights", "projectconfigs", "promotiontasks", "targets":
 		return kargoapi.GroupVersion.Group, nil
 	default:
 		return "", apierrors.NewBadRequest(fmt.Sprintf("unrecognized resource type %q", resource))

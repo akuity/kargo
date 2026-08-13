@@ -48,7 +48,7 @@ rules:
   - kargo.akuity.io
   resources:
   - promotions
-  - promotionsets
+  - promotionrequests
   verbs:
   - create
   - get
@@ -90,7 +90,7 @@ rules:
   resources:
   - freights/status
   - promotions/status
-  - promotionsets/status
+  - promotionrequests/status
   - stages/status
   - warehouses/finalizers
   - warehouses/status

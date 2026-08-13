@@ -10,7 +10,7 @@ tests:
           count: 11
       - documentSelector:
           path: metadata.name
-          value: promotionsets.kargo.akuity.io
+          value: promotionrequests.kargo.akuity.io
         isKind:
           of: CustomResourceDefinition
       - documentSelector:

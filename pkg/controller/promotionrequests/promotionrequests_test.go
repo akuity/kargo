@@ -1,4 +1,4 @@
-package promotionsets
+package promotionrequests
 
 import (
 	"context"
@@ -26,12 +26,12 @@ func TestReconcilerConfigName(t *testing.T) {
 		{
 			name:     "no shard name",
 			cfg:      ReconcilerConfig{},
-			expected: "promotion-set-controller",
+			expected: "promotion-request-controller",
 		},
 		{
 			name:     "with shard name",
 			cfg:      ReconcilerConfig{ShardName: "my-shard"},
-			expected: "promotion-set-controller-my-shard",
+			expected: "promotion-request-controller-my-shard",
 		},
 	}
 	for _, testCase := range testCases {
@@ -52,30 +52,30 @@ func TestReconcilerConfigShardPredicate(t *testing.T) {
 		responsible bool
 	}{
 		{
-			name:        "default controller claims unlabeled PromotionSet",
+			name:        "default controller claims unlabeled PromotionRequest",
 			cfg:         ReconcilerConfig{IsDefaultController: true},
 			responsible: true,
 		},
 		{
-			name:        "default controller ignores PromotionSet of another shard",
+			name:        "default controller ignores PromotionRequest of another shard",
 			cfg:         ReconcilerConfig{IsDefaultController: true},
 			shardLabel:  "my-shard",
 			responsible: false,
 		},
 		{
-			name:        "sharded controller claims PromotionSet of its own shard",
+			name:        "sharded controller claims PromotionRequest of its own shard",
 			cfg:         ReconcilerConfig{ShardName: "my-shard"},
 			shardLabel:  "my-shard",
 			responsible: true,
 		},
 		{
-			name:        "sharded controller ignores PromotionSet of another shard",
+			name:        "sharded controller ignores PromotionRequest of another shard",
 			cfg:         ReconcilerConfig{ShardName: "my-shard"},
 			shardLabel:  "other-shard",
 			responsible: false,
 		},
 		{
-			name:        "sharded controller ignores unlabeled PromotionSet",
+			name:        "sharded controller ignores unlabeled PromotionRequest",
 			cfg:         ReconcilerConfig{ShardName: "my-shard"},
 			responsible: false,
 		},
@@ -84,9 +84,9 @@ func TestReconcilerConfigShardPredicate(t *testing.T) {
 		t.Run(testCase.name, func(t *testing.T) {
 			t.Parallel()
 
-			promotionSet := &kargoapi.PromotionSet{}
+			promotionRequest := &kargoapi.PromotionRequest{}
 			if testCase.shardLabel != "" {
-				promotionSet.Labels = map[string]string{
+				promotionRequest.Labels = map[string]string{
 					kargoapi.LabelKeyShard: testCase.shardLabel,
 				}
 			}
@@ -94,7 +94,7 @@ func TestReconcilerConfigShardPredicate(t *testing.T) {
 			require.Equal(
 				t,
 				testCase.responsible,
-				testCase.cfg.shardPredicate().IsResponsible(promotionSet),
+				testCase.cfg.shardPredicate().IsResponsible(promotionRequest),
 			)
 		})
 	}
@@ -105,31 +105,31 @@ func TestReconcile(t *testing.T) {
 
 	const (
 		namespace = "fake-project"
-		name      = "fake-promotion-set"
+		name      = "fake-promotion-request"
 	)
 
 	scheme := runtime.NewScheme()
 	require.NoError(t, kargoapi.AddToScheme(scheme))
 
-	t.Run("existing PromotionSet", func(t *testing.T) {
-		promotionSet := &kargoapi.PromotionSet{
+	t.Run("existing PromotionRequest", func(t *testing.T) {
+		promotionRequest := &kargoapi.PromotionRequest{
 			ObjectMeta: metav1.ObjectMeta{
 				Namespace:  namespace,
 				Name:       name,
 				Generation: 1,
 			},
-			Spec: kargoapi.PromotionSetSpec{
+			Spec: kargoapi.PromotionRequestSpec{
 				Stage:   "fake-stage",
 				Freight: "fake-freight",
-				Targets: []kargoapi.PromotionSetTarget{{
+				Targets: []kargoapi.PromotionRequestTarget{{
 					Name: "fake-target",
 				}},
 			},
 		}
 		c := fake.NewClientBuilder().
 			WithScheme(scheme).
-			WithObjects(promotionSet).
-			WithStatusSubresource(&kargoapi.PromotionSet{}).
+			WithObjects(promotionRequest).
+			WithStatusSubresource(&kargoapi.PromotionRequest{}).
 			Build()
 		r := &reconciler{
 			client:      c,
@@ -144,10 +144,10 @@ func TestReconcile(t *testing.T) {
 		require.NoError(t, err)
 		require.Empty(t, result)
 
-		actual := &kargoapi.PromotionSet{}
+		actual := &kargoapi.PromotionRequest{}
 		require.NoError(t, c.Get(t.Context(), req.NamespacedName, actual))
 		require.Equal(t, int64(1), actual.Status.ObservedGeneration)
-		require.Equal(t, kargoapi.PromotionSetPhaseErrored, actual.Status.Phase)
+		require.Equal(t, kargoapi.PromotionRequestPhaseErrored, actual.Status.Phase)
 		require.NotNil(t, actual.Status.FinishedAt)
 		readyCondition := conditions.Get(&actual.Status, kargoapi.ConditionTypeReady)
 		require.NotNil(t, readyCondition)
@@ -167,7 +167,7 @@ func TestReconcile(t *testing.T) {
 	})
 
 	t.Run("delegates to configured reconcile function", func(t *testing.T) {
-		promotionSet := &kargoapi.PromotionSet{
+		promotionRequest := &kargoapi.PromotionRequest{
 			ObjectMeta: metav1.ObjectMeta{
 				Namespace: namespace,
 				Name:      name,
@@ -175,17 +175,17 @@ func TestReconcile(t *testing.T) {
 		}
 		c := fake.NewClientBuilder().
 			WithScheme(scheme).
-			WithObjects(promotionSet).
+			WithObjects(promotionRequest).
 			Build()
 		r := &reconciler{
 			client: c,
 			reconcileFn: func(
 				_ context.Context,
 				kubeClient client.Client,
-				actual *kargoapi.PromotionSet,
+				actual *kargoapi.PromotionRequest,
 			) (ctrl.Result, error) {
 				require.Same(t, c, kubeClient)
-				require.Equal(t, promotionSet.Name, actual.Name)
+				require.Equal(t, promotionRequest.Name, actual.Name)
 				return ctrl.Result{Requeue: true}, nil
 			},
 		}
@@ -201,7 +201,7 @@ func TestReconcile(t *testing.T) {
 		require.Equal(t, ctrl.Result{Requeue: true}, result)
 	})
 
-	t.Run("PromotionSet not found", func(t *testing.T) {
+	t.Run("PromotionRequest not found", func(t *testing.T) {
 		r := &reconciler{
 			client:      fake.NewClientBuilder().WithScheme(scheme).Build(),
 			reconcileFn: DefaultReconcile,
