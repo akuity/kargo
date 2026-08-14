@@ -2,6 +2,7 @@ export const paths = {
   home: '/',
   appExtensions: '/ext',
   projects: '/',
+  createProjectGuided: '/create-project',
   project: '/project/:name',
   projectEvents: '/project/:name/events',
   stage: '/project/:name/stage/:stageName',
