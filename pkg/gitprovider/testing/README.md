@@ -30,10 +30,11 @@ with the `repo` scope works (`gh auth token` if it has that scope).
 `dirty` subtests need only the three GitHub variables above. The `blocked`
 subtest is **opt-in** and additionally requires:
 
-- `TEST_GITHUB_REQUIRE_STATUS_CHECK=true`, and
-- the repo's `main` branch protected with a **required status check the PR will
-  never satisfy**. With an unsatisfied required check, GitHub reports the PR's
-  `mergeable_state` as `blocked` — the same not-ready gate branch as `behind`:
+- `TEST_GITHUB_REQUIRE_STATUS_CHECK=true`, and the repo's `main` branch protected with a **required
+  status check the PR will never satisfy**. With an unsatisfied required check, GitHub reports the
+  PR's `mergeable_state` as `blocked` — the same gate branch as `behind`, where the merge is
+  attempted and GitHub decides. `enforce_admins` below matters: the subtest expects GitHub to
+  decline, so `TEST_GITHUB_TOKEN` must not be authorized to bypass the protection.
 
   ```bash
   gh api -X PUT repos/<owner>/<repo>/branches/main/protection --input - <<'JSON'
