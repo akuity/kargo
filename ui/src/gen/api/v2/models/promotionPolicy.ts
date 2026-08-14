@@ -6,6 +6,7 @@
  * OpenAPI spec version: v1alpha1
  */
 import type { AutoRollbackConfig } from './autoRollbackConfig';
+import type { PromotionWindow } from './promotionWindow';
 import type { PromotionPolicySelector } from './promotionPolicySelector';
 
 export interface PromotionPolicy {
@@ -23,6 +24,16 @@ nil, auto-rollback is disabled.
 
 Kargo Enterprise only: This field is ignored in Kargo OSS. */
   autoRollback?: AutoRollbackConfig;
+  /** PromotionWindows defines time windows that gate promotions for Stages in
+this Project. A Stage's effective schedule is the union of matching windows
+defined here and any cluster-level windows in ClusterConfig.
+
+Kargo Enterprise only: This field is ignored in Kargo OSS.
+
++optional
++listType=map
++listMapKey=name */
+  promotionWindows?: PromotionWindow[];
   /** Stage is the name of the Stage to which this policy applies.
 
 Deprecated: Use StageSelector instead.

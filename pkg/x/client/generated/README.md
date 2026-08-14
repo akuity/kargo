@@ -214,6 +214,7 @@ Class | Method | HTTP request | Description
  - [ClusterConfig](docs/ClusterConfig.md)
  - [ClusterConfigSpec](docs/ClusterConfigSpec.md)
  - [ClusterConfigStatus](docs/ClusterConfigStatus.md)
+ - [ClusterPromotionPolicy](docs/ClusterPromotionPolicy.md)
  - [ClusterPromotionTask](docs/ClusterPromotionTask.md)
  - [ClusterPromotionTaskList](docs/ClusterPromotionTaskList.md)
  - [CreateAPITokenRequest](docs/CreateAPITokenRequest.md)

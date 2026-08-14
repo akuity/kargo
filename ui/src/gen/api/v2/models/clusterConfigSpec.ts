@@ -7,7 +7,7 @@
  */
 import type { DeepLink } from './deepLink';
 import type { GitClientConfig } from './gitClientConfig';
-import type { PromotionWindow } from './promotionWindow';
+import type { ClusterPromotionPolicy } from './clusterPromotionPolicy';
 import type { WebhookReceiverConfig } from './webhookReceiverConfig';
 
 export interface ClusterConfigSpec {
@@ -23,17 +23,15 @@ values take precedence over any configuration provided at install time
 via the Helm chart.
 +optional */
   gitClient?: GitClientConfig;
-  /** PromotionWindows defines time windows that gate promotions across the
-cluster. Each window may narrow its scope with a projectSelector and/or
-stageSelector. A Stage's effective schedule is the union of matching
-windows defined here and any project-level windows in ProjectConfig.
+  /** ClusterPromotionPolicies is a ClusterConfig equivalent of PromotionPolicy.
+NOTE: Currently only supports promotion windows, auto-promotions and rollbacks are NOT supported.
 
 Kargo Enterprise only: This field is ignored in Kargo OSS.
 
 +optional
 +listType=map
 +listMapKey=name */
-  promotionWindows?: PromotionWindow[];
+  promotionPolicies?: ClusterPromotionPolicy[];
   /** StageLinks defines deep links shown when viewing any Stage resource
 across all projects in the cluster. Project-level StageLinks defined in
 ProjectConfig are shown in addition to these.

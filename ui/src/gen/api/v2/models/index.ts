@@ -29,6 +29,7 @@ export * from './claim';
 export * from './clusterConfig';
 export * from './clusterConfigSpec';
 export * from './clusterConfigStatus';
+export * from './clusterPromotionPolicy';
 export * from './clusterPromotionTask';
 export * from './clusterPromotionTaskList';
 export * from './createAPITokenRequest';

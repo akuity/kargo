@@ -33,6 +33,7 @@ model_claim.go
 model_cluster_config.go
 model_cluster_config_spec.go
 model_cluster_config_status.go
+model_cluster_promotion_policy.go
 model_cluster_promotion_task.go
 model_cluster_promotion_task_list.go
 model_create_api_token_request.go

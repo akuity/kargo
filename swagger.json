@@ -6582,11 +6582,11 @@
             }
           ]
         },
-        "promotionWindows": {
-          "description": "PromotionWindows defines time windows that gate promotions across the\ncluster. Each window may narrow its scope with a projectSelector and/or\nstageSelector. A Stage's effective schedule is the union of matching\nwindows defined here and any project-level windows in ProjectConfig.\n\nKargo Enterprise only: This field is ignored in Kargo OSS.\n\n+optional\n+listType=map\n+listMapKey=name",
+        "promotionPolicies": {
+          "description": "ClusterPromotionPolicies is a ClusterConfig equivalent of PromotionPolicy.\nNOTE: Currently only supports promotion windows, auto-promotions and rollbacks are NOT supported.\n\nKargo Enterprise only: This field is ignored in Kargo OSS.\n\n+optional\n+listType=map\n+listMapKey=name",
           "type": "array",
           "items": {
-            "$ref": "#/definitions/PromotionWindow"
+            "$ref": "#/definitions/ClusterPromotionPolicy"
           }
         },
         "stageLinks": {
@@ -6629,6 +6629,34 @@
           "items": {
             "$ref": "#/definitions/WebhookReceiverDetails"
           }
+        }
+      }
+    },
+    "ClusterPromotionPolicy": {
+      "type": "object",
+      "properties": {
+        "projectSelector": {
+          "description": "ProjectSelector selects the Projects this policy applies to.\nWhen omitted on a ClusterConfig policy, the policy applies to all Projects.\nIt reuses PromotionPolicySelector, matching Projects by exact name, glob/regex\npattern, or label selector.\n\n+optional",
+          "allOf": [
+            {
+              "$ref": "#/definitions/PromotionPolicySelector"
+            }
+          ]
+        },
+        "promotionWindows": {
+          "description": "PromotionWindows defines time windows that gate promotions across the\ncluster. A Stage's effective schedule is the union of matching\nwindows defined here and any project-level policies in ProjectConfig.\n\nKargo Enterprise only: This field is ignored in Kargo OSS.\n\n+optional\n+listType=map\n+listMapKey=name",
+          "type": "array",
+          "items": {
+            "$ref": "#/definitions/PromotionWindow"
+          }
+        },
+        "stageSelector": {
+          "description": "StageSelector selects the Stages this policy applies to. When omitted, the\npolicy applies to all Stages in scope. It reuses PromotionPolicySelector, so it\ncan match by exact name, glob/regex pattern, or label selector.\n\n+optional",
+          "allOf": [
+            {
+              "$ref": "#/definitions/PromotionPolicySelector"
+            }
+          ]
         }
       }
     },
@@ -7561,13 +7589,6 @@
             "$ref": "#/definitions/PromotionPolicy"
           }
         },
-        "promotionWindows": {
-          "description": "PromotionWindows defines time windows that gate promotions for Stages in\nthis Project. A Stage's effective schedule is the union of matching windows\ndefined here and any cluster-level windows in ClusterConfig.\n\nKargo Enterprise only: This field is ignored in Kargo OSS.\n\n+optional\n+listType=map\n+listMapKey=name",
-          "type": "array",
-          "items": {
-            "$ref": "#/definitions/PromotionWindow"
-          }
-        },
         "stageLinks": {
           "description": "StageLinks defines deep links shown when viewing Stage resources within\nthis project. These are shown in addition to any cluster-level\nStageLinks defined in ClusterConfig.\n\n+optional",
           "type": "array",
@@ -7723,6 +7744,13 @@
               "$ref": "#/definitions/AutoRollbackConfig"
             }
           ]
+        },
+        "promotionWindows": {
+          "description": "PromotionWindows defines time windows that gate promotions for Stages in\nthis Project. A Stage's effective schedule is the union of matching windows\ndefined here and any cluster-level windows in ClusterConfig.\n\nKargo Enterprise only: This field is ignored in Kargo OSS.\n\n+optional\n+listType=map\n+listMapKey=name",
+          "type": "array",
+          "items": {
+            "$ref": "#/definitions/PromotionWindow"
+          }
         },
         "stage": {
           "description": "Stage is the name of the Stage to which this policy applies.\n\nDeprecated: Use StageSelector instead.\n\n+kubebuilder:validation:Pattern=^[a-z0-9]([-a-z0-9]*[a-z0-9])?(\\.[a-z0-9]([-a-z0-9]*[a-z0-9])?)*$",
@@ -8092,25 +8120,9 @@
           "description": "Name is a symbolic name for the window, unique within its list. It is used\nto identify the window in denial messages and events.\n\n+kubebuilder:validation:Required\n+kubebuilder:validation:MinLength=1\n+kubebuilder:validation:MaxLength=253\n+kubebuilder:validation:Pattern=`^[a-z0-9]([-a-z0-9]*[a-z0-9])?(\\.[a-z0-9]([-a-z0-9]*[a-z0-9])?)*$`\n+akuity:test-kubebuilder-pattern=KubernetesName",
           "type": "string"
         },
-        "projectSelector": {
-          "description": "ProjectSelector selects the Projects this window applies to. It is only\nmeaningful on ClusterConfig windows; on ProjectConfig windows the Project\nis implicit and this field is rejected. When omitted on a ClusterConfig\nwindow, the window applies to all Projects. It reuses\nPromotionPolicySelector, matching Projects by exact name, glob/regex\npattern, or label selector.\n\n+optional",
-          "allOf": [
-            {
-              "$ref": "#/definitions/PromotionPolicySelector"
-            }
-          ]
-        },
         "rrule": {
           "description": "RRule is an optional RFC 5545 recurrence rule (e.g. \"FREQ=DAILY\") that\nmakes the window recurring. When omitted, the window is a one-shot interval\ndefined by DTStart and DTEnd. The full value is parsed and validated by\nKargo Enterprise.\n\n+optional",
           "type": "string"
-        },
-        "stageSelector": {
-          "description": "StageSelector selects the Stages this window applies to. When omitted, the\nwindow applies to all Stages in scope (project-wide on ProjectConfig,\ncluster-wide on ClusterConfig). It reuses PromotionPolicySelector, so it\ncan match by exact name, glob/regex pattern, or label selector.\n\n+optional",
-          "allOf": [
-            {
-              "$ref": "#/definitions/PromotionPolicySelector"
-            }
-          ]
         }
       },
       "required": [
