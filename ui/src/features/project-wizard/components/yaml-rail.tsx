@@ -17,6 +17,10 @@ type YamlRailProps = {
 };
 
 const liveEditDebounceMs = 400;
+// Monaco drops its tokens on every new document and re-tokenizes asynchronously,
+// so a sync per keystroke flashes uncolored text. Settle on a pause instead.
+// TODO: remove once Monaco is replaced.
+const incomingSyncDebounceMs = 400;
 
 export const YamlRail = ({ yaml, stepTitle, resources, onLiveEdit }: YamlRailProps) => {
   const { token } = theme.useToken();
@@ -35,10 +39,14 @@ export const YamlRail = ({ yaml, stepTitle, resources, onLiveEdit }: YamlRailPro
   textRef.current = text;
 
   useEffect(() => {
-    if (!focusedRef.current) {
+    if (focusedRef.current) {
+      return;
+    }
+    const id = window.setTimeout(() => {
       setText(yaml);
       setError(null);
-    }
+    }, incomingSyncDebounceMs);
+    return () => window.clearTimeout(id);
   }, [yaml]);
 
   useEffect(() => () => window.clearTimeout(debounceRef.current), []);
