@@ -21,8 +21,10 @@ its contents are merged with those of the source. Existing destination files are
 overwritten.
 
 :::note
-Symlinks encountered in the source are skipped, and `.git` directories are
-always ignored, regardless of the `ignore` patterns.
+Symlinks encountered in the source are skipped.
+
+`.git` is ignored by default. Because user-supplied `ignore` patterns are evaluated after that
+default, a negation such as `!.git/` re-includes it.
 :::
 
 ## Examples
