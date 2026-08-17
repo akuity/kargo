@@ -37,6 +37,13 @@ type Result struct {
 	// Checker. The Engine will aggregate this output and include it
 	// in the final results of the health check, which will ultimately be included
 	// in StageStatus.
+	//
+	// Because StageStatus is persisted with a diff-based patch
+	// (kubeclient.PatchStatus compares marshaled JSON), Output must be stable
+	// across repeated observations of unchanged state: a Checker that embeds
+	// values that tick on every observation (timestamps, counters, etc.) causes
+	// every reconciliation of every Stage using it to produce a non-empty
+	// status patch and a watch event, even when nothing meaningful changed.
 	Output map[string]any
 	// Issues is a list of issues that were encountered during the execution of
 	// the health check by a Checker.
