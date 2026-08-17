@@ -168,6 +168,50 @@ func Test_server_promoteToStage(t *testing.T) {
 				},
 			},
 			{
+				// Taylor's question on #6805: re-promoting the same Freight --
+				// rolling back to it, say -- must still produce a request. The
+				// stand-down guard exists only in the Stage controller's
+				// auto-promotion loop; this path creates unconditionally.
+				name: "re-promoting the same Freight yields a second PromotionRequest",
+				clientBuilder: fake.NewClientBuilder().WithObjects(
+					testProject,
+					testTargetAwareStage,
+					testFreight,
+					testTarget,
+					&kargoapi.PromotionRequest{
+						ObjectMeta: metav1.ObjectMeta{
+							Namespace: testProject.Name,
+							Name:      testStage.Name + ".existing.01jexam",
+							Labels: map[string]string{
+								kargoapi.LabelKeyStage: testStage.Name,
+							},
+						},
+						Spec: kargoapi.PromotionRequestSpec{
+							Stage:   testStage.Name,
+							Freight: testFreight.Name,
+							Targets: []kargoapi.PromotionRequestTarget{{Name: "us-east"}},
+						},
+						Status: kargoapi.PromotionRequestStatus{
+							Phase: kargoapi.PromotionRequestPhaseSucceeded,
+						},
+					},
+				),
+				serverSetup: authorizeAllStagesPromote,
+				body: mustJSONBody(promoteToStageRequest{
+					Freight: testFreight.Name,
+				}),
+				assertions: func(t *testing.T, w *httptest.ResponseRecorder, c client.Client) {
+					require.Equal(t, http.StatusCreated, w.Code)
+
+					reqs := &kargoapi.PromotionRequestList{}
+					require.NoError(t, c.List(t.Context(), reqs, client.InNamespace(testProject.Name)))
+					require.Len(t, reqs.Items, 2)
+					// Distinct objects: names embed a ULID, so a repeat
+					// promotion of the same Stage and Freight cannot collide.
+					require.NotEqual(t, reqs.Items[0].Name, reqs.Items[1].Name)
+				},
+			},
+			{
 				name: "Promotion by origin is refused for a target-aware Stage",
 				clientBuilder: fake.NewClientBuilder().WithObjects(
 					testProject,

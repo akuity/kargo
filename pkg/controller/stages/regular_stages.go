@@ -1966,7 +1966,7 @@ func (r *RegularStageReconciler) autoPromoteFreight(
 		}
 
 		if api.IsTargetAware(stage) {
-			if err = r.autoPromoteToTargets(ctx, stage, &candidate, origin); err != nil {
+			if err = r.createAutoPromotionRequest(ctx, stage, &candidate, origin); err != nil {
 				return newStatus, err
 			}
 			continue
@@ -2067,10 +2067,10 @@ func (r *RegularStageReconciler) autoPromoteFreight(
 	return newStatus, nil
 }
 
-// autoPromoteToTargets creates a PromotionRequest expressing the intent to
-// promote the candidate Freight to every Target that the target-aware Stage
-// governs. Resolving the Stage's target selectors to Targets is the
-// PromotionRequest reconciler's job, not this controller's.
+// createAutoPromotionRequest creates a PromotionRequest expressing the intent
+// to promote the candidate Freight to the Targets that the target-aware Stage
+// governs. Those Targets are resolved once, as the request is built, and
+// recorded on it; the request does not promote anything itself.
 //
 // The guard against duplicate work here is deliberately stricter than the one
 // autoPromoteFreight applies to Promotions: a PromotionRequest is created only when
@@ -2079,7 +2079,11 @@ func (r *RegularStageReconciler) autoPromoteFreight(
 // "succeeded, but the outcome is not yet recorded in status" to reason about --
 // and absent a guard that holds unconditionally, every reconcile would create
 // another PromotionRequest.
-func (r *RegularStageReconciler) autoPromoteToTargets(
+//
+// The guard is confined to auto-promotion. Promoting the same Freight to the
+// same Stage again deliberately -- rolling back to it, say -- goes through the
+// API server, which creates a PromotionRequest unconditionally.
+func (r *RegularStageReconciler) createAutoPromotionRequest(
 	ctx context.Context,
 	stage *kargoapi.Stage,
 	candidate *kargoapi.Freight,
