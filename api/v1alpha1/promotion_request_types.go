@@ -37,11 +37,11 @@ func (p *PromotionRequestPhase) IsTerminal() bool {
 	}
 }
 
-// PromotionRequest expresses the intent to promote a piece of Freight to the
-// Targets its Stage governs. It is a living object: the governing Stage owns
-// its target selectors and keeps them in sync with the Stage's own, and its
-// status reflects the current per-Target promotion state as Targets come and
-// go -- closer to a ReplicaSet than to a Job.
+// PromotionRequest expresses the intent to promote a piece of Freight to a
+// specific set of Targets. Its Stage and Freight are fixed for its lifetime,
+// giving it a single freight transition to represent from start to terminal
+// state; only its list of Targets may change, so that Targets discovered after
+// creation can still be included.
 //
 // +kubebuilder:resource:scope=Namespaced,shortName={promotionrequest,promotionrequests}
 // +kubebuilder:object:root=true
@@ -54,14 +54,14 @@ type PromotionRequest struct {
 	metav1.TypeMeta   `json:",inline"`
 	metav1.ObjectMeta `json:"metadata,omitempty"`
 
-	// Spec describes the Stage, the Freight, and the target selectors of the
+	// Spec describes the Stage, the Freight, and the Targets of the
 	// PromotionRequest.
 	//
 	// +kubebuilder:validation:Required
 	Spec PromotionRequestSpec `json:"spec"`
 
-	// Status describes the current resolution of the target selectors and the
-	// aggregate state of the PromotionRequest's Promotions.
+	// Status describes the per-Target progress and the aggregate state of the
+	// PromotionRequest's Promotions.
 	//
 	// +kubebuilder:validation:Optional
 	Status PromotionRequestStatus `json:"status,omitempty"`
@@ -72,8 +72,8 @@ func (p *PromotionRequest) GetStatus() *PromotionRequestStatus {
 	return &p.Status
 }
 
-// PromotionRequestSpec describes the Stage, the Freight, and the target
-// selectors of a PromotionRequest.
+// PromotionRequestSpec describes the Stage, the Freight, and the Targets of a
+// PromotionRequest.
 type PromotionRequestSpec struct {
 	// Stage specifies the name of the Stage that promotes the Freight.
 	// The Stage MUST be in the same namespace as the PromotionRequest.
@@ -97,21 +97,41 @@ type PromotionRequestSpec struct {
 	// +kubebuilder:validation:XValidation:rule="self == oldSelf"
 	Freight string `json:"freight"`
 
-	// TargetSelectors select the Targets to which this PromotionRequest promotes
-	// Freight, matching Targets by their labels within the PromotionRequest's
-	// own Project. A Target is selected when it matches any selector in this
-	// list. An empty selector in a non-empty list selects all Targets in the
-	// Project; a list that matches nothing leaves the PromotionRequest with
-	// nothing to do.
+	// Targets names the Targets to which this PromotionRequest promotes Freight.
+	// Each Target MUST be in the same namespace as the PromotionRequest. The
+	// list may be empty, which records that the governing Stage governed no
+	// Targets when the PromotionRequest was created -- distinct from the field
+	// being absent, which asks for it to be resolved.
 	//
-	// The governing Stage owns this field: the selectors are copied from the
-	// Stage's own at creation and kept in sync when they change. Unlike Stage
-	// and Freight, this field is expected to change over the PromotionRequest's
-	// lifetime; the reconciler responds by creating Promotions for newly
-	// selected Targets and recording resolution in status.
+	// This is a resolved list, not a selector: the Stage's target selectors are
+	// evaluated once, at creation, and the result recorded here. The membership
+	// of the PromotionRequest is therefore a snapshot of what the Stage governed
+	// at that moment, and its threshold and terminal state are computed against
+	// it rather than against a selector that could match differently later.
 	//
-	// +optional
-	TargetSelectors []metav1.LabelSelector `json:"targetSelectors,omitempty"`
+	// This is the only mutable field in the spec. The governing Stage owns it,
+	// and may add Targets to an in-flight PromotionRequest so that Targets
+	// discovered after creation can still receive the Freight. Target names MUST
+	// be unique; this is enforced by the validating webhook rather than by the
+	// schema, since a list-map's per-item ownership tracking would roughly
+	// double the storage cost of every entry.
+	//
+	// +listType=atomic
+	// +kubebuilder:validation:Required
+	Targets []PromotionRequestTarget `json:"targets"`
+}
+
+// PromotionRequestTarget names a Target that a PromotionRequest promotes
+// Freight to.
+type PromotionRequestTarget struct {
+	// Name is the name of the Target.
+	//
+	// +kubebuilder:validation:Required
+	// +kubebuilder:validation:MinLength=1
+	// +kubebuilder:validation:MaxLength=253
+	// +kubebuilder:validation:Pattern=`^[a-z0-9]([-a-z0-9]*[a-z0-9])?(\.[a-z0-9]([-a-z0-9]*[a-z0-9])?)*$`
+	// +akuity:test-kubebuilder-pattern=KubernetesName
+	Name string `json:"name"`
 }
 
 // PromotionRequestStatus describes the observed aggregate state of a
@@ -131,10 +151,9 @@ type PromotionRequestStatus struct {
 	// +kubebuilder:validation:Optional
 	Phase PromotionRequestPhase `json:"phase,omitempty"`
 
-	// Targets records the current resolution of the target selectors: one entry
-	// per selected Target, with the child Promotion promoting to it and that
-	// Promotion's phase. Entries come and go as the selectors and the Project's
-	// Targets change.
+	// Targets records progress against spec.targets: one entry per Target, with
+	// the child Promotion promoting to it and that Promotion's phase. Entries
+	// appear as the reconciler acts on each Target in spec.targets.
 	//
 	// The list is atomic rather than a map keyed by name: the reconciler is its
 	// only writer, so per-item ownership tracking in managedFields would only
