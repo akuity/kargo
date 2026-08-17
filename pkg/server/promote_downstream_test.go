@@ -93,6 +93,22 @@ func Test_server_promoteDownstream(t *testing.T) {
 		},
 	}
 
+	// Same name as testDownstreamStage, so that it is found downstream of the
+	// Stage under test, but governing Targets rather than promoting to itself.
+	testTargetAwareDownstreamStage := testDownstreamStage.DeepCopy()
+	testTargetAwareDownstreamStage.Spec.Targets = &kargoapi.StageTargets{
+		Selectors: []metav1.LabelSelector{{
+			MatchLabels: map[string]string{"region": "us"},
+		}},
+	}
+	testDownstreamTarget := &kargoapi.Target{
+		ObjectMeta: metav1.ObjectMeta{
+			Name:      "us-east",
+			Namespace: testProject.Name,
+			Labels:    map[string]string{"region": "us"},
+		},
+	}
+
 	testRESTEndpoint(
 		t, &config.ServerConfig{},
 		http.MethodPost, "/v1beta1/projects/"+testProject.Name+"/stages/"+testStage.Name+"/promotions/downstream",
@@ -199,6 +215,57 @@ func Test_server_promoteDownstream(t *testing.T) {
 					require.Len(t, promos.Items, 1)
 					require.Equal(t, testDownstreamStage.Name, promos.Items[0].Spec.Stage)
 					require.Equal(t, testFreight.Name, promos.Items[0].Spec.Freight)
+				},
+			},
+			{
+				name: "target-aware downstream Stage yields a PromotionRequest",
+				clientBuilder: fake.NewClientBuilder().WithObjects(
+					testProject,
+					testStage,
+					testTargetAwareDownstreamStage,
+					testFreight,
+					testDownstreamTarget,
+				),
+				serverSetup: func(_ *testing.T, s *server) {
+					s.authorizeFn = func(
+						context.Context,
+						string,
+						schema.GroupVersionResource,
+						string,
+						client.ObjectKey,
+					) error {
+						return nil
+					}
+				},
+				body: mustJSONBody(promoteDownstreamRequest{
+					Freight: testFreight.Name,
+				}),
+				assertions: func(t *testing.T, w *httptest.ResponseRecorder, c client.Client) {
+					require.Equal(t, http.StatusCreated, w.Code)
+					require.Contains(t, w.Body.String(), "promotionRequests")
+
+					promos := &kargoapi.PromotionList{}
+					require.NoError(t, c.List(t.Context(), promos, client.InNamespace(testProject.Name)))
+					require.Empty(t, promos.Items)
+
+					reqs := &kargoapi.PromotionRequestList{}
+					require.NoError(t, c.List(t.Context(), reqs, client.InNamespace(testProject.Name)))
+					require.Len(t, reqs.Items, 1)
+					require.Equal(t, testTargetAwareDownstreamStage.Name, reqs.Items[0].Spec.Stage)
+					require.Equal(t, testFreight.Name, reqs.Items[0].Spec.Freight)
+					// The downstream Stage's selectors are resolved to Targets
+					// at creation.
+					require.Equal(
+						t,
+						[]kargoapi.PromotionRequestTarget{{Name: "us-east"}},
+						reqs.Items[0].Spec.Targets,
+					)
+					require.Len(t, reqs.Items[0].OwnerReferences, 1)
+					require.Equal(
+						t,
+						testTargetAwareDownstreamStage.Name,
+						reqs.Items[0].OwnerReferences[0].Name,
+					)
 				},
 			},
 		},

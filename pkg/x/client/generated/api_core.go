@@ -4837,7 +4837,8 @@ func (r ApiPromoteDownstreamRequest) Execute() (*any, *http.Response, error) {
 PromoteDownstream Promote downstream
 
 Creates a Promotion resource for each of a Stage's immediately
-downstream Stages.
+downstream Stages. Downstream Stages that select Targets yield a
+PromotionRequest each, returned separately under "promotionRequests".
 
  @param ctx context.Context - for authentication, logging, cancellation, deadlines, tracing, etc. Passed from http.Request or context.Background().
  @param project Project name
@@ -4972,6 +4973,8 @@ PromoteToStage Promote to Stage
 
 Create a Promotion resource to transition a specified Stage into
 the state represented by the specified Freight.
+A Stage that selects Targets yields a PromotionRequest, which fans
+the Freight out to each of them, in place of a single Promotion.
 
  @param ctx context.Context - for authentication, logging, cancellation, deadlines, tracing, etc. Passed from http.Request or context.Background().
  @param project Project name

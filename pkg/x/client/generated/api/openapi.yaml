@@ -1875,6 +1875,8 @@ paths:
       description: |-
         Create a Promotion resource to transition a specified Stage into
         the state represented by the specified Freight.
+        A Stage that selects Targets yields a PromotionRequest, which fans
+        the Freight out to each of them, in place of a single Promotion.
       operationId: PromoteToStage
       parameters:
       - description: Project name
@@ -1902,7 +1904,8 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/Promotion"
-          description: Promotion resource (github.com/akuity/kargo/api/v1alpha1.Promotion)
+          description: "Promotion resource, or a PromotionRequest for a Stage that\
+            \ selects Targets"
       security:
       - BearerAuth: []
       summary: Promote to Stage
@@ -1913,7 +1916,8 @@ paths:
     post:
       description: |-
         Creates a Promotion resource for each of a Stage's immediately
-        downstream Stages.
+        downstream Stages. Downstream Stages that select Targets yield a
+        PromotionRequest each, returned separately under "promotionRequests".
       operationId: PromoteDownstream
       parameters:
       - description: Project name

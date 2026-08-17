@@ -154,6 +154,19 @@ func (r *RegularStageReconciler) SetupWithManager(
 		)
 	}
 
+	// This index is used to determine if a PromotionRequest already exists for a
+	// Stage and Freight combination.
+	if err := sharedIndexer.IndexField(
+		ctx,
+		&kargoapi.PromotionRequest{},
+		indexer.PromotionRequestsByStageAndFreightField,
+		indexer.PromotionRequestsByStageAndFreight,
+	); err != nil {
+		return fmt.Errorf(
+			"error setting up index for PromotionRequests by Stage and Freight: %w", err,
+		)
+	}
+
 	// This index is used to find Freight that are directly available from a
 	// Warehouse and can be automatically promoted to a Stage.
 	if err := sharedIndexer.IndexField(
@@ -1952,6 +1965,13 @@ func (r *RegularStageReconciler) autoPromoteFreight(
 			continue
 		}
 
+		if api.IsTargetAware(stage) {
+			if err = r.autoPromoteToTargets(ctx, stage, &candidate, origin); err != nil {
+				return newStatus, err
+			}
+			continue
+		}
+
 		// Do not create duplicate work: stand down while any Promotion for
 		// this candidate is either still in flight or succeeded with an
 		// outcome not yet recorded in Stage status.
@@ -2045,6 +2065,100 @@ func (r *RegularStageReconciler) autoPromoteFreight(
 	}
 
 	return newStatus, nil
+}
+
+// autoPromoteToTargets creates a PromotionRequest expressing the intent to
+// promote the candidate Freight to every Target that the target-aware Stage
+// governs. Resolving the Stage's target selectors to Targets is the
+// PromotionRequest reconciler's job, not this controller's.
+//
+// The guard against duplicate work here is deliberately stricter than the one
+// autoPromoteFreight applies to Promotions: a PromotionRequest is created only when
+// no PromotionRequest for this Stage and Freight exists at all, in any phase. Stage
+// status does not yet track PromotionRequests, so there is no equivalent of
+// "succeeded, but the outcome is not yet recorded in status" to reason about --
+// and absent a guard that holds unconditionally, every reconcile would create
+// another PromotionRequest.
+func (r *RegularStageReconciler) autoPromoteToTargets(
+	ctx context.Context,
+	stage *kargoapi.Stage,
+	candidate *kargoapi.Freight,
+	origin string,
+) error {
+	logger := logging.LoggerFromContext(ctx).WithValues(
+		"origin", origin,
+		"freight", candidate.Name,
+	)
+
+	exists, err := r.promotionRequestExistsForStageFreight(ctx, stage, candidate.Name)
+	if err != nil {
+		return fmt.Errorf(
+			"error listing existing PromotionRequests for Freight %q in namespace %q: %w",
+			candidate.Name, stage.Namespace, err,
+		)
+	}
+	if exists {
+		logger.Debug("a PromotionRequest already exists for Stage and Freight")
+		return nil
+	}
+
+	promotionRequest, err := api.NewPromotionRequest(ctx, r.client, stage, candidate.Name)
+	if err != nil {
+		return fmt.Errorf(
+			"error building PromotionRequest for Freight %q in namespace %q: %w",
+			candidate.Name, stage.Namespace, err,
+		)
+	}
+
+	if err = r.client.Create(ctx, promotionRequest); err != nil {
+		// Tolerate an admission denial exactly as the Promotion path does:
+		// nothing is persisted, so a later reconcile re-attempts once the
+		// denying policy no longer applies.
+		if apierrors.IsForbidden(err) {
+			logger.Debug(
+				"auto-promotion was denied by an admission webhook",
+				"error", err.Error(),
+			)
+			return nil
+		}
+		return fmt.Errorf(
+			"error creating PromotionRequest for Freight %q in namespace %q: %w",
+			candidate.Name, stage.Namespace, err,
+		)
+	}
+
+	// No event is recorded. Kargo's promotion events carry a Promotion, and a
+	// PromotionRequest has none of its own; the events belong to the child
+	// Promotions that its reconciler creates.
+	logger.Debug(
+		"created PromotionRequest resource",
+		"promotionRequest", promotionRequest.Name,
+	)
+	return nil
+}
+
+// promotionRequestExistsForStageFreight reports whether any PromotionRequest exists for
+// the given Stage and Freight, in any phase.
+func (r *RegularStageReconciler) promotionRequestExistsForStageFreight(
+	ctx context.Context,
+	stage *kargoapi.Stage,
+	freightName string,
+) (bool, error) {
+	promotionRequests := &kargoapi.PromotionRequestList{}
+	if err := r.client.List(
+		ctx,
+		promotionRequests,
+		client.InNamespace(stage.Namespace),
+		client.MatchingFieldsSelector{
+			Selector: fields.OneTermEqualSelector(
+				indexer.PromotionRequestsByStageAndFreightField,
+				indexer.StageAndFreightKey(stage.Name, freightName),
+			),
+		},
+	); err != nil {
+		return false, err
+	}
+	return len(promotionRequests.Items) > 0, nil
 }
 
 // stageAwaitingFreightForOrigin reports whether this reconcile pass has already

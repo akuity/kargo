@@ -6272,6 +6272,170 @@ func TestRegularStageReconciler_autoPromoteFreight(t *testing.T) {
 			},
 		},
 		{
+			name:                 "target-aware Stage gets a PromotionRequest, not a Promotion",
+			autoPromotionEnabled: true,
+			stage: &kargoapi.Stage{
+				ObjectMeta: metav1.ObjectMeta{
+					Namespace: "fake-project",
+					Name:      "test-stage",
+				},
+				Spec: kargoapi.StageSpec{
+					RequestedFreight: []kargoapi.FreightRequest{{
+						Origin: kargoapi.FreightOrigin{
+							Kind: kargoapi.FreightOriginKindWarehouse,
+							Name: "test-warehouse",
+						},
+						Sources: kargoapi.FreightSources{Direct: true},
+					}},
+					Targets: &kargoapi.StageTargets{
+						Selectors: []metav1.LabelSelector{{
+							MatchLabels: map[string]string{"region": "us"},
+						}},
+					},
+				},
+			},
+			objects: []client.Object{
+				&kargoapi.Warehouse{
+					ObjectMeta: metav1.ObjectMeta{
+						Namespace: "fake-project",
+						Name:      "test-warehouse",
+					},
+				},
+				&kargoapi.Freight{
+					ObjectMeta: metav1.ObjectMeta{
+						Namespace:         "fake-project",
+						Name:              "test-freight-1",
+						CreationTimestamp: metav1.Time{Time: now},
+					},
+					Origin: kargoapi.FreightOrigin{
+						Kind: kargoapi.FreightOriginKindWarehouse,
+						Name: "test-warehouse",
+					},
+				},
+				&kargoapi.Target{
+					ObjectMeta: metav1.ObjectMeta{
+						Namespace: "fake-project",
+						Name:      "us-east",
+						Labels:    map[string]string{"region": "us"},
+					},
+				},
+				// Present in the Project but not matched by the Stage's
+				// selector, so it must not appear in the resolved list.
+				&kargoapi.Target{
+					ObjectMeta: metav1.ObjectMeta{
+						Namespace: "fake-project",
+						Name:      "eu-west",
+						Labels:    map[string]string{"region": "eu"},
+					},
+				},
+			},
+			assertions: func(
+				t *testing.T,
+				recorder *fakeevent.EventRecorder,
+				c client.Client,
+				_ kargoapi.StageStatus,
+				err error,
+			) {
+				require.NoError(t, err)
+
+				promoList := &kargoapi.PromotionList{}
+				require.NoError(t, c.List(t.Context(), promoList, client.InNamespace("fake-project")))
+				assert.Empty(t, promoList.Items)
+
+				reqList := &kargoapi.PromotionRequestList{}
+				require.NoError(t, c.List(t.Context(), reqList, client.InNamespace("fake-project")))
+				require.Len(t, reqList.Items, 1)
+				assert.Equal(t, "test-stage", reqList.Items[0].Spec.Stage)
+				assert.Equal(t, "test-freight-1", reqList.Items[0].Spec.Freight)
+				// The Stage's selectors are resolved to Targets at creation:
+				// only the Target matching the selector is included.
+				assert.Equal(
+					t,
+					[]kargoapi.PromotionRequestTarget{{Name: "us-east"}},
+					reqList.Items[0].Spec.Targets,
+				)
+				// The Stage owns the PromotionRequest.
+				require.Len(t, reqList.Items[0].OwnerReferences, 1)
+				assert.Equal(t, "test-stage", reqList.Items[0].OwnerReferences[0].Name)
+
+				// A PromotionRequest has no Promotion to carry an event.
+				assert.Empty(t, recorder.Events)
+			},
+		},
+		{
+			name:                 "target-aware Stage skips promotion if a PromotionRequest already exists",
+			autoPromotionEnabled: true,
+			stage: &kargoapi.Stage{
+				ObjectMeta: metav1.ObjectMeta{
+					Namespace: "fake-project",
+					Name:      "test-stage",
+				},
+				Spec: kargoapi.StageSpec{
+					RequestedFreight: []kargoapi.FreightRequest{{
+						Origin: kargoapi.FreightOrigin{
+							Kind: kargoapi.FreightOriginKindWarehouse,
+							Name: "test-warehouse",
+						},
+						Sources: kargoapi.FreightSources{Direct: true},
+					}},
+					Targets: &kargoapi.StageTargets{
+						Selectors: []metav1.LabelSelector{{}},
+					},
+				},
+			},
+			objects: []client.Object{
+				&kargoapi.Warehouse{
+					ObjectMeta: metav1.ObjectMeta{
+						Namespace: "fake-project",
+						Name:      "test-warehouse",
+					},
+				},
+				&kargoapi.Freight{
+					ObjectMeta: metav1.ObjectMeta{
+						Namespace:         "fake-project",
+						Name:              "test-freight-1",
+						CreationTimestamp: metav1.Time{Time: now},
+					},
+					Origin: kargoapi.FreightOrigin{
+						Kind: kargoapi.FreightOriginKindWarehouse,
+						Name: "test-warehouse",
+					},
+				},
+				// Already terminal. Unlike the Promotion path, a target-aware
+				// Stage stands down on any existing PromotionRequest regardless of
+				// phase, so that a Stage whose PromotionRequests never reach a
+				// recorded outcome cannot create one on every reconcile.
+				&kargoapi.PromotionRequest{
+					ObjectMeta: metav1.ObjectMeta{
+						Namespace: "fake-project",
+						Name:      "test-stage.existing",
+					},
+					Spec: kargoapi.PromotionRequestSpec{
+						Stage:   "test-stage",
+						Freight: "test-freight-1",
+						Targets: []kargoapi.PromotionRequestTarget{},
+					},
+					Status: kargoapi.PromotionRequestStatus{
+						Phase: kargoapi.PromotionRequestPhaseErrored,
+					},
+				},
+			},
+			assertions: func(
+				t *testing.T,
+				_ *fakeevent.EventRecorder,
+				c client.Client,
+				_ kargoapi.StageStatus,
+				err error,
+			) {
+				require.NoError(t, err)
+
+				setList := &kargoapi.PromotionRequestList{}
+				require.NoError(t, c.List(t.Context(), setList, client.InNamespace("fake-project")))
+				require.Len(t, setList.Items, 1)
+				assert.Equal(t, "test-stage.existing", setList.Items[0].Name)
+			},
+		},
+		{
 			name:                 "sorts by discoveredAt when set",
 			autoPromotionEnabled: true,
 			stage: &kargoapi.Stage{
@@ -8223,6 +8387,11 @@ func TestRegularStageReconciler_autoPromoteFreight(t *testing.T) {
 					&kargoapi.Freight{},
 					indexer.FreightApprovedForStagesField,
 					indexer.FreightApprovedForStages,
+				).
+				WithIndex(
+					&kargoapi.PromotionRequest{},
+					indexer.PromotionRequestsByStageAndFreightField,
+					indexer.PromotionRequestsByStageAndFreight,
 				)
 
 			c := builder.Build()
