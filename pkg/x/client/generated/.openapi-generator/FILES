@@ -178,6 +178,7 @@ model_stage_list.go
 model_stage_spec.go
 model_stage_stats.go
 model_stage_status.go
+model_stage_targets.go
 model_step_execution_metadata.go
 model_tag_map.go
 model_update_config_map_request.go

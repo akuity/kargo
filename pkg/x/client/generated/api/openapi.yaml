@@ -13230,11 +13230,11 @@ components:
             (namespace), that this Promotion promotes Freight to. Targets allow a
             single Stage to govern -- and promote Freight to -- multiple destinations.
             When set, the named Target must be one that the referenced Stage governs,
-            i.e. one selected by the Stage's targetSelectors.
+            i.e. one selected by the Stage's targets.selectors.
 
             When empty (the default), the Promotion promotes to the Stage itself. This
             preserves the behavior of Promotions created before Targets existed:
-            classic Stages -- those without targetSelectors -- govern no Targets, so
+            classic Stages -- those without a targets block -- govern no Targets, so
             their Promotions leave this field empty.
 
             +kubebuilder:validation:Optional
@@ -14124,23 +14124,20 @@ components:
             kargo.akuity.io/shard label with the value of this field. When this field
             is empty, the webhook will ensure that label is absent.
           type: string
-        targetSelectors:
+        targets:
+          allOf:
+          - $ref: "#/components/schemas/StageTargets"
           description: |-
-            TargetSelectors select the Targets that this Stage governs and promotes
-            Freight to, matching Targets by their labels within the Stage's own
-            Project. A Target is selected when it matches any selector in this list.
-            A Stage may govern any number of Targets this way.
+            Targets describes the Targets that this Stage governs and promotes Freight
+            to. Its presence is what makes a Stage target-aware.
 
             When this field is nil (the default), the Stage operates in classic mode:
             it governs a single implicit "stage-self" Target that the controller
             creates and maintains on the Stage's behalf. This preserves the behavior
-            of Stages authored before Targets existed. An empty selector in a non-empty
-            list selects all Targets in the Project.
+            of Stages authored before Targets existed.
 
             +optional
-          items:
-            $ref: "#/components/schemas/V1LabelSelector"
-          type: array
+          type: object
         vars:
           description: |-
             Vars is a list of variables that can be referenced anywhere in the
@@ -14277,6 +14274,27 @@ components:
 
             +optional
           type: object
+      type: object
+    StageTargets:
+      properties:
+        selectors:
+          description: |-
+            Selectors select the Targets that the Stage governs, matching Targets by
+            their labels within the Stage's own Project. A Target is selected when it
+            matches any selector in the list, so several selectors describe a union.
+            A Target matching more than one of them is still governed once.
+
+            An empty selector selects every Target in the Project. An empty list
+            selects none: the Stage still governs Targets, it just governs none at the
+            moment.
+
+            +listType=atomic
+            +kubebuilder:validation:Required
+          items:
+            $ref: "#/components/schemas/V1LabelSelector"
+          type: array
+      required:
+      - selectors
       type: object
     StepExecutionMetadata:
       properties:

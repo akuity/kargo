@@ -219,6 +219,7 @@ export * from './stageStatus';
 export * from './stageStatusAutoPromotionHolds';
 export * from './stageStatusEffectiveAutoPromotionHolds';
 export * from './stageStatusMetadata';
+export * from './stageTargets';
 export * from './stepExecutionMetadata';
 export * from './tagMap';
 export * from './tagMapTags';

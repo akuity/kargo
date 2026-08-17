@@ -7,7 +7,7 @@
  */
 import type { PromotionTemplate } from './promotionTemplate';
 import type { FreightRequest } from './freightRequest';
-import type { V1LabelSelector } from './v1LabelSelector';
+import type { StageTargets } from './stageTargets';
 import type { ExpressionVariable } from './expressionVariable';
 import type { Verification } from './verification';
 
@@ -32,19 +32,16 @@ shard. A defaulting webhook will sync the value of the
 kargo.akuity.io/shard label with the value of this field. When this field
 is empty, the webhook will ensure that label is absent. */
   shard?: string;
-  /** TargetSelectors select the Targets that this Stage governs and promotes
-Freight to, matching Targets by their labels within the Stage's own
-Project. A Target is selected when it matches any selector in this list.
-A Stage may govern any number of Targets this way.
+  /** Targets describes the Targets that this Stage governs and promotes Freight
+to. Its presence is what makes a Stage target-aware.
 
 When this field is nil (the default), the Stage operates in classic mode:
 it governs a single implicit "stage-self" Target that the controller
 creates and maintains on the Stage's behalf. This preserves the behavior
-of Stages authored before Targets existed. An empty selector in a non-empty
-list selects all Targets in the Project.
+of Stages authored before Targets existed.
 
 +optional */
-  targetSelectors?: V1LabelSelector[];
+  targets?: StageTargets;
   /** Vars is a list of variables that can be referenced anywhere in the
 StageSpec that supports expressions. For example, the PromotionTemplate
 and arguments of the Verification. */
