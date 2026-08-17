@@ -34,11 +34,11 @@ spec:
     schema:
       openAPIV3Schema:
         description: |-
-          PromotionRequest expresses the intent to promote a piece of Freight to the
-          Targets its Stage governs. It is a living object: the governing Stage owns
-          its target selectors and keeps them in sync with the Stage's own, and its
-          status reflects the current per-Target promotion state as Targets come and
-          go -- closer to a ReplicaSet than to a Job.
+          PromotionRequest expresses the intent to promote a piece of Freight to a
+          specific set of Targets. Its Stage and Freight are fixed for its lifetime,
+          giving it a single freight transition to represent from start to terminal
+          state; only its list of Targets may change, so that Targets discovered after
+          creation can still be included.
         properties:
           apiVersion:
             description: |-
@@ -59,7 +59,7 @@ spec:
             type: object
           spec:
             description: |-
-              Spec describes the Stage, the Freight, and the target selectors of the
+              Spec describes the Stage, the Freight, and the Targets of the
               PromotionRequest.
             properties:
               freight:
@@ -82,78 +82,51 @@ spec:
                 type: string
                 x-kubernetes-validations:
                 - rule: self == oldSelf
-              targetSelectors:
+              targets:
                 description: |-
-                  TargetSelectors select the Targets to which this PromotionRequest promotes
-                  Freight, matching Targets by their labels within the PromotionRequest's
-                  own Project. A Target is selected when it matches any selector in this
-                  list. An empty selector in a non-empty list selects all Targets in the
-                  Project; a list that matches nothing leaves the PromotionRequest with
-                  nothing to do.
+                  Targets names the Targets to which this PromotionRequest promotes Freight.
+                  Each Target MUST be in the same namespace as the PromotionRequest. The
+                  list may be empty, which records that the governing Stage governed no
+                  Targets when the PromotionRequest was created -- distinct from the field
+                  being absent, which asks for it to be resolved.
 
-                  The governing Stage owns this field: the selectors are copied from the
-                  Stage's own at creation and kept in sync when they change. Unlike Stage
-                  and Freight, this field is expected to change over the PromotionRequest's
-                  lifetime; the reconciler responds by creating Promotions for newly
-                  selected Targets and recording resolution in status.
+                  This is a resolved list, not a selector: the Stage's target selectors are
+                  evaluated once, at creation, and the result recorded here. The membership
+                  of the PromotionRequest is therefore a snapshot of what the Stage governed
+                  at that moment, and its threshold and terminal state are computed against
+                  it rather than against a selector that could match differently later.
+
+                  This is the only mutable field in the spec. The governing Stage owns it,
+                  and may add Targets to an in-flight PromotionRequest so that Targets
+                  discovered after creation can still receive the Freight. Target names MUST
+                  be unique; this is enforced by the validating webhook rather than by the
+                  schema, since a list-map's per-item ownership tracking would roughly
+                  double the storage cost of every entry.
                 items:
                   description: |-
-                    A label selector is a label query over a set of resources. The result of matchLabels and
-                    matchExpressions are ANDed. An empty label selector matches all objects. A null
-                    label selector matches no objects.
+                    PromotionRequestTarget names a Target that a PromotionRequest promotes
+                    Freight to.
                   properties:
-                    matchExpressions:
-                      description: matchExpressions is a list of label selector requirements.
-                        The requirements are ANDed.
-                      items:
-                        description: |-
-                          A label selector requirement is a selector that contains values, a key, and an operator that
-                          relates the key and values.
-                        properties:
-                          key:
-                            description: key is the label key that the selector applies
-                              to.
-                            type: string
-                          operator:
-                            description: |-
-                              operator represents a key's relationship to a set of values.
-                              Valid operators are In, NotIn, Exists and DoesNotExist.
-                            type: string
-                          values:
-                            description: |-
-                              values is an array of string values. If the operator is In or NotIn,
-                              the values array must be non-empty. If the operator is Exists or DoesNotExist,
-                              the values array must be empty. This array is replaced during a strategic
-                              merge patch.
-                            items:
-                              type: string
-                            type: array
-                            x-kubernetes-list-type: atomic
-                        required:
-                        - key
-                        - operator
-                        type: object
-                      type: array
-                      x-kubernetes-list-type: atomic
-                    matchLabels:
-                      additionalProperties:
-                        type: string
-                      description: |-
-                        matchLabels is a map of {key,value} pairs. A single {key,value} in the matchLabels
-                        map is equivalent to an element of matchExpressions, whose key field is "key", the
-                        operator is "In", and the values array contains only "value". The requirements are ANDed.
-                      type: object
+                    name:
+                      description: Name is the name of the Target.
+                      maxLength: 253
+                      minLength: 1
+                      pattern: ^[a-z0-9]([-a-z0-9]*[a-z0-9])?(\.[a-z0-9]([-a-z0-9]*[a-z0-9])?)*$
+                      type: string
+                  required:
+                  - name
                   type: object
-                  x-kubernetes-map-type: atomic
                 type: array
+                x-kubernetes-list-type: atomic
             required:
             - freight
             - stage
+            - targets
             type: object
           status:
             description: |-
-              Status describes the current resolution of the target selectors and the
-              aggregate state of the PromotionRequest's Promotions.
+              Status describes the per-Target progress and the aggregate state of the
+              PromotionRequest's Promotions.
             properties:
               conditions:
                 description: |-
@@ -272,10 +245,9 @@ spec:
                 type: object
               targets:
                 description: |-
-                  Targets records the current resolution of the target selectors: one entry
-                  per selected Target, with the child Promotion promoting to it and that
-                  Promotion's phase. Entries come and go as the selectors and the Project's
-                  Targets change.
+                  Targets records progress against spec.targets: one entry per Target, with
+                  the child Promotion promoting to it and that Promotion's phase. Entries
+                  appear as the reconciler acts on each Target in spec.targets.
 
                   The list is atomic rather than a map keyed by name: the reconciler is its
                   only writer, so per-item ownership tracking in managedFields would only
