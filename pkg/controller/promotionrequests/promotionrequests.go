@@ -60,13 +60,11 @@ func ReconcilerConfigFromEnv() ReconcilerConfig {
 }
 
 // SetupReconcilerWithManager initializes the PromotionRequest reconciler and
-// registers it with the provided Manager. The behavior that fans a
-// PromotionRequest out into Promotions is supplied by reconcileFn.
+// registers it with the provided Manager.
 func SetupReconcilerWithManager(
 	ctx context.Context,
 	mgr manager.Manager,
 	cfg ReconcilerConfig,
-	reconcileFn ReconcileFn,
 ) error {
 	if err := ctrl.NewControllerManagedBy(mgr).
 		For(&kargoapi.PromotionRequest{}).
@@ -75,10 +73,7 @@ func SetupReconcilerWithManager(
 		WithEventFilter(cfg.shardPredicate()).
 		WithOptions(controller.CommonOptions(cfg.MaxConcurrentReconciles)).
 		Named(cfg.Name()).
-		Complete(&reconciler{
-			client:      mgr.GetClient(),
-			reconcileFn: reconcileFn,
-		}); err != nil {
+		Complete(&reconciler{client: mgr.GetClient()}); err != nil {
 		return fmt.Errorf("error building PromotionRequest reconciler: %w", err)
 	}
 
@@ -91,17 +86,16 @@ func SetupReconcilerWithManager(
 	return nil
 }
 
-// ReconcileFn reconciles a PromotionRequest after it has been loaded.
-type ReconcileFn func(
-	ctx context.Context,
-	kubeClient client.Client,
-	promotionRequest *kargoapi.PromotionRequest,
-) (ctrl.Result, error)
-
-// reconciler delegates PromotionRequest reconciliation to its configured function.
+// reconciler reports on every PromotionRequest it observes that fanning Freight
+// out to Targets is a Kargo Enterprise-only feature, so that a user whose Stage
+// has stopped promoting can find out why from the object it produced.
+//
+// There is deliberately no hook to swap this behavior out. A reconciler that
+// fans a PromotionRequest out into Promotions must also watch the child
+// Promotions that drive it forward, and a watch is not something a swappable
+// Reconcile body can contribute; such a reconciler is its own controller.
 type reconciler struct {
-	client      client.Client
-	reconcileFn ReconcileFn
+	client client.Client
 }
 
 func (r *reconciler) Reconcile(
@@ -113,19 +107,7 @@ func (r *reconciler) Reconcile(
 		return ctrl.Result{}, client.IgnoreNotFound(err)
 	}
 
-	return r.reconcileFn(ctx, r.client, promotionRequest)
-}
-
-// DefaultReconcile is the ReconcileFn used when no fan-out implementation has
-// been supplied. It reports on the PromotionRequest itself that fanning Freight
-// out to Targets is a Kargo Enterprise-only feature, so that a user whose Stage
-// has stopped promoting can find out why from the object it produced.
-func DefaultReconcile(
-	ctx context.Context,
-	kubeClient client.Client,
-	promotionRequest *kargoapi.PromotionRequest,
-) (ctrl.Result, error) {
-	if err := kubeclient.PatchStatus(ctx, kubeClient, promotionRequest, func(status *kargoapi.PromotionRequestStatus) {
+	if err := kubeclient.PatchStatus(ctx, r.client, promotionRequest, func(status *kargoapi.PromotionRequestStatus) {
 		status.ObservedGeneration = promotionRequest.Generation
 		status.Phase = kargoapi.PromotionRequestPhaseErrored
 		if status.FinishedAt == nil {
