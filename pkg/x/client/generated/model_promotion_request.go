@@ -26,9 +26,9 @@ type PromotionRequest struct {
 	// Kind is a string value representing the REST resource this object represents. Servers may infer this from the endpoint the client submits requests to. Cannot be updated. In CamelCase. More info: https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#types-kinds +optional
 	Kind *string `json:"kind,omitempty"`
 	Metadata *V1ObjectMeta `json:"metadata,omitempty"`
-	// Spec describes the Stage, the Freight, and the target selectors of the PromotionRequest.  +kubebuilder:validation:Required
+	// Spec describes the Stage, the Freight, and the Targets of the PromotionRequest.  +kubebuilder:validation:Required
 	Spec PromotionRequestSpec `json:"spec"`
-	// Status describes the current resolution of the target selectors and the aggregate state of the PromotionRequest's Promotions.  +kubebuilder:validation:Optional
+	// Status describes the per-Target progress and the aggregate state of the PromotionRequest's Promotions.  +kubebuilder:validation:Optional
 	Status *PromotionRequestStatus `json:"status,omitempty"`
 }
 

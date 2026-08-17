@@ -5,7 +5,7 @@
  * REST API for Kargo
  * OpenAPI spec version: v1alpha1
  */
-import type { V1LabelSelector } from './v1LabelSelector';
+import type { PromotionRequestTarget } from './promotionRequestTarget';
 
 export interface PromotionRequestSpec {
   /** Freight specifies the piece of Freight promoted by the Stage.
@@ -28,19 +28,26 @@ The Stage MUST be in the same namespace as the PromotionRequest.
 +akuity:test-kubebuilder-pattern=KubernetesName
 +kubebuilder:validation:XValidation:rule="self == oldSelf" */
   stage: string;
-  /** TargetSelectors select the Targets to which this PromotionRequest promotes
-Freight, matching Targets by their labels within the PromotionRequest's
-own Project. A Target is selected when it matches any selector in this
-list. An empty selector in a non-empty list selects all Targets in the
-Project; a list that matches nothing leaves the PromotionRequest with
-nothing to do.
+  /** Targets names the Targets to which this PromotionRequest promotes Freight.
+Each Target MUST be in the same namespace as the PromotionRequest. The
+list may be empty, which records that the governing Stage governed no
+Targets when the PromotionRequest was created -- distinct from the field
+being absent, which asks for it to be resolved.
 
-The governing Stage owns this field: the selectors are copied from the
-Stage's own at creation and kept in sync when they change. Unlike Stage
-and Freight, this field is expected to change over the PromotionRequest's
-lifetime; the reconciler responds by creating Promotions for newly
-selected Targets and recording resolution in status.
+This is a resolved list, not a selector: the Stage's target selectors are
+evaluated once, at creation, and the result recorded here. The membership
+of the PromotionRequest is therefore a snapshot of what the Stage governed
+at that moment, and its threshold and terminal state are computed against
+it rather than against a selector that could match differently later.
 
-+optional */
-  targetSelectors?: V1LabelSelector[];
+This is the only mutable field in the spec. The governing Stage owns it,
+and may add Targets to an in-flight PromotionRequest so that Targets
+discovered after creation can still receive the Freight. Target names MUST
+be unique; this is enforced by the validating webhook rather than by the
+schema, since a list-map's per-item ownership tracking would roughly
+double the storage cost of every entry.
+
++listType=atomic
++kubebuilder:validation:Required */
+  targets: PromotionRequestTarget[];
 }

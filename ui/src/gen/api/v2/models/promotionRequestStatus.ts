@@ -37,10 +37,9 @@ state.
 
 +kubebuilder:validation:Optional */
   summary?: PromotionRequestSummary;
-  /** Targets records the current resolution of the target selectors: one entry
-per selected Target, with the child Promotion promoting to it and that
-Promotion's phase. Entries come and go as the selectors and the Project's
-Targets change.
+  /** Targets records progress against spec.targets: one entry per Target, with
+the child Promotion promoting to it and that Promotion's phase. Entries
+appear as the reconciler acts on each Target in spec.targets.
 
 The list is atomic rather than a map keyed by name: the reconciler is its
 only writer, so per-item ownership tracking in managedFields would only

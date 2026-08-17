@@ -7890,7 +7890,7 @@
           "$ref": "#/definitions/V1ObjectMeta"
         },
         "spec": {
-          "description": "Spec describes the Stage, the Freight, and the target selectors of the\nPromotionRequest.\n\n+kubebuilder:validation:Required",
+          "description": "Spec describes the Stage, the Freight, and the Targets of the\nPromotionRequest.\n\n+kubebuilder:validation:Required",
           "allOf": [
             {
               "$ref": "#/definitions/PromotionRequestSpec"
@@ -7898,7 +7898,7 @@
           ]
         },
         "status": {
-          "description": "Status describes the current resolution of the target selectors and the\naggregate state of the PromotionRequest's Promotions.\n\n+kubebuilder:validation:Optional",
+          "description": "Status describes the per-Target progress and the aggregate state of the\nPromotionRequest's Promotions.\n\n+kubebuilder:validation:Optional",
           "allOf": [
             {
               "$ref": "#/definitions/PromotionRequestStatus"
@@ -7960,17 +7960,18 @@
           "description": "Stage specifies the name of the Stage that promotes the Freight.\nThe Stage MUST be in the same namespace as the PromotionRequest.\n\n+kubebuilder:validation:Required\n+kubebuilder:validation:MinLength=1\n+kubebuilder:validation:MaxLength=253\n+kubebuilder:validation:Pattern=`^[a-z0-9]([-a-z0-9]*[a-z0-9])?(\\.[a-z0-9]([-a-z0-9]*[a-z0-9])?)*$`\n+akuity:test-kubebuilder-pattern=KubernetesName\n+kubebuilder:validation:XValidation:rule=\"self == oldSelf\"",
           "type": "string"
         },
-        "targetSelectors": {
-          "description": "TargetSelectors select the Targets to which this PromotionRequest promotes\nFreight, matching Targets by their labels within the PromotionRequest's\nown Project. A Target is selected when it matches any selector in this\nlist. An empty selector in a non-empty list selects all Targets in the\nProject; a list that matches nothing leaves the PromotionRequest with\nnothing to do.\n\nThe governing Stage owns this field: the selectors are copied from the\nStage's own at creation and kept in sync when they change. Unlike Stage\nand Freight, this field is expected to change over the PromotionRequest's\nlifetime; the reconciler responds by creating Promotions for newly\nselected Targets and recording resolution in status.\n\n+optional",
+        "targets": {
+          "description": "Targets names the Targets to which this PromotionRequest promotes Freight.\nEach Target MUST be in the same namespace as the PromotionRequest. The\nlist may be empty, which records that the governing Stage governed no\nTargets when the PromotionRequest was created -- distinct from the field\nbeing absent, which asks for it to be resolved.\n\nThis is a resolved list, not a selector: the Stage's target selectors are\nevaluated once, at creation, and the result recorded here. The membership\nof the PromotionRequest is therefore a snapshot of what the Stage governed\nat that moment, and its threshold and terminal state are computed against\nit rather than against a selector that could match differently later.\n\nThis is the only mutable field in the spec. The governing Stage owns it,\nand may add Targets to an in-flight PromotionRequest so that Targets\ndiscovered after creation can still receive the Freight. Target names MUST\nbe unique; this is enforced by the validating webhook rather than by the\nschema, since a list-map's per-item ownership tracking would roughly\ndouble the storage cost of every entry.\n\n+listType=atomic\n+kubebuilder:validation:Required",
           "type": "array",
           "items": {
-            "$ref": "#/definitions/V1LabelSelector"
+            "$ref": "#/definitions/PromotionRequestTarget"
           }
         }
       },
       "required": [
         "freight",
-        "stage"
+        "stage",
+        "targets"
       ]
     },
     "PromotionRequestStatus": {
@@ -8012,7 +8013,7 @@
           ]
         },
         "targets": {
-          "description": "Targets records the current resolution of the target selectors: one entry\nper selected Target, with the child Promotion promoting to it and that\nPromotion's phase. Entries come and go as the selectors and the Project's\nTargets change.\n\nThe list is atomic rather than a map keyed by name: the reconciler is its\nonly writer, so per-item ownership tracking in managedFields would only\ninflate the object -- roughly doubling the storage cost of each entry --\nwithout ever being used to merge.\n\n+kubebuilder:validation:Optional\n+listType=atomic",
+          "description": "Targets records progress against spec.targets: one entry per Target, with\nthe child Promotion promoting to it and that Promotion's phase. Entries\nappear as the reconciler acts on each Target in spec.targets.\n\nThe list is atomic rather than a map keyed by name: the reconciler is its\nonly writer, so per-item ownership tracking in managedFields would only\ninflate the object -- roughly doubling the storage cost of each entry --\nwithout ever being used to merge.\n\n+kubebuilder:validation:Optional\n+listType=atomic",
           "type": "array",
           "items": {
             "$ref": "#/definitions/PromotionRequestTargetStatus"
@@ -8048,6 +8049,18 @@
           "type": "integer"
         }
       }
+    },
+    "PromotionRequestTarget": {
+      "type": "object",
+      "properties": {
+        "name": {
+          "description": "Name is the name of the Target.\n\n+kubebuilder:validation:Required\n+kubebuilder:validation:MinLength=1\n+kubebuilder:validation:MaxLength=253\n+kubebuilder:validation:Pattern=`^[a-z0-9]([-a-z0-9]*[a-z0-9])?(\\.[a-z0-9]([-a-z0-9]*[a-z0-9])?)*$`\n+akuity:test-kubebuilder-pattern=KubernetesName",
+          "type": "string"
+        }
+      },
+      "required": [
+        "name"
+      ]
     },
     "PromotionRequestTargetStatus": {
       "type": "object",

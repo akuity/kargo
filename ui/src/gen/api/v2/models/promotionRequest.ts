@@ -24,13 +24,13 @@ More info: https://git.k8s.io/community/contributors/devel/sig-architecture/api-
 +optional */
   kind?: string;
   metadata?: V1ObjectMeta;
-  /** Spec describes the Stage, the Freight, and the target selectors of the
+  /** Spec describes the Stage, the Freight, and the Targets of the
 PromotionRequest.
 
 +kubebuilder:validation:Required */
   spec: PromotionRequestSpec;
-  /** Status describes the current resolution of the target selectors and the
-aggregate state of the PromotionRequest's Promotions.
+  /** Status describes the per-Target progress and the aggregate state of the
+PromotionRequest's Promotions.
 
 +kubebuilder:validation:Optional */
   status?: PromotionRequestStatus;

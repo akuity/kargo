@@ -148,6 +148,7 @@ export * from './promotionRequestPhase';
 export * from './promotionRequestSpec';
 export * from './promotionRequestStatus';
 export * from './promotionRequestSummary';
+export * from './promotionRequestTarget';
 export * from './promotionRequestTargetStatus';
 export * from './promotionSpec';
 export * from './promotionStatus';

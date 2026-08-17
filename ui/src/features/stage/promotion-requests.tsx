@@ -103,24 +103,38 @@ export const PromotionRequests = ({ projectName, stageName }: Props) => {
       title: 'Targets',
       width: 220,
       render: (_, promotionRequest) => {
-        const targets = promotionRequest?.status?.targets || [];
-        if (!targets.length) {
-          // Selectors have not been resolved to Targets (yet, or ever).
-          const selectors = promotionRequest?.spec?.targetSelectors || [];
+        // status.targets carries per-Target progress and appears as the
+        // reconciler acts on each one.
+        const progress = promotionRequest?.status?.targets || [];
+        if (progress.length) {
           return (
-            <Tooltip title={JSON.stringify(selectors)}>
+            <Flex gap={4} wrap>
+              {progress.map((target) => (
+                <Tag key={target.name} color={phaseColor(target.phase)}>
+                  {target.name}
+                </Tag>
+              ))}
+            </Flex>
+          );
+        }
+
+        // Nothing has been acted on yet, so fall back to the Targets the
+        // request names. spec.targets is resolved once, when the request is
+        // created, so it is always populated even before any progress exists.
+        const named = promotionRequest?.spec?.targets || [];
+        if (!named.length) {
+          return (
+            <Tooltip title='The Stage governed no Targets when this request was created'>
               <Typography.Text type='secondary' className='text-xs'>
-                {selectors.length} selector{selectors.length === 1 ? '' : 's'}, unresolved
+                no Targets
               </Typography.Text>
             </Tooltip>
           );
         }
         return (
           <Flex gap={4} wrap>
-            {targets.map((target) => (
-              <Tag key={target.name} color={phaseColor(target.phase)}>
-                {target.name}
-              </Tag>
+            {named.map((target) => (
+              <Tag key={target.name}>{target.name}</Tag>
             ))}
           </Flex>
         );
