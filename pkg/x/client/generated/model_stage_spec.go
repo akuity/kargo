@@ -25,8 +25,8 @@ type StageSpec struct {
 	RequestedFreight []FreightRequest `json:"requestedFreight,omitempty"`
 	// Shard is the name of the shard that this Stage belongs to. This is an optional field. If not specified, the Stage will belong to the default shard. A defaulting webhook will sync the value of the kargo.akuity.io/shard label with the value of this field. When this field is empty, the webhook will ensure that label is absent.
 	Shard *string `json:"shard,omitempty"`
-	// TargetSelectors select the Targets that this Stage governs and promotes Freight to, matching Targets by their labels within the Stage's own Project. A Target is selected when it matches any selector in this list. A Stage may govern any number of Targets this way.  When this field is nil (the default), the Stage operates in classic mode: it governs a single implicit \"stage-self\" Target that the controller creates and maintains on the Stage's behalf. This preserves the behavior of Stages authored before Targets existed. An empty selector in a non-empty list selects all Targets in the Project.  +optional
-	TargetSelectors []V1LabelSelector `json:"targetSelectors,omitempty"`
+	// Targets describes the Targets that this Stage governs and promotes Freight to. Its presence is what makes a Stage target-aware.  When this field is nil (the default), the Stage operates in classic mode: it governs a single implicit \"stage-self\" Target that the controller creates and maintains on the Stage's behalf. This preserves the behavior of Stages authored before Targets existed.  +optional
+	Targets *StageTargets `json:"targets,omitempty"`
 	// Vars is a list of variables that can be referenced anywhere in the StageSpec that supports expressions. For example, the PromotionTemplate and arguments of the Verification.
 	Vars []ExpressionVariable `json:"vars,omitempty"`
 	// Verification describes how to verify a Stage's current Freight is fit for promotion downstream.
@@ -146,36 +146,36 @@ func (o *StageSpec) SetShard(v string) {
 	o.Shard = &v
 }
 
-// GetTargetSelectors returns the TargetSelectors field value if set, zero value otherwise.
-func (o *StageSpec) GetTargetSelectors() []V1LabelSelector {
-	if o == nil || IsNil(o.TargetSelectors) {
-		var ret []V1LabelSelector
+// GetTargets returns the Targets field value if set, zero value otherwise.
+func (o *StageSpec) GetTargets() StageTargets {
+	if o == nil || IsNil(o.Targets) {
+		var ret StageTargets
 		return ret
 	}
-	return o.TargetSelectors
+	return *o.Targets
 }
 
-// GetTargetSelectorsOk returns a tuple with the TargetSelectors field value if set, nil otherwise
+// GetTargetsOk returns a tuple with the Targets field value if set, nil otherwise
 // and a boolean to check if the value has been set.
-func (o *StageSpec) GetTargetSelectorsOk() ([]V1LabelSelector, bool) {
-	if o == nil || IsNil(o.TargetSelectors) {
+func (o *StageSpec) GetTargetsOk() (*StageTargets, bool) {
+	if o == nil || IsNil(o.Targets) {
 		return nil, false
 	}
-	return o.TargetSelectors, true
+	return o.Targets, true
 }
 
-// HasTargetSelectors returns a boolean if a field has been set.
-func (o *StageSpec) HasTargetSelectors() bool {
-	if o != nil && !IsNil(o.TargetSelectors) {
+// HasTargets returns a boolean if a field has been set.
+func (o *StageSpec) HasTargets() bool {
+	if o != nil && !IsNil(o.Targets) {
 		return true
 	}
 
 	return false
 }
 
-// SetTargetSelectors gets a reference to the given []V1LabelSelector and assigns it to the TargetSelectors field.
-func (o *StageSpec) SetTargetSelectors(v []V1LabelSelector) {
-	o.TargetSelectors = v
+// SetTargets gets a reference to the given StageTargets and assigns it to the Targets field.
+func (o *StageSpec) SetTargets(v StageTargets) {
+	o.Targets = &v
 }
 
 // GetVars returns the Vars field value if set, zero value otherwise.
@@ -261,8 +261,8 @@ func (o StageSpec) ToMap() (map[string]interface{}, error) {
 	if !IsNil(o.Shard) {
 		toSerialize["shard"] = o.Shard
 	}
-	if !IsNil(o.TargetSelectors) {
-		toSerialize["targetSelectors"] = o.TargetSelectors
+	if !IsNil(o.Targets) {
+		toSerialize["targets"] = o.Targets
 	}
 	if !IsNil(o.Vars) {
 		toSerialize["vars"] = o.Vars

@@ -240,19 +240,32 @@ type StageSpec struct {
 	// Verification describes how to verify a Stage's current Freight is fit for
 	// promotion downstream.
 	Verification *Verification `json:"verification,omitempty"`
-	// TargetSelectors select the Targets that this Stage governs and promotes
-	// Freight to, matching Targets by their labels within the Stage's own
-	// Project. A Target is selected when it matches any selector in this list.
-	// A Stage may govern any number of Targets this way.
+	// Targets describes the Targets that this Stage governs and promotes Freight
+	// to. Its presence is what makes a Stage target-aware.
 	//
 	// When this field is nil (the default), the Stage operates in classic mode:
 	// it governs a single implicit "stage-self" Target that the controller
 	// creates and maintains on the Stage's behalf. This preserves the behavior
-	// of Stages authored before Targets existed. An empty selector in a non-empty
-	// list selects all Targets in the Project.
+	// of Stages authored before Targets existed.
 	//
 	// +optional
-	TargetSelectors []metav1.LabelSelector `json:"targetSelectors,omitempty"`
+	Targets *StageTargets `json:"targets,omitempty"`
+}
+
+// StageTargets describes the Targets a Stage governs.
+type StageTargets struct {
+	// Selectors select the Targets that the Stage governs, matching Targets by
+	// their labels within the Stage's own Project. A Target is selected when it
+	// matches any selector in the list, so several selectors describe a union.
+	// A Target matching more than one of them is still governed once.
+	//
+	// An empty selector selects every Target in the Project. An empty list
+	// selects none: the Stage still governs Targets, it just governs none at the
+	// moment.
+	//
+	// +listType=atomic
+	// +kubebuilder:validation:Required
+	Selectors []metav1.LabelSelector `json:"selectors"`
 }
 
 // FreightRequest expresses a Stage's need for Freight having originated from a

@@ -359,6 +359,7 @@ Class | Method | HTTP request | Description
  - [StageSpec](docs/StageSpec.md)
  - [StageStats](docs/StageStats.md)
  - [StageStatus](docs/StageStatus.md)
+ - [StageTargets](docs/StageTargets.md)
  - [StepExecutionMetadata](docs/StepExecutionMetadata.md)
  - [TagMap](docs/TagMap.md)
  - [UpdateConfigMapRequest](docs/UpdateConfigMapRequest.md)
