@@ -758,6 +758,15 @@ func (r *RegularStageReconciler) syncPromotions(
 			if promo.Status.Freight != nil {
 				ref.Freight = promo.Status.Freight.DeepCopy()
 			}
+			// A Promotion that was aborted before it ever reached Running never
+			// had the chance to build a FreightCollection. Recording it as-is
+			// would make the Stage forget Freight origins the previous
+			// lastPromotion had already collected, permanently breaking any
+			// subsequent Promotion's ability to inherit them.
+			if promo.Status.StartedAt == nil && ref.Status.FreightCollection == nil &&
+				newStatus.LastPromotion != nil && newStatus.LastPromotion.Status != nil {
+				ref.Status.FreightCollection = newStatus.LastPromotion.Status.FreightCollection
+			}
 			newStatus.LastPromotion = &ref
 			if promo.Status.Phase == kargoapi.PromotionPhaseSucceeded {
 				// If the Promotion was successful, then we should add the Freight
