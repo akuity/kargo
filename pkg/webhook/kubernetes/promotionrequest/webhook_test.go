@@ -1,16 +1,20 @@
 package promotionrequest
 
 import (
+	"context"
+	"errors"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 	corev1 "k8s.io/api/core/v1"
+	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/util/validation/field"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/client/fake"
+	"sigs.k8s.io/controller-runtime/pkg/client/interceptor"
 	"sigs.k8s.io/controller-runtime/pkg/webhook/admission"
 
 	kargoapi "github.com/akuity/kargo/api/v1alpha1"
@@ -312,6 +316,104 @@ func Test_webhook_ValidateDelete(t *testing.T) {
 	warnings, err := w.ValidateDelete(t.Context(), promotionRequest())
 	assert.Empty(t, warnings)
 	assert.NoError(t, err)
+}
+
+// Test_webhook_failsClosed covers the paths where a lookup the webhook depends
+// on fails. A transient API error must fail the admission request rather than
+// silently admit a PromotionRequest nothing has actually checked.
+func Test_webhook_failsClosed(t *testing.T) {
+	t.Parallel()
+
+	scheme := runtime.NewScheme()
+	require.NoError(t, corev1.AddToScheme(scheme))
+	require.NoError(t, kargoapi.AddToScheme(scheme))
+
+	// Fresh objects per client: the builder takes ownership of what it is given
+	// and stamps a resourceVersion onto it, so subtests that run in parallel
+	// cannot share fixtures.
+	newWebhook := func(funcs interceptor.Funcs) *webhook {
+		return &webhook{
+			client: fake.NewClientBuilder().
+				WithScheme(scheme).
+				WithObjects(append(
+					projectObjects(),
+					targetAwareStage(),
+					target("us-east"),
+				)...).
+				WithInterceptorFuncs(funcs).
+				Build(),
+		}
+	}
+
+	t.Run("Stage lookup fails", func(t *testing.T) {
+		t.Parallel()
+
+		w := newWebhook(interceptor.Funcs{
+			Get: func(
+				ctx context.Context,
+				c client.WithWatch,
+				key client.ObjectKey,
+				obj client.Object,
+				opts ...client.GetOption,
+			) error {
+				if _, ok := obj.(*kargoapi.Stage); ok {
+					return errors.New("something went wrong")
+				}
+				return c.Get(ctx, key, obj, opts...)
+			},
+		})
+
+		_, err := w.ValidateCreate(t.Context(), promotionRequest("us-east"))
+		require.True(t, apierrors.IsInternalError(err), "got %T: %v", err, err)
+		assert.ErrorContains(t, err, "something went wrong")
+	})
+
+	t.Run("Target lookup fails", func(t *testing.T) {
+		t.Parallel()
+
+		w := newWebhook(interceptor.Funcs{
+			List: func(
+				ctx context.Context,
+				c client.WithWatch,
+				list client.ObjectList,
+				opts ...client.ListOption,
+			) error {
+				if _, ok := list.(*kargoapi.TargetList); ok {
+					return errors.New("something went wrong")
+				}
+				return c.List(ctx, list, opts...)
+			},
+		})
+
+		_, err := w.ValidateCreate(t.Context(), promotionRequest("us-east"))
+		require.True(t, apierrors.IsInternalError(err), "got %T: %v", err, err)
+		assert.ErrorContains(t, err, "something went wrong")
+	})
+
+	t.Run("Target lookup fails on update", func(t *testing.T) {
+		t.Parallel()
+
+		w := newWebhook(interceptor.Funcs{
+			List: func(
+				ctx context.Context,
+				c client.WithWatch,
+				list client.ObjectList,
+				opts ...client.ListOption,
+			) error {
+				if _, ok := list.(*kargoapi.TargetList); ok {
+					return errors.New("something went wrong")
+				}
+				return c.List(ctx, list, opts...)
+			},
+		})
+
+		_, err := w.ValidateUpdate(
+			t.Context(),
+			promotionRequest("us-east"),
+			promotionRequest("us-east", "us-west"),
+		)
+		require.True(t, apierrors.IsInternalError(err), "got %T: %v", err, err)
+	})
 }
 
 func Test_validateTargetsUnique(t *testing.T) {
