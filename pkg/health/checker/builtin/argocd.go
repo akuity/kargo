@@ -197,7 +197,15 @@ func (a *argocdChecker) getApplicationHealth(
 	}
 
 	// Reflect the health and sync status of the Argo CD Application.
-	appStatus.ApplicationStatus = app.Status
+	//
+	// The status is sanitized because it is persisted verbatim in Stage status,
+	// which is written with a diff-based patch: any field that Argo CD ticks on
+	// every refresh (most notably reconciledAt) would otherwise make every
+	// periodic reconciliation of every Stage produce a non-empty patch -- and a
+	// watch event -- even when nothing meaningful changed. The health
+	// assessment below reads such fields from the live App, not from this
+	// sanitized copy.
+	appStatus.ApplicationStatus = sanitizeAppStatus(app.Status)
 
 	// Argo CD has separate reconciliation loops for operations (like syncing) and
 	// assessing App health. This means that immediately following a completed
@@ -268,6 +276,23 @@ func (a *argocdChecker) getApplicationHealth(
 
 	stageHealth, err := a.stageHealthForAppHealth(app)
 	return stageHealth, appStatus, err
+}
+
+// sanitizeAppStatus returns a deep copy of the given
+// v1alpha1.ApplicationStatus with fields removed that change without
+// representing a meaningful change to the Application: reconciledAt (updated
+// by Argo CD on every refresh cycle) and condition lastTransitionTimes
+// (re-stamped when a condition clears and later recurs with an identical
+// message). The result shares no memory with the input, so the live
+// Application remains safe to read (and to mutate, e.g. by a refresh
+// request) after the sanitized copy has been taken.
+func sanitizeAppStatus(status argocd.ApplicationStatus) argocd.ApplicationStatus {
+	sanitized := *status.DeepCopy()
+	sanitized.ReconciledAt = nil
+	for i := range sanitized.Conditions {
+		sanitized.Conditions[i].LastTransitionTime = nil
+	}
+	return sanitized
 }
 
 // stageHealthForAppSync returns the v1alpha1.HealthState for an Argo CD
