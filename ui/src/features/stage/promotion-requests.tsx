@@ -1,6 +1,6 @@
 import { faCircleExclamation } from '@fortawesome/free-solid-svg-icons';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
-import { Alert, Flex, Table, Tag, Tooltip, Typography } from 'antd';
+import { Alert, Table, Tag, Tooltip, Typography } from 'antd';
 import { ColumnsType } from 'antd/es/table';
 import { format } from 'date-fns';
 
@@ -101,28 +101,10 @@ export const PromotionRequests = ({ projectName, stageName }: Props) => {
     },
     {
       title: 'Targets',
-      width: 220,
+      width: 100,
       render: (_, promotionRequest) => {
-        // status.targets carries per-Target progress and appears as the
-        // reconciler acts on each one.
-        const progress = promotionRequest?.status?.targets || [];
-        if (progress.length) {
-          return (
-            <Flex gap={4} wrap>
-              {progress.map((target) => (
-                <Tag key={target.name} color={phaseColor(target.phase)}>
-                  {target.name}
-                </Tag>
-              ))}
-            </Flex>
-          );
-        }
-
-        // Nothing has been acted on yet, so fall back to the Targets the
-        // request names. spec.targets is resolved once, when the request is
-        // created, so it is always populated even before any progress exists.
-        const named = promotionRequest?.spec?.targets || [];
-        if (!named.length) {
+        const targetCount = promotionRequest?.spec?.targets?.length || 0;
+        if (!targetCount) {
           return (
             <Tooltip title='The Stage governed no Targets when this request was created'>
               <Typography.Text type='secondary' className='text-xs'>
@@ -131,13 +113,7 @@ export const PromotionRequests = ({ projectName, stageName }: Props) => {
             </Tooltip>
           );
         }
-        return (
-          <Flex gap={4} wrap>
-            {named.map((target) => (
-              <Tag key={target.name}>{target.name}</Tag>
-            ))}
-          </Flex>
-        );
+        return <Typography.Text className='text-xs'>{targetCount}</Typography.Text>;
       }
     },
     {
