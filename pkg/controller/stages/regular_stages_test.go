@@ -2086,6 +2086,88 @@ func TestRegularStageReconciler_syncPromotions(t *testing.T) {
 			},
 		},
 		{
+			// Regression test for https://github.com/akuity/kargo/issues/6810.
+			// Aborting a Promotion before it ever reaches Running leaves its
+			// status.freightCollection nil (it never ran promote()). Folding
+			// that Promotion into status.lastPromotion must not clobber the
+			// multi-origin collection the Stage already had.
+			name:                 "aborted promotion that never started preserves inherited freight collection",
+			autoPromotionEnabled: true,
+			stage: &kargoapi.Stage{
+				ObjectMeta: metav1.ObjectMeta{
+					Namespace: "fake-project",
+					Name:      "test-stage",
+				},
+				Spec: kargoapi.StageSpec{
+					RequestedFreight: []kargoapi.FreightRequest{
+						{Origin: kargoapi.FreightOrigin{Kind: kargoapi.FreightOriginKindWarehouse, Name: "git-origin"}},
+						{Origin: kargoapi.FreightOrigin{Kind: kargoapi.FreightOriginKindWarehouse, Name: "image-origin"}},
+					},
+				},
+				Status: kargoapi.StageStatus{
+					CurrentPromotion: &kargoapi.PromotionReference{
+						Name: "promotion-2",
+					},
+					LastPromotion: &kargoapi.PromotionReference{
+						Name: "promotion-1",
+						Status: &kargoapi.PromotionStatus{
+							Phase: kargoapi.PromotionPhaseSucceeded,
+							FreightCollection: &kargoapi.FreightCollection{
+								ID: "two-origin-collection",
+								Freight: map[string]kargoapi.FreightReference{
+									"Warehouse/git-origin": {
+										Name: "git-freight",
+										Origin: kargoapi.FreightOrigin{
+											Kind: kargoapi.FreightOriginKindWarehouse,
+											Name: "git-origin",
+										},
+									},
+									"Warehouse/image-origin": {
+										Name: "image-freight",
+										Origin: kargoapi.FreightOrigin{
+											Kind: kargoapi.FreightOriginKindWarehouse,
+											Name: "image-origin",
+										},
+									},
+								},
+							},
+						},
+					},
+				},
+			},
+			objects: []client.Object{
+				&kargoapi.Promotion{
+					ObjectMeta: metav1.ObjectMeta{
+						Name:              "promotion-2",
+						Namespace:         "fake-project",
+						CreationTimestamp: metav1.Time{Time: now},
+					},
+					Spec: kargoapi.PromotionSpec{
+						Stage: "test-stage",
+					},
+					Status: kargoapi.PromotionStatus{
+						// Aborted before StartedAt was ever set, i.e. it never
+						// reached promote() and never got a FreightCollection.
+						Phase:      kargoapi.PromotionPhaseAborted,
+						FinishedAt: &metav1.Time{Time: now},
+					},
+				},
+			},
+			assertions: func(t *testing.T, status kargoapi.StageStatus, hasPendingPromotions bool, err error) {
+				require.NoError(t, err)
+				assert.False(t, hasPendingPromotions)
+
+				require.NotNil(t, status.LastPromotion)
+				assert.Equal(t, "promotion-2", status.LastPromotion.Name)
+				assert.Equal(t, kargoapi.PromotionPhaseAborted, status.LastPromotion.Status.Phase)
+
+				require.NotNil(t, status.LastPromotion.Status.FreightCollection)
+				require.Len(t, status.LastPromotion.Status.FreightCollection.Freight, 2)
+				assert.Contains(t, status.LastPromotion.Status.FreightCollection.Freight, "Warehouse/git-origin")
+				assert.Contains(t, status.LastPromotion.Status.FreightCollection.Freight, "Warehouse/image-origin")
+			},
+		},
+		{
 			name:                 "handles promotion phase transition",
 			autoPromotionEnabled: true,
 			stage: &kargoapi.Stage{
