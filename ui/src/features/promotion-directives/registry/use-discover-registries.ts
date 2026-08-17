@@ -29,7 +29,6 @@ import ociDownloadConfig from '@ui/gen/directives/oci-download-config.json';
 import ociPushConfig from '@ui/gen/directives/oci-push-config.json';
 import setFreightAliasConfig from '@ui/gen/directives/set-freight-alias-config.json';
 import setMetadataConfig from '@ui/gen/directives/set-metadata-config.json';
-import tarConfig from '@ui/gen/directives/tar-config.json';
 import tomlParseConfig from '@ui/gen/directives/toml-parse-config.json';
 import tomlUpdateConfig from '@ui/gen/directives/toml-update-config.json';
 import untarConfig from '@ui/gen/directives/untar-config.json';
@@ -165,10 +164,6 @@ export const useDiscoverPromotionDirectivesRegistries = (): PromotionDirectivesR
       {
         identifier: 'oci-push',
         config: ociPushConfig as JSONSchema7
-      },
-      {
-        identifier: 'tar',
-        config: tarConfig as JSONSchema7
       },
       {
         identifier: 'untar',
