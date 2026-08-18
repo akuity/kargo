@@ -55,7 +55,8 @@ type promoteDownstreamRequest struct {
 // @id PromoteDownstream
 // @Summary Promote downstream
 // @Description Creates a Promotion resource for each of a Stage's immediately
-// @Description downstream Stages.
+// @Description downstream Stages. Downstream Stages that select Targets yield a
+// @Description PromotionRequest each, returned separately under "promotionRequests".
 // @Tags Core, Project-Level
 // @Security BearerAuth
 // @Accept json
@@ -185,11 +186,39 @@ func (s *server) promoteDownstream(c *gin.Context) {
 
 	promoteErrs := make([]error, 0, len(downstreams))
 	createdPromos := make([]*kargoapi.Promotion, 0, len(downstreams))
+	createdPromoReqs := make([]*kargoapi.PromotionRequest, 0, len(downstreams))
 
 	for _, downstream := range downstreams {
 		// Skip "control flow" stages with no promotion steps
 		if downstream.Spec.PromotionTemplate != nil &&
 			len(downstream.Spec.PromotionTemplate.Spec.Steps) == 0 {
+			continue
+		}
+
+		// A downstream Stage that selects Targets fans Freight out to them via
+		// a PromotionRequest rather than promoting to itself with a Promotion.
+		if api.IsTargetAware(&downstream) {
+			// Both the Target lookup and the create go through the internal
+			// client. PromotionRequests are system-owned, and the promote-verb
+			// check above IS the authorization decision for this downstream
+			// Stage; which Targets it governs is a detail of carrying it out.
+			newPromoReq, err := api.NewPromotionRequest(
+				ctx, s.client.InternalClient(), &downstream, freight.Name,
+			)
+			if err != nil {
+				promoteErrs = append(promoteErrs, err)
+				continue
+			}
+			if actor != "" {
+				api.SetCreateActorAnnotation(newPromoReq, actor)
+			}
+			if err = s.client.InternalClient().Create(ctx, newPromoReq); err != nil {
+				promoteErrs = append(promoteErrs, err)
+				continue
+			}
+			// No event is recorded: Kargo's promotion events carry a Promotion,
+			// and a PromotionRequest has none of its own.
+			createdPromoReqs = append(createdPromoReqs, newPromoReq)
 			continue
 		}
 
@@ -210,6 +239,9 @@ func (s *server) promoteDownstream(c *gin.Context) {
 	}
 
 	response := gin.H{"promotions": createdPromos}
+	if len(createdPromoReqs) > 0 {
+		response["promotionRequests"] = createdPromoReqs
+	}
 	if len(promoteErrs) > 0 {
 		response["errors"] = errors.Join(promoteErrs...).Error()
 		c.JSON(http.StatusMultiStatus, response)

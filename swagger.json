@@ -2554,7 +2554,7 @@
     },
     "/v1beta1/projects/{project}/stages/{stage}/promotions": {
       "post": {
-        "description": "Create a Promotion resource to transition a specified Stage into\nthe state represented by the specified Freight.",
+        "description": "Create a Promotion resource to transition a specified Stage into\nthe state represented by the specified Freight.\nA Stage that selects Targets yields a PromotionRequest, which fans\nthe Freight out to each of them, in place of a single Promotion.",
         "consumes": [
           "application/json"
         ],
@@ -2594,7 +2594,7 @@
         ],
         "responses": {
           "201": {
-            "description": "Promotion resource (github.com/akuity/kargo/api/v1alpha1.Promotion)",
+            "description": "Promotion resource, or a PromotionRequest for a Stage that selects Targets",
             "schema": {
               "$ref": "#/definitions/Promotion"
             }
@@ -2609,7 +2609,7 @@
     },
     "/v1beta1/projects/{project}/stages/{stage}/promotions/downstream": {
       "post": {
-        "description": "Creates a Promotion resource for each of a Stage's immediately\ndownstream Stages.",
+        "description": "Creates a Promotion resource for each of a Stage's immediately\ndownstream Stages. Downstream Stages that select Targets yield a\nPromotionRequest each, returned separately under \"promotionRequests\".",
         "consumes": [
           "application/json"
         ],

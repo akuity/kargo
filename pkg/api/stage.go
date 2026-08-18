@@ -73,6 +73,16 @@ func ListStagesByWarehouses(
 	return stages, nil
 }
 
+// IsTargetAware returns true if the Stage governs Targets, i.e. promotes
+// Freight to destinations described by Target resources rather than to itself.
+//
+// The presence of the targets block is what decides this, not what its
+// selectors happen to match. A Stage whose selectors currently match nothing is
+// still target-aware; it simply governs no Targets at the moment.
+func IsTargetAware(stage *kargoapi.Stage) bool {
+	return stage != nil && stage.Spec.Targets != nil
+}
+
 // StageMatchesAnyWarehouse returns true if the Stage requests Freight that
 // originated from at least one of the specified warehouses, either directly
 // or through upstream stages.

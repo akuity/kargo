@@ -28,10 +28,11 @@ const (
 	// embedded in a generated Promotion name.
 	promotionShortHashLength = 7
 
-	// maxStageNamePrefixForPromotionName is the maximum length of the Stage
-	// name used as the prefix of a generated Promotion name before it would
-	// exceed the Kubernetes resource name limit of 253.
-	maxStageNamePrefixForPromotionName = 253 -
+	// maxPrefixForPromotionName is the maximum length of the descriptive prefix
+	// of a generated Promotion name -- the Stage name, or the Stage and Target
+	// names together -- before the name would exceed the Kubernetes resource
+	// name limit of 253.
+	maxPrefixForPromotionName = 253 -
 		len(promotionNameSeparator) - ulid.EncodedSize -
 		len(promotionNameSeparator) - promotionShortHashLength
 )
@@ -89,7 +90,15 @@ func NewMinimalPromotionForOrigin(
 // in this format -- the embedded ULID makes lex order match creation order.
 // Callers that need a Promotion name should always use this function.
 func GeneratePromotionName(stageName, freight string) string {
-	if stageName == "" || freight == "" {
+	return generatePromotionStyleName(stageName, freight)
+}
+
+// generatePromotionStyleName generates a name of the form
+// <prefix>.<ulid>.<short-hash> for a resource that promotes a piece of Freight.
+// The embedded ULID makes lex order match creation order, which sorting logic
+// elsewhere in Kargo relies on.
+func generatePromotionStyleName(prefix, freight string) string {
+	if prefix == "" || freight == "" {
 		return ""
 	}
 
@@ -98,12 +107,16 @@ func GeneratePromotionName(stageName, freight string) string {
 		shortHash = shortHash[0:promotionShortHashLength]
 	}
 
-	shortStageName := stageName
-	if len(stageName) > maxStageNamePrefixForPromotionName {
-		shortStageName = shortStageName[0:maxStageNamePrefixForPromotionName]
+	if len(prefix) > maxPrefixForPromotionName {
+		// Truncation can land on a separator or hyphen, neither of which a
+		// Kubernetes resource name may end with.
+		prefix = strings.TrimRight(
+			prefix[0:maxPrefixForPromotionName],
+			promotionNameSeparator+"-",
+		)
 	}
 
-	parts := []string{shortStageName, ulid.Make().String(), shortHash}
+	parts := []string{prefix, ulid.Make().String(), shortHash}
 	return strings.ToLower(strings.Join(parts, promotionNameSeparator))
 }
 

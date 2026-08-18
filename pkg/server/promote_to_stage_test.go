@@ -103,10 +103,140 @@ func Test_server_promoteToStage(t *testing.T) {
 		},
 	}
 
+	// Same name as testStage, so that it can stand in for it at the endpoint
+	// under test, but governing Targets rather than promoting to itself.
+	testTargetAwareStage := testStage.DeepCopy()
+	testTargetAwareStage.Spec.Targets = &kargoapi.StageTargets{
+		Selectors: []metav1.LabelSelector{{
+			MatchLabels: map[string]string{"region": "us"},
+		}},
+	}
+	testTarget := &kargoapi.Target{
+		ObjectMeta: metav1.ObjectMeta{
+			Name:      "us-east",
+			Namespace: testProject.Name,
+			Labels:    map[string]string{"region": "us"},
+		},
+	}
+	// Present in the Project but not matched by the Stage's selector, so it
+	// must not appear in the resolved list.
+	testUnselectedTarget := &kargoapi.Target{
+		ObjectMeta: metav1.ObjectMeta{
+			Name:      "eu-west",
+			Namespace: testProject.Name,
+			Labels:    map[string]string{"region": "eu"},
+		},
+	}
+
 	testRESTEndpoint(
 		t, &config.ServerConfig{},
 		http.MethodPost, "/v1beta1/projects/"+testProject.Name+"/stages/"+testStage.Name+"/promotions",
 		[]restTestCase{
+			{
+				name: "Target-aware Stage yields a PromotionRequest",
+				clientBuilder: fake.NewClientBuilder().WithObjects(
+					testProject,
+					testTargetAwareStage,
+					testFreight,
+					testTarget,
+					testUnselectedTarget,
+				),
+				serverSetup: authorizeAllStagesPromote,
+				body: mustJSONBody(promoteToStageRequest{
+					Freight: testFreight.Name,
+				}),
+				assertions: func(t *testing.T, w *httptest.ResponseRecorder, c client.Client) {
+					require.Equal(t, http.StatusCreated, w.Code)
+
+					promos := &kargoapi.PromotionList{}
+					require.NoError(t, c.List(t.Context(), promos, client.InNamespace(testProject.Name)))
+					require.Empty(t, promos.Items)
+
+					reqs := &kargoapi.PromotionRequestList{}
+					require.NoError(t, c.List(t.Context(), reqs, client.InNamespace(testProject.Name)))
+					require.Len(t, reqs.Items, 1)
+					require.Equal(t, testStage.Name, reqs.Items[0].Spec.Stage)
+					require.Equal(t, testFreight.Name, reqs.Items[0].Spec.Freight)
+					// The Stage's selectors are resolved to Targets at creation.
+					require.Equal(
+						t,
+						[]kargoapi.PromotionRequestTarget{{Name: "us-east"}},
+						reqs.Items[0].Spec.Targets,
+					)
+					require.Len(t, reqs.Items[0].OwnerReferences, 1)
+					require.Equal(t, testStage.Name, reqs.Items[0].OwnerReferences[0].Name)
+				},
+			},
+			{
+				// Taylor's question on #6805: re-promoting the same Freight --
+				// rolling back to it, say -- must still produce a request. The
+				// stand-down guard exists only in the Stage controller's
+				// auto-promotion loop; this path creates unconditionally.
+				name: "re-promoting the same Freight yields a second PromotionRequest",
+				clientBuilder: fake.NewClientBuilder().WithObjects(
+					testProject,
+					testTargetAwareStage,
+					testFreight,
+					testTarget,
+					&kargoapi.PromotionRequest{
+						ObjectMeta: metav1.ObjectMeta{
+							Namespace: testProject.Name,
+							Name:      testStage.Name + ".existing.01jexam",
+							Labels: map[string]string{
+								kargoapi.LabelKeyStage: testStage.Name,
+							},
+						},
+						Spec: kargoapi.PromotionRequestSpec{
+							Stage:   testStage.Name,
+							Freight: testFreight.Name,
+							Targets: []kargoapi.PromotionRequestTarget{{Name: "us-east"}},
+						},
+						Status: kargoapi.PromotionRequestStatus{
+							Phase: kargoapi.PromotionRequestPhaseSucceeded,
+						},
+					},
+				),
+				serverSetup: authorizeAllStagesPromote,
+				body: mustJSONBody(promoteToStageRequest{
+					Freight: testFreight.Name,
+				}),
+				assertions: func(t *testing.T, w *httptest.ResponseRecorder, c client.Client) {
+					require.Equal(t, http.StatusCreated, w.Code)
+
+					reqs := &kargoapi.PromotionRequestList{}
+					require.NoError(t, c.List(t.Context(), reqs, client.InNamespace(testProject.Name)))
+					require.Len(t, reqs.Items, 2)
+					// Distinct objects: names embed a ULID, so a repeat
+					// promotion of the same Stage and Freight cannot collide.
+					require.NotEqual(t, reqs.Items[0].Name, reqs.Items[1].Name)
+				},
+			},
+			{
+				name: "Promotion by origin is refused for a target-aware Stage",
+				clientBuilder: fake.NewClientBuilder().WithObjects(
+					testProject,
+					testTargetAwareStage,
+					testFreight,
+				),
+				serverSetup: authorizeAllStagesPromote,
+				body: mustJSONBody(promoteToStageRequest{
+					Origin: testFreight.Origin.String(),
+				}),
+				assertions: func(t *testing.T, w *httptest.ResponseRecorder, c client.Client) {
+					// Nothing resolves an origin for a PromotionRequest, so this
+					// must fail loudly rather than fall back to a Promotion
+					// that would bypass the Stage's Targets.
+					require.Equal(t, http.StatusBadRequest, w.Code)
+
+					promos := &kargoapi.PromotionList{}
+					require.NoError(t, c.List(t.Context(), promos, client.InNamespace(testProject.Name)))
+					require.Empty(t, promos.Items)
+
+					reqs := &kargoapi.PromotionRequestList{}
+					require.NoError(t, c.List(t.Context(), reqs, client.InNamespace(testProject.Name)))
+					require.Empty(t, reqs.Items)
+				},
+			},
 			{
 				name:          "Project not found",
 				clientBuilder: fake.NewClientBuilder(),
