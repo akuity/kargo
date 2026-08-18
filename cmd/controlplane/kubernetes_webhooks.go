@@ -28,6 +28,7 @@ import (
 	"github.com/akuity/kargo/pkg/webhook/kubernetes/project"
 	"github.com/akuity/kargo/pkg/webhook/kubernetes/projectconfig"
 	"github.com/akuity/kargo/pkg/webhook/kubernetes/promotion"
+	"github.com/akuity/kargo/pkg/webhook/kubernetes/promotionrequest"
 	"github.com/akuity/kargo/pkg/webhook/kubernetes/promotiontask"
 	"github.com/akuity/kargo/pkg/webhook/kubernetes/replicatedresource"
 	"github.com/akuity/kargo/pkg/webhook/kubernetes/stage"
@@ -185,6 +186,9 @@ func (o *kubernetesWebhooksServerOptions) run(ctx context.Context) error {
 	}
 	if err = promotion.SetupWebhookWithManager(ctx, webhookCfg, mgr); err != nil {
 		return fmt.Errorf("setup Promotion webhook: %w", err)
+	}
+	if err = promotionrequest.SetupWebhookWithManager(mgr); err != nil {
+		return fmt.Errorf("setup PromotionRequest webhook: %w", err)
 	}
 	if err = promotiontask.SetupWebhookWithManager(mgr); err != nil {
 		return fmt.Errorf("setup PromotionTask webhook: %w", err)
