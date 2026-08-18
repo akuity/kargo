@@ -3,6 +3,7 @@ package builtin
 import (
 	"context"
 	"errors"
+	"reflect"
 	"testing"
 	"time"
 
@@ -869,7 +870,8 @@ func Test_argocdUpdater_filterAppConditions(t *testing.T) {
 				require.Equal(t, argocd.ApplicationConditionComparisonError, conditions[1].Type)
 				require.Equal(t, argocd.ApplicationConditionType("SomeOtherType"), conditions[2].Type)
 			},
-		}, {
+		},
+		{
 			name: "no matching conditions",
 			conditions: []argocd.ApplicationCondition{
 				{
@@ -905,4 +907,206 @@ func Test_argocdUpdater_filterAppConditions(t *testing.T) {
 			)
 		})
 	}
+}
+
+func Test_sanitizeAppStatus(t *testing.T) {
+	original := argocd.ApplicationStatus{
+		Health: argocd.HealthStatus{
+			Status: argocd.HealthStatusHealthy,
+		},
+		Sync: argocd.SyncStatus{
+			Status:    argocd.SyncStatusCodeSynced,
+			Revisions: []string{"fake-revision"},
+		},
+		ReconciledAt: &metav1.Time{
+			Time: time.Date(2024, 1, 1, 0, 0, 1, 0, time.UTC),
+		},
+		OperationState: &argocd.OperationState{
+			Phase: argocd.OperationSucceeded,
+			FinishedAt: &metav1.Time{
+				Time: time.Date(2024, 1, 1, 0, 0, 0, 0, time.UTC),
+			},
+		},
+		Conditions: []argocd.ApplicationCondition{
+			{
+				Type:    argocd.ApplicationConditionComparisonError,
+				Message: "fake-message",
+				LastTransitionTime: &metav1.Time{
+					Time: time.Date(2024, 1, 1, 0, 0, 2, 0, time.UTC),
+				},
+			},
+		},
+	}
+
+	// Snapshot the input so mutations through shared memory can be detected.
+	snapshot := *original.DeepCopy()
+
+	sanitized := sanitizeAppStatus(original)
+
+	// Volatile fields are removed.
+	require.Nil(t, sanitized.ReconciledAt)
+	require.Len(t, sanitized.Conditions, 1)
+	require.Nil(t, sanitized.Conditions[0].LastTransitionTime)
+
+	// Meaningful fields are preserved. Compare against the snapshot rather
+	// than the input so a mutation through shared memory cannot make an
+	// assertion compare a value to itself.
+	require.Equal(t, snapshot.Health, sanitized.Health)
+	require.Equal(t, snapshot.Sync, sanitized.Sync)
+	require.Equal(t, snapshot.OperationState, sanitized.OperationState)
+	require.Equal(t, snapshot.Conditions[0].Type, sanitized.Conditions[0].Type)
+	require.Equal(t, snapshot.Conditions[0].Message, sanitized.Conditions[0].Message)
+
+	// The input is entirely unmodified and shares no memory with the result.
+	require.Equal(t, snapshot, original)
+	require.NotSame(t, original.OperationState, sanitized.OperationState)
+}
+
+// Test_sanitizeAppStatus_accountsForAllTimestampFields walks the
+// v1alpha1.ApplicationStatus type and fails when it contains a timestamp
+// field that has not been explicitly accounted for below. This forces whoever
+// adds a timestamp-bearing field to the vendored type to decide whether
+// sanitizeAppStatus must strip it. See the comment on ApplicationStatus.
+func Test_sanitizeAppStatus_accountsForAllTimestampFields(t *testing.T) {
+	accountedFor := map[string]bool{
+		// Stripped: ticks on every Argo CD refresh cycle.
+		"ReconciledAt": true,
+		// Stripped: re-stamped when a condition clears and later recurs.
+		"Conditions[].LastTransitionTime": true,
+		// Kept: changes only when an operation completes.
+		"OperationState.FinishedAt": true,
+	}
+
+	timeType := reflect.TypeFor[metav1.Time]()
+	var timestampFields []string
+	ancestors := map[reflect.Type]bool{}
+	var walk func(reflect.Type, string)
+	walk = func(typ reflect.Type, path string) {
+		for typ.Kind() == reflect.Pointer || typ.Kind() == reflect.Slice {
+			if typ.Kind() == reflect.Slice {
+				path += "[]"
+			}
+			typ = typ.Elem()
+		}
+		if typ == timeType {
+			timestampFields = append(timestampFields, path)
+			return
+		}
+		if typ.Kind() != reflect.Struct || ancestors[typ] {
+			return
+		}
+		ancestors[typ] = true
+		for field := range typ.Fields() {
+			fieldPath := field.Name
+			if path != "" {
+				fieldPath = path + "." + field.Name
+			}
+			walk(field.Type, fieldPath)
+		}
+		delete(ancestors, typ)
+	}
+	walk(reflect.TypeFor[argocd.ApplicationStatus](), "")
+
+	for _, field := range timestampFields {
+		require.True(
+			t, accountedFor[field],
+			"timestamp field %q is not accounted for; decide whether sanitizeAppStatus must strip it",
+			field,
+		)
+	}
+	require.Len(t, timestampFields, len(accountedFor))
+}
+
+// Test_argocdChecker_check_outputStableAcrossRefreshes verifies that a routine
+// Argo CD refresh -- which advances reconciledAt and re-stamps condition
+// lastTransitionTimes without any meaningful change to the Application -- does
+// not alter the health check output. The output is persisted in Stage status
+// with a diff-based patch, so any instability here produces a status patch and
+// a watch event for every Stage on every reconciliation.
+func Test_argocdChecker_check_outputStableAcrossRefreshes(t *testing.T) {
+	scheme := runtime.NewScheme()
+	require.NoError(t, argocd.AddToScheme(scheme))
+
+	appBefore := &argocd.Application{
+		ObjectMeta: metav1.ObjectMeta{
+			Namespace: "fake-namespace",
+			Name:      "fake-app",
+		},
+		Spec: argocd.ApplicationSpec{
+			Sources: []argocd.ApplicationSource{{}},
+		},
+		Status: argocd.ApplicationStatus{
+			OperationState: &argocd.OperationState{
+				Phase: argocd.OperationSucceeded,
+				FinishedAt: &metav1.Time{
+					Time: time.Date(2024, 1, 1, 0, 0, 0, 0, time.UTC),
+				},
+			},
+			ReconciledAt: &metav1.Time{
+				Time: time.Date(2024, 1, 1, 0, 0, 1, 0, time.UTC),
+			},
+			Health: argocd.HealthStatus{
+				Status: argocd.HealthStatusHealthy,
+			},
+			Sync: argocd.SyncStatus{
+				Status:    argocd.SyncStatusCodeSynced,
+				Revisions: []string{"fake-revision"},
+			},
+			Conditions: []argocd.ApplicationCondition{
+				{
+					Type:    argocd.ApplicationConditionComparisonError,
+					Message: "fake-message",
+					LastTransitionTime: &metav1.Time{
+						Time: time.Date(2024, 1, 1, 0, 0, 2, 0, time.UTC),
+					},
+				},
+			},
+		},
+	}
+
+	// Same Application after a routine refresh: reconciledAt advanced and the
+	// condition was re-stamped, but nothing else changed.
+	appAfter := appBefore.DeepCopy()
+	appAfter.Status.ReconciledAt = &metav1.Time{
+		Time: time.Date(2024, 1, 1, 0, 5, 1, 0, time.UTC),
+	}
+	appAfter.Status.Conditions[0].LastTransitionTime = &metav1.Time{
+		Time: time.Date(2024, 1, 1, 0, 5, 2, 0, time.UTC),
+	}
+
+	input := ArgoCDHealthInput{
+		Apps: []ArgoCDAppHealthCheck{
+			{
+				Namespace:        "fake-namespace",
+				Name:             "fake-app",
+				DesiredRevisions: []string{"fake-revision"},
+			},
+		},
+	}
+
+	var results []health.Result
+	for _, app := range []*argocd.Application{appBefore, appAfter} {
+		checker := &argocdChecker{
+			argocdClient: fake.NewClientBuilder().
+				WithScheme(scheme).
+				WithObjects(app).
+				Build(),
+		}
+		results = append(results, checker.check(t.Context(), input))
+	}
+
+	// Guard against vacuous stability: the output must reflect the real,
+	// sanitized Application status.
+	require.Equal(t, kargoapi.HealthStateUnhealthy, results[0].Status)
+	require.Contains(t, results[0].Output, applicationStatusesKey)
+	appStatuses, ok := results[0].Output[applicationStatusesKey].([]ArgoCDAppStatus)
+	require.True(t, ok)
+	require.Len(t, appStatuses, 1)
+	require.Equal(t, argocd.HealthStatusHealthy, appStatuses[0].Health.Status)
+	require.Equal(t, argocd.SyncStatusCodeSynced, appStatuses[0].Sync.Status)
+	require.Nil(t, appStatuses[0].ReconciledAt)
+	require.Len(t, appStatuses[0].Conditions, 1)
+	require.Nil(t, appStatuses[0].Conditions[0].LastTransitionTime)
+
+	require.Equal(t, results[0], results[1])
 }
