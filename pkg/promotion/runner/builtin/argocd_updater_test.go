@@ -464,11 +464,24 @@ func Test_argoCDUpdater_convert(t *testing.T) {
 			},
 		},
 		{
+			name: "prune is not a boolean",
+			config: promotion.Config{
+				"apps": []promotion.Config{{
+					"name":  "app",
+					"prune": "true",
+				}},
+			},
+			expectedProblems: []string{
+				"apps.0.prune: Invalid type. Expected: boolean, given: string",
+			},
+		},
+		{
 			name: "valid kitchen sink",
 			config: promotion.Config{
 				"apps": []promotion.Config{{
 					"name":      "app",
 					"namespace": "argocd",
+					"prune":     true,
 					"sources": []promotion.Config{{
 						"repoURL":              "fake-git-url",
 						"desiredRevision":      "fake-commit",
@@ -610,6 +623,7 @@ func Test_argoCDUpdater_run(t *testing.T) {
 				syncApplicationFn: func(
 					context.Context,
 					*promotion.StepContext,
+					*builtin.ArgoCDAppUpdate,
 					*argocd.Application,
 					argocd.ApplicationSources,
 				) error {
@@ -764,6 +778,7 @@ func Test_argoCDUpdater_run(t *testing.T) {
 				syncApplicationFn: func(
 					context.Context,
 					*promotion.StepContext,
+					*builtin.ArgoCDAppUpdate,
 					*argocd.Application,
 					argocd.ApplicationSources,
 				) error {
@@ -821,6 +836,7 @@ func Test_argoCDUpdater_run(t *testing.T) {
 				syncApplicationFn: func(
 					context.Context,
 					*promotion.StepContext,
+					*builtin.ArgoCDAppUpdate,
 					*argocd.Application,
 					argocd.ApplicationSources,
 				) error {
@@ -1010,6 +1026,7 @@ func Test_argoCDUpdater_run(t *testing.T) {
 				syncApplicationFn: func(
 					_ context.Context,
 					_ *promotion.StepContext,
+					_ *builtin.ArgoCDAppUpdate,
 					app *argocd.Application,
 					_ argocd.ApplicationSources,
 				) error {
@@ -1084,6 +1101,7 @@ func Test_argoCDUpdater_run(t *testing.T) {
 				syncApplicationFn: func(
 					context.Context,
 					*promotion.StepContext,
+					*builtin.ArgoCDAppUpdate,
 					*argocd.Application,
 					argocd.ApplicationSources,
 				) error {
@@ -1139,6 +1157,7 @@ func Test_argoCDUpdater_run(t *testing.T) {
 				syncApplicationFn: func(
 					context.Context,
 					*promotion.StepContext,
+					*builtin.ArgoCDAppUpdate,
 					*argocd.Application,
 					argocd.ApplicationSources,
 				) error {
@@ -1644,6 +1663,7 @@ func Test_argoCDUpdater_syncApplication(t *testing.T) {
 	testCases := []struct {
 		name           string
 		runner         *argocdUpdater
+		update         *builtin.ArgoCDAppUpdate
 		app            *argocd.Application
 		desiredSources argocd.ApplicationSources
 		assertions     func(*testing.T, *argocd.Application, error)
@@ -1804,6 +1824,63 @@ func Test_argoCDUpdater_syncApplication(t *testing.T) {
 				assert.Equal(t, "old-rev-source", patched.Spec.Source.TargetRevision)
 			},
 		},
+		{
+			name: "does not prune by default",
+			runner: &argocdUpdater{
+				argoCDAppPatchFn: func(
+					context.Context,
+					kubeclient.ObjectWithKind,
+					kubeclient.UnstructuredPatchFn,
+				) error {
+					return nil
+				},
+				logAppEventFn: func(context.Context,
+					*argocd.Application,
+					string,
+					string,
+					string,
+				) {
+				},
+			},
+			app: &argocd.Application{
+				ObjectMeta: metav1.ObjectMeta{Name: "fake", Namespace: "fake"},
+			},
+			assertions: func(t *testing.T, app *argocd.Application, err error) {
+				require.NoError(t, err)
+				require.NotNil(t, app.Operation)
+				require.NotNil(t, app.Operation.Sync)
+				assert.False(t, app.Operation.Sync.Prune)
+			},
+		},
+		{
+			name: "sets prune on the sync operation when requested",
+			runner: &argocdUpdater{
+				argoCDAppPatchFn: func(
+					context.Context,
+					kubeclient.ObjectWithKind,
+					kubeclient.UnstructuredPatchFn,
+				) error {
+					return nil
+				},
+				logAppEventFn: func(context.Context,
+					*argocd.Application,
+					string,
+					string,
+					string,
+				) {
+				},
+			},
+			update: &builtin.ArgoCDAppUpdate{Prune: true},
+			app: &argocd.Application{
+				ObjectMeta: metav1.ObjectMeta{Name: "fake", Namespace: "fake"},
+			},
+			assertions: func(t *testing.T, app *argocd.Application, err error) {
+				require.NoError(t, err)
+				require.NotNil(t, app.Operation)
+				require.NotNil(t, app.Operation.Sync)
+				assert.True(t, app.Operation.Sync.Prune)
+			},
+		},
 	}
 
 	for _, testCase := range testCases {
@@ -1813,9 +1890,14 @@ func Test_argoCDUpdater_syncApplication(t *testing.T) {
 					ID: "fake-freight-collection-id",
 				},
 			}
+			update := testCase.update
+			if update == nil {
+				update = &builtin.ArgoCDAppUpdate{}
+			}
 			err := testCase.runner.syncApplication(
 				t.Context(),
 				stepCtx,
+				update,
 				testCase.app,
 				testCase.desiredSources,
 			)
@@ -2768,6 +2850,7 @@ func Test_argoCDUpdater_processApplication(t *testing.T) {
 				syncApplicationFn: func(
 					context.Context,
 					*promotion.StepContext,
+					*builtin.ArgoCDAppUpdate,
 					*argocd.Application,
 					argocd.ApplicationSources,
 				) error {
@@ -2912,6 +2995,7 @@ func Test_argoCDUpdater_processApplication(t *testing.T) {
 				syncApplicationFn: func(
 					context.Context,
 					*promotion.StepContext,
+					*builtin.ArgoCDAppUpdate,
 					*argocd.Application,
 					argocd.ApplicationSources,
 				) error {
