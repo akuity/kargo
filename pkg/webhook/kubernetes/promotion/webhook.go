@@ -215,8 +215,16 @@ func (w *webhook) Default(ctx context.Context, promo *kargoapi.Promotion) error 
 		// A Promotion that names a Target takes the Target-aware form, so that one
 		// Stage promoting to many destinations stays legible at a glance and
 		// greppable by Target. Without this, every Promotion of a single piece of
-		// Freight differs only by its ULID. Both forms embed the same ULID and
-		// Freight hash, so lex order still matches creation order.
+		// Freight differs only by its ULID.
+		//
+		// Note this changes how such Promotions sort relative to each other.
+		// ComparePromotionByPhaseAndCreationTime compares whole names and reads
+		// the result as creation order, which holds only while everything left of
+		// the ULID is identical. Two children of different Targets now compare at
+		// the Target segment instead, so a Stage sorts them by Target name rather
+		// than by when they were created. Deterministic either way, and they are
+		// created within milliseconds of each other, but it is not what the
+		// comparator's doc comment claims.
 		if promo.Spec.Target != "" {
 			promo.Name = api.GenerateChildPromotionName(
 				stage.Name,

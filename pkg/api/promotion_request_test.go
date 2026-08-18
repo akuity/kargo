@@ -360,3 +360,49 @@ func TestNewPromotionRequest(t *testing.T) {
 		require.ErrorContains(t, err, "error resolving Targets governed by Stage")
 	})
 }
+
+// Two separate properties, and only the first one holds.
+//
+// Promotion ordering elsewhere in Kargo compares whole names and treats the
+// result as creation order -- see ComparePromotionByPhaseAndCreationTime, whose
+// output decides which Promotion a Stage marks as current. That is sound only
+// while the names being compared share everything to the left of the ULID.
+// Naming a child after its Target breaks that for two children of different
+// Targets, so the property is pinned here rather than assumed.
+func TestGenerateChildPromotionNameOrdering(t *testing.T) {
+	t.Parallel()
+
+	const (
+		stage   = "fake-stage"
+		freight = "abc1234567890"
+	)
+
+	t.Run("same Target: lex order is creation order", func(t *testing.T) {
+		t.Parallel()
+
+		// ulid.Make draws from a process-wide monotonic entropy source, so ULIDs
+		// minted within one millisecond still increase. Enough names to be sure
+		// of landing several in the same millisecond.
+		const n = 50
+		names := make([]string, n)
+		for i := range names {
+			names[i] = GenerateChildPromotionName(stage, "us-east", freight)
+		}
+		for i := 1; i < n; i++ {
+			require.Less(
+				t, names[i-1], names[i],
+				"name %d sorts before its predecessor; lex order no longer tracks creation order",
+			)
+		}
+	})
+
+	t.Run("different Targets: lex order is Target order, not creation order", func(t *testing.T) {
+		t.Parallel()
+
+		// Created second, but sorts first, because comparison resolves at the
+		// Target segment and never reaches the ULID.
+		west := GenerateChildPromotionName(stage, "us-west", freight)
+		east := GenerateChildPromotionName(stage, "us-east", freight)
+		require.Less(t, east, west)
+	})
+}
