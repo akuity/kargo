@@ -10,3 +10,5 @@ argocd_cli:
 context:
   # kargo_demo_gitops_repo: <specify a repo here>
   # git_pat: <specify a PAT here>
+  # http_endpoint: <URL of an HTTP endpoint that returns 2xx to a POST>
+

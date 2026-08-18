@@ -129,6 +129,29 @@ func StartPromotion(
 	}
 }
 
+// TryPromoteToStage issues a single promote request for freightName to stage
+// without retrying, returning the HTTP status code and error. It is used to
+// assert whether a promotion is currently permitted (e.g. before a required
+// soak time has elapsed), where an unavailable freight yields 400 Bad Request.
+func TryPromoteToStage(
+	ctx context.Context,
+	project, stage, freightName string,
+) (int, error) {
+	kargoClient := ctx.Value(KargoCLIKey).(generated.APIClient)
+	_, httpRes, promoteErr := kargoClient.CoreAPI.
+		PromoteToStage(ctx, project, stage).
+		Body(generated.PromoteToStageRequest{
+			Freight: &freightName,
+		}).
+		Execute()
+	statusCode := 0
+	if httpRes != nil {
+		statusCode = httpRes.StatusCode
+		_ = httpRes.Body.Close()
+	}
+	return statusCode, promoteErr
+}
+
 // WaitForPromotionPhase watches the named promotion until it reaches phase or
 // any terminal phase, whichever comes first, then asserts the observed phase
 // equals phase. Passing a terminal phase makes it wait for completion.
@@ -222,6 +245,18 @@ func WaitForPullRequestID(
 			t.Fatalf("timed out waiting for pull request id from promotion %q", name)
 		}
 	}
+}
+
+// PromotionStepOutput returns the string value stored by the step with the
+// given alias under key in the promotion's shared state (i.e. the value a step
+// referenced as outputs[stepAlias].key).
+func PromotionStepOutput(promotion *kargoapi.Promotion, stepAlias, key string) (string, bool) {
+	stepOutput, ok := promotion.Status.GetState()[stepAlias].(map[string]any)
+	if !ok {
+		return "", false
+	}
+	value, ok := stepOutput[key].(string)
+	return value, ok
 }
 
 // pullRequestIDFromState extracts the pull request id recorded by the
@@ -326,6 +361,61 @@ func WaitForFreightToBeVerified(
 		t.Fatalf("Error getting freight %s from api %v", freightID, err)
 	}
 	return freight
+}
+
+// WaitForStageVerified watches the named Stage until its most recent Freight
+// selection has been verified successfully, returning the Stage. It fails the
+// test if verification reaches a terminal, non-successful phase or the timeout
+// elapses.
+func WaitForStageVerified(
+	ctx context.Context,
+	t *testing.T,
+	project, stage string,
+	timeout time.Duration,
+) *kargoapi.Stage {
+	timedCtx, cancel := context.WithTimeout(ctx, timeout)
+	defer cancel()
+	watchClient := ctx.Value(KargoCLIWatchKey).(watch.Client)
+	watchChan, errorChan := watchClient.WatchStage(timedCtx, project, stage)
+	for {
+		select {
+		case event := <-watchChan:
+			if event.Object == nil {
+				continue
+			}
+			info := currentStageVerification(event.Object)
+			if info == nil {
+				continue
+			}
+			switch info.Phase {
+			case kargoapi.VerificationPhaseSuccessful:
+				return event.Object
+			case kargoapi.VerificationPhaseFailed,
+				kargoapi.VerificationPhaseError,
+				kargoapi.VerificationPhaseAborted,
+				kargoapi.VerificationPhaseInconclusive:
+				t.Fatalf("stage %q verification finished with phase %q: %s", stage, info.Phase, info.Message)
+			}
+		case err := <-errorChan:
+			if strings.Contains(err.Error(), "unexpected status 404") {
+				watchChan, errorChan = watchClient.WatchStage(timedCtx, project, stage)
+			} else {
+				t.Fatalf("error watching stage %q: %v", stage, err)
+			}
+		case <-timedCtx.Done():
+			t.Fatalf("timed out waiting for stage %q to be verified", stage)
+		}
+	}
+}
+
+// currentStageVerification returns the verification info for the Stage's most
+// recent Freight selection, or nil if none has been recorded yet.
+func currentStageVerification(stage *kargoapi.Stage) *kargoapi.VerificationInfo {
+	current := stage.Status.FreightHistory.Current()
+	if current == nil {
+		return nil
+	}
+	return current.VerificationHistory.Current()
 }
 
 func GetFreight(ctx context.Context, project, freightID string) (*generated.Freight, error) {
