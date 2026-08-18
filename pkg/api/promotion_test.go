@@ -3,6 +3,7 @@ package api
 import (
 	"context"
 	"errors"
+	"slices"
 	"strings"
 	"testing"
 	"time"
@@ -1261,4 +1262,137 @@ func Test_promotionTaskVarsToStepVars(t *testing.T) {
 			tt.assertions(t, result, err)
 		})
 	}
+}
+
+// An older PromotionRequest must drain before a newer one starts. Both name
+// their children after the Target being promoted to, so every child of the same
+// Stage shares the "<stage>." prefix and then diverges at the Target segment.
+// Comparing names whole resolves there and never reaches the ULID, which
+// interleaves the two requests: the Stage promotes to the newer request's
+// first Target while the older request still has Targets outstanding.
+func TestComparePromotionByPhaseAndCreationTime_doesNotInterleaveRequests(t *testing.T) {
+	t.Parallel()
+
+	const (
+		stage    = "tier-2"
+		freightA = "aaaa111122223333"
+		freightB = "bbbb444455556666"
+	)
+
+	// Request A is created first, so all four of its ULIDs precede all of B's.
+	// Targets are visited in spec order within each request.
+	older := []kargoapi.Promotion{
+		{ObjectMeta: metav1.ObjectMeta{Name: GenerateChildPromotionName(stage, "us-west", freightA)}},
+		{ObjectMeta: metav1.ObjectMeta{Name: GenerateChildPromotionName(stage, "us-east", freightA)}},
+	}
+	newer := []kargoapi.Promotion{
+		{ObjectMeta: metav1.ObjectMeta{Name: GenerateChildPromotionName(stage, "us-west", freightB)}},
+		{ObjectMeta: metav1.ObjectMeta{Name: GenerateChildPromotionName(stage, "us-east", freightB)}},
+	}
+
+	olderNames := map[string]struct{}{}
+	for _, promo := range older {
+		olderNames[promo.Name] = struct{}{}
+	}
+
+	// All non-terminal, so ordering is decided entirely by name.
+	promos := append(append([]kargoapi.Promotion{}, newer...), older...)
+	slices.SortFunc(promos, ComparePromotionByPhaseAndCreationTime)
+
+	// Every child of the older request must sort ahead of every child of the
+	// newer one. Asserting only on promos[0] would pass even while interleaved.
+	var seenNewer bool
+	for _, promo := range promos {
+		_, isOlder := olderNames[promo.Name]
+		if !isOlder {
+			seenNewer = true
+			continue
+		}
+		require.False(
+			t, seenNewer,
+			"%q belongs to the older request but sorts after a child of the newer one; "+
+				"the Stage would start the newer request before the older one finished",
+			promo.Name,
+		)
+	}
+
+	require.Contains(t, olderNames, promos[0].Name)
+}
+
+func Test_promotionNameULID(t *testing.T) {
+	t.Parallel()
+
+	id := ulid.Make().String()
+
+	testCases := []struct {
+		name     string
+		input    string
+		expected string
+		found    bool
+	}{
+		{
+			name:     "classic generated name",
+			input:    strings.ToLower("tier-2." + id + ".abc1234"),
+			expected: strings.ToLower(id),
+			found:    true,
+		},
+		{
+			name:     "Target-aware generated name",
+			input:    strings.ToLower("tier-2.us-east." + id + ".abc1234"),
+			expected: strings.ToLower(id),
+			found:    true,
+		},
+		{
+			// A dotted Stage or Target name shifts the prefix, which is why the
+			// ULID is located from the end rather than the start.
+			name:     "dots in the Stage and Target names",
+			input:    strings.ToLower("foo.bar.baz.qux." + id + ".abc1234"),
+			expected: strings.ToLower(id),
+			found:    true,
+		},
+		{
+			name:  "hand-written name",
+			input: "my-promotion",
+		},
+		{
+			name:  "too few segments",
+			input: "tier-2." + strings.ToLower(id),
+		},
+		{
+			name:  "right length, not a ULID",
+			input: "tier-2." + strings.Repeat("!", ulid.EncodedSize) + ".abc1234",
+		},
+	}
+
+	for _, testCase := range testCases {
+		t.Run(testCase.name, func(t *testing.T) {
+			t.Parallel()
+			got, ok := promotionNameULID(testCase.input)
+			require.Equal(t, testCase.found, ok)
+			require.Equal(t, testCase.expected, got)
+		})
+	}
+}
+
+func Test_comparePromotionNamesByULID(t *testing.T) {
+	t.Parallel()
+
+	earlier := strings.ToLower(ulid.MustNew(ulid.Timestamp(time.Now().Add(-time.Hour)), nil).String())
+	later := strings.ToLower(ulid.MustNew(ulid.Timestamp(time.Now().Add(time.Hour)), nil).String())
+
+	t.Run("earlier ULID wins regardless of Target name", func(t *testing.T) {
+		t.Parallel()
+		// "us-west" sorts after "us-east" lexically; the ULID must decide.
+		require.Negative(t, comparePromotionNamesByULID(
+			"tier-2.us-west."+earlier+".abc1234",
+			"tier-2.us-east."+later+".abc1234",
+		))
+	})
+
+	t.Run("falls back to whole-name compare when a ULID is absent", func(t *testing.T) {
+		t.Parallel()
+		require.Negative(t, comparePromotionNamesByULID("aaa", "bbb"))
+		require.Positive(t, comparePromotionNamesByULID("bbb", "aaa"))
+		require.Zero(t, comparePromotionNamesByULID("same", "same"))
+	})
 }

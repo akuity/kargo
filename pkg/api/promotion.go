@@ -224,14 +224,68 @@ func ComparePromotionByPhaseAndCreationTime(a, b kargoapi.Promotion) int {
 		// Non-terminal Promotions are ordered in ascending order based on the
 		// ULID in the Promotion name. This ensures that the Promotion which
 		// was (or will be) enqueued first is at the top.
-		return strings.Compare(a.Name, b.Name)
+		return comparePromotionNamesByULID(a.Name, b.Name)
 	default:
 		// Terminal Promotions are ordered in descending order based on the
 		// ULID in the Promotion name. This ensures that the most recent
 		// Promotion is at the top, limiting the number of Promotions which
 		// have to be further inspected to collect the "new" Promotions.
-		return strings.Compare(b.Name, a.Name)
+		return comparePromotionNamesByULID(b.Name, a.Name)
 	}
+}
+
+// comparePromotionNamesByULID orders two generated Promotion names by the ULID
+// they embed, rather than by comparing the names whole.
+//
+// Comparing whole names is only equivalent to comparing ULIDs while everything
+// to the left of the ULID is identical, which stopped being true once a
+// Promotion could be named after the Target it promotes to. Two Promotions of
+// the same Stage then differ at the Target segment, the comparison resolves
+// there, and it never reaches the ULID at all -- so an older Promotion to
+// "us-west" would sort after a newer one to "us-east", and a Stage would start
+// promoting to the second while the first was still outstanding.
+//
+// Both generated name formats put the ULID in the second-to-last
+// dot-separated segment:
+//
+//	<stage>.<ulid>.<short-hash>
+//	<stage>.<target>.<ulid>.<short-hash>
+//
+// Indexing from the end is what makes that reliable: a Kubernetes name may
+// contain dots, so a Stage or Target named "foo.bar" adds segments on the left,
+// while the short hash never contains one.
+//
+// Names that do not carry a parseable ULID -- a Promotion created before Kargo
+// generated names, or one named by hand -- fall back to comparing whole names,
+// preserving the previous behavior rather than declaring them equal and leaving
+// the sort unstable.
+func comparePromotionNamesByULID(a, b string) int {
+	aULID, aOK := promotionNameULID(a)
+	bULID, bOK := promotionNameULID(b)
+	if !aOK || !bOK {
+		return strings.Compare(a, b)
+	}
+	return strings.Compare(aULID, bULID)
+}
+
+// promotionNameULID returns the ULID embedded in a generated Promotion name,
+// and whether one was found. The returned value keeps the case it appears in:
+// generated names are lowercased, and lowercasing a ULID preserves ordering,
+// since Crockford base32 digits sort before its letters in ASCII either way.
+func promotionNameULID(name string) (string, bool) {
+	parts := strings.Split(name, promotionNameSeparator)
+	// A generated name has at least a prefix, a ULID, and a hash.
+	if len(parts) < 3 {
+		return "", false
+	}
+	candidate := parts[len(parts)-2]
+	if len(candidate) != ulid.EncodedSize {
+		return "", false
+	}
+	if _, err := ulid.ParseStrict(candidate); err != nil {
+		return "", false
+	}
+	return candidate, true
 }
 
 // ComparePromotionPhase compares two Promotion phases. It returns a negative
