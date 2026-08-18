@@ -1632,6 +1632,105 @@ func Test_webhook_Default(t *testing.T) {
 			},
 		},
 		{
+			name: "names a Promotion after the Target it promotes to",
+			webhook: &webhook{
+				admissionRequestFromContextFn: admission.RequestFromContext,
+				getStageFn: func(
+					context.Context,
+					client.Client,
+					types.NamespacedName,
+				) (*kargoapi.Stage, error) {
+					return &kargoapi.Stage{
+						ObjectMeta: metav1.ObjectMeta{
+							Name:      "fake-stage",
+							Namespace: "fake-project",
+						},
+						Spec: kargoapi.StageSpec{
+							PromotionTemplate: &kargoapi.PromotionTemplate{
+								Spec: kargoapi.PromotionTemplateSpec{
+									Steps: []kargoapi.PromotionStep{{Uses: "fake-step"}},
+								},
+							},
+						},
+					}, nil
+				},
+				isRequestFromKargoControlplaneFn: func(admission.Request) bool {
+					return true
+				},
+			},
+			req: admission.Request{
+				AdmissionRequest: admissionv1.AdmissionRequest{
+					Operation: admissionv1.Create,
+				},
+			},
+			promotion: &kargoapi.Promotion{
+				ObjectMeta: metav1.ObjectMeta{Namespace: "fake-project"},
+				Spec: kargoapi.PromotionSpec{
+					Stage:   "fake-stage",
+					Freight: "abc1234567890",
+					Target:  "us-east",
+				},
+			},
+			assertions: func(t *testing.T, promo *kargoapi.Promotion, err error) {
+				require.NoError(t, err)
+				// Without the Target segment, every Promotion of one piece of
+				// Freight would differ only by its ULID.
+				require.Regexp(
+					t,
+					`^fake-stage\.us-east\.[0-9a-z]{26}\.abc1234$`,
+					promo.Name,
+				)
+			},
+		},
+		{
+			name: "a Promotion with no Target keeps the classic name",
+			webhook: &webhook{
+				admissionRequestFromContextFn: admission.RequestFromContext,
+				getStageFn: func(
+					context.Context,
+					client.Client,
+					types.NamespacedName,
+				) (*kargoapi.Stage, error) {
+					return &kargoapi.Stage{
+						ObjectMeta: metav1.ObjectMeta{
+							Name:      "fake-stage",
+							Namespace: "fake-project",
+						},
+						Spec: kargoapi.StageSpec{
+							PromotionTemplate: &kargoapi.PromotionTemplate{
+								Spec: kargoapi.PromotionTemplateSpec{
+									Steps: []kargoapi.PromotionStep{{Uses: "fake-step"}},
+								},
+							},
+						},
+					}, nil
+				},
+				isRequestFromKargoControlplaneFn: func(admission.Request) bool {
+					return true
+				},
+			},
+			req: admission.Request{
+				AdmissionRequest: admissionv1.AdmissionRequest{
+					Operation: admissionv1.Create,
+				},
+			},
+			promotion: &kargoapi.Promotion{
+				ObjectMeta: metav1.ObjectMeta{Namespace: "fake-project"},
+				Spec: kargoapi.PromotionSpec{
+					Stage:   "fake-stage",
+					Freight: "abc1234567890",
+				},
+			},
+			assertions: func(t *testing.T, promo *kargoapi.Promotion, err error) {
+				require.NoError(t, err)
+				require.Regexp(
+					t,
+					`^fake-stage\.[0-9a-z]{26}\.abc1234$`,
+					promo.Name,
+				)
+			},
+		},
+		{
 			name: "preserves a PromotionRequest's controller reference",
 			webhook: &webhook{
 				admissionRequestFromContextFn: admission.RequestFromContext,
