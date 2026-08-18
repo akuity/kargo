@@ -1,16 +1,37 @@
+import { FormatDistanceToken, formatDuration, intervalToDuration } from 'date-fns';
+
 import { StepExecutionMetadata } from '@ui/gen/api/v2/models';
 import { parseDate } from '@ui/utils/dates';
 
+const oneSecondMs = 1000;
+const oneHourMs = 60 * 60 * oneSecondMs;
+
+// formatDuration delegates each unit to locale.formatDistance(token, count),
+// which is the supported hook for non-English output. Reusing it for compact
+// units keeps date-fns in charge of picking and normalizing units while
+// rendering "1h 40m" instead of en-US's "1 hour 40 minutes".
+const compactUnits: Partial<Record<FormatDistanceToken, string>> = {
+  xSeconds: 's',
+  xMinutes: 'm',
+  xHours: 'h',
+  xDays: 'd',
+  xMonths: 'mo',
+  xYears: 'y'
+};
+
+const compactLocale = {
+  formatDistance: (token: FormatDistanceToken, count: number) =>
+    `${count}${compactUnits[token] ?? ''}`
+};
+
 /**
- * stepDurationMs returns how long a promotion step has been executing, in
- * milliseconds.
+ * elapsedStepDurationMs returns how long a still-running promotion step has
+ * been executing, in milliseconds, measured from startedAt to `now`.
  *
- * A step that has finished is measured from startedAt to finishedAt. A step
- * that is still running is measured from startedAt to `now`, so callers that
- * re-render on a timer show a live elapsed time. Returns null when the step has
- * not started yet, or when the timestamps are missing or unparseable.
+ * Callers pass a `now` that advances on a timer so the elapsed time counts up.
+ * Returns null when the step has not started yet or startedAt is unparseable.
  */
-export const stepDurationMs = (
+export const elapsedStepDurationMs = (
   meta?: StepExecutionMetadata,
   now: number = Date.now()
 ): number | null => {
@@ -19,10 +40,7 @@ export const stepDurationMs = (
     return null;
   }
 
-  const finishedAt = parseDate(meta?.finishedAt);
-  const end = finishedAt ? finishedAt.getTime() : now;
-
-  const elapsed = end - startedAt.getTime();
+  const elapsed = now - startedAt.getTime();
   // Clock skew between the control plane and the browser can put `now` behind
   // startedAt. Showing "-3s" would be worse than showing nothing.
   return elapsed < 0 ? null : elapsed;
@@ -36,30 +54,23 @@ export const stepDurationMs = (
  * rather than using a single fixed granularity.
  */
 export const formatStepDuration = (ms: number): string => {
-  // API timestamps are RFC 3339 with second precision, so any step faster than
-  // a second computes to exactly 0. Rendering that as "0ms" would imply a
-  // precision the data does not have. Sub-second values other than 0 are still
-  // formatted exactly, in case finer-grained timestamps arrive later.
-  if (ms === 0) {
-    return '<1s';
+  // intervalToDuration truncates to whole seconds, so a sub-second value would
+  // arrive at formatDuration as an empty Duration and render as ''. API
+  // timestamps are RFC 3339 with second precision, so exactly 0 is the common
+  // case, and "0ms" would imply a precision the data does not have. Other
+  // sub-second values are still formatted exactly, in case finer-grained
+  // timestamps arrive later.
+  if (ms < oneSecondMs) {
+    return ms === 0 ? '<1s' : `${ms}ms`;
   }
 
-  if (ms < 1000) {
-    return `${ms}ms`;
-  }
-
-  const totalSeconds = Math.floor(ms / 1000);
-  if (totalSeconds < 60) {
-    return `${totalSeconds}s`;
-  }
-
-  const totalMinutes = Math.floor(totalSeconds / 60);
-  const seconds = totalSeconds % 60;
-  if (totalMinutes < 60) {
-    return seconds > 0 ? `${totalMinutes}m ${seconds}s` : `${totalMinutes}m`;
-  }
-
-  const hours = Math.floor(totalMinutes / 60);
-  const minutes = totalMinutes % 60;
-  return minutes > 0 ? `${hours}h ${minutes}m` : `${hours}h`;
+  return formatDuration(intervalToDuration({ start: 0, end: ms }), {
+    locale: compactLocale,
+    // Seconds are meaningful precision below an hour and noise above it. Every
+    // coarser unit is listed so a long duration never silently loses its
+    // largest component -- intervalToDuration rolls 40 days up into
+    // {months: 1, days: 9}, which a shorter list would render as just "9d".
+    format:
+      ms < oneHourMs ? ['minutes', 'seconds'] : ['years', 'months', 'days', 'hours', 'minutes']
+  });
 };

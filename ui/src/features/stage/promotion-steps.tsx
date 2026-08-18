@@ -71,7 +71,7 @@ export const PromotionSteps = (props: PromotionStepsProps) => {
         result,
         output: outputsByStepAlias[step.as || ''],
         promotion: props.promotion,
-        stepMetadata: props.promotion?.status?.stepExecutionMetadata?.[i]
+        stepIndex: i
       }),
       key
     };

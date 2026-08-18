@@ -17,7 +17,7 @@ import YamlEditor from '@ui/features/common/code-editor/yaml-editor-lazy';
 import { PromotionDirectiveStepStatus } from '@ui/features/common/promotion-directive-step-status/utils';
 import { usePromotionDirectivesRegistryContext } from '@ui/features/promotion-directives/registry/context/use-registry-context';
 import { Runner } from '@ui/features/promotion-directives/registry/types';
-import { Promotion, PromotionStep, StepExecutionMetadata } from '@ui/gen/api/v2/models';
+import { Promotion, PromotionStep } from '@ui/gen/api/v2/models';
 import uiPlugins from '@ui/plugins';
 import { UiPluginHoles } from '@ui/plugins/atoms/ui-plugin-hole/ui-plugin-holes';
 
@@ -29,13 +29,13 @@ export const Step = ({
   result,
   output,
   promotion,
-  stepMetadata
+  stepIndex
 }: {
   step: PromotionStep;
   result: PromotionDirectiveStepStatus;
   output?: object;
   promotion?: Promotion;
-  stepMetadata?: StepExecutionMetadata;
+  stepIndex: number;
 }) => {
   const [showDetails, setShowDetails] = useState(false);
 
@@ -152,7 +152,7 @@ export const Step = ({
               )}
             </UiPluginHoles.DeepLinks.PromotionStep>
           )}
-          <StepDuration meta={stepMetadata} />
+          <StepDuration promotion={promotion} stepIndex={stepIndex} />
         </Flex>
       </Flex>
     ),
