@@ -477,7 +477,6 @@ func (o *controllerOptions) setupReconcilers(
 		ctx,
 		kargoMgr,
 		promotionrequests.ReconcilerConfigFromEnv(),
-		promotionrequests.DefaultReconcile,
 	); err != nil {
 		return fmt.Errorf("error setting up PromotionRequests reconciler: %w", err)
 	}

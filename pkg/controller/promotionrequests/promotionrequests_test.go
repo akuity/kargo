@@ -1,7 +1,6 @@
 package promotionrequests
 
 import (
-	"context"
 	"testing"
 
 	"github.com/stretchr/testify/require"
@@ -131,10 +130,7 @@ func TestReconcile(t *testing.T) {
 			WithObjects(promotionRequest).
 			WithStatusSubresource(&kargoapi.PromotionRequest{}).
 			Build()
-		r := &reconciler{
-			client:      c,
-			reconcileFn: DefaultReconcile,
-		}
+		r := &reconciler{client: c}
 		req := ctrl.Request{NamespacedName: client.ObjectKey{
 			Namespace: namespace,
 			Name:      name,
@@ -166,45 +162,9 @@ func TestReconcile(t *testing.T) {
 		require.Equal(t, firstStatus, &actual.Status)
 	})
 
-	t.Run("delegates to configured reconcile function", func(t *testing.T) {
-		promotionRequest := &kargoapi.PromotionRequest{
-			ObjectMeta: metav1.ObjectMeta{
-				Namespace: namespace,
-				Name:      name,
-			},
-		}
-		c := fake.NewClientBuilder().
-			WithScheme(scheme).
-			WithObjects(promotionRequest).
-			Build()
-		r := &reconciler{
-			client: c,
-			reconcileFn: func(
-				_ context.Context,
-				kubeClient client.Client,
-				actual *kargoapi.PromotionRequest,
-			) (ctrl.Result, error) {
-				require.Same(t, c, kubeClient)
-				require.Equal(t, promotionRequest.Name, actual.Name)
-				return ctrl.Result{Requeue: true}, nil
-			},
-		}
-
-		result, err := r.Reconcile(t.Context(), ctrl.Request{
-			NamespacedName: client.ObjectKey{
-				Namespace: namespace,
-				Name:      name,
-			},
-		})
-
-		require.NoError(t, err)
-		require.Equal(t, ctrl.Result{Requeue: true}, result)
-	})
-
 	t.Run("PromotionRequest not found", func(t *testing.T) {
 		r := &reconciler{
-			client:      fake.NewClientBuilder().WithScheme(scheme).Build(),
-			reconcileFn: DefaultReconcile,
+			client: fake.NewClientBuilder().WithScheme(scheme).Build(),
 		}
 
 		result, err := r.Reconcile(t.Context(), ctrl.Request{
