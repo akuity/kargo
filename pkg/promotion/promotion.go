@@ -2,6 +2,7 @@ package promotion
 
 import (
 	"context"
+	"encoding/json"
 	"fmt"
 	"maps"
 	"slices"
@@ -31,6 +32,31 @@ type TargetContext struct {
 	// Labels are the resolved Target's metadata labels. Exposed to expressions
 	// as target.labels.
 	Labels map[string]string
+}
+
+// NewTargetContext builds a TargetContext from the provided Target, decoding
+// its spec.params from JSON into the plain values that expressions operate on.
+// It returns nil if the Target is nil, which callers use to represent a
+// Promotion that promotes to its Stage itself rather than to a Target.
+func NewTargetContext(target *kargoapi.Target) (*TargetContext, error) {
+	if target == nil {
+		return nil, nil
+	}
+	targetCtx := &TargetContext{Labels: maps.Clone(target.Labels)}
+	if len(target.Spec.Params) > 0 {
+		targetCtx.Params = make(map[string]any, len(target.Spec.Params))
+		for key, raw := range target.Spec.Params {
+			var value any
+			if err := json.Unmarshal(raw.Raw, &value); err != nil {
+				return nil, fmt.Errorf(
+					"error decoding param %q of Target %q: %w",
+					key, target.Name, err,
+				)
+			}
+			targetCtx.Params[key] = value
+		}
+	}
+	return targetCtx, nil
 }
 
 // DeepCopy returns a deep copy of the TargetContext, or nil if the receiver is
@@ -181,6 +207,15 @@ func WithActor(actor string) ContextOption {
 func WithTargetFreightAlias(alias string) ContextOption {
 	return func(c *Context) {
 		c.TargetFreightAlias = alias
+	}
+}
+
+// WithTarget sets the Target of the Context. A nil TargetContext leaves the
+// Context target-less, as it is for Promotions that promote to their Stage
+// itself.
+func WithTarget(target *TargetContext) ContextOption {
+	return func(c *Context) {
+		c.Target = target
 	}
 }
 
