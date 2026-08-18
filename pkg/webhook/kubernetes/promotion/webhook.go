@@ -28,6 +28,10 @@ import (
 	libWebhook "github.com/akuity/kargo/pkg/webhook/kubernetes"
 )
 
+// promotionRequestKind is the Kind of the one resource permitted to own a
+// Promotion in the Stage's place. See the owner-reference handling in Default.
+const promotionRequestKind = "PromotionRequest"
+
 var (
 	promotionGroupKind = schema.GroupKind{
 		Group: kargoapi.GroupVersion.Group,
@@ -307,8 +311,22 @@ func (w *webhook) Default(ctx context.Context, promo *kargoapi.Promotion) error 
 	promo.Labels[kargoapi.LabelKeyStage] = kubernetes.ShortenLabelValue(promo.Spec.Stage)
 	promo.Annotations[kargoapi.AnnotationKeyStage] = promo.Spec.Stage
 
-	ownerRef := metav1.NewControllerRef(stage, kargoapi.GroupVersion.WithKind("Stage"))
-	promo.OwnerReferences = []metav1.OwnerReference{*ownerRef}
+	// A Promotion created as one part of a larger unit of work is owned by that
+	// unit, not by the Stage. Overwriting the reference would sever it, and the
+	// owner would then have no way to recognize the Promotions it created --
+	// leaving it to create them again on its next reconcile.
+	//
+	// Only a PromotionRequest may claim a Promotion this way. Preserving an
+	// arbitrary controller reference would let a caller detach a Promotion from
+	// Stage-based garbage collection entirely, whereas a PromotionRequest is
+	// itself owned by its Stage, so deleting the Stage still cascades to the
+	// Promotion through it.
+	if owner := metav1.GetControllerOf(promo); owner == nil ||
+		owner.APIVersion != kargoapi.GroupVersion.String() ||
+		owner.Kind != promotionRequestKind {
+		ownerRef := metav1.NewControllerRef(stage, kargoapi.GroupVersion.WithKind("Stage"))
+		promo.OwnerReferences = []metav1.OwnerReference{*ownerRef}
+	}
 	return nil
 }
 
