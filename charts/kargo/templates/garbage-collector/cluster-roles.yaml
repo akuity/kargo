@@ -38,6 +38,7 @@ rules:
   - kargo.akuity.io
   resources:
   - freights
+  - promotionrequests
   - promotions
   verbs:
   - delete

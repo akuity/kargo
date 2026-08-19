@@ -64,6 +64,10 @@ tests:
       - isNotEmpty:
           path: data.MAX_RETAINED_PROMOTIONS
       - isNotEmpty:
+          path: data.MAX_RETAINED_PROMOTION_REQUESTS
+      - isNotEmpty:
+          path: data.MIN_PROMOTION_REQUEST_DELETION_AGE
+      - isNotEmpty:
           path: data.MAX_RETAINED_FREIGHT
 
   - it: reflects an overridden worker count

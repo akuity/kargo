@@ -881,6 +881,10 @@ garbageCollector:
   maxRetainedPromotions: 20
   ## @param garbageCollector.minPromotionDeletionAge The minimum age a Promotion must be before considered eligible for garbage collection.
   minPromotionDeletionAge: 336h # Two weeks
+  ## @param garbageCollector.maxRetainedPromotionRequests The ideal maximum number of PromotionRequests OLDER than the oldest PromotionRequest in a non-terminal phase (for each Stage) that may be spared by the garbage collector. The ACTUAL number of older PromotionRequests spared may exceed this ideal if some PromotionRequests that would otherwise be deleted do not meet the minimum age criterion.
+  maxRetainedPromotionRequests: 20
+  ## @param garbageCollector.minPromotionRequestDeletionAge The minimum age a PromotionRequest must be before considered eligible for garbage collection.
+  minPromotionRequestDeletionAge: 336h # Two weeks
   ## @param garbageCollector.maxRetainedFreight The ideal maximum number of Freight OLDER than the oldest still in use (from each Warehouse) that may be spared by the garbage collector. The ACTUAL number of older Freight spared may exceed this ideal if some Freight that would otherwise be deleted do not meet the minimum age criterion.
   maxRetainedFreight: 20
   ## @param garbageCollector.minFreightDeletionAge The minimum age Freight must be before considered eligible for garbage collection.

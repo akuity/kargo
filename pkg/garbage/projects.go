@@ -51,6 +51,15 @@ func (c *collector) cleanProject(ctx context.Context, project string) error {
 		)
 	}
 
+	if err := c.cleanProjectPromotionRequestsFn(ctx, project); err != nil {
+		errs = append(
+			errs,
+			fmt.Errorf(
+				"error cleaning PromotionRequests in Project %q: %w", project, err,
+			),
+		)
+	}
+
 	if err := c.cleanProjectFreightFn(ctx, project); err != nil {
 		errs = append(
 			errs,

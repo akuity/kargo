@@ -15,6 +15,8 @@ data:
   NUM_WORKERS: {{ quote .Values.garbageCollector.workers }}
   MAX_RETAINED_PROMOTIONS: {{ quote .Values.garbageCollector.maxRetainedPromotions }}
   MIN_PROMOTION_DELETION_AGE: {{ quote .Values.garbageCollector.minPromotionDeletionAge }}
+  MAX_RETAINED_PROMOTION_REQUESTS: {{ quote .Values.garbageCollector.maxRetainedPromotionRequests }}
+  MIN_PROMOTION_REQUEST_DELETION_AGE: {{ quote .Values.garbageCollector.minPromotionRequestDeletionAge }}
   MAX_RETAINED_FREIGHT: {{ quote .Values.garbageCollector.maxRetainedFreight }}
   MIN_FREIGHT_DELETION_AGE: {{ quote .Values.garbageCollector.minFreightDeletionAge }}
   {{- if $kc }}
