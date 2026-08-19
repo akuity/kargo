@@ -67,6 +67,31 @@ export function getCurrentFreightByWarehouse(
   return result;
 }
 
+// reconstructFreightFromHistory builds a Freight object from a
+// historical Stage so clone/assemble flows can still work
+// even when the original Freight resource has already been garbage collected.
+//
+// We keep the artifact contents (images/charts/commits)
+// so existing clone logic can treat this the same as a live freight.
+export function reconstructFreightFromHistory(
+  reference: FreightReference,
+  namespace?: string
+): Freight {
+  return {
+    apiVersion: 'kargo.akuity.io/v1alpha1',
+    kind: 'Freight',
+    metadata: {
+      name: reference.name,
+      namespace
+    },
+    origin: reference.origin,
+    images: reference.images,
+    charts: reference.charts,
+    commits: reference.commits,
+    artifacts: reference.artifacts
+  } as Freight;
+}
+
 export function getShortFreightLabel(name?: string, alias?: string): string {
   const shortID = (name || '').slice(0, 7);
   return alias ? `${alias} (${shortID})` : shortID;
