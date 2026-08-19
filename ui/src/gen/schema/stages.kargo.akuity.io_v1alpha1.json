@@ -1223,7 +1223,7 @@
           "type": "object"
         },
         "currentPromotionRequest": {
-          "description": "CurrentPromotionRequest is a reference to the PromotionRequest currently\nfanning Freight out to this Stage's Targets. It is absent for a Stage that\ngoverns no Targets.\n\nKargo Enterprise only: This field is ignored in Kargo OSS.",
+          "description": "CurrentPromotionRequest is a reference to the PromotionRequest currently\nfanning Freight out to this Stage's Targets. It is absent for a Stage that\ngoverns no Targets.\n\nFanning Freight out to Targets is a Kargo Enterprise-only feature. Kargo\nOSS maintains this field all the same, but the PromotionRequest it refers\nto never gets further than being marked Errored for that reason.",
           "properties": {
             "finishedAt": {
               "description": "FinishedAt is the time at which the PromotionRequest completed.",
@@ -2281,7 +2281,7 @@
           "type": "object"
         },
         "lastPromotionRequest": {
-          "description": "LastPromotionRequest is a reference to the last PromotionRequest to reach a\nterminal phase. It is absent for a Stage that governs no Targets.\n\nKargo Enterprise only: This field is ignored in Kargo OSS.",
+          "description": "LastPromotionRequest is a reference to the last PromotionRequest to reach a\nterminal phase. It is absent for a Stage that governs no Targets, and only\never moves forward, so it outlives the PromotionRequest it refers to.",
           "properties": {
             "finishedAt": {
               "description": "FinishedAt is the time at which the PromotionRequest completed.",

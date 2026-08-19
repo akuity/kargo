@@ -167,6 +167,19 @@ func (r *RegularStageReconciler) SetupWithManager(
 		)
 	}
 
+	// This index is used to find all PromotionRequests that promote Freight on
+	// behalf of a specific Stage.
+	if err := sharedIndexer.IndexField(
+		ctx,
+		&kargoapi.PromotionRequest{},
+		indexer.PromotionRequestsByStageField,
+		indexer.PromotionRequestsByStage,
+	); err != nil {
+		return fmt.Errorf(
+			"error setting up index for PromotionRequests by Stage: %w", err,
+		)
+	}
+
 	// This index is used to find Freight that are directly available from a
 	// Warehouse and can be automatically promoted to a Stage.
 	if err := sharedIndexer.IndexField(
@@ -246,6 +259,24 @@ func (r *RegularStageReconciler) SetupWithManager(
 		),
 	); err != nil {
 		return fmt.Errorf("unable to watch Promotions: %w", err)
+	}
+
+	// Watch for PromotionRequests for which the phase changed and enqueue the
+	// related Stage for reconciliation.
+	if err = c.Watch(
+		source.Kind(
+			kargoMgr.GetCache(),
+			&kargoapi.PromotionRequest{},
+			handler.TypedEnqueueRequestForOwner[*kargoapi.PromotionRequest](
+				kargoMgr.GetScheme(),
+				kargoMgr.GetRESTMapper(),
+				&kargoapi.Stage{},
+				handler.OnlyControllerOwner(),
+			),
+			kargo.NewPromotionRequestPhaseChangedPredicate(logger),
+		),
+	); err != nil {
+		return fmt.Errorf("unable to watch PromotionRequests: %w", err)
 	}
 
 	// Watch for Freight that have been newly promoted to a Stage or newly marked
@@ -476,6 +507,16 @@ func (r *RegularStageReconciler) reconcile(
 				// process the next Promotion as soon as possible.
 				if status.CurrentPromotion == nil && hasPendingPromotions {
 					requestRequeue = true
+				}
+				return status, err
+			},
+		},
+		{
+			name: "syncing PromotionRequests",
+			reconcile: func() (kargoapi.StageStatus, error) {
+				status, err := r.syncPromotionRequests(ctx, working)
+				if err != nil {
+					err = fmt.Errorf("failed to sync PromotionRequests: %w", err)
 				}
 				return status, err
 			},
@@ -885,6 +926,119 @@ func (r *RegularStageReconciler) syncPromotions(
 	// not promoting.
 	conditions.Delete(&newStatus, kargoapi.ConditionTypePromoting)
 	return newStatus, hasNonTerminalPromotions, nil
+}
+
+// syncPromotionRequests records in the Stage's status which PromotionRequest is
+// currently fanning Freight out to the Stage's Targets, and which was the last
+// to reach a terminal phase.
+//
+// Both references are mirrors, kept so that a reader of the Stage can see the
+// round of fan-out it is in, and how the previous round ended, without listing
+// PromotionRequests. Nothing in the Stage's own progression is decided from
+// them: a PromotionRequest effects no promotion itself, and the Promotions it
+// creates reach the Stage through syncPromotions like any other.
+//
+// A Stage can have more than one PromotionRequest in flight, exactly as it can
+// have more than one Promotion in flight: auto-promotion creates a request only
+// when none exists in any phase, but the promote endpoints create one per call,
+// so consecutive promotions queue up. Which one the Stage records as current is
+// therefore decided by the same ordering syncPromotions applies to Promotions.
+//
+// The references mirror the requests that exist, not the Stage's spec: a
+// request in flight for a Stage whose selectors currently govern no Targets
+// -- or one left behind by a Stage that no longer governs any -- is recorded
+// all the same. Only for a Stage with no PromotionRequests at all is this a
+// no-op beyond clearing a stale current reference.
+func (r *RegularStageReconciler) syncPromotionRequests(
+	ctx context.Context,
+	stage *kargoapi.Stage,
+) (kargoapi.StageStatus, error) {
+	newStatus := *stage.Status.DeepCopy()
+
+	promotionRequests := &kargoapi.PromotionRequestList{}
+	if err := r.client.List(
+		ctx,
+		promotionRequests,
+		client.InNamespace(stage.Namespace),
+		client.MatchingFieldsSelector{
+			Selector: fields.OneTermEqualSelector(
+				indexer.PromotionRequestsByStageField,
+				stage.Name,
+			),
+		},
+	); err != nil {
+		return newStatus, fmt.Errorf(
+			"failed to list PromotionRequests for Stage %q in namespace %q: %w",
+			stage.Name, stage.Namespace, err,
+		)
+	}
+
+	// If there are no PromotionRequests, the Stage is fanning nothing out. Clear
+	// any current reference it was left with.
+	if len(promotionRequests.Items) == 0 {
+		newStatus.CurrentPromotionRequest = nil
+		return newStatus, nil
+	}
+
+	// Sort the PromotionRequests exactly as syncPromotions sorts a Stage's
+	// Promotions -- Running first, then non-terminal by ULID ascending, then
+	// terminal by ULID descending -- so that the request a Stage records as
+	// current is chosen the same way its current Promotion is.
+	slices.SortFunc(
+		promotionRequests.Items,
+		api.ComparePromotionRequestByPhaseAndCreationTime,
+	)
+
+	// The PromotionRequest with the highest priority is the one the Stage is
+	// promoting through, unless it has finished -- in which case the Stage is
+	// promoting through none, and a finished request must not be left looking
+	// like an active one.
+	newStatus.CurrentPromotionRequest = nil
+	if highestPrioRequest := &promotionRequests.Items[0]; !highestPrioRequest.Status.Phase.IsTerminal() {
+		newStatus.CurrentPromotionRequest = newPromotionRequestReference(highestPrioRequest)
+	}
+
+	// Terminal PromotionRequests sort newest-first, so the first terminal request
+	// in the sorted list is the newest, and nothing after it can supersede it.
+	//
+	// It is recorded only when it is newer than the request already recorded. A
+	// Stage's account of how its last round of fan-out ended should outlive the
+	// request that produced it, so garbage collection of the newest request must
+	// not let an older one take its place.
+	//
+	// NB: As in syncPromotions, this makes use of the fact that PromotionRequest
+	// names are generated with an embedded ULID, so among one Stage's requests
+	// lex order over names is creation order.
+	for i := range promotionRequests.Items {
+		promotionRequest := &promotionRequests.Items[i]
+		if !promotionRequest.Status.Phase.IsTerminal() {
+			continue
+		}
+		if last := newStatus.LastPromotionRequest; last == nil ||
+			strings.Compare(promotionRequest.Name, last.Name) > 0 {
+			newStatus.LastPromotionRequest = newPromotionRequestReference(promotionRequest)
+		}
+		break
+	}
+
+	return newStatus, nil
+}
+
+// newPromotionRequestReference builds the reference a Stage records for one of
+// its PromotionRequests. The reference names the PromotionRequest's Freight
+// rather than describing it; a reader that needs the Freight's contents can
+// look them up from the Freight itself.
+func newPromotionRequestReference(
+	promotionRequest *kargoapi.PromotionRequest,
+) *kargoapi.PromotionRequestReference {
+	return &kargoapi.PromotionRequestReference{
+		Name:       promotionRequest.Name,
+		Phase:      promotionRequest.Status.Phase,
+		FinishedAt: promotionRequest.Status.FinishedAt,
+		Freight: &kargoapi.PromotionRequestFreightReference{
+			Name: promotionRequest.Spec.Freight,
+		},
+	}
 }
 
 // assessHealth assesses the health of a Stage based on the health checks from
@@ -2074,8 +2228,10 @@ func (r *RegularStageReconciler) autoPromoteFreight(
 //
 // The guard against duplicate work here is deliberately stricter than the one
 // autoPromoteFreight applies to Promotions: a PromotionRequest is created only when
-// no PromotionRequest for this Stage and Freight exists at all, in any phase. Stage
-// status does not yet track PromotionRequests, so there is no equivalent of
+// no PromotionRequest for this Stage and Freight exists at all, in any phase.
+// Stage status now records the current and last PromotionRequest, but those are
+// mirrors of a request's own phase, not of a Stage having absorbed its outcome:
+// a PromotionRequest promotes nothing itself, so there is still no equivalent of
 // "succeeded, but the outcome is not yet recorded in status" to reason about --
 // and absent a guard that holds unconditionally, every reconcile would create
 // another PromotionRequest.

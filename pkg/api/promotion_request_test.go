@@ -143,6 +143,135 @@ func TestGenerateChildPromotionName(t *testing.T) {
 	}
 }
 
+func TestComparePromotionRequestPhase(t *testing.T) {
+	t.Parallel()
+
+	testCases := []struct {
+		name     string
+		a        kargoapi.PromotionRequestPhase
+		b        kargoapi.PromotionRequestPhase
+		expected int
+	}{
+		{
+			name:     "Running before Pending",
+			a:        kargoapi.PromotionRequestPhaseRunning,
+			b:        kargoapi.PromotionRequestPhasePending,
+			expected: -1,
+		},
+		{
+			name:     "Pending after Running",
+			a:        kargoapi.PromotionRequestPhasePending,
+			b:        kargoapi.PromotionRequestPhaseRunning,
+			expected: 1,
+		},
+		{
+			name:     "non-terminal before terminal",
+			a:        kargoapi.PromotionRequestPhasePending,
+			b:        kargoapi.PromotionRequestPhaseSucceeded,
+			expected: -1,
+		},
+		{
+			name:     "terminal after non-terminal",
+			a:        kargoapi.PromotionRequestPhaseSucceeded,
+			b:        kargoapi.PromotionRequestPhasePending,
+			expected: 1,
+		},
+		{
+			name: "a PromotionRequest without a phase yet is non-terminal",
+			a:    "",
+			b:    kargoapi.PromotionRequestPhaseErrored,
+			// The reconciler has yet to record a phase, so the request still has
+			// work ahead of it.
+			expected: -1,
+		},
+		{
+			name:     "terminal phases are equal to one another",
+			a:        kargoapi.PromotionRequestPhaseSucceeded,
+			b:        kargoapi.PromotionRequestPhaseFailed,
+			expected: 0,
+		},
+		{
+			name:     "identical phases",
+			a:        kargoapi.PromotionRequestPhaseRunning,
+			b:        kargoapi.PromotionRequestPhaseRunning,
+			expected: 0,
+		},
+	}
+	for _, testCase := range testCases {
+		t.Run(testCase.name, func(t *testing.T) {
+			t.Parallel()
+			require.Equal(
+				t,
+				testCase.expected,
+				ComparePromotionRequestPhase(testCase.a, testCase.b),
+			)
+		})
+	}
+}
+
+func TestComparePromotionRequestByPhaseAndCreationTime(t *testing.T) {
+	t.Parallel()
+
+	// Generated in this order, so the ULID in older precedes the ULID in newer.
+	older := GeneratePromotionRequestName("test-stage", "fake-freight")
+	newer := GeneratePromotionRequestName("test-stage", "fake-freight")
+
+	request := func(name string, phase kargoapi.PromotionRequestPhase) kargoapi.PromotionRequest {
+		return kargoapi.PromotionRequest{
+			ObjectMeta: metav1.ObjectMeta{Name: name},
+			Status:     kargoapi.PromotionRequestStatus{Phase: phase},
+		}
+	}
+
+	testCases := []struct {
+		name       string
+		a          kargoapi.PromotionRequest
+		b          kargoapi.PromotionRequest
+		assertions func(*testing.T, int)
+	}{
+		{
+			name: "phase is compared before name",
+			// The Running request is the newer of the two, so name order alone
+			// would put the other one first.
+			a: request(newer, kargoapi.PromotionRequestPhaseRunning),
+			b: request(older, kargoapi.PromotionRequestPhasePending),
+			assertions: func(t *testing.T, result int) {
+				require.Negative(t, result)
+			},
+		},
+		{
+			name: "older of two non-terminal requests comes first",
+			a:    request(older, kargoapi.PromotionRequestPhasePending),
+			b:    request(newer, kargoapi.PromotionRequestPhasePending),
+			assertions: func(t *testing.T, result int) {
+				require.Negative(t, result)
+			},
+		},
+		{
+			name: "newer of two terminal requests comes first",
+			a:    request(newer, kargoapi.PromotionRequestPhaseSucceeded),
+			b:    request(older, kargoapi.PromotionRequestPhaseFailed),
+			assertions: func(t *testing.T, result int) {
+				require.Negative(t, result)
+			},
+		},
+	}
+	for _, testCase := range testCases {
+		t.Run(testCase.name, func(t *testing.T) {
+			t.Parallel()
+			testCase.assertions(
+				t,
+				ComparePromotionRequestByPhaseAndCreationTime(testCase.a, testCase.b),
+			)
+			// The comparator must be antisymmetric, or slices.SortFunc gives no
+			// guarantees about the order it produces.
+			forward := ComparePromotionRequestByPhaseAndCreationTime(testCase.a, testCase.b)
+			reverse := ComparePromotionRequestByPhaseAndCreationTime(testCase.b, testCase.a)
+			require.Equal(t, forward, -reverse)
+		})
+	}
+}
+
 func TestNewPromotionRequest(t *testing.T) {
 	t.Parallel()
 
