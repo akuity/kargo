@@ -11,8 +11,12 @@ import { Tooltip } from 'antd';
 import classNames from 'classnames';
 import { memo, useMemo } from 'react';
 
-import { StageConditionType, StageConditionStatus } from '@ui/features/common/stage-status/utils';
-import { V1Condition } from '@ui/gen/api/v2/models';
+import {
+  isStageProgressing,
+  StageConditionType,
+  StageConditionStatus
+} from '@ui/features/common/stage-status/utils';
+import { Stage, V1Condition } from '@ui/gen/api/v2/models';
 
 import styles from './styles.module.less';
 import { TruckIcon } from './truck-icon/truck-icon';
@@ -26,19 +30,20 @@ interface IconState {
 
 export const StageConditionIcon = memo(
   ({
-    conditions,
+    stage,
     className,
     noTooltip,
     isControllerDead,
     controllerName
   }: {
-    conditions: V1Condition[];
+    stage: Stage;
     className?: string;
     noTooltip?: boolean;
     isControllerDead?: boolean;
     controllerName?: string;
   }) => {
     const { iconState, isPromoting } = useMemo(() => {
+      const conditions = stage.status?.conditions || [];
       // A dead (or absent) controller overrides everything: the
       // conditions on the Stage were written by the very controller that
       // has gone silent, so they cannot be trusted. Surface this as
@@ -84,6 +89,7 @@ export const StageConditionIcon = memo(
       );
 
       const isFailed = readyCondition?.status === StageConditionStatus.False;
+      const isProgressing = isStageProgressing(stage);
 
       const { condition: verifiedCondition, isActive: isVerifying } = hasCondition(
         StageConditionType.Verified,
@@ -98,7 +104,7 @@ export const StageConditionIcon = memo(
         iconClass: 'text-gray-400'
       };
 
-      // Priority: Promoting > Verifying > Reconciling > Failed > Ready
+      // Priority: Promoting > Verifying > Reconciling > Progressing > Failed > Ready
       if (isPromoting && promotingCondition?.reason !== 'NoFreight') {
         iconState = {
           icon: faCircleMinus,
@@ -120,6 +126,13 @@ export const StageConditionIcon = memo(
           tooltipMessage: reconcilingCondition?.message ?? '',
           iconClass: `text-yellow-500 ${styles.rotate}`
         };
+      } else if (isProgressing) {
+        iconState = {
+          icon: faSync,
+          tooltipTitle: 'Progressing',
+          tooltipMessage: stage.status?.health?.issues?.join('; ') ?? readyCondition?.message ?? '',
+          iconClass: `text-blue-500 ${styles.rotate}`
+        };
       } else if (isFailed && readyCondition.reason !== 'NoFreight') {
         iconState = {
           icon: faTimesCircle,
@@ -137,7 +150,7 @@ export const StageConditionIcon = memo(
       }
 
       return { iconState, isPromoting };
-    }, [conditions, isControllerDead, controllerName]);
+    }, [stage, isControllerDead, controllerName]);
 
     const tooltipContent = useMemo(
       () => (

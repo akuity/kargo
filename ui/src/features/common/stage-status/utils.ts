@@ -25,6 +25,14 @@ export const hasCondition = (
   };
 };
 
+export const isStageProgressing = (stage: Stage) =>
+  stage.status?.conditions?.some(
+    (condition) =>
+      condition.type === StageConditionType.Ready &&
+      condition.status === StageConditionStatus.False &&
+      condition.reason === 'Progressing'
+  ) ?? false;
+
 export const getStagePhase = (stage: Stage, isControllerDead?: boolean) => {
   // A dead (or absent) controller means any condition the Stage carries
   // was written before the controller stopped reporting and is now stale.
@@ -68,6 +76,10 @@ export const getStagePhase = (stage: Stage, isControllerDead?: boolean) => {
   const ready = hasCondition(StageConditionType.Ready, StageConditionStatus.True, conditions);
 
   const failed = ready.condition?.status === StageConditionStatus.False;
+
+  if (isStageProgressing(stage)) {
+    return 'Progressing';
+  }
 
   if (failed && ready.condition?.reason !== 'NoFreight') {
     return 'Failed';

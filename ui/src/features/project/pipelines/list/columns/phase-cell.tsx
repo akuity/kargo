@@ -20,7 +20,7 @@ export const PhaseCell = ({ stage }: { stage: Stage }) => {
     <Flex align='center' gap={4}>
       {stagePhase}{' '}
       <StageConditionIcon
-        conditions={stage?.status?.conditions || []}
+        stage={stage}
         noTooltip
         className='text-[10px]'
         isControllerDead={isControllerDead}

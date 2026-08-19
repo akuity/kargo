@@ -19,7 +19,7 @@ export const StageNodePhase = (props: { stage: Stage }) => {
       {stagePhase}{' '}
       <StageConditionIcon
         className='text-[10px]'
-        conditions={props.stage?.status?.conditions || []}
+        stage={props.stage}
         noTooltip
         isControllerDead={isControllerDead}
         controllerName={controllerName}
