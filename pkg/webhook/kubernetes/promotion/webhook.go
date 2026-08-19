@@ -343,13 +343,27 @@ func (w *webhook) Default(ctx context.Context, promo *kargoapi.Promotion) error 
 	// Stage-based garbage collection entirely, whereas a PromotionRequest is
 	// itself owned by its Stage, so deleting the Stage still cascades to the
 	// Promotion through it.
-	if owner := metav1.GetControllerOf(promo); owner == nil ||
-		owner.APIVersion != kargoapi.GroupVersion.String() ||
-		owner.Kind != promotionRequestKind {
+	if !isPromotionRequestChild(promo) {
 		ownerRef := metav1.NewControllerRef(stage, kargoapi.GroupVersion.WithKind("Stage"))
 		promo.OwnerReferences = []metav1.OwnerReference{*ownerRef}
 	}
 	return nil
+}
+
+// isPromotionRequestChild returns true if the Promotion was created by a
+// PromotionRequest as one part of that request's fan-out to Targets, rather
+// than on its own.
+//
+// Ownership is the signal because it is the one a caller cannot usefully forge:
+// Kubernetes garbage collection deletes an object whose controller owner does
+// not exist, so a reference to a PromotionRequest that was never created takes
+// the Promotion with it. Defaulting and validation share this function so that
+// the owner reference Default preserves is exactly the one validation accepts.
+func isPromotionRequestChild(promo *kargoapi.Promotion) bool {
+	owner := metav1.GetControllerOf(promo)
+	return owner != nil &&
+		owner.APIVersion == kargoapi.GroupVersion.String() &&
+		owner.Kind == promotionRequestKind
 }
 
 // resolveOriginToFreight resolves promo's origin to the Freight that the
@@ -560,6 +574,17 @@ func (w *webhook) ValidateCreate(
 		return nil, apierrors.NewInternalError(fmt.Errorf("get stage: %w", err))
 	}
 
+	var errs field.ErrorList
+	if fieldErr := validateTargetIsPromotionRequestChild(promo); fieldErr != nil {
+		errs = append(errs, fieldErr)
+	}
+	if fieldErr := validateTargetAwareStageIsPromotedByRequest(promo, stage); fieldErr != nil {
+		errs = append(errs, fieldErr)
+	}
+	if len(errs) > 0 {
+		return nil, apierrors.NewInvalid(promotionGroupKind, promo.Name, errs)
+	}
+
 	freight, err := w.getFreightFn(ctx, w.client, types.NamespacedName{
 		Namespace: promo.Namespace,
 		Name:      promo.Spec.Freight,
@@ -590,6 +615,66 @@ func (w *webhook) ValidateCreate(
 	return nil, nil
 }
 
+// validateTargetIsPromotionRequestChild enforces that a Promotion naming a
+// Target is a child of a PromotionRequest.
+//
+// spec.target is not a field a user fills in. A Target belongs to the fan-out a
+// PromotionRequest describes: the request resolves the Stage's selectors once,
+// records the result in its own spec.targets, and each of its Promotions
+// carries one of those names. Letting a Promotion name a Target on its own
+// would produce work no PromotionRequest is counting, so a Stage's Targets
+// could advance without any record of it having been requested.
+//
+// Note this deliberately does not check that the Stage currently governs the
+// named Target. The Target came from a snapshot the PromotionRequest took when
+// it was created, and re-resolving selectors here would let a label edit
+// invalidate a Promotion already in flight -- the same reasoning that keeps the
+// PromotionRequest webhook from re-checking its own spec.targets.
+func validateTargetIsPromotionRequestChild(
+	promo *kargoapi.Promotion,
+) *field.Error {
+	if promo.Spec.Target == "" || isPromotionRequestChild(promo) {
+		return nil
+	}
+	return field.Invalid(
+		field.NewPath("spec", "target"),
+		promo.Spec.Target,
+		"a Promotion may name a Target only when created by a PromotionRequest",
+	)
+}
+
+// validateTargetAwareStageIsPromotedByRequest enforces the converse: a Stage
+// that governs Targets is promoted to only through a PromotionRequest.
+//
+// A Stage promotes Freight either to itself or to the Targets it governs, never
+// both, so a Promotion created directly against a target-aware Stage would
+// promote to a destination the Stage does not have. Every in-tree caller -- the
+// promote-to-stage and promote-downstream endpoints, and the auto-promotion
+// loop -- already routes such a Stage to a PromotionRequest; this closes the
+// path a client can still reach by creating the Promotion itself.
+//
+// Only creates are checked. A Stage can gain a targets block while Promotions
+// created before it are still running, and those must remain updatable -- an
+// abort request is an update, and refusing it would leave a running Promotion
+// with no way to stop.
+func validateTargetAwareStageIsPromotedByRequest(
+	promo *kargoapi.Promotion,
+	stage *kargoapi.Stage,
+) *field.Error {
+	if !api.IsTargetAware(stage) || isPromotionRequestChild(promo) {
+		return nil
+	}
+	return field.Invalid(
+		field.NewPath("spec", "stage"),
+		promo.Spec.Stage,
+		fmt.Sprintf(
+			"Stage %q selects Targets; it is promoted to with a PromotionRequest "+
+				"rather than a Promotion",
+			promo.Spec.Stage,
+		),
+	)
+}
+
 func (w *webhook) ValidateUpdate(
 	ctx context.Context,
 	oldPromo *kargoapi.Promotion,
@@ -611,6 +696,19 @@ func (w *webhook) ValidateUpdate(
 					"spec is immutable",
 				),
 			},
+		)
+	}
+
+	// spec.target is immutable by the check above, but the owner reference that
+	// justifies it is metadata and is not. Re-check it so a Promotion cannot be
+	// severed from the PromotionRequest that created it -- by an apply whose
+	// manifest simply omits ownerReferences, if nothing else -- and go on
+	// promoting to a Target as an orphan.
+	if fieldErr := validateTargetIsPromotionRequestChild(promo); fieldErr != nil {
+		return nil, apierrors.NewInvalid(
+			promotionGroupKind,
+			promo.Name,
+			field.ErrorList{fieldErr},
 		)
 	}
 
