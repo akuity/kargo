@@ -256,16 +256,42 @@ func ComparePromotionByPhaseAndCreationTime(a, b kargoapi.Promotion) int {
 // while the short hash never contains one.
 //
 // Names that do not carry a parseable ULID -- a Promotion created before Kargo
-// generated names, or one named by hand -- fall back to comparing whole names,
-// preserving the previous behavior rather than declaring them equal and leaving
-// the sort unstable.
+// generated names, or one named by hand -- are compared whole, preserving the
+// previous behavior rather than declaring them equal and leaving the sort
+// unstable.
+//
+// A ULID and an arbitrary string are not on the same comparison axis, so a pair
+// where only one name carries a ULID is decided by which one does, not by
+// comparing the names. Choosing the axis per pair is what would break
+// transitivity, and slices.SortFunc gives no guarantees about the order it
+// produces for a comparator that is not a strict weak ordering. Consider:
+//
+//	a = "b.7zzzzzzzzzzzzzzzzzzzzzzzzz.abc1234"
+//	b = "m"
+//	c = "z.00000000000000000000000000.abc1234"
+//
+// A per-pair axis compares a and b, and b and c, as whole names, giving a < b
+// and b < c, but compares a and c as ULIDs, giving a > c. No order satisfies
+// all three, so a single hand-named Promotion alongside generated ones would be
+// enough to make the Stage's choice of current Promotion arbitrary.
 func comparePromotionNamesByULID(a, b string) int {
 	aULID, aOK := promotionNameULID(a)
 	bULID, bOK := promotionNameULID(b)
-	if !aOK || !bOK {
+	switch {
+	case aOK && bOK:
+		return strings.Compare(aULID, bULID)
+	case aOK != bOK:
+		// Bucket by whether a ULID is present. Names without one sort first,
+		// which -- because the caller inverts the arguments for terminal
+		// Promotions -- puts them ahead of generated names among non-terminal
+		// Promotions and behind them among terminal ones.
+		if aOK {
+			return 1
+		}
+		return -1
+	default:
 		return strings.Compare(a, b)
 	}
-	return strings.Compare(aULID, bULID)
 }
 
 // promotionNameULID returns the ULID embedded in a generated Promotion name,

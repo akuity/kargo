@@ -1389,10 +1389,60 @@ func Test_comparePromotionNamesByULID(t *testing.T) {
 		))
 	})
 
-	t.Run("falls back to whole-name compare when a ULID is absent", func(t *testing.T) {
+	t.Run("compares whole names when neither carries a ULID", func(t *testing.T) {
 		t.Parallel()
 		require.Negative(t, comparePromotionNamesByULID("aaa", "bbb"))
 		require.Positive(t, comparePromotionNamesByULID("bbb", "aaa"))
 		require.Zero(t, comparePromotionNamesByULID("same", "same"))
+	})
+
+	// A name without a ULID is bucketed ahead of one with a ULID no matter how
+	// the two compare lexically. Deciding such a pair by comparing the names
+	// instead is what would make the comparator non-transitive.
+	t.Run("a name without a ULID sorts before one with a ULID", func(t *testing.T) {
+		t.Parallel()
+
+		generated := "tier-2.us-east." + earlier + ".abc1234"
+
+		for _, handWritten := range []string{
+			"aaa",                     // lexically before the generated name
+			"zzz",                     // lexically after it
+			"tier-2.us-east.aaa.aaa1", // shares the generated name's prefix
+		} {
+			t.Run(handWritten, func(t *testing.T) {
+				t.Parallel()
+				require.Negative(t, comparePromotionNamesByULID(handWritten, generated))
+				require.Positive(t, comparePromotionNamesByULID(generated, handWritten))
+			})
+		}
+	})
+
+	// The comparator must be a strict weak ordering, or slices.SortFunc -- which
+	// pkg/controller/stages calls to pick a Stage's current Promotion -- makes no
+	// promise about the order it produces. This triple is the counterexample that
+	// a per-pair choice between comparing ULIDs and comparing whole names admits:
+	// deciding a vs b and b vs c lexically while deciding a vs c by ULID yields
+	// a < b < c and a > c at once.
+	t.Run("ordering is transitive across names with and without ULIDs", func(t *testing.T) {
+		t.Parallel()
+
+		const (
+			maxULID = "7zzzzzzzzzzzzzzzzzzzzzzzzz"
+			minULID = "00000000000000000000000000"
+		)
+		var (
+			a = "b." + maxULID + ".abc1234"
+			b = "m"
+			c = "z." + minULID + ".abc1234"
+		)
+
+		require.Negative(t, comparePromotionNamesByULID(b, a), "the name without a ULID sorts first")
+		require.Negative(t, comparePromotionNamesByULID(b, c), "the name without a ULID sorts first")
+		require.Negative(t, comparePromotionNamesByULID(c, a), "%q holds the earlier ULID", c)
+
+		names := []string{a, b, c}
+		slices.SortFunc(names, comparePromotionNamesByULID)
+		require.Equal(t, []string{b, c, a}, names)
+		require.True(t, slices.IsSortedFunc(names, comparePromotionNamesByULID))
 	})
 }
