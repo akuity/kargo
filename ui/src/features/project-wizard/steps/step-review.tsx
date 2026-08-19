@@ -39,7 +39,7 @@ export const StepReview = ({ state, status, items }: StepReviewProps) => {
       )}
       <Card title={`Resources (${resources.length})`}>
         {resources.length === 0 ? (
-          <div className='text-sm text-gray-400'>
+          <div className='text-sm text-gray-400 dark:text-neutral-500'>
             Nothing to create yet — give your project a name in the first step.
           </div>
         ) : (
@@ -60,7 +60,7 @@ export const StepReview = ({ state, status, items }: StepReviewProps) => {
                     style={{ backgroundColor: token.colorSuccess }}
                   />
                 )}
-                <span className='font-mono text-gray-700'>
+                <span className='font-mono text-gray-700 dark:text-neutral-200'>
                   {r.kind}/{r.name}
                 </span>
                 {progress?.message && (

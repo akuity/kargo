@@ -79,17 +79,20 @@ export const FreightTimeline = (props: { freights: Freight[]; project: string })
           <BaseHeader>
             <PromotionModeHeader
               loading={getPromotionEligibleFreightQuery.isFetching}
-              className='bg-white space-x-2'
+              className='bg-[var(--kargo-topbar-bg)] space-x-2'
             />
           </BaseHeader>
         </div>
       )}
       <div
-        className={classNames('freightTimeline', 'bg-white py-2 flex relative z-20')}
-        style={{ borderBottom: '2px solid rgba(0,0,0,.05)' }}
+        className={classNames(
+          'freightTimeline',
+          'bg-[var(--kargo-topbar-bg)] py-2 flex relative z-20'
+        )}
+        style={{ borderBottom: '2px solid var(--kargo-color-border-secondary, rgba(0,0,0,.05))' }}
       >
         <div
-          className='flex items-stretch shrink-0 cursor-pointer select-none text-gray-500 hover:text-gray-700 mx-1'
+          className='flex items-stretch shrink-0 cursor-pointer select-none text-gray-500 dark:text-neutral-400 hover:text-gray-700 dark:hover:text-neutral-200 mx-1'
           style={{ width: ARROW_BUTTON_WIDTH, opacity: canSlideLeft ? 1 : 0.4 }}
           onClick={() => {
             if (canSlideLeft) slideLeft();
@@ -171,7 +174,7 @@ export const FreightTimeline = (props: { freights: Freight[]; project: string })
         </div>
 
         <div
-          className='flex items-stretch shrink-0 cursor-pointer select-none text-gray-500 hover:text-gray-700 mx-1'
+          className='flex items-stretch shrink-0 cursor-pointer select-none text-gray-500 dark:text-neutral-400 hover:text-gray-700 dark:hover:text-neutral-200 mx-1'
           style={{ width: ARROW_BUTTON_WIDTH, opacity: canSlideRight ? 1 : 0.4 }}
           onClick={() => {
             if (canSlideRight) slideRight();

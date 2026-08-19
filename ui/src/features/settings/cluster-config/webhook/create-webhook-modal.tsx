@@ -125,7 +125,9 @@ export const CreateWebhookModal = (props: CreateWebhookModalProps) => {
                     }
                   />
                   {secret.description && (
-                    <div className='text-xs text-gray-500 mt-2'>{secret.description}</div>
+                    <div className='text-xs text-gray-500 dark:text-neutral-400 mt-2'>
+                      {secret.description}
+                    </div>
                   )}
                 </Form.Item>
               </Form>

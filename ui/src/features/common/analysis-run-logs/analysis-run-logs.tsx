@@ -8,12 +8,14 @@ import { useMemo, useRef, useState } from 'react';
 import { generatePath, Link } from 'react-router-dom';
 
 import { paths } from '@ui/config/paths';
+import { useTheme } from '@ui/features/common/theme/use-theme';
 import { RolloutsAnalysisRun } from '@ui/gen/api/v2/models';
 
 import { extractFilters } from './extract-analysis-run';
 import {
   monacoEditorLogLanguage,
   monacoEditorLogLanguageTheme,
+  monacoEditorLogLanguageThemeDark,
   useMonacoEditorLogLanguage
 } from './use-monaco-editor-log-language';
 import { useWatchAnalysisRunLogs } from './use-watch-analysis-run-logs';
@@ -28,6 +30,7 @@ export const AnalysisRunLogs = (props: {
     search?: string;
   };
 }) => {
+  const { isDark } = useTheme();
   const logsEditor = useRef<editor.IStandaloneCodeEditor>(null);
   const editorDecoration = useRef<editor.IEditorDecorationsCollection>(null);
 
@@ -171,7 +174,7 @@ export const AnalysisRunLogs = (props: {
       {!logsLoading && logs && (
         <Editor
           defaultLanguage={monacoEditorLogLanguage}
-          theme={monacoEditorLogLanguageTheme}
+          theme={isDark ? monacoEditorLogLanguageThemeDark : monacoEditorLogLanguageTheme}
           value={logs}
           height={props.height || '512px'}
           options={{

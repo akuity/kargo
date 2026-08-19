@@ -52,9 +52,10 @@ export const FreightContentItem = (props: {
         'max-w-60': horizontal && !fullContentVisibility,
         'mr-2 p-2 flex-shrink': horizontal,
         'bg-black text-white': dark,
-        'bg-white': !dark && highlighted && !horizontal,
-        'border border-solid border-gray-200': !dark && !highlighted && !horizontal,
-        'bg-gray-200': !dark && horizontal
+        'bg-white dark:bg-neutral-900': !dark && highlighted && !horizontal,
+        'border border-solid border-gray-200 dark:border-neutral-700':
+          !dark && !highlighted && !horizontal,
+        'bg-gray-200 dark:bg-neutral-700': !dark && horizontal
       })}
       overlay={overlay}
       title={title}

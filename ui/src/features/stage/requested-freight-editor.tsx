@@ -42,7 +42,7 @@ export const RequestedFreightEditor = ({
   }, [selectedWarehouse, stages]);
 
   return (
-    <div className='w-full rounded-md bg-gray-50 p-3 mb-6'>
+    <div className='w-full rounded-md bg-gray-50 dark:bg-neutral-800 p-3 mb-6'>
       {(warehouses?.length || 0) <= 0 && (
         <Alert
           message='No Warehouses exist for this project. To avoid errors, create a Warehouse before creating a Stage.'

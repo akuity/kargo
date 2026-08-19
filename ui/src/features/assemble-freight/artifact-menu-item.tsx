@@ -13,7 +13,7 @@ export const ArtifactMenuItem = ({ onClick, selected, children }: ArtifactMenuIt
   <div
     onClick={onClick}
     className={classNames(
-      'p-2 bg-white mb-1 cursor-pointer rounded-md border border-solid border-gray-100 break-words',
+      'p-2 bg-white dark:bg-neutral-900 mb-1 cursor-pointer rounded-md border border-solid border-gray-100 dark:border-neutral-700 break-words',
       { 'border-sky-500': selected }
     )}
   >

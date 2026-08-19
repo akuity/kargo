@@ -38,7 +38,8 @@ export const SubscriptionWizard = (props: {
       <div className='flex gap-4 my-4 relative'>
         <div
           className={classNames('w-5/12 rounded-md flex gap-y-4 flex-wrap h-fit sticky top-0', {
-            'bg-gray-100 text-center p-5 justify-center': props.subscriptions?.length === 0
+            'bg-gray-100 dark:bg-neutral-800 text-center p-5 justify-center':
+              props.subscriptions?.length === 0
           })}
         >
           {props.subscriptions.map((subscription, idx) => (

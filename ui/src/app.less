@@ -62,6 +62,49 @@ body, html {
     font-family: 'Poppins', sans-serif;
 }
 
+body {
+    background-color: var(--kargo-color-bg-layout, #f7f8fa);
+    color: var(--kargo-color-text, #454545);
+}
+
+// Top-bar bg (AntD Layout header + bars matching it); mirror Layout.headerBg.
+:root {
+    --kargo-topbar-bg: #fff;
+}
+
+// Dark vars: AntD-token mirrors go on :root at runtime via CssVarBridge, so we
+// only seed the pre-React body FOUC values + the custom (non-AntD) chrome.
+:root[data-theme='dark'] {
+    --kargo-color-bg-layout: #141414; // body FOUC; bridge overwrites on mount
+    --kargo-color-text: rgba(255, 255, 255, 0.85);
+    // Custom chrome (no AntD token); light fallbacks live at the use sites.
+    --kargo-tile-hover-border: rgba(255, 255, 255, 0.28);
+    --kargo-topbar-bg: #1f1f1f;
+    --kargo-sidebar-bg: #1f1f1f;
+    --kargo-sidebar-border: #303030;
+}
+
+// xyflow canvas defaults to white regardless of colorMode; use the themed bg.
+.react-flow.kargo-pipeline-graph {
+    background-color: var(--kargo-color-bg-layout, #f7f8fa);
+}
+
+// CheckableTag hover text defaults to colorPrimary (too-dark blue); keep white.
+:root[data-theme='dark']
+    .ant-tag-checkable:not(.ant-tag-checkable-checked):not(.kargo-light-scope *):hover {
+    color: #fff;
+}
+
+// Spin has no color token; recolor the loader (dots + text) to secondary grey.
+:root[data-theme='dark'] .ant-spin:not(.kargo-light-scope *),
+:root[data-theme='dark'] .ant-spin .ant-spin-text:not(.kargo-light-scope *),
+:root[data-theme='dark'] .ant-spin-dot-holder:not(.kargo-light-scope *) {
+    color: var(--kargo-color-text-secondary, rgba(255, 255, 255, 0.65));
+}
+:root[data-theme='dark'] .ant-spin-dot-item:not(.kargo-light-scope *) {
+    background-color: var(--kargo-color-text-secondary, rgba(255, 255, 255, 0.65));
+}
+
 .ant-btn {
     box-shadow: none !important;
 }
