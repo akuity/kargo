@@ -40,7 +40,9 @@ state.
 fanning Freight out to this Stage's Targets. It is absent for a Stage that
 governs no Targets.
 
-Kargo Enterprise only: This field is ignored in Kargo OSS.
+Fanning Freight out to Targets is a Kargo Enterprise-only feature. Kargo
+OSS maintains this field all the same, but the PromotionRequest it refers
+to never gets further than being marked Errored for that reason.
 
 +optional */
   currentPromotionRequest?: PromotionRequestReference;
@@ -75,9 +77,8 @@ determine whether the request to refresh the resource has been handled.
   /** LastPromotion is a reference to the last completed promotion. */
   lastPromotion?: PromotionReference;
   /** LastPromotionRequest is a reference to the last PromotionRequest to reach a
-terminal phase. It is absent for a Stage that governs no Targets.
-
-Kargo Enterprise only: This field is ignored in Kargo OSS.
+terminal phase. It is absent for a Stage that governs no Targets, and only
+ever moves forward, so it outlives the PromotionRequest it refers to.
 
 +optional */
   lastPromotionRequest?: PromotionRequestReference;
