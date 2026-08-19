@@ -208,7 +208,7 @@ func RunningPromotionsByArgoCDApplications(
 				Config: rawConfig,
 			}
 
-			evaluator := promotion.NewStepEvaluator(cl, nil)
+			evaluator := promotion.NewStepEvaluator(cl, nil, nil)
 
 			// As step-level variables are allowed to reference to output, we
 			// need to provide the state.
