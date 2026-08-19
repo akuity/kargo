@@ -7790,6 +7790,61 @@
         }
       }
     },
+    "PromotionRequestFreightReference": {
+      "type": "object",
+      "properties": {
+        "name": {
+          "description": "Name is the name of the Freight.",
+          "type": "string"
+        }
+      }
+    },
+    "PromotionRequestPhase": {
+      "type": "string",
+      "enum": [
+        "Pending",
+        "Running",
+        "Succeeded",
+        "Failed",
+        "Errored"
+      ],
+      "x-enum-varnames": [
+        "PromotionRequestPhasePending",
+        "PromotionRequestPhaseRunning",
+        "PromotionRequestPhaseSucceeded",
+        "PromotionRequestPhaseFailed",
+        "PromotionRequestPhaseErrored"
+      ]
+    },
+    "PromotionRequestReference": {
+      "type": "object",
+      "properties": {
+        "finishedAt": {
+          "description": "FinishedAt is the time at which the PromotionRequest completed.",
+          "type": "string"
+        },
+        "freight": {
+          "description": "Freight identifies the Freight being promoted.",
+          "allOf": [
+            {
+              "$ref": "#/definitions/PromotionRequestFreightReference"
+            }
+          ]
+        },
+        "name": {
+          "description": "Name is the name of the PromotionRequest.",
+          "type": "string"
+        },
+        "phase": {
+          "description": "Phase is a high-level summary of the PromotionRequest's lifecycle.",
+          "allOf": [
+            {
+              "$ref": "#/definitions/PromotionRequestPhase"
+            }
+          ]
+        }
+      }
+    },
     "PromotionSpec": {
       "type": "object",
       "properties": {
@@ -8320,6 +8375,14 @@
             }
           ]
         },
+        "currentPromotionRequest": {
+          "description": "CurrentPromotionRequest is a reference to the PromotionRequest currently\nfanning Freight out to this Stage's Targets. It is absent for a Stage that\ngoverns no Targets.\n\nKargo Enterprise only: This field is ignored in Kargo OSS.\n\n+optional",
+          "allOf": [
+            {
+              "$ref": "#/definitions/PromotionRequestReference"
+            }
+          ]
+        },
         "effectiveAutoPromotionHolds": {
           "description": "EffectiveAutoPromotionHolds is the set of auto-promotion holds in effect\nright now. It is recomputed every reconciliation from AutoPromotionHolds\nplus the newest in-flight Promotions, and unlike AutoPromotionHolds is not\ndurable. Clients should read this map to reflect current hold state.",
           "type": "object",
@@ -8355,6 +8418,14 @@
           "allOf": [
             {
               "$ref": "#/definitions/PromotionReference"
+            }
+          ]
+        },
+        "lastPromotionRequest": {
+          "description": "LastPromotionRequest is a reference to the last PromotionRequest to reach a\nterminal phase. It is absent for a Stage that governs no Targets.\n\nKargo Enterprise only: This field is ignored in Kargo OSS.\n\n+optional",
+          "allOf": [
+            {
+              "$ref": "#/definitions/PromotionRequestReference"
             }
           ]
         },
