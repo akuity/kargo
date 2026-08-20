@@ -1,9 +1,9 @@
 import { faBoltLightning, faCircleNotch } from '@fortawesome/free-solid-svg-icons';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
 import { useMutation } from '@tanstack/react-query';
-import { Typography } from 'antd';
+import { Tooltip, Typography } from 'antd';
 import { ItemType } from 'antd/es/menu/interface';
-import { useState } from 'react';
+import { ReactNode, useState } from 'react';
 import { generatePath, useNavigate } from 'react-router-dom';
 
 import { paths } from '@ui/config/paths';
@@ -12,6 +12,10 @@ import { useDictionaryContext } from '@ui/features/project/pipelines/context/dic
 import { isStageControlFlow } from '@ui/features/project/pipelines/nodes/stage-meta-utils';
 import { useGetUpstreamFreight } from '@ui/features/project/pipelines/nodes/use-get-upstream-freight';
 import { stageHasAutoPromotionHold } from '@ui/features/project/pipelines/promotion/auto-promotion';
+import {
+  isPromotionWindowClosed,
+  promotionWindowClosedMessage
+} from '@ui/features/project/pipelines/promotion/promotion-window';
 import { ResumeAutoPromotionDrawer } from '@ui/features/project/pipelines/promotion/resume-auto-promotion-drawer';
 import { useManualApprovalModal } from '@ui/features/project/pipelines/promotion/use-manual-approval-modal';
 import { promoteToStage, queryFreightsRest } from '@ui/gen/api/v2/core/core';
@@ -32,6 +36,23 @@ export const useGetPromotionDropdownItems = (stage: Stage) => {
 
   const controlFlow = isStageControlFlow(stage);
   const hasAutoPromotionHold = stageHasAutoPromotionHold(stage);
+
+  // a closed promotion window forbids promotion of this Stage, so every action
+  // that would promote Freight *into* it is unavailable. Promotion to downstream
+  // Stages is gated by their own windows and stays available.
+  const windowClosed = isPromotionWindowClosed(stage);
+
+  const withWindowTooltip = (label: ReactNode): ReactNode => {
+    if (!windowClosed) {
+      return label;
+    }
+
+    return (
+      <Tooltip title={promotionWindowClosedMessage(stage)} placement='right'>
+        <span>{label}</span>
+      </Tooltip>
+    );
+  };
 
   const upstreamFreights = useGetUpstreamFreight(stage);
 
@@ -118,7 +139,8 @@ export const useGetPromotionDropdownItems = (stage: Stage) => {
   if (!controlFlow) {
     dropdownItems.push({
       key: 'promote',
-      label: 'Promote',
+      label: withWindowTooltip('Promote'),
+      disabled: windowClosed,
       onClick: () => actionContext?.actPromote(IAction.PROMOTE, stage)
     });
 
@@ -144,7 +166,8 @@ export const useGetPromotionDropdownItems = (stage: Stage) => {
   if (hasUpstreamFreights && !controlFlow) {
     dropdownItems.push({
       key: 'upstream-freight-promo',
-      label: 'Promote from upstream',
+      label: withWindowTooltip('Promote from upstream'),
+      disabled: windowClosed,
       onClick: () => {
         if (hasMultipleUpstreamFreights) {
           return;
@@ -165,7 +188,8 @@ export const useGetPromotionDropdownItems = (stage: Stage) => {
 
     dropdownItems.push({
       key: 'quick-promote-upstream-freight-promo',
-      label: (
+      disabled: windowClosed,
+      label: withWindowTooltip(
         <>
           {promoteMutation.isPending ? (
             <FontAwesomeIcon icon={faCircleNotch} className='mr-1' spin />
