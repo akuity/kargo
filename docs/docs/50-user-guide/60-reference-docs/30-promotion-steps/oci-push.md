@@ -29,7 +29,7 @@ Exactly one of `srcRef` or `srcPath` must be specified.
 | `srcPath` | `string` | Y* | Path, relative to the workspace, of a local file to push as a single-layer OCI artifact (e.g., a tarball produced by an earlier step). Mutually exclusive with `srcRef`. |
 | `destRef` | `string` | Y | Destination reference including tag (e.g., `registry/repository:tag`). For Helm OCI artifacts, the `oci://` prefix is supported. For retag-in-place, use the same repository as `srcRef` with the new tag. |
 | `mediaType` | `string` | N | Media type of the artifact layer when pushing a local file via `srcPath`. Defaults to `application/vnd.oci.image.layer.v1.tar+gzip`. Ignored when using `srcRef`. |
-| `artifactType` | `string` | N | Declares the type of artifact being pushed via `srcPath`. It is applied as the manifest's config media type (following the convention used by Helm, Flux, and ORAS). Ignored when using `srcRef`. |
+| `artifactType` | `string` | N | Declares the type of artifact being pushed via `srcPath`. It is applied as the manifest's config media type (following the convention used by Helm, Flux, and ORAS). Defaults to `application/vnd.oci.image.config.v1+json`. Ignored when using `srcRef`. |
 | `annotations` | `object` | N | Annotations to set on the destination artifact. Keys may be prefixed with `index:` or `manifest:` to scope them to the index or image manifest respectively. Unprefixed keys default to the image manifest. For single images (including local-archive pushes), `index:`-prefixed keys are ignored. Values support expressions. When copying with `srcRef`, existing annotations on the source artifact are preserved; specified annotations are added or overwritten. |
 | `insecureSkipTLSVerify` | `boolean` | N | Whether to skip TLS verification for both source and destination registries. Defaults to `false`. |
 
@@ -77,15 +77,6 @@ and pushed to an OCI registry as an artifact — the pattern used to publish
 manifests for consumption by Argo CD, Flux, or other OCI-aware tooling. The
 `mediaType` and `artifactType` follow Flux's OCI conventions, and provenance is
 recorded via standard OCI annotations.
-
-:::note
-
-The `tar` step used below to produce the archive is a companion contribution
-currently in review ([#6666](https://github.com/akuity/kargo/pull/6666)). Until
-it merges and ships, produce the archive another way (for example, by invoking
-`tar` from a script) and point `srcPath` at the result.
-
-:::
 
 ```yaml
 steps:

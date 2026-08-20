@@ -28,7 +28,7 @@
   },
   "artifactType": {
    "type": "string",
-   "description": "ArtifactType declares the type of artifact being pushed via srcPath. It is applied as the manifest's config media type. Ignored when using srcRef.",
+   "description": "ArtifactType declares the type of artifact being pushed via srcPath. It is applied as the manifest's config media type. Defaults to 'application/vnd.oci.image.config.v1+json'. Ignored when using srcRef.",
    "minLength": 1
   },
   "annotations": {

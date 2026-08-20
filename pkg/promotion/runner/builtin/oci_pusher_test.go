@@ -7,6 +7,7 @@ import (
 	"context"
 	"fmt"
 	"io"
+	"net/http"
 	"net/http/httptest"
 	"os"
 	"path/filepath"
@@ -517,13 +518,14 @@ func Test_ociPusher_run_noAnnotationsMutation(t *testing.T) {
 
 // makeTarGz builds an in-memory gzip-compressed tar archive containing a single
 // file, for use as a local artifact in tests.
-func makeTarGz(t *testing.T, fileName, content string) []byte {
+func makeTarGz(t *testing.T) []byte {
 	t.Helper()
+	const content = "kind: ConfigMap\n"
 	var buf bytes.Buffer
 	gz := gzip.NewWriter(&buf)
 	tw := tar.NewWriter(gz)
 	require.NoError(t, tw.WriteHeader(&tar.Header{
-		Name: fileName,
+		Name: "manifests.yaml",
 		Mode: 0o644,
 		Size: int64(len(content)),
 	}))
@@ -548,7 +550,7 @@ func Test_ociPusher_run_localFile(t *testing.T) {
 	)
 
 	workDir := t.TempDir()
-	tarball := makeTarGz(t, "manifests.yaml", "kind: ConfigMap\n")
+	tarball := makeTarGz(t)
 	require.NoError(t, os.WriteFile(filepath.Join(workDir, "artifact.tar.gz"), tarball, 0o644))
 
 	runner := &ociPusher{
@@ -620,16 +622,16 @@ func Test_ociPusher_run_localFile(t *testing.T) {
 	assert.Equal(t, gotDigest.String(), digestOut)
 }
 
-// Test that the layer media type defaults to the OCI tar+gzip layer type when
-// none is configured.
-func Test_ociPusher_run_localFile_defaultMediaType(t *testing.T) {
+// Test that the layer and config media types default to their OCI equivalents
+// when none are configured.
+func Test_ociPusher_run_localFile_defaultMediaTypes(t *testing.T) {
 	regHandler := registry.New()
 	srv := httptest.NewServer(regHandler)
 	t.Cleanup(srv.Close)
 	regHost := srv.Listener.Addr().String()
 
 	workDir := t.TempDir()
-	tarball := makeTarGz(t, "manifests.yaml", "kind: ConfigMap\n")
+	tarball := makeTarGz(t)
 	require.NoError(t, os.WriteFile(filepath.Join(workDir, "artifact.tar.gz"), tarball, 0o644))
 
 	runner := &ociPusher{
@@ -657,6 +659,9 @@ func Test_ociPusher_run_localFile_defaultMediaType(t *testing.T) {
 	require.NoError(t, err)
 	require.Len(t, manifest.Layers, 1)
 	assert.Equal(t, types.OCILayer, manifest.Layers[0].MediaType)
+	// With no artifactType configured, the config media type still defaults to
+	// the OCI config type rather than remaining Docker-typed.
+	assert.Equal(t, types.OCIConfigJSON, manifest.Config.MediaType)
 }
 
 // Test error handling for local-file pushes.
@@ -701,7 +706,7 @@ func Test_ociPusher_run_localFile_errors(t *testing.T) {
 			name:            "artifact exceeds size limit",
 			maxArtifactSize: 8,
 			setup: func(t *testing.T, workDir string) string {
-				tarball := makeTarGz(t, "manifests.yaml", "kind: ConfigMap\n")
+				tarball := makeTarGz(t)
 				require.NoError(t, os.WriteFile(filepath.Join(workDir, "big.tar.gz"), tarball, 0o644))
 				return "big.tar.gz"
 			},
@@ -739,6 +744,44 @@ func Test_ociPusher_run_localFile_errors(t *testing.T) {
 			assert.ErrorAs(t, err, &termErr)
 		})
 	}
+}
+
+// Test that a failure to write the artifact to the registry is reported as a
+// (retryable) error.
+func Test_ociPusher_run_localFile_pushError(t *testing.T) {
+	srv := httptest.NewServer(http.HandlerFunc(
+		func(w http.ResponseWriter, _ *http.Request) {
+			w.WriteHeader(http.StatusForbidden)
+		},
+	))
+	t.Cleanup(srv.Close)
+
+	workDir := t.TempDir()
+	tarball := makeTarGz(t)
+	require.NoError(t, os.WriteFile(filepath.Join(workDir, "artifact.tar.gz"), tarball, 0o644))
+
+	runner := &ociPusher{
+		credsDB:         &credentials.FakeDB{},
+		schemaLoader:    getConfigSchemaLoader(stepKindOCIPush),
+		maxArtifactSize: int64(1 << 30),
+	}
+
+	result, err := runner.run(context.Background(), &promotion.StepContext{
+		Project: "fake-project",
+		WorkDir: workDir,
+	}, builtin.OCIPushConfig{
+		SrcPath: "artifact.tar.gz",
+		DestRef: fmt.Sprintf("%s/test/local:v1", srv.Listener.Addr().String()),
+	})
+	require.Error(t, err)
+	assert.ErrorContains(t, err, "failed to push artifact")
+	assert.Equal(
+		t,
+		string(kargoapi.PromotionStepStatusErrored),
+		string(result.Status),
+	)
+	var termErr *promotion.TerminalError
+	assert.NotErrorAs(t, err, &termErr)
 }
 
 func Test_parseAnnotationScopes(t *testing.T) {

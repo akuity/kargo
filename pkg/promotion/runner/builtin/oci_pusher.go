@@ -184,9 +184,14 @@ func (p *ociPusher) pushRemoteArtifact(
 	return digest, kargoapi.PromotionStepStatusSucceeded, nil
 }
 
-// defaultLayerMediaType is the media type applied to the artifact layer when
-// pushing a local file via srcPath and no media type is configured.
-const defaultLayerMediaType = types.OCILayer
+const (
+	// defaultLayerMediaType is the media type applied to the artifact layer when
+	// pushing a local file via srcPath and no media type is configured.
+	defaultLayerMediaType = types.OCILayer
+	// defaultConfigMediaType is the manifest config media type applied when
+	// pushing a local file via srcPath and no artifact type is configured.
+	defaultConfigMediaType = types.OCIConfigJSON
+)
 
 // pushLocalFile pushes a local file from the workspace to the destination
 // reference as a single-layer OCI artifact. The layer media type and artifact
@@ -248,14 +253,21 @@ func (p *ociPusher) pushLocalFile(
 		return v1.Hash{}, kargoapi.PromotionStepStatusErrored,
 			fmt.Errorf("failed to build artifact: %w", err)
 	}
-	// empty.Image is a Docker manifest by default; emit an OCI manifest instead.
+	// empty.Image is a Docker manifest (and Docker-config-typed) by default;
+	// emit an OCI manifest instead.
 	img = ggcrmutate.MediaType(img, types.OCIManifestSchema1)
+
+	// This ggcr version has no top-level manifest artifactType, so carry the
+	// artifact type via the config media type per the OCI/Helm/Flux/ORAS
+	// convention. The config media type is overridden even when no artifact
+	// type is configured, because it would otherwise remain
+	// types.DockerConfigJSON, pairing an OCI manifest with a Docker-typed
+	// config, which strict OCI/ORAS consumers may reject.
+	configMediaType := defaultConfigMediaType
 	if cfg.ArtifactType != "" {
-		// This ggcr version has no top-level manifest artifactType, so carry the
-		// artifact type via the config media type per the OCI/Helm/Flux/ORAS
-		// convention.
-		img = ggcrmutate.ConfigMediaType(img, types.MediaType(cfg.ArtifactType))
+		configMediaType = types.MediaType(cfg.ArtifactType)
 	}
+	img = ggcrmutate.ConfigMediaType(img, configMediaType)
 
 	// Apply manifest-scoped annotations. This is a single image manifest, so
 	// index-scoped keys are ignored, matching the retag path's behavior for
