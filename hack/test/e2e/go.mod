@@ -20,6 +20,7 @@ require (
 	github.com/akuity/kargo/api v0.0.0
 	github.com/akuity/kargo/hack/test/e2e/envfuncs v0.0.0-00010101000000-000000000000
 	github.com/akuity/kargo/pkg/x/client/generated v0.0.0
+	github.com/google/go-github/v76 v76.0.0
 	k8s.io/api v0.36.3
 	k8s.io/apimachinery v0.36.3
 	sigs.k8s.io/e2e-framework v0.7.0
@@ -85,7 +86,6 @@ require (
 	github.com/google/btree v1.1.3 // indirect
 	github.com/google/gnostic-models v0.7.1 // indirect
 	github.com/google/go-containerregistry v0.21.7 // indirect
-	github.com/google/go-github/v76 v76.0.0 // indirect
 	github.com/google/go-querystring v1.2.0 // indirect
 	github.com/google/uuid v1.6.0 // indirect
 	github.com/gorilla/websocket v1.5.4-0.20250319132907-e064f32e3674 // indirect

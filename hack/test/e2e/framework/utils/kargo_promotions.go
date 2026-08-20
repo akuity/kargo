@@ -168,8 +168,8 @@ func WaitForPromotionPhase(
 	}
 	if promotion.Status.Phase != phase {
 		t.Fatalf(
-			"Promotion '%v' did not reach phase '%v', actual phase: '%v'",
-			promotion.Name, phase, promotion.Status.Phase)
+			"Promotion '%v' did not reach phase '%v', actual phase: '%v'. Message: '%v'",
+			promotion.Name, phase, promotion.Status.Phase, promotion.Status.Message)
 	}
 	return promotion, nil
 }

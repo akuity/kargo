@@ -243,6 +243,25 @@ func requireKargoDemoRepo(ctx context.Context, t *testing.T) string {
 // repository, mirroring the repo substitution applied to Kargo fixtures via
 // UpdateWarehouseGitRepoURL.
 func UpdateApplicationSetRepoURL(name, repoURL string) decoder.DecodeOption {
+	return mutateApplicationSetSources(name, func(source map[string]any) {
+		source["repoURL"] = repoURL
+	})
+}
+
+// UpdateApplicationSetTargetRevision returns a DecodeOption that rewrites the
+// targetRevision of the source(s) in the named ApplicationSet's Application
+// template. This lets tests point Argo CD Applications at a branch created
+// dynamically per test run.
+func UpdateApplicationSetTargetRevision(name, targetRevision string) decoder.DecodeOption {
+	return mutateApplicationSetSources(name, func(source map[string]any) {
+		source["targetRevision"] = targetRevision
+	})
+}
+
+// mutateApplicationSetSources returns a DecodeOption that applies mutate to each
+// source of the named ApplicationSet's Application template. Applications may
+// use either a single "source" or a list of "sources".
+func mutateApplicationSetSources(name string, mutate func(source map[string]any)) decoder.DecodeOption {
 	return MutateAsUnstructuredOptionFor("ApplicationSet", name, func(unstr runtime.Unstructured) error {
 		data := unstr.UnstructuredContent()
 		spec, ok := data["spec"].(map[string]any)
@@ -258,14 +277,13 @@ func UpdateApplicationSetRepoURL(name, repoURL string) decoder.DecodeOption {
 			return errors.New("ApplicationSet spec.template.spec is not a map")
 		}
 
-		// Applications may use either a single "source" or a list of "sources".
 		if source, ok := templateSpec["source"].(map[string]any); ok {
-			source["repoURL"] = repoURL
+			mutate(source)
 		}
 		if sources, ok := templateSpec["sources"].([]any); ok {
 			for _, src := range sources {
 				if srcMap, ok := src.(map[string]any); ok {
-					srcMap["repoURL"] = repoURL
+					mutate(srcMap)
 				}
 			}
 		}
