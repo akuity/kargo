@@ -8,8 +8,6 @@ import (
 // +kubebuilder:object:root=true
 // +kubebuilder:resource:scope=Namespaced
 // +kubebuilder:subresource:status
-// +kubebuilder:printcolumn:name="Ready",type="string",JSONPath=".status.conditions[?(@.type==\"Ready\")].status"
-// +kubebuilder:printcolumn:name="Status",type="string",JSONPath=".status.conditions[?(@.type==\"Ready\")].message"
 // +kubebuilder:printcolumn:name=Age,type=date,JSONPath=`.metadata.creationTimestamp`
 
 // Target represents a single destination -- a cluster, for instance -- that
@@ -43,42 +41,9 @@ type TargetSpec struct {
 	Params map[string]apiextensionsv1.JSON `json:"params,omitempty"`
 }
 
-// TargetStatus describes the current status of a Target.
-type TargetStatus struct {
-	// Conditions contains the last observations of the Target's current state.
-	//
-	// +patchMergeKey=type
-	// +patchStrategy=merge
-	// +listType=map
-	// +listMapKey=type
-	Conditions []metav1.Condition `json:"conditions,omitempty" patchMergeKey:"type" patchStrategy:"merge"`
-	// OwnedBy describes the Stages that currently govern this Target, with one
-	// entry per (Stage, Freight origin) pair.
-	OwnedBy []TargetOwnership `json:"ownedBy,omitempty"`
-}
-
-// GetConditions implements the conditions.Getter interface.
-func (t *TargetStatus) GetConditions() []metav1.Condition {
-	return t.Conditions
-}
-
-// SetConditions implements the conditions.Setter interface.
-func (t *TargetStatus) SetConditions(conditions []metav1.Condition) {
-	t.Conditions = conditions
-}
-
-// TargetOwnership records one Stage's governance of a Target with respect to
-// Freight from a single origin.
-type TargetOwnership struct {
-	// Stage is the name of the governing Stage.
-	Stage string `json:"stage,omitempty"`
-	// Origin is the origin of the Freight that the governing Stage promotes to
-	// this Target.
-	Origin FreightOrigin `json:"origin,omitempty"`
-	// CurrentFreight is the name of the Freight from Origin most recently
-	// promoted to this Target by the governing Stage.
-	CurrentFreight string `json:"currentFreight,omitempty"`
-}
+// TargetStatus describes the current status of a Target. It is intentionally
+// empty for now; fields will be added as they are needed.
+type TargetStatus struct{}
 
 // +kubebuilder:object:root=true
 
