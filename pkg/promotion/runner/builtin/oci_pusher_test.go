@@ -399,7 +399,7 @@ func Test_ociPusher_run(t *testing.T) {
 				Project: "fake-project",
 			}
 
-			result, err := runner.run(context.Background(), stepCtx, tt.cfg)
+			result, err := runner.run(t.Context(), stepCtx, tt.cfg)
 			tt.assertions(t, result, err)
 		})
 	}
@@ -464,7 +464,7 @@ func Test_ociPusher_run_credentialError(t *testing.T) {
 				Project: "fake-project",
 			}
 
-			_, err := runner.run(context.Background(), stepCtx, tt.cfg)
+			_, err := runner.run(t.Context(), stepCtx, tt.cfg)
 			assert.ErrorContains(t, err, tt.errMsg)
 		})
 	}
@@ -497,7 +497,7 @@ func Test_ociPusher_run_noAnnotationsMutation(t *testing.T) {
 	}
 
 	// Push without specifying annotations.
-	result, err := runner.run(context.Background(), &promotion.StepContext{
+	result, err := runner.run(t.Context(), &promotion.StepContext{
 		Project: "fake-project",
 	}, builtin.OCIPushConfig{
 		SrcRef:  fmt.Sprintf("%s/test/annotated:v1", regHost),
@@ -560,7 +560,7 @@ func Test_ociPusher_run_localFile(t *testing.T) {
 	}
 
 	destRef := fmt.Sprintf("%s/test/local:v1", regHost)
-	result, err := runner.run(context.Background(), &promotion.StepContext{
+	result, err := runner.run(t.Context(), &promotion.StepContext{
 		Project: "fake-project",
 		WorkDir: workDir,
 	}, builtin.OCIPushConfig{
@@ -641,7 +641,7 @@ func Test_ociPusher_run_localFile_defaultMediaTypes(t *testing.T) {
 	}
 
 	destRef := fmt.Sprintf("%s/test/local:default", regHost)
-	result, err := runner.run(context.Background(), &promotion.StepContext{
+	result, err := runner.run(t.Context(), &promotion.StepContext{
 		Project: "fake-project",
 		WorkDir: workDir,
 	}, builtin.OCIPushConfig{
@@ -730,7 +730,7 @@ func Test_ociPusher_run_localFile_errors(t *testing.T) {
 				maxArtifactSize: maxSize,
 			}
 
-			result, err := runner.run(context.Background(), &promotion.StepContext{
+			result, err := runner.run(t.Context(), &promotion.StepContext{
 				Project: "fake-project",
 				WorkDir: workDir,
 			}, builtin.OCIPushConfig{
@@ -766,7 +766,7 @@ func Test_ociPusher_run_localFile_pushError(t *testing.T) {
 		maxArtifactSize: int64(1 << 30),
 	}
 
-	result, err := runner.run(context.Background(), &promotion.StepContext{
+	result, err := runner.run(t.Context(), &promotion.StepContext{
 		Project: "fake-project",
 		WorkDir: workDir,
 	}, builtin.OCIPushConfig{
@@ -862,7 +862,7 @@ func Test_ociPusher_run_scopedAnnotationsOnImage(t *testing.T) {
 	}
 
 	// Push with mixed scoped annotations. "index:" should be ignored for images.
-	result, err := runner.run(context.Background(), &promotion.StepContext{
+	result, err := runner.run(t.Context(), &promotion.StepContext{
 		Project: "fake-project",
 	}, builtin.OCIPushConfig{
 		SrcRef:  fmt.Sprintf("%s/test/scoped:v1", regHost),
@@ -909,7 +909,7 @@ func Test_ociPusher_run_ociManifestAnnotations(t *testing.T) {
 		maxArtifactSize: int64(1 << 30),
 	}
 
-	result, err := runner.run(context.Background(), &promotion.StepContext{
+	result, err := runner.run(t.Context(), &promotion.StepContext{
 		Project: "fake-project",
 	}, builtin.OCIPushConfig{
 		SrcRef:  fmt.Sprintf("%s/test/oci:v1", regHost),
@@ -1015,7 +1015,7 @@ func Test_ociPusher_push_sizeLimitExceeded(t *testing.T) {
 				maxArtifactSize: 100, // tiny limit to trigger the error
 			}
 
-			result, err := runner.run(context.Background(), &promotion.StepContext{
+			result, err := runner.run(t.Context(), &promotion.StepContext{
 				Project: "fake-project",
 			}, builtin.OCIPushConfig{
 				SrcRef:  tt.srcRef,
@@ -1049,7 +1049,7 @@ func Test_ociPusher_push_sizeLimitZero(t *testing.T) {
 	stepCtx := &promotion.StepContext{Project: "fake-project"}
 
 	t.Run("cross-repo push is blocked", func(t *testing.T) {
-		result, err := runner.run(context.Background(), stepCtx, builtin.OCIPushConfig{
+		result, err := runner.run(t.Context(), stepCtx, builtin.OCIPushConfig{
 			SrcRef:  fmt.Sprintf("%s/test/img:v1", regHost),
 			DestRef: fmt.Sprintf("%s/other/repo:v1", regHost),
 		})
@@ -1058,7 +1058,7 @@ func Test_ociPusher_push_sizeLimitZero(t *testing.T) {
 	})
 
 	t.Run("same-repo retag succeeds", func(t *testing.T) {
-		result, err := runner.run(context.Background(), stepCtx, builtin.OCIPushConfig{
+		result, err := runner.run(t.Context(), stepCtx, builtin.OCIPushConfig{
 			SrcRef:  fmt.Sprintf("%s/test/img:v1", regHost),
 			DestRef: fmt.Sprintf("%s/test/img:v2", regHost),
 		})
@@ -1085,7 +1085,7 @@ func Test_ociPusher_push_sizeLimitDisabled(t *testing.T) {
 		maxArtifactSize: -1, // unlimited
 	}
 
-	result, err := runner.run(context.Background(), &promotion.StepContext{
+	result, err := runner.run(t.Context(), &promotion.StepContext{
 		Project: "fake-project",
 	}, builtin.OCIPushConfig{
 		SrcRef:  fmt.Sprintf("%s/test/img:v1", regHost),
