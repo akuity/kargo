@@ -127,13 +127,7 @@ func Test_ociPusher_validate(t *testing.T) {
 }
 
 func Test_ociPusher_run(t *testing.T) {
-	// Start an in-memory registry for testing.
-	regHandler := registry.New()
-	srv := httptest.NewServer(regHandler)
-	t.Cleanup(srv.Close)
-
-	// Strip the "http://" prefix to get a valid registry host.
-	regHost := srv.Listener.Addr().String()
+	regHost := newRegistry(t)
 
 	// Push a test image to the registry for use as a source.
 	srcImageRef := fmt.Sprintf("%s/test/image:v1.0.0", regHost)
@@ -472,10 +466,7 @@ func Test_ociPusher_run_credentialError(t *testing.T) {
 
 // Test that annotations don't mutate the source image when none are provided.
 func Test_ociPusher_run_noAnnotationsMutation(t *testing.T) {
-	regHandler := registry.New()
-	srv := httptest.NewServer(regHandler)
-	t.Cleanup(srv.Close)
-	regHost := srv.Listener.Addr().String()
+	regHost := newRegistry(t)
 
 	// Create an OCI image with existing annotations.
 	srcImg, err := random.Image(256, 1)
@@ -539,10 +530,7 @@ func makeTarGz(t *testing.T) []byte {
 // Test that a local archive is pushed as a single-layer OCI artifact with the
 // configured media types and scoped annotations.
 func Test_ociPusher_run_localFile(t *testing.T) {
-	regHandler := registry.New()
-	srv := httptest.NewServer(regHandler)
-	t.Cleanup(srv.Close)
-	regHost := srv.Listener.Addr().String()
+	regHost := newRegistry(t)
 
 	const (
 		layerMediaType = "application/vnd.cncf.flux.content.v1.tar+gzip"
@@ -625,10 +613,7 @@ func Test_ociPusher_run_localFile(t *testing.T) {
 // Test that the layer and config media types default to their OCI equivalents
 // when none are configured.
 func Test_ociPusher_run_localFile_defaultMediaTypes(t *testing.T) {
-	regHandler := registry.New()
-	srv := httptest.NewServer(regHandler)
-	t.Cleanup(srv.Close)
-	regHost := srv.Listener.Addr().String()
+	regHost := newRegistry(t)
 
 	workDir := t.TempDir()
 	tarball := makeTarGz(t)
@@ -844,10 +829,7 @@ func Test_parseAnnotationScopes(t *testing.T) {
 }
 
 func Test_ociPusher_run_scopedAnnotationsOnImage(t *testing.T) {
-	regHandler := registry.New()
-	srv := httptest.NewServer(regHandler)
-	t.Cleanup(srv.Close)
-	regHost := srv.Listener.Addr().String()
+	regHost := newRegistry(t)
 
 	srcImg, err := random.Image(256, 1)
 	require.NoError(t, err)
@@ -892,10 +874,7 @@ func Test_ociPusher_run_scopedAnnotationsOnImage(t *testing.T) {
 
 // Test OCI image with an OCI manifest (not Docker) to ensure annotations work.
 func Test_ociPusher_run_ociManifestAnnotations(t *testing.T) {
-	regHandler := registry.New()
-	srv := httptest.NewServer(regHandler)
-	t.Cleanup(srv.Close)
-	regHost := srv.Listener.Addr().String()
+	regHost := newRegistry(t)
 
 	// Create an OCI-format image (empty.Image is OCI by default).
 	srcImg := empty.Image
@@ -974,10 +953,7 @@ func Test_indexSize(t *testing.T) {
 }
 
 func Test_ociPusher_push_sizeLimitExceeded(t *testing.T) {
-	regHandler := registry.New()
-	srv := httptest.NewServer(regHandler)
-	t.Cleanup(srv.Close)
-	regHost := srv.Listener.Addr().String()
+	regHost := newRegistry(t)
 
 	// Push a test image (will exceed our tiny limit).
 	srcImg, err := random.Image(256, 1)
@@ -1030,10 +1006,7 @@ func Test_ociPusher_push_sizeLimitExceeded(t *testing.T) {
 }
 
 func Test_ociPusher_push_sizeLimitZero(t *testing.T) {
-	regHandler := registry.New()
-	srv := httptest.NewServer(regHandler)
-	t.Cleanup(srv.Close)
-	regHost := srv.Listener.Addr().String()
+	regHost := newRegistry(t)
 
 	srcImg, err := random.Image(256, 1)
 	require.NoError(t, err)
@@ -1068,10 +1041,7 @@ func Test_ociPusher_push_sizeLimitZero(t *testing.T) {
 }
 
 func Test_ociPusher_push_sizeLimitDisabled(t *testing.T) {
-	regHandler := registry.New()
-	srv := httptest.NewServer(regHandler)
-	t.Cleanup(srv.Close)
-	regHost := srv.Listener.Addr().String()
+	regHost := newRegistry(t)
 
 	srcImg, err := random.Image(256, 1)
 	require.NoError(t, err)
@@ -1093,6 +1063,15 @@ func Test_ociPusher_push_sizeLimitDisabled(t *testing.T) {
 	})
 	require.NoError(t, err)
 	assert.Equal(t, string(kargoapi.PromotionStepStatusSucceeded), string(result.Status))
+}
+
+func newRegistry(t *testing.T) string {
+	t.Helper()
+	regHandler := registry.New()
+	srv := httptest.NewServer(regHandler)
+	t.Cleanup(srv.Close)
+	regHost := srv.Listener.Addr().String()
+	return regHost
 }
 
 func Test_ociPusherConfig(t *testing.T) {
