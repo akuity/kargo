@@ -13180,6 +13180,45 @@ components:
           description: Status is the (optional) status of the Promotion.
           type: object
       type: object
+    PromotionRequestFreightReference:
+      properties:
+        name:
+          description: Name is the name of the Freight.
+          type: string
+      type: object
+    PromotionRequestPhase:
+      enum:
+      - Pending
+      - Running
+      - Succeeded
+      - Failed
+      - Errored
+      type: string
+      x-enum-varnames:
+      - PromotionRequestPhasePending
+      - PromotionRequestPhaseRunning
+      - PromotionRequestPhaseSucceeded
+      - PromotionRequestPhaseFailed
+      - PromotionRequestPhaseErrored
+    PromotionRequestReference:
+      properties:
+        finishedAt:
+          description: FinishedAt is the time at which the PromotionRequest completed.
+          type: string
+        freight:
+          allOf:
+          - $ref: "#/components/schemas/PromotionRequestFreightReference"
+          description: Freight identifies the Freight being promoted.
+          type: object
+        name:
+          description: Name is the name of the PromotionRequest.
+          type: string
+        phase:
+          allOf:
+          - $ref: "#/components/schemas/PromotionRequestPhase"
+          description: Phase is a high-level summary of the PromotionRequest's lifecycle.
+          type: object
+      type: object
     PromotionSpec:
       properties:
         freight:
@@ -14205,6 +14244,18 @@ components:
           - $ref: "#/components/schemas/PromotionReference"
           description: CurrentPromotion is a reference to the currently Running promotion.
           type: object
+        currentPromotionRequest:
+          allOf:
+          - $ref: "#/components/schemas/PromotionRequestReference"
+          description: |-
+            CurrentPromotionRequest is a reference to the PromotionRequest currently
+            fanning Freight out to this Stage's Targets. It is absent for a Stage that
+            governs no Targets.
+
+            Kargo Enterprise only: This field is ignored in Kargo OSS.
+
+            +optional
+          type: object
         effectiveAutoPromotionHolds:
           additionalProperties:
             $ref: "#/components/schemas/AutoPromotionHold"
@@ -14252,6 +14303,17 @@ components:
           allOf:
           - $ref: "#/components/schemas/PromotionReference"
           description: LastPromotion is a reference to the last completed promotion.
+          type: object
+        lastPromotionRequest:
+          allOf:
+          - $ref: "#/components/schemas/PromotionRequestReference"
+          description: |-
+            LastPromotionRequest is a reference to the last PromotionRequest to reach a
+            terminal phase. It is absent for a Stage that governs no Targets.
+
+            Kargo Enterprise only: This field is ignored in Kargo OSS.
+
+            +optional
           type: object
         metadata:
           additionalProperties:

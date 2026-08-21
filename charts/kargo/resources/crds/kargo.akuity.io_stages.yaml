@@ -1425,6 +1425,38 @@ spec:
                 required:
                 - name
                 type: object
+              currentPromotionRequest:
+                description: |-
+                  CurrentPromotionRequest is a reference to the PromotionRequest currently
+                  fanning Freight out to this Stage's Targets. It is absent for a Stage that
+                  governs no Targets.
+
+                  Kargo Enterprise only: This field is ignored in Kargo OSS.
+                properties:
+                  finishedAt:
+                    description: FinishedAt is the time at which the PromotionRequest
+                      completed.
+                    format: date-time
+                    type: string
+                  freight:
+                    description: Freight identifies the Freight being promoted.
+                    properties:
+                      name:
+                        description: Name is the name of the Freight.
+                        type: string
+                    required:
+                    - name
+                    type: object
+                  name:
+                    description: Name is the name of the PromotionRequest.
+                    type: string
+                  phase:
+                    description: Phase is a high-level summary of the PromotionRequest's
+                      lifecycle.
+                    type: string
+                required:
+                - name
+                type: object
               effectiveAutoPromotionHolds:
                 additionalProperties:
                   description: |-
@@ -2533,6 +2565,37 @@ spec:
                           type: object
                         type: array
                     type: object
+                required:
+                - name
+                type: object
+              lastPromotionRequest:
+                description: |-
+                  LastPromotionRequest is a reference to the last PromotionRequest to reach a
+                  terminal phase. It is absent for a Stage that governs no Targets.
+
+                  Kargo Enterprise only: This field is ignored in Kargo OSS.
+                properties:
+                  finishedAt:
+                    description: FinishedAt is the time at which the PromotionRequest
+                      completed.
+                    format: date-time
+                    type: string
+                  freight:
+                    description: Freight identifies the Freight being promoted.
+                    properties:
+                      name:
+                        description: Name is the name of the Freight.
+                        type: string
+                    required:
+                    - name
+                    type: object
+                  name:
+                    description: Name is the name of the PromotionRequest.
+                    type: string
+                  phase:
+                    description: Phase is a high-level summary of the PromotionRequest's
+                      lifecycle.
+                    type: string
                 required:
                 - name
                 type: object
