@@ -34,6 +34,7 @@ const (
 	PromotionsByTerminalField        = "terminal"
 
 	PromotionRequestsByStageAndFreightField = "stageAndFreight"
+	PromotionRequestsByStageField           = "stage"
 
 	RunningPromotionsByArgoCDApplicationsField = "applications"
 	RunningPromotionsByArgoCDSelectorsField    = "argoCDSelectors"
@@ -430,6 +431,16 @@ func PromotionsByStageAndFreight(obj client.Object) []string {
 	return []string{
 		StageAndFreightKey(promo.Spec.Stage, promo.Spec.Freight),
 	}
+}
+
+// PromotionRequestsByStage is a client.IndexerFunc that indexes
+// PromotionRequests by the Stage they promote on behalf of.
+func PromotionRequestsByStage(obj client.Object) []string {
+	promotionRequest, ok := obj.(*kargoapi.PromotionRequest)
+	if !ok {
+		return nil
+	}
+	return []string{promotionRequest.Spec.Stage}
 }
 
 // PromotionRequestsByStageAndFreight is a client.IndexerFunc that indexes

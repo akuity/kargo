@@ -718,9 +718,9 @@ section of the user guide.
 
 ## Garbage Collection
 
-Kargo includes a garbage collector that automatically removes old `Freight` and
-`Promotion` resources. The garbage collector offers a number of configuration
-options to manage the retention of these resources.
+Kargo includes a garbage collector that automatically removes old `Freight`,
+`Promotion`, and `PromotionRequest` resources. The garbage collector offers a
+number of configuration options to manage the retention of these resources.
 
 ### Disabling the Garbage Collector
 
@@ -734,8 +734,8 @@ garbageCollector:
 
 :::caution
 
-Disabling the garbage collector will result in old `Freight` and `Promotion`
-resources accumulating in the cluster. This can lead to increased resource
+Disabling the garbage collector will result in old `Freight`, `Promotion`, and
+`PromotionRequest` resources accumulating in the cluster. This can lead to increased resource
 usage and potential performance issues. Therefore, this is typically not
 recommended and should only be done with caution.
 
@@ -753,8 +753,8 @@ garbageCollector:
 
 ### Retention Settings
 
-The garbage collector offers settings to control the retention of `Promotion` and
-`Freight` resources.
+The garbage collector offers settings to control the retention of `Promotion`,
+`PromotionRequest`, and `Freight` resources.
 
 #### Promotion Retention
 
@@ -769,6 +769,24 @@ resources may exceed `maxRetainedPromotions` if some would-be-deleted
 resources for a `Stage` are in a terminal phase, the garbage collector simply
 retains the most recent `maxRetainedPromotions` and considers the rest for
 deletion (subject to the minimum age criterion).
+
+#### PromotionRequest Retention
+
+`PromotionRequest` resources are retained on the same terms as `Promotion`
+resources, counted separately. For each `Stage`, the garbage collector identifies
+the oldest `PromotionRequest` that is still in a non-terminal phase and retains
+up to `maxRetainedPromotionRequests` that are _older_ than it. Anything beyond
+that limit is eligible for deletion, but is only deleted once it has reached
+`minPromotionRequestDeletionAge`.
+
+:::note
+
+The budget is separate from `maxRetainedPromotions` because one
+`PromotionRequest` fans out to one `Promotion` per `Target`. A shared budget
+would let a `Stage` with many `Target`s evict the `PromotionRequest` records of
+`Promotion` resources that are themselves still retained.
+
+:::
 
 #### Freight Retention
 
@@ -792,6 +810,14 @@ garbageCollector:
   # non-terminal phase (for each Stage) that may be spared by the garbage
   # collector.
   maxRetainedPromotions: 20
+
+  # The minimum age a PromotionRequest must be before considered eligible for
+  # garbage collection. This is a duration string (e.g. 336h for 14 days).
+  minPromotionRequestDeletionAge: 336h
+  # The ideal maximum number of PromotionRequests OLDER than the oldest
+  # PromotionRequest in a non-terminal phase (for each Stage) that may be spared
+  # by the garbage collector.
+  maxRetainedPromotionRequests: 20
 
   # The minimum age Freight must be before considered eligible for garbage
   # collection. This is a duration string (e.g. 336h for 14 days).
