@@ -569,13 +569,25 @@ describe('transformMeasurements()', () => {
     ).not.toThrow();
   });
 
-  test('plain-text measurement value is surfaced as tableValue', () => {
+  test('plain-text measurement value has no tableValue', () => {
     const result = transformMeasurements([], [{ value: 'PASS', phase: 'Successful' }]);
-    expect(result.measurements[0].tableValue).toBe('PASS');
+    expect(result.measurements[0].tableValue).toBeNull();
   });
 
-  test('plain-text measurement value is not chartable', () => {
+  test('plain-text measurement value has no chart value', () => {
     const result = transformMeasurements([], [{ value: 'PASS', phase: 'Successful' }]);
-    expect(result.chartable).toBe(false);
+    expect(result.measurements[0].chartValue).toBeNull();
+  });
+
+  test('plain-text measurement value does not disable charting for the rest of the series', () => {
+    const result = transformMeasurements(
+      [],
+      [
+        { value: '1', phase: 'Successful' },
+        { value: 'PASS', phase: 'Successful' },
+        { value: '2', phase: 'Successful' }
+      ]
+    );
+    expect(result.chartable).toBe(true);
   });
 });
