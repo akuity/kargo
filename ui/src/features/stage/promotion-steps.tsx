@@ -34,21 +34,20 @@ export const PromotionSteps = (props: PromotionStepsProps) => {
 
   const phase = getPromotionStatusPhase(props.promotion);
 
+  const message = props.promotion?.status?.message;
+
+  // A failed step's message becomes the Promotion's, so it is already on screen.
+  const shownUnderStep = (props.promotion.status?.stepExecutionMetadata ?? []).some(
+    (meta, i) => isFailedStep(i, props.promotion.status) && !!meta.message
+  );
+
   const shouldShowMessage =
     isPromotionPhaseTerminal(phase) &&
     phase !== PromotionStatusPhase.SUCCEEDED &&
-    phase !== PromotionStatusPhase.ERRORED && // because its already handled at individual step level
-    !!props.promotion?.status?.message;
+    !!message &&
+    !shownUnderStep;
 
   const steps = props.promotion?.spec?.steps ?? [];
-
-  const errorItem = {
-    key: 'error',
-    label: <Alert message={props.promotion.status?.message} type='error' />,
-    showArrow: false,
-    collapsible: 'disabled' as const,
-    styles: { header: { paddingTop: 0 } }
-  };
 
   // Steps with a registered extension are interactive
   const hasExtension = (step: (typeof steps)[number]) =>
@@ -76,9 +75,26 @@ export const PromotionSteps = (props: PromotionStepsProps) => {
       key
     };
 
-    return isFailedStep(i, props.promotion.status)
-      ? [{ ...item, className: `${item.className || ''} !border-none` }, errorItem]
-      : [item];
+    if (!isFailedStep(i, props.promotion.status)) {
+      return [item];
+    }
+
+    const stepMessage = props.promotion.status?.stepExecutionMetadata?.[i]?.message;
+
+    if (!stepMessage) {
+      return [item];
+    }
+
+    return [
+      { ...item, className: `${item.className || ''} !border-none` },
+      {
+        key: `${key}-error`,
+        label: <Alert message={stepMessage} type='error' />,
+        showArrow: false,
+        collapsible: 'disabled' as const,
+        styles: { header: { paddingTop: 0 } }
+      }
+    ];
   });
 
   useEffect(() => {
@@ -97,9 +113,7 @@ export const PromotionSteps = (props: PromotionStepsProps) => {
         activeKey={activeKeys}
         onChange={(keys) => setActiveKeys(typeof keys === 'string' ? [keys] : keys)}
       />
-      {shouldShowMessage && (
-        <Alert message={props.promotion.status?.message} type='error' className='mt-4' />
-      )}
+      {shouldShowMessage && <Alert message={message} type='error' className='mt-4' />}
     </>
   );
 };
