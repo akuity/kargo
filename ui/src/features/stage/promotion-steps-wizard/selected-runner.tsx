@@ -21,7 +21,7 @@ export const SelectedRunner = (props: SelectedRunnerProps) => {
     <Card
       className={classNames('cursor-pointer', {
         'shadow-sm': props.isEditing,
-        'border-gray-400': props.isEditing
+        'border-gray-400 dark:border-neutral-600': props.isEditing
       })}
       size='small'
       onClick={props.onSettingOpen}

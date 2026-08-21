@@ -20,7 +20,9 @@ import { useProjectBreadcrumbs } from '../project-utils';
 const EventValue = ({ label, children }: { label: string; children: React.ReactNode }) => {
   return (
     <div className='flex py-2 items-center'>
-      <div className='font-medium text-xs text-right w-20 mr-4 text-gray-400'>{label}</div>
+      <div className='font-medium text-xs text-right w-20 mr-4 text-gray-400 dark:text-neutral-500'>
+        {label}
+      </div>
       <div>{children}</div>
     </div>
   );
@@ -82,7 +84,10 @@ const HumanReadableTimestamp = ({ timestamp }: { timestamp?: string }) => {
 
   return (
     <div className='flex items-center'>
-      {fromNow} <span className='text-xs font-mono text-gray-400 ml-4'>{fullTimestamp}</span>
+      {fromNow}{' '}
+      <span className='text-xs font-mono text-gray-400 dark:text-neutral-500 ml-4'>
+        {fullTimestamp}
+      </span>
     </div>
   );
 };
@@ -90,10 +95,10 @@ const HumanReadableTimestamp = ({ timestamp }: { timestamp?: string }) => {
 const EventRow = ({ event }: { event: V1Event }) => {
   return (
     <div className='mb-1 flex flex-col'>
-      <div className='uppercase text-xs text-gray-400 ml-auto mr-1 mb-1 font-mono'>
+      <div className='uppercase text-xs text-gray-400 dark:text-neutral-500 ml-auto mr-1 mb-1 font-mono'>
         {event.metadata?.name}
       </div>
-      <div className='flex items-center p-4 border border-solid border-gray-200 rounded-md mb-4'>
+      <div className='flex items-center p-4 border border-solid border-gray-200 dark:border-neutral-700 rounded-md mb-4'>
         <div className='flex flex-col mr-10'>
           <EventStatus event={event} className='mb-2' />
           <Tooltip title={`Count: ${event.count || 0}`}>

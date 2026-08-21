@@ -48,7 +48,7 @@ export const RulesTable = ({
             setRules && (
               <div
                 key='actions'
-                className='text-xs text-gray-400 font-semibold cursor-pointer ml-auto'
+                className='text-xs text-gray-400 dark:text-neutral-500 font-semibold cursor-pointer ml-auto'
                 onClick={() => {
                   setRules(rules.filter((r) => r !== rule));
                 }}

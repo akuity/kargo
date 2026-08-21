@@ -164,7 +164,7 @@ export const ProjectWizard = () => {
   };
 
   return (
-    <div className='flex flex-col h-full bg-gray-50'>
+    <div className='flex flex-col h-full bg-gray-50 dark:bg-neutral-800'>
       <ResumeDraftModal
         open={resumePromptOpen}
         hasCredentials={state.credentials.some((c) => c.auth !== 'ambient')}

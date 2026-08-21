@@ -33,7 +33,8 @@ export const WizardFooter = ({
       // Border spans the full width (incl. under the sidebar); the buttons are
       // inset so Back aligns with the content's left edge, tracking the
       // responsive sidebar: 16.5rem below 2xl (w-60), 19.5rem at 2xl+ (w-72).
-      className='sticky bottom-0 flex items-center justify-between border-0 border-t-2 border-t-black/5 border-solid bg-white py-4 pr-6 pl-[16.5rem] 2xl:pl-[19.5rem]'
+      className='sticky bottom-0 flex items-center justify-between bg-white dark:bg-neutral-900 py-4 pr-6 pl-[16.5rem] 2xl:pl-[19.5rem]'
+      style={{ borderTop: '2px solid var(--kargo-color-border-secondary, rgba(0,0,0,.05))' }}
     >
       <Button disabled={isFirst || backDisabled} onClick={onBack}>
         <FontAwesomeIcon icon={faChevronLeft} size='sm' />

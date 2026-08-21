@@ -74,7 +74,10 @@ const RepoCredentialCard = ({ cred, onChange, onRemove }: CredentialCardProps) =
     <Card
       title={
         <span className='flex items-center gap-2'>
-          <FontAwesomeIcon icon={iconForCredentialsType(cred.type)} className='text-gray-400' />
+          <FontAwesomeIcon
+            icon={iconForCredentialsType(cred.type)}
+            className='text-gray-400 dark:text-neutral-500'
+          />
           <span className='font-mono text-sm'>{cred.name || '(unnamed)'}</span>
           <Tag className='mr-0'>{cred.type}</Tag>
         </span>
@@ -206,8 +209,11 @@ export const StepCredentials = ({ value, onChange }: StepCredentialsProps) => {
     >
       {value.length === 0 ? (
         <div className='flex flex-col items-center py-10 text-center'>
-          <FontAwesomeIcon icon={faKey} className='text-2xl text-gray-300 mb-3' />
-          <div className='text-sm text-gray-500 max-w-md'>
+          <FontAwesomeIcon
+            icon={faKey}
+            className='text-2xl text-gray-300 dark:text-neutral-600 mb-3'
+          />
+          <div className='text-sm text-gray-500 dark:text-neutral-400 max-w-md'>
             Add credentials if your Warehouses will pull from a private repository the cluster
             cannot reach with ambient credentials. Otherwise, continue — you can add them later from
             project settings.

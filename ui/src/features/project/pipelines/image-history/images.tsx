@@ -97,7 +97,7 @@ export const Images = memo<ImagesProps>(({ hide, images, project, stages, wareho
                 className='w-2.5 h-2.5 rounded-full flex-shrink-0'
                 style={{ backgroundColor: stageColorMap[stageName] }}
               />
-              <Typography.Text className='text-xs font-medium text-gray-700 truncate max-w-[60px]'>
+              <Typography.Text className='text-xs font-medium text-gray-700 dark:text-neutral-200 truncate max-w-[60px]'>
                 {stageName}
               </Typography.Text>
             </Flex>
@@ -109,7 +109,7 @@ export const Images = memo<ImagesProps>(({ hide, images, project, stages, wareho
           const imageStageMap = selectedImageData?.tags[record.tag];
           if (!imageStageMap) {
             return (
-              <div className='w-full h-6 bg-gray-100 rounded text-xs flex items-center justify-center text-gray-400'>
+              <div className='w-full h-6 bg-gray-100 dark:bg-neutral-800 rounded text-xs flex items-center justify-center text-gray-400 dark:text-neutral-500'>
                 -
               </div>
             );
@@ -120,7 +120,7 @@ export const Images = memo<ImagesProps>(({ hide, images, project, stages, wareho
 
           if (!hasImage) {
             return (
-              <div className='w-full h-6 bg-gray-100 rounded text-xs flex items-center justify-center text-gray-400'>
+              <div className='w-full h-6 bg-gray-100 dark:bg-neutral-800 rounded text-xs flex items-center justify-center text-gray-400 dark:text-neutral-500'>
                 -
               </div>
             );
@@ -165,7 +165,7 @@ export const Images = memo<ImagesProps>(({ hide, images, project, stages, wareho
   }, [allTags]);
 
   return (
-    <Card className='shadow-xl border border-gray-200/75'>
+    <Card className='shadow-xl border border-gray-200/75 dark:border-neutral-700/75'>
       <Flex justify='space-between' align='center' className='mb-2'>
         <Flex align='baseline' gap={8}>
           <Typography.Title level={4} className='!mb-0'>
@@ -191,7 +191,7 @@ export const Images = memo<ImagesProps>(({ hide, images, project, stages, wareho
       {showHistory && (
         <Typography.Text
           type='secondary'
-          className='text-xs bg-gray-50 px-2 py-0.5 rounded block mb-2'
+          className='text-xs bg-gray-50 dark:bg-neutral-800 px-2 py-0.5 rounded block mb-2'
         >
           Numbers show promotion order (1 = most recent)
         </Typography.Text>

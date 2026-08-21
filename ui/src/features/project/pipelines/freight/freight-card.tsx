@@ -167,20 +167,24 @@ export const FreightCard = (props: FreightCardProps) => {
           <div
             {...listeners}
             {...attributes}
-            className='bg-gray-100 rounded text-center cursor-pointer hover:bg-gray-200 active:bg-gray-200'
+            className='bg-gray-100 dark:bg-neutral-700 rounded text-center cursor-pointer hover:bg-gray-200 dark:hover:bg-neutral-600 active:bg-gray-200 dark:active:bg-neutral-600'
             style={{ padding: '3px 0 1px' }}
             onMouseEnter={(e) => e.stopPropagation()}
           >
-            <FontAwesomeIcon icon={faGripVertical} className='text-gray-500' size='sm' />
+            <FontAwesomeIcon
+              icon={faGripVertical}
+              className='text-gray-500 dark:text-neutral-400'
+              size='sm'
+            />
           </div>
         )}
       </div>
       <div
         className={classNames(
-          'rounded-md text-center flex flex-col cursor-pointer pb-7 border border-solid border-gray-100 hover:border-gray-300',
+          'rounded-md text-center flex flex-col cursor-pointer pb-7 border border-solid border-gray-100 dark:border-neutral-700 hover:border-gray-300 dark:hover:border-neutral-600',
           {
-            'bg-gray-50': !isViewingFreight,
-            'bg-gray-100': isViewingFreight
+            'bg-gray-50 dark:bg-neutral-800': !isViewingFreight,
+            'bg-gray-100 dark:bg-neutral-700': isViewingFreight
           },
           props.className
         )}
