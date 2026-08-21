@@ -1,0 +1,80 @@
+## Example environment for running e2e tests against a self-managed kind cluster
+## with Kargo and Argo CD installed via Helm.
+##
+## The `cluster` section opts the run into managing its own cluster: the
+## envfuncs.ClusterSetupFuncs (CreateKindCluster -> InstallCertManager ->
+## InstallArgoCD -> InstallKargo) run only when it is present, and
+## envfuncs.ClusterTeardownFuncs (DestroyKindCluster) tears it down afterwards.
+## Wire these into a funcsloader (see framework/funcsloader) to use them.
+##
+## Every field below is optional; the values shown are the built-in defaults.
+description: "Provision a kind cluster and install Kargo + Argo CD via Helm"
+
+cluster:
+  name: kargo-e2e
+  ## Optional kind node image, e.g. kindest/node:v1.31.2
+  image: ""
+  ## Optional path to a kind cluster config file (supports a leading ~).
+  config_file: ""
+
+## cert-manager is a prerequisite for Kargo's self-signed certificates.
+cert_manager:
+  release_name: cert-manager
+  namespace: cert-manager
+  chart: jetstack/cert-manager
+  chart_repo_name: jetstack
+  chart_repo_url: https://charts.jetstack.io
+  version: ""
+  timeout: 10m
+  ## Defaults to ["crds.enabled=true"] when omitted.
+  set: []
+  values_files: []
+
+argocd:
+  release_name: argocd
+  namespace: argocd
+  chart: argo/argo-cd
+  chart_repo_name: argo
+  chart_repo_url: https://argoproj.github.io/argo-helm
+  version: ""
+  timeout: 10m
+  set: []
+  values_files: [
+    ../../values.argocd.test.yaml
+  ]
+
+kargo:
+  release_name: kargo
+  namespace: kargo
+  ## Defaults to the published OCI chart. Point at a local path (e.g.
+  ## ../../../charts/kargo) to test this checkout's chart.
+  chart: oci://ghcr.io/akuity/kargo-charts/kargo
+  ## For a classic (non-OCI) repo, set chart_repo_name + chart_repo_url instead.
+  chart_repo_name: ""
+  chart_repo_url: ""
+  version: ""
+  timeout: 10m
+  ## Optional locally built image to load into the kind cluster before install,
+  ## e.g. kargo:dev (pair with `set` entries pointing the chart at it).
+  image: ""
+  set: []
+  values_files: [
+    ../../values.test.yaml
+  ]
+
+kargo_cli:
+  ## Indicate that we need to run `kargo login` to login into a kargo instance in `kind` cluster
+  kargo_login:
+    ## Uste tmp directory to store kargo config
+    use_tmp_config_home: true
+
+argocd_cli:
+  ## Using system-local argocd config created by `argocd login`
+  config_file: ~/.config/argocd/config
+  ## Indicate that we need to run `argocd login` to login to an argocd instance in `kind` cluster
+  argocd_login: true
+
+context:
+  # kargo_demo_gitops_repo: <specify a repo here>
+  # git_pat: <specify a PAT here>
+  # http_endpoint: <URL of an HTTP endpoint that returns 2xx to a POST>

@@ -1,0 +1,37 @@
+apiVersion: argoproj.io/v1alpha1
+kind: ApplicationSet
+metadata:
+  name: kargo-argocd-helm-chart
+  namespace: argocd
+spec:
+  generators:
+  - list:
+      elements:
+      - stage: test
+      - stage: uat
+      - stage: prod
+  template:
+    metadata:
+      name: kargo-argocd-helm-chart-{{stage}}
+      annotations:
+        kargo.akuity.io/authorized-stage: kargo-argocd-helm-chart:{{stage}}
+    spec:
+      project: default
+      source:
+        repoURL: https://charts.bitnami.com/bitnami
+        chart: nginx
+        # Kargo will update targetRevision to move new charts into each stage
+        targetRevision: placeholder
+        helm:
+          parameters:
+          - name: service.type
+            value: ClusterIP
+      destination:
+        server: https://kubernetes.default.svc
+        namespace: kargo-argocd-helm-chart-{{stage}}
+      syncPolicy:
+        syncOptions:
+        - CreateNamespace=true
+  ignoreApplicationDifferences:
+  - jqPathExpressions:
+    - .spec.source.targetRevision

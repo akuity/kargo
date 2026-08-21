@@ -31,7 +31,7 @@ func TestArgocdUpdate(t *testing.T) {
 	project := "kargo-argocd-update"
 
 	feature.Setup(utils.SetupArgocdClient)
-	feature.Setup(utils.SetupArgoCDFixtures)
+	feature.Setup(utils.SetupArgoCDFixturesWithRepoURL(project))
 	feature.Teardown(utils.TeardownArgoCDFixtures)
 
 	feature.Setup(utils.SetupKargoClients)

@@ -1,0 +1,92 @@
+apiVersion: kargo.akuity.io/v1alpha1
+kind: Project
+metadata:
+  name: kargo-argocd-helm-chart
+---
+apiVersion: kargo.akuity.io/v1alpha1
+kind: Warehouse
+metadata:
+  name: kargo-demo
+  namespace: kargo-argocd-helm-chart
+spec:
+  subscriptions:
+  - chart:
+      repoURL: https://charts.bitnami.com/bitnami
+      name: nginx # Watch for new versions of this chart
+      semverConstraint: ^14.1.0
+---
+apiVersion: kargo.akuity.io/v1alpha1
+kind: PromotionTask
+metadata:
+  name: promo-process
+  namespace: kargo-argocd-helm-chart
+spec:
+  vars:
+  - name: chartRepo
+    value: https://charts.bitnami.com/bitnami
+  steps:
+  - uses: argocd-update
+    config:
+      apps:
+      - name: ${{ ctx.project }}-${{ ctx.stage }}
+        sources:
+        - repoURL: ${{ vars.chartRepo }}
+          chart: nginx
+          desiredRevision: ${{ chartFrom(vars.chartRepo, "nginx").Version }}
+          updateTargetRevision: true
+---
+apiVersion: kargo.akuity.io/v1alpha1
+kind: Stage
+metadata:
+  name: test
+  namespace: kargo-argocd-helm-chart
+spec:
+  requestedFreight:
+  - origin:
+      kind: Warehouse
+      name: kargo-demo
+    sources:
+      direct: true
+  promotionTemplate:
+    spec:
+      steps:
+      - task:
+          name: promo-process
+---
+apiVersion: kargo.akuity.io/v1alpha1
+kind: Stage
+metadata:
+  name: uat
+  namespace: kargo-argocd-helm-chart
+spec:
+  requestedFreight:
+  - origin:
+      kind: Warehouse
+      name: kargo-demo
+    sources:
+      stages:
+      - test
+  promotionTemplate:
+    spec:
+      steps:
+      - task:
+          name: promo-process
+---
+apiVersion: kargo.akuity.io/v1alpha1
+kind: Stage
+metadata:
+  name: prod
+  namespace: kargo-argocd-helm-chart
+spec:
+  requestedFreight:
+  - origin:
+      kind: Warehouse
+      name: kargo-demo
+    sources:
+      stages:
+      - uat
+  promotionTemplate:
+    spec:
+      steps:
+      - task:
+          name: promo-process

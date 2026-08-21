@@ -194,7 +194,8 @@ func KargoCreateHandler() decoder.HandlerFunc {
 		}
 
 		if err != nil {
-			return fmt.Errorf("error creating kargo resource: %w", err)
+			return fmt.Errorf("error creating kargo resource %v-%v: %w",
+				obj.GetObjectKind().GroupVersionKind().Kind, obj.GetName(), err)
 		}
 		createErrs := make([]error, 0, len(res.Results))
 		for _, r := range res.Results {
