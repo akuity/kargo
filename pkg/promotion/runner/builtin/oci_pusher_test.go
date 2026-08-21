@@ -678,10 +678,10 @@ func Test_ociPusher_run_localFile_errors(t *testing.T) {
 			errMsg:     "failed to stat source path",
 		},
 		{
-			name: "path traversal is contained",
+			name: "path traversal is rejected",
 			setup: func(_ *testing.T, _ string) string {
-				// SecureJoin clamps the escape to within workDir, where no such
-				// file exists, so it surfaces as a stat failure.
+				// The workspace root refuses to resolve a path that escapes it,
+				// so this surfaces as a stat failure.
 				return "../../etc/passwd"
 			},
 			wantStatus: kargoapi.PromotionStepStatusFailed,
@@ -729,6 +729,38 @@ func Test_ociPusher_run_localFile_errors(t *testing.T) {
 			assert.ErrorAs(t, err, &termErr)
 		})
 	}
+}
+
+// Test that a workspace that cannot be opened is reported as such, rather than
+// as a problem with the configured source path.
+func Test_ociPusher_run_localFile_workspaceError(t *testing.T) {
+	runner := &ociPusher{
+		credsDB:         &credentials.FakeDB{},
+		schemaLoader:    getConfigSchemaLoader(stepKindOCIPush),
+		maxArtifactSize: int64(1 << 30),
+	}
+
+	tmpDir := t.TempDir()
+	result, err := runner.run(t.Context(), &promotion.StepContext{
+		Project: "fake-project",
+		WorkDir: filepath.Join(tmpDir, "does-not-exist"),
+	}, builtin.OCIPushConfig{
+		SrcPath: "artifact.tar.gz",
+		DestRef: "registry.example.com/test/local:v1",
+	})
+	require.Error(t, err)
+	assert.ErrorContains(t, err, "failed to open workspace")
+	// The error names the workspace, not the source path, and does not leak the
+	// absolute path of the temporary workspace.
+	assert.NotContains(t, err.Error(), "artifact.tar.gz")
+	assert.NotContains(t, err.Error(), tmpDir)
+	assert.Equal(
+		t,
+		string(kargoapi.PromotionStepStatusFailed),
+		string(result.Status),
+	)
+	var termErr *promotion.TerminalError
+	assert.ErrorAs(t, err, &termErr)
 }
 
 // Test that a failure to write the artifact to the registry is reported as a

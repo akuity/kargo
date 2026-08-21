@@ -20,6 +20,7 @@ import (
 	"github.com/akuity/kargo/pkg/credentials"
 	libfmt "github.com/akuity/kargo/pkg/fmt"
 	"github.com/akuity/kargo/pkg/image/mutate"
+	"github.com/akuity/kargo/pkg/io/fs"
 	"github.com/akuity/kargo/pkg/promotion"
 	builtin "github.com/akuity/kargo/pkg/x/promotion/runner/builtin"
 )
@@ -207,7 +208,10 @@ func (p *ociPusher) pushLocalFile(
 	root, err := os.OpenRoot(stepCtx.WorkDir)
 	if err != nil {
 		return v1.Hash{}, kargoapi.PromotionStepStatusFailed, &promotion.TerminalError{
-			Err: fmt.Errorf("failed to resolve source path %q: %w", cfg.SrcPath, err),
+			Err: fmt.Errorf(
+				"failed to open workspace: %w",
+				fs.SanitizePathError(err, stepCtx.WorkDir),
+			),
 		}
 	}
 	defer root.Close()
