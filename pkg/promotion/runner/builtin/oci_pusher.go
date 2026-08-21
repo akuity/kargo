@@ -6,7 +6,6 @@ import (
 	"os"
 	"strings"
 
-	securejoin "github.com/cyphar/filepath-securejoin"
 	"github.com/google/go-containerregistry/pkg/name"
 	v1 "github.com/google/go-containerregistry/pkg/v1"
 	"github.com/google/go-containerregistry/pkg/v1/empty"
@@ -205,14 +204,15 @@ func (p *ociPusher) pushLocalFile(
 	dstRef name.Reference,
 	dstOpts []remote.Option,
 ) (v1.Hash, kargoapi.PromotionStepStatus, error) {
-	absPath, err := securejoin.SecureJoin(stepCtx.WorkDir, cfg.SrcPath)
+	root, err := os.OpenRoot(stepCtx.WorkDir)
 	if err != nil {
 		return v1.Hash{}, kargoapi.PromotionStepStatusFailed, &promotion.TerminalError{
 			Err: fmt.Errorf("failed to resolve source path %q: %w", cfg.SrcPath, err),
 		}
 	}
+	defer root.Close()
 
-	info, err := os.Stat(absPath)
+	info, err := root.Stat(cfg.SrcPath)
 	if err != nil {
 		return v1.Hash{}, kargoapi.PromotionStepStatusFailed, &promotion.TerminalError{
 			Err: fmt.Errorf("failed to stat source path %q: %w", cfg.SrcPath, err),
@@ -236,7 +236,7 @@ func (p *ociPusher) pushLocalFile(
 		}
 	}
 
-	data, err := os.ReadFile(absPath)
+	data, err := root.ReadFile(cfg.SrcPath)
 	if err != nil {
 		return v1.Hash{}, kargoapi.PromotionStepStatusErrored,
 			fmt.Errorf("failed to read source path %q: %w", cfg.SrcPath, err)
