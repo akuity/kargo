@@ -24,6 +24,7 @@ import { parseDate } from '@ui/utils/dates';
 
 import { Promotion as PromotionComponent } from '../project/pipelines/promotion/promotion';
 
+import { PromotionRequests } from './promotion-requests';
 import { useGetFreightMap } from './tabs/freight-history/use-get-freight-map';
 import { hasAbortRequest, promotionCompareFn } from './utils/promotion';
 
@@ -180,6 +181,8 @@ export const Promotions = ({ argocdShard }: { argocdShard?: ArgoCDShard }) => {
 
   return (
     <>
+      <PromotionRequests projectName={projectName || ''} stageName={stageName || ''} />
+
       <Table
         columns={columns}
         dataSource={promotions}

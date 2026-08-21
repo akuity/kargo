@@ -1512,6 +1512,91 @@
         ]
       }
     },
+    "/v1beta1/projects/{project}/promotion-requests": {
+      "get": {
+        "description": "List PromotionRequest resources from a project's namespace.\nReturns a PromotionRequestList resource.",
+        "produces": [
+          "application/json"
+        ],
+        "tags": [
+          "Core",
+          "Project-Level"
+        ],
+        "summary": "List PromotionRequests",
+        "operationId": "ListPromotionRequests",
+        "parameters": [
+          {
+            "type": "string",
+            "description": "Project name",
+            "name": "project",
+            "in": "path",
+            "required": true
+          },
+          {
+            "type": "string",
+            "description": "Stage filter",
+            "name": "stage",
+            "in": "query"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "PromotionRequestList custom resource",
+            "schema": {
+              "$ref": "#/definitions/PromotionRequestList"
+            }
+          }
+        },
+        "security": [
+          {
+            "BearerAuth": []
+          }
+        ]
+      }
+    },
+    "/v1beta1/projects/{project}/promotion-requests/{promotion-request}": {
+      "get": {
+        "description": "Retrieve a PromotionRequest resource from a project's namespace.",
+        "produces": [
+          "application/json"
+        ],
+        "tags": [
+          "Core",
+          "Project-Level"
+        ],
+        "summary": "Retrieve a PromotionRequest",
+        "operationId": "GetPromotionRequest",
+        "parameters": [
+          {
+            "type": "string",
+            "description": "Project name",
+            "name": "project",
+            "in": "path",
+            "required": true
+          },
+          {
+            "type": "string",
+            "description": "PromotionRequest name",
+            "name": "promotion-request",
+            "in": "path",
+            "required": true
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "PromotionRequest custom resource",
+            "schema": {
+              "$ref": "#/definitions/PromotionRequest"
+            }
+          }
+        },
+        "security": [
+          {
+            "BearerAuth": []
+          }
+        ]
+      }
+    },
     "/v1beta1/projects/{project}/promotion-tasks": {
       "get": {
         "description": "List PromotionTask resources from a project's namespace. Returns\na PromotionTaskList resource.",
@@ -7789,6 +7874,213 @@
           ]
         }
       }
+    },
+    "PromotionRequest": {
+      "type": "object",
+      "properties": {
+        "apiVersion": {
+          "description": "APIVersion defines the versioned schema of this representation of an object.\nServers should convert recognized schemas to the latest internal value, and\nmay reject unrecognized values.\nMore info: https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#resources\n+optional",
+          "type": "string"
+        },
+        "kind": {
+          "description": "Kind is a string value representing the REST resource this object represents.\nServers may infer this from the endpoint the client submits requests to.\nCannot be updated.\nIn CamelCase.\nMore info: https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#types-kinds\n+optional",
+          "type": "string"
+        },
+        "metadata": {
+          "$ref": "#/definitions/V1ObjectMeta"
+        },
+        "spec": {
+          "description": "Spec describes the Stage, the Freight, and the Targets of the\nPromotionRequest.\n\n+kubebuilder:validation:Required",
+          "allOf": [
+            {
+              "$ref": "#/definitions/PromotionRequestSpec"
+            }
+          ]
+        },
+        "status": {
+          "description": "Status describes the per-Target progress and the aggregate state of the\nPromotionRequest's Promotions.\n\n+kubebuilder:validation:Optional",
+          "allOf": [
+            {
+              "$ref": "#/definitions/PromotionRequestStatus"
+            }
+          ]
+        }
+      },
+      "required": [
+        "spec"
+      ]
+    },
+    "PromotionRequestList": {
+      "type": "object",
+      "properties": {
+        "apiVersion": {
+          "description": "APIVersion defines the versioned schema of this representation of an object.\nServers should convert recognized schemas to the latest internal value, and\nmay reject unrecognized values.\nMore info: https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#resources\n+optional",
+          "type": "string"
+        },
+        "items": {
+          "type": "array",
+          "items": {
+            "$ref": "#/definitions/PromotionRequest"
+          }
+        },
+        "kind": {
+          "description": "Kind is a string value representing the REST resource this object represents.\nServers may infer this from the endpoint the client submits requests to.\nCannot be updated.\nIn CamelCase.\nMore info: https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#types-kinds\n+optional",
+          "type": "string"
+        },
+        "metadata": {
+          "$ref": "#/definitions/V1ListMeta"
+        }
+      }
+    },
+    "PromotionRequestPhase": {
+      "type": "string",
+      "enum": [
+        "Pending",
+        "Running",
+        "Succeeded",
+        "Failed",
+        "Errored"
+      ],
+      "x-enum-varnames": [
+        "PromotionRequestPhasePending",
+        "PromotionRequestPhaseRunning",
+        "PromotionRequestPhaseSucceeded",
+        "PromotionRequestPhaseFailed",
+        "PromotionRequestPhaseErrored"
+      ]
+    },
+    "PromotionRequestSpec": {
+      "type": "object",
+      "properties": {
+        "freight": {
+          "description": "Freight specifies the piece of Freight promoted by the Stage.\nThe Freight MUST be in the same namespace as the PromotionRequest.\n\n+kubebuilder:validation:Required\n+kubebuilder:validation:MinLength=1\n+kubebuilder:validation:MaxLength=253\n+kubebuilder:validation:Pattern=`^[a-z0-9]([-a-z0-9]*[a-z0-9])?(\\.[a-z0-9]([-a-z0-9]*[a-z0-9])?)*$`\n+akuity:test-kubebuilder-pattern=KubernetesName\n+kubebuilder:validation:XValidation:rule=\"self == oldSelf\"",
+          "type": "string"
+        },
+        "stage": {
+          "description": "Stage specifies the name of the Stage that promotes the Freight.\nThe Stage MUST be in the same namespace as the PromotionRequest.\n\n+kubebuilder:validation:Required\n+kubebuilder:validation:MinLength=1\n+kubebuilder:validation:MaxLength=253\n+kubebuilder:validation:Pattern=`^[a-z0-9]([-a-z0-9]*[a-z0-9])?(\\.[a-z0-9]([-a-z0-9]*[a-z0-9])?)*$`\n+akuity:test-kubebuilder-pattern=KubernetesName\n+kubebuilder:validation:XValidation:rule=\"self == oldSelf\"",
+          "type": "string"
+        },
+        "targets": {
+          "description": "Targets names the Targets to which this PromotionRequest promotes Freight.\nEach Target MUST be in the same namespace as the PromotionRequest. The\nlist may be empty, which records that the governing Stage governed no\nTargets when the PromotionRequest was created -- distinct from the field\nbeing absent, which asks for it to be resolved.\n\nThis is a resolved list, not a selector: the Stage's target selectors are\nevaluated once, at creation, and the result recorded here. The membership\nof the PromotionRequest is therefore a snapshot of what the Stage governed\nat that moment, and its threshold and terminal state are computed against\nit rather than against a selector that could match differently later.\n\nThis is the only mutable field in the spec. The governing Stage owns it,\nand may add Targets to an in-flight PromotionRequest so that Targets\ndiscovered after creation can still receive the Freight. Target names MUST\nbe unique; this is enforced by the validating webhook rather than by the\nschema, since a list-map's per-item ownership tracking would roughly\ndouble the storage cost of every entry.\n\n+listType=atomic\n+kubebuilder:validation:Required",
+          "type": "array",
+          "items": {
+            "$ref": "#/definitions/PromotionRequestTarget"
+          }
+        }
+      },
+      "required": [
+        "freight",
+        "stage",
+        "targets"
+      ]
+    },
+    "PromotionRequestStatus": {
+      "type": "object",
+      "properties": {
+        "conditions": {
+          "description": "Conditions contains the last observations of the PromotionRequest's current\nstate.\n\n+patchMergeKey=type\n+patchStrategy=merge\n+listType=map\n+listMapKey=type",
+          "type": "array",
+          "items": {
+            "$ref": "#/definitions/V1Condition"
+          }
+        },
+        "finishedAt": {
+          "description": "FinishedAt is the time at which the PromotionRequest completed.",
+          "type": "string"
+        },
+        "observedGeneration": {
+          "description": "ObservedGeneration is the generation of the spec last reconciled.\n\n+kubebuilder:validation:Optional",
+          "type": "integer"
+        },
+        "phase": {
+          "description": "Phase is a high-level summary of the PromotionRequest's lifecycle.\n\n+kubebuilder:validation:Optional",
+          "allOf": [
+            {
+              "$ref": "#/definitions/PromotionRequestPhase"
+            }
+          ]
+        },
+        "startedAt": {
+          "description": "StartedAt is the time at which the PromotionRequest started.\n\n+kubebuilder:validation:Optional",
+          "type": "string"
+        },
+        "summary": {
+          "description": "Summary aggregates the phases of this PromotionRequest's child Promotions.\n\n+kubebuilder:validation:Optional",
+          "allOf": [
+            {
+              "$ref": "#/definitions/PromotionRequestSummary"
+            }
+          ]
+        },
+        "targets": {
+          "description": "Targets records progress against spec.targets: one entry per Target, with\nthe child Promotion promoting to it and that Promotion's phase. Entries\nappear as the reconciler acts on each Target in spec.targets.\n\nThe list is atomic rather than a map keyed by name: the reconciler is its\nonly writer, so per-item ownership tracking in managedFields would only\ninflate the object -- roughly doubling the storage cost of each entry --\nwithout ever being used to merge.\n\n+kubebuilder:validation:Optional\n+listType=atomic",
+          "type": "array",
+          "items": {
+            "$ref": "#/definitions/PromotionRequestTargetStatus"
+          }
+        }
+      }
+    },
+    "PromotionRequestSummary": {
+      "type": "object",
+      "properties": {
+        "aborted": {
+          "description": "Aborted is the number of child Promotions in the Aborted phase.",
+          "type": "integer"
+        },
+        "errored": {
+          "description": "Errored is the number of child Promotions in the Errored phase.",
+          "type": "integer"
+        },
+        "failed": {
+          "description": "Failed is the number of child Promotions in the Failed phase.",
+          "type": "integer"
+        },
+        "pending": {
+          "description": "Pending is the number of child Promotions in the Pending phase.",
+          "type": "integer"
+        },
+        "running": {
+          "description": "Running is the number of child Promotions in the Running phase.",
+          "type": "integer"
+        },
+        "succeeded": {
+          "description": "Succeeded is the number of child Promotions in the Succeeded phase.",
+          "type": "integer"
+        }
+      }
+    },
+    "PromotionRequestTarget": {
+      "type": "object",
+      "properties": {
+        "name": {
+          "description": "Name is the name of the Target.\n\n+kubebuilder:validation:Required\n+kubebuilder:validation:MinLength=1\n+kubebuilder:validation:MaxLength=253\n+kubebuilder:validation:Pattern=`^[a-z0-9]([-a-z0-9]*[a-z0-9])?(\\.[a-z0-9]([-a-z0-9]*[a-z0-9])?)*$`\n+akuity:test-kubebuilder-pattern=KubernetesName",
+          "type": "string"
+        }
+      },
+      "required": [
+        "name"
+      ]
+    },
+    "PromotionRequestTargetStatus": {
+      "type": "object",
+      "properties": {
+        "name": {
+          "description": "Name is the name of the Target.\n\n+kubebuilder:validation:Required\n+kubebuilder:validation:MinLength=1\n+kubebuilder:validation:MaxLength=253\n+kubebuilder:validation:Pattern=`^[a-z0-9]([-a-z0-9]*[a-z0-9])?(\\.[a-z0-9]([-a-z0-9]*[a-z0-9])?)*$`\n+akuity:test-kubebuilder-pattern=KubernetesName",
+          "type": "string"
+        },
+        "phase": {
+          "description": "Phase is the phase of that Promotion.\n\n+kubebuilder:validation:Optional",
+          "type": "string"
+        },
+        "promotion": {
+          "description": "Promotion is the name of the child Promotion currently promoting the\nFreight to this Target. Empty if none has been created yet.\n\n+kubebuilder:validation:Optional",
+          "type": "string"
+        }
+      },
+      "required": [
+        "name"
+      ]
     },
     "PromotionSpec": {
       "type": "object",

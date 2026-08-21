@@ -91,6 +91,7 @@ Class | Method | HTTP request | Description
 *CoreAPI* | [**GetProjectConfig**](docs/CoreAPI.md#getprojectconfig) | **Get** /v1beta1/projects/{project}/config | Retrieve ProjectConfig
 *CoreAPI* | [**GetProjectConfigMap**](docs/CoreAPI.md#getprojectconfigmap) | **Get** /v1beta1/projects/{project}/configmaps/{configmap} | Retrieve a project-level ConfigMap
 *CoreAPI* | [**GetPromotion**](docs/CoreAPI.md#getpromotion) | **Get** /v1beta1/projects/{project}/promotions/{promotion} | Retrieve a Promotion
+*CoreAPI* | [**GetPromotionRequest**](docs/CoreAPI.md#getpromotionrequest) | **Get** /v1beta1/projects/{project}/promotion-requests/{promotion-request} | Retrieve a PromotionRequest
 *CoreAPI* | [**GetPromotionTask**](docs/CoreAPI.md#getpromotiontask) | **Get** /v1beta1/projects/{project}/promotion-tasks/{promotion-task} | Retrieve a PromotionTask
 *CoreAPI* | [**GetSharedConfigMap**](docs/CoreAPI.md#getsharedconfigmap) | **Get** /v1beta1/shared/configmaps/{configmap} | Retrieve a shared ConfigMap
 *CoreAPI* | [**GetStage**](docs/CoreAPI.md#getstage) | **Get** /v1beta1/projects/{project}/stages/{stage} | Retrieve a Stage
@@ -101,6 +102,7 @@ Class | Method | HTTP request | Description
 *CoreAPI* | [**ListImages**](docs/CoreAPI.md#listimages) | **Get** /v1beta1/projects/{project}/images | List container images
 *CoreAPI* | [**ListProjectConfigMaps**](docs/CoreAPI.md#listprojectconfigmaps) | **Get** /v1beta1/projects/{project}/configmaps | List project-level ConfigMaps
 *CoreAPI* | [**ListProjects**](docs/CoreAPI.md#listprojects) | **Get** /v1beta1/projects | List projects
+*CoreAPI* | [**ListPromotionRequests**](docs/CoreAPI.md#listpromotionrequests) | **Get** /v1beta1/projects/{project}/promotion-requests | List PromotionRequests
 *CoreAPI* | [**ListPromotionTasks**](docs/CoreAPI.md#listpromotiontasks) | **Get** /v1beta1/projects/{project}/promotion-tasks | List PromotionTasks
 *CoreAPI* | [**ListPromotions**](docs/CoreAPI.md#listpromotions) | **Get** /v1beta1/projects/{project}/promotions | List Promotions
 *CoreAPI* | [**ListSharedConfigMaps**](docs/CoreAPI.md#listsharedconfigmaps) | **Get** /v1beta1/shared/configmaps | List shared ConfigMaps
@@ -289,6 +291,14 @@ Class | Method | HTTP request | Description
  - [PromotionPolicy](docs/PromotionPolicy.md)
  - [PromotionPolicySelector](docs/PromotionPolicySelector.md)
  - [PromotionReference](docs/PromotionReference.md)
+ - [PromotionRequest](docs/PromotionRequest.md)
+ - [PromotionRequestList](docs/PromotionRequestList.md)
+ - [PromotionRequestPhase](docs/PromotionRequestPhase.md)
+ - [PromotionRequestSpec](docs/PromotionRequestSpec.md)
+ - [PromotionRequestStatus](docs/PromotionRequestStatus.md)
+ - [PromotionRequestSummary](docs/PromotionRequestSummary.md)
+ - [PromotionRequestTarget](docs/PromotionRequestTarget.md)
+ - [PromotionRequestTargetStatus](docs/PromotionRequestTargetStatus.md)
  - [PromotionSpec](docs/PromotionSpec.md)
  - [PromotionStatus](docs/PromotionStatus.md)
  - [PromotionStep](docs/PromotionStep.md)
