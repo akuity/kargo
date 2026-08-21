@@ -1,6 +1,6 @@
 module github.com/akuity/kargo/hack/test/e2e
 
-go 1.26.7
+go 1.26.0
 
 replace (
 	github.com/akuity/kargo => ../../../

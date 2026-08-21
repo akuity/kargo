@@ -1,6 +1,6 @@
 module github.com/akuity/kargo/api
 
-go 1.26.7
+go 1.26.0
 
 require (
 	github.com/stretchr/testify v1.11.1
