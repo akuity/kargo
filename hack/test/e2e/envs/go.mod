@@ -1,3 +1,3 @@
 module envs
 
-go 1.26.0
+go 1.26.3
