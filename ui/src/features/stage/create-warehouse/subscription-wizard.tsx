@@ -15,6 +15,7 @@ import { FieldTemplate } from '@ui/features/common/form/rjsf/field-template';
 import { ObjectFieldTemplate } from '@ui/features/common/form/rjsf/object-field-template';
 import { IconSetByKargoTerminology } from '@ui/features/common/icons';
 import { ObjectDescription } from '@ui/features/common/object-description';
+import { SubscriptionNameTag } from '@ui/features/common/subscription-name-tag';
 
 import { warehouseCreateFormJSONSchema } from './schema';
 
@@ -180,7 +181,12 @@ SubscriptionWizard.Subscription = (props: {
       <Card.Meta
         avatar={icon && <FontAwesomeIcon icon={icon} />}
         title={subscriptionType}
-        description={subscriptionSource}
+        description={
+          <div className='flex items-center gap-2'>
+            <SubscriptionNameTag name={props.subscription.name} />
+            {subscriptionSource}
+          </div>
+        }
       />
     </Card>
   );

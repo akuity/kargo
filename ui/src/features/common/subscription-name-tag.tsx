@@ -9,13 +9,7 @@ import classNames from 'classnames';
 // Rendering it through this one component keeps it recognizable as a
 // subscription name wherever it appears. Renders nothing when there is no name,
 // so callers can drop it in without guarding.
-export const SubscriptionNameTag = ({
-  name,
-  className
-}: {
-  name?: string;
-  className?: string;
-}) => {
+export const SubscriptionNameTag = ({ name, className }: { name?: string; className?: string }) => {
   if (!name) {
     return null;
   }
