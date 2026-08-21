@@ -479,14 +479,15 @@ type StageStatus struct {
 	// fanning Freight out to this Stage's Targets. It is absent for a Stage that
 	// governs no Targets.
 	//
-	// Kargo Enterprise only: This field is ignored in Kargo OSS.
+	// Fanning Freight out to Targets is a Kargo Enterprise-only feature. Kargo
+	// OSS maintains this field all the same, but the PromotionRequest it refers
+	// to never gets further than being marked Errored for that reason.
 	//
 	// +optional
 	CurrentPromotionRequest *PromotionRequestReference `json:"currentPromotionRequest,omitempty"`
 	// LastPromotionRequest is a reference to the last PromotionRequest to reach a
-	// terminal phase. It is absent for a Stage that governs no Targets.
-	//
-	// Kargo Enterprise only: This field is ignored in Kargo OSS.
+	// terminal phase. It is absent for a Stage that governs no Targets, and only
+	// ever moves forward, so it outlives the PromotionRequest it refers to.
 	//
 	// +optional
 	LastPromotionRequest *PromotionRequestReference `json:"lastPromotionRequest,omitempty"`

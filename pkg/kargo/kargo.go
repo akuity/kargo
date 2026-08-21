@@ -61,6 +61,67 @@ func (p PromoPhaseChanged[T]) Update(e event.TypedUpdateEvent[T]) bool {
 	return newPromo.Status.Phase != oldPromo.Status.Phase
 }
 
+// NewPromotionRequestPhaseChangedPredicate returns a predicate that reacts to
+// changes in the phase of a PromotionRequest.
+func NewPromotionRequestPhaseChangedPredicate(
+	logger *logging.Logger,
+) PromotionRequestPhaseChanged {
+	return PromotionRequestPhaseChanged{logger: logger}
+}
+
+// PromotionRequestPhaseChanged is a predicate that returns true if the phase of
+// a PromotionRequest has changed. It is the PromotionRequest counterpart of
+// PromoPhaseChanged, and is used to trigger the reconciliation of the Stage a
+// PromotionRequest promotes on behalf of, so that the Stage can update the
+// current and last PromotionRequest references in its status.
+type PromotionRequestPhaseChanged struct {
+	predicate.TypedFuncs[*kargoapi.PromotionRequest]
+	logger *logging.Logger
+}
+
+func (p PromotionRequestPhaseChanged) Create(
+	event.TypedCreateEvent[*kargoapi.PromotionRequest],
+) bool {
+	// A PromotionRequest is created without a phase, so its creation tells the
+	// Stage nothing that the first phase change will not.
+	return false
+}
+
+func (p PromotionRequestPhaseChanged) Delete(
+	e event.TypedDeleteEvent[*kargoapi.PromotionRequest],
+) bool {
+	// If a PromotionRequest is deleted while it is non-terminal, we want to
+	// enqueue the associated Stage so that it can reset its
+	// status.currentPromotionRequest.
+	return e.Object != nil && !e.Object.Status.Phase.IsTerminal()
+}
+
+func (p PromotionRequestPhaseChanged) Generic(
+	event.TypedGenericEvent[*kargoapi.PromotionRequest],
+) bool {
+	return false
+}
+
+func (p PromotionRequestPhaseChanged) Update(
+	e event.TypedUpdateEvent[*kargoapi.PromotionRequest],
+) bool {
+	if e.ObjectOld == nil {
+		p.logger.Error(
+			nil, "Update event has no old object for update",
+			"event", e,
+		)
+		return false
+	}
+	if e.ObjectNew == nil {
+		p.logger.Error(
+			nil, "Update event has no new object for update",
+			"event", e,
+		)
+		return false
+	}
+	return e.ObjectNew.Status.Phase != e.ObjectOld.Status.Phase
+}
+
 // RefreshRequested is a predicate that returns true if the refresh annotation
 // has been set on a resource, or the value of the annotation has changed
 // compared to the previous state.

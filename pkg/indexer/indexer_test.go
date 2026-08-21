@@ -928,6 +928,19 @@ func TestPromotionRequestsByStageAndFreight(t *testing.T) {
 	})
 }
 
+func TestPromotionRequestsByStage(t *testing.T) {
+	t.Run("PromotionRequest", func(t *testing.T) {
+		promotionRequest := &kargoapi.PromotionRequest{
+			Spec: kargoapi.PromotionRequestSpec{Stage: "fake-stage"},
+		}
+		require.Equal(t, []string{"fake-stage"}, PromotionRequestsByStage(promotionRequest))
+	})
+
+	t.Run("not a PromotionRequest", func(t *testing.T) {
+		require.Nil(t, PromotionRequestsByStage(&kargoapi.Promotion{}))
+	})
+}
+
 func TestFreightByWarehouse(t *testing.T) {
 	testCases := []struct {
 		name     string

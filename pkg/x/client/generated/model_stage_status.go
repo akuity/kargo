@@ -27,7 +27,7 @@ type StageStatus struct {
 	Conditions []V1Condition `json:"conditions,omitempty"`
 	// CurrentPromotion is a reference to the currently Running promotion.
 	CurrentPromotion *PromotionReference `json:"currentPromotion,omitempty"`
-	// CurrentPromotionRequest is a reference to the PromotionRequest currently fanning Freight out to this Stage's Targets. It is absent for a Stage that governs no Targets.  Kargo Enterprise only: This field is ignored in Kargo OSS.  +optional
+	// CurrentPromotionRequest is a reference to the PromotionRequest currently fanning Freight out to this Stage's Targets. It is absent for a Stage that governs no Targets.  Fanning Freight out to Targets is a Kargo Enterprise-only feature. Kargo OSS maintains this field all the same, but the PromotionRequest it refers to never gets further than being marked Errored for that reason.  +optional
 	CurrentPromotionRequest *PromotionRequestReference `json:"currentPromotionRequest,omitempty"`
 	// EffectiveAutoPromotionHolds is the set of auto-promotion holds in effect right now. It is recomputed every reconciliation from AutoPromotionHolds plus the newest in-flight Promotions, and unlike AutoPromotionHolds is not durable. Clients should read this map to reflect current hold state.
 	EffectiveAutoPromotionHolds *map[string]AutoPromotionHold `json:"effectiveAutoPromotionHolds,omitempty"`
@@ -41,7 +41,7 @@ type StageStatus struct {
 	LastHandledRefresh *string `json:"lastHandledRefresh,omitempty"`
 	// LastPromotion is a reference to the last completed promotion.
 	LastPromotion *PromotionReference `json:"lastPromotion,omitempty"`
-	// LastPromotionRequest is a reference to the last PromotionRequest to reach a terminal phase. It is absent for a Stage that governs no Targets.  Kargo Enterprise only: This field is ignored in Kargo OSS.  +optional
+	// LastPromotionRequest is a reference to the last PromotionRequest to reach a terminal phase. It is absent for a Stage that governs no Targets, and only ever moves forward, so it outlives the PromotionRequest it refers to.  +optional
 	LastPromotionRequest *PromotionRequestReference `json:"lastPromotionRequest,omitempty"`
 	// Metadata is a map of arbitrary metadata associated with the Stage. This is useful for storing additional information about the Stage that can be shared across promotions, verifications, or other processes.
 	Metadata map[string]any `json:"metadata,omitempty"`
