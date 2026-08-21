@@ -128,64 +128,22 @@ spec:
                 - email
                 - name
                 type: object
-              promotionWindows:
+              promotionPolicies:
                 description: |-
-                  PromotionWindows defines time windows that gate promotions across the
-                  cluster. Each window may narrow its scope with a projectSelector and/or
-                  stageSelector. A Stage's effective schedule is the union of matching
-                  windows defined here and any project-level windows in ProjectConfig.
+                  ClusterPromotionPolicies is a ClusterConfig equivalent of PromotionPolicy.
+                  NOTE: Currently only supports promotion windows, auto-promotions and rollbacks are NOT supported.
 
                   Kargo Enterprise only: This field is ignored in Kargo OSS.
                 items:
                   description: |-
-                    PromotionWindow describes a recurring or one-shot time window that gates
-                    promotions for the Stages it matches. Windows may appear on both
-                    ProjectConfig and ClusterConfig; a Stage's effective schedule is the union of
-                    all matching windows from both. A schedule is open at a given time when no
-                    matching Deny window is active and, if any Allow windows match the Stage, at
-                    least one of them is active. Windows gate all promotions uniformly (auto,
-                    manual, and rollback).
-
-                    Kargo Enterprise only: This type is ignored in Kargo OSS. The schedule is
-                    evaluated and enforced only by Kargo Enterprise; OSS carries the API for
-                    compatibility, as it does for other Enterprise-only fields.
+                    ClusterPromotionPolicy is a partial ClusterConfig equivalent of PromotionPolicy.
+                    In addition to StageSelector it also has ProjectSelector allowing to apply it to specific projects only.
                   properties:
-                    dtend:
-                      description: |-
-                        DTEnd is the window's end in the same format as DTStart. When combined with
-                        RRule, DTEnd - DTStart defines the duration of each occurrence. The value
-                        is parsed and validated by Kargo Enterprise.
-                      type: string
-                    dtstart:
-                      description: |-
-                        DTStart is the window's start as an iCal date-time, with an optional
-                        "TZID=" prefix carrying the time zone (e.g.
-                        "TZID=America/New_York:20260101T090000"). The value is parsed and validated
-                        by Kargo Enterprise.
-                      type: string
-                    kind:
-                      description: |-
-                        Kind indicates whether this window allows or denies promotions while it is
-                        active.
-                      enum:
-                      - Allow
-                      - Deny
-                      type: string
-                    name:
-                      description: |-
-                        Name is a symbolic name for the window, unique within its list. It is used
-                        to identify the window in denial messages and events.
-                      maxLength: 253
-                      minLength: 1
-                      pattern: ^[a-z0-9]([-a-z0-9]*[a-z0-9])?(\.[a-z0-9]([-a-z0-9]*[a-z0-9])?)*$
-                      type: string
                     projectSelector:
                       description: |-
-                        ProjectSelector selects the Projects this window applies to. It is only
-                        meaningful on ClusterConfig windows; on ProjectConfig windows the Project
-                        is implicit and this field is rejected. When omitted on a ClusterConfig
-                        window, the window applies to all Projects. It reuses
-                        PromotionPolicySelector, matching Projects by exact name, glob/regex
+                        ProjectSelector selects the Projects this policy applies to.
+                        When omitted on a ClusterConfig policy, the policy applies to all Projects.
+                        It reuses PromotionPolicySelector, matching Projects by exact name, glob/regex
                         pattern, or label selector.
                       properties:
                         matchExpressions:
@@ -249,18 +207,75 @@ spec:
                           type: string
                       type: object
                       x-kubernetes-map-type: atomic
-                    rrule:
+                    promotionWindows:
                       description: |-
-                        RRule is an optional RFC 5545 recurrence rule (e.g. "FREQ=DAILY") that
-                        makes the window recurring. When omitted, the window is a one-shot interval
-                        defined by DTStart and DTEnd. The full value is parsed and validated by
-                        Kargo Enterprise.
-                      type: string
+                        PromotionWindows defines time windows that gate promotions across the
+                        cluster. A Stage's effective schedule is the union of matching
+                        windows defined here and any project-level policies in ProjectConfig.
+
+                        Kargo Enterprise only: This field is ignored in Kargo OSS.
+                      items:
+                        description: |-
+                          PromotionWindow describes a recurring or one-shot time window that gates
+                          promotions for the Stages matched by promotion policy or ClusterPromotionWindow.
+                          Windows may appear on both PromotionPolicy and ClusterConfig as ClusterPromotionWindow;
+                          a Stage's effective schedule is the union of all matching windows from both.
+                          A schedule is open at a given time when no matching Deny window is active and,
+                          if any Allow windows match the Stage, at least one of them is active.
+                          Windows gate all promotions uniformly (auto, manual, and rollback).
+
+                          Kargo Enterprise only: This type is ignored in Kargo OSS. The schedule is
+                          evaluated and enforced only by Kargo Enterprise; OSS carries the API for
+                          compatibility, as it does for other Enterprise-only fields.
+                        properties:
+                          dtend:
+                            description: |-
+                              DTEnd is the window's end in the same format as DTStart. When combined with
+                              RRule, DTEnd - DTStart defines the duration of each occurrence. The value
+                              is parsed and validated by Kargo Enterprise.
+                            type: string
+                          dtstart:
+                            description: |-
+                              DTStart is the window's start as an iCal date-time, with an optional
+                              "TZID=" prefix carrying the time zone (e.g.
+                              "TZID=America/New_York:20260101T090000"). The value is parsed and validated
+                              by Kargo Enterprise.
+                            type: string
+                          kind:
+                            description: |-
+                              Kind indicates whether this window allows or denies promotions while it is
+                              active.
+                            enum:
+                            - Allow
+                            - Deny
+                            type: string
+                          name:
+                            description: |-
+                              Name is a symbolic name for the window, unique within its list. It is used
+                              to identify the window in denial messages and events.
+                            maxLength: 253
+                            minLength: 1
+                            pattern: ^[a-z0-9]([-a-z0-9]*[a-z0-9])?(\.[a-z0-9]([-a-z0-9]*[a-z0-9])?)*$
+                            type: string
+                          rrule:
+                            description: |-
+                              RRule is an optional RFC 5545 recurrence rule (e.g. "FREQ=DAILY") that
+                              makes the window recurring. When omitted, the window is a one-shot interval
+                              defined by DTStart and DTEnd. The full value is parsed and validated by
+                              Kargo Enterprise.
+                            type: string
+                        required:
+                        - kind
+                        - name
+                        type: object
+                      type: array
+                      x-kubernetes-list-map-keys:
+                      - name
+                      x-kubernetes-list-type: map
                     stageSelector:
                       description: |-
-                        StageSelector selects the Stages this window applies to. When omitted, the
-                        window applies to all Stages in scope (project-wide on ProjectConfig,
-                        cluster-wide on ClusterConfig). It reuses PromotionPolicySelector, so it
+                        StageSelector selects the Stages this policy applies to. When omitted, the
+                        policy applies to all Stages in scope. It reuses PromotionPolicySelector, so it
                         can match by exact name, glob/regex pattern, or label selector.
                       properties:
                         matchExpressions:
@@ -324,9 +339,6 @@ spec:
                           type: string
                       type: object
                       x-kubernetes-map-type: atomic
-                  required:
-                  - kind
-                  - name
                   type: object
                 type: array
                 x-kubernetes-list-map-keys:

@@ -23,6 +23,8 @@ type PromotionPolicy struct {
 	AutoPromotionEnabled *bool `json:"autoPromotionEnabled,omitempty"`
 	// AutoRollback describes the conditions under which this Stage should automatically roll back to the last known-good (verified) Freight. When nil, auto-rollback is disabled.  Kargo Enterprise only: This field is ignored in Kargo OSS.
 	AutoRollback *AutoRollbackConfig `json:"autoRollback,omitempty"`
+	// PromotionWindows defines time windows that gate promotions for Stages in this Project. A Stage's effective schedule is the union of matching windows defined here and any cluster-level windows in ClusterConfig.  Kargo Enterprise only: This field is ignored in Kargo OSS.  +optional +listType=map +listMapKey=name
+	PromotionWindows []PromotionWindow `json:"promotionWindows,omitempty"`
 	// Stage is the name of the Stage to which this policy applies.  Deprecated: Use StageSelector instead.  +kubebuilder:validation:Pattern=^[a-z0-9]([-a-z0-9]*[a-z0-9])?(\\.[a-z0-9]([-a-z0-9]*[a-z0-9])?)*$
 	Stage *string `json:"stage,omitempty"`
 	// StageSelector is a selector that matches the Stage resource to which this policy applies.
@@ -110,6 +112,38 @@ func (o *PromotionPolicy) SetAutoRollback(v AutoRollbackConfig) {
 	o.AutoRollback = &v
 }
 
+// GetPromotionWindows returns the PromotionWindows field value if set, zero value otherwise.
+func (o *PromotionPolicy) GetPromotionWindows() []PromotionWindow {
+	if o == nil || IsNil(o.PromotionWindows) {
+		var ret []PromotionWindow
+		return ret
+	}
+	return o.PromotionWindows
+}
+
+// GetPromotionWindowsOk returns a tuple with the PromotionWindows field value if set, nil otherwise
+// and a boolean to check if the value has been set.
+func (o *PromotionPolicy) GetPromotionWindowsOk() ([]PromotionWindow, bool) {
+	if o == nil || IsNil(o.PromotionWindows) {
+		return nil, false
+	}
+	return o.PromotionWindows, true
+}
+
+// HasPromotionWindows returns a boolean if a field has been set.
+func (o *PromotionPolicy) HasPromotionWindows() bool {
+	if o != nil && !IsNil(o.PromotionWindows) {
+		return true
+	}
+
+	return false
+}
+
+// SetPromotionWindows gets a reference to the given []PromotionWindow and assigns it to the PromotionWindows field.
+func (o *PromotionPolicy) SetPromotionWindows(v []PromotionWindow) {
+	o.PromotionWindows = v
+}
+
 // GetStage returns the Stage field value if set, zero value otherwise.
 func (o *PromotionPolicy) GetStage() string {
 	if o == nil || IsNil(o.Stage) {
@@ -189,6 +223,9 @@ func (o PromotionPolicy) ToMap() (map[string]interface{}, error) {
 	}
 	if !IsNil(o.AutoRollback) {
 		toSerialize["autoRollback"] = o.AutoRollback
+	}
+	if !IsNil(o.PromotionWindows) {
+		toSerialize["promotionWindows"] = o.PromotionWindows
 	}
 	if !IsNil(o.Stage) {
 		toSerialize["stage"] = o.Stage

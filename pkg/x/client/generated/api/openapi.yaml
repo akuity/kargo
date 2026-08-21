@@ -11207,12 +11207,10 @@ components:
             via the Helm chart.
             +optional
           type: object
-        promotionWindows:
+        promotionPolicies:
           description: |-
-            PromotionWindows defines time windows that gate promotions across the
-            cluster. Each window may narrow its scope with a projectSelector and/or
-            stageSelector. A Stage's effective schedule is the union of matching
-            windows defined here and any project-level windows in ProjectConfig.
+            ClusterPromotionPolicies is a ClusterConfig equivalent of PromotionPolicy.
+            NOTE: Currently only supports promotion windows, auto-promotions and rollbacks are NOT supported.
 
             Kargo Enterprise only: This field is ignored in Kargo OSS.
 
@@ -11220,7 +11218,7 @@ components:
             +listType=map
             +listMapKey=name
           items:
-            $ref: "#/components/schemas/PromotionWindow"
+            $ref: "#/components/schemas/ClusterPromotionPolicy"
           type: array
         stageLinks:
           description: |-
@@ -11272,6 +11270,44 @@ components:
           items:
             $ref: "#/components/schemas/WebhookReceiverDetails"
           type: array
+      type: object
+    ClusterPromotionPolicy:
+      properties:
+        projectSelector:
+          allOf:
+          - $ref: "#/components/schemas/PromotionPolicySelector"
+          description: |-
+            ProjectSelector selects the Projects this policy applies to.
+            When omitted on a ClusterConfig policy, the policy applies to all Projects.
+            It reuses PromotionPolicySelector, matching Projects by exact name, glob/regex
+            pattern, or label selector.
+
+            +optional
+          type: object
+        promotionWindows:
+          description: |-
+            PromotionWindows defines time windows that gate promotions across the
+            cluster. A Stage's effective schedule is the union of matching
+            windows defined here and any project-level policies in ProjectConfig.
+
+            Kargo Enterprise only: This field is ignored in Kargo OSS.
+
+            +optional
+            +listType=map
+            +listMapKey=name
+          items:
+            $ref: "#/components/schemas/PromotionWindow"
+          type: array
+        stageSelector:
+          allOf:
+          - $ref: "#/components/schemas/PromotionPolicySelector"
+          description: |-
+            StageSelector selects the Stages this policy applies to. When omitted, the
+            policy applies to all Stages in scope. It reuses PromotionPolicySelector, so it
+            can match by exact name, glob/regex pattern, or label selector.
+
+            +optional
+          type: object
       type: object
     ClusterPromotionTask:
       example:
@@ -12753,20 +12789,6 @@ components:
           items:
             $ref: "#/components/schemas/PromotionPolicy"
           type: array
-        promotionWindows:
-          description: |-
-            PromotionWindows defines time windows that gate promotions for Stages in
-            this Project. A Stage's effective schedule is the union of matching windows
-            defined here and any cluster-level windows in ClusterConfig.
-
-            Kargo Enterprise only: This field is ignored in Kargo OSS.
-
-            +optional
-            +listType=map
-            +listMapKey=name
-          items:
-            $ref: "#/components/schemas/PromotionWindow"
-          type: array
         stageLinks:
           description: |-
             StageLinks defines deep links shown when viewing Stage resources within
@@ -13105,6 +13127,20 @@ components:
 
             Kargo Enterprise only: This field is ignored in Kargo OSS.
           type: object
+        promotionWindows:
+          description: |-
+            PromotionWindows defines time windows that gate promotions for Stages in
+            this Project. A Stage's effective schedule is the union of matching windows
+            defined here and any cluster-level windows in ClusterConfig.
+
+            Kargo Enterprise only: This field is ignored in Kargo OSS.
+
+            +optional
+            +listType=map
+            +listMapKey=name
+          items:
+            $ref: "#/components/schemas/PromotionWindow"
+          type: array
         stage:
           description: |-
             Stage is the name of the Stage to which this policy applies.
@@ -13750,19 +13786,6 @@ components:
             +kubebuilder:validation:Pattern=`^[a-z0-9]([-a-z0-9]*[a-z0-9])?(\.[a-z0-9]([-a-z0-9]*[a-z0-9])?)*$`
             +akuity:test-kubebuilder-pattern=KubernetesName
           type: string
-        projectSelector:
-          allOf:
-          - $ref: "#/components/schemas/PromotionPolicySelector"
-          description: |-
-            ProjectSelector selects the Projects this window applies to. It is only
-            meaningful on ClusterConfig windows; on ProjectConfig windows the Project
-            is implicit and this field is rejected. When omitted on a ClusterConfig
-            window, the window applies to all Projects. It reuses
-            PromotionPolicySelector, matching Projects by exact name, glob/regex
-            pattern, or label selector.
-
-            +optional
-          type: object
         rrule:
           description: |-
             RRule is an optional RFC 5545 recurrence rule (e.g. "FREQ=DAILY") that
@@ -13772,17 +13795,6 @@ components:
 
             +optional
           type: string
-        stageSelector:
-          allOf:
-          - $ref: "#/components/schemas/PromotionPolicySelector"
-          description: |-
-            StageSelector selects the Stages this window applies to. When omitted, the
-            window applies to all Stages in scope (project-wide on ProjectConfig,
-            cluster-wide on ClusterConfig). It reuses PromotionPolicySelector, so it
-            can match by exact name, glob/regex pattern, or label selector.
-
-            +optional
-          type: object
       required:
       - kind
       - name

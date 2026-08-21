@@ -81,36 +81,13 @@
           ],
           "type": "object"
         },
-        "promotionWindows": {
-          "description": "PromotionWindows defines time windows that gate promotions across the\ncluster. Each window may narrow its scope with a projectSelector and/or\nstageSelector. A Stage's effective schedule is the union of matching\nwindows defined here and any project-level windows in ProjectConfig.\n\nKargo Enterprise only: This field is ignored in Kargo OSS.",
+        "promotionPolicies": {
+          "description": "ClusterPromotionPolicies is a ClusterConfig equivalent of PromotionPolicy.\nNOTE: Currently only supports promotion windows, auto-promotions and rollbacks are NOT supported.\n\nKargo Enterprise only: This field is ignored in Kargo OSS.",
           "items": {
-            "description": "PromotionWindow describes a recurring or one-shot time window that gates\npromotions for the Stages it matches. Windows may appear on both\nProjectConfig and ClusterConfig; a Stage's effective schedule is the union of\nall matching windows from both. A schedule is open at a given time when no\nmatching Deny window is active and, if any Allow windows match the Stage, at\nleast one of them is active. Windows gate all promotions uniformly (auto,\nmanual, and rollback).\n\nKargo Enterprise only: This type is ignored in Kargo OSS. The schedule is\nevaluated and enforced only by Kargo Enterprise; OSS carries the API for\ncompatibility, as it does for other Enterprise-only fields.",
+            "description": "ClusterPromotionPolicy is a partial ClusterConfig equivalent of PromotionPolicy.\nIn addition to StageSelector it also has ProjectSelector allowing to apply it to specific projects only.",
             "properties": {
-              "dtend": {
-                "description": "DTEnd is the window's end in the same format as DTStart. When combined with\nRRule, DTEnd - DTStart defines the duration of each occurrence. The value\nis parsed and validated by Kargo Enterprise.",
-                "type": "string"
-              },
-              "dtstart": {
-                "description": "DTStart is the window's start as an iCal date-time, with an optional\n\"TZID=\" prefix carrying the time zone (e.g.\n\"TZID=America/New_York:20260101T090000\"). The value is parsed and validated\nby Kargo Enterprise.",
-                "type": "string"
-              },
-              "kind": {
-                "description": "Kind indicates whether this window allows or denies promotions while it is\nactive.",
-                "enum": [
-                  "Allow",
-                  "Deny"
-                ],
-                "type": "string"
-              },
-              "name": {
-                "description": "Name is a symbolic name for the window, unique within its list. It is used\nto identify the window in denial messages and events.",
-                "maxLength": 253,
-                "minLength": 1,
-                "pattern": "^[a-z0-9]([-a-z0-9]*[a-z0-9])?(\\.[a-z0-9]([-a-z0-9]*[a-z0-9])?)*$",
-                "type": "string"
-              },
               "projectSelector": {
-                "description": "ProjectSelector selects the Projects this window applies to. It is only\nmeaningful on ClusterConfig windows; on ProjectConfig windows the Project\nis implicit and this field is rejected. When omitted on a ClusterConfig\nwindow, the window applies to all Projects. It reuses\nPromotionPolicySelector, matching Projects by exact name, glob/regex\npattern, or label selector.",
+                "description": "ProjectSelector selects the Projects this policy applies to.\nWhen omitted on a ClusterConfig policy, the policy applies to all Projects.\nIt reuses PromotionPolicySelector, matching Projects by exact name, glob/regex\npattern, or label selector.",
                 "properties": {
                   "matchExpressions": {
                     "description": "matchExpressions is a list of label selector requirements. The requirements are ANDed.",
@@ -158,12 +135,53 @@
                 "type": "object",
                 "x-kubernetes-map-type": "atomic"
               },
-              "rrule": {
-                "description": "RRule is an optional RFC 5545 recurrence rule (e.g. \"FREQ=DAILY\") that\nmakes the window recurring. When omitted, the window is a one-shot interval\ndefined by DTStart and DTEnd. The full value is parsed and validated by\nKargo Enterprise.",
-                "type": "string"
+              "promotionWindows": {
+                "description": "PromotionWindows defines time windows that gate promotions across the\ncluster. A Stage's effective schedule is the union of matching\nwindows defined here and any project-level policies in ProjectConfig.\n\nKargo Enterprise only: This field is ignored in Kargo OSS.",
+                "items": {
+                  "description": "PromotionWindow describes a recurring or one-shot time window that gates\npromotions for the Stages matched by promotion policy or ClusterPromotionWindow.\nWindows may appear on both PromotionPolicy and ClusterConfig as ClusterPromotionWindow;\na Stage's effective schedule is the union of all matching windows from both.\nA schedule is open at a given time when no matching Deny window is active and,\nif any Allow windows match the Stage, at least one of them is active.\nWindows gate all promotions uniformly (auto, manual, and rollback).\n\nKargo Enterprise only: This type is ignored in Kargo OSS. The schedule is\nevaluated and enforced only by Kargo Enterprise; OSS carries the API for\ncompatibility, as it does for other Enterprise-only fields.",
+                  "properties": {
+                    "dtend": {
+                      "description": "DTEnd is the window's end in the same format as DTStart. When combined with\nRRule, DTEnd - DTStart defines the duration of each occurrence. The value\nis parsed and validated by Kargo Enterprise.",
+                      "type": "string"
+                    },
+                    "dtstart": {
+                      "description": "DTStart is the window's start as an iCal date-time, with an optional\n\"TZID=\" prefix carrying the time zone (e.g.\n\"TZID=America/New_York:20260101T090000\"). The value is parsed and validated\nby Kargo Enterprise.",
+                      "type": "string"
+                    },
+                    "kind": {
+                      "description": "Kind indicates whether this window allows or denies promotions while it is\nactive.",
+                      "enum": [
+                        "Allow",
+                        "Deny"
+                      ],
+                      "type": "string"
+                    },
+                    "name": {
+                      "description": "Name is a symbolic name for the window, unique within its list. It is used\nto identify the window in denial messages and events.",
+                      "maxLength": 253,
+                      "minLength": 1,
+                      "pattern": "^[a-z0-9]([-a-z0-9]*[a-z0-9])?(\\.[a-z0-9]([-a-z0-9]*[a-z0-9])?)*$",
+                      "type": "string"
+                    },
+                    "rrule": {
+                      "description": "RRule is an optional RFC 5545 recurrence rule (e.g. \"FREQ=DAILY\") that\nmakes the window recurring. When omitted, the window is a one-shot interval\ndefined by DTStart and DTEnd. The full value is parsed and validated by\nKargo Enterprise.",
+                      "type": "string"
+                    }
+                  },
+                  "required": [
+                    "kind",
+                    "name"
+                  ],
+                  "type": "object"
+                },
+                "type": "array",
+                "x-kubernetes-list-map-keys": [
+                  "name"
+                ],
+                "x-kubernetes-list-type": "map"
               },
               "stageSelector": {
-                "description": "StageSelector selects the Stages this window applies to. When omitted, the\nwindow applies to all Stages in scope (project-wide on ProjectConfig,\ncluster-wide on ClusterConfig). It reuses PromotionPolicySelector, so it\ncan match by exact name, glob/regex pattern, or label selector.",
+                "description": "StageSelector selects the Stages this policy applies to. When omitted, the\npolicy applies to all Stages in scope. It reuses PromotionPolicySelector, so it\ncan match by exact name, glob/regex pattern, or label selector.",
                 "properties": {
                   "matchExpressions": {
                     "description": "matchExpressions is a list of label selector requirements. The requirements are ANDed.",
@@ -212,10 +230,6 @@
                 "x-kubernetes-map-type": "atomic"
               }
             },
-            "required": [
-              "kind",
-              "name"
-            ],
             "type": "object"
           },
           "type": "array",

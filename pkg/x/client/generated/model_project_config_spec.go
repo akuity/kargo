@@ -23,8 +23,6 @@ type ProjectConfigSpec struct {
 	FreightLinks []DeepLink `json:"freightLinks,omitempty"`
 	// PromotionPolicies defines policies governing the promotion of Freight to specific Stages within the Project.
 	PromotionPolicies []PromotionPolicy `json:"promotionPolicies,omitempty"`
-	// PromotionWindows defines time windows that gate promotions for Stages in this Project. A Stage's effective schedule is the union of matching windows defined here and any cluster-level windows in ClusterConfig.  Kargo Enterprise only: This field is ignored in Kargo OSS.  +optional +listType=map +listMapKey=name
-	PromotionWindows []PromotionWindow `json:"promotionWindows,omitempty"`
 	// StageLinks defines deep links shown when viewing Stage resources within this project. These are shown in addition to any cluster-level StageLinks defined in ClusterConfig.  +optional
 	StageLinks []DeepLink `json:"stageLinks,omitempty"`
 	// WebhookReceivers describes Project-specific webhook receivers used for processing events from various external platforms
@@ -112,38 +110,6 @@ func (o *ProjectConfigSpec) SetPromotionPolicies(v []PromotionPolicy) {
 	o.PromotionPolicies = v
 }
 
-// GetPromotionWindows returns the PromotionWindows field value if set, zero value otherwise.
-func (o *ProjectConfigSpec) GetPromotionWindows() []PromotionWindow {
-	if o == nil || IsNil(o.PromotionWindows) {
-		var ret []PromotionWindow
-		return ret
-	}
-	return o.PromotionWindows
-}
-
-// GetPromotionWindowsOk returns a tuple with the PromotionWindows field value if set, nil otherwise
-// and a boolean to check if the value has been set.
-func (o *ProjectConfigSpec) GetPromotionWindowsOk() ([]PromotionWindow, bool) {
-	if o == nil || IsNil(o.PromotionWindows) {
-		return nil, false
-	}
-	return o.PromotionWindows, true
-}
-
-// HasPromotionWindows returns a boolean if a field has been set.
-func (o *ProjectConfigSpec) HasPromotionWindows() bool {
-	if o != nil && !IsNil(o.PromotionWindows) {
-		return true
-	}
-
-	return false
-}
-
-// SetPromotionWindows gets a reference to the given []PromotionWindow and assigns it to the PromotionWindows field.
-func (o *ProjectConfigSpec) SetPromotionWindows(v []PromotionWindow) {
-	o.PromotionWindows = v
-}
-
 // GetStageLinks returns the StageLinks field value if set, zero value otherwise.
 func (o *ProjectConfigSpec) GetStageLinks() []DeepLink {
 	if o == nil || IsNil(o.StageLinks) {
@@ -223,9 +189,6 @@ func (o ProjectConfigSpec) ToMap() (map[string]interface{}, error) {
 	}
 	if !IsNil(o.PromotionPolicies) {
 		toSerialize["promotionPolicies"] = o.PromotionPolicies
-	}
-	if !IsNil(o.PromotionWindows) {
-		toSerialize["promotionWindows"] = o.PromotionWindows
 	}
 	if !IsNil(o.StageLinks) {
 		toSerialize["stageLinks"] = o.StageLinks

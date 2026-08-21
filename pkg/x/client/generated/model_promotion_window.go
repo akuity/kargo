@@ -29,12 +29,8 @@ type PromotionWindow struct {
 	Kind PromotionWindowKind `json:"kind"`
 	// Name is a symbolic name for the window, unique within its list. It is used to identify the window in denial messages and events.  +kubebuilder:validation:Required +kubebuilder:validation:MinLength=1 +kubebuilder:validation:MaxLength=253 +kubebuilder:validation:Pattern=`^[a-z0-9]([-a-z0-9]*[a-z0-9])?(\\.[a-z0-9]([-a-z0-9]*[a-z0-9])?)*$` +akuity:test-kubebuilder-pattern=KubernetesName
 	Name string `json:"name"`
-	// ProjectSelector selects the Projects this window applies to. It is only meaningful on ClusterConfig windows; on ProjectConfig windows the Project is implicit and this field is rejected. When omitted on a ClusterConfig window, the window applies to all Projects. It reuses PromotionPolicySelector, matching Projects by exact name, glob/regex pattern, or label selector.  +optional
-	ProjectSelector *PromotionPolicySelector `json:"projectSelector,omitempty"`
 	// RRule is an optional RFC 5545 recurrence rule (e.g. \"FREQ=DAILY\") that makes the window recurring. When omitted, the window is a one-shot interval defined by DTStart and DTEnd. The full value is parsed and validated by Kargo Enterprise.  +optional
 	Rrule *string `json:"rrule,omitempty"`
-	// StageSelector selects the Stages this window applies to. When omitted, the window applies to all Stages in scope (project-wide on ProjectConfig, cluster-wide on ClusterConfig). It reuses PromotionPolicySelector, so it can match by exact name, glob/regex pattern, or label selector.  +optional
-	StageSelector *PromotionPolicySelector `json:"stageSelector,omitempty"`
 }
 
 type _PromotionWindow PromotionWindow
@@ -170,38 +166,6 @@ func (o *PromotionWindow) SetName(v string) {
 	o.Name = v
 }
 
-// GetProjectSelector returns the ProjectSelector field value if set, zero value otherwise.
-func (o *PromotionWindow) GetProjectSelector() PromotionPolicySelector {
-	if o == nil || IsNil(o.ProjectSelector) {
-		var ret PromotionPolicySelector
-		return ret
-	}
-	return *o.ProjectSelector
-}
-
-// GetProjectSelectorOk returns a tuple with the ProjectSelector field value if set, nil otherwise
-// and a boolean to check if the value has been set.
-func (o *PromotionWindow) GetProjectSelectorOk() (*PromotionPolicySelector, bool) {
-	if o == nil || IsNil(o.ProjectSelector) {
-		return nil, false
-	}
-	return o.ProjectSelector, true
-}
-
-// HasProjectSelector returns a boolean if a field has been set.
-func (o *PromotionWindow) HasProjectSelector() bool {
-	if o != nil && !IsNil(o.ProjectSelector) {
-		return true
-	}
-
-	return false
-}
-
-// SetProjectSelector gets a reference to the given PromotionPolicySelector and assigns it to the ProjectSelector field.
-func (o *PromotionWindow) SetProjectSelector(v PromotionPolicySelector) {
-	o.ProjectSelector = &v
-}
-
 // GetRrule returns the Rrule field value if set, zero value otherwise.
 func (o *PromotionWindow) GetRrule() string {
 	if o == nil || IsNil(o.Rrule) {
@@ -234,38 +198,6 @@ func (o *PromotionWindow) SetRrule(v string) {
 	o.Rrule = &v
 }
 
-// GetStageSelector returns the StageSelector field value if set, zero value otherwise.
-func (o *PromotionWindow) GetStageSelector() PromotionPolicySelector {
-	if o == nil || IsNil(o.StageSelector) {
-		var ret PromotionPolicySelector
-		return ret
-	}
-	return *o.StageSelector
-}
-
-// GetStageSelectorOk returns a tuple with the StageSelector field value if set, nil otherwise
-// and a boolean to check if the value has been set.
-func (o *PromotionWindow) GetStageSelectorOk() (*PromotionPolicySelector, bool) {
-	if o == nil || IsNil(o.StageSelector) {
-		return nil, false
-	}
-	return o.StageSelector, true
-}
-
-// HasStageSelector returns a boolean if a field has been set.
-func (o *PromotionWindow) HasStageSelector() bool {
-	if o != nil && !IsNil(o.StageSelector) {
-		return true
-	}
-
-	return false
-}
-
-// SetStageSelector gets a reference to the given PromotionPolicySelector and assigns it to the StageSelector field.
-func (o *PromotionWindow) SetStageSelector(v PromotionPolicySelector) {
-	o.StageSelector = &v
-}
-
 func (o PromotionWindow) MarshalJSON() ([]byte, error) {
 	toSerialize,err := o.ToMap()
 	if err != nil {
@@ -284,14 +216,8 @@ func (o PromotionWindow) ToMap() (map[string]interface{}, error) {
 	}
 	toSerialize["kind"] = o.Kind
 	toSerialize["name"] = o.Name
-	if !IsNil(o.ProjectSelector) {
-		toSerialize["projectSelector"] = o.ProjectSelector
-	}
 	if !IsNil(o.Rrule) {
 		toSerialize["rrule"] = o.Rrule
-	}
-	if !IsNil(o.StageSelector) {
-		toSerialize["stageSelector"] = o.StageSelector
 	}
 	return toSerialize, nil
 }

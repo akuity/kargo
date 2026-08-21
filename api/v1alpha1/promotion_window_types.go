@@ -20,12 +20,12 @@ const (
 )
 
 // PromotionWindow describes a recurring or one-shot time window that gates
-// promotions for the Stages it matches. Windows may appear on both
-// ProjectConfig and ClusterConfig; a Stage's effective schedule is the union of
-// all matching windows from both. A schedule is open at a given time when no
-// matching Deny window is active and, if any Allow windows match the Stage, at
-// least one of them is active. Windows gate all promotions uniformly (auto,
-// manual, and rollback).
+// promotions for the Stages matched by promotion policy or ClusterPromotionWindow. 
+// Windows may appear on both PromotionPolicy and ClusterConfig as ClusterPromotionWindow; 
+// a Stage's effective schedule is the union of all matching windows from both. 
+// A schedule is open at a given time when no matching Deny window is active and, 
+// if any Allow windows match the Stage, at least one of them is active. 
+// Windows gate all promotions uniformly (auto, manual, and rollback).
 //
 // Kargo Enterprise only: This type is ignored in Kargo OSS. The schedule is
 // evaluated and enforced only by Kargo Enterprise; OSS carries the API for
@@ -40,22 +40,6 @@ type PromotionWindow struct {
 	// +kubebuilder:validation:Pattern=`^[a-z0-9]([-a-z0-9]*[a-z0-9])?(\.[a-z0-9]([-a-z0-9]*[a-z0-9])?)*$`
 	// +akuity:test-kubebuilder-pattern=KubernetesName
 	Name string `json:"name"`
-	// StageSelector selects the Stages this window applies to. When omitted, the
-	// window applies to all Stages in scope (project-wide on ProjectConfig,
-	// cluster-wide on ClusterConfig). It reuses PromotionPolicySelector, so it
-	// can match by exact name, glob/regex pattern, or label selector.
-	//
-	// +optional
-	StageSelector *PromotionPolicySelector `json:"stageSelector,omitempty"`
-	// ProjectSelector selects the Projects this window applies to. It is only
-	// meaningful on ClusterConfig windows; on ProjectConfig windows the Project
-	// is implicit and this field is rejected. When omitted on a ClusterConfig
-	// window, the window applies to all Projects. It reuses
-	// PromotionPolicySelector, matching Projects by exact name, glob/regex
-	// pattern, or label selector.
-	//
-	// +optional
-	ProjectSelector *PromotionPolicySelector `json:"projectSelector,omitempty"`
 	// Kind indicates whether this window allows or denies promotions while it is
 	// active.
 	//

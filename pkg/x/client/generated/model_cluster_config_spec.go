@@ -23,8 +23,8 @@ type ClusterConfigSpec struct {
 	FreightLinks []DeepLink `json:"freightLinks,omitempty"`
 	// GitClient describes cluster-level configuration for Kargo's Git client, including committer identity and an optional signing key. If set, these values take precedence over any configuration provided at install time via the Helm chart. +optional
 	GitClient *GitClientConfig `json:"gitClient,omitempty"`
-	// PromotionWindows defines time windows that gate promotions across the cluster. Each window may narrow its scope with a projectSelector and/or stageSelector. A Stage's effective schedule is the union of matching windows defined here and any project-level windows in ProjectConfig.  Kargo Enterprise only: This field is ignored in Kargo OSS.  +optional +listType=map +listMapKey=name
-	PromotionWindows []PromotionWindow `json:"promotionWindows,omitempty"`
+	// ClusterPromotionPolicies is a ClusterConfig equivalent of PromotionPolicy. NOTE: Currently only supports promotion windows, auto-promotions and rollbacks are NOT supported.  Kargo Enterprise only: This field is ignored in Kargo OSS.  +optional +listType=map +listMapKey=name
+	PromotionPolicies []ClusterPromotionPolicy `json:"promotionPolicies,omitempty"`
 	// StageLinks defines deep links shown when viewing any Stage resource across all projects in the cluster. Project-level StageLinks defined in ProjectConfig are shown in addition to these.  +optional
 	StageLinks []DeepLink `json:"stageLinks,omitempty"`
 	// WebhookReceivers describes cluster-scoped webhook receivers used for processing events from various external platforms
@@ -112,36 +112,36 @@ func (o *ClusterConfigSpec) SetGitClient(v GitClientConfig) {
 	o.GitClient = &v
 }
 
-// GetPromotionWindows returns the PromotionWindows field value if set, zero value otherwise.
-func (o *ClusterConfigSpec) GetPromotionWindows() []PromotionWindow {
-	if o == nil || IsNil(o.PromotionWindows) {
-		var ret []PromotionWindow
+// GetPromotionPolicies returns the PromotionPolicies field value if set, zero value otherwise.
+func (o *ClusterConfigSpec) GetPromotionPolicies() []ClusterPromotionPolicy {
+	if o == nil || IsNil(o.PromotionPolicies) {
+		var ret []ClusterPromotionPolicy
 		return ret
 	}
-	return o.PromotionWindows
+	return o.PromotionPolicies
 }
 
-// GetPromotionWindowsOk returns a tuple with the PromotionWindows field value if set, nil otherwise
+// GetPromotionPoliciesOk returns a tuple with the PromotionPolicies field value if set, nil otherwise
 // and a boolean to check if the value has been set.
-func (o *ClusterConfigSpec) GetPromotionWindowsOk() ([]PromotionWindow, bool) {
-	if o == nil || IsNil(o.PromotionWindows) {
+func (o *ClusterConfigSpec) GetPromotionPoliciesOk() ([]ClusterPromotionPolicy, bool) {
+	if o == nil || IsNil(o.PromotionPolicies) {
 		return nil, false
 	}
-	return o.PromotionWindows, true
+	return o.PromotionPolicies, true
 }
 
-// HasPromotionWindows returns a boolean if a field has been set.
-func (o *ClusterConfigSpec) HasPromotionWindows() bool {
-	if o != nil && !IsNil(o.PromotionWindows) {
+// HasPromotionPolicies returns a boolean if a field has been set.
+func (o *ClusterConfigSpec) HasPromotionPolicies() bool {
+	if o != nil && !IsNil(o.PromotionPolicies) {
 		return true
 	}
 
 	return false
 }
 
-// SetPromotionWindows gets a reference to the given []PromotionWindow and assigns it to the PromotionWindows field.
-func (o *ClusterConfigSpec) SetPromotionWindows(v []PromotionWindow) {
-	o.PromotionWindows = v
+// SetPromotionPolicies gets a reference to the given []ClusterPromotionPolicy and assigns it to the PromotionPolicies field.
+func (o *ClusterConfigSpec) SetPromotionPolicies(v []ClusterPromotionPolicy) {
+	o.PromotionPolicies = v
 }
 
 // GetStageLinks returns the StageLinks field value if set, zero value otherwise.
@@ -224,8 +224,8 @@ func (o ClusterConfigSpec) ToMap() (map[string]interface{}, error) {
 	if !IsNil(o.GitClient) {
 		toSerialize["gitClient"] = o.GitClient
 	}
-	if !IsNil(o.PromotionWindows) {
-		toSerialize["promotionWindows"] = o.PromotionWindows
+	if !IsNil(o.PromotionPolicies) {
+		toSerialize["promotionPolicies"] = o.PromotionPolicies
 	}
 	if !IsNil(o.StageLinks) {
 		toSerialize["stageLinks"] = o.StageLinks
