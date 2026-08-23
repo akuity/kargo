@@ -564,9 +564,7 @@ describe('analysis modal transforms', () => {
 
 describe('transformMeasurements()', () => {
   test('plain-text measurement value (e.g. web provider returning "PASS") does not throw', () => {
-    expect(() =>
-      transformMeasurements([], [{ value: 'PASS', phase: 'Successful' }])
-    ).not.toThrow();
+    expect(() => transformMeasurements([], [{ value: 'PASS', phase: 'Successful' }])).not.toThrow();
   });
 
   test('plain-text measurement value has no tableValue', () => {
