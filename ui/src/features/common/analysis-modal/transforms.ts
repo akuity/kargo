@@ -783,7 +783,22 @@ const transformMeasurementValue = (
     };
   }
 
-  const parsedValue = JSON.parse(value);
+  let parsedValue;
+  try {
+    parsedValue = JSON.parse(value);
+  } catch {
+    // this behavior matches rollouts with the following reasoning:
+    // - canChart == true - just one measurement with this set to false will prevent the chart from being displayed
+    // - chartValue == null - the chart will just show an absence of a point or a blip for this measurement
+    // - tableValue == null - while a healthcheck of "PASS" or "OK" might be worth seeing, allowing a string of
+    // onbounded length could make the table unusable (a stack trace, error message, a failed parsoning because 
+    // a long json string got truncated, etc.)
+    return {
+      canChart: true,
+      chartValue: null,
+      tableValue: null
+    };
+  }
 
   // single number measurement value
   if (isFiniteNumber(parsedValue)) {

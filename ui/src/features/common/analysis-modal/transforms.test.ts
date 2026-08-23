@@ -24,7 +24,8 @@ import {
   metricStatusLabel,
   metricSubstatus,
   printableCloudWatchQuery,
-  printableDatadogQuery
+  printableDatadogQuery,
+  transformMeasurements
 } from './transforms';
 import { AnalysisStatus, FunctionalStatus } from './types';
 
@@ -558,5 +559,35 @@ describe('analysis modal transforms', () => {
       chartValue: { latency: null, cpuUsage: null },
       tableValue: { latency: null, cpuUsage: null }
     });
+  });
+});
+
+describe('transformMeasurements()', () => {
+  test('plain-text measurement value (e.g. web provider returning "PASS") does not throw', () => {
+    expect(() =>
+      transformMeasurements([], [{ value: 'PASS', phase: 'Successful' }])
+    ).not.toThrow();
+  });
+
+  test('plain-text measurement value has no tableValue', () => {
+    const result = transformMeasurements([], [{ value: 'PASS', phase: 'Successful' }]);
+    expect(result.measurements[0].tableValue).toBeNull();
+  });
+
+  test('plain-text measurement value has no chart value', () => {
+    const result = transformMeasurements([], [{ value: 'PASS', phase: 'Successful' }]);
+    expect(result.measurements[0].chartValue).toBeNull();
+  });
+
+  test('plain-text measurement value does not disable charting for the rest of the series', () => {
+    const result = transformMeasurements(
+      [],
+      [
+        { value: '1', phase: 'Successful' },
+        { value: 'PASS', phase: 'Successful' },
+        { value: '2', phase: 'Successful' }
+      ]
+    );
+    expect(result.chartable).toBe(true);
   });
 });
