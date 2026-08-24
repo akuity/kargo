@@ -143,6 +143,30 @@ linters:
           - goconst
           - gosec
         path: (.+)_test\.go
+      # goconst findings surfaced by the golangci-lint v2.13.1 upgrade
+      # (bumped for Go 1.27 support). Left as follow-up cleanup rather than
+      # bundling it with an unrelated Go version bump.
+      - linters:
+          - goconst
+        path: pkg/cli/cmd/get/.*\.go
+      - linters:
+          - goconst
+        path: pkg/controller/management/projects/projects\.go
+      - linters:
+          - goconst
+        path: pkg/controller/warehouses/warehouses\.go
+      - linters:
+          - goconst
+        path: pkg/promotion/runner/builtin/(git_pr_opener|git_pr_waiter|helm_chart_updater|json_updater|kustomize_image_setter|toml_updater|yaml_merger|yaml_updater)\.go
+      - linters:
+          - goconst
+        path: pkg/server/(get_cluster_config|get_project_config|get_promotion|get_stage|get_warehouse)\.go
+      - linters:
+          - goconst
+        path: pkg/server/rbac/(generic_escalation|roles)\.go
+      - linters:
+          - goconst
+        path: pkg/webhook/external/(azure|github|refresh)\.go
     paths:
       - .*/*_types.go
       - .*/groupversion_info.go

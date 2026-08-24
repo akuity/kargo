@@ -254,6 +254,8 @@ func (t *tarCreator) createTarball(
 		}
 
 		if info.Mode().IsRegular() {
+			// #nosec G122 -- path is produced by WalkDir over the promotion's
+			// own already-checked-out work tree, not attacker-supplied input.
 			srcFile, err := os.Open(path)
 			if err != nil {
 				return fmt.Errorf("failed to open source file %q: %w", path, err)

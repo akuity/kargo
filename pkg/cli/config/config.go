@@ -133,6 +133,8 @@ func SaveCLIConfig(config CLIConfig) error {
 }
 
 func saveCLIConfig(config CLIConfig, configPath string) error {
+	// #nosec G117 -- This is the user's own CLI config file, written to their
+	// own Kargo home directory so it can be read back on later invocations.
 	configBytes, err := yaml.Marshal(config)
 	if err != nil {
 		return fmt.Errorf("error marshaling config: %w", err)

@@ -73,6 +73,8 @@ func (o *viewOptions) run() error {
 		cfg = config.MaskedConfig(cfg)
 	}
 
+	// #nosec G117 -- This command's purpose is to display the user's own
+	// CLI config; secrets are masked unless --raw is explicitly passed.
 	b, err := sigyaml.Marshal(cfg)
 	if err != nil {
 		return err
