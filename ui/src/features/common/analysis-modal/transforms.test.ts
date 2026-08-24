@@ -24,7 +24,8 @@ import {
   metricStatusLabel,
   metricSubstatus,
   printableCloudWatchQuery,
-  printableDatadogQuery
+  printableDatadogQuery,
+  transformMeasurements
 } from './transforms';
 import { AnalysisStatus, FunctionalStatus } from './types';
 
@@ -557,6 +558,21 @@ describe('analysis modal transforms', () => {
       canChart: false,
       chartValue: { latency: null, cpuUsage: null },
       tableValue: { latency: null, cpuUsage: null }
+    });
+  });
+
+  test('transformMeasurements() with a plain, non-JSON string measurement value', () => {
+    expect(transformMeasurements([], [{ value: 'kargo' }])).toEqual({
+      chartable: false,
+      min: 0,
+      max: null,
+      measurements: [
+        {
+          value: 'kargo',
+          chartValue: undefined,
+          tableValue: 'kargo'
+        }
+      ]
     });
   });
 });
