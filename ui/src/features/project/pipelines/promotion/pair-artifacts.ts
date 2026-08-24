@@ -13,14 +13,17 @@ export type PairedRow = {
   incoming?: TableSource;
 };
 
+const withSubscription = (key: string, subscriptionName?: string) =>
+  subscriptionName ? `${key}#${subscriptionName}` : key;
+
 const pairKey = (s: TableSource): string => {
   switch (s.type) {
     case 'other':
       return `other:${s.subscriptionName || ''}`;
     case 'helm':
-      return `helm:${s.repoURL || ''}/${s.name || ''}`;
+      return withSubscription(`helm:${s.repoURL || ''}/${s.name || ''}`, s.subscriptionName);
     default:
-      return `${s.type}:${s.repoURL || ''}`;
+      return withSubscription(`${s.type}:${s.repoURL || ''}`, s.subscriptionName);
   }
 };
 

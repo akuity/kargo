@@ -5,6 +5,7 @@ import Link from 'antd/es/typography/Link';
 import classNames from 'classnames';
 import { useMemo } from 'react';
 
+import { SubscriptionNameTag } from '../common/subscription-name-tag';
 import { TruncateMiddle } from '../common/truncate-middle';
 
 export const FreightContentItem = (props: {
@@ -23,6 +24,8 @@ export const FreightContentItem = (props: {
   artifactSource?: string;
   // build date of image
   artifactBuildDate?: string;
+  // name of the subscription that discovered the artifact, if it has one
+  subscriptionName?: string;
 }) => {
   const {
     horizontal,
@@ -34,8 +37,21 @@ export const FreightContentItem = (props: {
     href,
     children,
     linkClass,
-    fullContentVisibility
+    fullContentVisibility,
+    subscriptionName
   } = props;
+
+  // The chips are too cramped to always carry the name, so it rides along in
+  // the tooltip and only becomes a visible tag where there is room for it.
+  const _title = useMemo(() => {
+    if (!subscriptionName) {
+      return title;
+    }
+
+    return title
+      ? `${title} (subscription: ${subscriptionName})`
+      : `subscription: ${subscriptionName}`;
+  }, [title, subscriptionName]);
 
   const _children = useMemo(() => {
     if (fullContentVisibility) {
@@ -57,7 +73,7 @@ export const FreightContentItem = (props: {
         'bg-gray-200': !dark && horizontal
       })}
       overlay={overlay}
-      title={title}
+      title={_title}
     >
       <Flex align='center' gap={8}>
         {!!icon && (
@@ -106,6 +122,12 @@ export const FreightContentItem = (props: {
             <FontAwesomeIcon icon={faHammer} />
             {props.artifactBuildDate}
           </span>
+        )}
+        {fullContentVisibility && (
+          <SubscriptionNameTag
+            name={subscriptionName}
+            className='mr-0 max-w-full truncate text-[10px]'
+          />
         )}
       </div>
     </Tooltip>

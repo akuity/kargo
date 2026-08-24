@@ -2,10 +2,17 @@ import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
 import { Col, Flex, Row, Space, Table, Tag, theme, Typography } from 'antd';
 import { useMemo } from 'react';
 
+import { SubscriptionNameTag } from '@ui/features/common/subscription-name-tag';
 import { ArtifactMetadata } from '@ui/features/freight/artifact-metadata';
 import { Freight, FreightReference } from '@ui/gen/api/v2/models';
 
-import { repoLabel, typeIcon, typeLabel, versionLabel } from './freight-comparison-utils';
+import {
+  repoLabel,
+  subscriptionName,
+  typeIcon,
+  typeLabel,
+  versionLabel
+} from './freight-comparison-utils';
 import { PairedRow, pairArtifacts, PairStatus } from './pair-artifacts';
 
 const statusTag = (status: PairStatus) => {
@@ -114,9 +121,15 @@ export const FreightComparisonTable = ({
               />
               <div>
                 <div className='font-mono'>{repoLabel(source)}</div>
-                <Typography.Text type='secondary' className='text-xs'>
-                  {typeLabel(source)}
-                </Typography.Text>
+                <Flex align='center' gap={8} wrap>
+                  <Typography.Text type='secondary' className='text-xs'>
+                    {typeLabel(source)}
+                  </Typography.Text>
+                  <SubscriptionNameTag
+                    name={subscriptionName(source)}
+                    className='mr-0 text-[10px]'
+                  />
+                </Flex>
               </div>
             </Flex>
           );

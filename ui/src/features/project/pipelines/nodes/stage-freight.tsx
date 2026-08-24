@@ -212,6 +212,9 @@ export const StageFreight = (props: { stage: Stage }) => {
   );
 };
 
+const subscriptionTitle = (base: string | undefined, subscriptionName: string | undefined) =>
+  subscriptionName ? `${base} (subscription: ${subscriptionName})` : base;
+
 const Artifact = (props: { artifact: string | GitCommit | Chart | Image | ArtifactReference }) => {
   if (typeof props.artifact === 'string') {
     return (
@@ -221,10 +224,22 @@ const Artifact = (props: { artifact: string | GitCommit | Chart | Image | Artifa
     );
   }
 
+  // A generic artifact has no repository to name it, so its subscription name
+  // is all the carousel can show alongside the version.
   if (isArtifactGeneric(props.artifact)) {
     return (
-      <Tag bordered={false} color='geekblue'>
-        {props.artifact.version}
+      <Tag
+        bordered={false}
+        color='geekblue'
+        title={subscriptionTitle(props.artifact.version, props.artifact.subscriptionName)}
+      >
+        <Flex justify='center' align='center' wrap>
+          <div>{props.artifact.version}</div>
+
+          {!!props.artifact.subscriptionName && (
+            <span className='text-[10px] ml-1'>{props.artifact.subscriptionName}</span>
+          )}
+        </Flex>
       </Tag>
     );
   }
@@ -237,7 +252,11 @@ const Artifact = (props: { artifact: string | GitCommit | Chart | Image | Artifa
     const url = getGitCommitURL(props.artifact.repoURL || '', props.artifact.id || '');
 
     let TagComponent = (
-      <Tag title={props.artifact.repoURL} bordered={false} color='geekblue'>
+      <Tag
+        title={subscriptionTitle(props.artifact.repoURL, props.artifact.subscriptionName)}
+        bordered={false}
+        color='geekblue'
+      >
         <Flex justify='center' align='center' wrap>
           <div>{props.artifact.id?.slice(0, 7)}</div>
 
@@ -273,7 +292,10 @@ const Artifact = (props: { artifact: string | GitCommit | Chart | Image | Artifa
   if (isArtifactChart(props.artifact)) {
     return (
       <Tag
-        title={`${props.artifact.repoURL}:${props.artifact.version}`}
+        title={subscriptionTitle(
+          `${props.artifact.repoURL}:${props.artifact.version}`,
+          props.artifact.subscriptionName
+        )}
         bordered={false}
         color='geekblue'
       >
@@ -297,7 +319,10 @@ const Artifact = (props: { artifact: string | GitCommit | Chart | Image | Artifa
 
     let TagComponent = (
       <Tag
-        title={`${props.artifact.repoURL}:${props.artifact.tag}`}
+        title={subscriptionTitle(
+          `${props.artifact.repoURL}:${props.artifact.tag}`,
+          props.artifact.subscriptionName
+        )}
         bordered={false}
         color='geekblue'
       >

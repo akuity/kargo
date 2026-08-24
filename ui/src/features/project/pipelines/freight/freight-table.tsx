@@ -6,6 +6,7 @@ import { Table } from 'antd';
 import classNames from 'classnames';
 import { useMemo } from 'react';
 
+import { SubscriptionNameTag } from '@ui/features/common/subscription-name-tag';
 import { ArtifactMetadata } from '@ui/features/freight/artifact-metadata';
 import { flattenFreightOrigin } from '@ui/features/freight/flatten-freight-origin-utils';
 import { Freight } from '@ui/gen/api/v2/models';
@@ -58,7 +59,12 @@ export const FreightTable = (props: FreightTableProps) => {
                   return record.subscriptionName || '-';
                 }
 
-                return record.repoURL;
+                return (
+                  <div className='flex items-center gap-2'>
+                    <span className='min-w-0 break-all'>{record.repoURL}</span>
+                    <SubscriptionNameTag name={record.subscriptionName} className='mr-0 shrink-0' />
+                  </div>
+                );
               }
             },
             {
