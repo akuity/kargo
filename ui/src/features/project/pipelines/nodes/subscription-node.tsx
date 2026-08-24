@@ -7,6 +7,7 @@ import Link from 'antd/es/typography/Link';
 import { useMemo } from 'react';
 
 import { RepoSubscription } from '@ui/extend/types';
+import { SubscriptionNameTag } from '@ui/features/common/subscription-name-tag';
 
 import {
   artifactBase,
@@ -47,9 +48,15 @@ export const SubscriptionNode = (props: { subscription: RepoSubscription }) => {
       size='small'
       className={styles['subscription-node-size']}
       title={
-        <Flex align='center' gap={16}>
+        <Flex align='center' gap={8}>
           {icon && <FontAwesomeIcon icon={icon} />}
-          <span className='text-xs'>{title}</span>
+          <span className='text-xs truncate'>{title}</span>
+          {!!props.subscription.name && (
+            <SubscriptionNameTag
+              name={props.subscription.name}
+              className='ml-auto mr-0 max-w-[45%] shrink-0 truncate text-[9px]'
+            />
+          )}
         </Flex>
       }
       variant='borderless'
