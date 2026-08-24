@@ -1,6 +1,7 @@
 import { Descriptions, Typography } from 'antd';
 
 import { RepoSubscription } from '@ui/extend/types';
+import { SubscriptionNameTag } from '@ui/features/common/subscription-name-tag';
 import { urlForImage } from '@ui/utils/url';
 
 type Props = {
@@ -11,6 +12,15 @@ type Props = {
 const DescriptionsLabelStyle: React.CSSProperties = {
   width: '40%'
 };
+
+// subscriptionTitle pairs the kind of a subscription with its optional name,
+// which is what identifies one subscription among several of the same kind.
+const subscriptionTitle = (kind: string, name?: string) => (
+  <span className='flex items-center gap-2'>
+    {kind}
+    <SubscriptionNameTag name={name} className='mr-0' />
+  </span>
+);
 
 export const RepoSubscriptions = ({ subscriptions }: Props) => {
   if (!subscriptions) {
@@ -23,7 +33,7 @@ export const RepoSubscriptions = ({ subscriptions }: Props) => {
         <>
           {subscription.chart && (
             <Descriptions
-              title='Chart'
+              title={subscriptionTitle('Chart', subscription.name)}
               bordered
               size='small'
               column={1}
@@ -58,7 +68,7 @@ export const RepoSubscriptions = ({ subscriptions }: Props) => {
 
           {subscription.git && (
             <Descriptions
-              title='Git'
+              title={subscriptionTitle('Git', subscription.name)}
               bordered
               size='small'
               column={1}
@@ -104,7 +114,7 @@ export const RepoSubscriptions = ({ subscriptions }: Props) => {
 
           {subscription.image && (
             <Descriptions
-              title='Image'
+              title={subscriptionTitle('Image', subscription.name)}
               bordered
               size='small'
               column={1}
@@ -148,13 +158,12 @@ export const RepoSubscriptions = ({ subscriptions }: Props) => {
 
           {subscription.subscription && (
             <Descriptions
-              title='Other'
+              title={subscriptionTitle('Other', subscription.name)}
               bordered
               size='small'
               column={1}
               style={{ width: '40%', minWidth: 500 }}
             >
-              <Descriptions.Item label='Name'>{subscription.name}</Descriptions.Item>
               <Descriptions.Item label='Type'>
                 {subscription.subscription.subscriptionType}
               </Descriptions.Item>
