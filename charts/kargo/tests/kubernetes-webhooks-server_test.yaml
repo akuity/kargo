@@ -211,5 +211,8 @@ tests:
           path: spec.endpoints[0].port
           value: http-metrics
       - equal:
+          path: spec.endpoints[0].path
+          value: /metrics
+      - equal:
           path: spec.selector.matchLabels["app.kubernetes.io/component"]
           value: kubernetes-webhooks-server
