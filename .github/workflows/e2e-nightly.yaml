@@ -1,0 +1,87 @@
+name: E2E (nightly)
+
+on:
+  # schedule:
+  # Nightly at 03:00 UTC.
+  # - cron: "0 3 * * *"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  e2e:
+    runs-on: ubuntu-latest
+    # Test provisions kind cluster, cert-manager, Argo CD and Kargo, so the full run takes a while.
+    timeout-minutes: 120
+    steps:
+    - name: Harden the runner (Audit all outbound calls)
+      uses: step-security/harden-runner@b09bb98e06d4d774595224525879c09bc6e98c40 # v2.20.1
+      with:
+        egress-policy: audit
+
+    - name: Checkout code
+      uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+
+    - name: Install Go
+      uses: actions/setup-go@v5
+      with:
+        # Use the e2e module's toolchain version.
+        go-version-file: hack/test/e2e/go.mod
+        cache-dependency-path: |
+          go.sum
+          hack/test/e2e/go.sum
+
+    # The test shells out to helm, kind, kargo and argocd; install them all into
+    # hack/bin, which is added to PATH for the subsequent steps.
+    - name: Add hack/bin to PATH
+      run: echo "${GITHUB_WORKSPACE}/hack/bin" >> "${GITHUB_PATH}"
+
+    - name: Install helm
+      run: make install-helm
+
+    - name: Build kind
+      run: go build -o hack/bin/kind sigs.k8s.io/kind
+
+    - name: Build kargo CLI
+      run: go build -o hack/bin/kargo ./cmd/cli
+
+    - name: Install argocd CLI
+      run: |
+        curl -fsSL -o hack/bin/argocd \
+          https://github.com/argoproj/argo-cd/releases/latest/download/argocd-linux-amd64
+        chmod +x hack/bin/argocd
+
+    - name: Verify tools
+      run: |
+        go version
+        helm version
+        kind version
+        kargo version --client || true
+        argocd version --client
+
+    # nightly_config.yaml ships with an empty `context` section. Populate it from
+    # repository secrets so the git- and http-dependent suites can run. Each key
+    # is only written when its secret is set; suites whose context is missing
+    # skip or fail on their own.
+    - name: Configure e2e context
+      env:
+        E2E_KARGO_DEMO_GITOPS_REPO: ${{ secrets.E2E_KARGO_DEMO_GITOPS_REPO }}
+        E2E_GIT_PAT: ${{ secrets.E2E_GIT_PAT }}
+        ## TODO: We need to set up the endpoint to ebable that
+        # E2E_HTTP_ENDPOINT: ${{ secrets.E2E_HTTP_ENDPOINT }}
+      run: |
+        cfg=hack/test/e2e/envs/nightly_config.yaml
+        # Drop the existing (last) context section and re-add it from secrets.
+        sed -i '/^context:/,$d' "${cfg}"
+        {
+          echo "context:"
+          [ -n "${E2E_KARGO_DEMO_GITOPS_REPO}" ] && echo "  kargo_demo_gitops_repo: ${E2E_KARGO_DEMO_GITOPS_REPO}"
+          [ -n "${E2E_GIT_PAT}" ] && echo "  git_pat: ${E2E_GIT_PAT}"
+          [ -n "${E2E_HTTP_ENDPOINT}" ] && echo "  http_endpoint: ${E2E_HTTP_ENDPOINT}"
+        } >> "${cfg}"
+
+    - name: Run e2e tests
+      working-directory: hack/test/e2e
+      run: |
+        go test -tags=e2e,shared ./suites/shared -timeout 60m -args -env-file=nightly_config.yaml

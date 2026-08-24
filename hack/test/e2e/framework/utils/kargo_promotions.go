@@ -4,7 +4,6 @@ package utils
 import (
 	"context"
 	"errors"
-	"fmt"
 	"net/http"
 	"strings"
 	"testing"
@@ -428,37 +427,5 @@ func GetFreight(ctx context.Context, project, freightID string) (*generated.Frei
 	if err != nil {
 		return nil, err
 	}
-	fmt.Printf("FREIGHT: %v", freightOK)
 	return freightOK, nil
 }
-
-// func getAnyFreight(kargoClient generated.APIClient, project, origin string) (*kargoapi.Freight, error) {
-
-// 	params := core.NewQueryFreightsRestParams().WithProject(project).WithOrigins([]string{origin})
-
-// 	freightRes, err := kargoClient.CoreAPI.QueryFreightsRest(params, nil)
-// 	if err != nil {
-// 		return nil, fmt.Errorf("Error querying freight %v", err)
-// 	}
-
-// 	// FIXME: change that once we make freight response typed
-// 	var freightJSON []byte
-// 	if freightJSON, err = json.Marshal(freightRes); err != nil {
-// 		return nil, fmt.Errorf("marshal freight: %w", err)
-// 	}
-// 	// The response is {"groups": {"": {"items": [...]}}}
-// 	type freightList struct {
-// 		Items []*kargoapi.Freight `json:"items"`
-// 	}
-// 	var result struct {
-// 		Groups map[string]*freightList `json:"groups"`
-// 	}
-// 	if err = json.Unmarshal(freightJSON, &result); err != nil {
-// 		return nil, fmt.Errorf("unmarshal freight: %v", err)
-// 	}
-// 	freights := result.Groups[""].Items
-// 	if len(freights) < 1 {
-// 		return nil, fmt.Errorf("no freights found")
-// 	}
-// 	return freights[0], nil
-// }
