@@ -262,6 +262,161 @@ func TestAbortPromotion(t *testing.T) {
 	})
 }
 
+func TestStageAwaitsPromotion(t *testing.T) {
+	requestChild := func(name, target, request string) *kargoapi.Promotion {
+		controller := true
+		return &kargoapi.Promotion{
+			ObjectMeta: metav1.ObjectMeta{
+				Name: name,
+				OwnerReferences: []metav1.OwnerReference{{
+					APIVersion: kargoapi.GroupVersion.String(),
+					Kind:       "PromotionRequest",
+					Name:       request,
+					Controller: &controller,
+				}},
+			},
+			Spec: kargoapi.PromotionSpec{Stage: "test-stage", Target: target},
+		}
+	}
+
+	testCases := []struct {
+		name     string
+		status   kargoapi.StageStatus
+		promo    *kargoapi.Promotion
+		expected bool
+	}{
+		{
+			name: "no current Promotion",
+			promo: &kargoapi.Promotion{
+				ObjectMeta: metav1.ObjectMeta{Name: "test-promotion"},
+			},
+		},
+		{
+			name: "another Promotion is current",
+			status: kargoapi.StageStatus{
+				CurrentPromotion: &kargoapi.PromotionReference{Name: "other-promotion"},
+			},
+			promo: &kargoapi.Promotion{
+				ObjectMeta: metav1.ObjectMeta{Name: "test-promotion"},
+			},
+		},
+		{
+			name: "the Promotion is current",
+			status: kargoapi.StageStatus{
+				CurrentPromotion: &kargoapi.PromotionReference{Name: "test-promotion"},
+			},
+			promo: &kargoapi.Promotion{
+				ObjectMeta: metav1.ObjectMeta{Name: "test-promotion"},
+			},
+			expected: true,
+		},
+		{
+			name: "a Target Promotion is not admitted by the Stage's own slot",
+			status: kargoapi.StageStatus{
+				CurrentPromotion: &kargoapi.PromotionReference{Name: "test-promotion"},
+			},
+			promo: requestChild("test-promotion", "blue", "test-request"),
+		},
+		{
+			name:  "a Target Promotion is not admitted without a current PromotionRequest",
+			promo: requestChild("test-promotion", "blue", "test-request"),
+		},
+		{
+			name: "a Target Promotion of a queued PromotionRequest is not admitted",
+			status: kargoapi.StageStatus{
+				CurrentPromotionRequest: &kargoapi.PromotionRequestReference{
+					Name: "current-request",
+				},
+			},
+			promo: requestChild("test-promotion", "blue", "queued-request"),
+		},
+		{
+			name: "a Target Promotion without a PromotionRequest owner is not admitted",
+			status: kargoapi.StageStatus{
+				CurrentPromotionRequest: &kargoapi.PromotionRequestReference{
+					Name: "current-request",
+				},
+			},
+			promo: &kargoapi.Promotion{
+				ObjectMeta: metav1.ObjectMeta{Name: "test-promotion"},
+				Spec:       kargoapi.PromotionSpec{Stage: "test-stage", Target: "blue"},
+			},
+		},
+		{
+			name: "a Target Promotion of the current PromotionRequest is admitted",
+			status: kargoapi.StageStatus{
+				CurrentPromotionRequest: &kargoapi.PromotionRequestReference{
+					Name: "current-request",
+				},
+			},
+			promo:    requestChild("test-promotion", "blue", "current-request"),
+			expected: true,
+		},
+	}
+	for _, testCase := range testCases {
+		t.Run(testCase.name, func(t *testing.T) {
+			t.Parallel()
+			stage := &kargoapi.Stage{Status: testCase.status}
+			require.Equal(
+				t,
+				testCase.expected,
+				StageAwaitsPromotion(stage, testCase.promo),
+			)
+		})
+	}
+}
+
+func TestPromotionRequestOwner(t *testing.T) {
+	controller := true
+	testCases := []struct {
+		name     string
+		owner    *metav1.OwnerReference
+		expected string
+	}{
+		{
+			name: "no owner",
+		},
+		{
+			name: "owner of another kind",
+			owner: &metav1.OwnerReference{
+				APIVersion: kargoapi.GroupVersion.String(),
+				Kind:       "Stage",
+				Name:       "test-stage",
+				Controller: &controller,
+			},
+		},
+		{
+			name: "owner of another group",
+			owner: &metav1.OwnerReference{
+				APIVersion: "apps/v1",
+				Kind:       "PromotionRequest",
+				Name:       "test-request",
+				Controller: &controller,
+			},
+		},
+		{
+			name: "PromotionRequest owner",
+			owner: &metav1.OwnerReference{
+				APIVersion: kargoapi.GroupVersion.String(),
+				Kind:       "PromotionRequest",
+				Name:       "test-request",
+				Controller: &controller,
+			},
+			expected: "test-request",
+		},
+	}
+	for _, testCase := range testCases {
+		t.Run(testCase.name, func(t *testing.T) {
+			t.Parallel()
+			promo := &kargoapi.Promotion{}
+			if testCase.owner != nil {
+				promo.OwnerReferences = []metav1.OwnerReference{*testCase.owner}
+			}
+			require.Equal(t, testCase.expected, PromotionRequestOwner(promo))
+		})
+	}
+}
+
 func Test_ComparePromotionByPhaseAndCreationTime(t *testing.T) {
 	now := time.Date(2024, time.April, 10, 0, 0, 0, 0, time.UTC)
 	ulidEarlier := ulid.MustNew(ulid.Timestamp(now.Add(-time.Hour)), nil)

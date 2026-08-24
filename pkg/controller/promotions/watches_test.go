@@ -397,9 +397,35 @@ func TestUpdatedArgoCDAppHandler_Update(t *testing.T) {
 }
 
 func TestPromotionAcknowledgedByStageHandler_Update(t *testing.T) {
+	scheme := runtime.NewScheme()
+	require.NoError(t, kargoapi.AddToScheme(scheme))
+
+	controllerTrue := true
+	newRequestChild := func(name, target, request string, phase kargoapi.PromotionPhase) *kargoapi.Promotion {
+		return &kargoapi.Promotion{
+			ObjectMeta: metav1.ObjectMeta{
+				Namespace: "fake-project",
+				Name:      name,
+				Labels:    map[string]string{kargoapi.LabelKeyStage: "fake-stage"},
+				OwnerReferences: []metav1.OwnerReference{{
+					APIVersion: kargoapi.GroupVersion.String(),
+					Kind:       "PromotionRequest",
+					Name:       request,
+					Controller: &controllerTrue,
+				}},
+			},
+			Spec: kargoapi.PromotionSpec{
+				Stage:  "fake-stage",
+				Target: target,
+			},
+			Status: kargoapi.PromotionStatus{Phase: phase},
+		}
+	}
+
 	testCases := []struct {
 		name           string
 		shardPredicate controller.ResponsibleFor[kargoapi.Stage]
+		objects        []client.Object
 		e              event.TypedUpdateEvent[*kargoapi.Stage]
 		assertions     func(
 			*testing.T,
@@ -517,10 +543,96 @@ func TestPromotionAcknowledgedByStageHandler_Update(t *testing.T) {
 				}, item)
 			},
 		},
+		{
+			name: "children of a newly current PromotionRequest are all enqueued",
+			shardPredicate: controller.ResponsibleFor[kargoapi.Stage]{
+				IsDefaultController: true,
+				ShardName:           "fake-shard",
+			},
+			objects: []client.Object{
+				newRequestChild("blue-promotion", "blue", "current-request", kargoapi.PromotionPhasePending),
+				newRequestChild("green-promotion", "green", "current-request", kargoapi.PromotionPhasePending),
+				// Terminal children and children of other requests are not
+				// enqueued.
+				newRequestChild("red-promotion", "red", "current-request", kargoapi.PromotionPhaseErrored),
+				newRequestChild("queued-promotion", "blue", "queued-request", kargoapi.PromotionPhasePending),
+			},
+			e: event.TypedUpdateEvent[*kargoapi.Stage]{
+				ObjectOld: &kargoapi.Stage{},
+				ObjectNew: &kargoapi.Stage{
+					ObjectMeta: metav1.ObjectMeta{
+						Namespace: "fake-project",
+						Name:      "fake-stage",
+					},
+					Status: kargoapi.StageStatus{
+						CurrentPromotionRequest: &kargoapi.PromotionRequestReference{
+							Name: "current-request",
+						},
+					},
+				},
+			},
+			assertions: func(
+				t *testing.T,
+				wq workqueue.TypedRateLimitingInterface[reconcile.Request],
+			) {
+				require.Equal(t, 2, wq.Len())
+				enqueued := make([]string, 0, 2)
+				for range 2 {
+					item, _ := wq.Get()
+					require.Equal(t, "fake-project", item.Namespace)
+					enqueued = append(enqueued, item.Name)
+				}
+				require.ElementsMatch(
+					t,
+					[]string{"blue-promotion", "green-promotion"},
+					enqueued,
+				)
+			},
+		},
+		{
+			name: "an unchanged current PromotionRequest enqueues nothing",
+			shardPredicate: controller.ResponsibleFor[kargoapi.Stage]{
+				IsDefaultController: true,
+				ShardName:           "fake-shard",
+			},
+			objects: []client.Object{
+				newRequestChild("blue-promotion", "blue", "current-request", kargoapi.PromotionPhasePending),
+			},
+			e: event.TypedUpdateEvent[*kargoapi.Stage]{
+				ObjectOld: &kargoapi.Stage{
+					Status: kargoapi.StageStatus{
+						CurrentPromotionRequest: &kargoapi.PromotionRequestReference{
+							Name: "current-request",
+						},
+					},
+				},
+				ObjectNew: &kargoapi.Stage{
+					ObjectMeta: metav1.ObjectMeta{
+						Namespace: "fake-project",
+						Name:      "fake-stage",
+					},
+					Status: kargoapi.StageStatus{
+						CurrentPromotionRequest: &kargoapi.PromotionRequestReference{
+							Name: "current-request",
+						},
+					},
+				},
+			},
+			assertions: func(
+				t *testing.T,
+				wq workqueue.TypedRateLimitingInterface[reconcile.Request],
+			) {
+				require.Equal(t, 0, wq.Len())
+			},
+		},
 	}
 	for _, testCase := range testCases {
 		t.Run(testCase.name, func(t *testing.T) {
 			p := &PromotionAcknowledgedByStageHandler[*kargoapi.Stage]{
+				kargoClient: fake.NewClientBuilder().
+					WithScheme(scheme).
+					WithObjects(testCase.objects...).
+					Build(),
 				shardPredicate: testCase.shardPredicate,
 			}
 

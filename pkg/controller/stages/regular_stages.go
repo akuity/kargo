@@ -682,6 +682,23 @@ func (r *RegularStageReconciler) syncPromotions(
 		return newStatus, false, err
 	}
 
+	// Partition out Promotions to one of the Stage's Targets (the children of
+	// a PromotionRequest): they take no part in the Stage's own promotion
+	// flow. Their admission is decided by the Stage's current
+	// PromotionRequest -- see api.StageAwaitsPromotion -- and their outcomes
+	// are the business of whatever governs the Target, so the Stage records
+	// nothing about them. Without this, a child would occupy the Stage's own
+	// single Promotion slot, serializing the very Promotions the request
+	// fanned out to run in parallel -- and its terminal phases would replay
+	// into the Stage's Freight history.
+	var stagePromos []kargoapi.Promotion
+	for _, promo := range promotions.Items {
+		if promo.Spec.Target == "" {
+			stagePromos = append(stagePromos, promo)
+		}
+	}
+	promotions.Items = stagePromos
+
 	// Build a map of origin keys that are currently requested by this Stage,
 	// used both to filter new holds and to evict stale ones.
 	requestedOrigins := make(map[string]struct{}, len(stage.Spec.RequestedFreight))
@@ -935,11 +952,15 @@ func (r *RegularStageReconciler) syncPromotions(
 // currently fanning Freight out to the Stage's Targets, and which was the last
 // to reach a terminal phase.
 //
-// Both references are mirrors, kept so that a reader of the Stage can see the
-// round of fan-out it is in, and how the previous round ended, without listing
-// PromotionRequests. Nothing in the Stage's own progression is decided from
-// them: a PromotionRequest effects no promotion itself, and the Promotions it
-// creates reach the Stage through syncPromotions like any other.
+// The current reference is the mutex that serializes rounds of fan-out: the
+// Promotion reconciler runs a Promotion to one of the Stage's Targets only
+// while the PromotionRequest that owns it is the Stage's current one -- see
+// api.StageAwaitsPromotion. All of one request's children (at most one per
+// Target) are admitted at once, so Promotions to distinct Targets run in
+// parallel, while the children of a queued request wait for the current
+// round to end. The last reference remains a mirror, kept so that a reader
+// of the Stage can see how the previous round ended without listing
+// PromotionRequests.
 //
 // A Stage can have more than one PromotionRequest in flight, exactly as it can
 // have more than one Promotion in flight: auto-promotion creates a request only
