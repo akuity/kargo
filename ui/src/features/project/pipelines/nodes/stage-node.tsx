@@ -26,6 +26,7 @@ import { useGraphContext } from '../context/graph-context';
 import { stageIndexer } from '../graph/node-indexer';
 import { AutoPromotionStatusIcon } from '../promotion/auto-promotion-status-icon';
 import { DropOverlay } from '../promotion/drag-and-drop/drop-overlay';
+import { isPromotionWindowClosed } from '../promotion/promotion-window';
 
 import { AnalysisRunLogsLink } from './analysis-run-logs-link';
 import style from './node-size-source-of-truth.module.less';
@@ -129,7 +130,8 @@ export const StageNode = (props: { stage: Stage }) => {
   const { isOver, setNodeRef } = useDroppable({
     id: props.stage.metadata?.name || 'stage-node',
     data: {
-      requestedFreightNames: props.stage.spec?.requestedFreight?.map((f) => f.origin?.name) || []
+      requestedFreightNames: props.stage.spec?.requestedFreight?.map((f) => f.origin?.name) || [],
+      promotionWindowClosed: isPromotionWindowClosed(props.stage)
     }
   });
 
