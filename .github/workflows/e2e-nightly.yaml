@@ -13,7 +13,7 @@ jobs:
   e2e:
     runs-on: ubuntu-latest
     # Test provisions kind cluster, cert-manager, Argo CD and Kargo, so the full run takes a while.
-    timeout-minutes: 120
+    timeout-minutes: 180
     steps:
     - name: Harden the runner (Audit all outbound calls)
       uses: step-security/harden-runner@b09bb98e06d4d774595224525879c09bc6e98c40 # v2.20.1
@@ -84,4 +84,4 @@ jobs:
     - name: Run e2e tests
       working-directory: hack/test/e2e
       run: |
-        go test -tags=e2e,shared ./suites/shared -timeout 60m -args -env-file=nightly_config.yaml
+        go test -tags=e2e,shared ./suites/shared -timeout 120m -args -env-file=nightly_config.yaml
