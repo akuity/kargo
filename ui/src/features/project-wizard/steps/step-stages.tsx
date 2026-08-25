@@ -54,7 +54,7 @@ const StageCard = ({
             style={{ backgroundColor: ColorMapHex[stage.color] ?? stage.color }}
           />
         )}
-        <FontAwesomeIcon icon={faDiagramProject} className='text-gray-400' />
+        <FontAwesomeIcon icon={faDiagramProject} className='text-gray-400 dark:text-neutral-500' />
         <span className='font-mono text-sm'>{stage.name || '(unnamed)'}</span>
       </span>
     }
@@ -143,8 +143,11 @@ export const StepStages = ({ value, projectName, warehouses, onChange }: StepSta
       >
         {value.length === 0 ? (
           <div className='flex flex-col items-center py-10 text-center'>
-            <FontAwesomeIcon icon={faDiagramProject} className='text-2xl text-gray-300 mb-3' />
-            <div className='text-sm text-gray-500 max-w-md mb-5'>
+            <FontAwesomeIcon
+              icon={faDiagramProject}
+              className='text-2xl text-gray-300 dark:text-neutral-600 mb-3'
+            />
+            <div className='text-sm text-gray-500 dark:text-neutral-400 max-w-md mb-5'>
               Add Stages to define your promotion pipeline. Load the example to scaffold a{' '}
               <code>dev → staging → prod</code> chain inspired by akuity&apos;s{' '}
               <code>kargo-simple</code> example. You can also continue and add Stages later.

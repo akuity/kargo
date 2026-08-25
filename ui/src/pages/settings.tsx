@@ -1,6 +1,7 @@
 import {
   faAsterisk,
   faBarChart,
+  faDisplay,
   faGear,
   faKey,
   faScrewdriverWrench,
@@ -22,6 +23,7 @@ import { ClusterPromotionTasks } from '@ui/features/settings/cluster-promotion-t
 import { ClusterSecret } from '@ui/features/settings/cluster-secret/cluster-secret';
 import { ConfigMapsSettings } from '@ui/features/settings/config-maps/config-maps-settings';
 import { SharedSecrets } from '@ui/features/settings/shared-secrets/shared-secrets';
+import { UISettings } from '@ui/features/settings/ui/ui-settings';
 
 const DEFAULT_GROUP = 'General';
 
@@ -71,6 +73,12 @@ const settingsViews = {
     path: 'cluster-promotion-tasks',
     component: ClusterPromotionTasks,
     group: 'Projects'
+  },
+  ui: {
+    label: 'UI Preferences',
+    icon: faDisplay,
+    path: 'ui',
+    component: UISettings
   }
 };
 

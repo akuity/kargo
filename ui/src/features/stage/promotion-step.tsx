@@ -113,7 +113,7 @@ export const Step = ({
   return {
     className: classNames('', {
       'border-green-500': progressing,
-      'border-gray-200': !progressing
+      'border-gray-200 dark:border-neutral-700': !progressing
     }),
     label: (
       <Flex align='center' onClick={() => setShowDetails(!showDetails)}>

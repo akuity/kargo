@@ -24,10 +24,12 @@ const PolicyCard = ({ policy, stageNames, onChange, onRemove }: PolicyCardProps)
   const patch = (p: Partial<PolicyDraft>) => onChange({ ...policy, ...p });
 
   return (
-    <div className='rounded-md border border-gray-200 p-3'>
+    <div className='rounded-md border border-gray-200 dark:border-neutral-700 p-3'>
       <Flex gap={12} align='flex-start'>
         <div className='w-40 shrink-0'>
-          <div className='text-xs font-medium text-gray-600 mb-1'>Selector</div>
+          <div className='text-xs font-medium text-gray-600 dark:text-neutral-400 mb-1'>
+            Selector
+          </div>
           <Select
             className='w-full'
             value={policy.selectorType}
@@ -36,7 +38,7 @@ const PolicyCard = ({ policy, stageNames, onChange, onRemove }: PolicyCardProps)
           />
         </div>
         <div className='flex-1 min-w-0'>
-          <div className='text-xs font-medium text-gray-600 mb-1'>
+          <div className='text-xs font-medium text-gray-600 dark:text-neutral-400 mb-1'>
             {policy.selectorType === 'labels' ? 'Stage labels' : 'Matches'}
           </div>
           {policy.selectorType === 'exact' ? (
@@ -64,7 +66,9 @@ const PolicyCard = ({ policy, stageNames, onChange, onRemove }: PolicyCardProps)
           )}
         </div>
         <div className='shrink-0 text-center'>
-          <div className='text-xs font-medium text-gray-600 mb-1'>Auto-promote</div>
+          <div className='text-xs font-medium text-gray-600 dark:text-neutral-400 mb-1'>
+            Auto-promote
+          </div>
           <Switch
             checked={policy.autoPromotionEnabled}
             onChange={(autoPromotionEnabled) => patch({ autoPromotionEnabled })}
@@ -92,10 +96,15 @@ type StepPoliciesProps = {
 export const StepPolicies = ({ value, stageNames, onChange }: StepPoliciesProps) => {
   if (stageNames.length === 0) {
     return (
-      <div className='flex flex-col items-center rounded-lg border border-dashed border-gray-300 bg-white py-14 text-center'>
-        <FontAwesomeIcon icon={faLock} className='text-2xl text-gray-300 mb-3' />
-        <div className='text-base font-semibold text-gray-800'>Add stages first</div>
-        <div className='text-sm text-gray-500 mt-1 max-w-md'>
+      <div className='flex flex-col items-center rounded-lg border border-dashed border-gray-300 dark:border-neutral-600 bg-white dark:bg-neutral-900 py-14 text-center'>
+        <FontAwesomeIcon
+          icon={faLock}
+          className='text-2xl text-gray-300 dark:text-neutral-600 mb-3'
+        />
+        <div className='text-base font-semibold text-gray-800 dark:text-neutral-100'>
+          Add stages first
+        </div>
+        <div className='text-sm text-gray-500 dark:text-neutral-400 mt-1 max-w-md'>
           Promotion policies act on Stages. Go back to the Stages step to add at least one, then
           return here to configure auto-promotion.
         </div>
@@ -132,8 +141,11 @@ export const StepPolicies = ({ value, stageNames, onChange }: StepPoliciesProps)
       />
       {value.length === 0 ? (
         <div className='flex flex-col items-center py-8 text-center'>
-          <FontAwesomeIcon icon={faFlag} className='text-2xl text-gray-300 mb-3' />
-          <div className='text-sm text-gray-500 max-w-md mb-5'>
+          <FontAwesomeIcon
+            icon={faFlag}
+            className='text-2xl text-gray-300 dark:text-neutral-600 mb-3'
+          />
+          <div className='text-sm text-gray-500 dark:text-neutral-400 max-w-md mb-5'>
             No policies — every promotion stays manual. Most teams auto-promote into their first
             stage and keep production manual.
           </div>

@@ -1,6 +1,9 @@
 /** @type {import('tailwindcss').Config} */
 module.exports = {
   mode: 'jit',
+  // `dark:` keys off the data-theme attr on <html> (not `.dark`): CSS Modules
+  // scopes class selectors, so `.dark` breaks inside *.module.less; attrs don't.
+  darkMode: ['selector', '[data-theme="dark"]'],
   content: ['./index.html', './src/**/*.{js,jsx,ts,tsx}'],
   theme: {
     extend: {}

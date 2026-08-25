@@ -8,14 +8,16 @@
   display: flex;
   flex-direction: column;
   flex: 0 0 110px;
-  background-color: #111;
+  // #111 in light; chrome tone + divider in dark so it doesn't blend into the page.
+  background-color: var(--kargo-sidebar-bg, #111);
+  border-right: 1px solid var(--kargo-sidebar-border, transparent);
   color: @colorWhite;
 }
 
 .contentWrapper {
   position: relative;
   flex: 1;
-  background-color: @colorBgLayout;
+  background-color: var(--kargo-color-bg-layout, @colorBgLayout);
   overflow: hidden;
 }
 

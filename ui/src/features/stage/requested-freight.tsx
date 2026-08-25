@@ -60,7 +60,7 @@ export const RequestedFreight = ({
           return (
             <div
               key={i}
-              className='bg-gray-50 rounded-md p-3 border-2 border-solid border-gray-200'
+              className='bg-gray-50 dark:bg-neutral-800 rounded-md p-3 border-2 border-solid border-gray-200 dark:border-neutral-700'
               style={itemStyle}
             >
               <Flex gap={16} align='stretch'>
@@ -115,7 +115,7 @@ export const RequestedFreight = ({
                 </div>
 
                 {current && (
-                  <div className='w-48 shrink-0 border-0 border-l border-solid border-gray-200 pl-4'>
+                  <div className='w-48 shrink-0 border-0 border-l border-solid border-gray-200 dark:border-neutral-700 pl-4'>
                     <SmallLabel className='mb-1'>CURRENT FREIGHT</SmallLabel>
                     <Link
                       to={generatePath(paths.freight, {

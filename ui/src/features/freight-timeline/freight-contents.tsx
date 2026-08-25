@@ -19,15 +19,17 @@ export const FreightContents = (props: {
   fullContentVisibility?: boolean;
 }) => {
   const { freight, highlighted, horizontal, dark } = props;
-  const linkClass = `${highlighted ? 'text-blue-500' : 'text-gray-400'} hover:text-blue-400 hover:underline max-w-full min-w-0 flex-shrink`;
+  const linkClass = `${highlighted ? 'text-blue-500' : 'text-gray-400 dark:text-neutral-500'} hover:text-blue-400 hover:underline max-w-full min-w-0 flex-shrink`;
 
   return (
     <div
       className={classNames(
         'flex justify-start items-center font-mono text-xs flex-shrink max-h-full max-w-full flex-wrap',
         {
-          'text-gray-700 hover:text-gray-800': highlighted,
-          'text-gray-400 hover:text-gray-500': !highlighted,
+          'text-gray-700 dark:text-neutral-200 hover:text-gray-800 dark:hover:text-neutral-100':
+            highlighted,
+          'text-gray-400 dark:text-neutral-500 hover:text-gray-500 dark:hover:text-neutral-400':
+            !highlighted,
           'flex-col w-44 overflow-y-auto flex-grow-0 flex-nowrap': !horizontal
         }
       )}

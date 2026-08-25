@@ -6,6 +6,8 @@ import { configureMonacoYaml } from 'monaco-yaml';
 import React, { FC, useEffect, useRef } from 'react';
 import yaml from 'yaml';
 
+import { useTheme } from '@ui/features/common/theme/use-theme';
+
 import styles from './yaml-editor.module.less';
 
 import './patch-yaml-editor';
@@ -53,6 +55,10 @@ const YamlEditor: FC<YamlEditorProps> = (props) => {
     resourceType,
     theme
   } = props;
+
+  // Follow the app theme unless a caller pins one (e.g. the always-dark YAML rail).
+  const { isDark } = useTheme();
+  const effectiveTheme = theme ?? (isDark ? 'dark' : 'light');
 
   const handleOnChange = (newValue: string | undefined) => {
     onChange?.(newValue);
@@ -127,13 +133,13 @@ const YamlEditor: FC<YamlEditorProps> = (props) => {
         // a plain <div> that React Flow doesn't recognize as a text field.
         className={['nokey', className].filter(Boolean).join(' ')}
         style={{
-          border: `1px solid ${theme === 'dark' ? '#2a3340' : '#d9d9d9'}`,
+          border: `1px solid ${effectiveTheme === 'dark' ? '#2a3340' : '#d9d9d9'}`,
           height,
           overflow: 'hidden'
         }}
       >
         <Editor
-          theme={theme === 'dark' ? 'kargo-dark' : 'light'}
+          theme={effectiveTheme === 'dark' ? 'kargo-dark' : 'light'}
           options={{
             readOnly: disabled,
             // Small breathing room around the content

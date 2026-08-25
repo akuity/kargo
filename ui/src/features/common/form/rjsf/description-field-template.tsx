@@ -9,5 +9,9 @@ export const DescriptionFieldTemplate = (props: DescriptionFieldProps) => {
     return null;
   }
 
-  return <span className='text-xs text-gray-400 mt-1 block mb-4'>{props.description}</span>;
+  return (
+    <span className='text-xs text-gray-400 dark:text-neutral-500 mt-1 block mb-4'>
+      {props.description}
+    </span>
+  );
 };
