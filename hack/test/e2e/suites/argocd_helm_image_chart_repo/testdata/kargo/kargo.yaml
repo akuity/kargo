@@ -11,8 +11,8 @@ metadata:
 spec:
   subscriptions:
   - image:
-      repoURL: public.ecr.aws/nginx/nginx # Watch for new versions of this image
-      semverConstraint: ^1.24.0
+      repoURL: docker.io/grafana/grafana # Watch for new versions of this image
+      semverConstraint: ^13.0
 ---
 apiVersion: kargo.akuity.io/v1alpha1
 kind: PromotionTask
@@ -22,15 +22,15 @@ metadata:
 spec:
   vars:
   - name: imageRepo
-    value: public.ecr.aws/nginx/nginx
+    value: docker.io/grafana/grafana
   steps:
   - uses: argocd-update
     config:
       apps:
       - name: ${{ ctx.project }}-${{ ctx.stage }}
         sources:
-        - repoURL: https://charts.bitnami.com/bitnami
-          chart: nginx
+        - repoURL: https://grafana-community.github.io/helm-charts
+          chart: grafana
           helm:
             images:
             - key: image.tag

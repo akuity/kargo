@@ -4,10 +4,8 @@ package argocd_helm_chart
 
 // This test implements the Argo CD driven, Helm chart-only example from
 // https://github.com/akuity/kargo-examples (01-argocd-driven/02-helm-driven/01-chart-only).
-// Stage-specific Argo CD Applications point at a specific version of the nginx
-// chart in the Bitnami chart repository, and Kargo advances new chart versions
-// from stage to stage. AnalysisTemplate verification is stripped (see
-// testdata/review/verification.yaml).
+// Stage-specific Argo CD Applications point at a specific version of the chart, and Kargo advances new chart versions
+// from stage to stage.
 
 import (
 	"testing"
