@@ -11,8 +11,8 @@ metadata:
 spec:
   subscriptions:
   - chart:
-      repoURL: https://charts.bitnami.com/bitnami
-      name: nginx
+      repoURL: https://grafana-community.github.io/helm-charts
+      name: grafana
 ---
 apiVersion: kargo.akuity.io/v1alpha1
 kind: PromotionTask

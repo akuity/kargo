@@ -1,3 +1,6 @@
+image:
+  repository: docker.io/library/kargo
+  tag: dev
 global:
   clusterSecretsNamespace: kargo-cluster-secrets
 api:

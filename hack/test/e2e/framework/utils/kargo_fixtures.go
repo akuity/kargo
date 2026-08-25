@@ -4,7 +4,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
-	"os"
+	"io/fs"
 	"path/filepath"
 	"slices"
 	"strings"
@@ -26,6 +26,8 @@ import (
 const groupKargo = "kargo"
 const KargoCLIKey envfuncs.ContextKey = "kargo_cli"
 const KargoCLIWatchKey envfuncs.ContextKey = "kargo_watch"
+const TestDataPath = "testdata"
+const TestDataKey envfuncs.ContextKey = "test_data"
 
 func SetupKargoClients(ctx context.Context, t *testing.T, cfg *envconf.Config) context.Context {
 	ctx = SetupKargoApiClient(ctx, t, cfg)
@@ -113,15 +115,26 @@ func TeardownKargoFixtures(ctx context.Context, t *testing.T, cfg *envconf.Confi
 	return TeardownKargoFixturesWithOptions(ctx, t, cfg)
 }
 
+func TestData(testData fs.FS) features.Func {
+	return func(ctx context.Context, _ *testing.T, _ *envconf.Config) context.Context {
+		return context.WithValue(ctx, TestDataKey, testData)
+	}
+}
+
 func scanFixtures(
 	ctx context.Context,
 	group string,
 	sortFun func([]string) []string,
 	handlerFun decoder.HandlerFunc,
-	options ...decoder.DecodeOption) error {
+	options ...decoder.DecodeOption,
+) error {
+	testData, ok := ctx.Value(TestDataKey).(fs.FS)
+	if !ok {
+		return fmt.Errorf("unable to get testdata from context")
+	}
 
-	fixturesDir := filepath.Join("testdata", group)
-	files, err := filepath.Glob(filepath.Join(fixturesDir, "*.yaml"))
+	fixturesDir := filepath.Join(TestDataPath, group)
+	files, err := fs.Glob(testData, filepath.Join(fixturesDir, "*.yaml"))
 	if err != nil {
 		return err
 	}
@@ -129,7 +142,7 @@ func scanFixtures(
 	files = sortFun(files)
 
 	for _, file := range files {
-		err := scanFile(ctx, file, handlerFun, options...)
+		err := scanFile(ctx, testData, file, handlerFun, options...)
 		if err != nil {
 			return err
 		}
@@ -140,11 +153,12 @@ func scanFixtures(
 
 func scanFile(
 	ctx context.Context,
+	testData fs.FS,
 	fileName string,
 	handlerFun decoder.HandlerFunc,
 	options ...decoder.DecodeOption,
 ) error {
-	f, err := os.Open(fileName)
+	f, err := testData.Open(fileName)
 	if err != nil {
 		return err
 	}
@@ -153,7 +167,7 @@ func scanFile(
 	if err != nil {
 		return err
 	}
-	return f.Close()
+	return nil
 }
 
 func sortDesc(sorted []string) []string {
@@ -179,8 +193,9 @@ func KargoCreateHandler() decoder.HandlerFunc {
 			return fmt.Errorf("kargo_cli is required in context")
 		}
 
+		fmt.Printf("Create kargo resource %v : %v\n", obj.GetObjectKind().GroupVersionKind().Kind, obj.GetName())
+
 		manifest, err := yaml.Marshal(obj)
-		fmt.Printf("Creating resource: %v\n", obj.GetObjectKind())
 		if err != nil {
 			return fmt.Errorf("error encoding kargo resource manifest: %w", err)
 		}

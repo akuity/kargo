@@ -1,0 +1,51 @@
+## Environment template used to configure nightly e2e runs.
+
+## It is based on kind_config.yaml and is going to use `kind` and `helm` to set up kargo and argocd instances.
+description: "Nightly test wth kind cluster"
+
+cluster:
+  name: kargo-e2e
+
+## cert-manager is a prerequisite for Kargo's self-signed certificates.
+cert_manager:
+  namespace: cert-manager
+  timeout: 10m
+
+argocd:
+  namespace: argocd
+  timeout: 10m
+  values_files: [
+    ../../values.argocd.test.yaml
+  ]
+
+argo-rollouts:
+  namespace: argo-rollouts
+  timeout: 10m
+
+kargo:
+  namespace: kargo
+  ## Using a chart directly from the repo
+  chart: ../../../../../charts/kargo
+  ## Using an image built with make hack-build
+  image: docker.io/library/kargo:dev
+  timeout: 10m
+  values_files: [
+    ../../values.test.yaml
+  ]
+
+kargo_cli:
+  ## Indicate that we need to run `kargo login` to login into a kargo instance in `kind` cluster
+  kargo_login:
+    ## Uste tmp directory to store kargo config
+    use_tmp_config_home: true
+
+argocd_cli:
+  ## Using system-local argocd config created by `argocd login`
+  config_file: ~/.config/argocd/config
+  ## Indicate that we need to run `argocd login` to login to an argocd instance in `kind` cluster
+  argocd_login: true
+
+context:
+  # kargo_demo_gitops_repo: <specify a repo here>
+  # git_pat: <specify a PAT here>
+  # http_endpoint: <URL of an HTTP endpoint that returns 2xx to a POST>

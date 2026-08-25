@@ -18,8 +18,8 @@ spec:
     spec:
       project: default
       source:
-        repoURL: https://charts.bitnami.com/bitnami
-        chart: nginx
+        repoURL: https://grafana-community.github.io/helm-charts
+        chart: grafana
         # Kargo will update targetRevision to move new charts into each stage
         targetRevision: placeholder
         helm:
@@ -27,8 +27,6 @@ spec:
           # Kargo will update this value to move new images into each stage
           - name: image.tag
             value: placeholder
-          - name: service.type
-            value: ClusterIP
       destination:
         server: https://kubernetes.default.svc
         namespace: kargo-argocd-helm-chart-image-{{stage}}
