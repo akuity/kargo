@@ -18,8 +18,16 @@ argocd:
     ../../values.argocd.test.yaml
   ]
 
+argo-rollouts:
+  namespace: argo-rollouts
+  timeout: 10m
+
 kargo:
   namespace: kargo
+  ## Using a chart directly from the repo
+  chart: ../../../../../charts/kargo
+  ## Using an image built with make hack-build
+  image: docker.io/library/kargo:dev
   timeout: 10m
   values_files: [
     ../../values.test.yaml

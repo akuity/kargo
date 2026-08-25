@@ -81,6 +81,10 @@ jobs:
           [ -n "${E2E_HTTP_ENDPOINT}" ] && echo "  http_endpoint: ${E2E_HTTP_ENDPOINT}"
         } >> "${cfg}"
 
+    - name: Build kargo image
+      run: |
+        make hack-build
+
     - name: Run e2e tests
       working-directory: hack/test/e2e
       run: |

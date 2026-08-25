@@ -30,6 +30,11 @@ cert_manager:
   set: []
   values_files: []
 
+## argo-rollouts are required for AnalysisTemplate in kargo
+argo-rollouts:
+  namespace: argo-rollouts
+  timeout: 10m
+
 argocd:
   release_name: argocd
   namespace: argocd

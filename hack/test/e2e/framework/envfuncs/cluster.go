@@ -25,6 +25,7 @@ const ClusterNameKey ContextKey = "cluster_name"
 
 // KargoHostKey holds a hostname used in KargoLogin. Populated by InstallKargo
 const KargoHostKey ContextKey = "kargo_host"
+
 // KargoPasswordKey holds a password used in KargoLogin. Populated by InstallKargo
 const KargoPasswordKey ContextKey = "kargo_password"
 
@@ -39,6 +40,7 @@ func ClusterSetupFuncs() []env.Func {
 		CreateKindCluster,
 		InstallCertManager,
 		InstallArgoCD,
+		InstallArgoRollouts,
 		InstallKargo,
 	}
 }
@@ -70,7 +72,7 @@ func CreateKindCluster(ctx context.Context, cfg *envconf.Config) (context.Contex
 	}
 
 	provider := kind.NewProvider()
-	
+
 	tempdir := ctx.Value(TmpDirKey)
 	if tempdir == nil {
 		return ctx, fmt.Errorf("Temp dir is not set up. Cannot create kubeconfig")
@@ -178,7 +180,7 @@ func InstallArgoCD(ctx context.Context, cfg *envconf.Config) (context.Context, e
 	}
 	// Port from portForward above
 	ctx = context.WithValue(ctx, ArgocdHostKey, "localhost:8080")
-	// Auth info. 
+	// Auth info.
 	// FIXME: the values require setValues to have configs.secret.argocdServerAdminPassword set
 	// Currently set in values.argocd.test.yaml
 	ctx = context.WithValue(ctx, ArgocdUsernameKey, "admin")
@@ -239,17 +241,46 @@ func InstallKargo(ctx context.Context, cfg *envconf.Config) (context.Context, er
 	return ctx, nil
 }
 
+// InstallArgoRollouts installs the Argo Rollouts Helm chart.
+// It no-ops when no managed cluster is present in the context.
+func InstallArgoRollouts(ctx context.Context, cfg *envconf.Config) (context.Context, error) {
+	if _, ok := managedClusterName(ctx); !ok {
+		return ctx, nil
+	}
+	if _, err := GetEnvMap(ctx, []string{"argo-rollouts"}); err != nil {
+		fmt.Println("No `argo-rollouts` section in env; skipping argo rollouts installation")
+		return ctx, nil
+	}
+	chart := helmChart{
+		releaseName: optionalString(ctx, []string{"argo-rollouts", "release_name"}, "argo-rollouts"),
+		chart:       optionalString(ctx, []string{"argo-rollouts", "chart"}, "argo/argo-rollouts"),
+		namespace:   optionalString(ctx, []string{"argo-rollouts", "namespace"}, "argo-rollouts"),
+		version:     optionalString(ctx, []string{"argo-rollouts", "version"}, ""),
+		repoName:    optionalString(ctx, []string{"argo-rollouts", "chart_repo_name"}, "argo"),
+		repoURL:     optionalString(ctx, []string{"argo-rollouts", "chart_repo_url"}, "https://argoproj.github.io/argo-helm"),
+		timeout:     optionalString(ctx, []string{"argo-rollouts", "timeout"}, "10m"),
+		valuesFiles: expandHomeAll(optionalStringSlice(ctx, []string{"argo-rollouts", "values_files"})),
+		setValues:   optionalStringSlice(ctx, []string{"argo-rollouts", "set"}),
+	}
+	fmt.Println("Installing Argo Rollouts")
+	if err := chart.install(cfg.KubeconfigFile()); err != nil {
+		return ctx, fmt.Errorf("installing Argo Rollouts: %w", err)
+	}
+
+	return ctx, nil
+}
+
 func portForward(kubeconfig, namespace, service string, outport, inport int) error {
 	// Run port-forward in background.
 	// This is a simplified approach when we just run a background shell.
 	// There is no error handling here, it might fail silently.
 	// FIXME: replace that with goroutine and error channels?
 	// FIXME: implement forwarding to an non-predefined port
-	cmd := fmt.Sprintf("sh -c \"kubectl port-forward --kubeconfig %s --namespace %s %s %d:%d > /dev/null 2>&1 &\"", 
+	cmd := fmt.Sprintf("sh -c \"kubectl port-forward --kubeconfig %s --namespace %s %s %d:%d > /dev/null 2>&1 &\"",
 		kubeconfig, namespace, service, outport, inport)
 
-	fmt.Printf("Port forwarding %s to %d", service, outport)
-	
+	fmt.Printf("Port forwarding %s to %d\n", service, outport)
+
 	p := utils.RunCommand(cmd)
 	if p.Err() != nil {
 		outBytes, outErr := io.ReadAll(p.Out())

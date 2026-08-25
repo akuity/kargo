@@ -193,6 +193,8 @@ func KargoCreateHandler() decoder.HandlerFunc {
 			return fmt.Errorf("kargo_cli is required in context")
 		}
 
+		fmt.Printf("Create kargo resource %v : %v\n", obj.GetObjectKind().GroupVersionKind().Kind, obj.GetName())
+
 		manifest, err := yaml.Marshal(obj)
 		if err != nil {
 			return fmt.Errorf("error encoding kargo resource manifest: %w", err)
