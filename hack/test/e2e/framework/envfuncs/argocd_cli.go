@@ -72,7 +72,7 @@ func ArgocdLogin(ctx context.Context, cfg *envconf.Config) (context.Context, err
 
 	cmd := fmt.Sprintf("argocd login --insecure %s --username %s --password %s --config %s", 
 		argocdHost, argocdUsername, argocdPassword, argocdConfigFile)
-	p := utils.RunCommand(cmd)
+	p := utils.RunCommandContext(ctx, cmd)
 	if p.Err() != nil {
 		outBytes, outErr := io.ReadAll(p.Out())
 		if outErr != nil {

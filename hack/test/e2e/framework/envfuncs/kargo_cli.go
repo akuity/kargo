@@ -49,9 +49,9 @@ func KargoLogin(ctx context.Context, cfg *envconf.Config) (context.Context, erro
 	}
 
 	fmt.Printf("Kargo login \n")
-	
+
 	cmd := fmt.Sprintf("kargo login %s --admin --password %s", kargoHost, kargoPassword)
-	p := utils.RunCommand(cmd)
+	p := utils.RunCommandContext(ctx, cmd)
 	if p.Err() != nil {
 		outBytes, outErr := io.ReadAll(p.Out())
 		if outErr != nil {
@@ -64,34 +64,30 @@ func KargoLogin(ctx context.Context, cfg *envconf.Config) (context.Context, erro
 }
 
 func processLoginConfig(ctx context.Context, loginConfigVal any) (context.Context, func(), error) {
-	loginConfig, ok := loginConfigVal.(map[string]any)
-	if ok {
+	if loginConfig, ok := loginConfigVal.(map[string]any); ok {
 		// There are extra fields in the config
-
 		// Using tmpdir for config home
-		if useTmpConfigHome, ok := loginConfig["use_tmp_config_home"]; ok {
-			if useTmpConfigHome.(bool) {
-				oldConfigHome := os.Getenv(ConfigHomeVar)
+		if useTmpConfigHome, ok := loginConfig["use_tmp_config_home"]; ok && useTmpConfigHome.(bool) {
+			oldConfigHome := os.Getenv(ConfigHomeVar)
 
-				tempdir := ctx.Value(TmpDirKey)
-				if tempdir == nil {
-					return ctx, nil, fmt.Errorf("Temp dir is not set up. Cannot create tmp confighome")
-				}
-
-				tmpConfigHome := filepath.Join(tempdir.(string), "config")
-
-				configFile := filepath.Join(tmpConfigHome, "kargo", "config")
-				ctx = context.WithValue(ctx, KargoConfigKey, configFile)
-
-				os.Setenv(ConfigHomeVar, tmpConfigHome)
-				return ctx, func() {
-					if oldConfigHome == "" {
-						os.Unsetenv(ConfigHomeVar)
-					} else {
-						os.Setenv(ConfigHomeVar, oldConfigHome)
-					}
-				}, nil
+			tempdir := ctx.Value(TmpDirKey)
+			if tempdir == nil {
+				return ctx, nil, fmt.Errorf("Temp dir is not set up. Cannot create tmp confighome")
 			}
+
+			tmpConfigHome := filepath.Join(tempdir.(string), "config")
+
+			configFile := filepath.Join(tmpConfigHome, "kargo", "config")
+			ctx = context.WithValue(ctx, KargoConfigKey, configFile)
+
+			os.Setenv(ConfigHomeVar, tmpConfigHome)
+			return ctx, func() {
+				if oldConfigHome == "" {
+					os.Unsetenv(ConfigHomeVar)
+				} else {
+					os.Setenv(ConfigHomeVar, oldConfigHome)
+				}
+			}, nil
 		}
 	}
 	return ctx, nil, nil
@@ -120,7 +116,7 @@ func LoadKargoConfig(ctx context.Context, cfg *envconf.Config) (context.Context,
 			return withKargoConfig(ctx, kargoConfig), nil
 		}
 		if kargoConfigEnv, ok := kargoEnv["kargo_config"].(map[string]any); ok {
-			kargoConfig, err := loadConfigFromEnv(kargoConfigEnv)	
+			kargoConfig, err := loadConfigFromEnv(kargoConfigEnv)
 			if err != nil {
 				return ctx, err
 			}
@@ -157,7 +153,7 @@ func loadConfigFromFile(fileName string) (cfg config.CLIConfig, err error) {
 		fmt.Printf("Reading kargo config from embedded env %v\n", fileName)
 		configBytes, err = env.Envs.ReadFile(filepath.Join("envs", fileName))
 	}
-	
+
 	if err != nil {
 		return config.CLIConfig{}, err
 	}

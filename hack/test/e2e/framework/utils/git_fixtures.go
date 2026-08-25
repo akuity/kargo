@@ -17,11 +17,12 @@ import (
 	"github.com/akuity/kargo/hack/test/e2e/envfuncs"
 	"github.com/akuity/kargo/pkg/gitprovider"
 
-	_ "github.com/akuity/kargo/pkg/gitprovider/azure"           // Azure provider registration
-	_ "github.com/akuity/kargo/pkg/gitprovider/bitbucket/cloud" // Bitbucket Cloud provider registration
-	_ "github.com/akuity/kargo/pkg/gitprovider/gitea"           // Gitea provider registration
-	_ "github.com/akuity/kargo/pkg/gitprovider/github"          // GitHub provider registration
-	_ "github.com/akuity/kargo/pkg/gitprovider/gitlab"          // GitLab provider registration
+	// Git provider registrations
+	_ "github.com/akuity/kargo/pkg/gitprovider/azure"
+	_ "github.com/akuity/kargo/pkg/gitprovider/bitbucket/cloud"
+	_ "github.com/akuity/kargo/pkg/gitprovider/gitea"
+	_ "github.com/akuity/kargo/pkg/gitprovider/github"
+	_ "github.com/akuity/kargo/pkg/gitprovider/gitlab"
 )
 
 // GitCreds holds the git credentials substituted into git-driven suite

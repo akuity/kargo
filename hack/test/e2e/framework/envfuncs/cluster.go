@@ -174,7 +174,7 @@ func InstallArgoCD(ctx context.Context, cfg *envconf.Config) (context.Context, e
 
 	// kubectl port-forward svc/argocd-server -n argocd 8080:443
 	// TODO: make the port configurable
-	err := portForward(cfg.KubeconfigFile(), chart.namespace, "svc/argocd-server", 8080, 443)
+	err := portForward(ctx, cfg.KubeconfigFile(), chart.namespace, "svc/argocd-server", 8080, 443)
 	if err != nil {
 		return ctx, fmt.Errorf("port-forwarding Argocd: %w", err)
 	}
@@ -228,7 +228,7 @@ func InstallKargo(ctx context.Context, cfg *envconf.Config) (context.Context, er
 	}
 	// kubectl port-forward --namespace kargo svc/kargo-api 3000:80
 	// TODO: make the port configurable
-	err := portForward(cfg.KubeconfigFile(), chart.namespace, "svc/kargo-api", 3000, 80)
+	err := portForward(ctx, cfg.KubeconfigFile(), chart.namespace, "svc/kargo-api", 3000, 80)
 	if err != nil {
 		return ctx, fmt.Errorf("port-forwarding Kargo API: %w", err)
 	}
@@ -270,7 +270,7 @@ func InstallArgoRollouts(ctx context.Context, cfg *envconf.Config) (context.Cont
 	return ctx, nil
 }
 
-func portForward(kubeconfig, namespace, service string, outport, inport int) error {
+func portForward(ctx context.Context, kubeconfig, namespace, service string, outport, inport int) error {
 	// Run port-forward in background.
 	// This is a simplified approach when we just run a background shell.
 	// There is no error handling here, it might fail silently.
@@ -281,7 +281,7 @@ func portForward(kubeconfig, namespace, service string, outport, inport int) err
 
 	fmt.Printf("Port forwarding %s to %d\n", service, outport)
 
-	p := utils.RunCommand(cmd)
+	p := utils.RunCommandContext(ctx, cmd)
 	if p.Err() != nil {
 		outBytes, outErr := io.ReadAll(p.Out())
 		if outErr != nil {

@@ -70,7 +70,7 @@ kargo:
 kargo_cli:
   ## Indicate that we need to run `kargo login` to login into a kargo instance in `kind` cluster
   kargo_login:
-    ## Uste tmp directory to store kargo config
+    ## Use tmp directory to store kargo config
     use_tmp_config_home: true
 
 argocd_cli:
