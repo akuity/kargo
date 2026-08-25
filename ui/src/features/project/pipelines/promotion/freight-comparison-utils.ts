@@ -37,6 +37,9 @@ export const repoLabel = (source: TableSource): string => {
   return source.repoURL || '-';
 };
 
+export const subscriptionName = (source?: TableSource): string | undefined =>
+  !source || source.type === 'other' ? undefined : source.subscriptionName;
+
 export const versionLabel = (source: TableSource): string => {
   switch (source.type) {
     case 'git':

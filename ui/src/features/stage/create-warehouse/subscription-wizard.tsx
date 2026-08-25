@@ -3,7 +3,7 @@ import { faEye, faTrash, IconDefinition } from '@fortawesome/free-solid-svg-icon
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
 import Form from '@rjsf/antd';
 import validator from '@rjsf/validator-ajv8';
-import { Button, Card, Collapse, Modal, Select, Tag, Typography } from 'antd';
+import { Button, Card, Collapse, Input, Modal, Select, Tag, Typography } from 'antd';
 import AntdFormLabel from 'antd/es/form/FormItemLabel';
 import classNames from 'classnames';
 import { JSONSchema7 } from 'json-schema';
@@ -15,6 +15,7 @@ import { FieldTemplate } from '@ui/features/common/form/rjsf/field-template';
 import { ObjectFieldTemplate } from '@ui/features/common/form/rjsf/object-field-template';
 import { IconSetByKargoTerminology } from '@ui/features/common/icons';
 import { ObjectDescription } from '@ui/features/common/object-description';
+import { SubscriptionName } from '@ui/features/common/subscription-name';
 
 import { warehouseCreateFormJSONSchema } from './schema';
 
@@ -30,6 +31,8 @@ export const SubscriptionWizard = (props: {
   const [selectedNewSubscription, setSelectedNewSubscription] = useState(
     subscriptionTypes[2] /* image as default and common subscription */
   );
+
+  const [name, setName] = useState('');
 
   return (
     <>
@@ -62,6 +65,16 @@ export const SubscriptionWizard = (props: {
             value={selectedNewSubscription}
             onChange={(newSubscription) => setSelectedNewSubscription(newSubscription)}
           />
+          <div>
+            <AntdFormLabel prefixCls='' label='Name' htmlFor='subscription-name' />
+            <Input
+              id='subscription-name'
+              className='mt-2'
+              value={name}
+              onChange={(e) => setName(e.target.value)}
+              placeholder='Optional'
+            />
+          </div>
           <Collapse
             items={[
               {
@@ -86,14 +99,16 @@ export const SubscriptionWizard = (props: {
                         norender: true
                       }
                     }}
-                    onSubmit={(data) =>
+                    onSubmit={(data) => {
                       props.onChange([
                         ...props.subscriptions,
                         {
+                          ...(name ? { name } : {}),
                           [selectedNewSubscription]: data.formData
                         }
-                      ])
-                    }
+                      ]);
+                      setName('');
+                    }}
                   >
                     <Button htmlType='submit' icon={<IconSetByKargoTerminology.subscription />}>
                       Add Subscription
@@ -117,8 +132,8 @@ SubscriptionWizard.Subscription = (props: {
   let icon: IconDefinition | null = null;
 
   // one of git, image or chart
-  const subscriptionType = (Object.keys(props.subscription)[0] || '') as
-    keyof RepoSubscription | '';
+  const subscriptionType = (Object.keys(props.subscription).filter((k) => k !== 'name')[0] ||
+    '') as keyof RepoSubscription | '';
 
   if (subscriptionType === '') {
     return <Tag color='red'>Corrupt Subscription! Please Check YAML</Tag>;
@@ -167,7 +182,12 @@ SubscriptionWizard.Subscription = (props: {
       <Card.Meta
         avatar={icon && <FontAwesomeIcon icon={icon} />}
         title={subscriptionType}
-        description={subscriptionSource}
+        description={
+          <div className='flex items-center gap-2'>
+            <SubscriptionName name={props.subscription.name} />
+            {subscriptionSource}
+          </div>
+        }
       />
     </Card>
   );

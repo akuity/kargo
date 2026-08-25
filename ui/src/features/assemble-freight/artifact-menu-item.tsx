@@ -1,7 +1,13 @@
 import classNames from 'classnames';
 
+import { SubscriptionName } from '@ui/features/common/subscription-name';
+
 import { DiscoveryResult } from './types';
-import { getSubscriptionKey, isEqualSubscriptions } from './unique-subscription-key';
+import {
+  getSubscriptionKey,
+  getSubscriptionName,
+  isEqualSubscriptions
+} from './unique-subscription-key';
 
 export interface ArtifactMenuItemProps {
   onClick: () => void;
@@ -34,10 +40,16 @@ export const ArtifactMenuItems = ({
     {items.map((item) => {
       const isSelected = !!selected && isEqualSubscriptions(selected, item);
       const key = getSubscriptionKey(item);
+      const subscriptionName = getSubscriptionName(item);
 
       return (
         <ArtifactMenuItem key={key} onClick={() => onClick(item)} selected={isSelected}>
           {key}
+          {!!subscriptionName && (
+            <div className='mt-1'>
+              <SubscriptionName name={subscriptionName} />
+            </div>
+          )}
         </ArtifactMenuItem>
       );
     })}
