@@ -53,6 +53,16 @@ linters:
       min-len: 3
       # Minimal occurrences count to trigger, 3 by default
       min-occurrences: 3
+      # Ad hoc map keys (e.g. step result output fields) don't warrant a
+      # named constant just because the same key is reused elsewhere.
+      ignore-map-keys: true
+      # Call is excluded by default; CompositeLit is added here because
+      # struct/slice literal values (Kubernetes API kinds, verbs, resource
+      # names, table column headers, etc.) are frequently repeated
+      # vocabulary rather than magic strings that need centralizing.
+      exclude-types:
+        - Call
+        - CompositeLit
 
     govet:
       enable:

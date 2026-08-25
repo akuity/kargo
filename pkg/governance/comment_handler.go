@@ -41,6 +41,14 @@ func (h *commentHandler) handleCreated(
 	}
 
 	// Slash commands are maintainer-only.
+	//
+	// AuthorAssociation is marked deprecated on this go-github struct field,
+	// but the deprecation notice's own wording scopes it to GitHub's Events
+	// API (the polling activity feed) as of 2025-10-07 — see GitHub's
+	// "Upcoming changes to GitHub Events API payloads" changelog. It doesn't
+	// apply to webhook deliveries, which is what's read here: GitHub's own
+	// webhook schema (github/rest-api-description) still documents
+	// author_association on issue_comment with no deprecation notice.
 	authorAssoc := event.GetComment().GetAuthorAssociation()
 	authorLogin := event.GetComment().GetUser().GetLogin()
 	authorIsMaintainer, err := h.isMaintainer(ctx, authorAssoc, authorLogin)

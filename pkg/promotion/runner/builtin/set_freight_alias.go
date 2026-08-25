@@ -82,18 +82,18 @@ func (s *freightAliasSetter) run(
 	)
 	if err != nil {
 		return promotion.StepResult{
-				Status: kargoapi.PromotionStepStatusFailed,
-			}, &promotion.TerminalError{
-				Err: fmt.Errorf("failed to fetch Freight %q in project %q: %w", cfg.Name, stepCtx.Project, err),
-			}
+			Status: kargoapi.PromotionStepStatusFailed,
+		}, &promotion.TerminalError{
+			Err: fmt.Errorf("failed to fetch Freight %q in project %q: %w", cfg.Name, stepCtx.Project, err),
+		}
 	}
 
 	if freight == nil {
 		return promotion.StepResult{
-				Status: kargoapi.PromotionStepStatusFailed,
-			}, &promotion.TerminalError{
-				Err: fmt.Errorf("freight %q not found in project %q", cfg.Name, stepCtx.Project),
-			}
+			Status: kargoapi.PromotionStepStatusFailed,
+		}, &promotion.TerminalError{
+			Err: fmt.Errorf("freight %q not found in project %q", cfg.Name, stepCtx.Project),
+		}
 	}
 
 	patchBytes := []byte(
@@ -109,10 +109,10 @@ func (s *freightAliasSetter) run(
 	// Alias uniqueness is enforced by the admission webhook.
 	if err := s.kargoClient.Patch(ctx, freight, patch); err != nil {
 		return promotion.StepResult{
-				Status: kargoapi.PromotionStepStatusFailed,
-			}, &promotion.TerminalError{
-				Err: fmt.Errorf("failed to patch alias for Freight %q in project %q: %w", freight.Name, stepCtx.Project, err),
-			}
+			Status: kargoapi.PromotionStepStatusFailed,
+		}, &promotion.TerminalError{
+			Err: fmt.Errorf("failed to patch alias for Freight %q in project %q: %w", freight.Name, stepCtx.Project, err),
+		}
 	}
 
 	return promotion.StepResult{

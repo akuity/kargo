@@ -158,6 +158,24 @@ func (t *tarCreator) createTarball(
 ) (promotion.StepResult, error) {
 	matcher := t.buildIgnoreMatcher(ignore)
 
+	// Regular files are opened relative to root rather than by their
+	// absolute path (below) so that a symlink swapped in after WalkDir
+	// stats an entry can't redirect the read outside rootDir: os.Root
+	// guarantees that symlinks it follows cannot escape the directory it
+	// was opened on.
+	rootDir := absInPath
+	if info, statErr := os.Stat(absInPath); statErr == nil && !info.IsDir() {
+		rootDir = filepath.Dir(absInPath)
+	}
+	root, err := os.OpenRoot(rootDir)
+	if err != nil {
+		return promotion.StepResult{Status: kargoapi.PromotionStepStatusErrored},
+			fmt.Errorf("failed to open root directory %q: %w", rootDir, err)
+	}
+	defer func() {
+		_ = root.Close()
+	}()
+
 	tempFile, tempFilePath, err := t.createTempFile(absOutPath)
 	if err != nil {
 		return promotion.StepResult{Status: kargoapi.PromotionStepStatusErrored}, err
@@ -227,6 +245,10 @@ func (t *tarCreator) createTarball(
 			}
 		}
 
+		// fsRelPath keeps the OS-native separators needed for root.Open
+		// below; relPath is normalized to forward slashes for the tar
+		// header name.
+		fsRelPath := relPath
 		relPath = filepath.ToSlash(relPath)
 
 		// Read its target if it's a symlink.
@@ -254,7 +276,7 @@ func (t *tarCreator) createTarball(
 		}
 
 		if info.Mode().IsRegular() {
-			srcFile, err := os.Open(path)
+			srcFile, err := root.Open(fsRelPath)
 			if err != nil {
 				return fmt.Errorf("failed to open source file %q: %w", path, err)
 			}

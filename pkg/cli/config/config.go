@@ -133,6 +133,9 @@ func SaveCLIConfig(config CLIConfig) error {
 }
 
 func saveCLIConfig(config CLIConfig, configPath string) error {
+	// #nosec G117 -- Written only to a local file (configPath, below) in the
+	// user's own Kargo home directory so it can be read back on later
+	// invocations; it is never transmitted anywhere over the network.
 	configBytes, err := yaml.Marshal(config)
 	if err != nil {
 		return fmt.Errorf("error marshaling config: %w", err)
