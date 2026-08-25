@@ -37,15 +37,25 @@ export const PromotionSteps = (props: PromotionStepsProps) => {
   const message = props.promotion?.status?.message;
 
   // A failed step's message becomes the Promotion's, so it is already on screen.
-  const shownUnderStep = (props.promotion.status?.stepExecutionMetadata ?? []).some(
-    (meta, i) => isFailedStep(i, props.promotion.status) && !!meta.message
-  );
+  const hasIndividualPromotionStepTerminalMessage = (
+    props.promotion.status?.stepExecutionMetadata ?? []
+  ).some((meta, i) => isFailedStep(i, props.promotion.status) && !!meta.message);
 
-  const shouldShowMessage =
-    isPromotionPhaseTerminal(phase) &&
-    phase !== PromotionStatusPhase.SUCCEEDED &&
-    !!message &&
-    !shownUnderStep;
+  let shouldShowMessage = false;
+
+  if (isPromotionPhaseTerminal(phase)) {
+    switch (phase) {
+      case PromotionStatusPhase.FAILED:
+      case PromotionStatusPhase.ERRORED:
+        // The failing step already shows this message, so don't repeat it.
+        shouldShowMessage = !hasIndividualPromotionStepTerminalMessage;
+        break;
+      case PromotionStatusPhase.ABORTED:
+        // An abort is not attributable to any one step.
+        shouldShowMessage = true;
+        break;
+    }
+  }
 
   const steps = props.promotion?.spec?.steps ?? [];
 
@@ -113,7 +123,7 @@ export const PromotionSteps = (props: PromotionStepsProps) => {
         activeKey={activeKeys}
         onChange={(keys) => setActiveKeys(typeof keys === 'string' ? [keys] : keys)}
       />
-      {shouldShowMessage && <Alert message={message} type='error' className='mt-4' />}
+      {shouldShowMessage && !!message && <Alert message={message} type='error' className='mt-4' />}
     </>
   );
 };
