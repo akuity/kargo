@@ -6,6 +6,7 @@ import (
 
 	"github.com/gin-gonic/gin"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"sigs.k8s.io/controller-runtime/pkg/client"
 
 	kargoapi "github.com/akuity/kargo/api/v1alpha1"
 	"github.com/akuity/kargo/pkg/api"
@@ -29,6 +30,14 @@ func (s *server) refreshStage(c *gin.Context) {
 	project := c.Param("project")
 	stageName := c.Param("stage")
 
+	stageKey := client.ObjectKey{Name: stageName, Namespace: project}
+	if err := s.authorizeFn(
+		ctx, "get", kargoapi.GroupVersion.WithResource("stages"), "", stageKey,
+	); err != nil {
+		_ = c.Error(err)
+		return
+	}
+
 	stage := &kargoapi.Stage{
 		ObjectMeta: metav1.ObjectMeta{Name: stageName, Namespace: project},
 	}
@@ -40,6 +49,14 @@ func (s *server) refreshStage(c *gin.Context) {
 
 	// If there is a current Promotion then refresh it, too
 	if stage.Status.CurrentPromotion != nil {
+		promoKey := client.ObjectKey{Name: stage.Status.CurrentPromotion.Name, Namespace: project}
+		if err := s.authorizeFn(
+			ctx, "get", kargoapi.GroupVersion.WithResource("promotions"), "", promoKey,
+		); err != nil {
+			_ = c.Error(err)
+			return
+		}
+
 		promo := &kargoapi.Promotion{
 			ObjectMeta: metav1.ObjectMeta{
 				Namespace: project,
