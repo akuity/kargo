@@ -7,7 +7,6 @@ import Link from 'antd/es/typography/Link';
 import { useMemo } from 'react';
 
 import { RepoSubscription } from '@ui/extend/types';
-import { SubscriptionNameTag } from '@ui/features/common/subscription-name-tag';
 
 import {
   artifactBase,
@@ -24,8 +23,9 @@ export const SubscriptionNode = (props: { subscription: RepoSubscription }) => {
       props.subscription?.chart?.repoURL ||
       props.subscription?.image?.repoURL ||
       '';
-    const title = humanComprehendableArtifact({ repoURL }) || props.subscription.name;
-    const base = artifactBase(repoURL) || repoURL;
+    const name = props.subscription.name;
+    const title = name || humanComprehendableArtifact({ repoURL }) || repoURL;
+    const base = name ? repoURL : artifactBase(repoURL) || repoURL;
     const link = artifactURL(repoURL);
 
     return { title, repoURL, base, link };
@@ -50,13 +50,9 @@ export const SubscriptionNode = (props: { subscription: RepoSubscription }) => {
       title={
         <Flex align='center' gap={8}>
           {icon && <FontAwesomeIcon icon={icon} />}
-          <span className='text-xs truncate'>{title}</span>
-          {!!props.subscription.name && (
-            <SubscriptionNameTag
-              name={props.subscription.name}
-              className='ml-auto mr-0 max-w-[45%] shrink-0 truncate text-[9px]'
-            />
-          )}
+          <span className='text-xs truncate' title={title}>
+            {title}
+          </span>
         </Flex>
       }
       variant='borderless'

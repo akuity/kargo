@@ -1,6 +1,6 @@
 import classNames from 'classnames';
 
-import { SubscriptionNameTag } from '@ui/features/common/subscription-name-tag';
+import { SubscriptionName } from '@ui/features/common/subscription-name';
 
 import { DiscoveryResult } from './types';
 import {
@@ -47,10 +47,7 @@ export const ArtifactMenuItems = ({
           {key}
           {!!subscriptionName && (
             <div className='mt-1'>
-              <SubscriptionNameTag
-                name={subscriptionName}
-                className='mr-0 max-w-full truncate text-[10px]'
-              />
+              <SubscriptionName name={subscriptionName} />
             </div>
           )}
         </ArtifactMenuItem>

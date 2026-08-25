@@ -5,7 +5,7 @@ import Link from 'antd/es/typography/Link';
 import classNames from 'classnames';
 import { useMemo } from 'react';
 
-import { SubscriptionNameTag } from '../common/subscription-name-tag';
+import { SubscriptionName } from '../common/subscription-name';
 import { TruncateMiddle } from '../common/truncate-middle';
 
 export const FreightContentItem = (props: {
@@ -124,10 +124,7 @@ export const FreightContentItem = (props: {
           </span>
         )}
         {fullContentVisibility && (
-          <SubscriptionNameTag
-            name={subscriptionName}
-            className='mr-0 max-w-full truncate text-[10px]'
-          />
+          <SubscriptionName name={subscriptionName} className='text-[10px]' />
         )}
       </div>
     </Tooltip>

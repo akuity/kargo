@@ -2,7 +2,7 @@ import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
 import { Col, Flex, Row, Space, Table, Tag, theme, Typography } from 'antd';
 import { useMemo } from 'react';
 
-import { SubscriptionNameTag } from '@ui/features/common/subscription-name-tag';
+import { SubscriptionName } from '@ui/features/common/subscription-name';
 import { ArtifactMetadata } from '@ui/features/freight/artifact-metadata';
 import { Freight, FreightReference } from '@ui/gen/api/v2/models';
 
@@ -49,6 +49,11 @@ export const FreightComparisonTable = ({
   );
 
   const hasCurrent = !!currentFreight;
+
+  const hasSubscriptionNames = useMemo(
+    () => rows.some((row) => !!subscriptionName(row.incoming || row.current)),
+    [rows]
+  );
 
   return (
     <Table<PairedRow>
@@ -104,7 +109,7 @@ export const FreightComparisonTable = ({
     >
       <Table.Column<PairedRow>
         title='Repo / Name'
-        width='57%'
+        width={hasSubscriptionNames ? '42%' : '57%'}
         render={(_, row) => {
           const source = row.incoming || row.current;
           if (!source) {
@@ -121,20 +126,29 @@ export const FreightComparisonTable = ({
               />
               <div>
                 <div className='font-mono'>{repoLabel(source)}</div>
-                <Flex align='center' gap={8} wrap>
-                  <Typography.Text type='secondary' className='text-xs'>
-                    {typeLabel(source)}
-                  </Typography.Text>
-                  <SubscriptionNameTag
-                    name={subscriptionName(source)}
-                    className='mr-0 text-[10px]'
-                  />
-                </Flex>
+                <Typography.Text type='secondary' className='text-xs'>
+                  {typeLabel(source)}
+                </Typography.Text>
               </div>
             </Flex>
           );
         }}
       />
+      {hasSubscriptionNames && (
+        <Table.Column<PairedRow>
+          title='Name'
+          width='15%'
+          render={(_, row) => {
+            const name = subscriptionName(row.incoming || row.current);
+
+            if (!name) {
+              return <Typography.Text type='secondary'>—</Typography.Text>;
+            }
+
+            return <SubscriptionName name={name} className='text-xs' />;
+          }}
+        />
+      )}
       <Table.Column<PairedRow>
         title='Current'
         width='15%'

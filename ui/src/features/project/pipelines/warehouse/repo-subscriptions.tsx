@@ -1,7 +1,6 @@
 import { Descriptions, Typography } from 'antd';
 
 import { RepoSubscription } from '@ui/extend/types';
-import { SubscriptionNameTag } from '@ui/features/common/subscription-name-tag';
 import { urlForImage } from '@ui/utils/url';
 
 type Props = {
@@ -12,15 +11,6 @@ type Props = {
 const DescriptionsLabelStyle: React.CSSProperties = {
   width: '40%'
 };
-
-// subscriptionTitle pairs the kind of a subscription with its optional name,
-// which is what identifies one subscription among several of the same kind.
-const subscriptionTitle = (kind: string, name?: string) => (
-  <span className='flex items-center gap-2'>
-    {kind}
-    <SubscriptionNameTag name={name} className='mr-0' />
-  </span>
-);
 
 export const RepoSubscriptions = ({ subscriptions }: Props) => {
   if (!subscriptions) {
@@ -33,12 +23,18 @@ export const RepoSubscriptions = ({ subscriptions }: Props) => {
         <>
           {subscription.chart && (
             <Descriptions
-              title={subscriptionTitle('Chart', subscription.name)}
+              title='Chart'
               bordered
               size='small'
               column={1}
               style={{ width: '40%', minWidth: 500 }}
             >
+              {!!subscription.name && (
+                <Descriptions.Item label='Name' styles={{ label: DescriptionsLabelStyle }}>
+                  {subscription.name}
+                </Descriptions.Item>
+              )}
+
               <Descriptions.Item label='repo URL' styles={{ label: DescriptionsLabelStyle }}>
                 <Typography.Link
                   href={`${subscription.chart?.repoURL}/${subscription?.chart?.name}`}
@@ -68,12 +64,18 @@ export const RepoSubscriptions = ({ subscriptions }: Props) => {
 
           {subscription.git && (
             <Descriptions
-              title={subscriptionTitle('Git', subscription.name)}
+              title='Git'
               bordered
               size='small'
               column={1}
               style={{ width: '40%', minWidth: 500 }}
             >
+              {!!subscription.name && (
+                <Descriptions.Item label='Name' styles={{ label: DescriptionsLabelStyle }}>
+                  {subscription.name}
+                </Descriptions.Item>
+              )}
+
               <Descriptions.Item label='repo URL' styles={{ label: DescriptionsLabelStyle }}>
                 <Typography.Link href={subscription.git?.repoURL} target='_blank' rel='noreferrer'>
                   {subscription.git?.repoURL}
@@ -114,12 +116,18 @@ export const RepoSubscriptions = ({ subscriptions }: Props) => {
 
           {subscription.image && (
             <Descriptions
-              title={subscriptionTitle('Image', subscription.name)}
+              title='Image'
               bordered
               size='small'
               column={1}
               style={{ width: '40%', minWidth: 500 }}
             >
+              {!!subscription.name && (
+                <Descriptions.Item label='Name' styles={{ label: DescriptionsLabelStyle }}>
+                  {subscription.name}
+                </Descriptions.Item>
+              )}
+
               <Descriptions.Item label='repo URL' styles={{ label: DescriptionsLabelStyle }}>
                 <Typography.Link
                   href={urlForImage(subscription.image?.repoURL)}
@@ -158,12 +166,16 @@ export const RepoSubscriptions = ({ subscriptions }: Props) => {
 
           {subscription.subscription && (
             <Descriptions
-              title={subscriptionTitle('Other', subscription.name)}
+              title='Other'
               bordered
               size='small'
               column={1}
               style={{ width: '40%', minWidth: 500 }}
             >
+              {!!subscription.name && (
+                <Descriptions.Item label='Name'>{subscription.name}</Descriptions.Item>
+              )}
+
               <Descriptions.Item label='Type'>
                 {subscription.subscription.subscriptionType}
               </Descriptions.Item>
