@@ -1,0 +1,210 @@
+apiVersion: kargo.akuity.io/v1alpha1
+kind: Project
+metadata:
+  name: kargo-git-helm-commit-image
+---
+apiVersion: v1
+kind: Secret
+type: Opaque
+metadata:
+  name: manifests
+  namespace: kargo-git-helm-commit-image
+  labels:
+    kargo.akuity.io/cred-type: git
+stringData:
+  repoURL: https://github.com/<github-username>/kargo-demo-gitops.git
+  username: <github-username>
+  password: <github-pat>
+---
+apiVersion: kargo.akuity.io/v1alpha1
+kind: Warehouse
+metadata:
+  name: kargo-demo
+  namespace: kargo-git-helm-commit-image
+spec:
+  subscriptions:
+  - git:
+      repoURL: https://github.com/<github-username>/kargo-demo-gitops.git
+      # Watch this branch instead of main. This is the "trunk" for this example.
+      branch: new-helm
+  - image:
+      repoURL: public.ecr.aws/nginx/nginx # Watch for new versions of this image
+      semverConstraint: ^1.24.0
+---
+apiVersion: kargo.akuity.io/v1alpha1
+kind: PromotionTask
+metadata:
+  name: base-promo-process
+  namespace: kargo-git-helm-commit-image
+spec:
+  vars:
+  - name: gitRepo
+  - name: targetBranch
+  - name: outPath
+  - name: imageRepo
+    value: public.ecr.aws/nginx/nginx
+  steps:
+  - uses: git-clone
+    config:
+      repoURL: ${{ vars.gitRepo }}
+      checkout:
+      - commit: ${{ commitFrom(vars.gitRepo).ID }}
+        path: ./src
+      - branch: ${{ vars.targetBranch }}
+        create: true
+        path: ${{ vars.outPath }}
+  - uses: git-clear
+    config:
+      path: ${{ vars.outPath }}
+  - uses: yaml-update
+    as: update-image
+    config:
+      path: ./src/charts/kargo-demo/values.yaml
+      updates:
+      - key: image.name
+        value: ${{ vars.imageRepo }}:${{ imageFrom(vars.imageRepo).Tag }}
+  - uses: helm-template
+    config:
+      path: ./src/charts/kargo-demo
+      releaseName: kargo-demo
+      valuesFiles:
+      - ./src/charts/kargo-demo/stages/${{ ctx.stage }}/values.yaml
+      outPath: ${{ vars.outPath }}
+  - uses: git-commit
+    as: commit
+    config:
+      path: ${{ vars.outPath }}
+      message: ${{ task.outputs['update-image'].commitMessage }}
+
+      message: ${{ task.outputs['update-image'].commitMessage }}
+  - uses: compose-output
+    config:
+      commit: ${{ task.outputs.commit.commit }}
+---
+apiVersion: kargo.akuity.io/v1alpha1
+kind: Stage
+metadata:
+  name: test
+  namespace: kargo-git-helm-commit-image
+spec:
+  requestedFreight:
+  - origin:
+      kind: Warehouse
+      name: kargo-demo
+    sources:
+      direct: true
+  promotionTemplate:
+    spec:
+      vars:
+      - name: gitRepo
+        value: https://github.com/<github-username>/kargo-demo-gitops.git
+      - name: targetBranch
+        value: helm-commit-image/promotion/${{ ctx.promotion }}
+      - name: outPath
+        value: ./out
+      steps:
+      - task:
+          name: base-promo-process
+        as: base
+      - uses: git-push
+        config:
+          path: ${{ vars.outPath }}
+          targetBranch: ${{ vars.targetBranch }}
+      - uses: argocd-update
+        config:
+          apps:
+          - name: ${{ ctx.project }}-${{ ctx.stage }}
+            sources:
+            - repoURL: ${{ vars.gitRepo }}
+              desiredRevision: ${{ outputs.base.commit }}
+              updateTargetRevision: true
+---
+apiVersion: kargo.akuity.io/v1alpha1
+kind: Stage
+metadata:
+  name: uat
+  namespace: kargo-git-helm-commit-image
+spec:
+  requestedFreight:
+  - origin:
+      kind: Warehouse
+      name: kargo-demo
+    sources:
+      stages:
+      - test
+  promotionTemplate:
+    spec:
+      vars:
+      - name: gitRepo
+        value: https://github.com/<github-username>/kargo-demo-gitops.git
+      - name: targetBranch
+        value: helm-commit-image/promotion/${{ ctx.promotion }}
+      - name: outPath
+        value: ./out
+      steps:
+      - task:
+          name: base-promo-process
+        as: base
+      - uses: git-push
+        config:
+          path: ${{ vars.outPath }}
+          targetBranch: ${{ vars.targetBranch }}
+      - uses: argocd-update
+        config:
+          apps:
+          - name: ${{ ctx.project }}-${{ ctx.stage }}
+            sources:
+            - repoURL: ${{ vars.gitRepo }}
+              desiredRevision: ${{ outputs.base.commit }}
+              updateTargetRevision: true
+---
+apiVersion: kargo.akuity.io/v1alpha1
+kind: Stage
+metadata:
+  name: prod
+  namespace: kargo-git-helm-commit-image
+spec:
+  requestedFreight:
+  - origin:
+      kind: Warehouse
+      name: kargo-demo
+    sources:
+      stages:
+      - uat
+  promotionTemplate:
+    spec:
+      vars:
+      - name: gitRepo
+        value: https://github.com/<github-username>/kargo-demo-gitops.git
+      - name: targetBranch
+        value: helm-commit-image/promotion/${{ ctx.promotion }}
+      - name: outPath
+        value: ./out
+      steps:
+      - task:
+          name: base-promo-process
+      - uses: git-push
+        as: push
+        config:
+          path: ${{ vars.outPath }}
+          generateTargetBranch: true
+      - uses: git-open-pr
+        as: open-pr
+        config:
+          repoURL: ${{ vars.gitRepo }}
+          createTargetBranch: true
+          sourceBranch: ${{ outputs.push.branch }}
+          targetBranch: ${{ vars.targetBranch }}
+      - uses: git-wait-for-pr
+        as: wait-for-pr
+        config:
+          repoURL: ${{ vars.gitRepo }}
+          prNumber: ${{ outputs['open-pr'].pr.id }}
+      - uses: argocd-update
+        config:
+          apps:
+          - name: ${{ ctx.project }}-${{ ctx.stage }}
+            sources:
+            - repoURL: ${{ vars.gitRepo }}
+              desiredRevision: ${{ outputs['wait-for-pr'].commit }}
+              updateTargetRevision: true

@@ -1,19 +1,13 @@
 //go:build e2e
 //nolint:forcetypeassert
-package kargo_promotion_fail_test
+package kargo_promotion_fail
 
 // This test shows an example of running Kargo promotion with stage defined in YAML fixtures.
 // Specifically it executes the `fail` stage and checks that promotion fails.
 
 import (
-	"context"
 	"testing"
-	"time"
 
-	"sigs.k8s.io/e2e-framework/pkg/envconf"
-	"sigs.k8s.io/e2e-framework/pkg/features"
-
-	kargoapi "github.com/akuity/kargo/api/v1alpha1"
 	"github.com/akuity/kargo/hack/test/e2e/framework/utils"
 )
 
@@ -24,34 +18,5 @@ func TestMain(m *testing.M) {
 }
 
 func TestKargoPromotionFail(t *testing.T) {
-	feature := features.New("Example kargo promotion")
-	project := "kargo-promotion-fail"
-	// Setup and teardown fixtures from testdata folder
-	feature.Setup(utils.SetupKargoClients)
-	feature.Setup(utils.SetupKargoFixtures)
-	feature.Teardown(utils.TeardownKargoFixtures)
-
-	feature.Assess("promotion fails", func(ctx context.Context, t *testing.T, _ *envconf.Config) context.Context {
-		stage := "kargo-promotion-fail-stage"
-		origin := "images"
-
-		anyFreightID, err := utils.WaitForLatestFreight(ctx, project, origin, 5*time.Minute)
-		if err != nil {
-			t.Fatal(err)
-		}
-
-		_, err = utils.PromoteAndWaitForPhase(
-			ctx, t,
-			project, stage, anyFreightID,
-			kargoapi.PromotionPhaseFailed,
-			5*time.Minute)
-		if err != nil {
-			t.Fatal(err)
-		}
-
-		return ctx
-	})
-
-	utils.TestEnv.Test(t, feature.Feature())
-
+	utils.TestEnv.Test(t, feature())
 }

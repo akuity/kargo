@@ -1,0 +1,81 @@
+apiVersion: kargo.akuity.io/v1alpha1
+kind: Project
+metadata:
+  name: kargo-http-promo-step
+---
+apiVersion: kargo.akuity.io/v1alpha1
+kind: Warehouse
+metadata:
+  name: kargo-demo
+  namespace: kargo-http-promo-step
+spec:
+  subscriptions:
+  - image:
+      repoURL: public.ecr.aws/nginx/nginx # Watch for new versions of this image
+      semverConstraint: ^1.24.0
+---
+apiVersion: v1
+kind: Secret
+type: Opaque
+metadata:
+  name: slack
+  namespace: kargo-http-promo-step
+stringData:
+  token: foo
+---
+apiVersion: kargo.akuity.io/v1alpha1
+kind: PromotionTask
+metadata:
+  name: promo-process
+  namespace: kargo-http-promo-step
+spec:
+  vars:
+  - name: repoURL
+    value: public.ecr.aws/nginx/nginx
+  - name: url
+    # Substituted at runtime from the test env (context.http_endpoint). Must be
+    # an HTTP endpoint that accepts the POST and returns a 2xx response.
+    value: http://<host IP>:8080
+  - name: slackChannel
+    value: C123456 # Totally fake
+  steps:
+  - uses: http
+    config:
+      method: POST
+      url: ${{ vars.url }}
+      headers:
+      - name: Content-Type
+        value: application/json
+      - name: Authorization
+        value: Bearer ${{ secrets.slack.token }}
+      body: |
+        ${{ quote({
+          "channel": vars.slackChannel,
+          "blocks": [
+            {
+              "type": "section",
+              "text": {
+                "type": "mrkdwn",
+                "text": "Updated " + ctx.stage + " to use image " + vars.repoURL + ":" + imageFrom(vars.repoURL).Tag
+              }
+            }
+          ]
+        }) }}
+---
+apiVersion: kargo.akuity.io/v1alpha1
+kind: Stage
+metadata:
+  name: test
+  namespace: kargo-http-promo-step
+spec:
+  requestedFreight:
+  - origin:
+      kind: Warehouse
+      name: kargo-demo
+    sources:
+      direct: true
+  promotionTemplate:
+    spec:
+      steps:
+      - task:
+          name: promo-process

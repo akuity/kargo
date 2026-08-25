@@ -1,0 +1,37 @@
+apiVersion: argoproj.io/v1alpha1
+kind: ApplicationSet
+metadata:
+  name: kargo-argocd-helm-image-chartrepo
+  namespace: argocd
+spec:
+  generators:
+  - list:
+      elements:
+      - stage: test
+      - stage: uat
+      - stage: prod
+  template:
+    metadata:
+      name: kargo-argocd-helm-image-chartrepo-{{stage}}
+      annotations:
+        kargo.akuity.io/authorized-stage: kargo-argocd-helm-image-chartrepo:{{stage}}
+    spec:
+      project: default
+      source:
+        repoURL: https://grafana-community.github.io/helm-charts
+        chart: grafana
+        targetRevision: 12.11.2
+        helm:
+          parameters:
+          # Kargo will update this value to move new images into each stage
+          - name: image.tag
+            value: placeholder
+      destination:
+        server: https://kubernetes.default.svc
+        namespace: kargo-argocd-helm-image-chartrepo-{{stage}}
+      syncPolicy:
+        syncOptions:
+        - CreateNamespace=true
+  ignoreApplicationDifferences:
+  - jqPathExpressions:
+    - .spec.source.helm.parameters
