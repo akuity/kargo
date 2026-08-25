@@ -3,6 +3,7 @@ package api
 import (
 	"context"
 	"fmt"
+	"strings"
 
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"sigs.k8s.io/controller-runtime/pkg/client"
@@ -37,6 +38,80 @@ func GenerateChildPromotionName(stageName, targetName, freight string) string {
 		stageName+promotionNameSeparator+targetName,
 		freight,
 	)
+}
+
+// ComparePromotionRequestByPhaseAndCreationTime compares two PromotionRequests
+// by their phase and creation time. It returns a negative value if
+// PromotionRequest `a` should come before PromotionRequest `b`, a positive
+// value if `a` should come after `b`, or zero if they are considered equal for
+// sorting purposes. It can be used in conjunction with slices.SortFunc to sort
+// a list of PromotionRequests.
+//
+// The order is the one ComparePromotionByPhaseAndCreationTime imposes on
+// Promotions, so that a Stage chooses the PromotionRequest it is promoting
+// through exactly as it chooses its current Promotion:
+//
+//  1. Running PromotionRequests
+//  2. Non-terminal PromotionRequests (ordered by ULID in ascending order)
+//  3. Terminal PromotionRequests (ordered by ULID in descending order)
+//
+// As there, name order stands in for creation order: a generated
+// PromotionRequest name is <stage>.<ulid>.<short-hash>, so among the requests
+// of a single Stage everything left of the ULID is identical and comparing
+// names whole is comparing the ULIDs.
+func ComparePromotionRequestByPhaseAndCreationTime(a, b kargoapi.PromotionRequest) int {
+	// Compare the phases of the PromotionRequests first.
+	if phaseCompare := ComparePromotionRequestPhase(
+		a.Status.Phase,
+		b.Status.Phase,
+	); phaseCompare != 0 {
+		return phaseCompare
+	}
+
+	switch {
+	case !a.Status.Phase.IsTerminal():
+		// Non-terminal PromotionRequests are ordered in ascending order, so that
+		// the request which was (or will be) worked first is at the top.
+		return strings.Compare(a.Name, b.Name)
+	default:
+		// Terminal PromotionRequests are ordered in descending order, so that the
+		// most recent request is at the top, limiting the number of requests which
+		// have to be further inspected.
+		return strings.Compare(b.Name, a.Name)
+	}
+}
+
+// ComparePromotionRequestPhase compares two PromotionRequest phases. It returns
+// a negative value if phase `a` should come before phase `b`, a positive value
+// if phase `a` should come after phase `b`, or zero if they are considered
+// equal for sorting purposes. It can be used in combination with
+// slices.SortFunc to sort a list of PromotionRequest phases.
+//
+// The order of PromotionRequest phases matches the one ComparePromotionPhase
+// imposes on Promotion phases:
+//
+//  1. Running
+//  2. Non-terminal phases
+//  3. Terminal phases
+func ComparePromotionRequestPhase(a, b kargoapi.PromotionRequestPhase) int {
+	aRunning := a == kargoapi.PromotionRequestPhaseRunning
+	bRunning := b == kargoapi.PromotionRequestPhaseRunning
+	aTerminal, bTerminal := a.IsTerminal(), b.IsTerminal()
+
+	// NB: As in ComparePromotionPhase, the order of the cases here is important:
+	// "Running" is a special case that should always come before any other phase.
+	switch {
+	case aRunning && !bRunning:
+		return -1
+	case !aRunning && bRunning:
+		return 1
+	case !aTerminal && bTerminal:
+		return -1
+	case aTerminal && !bTerminal:
+		return 1
+	default:
+		return 0
+	}
 }
 
 // NewPromotionRequest constructs a PromotionRequest expressing the intent to
