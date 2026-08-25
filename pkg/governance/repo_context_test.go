@@ -541,7 +541,7 @@ func Test_repoContext_applyPRPolicy(t *testing.T) {
 				Number: github.Ptr(1),
 				Body:   github.Ptr(testCase.prBody),
 				User:   &github.User{Login: github.Ptr("author")},
-				// nolint:staticcheck // production code still reads this field
+				// nolint:staticcheck // deprecated only for the Events API, not webhooks; see comment_handler.go
 				AuthorAssociation: github.Ptr(testCase.association),
 			}
 			err := rc.applyPRPolicy(t.Context(), pr, testCase.senderLogin)
@@ -912,7 +912,7 @@ func Test_repoContext_isPRExempt(t *testing.T) {
 			pr := &github.PullRequest{
 				Number: github.Ptr(1),
 				User:   &github.User{Login: github.Ptr(testCase.authorLogin)},
-				// nolint:staticcheck // production code still reads this field
+				// nolint:staticcheck // deprecated only for the Events API, not webhooks; see comment_handler.go
 				AuthorAssociation: github.Ptr(testCase.association),
 				Additions:         github.Ptr(testCase.additions),
 				Deletions:         github.Ptr(testCase.deletions),

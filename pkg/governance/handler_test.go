@@ -89,7 +89,7 @@ func Test_handler_ServeHTTP(t *testing.T) {
 				Action: github.Ptr(prActionOpened),
 				PullRequest: &github.PullRequest{
 					Number: github.Ptr(1),
-					// nolint:staticcheck // production code still reads this field
+					// nolint:staticcheck // deprecated only for the Events API, not webhooks; see comment_handler.go
 					AuthorAssociation: github.Ptr("NONE"),
 				},
 				Repo: &github.Repository{
@@ -114,7 +114,7 @@ func Test_handler_ServeHTTP(t *testing.T) {
 				Action: github.Ptr(prActionOpened),
 				PullRequest: &github.PullRequest{
 					Number: github.Ptr(1),
-					// nolint:staticcheck // production code still reads this field
+					// nolint:staticcheck // deprecated only for the Events API, not webhooks; see comment_handler.go
 					AuthorAssociation: github.Ptr("NONE"),
 				},
 				Repo: &github.Repository{

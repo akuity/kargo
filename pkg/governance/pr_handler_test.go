@@ -260,7 +260,7 @@ func Test_prHandler_handleOpened(t *testing.T) {
 					Number: github.Ptr(1),
 					Body:   github.Ptr(testCase.body),
 					User:   &github.User{Login: github.Ptr(testCase.author)},
-					// nolint:staticcheck // production code still reads this field
+					// nolint:staticcheck // deprecated only for the Events API, not webhooks; see comment_handler.go
 					AuthorAssociation: github.Ptr("NONE"),
 				},
 				Repo: &github.Repository{
