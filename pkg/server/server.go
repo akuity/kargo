@@ -311,8 +311,12 @@ func wrapWithBasePath(inner http.Handler, basePath string) http.Handler {
 		if r.URL.Path == basePath {
 			u := *r.URL
 			u.Path = basePath + "/"
-			// #nosec G710 -- u.Path is the fixed, server-configured basePath,
-			// not attacker-controlled; only the query string passes through.
+			// u.RequestURI() renders only path and query, never scheme or
+			// host, so this redirect always stays same-origin no matter what
+			// a user's request contained. Path is hardcoded to basePath+"/"
+			// above; the query string is carried through only so params
+			// (e.g. "?tab=x") survive the redirect.
+			// #nosec G710
 			http.Redirect(w, r, u.RequestURI(), http.StatusMovedPermanently)
 			return
 		}
