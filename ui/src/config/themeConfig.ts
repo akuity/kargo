@@ -73,6 +73,10 @@ const darkComponents: ThemeConfig['components'] = {
     itemActiveColor: darkAccentWhite,
     inkBarColor: darkAccentWhite
   },
+  Pagination: {
+    itemActiveColor: darkAccentWhite, // active page defaults to the too-dark blue
+    itemActiveColorHover: darkAccentWhite
+  },
   Menu: {
     ...sharedComponents.Menu,
     itemActiveBg: 'rgba(255, 255, 255, 0.08)',
