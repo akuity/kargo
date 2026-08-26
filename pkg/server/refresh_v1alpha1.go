@@ -72,6 +72,10 @@ func (s *server) RefreshResource(
 		return nil, err
 	}
 
+	if err = s.authorizeRefresh(ctx, o); err != nil {
+		return nil, err
+	}
+
 	c := s.client.InternalClient()
 	rt := req.Msg.GetResourceType()
 
@@ -92,13 +96,16 @@ func (s *server) RefreshResource(
 	// refresh it too.
 	stage, ok := o.(*kargoapi.Stage)
 	if ok && stage.Status.CurrentPromotion != nil {
-		err = api.RefreshObject(ctx, c, &kargoapi.Promotion{
+		promo := &kargoapi.Promotion{
 			ObjectMeta: metav1.ObjectMeta{
 				Namespace: stage.Namespace,
 				Name:      stage.Status.CurrentPromotion.Name,
 			},
-		})
-		if err != nil {
+		}
+		if err = s.authorizeRefresh(ctx, promo); err != nil {
+			return nil, err
+		}
+		if err = api.RefreshObject(ctx, c, promo); err != nil {
 			return nil, connect.NewError(
 				connect.CodeInternal,
 				fmt.Errorf("failed to refresh %s: %w", rt, err),
@@ -106,6 +113,31 @@ func (s *server) RefreshResource(
 		}
 	}
 	return newRefreshResponse(o), nil
+}
+
+// authorizeRefresh checks that the caller may "get" obj before it is
+// refreshed. RefreshObject itself patches via the internal client, which
+// performs no SubjectAccessReview, so this check is the only authorization
+// this RPC performs.
+func (s *server) authorizeRefresh(ctx context.Context, obj client.Object) error {
+	var resource string
+	switch obj.(type) {
+	case *kargoapi.ClusterConfig:
+		resource = "clusterconfigs"
+	case *kargoapi.ProjectConfig:
+		resource = "projectconfigs"
+	case *kargoapi.Stage:
+		resource = "stages"
+	case *kargoapi.Warehouse:
+		resource = "warehouses"
+	case *kargoapi.Promotion:
+		resource = promotionsResource
+	default:
+		return fmt.Errorf("unsupported type for refresh authorization: %T", obj)
+	}
+	return s.authorizeFn(
+		ctx, "get", kargoapi.GroupVersion.WithResource(resource), "", client.ObjectKeyFromObject(obj),
+	)
 }
 
 func (s *server) getClientObject(ctx context.Context, r *svcv1alpha1.RefreshResourceRequest) (client.Object, error) {

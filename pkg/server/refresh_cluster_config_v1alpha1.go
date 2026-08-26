@@ -5,6 +5,7 @@ import (
 
 	"github.com/gin-gonic/gin"
 	v1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"sigs.k8s.io/controller-runtime/pkg/client"
 
 	kargoapi "github.com/akuity/kargo/api/v1alpha1"
 	"github.com/akuity/kargo/pkg/api"
@@ -21,6 +22,14 @@ import (
 // @Router /v1beta1/system/cluster-config/refresh [post]
 func (s *server) refreshClusterConfig(c *gin.Context) {
 	ctx := c.Request.Context()
+
+	key := client.ObjectKey{Name: api.ClusterConfigName}
+	if err := s.authorizeFn(
+		ctx, "get", kargoapi.GroupVersion.WithResource("clusterconfigs"), "", key,
+	); err != nil {
+		_ = c.Error(err)
+		return
+	}
 
 	obj := &kargoapi.ClusterConfig{
 		ObjectMeta: v1.ObjectMeta{Name: api.ClusterConfigName},
