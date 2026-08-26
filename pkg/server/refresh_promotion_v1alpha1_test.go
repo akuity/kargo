@@ -1,12 +1,16 @@
 package server
 
 import (
+	"context"
+	"errors"
 	"net/http"
 	"net/http/httptest"
 	"testing"
 
 	"github.com/stretchr/testify/require"
+	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/apimachinery/pkg/runtime/schema"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/client/fake"
 
@@ -45,8 +49,45 @@ func Test_server_refreshPromotion(t *testing.T) {
 				},
 			},
 			{
+				name:          "not authorized",
+				clientBuilder: fake.NewClientBuilder().WithObjects(testProject, testPromotion),
+				serverSetup: func(_ *testing.T, s *server) {
+					s.authorizeFn = func(
+						context.Context,
+						string,
+						schema.GroupVersionResource,
+						string,
+						client.ObjectKey,
+					) error {
+						return apierrors.NewForbidden(
+							kargoapi.GroupVersion.WithResource("promotions").GroupResource(),
+							testPromotion.Name,
+							errors.New("not authorized"),
+						)
+					}
+				},
+				assertions: func(t *testing.T, w *httptest.ResponseRecorder, _ client.Client) {
+					require.Equal(t, http.StatusForbidden, w.Code)
+				},
+			},
+			{
 				name:          "refreshes Promotion",
 				clientBuilder: fake.NewClientBuilder().WithObjects(testProject, testPromotion),
+				serverSetup: func(t *testing.T, s *server) {
+					s.authorizeFn = func(
+						_ context.Context,
+						verb string,
+						gvr schema.GroupVersionResource,
+						subresource string,
+						key client.ObjectKey,
+					) error {
+						require.Equal(t, "get", verb)
+						require.Equal(t, kargoapi.GroupVersion.WithResource("promotions"), gvr)
+						require.Empty(t, subresource)
+						require.Equal(t, client.ObjectKeyFromObject(testPromotion), key)
+						return nil
+					}
+				},
 				assertions: func(t *testing.T, w *httptest.ResponseRecorder, c client.Client) {
 					require.Equal(t, http.StatusOK, w.Code)
 
