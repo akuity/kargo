@@ -5,6 +5,7 @@ import (
 
 	"github.com/gin-gonic/gin"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"sigs.k8s.io/controller-runtime/pkg/client"
 
 	kargoapi "github.com/akuity/kargo/api/v1alpha1"
 	"github.com/akuity/kargo/pkg/api"
@@ -27,6 +28,14 @@ func (s *server) refreshWarehouse(c *gin.Context) {
 
 	project := c.Param("project")
 	warehouseName := c.Param("warehouse")
+
+	key := client.ObjectKey{Name: warehouseName, Namespace: project}
+	if err := s.authorizeFn(
+		ctx, "get", kargoapi.GroupVersion.WithResource("warehouses"), "", key,
+	); err != nil {
+		_ = c.Error(err)
+		return
+	}
 
 	obj := &kargoapi.Warehouse{
 		ObjectMeta: metav1.ObjectMeta{Name: warehouseName, Namespace: project},

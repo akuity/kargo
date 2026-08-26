@@ -3,14 +3,17 @@ package server
 import (
 	"context"
 	"encoding/json"
+	"errors"
 	"testing"
 	"time"
 
 	"connectrpc.com/connect"
 	"github.com/stretchr/testify/require"
 	corev1 "k8s.io/api/core/v1"
+	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
+	"k8s.io/apimachinery/pkg/runtime/schema"
 	"k8s.io/client-go/rest"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/client/fake"
@@ -21,6 +24,30 @@ import (
 	"github.com/akuity/kargo/pkg/server/kubernetes"
 	"github.com/akuity/kargo/pkg/server/validation"
 )
+
+// refreshDeniedFn returns an authorizeFn that asserts it was called to check
+// "get" on wantResource with no subresource, and denies the request.
+func refreshDeniedFn(
+	t *testing.T,
+	wantResource string,
+) func(context.Context, string, schema.GroupVersionResource, string, client.ObjectKey) error {
+	return func(
+		_ context.Context,
+		verb string,
+		gvr schema.GroupVersionResource,
+		subresource string,
+		_ client.ObjectKey,
+	) error {
+		require.Equal(t, "get", verb)
+		require.Equal(t, wantResource, gvr.Resource)
+		require.Empty(t, subresource)
+		return apierrors.NewForbidden(
+			kargoapi.GroupVersion.WithResource(wantResource).GroupResource(),
+			"test",
+			errors.New("not authorized"),
+		)
+	}
+}
 
 func TestRefreshResource(t *testing.T) {
 	testScheme := runtime.NewScheme()
@@ -37,9 +64,18 @@ func TestRefreshResource(t *testing.T) {
 	}
 
 	testSets := map[string]struct {
-		kClient    client.WithWatch
-		req        *svcv1alpha1.RefreshResourceRequest
-		assertions func(*connect.Response[svcv1alpha1.RefreshResourceResponse], error)
+		kClient client.WithWatch
+		req     *svcv1alpha1.RefreshResourceRequest
+		// authorizeFn overrides the default (allow-everything) authorization
+		// function. Leave nil to allow.
+		authorizeFn func(
+			context.Context,
+			string,
+			schema.GroupVersionResource,
+			string,
+			client.ObjectKey,
+		) error
+		assertions func(*testing.T, *connect.Response[svcv1alpha1.RefreshResourceResponse], error, client.WithWatch)
 	}{
 		"empty project": {
 			kClient: fake.NewClientBuilder().WithScheme(testScheme).Build(),
@@ -48,7 +84,12 @@ func TestRefreshResource(t *testing.T) {
 				Name:         "test",
 				ResourceType: RefreshResourceTypeWarehouse.String(),
 			},
-			assertions: func(res *connect.Response[svcv1alpha1.RefreshResourceResponse], err error) {
+			assertions: func(
+				t *testing.T,
+				res *connect.Response[svcv1alpha1.RefreshResourceResponse],
+				err error,
+				_ client.WithWatch,
+			) {
 				require.Nil(t, res)
 				require.Error(t, err)
 				require.Equal(t, connect.CodeInvalidArgument, connect.CodeOf(err))
@@ -65,7 +106,12 @@ func TestRefreshResource(t *testing.T) {
 				Name:         "",
 				ResourceType: RefreshResourceTypeWarehouse.String(),
 			},
-			assertions: func(res *connect.Response[svcv1alpha1.RefreshResourceResponse], err error) {
+			assertions: func(
+				t *testing.T,
+				res *connect.Response[svcv1alpha1.RefreshResourceResponse],
+				err error,
+				_ client.WithWatch,
+			) {
 				require.Nil(t, res)
 				require.Error(t, err)
 				require.Equal(t, connect.CodeInvalidArgument, connect.CodeOf(err))
@@ -82,7 +128,12 @@ func TestRefreshResource(t *testing.T) {
 				Name:         "test",
 				ResourceType: "",
 			},
-			assertions: func(res *connect.Response[svcv1alpha1.RefreshResourceResponse], err error) {
+			assertions: func(
+				t *testing.T,
+				res *connect.Response[svcv1alpha1.RefreshResourceResponse],
+				err error,
+				_ client.WithWatch,
+			) {
 				require.Nil(t, res)
 				require.Error(t, err)
 				require.Equal(t, connect.CodeInvalidArgument, connect.CodeOf(err))
@@ -99,7 +150,12 @@ func TestRefreshResource(t *testing.T) {
 				Name:         "test",
 				ResourceType: "invalid",
 			},
-			assertions: func(res *connect.Response[svcv1alpha1.RefreshResourceResponse], err error) {
+			assertions: func(
+				t *testing.T,
+				res *connect.Response[svcv1alpha1.RefreshResourceResponse],
+				err error,
+				_ client.WithWatch,
+			) {
 				require.Nil(t, res)
 				require.Error(t, err)
 				require.Equal(t, connect.CodeInvalidArgument, connect.CodeOf(err))
@@ -116,7 +172,12 @@ func TestRefreshResource(t *testing.T) {
 				Name:         "test",
 				ResourceType: RefreshResourceTypeWarehouse.String(),
 			},
-			assertions: func(res *connect.Response[svcv1alpha1.RefreshResourceResponse], err error) {
+			assertions: func(
+				t *testing.T,
+				res *connect.Response[svcv1alpha1.RefreshResourceResponse],
+				err error,
+				_ client.WithWatch,
+			) {
 				require.Nil(t, res)
 				require.Error(t, err)
 				require.Equal(t, connect.CodeNotFound, connect.CodeOf(err))
@@ -133,11 +194,180 @@ func TestRefreshResource(t *testing.T) {
 				Name:         "test",
 				ResourceType: RefreshResourceTypeWarehouse.String(),
 			},
-			assertions: func(res *connect.Response[svcv1alpha1.RefreshResourceResponse], err error) {
+			assertions: func(
+				t *testing.T,
+				res *connect.Response[svcv1alpha1.RefreshResourceResponse],
+				err error,
+				_ client.WithWatch,
+			) {
 				require.Nil(t, res)
 				require.Error(t, err)
 				require.Equal(t, connect.CodeNotFound, connect.CodeOf(err))
 				require.ErrorContainsf(t, err, "Warehouse not found", "")
+			},
+		},
+		"warehouse not authorized": {
+			kClient: fake.NewClientBuilder().WithScheme(testScheme).
+				WithObjects(ns,
+					&kargoapi.Warehouse{
+						ObjectMeta: metav1.ObjectMeta{Namespace: "kargo-demo", Name: "test"},
+					},
+				).
+				Build(),
+			req: &svcv1alpha1.RefreshResourceRequest{
+				Project:      "kargo-demo",
+				Name:         "test",
+				ResourceType: RefreshResourceTypeWarehouse.String(),
+			},
+			authorizeFn: refreshDeniedFn(t, "warehouses"),
+			assertions: func(
+				t *testing.T,
+				res *connect.Response[svcv1alpha1.RefreshResourceResponse],
+				err error,
+				_ client.WithWatch,
+			) {
+				require.Nil(t, res)
+				require.Error(t, err)
+				require.True(t, apierrors.IsForbidden(err), "expected a Forbidden error, got: %v", err)
+			},
+		},
+		"stage not authorized": {
+			kClient: fake.NewClientBuilder().WithScheme(testScheme).
+				WithObjects(ns,
+					&kargoapi.Stage{
+						ObjectMeta: metav1.ObjectMeta{Namespace: "kargo-demo", Name: "test"},
+					},
+				).
+				Build(),
+			req: &svcv1alpha1.RefreshResourceRequest{
+				Project:      "kargo-demo",
+				Name:         "test",
+				ResourceType: RefreshResourceTypeStage.String(),
+			},
+			authorizeFn: refreshDeniedFn(t, "stages"),
+			assertions: func(
+				t *testing.T,
+				res *connect.Response[svcv1alpha1.RefreshResourceResponse],
+				err error,
+				_ client.WithWatch,
+			) {
+				require.Nil(t, res)
+				require.Error(t, err)
+				require.True(t, apierrors.IsForbidden(err), "expected a Forbidden error, got: %v", err)
+			},
+		},
+		"project config not authorized": {
+			kClient: fake.NewClientBuilder().WithScheme(testScheme).
+				WithObjects(ns,
+					&kargoapi.ProjectConfig{
+						ObjectMeta: metav1.ObjectMeta{Namespace: "kargo-demo", Name: "kargo-demo"},
+					},
+				).
+				Build(),
+			req: &svcv1alpha1.RefreshResourceRequest{
+				Project:      "kargo-demo",
+				ResourceType: RefreshResourceTypeProjectConfig.String(),
+			},
+			authorizeFn: refreshDeniedFn(t, "projectconfigs"),
+			assertions: func(
+				t *testing.T,
+				res *connect.Response[svcv1alpha1.RefreshResourceResponse],
+				err error,
+				_ client.WithWatch,
+			) {
+				require.Nil(t, res)
+				require.Error(t, err)
+				require.True(t, apierrors.IsForbidden(err), "expected a Forbidden error, got: %v", err)
+			},
+		},
+		"cluster config not authorized": {
+			kClient: fake.NewClientBuilder().WithScheme(testScheme).
+				WithObjects(
+					&kargoapi.ClusterConfig{
+						ObjectMeta: metav1.ObjectMeta{Name: api.ClusterConfigName},
+					},
+				).
+				Build(),
+			req: &svcv1alpha1.RefreshResourceRequest{
+				Project:      "",
+				Name:         api.ClusterConfigName,
+				ResourceType: RefreshResourceTypeClusterConfig.String(),
+			},
+			authorizeFn: refreshDeniedFn(t, "clusterconfigs"),
+			assertions: func(
+				t *testing.T,
+				res *connect.Response[svcv1alpha1.RefreshResourceResponse],
+				err error,
+				_ client.WithWatch,
+			) {
+				require.Nil(t, res)
+				require.Error(t, err)
+				require.True(t, apierrors.IsForbidden(err), "expected a Forbidden error, got: %v", err)
+			},
+		},
+		"stage with current promo, promotion refresh not authorized": {
+			kClient: fake.NewClientBuilder().WithScheme(testScheme).
+				WithObjects(ns,
+					&kargoapi.Stage{
+						ObjectMeta: metav1.ObjectMeta{Namespace: "kargo-demo", Name: "test"},
+						Status: kargoapi.StageStatus{
+							CurrentPromotion: &kargoapi.PromotionReference{Name: "promo-1"},
+						},
+					},
+					&kargoapi.Promotion{
+						ObjectMeta: metav1.ObjectMeta{Namespace: "kargo-demo", Name: "promo-1"},
+					},
+				).
+				Build(),
+			req: &svcv1alpha1.RefreshResourceRequest{
+				Project:      "kargo-demo",
+				Name:         "test",
+				ResourceType: RefreshResourceTypeStage.String(),
+			},
+			authorizeFn: func(
+				_ context.Context,
+				_ string,
+				gvr schema.GroupVersionResource,
+				_ string,
+				_ client.ObjectKey,
+			) error {
+				if gvr.Resource == "promotions" {
+					return apierrors.NewForbidden(
+						kargoapi.GroupVersion.WithResource("promotions").GroupResource(),
+						"promo-1",
+						errors.New("not authorized"),
+					)
+				}
+				require.Equal(t, "stages", gvr.Resource)
+				return nil
+			},
+			assertions: func(
+				t *testing.T,
+				res *connect.Response[svcv1alpha1.RefreshResourceResponse],
+				err error,
+				kc client.WithWatch,
+			) {
+				require.Nil(t, res)
+				require.Error(t, err)
+				require.True(t, apierrors.IsForbidden(err), "expected a Forbidden error, got: %v", err)
+
+				// The Stage refresh was already authorized and performed
+				var st kargoapi.Stage
+				require.NoError(t, kc.Get(
+					t.Context(),
+					client.ObjectKey{Namespace: "kargo-demo", Name: "test"},
+					&st,
+				))
+				require.NotEmpty(t, st.Annotations[kargoapi.AnnotationKeyRefresh])
+
+				// The current Promotion was NOT refreshed
+				var p kargoapi.Promotion
+				require.NoError(t, kc.Get(
+					t.Context(),
+					client.ObjectKey{Namespace: "kargo-demo", Name: "promo-1"},
+					&p,
+				))
+				require.Empty(t, p.Annotations[kargoapi.AnnotationKeyRefresh])
 			},
 		},
 		"warehouse": {
@@ -157,7 +387,12 @@ func TestRefreshResource(t *testing.T) {
 				Name:         "test",
 				ResourceType: RefreshResourceTypeWarehouse.String(),
 			},
-			assertions: func(res *connect.Response[svcv1alpha1.RefreshResourceResponse], err error) {
+			assertions: func(
+				t *testing.T,
+				res *connect.Response[svcv1alpha1.RefreshResourceResponse],
+				err error,
+				_ client.WithWatch,
+			) {
 				require.NoError(t, err)
 				var wh kargoapi.Warehouse
 				require.NoError(t, json.Unmarshal(res.Msg.GetResource().Value, &wh))
@@ -187,7 +422,12 @@ func TestRefreshResource(t *testing.T) {
 				Name:         "test",
 				ResourceType: RefreshResourceTypeStage.String(),
 			},
-			assertions: func(res *connect.Response[svcv1alpha1.RefreshResourceResponse], err error) {
+			assertions: func(
+				t *testing.T,
+				res *connect.Response[svcv1alpha1.RefreshResourceResponse],
+				err error,
+				_ client.WithWatch,
+			) {
 				require.NoError(t, err)
 				var st kargoapi.Stage
 				require.NoError(t, json.Unmarshal(res.Msg.GetResource().Value, &st))
@@ -227,7 +467,12 @@ func TestRefreshResource(t *testing.T) {
 				Name:         "test",
 				ResourceType: RefreshResourceTypeStage.String(),
 			},
-			assertions: func(res *connect.Response[svcv1alpha1.RefreshResourceResponse], err error) {
+			assertions: func(
+				t *testing.T,
+				res *connect.Response[svcv1alpha1.RefreshResourceResponse],
+				err error,
+				_ client.WithWatch,
+			) {
 				require.NoError(t, err)
 				var p kargoapi.Promotion
 				require.NoError(t, json.Unmarshal(res.Msg.GetResource().Value, &p))
@@ -256,7 +501,12 @@ func TestRefreshResource(t *testing.T) {
 				Name:         api.ClusterConfigName,
 				ResourceType: RefreshResourceTypeClusterConfig.String(),
 			},
-			assertions: func(res *connect.Response[svcv1alpha1.RefreshResourceResponse], err error) {
+			assertions: func(
+				t *testing.T,
+				res *connect.Response[svcv1alpha1.RefreshResourceResponse],
+				err error,
+				_ client.WithWatch,
+			) {
 				require.NoError(t, err)
 				var cc kargoapi.ClusterConfig
 				require.NoError(t, json.Unmarshal(res.Msg.GetResource().Value, &cc))
@@ -285,7 +535,12 @@ func TestRefreshResource(t *testing.T) {
 				Project:      "kargo-demo",
 				ResourceType: RefreshResourceTypeProjectConfig.String(),
 			},
-			assertions: func(res *connect.Response[svcv1alpha1.RefreshResourceResponse], err error) {
+			assertions: func(
+				t *testing.T,
+				res *connect.Response[svcv1alpha1.RefreshResourceResponse],
+				err error,
+				_ client.WithWatch,
+			) {
 				require.NoError(t, err)
 				var pc kargoapi.ProjectConfig
 				require.NoError(t, json.Unmarshal(res.Msg.GetResource().Value, &pc))
@@ -320,8 +575,12 @@ func TestRefreshResource(t *testing.T) {
 			require.NoError(t, err)
 			svr := &server{client: client}
 			svr.externalValidateProjectFn = validation.ValidateProject
+			svr.authorizeFn = client.Authorize
+			if ts.authorizeFn != nil {
+				svr.authorizeFn = ts.authorizeFn
+			}
 			res, err := svr.RefreshResource(ctx, connect.NewRequest(ts.req))
-			ts.assertions(res, err)
+			ts.assertions(t, res, err, ts.kClient)
 		})
 	}
 }
