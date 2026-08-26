@@ -31,7 +31,7 @@ func (s *server) refreshPromotion(c *gin.Context) {
 
 	key := client.ObjectKey{Name: promotionName, Namespace: project}
 	if err := s.authorizeFn(
-		ctx, "get", kargoapi.GroupVersion.WithResource(promotionsResource), "", key,
+		ctx, "get", kargoapi.GroupVersion.WithResource("promotions"), "", key,
 	); err != nil {
 		_ = c.Error(err)
 		return

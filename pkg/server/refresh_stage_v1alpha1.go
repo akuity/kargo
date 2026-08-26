@@ -51,7 +51,7 @@ func (s *server) refreshStage(c *gin.Context) {
 	if stage.Status.CurrentPromotion != nil {
 		promoKey := client.ObjectKey{Name: stage.Status.CurrentPromotion.Name, Namespace: project}
 		if err := s.authorizeFn(
-			ctx, "get", kargoapi.GroupVersion.WithResource(promotionsResource), "", promoKey,
+			ctx, "get", kargoapi.GroupVersion.WithResource("promotions"), "", promoKey,
 		); err != nil {
 			_ = c.Error(err)
 			return
