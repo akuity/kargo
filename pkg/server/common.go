@@ -24,10 +24,6 @@ import (
 
 const trueStr = "true"
 
-// promotionsResource is the plural resource name for Promotions in the
-// kargo.akuity.io API group, as used in GroupVersionResource and RBAC checks.
-const promotionsResource = "promotions"
-
 var (
 	projectGVK = schema.GroupVersionKind{
 		Group:   kargoapi.GroupVersion.Group,

@@ -131,7 +131,8 @@ func (s *server) authorizeRefresh(ctx context.Context, obj client.Object) error 
 	case *kargoapi.Warehouse:
 		resource = "warehouses"
 	case *kargoapi.Promotion:
-		resource = promotionsResource
+		// nolint: goconst
+		resource = "promotions"
 	default:
 		return fmt.Errorf("unsupported type for refresh authorization: %T", obj)
 	}

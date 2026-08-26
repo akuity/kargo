@@ -79,7 +79,7 @@ func (s *server) listPromotions(c *gin.Context) {
 	}
 
 	list := &kargoapi.PromotionList{}
-	if err := s.listForWatchSeed(ctx, promotionsResource, list, client.InNamespace(project)); err != nil {
+	if err := s.listForWatchSeed(ctx, "promotions", list, client.InNamespace(project)); err != nil {
 		_ = c.Error(err)
 		return
 	}
