@@ -125,6 +125,7 @@ func testRESTEndpoint(
 				},
 			)
 			require.NoError(t, err)
+			s.authorizeFn = s.client.Authorize
 			s.rolesDB = rbac.NewKubernetesRolesDatabase(
 				internalClient,
 				rbac.RolesDatabaseConfig{KargoNamespace: testKargoNamespace},
