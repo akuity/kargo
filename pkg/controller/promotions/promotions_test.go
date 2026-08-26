@@ -7,6 +7,8 @@ import (
 	"testing"
 	"time"
 
+	"github.com/prometheus/client_golang/prometheus"
+	dto "github.com/prometheus/client_model/go"
 	"github.com/stretchr/testify/require"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	k8sruntime "k8s.io/apimachinery/pkg/runtime"
@@ -19,6 +21,7 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/client/interceptor"
 
 	kargoapi "github.com/akuity/kargo/api/v1alpha1"
+	"github.com/akuity/kargo/pkg/controller/metrics"
 	k8sevent "github.com/akuity/kargo/pkg/event/kubernetes"
 	fakeevent "github.com/akuity/kargo/pkg/kubernetes/event/fake"
 	"github.com/akuity/kargo/pkg/promotion"
@@ -655,9 +658,10 @@ func Test_reconciler_terminatePromotion(t *testing.T) {
 			recorder := fakeevent.NewEventRecorder(1)
 
 			r := &reconciler{
-				kargoClient: c,
-				apiReader:   c,
-				sender:      k8sevent.NewEventSender(recorder),
+				kargoClient:  c,
+				apiReader:    c,
+				sender:       k8sevent.NewEventSender(recorder),
+				promoMetrics: metrics.NewPromotionMetrics(c),
 				cleanupWorkDirFn: func(context.Context, types.UID) {
 					// no-op for tests
 				},
@@ -790,9 +794,10 @@ func Test_reconciler_terminatePromotion_cleansUpWorkDir(t *testing.T) {
 
 	cleanupCalled := false
 	r := &reconciler{
-		kargoClient: c,
-		apiReader:   c,
-		sender:      k8sevent.NewEventSender(recorder),
+		kargoClient:  c,
+		apiReader:    c,
+		sender:       k8sevent.NewEventSender(recorder),
+		promoMetrics: metrics.NewPromotionMetrics(c),
 		cleanupWorkDirFn: func(context.Context, types.UID) {
 			cleanupCalled = true
 		},
@@ -1149,6 +1154,82 @@ func newPromo(namespace, name, stage string,
 		Status: kargoapi.PromotionStatus{
 			Phase: phase,
 		},
+	}
+}
+
+func Test_reconciler_recordDuration(t *testing.T) {
+	started := metav1.Time{Time: now.Add(-90 * time.Second)}
+
+	testCases := []struct {
+		name   string
+		status kargoapi.PromotionStatus
+		// expected maps a terminalPhase label value to the number of
+		// observations expected under it.
+		expected map[string]uint64
+	}{
+		{
+			name: "succeeded Promotion",
+			status: kargoapi.PromotionStatus{
+				Phase:      kargoapi.PromotionPhaseSucceeded,
+				StartedAt:  &started,
+				FinishedAt: &now,
+			},
+			expected: map[string]uint64{"Succeeded": 1, "Errored": 0, "Aborted": 0},
+		},
+		{
+			name: "errored Promotion",
+			status: kargoapi.PromotionStatus{
+				Phase:      kargoapi.PromotionPhaseErrored,
+				StartedAt:  &started,
+				FinishedAt: &now,
+			},
+			expected: map[string]uint64{"Succeeded": 0, "Errored": 1, "Aborted": 0},
+		},
+		{
+			name: "aborted Promotion",
+			status: kargoapi.PromotionStatus{
+				Phase:      kargoapi.PromotionPhaseAborted,
+				StartedAt:  &started,
+				FinishedAt: &now,
+			},
+			expected: map[string]uint64{"Succeeded": 0, "Errored": 0, "Aborted": 1},
+		},
+		{
+			name: "Promotion that never started is not observed",
+			status: kargoapi.PromotionStatus{
+				Phase:      kargoapi.PromotionPhaseAborted,
+				FinishedAt: &now,
+			},
+			expected: map[string]uint64{"Succeeded": 0, "Errored": 0, "Aborted": 0},
+		},
+	}
+	for _, testCase := range testCases {
+		t.Run(testCase.name, func(t *testing.T) {
+			// Each case needs its own histogram, but PromotionMetrics is a
+			// process-wide singleton, so swap in a standalone one.
+			duration := prometheus.NewHistogramVec(
+				prometheus.HistogramOpts{Name: "test_duration_seconds"},
+				[]string{"project", "terminalPhase"},
+			)
+			r := &reconciler{promoMetrics: &metrics.PromotionMetrics{Duration: duration}}
+
+			r.recordDuration("fake-project", &testCase.status)
+
+			for phase, expected := range testCase.expected {
+				observer, ok := duration.
+					WithLabelValues("fake-project", phase).(prometheus.Metric)
+				require.True(t, ok)
+
+				var m dto.Metric
+				require.NoError(t, observer.Write(&m))
+				require.Equal(
+					t, expected, m.GetHistogram().GetSampleCount(), "terminalPhase %q", phase,
+				)
+				if expected > 0 {
+					require.Equal(t, 90.0, m.GetHistogram().GetSampleSum())
+				}
+			}
+		})
 	}
 }
 

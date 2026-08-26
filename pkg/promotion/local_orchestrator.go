@@ -3,6 +3,7 @@ package promotion
 import (
 	"context"
 	"fmt"
+	"maps"
 	"slices"
 
 	gocache "github.com/patrickmn/go-cache"
@@ -12,6 +13,7 @@ import (
 	kargoapi "github.com/akuity/kargo/api/v1alpha1"
 	"github.com/akuity/kargo/pkg/credentials"
 	"github.com/akuity/kargo/pkg/health"
+	"github.com/akuity/kargo/pkg/promotion/metrics"
 )
 
 // LocalOrchestrator is an implementation of the Orchestrator interface that
@@ -22,6 +24,7 @@ type LocalOrchestrator struct {
 	registry  StepRunnerRegistry
 	client    client.Client
 	cacheFunc ExprDataCacheFn
+	metrics   *metrics.StepMetrics
 }
 
 // NewLocalOrchestrator creates a new LocalOrchestrator instance with the
@@ -44,6 +47,7 @@ func NewLocalOrchestrator(
 		registry:  registry,
 		client:    kargoClient,
 		cacheFunc: cacheFunc,
+		metrics:   metrics.NewStepMetrics(),
 	}
 }
 
@@ -82,6 +86,7 @@ func (o *LocalOrchestrator) ExecuteSteps(
 					"step %q was canceled due to context cancellation: %s",
 					step.Alias, ctx.Err(),
 				).Finished()
+				o.recordStepDuration(promoCtx.Project, step, meta)
 			}
 			return Result{
 				Status:                kargoapi.PromotionPhaseErrored,
@@ -169,6 +174,7 @@ func (o *LocalOrchestrator) ExecuteSteps(
 			meta.WithStatus(kargoapi.PromotionStepStatusErrored).WithMessagef(
 				"step %q returned an invalid status: %s", step.Alias, result.Status,
 			).Finished()
+			o.recordStepDuration(promoCtx.Project, step, meta)
 			continue
 		}
 
@@ -187,6 +193,9 @@ func (o *LocalOrchestrator) ExecuteSteps(
 				RetryAfter:            result.RetryAfter,
 			}, err
 		}
+
+		// The step reached a terminal status on this attempt.
+		o.recordStepDuration(promoCtx.Project, step, meta)
 
 		// If the step succeeded, we can add any health checks to the list.
 		if meta.Status == kargoapi.PromotionStepStatusSucceeded {
@@ -209,6 +218,31 @@ func (o *LocalOrchestrator) ExecuteSteps(
 	}, nil
 }
 
+// recordStepDuration observes how long a step spent running, from the moment it
+// first started until it reached a terminal status, labeled by the Project it
+// belongs to, its kind, and the status it ended in. Because a step's StartedAt
+// survives across reconciliations, this covers the step's whole lifetime, not
+// just the attempt that happened to finish it.
+//
+// A step with no start or no finish has no running time to report and is not
+// observed; neither are skipped steps, whose duration says nothing about the
+// work the step represents.
+func (o *LocalOrchestrator) recordStepDuration(
+	project string,
+	step Step,
+	meta *StepMetadata,
+) {
+	if meta == nil || meta.StartedAt == nil || meta.FinishedAt == nil ||
+		meta.Status == kargoapi.PromotionStepStatusSkipped {
+		return
+	}
+	o.metrics.Duration.WithLabelValues(
+		project,
+		step.Kind,
+		string(meta.Status),
+	).Observe(meta.FinishedAt.Sub(meta.StartedAt.Time).Seconds())
+}
+
 func (o *LocalOrchestrator) propagateStepOutput(
 	promoCtx Context,
 	step Step,
@@ -225,9 +259,8 @@ func (o *LocalOrchestrator) propagateStepOutput(
 			if promoCtx.State[aliasNamespace] == nil {
 				promoCtx.State[aliasNamespace] = make(map[string]any)
 			}
-			for k, v := range result.Output {
-				promoCtx.State[aliasNamespace].(map[string]any)[k] = v // nolint: forcetypeassert
-			}
+			// nolint: forcetypeassert
+			maps.Copy(promoCtx.State[aliasNamespace].(map[string]any), result.Output)
 		}
 	}
 }

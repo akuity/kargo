@@ -33,6 +33,7 @@ import (
 	"github.com/akuity/kargo/pkg/conditions"
 	"github.com/akuity/kargo/pkg/controller"
 	argocdapi "github.com/akuity/kargo/pkg/controller/argocd/api/v1alpha1"
+	"github.com/akuity/kargo/pkg/controller/metrics"
 	kargoEvent "github.com/akuity/kargo/pkg/event"
 	k8sevent "github.com/akuity/kargo/pkg/event/kubernetes"
 	exprfn "github.com/akuity/kargo/pkg/expressions/function"
@@ -212,6 +213,8 @@ func (r *RegularStageReconciler) SetupWithManager(
 	); err != nil {
 		return fmt.Errorf("index Freight by Stages for which it has been approved: %w", err)
 	}
+
+	metrics.RegisterStageMetrics(r.client)
 
 	// Build the controller with the reconciler.
 	c, err := ctrl.NewControllerManagedBy(kargoMgr).

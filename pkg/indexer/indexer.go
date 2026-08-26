@@ -32,6 +32,7 @@ const (
 	PromotionsByStageAndFreightField = "stageAndFreight"
 	PromotionsByStageField           = "stage"
 	PromotionsByTerminalField        = "terminal"
+	PromotionsByNonTerminalField     = "nonTerminal"
 
 	PromotionRequestsByStageAndFreightField = "stageAndFreight"
 	PromotionRequestsByStageField           = "stage"
@@ -122,6 +123,16 @@ func PromotionsByTerminal(obj client.Object) []string {
 		return nil
 	}
 	return []string{strconv.FormatBool(promo.Status.Phase.IsTerminal())}
+}
+
+// PromotionsByNonTerminal returns a client.IndexerFunc that indexes Promotions by
+// whether or not that are in a non-terminal phase.
+func PromotionsByNonTerminal(obj client.Object) []string {
+	promo, ok := obj.(*kargoapi.Promotion)
+	if !ok {
+		return nil
+	}
+	return []string{strconv.FormatBool(!promo.Status.Phase.IsTerminal())}
 }
 
 // RunningPromotionsByArgoCDApplications returns a client.IndexerFunc that
