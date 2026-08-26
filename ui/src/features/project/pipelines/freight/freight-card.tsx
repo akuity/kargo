@@ -1,7 +1,5 @@
 import { useDraggable } from '@dnd-kit/core';
-import { faDocker, faGithub } from '@fortawesome/free-brands-svg-icons';
 import {
-  faAnchor,
   faCheck,
   faEllipsis,
   faPlus,
@@ -9,8 +7,7 @@ import {
   faHourglass,
   faTrash,
   faTriangleExclamation,
-  faWarehouse,
-  IconDefinition
+  faWarehouse
 } from '@fortawesome/free-solid-svg-icons';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
 import { Button, Divider, Dropdown, Flex, Tooltip, Typography } from 'antd';
@@ -71,10 +68,6 @@ export const FreightCard = (props: FreightCardProps) => {
       abs: creationDate
     };
   }, [props.freight]);
-
-  const noOfGitCommits = props.freight?.commits?.length || 0;
-  const noOfHelmReleases = props.freight?.charts?.length || 0;
-  const noOfContainerImages = props.freight?.images?.length || 0;
 
   const isViewingFreight =
     props.viewingFreight?.metadata?.name === props.freight?.metadata?.name ||
@@ -294,16 +287,6 @@ export const FreightCard = (props: FreightCardProps) => {
           </div>
 
           <div className='flex flex-col mx-auto w-full gap-0.5 items-center justify-center text-nowrap py-1 mt-auto'>
-            {(noOfGitCommits ? 1 : 0) + (noOfHelmReleases ? 1 : 0) + (noOfContainerImages ? 1 : 0) >
-              2 && (
-              <>
-                <FreightCard.ArtifactCount icon={faGithub} count={noOfGitCommits} />
-
-                <FreightCard.ArtifactCount icon={faAnchor} count={noOfHelmReleases} />
-
-                <FreightCard.ArtifactCount icon={faDocker} count={noOfContainerImages} />
-              </>
-            )}
             <Typography.Text
               className='text-xs text-nowrap'
               type='secondary'
@@ -317,10 +300,3 @@ export const FreightCard = (props: FreightCardProps) => {
     </div>
   );
 };
-
-FreightCard.ArtifactCount = (props: { icon: IconDefinition; count: number }) =>
-  props.count > 0 && (
-    <div className='text-[10px]'>
-      {props.count}x <FontAwesomeIcon icon={props.icon} />
-    </div>
-  );
