@@ -10,6 +10,7 @@ import { ARGOCD_CONTEXT_KEY, SHARD_LABEL_KEY } from '@ui/config/labels';
 import { paths } from '@ui/config/paths';
 import { useExtensionsContext } from '@ui/extensions/extensions-context';
 import { HealthStatusIcon } from '@ui/features/common/health-status/health-status-icon';
+import { useEmbeddedArgoCD } from '@ui/features/common/preferences/use-embedded-argocd';
 import { Health, Stage } from '@ui/gen/api/v2/models';
 
 import { useDictionaryContext } from '../context/dictionary-context';
@@ -30,11 +31,12 @@ export const ArgoCDLink = ({
   const { name: projectName } = useParams();
   const { argoCDExtension } = useExtensionsContext();
   const dictionaryContext = useDictionaryContext();
+  const [embeddedArgoCD] = useEmbeddedArgoCD();
 
   const shardKey = stage?.metadata?.labels?.[SHARD_LABEL_KEY] || '';
   // Remove trailing slash if present
   const argoCDShardURL = dictionaryContext?.argocdShards?.[shardKey]?.url?.replace(/\/$/, '');
-  const isExtensionArgoCD = Boolean(argoCDExtension) && !externalLinksOnly;
+  const isExtensionArgoCD = Boolean(argoCDExtension) && !externalLinksOnly && embeddedArgoCD;
 
   const argoCDApps = React.useMemo(() => {
     const rawValues = stage.metadata?.annotations?.[ARGOCD_CONTEXT_KEY];
