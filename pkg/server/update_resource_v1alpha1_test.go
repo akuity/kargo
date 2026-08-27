@@ -8,6 +8,7 @@ import (
 	"testing"
 
 	"github.com/stretchr/testify/require"
+	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/client/fake"
@@ -439,6 +440,96 @@ func Test_server_updateResources(t *testing.T) {
 						project,
 					)
 					require.NoError(t, err)
+				},
+			},
+		},
+	)
+}
+
+// Test_server_updateResources_clusterScopedNamespaceSpoofing is the
+// updateResources (PUT .../resources?upsert=true) counterpart to
+// Test_server_createResources_clusterScopedNamespaceSpoofing in
+// create_resource_v1alpha1_test.go; see that test's doc comment for the full
+// explanation. newProjectCreatorClient is defined there and reused here.
+func Test_server_updateResources_clusterScopedNamespaceSpoofing(t *testing.T) {
+	const projectName = "ghsa-repro"
+
+	// capturedClient is reassigned by each serverSetup before assertions reads
+	// it. Test cases are run sequentially, so this is safe.
+	var capturedClient client.WithWatch
+
+	testRESTEndpoint(
+		t, &config.ServerConfig{},
+		http.MethodPut, "/v1beta1/resources?upsert=true",
+		[]restTestCase{
+			{
+				name: "control: direct upsert of a cluster-scoped resource is denied",
+				serverSetup: func(t *testing.T, s *server) {
+					s.client, capturedClient = newProjectCreatorClient(t, fake.NewClientBuilder())
+					s.authorizeFn = s.client.Authorize
+				},
+				body: mustJSONBody(&kargoapi.ClusterPromotionTask{
+					TypeMeta: metav1.TypeMeta{
+						APIVersion: kargoapi.GroupVersion.String(),
+						Kind:       "ClusterPromotionTask",
+					},
+					ObjectMeta: metav1.ObjectMeta{Name: "control-task"},
+					Spec: kargoapi.PromotionTaskSpec{
+						Steps: []kargoapi.PromotionStep{{Uses: "fail"}},
+					},
+				}),
+				assertions: func(t *testing.T, w *httptest.ResponseRecorder, _ client.Client) {
+					require.Equal(t, http.StatusForbidden, w.Code)
+				},
+			},
+			{
+				name: "exploit: ClusterPromotionTask namespace spoofed to a just-created Project is still denied",
+				serverSetup: func(t *testing.T, s *server) {
+					s.client, capturedClient = newProjectCreatorClient(t, fake.NewClientBuilder())
+					s.authorizeFn = s.client.Authorize
+				},
+				body: mustJSONArrayBody(
+					&kargoapi.Project{
+						TypeMeta: metav1.TypeMeta{
+							APIVersion: kargoapi.GroupVersion.String(),
+							Kind:       "Project",
+						},
+						ObjectMeta: metav1.ObjectMeta{Name: projectName},
+					},
+					&kargoapi.ClusterPromotionTask{
+						TypeMeta: metav1.TypeMeta{
+							APIVersion: kargoapi.GroupVersion.String(),
+							Kind:       "ClusterPromotionTask",
+						},
+						ObjectMeta: metav1.ObjectMeta{
+							Name: "exploit-task",
+							// The exploit: meaningless to Kubernetes for a cluster-scoped kind.
+							Namespace: projectName,
+						},
+						Spec: kargoapi.PromotionTaskSpec{
+							Steps: []kargoapi.PromotionStep{{Uses: "fail"}},
+						},
+					},
+				),
+				assertions: func(t *testing.T, w *httptest.ResponseRecorder, _ client.Client) {
+					require.Equal(t, http.StatusOK, w.Code)
+
+					var res createOrUpdateResourceResponse
+					require.NoError(t, json.Unmarshal(w.Body.Bytes(), &res))
+					require.Len(t, res.Results, 2)
+					require.Empty(t, res.Results[0].Error, "Project creation should succeed")
+					require.NotEmpty(
+						t, res.Results[1].Error,
+						"ClusterPromotionTask creation must be denied, not silently bypassed via a spoofed namespace",
+					)
+					require.Contains(t, res.Results[1].Error, "forbidden")
+
+					err := capturedClient.Get(
+						t.Context(),
+						client.ObjectKey{Name: "exploit-task"},
+						&kargoapi.ClusterPromotionTask{},
+					)
+					require.True(t, apierrors.IsNotFound(err), "ClusterPromotionTask must not have been persisted")
 				},
 			},
 		},
