@@ -257,9 +257,10 @@ func Test_prHandler_handleOpened(t *testing.T) {
 			event := &github.PullRequestEvent{
 				Action: github.Ptr(action),
 				PullRequest: &github.PullRequest{
-					Number:            github.Ptr(1),
-					Body:              github.Ptr(testCase.body),
-					User:              &github.User{Login: github.Ptr(testCase.author)},
+					Number: github.Ptr(1),
+					Body:   github.Ptr(testCase.body),
+					User:   &github.User{Login: github.Ptr(testCase.author)},
+					// nolint:staticcheck // deprecated only for the Events API, not webhooks; see comment_handler.go
 					AuthorAssociation: github.Ptr("NONE"),
 				},
 				Repo: &github.Repository{

@@ -259,7 +259,10 @@ func (rc *repoContext) isPRExempt(
 
 	if ex.Maintainers {
 		// Author check: payload association (cheap), with org-membership
-		// fallback to catch concealed members.
+		// fallback to catch concealed members. GetAuthorAssociation is
+		// deprecated only for GitHub's Events API, not webhook deliveries
+		// (see the comment in comment_handler.go), so it's still safe to
+		// read here.
 		authorLogin := pr.GetUser().GetLogin()
 		authorExempt, err := rc.isMaintainer(
 			ctx, pr.GetAuthorAssociation(), authorLogin,

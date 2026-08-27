@@ -1,0 +1,74 @@
+apiVersion: kargo.akuity.io/v1alpha1
+kind: Project
+metadata:
+  name: kargo-yaml-parse-update
+---
+apiVersion: kargo.akuity.io/v1alpha1
+kind: Warehouse
+metadata:
+  name: kargo-demo
+  namespace: kargo-yaml-parse-update
+spec:
+  subscriptions:
+  - git:
+      repoURL: https://github.com/<github-username>/kargo-demo-gitops.git
+      branch: new-helm
+---
+apiVersion: kargo.akuity.io/v1alpha1
+kind: Stage
+metadata:
+  name: yaml-parse-update
+  namespace: kargo-yaml-parse-update
+spec:
+  requestedFreight:
+  - origin:
+      kind: Warehouse
+      name: kargo-demo
+    sources:
+      direct: true
+  promotionTemplate:
+    spec:
+      vars:
+      - name: repoURL
+        value: https://github.com/<github-username>/kargo-demo-gitops.git
+      - name: newImageName
+        value: public.ecr.aws/nginx/nginx:1.25.0
+      steps:
+      # Clone the commit the Warehouse discovered into ./src.
+      - uses: git-clone
+        config:
+          repoURL: ${{ vars.repoURL }}
+          checkout:
+          - commit: ${{ commitFrom(vars.repoURL, warehouse("kargo-demo")).ID }}
+            path: ./src
+      # Parse the current image.name from the values file (the "source" value).
+      - uses: yaml-parse
+        as: source
+        config:
+          path: ./src/charts/kargo-demo/values.yaml
+          outputs:
+          - name: imageName
+            fromExpression: image.name
+      # Update image.name in the working copy. There is no git-commit / git-push
+      # step, so the change is never written back to the repository.
+      - uses: yaml-update
+        config:
+          path: ./src/charts/kargo-demo/values.yaml
+          updates:
+          - key: image.name
+            value: ${{ vars.newImageName }}
+      # Re-parse the updated file to read the field back for verification.
+      - uses: yaml-parse
+        as: updated
+        config:
+          path: ./src/charts/kargo-demo/values.yaml
+          outputs:
+          - name: imageName
+            fromExpression: image.name
+      # Surface the before/after values so the test can assert the update.
+      - uses: compose-output
+        as: output
+        config:
+          originalImage: ${{ outputs.source.imageName }}
+          updatedImage: ${{ outputs.updated.imageName }}
+          expectedImage: ${{ vars.newImageName }}

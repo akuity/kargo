@@ -25,10 +25,12 @@ type CreateWarehouseWizardProps = {
   // rjsf dynamic forms from JSON schema, its fine if it is not strongly typed
   formState: Record<string, unknown>;
   setFormState(nextFormState: object): void;
+  // When true, field descriptions are always shown and the toggle is hidden.
+  alwaysShowDescription?: boolean;
 };
 
 export const CreateWarehouseWizard = (props: CreateWarehouseWizardProps) => {
-  const [showDescription, setShowDescription] = useState(false);
+  const [showDescription, setShowDescription] = useState(props.alwaysShowDescription ?? false);
 
   const { formState, setFormState } = props;
 
@@ -43,15 +45,17 @@ export const CreateWarehouseWizard = (props: CreateWarehouseWizardProps) => {
         }
       }}
     >
-      <div className='flex'>
-        <Checkbox
-          className='text-xs mb-2 ml-auto'
-          checked={showDescription}
-          onChange={(e) => setShowDescription(e.target.checked)}
-        >
-          Show description
-        </Checkbox>
-      </div>
+      {!props.alwaysShowDescription && (
+        <div className='flex'>
+          <Checkbox
+            className='text-xs mb-2 ml-auto'
+            checked={showDescription}
+            onChange={(e) => setShowDescription(e.target.checked)}
+          >
+            Show description
+          </Checkbox>
+        </div>
+      )}
       <div className={rjsfStylesOverride.container}>
         <AntdFormLabel prefixCls='' label='Name' htmlFor='warehouse-name' />
         <Input
@@ -89,15 +93,15 @@ export const CreateWarehouseWizard = (props: CreateWarehouseWizardProps) => {
 
         <SubscriptionWizard
           subscriptions={subscriptions}
-          onChange={(subscriptions) =>
+          onChange={(subscriptions) => {
             setFormState({
               ...formState,
               spec: {
                 ...(formState?.spec || {}),
                 subscriptions
               }
-            })
-          }
+            });
+          }}
         />
       </div>
     </RjsfConfigContext.Provider>

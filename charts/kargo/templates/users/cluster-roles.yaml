@@ -35,8 +35,10 @@ rules:
   - freights
   - projects
   - projectconfigs
+  - promotionrequests
   - promotiontasks
   - stages
+  - targets
   - warehouses
   verbs:
   - create
@@ -221,8 +223,10 @@ rules:
   - projects
   - projectconfigs
   - promotions
+  - promotionrequests
   - promotiontasks
   - stages
+  - targets
   - warehouses
   verbs:
   - get

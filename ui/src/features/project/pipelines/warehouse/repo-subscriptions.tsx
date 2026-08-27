@@ -29,6 +29,12 @@ export const RepoSubscriptions = ({ subscriptions }: Props) => {
               column={1}
               style={{ width: '40%', minWidth: 500 }}
             >
+              {!!subscription.name && (
+                <Descriptions.Item label='Name' styles={{ label: DescriptionsLabelStyle }}>
+                  {subscription.name}
+                </Descriptions.Item>
+              )}
+
               <Descriptions.Item label='repo URL' styles={{ label: DescriptionsLabelStyle }}>
                 <Typography.Link
                   href={`${subscription.chart?.repoURL}/${subscription?.chart?.name}`}
@@ -64,6 +70,12 @@ export const RepoSubscriptions = ({ subscriptions }: Props) => {
               column={1}
               style={{ width: '40%', minWidth: 500 }}
             >
+              {!!subscription.name && (
+                <Descriptions.Item label='Name' styles={{ label: DescriptionsLabelStyle }}>
+                  {subscription.name}
+                </Descriptions.Item>
+              )}
+
               <Descriptions.Item label='repo URL' styles={{ label: DescriptionsLabelStyle }}>
                 <Typography.Link href={subscription.git?.repoURL} target='_blank' rel='noreferrer'>
                   {subscription.git?.repoURL}
@@ -110,6 +122,12 @@ export const RepoSubscriptions = ({ subscriptions }: Props) => {
               column={1}
               style={{ width: '40%', minWidth: 500 }}
             >
+              {!!subscription.name && (
+                <Descriptions.Item label='Name' styles={{ label: DescriptionsLabelStyle }}>
+                  {subscription.name}
+                </Descriptions.Item>
+              )}
+
               <Descriptions.Item label='repo URL' styles={{ label: DescriptionsLabelStyle }}>
                 <Typography.Link
                   href={urlForImage(subscription.image?.repoURL)}
@@ -154,7 +172,10 @@ export const RepoSubscriptions = ({ subscriptions }: Props) => {
               column={1}
               style={{ width: '40%', minWidth: 500 }}
             >
-              <Descriptions.Item label='Name'>{subscription.name}</Descriptions.Item>
+              {!!subscription.name && (
+                <Descriptions.Item label='Name'>{subscription.name}</Descriptions.Item>
+              )}
+
               <Descriptions.Item label='Type'>
                 {subscription.subscription.subscriptionType}
               </Descriptions.Item>

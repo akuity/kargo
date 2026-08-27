@@ -22,5 +22,8 @@ export const getSubscriptionKeyFreight = (res: Image | Chart | GitCommit) => {
   return getSubscriptionKey(res);
 };
 
+export const getSubscriptionName = (res: DiscoveryResult) =>
+  'subscriptionName' in res ? res.subscriptionName : undefined;
+
 export const isEqualSubscriptions = (a: DiscoveryResult, b: DiscoveryResult) =>
   getSubscriptionKey(a) === getSubscriptionKey(b);

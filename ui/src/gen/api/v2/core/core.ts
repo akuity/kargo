@@ -3694,6 +3694,8 @@ export function useGetStageLinks<
 /**
  * Create a Promotion resource to transition a specified Stage into
 the state represented by the specified Freight.
+A Stage that selects Targets yields a PromotionRequest, which fans
+the Freight out to each of them, in place of a single Promotion.
  * @summary Promote to Stage
  */
 export type promoteToStageResponse201 = {
@@ -3790,7 +3792,8 @@ export const usePromoteToStage = <TError = ErrorType<unknown>, TContext = unknow
 };
 /**
  * Creates a Promotion resource for each of a Stage's immediately
-downstream Stages.
+downstream Stages. Downstream Stages that select Targets yield a
+PromotionRequest each, returned separately under "promotionRequests".
  * @summary Promote downstream
  */
 export type promoteDownstreamResponse201 = {

@@ -8,6 +8,7 @@
 import type { StageStatusAutoPromotionHolds } from './stageStatusAutoPromotionHolds';
 import type { V1Condition } from './v1Condition';
 import type { PromotionReference } from './promotionReference';
+import type { PromotionRequestReference } from './promotionRequestReference';
 import type { StageStatusEffectiveAutoPromotionHolds } from './stageStatusEffectiveAutoPromotionHolds';
 import type { FreightCollection } from './freightCollection';
 import type { Health } from './health';
@@ -35,6 +36,16 @@ state.
   conditions?: V1Condition[];
   /** CurrentPromotion is a reference to the currently Running promotion. */
   currentPromotion?: PromotionReference;
+  /** CurrentPromotionRequest is a reference to the PromotionRequest currently
+fanning Freight out to this Stage's Targets. It is absent for a Stage that
+governs no Targets.
+
+Fanning Freight out to Targets is a Kargo Enterprise-only feature. Kargo
+OSS maintains this field all the same, but the PromotionRequest it refers
+to never gets further than being marked Errored for that reason.
+
++optional */
+  currentPromotionRequest?: PromotionRequestReference;
   /** EffectiveAutoPromotionHolds is the set of auto-promotion holds in effect
 right now. It is recomputed every reconciliation from AutoPromotionHolds
 plus the newest in-flight Promotions, and unlike AutoPromotionHolds is not
@@ -65,6 +76,12 @@ determine whether the request to refresh the resource has been handled.
   lastHandledRefresh?: string;
   /** LastPromotion is a reference to the last completed promotion. */
   lastPromotion?: PromotionReference;
+  /** LastPromotionRequest is a reference to the last PromotionRequest to reach a
+terminal phase. It is absent for a Stage that governs no Targets, and only
+ever moves forward, so it outlives the PromotionRequest it refers to.
+
++optional */
+  lastPromotionRequest?: PromotionRequestReference;
   /** Metadata is a map of arbitrary metadata associated with the Stage.
 This is useful for storing additional information about the Stage
 that can be shared across promotions, verifications, or other processes. */

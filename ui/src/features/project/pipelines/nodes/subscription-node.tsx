@@ -23,8 +23,9 @@ export const SubscriptionNode = (props: { subscription: RepoSubscription }) => {
       props.subscription?.chart?.repoURL ||
       props.subscription?.image?.repoURL ||
       '';
-    const title = humanComprehendableArtifact({ repoURL }) || props.subscription.name;
-    const base = artifactBase(repoURL) || repoURL;
+    const name = props.subscription.name;
+    const title = name || humanComprehendableArtifact({ repoURL }) || repoURL;
+    const base = name ? repoURL : artifactBase(repoURL) || repoURL;
     const link = artifactURL(repoURL);
 
     return { title, repoURL, base, link };
@@ -47,9 +48,11 @@ export const SubscriptionNode = (props: { subscription: RepoSubscription }) => {
       size='small'
       className={styles['subscription-node-size']}
       title={
-        <Flex align='center' gap={16}>
+        <Flex align='center' gap={8}>
           {icon && <FontAwesomeIcon icon={icon} />}
-          <span className='text-xs'>{title}</span>
+          <span className='text-xs truncate' title={title}>
+            {title}
+          </span>
         </Flex>
       }
       variant='borderless'

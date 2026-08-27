@@ -21,18 +21,21 @@ import { Promotion, PromotionStep } from '@ui/gen/api/v2/models';
 import uiPlugins from '@ui/plugins';
 import { UiPluginHoles } from '@ui/plugins/atoms/ui-plugin-hole/ui-plugin-holes';
 
+import { StepDuration } from './promotion-step-duration';
 import { objectToYAML } from './utils/promotion';
 
 export const Step = ({
   step,
   result,
   output,
-  promotion
+  promotion,
+  stepIndex
 }: {
   step: PromotionStep;
   result: PromotionDirectiveStepStatus;
   output?: object;
   promotion?: Promotion;
+  stepIndex: number;
 }) => {
   const [showDetails, setShowDetails] = useState(false);
 
@@ -110,7 +113,7 @@ export const Step = ({
   return {
     className: classNames('', {
       'border-green-500': progressing,
-      'border-gray-200': !progressing
+      'border-gray-200 dark:border-neutral-700': !progressing
     }),
     label: (
       <Flex align='center' onClick={() => setShowDetails(!showDetails)}>
@@ -149,6 +152,7 @@ export const Step = ({
               )}
             </UiPluginHoles.DeepLinks.PromotionStep>
           )}
+          <StepDuration promotion={promotion} stepIndex={stepIndex} />
         </Flex>
       </Flex>
     ),

@@ -108,6 +108,9 @@ model_promotion_list.go
 model_promotion_policy.go
 model_promotion_policy_selector.go
 model_promotion_reference.go
+model_promotion_request_freight_reference.go
+model_promotion_request_phase.go
+model_promotion_request_reference.go
 model_promotion_spec.go
 model_promotion_status.go
 model_promotion_step.go
@@ -178,6 +181,7 @@ model_stage_list.go
 model_stage_spec.go
 model_stage_stats.go
 model_stage_status.go
+model_stage_targets.go
 model_step_execution_metadata.go
 model_tag_map.go
 model_update_config_map_request.go

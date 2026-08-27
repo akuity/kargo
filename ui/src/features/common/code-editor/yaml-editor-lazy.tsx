@@ -6,11 +6,20 @@ import { configureMonacoYaml } from 'monaco-yaml';
 import React, { FC, useEffect, useRef } from 'react';
 import yaml from 'yaml';
 
+import { useTheme } from '@ui/features/common/theme/use-theme';
+
 import styles from './yaml-editor.module.less';
 
 import './patch-yaml-editor';
 
 loader.config({ monaco });
+
+monaco.editor.defineTheme('kargo-dark', {
+  base: 'vs-dark',
+  inherit: true,
+  rules: [],
+  colors: { 'editor.background': '#0f1722' }
+});
 
 export interface YamlEditorProps {
   value: string;
@@ -25,6 +34,9 @@ export interface YamlEditorProps {
   label?: string;
   toolbar?: React.ReactNode;
   resourceType?: string;
+  theme?: 'light' | 'dark';
+  onFocus?(): void;
+  onBlur?(): void;
 }
 
 const YamlEditor: FC<YamlEditorProps> = (props) => {
@@ -40,8 +52,13 @@ const YamlEditor: FC<YamlEditorProps> = (props) => {
     placeholder,
     isLoading,
     label,
-    resourceType
+    resourceType,
+    theme
   } = props;
+
+  // Follow the app theme unless a caller pins one (e.g. the always-dark YAML rail).
+  const { isDark } = useTheme();
+  const effectiveTheme = theme ?? (isDark ? 'dark' : 'light');
 
   const handleOnChange = (newValue: string | undefined) => {
     onChange?.(newValue);
@@ -83,8 +100,16 @@ const YamlEditor: FC<YamlEditorProps> = (props) => {
     }
   }, [value]);
 
+  // Keep the latest callbacks available to the listeners registered on mount
+  const onFocusRef = useRef(props.onFocus);
+  onFocusRef.current = props.onFocus;
+  const onBlurRef = useRef(props.onBlur);
+  onBlurRef.current = props.onBlur;
+
   const handleEditorDidMount = (editor: monaco.editor.IStandaloneCodeEditor) => {
     editorRef.current = editor;
+    editor.onDidFocusEditorText(() => onFocusRef.current?.());
+    editor.onDidBlurEditorText(() => onBlurRef.current?.());
   };
 
   if (isLoading) {
@@ -101,18 +126,25 @@ const YamlEditor: FC<YamlEditorProps> = (props) => {
         <div>{label}</div>
       </Flex>
       <div
-        style={{ border: '1px solid #d9d9d9', height, overflow: 'hidden' }}
         // `nokey` opts this subtree out of React Flow's global key handling.
         // When the editor is rendered over a pipeline graph (e.g. the Stage /
         // Warehouse detail drawer), React Flow's default space-to-pan would
         // otherwise swallow the space key, since Monaco's EditContext input is
         // a plain <div> that React Flow doesn't recognize as a text field.
         className={['nokey', className].filter(Boolean).join(' ')}
+        style={{
+          border: `1px solid ${effectiveTheme === 'dark' ? '#2a3340' : '#d9d9d9'}`,
+          height,
+          overflow: 'hidden'
+        }}
       >
         <Editor
+          theme={effectiveTheme === 'dark' ? 'kargo-dark' : 'light'}
           options={{
             readOnly: disabled,
-            lineDecorationsWidth: 5,
+            // Small breathing room around the content
+            padding: { top: 8, bottom: 8 },
+            lineDecorationsWidth: 12,
             lineNumbersMinChars: 0,
             glyphMargin: false,
             folding: false,

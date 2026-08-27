@@ -2,10 +2,17 @@ import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
 import { Col, Flex, Row, Space, Table, Tag, theme, Typography } from 'antd';
 import { useMemo } from 'react';
 
+import { SubscriptionName } from '@ui/features/common/subscription-name';
 import { ArtifactMetadata } from '@ui/features/freight/artifact-metadata';
 import { Freight, FreightReference } from '@ui/gen/api/v2/models';
 
-import { repoLabel, typeIcon, typeLabel, versionLabel } from './freight-comparison-utils';
+import {
+  repoLabel,
+  subscriptionName,
+  typeIcon,
+  typeLabel,
+  versionLabel
+} from './freight-comparison-utils';
 import { PairedRow, pairArtifacts, PairStatus } from './pair-artifacts';
 
 const statusTag = (status: PairStatus) => {
@@ -42,6 +49,11 @@ export const FreightComparisonTable = ({
   );
 
   const hasCurrent = !!currentFreight;
+
+  const hasSubscriptionNames = useMemo(
+    () => rows.some((row) => !!subscriptionName(row.incoming || row.current)),
+    [rows]
+  );
 
   return (
     <Table<PairedRow>
@@ -97,7 +109,7 @@ export const FreightComparisonTable = ({
     >
       <Table.Column<PairedRow>
         title='Repo / Name'
-        width='57%'
+        width={hasSubscriptionNames ? '42%' : '57%'}
         render={(_, row) => {
           const source = row.incoming || row.current;
           if (!source) {
@@ -122,6 +134,21 @@ export const FreightComparisonTable = ({
           );
         }}
       />
+      {hasSubscriptionNames && (
+        <Table.Column<PairedRow>
+          title='Name'
+          width='15%'
+          render={(_, row) => {
+            const name = subscriptionName(row.incoming || row.current);
+
+            if (!name) {
+              return <Typography.Text type='secondary'>—</Typography.Text>;
+            }
+
+            return <SubscriptionName name={name} className='text-xs' />;
+          }}
+        />
+      )}
       <Table.Column<PairedRow>
         title='Current'
         width='15%'

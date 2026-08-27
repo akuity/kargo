@@ -1,0 +1,241 @@
+{
+  "$schema": "http://json-schema.org/draft-04/schema#",
+  "description": "PromotionRequest expresses the intent to promote a piece of Freight to a\nspecific set of Targets. Its Stage and Freight are fixed for its lifetime,\ngiving it a single freight transition to represent from start to terminal\nstate; only its list of Targets may change, so that Targets discovered after\ncreation can still be included.",
+  "properties": {
+    "apiVersion": {
+      "description": "APIVersion defines the versioned schema of this representation of an object.\nServers should convert recognized schemas to the latest internal value, and\nmay reject unrecognized values.\nMore info: https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#resources",
+      "type": "string"
+    },
+    "kind": {
+      "description": "Kind is a string value representing the REST resource this object represents.\nServers may infer this from the endpoint the client submits requests to.\nCannot be updated.\nIn CamelCase.\nMore info: https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#types-kinds",
+      "type": "string"
+    },
+    "metadata": {
+      "type": "object"
+    },
+    "spec": {
+      "description": "Spec describes the Stage, the Freight, and the Targets of the\nPromotionRequest.",
+      "properties": {
+        "freight": {
+          "description": "Freight specifies the piece of Freight promoted by the Stage.\nThe Freight MUST be in the same namespace as the PromotionRequest.",
+          "maxLength": 253,
+          "minLength": 1,
+          "pattern": "^[a-z0-9]([-a-z0-9]*[a-z0-9])?(\\.[a-z0-9]([-a-z0-9]*[a-z0-9])?)*$",
+          "type": "string",
+          "x-kubernetes-validations": [
+            {
+              "rule": "self == oldSelf"
+            }
+          ]
+        },
+        "stage": {
+          "description": "Stage specifies the name of the Stage that promotes the Freight.\nThe Stage MUST be in the same namespace as the PromotionRequest.",
+          "maxLength": 253,
+          "minLength": 1,
+          "pattern": "^[a-z0-9]([-a-z0-9]*[a-z0-9])?(\\.[a-z0-9]([-a-z0-9]*[a-z0-9])?)*$",
+          "type": "string",
+          "x-kubernetes-validations": [
+            {
+              "rule": "self == oldSelf"
+            }
+          ]
+        },
+        "targets": {
+          "description": "Targets names the Targets to which this PromotionRequest promotes Freight.\nEach Target MUST be in the same namespace as the PromotionRequest. The\nlist may be empty, which records that the governing Stage governed no\nTargets when the PromotionRequest was created -- distinct from the field\nbeing absent, which asks for it to be resolved.\n\nThis is a resolved list, not a selector: the Stage's target selectors are\nevaluated once, at creation, and the result recorded here. The membership\nof the PromotionRequest is therefore a snapshot of what the Stage governed\nat that moment, and its threshold and terminal state are computed against\nit rather than against a selector that could match differently later.\n\nThis is the only mutable field in the spec. The governing Stage owns it,\nand may add Targets to an in-flight PromotionRequest so that Targets\ndiscovered after creation can still receive the Freight. Target names MUST\nbe unique; this is enforced by the validating webhook rather than by the\nschema, since a list-map's per-item ownership tracking would roughly\ndouble the storage cost of every entry.",
+          "items": {
+            "description": "PromotionRequestTarget names a Target that a PromotionRequest promotes\nFreight to.",
+            "properties": {
+              "name": {
+                "description": "Name is the name of the Target.",
+                "maxLength": 253,
+                "minLength": 1,
+                "pattern": "^[a-z0-9]([-a-z0-9]*[a-z0-9])?(\\.[a-z0-9]([-a-z0-9]*[a-z0-9])?)*$",
+                "type": "string"
+              }
+            },
+            "required": [
+              "name"
+            ],
+            "type": "object"
+          },
+          "type": "array",
+          "x-kubernetes-list-type": "atomic"
+        }
+      },
+      "required": [
+        "freight",
+        "stage",
+        "targets"
+      ],
+      "type": "object"
+    },
+    "status": {
+      "description": "Status describes the per-Target progress and the aggregate state of the\nPromotionRequest's Promotions.",
+      "properties": {
+        "conditions": {
+          "description": "Conditions contains the last observations of the PromotionRequest's current\nstate.",
+          "items": {
+            "description": "Condition contains details for one aspect of the current state of this API Resource.",
+            "properties": {
+              "lastTransitionTime": {
+                "description": "lastTransitionTime is the last time the condition transitioned from one status to another.\nThis should be when the underlying condition changed.  If that is not known, then using the time when the API field changed is acceptable.",
+                "format": "date-time",
+                "type": "string"
+              },
+              "message": {
+                "description": "message is a human readable message indicating details about the transition.\nThis may be an empty string.",
+                "maxLength": 32768,
+                "type": "string"
+              },
+              "observedGeneration": {
+                "description": "observedGeneration represents the .metadata.generation that the condition was set based upon.\nFor instance, if .metadata.generation is currently 12, but the .status.conditions[x].observedGeneration is 9, the condition is out of date\nwith respect to the current state of the instance.",
+                "format": "int64",
+                "maximum": 9223372036854776000,
+                "minimum": 0,
+                "type": "integer"
+              },
+              "reason": {
+                "description": "reason contains a programmatic identifier indicating the reason for the condition's last transition.\nProducers of specific condition types may define expected values and meanings for this field,\nand whether the values are considered a guaranteed API.\nThe value should be a CamelCase string.\nThis field may not be empty.",
+                "maxLength": 1024,
+                "minLength": 1,
+                "pattern": "^[A-Za-z]([A-Za-z0-9_,:]*[A-Za-z0-9_])?$",
+                "type": "string"
+              },
+              "status": {
+                "description": "status of the condition, one of True, False, Unknown.",
+                "enum": [
+                  "True",
+                  "False",
+                  "Unknown"
+                ],
+                "type": "string"
+              },
+              "type": {
+                "description": "type of condition in CamelCase or in foo.example.com/CamelCase.",
+                "maxLength": 316,
+                "pattern": "^([a-z0-9]([-a-z0-9]*[a-z0-9])?(\\.[a-z0-9]([-a-z0-9]*[a-z0-9])?)*/)?(([A-Za-z0-9][-A-Za-z0-9_.]*)?[A-Za-z0-9])$",
+                "type": "string"
+              }
+            },
+            "required": [
+              "lastTransitionTime",
+              "message",
+              "reason",
+              "status",
+              "type"
+            ],
+            "type": "object"
+          },
+          "type": "array",
+          "x-kubernetes-list-map-keys": [
+            "type"
+          ],
+          "x-kubernetes-list-type": "map"
+        },
+        "finishedAt": {
+          "description": "FinishedAt is the time at which the PromotionRequest completed.",
+          "format": "date-time",
+          "type": "string"
+        },
+        "observedGeneration": {
+          "description": "ObservedGeneration is the generation of the spec last reconciled.",
+          "format": "int64",
+          "maximum": 9223372036854776000,
+          "minimum": -9223372036854776000,
+          "type": "integer"
+        },
+        "phase": {
+          "description": "Phase is a high-level summary of the PromotionRequest's lifecycle.",
+          "type": "string"
+        },
+        "startedAt": {
+          "description": "StartedAt is the time at which the PromotionRequest started.",
+          "format": "date-time",
+          "type": "string"
+        },
+        "summary": {
+          "description": "Summary aggregates the phases of this PromotionRequest's child Promotions.",
+          "properties": {
+            "aborted": {
+              "description": "Aborted is the number of child Promotions in the Aborted phase.",
+              "format": "int32",
+              "maximum": 2147483647,
+              "minimum": -2147483648,
+              "type": "integer"
+            },
+            "errored": {
+              "description": "Errored is the number of child Promotions in the Errored phase.",
+              "format": "int32",
+              "maximum": 2147483647,
+              "minimum": -2147483648,
+              "type": "integer"
+            },
+            "failed": {
+              "description": "Failed is the number of child Promotions in the Failed phase.",
+              "format": "int32",
+              "maximum": 2147483647,
+              "minimum": -2147483648,
+              "type": "integer"
+            },
+            "pending": {
+              "description": "Pending is the number of child Promotions in the Pending phase.",
+              "format": "int32",
+              "maximum": 2147483647,
+              "minimum": -2147483648,
+              "type": "integer"
+            },
+            "running": {
+              "description": "Running is the number of child Promotions in the Running phase.",
+              "format": "int32",
+              "maximum": 2147483647,
+              "minimum": -2147483648,
+              "type": "integer"
+            },
+            "succeeded": {
+              "description": "Succeeded is the number of child Promotions in the Succeeded phase.",
+              "format": "int32",
+              "maximum": 2147483647,
+              "minimum": -2147483648,
+              "type": "integer"
+            }
+          },
+          "type": "object"
+        },
+        "targets": {
+          "description": "Targets records progress against spec.targets: one entry per Target, with\nthe child Promotion promoting to it and that Promotion's phase. Entries\nappear as the reconciler acts on each Target in spec.targets.\n\nThe list is atomic rather than a map keyed by name: the reconciler is its\nonly writer, so per-item ownership tracking in managedFields would only\ninflate the object -- roughly doubling the storage cost of each entry --\nwithout ever being used to merge.",
+          "items": {
+            "description": "PromotionRequestTargetStatus records the state of a single Target selected\nby a PromotionRequest.",
+            "properties": {
+              "name": {
+                "description": "Name is the name of the Target.",
+                "maxLength": 253,
+                "minLength": 1,
+                "pattern": "^[a-z0-9]([-a-z0-9]*[a-z0-9])?(\\.[a-z0-9]([-a-z0-9]*[a-z0-9])?)*$",
+                "type": "string"
+              },
+              "phase": {
+                "description": "Phase is the phase of that Promotion.",
+                "type": "string"
+              },
+              "promotion": {
+                "description": "Promotion is the name of the child Promotion currently promoting the\nFreight to this Target. Empty if none has been created yet.",
+                "type": "string"
+              }
+            },
+            "required": [
+              "name"
+            ],
+            "type": "object"
+          },
+          "type": "array",
+          "x-kubernetes-list-type": "atomic"
+        }
+      },
+      "type": "object"
+    }
+  },
+  "required": [
+    "spec"
+  ],
+  "type": "object"
+}

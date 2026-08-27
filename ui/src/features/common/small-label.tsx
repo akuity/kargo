@@ -6,4 +6,8 @@ export const SmallLabel = ({
 }: {
   children: React.ReactNode;
   className?: string;
-}) => <div className={classNames('text-xs text-gray-500 font-medium', className)}>{children}</div>;
+}) => (
+  <div className={classNames('text-xs text-gray-500 dark:text-neutral-400 font-medium', className)}>
+    {children}
+  </div>
+);

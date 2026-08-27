@@ -2634,6 +2634,116 @@ func TestReconciler_ensureDefaultUserRoles(t *testing.T) {
 	}
 }
 
+func TestReconciler_ensureDefaultUserRoles_PromotionRequestPermissions(t *testing.T) {
+	scheme := runtime.NewScheme()
+	require.NoError(t, corev1.AddToScheme(scheme))
+	require.NoError(t, rbacv1.AddToScheme(scheme))
+
+	createdRoles := map[string]*rbacv1.Role{}
+	r := &reconciler{
+		client: fake.NewClientBuilder().WithScheme(scheme).Build(),
+		createServiceAccountFn: func(
+			context.Context,
+			client.Object,
+			...client.CreateOption,
+		) error {
+			return nil
+		},
+		createRoleFn: func(
+			_ context.Context,
+			obj client.Object,
+			_ ...client.CreateOption,
+		) error {
+			role, ok := obj.(*rbacv1.Role)
+			require.True(t, ok)
+			createdRoles[role.Name] = role
+			return nil
+		},
+		createRoleBindingFn: func(
+			context.Context,
+			client.Object,
+			...client.CreateOption,
+		) error {
+			return nil
+		},
+		createClusterRoleFn: func(
+			context.Context,
+			client.Object,
+			...client.CreateOption,
+		) error {
+			return nil
+		},
+		createClusterRoleBindingFn: func(
+			context.Context,
+			client.Object,
+			...client.CreateOption,
+		) error {
+			return nil
+		},
+	}
+
+	require.NoError(
+		t,
+		r.ensureDefaultUserRoles(
+			t.Context(),
+			&kargoapi.Project{ObjectMeta: metav1.ObjectMeta{Name: "test-project"}},
+		),
+	)
+
+	testCases := []struct {
+		roleName string
+		resource string
+		verbs    []string
+	}{
+		{
+			roleName: "kargo-admin",
+			resource: "targets",
+			verbs:    []string{"*"},
+		},
+		{
+			roleName: "kargo-viewer",
+			resource: "targets",
+			verbs:    []string{"get", "list", "watch"},
+		},
+	}
+	for _, testCase := range testCases {
+		t.Run(testCase.roleName+"/"+testCase.resource, func(t *testing.T) {
+			role := createdRoles[testCase.roleName]
+			require.NotNil(t, role)
+			for _, rule := range role.Rules {
+				for _, resource := range rule.Resources {
+					if resource == testCase.resource {
+						require.ElementsMatch(t, testCase.verbs, rule.Verbs)
+						return
+					}
+				}
+			}
+			require.Fail(t, testCase.resource+" permissions not found")
+		})
+	}
+	// No default role grants any access to PromotionRequests. Only the Stage
+	// controller creates them, so no user needs to write one, and withholding
+	// read access keeps them inert in editions that do not reconcile them.
+	// Editions that do grant these permissions via
+	// RegisterRoleRulesContributor.
+	for _, roleName := range []string{"kargo-admin", "kargo-viewer", "kargo-promoter"} {
+		t.Run(roleName+"/no promotionrequests", func(t *testing.T) {
+			role := createdRoles[roleName]
+			require.NotNil(t, role)
+			for _, rule := range role.Rules {
+				require.NotContains(t, rule.Resources, "promotionrequests")
+			}
+		})
+	}
+	t.Run("kargo-promoter/no targets", func(t *testing.T) {
+		role := createdRoles["kargo-promoter"]
+		require.NotNil(t, role)
+		for _, rule := range role.Rules {
+			require.NotContains(t, rule.Resources, "targets")
+		}
+	})
+}
+
 func TestReconciler_ensureDefaultUserRoles_contributors(t *testing.T) {
 	// Save and restore the global registry around each sub-test.
 	origRegistry := defaultRoleRulesContributorRegistry

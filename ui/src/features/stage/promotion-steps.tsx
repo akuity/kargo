@@ -70,7 +70,8 @@ export const PromotionSteps = (props: PromotionStepsProps) => {
         step,
         result,
         output: outputsByStepAlias[step.as || ''],
-        promotion: props.promotion
+        promotion: props.promotion,
+        stepIndex: i
       }),
       key
     };

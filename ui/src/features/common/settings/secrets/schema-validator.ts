@@ -3,8 +3,49 @@ import { z } from 'zod';
 import { dnsRegex } from '@ui/features/common/utils';
 import { zodValidators } from '@ui/utils/validators';
 
-const imageNameRegex =
+export const imageNameRegex =
   /^(?![a-zA-Z][a-zA-Z0-9+.-]*:\/\/)(\w+([.-]\w+)*(:\d+)?\/)?(\w+([.-]\w+)*)(\/\w+([.-]\w+)*)*$/;
+
+const parseUrl = (value: string): URL | undefined => {
+  try {
+    return new URL(value);
+  } catch {
+    return undefined;
+  }
+};
+
+const helmProtocols = ['http:', 'https:', 'oci:'];
+
+// The repo URL shape a credential type demands, or undefined when the URL is
+// acceptable. Shared with the project wizard's credential step so both surfaces
+// reject the same URLs with the same wording. A regex pattern matches URLs
+// rather than being one, and types without a shape rule (generic) are left
+// alone; an empty URL is a separate, "required" concern.
+export const repoUrlError = (
+  type: string,
+  repoUrl?: string,
+  repoUrlIsRegex?: boolean
+): string | undefined => {
+  if (!repoUrl || repoUrlIsRegex) {
+    return undefined;
+  }
+  switch (type) {
+    case 'git':
+      return parseUrl(repoUrl) ? undefined : 'Repo URL must be a valid git URL.';
+    case 'helm': {
+      const url = parseUrl(repoUrl);
+      return url && helmProtocols.includes(url.protocol)
+        ? undefined
+        : 'Repo URL must be a valid Helm chart repository.';
+    }
+    case 'image':
+      return imageNameRegex.test(repoUrl)
+        ? undefined
+        : 'Repo URL must be a valid container registry.';
+    default:
+      return undefined;
+  }
+};
 
 // secretFormSchema is the unified shape backing both the repo credentials form
 // and the generic secret form. Repo- and generic-specific requirements are
@@ -42,44 +83,17 @@ export const createFormSchema = (genericCreds: boolean, editing?: boolean) =>
       error: 'Password is required.',
       path: ['password']
     })
-    .refine(
-      (data) => {
-        if (!genericCreds && data.type === 'git' && data.repoUrl && !data.repoUrlIsRegex) {
-          try {
-            new URL(data.repoUrl);
-          } catch {
-            return false;
-          }
-        }
-        return true;
-      },
-      { error: 'Repo URL must be a valid git URL.', path: ['repoUrl'] }
-    )
-    .refine(
-      (data) => {
-        if (!genericCreds && data.type === 'helm' && data.repoUrl && !data.repoUrlIsRegex) {
-          try {
-            const url = new URL(data.repoUrl);
-            if (url.protocol !== 'http:' && url.protocol !== 'https:' && url.protocol !== 'oci:') {
-              return false;
-            }
-          } catch {
-            return false;
-          }
-        }
-        return true;
-      },
-      { error: 'Repo URL must be a valid Helm chart repository.', path: ['repoUrl'] }
-    )
-    .refine(
-      (data) => {
-        if (!genericCreds && data.type === 'image' && data.repoUrl && !data.repoUrlIsRegex) {
-          return imageNameRegex.test(data.repoUrl);
-        }
-        return true;
-      },
-      { error: 'Repo URL must be a valid container registry.', path: ['repoUrl'] }
-    )
+    // superRefine rather than a refine per type: the message depends on the
+    // type, and only one of them can ever apply.
+    .superRefine((data, ctx) => {
+      if (genericCreds) {
+        return;
+      }
+      const error = repoUrlError(data.type, data.repoUrl, data.repoUrlIsRegex);
+      if (error) {
+        ctx.addIssue({ code: 'custom', message: error, path: ['repoUrl'] });
+      }
+    })
     .refine((data) => ['git', 'helm', 'image', 'generic'].includes(data.type), {
       error: "Type must be one of 'git', 'helm', 'image' or 'generic'."
     });

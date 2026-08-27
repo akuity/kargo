@@ -1,6 +1,6 @@
 import { faTruckArrowRight } from '@fortawesome/free-solid-svg-icons';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
-import { Button, Drawer, Flex } from 'antd';
+import { Button, Drawer, Flex, Tooltip } from 'antd';
 import classNames from 'classnames';
 import { useMemo } from 'react';
 import { generatePath, useNavigate } from 'react-router-dom';
@@ -18,6 +18,7 @@ import { isStageControlFlow } from '../nodes/stage-meta-utils';
 
 import { FreightDetails } from './freight-details';
 import styles from './promote.module.less';
+import { isPromotionWindowClosed, promotionWindowClosedMessage } from './promotion-window';
 
 type PromoteProps = ModalComponentProps & {
   stage: Stage;
@@ -89,6 +90,10 @@ export const Promote = (props: PromoteProps) => {
     promoteActionMutation.mutate(payload);
   };
 
+  // a closed promotion window forbids promotion of this Stage. Downstream
+  // promotions target other Stages, each gated by its own window.
+  const windowClosed = !isDownstreamPromotion && isPromotionWindowClosed(props.stage);
+
   let promotingTo = stageName || '';
 
   if (isDownstreamPromotion) {
@@ -107,15 +112,18 @@ export const Promote = (props: PromoteProps) => {
       size='large'
       width={'1400px'}
       footer={
-        <Button
-          size='large'
-          className={classNames(styles['promote-btn'], 'ml-auto mt-5')}
-          icon={<FontAwesomeIcon icon={faTruckArrowRight} />}
-          onClick={onPromote}
-          loading={promoteActionMutation.isPending || promoteDownstreamActionMutation.isPending}
-        >
-          Promote{isDownstreamPromotion && ' to downstream'}
-        </Button>
+        <Tooltip title={windowClosed ? promotionWindowClosedMessage(props.stage) : undefined}>
+          <Button
+            size='large'
+            className={classNames(styles['promote-btn'], 'ml-auto mt-5')}
+            icon={<FontAwesomeIcon icon={faTruckArrowRight} />}
+            onClick={onPromote}
+            disabled={windowClosed}
+            loading={promoteActionMutation.isPending || promoteDownstreamActionMutation.isPending}
+          >
+            Promote{isDownstreamPromotion && ' to downstream'}
+          </Button>
+        </Tooltip>
       }
     >
       <div className='-mt-4'>

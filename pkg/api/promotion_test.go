@@ -102,7 +102,7 @@ func TestGeneratePromotionName(t *testing.T) {
 				require.Len(t, result, 253) // Kubernetes resource name limit
 				require.Equal(
 					t,
-					maxStageNamePrefixForPromotionName,
+					maxPrefixForPromotionName,
 					len(result[:strings.Index(result, ".")]),
 				)
 			},

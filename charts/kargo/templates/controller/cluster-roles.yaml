@@ -39,6 +39,7 @@ rules:
   - clusterconfigs
   - projects
   - projectconfigs
+  - targets
   verbs:
   - get
   - list
@@ -47,6 +48,7 @@ rules:
   - kargo.akuity.io
   resources:
   - promotions
+  - promotionrequests
   verbs:
   - create
   - get
@@ -88,6 +90,7 @@ rules:
   resources:
   - freights/status
   - promotions/status
+  - promotionrequests/status
   - stages/status
   - warehouses/finalizers
   - warehouses/status

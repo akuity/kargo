@@ -2,17 +2,14 @@ import { MutationCache, QueryCache, QueryClient } from '@tanstack/react-query';
 import { notification } from 'antd';
 
 import { ApiError } from '@ui/lib/api/custom-fetch';
+import { apiErrorBodyMessage } from '@ui/lib/api/error-message';
 
 const showErrorNotification = (error: unknown) => {
   let message: string;
   if (error instanceof ApiError) {
-    const body = error.body;
-    if (typeof body === 'object' && body !== null) {
-      const b = body as Record<string, unknown>;
-      message = String(b.message ?? b.error ?? error.message);
-    } else {
-      message = error.message;
-    }
+    // Notifications appear on their own, so fall back to ApiError's message
+    // ("API Error: 404 Not Found") to keep the status code in view.
+    message = apiErrorBodyMessage(error.body) || error.message;
   } else if (error instanceof Error) {
     message = error.message;
   } else {
