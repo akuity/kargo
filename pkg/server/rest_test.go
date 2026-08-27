@@ -48,19 +48,57 @@ type restTestCase struct {
 	assertions  func(*testing.T, *httptest.ResponseRecorder, client.Client)
 }
 
-// testRESTMapper builds a RESTMapper from a scheme so fake clients can resolve a
-// resource type's API group the way the production discovery-backed mapper does.
-// It mirrors a real cluster by omitting rbac.kargo.akuity.io types, which are
-// virtual API objects rather than resources the cluster actually serves.
+// clusterScopedTestKinds mirrors the +kubebuilder:resource:scope=Cluster
+// markers in api/v1alpha1, plus ClusterAnalysisTemplate (cluster-scoped in
+// its own upstream Argo Rollouts CRD). meta.NewDefaultRESTMapper can't infer
+// scope from a scheme, so getting this wrong would make every kind look
+// namespaced to fake clients and mask scope-dependent bugs in tests.
+var clusterScopedTestKinds = map[string]bool{
+	"Project":                 true,
+	"ClusterConfig":           true,
+	"ClusterPromotionTask":    true,
+	"ClusterAnalysisTemplate": true,
+}
+
+// testRESTMapper builds a RESTMapper from a scheme so fake clients can resolve
+// a resource type's API group and scope the way the production
+// discovery-backed mapper does. It mirrors a real cluster by omitting
+// rbac.kargo.akuity.io types, which are virtual API objects rather than
+// resources the cluster actually serves.
 func testRESTMapper(s *runtime.Scheme) meta.RESTMapper {
 	m := meta.NewDefaultRESTMapper(nil)
 	for gvk := range s.AllKnownTypes() {
 		if strings.HasSuffix(gvk.Kind, "List") || gvk.Group == rbacapi.GroupVersion.Group {
 			continue
 		}
-		m.Add(gvk, meta.RESTScopeNamespace)
+		scope := meta.RESTScopeNamespace
+		if clusterScopedTestKinds[gvk.Kind] {
+			scope = meta.RESTScopeRoot
+		}
+		m.Add(gvk, scope)
 	}
 	return m
+}
+
+// newTestScheme builds the scheme used by the REST test harness, and by
+// tests that build their own kubernetes.Client (e.g. to control
+// authorization the harness's SkipAuthorization: true bypasses).
+func newTestScheme(t *testing.T) *runtime.Scheme {
+	t.Helper()
+	testScheme := runtime.NewScheme()
+
+	// k8s APIs
+	require.NoError(t, corev1.AddToScheme(testScheme))
+	require.NoError(t, rbacv1.AddToScheme(testScheme))
+
+	// Kargo APIs
+	require.NoError(t, kargoapi.AddToScheme(testScheme))
+	require.NoError(t, rbacapi.AddToScheme(testScheme))
+
+	// Third-party APIs
+	require.NoError(t, rollouts.AddToScheme(testScheme))
+
+	return testScheme
 }
 
 func testRESTEndpoint(
@@ -70,23 +108,7 @@ func testRESTEndpoint(
 	url string,
 	testCases []restTestCase,
 ) {
-	testScheme := runtime.NewScheme()
-
-	// k8s APIs
-	err := corev1.AddToScheme(testScheme)
-	require.NoError(t, err)
-	err = rbacv1.AddToScheme(testScheme)
-	require.NoError(t, err)
-
-	// Kargo APIs
-	err = kargoapi.AddToScheme(testScheme)
-	require.NoError(t, err)
-	err = rbacapi.AddToScheme(testScheme)
-	require.NoError(t, err)
-
-	// Third-party APIs
-	err = rollouts.AddToScheme(testScheme)
-	require.NoError(t, err)
+	testScheme := newTestScheme(t)
 
 	gin.DefaultWriter = io.Discard
 	gin.DefaultErrorWriter = io.Discard
@@ -110,6 +132,7 @@ func testRESTEndpoint(
 				WithScheme(testScheme).
 				WithRESTMapper(testRESTMapper(testScheme)).
 				Build()
+			var err error
 			s.client, err = kubernetes.NewClient(
 				t.Context(),
 				&rest.Config{},
@@ -177,23 +200,7 @@ func testRESTWatchEndpoint(
 	url string,
 	testCases []restWatchTestCase,
 ) {
-	testScheme := runtime.NewScheme()
-
-	// k8s APIs
-	err := corev1.AddToScheme(testScheme)
-	require.NoError(t, err)
-	err = rbacv1.AddToScheme(testScheme)
-	require.NoError(t, err)
-
-	// Kargo APIs
-	err = kargoapi.AddToScheme(testScheme)
-	require.NoError(t, err)
-	err = rbacapi.AddToScheme(testScheme)
-	require.NoError(t, err)
-
-	// Third-party APIs
-	err = rollouts.AddToScheme(testScheme)
-	require.NoError(t, err)
+	testScheme := newTestScheme(t)
 
 	gin.DefaultWriter = io.Discard
 	gin.DefaultErrorWriter = io.Discard
