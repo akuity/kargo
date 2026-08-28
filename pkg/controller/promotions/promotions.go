@@ -357,7 +357,6 @@ func (r *reconciler) Reconcile(
 		}); err != nil {
 			return ctrl.Result{}, err
 		}
-		r.promoMetrics.Created.WithLabelValues(promo.Namespace).Inc()
 	}
 
 	// Retrieve the Stage associated with the Promotion.
@@ -451,10 +450,7 @@ func (r *reconciler) Reconcile(
 	if newStatus.Phase.IsTerminal() {
 		newStatus.FinishedAt = &metav1.Time{Time: time.Now()}
 		logger.Info("promotion", "phase", newStatus.Phase)
-		if newStatus.Phase == kargoapi.PromotionPhaseErrored {
-			r.promoMetrics.TerminalErrors.WithLabelValues(promo.Namespace).Inc()
-		}
-		r.recordDuration(promo.Namespace, newStatus)
+		r.recordTerminalMetrics(promo.Namespace, newStatus)
 	}
 
 	// Record the current refresh token as having been handled.
@@ -556,7 +552,6 @@ func (r *reconciler) Reconcile(
 	if newStatus.Phase == kargoapi.PromotionPhaseRunning {
 		if promoteErr != nil {
 			// Retryable error: use progressive backoff.
-			r.promoMetrics.RetryableErrors.WithLabelValues(promo.Namespace).Inc()
 			return ctrl.Result{}, promoteErr
 		}
 		// Waiting for external condition: use calculated interval.
@@ -772,7 +767,7 @@ func (r *reconciler) terminatePromotion(
 		return err
 	}
 
-	r.recordDuration(promo.Namespace, newStatus)
+	r.recordTerminalMetrics(promo.Namespace, newStatus)
 
 	// Best-effort cleanup of working directory.
 	r.cleanupWorkDirFn(ctx, promo.UID)
@@ -786,15 +781,17 @@ func (r *reconciler) terminatePromotion(
 	return nil
 }
 
-// recordDuration observes how long the Promotion described by the given
-// terminal status spent running, labeled by the Project it belongs to and by
-// whether it succeeded. A Promotion that reached a terminal phase without ever
-// having started -- one aborted while still Pending, for instance -- has no
-// running time to report and is skipped.
-func (r *reconciler) recordDuration(
+// recordTerminalMetrics counts the Promotion described by the given terminal
+// status as completed and observes how long it spent running, both labeled by
+// the Project it belongs to and by the phase it finished in. A Promotion that
+// reached a terminal phase without ever having started -- one aborted while
+// still Pending, for instance -- still counts as completed, but has no running
+// time to report.
+func (r *reconciler) recordTerminalMetrics(
 	project string,
 	status *kargoapi.PromotionStatus,
 ) {
+	r.promoMetrics.Completed.WithLabelValues(project, string(status.Phase)).Inc()
 	if status.StartedAt == nil || status.FinishedAt == nil {
 		return
 	}

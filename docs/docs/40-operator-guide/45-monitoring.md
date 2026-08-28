@@ -77,9 +77,7 @@ labeled by `project`:
 
 | Metric | Type | Description |
 |--------|------|-------------|
-| `kargo_promotions_created_total` | Counter | Number of `Promotion` resources the controller has observed being created. |
-| `kargo_promotions_errored_retryable_total` | Counter | Number of retryable errors encountered while executing Promotions. A single Promotion may contribute more than once, since each failed attempt is counted. |
-| `kargo_promotions_errored_terminal_total` | Counter | Number of Promotions that reached the terminal `Errored` phase. |
+| `kargo_promotions_completed_total` | Counter | Number of Promotions that reached a terminal phase, by the phase they finished in. |
 | `kargo_promotions_non_terminal` | Gauge | Number of Promotions currently in a non-terminal phase (`Pending` or `Running`), sampled at scrape time. |
 | `kargo_promotion_duration_seconds` | Histogram | Time each Promotion spent running, from the moment it started until it reached a terminal phase. |
 | `kargo_promotion_step_duration_seconds` | Histogram | Time each individual promotion step spent running, from the moment it started until it reached a terminal status. |
@@ -101,6 +99,35 @@ value when a Project is idle.
 
 :::
 
+### Completed Promotions
+
+`kargo_promotions_completed_total` counts Promotions as they reach a terminal
+phase. Alongside `project`, it carries a `phase` label naming the phase the
+`Promotion` finished in, so a single metric describes both how many Promotions
+are finishing and how they are turning out:
+
+```
+kargo_promotions_completed_total{project="guestbook",phase="Succeeded"}  10
+kargo_promotions_completed_total{project="guestbook",phase="Errored"}     2
+kargo_promotions_completed_total{project="guestbook",phase="Failed"}      3
+kargo_promotions_completed_total{project="guestbook",phase="Aborted"}     1
+kargo_promotions_completed_total{project="wordpress",phase="Succeeded"}   3
+```
+
+The label matches the one on `kargo_promotion_duration_seconds`, so the two
+metrics can be queried and graphed side by side. Only phases actually observed
+produce a series, so use `or vector(0)` in queries that need a value for a
+phase a Project has never reached.
+
+:::note
+
+The counts here are slightly higher than the observation counts of
+`kargo_promotion_duration_seconds`, which excludes Promotions that reached a
+terminal phase without ever having started (one aborted while still `Pending`,
+for instance). Those still count as completed.
+
+:::
+
 ### Promotion Duration
 
 `kargo_promotion_duration_seconds` measures only the time a `Promotion` spent
@@ -109,7 +136,7 @@ timestamps. Time spent `Pending`, waiting for its `Stage` to acknowledge it, is
 excluded, as are Promotions that reached a terminal phase without ever having
 started.
 
-In addition to `project`, it carries an `terminalPhase` label that has the phase
+In addition to `project`, it carries a `phase` label that has the phase
 with which the promotion finished for more granular queries.
 
 Because promotion durations span a very wide range, this histogram also emits a

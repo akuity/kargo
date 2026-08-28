@@ -1157,15 +1157,19 @@ func newPromo(namespace, name, stage string,
 	}
 }
 
-func Test_reconciler_recordDuration(t *testing.T) {
+func Test_reconciler_recordTerminalMetrics(t *testing.T) {
 	started := metav1.Time{Time: now.Add(-90 * time.Second)}
+
+	phases := []string{"Succeeded", "Errored", "Aborted"}
 
 	testCases := []struct {
 		name   string
 		status kargoapi.PromotionStatus
-		// expected maps a terminalPhase label value to the number of
-		// observations expected under it.
-		expected map[string]uint64
+		// expectedCompletions and expectedObservations map a phase
+		// label value to the counter increments and histogram observations
+		// expected under it.
+		expectedCompletions  map[string]float64
+		expectedObservations map[string]uint64
 	}{
 		{
 			name: "succeeded Promotion",
@@ -1174,7 +1178,8 @@ func Test_reconciler_recordDuration(t *testing.T) {
 				StartedAt:  &started,
 				FinishedAt: &now,
 			},
-			expected: map[string]uint64{"Succeeded": 1, "Errored": 0, "Aborted": 0},
+			expectedCompletions:  map[string]float64{"Succeeded": 1, "Errored": 0, "Aborted": 0},
+			expectedObservations: map[string]uint64{"Succeeded": 1, "Errored": 0, "Aborted": 0},
 		},
 		{
 			name: "errored Promotion",
@@ -1183,7 +1188,8 @@ func Test_reconciler_recordDuration(t *testing.T) {
 				StartedAt:  &started,
 				FinishedAt: &now,
 			},
-			expected: map[string]uint64{"Succeeded": 0, "Errored": 1, "Aborted": 0},
+			expectedCompletions:  map[string]float64{"Succeeded": 0, "Errored": 1, "Aborted": 0},
+			expectedObservations: map[string]uint64{"Succeeded": 0, "Errored": 1, "Aborted": 0},
 		},
 		{
 			name: "aborted Promotion",
@@ -1192,38 +1198,61 @@ func Test_reconciler_recordDuration(t *testing.T) {
 				StartedAt:  &started,
 				FinishedAt: &now,
 			},
-			expected: map[string]uint64{"Succeeded": 0, "Errored": 0, "Aborted": 1},
+			expectedCompletions:  map[string]float64{"Succeeded": 0, "Errored": 0, "Aborted": 1},
+			expectedObservations: map[string]uint64{"Succeeded": 0, "Errored": 0, "Aborted": 1},
 		},
 		{
-			name: "Promotion that never started is not observed",
+			name: "Promotion that never started counts, but has no duration",
 			status: kargoapi.PromotionStatus{
 				Phase:      kargoapi.PromotionPhaseAborted,
 				FinishedAt: &now,
 			},
-			expected: map[string]uint64{"Succeeded": 0, "Errored": 0, "Aborted": 0},
+			expectedCompletions:  map[string]float64{"Succeeded": 0, "Errored": 0, "Aborted": 1},
+			expectedObservations: map[string]uint64{"Succeeded": 0, "Errored": 0, "Aborted": 0},
 		},
 	}
 	for _, testCase := range testCases {
 		t.Run(testCase.name, func(t *testing.T) {
-			// Each case needs its own histogram, but PromotionMetrics is a
-			// process-wide singleton, so swap in a standalone one.
+			// Each case needs its own collectors, but PromotionMetrics is a
+			// process-wide singleton, so swap in standalone ones.
+			completed := prometheus.NewCounterVec(
+				prometheus.CounterOpts{Name: "test_completed_total"},
+				[]string{"project", "phase"},
+			)
 			duration := prometheus.NewHistogramVec(
 				prometheus.HistogramOpts{Name: "test_duration_seconds"},
-				[]string{"project", "terminalPhase"},
+				[]string{"project", "phase"},
 			)
-			r := &reconciler{promoMetrics: &metrics.PromotionMetrics{Duration: duration}}
+			r := &reconciler{
+				promoMetrics: &metrics.PromotionMetrics{
+					Completed: completed,
+					Duration:  duration,
+				},
+			}
 
-			r.recordDuration("fake-project", &testCase.status)
+			r.recordTerminalMetrics("fake-project", &testCase.status)
 
-			for phase, expected := range testCase.expected {
+			for _, phase := range phases {
+				var m dto.Metric
+
+				counter := completed.WithLabelValues("fake-project", phase)
+				require.NoError(t, counter.Write(&m))
+				require.Equal(
+					t,
+					testCase.expectedCompletions[phase],
+					m.GetCounter().GetValue(),
+					"phase %q", phase,
+				)
+
 				observer, ok := duration.
 					WithLabelValues("fake-project", phase).(prometheus.Metric)
 				require.True(t, ok)
 
-				var m dto.Metric
+				m = dto.Metric{}
 				require.NoError(t, observer.Write(&m))
+				expected := testCase.expectedObservations[phase]
 				require.Equal(
-					t, expected, m.GetHistogram().GetSampleCount(), "terminalPhase %q", phase,
+					t, expected, m.GetHistogram().GetSampleCount(), "phase %q", phase,
 				)
 				if expected > 0 {
 					require.Equal(t, 90.0, m.GetHistogram().GetSampleSum())

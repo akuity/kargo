@@ -21,9 +21,9 @@ import (
 )
 
 const (
-	// terminalPhaseLabel is the label under which the terminal phase value of a Promotion is
+	// phaseLabel is the label under which the terminal phase value of a Promotion is
 	// recorded.
-	terminalPhaseLabel = "terminalPhase"
+	phaseLabel = "phase"
 )
 
 // durationBuckets are the histogram buckets for Promotion durations. Promotions
@@ -40,14 +40,10 @@ var (
 // PromotionMetrics describes Promotion activity observed by the controller. All
 // of its collectors are labeled by the Project the Promotion belongs to.
 type PromotionMetrics struct {
-	// Created counts Promotions the controller has observed being created.
-	Created *prometheus.CounterVec
-	// RetryableErrors counts errors encountered while executing Promotions that
-	// a subsequent attempt may recover from. A single Promotion can contribute
-	// more than once.
-	RetryableErrors *prometheus.CounterVec
-	// TerminalErrors counts Promotions that have errored unrecoverably.
-	TerminalErrors *prometheus.CounterVec
+	// Completed counts Promotions that have reached a terminal phase. It is
+	// additionally labeled by that phase, so a single series describes both how
+	// many Promotions finished and how they finished.
+	Completed *prometheus.CounterVec
 	// Duration observes, in seconds, how long each Promotion spent running --
 	// measured from the moment it transitioned to Running until it reached a
 	// terminal phase. It is additionally labeled by outcome. Promotions that
@@ -71,29 +67,13 @@ func initPromotionMetrics(
 	c client.Client,
 ) *PromotionMetrics {
 	m := &PromotionMetrics{
-		Created: prometheus.NewCounterVec(
+		Completed: prometheus.NewCounterVec(
 			prometheus.CounterOpts{
 				Namespace: metrics.Namespace,
-				Name:      "promotions_created_total",
-				Help:      "Number of Promotions the controller has observed being created.",
+				Name:      "promotions_completed_total",
+				Help:      "Number of Promotions that have reached a terminal phase.",
 			},
-			[]string{metrics.ProjectLabel},
-		),
-		RetryableErrors: prometheus.NewCounterVec(
-			prometheus.CounterOpts{
-				Namespace: metrics.Namespace,
-				Name:      "promotions_errored_retryable_total",
-				Help:      "Number of retryable errors encountered while executing Promotions.",
-			},
-			[]string{metrics.ProjectLabel},
-		),
-		TerminalErrors: prometheus.NewCounterVec(
-			prometheus.CounterOpts{
-				Namespace: metrics.Namespace,
-				Name:      "promotions_errored_terminal_total",
-				Help:      "Number of Promotions that have terminally errored.",
-			},
-			[]string{metrics.ProjectLabel},
+			[]string{metrics.ProjectLabel, phaseLabel},
 		),
 		Duration: prometheus.NewHistogramVec(
 			prometheus.HistogramOpts{
@@ -110,7 +90,7 @@ func initPromotionMetrics(
 				NativeHistogramMaxBucketNumber:  metrics.NativeHistogramMaxBucketNumber,
 				NativeHistogramMinResetDuration: metrics.NativeHistogramMinResetDuration,
 			},
-			[]string{metrics.ProjectLabel, terminalPhaseLabel},
+			[]string{metrics.ProjectLabel, phaseLabel},
 		),
 	}
 
@@ -121,9 +101,7 @@ func initPromotionMetrics(
 	// NOTE: These must be registered with the controller-runtime registry, not the default one. The
 	// manager's metrics endpoint serves only the former.
 	ctrlmetrics.Registry.MustRegister(
-		m.Created,
-		m.RetryableErrors,
-		m.TerminalErrors,
+		m.Completed,
 		m.Duration,
 		nonTerminalCollector,
 	)
