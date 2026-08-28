@@ -1171,9 +1171,9 @@ func isGenericSecretType(secret corev1.Secret) bool {
 // narrowly-scoped, short-lived credentials derived from the underlying Secret
 // rather than the Secret's raw contents. The credentials are returned as a
 // credentials.Credentials struct, whose fields are accessed by name (e.g.
-// .Username, .Password). If no credentials are found, a zero-value struct (all
-// fields empty) is returned, so expression authors can rely on a predictable
-// shape regardless of whether credentials were found.
+// .Username, .Password). If no credentials are found, nil is returned, so
+// expression authors can detect the absence of credentials using optional
+// chaining and nil-coalescing.
 //
 // If a cache is provided, it will be used to store the resolved credentials to
 // avoid repeated lookups within the same evaluation. The cache key is generated
@@ -1230,6 +1230,10 @@ func getRepoCredentials(
 		)
 		if cache != nil {
 			if cachedData, ok := cache.Get(cacheKey); ok {
+				// A cached nil records a previous lookup that found nothing.
+				if cachedData == nil {
+					return nil, nil
+				}
 				if creds, ok := cachedData.(credentials.Credentials); ok {
 					return creds, nil
 				}
@@ -1243,19 +1247,19 @@ func getRepoCredentials(
 			)
 		}
 
-		// Return the resolved credentials as a value struct so that expression
-		// authors can rely on a predictable shape regardless of credential type
-		// or provider. When no credentials are found, a zero-value struct (all
-		// fields empty) is returned.
-		var result credentials.Credentials
-		if creds != nil {
-			result = *creds
+		// When no credentials are found, return nil so that expression authors
+		// can detect their absence using optional chaining and nil-coalescing.
+		if creds == nil {
+			if cache != nil {
+				cache.Set(cacheKey, nil, gocache.NoExpiration)
+			}
+			return nil, nil
 		}
 
 		if cache != nil {
-			cache.Set(cacheKey, result, gocache.NoExpiration)
+			cache.Set(cacheKey, *creds, gocache.NoExpiration)
 		}
-		return result, nil
+		return *creds, nil
 	}
 }
 
