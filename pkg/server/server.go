@@ -17,7 +17,7 @@ import (
 	"github.com/klauspost/compress/gzhttp"
 	"github.com/rs/cors"
 	"golang.org/x/net/http2"
-	"golang.org/x/net/http2/h2c"
+	"golang.org/x/net/http2/h2c" //nolint:staticcheck // SA1019
 	"k8s.io/apimachinery/pkg/runtime/schema"
 	"k8s.io/apimachinery/pkg/types"
 	"sigs.k8s.io/controller-runtime/pkg/client"
@@ -221,7 +221,7 @@ func (s *server) Serve(ctx context.Context, l net.Listener) error {
 		mux.Handle("/dex/", dexProxy)
 	}
 
-	handler := h2c.NewHandler(mux, &http2.Server{})
+	handler := h2c.NewHandler(mux, &http2.Server{}) //nolint:staticcheck // SA1019
 
 	// Sometimes a permissive CORS policy is useful during local development.
 	if s.cfg.PermissiveCORSPolicyEnabled {
