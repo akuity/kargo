@@ -17,8 +17,9 @@ func TestFetchBestReleases(t *testing.T) {
 		BrowserDownloadURL string `json:"browser_download_url"`
 	}
 	type rawRelease struct {
-		TagName string     `json:"tag_name"`
-		Assets  []rawAsset `json:"assets"`
+		TagName    string     `json:"tag_name"`
+		Prerelease bool       `json:"prerelease,omitempty"`
+		Assets     []rawAsset `json:"assets"`
 	}
 
 	t.Run("paginates and returns best releases", func(t *testing.T) {
@@ -67,6 +68,46 @@ func TestFetchBestReleases(t *testing.T) {
 		assert.True(t, results[0].Latest)
 		assert.True(t, v("1.0.99").Equal(results[1].Version))
 		assert.False(t, results[1].Latest)
+	})
+
+	t.Run("keeps paginating when a page is mostly prereleases", func(t *testing.T) {
+		const perPage = 100
+		asset := rawAsset{Name: "kargo-linux-amd64", BrowserDownloadURL: "https://example.com/dl"}
+
+		// A full page of 100 raw releases, most of which are prereleases and
+		// get filtered out. The page is still full, so there is more to fetch.
+		page1 := make([]rawRelease, perPage)
+		for i := range page1 {
+			page1[i] = rawRelease{
+				TagName:    fmt.Sprintf("v1.2.0-rc.%d", i),
+				Prerelease: true,
+				Assets:     []rawAsset{asset},
+			}
+		}
+		page1[0] = rawRelease{TagName: "v1.2.0", Assets: []rawAsset{asset}}
+		page2 := []rawRelease{{TagName: "v1.1.0", Assets: []rawAsset{asset}}}
+
+		srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+			var data any
+			switch r.URL.Query().Get("page") {
+			case "1", "":
+				data = page1
+			case "2":
+				data = page2
+			default:
+				data = []rawRelease{}
+			}
+			w.Header().Set("Content-Type", "application/json")
+			json.NewEncoder(w).Encode(data) //nolint: errcheck
+		}))
+		defer srv.Close()
+
+		results, err := fetchBestReleases(t.Context(), srv.URL)
+		require.NoError(t, err)
+
+		require.Len(t, results, 2)
+		assert.True(t, v("1.2.0").Equal(results[0].Version))
+		assert.True(t, v("1.1.0").Equal(results[1].Version))
 	})
 
 	t.Run("HTTP error returns error", func(t *testing.T) {

@@ -64,6 +64,15 @@ func fetchBestReleases(ctx context.Context, baseURL string) ([]Release, error) {
 			)
 		}
 
+		// The page is counted before filtering. GitHub's page size counts drafts
+		// and prereleases, which githubReleases discards, so a full page can
+		// yield far fewer usable releases -- and comparing the filtered count
+		// against perPage would end pagination while pages remain.
+		var rawPage []json.RawMessage
+		if err := json.Unmarshal(body, &rawPage); err != nil {
+			return nil, fmt.Errorf("unmarshaling releases page %d: %w", page, err)
+		}
+
 		var pageReleases githubReleases
 		if err := json.Unmarshal(body, &pageReleases); err != nil {
 			return nil, fmt.Errorf("unmarshaling releases: %w", err)
@@ -71,7 +80,7 @@ func fetchBestReleases(ctx context.Context, baseURL string) ([]Release, error) {
 
 		allReleases = append(allReleases, pageReleases...)
 
-		if len(pageReleases) < perPage {
+		if len(rawPage) < perPage {
 			break
 		}
 		page++
