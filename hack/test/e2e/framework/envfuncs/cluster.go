@@ -8,6 +8,7 @@ import (
 	"os"
 	"path/filepath"
 	"strings"
+	"time"
 
 	"sigs.k8s.io/e2e-framework/pkg/env"
 	"sigs.k8s.io/e2e-framework/pkg/envconf"
@@ -226,6 +227,7 @@ func InstallKargo(ctx context.Context, cfg *envconf.Config) (context.Context, er
 	if err := chart.install(cfg.KubeconfigFile()); err != nil {
 		return ctx, fmt.Errorf("installing Kargo: %w", err)
 	}
+
 	// kubectl port-forward --namespace kargo svc/kargo-api 3000:80
 	// TODO: make the port configurable
 	err := portForward(ctx, cfg.KubeconfigFile(), chart.namespace, "svc/kargo-api", 3000, 80)
@@ -277,7 +279,7 @@ func portForward(ctx context.Context, kubeconfig, namespace, service string, out
 	// FIXME: replace that with goroutine and error channels?
 	// FIXME: implement forwarding to an non-predefined port
 	cmd := fmt.Sprintf("sh -c \"kubectl port-forward --kubeconfig %s --namespace %s %s %d:%d > /dev/null 2>&1 &\"",
-		kubeconfig, namespace, service, outport, inport)
+		 kubeconfig, namespace, service, outport, inport)
 
 	fmt.Printf("Port forwarding %s to %d\n", service, outport)
 
@@ -289,6 +291,10 @@ func portForward(ctx context.Context, kubeconfig, namespace, service string, out
 		}
 		return fmt.Errorf("kubectl: failed to port-forward: %w : %s", p.Err(), outBytes)
 	}
+
+	// Port-forward might take some time
+	// FIXME: implement reading the log and reacting to port being ready
+	time.Sleep(3 * time.Second)
 	return nil
 }
 
