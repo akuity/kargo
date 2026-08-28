@@ -6,13 +6,15 @@ import (
 	"testing"
 	"time"
 
+	"github.com/prometheus/client_golang/prometheus"
+	dto "github.com/prometheus/client_model/go"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	"k8s.io/utils/ptr"
 	"sigs.k8s.io/controller-runtime/pkg/client/fake"
 
 	kargoapi "github.com/akuity/kargo/api/v1alpha1"
+	"github.com/akuity/kargo/pkg/promotion/metrics"
 )
 
 func TestLocalOrchestrator_ExecuteSteps(t *testing.T) {
@@ -352,7 +354,7 @@ func TestLocalOrchestrator_ExecuteSteps(t *testing.T) {
 			promoCtx: Context{
 				StepExecutionMetadata: kargoapi.StepExecutionMetadataList{{
 					// Start time is set to an hour ago
-					StartedAt: ptr.To(metav1.NewTime(time.Now().Add(-time.Hour))),
+					StartedAt: new(metav1.NewTime(time.Now().Add(-time.Hour))),
 				}},
 			},
 			steps: []Step{
@@ -385,7 +387,7 @@ func TestLocalOrchestrator_ExecuteSteps(t *testing.T) {
 			promoCtx: Context{
 				StepExecutionMetadata: kargoapi.StepExecutionMetadataList{{
 					// Start time is set to an hour ago
-					StartedAt: ptr.To(metav1.NewTime(time.Now().Add(-time.Hour))),
+					StartedAt: new(metav1.NewTime(time.Now().Add(-time.Hour))),
 				}},
 			},
 			steps: []Step{
@@ -537,7 +539,7 @@ func TestLocalOrchestrator_ExecuteSteps(t *testing.T) {
 			promoCtx: Context{
 				StepExecutionMetadata: kargoapi.StepExecutionMetadataList{{
 					Alias:     "step1",
-					StartedAt: ptr.To(metav1.NewTime(time.Now().Add(-time.Minute))),
+					StartedAt: new(metav1.NewTime(time.Now().Add(-time.Minute))),
 					Status:    kargoapi.PromotionStepStatusFailed,
 					Message:   "previous failure",
 				}},
@@ -724,6 +726,108 @@ func TestLocalOrchestrator_ExecuteSteps(t *testing.T) {
 
 			result, err := orchestrator.ExecuteSteps(ctx, tt.promoCtx, tt.steps)
 			tt.assertions(t, result, err)
+		})
+	}
+}
+
+func TestLocalOrchestrator_recordStepDuration(t *testing.T) {
+	started := metav1.Time{Time: time.Now().Add(-45 * time.Second)}
+	finished := metav1.Time{Time: time.Now()}
+
+	// noneObserved is the expectation for a step that is not observed at all.
+	noneObserved := map[string]uint64{"Succeeded": 0, "Failed": 0, "Errored": 0, "Skipped": 0}
+
+	tests := []struct {
+		name string
+		meta *StepMetadata
+		// expected maps a terminalStatus label value to the number of
+		// observations expected under it.
+		expected map[string]uint64
+	}{
+		{
+			name: "succeeded step",
+			meta: &StepMetadata{
+				Status:     kargoapi.PromotionStepStatusSucceeded,
+				StartedAt:  &started,
+				FinishedAt: &finished,
+			},
+			expected: map[string]uint64{"Succeeded": 1, "Failed": 0, "Errored": 0, "Skipped": 0},
+		},
+		{
+			// A terminal, non-technical failure. Distinct from Errored.
+			name: "failed step",
+			meta: &StepMetadata{
+				Status:     kargoapi.PromotionStepStatusFailed,
+				StartedAt:  &started,
+				FinishedAt: &finished,
+			},
+			expected: map[string]uint64{"Succeeded": 0, "Failed": 1, "Errored": 0, "Skipped": 0},
+		},
+		{
+			// A technical failure, retried until the step's error threshold.
+			name: "errored step",
+			meta: &StepMetadata{
+				Status:     kargoapi.PromotionStepStatusErrored,
+				StartedAt:  &started,
+				FinishedAt: &finished,
+			},
+			expected: map[string]uint64{"Succeeded": 0, "Failed": 0, "Errored": 1, "Skipped": 0},
+		},
+		{
+			// Even a step that ran before self-determining it should be skipped
+			// is not observed; its duration says nothing about the work it
+			// represents.
+			name: "skipped step is not observed",
+			meta: &StepMetadata{
+				Status:     kargoapi.PromotionStepStatusSkipped,
+				StartedAt:  &started,
+				FinishedAt: &finished,
+			},
+			expected: noneObserved,
+		},
+		{
+			name: "step still running is not observed",
+			meta: &StepMetadata{
+				Status:    kargoapi.PromotionStepStatusRunning,
+				StartedAt: &started,
+			},
+			expected: noneObserved,
+		},
+		{
+			name: "step that never started is not observed",
+			meta: &StepMetadata{
+				Status:     kargoapi.PromotionStepStatusSucceeded,
+				FinishedAt: &finished,
+			},
+			expected: noneObserved,
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			// StepMetrics is a process-wide singleton, so each case swaps in a
+			// standalone histogram to observe against.
+			duration := prometheus.NewHistogramVec(
+				prometheus.HistogramOpts{Name: "test_step_duration_seconds"},
+				[]string{"project", "stepKind", "terminalStatus"},
+			)
+			o := &LocalOrchestrator{metrics: &metrics.StepMetrics{Duration: duration}}
+
+			o.recordStepDuration("fake-project", Step{Kind: "fake-kind"}, tt.meta)
+
+			for status, expected := range tt.expected {
+				observer, ok := duration.
+					WithLabelValues("fake-project", "fake-kind", status).(prometheus.Metric)
+				require.True(t, ok)
+
+				var m dto.Metric
+				require.NoError(t, observer.Write(&m))
+				require.Equal(
+					t, expected, m.GetHistogram().GetSampleCount(), "terminalStatus=%s", status,
+				)
+				if expected > 0 {
+					require.InDelta(t, 45.0, m.GetHistogram().GetSampleSum(), 1.0)
+				}
+			}
 		})
 	}
 }

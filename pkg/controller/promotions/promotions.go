@@ -24,6 +24,7 @@ import (
 	"github.com/akuity/kargo/pkg/api"
 	"github.com/akuity/kargo/pkg/controller"
 	argocd "github.com/akuity/kargo/pkg/controller/argocd/api/v1alpha1"
+	"github.com/akuity/kargo/pkg/controller/metrics"
 	"github.com/akuity/kargo/pkg/event"
 	k8sevent "github.com/akuity/kargo/pkg/event/kubernetes"
 	"github.com/akuity/kargo/pkg/indexer"
@@ -67,6 +68,8 @@ type reconciler struct {
 	cfg ReconcilerConfig
 
 	sender event.Sender
+
+	promoMetrics *metrics.PromotionMetrics
 
 	// The following behaviors are overridable for testing purposes:
 
@@ -131,6 +134,17 @@ func SetupReconcilerWithManager(
 		),
 	); err != nil {
 		return fmt.Errorf("index running Promotions by Argo CD selectors: %w", err)
+	}
+
+	// Index non-terminal Promotions for use by prometheus metrics. This allows the metrics to be
+	// calculated without scanning all Promotions.
+	if err := kargoMgr.GetFieldIndexer().IndexField(
+		ctx,
+		&kargoapi.Promotion{},
+		indexer.PromotionsByNonTerminalField,
+		indexer.PromotionsByNonTerminal,
+	); err != nil {
+		return fmt.Errorf("index non-terminal Promotions: %w", err)
 	}
 
 	reconciler := newReconciler(
@@ -236,11 +250,12 @@ func newReconciler(
 	cfg ReconcilerConfig,
 ) *reconciler {
 	r := &reconciler{
-		kargoClient: kargoClient,
-		apiReader:   apiReader,
-		promoEngine: promoEngine,
-		sender:      sender,
-		cfg:         cfg,
+		kargoClient:  kargoClient,
+		apiReader:    apiReader,
+		promoEngine:  promoEngine,
+		sender:       sender,
+		promoMetrics: metrics.NewPromotionMetrics(kargoClient),
+		cfg:          cfg,
 		shardPredicate: controller.ResponsibleFor[kargoapi.Promotion]{
 			IsDefaultController: cfg.IsDefaultController,
 			ShardName:           cfg.ShardName,
@@ -435,6 +450,7 @@ func (r *reconciler) Reconcile(
 	if newStatus.Phase.IsTerminal() {
 		newStatus.FinishedAt = &metav1.Time{Time: time.Now()}
 		logger.Info("promotion", "phase", newStatus.Phase)
+		r.recordTerminalMetrics(promo.Namespace, newStatus)
 	}
 
 	// Record the current refresh token as having been handled.
@@ -802,6 +818,8 @@ func (r *reconciler) terminatePromotion(
 		return err
 	}
 
+	r.recordTerminalMetrics(promo.Namespace, newStatus)
+
 	// Best-effort cleanup of working directory.
 	r.cleanupWorkDirFn(ctx, promo.UID)
 
@@ -812,6 +830,26 @@ func (r *reconciler) terminatePromotion(
 	}
 
 	return nil
+}
+
+// recordTerminalMetrics counts the Promotion described by the given terminal
+// status as completed and observes how long it spent running, both labeled by
+// the Project it belongs to and by the phase it finished in. A Promotion that
+// reached a terminal phase without ever having started -- one aborted while
+// still Pending, for instance -- still counts as completed, but has no running
+// time to report.
+func (r *reconciler) recordTerminalMetrics(
+	project string,
+	status *kargoapi.PromotionStatus,
+) {
+	r.promoMetrics.Completed.WithLabelValues(project, string(status.Phase)).Inc()
+	if status.StartedAt == nil || status.FinishedAt == nil {
+		return
+	}
+	r.promoMetrics.Duration.WithLabelValues(
+		project,
+		string(status.Phase),
+	).Observe(status.FinishedAt.Sub(status.StartedAt.Time).Seconds())
 }
 
 // setupDeleteCleanup registers an informer event handler that performs
