@@ -91,8 +91,6 @@ github.com/MirrexOne/unqueryvet v1.3.0 h1:5slWSomgqpYU4zFuZ3NNOfOUxVPlXFDBPAVasZ
 github.com/MirrexOne/unqueryvet v1.3.0/go.mod h1:IWwCwMQlSWjAIteW0t+28Q5vouyktfujzYznSIWiuOg=
 github.com/OpenPeeDeeP/depguard/v2 v2.2.1 h1:vckeWVESWp6Qog7UZSARNqfu/cZqvki8zsuj3piCMx4=
 github.com/OpenPeeDeeP/depguard/v2 v2.2.1/go.mod h1:q4DKzC4UcVaAvcfd41CZh0PWpGgzrVxUYBlgKNGquUo=
-github.com/SladkyCitron/slogcolor v1.9.0 h1:fr4LeG+T6pZ1RYNNOP925jaBYrTdpA6BLzGy29yd4vI=
-github.com/SladkyCitron/slogcolor v1.9.0/go.mod h1:ft8LEVIl4isUkebakhv+ngNXJjWBumnwhXfxTLApf3M=
 github.com/alecthomas/assert/v2 v2.11.0 h1:2Q9r3ki8+JYXvGsDyBXwH3LcJ+WK5D0gc5E8vS6K3D0=
 github.com/alecthomas/assert/v2 v2.11.0/go.mod h1:Bze95FyfUr7x34QZrjL+XP+0qgp/zg8yS+TtBj1WA3k=
 github.com/alecthomas/chroma/v2 v2.20.0 h1:sfIHpxPyR07/Oylvmcai3X/exDlE8+FA820NTz+9sGw=
@@ -285,8 +283,6 @@ github.com/go-logr/stdr v1.2.2 h1:hSWxHoqTgW2S2qGc0LTAI563KZ5YKYRhT3MFKZMbjag=
 github.com/go-logr/stdr v1.2.2/go.mod h1:mMo/vtBO5dYbehREoey6XUKy/eSumjCCveDpRre4VKE=
 github.com/go-openapi/analysis v0.26.0 h1:1xECln1iMMmQnTjgcknC1vi1hA4KISt6IHpSwnqcuwI=
 github.com/go-openapi/analysis v0.26.0/go.mod h1:40gERFi/2dyXA1FaqRRLxkv1IlC6X+GPDNd1xrYAjZE=
-github.com/go-openapi/codescan v0.36.4 h1:ngm19zhpNK2+NibLflXZTGbsJ0MsH9xEspMyWSBgjZU=
-github.com/go-openapi/codescan v0.36.4/go.mod h1:0SOMEOGEok11EOBRiK9GSoSHVSn4XeqjN4JEg8GGV1E=
 github.com/go-openapi/errors v0.22.8 h1:oP7sW7TWc3wFFjrzzj0nI83H2qMBkNjNfSd+XRejk/I=
 github.com/go-openapi/errors v0.22.8/go.mod h1:BuUoHcYrU6E7V9gfj1I5wLQqgtIHnup/alXZ8KdgQ0w=
 github.com/go-openapi/inflect v1.0.0 h1:IzG7K5YBu97odaCXhjODGGt25WaNtEYLJc9NfUcW4AI=
@@ -319,8 +315,6 @@ github.com/go-openapi/swag/loading v0.29.1 h1:FCv5fG8UhTdDJa2R7w+5O9Ekpcbw7tt0nF
 github.com/go-openapi/swag/loading v0.29.1/go.mod h1:N0ESuem4p2oedKal8EJhciqnJ9Q9Wmt83L1CRB3Fouw=
 github.com/go-openapi/swag/mangling v0.29.1 h1:lHALtvYCdxVnRl4GrHmFPwfBTZYIObqdGNSKyu/8D6I=
 github.com/go-openapi/swag/mangling v0.29.1/go.mod h1:SAop9pB7PUjQ/CGCNf/JmCKTRK+GDO+RqE9UHqC/N6s=
-github.com/go-openapi/swag/netutils v0.29.1 h1:IjIvdEP5duKcghFqJEPSUraRnkKYHoM65kTluTu+Jb4=
-github.com/go-openapi/swag/netutils v0.29.1/go.mod h1:DUde7x4Bx00k5jYl2AdRpNAO0m7atUvD2x6X+bWkbno=
 github.com/go-openapi/swag/pools v0.29.1 h1:NRogYxdEW9SjRM4mkAOji9iefO4MRXq3p/ZJcoQbUKg=
 github.com/go-openapi/swag/pools v0.29.1/go.mod h1:leDcaghjkRAhCuCRv9NfJU5f0mjoU3cT/XZObhMk3pc=
 github.com/go-openapi/swag/stringutils v0.29.1 h1:1ykunK7iJQk1uOO7+oUH1ukbsK85fFCOiCFMOVSY+F0=
@@ -339,8 +333,8 @@ github.com/go-quicktest/qt v1.101.0 h1:O1K29Txy5P2OK0dGo59b7b0LR6wKfIhttaAhHUyn7
 github.com/go-quicktest/qt v1.101.0/go.mod h1:14Bz/f7NwaXPtdYEgzsx46kqSxVwTbzVZsDC26tQJow=
 github.com/go-sql-driver/mysql v1.8.1 h1:LedoTUt/eveggdHS9qUFC1EFSa8bU2+1pZjSRpvNJ1Y=
 github.com/go-sql-driver/mysql v1.8.1/go.mod h1:wEBSXgmK//2ZFJyE+qWnIsVGmvmEKlqwuVSjsCm7DZg=
-github.com/go-swagger/go-swagger v0.36.5 h1:8CbHln5gYOuJfHUuRUmN3eGTTZyI44o2FTFFXv/GtoY=
-github.com/go-swagger/go-swagger v0.36.5/go.mod h1:FBiBp6zLDFfQIXyw/qGnDbDY3VAWKRTCrdQ5aR9TRzQ=
+github.com/go-swagger/go-swagger v0.33.1 h1:BdtmxCvMxkrYIGAyn/qXPi4j85mFTwG4c9ED/27jtq4=
+github.com/go-swagger/go-swagger v0.33.1/go.mod h1:wJK762cSroJbM7hgJtKtbZxfevB3RSF3sC8/hK+kRwc=
 github.com/go-task/slim-sprig/v3 v3.0.0 h1:sUs3vkvUymDpBKi3qH1YSqBQk9+9D/8M2mN1vB6EwHI=
 github.com/go-task/slim-sprig/v3 v3.0.0/go.mod h1:W848ghGpv3Qj3dhTPRyJypKRiqCdHZiAzKg9hl15HA8=
 github.com/go-toolsmith/astcast v1.1.0 h1:+JN9xZV1A+Re+95pgnMgDboWNVnIMMQXwfBwLRPgSC8=
