@@ -2,14 +2,17 @@ package server
 
 import (
 	"context"
+	"errors"
 	"testing"
 	"time"
 
 	"connectrpc.com/connect"
 	"github.com/stretchr/testify/require"
 	corev1 "k8s.io/api/core/v1"
+	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
+	"k8s.io/apimachinery/pkg/runtime/schema"
 	"k8s.io/client-go/rest"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/client/fake"
@@ -20,11 +23,45 @@ import (
 	"github.com/akuity/kargo/pkg/server/validation"
 )
 
+// refreshDeniedFn returns an authorizeFn that asserts it was called to check
+// "get" on wantResource with no subresource, and denies the request. Shared
+// by the refresh_*_v1alpha1_test.go files.
+func refreshDeniedFn(
+	t *testing.T,
+	wantResource string,
+) func(context.Context, string, schema.GroupVersionResource, string, client.ObjectKey) error {
+	return func(
+		_ context.Context,
+		verb string,
+		gvr schema.GroupVersionResource,
+		subresource string,
+		_ client.ObjectKey,
+	) error {
+		require.Equal(t, "get", verb)
+		require.Equal(t, wantResource, gvr.Resource)
+		require.Empty(t, subresource)
+		return apierrors.NewForbidden(
+			kargoapi.GroupVersion.WithResource(wantResource).GroupResource(),
+			"test",
+			errors.New("not authorized"),
+		)
+	}
+}
+
 func TestRefreshWarehouse(t *testing.T) {
 	testSets := map[string]struct {
-		req          *svcv1alpha1.RefreshWarehouseRequest
-		errExpected  bool
-		expectedCode connect.Code
+		req         *svcv1alpha1.RefreshWarehouseRequest
+		authorizeFn func(
+			context.Context,
+			string,
+			schema.GroupVersionResource,
+			string,
+			client.ObjectKey,
+		) error
+		errExpected     bool
+		expectedCode    connect.Code
+		wantForbidden   bool
+		createWarehouse bool
 	}{
 		"empty project": {
 			req: &svcv1alpha1.RefreshWarehouseRequest{
@@ -63,6 +100,17 @@ func TestRefreshWarehouse(t *testing.T) {
 				Project: "kargo-demo",
 				Name:    "test",
 			},
+			createWarehouse: true,
+		},
+		"not authorized": {
+			req: &svcv1alpha1.RefreshWarehouseRequest{
+				Project: "kargo-demo",
+				Name:    "test",
+			},
+			authorizeFn:     refreshDeniedFn(t, "warehouses"),
+			errExpected:     true,
+			wantForbidden:   true,
+			createWarehouse: true,
 		},
 	}
 	for name, ts := range testSets {
@@ -93,7 +141,7 @@ func TestRefreshWarehouse(t *testing.T) {
 			)
 			require.NoError(t, err)
 
-			if !ts.errExpected {
+			if ts.createWarehouse {
 				err = client.Create(ctx, &kargoapi.Warehouse{
 					ObjectMeta: metav1.ObjectMeta{
 						Namespace: ts.req.GetProject(),
@@ -108,10 +156,18 @@ func TestRefreshWarehouse(t *testing.T) {
 				client: client,
 			}
 			svr.externalValidateProjectFn = validation.ValidateProject
+			svr.authorizeFn = client.Authorize
+			if ts.authorizeFn != nil {
+				svr.authorizeFn = ts.authorizeFn
+			}
 			res, err := svr.RefreshWarehouse(ctx, connect.NewRequest(ts.req))
 			if ts.errExpected {
 				require.Error(t, err)
-				require.Equal(t, ts.expectedCode, connect.CodeOf(err))
+				if ts.wantForbidden {
+					require.True(t, apierrors.IsForbidden(err), "expected a Forbidden error, got: %v", err)
+				} else {
+					require.Equal(t, ts.expectedCode, connect.CodeOf(err))
+				}
 				return
 			}
 

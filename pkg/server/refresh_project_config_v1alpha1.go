@@ -5,8 +5,10 @@ import (
 
 	"connectrpc.com/connect"
 	"k8s.io/apimachinery/pkg/api/errors"
+	"sigs.k8s.io/controller-runtime/pkg/client"
 
 	svcv1alpha1 "github.com/akuity/kargo/api/service/v1alpha1"
+	kargoapi "github.com/akuity/kargo/api/v1alpha1"
 	"github.com/akuity/kargo/pkg/api"
 )
 
@@ -20,6 +22,13 @@ func (s *server) RefreshProjectConfig(
 	}
 
 	if err := s.validateProjectExists(ctx, project); err != nil {
+		return nil, err
+	}
+
+	key := client.ObjectKey{Namespace: project, Name: project}
+	if err := s.authorizeFn(
+		ctx, "get", kargoapi.GroupVersion.WithResource("projectconfigs"), "", key,
+	); err != nil {
 		return nil, err
 	}
 

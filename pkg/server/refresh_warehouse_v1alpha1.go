@@ -7,6 +7,7 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
 	svcv1alpha1 "github.com/akuity/kargo/api/service/v1alpha1"
+	kargoapi "github.com/akuity/kargo/api/v1alpha1"
 	"github.com/akuity/kargo/pkg/api"
 )
 
@@ -28,10 +29,14 @@ func (s *server) RefreshWarehouse(
 		return nil, err
 	}
 
-	warehouse, err := api.RefreshWarehouse(ctx, s.client.InternalClient(), client.ObjectKey{
-		Namespace: project,
-		Name:      name,
-	})
+	key := client.ObjectKey{Namespace: project, Name: name}
+	if err := s.authorizeFn(
+		ctx, "get", kargoapi.GroupVersion.WithResource("warehouses"), "", key,
+	); err != nil {
+		return nil, err
+	}
+
+	warehouse, err := api.RefreshWarehouse(ctx, s.client.InternalClient(), key)
 	if err != nil {
 		return nil, err
 	}

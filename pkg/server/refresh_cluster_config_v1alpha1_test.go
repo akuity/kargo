@@ -7,8 +7,10 @@ import (
 
 	"connectrpc.com/connect"
 	"github.com/stretchr/testify/require"
+	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
+	"k8s.io/apimachinery/pkg/runtime/schema"
 	"k8s.io/client-go/rest"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/client/fake"
@@ -21,8 +23,15 @@ import (
 
 func TestRefreshClusterConfig(t *testing.T) {
 	testSets := map[string]struct {
-		req        *svcv1alpha1.RefreshClusterConfigRequest
-		objects    []client.Object
+		req         *svcv1alpha1.RefreshClusterConfigRequest
+		objects     []client.Object
+		authorizeFn func(
+			context.Context,
+			string,
+			schema.GroupVersionResource,
+			string,
+			client.ObjectKey,
+		) error
 		assertions func(*testing.T, *connect.Response[svcv1alpha1.RefreshClusterConfigResponse], error)
 	}{
 		"non-existing ClusterConfig": {
@@ -63,6 +72,26 @@ func TestRefreshClusterConfig(t *testing.T) {
 
 			},
 		},
+		"not authorized": {
+			req: &svcv1alpha1.RefreshClusterConfigRequest{},
+			objects: []client.Object{
+				&kargoapi.ClusterConfig{
+					TypeMeta: metav1.TypeMeta{
+						Kind:       "ClusterConfig",
+						APIVersion: kargoapi.GroupVersion.String(),
+					},
+					ObjectMeta: metav1.ObjectMeta{
+						Name: api.ClusterConfigName,
+					},
+				},
+			},
+			authorizeFn: refreshDeniedFn(t, "clusterconfigs"),
+			assertions: func(t *testing.T, r *connect.Response[svcv1alpha1.RefreshClusterConfigResponse], err error) {
+				require.Nil(t, r)
+				require.Error(t, err)
+				require.True(t, apierrors.IsForbidden(err), "expected a Forbidden error, got: %v", err)
+			},
+		},
 	}
 	for name, ts := range testSets {
 		t.Run(name, func(t *testing.T) {
@@ -91,6 +120,10 @@ func TestRefreshClusterConfig(t *testing.T) {
 
 			svr := &server{
 				client: client,
+			}
+			svr.authorizeFn = client.Authorize
+			if ts.authorizeFn != nil {
+				svr.authorizeFn = ts.authorizeFn
 			}
 			res, err := svr.RefreshClusterConfig(ctx, connect.NewRequest(ts.req))
 			ts.assertions(t, res, err)

@@ -8,8 +8,10 @@ import (
 	"connectrpc.com/connect"
 	"github.com/stretchr/testify/require"
 	corev1 "k8s.io/api/core/v1"
+	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
+	"k8s.io/apimachinery/pkg/runtime/schema"
 	"k8s.io/client-go/rest"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/client/fake"
@@ -22,8 +24,15 @@ import (
 
 func TestRefreshProjectConfig(t *testing.T) {
 	testSets := map[string]struct {
-		req        *svcv1alpha1.RefreshProjectConfigRequest
-		objects    []client.Object
+		req         *svcv1alpha1.RefreshProjectConfigRequest
+		objects     []client.Object
+		authorizeFn func(
+			context.Context,
+			string,
+			schema.GroupVersionResource,
+			string,
+			client.ObjectKey,
+		) error
 		assertions func(*testing.T, *connect.Response[svcv1alpha1.RefreshProjectConfigResponse], error)
 	}{
 		"empty project": {
@@ -98,6 +107,30 @@ func TestRefreshProjectConfig(t *testing.T) {
 
 			},
 		},
+		"not authorized": {
+			req: &svcv1alpha1.RefreshProjectConfigRequest{
+				Project: "kargo-demo",
+			},
+			objects: []client.Object{
+				mustNewObject[corev1.Namespace]("testdata/namespace.yaml"),
+				&kargoapi.ProjectConfig{
+					TypeMeta: metav1.TypeMeta{
+						Kind:       "ProjectConfig",
+						APIVersion: kargoapi.GroupVersion.String(),
+					},
+					ObjectMeta: metav1.ObjectMeta{
+						Name:      "kargo-demo",
+						Namespace: "kargo-demo",
+					},
+				},
+			},
+			authorizeFn: refreshDeniedFn(t, "projectconfigs"),
+			assertions: func(t *testing.T, r *connect.Response[svcv1alpha1.RefreshProjectConfigResponse], err error) {
+				require.Nil(t, r)
+				require.Error(t, err)
+				require.True(t, apierrors.IsForbidden(err), "expected a Forbidden error, got: %v", err)
+			},
+		},
 	}
 	for name, ts := range testSets {
 		t.Run(name, func(t *testing.T) {
@@ -127,6 +160,10 @@ func TestRefreshProjectConfig(t *testing.T) {
 			svr := &server{
 				client:                    client,
 				externalValidateProjectFn: validation.ValidateProject,
+				authorizeFn:               client.Authorize,
+			}
+			if ts.authorizeFn != nil {
+				svr.authorizeFn = ts.authorizeFn
 			}
 			res, err := svr.RefreshProjectConfig(ctx, connect.NewRequest(ts.req))
 			ts.assertions(t, res, err)
