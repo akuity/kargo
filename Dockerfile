@@ -20,7 +20,7 @@ RUN NODE_ENV='production' VERSION=${VERSION} pnpm run build
 ####################################################################################################
 # back-end-builder
 ####################################################################################################
-FROM --platform=$BUILDPLATFORM golang:1.25.4-trixie AS back-end-builder
+FROM --platform=$BUILDPLATFORM golang:1.25.14-trixie AS back-end-builder
 
 ARG TARGETOS
 ARG TARGETARCH
@@ -58,20 +58,46 @@ RUN GOOS=${TARGETOS} GOARCH=${TARGETARCH} go build \
 WORKDIR /kargo/bin
 
 ####################################################################################################
-# tools
+# helm-builder
 ####################################################################################################
-# `tools` stage allows us to take the leverage of the parallel build.
-# For example, this stage can be cached and re-used when we have to rebuild code base.
-FROM curlimages/curl:8.16.0 AS tools
+# Helm is required by the kustomize-build promotion step's Helm plugin. We build
+# it ourselves rather than shipping Helm's prebuilt release, because that release
+# is compiled with whatever Go version upstream happened to use, and we inherit
+# its stdlib CVEs. Building here means Helm always carries a current, patched Go
+# stdlib.
+#
+# Building rather than downloading does not hide Helm from vulnerability
+# scanners. Go embeds build metadata in the binary, and the module it records is
+# the one containing the main package -- not the throwaway module used to drive
+# the build. This binary therefore reports `helm.sh/helm/v3` at HELM_VERSION --
+# the same module path and version that Helm's own release build reports.
+# Scanners key on exactly that, so an advisory filed against Helm itself is
+# matched here just as it would be against an upstream binary.
+#
+# The Helm version is intentionally ahead of the helm.sh/helm/v3 library in
+# go.mod: the standalone binary carries no k8s dependency cascade, so we track
+# the latest Helm 3 minor for CVE coverage.
+#
+# Source comes from the Go module proxy, so it is checksum-verified against
+# sum.golang.org rather than trusted from a tarball download.
+FROM --platform=$BUILDPLATFORM golang:1.27.0-trixie AS helm-builder
 
 ARG TARGETOS
 ARG TARGETARCH
 
-WORKDIR /tools
+ARG HELM_VERSION=v3.21.4
 
-RUN GRPC_HEALTH_PROBE_VERSION=v0.4.41 && \
-    curl -fL -o /tools/grpc_health_probe https://github.com/grpc-ecosystem/grpc-health-probe/releases/download/${GRPC_HEALTH_PROBE_VERSION}/grpc_health_probe-${TARGETOS}-${TARGETARCH} && \
-    chmod +x /tools/grpc_health_probe
+WORKDIR /helm-build
+RUN --mount=type=cache,target=/go/pkg/mod --mount=type=cache,target=/root/.cache/go-build \
+    go mod init helm-build && \
+    go get helm.sh/helm/v3/cmd/helm@${HELM_VERSION}
+
+RUN --mount=type=cache,target=/go/pkg/mod --mount=type=cache,target=/root/.cache/go-build \
+    CGO_ENABLED=0 GOOS=${TARGETOS} GOARCH=${TARGETARCH} go build \
+      -trimpath \
+      -ldflags "-w -s -X helm.sh/helm/v3/internal/version.version=${HELM_VERSION}" \
+      -o /helm-build/helm \
+      helm.sh/helm/v3/cmd/helm
 
 ####################################################################################################
 # back-end-dev
@@ -84,6 +110,9 @@ FROM alpine:latest AS back-end-dev
 
 RUN apk update && apk add ca-certificates git gpg gpg-agent openssh-client tini
 
+# Match the published image: use the Helm binary we build ourselves (needed
+# by the kustomize-build step's Helm plugin) rather than a distro package.
+COPY --from=helm-builder /helm-build/helm /usr/local/bin/helm
 COPY bin/credential-helper /usr/local/bin/credential-helper
 COPY bin/controlplane/kargo /usr/local/bin/kargo
 
@@ -121,7 +150,7 @@ CMD ["pnpm", "dev"]
 FROM ${BASE_IMAGE}:latest-${TARGETARCH} AS final
 
 COPY --from=back-end-builder /kargo/bin/ /usr/local/bin/
-COPY --from=tools /tools/ /usr/local/bin/
+COPY --from=helm-builder /helm-build/helm /usr/local/bin/helm
 
 ENTRYPOINT ["/sbin/tini", "--"]
 CMD ["/usr/local/bin/kargo"]

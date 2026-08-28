@@ -1,10 +1,10 @@
 package chart
 
 import (
+	"context"
 	"testing"
 
 	"github.com/stretchr/testify/require"
-	"golang.org/x/net/context"
 
 	kargoapi "github.com/akuity/kargo/api/v1alpha1"
 )
