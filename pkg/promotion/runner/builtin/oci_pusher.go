@@ -1,15 +1,16 @@
 package builtin
 
 import (
+	"bytes"
 	"context"
+	"encoding/json"
 	"fmt"
+	"io"
 	"os"
 	"strings"
 
 	"github.com/google/go-containerregistry/pkg/name"
 	v1 "github.com/google/go-containerregistry/pkg/v1"
-	"github.com/google/go-containerregistry/pkg/v1/empty"
-	ggcrmutate "github.com/google/go-containerregistry/pkg/v1/mutate"
 	"github.com/google/go-containerregistry/pkg/v1/remote"
 	"github.com/google/go-containerregistry/pkg/v1/static"
 	"github.com/google/go-containerregistry/pkg/v1/types"
@@ -188,15 +189,20 @@ const (
 	// defaultLayerMediaType is the media type applied to the artifact layer when
 	// pushing a local file via srcPath and no media type is configured.
 	defaultLayerMediaType = types.OCILayer
-	// defaultConfigMediaType is the manifest config media type applied when
-	// pushing a local file via srcPath and no artifact type is configured.
-	defaultConfigMediaType = types.OCIConfigJSON
+	// emptyConfigMediaType is the media type of the OCI "empty" descriptor. An
+	// artifact carries no image config.
+	emptyConfigMediaType = types.MediaType("application/vnd.oci.empty.v1+json")
+	// emptyConfigBlob is the content of the OCI "empty" descriptor.
+	emptyConfigBlob = "{}"
+	// defaultArtifactType is declared when no artifact type is configured. The
+	// image spec requires an artifactType whenever the config is the empty
+	// descriptor; this is the value ORAS uses for an artifact of unknown type.
+	defaultArtifactType = "application/vnd.unknown.artifact.v1"
 )
 
 // pushLocalFile pushes a local file from the workspace to the destination
-// reference as a single-layer OCI artifact. The layer media type and artifact
-// type (carried as the manifest config media type) are taken from the
-// configuration, and scoped annotations are applied to the manifest. It returns
+// reference as a single-layer OCI artifact -- not an image, so the manifest
+// carries no image config and the file's bytes are pushed verbatim. It returns
 // the digest of the pushed artifact and, on failure, the promotion step status
 // to report alongside the error.
 func (p *ociPusher) pushLocalFile(
@@ -240,61 +246,149 @@ func (p *ociPusher) pushLocalFile(
 		}
 	}
 
-	data, err := root.ReadFile(cfg.SrcPath)
-	if err != nil {
-		return v1.Hash{}, kargoapi.PromotionStepStatusErrored,
-			fmt.Errorf("failed to read source path %q: %w", cfg.SrcPath, err)
-	}
-
 	layerMediaType := defaultLayerMediaType
 	if cfg.MediaType != "" {
 		layerMediaType = types.MediaType(cfg.MediaType)
 	}
 
-	layer := static.NewLayer(data, layerMediaType)
-	img, err := ggcrmutate.AppendLayers(empty.Image, layer)
-	if err != nil {
-		return v1.Hash{}, kargoapi.PromotionStepStatusErrored,
-			fmt.Errorf("failed to build artifact: %w", err)
+	// A configured artifact type is mirrored onto the config media type, where
+	// Flux and the pre-OCI-1.1 Helm/ORAS convention record it. Absent one, the
+	// config is the empty descriptor, which requires an artifactType.
+	artifactType := cfg.ArtifactType
+	configMediaType := types.MediaType(artifactType)
+	if artifactType == "" {
+		artifactType = defaultArtifactType
+		configMediaType = emptyConfigMediaType
 	}
-	// empty.Image is a Docker manifest (and Docker-config-typed) by default;
-	// emit an OCI manifest instead.
-	img = ggcrmutate.MediaType(img, types.OCIManifestSchema1)
 
-	// This ggcr version has no top-level manifest artifactType, so carry the
-	// artifact type via the config media type per the OCI/Helm/Flux/ORAS
-	// convention. The config media type is overridden even when no artifact
-	// type is configured, because it would otherwise remain
-	// types.DockerConfigJSON, pairing an OCI manifest with a Docker-typed
-	// config, which strict OCI/ORAS consumers may reject.
-	configMediaType := defaultConfigMediaType
-	if cfg.ArtifactType != "" {
-		configMediaType = types.MediaType(cfg.ArtifactType)
-	}
-	img = ggcrmutate.ConfigMediaType(img, configMediaType)
-
-	// Apply manifest-scoped annotations. This is a single image manifest, so
-	// index-scoped keys are ignored, matching the retag path's behavior for
-	// single images.
+	// A single manifest, so index-scoped keys are ignored, as on the retag path.
 	scopes := p.parseAnnotationScopes(cfg.Annotations)
-	annotated, err := mutate.Annotations(img, nil, scopes.manifest)
+
+	configLayer := static.NewLayer([]byte(emptyConfigBlob), configMediaType)
+	artifactLayer, err := newFileLayer(root, cfg.SrcPath, layerMediaType)
 	if err != nil {
 		return v1.Hash{}, kargoapi.PromotionStepStatusErrored,
-			fmt.Errorf("failed to annotate artifact: %w", err)
+			fmt.Errorf("failed to read source path %q: %w", cfg.SrcPath, err)
 	}
-	img = annotated.(v1.Image) //nolint:forcetypeassert
 
-	if err = remote.Write(dstRef, img, dstOpts...); err != nil {
+	configDesc, err := layerDescriptor(configLayer)
+	if err != nil {
+		return v1.Hash{}, kargoapi.PromotionStepStatusErrored,
+			fmt.Errorf("failed to describe artifact config: %w", err)
+	}
+	artifactDesc, err := layerDescriptor(artifactLayer)
+	if err != nil {
+		return v1.Hash{}, kargoapi.PromotionStepStatusErrored,
+			fmt.Errorf("failed to describe artifact layer: %w", err)
+	}
+
+	rawManifest, err := json.Marshal(v1.Manifest{
+		SchemaVersion: 2,
+		MediaType:     types.OCIManifestSchema1,
+		ArtifactType:  artifactType,
+		Config:        configDesc,
+		Layers:        []v1.Descriptor{artifactDesc},
+		Annotations:   scopes.manifest,
+	})
+	if err != nil {
+		return v1.Hash{}, kargoapi.PromotionStepStatusErrored,
+			fmt.Errorf("failed to build artifact manifest: %w", err)
+	}
+
+	// Upload both blobs before the manifest that references them. The blobs are
+	// unreachable until then, so the manifest is the commit point: a failure
+	// here leaves the destination tag as it was.
+	for _, layer := range []v1.Layer{configLayer, artifactLayer} {
+		if err = remote.WriteLayer(dstRef.Context(), layer, dstOpts...); err != nil {
+			return v1.Hash{}, kargoapi.PromotionStepStatusErrored,
+				fmt.Errorf("failed to push artifact blob to %q: %w", dstRef.Context().String(), err)
+		}
+	}
+	if err = remote.Put(
+		dstRef,
+		&taggableManifest{raw: rawManifest, mediaType: types.OCIManifestSchema1},
+		dstOpts...,
+	); err != nil {
 		return v1.Hash{}, kargoapi.PromotionStepStatusErrored,
 			fmt.Errorf("failed to push artifact to %q: %w", dstRef.String(), err)
 	}
-	digest, err := img.Digest()
+
+	digest, _, err := v1.SHA256(bytes.NewReader(rawManifest))
 	if err != nil {
 		return v1.Hash{}, kargoapi.PromotionStepStatusErrored,
 			fmt.Errorf("failed to compute artifact digest: %w", err)
 	}
 	return digest, kargoapi.PromotionStepStatusSucceeded, nil
 }
+
+// layerDescriptor describes a layer whose digest and size are already known.
+func layerDescriptor(layer v1.Layer) (v1.Descriptor, error) {
+	mediaType, err := layer.MediaType()
+	if err != nil {
+		return v1.Descriptor{}, err
+	}
+	digest, err := layer.Digest()
+	if err != nil {
+		return v1.Descriptor{}, err
+	}
+	size, err := layer.Size()
+	if err != nil {
+		return v1.Descriptor{}, err
+	}
+	return v1.Descriptor{MediaType: mediaType, Digest: digest, Size: size}, nil
+}
+
+// fileLayer is a v1.Layer backed by a file, streamed from disk on each read
+// rather than held in memory. Its content is opaque, so the compressed and
+// uncompressed forms are identical.
+type fileLayer struct {
+	open      func() (io.ReadCloser, error)
+	mediaType types.MediaType
+	digest    v1.Hash
+	size      int64
+}
+
+// newFileLayer reads the file once, to hash and measure it.
+func newFileLayer(
+	root *os.Root,
+	path string,
+	mediaType types.MediaType,
+) (*fileLayer, error) {
+	open := func() (io.ReadCloser, error) { return root.Open(path) }
+	f, err := open()
+	if err != nil {
+		return nil, err
+	}
+	defer f.Close()
+	digest, size, err := v1.SHA256(f)
+	if err != nil {
+		return nil, err
+	}
+	return &fileLayer{
+		open:      open,
+		mediaType: mediaType,
+		digest:    digest,
+		size:      size,
+	}, nil
+}
+
+func (l *fileLayer) MediaType() (types.MediaType, error)  { return l.mediaType, nil }
+func (l *fileLayer) Digest() (v1.Hash, error)             { return l.digest, nil }
+func (l *fileLayer) DiffID() (v1.Hash, error)             { return l.digest, nil }
+func (l *fileLayer) Size() (int64, error)                 { return l.size, nil }
+func (l *fileLayer) Compressed() (io.ReadCloser, error)   { return l.open() }
+func (l *fileLayer) Uncompressed() (io.ReadCloser, error) { return l.open() }
+
+// taggableManifest pushes a pre-built manifest as-is. ggcr's mutate package can
+// only assemble image manifests, which an artifact is not.
+type taggableManifest struct {
+	raw       []byte
+	mediaType types.MediaType
+}
+
+func (t *taggableManifest) RawManifest() ([]byte, error) { return t.raw, nil }
+
+func (t *taggableManifest) MediaType() (types.MediaType, error) { return t.mediaType, nil }
 
 // annotationScopes holds annotations separated by their target scope.
 // Keys prefixed with "index:" target the image index manifest, keys prefixed

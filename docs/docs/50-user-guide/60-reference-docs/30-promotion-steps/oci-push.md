@@ -27,9 +27,9 @@ Exactly one of `srcRef` or `srcPath` must be specified.
 |------|------|----------|-------------|
 | `srcRef` | `string` | Y* | Reference to the source OCI artifact. Supports both tag format `registry/repository:tag` and digest format `registry/repository@sha256:digest`. For Helm OCI artifacts, the `oci://` prefix is supported (e.g., `oci://registry/repository:tag`) and will use Helm-specific credential lookup. Mutually exclusive with `srcPath`. |
 | `srcPath` | `string` | Y* | Path, relative to the workspace, of a local file to push as a single-layer OCI artifact (e.g., a tarball produced by an earlier step). Mutually exclusive with `srcRef`. |
-| `destRef` | `string` | Y | Destination reference including tag (e.g., `registry/repository:tag`). For Helm OCI artifacts, the `oci://` prefix is supported. For retag-in-place, use the same repository as `srcRef` with the new tag. |
+| `destRef` | `string` | Y | Destination reference including tag (e.g., `registry/repository:tag`). For retag-in-place, use the same repository as `srcRef` with the new tag. The `oci://` prefix is supported for Helm charts, and switches credential lookup to Helm repository credentials — so use it only for charts. |
 | `mediaType` | `string` | N | Media type of the artifact layer when pushing a local file via `srcPath`. Defaults to `application/vnd.oci.image.layer.v1.tar+gzip`. Ignored when using `srcRef`. |
-| `artifactType` | `string` | N | Declares the type of artifact being pushed via `srcPath`. It is applied as the manifest's config media type (following the convention used by Helm, Flux, and ORAS). Defaults to `application/vnd.oci.image.config.v1+json`. Ignored when using `srcRef`. |
+| `artifactType` | `string` | N | Declares the type of artifact being pushed via `srcPath`. It is recorded in the manifest's `artifactType` field, and mirrored onto the config media type (the convention used by Flux, Helm, and ORAS). Defaults to `application/vnd.unknown.artifact.v1`, with `application/vnd.oci.empty.v1+json` as the config media type. Ignored when using `srcRef`. |
 | `annotations` | `object` | N | Annotations to set on the destination artifact. Keys may be prefixed with `index:` or `manifest:` to scope them to the index or image manifest respectively. Unprefixed keys default to the image manifest. For single images (including local-archive pushes), `index:`-prefixed keys are ignored. Values support expressions. When copying with `srcRef`, existing annotations on the source artifact are preserved; specified annotations are added or overwritten. |
 | `insecureSkipTLSVerify` | `boolean` | N | Whether to skip TLS verification for both source and destination registries. Defaults to `false`. |
 
@@ -37,10 +37,16 @@ Exactly one of `srcRef` or `srcPath` must be specified.
 
 :::note
 
-`srcPath` is content-agnostic: it pushes any file as a single layer, so it is
-not limited to tarballs. A compressed tarball is the common case, but single
-non-tar files (e.g., a WASM module or an SBOM) work as well — set `mediaType`
-and `artifactType` to describe the content.
+`srcPath` produces an OCI artifact, not a container image: the manifest carries
+no image config, and the file's bytes are pushed verbatim as the sole layer. The
+result is therefore not something `docker pull` can run — it is a payload for
+tooling that reads OCI artifacts. Pushing one requires a registry that accepts
+[OCI 1.1 artifacts](https://github.com/opencontainers/image-spec/blob/main/manifest.md#guidelines-for-artifact-usage).
+
+It is also content-agnostic, pushing any file as a single layer, so it is not
+limited to tarballs. A compressed tarball is the common case, but single non-tar
+files (e.g., a WASM module or an SBOM) work as well — set `mediaType` and
+`artifactType` to describe the content.
 
 Producing canonical Helm charts via `srcPath` is not supported, because a Helm
 chart's manifest config blob must carry the chart's `Chart.yaml` metadata. Use
@@ -88,13 +94,31 @@ steps:
 - uses: oci-push
   config:
     srcPath: ./manifests.tar.gz
-    destRef: oci://ghcr.io/example/config/app:${{ ctx.promotion }}
+    destRef: ghcr.io/example/config/app:${{ ctx.promotion }}
     mediaType: application/vnd.cncf.flux.content.v1.tar+gzip
     artifactType: application/vnd.cncf.flux.config.v1+json
     annotations:
       org.opencontainers.image.source: ${{ commitFrom("https://github.com/example/app.git").repoURL }}
       org.opencontainers.image.revision: ${{ commitFrom("https://github.com/example/app.git").id }}
 ```
+
+:::note
+
+Consumers identify the content layer by its media type, and they do not agree on
+which types are acceptable:
+
+- **Flux** selects the layer named by an `OCIRepository`'s
+  `spec.layerSelector.mediaType`, falling back to the first layer when no
+  selector is configured. The media types above are the ones
+  `flux push artifact` produces.
+- **Argo CD** accepts only layer media types in its repo-server's allow-list,
+  which by default holds `application/vnd.oci.image.layer.v1.tar`,
+  `application/vnd.oci.image.layer.v1.tar+gzip`, and
+  `application/vnd.cncf.helm.chart.content.v1.tar+gzip`. A Flux-typed layer is
+  rejected unless an operator extends `--oci-layer-media-types`. Omit
+  `mediaType` to stay within the defaults.
+
+:::
 
 ### Retagging an Image with a Release Version
 

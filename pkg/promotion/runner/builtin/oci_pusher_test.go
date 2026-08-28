@@ -507,6 +507,9 @@ func Test_ociPusher_run_noAnnotationsMutation(t *testing.T) {
 	assert.Equal(t, "annotation", manifest.Annotations["existing"])
 }
 
+// emptyConfigDigest is the digest of the OCI empty descriptor's content.
+const emptyConfigDigest = "sha256:44136fa355b3678a1146ad16f7e8649e94fb4fc21fe77e8310c060f61caaff8a"
+
 // makeTarGz builds an in-memory gzip-compressed tar archive containing a single
 // file, for use as a local artifact in tests.
 func makeTarGz(t *testing.T) []byte {
@@ -579,10 +582,17 @@ func Test_ociPusher_run_localFile(t *testing.T) {
 	manifest, err := dstImg.Manifest()
 	require.NoError(t, err)
 
-	// An OCI image manifest, not a Docker one.
+	// An OCI manifest, not a Docker one.
 	assert.Equal(t, types.OCIManifestSchema1, manifest.MediaType)
-	// The artifact type is carried via the config media type.
+	// Declared in artifactType, mirrored onto the config media type for Flux.
+	assert.Equal(t, artifactType, manifest.ArtifactType)
 	assert.Equal(t, types.MediaType(artifactType), manifest.Config.MediaType)
+	// The OCI empty descriptor: no image config, so no rootfs to get wrong.
+	assert.Equal(t, emptyConfigDigest, manifest.Config.Digest.String())
+	assert.Equal(t, int64(len(`{}`)), manifest.Config.Size)
+	rawConfig, err := dstImg.RawConfigFile()
+	require.NoError(t, err)
+	assert.JSONEq(t, `{}`, string(rawConfig))
 
 	// A single layer with the configured media type and the exact archive bytes.
 	require.Len(t, manifest.Layers, 1)
@@ -610,8 +620,8 @@ func Test_ociPusher_run_localFile(t *testing.T) {
 	assert.Equal(t, gotDigest.String(), digestOut)
 }
 
-// Test that the layer and config media types default to their OCI equivalents
-// when none are configured.
+// Test the media type defaults: an OCI tar+gzip layer, no artifact type, and
+// the empty config.
 func Test_ociPusher_run_localFile_defaultMediaTypes(t *testing.T) {
 	regHost := newRegistry(t)
 
@@ -644,9 +654,62 @@ func Test_ociPusher_run_localFile_defaultMediaTypes(t *testing.T) {
 	require.NoError(t, err)
 	require.Len(t, manifest.Layers, 1)
 	assert.Equal(t, types.OCILayer, manifest.Layers[0].MediaType)
-	// With no artifactType configured, the config media type still defaults to
-	// the OCI config type rather than remaining Docker-typed.
-	assert.Equal(t, types.OCIConfigJSON, manifest.Config.MediaType)
+	// The config is the OCI empty descriptor, which the spec permits only
+	// alongside an artifactType, so an unknown-artifact type is declared.
+	assert.Equal(t, defaultArtifactType, manifest.ArtifactType)
+	assert.Equal(t, emptyConfigMediaType, manifest.Config.MediaType)
+	assert.Equal(t, emptyConfigDigest, manifest.Config.Digest.String())
+}
+
+// Test that a file-backed layer reports the file's digest and size, and can be
+// read more than once.
+func Test_newFileLayer(t *testing.T) {
+	workDir := t.TempDir()
+	content := makeTarGz(t)
+	require.NoError(t, os.WriteFile(filepath.Join(workDir, "artifact.tar.gz"), content, 0o644))
+
+	root, err := os.OpenRoot(workDir)
+	require.NoError(t, err)
+	t.Cleanup(func() { require.NoError(t, root.Close()) })
+
+	layer, err := newFileLayer(root, "artifact.tar.gz", types.OCILayer)
+	require.NoError(t, err)
+
+	wantDigest, wantSize, err := v1.SHA256(bytes.NewReader(content))
+	require.NoError(t, err)
+
+	mediaType, err := layer.MediaType()
+	require.NoError(t, err)
+	assert.Equal(t, types.OCILayer, mediaType)
+	digest, err := layer.Digest()
+	require.NoError(t, err)
+	assert.Equal(t, wantDigest, digest)
+	diffID, err := layer.DiffID()
+	require.NoError(t, err)
+	assert.Equal(t, wantDigest, diffID)
+	size, err := layer.Size()
+	require.NoError(t, err)
+	assert.Equal(t, wantSize, size)
+
+	// Each read opens the file afresh, so the content is not consumed.
+	for range 2 {
+		rc, err := layer.Compressed()
+		require.NoError(t, err)
+		got, err := io.ReadAll(rc)
+		require.NoError(t, err)
+		require.NoError(t, rc.Close())
+		assert.Equal(t, content, got)
+	}
+}
+
+// Test that a source path that cannot be read is reported as an error.
+func Test_newFileLayer_missingFile(t *testing.T) {
+	root, err := os.OpenRoot(t.TempDir())
+	require.NoError(t, err)
+	t.Cleanup(func() { require.NoError(t, root.Close()) })
+
+	_, err = newFileLayer(root, "missing.tar.gz", types.OCILayer)
+	assert.ErrorContains(t, err, "missing.tar.gz")
 }
 
 // Test error handling for local-file pushes.
@@ -680,8 +743,7 @@ func Test_ociPusher_run_localFile_errors(t *testing.T) {
 		{
 			name: "path traversal is rejected",
 			setup: func(_ *testing.T, _ string) string {
-				// The workspace root refuses to resolve a path that escapes it,
-				// so this surfaces as a stat failure.
+				// The workspace root refuses to resolve an escaping path.
 				return "../../etc/passwd"
 			},
 			wantStatus: kargoapi.PromotionStepStatusFailed,
@@ -731,8 +793,7 @@ func Test_ociPusher_run_localFile_errors(t *testing.T) {
 	}
 }
 
-// Test that a workspace that cannot be opened is reported as such, rather than
-// as a problem with the configured source path.
+// Test that an unopenable workspace is not reported as a source path problem.
 func Test_ociPusher_run_localFile_workspaceError(t *testing.T) {
 	runner := &ociPusher{
 		credsDB:         &credentials.FakeDB{},
@@ -750,8 +811,7 @@ func Test_ociPusher_run_localFile_workspaceError(t *testing.T) {
 	})
 	require.Error(t, err)
 	assert.ErrorContains(t, err, "failed to open workspace")
-	// The error names the workspace, not the source path, and does not leak the
-	// absolute path of the temporary workspace.
+	// Names the workspace, not the source path, and leaks no absolute path.
 	assert.NotContains(t, err.Error(), "artifact.tar.gz")
 	assert.NotContains(t, err.Error(), tmpDir)
 	assert.Equal(

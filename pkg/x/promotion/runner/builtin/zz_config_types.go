@@ -683,9 +683,9 @@ type OCIPushConfig struct {
 	// 'manifest:' to scope them to the index or image manifest respectively. Unprefixed keys
 	// default to the image manifest. For single images, 'index:'-prefixed keys are ignored.
 	Annotations map[string]string `json:"annotations,omitempty"`
-	// ArtifactType declares the type of artifact being pushed via srcPath. It is applied as the
-	// manifest's config media type. Defaults to 'application/vnd.oci.image.config.v1+json'.
-	// Ignored when using srcRef.
+	// ArtifactType declares the type of artifact being pushed via srcPath. It is recorded in
+	// the manifest's artifactType field and mirrored onto the config media type. Defaults to
+	// 'application/vnd.unknown.artifact.v1'. Ignored when using srcRef.
 	ArtifactType string `json:"artifactType,omitempty"`
 	// DestRef is the destination reference including tag (e.g. 'registry/repo:tag' or
 	// 'oci://registry/repo:tag'). For retag-in-place, use the same repo as srcRef with the new
