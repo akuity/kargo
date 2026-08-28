@@ -4,7 +4,7 @@ go 1.26.0
 
 require (
 	github.com/bufbuild/buf v1.61.0
-	github.com/go-swagger/go-swagger v0.36.5
+	github.com/go-swagger/go-swagger v0.33.2
 	github.com/golangci/golangci-lint/v2 v2.10.1
 	github.com/swaggo/swag v1.16.6
 	golang.org/x/tools v0.49.0
@@ -59,7 +59,6 @@ require (
 	github.com/Microsoft/go-winio v0.6.2 // indirect
 	github.com/MirrexOne/unqueryvet v1.5.3 // indirect
 	github.com/OpenPeeDeeP/depguard/v2 v2.2.1 // indirect
-	github.com/SladkyCitron/slogcolor v1.9.0 // indirect
 	github.com/alecthomas/chroma/v2 v2.23.1 // indirect
 	github.com/alecthomas/go-check-sumtype v0.3.1 // indirect
 	github.com/alexkohler/nakedret/v2 v2.0.6 // indirect
@@ -136,7 +135,6 @@ require (
 	github.com/go-logr/logr v1.4.4 // indirect
 	github.com/go-logr/stdr v1.2.2 // indirect
 	github.com/go-openapi/analysis v0.26.0 // indirect
-	github.com/go-openapi/codescan v0.36.4 // indirect
 	github.com/go-openapi/errors v0.22.8 // indirect
 	github.com/go-openapi/inflect v1.0.0 // indirect
 	github.com/go-openapi/jsonpointer v1.0.0 // indirect
