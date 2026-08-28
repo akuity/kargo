@@ -1556,7 +1556,43 @@ func Test_getRepoCredentials(t *testing.T) {
 			args:    []any{testRepoURL, "git"},
 			assertions: func(t *testing.T, _ *cache.Cache, result any, err error) {
 				assert.NoError(t, err)
-				assert.Equal(t, credentials.Credentials{}, result)
+				assert.Nil(t, result)
+			},
+		},
+		{
+			name:    "credentials not found with cache",
+			credsDB: &credentials.FakeDB{},
+			cache:   cache.New(cache.NoExpiration, cache.NoExpiration),
+			args:    []any{testRepoURL, "git"},
+			assertions: func(t *testing.T, cache *cache.Cache, result any, err error) {
+				assert.NoError(t, err)
+				assert.Nil(t, result)
+
+				data, ok := cache.Get(cacheKey)
+				assert.True(t, ok)
+				assert.Nil(t, data)
+			},
+		},
+		{
+			name: "credentials not found from cache",
+			credsDB: &credentials.FakeDB{
+				GetFn: func(
+					context.Context,
+					string,
+					credentials.Type,
+					string,
+				) (*credentials.Credentials, error) {
+					// This should not be used, as the value comes from the cache.
+					return &credentials.Credentials{Username: "should-not-be-used"}, nil
+				},
+			},
+			cache: cache.NewFrom(cache.NoExpiration, cache.NoExpiration, map[string]cache.Item{
+				cacheKey: {Object: nil},
+			}),
+			args: []any{testRepoURL, "git"},
+			assertions: func(t *testing.T, _ *cache.Cache, result any, err error) {
+				assert.NoError(t, err)
+				assert.Nil(t, result)
 			},
 		},
 		{

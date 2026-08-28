@@ -497,8 +497,15 @@ all of the following fields:
 | `Password` | The password or token used to authenticate. **API keys and personal access tokens are surfaced here.** |
 | `SSHPrivateKey` | The SSH private key, when applicable. **Deprecated as of v1.10.0** and slated for removal in v1.13.0. |
 
-If no matching credentials are found, an object with all fields empty is
-returned.
+If no matching credentials are found, `nil` is returned. Optional chaining
+(`?.`) and nil-coalescing (`??`) can be used to handle this case gracefully:
+
+```yaml
+config:
+  headers:
+  - name: Authorization
+    value: Bearer ${{ repoCredentials('https://github.com/example/repo.git', 'git')?.Password ?? 'anonymous' }}
+```
 
 For details on how each field is populated for a given credential type or
 provider (e.g. GitHub App, ECR, or basic username/password), see the
