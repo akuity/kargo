@@ -6,6 +6,7 @@ import (
 	"net/http"
 	"net/http/httptest"
 	"testing"
+	"time"
 
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
@@ -179,5 +180,48 @@ func TestPickBestReleases(t *testing.T) {
 		results := pickBestReleases(raw)
 		require.Len(t, results, 1)
 		assert.True(t, v("1.0.0").Equal(results[0].Version))
+	})
+
+	t.Run("dates each line from its x.y.0 release", func(t *testing.T) {
+		day := func(s string) time.Time {
+			d, err := time.Parse(time.DateOnly, s)
+			require.NoError(t, err)
+			return d
+		}
+		raw := []Release{
+			{Version: v("1.0.0"), PublishedAt: day("2024-10-19")},
+			{Version: v("1.0.4"), PublishedAt: day("2024-12-06")},
+			{Version: v("1.1.0"), PublishedAt: day("2024-12-06")},
+			// An older line patched after a newer line opened must not take
+			// the newer line's date, nor give up its own.
+			{Version: v("1.0.5"), PublishedAt: day("2025-01-30")},
+			{Version: v("1.1.1"), PublishedAt: day("2025-01-28")},
+		}
+
+		results := pickBestReleases(raw)
+
+		require.Len(t, results, 2)
+		assert.True(t, v("1.1.1").Equal(results[0].Version))
+		assert.Equal(t, "2024-12-06", results[0].InitialReleaseDate)
+		assert.True(t, v("1.0.5").Equal(results[1].Version))
+		assert.Equal(t, "2024-10-19", results[1].InitialReleaseDate)
+	})
+
+	t.Run("falls back to the oldest patch when x.y.0 is absent", func(t *testing.T) {
+		published := time.Date(2025, 5, 15, 22, 27, 32, 0, time.UTC)
+		raw := []Release{
+			{Version: v("1.5.2"), PublishedAt: published},
+			{Version: v("1.5.3"), PublishedAt: published.AddDate(0, 1, 0)},
+		}
+
+		results := pickBestReleases(raw)
+		require.Len(t, results, 1)
+		assert.Equal(t, "2025-05-15", results[0].InitialReleaseDate)
+	})
+
+	t.Run("omits the date when publication time is unknown", func(t *testing.T) {
+		results := pickBestReleases([]Release{{Version: v("1.0.0")}})
+		require.Len(t, results, 1)
+		assert.Empty(t, results[0].InitialReleaseDate)
 	})
 }

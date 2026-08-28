@@ -3,6 +3,7 @@ package main
 import (
 	"encoding/json"
 	"regexp"
+	"time"
 
 	"github.com/Masterminds/semver/v3"
 )
@@ -55,6 +56,14 @@ type Release struct {
 	Version *semver.Version `json:"version"`
 	// Latest indicates whether this release is the latest release.
 	Latest bool `json:"latest,omitempty"`
+	// PublishedAt is when this specific release was published. It is used to
+	// derive InitialReleaseDate and is not itself part of the JSON output.
+	PublishedAt time.Time `json:"-"`
+	// InitialReleaseDate is the date on which the minor release line this
+	// release belongs to was first published -- the date of its x.y.0 release.
+	// Support and vulnerability backport windows are measured from this date,
+	// so it is expressed as a plain YYYY-MM-DD date rather than a timestamp.
+	InitialReleaseDate string `json:"initialReleaseDate,omitempty"`
 	// CLIBinaries maps OS and architecture combinations to their corresponding
 	// download URLs for the kargo CLI binary.
 	CLIBinaries CLIBinaries `json:"cliBinaries"`
@@ -64,13 +73,15 @@ type Release struct {
 // semver Version to a string.
 func (r Release) MarshalJSON() ([]byte, error) {
 	return json.Marshal(struct {
-		Version     string      `json:"version"`
-		Latest      bool        `json:"latest,omitempty"`
-		CLIBinaries CLIBinaries `json:"cliBinaries"`
+		Version            string      `json:"version"`
+		Latest             bool        `json:"latest,omitempty"`
+		InitialReleaseDate string      `json:"initialReleaseDate,omitempty"`
+		CLIBinaries        CLIBinaries `json:"cliBinaries"`
 	}{
-		Version:     r.Version.Original(),
-		Latest:      r.Latest,
-		CLIBinaries: r.CLIBinaries,
+		Version:            r.Version.Original(),
+		Latest:             r.Latest,
+		InitialReleaseDate: r.InitialReleaseDate,
+		CLIBinaries:        r.CLIBinaries,
 	})
 }
 
@@ -83,8 +94,9 @@ var cliAssetPattern = regexp.MustCompile(`^kargo-([a-z]+)-([a-z0-9]+)(?:\.exe)?$
 // kargo-{os}-{arch}[.exe] naming convention.
 func (r *Release) UnmarshalJSON(data []byte) error {
 	var raw struct {
-		TagName string `json:"tag_name"`
-		Assets  []struct {
+		TagName     string    `json:"tag_name"`
+		PublishedAt time.Time `json:"published_at"`
+		Assets      []struct {
 			Name               string `json:"name"`
 			BrowserDownloadURL string `json:"browser_download_url"`
 		} `json:"assets"`
@@ -97,6 +109,7 @@ func (r *Release) UnmarshalJSON(data []byte) error {
 		return err
 	}
 	r.Version = v
+	r.PublishedAt = raw.PublishedAt
 	r.CLIBinaries = CLIBinaries{}
 	for _, a := range raw.Assets {
 		if m := cliAssetPattern.FindStringSubmatch(a.Name); m != nil {

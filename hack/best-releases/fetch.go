@@ -8,6 +8,7 @@ import (
 	"net/http"
 	"net/url"
 	"sort"
+	"time"
 
 	"github.com/Masterminds/semver/v3"
 	"github.com/hashicorp/go-cleanhttp"
@@ -90,9 +91,11 @@ func fetchBestReleases(ctx context.Context, baseURL string) ([]Release, error) {
 }
 
 // pickBestReleases takes a slice of releases and returns the latest patch
-// release for each minor version, sorted in descending version order.
+// release for each minor version, sorted in descending version order. Each
+// result also carries the date on which its minor release line opened.
 func pickBestReleases(raw []Release) []Release {
 	best := make(map[string]*Release)
+	first := make(map[string]*Release)
 
 	v1 := semver.MustParse("v1.0.0")
 	for i, r := range raw {
@@ -103,11 +106,21 @@ func pickBestReleases(raw []Release) []Release {
 		if existing, ok := best[key]; !ok || r.Version.GreaterThan(existing.Version) {
 			best[key] = &raw[i]
 		}
+		// A line opens with its x.y.0 release. Tracking the lowest version
+		// rather than the earliest date keeps this correct even if an older
+		// line receives a patch after a newer line has already opened.
+		if existing, ok := first[key]; !ok || r.Version.LessThan(existing.Version) {
+			first[key] = &raw[i]
+		}
 	}
 
 	results := make([]Release, 0, len(best))
-	for _, r := range best {
-		results = append(results, *r)
+	for key, r := range best {
+		release := *r
+		if opener, ok := first[key]; ok && !opener.PublishedAt.IsZero() {
+			release.InitialReleaseDate = opener.PublishedAt.UTC().Format(time.DateOnly)
+		}
+		results = append(results, release)
 	}
 
 	sort.Slice(results, func(i, j int) bool {
