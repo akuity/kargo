@@ -120,6 +120,49 @@ which types are acceptable:
 
 :::
 
+### Publishing an Artifact and Updating an Argo CD Application
+
+This example builds on the previous one to close the loop with Argo CD. After
+the archive is pushed, an [`argocd-update`](argocd-update.md) step points the
+`Application`'s OCI source at the newly pushed artifact and waits for it to
+sync. The `oci-push` step is given the alias `push` so its `digest` output can
+be referenced.
+
+```yaml
+steps:
+- uses: tar
+  config:
+    inPath: ./manifests
+    outPath: ./manifests.tar.gz
+    gzip: true
+- uses: oci-push
+  as: push
+  config:
+    srcPath: ./manifests.tar.gz
+    destRef: ghcr.io/example/config/app:${{ ctx.promotion }}
+- uses: argocd-update
+  config:
+    apps:
+    - name: app
+      sources:
+      - repoURL: oci://ghcr.io/example/config/app
+        desiredRevision: ${{ outputs.push.digest }}
+        updateTargetRevision: true
+```
+
+:::note
+
+Use the `digest` output as the `desiredRevision`, not the `tag`. Argo CD records
+the digest of a synced OCI artifact as its revision, and `argocd-update`
+compares `desiredRevision` against that value to determine whether the
+`Application` has synced. A tag would never match, and the step would wait
+indefinitely.
+
+Setting `targetRevision` to a digest also pins the `Application` to exactly the
+artifact that was pushed, since tags can be overwritten.
+
+:::
+
 ### Retagging an Image with a Release Version
 
 In this example, a dedicated "release" Stage sits downstream from a testing
