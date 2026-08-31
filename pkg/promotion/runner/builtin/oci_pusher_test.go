@@ -569,14 +569,8 @@ func Test_ociPusher_run_localFile(t *testing.T) {
 	)
 
 	workDir := t.TempDir()
-	tarball := makeTarGz(t)
-	require.NoError(t, os.WriteFile(filepath.Join(workDir, "artifact.tar.gz"), tarball, 0o644))
-
-	runner := &ociPusher{
-		credsDB:         &credentials.FakeDB{},
-		schemaLoader:    getConfigSchemaLoader(stepKindOCIPush),
-		maxArtifactSize: testMaxArtifactSize,
-	}
+	tarball := writeTestArchive(t, workDir, "artifact.tar.gz")
+	runner := newTestPusher()
 
 	destRef := fmt.Sprintf("%s/test/local:v1", regHost)
 	result, err := runner.run(t.Context(), &promotion.StepContext{
@@ -655,14 +649,8 @@ func Test_ociPusher_run_localFile_defaultMediaTypes(t *testing.T) {
 	regHost := newRegistry(t)
 
 	workDir := t.TempDir()
-	tarball := makeTarGz(t)
-	require.NoError(t, os.WriteFile(filepath.Join(workDir, "artifact.tar.gz"), tarball, 0o644))
-
-	runner := &ociPusher{
-		credsDB:         &credentials.FakeDB{},
-		schemaLoader:    getConfigSchemaLoader(stepKindOCIPush),
-		maxArtifactSize: testMaxArtifactSize,
-	}
+	writeTestArchive(t, workDir, "artifact.tar.gz")
+	runner := newTestPusher()
 
 	destRef := fmt.Sprintf("%s/test/local:default", regHost)
 	result, err := runner.run(t.Context(), &promotion.StepContext{
@@ -695,8 +683,7 @@ func Test_ociPusher_run_localFile_defaultMediaTypes(t *testing.T) {
 func Test_newFileLayer(t *testing.T) {
 	t.Parallel()
 	workDir := t.TempDir()
-	content := makeTarGz(t)
-	require.NoError(t, os.WriteFile(filepath.Join(workDir, "artifact.tar.gz"), content, 0o644))
+	content := writeTestArchive(t, workDir, "artifact.tar.gz")
 
 	root, err := os.OpenRoot(workDir)
 	require.NoError(t, err)
@@ -788,8 +775,7 @@ func Test_ociPusher_run_localFile_errors(t *testing.T) {
 			name:            "artifact exceeds size limit",
 			maxArtifactSize: 8,
 			setup: func(t *testing.T, workDir string) string {
-				tarball := makeTarGz(t)
-				require.NoError(t, os.WriteFile(filepath.Join(workDir, "big.tar.gz"), tarball, 0o644))
+				writeTestArchive(t, workDir, "big.tar.gz")
 				return "big.tar.gz"
 			},
 			wantStatus: kargoapi.PromotionStepStatusErrored,
@@ -815,11 +801,8 @@ func Test_ociPusher_run_localFile_errors(t *testing.T) {
 			workDir := t.TempDir()
 			srcPath := tt.setup(t, workDir)
 
-			runner := &ociPusher{
-				credsDB:         &credentials.FakeDB{},
-				schemaLoader:    getConfigSchemaLoader(stepKindOCIPush),
-				maxArtifactSize: tt.maxArtifactSize,
-			}
+			runner := newTestPusher()
+			runner.maxArtifactSize = tt.maxArtifactSize
 
 			result, err := runner.run(t.Context(), &promotion.StepContext{
 				Project: "fake-project",
@@ -840,11 +823,7 @@ func Test_ociPusher_run_localFile_errors(t *testing.T) {
 // Test that an unopenable workspace is not reported as a source path problem.
 func Test_ociPusher_run_localFile_workspaceError(t *testing.T) {
 	t.Parallel()
-	runner := &ociPusher{
-		credsDB:         &credentials.FakeDB{},
-		schemaLoader:    getConfigSchemaLoader(stepKindOCIPush),
-		maxArtifactSize: testMaxArtifactSize,
-	}
+	runner := newTestPusher()
 
 	tmpDir := t.TempDir()
 	result, err := runner.run(t.Context(), &promotion.StepContext{
@@ -880,14 +859,8 @@ func Test_ociPusher_run_localFile_pushError(t *testing.T) {
 	t.Cleanup(srv.Close)
 
 	workDir := t.TempDir()
-	tarball := makeTarGz(t)
-	require.NoError(t, os.WriteFile(filepath.Join(workDir, "artifact.tar.gz"), tarball, 0o644))
-
-	runner := &ociPusher{
-		credsDB:         &credentials.FakeDB{},
-		schemaLoader:    getConfigSchemaLoader(stepKindOCIPush),
-		maxArtifactSize: testMaxArtifactSize,
-	}
+	writeTestArchive(t, workDir, "artifact.tar.gz")
+	runner := newTestPusher()
 
 	result, err := runner.run(t.Context(), &promotion.StepContext{
 		Project: "fake-project",
@@ -1257,5 +1230,24 @@ func Test_ociPusherConfig(t *testing.T) {
 			envconfig.MustProcess("", &cfg)
 			assert.Equal(t, tt.expected, cfg.MaxArtifactSize)
 		})
+	}
+}
+
+// writeTestArchive writes a tar.gz archive into workDir under the given name
+// and returns its bytes.
+func writeTestArchive(t *testing.T, workDir, filename string) []byte {
+	t.Helper()
+	tarball := makeTarGz(t)
+	require.NoError(t, os.WriteFile(filepath.Join(workDir, filename), tarball, 0o644))
+	return tarball
+}
+
+// newTestPusher returns an ociPusher wired with fake credentials and a size
+// limit generous enough that no test artifact trips it.
+func newTestPusher() *ociPusher {
+	return &ociPusher{
+		credsDB:         &credentials.FakeDB{},
+		schemaLoader:    getConfigSchemaLoader(stepKindOCIPush),
+		maxArtifactSize: testMaxArtifactSize,
 	}
 }
