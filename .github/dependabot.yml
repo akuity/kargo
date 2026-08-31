@@ -4,7 +4,12 @@
 version: 2
 updates:
   - package-ecosystem: "github-actions"
-    directory: "/"
+    # "/" covers .github/workflows and a root-level action.yaml only, so each
+    # composite action's directory is listed explicitly. Add a line here when
+    # adding an action.
+    directories:
+    - "/"
+    - "/.github/actions/setup-go"
     schedule:
       interval: "weekly"
       day: "sunday"
