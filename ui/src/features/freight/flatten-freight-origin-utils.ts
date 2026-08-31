@@ -5,6 +5,8 @@ export type TableSource =
       type: 'image';
       repoURL: string;
       tag?: string;
+      digest?: string;
+      subscriptionName?: string;
       annotations?: Record<string, string>;
     }
   | {
@@ -35,6 +37,8 @@ export const flattenFreightOrigin = (
       type: 'image',
       repoURL: image?.repoURL || '',
       tag: image?.tag || '',
+      digest: image?.digest,
+      subscriptionName: image?.subscriptionName,
       annotations: image?.annotations || {}
     })) || [];
 

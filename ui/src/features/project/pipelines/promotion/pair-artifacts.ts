@@ -29,7 +29,7 @@ const versionOf = (s: TableSource): string => {
     case 'git':
       return s.id || '';
     case 'image':
-      return s.tag || '';
+      return `${s.tag || ''}@${s.digest || ''}`;
     case 'helm':
       return s.version || '';
     case 'other':

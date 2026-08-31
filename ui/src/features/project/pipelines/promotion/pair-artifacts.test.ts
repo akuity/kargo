@@ -1,11 +1,11 @@
 import { describe, expect, test } from 'vitest';
 
-import { Freight } from '@ui/gen/api/v2/models';
+import { Freight, Image } from '@ui/gen/api/v2/models';
 
 import { pairArtifacts } from './pair-artifacts';
 
 const f = (input: {
-  images?: { repoURL: string; tag: string }[];
+  images?: Image[];
   commits?: { repoURL: string; id: string; branch?: string; message?: string }[];
   charts?: { repoURL: string; name?: string; version: string }[];
 }) =>
@@ -17,6 +17,36 @@ const f = (input: {
   }) as unknown as Freight;
 
 describe('pairArtifacts', () => {
+  test.each([
+    { name: 'adding a name', currentName: undefined, incomingName: 'api' },
+    { name: 'renaming', currentName: 'old-api', incomingName: 'api' },
+    { name: 'removing a name', currentName: 'api', incomingName: undefined }
+  ])('$name preserves image continuity', ({ currentName, incomingName }) => {
+    const image = { repoURL: 'ghcr.io/example/api', tag: 'v1', digest: 'sha256:abc' };
+    const rows = pairArtifacts(
+      f({ images: [{ ...image, subscriptionName: currentName }] }),
+      f({ images: [{ ...image, subscriptionName: incomingName }] })
+    );
+
+    expect(rows).toHaveLength(1);
+    expect(rows[0].status).toBe('UNCHANGED');
+  });
+
+  test.each([
+    { tag: 'v2', digest: 'sha256:abc' },
+    { tag: 'v1', digest: 'sha256:def' },
+    { tag: undefined, digest: 'sha256:def' }
+  ])('detects image version changes: $tag $digest', (incomingVersion) => {
+    const repoURL = 'ghcr.io/example/api';
+    const rows = pairArtifacts(
+      f({ images: [{ repoURL, tag: 'v1', digest: 'sha256:abc' }] }),
+      f({ images: [{ repoURL, ...incomingVersion }] })
+    );
+
+    expect(rows).toHaveLength(1);
+    expect(rows[0].status).toBe('CHANGED');
+  });
+
   test('multi-artifact: image changed, git changed, chart unchanged', () => {
     const current = f({
       images: [{ repoURL: 'ghcr.io/acme/guestbook', tag: 'v0.0.87' }],

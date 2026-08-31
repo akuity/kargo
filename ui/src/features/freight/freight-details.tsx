@@ -1,4 +1,4 @@
-import { faFile, faInfoCircle, faPencil } from '@fortawesome/free-solid-svg-icons';
+import { faFile, faInfoCircle, faPencil, faTags } from '@fortawesome/free-solid-svg-icons';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
 import { Button, Descriptions, Drawer, Space, Tabs, Typography } from 'antd';
 import { useEffect, useState } from 'react';
@@ -18,6 +18,7 @@ import { FreightTable } from '../project/pipelines/freight/freight-table';
 
 import { FreightMetadata } from './freight-metadata';
 import { FreightStatusList } from './freight-status-list';
+import { ReleaseContext } from './release-context';
 import { UpdateFreightAliasModal } from './update-freight-alias-modal';
 
 export const FreightDetails = ({
@@ -153,6 +154,12 @@ export const FreightDetails = ({
                   icon: <FontAwesomeIcon icon={faFile} />,
                   className: 'h-full pb-2',
                   children: <ManifestPreview object={freight} height='900px' />
+                },
+                {
+                  key: 'release-context',
+                  label: 'Release Context',
+                  icon: <FontAwesomeIcon icon={faTags} />,
+                  children: <ReleaseContext freight={freight} />
                 },
                 ...freightTabs.map((data, index) => ({
                   children: (

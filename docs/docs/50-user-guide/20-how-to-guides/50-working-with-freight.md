@@ -27,6 +27,88 @@ see [Core Concepts](../10-core-concepts/index.md).
 The remainder of this page describes features of freight that will enable you
 to work more effectively.
 
+## Release context
+
+Select the <hlt>Release Context</hlt> tab in the Freight details view to inspect
+container image tags, digests, source revisions, and build times. In the promotion
+view, this tab compares incoming images with the Stage's current Freight from the
+same Warehouse. Images are paired by repository and marked changed when their tag
+or digest differs. Adding or renaming a subscription does not break this pairing.
+
+This view covers container images. Git commits, Helm charts, and other artifacts
+remain available in the existing Freight view. Pipeline tiles are unchanged.
+
+Standard OCI annotations retain their established meanings:
+
+- `org.opencontainers.image.source` identifies the source repository.
+
+- `org.opencontainers.image.revision` identifies the source revision.
+
+- `org.opencontainers.image.created` describes image creation, not commit creation.
+
+Source and derived commit links are clickable only when they resolve to HTTP or
+HTTPS URLs. Other source values remain visible as text. Expand <hlt>Image
+annotations</hlt> to inspect all stored annotations, including fields that are not
+interpreted by the dashboard.
+
+### Custom commit metadata
+
+Kargo does not infer commit metadata from custom annotation names. Configure exact
+keys under `spec.releaseContext.imageAnnotations` in `ClusterConfig` to provide
+defaults for the instance:
+
+```yaml
+apiVersion: kargo.akuity.io/v1alpha1
+kind: ClusterConfig
+metadata:
+  name: cluster
+spec:
+  releaseContext:
+    imageAnnotations:
+      commitSubject: com.example.image.commit.subject
+      commitAuthor: com.example.image.commit.author
+      commitCommitter: com.example.image.commit.committer
+      commitCreatedAt: com.example.image.commit.created
+```
+
+These are example organization-owned keys, not a required naming convention.
+`commitCreatedAt` should point to an RFC 3339 source commit timestamp. Missing or
+empty annotation values are omitted. Unparseable timestamps remain visible as
+raw text rather than being formatted as dates. Keys in the reserved
+`org.opencontainers.*` namespace cannot be mapped to custom commit fields.
+
+A project's `ProjectConfig` can replace the complete mapping:
+
+```yaml
+apiVersion: kargo.akuity.io/v1alpha1
+kind: ProjectConfig
+metadata:
+  name: example
+  namespace: example
+spec:
+  releaseContext:
+    imageAnnotations:
+      commitSubject: dev.example.build.summary
+      commitAuthor: dev.example.build.author
+```
+
+This project uses only the two specified custom fields. It does not inherit
+`commitCommitter` or `commitCreatedAt` from the cluster, so partial overrides do not
+accidentally mix annotation conventions. Omit `spec.releaseContext` to inherit the
+cluster defaults. Set `spec.releaseContext: {}` to disable custom interpretation
+for the project. Standard OCI fields and raw annotations remain available.
+
+Both Release Context views use the same effective mapping. It applies to
+annotations already stored in Freight, including previously discovered images.
+It does not change artifact discovery, fetch new registry metadata, or modify
+Freight resources. After changing configuration, reopen the view or return focus
+to the browser window to refresh it.
+
+Viewing the mapping requires read access to the Freight resource, not access to
+the full `ClusterConfig` or `ProjectConfig`. If configuration cannot be loaded,
+the dashboard shows a warning and continues to display standard OCI fields and raw
+annotations. Use <hlt>Retry</hlt> to try loading the mapping again.
+
 ## Names
 
 Like all Kubernetes resources, Kargo `Freight` resources have a `metadata.name`

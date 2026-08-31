@@ -1,4 +1,4 @@
-import { faTruckArrowRight } from '@fortawesome/free-solid-svg-icons';
+import { faTags, faTruckArrowRight } from '@fortawesome/free-solid-svg-icons';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
 import { Button, Drawer, Flex } from 'antd';
 import classNames from 'classnames';
@@ -9,6 +9,7 @@ import { paths } from '@ui/config/paths';
 import { useExtensionsContext } from '@ui/extensions/extensions-context';
 import { ModalComponentProps } from '@ui/features/common/modal/modal-context';
 import { getCurrentFreightForComparison } from '@ui/features/common/utils';
+import { ReleaseContext } from '@ui/features/freight/release-context';
 import { IAction, useActionContext } from '@ui/features/project/pipelines/context/action-context';
 import { usePromoteDownstream, usePromoteToStage } from '@ui/gen/api/v2/core/core';
 import { Freight, Stage } from '@ui/gen/api/v2/models';
@@ -122,12 +123,26 @@ export const Promote = (props: PromoteProps) => {
         <FreightDetails
           freight={props.freight}
           comparison={{ currentFreight: currentFreightOnStage }}
-          additionalTabs={promoteTabs.map((data, index) => ({
-            children: <data.component freight={props.freight} stage={props.stage} />,
-            key: String(data.label + index),
-            label: data.label,
-            icon: data.icon
-          }))}
+          additionalTabs={[
+            {
+              children: (
+                <ReleaseContext
+                  freight={props.freight}
+                  currentFreight={currentFreightOnStage}
+                  comparison
+                />
+              ),
+              key: 'release-context',
+              label: 'Release Context',
+              icon: <FontAwesomeIcon icon={faTags} />
+            },
+            ...promoteTabs.map((data, index) => ({
+              children: <data.component freight={props.freight} stage={props.stage} />,
+              key: String(data.label + index),
+              label: data.label,
+              icon: data.icon
+            }))
+          ]}
         />
       </div>
     </Drawer>
