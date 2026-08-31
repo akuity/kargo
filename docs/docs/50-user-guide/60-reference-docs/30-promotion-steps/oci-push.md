@@ -71,8 +71,8 @@ child images. Exceeding this limit causes a terminal (non-retryable) error.
 
 This limit is not enforced when `srcRef` and `destRef` refer to the same
 repository (i.e. retagging within the same registry and path), since no blob
-transfer occurs in that case. It is always enforced for local-archive pushes
-(`srcPath`), based on the file's size.
+transfer occurs in that case. When a limit is configured, it is always enforced
+for local-archive pushes (`srcPath`), based on the file's size.
 
 ## Examples
 

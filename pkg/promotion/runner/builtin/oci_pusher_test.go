@@ -27,6 +27,7 @@ import (
 
 	kargoapi "github.com/akuity/kargo/api/v1alpha1"
 	"github.com/akuity/kargo/pkg/credentials"
+	intio "github.com/akuity/kargo/pkg/io"
 	"github.com/akuity/kargo/pkg/promotion"
 	builtin "github.com/akuity/kargo/pkg/x/promotion/runner/builtin"
 )
@@ -689,7 +690,7 @@ func Test_newFileLayer(t *testing.T) {
 	require.NoError(t, err)
 	t.Cleanup(func() { require.NoError(t, root.Close()) })
 
-	layer, err := newFileLayer(root, "artifact.tar.gz", types.OCILayer)
+	layer, err := newFileLayer(root, "artifact.tar.gz", types.OCILayer, testMaxArtifactSize)
 	require.NoError(t, err)
 
 	wantDigest, wantSize, err := v1.SHA256(bytes.NewReader(content))
@@ -726,8 +727,54 @@ func Test_newFileLayer_missingFile(t *testing.T) {
 	require.NoError(t, err)
 	t.Cleanup(func() { require.NoError(t, root.Close()) })
 
-	_, err = newFileLayer(root, "missing.tar.gz", types.OCILayer)
+	_, err = newFileLayer(root, "missing.tar.gz", types.OCILayer, testMaxArtifactSize)
 	assert.ErrorContains(t, err, "missing.tar.gz")
+}
+
+// Test that the size limit is enforced on the bytes actually read, so a file
+// that grows after a stat-based pre-check cannot slip past the limit.
+func Test_newFileLayer_limit(t *testing.T) {
+	t.Parallel()
+	workDir := t.TempDir()
+	content := writeTestArchive(t, workDir, "artifact.tar.gz")
+
+	root, err := os.OpenRoot(workDir)
+	require.NoError(t, err)
+	t.Cleanup(func() { require.NoError(t, root.Close()) })
+
+	t.Run("content exceeds limit", func(t *testing.T) {
+		t.Parallel()
+		_, err := newFileLayer(
+			root, "artifact.tar.gz", types.OCILayer, int64(len(content))-1,
+		)
+		tooLarge := &intio.BodyTooLargeError{}
+		require.ErrorAs(t, err, &tooLarge)
+	})
+
+	t.Run("content exactly at limit", func(t *testing.T) {
+		t.Parallel()
+		layer, err := newFileLayer(
+			root, "artifact.tar.gz", types.OCILayer, int64(len(content)),
+		)
+		require.NoError(t, err)
+		wantDigest, wantSize, err := v1.SHA256(bytes.NewReader(content))
+		require.NoError(t, err)
+		digest, err := layer.Digest()
+		require.NoError(t, err)
+		assert.Equal(t, wantDigest, digest)
+		size, err := layer.Size()
+		require.NoError(t, err)
+		assert.Equal(t, wantSize, size)
+	})
+
+	t.Run("non-positive limit disables the check", func(t *testing.T) {
+		t.Parallel()
+		layer, err := newFileLayer(root, "artifact.tar.gz", types.OCILayer, -1)
+		require.NoError(t, err)
+		size, err := layer.Size()
+		require.NoError(t, err)
+		assert.Equal(t, int64(len(content)), size)
+	})
 }
 
 // Test error handling for local-file pushes.

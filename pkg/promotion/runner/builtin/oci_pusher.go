@@ -3,9 +3,13 @@ package builtin
 import (
 	"bytes"
 	"context"
+	"crypto/sha256"
+	"encoding/hex"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"io"
+	"math"
 	"os"
 	"strings"
 
@@ -22,6 +26,7 @@ import (
 	"github.com/akuity/kargo/pkg/credentials"
 	libfmt "github.com/akuity/kargo/pkg/fmt"
 	"github.com/akuity/kargo/pkg/image/mutate"
+	intio "github.com/akuity/kargo/pkg/io"
 	"github.com/akuity/kargo/pkg/io/fs"
 	"github.com/akuity/kargo/pkg/promotion"
 	builtin "github.com/akuity/kargo/pkg/x/promotion/runner/builtin"
@@ -237,7 +242,15 @@ func (p *ociPusher) pushLocalFile(
 	}
 	defer root.Close()
 
-	info, err := root.Stat(cfg.SrcPath)
+	f, err := root.Open(cfg.SrcPath)
+	if err != nil {
+		return v1.Hash{}, kargoapi.PromotionStepStatusFailed, &promotion.TerminalError{
+			Err: fmt.Errorf("failed to open source path %q: %w", cfg.SrcPath, err),
+		}
+	}
+	defer f.Close()
+
+	info, err := f.Stat()
 	if err != nil {
 		return v1.Hash{}, kargoapi.PromotionStepStatusFailed, &promotion.TerminalError{
 			Err: fmt.Errorf("failed to stat source path %q: %w", cfg.SrcPath, err),
@@ -252,6 +265,9 @@ func (p *ociPusher) pushLocalFile(
 	// A local push always transfers the blob, so enforce the size limit
 	// unconditionally, mirroring the cross-repository check on the retag path:
 	// zero disables pushing entirely and a negative value disables the check.
+	// This stat-based check is only a fast fail; newFileLayer re-enforces the
+	// limit on the bytes actually hashed, which catches a file that grows after
+	// this check.
 	if p.maxArtifactSize == 0 {
 		return v1.Hash{}, kargoapi.PromotionStepStatusErrored, &promotion.TerminalError{
 			Err: fmt.Errorf("local artifact push is disabled"),
@@ -285,8 +301,16 @@ func (p *ociPusher) pushLocalFile(
 	scopes := p.parseAnnotationScopes(cfg.Annotations)
 
 	configLayer := static.NewLayer([]byte(emptyConfigBlob), configMediaType)
-	artifactLayer, err := newFileLayer(root, cfg.SrcPath, layerMediaType)
+	artifactLayer, err := newFileLayer(root, cfg.SrcPath, f, layerMediaType, p.maxArtifactSize)
 	if err != nil {
+		if _, ok := errors.AsType[*intio.BodyTooLargeError](err); ok {
+			return v1.Hash{}, kargoapi.PromotionStepStatusErrored, &promotion.TerminalError{
+				Err: fmt.Errorf(
+					"artifact size exceeds maximum allowed size of %s",
+					libfmt.FormatByteCount(p.maxArtifactSize),
+				),
+			}
+		}
 		return v1.Hash{}, kargoapi.PromotionStepStatusErrored,
 			fmt.Errorf("failed to read source path %q: %w", cfg.SrcPath, err)
 	}
@@ -351,26 +375,33 @@ type fileLayer struct {
 	size      int64
 }
 
-// newFileLayer reads the file once, to hash and measure it.
+// newFileLayer hashes and measures the file's content from f, which must read
+// the file at path from its start and remains owned (and closed) by the
+// caller; later reads re-open path under root. It reads at most limit bytes
+// and returns an *intio.BodyTooLargeError if the content exceeds that.
+// Enforcing the limit on the bytes actually hashed closes the window between
+// a caller's stat-based pre-check and the read. A negative limit disables the
+// check; zero is a real zero-byte limit, so a caller treating zero as
+// "disabled" must guard before calling.
 func newFileLayer(
 	root *os.Root,
 	path string,
+	f io.Reader,
 	mediaType types.MediaType,
+	limit int64,
 ) (*fileLayer, error) {
-	open := func() (io.ReadCloser, error) { return root.Open(path) }
-	f, err := open()
-	if err != nil {
-		return nil, err
+	if limit < 0 {
+		limit = math.MaxInt64
 	}
-	defer f.Close()
-	digest, size, err := v1.SHA256(f)
+	hasher := sha256.New()
+	size, err := intio.LimitCopy(hasher, io.NopCloser(f), limit)
 	if err != nil {
 		return nil, err
 	}
 	return &fileLayer{
-		open:      open,
+		open:      func() (io.ReadCloser, error) { return root.Open(path) },
 		mediaType: mediaType,
-		digest:    digest,
+		digest:    v1.Hash{Algorithm: "sha256", Hex: hex.EncodeToString(hasher.Sum(nil))},
 		size:      size,
 	}, nil
 }
