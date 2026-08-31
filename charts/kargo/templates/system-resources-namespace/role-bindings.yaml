@@ -1,4 +1,5 @@
 {{- if and .Values.dataPlane.install .Values.global.systemResources.createRBAC }}
+{{- if .Values.externalWebhooksServer.enabled }}
 apiVersion: rbac.authorization.k8s.io/v1
 kind: RoleBinding
 metadata:
@@ -16,6 +17,7 @@ subjects:
   namespace: {{ .Release.Namespace }}
   name: kargo-external-webhooks-server
 ---
+{{- end }}
 apiVersion: rbac.authorization.k8s.io/v1
 kind: RoleBinding
 metadata:
