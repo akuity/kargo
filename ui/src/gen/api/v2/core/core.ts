@@ -46,6 +46,7 @@ import type {
   PromotionTask,
   PromotionTaskList,
   QueryFreightsRestParams,
+  ReleaseContextConfig,
   Stage,
   StageList,
   UpdateConfigMapRequestBody,
@@ -2241,6 +2242,183 @@ export function useGetFreightLinks<
   queryClient?: QueryClient
 ): UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> } {
   const queryOptions = getGetFreightLinksQueryOptions(project, freightNameOrAlias, options);
+
+  const query = useQuery(queryOptions, queryClient) as UseQueryResult<TData, TError> & {
+    queryKey: DataTag<QueryKey, TData, TError>;
+  };
+
+  query.queryKey = queryOptions.queryKey;
+
+  return query;
+}
+
+/**
+ * Returns project annotation mappings when configured, otherwise cluster defaults.
+Authorizes read access to the requested Freight before reading configuration internally.
+Only annotation-key mappings are returned; Freight readers need not access full configuration resources.
+ * @summary Retrieve effective release context configuration for Freight
+ */
+export type getFreightReleaseContextConfigResponse200 = {
+  data: ReleaseContextConfig;
+  status: 200;
+};
+
+export type getFreightReleaseContextConfigResponseSuccess =
+  getFreightReleaseContextConfigResponse200 & {
+    headers: Headers;
+  };
+export type getFreightReleaseContextConfigResponse = getFreightReleaseContextConfigResponseSuccess;
+
+export const getGetFreightReleaseContextConfigUrl = (
+  project: string,
+  freightNameOrAlias: string
+) => {
+  return `/v1beta1/projects/${project}/freight/${freightNameOrAlias}/release-context-config`;
+};
+
+export const getFreightReleaseContextConfig = async (
+  project: string,
+  freightNameOrAlias: string,
+  options?: RequestInit
+): Promise<getFreightReleaseContextConfigResponse> => {
+  return customFetch<getFreightReleaseContextConfigResponse>(
+    getGetFreightReleaseContextConfigUrl(project, freightNameOrAlias),
+    {
+      ...options,
+      method: 'GET'
+    }
+  );
+};
+
+export const getGetFreightReleaseContextConfigQueryKey = (
+  project?: string,
+  freightNameOrAlias?: string
+) => {
+  return [
+    `/v1beta1/projects/${project}/freight/${freightNameOrAlias}/release-context-config`
+  ] as const;
+};
+
+export const getGetFreightReleaseContextConfigQueryOptions = <
+  TData = Awaited<ReturnType<typeof getFreightReleaseContextConfig>>,
+  TError = ErrorType<unknown>
+>(
+  project: string,
+  freightNameOrAlias: string,
+  options?: {
+    query?: Partial<
+      UseQueryOptions<Awaited<ReturnType<typeof getFreightReleaseContextConfig>>, TError, TData>
+    >;
+    request?: SecondParameter<typeof customFetch>;
+  }
+) => {
+  const { query: queryOptions, request: requestOptions } = options ?? {};
+
+  const queryKey =
+    queryOptions?.queryKey ??
+    getGetFreightReleaseContextConfigQueryKey(project, freightNameOrAlias);
+
+  const queryFn: QueryFunction<Awaited<ReturnType<typeof getFreightReleaseContextConfig>>> = () =>
+    getFreightReleaseContextConfig(project, freightNameOrAlias, requestOptions);
+
+  return {
+    queryKey,
+    queryFn,
+    enabled: !!(project && freightNameOrAlias),
+    ...queryOptions
+  } as UseQueryOptions<
+    Awaited<ReturnType<typeof getFreightReleaseContextConfig>>,
+    TError,
+    TData
+  > & { queryKey: DataTag<QueryKey, TData, TError> };
+};
+
+export type GetFreightReleaseContextConfigQueryResult = NonNullable<
+  Awaited<ReturnType<typeof getFreightReleaseContextConfig>>
+>;
+export type GetFreightReleaseContextConfigQueryError = ErrorType<unknown>;
+
+export function useGetFreightReleaseContextConfig<
+  TData = Awaited<ReturnType<typeof getFreightReleaseContextConfig>>,
+  TError = ErrorType<unknown>
+>(
+  project: string,
+  freightNameOrAlias: string,
+  options: {
+    query: Partial<
+      UseQueryOptions<Awaited<ReturnType<typeof getFreightReleaseContextConfig>>, TError, TData>
+    > &
+      Pick<
+        DefinedInitialDataOptions<
+          Awaited<ReturnType<typeof getFreightReleaseContextConfig>>,
+          TError,
+          Awaited<ReturnType<typeof getFreightReleaseContextConfig>>
+        >,
+        'initialData'
+      >;
+    request?: SecondParameter<typeof customFetch>;
+  },
+  queryClient?: QueryClient
+): DefinedUseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> };
+export function useGetFreightReleaseContextConfig<
+  TData = Awaited<ReturnType<typeof getFreightReleaseContextConfig>>,
+  TError = ErrorType<unknown>
+>(
+  project: string,
+  freightNameOrAlias: string,
+  options?: {
+    query?: Partial<
+      UseQueryOptions<Awaited<ReturnType<typeof getFreightReleaseContextConfig>>, TError, TData>
+    > &
+      Pick<
+        UndefinedInitialDataOptions<
+          Awaited<ReturnType<typeof getFreightReleaseContextConfig>>,
+          TError,
+          Awaited<ReturnType<typeof getFreightReleaseContextConfig>>
+        >,
+        'initialData'
+      >;
+    request?: SecondParameter<typeof customFetch>;
+  },
+  queryClient?: QueryClient
+): UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> };
+export function useGetFreightReleaseContextConfig<
+  TData = Awaited<ReturnType<typeof getFreightReleaseContextConfig>>,
+  TError = ErrorType<unknown>
+>(
+  project: string,
+  freightNameOrAlias: string,
+  options?: {
+    query?: Partial<
+      UseQueryOptions<Awaited<ReturnType<typeof getFreightReleaseContextConfig>>, TError, TData>
+    >;
+    request?: SecondParameter<typeof customFetch>;
+  },
+  queryClient?: QueryClient
+): UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> };
+/**
+ * @summary Retrieve effective release context configuration for Freight
+ */
+
+export function useGetFreightReleaseContextConfig<
+  TData = Awaited<ReturnType<typeof getFreightReleaseContextConfig>>,
+  TError = ErrorType<unknown>
+>(
+  project: string,
+  freightNameOrAlias: string,
+  options?: {
+    query?: Partial<
+      UseQueryOptions<Awaited<ReturnType<typeof getFreightReleaseContextConfig>>, TError, TData>
+    >;
+    request?: SecondParameter<typeof customFetch>;
+  },
+  queryClient?: QueryClient
+): UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> } {
+  const queryOptions = getGetFreightReleaseContextConfigQueryOptions(
+    project,
+    freightNameOrAlias,
+    options
+  );
 
   const query = useQuery(queryOptions, queryClient) as UseQueryResult<TData, TError> & {
     queryKey: DataTag<QueryKey, TData, TError>;

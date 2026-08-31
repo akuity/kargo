@@ -332,6 +332,55 @@ spec:
                 x-kubernetes-list-map-keys:
                 - name
                 x-kubernetes-list-type: map
+              releaseContext:
+                description: |-
+                  ReleaseContext defines default image annotation mappings for the dashboard.
+                  A ProjectConfig may replace this configuration for its project.
+                properties:
+                  imageAnnotations:
+                    description: |-
+                      ImageAnnotations maps optional commit details to exact custom annotation
+                      keys. Unconfigured or absent values are not interpreted.
+                    properties:
+                      commitAuthor:
+                        description: CommitAuthor is the annotation containing the
+                          source commit's author.
+                        minLength: 1
+                        pattern: ^\S+$
+                        type: string
+                        x-kubernetes-validations:
+                        - message: must be a custom annotation key
+                          rule: '!self.startsWith(''org.opencontainers.'')'
+                      commitCommitter:
+                        description: CommitCommitter is the annotation containing
+                          the source commit's committer.
+                        minLength: 1
+                        pattern: ^\S+$
+                        type: string
+                        x-kubernetes-validations:
+                        - message: must be a custom annotation key
+                          rule: '!self.startsWith(''org.opencontainers.'')'
+                      commitCreatedAt:
+                        description: |-
+                          CommitCreatedAt is the annotation containing the source commit timestamp
+                          in RFC 3339 format. It is separate from the OCI image creation timestamp.
+                        minLength: 1
+                        pattern: ^\S+$
+                        type: string
+                        x-kubernetes-validations:
+                        - message: must be a custom annotation key
+                          rule: '!self.startsWith(''org.opencontainers.'')'
+                      commitSubject:
+                        description: CommitSubject is the annotation containing the
+                          source commit's subject.
+                        minLength: 1
+                        pattern: ^\S+$
+                        type: string
+                        x-kubernetes-validations:
+                        - message: must be a custom annotation key
+                          rule: '!self.startsWith(''org.opencontainers.'')'
+                    type: object
+                type: object
               stageLinks:
                 description: |-
                   StageLinks defines deep links shown when viewing any Stage resource

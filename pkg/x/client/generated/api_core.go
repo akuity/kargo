@@ -1864,6 +1864,129 @@ func (a *CoreAPIService) GetFreightLinksExecute(r ApiGetFreightLinksRequest) (*G
 	return localVarReturnValue, localVarHTTPResponse, nil
 }
 
+type ApiGetFreightReleaseContextConfigRequest struct {
+	ctx context.Context
+	ApiService *CoreAPIService
+	project string
+	freightNameOrAlias string
+}
+
+func (r ApiGetFreightReleaseContextConfigRequest) Execute() (*ReleaseContextConfig, *http.Response, error) {
+	return r.ApiService.GetFreightReleaseContextConfigExecute(r)
+}
+
+/*
+GetFreightReleaseContextConfig Retrieve effective release context configuration for Freight
+
+Returns project annotation mappings when configured, otherwise cluster defaults.
+Authorizes read access to the requested Freight before reading configuration internally.
+Only annotation-key mappings are returned; Freight readers need not access full configuration resources.
+
+ @param ctx context.Context - for authentication, logging, cancellation, deadlines, tracing, etc. Passed from http.Request or context.Background().
+ @param project Project name
+ @param freightNameOrAlias Freight name or alias
+ @return ApiGetFreightReleaseContextConfigRequest
+*/
+func (a *CoreAPIService) GetFreightReleaseContextConfig(ctx context.Context, project string, freightNameOrAlias string) ApiGetFreightReleaseContextConfigRequest {
+	return ApiGetFreightReleaseContextConfigRequest{
+		ApiService: a,
+		ctx: ctx,
+		project: project,
+		freightNameOrAlias: freightNameOrAlias,
+	}
+}
+
+// Execute executes the request
+//  @return ReleaseContextConfig
+func (a *CoreAPIService) GetFreightReleaseContextConfigExecute(r ApiGetFreightReleaseContextConfigRequest) (*ReleaseContextConfig, *http.Response, error) {
+	var (
+		localVarHTTPMethod   = http.MethodGet
+		localVarPostBody     interface{}
+		formFiles            []formFile
+		localVarReturnValue  *ReleaseContextConfig
+	)
+
+	localBasePath, err := a.client.cfg.ServerURLWithContext(r.ctx, "CoreAPIService.GetFreightReleaseContextConfig")
+	if err != nil {
+		return localVarReturnValue, nil, &GenericOpenAPIError{error: err.Error()}
+	}
+
+	localVarPath := localBasePath + "/v1beta1/projects/{project}/freight/{freight-name-or-alias}/release-context-config"
+	localVarPath = strings.Replace(localVarPath, "{"+"project"+"}", url.PathEscape(parameterValueToString(r.project, "project")), -1)
+	localVarPath = strings.Replace(localVarPath, "{"+"freight-name-or-alias"+"}", url.PathEscape(parameterValueToString(r.freightNameOrAlias, "freightNameOrAlias")), -1)
+
+	localVarHeaderParams := make(map[string]string)
+	localVarQueryParams := url.Values{}
+	localVarFormParams := url.Values{}
+
+	// to determine the Content-Type header
+	localVarHTTPContentTypes := []string{}
+
+	// set Content-Type header
+	localVarHTTPContentType := selectHeaderContentType(localVarHTTPContentTypes)
+	if localVarHTTPContentType != "" {
+		localVarHeaderParams["Content-Type"] = localVarHTTPContentType
+	}
+
+	// to determine the Accept header
+	localVarHTTPHeaderAccepts := []string{"application/json"}
+
+	// set Accept header
+	localVarHTTPHeaderAccept := selectHeaderAccept(localVarHTTPHeaderAccepts)
+	if localVarHTTPHeaderAccept != "" {
+		localVarHeaderParams["Accept"] = localVarHTTPHeaderAccept
+	}
+	if r.ctx != nil {
+		// API Key Authentication
+		if auth, ok := r.ctx.Value(ContextAPIKeys).(map[string]APIKey); ok {
+			if apiKey, ok := auth["BearerAuth"]; ok {
+				var key string
+				if apiKey.Prefix != "" {
+					key = apiKey.Prefix + " " + apiKey.Key
+				} else {
+					key = apiKey.Key
+				}
+				localVarHeaderParams["Authorization"] = key
+			}
+		}
+	}
+	req, err := a.client.prepareRequest(r.ctx, localVarPath, localVarHTTPMethod, localVarPostBody, localVarHeaderParams, localVarQueryParams, localVarFormParams, formFiles)
+	if err != nil {
+		return localVarReturnValue, nil, err
+	}
+
+	localVarHTTPResponse, err := a.client.callAPI(req)
+	if err != nil || localVarHTTPResponse == nil {
+		return localVarReturnValue, localVarHTTPResponse, err
+	}
+
+	localVarBody, err := io.ReadAll(localVarHTTPResponse.Body)
+	localVarHTTPResponse.Body.Close()
+	localVarHTTPResponse.Body = io.NopCloser(bytes.NewBuffer(localVarBody))
+	if err != nil {
+		return localVarReturnValue, localVarHTTPResponse, err
+	}
+
+	if localVarHTTPResponse.StatusCode >= 300 {
+		newErr := &GenericOpenAPIError{
+			body:  localVarBody,
+			error: localVarHTTPResponse.Status,
+		}
+		return localVarReturnValue, localVarHTTPResponse, newErr
+	}
+
+	err = a.client.decode(&localVarReturnValue, localVarBody, localVarHTTPResponse.Header.Get("Content-Type"))
+	if err != nil {
+		newErr := &GenericOpenAPIError{
+			body:  localVarBody,
+			error: err.Error(),
+		}
+		return localVarReturnValue, localVarHTTPResponse, newErr
+	}
+
+	return localVarReturnValue, localVarHTTPResponse, nil
+}
+
 type ApiGetProjectRequest struct {
 	ctx context.Context
 	ApiService *CoreAPIService

@@ -910,6 +910,38 @@ paths:
       summary: Retrieve deep links for a Freight resource
       tags:
       - Core
+  /v1beta1/projects/{project}/freight/{freight-name-or-alias}/release-context-config:
+    get:
+      description: |-
+        Returns project annotation mappings when configured, otherwise cluster defaults.
+        Authorizes read access to the requested Freight before reading configuration internally.
+        Only annotation-key mappings are returned; Freight readers need not access full configuration resources.
+      operationId: GetFreightReleaseContextConfig
+      parameters:
+      - description: Project name
+        in: path
+        name: project
+        required: true
+        schema:
+          type: string
+      - description: Freight name or alias
+        in: path
+        name: freight-name-or-alias
+        required: true
+        schema:
+          type: string
+      responses:
+        "200":
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ReleaseContextConfig"
+          description: OK
+      security:
+      - BearerAuth: []
+      summary: Retrieve effective release context configuration for Freight
+      tags:
+      - Core
   /v1beta1/projects/{project}/generic-credentials:
     get:
       description: |-
@@ -11218,6 +11250,14 @@ components:
           items:
             $ref: "#/components/schemas/PromotionWindow"
           type: array
+        releaseContext:
+          allOf:
+          - $ref: "#/components/schemas/ReleaseContextConfig"
+          description: |-
+            ReleaseContext defines default image annotation mappings for the dashboard.
+            A ProjectConfig may replace this configuration for its project.
+            +optional
+          type: object
         stageLinks:
           description: |-
             StageLinks defines deep links shown when viewing any Stage resource
@@ -12503,6 +12543,30 @@ components:
             by RepoURL.
           type: string
       type: object
+    ImageAnnotationMappings:
+      properties:
+        commitAuthor:
+          description: |-
+            CommitAuthor is the annotation containing the source commit's author.
+            +optional
+          type: string
+        commitCommitter:
+          description: |-
+            CommitCommitter is the annotation containing the source commit's committer.
+            +optional
+          type: string
+        commitCreatedAt:
+          description: |-
+            CommitCreatedAt is the annotation containing the source commit timestamp
+            in RFC 3339 format. It is separate from the OCI image creation timestamp.
+            +optional
+          type: string
+        commitSubject:
+          description: |-
+            CommitSubject is the annotation containing the source commit's subject.
+            +optional
+          type: string
+      type: object
     ImageDiscoveryResult:
       properties:
         platform:
@@ -12763,6 +12827,15 @@ components:
           items:
             $ref: "#/components/schemas/PromotionWindow"
           type: array
+        releaseContext:
+          allOf:
+          - $ref: "#/components/schemas/ReleaseContextConfig"
+          description: |-
+            ReleaseContext replaces the cluster-level release context configuration.
+            Omit it to inherit cluster defaults. Set it to {} to disable custom image
+            annotation interpretation in this project without hiding raw annotations.
+            +optional
+          type: object
         stageLinks:
           description: |-
             StageLinks defines deep links shown when viewing Stage resources within
@@ -13865,6 +13938,19 @@ components:
           type: object
       required:
       - secretRef
+      type: object
+    ReleaseContextConfig:
+      example:
+        imageAnnotations: "{}"
+      properties:
+        imageAnnotations:
+          allOf:
+          - $ref: "#/components/schemas/ImageAnnotationMappings"
+          description: |-
+            ImageAnnotations maps optional commit details to exact custom annotation
+            keys. Unconfigured or absent values are not interpreted.
+            +optional
+          type: object
       type: object
     Stage:
       example:
