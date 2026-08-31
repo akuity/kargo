@@ -1,0 +1,357 @@
+{
+  "openapi": "3.0.3",
+  "info": {
+    "title": "Bitbucket Data Center API",
+    "description": "Minimal Bitbucket Data Center REST API spec covering pull request and commit operations used by the Kargo git provider integration.",
+    "version": "1.0"
+  },
+  "servers": [
+    {
+      "url": "{baseUrl}",
+      "variables": {
+        "baseUrl": {
+          "default": "https://bitbucket.example.com"
+        }
+      }
+    }
+  ],
+  "paths": {
+    "/rest/api/1.0/projects/{projectKey}/repos/{repositorySlug}/pull-requests": {
+      "get": {
+        "operationId": "GetPullRequests",
+        "summary": "List pull requests",
+        "parameters": [
+          {
+            "name": "projectKey",
+            "in": "path",
+            "required": true,
+            "schema": { "type": "string" }
+          },
+          {
+            "name": "repositorySlug",
+            "in": "path",
+            "required": true,
+            "schema": { "type": "string" }
+          },
+          {
+            "name": "state",
+            "in": "query",
+            "description": "Filter by state. ALL returns pull requests in any state.",
+            "schema": {
+              "type": "string",
+              "enum": ["ALL", "OPEN", "MERGED", "DECLINED"]
+            }
+          },
+          {
+            "name": "start",
+            "in": "query",
+            "schema": { "type": "integer" }
+          },
+          {
+            "name": "limit",
+            "in": "query",
+            "schema": { "type": "integer" }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "A paginated list of pull requests.",
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/RestPullRequestPage" }
+              }
+            }
+          }
+        }
+      },
+      "post": {
+        "operationId": "CreatePullRequest",
+        "summary": "Create a pull request",
+        "parameters": [
+          {
+            "name": "projectKey",
+            "in": "path",
+            "required": true,
+            "schema": { "type": "string" }
+          },
+          {
+            "name": "repositorySlug",
+            "in": "path",
+            "required": true,
+            "schema": { "type": "string" }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": { "$ref": "#/components/schemas/RestPullRequestCreate" }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "The newly created pull request.",
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/RestPullRequest" }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/rest/api/1.0/projects/{projectKey}/repos/{repositorySlug}/pull-requests/{pullRequestId}": {
+      "get": {
+        "operationId": "GetPullRequest",
+        "summary": "Get a pull request",
+        "parameters": [
+          {
+            "name": "projectKey",
+            "in": "path",
+            "required": true,
+            "schema": { "type": "string" }
+          },
+          {
+            "name": "repositorySlug",
+            "in": "path",
+            "required": true,
+            "schema": { "type": "string" }
+          },
+          {
+            "name": "pullRequestId",
+            "in": "path",
+            "required": true,
+            "schema": { "type": "integer" }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "The pull request.",
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/RestPullRequest" }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/rest/api/1.0/projects/{projectKey}/repos/{repositorySlug}/pull-requests/{pullRequestId}/merge": {
+      "post": {
+        "operationId": "MergePullRequest",
+        "summary": "Merge a pull request",
+        "parameters": [
+          {
+            "name": "projectKey",
+            "in": "path",
+            "required": true,
+            "schema": { "type": "string" }
+          },
+          {
+            "name": "repositorySlug",
+            "in": "path",
+            "required": true,
+            "schema": { "type": "string" }
+          },
+          {
+            "name": "pullRequestId",
+            "in": "path",
+            "required": true,
+            "schema": { "type": "integer" }
+          },
+          {
+            "name": "version",
+            "in": "query",
+            "description": "The current version of the pull request. Required to prevent merging a stale PR.",
+            "required": true,
+            "schema": { "type": "integer" }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": { "$ref": "#/components/schemas/RestMergeConfig" }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "The merged pull request.",
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/RestPullRequest" }
+              }
+            }
+          },
+          "409": {
+            "description": "The pull request has conflicts and cannot be merged."
+          }
+        }
+      }
+    },
+    "/rest/api/1.0/projects/{projectKey}/repos/{repositorySlug}/commits/{commitId}": {
+      "get": {
+        "operationId": "GetCommit",
+        "summary": "Get a commit",
+        "parameters": [
+          {
+            "name": "projectKey",
+            "in": "path",
+            "required": true,
+            "schema": { "type": "string" }
+          },
+          {
+            "name": "repositorySlug",
+            "in": "path",
+            "required": true,
+            "schema": { "type": "string" }
+          },
+          {
+            "name": "commitId",
+            "in": "path",
+            "required": true,
+            "schema": { "type": "string" }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "The commit.",
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/RestCommit" }
+              }
+            }
+          }
+        }
+      }
+    }
+  },
+  "components": {
+    "schemas": {
+      "RestPullRequest": {
+        "type": "object",
+        "properties": {
+          "id": { "type": "integer" },
+          "version": { "type": "integer" },
+          "title": { "type": "string" },
+          "description": { "type": "string" },
+          "state": {
+            "type": "string",
+            "enum": ["OPEN", "MERGED", "DECLINED"]
+          },
+          "open": { "type": "boolean" },
+          "closed": { "type": "boolean" },
+          "draft": { "type": "boolean" },
+          "createdDate": { "type": "integer", "format": "int64" },
+          "updatedDate": { "type": "integer", "format": "int64" },
+          "fromRef": { "$ref": "#/components/schemas/RestRef" },
+          "toRef": { "$ref": "#/components/schemas/RestRef" },
+          "locked": { "type": "boolean" },
+          "links": { "$ref": "#/components/schemas/RestPullRequestLinks" }
+        }
+      },
+      "RestRef": {
+        "type": "object",
+        "properties": {
+          "id": { "type": "string" },
+          "displayId": { "type": "string" },
+          "latestCommit": { "type": "string" },
+          "repository": { "$ref": "#/components/schemas/RestRefRepository" }
+        }
+      },
+      "RestRefRepository": {
+        "type": "object",
+        "properties": {
+          "slug": { "type": "string" },
+          "project": { "$ref": "#/components/schemas/RestProject" }
+        }
+      },
+      "RestProject": {
+        "type": "object",
+        "properties": {
+          "key": { "type": "string" }
+        }
+      },
+      "RestPullRequestLinks": {
+        "type": "object",
+        "properties": {
+          "self": {
+            "type": "array",
+            "items": { "$ref": "#/components/schemas/RestHref" }
+          }
+        }
+      },
+      "RestHref": {
+        "type": "object",
+        "properties": {
+          "href": { "type": "string" }
+        }
+      },
+      "RestPullRequestPage": {
+        "type": "object",
+        "properties": {
+          "size": { "type": "integer" },
+          "limit": { "type": "integer" },
+          "start": { "type": "integer" },
+          "isLastPage": { "type": "boolean" },
+          "nextPageStart": { "type": "integer" },
+          "values": {
+            "type": "array",
+            "items": { "$ref": "#/components/schemas/RestPullRequest" }
+          }
+        }
+      },
+      "RestPullRequestCreate": {
+        "type": "object",
+        "required": ["title", "fromRef", "toRef"],
+        "properties": {
+          "title": { "type": "string" },
+          "description": { "type": "string" },
+          "fromRef": { "$ref": "#/components/schemas/RestCreateRef" },
+          "toRef": { "$ref": "#/components/schemas/RestCreateRef" }
+        }
+      },
+      "RestCreateRef": {
+        "type": "object",
+        "required": ["id", "repository"],
+        "properties": {
+          "id": { "type": "string" },
+          "repository": { "$ref": "#/components/schemas/RestRefRepository" }
+        }
+      },
+      "RestMergeConfig": {
+        "type": "object",
+        "properties": {
+          "message": { "type": "string" },
+          "strategy": { "$ref": "#/components/schemas/RestMergeStrategy" }
+        }
+      },
+      "RestMergeStrategy": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "enum": [
+              "no-ff",
+              "ff",
+              "ff-only",
+              "squash",
+              "squash-ff-only",
+              "rebase-no-ff",
+              "rebase-ff-only"
+            ]
+          }
+        }
+      },
+      "RestCommit": {
+        "type": "object",
+        "properties": {
+          "id": { "type": "string" },
+          "displayId": { "type": "string" },
+          "message": { "type": "string" }
+        }
+      }
+    }
+  }
+}
