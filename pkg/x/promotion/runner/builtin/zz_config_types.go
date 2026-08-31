@@ -297,8 +297,6 @@ type GitMergePRConfig struct {
 }
 
 type GitOpenPRConfig struct {
-	// Deprecated. Is a no-op if set. Will be removed in a future release.
-	CreateTargetBranch bool `json:"createTargetBranch,omitempty"`
 	// The description of the pull request. Kargo generates a description based on the commit
 	// messages if it is not explicitly specified.
 	Description string `json:"description,omitempty"`

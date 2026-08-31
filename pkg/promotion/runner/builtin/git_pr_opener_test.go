@@ -296,13 +296,12 @@ func Test_gitPROpener_run(t *testing.T) {
 				WorkDir: workDir,
 			},
 			builtin.GitOpenPRConfig{
-				RepoURL:            testRepoURL,
-				SourceBranch:       testSourceBranch,
-				TargetBranch:       testTargetBranch,
-				CreateTargetBranch: true,
-				Provider:           ptr.To(builtin.Provider(fakeGitProviderName)),
-				Title:              "kargo",
-				Description:        "kargo description",
+				RepoURL:      testRepoURL,
+				SourceBranch: testSourceBranch,
+				TargetBranch: testTargetBranch,
+				Provider:     ptr.To(builtin.Provider(fakeGitProviderName)),
+				Title:        "kargo",
+				Description:  "kargo description",
 			},
 		)
 		require.NoError(t, err)
