@@ -31,6 +31,10 @@ import (
 	builtin "github.com/akuity/kargo/pkg/x/promotion/runner/builtin"
 )
 
+// testMaxArtifactSize is a 1 GiB size limit, generous enough that no test
+// artifact ever trips it.
+const testMaxArtifactSize = int64(1024 * 1024 * 1024)
+
 func Test_ociPusher_validate(t *testing.T) {
 	tests := []validationTestCase{
 		{
@@ -118,7 +122,7 @@ func Test_ociPusher_validate(t *testing.T) {
 	}
 
 	r := newOCIPusher(promotion.StepRunnerCapabilities{}, ociPusherConfig{
-		MaxArtifactSize: int64(1 << 30),
+		MaxArtifactSize: testMaxArtifactSize,
 	})
 	runner, ok := r.(*ociPusher)
 	require.True(t, ok)
@@ -386,7 +390,7 @@ func Test_ociPusher_run(t *testing.T) {
 			runner := &ociPusher{
 				credsDB:         &credentials.FakeDB{},
 				schemaLoader:    getConfigSchemaLoader(stepKindOCIPush),
-				maxArtifactSize: int64(1 << 30),
+				maxArtifactSize: testMaxArtifactSize,
 			}
 
 			stepCtx := &promotion.StepContext{
@@ -407,7 +411,7 @@ func Test_ociPusher_push_unsupportedMediaType(t *testing.T) {
 		},
 	}
 
-	runner := &ociPusher{maxArtifactSize: int64(1 << 30)}
+	runner := &ociPusher{maxArtifactSize: testMaxArtifactSize}
 	srcRef, err := name.ParseReference("localhost:5000/src:tag")
 	require.NoError(t, err)
 	dstRef, err := name.ParseReference("localhost:5000/test:tag")
@@ -444,6 +448,24 @@ func Test_ociPusher_run_credentialError(t *testing.T) {
 			},
 			errMsg: "error obtaining credentials",
 		},
+		{
+			// The source reference is validated before any credential lookup, so
+			// a malformed reference fails terminally instead of being masked by a
+			// retryable credential error.
+			name: "malformed source reference wins over credential error",
+			cfg: builtin.OCIPushConfig{
+				SrcRef:  "invalid::ref",
+				DestRef: "registry.example.com/image:newtag",
+			},
+			credsDB: &credentials.FakeDB{
+				GetFn: func(
+					context.Context, string, credentials.Type, string,
+				) (*credentials.Credentials, error) {
+					return nil, fmt.Errorf("cred error")
+				},
+			},
+			errMsg: "failed to parse source reference",
+		},
 	}
 
 	for _, tt := range tests {
@@ -451,7 +473,7 @@ func Test_ociPusher_run_credentialError(t *testing.T) {
 			runner := &ociPusher{
 				credsDB:         tt.credsDB,
 				schemaLoader:    getConfigSchemaLoader(stepKindOCIPush),
-				maxArtifactSize: int64(1 << 30),
+				maxArtifactSize: testMaxArtifactSize,
 			}
 
 			stepCtx := &promotion.StepContext{
@@ -484,7 +506,7 @@ func Test_ociPusher_run_noAnnotationsMutation(t *testing.T) {
 	runner := &ociPusher{
 		credsDB:         &credentials.FakeDB{},
 		schemaLoader:    getConfigSchemaLoader(stepKindOCIPush),
-		maxArtifactSize: int64(1 << 30),
+		maxArtifactSize: testMaxArtifactSize,
 	}
 
 	// Push without specifying annotations.
@@ -547,7 +569,7 @@ func Test_ociPusher_run_localFile(t *testing.T) {
 	runner := &ociPusher{
 		credsDB:         &credentials.FakeDB{},
 		schemaLoader:    getConfigSchemaLoader(stepKindOCIPush),
-		maxArtifactSize: int64(1 << 30),
+		maxArtifactSize: testMaxArtifactSize,
 	}
 
 	destRef := fmt.Sprintf("%s/test/local:v1", regHost)
@@ -632,7 +654,7 @@ func Test_ociPusher_run_localFile_defaultMediaTypes(t *testing.T) {
 	runner := &ociPusher{
 		credsDB:         &credentials.FakeDB{},
 		schemaLoader:    getConfigSchemaLoader(stepKindOCIPush),
-		maxArtifactSize: int64(1 << 30),
+		maxArtifactSize: testMaxArtifactSize,
 	}
 
 	destRef := fmt.Sprintf("%s/test/local:default", regHost)
@@ -724,7 +746,8 @@ func Test_ociPusher_run_localFile_errors(t *testing.T) {
 		errMsg     string
 	}{
 		{
-			name: "source path is a directory",
+			name:            "source path is a directory",
+			maxArtifactSize: testMaxArtifactSize,
 			setup: func(t *testing.T, workDir string) string {
 				require.NoError(t, os.Mkdir(filepath.Join(workDir, "adir"), 0o755))
 				return "adir"
@@ -733,7 +756,8 @@ func Test_ociPusher_run_localFile_errors(t *testing.T) {
 			errMsg:     "is a directory",
 		},
 		{
-			name: "source path does not exist",
+			name:            "source path does not exist",
+			maxArtifactSize: testMaxArtifactSize,
 			setup: func(_ *testing.T, _ string) string {
 				return "missing.tar.gz"
 			},
@@ -741,7 +765,8 @@ func Test_ociPusher_run_localFile_errors(t *testing.T) {
 			errMsg:     "failed to stat source path",
 		},
 		{
-			name: "path traversal is rejected",
+			name:            "path traversal is rejected",
+			maxArtifactSize: testMaxArtifactSize,
 			setup: func(_ *testing.T, _ string) string {
 				// The workspace root refuses to resolve an escaping path.
 				return "../../etc/passwd"
@@ -760,6 +785,18 @@ func Test_ociPusher_run_localFile_errors(t *testing.T) {
 			wantStatus: kargoapi.PromotionStepStatusErrored,
 			errMsg:     "exceeds maximum allowed size of",
 		},
+		{
+			// A zero limit disables pushing entirely; even an empty file, whose
+			// size never exceeds the limit, must be rejected.
+			name:            "zero size limit disables local push",
+			maxArtifactSize: 0,
+			setup: func(t *testing.T, workDir string) string {
+				require.NoError(t, os.WriteFile(filepath.Join(workDir, "empty.tar.gz"), nil, 0o644))
+				return "empty.tar.gz"
+			},
+			wantStatus: kargoapi.PromotionStepStatusErrored,
+			errMsg:     "local artifact push is disabled",
+		},
 	}
 
 	for _, tt := range tests {
@@ -767,14 +804,10 @@ func Test_ociPusher_run_localFile_errors(t *testing.T) {
 			workDir := t.TempDir()
 			srcPath := tt.setup(t, workDir)
 
-			maxSize := tt.maxArtifactSize
-			if maxSize == 0 {
-				maxSize = int64(1 << 30)
-			}
 			runner := &ociPusher{
 				credsDB:         &credentials.FakeDB{},
 				schemaLoader:    getConfigSchemaLoader(stepKindOCIPush),
-				maxArtifactSize: maxSize,
+				maxArtifactSize: tt.maxArtifactSize,
 			}
 
 			result, err := runner.run(t.Context(), &promotion.StepContext{
@@ -798,7 +831,7 @@ func Test_ociPusher_run_localFile_workspaceError(t *testing.T) {
 	runner := &ociPusher{
 		credsDB:         &credentials.FakeDB{},
 		schemaLoader:    getConfigSchemaLoader(stepKindOCIPush),
-		maxArtifactSize: int64(1 << 30),
+		maxArtifactSize: testMaxArtifactSize,
 	}
 
 	tmpDir := t.TempDir()
@@ -840,7 +873,7 @@ func Test_ociPusher_run_localFile_pushError(t *testing.T) {
 	runner := &ociPusher{
 		credsDB:         &credentials.FakeDB{},
 		schemaLoader:    getConfigSchemaLoader(stepKindOCIPush),
-		maxArtifactSize: int64(1 << 30),
+		maxArtifactSize: testMaxArtifactSize,
 	}
 
 	result, err := runner.run(t.Context(), &promotion.StepContext{
@@ -932,7 +965,7 @@ func Test_ociPusher_run_scopedAnnotationsOnImage(t *testing.T) {
 	runner := &ociPusher{
 		credsDB:         &credentials.FakeDB{},
 		schemaLoader:    getConfigSchemaLoader(stepKindOCIPush),
-		maxArtifactSize: int64(1 << 30),
+		maxArtifactSize: testMaxArtifactSize,
 	}
 
 	// Push with mixed scoped annotations. "index:" should be ignored for images.
@@ -977,7 +1010,7 @@ func Test_ociPusher_run_ociManifestAnnotations(t *testing.T) {
 	runner := &ociPusher{
 		credsDB:         &credentials.FakeDB{},
 		schemaLoader:    getConfigSchemaLoader(stepKindOCIPush),
-		maxArtifactSize: int64(1 << 30),
+		maxArtifactSize: testMaxArtifactSize,
 	}
 
 	result, err := runner.run(t.Context(), &promotion.StepContext{
@@ -1175,7 +1208,7 @@ func Test_ociPusherConfig(t *testing.T) {
 		{
 			name:     "unset returns default 1 GiB",
 			envValue: "",
-			expected: 1 << 30,
+			expected: 1024 * 1024 * 1024,
 		},
 		{
 			name:     "zero blocks cross-repo pushes",

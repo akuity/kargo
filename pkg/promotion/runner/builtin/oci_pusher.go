@@ -11,6 +11,7 @@ import (
 
 	"github.com/google/go-containerregistry/pkg/name"
 	v1 "github.com/google/go-containerregistry/pkg/v1"
+	"github.com/google/go-containerregistry/pkg/v1/partial"
 	"github.com/google/go-containerregistry/pkg/v1/remote"
 	"github.com/google/go-containerregistry/pkg/v1/static"
 	"github.com/google/go-containerregistry/pkg/v1/types"
@@ -29,7 +30,8 @@ import (
 const stepKindOCIPush = "oci-push"
 
 // ociPusherConfig holds environment-based configuration for the oci-push step
-// runner. A value of -1 for MaxArtifactSize disables the size limit entirely.
+// runner. A value of -1 for MaxArtifactSize disables the size limit entirely;
+// a value of 0 disables all pushes that transfer blobs.
 type ociPusherConfig struct {
 	MaxArtifactSize int64 `envconfig:"MAX_OCI_PUSH_ARTIFACT_SIZE" default:"1073741824"` // 1 GiB
 }
@@ -112,6 +114,22 @@ func (p *ociPusher) run(
 			}
 	}
 
+	// Validate the source reference before any credential lookups so a
+	// malformed reference fails terminally instead of being masked by a
+	// retryable credential error.
+	var (
+		srcRef      name.Reference
+		srcCredType credentials.Type
+	)
+	if cfg.SrcPath == "" {
+		if srcRef, srcCredType, err = parseOCIReference(cfg.SrcRef); err != nil {
+			return promotion.StepResult{Status: kargoapi.PromotionStepStatusFailed},
+				&promotion.TerminalError{
+					Err: fmt.Errorf("failed to parse source reference %q: %w", cfg.SrcRef, err),
+				}
+		}
+	}
+
 	dstOpts, err := buildOCIRemoteOptions(
 		ctx, p.credsDB, stepCtx.Project, dstRef, dstCredType, cfg.InsecureSkipTLSVerify,
 	)
@@ -126,7 +144,9 @@ func (p *ociPusher) run(
 	if cfg.SrcPath != "" {
 		digest, status, err = p.pushLocalFile(stepCtx, cfg, dstRef, dstOpts)
 	} else {
-		digest, status, err = p.pushRemoteArtifact(ctx, stepCtx, cfg, dstRef, dstOpts)
+		digest, status, err = p.pushRemoteArtifact(
+			ctx, stepCtx, cfg, srcRef, srcCredType, dstRef, dstOpts,
+		)
 	}
 	if err != nil {
 		return promotion.StepResult{Status: status}, err
@@ -148,23 +168,18 @@ func (p *ociPusher) run(
 	}, nil
 }
 
-// pushRemoteArtifact copies/retags the artifact identified by cfg.SrcRef to the
+// pushRemoteArtifact copies/retags the artifact identified by srcRef to the
 // destination reference. It returns the digest of the pushed artifact and, on
 // failure, the promotion step status to report alongside the error.
 func (p *ociPusher) pushRemoteArtifact(
 	ctx context.Context,
 	stepCtx *promotion.StepContext,
 	cfg builtin.OCIPushConfig,
+	srcRef name.Reference,
+	srcCredType credentials.Type,
 	dstRef name.Reference,
 	dstOpts []remote.Option,
 ) (v1.Hash, kargoapi.PromotionStepStatus, error) {
-	srcRef, srcCredType, err := parseOCIReference(cfg.SrcRef)
-	if err != nil {
-		return v1.Hash{}, kargoapi.PromotionStepStatusFailed, &promotion.TerminalError{
-			Err: fmt.Errorf("failed to parse source reference %q: %w", cfg.SrcRef, err),
-		}
-	}
-
 	srcOpts, err := buildOCIRemoteOptions(
 		ctx, p.credsDB, stepCtx.Project, srcRef, srcCredType, cfg.InsecureSkipTLSVerify,
 	)
@@ -235,9 +250,14 @@ func (p *ociPusher) pushLocalFile(
 	}
 
 	// A local push always transfers the blob, so enforce the size limit
-	// unconditionally. A negative maxArtifactSize disables the check. This
-	// mirrors the cross-repository size check on the retag path.
-	if p.maxArtifactSize >= 0 && info.Size() > p.maxArtifactSize {
+	// unconditionally, mirroring the cross-repository check on the retag path:
+	// zero disables pushing entirely and a negative value disables the check.
+	if p.maxArtifactSize == 0 {
+		return v1.Hash{}, kargoapi.PromotionStepStatusErrored, &promotion.TerminalError{
+			Err: fmt.Errorf("local artifact push is disabled"),
+		}
+	}
+	if p.maxArtifactSize > 0 && info.Size() > p.maxArtifactSize {
 		return v1.Hash{}, kargoapi.PromotionStepStatusErrored, &promotion.TerminalError{
 			Err: fmt.Errorf(
 				"artifact size %s exceeds maximum allowed size of %s",
@@ -271,12 +291,12 @@ func (p *ociPusher) pushLocalFile(
 			fmt.Errorf("failed to read source path %q: %w", cfg.SrcPath, err)
 	}
 
-	configDesc, err := layerDescriptor(configLayer)
+	configDesc, err := partial.Descriptor(configLayer)
 	if err != nil {
 		return v1.Hash{}, kargoapi.PromotionStepStatusErrored,
 			fmt.Errorf("failed to describe artifact config: %w", err)
 	}
-	artifactDesc, err := layerDescriptor(artifactLayer)
+	artifactDesc, err := partial.Descriptor(artifactLayer)
 	if err != nil {
 		return v1.Hash{}, kargoapi.PromotionStepStatusErrored,
 			fmt.Errorf("failed to describe artifact layer: %w", err)
@@ -286,8 +306,8 @@ func (p *ociPusher) pushLocalFile(
 		SchemaVersion: 2,
 		MediaType:     types.OCIManifestSchema1,
 		ArtifactType:  artifactType,
-		Config:        configDesc,
-		Layers:        []v1.Descriptor{artifactDesc},
+		Config:        *configDesc,
+		Layers:        []v1.Descriptor{*artifactDesc},
 		Annotations:   scopes.manifest,
 	})
 	if err != nil {
@@ -319,23 +339,6 @@ func (p *ociPusher) pushLocalFile(
 			fmt.Errorf("failed to compute artifact digest: %w", err)
 	}
 	return digest, kargoapi.PromotionStepStatusSucceeded, nil
-}
-
-// layerDescriptor describes a layer whose digest and size are already known.
-func layerDescriptor(layer v1.Layer) (v1.Descriptor, error) {
-	mediaType, err := layer.MediaType()
-	if err != nil {
-		return v1.Descriptor{}, err
-	}
-	digest, err := layer.Digest()
-	if err != nil {
-		return v1.Descriptor{}, err
-	}
-	size, err := layer.Size()
-	if err != nil {
-		return v1.Descriptor{}, err
-	}
-	return v1.Descriptor{MediaType: mediaType, Digest: digest, Size: size}, nil
 }
 
 // fileLayer is a v1.Layer backed by a file, streamed from disk on each read
