@@ -213,7 +213,7 @@ jobs:
       contents: write
     runs-on: ubuntu-latest
     container:
-      image: golang:1.25.14-trixie
+      image: golang:1.27.0-trixie
     strategy:
       matrix:
         os: [linux, darwin, windows]
@@ -278,7 +278,7 @@ jobs:
     if: github.event_name != 'release'
     runs-on: ubuntu-latest
     container:
-      image: golang:1.25.14-trixie
+      image: golang:1.27.0-trixie
     strategy:
       matrix:
         os: [linux, darwin, windows]

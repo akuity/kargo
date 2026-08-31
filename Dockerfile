@@ -20,7 +20,7 @@ RUN NODE_ENV='production' VERSION=${VERSION} pnpm run build
 ####################################################################################################
 # back-end-builder
 ####################################################################################################
-FROM --platform=$BUILDPLATFORM golang:1.25.14-trixie AS back-end-builder
+FROM --platform=$BUILDPLATFORM golang:1.27.0-trixie AS back-end-builder
 
 ARG TARGETOS
 ARG TARGETARCH
