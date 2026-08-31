@@ -6,6 +6,7 @@ import (
 	"net/http"
 	"net/http/httptest"
 	"testing"
+	"time"
 
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
@@ -17,8 +18,9 @@ func TestFetchBestReleases(t *testing.T) {
 		BrowserDownloadURL string `json:"browser_download_url"`
 	}
 	type rawRelease struct {
-		TagName string     `json:"tag_name"`
-		Assets  []rawAsset `json:"assets"`
+		TagName    string     `json:"tag_name"`
+		Prerelease bool       `json:"prerelease,omitempty"`
+		Assets     []rawAsset `json:"assets"`
 	}
 
 	t.Run("paginates and returns best releases", func(t *testing.T) {
@@ -67,6 +69,46 @@ func TestFetchBestReleases(t *testing.T) {
 		assert.True(t, results[0].Latest)
 		assert.True(t, v("1.0.99").Equal(results[1].Version))
 		assert.False(t, results[1].Latest)
+	})
+
+	t.Run("keeps paginating when a page is mostly prereleases", func(t *testing.T) {
+		const perPage = 100
+		asset := rawAsset{Name: "kargo-linux-amd64", BrowserDownloadURL: "https://example.com/dl"}
+
+		// A full page of 100 raw releases, most of which are prereleases and
+		// get filtered out. The page is still full, so there is more to fetch.
+		page1 := make([]rawRelease, perPage)
+		for i := range page1 {
+			page1[i] = rawRelease{
+				TagName:    fmt.Sprintf("v1.2.0-rc.%d", i),
+				Prerelease: true,
+				Assets:     []rawAsset{asset},
+			}
+		}
+		page1[0] = rawRelease{TagName: "v1.2.0", Assets: []rawAsset{asset}}
+		page2 := []rawRelease{{TagName: "v1.1.0", Assets: []rawAsset{asset}}}
+
+		srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+			var data any
+			switch r.URL.Query().Get("page") {
+			case "1", "":
+				data = page1
+			case "2":
+				data = page2
+			default:
+				data = []rawRelease{}
+			}
+			w.Header().Set("Content-Type", "application/json")
+			json.NewEncoder(w).Encode(data) //nolint: errcheck
+		}))
+		defer srv.Close()
+
+		results, err := fetchBestReleases(t.Context(), srv.URL)
+		require.NoError(t, err)
+
+		require.Len(t, results, 2)
+		assert.True(t, v("1.2.0").Equal(results[0].Version))
+		assert.True(t, v("1.1.0").Equal(results[1].Version))
 	})
 
 	t.Run("HTTP error returns error", func(t *testing.T) {
@@ -138,5 +180,48 @@ func TestPickBestReleases(t *testing.T) {
 		results := pickBestReleases(raw)
 		require.Len(t, results, 1)
 		assert.True(t, v("1.0.0").Equal(results[0].Version))
+	})
+
+	t.Run("dates each line from its x.y.0 release", func(t *testing.T) {
+		day := func(s string) time.Time {
+			d, err := time.Parse(time.DateOnly, s)
+			require.NoError(t, err)
+			return d
+		}
+		raw := []Release{
+			{Version: v("1.0.0"), PublishedAt: day("2024-10-19")},
+			{Version: v("1.0.4"), PublishedAt: day("2024-12-06")},
+			{Version: v("1.1.0"), PublishedAt: day("2024-12-06")},
+			// An older line patched after a newer line opened must not take
+			// the newer line's date, nor give up its own.
+			{Version: v("1.0.5"), PublishedAt: day("2025-01-30")},
+			{Version: v("1.1.1"), PublishedAt: day("2025-01-28")},
+		}
+
+		results := pickBestReleases(raw)
+
+		require.Len(t, results, 2)
+		assert.True(t, v("1.1.1").Equal(results[0].Version))
+		assert.Equal(t, "2024-12-06", results[0].InitialReleaseDate)
+		assert.True(t, v("1.0.5").Equal(results[1].Version))
+		assert.Equal(t, "2024-10-19", results[1].InitialReleaseDate)
+	})
+
+	t.Run("falls back to the oldest patch when x.y.0 is absent", func(t *testing.T) {
+		published := time.Date(2025, 5, 15, 22, 27, 32, 0, time.UTC)
+		raw := []Release{
+			{Version: v("1.5.2"), PublishedAt: published},
+			{Version: v("1.5.3"), PublishedAt: published.AddDate(0, 1, 0)},
+		}
+
+		results := pickBestReleases(raw)
+		require.Len(t, results, 1)
+		assert.Equal(t, "2025-05-15", results[0].InitialReleaseDate)
+	})
+
+	t.Run("omits the date when publication time is unknown", func(t *testing.T) {
+		results := pickBestReleases([]Release{{Version: v("1.0.0")}})
+		require.Len(t, results, 1)
+		assert.Empty(t, results[0].InitialReleaseDate)
 	})
 }
