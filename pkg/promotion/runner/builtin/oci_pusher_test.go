@@ -36,6 +36,7 @@ import (
 const testMaxArtifactSize = int64(1024 * 1024 * 1024)
 
 func Test_ociPusher_validate(t *testing.T) {
+	t.Parallel()
 	tests := []validationTestCase{
 		{
 			name: "no source specified",
@@ -131,6 +132,7 @@ func Test_ociPusher_validate(t *testing.T) {
 }
 
 func Test_ociPusher_run(t *testing.T) {
+	t.Parallel()
 	regHost := newRegistry(t)
 
 	// Push a test image to the registry for use as a source.
@@ -404,6 +406,7 @@ func Test_ociPusher_run(t *testing.T) {
 }
 
 func Test_ociPusher_push_unsupportedMediaType(t *testing.T) {
+	t.Parallel()
 	// Create a descriptor with an unsupported media type.
 	desc := &remote.Descriptor{
 		Descriptor: v1.Descriptor{
@@ -424,6 +427,7 @@ func Test_ociPusher_push_unsupportedMediaType(t *testing.T) {
 }
 
 func Test_ociPusher_run_credentialError(t *testing.T) {
+	t.Parallel()
 	tests := []struct {
 		name    string
 		cfg     builtin.OCIPushConfig
@@ -488,6 +492,7 @@ func Test_ociPusher_run_credentialError(t *testing.T) {
 
 // Test that annotations don't mutate the source image when none are provided.
 func Test_ociPusher_run_noAnnotationsMutation(t *testing.T) {
+	t.Parallel()
 	regHost := newRegistry(t)
 
 	// Create an OCI image with existing annotations.
@@ -555,6 +560,7 @@ func makeTarGz(t *testing.T) []byte {
 // Test that a local archive is pushed as a single-layer OCI artifact with the
 // configured media types and scoped annotations.
 func Test_ociPusher_run_localFile(t *testing.T) {
+	t.Parallel()
 	regHost := newRegistry(t)
 
 	const (
@@ -645,6 +651,7 @@ func Test_ociPusher_run_localFile(t *testing.T) {
 // Test the media type defaults: an OCI tar+gzip layer, no artifact type, and
 // the empty config.
 func Test_ociPusher_run_localFile_defaultMediaTypes(t *testing.T) {
+	t.Parallel()
 	regHost := newRegistry(t)
 
 	workDir := t.TempDir()
@@ -686,6 +693,7 @@ func Test_ociPusher_run_localFile_defaultMediaTypes(t *testing.T) {
 // Test that a file-backed layer reports the file's digest and size, and can be
 // read more than once.
 func Test_newFileLayer(t *testing.T) {
+	t.Parallel()
 	workDir := t.TempDir()
 	content := makeTarGz(t)
 	require.NoError(t, os.WriteFile(filepath.Join(workDir, "artifact.tar.gz"), content, 0o644))
@@ -726,6 +734,7 @@ func Test_newFileLayer(t *testing.T) {
 
 // Test that a source path that cannot be read is reported as an error.
 func Test_newFileLayer_missingFile(t *testing.T) {
+	t.Parallel()
 	root, err := os.OpenRoot(t.TempDir())
 	require.NoError(t, err)
 	t.Cleanup(func() { require.NoError(t, root.Close()) })
@@ -736,6 +745,7 @@ func Test_newFileLayer_missingFile(t *testing.T) {
 
 // Test error handling for local-file pushes.
 func Test_ociPusher_run_localFile_errors(t *testing.T) {
+	t.Parallel()
 	tests := []struct {
 		name            string
 		maxArtifactSize int64
@@ -801,6 +811,7 @@ func Test_ociPusher_run_localFile_errors(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
+			t.Parallel()
 			workDir := t.TempDir()
 			srcPath := tt.setup(t, workDir)
 
@@ -828,6 +839,7 @@ func Test_ociPusher_run_localFile_errors(t *testing.T) {
 
 // Test that an unopenable workspace is not reported as a source path problem.
 func Test_ociPusher_run_localFile_workspaceError(t *testing.T) {
+	t.Parallel()
 	runner := &ociPusher{
 		credsDB:         &credentials.FakeDB{},
 		schemaLoader:    getConfigSchemaLoader(stepKindOCIPush),
@@ -859,6 +871,7 @@ func Test_ociPusher_run_localFile_workspaceError(t *testing.T) {
 // Test that a failure to write the artifact to the registry is reported as a
 // (retryable) error.
 func Test_ociPusher_run_localFile_pushError(t *testing.T) {
+	t.Parallel()
 	srv := httptest.NewServer(http.HandlerFunc(
 		func(w http.ResponseWriter, _ *http.Request) {
 			w.WriteHeader(http.StatusForbidden)
@@ -895,6 +908,7 @@ func Test_ociPusher_run_localFile_pushError(t *testing.T) {
 }
 
 func Test_parseAnnotationScopes(t *testing.T) {
+	t.Parallel()
 	tests := []struct {
 		name         string
 		annotations  map[string]string
@@ -954,6 +968,7 @@ func Test_parseAnnotationScopes(t *testing.T) {
 }
 
 func Test_ociPusher_run_scopedAnnotationsOnImage(t *testing.T) {
+	t.Parallel()
 	regHost := newRegistry(t)
 
 	srcImg, err := random.Image(256, 1)
@@ -999,6 +1014,7 @@ func Test_ociPusher_run_scopedAnnotationsOnImage(t *testing.T) {
 
 // Test OCI image with an OCI manifest (not Docker) to ensure annotations work.
 func Test_ociPusher_run_ociManifestAnnotations(t *testing.T) {
+	t.Parallel()
 	regHost := newRegistry(t)
 
 	// Create an OCI-format image (empty.Image is OCI by default).
@@ -1035,6 +1051,7 @@ func Test_ociPusher_run_ociManifestAnnotations(t *testing.T) {
 }
 
 func Test_imageSize(t *testing.T) {
+	t.Parallel()
 	img, err := random.Image(256, 3)
 	require.NoError(t, err)
 
@@ -1055,6 +1072,7 @@ func Test_imageSize(t *testing.T) {
 }
 
 func Test_indexSize(t *testing.T) {
+	t.Parallel()
 	idx, err := random.Index(256, 2, 3) // 3 platform images, 2 layers each
 	require.NoError(t, err)
 
@@ -1078,6 +1096,7 @@ func Test_indexSize(t *testing.T) {
 }
 
 func Test_ociPusher_push_sizeLimitExceeded(t *testing.T) {
+	t.Parallel()
 	regHost := newRegistry(t)
 
 	// Push a test image (will exceed our tiny limit).
@@ -1131,6 +1150,7 @@ func Test_ociPusher_push_sizeLimitExceeded(t *testing.T) {
 }
 
 func Test_ociPusher_push_sizeLimitZero(t *testing.T) {
+	t.Parallel()
 	regHost := newRegistry(t)
 
 	srcImg, err := random.Image(256, 1)
@@ -1166,6 +1186,7 @@ func Test_ociPusher_push_sizeLimitZero(t *testing.T) {
 }
 
 func Test_ociPusher_push_sizeLimitDisabled(t *testing.T) {
+	t.Parallel()
 	regHost := newRegistry(t)
 
 	srcImg, err := random.Image(256, 1)
