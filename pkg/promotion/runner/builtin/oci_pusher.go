@@ -314,6 +314,11 @@ func (p *ociPusher) pushLocalFile(
 		return v1.Hash{}, kargoapi.PromotionStepStatusErrored,
 			fmt.Errorf("failed to build artifact manifest: %w", err)
 	}
+	digest, _, err := v1.SHA256(bytes.NewReader(rawManifest))
+	if err != nil {
+		return v1.Hash{}, kargoapi.PromotionStepStatusErrored,
+			fmt.Errorf("failed to compute artifact digest: %w", err)
+	}
 
 	// Upload both blobs before the manifest that references them. The blobs are
 	// unreachable until then, so the manifest is the commit point: a failure
@@ -333,11 +338,6 @@ func (p *ociPusher) pushLocalFile(
 			fmt.Errorf("failed to push artifact to %q: %w", dstRef.String(), err)
 	}
 
-	digest, _, err := v1.SHA256(bytes.NewReader(rawManifest))
-	if err != nil {
-		return v1.Hash{}, kargoapi.PromotionStepStatusErrored,
-			fmt.Errorf("failed to compute artifact digest: %w", err)
-	}
 	return digest, kargoapi.PromotionStepStatusSucceeded, nil
 }
 
