@@ -6,7 +6,6 @@
  * OpenAPI spec version: v1alpha1
  */
 import type { PromotionWindowKind } from './promotionWindowKind';
-import type { PromotionPolicySelector } from './promotionPolicySelector';
 
 export interface PromotionWindow {
   /** DTEnd is the window's end in the same format as DTStart. When combined with
@@ -36,15 +35,6 @@ to identify the window in denial messages and events.
 +kubebuilder:validation:Pattern=`^[a-z0-9]([-a-z0-9]*[a-z0-9])?(\.[a-z0-9]([-a-z0-9]*[a-z0-9])?)*$`
 +akuity:test-kubebuilder-pattern=KubernetesName */
   name: string;
-  /** ProjectSelector selects the Projects this window applies to. It is only
-meaningful on ClusterConfig windows; on ProjectConfig windows the Project
-is implicit and this field is rejected. When omitted on a ClusterConfig
-window, the window applies to all Projects. It reuses
-PromotionPolicySelector, matching Projects by exact name, glob/regex
-pattern, or label selector.
-
-+optional */
-  projectSelector?: PromotionPolicySelector;
   /** RRule is an optional RFC 5545 recurrence rule (e.g. "FREQ=DAILY") that
 makes the window recurring. When omitted, the window is a one-shot interval
 defined by DTStart and DTEnd. The full value is parsed and validated by
@@ -52,11 +42,4 @@ Kargo Enterprise.
 
 +optional */
   rrule?: string;
-  /** StageSelector selects the Stages this window applies to. When omitted, the
-window applies to all Stages in scope (project-wide on ProjectConfig,
-cluster-wide on ClusterConfig). It reuses PromotionPolicySelector, so it
-can match by exact name, glob/regex pattern, or label selector.
-
-+optional */
-  stageSelector?: PromotionPolicySelector;
 }

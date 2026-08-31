@@ -50,10 +50,36 @@ type ClusterConfigSpec struct {
 	//
 	// +optional
 	StageLinks []DeepLink `json:"stageLinks,omitempty"`
+	// ClusterPromotionPolicies is a ClusterConfig equivalent of PromotionPolicy.
+	// NOTE: Currently only supports promotion windows, auto-promotions and rollbacks are NOT supported.
+	//
+	// Kargo Enterprise only: This field is ignored in Kargo OSS.
+	//
+	// +optional
+	// +listType=map
+	// +listMapKey=name
+	ClusterPromotionPolicies []ClusterPromotionPolicy `json:"promotionPolicies,omitempty"`
+}
+
+// ClusterPromotionPolicy is a partial ClusterConfig equivalent of PromotionPolicy.
+// In addition to StageSelector it also has ProjectSelector allowing to apply it to specific projects only.
+type ClusterPromotionPolicy struct {
+	// StageSelector selects the Stages this policy applies to. When omitted, the
+	// policy applies to all Stages in scope. It reuses PromotionPolicySelector, so it
+	// can match by exact name, glob/regex pattern, or label selector.
+	//
+	// +optional
+	StageSelector *PromotionPolicySelector `json:"stageSelector,omitempty"`
+	// ProjectSelector selects the Projects this policy applies to. 
+	// When omitted on a ClusterConfig policy, the policy applies to all Projects.
+	// It reuses PromotionPolicySelector, matching Projects by exact name, glob/regex
+	// pattern, or label selector.
+	//
+	// +optional
+	ProjectSelector *PromotionPolicySelector `json:"projectSelector,omitempty"`
 	// PromotionWindows defines time windows that gate promotions across the
-	// cluster. Each window may narrow its scope with a projectSelector and/or
-	// stageSelector. A Stage's effective schedule is the union of matching
-	// windows defined here and any project-level windows in ProjectConfig.
+	// cluster. A Stage's effective schedule is the union of matching
+	// windows defined here and any project-level policies in ProjectConfig.
 	//
 	// Kargo Enterprise only: This field is ignored in Kargo OSS.
 	//
