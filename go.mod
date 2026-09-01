@@ -29,8 +29,8 @@ require (
 	code.gitea.io/sdk/gitea v0.25.1
 	connectrpc.com/connect v1.20.0
 	github.com/AlecAivazis/survey/v2 v2.3.7
-	github.com/Azure/azure-sdk-for-go/sdk/azcore v1.22.0
-	github.com/Azure/azure-sdk-for-go/sdk/azidentity v1.14.0
+	github.com/Azure/azure-sdk-for-go/sdk/azcore v1.23.1
+	github.com/Azure/azure-sdk-for-go/sdk/azidentity v1.14.1
 	github.com/Azure/azure-sdk-for-go/sdk/containers/azcontainerregistry v0.2.3
 	github.com/Masterminds/semver/v3 v3.5.0
 	github.com/Masterminds/sprig/v3 v3.3.0
@@ -65,7 +65,7 @@ require (
 	github.com/hashicorp/golang-lru/v2 v2.0.7
 	github.com/jferrl/go-githubauth v1.7.0
 	github.com/kelseyhightower/envconfig v1.4.0
-	github.com/klauspost/compress v1.19.1
+	github.com/klauspost/compress v1.19.2
 	github.com/microsoft/azure-devops-go-api/azuredevops/v7 v7.1.0
 	github.com/oapi-codegen/runtime v1.6.0
 	github.com/oklog/ulid/v2 v2.1.2
@@ -79,7 +79,7 @@ require (
 	github.com/sosedoff/gitkit v0.4.0
 	github.com/spf13/cobra v1.10.2
 	github.com/spf13/pflag v1.0.10
-	github.com/stretchr/testify v1.11.1
+	github.com/stretchr/testify v1.12.1
 	github.com/technosophos/moniker v0.0.0-20210218184952-3ea787d3943b
 	github.com/tidwall/sjson v1.2.5
 	github.com/xeipuuv/gojsonschema v1.2.0
@@ -87,13 +87,13 @@ require (
 	go.uber.org/ratelimit v0.3.1
 	go.uber.org/zap v1.28.0
 	go.yaml.in/yaml/v3 v3.0.5
-	golang.org/x/crypto v0.54.0
+	golang.org/x/crypto v0.55.0
 	golang.org/x/oauth2 v0.36.0
 	golang.org/x/sync v0.22.0
-	golang.org/x/text v0.40.0
+	golang.org/x/text v0.41.0
 	google.golang.org/api v0.292.0
 	gopkg.in/yaml.v3 v3.0.1
-	helm.sh/helm/v3 v3.21.3
+	helm.sh/helm/v3 v3.21.4
 	k8s.io/api v0.36.3
 	k8s.io/apiextensions-apiserver v0.36.3
 	k8s.io/apimachinery v0.36.3
@@ -118,13 +118,14 @@ require (
 	github.com/42wim/httpsig v1.2.4 // indirect
 	github.com/Azure/azure-sdk-for-go/sdk/internal v1.12.0 // indirect
 	github.com/Azure/go-ansiterm v0.0.0-20250102033503-faa5f7b0171c // indirect
-	github.com/AzureAD/microsoft-authentication-library-for-go v1.7.2 // indirect
+	github.com/AzureAD/microsoft-authentication-library-for-go v1.8.0 // indirect
 	github.com/BurntSushi/toml v1.6.0 // indirect
 	github.com/KyleBanks/depth v1.2.1 // indirect
 	github.com/MakeNowJust/heredoc v1.0.0 // indirect
 	github.com/Masterminds/goutils v1.1.1 // indirect
 	github.com/Masterminds/squirrel v1.5.4 // indirect
 	github.com/Microsoft/go-winio v0.6.2 // indirect
+	github.com/ProtonMail/go-crypto v1.4.1 // indirect
 	github.com/apapsch/go-jsonmerge/v2 v2.0.0 // indirect
 	github.com/asaskevich/govalidator v0.0.0-20230301143203-a9d515a09cc2 // indirect
 	github.com/aws/aws-sdk-go-v2/feature/ec2/imds v1.18.33 // indirect
@@ -146,6 +147,7 @@ require (
 	github.com/cespare/xxhash/v2 v2.3.0 // indirect
 	github.com/chai2010/gettext-go v1.0.3 // indirect
 	github.com/clipperhouse/uax29/v2 v2.7.0 // indirect
+	github.com/cloudflare/circl v1.6.3 // indirect
 	github.com/cloudwego/base64x v0.1.7 // indirect
 	github.com/containerd/errdefs v1.0.0 // indirect
 	github.com/containerd/errdefs/pkg v0.3.0 // indirect
@@ -274,7 +276,7 @@ require (
 	github.com/speakeasy-api/jsonpath v0.6.3 // indirect
 	github.com/speakeasy-api/openapi v1.19.2 // indirect
 	github.com/spf13/cast v1.10.0 // indirect
-	github.com/stretchr/objx v0.5.2 // indirect
+	github.com/stretchr/objx v0.5.3 // indirect
 	github.com/swaggo/swag v1.16.6 // indirect
 	github.com/tidwall/gjson v1.19.0 // indirect
 	github.com/tidwall/match v1.2.0 // indirect
@@ -310,13 +312,13 @@ require (
 	go.uber.org/multierr v1.11.0 // indirect
 	go.yaml.in/yaml/v2 v2.4.4 // indirect
 	golang.org/x/arch v0.29.0 // indirect
-	golang.org/x/mod v0.37.0 // indirect
-	golang.org/x/net v0.57.0 // indirect
+	golang.org/x/mod v0.38.0 // indirect
+	golang.org/x/net v0.58.0 // indirect
 	golang.org/x/sys v0.47.0 // indirect
-	golang.org/x/telemetry v0.0.0-20260625142307-59b4966ccb57 // indirect
+	golang.org/x/telemetry v0.0.0-20260708182218-49f421fb7959 // indirect
 	golang.org/x/term v0.45.0 // indirect
 	golang.org/x/time v0.15.0 // indirect
-	golang.org/x/tools v0.47.0 // indirect
+	golang.org/x/tools v0.48.0 // indirect
 	gomodules.xyz/jsonpatch/v2 v2.5.0 // indirect
 	google.golang.org/genproto/googleapis/api v0.0.0-20260630182238-925bb5da69e7 // indirect
 	google.golang.org/genproto/googleapis/rpc v0.0.0-20260803160001-6ac0973c030d // indirect
