@@ -21,8 +21,10 @@ var _ MappedNullable = &PromotionRequestSpec{}
 
 // PromotionRequestSpec struct for PromotionRequestSpec
 type PromotionRequestSpec struct {
-	// Freight specifies the piece of Freight promoted by the Stage. The Freight MUST be in the same namespace as the PromotionRequest.  +kubebuilder:validation:Required +kubebuilder:validation:MinLength=1 +kubebuilder:validation:MaxLength=253 +kubebuilder:validation:Pattern=`^[a-z0-9]([-a-z0-9]*[a-z0-9])?(\\.[a-z0-9]([-a-z0-9]*[a-z0-9])?)*$` +akuity:test-kubebuilder-pattern=KubernetesName +kubebuilder:validation:XValidation:rule=\"self == oldSelf\"
-	Freight string `json:"freight"`
+	// Freight specifies the piece of Freight promoted by the Stage. The Freight MUST be in the same namespace as the PromotionRequest. Exactly one of Freight or Origin must be set. Once set, Freight is immutable -- this is enforced by a transition rule on the spec rather than on this field, since a rule here would not be evaluated on an update that omits the field entirely.  +kubebuilder:validation:Optional +kubebuilder:validation:MinLength=1 +kubebuilder:validation:MaxLength=253 +kubebuilder:validation:Pattern=`^[a-z0-9]([-a-z0-9]*[a-z0-9])?(\\.[a-z0-9]([-a-z0-9]*[a-z0-9])?)*$` +akuity:test-kubebuilder-pattern=KubernetesName
+	Freight *string `json:"freight,omitempty"`
+	// Origin, when set, identifies the FreightOrigin whose auto-promotion candidate should be promoted. The PromotionRequest defaulting webhook resolves this to the candidate Freight for that origin and fills Freight before the PromotionRequest is persisted. Exactly one of Freight or Origin must be set.  +kubebuilder:validation:Optional
+	Origin *FreightOrigin `json:"origin,omitempty"`
 	// Stage specifies the name of the Stage that promotes the Freight. The Stage MUST be in the same namespace as the PromotionRequest.  +kubebuilder:validation:Required +kubebuilder:validation:MinLength=1 +kubebuilder:validation:MaxLength=253 +kubebuilder:validation:Pattern=`^[a-z0-9]([-a-z0-9]*[a-z0-9])?(\\.[a-z0-9]([-a-z0-9]*[a-z0-9])?)*$` +akuity:test-kubebuilder-pattern=KubernetesName +kubebuilder:validation:XValidation:rule=\"self == oldSelf\"
 	Stage string `json:"stage"`
 	// Targets names the Targets to which this PromotionRequest promotes Freight. Each Target MUST be in the same namespace as the PromotionRequest. The list may be empty, which records that the governing Stage governed no Targets when the PromotionRequest was created -- distinct from the field being absent, which asks for it to be resolved.  This is a resolved list, not a selector: the Stage's target selectors are evaluated once, at creation, and the result recorded here. The membership of the PromotionRequest is therefore a snapshot of what the Stage governed at that moment, and its threshold and terminal state are computed against it rather than against a selector that could match differently later.  This is the only mutable field in the spec. The governing Stage owns it, and may add Targets to an in-flight PromotionRequest so that Targets discovered after creation can still receive the Freight. Target names MUST be unique; this is enforced by the validating webhook rather than by the schema, since a list-map's per-item ownership tracking would roughly double the storage cost of every entry.  +listType=atomic +kubebuilder:validation:Required
@@ -35,9 +37,8 @@ type _PromotionRequestSpec PromotionRequestSpec
 // This constructor will assign default values to properties that have it defined,
 // and makes sure properties required by API are set, but the set of arguments
 // will change when the set of required properties is changed
-func NewPromotionRequestSpec(freight string, stage string, targets []PromotionRequestTarget) *PromotionRequestSpec {
+func NewPromotionRequestSpec(stage string, targets []PromotionRequestTarget) *PromotionRequestSpec {
 	this := PromotionRequestSpec{}
-	this.Freight = freight
 	this.Stage = stage
 	this.Targets = targets
 	return &this
@@ -51,28 +52,68 @@ func NewPromotionRequestSpecWithDefaults() *PromotionRequestSpec {
 	return &this
 }
 
-// GetFreight returns the Freight field value
+// GetFreight returns the Freight field value if set, zero value otherwise.
 func (o *PromotionRequestSpec) GetFreight() string {
-	if o == nil {
+	if o == nil || IsNil(o.Freight) {
 		var ret string
 		return ret
 	}
-
-	return o.Freight
+	return *o.Freight
 }
 
-// GetFreightOk returns a tuple with the Freight field value
+// GetFreightOk returns a tuple with the Freight field value if set, nil otherwise
 // and a boolean to check if the value has been set.
 func (o *PromotionRequestSpec) GetFreightOk() (*string, bool) {
-	if o == nil {
+	if o == nil || IsNil(o.Freight) {
 		return nil, false
 	}
-	return &o.Freight, true
+	return o.Freight, true
 }
 
-// SetFreight sets field value
+// HasFreight returns a boolean if a field has been set.
+func (o *PromotionRequestSpec) HasFreight() bool {
+	if o != nil && !IsNil(o.Freight) {
+		return true
+	}
+
+	return false
+}
+
+// SetFreight gets a reference to the given string and assigns it to the Freight field.
 func (o *PromotionRequestSpec) SetFreight(v string) {
-	o.Freight = v
+	o.Freight = &v
+}
+
+// GetOrigin returns the Origin field value if set, zero value otherwise.
+func (o *PromotionRequestSpec) GetOrigin() FreightOrigin {
+	if o == nil || IsNil(o.Origin) {
+		var ret FreightOrigin
+		return ret
+	}
+	return *o.Origin
+}
+
+// GetOriginOk returns a tuple with the Origin field value if set, nil otherwise
+// and a boolean to check if the value has been set.
+func (o *PromotionRequestSpec) GetOriginOk() (*FreightOrigin, bool) {
+	if o == nil || IsNil(o.Origin) {
+		return nil, false
+	}
+	return o.Origin, true
+}
+
+// HasOrigin returns a boolean if a field has been set.
+func (o *PromotionRequestSpec) HasOrigin() bool {
+	if o != nil && !IsNil(o.Origin) {
+		return true
+	}
+
+	return false
+}
+
+// SetOrigin gets a reference to the given FreightOrigin and assigns it to the Origin field.
+func (o *PromotionRequestSpec) SetOrigin(v FreightOrigin) {
+	o.Origin = &v
 }
 
 // GetStage returns the Stage field value
@@ -133,7 +174,12 @@ func (o PromotionRequestSpec) MarshalJSON() ([]byte, error) {
 
 func (o PromotionRequestSpec) ToMap() (map[string]interface{}, error) {
 	toSerialize := map[string]interface{}{}
-	toSerialize["freight"] = o.Freight
+	if !IsNil(o.Freight) {
+		toSerialize["freight"] = o.Freight
+	}
+	if !IsNil(o.Origin) {
+		toSerialize["origin"] = o.Origin
+	}
 	toSerialize["stage"] = o.Stage
 	toSerialize["targets"] = o.Targets
 	return toSerialize, nil
@@ -144,7 +190,6 @@ func (o *PromotionRequestSpec) UnmarshalJSON(data []byte) (err error) {
 	// by unmarshalling the object into a generic map with string keys and checking
 	// that every required field exists as a key in the generic map.
 	requiredProperties := []string{
-		"freight",
 		"stage",
 		"targets",
 	}

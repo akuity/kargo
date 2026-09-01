@@ -66,12 +66,38 @@ spec:
                 description: |-
                   Freight specifies the piece of Freight promoted by the Stage.
                   The Freight MUST be in the same namespace as the PromotionRequest.
+                  Exactly one of Freight or Origin must be set. Once set, Freight is
+                  immutable -- this is enforced by a transition rule on the spec rather
+                  than on this field, since a rule here would not be evaluated on an
+                  update that omits the field entirely.
                 maxLength: 253
                 minLength: 1
                 pattern: ^[a-z0-9]([-a-z0-9]*[a-z0-9])?(\.[a-z0-9]([-a-z0-9]*[a-z0-9])?)*$
                 type: string
-                x-kubernetes-validations:
-                - rule: self == oldSelf
+              origin:
+                description: |-
+                  Origin, when set, identifies the FreightOrigin whose auto-promotion
+                  candidate should be promoted. The PromotionRequest defaulting webhook
+                  resolves this to the candidate Freight for that origin and fills Freight
+                  before the PromotionRequest is persisted. Exactly one of Freight or
+                  Origin must be set.
+                properties:
+                  kind:
+                    description: |-
+                      Kind is the kind of resource from which Freight may have originated. At
+                      present, this can only be "Warehouse".
+                    enum:
+                    - Warehouse
+                    type: string
+                  name:
+                    description: |-
+                      Name is the name of the resource of the kind indicated by the Kind field
+                      from which Freight may originate.
+                    type: string
+                required:
+                - kind
+                - name
+                type: object
               stage:
                 description: |-
                   Stage specifies the name of the Stage that promotes the Freight.
@@ -119,10 +145,15 @@ spec:
                 type: array
                 x-kubernetes-list-type: atomic
             required:
-            - freight
             - stage
             - targets
             type: object
+            x-kubernetes-validations:
+            - message: exactly one of freight or origin must be set
+              rule: has(self.freight) != has(self.origin)
+            - message: freight is immutable
+              rule: '!has(oldSelf.freight) || (has(self.freight) && self.freight ==
+                oldSelf.freight)'
           status:
             description: |-
               Status describes the per-Target progress and the aggregate state of the

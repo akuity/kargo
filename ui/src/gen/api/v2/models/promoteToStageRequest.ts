@@ -11,8 +11,10 @@ export interface PromoteToStageRequest {
   freightAlias?: string;
   /**
    * Origin is the canonical Freight origin key (e.g. "Warehouse/foo"). When
-   * set, the promotion webhook resolves it to the current auto-promotion
-   * candidate. Exactly one of Freight, FreightAlias, or Origin must be set.
+   * set, admission resolves it to the current auto-promotion candidate --
+   * via the Promotion defaulting webhook, or the PromotionRequest defaulting
+   * webhook for a Stage that selects Targets. Exactly one of Freight,
+   * FreightAlias, or Origin must be set.
    */
   origin?: string;
 }

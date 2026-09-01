@@ -212,21 +212,19 @@ func Test_server_promoteToStage(t *testing.T) {
 				},
 			},
 			{
-				name: "Promotion by origin is refused for a target-aware Stage",
+				name: "Target-aware Stage promoted by origin yields a PromotionRequest carrying the origin",
 				clientBuilder: fake.NewClientBuilder().WithObjects(
 					testProject,
 					testTargetAwareStage,
 					testFreight,
+					testTarget,
 				),
 				serverSetup: authorizeAllStagesPromote,
 				body: mustJSONBody(promoteToStageRequest{
 					Origin: testFreight.Origin.String(),
 				}),
 				assertions: func(t *testing.T, w *httptest.ResponseRecorder, c client.Client) {
-					// Nothing resolves an origin for a PromotionRequest, so this
-					// must fail loudly rather than fall back to a Promotion
-					// that would bypass the Stage's Targets.
-					require.Equal(t, http.StatusBadRequest, w.Code)
+					require.Equal(t, http.StatusCreated, w.Code)
 
 					promos := &kargoapi.PromotionList{}
 					require.NoError(t, c.List(t.Context(), promos, client.InNamespace(testProject.Name)))
@@ -234,7 +232,17 @@ func Test_server_promoteToStage(t *testing.T) {
 
 					reqs := &kargoapi.PromotionRequestList{}
 					require.NoError(t, c.List(t.Context(), reqs, client.InNamespace(testProject.Name)))
-					require.Empty(t, reqs.Items)
+					require.Len(t, reqs.Items, 1)
+					// The origin rides along unresolved; the PromotionRequest
+					// defaulting webhook resolves it to the candidate Freight at
+					// admission time.
+					require.Empty(t, reqs.Items[0].Spec.Freight)
+					require.Equal(t, testFreight.Origin, *reqs.Items[0].Spec.Origin)
+					require.Equal(
+						t,
+						[]kargoapi.PromotionRequestTarget{{Name: "us-east"}},
+						reqs.Items[0].Spec.Targets,
+					)
 				},
 			},
 			{
