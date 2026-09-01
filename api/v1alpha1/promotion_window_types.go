@@ -40,6 +40,17 @@ type PromotionWindow struct {
 	// +kubebuilder:validation:Pattern=`^[a-z0-9]([-a-z0-9]*[a-z0-9])?(\.[a-z0-9]([-a-z0-9]*[a-z0-9])?)*$`
 	// +akuity:test-kubebuilder-pattern=KubernetesName
 	Name string `json:"name"`
+	// Description is a human-readable description of the window.
+	// May contain reason, author or any clarification for the window.
+	//
+	// +optional
+	// +kubebuilder:validation:MaxLength=1024
+	Description string `json:"description,omitempty"`
+	// Disabled controls whether configured windows should be skipped when calculating the stage window status.
+	// Optional. Default is `false`. Unless set to `true` the window will impact the stages it's configured for.
+	//
+	// +optional
+	Disabled bool `json:"disabled,omitempty"`
 	// StageSelector selects the Stages this window applies to. When omitted, the
 	// window applies to all Stages in scope (project-wide on ProjectConfig,
 	// cluster-wide on ClusterConfig). It reuses PromotionPolicySelector, so it
