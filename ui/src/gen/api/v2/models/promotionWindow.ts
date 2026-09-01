@@ -9,6 +9,17 @@ import type { PromotionWindowKind } from './promotionWindowKind';
 import type { PromotionPolicySelector } from './promotionPolicySelector';
 
 export interface PromotionWindow {
+  /** Description is a human-readable description of the window.
+May contain reason, author or any clarification for the window.
+
++optional
++kubebuilder:validation:MaxLength=1024 */
+  description?: string;
+  /** Disabled controls whether configured windows should be skipped when calculating the stage window status.
+Optional. Default is `false`. Unless set to `true` the window will impact the stages it's configured for.
+
++optional */
+  disabled?: boolean;
   /** DTEnd is the window's end in the same format as DTStart. When combined with
 RRule, DTEnd - DTStart defines the duration of each occurrence. The value
 is parsed and validated by Kargo Enterprise.
