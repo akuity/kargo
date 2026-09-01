@@ -390,11 +390,7 @@ func Test_ociPusher_run(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			runner := &ociPusher{
-				credsDB:         &credentials.FakeDB{},
-				schemaLoader:    getConfigSchemaLoader(stepKindOCIPush),
-				maxArtifactSize: testMaxArtifactSize,
-			}
+			runner := newTestPusher()
 
 			stepCtx := &promotion.StepContext{
 				Project: "fake-project",
@@ -415,7 +411,7 @@ func Test_ociPusher_push_unsupportedMediaType(t *testing.T) {
 		},
 	}
 
-	runner := &ociPusher{maxArtifactSize: testMaxArtifactSize}
+	runner := newTestPusher()
 	srcRef, err := name.ParseReference("localhost:5000/src:tag")
 	require.NoError(t, err)
 	dstRef, err := name.ParseReference("localhost:5000/test:tag")
@@ -475,11 +471,8 @@ func Test_ociPusher_run_credentialError(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			runner := &ociPusher{
-				credsDB:         tt.credsDB,
-				schemaLoader:    getConfigSchemaLoader(stepKindOCIPush),
-				maxArtifactSize: testMaxArtifactSize,
-			}
+			runner := newTestPusher()
+			runner.credsDB = tt.credsDB
 
 			stepCtx := &promotion.StepContext{
 				Project: "fake-project",
@@ -509,11 +502,7 @@ func Test_ociPusher_run_noAnnotationsMutation(t *testing.T) {
 	require.NoError(t, err)
 	require.NoError(t, remote.Write(srcRef, srcImg))
 
-	runner := &ociPusher{
-		credsDB:         &credentials.FakeDB{},
-		schemaLoader:    getConfigSchemaLoader(stepKindOCIPush),
-		maxArtifactSize: testMaxArtifactSize,
-	}
+	runner := newTestPusher()
 
 	// Push without specifying annotations.
 	result, err := runner.run(t.Context(), &promotion.StepContext{
@@ -537,26 +526,6 @@ func Test_ociPusher_run_noAnnotationsMutation(t *testing.T) {
 
 // emptyConfigDigest is the digest of the OCI empty descriptor's content.
 const emptyConfigDigest = "sha256:44136fa355b3678a1146ad16f7e8649e94fb4fc21fe77e8310c060f61caaff8a"
-
-// makeTarGz builds an in-memory gzip-compressed tar archive containing a single
-// file, for use as a local artifact in tests.
-func makeTarGz(t *testing.T) []byte {
-	t.Helper()
-	const content = "kind: ConfigMap\n"
-	var buf bytes.Buffer
-	gz := gzip.NewWriter(&buf)
-	tw := tar.NewWriter(gz)
-	require.NoError(t, tw.WriteHeader(&tar.Header{
-		Name: "manifests.yaml",
-		Mode: 0o644,
-		Size: int64(len(content)),
-	}))
-	_, err := tw.Write([]byte(content))
-	require.NoError(t, err)
-	require.NoError(t, tw.Close())
-	require.NoError(t, gz.Close())
-	return buf.Bytes()
-}
 
 // Test that a local archive is pushed as a single-layer OCI artifact with the
 // configured media types and scoped annotations.
@@ -690,7 +659,11 @@ func Test_newFileLayer(t *testing.T) {
 	require.NoError(t, err)
 	t.Cleanup(func() { require.NoError(t, root.Close()) })
 
-	layer, err := newFileLayer(root, "artifact.tar.gz", types.OCILayer, testMaxArtifactSize)
+	f, err := root.Open("artifact.tar.gz")
+	require.NoError(t, err)
+	t.Cleanup(func() { require.NoError(t, f.Close()) })
+
+	layer, err := newFileLayer(root, "artifact.tar.gz", f, types.OCILayer, testMaxArtifactSize)
 	require.NoError(t, err)
 
 	wantDigest, wantSize, err := v1.SHA256(bytes.NewReader(content))
@@ -720,17 +693,6 @@ func Test_newFileLayer(t *testing.T) {
 	}
 }
 
-// Test that a source path that cannot be read is reported as an error.
-func Test_newFileLayer_missingFile(t *testing.T) {
-	t.Parallel()
-	root, err := os.OpenRoot(t.TempDir())
-	require.NoError(t, err)
-	t.Cleanup(func() { require.NoError(t, root.Close()) })
-
-	_, err = newFileLayer(root, "missing.tar.gz", types.OCILayer, testMaxArtifactSize)
-	assert.ErrorContains(t, err, "missing.tar.gz")
-}
-
 // Test that the size limit is enforced on the bytes actually read, so a file
 // that grows after a stat-based pre-check cannot slip past the limit.
 func Test_newFileLayer_limit(t *testing.T) {
@@ -742,10 +704,19 @@ func Test_newFileLayer_limit(t *testing.T) {
 	require.NoError(t, err)
 	t.Cleanup(func() { require.NoError(t, root.Close()) })
 
+	openArchive := func(t *testing.T) io.Reader {
+		t.Helper()
+		f, err := root.Open("artifact.tar.gz")
+		require.NoError(t, err)
+		t.Cleanup(func() { require.NoError(t, f.Close()) })
+		return f
+	}
+
 	t.Run("content exceeds limit", func(t *testing.T) {
 		t.Parallel()
 		_, err := newFileLayer(
-			root, "artifact.tar.gz", types.OCILayer, int64(len(content))-1,
+			root, "artifact.tar.gz", openArchive(t), types.OCILayer,
+			int64(len(content))-1,
 		)
 		tooLarge := &intio.BodyTooLargeError{}
 		require.ErrorAs(t, err, &tooLarge)
@@ -754,7 +725,8 @@ func Test_newFileLayer_limit(t *testing.T) {
 	t.Run("content exactly at limit", func(t *testing.T) {
 		t.Parallel()
 		layer, err := newFileLayer(
-			root, "artifact.tar.gz", types.OCILayer, int64(len(content)),
+			root, "artifact.tar.gz", openArchive(t), types.OCILayer,
+			int64(len(content)),
 		)
 		require.NoError(t, err)
 		wantDigest, wantSize, err := v1.SHA256(bytes.NewReader(content))
@@ -767,9 +739,20 @@ func Test_newFileLayer_limit(t *testing.T) {
 		assert.Equal(t, wantSize, size)
 	})
 
-	t.Run("non-positive limit disables the check", func(t *testing.T) {
+	t.Run("zero limit rejects any content", func(t *testing.T) {
 		t.Parallel()
-		layer, err := newFileLayer(root, "artifact.tar.gz", types.OCILayer, -1)
+		_, err := newFileLayer(
+			root, "artifact.tar.gz", openArchive(t), types.OCILayer, 0,
+		)
+		tooLarge := &intio.BodyTooLargeError{}
+		require.ErrorAs(t, err, &tooLarge)
+	})
+
+	t.Run("negative limit disables the check", func(t *testing.T) {
+		t.Parallel()
+		layer, err := newFileLayer(
+			root, "artifact.tar.gz", openArchive(t), types.OCILayer, -1,
+		)
 		require.NoError(t, err)
 		size, err := layer.Size()
 		require.NoError(t, err)
@@ -806,7 +789,7 @@ func Test_ociPusher_run_localFile_errors(t *testing.T) {
 				return "missing.tar.gz"
 			},
 			wantStatus: kargoapi.PromotionStepStatusFailed,
-			errMsg:     "failed to stat source path",
+			errMsg:     "failed to open source path",
 		},
 		{
 			name:            "path traversal is rejected",
@@ -816,7 +799,7 @@ func Test_ociPusher_run_localFile_errors(t *testing.T) {
 				return "../../etc/passwd"
 			},
 			wantStatus: kargoapi.PromotionStepStatusFailed,
-			errMsg:     "failed to stat source path",
+			errMsg:     "failed to open source path",
 		},
 		{
 			name:            "artifact exceeds size limit",
@@ -997,11 +980,7 @@ func Test_ociPusher_run_scopedAnnotationsOnImage(t *testing.T) {
 	require.NoError(t, err)
 	require.NoError(t, remote.Write(srcRef, srcImg))
 
-	runner := &ociPusher{
-		credsDB:         &credentials.FakeDB{},
-		schemaLoader:    getConfigSchemaLoader(stepKindOCIPush),
-		maxArtifactSize: testMaxArtifactSize,
-	}
+	runner := newTestPusher()
 
 	// Push with mixed scoped annotations. "index:" should be ignored for images.
 	result, err := runner.run(t.Context(), &promotion.StepContext{
@@ -1043,11 +1022,7 @@ func Test_ociPusher_run_ociManifestAnnotations(t *testing.T) {
 	require.NoError(t, err)
 	require.NoError(t, remote.Write(srcRef, srcImg))
 
-	runner := &ociPusher{
-		credsDB:         &credentials.FakeDB{},
-		schemaLoader:    getConfigSchemaLoader(stepKindOCIPush),
-		maxArtifactSize: testMaxArtifactSize,
-	}
+	runner := newTestPusher()
 
 	result, err := runner.run(t.Context(), &promotion.StepContext{
 		Project: "fake-project",
@@ -1149,11 +1124,8 @@ func Test_ociPusher_push_sizeLimitExceeded(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			runner := &ociPusher{
-				credsDB:         &credentials.FakeDB{},
-				schemaLoader:    getConfigSchemaLoader(stepKindOCIPush),
-				maxArtifactSize: 100, // tiny limit to trigger the error
-			}
+			runner := newTestPusher()
+			runner.maxArtifactSize = 100 // tiny limit to trigger the error
 
 			result, err := runner.run(t.Context(), &promotion.StepContext{
 				Project: "fake-project",
@@ -1179,11 +1151,8 @@ func Test_ociPusher_push_sizeLimitZero(t *testing.T) {
 	require.NoError(t, err)
 	require.NoError(t, remote.Write(srcRef, srcImg))
 
-	runner := &ociPusher{
-		credsDB:         &credentials.FakeDB{},
-		schemaLoader:    getConfigSchemaLoader(stepKindOCIPush),
-		maxArtifactSize: 0, // blocks all cross-repo pushes
-	}
+	runner := newTestPusher()
+	runner.maxArtifactSize = 0 // blocks all cross-repo pushes
 	stepCtx := &promotion.StepContext{Project: "fake-project"}
 
 	t.Run("cross-repo push is blocked", func(t *testing.T) {
@@ -1215,11 +1184,8 @@ func Test_ociPusher_push_sizeLimitDisabled(t *testing.T) {
 	require.NoError(t, err)
 	require.NoError(t, remote.Write(srcRef, srcImg))
 
-	runner := &ociPusher{
-		credsDB:         &credentials.FakeDB{},
-		schemaLoader:    getConfigSchemaLoader(stepKindOCIPush),
-		maxArtifactSize: -1, // unlimited
-	}
+	runner := newTestPusher()
+	runner.maxArtifactSize = -1 // unlimited
 
 	result, err := runner.run(t.Context(), &promotion.StepContext{
 		Project: "fake-project",
@@ -1284,7 +1250,20 @@ func Test_ociPusherConfig(t *testing.T) {
 // and returns its bytes.
 func writeTestArchive(t *testing.T, workDir, filename string) []byte {
 	t.Helper()
-	tarball := makeTarGz(t)
+	const content = "kind: ConfigMap\n"
+	var buf bytes.Buffer
+	gz := gzip.NewWriter(&buf)
+	tw := tar.NewWriter(gz)
+	require.NoError(t, tw.WriteHeader(&tar.Header{
+		Name: "manifests.yaml",
+		Mode: 0o644,
+		Size: int64(len(content)),
+	}))
+	_, err := tw.Write([]byte(content))
+	require.NoError(t, err)
+	require.NoError(t, tw.Close())
+	require.NoError(t, gz.Close())
+	tarball := buf.Bytes()
 	require.NoError(t, os.WriteFile(filepath.Join(workDir, filename), tarball, 0o644))
 	return tarball
 }
