@@ -1,11 +1,22 @@
 name: Set up Go
 description: >-
-  Installs Go and restores the module and build caches. Keep the default
-  version in sync with the golang image used by the Dockerfile.
+  Installs Go and restores the module and build caches. The default version
+  is the one we ship with; keep it in sync with the Dockerfile. Jobs that
+  must run against the linter-capped toolchain override it.
 inputs:
   go-version:
     description: The Go version to install
     required: false
+    # Always use the latest minor version of Go for anything we ship -- see the
+    # back-end-builder stage in Dockerfile for why.
+    #
+    # Ship is the default because the opposite default would fail silently: a
+    # publish job that named no version would build the released binary on the
+    # capped toolchain and still succeed.
+    #
+    # Jobs that run the linter, the unit tests, or codegen must instead pass
+    # the `goTestVersion` anchor defined in .github/workflows/ci.yaml, which is
+    # capped by the golangci-lint version pinned in hack/tools.mk.
     default: "1.27.0"
 runs:
   using: composite

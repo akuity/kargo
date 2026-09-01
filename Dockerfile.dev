@@ -1,3 +1,14 @@
+# IMPORTANT: This is the Go minor version that unit tests, linters, and codegen
+# run against. It is capped by the golangci-lint version pinned in
+# hack/tools.mk: a linter binary built with go1.X panics under go1.(X+1), so
+# raising Go here requires a linter upgrade, which typically surfaces new
+# findings requiring code or configuration changes.
+#
+# Anything we actually ship is built with the latest minor version of Go instead
+# (see Dockerfile).
+#
+# This version must match the `goTestVersion` anchor in
+# .github/workflows/ci.yaml.
 FROM golang:1.27.0-trixie
 
 ARG TARGETARCH
