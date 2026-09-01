@@ -56,7 +56,7 @@
         },
         "discoveryLimit": {
             "type": "integer",
-            "minimum": 1,
+            "minimum": 0,
             "maximum": 100,
             "default": 20,
             "description": "DiscoveryLimit is an optional limit on the number of image references that can be discovered for this subscription. The limit is applied after filtering images based on the AllowTagsRegexes and IgnoreTagsRegexes fields. When left unspecified, the field is implicitly treated as if its value were \"20\". The upper limit for this field is 100. Deprecated: Set discoveryLimit on the subscription (as a sibling of the image field) instead."
