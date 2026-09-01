@@ -248,7 +248,7 @@ jobs:
         cache-to: type=gha,mode=max
     - name: Install Grype
       id: grype
-      uses: anchore/scan-action/download-grype@e1165082ffb1fe366ebaf02d8526e7c4989ea9d2 # v7.4.0
+      uses: anchore/scan-action/download-grype@27805bf3b4e84b4a5c980df22ed233c00390a439 # v7.4.2
       with:
         cache-db: true
     # cve-scan.sh re-stamps the VEX product @id to the scanned digest, which it
