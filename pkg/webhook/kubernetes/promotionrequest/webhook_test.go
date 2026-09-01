@@ -3,10 +3,13 @@ package promotionrequest
 import (
 	"context"
 	"errors"
+	"strings"
 	"testing"
+	"time"
 
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
+	admissionv1 "k8s.io/api/admission/v1"
 	corev1 "k8s.io/api/core/v1"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -18,6 +21,7 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/webhook/admission"
 
 	kargoapi "github.com/akuity/kargo/api/v1alpha1"
+	"github.com/akuity/kargo/pkg/indexer"
 )
 
 const testProject = "fake-project"
@@ -70,6 +74,259 @@ func promotionRequest(targets ...string) *kargoapi.PromotionRequest {
 			Freight: "fake-freight",
 			Targets: specTargets,
 		},
+	}
+}
+
+func testOrigin() kargoapi.FreightOrigin {
+	return kargoapi.FreightOrigin{
+		Kind: kargoapi.FreightOriginKindWarehouse,
+		Name: "fake-warehouse",
+	}
+}
+
+// targetAwareStageRequestingFreight returns a target-aware Stage that requests
+// Freight directly from testOrigin's Warehouse, so that origin resolution has
+// candidates to select from.
+func targetAwareStageRequestingFreight() *kargoapi.Stage {
+	stage := targetAwareStage()
+	stage.Spec.RequestedFreight = []kargoapi.FreightRequest{{
+		Origin:  testOrigin(),
+		Sources: kargoapi.FreightSources{Direct: true},
+	}}
+	return stage
+}
+
+func warehouse() *kargoapi.Warehouse {
+	return &kargoapi.Warehouse{
+		ObjectMeta: metav1.ObjectMeta{
+			Namespace: testProject,
+			Name:      testOrigin().Name,
+		},
+	}
+}
+
+func freight(name string, discoveredAt time.Time) *kargoapi.Freight {
+	return &kargoapi.Freight{
+		ObjectMeta: metav1.ObjectMeta{
+			Namespace: testProject,
+			Name:      name,
+		},
+		Origin:       testOrigin(),
+		DiscoveredAt: &metav1.Time{Time: discoveredAt},
+	}
+}
+
+// promotionRequestForOrigin returns a PromotionRequest as
+// api.NewPromotionRequestForOrigin would construct it: an origin in place of
+// Freight, and a placeholder generateName in place of a name.
+func promotionRequestForOrigin(targets ...string) *kargoapi.PromotionRequest {
+	promotionRequest := promotionRequest(targets...)
+	promotionRequest.Name = ""
+	promotionRequest.GenerateName = "promoreq-"
+	promotionRequest.Spec.Freight = ""
+	origin := testOrigin()
+	promotionRequest.Spec.Origin = &origin
+	return promotionRequest
+}
+
+func Test_webhook_Default(t *testing.T) {
+	t.Parallel()
+
+	scheme := runtime.NewScheme()
+	require.NoError(t, corev1.AddToScheme(scheme))
+	require.NoError(t, kargoapi.AddToScheme(scheme))
+
+	contextWithOperation := func(
+		t *testing.T,
+		operation admissionv1.Operation,
+	) context.Context {
+		return admission.NewContextWithRequest(t.Context(), admission.Request{
+			AdmissionRequest: admissionv1.AdmissionRequest{Operation: operation},
+		})
+	}
+
+	testCases := []struct {
+		name             string
+		ctx              func(*testing.T) context.Context
+		objects          []client.Object
+		interceptors     interceptor.Funcs
+		promotionRequest *kargoapi.PromotionRequest
+		assertions       func(*testing.T, *kargoapi.PromotionRequest, error)
+	}{
+		{
+			name:             "no admission request in context",
+			ctx:              func(t *testing.T) context.Context { return t.Context() },
+			promotionRequest: promotionRequestForOrigin(),
+			assertions: func(t *testing.T, _ *kargoapi.PromotionRequest, err error) {
+				require.True(t, apierrors.IsInternalError(err), "got %T: %v", err, err)
+			},
+		},
+		{
+			name: "non-create operations are ignored",
+			ctx: func(t *testing.T) context.Context {
+				return contextWithOperation(t, admissionv1.Update)
+			},
+			promotionRequest: promotionRequestForOrigin(),
+			assertions: func(t *testing.T, pr *kargoapi.PromotionRequest, err error) {
+				require.NoError(t, err)
+				assert.Empty(t, pr.Spec.Freight)
+				assert.NotNil(t, pr.Spec.Origin)
+			},
+		},
+		{
+			name: "no origin is a no-op",
+			ctx: func(t *testing.T) context.Context {
+				return contextWithOperation(t, admissionv1.Create)
+			},
+			promotionRequest: promotionRequest("us-east"),
+			assertions: func(t *testing.T, pr *kargoapi.PromotionRequest, err error) {
+				require.NoError(t, err)
+				assert.Equal(t, "fake-freight", pr.Spec.Freight)
+			},
+		},
+		{
+			// Validation makes freight and origin mutually exclusive, but it has
+			// not fired yet. Resolution is skipped and the conflict left for it.
+			name: "origin alongside freight is left for validation",
+			ctx: func(t *testing.T) context.Context {
+				return contextWithOperation(t, admissionv1.Create)
+			},
+			promotionRequest: func() *kargoapi.PromotionRequest {
+				pr := promotionRequest()
+				origin := testOrigin()
+				pr.Spec.Origin = &origin
+				return pr
+			}(),
+			assertions: func(t *testing.T, pr *kargoapi.PromotionRequest, err error) {
+				require.NoError(t, err)
+				assert.Equal(t, "fake-freight", pr.Spec.Freight)
+				assert.NotNil(t, pr.Spec.Origin)
+			},
+		},
+		{
+			name: "Stage does not exist",
+			ctx: func(t *testing.T) context.Context {
+				return contextWithOperation(t, admissionv1.Create)
+			},
+			promotionRequest: promotionRequestForOrigin(),
+			assertions: func(t *testing.T, _ *kargoapi.PromotionRequest, err error) {
+				require.True(t, apierrors.IsInvalid(err), "got %T: %v", err, err)
+				assert.ErrorContains(t, err, `Stage "fake-stage" not found`)
+			},
+		},
+		{
+			name: "Stage lookup fails",
+			ctx: func(t *testing.T) context.Context {
+				return contextWithOperation(t, admissionv1.Create)
+			},
+			objects: []client.Object{targetAwareStageRequestingFreight()},
+			interceptors: interceptor.Funcs{
+				Get: func(
+					ctx context.Context,
+					c client.WithWatch,
+					key client.ObjectKey,
+					obj client.Object,
+					opts ...client.GetOption,
+				) error {
+					if _, ok := obj.(*kargoapi.Stage); ok {
+						return errors.New("something went wrong")
+					}
+					return c.Get(ctx, key, obj, opts...)
+				},
+			},
+			promotionRequest: promotionRequestForOrigin(),
+			assertions: func(t *testing.T, _ *kargoapi.PromotionRequest, err error) {
+				require.True(t, apierrors.IsInternalError(err), "got %T: %v", err, err)
+				assert.ErrorContains(t, err, "something went wrong")
+			},
+		},
+		{
+			name: "Freight listing fails",
+			ctx: func(t *testing.T) context.Context {
+				return contextWithOperation(t, admissionv1.Create)
+			},
+			objects: []client.Object{
+				targetAwareStageRequestingFreight(),
+				warehouse(),
+			},
+			interceptors: interceptor.Funcs{
+				List: func(
+					ctx context.Context,
+					c client.WithWatch,
+					list client.ObjectList,
+					opts ...client.ListOption,
+				) error {
+					if _, ok := list.(*kargoapi.FreightList); ok {
+						return errors.New("something went wrong")
+					}
+					return c.List(ctx, list, opts...)
+				},
+			},
+			promotionRequest: promotionRequestForOrigin(),
+			assertions: func(t *testing.T, _ *kargoapi.PromotionRequest, err error) {
+				require.True(t, apierrors.IsInternalError(err), "got %T: %v", err, err)
+				assert.ErrorContains(t, err, "something went wrong")
+			},
+		},
+		{
+			name: "no candidate for the origin",
+			ctx: func(t *testing.T) context.Context {
+				return contextWithOperation(t, admissionv1.Create)
+			},
+			objects: []client.Object{
+				targetAwareStageRequestingFreight(),
+				warehouse(),
+			},
+			promotionRequest: promotionRequestForOrigin(),
+			assertions: func(t *testing.T, _ *kargoapi.PromotionRequest, err error) {
+				require.True(t, apierrors.IsInvalid(err), "got %T: %v", err, err)
+				assert.ErrorContains(t, err, "no auto-promotion candidate found")
+				assert.ErrorContains(t, err, `"Warehouse/fake-warehouse"`)
+			},
+		},
+		{
+			name: "origin resolves to the candidate Freight",
+			ctx: func(t *testing.T) context.Context {
+				return contextWithOperation(t, admissionv1.Create)
+			},
+			objects: []client.Object{
+				targetAwareStageRequestingFreight(),
+				warehouse(),
+				freight("older-freight", time.Now().Add(-time.Hour)),
+				freight("newer-freight", time.Now()),
+			},
+			promotionRequest: promotionRequestForOrigin("us-east"),
+			assertions: func(t *testing.T, pr *kargoapi.PromotionRequest, err error) {
+				require.NoError(t, err)
+				assert.Equal(t, "newer-freight", pr.Spec.Freight)
+				assert.Nil(t, pr.Spec.Origin)
+				// The name embeds a short hash of the resolved Freight, which the
+				// caller could not have known.
+				assert.True(t, strings.HasPrefix(pr.Name, "fake-stage."), pr.Name)
+				assert.True(t, strings.HasSuffix(pr.Name, ".newer-f"), pr.Name)
+			},
+		},
+	}
+
+	for _, testCase := range testCases {
+		t.Run(testCase.name, func(t *testing.T) {
+			t.Parallel()
+
+			w := &webhook{
+				client: fake.NewClientBuilder().
+					WithScheme(scheme).
+					WithObjects(testCase.objects...).
+					WithIndex(
+						&kargoapi.Freight{},
+						indexer.FreightByWarehouseField,
+						indexer.FreightByWarehouse,
+					).
+					WithInterceptorFuncs(testCase.interceptors).
+					Build(),
+			}
+			err := w.Default(testCase.ctx(t), testCase.promotionRequest)
+			testCase.assertions(t, testCase.promotionRequest, err)
+		})
 	}
 }
 
@@ -173,6 +430,39 @@ func Test_webhook_ValidateCreate(t *testing.T) {
 			},
 		},
 		{
+			// Defaulting resolves a lone origin before validation fires, so an
+			// origin surviving to this point means the caller set both.
+			name:    "both freight and origin set",
+			objects: append(projectObjects(), targetAwareStage()),
+			promotionRequest: func() *kargoapi.PromotionRequest {
+				pr := promotionRequest()
+				origin := testOrigin()
+				pr.Spec.Origin = &origin
+				return pr
+			}(),
+			assertions: func(t *testing.T, warnings admission.Warnings, err error) {
+				assert.Empty(t, warnings)
+				assert.ErrorContains(
+					t, err, "exactly one of spec.freight or spec.origin must be set",
+				)
+			},
+		},
+		{
+			name:    "neither freight nor origin set",
+			objects: append(projectObjects(), targetAwareStage()),
+			promotionRequest: func() *kargoapi.PromotionRequest {
+				pr := promotionRequest()
+				pr.Spec.Freight = ""
+				return pr
+			}(),
+			assertions: func(t *testing.T, warnings admission.Warnings, err error) {
+				assert.Empty(t, warnings)
+				assert.ErrorContains(
+					t, err, "exactly one of spec.freight or spec.origin must be set",
+				)
+			},
+		},
+		{
 			name: "valid",
 			objects: append(
 				projectObjects(),
@@ -270,6 +560,30 @@ func Test_webhook_ValidateUpdate(t *testing.T) {
 		)
 		assert.Empty(t, warnings)
 		assert.NoError(t, err)
+	})
+
+	t.Run("introducing origin on an update is rejected", func(t *testing.T) {
+		t.Parallel()
+
+		w := newWebhook(append(
+			projectObjects(),
+			targetAwareStage(),
+			target("us-east"),
+		)...)
+
+		updated := promotionRequest("us-east")
+		origin := testOrigin()
+		updated.Spec.Origin = &origin
+
+		warnings, err := w.ValidateUpdate(
+			t.Context(),
+			promotionRequest("us-east"),
+			updated,
+		)
+		assert.Empty(t, warnings)
+		assert.ErrorContains(
+			t, err, "origin is resolved to freight at creation",
+		)
 	})
 
 	t.Run("adding a duplicate Target is rejected", func(t *testing.T) {

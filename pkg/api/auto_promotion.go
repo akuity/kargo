@@ -140,6 +140,26 @@ func SelectAutoPromotionCandidates(
 	return candidates
 }
 
+// SelectAutoPromotionCandidateForOrigin returns, from availableFreight, the
+// Freight that origin's auto-promotion selection policy would pick for stage,
+// or nil when the origin has no candidate. This is the single implementation
+// of origin resolution shared by the Promotion and PromotionRequest defaulting
+// webhooks, so that promote-by-origin selects the same Freight regardless of
+// which resource carries the origin.
+func SelectAutoPromotionCandidateForOrigin(
+	ctx context.Context,
+	stage *kargoapi.Stage,
+	availableFreight []kargoapi.Freight,
+	origin kargoapi.FreightOrigin,
+) *kargoapi.Freight {
+	candidates := SelectAutoPromotionCandidates(ctx, stage, availableFreight)
+	candidate, ok := candidates[origin.String()]
+	if !ok {
+		return nil
+	}
+	return &candidate
+}
+
 // SetAutoPromotionHoldAnnotation stamps promo with AnnotationKeyAutoPromotionHold
 // set to origin's canonical key. The Stage controller reads a succeeded
 // Promotion carrying this annotation to establish a hold for that origin.

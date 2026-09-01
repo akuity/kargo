@@ -5,6 +5,7 @@ import (
 	"errors"
 	"fmt"
 
+	admissionv1 "k8s.io/api/admission/v1"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/apimachinery/pkg/runtime/schema"
 	"k8s.io/apimachinery/pkg/types"
@@ -32,8 +33,119 @@ func SetupWebhookWithManager(mgr ctrl.Manager) error {
 		client: mgr.GetClient(),
 	}
 	return ctrl.NewWebhookManagedBy(mgr, &kargoapi.PromotionRequest{}).
+		WithDefaulter(w).
 		WithValidator(w).
 		Complete()
+}
+
+func (w *webhook) Default(
+	ctx context.Context,
+	promotionRequest *kargoapi.PromotionRequest,
+) error {
+	req, err := admission.RequestFromContext(ctx)
+	if err != nil {
+		return apierrors.NewInternalError(
+			fmt.Errorf("get admission request from context: %w", err),
+		)
+	}
+	if req.Operation != admissionv1.Create {
+		return nil
+	}
+
+	// Note: Validation makes these mutually exclusive, but defaulting webhooks
+	// fire before validating webhooks. Only try to resolve origin to the
+	// candidate Freight for that origin if the Freight field is also empty.
+	// If Origin is non-nil AND Freight is non-empty, validation will catch it
+	// when it eventually fires, so skipping resolution is all we need to do.
+	if promotionRequest.Spec.Origin == nil || promotionRequest.Spec.Freight != "" {
+		return nil
+	}
+
+	stage, err := api.GetStage(
+		ctx,
+		w.client,
+		types.NamespacedName{
+			Namespace: promotionRequest.Namespace,
+			Name:      promotionRequest.Spec.Stage,
+		},
+	)
+	if err != nil {
+		return apierrors.NewInternalError(fmt.Errorf(
+			"error getting Stage %q in namespace %q: %w",
+			promotionRequest.Spec.Stage, promotionRequest.Namespace, err,
+		))
+	}
+	if stage == nil {
+		return apierrors.NewInvalid(
+			promotionRequestGroupKind,
+			promotionRequest.Name,
+			field.ErrorList{field.Invalid(
+				field.NewPath("spec", "stage"),
+				promotionRequest.Spec.Stage,
+				fmt.Sprintf(
+					"Stage %q not found in namespace %q",
+					promotionRequest.Spec.Stage, promotionRequest.Namespace,
+				),
+			)},
+		)
+	}
+
+	freight, err := w.resolveOriginToFreight(ctx, promotionRequest, stage)
+	if err != nil {
+		return err
+	}
+	promotionRequest.Spec.Freight = freight.Name
+	promotionRequest.Spec.Origin = nil
+	// A generated PromotionRequest name embeds a short hash of the Freight,
+	// which a caller that only knew an origin could not have computed. Name
+	// the request for the Freight the origin resolved to.
+	promotionRequest.Name = api.GeneratePromotionRequestName(
+		stage.Name,
+		freight.Name,
+	)
+	return nil
+}
+
+// resolveOriginToFreight resolves promotionRequest's origin to the Freight
+// that the origin's auto-promotion selection policy would choose for stage.
+// Returns an error (denying admission) if no Freight is available. The
+// selection itself is shared with the Promotion defaulting webhook, so
+// promote-by-origin picks the same Freight regardless of which resource
+// carries the origin.
+func (w *webhook) resolveOriginToFreight(
+	ctx context.Context,
+	promotionRequest *kargoapi.PromotionRequest,
+	stage *kargoapi.Stage,
+) (*kargoapi.Freight, error) {
+	availableFreight, err := api.ListFreightAvailableToStage(ctx, w.client, stage)
+	if err != nil {
+		return nil, apierrors.NewInternalError(
+			fmt.Errorf("list available freight: %w", err),
+		)
+	}
+	candidate := api.SelectAutoPromotionCandidateForOrigin(
+		ctx,
+		stage,
+		availableFreight,
+		*promotionRequest.Spec.Origin,
+	)
+	if candidate == nil {
+		originKey := promotionRequest.Spec.Origin.String()
+		return nil, apierrors.NewInvalid(
+			promotionRequestGroupKind,
+			promotionRequest.Name,
+			field.ErrorList{field.Invalid(
+				field.NewPath("spec", "origin"),
+				originKey,
+				fmt.Sprintf(
+					"no auto-promotion candidate found for origin %q on Stage %q",
+					originKey,
+					stage.Name,
+				),
+			)},
+		)
+	}
+	return candidate, nil
 }
 
 func (w *webhook) ValidateCreate(
@@ -51,6 +163,17 @@ func (w *webhook) ValidateCreate(
 			return nil, apierrors.NewInternalError(err)
 		}
 		errs = append(errs, fieldErr)
+	}
+
+	// The defaulting webhook has already run: a lone origin has been resolved
+	// to Freight and cleared. Freight and origin both set means the caller
+	// supplied both; neither set means the caller supplied neither.
+	if (promotionRequest.Spec.Freight == "") == (promotionRequest.Spec.Origin == nil) {
+		errs = append(errs, field.Invalid(
+			field.NewPath("spec"),
+			promotionRequest.Spec,
+			"exactly one of spec.freight or spec.origin must be set",
+		))
 	}
 
 	specErrs, internalErr := w.validateSpec(
@@ -76,6 +199,22 @@ func (w *webhook) ValidateUpdate(
 	_ *kargoapi.PromotionRequest,
 	promotionRequest *kargoapi.PromotionRequest,
 ) (admission.Warnings, error) {
+	// spec.origin never persists: the defaulting webhook resolves it to
+	// spec.freight at creation, so it can only appear on an update. The
+	// schema's exactly-one rule already rejects it alongside the freight every
+	// stored PromotionRequest has; this check exists to say why.
+	if promotionRequest.Spec.Origin != nil {
+		return nil, apierrors.NewInvalid(
+			promotionRequestGroupKind,
+			promotionRequest.Name,
+			field.ErrorList{field.Invalid(
+				field.NewPath("spec", "origin"),
+				promotionRequest.Spec.Origin.String(),
+				"origin is resolved to freight at creation and must not be set on an update",
+			)},
+		)
+	}
+
 	// spec.stage and spec.freight cannot have changed -- the schema's transition
 	// rules reject that before this runs -- but spec.targets can, so the same
 	// checks apply to an update as to a create.

@@ -380,10 +380,14 @@ func (w *webhook) resolveOriginToFreight(
 			fmt.Errorf("list available freight: %w", err),
 		)
 	}
-	candidates := api.SelectAutoPromotionCandidates(ctx, stage, availableFreight)
-	originKey := promo.Spec.Origin.String()
-	candidate, ok := candidates[originKey]
-	if !ok {
+	candidate := api.SelectAutoPromotionCandidateForOrigin(
+		ctx,
+		stage,
+		availableFreight,
+		*promo.Spec.Origin,
+	)
+	if candidate == nil {
+		originKey := promo.Spec.Origin.String()
 		return nil, apierrors.NewInvalid(
 			promotionGroupKind,
 			promo.Name,
@@ -398,7 +402,7 @@ func (w *webhook) resolveOriginToFreight(
 			)},
 		)
 	}
-	return &candidate, nil
+	return candidate, nil
 }
 
 // syncHoldAnnotations stamps the correct hold/resume intent annotation on a

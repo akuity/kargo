@@ -135,6 +135,46 @@ func NewPromotionRequest(
 	stage *kargoapi.Stage,
 	freightName string,
 ) (*kargoapi.PromotionRequest, error) {
+	promotionRequest, err := newPromotionRequest(ctx, c, stage)
+	if err != nil {
+		return nil, err
+	}
+	promotionRequest.Name = GeneratePromotionRequestName(stage.Name, freightName)
+	promotionRequest.Spec.Freight = freightName
+	return promotionRequest, nil
+}
+
+// NewPromotionRequestForOrigin constructs a PromotionRequest that, unlike
+// NewPromotionRequest which is explicit about the exact Freight to promote,
+// specifies only an origin. The PromotionRequest defaulting webhook resolves
+// the origin to the auto-promotion candidate Freight at admission time and
+// names the PromotionRequest for it.
+//
+// The Stage MUST be target-aware. Callers should gate on IsTargetAware.
+func NewPromotionRequestForOrigin(
+	ctx context.Context,
+	c client.Client,
+	stage *kargoapi.Stage,
+	origin kargoapi.FreightOrigin,
+) (*kargoapi.PromotionRequest, error) {
+	promotionRequest, err := newPromotionRequest(ctx, c, stage)
+	if err != nil {
+		return nil, err
+	}
+	// The defaulting webhook overwrites this. We set it here only so that the
+	// Kubernetes API server has a name to work with before admission runs.
+	promotionRequest.GenerateName = "promoreq-"
+	promotionRequest.Spec.Origin = &origin
+	return promotionRequest, nil
+}
+
+// newPromotionRequest constructs a PromotionRequest with everything but the
+// Freight (or the origin standing in for it) and the name that embeds it.
+func newPromotionRequest(
+	ctx context.Context,
+	c client.Client,
+	stage *kargoapi.Stage,
+) (*kargoapi.PromotionRequest, error) {
 	targets, err := ListTargetsForStage(ctx, c, stage)
 	if err != nil {
 		return nil, fmt.Errorf(
@@ -162,7 +202,6 @@ func NewPromotionRequest(
 	return &kargoapi.PromotionRequest{
 		ObjectMeta: metav1.ObjectMeta{
 			Namespace: stage.Namespace,
-			Name:      GeneratePromotionRequestName(stage.Name, freightName),
 			Labels:    labels,
 			OwnerReferences: []metav1.OwnerReference{
 				*metav1.NewControllerRef(
@@ -173,7 +212,6 @@ func NewPromotionRequest(
 		},
 		Spec: kargoapi.PromotionRequestSpec{
 			Stage:   stage.Name,
-			Freight: freightName,
 			Targets: specTargets,
 		},
 	}, nil
