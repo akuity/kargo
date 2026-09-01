@@ -53,6 +53,13 @@ export const ThemeContextProvider = ({ children }: PropsWithChildren) => {
     root.style.colorScheme = isDark ? 'dark' : 'light';
   }, [isDark]);
 
+  // Static message/notification/Modal.confirm render into a detached root
+  // outside this tree, so they can't read the ConfigProvider above. AntD keeps
+  // a global theme for those holders; push ours to it on every switch.
+  React.useLayoutEffect(() => {
+    ConfigProvider.config({ theme: themeConfig(isDark) });
+  }, [isDark]);
+
   const ctx: ThemeContextType = React.useMemo(
     () => ({ mode, isDark, setMode }),
     [mode, isDark, setMode]
