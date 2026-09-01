@@ -89,7 +89,7 @@
             "minimum": 1,
             "maximum": 100,
             "default": 20,
-            "description": "DiscoveryLimit is an optional limit on the number of commits that can be discovered for this subscription. The upper limit is 100."
+            "description": "DiscoveryLimit is an optional limit on the number of commits that can be discovered for this subscription. The upper limit is 100. Deprecated: Set discoveryLimit on the subscription (as a sibling of the git field) instead."
         },
         "since": {
             "type": "string",
