@@ -103,6 +103,22 @@ RUN --mount=type=cache,target=/go/pkg/mod --mount=type=cache,target=/root/.cache
       helm.sh/helm/v3/cmd/helm
 
 ####################################################################################################
+# tools
+####################################################################################################
+# `tools` stage allows us to take the leverage of the parallel build.
+# For example, this stage can be cached and re-used when we have to rebuild code base.
+FROM curlimages/curl:8.18.0 AS tools
+
+ARG TARGETOS
+ARG TARGETARCH
+
+WORKDIR /tools
+
+RUN GRPC_HEALTH_PROBE_VERSION=v0.4.56 && \
+    curl -fL -o /tools/grpc_health_probe https://github.com/grpc-ecosystem/grpc-health-probe/releases/download/${GRPC_HEALTH_PROBE_VERSION}/grpc_health_probe-${TARGETOS}-${TARGETARCH} && \
+    chmod +x /tools/grpc_health_probe
+
+####################################################################################################
 # back-end-dev
 # - no UI
 # - relies on go build that runs on host
@@ -154,6 +170,7 @@ FROM ${BASE_IMAGE}:latest-${TARGETARCH} AS final
 
 COPY --from=back-end-builder /kargo/bin/ /usr/local/bin/
 COPY --from=helm-builder /helm-build/helm /usr/local/bin/helm
+COPY --from=tools /tools/grpc_health_probe /usr/local/bin/grpc_health_probe
 
 ENTRYPOINT ["/sbin/tini", "--"]
 CMD ["/usr/local/bin/kargo"]
