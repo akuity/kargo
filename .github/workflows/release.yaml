@@ -45,10 +45,8 @@ jobs:
         echo "repo=$REPO" >> $GITHUB_OUTPUT
     - name: Checkout
       uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
-    - name: Setup Go
-      uses: actions/setup-go@b7ad1dad31e06c5925ef5d2fc7ad053ef454303e # v7.0.0
-      with:
-        go-version-file: go.mod
+    - name: Set up Go
+      uses: ./.github/actions/setup-go
     - name: Set version for unstable builds
       id: unstable-version
       run: |
@@ -242,8 +240,6 @@ jobs:
     permissions:
       contents: write
     runs-on: ubuntu-latest
-    container:
-      image: &golangImage golang:1.27.0-trixie
     strategy:
       matrix:
         os: [linux, darwin, windows]
@@ -263,12 +259,8 @@ jobs:
 
     - name: Checkout code
       uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
-    - uses: actions/cache@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
-      with:
-        path: /go/pkg/mod
-        key: ${{ runner.os }}-go-${{ hashFiles('**/go.sum') }}
-        restore-keys: |
-          ${{ runner.os }}-go-
+    - name: Set up Go
+      uses: ./.github/actions/setup-go
     - name: Download UI artifact
       uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c # v8.0.1
       with:
@@ -313,8 +305,6 @@ jobs:
       contents: read
     if: github.event_name != 'release'
     runs-on: ubuntu-latest
-    container:
-      image: *golangImage
     strategy:
       matrix:
         os: [linux, darwin, windows]
@@ -327,12 +317,8 @@ jobs:
 
     - name: Checkout code
       uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
-    - uses: actions/cache@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
-      with:
-        path: /go/pkg/mod
-        key: ${{ runner.os }}-go-${{ hashFiles('**/go.sum') }}
-        restore-keys: |
-          ${{ runner.os }}-go-
+    - name: Set up Go
+      uses: ./.github/actions/setup-go
     - name: Download UI artifact
       uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c # v8.0.1
       with:
@@ -358,9 +344,6 @@ jobs:
         KARGO_BIN_PATH: bin/kargo-cli/${{ needs.publish-image.outputs.unstable-version }}/${{ matrix.os }}/${{ matrix.arch }}/kargo
       run: |
         make sign-and-notarize-cli
-    - name: Install awscli
-      run: |
-        apt update && apt install awscli -y
     - name: Configure AWS credentials
       uses: aws-actions/configure-aws-credentials@e6de054238d6b7531b4efff3b6587d9aade6a06c # v6.2.3
       with:
@@ -422,8 +405,6 @@ jobs:
       name: github-pages
       url: ${{ steps.deployment.outputs.page_url }}
     runs-on: ubuntu-latest
-    container:
-      image: *golangImage
     steps:
     - name: Harden the runner (Audit all outbound calls)
       uses: step-security/harden-runner@05e31511f85b41b11d1cf0ef85d0992719546e2c # v2.21.0
@@ -432,6 +413,8 @@ jobs:
 
     - name: Checkout code
       uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+    - name: Set up Go
+      uses: ./.github/actions/setup-go
     - name: Generate best releases JSON
       run: |
         mkdir _site

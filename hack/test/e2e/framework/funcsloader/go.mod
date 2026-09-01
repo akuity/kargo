@@ -10,7 +10,7 @@ replace envs => ../../envs
 
 replace github.com/akuity/kargo/hack/test/e2e/envfuncs => ../envfuncs
 
-go 1.26.3
+go 1.27.0
 
 require (
 	github.com/akuity/kargo/hack/test/e2e/envfuncs v0.0.0-00010101000000-000000000000

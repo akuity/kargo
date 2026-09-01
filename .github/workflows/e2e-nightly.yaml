@@ -23,14 +23,8 @@ jobs:
     - name: Checkout code
       uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
 
-    - name: Install Go
-      uses: actions/setup-go@v7
-      with:
-        # Use the e2e module's toolchain version.
-        go-version-file: hack/test/e2e/go.mod
-        cache-dependency-path: |
-          go.sum
-          hack/test/e2e/go.sum
+    - name: Set up Go
+      uses: ./.github/actions/setup-go
 
     # The test shells out to helm, kind, kargo and argocd; install them all into
     # hack/bin, which is added to PATH for the subsequent steps.
