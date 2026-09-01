@@ -4461,6 +4461,7 @@ components:
                   parallelism: 7
                   podFailurePolicy: "{}"
                   podReplacementPolicy: "{}"
+                  scheduling: "{}"
                   selector: "{}"
                   successPolicy: "{}"
                   suspend: true
@@ -4694,6 +4695,7 @@ components:
                   parallelism: 7
                   podFailurePolicy: "{}"
                   podReplacementPolicy: "{}"
+                  scheduling: "{}"
                   selector: "{}"
                   successPolicy: "{}"
                   suspend: true
@@ -5063,6 +5065,7 @@ components:
                 parallelism: 7
                 podFailurePolicy: "{}"
                 podReplacementPolicy: "{}"
+                scheduling: "{}"
                 selector: "{}"
                 successPolicy: "{}"
                 suspend: true
@@ -5296,6 +5299,7 @@ components:
                 parallelism: 7
                 podFailurePolicy: "{}"
                 podReplacementPolicy: "{}"
+                scheduling: "{}"
                 selector: "{}"
                 successPolicy: "{}"
                 suspend: true
@@ -5730,6 +5734,7 @@ components:
                   parallelism: 7
                   podFailurePolicy: "{}"
                   podReplacementPolicy: "{}"
+                  scheduling: "{}"
                   selector: "{}"
                   successPolicy: "{}"
                   suspend: true
@@ -5963,6 +5968,7 @@ components:
                   parallelism: 7
                   podFailurePolicy: "{}"
                   podReplacementPolicy: "{}"
+                  scheduling: "{}"
                   selector: "{}"
                   successPolicy: "{}"
                   suspend: true
@@ -6303,6 +6309,7 @@ components:
                     parallelism: 7
                     podFailurePolicy: "{}"
                     podReplacementPolicy: "{}"
+                    scheduling: "{}"
                     selector: "{}"
                     successPolicy: "{}"
                     suspend: true
@@ -6536,6 +6543,7 @@ components:
                     parallelism: 7
                     podFailurePolicy: "{}"
                     podReplacementPolicy: "{}"
+                    scheduling: "{}"
                     selector: "{}"
                     successPolicy: "{}"
                     suspend: true
@@ -6849,6 +6857,7 @@ components:
                     parallelism: 7
                     podFailurePolicy: "{}"
                     podReplacementPolicy: "{}"
+                    scheduling: "{}"
                     selector: "{}"
                     successPolicy: "{}"
                     suspend: true
@@ -7082,6 +7091,7 @@ components:
                     parallelism: 7
                     podFailurePolicy: "{}"
                     podReplacementPolicy: "{}"
+                    scheduling: "{}"
                     selector: "{}"
                     successPolicy: "{}"
                     suspend: true
@@ -7390,6 +7400,7 @@ components:
                 parallelism: 7
                 podFailurePolicy: "{}"
                 podReplacementPolicy: "{}"
+                scheduling: "{}"
                 selector: "{}"
                 successPolicy: "{}"
                 suspend: true
@@ -7623,6 +7634,7 @@ components:
                 parallelism: 7
                 podFailurePolicy: "{}"
                 podReplacementPolicy: "{}"
+                scheduling: "{}"
                 selector: "{}"
                 successPolicy: "{}"
                 suspend: true
@@ -8128,6 +8140,7 @@ components:
                   parallelism: 7
                   podFailurePolicy: "{}"
                   podReplacementPolicy: "{}"
+                  scheduling: "{}"
                   selector: "{}"
                   successPolicy: "{}"
                   suspend: true
@@ -8361,6 +8374,7 @@ components:
                   parallelism: 7
                   podFailurePolicy: "{}"
                   podReplacementPolicy: "{}"
+                  scheduling: "{}"
                   selector: "{}"
                   successPolicy: "{}"
                   suspend: true
@@ -8701,6 +8715,7 @@ components:
                     parallelism: 7
                     podFailurePolicy: "{}"
                     podReplacementPolicy: "{}"
+                    scheduling: "{}"
                     selector: "{}"
                     successPolicy: "{}"
                     suspend: true
@@ -8934,6 +8949,7 @@ components:
                     parallelism: 7
                     podFailurePolicy: "{}"
                     podReplacementPolicy: "{}"
+                    scheduling: "{}"
                     selector: "{}"
                     successPolicy: "{}"
                     suspend: true
@@ -9247,6 +9263,7 @@ components:
                     parallelism: 7
                     podFailurePolicy: "{}"
                     podReplacementPolicy: "{}"
+                    scheduling: "{}"
                     selector: "{}"
                     successPolicy: "{}"
                     suspend: true
@@ -9480,6 +9497,7 @@ components:
                     parallelism: 7
                     podFailurePolicy: "{}"
                     podReplacementPolicy: "{}"
+                    scheduling: "{}"
                     selector: "{}"
                     successPolicy: "{}"
                     suspend: true
@@ -9753,6 +9771,7 @@ components:
           parallelism: 7
           podFailurePolicy: "{}"
           podReplacementPolicy: "{}"
+          scheduling: "{}"
           selector: "{}"
           successPolicy: "{}"
           suspend: true
@@ -10021,6 +10040,7 @@ components:
               parallelism: 7
               podFailurePolicy: "{}"
               podReplacementPolicy: "{}"
+              scheduling: "{}"
               selector: "{}"
               successPolicy: "{}"
               suspend: true
@@ -10270,6 +10290,7 @@ components:
             parallelism: 7
             podFailurePolicy: "{}"
             podReplacementPolicy: "{}"
+            scheduling: "{}"
             selector: "{}"
             successPolicy: "{}"
             suspend: true
@@ -15848,6 +15869,14 @@ components:
             ClusterTrustBundles will be unified and deduplicated.
             +optional
           type: string
+        user:
+          description: |-
+            user is Optional: The owner UID of the created file.
+            If specified, the item-level user field takes precedence over defaultUser.
+            (Alpha) This field requires the AtomicWriteVolumeUserFields feature gate to be enabled.
+            +featureGate=AtomicWriteVolumeUserFields
+            +optional
+          type: integer
       type: object
     V1CompletionMode:
       enum:
@@ -15867,6 +15896,7 @@ components:
             +kubebuilder:validation:Required
             +kubebuilder:validation:Type=string
             +kubebuilder:validation:Format=date-time
+            +k8s:alpha(since: "1.37")=+k8s:customValidation
           type: string
         message:
           description: |-
@@ -15883,6 +15913,8 @@ components:
             with respect to the current state of the instance.
             +optional
             +kubebuilder:validation:Minimum=0
+            +k8s:alpha(since: "1.37")=+k8s:optional
+            +k8s:alpha(since: "1.37")=+k8s:minimum=0
           type: integer
         reason:
           description: |-
@@ -15896,6 +15928,8 @@ components:
             +kubebuilder:validation:MaxLength=1024
             +kubebuilder:validation:MinLength=1
             +kubebuilder:validation:Pattern=`^[A-Za-z]([A-Za-z0-9_,:]*[A-Za-z0-9_])?$`
+            +k8s:alpha(since: "1.37")=+k8s:required
+            +k8s:alpha(since: "1.37")=+k8s:maxBytes=1024
           type: string
         status:
           description: |-
@@ -15903,6 +15937,7 @@ components:
             +required
             +kubebuilder:validation:Required
             +kubebuilder:validation:Enum=True;False;Unknown
+            +k8s:alpha(since: "1.37")=+k8s:required
           type: string
         type:
           description: |-
@@ -15915,6 +15950,7 @@ components:
             +kubebuilder:validation:Required
             +kubebuilder:validation:Pattern=`^([a-z0-9]([-a-z0-9]*[a-z0-9])?(\.[a-z0-9]([-a-z0-9]*[a-z0-9])?)*/)?(([A-Za-z0-9][-A-Za-z0-9_.]*)?[A-Za-z0-9])$`
             +kubebuilder:validation:MaxLength=316
+            +k8s:alpha(since: "1.37")=+k8s:required
           type: string
       required:
       - lastTransitionTime
@@ -15955,6 +15991,8 @@ components:
             the Data field, this is enforced during validation process.
             Using this field will require 1.10+ apiserver and
             kubelet.
+            Note: BinaryData keys are not currently propagated to container env vars
+            via ConfigMapKeyRef or ConfigMapRef env sources; only Data keys are used.
             +optional
           type: object
         data:
@@ -16017,7 +16055,9 @@ components:
     V1ConfigMapKeySelector:
       properties:
         key:
-          description: The key to select.
+          description: |-
+            The key to select from the ConfigMap's Data field.
+            Keys in the BinaryData field are not currently propagated to container env vars.
           type: string
         name:
           description: |-
@@ -16135,6 +16175,14 @@ components:
             Directories within the path are not affected by this setting.
             This might be in conflict with other options that affect the file
             mode, like fsGroup, and the result can be other mode bits set.
+            +optional
+          type: integer
+        defaultUser:
+          description: |-
+            defaultUser is Optional: The owner UID of the created files by default.
+            The defaultUser field is only used as a fallback when the item-level user field is unset.
+            (Alpha) This field requires the AtomicWriteVolumeUserFields feature gate to be enabled.
+            +featureGate=AtomicWriteVolumeUserFields
             +optional
           type: integer
         items:
@@ -16583,6 +16631,14 @@ components:
             (limits.cpu, limits.memory, requests.cpu and requests.memory) are currently supported.
             +optional
           type: object
+        user:
+          description: |-
+            user is Optional: The owner UID of the created file.
+            If specified, the item-level user field takes precedence over defaultUser.
+            (Alpha) This field requires the AtomicWriteVolumeUserFields feature gate to be enabled.
+            +featureGate=AtomicWriteVolumeUserFields
+            +optional
+          type: integer
       type: object
     V1DownwardAPIVolumeSource:
       properties:
@@ -16596,6 +16652,14 @@ components:
             Directories within the path are not affected by this setting.
             This might be in conflict with other options that affect the file
             mode, like fsGroup, and the result can be other mode bits set.
+            +optional
+          type: integer
+        defaultUser:
+          description: |-
+            defaultUser is Optional: The owner UID of the created files by default.
+            The defaultUser field is only used as a fallback when the item-level user field is unset.
+            (Alpha) This field requires the AtomicWriteVolumeUserFields feature gate to be enabled.
+            +featureGate=AtomicWriteVolumeUserFields
             +optional
           type: integer
         items:
@@ -16617,6 +16681,19 @@ components:
             More info: https://kubernetes.io/docs/concepts/storage/volumes#emptydir
             +optional
           type: string
+        mode:
+          description: |-
+            mode specifies the permission bits for the emptyDir directory, in numeric
+            notation (e.g., 0755, 01777). Must be a value between 0000 and 01777.
+            If not specified, defaults to 0777.
+            This might be in conflict with other options that affect the file
+            mode, like fsGroup. If fsGroup is specified, the fsGroup permissions
+            will override the mode specified here.
+            This field has no effect on Windows.
+            This field is alpha and requires EmptyDirVolumeMode featuregate to be enabled.
+            +featureGate=EmptyDirVolumeMode
+            +optional
+          type: integer
         sizeLimit:
           description: |-
             sizeLimit is the total amount of local storage required for this EmptyDir volume.
@@ -17011,6 +17088,42 @@ components:
             +optional
           type: string
       type: object
+    V1EvictionResponder:
+      properties:
+        name:
+          description: |-
+            name allows you to identify the responder responding to the Eviction.
+
+            It must be a valid domain-prefixed key (such as "acme.io/foo").
+            Domain names *.k8s.io and *.kubernetes.io are reserved.
+            This field must be unique for each responder.
+            This field is required.
+            +required
+            +k8s:required
+            +k8s:format=k8s-prefixed-label-key
+            +k8s:customValidation
+          type: string
+        priority:
+          description: |-
+            priority for this responder. Higher priorities are selected first by the evictionrequest-controller.
+            If there are responders with the same priority, the responder whose domain name comes first in the
+            alphabetical higher domain order, will be picked. This means that the top domain labels are compared
+            alphabetically first, followed by the lower domain labels. The key is compared last.
+
+            The responder that is the managing controller of the pod should set the value of
+            this field to 10000 to allow both for preemption or fallback registration by other
+            responders.
+
+            The minimum value is 0 and the maximum value is 100000.
+            The interval 0-999 is reserved for responders with *.k8s.io suffix.
+            This field is required.
+            +required
+            +k8s:required
+            +k8s:minimum=0
+            +k8s:maximum=100000
+            +k8s:customValidation
+          type: integer
+      type: object
     V1ExecAction:
       properties:
         command:
@@ -17186,6 +17299,17 @@ components:
       type: object
     V1GRPCAction:
       properties:
+        mode:
+          allOf:
+          - $ref: "#/components/schemas/V1GRPCProbeMode"
+          description: |-
+            mode specifies the connection mode for the gRPC health probe.
+            Set to "TLS" to use TLS without certificate verification.
+            Set to "Plaintext" to use a plaintext (insecure) connection explicitly.
+            If not specified, the probe uses a plaintext (insecure) connection.
+            +featureGate=GRPCContainerProbeTLS
+            +optional
+          type: object
         port:
           description: Port number of the gRPC service. Number must be in the range
             1 to 65535.
@@ -17200,6 +17324,14 @@ components:
             +default=""
           type: string
       type: object
+    V1GRPCProbeMode:
+      enum:
+      - Plaintext
+      - TLS
+      type: string
+      x-enum-varnames:
+      - GRPCProbeModePlaintext
+      - GRPCProbeModeTLS
     V1GitRepoVolumeSource:
       properties:
         directory:
@@ -17264,6 +17396,15 @@ components:
             Number must be in the range 1 to 65535.
             Name must be an IANA_SVC_NAME.
           type: object
+        protocol:
+          allOf:
+          - $ref: "#/components/schemas/V1HTTPProtocol"
+          description: |-
+            Protocol selects the wire protocol for the probe connection.
+            Nil defaults to HTTP/1.1.
+            +optional
+            +featureGate=H2CContainerProbe
+          type: object
         scheme:
           description: |-
             Scheme to use for connecting to the host.
@@ -17282,6 +17423,14 @@ components:
           description: The header field value
           type: string
       type: object
+    V1HTTPProtocol:
+      enum:
+      - HTTP1
+      - HTTP2
+      type: string
+      x-enum-varnames:
+      - HTTPProtocolHTTP1
+      - HTTPProtocolHTTP2
     V1HostAlias:
       properties:
         hostnames:
@@ -17404,6 +17553,73 @@ components:
             +optional
           type: string
       type: object
+    V1JobSchedulingConfiguration:
+      properties:
+        disruptionMode:
+          allOf:
+          - $ref: "#/components/schemas/v1alpha3.WorkloadPodGroupDisruptionMode"
+          description: |-
+            DisruptionMode defines the mode in which the Job's pods can be disrupted.
+            One of Single, All.
+            This field is immutable after creation: it may not be added or removed,
+            and the selected mode may not be changed.
+
+            +optional
+            +k8s:optional
+            +k8s:immutable
+          type: object
+        resourceClaims:
+          description: |-
+            ResourceClaims defines which ResourceClaims may be shared among Pods in
+            the Job. Pods consume the devices allocated to a PodGroup's claim by
+            defining a claim in its own Spec.ResourceClaims that matches the
+            PodGroup's claim exactly. The claim must have the same name and refer to
+            the same ResourceClaim or ResourceClaimTemplate.
+            At most 4 claims may be set, matching the limit on the resulting PodGroup.
+            This list is immutable after creation: entries may neither be added,
+            removed, nor modified.
+
+            +optional
+            +patchMergeKey=name
+            +patchStrategy=merge
+            +listType=map
+            +listMapKey=name
+            +k8s:optional
+            +k8s:listType=map
+            +k8s:listMapKey=name
+            +k8s:maxItems=4
+            +k8s:immutable
+          items:
+            $ref: "#/components/schemas/v1alpha3.WorkloadPodGroupResourceClaim"
+          type: array
+        schedulingConstraints:
+          allOf:
+          - $ref: "#/components/schemas/v1alpha3.WorkloadPodGroupSchedulingConstraints"
+          description: |-
+            SchedulingConstraints defines scheduling constraints (e.g. topology)
+            for the Job's pods.
+            This field is immutable after creation.
+
+            +optional
+            +k8s:optional
+            +k8s:immutable
+          type: object
+        schedulingPolicy:
+          allOf:
+          - $ref: "#/components/schemas/v1alpha3.WorkloadPodGroupSchedulingPolicy"
+          description: |-
+            SchedulingPolicy defines the scheduling policy for this Job.
+            Exactly one of Basic or Gang must be set.
+            This field is immutable after creation: the policy may not be added or
+            removed. The policy variant (basic/gang) is frozen by hand-written
+            validation; only schedulingPolicy.gang.minCount may be changed.
+
+            +optional
+            +k8s:optional
+            +k8s:update=NoSet
+            +k8s:update=NoUnset
+          type: object
+      type: object
     V1JobSpec:
       example:
         activeDeadlineSeconds: 6
@@ -17417,6 +17633,7 @@ components:
         parallelism: 7
         podFailurePolicy: "{}"
         podReplacementPolicy: "{}"
+        scheduling: "{}"
         selector: "{}"
         successPolicy: "{}"
         suspend: true
@@ -17525,6 +17742,8 @@ components:
             It can be null or up to completions. It is required and must be
             less than or equal to 10^4 when is completions greater than 10^5.
             +optional
+            +k8s:optional
+            +k8s:alpha(since: "1.37")=+k8s:dependentRequired("backoffLimitPerIndex")
           type: integer
         parallelism:
           description: |-
@@ -17563,6 +17782,26 @@ components:
             When using podFailurePolicy, Failed is the the only allowed value.
             TerminatingOrFailed and Failed are allowed values when podFailurePolicy is not in use.
             +optional
+          type: object
+        scheduling:
+          allOf:
+          - $ref: "#/components/schemas/V1JobSchedulingConfiguration"
+          description: |-
+            scheduling defines the Workload-aware Scheduling configuration for this Job.
+            When set, it specifies the scheduling policy (basic or gang), topology
+            constraints, disruption mode, and shared resource claims.
+            When omitted, the Job defaults to the basic scheduling policy, which behaves
+            as standard pod-by-pod scheduling.
+            This field is alpha-level and requires the WorkloadWithJob feature gate.
+            This field is immutable, including whether it is set at all, only
+            policy.gang.minCount may be changed after creation.
+
+            +featureGate=WorkloadWithJob
+            +optional
+            +k8s:ifDisabled(WorkloadWithJob)=+k8s:forbidden
+            +k8s:optional
+            +k8s:update=NoSet
+            +k8s:update=NoUnset
           type: object
         selector:
           allOf:
@@ -17639,6 +17878,14 @@ components:
             May not contain the path element '..'.
             May not start with the string '..'.
           type: string
+        user:
+          description: |-
+            user is Optional: The owner UID of the created file.
+            If specified, the item-level user field takes precedence over defaultUser.
+            (Alpha) This field requires the AtomicWriteVolumeUserFields feature gate to be enabled.
+            +featureGate=AtomicWriteVolumeUserFields
+            +optional
+          type: integer
       type: object
     V1LabelSelector:
       properties:
@@ -17862,6 +18109,7 @@ components:
           description: |-
             Operation is the type of operation which lead to this ManagedFieldsEntry being created.
             The only valid values for this field are 'Apply' and 'Update'.
+            +k8s:alpha(since: "1.37")=+k8s:required
           type: string
         subresource:
           description: |-
@@ -18065,6 +18313,7 @@ components:
             Null for lists.
             More info: https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#metadata
             +optional
+            +k8s:alpha(since: "1.37")=+k8s:immutable
           type: string
         deletionGracePeriodSeconds:
           description: |-
@@ -18073,6 +18322,8 @@ components:
             May only be shortened.
             Read-only.
             +optional
+            +k8s:alpha(since: "1.37")=+k8s:optional
+            +k8s:alpha(since: "1.37")=+k8s:immutable
           type: integer
         deletionTimestamp:
           description: |-
@@ -18095,6 +18346,8 @@ components:
             Read-only.
             More info: https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#metadata
             +optional
+            +k8s:alpha(since: "1.37")=+k8s:optional
+            +k8s:alpha(since: "1.37")=+k8s:immutable
           type: string
         finalizers:
           description: |-
@@ -18138,6 +18391,8 @@ components:
             A sequence number representing a specific generation of the desired state.
             Populated by the system. Read-only.
             +optional
+            +k8s:alpha(since: "1.37")=+k8s:optional
+            +k8s:alpha(since: "1.37")=+k8s:minimum=0
           type: integer
         labels:
           additionalProperties:
@@ -18161,6 +18416,7 @@ components:
 
             +optional
             +listType=atomic
+            +k8s:alpha(since: "1.37")=+k8s:optional
           items:
             $ref: "#/components/schemas/V1ManagedFieldsEntry"
           type: array
@@ -18197,6 +18453,7 @@ components:
             +patchStrategy=merge
             +listType=map
             +listMapKey=uid
+            +k8s:alpha(since:"1.37")=+k8s:optional
           items:
             $ref: "#/components/schemas/V1OwnerReference"
           type: array
@@ -18229,6 +18486,8 @@ components:
             Read-only.
             More info: https://kubernetes.io/docs/concepts/overview/working-with-objects/names#uids
             +optional
+            +k8s:alpha(since: "1.37")=+k8s:optional
+            +k8s:alpha(since: "1.37")=+k8s:immutable
           type: string
       type: object
     V1ObjectReference:
@@ -18291,7 +18550,9 @@ components:
         uid: uid
       properties:
         apiVersion:
-          description: API version of the referent.
+          description: |-
+            API version of the referent.
+            +k8s:alpha(since:"1.37")=+k8s:required
           type: string
         blockOwnerDeletion:
           description: |-
@@ -18314,16 +18575,19 @@ components:
           description: |-
             Kind of the referent.
             More info: https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#types-kinds
+            +k8s:alpha(since:"1.37")=+k8s:required
           type: string
         name:
           description: |-
             Name of the referent.
             More info: https://kubernetes.io/docs/concepts/overview/working-with-objects/names#names
+            +k8s:alpha(since:"1.37")=+k8s:required
           type: string
         uid:
           description: |-
             UID of the referent.
             More info: https://kubernetes.io/docs/concepts/overview/working-with-objects/names#uids
+            +k8s:alpha(since:"1.37")=+k8s:required
           type: string
       type: object
     V1PersistentVolumeClaimSpec:
@@ -18346,8 +18610,8 @@ components:
             * An existing PVC (PersistentVolumeClaim)
             If the provisioner or an external controller can support the specified data source,
             it will create a new volume based on the contents of the specified data source.
-            When the AnyVolumeDataSource feature gate is enabled, dataSource contents will be copied to dataSourceRef,
-            and dataSourceRef contents will be copied to dataSource when dataSourceRef.namespace is not specified.
+            dataSource contents will be copied to dataSourceRef, and dataSourceRef contents will be
+            copied to dataSource when dataSourceRef.namespace is not specified.
             If the namespace is specified, then dataSourceRef will not be copied to dataSource.
             +optional
           type: object
@@ -18376,7 +18640,6 @@ components:
               specified.
             * While dataSource only allows local objects, dataSourceRef allows objects
               in any namespaces.
-            (Beta) Using this field requires the AnyVolumeDataSource feature gate to be enabled.
             (Alpha) Using the namespace field of dataSourceRef requires the CrossNamespaceVolumeDataSource feature gate to be enabled.
             +optional
           type: object
@@ -18442,6 +18705,7 @@ components:
             validation.
 
             +optional
+            +k8s:opaqueType
           type: object
         spec:
           allOf:
@@ -18696,6 +18960,14 @@ components:
 
             +required
           type: string
+        user:
+          description: |-
+            user is Optional: The owner UID of the created file.
+            If specified, the item-level user field takes precedence over defaultUser.
+            (Alpha) This field requires the AtomicWriteVolumeUserFields feature gate to be enabled.
+            +featureGate=AtomicWriteVolumeUserFields
+            +optional
+          type: integer
         userAnnotations:
           additionalProperties:
             type: string
@@ -19057,11 +19329,8 @@ components:
             Eligible volumes are in-tree FibreChannel and iSCSI volumes, and all CSI volumes
             whose CSI driver announces SELinux support by setting spec.seLinuxMount: true in their
             CSIDriver instance. Other volumes are always re-labelled recursively.
-            "MountOption" value is allowed only when SELinuxMount feature gate is enabled.
 
-            If not specified and SELinuxMount feature gate is enabled, "MountOption" is used.
-            If not specified and SELinuxMount feature gate is disabled, "MountOption" is used for ReadWriteOncePod volumes
-            and "Recursive" for all other volumes.
+            If not specified, "MountOption" is used.
 
             This field affects only Pods that have SELinux label set, either in PodSecurityContext or in SecurityContext of all containers.
 
@@ -19212,6 +19481,37 @@ components:
           items:
             $ref: "#/components/schemas/V1EphemeralContainer"
           type: array
+        evictionResponders:
+          description: |-
+            evictionResponders reference responders that react to Evictions based on EvictionRequests.
+            Responders should observe and communicate through the Eviction Resource API to help with
+            the graceful termination of a pod. The responders are selected sequentially, according to
+            their specified priority.
+
+            Responders should periodically report on an eviction progress by updating the
+            .status.responders[].heartbeatTime field of the Eviction object. If this field is not updated
+            within the heartbeat deadline defined by the Eviction API (currently 20 minutes), the eviction
+            is passed over to the next responder with a lower priority. If there is no other responder,
+            the last default imperative-eviction.k8s.io/evictor responder with a priority of 100 will
+            evict the pod using the imperative Eviction API (pods/<name>/eviction subresource).
+
+            The maximum length of the responders list is 10.
+            Responders are not supported when the pod is part of a PodGroup (.spec.schedulingGroup is set).
+            This field can only be set on creation and is immutable afterwards.
+            +featureGate=EvictionRequestAPI
+            +optional
+            +patchMergeKey=name
+            +patchStrategy=merge
+            +listType=map
+            +listMapKey=name
+            +k8s:optional
+            +k8s:listType=map
+            +k8s:listMapKey=name
+            +k8s:maxItems=10
+            +k8s:alpha(since: "1.37")=+k8s:dependentForbidden("schedulingGroup")
+          items:
+            $ref: "#/components/schemas/V1EvictionResponder"
+          type: array
         hostAliases:
           description: |-
             HostAliases is an optional list of hosts and IPs that will be injected into the pod's hosts
@@ -19228,7 +19528,6 @@ components:
           description: |-
             Use the host's ipc namespace.
             Optional: Default to false.
-            +k8s:conversion-gen=false
             +optional
           type: boolean
         hostNetwork:
@@ -19238,14 +19537,12 @@ components:
             When `hostNetwork` is true, specified `hostPort` fields in port definitions must match `containerPort`,
             and unspecified `hostPort` fields in port definitions are defaulted to match `containerPort`.
             Default to false.
-            +k8s:conversion-gen=false
             +optional
           type: boolean
         hostPID:
           description: |-
             Use the host's pid namespace.
             Optional: Default to false.
-            +k8s:conversion-gen=false
             +optional
           type: boolean
         hostUsers:
@@ -19258,7 +19555,6 @@ components:
             When set to false, a new userns is created for the pod. Setting false is useful for
             mitigating container breakout vulnerabilities even allowing users to run their
             containers as root without actually having root privileges on the host.
-            +k8s:conversion-gen=false
             +optional
           type: boolean
         hostname:
@@ -19278,7 +19574,6 @@ components:
             - `hostNetwork` must be set to false.
 
             This field must be a valid DNS subdomain as defined in RFC 1123 and contain at most 64 characters.
-            Requires the HostnameOverride feature gate to be enabled.
 
             +featureGate=HostnameOverride
             +optional
@@ -19392,6 +19687,8 @@ components:
           description: |-
             PreemptionPolicy is the Policy for preempting pods with lower priority.
             One of Never, PreemptLowerPriority.
+            When Priority Admission Controller is enabled, it prevents users from setting
+            this field. The admission controller populates this field from PriorityClassName.
             Defaults to PreemptLowerPriority if unset.
             +optional
           type: string
@@ -19535,7 +19832,6 @@ components:
           description: |-
             DeprecatedServiceAccount is a deprecated alias for ServiceAccountName.
             Deprecated: Use serviceAccountName instead.
-            +k8s:conversion-gen=false
             +optional
           type: string
         serviceAccountName:
@@ -19560,7 +19856,6 @@ components:
             in the same pod, and the first process in each container will not be assigned PID 1.
             HostPID and ShareProcessNamespace cannot both be set.
             Optional: Default to false.
-            +k8s:conversion-gen=false
             +optional
           type: boolean
         subdomain:
@@ -19586,6 +19881,7 @@ components:
             If specified, the pod's tolerations.
             +optional
             +listType=atomic
+            +k8s:alpha(since: "1.37")=+k8s:optional
           items:
             $ref: "#/components/schemas/V1Toleration"
           type: array
@@ -19625,6 +19921,7 @@ components:
             Standard object's metadata.
             More info: https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#metadata
             +optional
+            +k8s:opaqueType
           type: object
         spec:
           allOf:
@@ -19655,7 +19952,7 @@ components:
       properties:
         apiGroups:
           description: |-
-            APIGroups is the name of the APIGroup that contains the resources.  If multiple API groups are specified, any action requested against one of
+            apiGroups is the name of the APIGroup that contains the resources.  If multiple API groups are specified, any action requested against one of
             the enumerated resources in any API group will be allowed. "" represents the core API group and "*" represents all API groups.
             +optional
             +listType=atomic
@@ -19664,7 +19961,7 @@ components:
           type: array
         nonResourceURLs:
           description: |-
-            NonResourceURLs is a set of partial urls that a user should have access to.  *s are allowed, but only as the full, final step in the path
+            nonResourceURLs is a set of partial urls that a user should have access to.  *s are allowed, but only as the full, final step in the path
             Since non-resource URLs are not namespaced, this field is only applicable for ClusterRoles referenced from a ClusterRoleBinding.
             Rules can either apply to API resources (such as "pods" or "secrets") or non-resource URL paths (such as "/api"),  but not both.
             +optional
@@ -19674,7 +19971,7 @@ components:
           type: array
         resourceNames:
           description: |-
-            ResourceNames is an optional white list of names that the rule applies to.  An empty set means that everything is allowed.
+            resourceNames is an optional white list of names that the rule applies to.  An empty set means that everything is allowed.
             +optional
             +listType=atomic
           items:
@@ -19682,7 +19979,7 @@ components:
           type: array
         resources:
           description: |-
-            Resources is a list of resources this rule applies to. '*' represents all resources.
+            resources is a list of resources this rule applies to. '*' represents all resources.
             +optional
             +listType=atomic
           items:
@@ -19690,10 +19987,10 @@ components:
           type: array
         verbs:
           description: |-
-            Verbs is a list of Verbs that apply to ALL the ResourceKinds contained in this rule. '*' represents all verbs.
+            verbs is a list of Verbs that apply to ALL the ResourceKinds contained in this rule. '*' represents all verbs.
             +listType=atomic
             +required
-            +k8s:alpha(since: "1.36")=+k8s:required
+            +k8s:beta(since: "1.37")=+k8s:required
           items:
             type: string
           type: array
@@ -19814,6 +20111,14 @@ components:
             Directories within the path are not affected by this setting.
             This might be in conflict with other options that affect the file
             mode, like fsGroup, and the result can be other mode bits set.
+            +optional
+          type: integer
+        defaultUser:
+          description: |-
+            defaultUser is Optional: The owner UID of the created files by default.
+            The defaultUser field is only used as a fallback when the item-level user field is unset.
+            (Alpha) This field requires the AtomicWriteVolumeUserFields feature gate to be enabled.
+            +featureGate=AtomicWriteVolumeUserFields
             +optional
           type: integer
         sources:
@@ -20162,6 +20467,8 @@ components:
             Used to facilitate programmatic handling of secret data.
             More info: https://kubernetes.io/docs/concepts/configuration/secret/#secret-types
             +optional
+            +k8s:optional
+            +k8s:alpha(since: "1.37")=+k8s:immutable
           type: string
       type: object
     V1SecretEnvSource:
@@ -20311,6 +20618,14 @@ components:
             Directories within the path are not affected by this setting.
             This might be in conflict with other options that affect the file
             mode, like fsGroup, and the result can be other mode bits set.
+            +optional
+          type: integer
+        defaultUser:
+          description: |-
+            defaultUser is Optional: The owner UID of the created files by default.
+            The defaultUser field is only used as a fallback when the item-level user field is unset.
+            (Alpha) This field requires the AtomicWriteVolumeUserFields feature gate to be enabled.
+            +featureGate=AtomicWriteVolumeUserFields
             +optional
           type: integer
         items:
@@ -20478,6 +20793,14 @@ components:
             path is the path relative to the mount point of the file to project the
             token into.
           type: string
+        user:
+          description: |-
+            user is Optional: The owner UID of the created file.
+            If specified, the item-level user field takes precedence over defaultUser.
+            (Alpha) This field requires the AtomicWriteVolumeUserFields feature gate to be enabled.
+            +featureGate=AtomicWriteVolumeUserFields
+            +optional
+          type: integer
       type: object
     V1ShardInfo:
       properties:
@@ -20618,6 +20941,8 @@ components:
             Key is the taint key that the toleration applies to. Empty means match all taint keys.
             If the key is empty, operator must be Exists; this combination means to match all values and all keys.
             +optional
+            +k8s:alpha(since: "1.37")=+k8s:optional
+            +k8s:alpha(since: "1.37")=+k8s:format=k8s-label-key
           type: string
         operator:
           description: |-
@@ -21132,10 +21457,22 @@ components:
       type: object
     V1VolumeMount:
       properties:
-        mountPath:
+        bindMountOptions:
           description: |-
-            Path within the container at which the volume should be mounted.  Must
-            not contain ':'.
+            bindMountOptions is the list of additional bind mount options to apply when
+            mounting this volume into the container. Allowed values are noexec,
+            nodev, and nosuid. These are Linux mount options and have no effect on
+            Windows nodes.
+            This field is not supported with image volumes.
+            This is an alpha field and requires enabling the VolumeBindMountOptions feature gate.
+            +featureGate=VolumeBindMountOptions
+            +optional
+            +listType=set
+          items:
+            type: string
+          type: array
+        mountPath:
+          description: Path within the container at which the volume should be mounted.
           type: string
         mountPropagation:
           description: |-
@@ -21373,6 +21710,142 @@ components:
             PodSecurityContext, the value specified in SecurityContext takes precedence.
             +optional
           type: string
+      type: object
+    v1alpha3.TopologyConstraint:
+      properties:
+        key:
+          description: |-
+            key specifies the key of the node label representing the topology domain.
+            All pods within the PodGroup must be colocated within the same domain instance.
+            Different PodGroups can land on different domain instances even if they derive from the same PodGroupTemplate.
+            Examples: "topology.kubernetes.io/rack"
+
+            +required
+            +k8s:required
+            +k8s:format=k8s-label-key
+          type: string
+      type: object
+    v1alpha3.WorkloadPodGroupAllDisruptionMode:
+      type: object
+    v1alpha3.WorkloadPodGroupBasicSchedulingPolicy:
+      type: object
+    v1alpha3.WorkloadPodGroupDisruptionMode:
+      properties:
+        all:
+          allOf:
+          - $ref: "#/components/schemas/v1alpha3.WorkloadPodGroupAllDisruptionMode"
+          description: |-
+            all specifies that all pods in the group must be disrupted together.
+
+            +optional
+            +k8s:optional
+            +k8s:unionMember
+          type: object
+        single:
+          allOf:
+          - $ref: "#/components/schemas/v1alpha3.WorkloadPodGroupSingleDisruptionMode"
+          description: |-
+            single specifies that pods can be disrupted independently from each other.
+
+            +optional
+            +k8s:optional
+            +k8s:unionMember
+          type: object
+      type: object
+    v1alpha3.WorkloadPodGroupGangSchedulingPolicy:
+      properties:
+        minCount:
+          description: |-
+            minCount is the minimum number of pods that must be scheduled
+            at the same time for the scheduler to admit the entire group.
+            This field is optional. If it is not specified, the controller
+            should inject a context-specific sane default (e.g.,
+            parallelism for a Job).
+            If set, it must be a positive integer.
+
+            +optional
+            +k8s:optional
+            +k8s:minimum=1
+          type: integer
+      type: object
+    v1alpha3.WorkloadPodGroupResourceClaim:
+      properties:
+        name:
+          description: |-
+            name uniquely identifies this resource claim inside the group.
+            This field is required. It must be a DNS_LABEL.
+
+            +required
+            +k8s:required
+            +k8s:format=k8s-short-name
+          type: string
+        resourceClaimName:
+          description: |-
+            resourceClaimName is the name of a ResourceClaim object in the same
+            namespace.
+            This field is optional. If it is not specified, no resource claim
+            is used. If set, it must be a DNS subdomain.
+
+            +optional
+            +k8s:optional
+            +k8s:unionMember
+            +k8s:format=k8s-long-name
+          type: string
+        resourceClaimTemplateName:
+          description: |-
+            resourceClaimTemplateName is the name of a ResourceClaimTemplate
+            object in the same namespace.
+            This field is optional. If it is not specified, no resource claim
+            template is used. If set, it must be a DNS subdomain.
+
+            +optional
+            +k8s:optional
+            +k8s:unionMember
+            +k8s:format=k8s-long-name
+          type: string
+      type: object
+    v1alpha3.WorkloadPodGroupSchedulingConstraints:
+      properties:
+        topology:
+          description: |-
+            topology specifies desired topological placements for all pods
+            within the pod group.
+            If unset, no topology placement is requested.
+
+            +optional
+            +k8s:optional
+            +k8s:maxItems=1
+            +listType=atomic
+            +k8s:listType=atomic
+          items:
+            $ref: "#/components/schemas/v1alpha3.TopologyConstraint"
+          type: array
+      type: object
+    v1alpha3.WorkloadPodGroupSchedulingPolicy:
+      properties:
+        basic:
+          allOf:
+          - $ref: "#/components/schemas/v1alpha3.WorkloadPodGroupBasicSchedulingPolicy"
+          description: |-
+            basic specifies that standard, pod-by-pod Kubernetes scheduling
+            behavior should be used.
+
+            +optional
+            +k8s:optional
+            +k8s:unionMember
+          type: object
+        gang:
+          allOf:
+          - $ref: "#/components/schemas/v1alpha3.WorkloadPodGroupGangSchedulingPolicy"
+          description: |-
+            gang specifies all-or-nothing scheduling semantics.
+
+            +optional
+            +k8s:optional
+            +k8s:unionMember
+          type: object
+      type: object
+    v1alpha3.WorkloadPodGroupSingleDisruptionMode:
       type: object
   securitySchemes:
     BearerAuth:

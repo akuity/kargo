@@ -25,13 +25,16 @@ Populated by the system.
 Read-only.
 Null for lists.
 More info: https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#metadata
-+optional */
++optional
++k8s:alpha(since: "1.37")=+k8s:immutable */
   creationTimestamp?: string;
   /** Number of seconds allowed for this object to gracefully terminate before
 it will be removed from the system. Only set when deletionTimestamp is also set.
 May only be shortened.
 Read-only.
-+optional */
++optional
++k8s:alpha(since: "1.37")=+k8s:optional
++k8s:alpha(since: "1.37")=+k8s:immutable */
   deletionGracePeriodSeconds?: number;
   /** DeletionTimestamp is RFC 3339 date and time at which this resource will be deleted. This
 field is set by the server when a graceful deletion is requested by the user, and is not
@@ -51,7 +54,9 @@ If not set, graceful deletion of the object has not been requested.
 Populated by the system when a graceful deletion is requested.
 Read-only.
 More info: https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#metadata
-+optional */
++optional
++k8s:alpha(since: "1.37")=+k8s:optional
++k8s:alpha(since: "1.37")=+k8s:immutable */
   deletionTimestamp?: string;
   /** Must be empty before the object is deleted from the registry. Each entry
 is an identifier for the responsible component that will remove the entry
@@ -86,7 +91,9 @@ More info: https://git.k8s.io/community/contributors/devel/sig-architecture/api-
   generateName?: string;
   /** A sequence number representing a specific generation of the desired state.
 Populated by the system. Read-only.
-+optional */
++optional
++k8s:alpha(since: "1.37")=+k8s:optional
++k8s:alpha(since: "1.37")=+k8s:minimum=0 */
   generation?: number;
   /** Map of string keys and values that can be used to organize and categorize
 (scope and select) objects. May match selectors of replication controllers
@@ -103,7 +110,8 @@ controller's name, or the name of a specific apply path like
 workflow used when modifying the object.
 
 +optional
-+listType=atomic */
++listType=atomic
++k8s:alpha(since: "1.37")=+k8s:optional */
   managedFields?: V1ManagedFieldsEntry[];
   /** Name must be unique within a namespace. Is required when creating resources, although
 some resources may allow a client to request the generation of an appropriate name
@@ -131,7 +139,8 @@ There cannot be more than one managing controller.
 +patchMergeKey=uid
 +patchStrategy=merge
 +listType=map
-+listMapKey=uid */
++listMapKey=uid
++k8s:alpha(since:"1.37")=+k8s:optional */
   ownerReferences?: V1OwnerReference[];
   /** An opaque value that represents the internal version of this object that can
 be used by clients to determine when objects have changed. May be used for optimistic
@@ -155,6 +164,8 @@ operations.
 Populated by the system.
 Read-only.
 More info: https://kubernetes.io/docs/concepts/overview/working-with-objects/names#uids
-+optional */
++optional
++k8s:alpha(since: "1.37")=+k8s:optional
++k8s:alpha(since: "1.37")=+k8s:immutable */
   uid?: string;
 }

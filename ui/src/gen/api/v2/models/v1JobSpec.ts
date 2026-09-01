@@ -8,6 +8,7 @@
 import type { V1CompletionMode } from './v1CompletionMode';
 import type { V1PodFailurePolicy } from './v1PodFailurePolicy';
 import type { V1PodReplacementPolicy } from './v1PodReplacementPolicy';
+import type { V1JobSchedulingConfiguration } from './v1JobSchedulingConfiguration';
 import type { V1LabelSelector } from './v1LabelSelector';
 import type { V1SuccessPolicy } from './v1SuccessPolicy';
 import type { V1PodTemplateSpec } from './v1PodTemplateSpec';
@@ -96,7 +97,9 @@ all of its indexes and is marked with the `Complete` Job condition.
 It can only be specified when backoffLimitPerIndex is set.
 It can be null or up to completions. It is required and must be
 less than or equal to 10^4 when is completions greater than 10^5.
-+optional */
++optional
++k8s:optional
++k8s:alpha(since: "1.37")=+k8s:dependentRequired("backoffLimitPerIndex") */
   maxFailedIndexes?: number;
   /** Specifies the maximum desired number of pods the job should
 run at any given time. The actual number of pods running in steady state will
@@ -126,6 +129,22 @@ When using podFailurePolicy, Failed is the the only allowed value.
 TerminatingOrFailed and Failed are allowed values when podFailurePolicy is not in use.
 +optional */
   podReplacementPolicy?: V1PodReplacementPolicy;
+  /** scheduling defines the Workload-aware Scheduling configuration for this Job.
+When set, it specifies the scheduling policy (basic or gang), topology
+constraints, disruption mode, and shared resource claims.
+When omitted, the Job defaults to the basic scheduling policy, which behaves
+as standard pod-by-pod scheduling.
+This field is alpha-level and requires the WorkloadWithJob feature gate.
+This field is immutable, including whether it is set at all, only
+policy.gang.minCount may be changed after creation.
+
++featureGate=WorkloadWithJob
++optional
++k8s:ifDisabled(WorkloadWithJob)=+k8s:forbidden
++k8s:optional
++k8s:update=NoSet
++k8s:update=NoUnset */
+  scheduling?: V1JobSchedulingConfiguration;
   /** A label query over pods that should match the pod count.
 Normally, the system sets this field for you.
 More info: https://kubernetes.io/docs/concepts/overview/working-with-objects/labels/#label-selectors

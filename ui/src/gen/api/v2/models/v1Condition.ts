@@ -12,7 +12,8 @@ This should be when the underlying condition changed.  If that is not known, the
 +required
 +kubebuilder:validation:Required
 +kubebuilder:validation:Type=string
-+kubebuilder:validation:Format=date-time */
++kubebuilder:validation:Format=date-time
++k8s:alpha(since: "1.37")=+k8s:customValidation */
   lastTransitionTime: string;
   /** message is a human readable message indicating details about the transition.
 This may be an empty string.
@@ -24,7 +25,9 @@ This may be an empty string.
 For instance, if .metadata.generation is currently 12, but the .status.conditions[x].observedGeneration is 9, the condition is out of date
 with respect to the current state of the instance.
 +optional
-+kubebuilder:validation:Minimum=0 */
++kubebuilder:validation:Minimum=0
++k8s:alpha(since: "1.37")=+k8s:optional
++k8s:alpha(since: "1.37")=+k8s:minimum=0 */
   observedGeneration?: number;
   /** reason contains a programmatic identifier indicating the reason for the condition's last transition.
 Producers of specific condition types may define expected values and meanings for this field,
@@ -35,12 +38,15 @@ This field may not be empty.
 +kubebuilder:validation:Required
 +kubebuilder:validation:MaxLength=1024
 +kubebuilder:validation:MinLength=1
-+kubebuilder:validation:Pattern=`^[A-Za-z]([A-Za-z0-9_,:]*[A-Za-z0-9_])?$` */
++kubebuilder:validation:Pattern=`^[A-Za-z]([A-Za-z0-9_,:]*[A-Za-z0-9_])?$`
++k8s:alpha(since: "1.37")=+k8s:required
++k8s:alpha(since: "1.37")=+k8s:maxBytes=1024 */
   reason: string;
   /** status of the condition, one of True, False, Unknown.
 +required
 +kubebuilder:validation:Required
-+kubebuilder:validation:Enum=True;False;Unknown */
++kubebuilder:validation:Enum=True;False;Unknown
++k8s:alpha(since: "1.37")=+k8s:required */
   status: string;
   /** type of condition in CamelCase or in foo.example.com/CamelCase.
 ---
@@ -50,6 +56,7 @@ The regex it matches is (dns1123SubdomainFmt/)?(qualifiedNameFmt)
 +required
 +kubebuilder:validation:Required
 +kubebuilder:validation:Pattern=`^([a-z0-9]([-a-z0-9]*[a-z0-9])?(\.[a-z0-9]([-a-z0-9]*[a-z0-9])?)*\/)?(([A-Za-z0-9][-A-Za-z0-9_.]*)?[A-Za-z0-9])$`
-+kubebuilder:validation:MaxLength=316 */
++kubebuilder:validation:MaxLength=316
++k8s:alpha(since: "1.37")=+k8s:required */
   type: string;
 }

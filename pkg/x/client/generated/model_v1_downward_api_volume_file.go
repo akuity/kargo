@@ -27,6 +27,8 @@ type V1DownwardAPIVolumeFile struct {
 	Path *string `json:"path,omitempty"`
 	// Selects a resource of the container: only resources limits and requests (limits.cpu, limits.memory, requests.cpu and requests.memory) are currently supported. +optional
 	ResourceFieldRef *V1ResourceFieldSelector `json:"resourceFieldRef,omitempty"`
+	// user is Optional: The owner UID of the created file. If specified, the item-level user field takes precedence over defaultUser. (Alpha) This field requires the AtomicWriteVolumeUserFields feature gate to be enabled. +featureGate=AtomicWriteVolumeUserFields +optional
+	User *int32 `json:"user,omitempty"`
 }
 
 // NewV1DownwardAPIVolumeFile instantiates a new V1DownwardAPIVolumeFile object
@@ -174,6 +176,38 @@ func (o *V1DownwardAPIVolumeFile) SetResourceFieldRef(v V1ResourceFieldSelector)
 	o.ResourceFieldRef = &v
 }
 
+// GetUser returns the User field value if set, zero value otherwise.
+func (o *V1DownwardAPIVolumeFile) GetUser() int32 {
+	if o == nil || IsNil(o.User) {
+		var ret int32
+		return ret
+	}
+	return *o.User
+}
+
+// GetUserOk returns a tuple with the User field value if set, nil otherwise
+// and a boolean to check if the value has been set.
+func (o *V1DownwardAPIVolumeFile) GetUserOk() (*int32, bool) {
+	if o == nil || IsNil(o.User) {
+		return nil, false
+	}
+	return o.User, true
+}
+
+// HasUser returns a boolean if a field has been set.
+func (o *V1DownwardAPIVolumeFile) HasUser() bool {
+	if o != nil && !IsNil(o.User) {
+		return true
+	}
+
+	return false
+}
+
+// SetUser gets a reference to the given int32 and assigns it to the User field.
+func (o *V1DownwardAPIVolumeFile) SetUser(v int32) {
+	o.User = &v
+}
+
 func (o V1DownwardAPIVolumeFile) MarshalJSON() ([]byte, error) {
 	toSerialize,err := o.ToMap()
 	if err != nil {
@@ -195,6 +229,9 @@ func (o V1DownwardAPIVolumeFile) ToMap() (map[string]interface{}, error) {
 	}
 	if !IsNil(o.ResourceFieldRef) {
 		toSerialize["resourceFieldRef"] = o.ResourceFieldRef
+	}
+	if !IsNil(o.User) {
+		toSerialize["user"] = o.User
 	}
 	return toSerialize, nil
 }

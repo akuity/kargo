@@ -21,8 +21,8 @@ More info: https://kubernetes.io/docs/concepts/storage/persistent-volumes#access
 * An existing PVC (PersistentVolumeClaim)
 If the provisioner or an external controller can support the specified data source,
 it will create a new volume based on the contents of the specified data source.
-When the AnyVolumeDataSource feature gate is enabled, dataSource contents will be copied to dataSourceRef,
-and dataSourceRef contents will be copied to dataSource when dataSourceRef.namespace is not specified.
+dataSource contents will be copied to dataSourceRef, and dataSourceRef contents will be
+copied to dataSource when dataSourceRef.namespace is not specified.
 If the namespace is specified, then dataSourceRef will not be copied to dataSource.
 +optional */
   dataSource?: V1TypedLocalObjectReference;
@@ -47,7 +47,6 @@ There are three important differences between dataSource and dataSourceRef:
   specified.
 * While dataSource only allows local objects, dataSourceRef allows objects
   in any namespaces.
-(Beta) Using this field requires the AnyVolumeDataSource feature gate to be enabled.
 (Alpha) Using the namespace field of dataSourceRef requires the CrossNamespaceVolumeDataSource feature gate to be enabled.
 +optional */
   dataSourceRef?: V1TypedObjectReference;

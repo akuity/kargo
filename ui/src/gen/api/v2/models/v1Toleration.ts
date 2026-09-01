@@ -13,7 +13,9 @@ When specified, allowed values are NoSchedule, PreferNoSchedule and NoExecute.
   effect?: string;
   /** Key is the taint key that the toleration applies to. Empty means match all taint keys.
 If the key is empty, operator must be Exists; this combination means to match all values and all keys.
-+optional */
++optional
++k8s:alpha(since: "1.37")=+k8s:optional
++k8s:alpha(since: "1.37")=+k8s:format=k8s-label-key */
   key?: string;
   /** Operator represents a key's relationship to the value.
 Valid operators are Exists, Equal, Lt, and Gt. Defaults to Equal.

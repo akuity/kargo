@@ -26,4 +26,10 @@ mode, like fsGroup, and the result can be other mode bits set.
 (limits.cpu, limits.memory, requests.cpu and requests.memory) are currently supported.
 +optional */
   resourceFieldRef?: V1ResourceFieldSelector;
+  /** user is Optional: The owner UID of the created file.
+If specified, the item-level user field takes precedence over defaultUser.
+(Alpha) This field requires the AtomicWriteVolumeUserFields feature gate to be enabled.
++featureGate=AtomicWriteVolumeUserFields
++optional */
+  user?: number;
 }

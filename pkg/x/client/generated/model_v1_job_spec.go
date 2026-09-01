@@ -33,7 +33,7 @@ type V1JobSpec struct {
 	ManagedBy *string `json:"managedBy,omitempty"`
 	// manualSelector controls generation of pod labels and pod selectors. Leave `manualSelector` unset unless you are certain what you are doing. When false or unset, the system pick labels unique to this job and appends those labels to the pod template.  When true, the user is responsible for picking unique labels and specifying the selector.  Failure to pick a unique label may cause this and other jobs to not function correctly.  However, You may see `manualSelector=true` in jobs that were created with the old `extensions/v1beta1` API. More info: https://kubernetes.io/docs/concepts/workloads/controllers/jobs-run-to-completion/#specifying-your-own-pod-selector +optional
 	ManualSelector *bool `json:"manualSelector,omitempty"`
-	// Specifies the maximal number of failed indexes before marking the Job as failed, when backoffLimitPerIndex is set. Once the number of failed indexes exceeds this number the entire Job is marked as Failed and its execution is terminated. When left as null the job continues execution of all of its indexes and is marked with the `Complete` Job condition. It can only be specified when backoffLimitPerIndex is set. It can be null or up to completions. It is required and must be less than or equal to 10^4 when is completions greater than 10^5. +optional
+	// Specifies the maximal number of failed indexes before marking the Job as failed, when backoffLimitPerIndex is set. Once the number of failed indexes exceeds this number the entire Job is marked as Failed and its execution is terminated. When left as null the job continues execution of all of its indexes and is marked with the `Complete` Job condition. It can only be specified when backoffLimitPerIndex is set. It can be null or up to completions. It is required and must be less than or equal to 10^4 when is completions greater than 10^5. +optional +k8s:optional +k8s:alpha(since: \"1.37\")=+k8s:dependentRequired(\"backoffLimitPerIndex\")
 	MaxFailedIndexes *int32 `json:"maxFailedIndexes,omitempty"`
 	// Specifies the maximum desired number of pods the job should run at any given time. The actual number of pods running in steady state will be less than this number when ((.spec.completions - .status.successful) < .spec.parallelism), i.e. when the work left to do is less than max parallelism. More info: https://kubernetes.io/docs/concepts/workloads/controllers/jobs-run-to-completion/ +optional
 	Parallelism *int32 `json:"parallelism,omitempty"`
@@ -41,6 +41,8 @@ type V1JobSpec struct {
 	PodFailurePolicy *V1PodFailurePolicy `json:"podFailurePolicy,omitempty"`
 	// podReplacementPolicy specifies when to create replacement Pods. Possible values are: - TerminatingOrFailed means that we recreate pods   when they are terminating (has a metadata.deletionTimestamp) or failed. - Failed means to wait until a previously created Pod is fully terminated (has phase   Failed or Succeeded) before creating a replacement Pod.  When using podFailurePolicy, Failed is the the only allowed value. TerminatingOrFailed and Failed are allowed values when podFailurePolicy is not in use. +optional
 	PodReplacementPolicy *V1PodReplacementPolicy `json:"podReplacementPolicy,omitempty"`
+	// scheduling defines the Workload-aware Scheduling configuration for this Job. When set, it specifies the scheduling policy (basic or gang), topology constraints, disruption mode, and shared resource claims. When omitted, the Job defaults to the basic scheduling policy, which behaves as standard pod-by-pod scheduling. This field is alpha-level and requires the WorkloadWithJob feature gate. This field is immutable, including whether it is set at all, only policy.gang.minCount may be changed after creation.  +featureGate=WorkloadWithJob +optional +k8s:ifDisabled(WorkloadWithJob)=+k8s:forbidden +k8s:optional +k8s:update=NoSet +k8s:update=NoUnset
+	Scheduling *V1JobSchedulingConfiguration `json:"scheduling,omitempty"`
 	// A label query over pods that should match the pod count. Normally, the system sets this field for you. More info: https://kubernetes.io/docs/concepts/overview/working-with-objects/labels/#label-selectors +optional
 	Selector *V1LabelSelector `json:"selector,omitempty"`
 	// successPolicy specifies the policy when the Job can be declared as succeeded. If empty, the default behavior applies - the Job is declared as succeeded only when the number of succeeded pods equals to the completions. When the field is specified, it must be immutable and works only for the Indexed Jobs. Once the Job meets the SuccessPolicy, the lingering pods are terminated.  +optional
@@ -422,6 +424,38 @@ func (o *V1JobSpec) SetPodReplacementPolicy(v V1PodReplacementPolicy) {
 	o.PodReplacementPolicy = &v
 }
 
+// GetScheduling returns the Scheduling field value if set, zero value otherwise.
+func (o *V1JobSpec) GetScheduling() V1JobSchedulingConfiguration {
+	if o == nil || IsNil(o.Scheduling) {
+		var ret V1JobSchedulingConfiguration
+		return ret
+	}
+	return *o.Scheduling
+}
+
+// GetSchedulingOk returns a tuple with the Scheduling field value if set, nil otherwise
+// and a boolean to check if the value has been set.
+func (o *V1JobSpec) GetSchedulingOk() (*V1JobSchedulingConfiguration, bool) {
+	if o == nil || IsNil(o.Scheduling) {
+		return nil, false
+	}
+	return o.Scheduling, true
+}
+
+// HasScheduling returns a boolean if a field has been set.
+func (o *V1JobSpec) HasScheduling() bool {
+	if o != nil && !IsNil(o.Scheduling) {
+		return true
+	}
+
+	return false
+}
+
+// SetScheduling gets a reference to the given V1JobSchedulingConfiguration and assigns it to the Scheduling field.
+func (o *V1JobSpec) SetScheduling(v V1JobSchedulingConfiguration) {
+	o.Scheduling = &v
+}
+
 // GetSelector returns the Selector field value if set, zero value otherwise.
 func (o *V1JobSpec) GetSelector() V1LabelSelector {
 	if o == nil || IsNil(o.Selector) {
@@ -624,6 +658,9 @@ func (o V1JobSpec) ToMap() (map[string]interface{}, error) {
 	}
 	if !IsNil(o.PodReplacementPolicy) {
 		toSerialize["podReplacementPolicy"] = o.PodReplacementPolicy
+	}
+	if !IsNil(o.Scheduling) {
+		toSerialize["scheduling"] = o.Scheduling
 	}
 	if !IsNil(o.Selector) {
 		toSerialize["selector"] = o.Selector

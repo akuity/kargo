@@ -17,6 +17,12 @@ This might be in conflict with other options that affect the file
 mode, like fsGroup, and the result can be other mode bits set.
 +optional */
   defaultMode?: number;
+  /** defaultUser is Optional: The owner UID of the created files by default.
+The defaultUser field is only used as a fallback when the item-level user field is unset.
+(Alpha) This field requires the AtomicWriteVolumeUserFields feature gate to be enabled.
++featureGate=AtomicWriteVolumeUserFields
++optional */
+  defaultUser?: number;
   /** items if unspecified, each key-value pair in the Data field of the referenced
 ConfigMap will be projected into the volume as a file whose name is the
 key and content is the value. If specified, the listed keys will be

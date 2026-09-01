@@ -35,19 +35,21 @@ type V1PodSpec struct {
 	EnableServiceLinks *bool `json:"enableServiceLinks,omitempty"`
 	// List of ephemeral containers run in this pod. Ephemeral containers may be run in an existing pod to perform user-initiated actions such as debugging. This list cannot be specified when creating a pod, and it cannot be modified by updating the pod spec. In order to add an ephemeral container to an existing pod, use the pod's ephemeralcontainers subresource. +optional +patchMergeKey=name +patchStrategy=merge +listType=map +listMapKey=name
 	EphemeralContainers []V1EphemeralContainer `json:"ephemeralContainers,omitempty"`
+	// evictionResponders reference responders that react to Evictions based on EvictionRequests. Responders should observe and communicate through the Eviction Resource API to help with the graceful termination of a pod. The responders are selected sequentially, according to their specified priority.  Responders should periodically report on an eviction progress by updating the .status.responders[].heartbeatTime field of the Eviction object. If this field is not updated within the heartbeat deadline defined by the Eviction API (currently 20 minutes), the eviction is passed over to the next responder with a lower priority. If there is no other responder, the last default imperative-eviction.k8s.io/evictor responder with a priority of 100 will evict the pod using the imperative Eviction API (pods/<name>/eviction subresource).  The maximum length of the responders list is 10. Responders are not supported when the pod is part of a PodGroup (.spec.schedulingGroup is set). This field can only be set on creation and is immutable afterwards. +featureGate=EvictionRequestAPI +optional +patchMergeKey=name +patchStrategy=merge +listType=map +listMapKey=name +k8s:optional +k8s:listType=map +k8s:listMapKey=name +k8s:maxItems=10 +k8s:alpha(since: \"1.37\")=+k8s:dependentForbidden(\"schedulingGroup\")
+	EvictionResponders []V1EvictionResponder `json:"evictionResponders,omitempty"`
 	// HostAliases is an optional list of hosts and IPs that will be injected into the pod's hosts file if specified. +optional +patchMergeKey=ip +patchStrategy=merge +listType=map +listMapKey=ip
 	HostAliases []V1HostAlias `json:"hostAliases,omitempty"`
-	// Use the host's ipc namespace. Optional: Default to false. +k8s:conversion-gen=false +optional
+	// Use the host's ipc namespace. Optional: Default to false. +optional
 	HostIPC *bool `json:"hostIPC,omitempty"`
-	// Host networking requested for this pod. Use the host's network namespace. When using HostNetwork you should specify ports so the scheduler is aware. When `hostNetwork` is true, specified `hostPort` fields in port definitions must match `containerPort`, and unspecified `hostPort` fields in port definitions are defaulted to match `containerPort`. Default to false. +k8s:conversion-gen=false +optional
+	// Host networking requested for this pod. Use the host's network namespace. When using HostNetwork you should specify ports so the scheduler is aware. When `hostNetwork` is true, specified `hostPort` fields in port definitions must match `containerPort`, and unspecified `hostPort` fields in port definitions are defaulted to match `containerPort`. Default to false. +optional
 	HostNetwork *bool `json:"hostNetwork,omitempty"`
-	// Use the host's pid namespace. Optional: Default to false. +k8s:conversion-gen=false +optional
+	// Use the host's pid namespace. Optional: Default to false. +optional
 	HostPID *bool `json:"hostPID,omitempty"`
-	// Use the host's user namespace. Optional: Default to true. If set to true or not present, the pod will be run in the host user namespace, useful for when the pod needs a feature only available to the host user namespace, such as loading a kernel module with CAP_SYS_MODULE. When set to false, a new userns is created for the pod. Setting false is useful for mitigating container breakout vulnerabilities even allowing users to run their containers as root without actually having root privileges on the host. +k8s:conversion-gen=false +optional
+	// Use the host's user namespace. Optional: Default to true. If set to true or not present, the pod will be run in the host user namespace, useful for when the pod needs a feature only available to the host user namespace, such as loading a kernel module with CAP_SYS_MODULE. When set to false, a new userns is created for the pod. Setting false is useful for mitigating container breakout vulnerabilities even allowing users to run their containers as root without actually having root privileges on the host. +optional
 	HostUsers *bool `json:"hostUsers,omitempty"`
 	// Specifies the hostname of the Pod If not specified, the pod's hostname will be set to a system-defined value. +optional
 	Hostname *string `json:"hostname,omitempty"`
-	// HostnameOverride specifies an explicit override for the pod's hostname as perceived by the pod. This field only specifies the pod's hostname and does not affect its DNS records. When this field is set to a non-empty string: - It takes precedence over the values set in `hostname` and `subdomain`. - The Pod's hostname will be set to this value. - `setHostnameAsFQDN` must be nil or set to false. - `hostNetwork` must be set to false.  This field must be a valid DNS subdomain as defined in RFC 1123 and contain at most 64 characters. Requires the HostnameOverride feature gate to be enabled.  +featureGate=HostnameOverride +optional
+	// HostnameOverride specifies an explicit override for the pod's hostname as perceived by the pod. This field only specifies the pod's hostname and does not affect its DNS records. When this field is set to a non-empty string: - It takes precedence over the values set in `hostname` and `subdomain`. - The Pod's hostname will be set to this value. - `setHostnameAsFQDN` must be nil or set to false. - `hostNetwork` must be set to false.  This field must be a valid DNS subdomain as defined in RFC 1123 and contain at most 64 characters.  +featureGate=HostnameOverride +optional
 	HostnameOverride *string `json:"hostnameOverride,omitempty"`
 	// ImagePullSecrets is an optional list of references to secrets in the same namespace to use for pulling any of the images used by this PodSpec. If specified, these secrets will be passed to individual puller implementations for them to use. More info: https://kubernetes.io/docs/concepts/containers/images#specifying-imagepullsecrets-on-a-pod +optional +patchMergeKey=name +patchStrategy=merge +listType=map +listMapKey=name
 	ImagePullSecrets []V1LocalObjectReference `json:"imagePullSecrets,omitempty"`
@@ -61,7 +63,7 @@ type V1PodSpec struct {
 	Os *V1PodOS `json:"os,omitempty"`
 	// Overhead represents the resource overhead associated with running a pod for a given RuntimeClass. This field will be autopopulated at admission time by the RuntimeClass admission controller. If the RuntimeClass admission controller is enabled, overhead must not be set in Pod create requests. The RuntimeClass admission controller will reject Pod create requests which have the overhead already set. If RuntimeClass is configured and selected in the PodSpec, Overhead will be set to the value defined in the corresponding RuntimeClass, otherwise it will remain unset and treated as zero. More info: https://git.k8s.io/enhancements/keps/sig-node/688-pod-overhead/README.md +optional
 	Overhead *map[string]string `json:"overhead,omitempty"`
-	// PreemptionPolicy is the Policy for preempting pods with lower priority. One of Never, PreemptLowerPriority. Defaults to PreemptLowerPriority if unset. +optional
+	// PreemptionPolicy is the Policy for preempting pods with lower priority. One of Never, PreemptLowerPriority. When Priority Admission Controller is enabled, it prevents users from setting this field. The admission controller populates this field from PriorityClassName. Defaults to PreemptLowerPriority if unset. +optional
 	PreemptionPolicy *string `json:"preemptionPolicy,omitempty"`
 	// The priority value. Various system components use this field to find the priority of the pod. When Priority Admission Controller is enabled, it prevents users from setting this field. The admission controller populates this field from PriorityClassName. The higher the value, the higher the priority. +optional
 	Priority *int32 `json:"priority,omitempty"`
@@ -85,19 +87,19 @@ type V1PodSpec struct {
 	SchedulingGroup *V1PodSchedulingGroup `json:"schedulingGroup,omitempty"`
 	// SecurityContext holds pod-level security attributes and common container settings. Optional: Defaults to empty.  See type description for default values of each field. +optional
 	SecurityContext *V1PodSecurityContext `json:"securityContext,omitempty"`
-	// DeprecatedServiceAccount is a deprecated alias for ServiceAccountName. Deprecated: Use serviceAccountName instead. +k8s:conversion-gen=false +optional
+	// DeprecatedServiceAccount is a deprecated alias for ServiceAccountName. Deprecated: Use serviceAccountName instead. +optional
 	ServiceAccount *string `json:"serviceAccount,omitempty"`
 	// ServiceAccountName is the name of the ServiceAccount to use to run this pod. More info: https://kubernetes.io/docs/tasks/configure-pod-container/configure-service-account/ +optional
 	ServiceAccountName *string `json:"serviceAccountName,omitempty"`
 	// If true the pod's hostname will be configured as the pod's FQDN, rather than the leaf name (the default). In Linux containers, this means setting the FQDN in the hostname field of the kernel (the nodename field of struct utsname). In Windows containers, this means setting the registry value of hostname for the registry key HKEY_LOCAL_MACHINE\\\\SYSTEM\\\\CurrentControlSet\\\\Services\\\\Tcpip\\\\Parameters to FQDN. If a pod does not have FQDN, this has no effect. Default to false. +optional
 	SetHostnameAsFQDN *bool `json:"setHostnameAsFQDN,omitempty"`
-	// Share a single process namespace between all of the containers in a pod. When this is set containers will be able to view and signal processes from other containers in the same pod, and the first process in each container will not be assigned PID 1. HostPID and ShareProcessNamespace cannot both be set. Optional: Default to false. +k8s:conversion-gen=false +optional
+	// Share a single process namespace between all of the containers in a pod. When this is set containers will be able to view and signal processes from other containers in the same pod, and the first process in each container will not be assigned PID 1. HostPID and ShareProcessNamespace cannot both be set. Optional: Default to false. +optional
 	ShareProcessNamespace *bool `json:"shareProcessNamespace,omitempty"`
 	// If specified, the fully qualified Pod hostname will be \"<hostname>.<subdomain>.<pod namespace>.svc.<cluster domain>\". If not specified, the pod will not have a domainname at all. +optional
 	Subdomain *string `json:"subdomain,omitempty"`
 	// Optional duration in seconds the pod needs to terminate gracefully. May be decreased in delete request. Value must be non-negative integer. The value zero indicates stop immediately via the kill signal (no opportunity to shut down). If this value is nil, the default grace period will be used instead. The grace period is the duration in seconds after the processes running in the pod are sent a termination signal and the time when the processes are forcibly halted with a kill signal. Set this value longer than the expected cleanup time for your process. Defaults to 30 seconds. +optional
 	TerminationGracePeriodSeconds *int32 `json:"terminationGracePeriodSeconds,omitempty"`
-	// If specified, the pod's tolerations. +optional +listType=atomic
+	// If specified, the pod's tolerations. +optional +listType=atomic +k8s:alpha(since: \"1.37\")=+k8s:optional
 	Tolerations []V1Toleration `json:"tolerations,omitempty"`
 	// TopologySpreadConstraints describes how a group of pods ought to spread across topology domains. Scheduler will schedule pods in a way which abides by the constraints. All topologySpreadConstraints are ANDed. +optional +patchMergeKey=topologyKey +patchStrategy=merge +listType=map +listMapKey=topologyKey +listMapKey=whenUnsatisfiable
 	TopologySpreadConstraints []V1TopologySpreadConstraint `json:"topologySpreadConstraints,omitempty"`
@@ -376,6 +378,38 @@ func (o *V1PodSpec) HasEphemeralContainers() bool {
 // SetEphemeralContainers gets a reference to the given []V1EphemeralContainer and assigns it to the EphemeralContainers field.
 func (o *V1PodSpec) SetEphemeralContainers(v []V1EphemeralContainer) {
 	o.EphemeralContainers = v
+}
+
+// GetEvictionResponders returns the EvictionResponders field value if set, zero value otherwise.
+func (o *V1PodSpec) GetEvictionResponders() []V1EvictionResponder {
+	if o == nil || IsNil(o.EvictionResponders) {
+		var ret []V1EvictionResponder
+		return ret
+	}
+	return o.EvictionResponders
+}
+
+// GetEvictionRespondersOk returns a tuple with the EvictionResponders field value if set, nil otherwise
+// and a boolean to check if the value has been set.
+func (o *V1PodSpec) GetEvictionRespondersOk() ([]V1EvictionResponder, bool) {
+	if o == nil || IsNil(o.EvictionResponders) {
+		return nil, false
+	}
+	return o.EvictionResponders, true
+}
+
+// HasEvictionResponders returns a boolean if a field has been set.
+func (o *V1PodSpec) HasEvictionResponders() bool {
+	if o != nil && !IsNil(o.EvictionResponders) {
+		return true
+	}
+
+	return false
+}
+
+// SetEvictionResponders gets a reference to the given []V1EvictionResponder and assigns it to the EvictionResponders field.
+func (o *V1PodSpec) SetEvictionResponders(v []V1EvictionResponder) {
+	o.EvictionResponders = v
 }
 
 // GetHostAliases returns the HostAliases field value if set, zero value otherwise.
@@ -1499,6 +1533,9 @@ func (o V1PodSpec) ToMap() (map[string]interface{}, error) {
 	}
 	if !IsNil(o.EphemeralContainers) {
 		toSerialize["ephemeralContainers"] = o.EphemeralContainers
+	}
+	if !IsNil(o.EvictionResponders) {
+		toSerialize["evictionResponders"] = o.EvictionResponders
 	}
 	if !IsNil(o.HostAliases) {
 		toSerialize["hostAliases"] = o.HostAliases

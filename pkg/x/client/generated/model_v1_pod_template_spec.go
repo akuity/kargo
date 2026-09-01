@@ -19,7 +19,7 @@ var _ MappedNullable = &V1PodTemplateSpec{}
 
 // V1PodTemplateSpec struct for V1PodTemplateSpec
 type V1PodTemplateSpec struct {
-	// Standard object's metadata. More info: https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#metadata +optional
+	// Standard object's metadata. More info: https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#metadata +optional +k8s:opaqueType
 	Metadata *V1ObjectMeta `json:"metadata,omitempty"`
 	// Specification of the desired behavior of the pod. More info: https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#spec-and-status +optional
 	Spec *V1PodSpec `json:"spec,omitempty"`
