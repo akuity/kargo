@@ -1,8 +1,21 @@
 # Documentation:
 # * https://docs.github.com/en/code-security/supply-chain-security/keeping-your-dependencies-updated-automatically/enabling-and-disabling-dependabot-version-updates
 # * https://docs.github.com/en/code-security/supply-chain-security/keeping-your-dependencies-updated-automatically/configuration-options-for-dependency-updates
+#
+# Dependabot only ever reads this file from the repository's default branch.
+# Coverage of the release branches is therefore expressed here, using
+# target-branch. Because the layout of the repository differs from one release
+# branch to the next, each branch's Go modules are enumerated separately.
+#
+# Release branches take patch and minor updates only. Major version bumps are
+# ignored there, so they land on main alone.
+#
+# Each branch runs on its own day of the week so that update PRs arrive a
+# branch at a time rather than all at once.
 version: 2
 updates:
+  # ----------------------------- main -----------------------------
+
   - package-ecosystem: "github-actions"
     directory: "/"
     schedule:
@@ -92,3 +105,479 @@ updates:
       go-major:
         update-types:
         - "major"
+
+  - package-ecosystem: "gomod"
+    directories:
+    - "/hack/test/e2e"
+    - "/hack/test/e2e/envs"
+    - "/hack/test/e2e/framework/envfuncs"
+    - "/hack/test/e2e/framework/funcsloader"
+    schedule:
+      interval: "weekly"
+      day: "sunday"
+    commit-message:
+      prefix: "chore(deps/e2e):"
+    groups:
+      go-patch:
+        update-types:
+        - "patch"
+      go-minor:
+        update-types:
+        - "minor"
+      go-major:
+        update-types:
+        - "major"
+
+  # ----------------------------- release-1.11 -----------------------------
+
+  - package-ecosystem: "github-actions"
+    directory: "/"
+    schedule:
+      interval: "weekly"
+      day: "monday"
+    target-branch: "release-1.11"
+    ignore:
+    - dependency-name: "*"
+      update-types:
+      - "version-update:semver-major"
+    commit-message:
+      prefix: "chore(deps):"
+
+  - package-ecosystem: "docker"
+    directory: "/"
+    schedule:
+      interval: "weekly"
+      day: "monday"
+    target-branch: "release-1.11"
+    ignore:
+    - dependency-name: "*"
+      update-types:
+      - "version-update:semver-major"
+    commit-message:
+      prefix: "chore(deps):"
+
+  - package-ecosystem: "npm"
+    directory: "/ui"
+    versioning-strategy: increase
+    schedule:
+      interval: "monthly"
+    target-branch: "release-1.11"
+    ignore:
+    - dependency-name: "*"
+      update-types:
+      - "version-update:semver-major"
+    commit-message:
+      prefix: "chore(deps):"
+    groups:
+      js-patch:
+        update-types:
+        - "patch"
+      js-minor:
+        update-types:
+        - "minor"
+
+  - package-ecosystem: "gomod"
+    directory: "/"
+    schedule:
+      interval: "weekly"
+      day: "monday"
+    target-branch: "release-1.11"
+    ignore:
+    - dependency-name: "*"
+      update-types:
+      - "version-update:semver-major"
+    commit-message:
+      prefix: "chore(deps):"
+    groups:
+      go-patch:
+        update-types:
+        - "patch"
+      go-minor:
+        update-types:
+        - "minor"
+
+  - package-ecosystem: "gomod"
+    directory: "/api"
+    schedule:
+      interval: "weekly"
+      day: "monday"
+    target-branch: "release-1.11"
+    ignore:
+    - dependency-name: "*"
+      update-types:
+      - "version-update:semver-major"
+    commit-message:
+      prefix: "chore(deps/api):"
+    groups:
+      go-patch:
+        update-types:
+        - "patch"
+      go-minor:
+        update-types:
+        - "minor"
+
+  - package-ecosystem: "gomod"
+    directories:
+    - "/pkg/x/client/fidelity"
+    - "/pkg/x/client/generated"
+    schedule:
+      interval: "weekly"
+      day: "monday"
+    target-branch: "release-1.11"
+    ignore:
+    - dependency-name: "*"
+      update-types:
+      - "version-update:semver-major"
+    commit-message:
+      prefix: "chore(deps/client):"
+    groups:
+      go-patch:
+        update-types:
+        - "patch"
+      go-minor:
+        update-types:
+        - "minor"
+
+  # ----------------------------- release-1.10 -----------------------------
+
+  - package-ecosystem: "github-actions"
+    directory: "/"
+    schedule:
+      interval: "weekly"
+      day: "tuesday"
+    target-branch: "release-1.10"
+    ignore:
+    - dependency-name: "*"
+      update-types:
+      - "version-update:semver-major"
+    commit-message:
+      prefix: "chore(deps):"
+
+  - package-ecosystem: "docker"
+    directory: "/"
+    schedule:
+      interval: "weekly"
+      day: "tuesday"
+    target-branch: "release-1.10"
+    ignore:
+    - dependency-name: "*"
+      update-types:
+      - "version-update:semver-major"
+    commit-message:
+      prefix: "chore(deps):"
+
+  - package-ecosystem: "npm"
+    directory: "/ui"
+    versioning-strategy: increase
+    schedule:
+      interval: "monthly"
+    target-branch: "release-1.10"
+    ignore:
+    - dependency-name: "*"
+      update-types:
+      - "version-update:semver-major"
+    commit-message:
+      prefix: "chore(deps):"
+    groups:
+      js-patch:
+        update-types:
+        - "patch"
+      js-minor:
+        update-types:
+        - "minor"
+
+  - package-ecosystem: "gomod"
+    directory: "/"
+    schedule:
+      interval: "weekly"
+      day: "tuesday"
+    target-branch: "release-1.10"
+    ignore:
+    - dependency-name: "*"
+      update-types:
+      - "version-update:semver-major"
+    commit-message:
+      prefix: "chore(deps):"
+    groups:
+      go-patch:
+        update-types:
+        - "patch"
+      go-minor:
+        update-types:
+        - "minor"
+
+  - package-ecosystem: "gomod"
+    directory: "/api"
+    schedule:
+      interval: "weekly"
+      day: "tuesday"
+    target-branch: "release-1.10"
+    ignore:
+    - dependency-name: "*"
+      update-types:
+      - "version-update:semver-major"
+    commit-message:
+      prefix: "chore(deps/api):"
+    groups:
+      go-patch:
+        update-types:
+        - "patch"
+      go-minor:
+        update-types:
+        - "minor"
+
+  - package-ecosystem: "gomod"
+    directory: "/hack/tools"
+    schedule:
+      interval: "weekly"
+      day: "tuesday"
+    target-branch: "release-1.10"
+    ignore:
+    - dependency-name: "*"
+      update-types:
+      - "version-update:semver-major"
+    commit-message:
+      prefix: "chore(deps/hack):"
+    groups:
+      go-patch:
+        update-types:
+        - "patch"
+      go-minor:
+        update-types:
+        - "minor"
+
+  - package-ecosystem: "gomod"
+    directory: "/pkg/client/generated"
+    schedule:
+      interval: "weekly"
+      day: "tuesday"
+    target-branch: "release-1.10"
+    ignore:
+    - dependency-name: "*"
+      update-types:
+      - "version-update:semver-major"
+    commit-message:
+      prefix: "chore(deps/client):"
+    groups:
+      go-patch:
+        update-types:
+        - "patch"
+      go-minor:
+        update-types:
+        - "minor"
+
+  # ----------------------------- release-1.9 -----------------------------
+
+  - package-ecosystem: "github-actions"
+    directory: "/"
+    schedule:
+      interval: "weekly"
+      day: "wednesday"
+    target-branch: "release-1.9"
+    ignore:
+    - dependency-name: "*"
+      update-types:
+      - "version-update:semver-major"
+    commit-message:
+      prefix: "chore(deps):"
+
+  - package-ecosystem: "docker"
+    directory: "/"
+    schedule:
+      interval: "weekly"
+      day: "wednesday"
+    target-branch: "release-1.9"
+    ignore:
+    - dependency-name: "*"
+      update-types:
+      - "version-update:semver-major"
+    commit-message:
+      prefix: "chore(deps):"
+
+  - package-ecosystem: "npm"
+    directory: "/ui"
+    versioning-strategy: increase
+    schedule:
+      interval: "monthly"
+    target-branch: "release-1.9"
+    ignore:
+    - dependency-name: "*"
+      update-types:
+      - "version-update:semver-major"
+    commit-message:
+      prefix: "chore(deps):"
+    groups:
+      js-patch:
+        update-types:
+        - "patch"
+      js-minor:
+        update-types:
+        - "minor"
+
+  - package-ecosystem: "gomod"
+    directory: "/"
+    schedule:
+      interval: "weekly"
+      day: "wednesday"
+    target-branch: "release-1.9"
+    ignore:
+    - dependency-name: "*"
+      update-types:
+      - "version-update:semver-major"
+    commit-message:
+      prefix: "chore(deps):"
+    groups:
+      go-patch:
+        update-types:
+        - "patch"
+      go-minor:
+        update-types:
+        - "minor"
+
+  - package-ecosystem: "gomod"
+    directory: "/api"
+    schedule:
+      interval: "weekly"
+      day: "wednesday"
+    target-branch: "release-1.9"
+    ignore:
+    - dependency-name: "*"
+      update-types:
+      - "version-update:semver-major"
+    commit-message:
+      prefix: "chore(deps/api):"
+    groups:
+      go-patch:
+        update-types:
+        - "patch"
+      go-minor:
+        update-types:
+        - "minor"
+
+  - package-ecosystem: "gomod"
+    directory: "/hack/tools"
+    schedule:
+      interval: "weekly"
+      day: "wednesday"
+    target-branch: "release-1.9"
+    ignore:
+    - dependency-name: "*"
+      update-types:
+      - "version-update:semver-major"
+    commit-message:
+      prefix: "chore(deps/hack):"
+    groups:
+      go-patch:
+        update-types:
+        - "patch"
+      go-minor:
+        update-types:
+        - "minor"
+
+  # ----------------------------- release-1.8 -----------------------------
+
+  - package-ecosystem: "github-actions"
+    directory: "/"
+    schedule:
+      interval: "weekly"
+      day: "thursday"
+    target-branch: "release-1.8"
+    ignore:
+    - dependency-name: "*"
+      update-types:
+      - "version-update:semver-major"
+    commit-message:
+      prefix: "chore(deps):"
+
+  - package-ecosystem: "docker"
+    directory: "/"
+    schedule:
+      interval: "weekly"
+      day: "thursday"
+    target-branch: "release-1.8"
+    ignore:
+    - dependency-name: "*"
+      update-types:
+      - "version-update:semver-major"
+    commit-message:
+      prefix: "chore(deps):"
+
+  - package-ecosystem: "npm"
+    directory: "/ui"
+    versioning-strategy: increase
+    schedule:
+      interval: "monthly"
+    target-branch: "release-1.8"
+    ignore:
+    - dependency-name: "*"
+      update-types:
+      - "version-update:semver-major"
+    commit-message:
+      prefix: "chore(deps):"
+    groups:
+      js-patch:
+        update-types:
+        - "patch"
+      js-minor:
+        update-types:
+        - "minor"
+
+  - package-ecosystem: "gomod"
+    directory: "/"
+    schedule:
+      interval: "weekly"
+      day: "thursday"
+    target-branch: "release-1.8"
+    ignore:
+    - dependency-name: "*"
+      update-types:
+      - "version-update:semver-major"
+    commit-message:
+      prefix: "chore(deps):"
+    groups:
+      go-patch:
+        update-types:
+        - "patch"
+      go-minor:
+        update-types:
+        - "minor"
+
+  - package-ecosystem: "gomod"
+    directory: "/api"
+    schedule:
+      interval: "weekly"
+      day: "thursday"
+    target-branch: "release-1.8"
+    ignore:
+    - dependency-name: "*"
+      update-types:
+      - "version-update:semver-major"
+    commit-message:
+      prefix: "chore(deps/api):"
+    groups:
+      go-patch:
+        update-types:
+        - "patch"
+      go-minor:
+        update-types:
+        - "minor"
+
+  - package-ecosystem: "gomod"
+    directory: "/hack/tools"
+    schedule:
+      interval: "weekly"
+      day: "thursday"
+    target-branch: "release-1.8"
+    ignore:
+    - dependency-name: "*"
+      update-types:
+      - "version-update:semver-major"
+    commit-message:
+      prefix: "chore(deps/hack):"
+    groups:
+      go-patch:
+        update-types:
+        - "patch"
+      go-minor:
+        update-types:
+        - "minor"
