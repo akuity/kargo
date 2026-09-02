@@ -6,7 +6,8 @@ import {
   MiniMap,
   ReactFlow,
   ReactFlowInstance,
-  useNodesState
+  useNodesState,
+  Viewport
 } from '@xyflow/react';
 import { useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react';
 
@@ -37,6 +38,20 @@ const nodeTypes = {
   [reactFlowNodeConstants.CUSTOM_REPO_SUBSCRIPTION_NODE]: CustomRepoSubscriptionNode
 };
 
+const viewportLocalStorageKey = (project: string) => `pipeline-viewport-${project}`;
+
+const getStoredViewport = (project: string): Viewport | undefined => {
+  const raw = localStorage.getItem(viewportLocalStorageKey(project));
+  if (!raw) {
+    return undefined;
+  }
+  try {
+    return JSON.parse(raw);
+  } catch {
+    return undefined;
+  }
+};
+
 export const Graph = (props: GraphProps) => {
   const { isDark } = useTheme();
   const reactFlowInstance = useRef<ReactFlowInstance | null>(null);
@@ -61,6 +76,8 @@ export const Graph = (props: GraphProps) => {
   };
 
   const [redraw, setRedraw] = useState(false);
+
+  const [initialViewport] = useState(() => getStoredViewport(props.project));
 
   // Cheap placeholders on first paint; swap to real components on the next tick.
   // ReactFlow mounts every node at least once for measurement, so this avoids
@@ -222,11 +239,20 @@ export const Graph = (props: GraphProps) => {
     return nodes;
   }, [nodes]);
 
+  const hideSubscriptionsSignature = JSON.stringify(
+    filterContext?.preferredFilter?.hideSubscriptions ?? {}
+  );
+  const isInitialHideSubscriptionsRender = useRef(true);
+
   useEffect(() => {
+    if (isInitialHideSubscriptionsRender.current) {
+      isInitialHideSubscriptionsRender.current = false;
+      return;
+    }
     requestAnimationFrame(() => {
       reactFlowInstance.current?.fitView();
     });
-  }, [filterContext?.preferredFilter?.hideSubscriptions]);
+  }, [hideSubscriptionsSignature]);
 
   const stageSearch = filterContext?.stageSearch || '';
   const matchedStageIndices = useMemo(() => {
@@ -298,9 +324,13 @@ export const Graph = (props: GraphProps) => {
         nodes={nodes}
         edges={edges}
         nodeTypes={nodeTypes}
-        fitView
+        fitView={!initialViewport}
         fitViewOptions={{
           nodes: nodesExcludingSubscriptionNodes
+        }}
+        defaultViewport={initialViewport}
+        onMoveEnd={(_, viewport) => {
+          localStorage.setItem(viewportLocalStorageKey(props.project), JSON.stringify(viewport));
         }}
         proOptions={{ hideAttribution: true }}
         minZoom={nodes.length > 100 ? 0.4 : 0.1}
