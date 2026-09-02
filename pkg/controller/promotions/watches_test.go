@@ -23,6 +23,7 @@ import (
 	"github.com/akuity/kargo/pkg/controller"
 	argocd "github.com/akuity/kargo/pkg/controller/argocd/api/v1alpha1"
 	"github.com/akuity/kargo/pkg/indexer"
+	"github.com/akuity/kargo/pkg/kubernetes"
 )
 
 func TestUpdatedArgoCDAppHandler_Update(t *testing.T) {
@@ -401,6 +402,9 @@ func TestPromotionAcknowledgedByStageHandler_Update(t *testing.T) {
 	require.NoError(t, kargoapi.AddToScheme(scheme))
 
 	controllerTrue := true
+	// Longer than the 63 characters a label value may hold.
+	longStageName := strings.Repeat("a", 70)
+	require.Greater(t, len(longStageName), 63)
 	newRequestChild := func(name, target, request string, phase kargoapi.PromotionPhase) *kargoapi.Promotion {
 		return &kargoapi.Promotion{
 			ObjectMeta: metav1.ObjectMeta{
@@ -587,6 +591,60 @@ func TestPromotionAcknowledgedByStageHandler_Update(t *testing.T) {
 					[]string{"blue-promotion", "green-promotion"},
 					enqueued,
 				)
+			},
+		},
+		{
+			// The Promotion webhook shortens the Stage label to fit the 63
+			// character limit on label values, so children must be found by the
+			// shortened value, not the raw Stage name.
+			name: "children are found by the shortened Stage label",
+			shardPredicate: controller.ResponsibleFor[kargoapi.Stage]{
+				IsDefaultController: true,
+				ShardName:           "fake-shard",
+			},
+			objects: []client.Object{
+				&kargoapi.Promotion{
+					ObjectMeta: metav1.ObjectMeta{
+						Namespace: "fake-project",
+						Name:      "blue-promotion",
+						Labels: map[string]string{
+							kargoapi.LabelKeyStage: kubernetes.ShortenLabelValue(longStageName),
+						},
+						OwnerReferences: []metav1.OwnerReference{{
+							APIVersion: kargoapi.GroupVersion.String(),
+							Kind:       "PromotionRequest",
+							Name:       "current-request",
+							Controller: &controllerTrue,
+						}},
+					},
+					Spec: kargoapi.PromotionSpec{
+						Stage:  longStageName,
+						Target: "blue",
+					},
+					Status: kargoapi.PromotionStatus{Phase: kargoapi.PromotionPhasePending},
+				},
+			},
+			e: event.TypedUpdateEvent[*kargoapi.Stage]{
+				ObjectOld: &kargoapi.Stage{},
+				ObjectNew: &kargoapi.Stage{
+					ObjectMeta: metav1.ObjectMeta{
+						Namespace: "fake-project",
+						Name:      longStageName,
+					},
+					Status: kargoapi.StageStatus{
+						CurrentPromotionRequest: &kargoapi.PromotionRequestReference{
+							Name: "current-request",
+						},
+					},
+				},
+			},
+			assertions: func(
+				t *testing.T,
+				wq workqueue.TypedRateLimitingInterface[reconcile.Request],
+			) {
+				require.Equal(t, 1, wq.Len())
+				item, _ := wq.Get()
+				require.Equal(t, "blue-promotion", item.Name)
 			},
 		},
 		{

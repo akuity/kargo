@@ -16,6 +16,7 @@ import (
 	"github.com/akuity/kargo/pkg/controller"
 	argocd "github.com/akuity/kargo/pkg/controller/argocd/api/v1alpha1"
 	"github.com/akuity/kargo/pkg/indexer"
+	"github.com/akuity/kargo/pkg/kubernetes"
 	"github.com/akuity/kargo/pkg/logging"
 )
 
@@ -323,7 +324,7 @@ func (p *PromotionAcknowledgedByStageHandler[T]) enqueueChildrenOf(
 		ctx,
 		promotions,
 		client.InNamespace(stage.Namespace),
-		client.MatchingLabels{kargoapi.LabelKeyStage: stage.Name},
+		client.MatchingLabels{kargoapi.LabelKeyStage: kubernetes.ShortenLabelValue(stage.Name)},
 	); err != nil {
 		logger.Error(
 			err, "error listing Promotions for Stage",

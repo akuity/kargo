@@ -6595,6 +6595,24 @@ func TestRegularStageReconciler_computeEffectiveAutoPromotionHolds(t *testing.T)
 			},
 		},
 		{
+			// A PromotionRequest's child Promotions take no part in the Stage's
+			// own flow, whatever annotations they carry.
+			name:                 "hold-intent child Promotion is ignored",
+			autoPromotionEnabled: true,
+			stage:                stage(nil),
+			objects: []client.Object{
+				func() *kargoapi.Promotion {
+					promo := holdPromo("promo-01", kargoapi.PromotionPhaseRunning)
+					promo.Spec.Target = "blue"
+					return promo
+				}(),
+			},
+			assert: func(t *testing.T, holds map[string]kargoapi.AutoPromotionHold, err error) {
+				require.NoError(t, err)
+				assert.Empty(t, holds)
+			},
+		},
+		{
 			name:                 "running release-intent Promotion clears the origin",
 			autoPromotionEnabled: true,
 			stage:                stage(durableHold),
@@ -9449,6 +9467,69 @@ func Test_buildFreightSummary(t *testing.T) {
 		t.Run(tt.name, func(t *testing.T) {
 			result := buildFreightSummary(tt.requested, tt.current)
 			assert.Equal(t, tt.expected, result)
+		})
+	}
+}
+
+func TestWithoutTargetPromotions(t *testing.T) {
+	stagePromo := func(name string) kargoapi.Promotion {
+		return kargoapi.Promotion{
+			ObjectMeta: metav1.ObjectMeta{Name: name},
+			Spec:       kargoapi.PromotionSpec{Stage: "test-stage"},
+		}
+	}
+	targetPromo := func(name, target string) kargoapi.Promotion {
+		return kargoapi.Promotion{
+			ObjectMeta: metav1.ObjectMeta{Name: name},
+			Spec:       kargoapi.PromotionSpec{Stage: "test-stage", Target: target},
+		}
+	}
+
+	testCases := []struct {
+		name     string
+		promos   []kargoapi.Promotion
+		expected []string
+	}{
+		{
+			name:     "nil list",
+			promos:   nil,
+			expected: nil,
+		},
+		{
+			name:     "no children",
+			promos:   []kargoapi.Promotion{stagePromo("a"), stagePromo("b")},
+			expected: []string{"a", "b"},
+		},
+		{
+			name:     "only children",
+			promos:   []kargoapi.Promotion{targetPromo("a", "blue"), targetPromo("b", "green")},
+			expected: []string{},
+		},
+		{
+			name: "children are removed and order is preserved",
+			promos: []kargoapi.Promotion{
+				targetPromo("a", "blue"),
+				stagePromo("b"),
+				targetPromo("c", "green"),
+				stagePromo("d"),
+			},
+			expected: []string{"b", "d"},
+		},
+	}
+	for _, testCase := range testCases {
+		t.Run(testCase.name, func(t *testing.T) {
+			t.Parallel()
+			result := withoutTargetPromotions(testCase.promos)
+			names := make([]string, 0, len(result))
+			for _, promo := range result {
+				require.Empty(t, promo.Spec.Target)
+				names = append(names, promo.Name)
+			}
+			if testCase.expected == nil {
+				require.Empty(t, names)
+				return
+			}
+			require.Equal(t, testCase.expected, names)
 		})
 	}
 }
