@@ -671,6 +671,8 @@ func (r *RegularStageReconciler) reconcile(
 	case requestRequeue:
 		requeueAfter = immediateRequeueInterval
 	case !requeueAt.IsZero():
+		// Floor at the immediate interval: a deadline that passed during this
+		// pass must still produce a requeue, and a zero RequeueAfter would not.
 		requeueAfter = max(time.Until(requeueAt), immediateRequeueInterval)
 	}
 	return newStatus, requeueAfter, nil
