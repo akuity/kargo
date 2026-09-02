@@ -174,7 +174,8 @@ func Test_webhook_Default(t *testing.T) {
 			},
 		},
 		{
-			name: "no origin is a no-op",
+			// Nothing to resolve, but the name is still Kargo's to assign.
+			name: "explicit Freight is named without resolution",
 			ctx: func(t *testing.T) context.Context {
 				return contextWithOperation(t, admissionv1.Create)
 			},
@@ -182,6 +183,9 @@ func Test_webhook_Default(t *testing.T) {
 			assertions: func(t *testing.T, pr *kargoapi.PromotionRequest, err error) {
 				require.NoError(t, err)
 				assert.Equal(t, "fake-freight", pr.Spec.Freight)
+				assert.True(t, strings.HasPrefix(pr.Name, "fake-stage."), pr.Name)
+				assert.True(t, strings.HasSuffix(pr.Name, ".fake-fr"), pr.Name)
+				assert.NotEqual(t, "fake-stage.01jexample.abcdef1", pr.Name)
 			},
 		},
 		{
@@ -204,6 +208,9 @@ func Test_webhook_Default(t *testing.T) {
 			},
 		},
 		{
+			// Only origin resolution needs the Stage; naming an explicit
+			// Freight does not, so a missing Stage is validation's problem
+			// then.
 			name: "Stage does not exist",
 			ctx: func(t *testing.T) context.Context {
 				return contextWithOperation(t, admissionv1.Create)

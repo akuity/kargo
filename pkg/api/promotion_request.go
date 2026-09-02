@@ -128,6 +128,10 @@ func ComparePromotionRequestPhase(a, b kargoapi.PromotionRequestPhase) int {
 // The Stage is set as the controlling owner, so its PromotionRequests are
 // garbage-collected with it.
 //
+// As with Promotions, the name is left to the defaulting webhook, which
+// generates one that embeds the Freight so that sorting logic elsewhere in
+// Kargo can read creation order from it.
+//
 // The Stage MUST be target-aware. Callers should gate on IsTargetAware.
 func NewPromotionRequest(
 	ctx context.Context,
@@ -139,7 +143,6 @@ func NewPromotionRequest(
 	if err != nil {
 		return nil, err
 	}
-	promotionRequest.Name = GeneratePromotionRequestName(stage.Name, freightName)
 	promotionRequest.Spec.Freight = freightName
 	return promotionRequest, nil
 }
@@ -147,8 +150,7 @@ func NewPromotionRequest(
 // NewPromotionRequestForOrigin constructs a PromotionRequest that, unlike
 // NewPromotionRequest which is explicit about the exact Freight to promote,
 // specifies only an origin. The PromotionRequest defaulting webhook resolves
-// the origin to the auto-promotion candidate Freight at admission time and
-// names the PromotionRequest for it.
+// the origin to the auto-promotion candidate Freight at admission time.
 //
 // The Stage MUST be target-aware. Callers should gate on IsTargetAware.
 func NewPromotionRequestForOrigin(
@@ -161,15 +163,12 @@ func NewPromotionRequestForOrigin(
 	if err != nil {
 		return nil, err
 	}
-	// The defaulting webhook overwrites this. We set it here only so that the
-	// Kubernetes API server has a name to work with before admission runs.
-	promotionRequest.GenerateName = "promoreq-"
 	promotionRequest.Spec.Origin = &origin
 	return promotionRequest, nil
 }
 
 // newPromotionRequest constructs a PromotionRequest with everything but the
-// Freight (or the origin standing in for it) and the name that embeds it.
+// Freight (or the origin standing in for it).
 func newPromotionRequest(
 	ctx context.Context,
 	c client.Client,
@@ -202,7 +201,11 @@ func newPromotionRequest(
 	return &kargoapi.PromotionRequest{
 		ObjectMeta: metav1.ObjectMeta{
 			Namespace: stage.Namespace,
-			Labels:    labels,
+			// The defaulting webhook overwrites this. We set it here only so that
+			// the Kubernetes API server has a name to work with before admission
+			// runs.
+			GenerateName: "promoreq-",
+			Labels:       labels,
 			OwnerReferences: []metav1.OwnerReference{
 				*metav1.NewControllerRef(
 					stage,

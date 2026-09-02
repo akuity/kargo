@@ -335,7 +335,10 @@ func TestNewPromotionRequest(t *testing.T) {
 		require.Equal(t, project, promoReq.Namespace)
 		require.Equal(t, stage, promoReq.Spec.Stage)
 		require.Equal(t, freight, promoReq.Spec.Freight)
-		require.True(t, strings.HasPrefix(promoReq.Name, stage+"."))
+		// The name is left to the defaulting webhook; generateName only gives
+		// the API server something to work with before admission runs.
+		require.Empty(t, promoReq.Name)
+		require.NotEmpty(t, promoReq.GenerateName)
 		// Only Targets matching the selector, sorted by name so that repeated
 		// calls agree.
 		require.Equal(
