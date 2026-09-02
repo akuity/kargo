@@ -137,7 +137,9 @@ had a chance to be verified. This wait is bounded: if the `Stage` has not become
 healthy within the controller's verification start grace period (five minutes
 by default; see `controller.reconcilers.stages.verificationStartGracePeriod` in
 the Helm chart), the next queued `Promotion` is permitted to run and the current
-`Freight` will not be verified.
+`Freight` will not be verified. Manually created `Promotion`s are exempt from
+this wait: a person choosing to promote, for instance to roll back, is not held
+up by a rollout that has yet to settle.
 
 ## AnalysisRun
 

@@ -682,7 +682,7 @@ controller:
     stages:
       ## @param controller.reconcilers.stages.maxConcurrentReconciles optionally overrides the maximum number of (non-control flow) Stage resources the controller can reconcile concurrently.
       maxConcurrentReconciles:
-      ## @param controller.reconcilers.stages.verificationStartGracePeriod bounds how long queued Promotions to a Stage are held following a successful Promotion while the Stage's health is still Unknown or Progressing, i.e. while verification of the newly promoted Freight cannot yet begin. Without this hold, a queued Promotion could supersede the newly promoted Freight before it is ever verified. Accepts duration format (e.g., "5m", "1h", "30s"). Set to "0s" to disable the hold.
+      ## @param controller.reconcilers.stages.verificationStartGracePeriod bounds how long queued Promotions to a Stage are held following a successful Promotion while the Stage's health is still Unknown or Progressing, i.e. while verification of the newly promoted Freight cannot yet begin. Without this hold, a queued Promotion could supersede the newly promoted Freight before it is ever verified. Manually created Promotions are never held this way. Accepts duration format (e.g., "5m", "1h", "30s"). Set to "0s" to disable the hold.
       verificationStartGracePeriod: "5m0s"
     warehouses:
       ## @param controller.reconcilers.warehouses.maxConcurrentReconciles optionally overrides the maximum number of Warehouse resources the controller can reconcile concurrently.

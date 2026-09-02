@@ -737,6 +737,80 @@ func TestRegularStagesReconciler_reconcile(t *testing.T) {
 				assert.Equal(t, "test-promotion", status.CurrentPromotion.Name)
 			},
 		},
+
+		{
+			// On the pass in which a Promotion is observed to have completed,
+			// health has not yet been assessed for the new Freight, so the
+			// Stage must be requeued immediately to decide on the next queued
+			// Promotion, rather than deferred to the grace period expiry.
+			name: "requests an immediate requeue on the pass that records a completed Promotion",
+			cfg: ReconcilerConfig{
+				VerificationStartGracePeriod: 5 * time.Minute,
+			},
+			healthCheckFn: func(context.Context, string, string, []health.Criteria) kargoapi.Health {
+				return kargoapi.Health{Status: kargoapi.HealthStateUnknown}
+			},
+			stage: &kargoapi.Stage{
+				ObjectMeta: metav1.ObjectMeta{
+					Namespace:  "test-project",
+					Name:       "test-stage",
+					Generation: 1,
+				},
+				Status: kargoapi.StageStatus{
+					CurrentPromotion: &kargoapi.PromotionReference{Name: "finished-promotion"},
+				},
+			},
+			objects: []client.Object{
+				&kargoapi.Freight{
+					ObjectMeta: metav1.ObjectMeta{
+						Namespace: "test-project",
+						Name:      "test-freight",
+					},
+					Origin: kargoapi.FreightOrigin{
+						Kind: kargoapi.FreightOriginKindWarehouse,
+						Name: "test-warehouse",
+					},
+				},
+				&kargoapi.Promotion{
+					ObjectMeta: metav1.ObjectMeta{
+						Namespace:         "test-project",
+						Name:              "finished-promotion",
+						CreationTimestamp: metav1.Time{Time: now.Add(-time.Minute)},
+					},
+					Spec: kargoapi.PromotionSpec{Stage: "test-stage"},
+					Status: kargoapi.PromotionStatus{
+						Phase:      kargoapi.PromotionPhaseSucceeded,
+						FinishedAt: &metav1.Time{Time: now},
+						FreightCollection: &kargoapi.FreightCollection{
+							ID: "test-collection-id",
+							Freight: map[string]kargoapi.FreightReference{
+								"Warehouse/test-warehouse": {Name: "test-freight"},
+							},
+						},
+					},
+				},
+				&kargoapi.Promotion{
+					ObjectMeta: metav1.ObjectMeta{
+						Namespace:         "test-project",
+						Name:              "pending-promotion",
+						CreationTimestamp: metav1.Time{Time: now},
+					},
+					Spec: kargoapi.PromotionSpec{Stage: "test-stage"},
+					Status: kargoapi.PromotionStatus{
+						Phase: kargoapi.PromotionPhasePending,
+					},
+				},
+			},
+			assertions: func(t *testing.T, status kargoapi.StageStatus, requeueAfter time.Duration, err error) {
+				require.NoError(t, err)
+				assert.Equal(t, immediateRequeueInterval, requeueAfter)
+
+				require.NotNil(t, status.LastPromotion)
+				assert.Equal(t, "finished-promotion", status.LastPromotion.Name)
+				assert.Nil(t, status.CurrentPromotion)
+				require.Len(t, status.FreightHistory, 1)
+			},
+		},
 	}
 
 	for _, tt := range tests {
@@ -2752,6 +2826,73 @@ func TestRegularStageReconciler_syncPromotions(t *testing.T) {
 					ObjectMeta: metav1.ObjectMeta{
 						Name:      "pending-promotion",
 						Namespace: "fake-project",
+					},
+					Spec: kargoapi.PromotionSpec{
+						Stage: "test-stage",
+					},
+					Status: kargoapi.PromotionStatus{
+						Phase: kargoapi.PromotionPhasePending,
+					},
+				},
+			},
+			assertions: func(t *testing.T, status kargoapi.StageStatus, hasPendingPromotions bool, err error) {
+				require.NoError(t, err)
+				assert.True(t, hasPendingPromotions)
+
+				require.NotNil(t, status.CurrentPromotion)
+				assert.Equal(t, "pending-promotion", status.CurrentPromotion.Name)
+
+				promotingCond := conditions.Get(&status, kargoapi.ConditionTypePromoting)
+				require.NotNil(t, promotingCond)
+				assert.Equal(t, metav1.ConditionTrue, promotingCond.Status)
+			},
+		},
+
+		{
+			// A person promoting while health settles (e.g. rolling back a bad
+			// rollout) must not be held: unlike a running verification, the wait
+			// cannot be aborted.
+			name:                 "starts manually created queued promotion without waiting for health to settle",
+			autoPromotionEnabled: true,
+			cfg: ReconcilerConfig{
+				VerificationStartGracePeriod: 5 * time.Minute,
+			},
+			stage: &kargoapi.Stage{
+				ObjectMeta: metav1.ObjectMeta{
+					Namespace: "fake-project",
+					Name:      "test-stage",
+				},
+				Status: kargoapi.StageStatus{
+					Health: &kargoapi.Health{
+						Status: kargoapi.HealthStateProgressing,
+						Issues: []string{"Argo CD Application is progressing"},
+					},
+					LastPromotion: &kargoapi.PromotionReference{
+						Name: "previous-promotion",
+						Status: &kargoapi.PromotionStatus{
+							Phase:      kargoapi.PromotionPhaseSucceeded,
+							FinishedAt: &metav1.Time{Time: now},
+						},
+						FinishedAt: &metav1.Time{Time: now},
+					},
+					FreightHistory: kargoapi.FreightHistory{
+						{
+							ID: "current-collection",
+							Freight: map[string]kargoapi.FreightReference{
+								"warehouse-1": {Name: "current-freight"},
+							},
+						},
+					},
+				},
+			},
+			objects: []client.Object{
+				&kargoapi.Promotion{
+					ObjectMeta: metav1.ObjectMeta{
+						Name:      "pending-promotion",
+						Namespace: "fake-project",
+						Annotations: map[string]string{
+							kargoapi.AnnotationKeyCreateActor: "email:jane@example.com",
+						},
 					},
 					Spec: kargoapi.PromotionSpec{
 						Stage: "test-stage",

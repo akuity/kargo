@@ -953,6 +953,16 @@ func (r *RegularStageReconciler) syncPromotions(
 		// failed, then we can allow the next Promotion to start immediately as
 		// the expectation is that the Promotion can fix the issue.
 		_, awaiting := r.awaitingVerificationStart(&stage.Status, time.Now())
+		if awaiting && api.CreateActorAnnotationValue(&highestPrioPromo) != "" {
+			// A Promotion created by a person, as opposed to by auto-promotion,
+			// is a deliberate decision to move on -- often to roll back a bad
+			// rollout. It must not wait for health to settle: unlike a running
+			// verification, this wait cannot be aborted, so holding it would
+			// leave an operator with no way out for the length of the grace
+			// period.
+			logger.Debug("not waiting for health to settle before starting manually created Promotion")
+			awaiting = false
+		}
 		if stage.Status.Health == nil ||
 			stage.Status.Health.Status == kargoapi.HealthStateHealthy ||
 			awaiting {
