@@ -1,3 +1,13 @@
+# IMPORTANT: Do not upgrade the base image to a newer minor version of Go.
+# Anything we actually ship is built with the latest minor version of Go (see
+# Dockerfile), but this image exists to run unit tests, the linter, and codegen
+# against the minor version this branch targets. The cap is the golangci-lint
+# version pinned in hack/tools/go.mod: a linter binary built with go1.X panics
+# under go1.(X+1), so bumping Go here forces a linter upgrade, which typically
+# surfaces new findings requiring code or configuration changes.
+#
+# This version must match the `golangTestImage` anchor in
+# .github/workflows/ci.yaml.
 FROM golang:1.26.7-trixie
 
 ARG TARGETARCH
