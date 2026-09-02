@@ -190,6 +190,7 @@ func SetupReconcilerWithManager(
 			kargoMgr.GetCache(),
 			&kargoapi.Stage{},
 			&PromotionAcknowledgedByStageHandler[*kargoapi.Stage]{
+				kargoClient: kargoMgr.GetClient(),
 				shardPredicate: controller.ResponsibleFor[kargoapi.Stage]{
 					IsDefaultController: cfg.IsDefaultController,
 					ShardName:           cfg.ShardName,
@@ -383,8 +384,11 @@ func (r *reconciler) Reconcile(
 
 	// Confirm that the Stage is awaiting this Promotion.
 	// This effectively prevents the Promotion from running until the Stage
-	// decides it is the next Promotion to run.
-	if stage.Status.CurrentPromotion == nil || stage.Status.CurrentPromotion.Name != promo.Name {
+	// decides it is the next Promotion to run. A Promotion to one of the
+	// Stage's Targets is admitted by the Stage's current PromotionRequest
+	// instead, so all of one request's children -- at most one per Target --
+	// run in parallel while consecutive requests remain serialized.
+	if !api.StageAwaitsPromotion(stage, promo) {
 		// The watch on the Stage will requeue the Promotion if the Stage
 		// acknowledges it.
 		logger.Debug("Stage is not awaiting Promotion", "stage", stage.Name, "promotion", promo.Name)

@@ -202,6 +202,49 @@ func AbortPromotion(
 	return patchAnnotation(ctx, c, promotion, kargoapi.AnnotationKeyAbort, ar.String())
 }
 
+// promotionRequestKind is the Kind of the one resource permitted to own a
+// Promotion that promotes to a Target.
+const promotionRequestKind = "PromotionRequest"
+
+// StageAwaitsPromotion returns whether the Stage has recorded the Promotion
+// as one it is currently promoting through. The Promotion reconciler does
+// not run a Promotion until the Stage does so; this is what serializes
+// promotions.
+//
+// The Stage's own Promotions are serialized one at a time by the Stage's
+// current Promotion. A Promotion to one of the Stage's Targets is instead
+// admitted by the Stage's current PromotionRequest: all children of the
+// current request run at once -- a request creates at most one child per
+// Target, so Promotions to distinct Targets run in parallel and Promotions
+// to the same Target never contend -- while the children of a queued
+// request wait for the current round of fan-out to end.
+func StageAwaitsPromotion(
+	stage *kargoapi.Stage,
+	promo *kargoapi.Promotion,
+) bool {
+	if promo.Spec.Target != "" {
+		owner := PromotionRequestOwner(promo)
+		return owner != "" &&
+			stage.Status.CurrentPromotionRequest != nil &&
+			owner == stage.Status.CurrentPromotionRequest.Name
+	}
+	return stage.Status.CurrentPromotion != nil &&
+		stage.Status.CurrentPromotion.Name == promo.Name
+}
+
+// PromotionRequestOwner returns the name of the PromotionRequest that owns
+// the Promotion, or an empty string if the Promotion is not the child of
+// one.
+func PromotionRequestOwner(promo *kargoapi.Promotion) string {
+	owner := metav1.GetControllerOf(promo)
+	if owner != nil &&
+		owner.APIVersion == kargoapi.GroupVersion.String() &&
+		owner.Kind == promotionRequestKind {
+		return owner.Name
+	}
+	return ""
+}
+
 // ComparePromotionByPhaseAndCreationTime compares two Promotions by their
 // phase and creation timestamp. It returns a negative value if Promotion `a`
 // should come before Promotion `b`, a positive value if Promotion `a` should

@@ -2288,6 +2288,129 @@ func TestRegularStageReconciler_syncPromotions(t *testing.T) {
 	}
 }
 
+func TestRegularStageReconciler_syncPromotions_partitionsTargetPromotions(t *testing.T) {
+	scheme := runtime.NewScheme()
+	require.NoError(t, kargoapi.AddToScheme(scheme))
+
+	now := metav1.NewTime(time.Now().Truncate(time.Second))
+	stagePromoName := api.GeneratePromotionName("test-stage", "test-freight")
+	childPromoName := api.GenerateChildPromotionName("test-stage", "blue", "test-freight")
+
+	newChildPromo := func(phase kargoapi.PromotionPhase, finishedAt *metav1.Time) *kargoapi.Promotion {
+		return &kargoapi.Promotion{
+			ObjectMeta: metav1.ObjectMeta{
+				Namespace: "fake-project",
+				Name:      childPromoName,
+			},
+			Spec: kargoapi.PromotionSpec{
+				Stage:   "test-stage",
+				Freight: "test-freight",
+				Target:  "blue",
+			},
+			Status: kargoapi.PromotionStatus{
+				Phase:      phase,
+				FinishedAt: finishedAt,
+				FreightCollection: &kargoapi.FreightCollection{
+					Freight: map[string]kargoapi.FreightReference{
+						"Warehouse/test-warehouse": {Name: "test-freight"},
+					},
+				},
+			},
+		}
+	}
+
+	tests := []struct {
+		name       string
+		stage      *kargoapi.Stage
+		objects    []client.Object
+		assertions func(*testing.T, kargoapi.StageStatus, bool, error)
+	}{
+		{
+			name: "a child Promotion does not occupy the Stage's own slot",
+			stage: &kargoapi.Stage{
+				ObjectMeta: metav1.ObjectMeta{
+					Namespace: "fake-project",
+					Name:      "test-stage",
+				},
+			},
+			objects: []client.Object{
+				&kargoapi.Promotion{
+					ObjectMeta: metav1.ObjectMeta{
+						Namespace: "fake-project",
+						Name:      stagePromoName,
+					},
+					Spec: kargoapi.PromotionSpec{
+						Stage:   "test-stage",
+						Freight: "test-freight",
+					},
+					Status: kargoapi.PromotionStatus{
+						Phase: kargoapi.PromotionPhaseRunning,
+					},
+				},
+				newChildPromo(kargoapi.PromotionPhaseRunning, nil),
+			},
+			assertions: func(t *testing.T, status kargoapi.StageStatus, hasPendingPromotions bool, err error) {
+				require.NoError(t, err)
+				assert.True(t, hasPendingPromotions)
+
+				// The Stage's own slot admits the Stage's own Promotion, not
+				// the alphabetically-earlier child.
+				require.NotNil(t, status.CurrentPromotion)
+				assert.Equal(t, stagePromoName, status.CurrentPromotion.Name)
+			},
+		},
+		{
+			name: "a child Promotion's success leaves the Stage's own state alone",
+			stage: &kargoapi.Stage{
+				ObjectMeta: metav1.ObjectMeta{
+					Namespace: "fake-project",
+					Name:      "test-stage",
+				},
+			},
+			objects: []client.Object{
+				newChildPromo(kargoapi.PromotionPhaseSucceeded, &now),
+			},
+			assertions: func(t *testing.T, status kargoapi.StageStatus, hasPendingPromotions bool, err error) {
+				require.NoError(t, err)
+				assert.False(t, hasPendingPromotions)
+
+				// Nothing Stage-scoped absorbed the child's success.
+				assert.Nil(t, status.CurrentPromotion)
+				assert.Nil(t, status.LastPromotion)
+				assert.Empty(t, status.FreightHistory)
+				assert.Nil(t, conditions.Get(&status, kargoapi.ConditionTypeHealthy))
+				assert.Nil(t, conditions.Get(&status, kargoapi.ConditionTypeVerified))
+				assert.Nil(t, conditions.Get(&status, kargoapi.ConditionTypePromoting))
+			},
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			objects := []client.Object{tt.stage.DeepCopy()}
+			objects = append(objects, tt.objects...)
+			c := fake.NewClientBuilder().
+				WithScheme(scheme).
+				WithObjects(objects...).
+				WithIndex(
+					&kargoapi.Promotion{},
+					indexer.PromotionsByStageField,
+					indexer.PromotionsByStage,
+				).
+				WithStatusSubresource(&kargoapi.Stage{}, &kargoapi.Promotion{}).
+				Build()
+
+			r := &RegularStageReconciler{
+				client:      c,
+				eventSender: k8sevent.NewEventSender(fakeevent.NewEventRecorder(10)),
+			}
+
+			status, hasPendingPromotions, err := r.syncPromotions(t.Context(), tt.stage, false)
+			tt.assertions(t, status, hasPendingPromotions, err)
+		})
+	}
+}
+
 func TestRegularStageReconciler_syncPromotionRequests(t *testing.T) {
 	scheme := runtime.NewScheme()
 	require.NoError(t, kargoapi.AddToScheme(scheme))
@@ -6472,6 +6595,24 @@ func TestRegularStageReconciler_computeEffectiveAutoPromotionHolds(t *testing.T)
 			},
 		},
 		{
+			// A PromotionRequest's child Promotions take no part in the Stage's
+			// own flow, whatever annotations they carry.
+			name:                 "hold-intent child Promotion is ignored",
+			autoPromotionEnabled: true,
+			stage:                stage(nil),
+			objects: []client.Object{
+				func() *kargoapi.Promotion {
+					promo := holdPromo("promo-01", kargoapi.PromotionPhaseRunning)
+					promo.Spec.Target = "blue"
+					return promo
+				}(),
+			},
+			assert: func(t *testing.T, holds map[string]kargoapi.AutoPromotionHold, err error) {
+				require.NoError(t, err)
+				assert.Empty(t, holds)
+			},
+		},
+		{
 			name:                 "running release-intent Promotion clears the origin",
 			autoPromotionEnabled: true,
 			stage:                stage(durableHold),
@@ -9326,6 +9467,69 @@ func Test_buildFreightSummary(t *testing.T) {
 		t.Run(tt.name, func(t *testing.T) {
 			result := buildFreightSummary(tt.requested, tt.current)
 			assert.Equal(t, tt.expected, result)
+		})
+	}
+}
+
+func TestWithoutTargetPromotions(t *testing.T) {
+	stagePromo := func(name string) kargoapi.Promotion {
+		return kargoapi.Promotion{
+			ObjectMeta: metav1.ObjectMeta{Name: name},
+			Spec:       kargoapi.PromotionSpec{Stage: "test-stage"},
+		}
+	}
+	targetPromo := func(name, target string) kargoapi.Promotion {
+		return kargoapi.Promotion{
+			ObjectMeta: metav1.ObjectMeta{Name: name},
+			Spec:       kargoapi.PromotionSpec{Stage: "test-stage", Target: target},
+		}
+	}
+
+	testCases := []struct {
+		name     string
+		promos   []kargoapi.Promotion
+		expected []string
+	}{
+		{
+			name:     "nil list",
+			promos:   nil,
+			expected: nil,
+		},
+		{
+			name:     "no children",
+			promos:   []kargoapi.Promotion{stagePromo("a"), stagePromo("b")},
+			expected: []string{"a", "b"},
+		},
+		{
+			name:     "only children",
+			promos:   []kargoapi.Promotion{targetPromo("a", "blue"), targetPromo("b", "green")},
+			expected: []string{},
+		},
+		{
+			name: "children are removed and order is preserved",
+			promos: []kargoapi.Promotion{
+				targetPromo("a", "blue"),
+				stagePromo("b"),
+				targetPromo("c", "green"),
+				stagePromo("d"),
+			},
+			expected: []string{"b", "d"},
+		},
+	}
+	for _, testCase := range testCases {
+		t.Run(testCase.name, func(t *testing.T) {
+			t.Parallel()
+			result := withoutTargetPromotions(testCase.promos)
+			names := make([]string, 0, len(result))
+			for _, promo := range result {
+				require.Empty(t, promo.Spec.Target)
+				names = append(names, promo.Name)
+			}
+			if testCase.expected == nil {
+				require.Empty(t, names)
+				return
+			}
+			require.Equal(t, testCase.expected, names)
 		})
 	}
 }
