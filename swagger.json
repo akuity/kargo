@@ -8127,6 +8127,14 @@
     "PromotionWindow": {
       "type": "object",
       "properties": {
+        "description": {
+          "description": "Description is a human-readable description of the window.\nMay contain reason, author or any clarification for the window.\n\n+optional\n+kubebuilder:validation:MaxLength=1024",
+          "type": "string"
+        },
+        "disabled": {
+          "description": "Disabled controls whether configured windows should be skipped when calculating the stage window status.\nOptional. Default is `false`. Unless set to `true` the window will impact the stages it's configured for.\n\n+optional",
+          "type": "boolean"
+        },
         "dtend": {
           "description": "DTEnd is the window's end in the same format as DTStart. When combined with\nRRule, DTEnd - DTStart defines the duration of each occurrence. The value\nis parsed and validated by Kargo Enterprise.\n\n+optional",
           "type": "string"

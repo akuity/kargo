@@ -13773,6 +13773,21 @@ components:
       type: object
     PromotionWindow:
       properties:
+        description:
+          description: |-
+            Description is a human-readable description of the window.
+            May contain reason, author or any clarification for the window.
+
+            +optional
+            +kubebuilder:validation:MaxLength=1024
+          type: string
+        disabled:
+          description: |-
+            Disabled controls whether configured windows should be skipped when calculating the stage window status.
+            Optional. Default is `false`. Unless set to `true` the window will impact the stages it's configured for.
+
+            +optional
+          type: boolean
         dtend:
           description: |-
             DTEnd is the window's end in the same format as DTStart. When combined with
