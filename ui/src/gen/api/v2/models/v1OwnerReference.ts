@@ -7,7 +7,8 @@
  */
 
 export interface V1OwnerReference {
-  /** API version of the referent. */
+  /** API version of the referent.
++k8s:alpha(since:"1.37")=+k8s:required */
   apiVersion?: string;
   /** If true, AND if the owner has the "foregroundDeletion" finalizer, then
 the owner cannot be deleted from the key-value store until this
@@ -23,12 +24,15 @@ otherwise 422 (Unprocessable Entity) will be returned.
 +optional */
   controller?: boolean;
   /** Kind of the referent.
-More info: https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#types-kinds */
+More info: https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#types-kinds
++k8s:alpha(since:"1.37")=+k8s:required */
   kind?: string;
   /** Name of the referent.
-More info: https://kubernetes.io/docs/concepts/overview/working-with-objects/names#names */
+More info: https://kubernetes.io/docs/concepts/overview/working-with-objects/names#names
++k8s:alpha(since:"1.37")=+k8s:required */
   name?: string;
   /** UID of the referent.
-More info: https://kubernetes.io/docs/concepts/overview/working-with-objects/names#uids */
+More info: https://kubernetes.io/docs/concepts/overview/working-with-objects/names#uids
++k8s:alpha(since:"1.37")=+k8s:required */
   uid?: string;
 }

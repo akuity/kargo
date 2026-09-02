@@ -71,6 +71,12 @@ longer than 24 hours.
 
 +required */
   signerName?: string;
+  /** user is Optional: The owner UID of the created file.
+If specified, the item-level user field takes precedence over defaultUser.
+(Alpha) This field requires the AtomicWriteVolumeUserFields feature gate to be enabled.
++featureGate=AtomicWriteVolumeUserFields
++optional */
+  user?: number;
   /** userAnnotations allow pod authors to pass additional information to
 the signer implementation.  Kubernetes does not restrict or validate this
 metadata in any way.

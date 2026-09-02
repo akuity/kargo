@@ -9,6 +9,7 @@ import type { V1Affinity } from './v1Affinity';
 import type { V1Container } from './v1Container';
 import type { V1PodDNSConfig } from './v1PodDNSConfig';
 import type { V1EphemeralContainer } from './v1EphemeralContainer';
+import type { V1EvictionResponder } from './v1EvictionResponder';
 import type { V1HostAlias } from './v1HostAlias';
 import type { V1LocalObjectReference } from './v1LocalObjectReference';
 import type { V1PodSpecNodeSelector } from './v1PodSpecNodeSelector';
@@ -73,6 +74,33 @@ ephemeral container to an existing pod, use the pod's ephemeralcontainers subres
 +listType=map
 +listMapKey=name */
   ephemeralContainers?: V1EphemeralContainer[];
+  /** evictionResponders reference responders that react to Evictions based on EvictionRequests.
+Responders should observe and communicate through the Eviction Resource API to help with
+the graceful termination of a pod. The responders are selected sequentially, according to
+their specified priority.
+
+Responders should periodically report on an eviction progress by updating the
+.status.responders[].heartbeatTime field of the Eviction object. If this field is not updated
+within the heartbeat deadline defined by the Eviction API (currently 20 minutes), the eviction
+is passed over to the next responder with a lower priority. If there is no other responder,
+the last default imperative-eviction.k8s.io/evictor responder with a priority of 100 will
+evict the pod using the imperative Eviction API (pods/<name>/eviction subresource).
+
+The maximum length of the responders list is 10.
+Responders are not supported when the pod is part of a PodGroup (.spec.schedulingGroup is set).
+This field can only be set on creation and is immutable afterwards.
++featureGate=EvictionRequestAPI
++optional
++patchMergeKey=name
++patchStrategy=merge
++listType=map
++listMapKey=name
++k8s:optional
++k8s:listType=map
++k8s:listMapKey=name
++k8s:maxItems=10
++k8s:alpha(since: "1.37")=+k8s:dependentForbidden("schedulingGroup") */
+  evictionResponders?: V1EvictionResponder[];
   /** HostAliases is an optional list of hosts and IPs that will be injected into the pod's hosts
 file if specified.
 +optional
@@ -83,7 +111,6 @@ file if specified.
   hostAliases?: V1HostAlias[];
   /** Use the host's ipc namespace.
 Optional: Default to false.
-+k8s:conversion-gen=false
 +optional */
   hostIPC?: boolean;
   /** Host networking requested for this pod. Use the host's network namespace.
@@ -91,12 +118,10 @@ When using HostNetwork you should specify ports so the scheduler is aware.
 When `hostNetwork` is true, specified `hostPort` fields in port definitions must match `containerPort`,
 and unspecified `hostPort` fields in port definitions are defaulted to match `containerPort`.
 Default to false.
-+k8s:conversion-gen=false
 +optional */
   hostNetwork?: boolean;
   /** Use the host's pid namespace.
 Optional: Default to false.
-+k8s:conversion-gen=false
 +optional */
   hostPID?: boolean;
   /** Use the host's user namespace.
@@ -107,7 +132,6 @@ loading a kernel module with CAP_SYS_MODULE.
 When set to false, a new userns is created for the pod. Setting false is useful for
 mitigating container breakout vulnerabilities even allowing users to run their
 containers as root without actually having root privileges on the host.
-+k8s:conversion-gen=false
 +optional */
   hostUsers?: boolean;
   /** Specifies the hostname of the Pod
@@ -123,7 +147,6 @@ When this field is set to a non-empty string:
 - `hostNetwork` must be set to false.
 
 This field must be a valid DNS subdomain as defined in RFC 1123 and contain at most 64 characters.
-Requires the HostnameOverride feature gate to be enabled.
 
 +featureGate=HostnameOverride
 +optional */
@@ -213,6 +236,8 @@ More info: https://git.k8s.io/enhancements/keps/sig-node/688-pod-overhead/README
   overhead?: V1ResourceList;
   /** PreemptionPolicy is the Policy for preempting pods with lower priority.
 One of Never, PreemptLowerPriority.
+When Priority Admission Controller is enabled, it prevents users from setting
+this field. The admission controller populates this field from PriorityClassName.
 Defaults to PreemptLowerPriority if unset.
 +optional */
   preemptionPolicy?: string;
@@ -320,7 +345,6 @@ Optional: Defaults to empty.  See type description for default values of each fi
   securityContext?: V1PodSecurityContext;
   /** DeprecatedServiceAccount is a deprecated alias for ServiceAccountName.
 Deprecated: Use serviceAccountName instead.
-+k8s:conversion-gen=false
 +optional */
   serviceAccount?: string;
   /** ServiceAccountName is the name of the ServiceAccount to use to run this pod.
@@ -339,7 +363,6 @@ When this is set containers will be able to view and signal processes from other
 in the same pod, and the first process in each container will not be assigned PID 1.
 HostPID and ShareProcessNamespace cannot both be set.
 Optional: Default to false.
-+k8s:conversion-gen=false
 +optional */
   shareProcessNamespace?: boolean;
   /** If specified, the fully qualified Pod hostname will be "<hostname>.<subdomain>.<pod namespace>.svc.<cluster domain>".
@@ -358,7 +381,8 @@ Defaults to 30 seconds.
   terminationGracePeriodSeconds?: number;
   /** If specified, the pod's tolerations.
 +optional
-+listType=atomic */
++listType=atomic
++k8s:alpha(since: "1.37")=+k8s:optional */
   tolerations?: V1Toleration[];
   /** TopologySpreadConstraints describes how a group of pods ought to spread across topology
 domains. Scheduler will schedule pods in a way which abides by the constraints.

@@ -22,4 +22,10 @@ May not be an absolute path.
 May not contain the path element '..'.
 May not start with the string '..'. */
   path?: string;
+  /** user is Optional: The owner UID of the created file.
+If specified, the item-level user field takes precedence over defaultUser.
+(Alpha) This field requires the AtomicWriteVolumeUserFields feature gate to be enabled.
++featureGate=AtomicWriteVolumeUserFields
++optional */
+  user?: number;
 }

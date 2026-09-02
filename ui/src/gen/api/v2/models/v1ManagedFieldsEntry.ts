@@ -22,7 +22,8 @@ There is currently only one possible value: "FieldsV1" */
   /** Manager is an identifier of the workflow managing these fields. */
   manager?: string;
   /** Operation is the type of operation which lead to this ManagedFieldsEntry being created.
-The only valid values for this field are 'Apply' and 'Update'. */
+The only valid values for this field are 'Apply' and 'Update'.
++k8s:alpha(since: "1.37")=+k8s:required */
   operation?: string;
   /** Subresource is the name of the subresource used to update that object, or
 empty string if the object was updated through the main resource. The

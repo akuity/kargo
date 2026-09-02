@@ -7,7 +7,8 @@
  */
 
 export interface V1ConfigMapKeySelector {
-  /** The key to select. */
+  /** The key to select from the ConfigMap's Data field.
+Keys in the BinaryData field are not currently propagated to container env vars. */
   key?: string;
   /** Name of the referent.
 This field is effectively required, but due to backwards compatibility is

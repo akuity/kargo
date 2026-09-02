@@ -7,8 +7,17 @@
  */
 
 export interface V1VolumeMount {
-  /** Path within the container at which the volume should be mounted.  Must
-not contain ':'. */
+  /** bindMountOptions is the list of additional bind mount options to apply when
+mounting this volume into the container. Allowed values are noexec,
+nodev, and nosuid. These are Linux mount options and have no effect on
+Windows nodes.
+This field is not supported with image volumes.
+This is an alpha field and requires enabling the VolumeBindMountOptions feature gate.
++featureGate=VolumeBindMountOptions
++optional
++listType=set */
+  bindMountOptions?: string[];
+  /** Path within the container at which the volume should be mounted. */
   mountPath?: string;
   /** mountPropagation determines how mounts are propagated from the host
 to container and the other way around.

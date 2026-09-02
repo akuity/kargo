@@ -21,6 +21,8 @@ var _ MappedNullable = &V1ConfigMapVolumeSource{}
 type V1ConfigMapVolumeSource struct {
 	// defaultMode is optional: mode bits used to set permissions on created files by default. Must be an octal value between 0000 and 0777 or a decimal value between 0 and 511. YAML accepts both octal and decimal values, JSON requires decimal values for mode bits. Defaults to 0644. Directories within the path are not affected by this setting. This might be in conflict with other options that affect the file mode, like fsGroup, and the result can be other mode bits set. +optional
 	DefaultMode *int32 `json:"defaultMode,omitempty"`
+	// defaultUser is Optional: The owner UID of the created files by default. The defaultUser field is only used as a fallback when the item-level user field is unset. (Alpha) This field requires the AtomicWriteVolumeUserFields feature gate to be enabled. +featureGate=AtomicWriteVolumeUserFields +optional
+	DefaultUser *int32 `json:"defaultUser,omitempty"`
 	// items if unspecified, each key-value pair in the Data field of the referenced ConfigMap will be projected into the volume as a file whose name is the key and content is the value. If specified, the listed keys will be projected into the specified paths, and unlisted keys will not be present. If a key is specified which is not present in the ConfigMap, the volume setup will error unless it is marked optional. Paths must be relative and may not contain the '..' path or start with '..'. +optional +listType=atomic
 	Items []V1KeyToPath `json:"items,omitempty"`
 	// Name of the referent. This field is effectively required, but due to backwards compatibility is allowed to be empty. Instances of this type with an empty value here are almost certainly wrong. More info: https://kubernetes.io/docs/concepts/overview/working-with-objects/names/#names +optional +default=\"\" +kubebuilder:default=\"\" TODO: Drop `kubebuilder:default` when controller-gen doesn't need it https://github.com/kubernetes-sigs/kubebuilder/issues/3896.
@@ -76,6 +78,38 @@ func (o *V1ConfigMapVolumeSource) HasDefaultMode() bool {
 // SetDefaultMode gets a reference to the given int32 and assigns it to the DefaultMode field.
 func (o *V1ConfigMapVolumeSource) SetDefaultMode(v int32) {
 	o.DefaultMode = &v
+}
+
+// GetDefaultUser returns the DefaultUser field value if set, zero value otherwise.
+func (o *V1ConfigMapVolumeSource) GetDefaultUser() int32 {
+	if o == nil || IsNil(o.DefaultUser) {
+		var ret int32
+		return ret
+	}
+	return *o.DefaultUser
+}
+
+// GetDefaultUserOk returns a tuple with the DefaultUser field value if set, nil otherwise
+// and a boolean to check if the value has been set.
+func (o *V1ConfigMapVolumeSource) GetDefaultUserOk() (*int32, bool) {
+	if o == nil || IsNil(o.DefaultUser) {
+		return nil, false
+	}
+	return o.DefaultUser, true
+}
+
+// HasDefaultUser returns a boolean if a field has been set.
+func (o *V1ConfigMapVolumeSource) HasDefaultUser() bool {
+	if o != nil && !IsNil(o.DefaultUser) {
+		return true
+	}
+
+	return false
+}
+
+// SetDefaultUser gets a reference to the given int32 and assigns it to the DefaultUser field.
+func (o *V1ConfigMapVolumeSource) SetDefaultUser(v int32) {
+	o.DefaultUser = &v
 }
 
 // GetItems returns the Items field value if set, zero value otherwise.
@@ -186,6 +220,9 @@ func (o V1ConfigMapVolumeSource) ToMap() (map[string]interface{}, error) {
 	toSerialize := map[string]interface{}{}
 	if !IsNil(o.DefaultMode) {
 		toSerialize["defaultMode"] = o.DefaultMode
+	}
+	if !IsNil(o.DefaultUser) {
+		toSerialize["defaultUser"] = o.DefaultUser
 	}
 	if !IsNil(o.Items) {
 		toSerialize["items"] = o.Items

@@ -13,7 +13,8 @@ export interface V1PersistentVolumeClaimTemplate {
 when creating it. No other fields are allowed and will be rejected during
 validation.
 
-+optional */
++optional
++k8s:opaqueType */
   metadata?: V1ObjectMeta;
   /** The specification for the PersistentVolumeClaim. The entire content is
 copied unchanged into the PVC that gets created from this

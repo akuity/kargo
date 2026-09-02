@@ -32,4 +32,10 @@ Mutually-exclusive with name.  The contents of all selected
 ClusterTrustBundles will be unified and deduplicated.
 +optional */
   signerName?: string;
+  /** user is Optional: The owner UID of the created file.
+If specified, the item-level user field takes precedence over defaultUser.
+(Alpha) This field requires the AtomicWriteVolumeUserFields feature gate to be enabled.
++featureGate=AtomicWriteVolumeUserFields
++optional */
+  user?: number;
 }

@@ -24,4 +24,10 @@ and must be at least 10 minutes.
   /** path is the path relative to the mount point of the file to project the
 token into. */
   path?: string;
+  /** user is Optional: The owner UID of the created file.
+If specified, the item-level user field takes precedence over defaultUser.
+(Alpha) This field requires the AtomicWriteVolumeUserFields feature gate to be enabled.
++featureGate=AtomicWriteVolumeUserFields
++optional */
+  user?: number;
 }

@@ -19,7 +19,9 @@ var _ MappedNullable = &V1VolumeMount{}
 
 // V1VolumeMount struct for V1VolumeMount
 type V1VolumeMount struct {
-	// Path within the container at which the volume should be mounted.  Must not contain ':'.
+	// bindMountOptions is the list of additional bind mount options to apply when mounting this volume into the container. Allowed values are noexec, nodev, and nosuid. These are Linux mount options and have no effect on Windows nodes. This field is not supported with image volumes. This is an alpha field and requires enabling the VolumeBindMountOptions feature gate. +featureGate=VolumeBindMountOptions +optional +listType=set
+	BindMountOptions []string `json:"bindMountOptions,omitempty"`
+	// Path within the container at which the volume should be mounted.
 	MountPath *string `json:"mountPath,omitempty"`
 	// mountPropagation determines how mounts are propagated from the host to container and the other way around. When not set, MountPropagationNone is used. This field is beta in 1.10. When RecursiveReadOnly is set to IfPossible or to Enabled, MountPropagation must be None or unspecified (which defaults to None). +optional
 	MountPropagation *string `json:"mountPropagation,omitempty"`
@@ -50,6 +52,38 @@ func NewV1VolumeMount() *V1VolumeMount {
 func NewV1VolumeMountWithDefaults() *V1VolumeMount {
 	this := V1VolumeMount{}
 	return &this
+}
+
+// GetBindMountOptions returns the BindMountOptions field value if set, zero value otherwise.
+func (o *V1VolumeMount) GetBindMountOptions() []string {
+	if o == nil || IsNil(o.BindMountOptions) {
+		var ret []string
+		return ret
+	}
+	return o.BindMountOptions
+}
+
+// GetBindMountOptionsOk returns a tuple with the BindMountOptions field value if set, nil otherwise
+// and a boolean to check if the value has been set.
+func (o *V1VolumeMount) GetBindMountOptionsOk() ([]string, bool) {
+	if o == nil || IsNil(o.BindMountOptions) {
+		return nil, false
+	}
+	return o.BindMountOptions, true
+}
+
+// HasBindMountOptions returns a boolean if a field has been set.
+func (o *V1VolumeMount) HasBindMountOptions() bool {
+	if o != nil && !IsNil(o.BindMountOptions) {
+		return true
+	}
+
+	return false
+}
+
+// SetBindMountOptions gets a reference to the given []string and assigns it to the BindMountOptions field.
+func (o *V1VolumeMount) SetBindMountOptions(v []string) {
+	o.BindMountOptions = v
 }
 
 // GetMountPath returns the MountPath field value if set, zero value otherwise.
@@ -286,6 +320,9 @@ func (o V1VolumeMount) MarshalJSON() ([]byte, error) {
 
 func (o V1VolumeMount) ToMap() (map[string]interface{}, error) {
 	toSerialize := map[string]interface{}{}
+	if !IsNil(o.BindMountOptions) {
+		toSerialize["bindMountOptions"] = o.BindMountOptions
+	}
 	if !IsNil(o.MountPath) {
 		toSerialize["mountPath"] = o.MountPath
 	}

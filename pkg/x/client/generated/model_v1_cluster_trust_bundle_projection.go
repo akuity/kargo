@@ -29,6 +29,8 @@ type V1ClusterTrustBundleProjection struct {
 	Path *string `json:"path,omitempty"`
 	// Select all ClusterTrustBundles that match this signer name. Mutually-exclusive with name.  The contents of all selected ClusterTrustBundles will be unified and deduplicated. +optional
 	SignerName *string `json:"signerName,omitempty"`
+	// user is Optional: The owner UID of the created file. If specified, the item-level user field takes precedence over defaultUser. (Alpha) This field requires the AtomicWriteVolumeUserFields feature gate to be enabled. +featureGate=AtomicWriteVolumeUserFields +optional
+	User *int32 `json:"user,omitempty"`
 }
 
 // NewV1ClusterTrustBundleProjection instantiates a new V1ClusterTrustBundleProjection object
@@ -208,6 +210,38 @@ func (o *V1ClusterTrustBundleProjection) SetSignerName(v string) {
 	o.SignerName = &v
 }
 
+// GetUser returns the User field value if set, zero value otherwise.
+func (o *V1ClusterTrustBundleProjection) GetUser() int32 {
+	if o == nil || IsNil(o.User) {
+		var ret int32
+		return ret
+	}
+	return *o.User
+}
+
+// GetUserOk returns a tuple with the User field value if set, nil otherwise
+// and a boolean to check if the value has been set.
+func (o *V1ClusterTrustBundleProjection) GetUserOk() (*int32, bool) {
+	if o == nil || IsNil(o.User) {
+		return nil, false
+	}
+	return o.User, true
+}
+
+// HasUser returns a boolean if a field has been set.
+func (o *V1ClusterTrustBundleProjection) HasUser() bool {
+	if o != nil && !IsNil(o.User) {
+		return true
+	}
+
+	return false
+}
+
+// SetUser gets a reference to the given int32 and assigns it to the User field.
+func (o *V1ClusterTrustBundleProjection) SetUser(v int32) {
+	o.User = &v
+}
+
 func (o V1ClusterTrustBundleProjection) MarshalJSON() ([]byte, error) {
 	toSerialize,err := o.ToMap()
 	if err != nil {
@@ -232,6 +266,9 @@ func (o V1ClusterTrustBundleProjection) ToMap() (map[string]interface{}, error) 
 	}
 	if !IsNil(o.SignerName) {
 		toSerialize["signerName"] = o.SignerName
+	}
+	if !IsNil(o.User) {
+		toSerialize["user"] = o.User
 	}
 	return toSerialize, nil
 }

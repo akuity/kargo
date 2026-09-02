@@ -6,6 +6,7 @@
  * OpenAPI spec version: v1alpha1
  */
 import type { V1HTTPHeader } from './v1HTTPHeader';
+import type { V1HTTPProtocol } from './v1HTTPProtocol';
 
 export interface V1HTTPGetAction {
   /** Host name to connect to, defaults to the pod IP. You probably want to set
@@ -23,6 +24,11 @@ export interface V1HTTPGetAction {
 Number must be in the range 1 to 65535.
 Name must be an IANA_SVC_NAME. */
   port?: unknown;
+  /** Protocol selects the wire protocol for the probe connection.
+Nil defaults to HTTP/1.1.
++optional
++featureGate=H2CContainerProbe */
+  protocol?: V1HTTPProtocol;
   /** Scheme to use for connecting to the host.
 Defaults to HTTP.
 +optional */

@@ -21,6 +21,8 @@ var _ MappedNullable = &V1DownwardAPIVolumeSource{}
 type V1DownwardAPIVolumeSource struct {
 	// Optional: mode bits to use on created files by default. Must be a Optional: mode bits used to set permissions on created files by default. Must be an octal value between 0000 and 0777 or a decimal value between 0 and 511. YAML accepts both octal and decimal values, JSON requires decimal values for mode bits. Defaults to 0644. Directories within the path are not affected by this setting. This might be in conflict with other options that affect the file mode, like fsGroup, and the result can be other mode bits set. +optional
 	DefaultMode *int32 `json:"defaultMode,omitempty"`
+	// defaultUser is Optional: The owner UID of the created files by default. The defaultUser field is only used as a fallback when the item-level user field is unset. (Alpha) This field requires the AtomicWriteVolumeUserFields feature gate to be enabled. +featureGate=AtomicWriteVolumeUserFields +optional
+	DefaultUser *int32 `json:"defaultUser,omitempty"`
 	// Items is a list of downward API volume file +optional +listType=atomic
 	Items []V1DownwardAPIVolumeFile `json:"items,omitempty"`
 }
@@ -74,6 +76,38 @@ func (o *V1DownwardAPIVolumeSource) SetDefaultMode(v int32) {
 	o.DefaultMode = &v
 }
 
+// GetDefaultUser returns the DefaultUser field value if set, zero value otherwise.
+func (o *V1DownwardAPIVolumeSource) GetDefaultUser() int32 {
+	if o == nil || IsNil(o.DefaultUser) {
+		var ret int32
+		return ret
+	}
+	return *o.DefaultUser
+}
+
+// GetDefaultUserOk returns a tuple with the DefaultUser field value if set, nil otherwise
+// and a boolean to check if the value has been set.
+func (o *V1DownwardAPIVolumeSource) GetDefaultUserOk() (*int32, bool) {
+	if o == nil || IsNil(o.DefaultUser) {
+		return nil, false
+	}
+	return o.DefaultUser, true
+}
+
+// HasDefaultUser returns a boolean if a field has been set.
+func (o *V1DownwardAPIVolumeSource) HasDefaultUser() bool {
+	if o != nil && !IsNil(o.DefaultUser) {
+		return true
+	}
+
+	return false
+}
+
+// SetDefaultUser gets a reference to the given int32 and assigns it to the DefaultUser field.
+func (o *V1DownwardAPIVolumeSource) SetDefaultUser(v int32) {
+	o.DefaultUser = &v
+}
+
 // GetItems returns the Items field value if set, zero value otherwise.
 func (o *V1DownwardAPIVolumeSource) GetItems() []V1DownwardAPIVolumeFile {
 	if o == nil || IsNil(o.Items) {
@@ -118,6 +152,9 @@ func (o V1DownwardAPIVolumeSource) ToMap() (map[string]interface{}, error) {
 	toSerialize := map[string]interface{}{}
 	if !IsNil(o.DefaultMode) {
 		toSerialize["defaultMode"] = o.DefaultMode
+	}
+	if !IsNil(o.DefaultUser) {
+		toSerialize["defaultUser"] = o.DefaultUser
 	}
 	if !IsNil(o.Items) {
 		toSerialize["items"] = o.Items

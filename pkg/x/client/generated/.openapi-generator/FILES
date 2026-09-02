@@ -224,6 +224,7 @@ model_v1_event.go
 model_v1_event_list.go
 model_v1_event_series.go
 model_v1_event_source.go
+model_v1_eviction_responder.go
 model_v1_exec_action.go
 model_v1_fc_volume_source.go
 model_v1_file_key_selector.go
@@ -233,12 +234,15 @@ model_v1_gce_persistent_disk_volume_source.go
 model_v1_git_repo_volume_source.go
 model_v1_glusterfs_volume_source.go
 model_v1_grpc_action.go
+model_v1_grpc_probe_mode.go
 model_v1_host_alias.go
 model_v1_host_path_volume_source.go
 model_v1_http_get_action.go
 model_v1_http_header.go
+model_v1_http_protocol.go
 model_v1_image_volume_source.go
 model_v1_iscsi_volume_source.go
+model_v1_job_scheduling_configuration.go
 model_v1_job_spec.go
 model_v1_key_to_path.go
 model_v1_label_selector.go
@@ -322,6 +326,12 @@ model_v1_volume_resource_requirements.go
 model_v1_vsphere_virtual_disk_volume_source.go
 model_v1_weighted_pod_affinity_term.go
 model_v1_windows_security_context_options.go
+model_v1alpha3_topology_constraint.go
+model_v1alpha3_workload_pod_group_disruption_mode.go
+model_v1alpha3_workload_pod_group_gang_scheduling_policy.go
+model_v1alpha3_workload_pod_group_resource_claim.go
+model_v1alpha3_workload_pod_group_scheduling_constraints.go
+model_v1alpha3_workload_pod_group_scheduling_policy.go
 model_verification.go
 model_verification_info.go
 model_verified_stage.go

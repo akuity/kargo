@@ -31,7 +31,7 @@ type V1Secret struct {
 	Metadata *V1ObjectMeta `json:"metadata,omitempty"`
 	// stringData allows specifying non-binary secret data in string form. It is provided as a write-only input field for convenience. All keys and values are merged into the data field on write, overwriting any existing values. The stringData field is never output when reading from the API. +k8s:conversion-gen=false +optional
 	StringData *map[string]string `json:"stringData,omitempty"`
-	// Used to facilitate programmatic handling of secret data. More info: https://kubernetes.io/docs/concepts/configuration/secret/#secret-types +optional
+	// Used to facilitate programmatic handling of secret data. More info: https://kubernetes.io/docs/concepts/configuration/secret/#secret-types +optional +k8s:optional +k8s:alpha(since: \"1.37\")=+k8s:immutable
 	Type *string `json:"type,omitempty"`
 }
 
