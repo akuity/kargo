@@ -16,6 +16,7 @@ import (
 	"sigs.k8s.io/kustomize/api/resource"
 	kustypes "sigs.k8s.io/kustomize/api/types"
 	"sigs.k8s.io/kustomize/kyaml/filesys"
+	"sigs.k8s.io/kustomize/kyaml/openapi"
 	"sigs.k8s.io/yaml"
 
 	kargoapi "github.com/akuity/kargo/api/v1alpha1"
@@ -144,6 +145,11 @@ func (k *kustomizeBuilder) writeResult(rm resmap.ResMap, outPath string, outputF
 func kustomizeBuild(kusFS filesys.FileSystem, path string, pluginCfg *builtin.Plugin) (_ resmap.ResMap, err error) {
 	kustomizeRenderMutex.Lock()
 	defer kustomizeRenderMutex.Unlock()
+
+	// Kustomize stores custom OpenAPI schemas in package-level state. Reset it
+	// before and after every build to isolate independent Promotion steps.
+	openapi.ResetOpenAPI()
+	defer openapi.ResetOpenAPI()
 
 	// Kustomize can panic in unpredicted ways due to (accidental)
 	// invalid object data; recover when this happens to ensure
