@@ -443,11 +443,13 @@ func TestRegularStagesReconciler_reconcile(t *testing.T) {
 	now := time.Now()
 
 	tests := []struct {
-		name        string
-		stage       *kargoapi.Stage
-		objects     []client.Object
-		interceptor interceptor.Funcs
-		assertions  func(*testing.T, kargoapi.StageStatus, bool, error)
+		name          string
+		cfg           ReconcilerConfig
+		healthCheckFn func(context.Context, string, string, []health.Criteria) kargoapi.Health
+		stage         *kargoapi.Stage
+		objects       []client.Object
+		interceptor   interceptor.Funcs
+		assertions    func(*testing.T, kargoapi.StageStatus, time.Duration, error)
 	}{
 		{
 			name: "subreconciler error preserves reconciling condition",
@@ -463,9 +465,9 @@ func TestRegularStagesReconciler_reconcile(t *testing.T) {
 					return fmt.Errorf("forced error")
 				},
 			},
-			assertions: func(t *testing.T, status kargoapi.StageStatus, requeue bool, err error) {
+			assertions: func(t *testing.T, status kargoapi.StageStatus, requeueAfter time.Duration, err error) {
 				require.Error(t, err)
-				require.False(t, requeue)
+				require.Zero(t, requeueAfter)
 
 				reconciling := conditions.Get(&status, kargoapi.ConditionTypeReconciling)
 				require.NotNil(t, reconciling)
@@ -482,9 +484,9 @@ func TestRegularStagesReconciler_reconcile(t *testing.T) {
 					Generation: 1,
 				},
 			},
-			assertions: func(t *testing.T, status kargoapi.StageStatus, requeue bool, err error) {
+			assertions: func(t *testing.T, status kargoapi.StageStatus, requeueAfter time.Duration, err error) {
 				require.NoError(t, err)
-				require.False(t, requeue)
+				require.Zero(t, requeueAfter)
 
 				// Each subreconciler should have updated conditions
 				healthyCond := conditions.Get(&status, kargoapi.ConditionTypeHealthy)
@@ -511,9 +513,9 @@ func TestRegularStagesReconciler_reconcile(t *testing.T) {
 					},
 				},
 			},
-			assertions: func(t *testing.T, status kargoapi.StageStatus, requeue bool, err error) {
+			assertions: func(t *testing.T, status kargoapi.StageStatus, requeueAfter time.Duration, err error) {
 				require.NoError(t, err)
-				assert.False(t, requeue)
+				assert.Zero(t, requeueAfter)
 
 				reconciling := conditions.Get(&status, kargoapi.ConditionTypeReconciling)
 				assert.Nil(t, reconciling)
@@ -581,16 +583,158 @@ func TestRegularStagesReconciler_reconcile(t *testing.T) {
 					return c.SubResource(subResourceName).Patch(ctx, obj, patch, opts...)
 				},
 			},
-			assertions: func(t *testing.T, status kargoapi.StageStatus, requeue bool, err error) {
+			assertions: func(t *testing.T, status kargoapi.StageStatus, requeueAfter time.Duration, err error) {
 				// Status update failures between sub-reconcilers are non-fatal.
 				require.NoError(t, err)
-				require.False(t, requeue)
+				require.Zero(t, requeueAfter)
 
 				// The results of syncPromotions were carried through the rest
 				// of the pass despite never having been persisted.
 				require.NotNil(t, status.LastPromotion)
 				assert.Equal(t, "test-promotion", status.LastPromotion.Name)
 				require.Len(t, status.FreightHistory, 1)
+			},
+		},
+
+		{
+			// After a successful Promotion, verification of the newly promoted
+			// Freight cannot begin until the Stage is healthy. While health is
+			// still settling, a queued Promotion must not be allowed to
+			// supersede that Freight, and rather than spinning on immediate
+			// requeues, the Stage is requeued for when the wait expires (the
+			// Application watcher re-enqueues it sooner if health changes).
+			name: "holds queued Promotion while awaiting health to permit verification",
+			cfg: ReconcilerConfig{
+				VerificationStartGracePeriod: 5 * time.Minute,
+			},
+			healthCheckFn: func(context.Context, string, string, []health.Criteria) kargoapi.Health {
+				return kargoapi.Health{
+					Status: kargoapi.HealthStateUnknown,
+					Issues: []string{"Argo CD Application was not reconciled after its most recent operation completed"},
+				}
+			},
+			stage: &kargoapi.Stage{
+				ObjectMeta: metav1.ObjectMeta{
+					Namespace:  "test-project",
+					Name:       "test-stage",
+					Generation: 1,
+				},
+				Status: kargoapi.StageStatus{
+					Health: &kargoapi.Health{Status: kargoapi.HealthStateUnknown},
+					LastPromotion: &kargoapi.PromotionReference{
+						Name: "previous-promotion",
+						Status: &kargoapi.PromotionStatus{
+							Phase:      kargoapi.PromotionPhaseSucceeded,
+							FinishedAt: &metav1.Time{Time: now},
+						},
+						FinishedAt: &metav1.Time{Time: now},
+					},
+					FreightHistory: kargoapi.FreightHistory{
+						{
+							ID: "test-collection-id",
+							Freight: map[string]kargoapi.FreightReference{
+								"Warehouse/test-warehouse": {Name: "test-freight"},
+							},
+						},
+					},
+				},
+			},
+			objects: []client.Object{
+				&kargoapi.Freight{
+					ObjectMeta: metav1.ObjectMeta{
+						Namespace: "test-project",
+						Name:      "test-freight",
+					},
+					Origin: kargoapi.FreightOrigin{
+						Kind: kargoapi.FreightOriginKindWarehouse,
+						Name: "test-warehouse",
+					},
+				},
+				&kargoapi.Promotion{
+					ObjectMeta: metav1.ObjectMeta{
+						Namespace: "test-project",
+						Name:      "test-promotion",
+					},
+					Spec: kargoapi.PromotionSpec{Stage: "test-stage"},
+					Status: kargoapi.PromotionStatus{
+						Phase: kargoapi.PromotionPhasePending,
+					},
+				},
+			},
+			assertions: func(t *testing.T, status kargoapi.StageStatus, requeueAfter time.Duration, err error) {
+				require.NoError(t, err)
+
+				assert.Nil(t, status.CurrentPromotion)
+				assert.Nil(t, conditions.Get(&status, kargoapi.ConditionTypePromoting))
+				assert.Nil(t, conditions.Get(&status, kargoapi.ConditionTypeReconciling))
+
+				// Requeued for the expiry of the grace period, not immediately.
+				assert.Greater(t, requeueAfter, time.Second)
+				assert.LessOrEqual(t, requeueAfter, 5*time.Minute)
+			},
+		},
+		{
+			name: "starts queued Promotion immediately when the verification start hold is disabled",
+			cfg: ReconcilerConfig{
+				VerificationStartGracePeriod: 0,
+			},
+			healthCheckFn: func(context.Context, string, string, []health.Criteria) kargoapi.Health {
+				return kargoapi.Health{Status: kargoapi.HealthStateUnknown}
+			},
+			stage: &kargoapi.Stage{
+				ObjectMeta: metav1.ObjectMeta{
+					Namespace:  "test-project",
+					Name:       "test-stage",
+					Generation: 1,
+				},
+				Status: kargoapi.StageStatus{
+					Health: &kargoapi.Health{Status: kargoapi.HealthStateUnknown},
+					LastPromotion: &kargoapi.PromotionReference{
+						Name: "previous-promotion",
+						Status: &kargoapi.PromotionStatus{
+							Phase:      kargoapi.PromotionPhaseSucceeded,
+							FinishedAt: &metav1.Time{Time: now},
+						},
+						FinishedAt: &metav1.Time{Time: now},
+					},
+					FreightHistory: kargoapi.FreightHistory{
+						{
+							ID: "test-collection-id",
+							Freight: map[string]kargoapi.FreightReference{
+								"Warehouse/test-warehouse": {Name: "test-freight"},
+							},
+						},
+					},
+				},
+			},
+			objects: []client.Object{
+				&kargoapi.Freight{
+					ObjectMeta: metav1.ObjectMeta{
+						Namespace: "test-project",
+						Name:      "test-freight",
+					},
+					Origin: kargoapi.FreightOrigin{
+						Kind: kargoapi.FreightOriginKindWarehouse,
+						Name: "test-warehouse",
+					},
+				},
+				&kargoapi.Promotion{
+					ObjectMeta: metav1.ObjectMeta{
+						Namespace: "test-project",
+						Name:      "test-promotion",
+					},
+					Spec: kargoapi.PromotionSpec{Stage: "test-stage"},
+					Status: kargoapi.PromotionStatus{
+						Phase: kargoapi.PromotionPhasePending,
+					},
+				},
+			},
+			assertions: func(t *testing.T, status kargoapi.StageStatus, requeueAfter time.Duration, err error) {
+				require.NoError(t, err)
+				require.Zero(t, requeueAfter)
+
+				require.NotNil(t, status.CurrentPromotion)
+				assert.Equal(t, "test-promotion", status.CurrentPromotion.Name)
 			},
 		},
 	}
@@ -643,13 +787,14 @@ func TestRegularStagesReconciler_reconcile(t *testing.T) {
 				Build()
 
 			r := &RegularStageReconciler{
+				cfg:           tt.cfg,
 				client:        c,
 				eventSender:   k8sevent.NewEventSender(fakeevent.NewEventRecorder(10)),
-				healthChecker: &health.MockAggregatingChecker{},
+				healthChecker: &health.MockAggregatingChecker{CheckFn: tt.healthCheckFn},
 			}
 
-			status, requeue, err := r.reconcile(t.Context(), tt.stage, now)
-			tt.assertions(t, status, requeue, err)
+			status, requeueAfter, err := r.reconcile(t.Context(), tt.stage, now)
+			tt.assertions(t, status, requeueAfter, err)
 		})
 	}
 }
@@ -676,6 +821,7 @@ func TestRegularStageReconciler_syncPromotions(t *testing.T) {
 	tests := []struct {
 		name                 string
 		autoPromotionEnabled bool
+		cfg                  ReconcilerConfig
 		stage                *kargoapi.Stage
 		objects              []client.Object
 		interceptor          interceptor.Funcs
@@ -2259,6 +2405,374 @@ func TestRegularStageReconciler_syncPromotions(t *testing.T) {
 				assert.Nil(t, promotingCond)
 			},
 		},
+
+		{
+			// Immediately after a successful Promotion, Argo CD may not yet have
+			// re-assessed the health of the Applications it synced. Verification
+			// cannot begin until it has, so the queued Promotion must wait or the
+			// current Freight would never be verified.
+			name:                 "holds queued promotion while health is unknown after a successful promotion",
+			autoPromotionEnabled: true,
+			cfg: ReconcilerConfig{
+				VerificationStartGracePeriod: 5 * time.Minute,
+			},
+			stage: &kargoapi.Stage{
+				ObjectMeta: metav1.ObjectMeta{
+					Namespace: "fake-project",
+					Name:      "test-stage",
+				},
+				Status: kargoapi.StageStatus{
+					Health: &kargoapi.Health{
+						Status: kargoapi.HealthStateUnknown,
+						Issues: []string{"Argo CD Application was not reconciled after its most recent operation completed"},
+					},
+					LastPromotion: &kargoapi.PromotionReference{
+						Name: "previous-promotion",
+						Status: &kargoapi.PromotionStatus{
+							Phase:      kargoapi.PromotionPhaseSucceeded,
+							FinishedAt: &metav1.Time{Time: now},
+						},
+						FinishedAt: &metav1.Time{Time: now},
+					},
+					FreightHistory: kargoapi.FreightHistory{
+						{
+							ID: "current-collection",
+							Freight: map[string]kargoapi.FreightReference{
+								"warehouse-1": {Name: "current-freight"},
+							},
+						},
+					},
+				},
+			},
+			objects: []client.Object{
+				&kargoapi.Promotion{
+					ObjectMeta: metav1.ObjectMeta{
+						Name:      "pending-promotion",
+						Namespace: "fake-project",
+					},
+					Spec: kargoapi.PromotionSpec{
+						Stage: "test-stage",
+					},
+					Status: kargoapi.PromotionStatus{
+						Phase: kargoapi.PromotionPhasePending,
+					},
+				},
+			},
+			assertions: func(t *testing.T, status kargoapi.StageStatus, hasPendingPromotions bool, err error) {
+				require.NoError(t, err)
+				assert.True(t, hasPendingPromotions)
+
+				// Should hold the queued Promotion until health permits
+				// verification of the current Freight to begin.
+				assert.Nil(t, status.CurrentPromotion)
+				assert.Nil(t, conditions.Get(&status, kargoapi.ConditionTypePromoting))
+			},
+		},
+		{
+			name:                 "holds queued promotion while health is progressing after a successful promotion",
+			autoPromotionEnabled: true,
+			cfg: ReconcilerConfig{
+				VerificationStartGracePeriod: 5 * time.Minute,
+			},
+			stage: &kargoapi.Stage{
+				ObjectMeta: metav1.ObjectMeta{
+					Namespace: "fake-project",
+					Name:      "test-stage",
+				},
+				Status: kargoapi.StageStatus{
+					Health: &kargoapi.Health{
+						Status: kargoapi.HealthStateProgressing,
+						Issues: []string{"Argo CD Application is progressing"},
+					},
+					LastPromotion: &kargoapi.PromotionReference{
+						Name: "previous-promotion",
+						Status: &kargoapi.PromotionStatus{
+							Phase:      kargoapi.PromotionPhaseSucceeded,
+							FinishedAt: &metav1.Time{Time: now},
+						},
+						FinishedAt: &metav1.Time{Time: now},
+					},
+					FreightHistory: kargoapi.FreightHistory{
+						{
+							ID: "current-collection",
+							Freight: map[string]kargoapi.FreightReference{
+								"warehouse-1": {Name: "current-freight"},
+							},
+						},
+					},
+				},
+			},
+			objects: []client.Object{
+				&kargoapi.Promotion{
+					ObjectMeta: metav1.ObjectMeta{
+						Name:      "pending-promotion",
+						Namespace: "fake-project",
+					},
+					Spec: kargoapi.PromotionSpec{
+						Stage: "test-stage",
+					},
+					Status: kargoapi.PromotionStatus{
+						Phase: kargoapi.PromotionPhasePending,
+					},
+				},
+			},
+			assertions: func(t *testing.T, status kargoapi.StageStatus, hasPendingPromotions bool, err error) {
+				require.NoError(t, err)
+				assert.True(t, hasPendingPromotions)
+
+				// Should hold the queued Promotion until health permits
+				// verification of the current Freight to begin.
+				assert.Nil(t, status.CurrentPromotion)
+				assert.Nil(t, conditions.Get(&status, kargoapi.ConditionTypePromoting))
+			},
+		},
+		{
+			name:                 "allows queued promotion when health has not settled within the grace period",
+			autoPromotionEnabled: true,
+			cfg: ReconcilerConfig{
+				VerificationStartGracePeriod: 5 * time.Minute,
+			},
+			stage: &kargoapi.Stage{
+				ObjectMeta: metav1.ObjectMeta{
+					Namespace: "fake-project",
+					Name:      "test-stage",
+				},
+				Status: kargoapi.StageStatus{
+					Health: &kargoapi.Health{
+						Status: kargoapi.HealthStateProgressing,
+						Issues: []string{"Argo CD Application is progressing"},
+					},
+					LastPromotion: &kargoapi.PromotionReference{
+						Name: "previous-promotion",
+						Status: &kargoapi.PromotionStatus{
+							Phase:      kargoapi.PromotionPhaseSucceeded,
+							FinishedAt: &metav1.Time{Time: now.Add(-10 * time.Minute)},
+						},
+						FinishedAt: &metav1.Time{Time: now.Add(-10 * time.Minute)},
+					},
+					FreightHistory: kargoapi.FreightHistory{
+						{
+							ID: "current-collection",
+							Freight: map[string]kargoapi.FreightReference{
+								"warehouse-1": {Name: "current-freight"},
+							},
+						},
+					},
+				},
+			},
+			objects: []client.Object{
+				&kargoapi.Promotion{
+					ObjectMeta: metav1.ObjectMeta{
+						Name:      "pending-promotion",
+						Namespace: "fake-project",
+					},
+					Spec: kargoapi.PromotionSpec{
+						Stage: "test-stage",
+					},
+					Status: kargoapi.PromotionStatus{
+						Phase: kargoapi.PromotionPhasePending,
+					},
+				},
+			},
+			assertions: func(t *testing.T, status kargoapi.StageStatus, hasPendingPromotions bool, err error) {
+				require.NoError(t, err)
+				assert.True(t, hasPendingPromotions)
+
+				require.NotNil(t, status.CurrentPromotion)
+				assert.Equal(t, "pending-promotion", status.CurrentPromotion.Name)
+
+				promotingCond := conditions.Get(&status, kargoapi.ConditionTypePromoting)
+				require.NotNil(t, promotingCond)
+				assert.Equal(t, metav1.ConditionTrue, promotingCond.Status)
+			},
+		},
+		{
+			// Health is Unknown after a failed Promotion because there are no
+			// health checks to perform, not because it has yet to settle. The
+			// next Promotion is expected to remedy the situation and must not be
+			// held back.
+			name:                 "allows queued promotion when health is unknown after a failed promotion",
+			autoPromotionEnabled: true,
+			cfg: ReconcilerConfig{
+				VerificationStartGracePeriod: 5 * time.Minute,
+			},
+			stage: &kargoapi.Stage{
+				ObjectMeta: metav1.ObjectMeta{
+					Namespace: "fake-project",
+					Name:      "test-stage",
+				},
+				Status: kargoapi.StageStatus{
+					Health: &kargoapi.Health{
+						Status: kargoapi.HealthStateUnknown,
+						Issues: []string{"Cannot assess health because last Promotion did not succeed"},
+					},
+					LastPromotion: &kargoapi.PromotionReference{
+						Name: "previous-promotion",
+						Status: &kargoapi.PromotionStatus{
+							Phase:      kargoapi.PromotionPhaseFailed,
+							FinishedAt: &metav1.Time{Time: now},
+						},
+						FinishedAt: &metav1.Time{Time: now},
+					},
+					FreightHistory: kargoapi.FreightHistory{
+						{
+							ID: "current-collection",
+							Freight: map[string]kargoapi.FreightReference{
+								"warehouse-1": {Name: "current-freight"},
+							},
+						},
+					},
+				},
+			},
+			objects: []client.Object{
+				&kargoapi.Promotion{
+					ObjectMeta: metav1.ObjectMeta{
+						Name:      "pending-promotion",
+						Namespace: "fake-project",
+					},
+					Spec: kargoapi.PromotionSpec{
+						Stage: "test-stage",
+					},
+					Status: kargoapi.PromotionStatus{
+						Phase: kargoapi.PromotionPhasePending,
+					},
+				},
+			},
+			assertions: func(t *testing.T, status kargoapi.StageStatus, hasPendingPromotions bool, err error) {
+				require.NoError(t, err)
+				assert.True(t, hasPendingPromotions)
+
+				require.NotNil(t, status.CurrentPromotion)
+				assert.Equal(t, "pending-promotion", status.CurrentPromotion.Name)
+
+				promotingCond := conditions.Get(&status, kargoapi.ConditionTypePromoting)
+				require.NotNil(t, promotingCond)
+				assert.Equal(t, metav1.ConditionTrue, promotingCond.Status)
+			},
+		},
+		{
+			name:                 "allows queued promotion when progressing but current freight verification is terminal",
+			autoPromotionEnabled: true,
+			cfg: ReconcilerConfig{
+				VerificationStartGracePeriod: 5 * time.Minute,
+			},
+			stage: &kargoapi.Stage{
+				ObjectMeta: metav1.ObjectMeta{
+					Namespace: "fake-project",
+					Name:      "test-stage",
+				},
+				Status: kargoapi.StageStatus{
+					Health: &kargoapi.Health{
+						Status: kargoapi.HealthStateProgressing,
+						Issues: []string{"Argo CD Application is progressing"},
+					},
+					LastPromotion: &kargoapi.PromotionReference{
+						Name: "previous-promotion",
+						Status: &kargoapi.PromotionStatus{
+							Phase:      kargoapi.PromotionPhaseSucceeded,
+							FinishedAt: &metav1.Time{Time: now},
+						},
+						FinishedAt: &metav1.Time{Time: now},
+					},
+					FreightHistory: kargoapi.FreightHistory{
+						{
+							ID: "current-collection",
+							Freight: map[string]kargoapi.FreightReference{
+								"warehouse-1": {Name: "current-freight"},
+							},
+							VerificationHistory: []kargoapi.VerificationInfo{
+								{
+									Phase:      kargoapi.VerificationPhaseFailed,
+									FinishTime: &metav1.Time{Time: now},
+								},
+							},
+						},
+					},
+				},
+			},
+			objects: []client.Object{
+				&kargoapi.Promotion{
+					ObjectMeta: metav1.ObjectMeta{
+						Name:      "pending-promotion",
+						Namespace: "fake-project",
+					},
+					Spec: kargoapi.PromotionSpec{
+						Stage: "test-stage",
+					},
+					Status: kargoapi.PromotionStatus{
+						Phase: kargoapi.PromotionPhasePending,
+					},
+				},
+			},
+			assertions: func(t *testing.T, status kargoapi.StageStatus, hasPendingPromotions bool, err error) {
+				require.NoError(t, err)
+				assert.True(t, hasPendingPromotions)
+
+				require.NotNil(t, status.CurrentPromotion)
+				assert.Equal(t, "pending-promotion", status.CurrentPromotion.Name)
+
+				promotingCond := conditions.Get(&status, kargoapi.ConditionTypePromoting)
+				require.NotNil(t, promotingCond)
+				assert.Equal(t, metav1.ConditionTrue, promotingCond.Status)
+			},
+		},
+		{
+			name:                 "allows queued promotion when health is unknown and the hold is disabled",
+			autoPromotionEnabled: true,
+			stage: &kargoapi.Stage{
+				ObjectMeta: metav1.ObjectMeta{
+					Namespace: "fake-project",
+					Name:      "test-stage",
+				},
+				Status: kargoapi.StageStatus{
+					Health: &kargoapi.Health{
+						Status: kargoapi.HealthStateUnknown,
+						Issues: []string{"Argo CD Application was not reconciled after its most recent operation completed"},
+					},
+					LastPromotion: &kargoapi.PromotionReference{
+						Name: "previous-promotion",
+						Status: &kargoapi.PromotionStatus{
+							Phase:      kargoapi.PromotionPhaseSucceeded,
+							FinishedAt: &metav1.Time{Time: now},
+						},
+						FinishedAt: &metav1.Time{Time: now},
+					},
+					FreightHistory: kargoapi.FreightHistory{
+						{
+							ID: "current-collection",
+							Freight: map[string]kargoapi.FreightReference{
+								"warehouse-1": {Name: "current-freight"},
+							},
+						},
+					},
+				},
+			},
+			objects: []client.Object{
+				&kargoapi.Promotion{
+					ObjectMeta: metav1.ObjectMeta{
+						Name:      "pending-promotion",
+						Namespace: "fake-project",
+					},
+					Spec: kargoapi.PromotionSpec{
+						Stage: "test-stage",
+					},
+					Status: kargoapi.PromotionStatus{
+						Phase: kargoapi.PromotionPhasePending,
+					},
+				},
+			},
+			assertions: func(t *testing.T, status kargoapi.StageStatus, hasPendingPromotions bool, err error) {
+				require.NoError(t, err)
+				assert.True(t, hasPendingPromotions)
+
+				require.NotNil(t, status.CurrentPromotion)
+				assert.Equal(t, "pending-promotion", status.CurrentPromotion.Name)
+
+				promotingCond := conditions.Get(&status, kargoapi.ConditionTypePromoting)
+				require.NotNil(t, promotingCond)
+				assert.Equal(t, metav1.ConditionTrue, promotingCond.Status)
+			},
+		},
 	}
 
 	for _, tt := range tests {
@@ -2278,12 +2792,167 @@ func TestRegularStageReconciler_syncPromotions(t *testing.T) {
 				Build()
 
 			r := &RegularStageReconciler{
+				cfg:         tt.cfg,
 				client:      c,
 				eventSender: k8sevent.NewEventSender(fakeevent.NewEventRecorder(10)),
 			}
 
 			status, requeue, err := r.syncPromotions(t.Context(), tt.stage, tt.autoPromotionEnabled)
 			tt.assertions(t, status, requeue, err)
+		})
+	}
+}
+
+func TestRegularStageReconciler_awaitingVerificationStart(t *testing.T) {
+	now := time.Now()
+	const gracePeriod = 5 * time.Minute
+
+	promotion := func(phase kargoapi.PromotionPhase, finishedAt time.Time) *kargoapi.PromotionReference {
+		return &kargoapi.PromotionReference{
+			Name: "test-promotion",
+			Status: &kargoapi.PromotionStatus{
+				Phase:      phase,
+				FinishedAt: &metav1.Time{Time: finishedAt},
+			},
+			FinishedAt: &metav1.Time{Time: finishedAt},
+		}
+	}
+	freightHistory := func(verifications ...kargoapi.VerificationInfo) kargoapi.FreightHistory {
+		return kargoapi.FreightHistory{
+			{
+				ID:                  "current-collection",
+				VerificationHistory: verifications,
+			},
+		}
+	}
+
+	tests := []struct {
+		name         string
+		gracePeriod  time.Duration
+		status       kargoapi.StageStatus
+		wantDeadline time.Time
+		wantAwaiting bool
+	}{
+		{
+			name: "hold disabled",
+			status: kargoapi.StageStatus{
+				Health:         &kargoapi.Health{Status: kargoapi.HealthStateUnknown},
+				LastPromotion:  promotion(kargoapi.PromotionPhaseSucceeded, now),
+				FreightHistory: freightHistory(),
+			},
+		},
+		{
+			name:        "health not yet assessed",
+			gracePeriod: gracePeriod,
+			status: kargoapi.StageStatus{
+				LastPromotion:  promotion(kargoapi.PromotionPhaseSucceeded, now),
+				FreightHistory: freightHistory(),
+			},
+		},
+		{
+			name:        "healthy",
+			gracePeriod: gracePeriod,
+			status: kargoapi.StageStatus{
+				Health:         &kargoapi.Health{Status: kargoapi.HealthStateHealthy},
+				LastPromotion:  promotion(kargoapi.PromotionPhaseSucceeded, now),
+				FreightHistory: freightHistory(),
+			},
+		},
+		{
+			name:        "unhealthy",
+			gracePeriod: gracePeriod,
+			status: kargoapi.StageStatus{
+				Health:         &kargoapi.Health{Status: kargoapi.HealthStateUnhealthy},
+				LastPromotion:  promotion(kargoapi.PromotionPhaseSucceeded, now),
+				FreightHistory: freightHistory(),
+			},
+		},
+		{
+			name:        "unknown after successful promotion",
+			gracePeriod: gracePeriod,
+			status: kargoapi.StageStatus{
+				Health:         &kargoapi.Health{Status: kargoapi.HealthStateUnknown},
+				LastPromotion:  promotion(kargoapi.PromotionPhaseSucceeded, now),
+				FreightHistory: freightHistory(),
+			},
+			wantDeadline: now.Add(gracePeriod),
+			wantAwaiting: true,
+		},
+		{
+			name:        "progressing after successful promotion",
+			gracePeriod: gracePeriod,
+			status: kargoapi.StageStatus{
+				Health:         &kargoapi.Health{Status: kargoapi.HealthStateProgressing},
+				LastPromotion:  promotion(kargoapi.PromotionPhaseSucceeded, now),
+				FreightHistory: freightHistory(),
+			},
+			wantDeadline: now.Add(gracePeriod),
+			wantAwaiting: true,
+		},
+		{
+			name:        "verification of current freight in progress",
+			gracePeriod: gracePeriod,
+			status: kargoapi.StageStatus{
+				Health:         &kargoapi.Health{Status: kargoapi.HealthStateProgressing},
+				LastPromotion:  promotion(kargoapi.PromotionPhaseSucceeded, now),
+				FreightHistory: freightHistory(kargoapi.VerificationInfo{Phase: kargoapi.VerificationPhaseRunning}),
+			},
+			wantDeadline: now.Add(gracePeriod),
+			wantAwaiting: true,
+		},
+		{
+			name:        "unknown after failed promotion",
+			gracePeriod: gracePeriod,
+			status: kargoapi.StageStatus{
+				Health:         &kargoapi.Health{Status: kargoapi.HealthStateUnknown},
+				LastPromotion:  promotion(kargoapi.PromotionPhaseFailed, now),
+				FreightHistory: freightHistory(),
+			},
+		},
+		{
+			name:        "unknown without a last promotion",
+			gracePeriod: gracePeriod,
+			status: kargoapi.StageStatus{
+				Health:         &kargoapi.Health{Status: kargoapi.HealthStateUnknown},
+				FreightHistory: freightHistory(),
+			},
+		},
+		{
+			name:        "grace period elapsed",
+			gracePeriod: gracePeriod,
+			status: kargoapi.StageStatus{
+				Health:         &kargoapi.Health{Status: kargoapi.HealthStateUnknown},
+				LastPromotion:  promotion(kargoapi.PromotionPhaseSucceeded, now.Add(-gracePeriod)),
+				FreightHistory: freightHistory(),
+			},
+		},
+		{
+			name:        "no current freight",
+			gracePeriod: gracePeriod,
+			status: kargoapi.StageStatus{
+				Health:        &kargoapi.Health{Status: kargoapi.HealthStateUnknown},
+				LastPromotion: promotion(kargoapi.PromotionPhaseSucceeded, now),
+			},
+		},
+		{
+			name:        "current freight already has a terminal verification",
+			gracePeriod: gracePeriod,
+			status: kargoapi.StageStatus{
+				Health:         &kargoapi.Health{Status: kargoapi.HealthStateUnknown},
+				LastPromotion:  promotion(kargoapi.PromotionPhaseSucceeded, now),
+				FreightHistory: freightHistory(kargoapi.VerificationInfo{Phase: kargoapi.VerificationPhaseFailed}),
+			},
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			r := &RegularStageReconciler{
+				cfg: ReconcilerConfig{VerificationStartGracePeriod: tt.gracePeriod},
+			}
+			deadline, awaiting := r.awaitingVerificationStart(&tt.status, now)
+			assert.Equal(t, tt.wantAwaiting, awaiting)
+			assert.True(t, deadline.Equal(tt.wantDeadline), "deadline %s != %s", deadline, tt.wantDeadline)
 		})
 	}
 }

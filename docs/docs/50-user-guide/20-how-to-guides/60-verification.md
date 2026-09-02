@@ -128,6 +128,17 @@ other `Promotion`s to that `Stage` will run until verification has completed
 (either successfully or unsuccessfully). Once verification has completed, the
 next queued `Promotion` will run.
 
+Verification cannot begin until a `Stage` is healthy, and immediately after a
+`Promotion` completes a `Stage`'s health is often still `Unknown` (Argo CD may
+not yet have re-assessed the `Application`s it synced) or `Progressing` (a
+rollout may still be underway). Queued `Promotion`s are held during this window
+as well, so that the newly promoted `Freight` is not superseded before it has
+had a chance to be verified. This wait is bounded: if the `Stage` has not become
+healthy within the controller's verification start grace period (five minutes
+by default; see `controller.reconcilers.stages.verificationStartGracePeriod` in
+the Helm chart), the next queued `Promotion` is permitted to run and the current
+`Freight` will not be verified.
+
 ## AnalysisRun
 
 An `AnalysisRun` is a resource representing a verification attempt for a

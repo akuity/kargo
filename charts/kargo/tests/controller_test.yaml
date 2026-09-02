@@ -125,6 +125,35 @@ tests:
           path: data.MAX_CONCURRENT_PROMOTION_REQUEST_RECONCILES
           value: "7"
 
+  - it: sets the verification start grace period by default
+    asserts:
+      - equal:
+          path: data.VERIFICATION_START_GRACE_PERIOD
+          value: "5m0s"
+
+  - it: configures the verification start grace period
+    set:
+      controller.reconcilers.stages.verificationStartGracePeriod: 10m
+    asserts:
+      - equal:
+          path: data.VERIFICATION_START_GRACE_PERIOD
+          value: "10m"
+
+  - it: passes through a zero verification start grace period to disable the hold
+    set:
+      controller.reconcilers.stages.verificationStartGracePeriod: 0s
+    asserts:
+      - equal:
+          path: data.VERIFICATION_START_GRACE_PERIOD
+          value: "0s"
+
+  - it: omits the verification start grace period when unset
+    set:
+      controller.reconcilers.stages.verificationStartGracePeriod: ""
+    asserts:
+      - notExists:
+          path: data.VERIFICATION_START_GRACE_PERIOD
+
 ---
 suite: controller/cluster-role-bindings.yaml
 values:
