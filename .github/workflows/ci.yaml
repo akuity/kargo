@@ -25,7 +25,18 @@ jobs:
     - name: Checkout code
       uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
     - name: Set up Go
+      # This is the Go minor version that unit tests, linters, and codegen run
+      # against. It is capped by the golangci-lint version pinned in
+      # hack/tools.mk: a linter binary built with go1.X panics under go1.(X+1),
+      # so raising Go here requires a linter upgrade, which typically surfaces
+      # new findings requiring code or configuration changes.
+      #
+      # It must match the base image in Dockerfile.dev. Everything else,
+      # including anything we ship, uses the default that the setup-go action
+      # defines.
       uses: ./.github/actions/setup-go
+      with:
+        go-version: &goTestVersion "1.27.0"
     - name: Run unit tests
       run: make test-unit
     - name: Remove generated code from report
@@ -88,6 +99,8 @@ jobs:
       uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
     - name: Set up Go
       uses: ./.github/actions/setup-go
+      with:
+        go-version: *goTestVersion
     - name: Cache golangci-lint
       id: cache-golangci-lint
       uses: actions/cache@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
@@ -176,6 +189,8 @@ jobs:
       uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
     - name: Set up Go
       uses: ./.github/actions/setup-go
+      with:
+        go-version: *goTestVersion
     - name: Install java
       uses: actions/setup-java@dd06d9cba3e5552c54d9f8ea23572deb30010f7c # v6.0.0
       with:
