@@ -20,6 +20,11 @@ RUN NODE_ENV='production' VERSION=${VERSION} pnpm run build
 ####################################################################################################
 # back-end-builder
 ####################################################################################################
+# Always use the latest minor version of Go for anything we ship. A release
+# branch lives until its EOL, and over that lifetime the Go minor version it
+# started on may itself reach EOL. Building on the latest minor keeps released
+# binaries off unsupported toolchains and picks up fixes for CVEs in the Go
+# standard library.
 FROM --platform=$BUILDPLATFORM golang:1.27.0-trixie AS back-end-builder
 
 ARG TARGETOS
@@ -80,6 +85,9 @@ WORKDIR /kargo/bin
 #
 # Source comes from the Go module proxy, so it is checksum-verified against
 # sum.golang.org rather than trusted from a tarball download.
+#
+# As with the back-end-builder stage above, always use the latest minor version
+# of Go for anything we ship.
 FROM --platform=$BUILDPLATFORM golang:1.27.0-trixie AS helm-builder
 
 ARG TARGETOS
