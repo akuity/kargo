@@ -12,6 +12,7 @@ import (
 	"github.com/stretchr/testify/require"
 	"helm.sh/helm/v3/pkg/repo"
 	"k8s.io/utils/ptr"
+	kustfilesys "sigs.k8s.io/kustomize/kyaml/filesys"
 
 	kargoapi "github.com/akuity/kargo/api/v1alpha1"
 	"github.com/akuity/kargo/pkg/io/fs"
@@ -474,4 +475,107 @@ metadata:
 			tt.assertions(t, tempDir, result, err)
 		})
 	}
+}
+
+func Test_kustomizeBuild_resetsOpenAPIBetweenBuilds(t *testing.T) {
+	kusFS := kustfilesys.MakeFsOnDisk()
+
+	firstDir := t.TempDir()
+	require.NoError(t, os.WriteFile(filepath.Join(firstDir, "kustomization.yaml"), []byte(`
+apiVersion: kustomize.config.k8s.io/v1beta1
+kind: Kustomization
+resources:
+- configmap.yaml
+openapi:
+  path: schema.json
+`), 0o600))
+	require.NoError(t, os.WriteFile(filepath.Join(firstDir, "configmap.yaml"), []byte(`
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: first-build
+`), 0o600))
+	require.NoError(t, os.WriteFile(filepath.Join(firstDir, "schema.json"), []byte(`
+{"definitions": {}}
+`), 0o600))
+
+	_, err := kustomizeBuild(kusFS, firstDir, nil)
+	require.NoError(t, err)
+
+	secondDir := t.TempDir()
+	require.NoError(t, os.Mkdir(filepath.Join(secondDir, "component"), 0o700))
+	require.NoError(t, os.WriteFile(filepath.Join(secondDir, "kustomization.yaml"), []byte(`
+apiVersion: kustomize.config.k8s.io/v1beta1
+kind: Kustomization
+resources:
+- widget.yaml
+components:
+- component
+`), 0o600))
+	require.NoError(t, os.WriteFile(filepath.Join(secondDir, "widget.yaml"), []byte(`
+apiVersion: example.com/v1
+kind: Widget
+metadata:
+  name: example
+spec:
+  items:
+  - name: item
+    value: preserved
+`), 0o600))
+	require.NoError(t, os.WriteFile(filepath.Join(secondDir, "component", "kustomization.yaml"), []byte(`
+apiVersion: kustomize.config.k8s.io/v1alpha1
+kind: Component
+openapi:
+  path: schema.json
+patches:
+- path: patch.yaml
+`), 0o600))
+	require.NoError(t, os.WriteFile(filepath.Join(secondDir, "component", "patch.yaml"), []byte(`
+apiVersion: example.com/v1
+kind: Widget
+metadata:
+  name: example
+spec:
+  items:
+  - name: item
+    changed: true
+`), 0o600))
+	require.NoError(t, os.WriteFile(filepath.Join(secondDir, "component", "schema.json"), []byte(`
+{
+  "definitions": {
+    "example.com.v1.Widget": {
+      "type": "object",
+      "x-kubernetes-group-version-kind": [
+        {
+          "group": "example.com",
+          "version": "v1",
+          "kind": "Widget"
+        }
+      ],
+      "properties": {
+        "spec": {
+          "type": "object",
+          "properties": {
+            "items": {
+              "type": "array",
+              "items": {
+                "type": "object"
+              },
+              "x-kubernetes-patch-merge-key": "name",
+              "x-kubernetes-patch-strategy": "merge"
+            }
+          }
+        }
+      }
+    }
+  }
+}
+`), 0o600))
+
+	rm, err := kustomizeBuild(kusFS, secondDir, nil)
+	require.NoError(t, err)
+	result, err := rm.AsYaml()
+	require.NoError(t, err)
+	assert.Contains(t, string(result), "value: preserved")
+	assert.Contains(t, string(result), "changed: true")
 }
