@@ -1,5 +1,9 @@
 import { Tooltip } from 'antd';
 
+import {
+  getCurrentPromotionRef,
+  getLastPromotionRef
+} from '@ui/features/project/pipelines/nodes/stage-meta-utils';
 import { Stage } from '@ui/gen/api/v2/models';
 
 import { StagePopover } from '../project/list/project-item/stage-popover';
@@ -17,13 +21,14 @@ export const StageTag = ({
   projectName: string;
   stageColorMap: ColorMap;
 }) => {
+  const currentPromotion = getCurrentPromotionRef(stage);
+  const lastPromotion = getLastPromotionRef(stage);
+
   return (
     <Tooltip
       key={stage.metadata?.name}
       placement='bottom'
-      title={
-        stage?.status?.lastPromotion?.name && <StagePopover project={projectName} stage={stage} />
-      }
+      title={lastPromotion?.name && <StagePopover project={projectName} stage={stage} />}
     >
       <div
         className='flex items-center mb-2 text-white rounded py-1 px-2 font-semibold bg-gray-600'
@@ -34,11 +39,14 @@ export const StageTag = ({
             <HealthStatusIcon health={stage.status?.health} hideColor={true} />
           </div>
         )}
-        {!stage?.status?.currentPromotion && stage.status?.lastPromotion && (
+        {!currentPromotion && lastPromotion && (
           <div className='mr-2'>
             <PromotionStatusIcon
               placement='top'
-              status={stage.status?.lastPromotion?.status}
+              status={{ phase: lastPromotion.phase, message: lastPromotion.message }}
+              subject={
+                lastPromotion.kind === 'PromotionRequest' ? 'Promotion Request' : 'Promotion'
+              }
               color='white'
               size='1x'
             />
