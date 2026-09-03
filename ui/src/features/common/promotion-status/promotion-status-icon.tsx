@@ -1,14 +1,7 @@
-import {
-  faCancel,
-  faCircleCheck,
-  faCircleExclamation,
-  faCircleNotch,
-  faHourglassStart
-} from '@fortawesome/free-solid-svg-icons';
-import { theme } from 'antd';
-
 import { MessageTooltip } from '@ui/features/project/pipelines/message-tooltip';
 import { PromotionStatus } from '@ui/gen/api/v2/models';
+
+import { getPromotionPhasePresentation } from './promotion-phase';
 
 const PhaseAndMessage = ({ status }: { status: PromotionStatus }) => (
   <div>
@@ -30,37 +23,13 @@ export const PromotionStatusIcon = ({
   if (!status) {
     return null;
   }
-  const message = <PhaseAndMessage status={status} />;
-  let icon = faHourglassStart;
-  let defaultColor = 'aaa';
-  let spin = false;
-  switch (status?.phase) {
-    case 'Succeeded':
-      icon = faCircleCheck;
-      defaultColor = theme.defaultSeed.colorSuccess;
-      break;
-    case 'Failed':
-    case 'Errored':
-      icon = faCircleExclamation;
-      defaultColor = theme.defaultSeed.colorError;
-      break;
-    case 'Running':
-      icon = faCircleNotch;
-      spin = true;
-      break;
-    case 'Aborted':
-      icon = faCancel;
-      break;
-    case 'Pending':
-    default:
-      break;
-  }
+  const { icon, iconColor, spin } = getPromotionPhasePresentation(status.phase);
 
   return (
     <MessageTooltip
-      message={message}
+      message={<PhaseAndMessage status={status} />}
       icon={icon}
-      iconColor={color ? color : defaultColor}
+      iconColor={color ? color : iconColor}
       spin={spin}
       {...props}
     />
