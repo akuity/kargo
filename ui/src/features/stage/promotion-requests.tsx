@@ -1,11 +1,4 @@
-import {
-  faBullseye,
-  faCancel,
-  faCircleCheck,
-  faCircleExclamation,
-  faCircleNotch,
-  faHourglassStart
-} from '@fortawesome/free-solid-svg-icons';
+import { faBullseye, faCircleExclamation } from '@fortawesome/free-solid-svg-icons';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
 import { Alert, Flex, Table, Tag, Tooltip, Typography } from 'antd';
 import { ColumnsType } from 'antd/es/table';
@@ -14,10 +7,14 @@ import { useMemo, useState } from 'react';
 import { Link, generatePath, useParams } from 'react-router-dom';
 
 import { paths } from '@ui/config/paths';
+import {
+  getPromotionPhasePresentation,
+  promotionPhases
+} from '@ui/features/common/promotion-status/promotion-phase';
 import { PromotionStatusIcon } from '@ui/features/common/promotion-status/promotion-status-icon';
 import { getAlias, getShortFreightLabel } from '@ui/features/common/utils';
 import { useListPromotionRequests } from '@ui/gen/api/v2/core/core';
-import { PromotionRequest } from '@ui/gen/api/v2/models';
+import { PromotionRequest, PromotionRequestSummary } from '@ui/gen/api/v2/models';
 import { parseDate } from '@ui/utils/dates';
 
 import { Promotion as PromotionComponent } from '../project/pipelines/promotion/promotion';
@@ -32,28 +29,9 @@ import {
   targetRows
 } from './utils/promotion-request';
 
-const phaseTagColor = (phase?: string) => {
-  switch (phase) {
-    case 'Succeeded':
-      return 'success';
-    case 'Running':
-      return 'processing';
-    case 'Failed':
-    case 'Errored':
-      return 'error';
-    default:
-      return 'default';
-  }
-};
-
-const summaryPhases = [
-  { key: 'succeeded', label: 'succeeded', color: 'success', icon: faCircleCheck },
-  { key: 'running', label: 'running', color: 'processing', icon: faCircleNotch, spin: true },
-  { key: 'pending', label: 'pending', color: 'default', icon: faHourglassStart },
-  { key: 'failed', label: 'failed', color: 'error', icon: faCircleExclamation },
-  { key: 'errored', label: 'errored', color: 'error', icon: faCircleExclamation },
-  { key: 'aborted', label: 'aborted', color: 'default', icon: faCancel }
-] as const;
+// summaryKey maps a phase to its counter in status.summary, whose fields are
+// the lower-cased phase names.
+const summaryKey = (phase: string) => phase.toLowerCase() as keyof PromotionRequestSummary;
 
 // TargetSummary compresses status.summary into one chip per non-zero phase. A
 // request the controller has not yet acted on has no summary, in which case
@@ -74,21 +52,20 @@ const TargetSummary = ({ promotionRequest }: { promotionRequest: PromotionReques
 
   return (
     <Flex gap={4} wrap>
-      {summaryPhases.map((summaryPhase) => {
-        const { key, label, color, icon } = summaryPhase;
-        const count = summary?.[key] ?? (!summary && key === 'pending' ? targetCount : 0);
+      {promotionPhases.map((phase) => {
+        const { icon, tagColor, spin } = getPromotionPhasePresentation(phase);
+        const count =
+          summary?.[summaryKey(phase)] ?? (!summary && phase === 'Pending' ? targetCount : 0);
         if (!count) {
           return null;
         }
-        const description = `${count} ${label} Target${count === 1 ? '' : 's'}`;
+        const description = `${count} ${phase.toLowerCase()} Target${count === 1 ? '' : 's'}`;
         return (
-          <Tooltip key={key} title={description}>
+          <Tooltip key={phase} title={description}>
             <Tag
               className='m-0'
-              color={color}
-              icon={
-                <FontAwesomeIcon icon={icon} spin={'spin' in summaryPhase && summaryPhase.spin} />
-              }
+              color={tagColor}
+              icon={<FontAwesomeIcon icon={icon} spin={spin} />}
               aria-label={description}
             >
               {count}
@@ -202,7 +179,9 @@ export const PromotionRequests = ({ projectName, stageName }: Props) => {
       width: 110,
       render: (_, promotionRequest) => {
         const phase = promotionRequest?.status?.phase;
-        return <Tag color={phaseTagColor(phase)}>{phase || 'Pending'}</Tag>;
+        return (
+          <Tag color={getPromotionPhasePresentation(phase).tagColor}>{phase || 'Pending'}</Tag>
+        );
       }
     },
     {
