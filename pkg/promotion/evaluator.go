@@ -132,6 +132,7 @@ func BuildCtxMap(stepCtx StepContext) map[string]any {
 	// as it did before Targets existed.
 	if stepCtx.Target != nil {
 		env["target"] = map[string]any{
+			"name":   stepCtx.Target.Name,
 			"params": stepCtx.Target.Params,
 			"labels": stepCtx.Target.Labels,
 		}

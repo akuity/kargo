@@ -1199,6 +1199,7 @@ func TestResolveTargetContext(t *testing.T) {
 					map[string]string{"region": "us-east-1"},
 					targetCtx.Labels,
 				)
+				require.Equal(t, "fake-target", targetCtx.Name)
 			},
 		},
 	}
@@ -1213,4 +1214,21 @@ func TestResolveTargetContext(t *testing.T) {
 			testCase.assert(t, targetCtx, err)
 		})
 	}
+}
+
+func TestTargetContext_Name(t *testing.T) {
+	t.Run("NewTargetContext carries the Target's name", func(t *testing.T) {
+		targetCtx, err := NewTargetContext(&kargoapi.Target{
+			ObjectMeta: metav1.ObjectMeta{Name: "us-east-1"},
+		})
+		require.NoError(t, err)
+		require.NotNil(t, targetCtx)
+		assert.Equal(t, "us-east-1", targetCtx.Name)
+	})
+	t.Run("DeepCopy carries the name", func(t *testing.T) {
+		original := &TargetContext{Name: "us-east-1"}
+		cp := original.DeepCopy()
+		require.NotSame(t, original, cp)
+		assert.Equal(t, "us-east-1", cp.Name)
+	})
 }

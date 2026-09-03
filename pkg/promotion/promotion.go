@@ -29,6 +29,10 @@ import (
 // did before Targets existed. Only Promotions that promote to a specific Target
 // (a capability layered on top of Kargo) populate this field.
 type TargetContext struct {
+	// Name is the resolved Target's name. Exposed to expressions as target.name,
+	// so that a single promotion process can single out a destination without
+	// first mirroring its name into a label or param.
+	Name string
 	// Params are the resolved Target's spec.params, decoded to plain values
 	// suitable for use in expressions. Exposed to expressions as target.params.
 	Params map[string]any
@@ -45,7 +49,10 @@ func NewTargetContext(target *kargoapi.Target) (*TargetContext, error) {
 	if target == nil {
 		return nil, nil
 	}
-	targetCtx := &TargetContext{Labels: maps.Clone(target.Labels)}
+	targetCtx := &TargetContext{
+		Name:   target.Name,
+		Labels: maps.Clone(target.Labels),
+	}
 	if len(target.Spec.Params) > 0 {
 		targetCtx.Params = make(map[string]any, len(target.Spec.Params))
 		for key, raw := range target.Spec.Params {
@@ -113,7 +120,7 @@ func (t *TargetContext) DeepCopy() *TargetContext {
 	if t == nil {
 		return nil
 	}
-	newT := &TargetContext{}
+	newT := &TargetContext{Name: t.Name}
 	if t.Params != nil {
 		// Params originate from the Target's spec.params (JSON), so a JSON deep
 		// copy is both sufficient and appropriate.
