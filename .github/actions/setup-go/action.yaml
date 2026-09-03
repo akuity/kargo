@@ -17,7 +17,7 @@ inputs:
     # Jobs that run the linter, the unit tests, or codegen must instead pass
     # the `goTestVersion` anchor defined in .github/workflows/ci.yaml, which is
     # capped by the golangci-lint version pinned in hack/tools.mk.
-    default: "1.27.0"
+    default: "1.27.1"
 runs:
   using: composite
   steps:

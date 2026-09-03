@@ -9,7 +9,7 @@
 #
 # This version must match the `goTestVersion` anchor in
 # .github/workflows/ci.yaml.
-FROM golang:1.27.0-trixie
+FROM golang:1.27.1-trixie
 
 ARG TARGETARCH
 
