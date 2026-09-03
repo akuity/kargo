@@ -32,6 +32,7 @@ import type {
   ListImages200,
   ListProjectsParams,
   ListProjectsResponse,
+  ListPromotionRequestsParams,
   ListPromotionsParams,
   ListStagesParams,
   PatchConfigMapRequestBody,
@@ -43,6 +44,8 @@ import type {
   PromoteToStageRequest,
   Promotion,
   PromotionList,
+  PromotionRequest,
+  PromotionRequestList,
   PromotionTask,
   PromotionTaskList,
   QueryFreightsRestParams,
@@ -2376,6 +2379,336 @@ export function useListImages<
   queryClient?: QueryClient
 ): UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> } {
   const queryOptions = getListImagesQueryOptions(project, options);
+
+  const query = useQuery(queryOptions, queryClient) as UseQueryResult<TData, TError> & {
+    queryKey: DataTag<QueryKey, TData, TError>;
+  };
+
+  query.queryKey = queryOptions.queryKey;
+
+  return query;
+}
+
+/**
+ * List PromotionRequest resources from a project's namespace.
+Returns a PromotionRequestList resource.
+ * @summary List PromotionRequests
+ */
+export type listPromotionRequestsResponse200 = {
+  data: PromotionRequestList;
+  status: 200;
+};
+
+export type listPromotionRequestsResponseSuccess = listPromotionRequestsResponse200 & {
+  headers: Headers;
+};
+export type listPromotionRequestsResponse = listPromotionRequestsResponseSuccess;
+
+export const getListPromotionRequestsUrl = (
+  project: string,
+  params?: ListPromotionRequestsParams
+) => {
+  const normalizedParams = new URLSearchParams();
+
+  Object.entries(params || {}).forEach(([key, value]) => {
+    if (value !== undefined) {
+      normalizedParams.append(key, value === null ? 'null' : value.toString());
+    }
+  });
+
+  const stringifiedParams = normalizedParams.toString();
+
+  return stringifiedParams.length > 0
+    ? `/v1beta1/projects/${project}/promotion-requests?${stringifiedParams}`
+    : `/v1beta1/projects/${project}/promotion-requests`;
+};
+
+export const listPromotionRequests = async (
+  project: string,
+  params?: ListPromotionRequestsParams,
+  options?: RequestInit
+): Promise<listPromotionRequestsResponse> => {
+  return customFetch<listPromotionRequestsResponse>(getListPromotionRequestsUrl(project, params), {
+    ...options,
+    method: 'GET'
+  });
+};
+
+export const getListPromotionRequestsQueryKey = (
+  project?: string,
+  params?: ListPromotionRequestsParams
+) => {
+  return [`/v1beta1/projects/${project}/promotion-requests`, ...(params ? [params] : [])] as const;
+};
+
+export const getListPromotionRequestsQueryOptions = <
+  TData = Awaited<ReturnType<typeof listPromotionRequests>>,
+  TError = ErrorType<unknown>
+>(
+  project: string,
+  params?: ListPromotionRequestsParams,
+  options?: {
+    query?: Partial<
+      UseQueryOptions<Awaited<ReturnType<typeof listPromotionRequests>>, TError, TData>
+    >;
+    request?: SecondParameter<typeof customFetch>;
+  }
+) => {
+  const { query: queryOptions, request: requestOptions } = options ?? {};
+
+  const queryKey = queryOptions?.queryKey ?? getListPromotionRequestsQueryKey(project, params);
+
+  const queryFn: QueryFunction<Awaited<ReturnType<typeof listPromotionRequests>>> = () =>
+    listPromotionRequests(project, params, requestOptions);
+
+  return { queryKey, queryFn, enabled: !!project, ...queryOptions } as UseQueryOptions<
+    Awaited<ReturnType<typeof listPromotionRequests>>,
+    TError,
+    TData
+  > & { queryKey: DataTag<QueryKey, TData, TError> };
+};
+
+export type ListPromotionRequestsQueryResult = NonNullable<
+  Awaited<ReturnType<typeof listPromotionRequests>>
+>;
+export type ListPromotionRequestsQueryError = ErrorType<unknown>;
+
+export function useListPromotionRequests<
+  TData = Awaited<ReturnType<typeof listPromotionRequests>>,
+  TError = ErrorType<unknown>
+>(
+  project: string,
+  params: undefined | ListPromotionRequestsParams,
+  options: {
+    query: Partial<
+      UseQueryOptions<Awaited<ReturnType<typeof listPromotionRequests>>, TError, TData>
+    > &
+      Pick<
+        DefinedInitialDataOptions<
+          Awaited<ReturnType<typeof listPromotionRequests>>,
+          TError,
+          Awaited<ReturnType<typeof listPromotionRequests>>
+        >,
+        'initialData'
+      >;
+    request?: SecondParameter<typeof customFetch>;
+  },
+  queryClient?: QueryClient
+): DefinedUseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> };
+export function useListPromotionRequests<
+  TData = Awaited<ReturnType<typeof listPromotionRequests>>,
+  TError = ErrorType<unknown>
+>(
+  project: string,
+  params?: ListPromotionRequestsParams,
+  options?: {
+    query?: Partial<
+      UseQueryOptions<Awaited<ReturnType<typeof listPromotionRequests>>, TError, TData>
+    > &
+      Pick<
+        UndefinedInitialDataOptions<
+          Awaited<ReturnType<typeof listPromotionRequests>>,
+          TError,
+          Awaited<ReturnType<typeof listPromotionRequests>>
+        >,
+        'initialData'
+      >;
+    request?: SecondParameter<typeof customFetch>;
+  },
+  queryClient?: QueryClient
+): UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> };
+export function useListPromotionRequests<
+  TData = Awaited<ReturnType<typeof listPromotionRequests>>,
+  TError = ErrorType<unknown>
+>(
+  project: string,
+  params?: ListPromotionRequestsParams,
+  options?: {
+    query?: Partial<
+      UseQueryOptions<Awaited<ReturnType<typeof listPromotionRequests>>, TError, TData>
+    >;
+    request?: SecondParameter<typeof customFetch>;
+  },
+  queryClient?: QueryClient
+): UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> };
+/**
+ * @summary List PromotionRequests
+ */
+
+export function useListPromotionRequests<
+  TData = Awaited<ReturnType<typeof listPromotionRequests>>,
+  TError = ErrorType<unknown>
+>(
+  project: string,
+  params?: ListPromotionRequestsParams,
+  options?: {
+    query?: Partial<
+      UseQueryOptions<Awaited<ReturnType<typeof listPromotionRequests>>, TError, TData>
+    >;
+    request?: SecondParameter<typeof customFetch>;
+  },
+  queryClient?: QueryClient
+): UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> } {
+  const queryOptions = getListPromotionRequestsQueryOptions(project, params, options);
+
+  const query = useQuery(queryOptions, queryClient) as UseQueryResult<TData, TError> & {
+    queryKey: DataTag<QueryKey, TData, TError>;
+  };
+
+  query.queryKey = queryOptions.queryKey;
+
+  return query;
+}
+
+/**
+ * Retrieve a PromotionRequest resource from a project's namespace.
+ * @summary Retrieve a PromotionRequest
+ */
+export type getPromotionRequestResponse200 = {
+  data: PromotionRequest;
+  status: 200;
+};
+
+export type getPromotionRequestResponseSuccess = getPromotionRequestResponse200 & {
+  headers: Headers;
+};
+export type getPromotionRequestResponse = getPromotionRequestResponseSuccess;
+
+export const getGetPromotionRequestUrl = (project: string, promotionRequest: string) => {
+  return `/v1beta1/projects/${project}/promotion-requests/${promotionRequest}`;
+};
+
+export const getPromotionRequest = async (
+  project: string,
+  promotionRequest: string,
+  options?: RequestInit
+): Promise<getPromotionRequestResponse> => {
+  return customFetch<getPromotionRequestResponse>(
+    getGetPromotionRequestUrl(project, promotionRequest),
+    {
+      ...options,
+      method: 'GET'
+    }
+  );
+};
+
+export const getGetPromotionRequestQueryKey = (project?: string, promotionRequest?: string) => {
+  return [`/v1beta1/projects/${project}/promotion-requests/${promotionRequest}`] as const;
+};
+
+export const getGetPromotionRequestQueryOptions = <
+  TData = Awaited<ReturnType<typeof getPromotionRequest>>,
+  TError = ErrorType<unknown>
+>(
+  project: string,
+  promotionRequest: string,
+  options?: {
+    query?: Partial<
+      UseQueryOptions<Awaited<ReturnType<typeof getPromotionRequest>>, TError, TData>
+    >;
+    request?: SecondParameter<typeof customFetch>;
+  }
+) => {
+  const { query: queryOptions, request: requestOptions } = options ?? {};
+
+  const queryKey =
+    queryOptions?.queryKey ?? getGetPromotionRequestQueryKey(project, promotionRequest);
+
+  const queryFn: QueryFunction<Awaited<ReturnType<typeof getPromotionRequest>>> = () =>
+    getPromotionRequest(project, promotionRequest, requestOptions);
+
+  return {
+    queryKey,
+    queryFn,
+    enabled: !!(project && promotionRequest),
+    ...queryOptions
+  } as UseQueryOptions<Awaited<ReturnType<typeof getPromotionRequest>>, TError, TData> & {
+    queryKey: DataTag<QueryKey, TData, TError>;
+  };
+};
+
+export type GetPromotionRequestQueryResult = NonNullable<
+  Awaited<ReturnType<typeof getPromotionRequest>>
+>;
+export type GetPromotionRequestQueryError = ErrorType<unknown>;
+
+export function useGetPromotionRequest<
+  TData = Awaited<ReturnType<typeof getPromotionRequest>>,
+  TError = ErrorType<unknown>
+>(
+  project: string,
+  promotionRequest: string,
+  options: {
+    query: Partial<
+      UseQueryOptions<Awaited<ReturnType<typeof getPromotionRequest>>, TError, TData>
+    > &
+      Pick<
+        DefinedInitialDataOptions<
+          Awaited<ReturnType<typeof getPromotionRequest>>,
+          TError,
+          Awaited<ReturnType<typeof getPromotionRequest>>
+        >,
+        'initialData'
+      >;
+    request?: SecondParameter<typeof customFetch>;
+  },
+  queryClient?: QueryClient
+): DefinedUseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> };
+export function useGetPromotionRequest<
+  TData = Awaited<ReturnType<typeof getPromotionRequest>>,
+  TError = ErrorType<unknown>
+>(
+  project: string,
+  promotionRequest: string,
+  options?: {
+    query?: Partial<
+      UseQueryOptions<Awaited<ReturnType<typeof getPromotionRequest>>, TError, TData>
+    > &
+      Pick<
+        UndefinedInitialDataOptions<
+          Awaited<ReturnType<typeof getPromotionRequest>>,
+          TError,
+          Awaited<ReturnType<typeof getPromotionRequest>>
+        >,
+        'initialData'
+      >;
+    request?: SecondParameter<typeof customFetch>;
+  },
+  queryClient?: QueryClient
+): UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> };
+export function useGetPromotionRequest<
+  TData = Awaited<ReturnType<typeof getPromotionRequest>>,
+  TError = ErrorType<unknown>
+>(
+  project: string,
+  promotionRequest: string,
+  options?: {
+    query?: Partial<
+      UseQueryOptions<Awaited<ReturnType<typeof getPromotionRequest>>, TError, TData>
+    >;
+    request?: SecondParameter<typeof customFetch>;
+  },
+  queryClient?: QueryClient
+): UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> };
+/**
+ * @summary Retrieve a PromotionRequest
+ */
+
+export function useGetPromotionRequest<
+  TData = Awaited<ReturnType<typeof getPromotionRequest>>,
+  TError = ErrorType<unknown>
+>(
+  project: string,
+  promotionRequest: string,
+  options?: {
+    query?: Partial<
+      UseQueryOptions<Awaited<ReturnType<typeof getPromotionRequest>>, TError, TData>
+    >;
+    request?: SecondParameter<typeof customFetch>;
+  },
+  queryClient?: QueryClient
+): UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> } {
+  const queryOptions = getGetPromotionRequestQueryOptions(project, promotionRequest, options);
 
   const query = useQuery(queryOptions, queryClient) as UseQueryResult<TData, TError> & {
     queryKey: DataTag<QueryKey, TData, TError>;

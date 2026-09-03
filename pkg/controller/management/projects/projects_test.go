@@ -4,6 +4,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"slices"
 	"testing"
 
 	"github.com/stretchr/testify/require"
@@ -2721,20 +2722,30 @@ func TestReconciler_ensureDefaultUserRoles_PromotionRequestPermissions(t *testin
 			require.Fail(t, testCase.resource+" permissions not found")
 		})
 	}
-	// No default role grants any access to PromotionRequests. Only the Stage
-	// controller creates them, so no user needs to write one, and withholding
-	// read access keeps them inert in editions that do not reconcile them.
-	// Editions that do grant these permissions via
-	// RegisterRoleRulesContributor.
-	for _, roleName := range []string{"kargo-admin", "kargo-viewer", "kargo-promoter"} {
-		t.Run(roleName+"/no promotionrequests", func(t *testing.T) {
+	// PromotionRequests are readable but never writable by a user: only the
+	// Stage controller and the API server create them.
+	for _, roleName := range []string{"kargo-admin", "kargo-viewer"} {
+		t.Run(roleName+"/promotionrequests read-only", func(t *testing.T) {
 			role := createdRoles[roleName]
 			require.NotNil(t, role)
+			var found bool
 			for _, rule := range role.Rules {
-				require.NotContains(t, rule.Resources, "promotionrequests")
+				if !slices.Contains(rule.Resources, "promotionrequests") {
+					continue
+				}
+				found = true
+				require.ElementsMatch(t, []string{"get", "list", "watch"}, rule.Verbs)
 			}
+			require.True(t, found, "no promotionrequests rule found")
 		})
 	}
+	t.Run("kargo-promoter/no promotionrequests", func(t *testing.T) {
+		role := createdRoles["kargo-promoter"]
+		require.NotNil(t, role)
+		for _, rule := range role.Rules {
+			require.NotContains(t, rule.Resources, "promotionrequests")
+		}
+	})
 	t.Run("kargo-promoter/no targets", func(t *testing.T) {
 		role := createdRoles["kargo-promoter"]
 		require.NotNil(t, role)

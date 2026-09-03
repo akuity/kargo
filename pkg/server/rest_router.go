@@ -252,6 +252,8 @@ func (s *server) setupRESTRouter(ctx context.Context) *gin.Engine {
 			// Promotions
 			project.GET("/promotions", s.listPromotions)
 			project.GET("/promotions/:promotion", s.getPromotion)
+			project.GET("/promotion-requests", s.listPromotionRequests)
+			project.GET("/promotion-requests/:promotion-request", s.getPromotionRequest)
 			project.POST("/promotions/:promotion/refresh", s.refreshPromotion)
 			project.POST("/promotions/:promotion/abort", s.abortPromotion)
 

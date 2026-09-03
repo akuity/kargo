@@ -23,8 +23,10 @@ import uiPlugins from '@ui/plugins';
 import { UiPluginHoles } from '@ui/plugins/atoms/ui-plugin-hole/ui-plugin-holes';
 import { parseDate } from '@ui/utils/dates';
 
+import { isStageTargetAware } from '../project/pipelines/nodes/stage-meta-utils';
 import { Promotion as PromotionComponent } from '../project/pipelines/promotion/promotion';
 
+import { PromotionRequests } from './promotion-requests';
 import { useGetFreightMap } from './tabs/freight-history/use-get-freight-map';
 import { hasAbortRequest, promotionCompareFn } from './utils/promotion';
 
@@ -181,6 +183,10 @@ export const Promotions = ({ stage, argocdShard }: { stage: Stage; argocdShard?:
 
   return (
     <>
+      {isStageTargetAware(stage) && (
+        <PromotionRequests projectName={projectName || ''} stageName={stageName || ''} />
+      )}
+
       <PromotionWindowAlert stage={stage} className='mb-4' />
 
       <Table
