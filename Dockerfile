@@ -25,7 +25,7 @@ RUN NODE_ENV='production' VERSION=${VERSION} pnpm run build
 # started on may itself reach EOL. Building on the latest minor keeps released
 # binaries off unsupported toolchains and picks up fixes for CVEs in the Go
 # standard library.
-FROM --platform=$BUILDPLATFORM golang:1.27.0-trixie AS back-end-builder
+FROM --platform=$BUILDPLATFORM golang:1.27.1-trixie AS back-end-builder
 
 ARG TARGETOS
 ARG TARGETARCH
@@ -88,7 +88,7 @@ WORKDIR /kargo/bin
 #
 # As with the back-end-builder stage above, always use the latest minor version
 # of Go for anything we ship.
-FROM --platform=$BUILDPLATFORM golang:1.27.0-trixie AS helm-builder
+FROM --platform=$BUILDPLATFORM golang:1.27.1-trixie AS helm-builder
 
 ARG TARGETOS
 ARG TARGETARCH

@@ -240,7 +240,7 @@ jobs:
     container:
       # Always use the latest minor version of Go for anything we ship -- see
       # the back-end-builder stage in Dockerfile for why.
-      image: golang:1.27.0-trixie
+      image: golang:1.27.1-trixie
     steps:
     - name: Checkout code
       uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09 # v5.1.0
