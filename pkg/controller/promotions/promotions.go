@@ -620,7 +620,7 @@ func (r *reconciler) promote(
 	// single Stage's promotion process to behave differently per destination.
 	// Promotions that name no Target promote to the Stage itself and carry no
 	// target context, exactly as they did before Targets existed.
-	targetCtx, targetErr := r.resolveTargetContext(ctx, &promo)
+	targetCtx, targetErr := promotion.ResolveTargetContext(ctx, r.kargoClient, &promo)
 	if targetErr != nil {
 		return nil, nil, targetErr
 	}
@@ -698,46 +698,6 @@ func (r *reconciler) promote(
 	}
 
 	return &workingPromo.Status, nil, nil
-}
-
-// resolveTargetContext loads the Target named by the provided Promotion's
-// spec.target and converts it to a promotion.TargetContext. It returns nil for
-// Promotions that name no Target, i.e. those that promote to their Stage
-// itself.
-func (r *reconciler) resolveTargetContext(
-	ctx context.Context,
-	promo *kargoapi.Promotion,
-) (*promotion.TargetContext, error) {
-	if promo.Spec.Target == "" {
-		return nil, nil
-	}
-
-	target, err := api.GetTarget(ctx, r.kargoClient, types.NamespacedName{
-		Namespace: promo.Namespace,
-		Name:      promo.Spec.Target,
-	})
-	if err != nil {
-		return nil, fmt.Errorf(
-			"error finding Target %q in namespace %q: %w",
-			promo.Spec.Target, promo.Namespace, err,
-		)
-	}
-	if target == nil {
-		// nolint:staticcheck
-		return nil, fmt.Errorf(
-			"Target %q not found in namespace %q",
-			promo.Spec.Target, promo.Namespace,
-		)
-	}
-
-	targetCtx, err := promotion.NewTargetContext(target)
-	if err != nil {
-		return nil, fmt.Errorf(
-			"error building context for Target %q in namespace %q: %w",
-			promo.Spec.Target, promo.Namespace, err,
-		)
-	}
-	return targetCtx, nil
 }
 
 // buildTargetFreightCollection constructs a FreightCollection that contains all

@@ -1,6 +1,9 @@
 package promotion
 
 import (
+	"context"
+	"errors"
+	"fmt"
 	"testing"
 	"time"
 
@@ -8,7 +11,11 @@ import (
 	"github.com/stretchr/testify/require"
 	apiextensionsv1 "k8s.io/apiextensions-apiserver/pkg/apis/apiextensions/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/utils/ptr"
+	"sigs.k8s.io/controller-runtime/pkg/client"
+	"sigs.k8s.io/controller-runtime/pkg/client/fake"
+	"sigs.k8s.io/controller-runtime/pkg/client/interceptor"
 
 	kargoapi "github.com/akuity/kargo/api/v1alpha1"
 )
@@ -1049,4 +1056,161 @@ func TestTargetContext_DeepCopy(t *testing.T) {
 		assert.Equal(t, "east", original.Params["cluster"])
 		assert.Equal(t, "prod", original.Labels["env"])
 	})
+}
+
+func TestResolveTargetContext(t *testing.T) {
+	scheme := runtime.NewScheme()
+	require.NoError(t, kargoapi.SchemeBuilder.AddToScheme(scheme))
+
+	testTarget := &kargoapi.Target{
+		ObjectMeta: metav1.ObjectMeta{
+			Name:      "fake-target",
+			Namespace: "fake-namespace",
+			Labels:    map[string]string{"region": "us-east-1"},
+		},
+		Spec: kargoapi.TargetSpec{
+			Params: map[string]apiextensionsv1.JSON{
+				"branch": {Raw: []byte(`"env/prod-use1"`)},
+			},
+		},
+	}
+
+	testCases := []struct {
+		name   string
+		promo  *kargoapi.Promotion
+		client client.Client
+		assert func(*testing.T, *TargetContext, error)
+	}{
+		{
+			name: "no Target named",
+			promo: &kargoapi.Promotion{
+				ObjectMeta: metav1.ObjectMeta{Namespace: "fake-namespace"},
+			},
+			// A Promotion that names no Target must not read a Target at all.
+			client: fake.NewClientBuilder().WithScheme(scheme).WithInterceptorFuncs(
+				interceptor.Funcs{
+					Get: func(
+						context.Context,
+						client.WithWatch,
+						client.ObjectKey,
+						client.Object,
+						...client.GetOption,
+					) error {
+						t.Error("client.Get was called but should not have been")
+						return nil
+					},
+				},
+			).Build(),
+			assert: func(t *testing.T, targetCtx *TargetContext, err error) {
+				require.NoError(t, err)
+				require.Nil(t, targetCtx)
+			},
+		},
+		{
+			name: "Target not found",
+			promo: &kargoapi.Promotion{
+				ObjectMeta: metav1.ObjectMeta{Namespace: "fake-namespace"},
+				Spec:       kargoapi.PromotionSpec{Target: "fake-target"},
+			},
+			client: fake.NewClientBuilder().WithScheme(scheme).Build(),
+			assert: func(t *testing.T, targetCtx *TargetContext, err error) {
+				require.ErrorContains(t, err, `Target "fake-target" not found`)
+				require.Nil(t, targetCtx)
+			},
+		},
+		{
+			name: "error getting Target",
+			promo: &kargoapi.Promotion{
+				ObjectMeta: metav1.ObjectMeta{Namespace: "fake-namespace"},
+				Spec:       kargoapi.PromotionSpec{Target: "fake-target"},
+			},
+			client: fake.NewClientBuilder().WithScheme(scheme).WithInterceptorFuncs(
+				interceptor.Funcs{
+					Get: func(
+						context.Context,
+						client.WithWatch,
+						client.ObjectKey,
+						client.Object,
+						...client.GetOption,
+					) error {
+						return errors.New("something went wrong")
+					},
+				},
+			).Build(),
+			assert: func(t *testing.T, targetCtx *TargetContext, err error) {
+				require.ErrorContains(t, err, "error finding Target")
+				require.ErrorContains(t, err, "something went wrong")
+				require.Nil(t, targetCtx)
+			},
+		},
+		{
+			name: "malformed Target params",
+			promo: &kargoapi.Promotion{
+				ObjectMeta: metav1.ObjectMeta{Namespace: "fake-namespace"},
+				Spec:       kargoapi.PromotionSpec{Target: "fake-target"},
+			},
+			// The fake client round-trips objects through JSON and would reject
+			// malformed params before the decode under test could run, so the
+			// bad Target is injected directly.
+			client: fake.NewClientBuilder().WithScheme(scheme).WithInterceptorFuncs(
+				interceptor.Funcs{
+					Get: func(
+						_ context.Context,
+						_ client.WithWatch,
+						_ client.ObjectKey,
+						obj client.Object,
+						_ ...client.GetOption,
+					) error {
+						target, ok := obj.(*kargoapi.Target)
+						if !ok {
+							return fmt.Errorf("unexpected object type %T", obj)
+						}
+						target.Name = "fake-target"
+						target.Spec.Params = map[string]apiextensionsv1.JSON{
+							"branch": {Raw: []byte(`{not json`)},
+						}
+						return nil
+					},
+				},
+			).Build(),
+			assert: func(t *testing.T, targetCtx *TargetContext, err error) {
+				require.ErrorContains(t, err, "error building context for Target")
+				require.Nil(t, targetCtx)
+			},
+		},
+		{
+			name: "success",
+			promo: &kargoapi.Promotion{
+				ObjectMeta: metav1.ObjectMeta{Namespace: "fake-namespace"},
+				Spec:       kargoapi.PromotionSpec{Target: "fake-target"},
+			},
+			client: fake.NewClientBuilder().WithScheme(scheme).
+				WithObjects(testTarget).Build(),
+			assert: func(t *testing.T, targetCtx *TargetContext, err error) {
+				require.NoError(t, err)
+				require.NotNil(t, targetCtx)
+				require.Equal(
+					t,
+					map[string]any{"branch": "env/prod-use1"},
+					targetCtx.Params,
+				)
+				require.Equal(
+					t,
+					map[string]string{"region": "us-east-1"},
+					targetCtx.Labels,
+				)
+			},
+		},
+	}
+	for _, testCase := range testCases {
+		t.Run(testCase.name, func(t *testing.T) {
+			t.Parallel()
+			targetCtx, err := ResolveTargetContext(
+				context.Background(),
+				testCase.client,
+				testCase.promo,
+			)
+			testCase.assert(t, targetCtx, err)
+		})
+	}
 }
