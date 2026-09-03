@@ -48,6 +48,10 @@ import (
 	"github.com/akuity/kargo/pkg/rollouts"
 )
 
+// immediateRequeueInterval is the interval after which a Stage is requeued
+// when it has more work to do right away.
+const immediateRequeueInterval = 100 * time.Millisecond
+
 // ReconcilerConfig represents configuration for the stage reconciler.
 type ReconcilerConfig struct {
 	IsDefaultController                bool   `envconfig:"IS_DEFAULT_CONTROLLER"`
@@ -56,6 +60,12 @@ type ReconcilerConfig struct {
 	RolloutsControllerInstanceID       string `envconfig:"ROLLOUTS_CONTROLLER_INSTANCE_ID"`
 	MaxConcurrentControlFlowReconciles int    `envconfig:"MAX_CONCURRENT_CONTROL_FLOW_RECONCILES" default:"4"`
 	MaxConcurrentReconciles            int    `envconfig:"MAX_CONCURRENT_STAGE_RECONCILES" default:"4"`
+	// VerificationStartGracePeriod bounds how long queued Promotions to a Stage
+	// are held following a successful Promotion while the Stage's health is
+	// still Unknown or Progressing, i.e. while verification of the newly
+	// promoted Freight cannot yet begin. See awaitingVerificationStart. Zero
+	// disables the hold.
+	VerificationStartGracePeriod time.Duration `envconfig:"VERIFICATION_START_GRACE_PERIOD" default:"5m"`
 }
 
 // Name returns the name of the Stage controller.
@@ -406,12 +416,12 @@ func (r *RegularStageReconciler) Reconcile(ctx context.Context, req ctrl.Request
 	// The reason to requeue is to ensure that a possible deletion of the Stage
 	// directly after the finalizer was added is handled without delay.
 	if ok, err := api.EnsureFinalizer(ctx, r.client, stage); ok || err != nil {
-		return ctrl.Result{RequeueAfter: 100 * time.Millisecond}, err
+		return ctrl.Result{RequeueAfter: immediateRequeueInterval}, err
 	}
 
 	// Reconcile the Stage.
 	logger.Debug("reconciling Stage")
-	newStatus, needsRequeue, reconcileErr := r.reconcile(ctx, stage, time.Now())
+	newStatus, requeueAfter, reconcileErr := r.reconcile(ctx, stage, time.Now())
 	logger.Debug("done reconciling Stage")
 
 	// Record the current refresh token as having been handled.
@@ -435,20 +445,24 @@ func (r *RegularStageReconciler) Reconcile(ctx context.Context, req ctrl.Request
 	if reconcileErr != nil {
 		return ctrl.Result{}, reconcileErr
 	}
-	// Immediate requeue if needed.
-	if needsRequeue {
-		return ctrl.Result{RequeueAfter: 100 * time.Millisecond}, nil
+	// Requeue sooner if the reconciliation asked for it.
+	if requeueAfter > 0 {
+		return ctrl.Result{RequeueAfter: requeueAfter}, nil
 	}
 	// Otherwise, requeue after a delay.
 	// TODO: Make the requeue delay configurable.
 	return ctrl.Result{RequeueAfter: 5 * time.Minute}, nil
 }
 
+// reconcile performs the actual reconciliation of the Stage. It returns the
+// Stage's new status along with the duration after which the Stage should be
+// requeued. A zero duration indicates no particular urgency and leaves the
+// choice of interval to the caller.
 func (r *RegularStageReconciler) reconcile(
 	ctx context.Context,
 	stage *kargoapi.Stage,
 	startTime time.Time,
-) (kargoapi.StageStatus, bool, error) {
+) (kargoapi.StageStatus, time.Duration, error) {
 	logger := logging.LoggerFromContext(ctx)
 
 	// working is the Stage the sub-reconcilers operate on. Its status is
@@ -484,12 +498,13 @@ func (r *RegularStageReconciler) reconcile(
 		stage.ObjectMeta,
 	)
 	if err != nil {
-		return newStatus, false, fmt.Errorf(
+		return newStatus, 0, fmt.Errorf(
 			"error checking auto-promotion policy for Stage %q: %w", stage.Name, err,
 		)
 	}
 
 	var requestRequeue bool
+	var requeueAt time.Time
 	subReconcilers := []struct {
 		name      string
 		reconcile func() (kargoapi.StageStatus, error)
@@ -507,9 +522,18 @@ func (r *RegularStageReconciler) reconcile(
 				}
 				// If we have no current Promotion and there are pending Promotions,
 				// then we should request an immediate requeue to ensure that we
-				// process the next Promotion as soon as possible.
+				// process the next Promotion as soon as possible. The exception is
+				// when those Promotions are deliberately being held while we wait
+				// for the Stage's health to permit verification of the current
+				// Freight to begin. The Application watcher re-enqueues the Stage
+				// as health changes, so it suffices to schedule a requeue for when
+				// that wait expires.
 				if status.CurrentPromotion == nil && hasPendingPromotions {
-					requestRequeue = true
+					if deadline, ok := r.awaitingVerificationStart(&status, time.Now()); ok {
+						requeueAt = deadline
+					} else {
+						requestRequeue = true
+					}
 				}
 				return status, err
 			},
@@ -620,7 +644,7 @@ func (r *RegularStageReconciler) reconcile(
 		// If an error occurred during the sub-reconciler, then we should
 		// return the error which will cause the Stage to be requeued.
 		if err != nil {
-			return newStatus, false, err
+			return newStatus, 0, err
 		}
 
 		// Patch the status of the Stage after each sub-reconciler to show progress.
@@ -642,7 +666,16 @@ func (r *RegularStageReconciler) reconcile(
 		conditions.Delete(&newStatus, kargoapi.ConditionTypeReconciling)
 	}
 
-	return newStatus, requestRequeue, nil
+	var requeueAfter time.Duration
+	switch {
+	case requestRequeue:
+		requeueAfter = immediateRequeueInterval
+	case !requeueAt.IsZero():
+		// Floor at the immediate interval: a deadline that passed during this
+		// pass must still produce a requeue, and a zero RequeueAfter would not.
+		requeueAfter = max(time.Until(requeueAt), immediateRequeueInterval)
+	}
+	return newStatus, requeueAfter, nil
 }
 
 // withoutTargetPromotions removes Promotions to one of the Stage's Targets (the
@@ -913,11 +946,26 @@ func (r *RegularStageReconciler) syncPromotions(
 		}
 
 		// If we are in a healthy state, the current Freight needs to be verified
-		// before we can allow the next Promotion to start. If we are unhealthy
-		// or the verification failed, then we can allow the next Promotion to
-		// start immediately as the expectation is that the Promotion can fix the
-		// issue.
-		if stage.Status.Health == nil || stage.Status.Health.Status == kargoapi.HealthStateHealthy {
+		// before we can allow the next Promotion to start. The same is true while
+		// health has yet to settle following a successful Promotion, because
+		// verification cannot begin until the Stage is healthy; see
+		// awaitingVerificationStart. If we are unhealthy or the verification
+		// failed, then we can allow the next Promotion to start immediately as
+		// the expectation is that the Promotion can fix the issue.
+		_, awaiting := r.awaitingVerificationStart(&stage.Status, time.Now())
+		if awaiting && api.CreateActorAnnotationValue(&highestPrioPromo) != "" {
+			// A Promotion created by a person, as opposed to by auto-promotion,
+			// is a deliberate decision to move on -- often to roll back a bad
+			// rollout. It must not wait for health to settle: unlike a running
+			// verification, this wait cannot be aborted, so holding it would
+			// leave an operator with no way out for the length of the grace
+			// period.
+			logger.Debug("not waiting for health to settle before starting manually created Promotion")
+			awaiting = false
+		}
+		if stage.Status.Health == nil ||
+			stage.Status.Health.Status == kargoapi.HealthStateHealthy ||
+			awaiting {
 			curVI := curFreight.VerificationHistory.Current()
 			if curVI == nil || !curVI.Phase.IsTerminal() {
 				logger.Debug("current Freight needs to be verified before allowing new promotions to start")
@@ -1071,6 +1119,55 @@ func newPromotionRequestReference(
 			Name: promotionRequest.Spec.Freight,
 		},
 	}
+}
+
+// awaitingVerificationStart reports whether queued Promotions should be held
+// because the Stage is waiting for its health to permit verification of its
+// current Freight to begin and, if so, when that wait expires.
+//
+// Verification cannot begin until a Stage is healthy. Immediately following a
+// successful Promotion, however, a Stage's health is commonly Unknown (Argo CD
+// has not yet re-assessed the Applications it synced) or Progressing (a
+// rollout is still underway). Were a queued Promotion allowed to start in that
+// window, the current Freight would be superseded before ever having been
+// verified and would never become available to downstream Stages.
+//
+// The wait is bounded by the configured grace period, measured from the
+// completion of the last Promotion, so that a Stage whose health never settles
+// cannot hold up queued Promotions indefinitely. Once the period has elapsed,
+// the next Promotion is allowed to start in the expectation that it can fix
+// the issue. No wait applies when the last Promotion did not succeed (health is
+// then Unknown for lack of health checks to perform, not because it has yet to
+// settle) or once the current Freight has a terminal verification result.
+func (r *RegularStageReconciler) awaitingVerificationStart(
+	status *kargoapi.StageStatus,
+	now time.Time,
+) (time.Time, bool) {
+	if r.cfg.VerificationStartGracePeriod <= 0 || status.Health == nil {
+		return time.Time{}, false
+	}
+	switch status.Health.Status {
+	case kargoapi.HealthStateUnknown, kargoapi.HealthStateProgressing:
+	default:
+		return time.Time{}, false
+	}
+	lastPromo := status.LastPromotion
+	if lastPromo == nil || lastPromo.Status == nil || lastPromo.FinishedAt == nil ||
+		lastPromo.Status.Phase != kargoapi.PromotionPhaseSucceeded {
+		return time.Time{}, false
+	}
+	curFreight := status.FreightHistory.Current()
+	if curFreight == nil {
+		return time.Time{}, false
+	}
+	if curVI := curFreight.VerificationHistory.Current(); curVI != nil && curVI.Phase.IsTerminal() {
+		return time.Time{}, false
+	}
+	deadline := lastPromo.FinishedAt.Add(r.cfg.VerificationStartGracePeriod)
+	if !now.Before(deadline) {
+		return time.Time{}, false
+	}
+	return deadline, true
 }
 
 // assessHealth assesses the health of a Stage based on the health checks from
