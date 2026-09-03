@@ -609,11 +609,7 @@ func (r *reconciler) promote(
 	// engine, which may modify its status.
 	workingPromo := promo.DeepCopy()
 	workingPromo.Status.Freight = &targetFreightRef
-	workingPromo.Status.FreightCollection = r.buildTargetFreightCollection(
-		ctx,
-		targetFreightRef,
-		stage,
-	)
+	workingPromo.Status.FreightCollection = api.NewFreightCollectionForStage(stage, targetFreightRef)
 
 	// Resolve the Target, if any, that this Promotion promotes Freight to. Its
 	// params and labels are exposed to step expressions, which is what allows a
@@ -698,37 +694,6 @@ func (r *reconciler) promote(
 	}
 
 	return &workingPromo.Status, nil, nil
-}
-
-// buildTargetFreightCollection constructs a FreightCollection that contains all
-// FreightReferences from the previous Promotion (excepting those that are no
-// longer requested), plus a FreightReference for the provided targetFreight.
-func (r *reconciler) buildTargetFreightCollection(
-	ctx context.Context,
-	targetFreight kargoapi.FreightReference,
-	stage *kargoapi.Stage,
-) *kargoapi.FreightCollection {
-	logger := logging.LoggerFromContext(ctx)
-	freightCol := &kargoapi.FreightCollection{}
-
-	// We don't simply copy the current FreightCollection because we want to
-	// account for the possibility that some freight contained therein are no
-	// longer requested by the Stage.
-	if len(stage.Spec.RequestedFreight) > 1 {
-		lastPromo := stage.Status.LastPromotion
-		if lastPromo != nil && lastPromo.Status != nil && lastPromo.Status.FreightCollection != nil &&
-			lastPromo.Status.FreightCollection.Freight != nil {
-			for _, req := range stage.Spec.RequestedFreight {
-				if freight, ok := lastPromo.Status.FreightCollection.Freight[req.Origin.String()]; ok {
-					freightCol.UpdateOrPush(freight)
-				}
-			}
-		} else {
-			logger.Debug("last promotion has no collection to inherit Freight from")
-		}
-	}
-	freightCol.UpdateOrPush(targetFreight)
-	return freightCol
 }
 
 // terminatePromotion terminates the given Promotion with a message indicating

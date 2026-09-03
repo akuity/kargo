@@ -1049,11 +1049,106 @@ func (r *RegularStageReconciler) syncPromotionRequests(
 		if last := newStatus.LastPromotionRequest; last == nil ||
 			strings.Compare(promotionRequest.Name, last.Name) > 0 {
 			newStatus.LastPromotionRequest = newPromotionRequestReference(promotionRequest)
+			if err := r.recordSucceededPromotionRequest(
+				ctx,
+				stage,
+				&newStatus,
+				promotionRequest,
+			); err != nil {
+				return newStatus, err
+			}
 		}
 		break
 	}
 
 	return newStatus, nil
+}
+
+// recordSucceededPromotionRequest records the Freight a succeeded
+// PromotionRequest promoted as the Stage's current Freight, exactly as
+// syncPromotions records a succeeded Promotion's. A Stage that promotes through
+// PromotionRequests has no other writer of its freight history: its Promotions
+// are children of a request and take no part in its own flow.
+//
+// Only a request that succeeded -- every Target's child Promotion succeeded --
+// is recorded; a partial round leaves the Stage's account of what it is running
+// unchanged, as a failed Promotion does. The caller invokes this once, at the
+// moment a request is first recorded as the Stage's last, which is what keeps
+// a request from being recorded again on every reconcile: freight history is
+// prepend-only, and recording also resets health and verification.
+//
+// The collection is built here, at the moment of recording, from the Freight
+// the request names and whatever the Stage is running now. Building it any
+// earlier -- when the request is created, say -- would snapshot the Stage's
+// other origins before a queued-ahead request had finished changing them, and
+// recording that snapshot later would quietly roll those origins back. This is
+// the same guarantee a Promotion gets from having its collection built only
+// once it is admitted to run.
+func (r *RegularStageReconciler) recordSucceededPromotionRequest(
+	ctx context.Context,
+	stage *kargoapi.Stage,
+	newStatus *kargoapi.StageStatus,
+	promotionRequest *kargoapi.PromotionRequest,
+) error {
+	if promotionRequest.Status.Phase != kargoapi.PromotionRequestPhaseSucceeded {
+		return nil
+	}
+	logger := logging.LoggerFromContext(ctx).WithValues(
+		"promotionRequest", promotionRequest.Name,
+		"freight", promotionRequest.Spec.Freight,
+	)
+
+	freight, err := api.GetFreight(ctx, r.client, types.NamespacedName{
+		Namespace: stage.Namespace,
+		Name:      promotionRequest.Spec.Freight,
+	})
+	if err != nil {
+		return fmt.Errorf(
+			"error getting Freight %q promoted by PromotionRequest %q: %w",
+			promotionRequest.Spec.Freight, promotionRequest.Name, err,
+		)
+	}
+	if freight == nil {
+		// Gone before the Stage could record it. Nothing is invented; the
+		// Stage's account of what it is running is simply left as it was.
+		logger.Debug("Freight promoted by succeeded PromotionRequest no longer exists: not recording it")
+		return nil
+	}
+
+	// Inherit from the status being built, not the one the Stage was read with:
+	// they hold the same history, but the former is what the Stage is about to
+	// declare it is running.
+	working := *stage
+	working.Status = *newStatus
+	newStatus.FreightHistory.Record(
+		api.NewFreightCollectionForStage(&working, kargoapi.FreightReference{
+			Name:      freight.Name,
+			Commits:   freight.Commits,
+			Images:    freight.Images,
+			Charts:    freight.Charts,
+			Artifacts: freight.Artifacts,
+			Origin:    freight.Origin,
+		}),
+	)
+
+	// The Stage is running new Freight: what was known about the health and
+	// verification of the old is no longer relevant.
+	newStatus.Health = nil
+	conditions.Set(newStatus, &metav1.Condition{
+		Type:               kargoapi.ConditionTypeHealthy,
+		Status:             metav1.ConditionUnknown,
+		Reason:             "WaitingForHealthCheck",
+		Message:            "Waiting for health check to be performed after successful promotion",
+		ObservedGeneration: stage.Generation,
+	})
+	conditions.Set(newStatus, &metav1.Condition{
+		Type:               kargoapi.ConditionTypeVerified,
+		Status:             metav1.ConditionUnknown,
+		Reason:             "WaitingForVerification",
+		Message:            "Waiting for verification to be performed after successful promotion",
+		ObservedGeneration: stage.Generation,
+	})
+	return nil
 }
 
 // newPromotionRequestReference builds the reference a Stage records for one of
@@ -1099,6 +1194,23 @@ func (r *RegularStageReconciler) assessHealth(ctx context.Context, stage *kargoa
 
 	lastPromo := stage.Status.LastPromotion
 	if lastPromo == nil {
+		// A Stage that promotes through PromotionRequests never records a last
+		// Promotion: its Promotions are children of a request, and health is a
+		// property of each Target they promote to, not of the Stage. Say so,
+		// rather than claiming the Stage has no Freight when its history may
+		// well record some.
+		if api.IsTargetAware(stage) {
+			logger.Debug("Stage promotes to Targets: no Stage-level health checks to perform")
+			conditions.Set(&newStatus, &metav1.Condition{
+				Type:               kargoapi.ConditionTypeHealthy,
+				Status:             metav1.ConditionUnknown,
+				Reason:             "TargetAwareStage",
+				Message:            "Health is assessed per Target, not for the Stage",
+				ObservedGeneration: stage.Generation,
+			})
+			newStatus.Health = nil
+			return newStatus
+		}
 		logger.Debug("Stage has no current Freight: no health checks to perform")
 		conditions.Set(&newStatus, &metav1.Condition{
 			Type:               kargoapi.ConditionTypeHealthy,
