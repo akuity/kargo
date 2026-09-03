@@ -8,7 +8,7 @@
 #
 # This version must match the `golangTestImage` anchor in
 # .github/workflows/ci.yaml.
-FROM golang:1.26.7-trixie
+FROM golang:1.26.8-trixie
 
 ARG TARGETARCH
 
