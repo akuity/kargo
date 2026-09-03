@@ -45,7 +45,6 @@ spec:
     as: open-pr
     config:
       repoURL: ${{ vars.repoURL }}
-      createTargetBranch: true
       sourceBranch: ${{ vars.sourceBranch }}
       targetBranch: ${{ vars.targetBranch }}
 ```

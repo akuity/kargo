@@ -4,10 +4,6 @@
  "type": "object",
  "additionalProperties": false,
  "properties": {
-  "createTargetBranch": {
-   "type": "boolean",
-   "description": "Deprecated. Is a no-op if set. Will be removed in a future release."
-  },
   "insecureSkipTLSVerify": {
    "type": "boolean",
    "description": "Indicates whether to skip TLS verification when cloning the repository. Default is false."
