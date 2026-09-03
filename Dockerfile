@@ -100,10 +100,24 @@ RUN --mount=type=cache,target=/go/pkg/mod --mount=type=cache,target=/root/.cache
     go mod init helm-build && \
     go get helm.sh/helm/v3/cmd/helm@${HELM_VERSION}
 
+# Helm's own Makefile derives the Kubernetes version it reports to charts from
+# the k8s.io/client-go version it was built against, and injects it via ldflags.
+# Without those, the binary falls back to the in-source default of v1.20.0, and
+# any chart declaring a `kubeVersion` constraint newer than that fails to render.
+# Mirror that derivation here rather than hardcoding a version, so it stays
+# correct as HELM_VERSION moves.
 RUN --mount=type=cache,target=/go/pkg/mod --mount=type=cache,target=/root/.cache/go-build \
+    K8S_VERSION="$(go list -f '{{.Version}}' -m k8s.io/client-go)" && \
+    K8S_VERSION_MAJOR="$(( $(echo "${K8S_VERSION}" | cut -d. -f1 | tr -d v) + 1 ))" && \
+    K8S_VERSION_MINOR="$(echo "${K8S_VERSION}" | cut -d. -f2)" && \
     CGO_ENABLED=0 GOOS=${TARGETOS} GOARCH=${TARGETARCH} go build \
       -trimpath \
-      -ldflags "-w -s -X helm.sh/helm/v3/internal/version.version=${HELM_VERSION}" \
+      -ldflags "-w -s \
+        -X helm.sh/helm/v3/internal/version.version=${HELM_VERSION} \
+        -X helm.sh/helm/v3/pkg/chartutil.k8sVersionMajor=${K8S_VERSION_MAJOR} \
+        -X helm.sh/helm/v3/pkg/chartutil.k8sVersionMinor=${K8S_VERSION_MINOR} \
+        -X helm.sh/helm/v3/pkg/lint/rules.k8sVersionMajor=${K8S_VERSION_MAJOR} \
+        -X helm.sh/helm/v3/pkg/lint/rules.k8sVersionMinor=${K8S_VERSION_MINOR}" \
       -o /helm-build/helm \
       helm.sh/helm/v3/cmd/helm
 
