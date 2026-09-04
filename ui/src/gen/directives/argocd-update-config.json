@@ -16,6 +16,10 @@
      "description": "Specifies the namespace of an Argo CD Application resource to be updated. If left unspecified, the namespace will be the controller's configured default.",
      "minLength": 1
     },
+    "prune": {
+     "type": "boolean",
+     "description": "Indicates whether the sync operation initiated for the Argo CD Application resource should prune resources that are no longer defined in the Application's sources. Defaults to false."
+    },
     "selector": {
      "description": "Specifies a label selector to match Argo CD Application resources to be updated. Mutually exclusive with 'name'.",
      "type": "object",
@@ -361,6 +365,10 @@
       "type": "string",
       "description": "Specifies the namespace of an Argo CD Application resource to be updated. If left unspecified, the namespace will be the controller's configured default.",
       "minLength": 1
+     },
+     "prune": {
+      "type": "boolean",
+      "description": "Indicates whether the sync operation initiated for the Argo CD Application resource should prune resources that are no longer defined in the Application's sources. Defaults to false."
      },
      "selector": {
       "description": "Specifies a label selector to match Argo CD Application resources to be updated. Mutually exclusive with 'name'.",

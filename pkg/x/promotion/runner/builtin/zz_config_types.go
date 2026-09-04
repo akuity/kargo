@@ -19,6 +19,10 @@ type ArgoCDAppUpdate struct {
 	// Specifies the namespace of an Argo CD Application resource to be updated. If left
 	// unspecified, the namespace will be the controller's configured default.
 	Namespace string `json:"namespace,omitempty"`
+	// Indicates whether the sync operation initiated for the Argo CD Application resource
+	// should prune resources that are no longer defined in the Application's sources. Defaults
+	// to false.
+	Prune bool `json:"prune,omitempty"`
 	// Specifies a label selector to match Argo CD Application resources to be updated. Mutually
 	// exclusive with 'name'.
 	Selector *ArgoCDAppSelector `json:"selector,omitempty"`

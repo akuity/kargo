@@ -118,6 +118,7 @@ type Operation struct {
 type SyncOperation struct {
 	SyncOptions SyncOptions `json:"syncOptions,omitempty"`
 	Revisions   []string    `json:"revisions,omitempty"`
+	Prune       bool        `json:"prune,omitempty"`
 }
 
 type Info struct {

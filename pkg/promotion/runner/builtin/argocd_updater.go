@@ -87,6 +87,7 @@ type argocdUpdater struct {
 	syncApplicationFn func(
 		ctx context.Context,
 		stepCtx *promotion.StepContext,
+		update *builtin.ArgoCDAppUpdate,
 		app *argocd.Application,
 		desiredSources argocd.ApplicationSources,
 	) error
@@ -385,6 +386,7 @@ func (a *argocdUpdater) processApplication(
 	if err = a.syncApplicationFn(
 		ctx,
 		stepCtx,
+		update,
 		app,
 		desiredSources,
 	); err != nil {
@@ -585,6 +587,7 @@ func isKargoInitiatedOperation(op argocd.Operation) bool {
 func (a *argocdUpdater) syncApplication(
 	ctx context.Context,
 	stepCtx *promotion.StepContext,
+	update *builtin.ArgoCDAppUpdate,
 	app *argocd.Application,
 	desiredSources argocd.ApplicationSources,
 ) error {
@@ -629,6 +632,7 @@ func (a *argocdUpdater) syncApplication(
 		},
 		Sync: &argocd.SyncOperation{
 			Revisions: []string{},
+			Prune:     update.Prune,
 		},
 	}
 	if app.Spec.SyncPolicy != nil {
