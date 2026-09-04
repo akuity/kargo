@@ -1,11 +1,11 @@
 import { Flex } from 'antd';
-import { generatePath, Link } from 'react-router-dom';
+import { Link } from 'react-router-dom';
 
-import { paths } from '@ui/config/paths';
 import { StageConditionIcon } from '@ui/features/common/stage-status/stage-condition-icon';
 import { useStageControllerStatus } from '@ui/features/common/stage-status/use-stage-controller-status';
 import { getStagePhase } from '@ui/features/common/stage-status/utils';
 import { getCurrentFreight } from '@ui/features/common/utils';
+import { getCurrentPromotionRef } from '@ui/features/project/pipelines/nodes/stage-meta-utils';
 import { Stage } from '@ui/gen/api/v2/models';
 
 export const PhaseCell = ({ stage }: { stage: Stage }) => {
@@ -29,17 +29,10 @@ export const PhaseCell = ({ stage }: { stage: Stage }) => {
     </Flex>
   );
 
-  if (stagePhase === 'Promoting') {
-    return (
-      <Link
-        to={generatePath(paths.promotion, {
-          name: stage?.metadata?.namespace,
-          promotionId: stage?.status?.currentPromotion?.name
-        })}
-      >
-        {Comp}
-      </Link>
-    );
+  const currentPromotionPath = getCurrentPromotionRef(stage)?.path;
+
+  if (stagePhase === 'Promoting' && currentPromotionPath) {
+    return <Link to={currentPromotionPath}>{Comp}</Link>;
   }
 
   return Comp;

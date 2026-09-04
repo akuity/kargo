@@ -35,6 +35,7 @@ import { PullRequestLink } from './pull-request-link';
 import { StageFreight } from './stage-freight';
 import {
   getLastPromotionDate,
+  getLastPromotionRef,
   getStageHealth,
   isStageControlFlow,
   useHideStageIfInPromotionMode,
@@ -90,6 +91,7 @@ export const StageNode = (props: { stage: Stage }) => {
   let descriptionItems: ReactNode;
 
   const lastPromotion = getLastPromotionDate(props.stage);
+  const lastPromotionPath = getLastPromotionRef(props.stage)?.path;
 
   if (!controlFlow) {
     descriptionItems = (
@@ -245,13 +247,8 @@ export const StageNode = (props: { stage: Stage }) => {
           )}
         </div>
 
-        {lastPromotion && (
-          <Link
-            to={generatePath(paths.promotion, {
-              name: props.stage?.metadata?.namespace,
-              promotionId: props.stage?.status?.lastPromotion?.name
-            })}
-          >
+        {lastPromotion && lastPromotionPath && (
+          <Link to={lastPromotionPath}>
             <Flex gap={4} align='center' justify='center' className='text-[10px]'>
               <span>Last Promotion: </span>
               <span title={lastPromotion?.toString()}>
