@@ -34,6 +34,7 @@ import (
 	"github.com/akuity/kargo/pkg/controller"
 	argocdapi "github.com/akuity/kargo/pkg/controller/argocd/api/v1alpha1"
 	"github.com/akuity/kargo/pkg/controller/metrics"
+	"github.com/akuity/kargo/pkg/credentials"
 	kargoEvent "github.com/akuity/kargo/pkg/event"
 	k8sevent "github.com/akuity/kargo/pkg/event/kubernetes"
 	exprfn "github.com/akuity/kargo/pkg/expressions/function"
@@ -78,6 +79,7 @@ func ReconcilerConfigFromEnv() ReconcilerConfig {
 type RegularStageReconciler struct {
 	cfg            ReconcilerConfig
 	client         client.Client
+	credentialsDB  credentials.Database
 	eventSender    kargoEvent.Sender
 	healthChecker  health.AggregatingChecker
 	shardPredicate controller.ResponsibleFor[kargoapi.Stage]
@@ -88,10 +90,12 @@ type RegularStageReconciler struct {
 // NewRegularStageReconciler creates a new Stages reconciler.
 func NewRegularStageReconciler(
 	cfg ReconcilerConfig,
+	credentialsDB credentials.Database,
 	healthChecker health.AggregatingChecker,
 ) *RegularStageReconciler {
 	return &RegularStageReconciler{
 		cfg:           cfg,
+		credentialsDB: credentialsDB,
 		healthChecker: healthChecker,
 		shardPredicate: controller.ResponsibleFor[kargoapi.Stage]{
 			IsDefaultController: cfg.IsDefaultController,
@@ -1707,6 +1711,7 @@ func (r *RegularStageReconciler) startVerification(
 				exprfn.DataOperations(
 					ctx,
 					r.client,
+					r.credentialsDB,
 					gocache.New(gocache.NoExpiration, gocache.NoExpiration),
 					stage.Namespace,
 				),
