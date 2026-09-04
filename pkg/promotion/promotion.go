@@ -10,9 +10,12 @@ import (
 
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
+	"k8s.io/apimachinery/pkg/types"
 	"k8s.io/utils/ptr"
+	"sigs.k8s.io/controller-runtime/pkg/client"
 
 	kargoapi "github.com/akuity/kargo/api/v1alpha1"
+	"github.com/akuity/kargo/pkg/api"
 	"github.com/akuity/kargo/pkg/health"
 )
 
@@ -26,6 +29,10 @@ import (
 // did before Targets existed. Only Promotions that promote to a specific Target
 // (a capability layered on top of Kargo) populate this field.
 type TargetContext struct {
+	// Name is the resolved Target's name. Exposed to expressions as target.name,
+	// so that a single promotion process can single out a destination without
+	// first mirroring its name into a label or param.
+	Name string
 	// Params are the resolved Target's spec.params, decoded to plain values
 	// suitable for use in expressions. Exposed to expressions as target.params.
 	Params map[string]any
@@ -42,7 +49,10 @@ func NewTargetContext(target *kargoapi.Target) (*TargetContext, error) {
 	if target == nil {
 		return nil, nil
 	}
-	targetCtx := &TargetContext{Labels: maps.Clone(target.Labels)}
+	targetCtx := &TargetContext{
+		Name:   target.Name,
+		Labels: maps.Clone(target.Labels),
+	}
 	if len(target.Spec.Params) > 0 {
 		targetCtx.Params = make(map[string]any, len(target.Spec.Params))
 		for key, raw := range target.Spec.Params {
@@ -59,13 +69,58 @@ func NewTargetContext(target *kargoapi.Target) (*TargetContext, error) {
 	return targetCtx, nil
 }
 
+// ResolveTargetContext loads the Target named by the Promotion's spec.target
+// and builds the TargetContext that exposes it to the Promotion's steps. It
+// returns nil for a Promotion that names no Target -- one that promotes to its
+// Stage itself -- and an error for one whose Target cannot be found: the steps
+// were written against that Target, and running them with every target.*
+// reference silently evaluating to nothing would be worse than failing.
+//
+// Every engine that runs a Promotion's steps -- in-process or otherwise --
+// should build its Context through this function, so that a Promotion sees the
+// same Target however it is run.
+func ResolveTargetContext(
+	ctx context.Context,
+	c client.Client,
+	promo *kargoapi.Promotion,
+) (*TargetContext, error) {
+	if promo.Spec.Target == "" {
+		return nil, nil
+	}
+	target, err := api.GetTarget(ctx, c, types.NamespacedName{
+		Namespace: promo.Namespace,
+		Name:      promo.Spec.Target,
+	})
+	if err != nil {
+		return nil, fmt.Errorf(
+			"error finding Target %q in namespace %q: %w",
+			promo.Spec.Target, promo.Namespace, err,
+		)
+	}
+	if target == nil {
+		// nolint:staticcheck
+		return nil, fmt.Errorf(
+			"Target %q not found in namespace %q",
+			promo.Spec.Target, promo.Namespace,
+		)
+	}
+	targetCtx, err := NewTargetContext(target)
+	if err != nil {
+		return nil, fmt.Errorf(
+			"error building context for Target %q in namespace %q: %w",
+			promo.Spec.Target, promo.Namespace, err,
+		)
+	}
+	return targetCtx, nil
+}
+
 // DeepCopy returns a deep copy of the TargetContext, or nil if the receiver is
 // nil.
 func (t *TargetContext) DeepCopy() *TargetContext {
 	if t == nil {
 		return nil
 	}
-	newT := &TargetContext{}
+	newT := &TargetContext{Name: t.Name}
 	if t.Params != nil {
 		// Params originate from the Target's spec.params (JSON), so a JSON deep
 		// copy is both sufficient and appropriate.

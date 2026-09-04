@@ -76,6 +76,7 @@ func TestStepEvaluator_BuildExprEnv(t *testing.T) {
 					},
 				},
 				Target: &TargetContext{
+					Name:   "us-east-1",
 					Params: map[string]any{"cluster": "east"},
 					Labels: map[string]string{"env": "prod"},
 				},
@@ -104,6 +105,7 @@ func TestStepEvaluator_BuildExprEnv(t *testing.T) {
 					},
 				},
 				"target": map[string]any{
+					"name":   "us-east-1",
 					"params": map[string]any{"cluster": "east"},
 					"labels": map[string]string{"env": "prod"},
 				},
@@ -605,10 +607,11 @@ func TestBuildCtxMap(t *testing.T) {
 			},
 		},
 		{
-			name: "step context with target exposes target.params and target.labels",
+			name: "step context with target exposes target.name, target.params and target.labels",
 			stepCtx: StepContext{
 				Project: "test-project",
 				Target: &TargetContext{
+					Name:   "us-east-1",
 					Params: map[string]any{"cluster": "east", "region": "us"},
 					Labels: map[string]string{"env": "prod"},
 				},
@@ -637,6 +640,7 @@ func TestBuildCtxMap(t *testing.T) {
 					},
 				},
 				"target": map[string]any{
+					"name":   "us-east-1",
 					"params": map[string]any{"cluster": "east", "region": "us"},
 					"labels": map[string]string{"env": "prod"},
 				},
@@ -1913,6 +1917,7 @@ func TestStepEvaluator_Config_target(t *testing.T) {
 	testClient := fake.NewClientBuilder().WithScheme(testScheme).Build()
 
 	targetCtx := &TargetContext{
+		Name: "us-east-1",
 		Params: map[string]any{
 			"branch":   "env/prod-use1",
 			"replicas": float64(5),
@@ -1928,10 +1933,11 @@ func TestStepEvaluator_Config_target(t *testing.T) {
 		assert   func(*testing.T, Config, error)
 	}{
 		{
-			name:     "target params and labels resolve",
+			name:     "target name, params and labels resolve",
 			promoCtx: Context{Project: "fake-project", Target: targetCtx},
 			step: Step{
 				Config: []byte(`{
+					"name": "${{ target.name }}",
 					"branch": "${{ target.params.branch }}",
 					"replicas": "${{ target.params.replicas }}",
 					"host": "${{ target.params.ingress.host }}",
@@ -1943,6 +1949,7 @@ func TestStepEvaluator_Config_target(t *testing.T) {
 				require.Equal(
 					t,
 					Config{
+						"name":   "us-east-1",
 						"branch": "env/prod-use1",
 						// Numeric params reach a step as int, not the float64
 						// they are decoded to, because step config is
