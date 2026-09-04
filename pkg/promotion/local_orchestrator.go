@@ -357,7 +357,7 @@ func (o *LocalOrchestrator) determineStepCompletion(
 	if timeout > 0 && metav1.Now().Sub(meta.StartedAt.Time) > timeout {
 		// Timeout has elapsed.
 		meta.WithStatus(kargoapi.PromotionStepStatusErrored).WithMessagef(
-			"step %q timed out after %s", step.Alias, timeout.String(),
+			"step %q timed out after %s: %s", step.Alias, timeout.String(), meta.Message,
 		).Finished()
 		// Continue, because despite this failure, some steps' "if" conditions may
 		// still allow them to run.

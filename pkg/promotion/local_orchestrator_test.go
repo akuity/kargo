@@ -380,6 +380,7 @@ func TestLocalOrchestrator_ExecuteSteps(t *testing.T) {
 				assert.NotNil(t, result.StepExecutionMetadata[0].StartedAt)
 				assert.NotNil(t, result.StepExecutionMetadata[0].FinishedAt)
 				assert.Equal(t, uint32(1), result.StepExecutionMetadata[0].ErrorCount)
+				assert.Contains(t, result.StepExecutionMetadata[0].Message, "something went wrong")
 			},
 		},
 		{
