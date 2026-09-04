@@ -25,6 +25,8 @@ type ProjectConfigSpec struct {
 	PromotionPolicies []PromotionPolicy `json:"promotionPolicies,omitempty"`
 	// PromotionWindows defines time windows that gate promotions for Stages in this Project. A Stage's effective schedule is the union of matching windows defined here and any cluster-level windows in ClusterConfig.  Kargo Enterprise only: This field is ignored in Kargo OSS.  +optional +listType=map +listMapKey=name
 	PromotionWindows []PromotionWindow `json:"promotionWindows,omitempty"`
+	// ReleaseContext replaces the cluster-level release context configuration. Omit it to inherit cluster defaults. Set it to {} to disable custom image annotation interpretation in this project without hiding raw annotations. +optional
+	ReleaseContext *ReleaseContextConfig `json:"releaseContext,omitempty"`
 	// StageLinks defines deep links shown when viewing Stage resources within this project. These are shown in addition to any cluster-level StageLinks defined in ClusterConfig.  +optional
 	StageLinks []DeepLink `json:"stageLinks,omitempty"`
 	// WebhookReceivers describes Project-specific webhook receivers used for processing events from various external platforms
@@ -144,6 +146,38 @@ func (o *ProjectConfigSpec) SetPromotionWindows(v []PromotionWindow) {
 	o.PromotionWindows = v
 }
 
+// GetReleaseContext returns the ReleaseContext field value if set, zero value otherwise.
+func (o *ProjectConfigSpec) GetReleaseContext() ReleaseContextConfig {
+	if o == nil || IsNil(o.ReleaseContext) {
+		var ret ReleaseContextConfig
+		return ret
+	}
+	return *o.ReleaseContext
+}
+
+// GetReleaseContextOk returns a tuple with the ReleaseContext field value if set, nil otherwise
+// and a boolean to check if the value has been set.
+func (o *ProjectConfigSpec) GetReleaseContextOk() (*ReleaseContextConfig, bool) {
+	if o == nil || IsNil(o.ReleaseContext) {
+		return nil, false
+	}
+	return o.ReleaseContext, true
+}
+
+// HasReleaseContext returns a boolean if a field has been set.
+func (o *ProjectConfigSpec) HasReleaseContext() bool {
+	if o != nil && !IsNil(o.ReleaseContext) {
+		return true
+	}
+
+	return false
+}
+
+// SetReleaseContext gets a reference to the given ReleaseContextConfig and assigns it to the ReleaseContext field.
+func (o *ProjectConfigSpec) SetReleaseContext(v ReleaseContextConfig) {
+	o.ReleaseContext = &v
+}
+
 // GetStageLinks returns the StageLinks field value if set, zero value otherwise.
 func (o *ProjectConfigSpec) GetStageLinks() []DeepLink {
 	if o == nil || IsNil(o.StageLinks) {
@@ -226,6 +260,9 @@ func (o ProjectConfigSpec) ToMap() (map[string]interface{}, error) {
 	}
 	if !IsNil(o.PromotionWindows) {
 		toSerialize["promotionWindows"] = o.PromotionWindows
+	}
+	if !IsNil(o.ReleaseContext) {
+		toSerialize["releaseContext"] = o.ReleaseContext
 	}
 	if !IsNil(o.StageLinks) {
 		toSerialize["stageLinks"] = o.StageLinks
