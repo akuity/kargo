@@ -1030,35 +1030,55 @@ func (r *RegularStageReconciler) syncPromotionRequests(
 		newStatus.CurrentPromotionRequest = newPromotionRequestReference(highestPrioRequest)
 	}
 
-	// Terminal PromotionRequests sort newest-first, so the first terminal request
-	// in the sorted list is the newest, and nothing after it can supersede it.
+	// Gather the terminal PromotionRequests newer than the one already recorded
+	// as last. A request is recorded only when it is newer: a Stage's account of
+	// how its last round of fan-out ended should outlive the request that
+	// produced it, so garbage collection of the newest request must not let an
+	// older one take its place.
 	//
-	// It is recorded only when it is newer than the request already recorded. A
-	// Stage's account of how its last round of fan-out ended should outlive the
-	// request that produced it, so garbage collection of the newest request must
-	// not let an older one take its place.
+	// Every such request is gathered, not just the newest. More than one round
+	// can end between two reconciles -- a queued request failing while the round
+	// ahead of it succeeds, or several rounds ending while the controller was
+	// down -- and each succeeded round's Freight belongs in the Stage's history.
+	// Recording only the newest would drop the others for good, since the gate
+	// only moves forward by name.
 	//
 	// NB: As in syncPromotions, this makes use of the fact that PromotionRequest
 	// names are generated with an embedded ULID, so among one Stage's requests
 	// lex order over names is creation order.
+	var newRequests []*kargoapi.PromotionRequest
 	for i := range promotionRequests.Items {
 		promotionRequest := &promotionRequests.Items[i]
 		if !promotionRequest.Status.Phase.IsTerminal() {
 			continue
 		}
-		if last := newStatus.LastPromotionRequest; last == nil ||
-			strings.Compare(promotionRequest.Name, last.Name) > 0 {
-			newStatus.LastPromotionRequest = newPromotionRequestReference(promotionRequest)
-			if err := r.recordSucceededPromotionRequest(
-				ctx,
-				stage,
-				&newStatus,
-				promotionRequest,
-			); err != nil {
-				return newStatus, err
-			}
+		if last := newStatus.LastPromotionRequest; last != nil &&
+			strings.Compare(promotionRequest.Name, last.Name) <= 0 {
+			// Terminal PromotionRequests sort newest-first, so nothing after this
+			// one is newer than the last recorded either.
+			break
 		}
-		break
+		newRequests = append(newRequests, promotionRequest)
+	}
+
+	// Replay them oldest-first, exactly as syncPromotions replays Promotions, so
+	// that the last reference lands on the newest and Freight history is
+	// recorded in the order the rounds ended. Each record builds on the status
+	// the one before it produced, which is what lets a multi-origin Stage's
+	// collection carry one round's Freight into the next.
+	slices.SortFunc(newRequests, func(a, b *kargoapi.PromotionRequest) int {
+		return strings.Compare(a.Name, b.Name)
+	})
+	for _, promotionRequest := range newRequests {
+		newStatus.LastPromotionRequest = newPromotionRequestReference(promotionRequest)
+		if err := r.recordSucceededPromotionRequest(
+			ctx,
+			stage,
+			&newStatus,
+			promotionRequest,
+		); err != nil {
+			return newStatus, err
+		}
 	}
 
 	return newStatus, nil
@@ -1072,10 +1092,11 @@ func (r *RegularStageReconciler) syncPromotionRequests(
 //
 // Only a request that succeeded -- every Target's child Promotion succeeded --
 // is recorded; a partial round leaves the Stage's account of what it is running
-// unchanged, as a failed Promotion does. The caller invokes this once, at the
-// moment a request is first recorded as the Stage's last, which is what keeps
-// a request from being recorded again on every reconcile: freight history is
-// prepend-only, and recording also resets health and verification.
+// unchanged, as a failed Promotion does. The caller invokes this once per
+// request, at the moment the request is first recorded as the Stage's last,
+// which is what keeps a request from being recorded again on every reconcile:
+// freight history is prepend-only, and recording also resets health and
+// verification.
 //
 // The collection is built here, at the moment of recording, from the Freight
 // the request names and whatever the Stage is running now. Building it any

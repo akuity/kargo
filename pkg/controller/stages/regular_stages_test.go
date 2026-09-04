@@ -2416,10 +2416,11 @@ func TestRegularStageReconciler_syncPromotionRequests(t *testing.T) {
 	require.NoError(t, kargoapi.AddToScheme(scheme))
 
 	now := metav1.NewTime(time.Now().Truncate(time.Second))
-	// Generated in this order, so the ULID in olderRequest precedes the ULID in
-	// newerRequest, and lex order over the two names is creation order.
+	// Generated in this order, so the ULIDs in olderRequest, newerRequest and
+	// newestRequest ascend, and lex order over the three names is creation order.
 	olderRequest := api.GeneratePromotionRequestName("test-stage", "test-freight")
 	newerRequest := api.GeneratePromotionRequestName("test-stage", "test-freight")
+	newestRequest := api.GeneratePromotionRequestName("test-stage", "test-freight")
 	otherStageRequest := api.GeneratePromotionRequestName("other-stage", "test-freight")
 
 	tests := []struct {
@@ -3040,6 +3041,97 @@ func TestRegularStageReconciler_syncPromotionRequests(t *testing.T) {
 				require.Len(t, current.Freight, 2)
 				assert.Equal(t, "new-images", current.Freight["Warehouse/images"].Name)
 				assert.Equal(t, "new-config", current.Freight["Warehouse/config"].Name)
+			},
+		},
+		{
+			// Two rounds ended since the Stage last reconciled: the older request
+			// succeeded and a request queued behind it failed. The newest terminal
+			// request becomes the last one, but the succeeded round's Freight must
+			// be recorded all the same -- examining only the newest would drop it
+			// for good, since the last reference only moves forward by name.
+			name: "a succeeded PromotionRequest is recorded even when a newer one failed in the same reconcile",
+			stage: &kargoapi.Stage{
+				ObjectMeta: metav1.ObjectMeta{
+					Namespace: "fake-project",
+					Name:      "test-stage",
+				},
+				Status: kargoapi.StageStatus{
+					LastPromotionRequest: &kargoapi.PromotionRequestReference{
+						Name:  olderRequest,
+						Phase: kargoapi.PromotionRequestPhaseSucceeded,
+					},
+					FreightHistory: kargoapi.FreightHistory{testFreightCollection("test-freight")},
+					Health:         &kargoapi.Health{Status: kargoapi.HealthStateHealthy},
+				},
+			},
+			objects: []client.Object{
+				testFreight("test-freight", "test-warehouse"),
+				testFreight("newer-freight", "test-warehouse"),
+				testFreight("newest-freight", "test-warehouse"),
+				testPromotionRequest(olderRequest, "test-freight", kargoapi.PromotionRequestPhaseSucceeded, &now),
+				testPromotionRequest(newerRequest, "newer-freight", kargoapi.PromotionRequestPhaseSucceeded, &now),
+				testPromotionRequest(newestRequest, "newest-freight", kargoapi.PromotionRequestPhaseFailed, &now),
+			},
+			assertions: func(t *testing.T, status kargoapi.StageStatus, err error) {
+				require.NoError(t, err)
+				require.NotNil(t, status.LastPromotionRequest)
+				assert.Equal(t, newestRequest, status.LastPromotionRequest.Name)
+				assert.Equal(t, kargoapi.PromotionRequestPhaseFailed, status.LastPromotionRequest.Phase)
+				require.Len(t, status.FreightHistory, 2)
+				assert.True(t, status.FreightHistory[0].Includes("newer-freight"))
+				assert.True(t, status.FreightHistory[1].Includes("test-freight"))
+				// The succeeded round reset health.
+				assert.Nil(t, status.Health)
+			},
+		},
+		{
+			// Two rounds on a two-origin Stage both succeeded since the Stage last
+			// reconciled: the older promoted new images, the newer new config.
+			// They are replayed oldest-first, so history lists them in the order
+			// they ended and the newer's collection carries the older's images.
+			name: "several succeeded PromotionRequests in one reconcile are recorded oldest-first",
+			stage: &kargoapi.Stage{
+				ObjectMeta: metav1.ObjectMeta{
+					Namespace: "fake-project",
+					Name:      "test-stage",
+				},
+				Spec: kargoapi.StageSpec{
+					RequestedFreight: []kargoapi.FreightRequest{
+						{Origin: testOrigin("images")},
+						{Origin: testOrigin("config")},
+					},
+				},
+				Status: kargoapi.StageStatus{
+					FreightHistory: kargoapi.FreightHistory{
+						func() *kargoapi.FreightCollection {
+							c := &kargoapi.FreightCollection{}
+							c.UpdateOrPush(
+								kargoapi.FreightReference{Name: "old-images", Origin: testOrigin("images")},
+								kargoapi.FreightReference{Name: "old-config", Origin: testOrigin("config")},
+							)
+							return c
+						}(),
+					},
+				},
+			},
+			objects: []client.Object{
+				testFreight("new-images", "images"),
+				testFreight("new-config", "config"),
+				testPromotionRequest(olderRequest, "new-images", kargoapi.PromotionRequestPhaseSucceeded, &now),
+				testPromotionRequest(newerRequest, "new-config", kargoapi.PromotionRequestPhaseSucceeded, &now),
+			},
+			assertions: func(t *testing.T, status kargoapi.StageStatus, err error) {
+				require.NoError(t, err)
+				require.NotNil(t, status.LastPromotionRequest)
+				assert.Equal(t, newerRequest, status.LastPromotionRequest.Name)
+				require.Len(t, status.FreightHistory, 3)
+				// Newest first: the second round, then the first, then what the
+				// Stage was running before either.
+				assert.Equal(t, "new-images", status.FreightHistory[0].Freight["Warehouse/images"].Name)
+				assert.Equal(t, "new-config", status.FreightHistory[0].Freight["Warehouse/config"].Name)
+				assert.Equal(t, "new-images", status.FreightHistory[1].Freight["Warehouse/images"].Name)
+				assert.Equal(t, "old-config", status.FreightHistory[1].Freight["Warehouse/config"].Name)
+				assert.Equal(t, "old-images", status.FreightHistory[2].Freight["Warehouse/images"].Name)
 			},
 		},
 	}
