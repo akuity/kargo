@@ -444,6 +444,16 @@ func PromotionsByStageAndFreight(obj client.Object) []string {
 	}
 }
 
+// PromotionRequestsByStage is a client.IndexerFunc that indexes
+// PromotionRequests by the Stage they promote on behalf of.
+func PromotionRequestsByStage(obj client.Object) []string {
+	promotionRequest, ok := obj.(*kargoapi.PromotionRequest)
+	if !ok {
+		return nil
+	}
+	return []string{promotionRequest.Spec.Stage}
+}
+
 // PromotionRequestsByStageAndFreight is a client.IndexerFunc that indexes
 // PromotionRequests by the Stage and Freight they promote.
 func PromotionRequestsByStageAndFreight(obj client.Object) []string {

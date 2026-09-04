@@ -90,26 +90,36 @@ func TestCleanProject(t *testing.T) {
 		assertions func(*testing.T, error)
 	}{
 		{
-			name: "errors cleaning Promotions and Freight",
+			name: "errors cleaning Promotions, PromotionRequests, and Freight",
 			collector: &collector{
 				cleanProjectPromotionsFn: func(context.Context, string) error {
 					return errors.New("something went wrong")
 				},
-				cleanProjectFreightFn: func(context.Context, string) error {
+				cleanProjectPromotionRequestsFn: func(context.Context, string) error {
 					return errors.New("something else went wrong")
+				},
+				cleanProjectFreightFn: func(context.Context, string) error {
+					return errors.New("something worse went wrong")
 				},
 			},
 			assertions: func(t *testing.T, err error) {
 				require.ErrorContains(t, err, "error cleaning Promotions in Project")
 				require.ErrorContains(t, err, "something went wrong")
-				require.ErrorContains(t, err, "error cleaning Freight in Project")
+				require.ErrorContains(
+					t, err, "error cleaning PromotionRequests in Project",
+				)
 				require.ErrorContains(t, err, "something else went wrong")
+				require.ErrorContains(t, err, "error cleaning Freight in Project")
+				require.ErrorContains(t, err, "something worse went wrong")
 			},
 		},
 		{
 			name: "success",
 			collector: &collector{
 				cleanProjectPromotionsFn: func(context.Context, string) error {
+					return nil
+				},
+				cleanProjectPromotionRequestsFn: func(context.Context, string) error {
 					return nil
 				},
 				cleanProjectFreightFn: func(context.Context, string) error {

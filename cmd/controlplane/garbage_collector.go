@@ -142,6 +142,16 @@ func (o *garbageCollectorOptions) setupManager(ctx context.Context) (manager.Man
 		return nil, fmt.Errorf("error indexing Promotions by Stage: %w", err)
 	}
 
+	// Index PromotionRequests by Stage
+	if err = mgr.GetFieldIndexer().IndexField(
+		ctx,
+		&kargoapi.PromotionRequest{},
+		indexer.PromotionRequestsByStageField,
+		indexer.PromotionRequestsByStage,
+	); err != nil {
+		return nil, fmt.Errorf("error indexing PromotionRequests by Stage: %w", err)
+	}
+
 	// Index Freight by Warehouse
 	if err = mgr.GetFieldIndexer().IndexField(
 		ctx,
