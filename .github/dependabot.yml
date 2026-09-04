@@ -12,6 +12,14 @@
 #
 # Each branch runs on its own day of the week so that update PRs arrive a
 # branch at a time rather than all at once.
+#
+# Go itself is excluded from the docker ecosystem. Its version pins serve two
+# distinct roles -- the toolchain that builds shipped artifacts, and the older,
+# golangci-lint-capped toolchain that runs unit tests, linters, and codegen --
+# and most of them live in the workflows, where the docker ecosystem cannot see
+# them at all. Dependabot can neither tell the roles apart nor move a role's
+# pins in lock-step, so raising Go is a coordinated, whole-branch change made
+# by hand. The comment at each pin says which role it serves.
 version: 2
 updates:
   # ----------------------------- main -----------------------------
@@ -34,6 +42,8 @@ updates:
     schedule:
       interval: "weekly"
       day: "sunday"
+    ignore:
+    - dependency-name: "golang"
     commit-message:
       prefix: "chore(deps):"
 
@@ -155,6 +165,7 @@ updates:
       day: "monday"
     target-branch: "release-1.11"
     ignore:
+    - dependency-name: "golang"
     - dependency-name: "*"
       update-types:
       - "version-update:semver-major"
@@ -265,6 +276,7 @@ updates:
       day: "tuesday"
     target-branch: "release-1.10"
     ignore:
+    - dependency-name: "golang"
     - dependency-name: "*"
       update-types:
       - "version-update:semver-major"
@@ -393,6 +405,7 @@ updates:
       day: "wednesday"
     target-branch: "release-1.9"
     ignore:
+    - dependency-name: "golang"
     - dependency-name: "*"
       update-types:
       - "version-update:semver-major"
@@ -501,6 +514,7 @@ updates:
       day: "thursday"
     target-branch: "release-1.8"
     ignore:
+    - dependency-name: "golang"
     - dependency-name: "*"
       update-types:
       - "version-update:semver-major"
