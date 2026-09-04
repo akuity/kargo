@@ -36,7 +36,7 @@ jobs:
       # defines.
       uses: ./.github/actions/setup-go
       with:
-        go-version: &goTestVersion "1.27.0"
+        go-version: &goTestVersion "1.27.1"
     - name: Run unit tests
       run: make test-unit
     - name: Remove generated code from report
