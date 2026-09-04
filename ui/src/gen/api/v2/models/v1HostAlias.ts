@@ -7,10 +7,14 @@
  */
 
 export interface V1HostAlias {
-  /** Hostnames for the above IP address.
-+listType=atomic */
+  /**
+   * Hostnames for the above IP address.
+   * +listType=atomic
+   */
   hostnames?: string[];
-  /** IP address of the host file entry.
-+required */
+  /**
+   * IP address of the host file entry.
+   * +required
+   */
   ip?: string;
 }

@@ -22,8 +22,7 @@ import type {
 } from '@tanstack/react-query';
 
 import type {
-  CreateAPITokenRequestBody,
-  CreateProjectRoleBodyBody,
+  CreateAPITokenRequest,
   GrantRequest,
   ListProjectAPITokensParams,
   ListSystemAPITokensParams,
@@ -31,18 +30,29 @@ import type {
   RevokeRequest,
   V1Secret,
   V1SecretList
-} from '.././models';
+} from '../models';
 
 import { customFetch } from '../../../../lib/api/custom-fetch';
 import type { ErrorType } from '../../../../lib/api/custom-fetch';
+import { serializeParams } from '../../../../lib/api/params-serializer';
 
 type SecondParameter<T extends (...args: never) => unknown> = Parameters<T>[1];
 
-/**
- * List project-level API tokens. Returns a Kubernetes SecretList
-resource containing heavily redacted Secrets.
- * @summary List project-level API tokens
- */
+const withQueryKey = <T extends object, K>(query: T, queryKey: K): T & { queryKey: K } => {
+  const result = { queryKey } as T & { queryKey: K };
+  for (const key of Object.keys(query)) {
+    // The explicit queryKey always wins, matching the previous
+    // `{ ...query, queryKey }` spread where it was set last.
+    if (key === 'queryKey') continue;
+    Object.defineProperty(result, key, {
+      enumerable: true,
+      configurable: true,
+      get: () => (query as Record<string, unknown>)[key]
+    });
+  }
+  return result;
+};
+
 export type listProjectAPITokensResponse200 = {
   data: V1SecretList;
   status: 200;
@@ -57,25 +67,22 @@ export const getListProjectAPITokensUrl = (
   project: string,
   params?: ListProjectAPITokensParams
 ) => {
-  const normalizedParams = new URLSearchParams();
-
-  Object.entries(params || {}).forEach(([key, value]) => {
-    if (value !== undefined) {
-      normalizedParams.append(key, value === null ? 'null' : value.toString());
-    }
-  });
-
-  const stringifiedParams = normalizedParams.toString();
+  const stringifiedParams = serializeParams(params);
 
   return stringifiedParams.length > 0
     ? `/v1beta1/projects/${project}/api-tokens?${stringifiedParams}`
     : `/v1beta1/projects/${project}/api-tokens`;
 };
 
+/**
+ * List project-level API tokens. Returns a Kubernetes SecretList
+ * resource containing heavily redacted Secrets.
+ * @summary List project-level API tokens
+ */
 export const listProjectAPITokens = async (
   project: string,
   params?: ListProjectAPITokensParams,
-  options?: RequestInit
+  options?: Parameters<typeof customFetch>[1]
 ): Promise<listProjectAPITokensResponse> => {
   return customFetch<listProjectAPITokensResponse>(getListProjectAPITokensUrl(project, params), {
     ...options,
@@ -84,7 +91,7 @@ export const listProjectAPITokens = async (
 };
 
 export const getListProjectAPITokensQueryKey = (
-  project?: string,
+  project: string,
   params?: ListProjectAPITokensParams
 ) => {
   return [`/v1beta1/projects/${project}/api-tokens`, ...(params ? [params] : [])] as const;
@@ -110,11 +117,14 @@ export const getListProjectAPITokensQueryOptions = <
   const queryFn: QueryFunction<Awaited<ReturnType<typeof listProjectAPITokens>>> = () =>
     listProjectAPITokens(project, params, requestOptions);
 
-  return { queryKey, queryFn, enabled: !!project, ...queryOptions } as UseQueryOptions<
-    Awaited<ReturnType<typeof listProjectAPITokens>>,
-    TError,
-    TData
-  > & { queryKey: DataTag<QueryKey, TData, TError> };
+  return {
+    queryKey,
+    queryFn,
+    enabled: project !== null && project !== undefined,
+    ...queryOptions
+  } as UseQueryOptions<Awaited<ReturnType<typeof listProjectAPITokens>>, TError, TData> & {
+    queryKey: DataTag<QueryKey, TData, TError>;
+  };
 };
 
 export type ListProjectAPITokensQueryResult = NonNullable<
@@ -204,16 +214,9 @@ export function useListProjectAPITokens<
     queryKey: DataTag<QueryKey, TData, TError>;
   };
 
-  query.queryKey = queryOptions.queryKey;
-
-  return query;
+  return withQueryKey(query, queryOptions.queryKey);
 }
 
-/**
- * Retrieve a project-level API token by name. Returns a heavily
-redacted Kubernetes Secret resource.
- * @summary Retrieve a project-level API token
- */
 export type getProjectAPITokenResponse200 = {
   data: V1Secret;
   status: 200;
@@ -228,10 +231,15 @@ export const getGetProjectAPITokenUrl = (project: string, apitoken: string) => {
   return `/v1beta1/projects/${project}/api-tokens/${apitoken}`;
 };
 
+/**
+ * Retrieve a project-level API token by name. Returns a heavily
+ * redacted Kubernetes Secret resource.
+ * @summary Retrieve a project-level API token
+ */
 export const getProjectAPIToken = async (
   project: string,
   apitoken: string,
-  options?: RequestInit
+  options?: Parameters<typeof customFetch>[1]
 ): Promise<getProjectAPITokenResponse> => {
   return customFetch<getProjectAPITokenResponse>(getGetProjectAPITokenUrl(project, apitoken), {
     ...options,
@@ -239,7 +247,7 @@ export const getProjectAPIToken = async (
   });
 };
 
-export const getGetProjectAPITokenQueryKey = (project?: string, apitoken?: string) => {
+export const getGetProjectAPITokenQueryKey = (project: string, apitoken: string) => {
   return [`/v1beta1/projects/${project}/api-tokens/${apitoken}`] as const;
 };
 
@@ -264,7 +272,8 @@ export const getGetProjectAPITokenQueryOptions = <
   return {
     queryKey,
     queryFn,
-    enabled: !!(project && apitoken),
+    enabled:
+      project !== null && project !== undefined && apitoken !== null && apitoken !== undefined,
     ...queryOptions
   } as UseQueryOptions<Awaited<ReturnType<typeof getProjectAPIToken>>, TError, TData> & {
     queryKey: DataTag<QueryKey, TData, TError>;
@@ -352,15 +361,9 @@ export function useGetProjectAPIToken<
     queryKey: DataTag<QueryKey, TData, TError>;
   };
 
-  query.queryKey = queryOptions.queryKey;
-
-  return query;
+  return withQueryKey(query, queryOptions.queryKey);
 }
 
-/**
- * Delete a project-level API token from a project's namespace.
- * @summary Delete a project-level API token
- */
 export type deleteProjectAPITokenResponse204 = {
   data: void;
   status: 204;
@@ -375,10 +378,14 @@ export const getDeleteProjectAPITokenUrl = (project: string, apitoken: string) =
   return `/v1beta1/projects/${project}/api-tokens/${apitoken}`;
 };
 
+/**
+ * Delete a project-level API token from a project's namespace.
+ * @summary Delete a project-level API token
+ */
 export const deleteProjectAPIToken = async (
   project: string,
   apitoken: string,
-  options?: RequestInit
+  options?: Parameters<typeof customFetch>[1]
 ): Promise<deleteProjectAPITokenResponse> => {
   return customFetch<deleteProjectAPITokenResponse>(
     getDeleteProjectAPITokenUrl(project, apitoken),
@@ -389,6 +396,8 @@ export const deleteProjectAPIToken = async (
   );
 };
 
+export const getDeleteProjectAPITokenMutationKey = () => ['deleteProjectAPIToken'] as const;
+
 export const getDeleteProjectAPITokenMutationOptions = <
   TError = ErrorType<unknown>,
   TContext = unknown
@@ -396,17 +405,17 @@ export const getDeleteProjectAPITokenMutationOptions = <
   mutation?: UseMutationOptions<
     Awaited<ReturnType<typeof deleteProjectAPIToken>>,
     TError,
-    { project: string; apitoken: string },
+    DeleteProjectAPITokenMutationVariables,
     TContext
   >;
   request?: SecondParameter<typeof customFetch>;
 }): UseMutationOptions<
   Awaited<ReturnType<typeof deleteProjectAPIToken>>,
   TError,
-  { project: string; apitoken: string },
+  DeleteProjectAPITokenMutationVariables,
   TContext
 > => {
-  const mutationKey = ['deleteProjectAPIToken'];
+  const mutationKey = getDeleteProjectAPITokenMutationKey();
   const { mutation: mutationOptions, request: requestOptions } = options
     ? options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey
       ? options
@@ -415,7 +424,7 @@ export const getDeleteProjectAPITokenMutationOptions = <
 
   const mutationFn: MutationFunction<
     Awaited<ReturnType<typeof deleteProjectAPIToken>>,
-    { project: string; apitoken: string }
+    DeleteProjectAPITokenMutationVariables
   > = (props) => {
     const { project, apitoken } = props ?? {};
 
@@ -430,6 +439,7 @@ export type DeleteProjectAPITokenMutationResult = NonNullable<
 >;
 
 export type DeleteProjectAPITokenMutationError = ErrorType<unknown>;
+export type DeleteProjectAPITokenMutationVariables = { project: string; apitoken: string };
 
 /**
  * @summary Delete a project-level API token
@@ -439,7 +449,7 @@ export const useDeleteProjectAPIToken = <TError = ErrorType<unknown>, TContext =
     mutation?: UseMutationOptions<
       Awaited<ReturnType<typeof deleteProjectAPIToken>>,
       TError,
-      { project: string; apitoken: string },
+      DeleteProjectAPITokenMutationVariables,
       TContext
     >;
     request?: SecondParameter<typeof customFetch>;
@@ -448,18 +458,11 @@ export const useDeleteProjectAPIToken = <TError = ErrorType<unknown>, TContext =
 ): UseMutationResult<
   Awaited<ReturnType<typeof deleteProjectAPIToken>>,
   TError,
-  { project: string; apitoken: string },
+  DeleteProjectAPITokenMutationVariables,
   TContext
 > => {
-  const mutationOptions = getDeleteProjectAPITokenMutationOptions(options);
-
-  return useMutation(mutationOptions, queryClient);
+  return useMutation(getDeleteProjectAPITokenMutationOptions(options), queryClient);
 };
-/**
- * List project-level Kargo Role virtual resources. Returns a
-RoleList resource.
- * @summary List project-level Kargo Role virtual resources
- */
 export type listProjectRolesResponse200 = {
   data: unknown;
   status: 200;
@@ -474,9 +477,14 @@ export const getListProjectRolesUrl = (project: string) => {
   return `/v1beta1/projects/${project}/roles`;
 };
 
+/**
+ * List project-level Kargo Role virtual resources. Returns a
+ * RoleList resource.
+ * @summary List project-level Kargo Role virtual resources
+ */
 export const listProjectRoles = async (
   project: string,
-  options?: RequestInit
+  options?: Parameters<typeof customFetch>[1]
 ): Promise<listProjectRolesResponse> => {
   return customFetch<listProjectRolesResponse>(getListProjectRolesUrl(project), {
     ...options,
@@ -484,7 +492,7 @@ export const listProjectRoles = async (
   });
 };
 
-export const getListProjectRolesQueryKey = (project?: string) => {
+export const getListProjectRolesQueryKey = (project: string) => {
   return [`/v1beta1/projects/${project}/roles`] as const;
 };
 
@@ -505,11 +513,14 @@ export const getListProjectRolesQueryOptions = <
   const queryFn: QueryFunction<Awaited<ReturnType<typeof listProjectRoles>>> = () =>
     listProjectRoles(project, requestOptions);
 
-  return { queryKey, queryFn, enabled: !!project, ...queryOptions } as UseQueryOptions<
-    Awaited<ReturnType<typeof listProjectRoles>>,
-    TError,
-    TData
-  > & { queryKey: DataTag<QueryKey, TData, TError> };
+  return {
+    queryKey,
+    queryFn,
+    enabled: project !== null && project !== undefined,
+    ...queryOptions
+  } as UseQueryOptions<Awaited<ReturnType<typeof listProjectRoles>>, TError, TData> & {
+    queryKey: DataTag<QueryKey, TData, TError>;
+  };
 };
 
 export type ListProjectRolesQueryResult = NonNullable<Awaited<ReturnType<typeof listProjectRoles>>>;
@@ -585,17 +596,9 @@ export function useListProjectRoles<
     queryKey: DataTag<QueryKey, TData, TError>;
   };
 
-  query.queryKey = queryOptions.queryKey;
-
-  return query;
+  return withQueryKey(query, queryOptions.queryKey);
 }
 
-/**
- * Create a project-level Kargo Role virtual resource by creating
-the underlying Kubernetes ServiceAccount, Role, and RoleBinding
-resources.
- * @summary Create a project-level Kargo Role virtual resource
- */
 export type createProjectRoleResponse201 = {
   data: RbacRole;
   status: 201;
@@ -610,18 +613,34 @@ export const getCreateProjectRoleUrl = (project: string) => {
   return `/v1beta1/projects/${project}/roles`;
 };
 
+/**
+ * Create a project-level Kargo Role virtual resource by creating
+ * the underlying Kubernetes ServiceAccount, Role, and RoleBinding
+ * resources.
+ * @summary Create a project-level Kargo Role virtual resource
+ */
 export const createProjectRole = async (
   project: string,
-  createProjectRoleBodyBody: CreateProjectRoleBodyBody,
-  options?: RequestInit
+  createProjectRoleBody: unknown,
+  options?: Parameters<typeof customFetch>[1]
 ): Promise<createProjectRoleResponse> => {
+  const getHeaders = (
+    h?: NonNullable<RequestInit['headers']>
+  ): Record<string, string | readonly string[]> => {
+    if (!h) return {};
+    if (h instanceof Headers) return Object.fromEntries(h.entries());
+    if (Array.isArray(h)) return Object.fromEntries(h);
+    return h;
+  };
   return customFetch<createProjectRoleResponse>(getCreateProjectRoleUrl(project), {
     ...options,
     method: 'POST',
-    headers: { 'Content-Type': 'application/json', ...options?.headers },
-    body: JSON.stringify(createProjectRoleBodyBody)
+    headers: { 'Content-Type': 'application/json', ...getHeaders(options?.headers) },
+    body: JSON.stringify(createProjectRoleBody)
   });
 };
+
+export const getCreateProjectRoleMutationKey = () => ['createProjectRole'] as const;
 
 export const getCreateProjectRoleMutationOptions = <
   TError = ErrorType<unknown>,
@@ -630,17 +649,17 @@ export const getCreateProjectRoleMutationOptions = <
   mutation?: UseMutationOptions<
     Awaited<ReturnType<typeof createProjectRole>>,
     TError,
-    { project: string; data: CreateProjectRoleBodyBody },
+    CreateProjectRoleMutationVariables,
     TContext
   >;
   request?: SecondParameter<typeof customFetch>;
 }): UseMutationOptions<
   Awaited<ReturnType<typeof createProjectRole>>,
   TError,
-  { project: string; data: CreateProjectRoleBodyBody },
+  CreateProjectRoleMutationVariables,
   TContext
 > => {
-  const mutationKey = ['createProjectRole'];
+  const mutationKey = getCreateProjectRoleMutationKey();
   const { mutation: mutationOptions, request: requestOptions } = options
     ? options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey
       ? options
@@ -649,7 +668,7 @@ export const getCreateProjectRoleMutationOptions = <
 
   const mutationFn: MutationFunction<
     Awaited<ReturnType<typeof createProjectRole>>,
-    { project: string; data: CreateProjectRoleBodyBody }
+    CreateProjectRoleMutationVariables
   > = (props) => {
     const { project, data } = props ?? {};
 
@@ -662,8 +681,9 @@ export const getCreateProjectRoleMutationOptions = <
 export type CreateProjectRoleMutationResult = NonNullable<
   Awaited<ReturnType<typeof createProjectRole>>
 >;
-export type CreateProjectRoleMutationBody = CreateProjectRoleBodyBody;
+export type CreateProjectRoleMutationBody = unknown;
 export type CreateProjectRoleMutationError = ErrorType<unknown>;
+export type CreateProjectRoleMutationVariables = { project: string; data: unknown };
 
 /**
  * @summary Create a project-level Kargo Role virtual resource
@@ -673,7 +693,7 @@ export const useCreateProjectRole = <TError = ErrorType<unknown>, TContext = unk
     mutation?: UseMutationOptions<
       Awaited<ReturnType<typeof createProjectRole>>,
       TError,
-      { project: string; data: CreateProjectRoleBodyBody },
+      CreateProjectRoleMutationVariables,
       TContext
     >;
     request?: SecondParameter<typeof customFetch>;
@@ -682,18 +702,11 @@ export const useCreateProjectRole = <TError = ErrorType<unknown>, TContext = unk
 ): UseMutationResult<
   Awaited<ReturnType<typeof createProjectRole>>,
   TError,
-  { project: string; data: CreateProjectRoleBodyBody },
+  CreateProjectRoleMutationVariables,
   TContext
 > => {
-  const mutationOptions = getCreateProjectRoleMutationOptions(options);
-
-  return useMutation(mutationOptions, queryClient);
+  return useMutation(getCreateProjectRoleMutationOptions(options), queryClient);
 };
-/**
- * Grant a project-level Kargo Role to users or grant permissions
-to a project-level Kargo Role.
- * @summary Grant permissions
- */
 export type grantResponse200 = {
   data: RbacRole;
   status: 200;
@@ -708,44 +721,58 @@ export const getGrantUrl = (project: string) => {
   return `/v1beta1/projects/${project}/roles/grants`;
 };
 
+/**
+ * Grant a project-level Kargo Role to users or grant permissions
+ * to a project-level Kargo Role.
+ * @summary Grant permissions
+ */
 export const grant = async (
   project: string,
   grantRequest: GrantRequest,
-  options?: RequestInit
+  options?: Parameters<typeof customFetch>[1]
 ): Promise<grantResponse> => {
+  const getHeaders = (
+    h?: NonNullable<RequestInit['headers']>
+  ): Record<string, string | readonly string[]> => {
+    if (!h) return {};
+    if (h instanceof Headers) return Object.fromEntries(h.entries());
+    if (Array.isArray(h)) return Object.fromEntries(h);
+    return h;
+  };
   return customFetch<grantResponse>(getGrantUrl(project), {
     ...options,
     method: 'POST',
-    headers: { 'Content-Type': 'application/json', ...options?.headers },
+    headers: { 'Content-Type': 'application/json', ...getHeaders(options?.headers) },
     body: JSON.stringify(grantRequest)
   });
 };
+
+export const getGrantMutationKey = () => ['grant'] as const;
 
 export const getGrantMutationOptions = <TError = ErrorType<unknown>, TContext = unknown>(options?: {
   mutation?: UseMutationOptions<
     Awaited<ReturnType<typeof grant>>,
     TError,
-    { project: string; data: GrantRequest },
+    GrantMutationVariables,
     TContext
   >;
   request?: SecondParameter<typeof customFetch>;
 }): UseMutationOptions<
   Awaited<ReturnType<typeof grant>>,
   TError,
-  { project: string; data: GrantRequest },
+  GrantMutationVariables,
   TContext
 > => {
-  const mutationKey = ['grant'];
+  const mutationKey = getGrantMutationKey();
   const { mutation: mutationOptions, request: requestOptions } = options
     ? options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey
       ? options
       : { ...options, mutation: { ...options.mutation, mutationKey } }
     : { mutation: { mutationKey }, request: undefined };
 
-  const mutationFn: MutationFunction<
-    Awaited<ReturnType<typeof grant>>,
-    { project: string; data: GrantRequest }
-  > = (props) => {
+  const mutationFn: MutationFunction<Awaited<ReturnType<typeof grant>>, GrantMutationVariables> = (
+    props
+  ) => {
     const { project, data } = props ?? {};
 
     return grant(project, data, requestOptions);
@@ -757,6 +784,7 @@ export const getGrantMutationOptions = <TError = ErrorType<unknown>, TContext = 
 export type GrantMutationResult = NonNullable<Awaited<ReturnType<typeof grant>>>;
 export type GrantMutationBody = GrantRequest;
 export type GrantMutationError = ErrorType<unknown>;
+export type GrantMutationVariables = { project: string; data: GrantRequest };
 
 /**
  * @summary Grant permissions
@@ -766,7 +794,7 @@ export const useGrant = <TError = ErrorType<unknown>, TContext = unknown>(
     mutation?: UseMutationOptions<
       Awaited<ReturnType<typeof grant>>,
       TError,
-      { project: string; data: GrantRequest },
+      GrantMutationVariables,
       TContext
     >;
     request?: SecondParameter<typeof customFetch>;
@@ -775,18 +803,11 @@ export const useGrant = <TError = ErrorType<unknown>, TContext = unknown>(
 ): UseMutationResult<
   Awaited<ReturnType<typeof grant>>,
   TError,
-  { project: string; data: GrantRequest },
+  GrantMutationVariables,
   TContext
 > => {
-  const mutationOptions = getGrantMutationOptions(options);
-
-  return useMutation(mutationOptions, queryClient);
+  return useMutation(getGrantMutationOptions(options), queryClient);
 };
-/**
- * Revoke a project-level Kargo Role from users or revoke
-permissions from a project-level Kargo Role.
- * @summary Revoke permissions
- */
 export type revokeResponse200 = {
   data: RbacRole;
   status: 200;
@@ -801,18 +822,33 @@ export const getRevokeUrl = (project: string) => {
   return `/v1beta1/projects/${project}/roles/revocations`;
 };
 
+/**
+ * Revoke a project-level Kargo Role from users or revoke
+ * permissions from a project-level Kargo Role.
+ * @summary Revoke permissions
+ */
 export const revoke = async (
   project: string,
   revokeRequest: RevokeRequest,
-  options?: RequestInit
+  options?: Parameters<typeof customFetch>[1]
 ): Promise<revokeResponse> => {
+  const getHeaders = (
+    h?: NonNullable<RequestInit['headers']>
+  ): Record<string, string | readonly string[]> => {
+    if (!h) return {};
+    if (h instanceof Headers) return Object.fromEntries(h.entries());
+    if (Array.isArray(h)) return Object.fromEntries(h);
+    return h;
+  };
   return customFetch<revokeResponse>(getRevokeUrl(project), {
     ...options,
     method: 'POST',
-    headers: { 'Content-Type': 'application/json', ...options?.headers },
+    headers: { 'Content-Type': 'application/json', ...getHeaders(options?.headers) },
     body: JSON.stringify(revokeRequest)
   });
 };
+
+export const getRevokeMutationKey = () => ['revoke'] as const;
 
 export const getRevokeMutationOptions = <
   TError = ErrorType<unknown>,
@@ -821,17 +857,17 @@ export const getRevokeMutationOptions = <
   mutation?: UseMutationOptions<
     Awaited<ReturnType<typeof revoke>>,
     TError,
-    { project: string; data: RevokeRequest },
+    RevokeMutationVariables,
     TContext
   >;
   request?: SecondParameter<typeof customFetch>;
 }): UseMutationOptions<
   Awaited<ReturnType<typeof revoke>>,
   TError,
-  { project: string; data: RevokeRequest },
+  RevokeMutationVariables,
   TContext
 > => {
-  const mutationKey = ['revoke'];
+  const mutationKey = getRevokeMutationKey();
   const { mutation: mutationOptions, request: requestOptions } = options
     ? options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey
       ? options
@@ -840,7 +876,7 @@ export const getRevokeMutationOptions = <
 
   const mutationFn: MutationFunction<
     Awaited<ReturnType<typeof revoke>>,
-    { project: string; data: RevokeRequest }
+    RevokeMutationVariables
   > = (props) => {
     const { project, data } = props ?? {};
 
@@ -853,6 +889,7 @@ export const getRevokeMutationOptions = <
 export type RevokeMutationResult = NonNullable<Awaited<ReturnType<typeof revoke>>>;
 export type RevokeMutationBody = RevokeRequest;
 export type RevokeMutationError = ErrorType<unknown>;
+export type RevokeMutationVariables = { project: string; data: RevokeRequest };
 
 /**
  * @summary Revoke permissions
@@ -862,7 +899,7 @@ export const useRevoke = <TError = ErrorType<unknown>, TContext = unknown>(
     mutation?: UseMutationOptions<
       Awaited<ReturnType<typeof revoke>>,
       TError,
-      { project: string; data: RevokeRequest },
+      RevokeMutationVariables,
       TContext
     >;
     request?: SecondParameter<typeof customFetch>;
@@ -871,19 +908,11 @@ export const useRevoke = <TError = ErrorType<unknown>, TContext = unknown>(
 ): UseMutationResult<
   Awaited<ReturnType<typeof revoke>>,
   TError,
-  { project: string; data: RevokeRequest },
+  RevokeMutationVariables,
   TContext
 > => {
-  const mutationOptions = getRevokeMutationOptions(options);
-
-  return useMutation(mutationOptions, queryClient);
+  return useMutation(getRevokeMutationOptions(options), queryClient);
 };
-/**
- * Retrieve a project-level Kargo Role virtual resource by name.
-Returns a Kargo Role virtual resource or its underlying
-Kubernetes resources.
- * @summary Retrieve a project-level Kargo Role virtual resource
- */
 export type getProjectRoleResponse200 = {
   data: unknown;
   status: 200;
@@ -898,10 +927,16 @@ export const getGetProjectRoleUrl = (project: string, role: string) => {
   return `/v1beta1/projects/${project}/roles/${role}`;
 };
 
+/**
+ * Retrieve a project-level Kargo Role virtual resource by name.
+ * Returns a Kargo Role virtual resource or its underlying
+ * Kubernetes resources.
+ * @summary Retrieve a project-level Kargo Role virtual resource
+ */
 export const getProjectRole = async (
   project: string,
   role: string,
-  options?: RequestInit
+  options?: Parameters<typeof customFetch>[1]
 ): Promise<getProjectRoleResponse> => {
   return customFetch<getProjectRoleResponse>(getGetProjectRoleUrl(project, role), {
     ...options,
@@ -909,7 +944,7 @@ export const getProjectRole = async (
   });
 };
 
-export const getGetProjectRoleQueryKey = (project?: string, role?: string) => {
+export const getGetProjectRoleQueryKey = (project: string, role: string) => {
   return [`/v1beta1/projects/${project}/roles/${role}`] as const;
 };
 
@@ -931,11 +966,14 @@ export const getGetProjectRoleQueryOptions = <
   const queryFn: QueryFunction<Awaited<ReturnType<typeof getProjectRole>>> = () =>
     getProjectRole(project, role, requestOptions);
 
-  return { queryKey, queryFn, enabled: !!(project && role), ...queryOptions } as UseQueryOptions<
-    Awaited<ReturnType<typeof getProjectRole>>,
-    TError,
-    TData
-  > & { queryKey: DataTag<QueryKey, TData, TError> };
+  return {
+    queryKey,
+    queryFn,
+    enabled: project !== null && project !== undefined && role !== null && role !== undefined,
+    ...queryOptions
+  } as UseQueryOptions<Awaited<ReturnType<typeof getProjectRole>>, TError, TData> & {
+    queryKey: DataTag<QueryKey, TData, TError>;
+  };
 };
 
 export type GetProjectRoleQueryResult = NonNullable<Awaited<ReturnType<typeof getProjectRole>>>;
@@ -1015,17 +1053,9 @@ export function useGetProjectRole<
     queryKey: DataTag<QueryKey, TData, TError>;
   };
 
-  query.queryKey = queryOptions.queryKey;
-
-  return query;
+  return withQueryKey(query, queryOptions.queryKey);
 }
 
-/**
- * Update a project-level Kargo Role virtual resource by updating
-the underlying Kubernetes ServiceAccount, Role, and RoleBinding
-resources.
- * @summary Update a project-level Kargo Role virtual resource
- */
 export type updateRoleResponse200 = {
   data: RbacRole;
   status: 200;
@@ -1040,19 +1070,35 @@ export const getUpdateRoleUrl = (project: string, role: string) => {
   return `/v1beta1/projects/${project}/roles/${role}`;
 };
 
+/**
+ * Update a project-level Kargo Role virtual resource by updating
+ * the underlying Kubernetes ServiceAccount, Role, and RoleBinding
+ * resources.
+ * @summary Update a project-level Kargo Role virtual resource
+ */
 export const updateRole = async (
   project: string,
   role: string,
-  createProjectRoleBodyBody: CreateProjectRoleBodyBody,
-  options?: RequestInit
+  updateRoleBody: unknown,
+  options?: Parameters<typeof customFetch>[1]
 ): Promise<updateRoleResponse> => {
+  const getHeaders = (
+    h?: NonNullable<RequestInit['headers']>
+  ): Record<string, string | readonly string[]> => {
+    if (!h) return {};
+    if (h instanceof Headers) return Object.fromEntries(h.entries());
+    if (Array.isArray(h)) return Object.fromEntries(h);
+    return h;
+  };
   return customFetch<updateRoleResponse>(getUpdateRoleUrl(project, role), {
     ...options,
     method: 'PUT',
-    headers: { 'Content-Type': 'application/json', ...options?.headers },
-    body: JSON.stringify(createProjectRoleBodyBody)
+    headers: { 'Content-Type': 'application/json', ...getHeaders(options?.headers) },
+    body: JSON.stringify(updateRoleBody)
   });
 };
+
+export const getUpdateRoleMutationKey = () => ['updateRole'] as const;
 
 export const getUpdateRoleMutationOptions = <
   TError = ErrorType<unknown>,
@@ -1061,17 +1107,17 @@ export const getUpdateRoleMutationOptions = <
   mutation?: UseMutationOptions<
     Awaited<ReturnType<typeof updateRole>>,
     TError,
-    { project: string; role: string; data: CreateProjectRoleBodyBody },
+    UpdateRoleMutationVariables,
     TContext
   >;
   request?: SecondParameter<typeof customFetch>;
 }): UseMutationOptions<
   Awaited<ReturnType<typeof updateRole>>,
   TError,
-  { project: string; role: string; data: CreateProjectRoleBodyBody },
+  UpdateRoleMutationVariables,
   TContext
 > => {
-  const mutationKey = ['updateRole'];
+  const mutationKey = getUpdateRoleMutationKey();
   const { mutation: mutationOptions, request: requestOptions } = options
     ? options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey
       ? options
@@ -1080,7 +1126,7 @@ export const getUpdateRoleMutationOptions = <
 
   const mutationFn: MutationFunction<
     Awaited<ReturnType<typeof updateRole>>,
-    { project: string; role: string; data: CreateProjectRoleBodyBody }
+    UpdateRoleMutationVariables
   > = (props) => {
     const { project, role, data } = props ?? {};
 
@@ -1091,8 +1137,9 @@ export const getUpdateRoleMutationOptions = <
 };
 
 export type UpdateRoleMutationResult = NonNullable<Awaited<ReturnType<typeof updateRole>>>;
-export type UpdateRoleMutationBody = CreateProjectRoleBodyBody;
+export type UpdateRoleMutationBody = unknown;
 export type UpdateRoleMutationError = ErrorType<unknown>;
+export type UpdateRoleMutationVariables = { project: string; role: string; data: unknown };
 
 /**
  * @summary Update a project-level Kargo Role virtual resource
@@ -1102,7 +1149,7 @@ export const useUpdateRole = <TError = ErrorType<unknown>, TContext = unknown>(
     mutation?: UseMutationOptions<
       Awaited<ReturnType<typeof updateRole>>,
       TError,
-      { project: string; role: string; data: CreateProjectRoleBodyBody },
+      UpdateRoleMutationVariables,
       TContext
     >;
     request?: SecondParameter<typeof customFetch>;
@@ -1111,19 +1158,11 @@ export const useUpdateRole = <TError = ErrorType<unknown>, TContext = unknown>(
 ): UseMutationResult<
   Awaited<ReturnType<typeof updateRole>>,
   TError,
-  { project: string; role: string; data: CreateProjectRoleBodyBody },
+  UpdateRoleMutationVariables,
   TContext
 > => {
-  const mutationOptions = getUpdateRoleMutationOptions(options);
-
-  return useMutation(mutationOptions, queryClient);
+  return useMutation(getUpdateRoleMutationOptions(options), queryClient);
 };
-/**
- * Delete a project-level Kargo Role virtual resource by deleting
-the underlying Kubernetes ServiceAccount, Role, and RoleBinding
-resources from the project's namespace.
- * @summary Delete a project-level Kargo Role virtual resource
- */
 export type deleteProjectRoleResponse204 = {
   data: void;
   status: 204;
@@ -1138,16 +1177,24 @@ export const getDeleteProjectRoleUrl = (project: string, role: string) => {
   return `/v1beta1/projects/${project}/roles/${role}`;
 };
 
+/**
+ * Delete a project-level Kargo Role virtual resource by deleting
+ * the underlying Kubernetes ServiceAccount, Role, and RoleBinding
+ * resources from the project's namespace.
+ * @summary Delete a project-level Kargo Role virtual resource
+ */
 export const deleteProjectRole = async (
   project: string,
   role: string,
-  options?: RequestInit
+  options?: Parameters<typeof customFetch>[1]
 ): Promise<deleteProjectRoleResponse> => {
   return customFetch<deleteProjectRoleResponse>(getDeleteProjectRoleUrl(project, role), {
     ...options,
     method: 'DELETE'
   });
 };
+
+export const getDeleteProjectRoleMutationKey = () => ['deleteProjectRole'] as const;
 
 export const getDeleteProjectRoleMutationOptions = <
   TError = ErrorType<unknown>,
@@ -1156,17 +1203,17 @@ export const getDeleteProjectRoleMutationOptions = <
   mutation?: UseMutationOptions<
     Awaited<ReturnType<typeof deleteProjectRole>>,
     TError,
-    { project: string; role: string },
+    DeleteProjectRoleMutationVariables,
     TContext
   >;
   request?: SecondParameter<typeof customFetch>;
 }): UseMutationOptions<
   Awaited<ReturnType<typeof deleteProjectRole>>,
   TError,
-  { project: string; role: string },
+  DeleteProjectRoleMutationVariables,
   TContext
 > => {
-  const mutationKey = ['deleteProjectRole'];
+  const mutationKey = getDeleteProjectRoleMutationKey();
   const { mutation: mutationOptions, request: requestOptions } = options
     ? options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey
       ? options
@@ -1175,7 +1222,7 @@ export const getDeleteProjectRoleMutationOptions = <
 
   const mutationFn: MutationFunction<
     Awaited<ReturnType<typeof deleteProjectRole>>,
-    { project: string; role: string }
+    DeleteProjectRoleMutationVariables
   > = (props) => {
     const { project, role } = props ?? {};
 
@@ -1190,6 +1237,7 @@ export type DeleteProjectRoleMutationResult = NonNullable<
 >;
 
 export type DeleteProjectRoleMutationError = ErrorType<unknown>;
+export type DeleteProjectRoleMutationVariables = { project: string; role: string };
 
 /**
  * @summary Delete a project-level Kargo Role virtual resource
@@ -1199,7 +1247,7 @@ export const useDeleteProjectRole = <TError = ErrorType<unknown>, TContext = unk
     mutation?: UseMutationOptions<
       Awaited<ReturnType<typeof deleteProjectRole>>,
       TError,
-      { project: string; role: string },
+      DeleteProjectRoleMutationVariables,
       TContext
     >;
     request?: SecondParameter<typeof customFetch>;
@@ -1208,21 +1256,11 @@ export const useDeleteProjectRole = <TError = ErrorType<unknown>, TContext = unk
 ): UseMutationResult<
   Awaited<ReturnType<typeof deleteProjectRole>>,
   TError,
-  { project: string; role: string },
+  DeleteProjectRoleMutationVariables,
   TContext
 > => {
-  const mutationOptions = getDeleteProjectRoleMutationOptions(options);
-
-  return useMutation(mutationOptions, queryClient);
+  return useMutation(getDeleteProjectRoleMutationOptions(options), queryClient);
 };
-/**
- * Create a project-level API token associated with a Kargo Role
-virtual resource. Returns a Kubernetes Secret resource
-representing the token. Store it securely. The token is not
-retrievable via the Kargo API after creation except in a
-redacted form.
- * @summary Create a project-level API token
- */
 export type createProjectAPITokenResponse201 = {
   data: V1Secret;
   status: 201;
@@ -1237,19 +1275,37 @@ export const getCreateProjectAPITokenUrl = (project: string, role: string) => {
   return `/v1beta1/projects/${project}/roles/${role}/api-tokens`;
 };
 
+/**
+ * Create a project-level API token associated with a Kargo Role
+ * virtual resource. Returns a Kubernetes Secret resource
+ * representing the token. Store it securely. The token is not
+ * retrievable via the Kargo API after creation except in a
+ * redacted form.
+ * @summary Create a project-level API token
+ */
 export const createProjectAPIToken = async (
   project: string,
   role: string,
-  createAPITokenRequestBody: CreateAPITokenRequestBody,
-  options?: RequestInit
+  createAPITokenRequest: CreateAPITokenRequest,
+  options?: Parameters<typeof customFetch>[1]
 ): Promise<createProjectAPITokenResponse> => {
+  const getHeaders = (
+    h?: NonNullable<RequestInit['headers']>
+  ): Record<string, string | readonly string[]> => {
+    if (!h) return {};
+    if (h instanceof Headers) return Object.fromEntries(h.entries());
+    if (Array.isArray(h)) return Object.fromEntries(h);
+    return h;
+  };
   return customFetch<createProjectAPITokenResponse>(getCreateProjectAPITokenUrl(project, role), {
     ...options,
     method: 'POST',
-    headers: { 'Content-Type': 'application/json', ...options?.headers },
-    body: JSON.stringify(createAPITokenRequestBody)
+    headers: { 'Content-Type': 'application/json', ...getHeaders(options?.headers) },
+    body: JSON.stringify(createAPITokenRequest)
   });
 };
+
+export const getCreateProjectAPITokenMutationKey = () => ['createProjectAPIToken'] as const;
 
 export const getCreateProjectAPITokenMutationOptions = <
   TError = ErrorType<unknown>,
@@ -1258,17 +1314,17 @@ export const getCreateProjectAPITokenMutationOptions = <
   mutation?: UseMutationOptions<
     Awaited<ReturnType<typeof createProjectAPIToken>>,
     TError,
-    { project: string; role: string; data: CreateAPITokenRequestBody },
+    CreateProjectAPITokenMutationVariables,
     TContext
   >;
   request?: SecondParameter<typeof customFetch>;
 }): UseMutationOptions<
   Awaited<ReturnType<typeof createProjectAPIToken>>,
   TError,
-  { project: string; role: string; data: CreateAPITokenRequestBody },
+  CreateProjectAPITokenMutationVariables,
   TContext
 > => {
-  const mutationKey = ['createProjectAPIToken'];
+  const mutationKey = getCreateProjectAPITokenMutationKey();
   const { mutation: mutationOptions, request: requestOptions } = options
     ? options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey
       ? options
@@ -1277,7 +1333,7 @@ export const getCreateProjectAPITokenMutationOptions = <
 
   const mutationFn: MutationFunction<
     Awaited<ReturnType<typeof createProjectAPIToken>>,
-    { project: string; role: string; data: CreateAPITokenRequestBody }
+    CreateProjectAPITokenMutationVariables
   > = (props) => {
     const { project, role, data } = props ?? {};
 
@@ -1290,8 +1346,13 @@ export const getCreateProjectAPITokenMutationOptions = <
 export type CreateProjectAPITokenMutationResult = NonNullable<
   Awaited<ReturnType<typeof createProjectAPIToken>>
 >;
-export type CreateProjectAPITokenMutationBody = CreateAPITokenRequestBody;
+export type CreateProjectAPITokenMutationBody = CreateAPITokenRequest;
 export type CreateProjectAPITokenMutationError = ErrorType<unknown>;
+export type CreateProjectAPITokenMutationVariables = {
+  project: string;
+  role: string;
+  data: CreateAPITokenRequest;
+};
 
 /**
  * @summary Create a project-level API token
@@ -1301,7 +1362,7 @@ export const useCreateProjectAPIToken = <TError = ErrorType<unknown>, TContext =
     mutation?: UseMutationOptions<
       Awaited<ReturnType<typeof createProjectAPIToken>>,
       TError,
-      { project: string; role: string; data: CreateAPITokenRequestBody },
+      CreateProjectAPITokenMutationVariables,
       TContext
     >;
     request?: SecondParameter<typeof customFetch>;
@@ -1310,18 +1371,11 @@ export const useCreateProjectAPIToken = <TError = ErrorType<unknown>, TContext =
 ): UseMutationResult<
   Awaited<ReturnType<typeof createProjectAPIToken>>,
   TError,
-  { project: string; role: string; data: CreateAPITokenRequestBody },
+  CreateProjectAPITokenMutationVariables,
   TContext
 > => {
-  const mutationOptions = getCreateProjectAPITokenMutationOptions(options);
-
-  return useMutation(mutationOptions, queryClient);
+  return useMutation(getCreateProjectAPITokenMutationOptions(options), queryClient);
 };
-/**
- * List system-level API tokens. Returns a Kubernetes SecretList
-resource containing heavily redacted Secrets.
- * @summary List system-level API tokens
- */
 export type listSystemAPITokensResponse200 = {
   data: V1SecretList;
   status: 200;
@@ -1333,24 +1387,21 @@ export type listSystemAPITokensResponseSuccess = listSystemAPITokensResponse200 
 export type listSystemAPITokensResponse = listSystemAPITokensResponseSuccess;
 
 export const getListSystemAPITokensUrl = (params?: ListSystemAPITokensParams) => {
-  const normalizedParams = new URLSearchParams();
-
-  Object.entries(params || {}).forEach(([key, value]) => {
-    if (value !== undefined) {
-      normalizedParams.append(key, value === null ? 'null' : value.toString());
-    }
-  });
-
-  const stringifiedParams = normalizedParams.toString();
+  const stringifiedParams = serializeParams(params);
 
   return stringifiedParams.length > 0
     ? `/v1beta1/system/api-tokens?${stringifiedParams}`
     : `/v1beta1/system/api-tokens`;
 };
 
+/**
+ * List system-level API tokens. Returns a Kubernetes SecretList
+ * resource containing heavily redacted Secrets.
+ * @summary List system-level API tokens
+ */
 export const listSystemAPITokens = async (
   params?: ListSystemAPITokensParams,
-  options?: RequestInit
+  options?: Parameters<typeof customFetch>[1]
 ): Promise<listSystemAPITokensResponse> => {
   return customFetch<listSystemAPITokensResponse>(getListSystemAPITokensUrl(params), {
     ...options,
@@ -1471,16 +1522,9 @@ export function useListSystemAPITokens<
     queryKey: DataTag<QueryKey, TData, TError>;
   };
 
-  query.queryKey = queryOptions.queryKey;
-
-  return query;
+  return withQueryKey(query, queryOptions.queryKey);
 }
 
-/**
- * Retrieve a system-level API token by name. Returns a heavily
-redacted Kubernetes Secret resource.
- * @summary Retrieve a system-level API token
- */
 export type getSystemAPITokenResponse200 = {
   data: V1Secret;
   status: 200;
@@ -1495,9 +1539,14 @@ export const getGetSystemAPITokenUrl = (apitoken: string) => {
   return `/v1beta1/system/api-tokens/${apitoken}`;
 };
 
+/**
+ * Retrieve a system-level API token by name. Returns a heavily
+ * redacted Kubernetes Secret resource.
+ * @summary Retrieve a system-level API token
+ */
 export const getSystemAPIToken = async (
   apitoken: string,
-  options?: RequestInit
+  options?: Parameters<typeof customFetch>[1]
 ): Promise<getSystemAPITokenResponse> => {
   return customFetch<getSystemAPITokenResponse>(getGetSystemAPITokenUrl(apitoken), {
     ...options,
@@ -1505,7 +1554,7 @@ export const getSystemAPIToken = async (
   });
 };
 
-export const getGetSystemAPITokenQueryKey = (apitoken?: string) => {
+export const getGetSystemAPITokenQueryKey = (apitoken: string) => {
   return [`/v1beta1/system/api-tokens/${apitoken}`] as const;
 };
 
@@ -1526,11 +1575,14 @@ export const getGetSystemAPITokenQueryOptions = <
   const queryFn: QueryFunction<Awaited<ReturnType<typeof getSystemAPIToken>>> = () =>
     getSystemAPIToken(apitoken, requestOptions);
 
-  return { queryKey, queryFn, enabled: !!apitoken, ...queryOptions } as UseQueryOptions<
-    Awaited<ReturnType<typeof getSystemAPIToken>>,
-    TError,
-    TData
-  > & { queryKey: DataTag<QueryKey, TData, TError> };
+  return {
+    queryKey,
+    queryFn,
+    enabled: apitoken !== null && apitoken !== undefined,
+    ...queryOptions
+  } as UseQueryOptions<Awaited<ReturnType<typeof getSystemAPIToken>>, TError, TData> & {
+    queryKey: DataTag<QueryKey, TData, TError>;
+  };
 };
 
 export type GetSystemAPITokenQueryResult = NonNullable<
@@ -1608,15 +1660,9 @@ export function useGetSystemAPIToken<
     queryKey: DataTag<QueryKey, TData, TError>;
   };
 
-  query.queryKey = queryOptions.queryKey;
-
-  return query;
+  return withQueryKey(query, queryOptions.queryKey);
 }
 
-/**
- * Delete a system-level API token.
- * @summary Delete a system-level API token
- */
 export type deleteSystemAPITokenResponse204 = {
   data: void;
   status: 204;
@@ -1631,15 +1677,21 @@ export const getDeleteSystemAPITokenUrl = (apitoken: string) => {
   return `/v1beta1/system/api-tokens/${apitoken}`;
 };
 
+/**
+ * Delete a system-level API token.
+ * @summary Delete a system-level API token
+ */
 export const deleteSystemAPIToken = async (
   apitoken: string,
-  options?: RequestInit
+  options?: Parameters<typeof customFetch>[1]
 ): Promise<deleteSystemAPITokenResponse> => {
   return customFetch<deleteSystemAPITokenResponse>(getDeleteSystemAPITokenUrl(apitoken), {
     ...options,
     method: 'DELETE'
   });
 };
+
+export const getDeleteSystemAPITokenMutationKey = () => ['deleteSystemAPIToken'] as const;
 
 export const getDeleteSystemAPITokenMutationOptions = <
   TError = ErrorType<unknown>,
@@ -1648,17 +1700,17 @@ export const getDeleteSystemAPITokenMutationOptions = <
   mutation?: UseMutationOptions<
     Awaited<ReturnType<typeof deleteSystemAPIToken>>,
     TError,
-    { apitoken: string },
+    DeleteSystemAPITokenMutationVariables,
     TContext
   >;
   request?: SecondParameter<typeof customFetch>;
 }): UseMutationOptions<
   Awaited<ReturnType<typeof deleteSystemAPIToken>>,
   TError,
-  { apitoken: string },
+  DeleteSystemAPITokenMutationVariables,
   TContext
 > => {
-  const mutationKey = ['deleteSystemAPIToken'];
+  const mutationKey = getDeleteSystemAPITokenMutationKey();
   const { mutation: mutationOptions, request: requestOptions } = options
     ? options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey
       ? options
@@ -1667,7 +1719,7 @@ export const getDeleteSystemAPITokenMutationOptions = <
 
   const mutationFn: MutationFunction<
     Awaited<ReturnType<typeof deleteSystemAPIToken>>,
-    { apitoken: string }
+    DeleteSystemAPITokenMutationVariables
   > = (props) => {
     const { apitoken } = props ?? {};
 
@@ -1682,6 +1734,7 @@ export type DeleteSystemAPITokenMutationResult = NonNullable<
 >;
 
 export type DeleteSystemAPITokenMutationError = ErrorType<unknown>;
+export type DeleteSystemAPITokenMutationVariables = { apitoken: string };
 
 /**
  * @summary Delete a system-level API token
@@ -1691,7 +1744,7 @@ export const useDeleteSystemAPIToken = <TError = ErrorType<unknown>, TContext = 
     mutation?: UseMutationOptions<
       Awaited<ReturnType<typeof deleteSystemAPIToken>>,
       TError,
-      { apitoken: string },
+      DeleteSystemAPITokenMutationVariables,
       TContext
     >;
     request?: SecondParameter<typeof customFetch>;
@@ -1700,18 +1753,11 @@ export const useDeleteSystemAPIToken = <TError = ErrorType<unknown>, TContext = 
 ): UseMutationResult<
   Awaited<ReturnType<typeof deleteSystemAPIToken>>,
   TError,
-  { apitoken: string },
+  DeleteSystemAPITokenMutationVariables,
   TContext
 > => {
-  const mutationOptions = getDeleteSystemAPITokenMutationOptions(options);
-
-  return useMutation(mutationOptions, queryClient);
+  return useMutation(getDeleteSystemAPITokenMutationOptions(options), queryClient);
 };
-/**
- * List system-level Kargo Role virtual resources. Returns a
-RoleList resource.
- * @summary List system-level Kargo Role virtual resources
- */
 export type listSystemRolesResponse200 = {
   data: unknown;
   status: 200;
@@ -1726,7 +1772,14 @@ export const getListSystemRolesUrl = () => {
   return `/v1beta1/system/roles`;
 };
 
-export const listSystemRoles = async (options?: RequestInit): Promise<listSystemRolesResponse> => {
+/**
+ * List system-level Kargo Role virtual resources. Returns a
+ * RoleList resource.
+ * @summary List system-level Kargo Role virtual resources
+ */
+export const listSystemRoles = async (
+  options?: Parameters<typeof customFetch>[1]
+): Promise<listSystemRolesResponse> => {
   return customFetch<listSystemRolesResponse>(getListSystemRolesUrl(), {
     ...options,
     method: 'GET'
@@ -1827,17 +1880,9 @@ export function useListSystemRoles<
     queryKey: DataTag<QueryKey, TData, TError>;
   };
 
-  query.queryKey = queryOptions.queryKey;
-
-  return query;
+  return withQueryKey(query, queryOptions.queryKey);
 }
 
-/**
- * Retrieve a system-level Kargo Role virtual resource by name.
-Returns a Kargo Role virtual resource or its underlying
-Kubernetes resources.
- * @summary Retrieve a system-level Kargo Role virtual resource
- */
 export type getSystemRoleResponse200 = {
   data: unknown;
   status: 200;
@@ -1852,9 +1897,15 @@ export const getGetSystemRoleUrl = (role: string) => {
   return `/v1beta1/system/roles/${role}`;
 };
 
+/**
+ * Retrieve a system-level Kargo Role virtual resource by name.
+ * Returns a Kargo Role virtual resource or its underlying
+ * Kubernetes resources.
+ * @summary Retrieve a system-level Kargo Role virtual resource
+ */
 export const getSystemRole = async (
   role: string,
-  options?: RequestInit
+  options?: Parameters<typeof customFetch>[1]
 ): Promise<getSystemRoleResponse> => {
   return customFetch<getSystemRoleResponse>(getGetSystemRoleUrl(role), {
     ...options,
@@ -1862,7 +1913,7 @@ export const getSystemRole = async (
   });
 };
 
-export const getGetSystemRoleQueryKey = (role?: string) => {
+export const getGetSystemRoleQueryKey = (role: string) => {
   return [`/v1beta1/system/roles/${role}`] as const;
 };
 
@@ -1883,11 +1934,14 @@ export const getGetSystemRoleQueryOptions = <
   const queryFn: QueryFunction<Awaited<ReturnType<typeof getSystemRole>>> = () =>
     getSystemRole(role, requestOptions);
 
-  return { queryKey, queryFn, enabled: !!role, ...queryOptions } as UseQueryOptions<
-    Awaited<ReturnType<typeof getSystemRole>>,
-    TError,
-    TData
-  > & { queryKey: DataTag<QueryKey, TData, TError> };
+  return {
+    queryKey,
+    queryFn,
+    enabled: role !== null && role !== undefined,
+    ...queryOptions
+  } as UseQueryOptions<Awaited<ReturnType<typeof getSystemRole>>, TError, TData> & {
+    queryKey: DataTag<QueryKey, TData, TError>;
+  };
 };
 
 export type GetSystemRoleQueryResult = NonNullable<Awaited<ReturnType<typeof getSystemRole>>>;
@@ -1963,19 +2017,9 @@ export function useGetSystemRole<
     queryKey: DataTag<QueryKey, TData, TError>;
   };
 
-  query.queryKey = queryOptions.queryKey;
-
-  return query;
+  return withQueryKey(query, queryOptions.queryKey);
 }
 
-/**
- * Create a system-level API token associated with a system-level
-Kargo Role virtual resource. Returns a Kubernetes Secret
-resource representing the token. Store it securely. The token
-is not retrievable via the Kargo API after creation except in
-a redacted form.
- * @summary Create a system-level API token
- */
 export type createSystemAPITokenResponse201 = {
   data: V1Secret;
   status: 201;
@@ -1990,18 +2034,36 @@ export const getCreateSystemAPITokenUrl = (role: string) => {
   return `/v1beta1/system/roles/${role}/api-tokens`;
 };
 
+/**
+ * Create a system-level API token associated with a system-level
+ * Kargo Role virtual resource. Returns a Kubernetes Secret
+ * resource representing the token. Store it securely. The token
+ * is not retrievable via the Kargo API after creation except in
+ * a redacted form.
+ * @summary Create a system-level API token
+ */
 export const createSystemAPIToken = async (
   role: string,
-  createAPITokenRequestBody: CreateAPITokenRequestBody,
-  options?: RequestInit
+  createAPITokenRequest: CreateAPITokenRequest,
+  options?: Parameters<typeof customFetch>[1]
 ): Promise<createSystemAPITokenResponse> => {
+  const getHeaders = (
+    h?: NonNullable<RequestInit['headers']>
+  ): Record<string, string | readonly string[]> => {
+    if (!h) return {};
+    if (h instanceof Headers) return Object.fromEntries(h.entries());
+    if (Array.isArray(h)) return Object.fromEntries(h);
+    return h;
+  };
   return customFetch<createSystemAPITokenResponse>(getCreateSystemAPITokenUrl(role), {
     ...options,
     method: 'POST',
-    headers: { 'Content-Type': 'application/json', ...options?.headers },
-    body: JSON.stringify(createAPITokenRequestBody)
+    headers: { 'Content-Type': 'application/json', ...getHeaders(options?.headers) },
+    body: JSON.stringify(createAPITokenRequest)
   });
 };
+
+export const getCreateSystemAPITokenMutationKey = () => ['createSystemAPIToken'] as const;
 
 export const getCreateSystemAPITokenMutationOptions = <
   TError = ErrorType<unknown>,
@@ -2010,17 +2072,17 @@ export const getCreateSystemAPITokenMutationOptions = <
   mutation?: UseMutationOptions<
     Awaited<ReturnType<typeof createSystemAPIToken>>,
     TError,
-    { role: string; data: CreateAPITokenRequestBody },
+    CreateSystemAPITokenMutationVariables,
     TContext
   >;
   request?: SecondParameter<typeof customFetch>;
 }): UseMutationOptions<
   Awaited<ReturnType<typeof createSystemAPIToken>>,
   TError,
-  { role: string; data: CreateAPITokenRequestBody },
+  CreateSystemAPITokenMutationVariables,
   TContext
 > => {
-  const mutationKey = ['createSystemAPIToken'];
+  const mutationKey = getCreateSystemAPITokenMutationKey();
   const { mutation: mutationOptions, request: requestOptions } = options
     ? options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey
       ? options
@@ -2029,7 +2091,7 @@ export const getCreateSystemAPITokenMutationOptions = <
 
   const mutationFn: MutationFunction<
     Awaited<ReturnType<typeof createSystemAPIToken>>,
-    { role: string; data: CreateAPITokenRequestBody }
+    CreateSystemAPITokenMutationVariables
   > = (props) => {
     const { role, data } = props ?? {};
 
@@ -2042,8 +2104,9 @@ export const getCreateSystemAPITokenMutationOptions = <
 export type CreateSystemAPITokenMutationResult = NonNullable<
   Awaited<ReturnType<typeof createSystemAPIToken>>
 >;
-export type CreateSystemAPITokenMutationBody = CreateAPITokenRequestBody;
+export type CreateSystemAPITokenMutationBody = CreateAPITokenRequest;
 export type CreateSystemAPITokenMutationError = ErrorType<unknown>;
+export type CreateSystemAPITokenMutationVariables = { role: string; data: CreateAPITokenRequest };
 
 /**
  * @summary Create a system-level API token
@@ -2053,7 +2116,7 @@ export const useCreateSystemAPIToken = <TError = ErrorType<unknown>, TContext = 
     mutation?: UseMutationOptions<
       Awaited<ReturnType<typeof createSystemAPIToken>>,
       TError,
-      { role: string; data: CreateAPITokenRequestBody },
+      CreateSystemAPITokenMutationVariables,
       TContext
     >;
     request?: SecondParameter<typeof customFetch>;
@@ -2062,10 +2125,8 @@ export const useCreateSystemAPIToken = <TError = ErrorType<unknown>, TContext = 
 ): UseMutationResult<
   Awaited<ReturnType<typeof createSystemAPIToken>>,
   TError,
-  { role: string; data: CreateAPITokenRequestBody },
+  CreateSystemAPITokenMutationVariables,
   TContext
 > => {
-  const mutationOptions = getCreateSystemAPITokenMutationOptions(options);
-
-  return useMutation(mutationOptions, queryClient);
+  return useMutation(getCreateSystemAPITokenMutationOptions(options), queryClient);
 };

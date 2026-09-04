@@ -5,96 +5,120 @@
  * REST API for Kargo
  * OpenAPI spec version: v1alpha1
  */
-import type { StageStatusAutoPromotionHolds } from './stageStatusAutoPromotionHolds';
-import type { V1Condition } from './v1Condition';
-import type { PromotionReference } from './promotionReference';
-import type { PromotionRequestReference } from './promotionRequestReference';
-import type { StageStatusEffectiveAutoPromotionHolds } from './stageStatusEffectiveAutoPromotionHolds';
 import type { FreightCollection } from './freightCollection';
 import type { Health } from './health';
-import type { StageStatusMetadata } from './stageStatusMetadata';
+import type { PromotionReference } from './promotionReference';
+import type { PromotionRequestReference } from './promotionRequestReference';
 import type { PromotionWindowStatus } from './promotionWindowStatus';
+import type { StageStatusAutoPromotionHolds } from './stageStatusAutoPromotionHolds';
+import type { StageStatusEffectiveAutoPromotionHolds } from './stageStatusEffectiveAutoPromotionHolds';
+import type { StageStatusMetadata } from './stageStatusMetadata';
+import type { V1Condition } from './v1Condition';
 
 export interface StageStatus {
-  /** AutoPromotionEnabled indicates whether automatic promotion is enabled
-for the Stage based on the ProjectConfig. */
+  /**
+   * AutoPromotionEnabled indicates whether automatic promotion is enabled
+   * for the Stage based on the ProjectConfig.
+   */
   autoPromotionEnabled?: boolean;
-  /** AutoPromotionHolds records active auto-promotion holds for this Stage. A
-hold is established when a Promotion selects Freight other than the
-auto-promotion candidate for that origin, pausing auto-promotion for that
-origin until explicitly released. Auto-promotions themselves never
-establish holds. Keys are string representations of FreightOrigins (e.g.
-"Warehouse/my-warehouse"); values describe the Promotion that established
-the hold. */
+  /**
+   * AutoPromotionHolds records active auto-promotion holds for this Stage. A
+   * hold is established when a Promotion selects Freight other than the
+   * auto-promotion candidate for that origin, pausing auto-promotion for that
+   * origin until explicitly released. Auto-promotions themselves never
+   * establish holds. Keys are string representations of FreightOrigins (e.g.
+   * "Warehouse/my-warehouse"); values describe the Promotion that established
+   * the hold.
+   */
   autoPromotionHolds?: StageStatusAutoPromotionHolds;
-  /** Conditions contains the last observations of the Stage's current
-state.
-+patchMergeKey=type
-+patchStrategy=merge
-+listType=map
-+listMapKey=type */
+  /**
+   * Conditions contains the last observations of the Stage's current
+   * state.
+   * +patchMergeKey=type
+   * +patchStrategy=merge
+   * +listType=map
+   * +listMapKey=type
+   */
   conditions?: V1Condition[];
   /** CurrentPromotion is a reference to the currently Running promotion. */
   currentPromotion?: PromotionReference;
-  /** CurrentPromotionRequest is a reference to the PromotionRequest currently
-fanning Freight out to this Stage's Targets. It is absent for a Stage that
-governs no Targets.
-
-Fanning Freight out to Targets is a Kargo Enterprise-only feature. Kargo
-OSS maintains this field all the same, but the PromotionRequest it refers
-to never gets further than being marked Errored for that reason.
-
-+optional */
+  /**
+   * CurrentPromotionRequest is a reference to the PromotionRequest currently
+   * fanning Freight out to this Stage's Targets. It is absent for a Stage that
+   * governs no Targets.
+   *
+   * Fanning Freight out to Targets is a Kargo Enterprise-only feature. Kargo
+   * OSS maintains this field all the same, but the PromotionRequest it refers
+   * to never gets further than being marked Errored for that reason.
+   *
+   * +optional
+   */
   currentPromotionRequest?: PromotionRequestReference;
-  /** EffectiveAutoPromotionHolds is the set of auto-promotion holds in effect
-right now. It is recomputed every reconciliation from AutoPromotionHolds
-plus the newest in-flight Promotions, and unlike AutoPromotionHolds is not
-durable. Clients should read this map to reflect current hold state. */
+  /**
+   * EffectiveAutoPromotionHolds is the set of auto-promotion holds in effect
+   * right now. It is recomputed every reconciliation from AutoPromotionHolds
+   * plus the newest in-flight Promotions, and unlike AutoPromotionHolds is not
+   * durable. Clients should read this map to reflect current hold state.
+   */
   effectiveAutoPromotionHolds?: StageStatusEffectiveAutoPromotionHolds;
-  /** FreightHistory is a list of recent Freight selections that were deployed
-to the Stage. By default, the last ten Freight selections are stored.
-The first item in the list is the most recent Freight selection and
-currently deployed to the Stage, subsequent items are older selections. */
+  /**
+   * FreightHistory is a list of recent Freight selections that were deployed
+   * to the Stage. By default, the last ten Freight selections are stored.
+   * The first item in the list is the most recent Freight selection and
+   * currently deployed to the Stage, subsequent items are older selections.
+   */
   freightHistory?: FreightCollection[];
-  /** FreightSummary is human-readable text maintained by the controller that
-summarizes what Freight is currently deployed to the Stage. For Stages that
-request a single piece of Freight AND the request has been fulfilled, this
-field will simply contain the name of the Freight. For Stages that request
-a single piece of Freight AND the request has NOT been fulfilled, or for
-Stages that request multiple pieces of Freight, this field will contain a
-summary of fulfilled/requested Freight. The existence of this field is a
-workaround for kubectl limitations so that this complex but valuable
-information can be displayed in a column in response to `kubectl get
-stages`. */
+  /**
+   * FreightSummary is human-readable text maintained by the controller that
+   * summarizes what Freight is currently deployed to the Stage. For Stages that
+   * request a single piece of Freight AND the request has been fulfilled, this
+   * field will simply contain the name of the Freight. For Stages that request
+   * a single piece of Freight AND the request has NOT been fulfilled, or for
+   * Stages that request multiple pieces of Freight, this field will contain a
+   * summary of fulfilled/requested Freight. The existence of this field is a
+   * workaround for kubectl limitations so that this complex but valuable
+   * information can be displayed in a column in response to `kubectl get
+   * stages`.
+   */
   freightSummary?: string;
   /** Health is the Stage's last observed health. */
   health?: Health;
-  /** LastHandledRefresh holds the value of the most recent AnnotationKeyRefresh
-annotation that was handled by the controller. This field can be used to
-determine whether the request to refresh the resource has been handled.
-+optional */
+  /**
+   * LastHandledRefresh holds the value of the most recent AnnotationKeyRefresh
+   * annotation that was handled by the controller. This field can be used to
+   * determine whether the request to refresh the resource has been handled.
+   * +optional
+   */
   lastHandledRefresh?: string;
   /** LastPromotion is a reference to the last completed promotion. */
   lastPromotion?: PromotionReference;
-  /** LastPromotionRequest is a reference to the last PromotionRequest to reach a
-terminal phase. It is absent for a Stage that governs no Targets, and only
-ever moves forward, so it outlives the PromotionRequest it refers to.
-
-+optional */
+  /**
+   * LastPromotionRequest is a reference to the last PromotionRequest to reach a
+   * terminal phase. It is absent for a Stage that governs no Targets, and only
+   * ever moves forward, so it outlives the PromotionRequest it refers to.
+   *
+   * +optional
+   */
   lastPromotionRequest?: PromotionRequestReference;
-  /** Metadata is a map of arbitrary metadata associated with the Stage.
-This is useful for storing additional information about the Stage
-that can be shared across promotions, verifications, or other processes. */
+  /**
+   * Metadata is a map of arbitrary metadata associated with the Stage.
+   * This is useful for storing additional information about the Stage
+   * that can be shared across promotions, verifications, or other processes.
+   */
   metadata?: StageStatusMetadata;
-  /** ObservedGeneration represents the .metadata.generation that this Stage
-status was reconciled against. */
+  /**
+   * ObservedGeneration represents the .metadata.generation that this Stage
+   * status was reconciled against.
+   */
   observedGeneration?: number;
-  /** PromotionWindowStatus reports whether promotion windows currently permit
-promotion of this Stage, and when that is next expected to change. It is
-absent when no window gates the Stage.
-
-Kargo Enterprise only: This field is ignored in Kargo OSS.
-
-+optional */
+  /**
+   * PromotionWindowStatus reports whether promotion windows currently permit
+   * promotion of this Stage, and when that is next expected to change. It is
+   * absent when no window gates the Stage.
+   *
+   * Kargo Enterprise only: This field is ignored in Kargo OSS.
+   *
+   * +optional
+   */
   promotionWindowStatus?: PromotionWindowStatus;
 }

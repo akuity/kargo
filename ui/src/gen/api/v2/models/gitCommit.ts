@@ -13,19 +13,27 @@ export interface GitCommit {
   branch?: string;
   /** Committer is the person who committed the commit. */
   committer?: string;
-  /** ID is the ID of a specific commit in the Git repository specified by
-RepoURL. */
+  /**
+   * ID is the ID of a specific commit in the Git repository specified by
+   * RepoURL.
+   */
   id?: string;
-  /** Message is the message associated with the commit. At present, this only
-contains the first line (subject) of the commit message. */
+  /**
+   * Message is the message associated with the commit. At present, this only
+   * contains the first line (subject) of the commit message.
+   */
   message?: string;
   /** RepoURL is the URL of a Git repository. */
   repoURL?: string;
-  /** SubscriptionName is the name of the subscription that discovered this
-commit. This field is only populated if the subscription was assigned
-a name. */
+  /**
+   * SubscriptionName is the name of the subscription that discovered this
+   * commit. This field is only populated if the subscription was assigned
+   * a name.
+   */
   subscriptionName?: string;
-  /** Tag denotes a tag in the repository that matched selection criteria and
-resolved to this commit. */
+  /**
+   * Tag denotes a tag in the repository that matched selection criteria and
+   * resolved to this commit.
+   */
   tag?: string;
 }

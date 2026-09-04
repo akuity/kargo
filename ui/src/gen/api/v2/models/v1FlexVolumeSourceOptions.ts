@@ -8,6 +8,6 @@
 
 /**
  * options is Optional: this field holds extra command options if any.
-+optional
+ * +optional
  */
 export type V1FlexVolumeSourceOptions = { [key: string]: string };

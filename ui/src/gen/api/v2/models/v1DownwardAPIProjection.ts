@@ -8,8 +8,10 @@
 import type { V1DownwardAPIVolumeFile } from './v1DownwardAPIVolumeFile';
 
 export interface V1DownwardAPIProjection {
-  /** Items is a list of DownwardAPIVolume file
-+optional
-+listType=atomic */
+  /**
+   * Items is a list of DownwardAPIVolume file
+   * +optional
+   * +listType=atomic
+   */
   items?: V1DownwardAPIVolumeFile[];
 }

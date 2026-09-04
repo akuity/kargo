@@ -8,7 +8,6 @@
 
 export type PromotionWindowKind = (typeof PromotionWindowKind)[keyof typeof PromotionWindowKind];
 
-// eslint-disable-next-line @typescript-eslint/no-redeclare
 export const PromotionWindowKind = {
   PromotionWindowKindAllow: 'Allow',
   PromotionWindowKindDeny: 'Deny'

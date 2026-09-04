@@ -8,18 +8,20 @@
 import type { V1LocalObjectReference } from './v1LocalObjectReference';
 
 export interface HarborWebhookReceiverConfig {
-  /** SecretRef contains a reference to a Secret. For Project-scoped webhook
-receivers, the referenced Secret must be in the same namespace as the
-ProjectConfig.
-
-For cluster-scoped webhook receivers, the referenced Secret must be in the
-designated "system resources" namespace.
-
-The secret is expected to contain an `auth-header` key containing the "auth
-header" specified when registering the webhook in Harbor. For more
-information, please refer to the Harbor documentation:
-  https://goharbor.io/docs/main/working-with-projects/project-configuration/configure-webhooks/
-
-+kubebuilder:validation:Required */
+  /**
+   * SecretRef contains a reference to a Secret. For Project-scoped webhook
+   * receivers, the referenced Secret must be in the same namespace as the
+   * ProjectConfig.
+   *
+   * For cluster-scoped webhook receivers, the referenced Secret must be in the
+   * designated "system resources" namespace.
+   *
+   * The secret is expected to contain an `auth-header` key containing the "auth
+   * header" specified when registering the webhook in Harbor. For more
+   * information, please refer to the Harbor documentation:
+   *   https://goharbor.io/docs/main/working-with-projects/project-configuration/configure-webhooks/
+   *
+   * +kubebuilder:validation:Required
+   */
   secretRef: V1LocalObjectReference;
 }

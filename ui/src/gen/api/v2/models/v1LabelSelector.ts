@@ -5,17 +5,21 @@
  * REST API for Kargo
  * OpenAPI spec version: v1alpha1
  */
-import type { V1LabelSelectorRequirement } from './v1LabelSelectorRequirement';
 import type { V1LabelSelectorMatchLabels } from './v1LabelSelectorMatchLabels';
+import type { V1LabelSelectorRequirement } from './v1LabelSelectorRequirement';
 
 export interface V1LabelSelector {
-  /** matchExpressions is a list of label selector requirements. The requirements are ANDed.
-+optional
-+listType=atomic */
+  /**
+   * matchExpressions is a list of label selector requirements. The requirements are ANDed.
+   * +optional
+   * +listType=atomic
+   */
   matchExpressions?: V1LabelSelectorRequirement[];
-  /** matchLabels is a map of {key,value} pairs. A single {key,value} in the matchLabels
-map is equivalent to an element of matchExpressions, whose key field is "key", the
-operator is "In", and the values array contains only "value". The requirements are ANDed.
-+optional */
+  /**
+   * matchLabels is a map of {key,value} pairs. A single {key,value} in the matchLabels
+   * map is equivalent to an element of matchExpressions, whose key field is "key", the
+   * operator is "In", and the values array contains only "value". The requirements are ANDed.
+   * +optional
+   */
   matchLabels?: V1LabelSelectorMatchLabels;
 }

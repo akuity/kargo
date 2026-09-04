@@ -9,17 +9,21 @@ import type { V1alpha3WorkloadPodGroupBasicSchedulingPolicy } from './v1alpha3Wo
 import type { V1alpha3WorkloadPodGroupGangSchedulingPolicy } from './v1alpha3WorkloadPodGroupGangSchedulingPolicy';
 
 export interface V1alpha3WorkloadPodGroupSchedulingPolicy {
-  /** basic specifies that standard, pod-by-pod Kubernetes scheduling
-behavior should be used.
-
-+optional
-+k8s:optional
-+k8s:unionMember */
+  /**
+   * basic specifies that standard, pod-by-pod Kubernetes scheduling
+   * behavior should be used.
+   *
+   * +optional
+   * +k8s:optional
+   * +k8s:unionMember
+   */
   basic?: V1alpha3WorkloadPodGroupBasicSchedulingPolicy;
-  /** gang specifies all-or-nothing scheduling semantics.
-
-+optional
-+k8s:optional
-+k8s:unionMember */
+  /**
+   * gang specifies all-or-nothing scheduling semantics.
+   *
+   * +optional
+   * +k8s:optional
+   * +k8s:unionMember
+   */
   gang?: V1alpha3WorkloadPodGroupGangSchedulingPolicy;
 }

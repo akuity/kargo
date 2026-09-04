@@ -9,25 +9,33 @@
 export interface ChartDiscoveryResult {
   /** Name is the name of the Helm chart, as specified in the ChartSubscription. */
   name?: string;
-  /** RepoURL is the repository URL of the Helm chart, as specified in the
-ChartSubscription.
-
-+kubebuilder:validation:MinLength=1 */
+  /**
+   * RepoURL is the repository URL of the Helm chart, as specified in the
+   * ChartSubscription.
+   *
+   * +kubebuilder:validation:MinLength=1
+   */
   repoURL?: string;
-  /** SemverConstraint is the constraint for which versions were discovered.
-This field is optional, and only populated if the ChartSubscription
-specifies a SemverConstraint. */
+  /**
+   * SemverConstraint is the constraint for which versions were discovered.
+   * This field is optional, and only populated if the ChartSubscription
+   * specifies a SemverConstraint.
+   */
   semverConstraint?: string;
-  /** SubscriptionName is the optional human-readable name of the subscription
-that produced this discovery result.
-
-+optional */
+  /**
+   * SubscriptionName is the optional human-readable name of the subscription
+   * that produced this discovery result.
+   *
+   * +optional
+   */
   subscriptionName?: string;
-  /** Versions is a list of versions discovered by the Warehouse for the
-ChartSubscription. An empty list indicates that the discovery operation was
-successful, but no versions matching the ChartSubscription criteria were
-found.
-
-+optional */
+  /**
+   * Versions is a list of versions discovered by the Warehouse for the
+   * ChartSubscription. An empty list indicates that the discovery operation was
+   * successful, but no versions matching the ChartSubscription criteria were
+   * found.
+   *
+   * +optional
+   */
   versions?: string[];
 }

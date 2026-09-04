@@ -8,13 +8,17 @@
 import type { V1ContainerRestartRuleOnExitCodes } from './v1ContainerRestartRuleOnExitCodes';
 
 export interface V1ContainerRestartRule {
-  /** Specifies the action taken on a container exit if the requirements
-are satisfied. The only possible value is "Restart" to restart the
-container.
-+required */
+  /**
+   * Specifies the action taken on a container exit if the requirements
+   * are satisfied. The only possible value is "Restart" to restart the
+   * container.
+   * +required
+   */
   action?: string;
-  /** Represents the exit codes to check on container exits.
-+optional
-+oneOf=when */
+  /**
+   * Represents the exit codes to check on container exits.
+   * +optional
+   * +oneOf=when
+   */
   exitCodes?: V1ContainerRestartRuleOnExitCodes;
 }

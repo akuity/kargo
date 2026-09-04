@@ -7,18 +7,20 @@
  */
 
 export interface AutoPromotionOptions {
-  /** SelectionPolicy specifies the rules for identifying new Freight that is
-eligible for auto-promotion to this Stage. This field is optional. When
-left unspecified, the field is implicitly treated as if its value were
-"NewestFreight".
-
-Accepted Values:
-
-- "NewestFreight": The newest Freight that is available to the Stage is
-  eligible for auto-promotion.
-
-- "MatchUpstream": Only the Freight currently used immediately upstream
-  from this Stage is eligible for auto-promotion. This policy may only
-  be applied when the Stage has exactly one upstream Stage. */
+  /**
+   * SelectionPolicy specifies the rules for identifying new Freight that is
+   * eligible for auto-promotion to this Stage. This field is optional. When
+   * left unspecified, the field is implicitly treated as if its value were
+   * "NewestFreight".
+   *
+   * Accepted Values:
+   *
+   * - "NewestFreight": The newest Freight that is available to the Stage is
+   *   eligible for auto-promotion.
+   *
+   * - "MatchUpstream": Only the Freight currently used immediately upstream
+   *   from this Stage is eligible for auto-promotion. This policy may only
+   *   be applied when the Stage has exactly one upstream Stage.
+   */
   selectionPolicy?: string;
 }

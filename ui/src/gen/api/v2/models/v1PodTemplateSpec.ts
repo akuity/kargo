@@ -9,13 +9,17 @@ import type { V1ObjectMeta } from './v1ObjectMeta';
 import type { V1PodSpec } from './v1PodSpec';
 
 export interface V1PodTemplateSpec {
-  /** Standard object's metadata.
-More info: https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#metadata
-+optional
-+k8s:opaqueType */
+  /**
+   * Standard object's metadata.
+   * More info: https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#metadata
+   * +optional
+   * +k8s:opaqueType
+   */
   metadata?: V1ObjectMeta;
-  /** Specification of the desired behavior of the pod.
-More info: https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#spec-and-status
-+optional */
+  /**
+   * Specification of the desired behavior of the pod.
+   * More info: https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#spec-and-status
+   * +optional
+   */
   spec?: V1PodSpec;
 }

@@ -11,7 +11,9 @@ import type { WarehouseStats } from './warehouseStats';
 export interface ProjectStats {
   /** Stages contains a summary of the collective state of the Project's Stages. */
   stages?: StageStats;
-  /** Warehouses contains a summary of the collective state of the Project's
-Warehouses. */
+  /**
+   * Warehouses contains a summary of the collective state of the Project's
+   * Warehouses.
+   */
   warehouses?: WarehouseStats;
 }

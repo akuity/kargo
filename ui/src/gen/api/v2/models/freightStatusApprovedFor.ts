@@ -9,8 +9,8 @@ import type { ApprovedStage } from './approvedStage';
 
 /**
  * ApprovedFor describes the Stages for which this Freight has been approved
-preemptively/manually by a user. This is useful for hotfixes, where one
-might wish to promote a piece of Freight to a given Stage without
-transiting the entire pipeline.
+ * preemptively/manually by a user. This is useful for hotfixes, where one
+ * might wish to promote a piece of Freight to a given Stage without
+ * transiting the entire pipeline.
  */
 export type FreightStatusApprovedFor = { [key: string]: ApprovedStage };

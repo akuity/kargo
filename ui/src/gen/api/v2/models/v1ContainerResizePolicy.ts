@@ -7,10 +7,14 @@
  */
 
 export interface V1ContainerResizePolicy {
-  /** Name of the resource to which this resource resize policy applies.
-Supported values: cpu, memory. */
+  /**
+   * Name of the resource to which this resource resize policy applies.
+   * Supported values: cpu, memory.
+   */
   resourceName?: string;
-  /** Restart policy to apply when specified resource is resized.
-If not specified, it defaults to NotRequired. */
+  /**
+   * Restart policy to apply when specified resource is resized.
+   * If not specified, it defaults to NotRequired.
+   */
   restartPolicy?: string;
 }
