@@ -42,6 +42,7 @@ type baseSelector struct {
 
 func newBaseSelector(
 	sub kargoapi.GitSubscription,
+	discoveryLimit int,
 	creds *git.RepoCredentials,
 ) (*baseSelector, error) {
 	s := &baseSelector{
@@ -49,7 +50,7 @@ func newBaseSelector(
 		creds:                 creds,
 		insecureSkipTLSVerify: sub.InsecureSkipTLSVerify,
 		blobless:              sub.Blobless != nil && *sub.Blobless,
-		discoveryLimit:        int(sub.DiscoveryLimit),
+		discoveryLimit:        discoveryLimit,
 		gitCloneFn:            git.Clone,
 		lsRemoteFn:            git.LsRemote,
 	}

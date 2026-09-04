@@ -39,6 +39,7 @@ type gitSubscriber struct {
 	newSelectorFn func(
 		ctx context.Context,
 		sub kargoapi.GitSubscription,
+		discoveryLimit int,
 		creds *git.RepoCredentials,
 	) (commit.Selector, error)
 }
@@ -84,9 +85,6 @@ func (g *gitSubscriber) ApplySubscriptionDefaults(
 	}
 	if sub.Git.StrictSemvers == nil {
 		sub.Git.StrictSemvers = ptr.To(true)
-	}
-	if sub.Git.DiscoveryLimit == 0 {
-		sub.Git.DiscoveryLimit = 20
 	}
 	return nil
 }
@@ -149,15 +147,9 @@ func (g *gitSubscriber) ValidateSubscription(
 	); err != nil {
 		errs = append(errs, err)
 	}
-
-	// Validate DiscoveryLimit: Minimum=1, Maximum=100
-	if sub.DiscoveryLimit < 1 {
-		errs = append(errs, field.Invalid(
-			f.Child("discoveryLimit"),
-			sub.DiscoveryLimit,
-			"must be >= 1",
-		))
-	} else if sub.DiscoveryLimit > 100 {
+	// Lower-bound validation is moved to base subscription validation
+	// TODO: clean this up when removing DiscoveryLimits from specific subscriptions
+	if sub.DiscoveryLimit > 100 {
 		errs = append(errs, field.Invalid(
 			f.Child("discoveryLimit"),
 			sub.DiscoveryLimit,
@@ -223,7 +215,14 @@ func (g *gitSubscriber) DiscoverArtifacts(
 		logger.Debug("found no credentials for git repo")
 	}
 
-	selector, err := g.newSelectorFn(ctx, *gitSub, repoCreds)
+	// TODO: clean this up when removing DiscoveryLimits from specific subscriptions
+	discoveryLimit := sub.DiscoveryLimit
+	if discoveryLimit == 0 {
+		// Fallback to internal limit
+		discoveryLimit = gitSub.DiscoveryLimit
+	}
+
+	selector, err := g.newSelectorFn(ctx, *gitSub, int(discoveryLimit), repoCreds)
 	if err != nil {
 		return nil, fmt.Errorf(
 			"error obtaining selector for commits from git repo %q: %w",

@@ -65,6 +65,7 @@ type imageSubscriber struct {
 	newSelectorFn func(
 		ctx context.Context,
 		sub kargoapi.ImageSubscription,
+		discoveryLimit int,
 		creds *image.Credentials,
 	) (image.Selector, error)
 }
@@ -100,9 +101,6 @@ func (i *imageSubscriber) ApplySubscriptionDefaults(
 	}
 	if sub.Image.StrictSemvers == nil {
 		sub.Image.StrictSemvers = ptr.To(true)
-	}
-	if sub.Image.DiscoveryLimit == 0 {
-		sub.Image.DiscoveryLimit = 20
 	}
 	return nil
 }
@@ -200,14 +198,9 @@ func (i *imageSubscriber) ValidateSubscription(
 		)
 	}
 
-	// Validate DiscoveryLimit: Minimum=1, Maximum=100
-	if sub.DiscoveryLimit < 1 {
-		errs = append(errs, field.Invalid(
-			f.Child("discoveryLimit"),
-			sub.DiscoveryLimit,
-			"must be >= 1",
-		))
-	} else if sub.DiscoveryLimit > 100 {
+	// Lower-bound validation is moved to base subscription validation
+	// TODO: clean this up when removing DiscoveryLimits from specific subscriptions
+	if sub.DiscoveryLimit > 100 {
 		errs = append(errs, field.Invalid(
 			f.Child("discoveryLimit"),
 			sub.DiscoveryLimit,
@@ -290,7 +283,14 @@ func (i *imageSubscriber) DiscoverArtifacts(
 		imgSub.CacheByTag = true
 	}
 
-	selector, err := i.newSelectorFn(ctx, *imgSub, regCreds)
+	// TODO: clean this up when removing DiscoveryLimits from specific subscriptions
+	discoveryLimit := sub.DiscoveryLimit
+	if discoveryLimit == 0 {
+		// Fallback to internal limit
+		discoveryLimit = imgSub.DiscoveryLimit
+	}
+
+	selector, err := i.newSelectorFn(ctx, *imgSub, int(discoveryLimit), regCreds)
 	if err != nil {
 		return nil, fmt.Errorf(
 			"error obtaining selector for image %q: %w",

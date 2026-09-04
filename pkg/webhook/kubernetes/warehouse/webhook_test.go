@@ -121,7 +121,28 @@ func Test_webhook_Default(t *testing.T) {
 		require.False(t, ok)
 	})
 
-	t.Run("defaulting is delegated to subscribers", func(t *testing.T) {
+	t.Run("discovery limit default is set of RepoSubscription", func(t *testing.T) {
+		warehouse := &kargoapi.Warehouse{
+			Spec: kargoapi.WarehouseSpec{
+				InternalSubscriptions: []kargoapi.RepoSubscription{
+					// The one mock subscriber in the test registry will apply
+					// predicated changes to each of these subscriptions.
+					{Git: &kargoapi.GitSubscription{}},
+					{Image: &kargoapi.ImageSubscription{}},
+					{Chart: &kargoapi.ChartSubscription{}},
+					{Subscription: &kargoapi.Subscription{SubscriptionType: "fake"}},
+				},
+			},
+		}
+		err := w.Default(t.Context(), warehouse)
+		require.NoError(t, err)
+		const testDiscoveryLimit int64 = 20
+		require.Equal(t, testDiscoveryLimit, warehouse.Spec.InternalSubscriptions[0].DiscoveryLimit)
+		require.Equal(t, testDiscoveryLimit, warehouse.Spec.InternalSubscriptions[1].DiscoveryLimit)
+		require.Equal(t, testDiscoveryLimit, warehouse.Spec.InternalSubscriptions[2].DiscoveryLimit)
+	})
+
+	t.Run("defaulting in subscribers", func(t *testing.T) {
 		warehouse := &kargoapi.Warehouse{
 			Spec: kargoapi.WarehouseSpec{
 				InternalSubscriptions: []kargoapi.RepoSubscription{
@@ -141,23 +162,6 @@ func Test_webhook_Default(t *testing.T) {
 		require.Equal(t, testDiscoveryLimit, warehouse.Spec.InternalSubscriptions[1].Image.DiscoveryLimit)
 		require.Equal(t, testDiscoveryLimit, warehouse.Spec.InternalSubscriptions[2].Chart.DiscoveryLimit)
 		require.Equal(t, "fake", warehouse.Spec.InternalSubscriptions[3].Name)
-	})
-
-	t.Run("common elements of generic subscriptions are defaulted", func(t *testing.T) {
-		warehouse := &kargoapi.Warehouse{
-			Spec: kargoapi.WarehouseSpec{
-				InternalSubscriptions: []kargoapi.RepoSubscription{
-					{Subscription: &kargoapi.Subscription{SubscriptionType: "fake"}},
-				},
-			},
-		}
-		err := w.Default(t.Context(), warehouse)
-		require.NoError(t, err)
-		require.Equal(
-			t,
-			defaultDiscoveryLimit,
-			warehouse.Spec.InternalSubscriptions[0].Subscription.DiscoveryLimit,
-		)
 	})
 }
 
@@ -588,7 +592,7 @@ func TestValidateSpec(t *testing.T) {
 					fields[i] = err.Field
 				}
 				require.Contains(t, fields, "spec.subscriptions[0].name")
-				require.Contains(t, fields, "spec.subscriptions[0].fake.discoveryLimit")
+				require.Contains(t, fields, "spec.subscriptions[0].discoveryLimit")
 				require.Contains(t, fields, "spec.subscriptions[1].fake.discoveryLimit")
 			},
 		},

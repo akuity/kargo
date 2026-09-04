@@ -17,13 +17,6 @@ import (
 func Test_chartSubscriber_ApplySubscriptionDefaults(t *testing.T) {
 	s := &chartSubscriber{}
 
-	t.Run("defaults discoveryLimit", func(t *testing.T) {
-		sub := &kargoapi.RepoSubscription{Chart: &kargoapi.ChartSubscription{}}
-		err := s.ApplySubscriptionDefaults(t.Context(), sub)
-		require.NoError(t, err)
-		require.Equal(t, int64(20), sub.Chart.DiscoveryLimit)
-	})
-
 	t.Run("preserves non-zero discoveryLimit", func(t *testing.T) {
 		sub := &kargoapi.RepoSubscription{Chart: &kargoapi.ChartSubscription{DiscoveryLimit: 13}}
 		err := s.ApplySubscriptionDefaults(t.Context(), sub)
@@ -147,16 +140,13 @@ func Test_chartSubscriber_ValidateSubscription(t *testing.T) {
 			},
 		},
 		{
-			name: "DiscoveryLimit too small",
+			name: "DiscoveryLimit lower bound is not validated",
 			sub: kargoapi.ChartSubscription{
 				RepoURL:        "oci://ghcr.io/example/chart",
 				DiscoveryLimit: 0,
 			},
 			assertions: func(t *testing.T, errs field.ErrorList) {
-				require.NotNil(t, errs)
-				require.True(t, len(errs) > 0)
-				require.Equal(t, "chart.discoveryLimit", errs[0].Field)
-				require.Equal(t, field.ErrorTypeInvalid, errs[0].Type)
+				require.Nil(t, errs)
 			},
 		},
 		{
@@ -271,6 +261,7 @@ func Test_chartSubscriber_DiscoverArtifacts(t *testing.T) {
 				newSelectorFn: func(
 					_ context.Context,
 					_ kargoapi.ChartSubscription,
+					_ int,
 					creds *helm.Credentials,
 				) (chart.Selector, error) {
 					require.NotNil(t, creds)
@@ -297,6 +288,7 @@ func Test_chartSubscriber_DiscoverArtifacts(t *testing.T) {
 				newSelectorFn: func(
 					_ context.Context,
 					_ kargoapi.ChartSubscription,
+					_ int,
 					creds *helm.Credentials,
 				) (chart.Selector, error) {
 					require.Nil(t, creds)
@@ -319,6 +311,7 @@ func Test_chartSubscriber_DiscoverArtifacts(t *testing.T) {
 				newSelectorFn: func(
 					context.Context,
 					kargoapi.ChartSubscription,
+					int,
 					*helm.Credentials,
 				) (chart.Selector, error) {
 					return nil, errors.New("something went wrong")
@@ -338,6 +331,7 @@ func Test_chartSubscriber_DiscoverArtifacts(t *testing.T) {
 				newSelectorFn: func(
 					context.Context,
 					kargoapi.ChartSubscription,
+					int,
 					*helm.Credentials,
 				) (chart.Selector, error) {
 					return &fakeChartSelector{
@@ -363,6 +357,7 @@ func Test_chartSubscriber_DiscoverArtifacts(t *testing.T) {
 				newSelectorFn: func(
 					context.Context,
 					kargoapi.ChartSubscription,
+					int,
 					*helm.Credentials,
 				) (chart.Selector, error) {
 					return &fakeChartSelector{
@@ -384,12 +379,44 @@ func Test_chartSubscriber_DiscoverArtifacts(t *testing.T) {
 			},
 		},
 		{
+			// The Selector is entrusted with the whole subscription, discovery limit
+			// included, but the limit is enforced here regardless.
+			name: "discovered versions are trimmed to the repo sub discovery limit",
+			subscriber: &chartSubscriber{
+				credentialsDB: &credentials.FakeDB{},
+				newSelectorFn: func(
+					context.Context,
+					kargoapi.ChartSubscription,
+					int,
+					*helm.Credentials,
+				) (chart.Selector, error) {
+					return &fakeChartSelector{
+						selectFn: func(context.Context) ([]string, error) {
+							return []string{"3.0.0", "2.0.0", "1.0.0"}, nil
+						},
+					}, nil
+				},
+			},
+			sub: kargoapi.RepoSubscription{
+				DiscoveryLimit: 2,
+				Chart: &kargoapi.ChartSubscription{
+					RepoURL: "fake-url",
+				}},
+			assertions: func(t *testing.T, res any, err error) {
+				require.NoError(t, err)
+				result, ok := res.(kargoapi.ChartDiscoveryResult)
+				require.True(t, ok)
+				require.Equal(t, []string{"3.0.0", "2.0.0"}, result.Versions)
+			},
+		},
+		{
 			name: "success -- named subscription",
 			subscriber: &chartSubscriber{
 				credentialsDB: &credentials.FakeDB{},
 				newSelectorFn: func(
 					context.Context,
 					kargoapi.ChartSubscription,
+					int,
 					*helm.Credentials,
 				) (chart.Selector, error) {
 					return &fakeChartSelector{
@@ -400,12 +427,12 @@ func Test_chartSubscriber_DiscoverArtifacts(t *testing.T) {
 				},
 			},
 			sub: kargoapi.RepoSubscription{
-				Name: "fake-sub",
+				Name:           "fake-sub",
+				DiscoveryLimit: 20,
 				Chart: &kargoapi.ChartSubscription{
 					RepoURL:          "fake-url",
 					Name:             "fake-chart",
 					SemverConstraint: "^1.0.0",
-					DiscoveryLimit:   20,
 				},
 			},
 			assertions: func(t *testing.T, res any, err error) {
@@ -430,6 +457,7 @@ func Test_chartSubscriber_DiscoverArtifacts(t *testing.T) {
 				newSelectorFn: func(
 					context.Context,
 					kargoapi.ChartSubscription,
+					int,
 					*helm.Credentials,
 				) (chart.Selector, error) {
 					return &fakeChartSelector{
@@ -439,10 +467,11 @@ func Test_chartSubscriber_DiscoverArtifacts(t *testing.T) {
 					}, nil
 				},
 			},
-			sub: kargoapi.RepoSubscription{Chart: &kargoapi.ChartSubscription{
-				RepoURL:        "fake-url",
+			sub: kargoapi.RepoSubscription{
 				DiscoveryLimit: 20,
-			}},
+				Chart: &kargoapi.ChartSubscription{
+					RepoURL: "fake-url",
+				}},
 			assertions: func(t *testing.T, res any, err error) {
 				require.NoError(t, err)
 				result, ok := res.(kargoapi.ChartDiscoveryResult)

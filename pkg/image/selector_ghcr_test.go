@@ -32,8 +32,8 @@ func TestSelectImageGHCR(t *testing.T) {
 				RepoURL:                kargoRepo,
 				ImageSelectionStrategy: kargoapi.ImageSelectionStrategyDigest,
 				Constraint:             constraint,
-				DiscoveryLimit:         1,
 			},
+			1,
 			nil,
 		)
 		require.NoError(t, err)
@@ -57,8 +57,8 @@ func TestSelectImageGHCR(t *testing.T) {
 				ImageSelectionStrategy: kargoapi.ImageSelectionStrategyDigest,
 				Constraint:             constraint,
 				Platform:               platform,
-				DiscoveryLimit:         1,
 			},
+			1,
 			nil,
 		)
 		require.NoError(t, err)
@@ -79,8 +79,8 @@ func TestSelectImageGHCR(t *testing.T) {
 			kargoapi.ImageSubscription{
 				RepoURL:                kargoRepo,
 				ImageSelectionStrategy: kargoapi.ImageSelectionStrategyLexical,
-				DiscoveryLimit:         1,
 			},
+			1,
 			nil,
 		)
 		require.NoError(t, err)
@@ -101,8 +101,8 @@ func TestSelectImageGHCR(t *testing.T) {
 				RepoURL:                kargoRepo,
 				ImageSelectionStrategy: kargoapi.ImageSelectionStrategyLexical,
 				Platform:               platform,
-				DiscoveryLimit:         1,
 			},
+			1,
 			nil,
 		)
 		require.NoError(t, err)
@@ -123,8 +123,8 @@ func TestSelectImageGHCR(t *testing.T) {
 				RepoURL:                kargoRepo,
 				ImageSelectionStrategy: kargoapi.ImageSelectionStrategyNewestBuild,
 				AllowTagsRegexes:       []string{`^v0.1.0-rc.2\d$`},
-				DiscoveryLimit:         1,
 			},
+			1,
 			nil,
 		)
 		require.NoError(t, err)
@@ -147,8 +147,8 @@ func TestSelectImageGHCR(t *testing.T) {
 				ImageSelectionStrategy: kargoapi.ImageSelectionStrategyNewestBuild,
 				AllowTagsRegexes:       []string{`^v0.1.0-rc.2\d$`},
 				Platform:               platform,
-				DiscoveryLimit:         1,
 			},
+			1,
 			nil,
 		)
 		require.NoError(t, err)
@@ -169,8 +169,8 @@ func TestSelectImageGHCR(t *testing.T) {
 			kargoapi.ImageSubscription{
 				RepoURL:                kargoRepo,
 				ImageSelectionStrategy: kargoapi.ImageSelectionStrategySemVer,
-				DiscoveryLimit:         1,
 			},
+			1,
 			nil,
 		)
 		require.NoError(t, err)
@@ -196,8 +196,8 @@ func TestSelectImageGHCR(t *testing.T) {
 				RepoURL:                kargoRepo,
 				ImageSelectionStrategy: kargoapi.ImageSelectionStrategySemVer,
 				Platform:               platform,
-				DiscoveryLimit:         1,
 			},
+			1,
 			nil,
 		)
 		require.NoError(t, err)
@@ -227,8 +227,8 @@ func TestSelectImageGHCR(t *testing.T) {
 				RepoURL:                "ghcr.io/akuity/kargo-test",
 				ImageSelectionStrategy: kargoapi.ImageSelectionStrategyDigest,
 				Constraint:             tag,
-				DiscoveryLimit:         1,
 			},
+			1,
 			nil,
 		)
 		require.NoError(t, err)
@@ -251,8 +251,8 @@ func TestSelectImageGHCR(t *testing.T) {
 				ImageSelectionStrategy: kargoapi.ImageSelectionStrategyDigest,
 				Constraint:             "v0.1.0",
 				Platform:               "linux/made-up-arch",
-				DiscoveryLimit:         1,
 			},
+			1,
 			nil,
 		)
 		require.NoError(t, err)

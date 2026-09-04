@@ -265,7 +265,13 @@ func shouldRefresh(
 	for _, s := range wh.Spec.InternalSubscriptions {
 		switch {
 		case s.Git != nil && urls.NormalizeGit(s.Git.RepoURL) == repoURL:
-			selector, err := commit.NewSelector(ctx, *s.Git, nil)
+			// TODO: clean this up when removing DiscoveryLimits from specific subscriptions
+			discoveryLimit := s.DiscoveryLimit
+			if discoveryLimit == 0 {
+				// Fallback to internal limit
+				discoveryLimit = s.Git.DiscoveryLimit
+			}
+			selector, err := commit.NewSelector(ctx, *s.Git, int(discoveryLimit), nil)
 			if err != nil {
 				return false, fmt.Errorf("error creating commit selector for Git subscription %q: %w",
 					s.Git.RepoURL, err,
@@ -276,7 +282,13 @@ func shouldRefresh(
 				return true, nil
 			}
 		case s.Image != nil && urls.NormalizeImage(s.Image.RepoURL) == repoURL:
-			selector, err := image.NewSelector(ctx, *s.Image, nil)
+			// TODO: clean this up when removing DiscoveryLimits from specific subscriptions
+			discoveryLimit := s.DiscoveryLimit
+			if discoveryLimit == 0 {
+				// Fallback to internal limit
+				discoveryLimit = s.Image.DiscoveryLimit
+			}
+			selector, err := image.NewSelector(ctx, *s.Image, int(discoveryLimit), nil)
 			if err != nil {
 				return false, fmt.Errorf("error creating image selector for Image subscription %q: %w",
 					s.Image.RepoURL, err,
@@ -286,7 +298,13 @@ func shouldRefresh(
 				return true, nil
 			}
 		case s.Chart != nil && urls.NormalizeChart(s.Chart.RepoURL) == repoURL:
-			selector, err := chart.NewSelector(ctx, *s.Chart, nil)
+			// TODO: clean this up when removing DiscoveryLimits from specific subscriptions
+			discoveryLimit := s.DiscoveryLimit
+			if discoveryLimit == 0 {
+				// Fallback to internal limit
+				discoveryLimit = s.Chart.DiscoveryLimit
+			}
+			selector, err := chart.NewSelector(ctx, *s.Chart, int(discoveryLimit), nil)
 			if err != nil {
 				return false, fmt.Errorf("error creating chart selector for Chart subscription %q: %w",
 					s.Chart.RepoURL, err,
