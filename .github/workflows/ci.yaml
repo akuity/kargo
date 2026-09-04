@@ -27,7 +27,7 @@ jobs:
       # requiring code or configuration changes.
       #
       # This version must match the base image in Dockerfile.dev.
-      image: &golangTestImage golang:1.26.7-trixie
+      image: &golangTestImage golang:1.26.8-trixie
     steps:
     # Install Git from "trixie" repository to get a more recent version than
     # the one available in "stable". This can be removed once the version in
@@ -336,7 +336,7 @@ jobs:
     container:
       # Always use the latest minor version of Go for anything we ship -- see
       # the back-end-builder stage in Dockerfile for why.
-      image: golang:1.27.0-trixie
+      image: golang:1.27.1-trixie
     steps:
     - name: Harden the runner (Audit all outbound calls)
       uses: step-security/harden-runner@9af89fc71515a100421586dfdb3dc9c984fbf411 # v2.19.4
