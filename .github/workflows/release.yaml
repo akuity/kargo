@@ -38,7 +38,7 @@ jobs:
     - name: Setup Go
       uses: actions/setup-go@7a3fe6cf4cb3a834922a1244abfce67bcef6a0c5 # v6.2.0
       with:
-        go-version: '1.27.0'
+        go-version: '1.27.1'
     - name: Set version for unstable builds
       id: unstable-version
       run: |
@@ -215,7 +215,7 @@ jobs:
     container:
       # Always use the latest minor version of Go for anything we ship -- see
       # the back-end-builder stage in Dockerfile for why.
-      image: &golangImage golang:1.27.0-trixie
+      image: &golangImage golang:1.27.1-trixie
     strategy:
       matrix:
         os: [linux, darwin, windows]
