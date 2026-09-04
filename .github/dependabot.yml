@@ -144,6 +144,11 @@ updates:
         - "major"
 
   # ----------------------------- release-1.11 -----------------------------
+  #
+  # Kubernetes resources, our own CRDs among them, cannot be represented as
+  # protocol buffers under newer versions of Kubernetes. Everything k8s,
+  # gRPC, or protobuf related is therefore frozen at its current version
+  # here.
 
   - package-ecosystem: "github-actions"
     directory: "/"
@@ -202,6 +207,11 @@ updates:
     - dependency-name: "*"
       update-types:
       - "version-update:semver-major"
+    - dependency-name: "k8s.io/*"
+    - dependency-name: "sigs.k8s.io/*"
+    - dependency-name: "google.golang.org/grpc"
+    - dependency-name: "github.com/grpc-ecosystem/*"
+    - dependency-name: "*protobuf*"
     commit-message:
       prefix: "chore(deps):"
     groups:
@@ -222,6 +232,11 @@ updates:
     - dependency-name: "*"
       update-types:
       - "version-update:semver-major"
+    - dependency-name: "k8s.io/*"
+    - dependency-name: "sigs.k8s.io/*"
+    - dependency-name: "google.golang.org/grpc"
+    - dependency-name: "github.com/grpc-ecosystem/*"
+    - dependency-name: "*protobuf*"
     commit-message:
       prefix: "chore(deps/api):"
     groups:
@@ -244,6 +259,11 @@ updates:
     - dependency-name: "*"
       update-types:
       - "version-update:semver-major"
+    - dependency-name: "k8s.io/*"
+    - dependency-name: "sigs.k8s.io/*"
+    - dependency-name: "google.golang.org/grpc"
+    - dependency-name: "github.com/grpc-ecosystem/*"
+    - dependency-name: "*protobuf*"
     commit-message:
       prefix: "chore(deps/client):"
     groups:
@@ -255,6 +275,10 @@ updates:
         - "minor"
 
   # ----------------------------- release-1.10 -----------------------------
+  #
+  # k8s, gRPC, and protobuf are frozen for the reason given under
+  # release-1.11. oras is frozen as well because any upgrade of it, patches
+  # included, would require code changes.
 
   - package-ecosystem: "github-actions"
     directory: "/"
@@ -313,6 +337,12 @@ updates:
     - dependency-name: "*"
       update-types:
       - "version-update:semver-major"
+    - dependency-name: "k8s.io/*"
+    - dependency-name: "sigs.k8s.io/*"
+    - dependency-name: "google.golang.org/grpc"
+    - dependency-name: "github.com/grpc-ecosystem/*"
+    - dependency-name: "*protobuf*"
+    - dependency-name: "oras.land/*"
     commit-message:
       prefix: "chore(deps):"
     groups:
@@ -333,6 +363,12 @@ updates:
     - dependency-name: "*"
       update-types:
       - "version-update:semver-major"
+    - dependency-name: "k8s.io/*"
+    - dependency-name: "sigs.k8s.io/*"
+    - dependency-name: "google.golang.org/grpc"
+    - dependency-name: "github.com/grpc-ecosystem/*"
+    - dependency-name: "*protobuf*"
+    - dependency-name: "oras.land/*"
     commit-message:
       prefix: "chore(deps/api):"
     groups:
@@ -353,6 +389,12 @@ updates:
     - dependency-name: "*"
       update-types:
       - "version-update:semver-major"
+    - dependency-name: "k8s.io/*"
+    - dependency-name: "sigs.k8s.io/*"
+    - dependency-name: "google.golang.org/grpc"
+    - dependency-name: "github.com/grpc-ecosystem/*"
+    - dependency-name: "*protobuf*"
+    - dependency-name: "oras.land/*"
     commit-message:
       prefix: "chore(deps/hack):"
     groups:
@@ -373,6 +415,12 @@ updates:
     - dependency-name: "*"
       update-types:
       - "version-update:semver-major"
+    - dependency-name: "k8s.io/*"
+    - dependency-name: "sigs.k8s.io/*"
+    - dependency-name: "google.golang.org/grpc"
+    - dependency-name: "github.com/grpc-ecosystem/*"
+    - dependency-name: "*protobuf*"
+    - dependency-name: "oras.land/*"
     commit-message:
       prefix: "chore(deps/client):"
     groups:
@@ -384,6 +432,10 @@ updates:
         - "minor"
 
   # ----------------------------- release-1.9 -----------------------------
+  #
+  # k8s, gRPC, and protobuf are frozen for the reason given under
+  # release-1.11. oras is frozen as well because any upgrade of it, patches
+  # included, would require code changes.
 
   - package-ecosystem: "github-actions"
     directory: "/"
@@ -442,6 +494,12 @@ updates:
     - dependency-name: "*"
       update-types:
       - "version-update:semver-major"
+    - dependency-name: "k8s.io/*"
+    - dependency-name: "sigs.k8s.io/*"
+    - dependency-name: "google.golang.org/grpc"
+    - dependency-name: "github.com/grpc-ecosystem/*"
+    - dependency-name: "*protobuf*"
+    - dependency-name: "oras.land/*"
     commit-message:
       prefix: "chore(deps):"
     groups:
@@ -462,6 +520,12 @@ updates:
     - dependency-name: "*"
       update-types:
       - "version-update:semver-major"
+    - dependency-name: "k8s.io/*"
+    - dependency-name: "sigs.k8s.io/*"
+    - dependency-name: "google.golang.org/grpc"
+    - dependency-name: "github.com/grpc-ecosystem/*"
+    - dependency-name: "*protobuf*"
+    - dependency-name: "oras.land/*"
     commit-message:
       prefix: "chore(deps/api):"
     groups:
@@ -482,6 +546,12 @@ updates:
     - dependency-name: "*"
       update-types:
       - "version-update:semver-major"
+    - dependency-name: "k8s.io/*"
+    - dependency-name: "sigs.k8s.io/*"
+    - dependency-name: "google.golang.org/grpc"
+    - dependency-name: "github.com/grpc-ecosystem/*"
+    - dependency-name: "*protobuf*"
+    - dependency-name: "oras.land/*"
     commit-message:
       prefix: "chore(deps/hack):"
     groups:
@@ -493,6 +563,10 @@ updates:
         - "minor"
 
   # ----------------------------- release-1.8 -----------------------------
+  #
+  # k8s, gRPC, and protobuf are frozen for the reason given under
+  # release-1.11. oras is frozen as well because any upgrade of it, patches
+  # included, would require code changes.
 
   - package-ecosystem: "github-actions"
     directory: "/"
@@ -551,6 +625,12 @@ updates:
     - dependency-name: "*"
       update-types:
       - "version-update:semver-major"
+    - dependency-name: "k8s.io/*"
+    - dependency-name: "sigs.k8s.io/*"
+    - dependency-name: "google.golang.org/grpc"
+    - dependency-name: "github.com/grpc-ecosystem/*"
+    - dependency-name: "*protobuf*"
+    - dependency-name: "oras.land/*"
     commit-message:
       prefix: "chore(deps):"
     groups:
@@ -571,6 +651,12 @@ updates:
     - dependency-name: "*"
       update-types:
       - "version-update:semver-major"
+    - dependency-name: "k8s.io/*"
+    - dependency-name: "sigs.k8s.io/*"
+    - dependency-name: "google.golang.org/grpc"
+    - dependency-name: "github.com/grpc-ecosystem/*"
+    - dependency-name: "*protobuf*"
+    - dependency-name: "oras.land/*"
     commit-message:
       prefix: "chore(deps/api):"
     groups:
@@ -591,6 +677,12 @@ updates:
     - dependency-name: "*"
       update-types:
       - "version-update:semver-major"
+    - dependency-name: "k8s.io/*"
+    - dependency-name: "sigs.k8s.io/*"
+    - dependency-name: "google.golang.org/grpc"
+    - dependency-name: "github.com/grpc-ecosystem/*"
+    - dependency-name: "*protobuf*"
+    - dependency-name: "oras.land/*"
     commit-message:
       prefix: "chore(deps/hack):"
     groups:
