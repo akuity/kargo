@@ -9,14 +9,20 @@ import type { V1ConfigMapEnvSource } from './v1ConfigMapEnvSource';
 import type { V1SecretEnvSource } from './v1SecretEnvSource';
 
 export interface V1EnvFromSource {
-  /** The ConfigMap to select from
-+optional */
+  /**
+   * The ConfigMap to select from
+   * +optional
+   */
   configMapRef?: V1ConfigMapEnvSource;
-  /** Optional text to prepend to the name of each environment variable.
-May consist of any printable ASCII characters except '='.
-+optional */
+  /**
+   * Optional text to prepend to the name of each environment variable.
+   * May consist of any printable ASCII characters except '='.
+   * +optional
+   */
   prefix?: string;
-  /** The Secret to select from
-+optional */
+  /**
+   * The Secret to select from
+   * +optional
+   */
   secretRef?: V1SecretEnvSource;
 }

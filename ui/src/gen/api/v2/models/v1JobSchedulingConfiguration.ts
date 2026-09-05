@@ -11,52 +11,60 @@ import type { V1alpha3WorkloadPodGroupSchedulingConstraints } from './v1alpha3Wo
 import type { V1alpha3WorkloadPodGroupSchedulingPolicy } from './v1alpha3WorkloadPodGroupSchedulingPolicy';
 
 export interface V1JobSchedulingConfiguration {
-  /** DisruptionMode defines the mode in which the Job's pods can be disrupted.
-One of Single, All.
-This field is immutable after creation: it may not be added or removed,
-and the selected mode may not be changed.
-
-+optional
-+k8s:optional
-+k8s:immutable */
+  /**
+   * DisruptionMode defines the mode in which the Job's pods can be disrupted.
+   * One of Single, All.
+   * This field is immutable after creation: it may not be added or removed,
+   * and the selected mode may not be changed.
+   *
+   * +optional
+   * +k8s:optional
+   * +k8s:immutable
+   */
   disruptionMode?: V1alpha3WorkloadPodGroupDisruptionMode;
-  /** ResourceClaims defines which ResourceClaims may be shared among Pods in
-the Job. Pods consume the devices allocated to a PodGroup's claim by
-defining a claim in its own Spec.ResourceClaims that matches the
-PodGroup's claim exactly. The claim must have the same name and refer to
-the same ResourceClaim or ResourceClaimTemplate.
-At most 4 claims may be set, matching the limit on the resulting PodGroup.
-This list is immutable after creation: entries may neither be added,
-removed, nor modified.
-
-+optional
-+patchMergeKey=name
-+patchStrategy=merge
-+listType=map
-+listMapKey=name
-+k8s:optional
-+k8s:listType=map
-+k8s:listMapKey=name
-+k8s:maxItems=4
-+k8s:immutable */
+  /**
+   * ResourceClaims defines which ResourceClaims may be shared among Pods in
+   * the Job. Pods consume the devices allocated to a PodGroup's claim by
+   * defining a claim in its own Spec.ResourceClaims that matches the
+   * PodGroup's claim exactly. The claim must have the same name and refer to
+   * the same ResourceClaim or ResourceClaimTemplate.
+   * At most 4 claims may be set, matching the limit on the resulting PodGroup.
+   * This list is immutable after creation: entries may neither be added,
+   * removed, nor modified.
+   *
+   * +optional
+   * +patchMergeKey=name
+   * +patchStrategy=merge
+   * +listType=map
+   * +listMapKey=name
+   * +k8s:optional
+   * +k8s:listType=map
+   * +k8s:listMapKey=name
+   * +k8s:maxItems=4
+   * +k8s:immutable
+   */
   resourceClaims?: V1alpha3WorkloadPodGroupResourceClaim[];
-  /** SchedulingConstraints defines scheduling constraints (e.g. topology)
-for the Job's pods.
-This field is immutable after creation.
-
-+optional
-+k8s:optional
-+k8s:immutable */
+  /**
+   * SchedulingConstraints defines scheduling constraints (e.g. topology)
+   * for the Job's pods.
+   * This field is immutable after creation.
+   *
+   * +optional
+   * +k8s:optional
+   * +k8s:immutable
+   */
   schedulingConstraints?: V1alpha3WorkloadPodGroupSchedulingConstraints;
-  /** SchedulingPolicy defines the scheduling policy for this Job.
-Exactly one of Basic or Gang must be set.
-This field is immutable after creation: the policy may not be added or
-removed. The policy variant (basic/gang) is frozen by hand-written
-validation; only schedulingPolicy.gang.minCount may be changed.
-
-+optional
-+k8s:optional
-+k8s:update=NoSet
-+k8s:update=NoUnset */
+  /**
+   * SchedulingPolicy defines the scheduling policy for this Job.
+   * Exactly one of Basic or Gang must be set.
+   * This field is immutable after creation: the policy may not be added or
+   * removed. The policy variant (basic/gang) is frozen by hand-written
+   * validation; only schedulingPolicy.gang.minCount may be changed.
+   *
+   * +optional
+   * +k8s:optional
+   * +k8s:update=NoSet
+   * +k8s:update=NoUnset
+   */
   schedulingPolicy?: V1alpha3WorkloadPodGroupSchedulingPolicy;
 }

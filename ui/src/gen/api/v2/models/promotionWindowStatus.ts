@@ -7,41 +7,51 @@
  */
 
 export interface PromotionWindowStatus {
-  /** Closed indicates that the schedule currently forbids promotion of this
-Stage. */
+  /**
+   * Closed indicates that the schedule currently forbids promotion of this
+   * Stage.
+   */
   closed?: boolean;
-  /** NextClose is when promotion is next expected to become forbidden, and is
-meaningful only while Closed is false. It allows a client to give warning of
-an approaching freeze, which NextCloseReason names. Like NextOpen it is optional, and
-absent when no such boundary is known -- a schedule that will never forbid
-promotion again has none.
-
-+optional */
+  /**
+   * NextClose is when promotion is next expected to become forbidden, and is
+   * meaningful only while Closed is false. It allows a client to give warning of
+   * an approaching freeze, which NextCloseReason names. Like NextOpen it is optional, and
+   * absent when no such boundary is known -- a schedule that will never forbid
+   * promotion again has none.
+   *
+   * +optional
+   */
   nextClose?: string;
-  /** NextCloseReason explains in human-readable terms why promotion will be forbidden
-at NextClose, naming the freeze responsible where there is one.
-It is set whenever NextClose is set.
-
-+optional */
+  /**
+   * NextCloseReason explains in human-readable terms why promotion will be forbidden
+   * at NextClose, naming the freeze responsible where there is one.
+   * It is set whenever NextClose is set.
+   *
+   * +optional
+   */
   nextCloseReason?: string;
-  /** NextOpen is when the schedule is next expected to permit promotions.
-
-It is optional even while Closed is true, and its absence means only that
-no reopening is known: the schedule may have none (a one-shot Allow window
-that has already elapsed), determining one may be impractical, or the
-closure may be indefinite by design. Clients must therefore render Reason
-and treat a missing NextOpen as "frozen, with no known end" rather than
-assuming a value is present.
-
-+optional */
+  /**
+   * NextOpen is when the schedule is next expected to permit promotions.
+   *
+   * It is optional even while Closed is true, and its absence means only that
+   * no reopening is known: the schedule may have none (a one-shot Allow window
+   * that has already elapsed), determining one may be impractical, or the
+   * closure may be indefinite by design. Clients must therefore render Reason
+   * and treat a missing NextOpen as "frozen, with no known end" rather than
+   * assuming a value is present.
+   *
+   * +optional
+   */
   nextOpen?: string;
-  /** Reason explains in human-readable terms why promotion is forbidden,
-naming the freeze responsible where there is one.
-
-It is set whenever Closed is true, where it is the only field guaranteed
-to explain the freeze because NextOpen may be absent.
-It carries the same explanation as the corresponding admission rejection.
-
-+optional */
+  /**
+   * Reason explains in human-readable terms why promotion is forbidden,
+   * naming the freeze responsible where there is one.
+   *
+   * It is set whenever Closed is true, where it is the only field guaranteed
+   * to explain the freeze because NextOpen may be absent.
+   * It carries the same explanation as the corresponding admission rejection.
+   *
+   * +optional
+   */
   reason?: string;
 }

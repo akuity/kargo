@@ -7,21 +7,27 @@
  */
 
 export interface PromotionRequestTargetStatus {
-  /** Name is the name of the Target.
-
-+kubebuilder:validation:Required
-+kubebuilder:validation:MinLength=1
-+kubebuilder:validation:MaxLength=253
-+kubebuilder:validation:Pattern=`^[a-z0-9]([-a-z0-9]*[a-z0-9])?(\.[a-z0-9]([-a-z0-9]*[a-z0-9])?)*$`
-+akuity:test-kubebuilder-pattern=KubernetesName */
+  /**
+   * Name is the name of the Target.
+   *
+   * +kubebuilder:validation:Required
+   * +kubebuilder:validation:MinLength=1
+   * +kubebuilder:validation:MaxLength=253
+   * +kubebuilder:validation:Pattern=`^[a-z0-9]([-a-z0-9]*[a-z0-9])?(\.[a-z0-9]([-a-z0-9]*[a-z0-9])?)*$`
+   * +akuity:test-kubebuilder-pattern=KubernetesName
+   */
   name: string;
-  /** Phase is the phase of that Promotion.
-
-+kubebuilder:validation:Optional */
+  /**
+   * Phase is the phase of that Promotion.
+   *
+   * +kubebuilder:validation:Optional
+   */
   phase?: string;
-  /** Promotion is the name of the child Promotion currently promoting the
-Freight to this Target. Empty if none has been created yet.
-
-+kubebuilder:validation:Optional */
+  /**
+   * Promotion is the name of the child Promotion currently promoting the
+   * Freight to this Target. Empty if none has been created yet.
+   *
+   * +kubebuilder:validation:Optional
+   */
   promotion?: string;
 }

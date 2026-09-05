@@ -22,26 +22,37 @@ import type {
 } from '@tanstack/react-query';
 
 import type {
-  CreateGenericCredentialsRequestBody,
-  CreateRepoCredentialsRequestBody,
-  PatchGenericCredentialsRequestBody,
-  PatchRepoCredentialsRequestBody,
-  UpdateGenericCredentialsRequestBody,
-  UpdateRepoCredentialsRequestBody,
+  CreateGenericCredentialsRequest,
+  CreateRepoCredentialsRequest,
+  PatchGenericCredentialsRequest,
+  PatchRepoCredentialsRequest,
+  UpdateGenericCredentialsRequest,
+  UpdateRepoCredentialsRequest,
   V1Secret,
   V1SecretList
-} from '.././models';
+} from '../models';
 
 import { customFetch } from '../../../../lib/api/custom-fetch';
 import type { ErrorType } from '../../../../lib/api/custom-fetch';
+import { serializeParams } from '../../../../lib/api/params-serializer';
 
 type SecondParameter<T extends (...args: never) => unknown> = Parameters<T>[1];
 
-/**
- * List project-level generic credentials. Returns a Kubernetes
-SecretList resource containing heavily redacted Secrets.
- * @summary List project-level generic credentials
- */
+const withQueryKey = <T extends object, K>(query: T, queryKey: K): T & { queryKey: K } => {
+  const result = { queryKey } as T & { queryKey: K };
+  for (const key of Object.keys(query)) {
+    // The explicit queryKey always wins, matching the previous
+    // `{ ...query, queryKey }` spread where it was set last.
+    if (key === 'queryKey') continue;
+    Object.defineProperty(result, key, {
+      enumerable: true,
+      configurable: true,
+      get: () => (query as Record<string, unknown>)[key]
+    });
+  }
+  return result;
+};
+
 export type listProjectGenericCredentialsResponse200 = {
   data: V1SecretList;
   status: 200;
@@ -57,9 +68,14 @@ export const getListProjectGenericCredentialsUrl = (project: string) => {
   return `/v1beta1/projects/${project}/generic-credentials`;
 };
 
+/**
+ * List project-level generic credentials. Returns a Kubernetes
+ * SecretList resource containing heavily redacted Secrets.
+ * @summary List project-level generic credentials
+ */
 export const listProjectGenericCredentials = async (
   project: string,
-  options?: RequestInit
+  options?: Parameters<typeof customFetch>[1]
 ): Promise<listProjectGenericCredentialsResponse> => {
   return customFetch<listProjectGenericCredentialsResponse>(
     getListProjectGenericCredentialsUrl(project),
@@ -70,7 +86,7 @@ export const listProjectGenericCredentials = async (
   );
 };
 
-export const getListProjectGenericCredentialsQueryKey = (project?: string) => {
+export const getListProjectGenericCredentialsQueryKey = (project: string) => {
   return [`/v1beta1/projects/${project}/generic-credentials`] as const;
 };
 
@@ -93,11 +109,14 @@ export const getListProjectGenericCredentialsQueryOptions = <
   const queryFn: QueryFunction<Awaited<ReturnType<typeof listProjectGenericCredentials>>> = () =>
     listProjectGenericCredentials(project, requestOptions);
 
-  return { queryKey, queryFn, enabled: !!project, ...queryOptions } as UseQueryOptions<
-    Awaited<ReturnType<typeof listProjectGenericCredentials>>,
-    TError,
-    TData
-  > & { queryKey: DataTag<QueryKey, TData, TError> };
+  return {
+    queryKey,
+    queryFn,
+    enabled: project !== null && project !== undefined,
+    ...queryOptions
+  } as UseQueryOptions<Awaited<ReturnType<typeof listProjectGenericCredentials>>, TError, TData> & {
+    queryKey: DataTag<QueryKey, TData, TError>;
+  };
 };
 
 export type ListProjectGenericCredentialsQueryResult = NonNullable<
@@ -183,16 +202,9 @@ export function useListProjectGenericCredentials<
     queryKey: DataTag<QueryKey, TData, TError>;
   };
 
-  query.queryKey = queryOptions.queryKey;
-
-  return query;
+  return withQueryKey(query, queryOptions.queryKey);
 }
 
-/**
- * Create project-level generic credentials. Returns a heavily
-redacted Kubernetes Secret resource.
- * @summary Create project-level generic credentials
- */
 export type createProjectGenericCredentialsResponse201 = {
   data: V1Secret;
   status: 201;
@@ -209,21 +221,37 @@ export const getCreateProjectGenericCredentialsUrl = (project: string) => {
   return `/v1beta1/projects/${project}/generic-credentials`;
 };
 
+/**
+ * Create project-level generic credentials. Returns a heavily
+ * redacted Kubernetes Secret resource.
+ * @summary Create project-level generic credentials
+ */
 export const createProjectGenericCredentials = async (
   project: string,
-  createGenericCredentialsRequestBody: CreateGenericCredentialsRequestBody,
-  options?: RequestInit
+  createGenericCredentialsRequest: CreateGenericCredentialsRequest,
+  options?: Parameters<typeof customFetch>[1]
 ): Promise<createProjectGenericCredentialsResponse> => {
+  const getHeaders = (
+    h?: NonNullable<RequestInit['headers']>
+  ): Record<string, string | readonly string[]> => {
+    if (!h) return {};
+    if (h instanceof Headers) return Object.fromEntries(h.entries());
+    if (Array.isArray(h)) return Object.fromEntries(h);
+    return h;
+  };
   return customFetch<createProjectGenericCredentialsResponse>(
     getCreateProjectGenericCredentialsUrl(project),
     {
       ...options,
       method: 'POST',
-      headers: { 'Content-Type': 'application/json', ...options?.headers },
-      body: JSON.stringify(createGenericCredentialsRequestBody)
+      headers: { 'Content-Type': 'application/json', ...getHeaders(options?.headers) },
+      body: JSON.stringify(createGenericCredentialsRequest)
     }
   );
 };
+
+export const getCreateProjectGenericCredentialsMutationKey = () =>
+  ['createProjectGenericCredentials'] as const;
 
 export const getCreateProjectGenericCredentialsMutationOptions = <
   TError = ErrorType<unknown>,
@@ -232,17 +260,17 @@ export const getCreateProjectGenericCredentialsMutationOptions = <
   mutation?: UseMutationOptions<
     Awaited<ReturnType<typeof createProjectGenericCredentials>>,
     TError,
-    { project: string; data: CreateGenericCredentialsRequestBody },
+    CreateProjectGenericCredentialsMutationVariables,
     TContext
   >;
   request?: SecondParameter<typeof customFetch>;
 }): UseMutationOptions<
   Awaited<ReturnType<typeof createProjectGenericCredentials>>,
   TError,
-  { project: string; data: CreateGenericCredentialsRequestBody },
+  CreateProjectGenericCredentialsMutationVariables,
   TContext
 > => {
-  const mutationKey = ['createProjectGenericCredentials'];
+  const mutationKey = getCreateProjectGenericCredentialsMutationKey();
   const { mutation: mutationOptions, request: requestOptions } = options
     ? options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey
       ? options
@@ -251,7 +279,7 @@ export const getCreateProjectGenericCredentialsMutationOptions = <
 
   const mutationFn: MutationFunction<
     Awaited<ReturnType<typeof createProjectGenericCredentials>>,
-    { project: string; data: CreateGenericCredentialsRequestBody }
+    CreateProjectGenericCredentialsMutationVariables
   > = (props) => {
     const { project, data } = props ?? {};
 
@@ -264,8 +292,12 @@ export const getCreateProjectGenericCredentialsMutationOptions = <
 export type CreateProjectGenericCredentialsMutationResult = NonNullable<
   Awaited<ReturnType<typeof createProjectGenericCredentials>>
 >;
-export type CreateProjectGenericCredentialsMutationBody = CreateGenericCredentialsRequestBody;
+export type CreateProjectGenericCredentialsMutationBody = CreateGenericCredentialsRequest;
 export type CreateProjectGenericCredentialsMutationError = ErrorType<unknown>;
+export type CreateProjectGenericCredentialsMutationVariables = {
+  project: string;
+  data: CreateGenericCredentialsRequest;
+};
 
 /**
  * @summary Create project-level generic credentials
@@ -275,7 +307,7 @@ export const useCreateProjectGenericCredentials = <TError = ErrorType<unknown>, 
     mutation?: UseMutationOptions<
       Awaited<ReturnType<typeof createProjectGenericCredentials>>,
       TError,
-      { project: string; data: CreateGenericCredentialsRequestBody },
+      CreateProjectGenericCredentialsMutationVariables,
       TContext
     >;
     request?: SecondParameter<typeof customFetch>;
@@ -284,18 +316,11 @@ export const useCreateProjectGenericCredentials = <TError = ErrorType<unknown>, 
 ): UseMutationResult<
   Awaited<ReturnType<typeof createProjectGenericCredentials>>,
   TError,
-  { project: string; data: CreateGenericCredentialsRequestBody },
+  CreateProjectGenericCredentialsMutationVariables,
   TContext
 > => {
-  const mutationOptions = getCreateProjectGenericCredentialsMutationOptions(options);
-
-  return useMutation(mutationOptions, queryClient);
+  return useMutation(getCreateProjectGenericCredentialsMutationOptions(options), queryClient);
 };
-/**
- * Retrieve project-level generic credentials by name. Returns a
-heavily redacted Kubernetes Secret resource.
- * @summary Retrieve project-level generic credentials
- */
 export type getProjectGenericCredentialsResponse200 = {
   data: V1Secret;
   status: 200;
@@ -311,10 +336,15 @@ export const getGetProjectGenericCredentialsUrl = (project: string, genericCrede
   return `/v1beta1/projects/${project}/generic-credentials/${genericCredentials}`;
 };
 
+/**
+ * Retrieve project-level generic credentials by name. Returns a
+ * heavily redacted Kubernetes Secret resource.
+ * @summary Retrieve project-level generic credentials
+ */
 export const getProjectGenericCredentials = async (
   project: string,
   genericCredentials: string,
-  options?: RequestInit
+  options?: Parameters<typeof customFetch>[1]
 ): Promise<getProjectGenericCredentialsResponse> => {
   return customFetch<getProjectGenericCredentialsResponse>(
     getGetProjectGenericCredentialsUrl(project, genericCredentials),
@@ -326,8 +356,8 @@ export const getProjectGenericCredentials = async (
 };
 
 export const getGetProjectGenericCredentialsQueryKey = (
-  project?: string,
-  genericCredentials?: string
+  project: string,
+  genericCredentials: string
 ) => {
   return [`/v1beta1/projects/${project}/generic-credentials/${genericCredentials}`] as const;
 };
@@ -356,7 +386,11 @@ export const getGetProjectGenericCredentialsQueryOptions = <
   return {
     queryKey,
     queryFn,
-    enabled: !!(project && genericCredentials),
+    enabled:
+      project !== null &&
+      project !== undefined &&
+      genericCredentials !== null &&
+      genericCredentials !== undefined,
     ...queryOptions
   } as UseQueryOptions<Awaited<ReturnType<typeof getProjectGenericCredentials>>, TError, TData> & {
     queryKey: DataTag<QueryKey, TData, TError>;
@@ -454,16 +488,9 @@ export function useGetProjectGenericCredentials<
     queryKey: DataTag<QueryKey, TData, TError>;
   };
 
-  query.queryKey = queryOptions.queryKey;
-
-  return query;
+  return withQueryKey(query, queryOptions.queryKey);
 }
 
-/**
- * Replace project-level generic credentials. All existing data is
-replaced. Returns a heavily redacted Kubernetes Secret resource.
- * @summary Replace project-level generic credentials
- */
 export type updateProjectGenericCredentialsResponse200 = {
   data: V1Secret;
   status: 200;
@@ -483,22 +510,38 @@ export const getUpdateProjectGenericCredentialsUrl = (
   return `/v1beta1/projects/${project}/generic-credentials/${genericCredentials}`;
 };
 
+/**
+ * Replace project-level generic credentials. All existing data is
+ * replaced. Returns a heavily redacted Kubernetes Secret resource.
+ * @summary Replace project-level generic credentials
+ */
 export const updateProjectGenericCredentials = async (
   project: string,
   genericCredentials: string,
-  updateGenericCredentialsRequestBody: UpdateGenericCredentialsRequestBody,
-  options?: RequestInit
+  updateGenericCredentialsRequest: UpdateGenericCredentialsRequest,
+  options?: Parameters<typeof customFetch>[1]
 ): Promise<updateProjectGenericCredentialsResponse> => {
+  const getHeaders = (
+    h?: NonNullable<RequestInit['headers']>
+  ): Record<string, string | readonly string[]> => {
+    if (!h) return {};
+    if (h instanceof Headers) return Object.fromEntries(h.entries());
+    if (Array.isArray(h)) return Object.fromEntries(h);
+    return h;
+  };
   return customFetch<updateProjectGenericCredentialsResponse>(
     getUpdateProjectGenericCredentialsUrl(project, genericCredentials),
     {
       ...options,
       method: 'PUT',
-      headers: { 'Content-Type': 'application/json', ...options?.headers },
-      body: JSON.stringify(updateGenericCredentialsRequestBody)
+      headers: { 'Content-Type': 'application/json', ...getHeaders(options?.headers) },
+      body: JSON.stringify(updateGenericCredentialsRequest)
     }
   );
 };
+
+export const getUpdateProjectGenericCredentialsMutationKey = () =>
+  ['updateProjectGenericCredentials'] as const;
 
 export const getUpdateProjectGenericCredentialsMutationOptions = <
   TError = ErrorType<unknown>,
@@ -507,17 +550,17 @@ export const getUpdateProjectGenericCredentialsMutationOptions = <
   mutation?: UseMutationOptions<
     Awaited<ReturnType<typeof updateProjectGenericCredentials>>,
     TError,
-    { project: string; genericCredentials: string; data: UpdateGenericCredentialsRequestBody },
+    UpdateProjectGenericCredentialsMutationVariables,
     TContext
   >;
   request?: SecondParameter<typeof customFetch>;
 }): UseMutationOptions<
   Awaited<ReturnType<typeof updateProjectGenericCredentials>>,
   TError,
-  { project: string; genericCredentials: string; data: UpdateGenericCredentialsRequestBody },
+  UpdateProjectGenericCredentialsMutationVariables,
   TContext
 > => {
-  const mutationKey = ['updateProjectGenericCredentials'];
+  const mutationKey = getUpdateProjectGenericCredentialsMutationKey();
   const { mutation: mutationOptions, request: requestOptions } = options
     ? options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey
       ? options
@@ -526,7 +569,7 @@ export const getUpdateProjectGenericCredentialsMutationOptions = <
 
   const mutationFn: MutationFunction<
     Awaited<ReturnType<typeof updateProjectGenericCredentials>>,
-    { project: string; genericCredentials: string; data: UpdateGenericCredentialsRequestBody }
+    UpdateProjectGenericCredentialsMutationVariables
   > = (props) => {
     const { project, genericCredentials, data } = props ?? {};
 
@@ -539,8 +582,13 @@ export const getUpdateProjectGenericCredentialsMutationOptions = <
 export type UpdateProjectGenericCredentialsMutationResult = NonNullable<
   Awaited<ReturnType<typeof updateProjectGenericCredentials>>
 >;
-export type UpdateProjectGenericCredentialsMutationBody = UpdateGenericCredentialsRequestBody;
+export type UpdateProjectGenericCredentialsMutationBody = UpdateGenericCredentialsRequest;
 export type UpdateProjectGenericCredentialsMutationError = ErrorType<unknown>;
+export type UpdateProjectGenericCredentialsMutationVariables = {
+  project: string;
+  genericCredentials: string;
+  data: UpdateGenericCredentialsRequest;
+};
 
 /**
  * @summary Replace project-level generic credentials
@@ -550,7 +598,7 @@ export const useUpdateProjectGenericCredentials = <TError = ErrorType<unknown>, 
     mutation?: UseMutationOptions<
       Awaited<ReturnType<typeof updateProjectGenericCredentials>>,
       TError,
-      { project: string; genericCredentials: string; data: UpdateGenericCredentialsRequestBody },
+      UpdateProjectGenericCredentialsMutationVariables,
       TContext
     >;
     request?: SecondParameter<typeof customFetch>;
@@ -559,17 +607,11 @@ export const useUpdateProjectGenericCredentials = <TError = ErrorType<unknown>, 
 ): UseMutationResult<
   Awaited<ReturnType<typeof updateProjectGenericCredentials>>,
   TError,
-  { project: string; genericCredentials: string; data: UpdateGenericCredentialsRequestBody },
+  UpdateProjectGenericCredentialsMutationVariables,
   TContext
 > => {
-  const mutationOptions = getUpdateProjectGenericCredentialsMutationOptions(options);
-
-  return useMutation(mutationOptions, queryClient);
+  return useMutation(getUpdateProjectGenericCredentialsMutationOptions(options), queryClient);
 };
-/**
- * Delete generic credentials from a project's namespace.
- * @summary Delete project-level generic credentials
- */
 export type deleteProjectGenericCredentialsResponse204 = {
   data: void;
   status: 204;
@@ -589,10 +631,14 @@ export const getDeleteProjectGenericCredentialsUrl = (
   return `/v1beta1/projects/${project}/generic-credentials/${genericCredentials}`;
 };
 
+/**
+ * Delete generic credentials from a project's namespace.
+ * @summary Delete project-level generic credentials
+ */
 export const deleteProjectGenericCredentials = async (
   project: string,
   genericCredentials: string,
-  options?: RequestInit
+  options?: Parameters<typeof customFetch>[1]
 ): Promise<deleteProjectGenericCredentialsResponse> => {
   return customFetch<deleteProjectGenericCredentialsResponse>(
     getDeleteProjectGenericCredentialsUrl(project, genericCredentials),
@@ -603,6 +649,9 @@ export const deleteProjectGenericCredentials = async (
   );
 };
 
+export const getDeleteProjectGenericCredentialsMutationKey = () =>
+  ['deleteProjectGenericCredentials'] as const;
+
 export const getDeleteProjectGenericCredentialsMutationOptions = <
   TError = ErrorType<unknown>,
   TContext = unknown
@@ -610,17 +659,17 @@ export const getDeleteProjectGenericCredentialsMutationOptions = <
   mutation?: UseMutationOptions<
     Awaited<ReturnType<typeof deleteProjectGenericCredentials>>,
     TError,
-    { project: string; genericCredentials: string },
+    DeleteProjectGenericCredentialsMutationVariables,
     TContext
   >;
   request?: SecondParameter<typeof customFetch>;
 }): UseMutationOptions<
   Awaited<ReturnType<typeof deleteProjectGenericCredentials>>,
   TError,
-  { project: string; genericCredentials: string },
+  DeleteProjectGenericCredentialsMutationVariables,
   TContext
 > => {
-  const mutationKey = ['deleteProjectGenericCredentials'];
+  const mutationKey = getDeleteProjectGenericCredentialsMutationKey();
   const { mutation: mutationOptions, request: requestOptions } = options
     ? options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey
       ? options
@@ -629,7 +678,7 @@ export const getDeleteProjectGenericCredentialsMutationOptions = <
 
   const mutationFn: MutationFunction<
     Awaited<ReturnType<typeof deleteProjectGenericCredentials>>,
-    { project: string; genericCredentials: string }
+    DeleteProjectGenericCredentialsMutationVariables
   > = (props) => {
     const { project, genericCredentials } = props ?? {};
 
@@ -644,6 +693,10 @@ export type DeleteProjectGenericCredentialsMutationResult = NonNullable<
 >;
 
 export type DeleteProjectGenericCredentialsMutationError = ErrorType<unknown>;
+export type DeleteProjectGenericCredentialsMutationVariables = {
+  project: string;
+  genericCredentials: string;
+};
 
 /**
  * @summary Delete project-level generic credentials
@@ -653,7 +706,7 @@ export const useDeleteProjectGenericCredentials = <TError = ErrorType<unknown>, 
     mutation?: UseMutationOptions<
       Awaited<ReturnType<typeof deleteProjectGenericCredentials>>,
       TError,
-      { project: string; genericCredentials: string },
+      DeleteProjectGenericCredentialsMutationVariables,
       TContext
     >;
     request?: SecondParameter<typeof customFetch>;
@@ -662,19 +715,11 @@ export const useDeleteProjectGenericCredentials = <TError = ErrorType<unknown>, 
 ): UseMutationResult<
   Awaited<ReturnType<typeof deleteProjectGenericCredentials>>,
   TError,
-  { project: string; genericCredentials: string },
+  DeleteProjectGenericCredentialsMutationVariables,
   TContext
 > => {
-  const mutationOptions = getDeleteProjectGenericCredentialsMutationOptions(options);
-
-  return useMutation(mutationOptions, queryClient);
+  return useMutation(getDeleteProjectGenericCredentialsMutationOptions(options), queryClient);
 };
-/**
- * Patch project-level generic credentials. Merges provided data
-with existing data. Use removeKeys to delete specific keys.
-Returns a heavily redacted Kubernetes Secret resource.
- * @summary Patch project-level generic credentials
- */
 export type patchProjectGenericCredentialsResponse200 = {
   data: V1Secret;
   status: 200;
@@ -693,22 +738,39 @@ export const getPatchProjectGenericCredentialsUrl = (
   return `/v1beta1/projects/${project}/generic-credentials/${genericCredentials}`;
 };
 
+/**
+ * Patch project-level generic credentials. Merges provided data
+ * with existing data. Use removeKeys to delete specific keys.
+ * Returns a heavily redacted Kubernetes Secret resource.
+ * @summary Patch project-level generic credentials
+ */
 export const patchProjectGenericCredentials = async (
   project: string,
   genericCredentials: string,
-  patchGenericCredentialsRequestBody: PatchGenericCredentialsRequestBody,
-  options?: RequestInit
+  patchGenericCredentialsRequest: PatchGenericCredentialsRequest,
+  options?: Parameters<typeof customFetch>[1]
 ): Promise<patchProjectGenericCredentialsResponse> => {
+  const getHeaders = (
+    h?: NonNullable<RequestInit['headers']>
+  ): Record<string, string | readonly string[]> => {
+    if (!h) return {};
+    if (h instanceof Headers) return Object.fromEntries(h.entries());
+    if (Array.isArray(h)) return Object.fromEntries(h);
+    return h;
+  };
   return customFetch<patchProjectGenericCredentialsResponse>(
     getPatchProjectGenericCredentialsUrl(project, genericCredentials),
     {
       ...options,
       method: 'PATCH',
-      headers: { 'Content-Type': 'application/json', ...options?.headers },
-      body: JSON.stringify(patchGenericCredentialsRequestBody)
+      headers: { 'Content-Type': 'application/json', ...getHeaders(options?.headers) },
+      body: JSON.stringify(patchGenericCredentialsRequest)
     }
   );
 };
+
+export const getPatchProjectGenericCredentialsMutationKey = () =>
+  ['patchProjectGenericCredentials'] as const;
 
 export const getPatchProjectGenericCredentialsMutationOptions = <
   TError = ErrorType<unknown>,
@@ -717,17 +779,17 @@ export const getPatchProjectGenericCredentialsMutationOptions = <
   mutation?: UseMutationOptions<
     Awaited<ReturnType<typeof patchProjectGenericCredentials>>,
     TError,
-    { project: string; genericCredentials: string; data: PatchGenericCredentialsRequestBody },
+    PatchProjectGenericCredentialsMutationVariables,
     TContext
   >;
   request?: SecondParameter<typeof customFetch>;
 }): UseMutationOptions<
   Awaited<ReturnType<typeof patchProjectGenericCredentials>>,
   TError,
-  { project: string; genericCredentials: string; data: PatchGenericCredentialsRequestBody },
+  PatchProjectGenericCredentialsMutationVariables,
   TContext
 > => {
-  const mutationKey = ['patchProjectGenericCredentials'];
+  const mutationKey = getPatchProjectGenericCredentialsMutationKey();
   const { mutation: mutationOptions, request: requestOptions } = options
     ? options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey
       ? options
@@ -736,7 +798,7 @@ export const getPatchProjectGenericCredentialsMutationOptions = <
 
   const mutationFn: MutationFunction<
     Awaited<ReturnType<typeof patchProjectGenericCredentials>>,
-    { project: string; genericCredentials: string; data: PatchGenericCredentialsRequestBody }
+    PatchProjectGenericCredentialsMutationVariables
   > = (props) => {
     const { project, genericCredentials, data } = props ?? {};
 
@@ -749,8 +811,13 @@ export const getPatchProjectGenericCredentialsMutationOptions = <
 export type PatchProjectGenericCredentialsMutationResult = NonNullable<
   Awaited<ReturnType<typeof patchProjectGenericCredentials>>
 >;
-export type PatchProjectGenericCredentialsMutationBody = PatchGenericCredentialsRequestBody;
+export type PatchProjectGenericCredentialsMutationBody = PatchGenericCredentialsRequest;
 export type PatchProjectGenericCredentialsMutationError = ErrorType<unknown>;
+export type PatchProjectGenericCredentialsMutationVariables = {
+  project: string;
+  genericCredentials: string;
+  data: PatchGenericCredentialsRequest;
+};
 
 /**
  * @summary Patch project-level generic credentials
@@ -760,7 +827,7 @@ export const usePatchProjectGenericCredentials = <TError = ErrorType<unknown>, T
     mutation?: UseMutationOptions<
       Awaited<ReturnType<typeof patchProjectGenericCredentials>>,
       TError,
-      { project: string; genericCredentials: string; data: PatchGenericCredentialsRequestBody },
+      PatchProjectGenericCredentialsMutationVariables,
       TContext
     >;
     request?: SecondParameter<typeof customFetch>;
@@ -769,18 +836,11 @@ export const usePatchProjectGenericCredentials = <TError = ErrorType<unknown>, T
 ): UseMutationResult<
   Awaited<ReturnType<typeof patchProjectGenericCredentials>>,
   TError,
-  { project: string; genericCredentials: string; data: PatchGenericCredentialsRequestBody },
+  PatchProjectGenericCredentialsMutationVariables,
   TContext
 > => {
-  const mutationOptions = getPatchProjectGenericCredentialsMutationOptions(options);
-
-  return useMutation(mutationOptions, queryClient);
+  return useMutation(getPatchProjectGenericCredentialsMutationOptions(options), queryClient);
 };
-/**
- * List project-level repository credentials. Returns a SecretList
-resource containing heavily redacted Secrets.
- * @summary List project-level repository credentials
- */
 export type listProjectRepoCredentialsResponse200 = {
   data: V1SecretList;
   status: 200;
@@ -795,9 +855,14 @@ export const getListProjectRepoCredentialsUrl = (project: string) => {
   return `/v1beta1/projects/${project}/repo-credentials`;
 };
 
+/**
+ * List project-level repository credentials. Returns a SecretList
+ * resource containing heavily redacted Secrets.
+ * @summary List project-level repository credentials
+ */
 export const listProjectRepoCredentials = async (
   project: string,
-  options?: RequestInit
+  options?: Parameters<typeof customFetch>[1]
 ): Promise<listProjectRepoCredentialsResponse> => {
   return customFetch<listProjectRepoCredentialsResponse>(
     getListProjectRepoCredentialsUrl(project),
@@ -808,7 +873,7 @@ export const listProjectRepoCredentials = async (
   );
 };
 
-export const getListProjectRepoCredentialsQueryKey = (project?: string) => {
+export const getListProjectRepoCredentialsQueryKey = (project: string) => {
   return [`/v1beta1/projects/${project}/repo-credentials`] as const;
 };
 
@@ -831,11 +896,14 @@ export const getListProjectRepoCredentialsQueryOptions = <
   const queryFn: QueryFunction<Awaited<ReturnType<typeof listProjectRepoCredentials>>> = () =>
     listProjectRepoCredentials(project, requestOptions);
 
-  return { queryKey, queryFn, enabled: !!project, ...queryOptions } as UseQueryOptions<
-    Awaited<ReturnType<typeof listProjectRepoCredentials>>,
-    TError,
-    TData
-  > & { queryKey: DataTag<QueryKey, TData, TError> };
+  return {
+    queryKey,
+    queryFn,
+    enabled: project !== null && project !== undefined,
+    ...queryOptions
+  } as UseQueryOptions<Awaited<ReturnType<typeof listProjectRepoCredentials>>, TError, TData> & {
+    queryKey: DataTag<QueryKey, TData, TError>;
+  };
 };
 
 export type ListProjectRepoCredentialsQueryResult = NonNullable<
@@ -921,16 +989,9 @@ export function useListProjectRepoCredentials<
     queryKey: DataTag<QueryKey, TData, TError>;
   };
 
-  query.queryKey = queryOptions.queryKey;
-
-  return query;
+  return withQueryKey(query, queryOptions.queryKey);
 }
 
-/**
- * Create project-level repository credentials. Returns a heavily
-redacted Kubernetes Secret resource.
- * @summary Create project-level repository credentials
- */
 export type createProjectRepoCredentialsResponse201 = {
   data: V1Secret;
   status: 201;
@@ -946,21 +1007,37 @@ export const getCreateProjectRepoCredentialsUrl = (project: string) => {
   return `/v1beta1/projects/${project}/repo-credentials`;
 };
 
+/**
+ * Create project-level repository credentials. Returns a heavily
+ * redacted Kubernetes Secret resource.
+ * @summary Create project-level repository credentials
+ */
 export const createProjectRepoCredentials = async (
   project: string,
-  createRepoCredentialsRequestBody: CreateRepoCredentialsRequestBody,
-  options?: RequestInit
+  createRepoCredentialsRequest: CreateRepoCredentialsRequest,
+  options?: Parameters<typeof customFetch>[1]
 ): Promise<createProjectRepoCredentialsResponse> => {
+  const getHeaders = (
+    h?: NonNullable<RequestInit['headers']>
+  ): Record<string, string | readonly string[]> => {
+    if (!h) return {};
+    if (h instanceof Headers) return Object.fromEntries(h.entries());
+    if (Array.isArray(h)) return Object.fromEntries(h);
+    return h;
+  };
   return customFetch<createProjectRepoCredentialsResponse>(
     getCreateProjectRepoCredentialsUrl(project),
     {
       ...options,
       method: 'POST',
-      headers: { 'Content-Type': 'application/json', ...options?.headers },
-      body: JSON.stringify(createRepoCredentialsRequestBody)
+      headers: { 'Content-Type': 'application/json', ...getHeaders(options?.headers) },
+      body: JSON.stringify(createRepoCredentialsRequest)
     }
   );
 };
+
+export const getCreateProjectRepoCredentialsMutationKey = () =>
+  ['createProjectRepoCredentials'] as const;
 
 export const getCreateProjectRepoCredentialsMutationOptions = <
   TError = ErrorType<unknown>,
@@ -969,17 +1046,17 @@ export const getCreateProjectRepoCredentialsMutationOptions = <
   mutation?: UseMutationOptions<
     Awaited<ReturnType<typeof createProjectRepoCredentials>>,
     TError,
-    { project: string; data: CreateRepoCredentialsRequestBody },
+    CreateProjectRepoCredentialsMutationVariables,
     TContext
   >;
   request?: SecondParameter<typeof customFetch>;
 }): UseMutationOptions<
   Awaited<ReturnType<typeof createProjectRepoCredentials>>,
   TError,
-  { project: string; data: CreateRepoCredentialsRequestBody },
+  CreateProjectRepoCredentialsMutationVariables,
   TContext
 > => {
-  const mutationKey = ['createProjectRepoCredentials'];
+  const mutationKey = getCreateProjectRepoCredentialsMutationKey();
   const { mutation: mutationOptions, request: requestOptions } = options
     ? options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey
       ? options
@@ -988,7 +1065,7 @@ export const getCreateProjectRepoCredentialsMutationOptions = <
 
   const mutationFn: MutationFunction<
     Awaited<ReturnType<typeof createProjectRepoCredentials>>,
-    { project: string; data: CreateRepoCredentialsRequestBody }
+    CreateProjectRepoCredentialsMutationVariables
   > = (props) => {
     const { project, data } = props ?? {};
 
@@ -1001,8 +1078,12 @@ export const getCreateProjectRepoCredentialsMutationOptions = <
 export type CreateProjectRepoCredentialsMutationResult = NonNullable<
   Awaited<ReturnType<typeof createProjectRepoCredentials>>
 >;
-export type CreateProjectRepoCredentialsMutationBody = CreateRepoCredentialsRequestBody;
+export type CreateProjectRepoCredentialsMutationBody = CreateRepoCredentialsRequest;
 export type CreateProjectRepoCredentialsMutationError = ErrorType<unknown>;
+export type CreateProjectRepoCredentialsMutationVariables = {
+  project: string;
+  data: CreateRepoCredentialsRequest;
+};
 
 /**
  * @summary Create project-level repository credentials
@@ -1012,7 +1093,7 @@ export const useCreateProjectRepoCredentials = <TError = ErrorType<unknown>, TCo
     mutation?: UseMutationOptions<
       Awaited<ReturnType<typeof createProjectRepoCredentials>>,
       TError,
-      { project: string; data: CreateRepoCredentialsRequestBody },
+      CreateProjectRepoCredentialsMutationVariables,
       TContext
     >;
     request?: SecondParameter<typeof customFetch>;
@@ -1021,18 +1102,11 @@ export const useCreateProjectRepoCredentials = <TError = ErrorType<unknown>, TCo
 ): UseMutationResult<
   Awaited<ReturnType<typeof createProjectRepoCredentials>>,
   TError,
-  { project: string; data: CreateRepoCredentialsRequestBody },
+  CreateProjectRepoCredentialsMutationVariables,
   TContext
 > => {
-  const mutationOptions = getCreateProjectRepoCredentialsMutationOptions(options);
-
-  return useMutation(mutationOptions, queryClient);
+  return useMutation(getCreateProjectRepoCredentialsMutationOptions(options), queryClient);
 };
-/**
- * Retrieve project-level repository credentials by name. Returns a
-heavily redacted Kubernetes Secret resource.
- * @summary Retrieve project-level repository credentials
- */
 export type getProjectRepoCredentialsResponse200 = {
   data: V1Secret;
   status: 200;
@@ -1047,10 +1121,15 @@ export const getGetProjectRepoCredentialsUrl = (project: string, repoCredentials
   return `/v1beta1/projects/${project}/repo-credentials/${repoCredentials}`;
 };
 
+/**
+ * Retrieve project-level repository credentials by name. Returns a
+ * heavily redacted Kubernetes Secret resource.
+ * @summary Retrieve project-level repository credentials
+ */
 export const getProjectRepoCredentials = async (
   project: string,
   repoCredentials: string,
-  options?: RequestInit
+  options?: Parameters<typeof customFetch>[1]
 ): Promise<getProjectRepoCredentialsResponse> => {
   return customFetch<getProjectRepoCredentialsResponse>(
     getGetProjectRepoCredentialsUrl(project, repoCredentials),
@@ -1061,10 +1140,7 @@ export const getProjectRepoCredentials = async (
   );
 };
 
-export const getGetProjectRepoCredentialsQueryKey = (
-  project?: string,
-  repoCredentials?: string
-) => {
+export const getGetProjectRepoCredentialsQueryKey = (project: string, repoCredentials: string) => {
   return [`/v1beta1/projects/${project}/repo-credentials/${repoCredentials}`] as const;
 };
 
@@ -1092,7 +1168,11 @@ export const getGetProjectRepoCredentialsQueryOptions = <
   return {
     queryKey,
     queryFn,
-    enabled: !!(project && repoCredentials),
+    enabled:
+      project !== null &&
+      project !== undefined &&
+      repoCredentials !== null &&
+      repoCredentials !== undefined,
     ...queryOptions
   } as UseQueryOptions<Awaited<ReturnType<typeof getProjectRepoCredentials>>, TError, TData> & {
     queryKey: DataTag<QueryKey, TData, TError>;
@@ -1186,16 +1266,9 @@ export function useGetProjectRepoCredentials<
     queryKey: DataTag<QueryKey, TData, TError>;
   };
 
-  query.queryKey = queryOptions.queryKey;
-
-  return query;
+  return withQueryKey(query, queryOptions.queryKey);
 }
 
-/**
- * Replace project-level repository credentials. All fields are replaced.
-Returns a heavily redacted Kubernetes Secret resource.
- * @summary Replace project-level repository credentials
- */
 export type updateProjectRepoCredentialsResponse200 = {
   data: V1Secret;
   status: 200;
@@ -1211,22 +1284,38 @@ export const getUpdateProjectRepoCredentialsUrl = (project: string, repoCredenti
   return `/v1beta1/projects/${project}/repo-credentials/${repoCredentials}`;
 };
 
+/**
+ * Replace project-level repository credentials. All fields are replaced.
+ * Returns a heavily redacted Kubernetes Secret resource.
+ * @summary Replace project-level repository credentials
+ */
 export const updateProjectRepoCredentials = async (
   project: string,
   repoCredentials: string,
-  updateRepoCredentialsRequestBody: UpdateRepoCredentialsRequestBody,
-  options?: RequestInit
+  updateRepoCredentialsRequest: UpdateRepoCredentialsRequest,
+  options?: Parameters<typeof customFetch>[1]
 ): Promise<updateProjectRepoCredentialsResponse> => {
+  const getHeaders = (
+    h?: NonNullable<RequestInit['headers']>
+  ): Record<string, string | readonly string[]> => {
+    if (!h) return {};
+    if (h instanceof Headers) return Object.fromEntries(h.entries());
+    if (Array.isArray(h)) return Object.fromEntries(h);
+    return h;
+  };
   return customFetch<updateProjectRepoCredentialsResponse>(
     getUpdateProjectRepoCredentialsUrl(project, repoCredentials),
     {
       ...options,
       method: 'PUT',
-      headers: { 'Content-Type': 'application/json', ...options?.headers },
-      body: JSON.stringify(updateRepoCredentialsRequestBody)
+      headers: { 'Content-Type': 'application/json', ...getHeaders(options?.headers) },
+      body: JSON.stringify(updateRepoCredentialsRequest)
     }
   );
 };
+
+export const getUpdateProjectRepoCredentialsMutationKey = () =>
+  ['updateProjectRepoCredentials'] as const;
 
 export const getUpdateProjectRepoCredentialsMutationOptions = <
   TError = ErrorType<unknown>,
@@ -1235,17 +1324,17 @@ export const getUpdateProjectRepoCredentialsMutationOptions = <
   mutation?: UseMutationOptions<
     Awaited<ReturnType<typeof updateProjectRepoCredentials>>,
     TError,
-    { project: string; repoCredentials: string; data: UpdateRepoCredentialsRequestBody },
+    UpdateProjectRepoCredentialsMutationVariables,
     TContext
   >;
   request?: SecondParameter<typeof customFetch>;
 }): UseMutationOptions<
   Awaited<ReturnType<typeof updateProjectRepoCredentials>>,
   TError,
-  { project: string; repoCredentials: string; data: UpdateRepoCredentialsRequestBody },
+  UpdateProjectRepoCredentialsMutationVariables,
   TContext
 > => {
-  const mutationKey = ['updateProjectRepoCredentials'];
+  const mutationKey = getUpdateProjectRepoCredentialsMutationKey();
   const { mutation: mutationOptions, request: requestOptions } = options
     ? options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey
       ? options
@@ -1254,7 +1343,7 @@ export const getUpdateProjectRepoCredentialsMutationOptions = <
 
   const mutationFn: MutationFunction<
     Awaited<ReturnType<typeof updateProjectRepoCredentials>>,
-    { project: string; repoCredentials: string; data: UpdateRepoCredentialsRequestBody }
+    UpdateProjectRepoCredentialsMutationVariables
   > = (props) => {
     const { project, repoCredentials, data } = props ?? {};
 
@@ -1267,8 +1356,13 @@ export const getUpdateProjectRepoCredentialsMutationOptions = <
 export type UpdateProjectRepoCredentialsMutationResult = NonNullable<
   Awaited<ReturnType<typeof updateProjectRepoCredentials>>
 >;
-export type UpdateProjectRepoCredentialsMutationBody = UpdateRepoCredentialsRequestBody;
+export type UpdateProjectRepoCredentialsMutationBody = UpdateRepoCredentialsRequest;
 export type UpdateProjectRepoCredentialsMutationError = ErrorType<unknown>;
+export type UpdateProjectRepoCredentialsMutationVariables = {
+  project: string;
+  repoCredentials: string;
+  data: UpdateRepoCredentialsRequest;
+};
 
 /**
  * @summary Replace project-level repository credentials
@@ -1278,7 +1372,7 @@ export const useUpdateProjectRepoCredentials = <TError = ErrorType<unknown>, TCo
     mutation?: UseMutationOptions<
       Awaited<ReturnType<typeof updateProjectRepoCredentials>>,
       TError,
-      { project: string; repoCredentials: string; data: UpdateRepoCredentialsRequestBody },
+      UpdateProjectRepoCredentialsMutationVariables,
       TContext
     >;
     request?: SecondParameter<typeof customFetch>;
@@ -1287,17 +1381,11 @@ export const useUpdateProjectRepoCredentials = <TError = ErrorType<unknown>, TCo
 ): UseMutationResult<
   Awaited<ReturnType<typeof updateProjectRepoCredentials>>,
   TError,
-  { project: string; repoCredentials: string; data: UpdateRepoCredentialsRequestBody },
+  UpdateProjectRepoCredentialsMutationVariables,
   TContext
 > => {
-  const mutationOptions = getUpdateProjectRepoCredentialsMutationOptions(options);
-
-  return useMutation(mutationOptions, queryClient);
+  return useMutation(getUpdateProjectRepoCredentialsMutationOptions(options), queryClient);
 };
-/**
- * Delete repository credentials from a project's namespace.
- * @summary Delete project-level repository credentials
- */
 export type deleteProjectRepoCredentialsResponse204 = {
   data: void;
   status: 204;
@@ -1313,10 +1401,14 @@ export const getDeleteProjectRepoCredentialsUrl = (project: string, repoCredenti
   return `/v1beta1/projects/${project}/repo-credentials/${repoCredentials}`;
 };
 
+/**
+ * Delete repository credentials from a project's namespace.
+ * @summary Delete project-level repository credentials
+ */
 export const deleteProjectRepoCredentials = async (
   project: string,
   repoCredentials: string,
-  options?: RequestInit
+  options?: Parameters<typeof customFetch>[1]
 ): Promise<deleteProjectRepoCredentialsResponse> => {
   return customFetch<deleteProjectRepoCredentialsResponse>(
     getDeleteProjectRepoCredentialsUrl(project, repoCredentials),
@@ -1327,6 +1419,9 @@ export const deleteProjectRepoCredentials = async (
   );
 };
 
+export const getDeleteProjectRepoCredentialsMutationKey = () =>
+  ['deleteProjectRepoCredentials'] as const;
+
 export const getDeleteProjectRepoCredentialsMutationOptions = <
   TError = ErrorType<unknown>,
   TContext = unknown
@@ -1334,17 +1429,17 @@ export const getDeleteProjectRepoCredentialsMutationOptions = <
   mutation?: UseMutationOptions<
     Awaited<ReturnType<typeof deleteProjectRepoCredentials>>,
     TError,
-    { project: string; repoCredentials: string },
+    DeleteProjectRepoCredentialsMutationVariables,
     TContext
   >;
   request?: SecondParameter<typeof customFetch>;
 }): UseMutationOptions<
   Awaited<ReturnType<typeof deleteProjectRepoCredentials>>,
   TError,
-  { project: string; repoCredentials: string },
+  DeleteProjectRepoCredentialsMutationVariables,
   TContext
 > => {
-  const mutationKey = ['deleteProjectRepoCredentials'];
+  const mutationKey = getDeleteProjectRepoCredentialsMutationKey();
   const { mutation: mutationOptions, request: requestOptions } = options
     ? options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey
       ? options
@@ -1353,7 +1448,7 @@ export const getDeleteProjectRepoCredentialsMutationOptions = <
 
   const mutationFn: MutationFunction<
     Awaited<ReturnType<typeof deleteProjectRepoCredentials>>,
-    { project: string; repoCredentials: string }
+    DeleteProjectRepoCredentialsMutationVariables
   > = (props) => {
     const { project, repoCredentials } = props ?? {};
 
@@ -1368,6 +1463,10 @@ export type DeleteProjectRepoCredentialsMutationResult = NonNullable<
 >;
 
 export type DeleteProjectRepoCredentialsMutationError = ErrorType<unknown>;
+export type DeleteProjectRepoCredentialsMutationVariables = {
+  project: string;
+  repoCredentials: string;
+};
 
 /**
  * @summary Delete project-level repository credentials
@@ -1377,7 +1476,7 @@ export const useDeleteProjectRepoCredentials = <TError = ErrorType<unknown>, TCo
     mutation?: UseMutationOptions<
       Awaited<ReturnType<typeof deleteProjectRepoCredentials>>,
       TError,
-      { project: string; repoCredentials: string },
+      DeleteProjectRepoCredentialsMutationVariables,
       TContext
     >;
     request?: SecondParameter<typeof customFetch>;
@@ -1386,18 +1485,11 @@ export const useDeleteProjectRepoCredentials = <TError = ErrorType<unknown>, TCo
 ): UseMutationResult<
   Awaited<ReturnType<typeof deleteProjectRepoCredentials>>,
   TError,
-  { project: string; repoCredentials: string },
+  DeleteProjectRepoCredentialsMutationVariables,
   TContext
 > => {
-  const mutationOptions = getDeleteProjectRepoCredentialsMutationOptions(options);
-
-  return useMutation(mutationOptions, queryClient);
+  return useMutation(getDeleteProjectRepoCredentialsMutationOptions(options), queryClient);
 };
-/**
- * Patch project-level repository credentials. Only provided fields
-are updated. Returns a heavily redacted Kubernetes Secret resource.
- * @summary Patch project-level repository credentials
- */
 export type patchProjectRepoCredentialsResponse200 = {
   data: V1Secret;
   status: 200;
@@ -1412,22 +1504,38 @@ export const getPatchProjectRepoCredentialsUrl = (project: string, repoCredentia
   return `/v1beta1/projects/${project}/repo-credentials/${repoCredentials}`;
 };
 
+/**
+ * Patch project-level repository credentials. Only provided fields
+ * are updated. Returns a heavily redacted Kubernetes Secret resource.
+ * @summary Patch project-level repository credentials
+ */
 export const patchProjectRepoCredentials = async (
   project: string,
   repoCredentials: string,
-  patchRepoCredentialsRequestBody: PatchRepoCredentialsRequestBody,
-  options?: RequestInit
+  patchRepoCredentialsRequest: PatchRepoCredentialsRequest,
+  options?: Parameters<typeof customFetch>[1]
 ): Promise<patchProjectRepoCredentialsResponse> => {
+  const getHeaders = (
+    h?: NonNullable<RequestInit['headers']>
+  ): Record<string, string | readonly string[]> => {
+    if (!h) return {};
+    if (h instanceof Headers) return Object.fromEntries(h.entries());
+    if (Array.isArray(h)) return Object.fromEntries(h);
+    return h;
+  };
   return customFetch<patchProjectRepoCredentialsResponse>(
     getPatchProjectRepoCredentialsUrl(project, repoCredentials),
     {
       ...options,
       method: 'PATCH',
-      headers: { 'Content-Type': 'application/json', ...options?.headers },
-      body: JSON.stringify(patchRepoCredentialsRequestBody)
+      headers: { 'Content-Type': 'application/json', ...getHeaders(options?.headers) },
+      body: JSON.stringify(patchRepoCredentialsRequest)
     }
   );
 };
+
+export const getPatchProjectRepoCredentialsMutationKey = () =>
+  ['patchProjectRepoCredentials'] as const;
 
 export const getPatchProjectRepoCredentialsMutationOptions = <
   TError = ErrorType<unknown>,
@@ -1436,17 +1544,17 @@ export const getPatchProjectRepoCredentialsMutationOptions = <
   mutation?: UseMutationOptions<
     Awaited<ReturnType<typeof patchProjectRepoCredentials>>,
     TError,
-    { project: string; repoCredentials: string; data: PatchRepoCredentialsRequestBody },
+    PatchProjectRepoCredentialsMutationVariables,
     TContext
   >;
   request?: SecondParameter<typeof customFetch>;
 }): UseMutationOptions<
   Awaited<ReturnType<typeof patchProjectRepoCredentials>>,
   TError,
-  { project: string; repoCredentials: string; data: PatchRepoCredentialsRequestBody },
+  PatchProjectRepoCredentialsMutationVariables,
   TContext
 > => {
-  const mutationKey = ['patchProjectRepoCredentials'];
+  const mutationKey = getPatchProjectRepoCredentialsMutationKey();
   const { mutation: mutationOptions, request: requestOptions } = options
     ? options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey
       ? options
@@ -1455,7 +1563,7 @@ export const getPatchProjectRepoCredentialsMutationOptions = <
 
   const mutationFn: MutationFunction<
     Awaited<ReturnType<typeof patchProjectRepoCredentials>>,
-    { project: string; repoCredentials: string; data: PatchRepoCredentialsRequestBody }
+    PatchProjectRepoCredentialsMutationVariables
   > = (props) => {
     const { project, repoCredentials, data } = props ?? {};
 
@@ -1468,8 +1576,13 @@ export const getPatchProjectRepoCredentialsMutationOptions = <
 export type PatchProjectRepoCredentialsMutationResult = NonNullable<
   Awaited<ReturnType<typeof patchProjectRepoCredentials>>
 >;
-export type PatchProjectRepoCredentialsMutationBody = PatchRepoCredentialsRequestBody;
+export type PatchProjectRepoCredentialsMutationBody = PatchRepoCredentialsRequest;
 export type PatchProjectRepoCredentialsMutationError = ErrorType<unknown>;
+export type PatchProjectRepoCredentialsMutationVariables = {
+  project: string;
+  repoCredentials: string;
+  data: PatchRepoCredentialsRequest;
+};
 
 /**
  * @summary Patch project-level repository credentials
@@ -1479,7 +1592,7 @@ export const usePatchProjectRepoCredentials = <TError = ErrorType<unknown>, TCon
     mutation?: UseMutationOptions<
       Awaited<ReturnType<typeof patchProjectRepoCredentials>>,
       TError,
-      { project: string; repoCredentials: string; data: PatchRepoCredentialsRequestBody },
+      PatchProjectRepoCredentialsMutationVariables,
       TContext
     >;
     request?: SecondParameter<typeof customFetch>;
@@ -1488,18 +1601,11 @@ export const usePatchProjectRepoCredentials = <TError = ErrorType<unknown>, TCon
 ): UseMutationResult<
   Awaited<ReturnType<typeof patchProjectRepoCredentials>>,
   TError,
-  { project: string; repoCredentials: string; data: PatchRepoCredentialsRequestBody },
+  PatchProjectRepoCredentialsMutationVariables,
   TContext
 > => {
-  const mutationOptions = getPatchProjectRepoCredentialsMutationOptions(options);
-
-  return useMutation(mutationOptions, queryClient);
+  return useMutation(getPatchProjectRepoCredentialsMutationOptions(options), queryClient);
 };
-/**
- * List shared generic credentials. Returns a Kubernetes SecretList
-resource containing heavily redacted Secrets.
- * @summary List shared generic credentials
- */
 export type listSharedGenericCredentialsResponse200 = {
   data: V1SecretList;
   status: 200;
@@ -1515,8 +1621,13 @@ export const getListSharedGenericCredentialsUrl = () => {
   return `/v1beta1/shared/generic-credentials`;
 };
 
+/**
+ * List shared generic credentials. Returns a Kubernetes SecretList
+ * resource containing heavily redacted Secrets.
+ * @summary List shared generic credentials
+ */
 export const listSharedGenericCredentials = async (
-  options?: RequestInit
+  options?: Parameters<typeof customFetch>[1]
 ): Promise<listSharedGenericCredentialsResponse> => {
   return customFetch<listSharedGenericCredentialsResponse>(getListSharedGenericCredentialsUrl(), {
     ...options,
@@ -1630,16 +1741,9 @@ export function useListSharedGenericCredentials<
     queryKey: DataTag<QueryKey, TData, TError>;
   };
 
-  query.queryKey = queryOptions.queryKey;
-
-  return query;
+  return withQueryKey(query, queryOptions.queryKey);
 }
 
-/**
- * Create shared generic credentials referenceable by all
-projects. Returns a heavily redacted Kubernetes Secret resource.
- * @summary Create shared generic credentials
- */
 export type createSharedGenericCredentialsResponse201 = {
   data: V1Secret;
   status: 201;
@@ -1655,20 +1759,36 @@ export const getCreateSharedGenericCredentialsUrl = () => {
   return `/v1beta1/shared/generic-credentials`;
 };
 
+/**
+ * Create shared generic credentials referenceable by all
+ * projects. Returns a heavily redacted Kubernetes Secret resource.
+ * @summary Create shared generic credentials
+ */
 export const createSharedGenericCredentials = async (
-  createGenericCredentialsRequestBody: CreateGenericCredentialsRequestBody,
-  options?: RequestInit
+  createGenericCredentialsRequest: CreateGenericCredentialsRequest,
+  options?: Parameters<typeof customFetch>[1]
 ): Promise<createSharedGenericCredentialsResponse> => {
+  const getHeaders = (
+    h?: NonNullable<RequestInit['headers']>
+  ): Record<string, string | readonly string[]> => {
+    if (!h) return {};
+    if (h instanceof Headers) return Object.fromEntries(h.entries());
+    if (Array.isArray(h)) return Object.fromEntries(h);
+    return h;
+  };
   return customFetch<createSharedGenericCredentialsResponse>(
     getCreateSharedGenericCredentialsUrl(),
     {
       ...options,
       method: 'POST',
-      headers: { 'Content-Type': 'application/json', ...options?.headers },
-      body: JSON.stringify(createGenericCredentialsRequestBody)
+      headers: { 'Content-Type': 'application/json', ...getHeaders(options?.headers) },
+      body: JSON.stringify(createGenericCredentialsRequest)
     }
   );
 };
+
+export const getCreateSharedGenericCredentialsMutationKey = () =>
+  ['createSharedGenericCredentials'] as const;
 
 export const getCreateSharedGenericCredentialsMutationOptions = <
   TError = ErrorType<unknown>,
@@ -1677,17 +1797,17 @@ export const getCreateSharedGenericCredentialsMutationOptions = <
   mutation?: UseMutationOptions<
     Awaited<ReturnType<typeof createSharedGenericCredentials>>,
     TError,
-    { data: CreateGenericCredentialsRequestBody },
+    CreateSharedGenericCredentialsMutationVariables,
     TContext
   >;
   request?: SecondParameter<typeof customFetch>;
 }): UseMutationOptions<
   Awaited<ReturnType<typeof createSharedGenericCredentials>>,
   TError,
-  { data: CreateGenericCredentialsRequestBody },
+  CreateSharedGenericCredentialsMutationVariables,
   TContext
 > => {
-  const mutationKey = ['createSharedGenericCredentials'];
+  const mutationKey = getCreateSharedGenericCredentialsMutationKey();
   const { mutation: mutationOptions, request: requestOptions } = options
     ? options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey
       ? options
@@ -1696,7 +1816,7 @@ export const getCreateSharedGenericCredentialsMutationOptions = <
 
   const mutationFn: MutationFunction<
     Awaited<ReturnType<typeof createSharedGenericCredentials>>,
-    { data: CreateGenericCredentialsRequestBody }
+    CreateSharedGenericCredentialsMutationVariables
   > = (props) => {
     const { data } = props ?? {};
 
@@ -1709,8 +1829,11 @@ export const getCreateSharedGenericCredentialsMutationOptions = <
 export type CreateSharedGenericCredentialsMutationResult = NonNullable<
   Awaited<ReturnType<typeof createSharedGenericCredentials>>
 >;
-export type CreateSharedGenericCredentialsMutationBody = CreateGenericCredentialsRequestBody;
+export type CreateSharedGenericCredentialsMutationBody = CreateGenericCredentialsRequest;
 export type CreateSharedGenericCredentialsMutationError = ErrorType<unknown>;
+export type CreateSharedGenericCredentialsMutationVariables = {
+  data: CreateGenericCredentialsRequest;
+};
 
 /**
  * @summary Create shared generic credentials
@@ -1720,7 +1843,7 @@ export const useCreateSharedGenericCredentials = <TError = ErrorType<unknown>, T
     mutation?: UseMutationOptions<
       Awaited<ReturnType<typeof createSharedGenericCredentials>>,
       TError,
-      { data: CreateGenericCredentialsRequestBody },
+      CreateSharedGenericCredentialsMutationVariables,
       TContext
     >;
     request?: SecondParameter<typeof customFetch>;
@@ -1729,18 +1852,11 @@ export const useCreateSharedGenericCredentials = <TError = ErrorType<unknown>, T
 ): UseMutationResult<
   Awaited<ReturnType<typeof createSharedGenericCredentials>>,
   TError,
-  { data: CreateGenericCredentialsRequestBody },
+  CreateSharedGenericCredentialsMutationVariables,
   TContext
 > => {
-  const mutationOptions = getCreateSharedGenericCredentialsMutationOptions(options);
-
-  return useMutation(mutationOptions, queryClient);
+  return useMutation(getCreateSharedGenericCredentialsMutationOptions(options), queryClient);
 };
-/**
- * Retrieve shared generic credentials by name. Returns a
-heavily redacted Kubernetes Secret resource.
- * @summary Retrieve shared generic credentials
- */
 export type getSharedGenericCredentialsResponse200 = {
   data: V1Secret;
   status: 200;
@@ -1755,9 +1871,14 @@ export const getGetSharedGenericCredentialsUrl = (genericCredentials: string) =>
   return `/v1beta1/shared/generic-credentials/${genericCredentials}`;
 };
 
+/**
+ * Retrieve shared generic credentials by name. Returns a
+ * heavily redacted Kubernetes Secret resource.
+ * @summary Retrieve shared generic credentials
+ */
 export const getSharedGenericCredentials = async (
   genericCredentials: string,
-  options?: RequestInit
+  options?: Parameters<typeof customFetch>[1]
 ): Promise<getSharedGenericCredentialsResponse> => {
   return customFetch<getSharedGenericCredentialsResponse>(
     getGetSharedGenericCredentialsUrl(genericCredentials),
@@ -1768,7 +1889,7 @@ export const getSharedGenericCredentials = async (
   );
 };
 
-export const getGetSharedGenericCredentialsQueryKey = (genericCredentials?: string) => {
+export const getGetSharedGenericCredentialsQueryKey = (genericCredentials: string) => {
   return [`/v1beta1/shared/generic-credentials/${genericCredentials}`] as const;
 };
 
@@ -1792,11 +1913,14 @@ export const getGetSharedGenericCredentialsQueryOptions = <
   const queryFn: QueryFunction<Awaited<ReturnType<typeof getSharedGenericCredentials>>> = () =>
     getSharedGenericCredentials(genericCredentials, requestOptions);
 
-  return { queryKey, queryFn, enabled: !!genericCredentials, ...queryOptions } as UseQueryOptions<
-    Awaited<ReturnType<typeof getSharedGenericCredentials>>,
-    TError,
-    TData
-  > & { queryKey: DataTag<QueryKey, TData, TError> };
+  return {
+    queryKey,
+    queryFn,
+    enabled: genericCredentials !== null && genericCredentials !== undefined,
+    ...queryOptions
+  } as UseQueryOptions<Awaited<ReturnType<typeof getSharedGenericCredentials>>, TError, TData> & {
+    queryKey: DataTag<QueryKey, TData, TError>;
+  };
 };
 
 export type GetSharedGenericCredentialsQueryResult = NonNullable<
@@ -1882,16 +2006,9 @@ export function useGetSharedGenericCredentials<
     queryKey: DataTag<QueryKey, TData, TError>;
   };
 
-  query.queryKey = queryOptions.queryKey;
-
-  return query;
+  return withQueryKey(query, queryOptions.queryKey);
 }
 
-/**
- * Replace shared generic credentials. All existing data is replaced.
-Returns a heavily redacted Kubernetes Secret resource.
- * @summary Replace shared generic credentials
- */
 export type updateSharedGenericCredentialsResponse200 = {
   data: V1Secret;
   status: 200;
@@ -1907,21 +2024,37 @@ export const getUpdateSharedGenericCredentialsUrl = (genericCredentials: string)
   return `/v1beta1/shared/generic-credentials/${genericCredentials}`;
 };
 
+/**
+ * Replace shared generic credentials. All existing data is replaced.
+ * Returns a heavily redacted Kubernetes Secret resource.
+ * @summary Replace shared generic credentials
+ */
 export const updateSharedGenericCredentials = async (
   genericCredentials: string,
-  updateGenericCredentialsRequestBody: UpdateGenericCredentialsRequestBody,
-  options?: RequestInit
+  updateGenericCredentialsRequest: UpdateGenericCredentialsRequest,
+  options?: Parameters<typeof customFetch>[1]
 ): Promise<updateSharedGenericCredentialsResponse> => {
+  const getHeaders = (
+    h?: NonNullable<RequestInit['headers']>
+  ): Record<string, string | readonly string[]> => {
+    if (!h) return {};
+    if (h instanceof Headers) return Object.fromEntries(h.entries());
+    if (Array.isArray(h)) return Object.fromEntries(h);
+    return h;
+  };
   return customFetch<updateSharedGenericCredentialsResponse>(
     getUpdateSharedGenericCredentialsUrl(genericCredentials),
     {
       ...options,
       method: 'PUT',
-      headers: { 'Content-Type': 'application/json', ...options?.headers },
-      body: JSON.stringify(updateGenericCredentialsRequestBody)
+      headers: { 'Content-Type': 'application/json', ...getHeaders(options?.headers) },
+      body: JSON.stringify(updateGenericCredentialsRequest)
     }
   );
 };
+
+export const getUpdateSharedGenericCredentialsMutationKey = () =>
+  ['updateSharedGenericCredentials'] as const;
 
 export const getUpdateSharedGenericCredentialsMutationOptions = <
   TError = ErrorType<unknown>,
@@ -1930,17 +2063,17 @@ export const getUpdateSharedGenericCredentialsMutationOptions = <
   mutation?: UseMutationOptions<
     Awaited<ReturnType<typeof updateSharedGenericCredentials>>,
     TError,
-    { genericCredentials: string; data: UpdateGenericCredentialsRequestBody },
+    UpdateSharedGenericCredentialsMutationVariables,
     TContext
   >;
   request?: SecondParameter<typeof customFetch>;
 }): UseMutationOptions<
   Awaited<ReturnType<typeof updateSharedGenericCredentials>>,
   TError,
-  { genericCredentials: string; data: UpdateGenericCredentialsRequestBody },
+  UpdateSharedGenericCredentialsMutationVariables,
   TContext
 > => {
-  const mutationKey = ['updateSharedGenericCredentials'];
+  const mutationKey = getUpdateSharedGenericCredentialsMutationKey();
   const { mutation: mutationOptions, request: requestOptions } = options
     ? options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey
       ? options
@@ -1949,7 +2082,7 @@ export const getUpdateSharedGenericCredentialsMutationOptions = <
 
   const mutationFn: MutationFunction<
     Awaited<ReturnType<typeof updateSharedGenericCredentials>>,
-    { genericCredentials: string; data: UpdateGenericCredentialsRequestBody }
+    UpdateSharedGenericCredentialsMutationVariables
   > = (props) => {
     const { genericCredentials, data } = props ?? {};
 
@@ -1962,8 +2095,12 @@ export const getUpdateSharedGenericCredentialsMutationOptions = <
 export type UpdateSharedGenericCredentialsMutationResult = NonNullable<
   Awaited<ReturnType<typeof updateSharedGenericCredentials>>
 >;
-export type UpdateSharedGenericCredentialsMutationBody = UpdateGenericCredentialsRequestBody;
+export type UpdateSharedGenericCredentialsMutationBody = UpdateGenericCredentialsRequest;
 export type UpdateSharedGenericCredentialsMutationError = ErrorType<unknown>;
+export type UpdateSharedGenericCredentialsMutationVariables = {
+  genericCredentials: string;
+  data: UpdateGenericCredentialsRequest;
+};
 
 /**
  * @summary Replace shared generic credentials
@@ -1973,7 +2110,7 @@ export const useUpdateSharedGenericCredentials = <TError = ErrorType<unknown>, T
     mutation?: UseMutationOptions<
       Awaited<ReturnType<typeof updateSharedGenericCredentials>>,
       TError,
-      { genericCredentials: string; data: UpdateGenericCredentialsRequestBody },
+      UpdateSharedGenericCredentialsMutationVariables,
       TContext
     >;
     request?: SecondParameter<typeof customFetch>;
@@ -1982,17 +2119,11 @@ export const useUpdateSharedGenericCredentials = <TError = ErrorType<unknown>, T
 ): UseMutationResult<
   Awaited<ReturnType<typeof updateSharedGenericCredentials>>,
   TError,
-  { genericCredentials: string; data: UpdateGenericCredentialsRequestBody },
+  UpdateSharedGenericCredentialsMutationVariables,
   TContext
 > => {
-  const mutationOptions = getUpdateSharedGenericCredentialsMutationOptions(options);
-
-  return useMutation(mutationOptions, queryClient);
+  return useMutation(getUpdateSharedGenericCredentialsMutationOptions(options), queryClient);
 };
-/**
- * Delete shared generic credentials.
- * @summary Delete shared generic credentials
- */
 export type deleteSharedGenericCredentialsResponse204 = {
   data: void;
   status: 204;
@@ -2008,9 +2139,13 @@ export const getDeleteSharedGenericCredentialsUrl = (genericCredentials: string)
   return `/v1beta1/shared/generic-credentials/${genericCredentials}`;
 };
 
+/**
+ * Delete shared generic credentials.
+ * @summary Delete shared generic credentials
+ */
 export const deleteSharedGenericCredentials = async (
   genericCredentials: string,
-  options?: RequestInit
+  options?: Parameters<typeof customFetch>[1]
 ): Promise<deleteSharedGenericCredentialsResponse> => {
   return customFetch<deleteSharedGenericCredentialsResponse>(
     getDeleteSharedGenericCredentialsUrl(genericCredentials),
@@ -2021,6 +2156,9 @@ export const deleteSharedGenericCredentials = async (
   );
 };
 
+export const getDeleteSharedGenericCredentialsMutationKey = () =>
+  ['deleteSharedGenericCredentials'] as const;
+
 export const getDeleteSharedGenericCredentialsMutationOptions = <
   TError = ErrorType<unknown>,
   TContext = unknown
@@ -2028,17 +2166,17 @@ export const getDeleteSharedGenericCredentialsMutationOptions = <
   mutation?: UseMutationOptions<
     Awaited<ReturnType<typeof deleteSharedGenericCredentials>>,
     TError,
-    { genericCredentials: string },
+    DeleteSharedGenericCredentialsMutationVariables,
     TContext
   >;
   request?: SecondParameter<typeof customFetch>;
 }): UseMutationOptions<
   Awaited<ReturnType<typeof deleteSharedGenericCredentials>>,
   TError,
-  { genericCredentials: string },
+  DeleteSharedGenericCredentialsMutationVariables,
   TContext
 > => {
-  const mutationKey = ['deleteSharedGenericCredentials'];
+  const mutationKey = getDeleteSharedGenericCredentialsMutationKey();
   const { mutation: mutationOptions, request: requestOptions } = options
     ? options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey
       ? options
@@ -2047,7 +2185,7 @@ export const getDeleteSharedGenericCredentialsMutationOptions = <
 
   const mutationFn: MutationFunction<
     Awaited<ReturnType<typeof deleteSharedGenericCredentials>>,
-    { genericCredentials: string }
+    DeleteSharedGenericCredentialsMutationVariables
   > = (props) => {
     const { genericCredentials } = props ?? {};
 
@@ -2062,6 +2200,7 @@ export type DeleteSharedGenericCredentialsMutationResult = NonNullable<
 >;
 
 export type DeleteSharedGenericCredentialsMutationError = ErrorType<unknown>;
+export type DeleteSharedGenericCredentialsMutationVariables = { genericCredentials: string };
 
 /**
  * @summary Delete shared generic credentials
@@ -2071,7 +2210,7 @@ export const useDeleteSharedGenericCredentials = <TError = ErrorType<unknown>, T
     mutation?: UseMutationOptions<
       Awaited<ReturnType<typeof deleteSharedGenericCredentials>>,
       TError,
-      { genericCredentials: string },
+      DeleteSharedGenericCredentialsMutationVariables,
       TContext
     >;
     request?: SecondParameter<typeof customFetch>;
@@ -2080,19 +2219,11 @@ export const useDeleteSharedGenericCredentials = <TError = ErrorType<unknown>, T
 ): UseMutationResult<
   Awaited<ReturnType<typeof deleteSharedGenericCredentials>>,
   TError,
-  { genericCredentials: string },
+  DeleteSharedGenericCredentialsMutationVariables,
   TContext
 > => {
-  const mutationOptions = getDeleteSharedGenericCredentialsMutationOptions(options);
-
-  return useMutation(mutationOptions, queryClient);
+  return useMutation(getDeleteSharedGenericCredentialsMutationOptions(options), queryClient);
 };
-/**
- * Patch shared generic credentials. Merges provided data
-with existing data. Use removeKeys to delete specific keys.
-Returns a heavily redacted Kubernetes Secret resource.
- * @summary Patch shared generic credentials
- */
 export type patchSharedGenericCredentialsResponse200 = {
   data: V1Secret;
   status: 200;
@@ -2108,21 +2239,38 @@ export const getPatchSharedGenericCredentialsUrl = (genericCredentials: string) 
   return `/v1beta1/shared/generic-credentials/${genericCredentials}`;
 };
 
+/**
+ * Patch shared generic credentials. Merges provided data
+ * with existing data. Use removeKeys to delete specific keys.
+ * Returns a heavily redacted Kubernetes Secret resource.
+ * @summary Patch shared generic credentials
+ */
 export const patchSharedGenericCredentials = async (
   genericCredentials: string,
-  patchGenericCredentialsRequestBody: PatchGenericCredentialsRequestBody,
-  options?: RequestInit
+  patchGenericCredentialsRequest: PatchGenericCredentialsRequest,
+  options?: Parameters<typeof customFetch>[1]
 ): Promise<patchSharedGenericCredentialsResponse> => {
+  const getHeaders = (
+    h?: NonNullable<RequestInit['headers']>
+  ): Record<string, string | readonly string[]> => {
+    if (!h) return {};
+    if (h instanceof Headers) return Object.fromEntries(h.entries());
+    if (Array.isArray(h)) return Object.fromEntries(h);
+    return h;
+  };
   return customFetch<patchSharedGenericCredentialsResponse>(
     getPatchSharedGenericCredentialsUrl(genericCredentials),
     {
       ...options,
       method: 'PATCH',
-      headers: { 'Content-Type': 'application/json', ...options?.headers },
-      body: JSON.stringify(patchGenericCredentialsRequestBody)
+      headers: { 'Content-Type': 'application/json', ...getHeaders(options?.headers) },
+      body: JSON.stringify(patchGenericCredentialsRequest)
     }
   );
 };
+
+export const getPatchSharedGenericCredentialsMutationKey = () =>
+  ['patchSharedGenericCredentials'] as const;
 
 export const getPatchSharedGenericCredentialsMutationOptions = <
   TError = ErrorType<unknown>,
@@ -2131,17 +2279,17 @@ export const getPatchSharedGenericCredentialsMutationOptions = <
   mutation?: UseMutationOptions<
     Awaited<ReturnType<typeof patchSharedGenericCredentials>>,
     TError,
-    { genericCredentials: string; data: PatchGenericCredentialsRequestBody },
+    PatchSharedGenericCredentialsMutationVariables,
     TContext
   >;
   request?: SecondParameter<typeof customFetch>;
 }): UseMutationOptions<
   Awaited<ReturnType<typeof patchSharedGenericCredentials>>,
   TError,
-  { genericCredentials: string; data: PatchGenericCredentialsRequestBody },
+  PatchSharedGenericCredentialsMutationVariables,
   TContext
 > => {
-  const mutationKey = ['patchSharedGenericCredentials'];
+  const mutationKey = getPatchSharedGenericCredentialsMutationKey();
   const { mutation: mutationOptions, request: requestOptions } = options
     ? options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey
       ? options
@@ -2150,7 +2298,7 @@ export const getPatchSharedGenericCredentialsMutationOptions = <
 
   const mutationFn: MutationFunction<
     Awaited<ReturnType<typeof patchSharedGenericCredentials>>,
-    { genericCredentials: string; data: PatchGenericCredentialsRequestBody }
+    PatchSharedGenericCredentialsMutationVariables
   > = (props) => {
     const { genericCredentials, data } = props ?? {};
 
@@ -2163,8 +2311,12 @@ export const getPatchSharedGenericCredentialsMutationOptions = <
 export type PatchSharedGenericCredentialsMutationResult = NonNullable<
   Awaited<ReturnType<typeof patchSharedGenericCredentials>>
 >;
-export type PatchSharedGenericCredentialsMutationBody = PatchGenericCredentialsRequestBody;
+export type PatchSharedGenericCredentialsMutationBody = PatchGenericCredentialsRequest;
 export type PatchSharedGenericCredentialsMutationError = ErrorType<unknown>;
+export type PatchSharedGenericCredentialsMutationVariables = {
+  genericCredentials: string;
+  data: PatchGenericCredentialsRequest;
+};
 
 /**
  * @summary Patch shared generic credentials
@@ -2174,7 +2326,7 @@ export const usePatchSharedGenericCredentials = <TError = ErrorType<unknown>, TC
     mutation?: UseMutationOptions<
       Awaited<ReturnType<typeof patchSharedGenericCredentials>>,
       TError,
-      { genericCredentials: string; data: PatchGenericCredentialsRequestBody },
+      PatchSharedGenericCredentialsMutationVariables,
       TContext
     >;
     request?: SecondParameter<typeof customFetch>;
@@ -2183,18 +2335,11 @@ export const usePatchSharedGenericCredentials = <TError = ErrorType<unknown>, TC
 ): UseMutationResult<
   Awaited<ReturnType<typeof patchSharedGenericCredentials>>,
   TError,
-  { genericCredentials: string; data: PatchGenericCredentialsRequestBody },
+  PatchSharedGenericCredentialsMutationVariables,
   TContext
 > => {
-  const mutationOptions = getPatchSharedGenericCredentialsMutationOptions(options);
-
-  return useMutation(mutationOptions, queryClient);
+  return useMutation(getPatchSharedGenericCredentialsMutationOptions(options), queryClient);
 };
-/**
- * List shared repository credentials. Returns a SecretList
-resource containing heavily redacted Secrets.
- * @summary List shared repository credentials
- */
 export type listSharedRepoCredentialsResponse200 = {
   data: V1SecretList;
   status: 200;
@@ -2209,8 +2354,13 @@ export const getListSharedRepoCredentialsUrl = () => {
   return `/v1beta1/shared/repo-credentials`;
 };
 
+/**
+ * List shared repository credentials. Returns a SecretList
+ * resource containing heavily redacted Secrets.
+ * @summary List shared repository credentials
+ */
 export const listSharedRepoCredentials = async (
-  options?: RequestInit
+  options?: Parameters<typeof customFetch>[1]
 ): Promise<listSharedRepoCredentialsResponse> => {
   return customFetch<listSharedRepoCredentialsResponse>(getListSharedRepoCredentialsUrl(), {
     ...options,
@@ -2324,16 +2474,9 @@ export function useListSharedRepoCredentials<
     queryKey: DataTag<QueryKey, TData, TError>;
   };
 
-  query.queryKey = queryOptions.queryKey;
-
-  return query;
+  return withQueryKey(query, queryOptions.queryKey);
 }
 
-/**
- * Create shared repository credentials. Returns a heavily
-redacted Kubernetes Secret resource.
- * @summary Create shared repository credentials
- */
 export type createSharedRepoCredentialsResponse201 = {
   data: V1Secret;
   status: 201;
@@ -2348,17 +2491,33 @@ export const getCreateSharedRepoCredentialsUrl = () => {
   return `/v1beta1/shared/repo-credentials`;
 };
 
+/**
+ * Create shared repository credentials. Returns a heavily
+ * redacted Kubernetes Secret resource.
+ * @summary Create shared repository credentials
+ */
 export const createSharedRepoCredentials = async (
-  createRepoCredentialsRequestBody: CreateRepoCredentialsRequestBody,
-  options?: RequestInit
+  createRepoCredentialsRequest: CreateRepoCredentialsRequest,
+  options?: Parameters<typeof customFetch>[1]
 ): Promise<createSharedRepoCredentialsResponse> => {
+  const getHeaders = (
+    h?: NonNullable<RequestInit['headers']>
+  ): Record<string, string | readonly string[]> => {
+    if (!h) return {};
+    if (h instanceof Headers) return Object.fromEntries(h.entries());
+    if (Array.isArray(h)) return Object.fromEntries(h);
+    return h;
+  };
   return customFetch<createSharedRepoCredentialsResponse>(getCreateSharedRepoCredentialsUrl(), {
     ...options,
     method: 'POST',
-    headers: { 'Content-Type': 'application/json', ...options?.headers },
-    body: JSON.stringify(createRepoCredentialsRequestBody)
+    headers: { 'Content-Type': 'application/json', ...getHeaders(options?.headers) },
+    body: JSON.stringify(createRepoCredentialsRequest)
   });
 };
+
+export const getCreateSharedRepoCredentialsMutationKey = () =>
+  ['createSharedRepoCredentials'] as const;
 
 export const getCreateSharedRepoCredentialsMutationOptions = <
   TError = ErrorType<unknown>,
@@ -2367,17 +2526,17 @@ export const getCreateSharedRepoCredentialsMutationOptions = <
   mutation?: UseMutationOptions<
     Awaited<ReturnType<typeof createSharedRepoCredentials>>,
     TError,
-    { data: CreateRepoCredentialsRequestBody },
+    CreateSharedRepoCredentialsMutationVariables,
     TContext
   >;
   request?: SecondParameter<typeof customFetch>;
 }): UseMutationOptions<
   Awaited<ReturnType<typeof createSharedRepoCredentials>>,
   TError,
-  { data: CreateRepoCredentialsRequestBody },
+  CreateSharedRepoCredentialsMutationVariables,
   TContext
 > => {
-  const mutationKey = ['createSharedRepoCredentials'];
+  const mutationKey = getCreateSharedRepoCredentialsMutationKey();
   const { mutation: mutationOptions, request: requestOptions } = options
     ? options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey
       ? options
@@ -2386,7 +2545,7 @@ export const getCreateSharedRepoCredentialsMutationOptions = <
 
   const mutationFn: MutationFunction<
     Awaited<ReturnType<typeof createSharedRepoCredentials>>,
-    { data: CreateRepoCredentialsRequestBody }
+    CreateSharedRepoCredentialsMutationVariables
   > = (props) => {
     const { data } = props ?? {};
 
@@ -2399,8 +2558,9 @@ export const getCreateSharedRepoCredentialsMutationOptions = <
 export type CreateSharedRepoCredentialsMutationResult = NonNullable<
   Awaited<ReturnType<typeof createSharedRepoCredentials>>
 >;
-export type CreateSharedRepoCredentialsMutationBody = CreateRepoCredentialsRequestBody;
+export type CreateSharedRepoCredentialsMutationBody = CreateRepoCredentialsRequest;
 export type CreateSharedRepoCredentialsMutationError = ErrorType<unknown>;
+export type CreateSharedRepoCredentialsMutationVariables = { data: CreateRepoCredentialsRequest };
 
 /**
  * @summary Create shared repository credentials
@@ -2410,7 +2570,7 @@ export const useCreateSharedRepoCredentials = <TError = ErrorType<unknown>, TCon
     mutation?: UseMutationOptions<
       Awaited<ReturnType<typeof createSharedRepoCredentials>>,
       TError,
-      { data: CreateRepoCredentialsRequestBody },
+      CreateSharedRepoCredentialsMutationVariables,
       TContext
     >;
     request?: SecondParameter<typeof customFetch>;
@@ -2419,18 +2579,11 @@ export const useCreateSharedRepoCredentials = <TError = ErrorType<unknown>, TCon
 ): UseMutationResult<
   Awaited<ReturnType<typeof createSharedRepoCredentials>>,
   TError,
-  { data: CreateRepoCredentialsRequestBody },
+  CreateSharedRepoCredentialsMutationVariables,
   TContext
 > => {
-  const mutationOptions = getCreateSharedRepoCredentialsMutationOptions(options);
-
-  return useMutation(mutationOptions, queryClient);
+  return useMutation(getCreateSharedRepoCredentialsMutationOptions(options), queryClient);
 };
-/**
- * Retrieve shared repository credentials by name. Returns a
-heavily redacted Kubernetes Secret resource.
- * @summary Retrieve shared repository credentials
- */
 export type getSharedRepoCredentialsResponse200 = {
   data: V1Secret;
   status: 200;
@@ -2445,9 +2598,14 @@ export const getGetSharedRepoCredentialsUrl = (repoCredentials: string) => {
   return `/v1beta1/shared/repo-credentials/${repoCredentials}`;
 };
 
+/**
+ * Retrieve shared repository credentials by name. Returns a
+ * heavily redacted Kubernetes Secret resource.
+ * @summary Retrieve shared repository credentials
+ */
 export const getSharedRepoCredentials = async (
   repoCredentials: string,
-  options?: RequestInit
+  options?: Parameters<typeof customFetch>[1]
 ): Promise<getSharedRepoCredentialsResponse> => {
   return customFetch<getSharedRepoCredentialsResponse>(
     getGetSharedRepoCredentialsUrl(repoCredentials),
@@ -2458,7 +2616,7 @@ export const getSharedRepoCredentials = async (
   );
 };
 
-export const getGetSharedRepoCredentialsQueryKey = (repoCredentials?: string) => {
+export const getGetSharedRepoCredentialsQueryKey = (repoCredentials: string) => {
   return [`/v1beta1/shared/repo-credentials/${repoCredentials}`] as const;
 };
 
@@ -2481,11 +2639,14 @@ export const getGetSharedRepoCredentialsQueryOptions = <
   const queryFn: QueryFunction<Awaited<ReturnType<typeof getSharedRepoCredentials>>> = () =>
     getSharedRepoCredentials(repoCredentials, requestOptions);
 
-  return { queryKey, queryFn, enabled: !!repoCredentials, ...queryOptions } as UseQueryOptions<
-    Awaited<ReturnType<typeof getSharedRepoCredentials>>,
-    TError,
-    TData
-  > & { queryKey: DataTag<QueryKey, TData, TError> };
+  return {
+    queryKey,
+    queryFn,
+    enabled: repoCredentials !== null && repoCredentials !== undefined,
+    ...queryOptions
+  } as UseQueryOptions<Awaited<ReturnType<typeof getSharedRepoCredentials>>, TError, TData> & {
+    queryKey: DataTag<QueryKey, TData, TError>;
+  };
 };
 
 export type GetSharedRepoCredentialsQueryResult = NonNullable<
@@ -2571,16 +2732,9 @@ export function useGetSharedRepoCredentials<
     queryKey: DataTag<QueryKey, TData, TError>;
   };
 
-  query.queryKey = queryOptions.queryKey;
-
-  return query;
+  return withQueryKey(query, queryOptions.queryKey);
 }
 
-/**
- * Replace shared repository credentials. All fields are replaced.
-Returns a heavily redacted Kubernetes Secret resource.
- * @summary Replace shared repository credentials
- */
 export type updateSharedRepoCredentialsResponse200 = {
   data: V1Secret;
   status: 200;
@@ -2595,21 +2749,37 @@ export const getUpdateSharedRepoCredentialsUrl = (repoCredentials: string) => {
   return `/v1beta1/shared/repo-credentials/${repoCredentials}`;
 };
 
+/**
+ * Replace shared repository credentials. All fields are replaced.
+ * Returns a heavily redacted Kubernetes Secret resource.
+ * @summary Replace shared repository credentials
+ */
 export const updateSharedRepoCredentials = async (
   repoCredentials: string,
-  updateRepoCredentialsRequestBody: UpdateRepoCredentialsRequestBody,
-  options?: RequestInit
+  updateRepoCredentialsRequest: UpdateRepoCredentialsRequest,
+  options?: Parameters<typeof customFetch>[1]
 ): Promise<updateSharedRepoCredentialsResponse> => {
+  const getHeaders = (
+    h?: NonNullable<RequestInit['headers']>
+  ): Record<string, string | readonly string[]> => {
+    if (!h) return {};
+    if (h instanceof Headers) return Object.fromEntries(h.entries());
+    if (Array.isArray(h)) return Object.fromEntries(h);
+    return h;
+  };
   return customFetch<updateSharedRepoCredentialsResponse>(
     getUpdateSharedRepoCredentialsUrl(repoCredentials),
     {
       ...options,
       method: 'PUT',
-      headers: { 'Content-Type': 'application/json', ...options?.headers },
-      body: JSON.stringify(updateRepoCredentialsRequestBody)
+      headers: { 'Content-Type': 'application/json', ...getHeaders(options?.headers) },
+      body: JSON.stringify(updateRepoCredentialsRequest)
     }
   );
 };
+
+export const getUpdateSharedRepoCredentialsMutationKey = () =>
+  ['updateSharedRepoCredentials'] as const;
 
 export const getUpdateSharedRepoCredentialsMutationOptions = <
   TError = ErrorType<unknown>,
@@ -2618,17 +2788,17 @@ export const getUpdateSharedRepoCredentialsMutationOptions = <
   mutation?: UseMutationOptions<
     Awaited<ReturnType<typeof updateSharedRepoCredentials>>,
     TError,
-    { repoCredentials: string; data: UpdateRepoCredentialsRequestBody },
+    UpdateSharedRepoCredentialsMutationVariables,
     TContext
   >;
   request?: SecondParameter<typeof customFetch>;
 }): UseMutationOptions<
   Awaited<ReturnType<typeof updateSharedRepoCredentials>>,
   TError,
-  { repoCredentials: string; data: UpdateRepoCredentialsRequestBody },
+  UpdateSharedRepoCredentialsMutationVariables,
   TContext
 > => {
-  const mutationKey = ['updateSharedRepoCredentials'];
+  const mutationKey = getUpdateSharedRepoCredentialsMutationKey();
   const { mutation: mutationOptions, request: requestOptions } = options
     ? options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey
       ? options
@@ -2637,7 +2807,7 @@ export const getUpdateSharedRepoCredentialsMutationOptions = <
 
   const mutationFn: MutationFunction<
     Awaited<ReturnType<typeof updateSharedRepoCredentials>>,
-    { repoCredentials: string; data: UpdateRepoCredentialsRequestBody }
+    UpdateSharedRepoCredentialsMutationVariables
   > = (props) => {
     const { repoCredentials, data } = props ?? {};
 
@@ -2650,8 +2820,12 @@ export const getUpdateSharedRepoCredentialsMutationOptions = <
 export type UpdateSharedRepoCredentialsMutationResult = NonNullable<
   Awaited<ReturnType<typeof updateSharedRepoCredentials>>
 >;
-export type UpdateSharedRepoCredentialsMutationBody = UpdateRepoCredentialsRequestBody;
+export type UpdateSharedRepoCredentialsMutationBody = UpdateRepoCredentialsRequest;
 export type UpdateSharedRepoCredentialsMutationError = ErrorType<unknown>;
+export type UpdateSharedRepoCredentialsMutationVariables = {
+  repoCredentials: string;
+  data: UpdateRepoCredentialsRequest;
+};
 
 /**
  * @summary Replace shared repository credentials
@@ -2661,7 +2835,7 @@ export const useUpdateSharedRepoCredentials = <TError = ErrorType<unknown>, TCon
     mutation?: UseMutationOptions<
       Awaited<ReturnType<typeof updateSharedRepoCredentials>>,
       TError,
-      { repoCredentials: string; data: UpdateRepoCredentialsRequestBody },
+      UpdateSharedRepoCredentialsMutationVariables,
       TContext
     >;
     request?: SecondParameter<typeof customFetch>;
@@ -2670,17 +2844,11 @@ export const useUpdateSharedRepoCredentials = <TError = ErrorType<unknown>, TCon
 ): UseMutationResult<
   Awaited<ReturnType<typeof updateSharedRepoCredentials>>,
   TError,
-  { repoCredentials: string; data: UpdateRepoCredentialsRequestBody },
+  UpdateSharedRepoCredentialsMutationVariables,
   TContext
 > => {
-  const mutationOptions = getUpdateSharedRepoCredentialsMutationOptions(options);
-
-  return useMutation(mutationOptions, queryClient);
+  return useMutation(getUpdateSharedRepoCredentialsMutationOptions(options), queryClient);
 };
-/**
- * Delete shared repository credentials.
- * @summary Delete shared repository credentials
- */
 export type deleteSharedRepoCredentialsResponse204 = {
   data: void;
   status: 204;
@@ -2695,9 +2863,13 @@ export const getDeleteSharedRepoCredentialsUrl = (repoCredentials: string) => {
   return `/v1beta1/shared/repo-credentials/${repoCredentials}`;
 };
 
+/**
+ * Delete shared repository credentials.
+ * @summary Delete shared repository credentials
+ */
 export const deleteSharedRepoCredentials = async (
   repoCredentials: string,
-  options?: RequestInit
+  options?: Parameters<typeof customFetch>[1]
 ): Promise<deleteSharedRepoCredentialsResponse> => {
   return customFetch<deleteSharedRepoCredentialsResponse>(
     getDeleteSharedRepoCredentialsUrl(repoCredentials),
@@ -2708,6 +2880,9 @@ export const deleteSharedRepoCredentials = async (
   );
 };
 
+export const getDeleteSharedRepoCredentialsMutationKey = () =>
+  ['deleteSharedRepoCredentials'] as const;
+
 export const getDeleteSharedRepoCredentialsMutationOptions = <
   TError = ErrorType<unknown>,
   TContext = unknown
@@ -2715,17 +2890,17 @@ export const getDeleteSharedRepoCredentialsMutationOptions = <
   mutation?: UseMutationOptions<
     Awaited<ReturnType<typeof deleteSharedRepoCredentials>>,
     TError,
-    { repoCredentials: string },
+    DeleteSharedRepoCredentialsMutationVariables,
     TContext
   >;
   request?: SecondParameter<typeof customFetch>;
 }): UseMutationOptions<
   Awaited<ReturnType<typeof deleteSharedRepoCredentials>>,
   TError,
-  { repoCredentials: string },
+  DeleteSharedRepoCredentialsMutationVariables,
   TContext
 > => {
-  const mutationKey = ['deleteSharedRepoCredentials'];
+  const mutationKey = getDeleteSharedRepoCredentialsMutationKey();
   const { mutation: mutationOptions, request: requestOptions } = options
     ? options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey
       ? options
@@ -2734,7 +2909,7 @@ export const getDeleteSharedRepoCredentialsMutationOptions = <
 
   const mutationFn: MutationFunction<
     Awaited<ReturnType<typeof deleteSharedRepoCredentials>>,
-    { repoCredentials: string }
+    DeleteSharedRepoCredentialsMutationVariables
   > = (props) => {
     const { repoCredentials } = props ?? {};
 
@@ -2749,6 +2924,7 @@ export type DeleteSharedRepoCredentialsMutationResult = NonNullable<
 >;
 
 export type DeleteSharedRepoCredentialsMutationError = ErrorType<unknown>;
+export type DeleteSharedRepoCredentialsMutationVariables = { repoCredentials: string };
 
 /**
  * @summary Delete shared repository credentials
@@ -2758,7 +2934,7 @@ export const useDeleteSharedRepoCredentials = <TError = ErrorType<unknown>, TCon
     mutation?: UseMutationOptions<
       Awaited<ReturnType<typeof deleteSharedRepoCredentials>>,
       TError,
-      { repoCredentials: string },
+      DeleteSharedRepoCredentialsMutationVariables,
       TContext
     >;
     request?: SecondParameter<typeof customFetch>;
@@ -2767,18 +2943,11 @@ export const useDeleteSharedRepoCredentials = <TError = ErrorType<unknown>, TCon
 ): UseMutationResult<
   Awaited<ReturnType<typeof deleteSharedRepoCredentials>>,
   TError,
-  { repoCredentials: string },
+  DeleteSharedRepoCredentialsMutationVariables,
   TContext
 > => {
-  const mutationOptions = getDeleteSharedRepoCredentialsMutationOptions(options);
-
-  return useMutation(mutationOptions, queryClient);
+  return useMutation(getDeleteSharedRepoCredentialsMutationOptions(options), queryClient);
 };
-/**
- * Patch shared repository credentials. Only provided fields
-are updated. Returns a heavily redacted Kubernetes Secret resource.
- * @summary Patch shared repository credentials
- */
 export type patchSharedRepoCredentialsResponse200 = {
   data: V1Secret;
   status: 200;
@@ -2793,21 +2962,37 @@ export const getPatchSharedRepoCredentialsUrl = (repoCredentials: string) => {
   return `/v1beta1/shared/repo-credentials/${repoCredentials}`;
 };
 
+/**
+ * Patch shared repository credentials. Only provided fields
+ * are updated. Returns a heavily redacted Kubernetes Secret resource.
+ * @summary Patch shared repository credentials
+ */
 export const patchSharedRepoCredentials = async (
   repoCredentials: string,
-  patchRepoCredentialsRequestBody: PatchRepoCredentialsRequestBody,
-  options?: RequestInit
+  patchRepoCredentialsRequest: PatchRepoCredentialsRequest,
+  options?: Parameters<typeof customFetch>[1]
 ): Promise<patchSharedRepoCredentialsResponse> => {
+  const getHeaders = (
+    h?: NonNullable<RequestInit['headers']>
+  ): Record<string, string | readonly string[]> => {
+    if (!h) return {};
+    if (h instanceof Headers) return Object.fromEntries(h.entries());
+    if (Array.isArray(h)) return Object.fromEntries(h);
+    return h;
+  };
   return customFetch<patchSharedRepoCredentialsResponse>(
     getPatchSharedRepoCredentialsUrl(repoCredentials),
     {
       ...options,
       method: 'PATCH',
-      headers: { 'Content-Type': 'application/json', ...options?.headers },
-      body: JSON.stringify(patchRepoCredentialsRequestBody)
+      headers: { 'Content-Type': 'application/json', ...getHeaders(options?.headers) },
+      body: JSON.stringify(patchRepoCredentialsRequest)
     }
   );
 };
+
+export const getPatchSharedRepoCredentialsMutationKey = () =>
+  ['patchSharedRepoCredentials'] as const;
 
 export const getPatchSharedRepoCredentialsMutationOptions = <
   TError = ErrorType<unknown>,
@@ -2816,17 +3001,17 @@ export const getPatchSharedRepoCredentialsMutationOptions = <
   mutation?: UseMutationOptions<
     Awaited<ReturnType<typeof patchSharedRepoCredentials>>,
     TError,
-    { repoCredentials: string; data: PatchRepoCredentialsRequestBody },
+    PatchSharedRepoCredentialsMutationVariables,
     TContext
   >;
   request?: SecondParameter<typeof customFetch>;
 }): UseMutationOptions<
   Awaited<ReturnType<typeof patchSharedRepoCredentials>>,
   TError,
-  { repoCredentials: string; data: PatchRepoCredentialsRequestBody },
+  PatchSharedRepoCredentialsMutationVariables,
   TContext
 > => {
-  const mutationKey = ['patchSharedRepoCredentials'];
+  const mutationKey = getPatchSharedRepoCredentialsMutationKey();
   const { mutation: mutationOptions, request: requestOptions } = options
     ? options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey
       ? options
@@ -2835,7 +3020,7 @@ export const getPatchSharedRepoCredentialsMutationOptions = <
 
   const mutationFn: MutationFunction<
     Awaited<ReturnType<typeof patchSharedRepoCredentials>>,
-    { repoCredentials: string; data: PatchRepoCredentialsRequestBody }
+    PatchSharedRepoCredentialsMutationVariables
   > = (props) => {
     const { repoCredentials, data } = props ?? {};
 
@@ -2848,8 +3033,12 @@ export const getPatchSharedRepoCredentialsMutationOptions = <
 export type PatchSharedRepoCredentialsMutationResult = NonNullable<
   Awaited<ReturnType<typeof patchSharedRepoCredentials>>
 >;
-export type PatchSharedRepoCredentialsMutationBody = PatchRepoCredentialsRequestBody;
+export type PatchSharedRepoCredentialsMutationBody = PatchRepoCredentialsRequest;
 export type PatchSharedRepoCredentialsMutationError = ErrorType<unknown>;
+export type PatchSharedRepoCredentialsMutationVariables = {
+  repoCredentials: string;
+  data: PatchRepoCredentialsRequest;
+};
 
 /**
  * @summary Patch shared repository credentials
@@ -2859,7 +3048,7 @@ export const usePatchSharedRepoCredentials = <TError = ErrorType<unknown>, TCont
     mutation?: UseMutationOptions<
       Awaited<ReturnType<typeof patchSharedRepoCredentials>>,
       TError,
-      { repoCredentials: string; data: PatchRepoCredentialsRequestBody },
+      PatchSharedRepoCredentialsMutationVariables,
       TContext
     >;
     request?: SecondParameter<typeof customFetch>;
@@ -2868,18 +3057,11 @@ export const usePatchSharedRepoCredentials = <TError = ErrorType<unknown>, TCont
 ): UseMutationResult<
   Awaited<ReturnType<typeof patchSharedRepoCredentials>>,
   TError,
-  { repoCredentials: string; data: PatchRepoCredentialsRequestBody },
+  PatchSharedRepoCredentialsMutationVariables,
   TContext
 > => {
-  const mutationOptions = getPatchSharedRepoCredentialsMutationOptions(options);
-
-  return useMutation(mutationOptions, queryClient);
+  return useMutation(getPatchSharedRepoCredentialsMutationOptions(options), queryClient);
 };
-/**
- * List system-level generic credentials. Returns a Kubernetes
-SecretList resource containing heavily redacted Secrets.
- * @summary List system-level generic credentials
- */
 export type listSystemGenericCredentialsResponse200 = {
   data: V1SecretList;
   status: 200;
@@ -2895,8 +3077,13 @@ export const getListSystemGenericCredentialsUrl = () => {
   return `/v1beta1/system/generic-credentials`;
 };
 
+/**
+ * List system-level generic credentials. Returns a Kubernetes
+ * SecretList resource containing heavily redacted Secrets.
+ * @summary List system-level generic credentials
+ */
 export const listSystemGenericCredentials = async (
-  options?: RequestInit
+  options?: Parameters<typeof customFetch>[1]
 ): Promise<listSystemGenericCredentialsResponse> => {
   return customFetch<listSystemGenericCredentialsResponse>(getListSystemGenericCredentialsUrl(), {
     ...options,
@@ -3010,16 +3197,9 @@ export function useListSystemGenericCredentials<
     queryKey: DataTag<QueryKey, TData, TError>;
   };
 
-  query.queryKey = queryOptions.queryKey;
-
-  return query;
+  return withQueryKey(query, queryOptions.queryKey);
 }
 
-/**
- * Create system-level generic credentials. Returns a heavily
-redacted Kubernetes Secret resource.
- * @summary Create system-level generic credentials
- */
 export type createSystemGenericCredentialsResponse201 = {
   data: V1Secret;
   status: 201;
@@ -3035,20 +3215,36 @@ export const getCreateSystemGenericCredentialsUrl = () => {
   return `/v1beta1/system/generic-credentials`;
 };
 
+/**
+ * Create system-level generic credentials. Returns a heavily
+ * redacted Kubernetes Secret resource.
+ * @summary Create system-level generic credentials
+ */
 export const createSystemGenericCredentials = async (
-  createGenericCredentialsRequestBody: CreateGenericCredentialsRequestBody,
-  options?: RequestInit
+  createGenericCredentialsRequest: CreateGenericCredentialsRequest,
+  options?: Parameters<typeof customFetch>[1]
 ): Promise<createSystemGenericCredentialsResponse> => {
+  const getHeaders = (
+    h?: NonNullable<RequestInit['headers']>
+  ): Record<string, string | readonly string[]> => {
+    if (!h) return {};
+    if (h instanceof Headers) return Object.fromEntries(h.entries());
+    if (Array.isArray(h)) return Object.fromEntries(h);
+    return h;
+  };
   return customFetch<createSystemGenericCredentialsResponse>(
     getCreateSystemGenericCredentialsUrl(),
     {
       ...options,
       method: 'POST',
-      headers: { 'Content-Type': 'application/json', ...options?.headers },
-      body: JSON.stringify(createGenericCredentialsRequestBody)
+      headers: { 'Content-Type': 'application/json', ...getHeaders(options?.headers) },
+      body: JSON.stringify(createGenericCredentialsRequest)
     }
   );
 };
+
+export const getCreateSystemGenericCredentialsMutationKey = () =>
+  ['createSystemGenericCredentials'] as const;
 
 export const getCreateSystemGenericCredentialsMutationOptions = <
   TError = ErrorType<unknown>,
@@ -3057,17 +3253,17 @@ export const getCreateSystemGenericCredentialsMutationOptions = <
   mutation?: UseMutationOptions<
     Awaited<ReturnType<typeof createSystemGenericCredentials>>,
     TError,
-    { data: CreateGenericCredentialsRequestBody },
+    CreateSystemGenericCredentialsMutationVariables,
     TContext
   >;
   request?: SecondParameter<typeof customFetch>;
 }): UseMutationOptions<
   Awaited<ReturnType<typeof createSystemGenericCredentials>>,
   TError,
-  { data: CreateGenericCredentialsRequestBody },
+  CreateSystemGenericCredentialsMutationVariables,
   TContext
 > => {
-  const mutationKey = ['createSystemGenericCredentials'];
+  const mutationKey = getCreateSystemGenericCredentialsMutationKey();
   const { mutation: mutationOptions, request: requestOptions } = options
     ? options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey
       ? options
@@ -3076,7 +3272,7 @@ export const getCreateSystemGenericCredentialsMutationOptions = <
 
   const mutationFn: MutationFunction<
     Awaited<ReturnType<typeof createSystemGenericCredentials>>,
-    { data: CreateGenericCredentialsRequestBody }
+    CreateSystemGenericCredentialsMutationVariables
   > = (props) => {
     const { data } = props ?? {};
 
@@ -3089,8 +3285,11 @@ export const getCreateSystemGenericCredentialsMutationOptions = <
 export type CreateSystemGenericCredentialsMutationResult = NonNullable<
   Awaited<ReturnType<typeof createSystemGenericCredentials>>
 >;
-export type CreateSystemGenericCredentialsMutationBody = CreateGenericCredentialsRequestBody;
+export type CreateSystemGenericCredentialsMutationBody = CreateGenericCredentialsRequest;
 export type CreateSystemGenericCredentialsMutationError = ErrorType<unknown>;
+export type CreateSystemGenericCredentialsMutationVariables = {
+  data: CreateGenericCredentialsRequest;
+};
 
 /**
  * @summary Create system-level generic credentials
@@ -3100,7 +3299,7 @@ export const useCreateSystemGenericCredentials = <TError = ErrorType<unknown>, T
     mutation?: UseMutationOptions<
       Awaited<ReturnType<typeof createSystemGenericCredentials>>,
       TError,
-      { data: CreateGenericCredentialsRequestBody },
+      CreateSystemGenericCredentialsMutationVariables,
       TContext
     >;
     request?: SecondParameter<typeof customFetch>;
@@ -3109,18 +3308,11 @@ export const useCreateSystemGenericCredentials = <TError = ErrorType<unknown>, T
 ): UseMutationResult<
   Awaited<ReturnType<typeof createSystemGenericCredentials>>,
   TError,
-  { data: CreateGenericCredentialsRequestBody },
+  CreateSystemGenericCredentialsMutationVariables,
   TContext
 > => {
-  const mutationOptions = getCreateSystemGenericCredentialsMutationOptions(options);
-
-  return useMutation(mutationOptions, queryClient);
+  return useMutation(getCreateSystemGenericCredentialsMutationOptions(options), queryClient);
 };
-/**
- * Retrieve system-level generic credentials by name. Returns a
-heavily redacted Kubernetes Secret resource.
- * @summary Retrieve system-level generic credentials
- */
 export type getSystemGenericCredentialsResponse200 = {
   data: V1Secret;
   status: 200;
@@ -3135,9 +3327,14 @@ export const getGetSystemGenericCredentialsUrl = (genericCredentials: string) =>
   return `/v1beta1/system/generic-credentials/${genericCredentials}`;
 };
 
+/**
+ * Retrieve system-level generic credentials by name. Returns a
+ * heavily redacted Kubernetes Secret resource.
+ * @summary Retrieve system-level generic credentials
+ */
 export const getSystemGenericCredentials = async (
   genericCredentials: string,
-  options?: RequestInit
+  options?: Parameters<typeof customFetch>[1]
 ): Promise<getSystemGenericCredentialsResponse> => {
   return customFetch<getSystemGenericCredentialsResponse>(
     getGetSystemGenericCredentialsUrl(genericCredentials),
@@ -3148,7 +3345,7 @@ export const getSystemGenericCredentials = async (
   );
 };
 
-export const getGetSystemGenericCredentialsQueryKey = (genericCredentials?: string) => {
+export const getGetSystemGenericCredentialsQueryKey = (genericCredentials: string) => {
   return [`/v1beta1/system/generic-credentials/${genericCredentials}`] as const;
 };
 
@@ -3172,11 +3369,14 @@ export const getGetSystemGenericCredentialsQueryOptions = <
   const queryFn: QueryFunction<Awaited<ReturnType<typeof getSystemGenericCredentials>>> = () =>
     getSystemGenericCredentials(genericCredentials, requestOptions);
 
-  return { queryKey, queryFn, enabled: !!genericCredentials, ...queryOptions } as UseQueryOptions<
-    Awaited<ReturnType<typeof getSystemGenericCredentials>>,
-    TError,
-    TData
-  > & { queryKey: DataTag<QueryKey, TData, TError> };
+  return {
+    queryKey,
+    queryFn,
+    enabled: genericCredentials !== null && genericCredentials !== undefined,
+    ...queryOptions
+  } as UseQueryOptions<Awaited<ReturnType<typeof getSystemGenericCredentials>>, TError, TData> & {
+    queryKey: DataTag<QueryKey, TData, TError>;
+  };
 };
 
 export type GetSystemGenericCredentialsQueryResult = NonNullable<
@@ -3262,16 +3462,9 @@ export function useGetSystemGenericCredentials<
     queryKey: DataTag<QueryKey, TData, TError>;
   };
 
-  query.queryKey = queryOptions.queryKey;
-
-  return query;
+  return withQueryKey(query, queryOptions.queryKey);
 }
 
-/**
- * Replace system-level generic credentials. All existing data is
-replaced. Returns a heavily redacted Kubernetes Secret resource.
- * @summary Replace system-level generic credentials
- */
 export type updateSystemGenericCredentialsResponse200 = {
   data: V1Secret;
   status: 200;
@@ -3287,21 +3480,37 @@ export const getUpdateSystemGenericCredentialsUrl = (genericCredentials: string)
   return `/v1beta1/system/generic-credentials/${genericCredentials}`;
 };
 
+/**
+ * Replace system-level generic credentials. All existing data is
+ * replaced. Returns a heavily redacted Kubernetes Secret resource.
+ * @summary Replace system-level generic credentials
+ */
 export const updateSystemGenericCredentials = async (
   genericCredentials: string,
-  updateGenericCredentialsRequestBody: UpdateGenericCredentialsRequestBody,
-  options?: RequestInit
+  updateGenericCredentialsRequest: UpdateGenericCredentialsRequest,
+  options?: Parameters<typeof customFetch>[1]
 ): Promise<updateSystemGenericCredentialsResponse> => {
+  const getHeaders = (
+    h?: NonNullable<RequestInit['headers']>
+  ): Record<string, string | readonly string[]> => {
+    if (!h) return {};
+    if (h instanceof Headers) return Object.fromEntries(h.entries());
+    if (Array.isArray(h)) return Object.fromEntries(h);
+    return h;
+  };
   return customFetch<updateSystemGenericCredentialsResponse>(
     getUpdateSystemGenericCredentialsUrl(genericCredentials),
     {
       ...options,
       method: 'PUT',
-      headers: { 'Content-Type': 'application/json', ...options?.headers },
-      body: JSON.stringify(updateGenericCredentialsRequestBody)
+      headers: { 'Content-Type': 'application/json', ...getHeaders(options?.headers) },
+      body: JSON.stringify(updateGenericCredentialsRequest)
     }
   );
 };
+
+export const getUpdateSystemGenericCredentialsMutationKey = () =>
+  ['updateSystemGenericCredentials'] as const;
 
 export const getUpdateSystemGenericCredentialsMutationOptions = <
   TError = ErrorType<unknown>,
@@ -3310,17 +3519,17 @@ export const getUpdateSystemGenericCredentialsMutationOptions = <
   mutation?: UseMutationOptions<
     Awaited<ReturnType<typeof updateSystemGenericCredentials>>,
     TError,
-    { genericCredentials: string; data: UpdateGenericCredentialsRequestBody },
+    UpdateSystemGenericCredentialsMutationVariables,
     TContext
   >;
   request?: SecondParameter<typeof customFetch>;
 }): UseMutationOptions<
   Awaited<ReturnType<typeof updateSystemGenericCredentials>>,
   TError,
-  { genericCredentials: string; data: UpdateGenericCredentialsRequestBody },
+  UpdateSystemGenericCredentialsMutationVariables,
   TContext
 > => {
-  const mutationKey = ['updateSystemGenericCredentials'];
+  const mutationKey = getUpdateSystemGenericCredentialsMutationKey();
   const { mutation: mutationOptions, request: requestOptions } = options
     ? options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey
       ? options
@@ -3329,7 +3538,7 @@ export const getUpdateSystemGenericCredentialsMutationOptions = <
 
   const mutationFn: MutationFunction<
     Awaited<ReturnType<typeof updateSystemGenericCredentials>>,
-    { genericCredentials: string; data: UpdateGenericCredentialsRequestBody }
+    UpdateSystemGenericCredentialsMutationVariables
   > = (props) => {
     const { genericCredentials, data } = props ?? {};
 
@@ -3342,8 +3551,12 @@ export const getUpdateSystemGenericCredentialsMutationOptions = <
 export type UpdateSystemGenericCredentialsMutationResult = NonNullable<
   Awaited<ReturnType<typeof updateSystemGenericCredentials>>
 >;
-export type UpdateSystemGenericCredentialsMutationBody = UpdateGenericCredentialsRequestBody;
+export type UpdateSystemGenericCredentialsMutationBody = UpdateGenericCredentialsRequest;
 export type UpdateSystemGenericCredentialsMutationError = ErrorType<unknown>;
+export type UpdateSystemGenericCredentialsMutationVariables = {
+  genericCredentials: string;
+  data: UpdateGenericCredentialsRequest;
+};
 
 /**
  * @summary Replace system-level generic credentials
@@ -3353,7 +3566,7 @@ export const useUpdateSystemGenericCredentials = <TError = ErrorType<unknown>, T
     mutation?: UseMutationOptions<
       Awaited<ReturnType<typeof updateSystemGenericCredentials>>,
       TError,
-      { genericCredentials: string; data: UpdateGenericCredentialsRequestBody },
+      UpdateSystemGenericCredentialsMutationVariables,
       TContext
     >;
     request?: SecondParameter<typeof customFetch>;
@@ -3362,17 +3575,11 @@ export const useUpdateSystemGenericCredentials = <TError = ErrorType<unknown>, T
 ): UseMutationResult<
   Awaited<ReturnType<typeof updateSystemGenericCredentials>>,
   TError,
-  { genericCredentials: string; data: UpdateGenericCredentialsRequestBody },
+  UpdateSystemGenericCredentialsMutationVariables,
   TContext
 > => {
-  const mutationOptions = getUpdateSystemGenericCredentialsMutationOptions(options);
-
-  return useMutation(mutationOptions, queryClient);
+  return useMutation(getUpdateSystemGenericCredentialsMutationOptions(options), queryClient);
 };
-/**
- * Delete system-level generic credentials.
- * @summary Delete system-level generic credentials
- */
 export type deleteSystemGenericCredentialsResponse204 = {
   data: void;
   status: 204;
@@ -3388,9 +3595,13 @@ export const getDeleteSystemGenericCredentialsUrl = (genericCredentials: string)
   return `/v1beta1/system/generic-credentials/${genericCredentials}`;
 };
 
+/**
+ * Delete system-level generic credentials.
+ * @summary Delete system-level generic credentials
+ */
 export const deleteSystemGenericCredentials = async (
   genericCredentials: string,
-  options?: RequestInit
+  options?: Parameters<typeof customFetch>[1]
 ): Promise<deleteSystemGenericCredentialsResponse> => {
   return customFetch<deleteSystemGenericCredentialsResponse>(
     getDeleteSystemGenericCredentialsUrl(genericCredentials),
@@ -3401,6 +3612,9 @@ export const deleteSystemGenericCredentials = async (
   );
 };
 
+export const getDeleteSystemGenericCredentialsMutationKey = () =>
+  ['deleteSystemGenericCredentials'] as const;
+
 export const getDeleteSystemGenericCredentialsMutationOptions = <
   TError = ErrorType<unknown>,
   TContext = unknown
@@ -3408,17 +3622,17 @@ export const getDeleteSystemGenericCredentialsMutationOptions = <
   mutation?: UseMutationOptions<
     Awaited<ReturnType<typeof deleteSystemGenericCredentials>>,
     TError,
-    { genericCredentials: string },
+    DeleteSystemGenericCredentialsMutationVariables,
     TContext
   >;
   request?: SecondParameter<typeof customFetch>;
 }): UseMutationOptions<
   Awaited<ReturnType<typeof deleteSystemGenericCredentials>>,
   TError,
-  { genericCredentials: string },
+  DeleteSystemGenericCredentialsMutationVariables,
   TContext
 > => {
-  const mutationKey = ['deleteSystemGenericCredentials'];
+  const mutationKey = getDeleteSystemGenericCredentialsMutationKey();
   const { mutation: mutationOptions, request: requestOptions } = options
     ? options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey
       ? options
@@ -3427,7 +3641,7 @@ export const getDeleteSystemGenericCredentialsMutationOptions = <
 
   const mutationFn: MutationFunction<
     Awaited<ReturnType<typeof deleteSystemGenericCredentials>>,
-    { genericCredentials: string }
+    DeleteSystemGenericCredentialsMutationVariables
   > = (props) => {
     const { genericCredentials } = props ?? {};
 
@@ -3442,6 +3656,7 @@ export type DeleteSystemGenericCredentialsMutationResult = NonNullable<
 >;
 
 export type DeleteSystemGenericCredentialsMutationError = ErrorType<unknown>;
+export type DeleteSystemGenericCredentialsMutationVariables = { genericCredentials: string };
 
 /**
  * @summary Delete system-level generic credentials
@@ -3451,7 +3666,7 @@ export const useDeleteSystemGenericCredentials = <TError = ErrorType<unknown>, T
     mutation?: UseMutationOptions<
       Awaited<ReturnType<typeof deleteSystemGenericCredentials>>,
       TError,
-      { genericCredentials: string },
+      DeleteSystemGenericCredentialsMutationVariables,
       TContext
     >;
     request?: SecondParameter<typeof customFetch>;
@@ -3460,19 +3675,11 @@ export const useDeleteSystemGenericCredentials = <TError = ErrorType<unknown>, T
 ): UseMutationResult<
   Awaited<ReturnType<typeof deleteSystemGenericCredentials>>,
   TError,
-  { genericCredentials: string },
+  DeleteSystemGenericCredentialsMutationVariables,
   TContext
 > => {
-  const mutationOptions = getDeleteSystemGenericCredentialsMutationOptions(options);
-
-  return useMutation(mutationOptions, queryClient);
+  return useMutation(getDeleteSystemGenericCredentialsMutationOptions(options), queryClient);
 };
-/**
- * Patch system-level generic credentials. Merges provided data
-with existing data. Use removeKeys to delete specific keys.
-Returns a heavily redacted Kubernetes Secret resource.
- * @summary Patch system-level generic credentials
- */
 export type patchSystemGenericCredentialsResponse200 = {
   data: V1Secret;
   status: 200;
@@ -3488,21 +3695,38 @@ export const getPatchSystemGenericCredentialsUrl = (genericCredentials: string) 
   return `/v1beta1/system/generic-credentials/${genericCredentials}`;
 };
 
+/**
+ * Patch system-level generic credentials. Merges provided data
+ * with existing data. Use removeKeys to delete specific keys.
+ * Returns a heavily redacted Kubernetes Secret resource.
+ * @summary Patch system-level generic credentials
+ */
 export const patchSystemGenericCredentials = async (
   genericCredentials: string,
-  patchGenericCredentialsRequestBody: PatchGenericCredentialsRequestBody,
-  options?: RequestInit
+  patchGenericCredentialsRequest: PatchGenericCredentialsRequest,
+  options?: Parameters<typeof customFetch>[1]
 ): Promise<patchSystemGenericCredentialsResponse> => {
+  const getHeaders = (
+    h?: NonNullable<RequestInit['headers']>
+  ): Record<string, string | readonly string[]> => {
+    if (!h) return {};
+    if (h instanceof Headers) return Object.fromEntries(h.entries());
+    if (Array.isArray(h)) return Object.fromEntries(h);
+    return h;
+  };
   return customFetch<patchSystemGenericCredentialsResponse>(
     getPatchSystemGenericCredentialsUrl(genericCredentials),
     {
       ...options,
       method: 'PATCH',
-      headers: { 'Content-Type': 'application/json', ...options?.headers },
-      body: JSON.stringify(patchGenericCredentialsRequestBody)
+      headers: { 'Content-Type': 'application/json', ...getHeaders(options?.headers) },
+      body: JSON.stringify(patchGenericCredentialsRequest)
     }
   );
 };
+
+export const getPatchSystemGenericCredentialsMutationKey = () =>
+  ['patchSystemGenericCredentials'] as const;
 
 export const getPatchSystemGenericCredentialsMutationOptions = <
   TError = ErrorType<unknown>,
@@ -3511,17 +3735,17 @@ export const getPatchSystemGenericCredentialsMutationOptions = <
   mutation?: UseMutationOptions<
     Awaited<ReturnType<typeof patchSystemGenericCredentials>>,
     TError,
-    { genericCredentials: string; data: PatchGenericCredentialsRequestBody },
+    PatchSystemGenericCredentialsMutationVariables,
     TContext
   >;
   request?: SecondParameter<typeof customFetch>;
 }): UseMutationOptions<
   Awaited<ReturnType<typeof patchSystemGenericCredentials>>,
   TError,
-  { genericCredentials: string; data: PatchGenericCredentialsRequestBody },
+  PatchSystemGenericCredentialsMutationVariables,
   TContext
 > => {
-  const mutationKey = ['patchSystemGenericCredentials'];
+  const mutationKey = getPatchSystemGenericCredentialsMutationKey();
   const { mutation: mutationOptions, request: requestOptions } = options
     ? options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey
       ? options
@@ -3530,7 +3754,7 @@ export const getPatchSystemGenericCredentialsMutationOptions = <
 
   const mutationFn: MutationFunction<
     Awaited<ReturnType<typeof patchSystemGenericCredentials>>,
-    { genericCredentials: string; data: PatchGenericCredentialsRequestBody }
+    PatchSystemGenericCredentialsMutationVariables
   > = (props) => {
     const { genericCredentials, data } = props ?? {};
 
@@ -3543,8 +3767,12 @@ export const getPatchSystemGenericCredentialsMutationOptions = <
 export type PatchSystemGenericCredentialsMutationResult = NonNullable<
   Awaited<ReturnType<typeof patchSystemGenericCredentials>>
 >;
-export type PatchSystemGenericCredentialsMutationBody = PatchGenericCredentialsRequestBody;
+export type PatchSystemGenericCredentialsMutationBody = PatchGenericCredentialsRequest;
 export type PatchSystemGenericCredentialsMutationError = ErrorType<unknown>;
+export type PatchSystemGenericCredentialsMutationVariables = {
+  genericCredentials: string;
+  data: PatchGenericCredentialsRequest;
+};
 
 /**
  * @summary Patch system-level generic credentials
@@ -3554,7 +3782,7 @@ export const usePatchSystemGenericCredentials = <TError = ErrorType<unknown>, TC
     mutation?: UseMutationOptions<
       Awaited<ReturnType<typeof patchSystemGenericCredentials>>,
       TError,
-      { genericCredentials: string; data: PatchGenericCredentialsRequestBody },
+      PatchSystemGenericCredentialsMutationVariables,
       TContext
     >;
     request?: SecondParameter<typeof customFetch>;
@@ -3563,10 +3791,8 @@ export const usePatchSystemGenericCredentials = <TError = ErrorType<unknown>, TC
 ): UseMutationResult<
   Awaited<ReturnType<typeof patchSystemGenericCredentials>>,
   TError,
-  { genericCredentials: string; data: PatchGenericCredentialsRequestBody },
+  PatchSystemGenericCredentialsMutationVariables,
   TContext
 > => {
-  const mutationOptions = getPatchSystemGenericCredentialsMutationOptions(options);
-
-  return useMutation(mutationOptions, queryClient);
+  return useMutation(getPatchSystemGenericCredentialsMutationOptions(options), queryClient);
 };

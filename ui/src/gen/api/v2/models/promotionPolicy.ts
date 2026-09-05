@@ -9,27 +9,35 @@ import type { AutoRollbackConfig } from './autoRollbackConfig';
 import type { PromotionPolicySelector } from './promotionPolicySelector';
 
 export interface PromotionPolicy {
-  /** AutoPromotionEnabled indicates whether new Freight can automatically be
-promoted into the Stage referenced by the Stage field. Note: There are may
-be other conditions also required for an auto-promotion to occur. This
-field defaults to false, but is commonly set to true for Stages that
-subscribe to Warehouses instead of other, upstream Stages. This allows
-users to define Stages that are automatically updated as soon as new
-artifacts are detected. */
+  /**
+   * AutoPromotionEnabled indicates whether new Freight can automatically be
+   * promoted into the Stage referenced by the Stage field. Note: There are may
+   * be other conditions also required for an auto-promotion to occur. This
+   * field defaults to false, but is commonly set to true for Stages that
+   * subscribe to Warehouses instead of other, upstream Stages. This allows
+   * users to define Stages that are automatically updated as soon as new
+   * artifacts are detected.
+   */
   autoPromotionEnabled?: boolean;
-  /** AutoRollback describes the conditions under which this Stage should
-automatically roll back to the last known-good (verified) Freight. When
-nil, auto-rollback is disabled.
-
-Kargo Enterprise only: This field is ignored in Kargo OSS. */
+  /**
+   * AutoRollback describes the conditions under which this Stage should
+   * automatically roll back to the last known-good (verified) Freight. When
+   * nil, auto-rollback is disabled.
+   *
+   * Kargo Enterprise only: This field is ignored in Kargo OSS.
+   */
   autoRollback?: AutoRollbackConfig;
-  /** Stage is the name of the Stage to which this policy applies.
-
-Deprecated: Use StageSelector instead.
-
-+kubebuilder:validation:Pattern=^[a-z0-9]([-a-z0-9]*[a-z0-9])?(\.[a-z0-9]([-a-z0-9]*[a-z0-9])?)*$ */
+  /**
+   * Stage is the name of the Stage to which this policy applies.
+   *
+   * Deprecated: Use StageSelector instead.
+   *
+   * +kubebuilder:validation:Pattern=^[a-z0-9]([-a-z0-9]*[a-z0-9])?(\.[a-z0-9]([-a-z0-9]*[a-z0-9])?)*$
+   */
   stage?: string;
-  /** StageSelector is a selector that matches the Stage resource to which
-this policy applies. */
+  /**
+   * StageSelector is a selector that matches the Stage resource to which
+   * this policy applies.
+   */
   stageSelector?: PromotionPolicySelector;
 }

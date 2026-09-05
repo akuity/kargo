@@ -8,14 +8,16 @@
 import type { V1alpha3TopologyConstraint } from './v1alpha3TopologyConstraint';
 
 export interface V1alpha3WorkloadPodGroupSchedulingConstraints {
-  /** topology specifies desired topological placements for all pods
-within the pod group.
-If unset, no topology placement is requested.
-
-+optional
-+k8s:optional
-+k8s:maxItems=1
-+listType=atomic
-+k8s:listType=atomic */
+  /**
+   * topology specifies desired topological placements for all pods
+   * within the pod group.
+   * If unset, no topology placement is requested.
+   *
+   * +optional
+   * +k8s:optional
+   * +k8s:maxItems=1
+   * +listType=atomic
+   * +k8s:listType=atomic
+   */
   topology?: V1alpha3TopologyConstraint[];
 }

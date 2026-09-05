@@ -8,12 +8,16 @@
 import type { GetControllerHeartbeatsResponseHeartbeats } from './getControllerHeartbeatsResponseHeartbeats';
 
 export interface GetControllerHeartbeatsResponse {
-  /** DefaultController is the name of the default controller. The default
-controller is often unnamed, so an empty string is a valid value. This is
-included in the response to give clients a canonical identity to associate
-with Stages that have no explicit `spec.controller`. */
+  /**
+   * DefaultController is the name of the default controller. The default
+   * controller is often unnamed, so an empty string is a valid value. This is
+   * included in the response to give clients a canonical identity to associate
+   * with Stages that have no explicit `spec.controller`.
+   */
   defaultController?: string;
-  /** Heartbeats is the most recent heartbeat from every controller that has
-reported in indexed by controller name. */
+  /**
+   * Heartbeats is the most recent heartbeat from every controller that has
+   * reported in indexed by controller name.
+   */
   heartbeats?: GetControllerHeartbeatsResponseHeartbeats;
 }

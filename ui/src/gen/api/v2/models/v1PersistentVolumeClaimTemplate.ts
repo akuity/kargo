@@ -9,16 +9,20 @@ import type { V1ObjectMeta } from './v1ObjectMeta';
 import type { V1PersistentVolumeClaimSpec } from './v1PersistentVolumeClaimSpec';
 
 export interface V1PersistentVolumeClaimTemplate {
-  /** May contain labels and annotations that will be copied into the PVC
-when creating it. No other fields are allowed and will be rejected during
-validation.
-
-+optional
-+k8s:opaqueType */
+  /**
+   * May contain labels and annotations that will be copied into the PVC
+   * when creating it. No other fields are allowed and will be rejected during
+   * validation.
+   *
+   * +optional
+   * +k8s:opaqueType
+   */
   metadata?: V1ObjectMeta;
-  /** The specification for the PersistentVolumeClaim. The entire content is
-copied unchanged into the PVC that gets created from this
-template. The same fields as in a PersistentVolumeClaim
-are also valid here. */
+  /**
+   * The specification for the PersistentVolumeClaim. The entire content is
+   * copied unchanged into the PVC that gets created from this
+   * template. The same fields as in a PersistentVolumeClaim
+   * are also valid here.
+   */
   spec?: V1PersistentVolumeClaimSpec;
 }

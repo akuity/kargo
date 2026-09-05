@@ -8,7 +8,6 @@
 
 export type V1HTTPProtocol = (typeof V1HTTPProtocol)[keyof typeof V1HTTPProtocol];
 
-// eslint-disable-next-line @typescript-eslint/no-redeclare
 export const V1HTTPProtocol = {
   HTTPProtocolHTTP1: 'HTTP1',
   HTTPProtocolHTTP2: 'HTTP2'

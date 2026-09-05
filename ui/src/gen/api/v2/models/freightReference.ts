@@ -7,13 +7,15 @@
  */
 import type { ArtifactReference } from './artifactReference';
 import type { Chart } from './chart';
+import type { FreightOrigin } from './freightOrigin';
 import type { GitCommit } from './gitCommit';
 import type { Image } from './image';
-import type { FreightOrigin } from './freightOrigin';
 
 export interface FreightReference {
-  /** Artifacts describes specific versions of artifacts other
-than Git repository commits, container images, and Helm charts. */
+  /**
+   * Artifacts describes specific versions of artifacts other
+   * than Git repository commits, container images, and Helm charts.
+   */
   artifacts?: ArtifactReference[];
   /** Charts describes specific versions of specific Helm charts. */
   charts?: Chart[];
@@ -21,9 +23,11 @@ than Git repository commits, container images, and Helm charts. */
   commits?: GitCommit[];
   /** Images describes specific versions of specific container images. */
   images?: Image[];
-  /** Name is a system-assigned identifier derived deterministically from
-the contents of the Freight. I.e., two pieces of Freight can be compared
-for equality by comparing their Names. */
+  /**
+   * Name is a system-assigned identifier derived deterministically from
+   * the contents of the Freight. I.e., two pieces of Freight can be compared
+   * for equality by comparing their Names.
+   */
   name?: string;
   /** Origin describes a kind of Freight in terms of its origin. */
   origin?: FreightOrigin;

@@ -9,8 +9,8 @@ import type { AutoPromotionHold } from './autoPromotionHold';
 
 /**
  * EffectiveAutoPromotionHolds is the set of auto-promotion holds in effect
-right now. It is recomputed every reconciliation from AutoPromotionHolds
-plus the newest in-flight Promotions, and unlike AutoPromotionHolds is not
-durable. Clients should read this map to reflect current hold state.
+ * right now. It is recomputed every reconciliation from AutoPromotionHolds
+ * plus the newest in-flight Promotions, and unlike AutoPromotionHolds is not
+ * durable. Clients should read this map to reflect current hold state.
  */
 export type StageStatusEffectiveAutoPromotionHolds = { [key: string]: AutoPromotionHold };

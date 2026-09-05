@@ -7,31 +7,37 @@
  */
 
 export interface V1alpha3WorkloadPodGroupResourceClaim {
-  /** name uniquely identifies this resource claim inside the group.
-This field is required. It must be a DNS_LABEL.
-
-+required
-+k8s:required
-+k8s:format=k8s-short-name */
+  /**
+   * name uniquely identifies this resource claim inside the group.
+   * This field is required. It must be a DNS_LABEL.
+   *
+   * +required
+   * +k8s:required
+   * +k8s:format=k8s-short-name
+   */
   name?: string;
-  /** resourceClaimName is the name of a ResourceClaim object in the same
-namespace.
-This field is optional. If it is not specified, no resource claim
-is used. If set, it must be a DNS subdomain.
-
-+optional
-+k8s:optional
-+k8s:unionMember
-+k8s:format=k8s-long-name */
+  /**
+   * resourceClaimName is the name of a ResourceClaim object in the same
+   * namespace.
+   * This field is optional. If it is not specified, no resource claim
+   * is used. If set, it must be a DNS subdomain.
+   *
+   * +optional
+   * +k8s:optional
+   * +k8s:unionMember
+   * +k8s:format=k8s-long-name
+   */
   resourceClaimName?: string;
-  /** resourceClaimTemplateName is the name of a ResourceClaimTemplate
-object in the same namespace.
-This field is optional. If it is not specified, no resource claim
-template is used. If set, it must be a DNS subdomain.
-
-+optional
-+k8s:optional
-+k8s:unionMember
-+k8s:format=k8s-long-name */
+  /**
+   * resourceClaimTemplateName is the name of a ResourceClaimTemplate
+   * object in the same namespace.
+   * This field is optional. If it is not specified, no resource claim
+   * template is used. If set, it must be a DNS subdomain.
+   *
+   * +optional
+   * +k8s:optional
+   * +k8s:unionMember
+   * +k8s:format=k8s-long-name
+   */
   resourceClaimTemplateName?: string;
 }

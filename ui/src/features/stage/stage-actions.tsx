@@ -52,7 +52,7 @@ export const StageActions = ({
 
     if (refreshRequest === refreshStatus && shouldRefetchFreights) {
       client.invalidateQueries({
-        queryKey: getQueryFreightsRestQueryKey(stage?.metadata?.namespace)
+        queryKey: getQueryFreightsRestQueryKey(stage?.metadata?.namespace || '')
       });
       setShouldRefetchFreights(false);
     }

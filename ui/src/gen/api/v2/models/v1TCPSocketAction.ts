@@ -7,11 +7,15 @@
  */
 
 export interface V1TCPSocketAction {
-  /** Optional: Host name to connect to, defaults to the pod IP.
-+optional */
+  /**
+   * Optional: Host name to connect to, defaults to the pod IP.
+   * +optional
+   */
   host?: string;
-  /** Number or name of the port to access on the container.
-Number must be in the range 1 to 65535.
-Name must be an IANA_SVC_NAME. */
+  /**
+   * Number or name of the port to access on the container.
+   * Number must be in the range 1 to 65535.
+   * Name must be an IANA_SVC_NAME.
+   */
   port?: unknown;
 }

@@ -7,8 +7,10 @@
  */
 
 export interface V1ShardInfo {
-  /** selector is the shard selector string from the request, echoed back so clients
-can verify which shard they received and merge responses from multiple shards.
-+required */
+  /**
+   * selector is the shard selector string from the request, echoed back so clients
+   * can verify which shard they received and merge responses from multiple shards.
+   * +required
+   */
   selector?: string;
 }

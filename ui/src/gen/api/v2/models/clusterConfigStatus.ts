@@ -9,21 +9,27 @@ import type { V1Condition } from './v1Condition';
 import type { WebhookReceiverDetails } from './webhookReceiverDetails';
 
 export interface ClusterConfigStatus {
-  /** Conditions contains the last observations of the ClusterConfig's current
-state.
-
-+patchMergeKey=type
-+patchStrategy=merge
-+listType=map
-+listMapKey=type */
+  /**
+   * Conditions contains the last observations of the ClusterConfig's current
+   * state.
+   *
+   * +patchMergeKey=type
+   * +patchStrategy=merge
+   * +listType=map
+   * +listMapKey=type
+   */
   conditions?: V1Condition[];
-  /** LastHandledRefresh holds the value of the most recent AnnotationKeyRefresh
-annotation that was handled by the controller. This field can be used to
-determine whether the request to refresh the resource has been handled.
-+optional */
+  /**
+   * LastHandledRefresh holds the value of the most recent AnnotationKeyRefresh
+   * annotation that was handled by the controller. This field can be used to
+   * determine whether the request to refresh the resource has been handled.
+   * +optional
+   */
   lastHandledRefresh?: string;
-  /** ObservedGeneration represents the .metadata.generation that this
-ClusterConfig was reconciled against. */
+  /**
+   * ObservedGeneration represents the .metadata.generation that this
+   * ClusterConfig was reconciled against.
+   */
   observedGeneration?: number;
   /** WebhookReceivers describes the status of cluster-scoped webhook receivers. */
   webhookReceivers?: WebhookReceiverDetails[];

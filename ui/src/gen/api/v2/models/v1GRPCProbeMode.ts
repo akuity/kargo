@@ -8,7 +8,6 @@
 
 export type V1GRPCProbeMode = (typeof V1GRPCProbeMode)[keyof typeof V1GRPCProbeMode];
 
-// eslint-disable-next-line @typescript-eslint/no-redeclare
 export const V1GRPCProbeMode = {
   GRPCProbeModePlaintext: 'Plaintext',
   GRPCProbeModeTLS: 'TLS'

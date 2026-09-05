@@ -7,11 +7,13 @@
  */
 
 export interface V1PodSchedulingGroup {
-  /** PodGroupName specifies the name of the standalone PodGroup object
-that represents the runtime instance of this group.
-Must be a DNS subdomain.
-
-+optional
-+oneOf=GroupSelection */
+  /**
+   * PodGroupName specifies the name of the standalone PodGroup object
+   * that represents the runtime instance of this group.
+   * Must be a DNS subdomain.
+   *
+   * +optional
+   * +oneOf=GroupSelection
+   */
   podGroupName?: string;
 }
