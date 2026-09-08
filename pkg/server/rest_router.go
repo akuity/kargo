@@ -235,6 +235,10 @@ func (s *server) setupRESTRouter(ctx context.Context) *gin.Engine {
 			project.POST("/stages/:stage/verification", s.reverify)
 			project.POST("/stages/:stage/verification/abort", s.abortVerification)
 
+			// Targets
+			project.GET("/targets", s.listTargets)
+			project.GET("/targets/:target", s.getTarget)
+
 			// Warehouses
 			project.GET("/warehouses", s.listWarehouses)
 			project.GET("/warehouses/:warehouse", s.getWarehouse)

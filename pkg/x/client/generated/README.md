@@ -97,6 +97,7 @@ Class | Method | HTTP request | Description
 *CoreAPI* | [**GetStage**](docs/CoreAPI.md#getstage) | **Get** /v1beta1/projects/{project}/stages/{stage} | Retrieve a Stage
 *CoreAPI* | [**GetStageLinks**](docs/CoreAPI.md#getstagelinks) | **Get** /v1beta1/projects/{project}/stages/{stage}/links | Retrieve deep links for a Stage resource
 *CoreAPI* | [**GetSystemConfigMap**](docs/CoreAPI.md#getsystemconfigmap) | **Get** /v1beta1/system/configmaps/{configmap} | Retrieve a system-level ConfigMap
+*CoreAPI* | [**GetTarget**](docs/CoreAPI.md#gettarget) | **Get** /v1beta1/projects/{project}/targets/{target} | Retrieve a Target
 *CoreAPI* | [**GetWarehouse**](docs/CoreAPI.md#getwarehouse) | **Get** /v1beta1/projects/{project}/warehouses/{warehouse} | Retrieve a Warehouse
 *CoreAPI* | [**ListClusterPromotionTasks**](docs/CoreAPI.md#listclusterpromotiontasks) | **Get** /v1beta1/shared/cluster-promotion-tasks | List ClusterPromotionTasks
 *CoreAPI* | [**ListImages**](docs/CoreAPI.md#listimages) | **Get** /v1beta1/projects/{project}/images | List container images
@@ -108,6 +109,7 @@ Class | Method | HTTP request | Description
 *CoreAPI* | [**ListSharedConfigMaps**](docs/CoreAPI.md#listsharedconfigmaps) | **Get** /v1beta1/shared/configmaps | List shared ConfigMaps
 *CoreAPI* | [**ListStages**](docs/CoreAPI.md#liststages) | **Get** /v1beta1/projects/{project}/stages | List Stages
 *CoreAPI* | [**ListSystemConfigMaps**](docs/CoreAPI.md#listsystemconfigmaps) | **Get** /v1beta1/system/configmaps | List system-level ConfigMaps
+*CoreAPI* | [**ListTargets**](docs/CoreAPI.md#listtargets) | **Get** /v1beta1/projects/{project}/targets | List Targets
 *CoreAPI* | [**ListWarehouses**](docs/CoreAPI.md#listwarehouses) | **Get** /v1beta1/projects/{project}/warehouses | List Warehouses
 *CoreAPI* | [**PatchFreightAlias**](docs/CoreAPI.md#patchfreightalias) | **Patch** /v1beta1/projects/{project}/freight/{freight-name-or-alias}/alias | Patch a Freight resource&#39;s alias
 *CoreAPI* | [**PatchProjectConfigMap**](docs/CoreAPI.md#patchprojectconfigmap) | **Patch** /v1beta1/projects/{project}/configmaps/{configmap} | Patch a project-level ConfigMap
@@ -374,6 +376,9 @@ Class | Method | HTTP request | Description
  - [StageTargets](docs/StageTargets.md)
  - [StepExecutionMetadata](docs/StepExecutionMetadata.md)
  - [TagMap](docs/TagMap.md)
+ - [Target](docs/Target.md)
+ - [TargetList](docs/TargetList.md)
+ - [TargetSpec](docs/TargetSpec.md)
  - [UpdateConfigMapRequest](docs/UpdateConfigMapRequest.md)
  - [UpdateGenericCredentialsRequest](docs/UpdateGenericCredentialsRequest.md)
  - [UpdateRepoCredentialsRequest](docs/UpdateRepoCredentialsRequest.md)

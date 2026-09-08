@@ -2865,6 +2865,97 @@
         ]
       }
     },
+    "/v1beta1/projects/{project}/targets": {
+      "get": {
+        "description": "List Target resources from a project's namespace, optionally\nnarrowed to those a particular Stage governs or those matching a\nlabel selector. Returns a TargetList resource.",
+        "produces": [
+          "application/json"
+        ],
+        "tags": [
+          "Core",
+          "Project-Level"
+        ],
+        "summary": "List Targets",
+        "operationId": "ListTargets",
+        "parameters": [
+          {
+            "type": "string",
+            "description": "Project name",
+            "name": "project",
+            "in": "path",
+            "required": true
+          },
+          {
+            "type": "string",
+            "description": "Only Targets governed by this Stage, i.e. selected by its targets.selectors",
+            "name": "stage",
+            "in": "query"
+          },
+          {
+            "type": "string",
+            "description": "Kubernetes label selector to filter Targets by, e.g. region=us,tier!=canary",
+            "name": "labelSelector",
+            "in": "query"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "TargetList custom resource",
+            "schema": {
+              "$ref": "#/definitions/TargetList"
+            }
+          }
+        },
+        "security": [
+          {
+            "BearerAuth": []
+          }
+        ]
+      }
+    },
+    "/v1beta1/projects/{project}/targets/{target}": {
+      "get": {
+        "description": "Retrieve a Target resource from a project's namespace.",
+        "produces": [
+          "application/json"
+        ],
+        "tags": [
+          "Core",
+          "Project-Level"
+        ],
+        "summary": "Retrieve a Target",
+        "operationId": "GetTarget",
+        "parameters": [
+          {
+            "type": "string",
+            "description": "Project name",
+            "name": "project",
+            "in": "path",
+            "required": true
+          },
+          {
+            "type": "string",
+            "description": "Target name",
+            "name": "target",
+            "in": "path",
+            "required": true
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Target custom resource",
+            "schema": {
+              "$ref": "#/definitions/Target"
+            }
+          }
+        },
+        "security": [
+          {
+            "BearerAuth": []
+          }
+        ]
+      }
+    },
     "/v1beta1/projects/{project}/warehouses": {
       "get": {
         "description": "List Warehouse resources from a project's namespace. Returns a\nWarehouseList resource.",
@@ -8779,6 +8870,71 @@
         }
       }
     },
+    "Target": {
+      "type": "object",
+      "properties": {
+        "apiVersion": {
+          "description": "APIVersion defines the versioned schema of this representation of an object.\nServers should convert recognized schemas to the latest internal value, and\nmay reject unrecognized values.\nMore info: https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#resources\n+optional",
+          "type": "string"
+        },
+        "kind": {
+          "description": "Kind is a string value representing the REST resource this object represents.\nServers may infer this from the endpoint the client submits requests to.\nCannot be updated.\nIn CamelCase.\nMore info: https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#types-kinds\n+optional",
+          "type": "string"
+        },
+        "metadata": {
+          "$ref": "#/definitions/V1ObjectMeta"
+        },
+        "spec": {
+          "description": "Spec describes the Target.",
+          "allOf": [
+            {
+              "$ref": "#/definitions/TargetSpec"
+            }
+          ]
+        },
+        "status": {
+          "description": "Status describes the current status of the Target.",
+          "allOf": [
+            {
+              "$ref": "#/definitions/TargetStatus"
+            }
+          ]
+        }
+      }
+    },
+    "TargetList": {
+      "type": "object",
+      "properties": {
+        "apiVersion": {
+          "description": "APIVersion defines the versioned schema of this representation of an object.\nServers should convert recognized schemas to the latest internal value, and\nmay reject unrecognized values.\nMore info: https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#resources\n+optional",
+          "type": "string"
+        },
+        "items": {
+          "type": "array",
+          "items": {
+            "$ref": "#/definitions/Target"
+          }
+        },
+        "kind": {
+          "description": "Kind is a string value representing the REST resource this object represents.\nServers may infer this from the endpoint the client submits requests to.\nCannot be updated.\nIn CamelCase.\nMore info: https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#types-kinds\n+optional",
+          "type": "string"
+        },
+        "metadata": {
+          "$ref": "#/definitions/V1ListMeta"
+        }
+      }
+    },
+    "TargetSpec": {
+      "type": "object",
+      "properties": {
+        "params": {
+          "description": "Params is a map of arbitrary, target-specific values. Values may be any\nvalid JSON -- including nested objects and arrays -- so promotion steps\ncan reference deeply nested data. Promotion steps of Stages that govern\nthis Target may reference these values by key in their expressions (for\nexample, target.params.branch or target.params.cluster.region).\n\n+optional",
+          "type": "object",
+          "additionalProperties": {}
+        }
+      }
+    },
+    "TargetStatus": {},
     "Verification": {
       "type": "object",
       "properties": {

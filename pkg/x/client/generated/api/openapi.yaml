@@ -2094,6 +2094,71 @@ paths:
       summary: Abort a running Verification process
       tags:
       - Verifications
+  /v1beta1/projects/{project}/targets:
+    get:
+      description: |-
+        List Target resources from a project's namespace, optionally
+        narrowed to those a particular Stage governs or those matching a
+        label selector. Returns a TargetList resource.
+      operationId: ListTargets
+      parameters:
+      - description: Project name
+        in: path
+        name: project
+        required: true
+        schema:
+          type: string
+      - description: "Only Targets governed by this Stage, i.e. selected by its targets.selectors"
+        in: query
+        name: stage
+        schema:
+          type: string
+      - description: "Kubernetes label selector to filter Targets by, e.g. region=us,tier!=canary"
+        in: query
+        name: labelSelector
+        schema:
+          type: string
+      responses:
+        "200":
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/TargetList"
+          description: TargetList custom resource
+      security:
+      - BearerAuth: []
+      summary: List Targets
+      tags:
+      - Core
+  /v1beta1/projects/{project}/targets/{target}:
+    get:
+      description: Retrieve a Target resource from a project's namespace.
+      operationId: GetTarget
+      parameters:
+      - description: Project name
+        in: path
+        name: project
+        required: true
+        schema:
+          type: string
+      - description: Target name
+        in: path
+        name: target
+        required: true
+        schema:
+          type: string
+      responses:
+        "200":
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Target"
+          description: Target custom resource
+      security:
+      - BearerAuth: []
+      summary: Retrieve a Target
+      tags:
+      - Core
   /v1beta1/projects/{project}/warehouses:
     get:
       description: |-
@@ -14904,6 +14969,242 @@ components:
         status:
           description: Status is the high-level outcome of the step.
           type: string
+      type: object
+    Target:
+      example:
+        apiVersion: apiVersion
+        kind: kind
+        metadata:
+          annotations:
+            key: annotations
+          creationTimestamp: creationTimestamp
+          deletionGracePeriodSeconds: 0
+          deletionTimestamp: deletionTimestamp
+          finalizers:
+          - finalizers
+          - finalizers
+          generateName: generateName
+          generation: 6
+          labels:
+            key: labels
+          managedFields:
+          - apiVersion: apiVersion
+            fieldsType: fieldsType
+            fieldsV1: "{}"
+            manager: manager
+            operation: operation
+            subresource: subresource
+            time: time
+          - apiVersion: apiVersion
+            fieldsType: fieldsType
+            fieldsV1: "{}"
+            manager: manager
+            operation: operation
+            subresource: subresource
+            time: time
+          name: name
+          namespace: namespace
+          ownerReferences:
+          - apiVersion: apiVersion
+            blockOwnerDeletion: true
+            controller: true
+            kind: kind
+            name: name
+            uid: uid
+          - apiVersion: apiVersion
+            blockOwnerDeletion: true
+            controller: true
+            kind: kind
+            name: name
+            uid: uid
+          resourceVersion: resourceVersion
+          selfLink: selfLink
+          uid: uid
+        spec: "{}"
+        status: "{}"
+      properties:
+        apiVersion:
+          description: |-
+            APIVersion defines the versioned schema of this representation of an object.
+            Servers should convert recognized schemas to the latest internal value, and
+            may reject unrecognized values.
+            More info: https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#resources
+            +optional
+          type: string
+        kind:
+          description: |-
+            Kind is a string value representing the REST resource this object represents.
+            Servers may infer this from the endpoint the client submits requests to.
+            Cannot be updated.
+            In CamelCase.
+            More info: https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#types-kinds
+            +optional
+          type: string
+        metadata:
+          $ref: "#/components/schemas/V1ObjectMeta"
+        spec:
+          allOf:
+          - $ref: "#/components/schemas/TargetSpec"
+          description: Spec describes the Target.
+          type: object
+        status:
+          allOf:
+          - $ref: "#/components/schemas/TargetStatus"
+          description: Status describes the current status of the Target.
+          type: object
+      type: object
+    TargetList:
+      example:
+        apiVersion: apiVersion
+        items:
+        - apiVersion: apiVersion
+          kind: kind
+          metadata:
+            annotations:
+              key: annotations
+            creationTimestamp: creationTimestamp
+            deletionGracePeriodSeconds: 0
+            deletionTimestamp: deletionTimestamp
+            finalizers:
+            - finalizers
+            - finalizers
+            generateName: generateName
+            generation: 6
+            labels:
+              key: labels
+            managedFields:
+            - apiVersion: apiVersion
+              fieldsType: fieldsType
+              fieldsV1: "{}"
+              manager: manager
+              operation: operation
+              subresource: subresource
+              time: time
+            - apiVersion: apiVersion
+              fieldsType: fieldsType
+              fieldsV1: "{}"
+              manager: manager
+              operation: operation
+              subresource: subresource
+              time: time
+            name: name
+            namespace: namespace
+            ownerReferences:
+            - apiVersion: apiVersion
+              blockOwnerDeletion: true
+              controller: true
+              kind: kind
+              name: name
+              uid: uid
+            - apiVersion: apiVersion
+              blockOwnerDeletion: true
+              controller: true
+              kind: kind
+              name: name
+              uid: uid
+            resourceVersion: resourceVersion
+            selfLink: selfLink
+            uid: uid
+          spec: "{}"
+          status: "{}"
+        - apiVersion: apiVersion
+          kind: kind
+          metadata:
+            annotations:
+              key: annotations
+            creationTimestamp: creationTimestamp
+            deletionGracePeriodSeconds: 0
+            deletionTimestamp: deletionTimestamp
+            finalizers:
+            - finalizers
+            - finalizers
+            generateName: generateName
+            generation: 6
+            labels:
+              key: labels
+            managedFields:
+            - apiVersion: apiVersion
+              fieldsType: fieldsType
+              fieldsV1: "{}"
+              manager: manager
+              operation: operation
+              subresource: subresource
+              time: time
+            - apiVersion: apiVersion
+              fieldsType: fieldsType
+              fieldsV1: "{}"
+              manager: manager
+              operation: operation
+              subresource: subresource
+              time: time
+            name: name
+            namespace: namespace
+            ownerReferences:
+            - apiVersion: apiVersion
+              blockOwnerDeletion: true
+              controller: true
+              kind: kind
+              name: name
+              uid: uid
+            - apiVersion: apiVersion
+              blockOwnerDeletion: true
+              controller: true
+              kind: kind
+              name: name
+              uid: uid
+            resourceVersion: resourceVersion
+            selfLink: selfLink
+            uid: uid
+          spec: "{}"
+          status: "{}"
+        kind: kind
+        metadata:
+          continue: continue
+          remainingItemCount: 0
+          resourceVersion: resourceVersion
+          selfLink: selfLink
+          shardInfo: "{}"
+      properties:
+        apiVersion:
+          description: |-
+            APIVersion defines the versioned schema of this representation of an object.
+            Servers should convert recognized schemas to the latest internal value, and
+            may reject unrecognized values.
+            More info: https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#resources
+            +optional
+          type: string
+        items:
+          items:
+            $ref: "#/components/schemas/Target"
+          type: array
+        kind:
+          description: |-
+            Kind is a string value representing the REST resource this object represents.
+            Servers may infer this from the endpoint the client submits requests to.
+            Cannot be updated.
+            In CamelCase.
+            More info: https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#types-kinds
+            +optional
+          type: string
+        metadata:
+          $ref: "#/components/schemas/V1ListMeta"
+      type: object
+    TargetSpec:
+      properties:
+        params:
+          additionalProperties:
+            type: object
+          description: |-
+            Params is a map of arbitrary, target-specific values. Values may be any
+            valid JSON -- including nested objects and arrays -- so promotion steps
+            can reference deeply nested data. Promotion steps of Stages that govern
+            this Target may reference these values by key in their expressions (for
+            example, target.params.branch or target.params.cluster.region).
+
+            +optional
+          type: object
+      type: object
+    TargetStatus:
       type: object
     Verification:
       properties:
