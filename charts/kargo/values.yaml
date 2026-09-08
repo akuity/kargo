@@ -85,8 +85,19 @@ global:
   affinity: {}
   ## @param global.priorityClassName [nullable] Default priority class for all Kargo pods.
   # priorityClassName:
-  ## @param global.securityContext Default security context for all Kargo pods.
-  securityContext: {}
+  ## Default security context for all Kargo containers
+  securityContext:
+    ## @param global.securityContext.runAsNonRoot Require containers to run as a non-root user.
+    runAsNonRoot: true
+    ## @param global.securityContext.allowPrivilegeEscalation Prevent containers from gaining more privileges than their parent process.
+    allowPrivilegeEscalation: false
+    capabilities:
+      ## @param global.securityContext.capabilities.drop Linux capabilities to drop from containers.
+      drop:
+      - ALL
+    seccompProfile:
+      ## @param global.securityContext.seccompProfile.type Seccomp profile applied to containers.
+      type: RuntimeDefault
 
 ## @section Workloads
 workloads:
