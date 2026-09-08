@@ -40,6 +40,7 @@ export const App = () => (
                 <Route path={paths.createProjectGuided} element={<ProjectWizard />} />
                 <Route path={paths.project} element={<Project />} />
                 <Route path={paths.projectEvents} element={<Events />} />
+                <Route path={paths.projectFleet} element={<Project tab='fleet' />} />
                 <Route path={paths.stage} element={<Project />} />
                 <Route path={paths.promotion} element={<Project />} />
                 <Route path={paths.promote} element={<Project />} />

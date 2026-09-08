@@ -7,10 +7,12 @@ import { paths } from '@ui/config/paths';
 import { useExtensionsContext } from '@ui/extensions/extensions-context';
 import { useDocumentTitle } from '@ui/features/common/document-title/use-document-title';
 import { BaseHeader } from '@ui/features/common/layout/base-header';
+import { Fleet } from '@ui/features/project/fleet/fleet';
 import { Pipelines } from '@ui/features/project/pipelines/pipelines';
 import { useProjectBreadcrumbs } from '@ui/features/project/project-utils';
 
 export const Project = ({
+  tab,
   creatingStage,
   creatingWarehouse
 }: {
@@ -27,7 +29,8 @@ export const Project = ({
     (stageName && `Stage: ${stageName}`) ||
     (warehouseName && `Warehouse: ${warehouseName}`) ||
     (promotionId && `Promotion: ${promotionId}`) ||
-    (freightName && `Freight: ${freightName}`);
+    (freightName && `Freight: ${freightName}`) ||
+    (tab === 'fleet' && 'Fleet');
   const titleParts = resourceLabel ? [resourceLabel, name] : [name];
   useDocumentTitle(titleParts);
 
@@ -65,7 +68,13 @@ export const Project = ({
         </Space>
       </BaseHeader>
 
-      <Pipelines creatingStage={creatingStage} creatingWarehouse={creatingWarehouse} />
+      {/* The Fleet view has no entry point in the header yet; it is reached by
+          navigating to /project/:name/fleet directly. */}
+      {tab === 'fleet' ? (
+        <Fleet />
+      ) : (
+        <Pipelines creatingStage={creatingStage} creatingWarehouse={creatingWarehouse} />
+      )}
     </div>
   );
 };

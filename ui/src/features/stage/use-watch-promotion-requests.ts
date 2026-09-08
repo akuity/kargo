@@ -12,23 +12,30 @@ import { runSeededWatch, upsertOrDelete } from '../project/pipelines/watch-utils
 // enabled gates the watch on the initial list having loaded, so it never opens
 // before a seed resourceVersion is available — otherwise it would start an
 // unseeded watch that replays every PromotionRequest.
-export const useWatchPromotionRequests = (project: string, stage: string, enabled = true) => {
+//
+// With a stage, the watch is scoped to that Stage's requests; without one, it
+// follows every PromotionRequest in the project. The list query it updates must
+// have been issued with the same params, since they form the query key.
+export const useWatchPromotionRequests = (project: string, stage?: string, enabled = true) => {
   const client = useQueryClient();
 
   useEffect(() => {
-    if (!project || !stage || !enabled) {
+    if (!project || !enabled) {
       return;
     }
 
     const abort = new AbortController();
-    const listKey = getListPromotionRequestsQueryKey(project, { stage });
+    const listKey = getListPromotionRequestsQueryKey(project, stage ? { stage } : undefined);
 
     const seedResourceVersion = () =>
       (client.getQueryData(listKey) as listPromotionRequestsResponse | undefined)?.data?.metadata
         ?.resourceVersion;
 
     const buildUrl = (resourceVersion: string) => {
-      const params = new URLSearchParams({ watch: 'true', stage });
+      const params = new URLSearchParams({ watch: 'true' });
+      if (stage) {
+        params.append('stage', stage);
+      }
       if (resourceVersion) {
         params.append('resourceVersion', resourceVersion);
       }

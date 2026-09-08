@@ -1,0 +1,42 @@
+// The global rule in app.less renders a Select's chosen value in Poppins 500,
+// while placeholders keep the default font. The group-by control always has a
+// value, so beside the placeholder-styled search and Stage filter it read as a
+// different, heavier control. Keep the toolbar's selects in one voice.
+.fleetToolbar {
+  .ant-select-selection-item {
+    font-family: inherit;
+    font-weight: 400 !important;
+  }
+}
+
+// One column header row shared by every group's table. Its cells mirror the
+// tables' fixed column widths and Ant's small-table cell padding. The 1px
+// horizontal inset is the Collapse panel border, and the extra 40px on the
+// left is the room the tables leave for the panel's expand arrow.
+.fleetColumnHeader {
+  display: flex;
+  align-items: center;
+  padding: 4px 1px 4px 41px;
+  font-weight: 600;
+  color: var(--kargo-color-text-secondary, rgba(0, 0, 0, 0.65));
+  border-bottom: 1px solid var(--kargo-color-border-secondary, rgba(0, 0, 0, 0.06));
+
+  > span {
+    flex: none;
+    padding: 0 8px;
+  }
+  > span.flex-1 {
+    flex: 1 1 auto;
+  }
+}
+
+// Group tables sit inside Collapse panels with no padding of their own, and
+// their first column is inset to match the header row above.
+.fleetGroups {
+  .ant-collapse-content-box {
+    padding: 0 !important;
+  }
+  .ant-table-wrapper .ant-table-tbody > tr > td:first-child {
+    padding-left: 40px;
+  }
+}

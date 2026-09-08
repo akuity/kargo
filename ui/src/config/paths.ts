@@ -5,6 +5,7 @@ export const paths = {
   createProjectGuided: '/create-project',
   project: '/project/:name',
   projectEvents: '/project/:name/events',
+  projectFleet: '/project/:name/fleet',
   stage: '/project/:name/stage/:stageName',
   warehouse: '/project/:name/warehouse/:warehouseName/:tab?',
   promotion: '/project/:name/promotion/:promotionId',
