@@ -7,6 +7,7 @@ import (
 
 	"github.com/stretchr/testify/require"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/apimachinery/pkg/labels"
 	k8sruntime "k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/types"
 	"sigs.k8s.io/controller-runtime/pkg/client"
@@ -83,6 +84,129 @@ func TestGetTarget(t *testing.T) {
 				},
 			)
 			testCase.assertions(t, target, err)
+		})
+	}
+}
+
+func TestTargetSelectorsForStage(t *testing.T) {
+	testCases := []struct {
+		name   string
+		stage  *kargoapi.Stage
+		assert func(*testing.T, []labels.Selector, error)
+	}{
+		{
+			name:  "classic Stage governs no Targets",
+			stage: &kargoapi.Stage{},
+			assert: func(t *testing.T, selectors []labels.Selector, err error) {
+				require.NoError(t, err)
+				require.Nil(t, selectors)
+			},
+		},
+		{
+			name: "target-aware Stage with an empty selector list",
+			stage: &kargoapi.Stage{
+				Spec: kargoapi.StageSpec{
+					Targets: &kargoapi.StageTargets{Selectors: []metav1.LabelSelector{}},
+				},
+			},
+			assert: func(t *testing.T, selectors []labels.Selector, err error) {
+				require.NoError(t, err)
+				require.NotNil(t, selectors)
+				require.Empty(t, selectors)
+			},
+		},
+		{
+			name: "malformed selector",
+			stage: &kargoapi.Stage{
+				Spec: kargoapi.StageSpec{
+					Targets: &kargoapi.StageTargets{Selectors: []metav1.LabelSelector{{
+						MatchExpressions: []metav1.LabelSelectorRequirement{{
+							Key:      "region",
+							Operator: "Bogus",
+						}},
+					}}},
+				},
+			},
+			assert: func(t *testing.T, _ []labels.Selector, err error) {
+				require.ErrorContains(t, err, "error parsing target selector 0")
+			},
+		},
+		{
+			name: "parses every selector",
+			stage: &kargoapi.Stage{
+				Spec: kargoapi.StageSpec{
+					Targets: &kargoapi.StageTargets{Selectors: []metav1.LabelSelector{
+						{MatchLabels: map[string]string{"region": "us"}},
+						{},
+					}},
+				},
+			},
+			assert: func(t *testing.T, selectors []labels.Selector, err error) {
+				require.NoError(t, err)
+				require.Len(t, selectors, 2)
+				require.True(t, selectors[0].Matches(labels.Set{"region": "us"}))
+				require.False(t, selectors[0].Matches(labels.Set{"region": "eu"}))
+				// The empty selector matches everything.
+				require.True(t, selectors[1].Matches(labels.Set{}))
+			},
+		},
+	}
+	for _, testCase := range testCases {
+		t.Run(testCase.name, func(t *testing.T) {
+			t.Parallel()
+			selectors, err := TargetSelectorsForStage(testCase.stage)
+			testCase.assert(t, selectors, err)
+		})
+	}
+}
+
+func TestAnySelectorMatches(t *testing.T) {
+	us := labels.SelectorFromSet(labels.Set{"region": "us"})
+	eu := labels.SelectorFromSet(labels.Set{"region": "eu"})
+
+	testCases := []struct {
+		name      string
+		selectors []labels.Selector
+		labels    map[string]string
+		expected  bool
+	}{
+		{
+			name:     "no selectors match nothing",
+			labels:   map[string]string{"region": "us"},
+			expected: false,
+		},
+		{
+			name:      "first selector matches",
+			selectors: []labels.Selector{us, eu},
+			labels:    map[string]string{"region": "us"},
+			expected:  true,
+		},
+		{
+			name:      "later selector matches",
+			selectors: []labels.Selector{us, eu},
+			labels:    map[string]string{"region": "eu"},
+			expected:  true,
+		},
+		{
+			name:      "no selector matches",
+			selectors: []labels.Selector{us, eu},
+			labels:    map[string]string{"region": "ap"},
+			expected:  false,
+		},
+		{
+			name:      "nil labels",
+			selectors: []labels.Selector{us},
+			expected:  false,
+		},
+	}
+	for _, testCase := range testCases {
+		t.Run(testCase.name, func(t *testing.T) {
+			t.Parallel()
+			require.Equal(
+				t,
+				testCase.expected,
+				AnySelectorMatches(testCase.selectors, testCase.labels),
+			)
 		})
 	}
 }
