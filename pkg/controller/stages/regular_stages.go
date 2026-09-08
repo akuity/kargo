@@ -1069,8 +1069,13 @@ func (r *RegularStageReconciler) syncPromotionRequests(
 	slices.SortFunc(newRequests, func(a, b *kargoapi.PromotionRequest) int {
 		return strings.Compare(a.Name, b.Name)
 	})
+	//
+	// A request is recorded before it becomes the last: the status is persisted
+	// even when this returns an error, and a request that had already moved the
+	// gate forward when fetching its Freight failed would never be considered
+	// again, leaving its Freight out of the history for good. Recording first
+	// leaves the gate on the previous request, so the next reconcile retries.
 	for _, promotionRequest := range newRequests {
-		newStatus.LastPromotionRequest = newPromotionRequestReference(promotionRequest)
 		if err := r.recordSucceededPromotionRequest(
 			ctx,
 			stage,
@@ -1079,6 +1084,7 @@ func (r *RegularStageReconciler) syncPromotionRequests(
 		); err != nil {
 			return newStatus, err
 		}
+		newStatus.LastPromotionRequest = newPromotionRequestReference(promotionRequest)
 	}
 
 	return newStatus, nil

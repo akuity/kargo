@@ -2936,6 +2936,10 @@ func TestRegularStageReconciler_syncPromotionRequests(t *testing.T) {
 			assertions: func(t *testing.T, status kargoapi.StageStatus, err error) {
 				require.ErrorContains(t, err, "get error")
 				assert.Empty(t, status.FreightHistory)
+				// The status is persisted even on error, so the request must not
+				// have become the last one: that would leave nothing to retry, and
+				// its Freight would never be recorded.
+				assert.Nil(t, status.LastPromotionRequest)
 			},
 		},
 		{
